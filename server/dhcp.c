@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.100.2.10 1999/10/27 21:36:12 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.100.2.11 1999/10/27 21:57:23 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1281,10 +1281,10 @@ void ack_lease (packet, lease, offer, when, msg)
 	/* Because static leases aren't currently recorded? */
 #if defined (NSUPDATE)
  	if (!(lease -> flags & STATIC_LEASE) && (offer == DHCPACK || !offer) &&
-	    ((oc = lookup_option (&server_universe, state -> options,
-				  SV_DDNS_UPDATES)) &&
-	      !evaluate_boolean_option_cache (packet, packet -> options,
-					   lease, oc)))
+	    (!(oc = lookup_option (&server_universe, state -> options,
+				   SV_DDNS_UPDATES)) ||
+	     evaluate_boolean_option_cache (packet, packet -> options,
+					    lease, oc)))
  		nsupdate (lease, state, packet, ADD);
 #endif
 
