@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.23 2000/08/31 04:41:10 mellon Exp $ Copyright (c) 1999-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.24 2000/09/01 17:22:48 mellon Exp $ Copyright (c) 1999-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1371,6 +1371,8 @@ isc_result_t dhcp_failover_state_transition (dhcp_failover_state_t *state,
 		      case shut_down:
 		      case paused:
 		      case unknown_state:
+		      case recover_done:
+		      case startup:
 			return dhcp_failover_send_state (state);
 		}
 	} else if (!strcmp (name, "startup")) {
@@ -1664,6 +1666,7 @@ isc_result_t dhcp_failover_peer_state_changed (dhcp_failover_state_t *state,
 			break;
 
 		      case unknown_state:
+		      case startup:
 			break;
 		}
 		break;
@@ -1712,6 +1715,7 @@ isc_result_t dhcp_failover_peer_state_changed (dhcp_failover_state_t *state,
 			break;
 
 		      case unknown_state:
+		      case startup:
 			break;
 		}
 		break;
@@ -1738,6 +1742,7 @@ isc_result_t dhcp_failover_peer_state_changed (dhcp_failover_state_t *state,
 			break;
 
 		      case unknown_state:
+		      case startup:
 			break;
 		}
 		break;
@@ -1767,6 +1772,7 @@ isc_result_t dhcp_failover_peer_state_changed (dhcp_failover_state_t *state,
 			break;
 
 		      case unknown_state:
+		      case startup:
 			break;
 		}
 		break;
@@ -1797,6 +1803,7 @@ isc_result_t dhcp_failover_peer_state_changed (dhcp_failover_state_t *state,
 			break;
 
 		      case unknown_state:
+		      case startup:
 			break;
 		}
 		break;
@@ -1821,6 +1828,7 @@ isc_result_t dhcp_failover_peer_state_changed (dhcp_failover_state_t *state,
 			break;
 
 		      case unknown_state:
+		      case startup:
 			break;
 		}
 		break;
@@ -1845,6 +1853,7 @@ isc_result_t dhcp_failover_peer_state_changed (dhcp_failover_state_t *state,
 			break;
 
 		      case unknown_state:
+		      case startup:
 			break;
 		}
 		break;
@@ -2750,7 +2759,7 @@ const char *dhcp_failover_state_name_print (enum failover_state state)
 	}
 }
 
-const char *dhcp_failover_message_name (u_int8_t type)
+const char *dhcp_failover_message_name (unsigned type)
 {
 	switch (type) {
 	      case FTM_POOLREQ:
@@ -2794,7 +2803,7 @@ const char *dhcp_failover_message_name (u_int8_t type)
 	}
 }
 
-const char *dhcp_failover_option_name (u_int16_t type) {
+const char *dhcp_failover_option_name (unsigned type) {
 	switch (type) {
 	      case FTO_BINDING_STATUS:
 		return "binding-status";
@@ -4161,6 +4170,7 @@ dhcp_failover_process_update_done (dhcp_failover_state_t *state,
 	      case shut_down:
 	      case paused:
 	      case recover_done:
+	      case startup:
 		break;	/* shouldn't happen. */
 
 		/* We got the UPDDONE, so we can go into normal state! */
