@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: discover.c,v 1.30 2000/07/06 22:37:39 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: discover.c,v 1.31 2000/09/01 23:03:33 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -489,10 +489,27 @@ void discover_interfaces (state)
 		if (!tmp -> shared_network && (state == DISCOVER_SERVER)) {
 			log_error ("No subnet declaration for %s (%s).",
 				   tmp -> name, inet_ntoa (foo.sin_addr));
-			log_error ("Please write a subnet declaration in %s",
-				   "your dhcpd.conf file for the");
-			log_fatal ("network segment to which interface %s %s",
-				   tmp -> name, "is attached.");
+			if (supports_multiple_interfaces (tmp)) {
+				log_error ("Ignoring requests on %s.",
+					   tmp -> name);
+				log_error ("If this is not what you want, %s",
+				   "please write");
+				log_error ("a subnet declaration in your %s",
+				   "dhcpd.conf file for");
+				log_error ("the network segment to %s %s %s",
+					   "which interface",
+					   tmp -> name, "is attached.");
+				goto next;
+			} else {
+				log_error ("You must write a subnet %s",
+					   " declaration for this");
+				log_error ("subnet.   You cannot prevent %s",
+					   "the DHCP server");
+				log_error ("from listening on this subnet %s",
+					   "because your");
+				log_fatal ("operating system does not %s.",
+					   "support this capability");
+			}
 		}
 
 		/* Find subnets that don't have valid interface
@@ -523,6 +540,7 @@ void discover_interfaces (state)
 					   tmp -> name);
 		}
 #endif
+	      next:
 		interface_dereference (&tmp, MDL);
 		if (next)
 			interface_reference (&tmp, next, MDL);

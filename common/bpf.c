@@ -47,7 +47,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bpf.c,v 1.41 2000/07/27 09:02:29 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bpf.c,v 1.42 2000/09/01 23:03:31 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -512,6 +512,12 @@ int can_unicast_without_arp (ip)
 }
 
 int can_receive_unicast_unconfigured (ip)
+	struct interface_info *ip;
+{
+	return 1;
+}
+
+int supports_multiple_interfaces (ip)
 	struct interface_info *ip;
 {
 	return 1;
