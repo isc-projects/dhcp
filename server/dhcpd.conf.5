@@ -296,22 +296,32 @@ deny list, then only those clients that do not match any entries on
 the deny list will be elegible.    If both permit and deny lists exist
 for a pool, then only clients that match the permit list and do not
 match the deny list will be allowed access.
-.SH ADDRESS ALLOCATION
+.SH DYNAMIC ADDRESS ALLOCATION
 Address allocation is actually only done when a client is in the INIT
 state and has sent a DHCPDISCOVER message.  If the client thinks it
 has a valid lease and sends a DHCPREQUEST to initiate or renew that
 lease, the server has only three choices - it can ignore the
 DHCPREQUEST, send a DHCPNAK to tell the client it should stop using
 the address, or send a DHCPACK, telling the client to go ahead and use
-the address for a while.  If the server finds the address the client
-is requesting, and that address is available to the client, the server
-will send a DHCPACK.  If the address is no longer available, or the
-client isn't permitted to have it, the server will send a DHCPNAK.  If
-the server knows nothing about the, it will remain silent, unless the
-address is incorrect for the network segment to which the client has
-been attached and the server is authoritative for that network
-segment, in which case the server will send a DHCPNAK even though it
-doesn't know about the address.
+the address for a while.
+.PP
+If the server finds the address the client is requesting, and that
+address is available to the client, the server will send a DHCPACK.
+If the address is no longer available, or the client isn't permitted
+to have it, the server will send a DHCPNAK.  If the server knows
+nothing about the, it will remain silent, unless the address is
+incorrect for the network segment to which the client has been
+attached and the server is authoritative for that network segment, in
+which case the server will send a DHCPNAK even though it doesn't know
+about the address.
+.PP
+There may be a host declaration matching the client's identification,
+and that host declaration contains a fixed-address declaration that is
+valid for the network segment to which the client is connected.  In
+this case, the DHCP server will never do dynamic address allocation.
+In this case, the client is \fIrequired\fB to take the address
+specified in the host declaration.   If the client is requesting some
+other address, the server will respond with a DHCPNAK.
 .PP
 When the DHCP server allocates a new address for a client (remember,
 this only happens if the client has sent a DHCPDISCOVER), it first
