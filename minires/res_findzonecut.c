@@ -1,5 +1,5 @@
 #if !defined(lint) && !defined(SABER)
-static const char rcsid[] = "$Id: res_findzonecut.c,v 1.6 2000/07/05 07:28:46 mellon Exp $";
+static const char rcsid[] = "$Id: res_findzonecut.c,v 1.7 2000/07/06 06:22:36 mellon Exp $";
 #endif /* not lint */
 
 /*
@@ -136,14 +136,13 @@ static ns_rcode	do_query(res_state, const char *, ns_class, ns_type,
 ns_rcode
 res_findzonecut(res_state statp, const char *dname, ns_class class, int opts,
 		char *zname, size_t zsize, struct in_addr *addrs, int naddrs,
-		void *zcookie)
+		int *count, void *zcookie)
 {
 	char mname[NS_MAXDNAME];
 	u_long save_pfcode;
 	rrset_ns nsrrs;
-	int n;
+	int n = 0;
 	ns_rcode rcode;
-
 
 	DPRINTF(("START dname='%s' class=%s, zsize=%ld, naddrs=%d",
 		 dname, p_class(class), (long)zsize, naddrs));
@@ -179,6 +178,8 @@ res_findzonecut(res_state statp, const char *dname, ns_class class, int opts,
 	DPRINTF(("FINISH n=%d (%s)", n, (n < 0) ? strerror(errno) : "OK"));
 	free_nsrrset(&nsrrs);
 	statp->pfcode = save_pfcode;
+	if (count)
+		*count = n;
 	return rcode;
 }
 
