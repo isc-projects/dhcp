@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.99 2001/02/26 22:21:11 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.100 2001/03/22 07:00:15 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1872,7 +1872,7 @@ int evaluate_data_expression (result, packet, lease, client_state,
 		      lease, client_state, in_options, cfg_options,
 		      scope, expr -> data.pick_first_value.car))) {
 #if defined (DEBUG_EXPRESSIONS)
-			log_debug ("data: pick_first_value (%s, ???)",
+			log_debug ("data: pick_first_value (%s, xxx)",
 				   print_hex_1 (result -> len,
 						result -> data, 40));
 #endif
