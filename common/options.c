@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.82 2001/01/25 21:55:08 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.83 2001/01/26 06:17:01 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -1263,6 +1263,8 @@ struct option_cache *lookup_option (universe, options, code)
 	struct option_state *options;
 	unsigned code;
 {
+	if (!options)
+		return (struct option_cache *)0;
 	if (universe -> lookup_func)
 		return (*universe -> lookup_func) (universe, options, code);
 	else
