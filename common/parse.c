@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.70 2000/04/06 22:46:26 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.71 2000/04/14 16:26:37 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1157,7 +1157,7 @@ int parse_base64 (data, cfile)
 			parse_warn (cfile, "can't allocate string buffer");
 			return 0;
 		}
-		strcpy (data -> buffer -> data, val);
+		strcpy ((char *)data -> buffer -> data, val);
 		data -> terminated = 1;
 		data -> data = data -> buffer -> data;
 		return 1;
@@ -1891,6 +1891,13 @@ int parse_key (struct parse *cfile)
 		parse_warn (cfile, "expecting right brace.");
 		goto rbad;
 	}
+	/* Allow the BIND 8 syntax, which has a semicolon after each
+	   closing brace. */
+	token = peek_token (&val, cfile);
+	if (token == SEMI)
+		token = next_token (&val, cfile);
+
+	/* Remember the key. */
 	status = enter_tsig_key (key);
 	if (status != ISC_R_SUCCESS) {
 		parse_warn (cfile, "tsig key %s: %s",
