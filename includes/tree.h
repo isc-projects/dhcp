@@ -77,6 +77,7 @@ enum expr_op {
 	expr_const_int,
 	expr_exists,
 	expr_encapsulate,
+	expr_known,
 };
 
 struct expression {
