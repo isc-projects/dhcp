@@ -48,7 +48,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dns.c,v 1.5 1997/11/29 07:51:49 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dns.c,v 1.6 1998/01/12 01:00:09 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -63,6 +63,8 @@ static int copy_out_name PROTO ((u_int8_t *, u_int8_t *, char *));
 static int nslookup PROTO ((u_int8_t, char *, int, u_int16_t, u_int16_t));
 static int zonelookup PROTO ((u_int8_t, char *, int, u_int16_t));
 u_int16_t dns_port;
+
+struct dns_query *queries [65536];
 
 /* Initialize the DNS protocol. */
 
@@ -151,16 +153,19 @@ static int copy_out_name (base, name, buf)
    called with a null pointer.   Otherwise, the callback is called with the
    address of the string returned by the name server. */
 
-int ns_inaddr_lookup (id, inaddr)
-	u_int16_t id;
+struct dns_query *ns_inaddr_lookup (inaddr, wakeup)
 	struct iaddr inaddr;
+	struct dns_wakeup *wakeup;
 {
-	unsigned char namebuf [512];
-	unsigned char *s = namebuf;
+	unsigned char question [512];
+	unsigned char *s;
 	unsigned char *label;
 	int i;
 	unsigned char c;
 
+	s = question;
+
+	/* Copy out the digits. */
 	for (i = 3; i >= 0; --i) {
 		label = s++;
 		*label = 1;
@@ -178,140 +183,123 @@ int ns_inaddr_lookup (id, inaddr)
 	s += addlabel (s, "in-addr");
 	s += addlabel (s, "arpa");
 	*s++ = 0;
-/*	return nslookup (id, namebuf, s - namebuf, T_PTR, C_IN); */
-	return zonelookup (id, namebuf, s - namebuf, C_IN);
+
+	/* Set the query type. */
+	putUShort (s, T_PTR);
+	s += sizeof (u_int16_t);
+
+	/* Set the query class. */
+	putUShort (s, C_IN);
+	s += sizeof (u_int16_t);
+
+	return ns_query (question, s - question, wakeup);
 }
 
-/* Construct and transmit a name server query. */
-
-static int nslookup (id, qname, namelen, qtype, qclass)
-	u_int8_t id;
-	char *qname;
-	int namelen;
-	u_int16_t qtype;
-	u_int16_t qclass;
+struct dns_query *ns_query (question, len, wakeup)
+	unsigned char *question;
+	int len;
+	struct dns_wakeup *wakeup;
 {
 	HEADER *hdr;
-	unsigned char query [512];
-	u_int8_t *s;
-	int len;
-	int i, status;
-	struct sockaddr_in *server = pick_name_server ();
-	
-	if (!server)
-		return 0;
+	struct dns_query *query;
+	unsigned char *s;
+
+	/* See if there's already a query for this name, and allocate a
+	   query if none exists. */
+	query = find_dns_query (question, len, 1);
+
+	/* If we can't allocate a query, report that the query failed. */
+	if (!query) {
+		return (struct dns_query *)-1;
+	}
+
+	/* If the query has already been answered, return it. */
+	if (query -> expiry > cur_time)
+		return query;
+
+	/* The query hasn't yet been answered, so we have to wait, one
+	   way or another.   Put the wakeup on the list. */
+	if (wakeup) {
+		wakeup -> next = query -> wakeups;
+		query -> wakeups = wakeup;
+	}
+
+	/* If the query has already been sent, but we don't yet have
+	   an answer, we're done. */
+	if (query -> sent)
+		return (struct dns_query *)0;
 
 	/* Construct a header... */
-	hdr = (HEADER *)query;
+	hdr = (HEADER *)query -> buf;
 	memset (hdr, 0, sizeof *hdr);
-	hdr -> id = htons (id);
+	hdr -> id = query -> id;
 	hdr -> rd = 1;
 	hdr -> opcode = QUERY;
 	hdr -> qdcount = htons (1);
 
-	/* Copy in the name we're looking up. */
-	s = (u_int8_t *)(hdr + 1);
-	memcpy (s, qname, namelen);
-	s += namelen;
-	
-	/* Set the query type. */
-	putUShort (s, qtype);
-	s += sizeof (u_int16_t);
+	/* Copy the name into the buffer. */
+	s = (unsigned char *)hdr + 1;
+	memcpy (s, question, len);
+	query -> question = s;
+	query -> question_len = len;
 
-	/* Set the query class. */
-	putUShort (s, qclass);
-	s += sizeof (u_int16_t);
+	/* Figure out how long the whole message is */
+	s += len;
+	query -> len = s - query -> buf;
+
+	/* Flag the query as having been sent. */
+	query -> sent = 1;
 
 	/* Send the query. */
-	status = sendto (dns_protocol_fd, query, s - query, 0,
-			 (struct sockaddr *)server, sizeof *server);
+	dns_timeout (query);
 
-	/* If the send failed, report the failure. */
-	if (status < 0)
-		return 0;
-	return 1;
+	/* No answer yet, obviously. */
+	return (struct dns_query *)0;
 }
 
-/* Construct a query for the SOA for a specified name.
-   Try every possible SOA name starting from the name specified and going
-   to the root name - e.g., for
+/* Retransmit a DNS query. */
 
-   	215.5.5.192.in-addr.arpa, look for SOAs matching:
-
-	215.5.5.5.192.in-addr.arpa
-	5.5.192.in-addr.arpa
-	5.192.in-addr.arpa
-	192.in-addr.arpa
-	in-addr.arpa
-	arpa */
-
-static int zonelookup (id, qname, namelen, qclass)
-	u_int8_t id;
-	char *qname;
-	int namelen;
-	u_int16_t qclass;
+void dns_timeout (qv)
+	void *qv;
 {
-	HEADER *hdr;
-	unsigned char query [512];
-	u_int8_t *s, *nptr;
-	int len;
-	int i, status, count;
-	struct sockaddr_in *server = pick_name_server ();
-	
-	if (!server)
-		return 0;
+	struct dns_query *query = qv;
+	int status;
 
-	/* Construct a header... */
-	hdr = (HEADER *)query;
-	memset (hdr, 0, sizeof *hdr);
-	hdr -> id = htons (id);
-	hdr -> rd = 1;
-	hdr -> opcode = QUERY;
+	/* Choose the server to send to. */
+	if (!query -> next_server)
+		query -> next_server = first_name_server ();
 
-	/* Copy in the name we're looking up. */
-	s = (u_int8_t *)(hdr + 1);
-	memcpy (s, qname, namelen);
-	s += namelen;
-	
-	/* Set the query type. */
-	putUShort (s, T_SOA);
-	s += sizeof (u_int16_t);
-
-	/* Set the query class. */
-	putUShort (s, qclass);
-	s += sizeof (u_int16_t);
-	count = 1;
-
-	/* Now query up the hierarchy. */
-	nptr = (u_int8_t *)(hdr + 1);
-	while (*(nptr += *nptr + 1)) {
-		/* Store a compressed reference from the full name. */
-		putUShort (s, ntohs (htons (0xC000) |
-				     htons (nptr - &query [0])));
-		s += sizeof (u_int16_t);
-
-		/* Store the query type. */
-		putUShort (s, T_SOA);
-		s += sizeof (u_int16_t);
-
-		putUShort (s, qclass);
-		s += sizeof (u_int16_t);
-
-		/* Increment the query count... */
-		++count;
-break;
-	}
-	hdr -> qdcount = htons (count);
-
-dump_raw (query, s - query);
 	/* Send the query. */
-	status = sendto (dns_protocol_fd, query, s - query, 0,
-			 (struct sockaddr *)server, sizeof *server);
+	if (query -> next_server)
+		status = sendto (dns_protocol_fd,
+				 query -> buf, query -> len, 0,
+				 ((struct sockaddr *)&query ->
+				  next_server -> addr),
+				 sizeof query -> next_server -> addr);
+	else
+		status = -1;
 
-	/* If the send failed, report the failure. */
-	if (status < 0)
-		return 0;
-	return 1;
+	/* Look for the next server... */
+	query -> next_server = query -> next_server -> next;
+
+	/* If this is our first time, backoff one second. */
+	if (!query -> backoff)
+		query -> backoff = 1;
+
+	/* If the send failed, don't advance the backoff. */
+	else if (status < 0)
+		;
+
+	/* If we haven't run out of servers to try, don't backoff. */
+	else if (query -> next_server)
+		;
+
+	/* If we haven't backed off enough yet, back off some more. */
+	else if (query -> backoff < 30)
+		query -> backoff += random() % query -> backoff;
+
+	/* Set up the timeout. */
+	add_timeout (cur_time + query -> backoff, dns_timeout, query);
 }
 
 /* Process a reply from a name server. */
@@ -321,83 +309,74 @@ void dns_packet (protocol)
 {
 	HEADER *ns_header;
 	struct sockaddr_in from;
-	int fl;
-	unsigned char buf [4096];
-	unsigned char nbuf [512];
+	struct dns_wakeup *wakeup;
+	unsigned char buf [512];
 	unsigned char *base;
-	unsigned char *dptr;
+	unsigned char *dptr, *name;
 	u_int16_t type;
 	u_int16_t class;
 	TIME ttl;
 	u_int16_t rdlength;
 	int len, status;
 	int i;
+	struct dns_query *query;
 
 	len = sizeof from;
 	status = recvfrom (protocol -> fd, buf, sizeof buf, 0,
 			  (struct sockaddr *)&from, &len);
 	if (status < 0) {
-		warn ("icmp_echoreply: %m");
+		warn ("dns_packet: %m");
+		return;
+	}
+
+	/* Response is too long? */
+	if (len > 512) {
+		warn ("dns_packet: dns message too long (%d)", len);
 		return;
 	}
 
 	ns_header = (HEADER *)buf;
 	base = (unsigned char *)(ns_header + 1);
 
-#if 0
-	/* Ignore invalid packets... */
-	if (ntohs (ns_header -> id) > ns_query_max) {
-		printf ("Out-of-range NS message; id = %d\n",
-			ntohs (ns_header -> id));
-		return;
-	}
-#endif
-
 	/* Parse the response... */
 	dptr = base;
 
-	/* Skip over the queries... */
-	for (i = 0; i < ntohs (ns_header -> qdcount); i++) {
-		dptr += skipname (dptr);
-		/* Skip over the query type and query class. */
-		dptr += 2 * sizeof (u_int16_t);
+	/* If this is a response to a query from us, there should have
+           been only one query. */
+	if (ntohs (ns_header -> qdcount) != 1) {
+		dns_bogus (buf, len);
+		return;
 	}
 
-	/* Process the answers... */
-	for (i = 0; i < ntohs (ns_header -> ancount); i++) {
-		/* Skip over the name we looked up. */
-		dptr += skipname (dptr);
+	/* Find the start of the name in the query. */
+	name = dptr;
 
-		/* Get the type. */
-		type = getUShort (dptr);
-		dptr += sizeof type;
+	/* Skip over the name. */
+	dptr += skipname (dptr);
 
-		/* Get the class. */
-		class = getUShort (dptr);
-		dptr += sizeof class;
+	/* Skip over the query type and query class. */
+	dptr += 2 * sizeof (u_int16_t);
 
-		/* Get the time-to-live. */
-		ttl = getULong (dptr);
-		dptr += sizeof ttl;
+	/* See if we asked this question. */
+	query = find_dns_query (name, dptr - name, 0);
+	if (!query) {
+		dns_bogus (buf, len);
+		return;
+	}
 
-		/* Get the length of the reply. */
-		rdlength = getUShort (dptr);
-		dptr += sizeof rdlength;
+	/* Save the response. */
+	memcpy (buf, query -> buf, len);
 
-		switch (type) {
-		      case T_A:
-			note ("A record; value is %d.%d.%d.%d",
-			      dptr [0], dptr [1], dptr [2], dptr [3]);
-			break;
+	/* Remember where the question is and how long it is. */
+	query -> question = name;
+	query -> question_len = dptr - name;
 
-		      case T_CNAME:
-		      case T_PTR:
-			copy_out_name (base, dptr, nbuf);
-			note ("Domain name; value is %s\n", nbuf);
-			return;
+	/* Remember where the answer is and how long it is. */
+	query -> answer = dptr;
+	query -> answer_len = len - (dptr - buf);
 
-		      default:
-			note ("unhandled type: %x", type);
-		}
+	/* Wake up everybody who's waiting. */
+	for (wakeup = query -> wakeups; wakeup; wakeup = wakeup -> next) {
+		(*wakeup -> func) (query);
 	}
 }
