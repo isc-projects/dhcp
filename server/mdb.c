@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.67.2.5 2001/05/31 20:13:34 mellon Exp $ Copyright (c) 1996-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.67.2.6 2001/06/08 23:16:55 mellon Exp $ Copyright (c) 1996-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -58,6 +58,31 @@ struct hash_table *lease_hw_addr_hash;
 struct hash_table *host_name_hash;
 
 omapi_object_type_t *dhcp_type_host;
+
+static int find_uid_statement (struct executable_statement *esp,
+			       void *vp, int condp)
+{
+	struct executable_statement **evp = vp;
+
+	if (esp -> op == supersede_option_statement &&
+	    esp -> data.option &&
+	    (esp -> data.option -> option -> universe ==
+	     &dhcp_universe) &&
+	    (esp -> data.option -> option -> code ==
+	     DHO_DHCP_CLIENT_IDENTIFIER)) {
+		if (condp) {
+			log_error ("dhcp client identifier may not be %s",
+				   "specified conditionally.");
+		} else if (!(*evp)) {
+			executable_statement_reference (evp, esp, MDL);
+			return 1;
+		} else {
+			log_error ("only one dhcp client identifier may be %s",
+				   "specified");
+		}
+	}
+	return 0;
+}
 
 isc_result_t enter_host (hd, dynamicp, commit)
 	struct host_decl *hd;
@@ -155,21 +180,16 @@ isc_result_t enter_host (hd, dynamicp, commit)
 	/* See if there's a statement that sets the client identifier.
 	   This is a kludge - the client identifier really shouldn't be
 	   set with an executable statement. */
-	for (esp = hd -> group -> statements; esp; esp = esp -> next) {
-		if (esp -> op == supersede_option_statement &&
-		    esp -> data.option &&
-		    (esp -> data.option -> option -> universe ==
-		     &dhcp_universe) &&
-		    (esp -> data.option -> option -> code ==
-		     DHO_DHCP_CLIENT_IDENTIFIER)) {
-			evaluate_option_cache
-				(&hd -> client_identifier, (struct packet *)0,
-				 (struct lease *)0, (struct client_state *)0,
-				 (struct option_state *)0,
-				 (struct option_state *)0, &global_scope,
-				 esp -> data.option, MDL);
-			break;
-		}
+	esp = (struct executable_statement *)0;
+	if (executable_statement_foreach (hd -> group -> statements,
+					  find_uid_statement, &esp, 0)) {
+		evaluate_option_cache (&hd -> client_identifier,
+				       (struct packet *)0,
+				       (struct lease *)0,
+				       (struct client_state *)0,
+				       (struct option_state *)0,
+				       (struct option_state *)0, &global_scope,
+				       esp -> data.option, MDL);
 	}
 
 	/* If we got a client identifier, hash this entry by
@@ -568,6 +588,13 @@ void new_address_range (low, high, subnet, pool)
 
 #if defined (COMPACT_LEASES)
 struct lease *free_leases;
+
+#if defined (DEBUG_MEMORY_LEAKAGE) && 0
+void relinquish_free_leases ()
+{
+	
+}
+#endif
 
 /* If we are allocating leases in aggregations, there's really no way
    to free one, although perhaps we can maintain a free list. */
@@ -2032,3 +2059,34 @@ void dump_subnets ()
 HASH_FUNCTIONS (lease, const unsigned char *, struct lease)
 HASH_FUNCTIONS (host, const unsigned char *, struct host_decl)
 HASH_FUNCTIONS (class, const char *, struct class)
+
+#if defined (DEBUG_MEMORY_LEAKAGE)
+void free_everything ()
+{
+	struct subnet **sc, *sn = (struct subnet *)0;
+
+	subnet_dereference (&subnets, MDL);
+	shared_network_dereference (&shared_networks, MDL);
+
+	free_hash_table (host_hw_addr_hash, MDL);
+	host_hw_addr_hash = 0;
+	free_hash_table (host_uid_hash, MDL);
+	host_uid_hash = 0;
+	free_hash_table (lease_uid_hash, MDL);
+	lease_uid_hash = 0;
+	free_hash_table (lease_ip_addr_hash, MDL);
+	lease_ip_addr_hash = 0;
+	free_hash_table (lease_hw_addr_hash, MDL);
+	lease_hw_addr_hash = 0;
+	free_hash_table (host_name_hash, MDL);
+	host_name_hash = 0;
+
+	relinquish_free_lease_states ();
+	relinquish_free_pairs ();
+	relinquish_free_expressions ();
+	relinquish_free_binding_values ();
+	relinquish_free_option_caches ();
+	relinquish_free_packets ();
+
+}
+#endif /* DEBUG_MEMORY_LEAKAGE */
