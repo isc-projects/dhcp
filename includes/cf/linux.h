@@ -123,6 +123,13 @@ extern int h_errno;
 #  define HAVE_SO_BINDTODEVICE
 #  define HAVE_SIOCGIFHWADDR
 # else
+#  if (LINUX_MAJOR == 2)
+#   define HAVE_ARPHRD_METRICOM
+#   define HAVE_ARPHRD_IEEE802
+#   define HAVE_ARPHRD_LOOPBACK
+#   define HAVE_SO_BINDTODEVICE
+#   define HAVE_SIOCGIFHWADDR
+#  endif
 #  define USE_SOCKETS
 #  define IGNORE_HOSTUNREACH
 # endif
