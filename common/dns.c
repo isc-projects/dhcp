@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dns.c,v 1.19 2000/03/18 02:15:36 mellon Exp $ Copyright (c) 2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dns.c,v 1.20 2000/04/06 22:41:47 mellon Exp $ Copyright (c) 2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -63,7 +63,7 @@ static char copyright[] =
  *	zone FOO.COM {
  *	  primary 10.0.17.1;
  *	  secondary 10.0.22.1, 10.0.23.1;
- *	  tsig-key "FOO.COM Key";
+ *	  key "FOO.COM Key";
  * 	}
  *
  * If an update is requested for GAZANGA.TOPANGA.FOO.COM, then the name
@@ -115,14 +115,18 @@ static char copyright[] =
  *
  * TSIG keys are defined like this:
  *
- *	tsig-key "FOO.COM Key" HMAC-MD5.SIG-ALG.REG.INT <CSHL>;
+ *	key "FOO.COM Key" {
+ *		algorithm HMAC-MD5.SIG-ALG.REG.INT;
+ *		secret <Base64>;
+ *	}
  *
- * CSHL is a colon-seperated list of hexadecimal bytes that make up
- * the key.   It's also permissible to use a quoted string here - this will
- * be translated as the ASCII bytes making up the string, and will not include
- * any NUL termination.   The key name can be any text string, and the
- * key type must be one of the key types defined in the draft or by the IANA.
- * Currently only the HMAC-MD5... key type is supported.
+ * <Base64> is a number expressed in base64 that represents the key.
+ * It's also permissible to use a quoted string here - this will be
+ * translated as the ASCII bytes making up the string, and will not
+ * include any NUL termination.  The key name can be any text string,
+ * and the key type must be one of the key types defined in the draft
+ * or by the IANA.  Currently only the HMAC-MD5... key type is
+ * supported.
  */
 
 struct hash_table *tsig_key_hash;
