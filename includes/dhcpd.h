@@ -54,12 +54,46 @@
 #include "hash.h"
 #include "inet.h"
 #include "auth.h"
+#include "dhctoken.h"
 
 #include <omapip/omapip.h>
 
 #if !defined (OPTION_HASH_SIZE)
 # define OPTION_HASH_SIZE 17
 #endif
+
+/* A parsing context. */
+
+struct parse {
+	int lexline;
+	int lexchar;
+	char *token_line;
+	char *prev_line;
+	char *cur_line;
+	char *tlname;
+	int eol_token;
+
+	char line1 [81];
+	char line2 [81];
+	int lpos;
+	int line;
+	int tlpos;
+	int tline;
+	enum dhcp_token token;
+	int ugflag;
+	char *tval;
+	char tokbuf [1500];
+
+#ifdef OLD_LEXER
+	char comments [4096];
+	int comment_index;
+#endif
+	int warnings_occurred;
+	int file;
+	char *inbuf;
+	int bufix, buflen;
+	int bufsiz;
+};
 
 /* Variable-length array of data. */
 
@@ -863,12 +897,11 @@ int hashed_option_space_encapsulate PROTO ((struct data_string *,
 					    struct universe *));
 
 /* errwarn.c */
-extern int warnings_occurred;
 void log_fatal PROTO ((char *, ...));
 int log_error PROTO ((char *, ...));
 int log_info PROTO ((char *, ...));
 int log_debug PROTO ((char *, ...));
-int parse_warn PROTO ((char *, ...));
+int parse_warn PROTO ((struct parse *, char *, ...));
 
 /* dhcpd.c */
 extern TIME cur_time;
@@ -892,73 +925,79 @@ void lease_pinged PROTO ((struct iaddr, u_int8_t *, int));
 void lease_ping_timeout PROTO ((void *));
 
 /* conflex.c */
-extern int lexline, lexchar;
-extern char *token_line, *tlname;
-extern char comments [4096];
-extern int comment_index;
-extern int eol_token;
-void new_parse PROTO ((char *));
-enum dhcp_token next_token PROTO ((char **, FILE *));
-enum dhcp_token peek_token PROTO ((char **, FILE *));
+isc_result_t new_parse PROTO ((struct parse **, int, char *, int, char *));
+isc_result_t end_parse PROTO ((struct parse **));
+enum dhcp_token next_token PROTO ((char **, struct parse *));
+enum dhcp_token peek_token PROTO ((char **, struct parse *));
 
 /* confpars.c */
-int readconf PROTO ((void));
-void read_leases PROTO ((void));
-int parse_statement PROTO ((FILE *,
+isc_result_t readconf PROTO ((void));
+isc_result_t read_leases PROTO ((void));
+int parse_statement PROTO ((struct parse *,
 			    struct group *, int, struct host_decl *, int));
-void parse_failover_peer PROTO ((FILE *, struct group *, int));
-enum failover_state parse_failover_state PROTO ((FILE *));
-void parse_pool_statement PROTO ((FILE *, struct group *, int));
-int parse_boolean PROTO ((FILE *));
-int parse_lbrace PROTO ((FILE *));
-void parse_host_declaration PROTO ((FILE *, struct group *));
-struct class *parse_class_declaration PROTO ((FILE *, struct group *, int));
-void parse_shared_net_declaration PROTO ((FILE *, struct group *));
-void parse_subnet_declaration PROTO ((FILE *, struct shared_network *));
-void parse_group_declaration PROTO ((FILE *, struct group *));
-int parse_fixed_addr_param PROTO ((struct option_cache **, FILE *));
-TIME parse_timestamp PROTO ((FILE *));
-struct lease *parse_lease_declaration PROTO ((FILE *));
-void parse_address_range PROTO ((FILE *, struct group *, int, struct pool *));
+void parse_failover_peer PROTO ((struct parse *, struct group *, int));
+enum failover_state parse_failover_state PROTO ((struct parse *));
+void parse_pool_statement PROTO ((struct parse *, struct group *, int));
+int parse_boolean PROTO ((struct parse *));
+int parse_lbrace PROTO ((struct parse *));
+void parse_host_declaration PROTO ((struct parse *, struct group *));
+struct class *parse_class_declaration PROTO ((struct parse *,
+					      struct group *, int));
+void parse_shared_net_declaration PROTO ((struct parse *, struct group *));
+void parse_subnet_declaration PROTO ((struct parse *,
+				      struct shared_network *));
+void parse_group_declaration PROTO ((struct parse *, struct group *));
+int parse_fixed_addr_param PROTO ((struct option_cache **, struct parse *));
+TIME parse_timestamp PROTO ((struct parse *));
+struct lease *parse_lease_declaration PROTO ((struct parse *));
+void parse_address_range PROTO ((struct parse *,
+				 struct group *, int, struct pool *));
 
 /* parse.c */
-void skip_to_semi PROTO ((FILE *));
-void skip_to_rbrace PROTO ((FILE *, int));
-int parse_semi PROTO ((FILE *));
-char *parse_string PROTO ((FILE *));
-char *parse_host_name PROTO ((FILE *));
-int parse_ip_addr_or_hostname PROTO ((struct expression **, FILE *, int));
-void parse_hardware_param PROTO ((FILE *, struct hardware *));
-void parse_lease_time PROTO ((FILE *, TIME *));
-unsigned char *parse_numeric_aggregate PROTO ((FILE *,
+void skip_to_semi PROTO ((struct parse *));
+void skip_to_rbrace PROTO ((struct parse *, int));
+int parse_semi PROTO ((struct parse *));
+char *parse_string PROTO ((struct parse *));
+char *parse_host_name PROTO ((struct parse *));
+int parse_ip_addr_or_hostname PROTO ((struct expression **,
+				      struct parse *, int));
+void parse_hardware_param PROTO ((struct parse *, struct hardware *));
+void parse_lease_time PROTO ((struct parse *, TIME *));
+unsigned char *parse_numeric_aggregate PROTO ((struct parse *,
 					       unsigned char *, int *,
 					       int, int, int));
-void convert_num PROTO ((unsigned char *, char *, int, int));
-TIME parse_date PROTO ((FILE *));
-struct option *parse_option_name PROTO ((FILE *, int));
-void parse_option_space_decl PROTO ((FILE *));
-int parse_option_code_definition PROTO ((FILE *, struct option *));
-int parse_cshl PROTO ((struct data_string *, FILE *));
+void convert_num PROTO ((struct parse *, unsigned char *, char *, int, int));
+TIME parse_date PROTO ((struct parse *));
+struct option *parse_option_name PROTO ((struct parse *, int));
+void parse_option_space_decl PROTO ((struct parse *));
+int parse_option_code_definition PROTO ((struct parse *, struct option *));
+int parse_cshl PROTO ((struct data_string *, struct parse *));
 int parse_executable_statement PROTO ((struct executable_statement **,
-				       FILE *, int *));
+				       struct parse *, int *));
 int parse_executable_statements PROTO ((struct executable_statement **,
-					FILE *, int *));
-int parse_on_statement PROTO ((struct executable_statement **, FILE *, int *));
-int parse_if_statement PROTO ((struct executable_statement **, FILE *, int *));
-int parse_boolean_expression PROTO ((struct expression **, FILE *, int *));
-int parse_data_expression PROTO ((struct expression **, FILE *, int *));
-int parse_numeric_expression PROTO ((struct expression **, FILE *, int *));
-int parse_non_binary PROTO ((struct expression **, FILE *, int *,
+					struct parse *, int *));
+int parse_on_statement PROTO ((struct executable_statement **,
+			       struct parse *, int *));
+int parse_if_statement PROTO ((struct executable_statement **,
+			       struct parse *, int *));
+int parse_boolean_expression PROTO ((struct expression **,
+				     struct parse *, int *));
+int parse_data_expression PROTO ((struct expression **,
+				  struct parse *, int *));
+int parse_numeric_expression PROTO ((struct expression **,
+				     struct parse *, int *));
+int parse_non_binary PROTO ((struct expression **, struct parse *, int *,
 			     enum expression_context));
-int parse_expression PROTO ((struct expression **, FILE *, int *,
+int parse_expression PROTO ((struct expression **, struct parse *, int *,
 			     enum expression_context,
 			     struct expression **, enum expr_op));
-int parse_option_statement PROTO ((struct executable_statement **, FILE *, int,
+int parse_option_statement PROTO ((struct executable_statement **,
+				   struct parse *, int,
 				   struct option *, enum statement_op));
-int parse_option_token PROTO ((struct expression **, FILE *, char *,
+int parse_option_token PROTO ((struct expression **, struct parse *, char *,
 			       struct expression *, int, int));
-int parse_allow_deny PROTO ((struct option_cache **, FILE *, int));
-int parse_auth_key PROTO ((struct data_string *, FILE *));
+int parse_allow_deny PROTO ((struct option_cache **, struct parse *, int));
+int parse_auth_key PROTO ((struct data_string *, struct parse *));
 
 /* tree.c */
 pair cons PROTO ((caddr_t, pair));
@@ -1429,7 +1468,7 @@ int db_printable PROTO ((char *));
 int db_printable_len PROTO ((char *, int));
 int write_billing_class PROTO ((struct class *));
 int commit_leases PROTO ((void));
-void db_startup PROTO ((void));
+void db_startup PROTO ((int));
 void new_lease_file PROTO ((void));
 
 /* packet.c */
@@ -1461,28 +1500,28 @@ ssize_t decode_tr_header PROTO ((struct interface_info *,
 				 int, struct hardware *));
 
 /* dhxpxlt.c */
-void convert_statement PROTO ((FILE *));
-void convert_host_statement PROTO ((FILE *, jrefproto));
-void convert_host_name PROTO ((FILE *, jrefproto));
-void convert_class_statement PROTO ((FILE *, jrefproto, int));
-void convert_class_decl PROTO ((FILE *, jrefproto));
-void convert_lease_time PROTO ((FILE *, jrefproto, char *));
-void convert_shared_net_statement PROTO ((FILE *, jrefproto));
-void convert_subnet_statement PROTO ((FILE *, jrefproto));
-void convert_subnet_decl PROTO ((FILE *, jrefproto));
-void convert_host_decl PROTO ((FILE *, jrefproto));
-void convert_hardware_decl PROTO ((FILE *, jrefproto));
-void convert_hardware_addr PROTO ((FILE *, jrefproto));
-void convert_filename_decl PROTO ((FILE *, jrefproto));
-void convert_servername_decl PROTO ((FILE *, jrefproto));
-void convert_ip_addr_or_hostname PROTO ((FILE *, jrefproto, int));
-void convert_fixed_addr_decl PROTO ((FILE *, jrefproto));
-void convert_option_decl PROTO ((FILE *, jrefproto));
-void convert_timestamp PROTO ((FILE *, jrefproto));
-void convert_lease_statement PROTO ((FILE *, jrefproto));
-void convert_address_range PROTO ((FILE *, jrefproto));
-void convert_date PROTO ((FILE *, jrefproto, char *));
-void convert_numeric_aggregate PROTO ((FILE *, jrefproto, int, int, int, int));
+void convert_statement PROTO ((struct parse *));
+void convert_host_statement PROTO ((struct parse *, jrefproto));
+void convert_host_name PROTO ((struct parse *, jrefproto));
+void convert_class_statement PROTO ((struct parse *, jrefproto, int));
+void convert_class_decl PROTO ((struct parse *, jrefproto));
+void convert_lease_time PROTO ((struct parse *, jrefproto, char *));
+void convert_shared_net_statement PROTO ((struct parse *, jrefproto));
+void convert_subnet_statement PROTO ((struct parse *, jrefproto));
+void convert_subnet_decl PROTO ((struct parse *, jrefproto));
+void convert_host_decl PROTO ((struct parse *, jrefproto));
+void convert_hardware_decl PROTO ((struct parse *, jrefproto));
+void convert_hardware_addr PROTO ((struct parse *, jrefproto));
+void convert_filename_decl PROTO ((struct parse *, jrefproto));
+void convert_servername_decl PROTO ((struct parse *, jrefproto));
+void convert_ip_addr_or_hostname PROTO ((struct parse *, jrefproto, int));
+void convert_fixed_addr_decl PROTO ((struct parse *, jrefproto));
+void convert_option_decl PROTO ((struct parse *, jrefproto));
+void convert_timestamp PROTO ((struct parse *, jrefproto));
+void convert_lease_statement PROTO ((struct parse *, jrefproto));
+void convert_address_range PROTO ((struct parse *, jrefproto));
+void convert_date PROTO ((struct parse *, jrefproto, char *));
+void convert_numeric_aggregate PROTO ((struct parse *, jrefproto, int, int, int, int));
 void indent PROTO ((int));
 
 /* route.c */
@@ -1499,26 +1538,27 @@ void set_broadcast_addr PROTO ((struct interface_info *, struct in_addr));
 void set_ip_address PROTO ((struct interface_info *, struct in_addr));
 
 /* clparse.c */
-int read_client_conf PROTO ((void));
+isc_result_t read_client_conf PROTO ((void));
 void read_client_leases PROTO ((void));
-void parse_client_statement PROTO ((FILE *, struct interface_info *,
+void parse_client_statement PROTO ((struct parse *, struct interface_info *,
 				    struct client_config *));
-int parse_X PROTO ((FILE *, u_int8_t *, int));
-void parse_option_list PROTO ((FILE *, u_int32_t **));
-void parse_interface_declaration PROTO ((FILE *,
+int parse_X PROTO ((struct parse *, u_int8_t *, int));
+void parse_option_list PROTO ((struct parse *, u_int32_t **));
+void parse_interface_declaration PROTO ((struct parse *,
 					 struct client_config *, char *));
 struct interface_info *interface_or_dummy PROTO ((char *));
 void make_client_state PROTO ((struct client_state **));
 void make_client_config PROTO ((struct client_state *,
 				struct client_config *));
-void parse_client_lease_statement PROTO ((FILE *, int));
-void parse_client_lease_declaration PROTO ((FILE *, struct client_lease *,
+void parse_client_lease_statement PROTO ((struct parse *, int));
+void parse_client_lease_declaration PROTO ((struct parse *,
+					    struct client_lease *,
 					    struct interface_info **,
 					    struct client_state **));
-int parse_option_decl PROTO ((struct option_cache **, FILE *));
-void parse_string_list PROTO ((FILE *, struct string_list **, int));
-int parse_ip_addr PROTO ((FILE *, struct iaddr *));
-void parse_reject_statement PROTO ((FILE *, struct client_config *));
+int parse_option_decl PROTO ((struct option_cache **, struct parse *));
+void parse_string_list PROTO ((struct parse *, struct string_list **, int));
+int parse_ip_addr PROTO ((struct parse *, struct iaddr *));
+void parse_reject_statement PROTO ((struct parse *, struct client_config *));
 
 /* dhcrelay.c */
 void relay PROTO ((struct interface_info *, struct dhcp_packet *, int,
@@ -1739,14 +1779,13 @@ extern omapi_object_type_t *dhcp_type_host;
 
 
 isc_result_t enter_host PROTO ((struct host_decl *, int, int));
-void delete_host PROTO ((struct host_decl *, int));
+isc_result_t delete_host PROTO ((struct host_decl *, int));
 struct host_decl *find_hosts_by_haddr PROTO ((int, unsigned char *, int));
 struct host_decl *find_hosts_by_uid PROTO ((unsigned char *, int));
 struct subnet *find_host_for_network PROTO ((struct host_decl **,
 					     struct iaddr *,
 					     struct shared_network *));
-void delete_group PROTO ((struct group_object *, int));
-void delete_group (struct group_object *, int);
+isc_result_t delete_group (struct group_object *, int);
 isc_result_t supersede_group (struct group_object *, int);
 void new_address_range PROTO ((struct iaddr, struct iaddr,
 			       struct subnet *, struct pool *));
