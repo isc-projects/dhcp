@@ -102,7 +102,7 @@ int main (argc, argv, envp)
 	if (bind (sock, (struct sockaddr *)&name, sizeof name) < 0)
 		error ("Can't bind to dhcp address: %m");
 
-	if (fork() > 0) {
+	if (fork() == 0) {
 		while (1)
 			do_a_packet (sock);
 	} else {
@@ -280,12 +280,14 @@ void do_a_line (sock)
 	raw.xid = xid++;
 	raw.xid = htons (raw.xid);
 	raw.secs = 0;
-	raw.flags = 0;
+	raw.flags = htons (BOOTP_BROADCAST);
 	raw.hops = 0;
 	raw.op = BOOTREQUEST;
 		
 	to.sin_port = htons (2000);
-	to.sin_addr.s_addr = INADDR_BROADCAST;
+	to.sin_addr.s_addr = INADDR_BROADCAST; 
+/*	inet_aton ("130.129.63.255", &to.sin_addr);*//* XXX bcst bug */
+
 	to.sin_family = AF_INET;
 	to.sin_len = sizeof to;
 	memset (to.sin_zero, 0, sizeof to.sin_zero);
