@@ -47,9 +47,6 @@ static char copyright[] =
 
 #include "dhcpd.h"
 #include <sys/ioctl.h>
-#ifdef AF_LINK
-#include <net/if_dl.h>
-#endif
 
 struct interface_info *interfaces;
 static struct hardware_link *interface_links;

@@ -51,7 +51,6 @@ static char copyright[] =
 #include <sys/uio.h>
 
 #include <net/bpf.h>
-#include <net/if_dl.h>
 #include <netinet/in_systm.h>
 #include <netinet/ip.h>
 #include <netinet/udp.h>
