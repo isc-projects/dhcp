@@ -59,7 +59,7 @@ res_nsendsigned(res_state statp,
 	if (dstkey == NULL) {
 		free(nstatp);
 		free(newmsg);
-		return ISC_R_INVALIDARG;
+		return ISC_R_BADKEY;
 	}
 
 	nstatp->nscount = 1;
