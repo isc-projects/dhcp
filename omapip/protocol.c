@@ -926,14 +926,14 @@ isc_result_t omapi_protocol_destroy (omapi_object_t *h,
 	if (p -> default_auth && !p -> remote_auth_list)
 		dfree (p -> default_auth, file, line);
 
-	do {
+	while (p -> remote_auth_list) {
 		omapi_remote_auth_t *r = p -> remote_auth_list -> next;
+		p -> remote_auth_list = r;
 		if (r) {
 			omapi_object_dereference (&r -> a, file, line);
 			dfree (r, file, line);
 		}
-		p -> remote_auth_list = r;
-	} while (p -> remote_auth_list);
+	}
 	return ISC_R_SUCCESS;
 }
 
