@@ -48,12 +48,23 @@ and for prodding me into improving it.
 
 			Changes since 3.0.1rc10
 
-- Buffer overflows in minires repaired.
+- Potential buffer overflows in minires repaired.
 
 - A change to the linux client script to use /bin/bash, since /bin/sh may
   not be bash.
 
 - Some missing va_end cleanups thanks to a patch from Thomas Klausner.
+
+- A correction of boolean parsing syntax validation - some illegal syntaxes
+  that worked before are now detected and produce errs, some legal syntaxes
+  that errored before will now work properly.
+
+- Some search-and-replace errors that caused some options to change their
+  names was repaired.
+
+- Shu-min Chang of the Intel corporation has contributed a perl script and
+  module that converts the MS NT4 DHCP configuration to a ISC DHCP3
+  configuration file.
 
 			Changes since 3.0.1rc9
 
