@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcpxlt.c,v 1.5 1996/08/30 23:41:07 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcpxlt.c,v 1.6 1996/08/31 00:48:48 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -313,7 +313,7 @@ void convert_class_statement (cfile, bc, type)
 	}
 
 	indent (0);
-	if (class)
+	if (type)
 		printf ("user-class %s {\n", val);
 	else
 		printf ("vendor-class %s {\n", val);
