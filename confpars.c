@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.38 1997/02/18 14:27:22 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.39 1997/02/22 08:41:01 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -71,6 +71,8 @@ int readconf ()
 	root_group.max_lease_time = 86400; /* 24 hours. */
 	root_group.bootp_lease_cutoff = MAX_TIME;
 	root_group.boot_unknown_clients = 1;
+	root_group.allow_bootp = 1;
+	root_group.allow_booting = 1;
 
 	if ((cfile = fopen (path_dhcpd_conf, "r")) == NULL)
 		error ("Can't open %s: %m", path_dhcpd_conf);
@@ -151,6 +153,8 @@ void read_leases ()
 	       | SERVER_NAME string-parameter
 	       | hardware-parameter
 	       | fixed-address-parameter
+	       | ALLOW allow-deny-keyword
+	       | DENY allow-deny-keyword
 
    declaration :== host-declaration
 		 | group-declaration
@@ -364,6 +368,14 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		parse_address_range (cfile, group -> subnet);
 		return declaration;
 
+	      case ALLOW:
+		parse_allow_deny (cfile, group, 1);
+		break;
+
+	      case DENY:
+		parse_allow_deny (cfile, group, 0);
+		break;
+
 	      default:
 		if (declaration)
 			parse_warn ("expecting a declaration.");
@@ -379,6 +391,45 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 	}
 
 	return 0;
+}
+
+/* allow-deny-keyword :== BOOTP
+   			| BOOTING
+			| DYNAMIC_BOOTP
+			| UNKNOWN_CLIENTS */
+
+void parse_allow_deny (cfile, group, flag)
+	FILE *cfile;
+	struct group *group;
+	int flag;
+{
+	int token;
+	char *val;
+
+	token = next_token (&val, cfile);
+	switch (token) {
+	      case BOOTP:
+		group -> allow_bootp = flag;
+		break;
+
+	      case BOOTING:
+		group -> allow_booting = flag;
+		break;
+
+	      case DYNAMIC_BOOTP:
+		group -> dynamic_bootp = flag;
+		break;
+
+	      case UNKNOWN_CLIENTS:
+		group -> boot_unknown_clients = flag;
+		break;
+
+	      default:
+		parse_warn ("expecting allow/deny key");
+		skip_to_semi (cfile);
+		return;
+	}
+	parse_semi (cfile);
 }
 
 /* boolean :== ON SEMI | OFF SEMI | TRUE SEMI | FALSE SEMI */
