@@ -119,6 +119,7 @@ struct lease {
 #	define PERSISTENT_FLAGS		(DYNAMIC_BOOTP_OK)
 #	define EPHEMERAL_FLAGS		(BOOTP_LEASE)
 #	define MS_NULL_TERMINATION	8
+#	define ABANDONED_LEASE		16
 
 	struct lease_state *state;
 };
