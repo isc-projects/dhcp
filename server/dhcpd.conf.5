@@ -423,6 +423,20 @@ that the other server is down, in which case the remaining server will
 for allocation, and begin to reuse them.   This is called putting the
 server into the PARTNER-DOWN state.
 .PP
+You can put the server into the PARTNER-DOWN state either by using the
+.B omshell (8)
+command or by stopping the server, editing the last peer state
+declaration in the lease file, and restarting the server.   If you use
+this last method, be sure to leave the date and time of the start of
+the state blank:
+.PP
+.nf
+.B failover peer "\fIname\fB" state {
+.B   my   state partner-down;
+.B   peer state \fIstate\fB at \fIdate\fB;
+.B }
+.fi
+.PP
 When the other server comes back online, it should automatically
 detect that it has been offline and request a complete update from the
 server that was running in the PARTNER-DOWN state, and then both
