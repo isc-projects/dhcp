@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.41 1999/04/23 22:10:52 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.42 1999/05/07 17:36:36 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -1125,7 +1125,11 @@ int option_cache_dereference (ptr, name)
 	if (!ptr || !*ptr) {
 		log_error ("Null pointer in option_cache_dereference: %s",
 			   name);
+#if defined (POINTER_DEBUG)
 		abort ();
+#else
+		return 0;
+#endif
 	}
 
 	(*ptr) -> refcnt--;

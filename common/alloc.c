@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: alloc.c,v 1.28 1999/04/05 19:02:17 mellon Exp $ Copyright (c) 1995, 1996, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: alloc.c,v 1.29 1999/05/07 17:34:30 mellon Exp $ Copyright (c) 1995, 1996, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -471,12 +471,20 @@ int expression_reference (ptr, src, name)
 {
 	if (!ptr) {
 		log_error ("Null pointer in expression_reference: %s", name);
+#if defined (POINTER_DEBUG)
 		abort ();
+#else
+		return 0;
+#endif
 	}
 	if (*ptr) {
 		log_error ("Non-null pointer in expression_reference (%s)",
 		      name);
+#if defined (POINTER_DEBUG)
 		abort ();
+#else
+		return 0;
+#endif
 	}
 	*ptr = src;
 	src -> refcnt++;
@@ -511,12 +519,20 @@ int option_cache_reference (ptr, src, name)
 {
 	if (!ptr) {
 		log_error ("Null pointer in option_cache_reference: %s", name);
+#if defined (POINTER_DEBUG)
 		abort ();
+#else
+		return 0;
+#endif
 	}
 	if (*ptr) {
 		log_error ("Non-null pointer in option_cache_reference (%s)",
 		      name);
+#if defined (POINTER_DEBUG)
 		abort ();
+#else
+		return 0;
+#endif
 	}
 	*ptr = src;
 	src -> refcnt++;
@@ -546,11 +562,19 @@ int buffer_reference (ptr, bp, name)
 	if (!ptr) {
 		log_error ("Null pointer passed to buffer_reference: %s",
 			   name);
+#if defined (POINTER_DEBUG)
 		abort ();
+#else
+		return 0;
+#endif
 	}
 	if (*ptr) {
 		log_error ("Non-null pointer in buffer_reference (%s)", name);
+#if defined (POINTER_DEBUG)
 		abort ();
+#else
+		return 0;
+#endif
 	}
 	*ptr = bp;
 	bp -> refcnt++;
@@ -566,7 +590,11 @@ int buffer_dereference (ptr, name)
 	if (!ptr || !*ptr) {
 		log_error ("Null pointer passed to buffer_dereference: %s",
 			   name);
+#if defined (POINTER_DEBUG)
 		abort ();
+#else
+		return 0;
+#endif
 	}
 
 	(*ptr) -> refcnt--;
@@ -600,12 +628,20 @@ int dns_host_entry_reference (ptr, bp, name)
 	if (!ptr) {
 		log_error ("Null pointer in dns_host_entry_reference: %s",
 			   name);
+#if defined (POINTER_DEBUG)
 		abort ();
+#else
+		return 0;
+#endif
 	}
 	if (*ptr) {
 		log_error ("Non-null pointer in dns_host_entry_reference (%s)",
 			   name);
+#if defined (POINTER_DEBUG)
 		abort ();
+#else
+		return 0;
+#endif
 	}
 	*ptr = bp;
 	bp -> refcnt++;
@@ -621,7 +657,11 @@ int dns_host_entry_dereference (ptr, name)
 	if (!ptr || !*ptr) {
 		log_error ("Null pointer in dns_host_entry_dereference: %s",
 			   name);
+#if defined (POINTER_DEBUG)
 		abort ();
+#else
+		return 0;
+#endif
 	}
 
 	(*ptr) -> refcnt--;
@@ -640,12 +680,20 @@ int option_state_allocate (ptr, name)
 	if (!ptr) {
 		log_error ("Null pointer passed to option_state_allocate: %s",
 			   name);
+#if defined (POINTER_DEBUG)
 		abort ();
+#else
+		return 0;
+#endif
 	}
 	if (*ptr) {
 		log_error ("Non-null pointer in option_state_allocate (%s)",
 			   name);
+#if defined (POINTER_DEBUG)
 		abort ();
+#else
+		return 0;
+#endif
 	}
 
 	size = sizeof **ptr + (universe_count - 1) * sizeof (VOIDPTR);
@@ -667,12 +715,20 @@ int option_state_reference (ptr, bp, name)
 	if (!ptr) {
 		log_error ("Null pointer in option_state_reference: %s",
 			   name);
+#if defined (POINTER_DEBUG)
 		abort ();
+#else
+		return 0;
+#endif
 	}
 	if (*ptr) {
 		log_error ("Non-null pointer in option_state_reference (%s)",
 			   name);
+#if defined (POINTER_DEBUG)
 		abort ();
+#else
+		return 0;
+#endif
 	}
 	*ptr = bp;
 	bp -> refcnt++;
@@ -689,7 +745,11 @@ int option_state_dereference (ptr, name)
 	if (!ptr || !*ptr) {
 		log_error ("Null pointer in option_state_dereference: %s",
 			   name);
+#if defined (POINTER_DEBUG)
 		abort ();
+#else
+		return 0;
+#endif
 	}
 
 	options = *ptr;

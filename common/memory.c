@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: memory.c,v 1.48 1999/03/16 05:50:35 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: memory.c,v 1.49 1999/05/07 17:35:12 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -733,11 +733,6 @@ void uid_hash_add (lease)
 		find_lease_by_uid (lease -> uid, lease -> uid_len);
 	struct lease *scan;
 
-#ifdef DEBUG
-	if (lease -> n_uid)
-		abort ();
-#endif
-
 	/* If it's not in the hash, just add it. */
 	if (!head)
 		add_hash (lease_uid_hash, lease -> uid,
@@ -745,11 +740,7 @@ void uid_hash_add (lease)
 	else {
 		/* Otherwise, attach it to the end of the list. */
 		for (scan = head; scan -> n_uid; scan = scan -> n_uid)
-#ifdef DEBUG
-			if (scan == lease)
-				abort ()
-#endif
-					;
+			;
 		scan -> n_uid = lease;
 	}
 }
