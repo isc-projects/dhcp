@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.20 1999/04/05 15:50:09 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.21 1999/04/12 22:09:24 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1534,6 +1534,13 @@ int parse_non_binary (expr, cfile, lose, context)
 						"parse_expression: EXISTS");
 			return 0;
 		}
+		break;
+
+	      case KNOWN:
+		token = next_token (&val, cfile);
+		if (!expression_allocate (expr, "parse_expression: EXISTS"))
+			log_fatal ("can't allocate expression");
+		(*expr) -> op = expr_known;
 		break;
 
 	      case SUBSTRING:
