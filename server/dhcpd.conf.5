@@ -2037,11 +2037,11 @@ of the configuration file.
 .RE
 .PP
 The
-.I ping-checks
+.I ping-check
 statement
 .RS 0.25i
 .PP
-.B ping-checks
+.B ping-check
 .I flag\fR\fB;\fR
 .PP
 When the DHCP server is considering dynamically allocating an IP
@@ -2053,7 +2053,7 @@ not respond to the client.
 .PP
 This \fIping check\fR introduces a one-second delay in responding to
 DHCPDISCOVER messages, which can be a problem for some clients.   The
-ping-checks configuration parameter can be used to control checking -
+ping-check configuration parameter can be used to control checking -
 if its value is false, no ping check is done.
 .RE
 .PP
