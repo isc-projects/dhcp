@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.28.2.4 1999/10/25 20:44:59 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.28.2.5 1999/10/27 21:38:05 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2194,8 +2194,9 @@ struct executable_statement *parse_option_statement (cfile, lookups,
 			expr = (struct expression *)0;
 			if (!parse_option_token (&expr, cfile, fmt,
 						 tmp, uniform, lookups)) {
-				expression_dereference
-					(&tmp, "parse_option_statement");
+				if (tmp)
+				    expression_dereference
+					    (&tmp, "parse_option_statement");
 				return (struct executable_statement *)0;
 			}
 			if (tmp)
