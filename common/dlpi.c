@@ -68,6 +68,11 @@
  * to sleep.
  */
 
+#ifndef lint
+static char copyright[] =
+"$Id: dlpi.c,v 1.10 1999/04/23 22:06:29 mellon Exp $ Copyright (c) 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+#endif /* not lint */
+
 #include "dhcpd.h"
 
 #if defined (USE_DLPI_SEND) || defined (USE_DLPI_RECEIVE)
@@ -108,7 +113,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dlpi.c,v 1.9 1999/03/16 06:37:48 mellon Exp $ Copyright (c) 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dlpi.c,v 1.10 1999/04/23 22:06:29 mellon Exp $ Copyright (c) 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 static int strioctl PROTO ((int fd, int cmd, int timeout, int len, char *dp));
