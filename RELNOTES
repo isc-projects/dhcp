@@ -1,7 +1,7 @@
 	    Internet Software Consortium DHCP Distribution
 			     Version 3.0.1
-			  Release Candidate 4
-			   November 6, 2001
+			  Release Candidate 5
+			   January 14, 2002
 
 			    Release Notes
 
@@ -45,6 +45,19 @@ Measurement Systems, Igor Sharfmesser at Kazakh Telecom, and Brian
 Murrell at BC Tel Advanced Communications.  I'd like to express my
 thanks to all of these good people here, both for working on the code
 and for prodding me into improving it.
+
+			Changes since 3.0.1rc4
+
+- Fix a bug that would cause the DHCP server to spin if asked to parse
+  a certain kind of incorrect statement.
+
+- Fix a related bug that would prevent an error from being reported in
+  the same case.
+
+- Additional documentation.
+
+- Make sure that the hardware address matches the lease when
+  processing a DHCPRELEASE message.
 
 			Changes since 3.0.1rc3
 
