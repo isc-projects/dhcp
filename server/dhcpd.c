@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.71.2.4 1999/12/22 02:59:04 mellon Exp $ Copyright 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.71.2.5 1999/12/22 20:48:09 mellon Exp $ Copyright 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.";
 #endif
 
   static char copyright[] =
@@ -86,14 +86,6 @@ int main (argc, argv, envp)
 #else
 	openlog ("dhcpd", LOG_NDELAY, DHCPD_LOG_FACILITY);
 #endif
-
-#ifndef DEBUG
-#ifndef SYSLOG_4_2
-#ifndef __CYGWIN32__ /* XXX */
-	setlogmask (LOG_UPTO (LOG_INFO));
-#endif
-#endif
-#endif	
 
 	for (i = 1; i < argc; i++) {
 		if (!strcmp (argv [i], "-p")) {
@@ -305,7 +297,7 @@ int main (argc, argv, envp)
 	/* Set up the bootp packet handler... */
 	bootp_packet_handler = do_packet;
 
-#if defined (DEBUG_MEMORY_LEAKAGE)
+#if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL)
 	dmalloc_cutoff_generation = dmalloc_generation;
 	dmalloc_longterm = dmalloc_outstanding;
 	dmalloc_outstanding = 0;
@@ -383,6 +375,20 @@ void lease_ping_timeout (vlp)
 {
 	struct lease *lp = vlp;
 
+#if defined (DEBUG_MEMORY_LEAKAGE)
+	unsigned long previous_outstanding = dmalloc_outstanding;
+#endif
+
 	--outstanding_pings;
 	dhcp_reply (lp);
+
+#if defined (DEBUG_MEMORY_LEAKAGE)
+	log_info ("generation %ld: %ld new, %ld outstanding, %ld long-term",
+		  dmalloc_generation,
+		  dmalloc_outstanding - previous_outstanding,
+		  dmalloc_outstanding, dmalloc_longterm);
+#endif
+#if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL)
+	dmalloc_dump_outstanding ();
+#endif
 }
