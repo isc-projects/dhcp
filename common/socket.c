@@ -30,7 +30,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: socket.c,v 1.37.2.1 1999/10/15 12:46:01 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: socket.c,v 1.37.2.2 1999/10/25 15:45:01 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -198,8 +198,8 @@ ssize_t send_packet (interface, packet, raw, len, from, to, hto)
 	if (result < 0) {
 		log_error ("send_packet: %m");
 		if (errno == ENETUNREACH)
-			log_error ("send_packet: please consult README file %s",
-				   "regarding broadcast address.");
+			log_error ("send_packet: please consult README file%s",
+				   " regarding broadcast address.");
 	}
 	return result;
 }
@@ -220,7 +220,7 @@ ssize_t receive_packet (interface, buf, len, from, hfrom)
 	int retry = 0;
 	do {
 #endif
-		result = recvfrom (interface -> rfdesc, buf, len, 0,
+		result = recvfrom (interface -> rfdesc, (char *)buf, len, 0,
 				   (struct sockaddr *)from, &flen);
 #ifdef IGNORE_HOSTUNREACH
 	} while (result < 0 &&
@@ -258,11 +258,14 @@ int can_unicast_without_arp (ip)
 	return 0;
 }
 
-/* On many stacks, we should return 1 here. */
 int can_receive_unicast_unconfigured (ip)
 	struct interface_info *ip;
 {
+#if defined (SOCKET_CAN_RECEIVE_UNICAST_UNCONFIGURED)
+	return 1;
+#else
 	return 0;
+#endif
 }
 
 /* If we have SO_BINDTODEVICE, set up a fallback interface; otherwise,
