@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: nit.c,v 1.7 1996/08/27 09:52:09 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: nit.c,v 1.8 1996/09/02 21:14:58 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -79,7 +79,7 @@ int if_register_nit (info, ifp)
 	/* Open a NIT device */
 	sock = open ("/dev/nit", O_RDWR);
 	if (sock < 0)
-		error ("Can't open NIT device: %m");
+		error ("Can't open NIT device for %s: %m", info -> name);
 
 	/* Set the NIT device to point at this interface. */
 	sio.ic_cmd = NIOCBIND;
@@ -87,7 +87,8 @@ int if_register_nit (info, ifp)
 	sio.ic_dp = (char *)ifp;
 	sio.ic_timout = INFTIM;
 	if (ioctl (sock, I_STR, &sio) < 0)
-		error ("Can't attach interface to nit device: %m");
+		error ("Can't attach interface %s to nit device: %m",
+		       info -> name);
 
 	/* Get the low-level address... */
 	sio.ic_cmd = SIOCGIFADDR;
@@ -95,7 +96,8 @@ int if_register_nit (info, ifp)
 	sio.ic_dp = (char *)&ifr;
 	sio.ic_timout = INFTIM;
 	if (ioctl (sock, I_STR, &sio) < 0)
-		error ("Can't get physical layer address: %m");
+		error ("Can't get physical layer address for %s: %m",
+		       info -> name);
 
 	/* XXX code below assumes ethernet interface! */
 	info -> hw_address.hlen = 6;
@@ -103,7 +105,8 @@ int if_register_nit (info, ifp)
 	memcpy (info -> hw_address.haddr, ifr.ifr_ifru.ifru_addr.sa_data, 6);
 
 	if (ioctl (sock, I_PUSH, "pf") < 0)
-		error ("Can't push packet filter onto NIT: %m");
+		error ("Can't push packet filter onto NIT for %s: %m",
+		       info -> name);
 
 	return sock;
 }
@@ -167,11 +170,11 @@ void if_register_receive (info, interface)
 	   packet. */
 	x = 0;
 	if (ioctl (info -> rfdesc, NIOCSSNAP, &x) < 0)
-		error ("Can't set NIT snap length: %m");
+		error ("Can't set NIT snap length on %s: %m", info -> name);
 
 	/* Set the stream to byte stream mode */
 	if (ioctl (info -> rfdesc, I_SRDOPT, RMSGN) != 0)
-		note ("I_SRDOPT failed: %m");
+		note ("I_SRDOPT failed on %s: %m", info -> name);
 
 #if 0
 	/* Push on the chunker... */
@@ -188,7 +191,7 @@ void if_register_receive (info, interface)
 	/* Ask for no header... */
 	x = 0;
 	if (ioctl (info -> rfdesc, NIOCSFLAGS, &x) < 0)
-		error ("Can't set NIT flags: %m");
+		error ("Can't set NIT flags on %s: %m", info -> name);
 
 	/* Set up the NIT filter program. */
 	/* XXX Unlike the BPF filter program, this one won't work if the
@@ -215,7 +218,7 @@ void if_register_receive (info, interface)
 	sio.ic_len = sizeof pf;
 	sio.ic_dp = (char *)&pf;
 	if (ioctl (info -> rfdesc, I_STR, &sio) < 0)
-		error ("Can't set NIT filter: %m");
+		error ("Can't set NIT filter on %s: %m", info -> name);
 
 	note ("Listening on NIT/%s/%s",
 	      print_hw_addr (info -> hw_address.htype,
