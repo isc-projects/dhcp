@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: clparse.c,v 1.60 2001/04/05 20:37:55 mellon Exp $ Copyright (c) 1996-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: clparse.c,v 1.61 2001/05/02 06:27:11 mellon Exp $ Copyright (c) 1996-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -108,7 +108,7 @@ isc_result_t read_client_conf ()
 
 	if ((file = open (path_dhclient_conf, O_RDONLY)) >= 0) {
 		cfile = (struct parse *)0;
-		new_parse (&cfile, file, (char *)0, 0, path_dhclient_conf);
+		new_parse (&cfile, file, (char *)0, 0, path_dhclient_conf, 1);
 
 		do {
 			token = peek_token (&val, (unsigned *)0, cfile);
@@ -130,7 +130,7 @@ isc_result_t read_client_conf ()
 		parse = (struct parse *)0;
 		status = new_parse (&parse, -1, default_client_config,
 				    (sizeof default_client_config) - 1,
-				    "default client configuration");
+				    "default client configuration", 1);
 		if (status != ISC_R_SUCCESS)
 			log_fatal ("can't begin default client config!");
 
@@ -191,7 +191,7 @@ void read_client_leases ()
 	if ((file = open (path_dhclient_db, O_RDONLY)) < 0)
 		return;
 	cfile = (struct parse *)0;
-	new_parse (&cfile, file, (char *)0, 0, path_dhclient_db);
+	new_parse (&cfile, file, (char *)0, 0, path_dhclient_db, 1);
 
 	do {
 		token = next_token (&val, (unsigned *)0, cfile);

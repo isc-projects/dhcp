@@ -50,7 +50,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: comapi.c,v 1.8 2001/02/26 22:21:06 mellon Exp $ Copyright (c) 1999-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: comapi.c,v 1.9 2001/05/02 06:27:52 mellon Exp $ Copyright (c) 1999-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -162,7 +162,7 @@ isc_result_t dhcp_group_set_value  (omapi_object_t *h,
 			status = new_parse (&parse, -1,
 					    (char *)value -> u.buffer.value,
 					    value -> u.buffer.len,
-					    "network client");
+					    "network client", 0);
 			if (status != ISC_R_SUCCESS)
 				return status;
 			if (!(parse_executable_statements
