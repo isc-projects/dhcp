@@ -3,7 +3,7 @@
    DHCP/BOOTP Relay Agent. */
 
 /*
- * Copyright (c) 1997 The Internet Software Consortium.
+ * Copyright (c) 1997, 1998 The Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -41,8 +41,8 @@
  */
 
 #ifndef lint
-static char copyright[] =
-"$Id: dhcrelay.c,v 1.9.2.6 1998/12/20 18:33:23 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
+static char ocopyright [] =
+"$Id: dhcrelay.c,v 1.9.2.7 1998/12/22 22:56:32 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -72,6 +72,13 @@ struct server_list {
 	struct server_list *next;
 	struct sockaddr_in to;
 } *servers;
+
+static char copyright [] =
+"Copyright 1997, 1998 The Internet Software Consortium.";
+static char arr [] = "All rights reserved.";
+static char message [] = "Internet Software Consortium DHCP Relay Agent V2.0b1pl7 ";
+static char contrib [] = "Please contribute if you find this software useful.";
+static char url [] = "For info: http://www.isc.org/dhcp-contrib.html";
 
 int main (argc, argv, envp)
 	int argc;
@@ -147,6 +154,14 @@ int main (argc, argv, envp)
 					iap, sizeof *iap);
 			}
  		}
+	}
+
+	if (!quiet) {
+		note (message);
+		note (copyright);
+		note (arr);
+		note (contrib);
+		note (url);
 	}
 
 	/* Default to the DHCP/BOOTP port. */
