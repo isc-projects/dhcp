@@ -63,7 +63,7 @@ depend:
 	makedepend $(INCLUDES) $(PREDEFINES) $(SRCS)
 
 clean:
-	-rm -f $(OBJ)
+	-rm -f $(OBJ) test.o test
 
 realclean: clean
 	-rm -f libdhcp.a *~ $(CATMANPAGES) $(SEDMANPAGES)
