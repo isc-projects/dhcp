@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.52 1999/10/04 23:15:43 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.53 1999/10/04 23:17:37 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2106,7 +2106,7 @@ int write_expression (file, expr, col, indent)
 		break;
 
 	      case expr_config_option:
-		s = "exists";
+		s = "config-option";
 		goto print_option_name;
 
 	      case expr_host_decl_name:
