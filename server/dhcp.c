@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.116 1999/10/08 22:21:34 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.117 1999/10/12 16:00:34 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -978,8 +978,8 @@ void ack_lease (packet, lease, offer, when, msg)
 					   oc)) {
 			if (d1.len && packet -> raw -> secs < d1.data [0]) {
 				data_string_forget (&d1, "ack_lease");
-				log_info ("%s: %d secs < %d",
-				      packet -> raw -> secs, d1.data [0]);
+				log_info ("%s: %d secs < %d", msg,
+					  packet -> raw -> secs, d1.data [0]);
 				free_lease_state (state, "ack_lease");
 				static_lease_dereference (lease, "ack_lease");
 				return;

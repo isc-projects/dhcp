@@ -900,11 +900,16 @@ int hashed_option_space_encapsulate PROTO ((struct data_string *,
 					    struct universe *));
 
 /* errwarn.c */
-void log_fatal PROTO ((const char *, ...));
-int log_error PROTO ((const char *, ...));
-int log_info PROTO ((const char *, ...));
-int log_debug PROTO ((const char *, ...));
-int parse_warn PROTO ((struct parse *, const char *, ...));
+void log_fatal PROTO ((const char *, ...))
+	__attribute__((__format__(__printf__,1,2)));
+int log_error PROTO ((const char *, ...))
+	__attribute__((__format__(__printf__,1,2)));
+int log_info PROTO ((const char *, ...))
+	__attribute__((__format__(__printf__,1,2)));
+int log_debug PROTO ((const char *, ...))
+	__attribute__((__format__(__printf__,1,2)));
+int parse_warn PROTO ((struct parse *, const char *, ...))
+	__attribute__((__format__(__printf__,2,3)));
 
 /* dhcpd.c */
 extern TIME cur_time;

@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.84 1999/10/07 06:35:36 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.85 1999/10/12 16:00:18 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -673,9 +673,9 @@ void bind_lease (client)
 	add_timeout (client -> active -> renewal,
 		     state_bound, client);
 
-	log_info ("bound to %s -- renewal in %d seconds.",
+	log_info ("bound to %s -- renewal in %ld seconds.",
 	      piaddr (client -> active -> address),
-	      client -> active -> renewal - cur_time);
+	      (long)(client -> active -> renewal - cur_time));
 	client -> state = S_BOUND;
 	reinitialize_interfaces ();
 	go_daemon ();
@@ -1205,9 +1205,11 @@ void state_panic (cpp)
 				if (cur_time <
 				    client -> active -> renewal) {
 					client -> state = S_BOUND;
-					log_info ("bound: renewal in %d seconds.",
-					      client -> active -> renewal
-					      - cur_time);
+					log_info ("bound: renewal in %s %ld.",
+						  "seconds",
+						  (long)
+						  (client -> active -> renewal
+						   - cur_time));
 					add_timeout ((client ->
 						      active -> renewal),
 						     state_bound, client);
@@ -2138,7 +2140,8 @@ char *dhcp_option_ev_name (option)
 	int i;
 
 	if (strlen (option -> name) + 1 > sizeof evbuf)
-		log_fatal ("option %s name is larger than static buffer.");
+		log_fatal ("option %s name is larger than static buffer.",
+			   option -> name);
 	for (i = 0; option -> name [i]; i++) {
 		if (option -> name [i] == '-')
 			evbuf [i] = '_';

@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.87 1999/10/07 06:36:30 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.88 1999/10/12 16:00:33 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -445,7 +445,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 			if (token == CODE) {
 				if (type != ROOT_GROUP) {
 					parse_warn (cfile,
-						    "option definitions%s%s",
+						    "option definitions%s",
 						    " may not be scoped.");
 					skip_to_semi (cfile);
 					free_option (option,
@@ -513,7 +513,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 						    "expecting a declaration");
 				    else
 					parse_warn (cfile,
-						    "expecting a parameter %s"
+						    "expecting a parameter %s",
 						    "or declaration");
 					skip_to_semi (cfile);
 				}
@@ -1119,8 +1119,8 @@ void parse_host_declaration (cfile, group)
 				
 		status = enter_host (host, dynamicp, 0);
 		if (status != ISC_R_SUCCESS)
-			parse_warn (cfile,
-				    "host %s: %s", isc_result_totext (status));
+			parse_warn (cfile, "host %s: %s", host -> name,
+				    isc_result_totext (status));
 	}
 }
 

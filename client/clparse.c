@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: clparse.c,v 1.36 1999/10/07 06:35:35 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: clparse.c,v 1.37 1999/10/12 16:00:17 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -559,7 +559,7 @@ void parse_option_list (cfile, list)
 				break;
 		}
 		if (i == 256) {
-			parse_warn (cfile, "%s: expected option name.");
+			parse_warn (cfile, "%s: expected option name.", val);
 			skip_to_semi (cfile);
 			return;
 		}
