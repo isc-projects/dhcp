@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: alloc.c,v 1.19 1998/11/09 02:43:42 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: alloc.c,v 1.20 1998/11/11 07:49:27 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -153,6 +153,8 @@ struct group *new_group (name)
 {
 	struct group *rval =
 		dmalloc (sizeof (struct group), name);
+	if (rval)
+		memset (rval, 0, sizeof *rval);
 	return rval;
 }
 
