@@ -113,6 +113,7 @@ extern int h_errno;
 # define HAVE_ARPHRD_LOOPBACK
 # define HAVE_SO_BINDTODEVICE
 # define HAVE_SIOCGIFHWADDR
+# define HAVE_SETFD
 #endif
 
 #if !defined (USE_LPF)
@@ -124,8 +125,3 @@ extern int h_errno;
 
 #define ALIAS_NAMES_PERMUTED
 #define SKIP_DUMMY_INTERFACES
-
-/* Linux needs to define SHUT_* in /usr/include/sys/socket.h someday... */
-#if !defined (SHUT_RD)
-# define SHUT_RD 0
-#endif
