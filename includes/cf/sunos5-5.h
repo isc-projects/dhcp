@@ -1,7 +1,6 @@
-/* sunos4.h
+/* sunos5-5.h
 
-   System dependencies for SunOS 5 (tested on 5.5 with gcc)... */
-
+   System dependencies for Solaris 2.x (tested on 2.5 with gcc)... */
 
 /*
  * Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.
@@ -15,15 +14,15 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of RadioMail Corporation nor the names of its
+ * 3. Neither the name of The Internet Software Consortium nor the names of its
  *    contributors may be used to endorse or promote products derived
  *    from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY RADIOMAIL CORPORATION AND CONTRIBUTORS
- * ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * THIS SOFTWARE IS PROVIDED BY THE INTERNET SOFTWARE CONSORTIUM AND
+ * CONTRIBUTORS ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING,
+ * BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
  * FOR A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL
- * RADIOMAIL CORPORATION OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+ * THE INTERNET SOFTWARE CONSORTIUM OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
  * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
  * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
@@ -32,29 +31,21 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  *
+ * This software was written for the Internet Software Consortium by Ted Lemon
+ * under a contract with Vixie Laboratories.
  */
-
-#define u_int8_t	unsigned char 	/* Not quite POSIX... */
-#define u_int16_t	unsigned short 
-#define u_int32_t	unsigned long 
 
 /* The jmp_buf type is an array on Solaris, so we can't dereference it
    and must declare it differently. */
+
 #define jbp_decl(x)	jmp_buf x
 #define jref(x)		(x)
 #define jdref(x)	(x)
 #define jrefproto	jmp_buf
 
-/* struct ether_host source and destination are structs on Solaris. */
-#ifndef ETHER_SRC
-# define ETHER_SRC(x)	(&((x) -> ether_shost))
-#endif
-#ifndef ETHER_DEST
-# define ETHER_DEST(x)	(&((x) -> ether_dhost))
-#endif
-
 #include <syslog.h>
 #include <sys/types.h>
+#include <sys/bitypes.h>
 #include <sys/sockio.h>
 
 #include <string.h>
@@ -102,9 +93,6 @@ extern int h_errno;
 #define vsnprintf(buf, size, fmt, list) vsprintf (buf, fmt, list)
 #define NO_SNPRINTF
 
-/* Solaris doesn't have TM_GMT stuff... */
-#define BROKEN_TM_GMT
-
 /* By default, use BSD Socket API for receiving and sending packets.
    This actually works pretty well on Solaris, which doesn't censor
    the all-ones broadcast address. */
@@ -115,18 +103,9 @@ extern int h_errno;
 #define EOL	'\n'
 #define VOIDPTR	void *
 
-/*
- * Time stuff...
- *
- * Definitions for an ISC DHCPD system that uses time_t
- * to represent time internally as opposed to, for example,  struct timeval.)
- */
+/* Time stuff... */
 
 #include <time.h>
 
 #define TIME time_t
 #define GET_TIME(x)	time ((x))
-#define TIME_DIFF(high, low)	 	(*(high) - *(low))
-#define SET_TIME(x, y)	(*(x) = (y))
-#define ADD_TIME(d, s1, s2) (*(d) = *(s1) + *(s2))
-#define SET_MAX_TIME(x)	(*(x) = INT_MAX)
