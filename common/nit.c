@@ -188,10 +188,6 @@ void if_register_receive (info, interface)
 	if (ioctl (info -> rfdesc, NIOCSFLAGS, &x) < 0)
 		error ("Can't set NIT flags: %m");
 
-	/* Copy the address into two shorts for comparison in the NIT
-           filter... */
-	memcpy (addr, info -> address.iabuf, 4);
-
 	/* Set up the NIT filter program. */
 	/* XXX Unlike the BPF filter program, this one won't work if the
 	   XXX IP packet is fragmented or if there are options on the IP
