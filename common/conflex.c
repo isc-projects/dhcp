@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: conflex.c,v 1.67 2000/02/15 19:40:34 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: conflex.c,v 1.68 2000/03/06 20:08:05 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -927,6 +927,10 @@ static enum dhcp_token intern (atom, dfv)
 			return NS_YXDOMAIN;
 		if (!strcasecmp (atom + 1, "xrrset"))
 			return NS_YXRRSET;
+		break;
+	      case 'z':
+		if (!strcasecmp (atom + 1, "one"))
+			return ZONE;
 		break;
 	}
 	return dfv;
