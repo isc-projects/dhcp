@@ -1,6 +1,5 @@
 	    Internet Software Consortium DHCP Distribution
 			     Version 3.0.1
-			 Release Candidate 12
 			       June, 2002
 
 			     Release Notes
@@ -23,11 +22,9 @@ that are new since version 2.0:
      - Many bug fixes, performance enhancements, and minor new DHCP
        protocol features. 
 
-This is a release candidate for a minor bug fix release to follow ISC
-DHCP 3.0.   The main bug fixed here is a bug in the subclass allocation
-code that could result in a memory smash.   Any users of the ISC DHCP server
-who are using subclasses should seriously consider upgrading to 3.0.1
-either now or when the final 3.0.1 release comes out.
+The main bug fixed here is a bug in the subclass allocation code that
+could result in a memory smash.   Any users of the ISC DHCP server who
+are using subclasses should seriously consider upgrading to 3.0.1.
 
 If you are running 3.0 beta 1 and are doing dynamic DNS updates, the
 lease file is no longer forward-compatible to 3.0 final.   A script
@@ -46,13 +43,18 @@ Murrell at BC Tel Advanced Communications.  I'd like to express my
 thanks to all of these good people here, both for working on the code
 and for prodding me into improving it.
 
-			Changes since 3.0.1rc11
+			Changes since 3.0.1rc12
 
-- The 'ping timeout' debugs from rc12 were removed.
+- The 'ping timeout' debugs from rc12 were removed to -DDEBUG only,
+  and reformatted to correct a compilation error on solaris platforms.
 
 - A patch from Ted Lemon was applied which fixes a case where leases
   read from the leases database do not properly over-ride previously
   read leases.
+
+- dhcpctl.3 manpage was tweaked.
+
+			Changes since 3.0.1rc11
 
 - A patch from Steve Campbell was applied with minor modifications to
   permit reverse dns PTR record updates with values containing spaces.
