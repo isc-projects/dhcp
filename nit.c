@@ -197,37 +197,34 @@ void if_register_receive (info, interface)
 	   XXX header. */
 	pf.Pf_Priority = 0;
 	pf.Pf_FilterLen = 0;
-	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_PUSHLIT;
-	pf.Pf_Filter [pf.Pf_FilterLen++] = 1;
-#if 0
-	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_PUSHWORD + 12;
+
+	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_PUSHWORD + 6;
 	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_PUSHLIT + ENF_CAND;
 	pf.Pf_Filter [pf.Pf_FilterLen++] = htons (ETHERTYPE_IP);
-	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_PUSHWORD + 22;
-	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_PUSHLIT + ENF_EQ;
+	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_PUSHLIT;
 	pf.Pf_Filter [pf.Pf_FilterLen++] = htons (IPPROTO_UDP);
+	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_PUSHWORD + 11;
 	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_PUSHLIT + ENF_AND;
-	pf.Pf_Filter [pf.Pf_FilterLen++] = htons (0xFF00);
+	pf.Pf_Filter [pf.Pf_FilterLen++] = htons (0xFF);
 	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_CAND;
-	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_PUSHWORD + 34;
+	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_PUSHWORD + 18;
 	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_PUSHLIT + ENF_CAND;
 	pf.Pf_Filter [pf.Pf_FilterLen++] = server_port;
-	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_PUSHWORD + 30;
+	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_PUSHWORD + 15;
 	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_PUSHLIT + ENF_EQ;
 	pf.Pf_Filter [pf.Pf_FilterLen++] = 0xffff;
-	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_PUSHWORD + 32;
+	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_PUSHWORD + 16;
 	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_PUSHLIT + ENF_EQ;
 	pf.Pf_Filter [pf.Pf_FilterLen++] = 0xffff;
 	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_AND;
-	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_PUSHWORD + 30;
+	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_PUSHWORD + 15;
 	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_PUSHLIT + ENF_EQ;
 	pf.Pf_Filter [pf.Pf_FilterLen++] = addr [0];
-	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_PUSHWORD + 32;
+	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_PUSHWORD + 16;
 	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_PUSHLIT + ENF_EQ;
 	pf.Pf_Filter [pf.Pf_FilterLen++] = addr [1];
 	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_AND;
 	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_OR;
-#endif
 
 	/* Install the filter... */
 	sio.ic_cmd = NIOCSETF;
