@@ -72,6 +72,16 @@ extern int h_errno;
 
 #define HAVE_SA_LEN
 
+/* socklen_t was first defined on November 24 in sys/socket.h, and
+   __FreeBSD_version was changed to 400013 on December 4, so if you
+   get a compile error on this, and you updated between those dates,
+   that's why.   Also, it may be that some 3.x version after 3.4 will
+   have socklen_t, but no such change has been made so far. */
+
+#if  __FreeBSD_version < 400013
+#define SOCKLEN_T int
+#endif
+
 #if defined (USE_DEFAULT_NETWORK)
 #  define USE_BPF
 #endif

@@ -80,6 +80,11 @@ extern int h_errno;
 #define PTRSIZE_64BIT
 #endif
 
+/* socklen_t first used right around the time 2.5 branched, it looks like. */
+#if OpenBSD < 199905
+#define SOCKLEN_T int
+#endif
+
 #ifdef NEED_PRAND_CONF
 #ifndef HAVE_DEV_RANDOM
  # define HAVE_DEV_RANDOM 1

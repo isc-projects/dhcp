@@ -80,6 +80,11 @@ extern int h_errno;
 #define PTRSIZE_64BIT
 #endif
 
+/* NetBSD added socklen_t in 1.3J, just prior to the 1.4 release. */
+#if __NetBSD_Version__ > 103090000
+#define SOCKLEN_T int
+#endif
+
 #ifdef NEED_PRAND_CONF
 /* prand_conf.h goop - remove when BIND 9 comes around. */
 #ifndef HAVE_DEV_RANDOM
