@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.81 1999/09/09 21:00:05 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.82 1999/09/28 22:49:10 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -314,6 +314,12 @@ int unbill_class (lease, class)
 	struct class *class;
 {
 	return 0;
+}
+
+struct subnet *find_subnet (addr)
+	struct iaddr addr;
+{
+	return (struct subnet *)0;
 }
 
 /* Individual States:
