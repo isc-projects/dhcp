@@ -89,6 +89,12 @@ isc_result_t omapi_listen (omapi_object_t *h,
 		return ISC_R_UNEXPECTED;
 	}
 
+	if (fcntl (obj -> socket, F_SETFL, O_NONBLOCK) < 0) {
+		omapi_object_dereference ((omapi_object_t **)&obj,
+					  "omapi_connect");
+		return ISC_R_UNEXPECTED;
+	}
+
 	status = omapi_register_io_object ((omapi_object_t *)obj,
 					   omapi_listener_readfd, 0,
 					   omapi_accept, 0, 0);
