@@ -137,7 +137,7 @@ void if_register_send (info, interface)
 	      print_hw_addr (info -> hw_address.htype,
 			     info -> hw_address.hlen,
 			     info -> hw_address.haddr),
-	      piaddr (info -> address));
+	      info -> shared_network -> name);
 }
 #endif /* USE_NIT_SEND */
 
@@ -210,21 +210,6 @@ void if_register_receive (info, interface)
 	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_PUSHWORD + 18;
 	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_PUSHLIT + ENF_CAND;
 	pf.Pf_Filter [pf.Pf_FilterLen++] = server_port;
-	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_PUSHWORD + 15;
-	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_PUSHLIT + ENF_EQ;
-	pf.Pf_Filter [pf.Pf_FilterLen++] = 0xffff;
-	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_PUSHWORD + 16;
-	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_PUSHLIT + ENF_EQ;
-	pf.Pf_Filter [pf.Pf_FilterLen++] = 0xffff;
-	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_AND;
-	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_PUSHWORD + 15;
-	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_PUSHLIT + ENF_EQ;
-	pf.Pf_Filter [pf.Pf_FilterLen++] = addr [0];
-	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_PUSHWORD + 16;
-	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_PUSHLIT + ENF_EQ;
-	pf.Pf_Filter [pf.Pf_FilterLen++] = addr [1];
-	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_AND;
-	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_OR;
 
 	/* Install the filter... */
 	sio.ic_cmd = NIOCSETF;
@@ -237,16 +222,17 @@ void if_register_receive (info, interface)
 	      print_hw_addr (info -> hw_address.htype,
 			     info -> hw_address.hlen,
 			     info -> hw_address.haddr),
-	      piaddr (info -> address));
+	      info -> shared_network -> name);
 }
 #endif /* USE_NIT_RECEIVE */
 
 #ifdef USE_NIT_SEND
-size_t send_packet (interface, packet, raw, len, to, hto)
+size_t send_packet (interface, packet, raw, len, from, to, hto)
 	struct interface_info *interface;
 	struct packet *packet;
 	struct dhcp_packet *raw;
 	size_t len;
+	struct in_addr from;
 	struct sockaddr_in *to;
 	struct hardware *hto;
 {
@@ -264,7 +250,7 @@ size_t send_packet (interface, packet, raw, len, to, hto)
 	/* Assemble the headers... */
 	assemble_hw_header (interface, buf, &bufp, hto);
 	hw_end = bufp;
-	assemble_udp_ip_header (interface, buf, &bufp,
+	assemble_udp_ip_header (interface, buf, &bufp, from.s_addr,
 				to -> sin_addr.s_addr, to -> sin_port,
 				raw, len);
 
