@@ -32,7 +32,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.129.2.21 2004/09/10 21:02:30 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.129.2.22 2004/09/29 23:01:46 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -936,6 +936,8 @@ void state_bound (cpp)
 			client -> destination.len = 4;
 		} else
 			client -> destination = iaddr_broadcast;
+
+		data_string_forget (&ds, MDL);
 	} else
 		client -> destination = iaddr_broadcast;
 
@@ -2828,6 +2830,8 @@ void do_release(client)
 				client -> destination.len = 4;
 			} else
 				client -> destination = iaddr_broadcast;
+
+			data_string_forget (&ds, MDL);
 		} else
 			client -> destination = iaddr_broadcast;
 		client -> first_sending = cur_time;

@@ -28,7 +28,7 @@
 .\" see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
 .\" ``http://www.nominum.com''.
 .\"
-.\" $Id: dhcpd.conf.5,v 1.63.2.21 2004/09/01 22:54:12 dhankins Exp $
+.\" $Id: dhcpd.conf.5,v 1.63.2.22 2004/09/29 23:01:50 dhankins Exp $
 .\"
 .TH dhcpd.conf 5
 .SH NAME
@@ -1163,7 +1163,7 @@ server whose zone information is to be updated.
 Note that the zone declarations have to correspond to authority
 records in your name server - in the above example, there must be an
 SOA record for "example.org." and for "17.10.10.in-addr.arpa.".   For
-example, if there were a subdoman "foo.example.org" with no separate
+example, if there were a subdomain "foo.example.org" with no separate
 SOA, you could not write a zone declaration for "foo.example.org."  
 Also keep in mind that zone names in your DHCP configuration should end in a
 "."; this is the preferred syntax.  If you do not end your zone name in a

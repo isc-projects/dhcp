@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.115.2.14 2004/09/29 16:21:01 dhankins Exp $ Copyright 2004 Internet Systems Consortium.";
+"$Id: dhcpd.c,v 1.115.2.15 2004/09/29 23:01:50 dhankins Exp $ Copyright 2004 Internet Systems Consortium.";
 #endif
 
   static char copyright[] =
@@ -769,7 +769,7 @@ void postconf_initialization (int quiet)
 		}
 	} else {
 		log_info ("%s", "");
-		log_error ("** You must add a ddns-update-style %s%s.",
+		log_error ("** You must add a global ddns-update-style %s%s.",
 			   "statement to ", path_dhcpd_conf);
 		log_error ("   To get the same behaviour as in 3.0b2pl11 %s",
 			   "and previous");

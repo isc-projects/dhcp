@@ -45,6 +45,15 @@ and for prodding me into improving it.
 
 			Changes since 3.0.1
 
+- The 'ddns-update-style' configuration warning bit now insists that
+  the configuration be globally scoped.
+
+- Two memory leaks in dhclient were closed thanks to a patch from Felix
+  Farkas.
+
+- Some minor but excellently pedantic documentation errors were fixed
+  thanks to a patch from Thomas Klausner.
+
 - Bugs in operator precedence in executable statements have been repaired
   once again.  More legal syntaxes should be parsed legally.
 
