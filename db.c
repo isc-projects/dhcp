@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: db.c,v 1.8.2.1 1997/03/29 08:06:45 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: db.c,v 1.8.2.2 1997/11/29 08:01:30 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -71,7 +71,7 @@ int write_lease (lease)
 	}
 
 	t = gmtime (&lease -> starts);
-	sprintf (tbuf, "%d %d/%d/%d %02d:%02d:%02d;",
+	sprintf (tbuf, "%d %d/%02d/%02d %02d:%02d:%02d;",
 		 t -> tm_wday, t -> tm_year + 1900,
 		 t -> tm_mon + 1, t -> tm_mday,
 		 t -> tm_hour, t -> tm_min, t -> tm_sec);
@@ -82,7 +82,7 @@ int write_lease (lease)
 	}
 
 	t = gmtime (&lease -> ends);
-	sprintf (tbuf, "%d %d/%d/%d %02d:%02d:%02d;",
+	sprintf (tbuf, "%d %d/%02d/%02d %02d:%02d:%02d;",
 		 t -> tm_wday, t -> tm_year + 1900,
 		 t -> tm_mon + 1, t -> tm_mday,
 		 t -> tm_hour, t -> tm_min, t -> tm_sec);
