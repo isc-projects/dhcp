@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.185 2001/03/16 01:55:38 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.186 2001/03/17 00:48:34 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1488,8 +1488,9 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 				seek = (struct lease *)0;
 				find_lease_by_uid (&seek, lease -> uid,
 						   lease -> uid_len, MDL);
-				if (!seek)
+				if (!seek || (seek == lease && !seek -> n_uid))
 					break;
+				next = (struct lease *)0;
 
 				/* Don't release expired leases, and don't
 				   release the lease we're going to assign. */
@@ -1530,7 +1531,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 				find_lease_by_hw_addr
 					(&seek, lease -> hardware_addr.hbuf,
 					 lease -> hardware_addr.hlen, MDL);
-				if (!seek)
+				if (!seek || (seek == lease && !seek -> n_hw))
 					break;
 				next = (struct lease *)0;
 				while (seek) {
