@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: db.c,v 1.47 2000/04/13 21:41:34 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: db.c,v 1.48 2000/05/03 06:23:05 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -495,6 +495,51 @@ int write_group (group)
 			  group -> name);
 	return !errors;
 }
+
+#if defined (FAILOVER_PROTOCOL)
+int write_failover_state (dhcp_failover_state_t *state)
+{
+	struct tm *t;
+	int errors = 0;
+
+	errno = 0;
+	fprintf (db_file, "failover peer \"%s\" state {", state -> name);
+	if (errno)
+		++errors;
+
+	t = gmtime (&state -> my_stos);
+	errno = 0;
+	fprintf (db_file, "\n  my state %s at %d %d/%02d/%02d %02d:%02d:%02d;",
+		 dhcp_failover_state_name_print (state -> my_state),
+		 t -> tm_wday, t -> tm_year + 1900,
+		 t -> tm_mon + 1, t -> tm_mday,
+		 t -> tm_hour, t -> tm_min, t -> tm_sec);
+	if (errno)
+		++errors;
+
+	t = gmtime (&state -> partner_stos);
+	errno = 0;
+	fprintf (db_file,
+		 "\n  partner state %s at %d %d/%02d/%02d %02d:%02d:%02d;",
+		 dhcp_failover_state_name_print (state -> my_state),
+		 t -> tm_wday, t -> tm_year + 1900,
+		 t -> tm_mon + 1, t -> tm_mday,
+		 t -> tm_hour, t -> tm_min, t -> tm_sec);
+	if (errno)
+		++errors;
+	fprintf (db_file, "\n}\n\n");
+	if (errno)
+		++errors;
+
+	if (errors) {
+		log_info ("write_failover_state: unable to write state %s",
+			  state -> name);
+		return 0;
+	}
+	return 1;
+
+}
+#endif
 
 int db_printable (s)
 	const char *s;
