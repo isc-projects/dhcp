@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: omshell.c,v 1.7.2.16 2004/06/10 17:59:24 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: omshell.c,v 1.7.2.17 2004/09/30 23:11:50 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include <time.h>
@@ -711,6 +711,7 @@ int main (int argc, char **argv, char **envp)
 		    
 		    break;
 	    }
+	    end_parse (&cfile);
 	} while (1);
 
 	exit (0);

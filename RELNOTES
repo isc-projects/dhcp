@@ -45,6 +45,9 @@ and for prodding me into improving it.
 
 			Changes since 3.0.1
 
+- A memory leak in 'omshell' per each command line parsed was
+  repaired, thanks to a patch from Jarkko Torppa.
+
 - Log functions writing to stderr were adjusted to use the STDERR_FILENO
   system definition rather than '2'.  This is a no-op for 90% of platforms.
 
