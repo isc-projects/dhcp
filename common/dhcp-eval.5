@@ -238,9 +238,21 @@ specified as a data expression.
 .RE
 .PP
 .B concat (\fIdata-expr1\fB, \fIdata-expr2\fB)\fR
+.RS 0.25i
 The two expressions are evaluated, and the result of concatenating the
 results of the two evaluations is returned.   If either subexpression
-evaluates to null, then the result is also null.
+evaluates to null, then the result is the value of the other
+expression.   If both expressions evaluate to null, then the result is
+null.
+.RE
+.PP
+.B encode-int (\fInumeric-expr\fB, \fIwidth\fB)\fR
+.RS 0.25i
+Numeric-expr is evaluated and encoded as a data string of the
+specified width, in network byte order (most significant byte first).
+If the numeric expression evaluates to the null value, the result is
+also null.
+
 .SH NUMERIC EXPRESSIONS
 Numeric expressions are expressions that evaluate to an integer.   In
 general, the maximum size of such an integer should not be assumed to
@@ -262,8 +274,7 @@ extract an integer of the specified size, the null value is returned.
 .PP
 .RS 0.25i
 Any number between zero and the maximum representable size may be
-specified as a numeric expression.   Negative numbers are not
-currently supported.
+specified as a numeric expression.
 .RE
 .SH SEE ALSO
 dhcpd.conf(5), dhcpd.leases(5), dhclient.conf(5), dhcp-eval(5), dhcpd(8),
