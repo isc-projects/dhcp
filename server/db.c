@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: db.c,v 1.64 2001/05/17 19:04:04 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: db.c,v 1.65 2001/06/22 16:47:16 brister Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -565,11 +565,102 @@ int db_printable_len (s, len)
 	return 1;
 }
 
+static int print_hash_string(FILE *fp, struct class *class)
+{
+	int i;
+	int errors;
+	
+	
+	for (i = 0; i < class -> hash_string.len; i++)
+		if (!isascii (class -> hash_string.data [i]) ||
+		    !isprint (class -> hash_string.data [i]))
+			break;
+
+	if (i == class -> hash_string.len) {
+		errno = 0;
+		fprintf (fp, " \"%.*s\";",
+			 (int)class -> hash_string.len,
+			 class -> hash_string.data);
+		if (errno)
+			++errors;
+	} else {
+		errno = 0;
+		fprintf (fp, " %2.2x", class -> hash_string.data [0]);
+		if (errno)
+			++errors;
+		for (i = 1; i < class -> hash_string.len; i++) {
+			errno = 0;
+			fprintf (fp, ":%2.2x",
+				 class -> hash_string.data [i]);
+			if (errno)
+				++errors;
+		}
+		errno = 0;
+		if (errno)
+			++errors;
+	}
+
+	return !errors;
+}
+
+
+	
+
+/* XXXJAB this needs to return non-zero on error. */
 void write_named_billing_class (const char *name, unsigned len,
 				struct class *class)
 {
-	/* XXX billing classes that are modified by OMAPI need
-	   XXX to be detected and written out here. */
+	if (class->superclass == 0) {
+		fprintf(db_file, "class \"%s\" {\n", name);
+	} else {
+		fprintf(db_file, "subclass \"%s\"", class->superclass->name);
+		print_hash_string(db_file, class);
+		fprintf(db_file, " {\n");
+	}
+
+	if ((class->flags & CLASS_DECL_DELETED) != 0) {
+		fprintf(db_file, "  deleted;\n");
+	} else {
+		fprintf(db_file, "  dynamic;\n");
+	}
+	
+
+	if (class->lease_limit > 0) {
+		fprintf(db_file, "  lease limit %d;\n", class->lease_limit);
+	}
+
+	if (class->expr != 0) {
+		fprintf(db_file, "  match if ");
+		write_expression(db_file, class->expr, 5, 5, 0);
+	}
+
+	if (class->submatch != 0) {
+		if (class->spawning) {
+			fprintf(db_file, "  spawn ");
+		} else {
+			fprintf(db_file, "  match ");
+		}
+	
+		write_expression(db_file, class->submatch, 5, 5, 0);
+	}
+	
+	if (class->statements != 0) {
+		write_statements(db_file, class->statements, 8);
+	}
+
+	/* XXXJAB this isn't right, but classes read in off the leases file
+	   don't get the root group assigned to them (due to clone_group()
+	   call). */
+	if (class->group != 0 && class->group->authoritative != 0) {
+		write_statements (db_file,
+				  class -> group -> statements, 8);
+	}
+	
+	fprintf(db_file, "}\n\n");
+
+	if (class -> hash != NULL) {	/* yep. recursive. god help us. */
+		class_hash_foreach (class -> hash, write_named_billing_class);
+	}
 }
 
 void write_billing_classes ()
@@ -608,6 +699,7 @@ int write_billing_class (class)
 	if (errno)
 		++errors;
 
+#if 0
 	for (i = 0; i < class -> hash_string.len; i++)
 		if (!isascii (class -> hash_string.data [i]) ||
 		    !isprint (class -> hash_string.data [i]))
@@ -636,6 +728,10 @@ int write_billing_class (class)
 		if (errno)
 			++errors;
 	}
+#else
+	print_hash_string(db_file, class);
+	fprintf(db_file, ";");
+#endif
 
 	class -> dirty = 0;
 	return !errors;

@@ -572,7 +572,7 @@ struct class {
 	OMAPI_OBJECT_PREAMBLE;
 	struct class *nic;	/* Next in collection. */
 	struct class *superclass;	/* Set for spawned classes only. */
-	const char *name;		/* Not set for spawned classes. */
+	char *name;		/* Not set for spawned classes. */
 
 	/* A class may be configured to permit a limited number of leases. */
 	int lease_limit;
@@ -597,8 +597,16 @@ struct class {
 	
 	struct group *group;
 
+
 	/* Statements to execute if class matches. */
 	struct executable_statement *statements;
+
+#define CLASS_DECL_DELETED	1
+#define CLASS_DECL_DYNAMIC	2
+#define CLASS_DECL_STATIC	4
+#define CLASS_DECL_SUBCLASS	8
+	
+	int flags;
 };
 
 /* DHCP client lease structure... */
@@ -1340,6 +1348,7 @@ int write_group PROTO ((struct group_object *));
 struct lease *new_leases PROTO ((unsigned, const char *, int));
 OMAPI_OBJECT_ALLOC_DECL (lease, struct lease, dhcp_type_lease)
 OMAPI_OBJECT_ALLOC_DECL (class, struct class, dhcp_type_class)
+OMAPI_OBJECT_ALLOC_DECL (subclass, struct class, dhcp_type_subclass)
 OMAPI_OBJECT_ALLOC_DECL (pool, struct pool, dhcp_type_pool)
 OMAPI_OBJECT_ALLOC_DECL (host, struct host_decl, dhcp_type_host)
 
@@ -1985,6 +1994,7 @@ void classify_client PROTO ((struct packet *));
 int check_collection PROTO ((struct packet *, struct lease *,
 			     struct collection *));
 void classify PROTO ((struct packet *, struct class *));
+isc_result_t unlink_class PROTO((struct class **class));
 isc_result_t find_class PROTO ((struct class **, const char *,
 				const char *, int));
 int unbill_class PROTO ((struct lease *, struct class *));
@@ -2086,6 +2096,7 @@ extern int (*dhcp_interface_shutdown_hook) (struct interface_info *);
 extern omapi_object_type_t *dhcp_type_lease;
 extern omapi_object_type_t *dhcp_type_pool;
 extern omapi_object_type_t *dhcp_type_class;
+extern omapi_object_type_t *dhcp_type_subclass;
 
 #if defined (FAILOVER_PROTOCOL)
 extern omapi_object_type_t *dhcp_type_failover_state;
@@ -2275,6 +2286,8 @@ extern struct hash_table *lease_hw_addr_hash;
 
 extern omapi_object_type_t *dhcp_type_host;
 
+isc_result_t enter_class PROTO ((struct class *, int, int));
+isc_result_t delete_class PROTO ((struct class *, int));
 isc_result_t enter_host PROTO ((struct host_decl *, int, int));
 isc_result_t delete_host PROTO ((struct host_decl *, int));
 int find_hosts_by_haddr PROTO ((struct host_decl **, int,

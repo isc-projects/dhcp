@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: class.c,v 1.29 2001/04/20 20:39:26 mellon Exp $ Copyright (c) 1998-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: class.c,v 1.30 2001/06/22 16:47:13 brister Exp $ Copyright (c) 1998-2000 The Internet Software Consortium.  All rights reserved.\n";
 
 #endif /* not lint */
 
@@ -227,6 +227,29 @@ void classify (packet, class)
 				     packet -> raw -> chaddr));
 }
 
+
+isc_result_t unlink_class(struct class **class) {
+	struct collection *lp;
+	struct class *cp, *pp;
+
+	for (lp = collections; lp; lp = lp -> next) {
+		for (pp = 0, cp = lp -> classes; cp; pp = cp, cp = cp -> nic)
+			if (cp == *class) {
+				if (pp == 0) {
+					lp->classes = cp->nic;
+				} else {
+					pp->nic = cp->nic;
+				}
+				cp->nic = 0;
+				class_dereference(class, MDL);
+
+				return ISC_R_SUCCESS;
+			}
+	}
+	return ISC_R_NOTFOUND;
+}
+
+	
 isc_result_t find_class (struct class **class, const char *name,
 			 const char *file, int line)
 {

@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: salloc.c,v 1.2 2001/04/27 21:30:15 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: salloc.c,v 1.3 2001/06/22 16:47:20 brister Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -60,6 +60,7 @@ struct lease *new_leases (n, file, line)
 
 OMAPI_OBJECT_ALLOC (lease, struct lease, dhcp_type_lease)
 OMAPI_OBJECT_ALLOC (class, struct class, dhcp_type_class)
+OMAPI_OBJECT_ALLOC (subclass, struct class, dhcp_type_subclass)
 OMAPI_OBJECT_ALLOC (pool, struct pool, dhcp_type_pool)
 
 #if !defined (NO_HOST_FREES)	/* Scary debugging mode - don't enable! */

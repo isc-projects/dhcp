@@ -50,7 +50,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: omapi.c,v 1.47 2001/05/17 19:04:09 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: omapi.c,v 1.48 2001/06/22 16:47:18 brister Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1196,7 +1196,7 @@ isc_result_t dhcp_host_stuff_values (omapi_object_t *c,
 }
 
 isc_result_t dhcp_host_lookup (omapi_object_t **lp,
-				omapi_object_t *id, omapi_object_t *ref)
+			       omapi_object_t *id, omapi_object_t *ref)
 {
 	omapi_value_t *tv = (omapi_value_t *)0;
 	isc_result_t status;
@@ -1571,20 +1571,132 @@ isc_result_t dhcp_pool_remove (omapi_object_t *lp,
 	return ISC_R_NOTIMPLEMENTED;
 }
 
-isc_result_t dhcp_class_set_value  (omapi_object_t *h,
-				    omapi_object_t *id,
-				    omapi_data_string_t *name,
-				    omapi_typed_data_t *value)
+static isc_result_t
+class_set_value (omapi_object_t *h,
+		 omapi_object_t *id,
+		 omapi_data_string_t *name,
+		 omapi_typed_data_t *value)
 {
 	struct class *class;
+	struct class *superclass = 0;
 	isc_result_t status;
-	int foo;
+	int issubclass = (h -> type == dhcp_type_subclass);
 
-	if (h -> type != dhcp_type_class)
-		return ISC_R_INVALIDARG;
 	class = (struct class *)h;
 
-	/* No values to set yet. */
+	if (!omapi_ds_strcmp (name, "name")) {
+		char *tname;
+
+		if (class -> name)
+			return ISC_R_EXISTS;
+
+		if ((tname = dmalloc (value -> u.buffer.len+1, MDL)) == NULL) {
+			return ISC_R_NOMEMORY;
+		}
+		
+		memcpy (tname, value -> u.buffer.value, value -> u.buffer.len);
+
+		if (issubclass) {
+			status = find_class(&superclass, tname, MDL);
+			dfree(tname, MDL);
+			
+			if (status == ISC_R_NOTFOUND)
+				return status;
+			
+			if (class -> superclass != 0) {
+				class_dereference(&class -> superclass, MDL);
+			}
+		
+			class_reference(&class -> superclass,
+					superclass, MDL);
+		} else if (value -> type == omapi_datatype_data ||
+			   value -> type == omapi_datatype_string) {
+			class -> name = dmalloc (value -> u.buffer.len+1,
+						 MDL);
+			if (!class -> name)
+				return ISC_R_NOMEMORY;
+
+			memcpy (class -> name,
+				value -> u.buffer.value,
+				value -> u.buffer.len);
+			class -> name [value -> u.buffer.len] = 0;
+		} else {
+			return ISC_R_INVALIDARG;
+		}
+		
+		return ISC_R_SUCCESS;
+	}
+
+
+	if (issubclass && !omapi_ds_strcmp(name, "hashstring")) {
+		if (class -> hash_string.data)
+			return ISC_R_EXISTS;
+		
+		if (value -> type == omapi_datatype_data ||
+		    value -> type == omapi_datatype_string) {
+			if (!buffer_allocate (&class -> hash_string.buffer,
+					      value -> u.buffer.len, MDL))
+				return ISC_R_NOMEMORY;
+			class->hash_string.data =
+				&class->hash_string.buffer -> data[0];
+			memcpy (class -> hash_string.buffer -> data,
+				value -> u.buffer.value,
+				value -> u.buffer.len);
+			class -> hash_string.len = value -> u.buffer.len;
+		} else
+		    return ISC_R_INVALIDARG;
+		return ISC_R_SUCCESS;
+	}
+
+	
+
+	if (!omapi_ds_strcmp (name, "group")) {
+		if (value -> type == omapi_datatype_data ||
+		    value -> type == omapi_datatype_string) {
+			struct group_object *group;
+			group = (struct group_object *)0;
+			group_hash_lookup (&group, group_name_hash,
+					   (char *)value -> u.buffer.value,
+					   value -> u.buffer.len, MDL);
+			if (!group || (group -> flags & GROUP_OBJECT_DELETED))
+				return ISC_R_NOTFOUND;
+			if (class -> group)
+				group_dereference (&class -> group, MDL);
+			group_reference (&class -> group, group -> group, MDL);
+			group_object_dereference (&group, MDL);
+		} else
+			return ISC_R_INVALIDARG;
+		return ISC_R_SUCCESS;
+	}
+
+
+	if (!omapi_ds_strcmp (name, "match")) {
+		if (value -> type == omapi_datatype_data ||
+		    value -> type == omapi_datatype_string) {
+			/* XXXJAB support 'match hardware' here. */
+			return ISC_R_INVALIDARG; /* XXX tmp */
+		} else {
+			return ISC_R_INVALIDARG;
+		}
+		
+		return ISC_R_SUCCESS;
+	}
+
+
+	if (!omapi_ds_strcmp (name, "option")) {
+		if (value -> type == omapi_datatype_data ||
+		    value -> type == omapi_datatype_string) {
+			/* XXXJAB support 'options' here. */
+			/* XXXJAB specifically 'bootfile-name' */
+			return ISC_R_INVALIDARG; /* XXX tmp */
+		} else {
+			return ISC_R_INVALIDARG;
+		}
+		
+		return ISC_R_SUCCESS;
+	}
+
+
 
 	/* Try to find some inner object that can take the value. */
 	if (h -> inner && h -> inner -> type -> set_value) {
@@ -1598,6 +1710,24 @@ isc_result_t dhcp_class_set_value  (omapi_object_t *h,
 }
 
 
+
+
+isc_result_t dhcp_class_set_value  (omapi_object_t *h,
+				    omapi_object_t *id,
+				    omapi_data_string_t *name,
+				    omapi_typed_data_t *value)
+{
+	struct class *class;
+	struct class *superclass = 0;
+	isc_result_t status;
+	int foo;
+
+	if (h -> type != dhcp_type_class)
+		return ISC_R_INVALIDARG;
+
+	return class_set_value(h, id, name, value);
+}
+
 isc_result_t dhcp_class_get_value (omapi_object_t *h, omapi_object_t *id,
 				   omapi_data_string_t *name,
 				   omapi_value_t **value)
@@ -1609,7 +1739,9 @@ isc_result_t dhcp_class_get_value (omapi_object_t *h, omapi_object_t *id,
 		return ISC_R_INVALIDARG;
 	class = (struct class *)h;
 
-	/* No values to get yet. */
+	if (!omapi_ds_strcmp (name, "name"))
+		return omapi_make_string_value (value, name, class -> name,
+						MDL);
 
 	/* Try to find some inner object that can provide the value. */
 	if (h -> inner && h -> inner -> type -> get_value) {
@@ -1618,6 +1750,7 @@ isc_result_t dhcp_class_get_value (omapi_object_t *h, omapi_object_t *id,
 		if (status == ISC_R_SUCCESS)
 			return status;
 	}
+
 	return ISC_R_NOTFOUND;
 }
 
@@ -1630,23 +1763,68 @@ isc_result_t dhcp_class_destroy (omapi_object_t *h, const char *file, int line)
 		return ISC_R_INVALIDARG;
 	class = (struct class *)h;
 
-	/* Can't destroy classs yet. */
+	/* Can't destroy class yet. */
 
 	return ISC_R_SUCCESS;
 }
 
-isc_result_t dhcp_class_signal_handler (omapi_object_t *h,
-					const char *name, va_list ap)
+static isc_result_t
+class_signal_handler(omapi_object_t *h,
+		     const char *name, va_list ap)
 {
-	struct class *class;
+	struct class *class = (struct class *)h;
 	isc_result_t status;
 	int updatep = 0;
+	int issubclass;
 
-	if (h -> type != dhcp_type_class)
-		return ISC_R_INVALIDARG;
-	class = (struct class *)h;
+	issubclass = (h -> type == dhcp_type_subclass);
 
-	/* Can't write classs yet. */
+	if (!strcmp (name, "updated")) {
+		
+		if (!issubclass) {
+			if (class -> name == 0 || strlen(class -> name) == 0) {
+				return ISC_R_INVALIDARG;
+			}
+		} else {
+			if (class -> superclass == 0) {
+				return ISC_R_INVALIDARG; /* didn't give name */
+			}
+
+			if (class -> hash_string.data == NULL) {
+				return ISC_R_INVALIDARG;
+			}
+		}
+
+
+		if (issubclass) {
+			if (!class -> superclass -> hash) {
+				class -> superclass -> hash =
+					new_hash ((hash_reference)
+						  omapi_object_reference,
+						  (hash_dereference)
+						  omapi_object_dereference, 0);
+			}
+			add_hash (class -> superclass -> hash,
+				  class -> hash_string.data,
+				  class -> hash_string.len,
+				  (void *)class, MDL);
+		}
+			
+		
+#ifdef DEBUG_OMAPI
+		if (issubclass) {
+			log_debug ("OMAPI added subclass %s",
+				   class -> superclass -> name);
+		} else {
+			log_debug ("OMAPI added class %s", class -> name);
+		}
+#endif
+		
+		status = enter_class (class, 1, 1);
+		if (status != ISC_R_SUCCESS)
+			return status;
+		updatep = 1;
+	}
 
 	/* Try to find some inner object that can take the value. */
 	if (h -> inner && h -> inner -> type -> signal_handler) {
@@ -1655,9 +1833,21 @@ isc_result_t dhcp_class_signal_handler (omapi_object_t *h,
 		if (status == ISC_R_SUCCESS)
 			return status;
 	}
+
 	if (updatep)
 		return ISC_R_SUCCESS;
+	
 	return ISC_R_NOTFOUND;
+}
+
+
+isc_result_t dhcp_class_signal_handler (omapi_object_t *h,
+					const char *name, va_list ap)
+{
+	if (h -> type != dhcp_type_class)
+		return ISC_R_INVALIDARG;
+
+	return class_signal_handler(h, name, ap);
 }
 
 isc_result_t dhcp_class_stuff_values (omapi_object_t *c,
@@ -1684,32 +1874,124 @@ isc_result_t dhcp_class_stuff_values (omapi_object_t *c,
 	return ISC_R_SUCCESS;
 }
 
+isc_result_t class_lookup (omapi_object_t **lp,
+			   omapi_object_t *id, omapi_object_t *ref,
+			   omapi_object_type_t *typewanted)
+{
+	omapi_value_t *nv = (omapi_value_t *)0;
+	omapi_value_t *hv = (omapi_value_t *)0;
+	isc_result_t status;
+	struct class *class = 0;
+	struct class *subclass = 0;
+
+	*lp = NULL;
+	
+	/* see if we have a name */
+	status = omapi_get_value_str (ref, id, "name", &nv);
+	if (status == ISC_R_SUCCESS) {
+		char *name = dmalloc(nv -> value -> u.buffer.len + 1, MDL);
+		memcpy (name,
+			nv -> value -> u.buffer.value,
+			nv -> value -> u.buffer.len);
+
+		omapi_value_dereference (&nv, MDL);
+
+		find_class(&class, name, MDL);
+
+		dfree(name, MDL);
+		
+		if (class == NULL) {
+			return ISC_R_NOTFOUND;
+		}
+
+		if (typewanted == dhcp_type_subclass) {
+			status = omapi_get_value_str (ref, id,
+						      "hashstring", &hv);
+			if (status != ISC_R_SUCCESS) {
+				class_dereference(&class, MDL);
+				return ISC_R_NOKEYS;
+			}
+
+			if (hv -> value -> type != omapi_datatype_data &&
+			    hv -> value -> type != omapi_datatype_string) {
+				class_dereference(&class, MDL);
+				omapi_value_dereference (&hv, MDL);
+				return ISC_R_NOKEYS;
+			}
+			
+			class_hash_lookup (&subclass, class -> hash,
+				      (const char *)hv -> value -> u.buffer.value,
+					   hv -> value -> u.buffer.len, MDL);
+			
+			omapi_value_dereference (&hv, MDL);
+
+			class_dereference(&class, MDL);
+			
+			if (subclass == NULL) {
+				return ISC_R_NOTFOUND;
+			}
+
+			class_reference(&class, subclass, MDL);
+			class_dereference(&subclass, MDL);
+		}
+		
+			
+		/* Don't return the object if the type is wrong. */
+		if (class -> type != typewanted) {
+			class_dereference (&class, MDL);
+			return ISC_R_INVALIDARG;
+		}
+		
+		if (class -> flags & CLASS_DECL_DELETED) {
+			class_dereference (&class, MDL);
+		}
+
+		omapi_object_reference(lp, (omapi_object_t *)class, MDL);
+		
+		return ISC_R_SUCCESS;
+	}
+
+	return ISC_R_NOKEYS;
+}
+
+
 isc_result_t dhcp_class_lookup (omapi_object_t **lp,
 				omapi_object_t *id, omapi_object_t *ref)
 {
-	omapi_value_t *tv = (omapi_value_t *)0;
-	isc_result_t status;
-	struct class *class;
-
-	/* Can't look up classs yet. */
-
-	/* If we get to here without finding a class, no valid key was
-	   specified. */
-	if (!*lp)
-		return ISC_R_NOKEYS;
-	return ISC_R_SUCCESS;
+	return class_lookup(lp, id, ref, dhcp_type_class);
 }
 
 isc_result_t dhcp_class_create (omapi_object_t **lp,
 				omapi_object_t *id)
 {
-	return ISC_R_NOTIMPLEMENTED;
+	struct class *cp = 0;
+	isc_result_t status;
+	
+	status = class_allocate(&cp, MDL);
+	if (status != ISC_R_SUCCESS)
+		return status;
+	
+	group_reference (&cp -> group, root_group, MDL);
+	cp -> flags = CLASS_DECL_DYNAMIC;
+	status = omapi_object_reference (lp, (omapi_object_t *)cp, MDL);
+	class_dereference (&cp, MDL);
+	return status;
 }
 
 isc_result_t dhcp_class_remove (omapi_object_t *lp,
 				omapi_object_t *id)
 {
-	return ISC_R_NOTIMPLEMENTED;
+	struct class *cp;
+	if (lp -> type != dhcp_type_class)
+		return ISC_R_INVALIDARG;
+	cp = (struct class *)lp;
+
+#ifdef DEBUG_OMAPI
+	log_debug ("OMAPI delete class %s", cp -> name);
+#endif
+	
+	delete_class (cp, 1);
+	return ISC_R_SUCCESS;
 }
 
 isc_result_t dhcp_subclass_set_value  (omapi_object_t *h,
@@ -1717,25 +1999,15 @@ isc_result_t dhcp_subclass_set_value  (omapi_object_t *h,
 				       omapi_data_string_t *name,
 				       omapi_typed_data_t *value)
 {
-	struct subclass *subclass;
+	struct class *subclass = 0;
+	struct class *superclass = 0;
 	isc_result_t status;
 	int foo;
 
 	if (h -> type != dhcp_type_subclass)
 		return ISC_R_INVALIDARG;
-	subclass = (struct subclass *)h;
 
-	/* No values to set yet. */
-
-	/* Try to find some inner object that can take the value. */
-	if (h -> inner && h -> inner -> type -> set_value) {
-		status = ((*(h -> inner -> type -> set_value))
-			  (h -> inner, id, name, value));
-		if (status == ISC_R_SUCCESS || status == ISC_R_UNCHANGED)
-			return status;
-	}
-			  
-	return ISC_R_NOTFOUND;
+	return class_set_value(h, id, name, value);
 }
 
 
@@ -1743,14 +2015,16 @@ isc_result_t dhcp_subclass_get_value (omapi_object_t *h, omapi_object_t *id,
 				      omapi_data_string_t *name,
 				      omapi_value_t **value)
 {
-	struct subclass *subclass;
+	struct class *subclass;
 	isc_result_t status;
 
-	if (h -> type != dhcp_type_subclass)
+	if (h -> type != dhcp_type_class)
 		return ISC_R_INVALIDARG;
-	subclass = (struct subclass *)h;
-
-	/* No values to get yet. */
+	subclass = (struct class *)h;
+	if (subclass -> name != 0)
+		return ISC_R_INVALIDARG;
+	
+	/* XXXJAB No values to get yet. */
 
 	/* Try to find some inner object that can provide the value. */
 	if (h -> inner && h -> inner -> type -> get_value) {
@@ -1759,20 +2033,24 @@ isc_result_t dhcp_subclass_get_value (omapi_object_t *h, omapi_object_t *id,
 		if (status == ISC_R_SUCCESS)
 			return status;
 	}
+
 	return ISC_R_NOTFOUND;
 }
 
 isc_result_t dhcp_subclass_destroy (omapi_object_t *h,
 				    const char *file, int line)
 {
-	struct subclass *subclass;
+	struct class *subclass;
 	isc_result_t status;
 
-	if (h -> type != dhcp_type_subclass)
+	if (h -> type != dhcp_type_class)
 		return ISC_R_INVALIDARG;
-	subclass = (struct subclass *)h;
+	subclass = (struct class *)h;
+	if (subclass -> name != 0)
+		return ISC_R_INVALIDARG;
+	
 
-	/* Can't destroy subclasss yet. */
+	/* XXXJAB Can't destroy subclasss yet. */
 
 	return ISC_R_SUCCESS;
 }
@@ -1780,38 +2058,26 @@ isc_result_t dhcp_subclass_destroy (omapi_object_t *h,
 isc_result_t dhcp_subclass_signal_handler (omapi_object_t *h,
 					   const char *name, va_list ap)
 {
-	struct subclass *subclass;
-	isc_result_t status;
-	int updatep = 0;
-
 	if (h -> type != dhcp_type_subclass)
 		return ISC_R_INVALIDARG;
-	subclass = (struct subclass *)h;
 
-	/* Can't write subclasss yet. */
-
-	/* Try to find some inner object that can take the value. */
-	if (h -> inner && h -> inner -> type -> signal_handler) {
-		status = ((*(h -> inner -> type -> signal_handler))
-			  (h -> inner, name, ap));
-		if (status == ISC_R_SUCCESS)
-			return status;
-	}
-	if (updatep)
-		return ISC_R_SUCCESS;
-	return ISC_R_NOTFOUND;
+	return class_signal_handler(h, name, ap);
 }
+
 
 isc_result_t dhcp_subclass_stuff_values (omapi_object_t *c,
 					 omapi_object_t *id,
 					 omapi_object_t *h)
 {
-	struct subclass *subclass;
+	struct class *subclass;
 	isc_result_t status;
 
-	if (h -> type != dhcp_type_subclass)
+	if (h -> type != dhcp_type_class)
 		return ISC_R_INVALIDARG;
-	subclass = (struct subclass *)h;
+	subclass = (struct class *)h;
+	if (subclass -> name != 0)
+		return ISC_R_INVALIDARG;
+	
 
 	/* Can't stuff subclass values yet. */
 
@@ -1829,29 +2095,67 @@ isc_result_t dhcp_subclass_stuff_values (omapi_object_t *c,
 isc_result_t dhcp_subclass_lookup (omapi_object_t **lp,
 				   omapi_object_t *id, omapi_object_t *ref)
 {
-	omapi_value_t *tv = (omapi_value_t *)0;
-	isc_result_t status;
-	struct subclass *subclass;
-
-	/* Can't look up subclasss yet. */
-
-	/* If we get to here without finding a subclass, no valid key was
-	   specified. */
-	if (!*lp)
-		return ISC_R_NOKEYS;
-	return ISC_R_SUCCESS;
+	return class_lookup(lp, id, ref, dhcp_type_subclass);
 }
+
+
+
 
 isc_result_t dhcp_subclass_create (omapi_object_t **lp,
 				   omapi_object_t *id)
 {
-	return ISC_R_NOTIMPLEMENTED;
+	struct class *cp = 0;
+	isc_result_t status;
+
+/*
+ * XXX
+ * NOTE: subclasses and classes have the same internal type, which makes it
+ * difficult to tell them apart. Specifically, in this function we need to
+ * create a class object (because there is no such thing as a subclass
+ * object), but one field of the class object is the type (which has the
+ * value dhcp_type_class), and it is from here that all the other omapi
+ * functions are accessed. So, even though there's a whole suite of
+ * subclass functions registered, they won't get used. Now we could change
+ * the type pointer after creating the class object, but I'm not certain
+ * that won't break something else.
+ */
+	
+	status = subclass_allocate(&cp, MDL);
+	if (status != ISC_R_SUCCESS)
+		return status;
+	group_reference (&cp -> group, root_group, MDL);
+
+	cp -> flags = CLASS_DECL_DYNAMIC;
+	
+	status = omapi_object_reference (lp, (omapi_object_t *)cp, MDL);
+	subclass_dereference (&cp, MDL);
+	return status;
 }
 
 isc_result_t dhcp_subclass_remove (omapi_object_t *lp,
 				   omapi_object_t *id)
 {
-	return ISC_R_NOTIMPLEMENTED;
+#if 1
+
+	log_fatal("calling dhcp_subclass_set_value");
+	/* this should never be called see dhcp_subclass_create for why */
+
+#else	
+	
+	struct class *cp;
+	if (lp -> type != dhcp_type_subclass)
+		return ISC_R_INVALIDARG;
+	cp = (struct class *)lp;
+
+#ifdef DEBUG_OMAPI
+	log_debug ("OMAPI delete subclass %s", cp -> name);
+#endif
+	
+	delete_class (cp, 1);
+
+#endif
+	
+	return ISC_R_SUCCESS;
 }
 
 /* vim: set tabstop=8: */

@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.143 2001/05/02 07:05:52 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.144 2001/06/22 16:47:14 brister Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -274,6 +274,10 @@ isc_result_t lease_file_subparse (struct parse *cfile)
 			} else
 				parse_warn (cfile,
 					    "possibly corrupt lease file");
+		} else if (token == CLASS) {
+			parse_class_declaration (0, cfile, root_group, 2);
+		} else if (token == SUBCLASS) {
+			parse_class_declaration (0, cfile, root_group, 3);
 		} else if (token == HOST) {
 			parse_host_declaration (cfile, root_group);
 		} else if (token == GROUP) {
@@ -1677,6 +1681,8 @@ int parse_class_declaration (cp, cfile, group, type)
 	struct expression *expr;
 	int new = 1;
 	isc_result_t status;
+	int deleted = 0;
+	int dynamic = 0;
 
 	token = next_token (&val, (unsigned *)0, cfile);
 	if (token != STRING) {
@@ -1824,7 +1830,7 @@ int parse_class_declaration (cp, cfile, group, type)
 		}
 
 		/* Save the name, if there is one. */
-		class -> name = name;
+		class -> name = (char *)name;
 	}
 
 	if (type == 0 || type == 1 || type == 3)
@@ -1862,6 +1868,18 @@ int parse_class_declaration (cp, cfile, group, type)
 			token = next_token (&val, (unsigned *)0, cfile);
 			parse_warn (cfile, "unexpected end of file");
 			break;
+		} else if (token == DYNAMIC) {
+			dynamic = 1;
+			token = next_token (&val, (unsigned *)0, cfile);
+			if (!parse_semi (cfile))
+				break;
+			continue;
+		} else if (token == TOKEN_DELETED) {
+			deleted = 1;
+			token = next_token (&val, (unsigned *)0, cfile);
+			if (!parse_semi (cfile))
+				break;
+			continue;
 		} else if (token == MATCH) {
 			if (pc) {
 				parse_warn (cfile,
@@ -1965,7 +1983,20 @@ int parse_class_declaration (cp, cfile, group, type)
 						       declaration);
 		}
 	} while (1);
-	if (type == 2 && new) {
+
+	if (deleted) {
+		struct class *theclass = 0;
+		
+		status = find_class(&theclass, class->name, MDL);
+		if (status == ISC_R_SUCCESS) {
+			delete_class(theclass, 0);
+			class_dereference(&theclass, MDL);
+		}
+	} else if (type == 2 && new) {
+		if (dynamic) {
+			class->flags |= CLASS_DECL_DYNAMIC;
+		}
+		
 		if (!collections -> classes)
 			class_reference (&collections -> classes, class, MDL);
 		else {
@@ -1976,7 +2007,7 @@ int parse_class_declaration (cp, cfile, group, type)
 			class_reference (&c -> nic, class, MDL);
 		}
 	}
-	if (cp)
+	if (cp)				/* should always be 0??? */
 		status = class_reference (cp, class, MDL);
 	class_dereference (&class, MDL);
 	if (pc)

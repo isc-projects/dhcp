@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.68 2001/05/17 19:04:08 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.69 2001/06/22 16:47:17 brister Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -58,6 +58,43 @@ struct hash_table *lease_hw_addr_hash;
 struct hash_table *host_name_hash;
 
 omapi_object_type_t *dhcp_type_host;
+
+isc_result_t enter_class(cd, dynamicp, commit)
+	struct class *cd;
+	int dynamicp;
+	int commit;
+{
+	if (!collections -> classes) {
+		class_reference (&collections -> classes, cd, MDL);
+	} else if (cd->name != NULL) {	/* regular class */
+		struct class *c = 0;
+
+		if (find_class(&c, cd->name, MDL) != ISC_R_NOTFOUND) {
+			class_dereference(&c, MDL);
+			return ISC_R_EXISTS;
+		}
+		
+		for (c = collections -> classes;
+		     c -> nic; c = c -> nic)
+			/* nothing */ ;
+		class_reference (&c -> nic, cd, MDL);
+	}
+
+	if (dynamicp && commit) {
+		const char *name = cd->name;
+
+		if (name == NULL) {
+			name = cd->superclass->name;
+		}
+
+		write_named_billing_class (name, 0, cd);
+		if (!commit_leases ())
+			return ISC_R_IOERROR;
+	}
+
+	return ISC_R_SUCCESS;
+}
+
 
 isc_result_t enter_host (hd, dynamicp, commit)
 	struct host_decl *hd;
@@ -217,6 +254,30 @@ isc_result_t enter_host (hd, dynamicp, commit)
 
 	return ISC_R_SUCCESS;
 }
+
+
+isc_result_t delete_class (cp, commit)
+	struct class *cp;
+	int commit;
+{
+	cp->flags |= CLASS_DECL_DELETED;
+
+	/* do the write first as we won't be leaving it in any data
+	   structures, unlike the host objects */
+	
+	if (commit) {
+		write_named_billing_class (cp->name, 0, cp);
+		if (!commit_leases ())
+			return ISC_R_IOERROR;
+	}
+	
+	unlink_class(&cp);		/* remove from collections */
+
+	class_dereference(&cp, MDL);
+
+	return ISC_R_SUCCESS;
+}
+
 
 isc_result_t delete_host (hd, commit)
 	struct host_decl *hd;
@@ -1712,10 +1773,28 @@ void write_leases ()
 	struct host_decl *hp;
 	struct group_object *gp;
 	struct hash_bucket *hb;
+	struct class *cp;
+	struct collection *colp;
 	int i;
 	int num_written;
 	struct lease **lptr [5];
 
+	/* write all the dynamically-created class declarations. */
+	if (collections->classes) {
+		num_written = 0;
+		for (colp = collections ; colp ; colp = colp->next) {
+			for (cp = colp->classes ; cp ; cp = cp->nic) {
+				write_named_billing_class(cp->name,
+							  0, cp);
+				++num_written;
+			}
+		}
+
+		/* XXXJAB this number doesn't include subclasses... */ 
+		log_info ("Wrote %d class decls to leases file.", num_written);
+	}
+	
+			
 	/* Write all the dynamically-created group declarations. */
 	if (group_name_hash) {
 	    num_written = 0;
