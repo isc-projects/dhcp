@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.85.2.2 2001/06/11 05:56:49 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.85.2.3 2001/06/20 03:27:29 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -1531,7 +1531,7 @@ int option_cache_dereference (ptr, file, line)
 	if ((*ptr) -> refcnt < 0) {
 		log_error ("%s(%d): negative refcnt!", file, line);
 #if defined (DEBUG_RC_HISTORY)
-		dump_rc_history ();
+		dump_rc_history (*ptr);
 #endif
 #if defined (POINTER_DEBUG)
 		abort ();
@@ -2197,11 +2197,11 @@ void do_packet (interface, packet, len, from_port, from, hfrom)
 		  dmalloc_outstanding - previous_outstanding,
 		  dmalloc_outstanding, dmalloc_longterm);
 #endif
-#if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL)
+#if defined (DEBUG_MEMORY_LEAKAGE)
 	dmalloc_dump_outstanding ();
 #endif
 #if defined (DEBUG_RC_HISTORY_EXHAUSTIVELY)
-	dump_rc_history ();
+	dump_rc_history (0);
 #endif
 }
 
