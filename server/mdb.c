@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.58 2001/04/09 01:18:15 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.59 2001/04/16 22:32:58 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -988,6 +988,9 @@ int supersede_lease (comp, lease, commit, propogate, pimmediate)
 	      default:
 		log_error ("Lease with bogus binding state: %d",
 			   comp -> binding_state);
+#if defined (BINDING_STATE_DEBUG)
+		abort ();
+#endif
 		return 0;
 	}
 
@@ -1025,7 +1028,7 @@ int supersede_lease (comp, lease, commit, propogate, pimmediate)
 
 	/* Make the state transition. */
 	if (commit || !pimmediate)
-		process_state_transition (comp);
+		make_binding_state_transition (comp);
 
 	/* Put the lease back on the appropriate queue.    If the lease
 	   is corrupt (as detected by lease_enqueue), don't go any farther. */
@@ -1072,7 +1075,7 @@ int supersede_lease (comp, lease, commit, propogate, pimmediate)
 	return 1;
 }
 
-void process_state_transition (struct lease *lease)
+void make_binding_state_transition (struct lease *lease)
 {
 #if defined (FAILOVER_PROTOCOL)
 	dhcp_failover_state_t *peer;
@@ -1162,16 +1165,44 @@ void process_state_transition (struct lease *lease)
 		lease -> tstp = lease -> ends;
 	}
 
+#if defined (DEBUG_LEASE_STATE_TRANSITIONS)
+	log_debug ("lease %s moves from %s to %s",
+		   piaddr (lease -> ip_addr),
+		   binding_state_print (lease -> binding_state),
+		   binding_state_print (lease -> next_binding_state));
+#endif
+
 	lease -> binding_state = lease -> next_binding_state;
-	if (lease -> binding_state == FTS_ACTIVE ||
-	    lease -> binding_state == FTS_BACKUP) {
+	switch (lease -> binding_state) {
+	      case FTS_ACTIVE:
+	      case FTS_BOOTP:
 #if defined (FAILOVER_PROTOCOL)
 		if (lease -> pool && lease -> pool -> failover_peer)
 			lease -> next_binding_state = FTS_EXPIRED;
 		else
 #endif
 			lease -> next_binding_state = FTS_FREE;
+		break;
+
+	      case FTS_EXPIRED:
+	      case FTS_RELEASED:
+	      case FTS_ABANDONED:
+	      case FTS_RESET:
+		lease -> next_binding_state = FTS_FREE;
+		break;
+
+	      case FTS_FREE:
+	      case FTS_BACKUP:
+	      case FTS_RESERVED:
+		lease -> next_binding_state = lease -> binding_state;
+		break;
 	}
+#if defined (DEBUG_LEASE_STATE_TRANSITIONS)
+	log_debug ("lease %s: next binding state %s",
+		   piaddr (lease -> ip_addr),
+		   binding_state_print (lease -> next_binding_state));
+#endif
+
 }
 
 /* Copy the contents of one lease into another, correctly maintaining
@@ -1791,6 +1822,9 @@ int lease_enqueue (struct lease *comp)
 	      default:
 		log_error ("Lease with bogus binding state: %d",
 			   comp -> binding_state);
+#if defined (BINDING_STATE_DEBUG)
+		abort ();
+#endif
 		return 0;
 	}
 
