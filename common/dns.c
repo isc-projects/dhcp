@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dns.c,v 1.20 2000/04/06 22:41:47 mellon Exp $ Copyright (c) 2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dns.c,v 1.21 2000/04/20 00:55:51 mellon Exp $ Copyright (c) 2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -191,11 +191,13 @@ isc_result_t enter_dns_zone (struct dns_zone *zone)
 	struct dns_zone *tz;
 
 	if (dns_zone_hash) {
-		tz = hash_lookup (dns_zone_hash, zone -> name, 0);
+		tz = hash_lookup (dns_zone_hash,
+				  (unsigned char *)zone -> name, 0);
 		if (tz == zone)
 			return ISC_R_SUCCESS;
 		if (tz)
-			delete_hash_entry (dns_zone_hash, zone -> name, 0);
+			delete_hash_entry (dns_zone_hash,
+					   (unsigned char *)zone -> name, 0);
 	} else {
 		dns_zone_hash =
 			new_hash ((hash_reference)dns_zone_reference,
@@ -203,16 +205,32 @@ isc_result_t enter_dns_zone (struct dns_zone *zone)
 		if (!dns_zone_hash)
 			return ISC_R_NOMEMORY;
 	}
-	add_hash (dns_zone_hash, zone -> name, 0, zone);
+	add_hash (dns_zone_hash, (unsigned char *)zone -> name, 0, zone);
 	return ISC_R_SUCCESS;
 }
 
-isc_result_t dns_zone_lookup (struct dns_zone **zone, const char *name) {
+isc_result_t dns_zone_lookup (struct dns_zone **zone, const char *name)
+{
 	struct dns_zone *tz;
+	unsigned len;
+	char *tname = (char *)0;
 
 	if (!dns_zone_hash)
 		return ISC_R_NOTFOUND;
+
+	len = strlen (name);
+	if (name [len - 1] != '.') {
+		tname = dmalloc (len + 2, MDL);
+		if (!tname)
+			return ISC_R_NOMEMORY;;
+		strcpy (tname, name);
+		tname [len] = '.';
+		tname [len + 1] = 0;
+		name = tname;
+	}
 	tz = hash_lookup (dns_zone_hash, name, 0);
+	if (tname)
+		dfree (tname, MDL);
 	if (!tz)
 		return ISC_R_NOTFOUND;
 	if (!dns_zone_reference (zone, tz, MDL))
@@ -225,11 +243,13 @@ isc_result_t enter_tsig_key (struct tsig_key *tkey)
 	struct tsig_key *tk;
 
 	if (tsig_key_hash) {
-		tk = hash_lookup (tsig_key_hash, tkey -> name, 0);
+		tk = hash_lookup (tsig_key_hash,
+				  (unsigned char *)tkey -> name, 0);
 		if (tk == tkey)
 			return ISC_R_SUCCESS;
 		if (tk)
-			delete_hash_entry (tsig_key_hash, tkey -> name, 0);
+			delete_hash_entry (tsig_key_hash,
+					   (unsigned char *)tkey -> name, 0);
 	} else {
 		tsig_key_hash =
 			new_hash ((hash_reference)tsig_key_reference,
@@ -237,7 +257,7 @@ isc_result_t enter_tsig_key (struct tsig_key *tkey)
 		if (!tsig_key_hash)
 			return ISC_R_NOMEMORY;
 	}
-	add_hash (tsig_key_hash, tkey -> name, 0, tkey);
+	add_hash (tsig_key_hash, (unsigned char *)tkey -> name, 0, tkey);
 	return ISC_R_SUCCESS;
 	
 }
@@ -247,7 +267,7 @@ isc_result_t tsig_key_lookup (struct tsig_key **tkey, const char *name) {
 
 	if (!tsig_key_hash)
 		return ISC_R_NOTFOUND;
-	tk = hash_lookup (tsig_key_hash, name, 0);
+	tk = hash_lookup (tsig_key_hash, (const unsigned char *)name, 0);
 	if (!tk)
 		return ISC_R_NOTFOUND;
 	if (!tsig_key_reference (tkey, tk, MDL))
@@ -303,3 +323,72 @@ int dns_zone_dereference (ptr, file, line)
 	return 1;
 }
 
+#if defined (NSUPDATE)
+int find_cached_zone (const char *dname, ns_class class,
+		      char *zname, size_t zsize,
+		      struct in_addr *addrs, int naddrs)
+{
+	isc_result_t status = ISC_R_NOTFOUND;
+	const char *np;
+	struct dns_zone *zone = (struct dns_zone *)0;
+	struct data_string nsaddrs;
+	int aix;
+
+	/* For each subzone, try to find a cached zone. */
+	for (np = dname - 1; np; np = strchr (np, '.')) {
+		np++;
+		status = dns_zone_lookup (&zone, np);
+		if (status == ISC_R_SUCCESS)
+			break;
+	}
+
+	if (status != ISC_R_SUCCESS)
+		return 0;
+
+	/* Make sure the zone name will fit. */
+	if (strlen (zone -> name) > zsize)
+		return 0;
+	strcpy (zname, zone -> name);
+
+	memset (&nsaddrs, 0, sizeof nsaddrs);
+	aix = 0;
+
+	if (zone -> primary) {
+		if (evaluate_option_cache (&nsaddrs, (struct packet *)0,
+					   (struct lease *)0,
+					   (struct option_state *)0,
+					   (struct option_state *)0,
+					   &global_scope,
+					   zone -> primary, MDL)) {
+			int ip = 0;
+			while (aix < naddrs) {
+				if (ip + 4 > nsaddrs.len)
+					break;
+				memcpy (&addrs [aix], &nsaddrs.data [ip], 4);
+				ip += 4;
+				aix++;
+			}
+			data_string_forget (&nsaddrs, MDL);
+		}
+	}
+	if (zone -> secondary) {
+		if (evaluate_option_cache (&nsaddrs, (struct packet *)0,
+					   (struct lease *)0,
+					   (struct option_state *)0,
+					   (struct option_state *)0,
+					   &global_scope,
+					   zone -> secondary, MDL)) {
+			int ip = 0;
+			while (aix < naddrs) {
+				if (ip + 4 > nsaddrs.len)
+					break;
+				memcpy (&addrs [aix], &nsaddrs.data [ip], 4);
+				ip += 4;
+				aix++;
+			}
+			data_string_forget (&nsaddrs, MDL);
+		}
+	}
+	return aix;
+}
+#endif /* NSUPDATE */
