@@ -1095,6 +1095,11 @@ struct lease *parse_lease_statement (cfile, bc)
 				seenbit = 4;
 				lease.timestamp = t;
 				break;
+
+			      default:
+				/*NOTREACHED*/
+				seenbit = 0;
+				break;
 			}
 		} else {
 			switch (token) {
@@ -1168,6 +1173,8 @@ struct lease *parse_lease_statement (cfile, bc)
 				if (token != SEMI)
 					skip_to_semi (cfile);
 				longjmp (jdref (bc), 1);
+				/*NOTREACHED*/
+				seenbit = 0;
 			}
 		}
 		if (seenmask & seenbit) {
