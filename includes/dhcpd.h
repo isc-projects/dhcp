@@ -2242,10 +2242,10 @@ const char *dhcp_failover_state_name_print (enum failover_state);
 failover_option_t *dhcp_failover_option_printf (unsigned, char *,
 						unsigned *,
 						unsigned, 
-						const char *, ...);
-failover_option_t *dhcp_failover_make_option PROTO ((unsigned, char *,
-						     unsigned *,
-						     unsigned, ...));
+						const char *, ...)
+	__attribute__((__format__(__printf__,5,6)));
+failover_option_t *dhcp_failover_make_option (unsigned, char *,
+					      unsigned *, unsigned, ...);
 isc_result_t dhcp_failover_put_message (dhcp_failover_link_t *,
 					omapi_object_t *, int, ...);
 isc_result_t dhcp_failover_send_connect PROTO ((omapi_object_t *));
