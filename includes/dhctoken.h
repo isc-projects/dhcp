@@ -114,9 +114,6 @@ enum dhcp_token {
 	MIN_SECS = 333,
 	AND = 334,
 	OR = 335,
-#if 0
-	NOT = 336,
-#endif
 	SUBSTRING = 337,
 	SUFFIX = 338,
 	CHECK = 339,
@@ -180,12 +177,10 @@ enum dhcp_token {
 	SPACE = 397,
 	CONCAT = 398,
 	ENCODE_INT = 399,
-	DDNS_FWD_NAME = 400,
-	DDNS_REV_NAME = 401,
 	REVERSE = 402,
 	LEASED_ADDRESS = 403,
 	BINARY_TO_ASCII = 404,
-	PICK_FIRST_VALUE = 405,
+	PICK = 405,
 	CONFIG_OPTION = 406,
 	HOST_DECL_NAME = 407,
 	ON = 408,
@@ -230,7 +225,10 @@ enum dhcp_token {
 	NS_YXRRSET,
 	TOKEN_NULL,
 	TOKEN_SET,
-	DEFINED
+	DEFINED,
+	UNSET,
+	EVAL,
+	LET
 };
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\
