@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.44 1999/07/31 20:23:19 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.45 1999/07/31 23:24:32 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -894,18 +894,18 @@ int evaluate_data_expression (result, packet, lease,
 			memcpy (&result -> data [data.len],
 				other.data, other.len + other.terminated);
 		} else if (s0)
-			data_string_copy (result, &data, "expr_concat");
+			data_string_forget (&data, "expr_concat");
 		else if (s1)
-			data_string_copy (result, &other, "expr_concat");
+			data_string_forget (&other, "expr_concat");
 #if defined (DEBUG_EXPRESSIONS)
 		log_debug ("data: concat (%s, %s) = %s",
 		      s0 ? print_hex_1 (data.len, data.data, 20) : "NULL",
 		      s1 ? print_hex_2 (other.len, other.data, 20) : "NULL",
-		      ((s0 || s1)
+		      ((s0 && s1)
 		       ? print_hex_3 (result -> len, result -> data, 30)
 		       : "NULL"));
 #endif
-		return s0 || s1;
+		return s0 && s1;
 
 	      case expr_encode_int8:
 		s0 = evaluate_numeric_expression (&len, packet, lease,

@@ -243,9 +243,9 @@ specified as a data expression.
 .B concat (\fIdata-expr1\fB, ..., \fIdata-exprN\fB)\fR
 .RS 0.25i
 The expressions are evaluated, and the results of each evaluation are
-concatenated in the sequence that the subexpressions are listed.   Any
-subexpression that evaluates to null is treated as a zero-length string.
-If all the arguments to concat are null, the result is also null.
+concatenated in the sequence that the subexpressions are listed.   If
+any subexpression evaluates to null, the result of the concatenation
+is null.
 .RE
 .PP
 .B reverse (\fInumeric-expr1\fB, \fIdata-expr2\fB)\fR
