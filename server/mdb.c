@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.10 1999/10/13 16:28:00 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.11 1999/10/14 18:27:38 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -601,6 +601,7 @@ void new_address_range (low, high, subnet, pool)
 		address_range [i].pool = pool;
 		address_range [i].billing_class = (struct class *)0;
 		address_range [i].flags = 0;
+		address_range [i].type = dhcp_type_lease;
 
 		/* Link this entry into the list. */
 		address_range [i].next = pool -> leases;
