@@ -41,7 +41,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.126 2001/04/05 20:42:11 mellon Exp $ Copyright (c) 1995-2001 Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.127 2001/04/05 22:37:35 mellon Exp $ Copyright (c) 1995-2001 Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -111,6 +111,16 @@ int main (argc, argv, envp)
 	int no_dhclient_pid = 0;
 	int no_dhclient_script = 0;
 	char *s;
+
+	/* Make sure we have stdin, stdout and stderr. */
+	i = open ("/dev/null", O_RDWR);
+	if (i == 0)
+		i = open ("/dev/null", O_RDWR);
+	if (i == 1) {
+		i = open ("/dev/null", O_RDWR);
+		log_perror = 0; /* No sense logging to /dev/null. */
+	} else if (i != -1)
+		close (i);
 
 #ifdef SYSLOG_4_2
 	openlog ("dhclient", LOG_NDELAY);
@@ -2066,8 +2076,10 @@ void rewrite_client_leases ()
 	if (leaseFile)
 		fclose (leaseFile);
 	leaseFile = fopen (path_dhclient_db, "w");
-	if (!leaseFile)
-		log_fatal ("can't create %s: %m", path_dhclient_db);
+	if (!leaseFile) {
+		log_error ("can't create %s: %m", path_dhclient_db);
+		return;
+	}
 
 	/* Write out all the leases attached to configured interfaces that
 	   we know about. */
@@ -2159,8 +2171,10 @@ int write_client_lease (client, lease, rewrite, makesure)
 
 	if (!leaseFile) {	/* XXX */
 		leaseFile = fopen (path_dhclient_db, "w");
-		if (!leaseFile)
-			log_fatal ("can't create %s: %m", path_dhclient_db);
+		if (!leaseFile) {
+			log_error ("can't create %s: %m", path_dhclient_db);
+			return 0;
+		}
 	}
 
 	errno = 0;
