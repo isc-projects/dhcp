@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: memory.c,v 1.52.2.4 1999/10/25 18:33:54 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: memory.c,v 1.52.2.5 1999/10/28 15:54:05 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -667,16 +667,14 @@ int supersede_lease (comp, lease, commit)
 			   it's run any outstanding expiry events on the
 			   pool. */
 			if (comp -> pool) {
-			    if (!comp -> pool -> next_expiry) {
-				comp -> pool -> next_expiry = comp;
-				if (commit)
-					add_timeout (comp -> ends,
-						     pool_timer, comp -> pool);
-			    } else if (comp -> ends <
-				       comp -> pool -> next_expiry -> ends) {
-				if (commit)
-					add_timeout (comp -> ends,
-						     pool_timer, comp -> pool);
+			    if (!comp -> pool -> next_expiry ||
+				(comp -> ends <
+				 comp -> pool -> next_expiry -> ends)) {
+				    comp -> pool -> next_expiry = comp;
+				    if (commit)
+					    add_timeout (comp -> ends,
+							 pool_timer,
+							 comp -> pool);
 			    }
 			}
 		}
