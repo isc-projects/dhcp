@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: nit.c,v 1.8 1996/09/02 21:14:58 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: nit.c,v 1.9 1996/09/05 23:56:52 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -133,6 +133,7 @@ void if_register_send (info, interface)
 	sio.ic_cmd = NIOCSETF;
 	sio.ic_len = sizeof pf;
 	sio.ic_dp = (char *)&pf;
+	sio.ic_timout = INFTIM;
 	if (ioctl (info -> wfdesc, I_STR, &sio) < 0)
 		error ("Can't set NIT filter: %m");
 #else
@@ -217,6 +218,7 @@ void if_register_receive (info, interface)
 	sio.ic_cmd = NIOCSETF;
 	sio.ic_len = sizeof pf;
 	sio.ic_dp = (char *)&pf;
+	sio.ic_timout = INFTIM;
 	if (ioctl (info -> rfdesc, I_STR, &sio) < 0)
 		error ("Can't set NIT filter on %s: %m", info -> name);
 
