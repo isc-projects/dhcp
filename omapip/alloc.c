@@ -151,6 +151,7 @@ isc_result_t omapi_buffer_new (omapi_buffer_t **h,
 	status = omapi_buffer_reference (h, t, name);
 	if (status != ISC_R_SUCCESS)
 		free (t);
+	(*h) -> head = sizeof ((*h) -> buf) - 1;
 	return status;
 }
 
