@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.95 1999/07/01 20:02:57 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.96 1999/07/02 17:10:51 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -875,6 +875,45 @@ void ack_lease (packet, lease, offer, when, msg)
 					     (lease -> pool
 					      ? lease -> pool -> group
 					      : lease -> subnet -> group));
+
+	/* See if the client is only supposed to have one lease at a time,
+	   and if so, find its other leases and release them.    We can only
+	   do this on DHCPREQUEST.    It's a little weird to do this before
+	   looking at permissions, because the client might not actually
+	   _get_ a lease after we've done the permission check, but the
+	   assumption for this option is that the client has exactly one
+	   network interface, and will only ever remember one lease.   So
+	   if it sends a DHCPREQUEST, and doesn't get the lease, it's already
+	   forgotten about its old lease, so we can too. */
+	if (offer == DHCPREQUEST &&
+	    (oc = lookup_option (&server_universe, state -> options,
+				 SV_ONE_LEASE_PER_CLIENT)) &&
+	    evaluate_boolean_option_cache (packet, packet -> options, oc)) {
+		struct lease *seek;
+		if (lease -> uid_len) {
+			do {
+				seek = find_lease_by_uid (lease -> uid,
+							  lease -> uid_len);
+				if (seek == lease)
+					seek = lease -> n_uid;
+				if (seek) {
+					release_lease (seek);
+				}
+			} while (seek);
+		} else {
+			do {
+				seek = (find_lease_by_hw_addr
+					(lease -> hardware_addr.haddr,
+					 lease -> hardware_addr.hlen));
+				if (seek == lease)
+					seek = lease -> n_hw;
+				if (seek) {
+					release_lease (seek);
+				}
+			} while (seek);
+		}
+	}
+	
 
 	/* Make sure this packet satisfies the configured minimum
 	   number of seconds. */
