@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.163 2000/09/01 16:57:44 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.164 2000/09/01 18:30:36 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1466,8 +1466,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 	}
 
 	/* If we are configured to do per-class billing, do it. */
-	if (have_billing_classes) {
-
+	if (have_billing_classes && !(lease -> flags & STATIC_LEASE)) {
 		/* See if the lease is currently being billed to a
 		   class, and if so, whether or not it can continue to
 		   be billed to that class. */
