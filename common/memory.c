@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: memory.c,v 1.52.2.11 1999/12/21 19:25:42 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: memory.c,v 1.52.2.12 1999/12/22 20:30:20 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -88,7 +88,8 @@ void enter_host (hd)
 				 (struct packet *)0,
 				 (struct option_state *)0,
 				 (struct lease *)0,
-				 esp -> data.option);
+				 esp -> data.option,
+				 "enter_host: DCI");
 			break;
 		}
 	}

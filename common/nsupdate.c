@@ -25,7 +25,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: nsupdate.c,v 1.3.2.13 1999/12/09 00:28:10 mellon Exp $ Copyright (c) 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: nsupdate.c,v 1.3.2.14 1999/12/22 20:30:45 mellon Exp $ Copyright (c) 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -60,7 +60,8 @@ char *ddns_rev_name (lease, state, packet)
 	memset (&revdomain, 0, sizeof revdomain);
 	if (oc)
 		evaluate_option_cache (&revdomain, packet,
-				       packet -> options, lease, oc);
+				       packet -> options, lease, oc,
+				       "ddns_rev_name: DRDN");
 	if (lease -> ip_addr.len != 4) { /* IPv4 */
 		log_error("unsupported IP address length: %d",
 			  lease -> ip_addr.len);
@@ -114,12 +115,14 @@ char *ddns_fwd_name (lease, state, packet)
 			    SV_DDNS_DOMAIN_NAME);
 	memset (&domain, 0, sizeof domain);
 	if (!(oc && evaluate_option_cache (&domain, packet,
-					   packet -> options, lease, oc))) {
+					   packet -> options, lease, oc,
+					   "ddns_fwd_name: DDN"))) {
 		oc = lookup_option (&dhcp_universe, state -> options,
 				    DHO_DOMAIN_NAME);
 		if (!(oc &&
 		      evaluate_option_cache (&domain, packet,
-					     packet -> options, lease, oc))) {
+					     packet -> options, lease, oc,
+					     "ddns_fwd_name: DN"))) {
 			log_info ("dns-update: no domain name specified.");
 			log_info ("Please specify a domain-name option or %s",
 				  "use the ddns-domainname parameter.");
@@ -136,12 +139,14 @@ char *ddns_fwd_name (lease, state, packet)
 			    SV_DDNS_HOST_NAME);
 	memset (&hostname, 0, sizeof hostname);
 	if (!(oc && evaluate_option_cache (&hostname, packet,
-					   state -> options, lease, oc))) {
+					   state -> options, lease, oc,
+					   "ddns_fwd_name: DHN"))) {
 		oc = lookup_option (&dhcp_universe,
 				    packet -> options, DHO_HOST_NAME);
 		if (!(oc &&
 		      evaluate_option_cache (&hostname, packet,
-					     packet -> options, lease, oc))) {
+					     packet -> options, lease, oc,
+					     "ddns_fwd_name: DN"))) {
 			if (lease -> host && lease -> host -> name) {
 				hostname.data =
 					(unsigned char *)lease -> host -> name;

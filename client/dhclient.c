@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.79.2.5 1999/12/09 00:24:20 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.79.2.6 1999/12/22 20:29:21 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -535,7 +535,7 @@ void dhcpack (packet)
 	if (oc &&
 	    evaluate_option_cache (&ds, packet,
 				   client -> new -> options,
-				   (struct lease *)0, oc)) {
+				   (struct lease *)0, oc, "dhcpack DLT")) {
 		if (ds.len > 3)
 			client -> new -> expiry = getULong (ds.data);
 		else
@@ -564,7 +564,7 @@ void dhcpack (packet)
 			    DHO_DHCP_RENEWAL_TIME);
 	if (oc &&
 	    evaluate_option_cache (&ds, packet, client -> new -> options,
-				   (struct lease *)0, oc)) {
+				   (struct lease *)0, oc, "dhcpack DRT")) {
 		if (ds.len > 3)
 			client -> new -> renewal = getULong (ds.data);
 		else
@@ -584,7 +584,7 @@ void dhcpack (packet)
 	if (oc &&
 	    evaluate_option_cache (&ds, packet,
 				   client -> new -> options,
-				   (struct lease *)0, oc)) {
+				   (struct lease *)0, oc, "dhcpack DRBT")) {
 		if (ds.len > 3)
 			client -> new -> rebind = getULong (ds.data);
 		else
@@ -694,7 +694,7 @@ void state_bound (cpp)
 	    evaluate_option_cache (&ds, (struct packet *)0,
 				   client -> active -> options,
 				   (struct lease *)0,
-				   oc)) {
+				   oc, "state_bound DSI")) {
 		if (ds.len > 3) {
 			memcpy (client -> destination.iabuf, ds.data, 4);
 			client -> destination.len = 4;
@@ -935,7 +935,8 @@ struct client_lease *packet_to_lease (packet)
 	memset (&data, 0, sizeof data);
 	if (oc &&
 	    evaluate_option_cache (&data, packet, lease -> options,
-				   (struct lease *)0, oc)) {
+				   (struct lease *)0, oc,
+				   "packet_to_lease: DOO")) {
 		if (data.len > 0)
 			i = data.data [0];
 		else
@@ -1869,7 +1870,8 @@ void write_client_lease (client, lease, rewrite)
 			oc = (struct option_cache *)p -> car;
 			if (evaluate_option_cache (&ds, (struct packet *)0,
 						   lease -> options,
-						   (struct lease *)0, oc)) {
+						   (struct lease *)0, oc,
+						   "write_client_lease")) {
 				fprintf (leaseFile,
 					 "  option %s %s;\n",
 					 oc -> option -> name,
@@ -1984,7 +1986,8 @@ void script_write_params (client, prefix, lease)
 	oc = lookup_option (&dhcp_universe, lease -> options, DHO_SUBNET_MASK);
 	if (oc && evaluate_option_cache (&data, (struct packet *)0,
 					 lease -> options,
-					 (struct lease *)0, oc)) {
+					 (struct lease *)0, oc,
+					 "script_write_params DSM")) {
 		if (data.len > 3) {
 			struct iaddr netmask, subnet, broadcast;
 
@@ -2008,7 +2011,7 @@ void script_write_params (client, prefix, lease)
 							    (struct packet *)0,
 							    lease -> options,
 							    (struct lease *)0,
-							    oc)) {
+							    oc, "swp BA")) {
 					broadcast = broadcast_addr (subnet,
 								    netmask);
 					if (broadcast.len) {
@@ -2054,7 +2057,8 @@ void script_write_params (client, prefix, lease)
 
 			if (evaluate_option_cache (&data, (struct packet *)0,
 						   lease -> options,
-						   (struct lease *)0, oc)) {
+						   (struct lease *)0, oc,
+						   "script_write_params")) {
 
 				if (data.len) {
 					char *s = (dhcp_option_ev_name
