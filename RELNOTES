@@ -1,7 +1,7 @@
 	    Internet Software Consortium DHCP Distribution
 			     Version 3.0.1
-			  Release Candidate 5
-			   January 14, 2002
+			  Release Candidate 6
+			   January 17, 2002
 
 			    Release Notes
 
@@ -45,6 +45,28 @@ Measurement Systems, Igor Sharfmesser at Kazakh Telecom, and Brian
 Murrell at BC Tel Advanced Communications.  I'd like to express my
 thanks to all of these good people here, both for working on the code
 and for prodding me into improving it.
+
+			Changes since 3.0.1rc5
+
+- Include some new documentation and changes provided by Karl Auer.
+
+- Add a workaround for some Lexmark printers that send a double-NUL-
+  terminated host-name option, which would break DNS updates.
+
+- Fix an off-by-one error in the MAC-address checking code for
+  DHCPRELEASE that was added in 3.0.1rc5.
+
+- Fix a bug where client-specific information was not being discarded
+  from the lease when it expired or was released, resulting in
+  problems if the lease was reallocated to a different client.
+
+- If more than one allocation pool is specified that has the same set
+  of constraints as another allocation pool on the same shared
+  network, merge the two pools.
+
+- Don't print an error in fallback_discard, since this just causes
+  confusion and does not appear to be helping to encourage anyone to
+  fix this bug.
 
 			Changes since 3.0.1rc4
 
