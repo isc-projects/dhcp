@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: upf.c,v 1.7 1999/03/13 18:53:15 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: upf.c,v 1.8 1999/03/13 18:56:47 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -306,12 +306,14 @@ ssize_t receive_packet (interface, buf, len, from, hfrom)
 	return length;
 }
 
-int can_unicast_without_arp ()
+int can_unicast_without_arp (ip)
+	struct interface_info *ip;
 {
 	return 1;
 }
 
-int can_receive_unicast_unconfigured ()
+int can_receive_unicast_unconfigured (ip)
+	struct interface_info *ip;
 {
 	return 1;
 }
