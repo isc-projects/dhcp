@@ -191,7 +191,7 @@ int parse_warn (ANSI_DECL (char *) fmt, VA_DOTDOTDOT)
 	vsnprintf (mbuf, sizeof mbuf, fbuf, list);
 	va_end (list);
 #ifndef DEBUG
-	syslog (LOG_ERROR, mbuf);
+	syslog (LOG_ERR, mbuf);
 #else
 	write (1, mbuf, strlen (mbuf));
 	write (1, "\n", 1);
