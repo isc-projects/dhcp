@@ -23,7 +23,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: lpf.c,v 1.13.2.1 1999/10/04 23:11:35 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: lpf.c,v 1.13.2.2 1999/10/15 12:36:10 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -173,7 +173,7 @@ static void lpf_gen_filter_setup (info)
 		    errno == ESOCKTNOSUPPORT || errno == EPFNOSUPPORT ||
 		    errno == EAFNOSUPPORT)
 			log_fatal ("socket: %m - make sure %s %s %s!",
-				   "CONFIG_PACKET (Packet socket)"
+				   "CONFIG_PACKET (Packet socket)",
 				   "and CONFIG_FILTER (Socket Filtering) are",
 				   "enabled in your kernel configuration");
 		log_fatal ("Can't install packet filter program: %m");
