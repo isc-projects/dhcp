@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: memory.c,v 1.22.2.3 1997/11/22 07:02:39 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: memory.c,v 1.22.2.4 1998/06/25 05:30:12 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -418,9 +418,9 @@ void enter_lease (lease)
 			       piaddr (lease -> ip_addr));
 		}
 		*comp = *lease;
-		lease -> next = dangling_leases;
-		lease -> prev = (struct lease *)0;
-		dangling_leases = lease;
+		comp -> next = dangling_leases;
+		comp -> prev = (struct lease *)0;
+		dangling_leases = comp;
 	} else {
 		supersede_lease (comp, lease, 0);
 	}
