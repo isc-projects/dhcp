@@ -18,6 +18,7 @@
 #
 
 CATMANPAGES = dhcp-options.cat5 dhcp-contrib.cat5 dhcp-eval.cat5
+SEDMANPAGES = dhcp-options.man5 dhcp-contrib.man5 dhcp-eval.man5
 SRC    = raw.c parse.c nit.c icmp.c dispatch.c conflex.c upf.c bpf.c socket.c \
 	 lpf.c dlpi.c packet.c memory.c print.c options.c inet.c convert.c \
 	 tree.c tables.c hash.c alloc.c errwarn.c inet_addr.c dns.c \
@@ -64,7 +65,7 @@ clean:
 	-rm -f $(OBJ)
 
 realclean: clean
-	-rm -f libdhcp.a *~ #* $(CATMANPAGES)
+	-rm -f libdhcp.a *~ #* $(CATMANPAGES) $(SEDMANPAGES)
 
 distclean: realclean
 	-rm -f Makefile

@@ -19,6 +19,8 @@
 
 CATMANPAGES = dhclient.cat8 dhclient.conf.cat5 dhclient-script.cat8 \
 	      dhclient.leases.cat5
+SEDMANPAGES = dhclient.man8 dhclient.conf.man5 dhclient-script.man8 \
+	      dhclient.leases.man5
 SRCS   = dhclient.c clparse.c
 OBJS   = dhclient.o clparse.o
 PROG   = dhclient
@@ -67,7 +69,7 @@ clean:
 	-rm -f $(OBJS)
 
 realclean: clean
-	-rm -f $(PROG) $(CATMANPAGES) *~ #*
+	-rm -f $(PROG) $(CATMANPAGES) $(SEDMANPAGES) *~ #*
 
 distclean: realclean
 	-rm -f Makefile

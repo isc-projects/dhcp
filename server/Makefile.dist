@@ -18,6 +18,7 @@
 #
 
 CATMANPAGES = dhcpd.cat8 dhcpd.conf.cat5 dhcpd.leases.cat5
+SEDMANPAGES = dhcpd.man8 dhcpd.conf.man5 dhcpd.leases.man5
 SRCS   = dhcpd.c dhcp.c bootp.c confpars.c db.c class.c failover.c
 OBJS   = dhcpd.o dhcp.o bootp.o confpars.o db.o class.o failover.o
 PROG   = dhcpd
@@ -57,7 +58,7 @@ clean:
 	-rm -f $(OBJS)
 
 realclean: clean
-	-rm -f $(PROG) $(CATMANPAGES) *~ #*
+	-rm -f $(PROG) $(CATMANPAGES) $(SEDMANPAGES) *~ #*
 
 distclean: realclean
 	-rm -f Makefile
