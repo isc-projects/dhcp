@@ -68,6 +68,7 @@
 # define ETHER_DEST(x)	(&((x) -> ether_dhost))
 #endif
 
+#include <syslog.h>
 #include <sys/types.h>
 
 #include <string.h>
@@ -79,7 +80,6 @@
 #include <limits.h>
 #include <poll.h>
 
-#include <netdb.h>
 extern int h_errno;
 
 #include <net/if.h>

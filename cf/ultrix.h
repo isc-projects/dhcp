@@ -49,6 +49,7 @@
  * This file was contributed by Jonathan Stone.
  */
 
+#include <sys/syslog.h>
 #include <sys/types.h>
 #include <string.h>
 #include <errno.h>
@@ -58,7 +59,6 @@
 #include <setjmp.h>
 #include <limits.h>
 
-#include <netdb.h>
 extern int h_errno;
 
 #include <net/if.h>
@@ -74,15 +74,26 @@ extern int h_errno;
 #define _PATH_DHCPD_PID	"/etc/dhcpd.pid"
 #endif
 
+#define u_int8_t	unsigned char		/* Not quite POSIX... */
+#define u_int16_t	unsigned short 
+#define u_int32_t	unsigned long 
+
+/* The jmp_buf type is an array on ultrix, so we can't dereference it
+   and must declare it differently. */
+#define jbp_decl(x)	jmp_buf x
+#define jref(x)		(x)
+#define jdref(x)	(x)
+#define jrefproto	jmp_buf
+
+#define IPTOS_LOWDELAY		0x10
+/*      IPTOS_LOWCOST		0x02 XXX */
 
 /* Varargs stuff... */
-#include <stdarg.h>
-#define VA_DOTDOTDOT ...
-#define VA_start(list, last) va_start (list, last)
-#define va_dcl
+#include <varargs.h>
+#define VA_DOTDOTDOT va_alist
+#define VA_start(list, last) va_start (list)
 #define vsnprintf(buf, size, fmt, list) vsprintf (buf, fmt, list)
-#define snprintf(buf, size, fmt, a1, a2, a3) \
-	sprintf(buf, fmt, a1, a2, a3) \
+#define NO_SNPRINTF
 
 #define INADDR_LOOPBACK	((u_int) htonl((u_int)0x7f000001))
 #define EOL	'\n'

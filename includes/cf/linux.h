@@ -49,6 +49,7 @@
  * This file was contributed by Jonathan Stone.
  */
 
+#include <syslog.h>
 #include <sys/types.h>
 #include <string.h>
 #include <errno.h>
@@ -58,7 +59,6 @@
 #include <setjmp.h>
 #include <limits.h>
 
-#include <netdb.h>
 extern int h_errno;
 
 #include <net/if.h>

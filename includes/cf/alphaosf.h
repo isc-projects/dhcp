@@ -36,6 +36,7 @@
  * design by Paul Vixie.
  */
 
+#include <syslog.h>
 #include <sys/types.h>
 #include <sys/bitypes.h>
 #include <string.h>
@@ -49,7 +50,6 @@
 #include <sys/wait.h>
 #include <signal.h>
 
-#include <netdb.h>
 extern int h_errno;
 
 #include <net/if.h>

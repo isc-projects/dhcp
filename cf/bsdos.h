@@ -35,6 +35,7 @@
  * under a contract with Vixie Labs.
  */
 
+#include <syslog.h>
 #include <sys/types.h>
 #include <string.h>
 #include <paths.h>
@@ -46,7 +47,6 @@
 #include <sys/wait.h>
 #include <signal.h>
 
-#include <netdb.h>
 extern int h_errno;
 
 #include <net/if.h>
