@@ -440,6 +440,8 @@ extern char *path_dhcpd_pid;
 
 int main PROTO ((int, char **, char **));
 void cleanup PROTO ((void));
+void lease_pinged PROTO ((struct iaddr, u_int8_t *, int));
+void lease_ping_timeout PROTO ((void *));
 
 /* conflex.c */
 extern int lexline, lexchar;
@@ -492,6 +494,8 @@ struct tree *tree_limit PROTO ((struct tree *, int));
 int tree_evaluate PROTO ((struct tree_cache *));
 
 /* dhcp.c */
+extern int outstanding_pings;
+
 void dhcp PROTO ((struct packet *));
 void dhcpdiscover PROTO ((struct packet *));
 void dhcprequest PROTO ((struct packet *));
@@ -526,7 +530,7 @@ void enter_subnet PROTO ((struct subnet *));
 void enter_lease PROTO ((struct lease *));
 int supersede_lease PROTO ((struct lease *, struct lease *, int));
 void release_lease PROTO ((struct lease *));
-void abandon_lease PROTO ((struct lease *));
+void abandon_lease PROTO ((struct lease *, char *));
 struct lease *find_lease_by_uid PROTO ((unsigned char *, int));
 struct lease *find_lease_by_hw_addr PROTO ((unsigned char *, int));
 struct lease *find_lease_by_ip_addr PROTO ((struct iaddr));
@@ -771,6 +775,8 @@ void db_startup PROTO ((void));
 void new_lease_file PROTO ((void));
 
 /* packet.c */
+u_int32_t checksum PROTO ((unsigned char *, int, u_int32_t));
+u_int32_t wrapsum PROTO ((u_int32_t));
 void assemble_hw_header PROTO ((struct interface_info *, unsigned char *,
 				int *, struct hardware *));
 void assemble_udp_ip_header PROTO ((struct interface_info *, unsigned char *,
