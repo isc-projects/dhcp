@@ -55,8 +55,6 @@ experiment, or for sites that desperately need the new features.
 
 	    CHANGES FROM VERSION 2.0 BETA 1 PATCHLEVEL 18
 
-Note: patchlevel 19 is a test patchlevel.
-
 - Support added for AIX 4.1.5.0 (and hopefully other versions).
 
 - Use /var/run instead of /etc on Digital Unix.
