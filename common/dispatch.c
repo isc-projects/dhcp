@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dispatch.c,v 1.56 1999/09/28 22:50:02 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dispatch.c,v 1.57 1999/10/04 23:14:00 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -70,6 +70,8 @@ void dispatch ()
 		/* Wait for a packet or a timeout... XXX */
 		status = omapi_one_dispatch (0, tvp);
 	} while (status == ISC_R_TIMEDOUT || status == ISC_R_SUCCESS);
+	log_fatal ("omapi_one_dispatch failed: %s -- exiting."
+		   isc_result_totext (status));
 }
 
 void add_timeout (when, where, what)
