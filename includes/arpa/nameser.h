@@ -49,21 +49,11 @@
  */
 
 /*
- *	$Id: nameser.h,v 1.2 2000/01/26 14:55:58 mellon Exp $
+ *	$Id: nameser.h,v 1.3 2000/01/27 23:28:08 mellon Exp $
  */
 
 #ifndef _ARPA_NAMESER_H_
 #define _ARPA_NAMESER_H_
-
-#define BIND_4_COMPAT
-
-#include <sys/param.h>
-#if (!defined(BSD)) || (BSD < 199306)
-# include <sys/bitypes.h>
-#else
-# include <sys/types.h>
-#endif
-#include <sys/cdefs.h>
 
 /*
  * Revision information.  This is the release date in YYYYMMDD format.
@@ -114,12 +104,12 @@ typedef enum __ns_sect {
  * leading _'s on the member names.  Use the accessor functions, not the _'s.
  */
 typedef struct __ns_msg {
-	const u_char	*_msg, *_eom;
+	const u_int8_t	*_msg, *_eom;
 	u_int16_t	_id, _flags, _counts[ns_s_max];
-	const u_char	*_sections[ns_s_max];
+	const u_int8_t	*_sections[ns_s_max];
 	ns_sect		_sect;
 	int		_rrnum;
-	const u_char	*_ptr;
+	const u_int8_t	*_ptr;
 } ns_msg;
 
 /* Private data structure - do not use from outside library. */
@@ -146,7 +136,7 @@ typedef	struct __ns_rr {
 	u_int16_t	rr_class;
 	u_int32_t	ttl;
 	u_int16_t	rdlength;
-	const u_char *	rdata;
+	const u_int8_t *rdata;
 } ns_rr;
 
 /* Accessor macros - this is part of the public interface. */
@@ -431,7 +421,7 @@ typedef enum __ns_cert_types {
  * Inline versions of get/put short/long.  Pointer is advanced.
  */
 #define NS_GET16(s, cp) do { \
-	register u_char *t_cp = (u_char *)(cp); \
+	register u_int8_t *t_cp = (u_int8_t *)(cp); \
 	(s) = ((u_int16_t)t_cp[0] << 8) \
 	    | ((u_int16_t)t_cp[1]) \
 	    ; \
@@ -439,7 +429,7 @@ typedef enum __ns_cert_types {
 } while (0)
 
 #define NS_GET32(l, cp) do { \
-	register u_char *t_cp = (u_char *)(cp); \
+	register u_int8_t *t_cp = (u_int8_t *)(cp); \
 	(l) = ((u_int32_t)t_cp[0] << 24) \
 	    | ((u_int32_t)t_cp[1] << 16) \
 	    | ((u_int32_t)t_cp[2] << 8) \
@@ -450,7 +440,7 @@ typedef enum __ns_cert_types {
 
 #define NS_PUT16(s, cp) do { \
 	register u_int16_t t_s = (u_int16_t)(s); \
-	register u_char *t_cp = (u_char *)(cp); \
+	register u_int8_t *t_cp = (u_int8_t *)(cp); \
 	*t_cp++ = t_s >> 8; \
 	*t_cp   = t_s; \
 	(cp) += NS_INT16SZ; \
@@ -458,7 +448,7 @@ typedef enum __ns_cert_types {
 
 #define NS_PUT32(l, cp) do { \
 	register u_int32_t t_l = (u_int32_t)(l); \
-	register u_char *t_cp = (u_char *)(cp); \
+	register u_int8_t *t_cp = (u_int8_t *)(cp); \
 	*t_cp++ = t_l >> 24; \
 	*t_cp++ = t_l >> 16; \
 	*t_cp++ = t_l >> 8; \
@@ -501,56 +491,6 @@ typedef enum __ns_cert_types {
 #define	ns_makecanon		__ns_makecanon
 #define	ns_samename		__ns_samename
 
-__BEGIN_DECLS
-u_int		ns_get16 __P((const u_char *));
-u_long		ns_get32 __P((const u_char *));
-void		ns_put16 __P((u_int, u_char *));
-void		ns_put32 __P((u_long, u_char *));
-int		ns_initparse __P((const u_char *, int, ns_msg *));
-int		ns_skiprr __P((const u_char *, const u_char *, ns_sect, int));
-int		ns_parserr __P((ns_msg *, ns_sect, int, ns_rr *));
-int		ns_sprintrr __P((const ns_msg *, const ns_rr *,
-				 const char *, const char *, char *, size_t));
-int		ns_sprintrrf __P((const u_char *, size_t, const char *,
-				  ns_class, ns_type, u_long, const u_char *,
-				  size_t, const char *, const char *,
-				  char *, size_t));
-int		ns_format_ttl __P((u_long, char *, size_t));
-int		ns_parse_ttl __P((const char *, u_long *));
-u_int32_t	ns_datetosecs __P((const char *cp, int *errp));
-int		ns_name_ntol __P((const u_char *, u_char *, size_t));
-int		ns_name_ntop __P((const u_char *, char *, size_t));
-int		ns_name_pton __P((const char *, u_char *, size_t));
-int		ns_name_unpack __P((const u_char *, const u_char *,
-				    const u_char *, u_char *, size_t));
-int		ns_name_pack __P((const u_char *, u_char *, int,
-				  const u_char **, const u_char **));
-int		ns_name_uncompress __P((const u_char *, const u_char *,
-					const u_char *, char *, size_t));
-int		ns_name_compress __P((const char *, u_char *, size_t,
-				      const u_char **, const u_char **));
-int		ns_name_skip __P((const u_char **, const u_char *));
-int		ns_sign __P((u_char *, int *, int, int, void *,
-			     const u_char *, int, u_char *, int *, time_t));
-int		ns_sign_tcp __P((u_char *, int *, int, int,
-				 ns_tcp_tsig_state *, int));
-int		ns_sign_tcp_init __P((void *, const u_char *, int,
-					ns_tcp_tsig_state *));
-u_char		*ns_find_tsig __P((u_char *, u_char *));
-int		ns_verify __P((u_char *, int *, void *,
-			       const u_char *, int, u_char *, int *,
-			       time_t *, int));
-int		ns_verify_tcp __P((u_char *, int *, ns_tcp_tsig_state *, int));
-int		ns_verify_tcp_init __P((void *, const u_char *, int,
-					ns_tcp_tsig_state *));
-int		ns_samedomain __P((const char *, const char *));
-int		ns_subdomain __P((const char *, const char *));
-int		ns_makecanon __P((const char *, char *, size_t));
-int		ns_samename __P((const char *, const char *));
-__END_DECLS
-
-#ifdef BIND_4_COMPAT
 #include <arpa/nameser_compat.h>
-#endif
 
 #endif /* !_ARPA_NAMESER_H_ */
