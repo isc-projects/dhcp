@@ -982,7 +982,8 @@ int evaluate_option_cache PROTO ((struct data_string *,
 				  struct packet *,
 				  struct option_state *,
 				  struct lease *,
-				  struct option_cache *));
+				  struct option_cache *,
+				  char *));
 int evaluate_boolean_option_cache PROTO ((struct packet *,
 					  struct option_state *,
 					  struct lease *,
@@ -1071,6 +1072,14 @@ extern unsigned long dmalloc_cutoff_generation;
 
 VOIDPTR dmalloc PROTO ((int, char *));
 void dfree PROTO ((VOIDPTR, char *));
+#if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL)
+void dmalloc_reuse PROTO ((VOIDPTR, char *, int));
+#else
+#define dmalloc_reuse(x,y,z)
+#endif
+#if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL)
+void dmalloc_dump_outstanding PROTO ((void));
+#endif
 struct packet *new_packet PROTO ((char *));
 struct dhcp_packet *new_dhcp_packet PROTO ((char *));
 struct hash_table *new_hash_table PROTO ((int, char *));
