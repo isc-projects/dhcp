@@ -52,7 +52,8 @@ and for prodding me into improving it.
 - log() was logging a work buffer, rather than the value returned by
   executing the statements configured by the user.  In some cases,
   the work buffer and the intended results were the same.  In some other
-  cases, they were not.  This was fixed.
+  cases, they were not.  This was fixed thanks to a patch from Gunnar
+  Fjone and directconnect.no.
 
 - Compiler warnings for some string type conversions was fixed, thanks
   to Andreas Gustafsson.
