@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: db.c,v 1.38 2000/01/05 18:15:28 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: db.c,v 1.39 2000/01/05 18:43:33 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -83,7 +83,6 @@ int write_lease (lease)
 		++errors;
 	}
 
-#if defined (FAILOVER_PROTOCOL)
 	t = gmtime (&lease -> tstp);
 	errno = 0;
 	fprintf (db_file, "\ttstp %d %d/%02d/%02d %02d:%02d:%02d;",
@@ -111,7 +110,6 @@ int write_lease (lease)
 			++errors;
 		}
 	}
-#endif /* FAILOVER_PROTOCOL */
 
 	/* If this lease is billed to a class and is still valid,
 	   write it out. */
