@@ -85,42 +85,40 @@
 #include "dhcpd.h"
 
 #if defined (USE_DLPI_SEND) || defined (USE_DLPI_RECEIVE)
-#include "dhcpd.h"
 
-#ifdef USE_DLPI
-#include <sys/ioctl.h>
-#include <sys/time.h>
-#include <sys/dlpi.h>
-#include <stropts.h>
-#ifdef USE_DLPI_PFMOD
-# include <sys/pfmod.h>
-#endif
-#ifdef USE_POLL
-# include <poll.h>
-#endif
-
-#include <netinet/in_systm.h>
-#include "includes/netinet/ip.h"
-#include "includes/netinet/udp.h"
-#include "includes/netinet/if_ether.h"
-
-#ifdef USE_DLPI_PFMOD
-# ifdef USE_DLPI_RAW
-#  define DLPI_MODNAME "DLPI+RAW+PFMOD"
-# else
-#  define DLPI_MODNAME "DLPI+PFMOD"
+# include <sys/ioctl.h>
+# include <sys/time.h>
+# include <sys/dlpi.h>
+# include <stropts.h>
+# ifdef USE_DLPI_PFMOD
+#  include <sys/pfmod.h>
 # endif
-#else
-# ifdef USE_DLPI_RAW
-#  define DLPI_MODNAME "DLPI+RAW"
-# else
-#  define DLPI_MODNAME "DLPI"
+# ifdef USE_POLL
+#  include <poll.h>
 # endif
-#endif
 
-#ifndef ABS
-# define ABS(x) ((x) >= 0 ? (x) : 0-(x))
-#endif
+# include <netinet/in_systm.h>
+# include "includes/netinet/ip.h"
+# include "includes/netinet/udp.h"
+# include "includes/netinet/if_ether.h"
+
+# ifdef USE_DLPI_PFMOD
+#  ifdef USE_DLPI_RAW
+#   define DLPI_MODNAME "DLPI+RAW+PFMOD"
+#  else
+#   define DLPI_MODNAME "DLPI+PFMOD"
+#  endif
+# else
+#  ifdef USE_DLPI_RAW
+#   define DLPI_MODNAME "DLPI+RAW"
+#  else
+#   define DLPI_MODNAME "DLPI"
+#  endif
+# endif
+
+# ifndef ABS
+#  define ABS(x) ((x) >= 0 ? (x) : 0-(x))
+# endif
 
 static int strioctl PROTO ((int fd, int cmd, int timeout, int len, char *dp));
 
@@ -163,9 +161,9 @@ static int dlpiunitdataind PROTO ((int fd,
 				   unsigned char *data,
 				   int datalen));
 
-#ifndef USE_POLL
+# ifndef USE_POLL
 static void	sigalrm PROTO ((int sig));
-#endif
+# endif
 static int	expected PROTO ((unsigned long prim, union DL_primitives *dlp,
 				  int msgflags));
 static int	strgetmsg PROTO ((int fd, struct strbuf *ctlp,
@@ -343,8 +341,8 @@ void if_register_send (info)
 #endif
 
         if (!quiet_interface_discovery)
-		note ("Sending on   %s/%s/%s",
-		      DLPI_MODNAME,
+		note ("Sending on   DLPI/%s/%s/%s",
+		      info -> name,
 		      print_hw_addr (info -> hw_address.htype,
 				     info -> hw_address.hlen,
 				     info -> hw_address.haddr),
@@ -425,8 +423,8 @@ void if_register_receive (info)
 #endif
 
         if (!quiet_interface_discovery)
-		note ("Listening on %s/%s/%s",
-		      DLPI_MODNAME,
+		note ("Listening on DLPI/%s/%s/%s",
+		      info -> name,
 		      print_hw_addr (info -> hw_address.htype,
 				     info -> hw_address.hlen,
 				     info -> hw_address.haddr),
