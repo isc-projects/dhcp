@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.108 2000/05/03 06:19:29 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.109 2000/05/04 18:58:11 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2140,6 +2140,7 @@ struct lease *parse_lease_declaration (cfile)
 		      case TIMESTAMP:
 		      case TSTP:
 		      case TSFP:
+		      case CLTT:
 			t = parse_date (cfile);
 			switch (token) {
 			      case STARTS:
@@ -2165,6 +2166,11 @@ struct lease *parse_lease_declaration (cfile)
 			      case TSFP:
 				seenbit = 131072;
 				lease.tsfp = t;
+				break;
+				
+			      case CLTT:
+				seenbit = 524288;
+				lease.cltt = t;
 				break;
 				
 			      default: /* for gcc, we'll never get here. */

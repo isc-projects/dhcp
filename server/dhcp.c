@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.147 2000/05/03 23:03:50 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.148 2000/05/04 18:58:13 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -172,6 +172,10 @@ void dhcpdiscover (packet, ms_nulltp)
 					  packet -> shared_network -> name);
 			return;
 		}
+#if defined (FAILOVER_PROTOCOL)
+		if (lease -> pool && lease -> pool -> failover_peer)
+			dhcp_failover_pool_check (lease -> pool);
+#endif
 		allocatedp = 1;
 	}
 
@@ -1493,7 +1497,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 #if defined (FAILOVER_PROTOCOL)
 		/* Okay, we know the lease duration.   Now check the
 		   failover state, if any. */
-		if (lease -> pool -> shared_network -> failover_peer) {
+		if (lease -> pool -> failover_peer) {
 			dhcp_failover_state_t *peer =
 			    lease -> pool -> failover_peer;
 
@@ -1507,11 +1511,9 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 				/* Here we're assuming that if we don't have
 				   to update tstp, there's already an update
 				   queued.   May want to revisit this.  */
-				if (cur_time + lease_time < lease -> tstp) {
-					lease -> tstp = cur_time + lease_time;
-					if (offer == DHCPACK)
-						update_partner (lease);
-				}
+				if (cur_time + lease_time > lease -> tstp)
+					lt.tstp = cur_time + lease_time;
+
 				/* Now choose a lease time that is either
 				   MCLT, for a lease that's never before been
 				   assigned, or TSFP + MCLT for a lease that
@@ -1526,6 +1528,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 					lease_time = (lease -> tsfp  - cur_time
 						      + peer -> mclt);
 			}
+			lt.cltt = cur_time;
 		}
 #endif /* FAILOVER_PROTOCOL */
 
@@ -1608,7 +1611,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 	if (ms_nulltp)
 		lease -> flags |= MS_NULL_TERMINATION;
 	else
-		lease -> flags &= MS_NULL_TERMINATION;
+		lease -> flags &= ~MS_NULL_TERMINATION;
 
 	/* If there are statements to execute when the lease is
 	   committed, execute them. */
@@ -1646,7 +1649,8 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 		   and we can't write the lease, don't ACK it (or BOOTREPLY
 		   it) either. */
 
-		if (!(supersede_lease (lease, &lt, !offer || offer == DHCPACK)
+		if (!(supersede_lease (lease, &lt, !offer || offer == DHCPACK,
+				       offer == DHCPACK)
 		      || (offer && offer != DHCPACK))) {
 			log_info ("%s: database update failed", msg);
 			free_lease_state (state, MDL);

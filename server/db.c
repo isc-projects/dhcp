@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: db.c,v 1.48 2000/05/03 06:23:05 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: db.c,v 1.49 2000/05/04 18:58:12 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -69,7 +69,7 @@ int write_lease (lease)
 	if (counting)
 		++count;
 	errno = 0;
-	fprintf (db_file, "lease %s {\n", piaddr (lease -> ip_addr));
+	fprintf (db_file, "lease %s {", piaddr (lease -> ip_addr));
 	if (errno) {
 		++errors;
 	}
@@ -77,32 +77,36 @@ int write_lease (lease)
 	/* Note: the following is not a Y2K bug - it's a Y1.9K bug.   Until
 	   somebody invents a time machine, I think we can safely disregard
 	   it. */
-	if (lease -> starts != MAX_TIME) {
-		t = gmtime (&lease -> starts);
-		sprintf (tbuf, "%d %d/%02d/%02d %02d:%02d:%02d;",
-			 t -> tm_wday, t -> tm_year + 1900,
-			 t -> tm_mon + 1, t -> tm_mday,
-			 t -> tm_hour, t -> tm_min, t -> tm_sec);
-	} else
-		strcpy (tbuf, "never;");
-	errno = 0;
-	fprintf (db_file, "  starts %s\n", tbuf);
-	if (errno) {
-		++errors;
+	if (lease -> starts) {
+		if (lease -> starts != MAX_TIME) {
+			t = gmtime (&lease -> starts);
+			sprintf (tbuf, "%d %d/%02d/%02d %02d:%02d:%02d;",
+				 t -> tm_wday, t -> tm_year + 1900,
+				 t -> tm_mon + 1, t -> tm_mday,
+				 t -> tm_hour, t -> tm_min, t -> tm_sec);
+		} else
+			strcpy (tbuf, "never;");
+		errno = 0;
+		fprintf (db_file, "\n  starts %s", tbuf);
+		if (errno) {
+			++errors;
+		}
 	}
 
-	if (lease -> ends != MAX_TIME) {
-		t = gmtime (&lease -> ends);
-		sprintf (tbuf, "%d %d/%02d/%02d %02d:%02d:%02d;",
-			 t -> tm_wday, t -> tm_year + 1900,
-			 t -> tm_mon + 1, t -> tm_mday,
-			 t -> tm_hour, t -> tm_min, t -> tm_sec);
-	} else
-		strcpy (tbuf, "never;");
-	errno = 0;
-	fprintf (db_file, "  ends %s", tbuf);
-	if (errno) {
-		++errors;
+	if (lease -> ends) {
+		if (lease -> ends != MAX_TIME) {
+			t = gmtime (&lease -> ends);
+			sprintf (tbuf, "%d %d/%02d/%02d %02d:%02d:%02d;",
+				 t -> tm_wday, t -> tm_year + 1900,
+				 t -> tm_mon + 1, t -> tm_mday,
+				 t -> tm_hour, t -> tm_min, t -> tm_sec);
+		} else
+			strcpy (tbuf, "never;");
+		errno = 0;
+		fprintf (db_file, "\n  ends %s", tbuf);
+		if (errno) {
+			++errors;
+		}
 	}
 
 	if (lease -> tstp) {
@@ -120,6 +124,17 @@ int write_lease (lease)
 		t = gmtime (&lease -> tsfp);
 		errno = 0;
 		fprintf (db_file, "\n  tsfp %d %d/%02d/%02d %02d:%02d:%02d;",
+			 t -> tm_wday, t -> tm_year + 1900,
+			 t -> tm_mon + 1, t -> tm_mday,
+			 t -> tm_hour, t -> tm_min, t -> tm_sec);
+		if (errno) {
+			++errors;
+		}
+	}
+	if (lease -> cltt) {
+		t = gmtime (&lease -> cltt);
+		errno = 0;
+		fprintf (db_file, "\n  cltt %d %d/%02d/%02d %02d:%02d:%02d;",
 			 t -> tm_wday, t -> tm_year + 1900,
 			 t -> tm_mon + 1, t -> tm_mday,
 			 t -> tm_hour, t -> tm_min, t -> tm_sec);
@@ -503,7 +518,7 @@ int write_failover_state (dhcp_failover_state_t *state)
 	int errors = 0;
 
 	errno = 0;
-	fprintf (db_file, "failover peer \"%s\" state {", state -> name);
+	fprintf (db_file, "\nfailover peer \"%s\" state {", state -> name);
 	if (errno)
 		++errors;
 
@@ -527,7 +542,7 @@ int write_failover_state (dhcp_failover_state_t *state)
 		 t -> tm_hour, t -> tm_min, t -> tm_sec);
 	if (errno)
 		++errors;
-	fprintf (db_file, "\n}\n\n");
+	fprintf (db_file, "\n}\n");
 	if (errno)
 		++errors;
 

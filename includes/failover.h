@@ -156,6 +156,15 @@ typedef struct {
 #define FTR_HBA_CONFLICT	19
 #define FTR_UNKNOWN		254
 
+/* Lease states: */
+#define FTS_FREE		1
+#define FTS_ACTIVE		2
+#define FTS_EXPIRED		3
+#define FTS_RELEASED		4
+#define FTS_ABANDONED		5
+#define FTS_RESET		6
+#define FTS_BACKUP		7
+
 #define DHCP_FAILOVER_MAX_MESSAGE_SIZE	2048
 
 typedef struct {

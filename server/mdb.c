@@ -43,13 +43,13 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.30 2000/05/03 06:34:13 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.31 2000/05/04 18:58:16 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
 
-static struct subnet *subnets;
-static struct shared_network *shared_networks;
+struct subnet *subnets;
+struct shared_network *shared_networks;
 struct hash_table *host_hw_addr_hash;
 struct hash_table *host_uid_hash;
 struct hash_table *lease_uid_hash;
@@ -622,6 +622,7 @@ void new_address_range (low, high, subnet, pool)
 			  address_range [i].ip_addr.iabuf,
 			  address_range [i].ip_addr.len,
 			  (unsigned char *)&address_range [i]);
+		address_range [i].refcnt = 1; /* XXX */
 	}
 
 	/* Find out if any dangling leases are in range... */
@@ -647,7 +648,7 @@ void new_address_range (low, high, subnet, pool)
 			address_range [lhost - i].hostname = lp -> hostname;
 			address_range [lhost - i].client_hostname =
 				lp -> client_hostname;
-			supersede_lease (&address_range [lhost - i], lp, 0);
+			supersede_lease (&address_range [lhost - i], lp, 0, 0);
 			free_lease (lp, MDL);
 		} else
 			plp = lp;
@@ -808,7 +809,7 @@ void enter_lease (lease)
 		/* Record the hostname information in the lease. */
 		comp -> hostname = lease -> hostname;
 		comp -> client_hostname = lease -> client_hostname;
-		supersede_lease (comp, lease, 0);
+		supersede_lease (comp, lease, 0, 0);
 	}
 }
 
@@ -817,9 +818,10 @@ void enter_lease (lease)
    list of leases by expiry time so that we can always find the oldest
    lease. */
 
-int supersede_lease (comp, lease, commit)
+int supersede_lease (comp, lease, commit, propogate)
 	struct lease *comp, *lease;
 	int commit;
+	int propogate;
 {
 	int enter_uid = 0;
 	int enter_hwaddr = 0;
@@ -1048,6 +1050,22 @@ int supersede_lease (comp, lease, commit)
 		}
 	}
 	comp -> pool -> insertion_point = comp;
+#if defined (FAILOVER_PROTOCOL)
+	if (comp -> ends <= cur_time && lease -> ends > cur_time) {
+		if (lease -> flags & PEER_IS_OWNER)
+			comp -> pool -> peer_leases--;
+		else
+			comp -> pool -> local_leases--;
+	} else if (comp -> ends > cur_time && lease -> ends <= cur_time) {
+		if (lease -> flags & PEER_IS_OWNER)
+			comp -> pool -> peer_leases++;
+		else
+			comp -> pool -> local_leases++;
+	}		
+	comp -> cltt = lease -> cltt;
+	comp -> tstp = lease -> tstp;
+	comp -> tsfp = lease -> tsfp;
+#endif /* FAILOVER_PROTOCOL */
 	comp -> ends = lease -> ends;
 
 	/* If there's an expiry event on this lease, process it or
@@ -1103,7 +1121,7 @@ int supersede_lease (comp, lease, commit)
                                     struct lease *foo;
                                     struct lease *install = comp;
                                     for (foo = comp;
-                                         foo -> ends == comp -> ends;
+					 foo && foo -> ends == comp -> ends;
                                          foo = foo -> next) {
 #if !defined (FAILOVER_PROTOCOL)
                                             if (foo -> on_expiry)
@@ -1122,7 +1140,7 @@ int supersede_lease (comp, lease, commit)
 	   nonzero if we did. */
 	return commit && write_lease (comp) && commit_leases ()
 #if defined (FAILOVER_PROTOCOL)
-		&& dhcp_failover_queue_update (comp)
+		&& (!propogate || dhcp_failover_queue_update (comp))
 #endif
 		;
 }
@@ -1166,7 +1184,7 @@ void release_lease (lease, packet)
 
 		lt.ends = cur_time;
 		lt.billing_class = (struct class *)0;
-		supersede_lease (lease, &lt, 1);
+		supersede_lease (lease, &lt, 1, 1);
 	}
 }
 
@@ -1198,7 +1216,7 @@ void abandon_lease (lease, message)
 	lt.uid = (unsigned char *)0;
 	lt.uid_len = 0;
 	lt.billing_class = (struct class *)0;
-	supersede_lease (lease, &lt, 1);
+	supersede_lease (lease, &lt, 1, 1);
 }
 
 /* Abandon the specified lease (set its timeout to infinity and its
@@ -1225,7 +1243,7 @@ void dissociate_lease (lease)
 	lt.uid = (unsigned char *)0;
 	lt.uid_len = 0;
 	lt.billing_class = (struct class *)0;
-	supersede_lease (lease, &lt, 1);
+	supersede_lease (lease, &lt, 1, 1);
 }
 
 /* Timer called when a lease in a particular pool expires. */
@@ -1260,10 +1278,6 @@ void pool_timer (vpool)
 		if (lease -> on_release)
 			executable_statement_dereference (&lease -> on_release,
 							  MDL);
-#if defined (FAILOVER_PROTOCOL)
-		lease -> tstp = 0;
-		update_partner (lease);
-#endif
 		
 		/* There are two problems with writing the lease out here.
 
@@ -1290,9 +1304,9 @@ void pool_timer (vpool)
 		}
 #if defined (FAILOVER_PROTOCOL)
 		if (lease -> flags & PEER_IS_OWNER)
-			pool -> peer_leases--;
+			pool -> peer_leases++;
 		else
-			pool -> local_leases--;
+			pool -> local_leases++;
 #endif
 	}
 	pool -> next_expiry = lease;
@@ -1552,7 +1566,10 @@ void write_leases ()
 		log_fatal ("Can't commit leases to new database: %m");
 }
 
-/* Write all interesting leases to permanent storage. */
+/* Run expiry events on every pool.   This is called on startup so that
+   any expiry events that occurred after the server stopped and before it
+   was restarted can be run.   At the same time, if failover support is
+   compiled in, we compute the balance of leases for the pool. */
 
 void expire_all_pools ()
 {
@@ -1560,12 +1577,35 @@ void expire_all_pools ()
 	struct pool *p;
 	struct hash_bucket *hb;
 	int i;
+	struct lease *l;
 
 	/* Loop through each pool in each shared network and call the
 	   expiry routine on the pool. */
-	for (s = shared_networks; s; s = s -> next)
-		for (p = s -> pools; p; p = p -> next)
-			pool_timer (p);
+	for (s = shared_networks; s; s = s -> next) {
+	    for (p = s -> pools; p; p = p -> next) {
+		pool_timer (p);
+
+#if defined (FAILOVER_PROTOCOL)
+		p -> lease_count = 0;
+		p -> local_leases = 0;
+		p -> peer_leases = 0;
+		
+		for (l = p -> leases; l; l = l -> next) {
+			p -> lease_count++;
+			if (l -> ends <= cur_time) {
+				if (l -> flags & PEER_IS_OWNER)
+					p -> peer_leases++;
+				else
+					p -> local_leases++;
+			}
+			if (p -> failover_peer &&
+			    l -> tstp > l -> tsfp &&
+			    !(l -> flags & ON_UPDATE_QUEUE))
+				dhcp_failover_queue_update (l);
+		}
+#endif
+	    }
+	}
 }
 
 void dump_subnets ()

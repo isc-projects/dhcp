@@ -266,7 +266,8 @@ enum dhcp_token {
 	ADDRESS = 464,
 	POTENTIAL_CONFLICT_NIC = 465,
 	STATE = 466,
-	UNKNOWN_STATE = 567
+	UNKNOWN_STATE = 567,
+	CLTT = 568
 };
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\
