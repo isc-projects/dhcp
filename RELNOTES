@@ -1,6 +1,6 @@
 	      Internet Systems Consortium DHCP Distribution
-			     Version 3.0.1
-			     July 14, 2004
+			     Version 3.0.2b1
+			   September 21, 2004
 
 			     Release Notes
 
@@ -91,7 +91,10 @@ and for prodding me into improving it.
 - A bug was repaired where the DHCP server would leave stale references
   to host records on leases it once thought about offering to certain
   clients.  The result would be to apply host and 'known' scopes to the
-  wrong clients (possibly denying booting).
+  wrong clients (possibly denying booting).  NOTE:  The 'mis-host' patch
+  that was being circulated as a workaround is not the way this bug was
+  fixed.  If you were a victim of this bug in 3.0.1, you are cautioned
+  to proceed carefully and see if it fixes your problem.
 
 - A bug was repaired in the server's DHCPINFORM handling, where it
   tried to divine the client's address from the source packet and
