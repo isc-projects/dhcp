@@ -183,15 +183,15 @@ VARDB = /var/db
 #BINDIR = /etc
 ##--qnx--
 
-CSRC   = options.c errwarn.c convert.c \
+CSRC   = options.c errwarn.c convert.c conflex.c parse.c \
 	 tree.c memory.c alloc.c print.c hash.c tables.c inet.c \
 	 dispatch.c bpf.c packet.c raw.c nit.c socket.c route.c
-COBJ   = options.o errwarn.o convert.o \
+COBJ   = options.o errwarn.o convert.o conflex.o parse.o \
 	 tree.o memory.o alloc.o print.o hash.o tables.o inet.o \
 	 dispatch.o bpf.o packet.o raw.o nit.o socket.o route.o
 XOBJ   = dhcpxlt.o xconflex.o
-SRCS   = dhcpd.c dhcp.c bootp.c conflex.c confpars.c db.c
-OBJS   = dhcpd.o dhcp.o bootp.o conflex.o confpars.o db.o
+SRCS   = dhcpd.c dhcp.c bootp.c confpars.c db.c
+OBJS   = dhcpd.o dhcp.o bootp.o confpars.o db.o
 PROGS  = dhcpd dhclient
 MAN    = dhcpd.8 dhcpd.conf.5
 
@@ -243,8 +243,8 @@ dhcpd.conf.cat5:	dhcpd.conf.5
 dhcpd:	$(OBJS) $(COBJ)
 	$(CC) $(LFLAGS) -o dhcpd $(OBJS) $(COBJ) $(LIBS)
 
-dhclient:	dhclient.o $(COBJ)
-	$(CC) $(LFLAGS) -o dhclient dhclient.o $(COBJ) $(LIBS)
+dhclient:	dhclient.o clparse.o $(COBJ)
+	$(CC) $(LFLAGS) -o dhclient dhclient.o clparse.o $(COBJ) $(LIBS)
 
 dhcpxlt:	dhcpxlt.o errwarn.o convert.o tables.o inet.o xconflex.o \
 		hash.o alloc.o
