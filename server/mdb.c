@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.19 1999/11/12 17:21:28 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.20 1999/11/14 00:32:28 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -864,13 +864,6 @@ int supersede_lease (comp, lease, commit)
 	    comp -> billing_class != lease -> billing_class)
 		unbill_class (comp, comp -> billing_class);
 
-	/* If comp is on the expiry list, get it off! */
-	if (comp -> pool && comp -> pool -> next_expiry &&
-	    comp == comp -> pool -> next_expiry) {
-		comp -> pool -> next_expiry = comp -> prev;
-		/* Let the timer clean things up. */
-	}
-
 	/* Copy the data files, but not the linkages. */
 	comp -> starts = lease -> starts;
 	if (lease -> uid) {
@@ -950,11 +943,11 @@ int supersede_lease (comp, lease, commit)
 	   (we may wind up putting it back, but we can't count on
 	   that here without too much additional complexity). */
 	if (comp -> pool -> next_expiry == comp) {
-		for (lp = comp -> pool -> next_expiry; lp; lp = lp -> prev)
+		for (lp = comp -> prev; lp; lp = lp -> prev)
 			if (lp -> on_expiry)
 				break;
 		if (lp && lp -> on_expiry) {
-			comp -> pool -> next_expiry = comp;
+			comp -> pool -> next_expiry = lp;
 			    if (commit)
 				    add_timeout (lp -> ends,
 						 pool_timer, lp -> pool);
@@ -1029,7 +1022,7 @@ int supersede_lease (comp, lease, commit)
 	/* If there's an expiry event on this lease, process it or
 	   queue it. */
 	if (comp -> on_expiry) {
-		if (comp -> ends < cur_time) {
+		if (comp -> ends <= cur_time && commit) {
 			execute_statements ((struct packet *)0, lease,
 					    (struct option_state *)0,
 					    (struct option_state *)0, /* XXX */
