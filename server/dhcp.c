@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.192.2.1 2001/05/04 23:28:08 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.192.2.2 2001/05/04 23:34:48 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -479,8 +479,10 @@ void dhcprequest (packet, ms_nulltp, ip_lease)
 
 		/* Don't let a client allocate a lease using DHCPREQUEST
 		   if the lease isn't ours to allocate. */
-		if ((lease -> state == free && peer -> i_am == secondary) ||
-		    (lease -> state == backup && peer -> i_am == primary)) {
+		if ((lease -> binding_state == FTS_FREE &&
+		     peer -> i_am == secondary) ||
+		    (lease -> binding_state == FTS_BACKUP &&
+		     peer -> i_am == primary)) {
 			log_debug ("%s: expired", msgbuf);
 			goto out;
 		}
