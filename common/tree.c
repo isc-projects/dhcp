@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.80 2000/03/18 02:15:37 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.81 2000/03/18 03:32:53 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2709,7 +2709,12 @@ int is_numeric_expression (expr)
 		expr -> op == expr_extract_int32 ||
 		expr -> op == expr_const_int ||
 		expr -> op == expr_lease_time ||
-		expr -> op == expr_dns_transaction);
+		expr -> op == expr_dns_transaction ||
+		expr -> op == expr_add ||
+		expr -> op == expr_subtract ||
+		expr -> op == expr_multiply ||
+		expr -> op == expr_divide ||
+		expr -> op == expr_remainder);
 }
 
 int is_compound_expression (expr)
