@@ -109,7 +109,7 @@ void discover_interfaces ()
 				LLADDR (foo), foo -> sdl_alen);
 			lp -> next = interface_links;
 			interface_links = lp;
-		}
+		} else
 #endif /* AF_LINK */
 
 		if (ifp -> ifr_addr.sa_family == AF_INET) {
