@@ -73,7 +73,7 @@ dhcpctl_status dhcpctl_connect (dhcpctl_handle *connection,
 	}
 
 	status = omapi_protocol_connect (*connection, server_name,
-					 port, authinfo);
+					 (unsigned)port, authinfo);
 	if (status != ISC_R_SUCCESS) {
 		omapi_object_dereference (connection, "dhcpctl_connect");
 		return status;
