@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.53 1997/11/29 07:57:02 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.54 1997/12/02 07:43:56 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1128,6 +1128,7 @@ struct lease *find_lease (packet, share, ours)
 	struct iaddr cip;
 	struct host_decl *hp, *host = (struct host_decl *)0;
 	struct lease *fixed_lease;
+	int i;
 
 	/* Try to find a host or lease that's been assigned to the
 	   specified unique client identifier. */
@@ -1219,8 +1220,26 @@ struct lease *find_lease (packet, share, ours)
 	   match */
 	if (ip_lease &&
 	    ip_lease -> ends >= cur_time &&
-	    ip_lease -> uid && ip_lease != uid_lease)
+	    ip_lease -> uid && ip_lease != uid_lease) {
+		int i = DHO_DHCP_CLIENT_IDENTIFIER;
+		/* If for some reason the client has more than one lease
+		   on the subnet that matches its uid, pick the one that
+		   it asked for.    It might be nice in some cases to
+		   release the extraneous leases, but better to leave
+		   that to a human. */
+		if (packet -> options [i].data &&
+		    ip_lease -> uid_len ==  packet -> options [i].len &&
+		    !memcmp (packet -> options [i].data,
+			     ip_lease -> uid, ip_lease -> uid_len)) {
+			warn ("client %s has duplicate leases on %s",
+			      print_hw_addr (packet -> raw -> htype,
+					     packet -> raw -> hlen,
+					     packet -> raw -> chaddr),
+			      ip_lease -> shared_network -> name);
+			uid_lease = ip_lease;
+		}
 		ip_lease = (struct lease *)0;
+	}
 
 	/* Toss hw_lease if it hasn't yet expired and the uid doesn't
 	   match, except that if the hardware address matches and the
