@@ -314,7 +314,8 @@ enum dhcp_token {
 	SERVER = 609,
 	CONNECT = 610,
 	REMOVE = 611,
-	REFRESH = 612
+	REFRESH = 612,
+	DOMAIN_NAME = 613
 };
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\
