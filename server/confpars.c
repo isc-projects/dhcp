@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.143.2.4 2001/06/20 04:00:48 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.143.2.5 2001/06/22 01:59:46 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -689,6 +689,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 			if (!multi) {
 				executable_statement_reference (&ep -> next,
 								et, MDL);
+				executable_statement_dereference (&et, MDL);
 				return declaration;
 			}
 
@@ -707,9 +708,12 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 							  MDL);
 			executable_statement_reference (&group -> statements,
 							ep, MDL);
-		} else
+			executable_statement_dereference (&ep, MDL);
+		} else {
 			executable_statement_reference (&group -> statements,
 							et, MDL);
+		}
+		executable_statement_dereference (&et, MDL);
 		return declaration;
 	}
 
@@ -839,7 +843,7 @@ void parse_failover_peer (cfile, group, type)
 			}
 			option_cache (&cp -> address,
 				      (struct data_string *)0, expr,
-				      (struct option *)0);
+				      (struct option *)0, MDL);
 			expression_dereference (&expr, MDL);
 			break;
 
@@ -1773,7 +1777,8 @@ int parse_class_declaration (cp, cfile, group, type)
 			}
 		} else {
 			parse_warn (cfile, "Expecting string or hex list.");
-			class_dereference (&pc, MDL);
+			if (pc)
+				class_dereference (&pc, MDL);
 			return 0;
 		}
 	}
@@ -1808,7 +1813,8 @@ int parse_class_declaration (cp, cfile, group, type)
 					new_hash ((hash_reference)
 						  omapi_object_reference,
 						  (hash_dereference)
-						  omapi_object_dereference, 0);
+						  omapi_object_dereference,
+						  0, MDL);
 			add_hash (pc -> hash,
 				  class -> hash_string.data,
 				  class -> hash_string.len,
@@ -1853,6 +1859,8 @@ int parse_class_declaration (cp, cfile, group, type)
 			if (cp)
 				status = class_reference (cp, class, MDL);
 			class_dereference (&class, MDL);
+			if (pc)
+				class_dereference (&pc, MDL);
 			return cp ? (status == ISC_R_SUCCESS) : 1;
 		}
 		/* Give the subclass its own group. */
@@ -2341,7 +2349,7 @@ int parse_fixed_addr_param (oc, cfile)
 		return 0;
 	}
 	status = option_cache (oc, (struct data_string *)0, expr,
-			       (struct option *)0);
+			       (struct option *)0, MDL);
 	expression_dereference (&expr, MDL);
 	return status;
 }
@@ -3125,45 +3133,48 @@ int parse_allow_deny (oc, cfile, flag)
 	struct expression *data = (struct expression *)0;
 	int status;
 
-	if (!make_const_data (&data, &rf, 1, 0, 1))
+	if (!make_const_data (&data, &rf, 1, 0, 1, MDL))
 		return 0;
 
 	token = next_token (&val, (unsigned *)0, cfile);
 	switch (token) {
 	      case TOKEN_BOOTP:
 		status = option_cache (oc, (struct data_string *)0, data,
-				       &server_options [SV_ALLOW_BOOTP]);
+				       &server_options [SV_ALLOW_BOOTP], MDL);
 		break;
 
 	      case BOOTING:
 		status = option_cache (oc, (struct data_string *)0, data,
-				       &server_options [SV_ALLOW_BOOTING]);
+				       &server_options [SV_ALLOW_BOOTING],
+				       MDL);
 		break;
 
 	      case DYNAMIC_BOOTP:
 		status = option_cache (oc, (struct data_string *)0, data,
-				       &server_options [SV_DYNAMIC_BOOTP]);
+				       &server_options [SV_DYNAMIC_BOOTP],
+				       MDL);
 		break;
 
 	      case UNKNOWN_CLIENTS:
 		status = (option_cache
 			  (oc, (struct data_string *)0, data,
-			   &server_options [SV_BOOT_UNKNOWN_CLIENTS]));
+			   &server_options [SV_BOOT_UNKNOWN_CLIENTS], MDL));
 		break;
 
 	      case DUPLICATES:
 		status = option_cache (oc, (struct data_string *)0, data,
-				       &server_options [SV_DUPLICATES]);
+				       &server_options [SV_DUPLICATES], MDL);
 		break;
 
 	      case DECLINES:
 		status = option_cache (oc, (struct data_string *)0, data,
-				       &server_options [SV_DECLINES]);
+				       &server_options [SV_DECLINES], MDL);
 		break;
 
 	      case CLIENT_UPDATES:
 		status = option_cache (oc, (struct data_string *)0, data,
-				       &server_options [SV_CLIENT_UPDATES]);
+				       &server_options [SV_CLIENT_UPDATES],
+				       MDL);
 		break;
 
 	      default:
@@ -3171,6 +3182,7 @@ int parse_allow_deny (oc, cfile, flag)
 		skip_to_semi (cfile);
 		return 0;
 	}
+	expression_dereference (&data, MDL);
 	parse_semi (cfile);
 	return status;
 }
