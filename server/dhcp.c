@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.67 1998/11/05 18:56:15 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.68 1998/11/06 00:17:12 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -439,7 +439,8 @@ void nak_lease (packet, cip)
 
 	/* Set up the option buffer... */
 	outgoing.packet_length =
-		cons_options (packet, outgoing.raw, 0, &options, 0, 0, 0);
+		cons_options (packet, outgoing.raw, 0, &options,
+			      packet -> agent_options, 0, 0, 0);
 
 /*	memset (&raw.ciaddr, 0, sizeof raw.ciaddr);*/
 	raw.siaddr = packet -> interface -> primary_address;
@@ -911,6 +912,12 @@ void ack_lease (packet, lease, offer, when)
 		data_string_forget (&d1, "ack_lease");
 	}
 
+	/* Steal the agent options from the packet. */
+	if (packet -> agent_options) {
+		state -> agent_options = packet -> agent_options;
+		packet -> agent_options = (struct agent_options *)0;
+	}
+
 	/* Now, if appropriate, put in DHCP-specific options that
            override those. */
 	if (state -> offer) {
@@ -1149,10 +1156,8 @@ void dhcp_reply (lease)
 	int i;
 	struct lease_state *state = lease -> state;
 	int nulltp, bootpp;
-#if 0
 	struct agent_options *a, *na;
 	struct option_tag *ot, *not;
-#endif
 	struct data_string d1;
 	struct option_cache *oc;
 
@@ -1210,6 +1215,7 @@ void dhcp_reply (lease)
 	packet_length = cons_options ((struct packet *)0, &raw,
 				      state -> max_message_size,
 				      &state -> options,
+				      state -> agent_options,
 				      bufs, nulltp, bootpp);
 
 	memcpy (&raw.ciaddr, &state -> ciaddr, sizeof raw.ciaddr);
