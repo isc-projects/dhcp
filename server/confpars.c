@@ -81,8 +81,10 @@ void read_leases (void)
 	jmp_buf bc;
 
 	/* Open the lease file... */
-	if ((cfile = fopen (_PATH_DHCPD_DB, "r")) == NULL)
+	if ((cfile = fopen (_PATH_DHCPD_DB, "r")) == NULL) {
 		warn ("Can't open lease database %s: %m", _PATH_DHCPD_DB);
+		return;
+	}
 	do {
 		token = next_token (&val, cfile);
 		if (token == EOF)
