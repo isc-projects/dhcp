@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"@(#) Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: alloc.c,v 1.8 1996/08/27 09:31:27 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -57,6 +57,7 @@ VOIDPTR dmalloc (size, name)
 	VOIDPTR foo = (VOIDPTR)malloc (size);
 	if (!foo)
 		warn ("No memory for %s.", name);
+	memset (foo, 0, size);
 	return foo;
 }
 
@@ -160,6 +161,21 @@ struct shared_network *new_shared_network (name)
 	return rval;
 }
 
+struct group *new_group (name)
+	char *name;
+{
+	struct group *rval =
+		dmalloc (sizeof (struct group), name);
+	return rval;
+}
+
+void free_group (ptr, name)
+	struct group *ptr;
+	char *name;
+{
+	dfree ((VOIDPTR)ptr, name);
+}
+
 void free_shared_network (ptr, name)
 	struct shared_network *ptr;
 	char *name;
@@ -192,6 +208,8 @@ void free_hash_bucket (ptr, name)
 	struct hash_bucket *ptr;
 	char *name;
 {
+	if (ptr -> name)
+		dfree ((VOIDPTR)ptr -> name, name);
 	dfree ((VOIDPTR)ptr, name);
 }
 
