@@ -360,9 +360,14 @@ heard, the client will bind to its address and move to the BOUND state.
 .I \(bu
 Select - DHCP client is in the SELECTING state - it has received at
 least one DHCPOFFER message, but is waiting to see if it may receive
-other DHCPOFFER messages from other servers.   The next message to be
-transmitted will be a DHCPREQUEST, which will be broadcast.   The
-client does not have an IP address.
+other DHCPOFFER messages from other servers.   No messages are sent in
+the SELECTING state.
+.TP
+.I \(bu
+Request - DHCP client is in the REQUESTING state - it has received at
+least one DHCPOFFER message, and has chosen which one it will
+request.   The next message to be sent will be a DHCPREQUEST message,
+which will be broadcast.
 .TP
 .I \(bu
 Bound - DHCP client is in the BOUND state - it has an IP address.   No

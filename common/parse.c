@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.98 2001/01/25 08:23:49 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.99 2001/01/26 05:56:29 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -3728,6 +3728,10 @@ int parse_non_binary (expr, cfile, lose, context)
 
 	      case SELECT:
 		known = S_SELECTING;
+		goto ns_const;
+
+	      case REQUEST:
+		known = S_REQUESTING;
 		goto ns_const;
 
 	      case BOUND:
