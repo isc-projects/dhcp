@@ -85,6 +85,7 @@ struct executable_statement {
 #			define ON_COMMIT  1
 #			define ON_EXPIRY  2
 #			define ON_RELEASE 4
+#			define ON_TRANSMISSION 8
 			struct executable_statement *statements;
 		} on;
 		struct {
