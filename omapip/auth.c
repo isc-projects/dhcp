@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: auth.c,v 1.3 2001/05/02 17:00:32 mellon Exp $ Copyright 1998-2000 The Internet Software Consortium.";
+"$Id: auth.c,v 1.3.2.1 2001/05/31 19:45:23 mellon Exp $ Copyright 1998-2000 The Internet Software Consortium.";
 #endif
 
 #include <omapip/omapip_p.h>
@@ -134,6 +134,9 @@ isc_result_t omapi_auth_key_lookup (omapi_object_t **h,
 
 	if (!auth_key_hash)
 		return ISC_R_NOTFOUND;
+
+	if (!ref)
+		return ISC_R_NOKEYS;
 
 	status = omapi_get_value_str (ref, id, "name", &name);
 	if (status != ISC_R_SUCCESS)
