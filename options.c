@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.20 1997/02/18 14:28:54 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.21 1997/02/19 10:52:14 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -526,12 +526,14 @@ char *pretty_print_option (code, data, len)
 				warn ("Unexpected format code %c", fmtbuf [j]);
 			}
 			op += strlen (op);
+			if (j + 1 < numelem)
+				*op++ = ' ';
+		}
+		if (i + 1 < numhunk) {
+			*op++ = ',';
 			*op++ = ' ';
 		}
+		
 	}
-	*--op = 0;
 	return optbuf;
 }
-
-			
-		
