@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: errwarn.c,v 1.12 1996/11/08 20:07:31 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: errwarn.c,v 1.12.2.1 1997/03/29 08:14:02 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -80,6 +80,11 @@ void error (ANSI_DECL(char *) fmt, VA_DOTDOTDOT)
 	  write (2, "\n", 1);
   }
 
+  syslog (LOG_CRIT, "exiting.");
+  if (log_perror) {
+	fprintf (stderr, "dhcpd: exiting.\n");
+	fflush (stderr);
+  }
   cleanup ();
   exit (1);
 }
