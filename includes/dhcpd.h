@@ -3,8 +3,8 @@
    Definitions for dhcpd... */
 
 /*
- * Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.
- * All rights reserved.
+ * Copyright (c) 1995, 1996, 1997, 1998, 1999
+ * The Internet Software Consortium.    All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -208,6 +208,7 @@ struct group {
 	int get_lease_hostnames;
 	int use_host_decl_names;
 	int use_lease_addr_for_default_route;
+	int authoritative;
 
 	struct tree_cache *options [256];
 };

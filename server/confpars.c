@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.45.2.5 1999/02/04 22:13:02 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.45.2.6 1999/02/09 04:55:46 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -73,6 +73,7 @@ int readconf ()
 	root_group.boot_unknown_clients = 1;
 	root_group.allow_bootp = 1;
 	root_group.allow_booting = 1;
+	root_group.authoritative = 1;
 
 	if ((cfile = fopen (path_dhcpd_conf, "r")) == NULL)
 		error ("Can't open %s: %m", path_dhcpd_conf);
@@ -240,16 +241,24 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		share -> group -> shared_network = share;
 
 		parse_subnet_declaration (cfile, share);
+
+		/* share -> subnets is the subnet we just parsed. */
 		if (share -> subnets) {
 			share -> interface =
 				share -> subnets -> interface;
 
+			/* Make the shared network name from network number. */
 			n = piaddr (share -> subnets -> net);
 			t = malloc (strlen (n) + 1);
 			if (!t)
 				error ("no memory for subnet name");
 			strcpy (t, n);
 			share -> name = t;
+
+			/* Copy the authoritative parameter from the subnet,
+			   since there is no opportunity to declare it here. */
+			share -> group -> authoritative =
+				share -> subnets -> group -> authoritative;
 			enter_shared_network (share);
 		}
 		return 1;
@@ -305,6 +314,34 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 	      case USE_LEASE_ADDR_FOR_DEFAULT_ROUTE:
 		group -> use_lease_addr_for_default_route =
 			parse_boolean (cfile);
+		break;
+
+	      case TOKEN_NOT:
+		token = next_token (&val, cfile);
+		switch (token) {
+		      case AUTHORITATIVE:
+			if (type == HOST_DECL ||
+			    (type == SUBNET_DECL && share &&
+			     share -> subnets &&
+			     share -> subnets -> next_sibling))
+			    parse_warn ("authority makes no sense here."); 
+			group -> authoritative = 0;
+			parse_semi (cfile);
+			break;
+		      default:
+			parse_warn ("expecting assertion");
+			skip_to_semi (cfile);
+			break;
+		}
+		break;
+			
+	      case AUTHORITATIVE:
+		if (type == HOST_DECL ||
+		    (type == SUBNET_DECL && share && share -> subnets &&
+		     share -> subnets -> next_sibling))
+		    parse_warn ("authority makes no sense here."); 
+		group -> authoritative = 1;
+		parse_semi (cfile);
 		break;
 
 	      case NEXT_SERVER:

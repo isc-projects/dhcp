@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.57.2.14 1999/02/04 22:13:04 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.57.2.15 1999/02/09 04:57:29 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -274,7 +274,9 @@ void dhcprequest (packet)
 		   where it claims to have come from, it didn't come
 		   from there.   Fry it. */
 		if (!packet -> shared_network) {
-			if (subnet) {
+			if (subnet &&
+			    subnet -> shared_network -> group -> authoritative)
+			{
 				nak_lease (packet, &cip);
 				return;
 			}
@@ -286,7 +288,8 @@ void dhcprequest (packet)
 		   address that is not on that shared network, nak it. */
 		subnet = find_grouped_subnet (packet -> shared_network, cip);
 		if (!subnet) {
-			nak_lease (packet, &cip);
+			if (packet -> shared_network -> group -> authoritative)
+				nak_lease (packet, &cip);
 			return;
 		}
 	}
@@ -297,7 +300,7 @@ void dhcprequest (packet)
 	if (lease && !addr_eq (lease -> ip_addr, cip)) {
 		/* If we found the address the client asked for, but
                    it wasn't what got picked, the lease belongs to us,
-                   so we can tenuously justify NAKing it. */
+                   so we should NAK it. */
 		if (ours)
 			nak_lease (packet, &cip);
 		return;

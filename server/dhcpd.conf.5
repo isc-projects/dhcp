@@ -1,7 +1,7 @@
 .\"	dhcpd.conf.5
 .\"
-.\" Copyright (c) 1995, 1996 The Internet Software Consortium.
-.\" All rights reserved.
+.\" Copyright (c) 1995, 1996, 1997, 1998, 1998
+.\" The Internet Software Consortium.    All rights reserved.
 .\"
 .\" Redistribution and use in source and binary forms, with or without
 .\" modification, are permitted provided that the following conditions
@@ -661,6 +661,41 @@ is equivalent to
 .PP
 An \fIoption host-name\fR statement within a host declaration will
 override the use of the name in the host declaration.
+.PP
+.B The
+.I authoritative
+.B statement
+.PP
+ \fBauthoritative;\fR
+.PP
+ \fBnot authoritative;\fR
+.PP
+The DHCP server will normally assume that the configuration
+information about a given network segment is known to be correct and
+is authoritative.   So if a client requests an IP address on a given
+network segment that the server knows is not valid for that segment,
+the server will respond with a DHCPNAK message, causing the client to
+forget its IP address and try to get a new one.
+.PP
+If a DHCP server is being configured by somebody who is not the
+network administrator and who therefore does not wish to assert this
+level of authority, then the statement "not authoritative" should be
+written in the appropriate scope in the configuration file.
+.PP
+Usually, writing \fBnot authoritative;\fR at the top level of the file
+should be sufficient.   However, if a DHCP server is to be set up so
+that it is aware of some networks for which it is authoritative and
+some networks for which it is not, it may be more appropriate to
+declare authority on a per-network-segment basis.
+.PP
+Note that the most specific scope for which the concept of authority
+makes any sense is the physical network segment - either a
+shared-network statement or a subnet statement that is not contained
+within a shared-network statement.  It is not meaningful to specify
+that the server is authoritative for some subnets within a shared
+network, but not authoritative for others, nor is it meaningful to
+specify that the server is authoritative for some host declarations
+and not others.
 .PP
 .B The
 .I use-lease-addr-for-default-route
