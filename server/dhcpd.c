@@ -42,11 +42,11 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.52 1998/07/10 04:52:25 mellon Exp $ Copyright 1995, 1996, 1997, 1998 The Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.53 1998/11/05 18:56:38 mellon Exp $ Copyright 1995, 1996, 1997, 1998 The Internet Software Consortium.";
 #endif
 
 static char copyright[] =
-"Copyright 1995, 1996 The Internet Software Consortium.";
+"Copyright 1995, 1996, 1997, 1998 The Internet Software Consortium.";
 static char arr [] = "All rights reserved.";
 static char message [] = "Internet Software Consortium DHCPD $Name:  $";
 
@@ -144,6 +144,10 @@ int main (argc, argv, envp)
 			if (++i == argc)
 				usage ();
 			path_dhcpd_db = argv [i];
+		} else if (!strcmp (argv [i], "-pf")) {
+			if (++i == argc)
+				usage ();
+			path_dhcpd_pid = argv [i];
                 } else if (!strcmp (argv [i], "-t")) {
 			/* test configurations only */
 #ifndef DEBUG
