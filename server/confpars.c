@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.34 1996/09/11 06:36:17 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.35 1996/09/13 18:58:20 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -289,6 +289,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		if (type == HOST_DECL)
 			parse_warn ("get-lease-hostnames not allowed here.");
 		group -> get_lease_hostnames = parse_boolean (cfile);
+note ("get_lease_hostnames: %d", group -> get_lease_hostnames);
 		break;
 
 	      case USE_HOST_DECL_NAMES:
@@ -433,7 +434,7 @@ int parse_boolean (cfile)
 	token = next_token (&val, cfile);
 	if (!strcasecmp (val, "true")
 	    || !strcasecmp (val, "on"))
-		rv = 0;
+		rv = 1;
 	else if (!strcasecmp (val, "false")
 		 || !strcasecmp (val, "off"))
 		rv = 0;
@@ -1415,12 +1416,7 @@ void parse_address_range (cfile, subnet)
 
 	if ((token = peek_token (&val, cfile)) == DYNAMIC_BOOTP) {
 		token = next_token (&val, cfile);
-		if (subnet -> group -> boot_unknown_clients) {
-			subnet -> group -> dynamic_bootp = dynamic = 1;
-		} else {
-			parse_warn ("dynamic-bootp conflicts with %s",
-				    "boot_unknown_hosts 0");
-		}
+		subnet -> group -> dynamic_bootp = dynamic = 1;
 	}
 
 	/* Get the bottom address in the range... */
