@@ -25,7 +25,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: nsupdate.c,v 1.3 1999/07/07 15:32:02 mellon Exp $ Copyright (c) 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: nsupdate.c,v 1.4 1999/07/12 22:43:08 mellon Exp $ Copyright (c) 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -129,13 +129,13 @@ char *ddns_fwd_name(lease, state, packet)
 			    SV_DDNS_HOST_NAME);
 	memset (&d, 0, sizeof d);
 	if (oc && evaluate_option_cache (&d, packet,
-					 packet -> options, lease, oc)) {
+					 state -> options, lease, oc)) {
 		memcpy(hostname, d.data, d.len);
 		hostname[d.len]='\0';
 		data_string_forget (&d, "nsupdate");
 	} else {
 		oc = lookup_option (&dhcp_universe,
-			      state -> options, DHO_HOST_NAME);
+				    packet -> options, DHO_HOST_NAME);
 		memset (&d, 0, sizeof d);
 		if (oc && evaluate_option_cache (&d, packet, packet -> options,
 						 lease, oc)) {
