@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: memory.c,v 1.60 1999/09/22 17:24:11 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: memory.c,v 1.61 1999/09/24 19:01:27 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -836,6 +836,8 @@ int supersede_lease (comp, lease, commit)
 			   the previous item on the list. */
 			if ((comp -> prev = lp -> prev))
 				comp -> prev -> next = comp;
+			else
+				comp -> pool -> leases = comp;
 			comp -> next = lp;
 			lp -> prev = comp;
 		}
@@ -856,6 +858,8 @@ int supersede_lease (comp, lease, commit)
 			   the next item on the list. */
 			if ((comp -> next = lp -> next))
 				comp -> next -> prev = comp;
+			else
+				comp -> pool -> last_lease = comp;
 			comp -> prev = lp;
 			lp -> next = comp;
 		}
