@@ -1048,6 +1048,22 @@ example, the Microsoft DHCP client is known not to have this problem,
 as are the OpenTransport and ISC DHCP clients.
 .PP
 .B The
+.I one-lease-per-client
+.B statement
+.PP
+ \fBone-lease-per-client\fR \fIflag\fR\fB;\fR
+.PP
+If this flag is enabled, whenever a client sends a DHCPREQUEST for a
+particular lease, the server will automatically free any other leases
+the client holds.   This presumes that when the client sends a
+DHCPREQUEST, it has forgotten any lease not mentioned in the
+DHCPREQUEST - i.e., the client has only a single network interface
+.I and
+it does not remember leases it's holding on networks to which it is
+not currently attached.   Neither of these assumptions are guaranteed
+or provable, so we urge caution in the use of this statement.
+.PP
+.B The
 .I use-lease-addr-for-default-route
 .B statement
 .PP
