@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.110 2001/02/12 21:04:06 mellon Exp $ Copyright 1995-2001 Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.111 2001/02/12 21:59:31 mellon Exp $ Copyright 1995-2001 Internet Software Consortium.";
 #endif
 
   static char copyright[] =
@@ -210,8 +210,10 @@ int main (argc, argv, envp)
 	int no_dhcpd_conf = 0;
 	int no_dhcpd_db = 0;
 	int no_dhcpd_pid = 0;
+#if defined (TRACING)
 	char *traceinfile = (char *)0;
 	char *traceoutfile = (char *)0;
+#endif
 
 	/* Set up the client classification system. */
 	classification_setup ();
@@ -300,6 +302,7 @@ int main (argc, argv, envp)
 		} else if (!strcmp (argv [i], "--version")) {
 			log_info ("isc-dhcpd-%s", DHCP_VERSION);
 			exit (0);
+#if defined (TRACING)
 		} else if (!strcmp (argv [i], "-tf")) {
 			if (++i == argc)
 				usage ();
@@ -309,6 +312,7 @@ int main (argc, argv, envp)
 				usage ();
 			traceinfile = argv [i];
 			trace_replay_init ();
+#endif /* TRACING */
 		} else if (argv [i][0] == '-') {
 			usage ();
 		} else {
@@ -847,8 +851,12 @@ static void usage ()
 
 	log_fatal ("Usage: dhcpd [-p <UDP port #>] [-d] [-f]%s%s%s%s",
 		   "\n             [-cf config-file] [-lf lease-file]",
+#if defined (TRACING)
 		   "\n		   [-tf trace-output-file]",
 		   "\n		   [-play trace-input-file]",
+#else
+		   "", "",
+#endif /* TRACING */
 		   "\n             [-t] [-T] [-s server] [if0 [...ifN]]");
 }
 

@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.132 2001/02/12 20:53:04 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.133 2001/02/12 21:59:30 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -53,7 +53,6 @@ static TIME parsed_time;
 #if defined (TRACING)
 trace_type_t *trace_readconf_type;
 trace_type_t *trace_readleases_type;
-#endif
 
 void parse_trace_setup ()
 {
@@ -64,6 +63,7 @@ void parse_trace_setup ()
 						     trace_conf_input,
 						     trace_conf_stop, MDL);
 }
+#endif
 
 /* conf-file :== parameters declarations EOF
    parameters :== <nil> | parameter | parameters parameter
