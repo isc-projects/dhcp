@@ -155,7 +155,7 @@ struct lease_state {
 
 	struct tree_cache *options [256];
 	u_int32_t expiry, renewal, rebind;
-	char filename [DHCP_FILE_LEN]
+	char filename [DHCP_FILE_LEN];
 	char *server_name;
 
 	struct iaddr from;
