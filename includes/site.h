@@ -45,31 +45,31 @@
 /* Define this if you want to track memory usage for the purpose of
    noticing memory leaks quickly. */
 
-#define DEBUG_MEMORY_LEAKAGE
+/* #define DEBUG_MEMORY_LEAKAGE */
 
 /* Define this if you want exhaustive (and very slow) checking of the
    malloc pool for corruption. */
 
-#define DEBUG_MALLOC_POOL
+/* #define DEBUG_MALLOC_POOL */
 
 /* Define this if you want to maintain a history of the last N operations
    that changed reference counts on objects.   This can be used to debug
    cases where an object is dereferenced too often, or not often enough. */
 
-#define DEBUG_RC_HISTORY
+/* #define DEBUG_RC_HISTORY */
 
 /* Define this if you want to see the history every cycle. */
 
 /* #define DEBUG_RC_HISTORY_EXHAUSTIVELY */
 /* This is the number of history entries to maintain - by default, 256. */
 
-#define RC_HISTORY_MAX 1024
+/* #define RC_HISTORY_MAX 1024 */
 
 /* Define this if you want dhcpd to dump core when a non-fatal memory
    allocation error is detected (i.e., something that would cause a
    memory leak rather than a memory smash). */
 
-#define POINTER_DEBUG
+/* #define POINTER_DEBUG */
 
 /* Define this if you want debugging output for DHCP failover protocol
    messages. */
