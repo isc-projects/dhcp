@@ -32,6 +32,7 @@ int main (argc, argv)
 	dhcpctl_handle connection;
 	dhcpctl_handle host_handle;
 	dhcpctl_data_string cid;
+	dhcpctl_data_string result;
 
 	status = dhcpctl_initialize ();
 	if (status != ISC_R_SUCCESS) {
@@ -97,14 +98,41 @@ int main (argc, argv)
 	status = dhcpctl_wait_for_completion (host_handle, &waitstatus);
 	if (status != ISC_R_SUCCESS) {
 		fprintf (stderr, "dhcpctl_wait_for_completion: %s\n",
-			 isc_result_totext (status));
+			 isc_result_totext (waitstatus));
 		exit (1);
 	}
 
 	if (waitstatus != ISC_R_SUCCESS) {
-		fprintf (stderr, "dhcpctl_wait_for_completion: %s\n",
-			 isc_result_totext (waitstatus));
+		status = dhcpctl_open_object (host_handle, connection, 0);
+		if (status != ISC_R_SUCCESS) {
+			fprintf (stderr, "dhcpctl_open_object: %s\n",
+				 isc_result_totext (status));
+			exit (1);
+		}
+		status = dhcpctl_wait_for_completion (host_handle,
+						      &waitstatus);
+		if (status != ISC_R_SUCCESS) {
+			fprintf (stderr, "dhcpctl_wait_for_completion: %s\n",
+				 isc_result_totext (status));
+			exit (1);
+		}
+		if (waitstatus != ISC_R_SUCCESS) {
+			fprintf (stderr, "dhcpctl_wait_for_completion: %s\n",
+				 isc_result_totext (status));
+			exit (1);
+		}
+	}
+
+	memset (&result, 0, sizeof result);
+	status = dhcpctl_get_value (&result, host_handle, "name");
+	if (status != ISC_R_SUCCESS) {
+		fprintf (stderr, "dhcpctl_get_value: %s\n",
+			 isc_result_totext (status));
 		exit (1);
 	}
+
+	printf ("host name = %*.*s\n", result -> len, result -> len,
+		result -> value);
+
 	exit (0);
 }
