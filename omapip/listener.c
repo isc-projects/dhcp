@@ -221,14 +221,6 @@ isc_result_t omapi_accept (omapi_object_t *h)
 	omapi_object_reference (&obj -> listener,
 				(omapi_object_t *)listener, MDL);
 
-	/* Set the SO_USELOOPBACK flag (this should not fail). */
-	i = 1;
-	if (setsockopt (obj -> socket, SOL_SOCKET, SO_USELOOPBACK,
-			(char *)&i, sizeof i) < 0) {
-		omapi_object_dereference ((omapi_object_t **)&obj, MDL);
-		return ISC_R_UNEXPECTED;
-	}
-	
 	status = omapi_signal (h, "connect", obj);
 
 	/* Lose our reference to the connection, so it'll be gc'd when it's
