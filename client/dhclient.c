@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"@(#) Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.17 1996/08/27 09:43:01 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -62,7 +62,7 @@ struct interface_info fallback_interface;
 u_int16_t server_port;
 int log_priority;
 
-int tline, tlpos;
+int lexline, lexchar;
 char *tlname;
 
 static void usage PROTO ((void));
