@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: packet.c,v 1.38 2000/10/14 07:56:59 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: packet.c,v 1.39 2000/10/15 18:54:29 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -254,7 +254,8 @@ ssize_t decode_udp_ip_header (interface, buf, bufix, from, data, buflen)
 #endif /* USERLAND_FILTER */
 
   ulen = ntohs (udp -> uh_ulen);
-  if (ulen < sizeof udp || ((unsigned char *)udp) + ulen > buf + buflen) {
+  if (ulen < sizeof *udp ||
+      ((unsigned char *)udp) + ulen > buf + bufix + buflen) {
 	  log_info ("bogus UDP packet length: %d", ulen);
 	  return -1;
   }
