@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.69 1999/03/30 21:54:02 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.70 1999/04/05 15:19:59 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -505,12 +505,12 @@ void dhcpack (packet)
 	cancel_timeout (send_request, client);
 
 	/* Figure out the lease time. */
-	oc = lookup_option (client -> new -> options.dhcp_hash,
+	oc = lookup_option (&dhcp_universe, client -> new -> options,
 			    DHO_DHCP_LEASE_TIME);
 	memset (&ds, 0, sizeof ds);
 	if (oc &&
 	    evaluate_option_cache (&ds, packet,
-				   &client -> new -> options, oc)) {
+				   client -> new -> options, oc)) {
 		if (ds.len > 3)
 			client -> new -> expiry = getULong (ds.data);
 		else
@@ -535,11 +535,11 @@ void dhcpack (packet)
 	if (client -> new -> expiry < 0)
 		client -> new -> expiry = TIME_MAX;
 	/* Take the server-provided renewal time if there is one. */
-	oc = lookup_option (client -> new -> options.dhcp_hash,
+	oc = lookup_option (&dhcp_universe, client -> new -> options,
 			    DHO_DHCP_RENEWAL_TIME);
 	if (oc &&
 	    evaluate_option_cache (&ds, packet,
-				   &client -> new -> options, oc)) {
+				   client -> new -> options, oc)) {
 		if (ds.len > 3)
 			client -> new -> renewal = getULong (ds.data);
 		else
@@ -554,11 +554,11 @@ void dhcpack (packet)
 			client -> new -> expiry / 2;
 
 	/* Same deal with the rebind time. */
-	oc = lookup_option (client -> new -> options.dhcp_hash,
+	oc = lookup_option (&dhcp_universe, client -> new -> options,
 			    DHO_DHCP_REBINDING_TIME);
 	if (oc &&
 	    evaluate_option_cache (&ds, packet,
-				   &client -> new -> options, oc)) {
+				   client -> new -> options, oc)) {
 		if (ds.len > 3)
 			client -> new -> rebind = getULong (ds.data);
 		else
@@ -662,11 +662,11 @@ void state_bound (cpp)
 	client -> xid = client -> packet.xid;
 
 	memset (&ds, 0, sizeof ds);
-	oc = lookup_option (client -> active -> options.dhcp_hash,
+	oc = lookup_option (&dhcp_universe, client -> active -> options,
 			    DHO_DHCP_SERVER_IDENTIFIER);
 	if (oc &&
 	    evaluate_option_cache (&ds, (struct packet *)0,
-				   &client -> active -> options, oc)) {
+				   client -> active -> options, oc)) {
 		if (ds.len > 3) {
 			memcpy (client -> destination.iabuf, ds.data, 4);
 			client -> destination.len = 4;
@@ -804,7 +804,7 @@ void dhcpoffer (packet)
 	if (client -> config -> required_options) {
 		for (i = 0; client -> config -> required_options [i]; i++) {
 			if (!lookup_option
-			    (packet -> options.dhcp_hash,
+			    (&dhcp_universe, packet -> options,
 			     client -> config -> required_options [i])) {
 				log_info ("%s isn't satisfactory.", name);
 				return;
@@ -901,11 +901,11 @@ struct client_lease *packet_to_lease (packet)
 		lease -> address.len);
 
 	/* Figure out the overload flag. */
-	oc = lookup_option (lease -> options.dhcp_hash,
+	oc = lookup_option (&dhcp_universe, lease -> options,
 			    DHO_DHCP_OPTION_OVERLOAD);
 	memset (&data, 0, sizeof data);
 	if (oc &&
-	    evaluate_option_cache (&data, packet, &lease -> options, oc)) {
+	    evaluate_option_cache (&data, packet, lease -> options, oc)) {
 		if (data.len > 0)
 			i = data.data [0];
 		else
@@ -1407,25 +1407,25 @@ void send_release (cpp)
 			      (struct hardware *)0);
 }
 
-void make_client_options (client, lease, type, sid, rip, prl,
-			  options)
+void make_client_options (client, lease, type, sid, rip, prl, op)
 	struct client_state *client;
 	struct client_lease *lease;
 	u_int8_t *type;
 	struct option_cache *sid;
 	struct iaddr *rip;
 	u_int32_t *prl;
-	struct option_state *options;
+	struct option_state **op;
 {
 	int i;
 	struct option_cache *oc;
 	struct buffer *bp = (struct buffer *)0;
 
-	memset (options, 0, sizeof *options);
+	/* Allocate space for options. */
+	option_state_allocate (op, "make_client_options");
 
 	/* Send the server identifier if provided. */
 	if (sid)
-		save_option (options -> dhcp_hash, sid);
+		save_option (&dhcp_universe, *op, sid);
 
 	oc = (struct option_cache *)0;
 
@@ -1437,9 +1437,9 @@ void make_client_options (client, lease, type, sid, rip, prl,
 		       rip -> iabuf, rip -> len,
 		       &dhcp_options [DHO_DHCP_REQUESTED_ADDRESS],
 		       "make_client_options")))
-			log_error ("can't make requested address option cache.");
+			log_error ("can't make requested address cache.");
 		else {
-			save_option (options -> dhcp_hash, oc);
+			save_option (&dhcp_universe, *op, oc);
 			option_cache_dereference (&oc, "make_client_options");
 		}
 	} else {
@@ -1452,7 +1452,7 @@ void make_client_options (client, lease, type, sid, rip, prl,
 	       "make_client_options")))
 		log_error ("can't make message type.");
 	else {
-		save_option (options -> dhcp_hash, oc);
+		save_option (&dhcp_universe, *op, oc);
 		option_cache_dereference (&oc, "make_client_options");
 	}
 
@@ -1461,7 +1461,7 @@ void make_client_options (client, lease, type, sid, rip, prl,
 		for (i = 0; prl [i]; i++)
 			;
 		if (!buffer_allocate (&bp, i, "make_client_options"))
-			log_error ("can't make buffer for parameter request list.");
+			log_error ("can't make parameter list buffer.");
 		else {
 			for (i = 0; prl [i]; i++)
 				bp -> data [i] = prl [i];
@@ -1471,7 +1471,7 @@ void make_client_options (client, lease, type, sid, rip, prl,
 			       "make_client_options")))
 				log_error ("can't make option cache");
 			else {
-				save_option (options -> dhcp_hash, oc);
+				save_option (&dhcp_universe, *op, oc);
 				option_cache_dereference
 					(&oc, "make_client_options");
 			}
@@ -1481,7 +1481,9 @@ void make_client_options (client, lease, type, sid, rip, prl,
 	/* Run statements that need to be run on transmission. */
 	if (client -> config -> on_transmission)
 		execute_statements_in_scope
-			((struct packet *)0, &lease -> options, options,
+			((struct packet *)0, (lease
+					      ? lease -> options
+					      : (struct option_state *)0), *op,
 			 client -> config -> on_transmission,
 			 (struct group *)0);
 }
@@ -1493,7 +1495,7 @@ void make_discover (client, lease)
 	struct dhcp_packet *raw;
 	unsigned char discover = DHCPDISCOVER;
 	int i;
-	struct option_state options;
+	struct option_state *options = (struct option_state *)0;
 
 	memset (&client -> packet, 0, sizeof (client -> packet));
 
@@ -1506,8 +1508,7 @@ void make_discover (client, lease)
 	/* Set up the option buffer... */
 	client -> packet_length =
 		cons_options ((struct packet *)0, &client -> packet, 0,
-			      &options, (struct agent_options *)0,
-			      0, 0, 0, (struct data_string *)0);
+			      options, 0, 0, 0, (struct data_string *)0);
 	if (client -> packet_length < BOOTP_MIN_LEN)
 		client -> packet_length = BOOTP_MIN_LEN;
 
@@ -1551,13 +1552,13 @@ void make_request (client, lease)
 	int i, j;
 	unsigned char *tmp, *digest;
 	unsigned char *old_digest_loc;
-	struct option_state options;
+	struct option_state *options = (struct option_state *)0;
 	struct option_cache *oc;
 
 	memset (&client -> packet, 0, sizeof (client -> packet));
 
 	if (client -> state == S_REQUESTING)
-		oc = lookup_option (lease -> options.dhcp_hash,
+		oc = lookup_option (&dhcp_universe, lease -> options,
 				    DHO_DHCP_SERVER_IDENTIFIER);
 	else
 		oc = (struct option_cache *)0;
@@ -1573,8 +1574,7 @@ void make_request (client, lease)
 	/* Set up the option buffer... */
 	client -> packet_length =
 		cons_options ((struct packet *)0, &client -> packet, 0,
-			      &options, (struct agent_options *)0,
-			      0, 0, 0, (struct data_string *)0);
+			      options, 0, 0, 0, (struct data_string *)0);
 	if (client -> packet_length < BOOTP_MIN_LEN)
 		client -> packet_length = BOOTP_MIN_LEN;
 
@@ -1626,23 +1626,21 @@ void make_decline (client, lease)
 	int i;
 	struct option_cache *oc;
 
-	struct option_state options;
+	struct option_state *options = (struct option_state *)0;
 
-	memset (&client -> packet, 0, sizeof (client -> packet));
-
-	oc = lookup_option (lease -> options.dhcp_hash,
+	oc = lookup_option (&dhcp_universe, lease -> options,
 			    DHO_DHCP_SERVER_IDENTIFIER);
 	make_client_options (client, lease, &decline, oc,
-			     &lease -> address, (u_int32_t *)0,
-			     &options);
+			     &lease -> address, (u_int32_t *)0, &options);
 
 	/* Set up the option buffer... */
+	memset (&client -> packet, 0, sizeof (client -> packet));
 	client -> packet_length =
 		cons_options ((struct packet *)0, &client -> packet, 0,
-			      &options, (struct agent_options *)0,
-			      0, 0, 0, (struct data_string *)0);
+			      options, 0, 0, 0, (struct data_string *)0);
 	if (client -> packet_length < BOOTP_MIN_LEN)
 		client -> packet_length = BOOTP_MIN_LEN;
+	option_state_dereference (&options, "make_decline");
 
 	client -> packet.op = BOOTREQUEST;
 	client -> packet.htype = client -> interface -> hw_address.htype;
@@ -1682,11 +1680,11 @@ void make_release (client, lease)
 	int i;
 	struct option_cache *oc;
 
-	struct option_state options;
+	struct option_state *options = (struct option_state *)0;
 
 	memset (&client -> packet, 0, sizeof (client -> packet));
 
-	oc = lookup_option (lease -> options.dhcp_hash,
+	oc = lookup_option (&dhcp_universe, lease -> options,
 			    DHO_DHCP_SERVER_IDENTIFIER);
 	make_client_options (client, lease, &request, oc,
 			     &lease -> address, (u_int32_t *)0,
@@ -1695,10 +1693,10 @@ void make_release (client, lease)
 	/* Set up the option buffer... */
 	client -> packet_length =
 		cons_options ((struct packet *)0, &client -> packet, 0,
-			      &options, (struct agent_options *)0,
-			      0, 0, 0, (struct data_string *)0);
+			      options, 0, 0, 0, (struct data_string *)0);
 	if (client -> packet_length < BOOTP_MIN_LEN)
 		client -> packet_length = BOOTP_MIN_LEN;
+	option_state_dereference (&options, "make_decline");
 
 	client -> packet.op = BOOTREQUEST;
 	client -> packet.htype = client -> interface -> hw_address.htype;
@@ -1735,7 +1733,7 @@ void destroy_client_lease (lease)
 		dfree (lease -> server_name, "destroy_client_lease");
 	if (lease -> filename)
 		dfree (lease -> filename, "destroy_client_lease");
-	option_state_dereference (&lease -> options);
+	option_state_dereference (&lease -> options, "destroy_client_lease");
 	free_client_lease (lease, "destroy_client_lease");
 }
 
@@ -1791,6 +1789,7 @@ void write_client_lease (client, lease, rewrite)
 	static int leases_written;
 	struct option_cache *oc;
 	struct data_string ds;
+	pair *hash;
 
 	if (!rewrite) {
 		if (leases_written++ > 20) {
@@ -1830,12 +1829,15 @@ void write_client_lease (client, lease, rewrite)
 			 lease -> medium -> string);
 
 	memset (&ds, 0, sizeof ds);
+
+	hash = lease -> options -> universes [dhcp_universe.index];
 	for (i = 0; i < OPTION_HASH_SIZE; i++) {
 		pair p;
-		for (p = lease -> options.dhcp_hash [i]; p; p = p -> cdr) {
+		/* XXX save _all_ options! XXX */
+		for (p = hash [i]; p; p = p -> cdr) {
 			oc = (struct option_cache *)p -> car;
 			if (evaluate_option_cache (&ds, (struct packet *)0,
-						   &lease -> options, oc)) {
+						   lease -> options, oc)) {
 				fprintf (leaseFile,
 					 "  option %s %s;\n",
 					 oc -> option -> name,
@@ -1931,6 +1933,7 @@ void script_write_params (client, prefix, lease)
 	int i;
 	struct data_string data;
 	struct option_cache *oc;
+	pair *hash;
 
 	fprintf (scriptFile, "%sip_address=\"%s\"\n",
 		 prefix, piaddr (lease -> address));
@@ -1944,9 +1947,9 @@ void script_write_params (client, prefix, lease)
 	   broadcast address). */
 
 	memset (&data, 0, sizeof data);
-	oc = lookup_option (lease -> options.dhcp_hash, DHO_SUBNET_MASK);
+	oc = lookup_option (&dhcp_universe, lease -> options, DHO_SUBNET_MASK);
 	if (oc && evaluate_option_cache (&data, (struct packet *)0,
-					 &lease -> options, oc)) {
+					 lease -> options, oc)) {
 		if (data.len > 3) {
 			struct iaddr netmask, subnet, broadcast;
 
@@ -1962,12 +1965,13 @@ void script_write_params (client, prefix, lease)
 				fprintf (scriptFile,
 					 "export %snetwork_number\n", prefix);
 
-				oc = lookup_option (lease -> options.dhcp_hash,
+				oc = lookup_option (&dhcp_universe,
+						    lease -> options,
 						    DHO_BROADCAST_ADDRESS);
 				if (!oc ||
 				    !evaluate_option_cache (&data,
 							    (struct packet *)0,
-							    &lease -> options,
+							    lease -> options,
 							    oc)) {
 					broadcast = broadcast_addr (subnet,
 								    netmask);
@@ -1999,19 +2003,20 @@ void script_write_params (client, prefix, lease)
 		fprintf (scriptFile, "export %sserver_name\n", prefix);
 	}
 
-	execute_statements_in_scope ((struct packet *)0, &lease -> options,
-				     &lease -> options,
+	execute_statements_in_scope ((struct packet *)0, lease -> options,
+				     lease -> options,
 				     client -> config -> on_receipt,
 				     (struct group *)0);
 
+	hash = lease -> options -> universes [dhcp_universe.index];
 	for (i = 0; i < OPTION_HASH_SIZE; i++) {
 		pair hp;
 
-		for (hp = lease -> options.dhcp_hash [i]; hp; hp = hp -> cdr) {
+		for (hp = hash [i]; hp; hp = hp -> cdr) {
 			oc = (struct option_cache *)hp -> car;
 
 			if (evaluate_option_cache (&data, (struct packet *)0,
-						   &lease -> options, oc)) {
+						   lease -> options, oc)) {
 
 				if (data.len) {
 					char *s = (dhcp_option_ev_name
