@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: hash.c,v 1.20 2000/03/18 03:31:39 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: hash.c,v 1.21 2000/04/20 00:56:20 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -67,7 +67,7 @@ struct hash_table *new_hash (hash_reference referencer,
 		rv -> cmp = casecmp;
 		rv -> do_hash = do_case_hash;
 	} else {
-		rv -> cmp = memcmp;
+		rv -> cmp = (hash_comparator_t)memcmp;
 		rv -> do_hash = do_hash;
 	}
 	return rv;
