@@ -771,6 +771,7 @@ isc_result_t omapi_protocol_send_update (omapi_object_t *po,
 	}
 
 	if (rid) {
+		omapi_handle_t handle;
 		status = omapi_set_int_value (message, (omapi_object_t *)0,
 					      "rid", rid);
 		if (status != ISC_R_SUCCESS) {
@@ -778,8 +779,7 @@ isc_result_t omapi_protocol_send_update (omapi_object_t *po,
 				(&message, "omapi_protocol_send_update");
 			return status;
 		}
-	} else {
-		omapi_handle_t handle;
+
 		status = omapi_object_handle (&handle, object);
 		if (status != ISC_R_SUCCESS) {
 			omapi_object_dereference
