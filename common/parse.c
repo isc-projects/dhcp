@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.71 2000/04/14 16:26:37 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.72 2000/04/20 00:56:56 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -158,6 +158,7 @@ char *parse_host_name (cfile)
 	char *s;
 	char *t;
 	pair c = (pair)0;
+	int ltid = 0;
 	
 	/* Read a dotted hostname... */
 	do {
@@ -176,8 +177,11 @@ char *parse_host_name (cfile)
 		/* Look for a dot; if it's there, keep going, otherwise
 		   we're done. */
 		token = peek_token (&val, cfile);
-		if (token == DOT)
+		if (token == DOT) {
 			token = next_token (&val, cfile);
+			ltid = 1;
+		} else
+			ltid = 0;
 	} while (token == DOT);
 
 	/* Should be at least one token. */
@@ -185,10 +189,12 @@ char *parse_host_name (cfile)
 		return (char *)0;
 
 	/* Assemble the hostname together into a string. */
-	if (!(s = (char *)dmalloc (len, MDL)))
+	if (!(s = (char *)dmalloc (len + ltid, MDL)))
 		log_fatal ("can't allocate space for hostname.");
-	t = s + len;
+	t = s + len + ltid;
 	*--t = 0;
+	if (ltid)
+		*--t = '.';
 	while (c) {
 		pair cdr = c -> cdr;
 		unsigned l = strlen ((char *)(c -> car));
@@ -1324,6 +1330,7 @@ int parse_executable_statement (result, cfile, lose, case_context)
 	struct option_cache *cache;
 	int known;
 	int flag;
+	int i;
 	struct dns_zone *zone;
 	isc_result_t status;
 
@@ -1659,6 +1666,12 @@ int parse_executable_statement (result, cfile, lose, case_context)
 			skip_to_semi (cfile);
 			dns_zone_dereference (&zone, MDL);
 			return 0;
+		}
+		i = strlen (zone -> name);
+		if (zone -> name [i - 1] != '.') {
+			parse_warn (cfile,
+				    "zone name must not be relative %s: %s",
+				    "(must end in '.')", zone -> name);
 		}
 		if (!parse_zone (zone, cfile))
 			goto badzone;
