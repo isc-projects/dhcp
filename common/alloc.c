@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: alloc.c,v 1.16 1998/11/05 18:39:54 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: alloc.c,v 1.17 1998/11/06 01:06:44 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -470,17 +470,18 @@ int buffer_dereference (ptr, name)
 	return 1;
 }
 
-int dns_host_entry_allocate (ptr, name)
+int dns_host_entry_allocate (ptr, hostname, name)
 	struct dns_host_entry **ptr;
 	char *name;
 {
 	struct dns_host_entry *bp;
 
-	bp = dmalloc (sizeof *bp, name);
+	bp = dmalloc (strlen (hostname) + sizeof *bp, name);
 	if (!bp)
 		return 0;
 	memset (bp, 0, sizeof *bp);
 	bp -> refcnt = 0;
+	strcpy (bp -> hostname, hostname);
 	return dns_host_entry_reference (ptr, bp, name);
 }
 
