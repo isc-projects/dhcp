@@ -235,7 +235,8 @@ enum dhcp_token {
 	LET,
 	FUNCTION,
 	DEFINE,
-	TSIG_KEY
+	TSIG_KEY,
+	ZONE
 };
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\
