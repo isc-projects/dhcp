@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.50 1999/09/22 17:27:01 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.51 1999/09/24 19:04:30 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1912,6 +1912,8 @@ int write_expression (file, expr, col, indent)
 	      concat_again:
 		col = write_expression (file, e -> data.concat [0],
 					col, scol);
+		if (!e -> data.concat [1])
+			goto no_concat_cdr;
 		col = token_print_indent (file, col, scol, "", " ", ",");
 		if (e -> data.concat [1] -> op == expr_concat) {
 			e = e -> data.concat [1];
@@ -1919,6 +1921,7 @@ int write_expression (file, expr, col, indent)
 		}
 		col = write_expression (file, e -> data.concat [1],
 					col, scol);
+	      no_concat_cdr:
 		col = token_print_indent (file, col, indent, "", "", ")");
 		break;
 
@@ -2121,6 +2124,14 @@ int write_expression (file, expr, col, indent)
 		col = write_expression (file,
 					e -> data.pick_first_value.car,
 					col, scol);
+		/* We're being very lisp-like right now - instead of
+                   representing this expression as (first middle . last) we're
+                   representing it as (first middle last), which means that the
+                   tail cdr is always nil.  Apologies to non-wisp-lizards - may
+                   this obscure way of describing the problem motivate you to
+                   learn more about the one true computing language. */
+		if (!e -> data.pick_first_value.cdr)
+			goto no_pick_cdr;
 		col = token_print_indent (file, col, scol, "", " ",
 					  ",");
 		if (e -> data.pick_first_value.cdr -> op ==
@@ -2131,6 +2142,7 @@ int write_expression (file, expr, col, indent)
 		col = write_expression (file,
 					e -> data.pick_first_value.cdr,
 					col, scol);
+	      no_pick_cdr:
 		col = token_print_indent (file, col, indent, "", "",
 					  ")");
 		break;
