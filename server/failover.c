@@ -3,7 +3,7 @@
    Failover protocol support code... */
 
 /*
- * Copyright (c) 1999-2001 Internet Software Consortium.
+ * Copyright (c) 1999-2002 Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.53.2.23 2002/02/19 20:59:09 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.53.2.24 2002/02/20 05:35:34 mellon Exp $ Copyright (c) 1999-2002 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2257,6 +2257,7 @@ int dhcp_failover_pool_check (struct pool *pool)
 		if (pool -> failover_peer -> i_am == secondary) {
 			/* Ask the primary to send us leases. */
 			dhcp_failover_send_poolreq (pool -> failover_peer);
+			return 1;
 		} else {
 			/* Figure out how many leases to skip on the backup
 			   list.   We skip the earliest leases on the list
@@ -2279,7 +2280,6 @@ int dhcp_failover_pool_check (struct pool *pool)
 			if (lts)
 				log_info ("failed to take %d leases.", lts);
 		}
-		return 1;
 	}
 	return 0;
 }
@@ -4586,12 +4586,33 @@ isc_result_t dhcp_failover_process_bind_ack (dhcp_failover_state_t *state,
 				commit_leases ();
 		} else {
 			lease -> tsfp = msg -> potential_expiry;
+			if ((lease -> desired_binding_state !=
+			     lease -> binding_state) &&
+			    (msg -> options_present & FTB_BINDING_STATUS) &&
+			    (msg -> binding_status ==
+			     lease -> desired_binding_state)) {
+				lease -> next_binding_state =
+					lease -> desired_binding_state;
+				supersede_lease (lease,
+						 (struct lease *)0, 0, 0, 0);
+			}
 			write_lease (lease);
-#if 0 /* XXX This might be needed. */
-			if (state -> me.state == normal)
-				commit_leases ();
-#endif
+			/* Commit the lease only after a two-second timeout,
+			   so that if we get a bunch of acks in quick 
+			   successtion (e.g., when stealing leases from the
+			   secondary), we do not do an immediate commit for
+			   each one. */
+			add_timeout (cur_time + 2,
+				     commit_leases_timeout, (void *)0, 0, 0);
 		}
+	} else if (lease -> desired_binding_state != lease -> binding_state &&
+		   (msg -> options_present & FTB_BINDING_STATUS) &&
+		   msg -> binding_status == lease -> desired_binding_state) {
+		lease -> next_binding_state = lease -> desired_binding_state;
+		supersede_lease (lease, (struct lease *)0, 0, 0, 0);
+		write_lease (lease);
+		add_timeout (cur_time + 2, commit_leases_timeout,
+			     (void *)0, 0, 0);
 	}
 
       unqueue:
@@ -5065,15 +5086,20 @@ normal_binding_state_transition_check (struct lease *lease,
 		switch (binding_state) {
 		      case FTS_ACTIVE:
 		      case FTS_ABANDONED:
-		      case FTS_FREE:
 		      case FTS_EXPIRED:
 		      case FTS_RELEASED:
 		      case FTS_RESET:
-			/* If the lease was in backup, and our peer is
-			   secondary, then it can make it active, or
-			   abandoned, or free. */
+			/* If the lease was in backup, and our peer
+			   is secondary, then it can make it active
+			   or abandoned. */
 			if (state -> i_am == primary)
 				return binding_state;
+
+			/* Either the primary or the secondary can
+			   reasonably move a lease from the backup
+			   state to the free state. */
+		      case FTS_FREE:
+			return binding_state;
 
 		      case FTS_BACKUP:
 			new_state = lease -> binding_state;
