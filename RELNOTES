@@ -1,6 +1,6 @@
 	      Internet Systems Consortium DHCP Distribution
 			     Version 3.0.2rc3
-			    November 12, 2004
+			    December  3, 2004
 
 			     Release Notes
 
@@ -48,6 +48,12 @@ and for prodding me into improving it.
 - Two varaibles introduced in 3.0.2b1 were used without being initialized
   in the case where neither the FILE nor SNAME fields were available for
   overloading.  This was repaired.
+
+- A heretofore believed to be impossible corner case of the option
+  overloading implementation turned out to be possible ("Unable to sort
+  overloaded options after 10 tries.").  The implementation was reworked
+  to consider the case of an option so large it would require more than
+  three chunks to fit.
 
 - Many other instances of variables being used without being initialized
   were repaired.

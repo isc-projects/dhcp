@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.85.2.25 2004/11/24 17:39:16 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.85.2.26 2004/12/03 23:06:08 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -735,13 +735,30 @@ int store_options (ocount, buffer, buflen, packet, lease, client_state,
 	int terminate;
 	const char *vuname;
 {
-	int bufix = 0;
+	int bufix = 0, six = 0, tix = 0;
 	int i;
 	int ix;
 	int tto;
+	int bufend, sbufend;
 	struct data_string od;
 	struct option_cache *oc;
 	unsigned code;
+
+	if (first_cutoff) {
+	    if (first_cutoff >= buflen)
+		log_fatal("%s:%s:store_options: Invalid first cutoff.", MDL);
+
+	    bufend = first_cutoff;
+	} else
+	    bufend = buflen;
+
+	if (second_cutoff) {
+	    if (second_cutoff >= buflen)
+		log_fatal("%s:%s:store_options: Invalid second cutoff.", MDL);
+
+	    sbufend = second_cutoff;
+	} else
+	    sbufend = buflen;
 
 	memset (&od, 0, sizeof od);
 
@@ -768,10 +785,11 @@ int store_options (ocount, buffer, buflen, packet, lease, client_state,
 	    /* Number of bytes left to store (some may already
 	       have been stored by a previous pass). */
 	    unsigned length;
-	    int optstart;
+	    int optstart, soptstart, toptstart;
 	    struct universe *u;
 	    int have_encapsulation = 0;
 	    struct data_string encapsulation;
+	    int splitup;
 
 	    memset (&encapsulation, 0, sizeof encapsulation);
 
@@ -908,165 +926,120 @@ int store_options (ocount, buffer, buflen, packet, lease, client_state,
 	       in any case, if the option data will cross a buffer
 	       boundary, split it across that boundary. */
 
+
+	    if (length > 255)
+		splitup = 1;
+	    else
+		splitup = 0;
+
 	    ix = 0;
 	    optstart = bufix;
+	    soptstart = six;
+	    toptstart = tix;
 	    while (length) {
-		    unsigned char incr = length > 255 ? 255 : length;
+		    unsigned incr = length;
 		    int consumed = 0;
-		    
-		    /* If this option is going to overflow the buffer,
-		       skip it. */
-		    if (bufix + 2 + incr > buflen) {
-			    bufix = optstart;
-			    break;
-		    }
-		    
-		    /* Everything looks good - copy it in! */
-		    buffer [bufix] = code;
-		    buffer [bufix + 1] = incr;
-		    if (tto && incr == length) {
-			    memcpy (buffer + bufix + 2,
-				    od.data + ix, (unsigned)(incr - 1));
-			    buffer [bufix + 2 + incr - 1] = 0;
+		    int *pix;
+		    char *base;
+
+		    /* Try to fit it in the options buffer. */
+		    if (!splitup &&
+			((!six && !tix && (i == priority_len - 1) &&
+			  (bufix + 2 + length < bufend)) ||
+			 (bufix + 5 + length < bufend))) {
+			base = buffer;
+			pix = &bufix;
+		    /* Try to fit it in the second buffer. */
+		    } else if (!splitup && first_cutoff &&
+			       (first_cutoff + six + 3 + length < sbufend)) {
+			base = &buffer[first_cutoff];
+			pix = &six;
+		    /* Try to fit it in the third buffer. */
+		    } else if (!splitup && second_cutoff &&
+			       (second_cutoff + tix + 3 + length < buflen)) {
+			base = &buffer[second_cutoff];
+			pix = &tix;
+		    /* Split the option up into the remaining space. */
 		    } else {
-			    memcpy (buffer + bufix + 2,
+			splitup = 1;
+
+			/* Use any remaining options space. */
+			if (bufix + 6 < bufend) {
+			    incr = bufend - bufix - 5;
+			    base = buffer;
+			    pix = &bufix;
+			/* Use any remaining first_cutoff space. */
+			} else if (first_cutoff &&
+				   (first_cutoff + six + 4 < sbufend)) {
+			    incr = sbufend - (first_cutoff + six) - 3;
+			    base = &buffer[first_cutoff];
+			    pix = &six;
+			/* Use any remaining second_cutoff space. */
+			} else if (second_cutoff &&
+				   (second_cutoff + tix + 4 < buflen)) {
+			    incr = buflen - (second_cutoff + tix) - 3;
+			    base = &buffer[second_cutoff];
+			    pix = &tix;
+			/* Give up, roll back this option. */
+			} else {
+			    bufix = optstart;
+			    six = soptstart;
+			    tix = toptstart;
+			    break;
+			}
+		    }
+
+		    if (incr > length)
+			incr = length;
+		    if (incr > 255)
+			incr = 255;
+
+		    /* Everything looks good - copy it in! */
+		    base [*pix] = code;
+		    base [*pix + 1] = (unsigned char)incr;
+		    if (tto && incr == length) {
+			    if (incr > 1)
+				memcpy (base + *pix + 2,
+					od.data + ix, (unsigned)(incr - 1));
+			    base [*pix + 2 + incr - 1] = 0;
+		    } else {
+			    memcpy (base + *pix + 2,
 				    od.data + ix, (unsigned)incr);
 		    }
 		    length -= incr;
 		    ix += incr;
-		    bufix += 2 + incr;
+		    *pix += 2 + incr;
 	    }
 	    data_string_forget (&od, MDL);
 	}
 
-	/* Do we need to do overloading? */
-	if (first_cutoff && bufix > first_cutoff) {
-	    int second_bufsize, third_bufsize;
-	    int firstix, loop_count, rightshift;
-	    int j;
-	    unsigned len = 0;
-	    unsigned char *ovbuf;
+	/* If we can overload, and we have, then PAD and END those spaces. */
+	if (first_cutoff && six) {
+	    if ((first_cutoff + six + 1) < sbufend)
+		memset (&buffer[first_cutoff + six + 1], DHO_PAD,
+			sbufend - (first_cutoff + six + 1));
+	    else if (first_cutoff + six >= sbufend)
+		log_fatal("Second buffer overflow in overloaded options.");
 
-	    if (ocount)
-		    *ocount = 1;
-	    if (second_cutoff) {
-		second_bufsize = second_cutoff - first_cutoff;
-		third_bufsize = buflen - second_cutoff;
-	    } else {
-		second_bufsize = buflen - first_cutoff;
-		third_bufsize = 0;
-	    }
-	    ovbuf = dmalloc (bufix, MDL);
-	    if (!ovbuf)
-		    return 0;
+	    buffer[first_cutoff + six] = DHO_END;
+	    *ocount |= 1; /* So that caller knows there's data there. */
+	}
 
-	    /* First move any options that can only fit into the first
-	       buffer into the first buffer. */
-	    loop_count = 0;
-	    do {
-		rightshift = 4;
-		firstix = 0;
+	if (second_cutoff && tix) {
+	    if (second_cutoff + tix + 1 < buflen) {
+		memset (&buffer[second_cutoff + tix + 1], DHO_PAD,
+			buflen - (second_cutoff + tix + 1));
+	    } else if (second_cutoff + tix >= buflen)
+		log_fatal("Third buffer overflow in overloaded options.");
 
-		for (i = 0; i < bufix; ) {
-			len = buffer [i + 1] + 2;
+	    buffer[second_cutoff + tix] = DHO_END;
+	    *ocount |= 2; /* So that caller knows there's data there. */
+	}
 
-			if ((i < first_cutoff) && (i + len + 4 > first_cutoff))
-				rightshift = first_cutoff - i;
+	if ((six || tix) && (bufix + 3 > bufend))
+	    log_fatal("Not enough space for option overload option.");
 
-			if (((i + len + 4 > first_cutoff) &&
-			     (len + 1 > second_bufsize)) ||
-			    (second_cutoff &&
-			     (i + len + rightshift + 1 > second_cutoff) &&
-			     (len + 1 > third_bufsize))) {
-				memcpy (ovbuf, &buffer [i], len);
-				memmove (&buffer [firstix + len],
-					 &buffer [firstix], i - firstix);
-				memcpy (&buffer [firstix], ovbuf, len);
-				firstix += len;
-			}
-			i += len;
-		}
-
-		loop_count++;
-	    } while (firstix && (loop_count < 10));
-
-	    /* If this ever happens, we want to hear about it. */
-	    if (loop_count == 10) {
-		log_error ("Unable to sort overloaded options after 10 tries.");
-		dfree (ovbuf, MDL);
-		return 0;
-	    }
-
-	    /* Find the first cutoff point. */
-	    for (i = 0; i < bufix; ) {
-		len = buffer [i + 1] + 2;
-		if (i + len + 4 > first_cutoff)
-			break;
-		i += len;
-	    }
-	    /* Copy down any options that can fill out this buffer. */
-	    for (j = i + len; (j < bufix) && (i + 4 < first_cutoff); ) {
-		len = buffer [j + 1] + 2;
-		if (i + len + 4 < first_cutoff) {
-			memcpy (ovbuf, &buffer [j], len);
-			memmove (&buffer [i + len], &buffer [i], j - i);
-			memcpy (&buffer [i], ovbuf, len);
-			i += len;
-		}
-		j += len;
-	    }
-
-	    /* Move any option that overlaps the first_cutoff mark and pad
-	     * the space between the end of options buffer and the start of
-	     * the first overload buffer, if there is any.
-	     */
-	    memcpy (ovbuf, &buffer [i], bufix - i);
-	    memset (&buffer [i], DHO_PAD, first_cutoff - i);
-	    memcpy (&buffer [first_cutoff], ovbuf, bufix - i);
-	    ix = i;
-	    bufix += (first_cutoff - i);
-	    i = first_cutoff;
-
-	    /* If there is no second field, the first one still MUST be
-	     * terminated with an END option.
-	     */
-	    if (!second_cutoff || (bufix < second_cutoff)) {
-		buffer[bufix++] = DHO_END;
-		memset (&buffer[bufix], DHO_PAD, buflen - bufix);
-	    }
-	    else {
-		for (j = i + buffer [i + 1] + 2; j < bufix; ) {
-		    len = buffer [j + 1] + 2;
-		    if (j + len + 1 > second_cutoff) {
-			    memcpy (ovbuf, &buffer [j], bufix - j);
-			    buffer [j] = DHO_END;
-			    if (second_cutoff - j > 1)
-				    memset (&buffer [j + 1],
-					    DHO_PAD, second_cutoff - j - 1);
-			    memcpy (&buffer [second_cutoff], ovbuf, bufix - j);
-			    bufix += (second_cutoff - j);
-			    buffer [bufix++] = DHO_END;
-
-			    /* We MUST initialize the remainder of the
-			     * field to the PAD value (0).
-			     */
-			    if (bufix != buflen)
-			    	memset (&buffer[bufix], DHO_PAD,
-					buflen - bufix);
-
-			    if (ocount)
-				    *ocount |= 2;
-			    break;
-		    }
-		    j += len;
-		}
-	    }
-			    
-	    dfree (ovbuf, MDL);
-	} else
-		return bufix;
-
-	return ix;
+	return bufix;
 }
 
 /* Format the specified option so that a human can easily read it. */
