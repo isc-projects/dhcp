@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.69 1998/11/06 01:04:32 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.70 1998/11/06 02:59:11 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -56,6 +56,9 @@ void dhcp (packet)
 {
 	if (!locate_network (packet) && packet -> packet_type != DHCPREQUEST)
 		return;
+
+	/* Classify the client. */
+	classify_client (packet);
 
 	switch (packet -> packet_type) {
 	      case DHCPDISCOVER:
@@ -87,9 +90,6 @@ void dhcpdiscover (packet)
 	struct packet *packet;
 {
 	struct lease *lease;
-
-	/* Classify the client. */
-	classify_client (packet);
 
 	note ("DHCPDISCOVER from %s via %s",
 	      print_hw_addr (packet -> raw -> htype,
@@ -544,8 +544,6 @@ void ack_lease (packet, lease, offer, when)
 		return;
 	}
 
-	/* XXX Process class restrictions. */
-
 	/* Allocate a lease state structure... */
 	state = new_lease_state ("ack_lease");
 	if (!state)
@@ -599,7 +597,12 @@ void ack_lease (packet, lease, offer, when)
 
 	/* Vendor and user classes are only supported for DHCP clients. */
 	if (state -> offer) {
-		/* XXX process class stuff here. */
+		for (i = packet -> class_count; i > 0; i--) {
+                        execute_statements_in_scope
+				(packet, &state -> options,
+				 packet -> classes [i - 1] -> group,
+				 (struct group *)0);
+		}
 	}
 
 	/* If we have a host_decl structure, run the options associated
