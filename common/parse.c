@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.88 2000/10/04 18:47:41 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.89 2000/10/10 22:45:25 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -893,11 +893,10 @@ void parse_option_space_decl (cfile)
 	nu -> lookup_func = lookup_hashed_option;
 	nu -> option_state_dereference =
 		hashed_option_state_dereference;
-	nu -> get_func = hashed_option_get;
-	nu -> set_func = hashed_option_set;
 	nu -> save_func = save_hashed_option;
 	nu -> delete_func = delete_hashed_option;
 	nu -> encapsulate = hashed_option_space_encapsulate;
+	nu -> decode = parse_option_buffer;
 	nu -> length_size = 1;
 	nu -> tag_size = 1;
 	nu -> store_tag = putUChar;
@@ -950,7 +949,8 @@ void parse_option_space_decl (cfile)
 			UNSIGNED INTEGER NUMBER |
 			IP-ADDRESS |
 			TEXT |
-			STRING */
+			STRING |
+			ENCAPSULATE identifier */
 
 int parse_option_code_definition (cfile, option)
 	struct parse *cfile;
@@ -967,6 +967,7 @@ int parse_option_code_definition (cfile, option)
 	int code;
 	int is_signed;
 	char *s;
+	int has_encapsulation = 0;
 	
 	/* Parse the option code. */
 	token = next_token (&val, cfile);
@@ -1004,6 +1005,13 @@ int parse_option_code_definition (cfile, option)
 
 	/* At this point we're expecting a data type. */
       next_type:
+	if (has_encapsulation) {
+		parse_warn (cfile,
+			    "encapsulate must always be the last item.");
+		skip_to_semi (cfile);
+		return 0;
+	}
+
 	switch (token) {
 	      case ARRAY:
 		if (arrayp) {
@@ -1098,6 +1106,23 @@ int parse_option_code_definition (cfile, option)
 		type = 'X';
 		goto no_arrays;
 
+	      case ENCAPSULATE:
+		token = next_token (&val, cfile);
+		if (!is_identifier (token)) {
+			parse_warn (cfile,
+				    "expecting option space identifier");
+			skip_to_semi (cfile);
+			return 0;
+		}
+		if (strlen (val) + tokix + 2 > sizeof (tokbuf))
+			goto toobig;
+		tokbuf [tokix++] = 'E';
+		strcpy (&tokbuf [tokix], val);
+		tokix += strlen (val);
+		type = '.';
+		has_encapsulation = 1;
+		break;
+
 	      default:
 		parse_warn (cfile, "unknown data type %s", val);
 		skip_to_rbrace (cfile, recordp);
@@ -1107,6 +1132,7 @@ int parse_option_code_definition (cfile, option)
 	}
 
 	if (tokix == sizeof tokbuf) {
+	      toobig:
 		parse_warn (cfile, "too many types in record.");
 		skip_to_rbrace (cfile, recordp);
 		if (recordp)
@@ -1156,10 +1182,22 @@ int parse_option_code_definition (cfile, option)
 			skip_to_semi (cfile);
 		return 0;
 	}
-	s = dmalloc (tokix + ((arrayp) ? 1 : 0) + 1, MDL);
+	if (has_encapsulation && arrayp) {
+		parse_warn (cfile,
+			    "Arrays of encapsulations don't make sense.");
+		return 0;
+	}
+	if (has_encapsulation && tokbuf [0] == 'E')
+		has_encapsulation = 0;
+	s = dmalloc (tokix +
+		     (arrayp ? 1 : 0) +
+		     (has_encapsulation ? 1 : 0) + 1, MDL);
 	if (!s)
 		log_fatal ("no memory for option format.");
-	memcpy (s, tokbuf, tokix);
+	if (has_encapsulation)
+		s [0] = 'e';
+	memcpy (s + has_encapsulation, tokbuf, tokix);
+	tokix += has_encapsulation;
 	if (arrayp)
 		s [tokix++] = (arrayp > recordp) ? 'a' : 'A';
 	s [tokix] = 0;
@@ -2739,9 +2777,12 @@ int parse_non_binary (expr, cfile, lose, context)
 					    cfile, lose)) {
 		      nodata:
 			expression_dereference (expr, MDL);
-			parse_warn (cfile, "expecting data expression.");
-			skip_to_semi (cfile);
-			*lose = 1;
+			if (!*lose) {
+				parse_warn (cfile,
+					    "expecting data expression.");
+				skip_to_semi (cfile);
+				*lose = 1;
+			}
 			return 0;
 		}
 
@@ -3220,9 +3261,10 @@ int parse_non_binary (expr, cfile, lose, context)
 			if (!(parse_numeric_expression
 			      (&(*expr) -> data.ns_add.ttl, cfile,
 			       lose))) {
+			    if (!*lose)
 				parse_warn (cfile,
-					    "expecting data expression.");
-				goto badnsupdate;
+					    "expecting numeric expression.");
+			    goto badnsupdate;
 			}
 		}
 
@@ -3382,9 +3424,12 @@ int parse_non_binary (expr, cfile, lose, context)
 
 		if (!parse_data_expression (&(*expr) -> data.extract_int,
 					    cfile, lose)) {
-			parse_warn (cfile, "expecting data expression.");
-			skip_to_semi (cfile);
-			*lose = 1;
+			if (!*lose) {
+				parse_warn (cfile,
+					    "expecting data expression.");
+				skip_to_semi (cfile);
+				*lose = 1;
+			}
 			expression_dereference (expr, MDL);
 			return 0;
 		}
@@ -3678,15 +3723,15 @@ int parse_expression (expr, cfile, lose, context, plhs, binop)
 	enum dhcp_token token;
 	const char *val;
 	struct expression *rhs = (struct expression *)0, *tmp;
-	struct expression *lhs;
+	struct expression *lhs = (struct expression *)0;
 	enum expr_op next_op;
+	enum expression_context lhs_context, rhs_context;
 
 	/* Consume the left hand side we were passed. */
 	if (plhs) {
-		lhs = *plhs;
-		*plhs = (struct expression *)0;
-	} else
-		lhs = (struct expression *)0;
+		expression_reference (&lhs, *plhs, MDL);
+		expression_dereference (plhs, MDL);
+	}
 
       new_rhs:
 	if (!parse_non_binary (&rhs, cfile, lose, context)) {
@@ -3723,50 +3768,62 @@ int parse_expression (expr, cfile, lose, context, plhs, binop)
 			return 0;
 		}
 		next_op = expr_not_equal;
+		lhs_context = rhs_context = context_any;
 		break;
 
 	      case EQUAL:
 		next_op = expr_equal;
+		lhs_context = rhs_context = context_any;
 		break;
 
 	      case AND:
 		next_op = expr_and;
+		lhs_context = rhs_context = context_boolean;
 		break;
 
 	      case OR:
 		next_op = expr_or;
+		lhs_context = rhs_context = context_boolean;
 		break;
 
 	      case PLUS:
 		next_op = expr_add;
+		lhs_context = rhs_context = context_numeric;
 		break;
 
 	      case MINUS:
 		next_op = expr_subtract;
+		lhs_context = rhs_context = context_numeric;
 		break;
 
 	      case SLASH:
 		next_op = expr_divide;
+		lhs_context = rhs_context = context_numeric;
 		break;
 
 	      case ASTERISK:
 		next_op = expr_multiply;
+		lhs_context = rhs_context = context_numeric;
 		break;
 
 	      case PERCENT:
 		next_op = expr_remainder;
+		lhs_context = rhs_context = context_numeric;
 		break;
 
 	      case AMPERSAND:
 		next_op = expr_binary_and;
+		lhs_context = rhs_context = context_numeric;
 		break;
 
 	      case PIPE:
 		next_op = expr_binary_or;
+		lhs_context = rhs_context = context_numeric;
 		break;
 
 	      case CARET:
 		next_op = expr_binary_xor;
+		lhs_context = rhs_context = context_numeric;
 		break;
 
 	      default:
@@ -3827,6 +3884,62 @@ int parse_expression (expr, cfile, lose, context, plhs, binop)
 		}
 		next_op = expr_none;
 	}
+
+#if defined (NOTYET)		/* Post 3.0 final */
+	/* Make sure rhs and lhs can be combined using binop. */
+	if (!expr_valid_for_context (lhs, lhs_context)) {
+		if (!*lose) {
+			parse_warn (cfile,
+				    "lhs type is not valid for operator.");
+			*lose = 1;
+		}
+	}
+	if (!expr_valid_for_context (rhs, rhs_context) || *lose) {
+		if (!*lose) {
+			parse_warn (cfile,
+				    "lhs type is not valid for operator.");
+			*lose = 1;
+		}
+		return 0;
+	}
+
+	/* Do a little nosing about in comparisons. */
+	if (binop == expr_equal || binop == expr_not_equal) {
+		int lrhs, llhs, crhs, clhs;
+
+		/* If the subexpressions have lengths that are computable
+		   at parse time, see if they're the same, and barf if they
+		   aren't. */
+		clhs = data_subexpression_length (&llhs, lhs);
+		crhs = data_subexpression_length (&lrhs, rhs);
+		if (clhs == 2 || crhs == 2) {
+			if (clhs == crhs &&
+			    (llhs != lrhs ||
+			     (clhs == 2 && llhs > lrhs) ||
+			     (crhs == 2 && lrhs > llhs))) {
+				parse_warn (cfile,
+					    "comparison will always be %s",
+					    (binop == expr_equal ?
+					     "true" : "false"));
+			} else if (llhs != lrhs) {
+				log_error ("warning: %s will normally be %d%s",
+					   (clhs == 1
+					    ? "left-hand side"
+					    : "right-hand side"),
+					   (clhs == 1 ? llhs : lrhs),
+					   " bytes");
+				log_error ("...and %s will always be %d%s",
+					   (clhs == 1
+					    ? "right-hand side"
+					    : "left-hand side"),
+					   (clhs == 1 ? lrhs : llhs),
+					   " bytes");
+				log_error ("so this may not work the way%s",
+					   " you intended");
+			}
+		}
+	}
+#endif /* NOTYET */
 
 	/* Now combine the LHS and the RHS using binop. */
 	tmp = (struct expression *)0;
@@ -4010,6 +4123,14 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 			log_fatal ("No memory for %s", val);
 		break;
 
+	      case 'E':
+		fmt = strchr (fmt, '.');
+		if (!fmt) {
+			parse_warn (cfile,
+				    "malformed encapsulation format (bug!)");
+			skip_to_semi (cfile);
+			return 0;
+		}
 	      case 'X':
 		token = peek_token (&val, cfile);
 		if (token == NUMBER_OR_NAME || token == NUMBER) {
