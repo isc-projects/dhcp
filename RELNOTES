@@ -1,6 +1,6 @@
 	    Internet Software Consortium DHCP Distribution
-		   Version 3, Beta 2, Patchlevel 24
-			    April 5, 2001
+		    Version 3, Release Candidate 1
+			    April 17, 2001
 
 			    Release Notes
 
@@ -9,8 +9,8 @@ Consortium DHCP Distribution.
 
 			     NEW FEATURES
 
-Version 3, Beta 2 of the ISC DHCP Distribution includes the following
-features that are new since version 2.0:
+Version 3 of the ISC DHCP Distribution includes the following features
+that are new since version 2.0:
 
      - DHCP Failover Protocol support
      - OMAPI, an API for accessing and modifying the DHCP server and
@@ -25,17 +25,24 @@ features that are new since version 2.0:
      - Many bug fixes, performance enhancements, and minor new DHCP
        protocol features. 
 
-This beta release is quite new, and is running in production at only a
-few sites.   We strongly recommend that you exercise caution in
-installing it.   The 3.0 Beta 2 lease file is not backwards compatible
+This release has been beta tested quite thorougly, and we think it is
+substantially more robust at this time than 2.0pl5.  The release
+candidate is expected to be free of serious bugs, but it's called a
+release candidate because we want people to try it and find any last
+real problems before we call it done.  We do not expect to add
+anything other than documentation and any remaining bug fixes to the
+3.0 release.  
+
+The 3.0 Release Candidate 1 lease file is not backwards compatible
 with the 3.0 Beta 1 lease file, so if you have to go back, you will
 have to convert your lease files back to the 3.0 Beta 1 format - if
 you try to run a 3.0 Beta 1 server on a 3.0 Beta 2 lease file, it will
-cheerfully delete all your leases.   Having said that, of course the
-way that new releases of open source software become stable is by
-people using them, finding the bugs, and reporting the bugs.   So
-while we urge you to exercise caution, we would also appreciate any
-testing or production use you can safely do.
+cheerfully delete all your leases.
+
+If you are running 3.0 beta 1 and are doing dynamic DNS updates, the
+lease file is no longer forward-compatible to 3.0 final.   A script
+has been provided to convert 3.0b1 lease files.   This is in
+contrib/3.0b1-lease-convert.
 
 For information on how to install, configure and run this software,
 as well as how to find documentation and report bugs, please consult
@@ -48,6 +55,25 @@ Measurement Systems, Igor Sharfmesser at Kazakh Telecom, and Brian
 Murrell at BC Tel Advanced Communications.  I'd like to express my
 thanks to all of these good people here, both for working on the code
 and for prodding me into improving it.
+
+		Changes since 3.0 Beta 2 Patchlevel 24
+
+- Went over problematic failover state transitions and made them all
+  work, so that failover should now much less fragile.
+
+- Add some dhcpctl and omapi documentation
+
+- Fix compile errors when compiling with unusual predefines.
+
+- Make Token Ring work on Linux 2.4
+
+- Fix the Digital Unix BPF_WORDALIGN bug.
+
+- Fix some dhcp client documentation errors.
+
+- Update some parts of the README file.
+
+- Support GCC on SCO.
 
 	        Changes since 3.0 Beta 2 Patchlevel 23
 
