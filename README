@@ -15,10 +15,11 @@ having been in a feature freeze since November of 1996.
 
 In this release, the server and relay agent currently work well on
 Digital Alpha OSF/1, SunOS 4.1.4, NetBSD, FreeBSD, BSD/OS and Ultrix.
-They can also be run usefully on Solaris as long as only one network
-interface is being used.  They also runs on QNX and Linux as long as
-only one network interface is present and a host route is added from
-that interface to the 255.255.255.255 broadcast address.
+They can also be run usefully on Solaris as long as only one broadcast
+network interface is configured.  They also runs on QNX and Linux as
+long as only one broadcast network interface is configured and a host
+route is added from that interface to the 255.255.255.255 broadcast
+address.
 
 The DHCP client currently only configures the network when running on
 NetBSD.   This is because the client depends on a system-dependent
