@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.104.2.4 2001/06/14 20:43:15 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.104.2.5 2001/06/21 23:44:23 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -295,7 +295,7 @@ int parse_ip_addr_or_hostname (expr, cfile, uniform)
 	} else if (token == NUMBER) {
 		if (!parse_numeric_aggregate (cfile, addr, &len, DOT, 10, 8))
 			return 0;
-		return make_const_data (expr, addr, len, 0, 1);
+		return make_const_data (expr, addr, len, 0, 1, MDL);
 	} else {
 		if (token != RBRACE && token != LBRACE)
 			token = next_token (&val, (unsigned *)0, cfile);
@@ -975,7 +975,7 @@ void parse_option_space_decl (cfile)
 		universes = ua;
 	}
 	universes [nu -> index] = nu;
-	nu -> hash = new_hash (0, 0, 1);
+	nu -> hash = new_hash (0, 0, 1, MDL);
 	if (!nu -> hash)
 		log_fatal ("Can't allocate %s option hash table.", nu -> name);
 	universe_hash_add (universe_hash, nu -> name, 0, nu, MDL);
@@ -1978,6 +1978,7 @@ int parse_executable_statement (result, cfile, lose, case_context)
 			dns_zone_dereference (&zone, MDL);
 			return 0;
 		}
+		dns_zone_dereference (&zone, MDL);
 		return 1;
 		
 		/* Also not really a statement, but same idea as above. */
@@ -2296,6 +2297,7 @@ int parse_key (struct parse *cfile)
 			    key -> name, isc_result_totext (status));
 		goto bad;
 	}
+	omapi_auth_key_dereference (&key, MDL);
 	return 1;
 
       rbad:
@@ -3017,6 +3019,7 @@ int parse_non_binary (expr, cfile, lose, context)
 					      *expr, MDL);
 			expression_dereference (expr, MDL);
 			expression_reference (expr, nexp, MDL);
+			expression_dereference (&nexp, MDL);
 			goto concat_another;
 		}
 
@@ -3105,8 +3108,10 @@ int parse_non_binary (expr, cfile, lose, context)
 		if (token != LPAREN)
 			goto nolparen;
 
-		nexp = *expr;
+		nexp = (struct expression *)0;
+		expression_reference (&nexp, *expr, MDL);
 		do {
+			struct expression *foo;
 			nexp -> op = expr_pick_first_value;
 			if (!(parse_data_expression
 			      (&nexp -> data.pick_first_value.car,
@@ -3115,13 +3120,15 @@ int parse_non_binary (expr, cfile, lose, context)
 
 			token = next_token (&val, (unsigned *)0, cfile);
 			if (token == COMMA) {
-				if (!(expression_allocate
-				      (&nexp -> data.pick_first_value.cdr,
-				       MDL)))
+				foo = (struct expression *)0;
+				if (!expression_allocate (&foo, MDL))
 					log_fatal ("can't allocate expr");
-				nexp = nexp -> data.pick_first_value.cdr;
+				expression_dereference (&nexp, MDL);
+				expression_reference (&nexp, foo, MDL);
+				expression_dereference (&foo, MDL);
 			}
 		} while (token == COMMA);
+		expression_dereference (&nexp, MDL);
 
 		if (token != RPAREN)
 			goto norparen;
@@ -3542,7 +3549,7 @@ int parse_non_binary (expr, cfile, lose, context)
 	      case STRING:
 		token = next_token (&val, &len, cfile);
 		if (!make_const_data (expr, (const unsigned char *)val,
-				      len, 1, 1))
+				      len, 1, 1, MDL))
 			log_fatal ("can't make constant string expression.");
 		break;
 
@@ -4229,8 +4236,10 @@ int parse_option_statement (result, cfile, lookups, option, op)
 		log_fatal ("no memory for option statement.");
 	(*result) -> op = op;
 	if (expr && !option_cache (&(*result) -> data.option,
-				   (struct data_string *)0, expr, option))
+				   (struct data_string *)0, expr, option, MDL))
 		log_fatal ("no memory for option cache");
+	if (expr)
+		expression_dereference (&expr, MDL);
 	return 1;
 }
 
@@ -4265,7 +4274,7 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 		}
 		token = next_token (&val, &len, cfile);
 		if (!make_const_data (&t, (const unsigned char *)val,
-				      len, 1, 1))
+				      len, 1, 1, MDL))
 			log_fatal ("No memory for %s", val);
 		break;
 
@@ -4291,7 +4300,7 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 		} else if (token == STRING) {
 			token = next_token (&val, &len, cfile);
 			if (!make_const_data (&t, (const unsigned char *)val,
-					      len, 1, 1))
+					      len, 1, 1, MDL))
 				log_fatal ("No memory for \"%s\"", val);
 		} else {
 			if ((*fmt) [1] != 'o') {
@@ -4326,7 +4335,7 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 		token = next_token (&val, &len, cfile);
 	      make_string:
 		if (!make_const_data (&t, (const unsigned char *)val,
-				      len, 1, 1))
+				      len, 1, 1, MDL))
 			log_fatal ("No memory for concatenation");
 		break;
 		
@@ -4352,7 +4361,7 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 			parse_warn (cfile, "unknown value");
 			goto foo;
 		}
-		if (!make_const_data (&t, &e -> value, 1, 0, 1))
+		if (!make_const_data (&t, &e -> value, 1, 0, 1, MDL))
 			return 0;
 		break;
 
@@ -4363,7 +4372,8 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 		} else {
 			if (!parse_ip_addr (cfile, &addr))
 				return 0;
-			if (!make_const_data (&t, addr.iabuf, addr.len, 0, 1))
+			if (!make_const_data (&t, addr.iabuf, addr.len,
+					      0, 1, MDL))
 				return 0;
 		}
 		break;
@@ -4374,7 +4384,7 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 			goto check_number;
 		token = next_token (&val, (unsigned *)0, cfile);
 		putLong (buf, -1);
-		if (!make_const_data (&t, buf, 4, 0, 1))
+		if (!make_const_data (&t, buf, 4, 0, 1, MDL))
 			return 0;
 		break;
 
@@ -4393,7 +4403,7 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 		}
 		token = next_token (&val, (unsigned *)0, cfile);
 		convert_num (cfile, buf, val, 0, 32);
-		if (!make_const_data (&t, buf, 4, 0, 1))
+		if (!make_const_data (&t, buf, 4, 0, 1, MDL))
 			return 0;
 		break;
 
@@ -4404,7 +4414,7 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 			goto need_number;
 		token = next_token (&val, (unsigned *)0, cfile);
 		convert_num (cfile, buf, val, 0, 16);
-		if (!make_const_data (&t, buf, 2, 0, 1))
+		if (!make_const_data (&t, buf, 2, 0, 1, MDL))
 			return 0;
 		break;
 
@@ -4415,7 +4425,7 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 			goto need_number;
 		token = next_token (&val, (unsigned *)0, cfile);
 		convert_num (cfile, buf, val, 0, 8);
-		if (!make_const_data (&t, buf, 1, 0, 1))
+		if (!make_const_data (&t, buf, 1, 0, 1, MDL))
 			return 0;
 		break;
 
@@ -4445,7 +4455,7 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 			goto bad_flag;
 		}
 		token = next_token (&val, (unsigned *)0, cfile);
-		if (!make_const_data (&t, buf, 1, 0, 1))
+		if (!make_const_data (&t, buf, 1, 0, 1, MDL))
 			return 0;
 		break;
 
@@ -4458,9 +4468,9 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 	if (expr) {
 		if (!make_concat (rv, expr, t))
 			return 0;
-		expression_dereference (&t, MDL);
 	} else
-		*rv = t;
+		expression_reference (rv, t, MDL);
+	expression_dereference (&t, MDL);
 	return 1;
 }
 
