@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.192.2.11 2001/06/20 04:13:36 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.192.2.12 2001/06/22 02:08:55 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -51,6 +51,18 @@ static char copyright[] =
 int outstanding_pings;
 
 static char dhcp_message [256];
+
+static const char *dhcp_type_names [] = { 
+	"DHCPDISCOVER",
+	"DHCPOFFER",
+	"DHCPREQUEST",
+	"DHCPDECLINE",
+	"DHCPACK",
+	"DHCPNAK",
+	"DHCPRELEASE",
+	"DHCPINFORM"
+};
+const int dhcp_type_name_max = ((sizeof dhcp_type_names) / sizeof (char *));
 
 #if defined (TRACING)
 # define send_packet trace_packet_send
@@ -68,18 +80,6 @@ void dhcp (packet)
 	if (!locate_network (packet) &&
 	    packet -> packet_type != DHCPREQUEST &&
 	    packet -> packet_type != DHCPINFORM) {
-		static const char *dhcp_type_names [] = { 
-			"DHCPDISCOVER",
-			"DHCPOFFER",
-			"DHCPREQUEST",
-			"DHCPDECLINE",
-			"DHCPACK",
-			"DHCPNAK",
-			"DHCPRELEASE",
-			"DHCPINFORM"
-		};
-		const int dhcp_type_name_max = ((sizeof dhcp_type_names) / 
-						sizeof (char *));
 		const char *s;
 		char typebuf [32];
 		errmsg = "unknown network segment";
@@ -1036,7 +1036,8 @@ void dhcpinform (packet, ms_nulltp)
 	i = DHO_DHCP_MESSAGE_TYPE;
 	oc = (struct option_cache *)0;
 	if (option_cache_allocate (&oc, MDL)) {
-		if (make_const_data (&oc -> expression, &dhcpack, 1, 0, 0)) {
+		if (make_const_data (&oc -> expression,
+				     &dhcpack, 1, 0, 0, MDL)) {
 			oc -> option = dhcp_universe.options [i];
 			save_option (&dhcp_universe, options, oc);
 		}
@@ -1053,7 +1054,7 @@ void dhcpinform (packet, ms_nulltp)
 			     ((unsigned char *)
 			      &packet -> interface -> primary_address),
 			     sizeof packet -> interface -> primary_address,
-			     0, 0)) {
+			     0, 0, MDL)) {
 				oc -> option =
 					dhcp_universe.options [i];
 				save_option (&dhcp_universe,
@@ -1085,7 +1086,8 @@ void dhcpinform (packet, ms_nulltp)
 		if (option_cache_allocate (&oc, MDL)) {
 			if (make_const_data (&oc -> expression,
 					     subnet -> netmask.iabuf,
-					     subnet -> netmask.len, 0, 0)) {
+					     subnet -> netmask.len,
+					     0, 0, MDL)) {
 				oc -> option = dhcp_universe.options [i];
 				save_option (&dhcp_universe, options, oc);
 			}
@@ -1248,7 +1250,8 @@ void nak_lease (packet, cip)
 		option_state_dereference (&options, MDL);
 		return;
 	}
-	if (!make_const_data (&oc -> expression, &nak, sizeof nak, 0, 0)) {
+	if (!make_const_data (&oc -> expression, &nak, sizeof nak,
+			      0, 0, MDL)) {
 		log_error ("No memory for expr_const expression.");
 		option_cache_dereference (&oc, MDL);
 		option_state_dereference (&options, MDL);
@@ -1266,7 +1269,7 @@ void nak_lease (packet, cip)
 	}
 	if (!make_const_data (&oc -> expression,
 			      (unsigned char *)dhcp_message,
-			      strlen (dhcp_message), 1, 0)) {
+			      strlen (dhcp_message), 1, 0, MDL)) {
 		log_error ("No memory for expr_const expression.");
 		option_cache_dereference (&oc, MDL);
 		option_state_dereference (&options, MDL);
@@ -1286,7 +1289,7 @@ void nak_lease (packet, cip)
 			     ((unsigned char *)
 			      &packet -> interface -> primary_address),
 			     sizeof packet -> interface -> primary_address,
-			     0, 0)) {
+			     0, 0, MDL)) {
 				oc -> option =
 					dhcp_universe.options [i];
 				save_option (&dhcp_universe, options, oc);
@@ -1556,8 +1559,12 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 		    seek = (struct lease *)0;
 		    find_lease_by_uid (&seek, lease -> uid,
 				       lease -> uid_len, MDL);
-		    if (!seek || (seek == lease && !seek -> n_uid))
+		    if (!seek)
 			break;
+		    if (seek == lease && !seek -> n_uid) {
+			lease_dereference (&seek, MDL);
+			break;
+		    }
 		    next = (struct lease *)0;
 
 		    /* Don't release expired leases, and don't
@@ -1604,8 +1611,12 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 		    find_lease_by_hw_addr
 			    (&seek, lease -> hardware_addr.hbuf,
 			     lease -> hardware_addr.hlen, MDL);
-		    if (!seek || (seek == lease && !seek -> n_hw))
+		    if (!seek)
 			    break;
+		    if (seek == lease && !seek -> n_hw) {
+			    lease_dereference (&seek, MDL);
+			    break;
+		    }
 		    next = (struct lease *)0;
 		    while (seek) {
 			if (seek -> n_hw)
@@ -2232,7 +2243,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 		oc = (struct option_cache *)0;
 		if (option_cache_allocate (&oc, MDL)) {
 			if (make_const_data (&oc -> expression,
-					     &state -> offer, 1, 0, 0)) {
+					     &state -> offer, 1, 0, 0, MDL)) {
 				oc -> option =
 					dhcp_universe.options [i];
 				save_option (&dhcp_universe,
@@ -2251,7 +2262,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 				     ((unsigned char *)
 				      &state -> ip -> primary_address),
 				     sizeof state -> ip -> primary_address,
-				     0, 0)) {
+				     0, 0, MDL)) {
 					oc -> option =
 						dhcp_universe.options [i];
 					save_option (&dhcp_universe,
@@ -2295,7 +2306,8 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 		if (option_cache_allocate (&oc, MDL)) {
 			if (make_const_data (&oc -> expression,
 					     (unsigned char *)&state -> expiry,
-					     sizeof state -> expiry, 0, 0)) {
+					     sizeof state -> expiry,
+					     0, 0, MDL)) {
 				oc -> option = dhcp_universe.options [i];
 				save_option (&dhcp_universe,
 					     state -> options, oc);
@@ -2316,7 +2328,8 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 			if (make_const_data (&oc -> expression,
 					     (unsigned char *)
 					     &state -> renewal,
-					     sizeof state -> renewal, 0, 0)) {
+					     sizeof state -> renewal,
+					     0, 0, MDL)) {
 				oc -> option = dhcp_universe.options [i];
 				save_option (&dhcp_universe,
 					     state -> options, oc);
@@ -2337,7 +2350,8 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 		if (option_cache_allocate (&oc, MDL)) {
 			if (make_const_data (&oc -> expression,
 					     (unsigned char *)&state -> rebind,
-					     sizeof state -> rebind, 0, 0)) {
+					     sizeof state -> rebind,
+					     0, 0, MDL)) {
 				oc -> option = dhcp_universe.options [i];
 				save_option (&dhcp_universe,
 					     state -> options, oc);
@@ -2378,7 +2392,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 			if (make_const_data (&oc -> expression,
 					     lease -> subnet -> netmask.iabuf,
 					     lease -> subnet -> netmask.len,
-					     0, 0)) {
+					     0, 0, MDL)) {
 				oc -> option = dhcp_universe.options [i];
 				save_option (&dhcp_universe,
 					     state -> options, oc);
@@ -2404,7 +2418,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 					     ((unsigned char *)
 					      lease -> host -> name),
 					     strlen (lease -> host -> name),
-					     1, 0)) {
+					     1, 0, MDL)) {
 				oc -> option = dhcp_universe.options [i];
 				save_option (&dhcp_universe,
 					     state -> options, oc);
@@ -2436,7 +2450,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 						     ((unsigned char *)
 						      h -> h_name),
 						     strlen (h -> h_name) + 1,
-						     1, 1)) {
+						     1, 1, MDL)) {
 					oc -> option =
 						dhcp_universe.options [i];
 					save_option (&dhcp_universe,
@@ -2464,7 +2478,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 				if (make_const_data (&oc -> expression,
 						     lease -> ip_addr.iabuf,
 						     lease -> ip_addr.len,
-						     0, 0)) {
+						     0, 0, MDL)) {
 					oc -> option =
 						dhcp_universe.options [i];
 					save_option (&dhcp_universe,
