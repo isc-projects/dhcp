@@ -53,6 +53,12 @@ running in producion at the ISC, but is not expected to be stable in
 the near future, and is intended for sites that are in a position to
 experiment, or for sites that desperately need the new features.
 
+	    CHANGES FROM VERSION 2.0 BETA 1 PATCHLEVEL 22
+
+- Test for lease before dereferencing it in dhcprequest.
+
+- Free the client parameter request list in dhcpnak if there is one. 
+
 	    CHANGES FROM VERSION 2.0 BETA 1 PATCHLEVEL 21
 
 - Fix a pasto in options.c that will cause a core dump whenever a
