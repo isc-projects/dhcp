@@ -24,7 +24,7 @@ int main (argc, argv)
 	dhcpctl_data_string result, groupname, identifier;
 	int i;
 	int mode;
-	char *action;
+	const char *action;
 
 	if (!strcmp (argv [1], "-u")) {
 		mode = up;
@@ -52,7 +52,8 @@ int main (argc, argv)
 	}
 
 	memset (&interface_handle, 0, sizeof interface_handle);
-	status = dhcpctl_new_object (&interface_handle, connection, "interface");
+	status = dhcpctl_new_object (&interface_handle,
+				     connection, "interface");
 	if (status != ISC_R_SUCCESS) {
 		fprintf (stderr, "dhcpctl_new_object: %s\n",
 			 isc_result_totext (status));
