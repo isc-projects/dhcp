@@ -59,8 +59,9 @@ programming or debugging on your own to get the DHCP Distribution working.
 
 				LINUX
 
-There are two big LINUX issues: the all-ones broadcast address, and
-operations with more than one  network interface.
+There are three big LINUX issues: the all-ones broadcast address,
+Linux 2.1 ip_bootp_agent enabling, and operations with more than one
+network interface.
 
                               BROADCAST
 
@@ -96,6 +97,14 @@ Another route that has worked for some users is:
 
 If you are not using eth0 as your network interface, you should
 specify the network interface you *are* using in your route command.
+
+			    IP BOOTP AGENT
+
+Some versions of the Linux 2.1 kernel apparently prevent dhcpd from
+working unless you enable it by doing the following:
+
+	      echo 1 >/proc/sys/net/ipv4/ip_bootp_agent
+
 
                         MULTIPLE INTERFACES
 
