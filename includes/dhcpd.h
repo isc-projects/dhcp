@@ -665,6 +665,9 @@ struct client_config {
 	struct iaddrlist *reject_list;	/* Servers to reject. */
 
 	struct option_state *send_options;	/* Options to send. */
+	int omapi_port;			/* port on which to accept OMAPI
+					   connections, or -1 for no
+					   listener. */
 };
 
 /* Per-interface state used in the dhcp client... */
