@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: memory.c,v 1.24 1997/03/05 06:34:36 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: memory.c,v 1.25 1997/03/06 06:53:49 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -227,6 +227,15 @@ void new_address_range (low, high, subnet, dynamic)
 		strcpy (netbuf, piaddr (subnet -> netmask));
 		error ("Address range %s to %s, netmask %s spans %s!",
 		       lowbuf, highbuf, netbuf, "multiple subnets");
+	}
+
+	/* Make sure that the addresses are on the correct subnet. */
+	if (!addr_eq (net, subnet -> net)) {
+		strcpy (lowbuf, piaddr (low));
+		strcpy (highbuf, piaddr (high));
+		strcpy (netbuf, piaddr (subnet -> netmask));
+		error ("Address range %s to %s not on net %s/%s!",
+		       lowbuf, highbuf, piaddr (subnet -> net), netbuf);
 	}
 
 	/* Get the high and low host addresses... */
@@ -489,7 +498,6 @@ int supersede_lease (comp, lease, commit)
 
 		/* Copy the data files, but not the linkages. */
 		comp -> starts = lease -> starts;
-		comp -> offered_expiry = lease -> offered_expiry;
 		comp -> timestamp = lease -> timestamp;
 		if (lease -> uid) {
 			if (lease -> uid_len < sizeof (lease -> uid_buf)) {
