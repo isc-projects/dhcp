@@ -127,3 +127,8 @@ const char *files[] = {
 	NULL
 };
 #endif /* NEED_PRAND_CONF */
+
+/* these are #defined somewhere in /usr/include headers. */
+#undef NO
+#undef SERVER
+
