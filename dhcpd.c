@@ -52,6 +52,14 @@ static void usage PROTO ((void));
 TIME cur_time;
 TIME default_lease_time = 43200; /* 12 hours... */
 TIME max_lease_time = 86400; /* 24 hours... */
+struct tree_cache *global_options [256];
+
+struct iaddr server_identifier;
+int server_identifier_matched;
+
+#ifdef USE_FALLBACK
+struct interface_info fallback_interface;
+#endif
 
 u_int16_t server_port;
 int log_priority;
@@ -79,6 +87,11 @@ int main (argc, argv, envp)
 #else
 	openlog ("dhcpd", LOG_NDELAY, LOG_DAEMON);
 #endif
+
+#ifndef	NO_PUTENV
+	/* ensure mktime() calls are processed in UTC */
+	putenv("TZ=GMT0");
+#endif /* !NO_PUTENV */
 
 #ifndef DEBUG
 	setlogmask (LOG_UPTO (LOG_INFO));
@@ -191,16 +204,21 @@ void do_packet (interface, packbuf, len, from_port, from, hfrom)
 	
 	/* If this came through a gateway, find the corresponding subnet... */
 	if (tp.raw -> giaddr.s_addr) {
+		struct subnet *subnet;
 		ia.len = 4;
 		memcpy (ia.iabuf, &tp.raw -> giaddr, 4);
-		tp.subnet = find_subnet (ia);
+		subnet = find_subnet (ia);
+		if (subnet)
+			tp.shared_network = subnet -> shared_network;
+		else
+			tp.shared_network = (struct shared_network *)0;
 	} else {
-		tp.subnet = interface -> local_subnet;
+		tp.shared_network = interface -> shared_network;
 	}
 
 	/* If the subnet from whence this packet came is unknown to us,
 	   drop it on the floor... */
-	if (!tp.subnet)
+	if (!tp.shared_network)
 		note ("Packet from unknown subnet: %s",
 		      inet_ntoa (tp.raw -> giaddr));
 	else {
