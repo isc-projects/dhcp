@@ -3,7 +3,7 @@
    Common parser code for dhcpd and dhclient. */
 
 /*
- * Copyright (c) 1995, 1996, 1997 The Internet Software Consortium.
+ * Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.5 1998/03/17 06:13:02 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.6 1998/04/20 18:01:32 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -643,4 +643,139 @@ TIME parse_date (cfile)
 	   significant. */
 
 	return guess;
+}
+
+struct option *parse_option_name (cfile)
+	FILE *cfile;
+{
+	char *val;
+	int token;
+	char *vendor;
+	struct universe *universe;
+	struct option *option;
+
+	token = next_token (&val, cfile);
+	if (!is_identifier (token)) {
+		parse_warn ("expecting identifier after option keyword.");
+		if (token != SEMI)
+			skip_to_semi (cfile);
+		return (struct option *)0;
+	}
+	vendor = malloc (strlen (val) + 1);
+	if (!vendor)
+		error ("no memory for vendor information.");
+	strcpy (vendor, val);
+	token = peek_token (&val, cfile);
+	if (token == DOT) {
+		/* Go ahead and take the DOT token... */
+		token = next_token (&val, cfile);
+
+		/* The next token should be an identifier... */
+		token = next_token (&val, cfile);
+		if (!is_identifier (token)) {
+			parse_warn ("expecting identifier after '.'");
+			if (token != SEMI)
+				skip_to_semi (cfile);
+			return (struct option *)0;
+		}
+
+		/* Look up the option name hash table for the specified
+		   vendor. */
+		universe = ((struct universe *)
+			    hash_lookup (&universe_hash,
+					 (unsigned char *)vendor, 0));
+		/* If it's not there, we can't parse the rest of the
+		   declaration. */
+		if (!universe) {
+			parse_warn ("no vendor named %s.", vendor);
+			skip_to_semi (cfile);
+			return (struct option *)0;
+		}
+	} else {
+		/* Use the default hash table, which contains all the
+		   standard dhcp option names. */
+		val = vendor;
+		universe = &dhcp_universe;
+	}
+
+	/* Look up the actual option info... */
+	option = (struct option *)hash_lookup (universe -> hash,
+					       (unsigned char *)val, 0);
+
+	/* If we didn't get an option structure, it's an undefined option. */
+	if (!option) {
+		if (val == vendor)
+			parse_warn ("no option named %s", val);
+		else
+			parse_warn ("no option named %s for vendor %s",
+				    val, vendor);
+		skip_to_semi (cfile);
+		return (struct option *)0;
+	}
+
+	/* Free the initial identifier token. */
+	free (vendor);
+	return option;
+}
+
+unsigned char *parse_cshl (cfile, plen)
+	FILE *cfile;
+	int *plen;
+{
+	char ibuf [128];
+	int ilen = 0;
+	int tlen = 0;
+	struct option_tag *sl = (struct option_tag *)0;
+	struct option_tag *next, **last = &sl;
+	int token;
+	char *val;
+	unsigned char *rv, *rvp;
+
+	do {
+		token = next_token (&val, cfile);
+		if (token != NUMBER && token != NUMBER_OR_NAME) {
+			parse_warn ("expecting hexadecimal number.");
+			skip_to_semi (cfile);
+			for (; sl; sl = next) {
+				next = sl -> next;
+				dfree (sl, "parse_cshl");
+			}
+			return (unsigned char *)0;
+		}
+		if (ilen == sizeof ibuf) {
+			next = (struct option_tag *)
+				dmalloc (ilen - 1 +
+					 sizeof (struct option_tag),
+					 "parse_cshl");
+			if (!next)
+				error ("no memory for string list.");
+			memcpy (next -> data, ibuf, ilen);
+			*last = next;
+			last = &next -> next;
+			tlen += ilen;
+			ilen = 0;
+		}
+		convert_num (&ibuf [ilen++], val, 16, 8);
+
+		token = peek_token (&val, cfile);
+		if (token != COLON)
+			break;
+		token = next_token (&val, cfile);
+	} while (1);
+
+	rv = dmalloc (tlen + ilen, "parse_cshl");
+	if (!rv)
+		error ("no memory to store octet data.");
+	rvp = rv;
+	while (sl) {
+		next = sl -> next;
+		memcpy (rvp, sl -> data, sizeof ibuf);
+		rvp += sizeof ibuf;
+		dfree (sl, "parse_cshl");
+		sl = next;
+	}
+	
+	memcpy (rvp, ibuf, ilen);
+	*plen = ilen + tlen;
+	return rv;
 }
