@@ -111,8 +111,21 @@ int main (argc, argv, envp)
 			server_port = htons (atoi (argv [i]));
 			debug ("binding to user-specified port %d",
 			       ntohs (server_port));
-		} else
+		} else if (argv [i][0] == '-') {
 			usage ();
+		} else {
+			struct interface_info *tmp =
+				((struct interface_info *)
+				 dmalloc (sizeof *tmp, "get_interface_list"));
+			if (!tmp)
+				error ("Insufficient memory to %s %s",
+				       "record interface", argv [i]);
+			memset (tmp, 0, sizeof *tmp);
+			strcpy (tmp -> name, argv [i]);
+			tmp -> next = interfaces;
+			tmp -> flags = INTERFACE_REQUESTED;
+			interfaces = tmp;
+		}
 	}
 
 	/* Default to the DHCP/BOOTP port. */
