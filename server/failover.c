@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.10 2000/05/03 06:43:26 mellon Exp $ Copyright (c) 1999-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.11 2000/05/03 07:01:16 mellon Exp $ Copyright (c) 1999-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1319,21 +1319,24 @@ isc_result_t dhcp_failover_set_state (dhcp_failover_state_t *state,
 
 isc_result_t dhcp_failover_send_updates (dhcp_failover_state_t *state)
 {
-	struct lease *lp;
+	struct lease *lp = (struct lease *)0;
 	isc_result_t status;
 
 	while (state -> max_flying_updates > state -> cur_unacked_updates &&
 	       state -> update_queue_head) {
-		/* Send the update to the peer. */
-		status = dhcp_failover_send_bind_update (state, lp);
-		if (status != ISC_R_SUCCESS)
-			return status;
-
 		/* Take the object off of the update queue and put it
 		   on the ack queue. */
 		omapi_object_reference ((omapi_object_t **)&lp,
 					(omapi_object_t *)
 					state -> update_queue_head, MDL);
+
+		/* Send the update to the peer. */
+		status = dhcp_failover_send_bind_update (state, lp);
+		if (status != ISC_R_SUCCESS) {
+			omapi_object_dereference ((omapi_object_t **)lp, MDL);
+			return status;
+		}
+
 		omapi_object_dereference ((omapi_object_t **)
 					  state -> update_queue_head, MDL);
 		if (lp -> next_pending) {
@@ -1348,6 +1351,7 @@ isc_result_t dhcp_failover_send_updates (dhcp_failover_state_t *state)
 						  &state -> update_queue_tail,
 						  MDL);
 		}
+
 		if (state -> ack_queue_head) {
 			omapi_object_reference
 				((omapi_object_t **)
@@ -1364,6 +1368,7 @@ isc_result_t dhcp_failover_send_updates (dhcp_failover_state_t *state)
 		omapi_object_reference ((omapi_object_t **)
 					&state -> ack_queue_tail,
 					(omapi_object_t *)lp, MDL);
+		omapi_object_dereference ((omapi_object_t **)lp, MDL);
 
 		/* Count the object as an unacked update. */
 		state -> cur_unacked_updates++;
@@ -2502,7 +2507,7 @@ isc_result_t dhcp_failover_send_bind_update (dhcp_failover_state_t *state,
 						lease -> uid_len)
 		   : &skip_failover_option,
 		   dhcp_failover_make_option (FTO_CHADDR, FMA,
-					      lease -> hardware_addr.hlen + 1,
+					      lease -> hardware_addr.hlen,
 					      lease -> hardware_addr.hbuf),
 		   dhcp_failover_make_option (FTO_LEASE_EXPIRY, FMA,
 					      lease -> ends),
