@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.55 1998/11/09 02:46:36 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.56 1998/11/11 07:59:53 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -707,7 +707,7 @@ void parse_host_declaration (cfile, group)
 /* class-declaration :== STRING LBRACE parameters declarations RBRACE
 */
 
-void parse_class_declaration (cfile, group, type)
+struct class *parse_class_declaration (cfile, group, type)
 	FILE *cfile;
 	struct group *group;
 	int type;
@@ -727,7 +727,7 @@ void parse_class_declaration (cfile, group, type)
 	if (token != STRING) {
 		parse_warn ("Expecting class name");
 		skip_to_semi (cfile);
-		return;
+		return (struct class *)0;
 	}
 
 	/* See if there's already a class with the specified name. */
@@ -745,7 +745,7 @@ void parse_class_declaration (cfile, group, type)
 	if (!pc && (type == 0 || type == 1 || type == 3)) {
 		parse_warn ("no class named %s", val);
 		skip_to_semi (cfile);
-		return;
+		return (struct class *)0;
 	}
 
 	/* The old vendor-class and user-class declarations had an implicit
@@ -783,14 +783,14 @@ void parse_class_declaration (cfile, group, type)
 			data.buffer = (struct buffer *)0;
 			if (!buffer_allocate (&data.buffer, data.len + 1,
 					     "parse_class_declaration"))
-				return;
+				return (struct class *)0;
 			data.terminated = 1;
 			data.data = &data.buffer -> data [0];
 			strcpy (data.data, val);
 		} else if (token == NUMBER_OR_NAME || token == NUMBER) {
 			memset (&data, 0, sizeof data);
 			if (!parse_cshl (&data, cfile))
-				return;
+				return (struct class *)0;
 		}
 	}
 
@@ -809,11 +809,29 @@ void parse_class_declaration (cfile, group, type)
 			error ("No memory for class %s.", val);
 		memset (class, 0, sizeof *class);
 		if (pc) {
-			class -> group =
-				clone_group (pc -> group,
-					     "parse_class_declaration");
+			class -> group = pc -> group;
+			class -> group = pc -> group;
+			class -> superclass = pc;
+			class -> lease_limit = pc -> lease_limit;
+			if (class -> lease_limit) {
+				class -> billed_leases =
+					dmalloc (class -> lease_limit *
+						 sizeof (struct lease *),
+						 "check_collection");
+				if (!class -> billed_leases)
+					error ("no memory for billed leases");
+				memset (class -> billed_leases, 0,
+					(class -> lease_limit *
+					 sizeof class -> billed_leases));
+			}
+			data_string_copy (&class -> hash_string, &data,
+					  "check_collection");
+			if (!pc -> hash)
+				pc -> hash = new_hash ();
 			add_hash (pc -> hash,
-				  data.data, data.len, (unsigned char *)class);
+				  class -> hash_string.data,
+				  class -> hash_string.len,
+				  (unsigned char *)class);
 		} else {
 			class -> group =
 				clone_group (group, "parse_class_declaration");
@@ -846,8 +864,17 @@ void parse_class_declaration (cfile, group, type)
 		class -> name = name;
 	}
 
+	if (type == 0 || type == 1 || type == 3)
+		data_string_forget (&data, "check_collection");
+
+	/* Spawned classes don't have their own settings. */
+	if (class -> superclass) {
+		parse_semi (cfile);
+		return class;
+	}
+
 	if (!parse_lbrace (cfile))
-		return;
+		return (struct class *)0;
 
 	do {
 		token = peek_token (&val, cfile);
@@ -909,6 +936,34 @@ void parse_class_declaration (cfile, group, type)
 			print_expression ("class match", class -> spawn);
 #endif
 			parse_semi (cfile);
+		} else if (token == LEASE) {
+			next_token (&val, cfile);
+			token = next_token (&val, cfile);
+			if (token != LIMIT) {
+				parse_warn ("expecting \"limit\"");
+				if (token != SEMI)
+					skip_to_semi (cfile);
+				break;
+			}
+			token = next_token (&val, cfile);
+			if (token != NUMBER) {
+				parse_warn ("expecting a number");
+				if (token != SEMI)
+					skip_to_semi (cfile);
+				break;
+			}
+			class -> lease_limit = atoi (val);
+			class -> billed_leases =
+				dmalloc (class -> lease_limit *
+					 sizeof (struct lease *),
+					 "check_collection");
+			if (!class -> billed_leases)
+				error ("no memory for billed leases.");
+			memset (class -> billed_leases, 0,
+				(class -> lease_limit *
+				 sizeof class -> billed_leases));
+			have_billing_classes = 1;
+			parse_semi (cfile);
 		} else {
 			declaration = parse_statement (cfile, class -> group,
 						       CLASS_DECL,
@@ -927,6 +982,7 @@ void parse_class_declaration (cfile, group, type)
 			cp -> nic = class;
 		}
 	}
+	return class;
 }
 
 /* shared-network-declaration :==
@@ -1337,13 +1393,44 @@ struct lease *parse_lease_declaration (cfile)
 						parse_host_name (cfile);
 				break;
 
+			      case BILLING:
+				seenbit = 2048;
+				token = next_token (&val, cfile);
+				if (token == CLASS) {
+					token = next_token (&val, cfile);
+					if (token != STRING) {
+						parse_warn
+							("expecting string");
+						if (token != SEMI)
+							skip_to_semi (cfile);
+						token = BILLING;
+						break;
+					}
+					lease.billing_class = find_class (val);
+					if (!lease.billing_class)
+						parse_warn ("unknown class %s",
+							    val);
+					parse_semi (cfile);
+				} else if (token == SUBCLASS) {
+					lease.billing_class =
+						parse_class_declaration
+						(cfile, (struct group *)0, 3);
+				} else {
+					parse_warn ("expecting \"class\"");
+					if (token != SEMI)
+						skip_to_semi (cfile);
+				}
+				token = BILLING;
+				break;
+
 			      default:
 				skip_to_semi (cfile);
 				seenbit = 0;
 				return (struct lease *)0;
 			}
 
-			if (token != HARDWARE && token != STRING) {
+			if (token != HARDWARE && token != STRING
+			    && token != BILLING) {
 				token = next_token (&val, cfile);
 				if (token != SEMI) {
 					parse_warn ("semicolon expected.");
