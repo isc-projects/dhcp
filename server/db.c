@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: db.c,v 1.63.2.6 2002/02/20 05:30:21 mellon Exp $ Copyright (c) 1995-2002 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: db.c,v 1.63.2.7 2002/04/27 05:19:48 murray Exp $ Copyright (c) 1995-2002 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -178,9 +178,13 @@ int write_lease (lease)
 
 	/* If this lease is billed to a class and is still valid,
 	   write it out. */
-	if (lease -> billing_class && lease -> ends > cur_time)
-		if (!write_billing_class (lease -> billing_class))
+	if (lease -> billing_class && lease -> ends > cur_time) {
+		if (!write_billing_class (lease -> billing_class)) {
+			log_error ("unable to write class %s",
+				   lease -> billing_class -> name);
 			++errors;
+		}
+	}
 
 	if (lease -> hardware_addr.hlen) {
 		errno = 0;
