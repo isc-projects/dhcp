@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.104.2.5 2001/06/21 23:44:23 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.104.2.6 2001/06/26 18:33:32 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -3111,22 +3111,23 @@ int parse_non_binary (expr, cfile, lose, context)
 		nexp = (struct expression *)0;
 		expression_reference (&nexp, *expr, MDL);
 		do {
-			struct expression *foo;
-			nexp -> op = expr_pick_first_value;
-			if (!(parse_data_expression
-			      (&nexp -> data.pick_first_value.car,
-			       cfile, lose)))
-				goto nodata;
+		    nexp -> op = expr_pick_first_value;
+		    if (!(parse_data_expression
+			  (&nexp -> data.pick_first_value.car,
+			   cfile, lose)))
+			goto nodata;
 
-			token = next_token (&val, (unsigned *)0, cfile);
-			if (token == COMMA) {
-				foo = (struct expression *)0;
-				if (!expression_allocate (&foo, MDL))
-					log_fatal ("can't allocate expr");
-				expression_dereference (&nexp, MDL);
-				expression_reference (&nexp, foo, MDL);
-				expression_dereference (&foo, MDL);
-			}
+		    token = next_token (&val, (unsigned *)0, cfile);
+		    if (token == COMMA) {
+			struct expression *foo = (struct expression *)0;
+			if (!expression_allocate (&foo, MDL))
+			    log_fatal ("can't allocate expr");
+			expression_reference
+				(&nexp -> data.pick_first_value.cdr, foo, MDL);
+			expression_dereference (&nexp, MDL);
+			expression_reference (&nexp, foo, MDL);
+			expression_dereference (&foo, MDL);
+		    }
 		} while (token == COMMA);
 		expression_dereference (&nexp, MDL);
 
