@@ -2190,6 +2190,7 @@ int dhcp_failover_pool_check (struct pool *);
 int dhcp_failover_state_pool_check (dhcp_failover_state_t *);
 void dhcp_failover_timeout (void *);
 void dhcp_failover_send_contact (void *);
+isc_result_t dhcp_failover_send_state (dhcp_failover_state_t *);
 isc_result_t dhcp_failover_send_updates (dhcp_failover_state_t *);
 int dhcp_failover_queue_update (struct lease *, int);
 void dhcp_failover_ack_queue_remove (dhcp_failover_state_t *, struct lease *);
@@ -2200,6 +2201,7 @@ isc_result_t dhcp_failover_state_set_value PROTO ((omapi_object_t *,
 void dhcp_failover_keepalive (void *);
 void dhcp_failover_reconnect (void *);
 void dhcp_failover_startup_timeout (void *);
+void dhcp_failover_link_startup_timeout (void *);
 void dhcp_failover_listener_restart (void *);
 isc_result_t dhcp_failover_state_get_value PROTO ((omapi_object_t *,
 						   omapi_object_t *,
@@ -2220,6 +2222,8 @@ isc_result_t dhcp_failover_state_remove PROTO ((omapi_object_t *,
 int dhcp_failover_state_match (dhcp_failover_state_t *, u_int8_t *, unsigned);
 const char *dhcp_failover_reject_reason_print (int);
 const char *dhcp_failover_state_name_print (enum failover_state);
+const char *dhcp_failover_message_name (u_int8_t);
+const char *dhcp_failover_option_name (u_int16_t);
 failover_option_t *dhcp_failover_option_printf (unsigned, char *,
 						unsigned *,
 						unsigned, 
