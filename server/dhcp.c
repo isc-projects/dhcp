@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.190 2001/04/18 18:58:39 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.191 2001/04/27 21:32:48 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1619,7 +1619,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 					break;
 			}
 			if (h)
-				host_reference (&lease -> host, hp, MDL);
+				host_reference (&lease -> host, h, MDL);
 		}
 		if (hp)
 			host_dereference (&hp, MDL);
@@ -3250,10 +3250,21 @@ int find_lease (struct lease **lp,
 	   hang it off the lease so that we can use the supplied
 	   options. */
 	if (lease && host && !lease -> host) {
-		for (; host; host = host -> n_ipaddr) {
-			if (!host -> fixed_addr) {
-				host_reference (&lease -> host, host, MDL);
+		struct host_decl *p = (struct host_decl *)0;
+		struct host_decl *n = (struct host_decl *)0;
+		host_reference (&p, host, MDL);
+		while (p) {
+			if (!p -> fixed_addr) {
+				host_reference (&lease -> host, p, MDL);
+				host_dereference (&p, MDL);
 				break;
+			}
+			if (p -> n_ipaddr)
+				host_reference (&n, p -> n_ipaddr, MDL);
+			host_dereference (&p, MDL);
+			if (n) {
+				host_reference (&p, n, MDL);
+				host_dereference (&n, MDL);
 			}
 		}
 	}
