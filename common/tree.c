@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.14 1998/11/06 00:13:36 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.15 1998/11/06 01:06:16 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -122,7 +122,7 @@ int enter_dns_host (dh, name)
 	   XXX and just add a new reference to a hostname that
 	   XXX already exists, if possible, rather than creating
 	   XXX a new structure. */
-	if (!dns_host_entry_allocate (dh, name)) {
+	if (!dns_host_entry_allocate (dh, name, "enter_dns_host")) {
 		warn ("Can't allocate space for new host.");
 		return 0;
 	}
