@@ -30,7 +30,8 @@ CFLAGS = $(DEBUG) $(PREDEFINES) $(INCLUDES) $(COPTS)
 all:	libdhcpctl.a test $(CATMANPAGES)
 
 test:	test.o libdhcpctl.a ../omapip/libomapi.a
-	$(CC) $(DEBUG) -o test test.o libdhcpctl.a ../omapip/libomapi.a $(LIBS)
+	$(CC) $(DEBUG) $(LFLAGS) -o test test.o libdhcpctl.a \
+			../omapip/libomapi.a $(LIBS)
 
 libdhcpctl.a:	$(OBJ)
 	rm -f libdhcpctl.a
