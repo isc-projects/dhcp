@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.106 2000/04/06 22:20:55 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.107 2000/05/01 23:57:51 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -582,6 +582,9 @@ void parse_failover_peer (cfile, group, type)
 	int hba_len = sizeof hba;
 	int i;
 	struct expression *expr;
+	isc_result_t status;
+	struct option_cache **paddr;
+	int *pport;
 
 	token = next_token (&val, cfile);
 	if (token != PEER) {
@@ -651,6 +654,8 @@ void parse_failover_peer (cfile, group, type)
 	if (!peer)
 		log_fatal ("no memory for failover peer%s.", name);
 	memset (peer, 0, sizeof *peer);
+	peer -> refcnt = 1;
+	peer -> type = dhcp_type_failover_state;
 
 	/* Save the name. */
 	peer -> name = name;
@@ -669,28 +674,45 @@ void parse_failover_peer (cfile, group, type)
 			peer -> i_am = secondary;
 			break;
 
-		      case IDENTIFIER:
+		      case PEER:
+			token = next_token (&val, cfile);
+			switch (token) {
+			      case ADDRESS:
+				paddr = &peer -> address;
+				goto doaddr;
+			      case PORT:
+				pport = &peer -> port;
+				goto doport;
+			      default:
+				parse_warn (cfile,
+					    "expecting 'address' or 'port'");
+				skip_to_rbrace (cfile, 1);
+				return;
+			}
+			break;
+
+		      case ADDRESS:
+			paddr = &peer -> server_addr;
+		      doaddr:
 			expr = (struct expression *)0;
 			if (!parse_ip_addr_or_hostname (&expr, cfile, 0)) {
 				skip_to_rbrace (cfile, 1);
 				return;
 			}
-			option_cache (&peer -> address,
-				      (struct data_string *)0, expr,
+			option_cache (paddr, (struct data_string *)0, expr,
 				      (struct option *)0);
 			expression_dereference (&expr, MDL);
 			break;
+
 		      case PORT:
+			pport = &peer -> listen_port;
+		      doport:
 			token = next_token (&val, cfile);
 			if (token != NUMBER) {
 				parse_warn (cfile, "expecting number");
 				skip_to_rbrace (cfile, 1);
 			}
-			peer -> port = atoi (val);
-			if (!parse_semi (cfile)) {
-				skip_to_rbrace (cfile, 1);
-				return;
-			}
+			*pport = atoi (val);
 			break;
 
 		      case MAX_TRANSMIT_IDLE:
@@ -718,12 +740,18 @@ void parse_failover_peer (cfile, group, type)
 			goto parse_idle;
 
 		      case HBA:
+			hba_len = 32;
 			if (!parse_numeric_aggregate (cfile, hba, &hba_len,
-						      COLON, 32, 8)) {
+						      COLON, 16, 8)) {
 				skip_to_rbrace (cfile, 1);
 				return;
 			}
-			parse_semi (cfile);
+			if (hba_len != 32) {
+				parse_warn (cfile,
+					    "HBA must be exactly 32 bytes.");
+				dfree (hba, MDL);
+				break;
+			}
 		      make_hba:
 			peer -> hba = dmalloc (32, MDL);
 			if (!peer -> hba) {
@@ -756,9 +784,39 @@ void parse_failover_peer (cfile, group, type)
 			}
 			break;
 			
+		      case LOAD:
+			token = next_token (&val, cfile);
+			if (token != BALANCE) {
+				parse_warn (cfile, "expecting 'balance'");
+			      badload:
+				skip_to_rbrace (cfile, 1);
+				break;
+			}
+			token = next_token (&val, cfile);
+			if (token != TOKEN_MAX) {
+				parse_warn (cfile, "expecting 'max'");
+				goto badload;
+			}
+			token = next_token (&val, cfile);
+			if (token != SECONDS) {
+				parse_warn (cfile, "expecting 'secs'");
+				goto badload;
+			}
+			token = next_token (&val, cfile);
+			if (token != NUMBER) {
+				parse_warn (cfile, "expecting number");
+				goto badload;
+			}
+			peer -> load_balance_max_secs = atoi (val);
+			break;
+			
 		      default:
 			parse_warn (cfile,
 				    "invalid statement in peer declaration");
+			skip_to_rbrace (cfile, 1);
+			return;
+		}
+		if (token != RBRACE && !parse_semi (cfile)) {
 			skip_to_rbrace (cfile, 1);
 			return;
 		}
@@ -767,7 +825,10 @@ void parse_failover_peer (cfile, group, type)
 	if (type == SHARED_NET_DECL) {
 		group -> shared_network -> failover_peer = peer;
 	}
-	enter_failover_peer (peer);
+	status = enter_failover_peer (peer);
+	if (status != ISC_R_SUCCESS)
+		parse_warn (cfile, "failover peer %s: %s",
+			    peer -> name, isc_result_totext (status));
 }
 
 void parse_failover_state (cfile, state, stos)
@@ -839,6 +900,7 @@ void parse_pool_statement (cfile, group, type)
 	struct permit *permit;
 	struct permit **permit_head;
 	int declaration = 0;
+	isc_result_t status;
 
 	pool = new_pool (MDL);
 	if (!pool)
@@ -885,6 +947,33 @@ void parse_pool_statement (cfile, group, type)
 #endif
 			break;
 				
+		      case FAILOVER:
+			next_token (&val, cfile);
+			token = next_token (&val, cfile);
+			if (token != PEER) {
+				parse_warn (cfile, "expecting 'peer'.");
+				skip_to_semi (cfile);
+				break;
+			}
+			token = next_token (&val, cfile);
+			if (token != STRING) {
+				parse_warn (cfile, "expecting string.");
+				skip_to_semi (cfile);
+				break;
+			}
+			if (pool -> failover_peer)
+				omapi_object_dereference
+					((omapi_object_t **)
+					 &pool -> failover_peer, MDL);
+			status = find_failover_peer (&pool -> failover_peer,
+						     val);
+			if (status != ISC_R_SUCCESS)
+				parse_warn (cfile,
+					    "failover peer %s: %s", val,
+					    isc_result_totext (status));
+			parse_semi (cfile);
+			break;
+
 		      case RANGE:
 			next_token (&val, cfile);
 			parse_address_range (cfile, group, type, pool);
@@ -1006,12 +1095,12 @@ void parse_pool_statement (cfile, group, type)
 				parse_warn (cfile,
 					    "pools with failover peers %s",
 					    "may not permit dynamic bootp.");
-				log_error ("Either write a \"no failover\"%s",
+				log_error ("Either write a \"no failover\" %s",
 					   "statement and use disjoint");
 				log_error ("pools, or don't permit dynamic%s",
-					   "bootp.");
+					   " bootp.");
 				log_error ("This is a protocol limitation,%s",
-					   "not an ISC DHCP limitation, so");
+					   " not an ISC DHCP limitation, so");
 				log_error ("please don't request an %s",
 					   "enhancement or ask why this is.");
 				goto clash_testing_done;
@@ -2046,6 +2135,7 @@ struct lease *parse_lease_declaration (cfile)
 				skip_to_rbrace (cfile, 1);
 				return (struct lease *)0;
 			}
+			token = next_token (&val, cfile);
 			if (token != OWNER) {
 				parse_warn (cfile, "expecting \"owner\".");
 				skip_to_rbrace (cfile, 1);
