@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bootp.c,v 1.69.2.2 2001/06/04 21:31:03 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bootp.c,v 1.69.2.3 2001/06/22 01:49:49 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -237,7 +237,8 @@ void bootp (packet)
 				if (make_const_data
 				    (&oc -> expression,
 				     lease -> subnet -> netmask.iabuf,
-				     lease -> subnet -> netmask.len, 0, 0)) {
+				     lease -> subnet -> netmask.len,
+				     0, 0, MDL)) {
 					oc -> option =
 						dhcp_universe.options [i];
 					save_option (&dhcp_universe,
