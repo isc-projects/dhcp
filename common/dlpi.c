@@ -70,7 +70,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dlpi.c,v 1.10 1999/04/23 22:06:29 mellon Exp $ Copyright (c) 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dlpi.c,v 1.11 1999/04/25 13:17:17 mellon Exp $ Copyright (c) 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -110,11 +110,6 @@ static char copyright[] =
 # ifndef ABS
 #  define ABS(x) ((x) >= 0 ? (x) : 0-(x))
 # endif
-
-#ifndef lint
-static char copyright[] =
-"$Id: dlpi.c,v 1.10 1999/04/23 22:06:29 mellon Exp $ Copyright (c) 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
-#endif /* not lint */
 
 static int strioctl PROTO ((int fd, int cmd, int timeout, int len, char *dp));
 
