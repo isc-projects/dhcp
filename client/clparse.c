@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: clparse.c,v 1.31.2.1 1999/10/14 20:22:16 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: clparse.c,v 1.31.2.2 1999/11/03 19:50:11 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -297,7 +297,7 @@ void parse_client_statement (cfile, ip, config)
 		if (token == SPACE) {
 			if (ip) {
 				parse_warn ("option space definitions %s",
-					    " may not be scoped.");
+					    "may not be scoped.");
 				skip_to_semi (cfile);
 				free_option (option, "parse_statement");
 				break;

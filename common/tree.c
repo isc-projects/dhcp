@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.31.2.3 1999/10/15 17:18:42 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.31.2.4 1999/11/03 19:50:15 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -281,7 +281,7 @@ static int do_host_lookup (result, dns)
 	int new_len;
 
 #ifdef DEBUG_EVAL
-	log_debug ("time: now = %d  dns = %d %d  diff = %d",
+	log_debug ("time: now = %d  dns = %d  diff = %d",
 	       cur_time, dns -> timeout, cur_time - dns -> timeout);
 #endif
 
@@ -645,7 +645,7 @@ int evaluate_data_expression (result, packet, options, lease, expr)
 		      s1 ? print_dec_1 (len) : "NULL",
 		      ((s0 && s1)
 		       ? print_hex_2 (result -> len, result -> data, 30)
-		       : NULL));
+		       : "NULL"));
 #endif
 		return s0 && s1;
 
@@ -734,7 +734,7 @@ int evaluate_data_expression (result, packet, options, lease, expr)
 		log_info ("data: packet (%ld, %ld) = %s",
 		      offset, len,
 		      s2 ? print_hex_1 (result -> len,
-					result -> data, 60) : NULL);
+					result -> data, 60) : "NULL");
 #endif
 		return s2;
 
@@ -752,7 +752,7 @@ int evaluate_data_expression (result, packet, options, lease, expr)
 		log_info ("data: encapsulate (%s) = %s",
 			  expr -> data.encapsulate.data,
 			  s0 ? print_hex_1 (result -> len,
-					    result -> data, 60) : "null");
+					    result -> data, 60) : "NULL");
 #endif
 		return s0;
 

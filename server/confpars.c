@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.73.2.2 1999/10/15 15:59:09 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.73.2.3 1999/11/03 19:50:18 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -385,7 +385,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		if (token == SPACE) {
 			if (type != ROOT_GROUP) {
 				parse_warn ("option space definitions %s",
-					    " may not be scoped.");
+					    "may not be scoped.");
 				skip_to_semi (cfile);
 				free_option (option, "parse_statement");
 				break;
@@ -514,7 +514,7 @@ void parse_failover_peer (cfile, group, type)
 	char *name;
 
 	if (type != SHARED_NET_DECL && type != ROOT_GROUP) {
-		parse_warn ("failover peer statements not in shared-network%s"
+		parse_warn ("failover peer statements not in shared-network%s",
 			    " declaration or at top level.");
 		skip_to_semi (cfile);
 		return;

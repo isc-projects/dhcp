@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.100.2.12 1999/10/28 20:33:10 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.100.2.13 1999/11/03 19:50:20 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2147,13 +2147,13 @@ struct lease *find_lease (packet, share, ours)
 			if (uid_lease) {
 			    if (uid_lease -> ends > cur_time) {
 				log_error ("client %s has duplicate%s on %s",
-					   " leases",
 					   (print_hw_addr
 					    (packet -> raw -> htype,
 					     packet -> raw -> hlen,
 					     packet -> raw -> chaddr)),
-				      (ip_lease -> subnet ->
-				       shared_network -> name));
+					   " leases",
+					   (ip_lease -> subnet ->
+					    shared_network -> name));
 
 				/* If the client is REQUESTing the lease,
 				   it shouldn't still be using the old

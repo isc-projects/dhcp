@@ -23,7 +23,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: lpf.c,v 1.13.2.3 1999/10/25 15:45:44 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: lpf.c,v 1.13.2.4 1999/11/03 19:50:15 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -74,7 +74,7 @@ int if_register_lpf (info)
 		    errno == ESOCKTNOSUPPORT || errno == EPFNOSUPPORT ||
 		    errno == EAFNOSUPPORT || errno == EINVAL)
 			log_fatal ("socket: %m - make sure %s %s %s!",
-				   "CONFIG_PACKET (Packet socket)"
+				   "CONFIG_PACKET (Packet socket)",
 				   "and CONFIG_FILTER (Socket Filtering) are",
 				   "enabled in your kernel configuration");
 		log_fatal ("Open a socket for LPF: %m");
@@ -89,7 +89,7 @@ int if_register_lpf (info)
 		    errno == ESOCKTNOSUPPORT || errno == EPFNOSUPPORT ||
 		    errno == EAFNOSUPPORT || errno == EINVAL)
 			log_fatal ("bind: %m - make sure %s %s %s!",
-				   "CONFIG_PACKET (Packet socket)"
+				   "CONFIG_PACKET (Packet socket)",
 				   "and CONFIG_FILTER (Socket Filtering) are",
 				   "enabled in your kernel configuration");
 		log_fatal ("Bind socket to interface: %m");
@@ -206,7 +206,7 @@ static void lpf_tr_filter_setup (info)
 		    errno == ESOCKTNOSUPPORT || errno == EPFNOSUPPORT ||
 		    errno == EAFNOSUPPORT)
 			log_fatal ("socket: %m - make sure %s %s %s!",
-				   "CONFIG_PACKET (Packet socket)"
+				   "CONFIG_PACKET (Packet socket)",
 				   "and CONFIG_FILTER (Socket Filtering) are",
 				   "enabled in your kernel configuration");
 		log_fatal ("Can't install packet filter program: %m");
