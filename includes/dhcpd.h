@@ -583,9 +583,9 @@ struct collection {
 /* XXX classes must be reference-counted. */
 struct class {
 	OMAPI_OBJECT_PREAMBLE;
-	struct class *nic;	/* Next in collection. */
+	struct class *nic;		/* Next in collection. */
 	struct class *superclass;	/* Set for spawned classes only. */
-	const char *name;		/* Not set for spawned classes. */
+	char *name;			/* Not set for spawned classes. */
 
 	/* A class may be configured to permit a limited number of leases. */
 	int lease_limit;
@@ -1354,6 +1354,9 @@ int write_group PROTO ((struct group_object *));
 
 /* salloc.c */
 struct lease *new_leases PROTO ((unsigned, const char *, int));
+#if defined (DEBUG_MEMORY_LEAKAGE)
+void relinquish_free_lease_states (void);
+#endif
 OMAPI_OBJECT_ALLOC_DECL (lease, struct lease, dhcp_type_lease)
 OMAPI_OBJECT_ALLOC_DECL (class, struct class, dhcp_type_class)
 OMAPI_OBJECT_ALLOC_DECL (pool, struct pool, dhcp_type_pool)
@@ -1367,6 +1370,13 @@ OMAPI_OBJECT_ALLOC_DECL (group_object, struct group_object, dhcp_type_group)
 OMAPI_OBJECT_ALLOC_DECL (dhcp_control,
 			 dhcp_control_object_t, dhcp_type_control)
 
+#if defined (DEBUG_MEMORY_LEAKAGE)
+void relinquish_free_pairs (void);
+void relinquish_free_expressions (void);
+void relinquish_free_binding_values (void);
+void relinquish_free_option_caches (void);
+void relinquish_free_packets (void);
+#endif
 
 int option_chain_head_allocate (struct option_chain_head **,
 				const char *, int);
@@ -2377,6 +2387,9 @@ int lease_enqueue (struct lease *);
 void lease_instantiate (const unsigned char *, unsigned, struct lease *);
 void expire_all_pools PROTO ((void));
 void dump_subnets PROTO ((void));
+#if defined (DEBUG_MEMORY_LEAKAGE)
+void free_everything (void);
+#endif
 HASH_FUNCTIONS_DECL (lease, const unsigned char *, struct lease)
 HASH_FUNCTIONS_DECL (host, const unsigned char *, struct host_decl)
 HASH_FUNCTIONS_DECL (class, const char *, struct class)
