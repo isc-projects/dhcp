@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.129 2001/01/11 23:15:31 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.130 2001/01/16 22:46:01 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -378,6 +378,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 
 	      case HARDWARE:
 		next_token (&val, cfile);
+		memset (&hardware, 0, sizeof hardware);
 		parse_hardware_param (cfile, &hardware);
 		if (host_decl)
 			host_decl -> interface = hardware;
