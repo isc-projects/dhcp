@@ -39,22 +39,6 @@
 omshell - OMPAI Command Shell
 .SH SYNOPSIS
 .B omshell
-[
-.B -n
-.I name
-]
-[
-.B -p
-.I password
-]
-[
-.B -a
-.I algorithm
-]
-[
-.B -P
-.I port
-]
 .SH DESCRIPTION
 The OMAPI Command Shell, omshell, provides an interactive way to connect to,
 query, and possibly change, the ISC DHCP Server's state via OMAPI, the Object
@@ -81,8 +65,7 @@ enable viewing and modification of object attributes.  Also, new remote
 objects can be created to match local objects.
 .SH OPENING A CONNECTION
 .PP
-omshell can be started from the command line; however, any arguments passed
-to it are not, at this time, handled.  Once omshell is started, there are
+omshell is started from the command line.  Once omshell is started, there are
 several commands that can be issued:
 .PP
 .B server \fIaddress\fR
