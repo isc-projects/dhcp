@@ -40,12 +40,10 @@
  * Enterprises, see ``http://www.vix.com''.
  */
 
-#ifndef lint
 static char copyright[] =
 "Copyright 1995, 1996 The Internet Software Consortium.";
 static char arr [] = "All rights reserved.";
 static char message [] = "Internet Software Consortium DHCPD $Name:  $";
-#endif /* not lint */
 
 #include "dhcpd.h"
 
@@ -70,18 +68,12 @@ int main (argc, argv, envp)
 	int argc;
 	char **argv, **envp;
 {
-	struct in_addr addr;
-	int port = 0;
 	int i;
 	struct sockaddr_in name;
-	u_int32_t *addrlist = (u_int32_t *)0;
-	int addrcount = 0;
-	struct tree *addrtree = (struct tree *)0;
 	struct servent *ent;
-	int sock;
+#ifndef DEBUG
 	int pid;
-	int result;
-	int flag;
+#endif
 
 #ifdef SYSLOG_4_2
 	openlog ("dhcpd", LOG_NDELAY);
