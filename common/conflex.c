@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: conflex.c,v 1.40 1999/03/16 05:50:32 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: conflex.c,v 1.41 1999/03/25 21:56:28 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -362,6 +362,8 @@ static int intern (atom, dfv)
 			return ADD;
 		if (!strcasecmp (atom + 1, "ll"))
 			return ALL;
+		if (!strcasecmp (atom + 1, "rray"))
+			return ARRAY;
 		break;
 	      case 'b':
 		if (!strcasecmp (atom + 1, "ackoff-cutoff"))
@@ -376,8 +378,12 @@ static int intern (atom, dfv)
 			return BREAK;
 		if (!strcasecmp (atom + 1, "illing"))
 			return BILLING;
+		if (!strcasecmp (atom + 1, "oolean"))
+			return BOOLEAN;
 		break;
 	      case 'c':
+		if (!strcasecmp (atom + 1, "ode"))
+			return CODE;
 		if (!strcasecmp (atom + 1, "heck"))
 			return CHECK;
 		if (!strcasecmp (atom + 1, "lass"))
@@ -467,6 +473,10 @@ static int intern (atom, dfv)
 			return HOSTNAME;
 		break;
 	      case 'i':
+		if (!strcasecmp (atom + 1, "nteger"))
+			return INTEGER;
+		if (!strcasecmp (atom + 1, "p-address"))
+			return IP_ADDRESS;
 		if (!strcasecmp (atom + 1, "nitial-interval"))
 			return INITIAL_INTERVAL;
 		if (!strcasecmp (atom + 1, "nterface"))
@@ -587,6 +597,10 @@ static int intern (atom, dfv)
 			return REJECT;
 		break;
 	      case 's':
+		if (!strcasecmp (atom + 1, "igned"))
+			return SIGNED;
+		if (!strcasecmp (atom + 1, "tring"))
+			return STRING;
 		if (!strcasecmp (atom + 1, "uffix"))
 			return SUFFIX;
 		if (!strcasecmp (atom + 1, "earch"))
@@ -630,8 +644,12 @@ static int intern (atom, dfv)
 			return TIMEOUT;
 		if (!strcasecmp (atom + 1, "oken-ring"))
 			return TOKEN_RING;
+		if (!strcasecmp (atom + 1, "ext"))
+			return TEXT;
 		break;
 	      case 'u':
+		if (!strcasecmp (atom + 1, "nsigned"))
+			return UNSIGNED;
 		if (!strcasecmp (atom + 1, "id"))
 			return UID;
 		if (!strncasecmp (atom + 1, "se", 2)) {
