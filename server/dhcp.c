@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.100.2.16 1999/12/22 20:45:26 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.100.2.17 2000/01/27 21:54:56 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1602,10 +1602,9 @@ void ack_lease (packet, lease, offer, when, msg)
 					save_option (&dhcp_universe,
 						     state -> options, oc);
 				}
+				option_cache_dereference (&oc, "ack_lease");
 			}
 		}
-		if (oc)
-			option_cache_dereference (&oc, "ack_lease");
 	}
 
 	/* If we've been given a vendor option space, and there's something
