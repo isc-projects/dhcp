@@ -61,11 +61,11 @@ int if_register_socket (info, interface)
 
 	/* Make sure only one interface is registered. */
 	if (once)
-		error ("The standard socket API can only support hosts "
-		       "with a single network interface.   If you must "
-		       "run dhcpd on a host with multiple interfaces, "
-		       "you must compile in BPF or NIT support.   If neither "
-		       "option is supported on your system, please let us "
+		error ("The standard socket API can only support %s%s%s%s%s",
+		       "hosts with a single network interface.   If you must ",
+		       "run dhcpd on a host with multiple interfaces, ",
+		       "you must compile in BPF or NIT support.   If neither ",
+		       "option is supported on your system, please let us ",
 		       "know.");
 	once = 1;
 
@@ -105,12 +105,14 @@ int if_register_socket (info, interface)
 void if_register_send (info, interface)
 	struct interface_info *info;
 	struct ifreq *interface;
+
 {
 #ifndef USE_SOCKET_RECEIVE
 	info -> wfdesc = if_register_socket (info, interface);
 #else
 	info -> wfdesc = info -> rfdesc;
 #endif
+	note ("Sending on   Socket/%s", piaddr (info -> address));
 }
 #endif /* USE_SOCKET_SEND */
 
@@ -122,6 +124,7 @@ void if_register_receive (info, interface)
 	/* If we're using the socket API for sending and receiving,
 	   we don't need to register this interface twice. */
 	info -> rfdesc = if_register_socket (info, interface);
+	note ("Listening on Socket/%s", piaddr (info -> address));
 }
 #endif /* USE_SOCKET_RECEIVE */
 
