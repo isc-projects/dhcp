@@ -30,9 +30,7 @@
 #if defined (NSUPDATE)
 # include <arpa/nameser.h>
 # include <resolv.h>
-# if  __RES  >= 19991006
-#  include <res_update.h>
-# endif
+# include <res_update.h>
 #endif
 
 #include <netdb.h>
@@ -224,7 +222,7 @@ struct lease {
 	unsigned char uid_buf [32];
 	char *hostname;
 	char *client_hostname;
-	struct binding *bindings;
+	struct binding_scope scope;
 	struct host_decl *host;
 	struct subnet *subnet;
 	struct pool *pool;
@@ -329,6 +327,7 @@ struct lease_state {
 #define SV_PID_FILE_NAME		27
 #define SV_DUPLICATES			28
 #define SV_DECLINES			29
+#define SV_DDNS_UPDATES			30
 
 #if !defined (DEFAULT_DEFAULT_LEASE_TIME)
 # define DEFAULT_DEFAULT_LEASE_TIME 43200
@@ -749,6 +748,48 @@ struct dns_query {
 	int backoff;			/* Current backoff, in seconds. */
 };
 
+#if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL)
+#define DMDOFFSET (sizeof (struct dmalloc_preamble))
+#define DMLFSIZE 16
+#define DMUFSIZE 16
+#define DMDSIZE (DMDOFFSET + DMLFSIZE + DMUFSIZE)
+
+struct dmalloc_preamble {
+	struct dmalloc_preamble *prev, *next;
+	size_t size;
+	const char *file;
+	int line;
+	unsigned long generation;
+	unsigned char low_fence [DMLFSIZE];
+};
+#else
+#define DMDOFFSET 0
+#define DMDSIZE 0
+#endif
+
+#if defined (DEBUG_RC_HISTORY)
+#if !defined (RC_HISTORY_MAX)
+# define RC_HISTORY_MAX 256
+#endif
+
+struct rc_history_entry {
+	char *name;
+	VOIDPTR addr;
+	int refcnt;
+};
+
+#define rc_register(x, l, y, z) do { \
+	rc_history [rc_history_index].file = (x); \
+	rc_history [rc_history_index].line = (l); \
+	rc_history [rc_history_index].addr = (y); \
+	rc_history [rc_history_index].refcnt = (z); \
+	if (++rc_history_index == RC_HISTORY_MAX) \
+		rc_history_index = 0;\
+	} while (0)
+#else
+#define rc_register(name, addr, refcnt)
+#endif
+
 /* Bitmask of dhcp option codes. */
 typedef unsigned char option_mask [16];
 
@@ -818,10 +859,11 @@ int parse_options PROTO ((struct packet *));
 int parse_option_buffer PROTO ((struct packet *, unsigned char *, unsigned));
 int cons_options PROTO ((struct packet *, struct dhcp_packet *, struct lease *,
 			 int, struct option_state *, struct option_state *,
+			 struct binding_scope *,
 			 int, int, int, struct data_string *));
 int store_options PROTO ((unsigned char *, unsigned, struct packet *,
-			  struct lease *,
-			  struct option_state *, struct option_state *,
+			  struct lease *, struct option_state *,
+			  struct option_state *, struct binding_scope *,
 			  unsigned *, int, unsigned, unsigned, int));
 const char *pretty_print_option PROTO ((unsigned int, const unsigned char *,
 					unsigned, int, int));
@@ -831,11 +873,13 @@ void do_packet PROTO ((struct interface_info *,
 int hashed_option_get PROTO ((struct data_string *, struct universe *,
 			      struct packet *, struct lease *,
 			      struct option_state *, struct option_state *,
-			      struct option_state *, unsigned));
+			      struct option_state *, struct binding_scope *,
+			      unsigned));
 int agent_option_get PROTO ((struct data_string *, struct universe *,
 			     struct packet *, struct lease *,
 			     struct option_state *, struct option_state *,
-			     struct option_state *, unsigned));
+			     struct option_state *, struct binding_scope *,
+			     unsigned));
 void hashed_option_set PROTO ((struct universe *, struct option_state *,
 			       struct option_cache *,
 			       enum statement_op));
@@ -859,21 +903,24 @@ int agent_option_state_dereference PROTO ((struct universe *,
 int store_option PROTO ((struct data_string *,
 			 struct universe *, struct packet *, struct lease *,
 			 struct option_state *, struct option_state *,
-			 struct option_cache *));
+			 struct binding_scope *, struct option_cache *));
 int option_space_encapsulate PROTO ((struct data_string *,
 				     struct packet *, struct lease *,
 				     struct option_state *,
 				     struct option_state *,
+				     struct binding_scope *,
 				     struct data_string *));
 int hashed_option_space_encapsulate PROTO ((struct data_string *,
 					    struct packet *, struct lease *,
 					    struct option_state *,
 					    struct option_state *,
+					    struct binding_scope *,
 					    struct universe *));
 int nwip_option_space_encapsulate PROTO ((struct data_string *,
 					  struct packet *, struct lease *,
 					  struct option_state *,
 					  struct option_state *,
+					  struct binding_scope *,
 					  struct universe *));
 
 /* errwarn.c */
@@ -891,6 +938,7 @@ int parse_warn PROTO ((struct parse *, const char *, ...))
 /* dhcpd.c */
 extern TIME cur_time;
 extern struct group root_group;
+extern struct binding_scope global_scope;
 extern struct in_addr limited_broadcast;
 
 extern u_int16_t local_port;
@@ -1004,50 +1052,57 @@ int make_host_lookup PROTO ((struct expression **, const char *));
 int enter_dns_host PROTO ((struct dns_host_entry **, const char *));
 int make_const_data PROTO ((struct expression **,
 			    const unsigned char *, unsigned, int, int));
+int make_const_int PROTO ((struct expression **, unsigned long));
 int make_concat PROTO ((struct expression **,
 			struct expression *, struct expression *));
 int make_encapsulation PROTO ((struct expression **, struct data_string *));
 int make_substring PROTO ((struct expression **, struct expression *,
 			   struct expression *, struct expression *));
 int make_limit PROTO ((struct expression **, struct expression *, int));
+int make_let PROTO ((struct executable_statement **, const char *));
 int option_cache PROTO ((struct option_cache **, struct data_string *,
 			 struct expression *, struct option *));
 int evaluate_dns_expression PROTO ((ns_updrec **, struct packet *,
 				    struct lease *, struct option_state *,
 				    struct option_state *,
+				    struct binding_scope *,
 				    struct expression *));
 int evaluate_boolean_expression PROTO ((int *,
 					struct packet *,  struct lease *,
 					struct option_state *,
 					struct option_state *,
+					struct binding_scope *,
 					struct expression *));
 int evaluate_data_expression PROTO ((struct data_string *,
 				     struct packet *, struct lease *,
 				     struct option_state *,
 				     struct option_state *,
+				     struct binding_scope *,
 				     struct expression *));
 int evaluate_numeric_expression PROTO
 	((unsigned long *, struct packet *, struct lease *,
-	  struct option_state *, struct option_state *, struct expression *));
+	  struct option_state *, struct option_state *, struct binding_scope *,
+	  struct expression *));
 int evaluate_option_cache PROTO ((struct data_string *,
 				  struct packet *, struct lease *,
 				  struct option_state *, struct option_state *,
+				  struct binding_scope *,
 				  struct option_cache *));
 int evaluate_boolean_option_cache PROTO ((int *,
 					  struct packet *, struct lease *,
 					  struct option_state *,
 					  struct option_state *,
-					  struct option_cache *));
+					  struct binding_scope *,
+					  struct option_cache *,
+					  const char *, int));
 int evaluate_boolean_expression_result PROTO ((int *,
 					       struct packet *, struct lease *,
 					       struct option_state *,
 					       struct option_state *,
-					       struct expression *));
+					       struct binding_scope *,
+					       struct expression *,
+					       const char *, int));
 void expression_dereference PROTO ((struct expression **, const char *));
-void data_string_copy PROTO ((struct data_string *,
-			      struct data_string *, const char *));
-void data_string_forget PROTO ((struct data_string *, const char *));
-void data_string_truncate PROTO ((struct data_string *, int));
 int is_dns_expression PROTO ((struct expression *));
 int is_boolean_expression PROTO ((struct expression *));
 int is_data_expression PROTO ((struct expression *));
@@ -1055,7 +1110,10 @@ int is_numeric_expression PROTO ((struct expression *));
 int is_compound_expression PROTO ((struct expression *));
 int op_precedence PROTO ((enum expr_op, enum expr_op));
 enum expression_context op_context PROTO ((enum expr_op));
-int write_expression (FILE *, struct expression *, int, int, int);
+int write_expression PROTO ((FILE *, struct expression *, int, int, int));
+struct binding *find_binding PROTO ((struct binding_scope *, const char *));
+int free_bindings PROTO ((struct binding_scope *, const char *));
+int binding_scope_dereference PROTO ((struct binding_scope **, const char *));
 
 /* dhcp.c */
 extern int outstanding_pings;
@@ -1092,86 +1150,107 @@ void bootp PROTO ((struct packet *));
 struct group *clone_group PROTO ((struct group *, const char *));
 
 /* alloc.c */
-VOIDPTR dmalloc PROTO ((unsigned, const char *));
-void dfree PROTO ((VOIDPTR, const char *));
-struct dhcp_packet *new_dhcp_packet PROTO ((const char *));
-struct hash_table *new_hash_table PROTO ((int, const char *));
-struct hash_bucket *new_hash_bucket PROTO ((const char *));
-struct lease *new_lease PROTO ((const char *));
-struct lease *new_leases PROTO ((unsigned, const char *));
-struct subnet *new_subnet PROTO ((const char *));
-struct class *new_class PROTO ((const char *));
-struct shared_network *new_shared_network PROTO ((const char *));
-struct group *new_group PROTO ((const char *));
-struct protocol *new_protocol PROTO ((const char *));
-struct lease_state *new_lease_state PROTO ((const char *));
-struct domain_search_list *new_domain_search_list PROTO ((const char *));
-struct name_server *new_name_server PROTO ((const char *));
-void free_name_server PROTO ((struct name_server *, const char *));
-struct option *new_option PROTO ((const char *));
-void free_option PROTO ((struct option *, const char *));
-struct universe *new_universe PROTO ((const char *));
-void free_universe PROTO ((struct universe *, const char *));
+#if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL)
+extern struct dmalloc_preamble *dmalloc_list;
+extern unsigned long dmalloc_outstanding;
+extern unsigned long dmalloc_longterm;
+extern unsigned long dmalloc_generation;
+extern unsigned long dmalloc_cutoff_generation;
+#endif
+
+#if defined (DEBUG_RC_HISTORY)
+extern struct rc_history_entry rc_history [RC_HISTORY_MAX];
+extern int rc_history_index;
+#endif
+VOIDPTR dmalloc PROTO ((unsigned, const char *, int));
+void dfree PROTO ((VOIDPTR, const char *, int));
+#if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL)
+void dmalloc_reuse PROTO ((VOIDPTR, const char *, int, int));
+void dmalloc_dump_outstanding PROTO ((void));
+#else
+#define dmalloc_reuse(x,y,z)
+#endif
+#if defined (DEBUG_RC_HISTORY)
+void dump_rc_history PROTO ((void));
+#endif
+struct dhcp_packet *new_dhcp_packet PROTO ((const char *, int));
+struct hash_table *new_hash_table PROTO ((int, const char *, int));
+struct hash_bucket *new_hash_bucket PROTO ((const char *, int));
+struct lease *new_lease PROTO ((const char *, int));
+struct lease *new_leases PROTO ((unsigned, const char *, int));
+struct subnet *new_subnet PROTO ((const char *, int));
+struct class *new_class PROTO ((const char *, int));
+struct shared_network *new_shared_network PROTO ((const char *, int));
+struct group *new_group PROTO ((const char *, int));
+struct protocol *new_protocol PROTO ((const char *, int));
+struct lease_state *new_lease_state PROTO ((const char *, int));
+struct domain_search_list *new_domain_search_list PROTO ((const char *, int));
+struct name_server *new_name_server PROTO ((const char *, int));
+void free_name_server PROTO ((struct name_server *, const char *, int));
+struct option *new_option PROTO ((const char *, int));
+void free_option PROTO ((struct option *, const char *, int));
+struct universe *new_universe PROTO ((const char *, int));
+void free_universe PROTO ((struct universe *, const char *, int));
 void free_domain_search_list PROTO ((struct domain_search_list *,
-				     const char *));
-void free_lease_state PROTO ((struct lease_state *, const char *));
-void free_protocol PROTO ((struct protocol *, const char *));
-void free_group PROTO ((struct group *, const char *));
-void free_shared_network PROTO ((struct shared_network *, const char *));
-void free_class PROTO ((struct class *, const char *));
-void free_subnet PROTO ((struct subnet *, const char *));
-void free_lease PROTO ((struct lease *, const char *));
-void free_hash_bucket PROTO ((struct hash_bucket *, const char *));
-void free_hash_table PROTO ((struct hash_table *, const char *));
-void free_dhcp_packet PROTO ((struct dhcp_packet *, const char *));
-struct client_lease *new_client_lease PROTO ((const char *));
-void free_client_lease PROTO ((struct client_lease *, const char *));
-struct pool *new_pool PROTO ((const char *));
-void free_pool PROTO ((struct pool *, const char *));
-struct auth_key *new_auth_key PROTO ((unsigned, const char *));
-void free_auth_key PROTO ((struct auth_key *, const char *));
-struct permit *new_permit PROTO ((const char *));
-void free_permit PROTO ((struct permit *, const char *));
-pair new_pair PROTO ((const char *));
-void free_pair PROTO ((pair, const char *));
-int expression_allocate PROTO ((struct expression **, const char *));
+				     const char *, int));
+void free_lease_state PROTO ((struct lease_state *, const char *, int));
+void free_protocol PROTO ((struct protocol *, const char *, int));
+void free_group PROTO ((struct group *, const char *, int));
+void free_shared_network PROTO ((struct shared_network *, const char *, int));
+void free_class PROTO ((struct class *, const char *, int));
+void free_subnet PROTO ((struct subnet *, const char *, int));
+void free_lease PROTO ((struct lease *, const char *, int));
+void free_hash_bucket PROTO ((struct hash_bucket *, const char *, int));
+void free_hash_table PROTO ((struct hash_table *, const char *, int));
+void free_dhcp_packet PROTO ((struct dhcp_packet *, const char *, int));
+struct client_lease *new_client_lease PROTO ((const char *, int));
+void free_client_lease PROTO ((struct client_lease *, const char *, int));
+struct pool *new_pool PROTO ((const char *, int));
+void free_pool PROTO ((struct pool *, const char *, int));
+struct auth_key *new_auth_key PROTO ((unsigned, const char *, int));
+void free_auth_key PROTO ((struct auth_key *, const char *, int));
+struct permit *new_permit PROTO ((const char *, int));
+void free_permit PROTO ((struct permit *, const char *, int));
+pair new_pair PROTO ((const char *, int));
+void free_pair PROTO ((pair, const char *, int));
+int expression_allocate PROTO ((struct expression **, const char *, int));
 int expression_reference PROTO ((struct expression **,
-				 struct expression *, const char *));
-void free_expression PROTO ((struct expression *, const char *));
-int option_cache_allocate PROTO ((struct option_cache **, const char *));
+				 struct expression *, const char *, int));
+void free_expression PROTO ((struct expression *, const char *, int));
+int option_cache_allocate PROTO ((struct option_cache **, const char *, int));
 int option_cache_reference PROTO ((struct option_cache **,
-				   struct option_cache *, const char *));
-int buffer_allocate PROTO ((struct buffer **, unsigned, const char *));
-int buffer_reference PROTO ((struct buffer **, struct buffer *, const char *));
-int buffer_dereference PROTO ((struct buffer **, const char *));
+				   struct option_cache *, const char *, int));
+int buffer_allocate PROTO ((struct buffer **, unsigned, const char *, int));
+int buffer_reference PROTO ((struct buffer **, struct buffer *,
+			     const char *, int));
+int buffer_dereference PROTO ((struct buffer **, const char *, int));
 int dns_host_entry_allocate PROTO ((struct dns_host_entry **,
-				    const char *, const char *));
+				    const char *, const char *, int));
 int dns_host_entry_reference PROTO ((struct dns_host_entry **,
-				     struct dns_host_entry *, const char *));
+				     struct dns_host_entry *,
+				     const char *, int));
 int dns_host_entry_dereference PROTO ((struct dns_host_entry **,
-				       const char *));
-int option_state_allocate PROTO ((struct option_state **, const char *));
+				       const char *, int));
+int option_state_allocate PROTO ((struct option_state **, const char *, int));
 int option_state_reference PROTO ((struct option_state **,
-				   struct option_state *, const char *));
-int option_state_dereference PROTO ((struct option_state **, const char *));
+				   struct option_state *, const char *, int));
+int option_state_dereference PROTO ((struct option_state **,
+				     const char *, int));
+void data_string_copy PROTO ((struct data_string *,
+			      struct data_string *, const char *, int));
+void data_string_forget PROTO ((struct data_string *, const char *, int));
+void data_string_truncate PROTO ((struct data_string *, int));
 int executable_statement_allocate PROTO ((struct executable_statement **,
-					  const char *));
+					  const char *, int));
 int executable_statement_reference PROTO ((struct executable_statement **,
 					   struct executable_statement *,
-					   const char *));
-int executable_statement_dereference PROTO ((struct executable_statement **,
-					     const char *));
-void write_statements (FILE *, struct executable_statement *, int);
-struct executable_statement *find_matching_case PROTO ((struct packet *,
-							struct lease *,
-							struct option_state *,
-							struct option_state *,
-							struct expression *,
-					      struct executable_statement *));
-
-int packet_allocate PROTO ((struct packet **, const char *));
-int packet_reference PROTO ((struct packet **, struct packet *, const char *));
-int packet_dereference PROTO ((struct packet **, const char *));
+					   const char *, int));
+int packet_allocate PROTO ((struct packet **, const char *, int));
+int packet_reference PROTO ((struct packet **,
+			     struct packet *, const char *, int));
+int packet_dereference PROTO ((struct packet **, const char *, int));
+int binding_scope_allocate PROTO ((struct binding_scope **,
+				   const char *, int));
 
 /* print.c */
 char *print_hw_addr PROTO ((int, int, unsigned char *));
@@ -1396,6 +1475,7 @@ unsigned char *hash_lookup PROTO ((struct hash_table *,
 
 /* tables.c */
 extern struct universe dhcp_universe;
+extern struct universe nwip_universe;
 extern struct option dhcp_options [256];
 extern int dhcp_option_default_priority_list [];
 extern int dhcp_option_default_priority_list_count;
@@ -1660,12 +1740,24 @@ int bill_class PROTO ((struct lease *, struct class *));
 int execute_statements PROTO ((struct packet *,
 			       struct lease *,
 			       struct option_state *, struct option_state *,
+			       struct binding_scope *,
 			       struct executable_statement *));
 void execute_statements_in_scope PROTO ((struct packet *,
 					 struct lease *,
 					 struct option_state *,
 					 struct option_state *,
+					 struct binding_scope *,
 					 struct group *, struct group *));
+int executable_statement_dereference PROTO ((struct executable_statement **,
+					     const char *, int));
+void write_statements (FILE *, struct executable_statement *, int);
+struct executable_statement *find_matching_case PROTO ((struct packet *,
+							struct lease *,
+							struct option_state *,
+							struct option_state *,
+							struct binding_scope *,
+							struct expression *,
+					      struct executable_statement *));
 
 /* auth.c */
 void enter_auth_key PROTO ((struct data_string *, struct auth_key *));
@@ -1839,7 +1931,7 @@ extern struct subnet *find_subnet PROTO ((struct iaddr));
 void enter_shared_network PROTO ((struct shared_network *));
 void new_shared_network_interface PROTO ((struct parse *,
 					  struct shared_network *,
-					  const char *));
+					  const char *, int));
 int subnet_inner_than PROTO ((struct subnet *, struct subnet *, int));
 void enter_subnet PROTO ((struct subnet *));
 void enter_lease PROTO ((struct lease *));
