@@ -56,7 +56,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.60 1999/03/13 18:52:41 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.61 1999/03/16 00:17:20 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -88,7 +88,7 @@ struct sockaddr_in sockaddr_broadcast;
 static char copyright[] =
 "Copyright 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.";
 static char arr [] = "All rights reserved.";
-static char message [] = "Internet Software Consortium DHCP Client V3.0-alpha-990225";
+static char message [] = "Internet Software Consortium DHCP Client V3.0-alpha-990315";
 static char contrib [] = "\nPlease contribute if you find this software useful.";
 static char url [] = "For info, please visit http://www.isc.org/dhcp-contrib.html\n";
 
