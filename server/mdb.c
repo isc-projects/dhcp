@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.38 2000/07/06 10:27:41 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.39 2000/07/06 22:40:27 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -538,13 +538,42 @@ void new_address_range (low, high, subnet, pool)
 
 
 #if defined (COMPACT_LEASES)
+struct lease *free_leases;
+
 /* If we are allocating leases in aggregations, there's really no way
    to free one, although perhaps we can maintain a free list. */
 
-isc_result_t dhcp_lease_free (omapi_object_t *lease,
+isc_result_t dhcp_lease_free (omapi_object_t *lo,
 			      const char *file, int line)
 {
+	struct lease *lease;
+	if (lo -> type != dhcp_type_lease)
+		return ISC_R_INVALIDARG;
+	lease = (struct lease *)lo;
+	if (free_leases) {
+		lease_reference (&lease -> next, free_leases, file, line);
+		lease_dereference (&free_leases, file, line);
+	}
+	lease_reference (&free_leases, lease, MDL);
 	return ISC_R_SUCCESS;
+}
+
+isc_result_t dhcp_lease_get (omapi_object_t **lp,
+			     const char *file, int line)
+{
+	struct lease **lease = (struct lease **)lp;
+
+	if (free_leases) {
+		lease_reference (lease, free_leases, file, line);
+		lease_dereference (&free_leases, file, line);
+		if ((*lease) -> next) {
+			lease_reference (&free_leases, (*lease) -> next,
+					 file, line);
+			lease_dereference (&(*lease) -> next, file, line);
+		}
+		return ISC_R_SUCCESS;
+	}
+	return ISC_R_NOMEMORY;
 }
 #endif
 
