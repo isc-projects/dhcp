@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: upf.c,v 1.4 1999/02/14 18:57:19 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: upf.c,v 1.5 1999/02/24 17:56:49 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -97,7 +97,7 @@ int if_register_upf (info)
 			if (errno == EBUSY) {
 				continue;
 			} else {
-				error ("Can't find free upf: %m");
+				log_fatal ("Can't find free upf: %m");
 			}
 		} else {
 			break;
@@ -106,21 +106,21 @@ int if_register_upf (info)
 
 	/* Set the UPF device to point at this interface. */
 	if (ioctl (sock, EIOCSETIF, info -> ifp) < 0)
-		error ("Can't attach interface %s to upf device %s: %m",
+		log_fatal ("Can't attach interface %s to upf device %s: %m",
 		       info -> name, filename);
 
 	/* Get the hardware address. */
 	if (ioctl (sock, EIOCDEVP, &param) < 0)
-		error ("Can't get interface %s hardware address: %m",
+		log_fatal ("Can't get interface %s hardware address: %m",
 		       info -> name);
 
 	/* We only know how to do ethernet. */
 	if (param.end_dev_type != ENDT_10MB)	
-		error ("Invalid device type on network interface %s: %d",
+		log_fatal ("Invalid device type on network interface %s: %d",
 		       info -> name, param.end_dev_type);
 
 	if (param.end_addr_len != 6)
-		error ("Invalid hardware address length on %s: %d",
+		log_fatal ("Invalid hardware address length on %s: %d",
 		       info -> name, param.end_addr_len);
 
 	info -> hw_address.hlen = 6;
@@ -143,7 +143,7 @@ void if_register_send (info)
 	info -> wfdesc = info -> rfdesc;
 #endif
         if (!quiet_interface_discovery)
-		note ("Sending on   UPF/%s/%s/%s",
+		log_info ("Sending on   UPF/%s/%s/%s",
 		      info -> name,
 		      print_hw_addr (info -> hw_address.htype,
 				     info -> hw_address.hlen,
@@ -172,18 +172,18 @@ void if_register_receive (info)
 
 	/* Allow the copyall flag to be set... */
 	if (ioctl(info -> rfdesc, EIOCALLOWCOPYALL, &flag) < 0)
-		error ("Can't set ALLOWCOPYALL: %m");
+		log_fatal ("Can't set ALLOWCOPYALL: %m");
 
 	/* Clear all the packet filter mode bits first... */
 	flag = (ENHOLDSIG | ENBATCH | ENTSTAMP | ENPROMISC |
 		ENNONEXCL | ENCOPYALL);
 	if (ioctl (info -> rfdesc, EIOCMBIC, &flag) < 0)
-		error ("Can't clear pfilt bits: %m");
+		log_fatal ("Can't clear pfilt bits: %m");
 
 	/* Set the ENBATCH and ENCOPYALL bits... */
 	bits = ENBATCH | ENCOPYALL;
 	if (ioctl (info -> rfdesc, EIOCMBIS, &bits) < 0)
-		error ("Can't set ENBATCH|ENCOPYALL: %m");
+		log_fatal ("Can't set ENBATCH|ENCOPYALL: %m");
 
 	/* Set up the UPF filter program. */
 	/* XXX Unlike the BPF filter program, this one won't work if the
@@ -206,9 +206,9 @@ void if_register_receive (info)
 	pf.enf_Filter [pf.enf_FilterLen++] = local_port;
 
 	if (ioctl (info -> rfdesc, EIOCSETF, &pf) < 0)
-		error ("Can't install packet filter program: %m");
+		log_fatal ("Can't install packet filter program: %m");
         if (!quiet_interface_discovery)
-		note ("Listening on UPF/%s/%s/%s",
+		log_info ("Listening on UPF/%s/%s/%s",
 		      info -> name,
 		      print_hw_addr (info -> hw_address.htype,
 				     info -> hw_address.hlen,

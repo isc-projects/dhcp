@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.12 1999/02/14 18:54:03 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.13 1999/02/24 17:56:47 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -132,7 +132,7 @@ char *parse_string (cfile)
 	}
 	s = (char *)malloc (strlen (val) + 1);
 	if (!s)
-		error ("no memory for string %s.", val);
+		log_fatal ("no memory for string %s.", val);
 	strcpy (s, val);
 
 	if (!parse_semi (cfile))
@@ -166,7 +166,7 @@ char *parse_host_name (cfile)
 
 		/* Store this identifier... */
 		if (!(s = (char *)malloc (strlen (val) + 1)))
-			error ("can't allocate temp space for hostname.");
+			log_fatal ("can't allocate temp space for hostname.");
 		strcpy (s, val);
 		c = cons ((caddr_t)s, c);
 		len += strlen (s) + 1;
@@ -179,7 +179,7 @@ char *parse_host_name (cfile)
 
 	/* Assemble the hostname together into a string. */
 	if (!(s = (char *)malloc (len)))
-		error ("can't allocate space for hostname.");
+		log_fatal ("can't allocate space for hostname.");
 	t = s + len;
 	*--t = 0;
 	while (c) {
@@ -375,7 +375,7 @@ unsigned char *parse_numeric_aggregate (cfile, buf,
 	if (!bufp && *max) {
 		bufp = (unsigned char *)malloc (*max * size / 8);
 		if (!bufp)
-			error ("can't allocate space for numeric aggregate");
+			log_fatal ("can't allocate space for numeric aggregate");
 	} else
 		s = bufp;
 
@@ -416,7 +416,7 @@ unsigned char *parse_numeric_aggregate (cfile, buf,
 		} else {
 			t = (unsigned char *)malloc (strlen (val) + 1);
 			if (!t)
-				error ("no temp space for number.");
+				log_fatal ("no temp space for number.");
 			strcpy ((char *)t, val);
 			c = cons ((caddr_t)t, c);
 		}
@@ -426,7 +426,7 @@ unsigned char *parse_numeric_aggregate (cfile, buf,
 	if (c) {
 		bufp = (unsigned char *)malloc (count * size / 8);
 		if (!bufp)
-			error ("can't allocate space for numeric aggregate.");
+			log_fatal ("can't allocate space for numeric aggregate.");
 		s = bufp + count - size / 8;
 		*max = count;
 	}
@@ -486,11 +486,11 @@ void convert_num (buf, str, base, size)
 		else if (tval >= '0')
 			tval -= '0';
 		else {
-			warn ("Bogus number: %s.", str);
+			log_error ("Bogus number: %s.", str);
 			break;
 		}
 		if (tval >= base) {
-			warn ("Bogus number: %s: digit %d not in base %d\n",
+			log_error ("Bogus number: %s: digit %d not in base %d\n",
 			      str, tval, base);
 			break;
 		}
@@ -504,15 +504,15 @@ void convert_num (buf, str, base, size)
 	if (val > max) {
 		switch (base) {
 		      case 8:
-			warn ("value %s%o exceeds max (%d) for precision.",
+			log_error ("value %s%o exceeds max (%d) for precision.",
 			      negative ? "-" : "", val, max);
 			break;
 		      case 16:
-			warn ("value %s%x exceeds max (%d) for precision.",
+			log_error ("value %s%x exceeds max (%d) for precision.",
 			      negative ? "-" : "", val, max);
 			break;
 		      default:
-			warn ("value %s%u exceeds max (%d) for precision.",
+			log_error ("value %s%u exceeds max (%d) for precision.",
 			      negative ? "-" : "", val, max);
 			break;
 		}
@@ -530,7 +530,7 @@ void convert_num (buf, str, base, size)
 			putLong (buf, -(unsigned long)val);
 			break;
 		      default:
-			warn ("Unexpected integer size: %d\n", size);
+			log_error ("Unexpected integer size: %d\n", size);
 			break;
 		}
 	} else {
@@ -545,7 +545,7 @@ void convert_num (buf, str, base, size)
 			putULong (buf, val);
 			break;
 		      default:
-			warn ("Unexpected integer size: %d\n", size);
+			log_error ("Unexpected integer size: %d\n", size);
 			break;
 		}
 	}
@@ -738,7 +738,7 @@ struct option *parse_option_name (cfile)
 	}
 	vendor = malloc (strlen (val) + 1);
 	if (!vendor)
-		error ("no memory for vendor information.");
+		log_fatal ("no memory for vendor information.");
 	strcpy (vendor, val);
 	token = peek_token (&val, cfile);
 	if (token == DOT) {
@@ -828,7 +828,7 @@ int parse_cshl (data, cfile)
 					 sizeof (struct option_tag),
 					 "parse_cshl");
 			if (!next)
-				error ("no memory for string list.");
+				log_fatal ("no memory for string list.");
 			memcpy (next -> data, ibuf, ilen);
 			*last = next;
 			last = &next -> next;
@@ -844,7 +844,7 @@ int parse_cshl (data, cfile)
 	} while (1);
 
 	if (!buffer_allocate (&data -> buffer, tlen + ilen, "parse_cshl"))
-		error ("no memory to store octet data.");
+		log_fatal ("no memory to store octet data.");
 	data -> data = &data -> buffer -> data [0];
 	data -> len = tlen + ilen;
 	data -> terminated = 0;
@@ -995,7 +995,7 @@ struct executable_statement *parse_executable_statement (cfile, lose)
 		dmalloc (sizeof (struct executable_statement),
 			 "parse_executable_statement"));
 	if (!stmt)
-		error ("no memory for new statement.");
+		log_fatal ("no memory for new statement.");
 	*stmt = base;
 	return stmt;
 }
@@ -1091,7 +1091,7 @@ struct executable_statement *parse_if_statement (cfile, lose)
 		dmalloc (sizeof (struct executable_statement),
 			 "parse_if_statement"));
 	if (!stmt)
-		error ("no memory for if statement.");
+		log_fatal ("no memory for if statement.");
 	memset (stmt, 0, sizeof *stmt);
 	stmt -> op = if_statement;
 	stmt -> data.ie.expr = if_condition;
@@ -1218,7 +1218,7 @@ int parse_non_binary (expr, cfile, lose, context)
 			return 0;
 		}
 		if (!expression_allocate (expr, "parse_expression: CHECK"))
-			error ("can't allocate expression");
+			log_fatal ("can't allocate expression");
 		(*expr) -> op = expr_check;
 		(*expr) -> data.check = col;
 		break;
@@ -1226,7 +1226,7 @@ int parse_non_binary (expr, cfile, lose, context)
 	      case NOT:
 		token = next_token (&val, cfile);
 		if (!expression_allocate (expr, "parse_expression: NOT"))
-			error ("can't allocate expression");
+			log_fatal ("can't allocate expression");
 		(*expr) -> op = expr_not;
 		if (!parse_non_binary (&(*expr) -> data.not,
 				       cfile, lose, context)) {
@@ -1243,7 +1243,7 @@ int parse_non_binary (expr, cfile, lose, context)
 	      case EXISTS:
 		token = next_token (&val, cfile);
 		if (!expression_allocate (expr, "parse_expression: EXISTS"))
-			error ("can't allocate expression");
+			log_fatal ("can't allocate expression");
 		(*expr) -> op = expr_exists;
 		(*expr) -> data.option = parse_option_name (cfile);
 		if (!(*expr) -> data.option) {
@@ -1257,7 +1257,7 @@ int parse_non_binary (expr, cfile, lose, context)
 	      case SUBSTRING:
 		token = next_token (&val, cfile);
 		if (!expression_allocate (expr, "parse_expression: SUBSTRING"))
-			error ("can't allocate expression");
+			log_fatal ("can't allocate expression");
 		(*expr) -> op = expr_substring;
 
 		token = next_token (&val, cfile);
@@ -1327,7 +1327,7 @@ int parse_non_binary (expr, cfile, lose, context)
 	      case SUFFIX:
 		token = next_token (&val, cfile);
 		if (!expression_allocate (expr, "parse_expression: SUFFIX"))
-			error ("can't allocate expression");
+			log_fatal ("can't allocate expression");
 		(*expr) -> op = expr_suffix;
 
 		token = next_token (&val, cfile);
@@ -1354,7 +1354,7 @@ int parse_non_binary (expr, cfile, lose, context)
 	      case OPTION:
 		token = next_token (&val, cfile);
 		if (!expression_allocate (expr, "parse_expression: OPTION"))
-			error ("can't allocate expression");
+			log_fatal ("can't allocate expression");
 		(*expr) -> op = expr_option;
 		(*expr) -> data.option = parse_option_name (cfile);
 		if (!(*expr) -> data.option) {
@@ -1368,14 +1368,14 @@ int parse_non_binary (expr, cfile, lose, context)
 	      case HARDWARE:
 		token = next_token (&val, cfile);
 		if (!expression_allocate (expr, "parse_expression: HARDWARE"))
-			error ("can't allocate expression");
+			log_fatal ("can't allocate expression");
 		(*expr) -> op = expr_hardware;
 		break;
 
 	      case PACKET:
 		token = next_token (&val, cfile);
 		if (!expression_allocate (expr, "parse_expression: PACKET"))
-			error ("can't allocate expression");
+			log_fatal ("can't allocate expression");
 		(*expr) -> op = expr_packet;
 
 		token = next_token (&val, cfile);
@@ -1402,7 +1402,7 @@ int parse_non_binary (expr, cfile, lose, context)
 	      case STRING:
 		token = next_token (&val, cfile);
 		if (!make_const_data (expr, val, strlen (val), 1, 1))
-			error ("can't make constant string expression.");
+			log_fatal ("can't make constant string expression.");
 		break;
 
 	      case EXTRACT_INT:
@@ -1416,7 +1416,7 @@ int parse_non_binary (expr, cfile, lose, context)
 
 		if (!expression_allocate (expr,
 					  "parse_expression: EXTRACT_INT"))
-			error ("can't allocate expression");
+			log_fatal ("can't allocate expression");
 
 		if (!parse_data_expression (&(*expr) -> data.extract_int,
 					    cfile, lose)) {
@@ -1474,7 +1474,7 @@ int parse_non_binary (expr, cfile, lose, context)
 	      case NUMBER:
 		if (!expression_allocate (expr,
 					  "parse_expression: NUMBER"))
-			error ("can't allocate expression");
+			log_fatal ("can't allocate expression");
 
 		/* If we're in a numeric context, this should just be a
 		   number, by itself. */
@@ -1583,7 +1583,7 @@ int parse_expression (expr, cfile, lose, context, plhs, binop)
 	if (next_op == expr_none) {
 		if (!expression_allocate (expr,
 					  "parse_expression: COMBINE"))
-			error ("Can't allocate expression!");
+			log_fatal ("Can't allocate expression!");
 
 		(*expr) -> op = binop;
 		/* All the binary operators' data union members
@@ -1620,7 +1620,7 @@ int parse_expression (expr, cfile, lose, context, plhs, binop)
 	/* Now combine the LHS and the RHS using binop. */
 	tmp = (struct expression *)0;
 	if (!expression_allocate (&tmp, "parse_expression: COMBINE2"))
-		error ("No memory for equal precedence combination.");
+		log_fatal ("No memory for equal precedence combination.");
 	
 	/* Store the LHS and RHS. */
 	tmp -> data.equal [0] = lhs;
@@ -1727,7 +1727,7 @@ struct executable_statement *parse_option_statement (cfile, lookups,
 	stmt -> op = op;
 	if (expr && !option_cache (&stmt -> data.option,
 				   (struct data_string *)0, expr, option))
-		error ("no memory for option cache in parse_option_statement");
+		log_fatal ("no memory for option cache in parse_option_statement");
 	return stmt;
 }
 
@@ -1760,7 +1760,7 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 			token = next_token (&val, cfile);
 			if (!make_const_data (&t, (unsigned char *) val,
 					      strlen (val), 1, 1))
-				error ("No memory for concatenation");
+				log_fatal ("No memory for concatenation");
 		} else {
 			parse_warn ("expecting string %s.",
 				    "or hexadecimal data");
@@ -1779,7 +1779,7 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 		}
 		if (!make_const_data (&t, (unsigned char *)val,
 				      strlen (val), 1, 1))
-			error ("No memory for concatenation");
+			log_fatal ("No memory for concatenation");
 		break;
 		
 	      case 'I': /* IP address or hostname. */
@@ -1853,7 +1853,7 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 		break;
 
 	      default:
-		warn ("Bad format %c in parse_option_param.",
+		log_error ("Bad format %c in parse_option_param.",
 		      *fmt);
 		skip_to_semi (cfile);
 		return 0;

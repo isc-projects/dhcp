@@ -812,10 +812,10 @@ int option_cache_dereference PROTO ((struct option_cache **, char *));
 
 /* errwarn.c */
 extern int warnings_occurred;
-void error PROTO ((char *, ...));
-int warn PROTO ((char *, ...));
-int note PROTO ((char *, ...));
-int debug PROTO ((char *, ...));
+void log_fatal PROTO ((char *, ...));
+int log_error PROTO ((char *, ...));
+int log_info PROTO ((char *, ...));
+int log_debug PROTO ((char *, ...));
 int parse_warn PROTO ((char *, ...));
 
 /* dhcpd.c */

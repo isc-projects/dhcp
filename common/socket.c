@@ -50,7 +50,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: socket.c,v 1.29 1999/02/14 19:40:21 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: socket.c,v 1.30 1999/02/24 17:56:48 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -105,7 +105,7 @@ int if_register_socket (info)
 #if !defined (SO_BINDTODEVICE) && !defined (USE_FALLBACK)
 	/* Make sure only one interface is registered. */
 	if (once)
-		error ("The standard socket API can only support %s",
+		log_fatal ("The standard socket API can only support %s",
 		       "hosts with a single network interface.");
 	once = 1;
 #endif
@@ -118,23 +118,23 @@ int if_register_socket (info)
 
 	/* Make a socket... */
 	if ((sock = socket (AF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0)
-		error ("Can't create dhcp socket: %m");
+		log_fatal ("Can't create dhcp socket: %m");
 
 	/* Set the REUSEADDR option so that we don't fail to start if
 	   we're being restarted. */
 	flag = 1;
 	if (setsockopt (sock, SOL_SOCKET, SO_REUSEADDR,
 			(char *)&flag, sizeof flag) < 0)
-		error ("Can't set SO_REUSEADDR option on dhcp socket: %m");
+		log_fatal ("Can't set SO_REUSEADDR option on dhcp socket: %m");
 
 	/* Set the BROADCAST option so that we can broadcast DHCP responses. */
 	if (setsockopt (sock, SOL_SOCKET, SO_BROADCAST,
 			(char *)&flag, sizeof flag) < 0)
-		error ("Can't set SO_BROADCAST option on dhcp socket: %m");
+		log_fatal ("Can't set SO_BROADCAST option on dhcp socket: %m");
 
 	/* Bind the socket to this interface's IP address. */
 	if (bind (sock, (struct sockaddr *)&name, sizeof name) < 0)
-		error ("Can't bind to dhcp address: %m");
+		log_fatal ("Can't bind to dhcp address: %m");
 
 #if defined (SO_BINDTODEVICE)
 	/* Bind this socket to this interface. */
@@ -159,7 +159,7 @@ void if_register_send (info)
 	info -> wfdesc = info -> rfdesc;
 #endif
 	if (!quiet_interface_discovery)
-		note ("Sending on   Socket/%s/%s",
+		log_info ("Sending on   Socket/%s/%s",
 		      info -> name,
 		      (info -> shared_network ?
 		       info -> shared_network -> name : "unattached"));
@@ -175,7 +175,7 @@ void if_register_receive (info)
 	   we don't need to register this interface twice. */
 	info -> rfdesc = if_register_socket (info);
 	if (!quiet_interface_discovery)
-		note ("Listening on Socket/%s/%s",
+		log_info ("Listening on Socket/%s/%s",
 		      info -> name,
 		      (info -> shared_network ?
 		       info -> shared_network -> name : "unattached"));
@@ -252,7 +252,7 @@ void fallback_discard (protocol)
 	status = recvfrom (interface -> wfdesc, buf, sizeof buf, 0,
 			   (struct sockaddr *)&from, &flen);
 	if (status < 0)
-		warn ("fallback_discard: %m");
+		log_error ("fallback_discard: %m");
 }
 #endif /* USE_SOCKET_SEND */
 

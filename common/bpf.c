@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bpf.c,v 1.20 1999/02/14 18:41:11 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bpf.c,v 1.21 1999/02/24 17:56:43 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -109,11 +109,11 @@ int if_register_bpf (info)
 				continue;
 			} else {
 				if (!b)
-					error ("No bpf devices.%s%s%s",
+					log_fatal ("No bpf devices.%s%s%s",
 					       "   Please read the README",
 					       " section for your operating",
 					       " system.");
-				error ("Can't find free bpf: %m");
+				log_fatal ("Can't find free bpf: %m");
 			}
 		} else {
 			break;
@@ -122,7 +122,7 @@ int if_register_bpf (info)
 
 	/* Set the BPF device to point at this interface. */
 	if (ioctl (sock, BIOCSETIF, info -> ifp) < 0)
-		error ("Can't attach interface %s to bpf device %s: %m",
+		log_fatal ("Can't attach interface %s to bpf device %s: %m",
 		       info -> name, filename);
 
 	return sock;
@@ -141,7 +141,7 @@ void if_register_send (info)
 	info -> wfdesc = info -> rfdesc;
 #endif
 	if (!quiet_interface_discovery)
-		note ("Sending on   BPF/%s/%s/%s",
+		log_info ("Sending on   BPF/%s/%s/%s",
 		      info -> name,
 		      print_hw_addr (info -> hw_address.htype,
 				     info -> hw_address.hlen,
@@ -201,39 +201,39 @@ void if_register_receive (info)
 
 	/* Make sure the BPF version is in range... */
 	if (ioctl (info -> rfdesc, BIOCVERSION, &v) < 0)
-		error ("Can't get BPF version: %m");
+		log_fatal ("Can't get BPF version: %m");
 
 	if (v.bv_major != BPF_MAJOR_VERSION ||
 	    v.bv_minor < BPF_MINOR_VERSION)
-		error ("Kernel BPF version out of range - recompile dhcpd!");
+		log_fatal ("Kernel BPF version out of range - recompile dhcpd!");
 
 	/* Set immediate mode so that reads return as soon as a packet
 	   comes in, rather than waiting for the input buffer to fill with
 	   packets. */
 	if (ioctl (info -> rfdesc, BIOCIMMEDIATE, &flag) < 0)
-		error ("Can't set immediate mode on bpf device: %m");
+		log_fatal ("Can't set immediate mode on bpf device: %m");
 
 #ifdef NEED_OSF_PFILT_HACKS
 	/* Allow the copyall flag to be set... */
 	if (ioctl(info -> rfdesc, EIOCALLOWCOPYALL, &flag) < 0)
-		error ("Can't set ALLOWCOPYALL: %m");
+		log_fatal ("Can't set ALLOWCOPYALL: %m");
 
 	/* Clear all the packet filter mode bits first... */
 	bits = 0;
 	if (ioctl (info -> rfdesc, EIOCMBIS, &bits) < 0)
-		error ("Can't clear pfilt bits: %m");
+		log_fatal ("Can't clear pfilt bits: %m");
 
 	/* Set the ENBATCH, ENCOPYALL, ENBPFHDR bits... */
 	bits = ENBATCH | ENCOPYALL | ENBPFHDR;
 	if (ioctl (info -> rfdesc, EIOCMBIS, &bits) < 0)
-		error ("Can't set ENBATCH|ENCOPYALL|ENBPFHDR: %m");
+		log_fatal ("Can't set ENBATCH|ENCOPYALL|ENBPFHDR: %m");
 #endif
 	/* Get the required BPF buffer length from the kernel. */
 	if (ioctl (info -> rfdesc, BIOCGBLEN, &info -> rbuf_max) < 0)
-		error ("Can't get bpf buffer length: %m");
+		log_fatal ("Can't get bpf buffer length: %m");
 	info -> rbuf = malloc (info -> rbuf_max);
 	if (!info -> rbuf)
-		error ("Can't allocate %d bytes for bpf input buffer.");
+		log_fatal ("Can't allocate %d bytes for bpf input buffer.");
 	info -> rbuf_offset = 0;
 	info -> rbuf_len = 0;
 
@@ -247,9 +247,9 @@ void if_register_receive (info)
 	dhcp_bpf_filter [8].k = ntohs (local_port);
 
 	if (ioctl (info -> rfdesc, BIOCSETF, &p) < 0)
-		error ("Can't install packet filter program: %m");
+		log_fatal ("Can't install packet filter program: %m");
 	if (!quiet_interface_discovery)
-		note ("Listening on BPF/%s/%s/%s",
+		log_info ("Listening on BPF/%s/%s/%s",
 		      info -> name,
 		      print_hw_addr (info -> hw_address.htype,
 				     info -> hw_address.hlen,

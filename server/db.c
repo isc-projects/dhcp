@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: db.c,v 1.20 1998/11/11 08:00:11 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: db.c,v 1.21 1999/02/24 17:56:51 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -176,7 +176,7 @@ int write_lease (lease)
 		++errors;
 	}
 	if (errors)
-		note ("write_lease: unable to write lease %s",
+		log_info ("write_lease: unable to write lease %s",
 		      piaddr (lease -> ip_addr));
 	return !errors;
 }
@@ -243,11 +243,11 @@ int commit_leases ()
 	   We need to do this even if we're rewriting the file below,
 	   just in case the rewrite fails. */
 	if (fflush (db_file) == EOF) {
-		note ("commit_leases: unable to commit: %m");
+		log_info ("commit_leases: unable to commit: %m");
 		return 0;
 	}
 	if (fsync (fileno (db_file)) < 0) {
-		note ("commit_leases: unable to commit: %m");
+		log_info ("commit_leases: unable to commit: %m");
 		return 0;
 	}
 
@@ -288,10 +288,10 @@ void new_lease_file ()
 	sprintf (newfname, "%s.%d", path_dhcpd_db, (int)t);
 	db_fd = open (newfname, O_WRONLY | O_TRUNC | O_CREAT, 0664);
 	if (db_fd < 0) {
-		error ("Can't create new lease file: %m");
+		log_fatal ("Can't create new lease file: %m");
 	}
 	if ((db_file = fdopen (db_fd, "w")) == NULL) {
-		error ("Can't fdopen new lease file!");
+		log_fatal ("Can't fdopen new lease file!");
 	}
 
 	/* Write out all the leases that we know of... */
@@ -301,15 +301,15 @@ void new_lease_file ()
 	/* Get the old database out of the way... */
 	sprintf (backfname, "%s~", path_dhcpd_db);
 	if (unlink (backfname) < 0 && errno != ENOENT)
-		error ("Can't remove old lease database backup %s: %m",
+		log_fatal ("Can't remove old lease database backup %s: %m",
 		       backfname);
 	if (link (path_dhcpd_db, backfname) < 0)
-		error ("Can't backup lease database %s to %s: %m",
+		log_fatal ("Can't backup lease database %s to %s: %m",
 		       path_dhcpd_db, backfname);
 	
 	/* Move in the new file... */
 	if (rename (newfname, path_dhcpd_db) < 0)
-		error ("Can't install new lease database %s to %s: %m",
+		log_fatal ("Can't install new lease database %s to %s: %m",
 		       newfname, path_dhcpd_db);
 
 	counting = 1;

@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: nit.c,v 1.16 1999/02/14 18:50:25 mellon Exp $ Copyright (c) 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: nit.c,v 1.17 1999/02/24 17:56:46 mellon Exp $ Copyright (c) 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -95,7 +95,7 @@ int if_register_nit (info)
 	/* Open a NIT device */
 	sock = open ("/dev/nit", O_RDWR);
 	if (sock < 0)
-		error ("Can't open NIT device for %s: %m", info -> name);
+		log_fatal ("Can't open NIT device for %s: %m", info -> name);
 
 	/* Set the NIT device to point at this interface. */
 	sio.ic_cmd = NIOCBIND;
@@ -103,7 +103,7 @@ int if_register_nit (info)
 	sio.ic_dp = (char *)(info -> ifp);
 	sio.ic_timout = INFTIM;
 	if (ioctl (sock, I_STR, &sio) < 0)
-		error ("Can't attach interface %s to nit device: %m",
+		log_fatal ("Can't attach interface %s to nit device: %m",
 		       info -> name);
 
 	/* Get the low-level address... */
@@ -112,7 +112,7 @@ int if_register_nit (info)
 	sio.ic_dp = (char *)&ifr;
 	sio.ic_timout = INFTIM;
 	if (ioctl (sock, I_STR, &sio) < 0)
-		error ("Can't get physical layer address for %s: %m",
+		log_fatal ("Can't get physical layer address for %s: %m",
 		       info -> name);
 
 	/* XXX code below assumes ethernet interface! */
@@ -121,7 +121,7 @@ int if_register_nit (info)
 	memcpy (info -> hw_address.haddr, ifr.ifr_ifru.ifru_addr.sa_data, 6);
 
 	if (ioctl (sock, I_PUSH, "pf") < 0)
-		error ("Can't push packet filter onto NIT for %s: %m",
+		log_fatal ("Can't push packet filter onto NIT for %s: %m",
 		       info -> name);
 
 	return sock;
@@ -150,12 +150,12 @@ void if_register_send (info)
 	sio.ic_dp = (char *)&pf;
 	sio.ic_timout = INFTIM;
 	if (ioctl (info -> wfdesc, I_STR, &sio) < 0)
-		error ("Can't set NIT filter: %m");
+		log_fatal ("Can't set NIT filter: %m");
 #else
 	info -> wfdesc = info -> rfdesc;
 #endif
         if (!quiet_interface_discovery)
-		note ("Sending on   NIT/%s/%s",
+		log_info ("Sending on   NIT/%s/%s",
 		      print_hw_addr (info -> hw_address.htype,
 				     info -> hw_address.hlen,
 				     info -> hw_address.haddr),
@@ -186,28 +186,28 @@ void if_register_receive (info)
 	   packet. */
 	x = 0;
 	if (ioctl (info -> rfdesc, NIOCSSNAP, &x) < 0)
-		error ("Can't set NIT snap length on %s: %m", info -> name);
+		log_fatal ("Can't set NIT snap length on %s: %m", info -> name);
 
 	/* Set the stream to byte stream mode */
 	if (ioctl (info -> rfdesc, I_SRDOPT, RMSGN) != 0)
-		note ("I_SRDOPT failed on %s: %m", info -> name);
+		log_info ("I_SRDOPT failed on %s: %m", info -> name);
 
 #if 0
 	/* Push on the chunker... */
 	if (ioctl (info -> rfdesc, I_PUSH, "nbuf") < 0)
-		error ("Can't push chunker onto NIT STREAM: %m");
+		log_fatal ("Can't push chunker onto NIT STREAM: %m");
 
 	/* Set the timeout to zero. */
 	t.tv_sec = 0;
 	t.tv_usec = 0;
 	if (ioctl (info -> rfdesc, NIOCSTIME, &t) < 0)
-		error ("Can't set chunk timeout: %m");
+		log_fatal ("Can't set chunk timeout: %m");
 #endif
 
 	/* Ask for no header... */
 	x = 0;
 	if (ioctl (info -> rfdesc, NIOCSFLAGS, &x) < 0)
-		error ("Can't set NIT flags on %s: %m", info -> name);
+		log_fatal ("Can't set NIT flags on %s: %m", info -> name);
 
 	/* Set up the NIT filter program. */
 	/* XXX Unlike the BPF filter program, this one won't work if the
@@ -235,10 +235,10 @@ void if_register_receive (info)
 	sio.ic_dp = (char *)&pf;
 	sio.ic_timout = INFTIM;
 	if (ioctl (info -> rfdesc, I_STR, &sio) < 0)
-		error ("Can't set NIT filter on %s: %m", info -> name);
+		log_fatal ("Can't set NIT filter on %s: %m", info -> name);
 
         if (!quiet_interface_discovery)
-		note ("Listening on NIT/%s/%s",
+		log_info ("Listening on NIT/%s/%s",
 		      print_hw_addr (info -> hw_address.htype,
 				     info -> hw_address.hlen,
 				     info -> hw_address.haddr),

@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: discover.c,v 1.3 1999/02/14 18:45:30 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: discover.c,v 1.4 1999/02/24 17:56:44 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -83,7 +83,7 @@ void discover_interfaces (state)
 
 	/* Create an unbound datagram socket to do the SIOCGIFADDR ioctl on. */
 	if ((sock = socket (AF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0)
-		error ("Can't create addrlist socket");
+		log_fatal ("Can't create addrlist socket");
 
 	/* Get the interface configuration information... */
 	ic.ifc_len = sizeof buf;
@@ -91,7 +91,7 @@ void discover_interfaces (state)
 	i = ioctl(sock, SIOCGIFCONF, &ic);
 
 	if (i < 0)
-		error ("ioctl: SIOCGIFCONF: %m");
+		log_fatal ("ioctl: SIOCGIFCONF: %m");
 
 	/* If we already have a list of interfaces, and we're running as
 	   a DHCP server, the interfaces were requested. */
@@ -130,7 +130,7 @@ void discover_interfaces (state)
 		   deal with. */
 		strcpy (ifr.ifr_name, ifp -> ifr_name);
 		if (ioctl (sock, SIOCGIFFLAGS, &ifr) < 0)
-			error ("Can't get interface flags for %s: %m",
+			log_fatal ("Can't get interface flags for %s: %m",
 			       ifr.ifr_name);
 
 		/* See if we've seen an interface that matches this one. */
@@ -156,7 +156,7 @@ void discover_interfaces (state)
 			tmp = ((struct interface_info *)
 			       dmalloc (sizeof *tmp, "discover_interfaces"));
 			if (!tmp)
-				error ("Insufficient memory to %s %s",
+				log_fatal ("Insufficient memory to %s %s",
 				       "record interface", ifp -> ifr_name);
 			strcpy (tmp -> name, ifp -> ifr_name);
 			tmp -> circuit_id = (u_int8_t *)tmp -> name;
@@ -209,7 +209,7 @@ void discover_interfaces (state)
 #endif
 				tif = (struct ifreq *)malloc (len);
 				if (!tif)
-					error ("no space to remember ifp.");
+					log_fatal ("no space to remember ifp.");
 				memcpy (tif, ifp, len);
 				tmp -> ifp = tif;
 				tmp -> primary_address = foo.sin_addr;
@@ -230,7 +230,7 @@ void discover_interfaces (state)
 					subnet -> interface = tmp;
 					subnet -> interface_address = addr;
 				} else if (subnet -> interface != tmp) {
-					warn ("Multiple %s %s: %s %s", 
+					log_error ("Multiple %s %s: %s %s", 
 					      "interfaces match the",
 					      "same subnet",
 					      subnet -> interface -> name,
@@ -239,7 +239,7 @@ void discover_interfaces (state)
 				share = subnet -> shared_network;
 				if (tmp -> shared_network &&
 				    tmp -> shared_network != share) {
-					warn ("Interface %s matches %s",
+					log_error ("Interface %s matches %s",
 					      tmp -> name,
 					      "multiple shared networks");
 				} else {
@@ -249,7 +249,7 @@ void discover_interfaces (state)
 				if (!share -> interface) {
 					share -> interface = tmp;
 				} else if (share -> interface != tmp) {
-					warn ("Multiple %s %s: %s %s", 
+					log_error ("Multiple %s %s: %s %s", 
 					      "interfaces match the",
 					      "same shared network",
 					      share -> interface -> name,
@@ -286,7 +286,7 @@ void discover_interfaces (state)
 
 		proc_dev = fopen (PROCDEV_DEVICE, "r");
 		if (!proc_dev)
-			error ("%s: %m", PROCDEV_DEVICE);
+			log_fatal ("%s: %m", PROCDEV_DEVICE);
 
 		while (fgets (buffer, sizeof buffer, proc_dev)) {
 			char *name = buffer;
@@ -319,7 +319,7 @@ void discover_interfaces (state)
 			tmp = ((struct interface_info *)
 			       dmalloc (sizeof *tmp, "discover_interfaces"));
 			if (!tmp)
-				error ("Insufficient memory to %s %s",
+				log_fatal ("Insufficient memory to %s %s",
 				       "record interface", name);
 			memset (tmp, 0, sizeof *tmp);
 			strcpy (tmp -> name, name);
@@ -344,7 +344,7 @@ void discover_interfaces (state)
 			/* Make up an ifreq structure. */
 			tif = (struct ifreq *)malloc (sizeof (struct ifreq));
 			if (!tif)
-				error ("no space to remember ifp.");
+				log_fatal ("no space to remember ifp.");
 			memset (tif, 0, sizeof (struct ifreq));
 			strcpy (tif -> ifr_name, tmp -> name);
 			tmp -> ifp = tif;
@@ -397,7 +397,7 @@ void discover_interfaces (state)
 #endif
 
 		      default:
-			error ("%s: unknown hardware address type %d",
+			log_fatal ("%s: unknown hardware address type %d",
 			       ifr.ifr_name, sa.sa_family);
 		}
 	}
@@ -418,7 +418,7 @@ void discover_interfaces (state)
 					  INTERFACE_REQUESTED);
 		if (!tmp -> ifp || !(tmp -> flags & INTERFACE_REQUESTED)) {
 			if ((tmp -> flags & INTERFACE_REQUESTED) != ir)
-				error ("%s: not found", tmp -> name);
+				log_fatal ("%s: not found", tmp -> name);
 			if (!last)
 				interfaces = interfaces -> next;
 			else
@@ -437,7 +437,7 @@ void discover_interfaces (state)
 
 		/* We must have a subnet declaration for each interface. */
 		if (!tmp -> shared_network && (state == DISCOVER_SERVER))
-			error ("No subnet declaration for %s (%s).",
+			log_fatal ("No subnet declaration for %s (%s).",
 			       tmp -> name, inet_ntoa (foo.sin_addr));
 
 		/* Find subnets that don't have valid interface
@@ -475,13 +475,13 @@ struct interface_info *setup_fallback ()
 		((struct interface_info *)
 		 dmalloc (sizeof *fallback_interface, "discover_interfaces"));
 	if (!fallback_interface)
-		error ("Insufficient memory to record fallback interface.");
+		log_fatal ("Insufficient memory to record fallback interface.");
 	memset (fallback_interface, 0, sizeof *fallback_interface);
 	strcpy (fallback_interface -> name, "fallback");
 	fallback_interface -> shared_network =
 		new_shared_network ("parse_statement");
 	if (!fallback_interface -> shared_network)
-		error ("No memory for shared subnet");
+		log_fatal ("No memory for shared subnet");
 	memset (fallback_interface -> shared_network, 0,
 		sizeof (struct shared_network));
 	fallback_interface -> shared_network -> name = "fallback-net";
@@ -520,7 +520,7 @@ void got_one (l)
 
 	if ((result =
 	     receive_packet (ip, u.packbuf, sizeof u, &from, &hfrom)) < 0) {
-		warn ("receive_packet failed on %s: %m", ip -> name);
+		log_error ("receive_packet failed on %s: %m", ip -> name);
 		return;
 	}
 	if (result == 0)

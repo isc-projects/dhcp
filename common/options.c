@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.34 1998/11/06 00:12:40 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.35 1999/02/24 17:56:46 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -115,7 +115,7 @@ int parse_option_buffer (packet, buffer, length)
 	struct buffer *bp = (struct buffer *)0;
 
 	if (!buffer_allocate (&bp, length, "parse_option_buffer")) {
-		warn ("parse_option_buffer: no memory for option buffer.");
+		log_error ("parse_option_buffer: no memory for option buffer.");
 		return 0;
 	}
 	memcpy (bp -> data, buffer, length);
@@ -134,7 +134,7 @@ int parse_option_buffer (packet, buffer, length)
 
 		/* If the length is outrageous, the options are bad. */
 		if (offset + len + 2 > length) {
-			warn ("Option %s length %d overflows input buffer.",
+			log_error ("Option %s length %d overflows input buffer.",
 			      dhcp_options [code].name,
 			      len);
 			buffer_dereference (&bp, "parse_option_buffer");
@@ -146,7 +146,7 @@ int parse_option_buffer (packet, buffer, length)
 		if (code == DHO_DHCP_AGENT_OPTIONS) {
 			if (!parse_agent_information_option
 			    (packet, len, buffer + offset + 2)) {
-				warn ("malformed agent information option.");
+				log_error ("malformed agent information option.");
 				buffer_dereference (&bp,
 						    "parse_option_buffer");
 				return 0;
@@ -154,7 +154,7 @@ int parse_option_buffer (packet, buffer, length)
 		} else {
 			if (!option_cache_allocate (&op,
 						    "parse_option_buffer")) {
-				warn ("Can't allocate storage for option %s.",
+				log_error ("Can't allocate storage for option %s.",
 				      dhcp_options [code].name);
 				buffer_dereference (&bp,
 						    "parse_option_buffer");
@@ -216,7 +216,7 @@ int parse_agent_information_option (packet, len, data)
 			dmalloc (op [1] + 1 + sizeof *t,
 				 "parse_agent_information_option");
 		if (!t)
-			error ("can't allocate space for option tag data.");
+			log_fatal ("can't allocate space for option tag data.");
 
 		/* Link it in at the tail of the list. */
 		t -> next = (struct option_tag *)0;
@@ -232,7 +232,7 @@ int parse_agent_information_option (packet, len, data)
 	a = (struct agent_options *)dmalloc (sizeof *a,
 					     "parse_agent_information_option");
 	if (!a)
-		error ("can't allocate space for agent option structure.");
+		log_fatal ("can't allocate space for agent option structure.");
 
 	/* Find the tail of the list. */
 	for (tail = &packet -> options.agent_options;
@@ -620,7 +620,7 @@ char *pretty_print_option (code, data, len, emit_commas, emit_quotes)
 
 	/* Code should be between 0 and 255. */
 	if (code > 255)
-		error ("pretty_print_option: bad code %d\n", code);
+		log_fatal ("pretty_print_option: bad code %d\n", code);
 
 	if (emit_commas)
 		comma = ',';
@@ -630,7 +630,7 @@ char *pretty_print_option (code, data, len, emit_commas, emit_quotes)
 	/* Figure out the size of the data. */
 	for (i = 0; dhcp_options [code].format [i]; i++) {
 		if (!numhunk) {
-			warn ("%s: Excess information in format string: %s\n",
+			log_error ("%s: Excess information in format string: %s\n",
 			      dhcp_options [code].name,
 			      &(dhcp_options [code].format [i]));
 			break;
@@ -672,7 +672,7 @@ char *pretty_print_option (code, data, len, emit_commas, emit_quotes)
 		      case 'e':
 			break;
 		      default:
-			warn ("%s: garbage in format string: %s\n",
+			log_error ("%s: garbage in format string: %s\n",
 			      dhcp_options [code].name,
 			      &(dhcp_options [code].format [i]));
 			break;
@@ -681,14 +681,14 @@ char *pretty_print_option (code, data, len, emit_commas, emit_quotes)
 
 	/* Check for too few bytes... */
 	if (hunksize > len) {
-		warn ("%s: expecting at least %d bytes; got %d",
+		log_error ("%s: expecting at least %d bytes; got %d",
 		      dhcp_options [code].name,
 		      hunksize, len);
 		return "<error>";
 	}
 	/* Check for too many bytes... */
 	if (numhunk == -1 && hunksize < len)
-		warn ("%s: %d extra bytes",
+		log_error ("%s: %d extra bytes",
 		      dhcp_options [code].name,
 		      len - hunksize);
 
@@ -697,7 +697,7 @@ char *pretty_print_option (code, data, len, emit_commas, emit_quotes)
 		numhunk = len / hunksize;
 	/* See if we got an exact number of hunks. */
 	if (numhunk > 0 && numhunk * hunksize < len)
-		warn ("%s: %d extra bytes at end of array\n",
+		log_error ("%s: %d extra bytes at end of array\n",
 		      dhcp_options [code].name,
 		      len - numhunk * hunksize);
 
@@ -753,7 +753,7 @@ char *pretty_print_option (code, data, len, emit_commas, emit_quotes)
 				strcpy (op, *dp++ ? "true" : "false");
 				break;
 			      default:
-				warn ("Unexpected format code %c", fmtbuf [j]);
+				log_error ("Unexpected format code %c", fmtbuf [j]);
 			}
 			op += strlen (op);
 			if (j + 1 < numelem && comma != ':')
@@ -788,7 +788,7 @@ void do_packet (interface, packet, len, from_port, from, hfrom)
 	tp.haddr = hfrom;
 	
 	if (packet -> hlen > sizeof packet -> chaddr) {
-		note ("Discarding packet with bogus hardware address length.");
+		log_info ("Discarding packet with bogus hardware address length.");
 		return;
 	}
 	if (!parse_options (&tp)) {
@@ -907,7 +907,7 @@ static void do_option_set (hash, option, op)
 	      case eval_statement:
 	      case break_statement:
 	      default:
-		warn ("bogus statement type in do_option_set.");
+		log_error ("bogus statement type in do_option_set.");
 		break;
 
 	      case default_option_statement:
@@ -933,7 +933,7 @@ static void do_option_set (hash, option, op)
 		if (!oc -> expression && oc -> data.len) {
 			if (!expression_allocate (&oc -> expression,
 						  "do_option_set")) {
-				warn ("Can't allocate const expression.");
+				log_error ("Can't allocate const expression.");
 				break;
 			}
 			oc -> expression -> op = expr_const_data;
@@ -1011,7 +1011,7 @@ void save_option (hash, oc)
 		/* Otherwise, just put the new one at the head of the list. */
 		bptr = new_pair ("save_option");
 		if (!bptr) {
-			warn ("No memory for option_cache reference.");
+			log_error ("No memory for option_cache reference.");
 			return;
 		}
 		bptr -> cdr = hash [hashix];
@@ -1058,7 +1058,7 @@ int option_cache_dereference (ptr, name)
 	char *name;
 {
 	if (!ptr || !*ptr) {
-		warn ("Null pointer in option_cache_dereference: %s", name);
+		log_error ("Null pointer in option_cache_dereference: %s", name);
 		abort ();
 	}
 

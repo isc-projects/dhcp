@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.59 1999/02/23 19:07:14 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.60 1999/02/24 17:56:51 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -69,7 +69,7 @@ int readconf ()
 	root_group.authoritative = 0;
 
 	if ((cfile = fopen (path_dhcpd_conf, "r")) == NULL)
-		error ("Can't open %s: %m", path_dhcpd_conf);
+		log_fatal ("Can't open %s: %m", path_dhcpd_conf);
 	do {
 		token = peek_token (&val, cfile);
 		if (token == EOF)
@@ -107,7 +107,7 @@ void read_leases ()
 	   thinking that no leases have been assigned to anybody, which
 	   could create severe network chaos. */
 	if ((cfile = fopen (path_dhcpd_db, "r")) == NULL)
-		error ("Can't open lease database %s: %m -- %s",
+		log_fatal ("Can't open lease database %s: %m -- %s",
 		       path_dhcpd_db,
 		       "check for failed database rewrite attempt!");
 	do {
@@ -115,7 +115,7 @@ void read_leases ()
 		if (token == EOF)
 			break;
 		if (token != LEASE) {
-			warn ("Corrupt lease file - possible data loss!");
+			log_error ("Corrupt lease file - possible data loss!");
 			skip_to_semi (cfile);
 		} else {
 			struct lease *lease;
@@ -242,7 +242,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 
 		share = new_shared_network ("parse_statement");
 		if (!share)
-			error ("No memory for shared subnet");
+			log_fatal ("No memory for shared subnet");
 		share -> group = clone_group (group, "parse_statement:subnet");
 		share -> group -> shared_network = share;
 
@@ -257,7 +257,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 			n = piaddr (share -> subnets -> net);
 			t = malloc (strlen (n) + 1);
 			if (!t)
-				error ("no memory for subnet name");
+				log_fatal ("no memory for subnet name");
 			strcpy (t, n);
 			share -> name = t;
 
@@ -360,7 +360,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		et = (struct executable_statement *)dmalloc (sizeof *et,
 							     "allow/deny");
 		if (!et)
-			error ("no memory for %s statement",
+			log_fatal ("no memory for %s statement",
 			       token == ALLOW ? "allow" : "deny");
 		memset (et, 0, sizeof *et);
 		et -> op = supersede_option_statement;
@@ -498,7 +498,7 @@ void parse_failover_peer (cfile, group, type)
 	if (is_identifier (token) || token == STRING) {
 		name = dmalloc (strlen (name) + 1, "peer name");
 		if (!peer -> name)
-			error ("no memory for peer name %s", name);
+			log_fatal ("no memory for peer name %s", name);
 	} else {
 		parse_warn ("expecting identifier or left brace");
 		skip_to_semi (cfile);
@@ -552,7 +552,7 @@ void parse_failover_peer (cfile, group, type)
 
 	peer = new_failover_peer ("parse_failover_peer");
 	if (!peer)
-		error ("no memory for %sfailover peer%s%s.",
+		log_fatal ("no memory for %sfailover peer%s%s.",
 		       name ? "" : "anonymous", name ? " " : "", name);
 
 	/* Save the name. */
@@ -654,7 +654,7 @@ void parse_pool_statement (cfile, group, type)
 
 	pool = new_pool ("parse_pool_statement");
 	if (!pool)
-		error ("no memory for pool.");
+		log_fatal ("no memory for pool.");
 
 	if (!parse_lbrace (cfile))
 		return;
@@ -669,7 +669,7 @@ void parse_pool_statement (cfile, group, type)
 		      get_permit:
 			permit = new_permit ("parse_pool_statement");
 			if (!permit)
-				error ("no memory for permit");
+				log_fatal ("no memory for permit");
 			next_token (&val, cfile);
 			token = next_token (&val, cfile);
 			switch (token) {
@@ -889,7 +889,7 @@ void parse_host_declaration (cfile, group)
 	host = (struct host_decl *)dmalloc (sizeof (struct host_decl),
 					    "parse_host_declaration");
 	if (!host)
-		error ("can't allocate host decl struct %s.", name);
+		log_fatal ("can't allocate host decl struct %s.", name);
 
 	host -> name = name;
 	host -> group = clone_group (group, "parse_host_declaration");
@@ -972,7 +972,7 @@ struct class *parse_class_declaration (cfile, group, type)
 		data.buffer = (struct buffer *)0;
 		if (!buffer_allocate (&data.buffer,
 				      data.len + 1, "parse_class_declaration"))
-			error ("no memoy for class name.");
+			log_fatal ("no memoy for class name.");
 		data.data = &data.buffer -> data [0];
 		data.terminated = 1;
 
@@ -980,7 +980,7 @@ struct class *parse_class_declaration (cfile, group, type)
 	} else if (type == 2) {
 		if (!(name = dmalloc (strlen (val) + 1,
 				      "parse_class_declaration")))
-			error ("No memory for class name %s.", val);
+			log_fatal ("No memory for class name %s.", val);
 		strcpy (name, val);
 	} else {
 		name = (char *)0;
@@ -1018,7 +1018,7 @@ struct class *parse_class_declaration (cfile, group, type)
 		class = (struct class *)dmalloc (sizeof (struct class),
 						 "parse_class_declaration");
 		if (!class)
-			error ("No memory for class %s.", val);
+			log_fatal ("No memory for class %s.", val);
 		memset (class, 0, sizeof *class);
 		if (pc) {
 			class -> group = pc -> group;
@@ -1031,7 +1031,7 @@ struct class *parse_class_declaration (cfile, group, type)
 						 sizeof (struct lease *),
 						 "check_collection");
 				if (!class -> billed_leases)
-					error ("no memory for billed leases");
+					log_fatal ("no memory for billed leases");
 				memset (class -> billed_leases, 0,
 					(class -> lease_limit *
 					 sizeof class -> billed_leases));
@@ -1057,7 +1057,7 @@ struct class *parse_class_declaration (cfile, group, type)
 				dmalloc (sizeof (struct executable_statement),
 					 "implicit user/vendor class"));
 			if (!stmt)
-				error ("no memory for class statement.");
+				log_fatal ("no memory for class statement.");
 			memset (stmt, 0, sizeof *stmt);
 			stmt -> op = supersede_option_statement;
 			if (option_cache_allocate (&stmt -> data.option,
@@ -1170,7 +1170,7 @@ struct class *parse_class_declaration (cfile, group, type)
 					 sizeof (struct lease *),
 					 "check_collection");
 			if (!class -> billed_leases)
-				error ("no memory for billed leases.");
+				log_fatal ("no memory for billed leases.");
 			memset (class -> billed_leases, 0,
 				(class -> lease_limit *
 				 sizeof class -> billed_leases));
@@ -1212,7 +1212,7 @@ void parse_shared_net_declaration (cfile, group)
 
 	share = new_shared_network ("parse_shared_net_declaration");
 	if (!share)
-		error ("No memory for shared subnet");
+		log_fatal ("No memory for shared subnet");
 	share -> pools = (struct pool *)0;
 	share -> next = (struct shared_network *)0;
 	share -> interface = (struct interface_info *)0;
@@ -1230,7 +1230,7 @@ void parse_shared_net_declaration (cfile, group)
 		}
 		name = malloc (strlen (val) + 1);
 		if (!name)
-			error ("no memory for shared network name");
+			log_fatal ("no memory for shared network name");
 		strcpy (name, val);
 	} else {
 		name = parse_host_name (cfile);
@@ -1282,7 +1282,7 @@ void parse_subnet_declaration (cfile, share)
 
 	subnet = new_subnet ("parse_subnet_declaration");
 	if (!subnet)
-		error ("No memory for new subnet");
+		log_fatal ("No memory for new subnet");
 	subnet -> shared_network = share;
 	subnet -> group = clone_group (share -> group,
 				       "parse_subnet_declaration");
@@ -1538,7 +1538,7 @@ struct lease *parse_lease_declaration (cfile)
 					lease.uid = (unsigned char *)
 						malloc (lease.uid_len);
 					if (!lease.uid) {
-						warn ("no space for uid");
+						log_error ("no space for uid");
 						return (struct lease *)0;
 					}
 					memcpy (lease.uid, val, lease.uid_len);
@@ -1548,7 +1548,7 @@ struct lease *parse_lease_declaration (cfile)
 						(cfile, (unsigned char *)0,
 						 &lease.uid_len, ':', 16, 8);
 					if (!lease.uid) {
-						warn ("no space for uid");
+						log_error ("no space for uid");
 						return (struct lease *)0;
 					}
 					if (lease.uid_len == 0) {
@@ -1559,7 +1559,7 @@ struct lease *parse_lease_declaration (cfile)
 					}
 				}
 				if (!lease.uid) {
-					error ("No memory for lease uid");
+					log_fatal ("No memory for lease uid");
 				}
 				break;
 
@@ -1762,12 +1762,12 @@ void parse_address_range (cfile, group, type, pool)
 		if (!pool) {
 			pool = new_pool ("parse_address_range");
 			if (!pool)
-				error ("no memory for ad-hoc pool.");
+				log_fatal ("no memory for ad-hoc pool.");
 			if (dynamic) {
 				pool -> permit_list =
 					new_permit ("parse_address_range");
 				if (!pool -> permit_list)
-					error ("no memory for ad-hoc permit.");
+					log_fatal ("no memory for ad-hoc permit.");
 				pool -> permit_list -> type =
 					permit_dynamic_bootp_clients;
 			}

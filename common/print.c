@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: print.c,v 1.19 1999/02/14 18:55:01 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: print.c,v 1.20 1999/02/24 17:56:47 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -76,26 +76,26 @@ void print_lease (lease)
 	struct tm *t;
 	char tbuf [32];
 
-	debug ("  Lease %s",
+	log_debug ("  Lease %s",
 	       piaddr (lease -> ip_addr));
 	
 	t = gmtime (&lease -> starts);
 	strftime (tbuf, sizeof tbuf, "%Y/%m/%d %H:%M:%S", t);
-	debug ("  start %s", tbuf);
+	log_debug ("  start %s", tbuf);
 	
 	t = gmtime (&lease -> ends);
 	strftime (tbuf, sizeof tbuf, "%Y/%m/%d %H:%M:%S", t);
-	debug ("  end %s", tbuf);
+	log_debug ("  end %s", tbuf);
 	
 	t = gmtime (&lease -> timestamp);
 	strftime (tbuf, sizeof tbuf, "%Y/%m/%d %H:%M:%S", t);
-	debug ("  stamp %s", tbuf);
+	log_debug ("  stamp %s", tbuf);
 	
-	debug ("    hardware addr = %s",
+	log_debug ("    hardware addr = %s",
 	       print_hw_addr (lease -> hardware_addr.htype,
 			       lease -> hardware_addr.hlen,
 			       lease -> hardware_addr.haddr));
-	debug ("  host %s  ",
+	log_debug ("  host %s  ",
 	       lease -> host ? lease -> host -> name : "<none>");
 }	
 
@@ -105,37 +105,37 @@ void dump_packet (tp)
 {
 	struct dhcp_packet *tdp = tp -> raw;
 
-	debug ("packet length %d", tp -> packet_length);
-	debug ("op = %d  htype = %d  hlen = %d  hops = %d",
+	log_debug ("packet length %d", tp -> packet_length);
+	log_debug ("op = %d  htype = %d  hlen = %d  hops = %d",
 	       tdp -> op, tdp -> htype, tdp -> hlen, tdp -> hops);
-	debug ("xid = %x  secs = %d  flags = %x",
+	log_debug ("xid = %x  secs = %d  flags = %x",
 	       tdp -> xid, tdp -> secs, tdp -> flags);
-	debug ("ciaddr = %s", inet_ntoa (tdp -> ciaddr));
-	debug ("yiaddr = %s", inet_ntoa (tdp -> yiaddr));
-	debug ("siaddr = %s", inet_ntoa (tdp -> siaddr));
-	debug ("giaddr = %s", inet_ntoa (tdp -> giaddr));
-	debug ("chaddr = %02.2x:%02.2x:%02.2x:%02.2x:%02.2x:%02.2x",
+	log_debug ("ciaddr = %s", inet_ntoa (tdp -> ciaddr));
+	log_debug ("yiaddr = %s", inet_ntoa (tdp -> yiaddr));
+	log_debug ("siaddr = %s", inet_ntoa (tdp -> siaddr));
+	log_debug ("giaddr = %s", inet_ntoa (tdp -> giaddr));
+	log_debug ("chaddr = %02.2x:%02.2x:%02.2x:%02.2x:%02.2x:%02.2x",
 	       ((unsigned char *)(tdp -> chaddr)) [0],
 	       ((unsigned char *)(tdp -> chaddr)) [1],
 	       ((unsigned char *)(tdp -> chaddr)) [2],
 	       ((unsigned char *)(tdp -> chaddr)) [3],
 	       ((unsigned char *)(tdp -> chaddr)) [4],
 	       ((unsigned char *)(tdp -> chaddr)) [5]);
-	debug ("filename = %s", tdp -> file);
-	debug ("server_name = %s", tdp -> sname);
+	log_debug ("filename = %s", tdp -> file);
+	log_debug ("server_name = %s", tdp -> sname);
 	if (tp -> options_valid) {
 		int i;
 
 		for (i = 0; i < 256; i++) {
 			if (tp -> options [i].data)
-				debug ("  %s = %s",
+				log_debug ("  %s = %s",
 					dhcp_options [i].name,
 					pretty_print_option
 					(i, tp -> options [i].data,
 					 tp -> options [i].len, 1, 1));
 		}
 	}
-	debug ("");
+	log_debug ("");
 }
 #endif
 
@@ -152,7 +152,7 @@ void dump_raw (buf, len)
 	for (i = 0; i < len; i++) {
 		if ((i & 15) == 0) {
 			if (lbix)
-				note (lbuf);
+				log_info (lbuf);
 			sprintf (lbuf, "%03x:", i);
 			lbix = 4;
 		} else if ((i & 7) == 0)
@@ -160,7 +160,7 @@ void dump_raw (buf, len)
 		sprintf (&lbuf [lbix], " %02x", buf [i]);
 		lbix += 3;
 	}
-	note (lbuf);
+	log_info (lbuf);
 }
 
 void hash_dump (table)
@@ -175,12 +175,12 @@ void hash_dump (table)
 	for (i = 0; i < table -> hash_count; i++) {
 		if (!table -> buckets [i])
 			continue;
-		note ("hash bucket %d:", i);
+		log_info ("hash bucket %d:", i);
 		for (bp = table -> buckets [i]; bp; bp = bp -> next) {
 			if (bp -> len)
 				dump_raw (bp -> name, bp -> len);
 			else
-				note ((char *)bp -> name);
+				log_info ((char *)bp -> name);
 		}
 	}
 }
@@ -526,6 +526,6 @@ void print_expression (name, expr)
 	char buf [1024];
 
 	print_subexpression (expr, buf, sizeof buf);
-	note ("%s: %s", name, buf);
+	log_info ("%s: %s", name, buf);
 }
 

@@ -54,7 +54,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: raw.c,v 1.11 1997/10/20 21:47:14 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: raw.c,v 1.12 1999/02/24 17:56:47 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -79,25 +79,25 @@ void if_register_send (info)
 
 	/* List addresses on which we're listening. */
         if (!quiet_interface_discovery)
-		note ("Sending on %s, port %d",
+		log_info ("Sending on %s, port %d",
 		      piaddr (info -> address), htons (local_port));
 	if ((sock = socket (AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0)
-		error ("Can't create dhcp socket: %m");
+		log_fatal ("Can't create dhcp socket: %m");
 
 	/* Set the BROADCAST option so that we can broadcast DHCP responses. */
 	flag = 1;
 	if (setsockopt (sock, SOL_SOCKET, SO_BROADCAST,
 			&flag, sizeof flag) < 0)
-		error ("Can't set SO_BROADCAST option on dhcp socket: %m");
+		log_fatal ("Can't set SO_BROADCAST option on dhcp socket: %m");
 
 	/* Set the IP_HDRINCL flag so that we can supply our own IP
 	   headers... */
 	if (setsockopt (sock, IPPROTO_IP, IP_HDRINCL, &flag, sizeof flag) < 0)
-		error ("Can't set IP_HDRINCL flag: %m");
+		log_fatal ("Can't set IP_HDRINCL flag: %m");
 
 	info -> wfdesc = sock;
         if (!quiet_interface_discovery)
-		note ("Sending on   Raw/%s/%s",
+		log_info ("Sending on   Raw/%s/%s",
 		      info -> name,
 		      (info -> shared_network ?
 		       info -> shared_network -> name : "unattached"));

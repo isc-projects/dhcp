@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: interact.c,v 1.1 1998/04/09 05:18:56 mellon Exp $ Copyright (c) 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: interact.c,v 1.2 1999/02/24 17:56:45 mellon Exp $ Copyright (c) 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -60,13 +60,13 @@ void interact_startup ()
 
 	/* Only initialize interact once. */
 	if (interact_initialized)
-		error ("attempted to reinitialize interact protocol");
+		log_fatal ("attempted to reinitialize interact protocol");
 	interact_initialized = 1;
 
 	/* Make a socket... */
 	interact_fd = socket (AF_UNIX, SOCK_STREAM, 0);
 	if (interact_fd < 0)
-		error ("unable to create interact socket: %m");
+		log_fatal ("unable to create interact socket: %m");
 
 	/* XXX for now... */
 	name.sun_family = PF_UNIX;
@@ -83,7 +83,7 @@ void interact_startup ()
 
 	/* Bind to it... */
 	if (bind (interact_fd, (struct sockaddr *)&name, len) < 0) {
-		warn ("can't bind to interact socket: %m");
+		log_error ("can't bind to interact socket: %m");
 		close (interact_fd);
 		umask (m);
 		return;
@@ -92,7 +92,7 @@ void interact_startup ()
 
 	/* Listen for connections... */
 	if (listen (interact_fd, 1) < 0) {
-		warn ("can't listen on interact socket: %m");
+		log_error ("can't listen on interact socket: %m");
 		close (interact_fd);
 		unlink (name.sun_path);
 		return;
@@ -112,20 +112,20 @@ void new_interact_connection (proto)
 
 	tmp = (struct interact_client *)malloc (sizeof *tmp);
 	if (!tmp)
-		error ("Can't find memory for new client!");
+		log_fatal ("Can't find memory for new client!");
 	memset (tmp, 0, sizeof *tmp);
 
 	namelen = sizeof name;
 	new_fd = accept (proto -> fd, (struct sockaddr *)&name, &namelen);
 	if (new_fd < 0) {
-		warn ("accept: %m");
+		log_error ("accept: %m");
 		free (tmp);
 		return;
 	}
 
 	if ((arg = fcntl (new_fd, F_GETFL, 0)) < 0) {
 	bad_flag:
-		warn ("Can't set flags on new interactive client: %m");
+		log_error ("Can't set flags on new interactive client: %m");
 		close (new_fd);
 		free (tmp);
 		return;
@@ -153,7 +153,7 @@ void interact_client_input (proto)
 	status = read (proto -> fd, &client -> ibuf [client -> ibuflen],
 		       (sizeof client -> ibuf) - client -> ibuflen);
 	if (status < 0) {
-		warn ("interact_client_input: %m");
+		log_error ("interact_client_input: %m");
 	blow:
 		close (proto -> fd);
 		remove_protocol (proto);
@@ -168,7 +168,7 @@ void interact_client_input (proto)
 	eobuf = memchr (client -> ibuf, '\n', client -> ibuflen);
 	if (!eobuf) {
 		if (client -> ibuflen == sizeof client -> ibuf) {
-			warn ("interact_client_input: buffer overflow.");
+			log_error ("interact_client_input: buffer overflow.");
 			goto blow;
 		}
 		return;
@@ -220,7 +220,7 @@ int interact_client_write (client, string, lastp)
 		obufmax = (strlen (string) + 1025) & ~1023;
 		obuf = malloc (obufmax);
 		if (!obuf) {
-			warn ("interact_client_write: out of memory");
+			log_error ("interact_client_write: out of memory");
 		blow:
 			close (client -> proto -> fd);
 			remove_protocol (client -> proto);

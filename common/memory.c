@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: memory.c,v 1.45 1999/02/14 18:49:45 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: memory.c,v 1.46 1999/02/24 17:56:46 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -224,7 +224,7 @@ void new_address_range (low, high, subnet, pool)
 	/* All subnets should have attached shared network structures. */
 	if (!share) {
 		strcpy (netbuf, piaddr (subnet -> net));
-		error ("No shared network for network %s (%s)",
+		log_fatal ("No shared network for network %s (%s)",
 		       netbuf, piaddr (subnet -> netmask));
 	}
 
@@ -242,7 +242,7 @@ void new_address_range (low, high, subnet, pool)
 		strcpy (lowbuf, piaddr (low));
 		strcpy (highbuf, piaddr (high));
 		strcpy (netbuf, piaddr (subnet -> netmask));
-		error ("Address range %s to %s, netmask %s spans %s!",
+		log_fatal ("Address range %s to %s, netmask %s spans %s!",
 		       lowbuf, highbuf, netbuf, "multiple subnets");
 	}
 
@@ -251,7 +251,7 @@ void new_address_range (low, high, subnet, pool)
 		strcpy (lowbuf, piaddr (low));
 		strcpy (highbuf, piaddr (high));
 		strcpy (netbuf, piaddr (subnet -> netmask));
-		error ("Address range %s to %s not on net %s/%s!",
+		log_fatal ("Address range %s to %s not on net %s/%s!",
 		       lowbuf, highbuf, piaddr (subnet -> net), netbuf);
 	}
 
@@ -270,7 +270,7 @@ void new_address_range (low, high, subnet, pool)
 	if (!address_range) {
 		strcpy (lowbuf, piaddr (low));
 		strcpy (highbuf, piaddr (high));
-		error ("No memory for address range %s-%s.", lowbuf, highbuf);
+		log_fatal ("No memory for address range %s-%s.", lowbuf, highbuf);
 	}
 	memset (address_range, 0, (sizeof *address_range) * (max - min + 1));
 
@@ -378,7 +378,7 @@ int subnet_inner_than (subnet, scan, warnp)
 				break;
 		strcpy (n1buf, piaddr (subnet -> net));
 		if (warnp)
-			warn ("%ssubnet %s/%d conflicts with subnet %s/%d",
+			log_error ("%ssubnet %s/%d conflicts with subnet %s/%d",
 			      "Warning: ", n1buf, 32 - i,
 			      piaddr (scan -> net), 32 - j);
 		if (i < j)
@@ -440,7 +440,7 @@ void enter_lease (lease)
 	if (!comp) {
 		comp = new_lease ("enter_lease");
 		if (!comp) {
-			error ("No memory for lease %s\n",
+			log_fatal ("No memory for lease %s\n",
 			       piaddr (lease -> ip_addr));
 		}
 		*comp = *lease;
@@ -494,7 +494,7 @@ int supersede_lease (comp, lease, commit)
 	       memcmp (comp -> hardware_addr.haddr,
 		       lease -> hardware_addr.haddr,
 		       comp -> hardware_addr.hlen))))) {
-		warn ("Lease conflict at %s",
+		log_error ("Lease conflict at %s",
 		      piaddr (comp -> ip_addr));
 		return 0;
 	}
@@ -546,7 +546,7 @@ int supersede_lease (comp, lease, commit)
 			lease -> uid = (unsigned char *)0;
 			lease -> uid_max = 0;
 		} else {
-			error ("corrupt lease uid."); /* XXX */
+			log_fatal ("corrupt lease uid."); /* XXX */
 		}
 	} else {
 		comp -> uid = (unsigned char *)0;
@@ -671,7 +671,7 @@ void abandon_lease (lease, message)
 	lease -> flags |= ABANDONED_LEASE;
 	lt = *lease;
 	lt.ends = cur_time; /* XXX */
-	warn ("Abandoning IP address %s: %s",
+	log_error ("Abandoning IP address %s: %s",
 	      piaddr (lease -> ip_addr), message);
 	lt.hardware_addr.htype = 0;
 	lt.hardware_addr.hlen = 0;
@@ -871,7 +871,7 @@ struct group *clone_group (group, caller)
 {
 	struct group *g = new_group (caller);
 	if (!g)
-		error ("%s: can't allocate new group", caller);
+		log_fatal ("%s: can't allocate new group", caller);
 	*g = *group;
 	g -> statements = (struct executable_statement *)0;
 	g -> next = group;
@@ -893,13 +893,13 @@ void write_leases ()
 				    l -> uid_len ||
 				    (l -> flags & ABANDONED_LEASE))
 					if (!write_lease (l))
-						error ("Can't rewrite %s",
+						log_fatal ("Can't rewrite %s",
 						       "lease database");
 			}
 		}
 	}
 	if (!commit_leases ())
-		error ("Can't commit leases to new database: %m");
+		log_fatal ("Can't commit leases to new database: %m");
 }
 
 void dump_subnets ()
@@ -909,20 +909,20 @@ void dump_subnets ()
 	struct subnet *n;
 	struct pool *p;
 
-	note ("Subnets:");
+	log_info ("Subnets:");
 	for (n = subnets; n; n = n -> next_subnet) {
-		debug ("  Subnet %s", piaddr (n -> net));
-		debug ("     netmask %s",
+		log_debug ("  Subnet %s", piaddr (n -> net));
+		log_debug ("     netmask %s",
 		       piaddr (n -> netmask));
 	}
-	note ("Shared networks:");
+	log_info ("Shared networks:");
 	for (s = shared_networks; s; s = s -> next) {
-		note ("  %s", s -> name);
+		log_info ("  %s", s -> name);
 		for (p = s -> pools; p; p = p -> next) {
 			for (l = p -> leases; l; l = l -> next) {
 				print_lease (l);
 			}
-			debug ("Last Lease:");
+			log_debug ("Last Lease:");
 			print_lease (p -> last_lease);
 		}
 	}

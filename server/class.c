@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: class.c,v 1.7 1998/11/11 07:58:35 mellon Exp $ Copyright (c) 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: class.c,v 1.8 1999/02/24 17:56:51 mellon Exp $ Copyright (c) 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -159,7 +159,7 @@ void classification_setup ()
 	me = (struct expression *)dmalloc (sizeof (struct expression),
 					   "default check expression");
 	if (!me)
-		error ("Can't allocate default check expression");
+		log_fatal ("Can't allocate default check expression");
 	memset (me, 0, sizeof *me);
 	me -> op = expr_check;
 	me -> data.check = &default_collection;
@@ -169,7 +169,7 @@ void classification_setup ()
 		dmalloc (sizeof (struct executable_statement),
 			 "add default collection check rule");
 	if (!rules)
-		error ("Can't allocate check of default collection");
+		log_fatal ("Can't allocate check of default collection");
 	memset (rules, 0, sizeof *rules);
 	rules -> op = eval_statement;
 	rules -> data.eval = me;
@@ -196,7 +196,7 @@ int check_collection (packet, collection)
 
 	for (class = collection -> classes; class; class = class -> nic) {
 #if defined (DEBUG_CLASS_MATCHING)
-		note ("checking against class %s...", class -> name);
+		log_info ("checking against class %s...", class -> name);
 #endif
 		memset (&data, 0, sizeof data);
 		/* If a class is for billing, don't put the client in the
@@ -211,7 +211,7 @@ int check_collection (packet, collection)
 							data.data,
 							data.len)))) {
 #if defined (DEBUG_CLASS_MATCHING)
-					note ("matches subclass %s.",
+					log_info ("matches subclass %s.",
 					      print_hex_1 (data.len,
 							   data.data, 60));
 #endif
@@ -222,7 +222,7 @@ int check_collection (packet, collection)
 					continue;
 				}
 #if defined (DEBUG_CLASS_MATCHING)
-				note ("spawning subclass %s.",
+				log_info ("spawning subclass %s.",
 				      print_hex_1 (data.len, data.data, 60));
 #endif
 				nc = (struct class *)
@@ -240,7 +240,7 @@ int check_collection (packet, collection)
 						  sizeof (struct lease *),
 						  "check_collection"));
 					if (!nc -> billed_leases) {
-						warn ("no memory for billing");
+						log_error ("no memory for billing");
 						data_string_forget
 							(&nc -> hash_string,
 							 "check_collection");
@@ -270,7 +270,7 @@ int check_collection (packet, collection)
 		if (status) {
 			matched = 1;
 #if defined (DEBUG_CLASS_MATCHING)
-			note ("matches class.");
+			log_info ("matches class.");
 #endif
 			classify (packet, class);
 		}
@@ -285,7 +285,7 @@ void classify (packet, class)
 	if (packet -> class_count < PACKET_MAX_CLASSES)
 		packet -> classes [packet -> class_count++] = class;
 	else
-		warn ("too many groups for %s",
+		log_error ("too many groups for %s",
 		      print_hw_addr (packet -> raw -> htype,
 				     packet -> raw -> hlen,
 				     packet -> raw -> chaddr));
@@ -315,7 +315,7 @@ int unbill_class (lease, class)
 		if (class -> billed_leases [i] == lease)
 			break;
 	if (i == class -> lease_limit) {
-		warn ("lease %s unbilled with no billing arrangement.",
+		log_error ("lease %s unbilled with no billing arrangement.",
 		      piaddr (lease -> ip_addr));
 		return 0;
 	}
@@ -339,7 +339,7 @@ int bill_class (lease, class)
 			break;
 
 	if (i == class -> lease_limit) {
-		warn ("class billing consumption disagrees with leases.");
+		log_error ("class billing consumption disagrees with leases.");
 		return 0;
 	}
 

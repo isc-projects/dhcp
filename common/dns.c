@@ -48,7 +48,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dns.c,v 1.9 1998/03/17 06:09:59 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dns.c,v 1.10 1999/02/24 17:56:44 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -76,7 +76,7 @@ void dns_startup ()
 
 	/* Only initialize icmp once. */
 	if (dns_protocol_initialized)
-		error ("attempted to reinitialize dns protocol");
+		log_fatal ("attempted to reinitialize dns protocol");
 	dns_protocol_initialized = 1;
 
 	/* Get the protocol number (should be 1). */
@@ -89,7 +89,7 @@ void dns_startup ()
 	/* Get a socket for the DNS protocol. */
 	dns_protocol_fd = socket (AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	if (dns_protocol_fd < 0)
-		error ("unable to create dns socket: %m");
+		log_fatal ("unable to create dns socket: %m");
 
 	first_name_server ();
 
@@ -473,13 +473,13 @@ void dns_packet (protocol)
 	status = recvfrom (protocol -> fd, (char *)buf, sizeof buf, 0,
 			  (struct sockaddr *)&from, &len);
 	if (status < 0) {
-		warn ("dns_packet: %m");
+		log_error ("dns_packet: %m");
 		return;
 	}
 
 	/* Response is too long? */
 	if (len > 512) {
-		warn ("dns_packet: dns message too long (%d)", len);
+		log_error ("dns_packet: dns message too long (%d)", len);
 		return;
 	}
 
@@ -492,7 +492,7 @@ void dns_packet (protocol)
 	/* If this is a response to a query from us, there should have
            been only one query. */
 	if (ntohs (ns_header -> qdcount) != 1) {
-		warn ("Bogus DNS answer packet from %s claims %d queries.\n",
+		log_error ("Bogus DNS answer packet from %s claims %d queries.\n",
 		      inet_ntoa (from.sin_addr),
 		      ntohs (ns_header -> qdcount));
 		return;
@@ -513,12 +513,12 @@ void dns_packet (protocol)
 	/* See if we asked this question. */
 	query = find_dns_query (&qbuf.q, 0);
 	if (!query) {
-warn ("got answer for question %s from DNS, which we didn't ask.",
+log_error ("got answer for question %s from DNS, which we didn't ask.",
 qbuf.q.data);
 		return;
 	}
 
-note ("got answer for question %s from DNS", qbuf.q.data);
+log_info ("got answer for question %s from DNS", qbuf.q.data);
 
 	/* Wake up everybody who's waiting. */
 	for (wakeup = query -> wakeups; wakeup; wakeup = wakeup -> next) {

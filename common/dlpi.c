@@ -122,7 +122,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dlpi.c,v 1.3 1999/02/14 18:48:05 mellon Exp $ Copyright (c) 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dlpi.c,v 1.4 1999/02/24 17:56:44 mellon Exp $ Copyright (c) 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 static int strioctl PROTO ((int fd, int cmd, int timeout, int len, char *dp));
@@ -208,7 +208,7 @@ int if_register_dlpi (info)
 
 	/* Open a DLPI device */
 	if ((sock = dlpiopen (info -> name)) < 0) {
-	    error ("Can't open DLPI device for %s: %m", info -> name);
+	    log_fatal ("Can't open DLPI device for %s: %m", info -> name);
 	}
 
 	/*
@@ -220,7 +220,7 @@ int if_register_dlpi (info)
 	 * the dl_mac_type and dl_provider_style
 	 */
 	if (dlpiinforeq(sock) < 0 || dlpiinfoack(sock, (char *)buf) < 0) {
-	    error ("Can't get DLPI MAC type for %s: %m", info -> name);
+	    log_fatal ("Can't get DLPI MAC type for %s: %m", info -> name);
 	} else {
 	    switch (dlp -> info_ack.dl_mac_type) {
 	      case DL_CSMACD: /* IEEE 802.3 */
@@ -231,7 +231,7 @@ int if_register_dlpi (info)
 		info -> hw_address.htype = HTYPE_FDDI;
 		break;
 	      default:
-		error ("%s: unknown DLPI MAC type %d",
+		log_fatal ("%s: unknown DLPI MAC type %d",
 		       info -> name,
 		       dlp -> info_ack.dl_mac_type);
 		break;
@@ -247,7 +247,7 @@ int if_register_dlpi (info)
 	
 	    if (dlpiattachreq (sock, unit) < 0
 		|| dlpiokack (sock, (char *)buf) < 0) {
-		error ("Can't attach DLPI device for %s: %m", info -> name);
+		log_fatal ("Can't attach DLPI device for %s: %m", info -> name);
 	    }
 	}
 
@@ -256,7 +256,7 @@ int if_register_dlpi (info)
 	 */
 	if (dlpibindreq (sock, DLPI_DEFAULTSAP, 0, DL_CLDLS, 0, 0) < 0
 	    || dlpibindack (sock, (char *)buf) < 0) {
-	    error ("Can't bind DLPI device for %s: %m", info -> name);
+	    log_fatal ("Can't bind DLPI device for %s: %m", info -> name);
 	}
 
 	/*
@@ -265,7 +265,7 @@ int if_register_dlpi (info)
 	 */
 	if (dlpiphysaddrreq (sock, DL_CURR_PHYS_ADDR) < 0
 	    || dlpiphysaddrack (sock, (char *)buf) < 0) {
-	    error ("Can't get DLPI hardware address for %s: %m",
+	    log_fatal ("Can't get DLPI hardware address for %s: %m",
 		   info -> name);
 	}
 
@@ -276,14 +276,14 @@ int if_register_dlpi (info)
 
 #ifdef USE_DLPI_RAW
 	if (strioctl (sock, DLIOCRAW, INFTIM, 0, 0) < 0) {
-	    error ("Can't set DLPI RAW mode for %s: %m",
+	    log_fatal ("Can't set DLPI RAW mode for %s: %m",
 		   info -> name);
 	}
 #endif
 
 #ifdef USE_DLPI_PFMOD
 	if (ioctl (sock, I_PUSH, "pfmod") < 0) {
-	    error ("Can't push packet filter onto DLPI for %s: %m",
+	    log_fatal ("Can't push packet filter onto DLPI for %s: %m",
 		   info -> name);
 	}
 #endif
@@ -336,7 +336,7 @@ void if_register_send (info)
 	/* Install the filter */
 	if (strioctl (info -> wfdesc, PFIOCSETF, INFTIM,
 		      sizeof (pf), (char *)&pf) < 0) {
-	    error ("Can't set PFMOD send filter on %s: %m", info -> name);
+	    log_fatal ("Can't set PFMOD send filter on %s: %m", info -> name);
 	}
 
 # endif /* USE_DLPI_PFMOD */
@@ -349,7 +349,7 @@ void if_register_send (info)
 #endif
 
         if (!quiet_interface_discovery)
-		note ("Sending on   DLPI/%s/%s/%s",
+		log_info ("Sending on   DLPI/%s/%s/%s",
 		      info -> name,
 		      print_hw_addr (info -> hw_address.htype,
 				     info -> hw_address.hlen,
@@ -426,12 +426,12 @@ void if_register_receive (info)
 	/* Install the filter... */
 	if (strioctl (info -> rfdesc, PFIOCSETF, INFTIM,
 		      sizeof (pf), (char *)&pf) < 0) {
-	    error ("Can't set PFMOD receive filter on %s: %m", info -> name);
+	    log_fatal ("Can't set PFMOD receive filter on %s: %m", info -> name);
 	}
 #endif
 
         if (!quiet_interface_discovery)
-		note ("Listening on DLPI/%s/%s/%s",
+		log_info ("Listening on DLPI/%s/%s/%s",
 		      info -> name,
 		      print_hw_addr (info -> hw_address.htype,
 				     info -> hw_address.hlen,
@@ -1164,14 +1164,14 @@ static int strgetmsg (fd, ctlp, datap, flagsp, caller)
 		count = poll (&pfd, 1, to_msec);
 		
 		if (count == 0) {
-			/* error ("strgetmsg: timeout"); */
+			/* log_fatal ("strgetmsg: timeout"); */
 			return -1;
 		} else if (count < 0) {
 			if (errno == EAGAIN || errno == EINTR) {
 				time (&now);
 				continue;
 			} else {
-				/* error ("poll: %m"); */
+				/* log_fatal ("poll: %m"); */
 				return -1;
 			}
 		} else {
@@ -1186,7 +1186,7 @@ static int strgetmsg (fd, ctlp, datap, flagsp, caller)
 	(void) sigset (SIGALRM, sigalrm);
 	
 	if (alarm (DLPI_MAXWAIT) < 0) {
-		/* error ("alarm: %m"); */
+		/* log_fatal ("alarm: %m"); */
 		return -1;
 	}
 #endif /* !defined (USE_POLL) */
@@ -1204,7 +1204,7 @@ static int strgetmsg (fd, ctlp, datap, flagsp, caller)
 	 * Stop timer.
 	 */	
 	if (alarm (0) < 0) {
-		/* error ("alarm: %m"); */
+		/* log_fatal ("alarm: %m"); */
 		return -1;
 	}
 #endif

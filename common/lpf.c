@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: lpf.c,v 1.2 1999/02/14 06:05:49 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: lpf.c,v 1.3 1999/02/24 17:56:45 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -93,7 +93,7 @@ int if_register_lpf (info)
 		if (errno == ENOPROTOOPT || errno == EPROTONOSUPPORT ||
 		    errno == ESOCKTNOSUPPORT || errno == EPFNOSUPPORT ||
 		    errno == EAFNOSUPPORT)
-			error ("socket: %m - make sure %s %s!",
+			log_fatal ("socket: %m - make sure %s %s!",
 			       "CONFIG_PACKET and CONFIG_FILTER are defined",
 			       "in your kernel configuration");
 		error("Open a socket for LPF: %m");
@@ -107,7 +107,7 @@ int if_register_lpf (info)
 		if (errno == ENOPROTOOPT || errno == EPROTONOSUPPORT ||
 		    errno == ESOCKTNOSUPPORT || errno == EPFNOSUPPORT ||
 		    errno == EAFNOSUPPORT)
-			error ("socket: %m - make sure %s %s!",
+			log_fatal ("socket: %m - make sure %s %s!",
 			       "CONFIG_PACKET and CONFIG_FILTER are defined",
 			       "in your kernel configuration");
 		error("Bind socket to interface: %m");
@@ -129,7 +129,7 @@ void if_register_send (info)
 	info -> wfdesc = info -> rfdesc;
 #endif
 	if (!quiet_interface_discovery)
-		note ("Sending on   LPF/%s/%s/%s",
+		log_info ("Sending on   LPF/%s/%s/%s",
 		      info -> name,
 		      print_hw_addr (info -> hw_address.htype,
 				     info -> hw_address.hlen,
@@ -168,13 +168,13 @@ void if_register_receive (info)
 		if (errno == ENOPROTOOPT || errno == EPROTONOSUPPORT ||
 		    errno == ESOCKTNOSUPPORT || errno == EPFNOSUPPORT ||
 		    errno == EAFNOSUPPORT)
-			error ("socket: %m - make sure %s %s!",
+			log_fatal ("socket: %m - make sure %s %s!",
 			       "CONFIG_PACKET and CONFIG_FILTER are defined",
 			       "in your kernel configuration");
-		error ("Can't install packet filter program: %m");
+		log_fatal ("Can't install packet filter program: %m");
 	}
 	if (!quiet_interface_discovery)
-		note ("Listening on LPF/%s/%s/%s",
+		log_info ("Listening on LPF/%s/%s/%s",
 		      info -> name,
 		      print_hw_addr (info -> hw_address.htype,
 				     info -> hw_address.hlen,

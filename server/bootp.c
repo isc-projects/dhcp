@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bootp.c,v 1.37 1999/02/14 19:40:22 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bootp.c,v 1.38 1999/02/24 17:56:50 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -81,7 +81,7 @@ void bootp (packet)
 
 
 	if (!locate_network (packet)) {
-		note ("%s: network unknown", msgbuf);
+		log_info ("%s: network unknown", msgbuf);
 		return;
 	}
 
@@ -128,7 +128,7 @@ void bootp (packet)
 			ack_lease (packet, lease, 0, 0, msgbuf);
 			return;
 		}
-		note ("%s: no available leases", msgbuf);
+		log_info ("%s: no available leases", msgbuf);
 		return;
 	}
 
@@ -150,14 +150,14 @@ void bootp (packet)
 	if (evaluate_boolean_option_cache (packet, &options,
 					   lookup_option (options.dhcp_hash,
 							  SV_ALLOW_BOOTP))) {
-		note ("%s: bootp disallowed", msgbuf);
+		log_info ("%s: bootp disallowed", msgbuf);
 		return;
 	} 
 
 	if (evaluate_boolean_option_cache (packet, &options,
 					   lookup_option (options.dhcp_hash,
 							  SV_ALLOW_BOOTING))) {
-		note ("%s: booting disallowed", msgbuf);
+		log_info ("%s: booting disallowed", msgbuf);
 		return;
 	}
 
@@ -244,8 +244,8 @@ void bootp (packet)
 	from = packet -> interface -> primary_address;
 
 	/* Report what we're doing... */
-	note ("%s", msgbuf);
-	note ("BOOTREPLY for %s to %s (%s) via %s",
+	log_info ("%s", msgbuf);
+	log_info ("BOOTREPLY for %s to %s (%s) via %s",
 	      piaddr (ip_address), hp -> name,
 	      print_hw_addr (packet -> raw -> htype,
 			     packet -> raw -> hlen,
@@ -272,7 +272,7 @@ void bootp (packet)
 					      &raw, outgoing.packet_length,
 					      from, &to, &hto);
 			if (result < 0)
-				warn ("send_packet: %m");
+				log_error ("send_packet: %m");
 			return;
 		}
 	/* Otherwise, broadcast it on the local network. */
@@ -286,5 +286,5 @@ void bootp (packet)
 			      packet, &raw, outgoing.packet_length,
 			      from, &to, &hto);
 	if (result < 0)
-		warn ("send_packet: %m");
+		log_error ("send_packet: %m");
 }

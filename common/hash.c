@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: hash.c,v 1.10 1998/03/16 06:11:51 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: hash.c,v 1.11 1999/02/24 17:56:45 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -105,7 +105,7 @@ void add_hash (table, name, len, pointer)
 	bp = new_hash_bucket ("add_hash");
 
 	if (!bp) {
-		warn ("Can't add %s to hash table.", name);
+		log_error ("Can't add %s to hash table.", name);
 		return;
 	}
 	bp -> name = name;

@@ -94,7 +94,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.54 1999/02/14 19:29:09 mellon Exp $ Copyright 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.55 1999/02/24 17:56:52 mellon Exp $ Copyright 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.";
 #endif
 
   static char copyright[] =
@@ -168,14 +168,14 @@ int main (argc, argv, envp)
 				usage ();
 			for (s = argv [i]; *s; s++)
 				if (!isdigit (*s))
-					error ("%s: not a valid UDP port",
+					log_fatal ("%s: not a valid UDP port",
 					       argv [i]);
 			status = atoi (argv [i]);
 			if (status < 1 || status > 65535)
-				error ("%s: not a valid UDP port",
+				log_fatal ("%s: not a valid UDP port",
 				       argv [i]);
 			local_port = htons (status);
-			debug ("binding to user-specified port %d",
+			log_debug ("binding to user-specified port %d",
 			       ntohs (local_port));
 		} else if (!strcmp (argv [i], "-f")) {
 #ifndef DEBUG
@@ -215,7 +215,7 @@ int main (argc, argv, envp)
 				((struct interface_info *)
 				 dmalloc (sizeof *tmp, "get_interface_list"));
 			if (!tmp)
-				error ("Insufficient memory to %s %s",
+				log_fatal ("Insufficient memory to %s %s",
 				       "record interface", argv [i]);
 			memset (tmp, 0, sizeof *tmp);
 			strcpy (tmp -> name, argv [i]);
@@ -226,11 +226,11 @@ int main (argc, argv, envp)
 	}
 
 	if (!quiet) {
-		note (message);
-		note (copyright);
-		note (arr);
-		note (contrib);
-		note (url);
+		log_info (message);
+		log_info (copyright);
+		log_info (arr);
+		log_info (contrib);
+		log_info (url);
 	}
 
 	/* Default to the DHCP/BOOTP port. */
@@ -264,7 +264,7 @@ int main (argc, argv, envp)
 
 	/* Read the dhcpd.conf file... */
 	if (!readconf ())
-		error ("Configuration file errors encountered -- exiting");
+		log_fatal ("Configuration file errors encountered -- exiting");
 
         /* test option should cause an early exit */
  	if (cftest) 
@@ -283,7 +283,7 @@ int main (argc, argv, envp)
 	if (daemon) {
 		/* First part of becoming a daemon... */
 		if ((pid = fork ()) < 0)
-			error ("Can't fork daemon: %m");
+			log_fatal ("Can't fork daemon: %m");
 		else if (pid)
 			exit (0);
 	}
@@ -307,7 +307,7 @@ int main (argc, argv, envp)
 				pidfilewritten = 1;
 			}
 		} else
-			error ("There's already a DHCP server running.\n");
+			log_fatal ("There's already a DHCP server running.\n");
 	}
 
 	/* If we were requested to log to stdout on the command line,
@@ -355,11 +355,11 @@ int main (argc, argv, envp)
 
 static void usage ()
 {
-	note (message);
-	note (copyright);
-	note (arr);
+	log_info (message);
+	log_info (copyright);
+	log_info (arr);
 
-	error ("Usage: dhcpd [-p <UDP port #>] [-d] [-f] [-cf config-file]%s",
+	log_fatal ("Usage: dhcpd [-p <UDP port #>] [-d] [-f] [-cf config-file]%s",
 	       "\n            [-lf lease-file] [if0 [...ifN]]");
 }
 
@@ -384,18 +384,18 @@ void lease_pinged (from, packet, length)
 	lp = find_lease_by_ip_addr (from);
 
 	if (!lp) {
-		note ("unexpected ICMP Echo Reply from %s", piaddr (from));
+		log_info ("unexpected ICMP Echo Reply from %s", piaddr (from));
 		return;
 	}
 
 	if (!lp -> state) {
-		warn ("ICMP Echo Reply for %s arrived late or is spurious.\n",
+		log_error ("ICMP Echo Reply for %s arrived late or is spurious.\n",
 		      piaddr (from));
 		return;
 	}
 
 	if (lp -> ends > cur_time) {
-		warn ("ICMP Echo reply arrived while lease %s was valid.\n",
+		log_error ("ICMP Echo reply arrived while lease %s was valid.\n",
 		      piaddr (from));
 	}
 

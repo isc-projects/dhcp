@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: packet.c,v 1.19 1998/03/16 06:14:08 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: packet.c,v 1.20 1999/02/24 17:56:47 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -63,13 +63,13 @@ u_int32_t checksum (buf, nbytes, sum)
 	int i;
 
 #ifdef DEBUG_CHECKSUM
-	debug ("checksum (%x %d %x)", buf, nbytes, sum);
+	log_debug ("checksum (%x %d %x)", buf, nbytes, sum);
 #endif
 
 	/* Checksum all the pairs of bytes first... */
 	for (i = 0; i < (nbytes & ~1); i += 2) {
 #ifdef DEBUG_CHECKSUM_VERBOSE
-		debug ("sum = %x", sum);
+		log_debug ("sum = %x", sum);
 #endif
 		sum += (u_int16_t) ntohs(*((u_int16_t *)(buf + i)));
 	}	
@@ -78,7 +78,7 @@ u_int32_t checksum (buf, nbytes, sum)
 	   byte order is big-endian, so the remaining byte is the high byte. */
 	if (i < nbytes) {
 #ifdef DEBUG_CHECKSUM_VERBOSE
-		debug ("sum = %x", sum);
+		log_debug ("sum = %x", sum);
 #endif
 		sum += buf [i] << 8;
 	}
@@ -93,26 +93,26 @@ u_int32_t wrapsum (sum)
 	u_int32_t sum;
 {
 #ifdef DEBUG_CHECKSUM
-	debug ("wrapsum (%x)", sum);
+	log_debug ("wrapsum (%x)", sum);
 #endif
 
 	while (sum > 0x10000) {
 		sum = (sum >> 16) + (sum & 0xFFFF);
 #ifdef DEBUG_CHECKSUM_VERBOSE
-		debug ("sum = %x", sum);
+		log_debug ("sum = %x", sum);
 #endif
 		sum += (sum >> 16);
 #ifdef DEBUG_CHECKSUM_VERBOSE
-		debug ("sum = %x", sum);
+		log_debug ("sum = %x", sum);
 #endif
 	}
 	sum = sum ^ 0xFFFF;
 #ifdef DEBUG_CHECKSUM_VERBOSE
-	debug ("sum = %x", sum);
+	log_debug ("sum = %x", sum);
 #endif
 	
 #ifdef DEBUG_CHECKSUM
-	debug ("wrapsum returns %x", htons (sum));
+	log_debug ("wrapsum returns %x", htons (sum));
 #endif
 	return htons(sum);
 }
@@ -267,7 +267,7 @@ ssize_t decode_udp_ip_header (interface, buf, bufix, from, data, len)
 
   /* Check the IP header checksum - it should be zero. */
   if (wrapsum (checksum (buf + bufix, ip_len, 0))) {
-	  note ("Bad IP checksum: %x",
+	  log_info ("Bad IP checksum: %x",
 		wrapsum (checksum (buf + bufix, sizeof *ip, 0)));
 	  return -1;
   }
@@ -298,7 +298,7 @@ ssize_t decode_udp_ip_header (interface, buf, bufix, from, data, len)
 					       ntohs (udp -> uh_ulen)))));
 
   if (usum && usum != sum) {
-	  note ("Bad udp checksum: %x %x", usum, sum);
+	  log_info ("Bad udp checksum: %x %x", usum, sum);
 	  return -1;
   }
 #endif

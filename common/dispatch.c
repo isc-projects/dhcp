@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dispatch.c,v 1.52 1999/02/14 18:46:20 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dispatch.c,v 1.53 1999/02/24 17:56:44 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -74,7 +74,7 @@ void dispatch ()
 	}
 	fds = (struct pollfd *)malloc ((nfds) * sizeof (struct pollfd));
 	if (!fds)
-		error ("Can't allocate poll structures.");
+		log_fatal ("Can't allocate poll structures.");
 
 	do {
 		/* Call any expired timeouts, and then if there's
@@ -125,7 +125,7 @@ void dispatch ()
 			if (errno == EAGAIN || errno == EINTR)
 				continue;
 			else
-				error ("poll: %m");
+				log_fatal ("poll: %m");
 		}
 
 		i = 0;
@@ -197,7 +197,7 @@ void dispatch ()
 
 		/* Not likely to be transitory... */
 		if (count < 0)
-			error ("select: %m");
+			log_fatal ("select: %m");
 
 		for (l = protocols; l; l = l -> next) {
 			if (!FD_ISSET (l -> fd, &r))
@@ -267,7 +267,7 @@ void add_timeout (when, where, what)
 		} else {
 			q = (struct timeout *)malloc (sizeof (struct timeout));
 			if (!q)
-				error ("Can't allocate timeout structure!");
+				log_fatal ("Can't allocate timeout structure!");
 			q -> func = where;
 			q -> what = what;
 		}
@@ -335,7 +335,7 @@ struct protocol *add_protocol (name, fd, handler, local)
 
 	p = (struct protocol *)malloc (sizeof *p);
 	if (!p)
-		error ("can't allocate protocol struct for %s", name);
+		log_fatal ("can't allocate protocol struct for %s", name);
 
 	p -> fd = fd;
 	p -> handler = handler;

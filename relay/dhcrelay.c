@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcrelay.c,v 1.18 1999/02/14 19:40:22 mellon Exp $ Copyright (c) 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcrelay.c,v 1.19 1999/02/24 17:56:50 mellon Exp $ Copyright (c) 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -141,7 +141,7 @@ int main (argc, argv, envp)
 			if (++i == argc)
 				usage ();
 			local_port = htons (atoi (argv [i]));
-			debug ("binding to user-specified port %d",
+			log_debug ("binding to user-specified port %d",
 			       ntohs (local_port));
 		} else if (!strcmp (argv [i], "-d")) {
 			no_daemon = 1;
@@ -150,7 +150,7 @@ int main (argc, argv, envp)
 				((struct interface_info *)
 				 dmalloc (sizeof *tmp, "specified_interface"));
 			if (!tmp)
-				error ("Insufficient memory to %s %s",
+				log_fatal ("Insufficient memory to %s %s",
 				       "record interface", argv [i]);
 			if (++i == argc) {
 				usage ();
@@ -194,7 +194,7 @@ int main (argc, argv, envp)
 			} else {
 				he = gethostbyname (argv [i]);
 				if (!he) {
-					warn ("%s: host unknown", argv [i]);
+					log_error ("%s: host unknown", argv [i]);
 				} else {
 					iap = ((struct in_addr *)
 					       he -> h_addr_list [0]);
@@ -203,7 +203,7 @@ int main (argc, argv, envp)
 			if (iap) {
 				sp = (struct server_list *)malloc (sizeof *sp);
 				if (!sp)
-					error ("no memory for server.\n");
+					log_fatal ("no memory for server.\n");
 				sp -> next = servers;
 				servers = sp;
 				memcpy (&sp -> to.sin_addr,
@@ -213,11 +213,11 @@ int main (argc, argv, envp)
 	}
 
 	if (!quiet) {
-		note (message);
-		note (copyright);
-		note (arr);
-		note (contrib);
-		note (url);
+		log_info (message);
+		log_info (copyright);
+		log_info (arr);
+		log_info (contrib);
+		log_info (url);
 	}
 
 	/* Default to the DHCP/BOOTP port. */
@@ -263,7 +263,7 @@ int main (argc, argv, envp)
 		log_perror = 0;
 
 		if ((pid = fork()) < 0)
-			error ("can't fork daemon: %m");
+			log_fatal ("can't fork daemon: %m");
 		else if (pid)
 			exit (0);
 
@@ -271,11 +271,11 @@ int main (argc, argv, envp)
 			       O_CREAT | O_TRUNC | O_WRONLY, 0644);
 
 		if (pfdesc < 0) {
-			warn ("Can't create %s: %m", path_dhcrelay_pid);
+			log_error ("Can't create %s: %m", path_dhcrelay_pid);
 		} else {
 			pf = fdopen (pfdesc, "w");
 			if (!pf)
-				warn ("Can't fdopen %s: %m",
+				log_error ("Can't fdopen %s: %m",
 				      path_dhcrelay_pid);
 			else {
 				fprintf (pf, "%ld\n", (long)getpid ());
@@ -310,7 +310,7 @@ void relay (ip, packet, length, from_port, from, hfrom)
 	struct hardware hto;
 
 	if (packet -> hlen > sizeof packet -> chaddr) {
-		note ("Discarding packet with invalid hlen.");
+		log_info ("Discarding packet with invalid hlen.");
 		return;
 	}
 
@@ -362,7 +362,7 @@ void relay (ip, packet, length, from_port, from, hfrom)
 			return;
 
 		if (!out) {
-			warn ("packet to bogus giaddr %s.\n",
+			log_error ("packet to bogus giaddr %s.\n",
 			      inet_ntoa (packet -> giaddr));
 			++bogus_giaddr_drops;
 			return;
@@ -372,10 +372,10 @@ void relay (ip, packet, length, from_port, from, hfrom)
 				 (struct packet *)0,
 				 packet, length, out -> primary_address,
 				 &to, &hto) < 0) {
-			debug ("sendpkt: %m");
+			log_debug ("sendpkt: %m");
 			++server_packet_errors;
 		} else {
-			debug ("forwarded BOOTREPLY for %s to %s",
+			log_debug ("forwarded BOOTREPLY for %s to %s",
 			       print_hw_addr (packet -> htype, packet -> hlen,
 					      packet -> chaddr),
 			       inet_ntoa (to.sin_addr));
@@ -412,10 +412,10 @@ void relay (ip, packet, length, from_port, from, hfrom)
 				 (struct packet *)0,
 				 packet, length, ip -> primary_address,
 				 &sp -> to, (struct hardware *)0) < 0) {
-			debug ("send_packet: %m");
+			log_debug ("send_packet: %m");
 			++client_packet_errors;
 		} else {
-			debug ("forwarded BOOTREQUEST for %s to %s",
+			log_debug ("forwarded BOOTREQUEST for %s to %s",
 			       print_hw_addr (packet -> htype, packet -> hlen,
 					      packet -> chaddr),
 			       inet_ntoa (sp -> to.sin_addr));
@@ -427,7 +427,7 @@ void relay (ip, packet, length, from_port, from, hfrom)
 
 static void usage ()
 {
-	error ("Usage: dhcrelay [-p <port>] [-d] [-D] [-i interface]\n%s%s%s",
+	log_fatal ("Usage: dhcrelay [-p <port>] [-d] [-D] [-i interface]\n%s%s%s",
 	       "                ",
 	       "[-q] [-a] [-A length] [-m append|replace|forward|discard]\n",
 	       "                [server1 [... serverN]]");
@@ -757,7 +757,7 @@ int add_relay_agent_options (ip, packet, length, giaddr)
 	*sp++ = RAI_CIRCUIT_ID;
 	/* Sanity check.   Had better not every happen. */
 	if (ip -> circuit_id_len > 255 || ip -> circuit_id_len < 1)
-		error ("completely bogus circuit id length %d on %s\n",
+		log_fatal ("completely bogus circuit id length %d on %s\n",
 		       ip -> circuit_id_len, ip -> name);
 	*sp++ = ip -> circuit_id_len;
 	memcpy (sp, ip -> circuit_id, ip -> circuit_id_len);
@@ -767,7 +767,7 @@ int add_relay_agent_options (ip, packet, length, giaddr)
 	if (ip -> remote_id) {
 		*sp++ = RAI_REMOTE_ID;
 		if (ip -> remote_id_len > 255 || ip -> remote_id_len < 1)
-			error ("completely bogus remote id length %d on %s\n",
+			log_fatal ("completely bogus remote id length %d on %s\n",
 			       ip -> circuit_id_len, ip -> name);
 		*sp++ = ip -> remote_id_len;
 		memcpy (sp, ip -> remote_id, ip -> remote_id_len);
@@ -777,7 +777,7 @@ int add_relay_agent_options (ip, packet, length, giaddr)
 	/* Relay option's total length shouldn't ever get to be more than
 	   257 bytes. */
 	if (sp - op > 257)
-		error ("total agent option length exceeds 257 (%d) on %s\n",
+		log_fatal ("total agent option length exceeds 257 (%d) on %s\n",
 		       sp - op, ip -> name);
 
 	/* Calculate length of RAI option. */

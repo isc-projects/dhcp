@@ -44,7 +44,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: sysconfd.c,v 1.7 1999/02/14 19:40:19 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: sysconfd.c,v 1.8 1999/02/24 17:56:53 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -97,7 +97,7 @@ int main (argc, argv, envp)
 	/* Make a socket... */
 	sysconf_fd = socket (AF_UNIX, SOCK_STREAM, 0);
 	if (sysconf_fd < 0)
-		error ("unable to create sysconf socket: %m");
+		log_fatal ("unable to create sysconf socket: %m");
 
 	/* XXX for now... */
 	name.sun_family = PF_UNIX;
@@ -111,18 +111,18 @@ int main (argc, argv, envp)
 
 	/* Bind to it... */
 	if (bind (sysconf_fd, (struct sockaddr *)&name, len) < 0)
-		error ("can't bind to sysconf socket: %m");
+		log_fatal ("can't bind to sysconf socket: %m");
 
 	/* Listen for connections... */
 	if (listen (sysconf_fd, 1) < 0)
-		error ("can't listen on sysconf socket: %m");
+		log_fatal ("can't listen on sysconf socket: %m");
 
 	/* Stop logging to stderr... */
 	log_perror = 0;
 
 	/* Become a daemon... */
 	if ((pid = fork ()) < 0)
-		error ("Can't fork daemon: %m");
+		log_fatal ("Can't fork daemon: %m");
 	else if (pid)
 		exit (0);
 
@@ -150,7 +150,7 @@ void new_connection (proto)
 
 	tmp = (struct sysconf_client *)malloc (sizeof *tmp);
 	if (!tmp) {
-		warn ("Can't find memory for new client!");
+		log_error ("Can't find memory for new client!");
 		return;
 	}
 	memset (tmp, 0, sizeof *tmp);
@@ -158,7 +158,7 @@ void new_connection (proto)
 	namelen = sizeof name;
 	new_fd = accept (proto -> fd, (struct sockaddr *)&name, &namelen);
 	if (new_fd < 0) {
-		warn ("accept: %m");
+		log_error ("accept: %m");
 		return;
 	}
 
@@ -181,29 +181,29 @@ void client_input (proto)
 	status = read (proto -> fd, &hdr, sizeof hdr);
 	if (status < 0) {
 	      blow:
-		warn ("client_input: %m");
+		log_error ("client_input: %m");
 		close (proto -> fd);
 		remove_protocol (proto);
 		return;
 	}
 	if (status < sizeof (hdr)) {
-		warn ("client_input: short message");
+		log_error ("client_input: short message");
 		goto blow;
 	}
 
 	if (hdr.length) {
 		buf = malloc (hdr.length);
 		if (!buf) {
-			warn ("client_input: can't buffer payload");
+			log_error ("client_input: can't buffer payload");
 			goto blow;
 		}
 		status = read (proto -> fd, buf, hdr.length);
 		if (status < 0) {
-			warn ("client_input payload read: %m");
+			log_error ("client_input payload read: %m");
 			goto blow;
 		}
 		if (status != hdr.length) {
-			warn ("client_input payload: short read");
+			log_error ("client_input payload: short read");
 			goto blow;
 		}
 	} else
@@ -215,22 +215,22 @@ void client_input (proto)
 
 		status = write (client -> fd, &hdr, sizeof hdr);
 		if (status < 0) {
-			warn ("client_input: %m");
+			log_error ("client_input: %m");
 			continue;
 		}
 		if (status < sizeof (hdr)) {
-			warn ("client_input: short write");
+			log_error ("client_input: short write");
 			continue;
 		}
 
 		if (hdr.length) {
 			status = write (client -> fd, buf, hdr.length);
 			if (status < 0) {
-				warn ("client_input payload write: %m");
+				log_error ("client_input payload write: %m");
 				continue;
 			}
 			if (status != hdr.length) {
-				warn ("client_input payload: short write");
+				log_error ("client_input payload: short write");
 				continue;
 			}
 		}

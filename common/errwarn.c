@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: errwarn.c,v 1.15 1997/05/09 08:03:44 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: errwarn.c,v 1.16 1999/02/24 17:56:45 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -57,7 +57,7 @@ int warnings_occurred;
 
 /* Log an error message, then exit... */
 
-void error (ANSI_DECL(char *) fmt, VA_DOTDOTDOT)
+void log_fatal (ANSI_DECL(char *) fmt, VA_DOTDOTDOT)
      KandR (char *fmt;)
      va_dcl
 {
@@ -89,9 +89,9 @@ void error (ANSI_DECL(char *) fmt, VA_DOTDOTDOT)
   exit (1);
 }
 
-/* Log a warning message... */
+/* Log an error message... */
 
-int warn (ANSI_DECL (char *) fmt, VA_DOTDOTDOT)
+int log_error (ANSI_DECL (char *) fmt, VA_DOTDOTDOT)
      KandR (char *fmt;)
      va_dcl
 {
@@ -117,7 +117,7 @@ int warn (ANSI_DECL (char *) fmt, VA_DOTDOTDOT)
 
 /* Log a note... */
 
-int note (ANSI_DECL (char *) fmt, VA_DOTDOTDOT)
+int log_info (ANSI_DECL (char *) fmt, VA_DOTDOTDOT)
      KandR (char *fmt;)
      va_dcl
 {
@@ -143,7 +143,7 @@ int note (ANSI_DECL (char *) fmt, VA_DOTDOTDOT)
 
 /* Log a debug message... */
 
-int debug (ANSI_DECL (char *) fmt, VA_DOTDOTDOT)
+int log_debug (ANSI_DECL (char *) fmt, VA_DOTDOTDOT)
      KandR (char *fmt;)
      va_dcl
 {

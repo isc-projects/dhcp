@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: alloc.c,v 1.22 1999/02/23 19:04:25 mellon Exp $ Copyright (c) 1995, 1996, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: alloc.c,v 1.23 1999/02/24 17:56:43 mellon Exp $ Copyright (c) 1995, 1996, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -56,7 +56,7 @@ VOIDPTR dmalloc (size, name)
 {
 	VOIDPTR foo = (VOIDPTR)malloc (size);
 	if (!foo)
-		warn ("No memory for %s.", name);
+		log_error ("No memory for %s.", name);
 	else
 		memset (foo, 0, size);
 	return foo;
@@ -67,7 +67,7 @@ void dfree (ptr, name)
 	char *name;
 {
 	if (!ptr) {
-		warn ("dfree %s: free on null pointer.", name);
+		log_error ("dfree %s: free on null pointer.", name);
 		return;
 	}
 	free (ptr);
@@ -425,11 +425,11 @@ int expression_reference (ptr, src, name)
 	char *name;
 {
 	if (!ptr) {
-		warn ("Null pointer in expression_reference: %s", name);
+		log_error ("Null pointer in expression_reference: %s", name);
 		abort ();
 	}
 	if (*ptr) {
-		warn ("Non-null pointer in expression_reference (%s)",
+		log_error ("Non-null pointer in expression_reference (%s)",
 		      name);
 		abort ();
 	}
@@ -465,11 +465,11 @@ int option_cache_reference (ptr, src, name)
 	char *name;
 {
 	if (!ptr) {
-		warn ("Null pointer in option_cache_reference: %s", name);
+		log_error ("Null pointer in option_cache_reference: %s", name);
 		abort ();
 	}
 	if (*ptr) {
-		warn ("Non-null pointer in option_cache_reference (%s)",
+		log_error ("Non-null pointer in option_cache_reference (%s)",
 		      name);
 		abort ();
 	}
@@ -499,11 +499,11 @@ int buffer_reference (ptr, bp, name)
 	char *name;
 {
 	if (!ptr) {
-		warn ("Null pointer passed to buffer_reference: %s", name);
+		log_error ("Null pointer passed to buffer_reference: %s", name);
 		abort ();
 	}
 	if (*ptr) {
-		warn ("Non-null pointer in buffer_reference (%s)", name);
+		log_error ("Non-null pointer in buffer_reference (%s)", name);
 		abort ();
 	}
 	*ptr = bp;
@@ -518,7 +518,7 @@ int buffer_dereference (ptr, name)
 	struct buffer *bp;
 
 	if (!ptr || !*ptr) {
-		warn ("Null pointer passed to buffer_dereference: %s", name);
+		log_error ("Null pointer passed to buffer_dereference: %s", name);
 		abort ();
 	}
 
@@ -551,11 +551,11 @@ int dns_host_entry_reference (ptr, bp, name)
 	char *name;
 {
 	if (!ptr) {
-		warn ("Null pointer in dns_host_entry_reference: %s", name);
+		log_error ("Null pointer in dns_host_entry_reference: %s", name);
 		abort ();
 	}
 	if (*ptr) {
-		warn ("Non-null pointer in dns_host_entry_reference (%s)",
+		log_error ("Non-null pointer in dns_host_entry_reference (%s)",
 		      name);
 		abort ();
 	}
@@ -571,7 +571,7 @@ int dns_host_entry_dereference (ptr, name)
 	struct dns_host_entry *bp;
 
 	if (!ptr || !*ptr) {
-		warn ("Null pointer in dns_host_entry_dereference: %s", name);
+		log_error ("Null pointer in dns_host_entry_dereference: %s", name);
 		abort ();
 	}
 

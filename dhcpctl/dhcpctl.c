@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcpctl.c,v 1.1 1998/04/09 05:20:14 mellon Exp $ Copyright (c) 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcpctl.c,v 1.2 1999/02/24 17:56:49 mellon Exp $ Copyright (c) 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -79,7 +79,7 @@ int main (argc, argv, envp)
 
 	dhcpctl_fd = socket (AF_UNIX, SOCK_STREAM, 0);
 	if (dhcpctl_fd < 0)
-		error ("unable to create dhcpctl socket: %m");
+		log_fatal ("unable to create dhcpctl socket: %m");
 
 	/* XXX for now... */
 	name.sun_family = PF_UNIX;
@@ -91,19 +91,19 @@ int main (argc, argv, envp)
 		       strlen (name.sun_path));
 
 	if (connect (dhcpctl_fd, (struct sockaddr *)&name, len) < 0)
-		error ("can't connect to dhcpctl socket: %m");
+		log_fatal ("can't connect to dhcpctl socket: %m");
 
 #if 0
 	if ((arg = fcntl (dhcpctl_fd, F_GETFL, 0)) < 0)
-		error ("Can't get flags on socket: %m");
+		log_fatal ("Can't get flags on socket: %m");
 	arg |= O_ASYNC;
 	if (fcntl (dhcpctl_fd, F_SETFL, arg) < 0)
-		error ("Can't set flags on socket: %m");
+		log_fatal ("Can't set flags on socket: %m");
 #endif
 
 	dhcpctl = fdopen (dhcpctl_fd, "r+");
 	if (!dhcpctl)
-		error ("Can't fdopen dhcpctl socket: %m");
+		log_fatal ("Can't fdopen dhcpctl socket: %m");
 	setlinebuf (dhcpctl);
 
 	/* Read the response. */

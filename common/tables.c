@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tables.c,v 1.18 1999/02/14 18:56:37 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tables.c,v 1.19 1999/02/24 17:56:48 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1114,7 +1114,7 @@ void initialize_universes()
 	dhcp_universe.set_func = dhcp_option_set;
 	dhcp_universe.hash = new_hash ();
 	if (!dhcp_universe.hash)
-		error ("Can't allocate dhcp option hash table.");
+		log_fatal ("Can't allocate dhcp option hash table.");
 	for (i = 0; i < 256; i++) {
 		dhcp_universe.options [i] = &dhcp_options [i];
 		add_hash (dhcp_universe.hash,
@@ -1127,7 +1127,7 @@ void initialize_universes()
 	agent_universe.lookup_func = agent_suboption_lookup;
 	agent_universe.hash = new_hash ();
 	if (!agent_universe.hash)
-		error ("Can't allocate agent option hash table.");
+		log_fatal ("Can't allocate agent option hash table.");
 	for (i = 0; i < 256; i++) {
 		agent_universe.options [i] = &agent_options [i];
 		add_hash (agent_universe.hash,
@@ -1141,7 +1141,7 @@ void initialize_universes()
 	server_universe.set_func = server_option_set;
 	server_universe.hash = new_hash ();
 	if (!server_universe.hash)
-		error ("Can't allocate server option hash table.");
+		log_fatal ("Can't allocate server option hash table.");
 	for (i = 0; i < 256; i++) {
 		server_universe.options [i] = &server_options [i];
 		add_hash (server_universe.hash,

@@ -56,7 +56,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.55 1999/02/14 19:40:20 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.56 1999/02/24 17:56:42 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -127,7 +127,7 @@ int main (argc, argv, envp)
 			if (++i == argc)
 				usage ();
 			local_port = htons (atoi (argv [i]));
-			debug ("binding to user-specified port %d",
+			log_debug ("binding to user-specified port %d",
 			       ntohs (local_port));
 		} else if (!strcmp (argv [i], "-d")) {
 			no_daemon = 1;
@@ -155,7 +155,7 @@ int main (argc, argv, envp)
  			((struct interface_info *)
  			 dmalloc (sizeof *tmp, "specified_interface"));
  		    if (!tmp)
- 			error ("Insufficient memory to %s %s",
+ 			log_fatal ("Insufficient memory to %s %s",
  			       "record interface", argv [i]);
  		    memset (tmp, 0, sizeof *tmp);
  		    strcpy (tmp -> name, argv [i]);
@@ -167,11 +167,11 @@ int main (argc, argv, envp)
 	}
 
 	if (!quiet) {
-		note (message);
-		note (copyright);
-		note (arr);
-		note (contrib);
-		note (url);
+		log_info (message);
+		log_info (copyright);
+		log_info (arr);
+		log_info (contrib);
+		log_info (url);
 	}
 
 	/* Default to the DHCP/BOOTP port. */
@@ -217,7 +217,7 @@ int main (argc, argv, envp)
 			     (struct string_list *)0);
 		script_go ((struct client_state *)0);
 
-		note ("No broadcast interfaces found - exiting.");
+		log_info ("No broadcast interfaces found - exiting.");
 
 		/* Nothing more to do. */
 		exit (0);
@@ -286,7 +286,7 @@ int main (argc, argv, envp)
 
 static void usage ()
 {
-	error ("Usage: dhclient [-d] [-D] [-q] [-c] [-p <port>]\n [-lf %s",
+	log_fatal ("Usage: dhclient [-d] [-D] [-q] [-c] [-p <port>]\n [-lf %s",
 	       "lease-file] [-pf pid-file] [-cf config-file] [interface]");
 }
 
@@ -521,7 +521,7 @@ void dhcpack (packet)
 	     packet -> raw -> hlen) ||
 	    (memcmp (packet -> interface -> hw_address.haddr,
 		     packet -> raw -> chaddr, packet -> raw -> hlen))) {
-		debug ("DHCPACK in wrong transaction.");
+		log_debug ("DHCPACK in wrong transaction.");
 		return;
 	}
 
@@ -529,15 +529,15 @@ void dhcpack (packet)
 	    client -> state != S_REQUESTING &&
 	    client -> state != S_RENEWING &&
 	    client -> state != S_REBINDING) {
-		debug ("DHCPACK in wrong state.");
+		log_debug ("DHCPACK in wrong state.");
 		return;
 	}
 
-	note ("DHCPACK from %s", piaddr (packet -> client_addr));
+	log_info ("DHCPACK from %s", piaddr (packet -> client_addr));
 
 	lease = packet_to_lease (packet);
 	if (!lease) {
-		note ("packet_to_lease failed.");
+		log_info ("packet_to_lease failed.");
 		return;
 	}
 
@@ -562,7 +562,7 @@ void dhcpack (packet)
 			client -> new -> expiry = 0;
 
 	if (!client -> new -> expiry) {
-		warn ("no expiry time on offered lease.");
+		log_error ("no expiry time on offered lease.");
 		/* XXX this is going to be bad - if this _does_
 		   XXX happen, we should probably dynamically 
 		   XXX disqualify the DHCP server that gave us the
@@ -665,7 +665,7 @@ void bind_lease (client)
 	add_timeout (client -> active -> renewal,
 		     state_bound, client);
 
-	note ("bound to %s -- renewal in %d seconds.",
+	log_info ("bound to %s -- renewal in %d seconds.",
 	      piaddr (client -> active -> address),
 	      client -> active -> renewal - cur_time);
 	client -> state = S_BOUND;
@@ -742,7 +742,7 @@ void bootp (packet)
 	for (ap = packet -> interface -> client -> config -> reject_list;
 	     ap; ap = ap -> next) {
 		if (addr_eq (packet -> client_addr, ap -> addr)) {
-			note ("BOOTREPLY from %s rejected.",
+			log_info ("BOOTREPLY from %s rejected.",
 			      piaddr (ap -> addr));
 			return;
 		}
@@ -784,7 +784,7 @@ void dhcp (packet)
 	for (ap = packet -> interface -> client -> config -> reject_list;
 	     ap; ap = ap -> next) {
 		if (addr_eq (packet -> client_addr, ap -> addr)) {
-			note ("%s from %s rejected.",
+			log_info ("%s from %s rejected.",
 			      type, piaddr (ap -> addr));
 			return;
 		}
@@ -821,11 +821,11 @@ void dhcpoffer (packet)
 	     packet -> raw -> hlen) ||
 	    (memcmp (packet -> interface -> hw_address.haddr,
 		     packet -> raw -> chaddr, packet -> raw -> hlen))) {
-		debug ("%s in wrong transaction.", name);
+		log_debug ("%s in wrong transaction.", name);
 		return;
 	}
 
-	note ("%s from %s", name, piaddr (packet -> client_addr));
+	log_info ("%s from %s", name, piaddr (packet -> client_addr));
 
 
 	/* If this lease doesn't supply the minimum required parameters,
@@ -835,7 +835,7 @@ void dhcpoffer (packet)
 			if (!lookup_option
 			    (packet -> options.dhcp_hash,
 			     client -> config -> required_options [i])) {
-				note ("%s isn't satisfactory.", name);
+				log_info ("%s isn't satisfactory.", name);
 				return;
 			}
 		}
@@ -846,14 +846,14 @@ void dhcpoffer (packet)
 		if (lease -> address.len == sizeof packet -> raw -> yiaddr &&
 		    !memcmp (lease -> address.iabuf,
 			     &packet -> raw -> yiaddr, lease -> address.len)) {
-			debug ("%s already seen.", name);
+			log_debug ("%s already seen.", name);
 			return;
 		}
 	}
 
 	lease = packet_to_lease (packet);
 	if (!lease) {
-		note ("packet_to_lease failed.");
+		log_info ("packet_to_lease failed.");
 		return;
 	}
 
@@ -939,7 +939,7 @@ struct client_lease *packet_to_lease (packet)
 	lease = (struct client_lease *)new_client_lease ("packet_to_lease");
 
 	if (!lease) {
-		warn ("dhcpoffer: no memory to record lease.\n");
+		log_error ("dhcpoffer: no memory to record lease.\n");
 		return (struct client_lease *)0;
 	}
 
@@ -976,7 +976,7 @@ struct client_lease *packet_to_lease (packet)
 				break;
 		lease -> server_name = dmalloc (len + 1, "packet_to_lease");
 		if (!lease -> server_name) {
-			warn ("dhcpoffer: no memory for filename.\n");
+			log_error ("dhcpoffer: no memory for filename.\n");
 			destroy_client_lease (lease);
 			return (struct client_lease *)0;
 		} else {
@@ -995,7 +995,7 @@ struct client_lease *packet_to_lease (packet)
 				break;
 		lease -> filename = dmalloc (len + 1, "packet_to_lease");
 		if (!lease -> filename) {
-			warn ("dhcpoffer: no memory for filename.\n");
+			log_error ("dhcpoffer: no memory for filename.\n");
 			destroy_client_lease (lease);
 			return (struct client_lease *)0;
 		} else {
@@ -1025,7 +1025,7 @@ void dhcpnak (packet)
 	     packet -> raw -> hlen) ||
 	    (memcmp (packet -> interface -> hw_address.haddr,
 		     packet -> raw -> chaddr, packet -> raw -> hlen))) {
-		debug ("DHCPNAK in wrong transaction.");
+		log_debug ("DHCPNAK in wrong transaction.");
 		return;
 	}
 
@@ -1033,14 +1033,14 @@ void dhcpnak (packet)
 	    client -> state != S_REQUESTING &&
 	    client -> state != S_RENEWING &&
 	    client -> state != S_REBINDING) {
-		debug ("DHCPNAK in wrong state.");
+		log_debug ("DHCPNAK in wrong state.");
 		return;
 	}
 
-	note ("DHCPNAK from %s", piaddr (packet -> client_addr));
+	log_info ("DHCPNAK from %s", piaddr (packet -> client_addr));
 
 	if (!client -> active) {
-		note ("DHCPNAK with no active lease.\n");
+		log_info ("DHCPNAK with no active lease.\n");
 		return;
 	}
 
@@ -1090,14 +1090,14 @@ void send_discover (cpp)
 		} 
 		if (!client -> medium) {
 			if (fail)
-				error ("No valid media types for %s!",
+				log_fatal ("No valid media types for %s!",
 				       client -> interface -> name);
 			client -> medium =
 				client -> config -> media;
 			increase = 1;
 		}
 			
-		note ("Trying medium \"%s\" %d",
+		log_info ("Trying medium \"%s\" %d",
 		      client -> medium -> string, increase);
 		script_init (client, "MEDIUM", client -> medium);
 		if (script_go (client)) {
@@ -1144,7 +1144,7 @@ void send_discover (cpp)
 	else
 		client -> packet.secs = 255;
 
-	note ("DHCPDISCOVER on %s to %s port %d interval %ld",
+	log_info ("DHCPDISCOVER on %s to %s port %d interval %ld",
 	      client -> name ? client -> name : client -> interface -> name,
 	      inet_ntoa (sockaddr_broadcast.sin_addr),
 	      ntohs (sockaddr_broadcast.sin_port), client -> interval);
@@ -1156,7 +1156,7 @@ void send_discover (cpp)
 			      inaddr_any, &sockaddr_broadcast,
 			      (struct hardware *)0);
 	if (result < 0)
-		warn ("send_packet: %m");
+		log_error ("send_packet: %m");
 
 	add_timeout (cur_time + client -> interval, send_discover, client);
 }
@@ -1175,7 +1175,7 @@ void state_panic (cpp)
 
 	loop = lp = client -> active;
 
-	note ("No DHCPOFFERS received.");
+	log_info ("No DHCPOFFERS received.");
 
 	/* We may not have an active lease, but we may have some
 	   predefined leases that we can try. */
@@ -1185,7 +1185,7 @@ void state_panic (cpp)
 	/* Run through the list of leases and see if one can be used. */
 	while (client -> active) {
 		if (client -> active -> expiry > cur_time) {
-			note ("Trying recorded lease %s",
+			log_info ("Trying recorded lease %s",
 			      piaddr (client -> active -> address));
 			/* Run the client script with the existing
 			   parameters. */
@@ -1203,7 +1203,7 @@ void state_panic (cpp)
 				if (cur_time <
 				    client -> active -> renewal) {
 					client -> state = S_BOUND;
-					note ("bound: renewal in %d seconds.",
+					log_info ("bound: renewal in %d seconds.",
 					      client -> active -> renewal
 					      - cur_time);
 					add_timeout ((client ->
@@ -1211,7 +1211,7 @@ void state_panic (cpp)
 						     state_bound, client);
 				} else {
 					client -> state = S_BOUND;
-					note ("bound: immediate renewal.");
+					log_info ("bound: immediate renewal.");
 					state_bound (client);
 				}
 				reinitialize_interfaces ();
@@ -1251,7 +1251,7 @@ void state_panic (cpp)
 	/* No leases were available, or what was available didn't work, so
 	   tell the shell script that we failed to allocate an address,
 	   and try again later. */
-	note ("No working leases in persistent database - sleeping.\n");
+	log_info ("No working leases in persistent database - sleeping.\n");
 	script_init (client, "FAIL", (struct string_list *)0);
 	if (client -> alias)
 		script_write_params (client, "alias_", client -> alias);
@@ -1385,7 +1385,7 @@ void send_request (cpp)
 	else
 		client -> packet.secs = 255;
 
-	note ("DHCPREQUEST on %s to %s port %d",
+	log_info ("DHCPREQUEST on %s to %s port %d",
 	      client -> name ? client -> name : client -> interface -> name,
 	      inet_ntoa (destination.sin_addr),
 	      ntohs (destination.sin_port));
@@ -1407,7 +1407,7 @@ void send_request (cpp)
 				      (struct hardware *)0);
 
 	if (result < 0)
-		warn ("send_packet: %m");
+		log_error ("send_packet: %m");
 
 	add_timeout (cur_time + client -> interval,
 		     send_request, client);
@@ -1420,7 +1420,7 @@ void send_decline (cpp)
 
 	int result;
 
-	note ("DHCPDECLINE on %s to %s port %d",
+	log_info ("DHCPDECLINE on %s to %s port %d",
 	      client -> name ? client -> name : client -> interface -> name,
 	      inet_ntoa (sockaddr_broadcast.sin_addr),
 	      ntohs (sockaddr_broadcast.sin_port));
@@ -1432,7 +1432,7 @@ void send_decline (cpp)
 			      inaddr_any, &sockaddr_broadcast,
 			      (struct hardware *)0);
 	if (result < 0)
-		warn ("send_packet: %m");
+		log_error ("send_packet: %m");
 }
 
 void send_release (cpp)
@@ -1442,7 +1442,7 @@ void send_release (cpp)
 
 	int result;
 
-	note ("DHCPRELEASE on %s to %s port %d",
+	log_info ("DHCPRELEASE on %s to %s port %d",
 	      client -> name ? client -> name : client -> interface -> name,
 	      inet_ntoa (sockaddr_broadcast.sin_addr),
 	      ntohs (sockaddr_broadcast.sin_port));
@@ -1454,7 +1454,7 @@ void send_release (cpp)
 			      inaddr_any, &sockaddr_broadcast,
 			      (struct hardware *)0);
 	if (result < 0)
-		warn ("send_packet: %m");
+		log_error ("send_packet: %m");
 }
 
 void make_client_options (client, lease, type, sid, rip, prl,
@@ -1487,7 +1487,7 @@ void make_client_options (client, lease, type, sid, rip, prl,
 		       rip -> iabuf, rip -> len,
 		       &dhcp_options [DHO_DHCP_REQUESTED_ADDRESS],
 		       "make_client_options")))
-			warn ("can't make requested address option cache.");
+			log_error ("can't make requested address option cache.");
 		else {
 			save_option (options -> dhcp_hash, oc);
 			option_cache_dereference (&oc, "make_client_options");
@@ -1500,7 +1500,7 @@ void make_client_options (client, lease, type, sid, rip, prl,
 	      (&oc, (struct buffer **)0,
 	       type, 1, &dhcp_options [DHO_DHCP_MESSAGE_TYPE],
 	       "make_client_options")))
-		warn ("can't make message type.");
+		log_error ("can't make message type.");
 	else {
 		save_option (options -> dhcp_hash, oc);
 		option_cache_dereference (&oc, "make_client_options");
@@ -1511,7 +1511,7 @@ void make_client_options (client, lease, type, sid, rip, prl,
 		for (i = 0; prl [i]; i++)
 			;
 		if (!buffer_allocate (&bp, i, "make_client_options"))
-			warn ("can't make buffer for parameter request list.");
+			log_error ("can't make buffer for parameter request list.");
 		else {
 			for (i = 0; prl [i]; i++)
 				bp -> data [i] = prl [i];
@@ -1519,7 +1519,7 @@ void make_client_options (client, lease, type, sid, rip, prl,
 			      (&oc, &bp, (u_int8_t *)0, i,
 			       &dhcp_options [DHO_DHCP_PARAMETER_REQUEST_LIST],
 			       "make_client_options")))
-				warn ("can't make option cache");
+				log_error ("can't make option cache");
 			else {
 				save_option (options -> dhcp_hash, oc);
 				option_cache_dereference
@@ -1532,7 +1532,7 @@ void make_client_options (client, lease, type, sid, rip, prl,
 				  DHO_DHCP_LEASE_TIME))) {
 		if (!buffer_allocate (&bp, sizeof (u_int32_t),
 				      "make_client_options"))
-			warn ("can't make buffer for requested lease time.");
+			log_error ("can't make buffer for requested lease time.");
 		else {
 			putULong (bp -> data,
 				  client -> config -> requested_lease);
@@ -1540,7 +1540,7 @@ void make_client_options (client, lease, type, sid, rip, prl,
 			      (&oc, &bp, (u_int8_t *)0, sizeof (u_int32_t),
 			       &dhcp_options [DHO_DHCP_LEASE_TIME],
 			       "make_client_options")))
-				warn ("can't make option cache");
+				log_error ("can't make option cache");
 			else {
 				save_option (options -> dhcp_hash, oc);
 				option_cache_dereference
@@ -1807,7 +1807,7 @@ void rewrite_client_leases ()
 		fclose (leaseFile);
 	leaseFile = fopen (path_dhclient_db, "w");
 	if (!leaseFile)
-		error ("can't create %s: %m", path_dhclient_db);
+		log_fatal ("can't create %s: %m", path_dhclient_db);
 
 	/* Write out all the leases attached to configured interfaces that
 	   we know about. */
@@ -1863,7 +1863,7 @@ void write_client_lease (client, lease, rewrite)
 	if (!leaseFile) {	/* XXX */
 		leaseFile = fopen (path_dhclient_db, "w");
 		if (!leaseFile)
-			error ("can't create %s: %m", path_dhclient_db);
+			log_fatal ("can't create %s: %m", path_dhclient_db);
 	}
 
 	fprintf (leaseFile, "lease {\n");
@@ -1950,7 +1950,7 @@ void script_init (client, reason, medium)
 		fd = mkstemp (scriptName);
 #else
 		if (!mktemp (scriptName))
-			error ("can't create temporary client script %s: %m",
+			log_fatal ("can't create temporary client script %s: %m",
 			       scriptName);
 		fd = creat (scriptName, 0600);
 	} while (fd < 0);
@@ -1958,7 +1958,7 @@ void script_init (client, reason, medium)
 
 	scriptFile = fdopen (fd, "w");
 	if (!scriptFile)
-		error ("can't write script file: %m");
+		log_fatal ("can't write script file: %m");
 	fprintf (scriptFile, "#!/bin/sh\n\n");
 	if (client) {
 		if (client -> interface) {
@@ -2119,7 +2119,7 @@ char *dhcp_option_ev_name (option)
 	int i;
 
 	if (strlen (option -> name) + 1 > sizeof evbuf)
-		error ("option %s name is larger than static buffer.");
+		log_fatal ("option %s name is larger than static buffer.");
 	for (i = 0; option -> name [i]; i++) {
 		if (option -> name [i] == '-')
 			evbuf [i] = '_';
@@ -2152,7 +2152,7 @@ void go_daemon ()
 
 	/* Become a daemon... */
 	if ((pid = fork ()) < 0)
-		error ("Can't fork daemon: %m");
+		log_fatal ("Can't fork daemon: %m");
 	else if (pid)
 		exit (0);
 	/* Become session leader and get pid... */
@@ -2174,13 +2174,13 @@ void write_client_pid_file ()
 	pfdesc = open (path_dhclient_pid, O_CREAT | O_TRUNC | O_WRONLY, 0644);
 
 	if (pfdesc < 0) {
-		warn ("Can't create %s: %m", path_dhclient_pid);
+		log_error ("Can't create %s: %m", path_dhclient_pid);
 		return;
 	}
 
 	pf = fdopen (pfdesc, "w");
 	if (!pf)
-		warn ("Can't fdopen %s: %m", path_dhclient_pid);
+		log_error ("Can't fdopen %s: %m", path_dhclient_pid);
 	else {
 		fprintf (pf, "%ld\n", (long)getpid ());
 		fclose (pf);

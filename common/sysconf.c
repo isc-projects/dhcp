@@ -44,7 +44,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: sysconf.c,v 1.4 1998/03/16 06:14:51 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: sysconf.c,v 1.5 1999/02/24 17:56:48 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -61,12 +61,12 @@ void sysconf_startup (handler)
 
 	/* Only initialize sysconf once. */
 	if (sysconf_initialized)
-		error ("attempted to reinitialize sysconf protocol");
+		log_fatal ("attempted to reinitialize sysconf protocol");
 	sysconf_initialized = 1;
 
 	sysconf_fd = socket (AF_UNIX, SOCK_STREAM, 0);
 	if (sysconf_fd < 0)
-		error ("unable to create sysconf socket: %m");
+		log_fatal ("unable to create sysconf socket: %m");
 
 	/* XXX for now... */
 	name.sun_family = PF_UNIX;
@@ -79,7 +79,7 @@ void sysconf_startup (handler)
 
 	if (connect (sysconf_fd, (struct sockaddr *)&name, len) < 0) {
 		if (!once)
-			warn ("can't connect to sysconf socket: %m");
+			log_error ("can't connect to sysconf socket: %m");
 		once = 1;
 		close (sysconf_fd);
 		sysconf_initialized = 0;
@@ -108,26 +108,26 @@ void sysconf_message (proto)
 
 	status = read (sysconf_fd, &hdr, sizeof hdr);
 	if (status < 0) {
-		warn ("sysconf_message: %m");
+		log_error ("sysconf_message: %m");
 	      lose:
 		add_timeout (cur_time + 60, sysconf_restart, proto -> local);
 		remove_protocol (proto);
 		return;
 	}
 	if (status < sizeof (hdr)) {
-		warn ("sysconf_message: short message");
+		log_error ("sysconf_message: short message");
 		goto lose;
 	}
 
 	if (hdr.length) {
 		buf = malloc (hdr.length);
 		if (!buf)
-			error ("sysconf_message: can't buffer payload");
+			log_fatal ("sysconf_message: can't buffer payload");
 		status = read (sysconf_fd, buf, hdr.length);
 		if (status < 0)
-			error ("sysconf_message payload read: %m");
+			log_fatal ("sysconf_message payload read: %m");
 		if (status != hdr.length)
-			error ("sysconf_message payload: short read");
+			log_fatal ("sysconf_message payload: short read");
 	} else
 		buf = (char *)0;
 

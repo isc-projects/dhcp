@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: clparse.c,v 1.21 1998/11/11 07:48:23 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: clparse.c,v 1.22 1999/02/24 17:56:42 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -100,11 +100,11 @@ int read_client_conf ()
 
 	top_level_config.on_receipt = new_group ("read_client_conf");
 	if (!top_level_config.on_receipt)
-		error ("no memory for top-level on_receipt group");
+		log_fatal ("no memory for top-level on_receipt group");
 
 	top_level_config.on_transmission = new_group ("read_client_conf");
 	if (!top_level_config.on_transmission)
-		error ("no memory for top-level on_transmission group");
+		log_fatal ("no memory for top-level on_transmission group");
 
 	if ((cfile = fopen (path_dhclient_conf, "r")) != NULL) {
 		do {
@@ -127,7 +127,7 @@ int read_client_conf ()
 			ip -> client = (struct client_state *)
 				malloc (sizeof (struct client_state));
 			if (!ip -> client)
-				error ("no memory for client state.");
+				log_fatal ("no memory for client state.");
 			memset (ip -> client, 0, sizeof *(ip -> client));
 		}
 
@@ -136,7 +136,7 @@ int read_client_conf ()
 				config = (struct client_config *)
 					malloc (sizeof (struct client_config));
 				if (!config)
-					error ("no memory for client config.");
+					log_fatal ("no memory for client config.");
 				memcpy (config, &top_level_config,
 					sizeof top_level_config);
 			}
@@ -168,7 +168,7 @@ void read_client_leases ()
 		if (token == EOF)
 			break;
 		if (token != LEASE) {
-			warn ("Corrupt lease file - possible data loss!");
+			log_error ("Corrupt lease file - possible data loss!");
 			skip_to_semi (cfile);
 			break;
 		} else
@@ -317,7 +317,7 @@ void parse_client_statement (cfile, ip, config)
 		token = next_token (&val, cfile);
 		name = dmalloc (strlen (val) + 1, "parse_client_statement");
 		if (!name)
-			error ("no memory for pseudo interface name");
+			log_fatal ("no memory for pseudo interface name");
 		strcpy (name, val);
 		parse_interface_declaration (cfile, config, name);
 		return;
@@ -441,7 +441,7 @@ void parse_option_list (cfile, list)
 		}
 		r = new_pair ("parse_option_list");
 		if (!r)
-			error ("can't allocate pair for option code.");
+			log_fatal ("can't allocate pair for option code.");
 		r -> car = (caddr_t)i;
 		r -> cdr = (pair)0;
 		if (p)
@@ -461,7 +461,7 @@ void parse_option_list (cfile, list)
 		dfree (*list, "parse_option_list");
 	*list = dmalloc (ix * sizeof **list, "parse_option_list");
 	if (!*list)
-		warn ("no memory for option list.");
+		log_error ("no memory for option list.");
 	else {
 		ix = 0;
 		for (q = p; q; q = q -> cdr)
@@ -563,7 +563,7 @@ struct interface_info *interface_or_dummy (name)
 	if (!ip) {
 		ip = ((struct interface_info *)malloc (sizeof *ip));
 		if (!ip)
-			error ("Insufficient memory to record interface %s",
+			log_fatal ("Insufficient memory to record interface %s",
 			       name);
 		memset (ip, 0, sizeof *ip);
 		strcpy (ip -> name, name);
@@ -579,7 +579,7 @@ void make_client_state (state)
 	*state = ((struct client_state *)dmalloc (sizeof **state,
 						  "make_client_state"));
 	if (!*state)
-		error ("no memory for client state\n");
+		log_fatal ("no memory for client state\n");
 	memset (*state, 0, sizeof **state);
 }
 
@@ -591,7 +591,7 @@ void make_client_config (client, config)
 			     dmalloc (sizeof (struct client_config),
 				      "make_client_config")));
 	if (!client -> config)
-		error ("no memory for client config\n");
+		log_fatal ("no memory for client config\n");
 	memcpy (client -> config, config, sizeof *config);
 	client -> config -> on_receipt =
 		clone_group (config -> on_receipt, "make_client_config");
@@ -627,7 +627,7 @@ void parse_client_lease_statement (cfile, is_static)
 
 	lease = (struct client_lease *)malloc (sizeof (struct client_lease));
 	if (!lease)
-		error ("no memory for lease.\n");
+		log_fatal ("no memory for lease.\n");
 	memset (lease, 0, sizeof *lease);
 	lease -> is_static = is_static;
 
@@ -960,7 +960,7 @@ int parse_option_decl (oc, cfile)
 				goto alloc;
 
 			      default:
-				warn ("Bad format %c in parse_option_param.",
+				log_error ("Bad format %c in parse_option_param.",
 				      *fmt);
 				skip_to_semi (cfile);
 				return 0;
@@ -977,13 +977,13 @@ int parse_option_decl (oc, cfile)
 
 	bp = (struct buffer *)0;
 	if (!buffer_allocate (&bp, hunkix + nul_term, "parse_option_decl"))
-		error ("no memory to store option declaration.");
+		log_fatal ("no memory to store option declaration.");
 	if (!bp -> data)
-		error ("out of memory allocating option data.");
+		log_fatal ("out of memory allocating option data.");
 	memcpy (bp -> data, hunkbuf, hunkix + nul_term);
 	
 	if (!option_cache_allocate (oc, "parse_option_decl"))
-		error ("out of memory allocating option cache.");
+		log_fatal ("out of memory allocating option cache.");
 
 	(*oc) -> data.buffer = bp;
 	(*oc) -> data.data = &bp -> data [0];
@@ -1022,7 +1022,7 @@ void parse_string_list (cfile, lp, multiple)
 						    sizeof
 						    (struct string_list *));
 		if (!tmp)
-			error ("no memory for string list entry.");
+			log_fatal ("no memory for string list entry.");
 
 		strcpy (tmp -> string, val);
 		tmp -> next = (struct string_list *)0;
@@ -1061,7 +1061,7 @@ void parse_reject_statement (cfile, config)
 
 		list = (struct iaddrlist *)malloc (sizeof (struct iaddrlist));
 		if (!list)
-			error ("no memory for reject list!");
+			log_fatal ("no memory for reject list!");
 
 		list -> addr = addr;
 		list -> next = config -> reject_list;

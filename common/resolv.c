@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: resolv.c,v 1.6 1998/01/12 01:01:44 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: resolv.c,v 1.7 1999/02/24 17:56:48 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -67,7 +67,7 @@ void read_resolv_conf (parse_time)
 
 	eol_token = 1;
 	if ((cfile = fopen (path_resolv_conf, "r")) == NULL) {
-		warn ("Can't open %s: %m", path_resolv_conf);
+		log_error ("Can't open %s: %m", path_resolv_conf);
 		return;
 	}
 
@@ -96,7 +96,7 @@ void read_resolv_conf (parse_time)
 					nd = new_domain_search_list
 						("read_resolv_conf");
 					if (!nd)
-						error ("No memory for %s", dn);
+						log_fatal ("No memory for %s", dn);
 					nd -> next =
 						(struct domain_search_list *)0;
 					*dp = nd;
@@ -127,7 +127,7 @@ void read_resolv_conf (parse_time)
 			if (!ns) {
 				ns = new_name_server ("read_resolv_conf");
 				if (!ns)
-					error ("No memory for nameserver %s",
+					log_fatal ("No memory for nameserver %s",
 					       piaddr (iaddr));
 				ns -> next = (struct name_server *)0;
 				*sp = ns;
@@ -192,7 +192,7 @@ struct name_server *first_name_server ()
 	/* Check /etc/resolv.conf and reload it if it's changed. */
 	if (cur_time > rcdate) {
 		if (stat (path_resolv_conf, &st) < 0) {
-			warn ("Can't stat %s", path_resolv_conf);
+			log_error ("Can't stat %s", path_resolv_conf);
 			return (struct name_server *)0;
 		}
 		if (st.st_mtime > rcdate) {

@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.18 1998/11/09 02:45:02 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.19 1999/02/24 17:56:48 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -56,7 +56,7 @@ pair cons (car, cdr)
 {
 	pair foo = (pair)dmalloc (sizeof *foo, "cons");
 	if (!foo)
-		error ("no memory for cons.");
+		log_fatal ("no memory for cons.");
 	foo -> car = car;
 	foo -> cdr = cdr;
 	return foo;
@@ -78,13 +78,13 @@ int make_const_option_cache (oc, buffer, data, len, option, name)
 	} else {
 		bp = (struct buffer *)0;
 		if (!buffer_allocate (&bp, len, name)) {
-			warn ("%s: can't allocate buffer.", name);	
+			log_error ("%s: can't allocate buffer.", name);	
 			return 0;
 		}
 	}
 
 	if (!option_cache_allocate (oc, name)) {
-		warn ("%s: can't allocate option cache.");
+		log_error ("%s: can't allocate option cache.");
 		buffer_dereference (&bp, name);
 		return 0;
 	}
@@ -103,7 +103,7 @@ int make_host_lookup (expr, name)
 	char *name;
 {
 	if (!expression_allocate (expr, "make_host_lookup")) {
-		warn ("No memory for host lookup tree node.");
+		log_error ("No memory for host lookup tree node.");
 		return 0;
 	}
 	(*expr) -> op = expr_host_lookup;
@@ -123,7 +123,7 @@ int enter_dns_host (dh, name)
 	   XXX already exists, if possible, rather than creating
 	   XXX a new structure. */
 	if (!dns_host_entry_allocate (dh, name, "enter_dns_host")) {
-		warn ("Can't allocate space for new host.");
+		log_error ("Can't allocate space for new host.");
 		return 0;
 	}
 	return 1;
@@ -139,7 +139,7 @@ int make_const_data (expr, data, len, terminated, allocate)
 	struct expression *nt;
 
 	if (!expression_allocate (expr, "make_host_lookup")) {
-		warn ("No memory for make_const_data tree node.");
+		log_error ("No memory for make_const_data tree node.");
 		return 0;
 	}
 	nt = *expr;
@@ -149,7 +149,7 @@ int make_const_data (expr, data, len, terminated, allocate)
 			if (!buffer_allocate (&nt -> data.const_data.buffer,
 					      len + terminated,
 					      "make_const_data")) {
-				warn ("Can't allocate const_data buffer.");
+				log_error ("Can't allocate const_data buffer.");
 				expression_dereference (expr,
 							"make_const_data");
 				return 0;
@@ -189,7 +189,7 @@ int make_concat (expr, left, right)
 			
 	/* Otherwise, allocate a new node to concatenate the two. */
 	if (!expression_allocate (expr, "make_concat")) {
-		warn ("No memory for concatenation expression node.");
+		log_error ("No memory for concatenation expression node.");
 		return 0;
 	}
 		
@@ -209,7 +209,7 @@ int make_substring (new, expr, offset, length)
 {
 	/* Allocate an expression node to compute the substring. */
 	if (!expression_allocate (new, "make_substring")) {
-		warn ("no memory for substring expression.");
+		log_error ("no memory for substring expression.");
 		return 0;
 	}
 	(*new) -> op = expr_substring;
@@ -231,7 +231,7 @@ int make_limit (new, expr, limit)
 
 	/* Allocate a node to enforce a limit on evaluation. */
 	if (!expression_allocate (new, "make_limit"))
-		warn ("no memory for limit expression");
+		log_error ("no memory for limit expression");
 	(*new) -> op = expr_substring;
 	expression_reference (&(*new) -> data.substring.expr,
 			      expr, "make_limit");
@@ -239,7 +239,7 @@ int make_limit (new, expr, limit)
 	/* Offset is a constant 0. */
 	if (!expression_allocate (&(*new) -> data.substring.offset,
 				  "make_limit")) {
-		warn ("no memory for limit offset expression");
+		log_error ("no memory for limit offset expression");
 		expression_dereference (new, "make_limit");
 		return 0;
 	}
@@ -249,7 +249,7 @@ int make_limit (new, expr, limit)
 	/* Length is a constant: the specified limit. */
 	if (!expression_allocate (&(*new) -> data.substring.len,
 				  "make_limit")) {
-		warn ("no memory for limit length expression");
+		log_error ("no memory for limit length expression");
 		expression_dereference (new, "make_limit");
 		return 0;
 	}
@@ -285,14 +285,14 @@ int do_host_lookup (result, dns)
 	int new_len;
 
 #ifdef DEBUG_EVAL
-	debug ("time: now = %d  dns = %d %d  diff = %d",
+	log_debug ("time: now = %d  dns = %d %d  diff = %d",
 	       cur_time, dns -> timeout, cur_time - dns -> timeout);
 #endif
 
 	/* If the record hasn't timed out, just copy the data and return. */
 	if (cur_time <= dns -> timeout) {
 #ifdef DEBUG_EVAL
-		debug ("easy copy: %d %s",
+		log_debug ("easy copy: %d %s",
 		       dns -> data.len,
 		       (dns -> data.len > 4
 			? inet_ntoa (*(struct in_addr *)(dns -> data.data))
@@ -302,7 +302,7 @@ int do_host_lookup (result, dns)
 		return 1;
 	}
 #ifdef DEBUG_EVAL
-	debug ("Looking up %s", dns -> hostname);
+	log_debug ("Looking up %s", dns -> hostname);
 #endif
 
 	/* Otherwise, look it up... */
@@ -312,18 +312,18 @@ int do_host_lookup (result, dns)
 		switch (h_errno) {
 		      case HOST_NOT_FOUND:
 #endif
-			warn ("%s: host unknown.", dns -> hostname);
+			log_error ("%s: host unknown.", dns -> hostname);
 #ifndef NO_H_ERRNO
 			break;
 		      case TRY_AGAIN:
-			warn ("%s: temporary name server failure",
+			log_error ("%s: temporary name server failure",
 			      dns -> hostname);
 			break;
 		      case NO_RECOVERY:
-			warn ("%s: name server failed", dns -> hostname);
+			log_error ("%s: name server failed", dns -> hostname);
 			break;
 		      case NO_DATA:
-			warn ("%s: no A record associated with address",
+			log_error ("%s: no A record associated with address",
 			      dns -> hostname);
 		}
 #endif /* !NO_H_ERRNO */
@@ -335,7 +335,7 @@ int do_host_lookup (result, dns)
 	}
 
 #ifdef DEBUG_EVAL
-	debug ("Lookup succeeded; first address is %s",
+	log_debug ("Lookup succeeded; first address is %s",
 	       inet_ntoa (h -> h_addr_list [0]));
 #endif
 
@@ -350,7 +350,7 @@ int do_host_lookup (result, dns)
 	new_len = count * h -> h_length;
 	if (!buffer_allocate (&dns -> data.buffer, new_len, "do_host_lookup"))
 	{
-		warn ("No memory for %s.", dns -> hostname);
+		log_error ("No memory for %s.", dns -> hostname);
 		return 0;
 	}
 
@@ -365,7 +365,7 @@ int do_host_lookup (result, dns)
 			h -> h_addr_list [i], h -> h_length);
 	}
 #ifdef DEBUG_EVAL
-	debug ("dns -> data: %x  h -> h_addr_list [0]: %x",
+	log_debug ("dns -> data: %x  h -> h_addr_list [0]: %x",
 	       *(int *)(dns -> buffer), h -> h_addr_list [0]);
 #endif
 
@@ -374,7 +374,7 @@ int do_host_lookup (result, dns)
 	dns -> timeout = cur_time + 3600;
 
 #ifdef DEBUG_EVAL
-	debug ("hard copy: %d %s", dns -> data.len,
+	log_debug ("hard copy: %d %s", dns -> data.len,
 	       (dns -> data.len > 4
 		? inet_ntoa (*(struct in_addr *)(dns -> data.data)) : 0));
 #endif
@@ -396,7 +396,7 @@ int evaluate_boolean_expression (result, packet, options, expr)
 	      case expr_check:
 		*result = check_collection (packet, expr -> data.check);
 #if defined (DEBUG_EXPRESSIONS)
-		note ("bool: check (%s) returns %s",
+		log_info ("bool: check (%s) returns %s",
 		      expr -> data.check -> name, *result ? "true" : "false");
 #endif
 		return 1;
@@ -417,7 +417,7 @@ int evaluate_boolean_expression (result, packet, options, expr)
 		}
 
 #if defined (DEBUG_EXPRESSIONS)
-		note ("bool: equal (%s, %s) = %s",
+		log_info ("bool: equal (%s, %s) = %s",
 		      sleft ? print_hex_1 (left.len, left.data, 30) : "NULL",
 		      sright ? print_hex_2 (right.len,
 					    right.data, 30) : "NULL",
@@ -440,7 +440,7 @@ int evaluate_boolean_expression (result, packet, options, expr)
 						      expr -> data.and [1]);
 
 #if defined (DEBUG_EXPRESSIONS)
-		note ("bool: and (%s, %s) = %s",
+		log_info ("bool: and (%s, %s) = %s",
 		      sleft ? (bleft ? "true" : "false") : "NULL",
 		      sright ? (bright ? "true" : "false") : "NULL",
 		      ((sleft && sright)
@@ -458,7 +458,7 @@ int evaluate_boolean_expression (result, packet, options, expr)
 		sright = evaluate_boolean_expression (&bright, packet, options,
 						      expr -> data.or [1]);
 #if defined (DEBUG_EXPRESSIONS)
-		note ("bool: or (%s, %s) = %s",
+		log_info ("bool: or (%s, %s) = %s",
 		      sleft ? (bleft ? "true" : "false") : "NULL",
 		      sright ? (bright ? "true" : "false") : "NULL",
 		      ((sleft && sright)
@@ -474,7 +474,7 @@ int evaluate_boolean_expression (result, packet, options, expr)
 		sleft = evaluate_boolean_expression (&bleft, packet, options,
 						     expr -> data.not);
 #if defined (DEBUG_EXPRESSIONS)
-		note ("bool: not (%s) = %s",
+		log_info ("bool: not (%s) = %s",
 		      sleft ? (bleft ? "true" : "false") : "NULL",
 		      ((sleft && sright)
 		       ? (!bleft ? "true" : "false") : "NULL"));
@@ -497,7 +497,7 @@ int evaluate_boolean_expression (result, packet, options, expr)
 					    "evaluate_boolean_expression");
 		}
 #if defined (DEBUG_EXPRESSIONS)
-		note ("data: exists %s.%s = %s",
+		log_info ("data: exists %s.%s = %s",
 		      expr -> data.option -> universe -> name,
 		      expr -> data.option -> name, *result ? "true" : "false");
 #endif
@@ -511,7 +511,7 @@ int evaluate_boolean_expression (result, packet, options, expr)
 	      case expr_packet:
 	      case expr_concat:
 	      case expr_host_lookup:
-		warn ("Data opcode in evaluate_boolean_expression: %d",
+		log_error ("Data opcode in evaluate_boolean_expression: %d",
 		      expr -> op);
 		return 0;
 
@@ -519,12 +519,12 @@ int evaluate_boolean_expression (result, packet, options, expr)
 	      case expr_extract_int16:
 	      case expr_extract_int32:
 	      case expr_const_int:
-		warn ("Numeric opcode in evaluate_boolean_expression: %d",
+		log_error ("Numeric opcode in evaluate_boolean_expression: %d",
 		      expr -> op);
 		return 0;
 	}
 
-	warn ("Bogus opcode in evaluate_boolean_expression: %d", expr -> op);
+	log_error ("Bogus opcode in evaluate_boolean_expression: %d", expr -> op);
 	return 0;
 }
 
@@ -570,7 +570,7 @@ int evaluate_data_expression (result, packet, options, expr)
 			s3 = 0;
 
 #if defined (DEBUG_EXPRESSIONS)
-		note ("data: substring (%s, %s, %s) = %s",
+		log_info ("data: substring (%s, %s, %s) = %s",
 		      s0 ? print_hex_1 (data.len, data.data, 30) : "NULL",
 		      s1 ? print_dec_1 (offset) : "NULL",
 		      s2 ? print_dec_2 (len) : "NULL",
@@ -607,7 +607,7 @@ int evaluate_data_expression (result, packet, options, expr)
 		}
 
 #if defined (DEBUG_EXPRESSIONS)
-		note ("data: suffix (%s, %d) = %s",
+		log_info ("data: suffix (%s, %d) = %s",
 		      s0 ? print_hex_1 (data.len, data.data, 30) : "NULL",
 		      s1 ? print_dec_1 (len) : "NULL",
 		      ((s0 && s1)
@@ -621,7 +621,7 @@ int evaluate_data_expression (result, packet, options, expr)
 		s0 = ((*expr -> data.option -> universe -> lookup_func)
 		      (result, options, expr -> data.option -> code));
 #if defined (DEBUG_EXPRESSIONS)
-		note ("data: option %s.%s = %s",
+		log_info ("data: option %s.%s = %s",
 		      expr -> data.option -> universe -> name,
 		      expr -> data.option -> name,
 		      s0 ? print_hex_1 (result -> len, result -> data, 60)
@@ -632,7 +632,7 @@ int evaluate_data_expression (result, packet, options, expr)
 		/* Combine the hardware type and address. */
 	      case expr_hardware:
 		if (!packet || !packet -> raw) {
-			warn ("data: hardware: raw packet not available");
+			log_error ("data: hardware: raw packet not available");
 			return 0;
 		}
 		result -> len = packet -> raw -> hlen + 1;
@@ -644,11 +644,11 @@ int evaluate_data_expression (result, packet, options, expr)
 				packet -> raw -> hlen);
 			result -> terminated = 0;
 		} else {
-			warn ("data: hardware: no memory for buffer.");
+			log_error ("data: hardware: no memory for buffer.");
 			return 0;
 		}
 #if defined (DEBUG_EXPRESSIONS)
-		note ("data: hardware = %s",
+		log_info ("data: hardware = %s",
 		      print_hex_1 (result -> len, result -> data, 60));
 #endif
 		return 1;
@@ -656,7 +656,7 @@ int evaluate_data_expression (result, packet, options, expr)
 		/* Extract part of the raw packet. */
 	      case expr_packet:
 		if (!packet || !packet -> raw) {
-			warn ("data: packet: raw packet not available");
+			log_error ("data: packet: raw packet not available");
 			return 0;
 		}
 
@@ -678,14 +678,14 @@ int evaluate_data_expression (result, packet, options, expr)
 					 + offset), result -> len);
 				result -> terminated = 0;
 			} else {
-				warn ("data: packet: no memory for buffer.");
+				log_error ("data: packet: no memory for buffer.");
 				return 0;
 			}
 			s2 = 1;
 		} else
 			s2 = 0;
 #if defined (DEBUG_EXPRESSIONS)
-		note ("data: packet (%d, %d) = %s",
+		log_info ("data: packet (%d, %d) = %s",
 		      offset, len,
 		      s2 ? print_hex_1 (result -> len,
 					result -> data, 60) : NULL);
@@ -695,7 +695,7 @@ int evaluate_data_expression (result, packet, options, expr)
 		/* Some constant data... */
 	      case expr_const_data:
 #if defined (DEBUG_EXPRESSIONS)
-		note ("data: const = %s",
+		log_info ("data: const = %s",
 		      print_hex_1 (expr -> data.const_data.len,
 				   expr -> data.const_data.data, 60));
 #endif
@@ -708,7 +708,7 @@ int evaluate_data_expression (result, packet, options, expr)
 	      case expr_host_lookup:
 		s0 = do_host_lookup (result, expr -> data.host_lookup);
 #if defined (DEBUG_EXPRESSIONS)
-		note ("data: DNS lookup (%s) = %s",
+		log_info ("data: DNS lookup (%s) = %s",
 		      expr -> data.host_lookup -> hostname,
 		      (s0
 		       ? print_dotted_quads (result -> len, result -> data)
@@ -731,7 +731,7 @@ int evaluate_data_expression (result, packet, options, expr)
 					      (result -> len +
 					       other.terminated),
 					      "expr_concat")) {
-				warn ("data: concat: no memory");
+				log_error ("data: concat: no memory");
 				result -> len = 0;
 				data_string_forget (&data, "expr_concat");
 				data_string_forget (&other, "expr_concat");
@@ -746,7 +746,7 @@ int evaluate_data_expression (result, packet, options, expr)
 		else if (s1)
 			data_string_copy (result, &other, "expr_concat");
 #if defined (DEBUG_EXPRESSIONS)
-		note ("data: concat (%s, %s) = %s",
+		log_info ("data: concat (%s, %s) = %s",
 		      s0 ? print_hex_1 (data.len, data.data, 20) : "NULL",
 		      s1 ? print_hex_2 (other.len, other.data, 20) : "NULL",
 		      ((s0 || s1)
@@ -761,7 +761,7 @@ int evaluate_data_expression (result, packet, options, expr)
 	      case expr_or:
 	      case expr_not:
 	      case expr_match:
-		warn ("Boolean opcode in evaluate_data_expression: %d",
+		log_error ("Boolean opcode in evaluate_data_expression: %d",
 		      expr -> op);
 		return 0;
 
@@ -769,12 +769,12 @@ int evaluate_data_expression (result, packet, options, expr)
 	      case expr_extract_int16:
 	      case expr_extract_int32:
 	      case expr_const_int:
-		warn ("Numeric opcode in evaluate_data_expression: %d",
+		log_error ("Numeric opcode in evaluate_data_expression: %d",
 		      expr -> op);
 		return 0;
 	}
 
-	warn ("Bogus opcode in evaluate_data_expression: %d", expr -> op);
+	log_error ("Bogus opcode in evaluate_data_expression: %d", expr -> op);
 	return 0;
 }	
 
@@ -794,7 +794,7 @@ int evaluate_numeric_expression (result, packet, options, expr)
 	      case expr_or:
 	      case expr_not:
 	      case expr_match:
-		warn ("Boolean opcode in evaluate_numeric_expression: %d",
+		log_error ("Boolean opcode in evaluate_numeric_expression: %d",
 		      expr -> op);
 		return 0;
 
@@ -806,7 +806,7 @@ int evaluate_numeric_expression (result, packet, options, expr)
 	      case expr_packet:
 	      case expr_concat:
 	      case expr_host_lookup:
-		warn ("Data opcode in evaluate_numeric_expression: %d",
+		log_error ("Data opcode in evaluate_numeric_expression: %d",
 		      expr -> op);
 		return 0;
 
@@ -818,7 +818,7 @@ int evaluate_numeric_expression (result, packet, options, expr)
 		if (status)
 			*result = data.data [0];
 #if defined (DEBUG_EXPRESSIONS)
-		note ("num: extract_int8 (%s) = %s",
+		log_info ("num: extract_int8 (%s) = %s",
 		      status ? print_hex_1 (data.len, data.data, 60) : "NULL",
 		      status ? print_dec_1 (*result) : "NULL" );
 #endif
@@ -834,7 +834,7 @@ int evaluate_numeric_expression (result, packet, options, expr)
 		if (status && data.len >= 2)
 			*result = getUShort (data.data);
 #if defined (DEBUG_EXPRESSIONS)
-		note ("num: extract_int16 (%s) = %ld",
+		log_info ("num: extract_int16 (%s) = %ld",
 		      ((status && data.len >= 2) ?
 		       print_hex_1 (data.len, data.data, 60) : "NULL"),
 		      *result);
@@ -851,7 +851,7 @@ int evaluate_numeric_expression (result, packet, options, expr)
 		if (status && data.len >= 4)
 			*result = getULong (data.data);
 #if defined (DEBUG_EXPRESSIONS)
-		note ("num: extract_int32 (%s) = %ld",
+		log_info ("num: extract_int32 (%s) = %ld",
 		      ((status && data.len >= 4) ?
 		       print_hex_1 (data.len, data.data, 60) : "NULL"),
 		      *result);
@@ -865,7 +865,7 @@ int evaluate_numeric_expression (result, packet, options, expr)
 		return 1;
 	}
 
-	warn ("Bogus opcode in evaluate_numeric_expression: %d", expr -> op);
+	log_error ("Bogus opcode in evaluate_numeric_expression: %d", expr -> op);
 	return 0;
 }
 
@@ -954,7 +954,7 @@ void expression_dereference (eptr, name)
 	if (--(expr -> refcnt) > 0)
 		return;
 	if (expr -> refcnt < 0) {
-		warn ("expression_dereference: negative refcnt!");
+		log_error ("expression_dereference: negative refcnt!");
 		abort ();
 	}
 
