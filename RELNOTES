@@ -1,6 +1,6 @@
 	    Internet Software Consortium DHCP Distribution
-		   Version 3, Beta 2, Patchlevel 14
-			   January 19, 2000
+		   Version 3, Beta 2, Patchlevel 15
+			   January 25, 2000
 
 			    Release Notes
 
@@ -48,6 +48,30 @@ Measurement Systems, and Brian Murrell at BC Tel Advanced
 Communications.  I'd like to express my thanks to all of these good
 people here, both for working on the code and for prodding me into
 improving it.
+
+	        Changes since 3.0 Beta 2 Patchlevel 14
+
+- Finish fixing a long-standing bug in the agent options code.   This
+  was causing core dumps and failing to operate correctly - in
+  particular, agent option stashing wasn't working.   Agent option
+  stashing should now be working, meaning that agent options can be
+  used in class statements to control address allocation.
+
+- Fix up documentation.
+
+- Fix a couple of small memory leaks that would have added up
+  significantly in a high-demand situation.
+
+- Add a log-facility configuration parameter.
+
+- Fix a compile error on some older operating systems.
+
+- Add the ability in the client to execute certain statements before
+  transmitting packets to the server.   Handy for debugging; not much
+  practical use otherwise.
+
+- Don't send faked-out giaddr when renewing or bound - again, useful
+  for debugging.
 
 	        Changes since 3.0 Beta 2 Patchlevel 13
 
