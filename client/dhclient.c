@@ -56,7 +56,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhclient.c,v 1.34 1997/03/28 23:57:47 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.35 1997/03/29 01:24:30 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -900,9 +900,9 @@ void send_discover (ipp)
 
 	/* Record the number of seconds since we started sending. */
 	if (interval < 255)
-		ip -> client -> packet -> secs = interval;
+		ip -> client -> packet.secs = interval;
 	else
-		ip -> client -> packet -> secs = 255;
+		ip -> client -> packet.secs = 255;
 
 	/* Send out a packet. */
 	result = send_packet (ip, (struct packet *)0,
@@ -1114,9 +1114,9 @@ void send_request (ipp)
 
 	/* Record the number of seconds since we started sending. */
 	if (interval < 255)
-		ip -> client -> packet -> secs = interval;
+		ip -> client -> packet.secs = interval;
 	else
-		ip -> client -> packet -> secs = 255;
+		ip -> client -> packet.secs = 255;
 
 	note ("DHCPREQUEST on %s to %s port %d", ip -> name,
 	      inet_ntoa (destination.sin_addr),
