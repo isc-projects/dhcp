@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.53.2.18 2001/10/27 04:17:09 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.53.2.19 2001/10/27 17:22:35 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -4274,6 +4274,7 @@ isc_result_t dhcp_failover_send_update_request (dhcp_failover_state_t *state)
 		log_debug ("%s", obuf);
 	}
 #endif
+	log_info ("Sent update request message to %s", state -> name);
 	return status;
 }
 
@@ -4313,6 +4314,7 @@ isc_result_t dhcp_failover_send_update_request_all (dhcp_failover_state_t
 		log_debug ("%s", obuf);
 	}
 #endif
+	log_info ("Sent update request all message to %s", state -> name);
 	return status;
 }
 
@@ -4351,6 +4353,8 @@ isc_result_t dhcp_failover_send_update_done (dhcp_failover_state_t *state)
 		log_debug ("%s", obuf);
 	}
 #endif
+
+	log_info ("Sent update done message to %s", state -> name);
 
 	/* There may be uncommitted leases at this point (since
 	   dhcp_failover_process_bind_ack() doesn't commit leases);
@@ -4683,10 +4687,14 @@ dhcp_failover_process_update_request (dhcp_failover_state_t *state,
 		lease_reference (&state -> send_update_done,
 				 state -> update_queue_tail, MDL);
 		dhcp_failover_send_updates (state);
+		log_info ("Update request from %s: sending update",
+			   state -> name);
 	} else {
 		/* Otherwise, there are no updates to send, so we can
 		   just send an UPDDONE message immediately. */
 		dhcp_failover_send_update_done (state);
+		log_info ("Update request from %s: nothing pending",
+			   state -> name);
 	}
 
 	return ISC_R_SUCCESS;
@@ -4703,10 +4711,14 @@ dhcp_failover_process_update_request_all (dhcp_failover_state_t *state,
 		lease_reference (&state -> send_update_done,
 				 state -> update_queue_tail, MDL);
 		dhcp_failover_send_updates (state);
+		log_info ("Update request all from %s: sending update",
+			   state -> name);
 	} else {
 		/* This should really never happen, but it could happen
 		   on a server that currently has no leases configured. */
 		dhcp_failover_send_update_done (state);
+		log_info ("Update request all from %s: nothing pending",
+			   state -> name);
 	}
 
 	return ISC_R_SUCCESS;
