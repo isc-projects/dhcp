@@ -1,0 +1,62 @@
+
+
+A new Request for Comments is now available in online RFC libraries.
+
+
+        RFC 1533:
+
+        Title:      DHCP Options and BOOTP Vendor Extensions
+        Author:     S. Alexander & R. Droms
+        Mailbox:    stevea@lachman.com, droms@bucknell.edu
+        Pages:      30
+        Characters: 50,919
+        Obsoletes:  1497, 1395, 1084, 1048
+
+
+The Dynamic Host Configuration Protocol (DHCP) provides a framework
+for passing configuration information to hosts on a TCP/IP network.
+Configuration parameters and other control information are carried in
+tagged data items that are stored in the "options" field of the DHCP
+message.  The data items themselves are also called "options."  This
+RFC specifies the current set of DHCP options.  This document will be
+periodically updated as new options are defined.  Each superseding
+document will include the entire current list of valid options.  This
+RFC is the product of the Dynamic Host Configuration Working Group of
+the IETF.
+
+This is now a Proposed Standard Protocol.
+
+This RFC specifies an Internet standards track protocol for the
+Internet community, and requests discussion and suggestions for
+improvements.  Please refer to the current edition of the "Internet
+Official Protocol Standards" for the standardization state and status
+of this protocol.  Distribution of this memo is unlimited.
+
+This announcement is sent to the IETF list and the RFC-DIST list.
+Requests to be added to or deleted from the IETF distribution list
+should be sent to IETF-REQUEST@CNRI.RESTON.VA.US.  Requests to be added
+to or deleted from the RFC-DIST distribution list should be sent to
+RFC-REQUEST@NIC.DDN.MIL.
+
+Details on obtaining RFCs via FTP or EMAIL may be obtained by sending
+an EMAIL message to "rfc-info@ISI.EDU" with the message body 
+"help: ways_to_get_rfcs".  For example:
+
+	To: rfc-info@ISI.EDU
+	Subject: getting rfcs
+
+	help: ways_to_get_rfcs
+
+Requests for special distribution should be addressed to either the
+author of the RFC in question, or to admin@DS.INTERNIC.NET.  Unless
+specifically noted otherwise on the RFC itself, all RFCs are for
+unlimited distribution.
+
+Submissions for Requests for Comments should be sent to
+RFC-EDITOR@ISI.EDU.  Please consult RFC 1111, "Instructions to RFC
+Authors", for further information.
+
+
+Joyce K. Reynolds
+USC/Information Sciences Institute
+
