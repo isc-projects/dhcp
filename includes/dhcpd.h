@@ -259,6 +259,8 @@ struct client_config {
 	TIME timeout;			/* Start to panic if we don't get a
 					   lease in this time period when
 					   SELECTING. */
+	TIME initial_interval;		/* All exponential backoff intervals
+					   start here. */
 	TIME retry_interval;		/* If the protocol failed to produce
 					   an address before the timeout,
 					   try the protocol again after this
@@ -269,6 +271,9 @@ struct client_config {
 	TIME reboot_timeout;		/* When in INIT-REBOOT, wait this
 					   long before giving up and going
 					   to INIT. */
+	TIME backoff_cutoff;		/* When doing exponential backoff,
+					   never back off to an interval
+					   longer than this amount. */
 	struct string_list *media;	/* Possible network media values. */
 	char *script_name;		/* Name of config script. */
 	enum { IGNORE, ACCEPT, PREFER } bootp_policy;
@@ -855,3 +860,7 @@ void icmp_startup PROTO ((int, void (*) PROTO ((struct iaddr,
 						u_int8_t *, int))));
 int icmp_echorequest PROTO ((struct iaddr *));
 void icmp_echoreply PROTO ((struct protocol *));
+
+/* dns.c */
+void dns_startup PROTO ((void));
+int ns_inaddr_lookup PROTO ((struct sockaddr_in *, u_int16_t, struct iaddr));
