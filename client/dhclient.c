@@ -56,7 +56,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.44.2.14 1999/02/09 04:59:50 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.44.2.15 1999/02/13 18:54:51 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -498,6 +498,10 @@ void dhcpack (packet)
 	ip -> client -> new -> expiry =
 		getULong (ip -> client ->
 			  new -> options [DHO_DHCP_LEASE_TIME].data);
+	/* A number that looks negative here is really just very large,
+	   because the lease expiry offset is unsigned. */
+	if (ip -> client -> new -> expiry < 0)
+		ip -> client -> new -> expiry = TIME_MAX;
 
 	/* Take the server-provided renewal time if there is one;
 	   otherwise figure it out according to the spec. */
@@ -521,8 +525,15 @@ void dhcpack (packet)
 					ip -> client -> new -> renewal / 4;
 
 	ip -> client -> new -> expiry += cur_time;
+	/* Lease lengths can never be negative. */
+	if (ip -> client -> new -> expiry < cur_time)
+		ip -> client -> new -> expiry = TIME_MAX;
 	ip -> client -> new -> renewal += cur_time;
+	if (ip -> client -> new -> renewal < cur_time)
+		ip -> client -> new -> renewal = TIME_MAX;
 	ip -> client -> new -> rebind += cur_time;
+	if (ip -> client -> new -> rebind < cur_time)
+		ip -> client -> new -> rebind = TIME_MAX;
 
 	bind_lease (ip);
 }
@@ -2095,6 +2106,11 @@ void go_daemon ()
 		exit (0);
 	/* Become session leader and get pid... */
 	pid = setsid ();
+
+	/* Close standard I/O descriptors. */
+        close(0);
+        close(1);
+        close(2);
 
 	write_client_pid_file ();
 }
