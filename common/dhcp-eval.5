@@ -240,13 +240,12 @@ A list of hexadecimal octet values, seperated by colons, may be
 specified as a data expression.
 .RE
 .PP
-.B concat (\fIdata-expr1\fB, \fIdata-expr2\fB)\fR
+.B concat (\fIdata-expr1\fB, ..., \fIdata-exprN\fB)\fR
 .RS 0.25i
-The two expressions are evaluated, and the result of concatenating the
-results of the two evaluations is returned.   If either subexpression
-evaluates to null, then the result is the value of the other
-expression.   If both expressions evaluate to null, then the result is
-null.
+The expressions are evaluated, and the results of each evaluation are
+concatenated in the sequence that the subexpressions are listed.   Any
+subexpression that evaluates to null is treated as a zero-length string.
+If all the arguments to concat are null, the result is also null.
 .RE
 .PP
 .B reverse (\fInumeric-expr1\fB, \fIdata-expr2\fB)\fR
