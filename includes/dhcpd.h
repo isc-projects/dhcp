@@ -1141,7 +1141,7 @@ ssize_t receive_packet PROTO ((struct interface_info *,
 			       struct sockaddr_in *, struct hardware *));
 #endif
 
-#if defined (USE_SOCKET_SEND) || defined (USE_SOCKET_FALLBACK)
+#if defined (USE_SOCKET_FALLBACK)
 void fallback_discard PROTO ((struct protocol *));
 #endif
 
