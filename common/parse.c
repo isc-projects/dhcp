@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.69 2000/04/04 06:27:35 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.70 2000/04/06 22:46:26 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1126,6 +1126,93 @@ int parse_option_code_definition (cfile, option)
 }
 
 /*
+ * base64 :== NUMBER_OR_STRING
+ */
+
+int parse_base64 (data, cfile)
+	struct data_string *data;
+	struct parse *cfile;
+{
+	enum dhcp_token token;
+	const char *val;
+	int i, j;
+	unsigned acc = 0;
+	static char from64 [] = {64, 64, 64, 64, 64, 64, 64, 64, /*  \"#$%&' */
+				 64, 64, 64, 62, 64, 64, 64, 63, /* ()*+,-./ */
+				 52, 53, 54, 55, 56, 57, 58, 59, /* 01234567 */
+				 60, 61, 64, 64, 64, 64, 64, 64, /* 90:;<=>? */
+				 64, 0, 1, 2, 3, 4, 5, 6,	 /* @ABCDEFG */
+				 7, 8, 9, 10, 11, 12, 13, 14,	 /* HIJKLMNO */
+				 15, 16, 17, 18, 19, 20, 21, 22, /* PQRSTUVW */
+				 23, 24, 25, 64, 64, 64, 64, 64, /* XYZ[\]^_ */
+				 64, 26, 27, 28, 29, 30, 31, 32, /* 'abcdefg */
+				 33, 34, 35, 36, 37, 38, 39, 40, /* hijklmno */
+				 41, 42, 43, 44, 45, 46, 47, 48, /* pqrstuvw */
+				 59, 50, 51, 64, 64, 64, 64, 64};/* xyz{|}~  */
+	
+	token = next_token (&val, cfile);
+	if (token == STRING) {
+		data -> len = strlen (val) + 1;
+		if (!buffer_allocate (&data -> buffer, data -> len, MDL)) {
+			parse_warn (cfile, "can't allocate string buffer");
+			return 0;
+		}
+		strcpy (data -> buffer -> data, val);
+		data -> terminated = 1;
+		data -> data = data -> buffer -> data;
+		return 1;
+	}
+
+	data -> len = strlen (val);
+	data -> len = (data -> len * 3) / 4;
+	if (!buffer_allocate (&data -> buffer, data -> len, MDL)) {
+		parse_warn (cfile, "can't allocate buffer for base64 data.");
+		data -> len = 0;
+		data -> data = (unsigned char *)0;
+		return 0;
+	}
+		
+	j = 0;
+	for (i = 0; val [i] != '=' && val [i]; i++) {
+		unsigned foo = val [i];
+		if (foo < ' ' || foo > 'z') {
+		      bad64:
+			parse_warn (cfile,
+				    "invalid base64 character %d.", val [i]);
+			data_string_forget (data, MDL);
+			return 0;
+		}
+		foo = from64 [foo - ' '];
+		if (foo == 64)
+			goto bad64;
+		acc = (acc << 6) + foo;
+		switch (i % 4) {
+		      case 0:
+			break;
+		      case 1:
+			data -> buffer -> data [j++] = (acc >> 4);
+			acc = acc & 0x0f;
+			break;
+
+		      case 2:
+			data -> buffer -> data [j++] = (acc >> 2);
+			acc = acc & 0x03;
+			break;
+		      case 3:
+			data -> buffer -> data [j++] = acc;
+			acc = 0;
+			break;
+		}
+	}
+	if (i % 4)
+		parse_warn (cfile, "partial base64 value left over: %d.", acc);
+	data -> len = j;
+	data -> data = data -> buffer -> data;
+	return 1;
+}
+
+
+/*
  * colon-seperated-hex-list :== NUMBER |
  *				NUMBER COLON colon-seperated-hex-list
  */
@@ -1238,7 +1325,6 @@ int parse_executable_statement (result, cfile, lose, case_context)
 	int known;
 	int flag;
 	struct dns_zone *zone;
-	struct tsig_key *tkey;
 	isc_result_t status;
 
 	token = peek_token (&val, cfile);
@@ -1563,6 +1649,7 @@ int parse_executable_statement (result, cfile, lose, case_context)
 		   parsers. */
 	      case ZONE:
 		token = next_token (&val, cfile);
+		zone = (struct dns_zone *)0;
 		if (!dns_zone_allocate (&zone, MDL))
 			log_fatal ("no memory for new zone.");
 		zone -> name = parse_host_name (cfile);
@@ -1573,26 +1660,13 @@ int parse_executable_statement (result, cfile, lose, case_context)
 			dns_zone_dereference (&zone, MDL);
 			return 0;
 		}
-		token = next_token (&val, cfile);
-		if (token != LBRACE) {
-			parse_warn (cfile, "expecting left brace");
-			goto badzone;
-		}
 		if (!parse_zone (zone, cfile))
 			goto badzone;
-		token = next_token (&val, cfile);
-		if (token != RBRACE) {
-			parse_warn (cfile, "expecting right brace.");
-			goto badzone;
-		}
 		status = enter_dns_zone (zone);
-		if (status == ISC_R_NOMEMORY)
-			log_fatal ("no memory to hash dns zone %s",
-				   zone -> name);
 		if (status != ISC_R_SUCCESS) {
 			if (parse_semi (cfile))
-				parse_warn (cfile, "tsig key %s: %s",
-					    tkey -> name,
+				parse_warn (cfile, "dns zone key %s: %s",
+					    zone -> name,
 					    isc_result_totext (status));
 			dns_zone_dereference (&zone, MDL);
 			return 0;
@@ -1600,44 +1674,13 @@ int parse_executable_statement (result, cfile, lose, case_context)
 		return 1;
 		
 		/* Also not really a statement, but same idea as above. */
-	      case TSIG_KEY:
+	      case KEY:
 		token = next_token (&val, cfile);
-		token = next_token (&val, cfile);
-		if (token != STRING) {
-			parse_warn (cfile, "expecting key name string.");
+		if (!parse_key (cfile)) {
 			*lose = 1;
-			skip_to_semi (cfile);
 			return 0;
 		}
-		if (!tsig_key_allocate (&tkey, MDL))
-			log_fatal ("no memory for tsig key");
-		tkey -> name = dmalloc (strlen (val) + 1, MDL);
-		if (!tkey -> name)
-			log_fatal ("no memory for tsig key name.");
-		strcpy (tkey -> name, val);
-		tkey -> algorithm = parse_host_name (cfile);
-		if (!tkey -> algorithm) {
-			parse_warn (cfile, "expecting key algorithim name.");
-		      badtkey:
-			skip_to_semi (cfile);
-			tsig_key_dereference (&tkey, MDL);
-			return 0;
-		}
-		if (!parse_cshl (&tkey -> key, cfile))
-			goto badtkey;
-		status = enter_tsig_key (tkey);
-		if (status == ISC_R_NOMEMORY)
-			log_fatal ("no memory to hash tsig key %s",
-				   tkey -> name);
-		if (status != ISC_R_SUCCESS) {
-			if (parse_semi (cfile))
-				parse_warn (cfile, "tsig key %s: %s",
-					    tkey -> name,
-					    isc_result_totext (status));
-			tsig_key_dereference (&tkey, MDL);
-			return 0;
-		}
-		return parse_semi (cfile);
+		return 1;
 			
 	      default:
 		if (config_universe && is_identifier (token)) {
@@ -1663,9 +1706,11 @@ int parse_executable_statement (result, cfile, lose, case_context)
    zone-statement :==
 	PRIMARY ip-addresses SEMI |
 	SECONDARY ip-addresses SEMI |
-	TSIG_KEY STRING SEMI
-   ip-addresses = ip-addr-or-hostname |
-		  ip-addr-or-hostname COMMA ip-addresses */
+	key-reference SEMI
+   ip-addresses :== ip-addr-or-hostname |
+		  ip-addr-or-hostname COMMA ip-addresses
+   key-reference :== KEY STRING |
+		    KEY identifier */
 
 int parse_zone (struct dns_zone *zone, struct parse *cfile)
 {
@@ -1673,6 +1718,12 @@ int parse_zone (struct dns_zone *zone, struct parse *cfile)
 	const char *val;
 	struct option_cache *oc;
 	int done = 0;
+
+	token = next_token (&val, cfile);
+	if (token != LBRACE) {
+		parse_warn (cfile, "expecting left brace");
+		return 0;
+	}
 
 	do {
 	    token = peek_token (&val, cfile);
@@ -1735,10 +1786,10 @@ int parse_zone (struct dns_zone *zone, struct parse *cfile)
 		    }
 		    break;
 
-		  case TSIG_KEY:
+		  case KEY:
 		    token = next_token (&val, cfile);
 		    token = next_token (&val, cfile);
-		    if (token != STRING) {
+		    if (token != STRING && !is_identifier (token)) {
 			    parse_warn (cfile, "expecting key name.");
 			    skip_to_semi (cfile);
 			    return 0;
@@ -1755,9 +1806,105 @@ int parse_zone (struct dns_zone *zone, struct parse *cfile)
 	    }
 	} while (!done);
 
+	token = next_token (&val, cfile);
+	if (token != RBRACE) {
+		parse_warn (cfile, "expecting right brace.");
+		return 0;
+	}
 	return 1;
 }
 
+/* key-statements :== key-statement |
+		      key-statement key-statements
+   key-statement :==
+	ALGORITHM host-name SEMI |
+	secret-definition SEMI
+   secret-definition :== SECRET base64val |
+			 SECRET STRING */
+
+int parse_key (struct parse *cfile)
+{
+	int token;
+	const char *val;
+	int done = 0;
+	struct tsig_key *key;
+	isc_result_t status;
+
+	token = next_token (&val, cfile);
+	if (token != STRING && !is_identifier (token)) {
+		parse_warn (cfile, "expecting key name string.");
+		skip_to_semi (cfile);
+		return 0;
+	}
+	key = (struct tsig_key *)0;
+	if (!tsig_key_allocate (&key, MDL))
+		log_fatal ("no memory for tsig key");
+	key -> name = dmalloc (strlen (val) + 1, MDL);
+	if (!key -> name)
+		log_fatal ("no memory for tsig key name.");
+	strcpy (key -> name, val);
+
+	token = next_token (&val, cfile);
+	if (token != LBRACE) {
+		parse_warn (cfile, "expecting left brace");
+		return 0;
+	}
+
+	do {
+		token = next_token (&val, cfile);
+		switch (token) {
+		      case ALGORITHM:
+			if (key -> algorithm) {
+				parse_warn (cfile,
+					    "key %s: too many algorithms",
+					    key -> name);
+				goto rbad;
+			}
+			key -> algorithm = parse_host_name (cfile);
+			if (!key -> algorithm) {
+				parse_warn (cfile,
+					    "expecting key algorithm name.");
+				goto rbad;
+			}
+			if (!parse_semi (cfile))
+				goto rbad;
+			break;
+
+		      case SECRET:
+			if (key -> key.buffer) {
+				parse_warn (cfile, "key %s: too many secrets",
+					    key -> name);
+				goto rbad;
+			}
+			if (!parse_base64 (&key -> key, cfile))
+				goto rbad;
+			if (!parse_semi (cfile))
+				goto rbad;
+			break;
+
+		      default:
+			done = 1;
+			break;
+		}
+	} while (!done);
+	if (token != RBRACE) {
+		parse_warn (cfile, "expecting right brace.");
+		goto rbad;
+	}
+	status = enter_tsig_key (key);
+	if (status != ISC_R_SUCCESS) {
+		parse_warn (cfile, "tsig key %s: %s",
+			    key -> name, isc_result_totext (status));
+		goto bad;
+	}
+	return 1;
+
+      rbad:
+	skip_to_rbrace (cfile, 1);
+      bad:
+	tsig_key_dereference (&key, MDL);
+	return 0;
+}
 /*
  * on-statement :== event-types LBRACE executable-statements RBRACE
  * event-types :== event-type OR event-types |
@@ -3682,57 +3829,6 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 	} else
 		*rv = t;
 	return 1;
-}
-
-int parse_auth_key (key_id, cfile)
-	struct data_string *key_id;
-	struct parse *cfile;
-{
-	struct data_string key_data;
-	const char *val;
-	enum dhcp_token token;
-	const struct auth_key *key, *old_key = (struct auth_key *)0;
-	struct auth_key *new_key;
-
-	memset (&key_data, 0, sizeof key_data);
-
-	if (!parse_cshl (key_id, cfile))
-		return 0;
-
-	key = auth_key_lookup (key_id);
-
-	token = peek_token (&val, cfile);
-	if (token == SEMI) {
-		if (!key)
-			parse_warn (cfile, "reference to undefined key %s",
-				    print_hex_1 (key_id -> len,
-						 key_id -> data,
-						 key_id -> len));
-		data_string_forget (key_id, MDL);
-	} else {
-		if (!parse_cshl (&key_data, cfile))
-			return 0;
-		if (key) {
-			parse_warn (cfile, "redefinition of key %s",
-				    print_hex_1 (key_id -> len,
-						 key_id -> data,
-						 key_id -> len));
-			old_key = key;
-		}
-		new_key = new_auth_key (key_data.len, MDL);
-		if (!new_key)
-			log_fatal ("No memory for key %s",
-				   print_hex_1 (key_id -> len,
-						key_id -> data,
-						key_id -> len));
-		new_key -> length = key_data.len;
-		memcpy (new_key -> data, key_data.data, key_data.len);
-		enter_auth_key (key_id, new_key);
-		data_string_forget (&key_data, MDL);
-	}
-
-	parse_semi (cfile);
-	return key_id -> len ? 1 : 0;
 }
 
 int parse_warn (struct parse *cfile, const char *fmt, ...)
