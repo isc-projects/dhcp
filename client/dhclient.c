@@ -56,7 +56,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.58 1999/03/10 20:39:02 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.59 1999/03/11 01:46:43 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -437,18 +437,6 @@ void state_selecting (cpp)
 		/* Check to see if we got an ARPREPLY for the address
 		   in this particular lease. */
 		if (!picked) {
-			script_init (client, "ARPCHECK", lp -> medium);
-			script_write_params (client, "check_", lp);
-
-			/* If the ARPCHECK code detects another
-			   machine using the offered address, it exits
-			   nonzero.  We need to send a DHCPDECLINE and
-			   toss the lease. */
-			if (script_go (client)) {
-				make_decline (client, lp);
-				send_decline (client);
-				goto freeit;
-			}
 			picked = lp;
 			picked -> next = (struct client_lease *)0;
 		} else {
@@ -640,9 +628,6 @@ void bind_lease (client)
 	/* Remember the medium. */
 	client -> new -> medium = client -> medium;
 
-	/* Write out the new lease. */
-	write_client_lease (client, client -> new, 0);
-
 	/* Run the client script with the new parameters. */
 	script_init (client, (client -> state == S_REQUESTING
 			  ? "BOUND"
@@ -656,7 +641,21 @@ void bind_lease (client)
 	script_write_params (client, "new_", client -> new);
 	if (client -> alias)
 		script_write_params (client, "alias_", client -> alias);
-	script_go (client);
+
+	/* If the BOUND/RENEW code detects another machine using the
+	   offered address, it exits nonzero.  We need to send a
+	   DHCPDECLINE and toss the lease. */
+	if (script_go (client)) {
+		make_decline (client, client -> new);
+		send_decline (client);
+		destroy_client_lease (client -> new);
+		client -> new = (struct lease *)0;
+		state_init (client);
+		return;
+	}
+
+	/* Write out the new lease. */
+	write_client_lease (client, client -> new, 0);
 
 	/* Replace the old active lease with the new one. */
 	if (client -> active)
@@ -802,7 +801,7 @@ void dhcpoffer (packet)
 	struct client_state *client;
 	struct client_lease *lease, *lp;
 	int i;
-	int arp_timeout_needed, stop_selecting;
+	int stop_selecting;
 	char *name = packet -> packet_type ? "DHCPOFFER" : "BOOTREPLY";
 	struct iaddrlist *ap;
 	struct option_cache *oc;
@@ -868,16 +867,6 @@ void dhcpoffer (packet)
 	/* Record the medium under which this lease was offered. */
 	lease -> medium = client -> medium;
 
-	/* Send out an ARP Request for the offered IP address. */
-	script_init (client, "ARPSEND", lease -> medium);
-	script_write_params (client, "check_", lease);
-	/* If the script can't send an ARP request without waiting, 
-	   we'll be waiting when we do the ARPCHECK, so don't wait now. */
-	if (script_go (client))
-		arp_timeout_needed = 0;
-	else
-		arp_timeout_needed = 2;
-
 	/* Figure out when we're supposed to stop selecting. */
 	stop_selecting = (client -> first_sending +
 			  client -> config -> select_interval);
@@ -891,14 +880,6 @@ void dhcpoffer (packet)
 		lease -> next = client -> offered_leases;
 		client -> offered_leases = lease;
 	} else {
-		/* If we already have an offer, and arping for this
-		   offer would take us past the selection timeout,
-		   then don't extend the timeout - just hope for the
-		   best. */
-		if (client -> offered_leases &&
-		    (cur_time + arp_timeout_needed) > stop_selecting)
-			arp_timeout_needed = 0;
-
 		/* Put the lease at the end of the list. */
 		lease -> next = (struct client_lease *)0;
 		if (!client -> offered_leases)
@@ -910,12 +891,6 @@ void dhcpoffer (packet)
 			lp -> next = lease;
 		}
 	}
-
-	/* If we're supposed to stop selecting before we've had time
-	   to wait for the ARPREPLY, add some delay to wait for
-	   the ARPREPLY. */
-	if (stop_selecting - cur_time < arp_timeout_needed)
-		stop_selecting = cur_time + arp_timeout_needed;
 
 	/* If the selecting interval has expired, go immediately to
 	   state_selecting().  Otherwise, time out into
