@@ -48,7 +48,7 @@ install: all
 				$(DESTDIR)$(ADMMANDIR)/dhcrelay$(ADMMANEXT)
 
 depend:
-	makedepend $(INCLUDES) $(PREDEFINES) $(SRCS)
+	mkdep $(INCLUDES) $(PREDEFINES) $(SRCS)
 
 clean:
 	-rm -f $(OBJS) dhclient.o

@@ -59,7 +59,7 @@ install: all
 				$(DESTDIR)$(FFMANDIR)/dhcp-contrib$(FFMANEXT)
 
 depend:
-	makedepend $(INCLUDES) $(PREDEFINES) $(SRC)
+	mkdep $(INCLUDES) $(PREDEFINES) $(SRC)
 
 clean:
 	-rm -f $(OBJ)

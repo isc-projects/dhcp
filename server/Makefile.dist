@@ -54,7 +54,7 @@ install: all
 			$(DESTDIR)$(FFMANDIR)/dhcpd.leases$(FFMANEXT)
 
 depend:
-	makedepend $(INCLUDES) $(PREDEFINES) $(SRCS)
+	mkdep $(INCLUDES) $(PREDEFINES) $(SRCS)
 
 clean:
 	-rm -f $(OBJS)
