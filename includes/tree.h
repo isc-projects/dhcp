@@ -3,7 +3,7 @@
    Definitions for address trees... */
 
 /*
- * Copyright (c) 1996-1999 Internet Software Consortium.
+ * Copyright (c) 1996-2001 Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -46,6 +46,11 @@ typedef struct _pair {
 	caddr_t car;
 	struct _pair *cdr;
 } *pair;
+
+struct option_chain_head {
+	int refcnt;
+	pair first;
+};
 
 struct enumeration_value {
 	const char *name;
