@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: alloc.c,v 1.49 2000/07/27 09:02:28 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: alloc.c,v 1.50 2000/08/01 21:54:01 neild Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -691,9 +691,9 @@ int buffer_dereference (ptr, file, line)
 
 	(*ptr) -> refcnt--;
 	rc_register (file, line, ptr, *ptr, (*ptr) -> refcnt);
-	if (!(*ptr) -> refcnt)
+	if (!(*ptr) -> refcnt) {
 		dfree ((*ptr), file, line);
-	if ((*ptr) -> refcnt < 0) {
+	} else if ((*ptr) -> refcnt < 0) {
 		log_error ("%s(%d): negative refcnt!", file, line);
 #if defined (DEBUG_RC_HISTORY)
 		dump_rc_history ();
