@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.64 2000/09/16 20:01:07 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.65 2000/09/29 19:58:24 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -680,9 +680,13 @@ const char *pretty_print_option (code, data, len, emit_commas, emit_quotes)
 				for (; dp < data + len; dp++) {
 					if (!isascii (*dp) ||
 					    !isprint (*dp)) {
-						sprintf (op, "\\%03o",
-							 *dp);
-						op += 4;
+						/* Skip trailing NUL. */
+					    if (dp + 1 != data + len ||
+						*dp != 0) {
+						    sprintf (op, "\\%03o",
+							     *dp);
+						    op += 4;
+					    }
 					} else if (*dp == '"' ||
 						   *dp == '\'' ||
 						   *dp == '$' ||
