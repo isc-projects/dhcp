@@ -230,7 +230,6 @@ void enter_lease (lease)
 	/* If we don't have a place for this lease yet, save it for
 	   later. */
 	if (!comp) {
-printf ("didn't find the lease...\n");
 		comp = new_lease ("enter_lease");
 		if (!comp) {
 			error ("No memory for lease %s\n",
@@ -241,7 +240,6 @@ printf ("didn't find the lease...\n");
 		lease -> prev = (struct lease *)0;
 		dangling_leases = lease;
 	} else {
-printf ("superseding lease...\n");
 		supersede_lease (comp, lease, 0);
 	}
 }

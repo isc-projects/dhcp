@@ -85,7 +85,6 @@ void read_leases (void)
 		warn ("Can't open lease database %s: %m", _PATH_DHCPD_DB);
 	do {
 		token = next_token (&val, cfile);
-printf ("token = %d\n", token);
 		if (token == EOF)
 			break;
 		if (token != LEASE) {
@@ -94,10 +93,8 @@ printf ("token = %d\n", token);
 		} else {
 			if (!setjmp (bc)) {
 				struct lease *lease;
-printf ("Parsing a lease...\n");
 				lease = parse_lease_statement (cfile, &bc);
 				enter_lease (lease);
-print_lease (lease);
 			}
 		}
 
