@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: conflex.c,v 1.16 1996/08/29 09:13:41 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: conflex.c,v 1.17 1996/08/29 09:49:52 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -90,6 +90,7 @@ void new_parse (name)
 	prev_line = line2;
 	token_line = cur_line;
 	cur_line [0] = prev_line [0] = 0;
+	warnings_occurred = 0;
 }
 
 static int get_char (cfile)

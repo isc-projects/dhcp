@@ -265,6 +265,7 @@ int store_options PROTO ((unsigned char *, int, struct tree_cache **,
 char *pretty_print_option PROTO ((unsigned char, unsigned char *, int));
 
 /* errwarn.c */
+extern int warnings_occurred;
 void error PROTO ((char *, ...));
 int warn PROTO ((char *, ...));
 int note PROTO ((char *, ...));
@@ -299,7 +300,7 @@ int next_token PROTO ((char **, FILE *));
 int peek_token PROTO ((char **, FILE *));
 
 /* confpars.c */
-void readconf PROTO ((void));
+int readconf PROTO ((void));
 void read_leases PROTO ((void));
 int parse_statement PROTO ((FILE *,
 			    struct group *, int, struct host_decl *, int));

@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: errwarn.c,v 1.9 1996/08/28 01:38:09 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: errwarn.c,v 1.10 1996/08/29 09:49:53 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -52,6 +52,8 @@ static void do_percentm PROTO ((char *obuf, char *ibuf));
 
 static char mbuf [1024];
 static char fbuf [1024];
+
+int warnings_occurred;
 
 /* Log an error message, then exit... */
 
@@ -221,6 +223,8 @@ int parse_warn (ANSI_DECL (char *) fmt, VA_DOTDOTDOT)
 		write (1, spaces, lexchar - 1);
 		write (1, "^\n", 2);
 	}
+
+	warnings_occurred = 1;
 
 	return 0;
 }

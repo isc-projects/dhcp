@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.27 1996/08/29 09:14:39 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.28 1996/08/29 09:49:52 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -54,7 +54,7 @@ static TIME parsed_time;
    parameters :== <nil> | parameter | parameters parameter
    declarations :== <nil> | declaration | declarations declaration */
 
-void readconf ()
+int readconf ()
 {
 	FILE *cfile;
 	char *val;
@@ -83,7 +83,9 @@ void readconf ()
 						 (struct host_decl *)0,
 						 declaration);
 	} while (1);
-	token = next_token (&val, cfile);
+	token = next_token (&val, cfile); /* Clear the peek buffer */
+
+	return !warnings_occurred;
 }
 
 /* lease-file :== lease-declarations EOF

@@ -41,7 +41,7 @@
  */
 
 static char objcopyright[] =
-"$Id: dhcpd.c,v 1.27 1996/08/28 01:30:19 mellon Exp $ Copyright 1995, 1996 The Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.28 1996/08/29 09:49:52 mellon Exp $ Copyright 1995, 1996 The Internet Software Consortium.";
 static char copyright[] =
 "Copyright 1995, 1996 The Internet Software Consortium.";
 static char arr [] = "All rights reserved.";
@@ -70,7 +70,6 @@ int main (argc, argv, envp)
 	char **argv, **envp;
 {
 	int i, status;
-	struct sockaddr_in name;
 	struct servent *ent;
 	int pidfilewritten = 0;
 #ifndef DEBUG
@@ -179,7 +178,8 @@ int main (argc, argv, envp)
 	GET_TIME (&cur_time);
 
 	/* Read the dhcpd.conf file... */
-	readconf ();
+	if (!readconf ())
+		error ("Configuration file errors encountered -- exiting");
 
 	/* Start up the database... */
 	db_startup ();
@@ -215,7 +215,7 @@ int main (argc, argv, envp)
 
 static void usage ()
 {
-	error ("Usage: dhcpd [-p <port>] [-f] [if0 [...ifN]]");
+	error ("Usage: dhcpd [-p <port>] [-d] [-f] [if0 [...ifN]]");
 }
 
 void cleanup ()
