@@ -46,7 +46,8 @@ isc_result_t omapi_buffer_reference (omapi_buffer_t **,
 				     omapi_buffer_t *, const char *, int);
 isc_result_t omapi_buffer_dereference (omapi_buffer_t **, const char *, int);
 
-#if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL)
+#if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL) || \
+		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
 #define DMDOFFSET (sizeof (struct dmalloc_preamble))
 #define DMLFSIZE 16
 #define DMUFSIZE 16
@@ -95,7 +96,8 @@ struct rc_history_entry {
 #define rc_register_mdl(reference, addr, refcnt)
 #endif
 
-#if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL)
+#if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL) || \
+		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
 extern struct dmalloc_preamble *dmalloc_list;
 extern unsigned long dmalloc_outstanding;
 extern unsigned long dmalloc_longterm;
