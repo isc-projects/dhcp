@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.143.2.22 2004/09/21 19:25:38 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.143.2.23 2004/09/30 17:31:18 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1464,39 +1464,53 @@ void parse_pool_statement (cfile, group, type)
 	   because BOOTP doesn't support leases, and failover absolutely
 	   depends on lease timing. */
 	if (pool -> failover_peer) {
-		for (permit = pool -> permit_list;
-		     permit; permit = permit -> next) {
+		/* This search order matches the search orders later in
+		 * execution - deny first, if not denied, check permit
+		 * list.  A dynamic bootp client may be known or unknown,
+		 * it may belong to a member of a class, but it definitely
+		 * will not be authenticated since that requires DHCP
+		 * to work.  So a dynamic bootp client is definitely not
+		 * an authenticated client, and we can't say for sure about
+		 * anything else.
+		 *
+		 * So we nag the user.
+		 */
+		for (permit = pool -> prohibit_list; permit;
+		     permit = permit -> next) {
 			if (permit -> type == permit_dynamic_bootp_clients ||
-			    permit -> type == permit_all_clients) {
-				  dynamic_bootp_clash:
-				parse_warn (cfile,
-					    "pools with failover peers %s",
-					    "may not permit dynamic bootp.");
-				log_error ("Either write a \"no failover\" %s",
-					   "statement and use disjoint");
-				log_error ("pools, or don't permit dynamic%s",
-					   " bootp.");
-				log_error ("This is a protocol limitation,%s",
-					   " not an ISC DHCP limitation, so");
-				log_error ("please don't request an %s",
-					   "enhancement or ask why this is.");
-				goto clash_testing_done;
-			}
+			    permit -> type == permit_unauthenticated_clients ||
+			    permit -> type == permit_all_clients)
+				break;
 		}
-		if (!pool -> permit_list) {
-			if (!pool -> prohibit_list)
-				goto dynamic_bootp_clash;
+		if (!permit) {
+			permit = pool -> permit_list;
+			do {
+				if (!permit ||
+				    permit -> type !=
+					permit_authenticated_clients) {
+					parse_warn (cfile,
+					  "pools with failover peers %s",
+					  "may not permit dynamic bootp.");
+					log_error ("Either write a \"%s\" %s",
+					  "no failover",
+					  "statement and use disjoint");
+					log_error ("pools, or%s (%s) %s",
+					  " don't permit dynamic bootp",
+					  "\"deny dynamic bootp clients;\"",
+					  "in this pool.");
+					log_error ("This is a protocol,%s %s",
+					   " limitation, not an ISC DHCP",
+					   "limitation, so");
+					log_error ("please don't request an %s",
+					   "enhancement or ask why this is.");
 
-			for (permit = pool -> prohibit_list; permit;
-			     permit = permit -> next) {
-				if (permit -> type ==
-				    permit_dynamic_bootp_clients ||
-				    permit -> type == permit_all_clients)
-					goto clash_testing_done;
-			}
+					break;
+				}
+
+				permit = permit -> next;
+			} while (permit);
 		}
 	}
-      clash_testing_done:				
 #endif /* FAILOVER_PROTOCOL */
 
 	/* See if there's already a pool into which we can merge this one. */

@@ -45,6 +45,12 @@ and for prodding me into improving it.
 
 			Changes since 3.0.1
 
+- Pools configured in DHCPD for failover possessing permission lists that
+  previously were assumed to not include dyanmic bootp clients are now
+  a little more pessimistic.  The result is, dhcpd will nag you about just
+  about most pools that possess a 'allow' statement with no 'deny' that
+  would definitely match a dynamic bootp client.
+
 - The 'ddns-update-style' configuration warning bit now insists that
   the configuration be globally scoped.
 
