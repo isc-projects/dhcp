@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.57.2.7 1998/06/29 20:40:47 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.57.2.8 1998/06/29 22:16:38 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -839,6 +839,7 @@ void ack_lease (packet, lease, offer, when)
 
 		i = DHO_DHCP_SERVER_IDENTIFIER;
 		if (!state -> options [i]) {
+		 use_primary:
 			state -> options [i] = new_tree_cache ("server-id");
 			state -> options [i] -> value =
 				(unsigned char *)&state ->
@@ -849,6 +850,24 @@ void ack_lease (packet, lease, offer, when)
 				= state -> options [i] -> len;
 			state -> options [i] -> timeout = 0xFFFFFFFF;
 			state -> options [i] -> tree = (struct tree *)0;
+			state -> from.len =
+				sizeof state -> ip -> primary_address;
+			memcpy (state -> from.iabuf,
+				&state -> ip -> primary_address,
+				state -> from.len);
+		} else {
+			/* Find the value of the server identifier... */
+			if (!tree_evaluate (state -> options [i]))
+				goto use_primary;
+			if (!state -> options [i] -> value ||
+			    (state -> options [i] -> len >
+			     sizeof state -> from.iabuf))
+				goto use_primary;
+			
+			state -> from.len = state -> options [i] -> len;
+			memcpy (state -> from.iabuf,
+				state -> options [i] -> value,
+				state -> from.len);
 		}
 
 		/* Sanity check the lease time. */
@@ -1083,8 +1102,6 @@ void dhcp_reply (lease)
 #endif
 	memset (to.sin_zero, 0, sizeof to.sin_zero);
 
-	from = state -> ip -> primary_address;
-
 #ifdef DEBUG_PACKET
 	dump_raw ((unsigned char *)&raw, packet_length);
 #endif
@@ -1138,10 +1155,11 @@ void dhcp_reply (lease)
 		to.sin_port = remote_port; /* XXX */
 	}
 
+	memcpy (&from, state -> from.iabuf, sizeof from);
 
 	result = send_packet (state -> ip,
 			      (struct packet *)0, &raw, packet_length,
-			      raw.siaddr, &to, &hto);
+			      from, &to, &hto);
 	if (result < 0)
 		warn ("sendpkt: %m");
 
