@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: discover.c,v 1.9.2.1 1999/07/13 12:52:45 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: discover.c,v 1.9.2.2 1999/10/14 21:11:49 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -169,9 +169,10 @@ void discover_interfaces (state)
 			memcpy (&foo, &ifp -> ifr_addr,
 				sizeof ifp -> ifr_addr);
 
-			/* We don't want the loopback interface. */
-			if (foo.sin_addr.s_addr == htonl (INADDR_LOOPBACK))
-				continue;
+			if (foo.sin_addr.s_addr == htonl (INADDR_LOOPBACK) &&
+			    ((tmp -> flags & INTERFACE_AUTOMATIC) &&
+			     state == DISCOVER_SERVER))
+			    continue;
 
 
 			/* If this is the first real IP address we've
@@ -530,6 +531,14 @@ void got_one (l)
 		return;
 	}
 	if (result == 0)
+		return;
+
+	/* If we didn't at least get the fixed portion of the BOOTP
+	   packet, drop the packet.  We're allowing packets with no
+	   sname or filename, because we're aware of at least one
+	   client that sends such packets, but this definitely falls
+	   into the category of being forgiving. */
+	if (result < DHCP_FIXED_NON_UDP - DHCP_SNAME_LEN - DHCP_FILE_LEN)
 		return;
 
 	if (bootp_packet_handler) {
