@@ -72,14 +72,14 @@ void assemble_tr_header (interface, buf, bufix, to)
 
         /* set up the token header */
         trh = (struct trh_hdr *) &buf[*bufix];
-        if (interface -> hw_address.hlen == sizeof (trh->saddr))
-                memcpy (trh->saddr, interface -> hw_address.haddr,
+        if (interface -> hw_address.hlen - 1 == sizeof (trh->saddr))
+                memcpy (trh->saddr, &interface -> hw_address.hbuf [1],
                                     sizeof (trh->saddr));
         else
                 memset (trh->saddr, 0x00, sizeof (trh->saddr));
 
-        if (to && to -> hlen == 6) /* XXX */
-                memcpy (trh->daddr, to -> haddr, sizeof trh->daddr);
+        if (to && to -> hlen == 7) /* XXX */
+                memcpy (trh->daddr, &to -> hbuf [1], sizeof trh->daddr);
         else
                 memset (trh->daddr, 0xff, sizeof (trh->daddr));
 
@@ -271,7 +271,7 @@ static void save_source_routing(trh, interface)
         }
 
         /* no entry found, so create one */
-        rover = malloc(sizeof(struct routing_entry));
+        rover = dmalloc (sizeof (struct routing_entry), MDL);
         if (rover == NULL) {
                 fprintf(stderr,
 			"%s: unable to save source routing information\n",
@@ -312,7 +312,7 @@ static void expire_routes()
         while((rover = *prover) != NULL) {
                 if ((now.tv_sec - rover->access_time) > routing_timeout) {
                         *prover = rover->next;
-                        free(rover);
+                        dfree (rover, MDL);
                 } else
                         prover = &rover->next;
         }
