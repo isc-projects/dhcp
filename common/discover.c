@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: discover.c,v 1.42.2.1 2001/05/10 19:28:29 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: discover.c,v 1.42.2.2 2001/05/11 23:55:46 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -207,7 +207,7 @@ void discover_interfaces (state)
 #ifdef SIOCGIFCONF_ZERO_PROBE
 	} else if (ic.ifc_ifcu.ifcu_buf == 0) {
 		ic.ifc_ifcu.ifcu_buf = (caddr_t)buf;
-		if.ifc_len = sizeof buf;
+		ic.ifc_len = sizeof buf;
 		goto gifconf_again;
 #endif
 	}
