@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.192.2.10 2001/06/14 19:17:01 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.192.2.11 2001/06/20 04:13:36 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1550,83 +1550,88 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 					   packet -> options,
 					   state -> options, &lease -> scope,
 					   oc, MDL)) {
-		struct lease *seek;
-		if (lease -> uid_len) {
-			do {
-				seek = (struct lease *)0;
-				find_lease_by_uid (&seek, lease -> uid,
-						   lease -> uid_len, MDL);
-				if (!seek || (seek == lease && !seek -> n_uid))
-					break;
-				next = (struct lease *)0;
+	    struct lease *seek;
+	    if (lease -> uid_len) {
+		do {
+		    seek = (struct lease *)0;
+		    find_lease_by_uid (&seek, lease -> uid,
+				       lease -> uid_len, MDL);
+		    if (!seek || (seek == lease && !seek -> n_uid))
+			break;
+		    next = (struct lease *)0;
 
-				/* Don't release expired leases, and don't
-				   release the lease we're going to assign. */
-				next = (struct lease *)0;
-				while (seek) {
-					if (seek -> n_uid)
-					    lease_reference (&next,
-							     seek -> n_uid,
-							     MDL);
-					if (seek != lease &&
-					    seek -> ends > cur_time)
-						break;
-					lease_dereference (&seek, MDL);
-					if (next) {
-					    lease_reference (&seek, next, MDL);
-					    lease_dereference (&next, MDL);
-					}
-				}
-				if (next)
-					lease_dereference (&next, MDL);
-				if (seek) {
-					release_lease (seek, packet);
-					lease_dereference (&seek, MDL);
-				} else
-					break;
-			} while (1);
-		}
-		if (!lease -> uid_len ||
-		    (lease -> host &&
-		     !lease -> host -> client_identifier.len &&
-		     (oc = lookup_option (&server_universe, state -> options,
-					  SV_DUPLICATES)) &&
-		     !evaluate_boolean_option_cache (&ignorep, packet, lease,
-						     (struct client_state *)0,
-						     packet -> options,
-						     state -> options,
-						     &lease -> scope,
-						     oc, MDL))) {
-			do {
-				seek = (struct lease *)0;
-				find_lease_by_hw_addr
-					(&seek, lease -> hardware_addr.hbuf,
-					 lease -> hardware_addr.hlen, MDL);
-				if (!seek || (seek == lease && !seek -> n_hw))
-					break;
-				next = (struct lease *)0;
-				while (seek) {
-				    if (seek -> n_hw)
-					lease_reference (&next,
-							 seek -> n_hw, MDL);
-					if (seek != lease &&
-					    seek -> ends > cur_time)
-						break;
-					lease_dereference (&seek, MDL);
-					if (next) {
-					    lease_reference (&seek, next, MDL);
-					    lease_dereference (&next, MDL);
-					}
-				}
-				if (next)
-					lease_dereference (&next, MDL);
-				if (seek) {
-					release_lease (seek, packet);
-					lease_dereference (&seek, MDL);
-				} else
-					break;
-			} while (1);
-		}
+		    /* Don't release expired leases, and don't
+		       release the lease we're going to assign. */
+		    next = (struct lease *)0;
+		    while (seek) {
+			if (seek -> n_uid)
+			    lease_reference (&next, seek -> n_uid, MDL);
+			if (seek != lease &&
+			    seek -> binding_state != FTS_RELEASED &&
+			    seek -> binding_state != FTS_EXPIRED &&
+			    seek -> binding_state != FTS_RESET &&
+			    seek -> binding_state != FTS_FREE &&
+			    seek -> binding_state != FTS_BACKUP)
+				break;
+			lease_dereference (&seek, MDL);
+			if (next) {
+			    lease_reference (&seek, next, MDL);
+			    lease_dereference (&next, MDL);
+			}
+		    }
+		    if (next)
+			lease_dereference (&next, MDL);
+		    if (seek) {
+			release_lease (seek, packet);
+			lease_dereference (&seek, MDL);
+		    } else
+			break;
+		} while (1);
+	    }
+	    if (!lease -> uid_len ||
+		(lease -> host &&
+		 !lease -> host -> client_identifier.len &&
+		 (oc = lookup_option (&server_universe, state -> options,
+				      SV_DUPLICATES)) &&
+		 !evaluate_boolean_option_cache (&ignorep, packet, lease,
+						 (struct client_state *)0,
+						 packet -> options,
+						 state -> options,
+						 &lease -> scope,
+						 oc, MDL))) {
+		do {
+		    seek = (struct lease *)0;
+		    find_lease_by_hw_addr
+			    (&seek, lease -> hardware_addr.hbuf,
+			     lease -> hardware_addr.hlen, MDL);
+		    if (!seek || (seek == lease && !seek -> n_hw))
+			    break;
+		    next = (struct lease *)0;
+		    while (seek) {
+			if (seek -> n_hw)
+			    lease_reference (&next, seek -> n_hw, MDL);
+			if (seek != lease &&
+			    seek -> binding_state != FTS_RELEASED &&
+			    seek -> binding_state != FTS_EXPIRED &&
+			    seek -> binding_state != FTS_RESET &&
+			    seek -> binding_state != FTS_FREE &&
+			    seek -> binding_state != FTS_BACKUP)
+				break;
+			lease_dereference (&seek, MDL);
+			if (next) {
+			    lease_reference (&seek, next, MDL);
+			    lease_dereference (&next, MDL);
+			}
+		    }
+		    if (next)
+			lease_dereference (&next, MDL);
+		    if (seek) {
+			release_lease (seek, packet);
+			lease_dereference (&seek, MDL);
+		    } else
+			break;
+		} while (1);
+	    }
 	}
 	
 
