@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: execute.c,v 1.42 2000/12/02 00:04:22 neild Exp $ Copyright (c) 1998-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: execute.c,v 1.43 2001/01/03 23:15:33 mellon Exp $ Copyright (c) 1998-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -445,7 +445,8 @@ int execute_statements (result, packet, lease, client_state,
 			break;
 
 		      default:
-			log_fatal ("bogus statement type %d", r -> op);
+			log_error ("bogus statement type %d", r -> op);
+			break;
 		}
 		executable_statement_dereference (&r, MDL);
 		if (next) {
