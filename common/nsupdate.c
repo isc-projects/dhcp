@@ -25,7 +25,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: nsupdate.c,v 1.3.2.3 1999/10/14 21:30:42 mellon Exp $ Copyright (c) 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: nsupdate.c,v 1.3.2.4 1999/10/25 17:44:12 mellon Exp $ Copyright (c) 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -188,12 +188,16 @@ int nsupdateA(hostname, ip_addr, ttl, opcode)
 {
 	int 	z;
 	ns_updrec	*u, *n;
+	ns_updque listuprec;
+	static struct __res_state res;
 
 	switch (opcode) {
 	case ADD:
 		if (!(u = res_mkupdrec(S_PREREQ, hostname, C_IN, T_A, 0))) 
 			return 0;
 		u->r_opcode = NXRRSET; u->r_data = NULL; u->r_size = 0;
+		INIT_LIST(listuprec);
+		APPEND (listuprec, u, r_link);
 		if (!(n = res_mkupdrec(S_UPDATE, hostname, C_IN, T_A, ttl))) {
 			res_freeupdrec(u);
 			return 0;
@@ -201,13 +205,19 @@ int nsupdateA(hostname, ip_addr, ttl, opcode)
 		n->r_opcode = opcode;
 		n->r_data = ip_addr;
 		n->r_size = strlen(n->r_data);
-		u->r_next = n;
-		z = res_update(u);
+		APPEND(listuprec, n, r_link);
+		res_ninit(&res);
+		z = res_nupdate(&res, HEAD(listuprec), NULL);
 		log_info("add %s: %s %d IN A %s",
 			 z == 1 ? "succeeded" : "failed", hostname, ttl,
 			 n->r_data);
-		res_freeupdrec(u); 
-		res_freeupdrec(n);
+
+		while (!EMPTY(listuprec)) {
+			ns_updrec *tmprrecp = HEAD(listuprec);
+			UNLINK(listuprec, tmprrecp, r_link);
+			res_freeupdrec(tmprrecp);
+		}
+
 /* do we really need to do this?  If so, it needs to be done elsewehere as
    this function is strictly for manipulating the A record
 		if (z < 1) 
@@ -248,6 +258,8 @@ int nsupdatePTR(hostname, revname, ttl, opcode)
 {
 	int 	z;
 	ns_updrec	*u, *n;
+	ns_updque listuprec;
+	static struct __res_state res;
 
 	if (opcode == DELETE) {
 		ttl = 0;
@@ -262,16 +274,22 @@ int nsupdatePTR(hostname, revname, ttl, opcode)
 	u->r_opcode = opcode;
 	u->r_data = hostname;
 	u->r_size = strlen(u->r_data);
+	INIT_LIST(listuprec);
+	APPEND (listuprec, u, r_link);
 	if (n) {
-		n -> r_next = u;
-		u = n;
+		APPEND(listuprec, n, r_link);
 	}
-	z = res_update(u);
+	res_ninit(&res);
+	z = res_nupdate(&res, HEAD(listuprec), NULL);
 	log_info("%s %s: %s %d IN PTR %s", 
 		 opcode == ADD ? "add" : 
 				 "delete", z == 1 ? "succeeded" : "failed",
 		 revname, ttl, hostname);
-	res_freeupdrec(u);
+	while (!EMPTY(listuprec)) {
+		ns_updrec *tmprrecp = HEAD(listuprec);
+		UNLINK(listuprec, tmprrecp, r_link);
+		res_freeupdrec(tmprrecp);
+	}
 	return z;
 }
 

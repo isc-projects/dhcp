@@ -30,6 +30,7 @@
 #if defined (NSUPDATE)
 # include <arpa/nameser.h>
 # include <resolv.h>
+# include <res_update.h>
 #endif
 
 #include <netdb.h>
