@@ -173,7 +173,7 @@ typedef struct {
 typedef struct __omapi_listener_object {
 	OMAPI_OBJECT_PREAMBLE;
 	int socket;		/* Connection socket. */
-	int32_t index;
+	int index;
 	struct sockaddr_in address;
 	isc_result_t (*verify_addr) (omapi_object_t *, omapi_addr_t *);
 } omapi_listener_object_t;
