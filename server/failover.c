@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.25 2000/09/04 22:32:34 mellon Exp $ Copyright (c) 1999-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.26 2000/09/20 09:06:39 mellon Exp $ Copyright (c) 1999-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -297,15 +297,20 @@ isc_result_t dhcp_failover_link_signal (omapi_object_t *h,
 	if (!strcmp (name, "disconnect")) {
 	    if (link -> state_object &&
 		link -> state_object -> link_to_peer == link) {
-		if (link -> state_object -> i_am == primary) {
-		    add_timeout (cur_time + 5, dhcp_failover_reconnect,
-				 link -> state_object,
-				 (tvref_t)dhcp_failover_state_reference,
-				 (tvunref_t)dhcp_failover_state_dereference);
-		}
+		dhcp_failover_state_reference (&state,
+					       link -> state_object, MDL);
 		link -> state = dhcp_flink_disconnected;
+
 		/* Make the transition. */
 		dhcp_failover_state_transition (link -> state_object, name);
+
+		/* Start trying to reconnect. */
+		add_timeout (cur_time + 5, dhcp_failover_reconnect,
+			     state,
+			     (tvref_t)dhcp_failover_state_reference,
+			     (tvunref_t)dhcp_failover_state_dereference);
+
+		state_dereference (&state, MDL);
 	    }
 	    return ISC_R_SUCCESS;
 	}
