@@ -73,7 +73,7 @@ void bootp (packet)
 				  packet -> raw -> chaddr,
 				  packet -> raw -> hlen);
 
-	lease = find_lease (packet);
+	lease = find_lease (packet, packet -> shared_network);
 
 	/* Find an IP address in the host_decl that matches the
 	   specified network. */
