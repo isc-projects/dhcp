@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.60 1999/10/12 16:00:27 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.61 1999/10/14 18:00:46 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -569,24 +569,23 @@ int evaluate_boolean_expression (result, packet, lease, in_options,
 
 		*result = 0;	/* assume failure */
 		if (s0 && s1 && s2 && s3) {
-			if (rrtype.len == 1 &&
-			    strncmp((const char *)rrtype.data, "a", 1) == 0) {
+		    if (rrtype.len == 1 &&
+			strncmp((const char *)rrtype.data, "a", 1) == 0) {
 #if defined (DEBUG_EXPRESSIONS)
-				log_debug("calling updateA(%s, %s, %d, lease)",
-					  expr1.data , expr2.data, ttl);
+			    log_debug("calling updateA(%s, %s, %ld, lease)",
+				      expr1.data, expr2.data, ttl);
 #endif
-				updateA(&expr1, &expr2, ttl, lease);
-			} else if (rrtype.len == 3 &&
-				   strncmp((const char *)rrtype.data,
-					    "ptr", 3) == 0) {
+			    updateA(&expr1, &expr2, ttl, lease);
+		    } else if (rrtype.len == 3 &&
+			       strncmp((const char *)rrtype.data,
+				       "ptr", 3) == 0) {
 #if defined (DEBUG_EXPRESSIONS)
-				log_debug ("%s updatePTR(%s, %s, %d, lease)",
-					   "calling", expr1.data,
-					   expr2.data, ttl);
+			log_debug ("%s updatePTR(%s, %s, %ld, lease)",
+				   "calling", expr1.data, expr2.data, ttl);
 #endif
-				updatePTR(&expr1, &expr2, ttl, lease);
-			}
-			*result = 1;
+			updatePTR(&expr1, &expr2, ttl, lease);
+		    }
+		    *result = 1;
 		} else {
 			log_error("dns-update: one or more subexpressions %s",
 				  "evaluate to NULL.");
@@ -781,12 +780,12 @@ int evaluate_data_expression (result, packet, lease,
 		}
 
 #if defined (DEBUG_EXPRESSIONS)
-		log_debug ("data: suffix (%s, %d) = %s",
+		log_debug ("data: suffix (%s, %s) = %s",
 		      s0 ? print_hex_1 (data.len, data.data, 30) : "NULL",
 		      s1 ? print_dec_1 (len) : "NULL",
 		      ((s0 && s1)
 		       ? print_hex_2 (result -> len, result -> data, 30)
-		       : NULL));
+		       : "NULL"));
 #endif
 		return s0 && s1;
 
@@ -894,7 +893,7 @@ int evaluate_data_expression (result, packet, lease,
 		} else
 			s2 = 0;
 #if defined (DEBUG_EXPRESSIONS)
-		log_debug ("data: packet (%d, %d) = %s",
+		log_debug ("data: packet (%ld, %ld) = %s",
 		      offset, len,
 		      s2 ? print_hex_1 (result -> len,
 					result -> data, 60) : NULL);
@@ -1007,7 +1006,7 @@ int evaluate_data_expression (result, packet, lease,
 		if (!s0)
 			log_debug ("data: encode_int8 (NULL) = NULL");
 		else
-			log_debug ("data: encode_int8 (%d) = %s", len,
+			log_debug ("data: encode_int8 (%ld) = %s", len,
 				  print_hex_2 (result -> len,
 					       result -> data, 20));
 #endif
@@ -1036,7 +1035,7 @@ int evaluate_data_expression (result, packet, lease,
 		if (!s0)
 			log_debug ("data: encode_int16 (NULL) = NULL");
 		else
-			log_debug ("data: encode_int16 (%d) = %s", len,
+			log_debug ("data: encode_int16 (%ld) = %s", len,
 				  print_hex_2 (result -> len,
 					       result -> data, 20));
 #endif
@@ -1064,7 +1063,7 @@ int evaluate_data_expression (result, packet, lease,
 		if (!s0)
 			log_debug ("data: encode_int32 (NULL) = NULL");
 		else
-			log_debug ("data: encode_int32 (%d) = %s", len,
+			log_debug ("data: encode_int32 (%ld) = %s", len,
 				  print_hex_2 (result -> len,
 					       result -> data, 20));
 #endif
@@ -1356,6 +1355,12 @@ int evaluate_data_expression (result, packet, lease,
 			data_string_forget (&data, "data: updated-dns-rr");
 			return 0;
 		}
+		if (!s) {
+			log_error ("data: updated-dns-rr: %*s value was NULL",
+				   data.len, (const char *)data.data);
+			data_string_forget (&data, "data: updated-dns-rr");
+			return 0;
+		}
 		data_string_forget (&data, "data: updated-dns-rr");
 		result -> len = strlen (s);
 		if (buffer_allocate (&result -> buffer, result -> len + 1,
@@ -1514,7 +1519,7 @@ int evaluate_numeric_expression (result, packet, lease,
 	      case expr_const_int:
 		*result = expr -> data.const_int;
 #if defined (DEBUG_EXPRESSIONS)
-		log_debug ("number: CONSTANT = %d", *result);
+		log_debug ("number: CONSTANT = %ld", *result);
 #endif
 		return 1;
 
@@ -1531,7 +1536,8 @@ int evaluate_numeric_expression (result, packet, lease,
 		}
 		*result = lease -> ends - cur_time;
 #if defined (DEBUG_EXPRESSIONS)
-		log_debug ("number: lease-time = (%d - %d) = %d", lease -> ends,
+		log_debug ("number: lease-time = (%lu - %lu) = %ld",
+			   lease -> ends,
 			   cur_time, *result);
 #endif
 		return 1;

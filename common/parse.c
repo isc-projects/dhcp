@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.45 1999/10/07 06:42:51 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.46 1999/10/14 17:58:42 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -487,17 +487,17 @@ void convert_num (cfile, buf, str, base, size)
 		switch (base) {
 		      case 8:
 			parse_warn (cfile,
-				    "%s%o exceeds max (%d) for precision.",
+				    "%s%lo exceeds max (%d) for precision.",
 				    negative ? "-" : "", val, max);
 			break;
 		      case 16:
 			parse_warn (cfile,
-				    "%s%x exceeds max (%d) for precision.",
+				    "%s%lx exceeds max (%d) for precision.",
 				    negative ? "-" : "", val, max);
 			break;
 		      default:
 			parse_warn (cfile,
-				    "%s%u exceeds max (%d) for precision.",
+				    "%s%lu exceeds max (%d) for precision.",
 				    negative ? "-" : "", val, max);
 			break;
 		}
