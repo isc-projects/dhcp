@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: ddns.c,v 1.6 2001/01/08 17:24:45 mellon Exp $ Copyright (c) 2000-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: ddns.c,v 1.7 2001/01/09 07:01:48 mellon Exp $ Copyright (c) 2000-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -499,7 +499,7 @@ static ns_rcode ddns_update_ptr (struct data_string *ddns_fwd_name,
 				   C_IN, T_PTR, ttl);
 	if (!updrec) goto error;
 
-	updrec -> r_data = (char *)ddns_fwd_name -> buffer -> data;
+	updrec -> r_data = (unsigned char *)ddns_fwd_name -> buffer -> data;
 	updrec -> r_size = ddns_fwd_name -> len;
 	updrec -> r_opcode = ADD;
 
@@ -566,7 +566,8 @@ static ns_rcode ddns_remove_a (struct data_string *ddns_fwd_name,
 	/*
 	 * DHCID RR exists, and matches client identity.
 	 */
-	updrec = minires_mkupdrec (S_PREREQ, ddns_fwd_name -> data,
+	updrec = minires_mkupdrec (S_PREREQ,
+				   (const char *)ddns_fwd_name -> data,
 				   C_IN, T_DHCID,0);
 	if (!updrec) goto error;
 
@@ -580,11 +581,12 @@ static ns_rcode ddns_remove_a (struct data_string *ddns_fwd_name,
 	/*
 	 * A RR matches the expiring lease.
 	 */
-	updrec = minires_mkupdrec (S_PREREQ, ddns_fwd_name -> data,
+	updrec = minires_mkupdrec (S_PREREQ,
+				   (const char *)ddns_fwd_name -> data,
 				   C_IN, T_A, 0);
 	if (!updrec) goto error;
 
-	updrec -> r_data = ddns_address;
+	updrec -> r_data = (unsigned char *)ddns_address;
 	updrec -> r_size = strlen (ddns_address);
 	updrec -> r_opcode = YXRRSET;
 
@@ -594,11 +596,12 @@ static ns_rcode ddns_remove_a (struct data_string *ddns_fwd_name,
 	/*
 	 * Delete appropriate A RR.
 	 */
-	updrec = minires_mkupdrec (S_UPDATE, ddns_fwd_name -> data,
+	updrec = minires_mkupdrec (S_UPDATE,
+				   (const char *)ddns_fwd_name -> data,
 				   C_IN, T_A, 0);
 	if (!updrec) goto error;
 
-	updrec -> r_data = ddns_address;
+	updrec -> r_data = (unsigned char *)ddns_address;
 	updrec -> r_size = strlen (ddns_address);
 	updrec -> r_opcode = DELETE;
 
@@ -642,7 +645,8 @@ static ns_rcode ddns_remove_a (struct data_string *ddns_fwd_name,
 	/*
 	 * A RR does not exist.
 	 */
-	updrec = minires_mkupdrec (S_PREREQ, ddns_fwd_name -> data,
+	updrec = minires_mkupdrec (S_PREREQ,
+				   (const char *)ddns_fwd_name -> data,
 				   C_IN, T_A, 0);
 	if (!updrec) goto error;
 
@@ -655,7 +659,8 @@ static ns_rcode ddns_remove_a (struct data_string *ddns_fwd_name,
 	/*
 	 * Delete appropriate DHCID RR.
 	 */
-	updrec = minires_mkupdrec (S_UPDATE, ddns_fwd_name -> data,
+	updrec = minires_mkupdrec (S_UPDATE,
+				  (const char *)ddns_fwd_name -> data,
 				   C_IN, T_DHCID, 0);
 	if (!updrec)
 		goto error;
@@ -948,14 +953,14 @@ int ddns_updates (struct packet *packet,
 		if (ddns_rev_name.buffer) {
 			ddns_rev_name.data = ddns_rev_name.buffer -> data;
 #ifndef NO_SNPRINTF
-			snprintf (ddns_rev_name.buffer -> data, 17,
+			snprintf ((char *)ddns_rev_name.buffer -> data, 17,
 				  "%d.%d.%d.%d.",
 				  lease -> ip_addr . iabuf[3],
 				  lease -> ip_addr . iabuf[2],
 				  lease -> ip_addr . iabuf[1],
 				  lease -> ip_addr . iabuf[0]);
 #else
-			sprintf (ddns_rev_name.buffer -> data,
+			sprintf ((char *)ddns_rev_name.buffer -> data,
 				 "%d.%d.%d.%d.",
 				 lease -> ip_addr . iabuf[3],
 				 lease -> ip_addr . iabuf[2],
