@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.21 1999/03/10 20:41:29 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.22 1999/03/16 00:48:21 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -552,19 +552,20 @@ int evaluate_data_expression (result, packet, options, expr)
 		s2 = evaluate_numeric_expression (&len, packet, options,
 						  expr -> data.substring.len);
 
-		/* If the offset is after end of the string, return
-		   an empty string. */
-		if (s0 && s1 && s2 && data.len > offset) {
-			/* Otherwise, do the adjustments and return
-			   what's left. */
-			data_string_copy (result, &data,
-					  "evaluate_data_expression");
-			result -> len -= offset;
-			if (result -> len > len) {
-				result -> len = len;
-				result -> terminated = 0;
+		if (s0 && s1 && s2) {
+			/* If the offset is after end of the string,
+			   return an empty string.  Otherwise, do the
+			   adjustments and return what's left. */
+			if (data.len > offset) {
+				data_string_copy (result, &data,
+						  "evaluate_data_expression");
+				result -> len -= offset;
+				if (result -> len > len) {
+					result -> len = len;
+					result -> terminated = 0;
+				}
+				result -> data += offset;
 			}
-			result -> data += offset;
 			s3 = 1;
 		} else
 			s3 = 0;
@@ -634,6 +635,11 @@ int evaluate_data_expression (result, packet, options, expr)
 	      case expr_hardware:
 		if (!packet || !packet -> raw) {
 			log_error ("data: hardware: raw packet not available");
+			return 0;
+		}
+		if (packet -> raw -> hlen > sizeof packet -> raw -> chaddr) {
+			log_error ("data: hardware: invalid hlen (%d)\n",
+				   packet -> raw -> hlen);
 			return 0;
 		}
 		result -> len = packet -> raw -> hlen + 1;
