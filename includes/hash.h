@@ -53,12 +53,14 @@ struct hash_bucket {
 	void *value;
 };
 
+typedef int (*hash_comparator_t)(const void *, const void *, size_t);
+
 struct hash_table {
 	unsigned hash_count;
 	struct hash_bucket *buckets [DEFAULT_HASH_SIZE];
 	hash_reference referencer;
 	hash_dereference dereferencer;
-	int (*cmp) (const void *, const void *, size_t);
+	hash_comparator_t cmp;
 	int (*do_hash) (const unsigned char *, unsigned, unsigned);
 };
 
