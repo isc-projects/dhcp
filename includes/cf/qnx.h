@@ -96,6 +96,9 @@ typedef signed long	int32_t;
     machine that dhcpd is running on.
 */
 
+#if defined (NSUPDATE)
+#error NSUPDATE is not supported on QNX at this time!!
+#endif
 #ifdef NEED_PRAND_CONF
 UHOH...   (this isn't present in the BIND distribution either)
 #endif /* NEED_PRAND_CONF */
