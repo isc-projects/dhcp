@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: clparse.c,v 1.23 1999/02/25 23:30:31 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: clparse.c,v 1.24 1999/03/09 19:58:42 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -129,6 +129,7 @@ int read_client_conf ()
 			if (!ip -> client)
 				log_fatal ("no memory for client state.");
 			memset (ip -> client, 0, sizeof *(ip -> client));
+			ip -> client -> interface = ip;
 		}
 
 		if (!ip -> client -> config) {
