@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.44.2.2 1999/11/12 18:56:21 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.44.2.3 1999/12/21 19:26:59 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -1221,7 +1221,7 @@ int agent_option_state_dereference (universe, state)
 		na = a -> next;
 		for (ot = a -> first; ot; ot = not) {
 			not = ot -> next;
-			free (ot);
+			dfree (ot, "agent_option_state_dereference");
 		}
 	}
 
