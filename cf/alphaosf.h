@@ -35,9 +35,17 @@
  * under a contract with Vixie Laboratories.
  */
 
+/* Define the basic integer types... */
+typedef char int8_t;
+typedef short int16_t;
+typedef int int32_t;
+
+typedef unsigned char u_int8_t;
+typedef unsigned short u_int16_t;
+typedef unsigned int u_int32_t;
+
 #include <syslog.h>
 #include <sys/types.h>
-#include <sys/bitypes.h>
 #include <string.h>
 #include <paths.h>
 #include <errno.h>
