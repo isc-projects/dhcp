@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.151 2000/06/02 21:27:13 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.152 2000/06/06 23:59:18 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2688,6 +2688,10 @@ int find_lease (struct lease **lp,
 #if defined (DEBUG_FIND_LEASE)
 			log_info ("rejecting lease for requested address.");
 #endif
+			/* If we're rejecting it because the peer has
+			   it, don't set "ours", because we shouldn't NAK. */
+			if (ours && ip_lease -> binding_state != FTS_ACTIVE)
+				*ours = 0;
 			lease_dereference (&ip_lease, MDL);
 		}
 	}
@@ -2868,7 +2872,6 @@ int find_lease (struct lease **lp,
 #if defined (DEBUG_FIND_LEASE)
 			log_info ("not choosing uid lease.");
 #endif
-			lease_dereference (&uid_lease, MDL);
 		} else {
 			lease_reference (&lease, uid_lease, MDL);
 			if (lease -> host)
@@ -2886,7 +2889,6 @@ int find_lease (struct lease **lp,
 			if (!packet -> raw -> ciaddr.s_addr &&
 			    packet -> packet_type == DHCPREQUEST)
 				dissociate_lease (hw_lease);
-			lease_dereference (&hw_lease, MDL);
 #if defined (DEBUG_FIND_LEASE)
 			log_info ("not choosing hardware lease.");
 #endif
