@@ -43,12 +43,12 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: auth.c,v 1.1 2000/08/03 21:00:11 neild Exp $ Copyright 1998-2000 The Internet Software Consortium.";
+"$Id: auth.c,v 1.2 2000/08/17 19:41:24 mellon Exp $ Copyright 1998-2000 The Internet Software Consortium.";
 #endif
 
 #include <omapip/omapip_p.h>
 
-OMAPI_OBJECT_ALLOC (omapi_auth_key, omapi_auth_key_t, omapi_type_auth_key);
+OMAPI_OBJECT_ALLOC (omapi_auth_key, omapi_auth_key_t, omapi_type_auth_key)
 
 static struct hash_table *auth_key_hash = (struct hash_table *)0;
 HASH_FUNCTIONS_DECL (omapi_auth_key, const char *, omapi_auth_key_t)
@@ -160,6 +160,7 @@ isc_result_t omapi_auth_key_lookup (omapi_object_t **h,
 
 
 	if (!omapi_auth_key_hash_lookup ((omapi_auth_key_t **)h, auth_key_hash,
+					 (const char *)
 					 name -> value -> u.buffer.value,
 					 name -> value -> u.buffer.len, MDL)) {
 		omapi_value_dereference (&name, MDL);

@@ -252,6 +252,7 @@ isc_result_t omapi_connection_copyout (unsigned char *buf,
 						(sig_flags,
 						 c -> in_key,
 						 &c -> in_context,
+						 (unsigned char *)
 						 &buffer -> buf [first_byte],
 						 bytes_this_copy,
 						 (omapi_typed_data_t **)0);
