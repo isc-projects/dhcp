@@ -1,5 +1,5 @@
 	    Internet Software Consortium DHCP Distribution
-		   Version 3, Beta 2, Patchlevel 21
+		   Version 3, Beta 2, Patchlevel 22
 			    March 20, 2001
 
 			    Release Notes
@@ -48,6 +48,10 @@ Measurement Systems, and Brian Murrell at BC Tel Advanced
 Communications.  I'd like to express my thanks to all of these good
 people here, both for working on the code and for prodding me into
 improving it.
+
+	        Changes since 3.0 Beta 2 Patchlevel 21
+
+- This time for sure: fix the spin described in the changes for pl20.
 
 	        Changes since 3.0 Beta 2 Patchlevel 20
 
