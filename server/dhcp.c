@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.59 1998/03/16 06:18:03 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.60 1998/03/17 06:20:51 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -153,7 +153,11 @@ void dhcpdiscover (packet)
 	} else if (lease -> host &&
 		    !lease -> host -> group -> allow_booting) {
 		note ("Declining to boot client %s",
-		      lease -> host -> name);
+		      lease -> host -> name
+		      ? lease -> host -> name
+		      : print_hw_addr (packet -> raw -> htype,
+				       packet -> raw -> hlen,
+				       packet -> raw -> chaddr));
 	} else
 		ack_lease (packet, lease, DHCPOFFER, cur_time + 120);
 }
@@ -1280,11 +1284,12 @@ struct lease *find_lease (packet, share, ours)
 		    ip_lease -> uid_len ==  packet -> options [i].len &&
 		    !memcmp (packet -> options [i].data,
 			     ip_lease -> uid, ip_lease -> uid_len)) {
-			warn ("client %s has duplicate leases on %s",
-			      print_hw_addr (packet -> raw -> htype,
-					     packet -> raw -> hlen,
-					     packet -> raw -> chaddr),
-			      ip_lease -> shared_network -> name);
+			if (uid_lease -> ends > cur_time)
+				warn ("client %s has duplicate leases on %s",
+				      print_hw_addr (packet -> raw -> htype,
+						     packet -> raw -> hlen,
+						     packet -> raw -> chaddr),
+				      ip_lease -> shared_network -> name);
 			uid_lease = ip_lease;
 		}
 		ip_lease = (struct lease *)0;

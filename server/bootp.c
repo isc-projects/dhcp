@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bootp.c,v 1.29 1998/02/06 01:05:39 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bootp.c,v 1.30 1998/03/17 06:18:06 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -110,13 +110,21 @@ void bootp (packet)
 
 		if (host && (!host -> group -> allow_booting)) {
 			note ("Ignoring excluded BOOTP client %s",
-			      host -> name);
+			      host -> name
+			      ? host -> name
+			      : print_hw_addr (packet -> raw -> htype,
+					       packet -> raw -> hlen,
+					       packet -> raw -> chaddr));
 			return;
 		}
 			
 		if (host && (!host -> group -> allow_bootp)) {
 			note ("Ignoring BOOTP request from client %s",
-			      host -> name);
+			      host -> name
+			      ? host -> name
+			      : print_hw_addr (packet -> raw -> htype,
+					       packet -> raw -> hlen,
+					       packet -> raw -> chaddr));
 			return;
 		}
 			

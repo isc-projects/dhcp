@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.47 1998/03/16 06:17:37 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.48 1998/03/17 06:18:58 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -485,11 +485,17 @@ void parse_host_declaration (cfile, group)
 	char *val;
 	int token;
 	struct host_decl *host;
-	char *name = parse_host_name (cfile);
+	char *name;
 	int declaration = 0;
 
-	if (!name)
-		return;
+	token = peek_token (&val, cfile);
+	if (token != LBRACE) {
+		name = parse_host_name (cfile);
+		if (!name)
+			return;
+	} else {
+		name = (char *)0;
+	}
 
 	host = (struct host_decl *)dmalloc (sizeof (struct host_decl),
 					    "parse_host_declaration");
