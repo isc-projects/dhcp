@@ -2168,12 +2168,11 @@ the server will attempt a DNS update for that client each time the
 client renews its lease, rather than only attempting an update when it
 appears to be necessary.   This will allow the DNS to heal from
 database inconsistencies more easily, but the cost is that the DHCP
-server must do many more DNS updates.   We do not recommend enabling
-this on large networks with the current DHCP server.   This option
-only affects the behavior of the interim DNS update scheme,
-and has no effect on the ad-hoc DNS update scheme.   If this
-parameter is not specified, or is false, the DHCP server will only
-update when the client information changes, the client gets a
+server must do many more DNS updates.   We recommend leaving this option
+enabled, which is the default.  This option only affects the behavior of
+the interim DNS update scheme, and has no effect on the ad-hoc DNS update
+scheme.   If this parameter is not specified, or is true, the DHCP server
+will only update when the client information changes, the client gets a
 different lease, or the client's lease expires.
 .RE
 .PP
