@@ -58,6 +58,9 @@ static int trace_playback_flag;
 trace_type_t trace_time_marker;
 
 #if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
+extern omapi_array_t *trace_listeners;
+extern omapi_array_t *omapi_connections;
+
 void trace_free_all ()
 {
 	trace_type_t *tp;
@@ -82,6 +85,9 @@ void trace_free_all ()
 	dfree (trace_types, MDL);
 	trace_types = (trace_type_t **)0;
 	trace_type_count = trace_type_max = 0;
+
+	omapi_array_free (&trace_listeners, MDL);
+	omapi_array_free (&omapi_connections, MDL);
 }
 #endif
 
