@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.192.2.38 2004/09/15 19:03:35 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.192.2.39 2004/09/20 17:59:28 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -247,6 +247,7 @@ void dhcpdiscover (packet, ms_nulltp)
 	const char *s;
 	int allocatedp = 0;
 	int peer_has_leases = 0;
+	int alloc_lease_called = 0;
 #if defined (FAILOVER_PROTOCOL)
 	dhcp_failover_state_t *peer;
 #endif
@@ -336,6 +337,7 @@ void dhcpdiscover (packet, ms_nulltp)
 			dhcp_failover_pool_check (lease -> pool);
 #endif
 		allocatedp = 1;
+		alloc_lease_called = 1;
 	}
 
 #if defined (FAILOVER_PROTOCOL)
@@ -361,14 +363,10 @@ void dhcpdiscover (packet, ms_nulltp)
 	   XXX is requesting.    Not sure this is allowed.  */
 	if (allocatedp && peer && (peer -> service_state == cooperating) &&
 	    !load_balance_mine (packet, peer)) {
-		/* If we did not allocate a free address (if the client
-		 * already has a lease or etc then the peer knows that too),
-		 * or if the peer has free addresses it might allocate itself,
-		 * then let the peer handle it.  Otherwise, we need to answer
-		 * now, rather than wait and hope that the client changes the
-		 * 'secs' field (some don't!) on a later retransmit.
+		/* peer_has_leases only has a chance to be set if we called
+		 * allocate_lease() above.
 		 */
-		if (!allocatedp || peer_has_leases) {
+		if (!alloc_lease_called || peer_has_leases) {
 			log_debug ("%s: load balance to peer %s",
 				   msgbuf, peer -> name);
 			goto out;
