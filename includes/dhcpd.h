@@ -885,23 +885,24 @@ typedef unsigned char option_mask [16];
 
 extern struct option *vendor_cfg_option;
 int parse_options PROTO ((struct packet *));
-int parse_option_buffer PROTO ((struct option_state *,
-				unsigned char *, unsigned, struct universe *));
+int parse_option_buffer PROTO ((struct option_state *, const unsigned char *,
+				unsigned, struct universe *));
+struct universe *find_option_universe (struct option *, const char *);
 int parse_encapsulated_suboptions (struct option_state *, struct option *,
-				   unsigned char *, unsigned,
-				   struct universe *, struct universe *);
+				   const unsigned char *, unsigned,
+				   struct universe *, const char *);
 int cons_options PROTO ((struct packet *, struct dhcp_packet *, struct lease *,
 			 int, struct option_state *, struct option_state *,
 			 struct binding_scope **,
 			 int, int, int, struct data_string *, const char *));
 int fqdn_universe_decode (struct option_state *,
-			  unsigned char *, unsigned, struct universe *);
+			  const unsigned char *, unsigned, struct universe *);
 int store_options PROTO ((unsigned char *, unsigned, struct packet *,
 			  struct lease *, struct option_state *,
 			  struct option_state *, struct binding_scope **,
 			  unsigned *, int, unsigned, unsigned,
 			  int, const char *));
-const char *pretty_print_option PROTO ((unsigned int, const unsigned char *,
+const char *pretty_print_option PROTO ((struct option *, const unsigned char *,
 					unsigned, int, int));
 int get_option (struct data_string *, struct universe *,
 		struct packet *, struct lease *,
@@ -957,6 +958,18 @@ int fqdn_option_space_encapsulate (struct data_string *,
 				   struct option_state *,
 				   struct binding_scope **,
 				   struct universe *);
+void suboption_foreach (struct packet *, struct lease *,
+			struct option_state *,
+			struct option_state *,
+			struct binding_scope **,
+			struct universe *, void *,
+			void (*) (struct option_cache *,
+				  struct packet *,
+				  struct lease *, struct option_state *,
+				  struct option_state *,
+				  struct binding_scope **,
+				  struct universe *, void *),
+			struct option_cache *, const char *);
 void option_space_foreach (struct packet *, struct lease *,
 			   struct option_state *,
 			   struct option_state *,
