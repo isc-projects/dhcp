@@ -54,6 +54,10 @@ and for prodding me into improving it.
 - The package will now compile cleanly in gcc 3.3 and 3.4.  As a side effect,
   lease structures will be 9 bytes smaller on all platforms.
 
+- Interface discovery code in DISCOVER_UNCONFIGURED mode is now
+  properly restricted to only detecting broadcast interfaces.  Thanks
+  to a patch from Jason Vas Dias at RedHat.
+
 			Changes since 3.0.2rc3
 
 - A previously undocumented configuration directive, 'local-address',
