@@ -94,8 +94,15 @@ void add_hash (table, name, len, pointer)
 	char *name;
 	unsigned char *pointer;
 {
-	int hashno = do_hash (name, len, table -> hash_count);
-	struct hash_bucket *bp = new_hash_bucket ("add_hash");
+	int hashno;
+	struct hash_bucket *bp;
+
+	if (!table)
+		return;
+
+	hashno = do_hash (name, len, table -> hash_count);
+	bp = new_hash_bucket ("add_hash");
+
 	if (!bp) {
 		warn ("Can't add %s to hash table.", name);
 		return;
@@ -112,8 +119,13 @@ void delete_hash_entry (table, name, len)
 	int len;
 	char *name;
 {
-	int hashno = do_hash (name, len, table -> hash_count);
+	int hashno;
 	struct hash_bucket *bp, *pbp = (struct hash_bucket *)0;
+
+	if (!table)
+		return;
+
+	hashno = do_hash (name, len, table -> hash_count);
 
 	/* Go through the list looking for an entry that matches;
 	   if we find it, delete it. */
@@ -137,8 +149,12 @@ unsigned char *hash_lookup (table, name, len)
 	char *name;
 	int len;
 {
-	int hashno = do_hash (name, len, table -> hash_count);
+	int hashno;
 	struct hash_bucket *bp;
+
+	if (!table)
+		return (unsigned char *)0;
+	hashno = do_hash (name, len, table -> hash_count);
 
 	if (len) {
 		for (bp = table -> buckets [hashno]; bp; bp = bp -> next) {
