@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.57.2.3 1998/06/25 21:20:41 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.57.2.4 1998/06/25 22:12:05 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -834,14 +834,18 @@ void ack_lease (packet, lease, offer, when)
 		state -> options [i] -> tree = (struct tree *)0;
 
 		i = DHO_DHCP_SERVER_IDENTIFIER;
-		state -> options [i] = new_tree_cache ("server-id");
-		state -> options [i] -> value =
-			(unsigned char *)&state -> ip -> primary_address;
-		state -> options [i] -> len =
-			sizeof state -> ip -> primary_address;
-		state -> options [i] -> buf_size = state -> options [i] -> len;
-		state -> options [i] -> timeout = 0xFFFFFFFF;
-		state -> options [i] -> tree = (struct tree *)0;
+		if (!state -> options [i]) {
+			state -> options [i] = new_tree_cache ("server-id");
+			state -> options [i] -> value =
+				(unsigned char *)&state ->
+					ip -> primary_address;
+			state -> options [i] -> len =
+				sizeof state -> ip -> primary_address;
+			state -> options [i] -> buf_size
+				= state -> options [i] -> len;
+			state -> options [i] -> timeout = 0xFFFFFFFF;
+			state -> options [i] -> tree = (struct tree *)0;
+		}
 
 		/* Sanity check the lease time. */
 		if ((state -> offered_expiry - cur_time) < 15)
@@ -1339,7 +1343,8 @@ struct lease *find_lease (packet, share, ours)
 	   a better offer, use that; otherwise, release it. */
 	if (ip_lease) {
 		if (lease) {
-			release_lease (ip_lease);
+			if (packet -> packet_type == DHCPREQUEST)
+				release_lease (ip_lease);
 		} else {
 			lease = ip_lease;
 			lease -> host = (struct host_decl *)0;
@@ -1351,7 +1356,8 @@ struct lease *find_lease (packet, share, ours)
 	   the lease that matched the client identifier. */
 	if (uid_lease) {
 		if (lease) {
-			release_lease (uid_lease);
+			if (packet -> packet_type == DHCPREQUEST)	
+				release_lease (uid_lease);
 		} else {
 			lease = uid_lease;
 			lease -> host = (struct host_decl *)0;
@@ -1361,7 +1367,8 @@ struct lease *find_lease (packet, share, ours)
 	/* The lease that matched the hardware address is treated likewise. */
 	if (hw_lease) {
 		if (lease) {
-			release_lease (hw_lease);
+			if (packet -> packet_type == DHCPREQUEST)	
+				release_lease (hw_lease);
 		} else {
 			lease = hw_lease;
 			lease -> host = (struct host_decl *)0;
