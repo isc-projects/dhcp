@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: ethernet.c,v 1.1.4.1 1999/11/11 16:10:23 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: ethernet.c,v 1.1.4.2 1999/12/13 23:04:05 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -85,6 +85,6 @@ ssize_t decode_ethernet_header (interface, buf, bufix, from)
   from -> htype = ARPHRD_ETHER;
   from -> hlen = sizeof eh.ether_shost;
 
-  return sizeof eh;
+  return ETHER_HEADER_SIZE;
 }
 #endif /* PACKET_DECODING */
