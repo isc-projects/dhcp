@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.19 1999/03/30 15:20:09 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.20 1999/04/05 15:50:09 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -792,6 +792,64 @@ struct option *parse_option_name (cfile, allocate)
 	/* Free the initial identifier token. */
 	free (uname);
 	return option;
+}
+
+/* IDENTIFIER SEMI */
+
+void parse_option_space_decl (cfile)
+	FILE *cfile;
+{
+	int token;
+	char *val;
+	struct universe **ua, *nu;
+
+	next_token (&val, cfile);	/* Discard the SPACE token, which was
+					   checked by the caller. */
+	token = next_token (&val, cfile);
+	if (!is_identifier (token)) {
+		parse_warn ("expecting identifier.");
+		skip_to_semi (cfile);
+		return;
+	}
+	nu = new_universe ("parse_option_space_decl");
+	if (!nu)
+		log_fatal ("No memory for new option space.");
+
+	/* Set up the server option universe... */
+	nu -> name = dmalloc (strlen (val) + 1, "parse_option_space_decl");
+	if (!nu -> name)
+		log_fatal ("No memory for new option space name.");
+	strcpy (nu -> name, val);
+	nu -> lookup_func = lookup_hashed_option;
+	nu -> option_state_dereference =
+		hashed_option_state_dereference;
+	nu -> get_func = hashed_option_get;
+	nu -> set_func = hashed_option_set;
+	nu -> save_func = save_hashed_option;
+	nu -> delete_func = delete_hashed_option;
+	nu -> encapsulate = hashed_option_space_encapsulate;
+	nu -> length_size = 1;
+	nu -> tag_size = 1;
+	nu -> store_tag = putUChar;
+	nu -> store_length = putUChar;
+	nu -> index = universe_count++;
+	if (nu -> index >= universe_max) {
+		ua = dmalloc (universe_max * 2 * sizeof *ua,
+			      "parse_option_space_decl");
+		if (!ua)
+			log_fatal ("No memory to expand option space array.");
+		memcpy (ua, universes, universe_max * sizeof *ua);
+		universe_max *= 2;
+		dfree (universes, "parse_option_space_decl");
+		universes = ua;
+	}
+	universes [nu -> index] = nu;
+	nu -> hash = new_hash ();
+	if (!nu -> hash)
+		log_fatal ("Can't allocate %s option hash table.", nu -> name);
+	add_hash (&universe_hash,
+		  (unsigned char *)nu -> name, 0, (unsigned char *)nu);
+	parse_semi (cfile);
 }
 
 /* This is faked up to look good right now.   Ideally, this should do a
@@ -1952,7 +2010,7 @@ struct executable_statement *parse_option_statement (cfile, lookups,
 	stmt -> op = op;
 	if (expr && !option_cache (&stmt -> data.option,
 				   (struct data_string *)0, expr, option))
-		log_fatal ("no memory for option cache in parse_option_statement");
+		log_fatal ("no memory for option cache");
 	return stmt;
 }
 
@@ -1973,6 +2031,18 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 	struct iaddr addr;
 
 	switch (*fmt) {
+	      case 'U':
+		token = next_token (&val, cfile);
+		if (!is_identifier (token)) {
+			parse_warn ("expecting identifier.");
+			skip_to_semi (cfile);
+			return 0;
+		}
+		if (!make_const_data (&t, (unsigned char *)val,
+				      strlen (val), 1, 1))
+			log_fatal ("No memory for %s", val);
+		break;
+
 	      case 'X':
 		token = peek_token (&val, cfile);
 		if (token == NUMBER_OR_NAME || token == NUMBER) {
@@ -1983,9 +2053,9 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 			t -> op = expr_const_data;
 		} else if (token == STRING) {
 			token = next_token (&val, cfile);
-			if (!make_const_data (&t, (unsigned char *) val,
+			if (!make_const_data (&t, (unsigned char *)val,
 					      strlen (val), 1, 1))
-				log_fatal ("No memory for concatenation");
+				log_fatal ("No memory for \"%s\"", val);
 		} else {
 			parse_warn ("expecting string %s.",
 				    "or hexadecimal data");
