@@ -41,7 +41,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.118 2000/11/28 22:10:52 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.119 2001/01/25 08:18:06 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -248,7 +248,7 @@ int main (argc, argv, envp)
 
 	/* Default to the DHCP/BOOTP port. */
 	if (!local_port) {
-		if (relay && giaddr.s_addr != INADDR_LOOPBACK) {
+		if (relay && giaddr.s_addr != htonl (INADDR_LOOPBACK)) {
 			local_port = htons (67);
 		} else {
 			ent = getservbyname ("dhcpc", "udp");
@@ -264,7 +264,7 @@ int main (argc, argv, envp)
 
 	/* If we're faking a relay agent, and we're not using loopback,
 	   use the server port, not the client port. */
-	if (relay && giaddr.s_addr != INADDR_LOOPBACK)
+	if (relay && giaddr.s_addr != htonl (INADDR_LOOPBACK))
 		remote_port = htons (67);
 	else
 		remote_port = htons (ntohs (local_port) - 1);	/* XXX */
@@ -402,6 +402,12 @@ int main (argc, argv, envp)
 
 	/* Set up the bootp packet handler... */
 	bootp_packet_handler = do_packet;
+
+#if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL)
+	dmalloc_cutoff_generation = dmalloc_generation;
+	dmalloc_longterm = dmalloc_outstanding;
+	dmalloc_outstanding = 0;
+#endif
 
 	/* Start dispatching packets and timeouts... */
 	dispatch ();
@@ -1866,7 +1872,12 @@ void make_request (client, lease)
 		sizeof client -> packet.yiaddr);
 	memset (&client -> packet.siaddr, 0,
 		sizeof client -> packet.siaddr);
-	client -> packet.giaddr = giaddr;
+	if (client -> state != S_BOUND &&
+	    client -> state != S_RENEWING)
+		client -> packet.giaddr = giaddr;
+	else
+		memset (&client -> packet.giaddr, 0,
+			sizeof client -> packet.giaddr);
 	if (client -> interface -> hw_address.hlen > 0)
 	    memcpy (client -> packet.chaddr,
 		    &client -> interface -> hw_address.hbuf [1],
