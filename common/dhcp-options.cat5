@@ -10,14 +10,14 @@ NNAAMMEE
 DDEESSCCRRIIPPTTIIOONN
        The Dynamic Host Configuration protocol allows the  client
        to  receive  ooppttiioonnss  from  the DHCP server describing the
-       network configuration and various services that are avail­
+       network configuration and various services that are avail-
        able  on  the  network.    When  configuring  ddhhccppdd((88))  or
        ddhhcclliieenntt((88)) ,, options must often be declared.   The syntax
        for  declaring  options,  and the names and formats of the
        options that can be declared, are documented here.
 
 RREEFFEERREENNCCEE:: OOPPTTIIOONN SSTTAATTEEMMEENNTTSS
-       DHCP _o_p_t_i_o_n statements always start with the  _o_p_t_i_o_n  key­
+       DHCP _o_p_t_i_o_n statements always start with the  _o_p_t_i_o_n  key-
        word, followed by an option name, followed by option data.
        The option names and data  formats  are  described  below.
        It  is  not  necessary  to  exhaustively  specify all DHCP
@@ -41,7 +41,7 @@ RREEFFEERREENNCCEE:: OOPPTTIIOONN SSTTAATTEEMMEENNTTSS
        8-bit integers are also sometimes referred to as octets.
 
        The  ssttrriinngg data type specifies an NVT ASCII string, which
-       must be enclosed in double quotes - for example, to  spec­
+       must be enclosed in double quotes - for example, to  spec-
        ify a domain-name option, the syntax would be
 
             option domain-name "isc.org";
@@ -76,14 +76,14 @@ dhcpd-options(5)                                 dhcpd-options(5)
        defined by the name option-_n_n_n, where _n_n_n _i_s  _t_h_e  _d_e_c_i_m_a_l
        _n_u_m_b_e_r _o_f _t_h_e _o_p_t_i_o_n _c_o_d_e_.   _T_h_e_s_e _o_p_t_i_o_n_s _m_a_y _b_e _f_o_l_l_o_w_e_d
        _e_i_t_h_e_r _b_y _a _s_t_r_i_n_g_, _e_n_c_l_o_s_e_d _i_n _q_u_o_t_e_s_, _o_r _b_y _a _s_e_r_i_e_s  _o_f
-       _o_c_t_e_t_s_,  _e_x_p_r_e_s_s_e_d _a_s _t_w_o_-_d_i_g_i_t _h_e_x_a_d_e_c_i_m_a_l _n_u_m_b_e_r_s _s_e_p_e_r_­
+       _o_c_t_e_t_s_,  _e_x_p_r_e_s_s_e_d _a_s _t_w_o_-_d_i_g_i_t _h_e_x_a_d_e_c_i_m_a_l _n_u_m_b_e_r_s _s_e_p_e_r_-
        _a_t_e_d _b_y _c_o_l_o_n_s_.   _F_o_r _e_x_a_m_p_l_e_:
 
             option option-133 "my-option-133-text";
             option option-129 1:54:c9:2b:47;
 
        Because dhcpd does not know the format of these  undefined
-       option  codes,  no checking is done to ensure the correct­
+       option  codes,  no checking is done to ensure the correct-
        ness of the entered data.
 
        The standard options are:
@@ -91,10 +91,10 @@ dhcpd-options(5)                                 dhcpd-options(5)
        ooppttiioonn ssuubbnneett--mmaasskk _i_p_-_a_d_d_r_e_s_s;;
 
           The subnet mask option specifies  the  client's  subnet
-          mask  as per RFC 950.  If no subnet mask option is pro­
+          mask  as per RFC 950.  If no subnet mask option is pro-
           vided anywhere in scope, as a last  resort  dhcpd  will
           use the subnet mask from the subnet declaration for the
-          network on which an address is  being  assigned.   How­
+          network on which an address is  being  assigned.   How-
           ever,  _a_n_y  subnet-mask  option  declaration that is in
           scope for the address being assigned will override  the
           subnet mask specified in the subnet declaration.
@@ -168,7 +168,7 @@ dhcpd-options(5)                                 dhcpd-options(5)
        ooppttiioonn   rreessoouurrccee--llooccaattiioonn--sseerrvveerrss   _i_p_-_a_d_d_r_e_s_s   [,,   _i_p_-
        _a_d_d_r_e_s_s...  ];;
 
-          This  option specifies a list of RFC 887 Resource Loca­
+          This  option specifies a list of RFC 887 Resource Loca-
           tion servers available to the client.   Servers  should
           be listed in order of preference.
 
@@ -219,20 +219,20 @@ dhcpd-options(5)                                 dhcpd-options(5)
        ooppttiioonn rroooott--ppaatthh _s_t_r_i_n_g;;
 
           This  option  specifies the path-name that contains the
-          client's root disk.  The path is formatted as a charac­
+          client's root disk.  The path is formatted as a charac-
           ter  string consisting of characters from the NVT ASCII
           character set.
 
        ooppttiioonn iipp--ffoorrwwaarrddiinngg _f_l_a_g;;
 
-          This option specifies whether the client should config­
+          This option specifies whether the client should config-
           ure  its  IP layer for packet forwarding.  A value of 0
           means disable IP forwarding, and a  value  of  1  means
           enable IP forwarding.
 
        ooppttiioonn nnoonn--llooccaall--ssoouurrccee--rroouuttiinngg _f_l_a_g;;
 
-          This option specifies whether the client should config­
+          This option specifies whether the client should config-
           ure its IP layer to allow forwarding of datagrams  with
           non-local source routes (see Section 3.3.5 of [4] for a
           discussion of this topic).  A value of 0 means disallow
@@ -268,7 +268,7 @@ dhcpd-options(5)                                 dhcpd-options(5)
 dhcpd-options(5)                                 dhcpd-options(5)
 
 
-          the client should be prepared to reassemble.  The mini­
+          the client should be prepared to reassemble.  The mini-
           mum value legal value is 576.
 
        ooppttiioonn ddeeffaauulltt--iipp--ttttll _u_i_n_t_8_;
@@ -287,7 +287,7 @@ dhcpd-options(5)                                 dhcpd-options(5)
           This  option specifies a table of MTU sizes to use when
           performing Path MTU Discovery as defined in  RFC  1191.
           The  table  is  formatted  as a list of 16-bit unsigned
-          integers, ordered from smallest to largest.  The  mini­
+          integers, ordered from smallest to largest.  The  mini-
           mum MTU value cannot be smaller than 68.
 
        ooppttiioonn iinntteerrffaaccee--mmttuu _u_i_n_t_1_6;;
@@ -317,8 +317,8 @@ dhcpd-options(5)                                 dhcpd-options(5)
 
           This option specifies whether or not the client  should
           perform subnet mask discovery using ICMP.  A value of 0
-          indicates that the client should not perform mask  dis­
-          covery.  A value of 1 means that the client should per­
+          indicates that the client should not perform mask  dis-
+          covery.  A value of 1 means that the client should per-
           form mask discovery.
 
        ooppttiioonn mmaasskk--ssuupppplliieerr _f_l_a_g;;
@@ -345,7 +345,7 @@ dhcpd-options(5)                                 dhcpd-options(5)
           solicit routers using the  Router  Discovery  mechanism
           defined  in  RFC 1256.  A value of 0 indicates that the
           client should not perform router discovery.  A value of
-          1  means  that the client should perform router discov­
+          1  means  that the client should perform router discov-
           ery.
 
        ooppttiioonn rroouutteerr--ssoolliicciittaattiioonn--aaddddrreessss _i_p_-_a_d_d_r_e_s_s;;
@@ -357,12 +357,12 @@ dhcpd-options(5)                                 dhcpd-options(5)
        _i_p_-_a_d_d_r_e_s_s...  ];;
 
           This option specifies a list of static routes that  the
-          client  should install in its routing cache.  If multi­
+          client  should install in its routing cache.  If multi-
           ple routes to the same destination are specified,  they
           are listed in descending order of priority.
 
           The  routes consist of a list of IP address pairs.  The
-          first address is the destination address, and the  sec­
+          first address is the destination address, and the  sec-
           ond address is the router for the destination.
 
           The  default  route (0.0.0.0) is an illegal destination
@@ -432,7 +432,7 @@ dhcpd-options(5)                                 dhcpd-options(5)
 
           This option specifies the name of the client's NIS (Sun
           Network Information Services) domain.   The  domain  is
-          formatted  as  a character string consisting of charac­
+          formatted  as  a character string consisting of charac-
           ters from the NVT ASCII character set.
 
        ooppttiioonn nniiss--sseerrvveerrss _i_p_-_a_d_d_r_e_s_s [,, _i_p_-_a_d_d_r_e_s_s...  ];;
@@ -507,8 +507,8 @@ dhcpd-options(5)                                 dhcpd-options(5)
 
        ooppttiioonn xx--ddiissppllaayy--mmaannaaggeerr _i_p_-_a_d_d_r_e_s_s [,, _i_p_-_a_d_d_r_e_s_s...  ];;
 
-          This  option  specifies a list of systems that are run­
-          ning the X Window System Display Manager and are avail­
+          This  option  specifies a list of systems that are run-
+          ning the X Window System Display Manager and are avail-
           able  to  the  client.   Addresses  should be listed in
           order of preference.
 
@@ -562,7 +562,7 @@ dhcpd-options(5)                                 dhcpd-options(5)
 
           This option specifies a list of IP addresses indicating
           mobile IP home agents available to the client.   Agents
-          should  be listed in order of preference, although nor­
+          should  be listed in order of preference, although nor-
           mally there will be only one such agent.
 
        ooppttiioonn ssmmttpp--sseerrvveerr _i_p_-_a_d_d_r_e_s_s [,, _i_p_-_a_d_d_r_e_s_s... ];;
@@ -573,13 +573,13 @@ dhcpd-options(5)                                 dhcpd-options(5)
 
        ooppttiioonn ppoopp--sseerrvveerr _i_p_-_a_d_d_r_e_s_s [,, _i_p_-_a_d_d_r_e_s_s... ];;
 
-          The POP3 server option specifies a list of POP3  avail­
+          The POP3 server option specifies a list of POP3  avail-
           able  to the client.  Servers should be listed in order
           of preference.
 
        ooppttiioonn nnnnttpp--sseerrvveerr _i_p_-_a_d_d_r_e_s_s [,, _i_p_-_a_d_d_r_e_s_s... ];;
 
-          The NNTP server option specifies a list of NNTP  avail­
+          The NNTP server option specifies a list of NNTP  avail-
           able  to the client.  Servers should be listed in order
           of preference.
 
@@ -624,7 +624,7 @@ dhcpd-options(5)                                 dhcpd-options(5)
 
           The   StreetTalk  Directory  Assistance  (STDA)  server
           option specifies a list of STDA  servers  available  to
-          the client.  Servers should be listed in order of pref­
+          the client.  Servers should be listed in order of pref-
           erence.
 
 RREELLAAYY AAGGEENNTT IINNFFOORRMMAATTIIOONN OOPPTTIIOONN
@@ -647,7 +647,7 @@ RREELLAAYY AAGGEENNTT IINNFFOORRMMAATTIIOONN OOPPTTIIO
 
        ooppttiioonn aaggeenntt..cciirrccuuiitt--iidd _s_t_r_i_n_g;;
 
-          The circuit-id suboption encodes an agent-local identi­
+          The circuit-id suboption encodes an agent-local identi-
           fier of the circuit from which a DHCP  client-to-server
           packet  was received.  It is intended for use by agents
           in relaying DHCP responses back to the proper  circuit.
@@ -665,7 +665,7 @@ dhcpd-options(5)                                 dhcpd-options(5)
 
 
           vendor-dependent, and will probably  remain  that  way,
-          although the current draft allows for for the possibil­
+          although the current draft allows for for the possibil-
           ity of standardizing the format in the future.
 
        ooppttiioonn aaggeenntt..rreemmoottee--iidd _s_t_r_i_n_g;;
@@ -683,7 +683,7 @@ DDEEFFIINNIINNGG NNEEWW OOPPTTIIOONNSS
        The  Internet  Software  Consortium DHCP client and server
        provide the capability to define new options.   Each  DHCP
        option  has a name, a code, and a structure.   The name is
-       used by you to refer to the option.   The code is  a  num­
+       used by you to refer to the option.   The code is  a  num-
        ber,  used  by  the  DHCP server and client to refer to an
        option.   The structure describes what the contents of  an
        option looks like.
@@ -693,11 +693,11 @@ DDEEFFIINNIINNGG NNEEWW OOPPTTIIOONNSS
        you  can't  use  "host-name"  because  the  DHCP  protocol
        already defines a host-name option,  which  is  documented
        earlier  in  this manual page.   If an option name doesn't
-       appear in this manual page, you can use it, but it's prob­
+       appear in this manual page, you can use it, but it's prob-
        ably  a good idea to put some kind of unique string at the
        beginning so you can be sure  that  future  options  don't
        take your name.   For example, you might define an option,
-       "local-host-name", feeling some confidence that  no  offi­
+       "local-host-name", feeling some confidence that  no  offi-
        cial DHCP option name will ever start with "local".
 
        Once  you have chosen a name, you must choose a code.  For
@@ -733,11 +733,11 @@ dhcpd-options(5)                                 dhcpd-options(5)
        ooppttiioonn _n_e_w_-_n_a_m_e ccooddee _n_e_w_-_c_o_d_e == _d_e_f_i_n_i_t_i_o_n ;;
 
        The values of _n_e_w_-_n_a_m_e and _n_e_w_-_c_o_d_e should be the name you
-       have chosen for the new option and the code you have  cho­
+       have chosen for the new option and the code you have  cho-
        sen.    The  _d_e_f_i_n_i_t_i_o_n  should  be  the definition of the
        structure of the option.
 
-       The following simple  option  type  definitions  are  sup­
+       The following simple  option  type  definitions  are  sup-
        ported:
 
        BBOOOOLLEEAANN
@@ -757,7 +757,7 @@ dhcpd-options(5)                                 dhcpd-options(5)
 
        The _s_i_g_n token should either be blank, _u_n_s_i_g_n_e_d or _s_i_g_n_e_d.
        The width can be either 8, 16 or 32,  and  refers  to  the
-       number  of bits in the integer.   So for example, the fol­
+       number  of bits in the integer.   So for example, the fol-
        lowing two lines show a definition of the  sql-connection-
        max option and its use:
 
@@ -805,7 +805,7 @@ dhcpd-options(5)                                 dhcpd-options(5)
 
        An option whose type is a data string is essentially  just
        a  collection  of  bytes,  and  can be specified either as
-       quoted text, like the text type, or as a list of hexadeci­
+       quoted text, like the text type, or as a list of hexadeci-
        mal  contents  seperated  by  colons  whose values must be
        between 0 and FF.   For example:
 

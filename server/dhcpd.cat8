@@ -16,12 +16,12 @@ DDEESSCCRRIIPPTTIIOONN
        implements  the Dynamic Host Configuration Protocol (DHCP)
        and the Internet Bootstrap Protocol (BOOTP).  DHCP  allows
        hosts  on  a  TCP/IP network to request and be assigned IP
-       addresses, and also to discover information about the net­
+       addresses, and also to discover information about the net-
        work  to  which they are attached.  BOOTP provides similar
        functionality, with certain restrictions.
 
 CCOONNTTRRIIBBUUTTIIOONNSS
-       Development of this software is funded  through  contribu­
+       Development of this software is funded  through  contribu-
        tions  and support contracts.   Please see ddhhccpp--ccoonnttrriibb((55))
        for information on how you can contribute.
 
@@ -29,7 +29,7 @@ OOPPEERRAATTIIOONN
        The DHCP protocol allows a host which is  unknown  to  the
        network  administrator  to be automatically assigned a new
        IP address out of a pool of IP addresses for its  network.
-       In order for this to work, the network administrator allo­
+       In order for this to work, the network administrator allo-
        cates address pools in each subnet and  enters  them  into
        the dhcpd.conf(5) file.
 
@@ -85,7 +85,7 @@ dhcpd(8)                                                 dhcpd(8)
        longer needed.    It  is  still  possible  to  dynamically
        assign addresses to BOOTP clients, but some administrative
        process  for  reclaiming  addresses  is   required.     By
-       default,  leases  are granted to BOOTP clients in perpetu­
+       default,  leases  are granted to BOOTP clients in perpetu-
        ity, although the network administrator may set an earlier
        cutoff  date or a shorter lease length for BOOTP leases if
        that makes sense.
@@ -120,8 +120,8 @@ CCOOMMMMAANNDD LLIINNEE
        unable to identify non-broadcast  interfaces,  but  should
        not  be  required on other systems.  If no interface names
        are specified on the command line dhcpd will identify  all
-       network  interfaces which are up, elimininating non-broad­
-       cast interfaces if possible, and listen  for  DHCP  broad­
+       network  interfaces which are up, elimininating non-broad-
+       cast interfaces if possible, and listen  for  DHCP  broad-
        casts on each interface.
 
 
@@ -147,10 +147,10 @@ dhcpd(8)                                                 dhcpd(8)
        under  a  debugger,  or  when running it out of inittab on
        System V systems.
 
-       To have dhcpd log to the standard error descriptor,  spec­
+       To have dhcpd log to the standard error descriptor,  spec-
        ify  the  --dd  flag.  This can be useful for debugging, and
        also at sites where a complete log of  all  dhcp  activity
-       must be kept but syslogd is not reliable or otherwise can­
+       must be kept but syslogd is not reliable or otherwise can-
        not be used.   Normally, dhcpd will log all  output  using
        the  syslog(3)  function  with  the  log  facility  set to
        LOG_DAEMON.
@@ -167,8 +167,8 @@ dhcpd(8)                                                 dhcpd(8)
        copyright  message  on  startup.    To avoid printing this
        message, the --qq flag may be specified.
 
-       The DHCP server reads two files on startup:  a  configura­
-       tion file, and a lease database.   If the --tt flag is spec­
+       The DHCP server reads two files on startup:  a  configura-
+       tion file, and a lease database.   If the --tt flag is spec-
        ified, the server will simply test the configuration  file
        for  correct  syntax,  but will not attempt to perform any
        network operations.   This can be used to test the  a  new
@@ -178,7 +178,7 @@ dhcpd(8)                                                 dhcpd(8)
        a similar way.
 
 CCOONNFFIIGGUURRAATTIIOONN
-       The syntax of the dhcpd.conf(5) file is  discussed  seper­
+       The syntax of the dhcpd.conf(5) file is  discussed  seper-
        ately.   This section should be used as an overview of the
        configuration process, and the dhcpd.conf(5) documentation
        should be consulted for detailed reference information.
@@ -186,7 +186,7 @@ CCOONNFFIIGGUURRAATTIIOONN
 
 SSuubbnneettss
        dhcpd needs to know the subnet numbers and netmasks of all
-       subnets for which it will be providing service.   In addi­
+       subnets for which it will be providing service.   In addi-
        tion,  in order to dynamically allocate addresses, it must
        be assigned one or more ranges of addresses on each subnet
        which  it can in turn assign to client hosts as they boot.
@@ -230,10 +230,10 @@ LLeeaassee LLeennggtthhss
        For example, in an office environment  where  systems  are
        added from time to time and removed from time to time, but
        move relatively infrequently, it might make sense to allow
-       lease times of a month of more.   In a final test environ­
+       lease times of a month of more.   In a final test environ-
        ment on a manufacturing floor, it may make more  sense  to
        assign  a maximum lease length of 30 minutes - enough time
-       to go through a simple test procedure on a network  appli­
+       to go through a simple test procedure on a network  appli-
        ance before packaging it up for delivery.
 
        It  is  possible to specify two lease lengths: the default
@@ -298,7 +298,7 @@ OOppttiioonnss
        for BOOTP clients, also on a per-client  basis.    In  the
        event  that  a  BOOTP client declaration specifies options
        that are also specified in  its  subnet  declaration,  the
-       options  specified  in  the client declaration take prece­
+       options  specified  in  the client declaration take prece-
        dence.   An reasonably complete DHCP  configuration  might
        look something like this:
 
@@ -312,7 +312,7 @@ OOppttiioonnss
               option domain-name "isc.org";
             }
 
-       A  bootp host on that subnet that needs to be in a differ­
+       A  bootp host on that subnet that needs to be in a differ-
        ent domain and  use  a  different  name  server  might  be
        declared as follows:
 

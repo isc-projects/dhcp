@@ -5,7 +5,7 @@ dhcp-contrib(5)                                   dhcp-contrib(5)
 
 
 NNAAMMEE
-       Contributing to the Internet Software Consortium DHCP Dis­
+       Contributing to the Internet Software Consortium DHCP Dis-
        tribution
 
 EEXXHHOORRTTAATTIIOONN
@@ -15,7 +15,7 @@ EEXXHHOORRTTAATTIIOONN
        individual contributions.  To some degree, support for the
        distribution has been done on a volunteer  basis,  but  by
        and  large  the  reason that you have this distribution in
-       your hands right now is because people like you have  pro­
+       your hands right now is because people like you have  pro-
        vided funding for it.
 
        We would like to encourage you to continue to provide such
@@ -33,17 +33,17 @@ EEXXHHOORRTTAATTIIOONN
 FFRREEQQUUEENNTTLLYY AASSKKEEDD QQUUEESSTTIIOONNSS
        Q: So if I won't be treated differently, why contribute?
 
-       A:  The  obvious  answer  is  self-interest.   If you con­
+       A:  The  obvious  answer  is  self-interest.   If you con-
        tribute, it means that the author will have time  to  work
        on  stuff that's not of the utmost high priority.   People
        are constantly asking for things that we would really like
-       to provide, but for which we have no time.   By contribut­
+       to provide, but for which we have no time.   By contribut-
        ing, you are literally giving us time to do these  things.
        The  amount  of  time  varies  with  the  contribution, of
        course, but if everybody contributes a little bit, it  can
        add up to a lot.
 
-       Q: But everybody isn't required to contribute.   If I con­
+       Q: But everybody isn't required to contribute.   If I con-
        tribute and nobody else does, doesn't that make me kind of
        a sucker?
 
@@ -70,7 +70,7 @@ FFRREEQQUUEENNTTLLYY AASSKKEEDD QQUUEESSTTIIOONNSS
 dhcp-contrib(5)                                   dhcp-contrib(5)
 
 
-       development work on specification if we feel it  is  rele­
+       development work on specification if we feel it  is  rele-
        vant  (although  you  won't  get to own it).   This can be
        quite expensive, though - much more than even the  maximum
        we'd  expect  you to donate.   So no, contributing doesn't
@@ -97,7 +97,7 @@ dhcp-contrib(5)                                   dhcp-contrib(5)
        for running the computer center, can afford to plant  nice
        gardens  and  maintain  nice  lawns, and maybe has all its
        dorms wired for ethernet, then even if you  qualify  as  a
-       nonprofit  under federal law (or the law in your own coun­
+       nonprofit  under federal law (or the law in your own coun-
        try) you should still contribute.  DHCP is just as much  a
        part of your infrastructure as your campus wiring.
 
@@ -105,7 +105,7 @@ dhcp-contrib(5)                                   dhcp-contrib(5)
        already contributed?
 
        A: If you're seeing this notice,  and  you  didn't  see  a
-       notice  saying  that  the people who sold you your CD con­
+       notice  saying  that  the people who sold you your CD con-
        tributed to us, then no, you haven't already  contributed.
        In  general,  we encourage people to include this software
        on their distributions if they feel it  would  be  useful,
@@ -142,7 +142,7 @@ dhcp-contrib(5)                                   dhcp-contrib(5)
        money to support this effort.
 
        A:  You  are  entitled  to  that opinion, but please don't
-       raise it on the mailing list, as it will tend to get  peo­
+       raise it on the mailing list, as it will tend to get  peo-
        ple  excited.  Please remember that while copying software
        is generally a very cheap process,  creating  it  is  not.
        The  amount of work that's gone into this software package
@@ -163,8 +163,8 @@ dhcp-contrib(5)                                   dhcp-contrib(5)
        translates directly into an opportunity.  For example, you
        may  want  very  much to work for [insert the name of your
        favorite commercial Linux vendor  here],  but  unless  you
-       have  the appropriate skills, they like you, they're will­
-       ing to pay what you need, and they have work that's appro­
+       have  the appropriate skills, they like you, they're will-
+       ing to pay what you need, and they have work that's appro-
        priate  to  your  skills,  you're  not  going to get hired
        there.
 
@@ -187,7 +187,7 @@ dhcp-contrib(5)                                   dhcp-contrib(5)
        If you want, we can send you a reminder notice on the year
        anniversary  of  your original contribution.  If you don't
        specifically ask for this, we won't force it on  you.   No
-       salesperson  will  call.   No spam will be sent.  We defi­
+       salesperson  will  call.   No spam will be sent.  We defi-
        nitely won't try to convince you that  it's  been  a  year
        since you last contributed when it hasn't been a year yet.
 
@@ -245,7 +245,7 @@ dhcp-contrib(5)                                   dhcp-contrib(5)
        Q: Can I contribute with my credit card?
 
        A: Yes.   The details haven't  been  ironed  out  at  this
-       writing,   but   if   you   send  mail  to  dhcp-contribu­
+       writing,   but   if   you   send  mail  to  dhcp-contribu-
        tions@isc.org, we'll work it out.   By the time  you  read
        this,  we may have a web interface set up - if so, it will
        be linked in at http://www.isc.org/dhcp-contrib.html.

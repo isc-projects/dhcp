@@ -13,9 +13,9 @@ SSYYNNOOPPSSIISS
        _f_o_r_w_a_r_d | _d_i_s_c_a_r_d ] _s_e_r_v_e_r_0 [ _._._._s_e_r_v_e_r_N ]
 
 DDEESSCCRRIIPPTTIIOONN
-       The Internet Software Consortium DHCP Relay Agent,  dhcre­
+       The Internet Software Consortium DHCP Relay Agent,  dhcre-
        lay, provides a means for relaying DHCP and BOOTP requests
-       from a subnet to which no DHCP  server  is  directly  con­
+       from a subnet to which no DHCP  server  is  directly  con-
        nected to one or more DHCP servers on other subnets.
 
 OOPPEERRAATTIIOONN
@@ -32,11 +32,11 @@ CCOOMMMMAANNDD LLIINNEE
        attempt to configure may be specified on the command  line
        using  the --ii option.  If no interface names are specified
        on the command line dhcrelay  will  identify  all  network
-       interfaces, elimininating non-broadcast interfaces if pos­
+       interfaces, elimininating non-broadcast interfaces if pos-
        sible, and attempt to configure each interface.
 
        If a relay agent is running on a system that is  connected
-       to  one or more networks on which no DHCP servers are pre­
+       to  one or more networks on which no DHCP servers are pre-
        sent, and is also connected to one  or  more  networks  on
        which DHCP servers _a_r_e connected, it is may not be helpful
        for the relay agent to relay requests from those  networks
@@ -86,7 +86,7 @@ RREELLAAYY AAGGEENNTT IINNFFOORRMMAATTIIOONN OOPPTTIIO
        responses back to the client.
 
        The agent option field will contain two agent options: the
-       Circuit  ID  suboption  and  the Agent ID suboption.  Cur­
+       Circuit  ID  suboption  and  the Agent ID suboption.  Cur-
        rently, the Circuit ID will be the printable name  of  the
        interface  on which the client request was received.   The
        Agent ID will be the value that the relay agent stores  in
@@ -108,17 +108,17 @@ RREELLAAYY AAGGEENNTT IINNFFOORRMMAATTIIOONN OOPPTTIIO
        current Agent Options draft requires that the relay  agent
        use a maximum packet size of 576 bytes.
 
-       It  is recommended that with the Internet Software Consor­
+       It  is recommended that with the Internet Software Consor-
        tium DHCP server, the maximum packet size be set to  about
        1400,  allowing  plenty  of extra space in which the relay
        agent can put the agent option field, while still  fitting
-       into  the Ethernet MTU size.  This can be done by specify­
+       into  the Ethernet MTU size.  This can be done by specify-
        ing the --AA flag, followed by the  desired  maximum  packet
        size (e.g., 1400).
 
        Note  that  this  is reasonably safe to do even if the MTU
        between the server and the client is less  than  1500,  as
-       long  as the hosts on which the server and client are run­
+       long  as the hosts on which the server and client are run-
        ning support IP fragmentation  (and  they  should).   With
        some knowledge as to how large the agent options might get
        in a particular configuration, this parameter can be tuned
@@ -158,7 +158,7 @@ dhcrelay(8)                                           dhcrelay(8)
        Information option processing is enabled, the relay  agent
        scans  the  packet for Relay Agent Information options and
        removes them.   As it's scanning,  if  it  finds  a  Relay
-       Agent Information option field containing an Agent ID sub­
+       Agent Information option field containing an Agent ID sub-
        option that matches one of its IP addresses,  that  option
        is  recognized  as  its own.   If no such option is found,
        the relay agent can either drop the packet,  or  relay  it
@@ -179,8 +179,8 @@ BBUUGGSS
        ID and Remote ID values on a per-interface basis.
 
        The relay agent should not relay  packets  received  on  a
-       physical network to DHCP servers on the same physical net­
-       work - if they do, the server will receive duplicate pack­
+       physical network to DHCP servers on the same physical net-
+       work - if they do, the server will receive duplicate pack-
        ets.    In  order  to  fix  this, however, the relay agent
        needs to be able to  learn  about  the  network  topology,
        which requires that it have a configuration file.

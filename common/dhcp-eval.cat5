@@ -11,12 +11,12 @@ DDEESSCCRRIIPPTTIIOONN
        The  Internet  Software  Consortium DHCP client and server
        both provide the ability to perform  conditional  behavior
        depending  on  the contents of packets they receive.   The
-       syntax for specifying this conditional behaviour is  docu­
+       syntax for specifying this conditional behaviour is  docu-
        mented here.
 
 RREEFFEERREENNCCEE:: CCOONNDDIITTIIOONNAALL BBEEHHAAVVIIOOUURR
        Conditional  behaviour is specified using the if statement
-       and the else or elsif statements.   A  conditional  state­
+       and the else or elsif statements.   A  conditional  state-
        ment  can  appear anywhere that a regular statement (e.g.,
        an option statement) can appear, and can  enclose  one  or
        more such statements.   A typical conditional statement in
@@ -79,7 +79,7 @@ dhcpd-options(5)                                 dhcpd-options(5)
        executed,  and  then any subsequent eellssiiff and eellssee clauses
        are skipped.   If all the iiff and eellssiiff clauses are checked
        but none of their expressions evaluate true, then if there
-       is an eellssee clause, the statements enclosed in braces  fol­
+       is an eellssee clause, the statements enclosed in braces  fol-
        lowing  the eellssee are evaluated.   Boolean expressions that
        evaluate to null are treated as false in conditionals.
 
@@ -97,7 +97,7 @@ BBOOOOLLEEAANN EEXXPPRREESSSSIIOONNSS
 
        _d_a_t_a_-_e_x_p_r_e_s_s_i_o_n_-_1 == _d_a_t_a_-_e_x_p_r_e_s_s_i_o_n_-_2
 
-          The  == operator compares the values of two data expres­
+          The  == operator compares the values of two data expres-
           sions, returning true if they are the  same,  false  if
           they  are  not.    If  either the left-hand side or the
           right-hand side are null, the result is also null.
@@ -114,15 +114,15 @@ BBOOOOLLEEAANN EEXXPPRREESSSSIIOONNSS
        _b_o_o_l_e_a_n_-_e_x_p_r_e_s_s_i_o_n_-_1 oorr _b_o_o_l_e_a_n_-_e_x_p_r_e_s_s_i_o_n_-_2
 
           The oorr operator evaluates to true if either the boolean
-          expression on the left-hand side or the boolean expres­
-          sion  on  the right-hand side evaluate to true.  Other­
+          expression on the left-hand side or the boolean expres-
+          sion  on  the right-hand side evaluate to true.  Other-
           wise, it evaluates to false.  If either the  expression
           on  the  left-hand side or the expression on the right-
           hand side are null, the result is null.
 
        nnoott _b_o_o_l_e_a_n_-_e_x_p_r_e_s_s_i_o_n
 
-          The nnoott operator evaluates to true  if  _b_o_o_l_e_a_n_-_e_x_p_r_e_s_­
+          The nnoott operator evaluates to true  if  _b_o_o_l_e_a_n_-_e_x_p_r_e_s_-
           _s_i_o_n  evaluates to false, and returns false if _b_o_o_l_e_a_n_-
 
 
@@ -142,7 +142,7 @@ dhcpd-options(5)                                 dhcpd-options(5)
        eexxiissttss _o_p_t_i_o_n_-_n_a_m_e
 
           The  eexxiissttss  expression  returns  true if the specified
-          option exists in the incoming DHCP  packet  being  pro­
+          option exists in the incoming DHCP  packet  being  pro-
           cessed.
        kknnoowwnn
 
@@ -158,8 +158,8 @@ DDAATTAA EEXXPPRREESSSSIIOONNSS
        ssuubbssttrriinngg ((_d_a_t_a_-_e_x_p_r,, _o_f_f_s_e_t,, _l_e_n_g_t_h))
 
           The  ssuubbssttrriinngg  operator  evaluates the data expression
-          and returns the substring of the result of that evalua­
-          tion  that starts _o_f_f_s_e_t bytes from the beginning, con­
+          and returns the substring of the result of that evalua-
+          tion  that starts _o_f_f_s_e_t bytes from the beginning, con-
           tinuing for _l_e_n_g_t_h bytes.  _O_f_f_s_e_t and _l_e_n_g_t_h  are  both
           numeric  expressions.   If  _d_a_t_a_-_e_x_p_r, _o_f_f_s_e_t or _l_e_n_g_t_h
           evaluate to null, then the result  is  also  null.   If
@@ -182,7 +182,7 @@ DDAATTAA EEXXPPRREESSSSIIOONNSS
 
        ooppttiioonn _o_p_t_i_o_n_-_n_a_m_e
 
-          The ooppttiioonn operator returns the contents of the  speci­
+          The ooppttiioonn operator returns the contents of the  speci-
           fied  option  in  the  packet  to  which  the server is
           responding.
 
@@ -207,9 +207,9 @@ dhcpd-options(5)                                 dhcpd-options(5)
           packet, or if the RFC2131 _h_l_e_n field is  invalid,  then
           the  result  is null.   Hardware types include ethernet
           (1), token-ring (6), and fddi (8).   Hardware types are
-          specified by the IETF, and details on how the type num­
+          specified by the IETF, and details on how the type num-
           bers are defined can be found in RFC2131  (in  the  ISC
-          DHCP  distribution, this is included in the doc/ subdi­
+          DHCP  distribution, this is included in the doc/ subdi-
           rectory).
 
        ppaacckkeett ((_o_f_f_s_e_t,, _l_e_n_g_t_h))
@@ -275,12 +275,12 @@ dhcpd-options(5)                                 dhcpd-options(5)
           the  result  of evaluating data-expr2.   Each number is
           seperated from the other by the  result  of  evaluating
           data-expr1.    The  result  of evaluating numeric-expr1
-          specifies the base (2 through 16) into which  the  num­
+          specifies the base (2 through 16) into which  the  num-
           bers  should  be  converted.   The result of evaluating
-          numeric-expr2 specifies the width in bits of each  num­
+          numeric-expr2 specifies the width in bits of each  num-
           ber, which may be either 8, 16 or 32.
 
-          As  an  example of the preceding three types of expres­
+          As  an  example of the preceding three types of expres-
           sions, to produce the name of a PTR record for  the  IP
           address being assigned to a client, one could write the
           following expression:
@@ -309,7 +309,7 @@ NNUUMMEERRIICC EEXXPPRREESSSSIIOONNSS
           The  eexxttrraacctt--iinntt  operator extracts an integer value in
           network byte order from the result  of  evaluating  the
           specified data expression.   Width is the width in bits
-          of the integer to extract.  Currently,  the  only  sup­
+          of the integer to extract.  Currently,  the  only  sup-
           ported  widths are 8, 16 and 32.   If the evaluation of
           the data expression doesn't provide sufficient bits  to
           extract  an  integer  of  the  specified size, the null

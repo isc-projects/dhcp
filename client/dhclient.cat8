@@ -30,8 +30,8 @@ OOPPEERRAATTIIOONN
        attached, such as the location of a  default  router,  the
        location of a name server, and so on.
 
-       On  startup, dhclient reads the _d_h_c_l_i_e_n_t_._c_o_n_f for configu­
-       ration instructions.   It then gets a list of all the net­
+       On  startup, dhclient reads the _d_h_c_l_i_e_n_t_._c_o_n_f for configu-
+       ration instructions.   It then gets a list of all the net-
        work interfaces that are configured in the current system.
        For each interface, it attempts to configure the interface
        using the DHCP protocol.
@@ -53,7 +53,7 @@ OOPPEERRAATTIIOONN
        database.
 
        Old  leases  are  kept  around  in case the DHCP server is
-       unavailable when dhclient is first invoked (generally dur­
+       unavailable when dhclient is first invoked (generally dur-
        ing the initial system boot process).   In that event, old
        leases from the dhclient.leases file which  have  not  yet
        expired  are  tested,  and  if  they  are determined to be
@@ -106,7 +106,7 @@ CCOOMMMMAANNDD LLIINNEE
        should use.  This is mostly useful for debugging purposes.
        If a different port is specified for the client to  listen
        on  and  transmit on, the client will also use a different
-       destination port - one greater than the specified destina­
+       destination port - one greater than the specified destina-
        tion port.
 
        The  DHCP  client normally transmits any protocol messages
@@ -138,19 +138,19 @@ dhclient(8)                                           dhclient(8)
 
        The  client  writes  a  temporary shell script whenever it
        invokes dhclient-script.   This script is normally deleted
-       after  the  client runs, but it can be helpful when debug­
+       after  the  client runs, but it can be helpful when debug-
        ging the client script to see what the client wrote.   The
        client  can  be  configured not to delete these scripts by
        specifying the --DD flag.
 
        The client normally prints a startup message and  displays
        the  protocol  sequence  to  the standard error descriptor
-       until it has acquired an address, and then only logs  mes­
-       sages  using  the  ssyysslloogg ((33)) facility.   The --qq flag pre­
+       until it has acquired an address, and then only logs  mes-
+       sages  using  the  ssyysslloogg ((33)) facility.   The --qq flag pre-
        vents any messages other than errors from being printed to
        the standard error descriptor.
 
-       The  DHCP  client normally gets its configuration informa­
+       The  DHCP  client normally gets its configuration informa-
        tion from  //eettcc//ddhhcclliieenntt..ccoonnff,,  its  lease  database  from
        //vvaarr//ddbb//ddhhcclliieenntt..lleeaasseess  and  stores  its  process ID in a
        file called //vvaarr//rruunn//ddhhcclliieenntt..ppiidd..  To  specify  different
@@ -183,7 +183,7 @@ AAUUTTHHOORR
        Elliot  Poger for use on Linux while he was working on the
        MosquitoNet project at Stanford.
 
-       The current version owes much to Elliot's  Linux  enhance­
+       The current version owes much to Elliot's  Linux  enhance-
        ments,  but  was  substantially  reorganized and partially
        rewritten by Ted Lemon so as to use  the  same  networking
        framework  that  the  Internet  Software  Consortium  DHCP
