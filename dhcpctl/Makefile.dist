@@ -27,17 +27,16 @@ HDRS   = dhcpctl.h
 DEBUG  = -g
 INCLUDES = $(BINDINC) -I$(TOP)/includes
 CFLAGS = $(DEBUG) $(PREDEFINES) $(INCLUDES) $(COPTS)
+DHCPCTLLIBS = libdhcpctl.a ../common/libdhcp.a $(BINDLIB) \
+		../omapip/libomapi.a ../dst/libdst.a
 
 all:	libdhcpctl.a omshell cltest $(CATMANPAGES)
 
-omshell:	omshell.o libdhcpctl.a ../common/libdhcp.a ../omapip/libomapi.a $(BINDLIB)
-	$(CC) $(DEBUG) $(LFLAGS) -o omshell omshell.o libdhcpctl.a \
-		        ../common/libdhcp.a \
-			../omapip/libomapi.a $(BINDLIB) $(LIBS)
+omshell:	omshell.o $(DHCPCTLLIBS)
+	$(CC) $(DEBUG) $(LFLAGS) -o omshell omshell.o $(DHCPCTLLIBS)
 
-cltest:	cltest.o libdhcpctl.a ../omapip/libomapi.a $(BINDLIB)
-	$(CC) $(DEBUG) $(LFLAGS) -o cltest cltest.o libdhcpctl.a \
-			../omapip/libomapi.a $(BINDLIB) $(LIBS)
+cltest:	cltest.o $(DHCPCTLLIBS)
+	$(CC) $(DEBUG) $(LFLAGS) -o cltest cltest.o $(DHCPCTLLIBS)
 
 libdhcpctl.a:	$(OBJ)
 	rm -f libdhcpctl.a

@@ -33,8 +33,9 @@ CFLAGS = $(DEBUG) $(PREDEFINES) $(INCLUDES) $(COPTS)
 
 all:	libomapi.a svtest $(CATMANPAGES)
 
-svtest:	test.o libomapi.a $(BINDLIB)
-	$(CC) $(DEBUG) $(LFLAGS) -o svtest test.o libomapi.a $(BINDLIB) $(LIBS)
+svtest:	test.o libomapi.a $(BINDLIB) ../dst/libdst.a
+	$(CC) $(DEBUG) $(LFLAGS) -o svtest test.o $(BINDLIB) \
+			libomapi.a ../dst/libdst.a $(LIBS)
 
 libomapi.a:	$(OBJ)
 	rm -f libomapi.a

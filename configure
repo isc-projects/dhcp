@@ -172,7 +172,7 @@ if [ ! -d $workname ]; then
   mkdir $workname
 fi
 
-for foo in . client server relay common omapip dhcpctl minires; do
+for foo in . client server relay common omapip dhcpctl minires dst; do
 	if [ ! -d ${workname}/$foo ]; then
 	  mkdir ${workname}/$foo
 	fi
