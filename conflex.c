@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: conflex.c,v 1.15 1996/08/28 01:41:11 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: conflex.c,v 1.16 1996/08/29 09:13:41 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -78,7 +78,7 @@ static int get_token PROTO ((FILE *));
 static void skip_to_eol PROTO ((FILE *));
 static int read_string PROTO ((FILE *));
 static int read_number PROTO ((int, FILE *));
-static int read_num_or_atom PROTO ((int, FILE *));
+static int read_num_or_name PROTO ((int, FILE *));
 static int intern PROTO ((char *, int));
 
 void new_parse (name)
@@ -164,7 +164,7 @@ static int get_token (cfile)
 		} else if (isascii (c) && isalpha (c)) {
 			lexline = l;
 			lexchar = p;
-			ttok = read_num_or_atom (c, cfile);
+			ttok = read_num_or_name (c, cfile);
 			break;
 		} else {
 			lexline = l;
@@ -295,9 +295,9 @@ static int read_number (c, cfile)
 #ifndef OLD_LEXER
 		} else if (isascii (c) && !isxdigit (c) &&
 			   (c == '-' || c == '_' || isalpha (c))) {
-			token = ATOM;
+			token = NAME;
 		} else if (isascii (c) && !isdigit (c) && isxdigit (c)) {
-			token = NUMBER_OR_ATOM;
+			token = NUMBER_OR_NAME;
 #endif
 		} else if (!isascii (c) || !isxdigit (c)) {
 			ungetc (c, cfile);
@@ -315,12 +315,12 @@ static int read_number (c, cfile)
 	return token;
 }
 
-static int read_num_or_atom (c, cfile)
+static int read_num_or_name (c, cfile)
 	int c;
 	FILE *cfile;
 {
 	int i = 0;
-	int rv = NUMBER_OR_ATOM;
+	int rv = NUMBER_OR_NAME;
 	tokbuf [i++] = c;
 	for (; i < sizeof tokbuf; i++) {
 		c = get_char (cfile);
@@ -331,7 +331,7 @@ static int read_num_or_atom (c, cfile)
 			break;
 		}
 		if (!isxdigit (c))
-			rv = ATOM;
+			rv = NAME;
 		tokbuf [i] = c;
 	}
 	if (i == sizeof tokbuf) {
