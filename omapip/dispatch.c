@@ -285,7 +285,9 @@ isc_result_t omapi_one_dispatch (omapi_object_t *wo,
 #if defined (__linux__)
 #define fds_bits __fds_bits
 #endif
-	log_error ("dispatch: %d %x %x", max, r.fds_bits [0], w.fds_bits [0]);
+	log_error ("dispatch: %d %lx %lx", max,
+		   (unsigned long)r.fds_bits [0],
+		   (unsigned long)w.fds_bits [0]);
 	count = select (max + 1, &r, &w, &x, t ? &to : (struct timeval *)0);
 
 	/* Get the current time... */
@@ -307,8 +309,9 @@ isc_result_t omapi_one_dispatch (omapi_object_t *wo,
 			if (io -> readfd && io -> inner &&
 			    (desc = (*(io -> readfd)) (io -> inner)) >= 0) {
 			    FD_SET (desc, &r);
-			    log_error ("read check: %d %x %x",
-				       max, r.fds_bits [0], w.fds_bits [0]);
+			    log_error ("read check: %d %lx %lx", max,
+				       (unsigned long)r.fds_bits [0],
+				       (unsigned long)w.fds_bits [0]);
 			    count = select (desc + 1, &r, &w, &x, &t0);
 			   bogon:
 			    if (count < 0) {
@@ -334,9 +337,9 @@ isc_result_t omapi_one_dispatch (omapi_object_t *wo,
 			if (io -> writefd && io -> inner &&
 			    (desc = (*(io -> writefd)) (io -> inner)) >= 0) {
 				FD_SET (desc, &w);
-				log_error ("write check: %d %x %x",
-					   max,
-					   r.fds_bits [0], w.fds_bits [0]);
+				log_error ("write check: %d %lx %lx", max,
+					   (unsigned long)r.fds_bits [0],
+					   (unsigned long)w.fds_bits [0]);
 				count = select (desc + 1, &r, &w, &x, &t0);
 				if (count < 0)
 					goto bogon;
