@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: conflex.c,v 1.64 2000/01/08 01:27:54 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: conflex.c,v 1.65 2000/01/25 01:03:36 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -534,10 +534,6 @@ static enum dhcp_token intern (atom, dfv)
 			return COMMUNICATIONS_INTERRUPTED;
 		break;
 	      case 'd':
-		if (!strcasecmp (atom + 1, "dns-fwd-name"))
-			return DDNS_FWD_NAME;
-		if (!strcasecmp (atom + 1, "dns-rev-name"))
-			return DDNS_REV_NAME;
 		if (!strcasecmp (atom + 1, "ns-update"))
 			return DNS_UPDATE;
 		if (!strcasecmp (atom + 1, "ns-delete"))
@@ -601,6 +597,8 @@ static enum dhcp_token intern (atom, dfv)
 				return ELSIF;
 			break;
 		}
+		if (!strcasecmp (atom + 1, "val"))
+			return EVAL;
 		break;
 	      case 'f':
 		if (!strcasecmp (atom + 1, "ilename"))
@@ -665,6 +663,8 @@ static enum dhcp_token intern (atom, dfv)
 			return LEASE_TIME;
 		if (!strcasecmp (atom + 1, "imit"))
 			return LIMIT;
+		if (!strcasecmp (atom + 1, "et"))
+			return LET;
 		break;
 	      case 'm':
 		if (!strncasecmp (atom + 1, "ax-", 3)) {
@@ -769,8 +769,9 @@ static enum dhcp_token intern (atom, dfv)
 			return PORT;
 		if (!strcasecmp (atom + 1, "otential-conflict"))
 			return POTENTIAL_CONFLICT;
-		if (!strcasecmp (atom + 1, "ick-first-value"))
-			return PICK_FIRST_VALUE;
+		if (!strcasecmp (atom + 1, "ick-first-value") ||
+		    !strcasecmp (atom + 1, "ick"))
+			return PICK;
 		break;
 	      case 'r':
 		if (!strcasecmp (atom + 1, "ange"))
@@ -868,6 +869,8 @@ static enum dhcp_token intern (atom, dfv)
 			return TSFP;
 		break;
 	      case 'u':
+		if (!strcasecmp (atom + 1, "nset"))
+			return UNSET;
 		if (!strcasecmp (atom + 1, "nsigned"))
 			return UNSIGNED;
 		if (!strcasecmp (atom + 1, "id"))
