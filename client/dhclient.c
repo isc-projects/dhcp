@@ -41,7 +41,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.129.2.3 2001/06/02 05:48:42 mellon Exp $ Copyright (c) 1995-2001 Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.129.2.4 2001/06/03 04:52:48 mellon Exp $ Copyright (c) 1995-2001 Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -881,7 +881,7 @@ void bind_lease (client)
 	client -> state = S_BOUND;
 	reinitialize_interfaces ();
 	go_daemon ();
-	client_dns_update (client);
+	client_dns_update (client, 1);
 }  
 
 /* state_bound is called when we've successfully bound to a particular
@@ -2946,7 +2946,11 @@ isc_result_t dhcp_set_control_state (control_object_state_t oldstate,
 		    return ISC_R_SUCCESS;
 
 		  case server_shutdown:
-		    do_release (client);
+		    if (client -> active &&
+			client -> active -> expiry < cur_time) {
+			    client_dns_update (client, 0);
+			    do_release (client);
+		    }
 		    break;
 
 		  case server_hibernate:
@@ -2966,7 +2970,7 @@ isc_result_t dhcp_set_control_state (control_object_state_t oldstate,
 
 /* See if we should do a DNS update, and if so, do it. */
 
-void client_dns_update (struct client_state *client)
+void client_dns_update (struct client_state *client, int addp)
 {
 	struct data_string ddns_fqdn, ddns_fwd_name,
 	       ddns_dhcid, client_identifier;
@@ -3054,10 +3058,17 @@ void client_dns_update (struct client_state *client)
 	/*
 	 * Perform updates.
 	 */
-	if (ddns_fwd_name.len && ddns_dhcid.len)
-		rcode = ddns_update_a (&ddns_fwd_name,
-				       client -> active -> address,
-				       &ddns_dhcid, DEFAULT_DDNS_TTL, 1);
+	if (ddns_fwd_name.len && ddns_dhcid.len) {
+		if (addp)
+			rcode = ddns_update_a (&ddns_fwd_name,
+					       client -> active -> address,
+					       &ddns_dhcid, DEFAULT_DDNS_TTL,
+					       1);
+		else
+			rcode = ddns_remove_a (&ddns_fwd_name,
+					       client -> active -> address,
+					       &ddns_dhcid);
+	}
 	
 	data_string_forget (&ddns_fwd_name, MDL);
 	data_string_forget (&ddns_dhcid, MDL);
