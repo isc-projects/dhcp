@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcrelay.c,v 1.3 1997/02/27 03:41:28 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcrelay.c,v 1.4 1997/03/05 06:16:44 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -149,7 +149,7 @@ int main (argc, argv, envp)
 
 	/* Set up the server sockaddrs. */
 	for (sp = servers; sp; sp = sp -> next) {
-		sp -> to.sin_port = remote_port;
+		sp -> to.sin_port = local_port;
 		sp -> to.sin_family = AF_INET;
 #ifdef HAVE_SA_LEN
 		sp -> to.sin_len = sizeof sp -> to;
