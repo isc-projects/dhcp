@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: print.c,v 1.29 1999/11/20 18:36:10 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: print.c,v 1.30 2000/01/05 18:04:46 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -71,10 +71,11 @@ void print_lease (lease)
 	strftime (tbuf, sizeof tbuf, "%Y/%m/%d %H:%M:%S", t);
 	log_debug ("  stamp %s", tbuf);
 	
-	log_debug ("    hardware addr = %s",
-	       print_hw_addr (lease -> hardware_addr.htype,
-			       lease -> hardware_addr.hlen,
-			       lease -> hardware_addr.haddr));
+	if (lease -> hardware_addr.hlen)
+		log_debug ("    hardware addr = %s",
+			   print_hw_addr (lease -> hardware_addr.hbuf [0],
+					  lease -> hardware_addr.hlen - 1,
+					  &lease -> hardware_addr.hbuf [1]));
 	log_debug ("  host %s  ",
 	       lease -> host ? lease -> host -> name : "<none>");
 }	
@@ -257,7 +258,7 @@ static unsigned print_subexpression (expr, buf, len)
 	char *buf;
 	unsigned len;
 {
-	unsigned rv;
+	unsigned rv, left;
 	const char *s;
 	
 	switch (expr -> op) {
@@ -648,31 +649,73 @@ static unsigned print_subexpression (expr, buf, len)
 		}
 		break;
 
-	      case expr_dns_delete:
-		s = "dns-delete";
-	      case expr_dns_update:
-		s = "dns-update";
-	      dodnsupd:
-		if (len > 12) {
-			rv = 16;
+	      case expr_dns_transaction:
+		rv = 10;
+		if (len < rv + 2) {
 			buf [0] = '(';
-			strcpy (buf, s);
-			buf [13] = ' ';
-			rv += print_subexpression
-				(expr -> data.dns_update.type,
-				 buf + rv, len - rv - 4);
+			strcpy (&buf [1], "ns-update ");
+			while (len < rv + 2) {
+				rv += print_subexpression
+					(expr -> data.dns_transaction.car,
+					 buf + rv, len - rv - 2);
+				buf [rv++] = ' ';
+				expr = expr -> data.dns_transaction.cdr;
+			}
+			buf [rv - 1] = ')';
+			buf [rv] = 0;
+			return rv;
+		}
+		return 0;
+
+	      case expr_ns_delete:
+		s = "delete";
+		left = 4;
+		goto dodnsupd;
+	      case expr_ns_exists:
+		s = "exists";
+		left = 4;
+		goto dodnsupd;
+	      case expr_ns_not_exists:
+		s = "not_exists";
+		left = 4;
+		goto dodnsupd;
+	      case expr_ns_update:
+		s = "update";
+		left = 5;
+	      dodnsupd:
+		rv = strlen (s);
+		if (len > strlen (s) + 1) {
+			buf [0] = '(';
+			strcpy (buf + 1, s);
+			rv++;
 			buf [rv++] = ' ';
-			rv += print_subexpression
-				(expr -> data.dns_update.rrname,
-				 buf + rv, len - rv - 3);
+			s = print_dec_1 (expr -> data.ns_update.rrclass);
+			if (len > rv + strlen (s) + left) {
+				strcpy (&buf [rv], s);
+				rv += strlen (&buf [rv]);
+			}
 			buf [rv++] = ' ';
-			rv += print_subexpression
-				(expr -> data.dns_update.rrdata,
-				 buf + rv, len - rv - 2);
+			left--;
+			s = print_dec_1 (expr -> data.ns_update.rrtype);
+			if (len > rv + strlen (s) + left) {
+				strcpy (&buf [rv], s);
+				rv += strlen (&buf [rv]);
+			}
 			buf [rv++] = ' ';
+			left--;
 			rv += print_subexpression
-				(expr -> data.dns_update.ttl,
-				 buf + rv, len - rv - 1);
+				(expr -> data.ns_update.rrname,
+				 buf + rv, len - rv - left);
+			buf [rv++] = ' ';
+			left--;
+			rv += print_subexpression
+				(expr -> data.ns_update.rrdata,
+				 buf + rv, len - rv - left);
+			buf [rv++] = ' ';
+			left--;
+			rv += print_subexpression
+				(expr -> data.ns_update.ttl,
+				 buf + rv, len - rv - left);
 			buf [rv++] = ')';
 			buf [rv] = 0;
 			return rv;
