@@ -30,31 +30,28 @@ isc_result_t omapi_protocol_connect (omapi_object_t *h,
 	isc_result_t status;
 	omapi_protocol_object_t *obj;
 
-	obj = (omapi_protocol_object_t *)malloc (sizeof *obj);
+	obj = (omapi_protocol_object_t *)dmalloc (sizeof *obj, MDL);
 	if (!obj)
 		return ISC_R_NOMEMORY;
 	memset (obj, 0, sizeof *obj);
 	obj -> refcnt = 1;
+	rc_register_mdl (obj, obj -> refcnt);
 	obj -> type = omapi_type_protocol;
 
 	status = omapi_connect ((omapi_object_t *)obj, server_name, port);
 	if (status != ISC_R_SUCCESS) {
-		omapi_object_dereference ((omapi_object_t **)&obj,
-					  "omapi_protocol_connect");
+		omapi_object_dereference ((omapi_object_t **)&obj, MDL);
 		return status;
 	}
-	status = omapi_object_reference (&h -> outer, (omapi_object_t *)obj,
-					 "omapi_protocol_connect");
+	status = omapi_object_reference (&h -> outer,
+					 (omapi_object_t *)obj, MDL);
 	if (status != ISC_R_SUCCESS) {
-		omapi_object_dereference ((omapi_object_t **)&obj,
-					  "omapi_protocol_connect");
+		omapi_object_dereference ((omapi_object_t **)&obj, MDL);
 		return status;
 	}
-	status = omapi_object_reference (&obj -> inner, h,
-					 "omapi_protocol_connect");
+	status = omapi_object_reference (&obj -> inner, h, MDL);
 	if (status != ISC_R_SUCCESS) {
-		omapi_object_dereference ((omapi_object_t **)&obj,
-					  "omapi_protocol_connect");
+		omapi_object_dereference ((omapi_object_t **)&obj, MDL);
 		return status;
 	}
 
@@ -63,16 +60,13 @@ isc_result_t omapi_protocol_connect (omapi_object_t *h,
 					    OMAPI_PROTOCOL_VERSION,
 					    sizeof (omapi_protocol_header_t));
 	if (status != ISC_R_SUCCESS) {
-		omapi_object_dereference ((omapi_object_t **)&obj,
-					  "omapi_protocol_connect");
+		omapi_object_dereference ((omapi_object_t **)&obj, MDL);
 		return status;
 	}
 
 	if (authinfo)
-		omapi_object_reference (&obj -> authinfo, authinfo,
-					"omapi_protocol_connect");
-	omapi_object_dereference ((omapi_object_t **)&obj,
-				  "omapi_protocol_accept");
+		omapi_object_reference (&obj -> authinfo, authinfo, MDL);
+	omapi_object_dereference ((omapi_object_t **)&obj, MDL);
 	return ISC_R_SUCCESS;
 }
 
@@ -288,7 +282,7 @@ isc_result_t omapi_protocol_signal_handler (omapi_object_t *h,
 
 	      case omapi_protocol_header_wait:
 		status = omapi_message_new ((omapi_object_t **)&p -> message,
-					    "omapi_protocol_signal_handler");
+					    MDL);
 		if (status != ISC_R_SUCCESS) {
 			omapi_disconnect (c, 1);
 			return status;
@@ -366,8 +360,7 @@ isc_result_t omapi_protocol_signal_handler (omapi_object_t *h,
 		}
 
 		/* Allocate a buffer for the name. */
-		status = (omapi_data_string_new
-			  (&p -> name, nlen, "omapi_protocol_signal_handler"));
+		status = (omapi_data_string_new (&p -> name, nlen, MDL));
 		if (status != ISC_R_SUCCESS) {
 			omapi_disconnect (c, 1);
 			return ISC_R_NOMEMORY;
@@ -395,9 +388,9 @@ isc_result_t omapi_protocol_signal_handler (omapi_object_t *h,
 		if (!vlen)
 			goto insert_new_value;
 
-		status = (omapi_typed_data_new
-			  (&p -> value, omapi_datatype_data, vlen,
-			   "omapi_protocol_signal_handler"));
+		status = omapi_typed_data_new (MDL, &p -> value,
+					       omapi_datatype_data,
+					       vlen);
 		if (status != ISC_R_SUCCESS) {
 			omapi_disconnect (c, 1);
 			return ISC_R_NOMEMORY;
@@ -423,8 +416,7 @@ isc_result_t omapi_protocol_signal_handler (omapi_object_t *h,
 				/* We need a generic object to hang off of the
 				   incoming message. */
 				status = (omapi_generic_new
-					  (&p -> message -> object,
-					   "omapi_protocol_signal_handler"));
+					  (&p -> message -> object, MDL));
 				if (status != ISC_R_SUCCESS) {
 					omapi_disconnect (c, 1);
 					return status;
@@ -439,15 +431,14 @@ isc_result_t omapi_protocol_signal_handler (omapi_object_t *h,
 			omapi_disconnect (c, 1);
 			return status;
 		}
-		omapi_data_string_dereference
-			(&p -> name, "omapi_protocol_signal_handler");
-		omapi_typed_data_dereference (&p -> value,
-					      "omapi_protocol_signal_handler");
+		omapi_data_string_dereference (&p -> name, MDL);
+		omapi_typed_data_dereference (&p -> value, MDL);
 		goto need_name_length;
 
 	      signature_wait:
 	      case omapi_protocol_signature_wait:
-		status = omapi_typed_data_new (&p -> message -> authenticator,
+		status = omapi_typed_data_new (MDL,
+					       &p -> message -> authenticator,
 					       omapi_datatype_data,
 					       p -> message -> authlen);
 			
@@ -472,7 +463,7 @@ isc_result_t omapi_protocol_signal_handler (omapi_object_t *h,
 		/* XXX unbind the authenticator. */
 	      auth_unbind:
 		omapi_object_dereference ((omapi_object_t **)&p -> message,
-					  "omapi_protocol_signal_handler");
+					  MDL);
 
 		/* Now wait for the next message. */
 		goto to_header_wait;		
@@ -512,7 +503,8 @@ isc_result_t omapi_protocol_get_value (omapi_object_t *h,
 	return ISC_R_NOTFOUND;
 }
 
-isc_result_t omapi_protocol_destroy (omapi_object_t *h, const char *name)
+isc_result_t omapi_protocol_destroy (omapi_object_t *h,
+				     const char *file, int line)
 {
 	omapi_protocol_object_t *p;
 	if (h -> type != omapi_type_protocol)
@@ -520,9 +512,9 @@ isc_result_t omapi_protocol_destroy (omapi_object_t *h, const char *name)
 	p = (omapi_protocol_object_t *)h;
 	if (p -> message)
 		omapi_object_dereference ((omapi_object_t **)&p -> message,
-					  name);
+					  file, line);
 	if (p -> authinfo)
-		return omapi_object_dereference (&p -> authinfo, name);
+		return omapi_object_dereference (&p -> authinfo, file, line);
 	return ISC_R_SUCCESS;
 }
 
@@ -554,31 +546,27 @@ isc_result_t omapi_protocol_listen (omapi_object_t *h,
 	isc_result_t status;
 	omapi_protocol_listener_object_t *obj;
 
-	obj = (omapi_protocol_listener_object_t *)malloc (sizeof *obj);
+	obj = (omapi_protocol_listener_object_t *)dmalloc (sizeof *obj, MDL);
 	if (!obj)
 		return ISC_R_NOMEMORY;
 	memset (obj, 0, sizeof *obj);
 	obj -> refcnt = 1;
 	obj -> type = omapi_type_protocol_listener;
 
-	status = omapi_object_reference (&h -> outer, (omapi_object_t *)obj,
-					 "omapi_protocol_listen");
+	status = omapi_object_reference (&h -> outer,
+					 (omapi_object_t *)obj, MDL);
 	if (status != ISC_R_SUCCESS) {
-		omapi_object_dereference ((omapi_object_t **)&obj,
-					  "omapi_protocol_listen");
+		omapi_object_dereference ((omapi_object_t **)&obj, MDL);
 		return status;
 	}
-	status = omapi_object_reference (&obj -> inner, h,
-					 "omapi_protocol_listen");
+	status = omapi_object_reference (&obj -> inner, h, MDL);
 	if (status != ISC_R_SUCCESS) {
-		omapi_object_dereference ((omapi_object_t **)&obj,
-					  "omapi_protocol_listen");
+		omapi_object_dereference ((omapi_object_t **)&obj, MDL);
 		return status;
 	}
 
 	status = omapi_listen ((omapi_object_t *)obj, port, max);
-	omapi_object_dereference ((omapi_object_t **)&obj,
-				  "omapi_protocol_listen");
+	omapi_object_dereference ((omapi_object_t **)&obj, MDL);
 	return status;
 }
 
@@ -609,25 +597,23 @@ isc_result_t omapi_protocol_listener_signal (omapi_object_t *o,
 	if (!c || c -> type != omapi_type_connection)
 		return ISC_R_INVALIDARG;
 
-	obj = (omapi_protocol_object_t *)malloc (sizeof *obj);
+	obj = (omapi_protocol_object_t *)dmalloc (sizeof *obj, MDL);
 	if (!obj)
 		return ISC_R_NOMEMORY;
 	memset (obj, 0, sizeof *obj);
 	obj -> refcnt = 1;
 	obj -> type = omapi_type_protocol;
 
-	status = omapi_object_reference (&obj -> outer, c,
-					 "omapi_protocol_accept");
+	status = omapi_object_reference (&obj -> outer, c, MDL);
 	if (status != ISC_R_SUCCESS) {
 	      lose:
-		omapi_object_dereference ((omapi_object_t **)&obj,
-					  "omapi_protocol_accept");
+		omapi_object_dereference ((omapi_object_t **)&obj, MDL);
 		omapi_disconnect (c, 1);
 		return status;
 	}
 
-	status = omapi_object_reference (&c -> inner, (omapi_object_t *)obj,
-					 "omapi_protocol_accept");
+	status = omapi_object_reference (&c -> inner,
+					 (omapi_object_t *)obj, MDL);
 	if (status != ISC_R_SUCCESS)
 		goto lose;
 
@@ -638,8 +624,7 @@ isc_result_t omapi_protocol_listener_signal (omapi_object_t *o,
 	if (status != ISC_R_SUCCESS)
 		goto lose;
 
-	omapi_object_dereference ((omapi_object_t **)&obj,
-				  "omapi_protocol_accept");
+	omapi_object_dereference ((omapi_object_t **)&obj, MDL);
 	return status;
 }
 
@@ -672,7 +657,7 @@ isc_result_t omapi_protocol_listener_get_value (omapi_object_t *h,
 }
 
 isc_result_t omapi_protocol_listener_destroy (omapi_object_t *h,
-					      const char *name)
+					      const char *file, int line)
 {
 	if (h -> type != omapi_type_protocol_listener)
 		return ISC_R_INVALIDARG;
@@ -708,31 +693,28 @@ isc_result_t omapi_protocol_send_status (omapi_object_t *po,
 	if (po -> type != omapi_type_protocol)
 		return ISC_R_INVALIDARG;
 
-	status = omapi_message_new (&message, "omapi_protocol_send_status");
+	status = omapi_message_new (&message, MDL);
 	if (status != ISC_R_SUCCESS)
 		return status;
 
 	status = omapi_set_int_value (message, (omapi_object_t *)0,
 				      "op", OMAPI_OP_STATUS);
 	if (status != ISC_R_SUCCESS) {
-		omapi_object_dereference (&message,
-					  "omapi_protocol_send_status");
+		omapi_object_dereference (&message, MDL);
 		return status;
 	}
 
 	status = omapi_set_int_value (message, (omapi_object_t *)0,
 				      "rid", (int)rid);
 	if (status != ISC_R_SUCCESS) {
-		omapi_object_dereference (&message,
-					  "omapi_protocol_send_status");
+		omapi_object_dereference (&message, MDL);
 		return status;
 	}
 
 	status = omapi_set_int_value (message, (omapi_object_t *)0,
 				      "result", (int)waitstatus);
 	if (status != ISC_R_SUCCESS) {
-		omapi_object_dereference (&message,
-					  "omapi_protocol_send_status");
+		omapi_object_dereference (&message, MDL);
 		return status;
 	}
 
@@ -741,8 +723,7 @@ isc_result_t omapi_protocol_send_status (omapi_object_t *po,
 		status = omapi_set_string_value (message, (omapi_object_t *)0,
 						 "message", msg);
 		if (status != ISC_R_SUCCESS) {
-			omapi_object_dereference
-				(&message, "omapi_protocol_send_status");
+			omapi_object_dereference (&message, MDL);
 			return status;
 		}
 	}
@@ -762,15 +743,14 @@ isc_result_t omapi_protocol_send_update (omapi_object_t *po,
 	if (po -> type != omapi_type_protocol)
 		return ISC_R_INVALIDARG;
 
-	status = omapi_message_new (&message, "omapi_protocol_send_update");
+	status = omapi_message_new (&message, MDL);
 	if (status != ISC_R_SUCCESS)
 		return status;
 
 	status = omapi_set_int_value (message, (omapi_object_t *)0,
 				      "op", OMAPI_OP_UPDATE);
 	if (status != ISC_R_SUCCESS) {
-		omapi_object_dereference (&message,
-					  "omapi_protocol_send_update");
+		omapi_object_dereference (&message, MDL);
 		return status;
 	}
 
@@ -779,22 +759,19 @@ isc_result_t omapi_protocol_send_update (omapi_object_t *po,
 		status = omapi_set_int_value (message, (omapi_object_t *)0,
 					      "rid", (int)rid);
 		if (status != ISC_R_SUCCESS) {
-			omapi_object_dereference
-				(&message, "omapi_protocol_send_update");
+			omapi_object_dereference (&message, MDL);
 			return status;
 		}
 
 		status = omapi_object_handle (&handle, object);
 		if (status != ISC_R_SUCCESS) {
-			omapi_object_dereference
-				(&message, "omapi_protocol_send_update");
+			omapi_object_dereference (&message, MDL);
 			return status;
 		}
 		status = omapi_set_int_value (message, (omapi_object_t *)0,
 					      "handle", (int)handle);
 		if (status != ISC_R_SUCCESS) {
-			omapi_object_dereference
-				(&message, "omapi_protocol_send_update");
+			omapi_object_dereference (&message, MDL);
 			return status;
 		}
 	}		
@@ -802,7 +779,7 @@ isc_result_t omapi_protocol_send_update (omapi_object_t *po,
 	status = omapi_set_object_value (message, (omapi_object_t *)0,
 					 "object", object);
 	if (status != ISC_R_SUCCESS) {
-		omapi_object_dereference (&message, "dhcpctl_open_object");
+		omapi_object_dereference (&message, MDL);
 		return status;
 	}
 

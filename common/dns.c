@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dns.c,v 1.13 2000/01/05 18:00:51 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dns.c,v 1.14 2000/01/26 14:55:34 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -197,12 +197,12 @@ struct dns_query *find_dns_query (question, new)
 	}
 	if (q || !new) {
 		if (new)
-			free (question);
+			dfree (question, MDL);
 		return q;
 	}
 
 	/* Allocate and zap a new query. */
-	q = (struct dns_query *)malloc (sizeof (struct dns_query));
+	q = (struct dns_query *)dmalloc (sizeof (struct dns_query), MDL);
 	memset (q, 0, sizeof *q);
 
 	/* All we need to set up is the question and the hash. */
@@ -223,11 +223,11 @@ void destroy_dns_query (query)
 
 	/* Free up attached free data. */
 	if (query -> question)
-		free (query -> question);
+		dfree (query -> question, MDL);
 	if (query -> answer)
-		free (query -> answer);
+		dfree (query -> answer, MDL);
 	if (query -> query)
-		free (query -> query);
+		dfree (query -> query, MDL);
 
 	/* Remove query from hash table. */
 	if (dns_query_hash [query -> hash] == query)
@@ -241,7 +241,7 @@ void destroy_dns_query (query)
 	}
 
 	/* Free the query structure. */
-	free (query);
+	dfree (query, MDL);
 }
 
 /* ns_inaddr_lookup constructs a PTR lookup query for an internet address -
@@ -264,8 +264,8 @@ struct dns_query *ns_inaddr_lookup (inaddr, wakeup)
 		 inaddr.iabuf [0], inaddr.iabuf [1],
 		 inaddr.iabuf [2], inaddr.iabuf [3]);
 
-	question = (struct dns_question *)malloc (strlen ((char *)query) +
-						  sizeof *question);
+	question = (struct dns_question *)dmalloc (strlen ((char *)query) +
+						   sizeof *question, MDL);
 	if (!question)
 		return (struct dns_query *)-1;
 	question -> type = T_PTR;
@@ -318,7 +318,7 @@ struct dns_query *ns_query (question, formatted_query, len, wakeup)
 
 	/* If the query won't fit, don't bother setting it up. */
 	if (len > 255) {
-		free (question);
+		dfree (question, MDL);
 		return (struct dns_query *)-1;
 	}
 
@@ -363,7 +363,7 @@ struct dns_query *ns_query (question, formatted_query, len, wakeup)
 	query -> len = s - buf;
 
 	/* Save the raw query data. */
-	query -> query = malloc (len);
+	query -> query = dmalloc (len, MDL);
 	if (!query -> query) {
 		destroy_dns_query (query);
 		return (struct dns_query *)-1;

@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.25 2000/01/25 01:42:48 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.26 2000/01/26 14:56:18 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -135,7 +135,7 @@ isc_result_t enter_host (hd, dynamicp, commit)
 				(&hd -> client_identifier, (struct packet *)0,
 				 (struct lease *)0, (struct option_state *)0,
 				 (struct option_state *)0, &global_scope,
-				 esp -> data.option);
+				 esp -> data.option, MDL);
 			break;
 		}
 	}
@@ -281,7 +281,7 @@ isc_result_t delete_host (hd, commit)
 			hd -> n_ipaddr -> refcnt++;
 		}
 		omapi_object_dereference ((omapi_object_t **)&hd -> n_ipaddr,
-					  "delete_host");
+					  MDL);
 	}
 
 	if (host_name_hash) {
@@ -359,7 +359,8 @@ struct subnet *find_host_for_network (host, addr, share)
 					    (struct lease *)0,
 					    (struct option_state *)0,
 					    (struct option_state *)0,
-					    &global_scope, hp -> fixed_addr))
+					    &global_scope,
+					    hp -> fixed_addr, MDL))
 			continue;
 		for (i = 0; i < fixed_addr.len; i += 4) {
 			ip_address.len = 4;
@@ -369,12 +370,11 @@ struct subnet *find_host_for_network (host, addr, share)
 			if (subnet) {
 				*addr = ip_address;
 				*host = hp;
-				data_string_forget (&fixed_addr,
-						    "find_host_for_network");
+				data_string_forget (&fixed_addr, MDL);
 				return subnet;
 			}
 		}
-		data_string_forget (&fixed_addr, "find_host_for_network");
+		data_string_forget (&fixed_addr, MDL);
 	}
 	return (struct subnet *)0;
 }
@@ -410,7 +410,7 @@ isc_result_t delete_group (struct group_object *group, int writep)
 	} else {
 		group -> flags |= GROUP_OBJECT_DELETED;
 		if (group -> group) {
-			dfree (group -> group, "delete_group");
+			dfree (group -> group, MDL);
 			group -> group = (struct group *)0;
 		}
 	}
@@ -459,8 +459,7 @@ isc_result_t supersede_group (struct group_object *group, int writep)
 					 (unsigned char *)group -> name,
 					 strlen (group -> name));
 				omapi_object_dereference
-					((omapi_object_t **)&t,
-					 "supersede_group");
+					((omapi_object_t **)&t, MDL);
 			}
 		}
 	} else {
@@ -554,7 +553,7 @@ void new_address_range (low, high, subnet, pool)
 	}
 
 	/* Get a lease structure for each address in the range. */
-	address_range = new_leases (max - min + 1, "new_address_range");
+	address_range = new_leases (max - min + 1, MDL);
 	if (!address_range) {
 		strcpy (lowbuf, piaddr (low));
 		strcpy (highbuf, piaddr (high));
@@ -623,7 +622,7 @@ void new_address_range (low, high, subnet, pool)
 			address_range [lhost - i].client_hostname =
 				lp -> client_hostname;
 			supersede_lease (&address_range [lhost - i], lp, 0);
-			free_lease (lp, "new_address_range");
+			free_lease (lp, MDL);
 		} else
 			plp = lp;
 	}
@@ -738,7 +737,7 @@ void new_shared_network_interface (cfile, share, name)
 		if (!strcmp (ip -> name, name))
 			break;
 	if (!ip) {
-		ip = dmalloc (sizeof *ip, "parse_subnet_declaration");
+		ip = dmalloc (sizeof *ip, MDL);
 		if (!ip)
 			log_fatal ("No memory to record interface %s", name);
 		memset (ip, 0, sizeof *ip);
@@ -769,7 +768,7 @@ void enter_lease (lease)
 	/* If we don't have a place for this lease yet, save it for
 	   later. */
 	if (!comp) {
-		comp = new_lease ("enter_lease");
+		comp = new_lease (MDL);
 		if (!comp) {
 			log_fatal ("No memory for lease %s\n",
 			       piaddr (lease -> ip_addr));
@@ -835,7 +834,7 @@ int supersede_lease (comp, lease, commit)
 		uid_hash_delete (comp);
 		enter_uid = 1;
 		if (comp -> uid != &comp -> uid_buf [0]) {
-			free (comp -> uid);
+			dfree (comp -> uid, MDL);
 			comp -> uid_max = 0;
 			comp -> uid_len = 0;
 		}
@@ -885,33 +884,32 @@ int supersede_lease (comp, lease, commit)
 	comp -> flags = ((lease -> flags & ~PERSISTENT_FLAGS) |
 			 (comp -> flags & ~EPHEMERAL_FLAGS));
 	if (comp -> scope.bindings)
-		free_bindings (&comp -> scope, "supersede_lease");
+		free_bindings (&comp -> scope, MDL);
 	comp -> scope.bindings = lease -> scope.bindings;
 	lease -> scope.bindings = (struct binding *)0;
 
 	if (lease -> on_expiry) {
 		if (comp -> on_expiry)
 			executable_statement_dereference (&comp -> on_expiry,
-							  "supersede_lease");
+							  MDL);
 		executable_statement_reference (&comp -> on_expiry,
 						lease -> on_expiry,
-						"supersede_lease");
+						MDL);
 	}
 	if (lease -> on_commit) {
 		if (comp -> on_commit)
 			executable_statement_dereference (&comp -> on_commit,
-							  "supersede_lease");
+							  MDL);
 		executable_statement_reference (&comp -> on_commit,
 						lease -> on_commit,
-						"supersede_lease");
+						MDL);
 	}
 	if (lease -> on_release) {
 		if (comp -> on_release)
 			executable_statement_dereference (&comp -> on_release,
-							  "supersede_lease");
+							  MDL);
 		executable_statement_reference (&comp -> on_release,
-						lease -> on_release,
-						"supersede_lease");
+						lease -> on_release, MDL);
 	}
 	
 	/* Record the lease in the uid hash if necessary. */
@@ -1041,15 +1039,14 @@ int supersede_lease (comp, lease, commit)
 					    &lease -> scope,
 					    comp -> on_expiry);
 			executable_statement_dereference (&comp -> on_expiry,
-							  "supersede_lease");
+							  MDL);
 #if defined (FAILOVER_PROTOCOL)
 			}
 #endif
 			/* No sense releasing a lease after it's expired. */
 			if (comp -> on_release)
 				executable_statement_dereference
-					(&comp -> on_release,
-					 "supersede_lease");
+					(&comp -> on_release, MDL);
 		} else {
 			/* If this is the next lease that will timeout on the
 			   pool, zap the old timeout and set the timeout on
@@ -1119,15 +1116,14 @@ void release_lease (lease, packet)
 				    &lease -> scope, lease -> on_release);
 		if (lease -> on_release)
 			executable_statement_dereference (&lease -> on_release,
-							  "dhcprelease");
+							  MDL);
 	}
 
 	/* We do either the on_release or the on_expiry events, but
 	   not both (it's possible that they could be the same,
 	   in any case). */
 	if (lease -> on_expiry)
-		executable_statement_dereference (&lease -> on_expiry,
-						  "dhcprelease");
+		executable_statement_dereference (&lease -> on_expiry, MDL);
 
 	if (lease -> ends > cur_time) {
 		lt = *lease;
@@ -1230,13 +1226,13 @@ void pool_timer (vpool)
 					    lease -> on_expiry);
 			if (lease -> on_expiry)
 				executable_statement_dereference
-					(&lease -> on_expiry, "pool_timer");
+					(&lease -> on_expiry, MDL);
 		}			
 
 		/* If there's an on_release event, blow it away. */
 		if (lease -> on_release)
 			executable_statement_dereference (&lease -> on_release,
-							  "pool_timer");
+							  MDL);
 #if defined (FAILOVER_PROTOCOL)
 		lease -> tstp = 0;
 		update_partner (lease);
@@ -1509,7 +1505,7 @@ void write_leases ()
 				    (l -> flags & ABANDONED_LEASE)) {
 					if (!write_lease (l))
 						log_fatal ("Can't rewrite %s",
-						       "lease database");
+							   "lease database");
 					num_written++;
 				}
 			}

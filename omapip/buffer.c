@@ -52,15 +52,13 @@ isc_result_t omapi_connection_reader (omapi_object_t *h)
 		     buffer = buffer -> next)
 			;
 		if (!BUFFER_BYTES_FREE (buffer)) {
-			status = omapi_buffer_new (&buffer -> next,
-						   "omapi_private_read");
+			status = omapi_buffer_new (&buffer -> next, MDL);
 			if (status != ISC_R_SUCCESS)
 				return status;
 			buffer = buffer -> next;
 		}
 	} else {
-		status = omapi_buffer_new (&c -> inbufs,
-					   "omapi_private_read");
+		status = omapi_buffer_new (&c -> inbufs, MDL);
 		if (status != ISC_R_SUCCESS)
 			return status;
 		buffer = c -> inbufs;
@@ -134,8 +132,7 @@ isc_result_t omapi_connection_copyin (omapi_object_t *h,
 		     buffer -> next; buffer = buffer -> next)
 			;
 	} else {
-		status = omapi_buffer_new (&c -> outbufs,
-					   "omapi_private_buffer_copyin");
+		status = omapi_buffer_new (&c -> outbufs, MDL);
 		if (status != ISC_R_SUCCESS)
 			return status;
 		buffer = c -> outbufs;
@@ -145,9 +142,7 @@ isc_result_t omapi_connection_copyin (omapi_object_t *h,
 		/* If there is no space available in this buffer,
                    allocate a new one. */
 		if (!BUFFER_BYTES_FREE (buffer)) {
-			status = (omapi_buffer_new
-				  (&buffer -> next,
-				   "omapi_private_buffer_copyin"));
+			status = (omapi_buffer_new (&buffer -> next, MDL));
 			if (status != ISC_R_SUCCESS)
 				return status;
 			buffer = buffer -> next;
@@ -233,22 +228,15 @@ isc_result_t omapi_connection_copyout (unsigned char *buf,
 	while (c -> inbufs &&
 	       !BYTES_IN_BUFFER (c -> inbufs)) {
 		if (c -> inbufs -> next) {
-			omapi_buffer_reference
-				(&buffer,
-				 c -> inbufs -> next,
-				 "omapi_private_buffer_copyout");
-			omapi_buffer_dereference
-				(&c -> inbufs -> next,
-				 "omapi_private_buffer_copyout");
+			omapi_buffer_reference (&buffer,
+						c -> inbufs -> next, MDL);
+			omapi_buffer_dereference (&c -> inbufs -> next, MDL);
 		}
-		omapi_buffer_dereference (&c -> inbufs,
-					  "omapi_private_buffer_copyout");
+		omapi_buffer_dereference (&c -> inbufs, MDL);
 		if (buffer) {
 			omapi_buffer_reference
-				(&c -> inbufs, buffer,
-				 "omapi_private_buffer_copyout");
-			omapi_buffer_dereference
-				(&buffer, "omapi_private_buffer_copyout");
+				(&c -> inbufs, buffer, MDL);
+			omapi_buffer_dereference (&buffer, MDL);
 		}
 	}
 	return ISC_R_SUCCESS;
@@ -336,19 +324,14 @@ isc_result_t omapi_connection_writer (omapi_object_t *h)
 	while (c -> outbufs &&
 	       !BYTES_IN_BUFFER (c -> outbufs)) {
 		if (c -> outbufs -> next) {
-			omapi_buffer_reference
-				(&buffer, c -> outbufs -> next,
-				 "omapi_private_flush");
-			omapi_buffer_dereference
-				(&c -> outbufs -> next, "omapi_private_flush");
+			omapi_buffer_reference (&buffer,
+						c -> outbufs -> next, MDL);
+			omapi_buffer_dereference (&c -> outbufs -> next, MDL);
 		}
-		omapi_buffer_dereference (&c -> outbufs,
-					  "omapi_private_flush");
+		omapi_buffer_dereference (&c -> outbufs, MDL);
 		if (buffer) {
-			omapi_buffer_reference (&c -> outbufs, buffer,
-						"omapi_private_flush");
-			omapi_buffer_dereference (&buffer,
-						  "omapi_private_flush");
+			omapi_buffer_reference (&c -> outbufs, buffer, MDL);
+			omapi_buffer_dereference (&buffer, MDL);
 		}
 	}
 	return ISC_R_SUCCESS;

@@ -57,8 +57,9 @@ typedef struct {
 		struct {
 			void *ptr;
 			isc_result_t (*reference) (void *,
-						   void *, char *);
-			isc_result_t (*dereference) (void *, char *);
+						   void *, const char *, int);
+			isc_result_t (*dereference) (void *,
+						     const char *, int);
 		} ref;
 #define OMAPI_TYPED_DATA_INT_LEN (sizeof (int) + \
 				  sizeof (omapi_datatype_t) + \
@@ -90,7 +91,7 @@ typedef struct __omapi_object_type_t {
 	isc_result_t (*get_value) (omapi_object_t *,
 				   omapi_object_t *,
 				   omapi_data_string_t *, omapi_value_t **);
-	isc_result_t (*destroy) (omapi_object_t *, const char *);
+	isc_result_t (*destroy) (omapi_object_t *, const char *, int);
 	isc_result_t (*signal_handler) (omapi_object_t *,
 					const char *, va_list);
 	isc_result_t (*stuff_values) (omapi_object_t *,
@@ -131,7 +132,7 @@ isc_result_t omapi_protocol_stuff_values (omapi_object_t *,
 					  omapi_object_t *,
 					  omapi_object_t *);
 
-isc_result_t omapi_protocol_destroy (omapi_object_t *, const char *);
+isc_result_t omapi_protocol_destroy (omapi_object_t *, const char *, int);
 isc_result_t omapi_protocol_send_message (omapi_object_t *,
 					  omapi_object_t *,
 					  omapi_object_t *,
@@ -146,7 +147,8 @@ isc_result_t omapi_protocol_listener_get_value (omapi_object_t *,
 						omapi_object_t *,
 						omapi_data_string_t *,
 						omapi_value_t **); 
-isc_result_t omapi_protocol_listener_destroy (omapi_object_t *, const char *);
+isc_result_t omapi_protocol_listener_destroy (omapi_object_t *,
+					      const char *, int);
 isc_result_t omapi_protocol_listener_signal (omapi_object_t *,
 					     const char *, va_list);
 isc_result_t omapi_protocol_listener_stuff (omapi_object_t *,
@@ -170,7 +172,7 @@ isc_result_t omapi_connection_set_value (omapi_object_t *, omapi_object_t *,
 isc_result_t omapi_connection_get_value (omapi_object_t *, omapi_object_t *,
 					 omapi_data_string_t *,
 					 omapi_value_t **); 
-isc_result_t omapi_connection_destroy (omapi_object_t *, const char *);
+isc_result_t omapi_connection_destroy (omapi_object_t *, const char *, int);
 isc_result_t omapi_connection_signal_handler (omapi_object_t *,
 					      const char *, va_list);
 isc_result_t omapi_connection_stuff_values (omapi_object_t *,
@@ -194,7 +196,7 @@ isc_result_t omapi_listener_set_value (omapi_object_t *, omapi_object_t *,
 isc_result_t omapi_listener_get_value (omapi_object_t *, omapi_object_t *,
 				       omapi_data_string_t *,
 				       omapi_value_t **); 
-isc_result_t omapi_listener_destroy (omapi_object_t *, const char *);
+isc_result_t omapi_listener_destroy (omapi_object_t *, const char *, int);
 isc_result_t omapi_listener_signal_handler (omapi_object_t *,
 					    const char *, va_list);
 isc_result_t omapi_listener_stuff_values (omapi_object_t *,
@@ -215,7 +217,7 @@ isc_result_t omapi_io_set_value (omapi_object_t *, omapi_object_t *,
 				 omapi_typed_data_t *);
 isc_result_t omapi_io_get_value (omapi_object_t *, omapi_object_t *,
 				 omapi_data_string_t *, omapi_value_t **); 
-isc_result_t omapi_io_destroy (omapi_object_t *, const char *);
+isc_result_t omapi_io_destroy (omapi_object_t *, const char *, int);
 isc_result_t omapi_io_signal_handler (omapi_object_t *, const char *, va_list);
 isc_result_t omapi_io_stuff_values (omapi_object_t *,
 				    omapi_object_t *,
@@ -223,28 +225,28 @@ isc_result_t omapi_io_stuff_values (omapi_object_t *,
 isc_result_t omapi_waiter_signal_handler (omapi_object_t *,
 					  const char *, va_list);
 
-isc_result_t omapi_generic_new (omapi_object_t **, const char *);
+isc_result_t omapi_generic_new (omapi_object_t **, const char *, int);
 isc_result_t omapi_generic_set_value  (omapi_object_t *, omapi_object_t *,
 				       omapi_data_string_t *,
 				       omapi_typed_data_t *);
 isc_result_t omapi_generic_get_value (omapi_object_t *, omapi_object_t *,
 				      omapi_data_string_t *,
 				      omapi_value_t **); 
-isc_result_t omapi_generic_destroy (omapi_object_t *, const char *);
+isc_result_t omapi_generic_destroy (omapi_object_t *, const char *, int);
 isc_result_t omapi_generic_signal_handler (omapi_object_t *,
 					   const char *, va_list);
 isc_result_t omapi_generic_stuff_values (omapi_object_t *,
 					 omapi_object_t *,
 					 omapi_object_t *);
 
-isc_result_t omapi_message_new (omapi_object_t **, const char *);
+isc_result_t omapi_message_new (omapi_object_t **, const char *, int);
 isc_result_t omapi_message_set_value  (omapi_object_t *, omapi_object_t *,
 				       omapi_data_string_t *,
 				       omapi_typed_data_t *);
 isc_result_t omapi_message_get_value (omapi_object_t *, omapi_object_t *,
 				      omapi_data_string_t *,
 				      omapi_value_t **); 
-isc_result_t omapi_message_destroy (omapi_object_t *, const char *);
+isc_result_t omapi_message_destroy (omapi_object_t *, const char *, int);
 isc_result_t omapi_message_signal_handler (omapi_object_t *,
 					   const char *, va_list);
 isc_result_t omapi_message_stuff_values (omapi_object_t *,
@@ -280,7 +282,7 @@ isc_result_t omapi_object_type_register (omapi_object_type_t **,
 						 omapi_data_string_t *,
 						 omapi_value_t **),
 					 isc_result_t (*) (omapi_object_t *,
-							   const char *),
+							   const char *, int),
 					 isc_result_t (*) (omapi_object_t *,
 							   const char *,
 							   va_list),
@@ -325,16 +327,16 @@ int omapi_data_string_cmp (omapi_data_string_t *, omapi_data_string_t *);
 int omapi_ds_strcmp (omapi_data_string_t *, const char *);
 int omapi_td_strcmp (omapi_typed_data_t *, const char *);
 isc_result_t omapi_make_value (omapi_value_t **, omapi_data_string_t *,
-			       omapi_typed_data_t *, const char *);
+			       omapi_typed_data_t *, const char *, int);
 isc_result_t omapi_make_const_value (omapi_value_t **, omapi_data_string_t *,
 				     const unsigned char *,
-				     unsigned, const char *);
+				     unsigned, const char *, int);
 isc_result_t omapi_make_int_value (omapi_value_t **, omapi_data_string_t *,
-				   int, const char *);
+				   int, const char *, int);
 isc_result_t omapi_make_handle_value (omapi_value_t **, omapi_data_string_t *,
-				      omapi_object_t *, const char *);
+				      omapi_object_t *, const char *, int);
 isc_result_t omapi_make_string_value (omapi_value_t **, omapi_data_string_t *,
-				      const char *, const char *);
+				      const char *, const char *, int);
 isc_result_t omapi_get_int_value (unsigned long *, omapi_typed_data_t *);
 
 isc_result_t omapi_object_handle (omapi_handle_t *, omapi_object_t *);
@@ -342,24 +344,52 @@ isc_result_t omapi_handle_lookup (omapi_object_t **, omapi_handle_t);
 isc_result_t omapi_handle_td_lookup (omapi_object_t **, omapi_typed_data_t *);
 
 isc_result_t omapi_object_reference (omapi_object_t **,
-				     omapi_object_t *, const char *);
-isc_result_t omapi_object_dereference (omapi_object_t **, const char *);
-isc_result_t omapi_typed_data_new (omapi_typed_data_t **,
+				     omapi_object_t *, const char *, int);
+isc_result_t omapi_object_dereference (omapi_object_t **, const char *, int);
+isc_result_t omapi_typed_data_new (const char *, int, omapi_typed_data_t **,
 				   omapi_datatype_t, ...);
 isc_result_t omapi_typed_data_reference (omapi_typed_data_t **,
-					 omapi_typed_data_t *, const char *);
+					 omapi_typed_data_t *,
+					 const char *, int);
 isc_result_t omapi_typed_data_dereference (omapi_typed_data_t **,
-					   const char *);
+					   const char *, int);
 isc_result_t omapi_data_string_new (omapi_data_string_t **,
-				    unsigned, const char *);
+				    unsigned, const char *, int);
 isc_result_t omapi_data_string_reference (omapi_data_string_t **,
-					  omapi_data_string_t *, const char *);
+					  omapi_data_string_t *,
+					  const char *, int);
 isc_result_t omapi_data_string_dereference (omapi_data_string_t **,
-					    const char *);
-isc_result_t omapi_value_new (omapi_value_t **, const char *);
+					    const char *, int);
+isc_result_t omapi_value_new (omapi_value_t **, const char *, int);
 isc_result_t omapi_value_reference (omapi_value_t **,
-				    omapi_value_t *, const char *);
-isc_result_t omapi_value_dereference (omapi_value_t **, const char *);
+				    omapi_value_t *, const char *, int);
+isc_result_t omapi_value_dereference (omapi_value_t **, const char *, int);
 
+void * dmalloc (unsigned, const char *, int);
+void dfree (void *, const char *, int);
+#if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL)
+void dmalloc_reuse (void *, const char *, int, int);
+void dmalloc_dump_outstanding (void);
+#define MDL __FILE__, __LINE__
+#else
+#define dmalloc_reuse(x,y,l,z)
+#define MDL (char *)0, __LINE__
+#endif
+#if defined (DEBUG_RC_HISTORY)
+void dump_rc_history (void);
+#endif
 
+extern int log_priority;
+extern int log_perror;
+extern void (*log_cleanup) (void);
+
+void log_fatal (const char *, ...)
+	__attribute__((__format__(__printf__,1,2)));
+int log_error (const char *, ...)
+	__attribute__((__format__(__printf__,1,2)));
+int log_info (const char *, ...)
+	__attribute__((__format__(__printf__,1,2)));
+int log_debug (const char *, ...)
+	__attribute__((__format__(__printf__,1,2)));
+void do_percentm (char *obuf, const char *ibuf);
 #endif /* _OMAPIP_H_ */

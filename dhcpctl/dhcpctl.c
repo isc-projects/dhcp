@@ -3,7 +3,7 @@
    Subroutines providing general support for objects. */
 
 /*
- * Copyright (c) 1996-1999 Internet Software Consortium.
+ * Copyright (c) 1996-2000 Internet Software Consortium.
  * Use is subject to license terms which appear in the file named
  * ISC-LICENSE that should have accompanied this file when you
  * received it.   If a file named ISC-LICENSE did not accompany this
@@ -67,7 +67,7 @@ dhcpctl_status dhcpctl_connect (dhcpctl_handle *connection,
 {
 	isc_result_t status;
 
-	status = omapi_generic_new (connection, "dhcpctl_connect");
+	status = omapi_generic_new (connection, MDL);
 	if (status != ISC_R_SUCCESS) {
 		return status;
 	}
@@ -75,13 +75,13 @@ dhcpctl_status dhcpctl_connect (dhcpctl_handle *connection,
 	status = omapi_protocol_connect (*connection, server_name,
 					 (unsigned)port, authinfo);
 	if (status != ISC_R_SUCCESS) {
-		omapi_object_dereference (connection, "dhcpctl_connect");
+		omapi_object_dereference (connection, MDL);
 		return status;
 	}
 
 	status = omapi_wait_for_completion (*connection, 0);
 	if (status != ISC_R_SUCCESS) {
-		omapi_object_dereference (connection, "dhcpctl_connect");
+		omapi_object_dereference (connection, MDL);
 		return status;
 	}
 
@@ -156,15 +156,13 @@ dhcpctl_status dhcpctl_get_value (dhcpctl_data_string *result,
 		break;
 
 	      default:
-		omapi_typed_data_dereference (&tv -> value,
-					      "dhcpctl_get_value");
+		omapi_typed_data_dereference (&tv -> value, MDL);
 		return ISC_R_UNEXPECTED;
 	}
 
-	status = omapi_data_string_new (result, len, "dhcpctl_get_value");
+	status = omapi_data_string_new (result, len, MDL);
 	if (status != ISC_R_SUCCESS) {
-		omapi_typed_data_dereference (&tv -> value,
-					      "dhcpctl_get_value");
+		omapi_typed_data_dereference (&tv -> value, MDL);
 		return status;
 	}
 
@@ -187,7 +185,7 @@ dhcpctl_status dhcpctl_get_value (dhcpctl_data_string *result,
 		break;
 	}
 
-	omapi_value_dereference (&tv, "dhcpctl_get_value");
+	omapi_value_dereference (&tv, MDL);
 	return ISC_R_SUCCESS;
 }
 
@@ -207,7 +205,7 @@ dhcpctl_status dhcpctl_get_boolean (int *result,
 	if (status != ISC_R_SUCCESS)
 		return status;
 	if (data -> len != sizeof rv) {
-		omapi_data_string_dereference (&data, "dhcpctl_get_boolean");
+		omapi_data_string_dereference (&data, MDL);
 		return ISC_R_UNEXPECTED;
 	}
 	memcpy (&rv, data -> value, sizeof rv);
@@ -230,23 +228,22 @@ dhcpctl_status dhcpctl_set_value (dhcpctl_handle h, dhcpctl_data_string value,
 	int len;
 	int ip;
 
-	status = omapi_data_string_new (&name, strlen (value_name),
-					"dhcpctl_set_value");
+	status = omapi_data_string_new (&name, strlen (value_name), MDL);
 	if (status != ISC_R_SUCCESS)
 		return status;
 	memcpy (name -> value, value_name, strlen (value_name));
 
-	status = omapi_typed_data_new (&tv, omapi_datatype_data,
+	status = omapi_typed_data_new (MDL, &tv, omapi_datatype_data,
 				       value -> len);
 	if (status != ISC_R_SUCCESS) {
-		omapi_data_string_dereference (&name, "dhcpctl_set_value");
+		omapi_data_string_dereference (&name, MDL);
 		return status;
 	}
 	memcpy (tv -> u.buffer.value, value -> value, value -> len);
 
 	status = omapi_set_value (h, (omapi_object_t *)0, name, tv);
-	omapi_data_string_dereference (&name, "dhcpctl_set_value");
-	omapi_typed_data_dereference (&tv, "dhcpctl_set_value");
+	omapi_data_string_dereference (&name, MDL);
+	omapi_typed_data_dereference (&tv, MDL);
 	return status;
 }
 
@@ -266,22 +263,20 @@ dhcpctl_status dhcpctl_set_string_value (dhcpctl_handle h, const char *value,
 	int len;
 	int ip;
 
-	status = omapi_data_string_new (&name, strlen (value_name),
-					"dhcpctl_set_string_value");
+	status = omapi_data_string_new (&name, strlen (value_name), MDL);
 	if (status != ISC_R_SUCCESS)
 		return status;
 	memcpy (name -> value, value_name, strlen (value_name));
 
-	status = omapi_typed_data_new (&tv, omapi_datatype_string, value);
+	status = omapi_typed_data_new (MDL, &tv, omapi_datatype_string, value);
 	if (status != ISC_R_SUCCESS) {
-		omapi_data_string_dereference (&name,
-					       "dhcpctl_set_string_value");
+		omapi_data_string_dereference (&name, MDL);
 		return status;
 	}
 
 	status = omapi_set_value (h, (omapi_object_t *)0, name, tv);
-	omapi_data_string_dereference (&name, "dhcpctl_set_string_value");
-	omapi_typed_data_dereference (&tv, "dhcpctl_set_string_value");
+	omapi_data_string_dereference (&name, MDL);
+	omapi_typed_data_dereference (&tv, MDL);
 	return status;
 }
 
@@ -299,22 +294,20 @@ dhcpctl_status dhcpctl_set_boolean_value (dhcpctl_handle h, int value,
 	int len;
 	int ip;
 
-	status = omapi_data_string_new (&name, strlen (value_name),
-					"dhcpctl_set_boolean_value");
+	status = omapi_data_string_new (&name, strlen (value_name), MDL);
 	if (status != ISC_R_SUCCESS)
 		return status;
 	memcpy (name -> value, value_name, strlen (value_name));
 
-	status = omapi_typed_data_new (&tv, omapi_datatype_int, value);
+	status = omapi_typed_data_new (MDL, &tv, omapi_datatype_int, value);
 	if (status != ISC_R_SUCCESS) {
-		omapi_data_string_dereference (&name,
-					       "dhcpctl_set_boolean_value");
+		omapi_data_string_dereference (&name, MDL);
 		return status;
 	}
 
 	status = omapi_set_value (h, (omapi_object_t *)0, name, tv);
-	omapi_data_string_dereference (&name, "dhcpctl_set_boolean_value");
-	omapi_typed_data_dereference (&tv, "dhcpctl_set_boolean_value");
+	omapi_data_string_dereference (&name, MDL);
+	omapi_typed_data_dereference (&tv, MDL);
 	return status;
 }
 
@@ -332,22 +325,20 @@ dhcpctl_status dhcpctl_set_int_value (dhcpctl_handle h, int value,
 	int len;
 	int ip;
 
-	status = omapi_data_string_new (&name, strlen (value_name),
-					"dhcpctl_set_boolean_value");
+	status = omapi_data_string_new (&name, strlen (value_name), MDL);
 	if (status != ISC_R_SUCCESS)
 		return status;
 	memcpy (name -> value, value_name, strlen (value_name));
 
-	status = omapi_typed_data_new (&tv, omapi_datatype_int, value);
+	status = omapi_typed_data_new (MDL, &tv, omapi_datatype_int, value);
 	if (status != ISC_R_SUCCESS) {
-		omapi_data_string_dereference (&name,
-					       "dhcpctl_set_boolean_value");
+		omapi_data_string_dereference (&name, MDL);
 		return status;
 	}
 
 	status = omapi_set_value (h, (omapi_object_t *)0, name, tv);
-	omapi_data_string_dereference (&name, "dhcpctl_set_boolean_value");
-	omapi_typed_data_dereference (&tv, "dhcpctl_set_boolean_value");
+	omapi_data_string_dereference (&name, MDL);
+	omapi_typed_data_dereference (&tv, MDL);
 	return status;
 }
 
@@ -363,21 +354,21 @@ dhcpctl_status dhcpctl_object_update (dhcpctl_handle connection,
 	isc_result_t status;
 	omapi_object_t *message = (omapi_object_t *)0;
 
-	status = omapi_message_new (&message, "dhcpctl_object_update");
+	status = omapi_message_new (&message, MDL);
 	if (status != ISC_R_SUCCESS) {
-		omapi_object_dereference (&message, "dhcpctl_object_update");
+		omapi_object_dereference (&message, MDL);
 		return status;
 	}
 	status = omapi_set_int_value (message, (omapi_object_t *)0,
 				      "op", OMAPI_OP_UPDATE);
 	if (status != ISC_R_SUCCESS) {
-		omapi_object_dereference (&message, "dhcpctl_object_update");
+		omapi_object_dereference (&message, MDL);
 		return status;
 	}
 	status = omapi_set_object_value (message, (omapi_object_t *)0,
 					 "object", h);
 	if (status != ISC_R_SUCCESS) {
-		omapi_object_dereference (&message, "dhcpctl_object_update");
+		omapi_object_dereference (&message, MDL);
 		return status;
 	}
 
@@ -385,7 +376,7 @@ dhcpctl_status dhcpctl_object_update (dhcpctl_handle connection,
 	status = omapi_protocol_send_message (connection -> outer,
 					      (omapi_object_t *)0,
 					      message, (omapi_object_t *)0);
-	omapi_object_dereference (&message, "dhcpctl_object_update");
+	omapi_object_dereference (&message, MDL);
 	return status;
 }
 
@@ -399,21 +390,21 @@ dhcpctl_status dhcpctl_object_refresh (dhcpctl_handle connection,
 	isc_result_t status;
 	omapi_object_t *message = (omapi_object_t *)0;
 
-	status = omapi_message_new (&message, "dhcpctl_object_refresh");
+	status = omapi_message_new (&message, MDL);
 	if (status != ISC_R_SUCCESS) {
-		omapi_object_dereference (&message, "dhcpctl_object_refresh");
+		omapi_object_dereference (&message, MDL);
 		return status;
 	}
 	status = omapi_set_int_value (message, (omapi_object_t *)0,
 				      "op", OMAPI_OP_REFRESH);
 	if (status != ISC_R_SUCCESS) {
-		omapi_object_dereference (&message, "dhcpctl_object_refresh");
+		omapi_object_dereference (&message, MDL);
 		return status;
 	}
 	status = omapi_set_int_value (message, (omapi_object_t *)0,
 				      "handle", (int)(h -> handle));
 	if (status != ISC_R_SUCCESS) {
-		omapi_object_dereference (&message, "dhcpctl_object_refresh");
+		omapi_object_dereference (&message, MDL);
 		return status;
 	}
 
@@ -421,7 +412,7 @@ dhcpctl_status dhcpctl_object_refresh (dhcpctl_handle connection,
 	status = omapi_protocol_send_message (connection -> outer,
 					      (omapi_object_t *)0,
 					      message, (omapi_object_t *)0);
-	omapi_object_dereference (&message, "dhcpctl_object_update");
+	omapi_object_dereference (&message, MDL);
 	return status;
 }
 
@@ -441,30 +432,29 @@ dhcpctl_status dhcpctl_object_remove (dhcpctl_handle connection,
 		return ISC_R_INVALIDARG;
 	ro = (dhcpctl_remote_object_t *)h;
 
-	status = omapi_message_new (&message, "dhcpctl_object_delete");
+	status = omapi_message_new (&message, MDL);
 	if (status != ISC_R_SUCCESS) {
-		omapi_object_dereference (&message, "dhcpctl_object_delete");
+		omapi_object_dereference (&message, MDL);
 		return status;
 	}
 	status = omapi_set_int_value (message, (omapi_object_t *)0,
 				      "op", OMAPI_OP_DELETE);
 	if (status != ISC_R_SUCCESS) {
-		omapi_object_dereference (&message, "dhcpctl_object_delete");
+		omapi_object_dereference (&message, MDL);
 		return status;
 	}
 
 	status = omapi_set_int_value (message, (omapi_object_t *)0, "handle",
 				      (int)(ro -> remote_handle));
 	if (status != ISC_R_SUCCESS) {
-		omapi_object_dereference (&message,
-					  "dhcpctl_object_delete");
+		omapi_object_dereference (&message, MDL);
 		return status;
 	}
 
 	status = omapi_set_object_value (message, (omapi_object_t *)0,
 					 "notify-object", h);
 	if (status != ISC_R_SUCCESS) {
-		omapi_object_dereference (&message, "dhcpctl_object_delete");
+		omapi_object_dereference (&message, MDL);
 		return status;
 	}
 
@@ -472,12 +462,12 @@ dhcpctl_status dhcpctl_object_remove (dhcpctl_handle connection,
 	status = omapi_protocol_send_message (connection -> outer,
 					      (omapi_object_t *)0,
 					      message, (omapi_object_t *)0);
-	omapi_object_dereference (&message, "dhcpctl_object_update");
+	omapi_object_dereference (&message, MDL);
 	return status;
 }
 
 isc_result_t dhcpctl_data_string_dereference (dhcpctl_data_string *vp,
-					      const char *name)
+					      const char *file, int line)
 {
-	return omapi_data_string_dereference (vp, name);
+	return omapi_data_string_dereference (vp, file, line);
 }

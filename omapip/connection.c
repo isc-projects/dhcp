@@ -3,7 +3,7 @@
    Subroutines for dealing with connections. */
 
 /*
- * Copyright (c) 1996-1999 Internet Software Consortium.
+ * Copyright (c) 1996-2000 Internet Software Consortium.
  * Use is subject to license terms which appear in the file named
  * ISC-LICENSE that should have accompanied this file when you
  * received it.   If a file named ISC-LICENSE did not accompany this
@@ -33,25 +33,23 @@ isc_result_t omapi_connect (omapi_object_t *c,
 	omapi_connection_object_t *obj;
 	int flag;
 
-	obj = (omapi_connection_object_t *)malloc (sizeof *obj);
+	obj = (omapi_connection_object_t *)dmalloc (sizeof *obj, MDL);
 	if (!obj)
 		return ISC_R_NOMEMORY;
 	memset (obj, 0, sizeof *obj);
 	obj -> refcnt = 1;
+	rc_register_mdl (obj, obj -> refcnt);
 	obj -> type = omapi_type_connection;
 
 	status = omapi_object_reference (&c -> outer, (omapi_object_t *)obj,
-					 "omapi_protocol_connect");
+					 MDL);
 	if (status != ISC_R_SUCCESS) {
-		omapi_object_dereference ((omapi_object_t **)&obj,
-					  "omapi_protocol_connect");
+		omapi_object_dereference ((omapi_object_t **)&obj, MDL);
 		return status;
 	}
-	status = omapi_object_reference (&obj -> inner, c,
-					 "omapi_protocol_connect");
+	status = omapi_object_reference (&obj -> inner, c, MDL);
 	if (status != ISC_R_SUCCESS) {
-		omapi_object_dereference ((omapi_object_t **)&obj,
-					  "omapi_protocol_connect");
+		omapi_object_dereference ((omapi_object_t **)&obj, MDL);
 		return status;
 	}
 
@@ -65,7 +63,7 @@ isc_result_t omapi_connect (omapi_object_t *c,
 		he = gethostbyname (server_name);
 		if (!he) {
 			omapi_object_dereference ((omapi_object_t **)&obj,
-						  "omapi_connect");
+						  MDL);
 			return ISC_R_HOSTUNKNOWN;
 		}
 		hix = 1;
@@ -87,8 +85,7 @@ isc_result_t omapi_connect (omapi_object_t *c,
 	obj -> socket =
 		socket (PF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if (obj -> socket < 0) {
-		omapi_object_dereference ((omapi_object_t **)&obj,
-					  "omapi_connect");
+		omapi_object_dereference ((omapi_object_t **)&obj, MDL);
 		if (errno == EMFILE || errno == ENFILE || errno == ENOBUFS)
 			return ISC_R_NORESOURCES;
 		return ISC_R_UNEXPECTED;
@@ -97,8 +94,7 @@ isc_result_t omapi_connect (omapi_object_t *c,
 #if defined (HAVE_SETFD)
 	if (fcntl (obj -> socket, F_SETFD, 1) < 0) {
 		close (obj -> socket);
-		omapi_object_dereference ((omapi_object_t **)&obj,
-					  "omapi_connect");
+		omapi_object_dereference ((omapi_object_t **)&obj, MDL);
 		return ISC_R_UNEXPECTED;
 	}
 #endif
@@ -107,8 +103,7 @@ isc_result_t omapi_connect (omapi_object_t *c,
 	flag = 1;
 	if (setsockopt (obj -> socket, SOL_SOCKET, SO_REUSEADDR,
 			(char *)&flag, sizeof flag) < 0) {
-		omapi_object_dereference ((omapi_object_t **)&obj,
-					  "omapi_connect");
+		omapi_object_dereference ((omapi_object_t **)&obj, MDL);
 		return ISC_R_UNEXPECTED;
 	}
 	
@@ -120,7 +115,7 @@ isc_result_t omapi_connect (omapi_object_t *c,
 			sizeof obj -> remote_addr)) {
 		if (!he || !he -> h_addr_list [hix]) {
 			omapi_object_dereference ((omapi_object_t **)&obj,
-						  "omapi_connect");
+						  MDL);
 			if (errno == ECONNREFUSED)
 				return ISC_R_CONNREFUSED;
 			if (errno == ENETUNREACH)
@@ -143,8 +138,7 @@ isc_result_t omapi_connect (omapi_object_t *c,
 	}
 
 	if (fcntl (obj -> socket, F_SETFL, O_NONBLOCK) < 0) {
-		omapi_object_dereference ((omapi_object_t **)&obj,
-					  "omapi_connect");
+		omapi_object_dereference ((omapi_object_t **)&obj, MDL);
 		return ISC_R_UNEXPECTED;
 	}
 
@@ -155,8 +149,7 @@ isc_result_t omapi_connect (omapi_object_t *c,
 					   omapi_connection_writer,
 					   omapi_connection_reaper);
 	if (status != ISC_R_SUCCESS) {
-		omapi_object_dereference ((omapi_object_t **)&obj,
-					  "omapi_connect");
+		omapi_object_dereference ((omapi_object_t **)&obj, MDL);
 		return status;
 	}
 
@@ -198,7 +191,7 @@ isc_result_t omapi_disconnect (omapi_object_t *h,
 
 	/* Disconnect from I/O object, if any. */
 	if (h -> outer)
-		omapi_object_dereference (&h -> outer, "omapi_disconnect");
+		omapi_object_dereference (&h -> outer, MDL);
 
 	/* If whatever created us registered a signal handler, send it
 	   a disconnect signal. */
@@ -302,7 +295,8 @@ isc_result_t omapi_connection_get_value (omapi_object_t *h,
 	return ISC_R_NOTFOUND;
 }
 
-isc_result_t omapi_connection_destroy (omapi_object_t *h, const char *name)
+isc_result_t omapi_connection_destroy (omapi_object_t *h,
+				       const char *file, int line)
 {
 	omapi_connection_object_t *c;
 
@@ -312,7 +306,7 @@ isc_result_t omapi_connection_destroy (omapi_object_t *h, const char *name)
 	if (c -> state == omapi_connection_connected)
 		omapi_disconnect (h, 1);
 	if (c -> listener)
-		omapi_object_dereference (&c -> listener, name);
+		omapi_object_dereference (&c -> listener, file, line);
 	return ISC_R_SUCCESS;
 }
 

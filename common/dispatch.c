@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dispatch.c,v 1.58 1999/10/04 23:46:30 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dispatch.c,v 1.59 2000/01/26 14:55:33 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -103,7 +103,8 @@ void add_timeout (when, where, what)
 			q -> func = where;
 			q -> what = what;
 		} else {
-			q = (struct timeout *)malloc (sizeof (struct timeout));
+			q = ((struct timeout *)
+			     dmalloc (sizeof (struct timeout), MDL));
 			if (!q)
 				log_fatal ("add_timeout: no memory!");
 			q -> func = where;

@@ -3,7 +3,7 @@
    DHCP Server Daemon. */
 
 /*
- * Copyright (c) 1996-1999 Internet Software Consortium.
+ * Copyright (c) 1996-2000 Internet Software Consortium.
  * Use is subject to license terms which appear in the file named
  * ISC-LICENSE that should have accompanied this file when you
  * received it.   If a file named ISC-LICENSE did not accompany this
@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.80 2000/01/05 18:17:10 mellon Exp $ Copyright 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.81 2000/01/26 14:56:18 mellon Exp $ Copyright 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.";
 #endif
 
   static char copyright[] =
@@ -47,13 +47,6 @@ u_int16_t local_port;
 u_int16_t remote_port;
 
 struct in_addr limited_broadcast;
-
-int log_priority;
-#ifdef DEBUG
-int log_perror = -1;
-#else
-int log_perror = 1;
-#endif
 
 const char *path_dhcpd_conf = _PATH_DHCPD_CONF;
 const char *path_dhcpd_db = _PATH_DHCPD_DB;
@@ -157,7 +150,7 @@ int main (argc, argv, envp)
 		} else {
 			struct interface_info *tmp =
 				((struct interface_info *)
-				 dmalloc (sizeof *tmp, "get_interface_list"));
+				 dmalloc (sizeof *tmp, MDL));
 			if (!tmp)
 				log_fatal ("Insufficient memory to %s %s",
 				       "record interface", argv [i]);
@@ -238,12 +231,12 @@ int main (argc, argv, envp)
  		exit(0);
 
 	/* Now try to get the lease file name. */
-	option_state_allocate (&options, "dhcpinform");
+	option_state_allocate (&options, MDL);
 
 	execute_statements_in_scope ((struct packet *)0,
 				     (struct lease *)0,
 				     (struct option_state *)0,
-				     options,
+				     options, &global_scope,
 				     &root_group,
 				     (struct group *)0);
 	memset (&fname, 0, sizeof fname);
@@ -251,13 +244,14 @@ int main (argc, argv, envp)
 	if (oc &&
 	    evaluate_option_cache (&fname, (struct packet *)0,
 				   (struct lease *)0, options,
-				   (struct option_state *)0, oc)) {
-		s = dmalloc (fname.len + 1, "main");
+				   (struct option_state *)0,
+				   &global_scope, oc, MDL)) {
+		s = dmalloc (fname.len + 1, MDL);
 		if (!s)
 			log_fatal ("no memory for lease db filename.");
 		memcpy (s, fname.data, fname.len);
 		s [fname.len] = 0;
-		data_string_forget (&fname, "main");
+		data_string_forget (&fname, MDL);
 		path_dhcpd_db = s;
 	}
 	
@@ -265,18 +259,19 @@ int main (argc, argv, envp)
 	if (oc &&
 	    evaluate_option_cache (&fname, (struct packet *)0,
 				   (struct lease *)0, options,
-				   (struct option_state *)0, oc)) {
-		s = dmalloc (fname.len + 1, "main");
+				   (struct option_state *)0,
+				   &global_scope, oc, MDL)) {
+		s = dmalloc (fname.len + 1, MDL);
 		if (!s)
 			log_fatal ("no memory for lease db filename.");
 		memcpy (s, fname.data, fname.len);
 		s [fname.len] = 0;
-		data_string_forget (&fname, "main");
+		data_string_forget (&fname, MDL);
 		path_dhcpd_pid = s;
 	}
 
 	/* Don't need the options anymore. */
-	option_state_dereference (&options, "main");
+	option_state_dereference (&options, MDL);
 	
 	/* Start up the database... */
 	db_startup (lftest);
@@ -307,7 +302,7 @@ int main (argc, argv, envp)
 
 	/* Start up a listener for the object management API protocol. */
 	listener = (omapi_object_t *)0;
-	result = omapi_generic_new (&listener, "main");
+	result = omapi_generic_new (&listener, MDL);
 	if (result != ISC_R_SUCCESS)
 		log_fatal ("Can't allocate new generic object: %s\n",
 			   isc_result_totext (result));
@@ -401,10 +396,6 @@ static void usage ()
 	       "\n            [-lf lease-file] [if0 [...ifN]]");
 }
 
-void cleanup ()
-{
-}
-
 void lease_pinged (from, packet, length)
 	struct iaddr from;
 	u_int8_t *packet;
@@ -433,15 +424,14 @@ void lease_pinged (from, packet, length)
 	}
 
 	if (lp -> ends > cur_time) {
-		log_error ("ICMP Echo reply arrived while lease %s was valid.\n",
-		      piaddr (from));
+		log_error ("ICMP Echo reply while lease %s valid\n",
+			   piaddr (from));
 	}
 
 	/* At this point it looks like we pinged a lease and got a
 	   response, which shouldn't have happened. */
-	data_string_forget (&lp -> state -> parameter_request_list,
-			    "lease_pinged");
-	free_lease_state (lp -> state, "lease_pinged");
+	data_string_forget (&lp -> state -> parameter_request_list, MDL);
+	free_lease_state (lp -> state, MDL);
 	lp -> state = (struct lease_state *)0;
 
 	abandon_lease (lp, "pinged before offer");

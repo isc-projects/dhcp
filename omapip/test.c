@@ -40,7 +40,7 @@ int main (int argc, char **argv)
 			fprintf (stderr, "Usage: test listen port\n");
 			exit (1);
 		}
-		status = omapi_generic_new (&listener, "main");
+		status = omapi_generic_new (&listener, MDL);
 		if (status != ISC_R_SUCCESS) {
 			fprintf (stderr, "omapi_generic_new: %s\n",
 				 isc_result_totext (status));
@@ -59,7 +59,7 @@ int main (int argc, char **argv)
 			fprintf (stderr, "Usage: test listen address port\n");
 			exit (1);
 		}
-		status = omapi_generic_new (&connection, "main");
+		status = omapi_generic_new (&connection, MDL);
 		if (status != ISC_R_SUCCESS) {
 			fprintf (stderr, "omapi_generic_new: %s\n",
 				 isc_result_totext (status));

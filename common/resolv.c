@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: resolv.c,v 1.11 1999/10/21 12:32:16 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: resolv.c,v 1.12 2000/01/26 14:55:34 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -74,8 +74,7 @@ void read_resolv_conf (parse_time)
 						break;
 				}
 				if (!nd) {
-					nd = new_domain_search_list
-						("read_resolv_conf");
+					nd = new_domain_search_list (MDL);
 					if (!nd)
 						log_fatal ("No memory for %s",
 							   dn);
@@ -108,7 +107,7 @@ void read_resolv_conf (parse_time)
 					break;
 			}
 			if (!ns) {
-				ns = new_name_server ("read_resolv_conf");
+				ns = new_name_server (MDL);
 				if (!ns)
 				    log_fatal ("No memory for nameserver %s",
 					       piaddr (iaddr));
@@ -157,7 +156,7 @@ void read_resolv_conf (parse_time)
 				dl -> next = dp -> next;
 			else
 				domains = dp -> next;
-			free_domain_search_list (dp, "pick_name_server");
+			free_domain_search_list (dp, MDL);
 		} else
 			dl = dp;
 	}

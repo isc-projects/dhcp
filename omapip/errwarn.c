@@ -4,7 +4,7 @@
 
 /*
  * Copyright (c) 1995 RadioMail Corporation.
- * Copyright (c) 1996-1999 Internet Software Consortium.
+ * Copyright (c) 1996-2000 Internet Software Consortium.
  *
  * Use is subject to license terms which appear in the file named
  * ISC-LICENSE that should have accompanied this file when you
@@ -29,13 +29,19 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: errwarn.c,v 1.1 2000/01/25 20:41:45 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: errwarn.c,v 1.2 2000/01/26 14:56:05 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
-#include "dhcpd.h"
+#include <omapip/omapip_p.h>
 #include <errno.h>
 
-static void do_percentm PROTO ((char *obuf, const char *ibuf));
+#ifdef DEBUG
+int log_perror = -1;
+#else
+int log_perror = 1;
+#endif
+int log_priority;
+void (*log_cleanup) (void);
 
 static char mbuf [1024];
 static char fbuf [1024];
@@ -69,7 +75,8 @@ void log_fatal (ANSI_DECL(const char *) fmt, VA_DOTDOTDOT)
 	fprintf (stderr, "exiting.\n");
 	fflush (stderr);
   }
-  cleanup ();
+  if (log_cleanup)
+	  (*log_cleanup) ();
   exit (1);
 }
 
@@ -153,7 +160,7 @@ int log_debug (ANSI_DECL (const char *) fmt, VA_DOTDOTDOT)
 
 /* Find %m in the input string and substitute an error message string. */
 
-static void do_percentm (obuf, ibuf)
+void do_percentm (obuf, ibuf)
      char *obuf;
      const char *ibuf;
 {
@@ -191,66 +198,6 @@ static void do_percentm (obuf, ibuf)
 		}
 	}
 	*p = 0;
-}
-
-
-int parse_warn (ANSI_DECL (struct parse *)cfile,
-		ANSI_DECL (const char *) fmt, VA_DOTDOTDOT)
-	KandR (struct parse *cfile;)
-	KandR (char *fmt;)
-	va_dcl
-{
-	va_list list;
-	static char spaces [] = "                                                                                ";
-	char lexbuf [256];
-	unsigned i, lix;
-	
-	do_percentm (mbuf, fmt);
-#ifndef NO_SNPRINTF
-	snprintf (fbuf, sizeof fbuf, "%s line %d: %s",
-		  cfile -> tlname, cfile -> lexline, mbuf);
-#else
-	sprintf (fbuf, "%s line %d: %s",
-		 cfile -> tlname, cfile -> lexline, mbuf);
-#endif
-	
-	VA_start (list, fmt);
-	vsnprintf (mbuf, sizeof mbuf, fbuf, list);
-	va_end (list);
-
-	lix = 0;
-	for (i = 0;
-	     cfile -> token_line [i] && i < (cfile -> lexchar - 1); i++) {
-		if (lix < (sizeof lexbuf) - 1)
-			lexbuf [lix++] = ' ';
-		if (cfile -> token_line [i] == '\t') {
-			for (lix;
-			     lix < (sizeof lexbuf) - 1 && (lix & 7); lix++)
-				lexbuf [lix] = ' ';
-		}
-	}
-	lexbuf [lix] = 0;
-
-#ifndef DEBUG
-	syslog (log_priority | LOG_ERR, mbuf);
-	syslog (log_priority | LOG_ERR, cfile -> token_line);
-	if (cfile -> lexchar < 81)
-		syslog (log_priority | LOG_ERR, "%s^", lexbuf);
-#endif
-
-	if (log_perror) {
-		write (2, mbuf, strlen (mbuf));
-		write (2, "\n", 1);
-		write (2, cfile -> token_line, strlen (cfile -> token_line));
-		write (2, "\n", 1);
-		if (cfile -> lexchar < 81)
-			write (2, lexbuf, lix);
-		write (2, "^\n", 2);
-	}
-
-	cfile -> warnings_occurred = 1;
-
-	return 0;
 }
 
 #ifdef NO_STRERROR

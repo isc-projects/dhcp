@@ -3,7 +3,7 @@
    DHCP Client. */
 
 /*
- * Copyright (c) 1996-1999 Internet Software Consortium.
+ * Copyright (c) 1996-2000 Internet Software Consortium.
  * Use is subject to license terms which appear in the file named
  * ISC-LICENSE that should have accompanied this file when you
  * received it.   If a file named ISC-LICENSE did not accompany this
@@ -29,7 +29,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.92 2000/01/25 00:58:57 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.93 2000/01/26 14:55:26 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -46,8 +46,6 @@ const char *path_dhclient_pid = _PATH_DHCLIENT_PID;
 int dhcp_max_agent_option_packet_length = 0;
 
 int interfaces_requested = 0;
-
-int log_perror = 1;
 
 struct iaddr iaddr_broadcast = { 4, { 255, 255, 255, 255 } };
 struct iaddr iaddr_any = { 4, { 0, 0, 0, 0 } };
@@ -70,7 +68,6 @@ static char url [] = "For info, please visit http://www.isc.org/dhcp-contrib.htm
 
 u_int16_t local_port;
 u_int16_t remote_port;
-int log_priority;
 int no_daemon;
 int save_scripts;
 
@@ -323,10 +320,6 @@ static void usage ()
 		   "[-s server]");
 	log_error ("                [-lf lease-file] [-pf pid-file]%s",
 		   "[-cf config-file] [interface]");
-}
-
-void cleanup ()
-{
 }
 
 struct class *find_class (s)

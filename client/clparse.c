@@ -3,7 +3,7 @@
    Parser for dhclient config and lease files... */
 
 /*
- * Copyright (c) 1996-1999 Internet Software Consortium.
+ * Copyright (c) 1996-2000 Internet Software Consortium.
  * Use is subject to license terms which appear in the file named
  * ISC-LICENSE that should have accompanied this file when you
  * received it.   If a file named ISC-LICENSE did not accompany this
@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: clparse.c,v 1.40 2000/01/25 00:58:02 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: clparse.c,v 1.41 2000/01/26 14:55:26 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -302,8 +302,7 @@ void parse_client_statement (cfile, ip, config)
 			return;
 		for (; *p; p = &((*p) -> next))
 			;
-		executable_statement_reference (p, stmt,
-						"parse_client_statement");
+		executable_statement_reference (p, stmt, MDL);
 		stmt -> next = (struct executable_statement *)0;
 		return;
 

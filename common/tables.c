@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tables.c,v 1.34 2000/01/08 01:38:04 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tables.c,v 1.35 2000/01/26 14:55:34 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -835,8 +835,7 @@ void initialize_common_option_spaces()
 
 	universe_max = 10;
 	universes = ((struct universe **)
-		     dmalloc (universe_max * sizeof (struct universe *),
-			      "initialize_universes"));
+		     dmalloc (universe_max * sizeof (struct universe *), MDL));
 	if (!universes)
 		log_fatal ("Can't allocate option space table.");
 	memset (universes, 0, universe_max * sizeof (struct universe *));

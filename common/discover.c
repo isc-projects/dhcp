@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: discover.c,v 1.19 2000/01/25 01:04:21 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: discover.c,v 1.20 2000/01/26 14:55:33 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -145,8 +145,8 @@ void discover_interfaces (state)
 		/* If there isn't already an interface by this name,
 		   allocate one. */
 		if (!tmp) {
-			tmp = ((struct interface_info *)
-			       dmalloc (sizeof *tmp, "discover_interfaces"));
+			tmp = ((struct interface_info *) dmalloc (sizeof *tmp,
+								  MDL));
 			if (!tmp)
 				log_fatal ("Insufficient memory to %s %s",
 				       "record interface", ifp -> ifr_name);
@@ -203,7 +203,7 @@ void discover_interfaces (state)
 #else
 				unsigned len = sizeof *ifp;
 #endif
-				tif = (struct ifreq *)malloc (len);
+				tif = (struct ifreq *)dmalloc (len, MDL);
 				if (!tif)
 					log_fatal ("no space for ifp.");
 				memcpy (tif, ifp, len);
@@ -338,7 +338,8 @@ void discover_interfaces (state)
 		
 		if (!tmp -> ifp) {
 			/* Make up an ifreq structure. */
-			tif = (struct ifreq *)malloc (sizeof (struct ifreq));
+			tif = (struct ifreq *)dmalloc (sizeof (struct ifreq),
+						       MDL);
 			if (!tif)
 				log_fatal ("no space to remember ifp.");
 			memset (tif, 0, sizeof (struct ifreq));
@@ -535,15 +536,13 @@ int if_readsocket (h)
 
 struct interface_info *setup_fallback ()
 {
-	fallback_interface =
-		((struct interface_info *)
-		 dmalloc (sizeof *fallback_interface, "discover_interfaces"));
+	fallback_interface = ((struct interface_info *)
+			      dmalloc (sizeof *fallback_interface, MDL));
 	if (!fallback_interface)
 		log_fatal ("No memory to record fallback interface.");
 	memset (fallback_interface, 0, sizeof *fallback_interface);
 	strcpy (fallback_interface -> name, "fallback");
-	fallback_interface -> shared_network =
-		new_shared_network ("parse_statement");
+	fallback_interface -> shared_network = new_shared_network (MDL);
 	if (!fallback_interface -> shared_network)
 		log_fatal ("No memory for shared subnet");
 	memset (fallback_interface -> shared_network, 0,
@@ -653,7 +652,7 @@ isc_result_t interface_stuff_values (omapi_object_t *c,
 	return ISC_R_NOTFOUND;
 }
 
-isc_result_t interface_destroy (omapi_object_t *h, const char *name)
+isc_result_t interface_destroy (omapi_object_t *h, const char *file, int line)
 {
 	int i;
 

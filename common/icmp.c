@@ -23,7 +23,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: icmp.c,v 1.16 2000/01/05 18:01:41 mellon Exp $ Copyright (c) 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: icmp.c,v 1.17 2000/01/26 14:55:34 mellon Exp $ Copyright (c) 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -65,7 +65,7 @@ void icmp_startup (routep, handler)
 		log_fatal ("Can't register icmp object type: %s",
 			   isc_result_totext (result));
 
-	new = (struct icmp_state *)dmalloc (sizeof *new, "icmp_startup");
+	new = (struct icmp_state *)dmalloc (sizeof *new, MDL);
 	if (!new)
 		log_fatal ("Unable to allocate state for icmp protocol");
 	memset (new, 0, sizeof *new);

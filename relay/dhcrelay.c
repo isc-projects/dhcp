@@ -3,7 +3,7 @@
    DHCP/BOOTP Relay Agent. */
 
 /*
- * Copyright (c) 1996-1999 Internet Software Consortium.
+ * Copyright (c) 1996-2000 Internet Software Consortium.
  * Use is subject to license terms which appear in the file named
  * ISC-LICENSE that should have accompanied this file when you
  * received it.   If a file named ISC-LICENSE did not accompany this
@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcrelay.c,v 1.37 2000/01/05 18:11:53 mellon Exp $ Copyright (c) 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcrelay.c,v 1.38 2000/01/26 14:56:16 mellon Exp $ Copyright (c) 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -34,8 +34,6 @@ TIME cur_time;
 TIME default_lease_time = 43200; /* 12 hours... */
 TIME max_lease_time = 86400; /* 24 hours... */
 struct tree_cache *global_options [256];
-
-int log_perror = 1;
 
 /* Needed to prevent linking against conflex.c. */
 int lexline;
@@ -82,7 +80,6 @@ enum { forward_and_append,	/* Forward and append our own relay option. */
 
 u_int16_t local_port;
 u_int16_t remote_port;
-int log_priority;
 
 struct server_list {
 	struct server_list *next;
@@ -130,7 +127,7 @@ int main (argc, argv, envp)
  		} else if (!strcmp (argv [i], "-i")) {
 			struct interface_info *tmp =
 				((struct interface_info *)
-				 dmalloc (sizeof *tmp, "specified_interface"));
+				 dmalloc (sizeof *tmp, MDL));
 			if (!tmp)
 				log_fatal ("Insufficient memory to %s %s",
 				       "record interface", argv [i]);
@@ -183,7 +180,8 @@ int main (argc, argv, envp)
 				}
 			}
 			if (iap) {
-				sp = (struct server_list *)malloc (sizeof *sp);
+				sp = ((struct server_list *)
+				      dmalloc (sizeof *sp, MDL));
 				if (!sp)
 					log_fatal ("no memory for server.\n");
 				sp -> next = servers;
@@ -416,10 +414,6 @@ static void usage ()
 	       "interface]\n                ",
 	       "[-q] [-a] [-A length] [-m append|replace|forward|discard]\n",
 	       "                [server1 [... serverN]]");
-}
-
-void cleanup ()
-{
 }
 
 int write_lease (lease)

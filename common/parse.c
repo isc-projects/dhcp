@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.59 2000/01/25 01:13:21 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.60 2000/01/26 14:55:34 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -208,8 +208,7 @@ int parse_ip_addr_or_hostname (expr, cfile, uniform)
 		if (!uniform) {
 			if (!make_limit (&x, *expr, 4))
 				return 0;
-			expression_dereference (expr,
-						"parse_ip_addr_or_hostname");
+			expression_dereference (expr, MDL);
 			*expr = x;
 		}
 	} else if (token == NUMBER) {
@@ -798,7 +797,7 @@ struct option *parse_option_name (cfile, allocate, known)
 		   (might) be an option code definition, so we'll create
 		   an option structure just in case. */
 		if (allocate) {
-			option = new_option ("parse_option_name");
+			option = new_option (MDL);
 			if (val == uname)
 				option -> name = val;
 			else {
@@ -847,7 +846,7 @@ void parse_option_space_decl (cfile)
 		skip_to_semi (cfile);
 		return;
 	}
-	nu = new_universe ("parse_option_space_decl");
+	nu = new_universe (MDL);
 	if (!nu)
 		log_fatal ("No memory for new option space.");
 
@@ -1150,7 +1149,7 @@ int parse_cshl (data, cfile)
 		token = next_token (&val, cfile);
 	} while (1);
 
-	if (!buffer_allocate (&data -> buffer, tlen + ilen, "parse_cshl"))
+	if (!buffer_allocate (&data -> buffer, tlen + ilen, MDL))
 		log_fatal ("no memory to store octet data.");
 	data -> data = &data -> buffer -> data [0];
 	data -> len = tlen + ilen;
@@ -1240,8 +1239,7 @@ int parse_executable_statement (result, cfile, lose, case_context)
 			*lose = 1;
 			return 0;
 		}
-		if (!executable_statement_allocate
-		    (result, "parse_executable_statement"))
+		if (!executable_statement_allocate (result, MDL))
 			log_fatal ("no memory for new statement.");
 		(*result) -> op = add_statement;
 		(*result) -> data.add = cta;
@@ -1253,8 +1251,7 @@ int parse_executable_statement (result, cfile, lose, case_context)
 			*lose = 1;
 			return 0;
 		}
-		if (!executable_statement_allocate
-		    (result, "parse_executable_statement"))
+		if (!executable_statement_allocate (result, MDL))
 			log_fatal ("no memory for new statement.");
 		(*result) -> op = break_statement;
 		break;
@@ -1290,8 +1287,7 @@ int parse_executable_statement (result, cfile, lose, case_context)
 		cache = (struct option_cache *)0;
 		if (!parse_allow_deny (&cache, cfile, flag))
 			return 0;
-		if (!executable_statement_allocate
-		    (result, "parse_executable_statement"))
+		if (!executable_statement_allocate (result, MDL))
 			log_fatal ("no memory for new statement.");
 		(*result) -> op = supersede_option_statement;
 		(*result) -> data.option = cache;
@@ -1362,9 +1358,7 @@ int parse_executable_statement (result, cfile, lose, case_context)
 			*lose = 1;
 			return 0;
 		} else {
-			if (!executable_statement_allocate
-			    (result,
-			     "parse_executable_statement"))
+			if (!executable_statement_allocate (result, MDL))
 				log_fatal ("no memory for default statement.");
 			(*result) -> op = default_statement;
 			return 1;
@@ -1383,9 +1377,7 @@ int parse_executable_statement (result, cfile, lose, case_context)
 			return 0;
 		}
 
-		if (!executable_statement_allocate
-		    (result,
-		     "parse_executable_statement"))
+		if (!executable_statement_allocate (result, MDL))
 			log_fatal ("no memory for set statement.");
 		(*result) -> op = set_statement;
 		(*result) -> data.set.name = dmalloc (strlen (val) + 1, MDL);
@@ -1407,8 +1399,7 @@ int parse_executable_statement (result, cfile, lose, case_context)
 			else
 				*lose = 1;
 			skip_to_semi (cfile);
-			executable_statement_dereference
-				(result, "parse_executable_statement");
+			executable_statement_dereference (result, MDL);
 			return 0;
 		}
 		parse_semi (cfile);
@@ -1427,9 +1418,7 @@ int parse_executable_statement (result, cfile, lose, case_context)
 			return 0;
 		}
 
-		if (!executable_statement_allocate
-		    (result,
-		     "parse_executable_statement"))
+		if (!executable_statement_allocate (result, MDL))
 			log_fatal ("no memory for set statement.");
 		(*result) -> op = unset_statement;
 		(*result) -> data.unset = dmalloc (strlen (val) + 1, MDL);
@@ -1442,9 +1431,7 @@ int parse_executable_statement (result, cfile, lose, case_context)
 	      case EVAL:
 		token = next_token (&val, cfile);
 
-		if (!executable_statement_allocate
-		    (result,
-		     "parse_executable_statement"))
+		if (!executable_statement_allocate (result, MDL))
 			log_fatal ("no memory for eval statement.");
 		(*result) -> op = eval_statement;
 
@@ -1457,8 +1444,7 @@ int parse_executable_statement (result, cfile, lose, case_context)
 			else
 				*lose = 1;
 			skip_to_semi (cfile);
-			executable_statement_dereference
-				(result, "parse_executable_statement");
+			executable_statement_dereference (result, MDL);
 			return 0;
 		}
 		parse_semi (cfile);
@@ -1487,8 +1473,7 @@ int parse_on_statement (result, cfile, lose)
 	enum dhcp_token token;
 	const char *val;
 
-	if (!executable_statement_allocate (result,
-					    "parse_executable_statement"))
+	if (!executable_statement_allocate (result, MDL))
 		log_fatal ("no memory for new statement.");
 	(*result) -> op = on_statement;
 
@@ -1511,8 +1496,7 @@ int parse_on_statement (result, cfile, lose)
 			parse_warn (cfile, "expecting a lease event type");
 			skip_to_semi (cfile);
 			*lose = 1;
-			executable_statement_dereference
-				(result, "parse_on_statement");
+			executable_statement_dereference (result, MDL);
 			return 0;
 		}
 		token = next_token (&val, cfile);
@@ -1526,8 +1510,7 @@ int parse_on_statement (result, cfile, lose)
 		parse_warn (cfile, "left brace expected.");
 		skip_to_semi (cfile);
 		*lose = 1;
-		executable_statement_dereference (result,
-						  "parse_on_statement");
+		executable_statement_dereference (result, MDL);
 		return 0;
 	}
 	if (!parse_executable_statements (&(*result) -> data.on.statements,
@@ -1537,8 +1520,7 @@ int parse_on_statement (result, cfile, lose)
 			do {
 				token = next_token (&val, cfile);
 			} while (token != EOF && token != RBRACE);
-			executable_statement_dereference
-				(result, "parse_on_statement");
+			executable_statement_dereference (result, MDL);
 			return 0;
 		}
 	}
@@ -1547,8 +1529,7 @@ int parse_on_statement (result, cfile, lose)
 		parse_warn (cfile, "right brace expected.");
 		skip_to_semi (cfile);
 		*lose = 1;
-		executable_statement_dereference
-			(result, "parse_on_statement");
+		executable_statement_dereference (result, MDL);
 		return 0;
 	}
 	return 1;
@@ -1567,8 +1548,7 @@ int parse_switch_statement (result, cfile, lose)
 	enum dhcp_token token;
 	const char *val;
 
-	if (!executable_statement_allocate (result,
-					    "parse_switch_statement"))
+	if (!executable_statement_allocate (result, MDL))
 		log_fatal ("no memory for new statement.");
 	(*result) -> op = switch_statement;
 
@@ -1579,8 +1559,7 @@ int parse_switch_statement (result, cfile, lose)
 		*lose = 1;
 		skip_to_semi (cfile);
 	      gnorf:
-		executable_statement_dereference (result,
-						  "parse_switch_statement");
+		executable_statement_dereference (result, MDL);
 		return 0;
 	}
 
@@ -1612,8 +1591,7 @@ int parse_switch_statement (result, cfile, lose)
 		? context_data : context_numeric)))) {
 		if (*lose) {
 			skip_to_rbrace (cfile, 1);
-			executable_statement_dereference
-				(result, "parse_switch_statement");
+			executable_statement_dereference (result, MDL);
 			return 0;
 		}
 	}
@@ -1639,8 +1617,7 @@ int parse_case_statement (result, cfile, lose, case_context)
 	enum dhcp_token token;
 	const char *val;
 
-	if (!executable_statement_allocate (result,
-					    "parse_switch_statement"))
+	if (!executable_statement_allocate (result, MDL))
 		log_fatal ("no memory for new statement.");
 	(*result) -> op = case_statement;
 
@@ -1656,8 +1633,7 @@ int parse_case_statement (result, cfile, lose, case_context)
 	      pfui:
 		*lose = 1;
 		skip_to_semi (cfile);
-		executable_statement_dereference (result,
-						  "parse_switch_statement");
+		executable_statement_dereference (result, MDL);
 		return 0;
 	}
 
@@ -1688,7 +1664,7 @@ int parse_if_statement (result, cfile, lose)
 	const char *val;
 	int parenp;
 
-	if (!executable_statement_allocate (result, "parse_if_statement"))
+	if (!executable_statement_allocate (result, MDL))
 		log_fatal ("no memory for if statement.");
 
 	(*result) -> op = if_statement;
@@ -1705,8 +1681,7 @@ int parse_if_statement (result, cfile, lose)
 				       cfile, lose)) {
 		if (!*lose)
 			parse_warn (cfile, "boolean expression expected.");
-		executable_statement_dereference (result,
-						  "parse_if_statement");
+		executable_statement_dereference (result, MDL);
 		*lose = 1;
 		return 0;
 	}
@@ -1718,8 +1693,7 @@ int parse_if_statement (result, cfile, lose)
 		if (token != RPAREN) {
 			parse_warn (cfile, "expecting right paren.");
 			*lose = 1;
-			executable_statement_dereference
-				(result, "parse_if_statement");
+			executable_statement_dereference (result, MDL);
 			return 0;
 		}
 	}
@@ -1728,8 +1702,7 @@ int parse_if_statement (result, cfile, lose)
 		parse_warn (cfile, "left brace expected.");
 		skip_to_semi (cfile);
 		*lose = 1;
-		executable_statement_dereference (result,
-						  "parse_if_statement");
+		executable_statement_dereference (result, MDL);
 		return 0;
 	}
 	if (!parse_executable_statements (&(*result) -> data.ie.true,
@@ -1739,8 +1712,7 @@ int parse_if_statement (result, cfile, lose)
 			do {
 				token = next_token (&val, cfile);
 			} while (token != EOF && token != RBRACE);
-			executable_statement_dereference
-				(result, "parse_if_statement");
+			executable_statement_dereference (result, MDL);
 			return 0;
 		}
 	}
@@ -1749,8 +1721,7 @@ int parse_if_statement (result, cfile, lose)
 		parse_warn (cfile, "right brace expected.");
 		skip_to_semi (cfile);
 		*lose = 1;
-		executable_statement_dereference
-			(result, "parse_if_statement");
+		executable_statement_dereference (result, MDL);
 		return 0;
 	}
 	token = peek_token (&val, cfile);
@@ -1763,9 +1734,8 @@ int parse_if_statement (result, cfile, lose)
 						 cfile, lose)) {
 				if (!*lose)
 					parse_warn (cfile,
-						    "expecting conditional.");
-				executable_statement_dereference
-					(result, "parse_if_statement");
+						    "expecting if statement");
+				executable_statement_dereference (result, MDL);
 				*lose = 1;
 				return 0;
 			}
@@ -1773,16 +1743,14 @@ int parse_if_statement (result, cfile, lose)
 			parse_warn (cfile, "left brace or if expected.");
 			skip_to_semi (cfile);
 			*lose = 1;
-			executable_statement_dereference
-				(result, "parse_if_statement");
+			executable_statement_dereference (result, MDL);
 			return 0;
 		} else {
 			token = next_token (&val, cfile);
 			if (!(parse_executable_statements
 			      (&(*result) -> data.ie.false,
 			       cfile, lose, context_any))) {
-				executable_statement_dereference
-					(result, "parse_if_statement");
+				executable_statement_dereference (result, MDL);
 				return 0;
 			}
 			token = next_token (&val, cfile);
@@ -1790,8 +1758,7 @@ int parse_if_statement (result, cfile, lose)
 				parse_warn (cfile, "right brace expected.");
 				skip_to_semi (cfile);
 				*lose = 1;
-				executable_statement_dereference
-					(result, "parse_if_statement");
+				executable_statement_dereference (result, MDL);
 				return 0;
 			}
 		}
@@ -1802,8 +1769,7 @@ int parse_if_statement (result, cfile, lose)
 			if (!*lose)
 				parse_warn (cfile,
 					    "expecting conditional.");
-			executable_statement_dereference
-				(result, "parse_if_statement");
+			executable_statement_dereference (result, MDL);
 			*lose = 1;
 			return 0;
 		}
@@ -1836,7 +1802,7 @@ int parse_boolean_expression (expr, cfile, lose)
 	if (!is_boolean_expression (*expr)) {
 		parse_warn (cfile, "Expecting a boolean expression.");
 		*lose = 1;
-		expression_dereference (expr, "parse_boolean_expression");
+		expression_dereference (expr, MDL);
 		return 0;
 	}
 	return 1;
@@ -1972,7 +1938,7 @@ int parse_non_binary (expr, cfile, lose, context)
 			*lose = 1;
 			return 0;
 		}
-		if (!expression_allocate (expr, "parse_expression: CHECK"))
+		if (!expression_allocate (expr, MDL))
 			log_fatal ("can't allocate expression");
 		(*expr) -> op = expr_check;
 		(*expr) -> data.check = col;
@@ -1984,7 +1950,7 @@ int parse_non_binary (expr, cfile, lose, context)
 			token = peek_token (&val, cfile);
 			goto not_exists;
 		}
-		if (!expression_allocate (expr, "parse_expression: NOT"))
+		if (!expression_allocate (expr, MDL))
 			log_fatal ("can't allocate expression");
 		(*expr) -> op = expr_not;
 		if (!parse_non_binary (&(*expr) -> data.not,
@@ -1994,7 +1960,7 @@ int parse_non_binary (expr, cfile, lose, context)
 				skip_to_semi (cfile);
 			}
 			*lose = 1;
-			expression_dereference (expr, "parse_expression: NOT");
+			expression_dereference (expr, MDL);
 			return 0;
 		}
 		break;
@@ -2003,44 +1969,42 @@ int parse_non_binary (expr, cfile, lose, context)
 		if (context == context_dns)
 			goto ns_exists;
 		token = next_token (&val, cfile);
-		if (!expression_allocate (expr, "parse_expression: EXISTS"))
+		if (!expression_allocate (expr, MDL))
 			log_fatal ("can't allocate expression");
 		(*expr) -> op = expr_exists;
 		known = 0;
 		(*expr) -> data.option = parse_option_name (cfile, 0, &known);
 		if (!(*expr) -> data.option) {
 			*lose = 1;
-			expression_dereference (expr,
-						"parse_expression: EXISTS");
+			expression_dereference (expr, MDL);
 			return 0;
 		}
 		break;
 
 	      case STATIC:
 		token = next_token (&val, cfile);
-		if (!expression_allocate (expr, "parse_expression: STATIC"))
+		if (!expression_allocate (expr, MDL))
 			log_fatal ("can't allocate expression");
 		(*expr) -> op = expr_static;
 		break;
 
 	      case KNOWN:
 		token = next_token (&val, cfile);
-		if (!expression_allocate (expr, "parse_expression: KNOWN"))
+		if (!expression_allocate (expr, MDL))
 			log_fatal ("can't allocate expression");
 		(*expr) -> op = expr_known;
 		break;
 
 	      case SUBSTRING:
 		token = next_token (&val, cfile);
-		if (!expression_allocate (expr, "parse_expression: SUBSTRING"))
+		if (!expression_allocate (expr, MDL))
 			log_fatal ("can't allocate expression");
 		(*expr) -> op = expr_substring;
 
 		token = next_token (&val, cfile);
 		if (token != LPAREN) {
 		      nolparen:
-			expression_dereference (expr,
-						"parse_expression: nolparen");
+			expression_dereference (expr, MDL);
 			parse_warn (cfile, "left parenthesis expected.");
 			*lose = 1;
 			return 0;
@@ -2049,8 +2013,7 @@ int parse_non_binary (expr, cfile, lose, context)
 		if (!parse_data_expression (&(*expr) -> data.substring.expr,
 					    cfile, lose)) {
 		      nodata:
-			expression_dereference (expr,
-						"parse_expression: nodata");
+			expression_dereference (expr, MDL);
 			parse_warn (cfile, "expecting data expression.");
 			skip_to_semi (cfile);
 			*lose = 1;
@@ -2060,8 +2023,7 @@ int parse_non_binary (expr, cfile, lose, context)
 		token = next_token (&val, cfile);
 		if (token != COMMA) {
 		      nocomma:
-			expression_dereference (expr,
-						"parse_expression: nocomma1");
+			expression_dereference (expr, MDL);
 			parse_warn (cfile, "comma expected.");
 			*lose = 1;
 
@@ -2077,8 +2039,7 @@ int parse_non_binary (expr, cfile, lose, context)
 				skip_to_semi (cfile);
 				*lose = 1;
 			}
-			expression_dereference (expr,
-						"parse_expression: nonum");
+			expression_dereference (expr, MDL);
 			return 0;
 		}
 
@@ -2095,15 +2056,14 @@ int parse_non_binary (expr, cfile, lose, context)
 		      norparen:
 			parse_warn (cfile, "right parenthesis expected.");
 			*lose = 1;
-			expression_dereference (expr,
-						"parse_expression: norparen");
+			expression_dereference (expr, MDL);
 			return 0;
 		}
 		break;
 
 	      case SUFFIX:
 		token = next_token (&val, cfile);
-		if (!expression_allocate (expr, "parse_expression: SUFFIX"))
+		if (!expression_allocate (expr, MDL))
 			log_fatal ("can't allocate expression");
 		(*expr) -> op = expr_suffix;
 
@@ -2130,7 +2090,7 @@ int parse_non_binary (expr, cfile, lose, context)
 
 	      case CONCAT:
 		token = next_token (&val, cfile);
-		if (!expression_allocate (expr, "parse_expression: CONCAT"))
+		if (!expression_allocate (expr, MDL))
 			log_fatal ("can't allocate expression");
 		(*expr) -> op = expr_concat;
 
@@ -2155,16 +2115,13 @@ int parse_non_binary (expr, cfile, lose, context)
 
 		if (token == COMMA) {
 			nexp = (struct expression *)0;
-			if (!expression_allocate (&nexp,
-						  "parse_expression: CONCAT2"))
+			if (!expression_allocate (&nexp, MDL))
 				log_fatal ("can't allocate at CONCAT2");
 			nexp -> op = expr_concat;
-			expression_reference (&nexp -> data.concat [0], *expr,
-					      "parse_expression: CONCAT2");
-			expression_dereference (expr,
-						"parse_expression: CONCAT2");
-			expression_reference (expr, nexp,
-					      "parse_expression: CONCAT2");
+			expression_reference (&nexp -> data.concat [0],
+					      *expr, MDL);
+			expression_dereference (expr, MDL);
+			expression_reference (expr, nexp, MDL);
 			goto concat_another;
 		}
 
@@ -2174,7 +2131,7 @@ int parse_non_binary (expr, cfile, lose, context)
 
 	      case BINARY_TO_ASCII:
 		token = next_token (&val, cfile);
-		if (!expression_allocate (expr, "parse_expression: B2A"))
+		if (!expression_allocate (expr, MDL))
 			log_fatal ("can't allocate expression");
 		(*expr) -> op = expr_binary_to_ascii;
 
@@ -2217,7 +2174,7 @@ int parse_non_binary (expr, cfile, lose, context)
 
 	      case REVERSE:
 		token = next_token (&val, cfile);
-		if (!expression_allocate (expr, "parse_expression: REVERSE"))
+		if (!expression_allocate (expr, MDL))
 			log_fatal ("can't allocate expression");
 		(*expr) -> op = expr_reverse;
 
@@ -2246,8 +2203,7 @@ int parse_non_binary (expr, cfile, lose, context)
 		/* pick (a, b, c) actually produces an internal representation
 		   that looks like pick (a, pick (b, pick (c, nil))). */
 		token = next_token (&val, cfile);
-		if (!(expression_allocate
-		      (expr, "parse_expression: PICK_FIRST_VALUE")))
+		if (!(expression_allocate (expr, MDL)))
 			log_fatal ("can't allocate expression");
 
 		token = next_token (&val, cfile);
@@ -2266,7 +2222,7 @@ int parse_non_binary (expr, cfile, lose, context)
 			if (token == COMMA) {
 				if (!(expression_allocate
 				      (&nexp -> data.pick_first_value.cdr,
-				       "parse_expression: PICK_FIRST_VALUE")))
+				       MDL)))
 					log_fatal ("can't allocate expr");
 				nexp = nexp -> data.pick_first_value.cdr;
 			}
@@ -2321,8 +2277,7 @@ int parse_non_binary (expr, cfile, lose, context)
 			goto badnsupdate;
 		}
 
-		if (!expression_allocate (expr,
-					  "parse_expression: DNS_UPDATE"))
+		if (!expression_allocate (expr, MDL))
 			log_fatal ("can't allocate expression");
 #if 0
 		(*expr) -> op = expr_funcall;
@@ -2385,8 +2340,7 @@ int parse_non_binary (expr, cfile, lose, context)
 			    "Please rebuild dhcpd with --with-nsupdate.");
 #endif
 		token = next_token (&val, cfile);
-		if (!expression_allocate (expr,
-					  "parse_expression: NS_UPDATE"))
+		if (!expression_allocate (expr, MDL))
 			log_fatal ("can't allocate expression");
 
 		token = next_token (&val, cfile);
@@ -2405,8 +2359,7 @@ int parse_non_binary (expr, cfile, lose, context)
 						(cfile,
 						 "expecting dns expression.");
 			      badnstrans:
-				expression_dereference (expr,
-							"parse_expression");
+				expression_dereference (expr, MDL);
 				*lose = 1;
 				return 0;
 			}
@@ -2416,7 +2369,7 @@ int parse_non_binary (expr, cfile, lose, context)
 			if (token == COMMA) {
 				if (!(expression_allocate
 				      (&nexp -> data.dns_transaction.cdr,
-				       "parse_expression")))
+				       MDL)))
 					log_fatal
 						("can't allocate expression");
 				nexp = nexp -> data.dns_transaction.cdr;
@@ -2452,7 +2405,7 @@ int parse_non_binary (expr, cfile, lose, context)
 		parse_warn (cfile,
 			    "Please rebuild dhcpd with --with-nsupdate.");
 #endif
-		if (!expression_allocate (expr, "parse_expression"))
+		if (!expression_allocate (expr, MDL))
 			log_fatal ("can't allocate expression");
 		(*expr) -> op = opcode;
 
@@ -2464,7 +2417,7 @@ int parse_non_binary (expr, cfile, lose, context)
 		if (!is_identifier (token) && token != NUMBER) {
 			parse_warn (cfile, "expecting identifier or number.");
 		      badnsop:
-			expression_dereference (expr, "parse_expression");
+			expression_dereference (expr, MDL);
 			skip_to_semi (cfile);
 			*lose = 1;
 			return 0;
@@ -2547,7 +2500,7 @@ int parse_non_binary (expr, cfile, lose, context)
 
 	      case OPTION:
 	      case CONFIG_OPTION:
-		if (!expression_allocate (expr, "parse_expression: OPTION"))
+		if (!expression_allocate (expr, MDL))
 			log_fatal ("can't allocate expression");
 		(*expr) -> op = (token == OPTION
 				 ? expr_option
@@ -2557,62 +2510,56 @@ int parse_non_binary (expr, cfile, lose, context)
 		(*expr) -> data.option = parse_option_name (cfile, 0, &known);
 		if (!(*expr) -> data.option) {
 			*lose = 1;
-			expression_dereference (expr,
-						"parse_expression: OPTION");
+			expression_dereference (expr, MDL);
 			return 0;
 		}
 		break;
 
 	      case HARDWARE:
 		token = next_token (&val, cfile);
-		if (!expression_allocate (expr, "parse_expression: HARDWARE"))
+		if (!expression_allocate (expr, MDL))
 			log_fatal ("can't allocate expression");
 		(*expr) -> op = expr_hardware;
 		break;
 
 	      case LEASED_ADDRESS:
 		token = next_token (&val, cfile);
-		if (!expression_allocate (expr,
-					  "parse_expression: LEASED_ADDRESS"))
+		if (!expression_allocate (expr, MDL))
 			log_fatal ("can't allocate expression");
 		(*expr) -> op = expr_leased_address;
 		break;
 
 	      case FILENAME:
 		token = next_token (&val, cfile);
-		if (!expression_allocate (expr,
-					  "parse_expression: FILENAME"))
+		if (!expression_allocate (expr, MDL))
 			log_fatal ("can't allocate expression");
 		(*expr) -> op = expr_filename;
 		break;
 
 	      case SERVER_NAME:
 		token = next_token (&val, cfile);
-		if (!expression_allocate (expr,
-					  "parse_expression: SERVER_NAME"))
+		if (!expression_allocate (expr, MDL))
 			log_fatal ("can't allocate expression");
 		(*expr) -> op = expr_sname;
 		break;
 
 	      case LEASE_TIME:
 		token = next_token (&val, cfile);
-		if (!expression_allocate (expr,
-					"parse_expression: LEASED_LEASE_TIME"))
+		if (!expression_allocate (expr, MDL))
 			log_fatal ("can't allocate expression");
 		(*expr) -> op = expr_lease_time;
 		break;
 
 	      case TOKEN_NULL:
 		token = next_token (&val, cfile);
-		if (!expression_allocate (expr, "parse_expression"))
+		if (!expression_allocate (expr, MDL))
 			log_fatal ("can't allocate expression");
 		(*expr) -> op = expr_null;
 		break;
 
 	      case HOST_DECL_NAME:
 		token = next_token (&val, cfile);
-		if (!expression_allocate (expr,
-					  "parse_expression: HOST_DECL_NAME"))
+		if (!expression_allocate (expr, MDL))
 			log_fatal ("can't allocate expression");
 		(*expr) -> op = expr_host_decl_name;
 		break;
@@ -2644,7 +2591,7 @@ int parse_non_binary (expr, cfile, lose, context)
 		if (token != RPAREN)
 			goto norparen;
 
-		if (!expression_allocate (expr, "parse_expression"))
+		if (!expression_allocate (expr, MDL))
 			log_fatal ("can't allocate expression");
 		(*expr) -> op = expr_variable_reference;
 		(*expr) -> data.variable =
@@ -2656,7 +2603,7 @@ int parse_non_binary (expr, cfile, lose, context)
 
 	      case PACKET:
 		token = next_token (&val, cfile);
-		if (!expression_allocate (expr, "parse_expression: PACKET"))
+		if (!expression_allocate (expr, MDL))
 			log_fatal ("can't allocate expression");
 		(*expr) -> op = expr_packet;
 
@@ -2697,8 +2644,7 @@ int parse_non_binary (expr, cfile, lose, context)
 			return 0;
 		}
 
-		if (!expression_allocate (expr,
-					  "parse_expression: EXTRACT_INT"))
+		if (!expression_allocate (expr, MDL))
 			log_fatal ("can't allocate expression");
 
 		if (!parse_data_expression (&(*expr) -> data.extract_int,
@@ -2706,8 +2652,7 @@ int parse_non_binary (expr, cfile, lose, context)
 			parse_warn (cfile, "expecting data expression.");
 			skip_to_semi (cfile);
 			*lose = 1;
-			expression_dereference
-				(expr, "parse_expression: EXTRACT_INT");
+			expression_dereference (expr, MDL);
 			return 0;
 		}
 
@@ -2715,8 +2660,7 @@ int parse_non_binary (expr, cfile, lose, context)
 		if (token != COMMA) {
 			parse_warn (cfile, "comma expected.");
 			*lose = 1;
-			expression_dereference
-				(expr, "parse_expression: EXTRACT_INT");
+			expression_dereference (expr, MDL);
 			return 0;
 		}
 
@@ -2724,8 +2668,7 @@ int parse_non_binary (expr, cfile, lose, context)
 		if (token != NUMBER) {
 			parse_warn (cfile, "number expected.");
 			*lose = 1;
-			expression_dereference
-				(expr, "parse_expression: EXTRACT_INT");
+			expression_dereference (expr, MDL);
 			return 0;
 		}
 		switch (atoi (val)) {
@@ -2746,8 +2689,7 @@ int parse_non_binary (expr, cfile, lose, context)
 				    "unsupported integer size %d", atoi (val));
 			*lose = 1;
 			skip_to_semi (cfile);
-			expression_dereference
-				(expr, "parse_expression: EXTRACT_INT");
+			expression_dereference (expr, MDL);
 			return 0;
 		}
 
@@ -2755,8 +2697,7 @@ int parse_non_binary (expr, cfile, lose, context)
 		if (token != RPAREN) {
 			parse_warn (cfile, "right parenthesis expected.");
 			*lose = 1;
-			expression_dereference
-				(expr, "parse_expression: EXTRACT_INT");
+			expression_dereference (expr, MDL);
 			return 0;
 		}
 		break;
@@ -2770,8 +2711,7 @@ int parse_non_binary (expr, cfile, lose, context)
 			return 0;
 		}
 
-		if (!expression_allocate (expr,
-					  "parse_expression: ENCODE_INT"))
+		if (!expression_allocate (expr, MDL))
 			log_fatal ("can't allocate expression");
 
 		if (!parse_numeric_expression (&(*expr) -> data.encode_int,
@@ -2779,8 +2719,7 @@ int parse_non_binary (expr, cfile, lose, context)
 			parse_warn (cfile, "expecting numeric expression.");
 			skip_to_semi (cfile);
 			*lose = 1;
-			expression_dereference
-				(expr, "parse_expression: ENCODE_INT");
+			expression_dereference (expr, MDL);
 			return 0;
 		}
 
@@ -2788,8 +2727,7 @@ int parse_non_binary (expr, cfile, lose, context)
 		if (token != COMMA) {
 			parse_warn (cfile, "comma expected.");
 			*lose = 1;
-			expression_dereference
-				(expr, "parse_expression: ENCODE_INT");
+			expression_dereference (expr, MDL);
 			return 0;
 		}
 
@@ -2797,8 +2735,7 @@ int parse_non_binary (expr, cfile, lose, context)
 		if (token != NUMBER) {
 			parse_warn (cfile, "number expected.");
 			*lose = 1;
-			expression_dereference
-				(expr, "parse_expression: ENCODE_INT");
+			expression_dereference (expr, MDL);
 			return 0;
 		}
 		switch (atoi (val)) {
@@ -2819,8 +2756,7 @@ int parse_non_binary (expr, cfile, lose, context)
 				    "unsupported integer size %d", atoi (val));
 			*lose = 1;
 			skip_to_semi (cfile);
-			expression_dereference
-				(expr, "parse_expression: ENCODE_INT");
+			expression_dereference (expr, MDL);
 			return 0;
 		}
 
@@ -2828,8 +2764,7 @@ int parse_non_binary (expr, cfile, lose, context)
 		if (token != RPAREN) {
 			parse_warn (cfile, "right parenthesis expected.");
 			*lose = 1;
-			expression_dereference
-				(expr, "parse_expression: ENCODE_INT");
+			expression_dereference (expr, MDL);
 			return 0;
 		}
 		break;
@@ -2840,8 +2775,7 @@ int parse_non_binary (expr, cfile, lose, context)
 		if (context == context_numeric ||
 		    context == context_data_or_numeric) {
 			next_token (&val, cfile);	/* Eat the number. */
-			if (!expression_allocate (expr,
-						  "parse_expression: NUMBER"))
+			if (!expression_allocate (expr, MDL))
 				log_fatal ("can't allocate expression");
 			(*expr) -> op = expr_const_int;
 			(*expr) -> data.const_int = atoi (val);
@@ -2849,14 +2783,12 @@ int parse_non_binary (expr, cfile, lose, context)
 		}
 
 	      case NUMBER_OR_NAME:
-		if (!expression_allocate (expr,
-					  "parse_expression: NUMBER_OR_NAME"))
+		if (!expression_allocate (expr, MDL))
 			log_fatal ("can't allocate expression");
 
 		(*expr) -> op = expr_const_data;
 		if (!parse_cshl (&(*expr) -> data.const_data, cfile)) {
-			expression_dereference (expr,
-						"parse_expression: cshl");
+			expression_dereference (expr, MDL);
 			return 0;
 		}
 		break;
@@ -2865,7 +2797,7 @@ int parse_non_binary (expr, cfile, lose, context)
 		known = FORMERR;
 	      ns_const:
 		token = next_token (&val, cfile);
-		if (!expression_allocate (expr, "parse_expression"))
+		if (!expression_allocate (expr, MDL))
 			log_fatal ("can't allocate expression");
 		(*expr) -> op = expr_const_int;
 		(*expr) -> data.const_int = known;
@@ -2925,7 +2857,7 @@ int parse_non_binary (expr, cfile, lose, context)
 			return 0;
 		}
 
-		if (!expression_allocate (expr, "parse_expression"))
+		if (!expression_allocate (expr, MDL))
 			log_fatal ("can't allocate expression");
 		(*expr) -> op = expr_variable_exists;
 		(*expr) -> data.variable = dmalloc (strlen (val) + 1, MDL);
@@ -2943,7 +2875,7 @@ int parse_non_binary (expr, cfile, lose, context)
 			return 0;
 
 		token = next_token (&val, cfile);
-		if (!expression_allocate (expr, "parse_expression"))
+		if (!expression_allocate (expr, MDL))
 			log_fatal ("can't allocate expression");
 		(*expr) -> op = expr_variable_reference;
 		(*expr) -> data.variable = dmalloc (strlen (val) + 1, MDL);
@@ -2990,7 +2922,7 @@ int parse_expression (expr, cfile, lose, context, plhs, binop)
 				*lose = 1;
 				skip_to_semi (cfile);
 			}
-			expression_dereference (&lhs, "parse_expression");
+			expression_dereference (&lhs, MDL);
 		}
 		return 0;
 	}
@@ -3009,8 +2941,7 @@ int parse_expression (expr, cfile, lose, context, plhs, binop)
 			*lose = 1;
 			skip_to_semi (cfile);
 			if (lhs)
-				expression_dereference (&lhs,
-							"parse_expression");
+				expression_dereference (&lhs, MDL);
 			return 0;
 		}
 		next_op = expr_not_equal;
@@ -3051,8 +2982,7 @@ int parse_expression (expr, cfile, lose, context, plhs, binop)
 	   this subexpression, so combine it with the preceding binary
 	   operator and return the result. */
 	if (next_op == expr_none) {
-		if (!expression_allocate (expr,
-					  "parse_expression: COMBINE"))
+		if (!expression_allocate (expr, MDL))
 			log_fatal ("Can't allocate expression!");
 
 		(*expr) -> op = binop;
@@ -3090,7 +3020,7 @@ int parse_expression (expr, cfile, lose, context, plhs, binop)
 
 	/* Now combine the LHS and the RHS using binop. */
 	tmp = (struct expression *)0;
-	if (!expression_allocate (&tmp, "parse_expression: COMBINE2"))
+	if (!expression_allocate (&tmp, MDL))
 		log_fatal ("No memory for equal precedence combination.");
 	
 	/* Store the LHS and RHS. */
@@ -3180,13 +3110,11 @@ int parse_option_statement (result, cfile, lookups, option, op)
 			if (!parse_option_token (&expr, cfile, fmt,
 						 tmp, uniform, lookups)) {
 				if (tmp)
-					expression_dereference
-					    (&tmp, "parse_option_statement");
+					expression_dereference (&tmp, MDL);
 				return 0;
 			}
 			if (tmp)
-				expression_dereference
-					(&tmp, "parse_option_statement");
+				expression_dereference (&tmp, MDL);
 		}
 		if (*fmt == 'A') {
 			token = peek_token (&val, cfile);
@@ -3201,7 +3129,7 @@ int parse_option_statement (result, cfile, lookups, option, op)
       done:
 	if (!parse_semi (cfile))
 		return 0;
-	if (!executable_statement_allocate (result, "parse_option_statement"))
+	if (!executable_statement_allocate (result, MDL))
 		log_fatal ("no memory for option statement.");
 	(*result) -> op = op;
 	if (expr && !option_cache (&(*result) -> data.option,
@@ -3243,11 +3171,10 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 	      case 'X':
 		token = peek_token (&val, cfile);
 		if (token == NUMBER_OR_NAME || token == NUMBER) {
-			if (!expression_allocate (&t, "parse_option_token"))
+			if (!expression_allocate (&t, MDL))
 				return 0;
 			if (!parse_cshl (&t -> data.const_data, cfile)) {
-				expression_dereference
-					(&t, "parse_option_token: X");
+				expression_dereference (&t, MDL);
 				return 0;
 			}
 			t -> op = expr_const_data;
@@ -3368,7 +3295,7 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 	if (expr) {
 		if (!make_concat (rv, expr, t))
 			return 0;
-		expression_dereference (&t, "parse_option_token");
+		expression_dereference (&t, MDL);
 	} else
 		*rv = t;
 	return 1;
@@ -3398,7 +3325,7 @@ int parse_auth_key (key_id, cfile)
 				    print_hex_1 (key_id -> len,
 						 key_id -> data,
 						 key_id -> len));
-		data_string_forget (key_id, "parse_auth_key");
+		data_string_forget (key_id, MDL);
 	} else {
 		if (!parse_cshl (&key_data, cfile))
 			return 0;
@@ -3409,7 +3336,7 @@ int parse_auth_key (key_id, cfile)
 						 key_id -> len));
 			old_key = key;
 		}
-		new_key = new_auth_key (key_data.len, "parse_auth_key");
+		new_key = new_auth_key (key_data.len, MDL);
 		if (!new_key)
 			log_fatal ("No memory for key %s",
 				   print_hex_1 (key_id -> len,
@@ -3418,9 +3345,70 @@ int parse_auth_key (key_id, cfile)
 		new_key -> length = key_data.len;
 		memcpy (new_key -> data, key_data.data, key_data.len);
 		enter_auth_key (key_id, new_key);
-		data_string_forget (&key_data, "parse_auth_key");
+		data_string_forget (&key_data, MDL);
 	}
 
 	parse_semi (cfile);
 	return key_id -> len ? 1 : 0;
+}
+
+int parse_warn (ANSI_DECL (struct parse *)cfile,
+		ANSI_DECL (const char *) fmt, VA_DOTDOTDOT)
+	KandR (struct parse *cfile;)
+	KandR (char *fmt;)
+	va_dcl
+{
+	va_list list;
+	static char spaces [] = "                                                                                ";
+	char lexbuf [256];
+	char mbuf [1024];
+	char fbuf [1024];
+	unsigned i, lix;
+	
+	do_percentm (mbuf, fmt);
+#ifndef NO_SNPRINTF
+	snprintf (fbuf, sizeof fbuf, "%s line %d: %s",
+		  cfile -> tlname, cfile -> lexline, mbuf);
+#else
+	sprintf (fbuf, "%s line %d: %s",
+		 cfile -> tlname, cfile -> lexline, mbuf);
+#endif
+	
+	VA_start (list, fmt);
+	vsnprintf (mbuf, sizeof mbuf, fbuf, list);
+	va_end (list);
+
+	lix = 0;
+	for (i = 0;
+	     cfile -> token_line [i] && i < (cfile -> lexchar - 1); i++) {
+		if (lix < (sizeof lexbuf) - 1)
+			lexbuf [lix++] = ' ';
+		if (cfile -> token_line [i] == '\t') {
+			for (lix;
+			     lix < (sizeof lexbuf) - 1 && (lix & 7); lix++)
+				lexbuf [lix] = ' ';
+		}
+	}
+	lexbuf [lix] = 0;
+
+#ifndef DEBUG
+	syslog (log_priority | LOG_ERR, mbuf);
+	syslog (log_priority | LOG_ERR, cfile -> token_line);
+	if (cfile -> lexchar < 81)
+		syslog (log_priority | LOG_ERR, "%s^", lexbuf);
+#endif
+
+	if (log_perror) {
+		write (2, mbuf, strlen (mbuf));
+		write (2, "\n", 1);
+		write (2, cfile -> token_line, strlen (cfile -> token_line));
+		write (2, "\n", 1);
+		if (cfile -> lexchar < 81)
+			write (2, lexbuf, lix);
+		write (2, "^\n", 2);
+	}
+
+	cfile -> warnings_occurred = 1;
+
+	return 0;
 }

@@ -68,7 +68,7 @@ isc_result_t omapi_object_handle (omapi_handle_t *h, omapi_object_t *o)
 	}
 	
 	if (!omapi_handle_table) {
-		omapi_handle_table = malloc (sizeof *omapi_handle_table);
+		omapi_handle_table = dmalloc (sizeof *omapi_handle_table, MDL);
 		if (!omapi_handle_table)
 			return ISC_R_NOMEMORY;
 		memset (omapi_handle_table, 0, sizeof *omapi_handle_table);
@@ -86,7 +86,7 @@ isc_result_t omapi_object_handle (omapi_handle_t *h, omapi_object_t *o)
 	while (omapi_next_handle >= omapi_handle_table -> limit) {
 		omapi_handle_table_t *new;
 		
-		new = malloc (sizeof *new);
+		new = dmalloc (sizeof *new, MDL);
 		if (!new)
 			return ISC_R_NOMEMORY;
 		memset (new, 0, sizeof *new);
@@ -140,7 +140,7 @@ static isc_result_t omapi_object_handle_in_table (omapi_handle_t h,
 	if (table -> leafp) {
 		status = (omapi_object_reference
 			  (&table -> children [h - table -> first].object,
-			   o, "omapi_object_handle_in_table"));
+			   o, MDL));
 		if (status != ISC_R_SUCCESS)
 			return status;
 		o -> handle = h;
@@ -161,7 +161,7 @@ static isc_result_t omapi_object_handle_in_table (omapi_handle_t h,
 	/* If there is no more direct table than this one in the slot
 	   we came up with, make one. */
 	if (!inner) {
-		inner = malloc (sizeof *inner);
+		inner = dmalloc (sizeof *inner, MDL);
 		if (!inner)
 			return ISC_R_NOMEMORY;
 		memset (inner, 0, sizeof *inner);
@@ -211,7 +211,7 @@ static isc_result_t omapi_handle_table_enclose (omapi_handle_table_t **table)
 	   we are allocating sequentially. */
 	index = (base - inner -> first) / OMAPI_HANDLE_TABLE_SIZE;
 
-	new = malloc (sizeof *new);
+	new = dmalloc (sizeof *new, MDL);
 	if (!new)
 		return ISC_R_NOMEMORY;
 	memset (new, 0, sizeof *new);
@@ -247,7 +247,7 @@ static isc_result_t omapi_handle_lookup_in (omapi_object_t **o,
 			return ISC_R_NOTFOUND;
 		return omapi_object_reference
 			(o, table -> children [h - table -> first].object,
-			 "omapi_handle_lookup_in");
+			 MDL);
 	}
 
 	/* Scale is the number of handles represented by each child of this

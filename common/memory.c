@@ -22,18 +22,19 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: memory.c,v 1.63 1999/10/07 06:35:42 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: memory.c,v 1.64 2000/01/26 14:55:34 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
 
-struct group *clone_group (group, caller)
+struct group *clone_group (group, file, line)
 	struct group *group;
-	const char *caller;
+	const char *file;
+	int line;
 {
-	struct group *g = new_group (caller);
+	struct group *g = new_group (file, line);
 	if (!g)
-		log_fatal ("%s: can't allocate new group", caller);
+		log_fatal ("%s(%d): can't allocate new group", file, line);
 	*g = *group;
 	g -> statements = (struct executable_statement *)0;
 	g -> next = group;

@@ -3,7 +3,7 @@
    DHCP options parsing and reassembly. */
 
 /*
- * Copyright (c) 1996-1999 Internet Software Consortium.
+ * Copyright (c) 1996-2000 Internet Software Consortium.
  * Use is subject to license terms which appear in the file named
  * ISC-LICENSE that should have accompanied this file when you
  * received it.   If a file named ISC-LICENSE did not accompany this
@@ -22,11 +22,12 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.51 2000/01/25 01:09:06 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.52 2000/01/26 14:55:34 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
 #include "dhcpd.h"
+#include <omapip/omapip_p.h>
 
 static void do_option_set PROTO ((pair *,
 				  struct option_cache *,
@@ -1027,9 +1028,10 @@ int option_cache_dereference (ptr, file, line)
 	rc_register (file, line, *ptr, (*ptr) -> refcnt);
 	if (!(*ptr) -> refcnt) {
 		if ((*ptr) -> data.buffer)
-			data_string_forget (&(*ptr) -> data, name);
+			data_string_forget (&(*ptr) -> data, file, line);
 		if ((*ptr) -> expression)
-			expression_dereference (&(*ptr) -> expression, name);
+			expression_dereference (&(*ptr) -> expression,
+						file, line);
 		/* Put it back on the free list... */
 		(*ptr) -> expression = (struct expression *)free_option_caches;
 		free_option_caches = *ptr;

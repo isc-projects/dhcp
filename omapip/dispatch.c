@@ -3,7 +3,7 @@
    I/O dispatcher. */
 
 /*
- * Copyright (c) 1996-1999 Internet Software Consortium.
+ * Copyright (c) 1996-2000 Internet Software Consortium.
  * Use is subject to license terms which appear in the file named
  * ISC-LICENSE that should have accompanied this file when you
  * received it.   If a file named ISC-LICENSE did not accompany this
@@ -50,27 +50,24 @@ isc_result_t omapi_register_io_object (omapi_object_t *h,
 		omapi_io_states.type = omapi_type_io_object;
 	}
 		
-	obj = malloc (sizeof *obj);
+	obj = dmalloc (sizeof *obj, MDL);
 	if (!obj)
 		return ISC_R_NOMEMORY;
 	memset (obj, 0, sizeof *obj);
-
 	obj -> refcnt = 1;
+	rc_register_mdl (obj, obj -> refcnt);
 	obj -> type = omapi_type_io_object;
 
-	status = omapi_object_reference (&obj -> inner, h,
-					 "omapi_register_io_object");
+	status = omapi_object_reference (&obj -> inner, h, MDL);
 	if (status != ISC_R_SUCCESS) {
-		omapi_object_dereference ((omapi_object_t **)&obj,
-					  "omapi_register_io_object");
+		omapi_object_dereference ((omapi_object_t **)&obj, MDL);
 		return status;
 	}
 
-	status = omapi_object_reference (&h -> outer, (omapi_object_t *)obj,
-					 "omapi_register_io_object");
+	status = omapi_object_reference (&h -> outer,
+					 (omapi_object_t *)obj, MDL);
 	if (status != ISC_R_SUCCESS) {
-		omapi_object_dereference ((omapi_object_t **)&obj,
-					  "omapi_register_io_object");
+		omapi_object_dereference ((omapi_object_t **)&obj, MDL);
 		return status;
 	}
 
@@ -105,11 +102,12 @@ isc_result_t omapi_wait_for_completion (omapi_object_t *object,
 	omapi_object_t *inner;
 
 	if (object) {
-		waiter = malloc (sizeof *waiter);
+		waiter = dmalloc (sizeof *waiter, MDL);
 		if (!waiter)
 			return ISC_R_NOMEMORY;
 		memset (waiter, 0, sizeof *waiter);
 		waiter -> refcnt = 1;
+		rc_register_mdl (waiter, waiter -> refcnt);
 		waiter -> type = omapi_type_waiter;
 
 		/* Paste the waiter object onto the inner object we're
@@ -117,20 +115,19 @@ isc_result_t omapi_wait_for_completion (omapi_object_t *object,
 		for (inner = object; inner -> inner; inner = inner -> inner)
 			;
 
-		status = omapi_object_reference (&waiter -> outer, inner,
-						 "omapi_wait_for_completion");
+		status = omapi_object_reference (&waiter -> outer, inner, MDL);
 		if (status != ISC_R_SUCCESS) {
 			omapi_object_dereference ((omapi_object_t **)&waiter,
-						  "omapi_wait_for_completion");
+						  MDL);
 			return status;
 		}
 		
 		status = omapi_object_reference (&inner -> inner,
 						 (omapi_object_t *)waiter,
-						 "omapi_wait_for_completion");
+						 MDL);
 		if (status != ISC_R_SUCCESS) {
 			omapi_object_dereference ((omapi_object_t **)&waiter,
-						  "omapi_wait_for_completion");
+						  MDL);
 			return status;
 		}
 	} else
@@ -145,22 +142,18 @@ isc_result_t omapi_wait_for_completion (omapi_object_t *object,
 	if (waiter -> outer) {
 		if (waiter -> outer -> inner) {
 			omapi_object_dereference (&waiter -> outer -> inner,
-						  "omapi_wait_for_completion");
+						  MDL);
 			if (waiter -> inner)
 				omapi_object_reference
 					(&waiter -> outer -> inner,
-					 waiter -> inner,
-					 "omapi_wait_for_completion");
+					 waiter -> inner, MDL);
 		}
-		omapi_object_dereference (&waiter -> outer,
-					  "omapi_wait_for_completion");
+		omapi_object_dereference (&waiter -> outer, MDL);
 	}
 	if (waiter -> inner)
-		omapi_object_dereference (&waiter -> inner,
-					  "omapi_wait_for_completion");
+		omapi_object_dereference (&waiter -> inner, MDL);
 	
-	omapi_object_dereference ((omapi_object_t **)&waiter,
-				  "omapi_wait_for_completion");
+	omapi_object_dereference ((omapi_object_t **)&waiter, MDL);
 	return ISC_R_SUCCESS;
 }
 
@@ -280,28 +273,28 @@ isc_result_t omapi_one_dispatch (omapi_object_t *wo,
 					omapi_object_reference
 						((omapi_object_t **)&tmp,
 						 (omapi_object_t *)io -> next,
-						 "omapi_wfc");
+						 MDL);
 				if (prev) {
 					omapi_object_dereference
 						(((omapi_object_t **)
-						  &prev -> next), "omapi_wfc");
+						  &prev -> next), MDL);
 					if (tmp)
 						omapi_object_reference
 						    (((omapi_object_t **)
 						      &prev -> next),
 						     (omapi_object_t *)tmp,
-						     "omapi_wfc");
+						     MDL);
 				} else {
 					omapi_object_dereference
 						(((omapi_object_t **)
 						  &omapi_io_states.next),
-						 "omapi_wfc");
+						 MDL);
 					if (tmp)
 						omapi_object_reference
 						    (((omapi_object_t **)
 						      &omapi_io_states.next),
 						     (omapi_object_t *)tmp,
-						     "omapi_wfc");
+						     MDL);
 					else
 						omapi_signal_in
 							((omapi_object_t *)
@@ -310,8 +303,7 @@ isc_result_t omapi_one_dispatch (omapi_object_t *wo,
 				}
 				if (tmp)
 					omapi_object_dereference
-						((omapi_object_t **)&tmp,
-						 "omapi_wfc");
+						((omapi_object_t **)&tmp, MDL);
 			}
 		}
 		prev = io;
@@ -348,7 +340,7 @@ isc_result_t omapi_io_get_value (omapi_object_t *h,
 	return ISC_R_NOTFOUND;
 }
 
-isc_result_t omapi_io_destroy (omapi_object_t *h, const char *name)
+isc_result_t omapi_io_destroy (omapi_object_t *h, const char *file, int line)
 {
 	if (h -> type != omapi_type_io_object)
 		return ISC_R_INVALIDARG;

@@ -3,7 +3,7 @@
    Turn data structures into printable text. */
 
 /*
- * Copyright (c) 1996-1999 Internet Software Consortium.
+ * Copyright (c) 1996-2000 Internet Software Consortium.
  * Use is subject to license terms which appear in the file named
  * ISC-LICENSE that should have accompanied this file when you
  * received it.   If a file named ISC-LICENSE did not accompany this
@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: print.c,v 1.32 2000/01/25 01:14:26 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: print.c,v 1.33 2000/01/26 14:55:34 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -367,8 +367,8 @@ static unsigned print_subexpression (expr, buf, len)
 		break;
 
 	      case expr_pick_first_value:
-		if (len > 11) {
-			rv = 9;
+		if (len > 8) {
+			rv = 6;
 			strcpy (buf, "(pick1st ");
 			rv += print_subexpression
 				(expr -> data.pick_first_value.car,
@@ -436,7 +436,7 @@ static unsigned print_subexpression (expr, buf, len)
 
 	      case expr_config_option:
 		s = "cfg-option";
-		break;
+		goto dooption;
 
 	      case expr_option:
 		s = "option";
@@ -627,6 +627,14 @@ static unsigned print_subexpression (expr, buf, len)
 
 	      case expr_static:
 		s = "static";
+		goto astring;
+
+	      case expr_filename:
+		s = "filename";
+		goto astring;
+
+	      case expr_sname:
+		s = "server-name";
 		goto astring;
 
 	      case expr_reverse:

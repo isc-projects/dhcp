@@ -3,7 +3,7 @@
    Subroutines that support the generic object. */
 
 /*
- * Copyright (c) 1996-1999 Internet Software Consortium.
+ * Copyright (c) 1996-2000 Internet Software Consortium.
  * Use is subject to license terms which appear in the file named
  * ISC-LICENSE that should have accompanied this file when you
  * received it.   If a file named ISC-LICENSE did not accompany this
@@ -22,18 +22,19 @@
 
 #include <omapip/omapip_p.h>
 
-isc_result_t omapi_generic_new (omapi_object_t **gen, const char *name)
+isc_result_t omapi_generic_new (omapi_object_t **gen,
+				const char *file, int line)
 {
 	omapi_generic_object_t *obj;
 
-	obj = malloc (sizeof *obj);
+	obj = dmalloc (sizeof *obj, file, line);
 	if (!obj)
 		return ISC_R_NOMEMORY;
 	memset (obj, 0, sizeof *obj);
 	obj -> refcnt = 0;
 	obj -> type = omapi_type_generic;
 
-	return omapi_object_reference (gen, (omapi_object_t *)obj, name);
+	return omapi_object_reference (gen, (omapi_object_t *)obj, file, line);
 }
 
 isc_result_t omapi_generic_set_value (omapi_object_t *h,
@@ -71,25 +72,18 @@ isc_result_t omapi_generic_set_value (omapi_object_t *h,
 			   maps to a name/null pair, ISC_R_NOTFOUND is
 			   returned. */
 			new = (omapi_value_t *)0;
-			status = (omapi_value_new (&new,
-						   "omapi_message_get_value"));
+			status = (omapi_value_new (&new, MDL));
 			if (status != ISC_R_SUCCESS)
 				return status;
-			omapi_data_string_reference
-				(&new -> name, name,
-				 "omapi_message_get_value");
+			omapi_data_string_reference (&new -> name, name, MDL);
 			if (value)
-				omapi_typed_data_reference
-					(&new -> value, value,
-					 "omapi_generic_set_value");
+				omapi_typed_data_reference (&new -> value,
+							    value, MDL);
 
-			omapi_value_dereference (&(g -> values [i]),
-						 "omapi_message_set_value");
+			omapi_value_dereference (&(g -> values [i]), MDL);
 			status = (omapi_value_reference
-				  (&(g -> values [i]), new,
-				   "omapi_message_set_value"));
-			omapi_value_dereference (&new,
-						 "omapi_message_set_value");
+				  (&(g -> values [i]), new, MDL));
+			omapi_value_dereference (&new, MDL);
 			return status;
 		}
 	}			
@@ -116,27 +110,25 @@ isc_result_t omapi_generic_set_value (omapi_object_t *h,
 			vm_new = 2 * g -> va_max;
 		else
 			vm_new = 10;
-		va = malloc (vm_new * sizeof *va);
+		va = dmalloc (vm_new * sizeof *va, MDL);
 		if (!va)
 			return ISC_R_NOMEMORY;
 		if (g -> va_max)
 			memcpy (va, g -> values, g -> va_max * sizeof *va);
 		memset (va + g -> va_max, 0,
 			(vm_new - g -> va_max) * sizeof *va);
-		free (g -> values);
+		dfree (g -> values, MDL);
 		g -> values = va;
 		g -> va_max = vm_new;
 	}
-	status = omapi_value_new (&g -> values [g -> nvalues],
-				  "omapi_generic_set_value");
+	status = omapi_value_new (&g -> values [g -> nvalues], MDL);
 	if (status != ISC_R_SUCCESS)
 		return status;
-	omapi_data_string_reference (&g -> values [g -> nvalues] -> name, name,
-				     "omapi_generic_set_value");
+	omapi_data_string_reference (&g -> values [g -> nvalues] -> name,
+				     name, MDL);
 	if (value)
 		omapi_typed_data_reference
-			(&g -> values [g -> nvalues] -> value, value,
-			 "omapi_generic_set_value");
+			(&g -> values [g -> nvalues] -> value, value, MDL);
 	g -> nvalues++;
 	return ISC_R_SUCCESS;
 }
@@ -162,9 +154,8 @@ isc_result_t omapi_generic_get_value (omapi_object_t *h,
 			if (!g -> values [i] -> value)
 				return ISC_R_NOTFOUND;
 			/* Otherwise, return the name/value pair. */
-			return omapi_value_reference
-				(value, g -> values [i],
-				 "omapi_message_get_value");
+			return omapi_value_reference (value,
+						      g -> values [i], MDL);
 		}
 	}			
 
@@ -174,7 +165,8 @@ isc_result_t omapi_generic_get_value (omapi_object_t *h,
 	return ISC_R_NOTFOUND;
 }
 
-isc_result_t omapi_generic_destroy (omapi_object_t *h, const char *name)
+isc_result_t omapi_generic_destroy (omapi_object_t *h,
+				    const char *file, int line)
 {
 	omapi_generic_object_t *g;
 	int i;
@@ -187,9 +179,9 @@ isc_result_t omapi_generic_destroy (omapi_object_t *h, const char *name)
 		for (i = 0; i < g -> nvalues; i++) {
 			if (g -> values [i])
 				omapi_value_dereference (&g -> values [i],
-							 name);
+							 file, line);
 		}
-		free (g -> values);
+		dfree (g -> values, file, line);
 		g -> values = (omapi_value_t **)0;
 		g -> va_max = 0;
 	}

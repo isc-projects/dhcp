@@ -22,279 +22,14 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: alloc.c,v 1.37 2000/01/25 01:02:26 mellon Exp $ Copyright (c) 1995, 1996, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: alloc.c,v 1.38 2000/01/26 14:55:33 mellon Exp $ Copyright (c) 1995, 1996, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
+#include <omapip/omapip_p.h>
 
 struct dhcp_packet *dhcp_free_list;
 struct packet *packet_free_list;
-
-#if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL)
-struct dmalloc_preamble *dmalloc_list;
-unsigned long dmalloc_outstanding;
-unsigned long dmalloc_longterm;
-unsigned long dmalloc_generation;
-unsigned long dmalloc_cutoff_generation;
-#endif
-
-#if defined (DEBUG_RC_HISTORY)
-struct rc_history_entry rc_history [RC_HISTORY_MAX];
-int rc_history_index;
-#endif
-
-VOIDPTR dmalloc (size, file, line)
-	unsigned size;
-	const char *file;
-	int line;
-{
-	unsigned char *foo = malloc (size + DMDSIZE);
-	int i;
-	VOIDPTR *bar;
-#if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL)
-	struct dmalloc_preamble *dp;
-#endif
-	if (!foo) {
-		log_error ("No memory for %s.", name);
-		return (VOIDPTR)0;
-	}
-	bar = (VOIDPTR)(foo + DMDOFFSET);
-	memset (bar, 0, size);
-
-#if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL)
-	dp = (struct dmalloc_preamble *)foo;
-	dp -> prev = dmalloc_list;
-	if (dmalloc_list)
-		dmalloc_list -> next = dp;
-	dmalloc_list = dp;
-	dp -> next = (struct dmalloc_preamble *)0;
-	dp -> size = size;
-	dp -> file = file;
-	dp -> line = line;
-	dp -> generation = dmalloc_generation++;
-	dmalloc_outstanding += size;
-	for (i = 0; i < DMLFSIZE; i++)
-		dp -> low_fence [i] =
-			(((unsigned long)
-			  (&dp -> low_fence [i])) % 143) + 113;
-	for (i = DMDOFFSET; i < DMDSIZE; i++)
-		foo [i + size] =
-			(((unsigned long)
-			  (&foo [i + size])) % 143) + 113;
-#if defined (DEBUG_MALLOC_POOL_EXHAUSTIVELY)
-	/* Check _every_ entry in the pool!   Very expensive. */
-	for (dp = dmalloc_list; dp; dp = dp -> prev) {
-		for (i = 0; i < DMLFSIZE; i++) {
-			if (dp -> low_fence [i] !=
-				(((unsigned long)
-				  (&dp -> low_fence [i])) % 143) + 113)
-			{
-				log_error ("malloc fence modified: %s(%d)",
-					   dp -> file, dp -> line);
-				abort ();
-			}
-		}
-		foo = (unsigned char *)dp;
-		for (i = DMDOFFSET; i < DMDSIZE; i++) {
-			if (foo [i + dp -> size] !=
-				(((unsigned long)
-				  (&foo [i + dp -> size])) % 143) + 113) {
-				log_error ("malloc fence modified: %s(%d)",
-					   dp -> file, dp -> line);
-				abort ();
-			}
-		}
-	}
-#endif
-#endif
-	return bar;
-}
-
-void dfree (ptr, file, line)
-	VOIDPTR ptr;
-	const char *file;
-	int line;
-{
-	if (!ptr) {
-		log_error ("dfree %s(%d): free on null pointer.", file, line);
-		return;
-	}
-#if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL)
-	{
-		unsigned char *bar = ptr;
-		struct dmalloc_preamble *dp, *cur;
-		int i;
-		bar -= DMDOFFSET;
-		cur = (struct dmalloc_preamble *)bar;
-		for (dp = dmalloc_list; dp; dp = dp -> prev)
-			if (dp == cur)
-				break;
-		if (!dp) {
-			log_error ("%s(%d): freeing unknown memory: %lx",
-				   dp -> file, dp -> line, (unsigned long)cur);
-			abort ();
-		}
-		if (dp -> prev)
-			dp -> prev -> next = dp -> next;
-		if (dp -> next)
-			dp -> next -> prev = dp -> prev;
-		if (dp == dmalloc_list)
-			dmalloc_list = dp -> prev;
-		if (dp -> generation >= dmalloc_cutoff_generation)
-			dmalloc_outstanding -= dp -> size;
-		else
-			dmalloc_longterm -= dp -> size;
-
-		for (i = 0; i < DMLFSIZE; i++) {
-			if (dp -> low_fence [i] !=
-				(((unsigned long)
-				  (&dp -> low_fence [i])) % 143) + 113)
-			{
-				log_error ("malloc fence modified: %s(%d)",
-					   dp -> file, dp -> line);
-				abort ();
-			}
-		}
-		for (i = DMDOFFSET; i < DMDSIZE; i++) {
-			if (bar [i + dp -> size] !=
-				(((unsigned long)
-				  (&bar [i + dp -> size])) % 143) + 113) {
-				log_error ("malloc fence modified: %s(%d)",
-					   dp -> file, dp -> line);
-				abort ();
-			}
-		}
-		ptr = bar;
-	}
-#endif
-	free (ptr);
-}
-
-#if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL)
-/* For allocation functions that keep their own free lists, we want to
-   account for the reuse of the memory. */
-
-void dmalloc_reuse (foo, file, line, justref)
-	VOIDPTR foo;
-	const char *file;
-	int line;
-	int justref;
-{
-	struct dmalloc_preamble *dp;
-
-	/* Get the pointer to the dmalloc header. */
-	dp = foo;
-	dp--;
-
-	/* If we just allocated this and are now referencing it, this
-	   function would almost be a no-op, except that it would
-	   increment the generation count needlessly.  So just return
-	   in this case. */
-	if (dp -> generation == dmalloc_generation)
-		return;
-
-	/* If this is longterm data, and we just made reference to it,
-	   don't put it on the short-term list or change its name -
-	   we don't need to know about this. */
-	if (dp -> generation < dmalloc_cutoff_generation && justref)
-		return;
-
-	/* Take it out of the place in the allocated list where it was. */
-	if (dp -> prev)
-		dp -> prev -> next = dp -> next;
-	if (dp -> next)
-		dp -> next -> prev = dp -> prev;
-	if (dp == dmalloc_list)
-		dmalloc_list = dp -> prev;
-
-	/* Account for its removal. */
-	if (dp -> generation >= dmalloc_cutoff_generation)
-		dmalloc_outstanding -= dp -> size;
-	else
-		dmalloc_longterm -= dp -> size;
-
-	/* Now put it at the head of the list. */
-	dp -> prev = dmalloc_list;
-	if (dmalloc_list)
-		dmalloc_list -> next = dp;
-	dmalloc_list = dp;
-	dp -> next = (struct dmalloc_preamble *)0;
-
-	/* Change the reference location information. */
-	dp -> file = file;
-	dp -> line = line;
-
-	/* Increment the generation. */
-	dp -> generation = dmalloc_generation++;
-
-	/* Account for it. */
-	dmalloc_outstanding += dp -> size;
-}
-
-void dmalloc_dump_outstanding ()
-{
-	static unsigned long dmalloc_cutoff_point;
-	struct dmalloc_preamble *dp;
-	unsigned char *foo;
-	int i;
-
-	if (!dmalloc_cutoff_point)
-		dmalloc_cutoff_point = dmalloc_cutoff_generation;
-	for (dp = dmalloc_list; dp; dp = dp -> prev) {
-		if (dp -> generation <= dmalloc_cutoff_point)
-			break;
-#if defined (DEBUG_MALLOC_POOL)
-		for (i = 0; i < DMLFSIZE; i++) {
-			if (dp -> low_fence [i] !=
-				(((unsigned long)
-				  (&dp -> low_fence [i])) % 143) + 113)
-			{
-				log_error ("malloc fence modified: %s(%d)",
-					   dp -> file, dp -> line);
-				abort ();
-			}
-		}
-		foo = (unsigned char *)dp;
-		for (i = DMDOFFSET; i < DMDSIZE; i++) {
-			if (foo [i + dp -> size] !=
-				(((unsigned long)
-				  (&foo [i + dp -> size])) % 143) + 113) {
-				log_error ("malloc fence modified: %s(%d)",
-					   dp -> file, dp -> line);
-				abort ();
-			}
-		}
-#endif
-#if defined (DEBUG_MEMORY_LEAKAGE)
-		/* Don't count data that's actually on a free list
-                   somewhere. */
-		if (dp -> file)
-			log_info ("  %s(%d): %d",
-				  dp -> file, dp -> line, dp -> size);
-#endif
-	}
-	if (dmalloc_list)
-		dmalloc_cutoff_point = dmalloc_list -> generation;
-}
-#endif /* DEBUG_MEMORY_LEAKAGE || DEBUG_MALLOC_POOL */
-
-#if defined (DEBUG_RC_HISTORY)
-void dump_rc_history ()
-{
-	int i;
-
-	i = rc_history_index;
-	do {
-		log_info ("   referenced by %s(%d): addr = %lx  refcnt = %x\n",
-			  rc_history [i].file, rc_history [i].line,
-			  (unsigned long)rc_history [i].addr,
-			  rc_history [i].refcnt);
-		++i;
-		if (i == RC_HISTORY_MAX)
-			i = 0;
-	} while (i != rc_history_index && rc_history [i].file);
-}
-#endif
 
 struct dhcp_packet *new_dhcp_packet (file, line)
 	const char *file;
@@ -501,9 +236,9 @@ void free_lease_state (ptr, file, line)
 		option_state_dereference (&ptr -> options, file, line);
 	if (ptr -> packet)
 		packet_dereference (&ptr -> packet, file, line);
-	data_string_forget (&state -> parameter_request_list, file, line);
-	data_string_forget (&state -> filename, file, line);
-	data_string_forget (&state -> server_name, file, line);
+	data_string_forget (&ptr -> parameter_request_list, file, line);
+	data_string_forget (&ptr -> filename, file, line);
+	data_string_forget (&ptr -> server_name, file, line);
 	ptr -> next = free_lease_states;
 	free_lease_states = ptr;
 	dmalloc_reuse (free_lease_states, (char *)0, 0, 0);
@@ -690,7 +425,7 @@ void free_pair (foo, file, line)
 {
 	foo -> cdr = free_pairs;
 	free_pairs = foo;
-	dmalloc_reuse (free_expressions, (char *)0, 0, 0);
+	dmalloc_reuse (free_pairs, (char *)0, 0, 0);
 }
 
 struct expression *free_expressions;
@@ -721,8 +456,7 @@ int expression_reference (ptr, src, file, line)
 	int line;
 {
 	if (!ptr) {
-		log_error ("Null pointer in expression_reference: %s",
-			   file, line);
+		log_error ("%s(%d): null pointer", file, line);
 #if defined (POINTER_DEBUG)
 		abort ();
 #else
@@ -730,8 +464,7 @@ int expression_reference (ptr, src, file, line)
 #endif
 	}
 	if (*ptr) {
-		log_error ("Non-null pointer in expression_reference (%s)",
-		      file, line);
+		log_error ("%s(%d): non-null pointer", file, line);
 #if defined (POINTER_DEBUG)
 		abort ();
 #else
@@ -786,8 +519,7 @@ int option_cache_reference (ptr, src, file, line)
 	int line;
 {
 	if (!ptr) {
-		log_error ("Null pointer in option_cache_reference: %s",
-			   file, line);
+		log_error ("%s(%d): null pointer", file, line);
 #if defined (POINTER_DEBUG)
 		abort ();
 #else
@@ -795,8 +527,7 @@ int option_cache_reference (ptr, src, file, line)
 #endif
 	}
 	if (*ptr) {
-		log_error ("Non-null pointer in option_cache_reference (%s)",
-		      file, line);
+		log_error ("%s(%d): non-null pointer", file, line);
 #if defined (POINTER_DEBUG)
 		abort ();
 #else
@@ -833,8 +564,7 @@ int buffer_reference (ptr, bp, file, line)
 	int line;
 {
 	if (!ptr) {
-		log_error ("Null pointer passed to buffer_reference: %s",
-			   file, line);
+		log_error ("%s(%d): null pointer", file, line);
 #if defined (POINTER_DEBUG)
 		abort ();
 #else
@@ -842,8 +572,7 @@ int buffer_reference (ptr, bp, file, line)
 #endif
 	}
 	if (*ptr) {
-		log_error ("Non-null pointer in buffer_reference (%s)",
-			   file, line);
+		log_error ("%s(%d): non-null pointer", file, line);
 #if defined (POINTER_DEBUG)
 		abort ();
 #else
@@ -865,8 +594,7 @@ int buffer_dereference (ptr, file, line)
 	struct buffer *bp;
 
 	if (!ptr) {
-		log_error ("Null pointer passed to buffer_dereference: %s",
-			   file, line);
+		log_error ("%s(%d): null pointer", file, line);
 #if defined (POINTER_DEBUG)
 		abort ();
 #else
@@ -875,8 +603,7 @@ int buffer_dereference (ptr, file, line)
 	}
 
 	if (!*ptr) {
-		log_error ("Null pointer in buffer_dereference: %s",
-			   file, line);
+		log_error ("%s(%d): null pointer", file, line);
 #if defined (POINTER_DEBUG)
 		abort ();
 #else
@@ -885,11 +612,11 @@ int buffer_dereference (ptr, file, line)
 	}
 
 	(*ptr) -> refcnt--;
-	rc_register (name, line, *ptr, (*ptr) -> refcnt);
+	rc_register (file, line, *ptr, (*ptr) -> refcnt);
 	if (!(*ptr) -> refcnt)
 		dfree ((*ptr), file, line);
 	if ((*ptr) -> refcnt < 0) {
-		log_error ("buffer_dereference: negative refcnt!");
+		log_error ("%s(%d): negative refcnt!", file, line);
 #if defined (DEBUG_RC_HISTORY)
 		dump_rc_history ();
 #endif
@@ -927,8 +654,7 @@ int dns_host_entry_reference (ptr, bp, file, line)
 	int line;
 {
 	if (!ptr) {
-		log_error ("Null pointer in dns_host_entry_reference: %s",
-			   file, line);
+		log_error ("%s(%d): null pointer", file, line);
 #if defined (POINTER_DEBUG)
 		abort ();
 #else
@@ -936,8 +662,7 @@ int dns_host_entry_reference (ptr, bp, file, line)
 #endif
 	}
 	if (*ptr) {
-		log_error ("Non-null pointer in dns_host_entry_reference (%s)",
-			   file, line);
+		log_error ("%s(%d): non-null pointer", file, line);
 #if defined (POINTER_DEBUG)
 		abort ();
 #else
@@ -959,8 +684,7 @@ int dns_host_entry_dereference (ptr, file, line)
 	struct dns_host_entry *bp;
 
 	if (!ptr || !*ptr) {
-		log_error ("Null pointer in dns_host_entry_dereference: %s",
-			   file, line);
+		log_error ("%s(%d): null pointer", file, line);
 #if defined (POINTER_DEBUG)
 		abort ();
 #else
@@ -973,7 +697,7 @@ int dns_host_entry_dereference (ptr, file, line)
 	if (!(*ptr) -> refcnt)
 		dfree ((*ptr), file, line);
 	if ((*ptr) -> refcnt < 0) {
-		log_error ("dns_host_entry_dereference: negative refcnt!");
+		log_error ("%s(%d): negative refcnt!", file, line);
 #if defined (DEBUG_RC_HISTORY)
 		dump_rc_history ();
 #endif
@@ -995,8 +719,7 @@ int option_state_allocate (ptr, file, line)
 	unsigned size;
 
 	if (!ptr) {
-		log_error ("Null pointer passed to option_state_allocate: %s",
-			   file, line);
+		log_error ("%s(%d): null pointer", file, line);
 #if defined (POINTER_DEBUG)
 		abort ();
 #else
@@ -1004,8 +727,7 @@ int option_state_allocate (ptr, file, line)
 #endif
 	}
 	if (*ptr) {
-		log_error ("Non-null pointer in option_state_allocate (%s)",
-			   file, line);
+		log_error ("%s(%d): non-null pointer", file, line);
 #if defined (POINTER_DEBUG)
 		abort ();
 #else
@@ -1032,8 +754,7 @@ int option_state_reference (ptr, bp, file, line)
 	int line;
 {
 	if (!ptr) {
-		log_error ("Null pointer in option_state_reference: %s",
-			   file, line);
+		log_error ("%s(%d): null pointer", file, line);
 #if defined (POINTER_DEBUG)
 		abort ();
 #else
@@ -1041,8 +762,7 @@ int option_state_reference (ptr, bp, file, line)
 #endif
 	}
 	if (*ptr) {
-		log_error ("Non-null pointer in option_state_reference (%s)",
-			   file, line);
+		log_error ("%s(%d): non-null pointer", file, line);
 #if defined (POINTER_DEBUG)
 		abort ();
 #else
@@ -1065,8 +785,7 @@ int option_state_dereference (ptr, file, line)
 	struct option_state *options;
 
 	if (!ptr || !*ptr) {
-		log_error ("Null pointer in option_state_dereference: %s",
-			   file, line);
+		log_error ("%s(%d): null pointer", file, line);
 #if defined (POINTER_DEBUG)
 		abort ();
 #else
@@ -1082,7 +801,7 @@ int option_state_dereference (ptr, file, line)
 		return 1;
 
 	if (options -> refcnt < 0) {
-		log_error ("option_state_dereference: negative refcnt!");
+		log_error ("%s(%d): negative refcnt!", file, line);
 #if defined (DEBUG_RC_HISTORY)
 		dump_rc_history ();
 #endif
@@ -1125,8 +844,7 @@ int executable_statement_reference (ptr, bp, file, line)
 	int line;
 {
 	if (!ptr) {
-		log_error ("Null ptr in executable_statement_reference: %s",
-			   file, line);
+		log_error ("%s(%d): null pointer", file, line);
 #if defined (POINTER_DEBUG)
 		abort ();
 #else
@@ -1134,8 +852,7 @@ int executable_statement_reference (ptr, bp, file, line)
 #endif
 	}
 	if (*ptr) {
-		log_error ("Nonnull ptr in executable_statement_reference: %s",
-			   file, line);
+		log_error ("%s(%d): non-null pointer", file, line);
 #if defined (POINTER_DEBUG)
 		abort ();
 #else
@@ -1159,8 +876,7 @@ int packet_allocate (ptr, file, line)
 	int size;
 
 	if (!ptr) {
-		log_error ("Null pointer passed to packet_allocate: %s",
-			   file, line);
+		log_error ("%s(%d): null pointer", file, line);
 #if defined (POINTER_DEBUG)
 		abort ();
 #else
@@ -1168,8 +884,7 @@ int packet_allocate (ptr, file, line)
 #endif
 	}
 	if (*ptr) {
-		log_error ("Non-null pointer in packet_allocate (%s)",
-			   file, line);
+		log_error ("%s(%d): non-null pointer", file, line);
 #if defined (POINTER_DEBUG)
 		abort ();
 #else
@@ -1193,8 +908,7 @@ int packet_reference (ptr, bp, file, line)
 	int line;
 {
 	if (!ptr) {
-		log_error ("Null pointer in packet_reference: %s",
-			   file, line);
+		log_error ("%s(%d): null pointer", file, line);
 #if defined (POINTER_DEBUG)
 		abort ();
 #else
@@ -1202,8 +916,7 @@ int packet_reference (ptr, bp, file, line)
 #endif
 	}
 	if (*ptr) {
-		log_error ("Non-null pointer in packet_reference (%s)",
-			   file, line);
+		log_error ("%s(%d): non-null pointer", file, line);
 #if defined (POINTER_DEBUG)
 		abort ();
 #else
@@ -1226,8 +939,7 @@ int packet_dereference (ptr, file, line)
 	struct packet *packet;
 
 	if (!ptr || !*ptr) {
-		log_error ("Null pointer in packet_dereference: %s",
-			   file, line);
+		log_error ("%s(%d): null pointer", file, line);
 #if defined (POINTER_DEBUG)
 		abort ();
 #else
@@ -1243,7 +955,7 @@ int packet_dereference (ptr, file, line)
 		return 1;
 
 	if (packet -> refcnt < 0) {
-		log_error ("option_state_dereference: negative refcnt!");
+		log_error ("%s(%d): negative refcnt!", file, line);
 #if defined (DEBUG_RC_HISTORY)
 		dump_rc_history ();
 #endif
@@ -1258,7 +970,7 @@ int packet_dereference (ptr, file, line)
 		option_state_dereference (&packet -> options, file, line);
 	packet -> raw = (struct dhcp_packet *)free_packets;
 	free_packets = packet;
-	dmalloc_reuse (free_packets, (char *)0, 0);
+	dmalloc_reuse (free_packets, (char *)0, 0, 0);
 	return 1;
 }
 
@@ -1270,8 +982,7 @@ int binding_scope_allocate (ptr, file, line)
 	struct binding_scope *bp;
 
 	if (!ptr) {
-		log_error ("Null pointer in binding_scope_allocate: %s",
-			   file, line);
+		log_error ("%s(%d): null pointer", file, line);
 #if defined (POINTER_DEBUG)
 		abort ();
 #else
@@ -1280,8 +991,7 @@ int binding_scope_allocate (ptr, file, line)
 	}
 
 	if (*ptr) {
-		log_error ("Non-null pointer in binding_scope_allocate: %s",
-			   file, line);
+		log_error ("%s(%d): non-null pointer", file, line);
 #if defined (POINTER_DEBUG)
 		abort ();
 #else
@@ -1303,7 +1013,7 @@ int binding_scope_allocate (ptr, file, line)
 void data_string_copy (dest, src, file, line)
 	struct data_string *dest;
 	struct data_string *src;
-	const char *name;
+	const char *file;
 	int line;
 {
 	if (src -> buffer)
@@ -1316,7 +1026,7 @@ void data_string_copy (dest, src, file, line)
 /* Release the reference count to a data string's buffer (if any) and
    zero out the other information, yielding the null data string. */
 
-void data_string_forget (data, name)
+void data_string_forget (data, file, line)
 	struct data_string *data;
 	const char *file;
 	int line;

@@ -116,7 +116,7 @@ option domain-name-servers 10.0.0.1, 10.0.0.2;",
 
 #if 1
 	memset (&cid, 0, sizeof cid);
-	status = omapi_data_string_new (&cid, 6, "main");
+	status = omapi_data_string_new (&cid, 6, MDL);
 	if (status != ISC_R_SUCCESS) {
 		fprintf (stderr, "omapi_data_string_new: %s\n",
 			 isc_result_totext (status));
@@ -148,7 +148,7 @@ option domain-name-servers 10.0.0.1, 10.0.0.2;",
 
 #if 0
 	memset (&ip_addr, 0, sizeof ip_addr);
-	status = omapi_data_string_new (&ip_addr, 4, "main");
+	status = omapi_data_string_new (&ip_addr, 4, MDL);
 	if (status != ISC_R_SUCCESS) {
 		fprintf (stderr, "omapi_data_string_new: %s\n",
 			 isc_result_totext (status));
@@ -262,7 +262,7 @@ option smtp-server 10.0.0.1;",
 	}
 
 	memset (&ip_addr, 0, sizeof ip_addr);
-	status = omapi_data_string_new (&ip_addr, 4, "main");
+	status = omapi_data_string_new (&ip_addr, 4, MDL);
 	if (status != ISC_R_SUCCESS) {
 		fprintf (stderr, "omapi_data_string_new: %s\n",
 			 isc_result_totext (status));
@@ -318,14 +318,14 @@ option smtp-server 10.0.0.1;",
 				printf (":%02x", identifier -> value [i]);
 			}
 			putchar ('\n');
-			dhcpctl_data_string_dereference (&identifier, "main");
+			dhcpctl_data_string_dereference (&identifier, MDL);
 			status = dhcpctl_get_value (&identifier, lease_handle,
 						    "hardware-type");
 			if (status == ISC_R_SUCCESS) {
 				printf ("lease hardware type = %d\n",
 					identifier -> value [0]);
 				dhcpctl_data_string_dereference (&identifier,
-								 "main");
+								 MDL);
 			}
 		} else {
 			printf ("Unable to find identifier for lease.\n");

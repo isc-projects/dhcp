@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: db.c,v 1.41 2000/01/25 01:39:57 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: db.c,v 1.42 2000/01/26 14:56:18 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -324,7 +324,7 @@ int write_host (host)
 					   (struct option_state *)0,
 					   (struct option_state *)0,
 					   &global_scope,
-					   host -> fixed_addr)) {
+					   host -> fixed_addr, MDL)) {
 		
 			errno = 0;
 			fprintf (db_file, "\n  fixed-address ");

@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.96 2000/01/25 01:38:17 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.97 2000/01/26 14:56:18 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -655,7 +655,7 @@ void parse_failover_peer (cfile, group, type)
 		return;
 	}
 
-	peer = dmalloc (sizeof *peer, "parse_failover_peer");
+	peer = dmalloc (sizeof *peer, MDL);
 	if (!peer)
 		log_fatal ("no memory for failover peer%s.", name);
 	memset (peer, 0, sizeof *peer);
@@ -1620,7 +1620,8 @@ void parse_shared_net_declaration (cfile, group)
 		if (token == RBRACE) {
 			token = next_token (&val, cfile);
 			if (!share -> subnets) {
-				parse_warn (cfile, MDL);
+				parse_warn (cfile,
+					    "empty shared-network decl");
 				return;
 			}
 			enter_shared_network (share);

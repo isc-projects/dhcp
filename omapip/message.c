@@ -30,23 +30,24 @@ isc_result_t omapi_message_new (omapi_object_t **o, const char *file, int line)
 	omapi_object_t *g;
 	isc_result_t status;
 
-	m = malloc (sizeof *m);
+	m = dmalloc (sizeof *m, file, line);
 	if (!m)
 		return ISC_R_NOMEMORY;
 	memset (m, 0, sizeof *m);
 	m -> type = omapi_type_message;
+	rc_register (file, line, m, m -> refcnt);
 	m -> refcnt = 1;
 
 	g = (omapi_object_t *)0;
 	status = omapi_generic_new (&g, file, line);
 	if (status != ISC_R_SUCCESS) {
-		free (m);
+		dfree (m, file, line);
 		return status;
 	}
 	status = omapi_object_reference (&m -> inner, g, file, line);
 	if (status != ISC_R_SUCCESS) {
 		omapi_object_dereference ((omapi_object_t **)&m, file, line);
-		omapi_object_dereference (&g, name);
+		omapi_object_dereference (&g, file, line);
 		return status;
 	}
 	status = omapi_object_reference (&g -> outer,
@@ -54,7 +55,7 @@ isc_result_t omapi_message_new (omapi_object_t **o, const char *file, int line)
 
 	if (status != ISC_R_SUCCESS) {
 		omapi_object_dereference ((omapi_object_t **)&m, file, line);
-		omapi_object_dereference (&g, name);
+		omapi_object_dereference (&g, file, line);
 		return status;
 	}
 
@@ -84,28 +85,24 @@ isc_result_t omapi_message_set_value (omapi_object_t *h,
 	/* Can set authenticator, but the value must be typed data. */
 	if (!omapi_ds_strcmp (name, "authenticator")) {
 		if (m -> authenticator)
-			omapi_typed_data_dereference
-				(&m -> authenticator, MDL);
-		omapi_typed_data_reference (&m -> authenticator,
-					    value, MDL);
+			omapi_typed_data_dereference (&m -> authenticator,
+						      MDL);
+		omapi_typed_data_reference (&m -> authenticator, value, MDL);
 		return ISC_R_SUCCESS;
 
 	} else if (!omapi_ds_strcmp (name, "object")) {
 		if (value -> type != omapi_datatype_object)
 			return ISC_R_INVALIDARG;
 		if (m -> object)
-			omapi_object_dereference
-				(&m -> object, MDL);
-		omapi_object_reference (&m -> object,
-					value -> u.object, MDL);
+			omapi_object_dereference (&m -> object, MDL);
+		omapi_object_reference (&m -> object, value -> u.object, MDL);
 		return ISC_R_SUCCESS;
 
 	} else if (!omapi_ds_strcmp (name, "notify-object")) {
 		if (value -> type != omapi_datatype_object)
 			return ISC_R_INVALIDARG;
 		if (m -> notify_object)
-			omapi_object_dereference
-				(&m -> notify_object, MDL);
+			omapi_object_dereference (&m -> notify_object, MDL);
 		omapi_object_reference (&m -> notify_object,
 					value -> u.object, MDL);
 		return ISC_R_SUCCESS;
@@ -205,7 +202,7 @@ isc_result_t omapi_message_destroy (omapi_object_t *h,
 	omapi_message_object_t *m;
 	if (h -> type != omapi_type_message)
 		return ISC_R_INVALIDARG;
-	m = (omapi_message_object *)h;
+	m = (omapi_message_object_t *)h;
 	if (m -> authenticator) {
 		omapi_typed_data_dereference (&m -> authenticator, file, line);
 	}
@@ -276,18 +273,16 @@ isc_result_t omapi_message_register (omapi_object_t *mo)
 	if (omapi_registered_messages) {
 		omapi_object_reference
 			((omapi_object_t **)&m -> next,
-			 (omapi_object_t *)omapi_registered_messages,
-			 file, line);
+			 (omapi_object_t *)omapi_registered_messages, MDL);
 		omapi_object_reference
 			((omapi_object_t **)&omapi_registered_messages -> prev,
-			 (omapi_object_t *)m, file, line);
+			 (omapi_object_t *)m, MDL);
 		omapi_object_dereference
-			((omapi_object_t **)&omapi_registered_messages,
-			 file, line);
+			((omapi_object_t **)&omapi_registered_messages, MDL);
 	}
 	omapi_object_reference
 		((omapi_object_t **)&omapi_registered_messages,
-		 (omapi_object_t *)m, file, line);
+		 (omapi_object_t *)m, MDL);
 	return ISC_R_SUCCESS;;
 }
 

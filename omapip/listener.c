@@ -32,26 +32,24 @@ isc_result_t omapi_listen (omapi_object_t *h,
 	omapi_listener_object_t *obj;
 
 	/* Get the handle. */
-	obj = (omapi_listener_object_t *)malloc (sizeof *obj);
+	obj = (omapi_listener_object_t *)dmalloc (sizeof *obj, MDL);
 	if (!obj)
 		return ISC_R_NOMEMORY;
 	memset (obj, 0, sizeof *obj);
 	obj -> refcnt = 1;
+	rc_register_mdl (obj, obj -> refcnt);
 	obj -> type = omapi_type_listener;
 
 	/* Connect this object to the inner object. */
-	status = omapi_object_reference (&h -> outer, (omapi_object_t *)obj,
-					 "omapi_protocol_listen");
+	status = omapi_object_reference (&h -> outer,
+					 (omapi_object_t *)obj, MDL);
 	if (status != ISC_R_SUCCESS) {
-		omapi_object_dereference ((omapi_object_t **)&obj,
-					  "omapi_protocol_listen");
+		omapi_object_dereference ((omapi_object_t **)&obj, MDL);
 		return status;
 	}
-	status = omapi_object_reference (&obj -> inner, h,
-					 "omapi_protocol_listen");
+	status = omapi_object_reference (&obj -> inner, h, MDL);
 	if (status != ISC_R_SUCCESS) {
-		omapi_object_dereference ((omapi_object_t **)&obj,
-					  "omapi_protocol_listen");
+		omapi_object_dereference ((omapi_object_t **)&obj, MDL);
 		return status;
 	}
 
@@ -62,8 +60,7 @@ isc_result_t omapi_listen (omapi_object_t *h,
 	/* Create a socket on which to listen. */
 	obj -> socket = socket (PF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if (!obj -> socket) {
-		omapi_object_dereference ((omapi_object_t **)&obj,
-					  "omapi_listen");
+		omapi_object_dereference ((omapi_object_t **)&obj, MDL);
 		if (errno == EMFILE || errno == ENFILE || errno == ENOBUFS)
 			return ISC_R_NORESOURCES;
 		return ISC_R_UNEXPECTED;
@@ -72,8 +69,7 @@ isc_result_t omapi_listen (omapi_object_t *h,
 #if defined (HAVE_SETFD)
 	if (fcntl (obj -> socket, F_SETFD, 1) < 0) {
 		close (obj -> socket);
-		omapi_object_dereference ((omapi_object_t **)&obj,
-					  "omapi_listen");
+		omapi_object_dereference ((omapi_object_t **)&obj, MDL);
 		return ISC_R_UNEXPECTED;
 	}
 #endif
@@ -82,8 +78,7 @@ isc_result_t omapi_listen (omapi_object_t *h,
            we were given. */
 	if (bind (obj -> socket,
 		  (struct sockaddr *)&obj -> address, sizeof obj -> address)) {
-		omapi_object_dereference ((omapi_object_t **)&obj,
-					  "omapi_listen");
+		omapi_object_dereference ((omapi_object_t **)&obj, MDL);
 		if (errno == EADDRINUSE)
 			return ISC_R_ADDRNOTAVAIL;
 		if (errno == EPERM)
@@ -93,14 +88,12 @@ isc_result_t omapi_listen (omapi_object_t *h,
 
 	/* Now tell the kernel to listen for connections. */
 	if (listen (obj -> socket, max)) {
-		omapi_object_dereference ((omapi_object_t **)&obj,
-					  "omapi_listen");
+		omapi_object_dereference ((omapi_object_t **)&obj, MDL);
 		return ISC_R_UNEXPECTED;
 	}
 
 	if (fcntl (obj -> socket, F_SETFL, O_NONBLOCK) < 0) {
-		omapi_object_dereference ((omapi_object_t **)&obj,
-					  "omapi_connect");
+		omapi_object_dereference ((omapi_object_t **)&obj, MDL);
 		return ISC_R_UNEXPECTED;
 	}
 
@@ -108,8 +101,7 @@ isc_result_t omapi_listen (omapi_object_t *h,
 					   omapi_listener_readfd, 0,
 					   omapi_accept, 0, 0);
 	if (status != ISC_R_SUCCESS) {
-		omapi_object_dereference ((omapi_object_t **)&obj,
-					  "omapi_listen");
+		omapi_object_dereference ((omapi_object_t **)&obj, MDL);
 		return status;
 	}
 
@@ -142,11 +134,12 @@ isc_result_t omapi_accept (omapi_object_t *h)
 	listener = (omapi_listener_object_t *)h;
 	
 	/* Get the handle. */
-	obj = (omapi_connection_object_t *)malloc (sizeof *obj);
+	obj = (omapi_connection_object_t *)dmalloc (sizeof *obj, MDL);
 	if (!obj)
 		return ISC_R_NOMEMORY;
 	memset (obj, 0, sizeof *obj);
 	obj -> refcnt = 1;
+	rc_register_mdl (obj, obj -> refcnt);
 	obj -> type = omapi_type_connection;
 
 	/* Accept the connection. */
@@ -156,8 +149,7 @@ isc_result_t omapi_accept (omapi_object_t *h)
 			((struct sockaddr *)
 			 &(obj -> remote_addr)), &len);
 	if (obj -> socket < 0) {
-		omapi_object_dereference ((omapi_object_t **)&obj,
-					  "omapi_accept");
+		omapi_object_dereference ((omapi_object_t **)&obj, MDL);
 		if (errno == EMFILE || errno == ENFILE || errno == ENOBUFS)
 			return ISC_R_NORESOURCES;
 		return ISC_R_UNEXPECTED;
@@ -172,19 +164,18 @@ isc_result_t omapi_accept (omapi_object_t *h)
 					   omapi_connection_writer,
 					   omapi_connection_reaper);
 	if (status != ISC_R_SUCCESS) {
-		omapi_object_dereference ((omapi_object_t **)&obj,
-					  "omapi_accept");
+		omapi_object_dereference ((omapi_object_t **)&obj, MDL);
 		return status;
 	}
 
-	omapi_object_reference (&obj -> listener, (omapi_object_t *)listener,
-				"omapi_accept");
+	omapi_object_reference (&obj -> listener,
+				(omapi_object_t *)listener, MDL);
 
 	status = omapi_signal (h, "connect", obj);
 
 	/* Lose our reference to the connection, so it'll be gc'd when it's
 	   reaped. */
-	omapi_object_dereference ((omapi_object_t **)&obj, "omapi_accept");
+	omapi_object_dereference ((omapi_object_t **)&obj, MDL);
 	return status;
 }
 
@@ -216,7 +207,8 @@ isc_result_t omapi_listener_get_value (omapi_object_t *h,
 	return ISC_R_NOTFOUND;
 }
 
-isc_result_t omapi_listener_destroy (omapi_object_t *h, const char *name)
+isc_result_t omapi_listener_destroy (omapi_object_t *h,
+				     const char *file, int line)
 {
 	omapi_listener_object_t *l;
 

@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: conflex.c,v 1.65 2000/01/25 01:03:36 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: conflex.c,v 1.66 2000/01/26 14:55:33 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -45,7 +45,7 @@ isc_result_t new_parse (cfile, file, inbuf, buflen, name)
 {
 	struct parse *tmp;
 
-	tmp = dmalloc (sizeof (struct parse), "new_parse");
+	tmp = dmalloc (sizeof (struct parse), MDL);
 	if (!tmp)
 		return ISC_R_NOMEMORY;
 	memset (tmp, 0, sizeof *tmp);
@@ -66,9 +66,9 @@ isc_result_t new_parse (cfile, file, inbuf, buflen, name)
 		tmp -> bufsiz = 0;
 		tmp -> inbuf = inbuf;
 	} else {
-		tmp -> inbuf = dmalloc (8192, "new_parse");
+		tmp -> inbuf = dmalloc (8192, MDL);
 		if (!tmp -> inbuf) {
-			dfree (tmp, "new_parse");
+			dfree (tmp, MDL);
 			return ISC_R_NOMEMORY;
 		}
 		tmp -> bufsiz = 8192;
@@ -82,8 +82,8 @@ isc_result_t end_parse (cfile)
 	struct parse **cfile;
 {
 	if ((*cfile) -> bufsiz)
-		dfree ((*cfile) -> inbuf, "end_parse");
-	dfree (*cfile, "end_parse");
+		dfree ((*cfile) -> inbuf, MDL);
+	dfree (*cfile, MDL);
 	*cfile = (struct parse *)0;
 	return ISC_R_SUCCESS;
 }

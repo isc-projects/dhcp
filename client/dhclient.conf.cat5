@@ -375,7 +375,7 @@ dhclient.conf(5)                                 dhclient.conf(5)
        If no lease is acquired, the script is used to test prede­
        fined leases, if any, and also called  once  if  no  valid
        lease  can  be  identified.    For  more  information, see
-       ddhhcclliieenntt--lleeaassee((88))..
+       ddhhcclliieenntt--ssccrriipptt((88))..
 
         mmeeddiiuumm ""_m_e_d_i_a _s_e_t_u_p"";;
 

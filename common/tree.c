@@ -22,10 +22,13 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.68 2000/01/25 01:16:14 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.69 2000/01/26 14:55:35 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
+#include <omapip/omapip_p.h>
+
+struct binding_scope global_scope;
 
 static int do_host_lookup PROTO ((struct data_string *,
 				  struct dns_host_entry *));
@@ -42,13 +45,14 @@ pair cons (car, cdr)
 	return foo;
 }
 
-int make_const_option_cache (oc, buffer, data, len, option, name)
+int make_const_option_cache (oc, buffer, data, len, option, file, line)
 	struct option_cache **oc;
 	struct buffer **buffer;
 	u_int8_t *data;
 	unsigned len;
 	struct option *option;
-	const char *name;
+	const char *file;
+	int line;
 {
 	struct buffer *bp;
 
@@ -57,15 +61,16 @@ int make_const_option_cache (oc, buffer, data, len, option, name)
 		*buffer = 0;
 	} else {
 		bp = (struct buffer *)0;
-		if (!buffer_allocate (&bp, len, name)) {
-			log_error ("%s: can't allocate buffer.", name);	
+		if (!buffer_allocate (&bp, len, file, line)) {
+			log_error ("%s(%d): can't allocate buffer.",
+				   file, line);
 			return 0;
 		}
 	}
 
-	if (!option_cache_allocate (oc, name)) {
-		log_error ("%s: can't allocate option cache.", name);
-		buffer_dereference (&bp, name);
+	if (!option_cache_allocate (oc, file, line)) {
+		log_error ("%s(%d): can't allocate option cache.", file, line);
+		buffer_dereference (&bp, file, line);
 		return 0;
 	}
 
@@ -397,6 +402,7 @@ static int do_host_lookup (result, dns)
 	return 1;
 }
 
+#if defined (NSUPDATE)
 int evaluate_dns_expression (result, packet, lease, in_options,
 			     cfg_options, scope, expr)
 	ns_updrec **result;
@@ -611,6 +617,7 @@ int evaluate_dns_expression (result, packet, lease, in_options,
 		   expr -> op);
 	return 0;
 }
+#endif /* defined (NSUPDATE) */
 
 int evaluate_boolean_expression (result, packet, lease, in_options,
 				 cfg_options, scope, expr)
@@ -802,7 +809,7 @@ int evaluate_boolean_expression (result, packet, lease, in_options,
 			*result = 0;
 #if defined (DEBUG_EXPRESSIONS)
 		log_debug ("boolean: %s? = %s", expr -> variable,
-			   s0 ? "true" : "false";
+			   s0 ? "true" : "false");
 #endif
 		return 1;
 
@@ -828,6 +835,8 @@ int evaluate_boolean_expression (result, packet, lease, in_options,
 	      case expr_leased_address:
 	      case expr_null:
 	      case expr_variable_reference:
+	      case expr_filename:
+	      case expr_sname:
 		log_error ("Data opcode in evaluate_boolean_expression: %d",
 		      expr -> op);
 		return 0;
@@ -1630,10 +1639,12 @@ int evaluate_numeric_expression (result, packet, lease,
 {
 	struct data_string data;
 	int status;
+#if defined (NSUPDATE)
 	ns_updrec *nut;
 	static struct __res_state res;
 	ns_updque uq;
 	static int inited;
+#endif
 	struct expression *cur, *next;
 
 	switch (expr -> op) {
@@ -1868,8 +1879,8 @@ int evaluate_boolean_option_cache (ignorep, packet, lease, in_options,
 		return 0;
 	
 	memset (&ds, 0, sizeof ds);
-	if (!evaluate_option_cache (&ds, packet, lease,
-				    in_options, cfg_options, scope, oc))
+	if (!evaluate_option_cache (&ds, packet, lease, in_options,
+				    cfg_options, scope, oc, file, line))
 		return 0;
 
 	if (ds.len) {
@@ -1889,7 +1900,7 @@ int evaluate_boolean_option_cache (ignorep, packet, lease, in_options,
    or FALSE if it failed. */
 
 int evaluate_boolean_expression_result (ignorep, packet, lease, in_options,
-					cfg_options, scope, expr, file, line)
+					cfg_options, scope, expr)
 	int *ignorep;
 	struct packet *packet;
 	struct lease *lease;
@@ -1897,8 +1908,6 @@ int evaluate_boolean_expression_result (ignorep, packet, lease, in_options,
 	struct option_state *cfg_options;
 	struct binding_scope *scope;
 	struct expression *expr;
-	const char *file;
-	int line;
 {
 	int result;
 
@@ -1908,7 +1917,7 @@ int evaluate_boolean_expression_result (ignorep, packet, lease, in_options,
 	
 	if (!evaluate_boolean_expression (&result, packet, lease,
 					  in_options, cfg_options,
-					  scope, expr, file, line))
+					  scope, expr))
 		return 0;
 
 	if (result == 2) {
@@ -1922,9 +1931,10 @@ int evaluate_boolean_expression_result (ignorep, packet, lease, in_options,
 
 /* Dereference an expression node, and if the reference count goes to zero,
    dereference any data it refers to, and then free it. */
-void expression_dereference (eptr, name)
+void expression_dereference (eptr, file, line)
 	struct expression **eptr;
-	const char *name;
+	const char *file;
+	int line;
 {
 	struct expression *expr = *eptr;
 
@@ -1938,7 +1948,7 @@ void expression_dereference (eptr, name)
 	if (expr -> refcnt > 0)
 		return;
 	if (expr -> refcnt < 0) {
-		log_error ("expression_dereference: negative refcnt!");
+		log_error ("%s(%d): negative refcnt!", file, line);
 #if defined (DEBUG_RC_HISTORY)
 		dump_rc_history ();
 #endif
@@ -1958,44 +1968,46 @@ void expression_dereference (eptr, name)
 	      case expr_and:
 	      case expr_or:
 		if (expr -> data.equal [0])
-			expression_dereference (&expr -> data.equal [0], name);
+			expression_dereference (&expr -> data.equal [0],
+						file, line);
 		if (expr -> data.equal [1])
-			expression_dereference (&expr -> data.equal [1], name);
+			expression_dereference (&expr -> data.equal [1],
+						file, line);
 		break;
 
 	      case expr_substring:
 		if (expr -> data.substring.expr)
 			expression_dereference (&expr -> data.substring.expr,
-						name);
+						file, line);
 		if (expr -> data.substring.offset)
 			expression_dereference (&expr -> data.substring.offset,
-						name);
+						file, line);
 		if (expr -> data.substring.len)
 			expression_dereference (&expr -> data.substring.len,
-						name);
+						file, line);
 		break;
 
 	      case expr_suffix:
 		if (expr -> data.suffix.expr)
 			expression_dereference (&expr -> data.suffix.expr,
-						name);
+						file, line);
 		if (expr -> data.suffix.len)
 			expression_dereference (&expr -> data.suffix.len,
-						name);
+						file, line);
 		break;
 
 	      case expr_not:
 		if (expr -> data.not)
-			expression_dereference (&expr -> data.not, name);
+			expression_dereference (&expr -> data.not, file, line);
 		break;
 
 	      case expr_packet:
 		if (expr -> data.packet.offset)
 			expression_dereference (&expr -> data.packet.offset,
-						name);
+						file, line);
 		if (expr -> data.packet.len)
 			expression_dereference (&expr -> data.packet.len,
-						name);
+						file, line);
 		break;
 
 	      case expr_extract_int8:
@@ -2003,7 +2015,7 @@ void expression_dereference (eptr, name)
 	      case expr_extract_int32:
 		if (expr -> data.extract_int)
 			expression_dereference (&expr -> data.extract_int,
-						name);
+						file, line);
 		break;
 
 	      case expr_encode_int8:
@@ -2011,70 +2023,72 @@ void expression_dereference (eptr, name)
 	      case expr_encode_int32:
 		if (expr -> data.encode_int)
 			expression_dereference (&expr -> data.encode_int,
-						name);
+						file, line);
 		break;
 
 	      case expr_encapsulate:
 	      case expr_const_data:
-		data_string_forget (&expr -> data.const_data, name);
+		data_string_forget (&expr -> data.const_data, file, line);
 		break;
 
 	      case expr_host_lookup:
 		if (expr -> data.host_lookup)
 			dns_host_entry_dereference (&expr -> data.host_lookup,
-						    name);
+						    file, line);
 		break;
 
 	      case expr_binary_to_ascii:
 		if (expr -> data.b2a.base)
-			expression_dereference (&expr -> data.b2a.base, name);
+			expression_dereference (&expr -> data.b2a.base,
+						file, line);
 		if (expr -> data.b2a.width)
-			expression_dereference (&expr -> data.b2a.width, name);
+			expression_dereference (&expr -> data.b2a.width,
+						file, line);
 		if (expr -> data.b2a.seperator)
 			expression_dereference (&expr -> data.b2a.seperator,
-						name);
+						file, line);
 		if (expr -> data.b2a.buffer)
 			expression_dereference (&expr -> data.b2a.buffer,
-						name);
+						file, line);
 		break;
 
 	      case expr_pick_first_value:
 		if (expr -> data.pick_first_value.car)
-			expression_dereference
-				(&expr -> data.pick_first_value.car, name);
+		    expression_dereference (&expr -> data.pick_first_value.car,
+					    file, line);
 		if (expr -> data.pick_first_value.cdr)
-			expression_dereference
-				(&expr -> data.pick_first_value.cdr, name);
+		    expression_dereference (&expr -> data.pick_first_value.cdr,
+					    file, line);
 		break;
 
 	      case expr_reverse:
 		if (expr -> data.reverse.width)
 			expression_dereference (&expr -> data.reverse.width,
-						name);
+						file, line);
 		if (expr -> data.reverse.buffer)
 			expression_dereference
-				(&expr -> data.reverse.buffer, name);
+				(&expr -> data.reverse.buffer, file, line);
 		break;
 
 	      case expr_dns_transaction:
 		if (expr -> data.dns_transaction.car)
-			expression_dereference
-				(&expr -> data.dns_transaction.car, name);
+		    expression_dereference (&expr -> data.dns_transaction.car,
+					    file, line);
 		if (expr -> data.dns_transaction.cdr)
-			expression_dereference
-				(&expr -> data.dns_transaction.cdr, name);
+		    expression_dereference (&expr -> data.dns_transaction.cdr,
+					    file, line);
 		break;
 
 	      case expr_ns_add:
 		if (expr -> data.ns_add.rrname)
 		    expression_dereference (&expr -> data.ns_add.rrname,
-					    name);
+					    file, line);
 		if (expr -> data.ns_add.rrdata)
 		    expression_dereference (&expr -> data.ns_add.rrdata,
-					    name);
+					    file, line);
 		if (expr -> data.ns_add.ttl)
 		    expression_dereference (&expr -> data.ns_add.ttl,
-					    name);
+					    file, line);
 		break;
 
 	      case expr_ns_delete:
@@ -2082,16 +2096,16 @@ void expression_dereference (eptr, name)
 	      case expr_ns_not_exists:
 		if (expr -> data.ns_delete.rrname)
 		    expression_dereference (&expr -> data.ns_delete.rrname,
-					    name);
+					    file, line);
 		if (expr -> data.ns_delete.rrdata)
 		    expression_dereference (&expr -> data.ns_delete.rrdata,
-					    name);
+					    file, line);
 		break;
 
 	      case expr_variable_reference:
 	      case expr_variable_exists:
 		if (expr -> data.variable)
-			dfree (expr -> data.variable, name);
+			dfree (expr -> data.variable, file, line);
 		break;
 
 		/* No subexpressions. */
@@ -2794,31 +2808,31 @@ struct binding *find_binding (struct binding_scope *scope, const char *name)
 	return (struct binding *)0;
 }
 
-int free_bindings (struct binding_scope *scope, const char *name)
+int free_bindings (struct binding_scope *scope, const char *file, int line)
 {
 	struct binding *bp, *next;
 
 	for (bp = scope -> bindings; bp; bp = next) {
 		next = bp -> next;
 		if (bp -> name)
-			dfree (bp -> name, name);
+			dfree (bp -> name, file, line);
 		if (bp -> value.data)
-			data_string_forget (&bp -> value, name);
-		dfree (bp, name);
+			data_string_forget (&bp -> value, file, line);
+		dfree (bp, file, line);
 	}
 	scope -> bindings = (struct binding *)0;
 	return 1;
 }
 
-int binding_scope_dereference (ptr, name)
+int binding_scope_dereference (ptr, file, line)
 	struct binding_scope **ptr;
-	const char *name;
+	const char *file;
+	int line;
 {
 	struct binding_scope *bp;
 
 	if (!ptr || !*ptr) {
-		log_error ("Null pointer in binding_scope_dereference: %s",
-			   name);
+		log_error ("%s(%d): null pointer", file, line);
 #if defined (POINTER_DEBUG)
 		abort ();
 #else
@@ -2827,8 +2841,8 @@ int binding_scope_dereference (ptr, name)
 	}
 
 	if ((*ptr) -> bindings)
-		free_bindings (*ptr, name);
-	dfree ((*ptr), name);
+		free_bindings (*ptr, file, line);
+	dfree ((*ptr), file, line);
 	*ptr = (struct binding_scope *)0;
 	return 1;
 }

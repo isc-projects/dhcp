@@ -49,7 +49,7 @@ OOPPEERRAATTIIOONN
        dhclient  creates  a new dhclient.leases file from its in-
        core   lease   database.    The   old   version   of   the
        dhclient.leases   file   is   retained   under   the  name
-       _d_h_c_p_d_._l_e_a_s_e_s_~ until the next time  dhclient  rewrites  the
+       _d_h_c_l_i_e_n_t_._l_e_a_s_e_s_~ until the next time dhclient rewrites the
        database.
 
        Old  leases  are  kept  around  in case the DHCP server is

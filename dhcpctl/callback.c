@@ -3,7 +3,7 @@
    The dhcpctl callback object. */
 
 /*
- * Copyright (c) 1996-1999 Internet Software Consortium.
+ * Copyright (c) 1996-2000 Internet Software Consortium.
  * Use is subject to license terms which appear in the file named
  * ISC-LICENSE that should have accompanied this file when you
  * received it.   If a file named ISC-LICENSE did not accompany this
@@ -44,21 +44,20 @@ dhcpctl_status dhcpctl_set_callback (dhcpctl_handle h, void *data,
 	omapi_object_t *inner;
 	isc_result_t status;
 
-	callback = malloc (sizeof *callback);
+	callback = dmalloc (sizeof *callback, MDL);
 	if (!callback)
 		return ISC_R_NOMEMORY;
 
 	/* Tie the callback object to the innermost object in the chain. */
 	for (inner = h; inner -> inner; inner = inner -> inner)
 		;
-	omapi_object_reference (&inner -> inner, (omapi_object_t *)callback,
-				"dhcpctl_set_callback");
-	omapi_object_reference ((omapi_object_t **)&callback -> outer, inner,
-				"dhcpctl_set_callback");
+	omapi_object_reference (&inner -> inner,
+				(omapi_object_t *)callback, MDL);
+	omapi_object_reference ((omapi_object_t **)&callback -> outer,
+				inner, MDL);
 
 	/* Save the actual handle pointer we were passed for the callback. */
-	omapi_object_reference (&callback -> object, h,
-				"dhcpctl_set_callback");
+	omapi_object_reference (&callback -> object, h, MDL);
 	callback -> data = data;
 	callback -> callback = func;
 	
@@ -126,7 +125,8 @@ isc_result_t dhcpctl_callback_signal_handler (omapi_object_t *o,
 	return ISC_R_SUCCESS;
 }
 
-isc_result_t dhcpctl_callback_destroy (omapi_object_t *h, const char *name)
+isc_result_t dhcpctl_callback_destroy (omapi_object_t *h,
+				       const char *file, int line)
 {
 	dhcpctl_callback_object_t *p;
 	if (h -> type != dhcpctl_callback_type)
@@ -134,7 +134,7 @@ isc_result_t dhcpctl_callback_destroy (omapi_object_t *h, const char *name)
 	p = (dhcpctl_callback_object_t *)h;
 	if (p -> handle)
 		omapi_object_dereference ((omapi_object_t **)&p -> handle,
-					  name);
+					  file, line);
 	return ISC_R_SUCCESS;
 }
 

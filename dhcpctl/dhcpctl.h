@@ -80,7 +80,7 @@ isc_result_t dhcpctl_callback_set_value  (omapi_object_t *, omapi_object_t *,
 isc_result_t dhcpctl_callback_get_value (omapi_object_t *, omapi_object_t *,
 					 omapi_data_string_t *,
 					 omapi_value_t **); 
-isc_result_t dhcpctl_callback_destroy (omapi_object_t *, const char *);
+isc_result_t dhcpctl_callback_destroy (omapi_object_t *, const char *, int);
 isc_result_t dhcpctl_callback_signal_handler (omapi_object_t *,
 					      const char *, va_list);
 isc_result_t dhcpctl_callback_stuff_values (omapi_object_t *,
@@ -96,12 +96,12 @@ isc_result_t dhcpctl_remote_set_value  (omapi_object_t *, omapi_object_t *,
 isc_result_t dhcpctl_remote_get_value (omapi_object_t *, omapi_object_t *,
 				       omapi_data_string_t *,
 				       omapi_value_t **); 
-isc_result_t dhcpctl_remote_destroy (omapi_object_t *, const char *);
+isc_result_t dhcpctl_remote_destroy (omapi_object_t *, const char *, int);
 isc_result_t dhcpctl_remote_signal_handler (omapi_object_t *,
 					    const char *, va_list);
 isc_result_t dhcpctl_remote_stuff_values (omapi_object_t *,
 					  omapi_object_t *,
 					  omapi_object_t *);
 isc_result_t dhcpctl_data_string_dereference (dhcpctl_data_string *,
-					      const char *);
+					      const char *, int);
 #endif /* _DHCPCTL_H_ */
