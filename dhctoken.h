@@ -90,7 +90,7 @@
 #define ONE_LEASE_PER_CLIENT 294
 #define GET_LEASE_HOSTNAMES 295
 #define USE_HOST_DECL_NAMES 296
-#define HOSTNAME	297
+#define SEND		297
 #define CLIENT_IDENTIFIER 298
 #define REQUEST		299
 #define REQUIRE		300
@@ -102,6 +102,14 @@
 #define RENEW		306
 #define	REBIND		307
 #define EXPIRE		308
+#define UNKNOWN_CLIENTS	309
+#define	ALLOW		310
+#define BOOTP		311
+#define DENY		312
+#define BOOTING		313
+#define DEFAULT		314
+#define MEDIA		315
+#define MEDIUM		316
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\
 				 (x) != STRING &&	\

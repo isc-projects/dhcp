@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: conflex.c,v 1.20 1997/02/18 14:32:30 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: conflex.c,v 1.21 1997/02/22 08:29:24 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -352,7 +352,15 @@ static int intern (atom, dfv)
 		return dfv;
 
 	switch (tolower (atom [0])) {
+	      case 'a':
+		if (!strcasecmp (atom + 1, "llow"))
+			return ALLOW;
+		break;
 	      case 'b':
+		if (!strcasecmp (atom + 1, "ootp"))
+			return BOOTP;
+		if (!strcasecmp (atom + 1, "ooting"))
+			return BOOTING;
 		if (!strcasecmp (atom + 1, "oot-unknown-clients"))
 			return BOOT_UNKNOWN_CLIENTS;
 	      case 'c':
@@ -364,15 +372,23 @@ static int intern (atom, dfv)
 			return CLIENT_IDENTIFIER;
 		break;
 	      case 'd':
-		if (!strcasecmp (atom + 1, "efault-lease-time"))
-			return DEFAULT_LEASE_TIME;
+		if (!strcasecmp (atom + 1, "eny"))
+			return DENY;
+		if (!strncasecmp (atom + 1, "efault", 6)) {
+			if (!atom [7])
+				return DEFAULT;
+			if (!strcasecmp (atom + 7, "-lease-time"))
+				return DEFAULT_LEASE_TIME;
+			break;
+		}
 		if (!strncasecmp (atom + 1, "ynamic-bootp", 12)) {
 			if (!atom [13])
 				return DYNAMIC_BOOTP;
-			else if (!strcasecmp (atom + 13, "-lease-cutoff"))
+			if (!strcasecmp (atom + 13, "-lease-cutoff"))
 				return DYNAMIC_BOOTP_LEASE_CUTOFF;
-			else if (!strcasecmp (atom + 13, "-lease-length"))
+			if (!strcasecmp (atom + 13, "-lease-length"))
 				return DYNAMIC_BOOTP_LEASE_LENGTH;
+			break;
 		}
 		break;
 	      case 'e':
@@ -400,8 +416,6 @@ static int intern (atom, dfv)
 	      case 'h':
 		if (!strcasecmp (atom + 1, "ost"))
 			return HOST;
-		if (!strcasecmp (atom + 1, "ostname"))
-			return HOSTNAME;
 		if (!strcasecmp (atom + 1, "ardware"))
 			return HARDWARE;
 		break;
@@ -416,6 +430,13 @@ static int intern (atom, dfv)
 	      case 'm':
 		if (!strcasecmp (atom + 1, "ax-lease-time"))
 			return MAX_LEASE_TIME;
+		if (!strncasecmp (atom + 1, "edi", 3)) {
+			if (!strcasecmp (atom + 4, "a"))
+				return MEDIA;
+			if (!strcasecmp (atom + 4, "um"))
+				return MEDIUM;
+			break;
+		}
 		break;
 	      case 'n':
 		if (!strcasecmp (atom + 1, "etmask"))
@@ -462,6 +483,8 @@ static int intern (atom, dfv)
 			return SERVER_IDENTIFIER;
 		if (!strcasecmp (atom + 1, "elect-timeout"))
 			return SELECT_TIMEOUT;
+		if (!strcasecmp (atom + 1, "end"))
+			return SEND;
 		if (!strcasecmp (atom + 1, "cript"))
 			return SCRIPT;
 		break;
@@ -480,6 +503,8 @@ static int intern (atom, dfv)
 			return USER_CLASS;
 		if (!strcasecmp (atom + 1, "se-host-decl-names"))
 			return USE_HOST_DECL_NAMES;
+		if (!strcasecmp (atom + 1, "nknown-clients"))
+			return UNKNOWN_CLIENTS;
 		break;
 	      case 'v':
 		if (!strcasecmp (atom + 1, "endor-class"))
