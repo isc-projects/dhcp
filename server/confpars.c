@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.39 1997/02/22 08:41:01 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.40 1997/03/06 19:29:39 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1266,6 +1266,11 @@ struct lease *parse_lease_declaration (cfile)
 			      case DYNAMIC_BOOTP:
 				seenbit = 128;
 				lease.flags |= BOOTP_LEASE;
+				break;
+
+			      case ABANDONED:
+				seenbit = 256;
+				lease.flags |= ABANDONED_LEASE;
 				break;
 
 			      default:
