@@ -3,7 +3,8 @@
    System dependencies for Solaris 2.x (tested on 2.5 with gcc)... */
 
 /*
- * Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.
+ * Copyright (c) 1996, 1998 The Internet Software Consortium.
+ * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -116,11 +117,12 @@ extern int h_errno;
 
 #define NEED_INET_ATON
 
-/* By default, use BSD Socket API for receiving and sending packets.
-   This actually works pretty well on Solaris, which doesn't censor
-   the all-ones broadcast address. */
+/* By default, use the DLPI API for receiving and sending packets. */
 #if defined (USE_DEFAULT_NETWORK)
-# define USE_SOCKETS
+# define USE_DLPI
+# define USE_DLPI_RAW
+# define USE_DLPI_PFMOD
+# define DLPI_FIRST_SEND_WAIT 6
 #endif
 
 #define USE_POLL
@@ -135,7 +137,11 @@ extern int h_errno;
 #define TIME time_t
 #define GET_TIME(x)	time ((x))
 
+/* Solaris prior to 2.5 didn't have random().   Rather than being clever and
+   using random() only on versions >2.5, always use rand() and srand(). */
+
 #define random()	rand()
+#define srandom(x)	srand(x)
 
 /* Solaris doesn't provide an endian.h, so we have to do it. */
 
