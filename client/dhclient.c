@@ -56,7 +56,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhclient.c,v 1.44 1997/12/06 04:02:35 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.45 1997/12/09 20:29:00 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1796,7 +1796,9 @@ void script_init (ip, reason, medium)
 #ifdef HAVE_MKSTEMP
 		fd = mkstemp (scriptName);
 #else
-		mktemp (scriptName);
+		if (!mktemp (scriptName))
+			error ("can't create temporary client script %s: %m",
+			       scriptName);
 		fd = creat (scriptName, 0600);
 	} while (fd < 0);
 #endif
