@@ -833,6 +833,33 @@ obtain new addresses immediately when they next renew.
 .SH REFERENCE: PARAMETERS
 .PP
 .B The
+.I lease-file-name
+.B statement
+.PP
+.B lease-file-name
+.I name\fR\fB;\fR
+.PP
+.I Name
+should be the name of the DHCP server's lease file.   By default, this
+is DBDIR/dhcpd.leases.   This statement \fBmust\fR appear in the outer
+scope of the configuration file - if it appears in some other scope,
+it will have no effect.
+.PP
+.B The
+.I pid-file-name
+.B statement
+.PP
+.B pid-file-name
+.I name\fR\fB;\fR
+.PP
+.I Name
+should be the name of the DHCP server's process ID file.   This is the
+file in which the DHCP server's process ID is stored when the server
+starts.   By default, this is RUNDIR/dhcpd.pid.   Like the
+lease-file-name statement, this statement must appear in the outer scope
+of the configuration file.
+.PP
+.B The
 .I default-lease-time
 .B statement
 .PP
