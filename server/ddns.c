@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: ddns.c,v 1.7 2001/01/09 07:01:48 mellon Exp $ Copyright (c) 2000-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: ddns.c,v 1.8 2001/01/11 02:18:11 mellon Exp $ Copyright (c) 2000-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -53,74 +53,6 @@ static char copyright[] =
 
 /* Have to use TXT records for now. */
 #define T_DHCID T_TXT
-
-static int get_dhcid (struct data_string *, struct lease *);
-
-static int get_dhcid (struct data_string *id, struct lease *lease)
-{
-	unsigned char buf[MD5_DIGEST_LENGTH];
-	MD5_CTX md5;
-	int i;
-
-	if (!buffer_allocate (&id -> buffer,
-			      (MD5_DIGEST_LENGTH * 2) + 3, MDL))
-		return 0;
-	id -> data = id -> buffer -> data;
-
-	/*
-	 * DHCP clients and servers should use the following forms of client
-	 * identification, starting with the most preferable, and finishing
-	 * with the least preferable.  If the client does not send any of these
-	 * forms of identification, the DHCP/DDNS interaction is not defined by
-	 * this specification.  The most preferable form of identification is
-	 * the Globally Unique Identifier Option [TBD].  Next is the DHCP
-	 * Client Identifier option.  Last is the client's link-layer address,
-	 * as conveyed in its DHCPREQUEST message.  Implementors should note
-	 * that the link-layer address cannot be used if there are no
-	 * significant bytes in the chaddr field of the DHCP client's request,
-	 * because this does not constitute a unique identifier.
-	 *   -- "Interaction between DHCP and DNS"
-	 *      <draft-ietf-dhc-dhcp-dns-12.txt>
-	 *      M. Stapp, Y. Rekhter
-	 */
-
-	MD5_Init (&md5);
-
-	if (lease -> uid) {
-		id -> buffer -> data [0] =
-			"0123456789abcdef" [DHO_DHCP_CLIENT_IDENTIFIER >> 4];
-		id -> buffer -> data [1] =
-			"0123456789abcdef" [DHO_DHCP_CLIENT_IDENTIFIER % 15];
-		/* Use the DHCP Client Identifier option. */
-		MD5_Update (&md5, lease -> uid, lease -> uid_len);
-	} else if (lease -> hardware_addr.hlen) {
-		id -> buffer -> data [0] = '0';
-		id -> buffer -> data [1] = '0';
-		/* Use the link-layer address. */
-		MD5_Update (&md5,
-			    lease -> hardware_addr.hbuf,
-			    lease -> hardware_addr.hlen);
-	} else {
-		/* Uh-oh.  Something isn't right here. */
-		return 1;
-	}
-
-	MD5_Final (buf, &md5);
-
-	/* Convert into ASCII. */
-	for (i = 0; i < MD5_DIGEST_LENGTH; i++) {
-		id -> buffer -> data [i * 2 + 2] =
-			"0123456789abcdef" [(buf [i] >> 4) & 0xf];
-		id -> buffer -> data [i * 2 + 3] =
-			"0123456789abcdef" [buf [i] & 0xf];
-	}
-	id -> len = MD5_DIGEST_LENGTH * 2 + 2;
-	id -> buffer -> data [id -> len] = 0;
-	id -> terminated = 1;
-
-	return 0;
-}
-
 
 /* DN: No way of checking that there is enough space in a data_string's
    buffer.  Be certain to allocate enough!
@@ -134,108 +66,6 @@ static void data_string_append (struct data_string *ds1,
 		ds2 -> len);
 	ds1 -> len += ds2 -> len;
 }
-
-
-static struct binding *create_binding (struct binding_scope **scope,
-				       const char *name)
-{
-	struct binding *binding;
-
-	if (!*scope) {
-		if (!binding_scope_allocate (scope, MDL))
-			return (struct binding *)0;
-	}
-
-	binding = find_binding (*scope, name);
-	if (!binding) {
-		binding = dmalloc (sizeof *binding, MDL);
-		if (!binding)
-			return (struct binding *)0;
-
-		memset (binding, 0, sizeof *binding);
-		binding -> name = dmalloc (strlen (name) + 1, MDL);
-		if (!binding -> name) {
-			dfree (binding, MDL);
-			return (struct binding *)0;
-		}
-		strcpy (binding -> name, name);
-
-		binding -> next = (*scope) -> bindings;
-		(*scope) -> bindings = binding;
-	}
-
-	return binding;
-}
-
-
-static int bind_ds_value (struct binding_scope **scope,
-			  const char *name,
-			  struct data_string *value)
-{
-	struct binding *binding;
-
-	binding = create_binding (scope, name);
-	if (!binding)
-		return 0;
-
-	if (binding -> value)
-		binding_value_dereference (&binding -> value, MDL);
-
-	if (!binding_value_allocate (&binding -> value, MDL))
-		return 0;
-
-	data_string_copy (&binding -> value -> value.data, value, MDL);
-	binding -> value -> type = binding_data;
-
-	return 1;
-}
-
-
-static int find_bound_string (struct data_string *value,
-			      struct binding_scope *scope,
-			      const char *name)
-{
-	struct binding *binding;
-
-	binding = find_binding (scope, name);
-	if (!binding ||
-	    !binding -> value ||
-	    binding -> value -> type != binding_data)
-		return 0;
-
-	if (binding -> value -> value.data.terminated) {
-		data_string_copy (value, &binding -> value -> value.data, MDL);
-	} else {
-		buffer_allocate (&value -> buffer,
-				 binding -> value -> value.data.len,
-				 MDL);
-		if (!value -> buffer)
-			return 0;
-
-		memcpy (value -> buffer -> data,
-			binding -> value -> value.data.data,
-			binding -> value -> value.data.len);
-		value -> data = value -> buffer -> data;
-		value -> len = binding -> value -> value.data.len;
-	}
-
-	return 1;
-}
-
-int unset (struct binding_scope *scope, const char *name)
-{
-	struct binding *binding;
-
-	binding = find_binding (scope, name);
-	if (binding) {
-		if (binding -> value)
-			binding_value_dereference
-				(&binding -> value, MDL);
-		return 1;
-	}
-	return 0;
-}
-
 
 static ns_rcode ddns_update_a (struct data_string *ddns_fwd_name,
 			       struct iaddr ddns_addr,
@@ -308,7 +138,7 @@ static ns_rcode ddns_update_a (struct data_string *ddns_fwd_name,
 				   C_IN, T_DHCID, ttl);
 	if (!updrec) goto error;
 
-	updrec -> r_data = ddns_dhcid -> buffer -> data;
+	updrec -> r_data = ddns_dhcid -> data;
 	updrec -> r_size = ddns_dhcid -> len;
 	updrec -> r_opcode = ADD;
 
@@ -366,7 +196,7 @@ static ns_rcode ddns_update_a (struct data_string *ddns_fwd_name,
 				   C_IN, T_DHCID, 0);
 	if (!updrec) goto error;
 
-	updrec -> r_data = ddns_dhcid -> buffer -> data;
+	updrec -> r_data = ddns_dhcid -> data;
 	updrec -> r_size = ddns_dhcid -> len;
 	updrec -> r_opcode = YXRRSET;
 
@@ -499,7 +329,7 @@ static ns_rcode ddns_update_ptr (struct data_string *ddns_fwd_name,
 				   C_IN, T_PTR, ttl);
 	if (!updrec) goto error;
 
-	updrec -> r_data = (unsigned char *)ddns_fwd_name -> buffer -> data;
+	updrec -> r_data = ddns_fwd_name -> data;
 	updrec -> r_size = ddns_fwd_name -> len;
 	updrec -> r_opcode = ADD;
 
@@ -571,7 +401,7 @@ static ns_rcode ddns_remove_a (struct data_string *ddns_fwd_name,
 				   C_IN, T_DHCID,0);
 	if (!updrec) goto error;
 
-	updrec -> r_data = ddns_dhcid -> buffer -> data;
+	updrec -> r_data = ddns_dhcid -> data;
 	updrec -> r_size = ddns_dhcid -> len;
 	updrec -> r_opcode = YXRRSET;
 
@@ -665,7 +495,7 @@ static ns_rcode ddns_remove_a (struct data_string *ddns_fwd_name,
 	if (!updrec)
 		goto error;
 
-	updrec -> r_data = ddns_dhcid -> buffer -> data;
+	updrec -> r_data = ddns_dhcid -> data;
 	updrec -> r_size = ddns_dhcid -> len;
 	updrec -> r_opcode = DELETE;
 
@@ -690,8 +520,7 @@ static ns_rcode ddns_remove_a (struct data_string *ddns_fwd_name,
 }
 
 
-static ns_rcode ddns_remove_ptr (struct data_string *ddns_fwd_name,
-				 struct data_string *ddns_rev_name)
+static ns_rcode ddns_remove_ptr (struct data_string *ddns_rev_name)
 {
 	ns_updque updqueue;
 	ns_updrec *updrec;
@@ -709,15 +538,15 @@ static ns_rcode ddns_remove_ptr (struct data_string *ddns_fwd_name,
 	ISC_LIST_INIT (updqueue);
 
 	/*
-	 * Delete appropriate PTR RR.
+	 * Delete the PTR RRset for the leased address.
 	 */
 	updrec = minires_mkupdrec (S_UPDATE,
 				   (const char *)ddns_rev_name -> data,
 				   C_IN, T_PTR, 0);
 	if (!updrec) goto error;
 
-	updrec -> r_data = ddns_fwd_name -> buffer -> data;
-	updrec -> r_size = ddns_fwd_name -> len;
+	updrec -> r_data = (unsigned char *)0;
+	updrec -> r_size = 0;
 	updrec -> r_opcode = DELETE;
 
 	ISC_LIST_APPEND (updqueue, updrec, r_link);
@@ -788,7 +617,7 @@ int ddns_updates (struct packet *packet,
 		/* If there's no fqdn.no-client-update or if it's
 		   nonzero, don't try to use the client-supplied
 		   XXX */
-		if (!(oc = lookup_option (&fqdn_universe, state -> options,
+		if (!(oc = lookup_option (&fqdn_universe, packet -> options,
 					  FQDN_NO_CLIENT_UPDATE)) ||
 		    evaluate_boolean_option_cache (&ignorep, packet, lease,
 						   (struct client_state *)0,
@@ -796,12 +625,13 @@ int ddns_updates (struct packet *packet,
 						   state -> options,
 						   &lease -> scope, oc, MDL))
 			goto noclient;
-		if (!(oc = lookup_option (&fqdn_universe, state -> options,
+		if (!(oc = lookup_option (&fqdn_universe, packet -> options,
 					  FQDN_FQDN)) ||
-		    evaluate_option_cache (&ddns_fwd_name, packet, lease,
-					   (struct client_state *)0,
-					   packet -> options, state -> options,
-					   &lease -> scope, oc, MDL))
+		    !evaluate_option_cache (&ddns_fwd_name, packet, lease,
+					    (struct client_state *)0,
+					    packet -> options,
+					    state -> options,
+					    &lease -> scope, oc, MDL))
 			goto noclient;
 		server_updates_a = 0;
 		goto client_updates;
@@ -904,9 +734,9 @@ int ddns_updates (struct packet *packet,
 	   PTR update. */
 	if (find_bound_string (&old_ddns_fwd_name,
 			       lease -> scope, "ddns-client-fqdn")) {
-		if (old_ddns_fwd_name.len != ddns_fwd_name.len ||
-		    memcmp (old_ddns_fwd_name.data, ddns_fwd_name.data,
-			    old_ddns_fwd_name.len)) {
+		if (old_ddns_fwd_name.len == ddns_fwd_name.len &&
+		    !memcmp (old_ddns_fwd_name.data, ddns_fwd_name.data,
+			     old_ddns_fwd_name.len)) {
 			/* If the name is not different, no need to update
 			   the PTR record. */
 			goto noerror;
@@ -1013,13 +843,15 @@ int ddns_updates (struct packet *packet,
 	if (rcode2 == -1)
 		rcode2 = SERVFAIL;
 
-	if (rcode1 == NOERROR) {
+	if (rcode1 == NOERROR &&
+	    (server_updates_a || rcode2 == NOERROR)) {
 		bind_ds_value (&lease -> scope, 
 			       (server_updates_a
 				? "ddns-fwd-name" : "ddns-client-fqdn"),
 			       &ddns_fwd_name);
-		bind_ds_value (&lease -> scope, "ddns-txt",
-			       &ddns_dhcid);
+		if (server_updates_a)
+			bind_ds_value (&lease -> scope, "ddns-txt",
+				       &ddns_dhcid);
 	}
 
 	if (rcode2 == NOERROR) {
@@ -1028,9 +860,12 @@ int ddns_updates (struct packet *packet,
 	}
 
 	/* Set up the outgoing FQDN option if there was an incoming
-	   FQDN option. */
+	   FQDN option.  If there's a valid FQDN option, there should
+	   be an FQDN_ENCODED suboption, so we test the latter to
+	   detect the presence of the former. */
       noerror:
-	if ((oc = lookup_option (&dhcp_universe, packet -> options, DHO_FQDN))
+	if ((oc = lookup_option (&fqdn_universe,
+				 packet -> options, FQDN_ENCODED))
 	    && buffer_allocate (&bp, ddns_fwd_name.len + 5, MDL)) {
 		bp -> data [0] = server_updates_a;
 		if (!save_option_buffer (&fqdn_universe, state -> options,
@@ -1108,6 +943,7 @@ int ddns_removals (struct lease *lease)
 	ns_rcode rcode;
 	struct binding *binding;
 	int result = 0;
+	int client_updated = 0;
 
 	/* No scope implies that DDNS has not been performed for this lease. */
 	if (!lease -> scope)
@@ -1131,8 +967,15 @@ int ddns_removals (struct lease *lease)
 	/* We need the fwd name whether we are deleting both records or just
 	   the PTR record, so if it's not there, we can't proceed. */
 	if (!find_bound_string (&ddns_fwd_name,
-				lease -> scope, "ddns-fwd-name"))
-		return 0;
+				lease -> scope, "ddns-fwd-name")) {
+		/* If there's no ddns-fwd-name, look for the client fqdn,
+		   in case the client did the update. */
+		if (!find_bound_string (&ddns_fwd_name,
+					lease -> scope, "ddns-client-fqdn"))
+			return 0;
+		client_updated = 1;
+		goto try_rev;
+	}
 
 	/* If the ddns-txt binding isn't there, this isn't an interim
 	   or rfc3??? record, so we can't delete the A record using
@@ -1154,10 +997,12 @@ int ddns_removals (struct lease *lease)
 	      try_rev:
 		if (find_bound_string (&ddns_rev_name,
 				       lease -> scope, "ddns-rev-name")) {
-			if (ddns_remove_ptr(&ddns_fwd_name,
-					    &ddns_rev_name) == NOERROR)
+			if (ddns_remove_ptr(&ddns_rev_name) == NOERROR) {
 				unset (lease -> scope, "ddns-rev-name");
-			else
+				if (client_updated)
+					unset (lease -> scope,
+					       "ddns-client-fqdn");
+			} else
 				result = 0;
 		}
 	}
