@@ -11,7 +11,11 @@
 #	  -Wno-uninitialized -Werror
 
 # DEC Alpha/OSF1
-LIBS=
+#LIBS=
+
+# BSD/OS 2.1
+#LIBS=
+#CC=gcc2
 
 CSRC = options.c errwarn.c convert.c conflex.c confpars.c \
        tree.c memory.c alloc.c print.c hash.c tables.c inet.c db.c \
