@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bootp.c,v 1.22 1997/02/18 14:28:54 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bootp.c,v 1.23 1997/02/19 10:50:40 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -264,7 +264,7 @@ void bootp (packet)
 	/* If this was gatewayed, send it back to the gateway... */
 	if (raw.giaddr.s_addr) {
 		to.sin_addr = raw.giaddr;
-		to.sin_port = server_port;
+		to.sin_port = local_port;
 
 #ifdef USE_FALLBACK
 		result = send_fallback (&fallback_interface,
@@ -278,7 +278,7 @@ void bootp (packet)
 	/* Otherwise, broadcast it on the local network. */
 	} else {
 		to.sin_addr.s_addr = INADDR_BROADCAST;
-		to.sin_port = htons (ntohs (server_port) + 1); /* XXX */
+		to.sin_port = remote_port; /* XXX */
 	}
 
 	errno = 0;
