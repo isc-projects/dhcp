@@ -35,7 +35,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: raw.c,v 1.15 1999/03/16 06:37:50 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: raw.c,v 1.16 2000/03/06 19:39:53 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -79,6 +79,20 @@ void if_register_send (info)
 	info -> wfdesc = sock;
         if (!quiet_interface_discovery)
 		log_info ("Sending on   Raw/%s%s%s",
+		      info -> name,
+		      (info -> shared_network ? "/" : ""),
+		      (info -> shared_network ?
+		       info -> shared_network -> name : ""));
+}
+
+void if_deregister_send (info)
+	struct interface_info *info;
+{
+	close (info -> wfdesc);
+	info -> wfdesc = -1;
+
+        if (!quiet_interface_discovery)
+		log_info ("Disabling output on Raw/%s%s%s",
 		      info -> name,
 		      (info -> shared_network ? "/" : ""),
 		      (info -> shared_network ?

@@ -23,7 +23,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: lpf.c,v 1.21 2000/02/15 20:40:30 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: lpf.c,v 1.22 2000/03/06 19:39:53 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -131,9 +131,9 @@ void if_deregister_send (info)
 	   are closed */
 	close (info -> wfdesc);
 #endif
-	info -> wfdesc = 0;
+	info -> wfdesc = -1;
 	if (!quiet_interface_discovery)
-		log_info ("NOT Sending on   LPF/%s/%s%s%s",
+		log_info ("Disabling output on LPF/%s/%s%s%s",
 		      info -> name,
 		      print_hw_addr (info -> hw_address.hbuf [0],
 				     info -> hw_address.hlen - 1,
@@ -183,9 +183,9 @@ void if_deregister_receive (info)
 	/* for LPF this is simple, packet filters are removed when sockets
 	   are closed */
 	close (info -> rfdesc);
-	info -> rfdesc = 0;
+	info -> rfdesc = -1;
 	if (!quiet_interface_discovery)
-		log_info ("NOT Listening on LPF/%s/%s%s%s",
+		log_info ("Disabling input on LPF/%s/%s%s%s",
 			  info -> name,
 			  print_hw_addr (info -> hw_address.hbuf [0],
 					 info -> hw_address.hlen - 1,

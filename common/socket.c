@@ -30,7 +30,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: socket.c,v 1.45 2000/02/03 03:43:51 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: socket.c,v 1.46 2000/03/06 19:39:54 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -153,6 +153,24 @@ void if_register_send (info)
 		      (info -> shared_network ?
 		       info -> shared_network -> name : ""));
 }
+
+#if !defined (USE_SOCKET_FALLBACK)
+void if_deregister_send (info)
+	struct interface_info *info;
+{
+#ifndef USE_SOCKET_RECEIVE
+	close (info -> wfdesc);
+#endif
+	info -> wfdesc = -1;
+
+	if (!quiet_interface_discovery)
+		log_info ("Disabling output on Socket/%s%s%s",
+		      info -> name,
+		      (info -> shared_network ? "/" : ""),
+		      (info -> shared_network ?
+		       info -> shared_network -> name : ""));
+}
+#endif /* !USE_SOCKET_FALLBACK */
 #endif /* USE_SOCKET_SEND || USE_SOCKET_FALLBACK */
 
 #ifdef USE_SOCKET_RECEIVE
@@ -169,6 +187,19 @@ void if_register_receive (info)
 		      (info -> shared_network ?
 		       info -> shared_network -> name : ""));
 }
+
+void if_deregister_receive (info)
+	struct interface_info *info;
+{
+	close (info -> rfdesc);
+	info -> rfdesc = -1;
+
+	if (!quiet_interface_discovery)
+		log_info ("Disabling input on Socket/%s%s%s",
+		      info -> name,
+		      (info -> shared_network ? "/" : ""),
+		      (info -> shared_network ?
+		       info -> shared_network -> name : ""));
 #endif /* USE_SOCKET_RECEIVE */
 
 #if defined (USE_SOCKET_SEND) || defined (USE_SOCKET_FALLBACK)

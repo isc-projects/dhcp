@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bpf.c,v 1.33 2000/01/26 14:55:33 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bpf.c,v 1.34 2000/03/06 19:39:53 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -122,6 +122,27 @@ void if_register_send (info)
 #endif
 	if (!quiet_interface_discovery)
 		log_info ("Sending on   BPF/%s/%s%s%s",
+		      info -> name,
+		      print_hw_addr (info -> hw_address.hbuf [0],
+				     info -> hw_address.hlen - 1,
+				     &info -> hw_address.hbuf [1]),
+		      (info -> shared_network ? "/" : ""),
+		      (info -> shared_network ?
+		       info -> shared_network -> name : ""));
+}
+
+void if_deregister_send (info)
+	struct interface_info *info;
+{
+	/* If we're using the bpf API for sending and receiving,
+	   we don't need to register this interface twice. */
+#ifndef USE_BPF_RECEIVE
+	close (info -> wfdesc);
+#endif
+	info -> wfdesc = -1;
+
+	if (!quiet_interface_discovery)
+		log_info ("Disabling output on BPF/%s/%s%s%s",
 		      info -> name,
 		      print_hw_addr (info -> hw_address.hbuf [0],
 				     info -> hw_address.hlen - 1,
@@ -245,6 +266,23 @@ void if_register_receive (info)
 		log_fatal ("Can't install packet filter program: %m");
 	if (!quiet_interface_discovery)
 		log_info ("Listening on BPF/%s/%s%s%s",
+		      info -> name,
+		      print_hw_addr (info -> hw_address.hbuf [0],
+				     info -> hw_address.hlen - 1,
+				     &info -> hw_address.hbuf [1]),
+		      (info -> shared_network ? "/" : ""),
+		      (info -> shared_network ?
+		       info -> shared_network -> name : ""));
+}
+
+void if_deregister_receive (info)
+	struct interface_info *info;
+{
+	close (info -> rfdesc);
+	info -> rfdesc = -1;
+
+	if (!quiet_interface_discovery)
+		log_info ("Disabling input on BPF/%s/%s%s%s",
 		      info -> name,
 		      print_hw_addr (info -> hw_address.hbuf [0],
 				     info -> hw_address.hlen - 1,

@@ -70,7 +70,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dlpi.c,v 1.17 2000/01/25 01:05:01 mellon Exp $ Copyright (c) 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dlpi.c,v 1.18 2000/03/06 19:39:53 mellon Exp $ Copyright (c) 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -357,6 +357,27 @@ void if_register_send (info)
 # endif
 #endif
 }
+
+void if_deregister_send (info)
+	struct interface_info *info;
+{
+	/* If we're using the DLPI API for sending and receiving,
+	   we don't need to register this interface twice. */
+#ifndef USE_DLPI_RECEIVE
+	close (info -> wfdesc);
+#endif
+	info -> wfdesc = -1;
+
+        if (!quiet_interface_discovery)
+		log_info ("Disabling output on DLPI/%s/%s%s%s",
+		      info -> name,
+		      print_hw_addr (info -> hw_address.hbuf [0],
+				     info -> hw_address.hlen - 1,
+				     &info -> hw_address.hbuf [1]),
+		      (info -> shared_network ? "/" : ""),
+		      (info -> shared_network ?
+		       info -> shared_network -> name : ""));
+}
 #endif /* USE_DLPI_SEND */
 
 #ifdef USE_DLPI_RECEIVE
@@ -439,6 +460,27 @@ void if_register_receive (info)
 	sleep (DLPI_FIRST_SEND_WAIT);
 # endif
 #endif
+}
+
+void if_deregister_receive (info)
+	struct interface_info *info;
+{
+	/* If we're using the DLPI API for sending and receiving,
+	   we don't need to register this interface twice. */
+#ifndef USE_DLPI_SEND
+	close (info -> rfdesc);
+#endif
+	info -> rfdesc = -1;
+
+        if (!quiet_interface_discovery)
+		log_info ("Disabling input on DLPI/%s/%s%s%s",
+		      info -> name,
+		      print_hw_addr (info -> hw_address.hbuf [0],
+				     info -> hw_address.hlen - 1,
+				     &info -> hw_address.hbuf [1]),
+		      (info -> shared_network ? "/" : ""),
+		      (info -> shared_network ?
+		       info -> shared_network -> name : ""));
 }
 #endif /* USE_DLPI_RECEIVE */
 

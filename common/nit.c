@@ -23,7 +23,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: nit.c,v 1.26 2000/01/25 01:07:41 mellon Exp $ Copyright (c) 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: nit.c,v 1.27 2000/03/06 19:39:53 mellon Exp $ Copyright (c) 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -145,6 +145,25 @@ void if_register_send (info)
 		      (info -> shared_network ?
 		       info -> shared_network -> name : ""));
 }
+
+void if_deregister_send (info)
+	struct interface_info *info;
+{
+	/* If we're using the nit API for sending and receiving,
+	   we don't need to register this interface twice. */
+#ifndef USE_NIT_RECEIVE
+	close (info -> wfdesc);
+#endif
+	info -> wfdesc = -1;
+        if (!quiet_interface_discovery)
+		log_info ("Disabling output on NIT/%s%s%s",
+		      print_hw_addr (info -> hw_address.hbuf [0],
+				     info -> hw_address.hlen - 1,
+				     &info -> hw_address.hbuf [1]),
+		      (info -> shared_network ? "/" : ""),
+		      (info -> shared_network ?
+		       info -> shared_network -> name : ""));
+}
 #endif /* USE_NIT_SEND */
 
 #ifdef USE_NIT_RECEIVE
@@ -222,6 +241,24 @@ void if_register_receive (info)
 
         if (!quiet_interface_discovery)
 		log_info ("Listening on NIT/%s%s%s",
+		      print_hw_addr (info -> hw_address.hbuf [0],
+				     info -> hw_address.hlen - 1,
+				     &info -> hw_address.hbuf [1]),
+		      (info -> shared_network ? "/" : ""),
+		      (info -> shared_network ?
+		       info -> shared_network -> name : ""));
+}
+
+void if_deregister_receive (info)
+	struct interface_info *info;
+{
+	/* If we're using the nit API for sending and receiving,
+	   we don't need to register this interface twice. */
+	close (info -> rfdesc);
+	info -> rfdesc = -1;
+
+        if (!quiet_interface_discovery)
+		log_info ("Disabling input on NIT/%s%s%s",
 		      print_hw_addr (info -> hw_address.hbuf [0],
 				     info -> hw_address.hlen - 1,
 				     &info -> hw_address.hbuf [1]),

@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: upf.c,v 1.15 2000/01/25 01:17:01 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: upf.c,v 1.16 2000/03/06 19:39:54 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -132,6 +132,24 @@ void if_register_send (info)
 		      (info -> shared_network ?
 		       info -> shared_network -> name : ""));
 }
+
+void if_deregister_send (info)
+	struct interface_info *info;
+{
+#ifndef USE_UPF_RECEIVE
+	close (info -> wfdesc);
+#endif
+	info -> wfdesc = -1;
+        if (!quiet_interface_discovery)
+		log_info ("Disabling output on UPF/%s/%s%s%s",
+		      info -> name,
+		      print_hw_addr (info -> hw_address.hbuf [0],
+				     info -> hw_address.hlen - 1,
+				     &info -> hw_address.hbuf [1]),
+		      (info -> shared_network ? "/" : ""),
+		      (info -> shared_network ?
+		       info -> shared_network -> name : ""));
+}
 #endif /* USE_UPF_SEND */
 
 #ifdef USE_UPF_RECEIVE
@@ -190,6 +208,22 @@ void if_register_receive (info)
 		log_fatal ("Can't install packet filter program: %m");
         if (!quiet_interface_discovery)
 		log_info ("Listening on UPF/%s/%s%s%s",
+		      info -> name,
+		      print_hw_addr (info -> hw_address.hbuf [0],
+				     info -> hw_address.hlen - 1,
+				     &info -> hw_address.hbuf [1]),
+		      (info -> shared_network ? "/" : ""),
+		      (info -> shared_network ?
+		       info -> shared_network -> name : ""));
+}
+
+void if_deregister_receive (info)
+	struct interface_info *info;
+{
+	close (info -> rfdesc);
+	info -> rfdesc = -1;
+        if (!quiet_interface_discovery)
+		log_info ("Disabling input on UPF/%s/%s%s%s",
 		      info -> name,
 		      print_hw_addr (info -> hw_address.hbuf [0],
 				     info -> hw_address.hlen - 1,
