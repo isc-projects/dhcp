@@ -224,7 +224,7 @@ static isc_result_t omapi_connection_reader_trace (omapi_object_t *h,
 			else if (errno == EINVAL)
 				return ISC_R_INVALIDARG;
 			else if (errno == ECONNRESET) {
-				omapi_disconnect (h, 0);
+				omapi_disconnect (h, 1);
 				return ISC_R_SHUTTINGDOWN;
 			} else
 				return ISC_R_UNEXPECTED;
