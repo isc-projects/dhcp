@@ -40,8 +40,11 @@
  * Enterprises, see ``http://www.vix.com''.
  */
 
-static char objcopyright[] =
-"$Id: dhcpd.c,v 1.30 1996/08/29 20:15:32 mellon Exp $ Copyright 1995, 1996 The Internet Software Consortium.";
+#ifndef lint
+static char ocopyright[] =
+"$Id: dhcpd.c,v 1.31 1996/08/30 23:40:28 mellon Exp $ Copyright 1995, 1996 The Internet Software Consortium.";
+#endif
+
 static char copyright[] =
 "Copyright 1995, 1996 The Internet Software Consortium.";
 static char arr [] = "All rights reserved.";
@@ -104,11 +107,11 @@ int main (argc, argv, envp)
 				if (!isdigit (*s))
 					error ("%s: not a valid UDP port",
 					       argv [i]);
-			server_port = atoi (argv [i]);
-			if (server_port < 1 || server_port > 65535)
+			status = atoi (argv [i]);
+			if (status < 1 || status > 65535)
 				error ("%s: not a valid UDP port",
 				       argv [i]);
-			server_port = htons (server_port);
+			server_port = htons (status);
 			debug ("binding to user-specified port %d",
 			       ntohs (server_port));
 		} else if (!strcmp (argv [i], "-f")) {
