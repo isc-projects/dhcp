@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bootp.c,v 1.28.2.7 1999/05/08 18:14:54 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bootp.c,v 1.28.2.8 1999/06/22 13:40:31 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -285,7 +285,7 @@ void bootp (packet)
 	raw.hops = packet -> raw -> hops;
 	raw.xid = packet -> raw -> xid;
 	raw.secs = packet -> raw -> secs;
-	raw.flags = 0;
+	raw.flags = packet -> raw -> flags;
 	raw.ciaddr = packet -> raw -> ciaddr;
 	memcpy (&raw.yiaddr, ip_address.iabuf, sizeof raw.yiaddr);
 
