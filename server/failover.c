@@ -3,7 +3,7 @@
    Failover protocol support code... */
 
 /*
- * Copyright (c) 1999-2000 Internet Software Consortium.
+ * Copyright (c) 1999-2001 Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.30 2000/11/28 23:27:20 mellon Exp $ Copyright (c) 1999-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.31 2001/01/19 11:06:45 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -3953,9 +3953,15 @@ isc_result_t dhcp_failover_process_bind_update (dhcp_failover_state_t *state,
 					     (lease, state,
 					      msg -> binding_status));
 			if (new_binding_state != msg -> binding_status) {
+				char outbuf [100];
+				snprintf (outbuf, sizeof outbuf,
+					  "invalid state transition: %d to %d",
+					  lease -> binding_state,
+					  msg -> binding_status);
 				dhcp_failover_send_bind_ack
-					(state, lease, msg, FTR_FATAL_CONFLICT,
-					 "invalid binding state transition");
+					(state, lease,
+					 msg, FTR_FATAL_CONFLICT, outbuf);
+				goto out;
 			}
 		}
 		lt -> next_binding_state = new_binding_state;
@@ -3969,6 +3975,7 @@ isc_result_t dhcp_failover_process_bind_update (dhcp_failover_state_t *state,
 					     reason, message);
 	} else
 		dhcp_failover_send_bind_ack (state, lease, msg, 0, 0);
+      out:
 	if (lt)
 		lease_dereference (&lt, MDL);
 	if (lease)
