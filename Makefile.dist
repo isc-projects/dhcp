@@ -144,11 +144,11 @@ COBJ   = options.o errwarn.o convert.o conflex.o confpars.o \
 	 dispatch.o bpf.o packet.o raw.o nit.o
 SRCS   = dhcpd.c socket.c dhcp.c bootp.c
 OBJS   = dhcpd.o socket.o dhcp.o bootp.o
-PROG   = dhcpd
+PROGS  = dhcpd dhclient
 MAN    = dhcpd.8 dhcpd.conf.5
 
 DEBUG  = -g
-CFLAGS = $(DEBUG) $(PREDEFINES) $(INCLUDES)
+CFLAGS = $(DEBUG) $(PREDEFINES) $(INCLUDES) $(COPTS)
 
 all:	dhcpd $(CATMANPAGES)
 
@@ -183,7 +183,7 @@ dhcpd:	$(OBJS) $(COBJ)
 dhclient:	dhclient.o $(COBJ)
 	$(CC) -o dhclient dhclient.o $(COBJ) $(LIBS)
 
-/* Dependencies (semi-automatically-generated) */
+# Dependencies (semi-automatically-generated)
 
 options.o:	dhcpd.h cdefs.h osdep.h site.h $(CF) dhcp.h tree.h \
 		hash.h inet.h 
