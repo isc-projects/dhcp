@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.78 1999/03/10 20:44:22 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.79 1999/03/10 21:32:59 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -573,9 +573,7 @@ void ack_lease (packet, lease, offer, when, msg)
 	/* Execute statements in scope starting with the pool group. */
 	execute_statements_in_scope (packet, &state -> options,
 				     &state -> options,
-				     (lease -> pool
-				      ? lease -> pool -> group
-				      : lease -> subnet -> group),
+				     lease -> subnet -> group,
 				     (struct group *)0);
 
 	/* Vendor and user classes are only supported for DHCP clients. */
@@ -590,6 +588,13 @@ void ack_lease (packet, lease, offer, when, msg)
 				  : lease -> subnet -> group));
 		}
 	}
+
+	/* If the lease is from a pool, run the pool scope. */
+	if (lease -> pool)
+		execute_statements_in_scope (packet, &state -> options,
+					     &state -> options,
+					     lease -> pool -> group,
+					     lease -> subnet -> group);
 
 	/* If we have a host_decl structure, run the options associated
 	   with its group. */
