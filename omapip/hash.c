@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: hash.c,v 1.1.2.4 2001/10/17 03:28:19 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: hash.c,v 1.1.2.5 2001/10/17 04:00:35 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include <omapip/omapip_p.h>
@@ -81,6 +81,7 @@ int new_hash_table (tp, count, file, line)
 	if (!rval)
 		return 0;
 	rval -> hash_count = count;
+	*tp = rval;
 	return 1;
 }
 
