@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.192.2.25 2003/02/10 01:22:54 dhankins Exp $ Copyright (c) 1995-2002 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.192.2.26 2003/02/23 02:08:47 dhankins Exp $ Copyright (c) 1995-2002 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -680,7 +680,7 @@ void dhcprelease (packet, ms_nulltp)
 	struct option_cache *oc;
 	struct data_string data;
 	char *s;
-	char msgbuf [1024]; /* XXX */
+	char msgbuf [1024], cstr[16]; /* XXX */
 
 
 	/* DHCPRELEASE must not specify address in requested-address
@@ -748,10 +748,13 @@ void dhcprelease (packet, ms_nulltp)
 	else
 		s = (char *)0;
 
+	strncpy(cstr, inet_ntoa (packet -> raw -> ciaddr), 15);
+	cstr[15] = '\0';
+
 	/* Say what we're doing... */
 	sprintf (msgbuf,
 		 "DHCPRELEASE of %s from %s %s%s%svia %s (%sfound)",
-		 inet_ntoa (packet -> raw -> ciaddr),
+		 cstr,
 		 (packet -> raw -> htype
 		  ? print_hw_addr (packet -> raw -> htype,
 				   packet -> raw -> hlen,
