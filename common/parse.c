@@ -3,8 +3,8 @@
    Common parser code for dhcpd and dhclient. */
 
 /*
- * Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.
- * All rights reserved.
+ * Copyright (c) 1995, 1996, 1997, 1998, 1999
+ * The Internet Software Consortium.   All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.11 1998/11/06 02:42:48 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.12 1999/02/14 18:54:03 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -65,9 +65,15 @@ static char copyright[] =
 void skip_to_semi (cfile)
 	FILE *cfile;
 {
+	skip_to_rbrace (cfile, 0);
+}
+
+void skip_to_rbrace (cfile, brace_count)
+	FILE *cfile;
+	int brace_count;
+{
 	enum dhcp_token token;
 	char *val;
-	int brace_count = 0;
 
 	do {
 		token = peek_token (&val, cfile);
@@ -281,6 +287,9 @@ void parse_hardware_param (cfile, hardware)
 	      case TOKEN_RING:
 		hardware -> htype = HTYPE_IEEE802;
 		break;
+	      case FDDI:
+		hardware -> htype = HTYPE_FDDI;
+		break;
 	      default:
 		parse_warn ("expecting a network hardware type");
 		skip_to_semi (cfile);
@@ -306,6 +315,9 @@ void parse_hardware_param (cfile, hardware)
 		hardware -> hlen = hlen;
 		memcpy ((unsigned char *)&hardware -> haddr [0],
 			t, hardware -> hlen);
+		if (hlen < sizeof hardware -> haddr)
+			memset (&hardware -> haddr [hlen], 0,
+				(sizeof hardware -> haddr) - hlen);
 		free (t);
 	}
 	
