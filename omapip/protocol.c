@@ -343,6 +343,9 @@ isc_result_t omapi_protocol_send_message (omapi_object_t *po,
 		}
 	}
 
+	if (!omo) {
+		omapi_protocol_reference (&m -> protocol_object, p, MDL);
+	}
 	return ISC_R_SUCCESS;
 }
 					  
@@ -353,6 +356,7 @@ isc_result_t omapi_protocol_signal_handler (omapi_object_t *h,
 	isc_result_t status;
 	omapi_protocol_object_t *p;
 	omapi_object_t *c;
+	omapi_message_object_t *m;
 	omapi_value_t *signature;
 	u_int16_t nlen;
 	u_int32_t vlen;
@@ -397,23 +401,27 @@ isc_result_t omapi_protocol_signal_handler (omapi_object_t *h,
 	}
 
 	/* If we get a disconnect, dump memory usage. */
-	if (!strcmp (name, "disconnect")
+	if (!strcmp (name, "disconnect")) {
 #if defined (DEBUG_MEMORY_LEAKAGE)
-	     && connect_outstanding != 0xDEADBEEF
-#endif
-		) {
-#if defined (DEBUG_MEMORY_LEAKAGE)
+	    if (connect_outstanding != 0xDEADBEEF) {
 		log_info ("generation %ld: %ld new, %ld outstanding, %ld%s",
 			  dmalloc_generation,
 			  dmalloc_outstanding - previous_outstanding,
 			  dmalloc_outstanding, dmalloc_longterm, " long-term");
+	    }
 #endif
 #if (defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL))
-		dmalloc_dump_outstanding ();
+	    dmalloc_dump_outstanding ();
 #endif
 #if defined (DEBUG_RC_HISTORY_EXHAUSTIVELY)
-		dump_rc_history ();
+	    dump_rc_history ();
 #endif
+	    for (m = omapi_registered_messages; m; m = m -> next) {
+		if (m -> protocol_object == p) {
+		    if (m -> object)
+			omapi_signal (m -> object, "disconnect");
+		}
+	    }
 	}
 
 	/* Not a signal we recognize? */
