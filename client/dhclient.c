@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.62 1999/03/16 05:50:30 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.63 1999/03/25 21:51:29 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1080,10 +1080,11 @@ void send_discover (cpp)
 			 client -> config -> timeout) - cur_time + 1;
 
 	/* Record the number of seconds since we started sending. */
-	if (interval < 255)
-		client -> packet.secs = interval;
+	if (interval < 65536)
+		client -> packet.secs = htons (interval);
 	else
-		client -> packet.secs = 255;
+		client -> packet.secs = htons (65535);
+	client -> secs = client -> packet.secs;
 
 	log_info ("DHCPDISCOVER on %s to %s port %d interval %ld",
 	      client -> name ? client -> name : client -> interface -> name,
@@ -1320,10 +1321,14 @@ void send_request (cpp)
 		from.s_addr = INADDR_ANY;
 
 	/* Record the number of seconds since we started sending. */
-	if (interval < 255)
-		client -> packet.secs = interval;
-	else
-		client -> packet.secs = 255;
+	if (client -> state == S_REQUESTING)
+		client -> packet.secs = client -> secs;
+	else {
+		if (interval < 65536)
+			client -> packet.secs = htons (interval);
+		else
+			client -> packet.secs = htons (65535);
+	}
 
 	log_info ("DHCPREQUEST on %s to %s port %d",
 	      client -> name ? client -> name : client -> interface -> name,
