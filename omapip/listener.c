@@ -130,6 +130,7 @@ isc_result_t omapi_accept (omapi_object_t *h)
 	obj = (omapi_connection_object_t *)malloc (sizeof *obj);
 	if (!obj)
 		return ISC_R_NOMEMORY;
+	memset (obj, 0, sizeof *obj);
 	obj -> refcnt = 1;
 	obj -> type = omapi_type_connection;
 

@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.79 1999/09/09 23:32:22 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.80 1999/09/15 19:47:38 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -915,7 +915,7 @@ void parse_host_declaration (cfile, group)
 					    "parse_host_declaration");
 	if (!host)
 		log_fatal ("can't allocate host decl struct %s.", name);
-
+	memset (host, 0, sizeof *host);
 	host -> name = name;
 	host -> group = clone_group (group, "parse_host_declaration");
 

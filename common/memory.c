@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: memory.c,v 1.56 1999/09/09 23:26:36 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: memory.c,v 1.57 1999/09/15 19:47:27 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -458,7 +458,8 @@ void new_address_range (low, high, subnet, pool)
 	if (!address_range) {
 		strcpy (lowbuf, piaddr (low));
 		strcpy (highbuf, piaddr (high));
-		log_fatal ("No memory for address range %s-%s.", lowbuf, highbuf);
+		log_fatal ("No memory for address range %s-%s.",
+			   lowbuf, highbuf);
 	}
 	memset (address_range, 0, (sizeof *address_range) * (max - min + 1));
 
@@ -635,6 +636,7 @@ void enter_lease (lease)
 			log_fatal ("No memory for lease %s\n",
 			       piaddr (lease -> ip_addr));
 		}
+		memset (comp, 0, sizeof *comp);
 		*comp = *lease;
 		comp -> next = dangling_leases;
 		comp -> prev = (struct lease *)0;
