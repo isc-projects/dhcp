@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.143.2.15 2002/11/03 04:38:57 dhankins Exp $ Copyright (c) 1995-2002 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.143.2.16 2002/11/04 00:46:50 dhankins Exp $ Copyright (c) 1995-2002 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1918,7 +1918,7 @@ int parse_class_declaration (cp, cfile, group, type)
 			    !class_new_hash (&pc -> hash, 0, MDL))
 				log_fatal ("No memory for subclass hash.");
 			class_hash_add (pc -> hash,
-					class -> hash_string.data,
+					(const char *)class -> hash_string.data,
 					class -> hash_string.len,
 					(void *)class, MDL);
 		} else {
@@ -2248,9 +2248,13 @@ void parse_subnet_declaration (cfile, share)
 
 	/* Validate the network number/netmask pair. */
 	if (host_addr (subnet -> net, subnet -> netmask)) {
+		char *maskstr;
+
+		maskstr = strdup (piaddr (subnet -> netmask));
 		parse_warn (cfile,
-			    "subnet %s: bad subnet number/mask combination.",
-			    piaddr (subnet -> net));
+		   "subnet %s netmask %s: bad subnet number/mask combination.",
+			    piaddr (subnet -> net), maskstr);
+		free(maskstr);
 		subnet_dereference (&subnet, MDL);
 		skip_to_semi (cfile);
 		return;
