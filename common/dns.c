@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dns.c,v 1.12 1999/10/07 06:35:41 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dns.c,v 1.13 2000/01/05 18:00:51 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -64,6 +64,11 @@ void dns_startup ()
 	dns_protocol_fd = socket (AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	if (dns_protocol_fd < 0)
 		log_fatal ("unable to create dns socket: %m");
+
+#if defined (HAVE_SETFD)
+	if (fcntl (dns_protocol_fd, F_SETFD, 1) < 0)
+		log_fatal ("unable to set close-on-exec on dns fd: %m");
+#endif
 
 	first_name_server ();
 
