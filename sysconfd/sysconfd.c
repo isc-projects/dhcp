@@ -44,7 +44,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: sysconfd.c,v 1.2 1997/10/20 22:11:44 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: sysconfd.c,v 1.3 1997/11/29 07:49:06 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -75,6 +75,7 @@ int main (argc, argv, envp)
 	struct sockaddr_un name;
 	int sysconf_fd;
 	int pid;
+	int len;
 
 #ifdef SYSLOG_4_2
 	openlog ("sysconfd", LOG_NDELAY);
@@ -95,12 +96,15 @@ int main (argc, argv, envp)
 	/* XXX for now... */
 	name.sun_family = PF_UNIX;
 	strcpy (name.sun_path, "/var/run/sysconf");
-	name.sun_len = ((sizeof name) - (sizeof name.sun_path) +
-			strlen (name.sun_path));
+#if defined (HAVE_SA_LEN)
+	name.sun_len =
+#endif
+		len = ((sizeof name) - (sizeof name.sun_path) +
+		       strlen (name.sun_path));
 	unlink (name.sun_path);
 
 	/* Bind to it... */
-	if (bind (sysconf_fd, (struct sockaddr *)&name, name.sun_len) < 0)
+	if (bind (sysconf_fd, (struct sockaddr *)&name, len) < 0)
 		error ("can't bind to sysconf socket: %m");
 
 	/* Listen for connections... */

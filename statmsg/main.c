@@ -44,7 +44,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: main.c,v 1.2 1997/10/20 22:04:23 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: main.c,v 1.3 1997/11/29 07:48:37 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -62,6 +62,7 @@ int main (argc, argv, envp)
 	struct sysconf_header hdr;
 	int status;
 	char *buf;
+	int len;
 
 #ifdef SYSLOG_4_2
 	openlog ("statmsg", LOG_NDELAY);
@@ -90,10 +91,13 @@ int main (argc, argv, envp)
 	/* XXX for now... */
 	name.sun_family = PF_UNIX;
 	strcpy (name.sun_path, "/var/run/sysconf");
-	name.sun_len = ((sizeof name) - (sizeof name.sun_path) +
-			strlen (name.sun_path));
+#if defined (HAVE_SA_LEN)
+	name.sun_len = 
+#endif
+		len = ((sizeof name) - (sizeof name.sun_path) +
+		       strlen (name.sun_path));
 
-	if (connect (sysconf_fd, (struct sockaddr *)&name, name.sun_len) < 0)
+	if (connect (sysconf_fd, (struct sockaddr *)&name, len) < 0)
 		error ("can't connect to sysconf socket: %m");
 
 	status = write (sysconf_fd, &hdr, sizeof hdr);
