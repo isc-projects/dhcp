@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: print.c,v 1.48 2001/01/16 23:12:47 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: print.c,v 1.49 2001/02/12 19:46:59 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -87,10 +87,6 @@ void print_lease (lease)
 	t = gmtime (&lease -> ends);
 	strftime (tbuf, sizeof tbuf, "%Y/%m/%d %H:%M:%S", t);
 	log_debug ("  end %s", tbuf);
-	
-	t = gmtime (&lease -> timestamp);
-	strftime (tbuf, sizeof tbuf, "%Y/%m/%d %H:%M:%S", t);
-	log_debug ("  stamp %s", tbuf);
 	
 	if (lease -> hardware_addr.hlen)
 		log_debug ("    hardware addr = %s",
