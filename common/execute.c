@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: execute.c,v 1.44.2.5 2001/06/21 16:53:57 mellon Exp $ Copyright (c) 1998-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: execute.c,v 1.44.2.6 2001/06/21 23:36:36 mellon Exp $ Copyright (c) 1998-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -545,7 +545,7 @@ int executable_statement_dereference (ptr, file, line)
 	}
 
 	(*ptr) -> refcnt--;
-	rc_register (file, line, ptr, *ptr, (*ptr) -> refcnt);
+	rc_register (file, line, ptr, *ptr, (*ptr) -> refcnt, 1);
 	if ((*ptr) -> refcnt > 0) {
 		*ptr = (struct executable_statement *)0;
 		return 1;
