@@ -1,7 +1,7 @@
 		     Internet Software Consortium
 	   Dynamic Host Configuration Protocol Distribution
 		      Version 3, Alpha Snapshot
-			  March 26, 1999
+			  March 29, 1999
 
 			    Release Notes
 
@@ -54,6 +54,14 @@ system and does all the stuff that I have thought to test, there's a
 pretty decent chance it will do something other than what you expect
 when you try to use it.  Pointing out inconsistencies between the
 documentation and the source code will always be appreciated.
+
+		     Changes since March 26, 1999
+
+- Set broadcast flag in DHCPDISCOVER packet if appropriate.
+
+- Fix parsing of pool permits and address range statements.
+
+- Account for tabs in parse_warn().
 
 		     Changes since March 15, 1999
 
