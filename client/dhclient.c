@@ -29,7 +29,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.93 2000/01/26 14:55:26 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.94 2000/01/28 20:30:26 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -73,6 +73,8 @@ int save_scripts;
 
 static void usage PROTO ((void));
 
+void do_release(struct client_state *);
+
 int main (argc, argv, envp)
 	int argc;
 	char **argv, **envp;
@@ -86,6 +88,9 @@ int main (argc, argv, envp)
 	char *server = (char *)0;
 	char *relay = (char *)0;
 	isc_result_t status;
+ 	int release_mode = 0;
+	omapi_object_t *listener;
+	isc_result_t result;
 
 #ifdef SYSLOG_4_2
 	openlog ("dhclient", LOG_NDELAY);
@@ -99,7 +104,10 @@ int main (argc, argv, envp)
 #endif	
 
 	for (i = 1; i < argc; i++) {
-		if (!strcmp (argv [i], "-p")) {
+		if (!strcmp (argv [i], "-r")) {
+			release_mode = 1;
+			no_daemon = 1;
+		} else if (!strcmp (argv [i], "-p")) {
 			if (++i == argc)
 				usage ();
 			local_port = htons (atoi (argv [i]));
@@ -132,6 +140,9 @@ int main (argc, argv, envp)
 			if (++i == argc)
 				usage ();
 			relay = argv [i];
+		} else if (!strcmp (argv [i], "-n")) {
+			/* do not start up any interfaces */
+		    interfaces_requested = 1;
  		} else if (argv [i][0] == '-') {
  		    usage ();
  		} else {
@@ -147,6 +158,16 @@ int main (argc, argv, envp)
 		    interfaces_requested = 1;
  		    interfaces = tmp;
  		}
+	}
+
+	/* first kill of any currently running client */
+	if (release_mode) {
+	        /* XXX inelegant hack to prove concept */
+		char command[1024];
+
+		snprintf (command, 1024, "kill `cat %s`",
+			  path_dhclient_pid);
+		system (command);
 	}
 
 	if (!quiet) {
@@ -225,6 +246,10 @@ int main (argc, argv, envp)
 		log_fatal ("Can't initialize OMAPI: %s",
 			   isc_result_totext (status));
 
+	/* Set up the OMAPI wrappers for various server database internal
+	   objects. */
+	dhclient_db_objects_setup ();
+
 	/* Discover all the network interfaces. */
 	discover_interfaces (DISCOVER_UNCONFIGURED);
 
@@ -251,7 +276,7 @@ int main (argc, argv, envp)
 
 		/* Nothing more to do. */
 		exit (0);
-	} else {
+	} else if (!release_mode) {
 		/* Call the script with the list of interfaces. */
 		for (ip = interfaces; ip; ip = ip -> next) {
 			/* If interfaces were specified, don't configure
@@ -295,14 +320,34 @@ int main (argc, argv, envp)
 
 	/* Start a configuration state machine for each interface. */
 	for (ip = interfaces; ip; ip = ip -> next) {
+		ip -> flags |= INTERFACE_RUNNING;
 		for (client = ip -> client; client; client = client -> next) {
-			client -> state = S_INIT;
-			/* Set up a timeout to start the initialization
-			   process. */
-			add_timeout (cur_time + random () % 5,
-			     	     state_reboot, client);
+			if (release_mode)
+				do_release (client);
+			else {
+				client -> state = S_INIT;
+				/* Set up a timeout to start the initialization
+				   process. */
+				add_timeout (cur_time + random () % 5,
+					     state_reboot, client);
+			}
 		}
 	}
+
+	if (release_mode)
+		return 0;
+
+	/* Start up a listener for the object management API protocol. */
+	listener = (omapi_object_t *)0;
+	result = omapi_generic_new (&listener, MDL);
+	if (result != ISC_R_SUCCESS)
+		log_fatal ("Can't allocate new generic object: %s\n",
+			   isc_result_totext (result));
+	result = omapi_protocol_listen (listener,
+					OMAPI_PROTOCOL_PORT, 1);
+	if (result != ISC_R_SUCCESS)
+		log_fatal ("Can't start OMAPI protocol: %s",
+			   isc_result_totext (result));
 
 	/* Set up the bootp packet handler... */
 	bootp_packet_handler = do_packet;
@@ -1778,7 +1823,7 @@ void make_release (client, lease)
 	oc = lookup_option (&dhcp_universe, lease -> options,
 			    DHO_DHCP_SERVER_IDENTIFIER);
 	make_client_options (client, lease, &request, oc,
-			     &lease -> address, (u_int32_t *)0,
+			     (struct iaddr *)0, (u_int32_t *)0,
 			     &options);
 
 	/* Set up the option buffer... */
@@ -2275,6 +2320,37 @@ void client_location_changed ()
 		}
 	}
 }
+
+void do_release(client) 
+	struct client_state *client;
+{
+	/* make_request doesn't initialize xid because it normally comes
+	   from the DHCPDISCOVER, but we haven't sent a DHCPDISCOVER,
+	   so pick an xid now. */
+	client -> xid = random ();
+
+	/* Make a DHCPREQUEST packet, and set appropriate per-interface
+	   flags. */
+	make_release (client, client -> active);
+	client -> destination = iaddr_broadcast;
+	client -> first_sending = cur_time;
+	client -> interval = client -> config -> initial_interval;
+
+	/* Zap the medium list... */
+	client -> medium = (struct string_list *)0;
+
+	/* Send out the first DHCPREQUEST packet. */
+	send_release (client);
+
+	script_init (client,
+		     "RELEASE", (struct string_list *)0);
+	if (client -> alias)
+		script_write_params (client, "alias_",
+				     client -> alias);
+	script_go (client);
+}
+
+
 
 /* The client should never receive a relay agent information option,
    so if it does, log it and discard it. */

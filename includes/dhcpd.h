@@ -689,6 +689,7 @@ struct interface_info {
 	u_int32_t flags;		/* Control flags... */
 #define INTERFACE_REQUESTED 1
 #define INTERFACE_AUTOMATIC 2
+#define INTERFACE_RUNNING 4
 
 	/* Only used by DHCP client code. */
 	struct client_state *client;
@@ -1974,3 +1975,29 @@ isc_result_t dhcp_failover_update_peer (struct lease *, int);
 void failover_print PROTO ((char *, unsigned *, unsigned, const char *));
 void update_partner PROTO ((struct lease *));
 #endif /* FAILOVER_PROTOCOL */
+
+/* client/omapi.c */
+void dhclient_db_objects_setup PROTO ((void));
+isc_result_t dhclient_interface_set_value (omapi_object_t *,
+					   omapi_object_t *,
+					   omapi_data_string_t *,
+					   omapi_typed_data_t *);
+isc_result_t dhclient_interface_get_value (omapi_object_t *,
+					   omapi_object_t *,
+					   omapi_data_string_t *,
+					   omapi_value_t **);
+isc_result_t dhclient_interface_destroy (omapi_object_t *,
+					       const char *, int);
+isc_result_t dhclient_interface_signal_handler (omapi_object_t *,
+						const char *,
+						va_list ap);
+isc_result_t dhclient_interface_stuff_values (omapi_object_t *,
+					      omapi_object_t *,
+					      omapi_object_t *);
+isc_result_t dhclient_interface_lookup (omapi_object_t **,
+					omapi_object_t *,
+					omapi_object_t *);
+isc_result_t dhclient_interface_create (omapi_object_t **,
+					omapi_object_t *);
+isc_result_t dhclient_interface_remove (omapi_object_t *,
+					omapi_object_t *);

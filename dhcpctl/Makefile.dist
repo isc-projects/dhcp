@@ -27,10 +27,14 @@ DEBUG  = -g
 INCLUDES = $(BINDINC) -I../includes
 CFLAGS = $(DEBUG) $(PREDEFINES) $(INCLUDES) $(COPTS)
 
-all:	libdhcpctl.a test $(CATMANPAGES)
+all:	libdhcpctl.a test cltest $(CATMANPAGES)
 
 test:	test.o libdhcpctl.a ../omapip/libomapi.a
 	$(CC) $(DEBUG) $(LFLAGS) -o test test.o libdhcpctl.a \
+			../omapip/libomapi.a $(LIBS)
+
+cltest:	cltest.o libdhcpctl.a ../omapip/libomapi.a
+	$(CC) $(DEBUG) $(LFLAGS) -o cltest cltest.o libdhcpctl.a \
 			../omapip/libomapi.a $(LIBS)
 
 libdhcpctl.a:	$(OBJ)

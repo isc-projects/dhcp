@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: discover.c,v 1.20 2000/01/26 14:55:33 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: discover.c,v 1.21 2000/01/28 20:30:31 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -47,7 +47,7 @@ omapi_object_type_t *dhcp_type_interface;
 void discover_interfaces (state)
 	int state;
 {
-	struct interface_info *tmp;
+	struct interface_info *tmp, *ip;
 	struct interface_info *last, *next;
 	char buf [8192];
 	struct ifconf ic;
@@ -159,6 +159,29 @@ void discover_interfaces (state)
 			tmp -> next = interfaces;
 			tmp -> flags = ir;
 			interfaces = tmp;
+		}
+
+		/* See if we can find the client from dummy_interfaces */
+		last = 0;
+		for (ip = dummy_interfaces; ip; ip = ip -> next) {
+			if (!strcmp (ip -> name, tmp -> name)) {
+				/* remove from dummy_interfaces */
+				if (last)
+					last -> next = ip -> next;
+				else
+					dummy_interfaces = ip -> next;
+				/* copy "client" to tmp */
+				if (ip -> client) {
+					tmp -> client = ip -> client;
+					tmp -> client -> interface = tmp;
+				}
+				/* free up the dummy_interface */
+				if (ip -> ifp)
+					free (ip -> ifp);
+				dfree (ip, MDL);
+				break;
+			}
+			last = ip;
 		}
 
 		/* If we have the capability, extract link information
@@ -323,6 +346,27 @@ void discover_interfaces (state)
 			tmp -> flags = ir;
 			tmp -> next = interfaces;
 			interfaces = tmp;
+			/* See if we can find the client from dummy_interfaces */
+			last = 0;
+			for (ip = dummy_interfaces; ip; ip = ip -> next) {
+				if (!strcmp (ip -> name, tmp -> name)) {
+					/* remove from dummy_interfaces */
+					if (last)
+						last -> next = ip -> next;
+					else
+						dummy_interfaces = ip -> next;
+					/* copy "client" to tmp */
+					if (ip -> client)
+						tmp -> client = ip -> client;
+					/* free up the dummy_interface */
+					if (ip -> ifp)
+						free (ip -> ifp);
+					dfree (ip, MDL);
+					ip = 0;
+					break;
+				}
+				last = ip;
+			}
 		}
 		fclose (proc_dev);
 	}
@@ -433,6 +477,9 @@ void discover_interfaces (state)
 	last = (struct interface_info *)0;
 	for (tmp = interfaces; tmp; tmp = next) {
 		next = tmp -> next;
+		/* skip interfaces that are running already */
+		if (tmp -> flags & INTERFACE_RUNNING)
+			continue;
 		if ((tmp -> flags & INTERFACE_AUTOMATIC) &&
 		    state == DISCOVER_REQUESTED)
 			tmp -> flags &= ~(INTERFACE_AUTOMATIC |
@@ -498,6 +545,9 @@ void discover_interfaces (state)
 
 	/* Now register all the remaining interfaces as protocols. */
 	for (tmp = interfaces; tmp; tmp = tmp -> next) {
+		/* not if it's been registered before */
+		if (tmp -> flags & INTERFACE_RUNNING)
+			continue;
 		tmp -> refcnt = 1;
 		tmp -> type = dhcp_type_interface;
 		status = omapi_register_io_object ((omapi_object_t *)tmp,

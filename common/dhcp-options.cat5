@@ -554,12 +554,8 @@ dhcpd-options(5)                                 dhcpd-options(5)
 
        ooppttiioonn rroouutteerr--ssoolliicciittaattiioonn--aaddddrreessss _i_p_-_a_d_d_r_e_s_s;;
 
-          <<<<<<<  dhcp-options.5 This option specifies a list of
-          IP addresses indicating NTP (RFC 1305)  servers  avail­
-          able  to the client.  Servers should be listed in order
-          of  preference.   =======  This  option  specifies  the
-          address  to  which  the  client  should transmit router
-          solicitation requests.  >>>>>>> 1.9
+          This  option  specifies the address to which the client
+          should transmit router solicitation requests.
 
        ooppttiioonn rroouutteerrss _i_p_-_a_d_d_r_e_s_s [,, _i_p_-_a_d_d_r_e_s_s...  ];;
 
@@ -586,6 +582,10 @@ dhcpd-options(5)                                 dhcpd-options(5)
           ond address is the router for the destination.
 
           The  default  route (0.0.0.0) is an illegal destination
+          for a static route.  To specify the default route,  use
+          the  rroouutteerrss  option.    Also,  please  note  that this
+          option is not intended for classless IP  routing  -  it
+          does  not  include  a subnet mask.   Since classless IP
 
 
 
@@ -598,10 +598,6 @@ dhcpd-options(5)                                 dhcpd-options(5)
 dhcpd-options(5)                                 dhcpd-options(5)
 
 
-          for a static route.  To specify the default route,  use
-          the  rroouutteerrss  option.    Also,  please  note  that this
-          option is not intended for classless IP  routing  -  it
-          does  not  include  a subnet mask.   Since classless IP
           routing is now the most widely deployed  routing  stan­
           dard,  this  option  is  virtually  useless, and is not
           implemented by any of the  popular  DHCP  clients,  for
@@ -652,6 +648,10 @@ dhcpd-options(5)                                 dhcpd-options(5)
           the client TCP should wait before sending  a  keepalive
           message  on a TCP connection.  The time is specified as
           a 32-bit unsigned integer.  A value of  zero  indicates
+          that  the client should not generate keepalive messages
+          on connections  unless  specifically  requested  by  an
+          application.
+
 
 
 
@@ -663,10 +663,6 @@ dhcpd-options(5)                                 dhcpd-options(5)
 
 dhcpd-options(5)                                 dhcpd-options(5)
 
-
-          that  the client should not generate keepalive messages
-          on connections  unless  specifically  requested  by  an
-          application.
 
        ooppttiioonn ttffttpp--sseerrvveerr--nnaammee _t_e_x_t;;
 
@@ -718,6 +714,10 @@ dhcpd-options(5)                                 dhcpd-options(5)
           whose  contents  are specific to the vendor and are not
           specified in a standard.   To  see  what  vendor  class
           identifier  a  clients  are  sending, you can write the
+          following in your DHCP server configuration file:
+
+          set vendor-class option vendor-class-identifier;
+
 
 
 
@@ -729,10 +729,6 @@ dhcpd-options(5)                                 dhcpd-options(5)
 
 dhcpd-options(5)                                 dhcpd-options(5)
 
-
-          following in your DHCP server configuration file:
-
-          set vendor-class option vendor-class-identifier;
 
           This will result in all  entries  in  the  DHCP  server
           lease database file for clients that sent vendor-class-
@@ -784,6 +780,10 @@ RREELLAAYY AAGGEENNTT IINNFFOORRMMAATTIIOONN OOPPTTIIO
        agent can add to a DHCP packet when  relaying  it  to  the
        DHCP server.   The server can then make address allocation
        decisions (or whatever other decisions it wants) based  on
+       these  options.   The server also returns these options in
+       any replies it sends through the relay agent, so that  the
+       relay  agent  can use the information in these options for
+       delivery or accounting purposes.
 
 
 
@@ -795,11 +795,6 @@ RREELLAAYY AAGGEENNTT IINNFFOORRMMAATTIIOONN OOPPTTIIO
 
 dhcpd-options(5)                                 dhcpd-options(5)
 
-
-       these  options.   The server also returns these options in
-       any replies it sends through the relay agent, so that  the
-       relay  agent  can use the information in these options for
-       delivery or accounting purposes.
 
        The current draft  defines  two  options.    To  reference
        these options in the dhcp server, specify the option space
@@ -850,6 +845,11 @@ TTHHEE NNEETTWWAARREE//IIPP SSUUBBOOPPTTIIOONNSS
           addresses,  each of which should be the IP address of a
           NetWare Domain SAP/RIP server (DSS).
 
+       ooppttiioonn nnwwiipp..nneeaarreesstt--nnwwiipp--sseerrvveerr _i_p_-_a_d_d_r_e_s_s
+                                    [,, _i_p_-_a_d_d_r_e_s_s...];;
+
+          This suboption specifies  a  list  of  up  to  five  IP
+          addresses,  each of which should be the IP address of a
 
 
 
@@ -862,11 +862,6 @@ TTHHEE NNEETTWWAARREE//IIPP SSUUBBOOPPTTIIOONNSS
 dhcpd-options(5)                                 dhcpd-options(5)
 
 
-       ooppttiioonn nnwwiipp..nneeaarreesstt--nnwwiipp--sseerrvveerr _i_p_-_a_d_d_r_e_s_s
-                                    [,, _i_p_-_a_d_d_r_e_s_s...];;
-
-          This suboption specifies  a  list  of  up  to  five  IP
-          addresses,  each of which should be the IP address of a
           Nearest NetWare IP server.
 
        ooppttiioonn nnwwiipp..aauuttoorreettrriieess _u_i_n_t_8;;
@@ -917,6 +912,11 @@ DDEEFFIINNIINNGG NNEEWW OOPPTTIIOONNSS
        "local-host-name",  feeling  some confidence that no offi­
        cial DHCP option name will ever start with "local".
 
+       Once you have chosen a name, you must choose a code.   For
+       site-local  options,  all  codes  between  128 and 254 are
+       reserved for DHCP options, so you  can  pick  any  one  of
+       these.   In  practice,  some  vendors have interpreted the
+
 
 
                                                                14
@@ -928,10 +928,6 @@ DDEEFFIINNIINNGG NNEEWW OOPPTTIIOONNSS
 dhcpd-options(5)                                 dhcpd-options(5)
 
 
-       Once you have chosen a name, you must choose a code.   For
-       site-local  options,  all  codes  between  128 and 254 are
-       reserved for DHCP options, so you  can  pick  any  one  of
-       these.   In  practice,  some  vendors have interpreted the
        protocol rather loosely and have used option  code  values
        greater  than  128  themselves.    There's  no real way to
        avoid this problem, but it's not likely to cause too  much
@@ -982,6 +978,10 @@ dhcpd-options(5)                                 dhcpd-options(5)
 
        IIPP--AADDDDRREESSSS
 
+       ooppttiioonn _n_e_w_-_n_a_m_e ccooddee _n_e_w_-_c_o_d_e == iipp--aaddddrreessss ;;
+
+       An  option  whose  structure  is  an  IP  address  can  be
+       expressed either as a domain name or as a dotted quad.  So
 
 
 
@@ -994,10 +994,6 @@ dhcpd-options(5)                                 dhcpd-options(5)
 dhcpd-options(5)                                 dhcpd-options(5)
 
 
-       ooppttiioonn _n_e_w_-_n_a_m_e ccooddee _n_e_w_-_c_o_d_e == iipp--aaddddrreessss ;;
-
-       An  option  whose  structure  is  an  IP  address  can  be
-       expressed either as a domain name or as a dotted quad.  So
        the following is an example use of the ip-address type:
 
        option sql-server-address code 193 = ip-address;
@@ -1048,6 +1044,10 @@ dhcpd-options(5)                                 dhcpd-options(5)
        option contrived-001 code 201 = { boolean, integer 32, text };
        option contrived-001 on 1772 "contrivance";
 
+       It's also possible to have  options  that  are  arrays  of
+       records, for example:
+
+       option new-static-routes code 201 = array of {
 
 
 
@@ -1060,10 +1060,6 @@ dhcpd-options(5)                                 dhcpd-options(5)
 dhcpd-options(5)                                 dhcpd-options(5)
 
 
-       It's also possible to have  options  that  are  arrays  of
-       records, for example:
-
-       option new-static-routes code 201 = array of {
             ip-address, ip-address, ip-address, integer 8 };
        option static-routes
             10.0.0.0 255.255.255.0 net-0-rtr.example.com 1,
@@ -1114,6 +1110,10 @@ VVEENNDDOORR EENNCCAAPPSSUULLAATTEEDD OOPPTTIIOONNSS
        option SUNW.server-name code 3 = text;
        option SUNW.root-path code 4 = text;
 
+       Once  you  have  defined an option space and the format of
+       some options, you can set up scopes that define values for
+       those  options,  and  you  can say when to use them.   For
+       example, suppose you want to handle two different  classes
 
 
 
@@ -1126,10 +1126,6 @@ VVEENNDDOORR EENNCCAAPPSSUULLAATTEEDD OOPPTTIIOONNSS
 dhcpd-options(5)                                 dhcpd-options(5)
 
 
-       Once  you  have  defined an option space and the format of
-       some options, you can set up scopes that define values for
-       those  options,  and  you  can say when to use them.   For
-       example, suppose you want to handle two different  classes
        of  clients.    Using the option space definition shown in
        the previous example, you can send different option values
        to  different clients based on the vendor-class-identifier
@@ -1172,6 +1168,10 @@ AAUUTTHHOORR
        through  the  Internet  Software  Consortium.  Information
        about the Internet Software Consortium  can  be  found  at
        hhttttpp::////wwwwww..iisscc..oorrgg//iisscc..
+
+
+
+
 
 
 
