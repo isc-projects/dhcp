@@ -183,15 +183,14 @@ int parse_warn (ANSI_DECL (char *) fmt, VA_DOTDOTDOT)
 	KandR (char *fmt;)
 	va_dcl
 {
-	extern int tline, tlpos;
 	va_list list;
 	
 	do_percentm (mbuf, fmt);
 #ifndef NO_SNPRINTF
-	snprintf (fbuf, sizeof fbuf, "dhcpd.conf line %d char %d: %s",
-		  tline, tlpos, mbuf);
+	snprintf (fbuf, sizeof fbuf, "%s line %d char %d: %s",
+		  tlname, tline, tlpos, mbuf);
 #else
-	sprintf (fbuf, "dhcpd.conf line %d char %d: %s", tline, tlpos, mbuf);
+	sprintf (fbuf, "%s line %d char %d: %s", tlname, tline, tlpos, mbuf);
 #endif
 	
 	VA_start (list, fmt);

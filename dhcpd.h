@@ -266,6 +266,8 @@ int main PROTO ((int, char **, char **));
 void cleanup PROTO ((void));
 
 /* conflex.c */
+extern int tline, tlpos;
+extern char *tlname;
 int next_token PROTO ((char **, FILE *));
 int peek_token PROTO ((char **, FILE *));
 

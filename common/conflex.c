@@ -53,6 +53,7 @@ static int line;
 static int lpos;
 int tlpos;
 int tline;
+char *tlname;
 static int token;
 static int ugflag;
 static char *tval;
