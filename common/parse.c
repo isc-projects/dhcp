@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.104.2.12 2002/11/17 02:58:34 dhankins Exp $ Copyright (c) 1995-2002 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.104.2.13 2003/01/22 04:58:36 dhankins Exp $ Copyright (c) 1995-2002 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -4040,7 +4040,11 @@ int parse_expression (expr, cfile, lose, context, plhs, binop)
 	}
 
 	if (binop != expr_none) {
-	  if (expression_context (rhs) != expression_context (lhs)) {
+	  rhs_context = expression_context(rhs);
+	  lhs_context = expression_context(lhs);
+
+	  if ((rhs_context != context_any) && (lhs_context != context_any) &&
+			(rhs_context != lhs_context)) {
 	    parse_warn (cfile, "illegal expression relating different types");
 	    skip_to_semi (cfile);
 	    expression_dereference (&rhs, MDL);
@@ -4052,9 +4056,10 @@ int parse_expression (expr, cfile, lose, context, plhs, binop)
 	  switch(binop) {
 	    case expr_not_equal:
 	    case expr_equal:
-		if ((expression_context(rhs) != context_data_or_numeric) &&
-		    (expression_context(rhs) != context_data) &&
-		    (expression_context(rhs) != context_numeric)) {
+		if ((rhs_context != context_data_or_numeric) &&
+		    (rhs_context != context_data) &&
+		    (rhs_context != context_numeric) &&
+		    (rhs_context != context_any)) {
 			parse_warn (cfile, "expecting data/numeric expression");
 			skip_to_semi (cfile);
 			expression_dereference (&rhs, MDL);
@@ -4065,7 +4070,8 @@ int parse_expression (expr, cfile, lose, context, plhs, binop)
 
 	    case expr_and:
 	    case expr_or:
-		if (expression_context(rhs) != context_boolean) {
+		if ((rhs_context != context_boolean) &&
+		    (rhs_context != context_any)) {
 			parse_warn (cfile, "expecting boolean expressions");
 			skip_to_semi (cfile);
 			expression_dereference (&rhs, MDL);
@@ -4082,7 +4088,8 @@ int parse_expression (expr, cfile, lose, context, plhs, binop)
 	    case expr_binary_and:
 	    case expr_binary_or:
 	    case expr_binary_xor:
-		if (expression_context(rhs) != context_numeric) {
+		if ((rhs_context != context_numeric) &&
+		    (rhs_context != context_any)) {
 			parse_warn (cfile, "expecting numeric expressions");
                         skip_to_semi (cfile);
                         expression_dereference (&rhs, MDL);
