@@ -3,7 +3,7 @@
    Parser for dhcpd config file... */
 
 /*
- * Copyright (c) 1995, 1996 The Internet Software Consortium.
+ * Copyright (c) 1995, 1996, 1997 The Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.37 1996/12/31 02:01:28 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.38 1997/02/18 14:27:22 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -381,46 +381,6 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 	return 0;
 }
 
-/* Skip to the semicolon ending the current statement.   If we encounter
-   braces, the matching closing brace terminates the statement.   If we
-   encounter a right brace but haven't encountered a left brace, return
-   leaving the brace in the token buffer for the caller.   If we see a
-   semicolon and haven't seen a left brace, return.   This lets us skip
-   over:
-
-   	statement;
-	statement foo bar { }
-	statement foo bar { statement { } }
-	statement}
- 
-	...et cetera. */
-
-void skip_to_semi (cfile)
-	FILE *cfile;
-{
-	int token;
-	char *val;
-	int brace_count = 0;
-
-	do {
-		token = peek_token (&val, cfile);
-		if (token == RBRACE) {
-			if (brace_count) {
-				token = next_token (&val, cfile);
-				if (!--brace_count)
-					return;
-			} else
-				return;
-		} else if (token == LBRACE) {
-			brace_count++;
-		} else if (token == SEMI && !brace_count) {
-			token = next_token (&val, cfile);
-			return;
-		}
-		token = next_token (&val, cfile);
-	} while (token != EOF);
-}
-
 /* boolean :== ON SEMI | OFF SEMI | TRUE SEMI | FALSE SEMI */
 
 int parse_boolean (cfile)
@@ -444,21 +404,6 @@ int parse_boolean (cfile)
 	}
 	parse_semi (cfile);
 	return rv;
-}
-
-int parse_semi (cfile)
-	FILE *cfile;
-{
-	int token;
-	char *val;
-
-	token = next_token (&val, cfile);
-	if (token != SEMI) {
-		parse_warn ("semicolon expected.");
-		skip_to_semi (cfile);
-		return 0;
-	}
-	return 1;
 }
 
 /* Expect a left brace; if there isn't one, skip over the rest of the
@@ -641,28 +586,6 @@ void parse_class_declaration (cfile, group, type)
 						       declaration);
 		}
 	} while (1);
-}
-
-/* lease-time :== NUMBER SEMI */
-
-void parse_lease_time (cfile, timep)
-	FILE *cfile;
-	TIME *timep;
-{
-	char *val;
-	int token;
-
-	token = next_token (&val, cfile);
-	if (token != NUMBER) {
-		parse_warn ("Expecting numeric lease time");
-		skip_to_semi (cfile);
-		return;
-	}
-	convert_num ((unsigned char *)timep, val, 10, 32);
-	/* Unswap the number - convert_num returns stuff in NBO. */
-	*timep = ntohl (*timep); /* XXX */
-
-	parse_semi (cfile);
 }
 
 /* shared-network-declaration :==
@@ -850,86 +773,6 @@ void parse_group_declaration (cfile, group)
 	} while (1);
 }
 
-/* hardware-parameter :== HARDWARE ETHERNET csns SEMI
-   csns :== NUMBER | csns COLON NUMBER */
-
-void parse_hardware_param (cfile, hardware)
-	FILE *cfile;
-	struct hardware *hardware;
-{
-	char *val;
-	int token;
-	int hlen;
-	unsigned char *t;
-
-	token = next_token (&val, cfile);
-	switch (token) {
-	      case ETHERNET:
-		hardware -> htype = HTYPE_ETHER;
-		break;
-	      case TOKEN_RING:
-		hardware -> htype = HTYPE_IEEE802;
-		break;
-	      default:
-		parse_warn ("expecting a network hardware type");
-		skip_to_semi (cfile);
-		return;
-	}
-
-	/* Parse the hardware address information.   Technically,
-	   it would make a lot of sense to restrict the length of the
-	   data we'll accept here to the length of a particular hardware
-	   address type.   Unfortunately, there are some broken clients
-	   out there that put bogus data in the chaddr buffer, and we accept
-	   that data in the lease file rather than simply failing on such
-	   clients.   Yuck. */
-	hlen = 0;
-	t = parse_numeric_aggregate (cfile, (unsigned char *)0, &hlen,
-				     COLON, 16, 8);
-	if (!t)
-		return;
-	if (hlen > sizeof hardware -> haddr) {
-		free (t);
-		parse_warn ("hardware address too long");
-	} else {
-		hardware -> hlen = hlen;
-		memcpy ((unsigned char *)&hardware -> haddr [0],
-			t, hardware -> hlen);
-		free (t);
-	}
-	
-	token = next_token (&val, cfile);
-	if (token != SEMI) {
-		parse_warn ("expecting semicolon.");
-		skip_to_semi (cfile);
-	}
-}
-
-/* string-parameter :== STRING SEMI */
-
-char *parse_string (cfile)
-	FILE *cfile;
-{
-	char *val;
-	int token;
-	char *s;
-
-	token = next_token (&val, cfile);
-	if (token != STRING) {
-		parse_warn ("filename must be a string");
-		skip_to_semi (cfile);
-		return (char *)0;
-	}
-	s = (char *)malloc (strlen (val) + 1);
-	if (!s)
-		error ("no memory for string %s.", val);
-	strcpy (s, val);
-
-	if (!parse_semi (cfile))
-		return (char *)0;
-	return s;
-}
-
 /* ip-addr-or-hostname :== ip-address | hostname
    ip-address :== NUMBER DOT NUMBER DOT NUMBER DOT NUMBER
    
@@ -1031,6 +874,8 @@ void parse_option_param (cfile, group)
 		return;
 	}
 	vendor = malloc (strlen (val) + 1);
+	if (!vendor)
+		error ("no memory for vendor token.");
 	strcpy (vendor, val);
 	token = peek_token (&val, cfile);
 	if (token == DOT) {
@@ -1445,364 +1290,4 @@ void parse_address_range (cfile, subnet)
 	new_address_range (low, high, subnet, dynamic);
 }
 
-/* date :== NUMBER NUMBER SLASH NUMBER SLASH NUMBER 
-   		NUMBER COLON NUMBER COLON NUMBER SEMI
 
-   Dates are always in GMT; first number is day of week; next is
-   year/month/day; next is hours:minutes:seconds on a 24-hour
-   clock. */
-
-TIME parse_date (cfile)
-	FILE *cfile;
-{
-	struct tm tm;
-	int guess;
-	char *val;
-	int token;
-	static int months [11] = { 31, 59, 90, 120, 151, 181,
-					  212, 243, 273, 304, 334 };
-
-	/* Day of week... */
-	token = next_token (&val, cfile);
-	if (token != NUMBER) {
-		parse_warn ("numeric day of week expected.");
-		if (token != SEMI)
-			skip_to_semi (cfile);
-		return (TIME)0;
-	}
-	tm.tm_wday = atoi (val);
-
-	/* Year... */
-	token = next_token (&val, cfile);
-	if (token != NUMBER) {
-		parse_warn ("numeric year expected.");
-		if (token != SEMI)
-			skip_to_semi (cfile);
-		return (TIME)0;
-	}
-	tm.tm_year = atoi (val);
-	if (tm.tm_year > 1900)
-		tm.tm_year -= 1900;
-
-	/* Slash seperating year from month... */
-	token = next_token (&val, cfile);
-	if (token != SLASH) {
-		parse_warn ("expected slash seperating year from month.");
-		if (token != SEMI)
-			skip_to_semi (cfile);
-		return (TIME)0;
-	}
-
-	/* Month... */
-	token = next_token (&val, cfile);
-	if (token != NUMBER) {
-		parse_warn ("numeric month expected.");
-		if (token != SEMI)
-			skip_to_semi (cfile);
-		return (TIME)0;
-	}
-	tm.tm_mon = atoi (val) - 1;
-
-	/* Slash seperating month from day... */
-	token = next_token (&val, cfile);
-	if (token != SLASH) {
-		parse_warn ("expected slash seperating month from day.");
-		if (token != SEMI)
-			skip_to_semi (cfile);
-		return (TIME)0;
-	}
-
-	/* Month... */
-	token = next_token (&val, cfile);
-	if (token != NUMBER) {
-		parse_warn ("numeric day of month expected.");
-		if (token != SEMI)
-			skip_to_semi (cfile);
-		return (TIME)0;
-	}
-	tm.tm_mday = atoi (val);
-
-	/* Hour... */
-	token = next_token (&val, cfile);
-	if (token != NUMBER) {
-		parse_warn ("numeric hour expected.");
-		if (token != SEMI)
-			skip_to_semi (cfile);
-		return (TIME)0;
-	}
-	tm.tm_hour = atoi (val);
-
-	/* Colon seperating hour from minute... */
-	token = next_token (&val, cfile);
-	if (token != COLON) {
-		parse_warn ("expected colon seperating hour from minute.");
-		if (token != SEMI)
-			skip_to_semi (cfile);
-		return (TIME)0;
-	}
-
-	/* Minute... */
-	token = next_token (&val, cfile);
-	if (token != NUMBER) {
-		parse_warn ("numeric minute expected.");
-		if (token != SEMI)
-			skip_to_semi (cfile);
-		return (TIME)0;
-	}
-	tm.tm_min = atoi (val);
-
-	/* Colon seperating minute from second... */
-	token = next_token (&val, cfile);
-	if (token != COLON) {
-		parse_warn ("expected colon seperating hour from minute.");
-		if (token != SEMI)
-			skip_to_semi (cfile);
-		return (TIME)0;
-	}
-
-	/* Minute... */
-	token = next_token (&val, cfile);
-	if (token != NUMBER) {
-		parse_warn ("numeric minute expected.");
-		if (token != SEMI)
-			skip_to_semi (cfile);
-		return (TIME)0;
-	}
-	tm.tm_sec = atoi (val);
-	tm.tm_isdst = 0;
-
-	/* XXX */ /* We assume that mktime does not use tm_yday. */
-	tm.tm_yday = 0;
-
-	/* Make sure the date ends in a semicolon... */
-	token = next_token (&val, cfile);
-	if (token != SEMI) {
-		parse_warn ("semicolon expected.");
-		skip_to_semi (cfile);
-		return 0;
-	}
-
-	/* Guess the time value... */
-	guess = ((((((365 * (tm.tm_year - 70) +	/* Days in years since '70 */
-		      (tm.tm_year - 72) / 4 +	/* Leap days since '70 */
-		      (tm.tm_mon		/* Days in months this year */
-		       ? months [tm.tm_mon - 1]
-		       : 0) +
-		      (tm.tm_mon > 1 &&		/* Leap day this year */
-		       ((tm.tm_year - 72) & 3)) +
-		      tm.tm_mday) * 24) +	/* Day of month */
-		    tm.tm_hour) * 60) +
-		  tm.tm_min) * 60) + tm.tm_sec;
-
-	/* This guess could be wrong because of leap seconds or other
-	   weirdness we don't know about that the system does.   For
-	   now, we're just going to accept the guess, but at some point
-	   it might be nice to do a successive approximation here to
-	   get an exact value.   Even if the error is small, if the
-	   server is restarted frequently (and thus the lease database
-	   is reread), the error could accumulate into something
-	   significant. */
-
-	return guess;
-}
-
-/* No BNF for numeric aggregates - that's defined by the caller.  What
-   this function does is to parse a sequence of numbers seperated by
-   the token specified in seperator.  If max is zero, any number of
-   numbers will be parsed; otherwise, exactly max numbers are
-   expected.  Base and size tell us how to internalize the numbers
-   once they've been tokenized. */
-
-unsigned char *parse_numeric_aggregate (cfile, buf,
-					max, seperator, base, size)
-	FILE *cfile;
-	unsigned char *buf;
-	int *max;
-	int seperator;
-	int base;
-	int size;
-{
-	char *val;
-	int token;
-	unsigned char *bufp = buf, *s, *t;
-	int count = 0;
-	pair c = (pair)0;
-
-	if (!bufp && *max) {
-		bufp = (unsigned char *)malloc (*max * size / 8);
-		if (!bufp)
-			error ("can't allocate space for numeric aggregate");
-	} else
-		s = bufp;
-
-	do {
-		if (count) {
-			token = peek_token (&val, cfile);
-			if (token != seperator) {
-				if (!*max)
-					break;
-				if (token != RBRACE && token != LBRACE)
-					token = next_token (&val, cfile);
-				parse_warn ("too few numbers.");
-				if (token != SEMI)
-					skip_to_semi (cfile);
-				return (unsigned char *)0;
-			}
-			token = next_token (&val, cfile);
-		}
-		token = next_token (&val, cfile);
-
-		if (token == EOF) {
-			parse_warn ("unexpected end of file");
-			break;
-		}
-
-		/* Allow NUMBER_OR_NAME if base is 16. */
-		if (token != NUMBER &&
-		    (base != 16 || token != NUMBER_OR_NAME)) {
-			parse_warn ("expecting numeric value.");
-			skip_to_semi (cfile);
-			return (unsigned char *)0;
-		}
-		/* If we can, convert the number now; otherwise, build
-		   a linked list of all the numbers. */
-		if (s) {
-			convert_num (s, val, base, size);
-			s += size / 8;
-		} else {
-			t = (unsigned char *)malloc (strlen (val) + 1);
-			if (!t)
-				error ("no temp space for number.");
-			strcpy (t, val);
-			c = cons (t, c);
-		}
-	} while (++count != *max);
-
-	/* If we had to cons up a list, convert it now. */
-	if (c) {
-		bufp = (unsigned char *)malloc (count * size / 8);
-		if (!bufp)
-			error ("can't allocate space for numeric aggregate.");
-		s = bufp + count - size / 8;
-		*max = count;
-	}
-	while (c) {
-		pair cdr = c -> cdr;
-		convert_num (s, (char *)(c -> car), base, size);
-		s -= size / 8;
-		/* Free up temp space. */
-		free (c -> car);
-		free (c);
-		c = cdr;
-	}
-	return bufp;
-}
-
-void convert_num (buf, str, base, size)
-	unsigned char *buf;
-	char *str;
-	int base;
-	int size;
-{
-	char *ptr = str;
-	int negative = 0;
-	u_int32_t val = 0;
-	int tval;
-	int max;
-
-	if (*ptr == '-') {
-		negative = 1;
-		++ptr;
-	}
-
-	/* If base wasn't specified, figure it out from the data. */
-	if (!base) {
-		if (ptr [0] == '0') {
-			if (ptr [1] == 'x') {
-				base = 16;
-				ptr += 2;
-			} else if (isascii (ptr [1]) && isdigit (ptr [1])) {
-				base = 8;
-				ptr += 1;
-			} else {
-				base = 10;
-			}
-		} else {
-			base = 10;
-		}
-	}
-
-	do {
-		tval = *ptr++;
-		/* XXX assumes ASCII... */
-		if (tval >= 'a')
-			tval = tval - 'a' + 10;
-		else if (tval >= 'A')
-			tval = tval - 'A' + 10;
-		else if (tval >= '0')
-			tval -= '0';
-		else {
-			warn ("Bogus number: %s.", str);
-			break;
-		}
-		if (tval >= base) {
-			warn ("Bogus number: %s: digit %d not in base %d\n",
-			      str, tval, base);
-			break;
-		}
-		val = val * base + tval;
-	} while (*ptr);
-
-	if (negative)
-		max = (1 << (size - 1));
-	else
-		max = (1 << (size - 1)) + ((1 << (size - 1)) - 1);
-	if (val > max) {
-		switch (base) {
-		      case 8:
-			warn ("value %s%o exceeds max (%d) for precision.",
-			      negative ? "-" : "", val, max);
-			break;
-		      case 16:
-			warn ("value %s%x exceeds max (%d) for precision.",
-			      negative ? "-" : "", val, max);
-			break;
-		      default:
-			warn ("value %s%u exceeds max (%d) for precision.",
-			      negative ? "-" : "", val, max);
-			break;
-		}
-	}
-
-	if (negative) {
-		switch (size) {
-		      case 8:
-			*buf = -(unsigned long)val;
-			break;
-		      case 16:
-			putShort (buf, -(unsigned long)val);
-			break;
-		      case 32:
-			putLong (buf, -(unsigned long)val);
-			break;
-		      default:
-			warn ("Unexpected integer size: %d\n", size);
-			break;
-		}
-	} else {
-		switch (size) {
-		      case 8:
-			*buf = (u_int8_t)val;
-			break;
-		      case 16:
-			putUShort (buf, (u_int16_t)val);
-			break;
-		      case 32:
-			putULong (buf, val);
-			break;
-		      default:
-			warn ("Unexpected integer size: %d\n", size);
-			break;
-		}
-	}
-}
