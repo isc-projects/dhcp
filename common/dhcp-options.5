@@ -786,6 +786,16 @@ component, the path /uap is assumed.   If more than one URL is
 specified in this list, the URLs are seperated by spaces.
 .RE
 .PP
+.B option \fBuser-class\fR \fIstring\fR\fB;\fR
+.RS 0.25i
+.PP
+This option is used by some DHCP clients as a way for users to
+specify identifying information to the client.   This can be used in a
+similar way to the vendor-class-identifier option, but the value of
+the option is specified by the user, not the vendor.   Most recent
+DHCP clients have a way in the user interface to specify the value for
+this identifier, usually as a text string.
+.PP
 .B option \fBvendor-class-identifier\fR \fIstring\fR\fB;\fR
 .RS 0.25i
 .PP
