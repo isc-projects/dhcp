@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.52 2001/05/01 23:12:06 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.53 2001/05/03 18:31:28 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -306,12 +306,9 @@ isc_result_t dhcp_failover_link_signal (omapi_object_t *h,
 
 		/* Make the transition. */
 		if (state -> link_to_peer == link) {
-			dhcp_failover_state_transition (link -> state_object,
-							name);
-		}
+		    dhcp_failover_state_transition (link -> state_object,
+						    name);
 
-		if (state -> link_to_peer == link ||
-		    !state -> link_to_peer) {
 		    /* Start trying to reconnect. */
 		    add_timeout (cur_time + 5, dhcp_failover_reconnect,
 				 state,
@@ -1656,6 +1653,11 @@ isc_result_t dhcp_failover_set_state (dhcp_failover_state_t *state,
 				 omapi_object_dereference);
 	    break;
 	    
+	  case recover:
+	    if (state -> link_to_peer)
+		    dhcp_failover_send_update_request_all (state);
+	    break;
+
 	  default:
 	    break;
     }
@@ -1730,9 +1732,16 @@ isc_result_t dhcp_failover_peer_state_changed (dhcp_failover_state_t *state,
 		      case communications_interrupted:
 			break;
 
+		      case partner_down:
+			if (state -> me.state == startup)
+				dhcp_failover_set_state (state, recover);
+			else
+				dhcp_failover_set_state (state,
+							 potential_conflict);
+			break;
+
 		      case potential_conflict:
 		      case resolution_interrupted:
-		      case partner_down:
 			/* None of these transitions should ever occur. */
 			dhcp_failover_set_state (state, shut_down);
 			break;
@@ -1769,7 +1778,11 @@ isc_result_t dhcp_failover_peer_state_changed (dhcp_failover_state_t *state,
 		      case recover:
 			log_info ("failover peer %s: requesting %s",
 				  state -> name, "full update from peer");
-			dhcp_failover_send_update_request_all (state);
+			/* Don't send updreqall if we're really in the
+			   startup state, because that will result in two
+			   being sent. */
+			if (state -> me.state == recover)
+				dhcp_failover_send_update_request_all (state);
 			break;
 
 		      case potential_conflict:
@@ -2129,9 +2142,7 @@ isc_result_t dhcp_failover_send_updates (dhcp_failover_state_t *state)
 	isc_result_t status;
 
 	/* Can't update peer if we're not talking to it! */
-	if (state -> me.state != normal &&
-	    state -> me.state != recover &&
-	    state -> me.state != potential_conflict)
+	if (!state -> link_to_peer)
 		return ISC_R_SUCCESS;
 
 	while ((state -> partner.max_flying_updates >
@@ -2369,8 +2380,6 @@ isc_result_t dhcp_failover_state_set_value (omapi_object_t *h,
 	   you try to change the local state. */
 
 	if (!omapi_ds_strcmp (name, "name")) {
-		return ISC_R_SUCCESS;
-	} else if (!omapi_ds_strcmp (name, "peer_name")) {
 		return ISC_R_SUCCESS;
 	} else if (!omapi_ds_strcmp (name, "partner-address")) {
 		return ISC_R_SUCCESS;
@@ -2855,7 +2864,7 @@ isc_result_t dhcp_failover_state_lookup (omapi_object_t **sp,
 	}
 
 	/* Look the failover state up by peer name. */
-	status = omapi_get_value_str (ref, id, "peer_name", &tv);
+	status = omapi_get_value_str (ref, id, "name", &tv);
 	if (status == ISC_R_SUCCESS) {
 		for (s = failover_states; s; s = s -> next) {
 			unsigned l = strlen (s -> name);
