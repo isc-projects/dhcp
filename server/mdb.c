@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.65 2001/04/27 21:30:59 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.66 2001/04/30 22:38:34 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1858,7 +1858,7 @@ int lease_enqueue (struct lease *comp)
 void lease_instantiate (const unsigned char *val, unsigned len,
 			struct lease *lease)
 {
-
+	struct class *class;
 	/* XXX If the lease doesn't have a pool at this point, it's an
 	   XXX orphan, which we *should* keep around until it expires,
 	   XXX but which right now we just forget. */
@@ -1882,6 +1882,22 @@ void lease_instantiate (const unsigned char *val, unsigned len,
 		hw_hash_add (lease);
 	}
 	
+	/* If the lease has a billing class, set up the billing. */
+	if (lease -> billing_class) {
+		class = (struct class *)0;
+		class_reference (&class, lease -> billing_class, MDL);
+		class_dereference (&lease -> billing_class, MDL);
+		/* If the lease is available for allocation, the billing
+		   is invalid, so we don't keep it. */
+		if (lease -> binding_state == FTS_ACTIVE ||
+		    lease -> binding_state == FTS_EXPIRED ||
+		    lease -> binding_state == FTS_RELEASED ||
+		    lease -> binding_state == FTS_RESET ||
+		    lease -> binding_state == FTS_RESERVED ||
+		    lease -> binding_state == FTS_BOOTP)
+			bill_class (lease, class);
+		class_dereference (&class, MDL);
+	}
 	return;
 }
 
