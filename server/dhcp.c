@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.192.2.37 2004/09/10 21:02:31 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.192.2.38 2004/09/15 19:03:35 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -359,13 +359,22 @@ void dhcpdiscover (packet, ms_nulltp)
 	   XXX be forced to switch servers (and IP addresses) just because
 	   XXX of bad luck, when it's possible for it to get the address it
 	   XXX is requesting.    Not sure this is allowed.  */
-	if (allocatedp && peer) {
-		if (peer -> service_state == cooperating) {
-			if (!load_balance_mine (packet, peer)) {
-				log_debug ("%s: load balance to peer %s",
-					   msgbuf, peer -> name);
-				goto out;
-			}
+	if (allocatedp && peer && (peer -> service_state == cooperating) &&
+	    !load_balance_mine (packet, peer)) {
+		/* If we did not allocate a free address (if the client
+		 * already has a lease or etc then the peer knows that too),
+		 * or if the peer has free addresses it might allocate itself,
+		 * then let the peer handle it.  Otherwise, we need to answer
+		 * now, rather than wait and hope that the client changes the
+		 * 'secs' field (some don't!) on a later retransmit.
+		 */
+		if (!allocatedp || peer_has_leases) {
+			log_debug ("%s: load balance to peer %s",
+				   msgbuf, peer -> name);
+			goto out;
+		} else {
+			log_debug ("cancel load balance to peer %s - %s",
+				   peer -> name, "no free leases");
 		}
 	}
 #endif

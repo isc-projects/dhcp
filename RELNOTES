@@ -45,6 +45,10 @@ and for prodding me into improving it.
 
 			Changes since 3.0.1
 
+- If one dhcp server chooses to 'load balance' a request to its failover
+  peer, it first checks to see if it believes said peer has a free
+  lease to allocate before ignoring the DISCOVER.
+
 - log() was logging a work buffer, rather than the value returned by
   executing the statements configured by the user.  In some cases,
   the work buffer and the intended results were the same.  In some other
