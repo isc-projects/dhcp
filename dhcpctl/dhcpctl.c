@@ -69,7 +69,7 @@ dhcpctl_status dhcpctl_initialize ()
 					     0, 0, 0, 0, 0, 0,
 					     sizeof
 					     (dhcpctl_callback_object_t), 0,
-					     RC_REGISTER);
+					     RC_MISC);
 	if (status != ISC_R_SUCCESS)
 		return status;
 
