@@ -3,7 +3,7 @@
    Turn data structures into printable text. */
 
 /*
- * Copyright (c) 1995-2000 Internet Software Consortium.
+ * Copyright (c) 1995-2001 Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -43,10 +43,86 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: print.c,v 1.49 2001/02/12 19:46:59 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: print.c,v 1.50 2001/03/15 23:17:28 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
+
+char *quotify_string (const char *s, const char *file, int line)
+{
+	unsigned len = 0;
+	const char *sp;
+	char *buf, *nsp;
+
+	for (sp = s; sp && *sp; sp++) {
+		if (*sp == ' ')
+			len++;
+		else if (!isascii (*sp) || !isprint (*sp))
+			len += 4;
+		else if (*sp == '"' || *sp == '\\')
+			len += 2;
+		else
+			len++;
+	}
+
+	buf = dmalloc (len + 1, file, line);
+	if (buf) {
+		nsp = buf;
+		for (sp = s; sp && *sp; sp++) {
+			if (*sp == ' ')
+				*nsp++ = ' ';
+			else if (!isascii (*sp) || !isprint (*sp)) {
+				sprintf (nsp, "\\%03o",
+					 *(const unsigned char *)sp);
+				nsp += 4;
+			} else if (*sp == '"' || *sp == '\\') {
+				*nsp++ = '\\';
+				*nsp++ = *sp;
+			} else
+				*nsp++ = *sp;
+		}
+		*nsp++ = 0;
+	}
+	return buf;
+}
+
+char *quotify_buf (const unsigned char *s, unsigned len,
+		   const char *file, int line)
+{
+	unsigned nulen = 0;
+	char *buf, *nsp;
+	int i;
+
+	for (i = 0; i < len; i++) {
+		if (s [i] == ' ')
+			nulen++;
+		else if (!isascii (s [i]) || !isprint (s [i]))
+			nulen += 4;
+		else if (s [i] == '"' || s [i] == '\\')
+			nulen += 2;
+		else
+			nulen++;
+	}
+
+	buf = dmalloc (nulen + 1, MDL);
+	if (buf) {
+		nsp = buf;
+		for (i = 0; i < len; i++) {
+			if (s [i] == ' ')
+				*nsp++ = ' ';
+			if (!isascii (s [i]) || !isprint (s [i])) {
+				sprintf (nsp, "\\%3.3o", s [i]);
+				nsp += 4;
+			} else if (s [i] == '"' || s [i] == '\\') {
+				*nsp++ = '\\';
+				*nsp++ = s [i];
+			} else
+				*nsp++ = s [i];
+		}
+		*nsp++ = 0;
+	}
+	return buf;
+}
 
 char *print_hw_addr (htype, hlen, data)
 	int htype;
