@@ -1,6 +1,6 @@
-/* socket.c
+/* dispatch.c
 
-   BSD socket interface code... */
+   Network input dispatcher... */
 
 /*
  * Copyright (c) 1995, 1996 The Internet Software Consortium.
@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dispatch.c,v 1.22 1996/09/02 21:15:17 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dispatch.c,v 1.23 1996/09/05 23:55:39 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -243,6 +243,11 @@ void discover_interfaces ()
 		memcpy (&foo, &tmp -> tif -> ifr_addr,
 			sizeof tmp -> tif -> ifr_addr);
 
+		/* We must have a subnet declaration for each interface. */
+		if (!tmp -> shared_network)
+			error ("No subnet declaration for %s (%s).",
+			       tmp -> name, inet_ntoa (foo.sin_addr));
+
 		/* Find subnets that don't have valid interface
 		   addresses... */
 		for (subnet = (tmp -> shared_network
@@ -250,9 +255,6 @@ void discover_interfaces ()
 			       : (struct subnet *)0);
 		     subnet; subnet = subnet -> next_sibling) {
 			if (!subnet -> interface_address.len) {
-				warn ("subnet %s attached to interface %s %s",
-				      piaddr (subnet -> net), tmp -> name,
-				      "but has no alias on that network.");
 				/* Set the interface address for this subnet
 				   to the first address we found. */
 				subnet -> interface_address.len = 4;
