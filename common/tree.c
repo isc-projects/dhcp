@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.95 2001/01/11 02:14:23 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.96 2001/01/16 23:15:38 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -915,7 +915,7 @@ int evaluate_boolean_expression (result, packet, lease, client_state,
 	int bleft, bright;
 	int sleft, sright;
 	struct binding *binding;
-	struct binding_value *bv;
+	struct binding_value *bv, *obv;
 
 	switch (expr -> op) {
 	      case expr_check:
@@ -923,50 +923,85 @@ int evaluate_boolean_expression (result, packet, lease, client_state,
 					    expr -> data.check);
 #if defined (DEBUG_EXPRESSIONS)
 		log_debug ("bool: check (%s) returns %s",
-		      expr -> data.check -> name, *result ? "true" : "false");
+			   expr -> data.check -> name,
+			   *result ? "true" : "false");
 #endif
 		return 1;
 
 	      case expr_equal:
 	      case expr_not_equal:
-		memset (&left, 0, sizeof left);
-		sleft = evaluate_data_expression (&left, packet, lease,
-						  client_state,
-						  in_options, cfg_options,
-						  scope,
-						  expr -> data.equal [0]);
-		memset (&right, 0, sizeof right);
-		sright = evaluate_data_expression (&right, packet, lease,
-						   client_state,
-						   in_options, cfg_options,
-						   scope,
-						   expr -> data.equal [1]);
+		bv = obv = (struct binding_value *)0;
+		sleft = evaluate_expression (&bv, packet, lease, client_state,
+					     in_options, cfg_options, scope,
+					     expr -> data.equal [0]);
+		sright = evaluate_expression (&obv, packet, lease,
+					      client_state, in_options,
+					      cfg_options, scope,
+					      expr -> data.equal [1]);
 		if (sleft && sright) {
-			if (left.len == right.len &&
-			    !memcmp (left.data, right.data, left.len))
-				*result = expr -> op == expr_equal;
-			else
-				*result = expr -> op == expr_not_equal;
-		} else if (!sleft && !sright)
-			*result = expr -> op == expr_equal;
-		else
+		    if (bv -> type != obv -> type)
 			*result = expr -> op == expr_not_equal;
+		    else {
+			switch (obv -> type) {
+			  case binding_boolean:
+			    if (bv -> value.boolean == obv -> value.boolean)
+				*result = expr -> op == expr_equal;
+			    else
+				*result = expr -> op == expr_not_equal;
+			    break;
+
+			  case binding_data:
+			    if ((bv -> value.data.len ==
+				 obv -> value.data.len) &&
+				!memcmp (bv -> value.data.data,
+					 obv -> value.data.data,
+					 obv -> value.data.len))
+				*result = expr -> op == expr_equal;
+			    else
+				*result = expr -> op == expr_not_equal;
+			    break;
+
+			  case binding_numeric:
+			    if (bv -> value.intval == obv -> value.intval)
+				*result = expr -> op == expr_equal;
+			    else
+				*result = expr -> op == expr_not_equal;
+			    break;
+
+			  case binding_dns:
+			    /* XXX This should be a comparison for equal
+			       XXX values, not for identity. */
+			    if (bv -> value.dns == obv -> value.dns)
+				*result = expr -> op == expr_equal;
+			    else
+				*result = expr -> op == expr_not_equal;
+			    break;
+
+			  case binding_function:
+			    if (bv -> value.fundef == obv -> value.fundef)
+				*result = expr -> op == expr_equal;
+			    else
+				*result = expr -> op == expr_not_equal;
+			    break;
+			  default:
+			    *result = expr -> op == expr_not_equal;
+			    break;
+			}
+		    }
+		} else if (!sleft && !sright)
+		    *result = expr -> op == expr_equal;
+		else
+		    *result = expr -> op == expr_not_equal;
 
 #if defined (DEBUG_EXPRESSIONS)
-		log_debug ("bool: %sequal (%s, %s) = %s",
+		log_debug ("bool: %sequal = %s",
 			   expr -> op == expr_not_equal ? "not" : "",
-			   (sleft
-			    ? print_hex_1 (left.len, left.data, 30)
-			    : "NULL"),
-			   (sright
-			    ? print_hex_2 (right.len, right.data, 30)
-			    : "NULL"),
 			   (*result ? "true" : "false"));
 #endif
 		if (sleft)
-			data_string_forget (&left, MDL);
+			binding_value_dereference (&bv, MDL);
 		if (sright)
-			data_string_forget (&right, MDL);
+			binding_value_dereference (&obv, MDL);
 		return 1;
 
 	      case expr_and:
@@ -2199,6 +2234,8 @@ int evaluate_numeric_expression (result, packet, lease, client_state,
 		if (!resolver_inited) {
 			minires_ninit (&resolver_state);
 			resolver_inited = 1;
+			resolver_state.retrans = 1;
+			resolver_state.retry = 1;
 		}
 		ISC_LIST_INIT (uq);
 		cur = expr;
@@ -3055,6 +3092,19 @@ int op_precedence (op1, op2)
 	int ov1, ov2;
 
 	return op_val (op1) - op_val (op2);
+}
+
+enum expression_context expression_context (struct expression *expr)
+{
+	if (is_data_expression (expr))
+		return context_data;
+	if (is_numeric_expression (expr))
+		return context_numeric;
+	if (is_boolean_expression (expr))
+		return context_boolean;
+	if (is_dns_expression (expr))
+		return context_dns;
+	return context_any;
 }
 
 enum expression_context op_context (op)
