@@ -185,35 +185,41 @@ VARDB = /var/db
 #BINDIR = /etc
 ##--qnx--
 
-SUBDIRS=	client server relay
+SUBDIRS=	common server client relay
 
 all:
-	for dir in ${SUBDIRS}; do
-		(cd $$dir; make all)
+	for dir in ${SUBDIRS}; do \
+		echo "Making in $$dir"; \
+		(cd $$dir; make all); \
 	done
 
 install:
-	for dir in ${SUBDIRS}; do
-		(cd $$dir; make install)
+	for dir in ${SUBDIRS}; do \
+		echo "Making in $$dir"; \
+		(cd $$dir; make install); \
 	done
 
 all:
-	for dir in ${SUBDIRS}; do
-		(cd $$dir; make all)
+	for dir in ${SUBDIRS}; do \
+		echo "Making in $$dir"; \
+		(cd $$dir; make all); \
 	done
 
 clean:
-	for dir in ${SUBDIRS}; do
-		(cd $$dir; make clean)
+	for dir in ${SUBDIRS}; do \
+		echo "Making in $$dir"; \
+		(cd $$dir; make clean); \
 	done
 
 realclean:
-	for dir in ${SUBDIRS}; do
-		(cd $$dir; make realclean)
+	for dir in ${SUBDIRS}; do \
+		echo "Making in $$dir"; \
+		(cd $$dir; make realclean); \
 	done
 
 distclean:
-	for dir in ${SUBDIRS}; do
-		(cd $$dir; make distclean)
+	for dir in ${SUBDIRS}; do \
+		echo "Making in $$dir"; \
+		(cd $$dir; make distclean); \
 	done
 	rm -f Makefile
