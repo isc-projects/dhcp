@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: alloc.c,v 1.32 1999/07/17 17:59:24 mellon Exp $ Copyright (c) 1995, 1996, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: alloc.c,v 1.33 1999/07/31 17:53:05 mellon Exp $ Copyright (c) 1995, 1996, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -51,14 +51,6 @@ void dfree (ptr, name)
 		return;
 	}
 	free (ptr);
-}
-
-struct packet *new_packet (name)
-	char *name;
-{
-	struct packet *rval;
-	rval = (struct packet *)dmalloc (sizeof (struct packet), name);
-	return rval;
 }
 
 struct dhcp_packet *new_dhcp_packet (name)
@@ -240,7 +232,10 @@ void free_lease_state (ptr, name)
 	struct lease_state *ptr;
 	char *name;
 {
-	option_state_dereference (&ptr -> options, name);
+	if (ptr -> options)
+		option_state_dereference (&ptr -> options, name);
+	if (ptr -> packet)
+		packet_dereference (&ptr -> packet, name);
 	ptr -> next = free_lease_states;
 	free_lease_states = ptr;
 }
@@ -296,13 +291,6 @@ void free_hash_bucket (ptr, name)
 
 void free_hash_table (ptr, name)
 	struct hash_table *ptr;
-	char *name;
-{
-	dfree ((VOIDPTR)ptr, name);
-}
-
-void free_packet (ptr, name)
-	struct packet *ptr;
 	char *name;
 {
 	dfree ((VOIDPTR)ptr, name);
@@ -484,6 +472,7 @@ int expression_reference (ptr, src, name)
 		abort ();
 #else
 		*ptr = (struct expression *)0;
+		return 0;
 #endif
 	}
 	*ptr = src;
@@ -532,6 +521,7 @@ int option_cache_reference (ptr, src, name)
 		abort ();
 #else
 		*ptr = (struct option_cache *)0;
+		return 0;
 #endif
 	}
 	*ptr = src;
@@ -574,6 +564,7 @@ int buffer_reference (ptr, bp, name)
 		abort ();
 #else
 		*ptr = (struct buffer *)0;
+		return 0;
 #endif
 	}
 	*ptr = bp;
@@ -650,6 +641,7 @@ int dns_host_entry_reference (ptr, bp, name)
 		abort ();
 #else
 		*ptr = (struct dns_host_entry *)0;
+		return 0;
 #endif
 	}
 	*ptr = bp;
@@ -702,6 +694,7 @@ int option_state_allocate (ptr, name)
 		abort ();
 #else
 		*ptr = (struct option_state *)0;
+		return 0;
 #endif
 	}
 
@@ -737,6 +730,7 @@ int option_state_reference (ptr, bp, name)
 		abort ();
 #else
 		*ptr = (struct option_state *)0;
+		return 0;
 #endif
 	}
 	*ptr = bp;
@@ -817,5 +811,100 @@ int executable_statement_reference (ptr, bp, name)
 	}
 	*ptr = bp;
 	bp -> refcnt++;
+	return 1;
+}
+
+static struct packet *free_packets;
+
+int packet_allocate (ptr, name)
+	struct packet **ptr;
+	char *name;
+{
+	int size;
+
+	if (!ptr) {
+		log_error ("Null pointer passed to packet_allocate: %s",
+			   name);
+#if defined (POINTER_DEBUG)
+		abort ();
+#else
+		return 0;
+#endif
+	}
+	if (*ptr) {
+		log_error ("Non-null pointer in packet_allocate (%s)",
+			   name);
+#if defined (POINTER_DEBUG)
+		abort ();
+#else
+		*ptr = (struct packet *)0;
+		return 0;
+#endif
+	}
+
+	*ptr = dmalloc (sizeof **ptr, name);
+	if (*ptr) {
+		memset (*ptr, 0, sizeof **ptr);
+		(*ptr) -> refcnt = 1;
+		return 1;
+	}
+	return 0;
+}
+
+int packet_reference (ptr, bp, name)
+	struct packet **ptr;
+	struct packet *bp;
+	char *name;
+{
+	if (!ptr) {
+		log_error ("Null pointer in packet_reference: %s",
+			   name);
+#if defined (POINTER_DEBUG)
+		abort ();
+#else
+		return 0;
+#endif
+	}
+	if (*ptr) {
+		log_error ("Non-null pointer in packet_reference (%s)",
+			   name);
+#if defined (POINTER_DEBUG)
+		abort ();
+#else
+		*ptr = (struct packet *)0;
+#endif
+	}
+	*ptr = bp;
+	bp -> refcnt++;
+	return 1;
+}
+
+int packet_dereference (ptr, name)
+	struct packet **ptr;
+	char *name;
+{
+	int i;
+	struct packet *packet;
+
+	if (!ptr || !*ptr) {
+		log_error ("Null pointer in packet_dereference: %s",
+			   name);
+#if defined (POINTER_DEBUG)
+		abort ();
+#else
+		return 0;
+#endif
+	}
+
+	packet = *ptr;
+	*ptr = (struct packet *)0;
+	--packet -> refcnt;
+	if (packet -> refcnt)
+		return 1;
+
+	if (packet -> options)
+		option_state_dereference (&packet -> options, name);
+	packet -> raw = (struct dhcp_packet *)free_packets;
+	free_packets = packet;
 	return 1;
 }
