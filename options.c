@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.19.2.1 1997/12/11 21:08:03 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.19.2.2 1998/05/18 05:21:36 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -183,6 +183,8 @@ void cons_options (inpacket, outpacket, options, overload, terminate, bootpp)
 		/* Enforce a minimum packet size... */
 		if (main_buffer_size < (576 - DHCP_FIXED_LEN))
 			main_buffer_size = 576 - DHCP_FIXED_LEN;
+		if (main_buffer_size > sizeof buffer)
+			main_buffer_size = sizeof buffer;
 	} else if (bootpp)
 		main_buffer_size = BOOTP_OPTION_LEN;
 	else
@@ -201,14 +203,15 @@ void cons_options (inpacket, outpacket, options, overload, terminate, bootpp)
 
 	if (inpacket &&
 	    inpacket -> options [DHO_DHCP_PARAMETER_REQUEST_LIST].data) {
+		int prlen = (inpacket ->
+			     options [DHO_DHCP_PARAMETER_REQUEST_LIST].len);
+		if (prlen + priority_len > sizeof priority_list)
+			prlen = (sizeof priority_list) - priority_len;
+
 		memcpy (&priority_list [priority_len],
 			inpacket -> options
-				[DHO_DHCP_PARAMETER_REQUEST_LIST].data,
-			inpacket -> options
-				[DHO_DHCP_PARAMETER_REQUEST_LIST].len);
-		priority_len +=
-			inpacket -> options
-				[DHO_DHCP_PARAMETER_REQUEST_LIST].len;
+				[DHO_DHCP_PARAMETER_REQUEST_LIST].data, prlen);
+		priority_len += prlen;
 	} else {
 		memcpy (&priority_list [priority_len],
 			dhcp_option_default_priority_list,
