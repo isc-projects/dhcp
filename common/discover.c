@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: discover.c,v 1.9 1999/04/23 15:23:08 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: discover.c,v 1.9.2.1 1999/07/13 12:52:45 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -440,10 +440,10 @@ void discover_interfaces (state)
 		if (!tmp -> shared_network && (state == DISCOVER_SERVER)) {
 			log_error ("No subnet declaration for %s (%s).",
 				   tmp -> name, inet_ntoa (foo.sin_addr));
-			log_error ("Please write a subnet declaration for %s",
-				   "the network segment to");
-			log_fatal ("which interface %s is attached.",
-				   tmp -> name);
+			log_error ("Please write a subnet declaration in %s",
+				   "your dhcpd.conf file for the");
+			log_fatal ("network segment to which interface %s %s",
+				   tmp -> name, "is attached.");
 		}
 
 		/* Find subnets that don't have valid interface
