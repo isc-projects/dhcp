@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcrelay.c,v 1.52.2.7 2004/07/10 00:11:17 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhcrelay.c,v 1.52.2.8 2004/10/04 20:39:44 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -67,9 +67,7 @@ int client_packet_errors = 0;	/* Errors sending packets to clients. */
 
 int add_agent_options = 0;	/* If nonzero, add relay agent options. */
 int drop_agent_mismatches = 0;	/* If nonzero, drop server replies that
-				   don't contain a Relay Agent Information
-				   option whose Agent ID suboption matches
-				   our giaddr. */
+				   don't have matching circuit-id's. */
 int corrupt_agent_options = 0;	/* Number of packets dropped because
 				   relay agent information option was bad. */
 int missing_agent_option = 0;	/* Number of packets dropped because no
@@ -530,9 +528,8 @@ isc_result_t dhcp_set_control_state (control_object_state_t oldstate,
 #endif
 
 /* Strip any Relay Agent Information options from the DHCP packet
-   option buffer.   If an RAI option is found whose Agent ID matches
-   the giaddr (i.e., ours), try to look up the outgoing interface
-   based on the circuit ID suboption. */
+   option buffer.   If there is a circuit ID suboption, look up the
+   outgoing interface based upon it. */
 
 int strip_relay_agent_options (in, out, packet, length)
 	struct interface_info *in, **out;
