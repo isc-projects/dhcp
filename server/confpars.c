@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.143.2.3 2001/06/14 19:16:33 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.143.2.4 2001/06/20 04:00:48 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -219,6 +219,7 @@ void trace_conf_input (trace_type_t *ttype, unsigned len, char *data)
 	if (!leaseconf_initialized && ttype == trace_readleases_type) {
 		db_startup (0);
 		leaseconf_initialized = 1;
+		postdb_startup ();
 	}
 }
 
@@ -456,6 +457,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 				share -> subnets -> group -> authoritative;
 			enter_shared_network (share);
 		}
+		shared_network_dereference (&share, MDL);
 		return 1;
 
 	      case VENDOR_CLASS:
@@ -2772,18 +2774,18 @@ int parse_lease_declaration (struct lease **lp, struct parse *cfile)
 				if (!(binding_scope_allocate
 				      (&lease -> scope, MDL)))
 					log_fatal ("no memory for scope");
-				binding = dmalloc (sizeof *binding, MDL);
-				if (!binding)
-					log_fatal ("No memory for lease %s.",
-						   "binding");
-				memset (binding, 0, sizeof *binding);
-				binding -> name =
-					dmalloc (strlen (val) + 1, MDL);
-				if (!binding -> name)
-					log_fatal ("No memory for binding %s.",
-						   "name");
-				strcpy (binding -> name, val);
-				newbinding = 1;
+			    binding = dmalloc (sizeof *binding, MDL);
+			    if (!binding)
+				    log_fatal ("No memory for lease %s.",
+					       "binding");
+			    memset (binding, 0, sizeof *binding);
+			    binding -> name =
+				    dmalloc (strlen (val) + 1, MDL);
+			    if (!binding -> name)
+				    log_fatal ("No memory for binding %s.",
+					       "name");
+			    strcpy (binding -> name, val);
+			    newbinding = 1;
 			} else if (binding -> value) {
 				binding_value_dereference (&binding -> value,
 							   MDL);
