@@ -1,6 +1,6 @@
 	    Internet Software Consortium DHCP Distribution
-		   Version 3, Beta 2, Patchlevel 18
-			  February 22, 2001
+		   Version 3, Beta 2, Patchlevel 19
+			    March 14, 2001
 
 			    Release Notes
 
@@ -48,6 +48,31 @@ Measurement Systems, and Brian Murrell at BC Tel Advanced
 Communications.  I'd like to express my thanks to all of these good
 people here, both for working on the code and for prodding me into
 improving it.
+
+	        Changes since 3.0 Beta 2 Patchlevel 18
+
+- Fix documentation for sending non-standard options.
+
+- Use unparsable names for unknown options.    WARNING: this will
+  break any configuration files that use the option-nnn convention.
+  If you want to continue to use this convention for some options,
+  please be sure to write a definition, like this:
+
+  option option-nnn code nnn = string;
+
+  You can use a descriptive name instead of option-nnn if you like.
+
+- Fix a problem where we would see a DHCPDISCOVER/DHCPOFFER/
+  DHCPREQUEST/DHCPACK/DHCPREQUEST/DHCPNAK sequence.   This was the
+  result of a deceptively silly bug in supersede_lease.
+
+- Fix client script exit status check, according to a fix supplied by
+  Hermann Lauer.
+
+- Fix an endianness bug in the tracefile support, regarding ICMP
+  messages.
+
+		       ** there was no pl17 **
 
 	        Changes since 3.0 Beta 2 Patchlevel 16
 

@@ -1,6 +1,6 @@
 	    Internet Software Consortium DHCP Distribution
-		   Version 3, Beta 2, Patchlevel 18
-			  February 22, 2001
+		   Version 3, Beta 2, Patchlevel 19
+			    March 14, 2001
 
 			     README FILE
 
@@ -141,14 +141,14 @@ information.   On Digital Unix, type ``man pfilt''.
 To build the DHCP Distribution, unpack the compressed tar file using
 the tar utility and the gzip command - type something like:
 
-	zcat dhcp-3.0b2pl16.tar.gz |tar xvf -
+	zcat dhcp-3.0b2pl19.tar.gz |tar xvf -
 
 On BSD/OS, you have to type gzcat, not zcat, and you may run into
 similar problems on other operating systems.
 
 			    CONFIGURING IT
 
-Now, cd to the dhcp-3.0b2pl16 subdirectory that you've just
+Now, cd to the dhcp-3.0b2pl19 subdirectory that you've just
 created and configure the source tree by typing:
 
 		./configure
@@ -492,7 +492,7 @@ latest patchlevel of a major version that's not the most recent major
 version, though - for example, if you're running 2.0, you don't have
 to upgrade to 3.0 before you can report bugs.
 
-PLEASE DO NOT REPORT BUGS IF YOU ARE NOT RUNNING A VERSION OF THE ISC
+PLEASE DO NOT REPORT BUGS IF YOU ARE RUNNING A VERSION OF THE ISC
 DHCP DISTRIBUTION THAT YOU DIDN'T GET FROM THE ISC!   Free operating
 system distributions are notorious for including outdated versions of
 software, and also versions of software that were not compiled on your
