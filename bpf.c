@@ -51,6 +51,9 @@ static char copyright[] =
 #include <sys/uio.h>
 
 #include <net/bpf.h>
+#ifdef NEED_OSF_PFILT_HACKS
+#include <net/pfilt.h>
+#endif
 #include <netinet/in_systm.h>
 #include <netinet/ip.h>
 #include <netinet/udp.h>
@@ -71,9 +74,9 @@ int if_register_bpf (info, ifp)
 	/* Open a BPF device */
 	for (b = 0; 1; b++) {
 #ifndef NO_SNPRINTF
-		snprintf(filename, sizeof(filename), "/dev/bpf%d", b);
+		snprintf(filename, sizeof(filename), BPF_FORMAT, b);
 #else
-		sprintf(filename, "/dev/bpf%d", b);
+		sprintf(filename, BPF_FORMAT, b);
 #endif
 		sock = open (filename, O_RDWR, 0);
 		if (sock < 0) {
@@ -161,6 +164,7 @@ void if_register_receive (info, interface)
 	struct bpf_version v;
 	u_int32_t addr;
 	struct bpf_program p;
+	u_int32_t bits;
 
 	/* Open a BPF device and hang it on this interface... */
 	info -> rfdesc = if_register_bpf (info, interface);
@@ -179,6 +183,21 @@ void if_register_receive (info, interface)
 	if (ioctl (info -> rfdesc, BIOCIMMEDIATE, &flag) < 0)
 		error ("Can't set immediate mode on bpf device: %m");
 
+#ifdef NEED_OSF_PFILT_HACKS
+	/* Allow the copyall flag to be set... */
+	if (ioctl(info -> rfdesc, EIOCALLOWCOPYALL, &flag) < 0)
+		error ("Can't set ALLOWCOPYALL: %m");
+
+	/* Clear all the packet filter mode bits first... */
+	bits = 0;
+	if (ioctl (info -> rfdesc, EIOCMBIS, &bits) < 0)
+		error ("Can't clear pfilt bits: %m");
+
+	/* Set the ENBATCH, ENCOPYALL, ENBPFHDR bits... */
+	bits = ENBATCH | ENCOPYALL | ENBPFHDR;
+	if (ioctl (info -> rfdesc, EIOCMBIS, &bits) < 0)
+		error ("Can't set ENBATCH|ENCOPYALL|ENBPFHDR: %m");
+#endif
 	/* Get the required BPF buffer length from the kernel. */
 	if (ioctl (info -> rfdesc, BIOCGBLEN, &info -> rbuf_max) < 0)
 		error ("Can't get bpf buffer length: %m");
@@ -226,7 +245,7 @@ size_t send_packet (interface, packet, raw, len, to, hto)
 				(unsigned char *)raw, len);
 
 	/* Fire it off */
-	iov [0].iov_base = buf;
+	iov [0].iov_base = (char *)buf;
 	iov [0].iov_len = bufp;
 	iov [1].iov_base = (char *)raw;
 	iov [1].iov_len = len;
