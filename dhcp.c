@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.34.2.1 1997/03/29 08:09:07 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.34.2.2 1997/03/29 08:31:31 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -303,7 +303,7 @@ void dhcpdecline (packet)
 
 	/* If we found a lease, mark it as unusable and complain. */
 	if (lease) {
-		abandon_lease (lease);
+		abandon_lease (lease, "declined");
 	}
 }
 
