@@ -32,15 +32,11 @@
  * ``http://www.nominum.com''.
  */
 
-/* Basic Integer Types not defined in SunOS headers... */
+/* SunOS defines uint*_t and int*_t, but not u_int*_t.  */
 
-#define int8_t		char
-#define int16_t		short
-#define int32_t		long
-
-#define u_int8_t	unsigned char
-#define u_int16_t	unsigned short 
-#define u_int32_t	unsigned long 
+typedef uint8_t		u_int8_t;
+typedef uint16_t	u_int16_t;
+typedef uint32_t	u_int32_t;
 
 /* The jmp_buf type is an array on Solaris, so we can't dereference it
    and must declare it differently. */

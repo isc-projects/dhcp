@@ -45,6 +45,10 @@ and for prodding me into improving it.
 
 			Changes since 3.0.1
 
+- Type definitions for various bitwidths of integers in the sunos5-5
+  build of ISC DHCP have been fixed.  It should compile and run more
+  easily when built in 64-bit for this platform.
+
 - "allow known-clients;" is now a legal syntax, to avoid confusion.
 
 - If one dhcp server chooses to 'load balance' a request to its failover
