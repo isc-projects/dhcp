@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.82 2000/05/17 16:04:04 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.83 2000/06/12 22:22:08 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -486,10 +486,11 @@ int evaluate_expression (result, packet, lease,
 				binding_scope_dereference (&ns, MDL);
 				return 0;
 			} else {
+				memset (nb, 0, sizeof *nb);
 				nb -> name = dmalloc (strlen (s -> string) + 1,
 						      MDL);
 				if (nb -> name)
-					strcpy (binding -> name, s -> string);
+					strcpy (nb -> name, s -> string);
 				else {
 					dfree (nb, MDL);
 					nb = (struct binding *)0;
