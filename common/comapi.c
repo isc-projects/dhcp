@@ -50,7 +50,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: comapi.c,v 1.3 2000/07/06 22:37:38 mellon Exp $ Copyright (c) 1999-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: comapi.c,v 1.4 2000/08/03 22:41:06 neild Exp $ Copyright (c) 1999-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -410,7 +410,6 @@ isc_result_t dhcp_group_create (omapi_object_t **lp,
 	status = group_object_allocate (&group, MDL);
 	if (status != ISC_R_SUCCESS)
 		return status;
-	memset (group, 0, sizeof *group);
 	group -> flags = GROUP_OBJECT_DYNAMIC;
 	status = omapi_object_reference (lp, (omapi_object_t *)group, MDL);
 	group_object_dereference (&group, MDL);
