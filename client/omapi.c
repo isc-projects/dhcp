@@ -4,7 +4,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: omapi.c,v 1.1 2000/01/28 20:30:26 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: omapi.c,v 1.2 2000/02/02 07:36:32 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -207,7 +207,7 @@ isc_result_t dhclient_interface_lookup (omapi_object_t **ip,
 		for (interface = interfaces; interface;
 		     interface = interface -> next) {
 		    if (strncmp (interface -> name,
-				 tv -> value -> u.buffer.value,
+				 (char *)tv -> value -> u.buffer.value,
 				 tv -> value -> u.buffer.len) == 0)
 			    break;
 		}
