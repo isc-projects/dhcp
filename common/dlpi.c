@@ -3,7 +3,7 @@
    Data Link Provider Interface (DLPI) network interface code. */
 
 /*
- * Copyright (c) 1998 The Internet Software Consortium.
+ * Copyright (c) 1998, 1999 The Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -120,6 +120,11 @@
 #  define ABS(x) ((x) >= 0 ? (x) : 0-(x))
 # endif
 
+#ifndef lint
+static char copyright[] =
+"$Id: dlpi.c,v 1.3 1999/02/14 18:48:05 mellon Exp $ Copyright (c) 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+#endif /* not lint */
+
 static int strioctl PROTO ((int fd, int cmd, int timeout, int len, char *dp));
 
 #define DLPI_MAXDLBUF		8192	/* Buffer size */
@@ -221,6 +226,9 @@ int if_register_dlpi (info)
 	      case DL_CSMACD: /* IEEE 802.3 */
 	      case DL_ETHER:
 		info -> hw_address.htype = HTYPE_ETHER;
+		break;
+	      case DL_FDDI:
+		info -> hw_address.htype = HTYPE_FDDI;
 		break;
 	      default:
 		error ("%s: unknown DLPI MAC type %d",
@@ -460,6 +468,10 @@ ssize_t send_packet (interface, packet, raw, len, from, to, hto)
 	int saplen;
 	int rslt;
 
+	if (!strcmp (interface -> name, "fallback"))
+		return send_fallback (interface, packet, raw,
+				      len, from, to, hto);
+
 	dbuflen = 0;
 
 	/* Assemble the headers... */
@@ -478,8 +490,8 @@ ssize_t send_packet (interface, packet, raw, len, from, to, hto)
 	rslt = write (interface -> wfdesc, dbuf, dbuflen);
 #else
 	/* XXX: Assumes ethernet, with two byte SAP */
-	sap [0] = 0;		/* ETHERTYPE_IP, high byte */
-	sap [1] = 0x80;		/* ETHERTYPE_IP, low byte */
+	sap [0] = 0x08;		/* ETHERTYPE_IP, high byte */
+	sap [1] = 0x0;		/* ETHERTYPE_IP, low byte */
 	saplen = -2;		/* -2 indicates a two byte SAP at the end
 				   of the address */
 
@@ -1226,4 +1238,19 @@ static void sigalrm (sig)
 }
 #endif /* !defined (USE_POLL) */
 
+int can_unicast_without_arp ()
+{
+	return 1;
+}
+
+void maybe_setup_fallback ()
+{
+	struct interface_info *fbi;
+	fbi = setup_fallback ();
+	if (fbi) {
+		if_register_fallback (fbi);
+		add_protocol ("fallback", fallback_interface -> wfdesc,
+			      fallback_discard, fallback_interface);
+	}
+}
 #endif /* USE_DLPI */

@@ -3,7 +3,7 @@
    Turn data structures into printable text. */
 
 /*
- * Copyright (c) 1995, 1996, 1998 The Internet Software Consortium.
+ * Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: print.c,v 1.18 1998/11/05 18:44:11 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: print.c,v 1.19 1999/02/14 18:55:01 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -80,15 +80,15 @@ void print_lease (lease)
 	       piaddr (lease -> ip_addr));
 	
 	t = gmtime (&lease -> starts);
-	strftime (tbuf, sizeof tbuf, "%D %H:%M:%S", t);
+	strftime (tbuf, sizeof tbuf, "%Y/%m/%d %H:%M:%S", t);
 	debug ("  start %s", tbuf);
 	
 	t = gmtime (&lease -> ends);
-	strftime (tbuf, sizeof tbuf, "%D %H:%M:%S", t);
+	strftime (tbuf, sizeof tbuf, "%Y/%m/%d %H:%M:%S", t);
 	debug ("  end %s", tbuf);
 	
 	t = gmtime (&lease -> timestamp);
-	strftime (tbuf, sizeof tbuf, "%D %H:%M:%S", t);
+	strftime (tbuf, sizeof tbuf, "%Y/%m/%d %H:%M:%S", t);
 	debug ("  stamp %s", tbuf);
 	
 	debug ("    hardware addr = %s",

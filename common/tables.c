@@ -3,7 +3,7 @@
    Tables of information... */
 
 /*
- * Copyright (c) 1995, 1996, 1998 The Internet Software Consortium.
+ * Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tables.c,v 1.17 1998/11/05 18:44:41 mellon Exp $ Copyright (c) 1995, 1996, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tables.c,v 1.18 1999/02/14 18:56:37 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -78,7 +78,7 @@ struct option dhcp_options [256] = {
 	{ "lpr-servers", "IA",				&dhcp_universe, 9 },
 	{ "impress-servers", "IA",			&dhcp_universe, 10 },
 	{ "resource-location-servers", "IA",		&dhcp_universe, 11 },
-	{ "host-name", "t",				&dhcp_universe, 12 },
+	{ "host-name", "X",				&dhcp_universe, 12 },
 	{ "boot-size", "S",				&dhcp_universe, 13 },
 	{ "merit-dump", "t",				&dhcp_universe, 14 },
 	{ "domain-name", "t",				&dhcp_universe, 15 },
@@ -333,7 +333,7 @@ char *hardware_types [] = {
 	"unknown-5",
 	"token-ring",
 	"unknown-7",
-	"unknown-8",
+	"fddi",
 	"unknown-9",
 	"unknown-10",
 	"unknown-11",
@@ -862,7 +862,7 @@ struct option server_options [256] = {
 	{ "filename", "t",			&server_universe, 15 },
 	{ "server-name", "t",			&server_universe, 16 },
 	{ "next-server", "I",			&server_universe, 17 },
-	{ "option-18", "X",			&server_universe, 18 },
+	{ "authoritative", "f",			&server_universe, 18 },
 	{ "option-19", "X",			&server_universe, 19 },
 	{ "option-20", "X",			&server_universe, 20 },
 	{ "option-21", "X",			&server_universe, 21 },

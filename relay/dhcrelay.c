@@ -3,7 +3,7 @@
    DHCP/BOOTP Relay Agent. */
 
 /*
- * Copyright (c) 1997, 1998 The Internet Software Consortium.
+ * Copyright (c) 1997, 1998, 1999 The Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcrelay.c,v 1.16 1998/11/06 00:15:13 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcrelay.c,v 1.17 1999/02/14 19:04:05 mellon Exp $ Copyright (c) 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -99,10 +99,6 @@ enum { forward_and_append,	/* Forward and append our own relay option. */
        forward_untouched,	/* Forward without changes. */
        discard } agent_relay_mode = forward_and_replace;
 
-#ifdef USE_FALLBACK
-struct interface_info fallback_interface;
-#endif
-
 u_int16_t local_port;
 u_int16_t remote_port;
 int log_priority;
@@ -111,6 +107,13 @@ struct server_list {
 	struct server_list *next;
 	struct sockaddr_in to;
 } *servers;
+
+static char copyright [] =
+"Copyright 1997, 1998, 1999 The Internet Software Consortium.";
+static char arr [] = "All rights reserved.";
+static char message [] = "Internet Software Consortium DHCP Relay Agent V3.0-alpha 19990213";
+static char contrib [] = "\nPlease contribute if you find this software useful.";
+static char url [] = "For info, please visit http://www.isc.org/dhcp-contrib.html\n";
 
 int main (argc, argv, envp)
 	int argc;
@@ -207,6 +210,14 @@ int main (argc, argv, envp)
 					iap, sizeof *iap);
 			}
  		}
+	}
+
+	if (!quiet) {
+		note (message);
+		note (copyright);
+		note (arr);
+		note (contrib);
+		note (url);
 	}
 
 	/* Default to the DHCP/BOOTP port. */
@@ -323,13 +334,11 @@ void relay (ip, packet, length, from_port, from, hfrom)
 
 	/* If it's a bootreply, forward it to the client. */
 	if (packet -> op == BOOTREPLY) {
-#ifdef USE_FALLBACK
-		if (!(packet -> flags & htons (BOOTP_BROADCAST))) {
+		if (!(packet -> flags & htons (BOOTP_BROADCAST)) &&
+			can_unicast_without_arp ()) {
 			to.sin_addr = packet -> yiaddr;
 			to.sin_port = remote_port;
-		} else
-#endif
-		{
+		} else {
 			to.sin_addr.s_addr = htonl (INADDR_BROADCAST);
 			to.sin_port = remote_port;
 		}
@@ -398,19 +407,11 @@ void relay (ip, packet, length, from_port, from, hfrom)
 	/* Otherwise, it's a BOOTREQUEST, so forward it to all the
 	   servers. */
 	for (sp = servers; sp; sp = sp -> next) {
-		if (
-#ifdef USE_FALLBACK
-		    send_fallback (&fallback_interface,
-				   (struct packet *)0,
-				   packet, length, ip -> primary_address,
-				   &sp -> to, (struct hardware *)0)
-#else
-		    send_packet (interfaces,
+		if (send_packet ((fallback_interface
+				  ? fallback_interface : interfaces),
 				 (struct packet *)0,
 				 packet, length, ip -> primary_address,
-				 &sp -> to, (struct hardware *)0)
-#endif
-		    < 0) {
+				 &sp -> to, (struct hardware *)0) < 0) {
 			debug ("send_packet: %m");
 			++client_packet_errors;
 		} else {

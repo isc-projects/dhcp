@@ -3,7 +3,7 @@
    Protocol structures... */
 
 /*
- * Copyright (c) 1995, 1996 The Internet Software Consortium.
+ * Copyright (c) 1995, 1996, 1999 The Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -84,6 +84,7 @@ struct dhcp_packet {
 /* Possible values for hardware type (htype) field... */
 #define HTYPE_ETHER	1               /* Ethernet 10Mbps              */
 #define HTYPE_IEEE802	6               /* IEEE 802.2 Token Ring...	*/
+#define HTYPE_FDDI	8		/* FDDI...			*/
 
 /* Magic cookie validating dhcp options field (and bootp vendor
    extensions field). */
