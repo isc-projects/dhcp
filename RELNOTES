@@ -54,6 +54,8 @@ experiment, or for sites that desperately need the new features.
 - Fix inet_aton prototype/declaration to match Internet Software
   Consortium BIND distribution.
 
+- Document new server-identifier functionality.
+
 	      CHANGES FROM VERSION 2.0 BETA 1 PATCHLEVEL 4
 
 - Do not use -Wstrict-prototypes on Solaris with gcc - if the Internet
