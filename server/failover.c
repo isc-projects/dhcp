@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.53.2.9 2001/06/05 17:59:45 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.53.2.10 2001/06/20 04:18:29 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -987,8 +987,10 @@ isc_result_t dhcp_failover_listener_signal (omapi_object_t *o,
 	for (s = failover_states; s; s = s -> next) {
 		if (dhcp_failover_state_match
 		    (s, (u_int8_t *)&c -> remote_addr.sin_addr,
-		     sizeof c -> remote_addr.sin_addr))
+		    sizeof c -> remote_addr.sin_addr)) {
 			state = s;
+			break;
+		}
 	}		
 	if (!state) {
 		log_info ("failover: listener: no matching state");
@@ -2297,7 +2299,7 @@ int dhcp_failover_queue_update (struct lease *lease, int immediate)
 	if (lease -> next_pending) {
 		log_error ("next pending on update queue lease.");
 #if defined (DEBUG_RC_HISTORY)
-		dump_rc_history ();
+		dump_rc_history (lease);
 #endif
 		abort ();
 	}
