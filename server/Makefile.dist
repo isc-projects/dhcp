@@ -18,7 +18,7 @@
 #
 
 CATMANPAGES = dhcpd.cat8 dhcpd.conf.cat5 dhcpd.leases.cat5
-SRCS   = dhcpd.c dhcp.c bootp.c confpars.c db.c dhcpdi.c class.c failover.c
+SRCS   = dhcpd.c dhcp.c bootp.c confpars.c db.c class.c failover.c
 OBJS   = dhcpd.o dhcp.o bootp.o confpars.o db.o dhcpdi.o class.o failover.o
 PROG   = dhcpd
 MAN    = dhcpd.8 dhcpd.conf.5 dhcpd.leases.5
