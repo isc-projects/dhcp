@@ -70,7 +70,7 @@
 
 #if defined(LIBC_SCCS) && !defined(lint)
 static const char sccsid[] = "@(#)res_init.c	8.1 (Berkeley) 6/7/93";
-static const char rcsid[] = "$Id: res_init.c,v 1.1 2000/02/02 07:28:15 mellon Exp $";
+static const char rcsid[] = "$Id: res_init.c,v 1.2 2000/02/02 07:37:19 mellon Exp $";
 #endif /* LIBC_SCCS and not lint */
 
 #include <sys/types.h>
@@ -95,12 +95,12 @@ static const char rcsid[] = "$Id: res_init.c,v 1.1 2000/02/02 07:28:15 mellon Ex
 #define RFC1535
 #define DEBUG
 
-static void res_setoptions __P((res_state, const char *, const char *));
+static void res_setoptions (res_state, const char *, const char *);
 
 #ifdef RESOLVSORT
 static const char sort_mask[] = "/&";
 #define ISSORTMASK(ch) (strchr(sort_mask, ch) != NULL)
-static u_int32_t net_mask __P((struct in_addr));
+static u_int32_t net_mask (struct in_addr);
 #endif
 
 #if !defined(isascii)	/* XXX - could be a function */

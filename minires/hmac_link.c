@@ -1,6 +1,6 @@
 #ifdef HMAC_MD5
 #ifndef LINT
-static const char rcsid[] = "$Header: /tmp/cvstest/DHCP/minires/Attic/hmac_link.c,v 1.1 2000/02/02 07:28:14 mellon Exp $";
+static const char rcsid[] = "$Header: /tmp/cvstest/DHCP/minires/Attic/hmac_link.c,v 1.2 2000/02/02 07:37:19 mellon Exp $";
 #endif
 /*
  * Portions Copyright (c) 1995-1998 by Trusted Information Systems, Inc.
@@ -429,7 +429,7 @@ static int
 dst_hmac_md5_generate_key(DST_KEY *key, const int nothing)
 {
 	u_char *buff;
-	int i, n;
+	int n;
 	unsigned size, len;
 
 	if (key == NULL || key->dk_alg != KEY_HMAC_MD5)
@@ -443,7 +443,7 @@ dst_hmac_md5_generate_key(DST_KEY *key, const int nothing)
 
 	n = dst_random(DST_RAND_SEMI, len, buff);
 	n += dst_random(DST_RAND_KEY, len, buff);
-	if (n <= i) {	/* failed getting anything */
+	if (n <= len) {	/* failed getting anything */
 		SAFE_FREE2(buff, len);
 		return (-1);
 	}

@@ -41,7 +41,7 @@ int res_servicenumber(const char *);
 int res_protocolnumber(const char *);
 const char *res_protocolname(int);
 const char *res_servicename(u_int16_t, const char *);
-u_int32_t ns_datetosecs __P((const char *cp, int *errp));
+u_int32_t ns_datetosecs (const char *cp, int *errp);
 int b64_pton (char const *, unsigned char *, size_t);
 int res_ninit (res_state);
 unsigned int res_randomid (void);
@@ -70,8 +70,8 @@ const char *p_section (int section, int opcode);
 int ns_makecanon (const char *, char *, size_t);
 int ns_parserr (ns_msg *, ns_sect, int, ns_rr *);
 int ns_samedomain (const char *, const char *);
-int ns_name_uncompress __P((const u_char *, const u_char *,
-			    const u_char *, char *, size_t));
+int ns_name_uncompress (const u_char *, const u_char *,
+			    const u_char *, char *, size_t);
 int res_nmkquery (res_state, int,
 		  const char *, ns_class, ns_type, const unsigned char *,
 		  unsigned, const unsigned char *, unsigned char *, unsigned);
