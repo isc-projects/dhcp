@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bootp.c,v 1.28.2.6 1999/04/08 21:39:34 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bootp.c,v 1.28.2.7 1999/05/08 18:14:54 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -300,16 +300,20 @@ void bootp (packet)
 		raw.siaddr = packet -> interface -> primary_address;
 
 	raw.giaddr = packet -> raw -> giaddr;
-	if (hp -> group -> server_name) {
+	if (hp -> group -> server_name)
 		strncpy (raw.sname, hp -> group -> server_name,
-			 (sizeof raw.sname) - 1);
-		raw.sname [(sizeof raw.sname) - 1] = 0;
-	}
-	if (hp -> group -> filename) {
+			 (sizeof raw.sname));
+	else if (subnet -> group -> server_name)
+		strncpy (raw.sname, subnet -> group -> server_name,
+			 (sizeof raw.sname));
+
+	if (hp -> group -> filename)
 		strncpy (raw.file, hp -> group -> filename,
-			 (sizeof raw.file) - 1);
-		raw.file [(sizeof raw.file) - 1] = 0;
-	} else
+			 (sizeof raw.file));
+	else if (subnet -> group -> filename)
+		strncpy (raw.file, subnet -> group -> filename,
+			 (sizeof raw.file));
+	else
 		memcpy (raw.file, packet -> raw -> file, sizeof raw.file);
 
 	/* Set up the hardware destination address... */
