@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.72 1998/11/11 08:01:49 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.73 1998/11/19 20:56:36 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -267,7 +267,11 @@ void dhcprequest (packet)
 	   and it's already been assigned to the client, ack it. */
 	oc = lookup_option (packet -> options.dhcp_hash,
 			    DHO_DHCP_CLIENT_IDENTIFIER);
-	status = evaluate_option_cache (&data, packet, &packet -> options, oc);
+	if (oc)
+		status = evaluate_option_cache (&data, packet,
+						&packet -> options, oc);
+	else
+		status = 0;
 	if (status && lease &&
 	    ((lease -> uid_len && lease -> uid_len == data.len &&
 	      !memcmp (data.data,
