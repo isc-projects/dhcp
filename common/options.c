@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.33 1998/11/05 18:42:47 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.34 1998/11/06 00:12:40 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -251,11 +251,12 @@ int parse_agent_information_option (packet, len, data)
    of vendor options using the same routine. */
 
 int cons_options (inpacket, outpacket, mms, options,
-		  overload, terminate, bootpp)
+		  agent_options, overload, terminate, bootpp)
 	struct packet *inpacket;
 	struct dhcp_packet *outpacket;
 	int mms;
 	struct option_state *options;
+	struct agent_options *agent_options;
 	int overload;	/* Overload flags that may be set. */
 	int terminate;
 	int bootpp;
