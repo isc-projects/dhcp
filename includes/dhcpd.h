@@ -453,7 +453,6 @@ struct pool {
 };
 
 /* A failover peer. */
-#if defined (FAILOVER_PROTOCOL)
 enum failover_state {
 	invalid_state,
 	partner_down,
@@ -463,6 +462,7 @@ enum failover_state {
 	recover
 };
 
+#if defined (FAILOVER_PROTOCOL)
 struct failover_peer {
 	char *name;			/* Name of this failover instance. */
 	struct expression *address;	/* Partner's IP address or hostname. */
