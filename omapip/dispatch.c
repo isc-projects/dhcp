@@ -310,8 +310,12 @@ isc_result_t omapi_one_dispatch (omapi_object_t *wo,
 	   maybe make it go away, and then try again. */
 	if (count < 0) {
 		struct timeval t0;
+		omapi_io_object_t *prev = (omapi_io_object_t *)0;
+		io = (omapi_io_object_t *)0;
+		if (omapi_io_states.next)
+			omapi_io_reference (&io, omapi_io_states.next, MDL);
 
-		for (io = omapi_io_states.next; io; io = io -> next) {	
+		while (io) {
 			omapi_object_t *obj;
 			FD_ZERO (&r);
 			FD_ZERO (&w);
@@ -360,6 +364,20 @@ isc_result_t omapi_one_dispatch (omapi_object_t *wo,
 					omapi_value_dereference (&ov, MDL);
 				}
 				status = (*(io -> reaper)) (io -> inner);
+				if (prev) {
+				    omapi_io_dereference (&prev -> next, MDL);
+				    if (io -> next)
+					omapi_io_reference (&prev -> next,
+							    io -> next, MDL);
+				} else {
+				    omapi_io_dereference
+					    (&omapi_io_states.next, MDL);
+				    if (io -> next)
+					omapi_io_reference
+						(&omapi_io_states.next,
+						 io -> next, MDL);
+				}
+				omapi_io_dereference (&io, MDL);
 				goto again;
 			    }
 			}
@@ -372,16 +390,20 @@ isc_result_t omapi_one_dispatch (omapi_object_t *wo,
 			if (io -> writefd && io -> inner &&
 			    (desc = (*(io -> writefd)) (io -> inner)) >= 0) {
 				FD_SET (desc, &w);
-#if 0
-				log_error ("write check: %d %lx %lx", max,
-					   (unsigned long)r.fds_bits [0],
-					   (unsigned long)w.fds_bits [0]);
-#endif
 				count = select (desc + 1, &r, &w, &x, &t0);
 				if (count < 0)
 					goto bogon;
 			}
+			if (prev)
+				omapi_io_dereference (&prev, MDL);
+			omapi_io_reference (&prev, io, MDL);
+			omapi_io_dereference (&io, MDL);
+			if (prev -> next)
+			    omapi_io_reference (&io, prev -> next, MDL);
 		}
+		if (prev)
+			omapi_io_dereference (&prev, MDL);
+		
 	}
 
 	for (io = omapi_io_states.next; io; io = io -> next) {
