@@ -184,8 +184,12 @@ int parse_warn (ANSI_DECL (char *) fmt, VA_DOTDOTDOT)
 	va_list list;
 	
 	do_percentm (mbuf, fmt);
+#ifndef NO_SNPRINTF
 	snprintf (fbuf, sizeof fbuf, "dhcpd.conf line %d char %d: %s",
 		  tline, tlpos, mbuf);
+#else
+	sprintf (fbuf, "dhcpd.conf line %d char %d: %s", tline, tlpos, mbuf);
+#endif
 	
 	VA_start (list, fmt);
 	vsnprintf (mbuf, sizeof mbuf, fbuf, list);
@@ -198,3 +202,19 @@ int parse_warn (ANSI_DECL (char *) fmt, VA_DOTDOTDOT)
 #endif
 	return 0;
 }
+
+#ifdef NO_STRERROR
+char *strerror (err)
+	int err;
+{
+	extern char *sys_errlist [];
+	extern int sys_nerr;
+	static char errbuf [128];
+
+	if (err < 0 || err >= sys_nerr) {
+		sprintf (errbuf, "Error %d", err);
+		return errbuf;
+	}
+	return sys_errlist [err];
+}
+#endif /* NO_STRERROR */
