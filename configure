@@ -1,6 +1,17 @@
 #!/bin/sh
 
-sysname=$1
+while [ $# != 0 ]; do
+  if [ x$1 = x--with-nsupdate ]; then
+    nsupdate="-e /^##--nsupdate--/,/^##--nsupdate--/s/^#//"
+  else
+   if [ $?sysname = 0 ]; then
+     sysname=$1
+    else
+       echo "Unexpected argument: $1"
+    fi
+  fi
+  shift
+done
 
 uname=`uname -s`
 machine=`uname -m`
@@ -79,7 +90,7 @@ fi
 echo "System Type: $sysname"
 
 for foo in . client server relay common; do
-	 (sed -e "/^##--${sysname}--/,/^##--${sysname}--/s/^#//" \
+	 (sed $nsupdate -e "/^##--${sysname}--/,/^##--${sysname}--/s/^#//" \
 		<Makefile.conf; cat site.conf; cat $foo/Makefile.dist)	\
 				>$foo/Makefile
 done
