@@ -932,25 +932,26 @@ will briefly document the operation of this update style here.
 The first point to understand about this style of DDNS updates is that
 unlike the \fIad-hoc\fR style, the DHCP server does not necessarily
 always update both the A and the PTR records.   The FQDN option
-includes a bit which, when sent by the client, indicates that the
+includes a flag which, when sent by the client, indicates that the
 client wishes to update its own A record.   In that case, the server
 can be configured either to honor the client's intentions or ignore
 them.   This is done with the statement \fIallow client-updates;\fR or
 the statement \fIignore client-updates;\fR.   By default, client
 updates are allowed.
 .PP
-If the server is configured to allow client updates, it will use
-whatever name the client sent in the FQDN option to update the PTR
-record.   For example, let us say that the client is a visitor from
-the "radish.org" domain, whose hostname is "jschmoe".   The server is
-for the "example.org" domain.   The DHCP client indicates in the FQDN
-option that its FQDN is "jschmoe.radish.org.".   It also indicates
-that it wants to update its own A record.   The DHCP server therefore
-does not attempt to set up an A record for the client, but does set up
-a PTR record for the IP address that it assigns the client, pointing
-at jschmoe.radish.org.   Once the DHCP client has an IP address, it
-can update its own A record, assuming that the "radish.org" DNS server
-will allow it to do so.
+If the server is configured to allow client updates, then if the
+client sends a fully-qualified domain name in the FQDN option, the
+server will use that name the client sent in the FQDN option to update
+the PTR record.   For example, let us say that the client is a visitor
+from the "radish.org" domain, whose hostname is "jschmoe".   The
+server is for the "example.org" domain.   The DHCP client indicates in
+the FQDN option that its FQDN is "jschmoe.radish.org.".   It also
+indicates that it wants to update its own A record.   The DHCP server
+therefore does not attempt to set up an A record for the client, but
+does set up a PTR record for the IP address that it assigns the
+client, pointing at jschmoe.radish.org.   Once the DHCP client has an
+IP address, it can update its own A record, assuming that the
+"radish.org" DNS server will allow it to do so.
 .PP
 If the server is configured not to allow client updates, or if the
 client doesn't want to do its own update, the server will simply
@@ -958,7 +959,10 @@ choose a name for the client, possibly using the hostname supplied by
 the client ("jschmoe" in the previous example).   It will use its own
 domain name for the client, just as in the \fIad-hoc\fR update scheme.
 It will then update both the A and PTR record, using the name that it
-chose for the client.
+chose for the client.   If the client sends a fully-qualified domain
+name in the fqdn option, the server uses only the leftmost part of the
+domain name - in the example above, "jschmoe" instead of
+"jschmoe.radish.org".
 .PP
 The other difference between the \fIad-hoc\fR scheme and the
 .I interim
@@ -1068,6 +1072,12 @@ zone 17.127.10.in-addr.arpa. {
   key DHCP_UPDATER;
 }
 .fi
+.PP
+Note that the zone declarations have to correspond to authority
+records in your name server - in the above example, there must be an
+SOA record for "example.org." and for "17.10.10.in-addr.arpa.".   For
+example, if there were a subdoman "foo.example.org" with no seperate
+SOA, you could not write a zone declaration for "foo.example.org."
 .PP
 You should choose your own secret key, of course.  The ISC BIND 8 and
 9 distributions come with a program for generating secret keys called
@@ -1311,6 +1321,7 @@ declarations.
 The \fBunknown-clients\fR flag is used to tell dhcpd whether
 or not to dynamically assign addresses to unknown clients.   Dynamic
 address assignment to unknown clients is \fBallow\fRed by default.
+An unknown client is simply a client that has no host declaration.
 .PP
 .B The
 .I bootp
@@ -1827,8 +1838,8 @@ create the file with correct ownership and permissions (usually, the
 same owner and permissions of your /var/log/messages or
 /usr/adm/messages file should be fine) and send a SIGHUP to syslogd.
 Some systems support log rollover using a shell script or program
-called newsyslog, and you may be able to configure this as well so
-that your log file doesn't grow uncontrollably.
+called newsyslog or logrotate, and you may be able to configure this
+as well so that your log file doesn't grow uncontrollably.
 .PP
 Because the \fIlog-facility\fR setting is controlled by the dhcpd.conf
 file, log messages printed while parsing the dhcpd.conf file or before
@@ -2061,7 +2072,7 @@ statement
 .PP
 .B update-optimization \fIflag\fB;\fR
 .PP
-If the \fIupdate-optimization\fR parameter is true for a given client,
+If the \fIupdate-optimization\fR parameter is false for a given client,
 the server will attempt a DDNS update for that client each time the
 client renews its lease, rather than only attempting an update when it
 appears to be necessary.   This will allow the DNS to heal from
@@ -2069,7 +2080,10 @@ database inconsistencies more easily, but the cost is that the DHCP
 server must do many more DDNS updates.   We do not recommend enabling
 this on large networks with the current DHCP server.   This option
 only affects the behaviour of the \fIinterim\fR DDNS update scheme,
-and has no effect on the \fIad-hoc\fI DDNS update scheme.
+and has no effect on the \fIad-hoc\fI DDNS update scheme.   If this
+parameter is not specified, or is false, the DHCP server will only
+update when the client information changes, the client gets a
+different lease, or the client's lease expires.
 .PP
 The
 .I update-static-leases
