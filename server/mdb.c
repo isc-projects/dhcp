@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.67 2001/05/02 07:09:36 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.67.2.1 2001/05/04 23:28:38 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1445,7 +1445,15 @@ void pool_timer (vpool)
 		/* If there's nothing on the queue, skip it. */
 		if (!*(lptr [i]))
 			continue;
-		
+
+#if defined (FAILOVER)
+		/* The secondary can't remove a lease from the active state
+		   except in partner_down. */
+		if (i == ACTIVE_LEASES &&
+		    pool -> peer && pool -> peer -> i_am == secondary &&
+		    pool -> peer -> me.state != partner_down)
+			continue;
+#endif		
 		lease_reference (&lease, *(lptr [i]), MDL);
 
 		while (lease) {
