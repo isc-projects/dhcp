@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.17 1998/11/06 03:25:17 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.18 1998/11/09 02:45:02 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -931,7 +931,6 @@ int evaluate_boolean_expression_result (packet, options, expr)
 	if (!expr)
 		return 0;
 	
-	memset (&ds, 0, sizeof ds);
 	if (!evaluate_boolean_expression (&result, packet, options, expr))
 		return 0;
 
