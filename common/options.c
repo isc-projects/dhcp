@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.70 2000/11/28 23:10:28 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.71 2000/11/29 13:38:36 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -234,7 +234,6 @@ int parse_encapsulated_suboptions (struct option_state *options,
 				   const char *uname)
 {
 	int i;
-	char *s;
 	struct universe *universe = find_option_universe (eopt, uname);
 
 	/* If we didn't find the universe, we can't do anything with it
@@ -251,7 +250,7 @@ int parse_encapsulated_suboptions (struct option_state *options,
 	i = (*universe -> decode) (options, buffer, len, universe);
 
 	/* If there is stuff before the suboptions, we have to keep it. */
-	if (s != eopt -> format)
+	if (eopt -> format [0] != 'E')
 		return 0;
 	/* Otherwise, return the status of the decode function. */
 	return i;
