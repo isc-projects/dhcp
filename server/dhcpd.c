@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.72 1999/09/08 01:50:19 mellon Exp $ Copyright 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.73 1999/09/09 21:11:27 mellon Exp $ Copyright 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.";
 #endif
 
   static char copyright[] =
@@ -214,6 +214,16 @@ int main (argc, argv, envp)
 	/* Set up the client classification system. */
 	classification_setup ();
 
+	/* Initialize the omapi system. */
+	status = omapi_init ();
+	if (status != ISC_R_SUCCESS)
+		log_fatal ("Can't initialize OMAPI: %s\n",
+			   isc_result_totext (status));
+
+	/* Set up the OMAPI wrappers for various server database internal
+	   objects. */
+	dhcp_db_objects_setup ();
+
 	/* Read the dhcpd.conf file... */
 	if (!readconf ())
 		log_fatal ("Configuration file errors encountered -- exiting");
@@ -256,11 +266,7 @@ int main (argc, argv, envp)
 					OMAPI_PROTOCOL_PORT, 1);
 	if (status != ISC_R_SUCCESS)
 		log_fatal ("Can't start OMAPI protocol: %s",
-			   isc_result_totext (result));
-
-	/* Set up the OMAPI wrappers for various server database internal
-	   objects. */
-	dhcp_db_objects_setup ();
+			   isc_result_totext (status));
 
 #ifndef DEBUG
 	if (daemon) {

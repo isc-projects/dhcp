@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.77 1999/09/08 01:49:56 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.78 1999/09/09 21:11:21 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -98,16 +98,18 @@ void read_leases ()
 		token = next_token (&val, cfile);
 		if (token == EOF)
 			break;
-		if (token != LEASE) {
-			log_error ("Corrupt lease file - possible data loss!");
-			skip_to_semi (cfile);
-		} else {
+		if (token == LEASE) {
 			struct lease *lease;
 			lease = parse_lease_declaration (cfile);
 			if (lease)
 				enter_lease (lease);
 			else
 				parse_warn ("possibly corrupt lease file");
+		} else if (token == HOST) {
+			parse_host_declaration (cfile, &root_group);
+		} else {
+			log_error ("Corrupt lease file - possible data loss!");
+			skip_to_semi (cfile);
 		}
 
 	} while (1);
@@ -944,7 +946,7 @@ void parse_host_declaration (cfile, group)
 					       declaration);
 	} while (1);
 
-	enter_host (host, dynamicp);
+	enter_host (host, dynamicp, 0);
 }
 
 /* class-declaration :== STRING LBRACE parameters declarations RBRACE
