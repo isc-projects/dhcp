@@ -1320,12 +1320,12 @@ single address, \fIhigh-address\fR can be omitted.
  \fB}\fR
 .fi
 .PP
-There must be at least one
+The
 .B host
-statement for every BOOTP client that is to be served.   
-.B host
-statements may also be specified for DHCP clients, although this is
-not required unless booting is only enabled for known hosts.
+declaration provides a scope in which to provide configuration information about
+a specific client, and also provides a way to assign a client a fixed address.
+The host declaration provides a way for the DHCP server to identify a DHCP or
+BOOTP client, and also a way to assign the client a static IP address.
 .PP
 If it is desirable to be able to boot a DHCP or BOOTP
 client on more than one subnet with fixed addresses, more than one
@@ -1338,13 +1338,13 @@ statement may be specified.
 If client-specific boot parameters must change based on the network
 to which the client is attached, then multiple 
 .B host
-statements should
+declaration should
 be used.
 .PP
 If a client is to be booted using a fixed address if it's
 possible, but should be allocated a dynamic address otherwise, then a
 .B host
-statement must be specified without a
+declaration must be specified without a
 .B fixed-address
 clause.
 .I hostname
@@ -1360,6 +1360,15 @@ parameter in the \fIhost\fR declaration to the network hardware
 address supplied by the client.   BOOTP clients do not normally
 provide a \fIdhcp-client-identifier\fR, so the hardware address must
 be used for all clients that may boot using the BOOTP protocol.
+.PP
+Please be aware that
+.B only
+the \fIdhcp-client-identifier\fR option and the hardware address can be
+used to match a host declaration.   For example, it is not possible to match
+a host declaration to a \fIhost-name\fR option.   This is because the
+host-name option cannot be guaranteed to be unique for any given client,
+whereas both the hardware address and \fIdhcp-client-identifier\fR option
+are at least theoretically guaranteed to be unique to a given client.
 .PP
 .B The
 .I group
