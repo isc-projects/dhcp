@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.17 2000/06/07 00:05:17 mellon Exp $ Copyright (c) 1999-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.18 2000/06/08 21:29:02 mellon Exp $ Copyright (c) 1999-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -277,15 +277,18 @@ isc_result_t dhcp_failover_link_signal (omapi_object_t *h,
 	}
 
 	if (!strcmp (name, "disconnect")) {
-		if (link -> state_object &&
-		    link -> state_object -> i_am == primary) {
-			add_timeout (cur_time + 90, dhcp_failover_reconnect,
-				     link -> state_object,
-				     (tvref_t)dhcp_failover_state_reference,
-				     (tvunref_t)
-				     dhcp_failover_state_dereference);
+	    if (link -> state_object) {
+		if (link -> state_object -> i_am == primary) {
+		    add_timeout (cur_time + 5, dhcp_failover_reconnect,
+				 link -> state_object,
+				 (tvref_t)dhcp_failover_state_reference,
+				 (tvunref_t)dhcp_failover_state_dereference);
 		}
-		return ISC_R_SUCCESS;
+		link -> state = dhcp_flink_disconnected;
+		/* Make the transition. */
+		dhcp_failover_state_transition (link -> state_object, name);
+	    }
+	    return ISC_R_SUCCESS;
 	}
 
 	/* Not a signal we recognize? */
@@ -1194,6 +1197,16 @@ isc_result_t dhcp_failover_state_transition (dhcp_failover_state_t *state,
 {
 	/* XXX Check these state transitions against the spec! */
 	if (!strcmp (name, "disconnect")) {
+		if (state -> link_to_peer) {
+		    if (state -> link_to_peer -> state_object)
+			dhcp_failover_state_dereference
+				(&state -> link_to_peer -> state_object, MDL);
+		    dhcp_failover_link_dereference (&state -> link_to_peer,
+						    MDL);
+		}
+		cancel_timeout (dhcp_failover_send_contact, state);
+		cancel_timeout (dhcp_failover_timeout, state);
+
 		switch (state -> my_state) {
 		      case potential_conflict_nic:
 		      case partner_down:
