@@ -230,10 +230,9 @@ needs, several option modifiers are available.
 .B default
 .I statement
 .PP
- \fBdefault { [ \fIoption declaration\fR ]
-[\fB,\fI ... \fIoption declaration\fR ]\fB}\fR
+ \fBdefault [ \fIoption declaration\fR ] \fB;\fR
 .PP
-If for some set of options the client should use the value supplied by
+If for some option the client should use the value supplied by
 the server, but needs to use some default value if no value was supplied
 by the server, these values can be defined in the
 .B default
@@ -243,12 +242,11 @@ statement.
 .B supersede
 .I statement
 .PP
- \fBsupersede { [ \fIoption declaration\fR ]
-[\fB,\fI ... \fIoption declaration\fR ]\fB}\fR
+ \fBsupersede [ \fIoption declaration\fR ] \fB;\fR
 .PP
-If for some set of options the client should always use its own value
-rather than any value supplied by the server, these values can be
-defined in the 
+If for some option the client should always use a locally-configured
+value or values rather than whatever is supplied by the server, these
+values can be defined in the 
 .B supersede
 statement.
 .PP
@@ -256,12 +254,11 @@ statement.
 .B prepend
 .I statement
 .PP
- \fBprepend { [ \fIoption declaration\fR ]
-[\fB,\fI ... \fIoption declaration\fR ]\fB}\fR
+ \fBprepend [ \fIoption declaration\fR ] \fB;\fR
 .PP
-If for some set of options the client should first a value it
-supplies, and then use the values supplied by
-the server, if any, these values can be defined in the
+If for some option the client should use both a value it
+supplies, and then any values supplied by
+the server, these values can be defined in the
 .B prepend
 statement.   The
 .B prepend
@@ -272,12 +269,11 @@ allow more than one value to be given.
 .B append
 .I statement
 .PP
- \fBappend { [ \fIoption declaration\fR ]
-[\fB,\fI ... \fIoption declaration\fR ]\fB}\fR
+ \fBappend [ \fIoption declaration\fR ] \fB;\fR
 .PP
-If for some set of options the client should first a value it
-supplies, and then use the values supplied by
-the server, if any, these values can be defined in the
+If for some option the client should first any values supplied
+to it by the server, and then some values it supplies, those values
+should be defined in the 
 .B append
 statement.   The
 .B append
