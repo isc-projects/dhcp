@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.192.2.26 2003/02/23 02:08:47 dhankins Exp $ Copyright (c) 1995-2002 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.192.2.27 2003/07/07 08:49:16 dhankins Exp $ Copyright (c) 1995-2002 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1960,6 +1960,9 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 #if defined (FAILOVER_PROTOCOL)
 		/* Okay, we know the lease duration.   Now check the
 		   failover state, if any. */
+		if (lease -> tsfp) {
+			lt ->tsfp = lease ->tsfp;
+		}
 		if (lease -> pool && lease -> pool -> failover_peer) {
 			dhcp_failover_state_t *peer =
 			    lease -> pool -> failover_peer;

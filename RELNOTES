@@ -79,6 +79,9 @@ and for prodding me into improving it.
   from looping infinitely when this is the case.  Thanks to a patch from
   Martin Blapp.
 
+- A patch from Bill Stephens was applied which resolves a problem with lease
+  expiry times in failover configurations.
+
 			Changes since 3.0.1rc10
 
 - Potential buffer overflows in minires repaired.
