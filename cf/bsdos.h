@@ -1,9 +1,9 @@
-/* bsdos.h
+/* netbsd.h
 
-   System dependencies for BSD/os... */
+   System dependencies for NetBSD... */
 
 /*
- * Copyright (c) 1995 RadioMail Corporation.  All rights reserved.
+ * Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,9 +31,8 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * This software was written for RadioMail Corporation by Ted Lemon
- * under a contract with Vixie Enterprises, and is based on an earlier
- * design by Paul Vixie.
+ * This software was written for the Internet Software Consortium by Ted Lemon
+ * under a contract with Vixie Labs.
  */
 
 #include <sys/types.h>
@@ -41,36 +40,17 @@
 #include <paths.h>
 #include <errno.h>
 #include <unistd.h>
-#include <sys/wait.h>
-#include <signal.h>
 #include <setjmp.h>
 #include <limits.h>
+
+#include <sys/wait.h>
+#include <signal.h>
 
 #include <netdb.h>
 extern int h_errno;
 
 #include <net/if.h>
-
-/* Time stuff... */
-#include <sys/time.h>
-#define TIME struct timeval
-#define GET_TIME(x)	gettimeofday ((x), (struct timezone *)0)
-#define TIME_DIFF_US(high, low) 					\
-  (((high) -> tv_sec - (low) -> tv_sec) * 1000000			\
-   + ((high) -> tv_usec - (low) -> tv_usec))
-#define SET_TIME(x, y)	(((x) -> tv_sec = ((y) / 1000000)),		\
-			 ((x) -> tv_usec = ((y) % 1000000)))
-#define DELAY() usleep (2000)
-#define DELAY_ONE_SECOND() usleep (1000000)
-
-/* Login stuff... */
-#include <utmp.h>
-#include <sys/syslimits.h>
-#define _PATH_LOGIN	"/usr/bin/login"
-#define SETLOGIN(x) setlogin (x)
-#define SETUID(x)	setuid (x)
-#define SETGID(x)	(setgroups (0, &x), setgid (x))
-#define USER_MAX	UT_NAMESIZE
+#define INADDR_LOOPBACK ((u_long)0x7f000001)
 
 /* Varargs stuff... */
 #include <stdarg.h>
@@ -78,29 +58,16 @@ extern int h_errno;
 #define va_dcl
 #define VA_start(list, last) va_start (list, last)
 
-#define _PATH_MPOOL_PID	"/var/run/mpoold.pid"
+#define _PATH_DHCPD_PID	"/var/run/dhcpd.pid"
 
 #define EOL	'\n'
-#define VOIDPTR	void *
+#define VOIDPTR void *
 
 /* Time stuff... */
 #include <sys/time.h>
-#define TIME struct timeval
-#define GET_TIME(x)	gettimeofday ((x), (struct timezone *)0)
-#define TIME_DIFF(high, low)	 					\
-  (((high) -> tv_sec == (low) -> tv_sec)				\
-   ? ((high) -> tv_usec > (low) -> tv_usec				\
-      ? 1 : (((high) -> tv_usec == (low) -> tv_usec) ? 0 : -1))		\
-   : (high) -> tv_sec - (low) -> tv_sec)
-#define SET_TIME(x, y)	(((x) -> tv_sec = ((y))), ((x) -> tv_usec = 0))
-#define ADD_TIME(d, s1, s2) {						\
-		 (d) -> tv_usec = (s1) -> tv_usec + (s2) -> tv_usec;	\
-		 if ((d) -> tv_usec > 1000000 || (d) -> tv_usec < -1000000) { \
-			 (d) -> tv_sec = (d) -> tv_usec / 1000000;	\
-			 (d) -> tv_usec %= 1000000;			\
-		 } else							\
-			 (d) -> tv_sec = 0;				\
-		 (d) -> tv_sec += (s1) -> tv_sec + (s2) -> tv_sec;	\
-	}
-#define SET_MAX_TIME(x)	(((x) -> tv_sec = INT_MAX),			\
-			 ((x) -> tv_usec = 999999))
+#define TIME time_t
+#define GET_TIME(x)	time ((x))
+#define TIME_DIFF(high, low)	 	(*(high) - *(low))
+#define SET_TIME(x, y)	(*(x) = (y))
+#define ADD_TIME(d, s1, s2) (*(d) = *(s1) + *(s2))
+#define SET_MAX_TIME(x)	(*(x) = INT_MAX)
