@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: db.c,v 1.53 2000/07/05 07:33:25 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: db.c,v 1.54 2000/07/27 09:03:02 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -196,7 +196,8 @@ int write_lease (lease)
 			putc (';', db_file);
 		}
 	}
-	for (b = lease -> scope.bindings; b; b = b -> next) {
+	if (lease -> scope) {
+	    for (b = lease -> scope -> bindings; b; b = b -> next) {
 		if (!b -> value)
 			continue;
 		if (b -> value -> type == binding_data) {
@@ -257,6 +258,7 @@ int write_lease (lease)
 			log_error ("%s: unknown binding type %d",
 				   b -> name, b -> value -> type);
 		}
+	    }
 	}
 	if (lease -> client_hostname &&
 	    db_printable (lease -> client_hostname)) {

@@ -43,15 +43,14 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.96 2000/07/17 20:56:08 mellon Exp $ Copyright 1995-2000 Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.97 2000/07/27 09:03:05 mellon Exp $ Copyright 1995-2000 Internet Software Consortium.";
 #endif
 
   static char copyright[] =
 "Copyright 1995-2000 Internet Software Consortium.";
 static char arr [] = "All rights reserved.";
 static char message [] = "Internet Software Consortium DHCP Server";
-static char contrib [] = "\nPlease contribute if you find this software useful.";
-static char url [] = "For info, please visit http://www.isc.org/dhcp-contrib.html\n";
+static char url [] = "For info, please visit http://www.isc.org/dhcp-contrib.html";
 
 #include "dhcpd.h"
 #include "version.h"
@@ -60,7 +59,6 @@ static char url [] = "For info, please visit http://www.isc.org/dhcp-contrib.htm
 static void usage PROTO ((void));
 
 TIME cur_time;
-struct binding_scope global_scope;
 
 struct iaddr server_identifier;
 int server_identifier_matched;
@@ -288,7 +286,6 @@ int main (argc, argv, envp)
 		log_info ("%s %s", message, DHCP_VERSION);
 		log_info (copyright);
 		log_info (arr);
-		log_info (contrib);
 		log_info (url);
 	} else {
 		quiet = 0;

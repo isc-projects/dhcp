@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: alloc.c,v 1.48 2000/06/24 06:16:28 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: alloc.c,v 1.49 2000/07/27 09:02:28 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1257,7 +1257,36 @@ int binding_scope_allocate (ptr, file, line)
 	if (!bp)
 		return 0;
 	memset (bp, 0, sizeof *bp);
+	binding_scope_reference (ptr, bp, file, line);
+	return 1;
+}
+
+int binding_scope_reference (ptr, bp, file, line)
+	struct binding_scope **ptr;
+	struct binding_scope *bp;
+	const char *file;
+	int line;
+{
+	if (!ptr) {
+		log_error ("%s(%d): null pointer", file, line);
+#if defined (POINTER_DEBUG)
+		abort ();
+#else
+		return 0;
+#endif
+	}
+	if (*ptr) {
+		log_error ("%s(%d): non-null pointer", file, line);
+#if defined (POINTER_DEBUG)
+		abort ();
+#else
+		*ptr = (struct binding_scope *)0;
+#endif
+	}
 	*ptr = bp;
+	bp -> refcnt++;
+	rc_register (file, line, ptr, bp, bp -> refcnt);
+	dmalloc_reuse (bp, file, line, 1);
 	return 1;
 }
 

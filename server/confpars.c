@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.120 2000/07/06 10:14:31 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.121 2000/07/27 09:03:01 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -305,6 +305,8 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 				   isc_result_totext (status));
 		if (!clone_group (&share -> group, group, MDL))
 			log_fatal ("Can't allocate group for shared net");
+		shared_network_reference (&share -> group -> shared_network,
+					  share, MDL);
 
 		parse_subnet_declaration (cfile, share);
 
@@ -1059,10 +1061,11 @@ void parse_pool_statement (cfile, group, type)
 	pool = (struct pool *)0;
 	status = pool_allocate (&pool, MDL);
 	if (status != ISC_R_SUCCESS)
-		log_fatal ("no memory for pool.");
+		log_fatal ("no memory for pool: %s",
+			   isc_result_totext (status));
 
 	if (!clone_group (&pool -> group, group, MDL))
-		log_fatal ("can't clone pool group");
+		log_fatal ("can't clone pool group.");
 
 	if (type == SUBNET_DECL)
 		shared_network_reference (&pool -> shared_network,
@@ -2547,8 +2550,15 @@ int parse_lease_declaration (struct lease **lp, struct parse *cfile)
 			
 			seenbit = 0;
 		      special_set:
-			binding = find_binding (&lease -> scope, val);
+			if (lease -> scope)
+				binding = find_binding (lease -> scope, val);
+			else
+				binding = (struct binding *)0;
 			if (!binding) {
+			    if (!lease -> scope)
+				if (!(binding_scope_allocate
+				      (&lease -> scope, MDL)))
+					log_fatal ("no memory for scope");
 				binding = dmalloc (sizeof *binding, MDL);
 				if (!binding)
 					log_fatal ("No memory for lease %s.",
@@ -2657,8 +2667,8 @@ int parse_lease_declaration (struct lease **lp, struct parse *cfile)
 			}
 				
 			if (newbinding) {
-				binding -> next = lease -> scope.bindings;
-				lease -> scope.bindings = binding;
+				binding -> next = lease -> scope -> bindings;
+				lease -> scope -> bindings = binding;
 			}
 			parse_semi (cfile);
 			break;

@@ -261,7 +261,7 @@ struct lease {
 	unsigned char uid_buf [32];
 	char *hostname;
 	char *client_hostname;
-	struct binding_scope scope;
+	struct binding_scope *scope;
 	struct host_decl *host;
 	struct subnet *subnet;
 	struct pool *pool;
@@ -892,11 +892,11 @@ int parse_options PROTO ((struct packet *));
 int parse_option_buffer PROTO ((struct packet *, unsigned char *, unsigned));
 int cons_options PROTO ((struct packet *, struct dhcp_packet *, struct lease *,
 			 int, struct option_state *, struct option_state *,
-			 struct binding_scope *,
+			 struct binding_scope **,
 			 int, int, int, struct data_string *));
 int store_options PROTO ((unsigned char *, unsigned, struct packet *,
 			  struct lease *, struct option_state *,
-			  struct option_state *, struct binding_scope *,
+			  struct option_state *, struct binding_scope **,
 			  unsigned *, int, unsigned, unsigned, int));
 const char *pretty_print_option PROTO ((unsigned int, const unsigned char *,
 					unsigned, int, int));
@@ -906,12 +906,12 @@ void do_packet PROTO ((struct interface_info *,
 int hashed_option_get PROTO ((struct data_string *, struct universe *,
 			      struct packet *, struct lease *,
 			      struct option_state *, struct option_state *,
-			      struct option_state *, struct binding_scope *,
+			      struct option_state *, struct binding_scope **,
 			      unsigned));
 int agent_option_get PROTO ((struct data_string *, struct universe *,
 			     struct packet *, struct lease *,
 			     struct option_state *, struct option_state *,
-			     struct option_state *, struct binding_scope *,
+			     struct option_state *, struct binding_scope **,
 			     unsigned));
 void hashed_option_set PROTO ((struct universe *, struct option_state *,
 			       struct option_cache *,
@@ -939,24 +939,24 @@ int agent_option_state_dereference PROTO ((struct universe *,
 int store_option PROTO ((struct data_string *,
 			 struct universe *, struct packet *, struct lease *,
 			 struct option_state *, struct option_state *,
-			 struct binding_scope *, struct option_cache *));
+			 struct binding_scope **, struct option_cache *));
 int option_space_encapsulate PROTO ((struct data_string *,
 				     struct packet *, struct lease *,
 				     struct option_state *,
 				     struct option_state *,
-				     struct binding_scope *,
+				     struct binding_scope **,
 				     struct data_string *));
 int hashed_option_space_encapsulate PROTO ((struct data_string *,
 					    struct packet *, struct lease *,
 					    struct option_state *,
 					    struct option_state *,
-					    struct binding_scope *,
+					    struct binding_scope **,
 					    struct universe *));
 int nwip_option_space_encapsulate PROTO ((struct data_string *,
 					  struct packet *, struct lease *,
 					  struct option_state *,
 					  struct option_state *,
-					  struct binding_scope *,
+					  struct binding_scope **,
 					  struct universe *));
 
 /* dhcpd.c */
@@ -1071,7 +1071,7 @@ int parse_warn (struct parse *, const char *, ...)
 	__attribute__((__format__(__printf__,2,3)));
 
 /* tree.c */
-extern struct binding_scope global_scope;
+extern struct binding_scope *global_scope;
 pair cons PROTO ((caddr_t, pair));
 int make_const_option_cache PROTO ((struct option_cache **, struct buffer **,
 				    u_int8_t *, unsigned, struct option *,
@@ -1092,7 +1092,7 @@ int option_cache PROTO ((struct option_cache **, struct data_string *,
 			 struct expression *, struct option *));
 int evaluate_expression (struct binding_value **, struct packet *,
 			 struct lease *, struct option_state *,
-			 struct option_state *, struct binding_scope *,
+			 struct option_state *, struct binding_scope **,
 			 struct expression *);
 int binding_value_dereference (struct binding_value **, const char *, int);
 int fundef_dereference (struct fundef **, const char *, int);
@@ -1100,43 +1100,44 @@ int fundef_dereference (struct fundef **, const char *, int);
 int evaluate_dns_expression PROTO ((ns_updrec **, struct packet *,
 				    struct lease *, struct option_state *,
 				    struct option_state *,
-				    struct binding_scope *,
+				    struct binding_scope **,
 				    struct expression *));
 #endif
 int evaluate_boolean_expression PROTO ((int *,
 					struct packet *,  struct lease *,
 					struct option_state *,
 					struct option_state *,
-					struct binding_scope *,
+					struct binding_scope **,
 					struct expression *));
 int evaluate_data_expression PROTO ((struct data_string *,
 				     struct packet *, struct lease *,
 				     struct option_state *,
 				     struct option_state *,
-				     struct binding_scope *,
+				     struct binding_scope **,
 				     struct expression *));
 int evaluate_numeric_expression PROTO
 	((unsigned long *, struct packet *, struct lease *,
-	  struct option_state *, struct option_state *, struct binding_scope *,
+	  struct option_state *, struct option_state *,
+	  struct binding_scope **,
 	  struct expression *));
 int evaluate_option_cache PROTO ((struct data_string *,
 				  struct packet *, struct lease *,
 				  struct option_state *, struct option_state *,
-				  struct binding_scope *,
+				  struct binding_scope **,
 				  struct option_cache *,
 				  const char *, int));
 int evaluate_boolean_option_cache PROTO ((int *,
 					  struct packet *, struct lease *,
 					  struct option_state *,
 					  struct option_state *,
-					  struct binding_scope *,
+					  struct binding_scope **,
 					  struct option_cache *,
 					  const char *, int));
 int evaluate_boolean_expression_result PROTO ((int *,
 					       struct packet *, struct lease *,
 					       struct option_state *,
 					       struct option_state *,
-					       struct binding_scope *,
+					       struct binding_scope **,
 					       struct expression *));
 void expression_dereference PROTO ((struct expression **, const char *, int));
 int is_dns_expression PROTO ((struct expression *));
@@ -1286,6 +1287,9 @@ int packet_reference PROTO ((struct packet **,
 int packet_dereference PROTO ((struct packet **, const char *, int));
 int binding_scope_allocate PROTO ((struct binding_scope **,
 				   const char *, int));
+int binding_scope_reference PROTO ((struct binding_scope **,
+				    struct binding_scope *,
+				    const char *, int));
 int dns_zone_allocate PROTO ((struct dns_zone **, const char *, int));
 int dns_zone_reference PROTO ((struct dns_zone **,
 			       struct dns_zone *, const char *, int));
@@ -1649,7 +1653,7 @@ void client_envadd (struct client_state *,
 		    const char *, const char *, const char *, ...)
 	__attribute__((__format__(__printf__,4,5)));
 
-struct client_lease *packet_to_lease PROTO ((struct packet *));
+struct client_lease *packet_to_lease (struct packet *, struct client_state *);
 void go_daemon PROTO ((void));
 void write_client_pid_file PROTO ((void));
 void client_location_changed PROTO ((void));
@@ -1837,13 +1841,13 @@ int bill_class PROTO ((struct lease *, struct class *));
 int execute_statements PROTO ((struct packet *,
 			       struct lease *,
 			       struct option_state *, struct option_state *,
-			       struct binding_scope *,
+			       struct binding_scope **,
 			       struct executable_statement *));
 void execute_statements_in_scope PROTO ((struct packet *,
 					 struct lease *,
 					 struct option_state *,
 					 struct option_state *,
-					 struct binding_scope *,
+					 struct binding_scope **,
 					 struct group *, struct group *));
 int executable_statement_dereference PROTO ((struct executable_statement **,
 					     const char *, int));
@@ -1851,7 +1855,7 @@ void write_statements (FILE *, struct executable_statement *, int);
 int find_matching_case (struct executable_statement **,
 			struct packet *, struct lease *,
 			struct option_state *, struct option_state *,
-			struct binding_scope *,
+			struct binding_scope **,
 			struct expression *, struct executable_statement *);
 
 /* auth.c */

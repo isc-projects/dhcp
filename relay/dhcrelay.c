@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcrelay.c,v 1.42 2000/07/17 20:56:14 mellon Exp $ Copyright (c) 1997-2000 Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcrelay.c,v 1.43 2000/07/27 09:02:59 mellon Exp $ Copyright (c) 1997-2000 Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -111,8 +111,7 @@ static char copyright [] =
 "Copyright 1997, 1998, 1999 Internet Software Consortium.";
 static char arr [] = "All rights reserved.";
 static char message [] = "Internet Software Consortium DHCP Relay Agent";
-static char contrib [] = "\nPlease contribute if you find this software useful.";
-static char url [] = "For info, please visit http://www.isc.org/dhcp-contrib.html\n";
+static char url [] = "For info, please visit http://www.isc.org/dhcp-contrib.html";
 
 int main (argc, argv, envp)
 	int argc;
@@ -223,7 +222,6 @@ int main (argc, argv, envp)
 		log_info ("%s %s", message, DHCP_VERSION);
 		log_info (copyright);
 		log_info (arr);
-		log_info (contrib);
 		log_info (url);
 	} else {
 		quiet = 0;

@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: execute.c,v 1.35 2000/07/06 22:42:22 mellon Exp $ Copyright (c) 1998-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: execute.c,v 1.36 2000/07/27 09:02:32 mellon Exp $ Copyright (c) 1998-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -55,7 +55,7 @@ int execute_statements (packet, lease, in_options, out_options, scope,
 	struct lease *lease;
 	struct option_state *in_options;
 	struct option_state *out_options;
-	struct binding_scope *scope;
+	struct binding_scope **scope;
 	struct executable_statement *statements;
 {
 	struct executable_statement *r, *e, *next;
@@ -163,9 +163,9 @@ int execute_statements (packet, lease, in_options, out_options, scope,
 			break;
 
 		      case if_statement:
-			status = evaluate_boolean_expression
-				(&result, packet, lease, in_options,
-				 out_options, scope, r -> data.ie.expr);
+			status = (evaluate_boolean_expression
+				  (&result, packet, lease, in_options,
+				   out_options, scope, r -> data.ie.expr));
 			
 #if defined (DEBUG_EXPRESSIONS)
 			log_debug ("exec: if %s", (status
@@ -244,7 +244,21 @@ int execute_statements (packet, lease, in_options, out_options, scope,
 			break;
 
 		      case set_statement:
-			binding = find_binding (scope, r -> data.set.name);
+			if (!scope) {
+				log_error ("set %s: no scope",
+					   r -> data.set.name);
+				status = 0;
+				break;
+			}
+			if (!*scope) {
+			    if (!binding_scope_allocate (scope, MDL)) {
+				log_error ("set %s: can't allocate scope",
+					   r -> data.set.name);
+				status = 0;
+				break;
+			    }
+			}
+			binding = find_binding (*scope, r -> data.set.name);
 #if defined (DEBUG_EXPRESSIONS)
 			log_debug ("exec: set %s", r -> data.set.name);
 #endif
@@ -261,12 +275,9 @@ int execute_statements (packet, lease, in_options, out_options, scope,
 						r -> data.set.name);
 					if (lease) {
 					    binding -> next =
-						    lease -> scope.bindings;
-					    lease -> scope.bindings = binding;
-					} else {
-					    binding -> next =
-						    global_scope.bindings;
-					    global_scope.bindings = binding;
+						    lease -> scope -> bindings;
+					    lease -> scope -> bindings =
+						    binding;
 					}
 				    } else {
 				       badalloc:
@@ -291,7 +302,11 @@ int execute_statements (packet, lease, in_options, out_options, scope,
 			break;
 
 		      case unset_statement:
-			binding = find_binding (scope, r -> data.unset);
+			if (!scope || !*scope) {
+				status = 0;
+				break;
+			}
+			binding = find_binding (*scope, r -> data.unset);
 #if defined (DEBUG_EXPRESSIONS)
 			log_debug ("exec: unset %s", r -> data.unset);
 #endif
@@ -357,10 +372,12 @@ int execute_statements (packet, lease, in_options, out_options, scope,
 				e = e -> data.let.statements;
 				goto next_let;
 			} else if (ns) {
-				ns -> outer = scope;
+				if (scope && *scope)
+				    	binding_scope_reference (&ns -> outer,
+								 *scope, MDL);
 				execute_statements
 				      (packet, lease, in_options, out_options,
-				       ns, e -> data.let.statements);
+				       &ns, e -> data.let.statements);
 			}
 			if (ns)
 				binding_scope_dereference (&ns, MDL);
@@ -392,7 +409,7 @@ void execute_statements_in_scope (packet, lease, in_options, out_options,
 	struct lease *lease;
 	struct option_state *in_options;
 	struct option_state *out_options;
-	struct binding_scope *scope;
+	struct binding_scope **scope;
 	struct group *group;
 	struct group *limiting_group;
 {
@@ -771,7 +788,7 @@ int find_matching_case (struct executable_statement **ep,
 			struct packet *packet, struct lease *lease,
 			struct option_state *in_options,
 			struct option_state *out_options,
-			struct binding_scope *scope,
+			struct binding_scope **scope,
 			struct expression *expr,
 			struct executable_statement *stmt)
 {

@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.156 2000/07/06 10:16:54 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.157 2000/07/27 09:03:04 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -197,8 +197,8 @@ void dhcpdiscover (packet, ms_nulltp)
 #endif
 
 	/* If it's an expired lease, get rid of any bindings. */
-	if (lease -> ends < cur_time && lease -> scope.bindings)
-		free_bindings (&lease -> scope, MDL);
+	if (lease -> ends < cur_time && lease -> scope)
+		binding_scope_dereference (&lease -> scope, MDL);
 
 	/* Set the lease to really expire in 2 minutes, unless it has
 	   not yet expired, in which case leave its expiry time alone. */
@@ -1745,8 +1745,10 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 	}
 
 	/* Save any bindings. */
-	lt -> scope.bindings = lease -> scope.bindings;
-	lease -> scope.bindings = (struct binding *)0;
+	if (lease -> scope) {
+		binding_scope_reference (&lt -> scope, lease -> scope, MDL);
+		binding_scope_dereference (&lease -> scope, MDL);
+	}
 
 	/* Replace the old lease hostname with the new one, if it's changed. */
 	oc = lookup_option (&dhcp_universe, packet -> options, DHO_HOST_NAME);
@@ -3037,7 +3039,7 @@ void static_lease_dereference (lease, file, line)
 		executable_statement_dereference (&lease -> on_commit,
 						  file, line);
 	if (&lease -> scope)
-		free_bindings (&lease -> scope, file, line);
+		binding_scope_dereference (&lease -> scope, file, line);
 	if (lease -> uid != lease -> uid_buf) {
 		dfree (lease -> uid, file, line);
 		lease -> uid = (unsigned char *)0;

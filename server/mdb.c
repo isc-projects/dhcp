@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.40 2000/07/09 07:00:06 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.41 2000/07/27 09:03:08 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -547,11 +547,8 @@ isc_result_t dhcp_lease_free (omapi_object_t *lo,
 	if (lo -> type != dhcp_type_lease)
 		return ISC_R_INVALIDARG;
 	lease = (struct lease *)lo;
-	if (free_leases) {
-		lease_reference (&lease -> next, free_leases, file, line);
-		lease_dereference (&free_leases, file, line);
-	}
-	lease_reference (&free_leases, lease, MDL);
+	lease -> next = free_leases;
+	free_leases = lease;
 	return ISC_R_SUCCESS;
 }
 
@@ -559,15 +556,12 @@ isc_result_t dhcp_lease_get (omapi_object_t **lp,
 			     const char *file, int line)
 {
 	struct lease **lease = (struct lease **)lp;
+	struct lease *lt;
 
 	if (free_leases) {
-		lease_reference (lease, free_leases, file, line);
-		lease_dereference (&free_leases, file, line);
-		if ((*lease) -> next) {
-			lease_reference (&free_leases, (*lease) -> next,
-					 file, line);
-			lease_dereference (&(*lease) -> next, file, line);
-		}
+		lt = free_leases;
+		free_leases = lt -> next;
+		*lease = lt;
 		return ISC_R_SUCCESS;
 	}
 	return ISC_R_NOMEMORY;
@@ -861,10 +855,12 @@ int supersede_lease (comp, lease, commit, propogate, pimmediate)
 	comp -> hardware_addr = lease -> hardware_addr;
 	comp -> flags = ((lease -> flags & ~PERSISTENT_FLAGS) |
 			 (comp -> flags & ~EPHEMERAL_FLAGS));
-	if (comp -> scope.bindings)
-		free_bindings (&comp -> scope, MDL);
-	comp -> scope.bindings = lease -> scope.bindings;
-	lease -> scope.bindings = (struct binding *)0;
+	if (comp -> scope)
+		binding_scope_dereference (&comp -> scope, MDL);
+	if (lease -> scope) {
+		binding_scope_reference (&comp -> scope, lease -> scope, MDL);
+		binding_scope_dereference (&lease -> scope, MDL);
+	}
 
 	/* Record the hostname information in the lease. */
 	if (comp -> hostname)
@@ -1139,7 +1135,8 @@ int lease_copy (struct lease **lp,
 		}
 		strcpy (lt -> client_hostname, lease -> client_hostname);
 	}
-	lt -> scope = lease -> scope;
+	if (lease -> scope)
+		binding_scope_reference (&lt -> scope, lease -> scope, MDL);
 	host_reference (&lt -> host, lease -> host, file, line);
 	subnet_reference (&lt -> subnet, lease -> subnet, file, line);
 	pool_reference (&lt -> pool, lease -> pool, file, line);
@@ -1197,8 +1194,8 @@ void release_lease (lease, packet)
 							  MDL);
 
 		/* Blow away any bindings. */
-		/* XXX free them?!? */
-		lease -> scope.bindings = (struct binding *)0;
+		if (lease -> scope)
+			binding_scope_dereference (&lease -> scope, MDL);
 		lease -> ends = cur_time;
 #if defined (FAILOVER_PROTOCOL)
 		if (lease -> pool && lease -> pool -> failover_peer) {
@@ -1235,7 +1232,8 @@ void abandon_lease (lease, message)
 		executable_statement_dereference (&lease -> on_commit, MDL);
 
 	/* Blow away any bindings. */
-	lt -> scope.bindings = (struct binding *)0;
+	if (lt -> scope)
+		binding_scope_dereference (&lt -> scope, MDL);
 	lt -> ends = cur_time; /* XXX */
 	lt -> next_binding_state = FTS_ABANDONED;
 
@@ -1272,7 +1270,8 @@ void dissociate_lease (lease)
 		executable_statement_dereference (&lease -> on_commit, MDL);
 
 	/* Blow away any bindings. */
-	lt -> scope.bindings = (struct binding *)0;
+	if (lt -> scope)
+		binding_scope_dereference (&lt -> scope, MDL);
 
 #if defined (FAILOVER_PROTOCOL)
 	if (lease -> pool && lease -> pool -> failover_peer) {

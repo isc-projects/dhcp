@@ -43,13 +43,13 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.84 2000/07/06 10:00:53 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.85 2000/07/27 09:02:36 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
 #include <omapip/omapip_p.h>
 
-struct binding_scope global_scope;
+struct binding_scope *global_scope;
 
 static int do_host_lookup PROTO ((struct data_string *,
 				  struct dns_host_entry *));
@@ -430,7 +430,7 @@ int evaluate_expression (result, packet, lease,
 	struct lease *lease;
 	struct option_state *in_options;
 	struct option_state *cfg_options;
-	struct binding_scope *scope;
+	struct binding_scope **scope;
 	struct expression *expr;
 {
 	struct binding_value *bv;
@@ -440,7 +440,10 @@ int evaluate_expression (result, packet, lease,
 	bv = (struct binding_value *)0;
 
 	if (expr -> op == expr_variable_reference) {
-		binding = find_binding (scope, expr -> data.variable);
+		if (!scope || !*scope)
+			return 0;
+
+		binding = find_binding (*scope, expr -> data.variable);
 
 		if (binding && binding -> value) {
 			if (result)
@@ -455,7 +458,14 @@ int evaluate_expression (result, packet, lease,
 		struct expression *arg;
 		struct binding_scope *ns;
 		struct binding *nb;
-		binding = find_binding (scope, expr -> data.funcall.name);
+
+		if (!scope || !*scope) {
+			log_error ("%s: no such function.",
+				   expr -> data.funcall.name);
+			return 0;
+		}
+
+		binding = find_binding (*scope, expr -> data.funcall.name);
 
 		if (!binding || !binding -> value) {
 			log_error ("%s: no such function.",
@@ -518,9 +528,11 @@ int evaluate_expression (result, packet, lease,
 			return 0;
 		}
 
-		ns -> outer = scope;
+		if (scope && *scope)
+			binding_scope_reference (&ns -> outer, *scope, MDL);
+
 		if (execute_statements
-		    (packet, lease, in_options, cfg_options, ns,
+		    (packet, lease, in_options, cfg_options, &ns,
 		     binding -> value -> value.fundef -> statements)) {
 			if (ns -> bindings && ns -> bindings -> name) {
 			    binding_value_reference (result,
@@ -641,7 +653,7 @@ int evaluate_dns_expression (result, packet, lease, in_options,
 	struct lease *lease;
 	struct option_state *in_options;
 	struct option_state *cfg_options;
-	struct binding_scope *scope;
+	struct binding_scope **scope;
 	struct expression *expr;
 {
 	ns_updrec *foo;
@@ -882,7 +894,7 @@ int evaluate_boolean_expression (result, packet, lease, in_options,
 	struct lease *lease;
 	struct option_state *in_options;
 	struct option_state *cfg_options;
-	struct binding_scope *scope;
+	struct binding_scope **scope;
 	struct expression *expr;
 {
 	struct data_string left, right;
@@ -1067,12 +1079,15 @@ int evaluate_boolean_expression (result, packet, lease, in_options,
 		return 1;
 
 	      case expr_variable_exists:
-		binding = find_binding (scope, expr -> data.variable);
+		if (scope && *scope) {
+			binding = find_binding (*scope, expr -> data.variable);
 
-		if (binding) {
-			if (binding -> value)
-				*result = 1;
-			else
+			if (binding) {
+				if (binding -> value)
+					*result = 1;
+				else
+					*result = 0;
+			} else
 				*result = 0;
 		} else
 			*result = 0;
@@ -1083,18 +1098,22 @@ int evaluate_boolean_expression (result, packet, lease, in_options,
 		return 1;
 
 	      case expr_variable_reference:
-		binding = find_binding (scope, expr -> data.variable);
+		if (scope && *scope) {
+		    binding = find_binding (*scope, expr -> data.variable);
 
-		if (binding && binding -> value) {
-			if (binding -> value -> type == binding_boolean) {
+		    if (binding && binding -> value) {
+			if (binding -> value -> type ==
+			    binding_boolean) {
 				*result = binding -> value -> value.boolean;
-			    sleft = 1;
+				sleft = 1;
 			} else {
 				log_error ("binding type %d in %s.",
 					   binding -> value -> type,
 					   "evaluate_boolean_expression");
 				sleft = 0;
 			}
+		    } else
+			    sleft = 0;
 		} else
 			sleft = 0;
 #if defined (DEBUG_EXPRESSIONS)
@@ -1194,7 +1213,7 @@ int evaluate_data_expression (result, packet, lease,
 	struct lease *lease;
 	struct option_state *in_options;
 	struct option_state *cfg_options;
-	struct binding_scope *scope;
+	struct binding_scope **scope;
 	struct expression *expr;
 {
 	struct data_string data, other;
@@ -1829,23 +1848,26 @@ int evaluate_data_expression (result, packet, lease,
 		return 0;
 
 	      case expr_variable_reference:
-		binding = find_binding (scope, expr -> data.variable);
+		if (scope && *scope) {
+		    binding = find_binding (*scope, expr -> data.variable);
 
-		if (binding && binding -> value) {
-		    if (binding -> value -> type == binding_data) {
+		    if (binding && binding -> value) {
+			if (binding -> value -> type == binding_data) {
 			    data_string_copy (result,
 					      &binding -> value -> value.data,
 					      MDL);
 			    s0 = 1;
-		    } else if (binding -> value -> type != binding_data) {
+			} else if (binding -> value -> type != binding_data) {
 			    log_error ("binding type %d in %s.",
 				       binding -> value -> type,
 				       "evaluate_data_expression");
 			    s0 = 0;
-		    } else
+			} else
 			    s0 = 0;
-		} else
+		    } else
 			s0 = 0;
+		} else
+		    s0 = 0;
 #if defined (DEBUG_EXPRESSIONS)
 		log_debug ("data: %s = %s", expr -> data.variable,
 			   s0 ? print_hex_1 (result -> len,
@@ -1998,7 +2020,7 @@ int evaluate_numeric_expression (result, packet, lease,
 	struct lease *lease;
 	struct option_state *in_options;
 	struct option_state *cfg_options;
-	struct binding_scope *scope;
+	struct binding_scope **scope;
 	struct expression *expr;
 {
 	struct data_string data;
@@ -2172,9 +2194,10 @@ int evaluate_numeric_expression (result, packet, lease,
 #endif /* NSUPDATE */
 
 	      case expr_variable_reference:
-		binding = find_binding (scope, expr -> data.variable);
+		if (scope && *scope) {
+		    binding = find_binding (*scope, expr -> data.variable);
 
-		if (binding && binding -> value) {
+		    if (binding && binding -> value) {
 			if (binding -> value -> type == binding_numeric) {
 				*result = binding -> value -> value.intval;
 			    status = 1;
@@ -2184,8 +2207,10 @@ int evaluate_numeric_expression (result, packet, lease,
 					   "evaluate_numeric_expression");
 				status = 0;
 			}
-		} else
+		    } else
 			status = 0;
+		} else
+		    status = 0;
 #if defined (DEBUG_EXPRESSIONS)
 		log_debug ("numeric: %s = %s", expr -> data.variable,
 			   status ? *result : 0);
@@ -2350,7 +2375,7 @@ int evaluate_option_cache (result, packet, lease,
 	struct lease *lease;
 	struct option_state *in_options;
 	struct option_state *cfg_options;
-	struct binding_scope *scope;
+	struct binding_scope **scope;
 	struct option_cache *oc;
 	const char *file;
 	int line;
@@ -2376,7 +2401,7 @@ int evaluate_boolean_option_cache (ignorep, packet, lease, in_options,
 	struct lease *lease;
 	struct option_state *in_options;
 	struct option_state *cfg_options;
-	struct binding_scope *scope;
+	struct binding_scope **scope;
 	struct option_cache *oc;
 	const char *file;
 	int line;
@@ -2416,7 +2441,7 @@ int evaluate_boolean_expression_result (ignorep, packet, lease, in_options,
 	struct lease *lease;
 	struct option_state *in_options;
 	struct option_state *cfg_options;
-	struct binding_scope *scope;
+	struct binding_scope **scope;
 	struct expression *expr;
 {
 	int result;
@@ -3407,6 +3432,9 @@ int binding_scope_dereference (ptr, file, line)
 	const char *file;
 	int line;
 {
+	int i;
+	struct binding_scope *binding_scope;
+
 	if (!ptr || !*ptr) {
 		log_error ("%s(%d): null pointer", file, line);
 #if defined (POINTER_DEBUG)
@@ -3416,10 +3444,29 @@ int binding_scope_dereference (ptr, file, line)
 #endif
 	}
 
-	if ((*ptr) -> bindings)
-		free_bindings (*ptr, file, line);
-	dfree ((*ptr), file, line);
+	binding_scope = *ptr;
 	*ptr = (struct binding_scope *)0;
+	--binding_scope -> refcnt;
+	rc_register (file, line, ptr, binding_scope, binding_scope -> refcnt);
+	if (binding_scope -> refcnt > 0)
+		return 1;
+
+	if (binding_scope -> refcnt < 0) {
+		log_error ("%s(%d): negative refcnt!", file, line);
+#if defined (DEBUG_RC_HISTORY)
+		dump_rc_history ();
+#endif
+#if defined (POINTER_DEBUG)
+		abort ();
+#else
+		return 0;
+#endif
+	}
+
+	free_bindings (binding_scope, file, line);
+	if (binding_scope -> outer)
+		binding_scope_dereference (&binding_scope -> outer, MDL);
+	dfree (binding_scope, file, line);
 	return 1;
 }
 
