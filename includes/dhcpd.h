@@ -3,7 +3,7 @@
    Definitions for dhcpd... */
 
 /*
- * Copyright (c) 1996-2000 Internet Software Consortium.
+ * Copyright (c) 1996-2001 Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -253,25 +253,25 @@ struct lease {
 
 	struct iaddr ip_addr;
 	TIME starts, ends, timestamp, sort_time;
-	unsigned char *uid;
-	unsigned uid_len;
-	unsigned uid_max;
-	unsigned char uid_buf [32];
-	char *hostname;
 	char *client_hostname;
 	struct binding_scope *scope;
 	struct host_decl *host;
 	struct subnet *subnet;
 	struct pool *pool;
 	struct class *billing_class;
-	struct hardware hardware_addr;
 	struct option_chain_head *agent_options;
 
 	struct executable_statement *on_expiry;
 	struct executable_statement *on_commit;
 	struct executable_statement *on_release;
 
-	u_int16_t flags;
+	unsigned char *uid;
+	unsigned short uid_len;
+	unsigned short uid_max;
+	unsigned char uid_buf [7];
+	struct hardware hardware_addr;
+
+	u_int8_t flags;
 #       define STATIC_LEASE		1
 #	define PERSISTENT_FLAGS		(ON_ACK_QUEUE | ON_UPDATE_QUEUE)
 #	define MS_NULL_TERMINATION	8
@@ -281,8 +281,8 @@ struct lease {
 #	define EPHEMERAL_FLAGS		(MS_NULL_TERMINATION | \
 					 UNICAST_BROADCAST_HACK)
 
-	binding_state_t binding_state;	/* See failover.h, FTS_*. */
-	binding_state_t next_binding_state;	/* See failover.h, FTS_*. */
+	binding_state_t __attribute__ ((mode (__byte__))) binding_state;
+	binding_state_t __attribute__ ((mode (__byte__))) next_binding_state;
 	
 	struct lease_state *state;
 
@@ -739,6 +739,7 @@ struct interface_info {
 	unsigned remote_id_len;		/* Length of Remote ID. */
 
 	char name [IFNAMSIZ];		/* Its name... */
+	int index;			/* Its index. */
 	int rfdesc;			/* Its read file descriptor. */
 	int wfdesc;			/* Its write file descriptor, if
 					   different. */
@@ -830,6 +831,8 @@ struct dns_zone {
 	struct option_cache *secondary;
 	struct auth_key *key;
 };
+
+#include "ctrace.h"
 
 /* Bitmask of dhcp option codes. */
 typedef unsigned char option_mask [16];
@@ -1064,6 +1067,7 @@ extern const char *path_dhcpd_pid;
 extern int dhcp_max_agent_option_packet_length;
 
 int main PROTO ((int, char **, char **));
+void postconf_initialization (int);
 void cleanup PROTO ((void));
 void lease_pinged PROTO ((struct iaddr, u_int8_t *, int));
 void lease_ping_timeout PROTO ((void *));
@@ -1077,9 +1081,15 @@ enum dhcp_token next_token PROTO ((const char **, struct parse *));
 enum dhcp_token peek_token PROTO ((const char **, struct parse *));
 
 /* confpars.c */
+void parse_trace_setup (void);
 isc_result_t readconf PROTO ((void));
-isc_result_t parse_conf_file (const char *, struct group *, int);
-isc_result_t read_leases PROTO ((void));
+isc_result_t read_conf_file (const char *, struct group *, int, int);
+#if defined (TRACING)
+void trace_conf_input (trace_type_t *, unsigned, char *);
+void trace_conf_stop (trace_type_t *ttype);
+#endif
+isc_result_t conf_file_subparse (struct parse *, struct group *, int);
+isc_result_t lease_file_subparse (struct parse *);
 int parse_statement PROTO ((struct parse *,
 			    struct group *, int, struct host_decl *, int));
 #if defined (FAILOVER_PROTOCOL)
@@ -1617,12 +1627,13 @@ int supports_multiple_interfaces (struct interface_info *);
 void maybe_setup_fallback PROTO ((void));
 #endif
 
-/* dispatch.c */
+/* discover.c */
 extern struct interface_info *interfaces,
 	*dummy_interfaces, *fallback_interface;
 extern struct protocol *protocols;
 extern int quiet_interface_discovery;
 isc_result_t interface_setup (void);
+void interface_trace_setup (void);
 
 extern struct in_addr limited_broadcast;
 extern struct in_addr local_address;
@@ -1639,11 +1650,23 @@ extern void (*bootp_packet_handler) PROTO ((struct interface_info *,
 					    struct iaddr, struct hardware *));
 extern struct timeout *timeouts;
 extern omapi_object_type_t *dhcp_type_interface;
+#if defined (TRACING)
+trace_type_t *interface_trace;
+trace_type_t *inpacket_trace;
+trace_type_t *outpacket_trace;
+#endif
+extern struct interface_info **interface_vector;
+extern int interface_count;
+extern int interface_max;
 isc_result_t interface_initialize (omapi_object_t *, const char *, int);
 void discover_interfaces PROTO ((int));
 int setup_fallback (struct interface_info **, const char *, int);
 int if_readsocket PROTO ((omapi_object_t *));
 void reinitialize_interfaces PROTO ((void));
+
+/* dispatch.c */
+void set_time (u_int32_t);
+struct timeval *process_outstanding_timeouts (struct timeval *);
 void dispatch PROTO ((void));
 isc_result_t got_one PROTO ((omapi_object_t *));
 isc_result_t interface_set_value (omapi_object_t *, omapi_object_t *,
@@ -2223,6 +2246,8 @@ isc_result_t dhcp_interface_create (omapi_object_t **,
 				    omapi_object_t *);
 isc_result_t dhcp_interface_remove (omapi_object_t *,
 				    omapi_object_t *);
+void interface_stash (struct interface_info *);
+void interface_snorf (struct interface_info *, int);
 
 /* mdb.c */
 
