@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: print.c,v 1.22.2.1 1999/07/13 18:42:58 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: print.c,v 1.22.2.2 1999/10/15 12:45:01 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -487,6 +487,42 @@ static int print_subexpression (expr, buf, len)
 		}
 		break;
 
+	      case expr_encode_int8:
+		if (len > 7) {
+			rv = 6;
+			strcpy (buf, "(to-int8 ");
+			rv += print_subexpression (expr -> data.encode_int,
+						   buf + rv, len - rv - 1);
+			buf [rv++] = ')';
+			buf [rv] = 0;
+			return rv;
+		}
+		break;
+
+	      case expr_encode_int16:
+		if (len > 8) {
+			rv = 7;
+			strcpy (buf, "(to-int16 ");
+			rv += print_subexpression (expr -> data.encode_int,
+						   buf + rv, len - rv - 1);
+			buf [rv++] = ')';
+			buf [rv] = 0;
+			return rv;
+		}
+		break;
+
+	      case expr_encode_int32:
+		if (len > 8) {
+			rv = 7;
+			strcpy (buf, "(to-int32 ");
+			rv += print_subexpression (expr -> data.encode_int,
+						   buf + rv, len - rv - 1);
+			buf [rv++] = ')';
+			buf [rv] = 0;
+			return rv;
+		}
+		break;
+
 	      case expr_const_int:
 		s = print_dec_1 (expr -> data.const_int);
 		rv = strlen (s);
@@ -503,6 +539,15 @@ static int print_subexpression (expr, buf, len)
 			sprintf (buf, "(exists %s.%s)",
 				 expr -> data.option -> universe -> name,
 				 expr -> data.option -> name);
+			return rv;
+		}
+		break;
+
+	      case expr_known:
+		s = "known";
+		rv = strlen (s);
+		if (len > rv) {
+			strcpy (buf, s);
 			return rv;
 		}
 		break;
