@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.126 1999/11/07 20:32:03 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.127 1999/11/12 17:17:16 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -71,6 +71,7 @@ void dhcpdiscover (packet)
 {
 	struct lease *lease;
 	char msgbuf [1024];
+	TIME when;
 
 	sprintf (msgbuf, "DHCPDISCOVER from %s via %s",
 		 print_hw_addr (packet -> raw -> htype,
@@ -103,7 +104,13 @@ void dhcpdiscover (packet)
 		}
 	}
 
-	ack_lease (packet, lease, DHCPOFFER, cur_time + 120, msgbuf);
+	/* Set the lease to really expire in 2 minutes, unless it has
+	   not yet expired, in which case leave its expiry time alone. */
+	when = cur_time + 120;
+	if (when < lease -> ends)
+		when = lease -> ends;
+
+	ack_lease (packet, lease, DHCPOFFER, when, msgbuf);
 }
 
 void dhcprequest (packet)
