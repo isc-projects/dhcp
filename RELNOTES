@@ -53,11 +53,31 @@ and for prodding me into improving it.
 
 - Add additional support for NetBSD/sparc64.
 
-- Fix a bug in the command-line parsing of the client.  Also, resolve a memory leak.
+- Fix a bug in the command-line parsing of the client.  Also, resolve
+  a memory leak.
 
-- Add better support for shells other than bash in the Linux client script.
+- Add better support for shells other than bash in the Linux client
+  script.
 
 - Various build fixes for modern versions of FreeBSD and Linux.
+
+- Fix a bad bounds check when printing binding state names.
+
+- Clarify documentation about fixed-address and multiple addresses.
+
+- Fix a typo in the authoritative error message.
+
+- Make a log entry when we can't write a billing class.
+
+- Use conversion targets that are the right size on all architectures.
+
+- Increment the hop count when relaying.
+
+- Log a message when lease state is changed through OMAPI.
+
+- Don't rerun the shared_network when evaluating the pool.
+
+- Fix a reversed test in the parser.
 
 			Changes since 3.0.1rc7
 
