@@ -1,5 +1,5 @@
 	    Internet Software Consortium DHCP Distribution
-		   Version 3, Beta 2, Patchlevel 11
+		   Version 3, Beta 2, Patchlevel 12
 			  November 30, 2000
 
 			    Release Notes
@@ -48,6 +48,62 @@ Measurement Systems, and Brian Murrell at BC Tel Advanced
 Communications.  I'd like to express my thanks to all of these good
 people here, both for working on the code and for prodding me into
 improving it.
+
+		Changes since 3.0 Beta 2 Patchlevel 11
+
+- Albert Herranz tracked down and fixed a subtle bug in the base64
+  decoder that would prevent any key with an 'x' in its base64
+  representation from working correctly.
+
+- Thanks to Chris Cheney and Michael Sanders, we have a fix for the
+  hang that they both spotted in the DHCP server - when
+  one-lease-per-client was set, the code to release the "other" lease
+  could spin.
+
+- Fix a problem with alignment of the input buffer in bpf in cases
+  where two packets arrive in the same bpf read.
+
+- Fix a problem where the relay agent would crash if you specified an
+  interface name on the command line.
+
+- Add the ability to conditionalize client behaviour based on the
+  client state.
+
+- Add support for the FQDN option, and added support for a new way of
+  doing ddns updates (ddns update style interim) that allows more than
+  one DHCP server to update the DNS for the same network(s).   This
+  was implemented by Damien Neil with some additional functionality
+  added by Ted Lemon.
+
+- Damien added a "log" statement, so that the configuration file can
+  be made to log debugging information and other information.
+
+- Fixed a bug that caused option buffers not to be terminated with an
+  end option.
+
+- Fixed a long-standing bug in the support for option spaces where the
+  options are stored as an ordered list rather than in a hash table,
+  which could theoretically result in memory pool corruption.
+
+- Prevent hardware declarations with no actual hardware address from
+  being written as something unparsable, and behave correctly in the
+  face of a null hardware address on input.
+
+- Allow key names to be FQDNs, and qualify the algorithm name if it is
+  specified unqualified.
+
+- Modify the DDNS update code so that it never prints the "resolver
+  failed" message, but instead says *why* the resolver failed.
+
+- Officially support the subnet selection option, which now has an
+  RFC.
+
+- Fix a build bug on MacOS X.
+
+- Allow administrator to disable ping checking.
+
+- Clean up dhcpd.conf documentation and add more information about how
+  it works.
 
 		Changes since 3.0 Beta 2 Patchlevel 10
 
