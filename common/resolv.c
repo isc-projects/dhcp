@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: resolv.c,v 1.5 1997/12/06 04:04:07 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: resolv.c,v 1.6 1998/01/12 01:01:44 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -157,7 +157,10 @@ void read_resolv_conf (parse_time)
 				sl -> next = sp -> next;
 			else
 				name_servers = sp -> next;
-			free_name_server (sp, "pick_name_server");
+			/* We can't actually free the name server structure,
+			   because somebody might be hanging on to it.    If
+			   your /etc/resolv.conf file changes a lot, this
+			   could be a noticable memory leak. */
 		} else
 			sl = sp;
 	}
@@ -180,7 +183,7 @@ void read_resolv_conf (parse_time)
 
 /* Pick a name server from the /etc/resolv.conf file. */
 
-struct sockaddr_in *pick_name_server ()
+struct name_server *first_name_server ()
 {
 	FILE *rc;
 	static TIME rcdate;
@@ -190,7 +193,7 @@ struct sockaddr_in *pick_name_server ()
 	if (cur_time > rcdate) {
 		if (stat (path_resolv_conf, &st) < 0) {
 			warn ("Can't stat %s", path_resolv_conf);
-			return (struct sockaddr_in *)0;
+			return (struct name_server *)0;
 		}
 		if (st.st_mtime > rcdate) {
 			char rcbuf [512];
@@ -201,7 +204,5 @@ struct sockaddr_in *pick_name_server ()
 		}
 	}
 
-	if (name_servers)
-		return &name_servers -> addr;
-	return (struct sockaddr_in *)0;
+	return name_servers;
 }
