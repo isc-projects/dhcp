@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcrelay.c,v 1.47 2000/10/12 09:05:04 mellon Exp $ Copyright (c) 1997-2000 Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcrelay.c,v 1.48 2000/12/29 06:47:46 mellon Exp $ Copyright (c) 1997-2000 Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -134,6 +134,15 @@ int main (argc, argv, envp)
 #if !(defined (DEBUG) || defined (SYSLOG_4_2))
 	setlogmask (LOG_UPTO (LOG_INFO));
 #endif	
+
+	/* Set up the OMAPI. */
+	status = omapi_init ();
+	if (status != ISC_R_SUCCESS)
+		log_fatal ("Can't initialize OMAPI: %s",
+			   isc_result_totext (status));
+
+	/* Set up the OMAPI wrappers for the interface object. */
+	interface_setup ();
 
 	for (i = 1; i < argc; i++) {
 		if (!strcmp (argv [i], "-p")) {
@@ -259,12 +268,6 @@ int main (argc, argv, envp)
 
 	/* Get the current time... */
 	GET_TIME (&cur_time);
-
-	/* Set up the OMAPI. */
-	status = omapi_init ();
-	if (status != ISC_R_SUCCESS)
-		log_fatal ("Can't initialize OMAPI: %s",
-			   isc_result_totext (status));
 
 	/* Discover all the network interfaces. */
 	discover_interfaces (DISCOVER_RELAY);
