@@ -23,7 +23,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: lpf.c,v 1.13.2.2 1999/10/15 12:36:10 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: lpf.c,v 1.13.2.3 1999/10/25 15:45:44 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -129,6 +129,9 @@ extern struct sock_filter dhcp_bpf_filter [];
 extern int dhcp_bpf_filter_len;
 extern struct sock_filter dhcp_bpf_tr_filter [];
 extern int dhcp_bpf_tr_filter_len;
+
+static void lpf_gen_filter_setup (struct interface_info *);
+static void lpf_tr_filter_setup (struct interface_info *);
 
 void if_register_receive (info)
 	struct interface_info *info;
