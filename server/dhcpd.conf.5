@@ -2038,6 +2038,23 @@ details).
 .RE
 .PP
 The
+.I stash-agent-options
+statement
+.RS 0.25i
+.PP
+.B stash-agent-options \fIflag\fB;\fR
+.PP
+If the \fIstash-agent-options\fR parameter is true for a given client,
+the server will record the relay agent information options sent during
+the client's initial DHCPREQUEST message when the client was in the
+SELECTING state and behave as if those options are included in all
+subsequent DHCPREQUEST messages sent in the RENEWING state.   This
+works around a problem with relay agent information options, which is
+that they usually not appear in DHCPREQUEST messages sent by the
+client in the RENEWING state, because such messages are unicast
+directly to the server and not sent through a relay agent.
+.PP
+The
 .I update-optimization
 statement
 .RS 0.25i
