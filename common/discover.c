@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: discover.c,v 1.16 1999/10/08 17:08:33 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: discover.c,v 1.17 1999/10/24 17:17:22 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -234,9 +234,9 @@ void discover_interfaces (state)
 				share = subnet -> shared_network;
 				if (tmp -> shared_network &&
 				    tmp -> shared_network != share) {
-					log_error ("Interface %s matches %s",
-					      tmp -> name,
-					      "multiple shared networks");
+					log_fatal ("Interface %s matches %s",
+						   tmp -> name,
+						   "multiple shared networks");
 				} else {
 					tmp -> shared_network = share;
 				}
