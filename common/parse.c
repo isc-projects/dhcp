@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.104.2.1 2001/06/04 21:22:12 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.104.2.2 2001/06/05 06:31:21 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1958,7 +1958,7 @@ int parse_executable_statement (result, cfile, lose, case_context)
 		}
 		i = strlen (zone -> name);
 		if (zone -> name [i - 1] != '.') {
-			s = dmalloc (i + 2, MDL);
+			s = dmalloc ((unsigned)i + 2, MDL);
 			if (!s)
 				goto badzone;
 			strcpy (s, zone -> name);
