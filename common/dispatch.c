@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dispatch.c,v 1.63.2.1 2001/06/08 23:07:25 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dispatch.c,v 1.63.2.2 2001/06/21 16:47:15 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -203,3 +203,26 @@ void cancel_timeout (where, what)
 		free_timeouts = q;
 	}
 }
+
+#if defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
+void cancel_all_timeouts ()
+{
+	struct timeout *t, *n;
+	for (t = timeouts; t; t = n) {
+		n = t -> next;
+		if (t -> unref && t -> what)
+			(*t -> unref) (&t -> what, MDL);
+		t -> next = free_timeouts;
+		free_timeouts = t;
+	}
+}
+
+void relinquish_timeouts ()
+{
+	struct timeout *t, *n;
+	for (t = free_timeouts; t; t = n) {
+		n = t -> next;
+		dfree (t, MDL);
+	}
+}
+#endif
