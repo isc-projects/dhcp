@@ -84,7 +84,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dlpi.c,v 1.25 2001/01/31 19:00:34 tamino Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dlpi.c,v 1.26 2001/02/02 18:14:17 tamino Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -430,7 +430,7 @@ void if_register_receive (info)
 	pf.Pf_Filter [pf.Pf_FilterLen++] = htons (ETHERTYPE_IP);
 # else
 # define ETHER_H_PREFIX (0)
-# endif / * USE_DLPI_RAW */
+# endif /* USE_DLPI_RAW */
 
 	/*
 	 * The packets that will be received on this file descriptor
