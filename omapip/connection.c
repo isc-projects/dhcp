@@ -265,7 +265,7 @@ void omapi_connection_register (omapi_connection_object_t *obj,
 	}
 
 	status = omapi_connection_array_extend (omapi_connections, obj,
-						(u_int32_t *)0, file, line);
+						(int *)0, file, line);
 	if (status != ISC_R_SUCCESS) {
 		obj -> index = -1;
 		return;
