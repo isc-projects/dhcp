@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.85.2.26 2004/12/03 23:06:08 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.85.2.27 2004/12/04 00:03:18 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -746,7 +746,7 @@ int store_options (ocount, buffer, buflen, packet, lease, client_state,
 
 	if (first_cutoff) {
 	    if (first_cutoff >= buflen)
-		log_fatal("%s:%s:store_options: Invalid first cutoff.", MDL);
+		log_fatal("%s:%d:store_options: Invalid first cutoff.", MDL);
 
 	    bufend = first_cutoff;
 	} else
@@ -754,7 +754,7 @@ int store_options (ocount, buffer, buflen, packet, lease, client_state,
 
 	if (second_cutoff) {
 	    if (second_cutoff >= buflen)
-		log_fatal("%s:%s:store_options: Invalid second cutoff.", MDL);
+		log_fatal("%s:%d:store_options: Invalid second cutoff.", MDL);
 
 	    sbufend = second_cutoff;
 	} else
