@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bootp.c,v 1.23 1997/02/19 10:50:40 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bootp.c,v 1.24 1997/02/22 08:36:36 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -105,12 +105,38 @@ void bootp (packet)
 			}
 		}
 
+		if (host && (!host -> group -> allow_booting)) {
+			note ("Ignoring excluded BOOTP client %s",
+			      host -> name);
+			return;
+		}
+			
+		if (host && (!host -> group -> allow_bootp)) {
+			note ("Ignoring BOOTP request from client %s",
+			      host -> name);
+			return;
+		}
+			
 		/* If we've been told not to boot unknown clients,
 		   and we didn't find any host record for this client,
 		   ignore it. */
 		if (!host && !(packet -> shared_network ->
 			       group -> boot_unknown_clients)) {
 			note ("Ignoring unknown BOOTP client %s via %s",
+			      print_hw_addr (packet -> raw -> htype,
+					     packet -> raw -> hlen,
+					     packet -> raw -> chaddr),
+			      packet -> raw -> giaddr.s_addr
+			      ? inet_ntoa (packet -> raw -> giaddr)
+			      : packet -> interface -> name);
+			return;
+		}
+
+		/* If we've been told not to boot with bootp on this
+		   network, ignore it. */
+		if (!host &&
+		    !(packet -> shared_network -> group -> allow_bootp)) {
+			note ("Ignoring BOOTP request from client %s via %s",
 			      print_hw_addr (packet -> raw -> htype,
 					     packet -> raw -> hlen,
 					     packet -> raw -> chaddr),
@@ -174,6 +200,20 @@ void bootp (packet)
 		goto lose;
 	}
 
+	/* Make sure we're allowed to boot this client. */
+	if (hp && (!hp -> group -> allow_booting)) {
+		note ("Ignoring excluded BOOTP client %s",
+		      hp -> name);
+		return;
+	}
+			
+	/* Make sure we're allowed to boot this client with bootp. */
+	if (hp && (!hp -> group -> allow_bootp)) {
+		note ("Ignoring BOOTP request from client %s",
+		      hp -> name);
+		return;
+	}
+			
 	/* Set up the outgoing packet... */
 	memset (&outgoing, 0, sizeof outgoing);
 	memset (&raw, 0, sizeof raw);
@@ -220,7 +260,7 @@ void bootp (packet)
 	else if (subnet -> interface_address.len)
 		memcpy (&raw.siaddr, subnet -> interface_address.iabuf, 4);
 	else
-		memcpy (&raw.siaddr, server_identifier.iabuf, 4);
+		raw.siaddr = packet -> interface -> primary_address;
 
 	raw.giaddr = packet -> raw -> giaddr;
 	if (hp -> group -> server_name) {
@@ -239,10 +279,7 @@ void bootp (packet)
 	hto.hlen = packet -> raw -> hlen;
 	memcpy (hto.haddr, packet -> raw -> chaddr, hto.hlen);
 
-	if (server_identifier.len)
-		memcpy (&from, server_identifier.iabuf, 4);
-	else
-		memset (&from, 0, 4);
+	from = packet -> interface -> primary_address;
 
 	/* Report what we're doing... */
 	note ("BOOTREPLY for %s to %s (%s) via %s",
@@ -287,4 +324,11 @@ void bootp (packet)
 			      from, &to, &hto);
 	if (result < 0)
 		warn ("send_packet: %m");
+}
+
+void relay (ip, packet, length)
+	struct interface_info *ip;
+	struct dhcp_packet *packet;
+	int length;
+{
 }
