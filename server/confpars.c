@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.73.2.4 1999/11/13 04:02:40 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.73.2.5 1999/12/09 00:46:39 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1769,17 +1769,18 @@ void parse_address_range (cfile, group, type, pool)
 		struct pool *last;
 		/* If we're permitting dynamic bootp for this range,
 		   then look for a pool with an empty prohibit list and
-		   a permit list with one entry which permits dynamic
-		   bootp. */
+		   a permit list with one entry that permits all clients */
 		for (pool = share -> pools; pool; pool = pool -> next) {
-			if ((!dynamic &&
-			     !pool -> permit_list && !pool -> prohibit_list) ||
-			    (dynamic &&
-			     !pool -> prohibit_list &&
+			if ((!dynamic && !pool -> permit_list && 
+			     pool -> prohibit_list &&
+			     !pool -> prohibit_list -> next &&
+			     (pool -> prohibit_list -> type ==
+			      permit_dynamic_bootp_clients)) ||
+			    (dynamic && !pool -> prohibit_list &&
 			     pool -> permit_list &&
 			     !pool -> permit_list -> next &&
 			     (pool -> permit_list -> type ==
-			      permit_dynamic_bootp_clients))) {
+			      permit_all_clients))) {
 				break;
 			}
 			last = pool;
@@ -1787,18 +1788,22 @@ void parse_address_range (cfile, group, type, pool)
 
 		/* If we didn't get a pool, make one. */
 		if (!pool) {
+			struct permit *p;
 			pool = new_pool ("parse_address_range");
-			if (!pool)
 				log_fatal ("no memory for ad-hoc pool.");
-			if (dynamic) {
-				pool -> permit_list =
-					new_permit ("parse_address_range");
-				if (!pool -> permit_list)
-					log_fatal ("no memory for ad-hoc %s.",
-						   "permit");
-				pool -> permit_list -> type =
-					permit_dynamic_bootp_clients;
-			}
+			p = new_permit ("parse_address_range");
+			if (!p)
+				log_fatal ("no memory for ad-hoc permit.");
+			pool -> permit_list -> type =
+				dynamic ? permit_all_clients
+					: permit_dynamic_bootp_clients;
+
+			/* Dynamic pools permit all clients.   Otherwise
+			   we prohibit BOOTP clients. */
+			if (dynamic)
+				pool -> permit_list = p;
+			else
+				pool -> prohibit_list = p;
 			if (share -> pools)
 				last -> next = pool;
 			else
