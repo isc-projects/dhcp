@@ -148,6 +148,21 @@ struct class *new_class (name)
 	return rval;
 }
 
+struct shared_network *new_shared_network (name)
+	char *name;
+{
+	struct shared_network *rval =
+		dmalloc (sizeof (struct shared_network), name);
+	return rval;
+}
+
+void free_shared_network (ptr, name)
+	struct shared_network *ptr;
+	char *name;
+{
+	dfree ((VOIDPTR)ptr, name);
+}
+
 void free_class (ptr, name)
 	struct class *ptr;
 	char *name;
