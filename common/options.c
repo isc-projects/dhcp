@@ -3,7 +3,7 @@
    DHCP options parsing and reassembly. */
 
 /*
- * Copyright (c) 1995-2000 Internet Software Consortium.
+ * Copyright (c) 1995-2001 Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.76 2001/01/09 06:56:11 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.77 2001/01/11 02:14:51 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -349,7 +349,7 @@ int fqdn_universe_decode (struct option_state *options,
 			goto bad;
 		/* Also save the whole name. */
 		if (!save_option_buffer (&fqdn_universe, options, bp,
-					 &bp -> data [5 + i], length - 3,
+					 &bp -> data [5], length - 3,
 					 &fqdn_options [FQDN_FQDN], 1))
 			goto bad;
 	} else {
