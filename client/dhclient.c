@@ -56,7 +56,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.44.2.28 1999/03/29 21:44:48 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.44.2.29 1999/03/29 23:13:48 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -171,10 +171,10 @@ int main (argc, argv, envp)
 		note (message);
 		note (copyright);
 		note (arr);
-		note ("")
+		note ("");
 		note (contrib);
 		note (url);
-		note ("")
+		note ("");
 	}
 
 	/* Default to the DHCP/BOOTP port. */
