@@ -48,7 +48,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dns.c,v 1.4 1997/06/08 04:05:20 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dns.c,v 1.5 1997/11/29 07:51:49 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -85,7 +85,7 @@ void dns_startup ()
 
 	/* Get a socket for the DNS protocol. */
 	dns_protocol_fd = socket (AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-	if (!dns_protocol_fd)
+	if (dns_protocol_fd < 0)
 		error ("unable to create dns socket: %m");
 
 	pick_name_server ();
