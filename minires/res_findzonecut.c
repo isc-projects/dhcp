@@ -1,5 +1,5 @@
 #if !defined(lint) && !defined(SABER)
-static const char rcsid[] = "$Id: res_findzonecut.c,v 1.13 2001/04/06 05:42:37 mellon Exp $";
+static const char rcsid[] = "$Id: res_findzonecut.c,v 1.14 2001/04/27 20:01:29 mellon Exp $";
 #endif /* not lint */
 
 /*
@@ -160,19 +160,19 @@ res_findzonecut(res_state statp, const char *dname, ns_class class, int opts,
 
 	DPRINTF(("get the soa, and see if it has enough glue"));
 	if ((rcode = get_soa(statp, dname, class, zname, zsize,
-			 mname, sizeof mname, &nsrrs)) != ns_r_noerror ||
+			     mname, sizeof mname, &nsrrs)) != ISC_R_SUCCESS ||
 	    ((opts & RES_EXHAUSTIVE) == 0 &&
 	     (n = satisfy(statp, mname, &nsrrs, addrs, naddrs)) > 0))
 		goto done;
 
 	DPRINTF(("get the ns rrset and see if it has enough glue"));
-	if ((n = get_ns(statp, zname, class, &nsrrs)) < 0 ||
+	if ((rcode = get_ns(statp, zname, class, &nsrrs)) != ISC_R_SUCCESS ||
 	    ((opts & RES_EXHAUSTIVE) == 0 &&
 	     (n = satisfy(statp, mname, &nsrrs, addrs, naddrs)) > 0))
 		goto done;
 
 	DPRINTF(("get the missing glue and see if it's finally enough"));
-	if ((rcode = get_glue(statp, class, &nsrrs)) == ns_r_noerror)
+	if ((rcode = get_glue(statp, class, &nsrrs)) == ISC_R_SUCCESS)
 		n = satisfy(statp, mname, &nsrrs, addrs, naddrs);
 
 	/* If we found the zone, cache it. */
@@ -277,7 +277,7 @@ get_soa(res_state statp, const char *dname, ns_class class,
 		} else {
 			ancount = ns_msg_count(msg, ns_s_an);
 			nscount = ns_msg_count(msg, ns_s_ns);
-			if (ancount > 0 && rcode == ns_r_noerror)
+			if (ancount > 0 && rcode == ISC_R_SUCCESS)
 				sect = ns_s_an, n = ancount;
 			else if (nscount > 0)
 				sect = ns_s_ns, n = nscount;
@@ -604,5 +604,5 @@ do_query(res_state statp, const char *dname, ns_class class, ns_type qtype,
 	}
 	if (alias_count)
 		*alias_count = n;
-	return ns_rcode_to_isc (ns_msg_getflag (*msg, ns_f_rcode));
+	return ISC_R_SUCCESS;
 }
