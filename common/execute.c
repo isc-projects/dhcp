@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: execute.c,v 1.14 1999/07/19 13:08:28 mellon Exp $ Copyright (c) 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: execute.c,v 1.15 1999/07/19 15:34:33 mellon Exp $ Copyright (c) 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -263,33 +263,40 @@ int executable_statement_dereference (ptr, name)
 
 	switch ((*ptr) -> op) {
 	      case statements_statement:
-		executable_statement_dereference
-			(&(*ptr) -> data.statements, name);
+		if ((*ptr) -> data.statements)
+			executable_statement_dereference
+				(&(*ptr) -> data.statements, name);
 		break;
 
 	      case on_statement:
-		executable_statement_dereference
-			(&(*ptr) -> data.on.statements, name);
+		if ((*ptr) -> data.on.statements)
+			executable_statement_dereference
+				(&(*ptr) -> data.on.statements, name);
 		break;
 
 	      case if_statement:
-		expression_dereference (&(*ptr) -> data.ie.expr, name);
-		executable_statement_dereference
-			(&(*ptr) -> data.ie.true, name);
+		if ((*ptr) -> data.ie.expr)
+			expression_dereference (&(*ptr) -> data.ie.expr, name);
+		if ((*ptr) -> data.ie.true)
+			executable_statement_dereference
+				(&(*ptr) -> data.ie.true, name);
 		if ((*ptr) -> data.ie.false)
 			executable_statement_dereference
 				(&(*ptr) -> data.ie.false, name);
 		break;
 
 	      case eval_statement:
-		expression_dereference (&(*ptr) -> data.eval, name);
+		if ((*ptr) -> data.eval)
+			expression_dereference (&(*ptr) -> data.eval, name);
 		break;
 
 	      case supersede_option_statement:
 	      case default_option_statement:
 	      case append_option_statement:
 	      case prepend_option_statement:
-		option_cache_dereference (&(*ptr) -> data.option, name);
+		if ((*ptr) -> data.option)
+			option_cache_dereference (&(*ptr) -> data.option,
+						  name);
 		break;
 
 	      default:
