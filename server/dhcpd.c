@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.48 1998/03/16 06:18:16 mellon Exp $ Copyright 1995, 1996 The Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.49 1998/03/17 06:20:11 mellon Exp $ Copyright 1995, 1996 The Internet Software Consortium.";
 #endif
 
 static char copyright[] =
@@ -196,7 +196,9 @@ int main (argc, argv, envp)
 	GET_TIME (&cur_time);
 
 	/* Initialize DNS support... */
-	dns_startup ();
+#if 0
+	dns_startup (); 
+#endif
 
 	/* Read the dhcpd.conf file... */
 	if (!readconf ())
