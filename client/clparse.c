@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: clparse.c,v 1.28 1999/03/16 06:37:47 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: clparse.c,v 1.29 1999/03/25 21:45:55 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -281,7 +281,7 @@ void parse_client_statement (cfile, ip, config)
 		op = supersede_option_statement;
 	      do_option:
 		token = next_token (&val, cfile);
-		option = parse_option_name (cfile);
+		option = parse_option_name (cfile, 0);
 		if (!option)
 			return;
 		stmt = parse_option_statement (cfile, 1, option, op);
@@ -289,6 +289,29 @@ void parse_client_statement (cfile, ip, config)
 			;
 		*p = stmt;
 		stmt -> next = (struct executable_statement *)0;
+		return;
+
+	      case OPTION:
+		token = next_token (&val, cfile);
+		option = parse_option_name (cfile, 1);
+		if (!option)
+			return;
+
+		token = next_token (&val, cfile);
+		if (token != CODE) {
+			parse_warn ("expecting \"code\" keyword.");
+			skip_to_semi (cfile);
+			return;
+		}
+		if (ip) {
+			parse_warn ("option definitions may only appear in %s",
+				    "the outermost scope.");
+			skip_to_semi (cfile);
+			free_option (option, "parse_statement");
+			return;
+		}
+		if (!parse_option_code_definition (cfile, option))
+			free_option (option, "parse_statement");
 		return;
 
 	      case DEFAULT:
@@ -918,7 +941,7 @@ int parse_option_decl (oc, cfile)
 	int nul_term = 0;
 	struct buffer *bp;
 
-	option = parse_option_name (cfile);
+	option = parse_option_name (cfile, 0);
 	if (!option)
 		return 0;
 
