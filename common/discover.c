@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: discover.c,v 1.36 2001/01/03 23:13:46 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: discover.c,v 1.37 2001/02/12 19:40:05 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -67,6 +67,14 @@ void (*bootp_packet_handler) PROTO ((struct interface_info *,
 				     struct iaddr, struct hardware *));
 
 omapi_object_type_t *dhcp_type_interface;
+#if defined (TRACING)
+trace_type_t *interface_trace;
+trace_type_t *inpacket_trace;
+trace_type_t *outpacket_trace;
+#endif
+struct interface_info **interface_vector;
+int interface_count;
+int interface_max;
 
 OMAPI_OBJECT_ALLOC (interface, struct interface_info, dhcp_type_interface)
 
@@ -89,8 +97,24 @@ isc_result_t interface_setup ()
 	if (status != ISC_R_SUCCESS)
 		log_fatal ("Can't register interface object type: %s",
 			   isc_result_totext (status));
+
 	return status;
 }
+
+#if defined (TRACING)
+void interface_trace_setup ()
+{
+	interface_trace = trace_type_register ("interface", (void *)0,
+					       trace_interface_input,
+					       trace_interface_stop, MDL);
+	inpacket_trace = trace_type_register ("inpacket", (void *)0,
+					       trace_inpacket_input,
+					       trace_inpacket_stop, MDL);
+	outpacket_trace = trace_type_register ("outpacket", (void *)0,
+					       trace_outpacket_input,
+					       trace_outpacket_stop, MDL);
+}
+#endif
 
 isc_result_t interface_initialize (omapi_object_t *ipo,
 				   const char *file, int line)
@@ -215,19 +239,9 @@ void discover_interfaces (state)
 					   ifp -> ifr_name,
 					   isc_result_totext (status));
 			strcpy (tmp -> name, ifp -> ifr_name);
-			tmp -> circuit_id = (u_int8_t *)tmp -> name;
-			tmp -> circuit_id_len = strlen (tmp -> name);
-			tmp -> remote_id = 0;
-			tmp -> remote_id_len = 0;
-			tmp -> flags = ir;
-			if (interfaces) {
-				interface_reference (&tmp -> next,
-						     interfaces, MDL);
-				interface_dereference (&interfaces, MDL);
-			}
-			interface_reference (&interfaces, tmp, MDL);
+			interface_snorf (tmp, ir);
 			interface_dereference (&tmp, MDL);
-			tmp = interfaces;
+			tmp = interfaces; /* XXX */
 		}
 
 		if (dhcp_interface_discovery_hook)
@@ -494,10 +508,13 @@ void discover_interfaces (state)
 				if (interfaces)
 					interface_dereference (&interfaces,
 							       MDL);
+				if (next)
 				interface_reference (&interfaces, next, MDL);
 			} else {
 				interface_dereference (&last -> next, MDL);
-				interface_reference (&last -> next, next, MDL);
+				if (next)
+					interface_reference (&last -> next,
+							     next, MDL);
 			}
 			if (tmp -> next)
 				interface_dereference (&tmp -> next, MDL);
@@ -564,9 +581,15 @@ void discover_interfaces (state)
 			}
 		}
 
+		/* Flag the index as not having been set, so that the
+		   interface registerer can set it or not as it chooses. */
+		tmp -> index = -1;
+
 		/* Register the interface... */
 		if_register_receive (tmp);
 		if_register_send (tmp);
+
+		interface_stash (tmp);
 		wifcount++;
 #if defined (HAVE_SETFD)
 		if (fcntl (tmp -> rfdesc, F_SETFD, 1) < 0)
@@ -647,6 +670,8 @@ int setup_fallback (struct interface_info **fp, const char *file, int line)
 		(*dhcp_interface_setup_hook) (fallback_interface,
 					      (struct iaddr *)0);
 	status = interface_reference (fp, fallback_interface, file, line);
+
+	interface_stash (fallback_interface);
 	return status == ISC_R_SUCCESS;
 }
 
@@ -1004,4 +1029,57 @@ isc_result_t dhcp_interface_remove (omapi_object_t *lp,
 	if_deregister_receive (interface);
 
 	return ISC_R_SUCCESS;
+}
+
+void interface_stash (struct interface_info *tptr)
+{
+	struct interface_info **vec;
+	int delta;
+
+	/* If the registerer didn't assign an index, assign one now. */
+	if (tptr -> index == -1) {
+		tptr -> index = interface_count++;
+		while (tptr -> index < interface_max &&
+		       interface_vector [tptr -> index])
+			tptr -> index = interface_count++;
+	}
+
+	if (interface_max <= tptr -> index) {
+		delta = tptr -> index - interface_max + 10;
+		vec = dmalloc ((interface_max + delta) *
+			       sizeof (struct interface_info *), MDL);
+		if (!vec)
+			return;
+		memset (&vec [interface_max], 0,
+			(sizeof (struct interface_info *)) * delta);
+		interface_max += delta;
+		if (interface_vector) {
+		    memcpy (vec, interface_vector,
+			    (interface_count *
+			     sizeof (struct interface_info *)));
+		    dfree (interface_vector, MDL);
+		}
+		interface_vector = vec;
+	}
+	interface_vector [tptr -> index] = tptr;
+	if (tptr -> index >= interface_count)
+		interface_count = tptr -> index + 1;
+#if defined (TRACING)
+	trace_interface_register (interface_trace, tptr);
+#endif
+}
+
+void interface_snorf (struct interface_info *tmp, int ir)
+{
+	tmp -> circuit_id = (u_int8_t *)tmp -> name;
+	tmp -> circuit_id_len = strlen (tmp -> name);
+	tmp -> remote_id = 0;
+	tmp -> remote_id_len = 0;
+	tmp -> flags = ir;
+	if (interfaces) {
+		interface_reference (&tmp -> next,
+				     interfaces, MDL);
+		interface_dereference (&interfaces, MDL);
+	}
+	interface_reference (&interfaces, tmp, MDL);
 }
