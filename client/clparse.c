@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: clparse.c,v 1.34 1999/10/01 03:34:49 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: clparse.c,v 1.35 1999/10/01 03:42:31 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -381,7 +381,7 @@ void parse_client_statement (cfile, ip, config)
 
 	      case REQUEST:
 		token = next_token (&val, cfile);
-		if (!config -> requested_options == default_requested_options)
+		if (config -> requested_options == default_requested_options)
 			config -> requested_options = (u_int32_t *)0;
 		parse_option_list (cfile, &config -> requested_options);
 		return;
