@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: clparse.c,v 1.42 2000/03/17 03:58:55 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: clparse.c,v 1.43 2000/04/06 22:31:16 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -206,7 +206,7 @@ void read_client_leases ()
 	interface-declaration |
 	LEASE client-lease-statement |
 	ALIAS client-lease-statement |
-	AUTH_KEY key_id key_data */
+	KEY key-definition */
 
 void parse_client_statement (cfile, ip, config)
 	struct parse *cfile;
@@ -225,7 +225,7 @@ void parse_client_statement (cfile, ip, config)
 	int known;
 
 	switch (peek_token (&val, cfile)) {
-	      case AUTH_KEY:
+	      case KEY:
 		next_token (&val, cfile);
 		if (ip) {
 			/* This may seem arbitrary, but there's a reason for
@@ -240,13 +240,11 @@ void parse_client_statement (cfile, ip, config)
 			   want to lull them into believing they've gotten
 			   their way.   This is a bit contrived, but people
 			   tend not to be entirely rational about security. */
-			parse_warn (cfile, "auth-key not allowed here.");
+			parse_warn (cfile, "key definition not allowed here.");
 			skip_to_semi (cfile);
 			break;
 		}
-		memset (&key_id, 0, sizeof key_id);
-		if (parse_auth_key (&key_id, cfile))
-			data_string_forget (&key_id, MDL);
+		parse_key (cfile);
 		return;
 
 		/* REQUIRE can either start a policy statement or a
@@ -880,7 +878,7 @@ void parse_client_lease_statement (cfile, is_static)
 	RENEW time-decl |
 	REBIND time-decl |
 	EXPIRE time-decl |
-	AUTH_KEY id */
+	KEY id */
 
 void parse_client_lease_declaration (cfile, lease, ipp, clientp)
 	struct parse *cfile;
@@ -897,12 +895,16 @@ void parse_client_lease_declaration (cfile, lease, ipp, clientp)
 	struct data_string key_id;
 
 	switch (next_token (&val, cfile)) {
-	      case AUTH_KEY:
-		memset (&key_id, 0, sizeof key_id);
-		if (parse_auth_key (&key_id, cfile)) {
-			data_string_copy (&lease -> auth_key_id, &key_id, MDL);
-			data_string_forget (&key_id, MDL);
+	      case KEY:
+		token = next_token (&val, cfile);
+		if (token != STRING && !is_identifier (token)) {
+			parse_warn (cfile, "expecting key name.");
+			skip_to_semi (cfile);
+			break;
 		}
+		if (tsig_key_lookup (&lease -> key, val) != ISC_R_SUCCESS)
+			parse_warn (cfile, "unknown key %s", val);
+		parse_semi (cfile);
 		break;
 	      case BOOTP:
 		lease -> is_bootp = 1;
