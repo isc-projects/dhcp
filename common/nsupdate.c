@@ -25,7 +25,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: nsupdate.c,v 1.3.2.9 1999/10/28 16:07:38 mellon Exp $ Copyright (c) 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: nsupdate.c,v 1.3.2.10 1999/11/03 19:50:57 mellon Exp $ Copyright (c) 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -49,7 +49,7 @@ char *ddns_rev_name (lease, state, packet)
 	char pdq [128]; /* 4*3 %d +3 . +1 NUL */
 	struct data_string revdomain;
 	unsigned pqlen, rdlen;
-	static char inaddr [] = "inaddr.arpa";
+	static char inaddr [] = "in-addr.arpa";
 
 	/* Figure out what reverse domain to update
 	   First take the scoped "ddns-rev-domainname" option if present
@@ -74,7 +74,7 @@ char *ddns_rev_name (lease, state, packet)
 	if (revdomain.len)
 		rdlen = revdomain.len + 2;
 	else
-		rdlen += sizeof inaddr + 1;
+		rdlen = sizeof inaddr + 1;
 	revname = dmalloc (pqlen + rdlen, "ddns_rev_name");
 	if (!revname) {
 		log_error ("No memory to compute PTR name for %s", pdq);
