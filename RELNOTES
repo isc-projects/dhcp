@@ -66,6 +66,12 @@ and for prodding me into improving it.
   module that converts the MS NT4 DHCP configuration to a ISC DHCP3
   configuration file.
 
+- Applied the remainder of the dhcpctl memory leak patch provided by Bill
+  Squier at ReefEdge, Inc.  (groo@reefedge.com).
+
+- Missing non-optional failover peer configurations will now result in a soft
+  error rather than a null dereference.
+
 			Changes since 3.0.1rc9
 
 - A format string was corrected to fix compiler warnings.
