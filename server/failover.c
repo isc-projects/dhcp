@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.32 2001/01/25 08:35:24 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.33 2001/02/15 21:35:30 neild Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1948,7 +1948,9 @@ int dhcp_failover_pool_rebalance (dhcp_failover_state_t *state)
 			lp -> next_binding_state = peer_lease_state;
 			lp -> tstp = cur_time;
 			lp -> starts = cur_time;
-			if (!supersede_lease (lp, (struct lease *)0, 1, 1, 0))
+
+			if (!supersede_lease (lp, (struct lease *)0, 0, 1, 0)
+			    || !write_lease (lp))
 			{
 			    log_info ("can't commit lease %s on giveaway",
 				      piaddr (lp -> ip_addr));
@@ -1970,6 +1972,7 @@ int dhcp_failover_pool_rebalance (dhcp_failover_state_t *state)
 		}
 	    }
 	}
+	commit_leases();
 	dhcp_failover_send_poolresp (state, leases_queued);
 	dhcp_failover_send_updates (state);
 	return leases_queued;
