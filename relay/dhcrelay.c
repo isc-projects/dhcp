@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcrelay.c,v 1.2 1997/02/22 12:28:26 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcrelay.c,v 1.3 1997/02/27 03:41:28 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -182,7 +182,7 @@ void relay (ip, packet, length)
 	if (packet -> op == BOOTREPLY) {
 #ifndef USE_FALLBACK
 		if (!packet -> flags & htons (BOOTP_BROADCAST)) {
-			to.sin_addr = packet -> raw -> ciaddr;
+			to.sin_addr = packet -> ciaddr;
 			to.sin_port = remote_port;
 		} else
 #endif
