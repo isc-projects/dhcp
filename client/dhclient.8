@@ -28,9 +28,6 @@ dhclient - Dynamic Host Configuration Protocol Client
 .B -d
 ]
 [
-.B -D
-]
-[
 .B -q
 ]
 [
@@ -176,14 +173,6 @@ process, the
 flag should be specified.  This is useful when running the client
 under a debugger, or when running it out of inittab on System V
 systems.
-.PP
-The client writes a temporary shell script whenever it invokes
-dhclient-script.   This script is normally deleted after the client
-runs, but it can be helpful when debugging the client script to see
-what the client wrote.   The client can be configured not to delete
-these scripts by specifying the
-.B -D
-flag.
 .PP
 The client normally prints a startup message and displays the
 protocol sequence to the standard error descriptor until it has
