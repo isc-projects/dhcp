@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.31 2001/01/19 11:06:45 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.32 2001/01/25 08:35:24 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -3954,10 +3954,17 @@ isc_result_t dhcp_failover_process_bind_update (dhcp_failover_state_t *state,
 					      msg -> binding_status));
 			if (new_binding_state != msg -> binding_status) {
 				char outbuf [100];
+#if defined (HAVE_SNPRINTF)
 				snprintf (outbuf, sizeof outbuf,
 					  "invalid state transition: %d to %d",
 					  lease -> binding_state,
 					  msg -> binding_status);
+#else
+				sprintf (outbuf,
+					 "invalid state transition: %d to %d",
+					 lease -> binding_state,
+					 msg -> binding_status);
+#endif
 				dhcp_failover_send_bind_ack
 					(state, lease,
 					 msg, FTR_FATAL_CONFLICT, outbuf);
