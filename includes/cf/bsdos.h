@@ -22,6 +22,7 @@
 
 #include <syslog.h>
 #include <sys/types.h>
+#include <sys/param.h>
 #include <string.h>
 #include <paths.h>
 #include <errno.h>
@@ -69,4 +70,8 @@ extern int h_errno;
 
 #if defined (USE_DEFAULT_NETWORK)
 #  define USE_BPF
+#endif
+
+#if _BSDI_VERSION < 199802
+typedef int socklen_t;
 #endif
