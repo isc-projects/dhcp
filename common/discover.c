@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: discover.c,v 1.41 2001/04/09 01:03:12 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: discover.c,v 1.42 2001/05/02 06:36:54 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -159,8 +159,7 @@ void discover_interfaces (state)
 
 	/* Get the interface configuration information... */
 
-#ifdef SIOCGIFCONF_NULL_BUF_GIVES_CORRECT_LEN
-
+#ifdef SIOCGIFCONF_ZERO_PROBE
 	/* linux will only tell us how long a buffer it wants if we give it
 	 * a null buffer first. So, do a dry run to figure out the length.
 	 * 
@@ -171,24 +170,13 @@ void discover_interfaces (state)
 
 	ic.ifc_len = 0;
 	ic.ifc_ifcu.ifcu_buf = (caddr_t)NULL;
-
-	i = ioctl(sock, SIOCGIFCONF, &ic);
-	if (i < 0)
-		log_fatal ("ioctl: SIOCGIFCONF: %m");
-
-	ic.ifc_ifcu.ifcu_buf = dmalloc ((size_t)ic.ifc_len, MDL);
-	if (!ic.ifc_ifcu.ifcu_buf)
-		log_fatal ("Can't allocate SIOCGIFCONF buffer.");
-
-#else /* SIOCGIFCONF_NULL_BUF_GIVES_CORRECT_LEN */
-
+#else
 	/* otherwise, we just feed it a starting size, and it'll tell us if
 	 * it needs more */
 
 	ic.ifc_len = sizeof buf;
 	ic.ifc_ifcu.ifcu_buf = (caddr_t)buf;
-
-#endif /* SIOCGIFCONF_NULL_BUF_GIVES_CORRECT_LEN */
+#endif
 
       gifconf_again:
 	i = ioctl(sock, SIOCGIFCONF, &ic);
@@ -198,13 +186,23 @@ void discover_interfaces (state)
 
 	/* If the SIOCGIFCONF resulted in more data than would fit in
 	   a buffer, allocate a bigger buffer. */
-	if (ic.ifc_ifcu.ifcu_buf == buf &&
-	    ic.ifc_len > sizeof buf) {
+	if ((ic.ifc_ifcu.ifcu_buf == buf 
+#ifdef SIOCGIFCONF_ZERO_PROBE
+	     || ic.ifc_ifcu.ifcu_buf == 0
+#endif
+		) && ic.ifc_len > sizeof buf) {
 		ic.ifc_ifcu.ifcu_buf = dmalloc ((size_t)ic.ifc_len, MDL);
 		if (!ic.ifc_ifcu.ifcu_buf)
 			log_fatal ("Can't allocate SIOCGIFCONF buffer.");
 		goto gifconf_again;
+#ifdef SIOCGIFCONF_ZERO_PROBE
+	} else if (ic.ifc_ifcu.ifcu_buf == 0) {
+		ic.ifc_ifcu.ifcu_buf = (caddr_t)buf;
+		if.ifc_len = sizeof buf;
+		goto gifconf_again;
+#endif
 	}
+
 		
 	/* If we already have a list of interfaces, and we're running as
 	   a DHCP server, the interfaces were requested. */
