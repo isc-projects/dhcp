@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.88 1999/04/23 23:47:51 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.89 1999/05/06 20:35:48 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -351,14 +351,28 @@ void dhcpinform (packet)
 	struct sockaddr_in to;
 	struct in_addr from;
 
+	/* The client should set ciaddr to its IP address, but apparently
+	   it's common for clients not to do this, so we'll use their IP
+	   source address if they didn't set ciaddr. */
+	if (!packet -> raw -> ciaddr.s_addr) {
+		cip.len = 4;
+		memcpy (cip.iabuf, &packet -> client_addr, 4);
+	} else {
+		cip.len = 4;
+		memcpy (cip.iabuf, &packet -> raw -> ciaddr, 4);
+	}
+
 	sprintf (msgbuf, "DHCPINFORM from %s via %s",
-		 inet_ntoa (packet -> raw -> ciaddr),
-		 packet -> interface -> name);
+		 piaddr (cip), packet -> interface -> name);
+
+	/* If the IP source address is zero, don't respond. */
+	if (!memcmp (cip.iabuf, "\0\0\0", 4)) {
+		log_info ("%s: ignored.", msgbuf);
+		return;
+	}
 
 	/* Find the subnet that the client is on. */
 	oc = (struct option_cache *)0;
-	cip.len = 4;
-	memcpy (cip.iabuf, &packet -> raw -> ciaddr.s_addr, 4);
 	subnet = find_subnet (cip);
 
 	/* Sourceless packets don't make sense here. */
@@ -388,6 +402,7 @@ void dhcpinform (packet)
 	}
 
 	/* Figure out the filename. */
+	memset (&d1, 0, sizeof d1);
 	oc = lookup_option (&server_universe, options, SV_FILENAME);
 	if (oc && evaluate_option_cache (&d1, packet, packet -> options, oc)) {
 		i = d1.len;
@@ -396,6 +411,7 @@ void dhcpinform (packet)
 		else
 			raw.file [i] = 0;
 		memcpy (raw.file, d1.data, i);
+		data_string_forget (&d1, "dhcpinform");
 	}
 
 	/* Choose a server name as above. */
@@ -407,6 +423,7 @@ void dhcpinform (packet)
 		else
 			raw.sname [i] = 0;
 		memcpy (raw.sname, d1.data, i);
+		data_string_forget (&d1, "dhcpinform");
 	}
 
 	/* Set a flag if this client is a lame Microsoft client that NUL
@@ -455,8 +472,10 @@ void dhcpinform (packet)
 	} else {
 		if (evaluate_option_cache (&d1, packet,
 					   packet -> options, oc)) {
-			if (!d1.len || d1.len != sizeof from)
+			if (!d1.len || d1.len != sizeof from) {
+				data_string_forget (&d1, "dhcpinform");
 				goto use_primary;
+			}
 			memcpy (&from, d1.data, sizeof from);
 			data_string_forget (&d1, "dhcpinform");
 		} else
@@ -467,6 +486,7 @@ void dhcpinform (packet)
 	   mask has been provided. */
 	i = DHO_SUBNET_MASK;
 	if (subnet && !lookup_option (&dhcp_universe, options, i)) {
+		oc = (struct option_cache *)0;
 		if (option_cache_allocate (&oc, "dhcpinform")) {
 			if (make_const_data (&oc -> expression,
 					     subnet -> netmask.iabuf,
@@ -523,13 +543,18 @@ void dhcpinform (packet)
 	   returned, use it to prioritize.  Otherwise, prioritize
 	   based on the default priority list. */
 
+	memset (&prl, 0, sizeof prl);
 	oc = lookup_option (&dhcp_universe, packet -> options,
 			    DHO_DHCP_PARAMETER_REQUEST_LIST);
 
-	if (oc) {
-		memset (&prl, 0, sizeof prl);
+	/* If the client didn't provide a parameter request list, see if
+	   there's one in scope. */
+	if (!oc)
+		oc = lookup_option (&dhcp_universe, options,
+				    DHO_DHCP_PARAMETER_REQUEST_LIST);
+
+	if (oc)
 		evaluate_option_cache (&prl, packet, packet -> options, oc);
-	}
 
 #ifdef DEBUG_PACKET
 	dump_packet (packet);
@@ -558,13 +583,14 @@ void dhcpinform (packet)
 			      0, nulltp, 0,
 			      prl.len ? &prl : (struct data_string *)0);
 	option_state_dereference (&options, "dhcpinform");
+	data_string_forget (&prl, "dhcpinform");
 
 	/* Make sure that the packet is at least as big as a BOOTP packet. */
 	if (outgoing.packet_length < BOOTP_MIN_LEN)
 		outgoing.packet_length = BOOTP_MIN_LEN;
 
-
 	raw.giaddr = packet -> raw -> giaddr;
+	raw.ciaddr = packet -> raw -> ciaddr;
 	memcpy (raw.chaddr, packet -> raw -> chaddr, sizeof raw.chaddr);
 	raw.hlen = packet -> raw -> hlen;
 	raw.htype = packet -> raw -> htype;
@@ -590,7 +616,8 @@ void dhcpinform (packet)
 #endif
 	memset (to.sin_zero, 0, sizeof to.sin_zero);
 
-	to.sin_addr = packet -> raw -> ciaddr;
+	/* Use the IP address we intuited for the client. */
+	memcpy (&to.sin_addr, cip.iabuf, 4);
 	to.sin_port = remote_port;
 
 	errno = 0;
@@ -770,6 +797,13 @@ void ack_lease (packet, lease, offer, when, msg)
 	state = new_lease_state ("ack_lease");
 	if (!state)
 		log_fatal ("unable to allocate lease state!");
+	state -> got_requested_address = packet -> got_requested_address;
+	state -> shared_network = packet -> interface -> shared_network;
+
+	/* See if we got a server identifier option. */
+	if (lookup_option (&dhcp_universe,
+			   packet -> options, DHO_DHCP_SERVER_IDENTIFIER))
+		state -> got_server_identifier = 1;
 
 	/* Replace the old lease hostname with the new one, if it's changed. */
 	oc = lookup_option (&dhcp_universe, packet -> options, DHO_HOST_NAME);
@@ -1233,8 +1267,10 @@ void ack_lease (packet, lease, offer, when, msg)
 			if (evaluate_option_cache (&d1, packet,
 						   packet -> options, oc)) {
 				if (!d1.len ||
-				    d1.len > sizeof state -> from.iabuf)
+				    d1.len > sizeof state -> from.iabuf) {
+					data_string_forget (&d1, "ack_lease");
 					goto use_primary;
+				}
 				memcpy (state -> from.iabuf, d1.data, d1.len);
 				state -> from.len = d1.len;
 				data_string_forget (&d1, "ack_lease");
@@ -1475,12 +1511,16 @@ void ack_lease (packet, lease, offer, when, msg)
 	}
 
 	/* If the client has provided a list of options that it wishes
-	   returned, use it to prioritize.  Otherwise, prioritize
-	   based on the default priority list. */
+	   returned, use it to prioritize.  Otherwise, if there's a
+	   parameter request list in scope, use that.  Otherwise use
+	   the default priority list. */
 
 	oc = lookup_option (&dhcp_universe, packet -> options,
 			    DHO_DHCP_PARAMETER_REQUEST_LIST);
 
+	if (!oc)
+		oc = lookup_option (&dhcp_universe, state -> options,
+				    DHO_DHCP_PARAMETER_REQUEST_LIST);
 	if (oc)
 		evaluate_option_cache (&state -> parameter_request_list,
 				       packet, packet -> options, oc);
@@ -1647,8 +1687,21 @@ void dhcp_reply (lease)
 		}
 
 	/* If the client is RENEWING, unicast to the client using the
-	   regular IP stack. */
-	} else if (raw.ciaddr.s_addr && state -> offer == DHCPACK) {
+	   regular IP stack.  Some clients, particularly those that
+	   follow RFC1541, are buggy, and send both ciaddr and server
+	   identifier.  We deal with this situation by assuming that
+	   if we got both dhcp-server-identifier and ciaddr, and
+	   giaddr was not set, then the client is on the local
+	   network, and we can therefore unicast or broadcast to it
+	   successfully.  A client in REQUESTING state on another
+	   network that's making this mistake will have set giaddr,
+	   and will therefore get a relayed response from the above
+	   code. */
+	} else if (raw.ciaddr.s_addr &&
+		   !(state -> got_server_identifier &&
+		     (state -> shared_network ==
+		      lease -> subnet -> shared_network)) &&
+		   state -> offer == DHCPACK) {
 		to.sin_addr = raw.ciaddr;
 		to.sin_port = remote_port;
 
@@ -1717,6 +1770,7 @@ struct lease *find_lease (packet, share, ours)
 	memset (&d1, 0, sizeof d1);
 	if (oc &&
 	    evaluate_option_cache (&d1, packet, packet -> options, oc)) {
+		packet -> got_requested_address = 1;
 		cip.len = 4;
 		memcpy (cip.iabuf, d1.data, cip.len);
 		data_string_forget (&d1, "find_lease");
