@@ -3,7 +3,7 @@
    DHCP options parsing and reassembly. */
 
 /*
- * Copyright (c) 1995-2001 Internet Software Consortium.
+ * Copyright (c) 1995-2002 Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.85.2.7 2002/02/09 03:22:38 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.85.2.8 2002/02/19 20:36:52 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -552,7 +552,8 @@ int cons_options (inpacket, outpacket, lease, client_state,
 		if (cfg_options -> site_code_min) {
 		    for (i = 0; i < OPTION_HASH_SIZE; i++) {
 			hash = cfg_options -> universes [dhcp_universe.index];
-			for (pp = hash [i]; pp; pp = pp -> cdr) {
+			if (hash) {
+			    for (pp = hash [i]; pp; pp = pp -> cdr) {
 				op = (struct option_cache *)(pp -> car);
 				if (op -> option -> code <
 				    cfg_options -> site_code_min &&
@@ -561,6 +562,7 @@ int cons_options (inpacket, outpacket, lease, client_state,
 				     DHO_DHCP_AGENT_OPTIONS))
 					priority_list [priority_len++] =
 						op -> option -> code;
+			    }
 			}
 		    }
 		}
@@ -569,8 +571,9 @@ int cons_options (inpacket, outpacket, lease, client_state,
 		   is no site option space, we'll be cycling through the
 		   dhcp option space. */
 		for (i = 0; i < OPTION_HASH_SIZE; i++) {
-			hash = (cfg_options -> universes
-				[cfg_options -> site_universe]);
+		    hash = (cfg_options -> universes
+			    [cfg_options -> site_universe]);
+		    if (hash)
 			for (pp = hash [i]; pp; pp = pp -> cdr) {
 				op = (struct option_cache *)(pp -> car);
 				if (op -> option -> code >=
