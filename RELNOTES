@@ -52,6 +52,9 @@ and for prodding me into improving it.
   dhcrelay.  It now discards packets whose hop count exceeds 10 by default,
   and a command-line option (-c) can be used to set this threshold.
 
+- A failover bug relating to identifying peers by name length instead of
+  by name was fixed.
+
 - A manpage typo was fixed.
 
 - The -nw command line option to dhclient now works.
