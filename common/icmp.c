@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: icmp.c,v 1.3 1997/03/08 00:22:01 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: icmp.c,v 1.4 1997/03/29 10:37:18 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -118,7 +118,7 @@ int icmp_echorequest (addr)
 					     sizeof icmp, 0));
 
 	/* Send the ICMP packet... */
-	status = sendto (icmp_protocol_fd, &icmp, sizeof icmp, 0,
+	status = sendto (icmp_protocol_fd, (char *)&icmp, sizeof icmp, 0,
 			 (struct sockaddr *)&to, sizeof to);
 	if (status < 0)
 		warn ("icmp_echorequest: %m");
