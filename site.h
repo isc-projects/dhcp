@@ -51,7 +51,7 @@
 
 /* Network API definitions.   You do not need to choose one of these - if
    you don't choose, one will be chosen for you in your system's config
-   header. */
+   header.    DON'T MESS WITH THIS UNLESS YOU KNOW WHAT YOU'RE DOING!!! */
 
 /* Define this to use the standard BSD socket API.
 
