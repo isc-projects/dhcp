@@ -47,6 +47,12 @@ static char copyright[] =
 
 #include "dhcpd.h"
 
+#ifdef USE_SOCKET_FALLBACK
+#  define USE_SOCKET_SEND
+#  define if_register_send if_register_fallback
+#  define send_packet send_fallback
+#endif
+
 #if defined (USE_SOCKET_SEND) || defined (USE_SOCKET_RECEIVE)
 /* Generic interface registration routine... */
 int if_register_socket (info, interface)
@@ -67,7 +73,22 @@ int if_register_socket (info, interface)
 		       "you must compile in BPF or NIT support.   If neither ",
 		       "option is supported on your system, please let us ",
 		       "know.");
-	once = 1;
+
+	/* Technically, we need to know what interface every packet
+	   comes in on, which means that we can only operate on a
+	   machine with a single interface configured.   However,
+	   we generally don't expect to get broadcast packets on
+	   point-to-point interfaces, so we can bend the rules a bit
+	   and not count them.   This won't allow DHCP-over-PPP,
+	   but it's probably right in a lot of cases, and the issue
+	   will have to be revisited when DHCP-over-PPP support is
+	   done.   Currently we determine whether an interface is
+	   point-to-point by seeing if it has a link-level address.
+	   This only works on 4.4BSD and derivative networking. */
+#ifdef AF_LINK
+	if (info -> hw_address.hlen) /* XXX */
+#endif
+		once = 1;
 
 	/* Set up the address we're going to bind to. */
 	name.sin_family = AF_INET;
@@ -75,9 +96,7 @@ int if_register_socket (info, interface)
 	name.sin_addr.s_addr = INADDR_ANY;
 	memset (name.sin_zero, 0, sizeof (name.sin_zero));
 
-	/* List addresses on which we're listening. */
-	note ("Receiving on %s, port %d",
-	      inet_ntoa (name.sin_addr), htons (name.sin_port));
+	/* Make a socket... */
 	if ((sock = socket (AF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0)
 		error ("Can't create dhcp socket: %m");
 
@@ -112,7 +131,9 @@ void if_register_send (info, interface)
 #else
 	info -> wfdesc = info -> rfdesc;
 #endif
-	note ("Sending on   Socket/%s", piaddr (info -> address));
+	note ("Sending on   Socket/%s/%s",
+	      info -> name, info -> shared_network -> name);
+
 }
 #endif /* USE_SOCKET_SEND */
 
@@ -129,11 +150,12 @@ void if_register_receive (info, interface)
 #endif /* USE_SOCKET_RECEIVE */
 
 #ifdef USE_SOCKET_SEND
-size_t send_packet (interface, packet, raw, len, to, hto)
+size_t send_packet (interface, packet, raw, len, from, to, hto)
 	struct interface_info *interface;
 	struct packet *packet;
 	struct dhcp_packet *raw;
 	size_t len;
+	struct in_addr from;
 	struct sockaddr_in *to;
 	struct hardware *hto;
 {

@@ -95,14 +95,16 @@ void if_register_send (info, interface)
 		error ("Can't set IP_HDRINCL flag: %m");
 
 	info -> wfdesc = sock;
-	note ("Sending on   Raw/%s", piaddr (info -> address));
+	note ("Sending on   Raw/%s/%s",
+	      info -> name, info -> shared_network -> name);
 }
 
-size_t send_packet (interface, packet, raw, len, to, hto)
+size_t send_packet (interface, packet, raw, len, from, to, hto)
 	struct interface_info *interface;
 	struct packet *packet;
 	struct dhcp_packet *raw;
 	size_t len;
+	struct in_addr from;
 	struct sockaddr_in *to;
 	struct hardware *hto;
 {
@@ -111,7 +113,7 @@ size_t send_packet (interface, packet, raw, len, to, hto)
 	struct iovec iov [2];
 
 	/* Assemble the headers... */
-	assemble_udp_ip_header (interface, buf, &bufp,
+	assemble_udp_ip_header (interface, buf, &bufp, from.s_addr,
 				to -> sin_addr.s_addr, to -> sin_port,
 				(unsigned char *)raw, len);
 
