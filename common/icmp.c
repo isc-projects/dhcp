@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: icmp.c,v 1.5 1997/05/09 08:05:28 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: icmp.c,v 1.6 1997/06/03 02:12:20 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -82,8 +82,8 @@ void icmp_startup (routep, handler)
 
 	/* Make sure it does routing... */
 	state = 0;
-	if (setsockopt (icmp_protocol_fd,
-			SOL_SOCKET, SO_DONTROUTE, &state, sizeof state) < 0)
+	if (setsockopt (icmp_protocol_fd, SOL_SOCKET, SO_DONTROUTE,
+			(char *)&state, sizeof state) < 0)
 		error ("Unable to disable SO_DONTROUTE on ICMP socket: %m");
 
 	add_protocol ("icmp", icmp_protocol_fd, icmp_echoreply, handler);
