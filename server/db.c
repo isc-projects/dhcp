@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: db.c,v 1.28 1999/09/22 01:45:57 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: db.c,v 1.29 1999/09/28 23:57:47 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -102,19 +102,25 @@ int write_lease (lease)
 	}
 	if (lease -> uid_len) {
 		int i;
-		errno = 0;
-		fprintf (db_file, "\n\tuid %2.2x", lease -> uid [0]);
-		if (errno) {
-			++errors;
-		}
-		for (i = 1; i < lease -> uid_len; i++) {
+		if (db_printable_len (lease -> uid, lease -> uid_len)) {
+			fprintf (db_file, "\n\tuid \"%*.*s\";",
+				 lease -> uid_len, lease -> uid_len,
+				 lease -> uid);
+		} else {
 			errno = 0;
-			fprintf (db_file, ":%2.2x", lease -> uid [i]);
+			fprintf (db_file, "\n\tuid %2.2x", lease -> uid [0]);
 			if (errno) {
 				++errors;
 			}
+			for (i = 1; i < lease -> uid_len; i++) {
+				errno = 0;
+				fprintf (db_file, ":%2.2x", lease -> uid [i]);
+				if (errno) {
+					++errors;
+				}
+			}
+			putc (';', db_file);
 		}
-		putc (';', db_file);
 	}
 	if (lease -> flags & BOOTP_LEASE) {
 		errno = 0;
@@ -238,23 +244,34 @@ int write_host (host)
 		if (host -> client_identifier.len) {
 			int i;
 			errno = 0;
-			fprintf (db_file,
-				 "\n\toption dhcp-client-identifier %2.2x",
-				 host -> client_identifier.data [0]);
-			if (errno) {
-				++errors;
-			}
-			for (i = 1; i < host -> client_identifier.len; i++) {
-				errno = 0;
-				fprintf (db_file, ":%2.2x",
-					 host -> client_identifier.data [i]);
+			if (db_printable_len (host -> client_identifier.data,
+					      host -> client_identifier.len)) {
+				fprintf (db_file, "\n\tuid \"%*.*s\";",
+					 host -> client_identifier.len,
+					 host -> client_identifier.len,
+					 host -> client_identifier.data);
+			} else {
+				fprintf (db_file,
+					 "\n\tuid %2.2x",
+					 host -> client_identifier.data [0]);
 				if (errno) {
 					++errors;
 				}
+				for (i = 1;
+				     i < host -> client_identifier.len; i++) {
+					errno = 0;
+					fprintf (db_file, ":%2.2x",
+						 host ->
+						 client_identifier.data [i]);
+					if (errno) {
+						++errors;
+					}
+				}
+				putc (';', db_file);
 			}
-			putc (';', db_file);
 		}
 		
+		memset (&ip_addrs, 0, sizeof ip_addrs);
 		if (host -> fixed_addr &&
 		    evaluate_option_cache (&ip_addrs, (struct packet *)0,
 					   (struct lease *)0,
@@ -262,12 +279,14 @@ int write_host (host)
 					   (struct option_state *)0,
 					   host -> fixed_addr)) {
 		
+			errno = 0;
 			fprintf (db_file, "\n\tfixed-address ");
 			if (errno) {
 				++errors;
 			}
 			for (i = 0; i < ip_addrs.len - 3; i += 4) {
-				fprintf (db_file, "\n\t%d.%d.%d.%d%s",
+				errno = 0;
+				fprintf (db_file, "%d.%d.%d.%d%s",
 					 ip_addrs.data [i],
 					 ip_addrs.data [i + 1],
 					 ip_addrs.data [i + 2],
@@ -276,6 +295,30 @@ int write_host (host)
 				if (errno) {
 					++errors;
 				}
+			}
+			errno = 0;
+			fputc (';', db_file);
+			if (errno) {
+				++errors;
+			}
+		}
+
+		if (host -> named_group) {
+			errno = 0;
+			fprintf (db_file, "\n\tgroup \"%s\";",
+				 host -> named_group -> name);
+			if (errno) {
+				++errors;
+			}
+		}
+
+		if (host -> named_group &&
+		    host -> group != host -> named_group -> group) {
+			errno = 0;
+			write_statements (db_file,
+					  host -> group -> statements, 8);
+			if (errno) {
+				++errors;
 			}
 		}
 	}
@@ -291,11 +334,28 @@ int write_host (host)
 	return !errors;
 }
 
+int write_group (group)
+	struct group_object *group;
+{
+	return 0;
+}
+
 int db_printable (s)
 	char *s;
 {
 	int i;
 	for (i = 0; s [i]; i++)
+		if (!isascii (s [i]) || !isprint (s [i]))
+			return 0;
+	return 1;
+}
+
+int db_printable_len (s, len)
+	char *s;
+	int len;
+{
+	int i;
+	for (i = 0; i < len; i++)
 		if (!isascii (s [i]) || !isprint (s [i]))
 			return 0;
 	return 1;
