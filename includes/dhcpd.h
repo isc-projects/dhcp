@@ -520,7 +520,6 @@ struct client_config {
 	 */
 	struct group *on_transmission;
 
-
 	u_int32_t *required_options; /* Options server must supply. */
 	u_int32_t *requested_options; /* Options to request from server. */
 
@@ -575,6 +574,7 @@ struct client_state {
 	enum dhcp_state state;		/* Current state for this interface. */
 	struct iaddr destination;		    /* Where to send packet. */
 	u_int32_t xid;					  /* Transaction ID. */
+	u_int16_t secs;			    /* secs value from DHCPDISCOVER. */
 	TIME first_sending;			/* When was first copy sent? */
 	TIME interval;		      /* What's the current resend interval? */
 	struct string_list *medium;		   /* Last media type tried. */
@@ -848,7 +848,8 @@ unsigned char *parse_numeric_aggregate PROTO ((FILE *,
 					       int, int, int));
 void convert_num PROTO ((unsigned char *, char *, int, int));
 TIME parse_date PROTO ((FILE *));
-struct option *parse_option_name PROTO ((FILE *));
+struct option *parse_option_name PROTO ((FILE *, int));
+int parse_option_code_definition PROTO ((FILE *, struct option *));
 int parse_cshl PROTO ((struct data_string *, FILE *));
 struct executable_statement *parse_executable_statement PROTO ((FILE *,
 								int *));
@@ -991,6 +992,8 @@ struct lease_state *new_lease_state PROTO ((char *));
 struct domain_search_list *new_domain_search_list PROTO ((char *));
 struct name_server *new_name_server PROTO ((char *));
 void free_name_server PROTO ((struct name_server *, char *));
+struct option *new_option PROTO ((char *));
+void free_option PROTO ((struct option *, char *));
 void free_domain_search_list PROTO ((struct domain_search_list *, char *));
 void free_lease_state PROTO ((struct lease_state *, char *));
 void free_protocol PROTO ((struct protocol *, char *));
