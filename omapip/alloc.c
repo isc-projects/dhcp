@@ -686,7 +686,7 @@ isc_result_t omapi_object_dereference (omapi_object_t **h,
 					(&hp -> outer, file, line);
 /*			if (!hp -> type -> freer) */
 				rc_register (file, line, h, hp,
-					     0, 1, (*h) -> type -> rc_flag);
+					     0, 1, hp -> type -> rc_flag);
 			if (hp -> type -> destroy)
 				(*(hp -> type -> destroy)) (hp, file, line);
 			if (hp -> type -> freer)
