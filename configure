@@ -21,6 +21,7 @@ if [ "$sysname" = "" ]; then
       case `uname -r` in
 	1*) sysname=linux-1 ;;
 	2.1*) sysname=linux-2.1 ;;
+	2.2*) sysname=linux-2.2 ;;
 	2*) sysname=linux-2.0 ;;
       esac;;
     SunOS)
