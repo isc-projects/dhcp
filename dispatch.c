@@ -54,6 +54,8 @@ static char copyright[] =
 struct interface_info *interfaces;
 static struct hardware_link *interface_links;
 
+static void got_one PROTO ((struct interface_info *));
+
 /* Use the SIOCGIFCONF ioctl to get a list of all the attached interfaces.
    For each interface that's of type INET and not the loopback interface,
    register that interface with the network I/O software, figure out what
@@ -122,7 +124,7 @@ void discover_interfaces ()
 			tmp = ((struct interface_info *)
 			       dmalloc (sizeof *tmp, "get_interface_list"));
 			if (!tmp)
-				error ("Insufficient memory to "
+				error ("Insufficient memory to %s",
 				       "record interface");
 			memset (tmp, 0, sizeof *tmp);
 			tmp -> address.len = 4;
@@ -152,6 +154,63 @@ void discover_interfaces ()
 	}
 }
 
+#ifdef USE_POLL
+/* Wait for packets to come in using poll().  Anyway, when a packet
+   comes in, call receive_packet to receive the packet and possibly
+   strip hardware addressing information from it, and then call
+   do_packet to try to do something with it. 
+
+   As you can see by comparing this with the code that uses select(),
+   below, this is gratuitously complex.  Quelle surprise, eh?  This is
+   SysV we're talking about, after all, and even in the 90's, it
+   wouldn't do for SysV to make networking *easy*, would it?  Rant,
+   rant... */
+
+void dispatch ()
+{
+	struct interface_info *l;
+	int nfds = 0;
+	struct pollfd *fds;
+	int count;
+	int i;
+
+	nfds = 0;
+	for (l = interfaces; l; l = l -> next) {
+		++nfds;
+	}
+	fds = (struct pollfd *)malloc (nfds * sizeof (struct pollfd));
+	if (!fds)
+		error ("Can't allocate poll structures.");
+
+	i = 0;
+	for (l = interfaces; l; l = l -> next) {
+		fds [i].fd = l -> rfdesc;
+		fds [i].events = POLLIN;
+		fds [i].revents = 0;
+		++i;
+	}
+
+	do {
+		/* Wait for a packet or a timeout... XXX */
+		count = poll (fds, nfds, (struct timeval *)-1);
+
+		/* Get the current time... */
+		GET_TIME (&cur_time);
+
+		/* Not likely to be transitory... */
+		if (count < 0)
+			error ("poll: %m");
+
+		i = 0;
+		for (l = interfaces; l; l = l -> next) {
+			if (!(fds [i].revents & POLLIN))
+				continue;
+			fds [i].revents = 0;
+			got_one (l);
+		}
+	} while (1);
+}
+#else
 /* Wait for packets to come in using select().   When one does, call
    receive_packet to receive the packet and possibly strip hardware
    addressing information from it, and then call do_packet to try to
@@ -197,24 +256,37 @@ void dispatch ()
 		for (l = interfaces; l; l = l -> next) {
 			if (!FD_ISSET (l -> rfdesc, &r))
 				continue;
-			if ((result =
-			     receive_packet (l, packbuf, sizeof packbuf,
-					     &from, &hfrom)) < 0) {
-				warn ("receive_packet failed on %s: %m",
-				      piaddr (l -> address));
-				continue;
-			}
-			if (result == 0)
-				continue;
-			note ("request from %s, port %d",
-			      inet_ntoa (from.sin_addr),
-			      htons (from.sin_port));
-			ifrom.len = 4;
-			memcpy (ifrom.iabuf, &from.sin_addr, ifrom.len);
-
-			do_packet (l, packbuf, result,
-				   from.sin_port, ifrom, &hfrom);
+			got_one (l);
 		}
 	} while (1);
 }
+#endif /* USE_POLL */
 
+static void got_one (l)
+	struct interface_info *l;
+{
+	struct sockaddr_in from;
+	struct hardware hfrom;
+	struct iaddr ifrom;
+	int result;
+	static unsigned char packbuf [4095]; /* Packet input buffer.
+						Must be as large as largest
+						possible MTU. */
+
+	if ((result = receive_packet (l, packbuf, sizeof packbuf,
+				      &from, &hfrom)) < 0) {
+		warn ("receive_packet failed on %s: %m",
+		      piaddr (l -> address));
+		return;
+	}
+	if (result == 0)
+		return;
+	note ("request from %s, port %d",
+	      inet_ntoa (from.sin_addr),
+	      htons (from.sin_port));
+	ifrom.len = 4;
+	memcpy (ifrom.iabuf, &from.sin_addr, ifrom.len);
+	
+	do_packet (l, packbuf, result,
+		   from.sin_port, ifrom, &hfrom);
+}
