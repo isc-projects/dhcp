@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.87 2000/03/18 03:34:10 mellon Exp $ Copyright 1995-2000 The Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.88 2000/04/14 16:28:07 mellon Exp $ Copyright 1995-2000 The Internet Software Consortium.";
 #endif
 
   static char copyright[] =
@@ -97,7 +97,7 @@ on commit {								    \n\
 					 reverse (1,			    \n\
 						  leased-address)), \".\",  \n\
 			pick (config-option server.ddns-rev-domainname,	    \n\
-			    \n\".in-addr.arpa.\"));			    \n\
+			      \"in-addr.arpa.\"));			    \n\
         switch (ns-update (delete (IN, PTR, ddns-rev-name, null),	    \n\
 			   add (IN, PTR, ddns-rev-name, ddns-fwd-name,	    \n\
 				lease-time / 2)))			    \n\
@@ -105,18 +105,29 @@ on commit {								    \n\
          default:							    \n\
 	  unset ddns-rev-name;						    \n\
 	  on release or expiry {					    \n\
-	    eval ns-update (delete (IN, A, ddns-fwd-name, leased-address)); \n\
-	    unset ddns-fwd-name;					    \n\
+	    switch (ns-update (delete (IN, A, ddns-fwd-name,		    \n\
+				       leased-address))) {		    \n\
+	      case NOERROR:						    \n\
+	        unset ddns-fwd-name;					    \n\
+		break;							    \n\
+	    }								    \n\
 	    on release or expiry;					    \n\
           }								    \n\
 	  break;							    \n\
 									    \n\
          case NOERROR:							    \n\
 	  on release or expiry {					    \n\
-	    eval ns-update (delete (IN, A, ddns-fwd-name, leased-address)); \n\
-	    eval ns-update (delete (IN, PTR, ddns-rev-name, null));	    \n\
-	    unset ddns-rev-name;					    \n\
-	    unset ddns-fwd-name;					    \n\
+	    switch (ns-update (delete (IN, PTR, ddns-rev-name, null))) {    \n\
+	      case NOERROR:						    \n\
+	        unset ddns-rev-name;					    \n\
+		break;							    \n\
+	    }								    \n\
+	    switch (ns-update (delete (IN, A, ddns-fwd-name,		    \n\
+			               leased-address))) {		    \n\
+	      case NOERROR:						    \n\
+	        unset ddns-fwd-name;					    \n\
+		break;							    \n\
+	    }								    \n\
 	    on release or expiry;					    \n\
 	  }								    \n\
         }								    \n\
