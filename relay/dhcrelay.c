@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcrelay.c,v 1.5 1997/03/06 06:58:37 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcrelay.c,v 1.6 1997/03/29 03:30:44 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -117,17 +117,26 @@ int main (argc, argv, envp)
  		    usage ();
  		} else {
 			struct hostent *he;
-			he = gethostbyname (argv [i]);
-			if (!he) {
-				herror (argv [i]);
+			struct in_addr ia, *iap = (struct in_addr *)0;
+			if (inet_aton (argv [i], &ia)) {
+				iap = &ia;
 			} else {
+				he = gethostbyname (argv [i]);
+				if (!he) {
+					warn ("%s: host unknown", argv [i]);
+				} else {
+					iap = ((struct in_addr *)
+					       he -> h_addr_list [0]);
+				}
+			}
+			if (iap) {
 				sp = (struct server_list *)malloc (sizeof *sp);
 				if (!sp)
 					error ("no memory for server.\n");
 				sp -> next = servers;
 				servers = sp;
 				memcpy (&sp -> to.sin_addr,
-					he -> h_addr_list [0], he -> h_length);
+					iap, sizeof *iap);
 			}
  		}
 	}
