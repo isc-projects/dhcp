@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.65 1999/03/16 06:37:51 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.66 1999/03/25 22:05:19 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -383,10 +383,48 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		parse_semi (cfile);
 		break;
 
+		/* "server-identifier" is a special hack, equivalent to
+		   "option dhcp-server-identifier". */
+	      case SERVER_IDENTIFIER:
+		option = dhcp_universe.options [DHO_DHCP_SERVER_IDENTIFIER];
+		token = next_token (&val, cfile);
+		goto finish_option;
+
 	      case OPTION:
 		token = next_token (&val, cfile);
-		option = parse_option_name (cfile);
+		option = parse_option_name (cfile, 1);
 		if (option) {
+			token = peek_token (&val, cfile);
+			if (token == CODE) {
+				if (type != ROOT_GROUP) {
+					parse_warn ("option definitions%s%s",
+						    " may not currently be",
+						    " scoped.");
+					skip_to_semi (cfile);
+					free_option (option,
+						     "parse_statement");
+					break;
+				}
+				next_token (&val, cfile);
+				if (!parse_option_code_definition (cfile,
+								   option))
+					free_option (option,
+						     "parse_statement");
+				return declaration;
+			}
+
+			/* If this wasn't an option code definition, don't
+			   allow an unknown option. */
+			if (option -> code == -1) {
+				parse_warn ("unknown option %s.%s",
+					    option -> universe -> name,
+					    option -> name);
+				skip_to_semi (cfile);
+				free_option (option, "parse_statement");
+				return declaration;
+			}
+
+		      finish_option:
 			et = parse_option_statement
 				(cfile, 1, option,
 				 supersede_option_statement);
