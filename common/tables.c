@@ -43,10 +43,16 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tables.c,v 1.42 2000/05/16 23:02:30 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tables.c,v 1.43 2000/08/01 22:54:50 neild Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
+
+/* XXXDPN: Moved here from hash.c, when it moved to libomapi.  Not sure
+   where these really belong. */
+HASH_FUNCTIONS (group, const char *, struct group_object)
+HASH_FUNCTIONS (universe, const char *, struct universe)
+HASH_FUNCTIONS (option, const char *, struct option)
 
 /* DHCP Option names, formats and codes, from RFC1533.
 

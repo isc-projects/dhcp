@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: alloc.c,v 1.50 2000/08/01 21:54:01 neild Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: alloc.c,v 1.51 2000/08/01 22:54:47 neild Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -177,54 +177,6 @@ struct dhcp_packet *new_dhcp_packet (file, line)
 	return rval;
 }
 
-struct hash_table *new_hash_table (count, file, line)
-	int count;
-	const char *file;
-	int line;
-{
-	struct hash_table *rval = dmalloc (sizeof (struct hash_table)
-					   - (DEFAULT_HASH_SIZE
-					      * sizeof (struct hash_bucket *))
-					   + (count
-					      * sizeof (struct hash_bucket *)),
-					   file, line);
-	rval -> hash_count = count;
-	return rval;
-}
-
-struct hash_bucket *free_hash_buckets;
-
-struct hash_bucket *new_hash_bucket (file, line)
-	const char *file;
-	int line;
-{
-	struct hash_bucket *rval;
-	int i;
-	if (!free_hash_buckets) {
-		rval = dmalloc (127 * sizeof (struct hash_bucket),
-				file, line);
-		if (!rval)
-			return rval;
-		for (i = 0; i < 127; i++) {
-			rval -> next = free_hash_buckets;
-			free_hash_buckets = rval;
-			rval++;
-		}
-	}
-	rval = free_hash_buckets;
-	free_hash_buckets = rval -> next;
-	return rval;
-}
-
-void free_hash_bucket (ptr, file, line)
-	struct hash_bucket *ptr;
-	const char *file;
-	int line;
-{
-	ptr -> next = free_hash_buckets;
-	free_hash_buckets = ptr;
-}
-
 struct protocol *new_protocol (file, line)
 	const char *file;
 	int line;
@@ -310,14 +262,6 @@ void free_domain_search_list (ptr, file, line)
 
 void free_protocol (ptr, file, line)
 	struct protocol *ptr;
-	const char *file;
-	int line;
-{
-	dfree ((VOIDPTR)ptr, file, line);
-}
-
-void free_hash_table (ptr, file, line)
-	struct hash_table *ptr;
 	const char *file;
 	int line;
 {

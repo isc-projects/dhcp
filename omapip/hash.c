@@ -43,14 +43,70 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: hash.c,v 1.25 2000/06/24 06:19:13 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: hash.c,v 1.1 2000/08/01 22:55:07 neild Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
-#include "dhcpd.h"
+#include <omapip/omapip_p.h>
 #include <ctype.h>
 
-static int do_hash PROTO ((const unsigned char *, unsigned, unsigned));
-static int do_case_hash PROTO ((const unsigned char *, unsigned, unsigned));
+static int do_hash (const unsigned char *, unsigned, unsigned);
+static int do_case_hash (const unsigned char *, unsigned, unsigned);
+
+struct hash_table *new_hash_table (count, file, line)
+	int count;
+	const char *file;
+	int line;
+{
+	struct hash_table *rval = dmalloc (sizeof (struct hash_table)
+					   - (DEFAULT_HASH_SIZE
+					      * sizeof (struct hash_bucket *))
+					   + (count
+					      * sizeof (struct hash_bucket *)),
+					   file, line);
+	rval -> hash_count = count;
+	return rval;
+}
+
+void free_hash_table (ptr, file, line)
+	struct hash_table *ptr;
+	const char *file;
+	int line;
+{
+	dfree ((VOIDPTR)ptr, file, line);
+}
+
+struct hash_bucket *free_hash_buckets;
+
+struct hash_bucket *new_hash_bucket (file, line)
+	const char *file;
+	int line;
+{
+	struct hash_bucket *rval;
+	int i;
+	if (!free_hash_buckets) {
+		rval = dmalloc (127 * sizeof (struct hash_bucket),
+				file, line);
+		if (!rval)
+			return rval;
+		for (i = 0; i < 127; i++) {
+			rval -> next = free_hash_buckets;
+			free_hash_buckets = rval;
+			rval++;
+		}
+	}
+	rval = free_hash_buckets;
+	free_hash_buckets = rval -> next;
+	return rval;
+}
+
+void free_hash_bucket (ptr, file, line)
+	struct hash_bucket *ptr;
+	const char *file;
+	int line;
+{
+	ptr -> next = free_hash_buckets;
+	free_hash_buckets = ptr;
+}
 
 struct hash_table *new_hash (hash_reference referencer,
 			     hash_dereference dereferencer,
@@ -278,7 +334,3 @@ int casecmp (const void *v1, const void *v2, unsigned long len)
 	}
 	return 0;
 }
-
-HASH_FUNCTIONS (group, const char *, struct group_object)
-HASH_FUNCTIONS (universe, const char *, struct universe)
-HASH_FUNCTIONS (option, const char *, struct option)

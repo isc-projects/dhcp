@@ -3,7 +3,7 @@
    Definitions for hashing... */
 
 /*
- * Copyright (c) 1996-1999 Internet Software Consortium.
+ * Copyright (c) 1995-2000 Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -40,6 +40,9 @@
  * see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
  * ``http://www.nominum.com''.
  */
+
+#ifndef OMAPI_HASH_H
+#define OMAPI_HASH_H
 
 #define DEFAULT_HASH_SIZE	9973
 
@@ -119,4 +122,20 @@ int name##_hash_foreach (struct hash_table *table,			      \
 	return hash_foreach (table, (hash_foreach_func)func);		      \
 }
 
-			    
+
+struct hash_table *new_hash_table (int, const char *, int);
+void free_hash_table (struct hash_table *, const char *, int);
+struct hash_bucket *new_hash_bucket (const char *, int);
+void free_hash_bucket (struct hash_bucket *, const char *, int);
+struct hash_table *new_hash (hash_reference, hash_dereference, int);
+void add_hash (struct hash_table *,
+		      const unsigned char *, unsigned, hashed_object_t *,
+		      const char *, int);
+void delete_hash_entry (struct hash_table *, const unsigned char *,
+			       unsigned, const char *, int);
+int hash_lookup (hashed_object_t **, struct hash_table *,
+			const unsigned char *, unsigned, const char *, int);
+int hash_foreach (struct hash_table *, hash_foreach_func);
+int casecmp (const void *s, const void *t, unsigned long len);
+
+#endif /* OMAPI_HASH_H */

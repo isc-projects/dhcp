@@ -73,7 +73,6 @@
 #include "dhcp.h"
 #include "statement.h"
 #include "tree.h"
-#include "hash.h"
 #include "inet.h"
 #include "auth.h"
 #include "dhctoken.h"
@@ -1211,8 +1210,6 @@ int group_allocate (struct group **, const char *, int);
 int group_reference (struct group **, struct group *, const char *, int);
 int group_dereference (struct group **, const char *, int);
 struct dhcp_packet *new_dhcp_packet PROTO ((const char *, int));
-struct hash_table *new_hash_table PROTO ((int, const char *, int));
-struct hash_bucket *new_hash_bucket PROTO ((const char *, int));
 struct protocol *new_protocol PROTO ((const char *, int));
 struct lease_state *new_lease_state PROTO ((const char *, int));
 struct domain_search_list *new_domain_search_list PROTO ((const char *, int));
@@ -1229,8 +1226,6 @@ void free_domain_search_list PROTO ((struct domain_search_list *,
 				     const char *, int));
 void free_lease_state PROTO ((struct lease_state *, const char *, int));
 void free_protocol PROTO ((struct protocol *, const char *, int));
-void free_hash_bucket PROTO ((struct hash_bucket *, const char *, int));
-void free_hash_table PROTO ((struct hash_table *, const char *, int));
 void free_dhcp_packet PROTO ((struct dhcp_packet *, const char *, int));
 struct client_lease *new_client_lease PROTO ((const char *, int));
 void free_client_lease PROTO ((struct client_lease *, const char *, int));
@@ -1534,21 +1529,6 @@ void remove_protocol PROTO ((struct protocol *));
 OMAPI_OBJECT_ALLOC_DECL (interface,
 			 struct interface_info, dhcp_type_interface)
 
-/* hash.c */
-struct hash_table *new_hash PROTO ((hash_reference, hash_dereference, int));
-void add_hash PROTO ((struct hash_table *,
-		      const unsigned char *, unsigned, hashed_object_t *,
-		      const char *, int));
-void delete_hash_entry PROTO ((struct hash_table *, const unsigned char *,
-			       unsigned, const char *, int));
-int hash_lookup PROTO ((hashed_object_t **, struct hash_table *,
-			const unsigned char *, unsigned, const char *, int));
-int hash_foreach (struct hash_table *, hash_foreach_func);
-int casecmp (const void *s, const void *t, unsigned long len);
-HASH_FUNCTIONS_DECL (group, const char *, struct group_object)
-HASH_FUNCTIONS_DECL (universe, const char *, struct universe)
-HASH_FUNCTIONS_DECL (option, const char *, struct option)
-
 /* tables.c */
 extern struct universe dhcp_universe;
 extern struct universe nwip_universe;
@@ -1561,6 +1541,9 @@ struct universe **universes;
 extern struct hash_table *universe_hash;
 void initialize_common_option_spaces PROTO ((void));
 struct universe *config_universe;
+HASH_FUNCTIONS_DECL (group, const char *, struct group_object)
+HASH_FUNCTIONS_DECL (universe, const char *, struct universe)
+HASH_FUNCTIONS_DECL (option, const char *, struct option)
 
 /* stables.c */
 #if defined (FAILOVER_PROTOCOL)

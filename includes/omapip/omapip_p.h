@@ -71,6 +71,7 @@
 #include <isc/result.h>
 
 #include <omapip/convert.h>
+#include <omapip/hash.h>
 #include <omapip/omapip.h>
 
 /* OMAPI protocol header, version 1.00 */
