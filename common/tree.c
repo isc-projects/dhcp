@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.24 1999/04/05 16:28:09 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.25 1999/04/05 19:06:50 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -700,15 +700,15 @@ int evaluate_data_expression (result, packet, options, expr)
 		/* The encapsulation of all defined options in an
 		   option space... */
 	      case expr_encapsulate:
-		memset (&data, 0, sizeof data);
-		s0 = option_space_encapsulate (&data, packet -> options,
+		s0 = option_space_encapsulate (result, options,
 					       &expr -> data.encapsulate);
 #if defined (DEBUG_EXPRESSIONS)
-		log_info ("data: encapsulate = %s",
-		      print_hex_1 (expr -> data.const_data.len,
-				   expr -> data.const_data.data, 60));
+		log_info ("data: encapsulate (%s) = %s",
+			  expr -> data.encapsulate.data,
+			  s0 ? print_hex_1 (result -> len,
+					    result -> data, 60) : "null");
 #endif
-		return s1;
+		return s0;
 
 		/* Some constant data... */
 	      case expr_const_data:
