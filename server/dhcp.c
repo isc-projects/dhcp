@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.161 2000/08/28 19:36:10 neild Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.162 2000/08/31 04:40:55 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -293,16 +293,12 @@ void dhcprequest (packet, ms_nulltp)
 		}
 		if (peer -> service_state == cooperating) {
 			/* XXX */
-			/* We have to ignore load balancing for
-			   clients with giaddr set to zero because
-			   we need to respond to clients in RENEWING
-			   state, that the other server can't hear,
-			   but not to clients in REBINDING state,
-			   which the other server _can_ hear, but
-			   we can't tell which state the client is
-			   in if it's on the local network. */
-			if (packet -> raw -> giaddr.s_addr == 0 ||
-			    !load_balance_mine (packet, peer)) {
+			/* If the client is in RENEWING state and sends
+			   us a DHCPREQUEST, we're going to ignore it,
+			   so it's going to have to fall back to REBINDING
+			   state before it can get a response from the
+			   other server.   Ick. */
+			if (!load_balance_mine (packet, peer)) {
 				log_debug ("%s: load balance to peer %s",
 					   msgbuf, peer -> name);
 				goto out;
@@ -1654,19 +1650,21 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 				   XXX What do we do in this case?
 				   XXX should the expiry timer on the lease
 				   XXX set tsfp and tstp to zero? */
-				if (lease -> tsfp == 0)
+				if (lease -> tsfp < cur_time) {
 					lease_time = peer -> mclt;
-				else
+				} else {
 					lease_time = (lease -> tsfp  - cur_time
 						      + peer -> mclt);
+				}
 			} else {
 				if (cur_time + lease_time > lease -> tsfp &&
-				    lease_time > peer -> mclt / 2)
+				    lease_time > peer -> mclt / 2) {
 					lt -> tstp = (cur_time + lease_time +
 						      peer -> mclt / 2);
-				else
+				} else { 
 					lt -> tstp = (cur_time + lease_time +
 						      lease_time / 2);
+				}
 			}
 
 			lt -> cltt = cur_time;
