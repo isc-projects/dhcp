@@ -44,7 +44,8 @@ CFLAGS = $(DEBUG) $(PREDEFINES) $(INCLUDES) $(COPTS)
 all:	$(PROG) $(CATMANPAGES)
 
 install: $(PROG) $(CATMANPAGES)
-	$(INSTALL) dhclient $(BINDIR); $(CHMOD) 755 $(BINDIR)/dhclient
+	$(INSTALL) dhclient $(CLIENTBINDIR)
+	$(CHMOD) 755 $(CLIENTBINDIR)/dhclient
 	if [ x$(SCRIPT) = xnone ]; then \
 	  echo "No client script available."; \
 	else \
