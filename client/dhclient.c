@@ -97,7 +97,7 @@ int main (argc, argv, envp)
 	putenv("TZ=GMT0");
 #endif /* !NO_PUTENV */
 
-#ifndef DEBUG
+#if !(defined (DEBUG) || defined (SYSLOG_4_2))
 	setlogmask (LOG_UPTO (LOG_INFO));
 #endif	
 
@@ -108,22 +108,6 @@ int main (argc, argv, envp)
 			server_port = htons (atoi (argv [i]));
 			debug ("binding to user-specified port %d",
 			       ntohs (server_port));
-#if 0
-		} else if (!strcmp (argv [i], "-a")) {
-			if (++i == argc)
-				usage ();
-			if (inet_aton (argv [i], &addr)) {
-				addrtree =
-					tree_concat (addrtree,
-						     tree_const
-						     ((unsigned char *)&addr,
-						      sizeof addr));
-			} else {
-				addrtree = tree_concat (addrtree,
-							tree_host_lookup
-							(argv [i]));
-			}
-#endif
 		} else
 			usage ();
 	}
@@ -191,7 +175,6 @@ void bootp (packet)
 void dhcp (packet)
 	struct packet *packet;
 {
-note ("got a dhcp packet: %d", packet -> packet_type);
 	switch (packet -> packet_type) {
 	      case DHCPOFFER:
 		dhcpoffer (packet);
