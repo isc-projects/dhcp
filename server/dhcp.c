@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.117 1999/10/12 16:00:34 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.118 1999/10/15 15:14:31 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -271,16 +271,24 @@ void dhcprelease (packet)
 				   oc)) {
 		lease = find_lease_by_uid (data.data, data.len);
 		data_string_forget (&data, "dhcprelease");
-	} else
-		lease = (struct lease *)0;
 
-	/* The client is supposed to pass a valid client-identifier,
-	   but the spec on this has changed historically, so try the
-	   IP address in ciaddr if the client-identifier fails. */
-	if (!lease) {
-		cip.len = 4;
-		memcpy (cip.iabuf, &packet -> raw -> ciaddr, 4);
-		lease = find_lease_by_ip_addr (cip);
+		/* See if we can find a lease that matches the IP address
+		   the client is claiming. */
+		for (; lease; lease = lease -> n_uid) {
+			if (!memcmp (&packet -> raw -> ciaddr,
+				     lease -> ip_addr.iabuf, 4)) {
+				break;
+			}
+		}
+	} else {
+		/* The client is supposed to pass a valid client-identifier,
+		   but the spec on this has changed historically, so try the
+		   IP address in ciaddr if the client-identifier fails. */
+		if (!lease) {
+			cip.len = 4;
+			memcpy (cip.iabuf, &packet -> raw -> ciaddr, 4);
+			lease = find_lease_by_ip_addr (cip);
+		}
 	}
 
 
@@ -295,7 +303,7 @@ void dhcprelease (packet)
 	      lease ? "" : "not ");
 
 	/* If we found a lease, release it. */
-	if (lease)
+	if (lease && lease -> ends > cur_time)
 		release_lease (lease, packet);
 }
 
