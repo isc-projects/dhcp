@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bpf.c,v 1.19.2.4 1999/02/03 19:46:04 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bpf.c,v 1.19.2.5 1999/02/04 22:10:09 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -51,7 +51,6 @@ static char copyright[] =
 # if defined (USE_LPF_RECEIVE)
 #  include <asm/types.h>
 #  include <linux/filter.h>
-#  include <net/ethernet.h>
 #  define bpf_insn sock_filter /* Linux: dare to be gratuitously different. */
 # else
 #  include <sys/ioctl.h>
