@@ -75,6 +75,13 @@ static void usage (char *s) {
 	exit (1);
 }
 
+static void check (isc_result_t status, const char *func) {
+	if (status != ISC_R_SUCCESS) {
+		fprintf (stderr, "%s: %s\n", func, isc_result_totext (status));
+		exit (1);
+	}
+}
+
 int main (int argc, char **argv, char **envp)
 {
 	isc_result_t status, waitstatus;
@@ -84,12 +91,14 @@ int main (int argc, char **argv, char **envp)
 	dhcpctl_data_string cid, ip_addr;
 	dhcpctl_data_string result, groupname, identifier;
 	const char *name = 0, *pass = 0, *algorithm = "hmac-md5";
-	int i;
+	int i, j;
 	int port = 7911;
 	const char *server = "127.0.0.1";
 	struct parse *cfile;
 	enum dhcp_token token;
 	const char *val;
+	char buf[1024];
+	char s1[1024];
 
 	for (i = 1; i < argc; i++) {
 		if (!strcmp (argv[i], "-n")) {
@@ -150,230 +159,193 @@ int main (int argc, char **argv, char **envp)
 
 	memset (&oh, 0, sizeof oh);
 
-	cfile = (struct parse *)0;
-	new_parse (&cfile, 0, (char *)0, 0, "<STDIN>");
 	do {
+		printf ("obj: ");
+		if (oh == NULL) {
+			printf ("<null>\n");
+		} else {
+			dhcpctl_remote_object_t *r =
+				(dhcpctl_remote_object_t *)oh;
+			omapi_generic_object_t *g =
+				(omapi_generic_object_t *)(r -> inner);
+
+			if (r -> rtype -> type != omapi_datatype_string) {
+				printf ("?\n");
+			} else {
+				printf ("%.*s\n",
+					r -> rtype -> u . buffer . len,
+					r -> rtype -> u . buffer . value);
+			}
+
+			for (i = 0; i < g -> nvalues; i++) {
+				omapi_value_t *v = g -> values [i];
+
+				printf ("%.*s = ",
+					v -> name -> len, v -> name -> value);
+
+				switch (v -> value -> type) {
+				case omapi_datatype_int:
+					printf ("%d\n",
+						v -> value -> u . integer);
+					break;
+
+				case omapi_datatype_string:
+					printf ("\"%.*s\"\n",
+						v -> value -> u.buffer.len,
+						v -> value -> u.buffer.value);
+					break;
+
+				case omapi_datatype_data:
+					printf ("%s\n",
+						print_hex_1
+						(v -> value -> u.buffer.len,
+						 v -> value -> u.buffer.value,
+						 60));
+					break;
+
+				case omapi_datatype_object:
+					printf ("<obj>\n");
+					break;
+				}
+			}
+		}
+
+		fputs ("> ", stdout);
+		fflush (stdout);
+		if (fgets (buf, sizeof(buf), stdin) == NULL)
+			break;
+
+		status = new_parse (&cfile, 0, buf, strlen(buf), "<STDIN>");
+		check(status, "new_parse()");
+
 		token = next_token (&val, cfile);
 		switch (token) {
 		      default:
 			parse_warn (cfile, "unknown token: %s", val);
-			skip_to_semi (cfile);
+			break;
+
+		      case EOF:
+			break;
+
+		      case TOKEN_HELP:
+		      case '?':
+			printf ("Commands:\n");
+			printf ("  new <object-type>\n");
+			printf ("  set <name> = <value>\n");
+			printf ("  create\n");
+			printf ("  open\n");
 			break;
 
 		      case TOKEN_NEW:
-			if (oh) {
-				parse_warn (cfile,
-					    "an object is already open.");
-				skip_to_semi (cfile);
-				break;
-			}
 			token = next_token (&val, cfile);
-			if (!is_identifier (token) && token != STRING) {
-				parse_warn (cfile,
-					    "expecting an object name.");
-				skip_to_semi (cfile);
+			if ((!is_identifier (token) && token != STRING) ||
+			    next_token (NULL, cfile) != EOF)
+			{
+				printf ("usage: new <object-type>\n");
 				break;
 			}
+
+			if (oh) {
+				printf ("an object is already open.\n");
+				break;
+			}
+
 			status = dhcpctl_new_object (&oh, connection, val);
 			if (status != ISC_R_SUCCESS) {
-				fprintf (stderr, "dhcpctl_new_object: %s\n",
-					 isc_result_totext (status));
-				exit (1);
+				printf ("can't create object: %s\n",
+					isc_result_totext (status));
+				break;
 			}
-			parse_semi (cfile);
+
 			break;
 
+		      case TOKEN_CLOSE:
+			if (next_token (NULL, cfile) != EOF) {
+				printf ("usage: close\n");
+			}
+
+			omapi_object_dereference (&oh, MDL);
+
+			break;
+
+		      case TOKEN_SET:
+			token = next_token (&val, cfile);
+
+			if ((!is_identifier (token) && token != STRING) ||
+			    next_token (NULL, cfile) != '=')
+			{
+				printf ("usage: set <name> = <value>\n");
+				break;
+			}
+
+			if (oh == NULL) {
+				printf ("no open object.\n");
+				break;
+			}
+
+			s1[0] = '\0';
+			strncat (s1, val, sizeof(s1)-1);
+
+			token = next_token (&val, cfile);
+			switch (token) {
+			case STRING:
+				dhcpctl_set_string_value (oh, val, s1);
+				break;
+
+			case NUMBER:
+				dhcpctl_set_int_value (oh, atoi (val), s1);
+				break;
+
+			default:
+				printf ("invalid value.\n");
+			}
+
+			break;
+
+		      case TOKEN_CREATE:
+		      case TOKEN_OPEN:
+			if (next_token (NULL, cfile) != EOF) {
+				printf ("usage: %s\n", val);
+			}
+
+			i = 0;
+			if (token == TOKEN_CREATE)
+				i = DHCPCTL_CREATE | DHCPCTL_EXCL;
+
+			status = dhcpctl_open_object (oh, connection, i);
+			if (status == ISC_R_SUCCESS)
+				status = dhcpctl_wait_for_completion
+					(oh, &waitstatus);
+			if (status == ISC_R_SUCCESS)
+				status = waitstatus;
+			if (status != ISC_R_SUCCESS) {
+				printf ("can't open object: %s\n",
+					isc_result_totext (status));
+				break;
+			}
+
+			break;
+
+		      case UPDATE:
+			if (next_token (NULL, cfile) != EOF) {
+				printf ("usage: %s\n", val);
+			}
+
+			status = dhcpctl_object_update(connection, oh);
+			if (status == ISC_R_SUCCESS)
+				status = dhcpctl_wait_for_completion
+					(oh, &waitstatus);
+			if (status == ISC_R_SUCCESS)
+				status = waitstatus;
+			if (status != ISC_R_SUCCESS) {
+				printf ("can't update object: %s\n",
+					isc_result_totext (status));
+				break;
+			}
+
+			break;
 		}
 	} while (1);
 
-#if 0
-	memset (&cid, 0, sizeof cid);
-	status = omapi_data_string_new (&cid, 6, MDL);
-	if (status != ISC_R_SUCCESS) {
-		fprintf (stderr, "omapi_data_string_new: %s\n",
-			 isc_result_totext (status));
-		exit (1);
-	}
-
-	memset (&cid -> value [0], 0, 6);
-
-	status = dhcpctl_set_value (host_handle,
-				    cid, "hardware-address");
-	if (status != ISC_R_SUCCESS) {
-		fprintf (stderr, "dhcpctl_set_value: %s\n",
-			 isc_result_totext (status));
-		exit (1);
-	}
-
-	status = dhcpctl_set_string_value (host_handle, "gnorf",
-					   "name");
-	if (status != ISC_R_SUCCESS) {
-		fprintf (stderr, "dhcpctl_set_string_value: %s\n",
-			 isc_result_totext (status));
-		exit (1);
-	}
-
-#if 0
-	memset (&ip_addr, 0, sizeof ip_addr);
-	status = omapi_data_string_new (&ip_addr, 4, MDL);
-	if (status != ISC_R_SUCCESS) {
-		fprintf (stderr, "omapi_data_string_new: %s\n",
-			 isc_result_totext (status));
-		exit (1);
-	}
-
-	ip_addr -> value [0] = 10; ip_addr -> value [1] = 0;
-	ip_addr -> value [2] = 0; ip_addr -> value [3] = 2;
-
-	status = dhcpctl_set_value (host_handle, ip_addr, "ip-address");
-	if (status != ISC_R_SUCCESS) {
-		fprintf (stderr, "dhcpctl_set_value: %s\n",
-			 isc_result_totext (status));
-		exit (1);
-	}
-#endif
-
-	/* Set the known flag to 1. */
-	status = dhcpctl_set_boolean_value (host_handle, 1, "known");
-	if (status != ISC_R_SUCCESS) {
-		fprintf (stderr, "dhcpctl_set_boolean_value: %s\n",
-			 isc_result_totext (status));
-		exit (1);
-	}
-
-#if 0
-       status = dhcpctl_set_string_value (host_handle, "\n\
-option host-name \"bar\";\n\
-option smtp-server 10.0.0.1;",
-                                          "statements");
-       if (status != ISC_R_SUCCESS) {
-               fprintf (stderr, "dhcpctl_set_value: %s\n",
-                        isc_result_totext (status));
-               exit (1);
-       }
-#endif
-
-	status = dhcpctl_open_object (host_handle, connection,
-				      DHCPCTL_CREATE | DHCPCTL_EXCL);
-	if (status != ISC_R_SUCCESS) {
-		fprintf (stderr, "dhcpctl_open_object: %s\n",
-			 isc_result_totext (status));
-		exit (1);
-	}
-
-	status = dhcpctl_wait_for_completion (host_handle, &waitstatus);
-	if (status != ISC_R_SUCCESS) {
-		fprintf (stderr, "create: dhcpctl_wait_for_completion: %s\n",
-			 isc_result_totext (status));
-		exit (1);
-	}
-
-	if (waitstatus != ISC_R_SUCCESS) {
-		fprintf (stderr, "dhcpctl_open_object: %s\n",
-			 isc_result_totext (waitstatus));
-		exit (1);
-	}
-
-	cid -> value [0] = 0; cid -> value [1] = 0x10;
-	cid -> value [2] = 0x5a; cid -> value [3] = 0xf8;
-	cid -> value [4] = 0x00; cid -> value [5] = 0xbb;
-
-	status = dhcpctl_set_value (host_handle,
-				    cid, "hardware-address");
-	if (status != ISC_R_SUCCESS) {
-		fprintf (stderr, "dhcpctl_set_value: %s\n",
-			 isc_result_totext (status));
-		exit (1);
-	}
-
-	status = dhcpctl_object_update (connection, host_handle);
-	if (status != ISC_R_SUCCESS) {
-		fprintf (stderr, "dhcpctl_object_update: %s\n",
-			 isc_result_totext (status));
-		exit (1);
-	}
-
-	status = dhcpctl_wait_for_completion (host_handle, &waitstatus);
-	if (status != ISC_R_SUCCESS) {
-		fprintf (stderr, "update: dhcpctl_wait_for_completion: %s\n",
-			 isc_result_totext (status));
-		exit (1);
-	}
-
-	if (waitstatus != ISC_R_SUCCESS) {
-		fprintf (stderr, "dhcpctl_object_update: %s\n",
-			 isc_result_totext (waitstatus));
-		exit (1);
-	}
-
-	status = dhcpctl_object_remove (connection, host_handle);
-	if (status != ISC_R_SUCCESS) {
-		fprintf (stderr, "dhcpctl_object_remove: %s\n",
-			 isc_result_totext (status));
-		exit (1);
-	}
-	status = dhcpctl_wait_for_completion (host_handle,
-					      &waitstatus);
-	if (status != ISC_R_SUCCESS) {
-		fprintf (stderr,
-			 "remove: dhcpctl_wait_for_completion: %s\n",
-			 isc_result_totext (status));
-		exit (1);
-	}
-	if (waitstatus != ISC_R_SUCCESS) {
-		fprintf (stderr,
-			 "remove: dhcpctl_wait_for_completion: %s\n",
-			 isc_result_totext (waitstatus));
-		exit (1);
-	}
-
-	omapi_object_dereference (&host_handle, MDL);
-
-	status = dhcpctl_new_object (&host_handle, connection, "host");
-	if (status != ISC_R_SUCCESS) {
-		fprintf (stderr, "dhcpctl_new_object: %s\n",
-			 isc_result_totext (status));
-		exit (1);
-	}
-
-	memset (&cid -> value [0], 0, 6);
-
-	status = dhcpctl_set_value (host_handle,
-				    cid, "hardware-address");
-	if (status != ISC_R_SUCCESS) {
-		fprintf (stderr, "dhcpctl_set_value: %s\n",
-			 isc_result_totext (status));
-		exit (1);
-	}
-
-	status = dhcpctl_set_string_value (host_handle, "gnorf",
-					   "name");
-	if (status != ISC_R_SUCCESS) {
-		fprintf (stderr, "dhcpctl_set_string_value: %s\n",
-			 isc_result_totext (status));
-		exit (1);
-	}
-
-	status = dhcpctl_open_object (host_handle, connection,
-				      DHCPCTL_CREATE | DHCPCTL_EXCL);
-	if (status != ISC_R_SUCCESS) {
-		fprintf (stderr, "dhcpctl_open_object 2: %s\n",
-			 isc_result_totext (status));
-		exit (1);
-	}
-
-	status = dhcpctl_wait_for_completion (host_handle, &waitstatus);
-	if (status != ISC_R_SUCCESS) {
-		fprintf (stderr, "create: dhcpctl_wait_for_completion: %s\n",
-			 isc_result_totext (status));
-		exit (1);
-	}
-
-	if (waitstatus != ISC_R_SUCCESS) {
-		fprintf (stderr, "dhcpctl_open_object 2: %s\n",
-			 isc_result_totext (waitstatus));
-		exit (1);
-	}
-#endif
 	exit (0);
 }
