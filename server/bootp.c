@@ -115,18 +115,16 @@ void bootp (packet)
 			return;
 		}
 
-		/* If a lease has already been assigned through dynamic
-		   BOOTP, and it's still okay to use dynamic bootp on
+		/* If a lease has already been assigned to this client
+		   and it's still okay to use dynamic bootp on
 		   that lease, reassign it. */
 		if (lease) {
-			if ((lease -> flags & BOOTP_LEASE) &&
-			    (lease -> flags & DYNAMIC_BOOTP_OK)) {
+			if (lease -> flags & DYNAMIC_BOOTP_OK) {
 				lease -> host = host;
 				ack_lease (packet, lease, 0, 0);
 				return;
 			}
-			/* If the lease was acquired with DHCP, or
-			   if dynamic BOOTP is no longer allowed for
+			 /* If dynamic BOOTP is no longer allowed for
 			   this lease, set it free. */
 			release_lease (lease);
 		}
