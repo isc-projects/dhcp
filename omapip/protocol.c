@@ -410,7 +410,7 @@ isc_result_t omapi_protocol_signal_handler (omapi_object_t *h,
 			  dmalloc_outstanding, dmalloc_longterm, " long-term");
 	    }
 #endif
-#if (defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL))
+#if defined (DEBUG_MEMORY_LEAKAGE)
 	    dmalloc_dump_outstanding ();
 #endif
 #if defined (DEBUG_RC_HISTORY_EXHAUSTIVELY)
