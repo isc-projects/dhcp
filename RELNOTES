@@ -65,6 +65,13 @@ experiment, or for sites that desperately need the new features.
   This allows abandoned leases to be reclaimed if there are no
   available free leases.
 
+- If a client explicitly requests a lease that's been abandoned, it's
+  probably the system that was answering pings on that address, so let it
+  have the lease.
+
+- Fix a bunch of type conversion errors that are flagged by the Solaris
+  C compiler.
+
 	      CHANGES FROM VERSION 2.0 BETA 1 PATCHLEVEL 0
 
 - Fix two potential buffer overflow problems.
