@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: stables.c,v 1.21 2000/12/29 06:51:21 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: stables.c,v 1.22 2001/01/08 08:24:56 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -485,7 +485,7 @@ struct option server_options [256] = {
 	{ "stash-agent-options", "f",		&server_universe, 37 },
 	{ "ddns-ttl", "T",			&server_universe, 38 },
 	{ "ddns-update-style", "Nddns-styles.",	&server_universe, 39 },
-	{ "option-40", "X",			&server_universe, 40 },
+	{ "client-updates", "f",		&server_universe, 40 },
 	{ "option-41", "X",			&server_universe, 41 },
 	{ "option-42", "X",			&server_universe, 42 },
 	{ "option-43", "X",			&server_universe, 43 },
