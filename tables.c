@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tables.c,v 1.11.2.1 1997/03/29 08:17:03 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tables.c,v 1.11.2.2 1997/05/09 08:38:21 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -71,7 +71,7 @@ struct option dhcp_options [256] = {
 	{ "time-offset", "l",				&dhcp_universe, 2 },
 	{ "routers", "IA",				&dhcp_universe, 3 },
 	{ "time-servers", "IA",				&dhcp_universe, 4 },
-	{ "name-servers", "IA",				&dhcp_universe, 5 },
+	{ "ien116-name-servers", "IA",			&dhcp_universe, 5 },
 	{ "domain-name-servers", "IA",			&dhcp_universe, 6 },
 	{ "log-servers", "IA",				&dhcp_universe, 7 },
 	{ "cookie-servers", "IA",			&dhcp_universe, 8 },
