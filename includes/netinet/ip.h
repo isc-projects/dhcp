@@ -64,10 +64,10 @@ struct ip {
 };
 
 #define IP_V(iph)	((iph)->ip_fvhl >> 4)
-#define IP_HL(iph)	((iph)->ip_fvhl & 0x0F)
+#define IP_HL(iph)	(((iph)->ip_fvhl & 0x0F) << 2)
 #define IP_V_SET(iph,x)	((iph)->ip_fvhl = ((iph)->ip_fvhl & 0x0F) | ((x) << 4))
 #define IP_HL_SET(iph,x) ((iph)->ip_fvhl = \
-			  ((iph)->ip_fvhl & 0xF0) | ((x) >> 2))
+			  ((iph)->ip_fvhl & 0xF0) | (((x) >> 2) & 0x0F))
 
 #define	IP_MAXPACKET	65535		/* maximum packet size */
 

@@ -161,7 +161,7 @@ ssize_t decode_tr_header (interface, buf, bufix, from)
          * filter code in bpf.c */
         llc = (struct trllc *)(buf + bufix + hdr_len);
         ip = (struct ip *) (llc + 1);
-        udp = (struct udphdr *) ((unsigned char*) ip + ip->ip_hl * 4);
+        udp = (struct udphdr *) ((unsigned char*) ip + IP_HL (ip));
 
         /* make sure it is a snap encoded, IP, UDP, unfragmented packet sent
          * to our port */

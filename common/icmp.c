@@ -23,7 +23,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: icmp.c,v 1.19 2000/02/01 18:19:48 mellon Exp $ Copyright (c) 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: icmp.c,v 1.20 2000/02/01 18:25:07 mellon Exp $ Copyright (c) 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -180,7 +180,7 @@ isc_result_t icmp_echoreply (h)
 
 	/* Find the IP header length... */
 	ip = (struct ip *)icbuf;
-	hlen = IP_HL (ip) << 2;
+	hlen = IP_HL (ip);
 
 	/* Short packet? */
 	if (status < hlen + (sizeof *icfrom)) {
