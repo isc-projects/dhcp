@@ -1,6 +1,6 @@
 	    Internet Software Consortium DHCP Distribution
-		   Version 3, Beta 2, Patchlevel 3
-			  September 7, 2000
+		   Version 3, Beta 2, Patchlevel 4
+			  September 14, 2000
 
 			    Release Notes
 
@@ -48,6 +48,25 @@ Measurement Systems, and Brian Murrell at BC Tel Advanced
 Communications.  I'd like to express my thanks to all of these good
 people here, both for working on the code and for prodding me into
 improving it.
+
+		Changes since 3.0 Beta 2 Patchlevel 3
+
+- In the DHCP client, execute client statements prior to using the values
+  of options, so that the client configuration can overried, e.g., the
+  lease renewal time.
+
+- Fix a reference counting error that would result in very reproducible
+  failures in updates, as well as occasional core dumps, if a zone was
+  declared without a key.
+
+- Fix some Linux 2.0 compilation problems.
+
+- Fix a bug in scope evaluation during execution of "on" statements that
+  caused values not to be recorded on leases.
+
+- If the dhcp-max-message-size option is specified in scope, and the
+  client didn't send this option, use the one specified in scope to
+  determine the maximum size of the response.
 
 		Changes since 3.0 Beta 2 Patchlevel 2
 
