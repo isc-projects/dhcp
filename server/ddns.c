@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: ddns.c,v 1.12 2001/01/25 08:29:12 mellon Exp $ Copyright (c) 2000-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: ddns.c,v 1.13 2001/01/25 21:55:54 mellon Exp $ Copyright (c) 2000-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -259,13 +259,6 @@ static isc_result_t ddns_update_a (struct data_string *ddns_fwd_name,
 
 	print_dns_status ((int)result, &updqueue);
 
-	while (!ISC_LIST_EMPTY (updqueue)) {
-		updrec = ISC_LIST_HEAD (updqueue);
-		ISC_LIST_UNLINK (updqueue, updrec, r_link);
-		minires_freeupdrec (updrec);
-	}
-
-
 	/*
 	 * If this query succeeds, the updater can conclude that the current
 	 * client was the last client associated with the domain name, and that
@@ -274,10 +267,6 @@ static isc_result_t ddns_update_a (struct data_string *ddns_fwd_name,
 	 * then proceed to perform a PTR RR update).
 	 *   -- "Interaction between DHCP and DNS"
 	 */
-
-	if (result == ISC_R_SUCCESS)
-		return result;
-
 
 	/*
 	 * If the second query fails with NXRRSET, the updater must conclude
@@ -294,9 +283,6 @@ static isc_result_t ddns_update_a (struct data_string *ddns_fwd_name,
 	 *   -- "Interaction between DHCP and DNS"
 	 */
 
-	return result;
-
-
   error:
 	while (!ISC_LIST_EMPTY (updqueue)) {
 		updrec = ISC_LIST_HEAD (updqueue);
@@ -304,17 +290,17 @@ static isc_result_t ddns_update_a (struct data_string *ddns_fwd_name,
 		minires_freeupdrec (updrec);
 	}
 
-	return SERVFAIL;
+	return result;
 }
 
 
-static ns_rcode ddns_update_ptr (struct data_string *ddns_fwd_name,
-				 struct data_string *ddns_rev_name,
-				 unsigned long ttl)
+static isc_result_t ddns_update_ptr (struct data_string *ddns_fwd_name,
+				     struct data_string *ddns_rev_name,
+				     unsigned long ttl)
 {
 	ns_updque updqueue;
 	ns_updrec *updrec;
-	ns_rcode result = SERVFAIL;
+	ns_rcode result = ISC_R_UNEXPECTED;
 
 	/*
 	 * The DHCP server submits a DNS query which deletes all of the PTR RRs
@@ -379,9 +365,9 @@ static ns_rcode ddns_update_ptr (struct data_string *ddns_fwd_name,
 }
 
 
-static ns_rcode ddns_remove_a (struct data_string *ddns_fwd_name,
-			       struct iaddr ddns_addr,
-			       struct data_string *ddns_dhcid)
+static isc_result_t ddns_remove_a (struct data_string *ddns_fwd_name,
+				   struct iaddr ddns_addr,
+				   struct data_string *ddns_dhcid)
 {
 	ns_updque updqueue;
 	ns_updrec *updrec;
@@ -389,7 +375,7 @@ static ns_rcode ddns_remove_a (struct data_string *ddns_fwd_name,
 	char ddns_address [16];
 
 	if (ddns_addr.len != 4)
-		return SERVFAIL;
+		return ISC_R_INVALIDARG;
 
 #ifndef NO_SNPRINTF
 	snprintf (ddns_address, 16, "%d.%d.%d.%d",
@@ -559,7 +545,7 @@ static ns_rcode ddns_remove_a (struct data_string *ddns_fwd_name,
 }
 
 
-static ns_rcode ddns_remove_ptr (struct data_string *ddns_rev_name)
+static isc_result_t ddns_remove_ptr (struct data_string *ddns_rev_name)
 {
 	ns_updque updqueue;
 	ns_updrec *updrec;
