@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: errwarn.c,v 1.8 1996/08/27 09:49:06 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: errwarn.c,v 1.9 1996/08/28 01:38:09 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -67,12 +67,14 @@ void error (ANSI_DECL(char *) fmt, VA_DOTDOTDOT)
   VA_start (list, fmt);
   vsnprintf (mbuf, sizeof mbuf, fbuf, list);
   va_end (list);
-#ifndef DEBUG
+
   syslog (log_priority | LOG_ERR, mbuf);
-#else
-  write (1, mbuf, strlen (mbuf));
-  write (1, "\n", 1);
-#endif
+
+  /* Also log it to stderr? */
+  if (log_perror) {
+	  write (1, mbuf, strlen (mbuf));
+	  write (1, "\n", 1);
+  }
 
   cleanup ();
   exit (1);
@@ -91,12 +93,14 @@ int warn (ANSI_DECL (char *) fmt, VA_DOTDOTDOT)
   VA_start (list, fmt);
   vsnprintf (mbuf, sizeof mbuf, fbuf, list);
   va_end (list);
-#ifndef DEBUG
+
   syslog (log_priority | LOG_ERR, mbuf);
-#else
-  write (1, mbuf, strlen (mbuf));
-  write (1, "\n", 1);
-#endif
+
+  if (log_perror) {
+	  write (1, mbuf, strlen (mbuf));
+	  write (1, "\n", 1);
+  }
+
   return 0;
 }
 
@@ -113,12 +117,14 @@ int note (ANSI_DECL (char *) fmt, VA_DOTDOTDOT)
   VA_start (list, fmt);
   vsnprintf (mbuf, sizeof mbuf, fbuf, list);
   va_end (list);
-#ifndef DEBUG
+
   syslog (log_priority | LOG_INFO, mbuf);
-#else
-  write (1, mbuf, strlen (mbuf));
-  write (1, "\n", 1);
-#endif
+
+  if (log_perror) {
+	  write (1, mbuf, strlen (mbuf));
+	  write (1, "\n", 1);
+  }
+
   return 0;
 }
 
@@ -135,12 +141,14 @@ int debug (ANSI_DECL (char *) fmt, VA_DOTDOTDOT)
   VA_start (list, fmt);
   vsnprintf (mbuf, sizeof mbuf, fbuf, list);
   va_end (list);
-#ifndef DEBUG
+
   syslog (log_priority | LOG_DEBUG, mbuf);
-#else
-  write (1, mbuf, strlen (mbuf));
-  write (1, "\n", 1);
-#endif
+
+  if (log_perror) {
+	  write (1, mbuf, strlen (mbuf));
+	  write (1, "\n", 1);
+  }
+
   return 0;
 }
 
@@ -184,24 +192,36 @@ int parse_warn (ANSI_DECL (char *) fmt, VA_DOTDOTDOT)
 	va_dcl
 {
 	va_list list;
+	static char spaces [] = "                                                                                ";
 	
 	do_percentm (mbuf, fmt);
 #ifndef NO_SNPRINTF
-	snprintf (fbuf, sizeof fbuf, "%s line %d char %d: %s",
-		  tlname, lexline, lexchar, mbuf);
+	snprintf (fbuf, sizeof fbuf, "%s line %d: %s",
+		  tlname, lexline, mbuf);
 #else
-	sprintf (fbuf, "%s line %d char %d: %s", tlname, tline, tlpos, mbuf);
+	sprintf (fbuf, "%s line %d: %s",
+		 tlname, lexline, mbuf);
 #endif
 	
 	VA_start (list, fmt);
 	vsnprintf (mbuf, sizeof mbuf, fbuf, list);
 	va_end (list);
-#ifndef DEBUG
+
 	syslog (log_priority | LOG_ERR, mbuf);
-#else
-	write (1, mbuf, strlen (mbuf));
-	write (1, "\n", 1);
-#endif
+	syslog (log_priority | LOG_ERR, token_line);
+	if (lexline < 81)
+		syslog (log_priority | LOG_ERR,
+			"%s^", &spaces [sizeof spaces - lexchar]);
+
+	if (log_perror) {
+		write (1, mbuf, strlen (mbuf));
+		write (1, "\n", 1);
+		write (1, token_line, strlen (token_line));
+		write (1, "\n", 1);
+		write (1, spaces, lexchar - 1);
+		write (1, "^\n", 2);
+	}
+
 	return 0;
 }
 
