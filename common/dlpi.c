@@ -122,7 +122,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dlpi.c,v 1.5 1999/02/25 23:30:34 mellon Exp $ Copyright (c) 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dlpi.c,v 1.6 1999/03/13 18:53:14 mellon Exp $ Copyright (c) 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 static int strioctl PROTO ((int fd, int cmd, int timeout, int len, char *dp));
@@ -1243,6 +1243,11 @@ static void sigalrm (sig)
 #endif /* !defined (USE_POLL) */
 
 int can_unicast_without_arp ()
+{
+	return 1;
+}
+
+int can_receive_unicast_unconfigured ()
 {
 	return 1;
 }
