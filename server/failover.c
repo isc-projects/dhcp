@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.28 2000/09/29 22:04:35 mellon Exp $ Copyright (c) 1999-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.29 2000/11/24 04:19:05 mellon Exp $ Copyright (c) 1999-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1349,6 +1349,8 @@ isc_result_t dhcp_failover_state_transition (dhcp_failover_state_t *state,
 			   XXX interrupted, because then when the connect
 			   XXX occurred, we'd make a transition into
 			   XXX normal, not recover. */
+			break;	/* Kim says stay in recover. */
+
 		      case normal:
 			return dhcp_failover_set_state
 				(state, communications_interrupted);
@@ -1659,6 +1661,7 @@ isc_result_t dhcp_failover_peer_state_changed (dhcp_failover_state_t *state,
 			   XXX the documentation for the shut_down state,
 			   XXX not the normal state. */
 			dhcp_failover_set_state (state, partner_down);
+			break;
 
 		      case paused:
 			dhcp_failover_set_state (state,
