@@ -41,7 +41,6 @@
  */
 
 #include <sys/types.h>
-#include <syslog.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
@@ -226,6 +225,7 @@ TIME default_lease_time;
 TIME max_lease_time;
 
 extern u_int16_t server_port;
+extern int log_priority;
 
 int main PROTO ((int, char **, char **));
 void cleanup PROTO ((void));

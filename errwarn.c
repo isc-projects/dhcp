@@ -42,7 +42,6 @@ static char copyright[] =
 #endif /* not lint */
 
 #include "dhcpd.h"
-#include <syslog.h>
 #include <errno.h>
 
 static void do_percentm PROTO ((char *obuf, char *ibuf));
@@ -65,7 +64,7 @@ int error (ANSI_DECL(char *) fmt, VA_DOTDOTDOT)
   vsnprintf (mbuf, sizeof mbuf, fbuf, list);
   va_end (list);
 #ifndef DEBUG
-  syslog (LOG_ERR, mbuf);
+  syslog (log_priority | LOG_ERR, mbuf);
 #else
   write (1, mbuf, strlen (mbuf));
   write (1, "\n", 1);
@@ -89,7 +88,7 @@ int warn (ANSI_DECL (char *) fmt, VA_DOTDOTDOT)
   vsnprintf (mbuf, sizeof mbuf, fbuf, list);
   va_end (list);
 #ifndef DEBUG
-  syslog (LOG_ERR, mbuf);
+  syslog (log_priority | LOG_ERR, mbuf);
 #else
   write (1, mbuf, strlen (mbuf));
   write (1, "\n", 1);
@@ -111,7 +110,7 @@ int note (ANSI_DECL (char *) fmt, VA_DOTDOTDOT)
   vsnprintf (mbuf, sizeof mbuf, fbuf, list);
   va_end (list);
 #ifndef DEBUG
-  syslog (LOG_INFO, mbuf);
+  syslog (log_priority | LOG_INFO, mbuf);
 #else
   write (1, mbuf, strlen (mbuf));
   write (1, "\n", 1);
@@ -133,7 +132,7 @@ int debug (ANSI_DECL (char *) fmt, VA_DOTDOTDOT)
   vsnprintf (mbuf, sizeof mbuf, fbuf, list);
   va_end (list);
 #ifndef DEBUG
-  syslog (LOG_DEBUG, mbuf);
+  syslog (log_priority | LOG_DEBUG, mbuf);
 #else
   write (1, mbuf, strlen (mbuf));
   write (1, "\n", 1);
@@ -195,7 +194,7 @@ int parse_warn (ANSI_DECL (char *) fmt, VA_DOTDOTDOT)
 	vsnprintf (mbuf, sizeof mbuf, fbuf, list);
 	va_end (list);
 #ifndef DEBUG
-	syslog (LOG_ERR, mbuf);
+	syslog (log_priority | LOG_ERR, mbuf);
 #else
 	write (1, mbuf, strlen (mbuf));
 	write (1, "\n", 1);

@@ -54,6 +54,7 @@ TIME default_lease_time = 43200; /* 12 hours... */
 TIME max_lease_time = 86400; /* 24 hours... */
 
 u_int16_t server_port;
+int log_priority;
 
 int main (argc, argv, envp)
 	int argc;
@@ -72,7 +73,13 @@ int main (argc, argv, envp)
 	int result;
 	int flag;
 
+#ifdef SYSLOG_4_2
+	openlog ("dhcpd", LOG_NDELAY);
+	log_facility = LOG_DAEMON;
+#else
 	openlog ("dhcpd", LOG_NDELAY, LOG_DAEMON);
+#endif
+
 #ifndef DEBUG
 	setlogmask (LOG_UPTO (LOG_INFO));
 
