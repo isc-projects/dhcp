@@ -90,6 +90,14 @@
 	 (((x) >> OPTION_HASH_EXP) & \
 	  (OPTION_HASH_PTWO - 1))) % OPTION_HASH_SIZE;
 
+enum dhcp_shutdown_state {
+	shutdown_listeners,
+	shutdown_omapi_connections,
+	shutdown_drop_omapi_connections,
+	shutdown_dhcp,
+	shutdown_done
+};
+
 /* Client FQDN option, failover FQDN option, etc. */
 typedef struct {
 	u_int8_t codes [2];
@@ -849,6 +857,12 @@ struct dns_zone {
 	struct auth_key *key;
 };
 
+struct icmp_state {
+	OMAPI_OBJECT_PREAMBLE;
+	int socket;
+	void (*icmp_handler) PROTO ((struct iaddr, u_int8_t *, int));
+};
+
 #include "ctrace.h"
 
 /* Bitmask of dhcp option codes. */
@@ -946,7 +960,8 @@ const char *pretty_print_option PROTO ((struct option *, const unsigned char *,
 int get_option (struct data_string *, struct universe *,
 		struct packet *, struct lease *, struct client_state *,
 		struct option_state *, struct option_state *,
-		struct option_state *, struct binding_scope **, unsigned);
+		struct option_state *, struct binding_scope **, unsigned,
+		const char *, int);
 void set_option (struct universe *, struct option_state *,
 		 struct option_cache *, enum statement_op);
 struct option_cache *lookup_option PROTO ((struct universe *,
@@ -1094,6 +1109,8 @@ void cleanup PROTO ((void));
 void lease_pinged PROTO ((struct iaddr, u_int8_t *, int));
 void lease_ping_timeout PROTO ((void *));
 int dhcpd_interface_setup_hook (struct interface_info *ip, struct iaddr *ia);
+enum dhcp_shutdown_state shutdown_state;
+isc_result_t dhcp_io_shutdown (omapi_object_t *, void *);
 isc_result_t dhcp_set_control_state (control_object_state_t oldstate,
 				     control_object_state_t newstate);
 
@@ -1221,8 +1238,9 @@ int make_const_option_cache PROTO ((struct option_cache **, struct buffer **,
 				    const char *, int));
 int make_host_lookup PROTO ((struct expression **, const char *));
 int enter_dns_host PROTO ((struct dns_host_entry **, const char *));
-int make_const_data PROTO ((struct expression **,
-			    const unsigned char *, unsigned, int, int));
+int make_const_data (struct expression **,
+		     const unsigned char *, unsigned, int, int,
+		     const char *, int);
 int make_const_int PROTO ((struct expression **, unsigned long));
 int make_concat PROTO ((struct expression **,
 			struct expression *, struct expression *));
@@ -1232,11 +1250,13 @@ int make_substring PROTO ((struct expression **, struct expression *,
 int make_limit PROTO ((struct expression **, struct expression *, int));
 int make_let PROTO ((struct executable_statement **, const char *));
 int option_cache PROTO ((struct option_cache **, struct data_string *,
-			 struct expression *, struct option *));
+			 struct expression *, struct option *,
+			 const char *, int));
 int evaluate_expression (struct binding_value **, struct packet *,
 			 struct lease *, struct client_state *,
 			 struct option_state *, struct option_state *,
-			 struct binding_scope **, struct expression *);
+			 struct binding_scope **, struct expression *,
+			 const char *, int);
 int binding_value_dereference (struct binding_value **, const char *, int);
 #if defined (NSUPDATE)
 int evaluate_dns_expression PROTO ((ns_updrec **, struct packet *,
@@ -1260,7 +1280,7 @@ int evaluate_data_expression PROTO ((struct data_string *,
 				     struct option_state *,
 				     struct option_state *,
 				     struct binding_scope **,
-				     struct expression *));
+				     struct expression *, const char *, int));
 int evaluate_numeric_expression (unsigned long *, struct packet *,
 				 struct lease *, struct client_state *,
 				 struct option_state *, struct option_state *,
@@ -1355,6 +1375,7 @@ int clone_group (struct group **, struct group *, const char *, int);
 int write_group PROTO ((struct group_object *));
 
 /* salloc.c */
+void relinquish_lease_hunks (void);
 struct lease *new_leases PROTO ((unsigned, const char *, int));
 #if defined (DEBUG_MEMORY_LEAKAGE) || \
 		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
@@ -1726,11 +1747,15 @@ isc_result_t interface_stuff_values (omapi_object_t *,
 void add_timeout PROTO ((TIME, void (*) PROTO ((void *)), void *,
 			 tvref_t, tvunref_t));
 void cancel_timeout PROTO ((void (*) PROTO ((void *)), void *));
+void cancel_all_timeouts (void);
+void relinquish_timeouts (void);
+#if 0
 struct protocol *add_protocol PROTO ((const char *, int,
 				      void (*) PROTO ((struct protocol *)),
 				      void *));
 
 void remove_protocol PROTO ((struct protocol *));
+#endif
 OMAPI_OBJECT_ALLOC_DECL (interface,
 			 struct interface_info, dhcp_type_interface)
 
@@ -1974,6 +1999,8 @@ int add_relay_agent_options PROTO ((struct interface_info *,
 				    unsigned, struct in_addr));
 
 /* icmp.c */
+OMAPI_OBJECT_ALLOC_DECL (icmp_state, struct icmp_state, dhcp_type_icmp)
+extern struct icmp_state *icmp_state;
 void icmp_startup PROTO ((int, void (*) PROTO ((struct iaddr,
 						u_int8_t *, int))));
 int icmp_readsocket PROTO ((omapi_object_t *));
