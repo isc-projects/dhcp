@@ -50,11 +50,17 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: comapi.c,v 1.9.2.2 2001/06/05 17:51:20 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: comapi.c,v 1.9.2.3 2001/06/08 23:07:23 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
 #include <omapip/omapip_p.h>
+
+OMAPI_OBJECT_ALLOC (subnet, struct subnet, dhcp_type_subnet)
+OMAPI_OBJECT_ALLOC (shared_network, struct shared_network,
+		    dhcp_type_shared_network)
+OMAPI_OBJECT_ALLOC (group_object, struct group_object, dhcp_type_group)
+OMAPI_OBJECT_ALLOC (dhcp_control, dhcp_control_object_t, dhcp_type_control)
 
 omapi_object_type_t *dhcp_type_interface;
 omapi_object_type_t *dhcp_type_group;

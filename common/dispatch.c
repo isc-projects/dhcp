@@ -43,15 +43,13 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dispatch.c,v 1.63 2001/02/12 19:41:30 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dispatch.c,v 1.63.2.1 2001/06/08 23:07:25 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
 
 struct timeout *timeouts;
 static struct timeout *free_timeouts;
-
-int interfaces_invalidated;
 
 void set_time (u_int32_t t)
 {

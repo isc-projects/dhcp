@@ -43,14 +43,14 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: discover.c,v 1.42.2.4 2001/06/05 06:29:07 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: discover.c,v 1.42.2.5 2001/06/08 23:07:24 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
 #include <sys/ioctl.h>
 
 struct interface_info *interfaces, *dummy_interfaces, *fallback_interface;
-extern int interfaces_invalidated;
+int interfaces_invalidated;
 int quiet_interface_discovery;
 u_int16_t local_port;
 u_int16_t remote_port;
