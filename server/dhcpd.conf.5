@@ -640,7 +640,7 @@ class, and then put an
 statement in the conditional's list of statements:
 .PP
 .nf
-if substring (option dhcp-client-identifier, 1, 4) = "RAS " {
+if substring (option dhcp-client-identifier, 1, 3) = "RAS " {
   add "ras-clients";
 }
 .fi
@@ -650,7 +650,7 @@ expression as a matching expression in the class statement:
 .PP
 .nf
 class "ras-clients" {
-  match if substring (option dhcp-client-identifier, 1, 4) = "RAS";
+  match if substring (option dhcp-client-identifier, 1, 3) = "RAS";
 }
 .fi
 Note that whether you use matching expressions or add statements (or
@@ -671,7 +671,7 @@ that a client that's a member of a class due to an add statement will not
 be affected by pool permits related to that class - when the pool permit list
 is computed, the client will not yet be a member of the pool.   This is an
 inconsistency that will probably be addressed in later versions of the DHCP
-server, but it important to be aware of it at lease for the time being.
+server, but it important to be aware of it at least for the time being.
 .SH SUBCLASSES
 .PP
 In addition to classes, it is possible to declare subclasses.   A
@@ -857,12 +857,23 @@ servers updating the same set of DNS records.
 For the ad hoc DNS update method, the client's FQDN is derived in two
 parts.   First, the hostname is determined.   Then, the domain name is
 determined, and appended to the hostname.
- use a host-name option sent
-by the client.   If the client did not send a host-name option, then
-if there is a host declaration that applies to the client, the name
-from that declaration will be used.   If none of these applies, the
-server will not have a hostname for the client, and will not be able
-to do a DDNS update.
+.PP
+The DHCP server determines the client's hostname by first looking for
+a \fIddns-hostname\fR configuration option, and using that if it is
+present.  If no such option has is present, the server looks for a
+valid hostname in the FQDN option send by the client.  If one is
+found, it is used; otherwise, if the client sent a host-name option,
+that is used.  Otherwise, if there is a host declaration that applies
+to the client, the name from that declaration will be used.  If none
+of these applies, the server will not have a hostname for the client,
+and will not be able to do a DDNS update.
+.PP
+The domain name is determined based strictly on the server
+configuration, not on what the client sends.   First, if there is a 
+.I ddns-domainname
+configuration option, it is used.   Second, if there is a
+\fIdomain-name\fR option configured, that is used.  Otherwise, the
+server will not do the DDNS update.
 .PP
 The client's fully-qualified domain name, derived as we have
 described, is used as the name on which an "A" record will be stored.
@@ -1783,6 +1794,50 @@ statement
 .PP
 This statement causes the DHCP server to listen for DHCP requests on
 the UDP port specified in \fIport\fR, rather than on port 67.
+.RE
+.PP
+The
+.I log-facility
+statement
+.RS 0.25i
+.PP
+.B log-facility \fIfacility\fB;\fR
+.PP
+This statement causes the DHCP server to do all of its logging on the
+specified log facility once the dhcpd.conf file has been read.   By
+default the DHCP server logs to the daemon facility.   Possible log
+facilities include auth, authpriv, cron, daemon, ftp, kern, lpr, mail,
+mark, news, ntp, security, syslog, user, uucp, and local0 through
+local7.   Not all of these facilities are available on all systems,
+and there may be other facilities available on other systems.
+.PP
+In addition to setting this value, you may need to modify your
+.I syslog.conf
+file to configure logging of the DHCP server.   For example, you might
+add a line like this:
+.PP
+.nf
+	local7.debug /var/log/dhcpd.log
+.fi
+.PP
+The syntax of the \fIsyslog.conf\fR file may be different on some
+operating systems - consult the \fIsyslog.conf\fR manual page to be
+sure.  To get syslog to start logging to the new file, you must first
+create the file with correct ownership and permissions (usually, the
+same owner and permissions of your /var/log/messages or
+/usr/adm/messages file should be fine) and send a SIGHUP to syslogd.
+Some systems support log rollover using a shell script or program
+called newsyslog, and you may be able to configure this as well so
+that your log file doesn't grow uncontrollably.
+.PP
+Because the \fIlog-facility\fR setting is controlled by the dhcpd.conf
+file, log messages printed while parsing the dhcpd.conf file or before
+parsing it are logged to the default log facility.  To prevent this,
+see the README file included with this distribution, which describes
+how to change the default log facility.  When this parameter is used,
+the DHCP server prints its startup message a second time after parsing
+the configuration file, so that the log will be as complete as
+possible.
 .RE
 .PP
 The
