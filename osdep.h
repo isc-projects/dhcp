@@ -102,3 +102,25 @@
 #  define USE_NIT_SEND
 #  define USE_NIT_RECEIVE
 #endif
+
+/* jmp_buf is assumed to be a struct unless otherwise defined in the
+   system header. */
+#ifndef jbp_decl
+# define jbp_decl(x)	jmp_buf *x
+#endif
+#ifndef jref
+# define jref(x)	(&(x))
+#endif
+#ifndef jdref
+# define jdref(x)	(*(x))
+#endif
+
+/* On some systems, the struct ether_header source and destinations buffers
+   are arrays; on others, they are structs.   We assume they're arrays
+   unless otherwise defined in the system header. */
+#ifndef ETHER_SRC
+# define ETHER_SRC(x)	((x) -> ether_shost)
+#endif
+#ifndef ETHER_DEST
+# define ETHER_DEST(x)	((x) -> ether_dhost)
+#endif
