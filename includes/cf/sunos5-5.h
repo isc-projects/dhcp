@@ -117,13 +117,20 @@ extern int h_errno;
 
 #define NEED_INET_ATON
 
-/* By default, use BSD Socket API for receiving and sending packets.
-   This actually works pretty well on Solaris, which doesn't censor
-   the all-ones broadcast address. */
 #if defined (USE_DEFAULT_NETWORK)
-# define USE_DLPI
-/* # define USE_DLPI_RAW */
-# define USE_DLPI_PFMOD
+# if defined (__sparc)
+/* On sparc systems, use the DLPI API, which allows multiple interfaces
+   to be supported.    DLPI is currently buggy on non-sparc machines.
+   It's unclear whether this is an O.S. bug or an endianness bug in
+   the DLPI code. */
+#  define USE_DLPI
+#  define USE_DLPI_PFMOD
+# else
+/* On non-sparc systems, use BSD Socket API for receiving and sending
+   packets.   This actually works pretty well on Solaris, which doesn't
+   censor the all-ones broadcast address. */
+#  define USE_SOCKETS
+# endif /* defined (__sparc) */
 #endif
 
 #define USE_POLL
