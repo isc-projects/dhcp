@@ -56,7 +56,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhclient.c,v 1.49 1998/04/09 04:26:24 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.50 1998/11/05 18:39:04 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -259,6 +259,25 @@ void cleanup ()
 {
 }
 
+struct class *find_class (s)
+	char *s;
+{
+	return (struct class *)0;
+}
+
+int check_collection (packet, collection)
+	struct packet *packet;
+	struct collection *collection;
+{
+	return 0;
+}
+
+void classify (packet, class)
+	struct packet *packet;
+	struct class *class;
+{
+}
+
 /* Individual States:
  * 
  * Each routine is called from the dhclient_state_machine() in one of
@@ -389,7 +408,7 @@ void state_selecting (ipp)
 			picked -> next = (struct client_lease *)0;
 		} else {
 		      freeit:
-			free_client_lease (lp);
+			destroy_client_lease (lp);
 		}
 	}
 	ip -> client -> offered_leases = (struct client_lease *)0;
@@ -403,7 +422,7 @@ void state_selecting (ipp)
 	}
 
 	/* If it was a BOOTREPLY, we can just take the address right now. */
-	if (!picked -> options [DHO_DHCP_MESSAGE_TYPE].len) {
+	if (!picked -> is_bootp) {
 		ip -> client -> new = picked;
 
 		/* Make up some lease expiry times
@@ -430,7 +449,7 @@ void state_selecting (ipp)
 	ip -> client -> xid = ip -> client -> packet.xid;
 
 	/* Toss the lease we picked - we'll get it back in a DHCPACK. */
-	free_client_lease (picked);
+	destroy_client_lease (picked);
 
 	/* Add an immediate timeout to send the first DHCPREQUEST packet. */
 	send_request (ip);
@@ -444,6 +463,8 @@ void dhcpack (packet)
 {
 	struct interface_info *ip = packet -> interface;
 	struct client_lease *lease;
+	struct option_cache *oc;
+	struct data_string ds;
 	int i;
 	
 	/* If we're not receptive to an offer right now, or if the offer
@@ -479,26 +500,63 @@ void dhcpack (packet)
 	cancel_timeout (send_request, ip);
 
 	/* Figure out the lease time. */
-	ip -> client -> new -> expiry =
-		getULong (ip -> client ->
-			  new -> options [DHO_DHCP_LEASE_TIME].data);
+	oc = lookup_option (ip -> client -> new -> options.dhcp_hash,
+			    DHO_DHCP_LEASE_TIME);
+	memset (&ds, 0, sizeof ds);
+	if (oc &&
+	    evaluate_option_cache (&ds, packet,
+				   &ip -> client -> new -> options, oc)) {
+		if (ds.len > 3)
+			ip -> client -> new -> expiry = getULong (ds.data);
+		else
+			ip -> client -> new -> expiry = 0;
+		data_string_forget (&ds, "dhcpack");
+	} else
+			ip -> client -> new -> expiry = 0;
 
-	/* Take the server-provided renewal time if there is one;
-	   otherwise figure it out according to the spec. */
-	if (ip -> client -> new -> options [DHO_DHCP_RENEWAL_TIME].len)
-		ip -> client -> new -> renewal =
-			getULong (ip -> client ->
-				  new -> options [DHO_DHCP_RENEWAL_TIME].data);
-	else
+	if (!ip -> client -> new -> expiry) {
+		warn ("no expiry time on offered lease.");
+		/* XXX this is going to be bad - if this _does_
+		   XXX happen, we should probably dynamically 
+		   XXX disqualify the DHCP server that gave us the
+		   XXX bad packet from future selections and
+		   XXX then go back into the init state. */
+		state_init (ip);
+		return;
+	}
+
+	/* Take the server-provided renewal time if there is one. */
+	oc = lookup_option (ip -> client -> new -> options.dhcp_hash,
+			    DHO_DHCP_RENEWAL_TIME);
+	if (oc &&
+	    evaluate_option_cache (&ds, packet,
+				   &ip -> client -> new -> options, oc)) {
+		if (ds.len > 3)
+			ip -> client -> new -> renewal = getULong (ds.data);
+		else
+			ip -> client -> new -> renewal = 0;
+	} else
+			ip -> client -> new -> renewal = 0;
+
+	/* If it wasn't specified by the server, calculate it. */
+	if (!ip -> client -> new -> renewal)
 		ip -> client -> new -> renewal =
 			ip -> client -> new -> expiry / 2;
 
 	/* Same deal with the rebind time. */
-	if (ip -> client -> new -> options [DHO_DHCP_REBINDING_TIME].len)
-		ip -> client -> new -> rebind =
-			getULong (ip -> client -> new ->
-				  options [DHO_DHCP_REBINDING_TIME].data);
-	else
+	oc = lookup_option (ip -> client -> new -> options.dhcp_hash,
+			    DHO_DHCP_REBINDING_TIME);
+	if (oc &&
+	    evaluate_option_cache (&ds, packet,
+				   &ip -> client -> new -> options, oc)) {
+		if (ds.len > 3)
+			ip -> client -> new -> rebind = getULong (ds.data);
+		else
+			ip -> client -> new -> rebind = 0;
+	} else
+			ip -> client -> new -> rebind = 0;
+
+	if (!ip -> client -> new -> rebind)
 		ip -> client -> new -> rebind =
 			ip -> client -> new -> renewal +
 				ip -> client -> new -> renewal / 2 +
@@ -537,7 +595,7 @@ void bind_lease (ip)
 
 	/* Replace the old active lease with the new one. */
 	if (ip -> client -> active)
-		free_client_lease (ip -> client -> active);
+		destroy_client_lease (ip -> client -> active);
 	ip -> client -> active = ip -> client -> new;
 	ip -> client -> new = (struct client_lease *)0;
 
@@ -562,6 +620,9 @@ void state_bound (ipp)
 	void *ipp;
 {
 	struct interface_info *ip = ipp;
+	int i;
+	struct option_cache *oc;
+	struct data_string ds;
 
 	ASSERT_STATE(state, S_BOUND);
 
@@ -569,12 +630,17 @@ void state_bound (ipp)
 	make_request (ip, ip -> client -> active);
 	ip -> client -> xid = ip -> client -> packet.xid;
 
-	if (ip -> client -> active ->
-	    options [DHO_DHCP_SERVER_IDENTIFIER].len == 4) {
-		memcpy (ip -> client -> destination.iabuf,
-			ip -> client -> active ->
-			options [DHO_DHCP_SERVER_IDENTIFIER].data, 4);
-		ip -> client -> destination.len = 4;
+	memset (&ds, 0, sizeof ds);
+	oc = lookup_option (ip -> client -> active -> options.dhcp_hash,
+			    DHO_DHCP_SERVER_IDENTIFIER);
+	if (oc &&
+	    evaluate_option_cache (&ds, (struct packet *)0,
+				   &ip -> client -> active -> options, oc)) {
+		if (ds.len > 3) {
+			memcpy (ip -> client -> destination.iabuf, ds.data, 4);
+			ip -> client -> destination.len = 4;
+		} else
+			ip -> client -> destination = iaddr_broadcast;
 	} else
 		ip -> client -> destination = iaddr_broadcast;
 
@@ -671,9 +737,9 @@ void dhcpoffer (packet)
 	struct client_lease *lease, *lp;
 	int i;
 	int arp_timeout_needed, stop_selecting;
-	char *name = (packet -> options [DHO_DHCP_MESSAGE_TYPE].len
-		      ? "DHCPOFFER" : "BOOTREPLY");
+	char *name = packet -> packet_type ? "DHCPOFFER" : "BOOTREPLY";
 	struct iaddrlist *ap;
+	struct option_cache *oc;
 	
 #ifdef DEBUG_PACKET
 	dump_packet (packet);
@@ -696,11 +762,15 @@ void dhcpoffer (packet)
 
 	/* If this lease doesn't supply the minimum required parameters,
 	   blow it off. */
-	for (i = 0; ip -> client -> config -> required_options [i]; i++) {
-		if (!packet -> options [ip -> client -> config ->
-					required_options [i]].len) {
-			note ("%s isn't satisfactory.", name);
-			return;
+	if (ip -> client -> config -> required_options) {
+		for (i = 0;
+		     ip -> client -> config -> required_options [i]; i++) {
+			if (!lookup_option
+			    (packet -> options.dhcp_hash,
+			     ip -> client -> config -> required_options [i])) {
+				note ("%s isn't satisfactory.", name);
+				return;
+			}
 		}
 	}
 
@@ -723,7 +793,7 @@ void dhcpoffer (packet)
 
 	/* If this lease was acquired through a BOOTREPLY, record that
 	   fact. */
-	if (!packet -> options [DHO_DHCP_MESSAGE_TYPE].len)
+	if (!packet -> options_valid || !packet -> packet_type)
 		lease -> is_bootp = 1;
 
 	/* Record the medium under which this lease was offered. */
@@ -797,8 +867,10 @@ struct client_lease *packet_to_lease (packet)
 {
 	struct client_lease *lease;
 	int i;
+	struct option_cache *oc;
+	struct data_string data;
 
-	lease = (struct client_lease *)malloc (sizeof (struct client_lease));
+	lease = (struct client_lease *)new_client_lease ("packet_to_lease");
 
 	if (!lease) {
 		warn ("dhcpoffer: no memory to record lease.\n");
@@ -808,45 +880,38 @@ struct client_lease *packet_to_lease (packet)
 	memset (lease, 0, sizeof *lease);
 
 	/* Copy the lease options. */
-	for (i = 0; i < 256; i++) {
-		if (packet -> options [i].len) {
-			lease -> options [i].data =
-				(unsigned char *)
-					malloc (packet -> options [i].len + 1);
-			if (!lease -> options [i].data) {
-				warn ("dhcpoffer: no memory for option %d\n",
-				      i);
-				free_client_lease (lease);
-				return (struct client_lease *)0;
-			} else {
-				memcpy (lease -> options [i].data,
-					packet -> options [i].data,
-					packet -> options [i].len);
-				lease -> options [i].len =
-					packet -> options [i].len;
-				lease -> options [i].data
-					[lease -> options [i].len] = 0;
-			}
-		}
-	}
+	lease -> options = packet -> options;
+	memset (&packet -> options, 0, sizeof packet -> options);
 
 	lease -> address.len = sizeof (packet -> raw -> yiaddr);
 	memcpy (lease -> address.iabuf, &packet -> raw -> yiaddr,
 		lease -> address.len);
 
+	/* Figure out the overload flag. */
+	oc = lookup_option (lease -> options.dhcp_hash,
+			    DHO_DHCP_OPTION_OVERLOAD);
+	memset (&data, 0, sizeof data);
+	if (oc &&
+	    evaluate_option_cache (&data, packet, &lease -> options, oc)) {
+		if (data.len > 0)
+			i = data.data [0];
+		else
+			i = 0;
+		data_string_forget (&data, "packet_to_lease");
+	} else
+		i = 0;
+
 	/* If the server name was filled out, copy it. */
-	if ((!packet -> options [DHO_DHCP_OPTION_OVERLOAD].len ||
-	     !(packet -> options [DHO_DHCP_OPTION_OVERLOAD].data [0] & 2)) &&
-	    packet -> raw -> sname [0]) {
+	if (!(i & 2) && packet -> raw -> sname [0]) {
 		int len;
 		/* Don't count on the NUL terminator. */
 		for (len = 0; len < 64; len++)
 			if (!packet -> raw -> sname [len])
 				break;
-		lease -> server_name = malloc (len + 1);
+		lease -> server_name = dmalloc (len + 1, "packet_to_lease");
 		if (!lease -> server_name) {
 			warn ("dhcpoffer: no memory for filename.\n");
-			free_client_lease (lease);
+			destroy_client_lease (lease);
 			return (struct client_lease *)0;
 		} else {
 			memcpy (lease -> server_name,
@@ -856,18 +921,16 @@ struct client_lease *packet_to_lease (packet)
 	}
 
 	/* Ditto for the filename. */
-	if ((!packet -> options [DHO_DHCP_OPTION_OVERLOAD].len ||
-	     !(packet -> options [DHO_DHCP_OPTION_OVERLOAD].data [0] & 1)) &&
-	    packet -> raw -> file [0]) {
+	if ((i & 1) && packet -> raw -> file [0]) {
 		int len;
 		/* Don't count on the NUL terminator. */
 		for (len = 0; len < 64; len++)
 			if (!packet -> raw -> file [len])
 				break;
-		lease -> filename = malloc (len + 1);
+		lease -> filename = dmalloc (len + 1, "packet_to_lease");
 		if (!lease -> filename) {
 			warn ("dhcpoffer: no memory for filename.\n");
-			free_client_lease (lease);
+			destroy_client_lease (lease);
 			return (struct client_lease *)0;
 		} else {
 			memcpy (lease -> filename,
@@ -909,7 +972,7 @@ void dhcpnak (packet)
 		return;
 	}
 
-	free_client_lease (ip -> client -> active);
+	destroy_client_lease (ip -> client -> active);
 	ip -> client -> active = (struct client_lease *)0;
 
 	/* Stop sending DHCPREQUEST packets... */
@@ -1317,6 +1380,103 @@ void send_release (ipp)
 		warn ("send_packet: %m");
 }
 
+void make_client_options (ip, lease, type, sid, rip, prl, statements,
+			  options)
+	struct interface_info *ip;
+	struct client_lease *lease;
+	u_int8_t *type;
+	struct option_cache *sid;
+	struct iaddr *rip;
+	u_int32_t *prl;
+	struct executable_statement *statements;
+	struct option_state *options;
+{
+	int i;
+	struct option_cache *oc;
+	struct buffer *bp = (struct buffer *)0;
+
+	memset (options, 0, sizeof *options);
+
+	/* Send the server identifier if provided. */
+	if (sid)
+		save_option (options -> dhcp_hash, sid);
+
+	/* Send the requested address if provided. */
+	if (rip) {
+		ip -> client -> requested_address = *rip;
+		if (!(make_const_option_cache
+		      (&oc, (struct buffer **)0,
+		       rip -> iabuf, rip -> len,
+		       &dhcp_options [DHO_DHCP_REQUESTED_ADDRESS],
+		       "make_client_options")))
+			warn ("can't make requested address option cache.");
+		else {
+			save_option (options -> dhcp_hash, oc);
+			option_cache_dereference (&oc, "make_client_options");
+		}
+	} else {
+		ip -> client -> requested_address.len = 0;
+	}
+
+	if (!(make_const_option_cache
+	      (&oc, (struct buffer **)0,
+	       type, 1, &dhcp_options [DHO_DHCP_MESSAGE_TYPE],
+	       "make_client_options")))
+		warn ("can't make message type.");
+	else {
+		save_option (options -> dhcp_hash, oc);
+		option_cache_dereference (&oc, "make_client_options");
+	}
+
+	if (prl) {
+		/* Figure out how many parameters were requested. */
+		for (i = 0; prl [i]; i++)
+			;
+		if (!buffer_allocate (&bp, i, "make_client_options"))
+			warn ("can't make buffer for parameter request list.");
+		else {
+			for (i = 0; prl [i]; i++)
+				bp -> data [i] = prl [i];
+			if (!(make_const_option_cache
+			      (&oc, &bp, (u_int8_t *)0, i,
+			       &dhcp_options [DHO_DHCP_PARAMETER_REQUEST_LIST],
+			       "make_client_options")))
+				warn ("can't make option cache");
+			else {
+				save_option (options -> dhcp_hash, oc);
+				option_cache_dereference
+					(&oc, "make_client_options");
+			}
+		}
+	}
+
+	if (!(oc = lookup_option (options -> dhcp_hash,
+				  DHO_DHCP_LEASE_TIME))) {
+		if (!buffer_allocate (&bp, sizeof (u_int32_t),
+				      "make_client_options"))
+			warn ("can't make buffer for requested lease time.");
+		else {
+			putULong (bp -> data,
+				  ip -> client -> config -> requested_lease);
+			if (!(make_const_option_cache
+			      (&oc, &bp, (u_int8_t *)0, sizeof (u_int32_t),
+			       &dhcp_options [DHO_DHCP_LEASE_TIME],
+			       "make_client_options")))
+				warn ("can't make option cache");
+			else {
+				save_option (options -> dhcp_hash, oc);
+				option_cache_dereference
+					(&oc, "make_client_options");
+			}
+		}
+	}		
+
+	/* Run statements that need to be run on transmission. */
+	if (statements)
+		execute_statements ((struct packet *)0,
+				    &lease -> options, options, statements);
+}
+
 void make_discover (ip, lease)
 	struct interface_info *ip;
 	struct client_lease *lease;
@@ -1324,67 +1484,20 @@ void make_discover (ip, lease)
 	struct dhcp_packet *raw;
 	unsigned char discover = DHCPDISCOVER;
 	int i;
+	struct option_state options;
 
-	struct tree_cache *options [256];
-	struct tree_cache option_elements [256];
-
-	memset (option_elements, 0, sizeof option_elements);
-	memset (options, 0, sizeof options);
 	memset (&ip -> client -> packet, 0, sizeof (ip -> client -> packet));
 
-	/* Set DHCP_MESSAGE_TYPE to DHCPDISCOVER */
-	i = DHO_DHCP_MESSAGE_TYPE;
-	options [i] = &option_elements [i];
-	options [i] -> value = &discover;
-	options [i] -> len = sizeof discover;
-	options [i] -> buf_size = sizeof discover;
-	options [i] -> timeout = 0xFFFFFFFF;
-	options [i] -> tree = (struct tree *)0;
-
-	/* Request the options we want */
-	i  = DHO_DHCP_PARAMETER_REQUEST_LIST;
-	options [i] = &option_elements [i];
-	options [i] -> value = ip -> client -> config -> requested_options;
-	options [i] -> len = ip -> client -> config -> requested_option_count;
-	options [i] -> buf_size =
-		ip -> client -> config -> requested_option_count;
-	options [i] -> timeout = 0xFFFFFFFF;
-	options [i] -> tree = (struct tree *)0;
-
-	/* If we had an address, try to get it again. */
-	if (lease) {
-		ip -> client -> requested_address = lease -> address;
-		i = DHO_DHCP_REQUESTED_ADDRESS;
-		options [i] = &option_elements [i];
-		options [i] -> value = lease -> address.iabuf;
-		options [i] -> len = lease -> address.len;
-		options [i] -> buf_size = lease -> address.len;
-		options [i] -> timeout = 0xFFFFFFFF;
-		options [i] -> tree = (struct tree *)0;
-	} else {
-		ip -> client -> requested_address.len = 0;
-	}
-
-	/* Send any options requested in the config file. */
-	for (i = 0; i < 256; i++) {
-		if (!options [i] &&
-		    ip -> client -> config -> send_options [i].data) {
-			options [i] = &option_elements [i];
-			options [i] -> value = ip -> client -> config ->
-				send_options [i].data;
-			options [i] -> len = ip -> client -> config ->
-				send_options [i].len;
-			options [i] -> buf_size = ip -> client -> config ->
-				send_options [i].len;
-			options [i] -> timeout = 0xFFFFFFFF;
-			options [i] -> tree = (struct tree *)0;
-		}
-	}
+	make_client_options (ip, lease, &discover, (struct option_cache *)0,
+			     lease ? &lease -> address : (struct iaddr *)0,
+			     ip -> client -> config -> requested_options,
+			     ip -> client -> config -> on_transmission,
+			     &options);
 
 	/* Set up the option buffer... */
 	ip -> client -> packet_length =
 		cons_options ((struct packet *)0, &ip -> client -> packet, 0,
-			      options, (struct agent_options *)0, 0, 0, 0);
+			      &options, 0, 0, 0);
 	if (ip -> client -> packet_length < BOOTP_MIN_LEN)
 		ip -> client -> packet_length = BOOTP_MIN_LEN;
 
@@ -1420,78 +1533,30 @@ void make_request (ip, lease)
 {
 	unsigned char request = DHCPREQUEST;
 	int i;
+	struct option_state options;
+	struct option_cache *oc;
 
-	struct tree_cache *options [256];
-	struct tree_cache option_elements [256];
-
-	memset (options, 0, sizeof options);
 	memset (&ip -> client -> packet, 0, sizeof (ip -> client -> packet));
 
-	/* Set DHCP_MESSAGE_TYPE to DHCPREQUEST */
-	i = DHO_DHCP_MESSAGE_TYPE;
-	options [i] = &option_elements [i];
-	options [i] -> value = &request;
-	options [i] -> len = sizeof request;
-	options [i] -> buf_size = sizeof request;
-	options [i] -> timeout = 0xFFFFFFFF;
-	options [i] -> tree = (struct tree *)0;
+	if (ip -> client -> state == S_REQUESTING)
+		oc = lookup_option (lease -> options.dhcp_hash,
+				    DHO_DHCP_SERVER_IDENTIFIER);
+	else
+		oc = (struct option_cache *)0;
 
-	/* Request the options we want */
-	i = DHO_DHCP_PARAMETER_REQUEST_LIST;
-	options [i] = &option_elements [i];
-	options [i] -> value = ip -> client -> config -> requested_options;
-	options [i] -> len = ip -> client -> config -> requested_option_count;
-	options [i] -> buf_size =
-		ip -> client -> config -> requested_option_count;
-	options [i] -> timeout = 0xFFFFFFFF;
-	options [i] -> tree = (struct tree *)0;
-
-	/* If we are requesting an address that hasn't yet been assigned
-	   to us, use the DHCP Requested Address option. */
-	if (ip -> client -> state == S_REQUESTING) {
-		/* Send back the server identifier... */
-		i = DHO_DHCP_SERVER_IDENTIFIER;
-		options [i] = &option_elements [i];
-		options [i] -> value = lease -> options [i].data;
-		options [i] -> len = lease -> options [i].len;
-		options [i] -> buf_size = lease -> options [i].len;
-		options [i] -> timeout = 0xFFFFFFFF;
-		options [i] -> tree = (struct tree *)0;
-	}
-	if (ip -> client -> state == S_REQUESTING ||
-	    ip -> client -> state == S_REBOOTING) {
-		ip -> client -> requested_address = lease -> address;
-		i = DHO_DHCP_REQUESTED_ADDRESS;
-		options [i] = &option_elements [i];
-		options [i] -> value = lease -> address.iabuf;
-		options [i] -> len = lease -> address.len;
-		options [i] -> buf_size = lease -> address.len;
-		options [i] -> timeout = 0xFFFFFFFF;
-		options [i] -> tree = (struct tree *)0;
-	} else {
-		ip -> client -> requested_address.len = 0;
-	}
-
-	/* Send any options requested in the config file. */
-	for (i = 0; i < 256; i++) {
-		if (!options [i] &&
-		    ip -> client -> config -> send_options [i].data) {
-			options [i] = &option_elements [i];
-			options [i] -> value = ip -> client -> config ->
-				send_options [i].data;
-			options [i] -> len = ip -> client -> config ->
-				send_options [i].len;
-			options [i] -> buf_size = ip -> client -> config ->
-				send_options [i].len;
-			options [i] -> timeout = 0xFFFFFFFF;
-			options [i] -> tree = (struct tree *)0;
-		}
-	}
+	make_client_options (ip, lease, &request, oc,
+			     ((ip -> client -> state == S_REQUESTING ||
+			       ip -> client -> state == S_REBOOTING)
+			      ? &lease -> address
+			      : (struct iaddr *)0),
+			     ip -> client -> config -> requested_options,
+			     ip -> client -> config -> on_transmission,
+			     &options);
 
 	/* Set up the option buffer... */
 	ip -> client -> packet_length =
 		cons_options ((struct packet *)0, &ip -> client -> packet, 0,
-			      options, (struct agent_options *)0, 0, 0, 0);
+			      &options, 0, 0, 0);
 	if (ip -> client -> packet_length < BOOTP_MIN_LEN)
 		ip -> client -> packet_length = BOOTP_MIN_LEN;
 
@@ -1535,62 +1600,22 @@ void make_decline (ip, lease)
 {
 	unsigned char decline = DHCPDECLINE;
 	int i;
+	struct option_cache *oc;
 
-	struct tree_cache *options [256];
-	struct tree_cache message_type_tree;
-	struct tree_cache requested_address_tree;
-	struct tree_cache server_id_tree;
-	struct tree_cache client_id_tree;
+	struct option_state options;
 
-	memset (options, 0, sizeof options);
 	memset (&ip -> client -> packet, 0, sizeof (ip -> client -> packet));
 
-	/* Set DHCP_MESSAGE_TYPE to DHCPDECLINE */
-	i = DHO_DHCP_MESSAGE_TYPE;
-	options [i] = &message_type_tree;
-	options [i] -> value = &decline;
-	options [i] -> len = sizeof decline;
-	options [i] -> buf_size = sizeof decline;
-	options [i] -> timeout = 0xFFFFFFFF;
-	options [i] -> tree = (struct tree *)0;
-
-	/* Send back the server identifier... */
-	i = DHO_DHCP_SERVER_IDENTIFIER;
-        options [i] = &server_id_tree;
-        options [i] -> value = lease -> options [i].data;
-        options [i] -> len = lease -> options [i].len;
-        options [i] -> buf_size = lease -> options [i].len;
-        options [i] -> timeout = 0xFFFFFFFF;
-        options [i] -> tree = (struct tree *)0;
-
-	/* Send back the address we're declining. */
-	i = DHO_DHCP_REQUESTED_ADDRESS;
-	options [i] = &requested_address_tree;
-	options [i] -> value = lease -> address.iabuf;
-	options [i] -> len = lease -> address.len;
-	options [i] -> buf_size = lease -> address.len;
-	options [i] -> timeout = 0xFFFFFFFF;
-	options [i] -> tree = (struct tree *)0;
-
-	/* Send the uid if the user supplied one. */
-	i = DHO_DHCP_CLIENT_IDENTIFIER;
-	if (ip -> client -> config -> send_options [i].len) {
-		options [i] = &client_id_tree;
-		options [i] -> value = ip -> client -> config ->
-			send_options [i].data;
-		options [i] -> len = ip -> client -> config ->
-			send_options [i].len;
-		options [i] -> buf_size = ip -> client -> config ->
-			send_options [i].len;
-		options [i] -> timeout = 0xFFFFFFFF;
-		options [i] -> tree = (struct tree *)0;
-	}
-
+	oc = lookup_option (lease -> options.dhcp_hash,
+			    DHO_DHCP_SERVER_IDENTIFIER);
+	make_client_options (ip, lease, &decline, oc,
+			     &lease -> address, (u_int32_t *)0,
+			     (struct executable_statement *)0, &options);
 
 	/* Set up the option buffer... */
 	ip -> client -> packet_length =
 		cons_options ((struct packet *)0, &ip -> client -> packet, 0,
-			      options, (struct agent_options *)0, 0, 0, 0);
+			      &options, 0, 0, 0);
 	if (ip -> client -> packet_length < BOOTP_MIN_LEN)
 		ip -> client -> packet_length = BOOTP_MIN_LEN;
 
@@ -1626,37 +1651,22 @@ void make_release (ip, lease)
 {
 	unsigned char request = DHCPRELEASE;
 	int i;
+	struct option_cache *oc;
 
-	struct tree_cache *options [256];
-	struct tree_cache message_type_tree;
-	struct tree_cache requested_address_tree;
-	struct tree_cache server_id_tree;
+	struct option_state options;
 
-	memset (options, 0, sizeof options);
 	memset (&ip -> client -> packet, 0, sizeof (ip -> client -> packet));
 
-	/* Set DHCP_MESSAGE_TYPE to DHCPRELEASE */
-	i = DHO_DHCP_MESSAGE_TYPE;
-	options [i] = &message_type_tree;
-	options [i] -> value = &request;
-	options [i] -> len = sizeof request;
-	options [i] -> buf_size = sizeof request;
-	options [i] -> timeout = 0xFFFFFFFF;
-	options [i] -> tree = (struct tree *)0;
-
-	/* Send back the server identifier... */
-	i = DHO_DHCP_SERVER_IDENTIFIER;
-        options [i] = &server_id_tree;
-        options [i] -> value = lease -> options [i].data;
-        options [i] -> len = lease -> options [i].len;
-        options [i] -> buf_size = lease -> options [i].len;
-        options [i] -> timeout = 0xFFFFFFFF;
-        options [i] -> tree = (struct tree *)0;
+	oc = lookup_option (lease -> options.dhcp_hash,
+			    DHO_DHCP_SERVER_IDENTIFIER);
+	make_client_options (ip, lease, &request, oc,
+			     &lease -> address, (u_int32_t *)0,
+			     (struct executable_statement *)0, &options);
 
 	/* Set up the option buffer... */
 	ip -> client -> packet_length =
 		cons_options ((struct packet *)0, &ip -> client -> packet, 0,
-			      options, (struct agent_options *)0, 0, 0, 0);
+			      &options, 0, 0, 0);
 	if (ip -> client -> packet_length < BOOTP_MIN_LEN)
 		ip -> client -> packet_length = BOOTP_MIN_LEN;
 
@@ -1685,20 +1695,17 @@ void make_release (ip, lease)
 #endif
 }
 
-void free_client_lease (lease)
+void destroy_client_lease (lease)
 	struct client_lease *lease;
 {
 	int i;
 
 	if (lease -> server_name)
-		free (lease -> server_name);
+		dfree (lease -> server_name, "destroy_client_lease");
 	if (lease -> filename)
-		free (lease -> filename);
-	for (i = 0; i < 256; i++) {
-		if (lease -> options [i].len)
-			free (lease -> options [i].data);
-	}
-	free (lease);
+		dfree (lease -> filename, "destroy_client_lease");
+	option_state_dereference (&lease -> options);
+	free_client_lease (lease, "destroy_client_lease");
 }
 
 FILE *leaseFile;
@@ -1744,6 +1751,8 @@ void write_client_lease (ip, lease, rewrite)
 	int i;
 	struct tm *t;
 	static int leases_written;
+	struct option_cache *oc;
+	struct data_string ds;
 
 	if (!rewrite) {
 		if (leases_written++ > 20) {
@@ -1778,14 +1787,21 @@ void write_client_lease (ip, lease, rewrite)
 	if (lease -> medium)
 		fprintf (leaseFile, "  medium \"%s\";\n",
 			 lease -> medium -> string);
-	for (i = 0; i < 256; i++) {
-		if (lease -> options [i].len) {
-			fprintf (leaseFile,
-				 "  option %s %s;\n",
-				 dhcp_options [i].name,
-				 pretty_print_option
-				 (i, lease -> options [i].data,
-				  lease -> options [i].len, 1, 1));
+	for (i = 0; i < OPTION_HASH_SIZE; i++) {
+		pair p;
+		for (p = lease -> options.dhcp_hash [i]; p; p = p -> cdr) {
+			memset (&ds, 0, sizeof ds);
+			if (evaluate_option_cache (&ds, (struct packet *)0,
+						   &lease -> options, oc)) {
+				fprintf (leaseFile,
+					 "  option %s %s;\n",
+					 dhcp_options [i].name,
+					 pretty_print_option
+					 (i, ds.data, ds.len,
+					  1, 1));
+				data_string_forget (&ds,
+						    "write_client_lease");
+			}
 		}
 	}
 
@@ -1863,8 +1879,8 @@ void script_write_params (ip, prefix, lease)
 	struct client_lease *lease;
 {
 	int i;
-	u_int8_t dbuf [1500];
-	int len;
+	struct data_string data;
+	struct option_cache *oc;
 
 	fprintf (scriptFile, "%sip_address=\"%s\"\n",
 		 prefix, piaddr (lease -> address));
@@ -1877,33 +1893,45 @@ void script_write_params (ip, prefix, lease)
 	   broadcast address, not the host address all zeroes
 	   broadcast address). */
 
-	if (lease -> options [DHO_SUBNET_MASK].len &&
-	    (lease -> options [DHO_SUBNET_MASK].len <
-	     sizeof lease -> address.iabuf)) {
-		struct iaddr netmask, subnet, broadcast;
+	memset (&data, 0, sizeof data);
+	oc = lookup_option (lease -> options.dhcp_hash, DHO_SUBNET_MASK);
+	if (oc && evaluate_option_cache (&data, (struct packet *)0,
+					 &lease -> options, oc)) {
+		if (data.len > 3) {
+			struct iaddr netmask, subnet, broadcast;
 
-		memcpy (netmask.iabuf,
-			lease -> options [DHO_SUBNET_MASK].data,
-			lease -> options [DHO_SUBNET_MASK].len);
-		netmask.len = lease -> options [DHO_SUBNET_MASK].len;
+			memcpy (netmask.iabuf, data.data, data.len);
+			netmask.len = data.len;
+			data_string_forget (&data, "script_write_params");
 
-		subnet = subnet_number (lease -> address, netmask);
-		if (subnet.len) {
-			fprintf (scriptFile, "%snetwork_number=\"%s\";\n",
-				 prefix, piaddr (subnet));
-			fprintf (scriptFile, "export %snetwork_number\n",
-				 prefix);
+			subnet = subnet_number (lease -> address, netmask);
+			if (subnet.len) {
+				fprintf (scriptFile,
+					 "%snetwork_number=\"%s\";\n",
+					 prefix, piaddr (subnet));
+				fprintf (scriptFile,
+					 "export %snetwork_number\n", prefix);
 
-			if (!lease -> options [DHO_BROADCAST_ADDRESS].len) {
-				broadcast = broadcast_addr (subnet, netmask);
-				if (broadcast.len) {
-					fprintf (scriptFile,
-						 "%s%s=\"%s\";\n", prefix,
-						 "broadcast_address",
-						 piaddr (broadcast));
-					fprintf (scriptFile,
-						 "export %s%s\n", prefix,
-						 "broadcast_address");
+				oc = lookup_option (lease -> options.dhcp_hash,
+						    DHO_BROADCAST_ADDRESS);
+				if (!oc ||
+				    !evaluate_option_cache (&data,
+							    (struct packet *)0,
+							    &lease -> options,
+							    oc)) {
+					broadcast = broadcast_addr (subnet,
+								    netmask);
+					if (broadcast.len) {
+						fprintf (scriptFile,
+							 "%s%s=\"%s\";\n",
+							 prefix,
+							 "broadcast_address",
+							 piaddr (broadcast));
+						fprintf (scriptFile,
+							 "export %s%s\n",
+							 prefix,
+							 "broadcast_address");
+					}
 				}
 			}
 		}
@@ -1919,84 +1947,33 @@ void script_write_params (ip, prefix, lease)
 			 prefix, lease -> server_name);
 		fprintf (scriptFile, "export %sserver_name\n", prefix);
 	}
-	for (i = 0; i < 256; i++) {
-		u_int8_t *dp;
 
-		if (ip -> client -> config -> defaults [i].len) {
-			if (lease -> options [i].len) {
-				switch (ip -> client ->
-					config -> default_actions [i]) {
-				      case ACTION_DEFAULT:
-					dp = lease -> options [i].data;
-					len = lease -> options [i].len;
-					break;
-				      case ACTION_SUPERSEDE:
-				      supersede:
-					dp = ip -> client ->
-						config -> defaults [i].data;
-					len = ip -> client ->
-						config -> defaults [i].len;
-					break;
-				      case ACTION_PREPEND:
-					len = (ip -> client ->
-					       config -> defaults [i].len +
-					       lease -> options [i].len);
-					if (len > sizeof dbuf) {
-						warn ("no space to %s %s",
-						      "prepend option",
-						      dhcp_options [i].name);
-						goto supersede;
-					}
-					dp = dbuf;
-					memcpy (dp,
-						ip -> client -> 
-						config -> defaults [i].data,
-						ip -> client -> 
-						config -> defaults [i].len);
-					memcpy (dp + ip -> client -> 
-						config -> defaults [i].len,
-						lease -> options [i].data,
-						lease -> options [i].len);
-					break;
-				      case ACTION_APPEND:
-					len = (ip -> client ->
-					       config -> defaults [i].len +
-					       lease -> options [i].len);
-					if (len > sizeof dbuf) {
-						warn ("no space to %s %s",
-						      "prepend option",
-						      dhcp_options [i].name);
-						goto supersede;
-					}
-					dp = dbuf;
-					memcpy (dp,
-						ip -> client -> 
-						config -> defaults [i].data,
-						ip -> client -> 
-						config -> defaults [i].len);
-					memcpy (dp + ip -> client -> 
-						config -> defaults [i].len,
-						lease -> options [i].data,
-						lease -> options [i].len);
-				}
-			} else {
-				dp = ip -> client ->
-					config -> defaults [i].data;
-				len = ip -> client ->
-					config -> defaults [i].len;
-			}
-		} else if (lease -> options [i].len) {
-			len = lease -> options [i].len;
-			dp = lease -> options [i].data;
-		} else {
-			len = 0;
-		}
-		if (len) {
-			char *s = dhcp_option_ev_name (&dhcp_options [i]);
+	execute_statements ((struct packet *)0, &lease -> options,
+			    &lease -> options,
+			    ip -> client -> config -> on_transmission);
+
+	for (i = 0; i < OPTION_HASH_SIZE; i++) {
+		pair hp;
+
+		for (hp = lease -> options.dhcp_hash [i]; hp; hp = hp -> cdr) {
+			oc = (struct option_cache *)hp -> car;
+
+			if (evaluate_option_cache (&data, (struct packet *)0,
+						   &lease -> options, oc)) {
+
+				if (data.len) {
+					char *s = (dhcp_option_ev_name
+						   (oc -> option));
 				
-			fprintf (scriptFile, "%s%s=\"%s\"\n", prefix, s,
-				 pretty_print_option (i, dp, len, 0, 0));
-			fprintf (scriptFile, "export %s%s\n", prefix, s);
+					fprintf (scriptFile,
+						 "%s%s=\"%s\"\n", prefix, s,
+						 (pretty_print_option
+						  (i, data.data, data.len,
+						   0, 0)));
+					fprintf (scriptFile,
+						 "export %s%s\n", prefix, s);
+				}
+			}
 		}
 	}
 	fprintf (scriptFile, "%sexpiry=\"%d\"\n",

@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.7 1998/06/25 03:07:51 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.8 1998/11/05 18:43:23 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -65,7 +65,7 @@ static char copyright[] =
 void skip_to_semi (cfile)
 	FILE *cfile;
 {
-	int token;
+	enum dhcp_token token;
 	char *val;
 	int brace_count = 0;
 
@@ -97,7 +97,7 @@ void skip_to_semi (cfile)
 int parse_semi (cfile)
 	FILE *cfile;
 {
-	int token;
+	enum dhcp_token token;
 	char *val;
 
 	token = next_token (&val, cfile);
@@ -115,7 +115,7 @@ char *parse_string (cfile)
 	FILE *cfile;
 {
 	char *val;
-	int token;
+	enum dhcp_token token;
 	char *s;
 
 	token = next_token (&val, cfile);
@@ -144,7 +144,7 @@ char *parse_host_name (cfile)
 	FILE *cfile;
 {
 	char *val;
-	int token;
+	enum dhcp_token token;
 	int len = 0;
 	char *s;
 	char *t;
@@ -198,29 +198,36 @@ char *parse_host_name (cfile)
    an expr_substring node to limit hostnames that evaluate to more
    than one IP address. */
 
-struct expression *parse_ip_addr_or_hostname (cfile, uniform)
+int parse_ip_addr_or_hostname (expr, cfile, uniform)
+	struct expression **expr;
 	FILE *cfile;
 	int uniform;
 {
 	char *val;
-	int token;
+	enum dhcp_token token;
 	unsigned char addr [4];
 	int len = sizeof addr;
 	char *name;
-	struct expression *rv;
+	struct expression *x = (struct expression *)0;
 
 	token = peek_token (&val, cfile);
 	if (is_identifier (token)) {
 		name = parse_host_name (cfile);
 		if (!name)
-			return (struct expression *)0;
-		rv = make_host_lookup (name);
-		if (!uniform)
-			rv = make_limit (rv, 4);
+			return 0;
+		if (!make_host_lookup (expr, name))
+			return 0;
+		if (!uniform) {
+			if (!make_limit (&x, *expr, 4))
+				return 0;
+			expression_dereference (expr,
+						"parse_ip_addr_or_hostname");
+			*expr = x;
+		}
 	} else if (token == NUMBER) {
 		if (!parse_numeric_aggregate (cfile, addr, &len, DOT, 10, 8))
-			return (struct expression *)0;
-		rv = make_const_data (addr, len, 0, 0);
+			return 0;
+		return make_const_data (expr, addr, len, 0, 1);
 	} else {
 		if (token != RBRACE && token != LBRACE)
 			token = next_token (&val, cfile);
@@ -228,10 +235,10 @@ struct expression *parse_ip_addr_or_hostname (cfile, uniform)
 			    val, token);
 		if (token != SEMI)
 			skip_to_semi (cfile);
-		return (struct expression *)0;
+		return 0;
 	}
 
-	return rv;
+	return 1;
 }	
 	
 /*
@@ -243,7 +250,7 @@ int parse_ip_addr (cfile, addr)
 	struct iaddr *addr;
 {
 	char *val;
-	int token;
+	enum dhcp_token token;
 
 	addr -> len = 4;
 	if (parse_numeric_aggregate (cfile, addr -> iabuf,
@@ -262,7 +269,7 @@ void parse_hardware_param (cfile, hardware)
 	struct hardware *hardware;
 {
 	char *val;
-	int token;
+	enum dhcp_token token;
 	int hlen;
 	unsigned char *t;
 
@@ -316,7 +323,7 @@ void parse_lease_time (cfile, timep)
 	TIME *timep;
 {
 	char *val;
-	int token;
+	enum dhcp_token token;
 
 	token = next_token (&val, cfile);
 	if (token != NUMBER) {
@@ -348,7 +355,7 @@ unsigned char *parse_numeric_aggregate (cfile, buf,
 	int size;
 {
 	char *val;
-	int token;
+	enum dhcp_token token;
 	unsigned char *bufp = buf, *s, *t;
 	int count = 0;
 	pair c = (pair)0;
@@ -547,7 +554,7 @@ TIME parse_date (cfile)
 	struct tm tm;
 	int guess;
 	char *val;
-	int token;
+	enum dhcp_token token;
 	static int months [11] = { 31, 59, 90, 120, 151, 181,
 					  212, 243, 273, 304, 334 };
 
@@ -709,7 +716,7 @@ struct option *parse_option_name (cfile)
 	FILE *cfile;
 {
 	char *val;
-	int token;
+	enum dhcp_token token;
 	char *vendor;
 	struct universe *universe;
 	struct option *option;
@@ -783,18 +790,18 @@ struct option *parse_option_name (cfile)
  *				NUMBER COLON colon-seperated-hex-list
  */
 
-unsigned char *parse_cshl (cfile, plen)
+int parse_cshl (data, cfile)
+	struct data_string *data;
 	FILE *cfile;
-	int *plen;
 {
 	char ibuf [128];
 	int ilen = 0;
 	int tlen = 0;
 	struct option_tag *sl = (struct option_tag *)0;
 	struct option_tag *next, **last = &sl;
-	int token;
+	enum dhcp_token token;
 	char *val;
-	unsigned char *rv, *rvp;
+	unsigned char *rvp;
 
 	do {
 		token = next_token (&val, cfile);
@@ -805,7 +812,7 @@ unsigned char *parse_cshl (cfile, plen)
 				next = sl -> next;
 				dfree (sl, "parse_cshl");
 			}
-			return (unsigned char *)0;
+			return 0;
 		}
 		if (ilen == sizeof ibuf) {
 			next = (struct option_tag *)
@@ -828,10 +835,13 @@ unsigned char *parse_cshl (cfile, plen)
 		token = next_token (&val, cfile);
 	} while (1);
 
-	rv = dmalloc (tlen + ilen, "parse_cshl");
-	if (!rv)
+	if (!buffer_allocate (&data -> buffer, tlen + ilen, "parse_cshl"))
 		error ("no memory to store octet data.");
-	rvp = rv;
+	data -> data = &data -> buffer -> data [0];
+	data -> len = tlen + ilen;
+	data -> terminated = 0;
+
+	rvp = &data -> data [0];
 	while (sl) {
 		next = sl -> next;
 		memcpy (rvp, sl -> data, sizeof ibuf);
@@ -841,8 +851,7 @@ unsigned char *parse_cshl (cfile, plen)
 	}
 	
 	memcpy (rvp, ibuf, ilen);
-	*plen = ilen + tlen;
-	return rv;
+	return 1;
 }
 
 /*
@@ -868,7 +877,7 @@ struct executable_statement *parse_executable_statements (cfile, lose)
 	next = &head;
 	while ((*next = parse_executable_statement (cfile, lose)))
 		next = &((*next) -> next);
-	if (!lose)
+	if (!*lose)
 		return head;
 	return (struct executable_statement *)0;
 }
@@ -877,7 +886,7 @@ struct executable_statement *parse_executable_statement (cfile, lose)
 	FILE *cfile;
 	int *lose;
 {
-	int token;
+	enum dhcp_token token;
 	char *val;
 	struct executable_statement *stmt, base;
 	struct class *cta;
@@ -989,19 +998,22 @@ struct executable_statement *parse_if_statement (cfile, lose)
 	FILE *cfile;
 	int *lose;
 {
-	int token;
+	enum dhcp_token token;
 	char *val;
 	struct executable_statement *stmt;
 	struct expression *if_condition;
 	struct executable_statement *true, *false;
 
 	token = next_token (&val, cfile);
-	if_condition = parse_boolean_expression (cfile, lose);
-	if (!if_condition) {
+	if_condition = (struct expression *)0;
+	if (!parse_boolean_expression (&if_condition, cfile, lose)) {
 		if (!*lose)
 			parse_warn ("boolean expression expected.");
 		return (struct executable_statement *)0;
 	}
+#if defined (DEBUG_EXPRESSION_PARSE)
+	print_expression ("if condition", if_condition);
+#endif
 	token = next_token (&val, cfile);
 	if (token != LBRACE) {
 		parse_warn ("left brace expected.");
@@ -1066,107 +1078,26 @@ struct executable_statement *parse_if_statement (cfile, lose)
  *			  data-expression EQUAL data-expression |
  *			  boolean-expression AND boolean-expression |
  *			  boolean-expression OR boolean-expression
+ *			  EXISTS OPTION-NAME
  */
    			  
-
-struct expression *parse_boolean_expression (cfile, lose)
+int parse_boolean_expression (expr, cfile, lose)
+	struct expression **expr;
 	FILE *cfile;
 	int *lose;
 {
-	int token;
-	char *val;
-	struct collection *col;
-	struct expression buf, *rv;
-	struct expression *left, *right;
+	/* Parse an expression... */
+	if (!parse_expression (expr, cfile, lose, context_boolean,
+			       (struct expression **)0, expr_none))
+		return 0;
 
-	token = peek_token (&val, cfile);
-
-	/* Check for unary operators... */
-	switch (token) {
-	      case CHECK:
-		token = next_token (&val, cfile);
-		token = next_token (&val, cfile);
-		if (token != STRING) {
-			parse_warn ("string expected.");
-			skip_to_semi (cfile);
-			*lose = 1;
-			return (struct expression *)0;
-		}
-		for (col = collections; col; col = col -> next)
-			if (!strcmp (col -> name, val))
-				break;
-		if (!col) {
-			parse_warn ("unknown collection.");
-			*lose = 1;
-			return (struct expression *)0;
-		}
-		buf.op = expr_check;
-		buf.data.check = col;
-		goto have_expr;
-
-	      case NOT:
-		token = next_token (&val, cfile);
-		buf.op = expr_not;
-		buf.data.not = parse_boolean_expression (cfile, lose);
-		if (!buf.data.not) {
-			if (!*lose) {
-				parse_warn ("match expression expected");
-				skip_to_semi (cfile);
-			}
-			*lose = 1;
-			return (struct expression *)0;
-		}
-		goto have_expr;
-	}
-
-	/* If we're going to find an expression at this point, it must
-	   involve a binary operator seperating two subexpressions. */
-	left = parse_data_expression (cfile, lose);
-	if (!left)
-		return left;
-	token = peek_token (&val, cfile);
-	switch (token) {
-	      case EQUAL:
-		buf.op = expr_equal;
-		break;
-	      case AND:
-		buf.op = expr_and;
-		break;
-	      case OR:
-		buf.op = expr_or;
-		break;
-	      default:
+	if (!is_boolean_expression (*expr)) {
 		parse_warn ("Expecting a boolean expression.");
-		skip_to_semi (cfile);
 		*lose = 1;
-		return (struct expression *)0;
+		return 0;
 	}
-	token = next_token (&val, cfile);
-
-	/* Now find the RHS of the expression. */
-	right = parse_data_expression (cfile, lose);
-	if (!right) {
-		if (!*lose) {
-			if (buf.op == expr_equal)
-				parse_warn ("Expecting a data expression.");
-			else
-				parse_warn ("Expecting a boolean expression.");
-			skip_to_semi (cfile);
-		}
-		return right;
-	}
-
-	/* Store the LHS and RHS. */
-	buf.data.equal [0] = left;
-	buf.data.equal [1] = right;
-
-      have_expr:
-	rv = new_expression ("parse_boolean_expression");
-	if (!rv)
-		error ("No memory for boolean expression.");
-	*rv = buf;
-	return rv;
-}	
+	return 1;
+}
 
 /*
  * data_expression :== SUBSTRING LPAREN data-expression COMMA
@@ -1182,167 +1113,22 @@ struct expression *parse_boolean_expression (cfile, lose)
  *		       colon_seperated_hex_list
  */
 
-struct expression *parse_data_expression (cfile, lose)
+int parse_data_expression (expr, cfile, lose)
+	struct expression **expr;
 	FILE *cfile;
 	int *lose;
 {
-	int token;
-	char *val;
-	struct collection *col;
-	struct expression buf, *rv;
-	struct expression *left, *right;
-	struct option *option;
+	/* Parse an expression... */
+	if (!parse_expression (expr, cfile, lose, context_data,
+			       (struct expression **)0, expr_none))
+		return 0;
 
-	token = peek_token (&val, cfile);
-
-	switch (token) {
-	      case SUBSTRING:
-		token = next_token (&val, cfile);
-		buf.op = expr_substring;
-
-		token = next_token (&val, cfile);
-		if (token != LPAREN) {
-		      nolparen:
-			parse_warn ("left parenthesis expected.");
-			*lose = 1;
-			return (struct expression *)0;
-		}
-
-		rv = parse_data_expression (cfile, lose);
-		if (!rv) {
-		      nodata:
-			parse_warn ("expecting data expression.");
-			skip_to_semi (cfile);
-			*lose = 1;
-			return (struct expression *)0;
-		}
-
-		token = next_token (&val, cfile);
-		if (token != COMMA) {
-		      nocomma:
-			parse_warn ("comma expected.");
-			*lose = 1;
-			return (struct expression *)0;
-		}
-
-		left = parse_numeric_expression (cfile, lose);
-		if (!left) {
-		      nonum:
-			if (!*lose) {
-				parse_warn ("expecting numeric expression.");
-				skip_to_semi (cfile);
-				*lose = 1;
-			}
-			return (struct expression *)0;
-		}
-
-		token = next_token (&val, cfile);
-		if (token != COMMA)
-			goto nocomma;
-
-		right = parse_numeric_expression (cfile, lose);
-		if (!right)
-			goto nonum;
-
-		token = next_token (&val, cfile);
-		if (token != RPAREN) {
-		      norparen:
-			parse_warn ("right parenthesis expected.");
-			*lose = 1;
-			return (struct expression *)0;
-		}
-		return make_substring (rv, left, right);
-
-	      case SUFFIX:
-		token = next_token (&val, cfile);
-		buf.op = expr_suffix;
-
-		token = next_token (&val, cfile);
-		if (token != LPAREN)
-			goto nolparen;
-
-		buf.data.suffix.expr = parse_data_expression (cfile, lose);
-		if (!buf.data.suffix.expr)
-			goto nodata;
-
-		token = next_token (&val, cfile);
-		if (token != COMMA)
-			goto nocomma;
-
-		buf.data.suffix.len = parse_numeric_expression (cfile, lose);
-		if (!buf.data.suffix.len)
-			goto nonum;
-
-		token = next_token (&val, cfile);
-		if (token != RPAREN)
-			goto norparen;
-		goto have_expr;
-
-	      case OPTION:
-		token = next_token (&val, cfile);
-		buf.op = expr_option;
-		buf.data.option = parse_option_name (cfile);
-		if (!buf.data.option) {
-			*lose = 1;
-			return (struct expression *)0;
-		}
-		goto have_expr;
-
-	      case HARDWARE:
-		token = next_token (&val, cfile);
-		buf.op = expr_hardware;
-		goto have_expr;
-
-	      case PACKET:
-		token = next_token (&val, cfile);
-		buf.op = expr_packet;
-
-		token = next_token (&val, cfile);
-		if (token != LPAREN)
-			goto nolparen;
-
-		buf.data.packet.offset =
-			parse_numeric_expression (cfile, lose);
-		if (!buf.data.packet.offset)
-			goto nonum;
-
-		token = next_token (&val, cfile);
-		if (token != COMMA)
-			goto nocomma;
-
-		buf.data.packet.len =
-			parse_numeric_expression (cfile, lose);
-		if (!buf.data.substring.len)
-			goto nonum;
-
-		token = next_token (&val, cfile);
-		if (token != RPAREN)
-			goto norparen;
-		goto have_expr;
-		
-	      case STRING:
-		token = next_token (&val, cfile);
-		return make_const_data (val, strlen (val), 1, 1);
-
-	      case NUMBER:
-	      case NUMBER_OR_NAME:
-		buf.op = expr_const_data;
-		memset (&buf.data, 0, sizeof buf.data);
-		buf.data.const_data.data =
-			parse_cshl (cfile, &buf.data.const_data.len);
-		goto have_expr;
-
-	      default:
-		return (struct expression *)0;
+	if (!is_data_expression (*expr)) {
+		parse_warn ("Expecting a data expression.");
+		*lose = 1;
+		return 0;
 	}
-
-      have_expr:
-	rv = (struct expression *)dmalloc (sizeof (struct expression),
-					   "parse_boolean_expression");
-	if (!rv)
-		error ("No memory for boolean expression.");
-	*rv = buf;
-	return rv;
+	return 1;
 }
 
 /*
@@ -1351,98 +1137,483 @@ struct expression *parse_data_expression (cfile, lose)
  *			  NUMBER
  */
 
-struct expression *parse_numeric_expression (cfile, lose)
+int parse_numeric_expression (expr, cfile, lose)
+	struct expression **expr;
 	FILE *cfile;
 	int *lose;
 {
-	int token;
+	/* Parse an expression... */
+	if (!parse_expression (expr, cfile, lose, context_numeric,
+			       (struct expression **)0, expr_none))
+		return 0;
+
+	if (!is_numeric_expression (*expr)) {
+		parse_warn ("Expecting a numeric expression.");
+		*lose = 1;
+		return 0;
+	}
+	return 1;
+}
+
+/* Parse a subexpression that does not contain a binary operator. */
+
+int parse_non_binary (expr, cfile, lose, context)
+	struct expression **expr;
+	FILE *cfile;
+	int *lose;
+	enum expression_context context;
+{
+	enum dhcp_token token;
 	char *val;
 	struct collection *col;
-	struct expression buf, *rv;
-	struct expression *left, *right;
 	struct option *option;
 
 	token = peek_token (&val, cfile);
 
+	/* Check for unary operators... */
 	switch (token) {
+	      case CHECK:
+		token = next_token (&val, cfile);
+		token = next_token (&val, cfile);
+		if (token != STRING) {
+			parse_warn ("string expected.");
+			skip_to_semi (cfile);
+			*lose = 1;
+			return 0;
+		}
+		for (col = collections; col; col = col -> next)
+			if (!strcmp (col -> name, val))
+				break;
+		if (!col) {
+			parse_warn ("unknown collection.");
+			*lose = 1;
+			return 0;
+		}
+		if (!expression_allocate (expr, "parse_expression: CHECK"))
+			error ("can't allocate expression");
+		(*expr) -> op = expr_check;
+		(*expr) -> data.check = col;
+		break;
+
+	      case NOT:
+		token = next_token (&val, cfile);
+		if (!expression_allocate (expr, "parse_expression: NOT"))
+			error ("can't allocate expression");
+		(*expr) -> op = expr_not;
+		if (!parse_non_binary (&(*expr) -> data.not,
+				       cfile, lose, context)) {
+			if (!*lose) {
+				parse_warn ("expression expected");
+				skip_to_semi (cfile);
+			}
+			*lose = 1;
+			expression_dereference (expr, "parse_expression: NOT");
+			return 0;
+		}
+		break;
+
+	      case EXISTS:
+		token = next_token (&val, cfile);
+		if (!expression_allocate (expr, "parse_expression: EXISTS"))
+			error ("can't allocate expression");
+		(*expr) -> op = expr_exists;
+		(*expr) -> data.option = parse_option_name (cfile);
+		if (!(*expr) -> data.option) {
+			*lose = 1;
+			expression_dereference (expr,
+						"parse_expression: EXISTS");
+			return 0;
+		}
+		break;
+
+	      case SUBSTRING:
+		token = next_token (&val, cfile);
+		if (!expression_allocate (expr, "parse_expression: SUBSTRING"))
+			error ("can't allocate expression");
+		(*expr) -> op = expr_substring;
+
+		token = next_token (&val, cfile);
+		if (token != LPAREN) {
+		      nolparen:
+			expression_dereference (expr,
+						"parse_expression: nolparen");
+			parse_warn ("left parenthesis expected.");
+			*lose = 1;
+			return 0;
+		}
+
+		if (!parse_data_expression (&(*expr) -> data.substring.expr,
+					    cfile, lose)) {
+		      nodata:
+			expression_dereference (expr,
+						"parse_expression: nodata");
+			parse_warn ("expecting data expression.");
+			skip_to_semi (cfile);
+			*lose = 1;
+			return 0;
+		}
+
+		token = next_token (&val, cfile);
+		if (token != COMMA) {
+		      nocomma:
+			expression_dereference (expr,
+						"parse_expression: nocomma1");
+			parse_warn ("comma expected.");
+			*lose = 1;
+
+			return 0;
+		}
+
+		if (!parse_numeric_expression
+		    (&(*expr) -> data.substring.offset,cfile, lose)) {
+		      nonum:
+			if (!*lose) {
+				parse_warn ("expecting numeric expression.");
+				skip_to_semi (cfile);
+				*lose = 1;
+			}
+			expression_dereference (expr,
+						"parse_expression: nonum");
+			return 0;
+		}
+
+		token = next_token (&val, cfile);
+		if (token != COMMA)
+			goto nocomma;
+
+		if (!parse_numeric_expression
+		    (&(*expr) -> data.substring.len, cfile, lose))
+			goto nonum;
+
+		token = next_token (&val, cfile);
+		if (token != RPAREN) {
+		      norparen:
+			parse_warn ("right parenthesis expected.");
+			*lose = 1;
+			expression_dereference (expr,
+						"parse_expression: norparen");
+			return 0;
+		}
+		break;
+
+	      case SUFFIX:
+		token = next_token (&val, cfile);
+		if (!expression_allocate (expr, "parse_expression: SUFFIX"))
+			error ("can't allocate expression");
+		(*expr) -> op = expr_suffix;
+
+		token = next_token (&val, cfile);
+		if (token != LPAREN)
+			goto nolparen;
+
+		if (!parse_data_expression (&(*expr) -> data.suffix.expr,
+					    cfile, lose))
+			goto nodata;
+
+		token = next_token (&val, cfile);
+		if (token != COMMA)
+			goto nocomma;
+
+		if (!parse_data_expression (&(*expr) -> data.suffix.len,
+					    cfile, lose))
+			goto nonum;
+
+		token = next_token (&val, cfile);
+		if (token != RPAREN)
+			goto norparen;
+		break;
+
+	      case OPTION:
+		token = next_token (&val, cfile);
+		if (!expression_allocate (expr, "parse_expression: OPTION"))
+			error ("can't allocate expression");
+		(*expr) -> op = expr_option;
+		(*expr) -> data.option = parse_option_name (cfile);
+		if (!(*expr) -> data.option) {
+			*lose = 1;
+			expression_dereference (expr,
+						"parse_expression: OPTION");
+			return 0;
+		}
+		break;
+
+	      case HARDWARE:
+		token = next_token (&val, cfile);
+		if (!expression_allocate (expr, "parse_expression: HARDWARE"))
+			error ("can't allocate expression");
+		(*expr) -> op = expr_hardware;
+		break;
+
+	      case PACKET:
+		token = next_token (&val, cfile);
+		if (!expression_allocate (expr, "parse_expression: PACKET"))
+			error ("can't allocate expression");
+		(*expr) -> op = expr_packet;
+
+		token = next_token (&val, cfile);
+		if (token != LPAREN)
+			goto nolparen;
+
+		if (!parse_numeric_expression (&(*expr) -> data.packet.offset,
+					       cfile, lose))
+			goto nonum;
+
+		token = next_token (&val, cfile);
+		if (token != COMMA)
+			goto nocomma;
+
+		if (!parse_numeric_expression (&(*expr) -> data.packet.len,
+					       cfile, lose))
+			goto nonum;
+
+		token = next_token (&val, cfile);
+		if (token != RPAREN)
+			goto norparen;
+		break;
+		
+	      case STRING:
+		token = next_token (&val, cfile);
+		if (!make_const_data (expr, val, strlen (val), 1, 1))
+			error ("can't make constant string expression.");
+		break;
+
 	      case EXTRACT_INT:
 		token = next_token (&val, cfile);	
-
 		token = next_token (&val, cfile);
 		if (token != LPAREN) {
 			parse_warn ("left parenthesis expected.");
 			*lose = 1;
-			return (struct expression *)0;
+			return 0;
 		}
 
-		buf.data.extract_int.expr =
-			parse_data_expression (cfile, lose);
-		if (!buf.data.extract_int.expr) {
+		if (!expression_allocate (expr,
+					  "parse_expression: EXTRACT_INT"))
+			error ("can't allocate expression");
+
+		if (!parse_data_expression (&(*expr) -> data.extract_int,
+					    cfile, lose)) {
 			parse_warn ("expecting data expression.");
 			skip_to_semi (cfile);
 			*lose = 1;
-			return (struct expression *)0;
+			expression_dereference
+				(expr, "parse_expression: EXTRACT_INT");
+			return 0;
 		}
 
 		token = next_token (&val, cfile);
 		if (token != COMMA) {
 			parse_warn ("comma expected.");
 			*lose = 1;
-			return (struct expression *)0;
+			return 0;
 		}
 
 		token = next_token (&val, cfile);
 		if (token != NUMBER) {
 			parse_warn ("number expected.");
 			*lose = 1;
-			return (struct expression *)0;
+			return 0;
 		}
-		buf.data.extract_int.width = (struct expression *)0;
 		switch (atoi (val)) {
 		      case 8:
-			buf.op = expr_extract_int8;
+			(*expr) -> op = expr_extract_int8;
 			break;
 
 		      case 16:
-			buf.op = expr_extract_int16;
+			(*expr) -> op = expr_extract_int16;
 			break;
 
 		      case 32:
-			buf.op = expr_extract_int32;
+			(*expr) -> op = expr_extract_int32;
 			break;
 
 		      default:
 			parse_warn ("unsupported integer size %d", atoi (val));
 			*lose = 1;
 			skip_to_semi (cfile);
-			return (struct expression *)0;
+			expression_dereference
+				(expr, "parse_expression: EXTRACT_INT");
+			return 0;
 		}
 
 		token = next_token (&val, cfile);
 		if (token != RPAREN) {
 			parse_warn ("right parenthesis expected.");
 			*lose = 1;
-			return (struct expression *)0;
+			return 0;
 		}
-		goto have_expr;
+		break;
 	
 	      case NUMBER:
-		buf.op = expr_const_int;
-		buf.data.const_int = atoi (val);
-		goto have_expr;
+		if (!expression_allocate (expr,
+					  "parse_expression: NUMBER"))
+			error ("can't allocate expression");
 
+		/* If we're in a numeric context, this should just be a
+		   number, by itself. */
+		if (context == context_numeric) {
+			next_token (&val, cfile);	/* Eat the number. */
+			(*expr) -> op = expr_const_int;
+			(*expr) -> data.const_int = atoi (val);
+			break;
+		}
+
+	      case NUMBER_OR_NAME:
+		(*expr) -> op = expr_const_data;
+		if (!parse_cshl (&(*expr) -> data.const_data, cfile)) {
+			expression_dereference (expr,
+						"parse_expression: cshl");
+			return 0;
+		}
+		break;
+
+		/* Not a valid start to an expression... */
 	      default:
-		return (struct expression *)0;
+		return 0;
+	}
+	return 1;
+}
+
+/* Parse an expression. */
+
+int parse_expression (expr, cfile, lose, context, plhs, binop)
+	struct expression **expr;
+	FILE *cfile;
+	int *lose;
+	enum expression_context context;
+	struct expression **plhs;
+	enum expr_op binop;
+{
+	enum dhcp_token token;
+	char *val;
+	struct expression *rhs = (struct expression *)0, *tmp;
+	struct expression *lhs;
+	enum expr_op next_op;
+
+	/* Consume the left hand side we were passed. */
+	if (plhs) {
+		lhs = *plhs;
+		*plhs = (struct expression *)0;
+	} else
+		lhs = (struct expression *)0;
+
+      new_rhs:
+	if (!parse_non_binary (&rhs, cfile, lose, context)) {
+		/* If we already have a left-hand side, then it's not
+		   okay for there not to be a right-hand side here, so
+		   we need to flag it as an error. */
+		if (lhs) {
+			if (!*lose) {
+				parse_warn ("expecting right-hand side.");
+				*lose = 1;
+				skip_to_semi (cfile);
+			}
+			expression_dereference (&lhs, "parse_expression");
+		}
+		return 0;
 	}
 
-      have_expr:
-	rv = (struct expression *)dmalloc (sizeof (struct expression),
-					   "parse_boolean_expression");
-	if (!rv)
-		error ("No memory for boolean expression.");
-	*rv = buf;
-	return rv;
-}
+	/* At this point, rhs contains either an entire subexpression,
+	   or at least a left-hand-side.   If we do not see a binary token
+	   as the next token, we're done with the expression. */
+
+	token = peek_token (&val, cfile);
+	switch (token) {
+	      case EQUAL:
+		next_op = expr_equal;
+		break;
+
+	      case AND:
+		next_op = expr_and;
+		break;
+
+	      case OR:
+		next_op = expr_or;
+		break;
+
+	      default:
+		next_op = expr_none;
+	}
+
+	/* If we have no lhs yet, we just parsed it. */
+	if (!lhs) {
+		/* If there was no operator following what we just parsed,
+		   then we're done - return it. */
+		if (next_op == expr_none) {
+			*expr = rhs;
+			return 1;
+		}
+		lhs = rhs;
+		rhs = (struct expression *)0;
+		binop = next_op;
+		next_token (&val, cfile);	/* Consume the operator. */
+		goto new_rhs;
+	}
+
+	/* Now, if we didn't find a binary operator, we're done parsing
+	   this subexpression, so combine it with the preceding binary
+	   operator and return the result. */
+	if (next_op == expr_none) {
+		if (!expression_allocate (expr,
+					  "parse_expression: COMBINE"))
+			error ("Can't allocate expression!");
+
+		(*expr) -> op = binop;
+		/* All the binary operators' data union members
+		   are the same, so we'll cheat and use the member
+		   for the equals operator. */
+		(*expr) -> data.equal [0] = lhs;
+		(*expr) -> data.equal [1] = rhs;
+		return 1;
+	}
+
+	/* Eat the operator token - we now know it was a binary operator... */
+	token = next_token (&val, cfile);
+
+	/* If the binary operator we saw previously has a lower precedence
+	   than the next operator, then the rhs we just parsed for that
+	   operator is actually the lhs of the operator with the higher
+	   precedence - to get the real rhs, we need to recurse on the
+	   new operator. */
+ 	if (binop != expr_none &&
+	    op_precedence (binop, next_op) < 0) {
+		tmp = rhs;
+		rhs = (struct expression *)0;
+		if (!parse_expression (&rhs, cfile, lose, op_context (next_op),
+				       &tmp, next_op)) {
+			if (!*lose) {
+				parse_warn ("expecting a subexpression");
+				*lose = 1;
+			}
+			return 0;
+		}
+		next_op = expr_none;
+	}
+
+	/* Now combine the LHS and the RHS using binop. */
+	tmp = (struct expression *)0;
+	if (!expression_allocate (&tmp, "parse_expression: COMBINE2"))
+		error ("No memory for equal precedence combination.");
+	
+	/* Store the LHS and RHS. */
+	tmp -> data.equal [0] = lhs;
+	tmp -> data.equal [1] = rhs;
+	tmp -> op = binop;
+	
+	lhs = tmp;
+	tmp = (struct expression *)0;
+	rhs = (struct expression *)0;
+
+	/* Recursions don't return until we have parsed the end of the
+	   expression, so if we recursed earlier, we can now return what
+	   we got. */
+	if (next_op == expr_none) {
+		*expr = lhs;
+		return 1;
+	}
+
+	binop = next_op;
+	goto new_rhs;
+}	
 
 /* option-statement :== identifier DOT identifier <syntax> SEMI
 		      | identifier <syntax> SEMI
@@ -1459,31 +1630,20 @@ struct executable_statement *parse_option_statement (cfile, lookups,
 	enum statement_op op;
 {
 	char *val;
-	int token;
+	enum dhcp_token token;
 	char *fmt;
 	struct expression *expr = (struct expression *)0;
+	struct expression *tmp;
 	int lose;
 	struct executable_statement *stmt;
+	int ftt = 1;
 
 	token = peek_token (&val, cfile);
 	if (token == SEMI) {
 		/* Eat the semicolon... */
 		token = next_token (&val, cfile);
-		expr = make_const_data (0, 0, 0, 0);
 		goto done;
 	}
-
-	/* See if there's a data expression, and if so, use it rather than
-	   the standard format. */
-	expr = ((struct expression *)parse_data_expression (cfile, &lose));
-
-	/* Found a data expression, but it was bogus? */
-	if (lose)
-		return (struct executable_statement *)0;
-		
-	/* We found one. */
-	if (expr)
-		goto done;
 
 	/* Parse the option data... */
 	do {
@@ -1495,8 +1655,16 @@ struct executable_statement *parse_option_statement (cfile, lookups,
 		for (fmt = option -> format; *fmt; fmt++) {
 			if (*fmt == 'A')
 				break;
-			expr = parse_option_token (cfile, fmt,
-						   expr, uniform, lookups);
+			tmp = expr;
+			if (!parse_option_token (&expr, cfile, fmt,
+						 tmp, uniform, lookups)) {
+				expression_dereference
+					(&tmp, "parse_option_statement");
+				return (struct executable_statement *)0;
+			}
+			if (tmp)
+				expression_dereference
+					(&tmp, "parse_option_statement");
 		}
 		if (*fmt == 'A') {
 			token = peek_token (&val, cfile);
@@ -1508,6 +1676,19 @@ struct executable_statement *parse_option_statement (cfile, lookups,
 		}
 	} while (*fmt == 'A');
 
+#if 0
+	goto done;
+
+      try_expr:
+	/* See if there's a data expression, and if so, use it rather than
+	   the standard format. */
+	expr = parse_data_expression (cfile, &lose);
+
+	/* Found a data expression, but it was bogus? */
+	if (lose)
+		return (struct executable_statement *)0;
+		
+#endif /* 0 */
       done:
 	token = next_token (&val, cfile);
 	if (token != SEMI) {
@@ -1517,12 +1698,16 @@ struct executable_statement *parse_option_statement (cfile, lookups,
 	}
 	stmt = ((struct executable_statement *)
 		dmalloc (sizeof *stmt, "parse_option_statement"));
+	memset (stmt, 0, sizeof *stmt);
 	stmt -> op = op;
-	stmt -> data.option = option_cache (expr, option);
+	if (expr && !option_cache (&stmt -> data.option,
+				   (struct data_string *)0, expr, option))
+		error ("no memory for option cache in parse_option_statement");
 	return stmt;
 }
 
-struct expression *parse_option_token (cfile, fmt, expr, uniform, lookups)
+int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
+	struct expression **rv;
 	FILE *cfile;
 	char *fmt;
 	struct expression *expr;
@@ -1530,8 +1715,8 @@ struct expression *parse_option_token (cfile, fmt, expr, uniform, lookups)
 	int lookups;
 {
 	char *val;
-	int token;
-	struct expression *t;
+	enum dhcp_token token;
+	struct expression *t = (struct expression *)0;
 	unsigned char buf [4];
 	int len;
 	unsigned char *ob;
@@ -1541,21 +1726,20 @@ struct expression *parse_option_token (cfile, fmt, expr, uniform, lookups)
 	      case 'X':
 		token = peek_token (&val, cfile);
 		if (token == NUMBER_OR_NAME || token == NUMBER) {
-			ob = parse_cshl (cfile, &len);
-			return make_concat (expr,
-					    make_const_data (ob, len, 0, 0));
+			if (!expression_allocate (&t, "parse_option_token"))
+				return 0;
+			if (!parse_cshl (&t -> data.const_data, cfile))
+				return 0;
 		} else if (token == STRING) {
 			token = next_token (&val, cfile);
-			return make_concat (expr,
-					    make_const_data ((unsigned char *)
-							     val,
-							     strlen (val),
-							     1, 1));
+			if (!make_const_data (&t, (unsigned char *) val,
+					      strlen (val), 1, 1))
+				error ("No memory for concatenation");
 		} else {
 			parse_warn ("expecting string %s.",
 				    "or hexadecimal data");
 			skip_to_semi (cfile);
-			return (struct expression *)0;
+			return 0;
 		}
 		break;
 		
@@ -1565,24 +1749,23 @@ struct expression *parse_option_token (cfile, fmt, expr, uniform, lookups)
 			parse_warn ("expecting string.");
 			if (token != SEMI)
 				skip_to_semi (cfile);
-			return (struct expression *)0;
+			return 0;
 		}
-		return make_concat (expr,
-				    make_const_data ((unsigned char *)
-						     val, strlen (val), 1, 1));
+		if (!make_const_data (&t, (unsigned char *)val,
+				      strlen (val), 1, 1))
+			error ("No memory for concatenation");
 		break;
 		
 	      case 'I': /* IP address or hostname. */
-		if (lookups)
-			t = parse_ip_addr_or_hostname (cfile, uniform);
-		else {
+		if (lookups) {
+			if (!parse_ip_addr_or_hostname (&t, cfile, uniform))
+				return 0;
+		} else {
 			if (!parse_ip_addr (cfile, &addr))
-				return (struct expression *)0;
-			t = make_const_data (addr.iabuf, addr.len, 0, 1);
+				return 0;
+			if (!make_const_data (&t, addr.iabuf, addr.len, 0, 1))
+				return 0;
 		}
-		if (!t)
-			return (struct expression *)0;
-		return make_concat (expr, t);
 		break;
 		
 	      case 'L': /* Unsigned 32-bit integer... */
@@ -1593,27 +1776,33 @@ struct expression *parse_option_token (cfile, fmt, expr, uniform, lookups)
 			parse_warn ("expecting number.");
 			if (token != SEMI)
 				skip_to_semi (cfile);
-			return (struct expression *)0;
+			return 0;
 		}
 		convert_num (buf, val, 0, 32);
-		return make_concat (expr, make_const_data (buf, 4, 0, 1));
+		if (!make_const_data (&t, buf, 4, 0, 1))
+			return 0;
 		break;
+
 	      case 's':	/* Signed 16-bit integer. */
 	      case 'S':	/* Unsigned 16-bit integer. */
 		token = next_token (&val, cfile);
 		if (token != NUMBER)
 			goto need_number;
 		convert_num (buf, val, 0, 16);
-		return make_concat (expr, make_const_data (buf, 2, 0, 1));
+		if (!make_const_data (&t, buf, 2, 0, 1))
+			return 0;
 		break;
+
 	      case 'b':	/* Signed 8-bit integer. */
 	      case 'B':	/* Unsigned 8-bit integer. */
 		token = next_token (&val, cfile);
 		if (token != NUMBER)
 			goto need_number;
 		convert_num (buf, val, 0, 8);
-		return make_concat (expr, make_const_data (buf, 1, 0, 1));
+		if (!make_const_data (&t, buf, 1, 0, 1))
+			return 0;
 		break;
+
 	      case 'f': /* Boolean flag. */
 		token = next_token (&val, cfile);
 		if (!is_identifier (token)) {
@@ -1621,7 +1810,7 @@ struct expression *parse_option_token (cfile, fmt, expr, uniform, lookups)
 		      bad_flag:
 			if (token != SEMI)
 				skip_to_semi (cfile);
-			return (struct expression *)0;
+			return 0;
 		}
 		if (!strcasecmp (val, "true")
 		    || !strcasecmp (val, "on"))
@@ -1633,12 +1822,21 @@ struct expression *parse_option_token (cfile, fmt, expr, uniform, lookups)
 			parse_warn ("expecting boolean.");
 			goto bad_flag;
 		}
-		return make_concat (expr, make_const_data (buf, 1, 0, 1));
+		if (!make_const_data (&t, buf, 1, 0, 1))
+			return 0;
 		break;
+
 	      default:
 		warn ("Bad format %c in parse_option_param.",
 		      *fmt);
 		skip_to_semi (cfile);
-		return (struct expression *)0;
+		return 0;
 	}
+	if (expr) {
+		if (!make_concat (rv, expr, t))
+			return 0;
+		expression_dereference (&t, "parse_option_token");
+	} else
+		*rv = t;
+	return 1;
 }

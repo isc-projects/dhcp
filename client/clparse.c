@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: clparse.c,v 1.17 1998/10/22 04:52:23 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: clparse.c,v 1.18 1998/11/05 18:38:43 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -51,6 +51,17 @@ static char copyright[] =
 static TIME parsed_time;
 
 struct client_config top_level_config;
+
+u_int32_t default_requested_options [] = {
+	DHO_SUBNET_MASK,
+	DHO_BROADCAST_ADDRESS,
+	DHO_TIME_OFFSET,
+	DHO_ROUTERS,
+	DHO_DOMAIN_NAME,
+	DHO_DOMAIN_NAME_SERVERS,
+	DHO_HOST_NAME,
+	0
+};
 
 /* client-conf-file :== client-declarations EOF
    client-declarations :== <nil>
@@ -84,32 +95,8 @@ int read_client_conf ()
 	top_level_config.initial_interval = 10;
 	top_level_config.bootp_policy = ACCEPT;
 	top_level_config.script_name = "/etc/dhclient-script";
-	top_level_config.requested_options
-		[top_level_config.requested_option_count++] =
-			DHO_SUBNET_MASK;
-	top_level_config.requested_options
-		[top_level_config.requested_option_count++] =
-			DHO_BROADCAST_ADDRESS;
-	top_level_config.requested_options
-		[top_level_config.requested_option_count++] =
-			DHO_TIME_OFFSET;
-	top_level_config.requested_options
-		[top_level_config.requested_option_count++] =
-			DHO_ROUTERS;
-	top_level_config.requested_options
-		[top_level_config.requested_option_count++] =
-			DHO_DOMAIN_NAME;
-	top_level_config.requested_options
-		[top_level_config.requested_option_count++] =
-			DHO_DOMAIN_NAME_SERVERS;
-	top_level_config.requested_options
-		[top_level_config.requested_option_count++] =
-			DHO_HOST_NAME;
-	top_level_config.requested_lease_time = 7200;
-	top_level_config.send_options.dhcp_options [DHO_DHCP_LEASE_TIME].data
-		= (unsigned char *)&top_level_config.requested_lease_time;
-	top_level_config.send_options.dhcp_options [DHO_DHCP_LEASE_TIME].len
-		= sizeof top_level_config.requested_lease_time;
+	top_level_config.requested_options = default_requested_options;
+	top_level_config.requested_lease = 7200;
 
 	if ((cfile = fopen (path_dhclient_conf, "r")) != NULL) {
 		do {
@@ -144,12 +131,6 @@ int read_client_conf ()
 					error ("no memory for client config.");
 				memcpy (config, &top_level_config,
 					sizeof top_level_config);
-				i = DHO_DHCP_LEASE_TIME;
-				config -> send_options.dhcp_options [i].data =
-					(unsigned char *)&config -> requested_lease_time;
-	top_level_config.send_options.dhcp_options [DHO_DHCP_LEASE_TIME].len
-		= sizeof top_level_config.requested_lease_time;
-
 			}
 			ip -> client -> config = config;
 		}
@@ -215,19 +196,17 @@ void parse_client_statement (cfile, ip, config)
 	char *val;
 	struct option *option;
 	struct executable_statement *stmt, **p;
-	enum statement op op;
+	enum statement_op op;
 
 	switch (next_token (&val, cfile)) {
 	      case SEND:
-		p = &config -> on_tranmission;
+		p = &config -> on_transmission;
 		op = send_option_statement;
 	      do_option:
 		token = next_token (&val, cfile);
 		option = parse_option_name (cfile);
-		if (!option) {
-			*lose = 1;
-			return (struct executable_statement *)0;
-		}
+		if (!option)
+			return;
 		stmt = parse_option_statement (cfile, 1, option,
 					       send_option_statement);
 		for (; *p; p = &((*p) -> next))
@@ -271,14 +250,11 @@ void parse_client_statement (cfile, ip, config)
 		return;
 
 	      case REQUEST:
-		config -> requested_option_count =
-			parse_option_list (cfile, config -> requested_options);
+		parse_option_list (cfile, &config -> requested_options);
 		return;
 
 	      case REQUIRE:
-		memset (config -> required_options, 0,
-			sizeof config -> required_options);
-		parse_option_list (cfile, config -> required_options);
+		parse_option_list (cfile, &config -> required_options);
 		return;
 
 	      case TIMEOUT:
@@ -390,13 +366,14 @@ int parse_X (cfile, buf, max)
 /* option-list :== option_name |
    		   option_list COMMA option_name */
 
-int parse_option_list (cfile, list)
+void parse_option_list (cfile, list)
 	FILE *cfile;
-	u_int8_t *list;
+	u_int32_t **list;
 {
 	int ix, i;
 	int token;
 	char *val;
+	pair p = (pair)0, q, r;
 
 	ix = 0;
 	do {
@@ -404,7 +381,7 @@ int parse_option_list (cfile, list)
 		if (!is_identifier (token)) {
 			parse_warn ("expected option name.");
 			skip_to_semi (cfile);
-			return 0;
+			return;
 		}
 		for (i = 0; i < 256; i++) {
 			if (!strcasecmp (dhcp_options [i].name, val))
@@ -413,22 +390,42 @@ int parse_option_list (cfile, list)
 		if (i == 256) {
 			parse_warn ("%s: expected option name.");
 			skip_to_semi (cfile);
-			return 0;
+			return;
 		}
-		list [ix++] = i;
-		if (ix == 256) {
-			parse_warn ("%s: too many options.", val);
-			skip_to_semi (cfile);
-			return 0;
-		}
+		r = new_pair ("parse_option_list");
+		if (!r)
+			error ("can't allocate pair for option code.");
+		r -> car = (caddr_t)i;
+		r -> cdr = (pair)0;
+		if (p)
+			q -> cdr = r;
+		else
+			p = r;
+		q = r;
+		++ix;
 		token = next_token (&val, cfile);
 	} while (token == COMMA);
 	if (token != SEMI) {
 		parse_warn ("expecting semicolon.");
 		skip_to_semi (cfile);
-		return 0;
+		return;
 	}
-	return ix;
+	if (*list)
+		dfree (*list, "parse_option_list");
+	*list = dmalloc (ix * sizeof **list, "parse_option_list");
+	if (!*list)
+		warn ("no memory for option list.");
+	else {
+		ix = 0;
+		for (q = p; q; q = q -> cdr)
+			(*list) [ix++] = (u_int32_t)q -> car;
+		(*list) [ix] = 0;
+	}
+	while (p) {
+		q = p -> cdr;
+		free_pair (p, "parse_option_list");
+		p = q;
+	}
 }
 
 /* interface-declaration :==
@@ -589,7 +586,7 @@ void parse_client_lease_statement (cfile, is_static)
 	/* If the lease declaration didn't include an interface
 	   declaration that we recognized, it's of no use to us. */
 	if (!ip) {
-		free_client_lease (lease);
+		destroy_client_lease (lease);
 		return;
 	}
 
@@ -616,7 +613,7 @@ void parse_client_lease_statement (cfile, is_static)
 				pl -> next = lp -> next;
 			else
 				ip -> client -> leases = lp -> next;
-			free_client_lease (lp);
+			destroy_client_lease (lp);
 			break;
 		}
 	}
@@ -642,13 +639,13 @@ void parse_client_lease_statement (cfile, is_static)
 	   still valid but no longer active. */
 	if (ip -> client -> active) {
 		if (ip -> client -> active -> expiry < cur_time)
-			free_client_lease (ip -> client -> active);
+			destroy_client_lease (ip -> client -> active);
 		else if (ip -> client -> active -> address.len ==
 			 lease -> address.len &&
 			 !memcmp (ip -> client -> active -> address.iabuf,
 				  lease -> address.iabuf,
 				  lease -> address.len))
-			free_client_lease (ip -> client -> active);
+			destroy_client_lease (ip -> client -> active);
 		else {
 			ip -> client -> active -> next =
 				ip -> client -> leases;
@@ -680,6 +677,7 @@ void parse_client_lease_declaration (cfile, lease, ipp)
 	char *val;
 	char *t, *n;
 	struct interface_info *ip;
+	struct option_cache *oc;
 
 	switch (next_token (&val, cfile)) {
 	      case BOOTP:
@@ -727,7 +725,14 @@ void parse_client_lease_declaration (cfile, lease, ipp)
 		return;
 
 	      case OPTION:
-		parse_option_decl (cfile, lease -> options);
+		oc = (struct option_cache *)0;
+		if (parse_option_decl (&oc, cfile)) {
+			/* XXX save_option here ought to account for the
+			   XXX correct option universe, but it doesn't. */
+			save_option (lease -> options.dhcp_hash, oc);
+			option_cache_dereference
+				(&oc, "parse_client_lease_declaration");
+		}
 		return;
 
 	      default:
@@ -742,9 +747,9 @@ void parse_client_lease_declaration (cfile, lease, ipp)
 	}
 }
 
-struct option *parse_option_decl (cfile, options)
+int parse_option_decl (oc, cfile)
+	struct option_cache **oc;
 	FILE *cfile;
-	struct option_data *options;
 {
 	char *val;
 	int token;
@@ -757,10 +762,11 @@ struct option *parse_option_decl (cfile, options)
 	u_int8_t *dp;
 	int len;
 	int nul_term = 0;
+	struct buffer *bp;
 
 	option = parse_option_name (cfile);
 	if (!option)
-		return;
+		return 0;
 
 	/* Parse the option data... */
 	do {
@@ -784,14 +790,14 @@ struct option *parse_option_decl (cfile, options)
 				if (token != STRING) {
 					parse_warn ("expecting string.");
 					skip_to_semi (cfile);
-					return (struct option *)0;
+					return 0;
 				}
 				len = strlen (val);
 				if (hunkix + len + 1 > sizeof hunkbuf) {
 					parse_warn ("option data buffer %s",
 						    "overflow");
 					skip_to_semi (cfile);
-					return (struct option *)0;
+					return 0;
 				}
 				memcpy (&hunkbuf [hunkix], val, len + 1);
 				nul_term = 1;
@@ -800,7 +806,7 @@ struct option *parse_option_decl (cfile, options)
 
 			      case 'I': /* IP address. */
 				if (!parse_ip_addr (cfile, &ip_addr))
-					return (struct option *)0;
+					return 0;
 				len = ip_addr.len;
 				dp = ip_addr.iabuf;
 
@@ -809,7 +815,7 @@ struct option *parse_option_decl (cfile, options)
 					parse_warn ("option data buffer %s",
 						    "overflow");
 					skip_to_semi (cfile);
-					return (struct option *)0;
+					return 0;
 				}
 				memcpy (&hunkbuf [hunkix], dp, len);
 				hunkix += len;
@@ -823,7 +829,7 @@ struct option *parse_option_decl (cfile, options)
 					parse_warn ("expecting number.");
 					if (token != SEMI)
 						skip_to_semi (cfile);
-					return (struct option *)0;
+					return 0;
 				}
 				convert_num (buf, val, 0, 32);
 				len = 4;
@@ -857,7 +863,7 @@ struct option *parse_option_decl (cfile, options)
 				      bad_flag:
 					if (token != SEMI)
 						skip_to_semi (cfile);
-					return (struct option *)0;
+					return 0;
 				}
 				if (!strcasecmp (val, "true")
 				    || !strcasecmp (val, "on"))
@@ -877,7 +883,7 @@ struct option *parse_option_decl (cfile, options)
 				warn ("Bad format %c in parse_option_param.",
 				      *fmt);
 				skip_to_semi (cfile);
-				return (struct option *)0;
+				return 0;
 			}
 		}
 		token = next_token (&val, cfile);
@@ -886,16 +892,25 @@ struct option *parse_option_decl (cfile, options)
 	if (token != SEMI) {
 		parse_warn ("semicolon expected.");
 		skip_to_semi (cfile);
-		return (struct option *)0;
+		return 0;
 	}
 
-	options [option -> code].data =
-		(unsigned char *)malloc (hunkix + nul_term);
-	if (!options [option -> code].data)
+	bp = (struct buffer *)0;
+	if (!buffer_allocate (&bp, hunkix + nul_term, "parse_option_decl"))
+		error ("no memory to store option declaration.");
+	if (!bp -> data)
 		error ("out of memory allocating option data.");
-	memcpy (options [option -> code].data, hunkbuf, hunkix + nul_term);
-	options [option -> code].len = hunkix;
-	return option;
+	memcpy (bp -> data, hunkbuf, hunkix + nul_term);
+	
+	if (!option_cache_allocate (oc, "parse_option_decl"))
+		error ("out of memory allocating option cache.");
+
+	(*oc) -> data.buffer = bp;
+	(*oc) -> data.data = &bp -> data [0];
+	(*oc) -> data.terminated = nul_term;
+	(*oc) -> data.len = hunkix;
+	(*oc) -> option = option;
+	return 1;
 }
 
 void parse_string_list (cfile, lp, multiple)
