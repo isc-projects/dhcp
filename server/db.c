@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: db.c,v 1.66 2001/06/27 00:31:04 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: db.c,v 1.67 2001/07/10 20:36:03 brister Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -616,7 +616,7 @@ static int print_hash_string(FILE *fp, struct class *class)
 
 	if (i == class -> hash_string.len) {
 		errno = 0;
-		fprintf (fp, " \"%.*s\";",
+		fprintf (fp, " \"%.*s\"",
 			 (int)class -> hash_string.len,
 			 class -> hash_string.data);
 		if (errno)
@@ -643,59 +643,63 @@ static int print_hash_string(FILE *fp, struct class *class)
 
 
 	
-
 /* XXXJAB this needs to return non-zero on error. */
 void write_named_billing_class (const char *name, unsigned len,
 				struct class *class)
 {
-	if (class->superclass == 0) {
-		fprintf(db_file, "class \"%s\" {\n", name);
-	} else {
-		fprintf(db_file, "subclass \"%s\"", class->superclass->name);
-		print_hash_string(db_file, class);
-		fprintf(db_file, " {\n");
-	}
-
-	if ((class->flags & CLASS_DECL_DELETED) != 0) {
-		fprintf(db_file, "  deleted;\n");
-	} else {
-		fprintf(db_file, "  dynamic;\n");
-	}
-	
-
-	if (class->lease_limit > 0) {
-		fprintf(db_file, "  lease limit %d;\n", class->lease_limit);
-	}
-
-	if (class->expr != 0) {
-		fprintf(db_file, "  match if ");
-		write_expression(db_file, class->expr, 5, 5, 0);
-	}
-
-	if (class->submatch != 0) {
-		if (class->spawning) {
-			fprintf(db_file, "  spawn ");
+	if (class->flags & CLASS_DECL_DYNAMIC) {
+		numclasseswritten++;
+		if (class->superclass == 0) {
+			fprintf(db_file, "class \"%s\" {\n", name);
 		} else {
-			fprintf(db_file, "  match ");
+			fprintf(db_file, "subclass \"%s\"",
+				class->superclass->name);
+			print_hash_string(db_file, class);
+			fprintf(db_file, " {\n");
+		}
+
+		if ((class->flags & CLASS_DECL_DELETED) != 0) {
+			fprintf(db_file, "  deleted;\n");
+		} else {
+			fprintf(db_file, "  dynamic;\n");
 		}
 	
-		write_expression(db_file, class->submatch, 5, 5, 0);
+		if (class->lease_limit > 0) {
+			fprintf(db_file, "  lease limit %d;\n", class->lease_limit);
+		}
+
+		if (class->expr != 0) {
+			fprintf(db_file, "  match if ");
+			write_expression(db_file, class->expr, 5, 5, 0);
+			fprintf(db_file, ";\n");
+		}
+
+		if (class->submatch != 0) {
+			if (class->spawning) {
+				fprintf(db_file, "  spawn ");
+			} else {
+				fprintf(db_file, "  match ");
+			}
+
+			write_expression(db_file, class->submatch, 5, 5, 0);
+			fprintf(db_file, ";\n");
+		}
+	
+		if (class->statements != 0) {
+			write_statements(db_file, class->statements, 8);
+		}
+
+		/* XXXJAB this isn't right, but classes read in off the leases file
+		   don't get the root group assigned to them (due to clone_group()
+		   call). */
+		if (class->group != 0 && class->group->authoritative != 0) {
+			write_statements (db_file,
+					  class -> group -> statements, 8);
+		}
+	
+		fprintf(db_file, "}\n\n");
 	}
 	
-	if (class->statements != 0) {
-		write_statements(db_file, class->statements, 8);
-	}
-
-	/* XXXJAB this isn't right, but classes read in off the leases file
-	   don't get the root group assigned to them (due to clone_group()
-	   call). */
-	if (class->group != 0 && class->group->authoritative != 0) {
-		write_statements (db_file,
-				  class -> group -> statements, 8);
-	}
-	
-	fprintf(db_file, "}\n\n");
-
 	if (class -> hash != NULL) {	/* yep. recursive. god help us. */
 		class_hash_foreach (class -> hash, write_named_billing_class);
 	}

@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.70 2001/06/27 00:31:13 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.71 2001/07/10 20:36:05 brister Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -56,6 +56,8 @@ struct hash_table *lease_uid_hash;
 struct hash_table *lease_ip_addr_hash;
 struct hash_table *lease_hw_addr_hash;
 struct hash_table *host_name_hash;
+
+int numclasseswritten;
 
 omapi_object_type_t *dhcp_type_host;
 
@@ -1794,17 +1796,17 @@ int write_leases ()
 
 	/* write all the dynamically-created class declarations. */
 	if (collections->classes) {
-		num_written = 0;
+		numclasseswritten = 0;
 		for (colp = collections ; colp ; colp = colp->next) {
 			for (cp = colp->classes ; cp ; cp = cp->nic) {
 				write_named_billing_class(cp->name,
 							  0, cp);
-				++num_written;
 			}
 		}
 
 		/* XXXJAB this number doesn't include subclasses... */ 
-		log_info ("Wrote %d class decls to leases file.", num_written);
+		log_info ("Wrote %d class decls to leases file.",
+			  numclasseswritten);
 	}
 	
 			

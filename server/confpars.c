@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.145 2001/06/27 00:31:03 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.146 2001/07/10 20:36:02 brister Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2029,7 +2029,10 @@ int parse_class_declaration (cp, cfile, group, type)
 				;
 			class_reference (&c -> nic, class, MDL);
 		}
+	} else if (type == 3 && dynamic) {
+		class->flags |= CLASS_DECL_DYNAMIC;
 	}
+		
 	if (cp)				/* should always be 0??? */
 		status = class_reference (cp, class, MDL);
 	class_dereference (&class, MDL);

@@ -50,7 +50,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: omapi.c,v 1.49 2001/06/27 00:31:15 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: omapi.c,v 1.50 2001/07/10 20:36:06 brister Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1762,11 +1762,27 @@ class_set_value (omapi_object_t *h,
 	}
 
 
+	/* note we do not support full expressions via omapi because the
+	   expressions parser needs to be re-done to support parsing from
+	   strings and not just files. */
+	
 	if (!omapi_ds_strcmp (name, "match")) {
 		if (value -> type == omapi_datatype_data ||
 		    value -> type == omapi_datatype_string) {
-			/* XXXJAB support 'match hardware' here. */
-			return ISC_R_INVALIDARG; /* XXX tmp */
+			int minlen = (value -> u.buffer.len > 8 ?
+				      8 : value -> u.buffer.len);
+			
+			if (strncmp("hardware", value -> u.buffer.value,
+				    minlen) == 0) {
+				if (!expression_allocate(&class->submatch,
+							 MDL)) {
+					return ISC_R_NOMEMORY;
+				}
+			
+				class->expr->op = expr_hardware;
+			} else {
+				return ISC_R_INVALIDARG;
+			}
 		} else {
 			return ISC_R_INVALIDARG;
 		}

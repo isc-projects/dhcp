@@ -2390,6 +2390,9 @@ extern struct hash_table *lease_hw_addr_hash;
 
 extern omapi_object_type_t *dhcp_type_host;
 
+extern int numclasseswritten;
+
+
 isc_result_t enter_class PROTO ((struct class *, int, int));
 isc_result_t delete_class PROTO ((struct class *, int));
 isc_result_t enter_host PROTO ((struct host_decl *, int, int));
