@@ -191,7 +191,7 @@ size_t decode_udp_ip_header (interface, buf, bufix, from, data, len)
 	  return -1;
 
   /* Is it to the port we're serving? */
-  if (udp -> uh_dport != server_port && udp -> uh_dport != server_port + 1)
+  if (udp -> uh_dport != server_port)
 	  return -1;
 
   /* Is it to this IP address? */
