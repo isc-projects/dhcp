@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.100.2.18 2000/06/24 07:59:31 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.100.2.19 2000/06/26 23:15:10 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -985,7 +985,7 @@ void ack_lease (packet, lease, offer, when, msg)
 
 	/* Try to find a matching host declaration for this lease. */
 	if (!lease -> host) {
-		struct host_decl *hp;
+		struct host_decl *hp = (struct host_decl *)0;
 
 		/* Try to find a host_decl that matches the client
 		   identifier or hardware address on the packet, and
