@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.32 1996/09/02 21:16:55 mellon Exp $ Copyright 1995, 1996 The Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.33 1996/09/02 21:37:57 mellon Exp $ Copyright 1995, 1996 The Internet Software Consortium.";
 #endif
 
 static char copyright[] =
@@ -88,8 +88,6 @@ int main (argc, argv, envp)
 	int pid;
 	char pbuf [20];
 	int daemon = 1;
-#else
-	int daemon = 0;
 #endif
 
 	/* Initially, log errors to stderr as well as to syslogd. */
@@ -129,7 +127,9 @@ int main (argc, argv, envp)
 			daemon = 0;
 #endif
 		} else if (!strcmp (argv [i], "-d")) {
+#ifndef DEBUG
 			daemon = 0;
+#endif
 			log_perror = -1;
 		} else if (!strcmp (argv [i], "-cf")) {
 			if (++i == argc)
@@ -163,6 +163,7 @@ int main (argc, argv, envp)
 	else
 		log_perror = 0;
 
+#ifndef DEBUG
 	if (daemon) {
 		/* Become a daemon... */
 		if ((pid = fork ()) < 0)
@@ -173,7 +174,6 @@ int main (argc, argv, envp)
 		pid = setsid ();
 	}
 
-#ifndef DEBUG
 	/* Read previous pid file. */
 	if ((i = open (path_dhcpd_pid, O_RDONLY)) >= 0) {
 		status = read (i, pbuf, (sizeof pbuf) - 1);
