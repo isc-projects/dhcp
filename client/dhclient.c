@@ -56,7 +56,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhclient.c,v 1.47 1998/03/15 21:04:52 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.48 1998/03/16 06:08:41 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -449,10 +449,10 @@ void dhcpack (packet)
 	/* If we're not receptive to an offer right now, or if the offer
 	   has an unrecognizable transaction id, then just drop it. */
 	if (packet -> interface -> client -> xid != packet -> raw -> xid ||
-	    (packet -> interface -> client -> hw_address.hlen !=
+	    (packet -> interface -> hw_address.hlen !=
 	     packet -> raw -> hlen) ||
-	    (memcmp (packet -> interface -> client -> hw_address.haddr,
-		     packet -> raw -> chaddr))) {
+	    (memcmp (packet -> interface -> hw_address.haddr,
+		     packet -> raw -> chaddr, packet -> raw -> hlen))) {
 		debug ("DHCPACK in wrong transaction.");
 		return;
 	}
@@ -682,7 +682,11 @@ void dhcpoffer (packet)
 	/* If we're not receptive to an offer right now, or if the offer
 	   has an unrecognizable transaction id, then just drop it. */
 	if (ip -> client -> state != S_SELECTING ||
-	    packet -> interface -> client -> xid != packet -> raw -> xid) {
+	    packet -> interface -> client -> xid != packet -> raw -> xid ||
+	    (packet -> interface -> hw_address.hlen !=
+	     packet -> raw -> hlen) ||
+	    (memcmp (packet -> interface -> hw_address.haddr,
+		     packet -> raw -> chaddr, packet -> raw -> hlen))) {
 		debug ("%s in wrong transaction.", name);
 		return;
 	}
@@ -881,7 +885,11 @@ void dhcpnak (packet)
 
 	/* If we're not receptive to an offer right now, or if the offer
 	   has an unrecognizable transaction id, then just drop it. */
-	if (packet -> interface -> client -> xid != packet -> raw -> xid) {
+	if (packet -> interface -> client -> xid != packet -> raw -> xid ||
+	    (packet -> interface -> hw_address.hlen !=
+	     packet -> raw -> hlen) ||
+	    (memcmp (packet -> interface -> hw_address.haddr,
+		     packet -> raw -> chaddr, packet -> raw -> hlen))) {
 		debug ("DHCPNAK in wrong transaction.");
 		return;
 	}
