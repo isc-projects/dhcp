@@ -94,7 +94,9 @@ int main (argc, argv, envp)
 #endif /* !NO_PUTENV */
 
 #ifndef DEBUG
+#ifndef SYSLOG_4_2
 	setlogmask (LOG_UPTO (LOG_INFO));
+#endif
 
 	/* Become a daemon... */
 	if ((pid = fork ()) < 0)
