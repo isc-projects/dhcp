@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dispatch.c,v 1.27 1996/11/08 20:06:29 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dispatch.c,v 1.27.2.1 1997/09/16 23:08:51 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -380,15 +380,15 @@ void dispatch ()
 	int max = 0;
 	int count;
 
-	FD_ZERO (&r);
 	FD_ZERO (&w);
 	FD_ZERO (&x);
 
 	do {
+		FD_ZERO (&r);
+
 		/* Set up the read mask. */
 		for (l = interfaces; l; l = l -> next) {
 			FD_SET (l -> rfdesc, &r);
-			FD_SET (l -> rfdesc, &x);
 			if (l -> rfdesc > max)
 				max = l -> rfdesc;
 		}
