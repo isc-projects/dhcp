@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.102 2001/03/17 00:47:33 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.103 2001/04/09 00:41:45 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2517,7 +2517,7 @@ int parse_if_statement (result, cfile, lose)
 		return 0;
 	}
 #if defined (DEBUG_EXPRESSION_PARSE)
-	print_expression ("if condition", if_condition);
+	print_expression ("if condition", (*result) -> data.ie.expr);
 #endif
 	if (parenp) {
 		token = next_token (&val, (unsigned *)0, cfile);
