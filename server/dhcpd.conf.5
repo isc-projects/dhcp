@@ -28,7 +28,7 @@
 .\" see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
 .\" ``http://www.nominum.com''.
 .\"
-.\" $Id: dhcpd.conf.5,v 1.63.2.19 2004/06/10 17:59:53 dhankins Exp $
+.\" $Id: dhcpd.conf.5,v 1.63.2.20 2004/08/26 17:23:07 dhankins Exp $
 .\"
 .TH dhcpd.conf 5
 .SH NAME
@@ -1798,6 +1798,7 @@ attempt to update the client's PTR record if the client supplies an
 FQDN that should be placed in the PTR record using the fqdn option.
 If forward updates are enabled, the DHCP server will still honor the
 setting of the \fBclient-updates\fR flag.
+.RE
 .PP
 The
 .I dynamic-bootp-lease-cutoff
