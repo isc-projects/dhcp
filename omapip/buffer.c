@@ -91,8 +91,8 @@ static void trace_connection_input_input (trace_type_t *ttype,
 				   omapi_connection_object_t, lp);
 
 	if (!c) {
-		log_error ("trace connection input: no connection index %d",
-			   connect_index);
+		log_error ("trace connection input: no connection index %ld",
+			   (long int)connect_index);
 		return;
 	}
 
