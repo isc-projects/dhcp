@@ -47,6 +47,21 @@ if [ "$sysname" = "" ]; then
   exit 1;
 fi
 
+if [ \( $sysname = "bsdos" -o $sysname = "netbsd" -o $sysname = "freebsd" \) \
+	-a \( ! -f /var/db/dhcpd.leases \) -a \( -f /etc/dhcpd.leases \) ];
+  then
+    echo
+    echo "                   !!!WARNING!!!"
+    echo
+    echo DHCPD is now storing the DHCP lease database in /var/db
+    echo instead of /etc.   Before you start using this new version
+    echo of dhcpd, you must move your dhcpd.leases file from /etc
+    echo to /var/db!
+    echo
+    echo "                   !!!WARNING!!!"
+    echo
+fi
+
 echo "System Type: $sysname"
 
 sed -e "/^##\+\+${sysname}\+\+/,/^##--${sysname}--/s/^#//" \
