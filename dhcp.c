@@ -52,6 +52,9 @@ static unsigned char dhcp_message [256];
 void dhcp (packet)
 	struct packet *packet;
 {
+	if (!locate_network (packet))
+		return;
+
 	switch (packet -> packet_type) {
 	      case DHCPDISCOVER:
 		dhcpdiscover (packet);

@@ -51,9 +51,7 @@ void bootp (packet)
 	struct packet *packet;
 {
 	int result;
-	struct host_decl *hp = find_hosts_by_haddr (packet -> raw -> htype,
-						    packet -> raw -> chaddr,
-						    packet -> raw -> hlen);
+	struct host_decl *hp;
 	struct host_decl *host = (struct host_decl *)0;
 	struct packet outgoing;
 	struct dhcp_packet raw;
@@ -68,6 +66,13 @@ void bootp (packet)
 	note ("BOOTREQUEST from %s", print_hw_addr (packet -> raw -> htype,
 						    packet -> raw -> hlen,
 						    packet -> raw -> chaddr));
+
+	if (!locate_network (packet))
+		return;
+
+	hp = find_hosts_by_haddr (packet -> raw -> htype,
+				  packet -> raw -> chaddr,
+				  packet -> raw -> hlen);
 
 	lease = find_lease (packet);
 
@@ -224,7 +229,8 @@ void bootp (packet)
 
 #ifdef USE_FALLBACK
 		result = send_fallback (&fallback_interface,
-					packet, &raw, outgoing.packet_length,
+					(struct packet *)0,
+					&raw, outgoing.packet_length,
 					raw.siaddr, &to, &hto);
 		if (result < 0)
 			warn ("send_fallback: %m");
