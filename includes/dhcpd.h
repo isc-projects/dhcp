@@ -1473,13 +1473,14 @@ struct protocol *add_protocol PROTO ((const char *, int,
 void remove_protocol PROTO ((struct protocol *));
 
 /* hash.c */
-struct hash_table *new_hash PROTO ((hash_reference, hash_dereference));
+struct hash_table *new_hash PROTO ((hash_reference, hash_dereference, int));
 void add_hash PROTO ((struct hash_table *,
 		      const unsigned char *, unsigned, void *));
 void delete_hash_entry PROTO ((struct hash_table *,
 			       const unsigned char *, unsigned));
 void *hash_lookup PROTO ((struct hash_table *,
 			  const unsigned char *, unsigned));
+int casecmp (const void *s, const void *t, unsigned len);
 
 /* tables.c */
 extern struct universe dhcp_universe;
@@ -1707,6 +1708,10 @@ int icmp_echorequest PROTO ((struct iaddr *));
 isc_result_t icmp_echoreply PROTO ((omapi_object_t *));
 
 /* dns.c */
+#if defined (NSUPDATE)
+isc_result_t find_tsig_key (ns_tsig_key **, const char *);
+void tkey_free (ns_tsig_key **);
+#endif
 isc_result_t enter_dns_zone (struct dns_zone *);
 isc_result_t dns_zone_lookup (struct dns_zone **, const char *);
 isc_result_t enter_tsig_key (struct tsig_key *);

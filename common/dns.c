@@ -34,16 +34,15 @@
  * SUCH DAMAGE.
  *
  * This software has been written for the Internet Software Consortium
- * by Ted Lemon in cooperation with Vixie Enterprises and Nominum, Inc.
+ * by Ted Lemon in cooperation with Nominum, Inc.
  * To learn more about the Internet Software Consortium, see
- * ``http://www.isc.org/''.  To learn more about Vixie Enterprises,
- * see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
+ * ``http://www.isc.org/''.  To learn more about Nominum, Inc., see
  * ``http://www.nominum.com''.
  */
 
 #ifndef lint
 static char copyright[] =
-"$Id: dns.c,v 1.18 2000/03/17 03:59:01 mellon Exp $ Copyright (c) 2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dns.c,v 1.19 2000/03/18 02:15:36 mellon Exp $ Copyright (c) 2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -129,6 +128,60 @@ static char copyright[] =
 struct hash_table *tsig_key_hash;
 struct hash_table *dns_zone_hash;
 
+#if defined (NSUPDATE)
+isc_result_t find_tsig_key (ns_tsig_key **key, const char *zname)
+{
+	struct dns_zone *zone;
+	isc_result_t status;
+	ns_tsig_key *tkey;
+
+	zone = (struct dns_zone *)0;
+	status = dns_zone_lookup (&zone, zname);
+	if (status != ISC_R_SUCCESS)
+		return status;
+	if (!zone -> key) {
+		dns_zone_dereference (&zone, MDL);
+		return ISC_R_KEY_UNKNOWN;
+	}
+	
+	if ((!zone -> key -> name ||
+	     strlen (zone -> key -> name) > NS_MAXDNAME) ||
+	    (!zone -> key -> algorithm ||
+	     strlen (zone -> key -> algorithm) > NS_MAXDNAME) ||
+	    (!zone -> key -> key.len)) {
+		dns_zone_dereference (&zone, MDL);
+		return ISC_R_INVALIDKEY;
+	}
+	tkey = dmalloc (sizeof *tkey, MDL);
+	if (!tkey) {
+	      nomem:
+		dns_zone_dereference (&zone, MDL);
+		return ISC_R_NOMEMORY;
+	}
+	memset (tkey, 0, sizeof *tkey);
+	tkey -> data = dmalloc (zone -> key -> key.len, MDL);
+	if (!tkey -> data) {
+		dfree (tkey, MDL);
+		goto nomem;
+	}
+	strcpy (tkey -> name, zone -> key -> name);
+	strcpy (tkey -> alg, zone -> key -> algorithm);
+	memcpy (tkey -> data,
+		zone -> key -> key.data, zone -> key -> key.len);
+	tkey -> len = zone -> key -> key.len;
+	*key = tkey;
+	return ISC_R_SUCCESS;
+}
+
+void tkey_free (ns_tsig_key **key)
+{
+	if ((*key) -> data)
+		dfree ((*key) -> data, MDL);
+	dfree ((*key), MDL);
+	*key = (ns_tsig_key *)0;
+}
+#endif
+
 isc_result_t enter_dns_zone (struct dns_zone *zone)
 {
 	struct dns_zone *tz;
@@ -142,7 +195,7 @@ isc_result_t enter_dns_zone (struct dns_zone *zone)
 	} else {
 		dns_zone_hash =
 			new_hash ((hash_reference)dns_zone_reference,
-				  (hash_dereference)dns_zone_dereference);
+				  (hash_dereference)dns_zone_dereference, 1);
 		if (!dns_zone_hash)
 			return ISC_R_NOMEMORY;
 	}
@@ -176,7 +229,7 @@ isc_result_t enter_tsig_key (struct tsig_key *tkey)
 	} else {
 		tsig_key_hash =
 			new_hash ((hash_reference)tsig_key_reference,
-				  (hash_dereference)tsig_key_dereference);
+				  (hash_dereference)tsig_key_dereference, 1);
 		if (!tsig_key_hash)
 			return ISC_R_NOMEMORY;
 	}

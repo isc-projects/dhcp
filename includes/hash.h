@@ -58,6 +58,8 @@ struct hash_table {
 	struct hash_bucket *buckets [DEFAULT_HASH_SIZE];
 	hash_reference referencer;
 	hash_dereference dereferencer;
+	int (*cmp) (const void *, const void *, size_t);
+	int (*do_hash) (const unsigned char *, unsigned, unsigned);
 };
 
 struct named_hash {

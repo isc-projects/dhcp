@@ -92,6 +92,8 @@ static const char *text[ISC_R_NRESULTS] = {
 	"key conflict",				/* 44 */
 	"parse error(s) occurred",		/* 45 */
 	"no key specified",			/* 46 */
+	"zone TSIG key not known",		/* 47 */
+	"invalid TSIG key",			/* 48 */
 };
 
 const char *isc_result_totext (isc_result_t result)

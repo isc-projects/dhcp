@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.28 2000/03/17 04:00:31 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.29 2000/03/18 02:15:52 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -72,7 +72,7 @@ isc_result_t enter_host (hd, dynamicp, commit)
 	struct executable_statement *esp;
 
 	if (!host_name_hash) {
-		host_name_hash = new_hash (0, 0);
+		host_name_hash = new_hash (0, 0, 0);
 		if (!host_name_hash)
 			log_fatal ("Can't allocate host name hash");
 	} else {
@@ -113,7 +113,7 @@ isc_result_t enter_host (hd, dynamicp, commit)
 
 	if (hd -> interface.hlen) {
 		if (!host_hw_addr_hash) {
-			host_hw_addr_hash = new_hash (0, 0);
+			host_hw_addr_hash = new_hash (0, 0, 0);
 			if (!host_hw_addr_hash)
 				log_fatal ("Can't allocate host/hw hash");
 		} else
@@ -167,7 +167,7 @@ isc_result_t enter_host (hd, dynamicp, commit)
 		/* If there's no uid hash, make one; otherwise, see if
 		   there's already an entry in the hash for this host. */
 		if (!host_uid_hash) {
-			host_uid_hash = new_hash (0, 0);
+			host_uid_hash = new_hash (0, 0, 0);
 			if (!host_uid_hash)
 				log_fatal ("Can't allocate host/uid hash");
 			hp = (struct host_decl *)0;
@@ -489,7 +489,7 @@ isc_result_t supersede_group (struct group_object *group, int writep)
 			}
 		}
 	} else {
-		group_name_hash = new_hash (0, 0);
+		group_name_hash = new_hash (0, 0, 0);
 		t = (struct group_object *)0;
 	}
 
@@ -534,17 +534,17 @@ void new_address_range (low, high, subnet, pool)
 
 	/* Initialize the hash table if it hasn't been done yet. */
 	if (!lease_uid_hash) {
-		lease_uid_hash = new_hash (0, 0);
+		lease_uid_hash = new_hash (0, 0, 0);
 		if (!lease_uid_hash)
 			log_fatal ("Can't allocate lease/uid hash");
 	}
 	if (!lease_ip_addr_hash) {
-		lease_ip_addr_hash = new_hash (0, 0);
+		lease_ip_addr_hash = new_hash (0, 0, 0);
 		if (!lease_uid_hash)
 			log_fatal ("Can't allocate lease/ip hash");
 	}
 	if (!lease_hw_addr_hash) {
-		lease_hw_addr_hash = new_hash (0, 0);
+		lease_hw_addr_hash = new_hash (0, 0, 0);
 		if (!lease_uid_hash)
 			log_fatal ("Can't allocate lease/hw hash");
 	}

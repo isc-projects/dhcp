@@ -1,5 +1,5 @@
 #if !defined(lint) && !defined(SABER)
-static const char rcsid[] = "$Id: res_update.c,v 1.3 2000/02/03 04:33:03 mellon Exp $";
+static const char rcsid[] = "$Id: res_update.c,v 1.4 2000/03/18 02:15:49 mellon Exp $";
 #endif /* not lint */
 
 /*
@@ -75,8 +75,11 @@ static int	nscopy(struct sockaddr_in *, const struct sockaddr_in *, int);
 static int	nsprom(struct sockaddr_in *, const struct in_addr *, int);
 static void	dprintf(const char *, ...);
 
+void tkey_free (ns_tsig_key **);
+int find_tsig_key (ns_tsig_key **, const char *);
+
 ns_rcode
-res_nupdate(res_state statp, ns_updrec *rrecp_in, ns_tsig_key *key) {
+res_nupdate(res_state statp, ns_updrec *rrecp_in) {
 	ns_updrec *rrecp;
 	u_char answer[PACKETSZ], packet[2*PACKETSZ];
 	struct zonegrp *zptr, tgrp;
@@ -84,6 +87,7 @@ res_nupdate(res_state statp, ns_updrec *rrecp_in, ns_tsig_key *key) {
 	unsigned n;
 	struct sockaddr_in nsaddrs[MAXNS];
 	ns_rcode rcode;
+	ns_tsig_key *key;
 
 	/* Make sure all the updates are in the same zone, and find out
 	   what zone they are in. */
@@ -144,11 +148,14 @@ res_nupdate(res_state statp, ns_updrec *rrecp_in, ns_tsig_key *key) {
 				zptr->z_nsaddrs, zptr->z_nscount);
 
 	/* Send the update and remember the result. */
-	if (key != NULL)
+	key = (ns_tsig_key *)0;
+	if (!find_tsig_key (&key, zptr->z_origin)) {
 		n = res_nsendsigned(statp, packet, n, key,
 				    answer, sizeof answer);
-	else
+		tkey_free (&key);
+	} else {
 		n = res_nsend(statp, packet, n, answer, sizeof answer);
+	}
 	if (n < 0) {
 		rcode = -1;
 		goto undone;

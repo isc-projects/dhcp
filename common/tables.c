@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tables.c,v 1.38 2000/03/17 03:59:02 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tables.c,v 1.39 2000/03/18 02:15:37 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -883,7 +883,7 @@ void initialize_common_option_spaces()
 	dhcp_universe.store_length = putUChar;
 	dhcp_universe.index = universe_count++;
 	universes [dhcp_universe.index] = &dhcp_universe;
-	dhcp_universe.hash = new_hash (0, 0);
+	dhcp_universe.hash = new_hash (0, 0, 1);
 	if (!dhcp_universe.hash)
 		log_fatal ("Can't allocate dhcp option hash table.");
 	for (i = 0; i < 256; i++) {
@@ -909,7 +909,7 @@ void initialize_common_option_spaces()
 	nwip_universe.store_length = putUChar;
 	nwip_universe.index = universe_count++;
 	universes [nwip_universe.index] = &nwip_universe;
-	nwip_universe.hash = new_hash (0, 0);
+	nwip_universe.hash = new_hash (0, 0, 1);
 	if (!nwip_universe.hash)
 		log_fatal ("Can't allocate dhcp option hash table.");
 	for (i = 0; i < 256; i++) {

@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.79 2000/03/17 03:59:02 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.80 2000/03/18 02:15:37 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -856,6 +856,11 @@ int evaluate_dns_expression (result, packet, lease, in_options,
 	      case expr_divide:
 	      case expr_remainder:
 		log_error ("Numeric opcode in evaluate_dns_expression: %d",
+		      expr -> op);
+		return 0;
+
+	      case expr_function:
+		log_error ("Function opcode in evaluate_dns_expression: %d",
 		      expr -> op);
 		return 0;
 
@@ -2135,7 +2140,7 @@ int evaluate_numeric_expression (result, packet, lease,
 
 		/* Do the update and record the error code, if there was
 		   an error; otherwise set it to NOERROR. */
-		*result = minires_nupdate (&res, ISC_LIST_HEAD (uq), NULL);
+		*result = minires_nupdate (&res, ISC_LIST_HEAD (uq));
 		status = 1;
 
 		print_dns_status ((int)*result, &uq);
