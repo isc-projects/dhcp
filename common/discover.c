@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: discover.c,v 1.38 2001/02/17 21:16:44 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: discover.c,v 1.39 2001/03/17 02:11:27 tamino Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -157,8 +157,38 @@ void discover_interfaces (state)
 		log_fatal ("Can't create addrlist socket");
 
 	/* Get the interface configuration information... */
+
+#ifdef SIOCGIFCONF_NULL_BUF_GIVES_CORRECT_LEN
+
+	/* linux will only tell us how long a buffer it wants if we give it
+	 * a null buffer first. So, do a dry run to figure out the length.
+	 * 
+	 * XXX this code is duplicated from below because trying to fold
+	 * the logic into the if statement and goto resulted in excesssive
+	 * obfuscation. The intent is that unless you run Linux you shouldn't
+	 * have to deal with this. */
+
+	ic.ifc_len = 0;
+	ic.ifc_ifcu.ifcu_buf = (caddr_t)NULL;
+
+	i = ioctl(sock, SIOCGIFCONF, &ic);
+	if (i < 0)
+		log_fatal ("ioctl: SIOCGIFCONF: %m");
+
+	ic.ifc_ifcu.ifcu_buf = dmalloc ((size_t)ic.ifc_len, MDL);
+	if (!ic.ifc_ifcu.ifcu_buf)
+		log_fatal ("Can't allocate SIOCGIFCONF buffer.");
+
+#else /* SIOCGIFCONF_NULL_BUF_GIVES_CORRECT_LEN */
+
+	/* otherwise, we just feed it a starting size, and it'll tell us if
+	 * it needs more */
+
 	ic.ifc_len = sizeof buf;
 	ic.ifc_ifcu.ifcu_buf = (caddr_t)buf;
+
+#endif /* SIOCGIFCONF_NULL_BUF_GIVES_CORRECT_LEN */
+
       gifconf_again:
 	i = ioctl(sock, SIOCGIFCONF, &ic);
 
