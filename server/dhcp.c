@@ -87,10 +87,13 @@ void dhcpdiscover (packet)
 	struct lease *lease = find_lease (packet, packet -> shared_network);
 	struct host_decl *hp;
 
-	note ("DHCPDISCOVER from %s",
+	note ("DHCPDISCOVER from %s via %s",
 	      print_hw_addr (packet -> raw -> htype,
 			     packet -> raw -> hlen,
-			     packet -> raw -> chaddr));
+			     packet -> raw -> chaddr),
+	      packet -> raw -> giaddr.s_addr
+	      ? inet_ntoa (packet -> raw -> giaddr)
+	      : packet -> interface -> name);
 
 	/* Sourceless packets don't make sense here. */
 	if (!packet -> shared_network) {
@@ -165,11 +168,15 @@ void dhcprequest (packet)
 				     ? subnet -> shared_network
 				     : (struct shared_network *)0));
 
-	note ("DHCPREQUEST for %s from %s",
+	note ("DHCPREQUEST for %s from %s via %s",
 	      piaddr (cip),
 	      print_hw_addr (packet -> raw -> htype,
 			     packet -> raw -> hlen,
-			     packet -> raw -> chaddr));
+			     packet -> raw -> chaddr),
+	      packet -> raw -> giaddr.s_addr
+	      ? inet_ntoa (packet -> raw -> giaddr)
+	      : packet -> interface -> name);
+
 
 	/* If a client on a given network wants to request a lease on
 	   an address on a different network, NAK it.   If the Requested
@@ -249,11 +256,15 @@ void dhcprelease (packet)
 {
 	struct lease *lease = find_lease (packet, packet -> shared_network);
 
-	note ("DHCPRELEASE of %s from %s",
+	note ("DHCPRELEASE of %s from %s via %s",
 	      inet_ntoa (packet -> raw -> ciaddr),
 	      print_hw_addr (packet -> raw -> htype,
 			     packet -> raw -> hlen,
-			     packet -> raw -> chaddr));
+			     packet -> raw -> chaddr),
+	      packet -> raw -> giaddr.s_addr
+	      ? inet_ntoa (packet -> raw -> giaddr)
+	      : packet -> interface -> name);
+
 
 	/* If we found a lease, release it. */
 	if (lease) {
@@ -276,11 +287,15 @@ void dhcpdecline (packet)
 		cip.len = 0;
 	}
 
-	note ("DHCPDECLINE on %s from %s",
+	note ("DHCPDECLINE on %s from %s via %s",
 	      piaddr (cip),
 	      print_hw_addr (packet -> raw -> htype,
 			     packet -> raw -> hlen,
-			     packet -> raw -> chaddr));
+			     packet -> raw -> chaddr),
+	      packet -> raw -> giaddr.s_addr
+	      ? inet_ntoa (packet -> raw -> giaddr)
+	      : packet -> interface -> name);
+
 
 	/* If we found a lease, mark it as unusable and complain. */
 	if (lease) {
@@ -293,7 +308,6 @@ void dhcpinform (packet)
 {
 	note ("DHCPINFORM from %s",
 	      inet_ntoa (packet -> raw -> ciaddr));
-
 }
 
 void nak_lease (packet, cip)
@@ -354,11 +368,16 @@ void nak_lease (packet, cip)
 	raw.op = BOOTREPLY;
 
 	/* Report what we're sending... */
-	note ("DHCPNAK on %s to %s",
+	note ("DHCPNAK on %s to %s via %s",
 	      piaddr (*cip),
 	      print_hw_addr (packet -> raw -> htype,
 			     packet -> raw -> hlen,
-			     packet -> raw -> chaddr));
+			     packet -> raw -> chaddr),
+	      packet -> raw -> giaddr.s_addr
+	      ? inet_ntoa (packet -> raw -> giaddr)
+	      : packet -> interface -> name);
+
+
 
 #ifdef DEBUG_PACKET
 	dump_packet (packet);
@@ -717,14 +736,17 @@ void ack_lease (packet, lease, offer, when)
 	raw.op = BOOTREPLY;
 
 	/* Say what we're doing... */
-	note ("%s on %s to %s",
+	note ("%s on %s to %s via %s",
 	      (offer
 	       ? (offer == DHCPACK ? "DHCPACK" : "DHCPOFFER")
 	       : "BOOTREPLY"),
 	      piaddr (lease -> ip_addr),
 	      print_hw_addr (packet -> raw -> htype,
 			     packet -> raw -> hlen,
-			     packet -> raw -> chaddr));
+			     packet -> raw -> chaddr),
+	      packet -> raw -> giaddr.s_addr
+	      ? inet_ntoa (packet -> raw -> giaddr)
+	      : packet -> interface -> name);
 
 	/* Set up the hardware address... */
 	hto.htype = packet -> raw -> htype;
