@@ -34,7 +34,11 @@ struct executable_statement {
 		prepend_option_statement,
 		send_option_statement,
 		statements_statement,
-		on_statement
+		on_statement,
+		switch_statement,
+		case_statement,
+		default_statement,
+		set_statement
 	} op;
 	union {
 		struct {
@@ -49,9 +53,21 @@ struct executable_statement {
 		struct option_cache *append;
 		struct executable_statement *statements;
 		struct {
-			enum { expiry, commit, release } evtype;
+			int evtypes;
+#			define ON_COMMIT  1
+#			define ON_EXPIRY  2
+#			define ON_RELEASE 3
 			struct executable_statement *statements;
 		} on;
+		struct {
+			struct expression *expr;
+			struct executable_statement *statements;
+		} s_switch;
+		struct expression *c_case;
+		struct {
+			char *name;
+			struct expression *expr;
+		} set;
 	} data;
 };
 
