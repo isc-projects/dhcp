@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.53.2.16 2001/10/26 15:47:53 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.53.2.17 2001/10/26 19:55:28 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1582,7 +1582,6 @@ isc_result_t dhcp_failover_set_service_state (dhcp_failover_state_t *state)
 	if (state -> service_state != not_responding) {
 		switch (state -> partner.state) {
 		      case partner_down:
-		      case recover:
 			state -> service_state = not_responding;
 			state -> nrr = " (recovering)";
 			break;
