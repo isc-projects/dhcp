@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: discover.c,v 1.33 2000/09/29 18:12:16 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: discover.c,v 1.34 2000/10/10 22:31:41 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -68,6 +68,14 @@ void (*bootp_packet_handler) PROTO ((struct interface_info *,
 omapi_object_type_t *dhcp_type_interface;
 
 OMAPI_OBJECT_ALLOC (interface, struct interface_info, dhcp_type_interface)
+
+isc_result_t interface_initialize (omapi_object_t *ipo,
+				   const char *file, int line)
+{
+	struct interface_info *ip = (struct interface_info *)ipo;
+	ip -> rfdesc = ip -> wfdesc = -1;
+	return ISC_R_SUCCESS;
+}
 
 /* Use the SIOCGIFCONF ioctl to get a list of all the attached interfaces.
    For each interface that's of type INET and not the loopback interface,
@@ -103,7 +111,8 @@ void discover_interfaces (state)
 			 interface_set_value, interface_get_value,
 			 interface_destroy, interface_signal_handler,
 			 interface_stuff_values, 0, 0, 0, 0, 0, 0,
-			 sizeof (struct interface_info));
+			 sizeof (struct interface_info),
+			 interface_initialize);
 		if (status != ISC_R_SUCCESS)
 			log_fatal ("Can't create interface object type: %s",
 				   isc_result_totext (status));
@@ -568,6 +577,8 @@ void discover_interfaces (state)
 	for (tmp = interfaces; tmp; tmp = tmp -> next) {
 		/* not if it's been registered before */
 		if (tmp -> flags & INTERFACE_RUNNING)
+			continue;
+		if (tmp -> rfdesc == -1)
 			continue;
 		status = omapi_register_io_object ((omapi_object_t *)tmp,
 						   if_readsocket, 0,
