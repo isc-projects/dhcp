@@ -493,9 +493,9 @@ RREEFFEERREENNCCEE:: AALLLLOOWW aanndd DDEENNYY
         aallllooww bboooottpp;;
         ddeennyy bboooottpp;;
 
-       The  uunnkknnoowwnn--cclliieennttss flag is used to tell dhcpd whether or
-       not to  respond  to  bootp  queries.   Bootp  queries  are
-       aalllloowwed by default.
+       The  bboooottpp  flag  is  used to tell dhcpd whether or not to
+       respond to bootp queries.  Bootp queries  are  aalllloowwed  by
+       default.
 
        TThhee _b_o_o_t_i_n_g kkeeyywwoorrdd
 

@@ -148,9 +148,9 @@ dhcpd(8)                                                 dhcpd(8)
        or database files in a non-production environment.
 
 CCOONNFFIIGGUURRAATTIIOONN
-       The  syntax  of the dhcpd.conf(8) file is discussed seper-
+       The  syntax  of the dhcpd.conf(5) file is discussed seper-
        ately.   This section should be used as an overview of the
-       configuration process, and the dhcpd.conf(8) documentation
+       configuration process, and the dhcpd.conf(5) documentation
        should be consulted for detailed reference information.
 
 
@@ -286,7 +286,8 @@ dhcpd(8)                                                 dhcpd(8)
        ent  domain  and  use  a  different  name  server might be
        declared as follows:
 
-            host haagen hardware ethernet 08:00:2b:4c:59:23 {
+            host haagen {
+              hardware ethernet 08:00:2b:4c:59:23;
               fixed-address 239.252.197.9;
               filename "/tftpboot/haagen.boot";
               option domain-name-servers 192.5.5.1;
@@ -309,7 +310,6 @@ AAUUTTHHOORR
        provided by the Internet Software  Corporation.   Informa-
        tion  about  the Internet Software Consortium can be found
        at hhttttpp::////wwwwww..iisscc..oorrgg//iisscc..
-
 
 
 
