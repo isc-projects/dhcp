@@ -1,6 +1,6 @@
 	    Internet Software Consortium DHCP Distribution
-		   Version 3, Beta 2, Patchlevel 9
-			   October 15, 2000
+		   Version 3, Beta 2, Patchlevel 10
+			  November 29, 2000
 
 			    Release Notes
 
@@ -48,6 +48,43 @@ Measurement Systems, and Brian Murrell at BC Tel Advanced
 Communications.  I'd like to express my thanks to all of these good
 people here, both for working on the code and for prodding me into
 improving it.
+
+		Changes since 3.0 Beta 2 Patchlevel 9
+
+- Fix DHCP client handling of vendor encapsulated options.
+
+- Fix a bug in the handling of relay agent information options introduced
+  in patchlevel 9.
+
+- Stash agent options on client leases by default, and use the stashed
+  options at renewal time.
+
+- Add the ability to test the client's binding state in the client
+  configuration language.
+
+- Fix a core dump in the DNS update code.
+
+- Fix some expression evaluation bugs that were causing updates to be
+  done when no client hostname was received.
+
+- Fix expression evaluation debugging printfs.
+
+- Teach pretty_print_option to print options in option spaces other than
+  the DHCP option space.
+
+- Add a warning message if the RHS of a not is not boolean.
+
+- Never select for more than a day, because some implementations of
+  select will just fail if the timeout is too long (!).
+
+- Fix a case where a DHCPDISCOVER from an unknown network would be
+  silently dropped.
+
+- Fix a bug where if a client requested an IP address for which a different
+  client had the lease, the DHCP server would reallocate it anyway.
+
+- Fix the DNS update code so that if the client changes its name, the DNS
+  will be correctly updated.
 
 		Changes since 3.0 Beta 2 Patchlevel 8
 
