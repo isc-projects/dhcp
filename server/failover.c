@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.50 2001/04/20 19:58:42 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.51 2001/05/01 20:02:10 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -4491,7 +4491,14 @@ dhcp_failover_process_update_done (dhcp_failover_state_t *state,
 		break;
 
 	      case recover:
-		if (state -> me.stos + state -> mclt > cur_time) {
+		/* Wait for MCLT to expire before moving to recover_done,
+		   except that if both peers come up in recover, there is
+		   no point in waiting for MCLT to expire - this probably
+		   indicates the initial startup of a newly-configured
+		   failover pair. */
+		if (state -> me.stos + state -> mclt > cur_time &&
+		    state -> partner.state != recover &&
+		    state -> partner.state != recover_done) {
 			dhcp_failover_set_state (state, recover_wait);
 			add_timeout ((int)(state -> me.stos + state -> mclt),
 				     dhcp_failover_recover_done,
