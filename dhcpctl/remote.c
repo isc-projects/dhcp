@@ -338,6 +338,9 @@ isc_result_t dhcpctl_remote_destroy (omapi_object_t *h,
 	if (p -> handle)
 		omapi_object_dereference ((omapi_object_t **)&p -> handle,
 					  file, line);
+	if (p -> rtype)
+		omapi_typed_data_dereference ((omapi_typed_data_t **)&p->rtype,
+					      file, line);
 	return ISC_R_SUCCESS;
 }
 
