@@ -460,8 +460,7 @@ static isc_result_t make_dst_key (DST_KEY **dst_key, omapi_object_t *a) {
 	if (status == ISC_R_SUCCESS) {
 		if ((algorithm -> value -> type == omapi_datatype_data ||
 		     algorithm -> value -> type == omapi_datatype_string) &&
-		    strncasecmp ((unsigned char *)
-				 algorithm -> value -> u.buffer.value,
+		    strncasecmp ((char *)algorithm -> value -> u.buffer.value,
 		                 NS_TSIG_ALG_HMAC_MD5 ".",
 		                 algorithm -> value -> u.buffer.len) == 0) {
 			algorithm_id = KEY_HMAC_MD5;
