@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.175 2001/01/04 00:15:50 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.176 2001/01/08 08:23:21 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -531,7 +531,9 @@ void dhcprequest (packet, ms_nulltp, ip_lease)
 				goto out;
 			}
 			/* Otherwise, ignore it. */
-			log_info ("%s: ignored (not authoritative).", msgbuf);
+			log_info ("%s: ignored (%s).", msgbuf,
+				  (subnet
+				   ? "not authoritative" : "unknown subnet"));
 			goto out;
 		}
 
