@@ -83,9 +83,9 @@ enclosed in double quotes, or a series of octets specified in
 hexadecimal, seperated by colons.   For example:
 .nf
 .sp 1
-	option client-identifier "CLIENT-FOO";
+	option dhcp-client-identifier "CLIENT-FOO";
 or
-	option client-identifier 43:4c:49:45:54:2d:46:4f:4f;
+	option dhcp-client-identifier 43:4c:49:45:54:2d:46:4f:4f;
 .fi
 .PP
 The documentation for the various options mentioned below is taken
@@ -562,6 +562,7 @@ these options in the dhcp server, specify the option space name,
 "agent", followed by a period, followed by the option name.   It isn't
 useful to specify these options to be sent, nor is it useful to
 reference them at all in the client.
+.PP
 .B option \fBagent.circuit-id\fR \fIdata-string\fR\fB;\fR
 .RS 0.25i
 .PP
@@ -574,7 +575,7 @@ current draft allows for for the possibility of standardizing the
 format in the future.
 .RE
 .PP
-.B option \fBagent.circuit-id\fR \fIdata-string\fR\fB;\fR
+.B option \fBagent.remote-id\fR \fIdata-string\fR\fB;\fR
 .RS 0.25i
 .PP
 The remote-id suboption encodes information about the remote host end
@@ -584,6 +585,192 @@ and similar things.   In principal, the meaning is not well-specified,
 and it should generally be assumed to be an opaque object that is
 administratively guaranteed to be unique to a particular remote end of
 a circuit.
+.SH DEFINING NEW OPTIONS
+The Internet Software Consortium DHCP client and server provide the
+capability to define new options.   Each DHCP option has a name, a
+code, and a structure.   The name is used by you to refer to the
+option.   The code is a number, used by the DHCP server and client to
+refer to an option.   The structure describes what the contents of an
+option looks like.
+.PP
+To define a new option, you need to choose a name for it that is not
+in use for some other option - for example, you can't use "host-name"
+because the DHCP protocol already defines a host-name option, which is
+documented earlier in this manual page.   If an option name doesn't
+appear in this manual page, you can use it, but it's probably a good
+idea to put some kind of unique string at the beginning so you can be
+sure that future options don't take your name.   For example, you
+might define an option, "local-host-name", feeling some confidence
+that no official DHCP option name will ever start with "local".
+.PP
+Once you have chosen a name, you must choose a code.  For site-local
+options, all codes between 128 and 254 are reserved for DHCP options,
+so you can pick any one of these.  In practice, some vendors have
+interpreted the protocol rather loosely and have used option code
+values greater than 128 themselves.   There's no real way to avoid
+this problem, but it's not likely to cause too much trouble in
+practice.
+.PP
+The structure of an option is simply the format in which the option
+data appears.   The ISC DHCP server currently supports a few simple
+types, like integers, booleans, strings and IP addresses, and it also
+supports the ability to define arrays of single types or arrays of
+fixed sequences of types.
+.PP
+New options are declared as follows:
+.PP
+.B option
+.I new-name
+.B code
+.I new-code
+.B =
+.I definition
+.B ;
+.PP
+The values of
+.I new-name
+and
+.I new-code
+should be the name you have chosen for the new option and the code you
+have chosen.   The
+.I definition
+should be the definition of the structure of the option.
+.PP
+The following simple option type definitions are supported:
+.PP
+.B BOOLEAN
+.PP
+.B option
+.I new-name
+.B code
+.I new-code
+.B =
+.B boolean
+.B ;
+.PP
+An option of type boolean is a flag with a value of either on or off
+(or true or false).   So an example use of the boolean type would be:
+.nf
+
+	option use-zephyr code 180 = boolean;
+	option use-zephyr on;
+
+.fi
+.B INTEGER
+.PP
+.B option
+.I new-name
+.B code
+.I new-code
+.B =
+.I sign
+.B integer
+.I width
+.B ;
+.PP
+The \fIsign\fR token should either be blank, \fIunsigned\fR
+or \fIsigned\fR.   The width can be either 8, 16 or 32, and refers to
+the number of bits in the integer.   So for example, the following two
+lines show a definition of the sql-connection-max option and its use:
+.nf
+
+	option sql-connection-max code 192 = unsigned integer 16;
+	option sql-connection-max 1536;
+
+.fi
+.B IP-ADDRESS
+.PP
+.B option
+.I new-name
+.B code
+.I new-code
+.B =
+.B ip-address
+.B ;
+.PP
+An option whose structure is an IP address can be expressed either as
+a domain name or as a dotted quad.  So the following is an example use
+of the ip-address type:
+.nf
+
+	option sql-server-address code 193 = ip-address;
+	option sql-server-address sql.example.com;
+
+.fi
+.PP
+.B TEXT
+.PP
+.B option
+.I new-name
+.B code
+.I new-code
+.B =
+.B text
+.B ;
+.PP
+An option whose type is text will encode an ASCII text string.   For
+example:
+.nf
+
+	option sql-default-connection-name code 194 = text;
+	option sql-default-connection-name "PRODZA";
+
+.fi
+.PP
+.B DATA STRING
+.PP
+.B option
+.I new-name
+.B code
+.I new-code
+.B =
+.B string
+.B ;
+.PP
+An option whose type is a data string is essentially just a collection
+of bytes, and can be specified either as quoted text, like the text
+type, or as a list of hexadecimal contents seperated by colons whose
+values must be between 0 and FF.   For example:
+.nf
+
+	option sql-identification-token code 195 = string;
+	option sql-identification-token 17:23:19:a6:42:ea:99:7c:22;
+
+.fi
+.PP
+.B ARRAYS
+.PP
+Options can contain arrays of any of the above types except for the
+text and data string types, which aren't currently supported in
+arrays.   An example of an array definition is as follows:
+.nf
+
+	option kerberos-servers code 200 = array of ip-address;
+	option kerberos-servers 10.20.10.1, 10.20.11.1;
+
+.fi
+.B RECORDS
+.PP
+Options can also contain data structures consisting of a sequence of
+data types, which is sometimes called a record type.   For example:
+.nf
+
+	option contrived-001 code 201 = { boolean, integer 32, text };
+	option contrived-001 on 1772 "contrivance";
+
+.fi
+It's also possible to have options that are arrays of records, for
+example:
+.nf
+
+	option new-static-routes code 201 = array of {
+		ip-address, ip-address, ip-address, integer 8 };
+	option static-routes
+		10.0.0.0 255.255.255.0 net-0-rtr.example.com 1,
+		10.0.1.0 255.255.255.0 net-1-rtr.example.com 1,
+		10.2.0.0 255.255.224.0 net-2-0-rtr.example.com 3;
+
+.fi	
 .SH SEE ALSO
 dhcpd.conf(5), dhcpd.leases(5), dhclient.conf(5), dhcp-eval(5), dhcpd(8),
 dhclient(8), RFC2132, RFC2131, draft-ietf-dhc-agent-options-??.txt.
