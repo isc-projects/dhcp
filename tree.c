@@ -73,7 +73,7 @@ struct tree_cache *tree_cache (tree)
 	tc = new_tree_cache ("tree_cache");
 	if (!tc)
 		return 0;
-	tc -> value = (char *)0;
+	tc -> value = (unsigned char *)0;
 	tc -> len = tc -> buf_size = 0;
 	tc -> timeout = 0;
 	tc -> tree = tree;
