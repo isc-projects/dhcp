@@ -49,9 +49,9 @@ extern int h_errno;
 #include <net/if_dl.h>
 
 /* Varargs stuff... */
-#include <varargs.h>
-#define VA_DOTDOTDOT va_alist
-#define VA_start(list, last) va_start (list)
+#include <stdarg.h>
+#define VA_DOTDOTDOT ...
+#define VA_start(list, last) va_start (list, last)
 
 #ifndef _PATH_DHCPD_PID
 #define _PATH_DHCPD_PID	"/var/run/dhcpd.pid"
