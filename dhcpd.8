@@ -37,7 +37,7 @@
 .\" Enterprises, see ``http://www.vix.com''.
 .TH dhcpd 8
 .SH NAME
-dhcpd - Dynamic Host Configuration Protocol server
+dhcpd - Dynamic Host Configuration Protocol Server
 .SH SYNOPSIS
 .B dhcpd
 [
@@ -48,17 +48,21 @@ dhcpd - Dynamic Host Configuration Protocol server
 .B -f
 ]
 [
+.B -d
+]
+[
 .I if0
 [
 .I ...ifN
 ]
 ]
 .SH DESCRIPTION
-dhcpd(8) implements the Dynamic Host Configuration Protocol (DHCP) and
-the Internet Bootstrap Protocol (BOOTP).  DHCP allows hosts on a
-TCP/IP network to request and be assigned IP addresses, and also to
-discover information about the network to which they are attached.
-BOOTP provides similar but much more limited functionality.
+The Internet Software Consortium DHCP Server, dhcpd, implements the
+Dynamic Host Configuration Protocol (DHCP) and the Internet Bootstrap
+Protocol (BOOTP).  DHCP allows hosts on a TCP/IP network to request
+and be assigned IP addresses, and also to discover information about
+the network to which they are attached.  BOOTP provides similar
+functionality, with certain restrictions.
 .SH OPERATION
 .PP
 The DHCP protocol allows a host which is unknown to the network
@@ -69,15 +73,15 @@ enters them into the dhcpd.conf(5) file.
 .PP
 On startup, dhcpd reads the
 .IR dhcpd.conf
-file and keeps the list of available addresses on each subnet in
-memory.  When a host requests an address using the DHCP protocol,
-dhcpd allocates an address for it.  Each such host is assigned a
-lease, which expires after an amount of time chosen by the
-administrator (by default, one day).  As leases expire, the hosts to
-which they are assigned are expected to renew the leases if they wish
-to continue to use the addresses.   Once a lease has expired, the host
-to which that lease is assigned is no longer permitted to use the IP
-address assigned to it.
+file and stores a list of available addresses on each subnet in
+memory.  When a client requests an address using the DHCP protocol,
+dhcpd allocates an address for it.  Each client is assigned a lease,
+which expires after an amount of time chosen by the administrator (by
+default, one day).  Before leases expire, the clients to which leases
+are assigned are expected to renew them in order to continue to use
+the addresses.  Once a lease has expired, the client to which that
+lease was assigned is no longer permitted to use the leased IP
+address.
 .PP
 In order to keep track of leases across system reboots and server
 restarts, dhcpd keeps a list of leases it has assigned in the
@@ -100,40 +104,55 @@ the middle of this process, whichever dhcpd.leases file remains will
 contain all the lease information, so there is no need for a special
 crash recovery process.
 .PP
-BOOTP support is also provided by this server.   Unlike DHCP, the
-BOOTP protocol requires that the server know the hardware address of
-the client that is to be booted.   The network administrator must
-determine that address, allocate an IP address for the client, and
-enter that information into the dhcpd.conf file.
+BOOTP support is also provided by this server.  Unlike DHCP, the BOOTP
+protocol does not provide a protocol for recovering
+dynamically-assigned addresses once they are no longer needed.   It is
+still possible to dynamically assign addresses to BOOTP clients, but
+some administrative process for reclaiming addresses is required.   By
+default, leases are granted to BOOTP clients in perpetuity, although
+the network administrator may set an earlier cutoff date or a shorter
+lease length for BOOTP leases if that makes sense.
+.PP
+BOOTP clients may also be served in the old standard way, which is to
+simply provide a declaration in the dhcpd.conf file for each
+BOOTP client, permanently assigning an address to each client.
 .PP
 Whenever changes are made to the dhcpd.conf file, dhcpd must be
 restarted.   To restart dhcpd, send a SIGTERM (signal 15) to the
 process ID contained in
-.IR /dhcpd.pid ,
-and then re-invoke dhcpd.
-
+.IR RUNDIR/dhcpd.pid ,
+and then re-invoke dhcpd.  Because the DHCP server database is not as
+lightweight as a BOOTP database, dhcpd does not automatically restart
+itself when it sees a change to the dhcpd.conf file.
 .SH COMMAND LINE
 .PP
-dhcpd normally identifies all interfaces on the system which are up,
-and listens on each interface.   If possible, point-to-point
-interfaces and the loopback interface are eliminated, but on some
-systems this is not possible.   For this reason, the interfaces on
-which dhcp should listen may be explicitly specified on the command
-line.
+The names of the network interfaces on which dhcpd should listen for
+broadcasts may be specified on the command line.  This should be done
+on systems where dhcpd is unable to identify non-broadcast interfaces,
+but should not be required on other systems.  If no interface names
+are specified on the command line dhcpd will identify all network
+interfaces which are up, elimininating non-broadcast interfaces if
+possible, and listen for DHCP broadcasts on each interface.
 .PP
-dhcpd normally listens on port 67, which is the BOOTP Server Port
-(the DHCP and BOOTP protocols both use this port).   If desired, dhcpd
-may be invoked with the
+If dhcpd should listen on a port other than the standard (port 67),
+the
 .B -p
-flag, followed by a port number, so as to provide DHCP service on a
-different port.   This is mostly useful for debugging purposes.
+flag may used.  It should be followed by the udp port number on which
+dhcpd should listen.  This is mostly useful for debugging purposes.
 .PP
-On some System-V systems, it may be desirable to run dhcp from
-/etc/inittab.   If so, dhcpd should be invoked with the
+To run dhcpd as a foreground process, rather than allowing it to run
+as a daemon in the background, the
 .B -f
-flag, which causes dhcpd to run in the foreground; otherwise, dhcpd
-automatically detaches itself from the process group that started it
-and runs in the background.
+flag should be specified.  This is useful when running dhcpd under a
+debugger, or when running it out of inittab on System V systems.
+.PP
+To have dhcpd log to the standard error descriptor, specify the
+.B -d
+flag.  This can be useful for debugging, and also at sites where a
+complete log of all dhcp activity must be kept but syslogd is not
+reliable or otherwise cannot be used.   Normally, dhcpd will log all
+output using the syslog(3) function with the log facility set to
+LOG_DAEMON.
 .SH CONFIGURATION
 The syntax of the dhcpd.conf(8) file is discussed seperately.   This
 section should be used as an overview of the configuration process,
@@ -149,16 +168,18 @@ hosts as they boot.   Thus, a very simple configuration providing DHCP
 support might look like this:
 .nf
 .sp 1
-	subnet 239.252.197.0 netmask 255.255.255.0
+	subnet 239.252.197.0 netmask 255.255.255.0 {
 	  range 239.252.197.10 239.252.197.250;
+        }
 .fi
 .PP
 Multiple address ranges may be specified like this:
 .nf
 .sp 1
-	subnet 239.252.197.0 netmask 255.255.255.0
-	  range 239.252.197.10 239.252.197.107
+	subnet 239.252.197.0 netmask 255.255.255.0 {
+	  range 239.252.197.10 239.252.197.107;
 	  range 239.252.197.113 239.252.197.250;
+	}
 .fi
 .PP
 If a subnet will only be provided with BOOTP service and no dynamic
@@ -185,10 +206,11 @@ length, and a maximum lease length.   These are specified as clauses
 to the subnet command:
 .nf
 .sp 1
-	subnet 239.252.197.0 netmask 255.255.255.0
-	  range 239.252.197.10 239.252.197.107
-	  default-lease-time 600
+	subnet 239.252.197.0 netmask 255.255.255.0 {
+	  range 239.252.197.10 239.252.197.107;
+	  default-lease-time 600;
 	  max-lease-time 7200;
+	|
 .fi
 .PP
 This particular subnet declaration specifies a default lease time of
@@ -209,9 +231,10 @@ the server, that file's name must be specified.   A simple bootp
 client declaration might look like this:
 .nf
 .sp 1
-	host haagen hardware ethernet 08:00:2b:4c:59:23
-	  fixed-address 239.252.197.9
+	host haagen hardware ethernet 08:00:2b:4c:59:23 {
+	  fixed-address 239.252.197.9;
 	  filename "/tftpboot/haagen.boot";
+	}
 .fi
 .SH Options
 DHCP (and also BOOTP with Vendor Extensions) provide a mechanism
@@ -228,29 +251,31 @@ take precedence.   An reasonably complete DHCP configuration might
 look something like this:
 .nf
 .sp 1
-	subnet 239.252.197.0 netmask 255.255.255.0
-	  range 239.252.197.10 239.252.197.250
-	  default-lease-time 600 max-lease-time 7200
-	  option subnet-mask 255.255.255.0
-	  option broadcast-address 239.252.197.255
-	  option routers 239.252.197.1
-	  option domain-name-servers 239.252.197.2, 239.252.197.3
+	subnet 239.252.197.0 netmask 255.255.255.0 {
+	  range 239.252.197.10 239.252.197.250;
+	  default-lease-time 600 max-lease-time 7200;
+	  option subnet-mask 255.255.255.0;
+	  option broadcast-address 239.252.197.255;
+	  option routers 239.252.197.1;
+	  option domain-name-servers 239.252.197.2, 239.252.197.3;
 	  option domain-name "isc.org";
+	}
 .fi
 .PP
 A bootp host on that subnet that needs to be in a different domain and
 use a different name server might be declared as follows:
 .nf
 .sp 1
-	host haagen hardware ethernet 08:00:2b:4c:59:23
-	  fixed-address 239.252.197.9
-	  filename "/tftpboot/haagen.boot"
-	  option domain-name-servers 192.5.5.1
+	host haagen hardware ethernet 08:00:2b:4c:59:23 {
+	  fixed-address 239.252.197.9;
+	  filename "/tftpboot/haagen.boot";
+	  option domain-name-servers 192.5.5.1;
 	  option domain-name "vix.com";
+	}
 .fi
 .PP
-A complete list of DHCP Options and their syntaxes is provided in
-dhcpd.conf(5).
+A more complete description of the dhcpd.conf file syntax is provided
+in dhcpd.conf(5).
 .SH FILES
 .B ETCDIR/dhcpd.conf, DBDIR/dhcpd.leases, RUNDIR/dhcpd.pid,
 .B DBDIR/dhcpd.leases~.
