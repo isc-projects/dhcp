@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.192.2.7 2001/05/31 19:57:23 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.192.2.8 2001/06/01 19:00:43 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -511,7 +511,7 @@ void dhcprequest (packet, ms_nulltp, ip_lease)
 		if ((lease -> binding_state == FTS_FREE ||
 		     lease -> binding_state == FTS_BACKUP) &&
 		    !lease_mine_to_reallocate (lease)) {
-			log_debug ("%s: expired", msgbuf);
+			log_debug ("%s: lease owned by peer", msgbuf);
 			goto out;
 		}
 
@@ -3053,15 +3053,11 @@ int find_lease (struct lease **lp,
 		      (unsigned)(ip_lease -> hardware_addr.hlen - 1))))) {
 		/* If we're not doing failover, the only state in which
 		   we can allocate this lease to the client is FTS_FREE.
-		   If we are doing failover, things are more complicated. */
-		if (
-#if !defined (FAILOVER_PROTOCOL)
-			(ip_lease -> binding_state != FTS_FREE &&
-			 ip_lease -> binding_state != FTS_BACKUP)
-#else
-			!lease_mine_to_reallocate (ip_lease)
-#endif
-			) {
+		   If we are doing failover, things are more complicated.
+		   If the lease is free or backup, we let the caller decide
+		   whether or not to give it out. */
+		if (ip_lease -> binding_state != FTS_FREE &&
+		    ip_lease -> binding_state != FTS_BACKUP) {
 #if defined (DEBUG_FIND_LEASE)
 			log_info ("rejecting lease for requested address.");
 #endif
