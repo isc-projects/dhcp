@@ -215,47 +215,47 @@ dhcpd.conf(5)()                                   dhcpd.conf(5)()
        or
             option client-identifier 43:4c:49:45:54:2d:46:4f:4f
 
-       The documentation for the various options mentioned below is taken
-       from the latest IETF draft document on DHCP options.
+       The documentation for the various options mentioned  below
+       is  taken  from  the  latest  IETF  draft document on DHCP
+       options.
 
-       ooppttiioonn
-       ssuubbnneett--mmaasskk
-       _i_p_-_a_d_d_r_e_s_s
+       ooppttiioonn ssuubbnneett--mmaasskk _i_p_-_a_d_d_r_e_s_s
 
-       The subnet mask option specifies the client's subnet mask as per RFC
-       950.
+       The subnet mask option specifies the client's subnet  mask
+       as per RFC 950.
 
-       ooppttiioonn
-       ttiimmee--ooffffsseett
-       _i_n_t_3_2
+       ooppttiioonn ttiimmee--ooffffsseett _i_n_t_3_2
 
-       The time-offset option specifies the offset of the client's subnet in
-       seconds from Coordinated Universal Time (UTC).
+       The   time-offset  option  specifies  the  offset  of  the
+       client's subnet in seconds from Coordinated Universal Time
+       (UTC).
 
-       ooppttiioonn
-       rroouutteerrss
-       _i_p_-_a_d_d_r_e_s_s
-       [,
-       _i_p_-_a_d_d_r_e_s_s
-       _._._.
-       ]
+       ooppttiioonn rroouutteerrss _i_p_-_a_d_d_r_e_s_s [, _i_p_-_a_d_d_r_e_s_s _._._.  ]
 
-       The routers option specifies a list of IP addresses for routers on the
-       client's subnet.  Routers should be listed in order of preference.
+       The  routers  option  specifies a list of IP addresses for
+       routers on the client's subnet.  Routers should be  listed
+       in order of preference.
 
-       ooppttiioonn
-       ttiimmee--sseerrvveerrss
-       _i_p_-_a_d_d_r_e_s_s
-       [,
-       _i_p_-_a_d_d_r_e_s_s
-       _._._.
-       ]
+       ooppttiioonn ttiimmee--sseerrvveerrss _i_p_-_a_d_d_r_e_s_s [, _i_p_-_a_d_d_r_e_s_s _._._.  ]
 
-       The time-server option specifies a list of RFC 868 time servers
-       available to the client.  Servers should be listed in order of
-       preference.
+       The  time-server  option  specifies a list of RFC 868 time
+       servers available to the client.  Servers should be listed
+       in order of preference.
 
-       ooppttiioonn
+       ooppttiioonn nnaammee--sseerrvveerrss _i_p_-_a_d_d_r_e_s_s [, _i_p_-_a_d_d_r_e_s_s _._._.  ]
+
+       The  name-servers  option specifies a list of IEN 116 name
+       servers available to the client.  Servers should be listed
+       in order of preference.
+
+       ooppttiioonn ddoommaaiinn--nnaammee--sseerrvveerrss _i_p_-_a_d_d_r_e_s_s [, _i_p_-_a_d_d_r_e_s_s _._._.  ]
+
+       The domain-name-servers option specifies a list of  Domain
+       Name  System  (STD 13, RFC 1035) name servers available to
+       the client.  Servers should be listed in order of  prefer-
+       ence.
+
+       ooppttiioonn lloogg--sseerrvveerrss _i_p_-_a_d_d_r_e_s_s [, _i_p_-_a_d_d_r_e_s_s _._._.  ]
 
 
 
@@ -268,60 +268,60 @@ dhcpd.conf(5)()                                   dhcpd.conf(5)()
 dhcpd.conf(5)()                                   dhcpd.conf(5)()
 
 
-       nnaammee--sseerrvveerrss
-       _i_p_-_a_d_d_r_e_s_s
-       [,
-       _i_p_-_a_d_d_r_e_s_s
-       _._._.
-       ]
+       The  log-server option specifies a list of MIT-LCS UDP log
+       servers available to the client.  Servers should be listed
+       in order of preference.
 
-       The name-servers option specifies a list of IEN 116 name servers
-       available to the client.  Servers should be listed in order of
-       preference.
+       ooppttiioonn ccooookkiiee--sseerrvveerrss _i_p_-_a_d_d_r_e_s_s [, _i_p_-_a_d_d_r_e_s_s _._._.  ]
 
-       ooppttiioonn
-       ddoommaaiinn--nnaammee--sseerrvveerrss
-       _i_p_-_a_d_d_r_e_s_s
-       [,
-       _i_p_-_a_d_d_r_e_s_s
-       _._._.
-       ]
+       The  cookie  server  option  specifies  a  list of RFC 865
+       cookie servers available to the client.  Servers should be
+       listed in order of preference.
 
-       The domain-name-servers option specifies a list of Domain Name System
-       (STD 13, RFC 1035) name servers available to the client.  Servers
-       should be listed in order of preference.
+       ooppttiioonn llpprr--sseerrvveerrss _i_p_-_a_d_d_r_e_s_s [, _i_p_-_a_d_d_r_e_s_s _._._.  ]
 
-       ooppttiioonn
-       lloogg--sseerrvveerrss
-       _i_p_-_a_d_d_r_e_s_s
-       [,
-       _i_p_-_a_d_d_r_e_s_s
-       _._._.
-       ]
+       The  LPR  server  option specifies a list of RFC 1179 line
+       printer servers available to the client.   Servers  should
+       be listed in order of preference.
 
-       The log-server option specifies a list of MIT-LCS UDP log servers
-       available to the client.  Servers should be listed in order of
-       preference.
+       ooppttiioonn iimmpprreessss--sseerrvveerrss _i_p_-_a_d_d_r_e_s_s [, _i_p_-_a_d_d_r_e_s_s _._._.  ]
 
-       ooppttiioonn
-       ccooookkiiee--sseerrvveerrss
-       _i_p_-_a_d_d_r_e_s_s
-       [,
-       _i_p_-_a_d_d_r_e_s_s
-       _._._.
-       ]
+       The  impress-server  option  specifies  a  list  of Imagen
+       Impress servers available to the client.   Servers  should
+       be listed in order of preference.
 
-       The cookie server option specifies a list of RFC 865 cookie
-       servers available to the client.  Servers should be listed in order
-       of preference.
+       ooppttiioonn  rreessoouurrccee--llooccaattiioonn--sseerrvveerrss _i_p_-_a_d_d_r_e_s_s [, _i_p_-_a_d_d_r_e_s_s
+       _._._.  ]
 
-       ooppttiioonn
-       llpprr--sseerrvveerrss
-       _i_p_-_a_d_d_r_e_s_s
-       [,
-       _i_p_-_a_d_d_r_e_s_s
-       _._._.
-       ]
+       This option specifies a list of RFC 887 Resource  Location
+       servers available to the client.  Servers should be listed
+       in order of preference.
+
+       ooppttiioonn hhoosstt--nnaammee _s_t_r_i_n_g
+
+       This option specifies the name of the  client.   The  name
+       may or may not be qualified with the local domain name (it
+       is preferable to use the domain-name option to specify the
+       domain  name).   See  RFC  1035 for character set restric-
+       tions.
+
+       ooppttiioonn bboooott--ssiizzee _u_i_n_t_1_6
+
+       This option specifies the length in  512-octet  blocks  of
+       the default boot image for the client.
+
+       ooppttiioonn mmeerriitt--dduummpp _s_t_r_i_n_g
+
+       This option specifies the path-name of a file to which the
+       client's core image should be  dumped  in  the  event  the
+       client  crashes.   The  path  is  formatted as a character
+       string consisting of characters from the NVT ASCII charac-
+       ter set.
+
+       ooppttiioonn ddoommaaiinn--nnaammee _s_t_r_i_n_g
+
+       This  option  specifies the domain name that client should
+       use when resolving hostnames via the Domain Name System.
 
 
 
@@ -334,60 +334,60 @@ dhcpd.conf(5)()                                   dhcpd.conf(5)()
 dhcpd.conf(5)()                                   dhcpd.conf(5)()
 
 
-       The LPR server option specifies a list of RFC 1179 line printer
-       servers available to the client.  Servers should be listed in order
-       of preference.
+       ooppttiioonn sswwaapp--sseerrvveerr _i_p_-_a_d_d_r_e_s_s
 
-       ooppttiioonn
-       iimmpprreessss--sseerrvveerrss
-       _i_p_-_a_d_d_r_e_s_s
-       [,
-       _i_p_-_a_d_d_r_e_s_s
-       _._._.
-       ]
+       This specifies the IP address of the client's swap server.
 
-       The impress-server option specifies a list of Imagen Impress servers
-       available to the client.  Servers should be listed in order of
-       preference.
+       ooppttiioonn rroooott--ppaatthh _s_t_r_i_n_g
 
-       ooppttiioonn
-       rreessoouurrccee--llooccaattiioonn--sseerrvveerrss
-       _i_p_-_a_d_d_r_e_s_s
-       [,
-       _i_p_-_a_d_d_r_e_s_s
-       _._._.
-       ]
+       This  option  specifies  the  path-name  that contains the
+       client's root disk.  The path is formatted as a  character
+       string consisting of characters from the NVT ASCII charac-
+       ter set.
 
-       This option specifies a list of RFC 887 Resource Location
-       servers available to the client.  Servers should be listed in order
-       of preference.
+       ooppttiioonn iipp--ffoorrwwaarrddiinngg _f_l_a_g
 
-       ooppttiioonn
-       hhoosstt--nnaammee
-       _s_t_r_i_n_g
+       This option specifies whether the client should  configure
+       its  IP  layer  for packet forwarding.  A value of 0 means
+       disable IP forwarding, and a value of 1  means  enable  IP
+       forwarding.
 
-       This option specifies the name of the client.  The name may or may
-       not be qualified with the local domain name (it is preferable to use
-       the domain-name option to specify the domain name).  See RFC 1035 for
-       character set restrictions.
+       ooppttiioonn nnoonn--llooccaall--ssoouurrccee--rroouuttiinngg _f_l_a_g
 
-       ooppttiioonn
-       bboooott--ssiizzee
-       _u_i_n_t_1_6
+       This  option specifies whether the client should configure
+       its IP layer to allow forwarding of  datagrams  with  non-
+       local  source  routes (see Section 3.3.5 of [4] for a dis-
+       cussion of this topic).  A value of 0 means disallow  for-
+       warding  of  such  datagrams, and a value of 1 means allow
+       forwarding.
 
-       This option specifies the length in 512-octet blocks of the default
-       boot image for the client.
+       ooppttiioonn ppoolliiccyy--ffiilltteerr _i_p_-_a_d_d_r_e_s_s _i_p_-_a_d_d_r_e_s_s  [,  _i_p_-_a_d_d_r_e_s_s
+       _i_p_-_a_d_d_r_e_s_s _._._.  ]
 
-       ooppttiioonn
-       mmeerriitt--dduummpp
-       _s_t_r_i_n_g
+       This  option specifies policy filters for non-local source
+       routing.  The filters consist of a list  of  IP  addresses
+       and  masks which specify destination/mask pairs with which
+       to filter incoming source routes.
 
-       This option specifies the path-name of a file to which the client's
-       core image should be dumped in the event the client crashes.  The
-       path is formatted as a character string consisting of characters from
-       the NVT ASCII character set.
+       Any source routed datagram whose next-hop address does not
+       match  one  of  the  filters  should  be  discarded by the
+       client.
 
-       ooppttiioonn
+       See STD 3 (RFC1122) for further information.
+
+       ooppttiioonn mmaaxx--ddggrraamm--rreeaasssseemmbbllyy _u_i_n_t_1_6
+
+       This option specifies the maximum size datagram  that  the
+       client  should  be  prepared  to  reassemble.  The minimum
+       value legal value is 576.
+
+       ooppttiioonn ddeeffaauulltt--iipp--ttttll _u_i_n_t_8
+
+       This option specifies the default  time-to-live  that  the
+       client should use on outgoing datagrams.
+
+       ooppttiioonn ppaatthh--mmttuu--aaggiinngg--ttiimmeeoouutt _u_i_n_t_3_2
+
 
 
 
@@ -400,60 +400,60 @@ dhcpd.conf(5)()                                   dhcpd.conf(5)()
 dhcpd.conf(5)()                                   dhcpd.conf(5)()
 
 
-       ddoommaaiinn--nnaammee
-       _s_t_r_i_n_g
+       This option specifies the timeout (in seconds) to use when
+       aging Path MTU values discovered by the mechanism  defined
+       in RFC 1191.
 
-       This option specifies the domain name that client should use when
-       resolving hostnames via the Domain Name System.
+       ooppttiioonn ppaatthh--mmttuu--ppllaatteeaauu--ttaabbllee _u_i_n_t_1_6 [, _u_i_n_t_1_6 _._._.  ]
 
-       ooppttiioonn
-       sswwaapp--sseerrvveerr
-       _i_p_-_a_d_d_r_e_s_s
+       This  option  specifies  a  table of MTU sizes to use when
+       performing Path MTU Discovery as defined in RFC 1191.  The
+       table  is formatted as a list of 16-bit unsigned integers,
+       ordered from smallest to largest.  The minimum  MTU  value
+       cannot be smaller than 68.
 
-       This specifies the IP address of the client's swap server.
+       ooppttiioonn iinntteerrffaaccee--mmttuu _u_i_n_t_1_6
 
-       ooppttiioonn
-       rroooott--ppaatthh
-       _s_t_r_i_n_g
+       This  option  specifies  the MTU to use on this interface.
+       The minimum legal value for the MTU is 68.
 
-       This option specifies the path-name that contains the client's root
-       disk.  The path is formatted as a character string consisting of
-       characters from the NVT ASCII character set.
+       ooppttiioonn  aallll--ssuubbnneettss--llooccaall  _f_l_a_g  This   option   specifies
+       whether  or  not the client may assume that all subnets of
+       the IP network to which the client is  connected  use  the
+       same MTU as the subnet of that network to which the client
+       is directly connected.  A value of 1  indicates  that  all
+       subnets  share  the same MTU.  A value of 0 means that the
+       client should assume that some  subnets  of  the  directly
+       connected network may have smaller MTUs.
 
-       ooppttiioonn
-       iipp--ffoorrwwaarrddiinngg
-       _f_l_a_g
+       ooppttiioonn bbrrooaaddccaasstt--aaddddrreessss _i_p_-_a_d_d_r_e_s_s
 
-       This option specifies whether the client should configure its IP
-       layer for packet forwarding.  A value of 0 means disable IP
-       forwarding, and a value of 1 means enable IP forwarding.
+       This  option specifies the broadcast address in use on the
+       client's subnet.  Legal values for broadcast addresses are
+       specified in section 3.2.1.3 of STD 3 (RFC1122).
 
-       ooppttiioonn
-       nnoonn--llooccaall--ssoouurrccee--rroouuttiinngg
-       _f_l_a_g
+       ooppttiioonn ppeerrffoorrmm--mmaasskk--ddiissccoovveerryy _f_l_a_g
 
-       This option specifies whether the client should configure its IP
-       layer to allow forwarding of datagrams with non-local source routes
-       (see Section 3.3.5 of [4] for a discussion of this topic).  A value
-       of 0 means disallow forwarding of such datagrams, and a value of 1
-       means allow forwarding.
+       This  option  specifies  whether  or not the client should
+       perform subnet mask discovery using ICMP.  A  value  of  0
+       indicates  that the client should not perform mask discov-
+       ery.  A value of 1 means that the  client  should  perform
+       mask discovery.
 
-       ooppttiioonn
-       ppoolliiccyy--ffiilltteerr
-       _i_p_-_a_d_d_r_e_s_s _i_p_-_a_d_d_r_e_s_s
-       [,
-       _i_p_-_a_d_d_r_e_s_s _i_p_-_a_d_d_r_e_s_s
-       _._._.
-       ]
+       ooppttiioonn mmaasskk--ssuupppplliieerr _f_l_a_g
 
-       This option specifies policy filters for non-local source routing.
-       The filters consist of a list of IP addresses and masks which specify
-       destination/mask pairs with which to filter incoming source routes.
+       This  option  specifies  whether  or not the client should
+       respond to subnet mask requests using ICMP.  A value of  0
+       indicates  that the client should not respond.  A value of
+       1 means that the client should respond.
 
-       Any source routed datagram whose next-hop address does not match one
-       of the filters should be discarded by the client.
+       ooppttiioonn rroouutteerr--ddiissccoovveerryy _f_l_a_g
 
-       See STD 3 (RFC1122) for further information.
+       This option specifies whether or  not  the  client  should
+       solicit  routers  using  the  Router  Discovery  mechanism
+       defined in RFC 1256.  A value  of  0  indicates  that  the
+       client  should not perform router discovery.  A value of 1
+       means that the client should perform router discovery.
 
 
 
@@ -466,60 +466,60 @@ dhcpd.conf(5)()                                   dhcpd.conf(5)()
 dhcpd.conf(5)()                                   dhcpd.conf(5)()
 
 
-       ooppttiioonn
-       mmaaxx--ddggrraamm--rreeaasssseemmbbllyy
-       _u_i_n_t_1_6
+       ooppttiioonn rroouutteerr--ssoolliicciittaattiioonn--aaddddrreessss _i_p_-_a_d_d_r_e_s_s
 
-       This option specifies the maximum size datagram that the client
-       should be prepared to reassemble.  The minimum value legal value is
-       576.
+       This option specifies the  address  to  which  the  client
+       should transmit router solicitation requests.
 
-       ooppttiioonn
-       ddeeffaauulltt--iipp--ttttll
-       _u_i_n_t_8
+       ooppttiioonn  ssttaattiicc--rroouutteess  _i_p_-_a_d_d_r_e_s_s _i_p_-_a_d_d_r_e_s_s [, _i_p_-_a_d_d_r_e_s_s
+       _i_p_-_a_d_d_r_e_s_s _._._.  ]
 
-       This option specifies the default time-to-live that the client should
-       use on outgoing datagrams.
+       This option specifies a list of  static  routes  that  the
+       client  should  install in its routing cache.  If multiple
+       routes to the same destination  are  specified,  they  are
+       listed in descending order of priority.
 
-       ooppttiioonn
-       ppaatthh--mmttuu--aaggiinngg--ttiimmeeoouutt
-       _u_i_n_t_3_2
+       The  routes  consist  of  a list of IP address pairs.  The
+       first address is the destination address, and  the  second
+       address is the router for the destination.
 
-       This option specifies the timeout (in seconds) to use when aging Path
-       MTU values discovered by the mechanism defined in RFC 1191.
+       The  default route (0.0.0.0) is an illegal destination for
+       a static route.  To specify the  default  route,  use  the
+       rroouutteerrss option.
 
-       ooppttiioonn
-       ppaatthh--mmttuu--ppllaatteeaauu--ttaabbllee
-       _u_i_n_t_1_6
-       [,
-       _u_i_n_t_1_6
-       _._._.
-       ]
+       ooppttiioonn ttrraaiilleerr--eennccaappssuullaattiioonn _f_l_a_g
 
-       This option specifies a table of MTU sizes to use when performing
-       Path MTU Discovery as defined in RFC 1191.  The table is formatted as
-       a list of 16-bit unsigned integers, ordered from smallest to largest.
-       The minimum MTU value cannot be smaller than 68.
+       This  option  specifies  whether  or not the client should
+       negotiate the use of trailers (RFC 893  [14])  when  using
+       the  ARP protocol.  A value of 0 indicates that the client
+       should not attempt to use trailers.  A value  of  1  means
+       that the client should attempt to use trailers.
 
-       ooppttiioonn
-       iinntteerrffaaccee--mmttuu
-       _u_i_n_t_1_6
+       ooppttiioonn aarrpp--ccaacchhee--ttiimmeeoouutt _u_i_n_t_3_2
 
-       This option specifies the MTU to use on this interface.   The minimum
-       legal value for the MTU is 68.
+       This option specifies the timeout in seconds for ARP cache
+       entries.
 
-       ooppttiioonn
-       aallll--ssuubbnneettss--llooccaall
-       _f_l_a_g
-       This option specifies whether or not the client may assume that all
-       subnets of the IP network to which the client is connected use the
-       same MTU as the subnet of that network to which the client is
-       directly connected.  A value of 1 indicates that all subnets share
-       the same MTU.  A value of 0 means that the client should assume that
-       some subnets of the directly connected network may have smaller MTUs.
+       ooppttiioonn iieeeeee880022--33--eennccaappssuullaattiioonn _f_l_a_g
 
-       ooppttiioonn
-       bbrrooaaddccaasstt--aaddddrreessss
+       This option specifies whether or not the client should use
+       Ethernet  Version  2  (RFC  894)  or IEEE 802.3 (RFC 1042)
+       encapsulation if the interface is an Ethernet.  A value of
+       0  indicates that the client should use RFC 894 encapsula-
+       tion.  A value of 1 means that the client should  use  RFC
+       1042 encapsulation.
+
+       ooppttiioonn ddeeffaauulltt--ttccpp--ttttll _u_i_n_t_8
+
+       This  option  specifies  the  default  TTL that the client
+       should use when sending TCP segments.  The  minimum  value
+       is 1.
+
+       ooppttiioonn ttccpp--kkeeeeppaalliivvee--iinntteerrvvaall _u_i_n_t_3_2
+
+       This  option  specifies the interval (in seconds) that the
+       client TCP should wait before sending a keepalive  message
+       on  a  TCP  connection.  The time is specified as a 32-bit
 
 
 
@@ -532,59 +532,59 @@ dhcpd.conf(5)()                                   dhcpd.conf(5)()
 dhcpd.conf(5)()                                   dhcpd.conf(5)()
 
 
-       _i_p_-_a_d_d_r_e_s_s
+       unsigned integer.  A value  of  zero  indicates  that  the
+       client  should  not generate keepalive messages on connec-
+       tions unless specifically requested by an application.
 
-       This option specifies the broadcast address in use on the client's
-       subnet.  Legal values for broadcast addresses are specified in
-       section 3.2.1.3 of STD 3 (RFC1122).
+       ooppttiioonn ttccpp--kkeeeeppaalliivvee--ggaarrbbaaggee _f_l_a_g
 
-       ooppttiioonn
-       ppeerrffoorrmm--mmaasskk--ddiissccoovveerryy
-       _f_l_a_g
+       This option specifies the whether or not the client should
+       send  TCP  keepalive  messages with a octet of garbage for
+       compatibility with older implementations.  A  value  of  0
+       indicates that a garbage octet should not be sent. A value
+       of 1 indicates that a garbage octet should be sent.
 
-       This option specifies whether or not the client should perform subnet
-       mask discovery using ICMP.  A value of 0 indicates that the client
-       should not perform mask discovery.  A value of 1 means that the
-       client should perform mask discovery.
+       ooppttiioonn nniiss--ddoommaaiinn _s_t_r_i_n_g
 
-       ooppttiioonn
-       mmaasskk--ssuupppplliieerr
-       _f_l_a_g
+       This option specifies the name of the  client's  NIS  (Sun
+       Network  Information Services) domain.  The domain is for-
+       matted as a character string consisting of characters from
+       the NVT ASCII character set.
 
-       This option specifies whether or not the client should respond to
-       subnet mask requests using ICMP.  A value of 0 indicates that the
-       client should not respond.  A value of 1 means that the client should
-       respond.
+       ooppttiioonn nniiss--sseerrvveerrss _i_p_-_a_d_d_r_e_s_s [, _i_p_-_a_d_d_r_e_s_s _._._.  ]
 
-       ooppttiioonn
-       rroouutteerr--ddiissccoovveerryy
-       _f_l_a_g
+       This  option  specifies  a list of IP addresses indicating
+       NIS servers available to the client.   Servers  should  be
+       listed in order of preference.
 
-       This option specifies whether or not the client should solicit
-       routers using the Router Discovery mechanism defined in RFC 1256.
-       A value of 0 indicates that the client should not perform
-       router discovery.  A value of 1 means that the client should perform
-       router discovery.
+       ooppttiioonn nnttpp--sseerrvveerrss _i_p_-_a_d_d_r_e_s_s [, _i_p_-_a_d_d_r_e_s_s _._._.  ]
 
-       ooppttiioonn
-       rroouutteerr--ssoolliicciittaattiioonn--aaddddrreessss
-       _i_p_-_a_d_d_r_e_s_s
+       This  option  specifies  a list of IP addresses indicating
+       NTP (RFC 1035) servers available to the  client.   Servers
+       should be listed in order of preference.
 
-       This option specifies the address to which the client should transmit
-       router solicitation requests.
-
-       ooppttiioonn
-       ssttaattiicc--rroouutteess
-       _i_p_-_a_d_d_r_e_s_s _i_p_-_a_d_d_r_e_s_s
-       [,
-       _i_p_-_a_d_d_r_e_s_s _i_p_-_a_d_d_r_e_s_s
-       _._._.
+       ooppttiioonn  nneettbbiiooss--nnaammee--sseerrvveerrss  _i_p_-_a_d_d_r_e_s_s [, _i_p_-_a_d_d_r_e_s_s _._._.
        ]
 
-       This option specifies a list of static routes that the client should
-       install in its routing cache.  If multiple routes to the same
-       destination are specified, they are listed in descending order of
-       priority.
+       The NetBIOS name server (NBNS) option specifies a list  of
+       RFC 1001/1002 NBNS name servers listed in order of prefer-
+       ence.
+
+       ooppttiioonn nneettbbiiooss--dddd--sseerrvveerr _i_p_-_a_d_d_r_e_s_s [, _i_p_-_a_d_d_r_e_s_s _._._.  ]
+
+       The NetBIOS datagram  distribution  server  (NBDD)  option
+       specifies  a  list of RFC 1001/1002 NBDD servers listed in
+       order of preference.
+
+       ooppttiioonn nneettbbiiooss--nnooddee--ttyyppee _u_i_n_t_8
+
+       The NetBIOS node type option allows  NetBIOS  over  TCP/IP
+       clients   which  are  configurable  to  be  configured  as
+       described in RFC 1001/1002.  The value is specified  as  a
+       single octet which identifies the client type.  A value of
+       1 corresponds to a NetBIOS B-node; a  value  of  2  corre-
+       sponds to a P-node; a value of 4 corresponds to an M-node;
+       a value of 8 corresponds to an H-node.
 
 
 
@@ -598,205 +598,31 @@ dhcpd.conf(5)()                                   dhcpd.conf(5)()
 dhcpd.conf(5)()                                   dhcpd.conf(5)()
 
 
-       The routes consist of a list of IP address pairs.  The first address
-       is the destination address, and the second address is the router for
-       the destination.
+       ooppttiioonn nneettbbiiooss--ssccooppee _s_t_r_i_n_g
 
-       The default route (0.0.0.0) is an illegal destination for a static
-       route.  To specify the default route, use the
-       rroouutteerrss
-       option.
+       The NetBIOS scope option specifies the NetBIOS over TCP/IP
+       scope  parameter  for  the  client  as  specified  in  RFC
+       1001/1002. See RFC1001, RFC1002, and RFC1035  for  charac-
+       ter-set restrictions.
 
-       ooppttiioonn
-       ttrraaiilleerr--eennccaappssuullaattiioonn
-       _f_l_a_g
+       ooppttiioonn ffoonntt--sseerrvveerrss _i_p_-_a_d_d_r_e_s_s [, _i_p_-_a_d_d_r_e_s_s _._._.  ]
 
-       This option specifies whether or not the client should negotiate the
-       use of trailers (RFC 893 [14]) when using the ARP protocol.  A value
-       of 0 indicates that the client should not attempt to use trailers.  A
-       value of 1 means that the client should attempt to use trailers.
+       This  option  specifies  a  list  of  X Window System Font
+       servers available to the client. Servers should be  listed
+       in order of preference.
 
-       ooppttiioonn
-       aarrpp--ccaacchhee--ttiimmeeoouutt
-       _u_i_n_t_3_2
+       ooppttiioonn xx--ddiissppllaayy--mmaannaaggeerr _i_p_-_a_d_d_r_e_s_s [, _i_p_-_a_d_d_r_e_s_s _._._.  ]
 
-       This option specifies the timeout in seconds for ARP cache entries.
+       This  option  specifies a list of systems that are running
+       the X Window System Display Manager and are  available  to
+       the  client.  Addresses should be listed in order of pref-
+       erence.
 
-       ooppttiioonn
-       iieeeeee880022--33--eennccaappssuullaattiioonn
-       _f_l_a_g
+       ooppttiioonn ddhhccpp--cclliieenntt--iiddeennttiiffiieerr _d_a_t_a_-_s_t_r_i_n_g
 
-       This option specifies whether or not the client should use Ethernet
-       Version 2 (RFC 894) or IEEE 802.3 (RFC 1042) encapsulation if the
-       interface is an Ethernet.  A value of 0 indicates that the client
-       should use RFC 894 encapsulation.  A value of 1 means that the client
-       should use RFC 1042 encapsulation.
-
-       ooppttiioonn
-       ddeeffaauulltt--ttccpp--ttttll
-       _u_i_n_t_8
-
-       This option specifies the default TTL that the client should use when
-       sending TCP segments.  The minimum value is 1.
-
-       ooppttiioonn
-       ttccpp--kkeeeeppaalliivvee--iinntteerrvvaall
-       _u_i_n_t_3_2
-
-       This option specifies the interval (in seconds) that the client TCP
-       should wait before sending a keepalive message on a TCP connection.
-       The time is specified as a 32-bit unsigned integer.  A value of zero
-       indicates that the client should not generate keepalive messages on
-       connections unless specifically requested by an application.
-
-       ooppttiioonn
-       ttccpp--kkeeeeppaalliivvee--ggaarrbbaaggee
-       _f_l_a_g
-
-
-
-                                                               10
-
-
-
-
-
-dhcpd.conf(5)()                                   dhcpd.conf(5)()
-
-
-       This option specifies the whether or not the client should send TCP
-       keepalive messages with a octet of garbage for compatibility with
-       older implementations.  A value of 0 indicates that a garbage octet
-       should not be sent. A value of 1 indicates that a garbage octet
-       should be sent.
-
-       ooppttiioonn
-       nniiss--ddoommaaiinn
-       _s_t_r_i_n_g
-
-       This option specifies the name of the client's NIS (Sun Network
-       Information Services) domain.  The domain is formatted as a character
-       string consisting of characters from the NVT ASCII character set.
-
-       ooppttiioonn
-       nniiss--sseerrvveerrss
-       _i_p_-_a_d_d_r_e_s_s
-       [,
-       _i_p_-_a_d_d_r_e_s_s
-       _._._.
-       ]
-
-       This option specifies a list of IP addresses indicating NIS servers
-       available to the client.  Servers should be listed in order of
-       preference.
-
-       ooppttiioonn
-       nnttpp--sseerrvveerrss
-       _i_p_-_a_d_d_r_e_s_s
-       [,
-       _i_p_-_a_d_d_r_e_s_s
-       _._._.
-       ]
-
-       This option specifies a list of IP addresses indicating NTP (RFC 1035)
-       servers available to the client.  Servers should be listed in order
-       of preference.
-
-       ooppttiioonn
-       nneettbbiiooss--nnaammee--sseerrvveerrss
-       _i_p_-_a_d_d_r_e_s_s
-       [,
-       _i_p_-_a_d_d_r_e_s_s
-       _._._.
-       ]
-
-       The NetBIOS name server (NBNS) option specifies a list of RFC
-       1001/1002 NBNS name servers listed in order of preference.
-
-       ooppttiioonn
-       nneettbbiiooss--dddd--sseerrvveerr
-       _i_p_-_a_d_d_r_e_s_s
-       [,
-       _i_p_-_a_d_d_r_e_s_s
-
-
-
-                                                               11
-
-
-
-
-
-dhcpd.conf(5)()                                   dhcpd.conf(5)()
-
-
-       _._._.
-       ]
-
-       The NetBIOS datagram distribution server (NBDD) option specifies a
-       list of RFC 1001/1002 NBDD servers listed in order of preference.
-
-       ooppttiioonn
-       nneettbbiiooss--nnooddee--ttyyppee
-       _u_i_n_t_8
-
-       The NetBIOS node type option allows NetBIOS over TCP/IP clients which
-       are configurable to be configured as described in RFC 1001/1002.  The
-       value is specified as a single octet which identifies the client type.
-       A value of 1 corresponds to a NetBIOS B-node; a value of 2 corresponds
-       to a P-node; a value of 4 corresponds to an M-node; a value of 8
-       corresponds to an H-node.
-
-       ooppttiioonn
-       nneettbbiiooss--ssccooppee
-       _s_t_r_i_n_g
-
-       The NetBIOS scope option specifies the NetBIOS over TCP/IP scope
-       parameter for the client as specified in RFC 1001/1002. See RFC1001,
-       RFC1002, and RFC1035 for character-set restrictions.
-
-       ooppttiioonn
-       ffoonntt--sseerrvveerrss
-       _i_p_-_a_d_d_r_e_s_s
-       [,
-       _i_p_-_a_d_d_r_e_s_s
-       _._._.
-       ]
-
-       This option specifies a list of X Window System Font servers available
-       to the client. Servers should be listed in order of preference.
-
-       ooppttiioonn
-       xx--ddiissppllaayy--mmaannaaggeerr
-       _i_p_-_a_d_d_r_e_s_s
-       [,
-       _i_p_-_a_d_d_r_e_s_s
-       _._._.
-       ]
-
-       This option specifies a list of systems that are running the X Window
-       System Display Manager and are available to the client.  Addresses
-       should be listed in order of preference.
-
-       ooppttiioonn
-       ddhhccpp--cclliieenntt--iiddeennttiiffiieerr
-       _d_a_t_a_-_s_t_r_i_n_g
-
-       This option can be used to specify the a DHCP client identifier in a
-       host declaration, so that dhcpd can find the host record by matching
-
-
-
-                                                               12
-
-
-
-
-
-dhcpd.conf(5)()                                   dhcpd.conf(5)()
-
-
-       against the client identifier.
+       This option can be used to specify the a DHCP client iden-
+       tifier  in  a host declaration, so that dhcpd can find the
+       host record by matching against the client identifier.
 
 SSEEEE AALLSSOO
        dhcpd.conf(5), dhcpd.leases(5)
@@ -829,30 +655,6 @@ AAUUTTHHOORR
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                                                               13
+                                                               10
 
 
