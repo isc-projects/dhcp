@@ -487,8 +487,9 @@ struct class {
 	struct expression *expr;
 
 	/* Expression used to compute subclass identifiers for spawning
-	   and subsequent matching. */
-	struct expression *spawn;
+	   and to do subclass matching. */
+	struct expression *submatch;
+	int spawning;
 	
 	struct group *group;
 
