@@ -354,9 +354,10 @@ static void trace_connect_input (trace_type_t *ttype,
 		} omapi_array_foreach_end (trace_listeners,
 					   omapi_listener_object_t, lp);
 		if (!listener) {
-			log_error ("%s%d, addr %s, port %d",
+			log_error ("%s%ld, addr %s, port %d",
 				   "Spurious traced listener connect - index ",
-				   listener_index, inet_ntoa (local.sin_addr),
+				   (long int)listener_index,
+				   inet_ntoa (local.sin_addr),
 				   ntohs (local.sin_port));
 			return;
 		}
@@ -392,8 +393,8 @@ static void trace_connect_input (trace_type_t *ttype,
 	} omapi_array_foreach_end (omapi_connections,
 				   omapi_connection_object_t, lp);
 						 
-	log_error ("Spurious traced connect - index %d, addr %s, port %d",
-		   connect_index, inet_ntoa (remote.sin_addr),
+	log_error ("Spurious traced connect - index %ld, addr %s, port %d",
+		   (long int)connect_index, inet_ntoa (remote.sin_addr),
 		   ntohs (remote.sin_port));
 	return;
 }
@@ -421,8 +422,8 @@ static void trace_disconnect_input (trace_type_t *ttype,
 	} omapi_array_foreach_end (omapi_connections,
 				   omapi_connection_object_t, lp);
 
-	log_error ("trace disconnect: no connection matching index %d",
-		   ntohl (*index));
+	log_error ("trace disconnect: no connection matching index %ld",
+		   (long int)ntohl (*index));
 }
 
 static void trace_disconnect_stop (trace_type_t *ttype) { }
