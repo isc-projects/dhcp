@@ -3,7 +3,7 @@
    Domain Name Service subroutines. */
 
 /*
- * Copyright (c) 1996-1999 Internet Software Consortium.
+ * Copyright (c) 2000 Internet Software Consortium.
  * Use is subject to license terms which appear in the file named
  * ISC-LICENSE that should have accompanied this file when you
  * received it.   If a file named ISC-LICENSE did not accompany this
@@ -22,486 +22,206 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dns.c,v 1.16 2000/02/03 03:43:51 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dns.c,v 1.17 2000/03/06 23:13:35 mellon Exp $ Copyright (c) 2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
 #include "arpa/nameser.h"
 
-int dns_protocol_initialized;
-int dns_protocol_fd;
+/* This file is kind of a crutch for the BIND 8 nsupdate code, which has
+ * itself been cruelly hacked from its original state.   What this code
+ * does is twofold: first, it maintains a database of zone cuts that can
+ * be used to figure out which server should be contacted to update any
+ * given domain name.   Secondly, it maintains a set of named TSIG keys,
+ * and associates those keys with zones.   When an update is requested for
+ * a particular zone, the key associated with that zone is used for the
+ * update.
+ *
+ * The way this works is that you define the domain name to which an
+ * SOA corresponds, and the addresses of some primaries for that domain name:
+ *
+ *	zone FOO.COM {
+ *	  primary 10.0.17.1;
+ *	  secondary 10.0.22.1, 10.0.23.1;
+ *	  tsig-key "FOO.COM Key";
+ * 	}
+ *
+ * If an update is requested for GAZANGA.TOPANGA.FOO.COM, then the name
+ * server looks in its database for a zone record for "GAZANGA.TOPANGA.FOO.COM",
+ * doesn't find it, looks for one for "TOPANGA.FOO.COM", doesn't find *that*,
+ * looks for "FOO.COM", finds it. So it
+ * attempts the update to the primary for FOO.COM.   If that times out, it
+ * tries the secondaries.   You can list multiple primaries if you have some
+ * kind of magic name server that supports that.   You shouldn't list
+ * secondaries that don't know how to forward updates (e.g., BIND 8 doesn't
+ * support update forwarding, AFAIK).   If no TSIG key is listed, the update
+ * is attempted without TSIG.
+ *
+ * The DHCP server tries to find an existing zone for any given name by
+ * trying to look up a local zone structure for each domain containing
+ * that name, all the way up to '.'.   If it finds one cached, it tries
+ * to use that one to do the update.   That's why it tries to update
+ * "FOO.COM" above, even though theoretically it should try GAZANGA...
+ * and TOPANGA... first.
+ *
+ * If the update fails with a predefined or cached zone (we'll get to
+ * those in a second), then it tries to find a more specific zone.   This
+ * is done by looking first for an SOA for GAZANGA.TOPANGA.FOO.COM.   Then
+ * an SOA for TOPANGA.FOO.COM is sought.   If during this search a predefined
+ * or cached zone is found, the update fails - there's something wrong
+ * somewhere.
+ *
+ * If a more specific zone _is_ found, that zone is cached for the length of
+ * its TTL in the same database as that described above.   TSIG updates are
+ * never done for cached zones - if you want TSIG updates you _must_
+ * write a zone definition linking the key to the zone.   In cases where you
+ * know for sure what the key is but do not want to hardcode the IP addresses
+ * of the primary or secondaries, a zone declaration can be made that doesn't
+ * include any primary or secondary declarations.   When the DHCP server
+ * encounters this while hunting up a matching zone for a name, it looks up
+ * the SOA, fills in the IP addresses, and uses that record for the update.
+ * If the SOA lookup returns NXRRSET, a warning is printed and the zone is
+ * discarded, TSIG key and all.   The search for the zone then continues as if
+ * the zone record hadn't been found.   Zones without IP addresses don't
+ * match when initially hunting for a predefined or cached zone to update.
+ *
+ * When an update is attempted and no predefined or cached zone is found
+ * that matches any enclosing domain of the domain being updated, the DHCP
+ * server goes through the same process that is done when the update to a
+ * predefined or cached zone fails - starting with the most specific domain
+ * name (GAZANGA.TOPANGA.FOO.COM) and moving to the least specific (the root),
+ * it tries to look up an SOA record.   When it finds one, it creates a cached
+ * zone and attempts an update, and gives up if the update fails.
+ *
+ * TSIG keys are defined like this:
+ *
+ *	tsig-key "FOO.COM Key" HMAC-MD5.SIG-ALG.REG.INT <CSHL>;
+ *
+ * CSHL is a colon-seperated list of hexadecimal bytes that make up
+ * the key.   It's also permissible to use a quoted string here - this will
+ * be translated as the ASCII bytes making up the string, and will not include
+ * any NUL termination.   The key name can be any text string, and the
+ * key type must be one of the key types defined in the draft or by the IANA.
+ * Currently only the HMAC-MD5... key type is supported.
+ */
 
-static unsigned addlabel PROTO ((u_int8_t *, const char *));
-static int skipname PROTO ((u_int8_t *));
-static int copy_out_name PROTO ((u_int8_t *, u_int8_t *, char *));
-static int nslookup PROTO ((u_int8_t, char *, int, u_int16_t, u_int16_t));
-static int zonelookup PROTO ((u_int8_t, char *, int, u_int16_t));
-u_int16_t dns_port;
+struct hash_table *tsig_key_hash;
+struct hash_table *dns_zone_hash;
 
-#define DNS_QUERY_HASH_SIZE	293
-struct dns_query *dns_query_hash [DNS_QUERY_HASH_SIZE];
-
-/* Initialize the DNS protocol. */
-
-void dns_startup ()
+isc_result_t enter_dns_zone (struct dns_zone *zone)
 {
-	struct servent *srv;
-	struct sockaddr_in from;
+	struct dns_zone *tz;
 
-	/* Only initialize icmp once. */
-	if (dns_protocol_initialized)
-		log_fatal ("attempted to reinitialize dns protocol");
-	dns_protocol_initialized = 1;
+	if (dns_zone_hash) {
+		tz = hash_lookup (dns_zone_hash, zone -> name, 0);
+		if (tz == zone)
+			return ISC_R_SUCCESS;
+		if (tz)
+			delete_hash_entry (dns_zone_hash, zone -> name, 0);
+	} else {
+		dns_zone_hash =
+			new_hash ((hash_reference)dns_zone_reference,
+				  (hash_dereference)dns_zone_dereference);
+		if (!dns_zone_hash)
+			return ISC_R_NOMEMORY;
+	}
+	add_hash (dns_zone_hash, zone -> name, 0, zone);
+	return ISC_R_SUCCESS;
+}
 
-	/* Get the protocol number (should be 1). */
-	srv = getservbyname ("domain", "tcp");
-	if (srv)
-		dns_port = srv -> s_port;
-	else
-		dns_port = htons (53);
+isc_result_t dns_zone_lookup (struct dns_zone **zone, const char *name) {
+	struct dns_zone *tz;
 
-	/* Get a socket for the DNS protocol. */
-	dns_protocol_fd = socket (AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-	if (dns_protocol_fd < 0)
-		log_fatal ("unable to create dns socket: %m");
+	if (!dns_zone_hash)
+		return ISC_R_NOTFOUND;
+	tz = hash_lookup (dns_zone_hash, name, 0);
+	if (!tz)
+		return ISC_R_NOTFOUND;
+	if (!dns_zone_reference (zone, tz, MDL))
+		return ISC_R_UNEXPECTED;
+	return ISC_R_SUCCESS;
+}
 
-#if defined (HAVE_SETFD)
-	if (fcntl (dns_protocol_fd, F_SETFD, 1) < 0)
-		log_fatal ("unable to set close-on-exec on dns fd: %m");
+isc_result_t enter_tsig_key (struct tsig_key *tkey)
+{
+	struct tsig_key *tk;
+
+	if (tsig_key_hash) {
+		tk = hash_lookup (tsig_key_hash, tkey -> name, 0);
+		if (tk == tkey)
+			return ISC_R_SUCCESS;
+		if (tk)
+			delete_hash_entry (tsig_key_hash, tkey -> name, 0);
+	} else {
+		tsig_key_hash =
+			new_hash ((hash_reference)tsig_key_reference,
+				  (hash_dereference)tsig_key_dereference);
+		if (!tsig_key_hash)
+			return ISC_R_NOMEMORY;
+	}
+	add_hash (tsig_key_hash, tkey -> name, 0, tkey);
+	return ISC_R_SUCCESS;
+	
+}
+
+isc_result_t tsig_key_lookup (struct tsig_key **tkey, const char *name) {
+	struct tsig_key *tk;
+
+	if (!tsig_key_hash)
+		return ISC_R_NOTFOUND;
+	tk = hash_lookup (tsig_key_hash, name, 0);
+	if (!tk)
+		return ISC_R_NOTFOUND;
+	if (!tsig_key_reference (tkey, tk, MDL))
+		return ISC_R_UNEXPECTED;
+	return ISC_R_SUCCESS;
+}
+
+int dns_zone_dereference (ptr, file, line)
+	struct dns_zone **ptr;
+	const char *file;
+	int line;
+{
+	int i;
+	struct dns_zone *dns_zone;
+
+	if (!ptr || !*ptr) {
+		log_error ("%s(%d): null pointer", file, line);
+#if defined (POINTER_DEBUG)
+		abort ();
+#else
+		return 0;
 #endif
+	}
 
-	first_name_server ();
-
-	add_protocol ("dns", dns_protocol_fd, dns_packet, 0);
-}
-
-/* Label manipulation stuff; see RFC1035, page 28 section 4.1.2 and
-   page 30, section 4.1.4. */
-
-/* addlabel copies a label into the specified buffer, putting the length of
-   the label in the first character, the contents of the label in subsequent
-   characters, and returning the length of the conglomeration. */
-
-static unsigned addlabel (buf, label)
-	u_int8_t *buf;
-	const char *label;
-{
-	*buf = strlen (label);
-	memcpy (buf + 1, label, (unsigned)*buf);
-	return (unsigned)(*buf + 1);
-}
-
-/* skipname skips over all of the labels in a single domain name,
-   returning the length of the domain name. */
-
-static int skipname (label)
-     u_int8_t *label;
-{
-	if (*label & INDIR_MASK)
-		return 2;
-	if (*label == 0)
+	dns_zone = *ptr;
+	*ptr = (struct dns_zone *)0;
+	--dns_zone -> refcnt;
+	rc_register (file, line, ptr, dns_zone, dns_zone -> refcnt);
+	if (dns_zone -> refcnt > 0)
 		return 1;
-	return *label + 1 + skipname (label + *label + 1);
+
+	if (dns_zone -> refcnt < 0) {
+		log_error ("%s(%d): negative refcnt!", file, line);
+#if defined (DEBUG_RC_HISTORY)
+		dump_rc_history ();
+#endif
+#if defined (POINTER_DEBUG)
+		abort ();
+#else
+		return 0;
+#endif
+	}
+
+	if (dns_zone -> name)
+		dfree (dns_zone -> name, file, line);
+	if (dns_zone -> key)
+		tsig_key_dereference (&dns_zone -> key, file, line);
+	if (dns_zone -> primary)
+		option_cache_dereference (&dns_zone -> primary, file, line);
+	if (dns_zone -> secondary)
+		option_cache_dereference (&dns_zone -> secondary, file, line);
+	dfree (dns_zone, file, line);
+	return 1;
 }
 
-/* copy_out_name copies out the name appearing at the specified location
-   into a string, stored as fields seperated by dots rather than lengths
-   and labels.   The length of the label-formatted name is returned. */
-
-static int copy_out_name (base, name, buf)
-     u_int8_t *base;
-     u_int8_t *name;
-     char *buf;
-{
-	if (*name & INDIR_MASK) {
-		int offset = (*name & ~INDIR_MASK) + (*name + 1);
-		return copy_out_name (base, base + offset, buf);
-	}
-	if (!*name) {
-		*buf = 0;
-		return 1;
-	}
-	memcpy (buf, name + 1, *name);
-	*(buf + *name) = '.';
-	return (*name + 1
-		+ copy_out_name (base, name + *name + 1, buf + *name + 1));
-}
-
-/* Compute a hash on the question. */
-
-static INLINE u_int32_t dns_hash_question (struct dns_question *question)
-{
-	u_int32_t sum;
-	u_int32_t remainder;
-	u_int32_t *p = (u_int32_t *)question;
-	u_int8_t *s;
-
-	/* First word. */
-	sum = *p++;
-	s = (u_int8_t *)p;
-
-	remainder = 0;
-	while (s [0]) {
-		remainder = s [0];
-		if (s [1]) {
-			remainder = (remainder << 8) + s [1];
-			if (s [2]) {
-				remainder = (remainder << 8) + s [2];
-				if (s [3])
-					remainder = (remainder << 8) + s [3];
-				else
-					goto done;
-			} else
-				goto done;
-		} else {
-		      done:
-			sum += remainder;
-			break;
-		}
-		if ((sum & 0x80000000) && (remainder & 0x80000000))
-			++sum;
-		sum += remainder;
-		s += 4;
-	}
-
-	while (sum > DNS_QUERY_HASH_SIZE) {
-		remainder = sum / DNS_QUERY_HASH_SIZE;
-		sum = sum % DNS_QUERY_HASH_SIZE;
-		while (remainder) {
-			sum += remainder % DNS_QUERY_HASH_SIZE;
-			remainder /= DNS_QUERY_HASH_SIZE;
-		}
-	} 
-
-	return sum;
-}
-
-/* Find a query that matches the specified name.  If one can't be
-   found, and new is nonzero, allocate one, hash it in, and save the
-   question.  Otherwise, if new is nonzero, free() the question.
-   Return the query if one was found or allocated. */
-
-struct dns_query *find_dns_query (question, new)
-	struct dns_question *question;
-	int new;
-{
-	int hash = dns_hash_question (question);
-	struct dns_query *q;
-
-	for (q = dns_query_hash [hash]; q; q = q -> next) {
-		if (q -> question -> type == question -> type &&
-		    q -> question -> class == question -> class &&
-		    !strcmp ((char *)q -> question -> data,
-			     (char *)question -> data))
-			break;
-	}
-	if (q || !new) {
-		if (new)
-			dfree (question, MDL);
-		return q;
-	}
-
-	/* Allocate and zap a new query. */
-	q = (struct dns_query *)dmalloc (sizeof (struct dns_query), MDL);
-	memset (q, 0, sizeof *q);
-
-	/* All we need to set up is the question and the hash. */
-	q -> question = question;
-	q -> next = dns_query_hash [hash];
-	dns_query_hash [hash] = q;
-	q -> hash = hash;
-	return q;
-}
-
-/* Free up all memory associated with a DNS query and remove it from the
-   query hash. */
-
-void destroy_dns_query (query)
-	struct dns_query *query;
-{
-	struct dns_query *q;
-
-	/* Free up attached free data. */
-	if (query -> question)
-		dfree (query -> question, MDL);
-	if (query -> answer)
-		dfree (query -> answer, MDL);
-	if (query -> query)
-		dfree (query -> query, MDL);
-
-	/* Remove query from hash table. */
-	if (dns_query_hash [query -> hash] == query)
-		dns_query_hash [query -> hash] = query -> next;
-	else {
-		for (q = dns_query_hash [query -> hash];
-		     q -> next && q -> next != query; q = q -> next)
-			;
-		if (q -> next)
-			q -> next = query -> next;
-	}
-
-	/* Free the query structure. */
-	dfree (query, MDL);
-}
-
-/* ns_inaddr_lookup constructs a PTR lookup query for an internet address -
-   e.g., 1.200.9.192.in-addr.arpa.   It then passes it on to ns_query for
-   completion. */
-
-struct dns_query *ns_inaddr_lookup (inaddr, wakeup)
-	struct iaddr inaddr;
-	struct dns_wakeup *wakeup;
-{
-	unsigned char query [512];
-	unsigned char *s;
-	unsigned char *label;
-	int i;
-	unsigned char c;
-	struct dns_question *question;
-
-	/* First format the query in the internal format. */
-	sprintf ((char *)query, "%d.%d.%d.%d.in-addr.arpa.",
-		 inaddr.iabuf [0], inaddr.iabuf [1],
-		 inaddr.iabuf [2], inaddr.iabuf [3]);
-
-	question = (struct dns_question *)dmalloc (strlen ((char *)query) +
-						   sizeof *question, MDL);
-	if (!question)
-		return (struct dns_query *)-1;
-	question -> type = T_PTR;
-	question -> class = C_IN;
-	strcpy ((char *)question -> data, (char *)query);
-
-	/* Now format the query for the name server. */
-	s = query;
-
-	/* Copy out the digits. */
-	for (i = 3; i >= 0; --i) {
-		label = s++;
-		sprintf ((char *)s, "%d", inaddr.iabuf [i]);
-		*label = strlen ((char *)s);
-		s += *label;
-	}
-	s += addlabel (s, "in-addr");
-	s += addlabel (s, "arpa");
-	*s++ = 0;
-
-	/* Set the query type. */
-	putUShort (s, T_PTR);
-	s += sizeof (u_int16_t);
-
-	/* Set the query class. */
-	putUShort (s, C_IN);
-	s += sizeof (u_int16_t);
-
-	return ns_query (question, query, (unsigned)(s - query), wakeup);
-}
-
-/* Try to satisfy a query out of the local cache.  If no answer has
-   been cached, and if there isn't already a query pending on this
-   question, send it.  If the query can be immediately satisfied,
-   a pointer to the dns_query structure is returned.  If the query
-   can't even be made for some reason, (struct dns_query *)-1 is
-   returned.  Otherwise, the null pointer is returned, indicating that
-   a wakeup will be performed later when the answer comes back. */
-
-struct dns_query *ns_query (question, formatted_query, len, wakeup)
-	struct dns_question *question;
-	unsigned char *formatted_query;
-	unsigned len;
-	struct dns_wakeup *wakeup;
-{
-	HEADER *hdr;
-	struct dns_query *query;
-	unsigned char *s;
-	unsigned char buf [512];
-
-	/* If the query won't fit, don't bother setting it up. */
-	if (len > 255) {
-		dfree (question, MDL);
-		return (struct dns_query *)-1;
-	}
-
-	/* See if there's already a query for this name, and allocate a
-	   query if none exists. */
-	query = find_dns_query (question, 1);
-
-	/* If we can't allocate a query, report that the query failed. */
-	if (!query)
-		return (struct dns_query *)-1;
-
-	/* If the query has already been answered, return it. */
-	if (query -> expiry > cur_time)
-		return query;
-
-	/* The query hasn't yet been answered, so we have to wait, one
-	   way or another.   Put the wakeup on the list. */
-	if (wakeup) {
-		wakeup -> next = query -> wakeups;
-		query -> wakeups = wakeup;
-	}
-
-	/* If the query has already been sent, but we don't yet have
-	   an answer, we're done. */
-	if (query -> sent)
-		return (struct dns_query *)0;
-
-	/* Construct a header... */
-	hdr = (HEADER *)buf;
-	memset (hdr, 0, sizeof *hdr);
-	hdr -> id = query -> id;
-	hdr -> rd = 1;
-	hdr -> opcode = QUERY;
-	hdr -> qdcount = htons (1);
-
-	/* Copy the formatted name into the buffer. */
-	s = (unsigned char *)hdr + 1;
-	memcpy (s, formatted_query, len);
-
-	/* Figure out how long the whole message is */
-	s += len;
-	query -> len = s - buf;
-
-	/* Save the raw query data. */
-	query -> query = dmalloc (len, MDL);
-	if (!query -> query) {
-		destroy_dns_query (query);
-		return (struct dns_query *)-1;
-	}
-	memcpy (query -> query, buf, query -> len);
-
-	/* Flag the query as having been sent. */
-	query -> sent = 1;
-
-	/* Send the query. */
-	dns_timeout (query);
-
-	/* No answer yet, obviously. */
-	return (struct dns_query *)0;
-}
-
-/* Retransmit a DNS query. */
-
-void dns_timeout (qv)
-	void *qv;
-{
-	struct dns_query *query = qv;
-	int status;
-
-	/* Choose the server to send to. */
-	if (!query -> next_server)
-		query -> next_server = first_name_server ();
-
-	/* Send the query. */
-	if (query -> next_server)
-		status = sendto (dns_protocol_fd,
-				 (char *)query -> query, query -> len, 0,
-				 ((struct sockaddr *)&query ->
-				  next_server -> addr),
-				 sizeof query -> next_server -> addr);
-	else
-		status = -1;
-
-	/* Look for the next server... */
-	query -> next_server = query -> next_server -> next;
-
-	/* If this is our first time, backoff one second. */
-	if (!query -> backoff)
-		query -> backoff = 1;
-
-	/* If the send failed, don't advance the backoff. */
-	else if (status < 0)
-		;
-
-	/* If we haven't run out of servers to try, don't backoff. */
-	else if (query -> next_server)
-		;
-
-	/* If we haven't backed off enough yet, back off some more. */
-	else if (query -> backoff < 30)
-		query -> backoff += random() % query -> backoff;
-
-	/* Set up the timeout. */
-	add_timeout (cur_time + query -> backoff, dns_timeout, query);
-}
-
-/* Process a reply from a name server. */
-
-void dns_packet (protocol)
-	struct protocol *protocol;
-{
-	HEADER *ns_header;
-	struct sockaddr_in from;
-	struct dns_wakeup *wakeup;
-	unsigned char buf [512];
-	union {
-		unsigned char u [512];
-		struct dns_question q;
-	} qbuf;
-	unsigned char *base;
-	unsigned char *dptr, *name;
-	u_int16_t type;
-	u_int16_t class;
-	TIME ttl;
-	u_int16_t rdlength;
-	SOCKLEN_T len;
-	int status;
-	int i;
-	struct dns_query *query;
-
-	len = sizeof from;
-	status = recvfrom (protocol -> fd, (char *)buf, sizeof buf, 0,
-			  (struct sockaddr *)&from, &len);
-	if (status < 0) {
-		log_error ("dns_packet: %m");
-		return;
-	}
-
-	/* Response is too long? */
-	if (len > 512) {
-		log_error ("dns_packet: dns message too long (%d)", len);
-		return;
-	}
-
-	ns_header = (HEADER *)buf;
-	base = (unsigned char *)(ns_header + 1);
-
-	/* Parse the response... */
-	dptr = base;
-
-	/* If this is a response to a query from us, there should have
-           been only one query. */
-	if (ntohs (ns_header -> qdcount) != 1) {
-		log_error ("Bogus DNS answer packet from %s claims %d queries.\n",
-		      inet_ntoa (from.sin_addr),
-		      ntohs (ns_header -> qdcount));
-		return;
-	}
-
-	/* Find the start of the name in the query. */
-	name = dptr;
-
-	/* Skip over the name. */
-	dptr += copy_out_name (name, name, (char *)qbuf.q.data);
-
-	/* Skip over the query type and query class. */
-	qbuf.q.type = getUShort (dptr);
-	dptr += sizeof (u_int16_t);
-	qbuf.q.class = getUShort (dptr);
-	dptr += sizeof (u_int16_t);
-
-	/* See if we asked this question. */
-	query = find_dns_query (&qbuf.q, 0);
-	if (!query) {
-log_error ("got answer for question %s from DNS, which we didn't ask.",
-qbuf.q.data);
-		return;
-	}
-
-log_info ("got answer for question %s from DNS", qbuf.q.data);
-
-	/* Wake up everybody who's waiting. */
-	for (wakeup = query -> wakeups; wakeup; wakeup = wakeup -> next) {
-		(*wakeup -> func) (query);
-	}
-}
