@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.124 1999/10/24 18:55:37 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.125 1999/10/24 19:38:53 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -814,7 +814,10 @@ void nak_lease (packet, cip)
 	   Otherwise, broadcast it on the local network. */
 	if (raw.giaddr.s_addr) {
 		to.sin_addr = raw.giaddr;
-		to.sin_port = local_port;
+		if (raw.giaddr.s_addr != INADDR_LOOPBACK)
+			to.sin_port = local_port;
+		else
+			to.sin_port = remote_port; /* for testing. */
 
 		if (fallback_interface) {
 			result = send_packet (fallback_interface,
@@ -1889,7 +1892,10 @@ void dhcp_reply (lease)
 	/* If this was gatewayed, send it back to the gateway... */
 	if (raw.giaddr.s_addr) {
 		to.sin_addr = raw.giaddr;
-		to.sin_port = local_port;
+		if (raw.giaddr.s_addr != INADDR_LOOPBACK)
+			to.sin_port = local_port;
+		else
+			to.sin_port = remote_port; /* For debugging. */
 
 		if (fallback_interface) {
 			result = send_packet (fallback_interface,
