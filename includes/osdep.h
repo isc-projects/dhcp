@@ -123,6 +123,10 @@
 # endif
 #endif
 
+#if !defined (TIME_MAX)
+# define TIME_MAX 2147483647
+#endif
+
 /* Porting::
 
    If you add a new network API, and have it set up so that it can be
