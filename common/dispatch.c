@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dispatch.c,v 1.47.2.8 1999/02/03 19:46:05 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dispatch.c,v 1.47.2.9 1999/02/05 20:23:50 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -262,31 +262,38 @@ void discover_interfaces (state)
 	   with IP addresses of 0.0.0.0 anymore (grumble).   This only
 	   matters for the DHCP client, of course - the relay agent and
 	   server should only care about interfaces that are configured
-	   with IP addresses anyway. */
+	   with IP addresses anyway.
+
+	   The PROCDEV_DEVICE (/proc/net/dev) is a kernel-supplied file
+	   that, when read, prints a human readable network status.   We
+	   extract the names of the network devices by skipping the first
+	   two lines (which are header) and then parsing off everything
+	   up to the colon in each subsequent line - these lines start
+	   with the interface name, then a colon, then a bunch of
+	   statistics.   Yes, Virgina, this is a kludge, but you work
+	   with what you have. */
 
 	if (state == DISCOVER_UNCONFIGURED) {
-		int proc_dev;
+		FILE *proc_dev;
 		char buffer [256];
 		struct ifreq *tif;
 		int skip = 2;
 
-		proc_dev = open (PROCDEV_DEVICE, O_RDONLY);
-		if (proc_dev < 0)
+		proc_dev = fopen (PROCDEV_DEVICE, "r");
+		if (!proc_dev)
 			error ("%s: %m", PROCDEV_DEVICE);
 
-		while (read (proc_dev, buffer, 256) == 256) {
+		while (fgets (buffer, sizeof buffer, proc_dev)) {
 			char *name = buffer;
 			char *sep;
 
-			/* Skip the first two blocks, which are apparently
-			   some kind of header. */
+			/* Skip the first two blocks, which are header
+			   lines. */
 			if (skip) {
 				--skip;
 				continue;
 			}
 
-			/* XXX What if there is no ':'?   Does the device put
-			   a NUL at the end of the name, I hope? XXX */
 			sep = strrchr (buffer, ':');
 			if (sep)
 				*sep = '\0';
@@ -332,7 +339,7 @@ void discover_interfaces (state)
 			tmp -> next = interfaces;
 			interfaces = tmp;
 		}
-		close (proc_dev);
+		fclose (proc_dev);
 	}
 #endif
 
