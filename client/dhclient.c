@@ -56,7 +56,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhclient.c,v 1.44.2.2 1998/07/10 23:14:10 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.44.2.3 1998/11/24 22:15:06 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -126,6 +126,10 @@ int main (argc, argv, envp)
 			no_daemon = 1;
 		} else if (!strcmp (argv [i], "-D")) {
 			save_scripts = 1;
+		} else if (!strcmp (argv [i], "-lf")) {
+			if (++i == argc)
+				usage ();
+			path_dhclient_db = argv [i];
  		} else if (argv [i][0] == '-') {
  		    usage ();
  		} else {
@@ -247,7 +251,7 @@ int main (argc, argv, envp)
 
 static void usage ()
 {
-	error ("Usage: dhclient [-c] [-p <port>] [interface]");
+	error ("Usage: dhclient [-c] [-p <port>] [-lf lease-file] [interface]");
 }
 
 void cleanup ()
