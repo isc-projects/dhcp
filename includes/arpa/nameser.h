@@ -49,7 +49,7 @@
  */
 
 /*
- *	$Id: nameser.h,v 1.3 2000/01/27 23:28:08 mellon Exp $
+ *	$Id: nameser.h,v 1.4 2000/02/02 07:23:18 mellon Exp $
  */
 
 #ifndef _ARPA_NAMESER_H_
@@ -215,7 +215,7 @@ typedef enum __ns_update_operation {
 struct ns_tsig_key {
         char name[NS_MAXDNAME], alg[NS_MAXDNAME];
         unsigned char *data;
-        int len;
+        unsigned len;
 };
 typedef struct ns_tsig_key ns_tsig_key;
 
@@ -227,7 +227,7 @@ struct ns_tcp_tsig_state {
 	struct dst_key *key;
 	void *ctx;
 	unsigned char sig[NS_PACKETSZ];
-	int siglen;
+	unsigned siglen;
 };
 typedef struct ns_tcp_tsig_state ns_tcp_tsig_state;
 
@@ -455,41 +455,6 @@ typedef enum __ns_cert_types {
 	*t_cp   = t_l; \
 	(cp) += NS_INT32SZ; \
 } while (0)
-
-/*
- * ANSI C identifier hiding for bind's lib/nameser.
- */
-#define ns_get16		__ns_get16
-#define ns_get32		__ns_get32
-#define ns_put16		__ns_put16
-#define ns_put32		__ns_put32
-#define ns_initparse		__ns_initparse
-#define ns_skiprr		__ns_skiprr
-#define ns_parserr		__ns_parserr
-#define	ns_sprintrr		__ns_sprintrr
-#define	ns_sprintrrf		__ns_sprintrrf
-#define	ns_format_ttl		__ns_format_ttl
-#define	ns_parse_ttl		__ns_parse_ttl
-#define ns_datetosecs		__ns_datetosecs
-#define	ns_name_ntol		__ns_name_ntol
-#define	ns_name_ntop		__ns_name_ntop
-#define	ns_name_pton		__ns_name_pton
-#define	ns_name_unpack		__ns_name_unpack
-#define	ns_name_pack		__ns_name_pack
-#define	ns_name_compress	__ns_name_compress
-#define	ns_name_uncompress	__ns_name_uncompress
-#define	ns_name_skip		__ns_name_skip
-#define	ns_sign			__ns_sign
-#define	ns_sign_tcp		__ns_sign_tcp
-#define	ns_sign_tcp_init	__ns_sign_tcp_init
-#define ns_find_tsig		__ns_find_tsig
-#define	ns_verify		__ns_verify
-#define	ns_verify_tcp		__ns_verify_tcp
-#define	ns_verify_tcp_init	__ns_verify_tcp_init
-#define	ns_samedomain		__ns_samedomain
-#define	ns_subdomain		__ns_subdomain
-#define	ns_makecanon		__ns_makecanon
-#define	ns_samename		__ns_samename
 
 #include <arpa/nameser_compat.h>
 
