@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.46 1998/02/06 01:10:28 mellon Exp $ Copyright 1995, 1996 The Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.47 1998/03/15 20:47:27 mellon Exp $ Copyright 1995, 1996 The Internet Software Consortium.";
 #endif
 
 static char copyright[] =
@@ -327,6 +327,11 @@ void lease_pinged (from, packet, length)
 		warn ("ICMP Echo Reply for %s arrived late or is spurious.\n",
 		      piaddr (from));
 		return;
+	}
+
+	if (lp -> ends > cur_time) {
+		warn ("ICMP Echo reply arrived while lease %s was valid.\n",
+		      piaddr (from));
 	}
 
 	/* At this point it looks like we pinged a lease and got a
