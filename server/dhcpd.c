@@ -42,7 +42,9 @@
 
 #ifndef lint
 static char copyright[] =
-"@(#) Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"Copyright 1995, 1996 The Internet Software Consortium.";
+static char arr [] = "All rights reserved.\n";
+static char message [] = "Internet Software Consortium DHCPD version $Name:  $";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -106,6 +108,10 @@ int main (argc, argv, envp)
 	/* Become session leader and get pid... */
 	pid = setsid ();
 #endif	
+	note (message);
+	note (copyright);
+	note (arr);
+
 	for (i = 1; i < argc; i++) {
 		if (!strcmp (argv [i], "-p")) {
 			if (++i == argc)
@@ -113,22 +119,6 @@ int main (argc, argv, envp)
 			server_port = htons (atoi (argv [i]));
 			debug ("binding to user-specified port %d",
 			       ntohs (server_port));
-#if 0
-		} else if (!strcmp (argv [i], "-a")) {
-			if (++i == argc)
-				usage ();
-			if (inet_aton (argv [i], &addr)) {
-				addrtree =
-					tree_concat (addrtree,
-						     tree_const
-						     ((unsigned char *)&addr,
-						      sizeof addr));
-			} else {
-				addrtree = tree_concat (addrtree,
-							tree_host_lookup
-							(argv [i]));
-			}
-#endif
 		} else
 			usage ();
 	}
