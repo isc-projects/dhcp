@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.91 2000/11/28 23:16:26 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.92 2000/12/05 07:15:16 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1246,20 +1246,6 @@ int parse_base64 (data, cfile)
 	int cc = 0;
 	int terminated = 0;
 	
-	token = peek_token (&val, cfile);
-	if (token == STRING) {
-		token = next_token (&val, cfile);
-		data -> len = strlen (val) + 1;
-		if (!buffer_allocate (&data -> buffer, data -> len, MDL)) {
-			parse_warn (cfile, "can't allocate string buffer");
-			return 0;
-		}
-		strcpy ((char *)data -> buffer -> data, val);
-		data -> terminated = 1;
-		data -> data = data -> buffer -> data;
-		return 1;
-	}
-
 	/* It's possible for a + or a / to cause a base64 quantity to be
 	   tokenized into more than one token, so we have to parse them all
 	   in before decoding. */
@@ -1281,7 +1267,8 @@ int parse_base64 (data, cfile)
 		last = t;
 		token = peek_token (&val, cfile);
 	} while (token == NUMBER_OR_NAME || token == NAME || token == EQUAL ||
-		 token == NUMBER || token == PLUS || token == SLASH);
+		 token == NUMBER || token == PLUS || token == SLASH ||
+		 token == STRING);
 
 	data -> len = cc;
 	data -> len = (data -> len * 3) / 4;
@@ -2100,6 +2087,7 @@ int parse_key (struct parse *cfile)
 	struct auth_key *key;
 	struct data_string ds;
 	isc_result_t status;
+	char *s;
 
 	token = next_token (&val, cfile);
 	if (token != STRING && !is_identifier (token)) {
@@ -2139,6 +2127,23 @@ int parse_key (struct parse *cfile)
 			}
 			if (!parse_semi (cfile))
 				goto rbad;
+			/* If the algorithm name isn't an FQDN, tack on
+			   the .SIG-ALG.REG.NET. domain. */
+			s = strchr (key -> algorithm, '.');
+			if (!s) {
+				static char add [] = ".SIG-ALG.REG.INT.";
+				s = dmalloc (strlen (key -> algorithm) +
+					     sizeof (add), MDL);
+				if (!s) {
+					log_error ("no memory for key %s.",
+						   "algorithm");
+					goto rbad;
+				}
+				strcpy (s, key -> algorithm);
+				strcat (s, add);
+				dfree (key -> algorithm, MDL);
+				key -> algorithm = s;
+			}
 			break;
 
 		      case SECRET:
