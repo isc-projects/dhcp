@@ -1,7 +1,7 @@
 		     Internet Software Consortium
 	      Dynamic Host Configuration Protocol Server
-			    Beta Release 0
-			    March 6, 1996
+			    Beta Release 1
+			    March 16, 1996
 
 This is the first Beta release of the Internet Software Consortium
 DHCP Server (ISC dhcpd).  In this Beta release, support for the core
@@ -22,11 +22,11 @@ is by no means self-explanatory at this point - it will get better as
 dhcpd matures.   If you are building on BSD/os or NetBSD, just type
 make - it should build with no problem.
 
-Last week (February 26-28), I brought ISC dhcpd to Connectathon and
-worked out many bugs.  ISC dhcpd was able to boot all of the DHCP
-clients at Connectathon by the time I left.  Many thanks to Audrey Van
-Belleghem for getting me in to Connectathon even though we weren't
-able to budget for it, to Mike Carney for running the DHCP testing in
+In February, I brought ISC dhcpd to Connectathon and worked out
+many bugs.  ISC dhcpd was able to boot all of the DHCP clients at
+Connectathon by the time I left.  Many thanks to Audrey Van Belleghem
+for getting me in to Connectathon even though we weren't able to
+budget for it, to Mike Carney for running the DHCP testing in
 general and helping me out in particular, and to all the other DHCP
 Bakeoff participants at Connectathon who tried their clients against
 dhcpd and told me where it was busted, or, later on, that it wasn't
@@ -51,6 +51,20 @@ You can also compile dhcpd with ``make DEBUG="-g -DDEBUG"''.  If you
 do this, dhcpd will run in the foreground rather than as a daemon, and
 will print its log messages to standard error.  It will also dump the
 contents of all packets it receives and sends.
+
+			       SUPPORT
+
+ISC DHCPD is not a commercial product, and is not supported in that sense.
+However, I am continuing to work on this server with the support of the
+Internet Software Consortium, so if you have trouble or want help, please
+free free to contact me, Ted Lemon <mellon@fugue.com>.
+
+In addition, there are two mailing lists for dhcpd - dhcpd-announce and
+dhcpd-users.   To subscribe, see http://www.fugue.com/dhcp/lists.   If you
+don't have WWW access, you can send mail to dhcpd-request@fugue.com and
+tell me which lists you want to subscribe to, but please use the web interface
+if you can, since I have to handle the -request mailing list manually.
+
 
 				 BUGS
 

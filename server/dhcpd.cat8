@@ -55,8 +55,8 @@ OOPPEERRAATTIIOONN
      into the ddhhccppdd..ccoonnff file.
 
      Whenever changes are made to the ddhhccppdd..ccoonnff file, ddhhccppdd must be restart-
-     ed.   To restart ddhhccppdd, send signal 15 to the process ID contained in
-     //vvaarr//rruunn//ddhhccppdd..ppiidd, and then re-invoke ddhhccppdd.
+     ed.   To restart ddhhccppdd, send a SIGTERM (signal 15) to the process ID con-
+     tained in //vvaarr//rruunn//ddhhccppdd..ppiidd, and then re-invoke ddhhccppdd.
 
 
 CCOONNFFIIGGUURRAATTIIOONN
@@ -179,4 +179,4 @@ AAUUTTHHOORR
      ware Corporation.  Information about the Internet Software Consortium can
      be found at hhttttpp::////wwwwww..iisscc..oorrgg//iisscc.
 
-                                 March 6, 1996                               3
+                                March 16, 1996                               3

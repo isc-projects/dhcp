@@ -122,7 +122,7 @@ file,
 .Nm dhcpd
 must be restarted.   To restart
 .Nm dhcpd ,
-send signal 15 to the process ID contained in
+send a SIGTERM (signal 15) to the process ID contained in
 .Nm /var/run/dhcpd.pid ,
 and then re-invoke
 .Nm dhcpd .
