@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bootp.c,v 1.44 1999/04/08 19:36:23 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bootp.c,v 1.45 1999/04/12 22:15:38 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -123,7 +123,7 @@ void bootp (packet)
 	
 	/* Execute the host statements. */
 	execute_statements_in_scope (packet, options, options, hp -> group,
-				     lease -> subnet -> group);
+				     hp -> group);
 	
 	/* Drop the request if it's not allowed for this client. */
 	if (evaluate_boolean_option_cache (packet, options,
@@ -205,8 +205,6 @@ void bootp (packet)
 	memcpy (&raw.yiaddr, ip_address.iabuf, sizeof raw.yiaddr);
 
 	/* Figure out the address of the next server. */
-	raw.siaddr = (lease -> subnet -> shared_network ->
-		      interface -> primary_address);
 	memset (&d1, 0, sizeof d1);
 	oc = lookup_option (&dhcp_universe, options, SV_NEXT_SERVER);
 	if (oc &&
@@ -215,6 +213,12 @@ void bootp (packet)
 		if (d1.len >= 4 && d1.data)
 			memcpy (&raw.siaddr, d1.data, 4);
 		data_string_forget (&d1, "bootrequest");
+	} else {
+		if (lease -> subnet -> shared_network -> interface)
+			raw.siaddr = (lease -> subnet -> shared_network ->
+				      interface -> primary_address);
+		else
+			raw.siaddr = packet -> interface -> primary_address;
 	}
 
 	raw.giaddr = packet -> raw -> giaddr;
