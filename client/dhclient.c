@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.88 1999/10/30 14:07:29 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.89 1999/11/13 23:49:41 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1993,11 +1993,14 @@ void script_init (client, reason, medium)
 		fd = mkstemp (scriptName);
 #else
 		if (!mktemp (scriptName))
-			log_fatal ("can't create temporary client script %s: %m",
-			       scriptName);
+			log_fatal ("can't create temporary script %s: %m",
+				   scriptName);
 		fd = creat (scriptName, 0600);
-	} while (fd < 0);
+	} while (fd < 0 && errno == EEXISTS);
 #endif
+	if (fd < 0)
+		log_fatal ("can't create temporary script %s: %m", scriptName);
+
 
 	scriptFile = fdopen (fd, "w");
 	if (!scriptFile)
@@ -2274,4 +2277,28 @@ void client_location_changed ()
 			state_reboot (client);
 		}
 	}
+}
+
+/* The client should never receive a relay agent information option,
+   so if it does, log it and discard it. */
+
+int parse_agent_information_option (packet, len, data)
+	struct packet *packet;
+	int len;
+	u_int8_t *data;
+{
+	log_info ("relay agent information option received.");
+	return 1;
+}
+
+/* The client never sends relay agent information options. */
+
+unsigned cons_agent_information_options (cfg_options, outpacket,
+					 agentix, length)
+	struct option_state *cfg_options;
+	struct dhcp_packet *outpacket;
+	unsigned agentix;
+	unsigned length;
+{
+	return length;
 }
