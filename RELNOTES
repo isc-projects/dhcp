@@ -26,18 +26,36 @@ release that we would expect most sites to run.  It is possible to run
 the Version 1 server with the Version 2 client at sites that want to
 be really conservative.
 
-Version 3 of the ISC DHCP Distribution will add conditional behaviour,
-address pools with access control, client classing, Dynamic DNS
+Version 3 of the ISC DHCP Distribution adds conditional behaviour,
+address pools with access control, and client classing.  Features in
+upcoming releases, starting with 3.1, will include Dynamic DNS
 Support, DHCPv4 16-bit option codes, asynchronous DNS query
 resolution, DHCP Authentication, and support for a DHCP Interserver
 Protocol and live querying and update of the DHCP database.  Not all
 of this is done yet (see below).
 
 This release is running in producion at the ISC and at some other
-sites.  A beta release of 3.0 is expected by June.  At this point, the
-3.0 release is reasonably stable, but is really only recommended for
-sites that are in a position to experiment, or for sites that need the
-new features.  Bug reports are enthusiastically solicited.
+sites.  A beta release of 3.0 will be available in mid-May of 1999.
+At this point, the 3.0 release is reasonably stable, but is really
+only recommended for sites that are in a position to experiment, or
+for sites that need the new features.  Bug reports are
+enthusiastically solicited.
+
+		     Changes since May 6, 1999
+
+- Reverse precedence of user-supplied parameter request list so that
+  user can override client's preferences.
+
+- Do not call abort () when uninitialized pointers are passed to
+  allocation functions unless POINTER_DEBUG is defined.
+
+- Fix a bug in parsing colon-seperated hex octet lists in data
+  expressions.
+
+- Fix a number of cases where the server would dump core in
+  evaluate_*_expression if the options buffer was a NULL pointer.
+
+- Fix incorrect handling of exists subexpression.
 
 		     Changes since April 24, 1999
 
