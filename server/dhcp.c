@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.154 2000/06/12 22:20:43 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.155 2000/06/30 00:48:55 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -3099,7 +3099,8 @@ int allocate_lease (struct lease **lp, struct packet *packet,
 				*peer_has_leases = 1;
 			lease = pool -> backup;
 		}
-	}
+	} else
+		lease = pool -> free;
 #else
 	if (pool -> free)
 		lease = pool -> free;
