@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.21 1999/11/20 18:36:32 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.22 2000/01/05 18:22:07 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -98,14 +98,14 @@ isc_result_t enter_host (hd, dynamicp, commit)
 		} else
 			hp = (struct host_decl *)
 				hash_lookup (host_hw_addr_hash,
-					     hd -> interface.haddr,
+					     hd -> interface.hbuf,
 					     hd -> interface.hlen);
 
 		/* If there isn't already a host decl matching this
 		   address, add it to the hash table. */
 		if (!hp) {
 			add_hash (host_hw_addr_hash,
-				  hd -> interface.haddr, hd -> interface.hlen,
+				  hd -> interface.hbuf, hd -> interface.hlen,
 				  (unsigned char *)hd);
 			hd -> refcnt++;	/* XXX */
 		}
@@ -209,14 +209,15 @@ isc_result_t delete_host (hd, commit)
 		if (host_hw_addr_hash) {
 			hp = (struct host_decl *)
 				hash_lookup (host_hw_addr_hash,
-					     hd -> interface.haddr,
+					     hd -> interface.hbuf,
 					     hd -> interface.hlen);
 
 			if (hp) {
 				if (hp == hd) {
-				    delete_hash_entry (host_hw_addr_hash,
-						       hd -> interface.haddr,
-						       hd -> interface.hlen);
+				    delete_hash_entry
+					    (host_hw_addr_hash,
+					     hd -> interface.hbuf,
+					     hd -> interface.hlen);
 				    hw_head = 1;
 				    --hd -> refcnt;
 				}
@@ -276,7 +277,7 @@ isc_result_t delete_host (hd, commit)
 		}
 		if (hw_head && hd -> n_ipaddr -> interface.hlen) {
 			add_hash (host_hw_addr_hash,
-				  hd -> n_ipaddr -> interface.haddr,
+				  hd -> n_ipaddr -> interface.hbuf,
 				  hd -> n_ipaddr -> interface.hlen,
 				  (unsigned char *)hd -> n_ipaddr);
 			hd -> n_ipaddr -> refcnt++;
@@ -579,7 +580,11 @@ void new_address_range (low, high, subnet, pool)
 		address_range [i].subnet = subnet;
 		address_range [i].pool = pool;
 		address_range [i].billing_class = (struct class *)0;
-		address_range [i].flags = 0;
+		if (pool -> failover_peer &&
+		    pool -> failover_peer -> i_am == secondary)
+			address_range [i].flags = PEER_IS_OWNER;
+		else
+			address_range [i].flags = 0;
 		address_range [i].type = dhcp_type_lease;
 
 		/* Link this entry into the list. */
@@ -820,12 +825,10 @@ int supersede_lease (comp, lease, commit)
 	      (comp -> uid_len != lease -> uid_len ||
 	       memcmp (comp -> uid, lease -> uid, comp -> uid_len))) ||
 	     (!comp -> uid &&
-	      ((comp -> hardware_addr.htype !=
-		lease -> hardware_addr.htype) ||
-	       (comp -> hardware_addr.hlen !=
+	      ((comp -> hardware_addr.hlen !=
 		lease -> hardware_addr.hlen) ||
-	       memcmp (comp -> hardware_addr.haddr,
-		       lease -> hardware_addr.haddr,
+	       memcmp (comp -> hardware_addr.hbuf,
+		       lease -> hardware_addr.hbuf,
 		       comp -> hardware_addr.hlen))))) {
 		log_error ("Lease conflict at %s",
 		      piaddr (comp -> ip_addr));
@@ -846,17 +849,15 @@ int supersede_lease (comp, lease, commit)
 	} else
 		enter_uid = 1;
 	
-	if (comp -> hardware_addr.htype &&
+	if (comp -> hardware_addr.hlen &&
 	    ((comp -> hardware_addr.hlen !=
 	      lease -> hardware_addr.hlen) ||
-	     (comp -> hardware_addr.htype !=
-	      lease -> hardware_addr.htype) ||
-	     memcmp (comp -> hardware_addr.haddr,
-		     lease -> hardware_addr.haddr,
+	     memcmp (comp -> hardware_addr.hbuf,
+		     lease -> hardware_addr.hbuf,
 		     comp -> hardware_addr.hlen))) {
 		hw_hash_delete (comp);
 		enter_hwaddr = 1;
-	} else if (!comp -> hardware_addr.htype)
+	} else if (!comp -> hardware_addr.hlen)
 		enter_hwaddr = 1;
 	
 	/* If the lease has been billed to a class, remove the billing. */
@@ -921,7 +922,7 @@ int supersede_lease (comp, lease, commit)
 	}
 	
 	/* Record it in the hardware address hash if necessary. */
-	if (enter_hwaddr && lease -> hardware_addr.htype) {
+	if (enter_hwaddr && lease -> hardware_addr.hlen) {
 		hw_hash_add (comp);
 	}
 	
@@ -943,10 +944,18 @@ int supersede_lease (comp, lease, commit)
 	   (we may wind up putting it back, but we can't count on
 	   that here without too much additional complexity). */
 	if (comp -> pool -> next_expiry == comp) {
+#if defined (FAILOVER_PROTOCOL)
+		lp = comp -> prev;
+#else
 		for (lp = comp -> prev; lp; lp = lp -> prev)
 			if (lp -> on_expiry)
 				break;
-		if (lp && lp -> on_expiry) {
+#endif
+		if (lp
+#if defined (FAILOVER_PROTOCOL)
+		    && lp -> on_expiry
+#endif
+			) {
 			comp -> pool -> next_expiry = lp;
 			if (commit)
 				add_timeout (lp -> ends,
@@ -1021,14 +1030,22 @@ int supersede_lease (comp, lease, commit)
 
 	/* If there's an expiry event on this lease, process it or
 	   queue it. */
+#if !defined (FAILOVER_PROTOCOL)
 	if (comp -> on_expiry) {
+#endif
 		if (comp -> ends <= cur_time && commit) {
+#if defined (FAILOVER_PROTOCOL)
+			if (comp -> on_expiry) {
+#endif
 			execute_statements ((struct packet *)0, lease,
 					    (struct option_state *)0,
 					    (struct option_state *)0, /* XXX */
 					    comp -> on_expiry);
 			executable_statement_dereference (&comp -> on_expiry,
 							  "supersede_lease");
+#if defined (FAILOVER_PROTOCOL)
+			}
+#endif
 			/* No sense releasing a lease after it's expired. */
 			if (comp -> on_release)
 				executable_statement_dereference
@@ -1069,14 +1086,18 @@ int supersede_lease (comp, lease, commit)
                                     for (foo = comp;
                                          foo -> ends == comp -> ends;
                                          foo = foo -> next) {
+#if defined (FAILOVER_PROTOCOL)
                                             if (foo -> on_expiry)
+#endif
                                                     install = foo;
                                     }
                                     comp -> pool -> next_expiry = install;
                             }
 			}
 		}
+#if !defined (FAILOVER_PROTOCOL)
 	}
+#endif
 
 	/* Return zero if we didn't commit the lease to permanent storage;
 	   nonzero if we did. */
@@ -1148,7 +1169,6 @@ void abandon_lease (lease, message)
 	lt.ends = cur_time; /* XXX */
 	log_error ("Abandoning IP address %s: %s",
 	      piaddr (lease -> ip_addr), message);
-	lt.hardware_addr.htype = 0;
 	lt.hardware_addr.hlen = 0;
 	lt.uid = (unsigned char *)0;
 	lt.uid_len = 0;
@@ -1173,7 +1193,6 @@ void dissociate_lease (lease)
 
 	if (lt.ends > cur_time)
 		lt.ends = cur_time;
-	lt.hardware_addr.htype = 0;
 	lt.hardware_addr.hlen = 0;
 	lt.uid = (unsigned char *)0;
 	lt.uid_len = 0;
@@ -1194,22 +1213,25 @@ void pool_timer (vpool)
                    yet expired. */
 		if (lease -> ends > cur_time)
 			break;
-		/* Skip entries that aren't set to expire. */
-		if (!lease -> on_expiry)
-			continue;
 
-		/* Okay, the current lease needs to expire, so do it. */
-		execute_statements ((struct packet *)0, lease,
-				    (struct option_state *)0,
-				    (struct option_state *)0, /* XXX */
-				    lease -> on_expiry);
-		executable_statement_dereference (&lease -> on_expiry,
-						  "pool_timer");
+		/* Skip entries that aren't set to expire. */
+		if (lease -> on_expiry) {
+			/* Okay, the current lease needs to expire, so
+                           do it. */
+			execute_statements ((struct packet *)0, lease,
+					    (struct option_state *)0,
+					    (struct option_state *)0, /* XXX */
+					    lease -> on_expiry);
+			executable_statement_dereference (&lease -> on_expiry,
+							  "pool_timer");
+		}			
 
 		/* If there's an on_release event, blow it away. */
 		if (lease -> on_release)
 			executable_statement_dereference (&lease -> on_release,
 							  "pool_timer");
+		/* XXX is this appropriate if we haven't run an
+		   XXX expiry event? */
 		if (lease -> ddns_fwd_name) {
 			dfree (lease -> ddns_fwd_name, "pool_timer");
 			lease -> ddns_fwd_name = (char *)0;
@@ -1218,6 +1240,12 @@ void pool_timer (vpool)
 			dfree (lease -> ddns_rev_name, "pool_timer");
 			lease -> ddns_rev_name = (char *)0;
 		}
+
+#if defined (FAILOVER_PROTOCOL)
+		lease -> tstp = 0;
+		update_partner (lease);
+#endif
+		
 		/* There are two problems with writing the lease out here.
 
 		   The first is that we've just done a commit, and the write
@@ -1241,6 +1269,12 @@ void pool_timer (vpool)
 			log_error ("Error committing after writing lease %s",
 				   piaddr (lease -> ip_addr));
 		}
+#if defined (FAILOVER_PROTOCOL)
+		if (lease -> flags & PEER_IS_OWNER)
+			pool -> peer_leases--;
+		else
+			pool -> local_leases--;
+#endif
 	}
 	pool -> next_expiry = lease;
 	if (lease)
@@ -1343,14 +1377,14 @@ void hw_hash_add (lease)
 	struct lease *lease;
 {
 	struct lease *head =
-		find_lease_by_hw_addr (lease -> hardware_addr.haddr,
+		find_lease_by_hw_addr (lease -> hardware_addr.hbuf,
 				       lease -> hardware_addr.hlen);
 	struct lease *scan;
 
 	/* If it's not in the hash, just add it. */
 	if (!head)
 		add_hash (lease_hw_addr_hash,
-			  lease -> hardware_addr.haddr,
+			  lease -> hardware_addr.hbuf,
 			  lease -> hardware_addr.hlen,
 			  (unsigned char *)lease);
 	else {
@@ -1367,7 +1401,7 @@ void hw_hash_delete (lease)
 	struct lease *lease;
 {
 	struct lease *head =
-		find_lease_by_hw_addr (lease -> hardware_addr.haddr,
+		find_lease_by_hw_addr (lease -> hardware_addr.hbuf,
 				       lease -> hardware_addr.hlen);
 	struct lease *scan;
 
@@ -1382,11 +1416,11 @@ void hw_hash_delete (lease)
 	   next lease on the list (if there is one). */
 	if (head == lease) {
 		delete_hash_entry (lease_hw_addr_hash,
-				   lease -> hardware_addr.haddr,
+				   lease -> hardware_addr.hbuf,
 				   lease -> hardware_addr.hlen);
 		if (lease -> n_hw)
 			add_hash (lease_hw_addr_hash,
-				  lease -> n_hw -> hardware_addr.haddr,
+				  lease -> n_hw -> hardware_addr.hbuf,
 				  lease -> n_hw -> hardware_addr.hlen,
 				  (unsigned char *)(lease -> n_hw));
 	} else {
