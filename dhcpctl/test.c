@@ -104,7 +104,7 @@ int main (argc, argv)
 	if (name) {
 		status = dhcpctl_new_authenticator (&authenticator,
 						    name, algorithm, pass,
-						    strlen (pass) + 1);
+						    (int)strlen (pass) + 1);
 		if (status != ISC_R_SUCCESS) {
 			fprintf (stderr, "Cannot create authenticator: %s\n",
 				 isc_result_totext (status));
