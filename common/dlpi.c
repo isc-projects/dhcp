@@ -70,7 +70,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dlpi.c,v 1.15 1999/10/07 06:47:50 mellon Exp $ Copyright (c) 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dlpi.c,v 1.16 1999/10/14 17:44:02 mellon Exp $ Copyright (c) 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -221,7 +221,7 @@ int if_register_dlpi (info)
 		info -> hw_address.htype = HTYPE_FDDI;
 		break;
 	      default:
-		log_fatal ("%s: unknown DLPI MAC type %d",
+		log_fatal ("%s: unknown DLPI MAC type %ld",
 		       info -> name,
 		       dlp -> info_ack.dl_mac_type);
 		break;

@@ -25,7 +25,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: nsupdate.c,v 1.11 1999/10/07 06:35:43 mellon Exp $ Copyright (c) 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: nsupdate.c,v 1.12 1999/10/14 17:47:54 mellon Exp $ Copyright (c) 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -257,7 +257,7 @@ int nsupdateA (hostname, ip_addr, ttl, opcode)
 		break;
 	}
 	z = res_update (u);
-	log_info ("%s %s: %s %d IN A %s", opcode == ADD ? "add" : "delete",
+	log_info ("%s %s: %s %ld IN A %s", opcode == ADD ? "add" : "delete",
 		  z == 1 ? "succeeded" : "failed", NAME (hostname), ttl,
 		  NAME (u -> r_data));
 #if 0
@@ -331,7 +331,7 @@ int nsupdatePTR (revname, hostname, ttl, opcode)
 		break;
 	}
 	z = res_update(u);
-	log_info ("%s %s: %s %d IN PTR %s", opcode == ADD ? "add" : 
+	log_info ("%s %s: %s %ld IN PTR %s", opcode == ADD ? "add" : 
 		  "delete", z == 1 ? "succeeded" : "failed",
 		  NAME (revname), ttl, NAME (u -> r_data));
 #if 0
