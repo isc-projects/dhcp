@@ -156,28 +156,23 @@ your own.
 			 DYNAMIC DNS UPDATES
 
 An interim implementation of dynamic DNS updates is included in this
-release.   This implementation is not currently supported, and is not
-built by default.   To use this implementation, you must have
-installed the latest version of bind 8.2 (see http://www.isc.org for
-more information about BIND).   The configuration utility assumes that
-the BIND 8.2 distribution libraries and includes are under the
-/usr/local/bind directory, so if you have installed them elsewhere,
-you should set the BINDLIB and BINDINC variables in site.conf to
-override the values that will be set by the configure script from
-Makefile.conf.
+release.  This implementation is not built by default.  To use this
+implementation, you must have installed the latest version of bind 8.2
+(see http://www.isc.org for more information about BIND).  The
+configuration utility assumes that the BIND 8.2 distribution libraries
+and includes are under the /usr/local/bind directory, so if you have
+installed them elsewhere, you should set the BINDLIB and BINDINC
+variables in site.conf to override the values that will be set by the
+configure script from Makefile.conf.
 
 Assuming that you have BIND 8.2 installed, you can build dynamic DNS
 update support using:
 
 		     ./configure --with-nsupdate
 
-Note that there's no documentation for the dynamic DNS support yet,
-and not many people are using it, so you should expect it to be
-difficult to set up.   We will do our best to help you on the mailing
-list, and more documentation will be forthcoming later.
-
-Also, please note that this implementation is not the final DNS update
-code, and the final code will probably be substantially different.
+There is documentation for the DDNS support in the dhcpd.conf manual
+page - see the beginning of this document for information on finding
+manual pages.
 
 			     BUILDING IT
 
