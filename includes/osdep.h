@@ -97,6 +97,10 @@
 #  include "cf/sco.h"
 #endif
 
+#ifdef hpux
+#  include "cf/hpux.h"
+#endif
+
 /* Porting::
 
    If you add a new network API, and have it set up so that it can be

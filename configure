@@ -26,6 +26,8 @@ if [ "$sysname" = "" ]; then
       sysname=netbsd;;
     FreeBSD)
       sysname=freebsd;;
+    hpux)
+      sysname=hpux;;
   esac
 fi
 
@@ -44,6 +46,7 @@ if [ "$sysname" = "" ]; then
   echo "   sunos5	SunOS 5.5 (Solaris 2.5) (earlier 2.x releases may work)"
   echo "   netbsd	NetBSD 1.1 or higher"
   echo "   freebsd	FreeBSD"
+  echo "   hpux		HP-UX"
   exit 1;
 fi
 
