@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.55 2000/01/27 22:40:49 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.56 2000/01/27 23:19:35 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -1043,6 +1043,7 @@ int option_cache_dereference (ptr, file, line)
 #if defined (POINTER_DEBUG)
 		abort ();
 #else
+		*ptr = (struct option_cache *)0;
 		return 0;
 #endif
 	}
@@ -1366,7 +1367,7 @@ void do_packet (interface, packet, len, from_port, from, hfrom)
 #if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL)
 	dmalloc_dump_outstanding ();
 #endif
-#if defined (DEBUG_RC_HISTORY)
+#if defined (DEBUG_RC_HISTORY_EXHAUSTIVELY)
 	dump_rc_history ();
 #endif
 }
