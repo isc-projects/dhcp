@@ -402,19 +402,22 @@ void trace_file_replay (const char *filename)
 		goto out;
 	}
 	if (tracefile_header.version > TRACEFILE_VERSION) {
-		log_error ("tracefile version %d > current %d.",
-			   tracefile_header.version, TRACEFILE_VERSION);
+		log_error ("tracefile version %ld > current %ld.",
+			   (long int)tracefile_header.version,
+			   (long int)TRACEFILE_VERSION);
 		goto out;
 	}
 	if (tracefile_header.phlen < sizeof *tpkt) {
-		log_error ("tracefile packet size too small - %d < %d",
-			   tracefile_header.phlen, sizeof *tpkt);
+		log_error ("tracefile packet size too small - %ld < %ld",
+			   (long int)tracefile_header.phlen,
+			   (long int)sizeof *tpkt);
 		goto out;
 	}
 	len = (sizeof tracefile_header) - tracefile_header.hlen;
 	if (len < 0) {
-		log_error ("tracefile header size too small - %d < %d",
-			   tracefile_header.hlen, sizeof tracefile_header);
+		log_error ("tracefile header size too small - %ld < %ld",
+			   (long int)tracefile_header.hlen,
+			   (long int)sizeof tracefile_header);
 		goto out;
 	}
 	if (len > 0) {
@@ -470,8 +473,10 @@ isc_result_t trace_get_next_packet (trace_type_t **ttp,
 		else if (status == 0)
 			return ISC_R_EOF;
 		else
-			log_error ("Short read on trace packet header: %d %d.",
-				   status, tracefile_header.phlen);
+			log_error ("Short read on trace packet header: "
+				   "%ld %ld.",
+				   (long int)status,
+				   (long int)tracefile_header.phlen);
 		return ISC_R_PROTOCOLERROR;
 	}
 
@@ -485,8 +490,8 @@ isc_result_t trace_get_next_packet (trace_type_t **ttp,
 	    trace_types [tpkt -> type_index])
 		ttype = trace_types [tpkt -> type_index];
 	else {
-		log_error ("Trace packet with unknown index %d",
-			   tpkt -> type_index);
+		log_error ("Trace packet with unknown index %ld",
+			   (long int)tpkt -> type_index);
 		return ISC_R_PROTOCOLERROR;
 	}
 
