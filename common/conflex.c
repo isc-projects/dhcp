@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: conflex.c,v 1.29 1997/10/29 18:32:53 mellon Exp $ Copyright (c) 1995, 1996, 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: conflex.c,v 1.29.2.1 1998/12/22 22:39:58 mellon Exp $ Copyright (c) 1995, 1996, 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -417,6 +417,8 @@ static int intern (atom, dfv)
 			return FILENAME;
 		if (!strcasecmp (atom + 1, "ixed-address"))
 			return FIXED_ADDR;
+		if (!strcasecmp (atom + 1, "ddi"))
+			return FDDI;
 		break;
 	      case 'g':
 		if (!strcasecmp (atom + 1, "iaddr"))
