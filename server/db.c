@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: db.c,v 1.37 1999/11/07 20:28:23 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: db.c,v 1.38 2000/01/05 18:15:28 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -83,6 +83,36 @@ int write_lease (lease)
 		++errors;
 	}
 
+#if defined (FAILOVER_PROTOCOL)
+	t = gmtime (&lease -> tstp);
+	errno = 0;
+	fprintf (db_file, "\ttstp %d %d/%02d/%02d %02d:%02d:%02d;",
+		 t -> tm_wday, t -> tm_year + 1900,
+		 t -> tm_mon + 1, t -> tm_mday,
+		 t -> tm_hour, t -> tm_min, t -> tm_sec);
+	if (errno) {
+		++errors;
+	}
+
+	t = gmtime (&lease -> tsfp);
+	errno = 0;
+	fprintf (db_file, "\ttsfp %d %d/%02d/%02d %02d:%02d:%02d;",
+		 t -> tm_wday, t -> tm_year + 1900,
+		 t -> tm_mon + 1, t -> tm_mday,
+		 t -> tm_hour, t -> tm_min, t -> tm_sec);
+	if (errno) {
+		++errors;
+	}
+
+	if (lease -> flags & PEER_IS_OWNER) {
+		errno = 0;
+		fprintf (db_file, "\n\tpeer is owner;");
+		if (errno) {
+			++errors;
+		}
+	}
+#endif /* FAILOVER_PROTOCOL */
+
 	/* If this lease is billed to a class and is still valid,
 	   write it out. */
 	if (lease -> billing_class && lease -> ends > cur_time)
@@ -92,10 +122,10 @@ int write_lease (lease)
 	if (lease -> hardware_addr.hlen) {
 		errno = 0;
 		fprintf (db_file, "\n\thardware %s %s;",
-			 hardware_types [lease -> hardware_addr.htype],
-			 print_hw_addr (lease -> hardware_addr.htype,
-					lease -> hardware_addr.hlen,
-					lease -> hardware_addr.haddr));
+			 hardware_types [lease -> hardware_addr.hbuf [0]],
+			 print_hw_addr (lease -> hardware_addr.hbuf [0],
+					lease -> hardware_addr.hlen - 1,
+					&lease -> hardware_addr.hbuf [1]));
 		if (errno) {
 			++errors;
 		}
@@ -233,10 +263,10 @@ int write_host (host)
 		if (host -> interface.hlen) {
 			errno = 0;
 			fprintf (db_file, "\n\thardware %s %s;",
-				 hardware_types [host -> interface.htype],
-				 print_hw_addr (host -> interface.htype,
-						host -> interface.hlen,
-						host -> interface.haddr));
+				 hardware_types [host -> interface.hbuf [0]],
+				 print_hw_addr (host -> interface.hbuf [0],
+						host -> interface.hlen - 1,
+						&host -> interface.hbuf [1]));
 			if (errno) {
 				++errors;
 			}
