@@ -1,6 +1,6 @@
 	    Internet Software Consortium DHCP Distribution
-		   Version 3, Beta 2, Patchlevel 4
-			  September 14, 2000
+		   Version 3, Beta 2, Patchlevel 5
+			  September 19, 2000
 
 			    Release Notes
 
@@ -58,6 +58,23 @@ improving it.
   comments)!
 
 - Added an encoding for the slp-agent option.   :')
+
+- Fixed SunOS 4 build.  Thanks to Robert Elz for responding to my
+  request for help on this with patches!
+
+- Incorporated a change that should fix a problem reported by Philippe
+  Jumelle where when the network connection between two servers is
+  lost, they never reconnect.
+
+- Fix client script files other than that for NetBSD to actually use
+  make_resolv_conf as documented in the manual page.
+
+- Fix a bug in the packet handling code that could result in a core
+  dump.
+
+- Fix a bug in the bootp code where responses on the local net would
+  be sent to the wrong MAC address.   Thanks to Jerry Schave for
+  catching this one.
 
 		Changes since 3.0 Beta 2 Patchlevel 3
 
