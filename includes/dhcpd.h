@@ -62,12 +62,19 @@
 #include <isc/result.h>
 #include <omapip/omapip.h>
 
-#if defined (FAILOVER_PROTOCOL)
-# include "failover.h"
-#endif
-
 #if !defined (OPTION_HASH_SIZE)
 # define OPTION_HASH_SIZE 17
+#endif
+
+/* Client FQDN option, failover FQDN option, etc. */
+typedef struct {
+	u_int8_t codes [2];
+	unsigned length;
+	u_int8_t *data;
+} ddns_fqdn_t;
+
+#if defined (FAILOVER_PROTOCOL)
+# include "failover.h"
 #endif
 
 /* A parsing context. */
@@ -102,13 +109,6 @@ struct parse {
 	unsigned bufix, buflen;
 	unsigned bufsiz;
 };
-
-/* Client FQDN option, failover FQDN option, etc. */
-typedef struct {
-	u_int8_t codes [2];
-	unsigned length;
-	u_int8_t *data;
-} ddns_fqdn_t;
 
 /* Variable-length array of data. */
 
@@ -1426,10 +1426,11 @@ void initialize_common_option_spaces PROTO ((void));
 
 /* stables.c */
 #if defined (FAILOVER_PROTOCOL)
+failover_option_t null_failover_option;
 struct failover_option_info ft_options [0];
 u_int32_t fto_allowed [0];
 int ft_sizes [0];
-char *dhcp_failover_link_state_names [0];
+const char *dhcp_flink_state_names [0];
 #endif
 extern struct universe agent_universe;
 extern struct option agent_options [256];
@@ -1949,4 +1950,19 @@ isc_result_t dhcp_failover_state_destroy PROTO ((omapi_object_t *,
 isc_result_t dhcp_failover_state_stuff PROTO ((omapi_object_t *,
 					       omapi_object_t *,
 					       omapi_object_t *));
+isc_result_t dhcp_failover_state_lookup PROTO ((omapi_object_t **,
+						omapi_object_t *,
+						omapi_object_t *));
+isc_result_t dhcp_failover_state_create PROTO ((omapi_object_t **,
+						omapi_object_t *));
+isc_result_t dhcp_failover_state_remove PROTO ((omapi_object_t *,
+					       omapi_object_t *));
+failover_option_t *dhcp_failover_make_option PROTO ((unsigned, char *,
+						     unsigned *,
+						     unsigned, ...));
+isc_result_t dhcp_failover_put_message PROTO ((dhcp_failover_link_t *,
+					       omapi_object_t *,
+					       int, ...));
+isc_result_t dhcp_failover_send_connect PROTO ((omapi_object_t *));
+void failover_print PROTO ((char *, unsigned *, unsigned, const char *));
 #endif /* FAILOVER_PROTOCOL */
