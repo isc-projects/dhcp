@@ -42,14 +42,14 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.58 1998/02/06 01:08:38 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.59 1998/03/16 06:18:03 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
 
 int outstanding_pings;
 
-static unsigned char dhcp_message [256];
+static char dhcp_message [256];
 
 void dhcp (packet)
 	struct packet *packet;
@@ -418,12 +418,12 @@ void nak_lease (packet, cip)
 
 	/* Set DHCP_MESSAGE to whatever the message is */
 	options [DHO_DHCP_MESSAGE] = &dhcpmsg_tree;
-	options [DHO_DHCP_MESSAGE] -> value = dhcp_message;
-	options [DHO_DHCP_MESSAGE] -> len = strlen (dhcp_message);
-	options [DHO_DHCP_MESSAGE] -> buf_size = strlen (dhcp_message);
+	options [DHO_DHCP_MESSAGE] -> value = (unsigned char *)dhcp_message;
+	options [DHO_DHCP_MESSAGE] -> buf_size = 
+		options [DHO_DHCP_MESSAGE] -> len = strlen (dhcp_message);
 	options [DHO_DHCP_MESSAGE] -> timeout = 0xFFFFFFFF;
 	options [DHO_DHCP_MESSAGE] -> tree = (struct tree *)0;
-
+	  
 	/* Do not use the client's requested parameter list. */
 	packet -> options [DHO_DHCP_PARAMETER_REQUEST_LIST].len = 0;
 	packet -> options [DHO_DHCP_PARAMETER_REQUEST_LIST].data =
@@ -513,7 +513,7 @@ void nak_lease (packet, cip)
 void ack_lease (packet, lease, offer, when)
 	struct packet *packet;
 	struct lease *lease;
-	unsigned char offer;
+	unsigned int offer;
 	TIME when;
 {
 	struct lease lt;
@@ -533,7 +533,7 @@ void ack_lease (packet, lease, offer, when)
 	if (packet -> options [DHO_DHCP_CLASS_IDENTIFIER].len) {
 		vendor_class =
 			find_class (0,
-				    packet ->
+				    (char *)packet ->
 				    options [DHO_DHCP_CLASS_IDENTIFIER].data,
 				    packet ->
 				    options [DHO_DHCP_CLASS_IDENTIFIER].len);
@@ -544,7 +544,7 @@ void ack_lease (packet, lease, offer, when)
 	if (packet -> options [DHO_DHCP_USER_CLASS_ID].len) {
 		user_class =
 			find_class (1,
-				    packet ->
+				    (char *)packet ->
 				    options [DHO_DHCP_USER_CLASS_ID].data,
 				    packet ->
 				    options [DHO_DHCP_USER_CLASS_ID].len);

@@ -3,7 +3,7 @@
    DHCP options parsing and reassembly. */
 
 /*
- * Copyright (c) 1995, 1996 The Internet Software Consortium.
+ * Copyright (c) 1995, 1996, 1998 The Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.27 1998/02/06 01:18:33 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.28 1998/03/16 06:19:46 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -71,13 +71,15 @@ void parse_options (packet)
 	if (packet -> options_valid
 	    && packet -> options [DHO_DHCP_OPTION_OVERLOAD].data) {
 		if (packet -> options [DHO_DHCP_OPTION_OVERLOAD].data [0] & 1)
-			parse_option_buffer (packet,
-					     packet -> raw -> file,
-					     sizeof packet -> raw -> file);
+			parse_option_buffer
+			  (packet,
+			   (unsigned char *)packet -> raw -> file,
+			   sizeof packet -> raw -> file);
 		if (packet -> options [DHO_DHCP_OPTION_OVERLOAD].data [0] & 2)
-			parse_option_buffer (packet,
-					     packet -> raw -> sname,
-					     sizeof packet -> raw -> sname);
+			parse_option_buffer
+			  (packet,
+			   (unsigned char *)packet -> raw -> sname,
+			   sizeof packet -> raw -> sname);
 	}
 }
 
@@ -623,8 +625,8 @@ char *pretty_print_option (code, data, len, emit_commas, emit_quotes)
 			      case 't':
 				if (emit_quotes)
 					*op++ = '"';
-				strcpy (op, dp);
-				op += strlen (dp);
+				strcpy (op, (char *)dp);
+				op += strlen ((char *)dp);
 				if (emit_quotes)
 					*op++ = '"';
 				*op = 0;
@@ -682,7 +684,7 @@ void do_packet (interface, packbuf, len, from_port, from, hfrom)
 	struct interface_info *interface;
 	unsigned char *packbuf;
 	int len;
-	unsigned short from_port;
+	unsigned int from_port;
 	struct iaddr from;
 	struct hardware *hfrom;
 {
