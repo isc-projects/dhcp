@@ -22,12 +22,19 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: stables.c,v 1.2 1999/11/20 18:36:32 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: stables.c,v 1.3 1999/11/23 22:24:49 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
 
 #if defined (FAILOVER_PROTOCOL)
+
+/* This is used to indicate some kind of failure when generating a
+   failover option. */
+failover_option_t null_failover_option = { 0, 0 };
+
+/* Information about failover options, for printing, encoding
+   and decoding. */
 struct failover_option_info ft_options [] =
 {
 	{ 0, "unused", FT_UNDEF, 0, 0, 0 },
@@ -36,14 +43,14 @@ struct failover_option_info ft_options [] =
 	{ FTO_ASSIGNED_IP_ADDRESS, "assigned-IP-address",
 	  FT_IPADDR, 1, FM_OFFSET (assigned_addr), FTB_ASSIGNED_IP_ADDRESS },
 	{ FTO_SERVER_ADDR, "sending-server-IP-address",
-	  FT_IPADDR, 1, FM_OFFSET (sending_server), FTB_SERVER_ADDR },
+	  FT_IPADDR, 1, FM_OFFSET (server_addr), FTB_SERVER_ADDR },
 	{ FTO_ADDRESSES_TRANSFERRED, "addresses-transferred",
 	  FT_UINT32, 1, FM_OFFSET (addresses_transferred),
 	  FTB_ADDRESSES_TRANSFERRED },
 	{ FTO_CLIENT_IDENTIFIER, "client-identifier",
 	  FT_BYTES, 0, FM_OFFSET (client_identifier), FTB_CLIENT_IDENTIFIER },
-	{ FTO_CLIENT_HARDWARE_ADDRESS, "client-hardware-address",
-	  FT_BYTES, 0, FM_OFFSET (chaddr), FTB_CLIENT_HARDWARE_ADDRESS },
+	{ FTO_CHADDR, "client-hardware-address",
+	  FT_BYTES, 0, FM_OFFSET (chaddr), FTB_CHADDR },
 	{ FTO_DDNS, "DDNS",
 	  FT_DDNS, 1, FM_OFFSET (ddns), FTB_DDNS },
 	{ FTO_REJECT_REASON, "reject-reason",
@@ -53,8 +60,8 @@ struct failover_option_info ft_options [] =
 	{ FTO_MCLT, "MCLT",
 	  FT_UINT32, 1, FM_OFFSET (mclt), FTB_MCLT },
 	{ FTO_VENDOR_CLASS, "vendor-class-identifier",
-	  FT_BYTES, 0, FM_OFFSET (vendor_class), FTB_VENDOR_CLASS },
-	{ FTO_UNDEFINED, "undefined", FT_UNDEF, 0, 0, FTB_UNDEFINED },
+	  FT_TEXT_OR_BYTES, 0, FM_OFFSET (vendor_class), FTB_VENDOR_CLASS },
+	{ 12, "undefined", FT_UNDEF, 0, 0, 0 },
 	{ FTO_LEASE_EXPIRY, "lease-expiration-time",
 	  FT_UINT32, 1, FM_OFFSET (expiry), FTB_LEASE_EXPIRY },
 	{ FTO_POTENTIAL_EXPIRY, "potential-expiration-time",
@@ -103,11 +110,11 @@ u_int32_t fto_allowed [] = {
 	0,	/* 1 POOLREQ */
 	FTB_ADDRESSES_TRANSFERRED, /* 2 POOLRESP */
 	(FTB_ASSIGNED_IP_ADDRESS | FTB_BINDING_STATUS | FTB_CLIENT_IDENTIFIER |
-	 FTB_CHADDR | FTB_EXPIRY | FTB_POTENTIAL_EXPIRY | FTB_STOS | FTB_CLTT |
-	 FTB_REQUEST_OPTIONS | FTB_REPLY_OPTIONS), /* 3 BNDUPD */
+	 FTB_CHADDR | FTB_LEASE_EXPIRY | FTB_POTENTIAL_EXPIRY | FTB_STOS |
+	 FTB_CLTT | FTB_REQUEST_OPTIONS | FTB_REPLY_OPTIONS), /* 3 BNDUPD */
 	(FTB_ASSIGNED_IP_ADDRESS | FTB_BINDING_STATUS | FTB_CLIENT_IDENTIFIER |
-	 FTB_CHADDR | FTB_EXPIRY | FTB_POTENTIAL_EXPIRY | FTB_STOS | FTB_CLTT |
-	 FTB_REQUEST_OPTIONS | FTB_REPLY_OPTIONS), /* 4 BNDACK */
+	 FTB_CHADDR | FTB_LEASE_EXPIRY | FTB_POTENTIAL_EXPIRY | FTB_STOS |
+	 FTB_CLTT | FTB_REQUEST_OPTIONS | FTB_REPLY_OPTIONS), /* 4 BNDACK */
 	(FTB_SERVER_ADDR | FTB_MAX_UNACKED | FTB_RECEIVE_TIMER |
 	 FTB_VENDOR_CLASS | FTB_PROTOCOL_VERSION | FTB_TLS_REQUEST |
 	 FTB_MCLT | FTB_HBA), /* 5 CONNECT */
@@ -117,24 +124,28 @@ u_int32_t fto_allowed [] = {
 	0,	/* 7 UPDREQ */
 	0,	/* 8 UPDDONE */
 	0,	/* 9 UPDREQALL */
-	(FTB_SENDING_STATE | FTB_SERVER_FLAGS | FTB_STOS), /* 10 STATE */
+	(FTB_SERVER_STATE | FTB_SERVER_FLAGS | FTB_STOS), /* 10 STATE */
 	0,	/* 11 CONTACT */
 	(FTB_REJECT_REASON | FTB_MESSAGE) /* 12 DISCONNECT */
 };
 
+/* Sizes of the various types. */
 int ft_sizes [] = {
 	1, /* FT_UINT8 */
 	4, /* FT_IPADDR */
 	4, /* FT_UINT32 */
 	1, /* FT_BYTES */
+	1, /* FT_TEXT_OR_BYTES */
 	0, /* FT_DDNS */
+	0, /* FT_DDNS1 */
 	2, /* FT_UINT16 */
 	1, /* FT_TEXT */
 	0, /* FT_UNDEF */
 	0, /* FT_DIGEST */
 };
 
-char *dhcp_flink_state_names [] = {
+/* Names of the various failover link states. */
+const char *dhcp_flink_state_names [] = {
 	"invalid state 0",
 	"startup",
 	"message length wait",
