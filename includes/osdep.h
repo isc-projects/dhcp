@@ -64,3 +64,23 @@
 #ifdef linux
 #include "cf/linux.h"
 #endif
+
+#ifdef USE_SOCKETS
+#define USE_SOCKET_SEND
+#define USE_SOCKET_RECEIVE
+#endif
+
+#ifdef USE_RAW_SOCKETS
+#define USE_RAW_SEND
+#define USE_SOCKET_RECEIVE
+#endif
+
+#ifdef USE_BPF
+#define USE_BPF_SEND
+#define USE_BPF_RECEIVE
+#endif
+
+#ifdef USE_NIT
+#define USE_NIT_SEND
+#define USE_NIT_RECEIVE
+#endif
