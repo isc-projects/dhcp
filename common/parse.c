@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.104.2.13 2003/01/22 04:58:36 dhankins Exp $ Copyright (c) 1995-2002 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.104.2.14 2003/07/25 19:36:11 dhankins Exp $ Copyright (c) 1995-2002 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -284,8 +284,11 @@ int parse_ip_addr_or_hostname (expr, cfile, uniform)
 		name = parse_host_name (cfile);
 		if (!name)
 			return 0;
-		if (!make_host_lookup (expr, name))
+		if (!make_host_lookup (expr, name)) {
+			dfree(name, MDL);
 			return 0;
+		}
+		dfree(name, MDL);
 		if (!uniform) {
 			if (!make_limit (&x, *expr, 4))
 				return 0;
