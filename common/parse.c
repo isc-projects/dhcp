@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.22 1999/05/06 20:20:43 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.23 1999/05/07 17:38:42 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1798,20 +1798,23 @@ int parse_non_binary (expr, cfile, lose, context)
 		break;
 	
 	      case NUMBER:
-		if (!expression_allocate (expr,
-					  "parse_expression: NUMBER"))
-			log_fatal ("can't allocate expression");
-
 		/* If we're in a numeric context, this should just be a
 		   number, by itself. */
 		if (context == context_numeric) {
 			next_token (&val, cfile);	/* Eat the number. */
+			if (!expression_allocate (expr,
+						  "parse_expression: NUMBER"))
+				log_fatal ("can't allocate expression");
 			(*expr) -> op = expr_const_int;
 			(*expr) -> data.const_int = atoi (val);
 			break;
 		}
 
 	      case NUMBER_OR_NAME:
+		if (!expression_allocate (expr,
+					  "parse_expression: NUMBER_OR_NAME"))
+			log_fatal ("can't allocate expression");
+
 		(*expr) -> op = expr_const_data;
 		if (!parse_cshl (&(*expr) -> data.const_data, cfile)) {
 			expression_dereference (expr,
