@@ -19,8 +19,8 @@
 
 CATMANPAGES = dhcpctl.cat3
 SEDMANPAGES = dhcpctl.man3
-SRC    = dhcpctl.c
-OBJ    = dhcpctl.o
+SRC    = dhcpctl.c callback.c remote.c
+OBJ    = dhcpctl.o callback.o remote.o
 MAN    = dhcpctl.3
 
 DEBUG  = -g
