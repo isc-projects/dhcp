@@ -234,8 +234,11 @@ isc_result_t omapi_disconnect (omapi_object_t *h,
 	c -> state = omapi_connection_closed;
 
 	/* Disconnect from I/O object, if any. */
-	if (h -> outer)
+	if (h -> outer) {
+		if (h -> outer -> inner)
+			omapi_object_dereference (&h -> outer -> inner, MDL);
 		omapi_object_dereference (&h -> outer, MDL);
+	}
 
 	/* If whatever created us registered a signal handler, send it
 	   a disconnect signal. */
