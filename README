@@ -1,7 +1,7 @@
 		     Internet Software Consortium
 	   Dynamic Host Configuration Protocol Distribution
 		      Version 3, Alpha Snapshot
-			  February 25, 1998
+			    March 15, 1998
 
 This is an alpha test snapshot of Version 3 of the Internet Software
 Consortium DHCP Distribution.  In version 3, this distribution
@@ -46,9 +46,9 @@ information.   On Digital Unix, type ``man pfilt''.
 To build the DHCP Distribution, unpack the compressed tar file using
 the tar utility and the gzip command - type something like:
 
-	zcat dhcp-3.0-alpha-19990225.tar.gz |tar xvf -
+	zcat dhcp-3.0-alpha-19990315.tar.gz |tar xvf -
 
-Now, cd to the dhcp-3.0-alpha-19990225 subdirectory that you've just
+Now, cd to the dhcp-3.0-alpha-19990315 subdirectory that you've just
 created and configure the source tree by typing:
 
 		./configure
