@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: db.c,v 1.25 1999/07/01 19:55:12 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: db.c,v 1.25.2.1 1999/10/15 16:00:45 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -55,22 +55,28 @@ int write_lease (lease)
 	/* Note: the following is not a Y2K bug - it's a Y1.9K bug.   Until
 	   somebody invents a time machine, I think we can safely disregard
 	   it. */
-	t = gmtime (&lease -> starts);
-	sprintf (tbuf, "%d %d/%02d/%02d %02d:%02d:%02d;",
-		 t -> tm_wday, t -> tm_year + 1900,
-		 t -> tm_mon + 1, t -> tm_mday,
-		 t -> tm_hour, t -> tm_min, t -> tm_sec);
+	if (lease -> starts != MAX_TIME) {
+		t = gmtime (&lease -> starts);
+		sprintf (tbuf, "%d %d/%02d/%02d %02d:%02d:%02d;",
+			 t -> tm_wday, t -> tm_year + 1900,
+			 t -> tm_mon + 1, t -> tm_mday,
+			 t -> tm_hour, t -> tm_min, t -> tm_sec);
+	} else
+		strcpy (tbuf, "infinite");
 	errno = 0;
 	fprintf (db_file, "\tstarts %s\n", tbuf);
 	if (errno) {
 		++errors;
 	}
 
-	t = gmtime (&lease -> ends);
-	sprintf (tbuf, "%d %d/%02d/%02d %02d:%02d:%02d;",
-		 t -> tm_wday, t -> tm_year + 1900,
-		 t -> tm_mon + 1, t -> tm_mday,
-		 t -> tm_hour, t -> tm_min, t -> tm_sec);
+	if (lease -> ends != MAX_TIME) {
+		t = gmtime (&lease -> ends);
+		sprintf (tbuf, "%d %d/%02d/%02d %02d:%02d:%02d;",
+			 t -> tm_wday, t -> tm_year + 1900,
+			 t -> tm_mon + 1, t -> tm_mday,
+			 t -> tm_hour, t -> tm_min, t -> tm_sec);
+	} else
+		strcpy (tbuf, "infinite");
 	errno = 0;
 	fprintf (db_file, "\tends %s", tbuf);
 	if (errno) {
@@ -260,13 +266,17 @@ int commit_leases ()
 	return 1;
 }
 
-void db_startup ()
+void db_startup (testp)
+	int testp;
 {
 	/* Read in the existing lease file... */
 	read_leases ();
 
-	GET_TIME (&write_time);
-	new_lease_file ();
+	if (!testp) {
+		expire_all_pools ();
+		GET_TIME (&write_time);
+		new_lease_file ();
+	}
 }
 
 void new_lease_file ()
