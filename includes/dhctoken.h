@@ -184,6 +184,9 @@ enum dhcp_token {
 	REVERSE = 402,
 	LEASED_ADDRESS = 403,
 	BINARY_TO_ASCII = 404,
+	ON = 405,
+	NEVER = 415,
+	INFINITE = 416,
 };
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\
