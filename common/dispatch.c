@@ -42,13 +42,13 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dispatch.c,v 1.47.2.3 1998/07/11 00:35:20 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dispatch.c,v 1.47.2.4 1998/12/20 18:26:22 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
 #include <sys/ioctl.h>
 
-struct interface_info *interfaces, *dummy_interfaces;
+struct interface_info *interfaces, *dummy_interfaces, *fallback_interface;
 struct protocol *protocols;
 struct timeout *timeouts;
 static struct timeout *free_timeouts;
@@ -57,7 +57,6 @@ void (*bootp_packet_handler) PROTO ((struct interface_info *,
 				     struct dhcp_packet *, int, unsigned int,
 				     struct iaddr, struct hardware *));
 
-static void got_one PROTO ((struct protocol *));
 int quiet_interface_discovery;
 
 /* Use the SIOCGIFCONF ioctl to get a list of all the attached interfaces.
@@ -82,9 +81,6 @@ void discover_interfaces (state)
 	int ir;
 #ifdef ALIAS_NAMES_PERMUTED
 	char *s;
-#endif
-#ifdef USE_FALLBACK
-	static struct shared_network fallback_network;
 #endif
 
 	/* Create an unbound datagram socket to do the SIOCGIFADDR ioctl on. */
@@ -385,14 +381,26 @@ void discover_interfaces (state)
 
 	close (sock);
 
-#ifdef USE_FALLBACK
-	strcpy (fallback_interface.name, "fallback");	
-	fallback_interface.shared_network = &fallback_network;
-	fallback_network.name = "fallback-net";
-	if_register_fallback (&fallback_interface);
-	add_protocol ("fallback", fallback_interface.wfdesc,
-		      fallback_discard, &fallback_interface);
-#endif
+	maybe_setup_fallback ();
+}
+
+struct interface_info *setup_fallback ()
+{
+	fallback_interface =
+		((struct interface_info *)
+		 dmalloc (sizeof *fallback_interface, "discover_interfaces"));
+	if (!fallback_interface)
+		error ("Insufficient memory to record fallback interface.");
+	memset (fallback_interface, 0, sizeof *fallback_interface);
+	strcpy (fallback_interface -> name, "fallback");
+	fallback_interface -> shared_network =
+		new_shared_network ("parse_statement");
+	if (!fallback_interface -> shared_network)
+		error ("No memory for shared subnet");
+	memset (fallback_interface -> shared_network, 0,
+		sizeof (struct shared_network));
+	fallback_interface -> shared_network -> name = "fallback-net";
+	return fallback_interface;
 }
 
 void reinitialize_interfaces ()
@@ -404,24 +412,17 @@ void reinitialize_interfaces ()
 		if_reinitialize_send (ip);
 	}
 
-#ifdef USE_FALLBACK
-	if_reinitialize_fallback (&fallback_interface);
-#endif
+	if (fallback_interface)
+		if_reinitialize_send (fallback_interface);
 
 	interfaces_invalidated = 1;
 }
 
 #ifdef USE_POLL
-/* Wait for packets to come in using poll().  Anyway, when a packet
-   comes in, call receive_packet to receive the packet and possibly
-   strip hardware addressing information from it, and then call
-   do_packet to try to do something with it. 
-
-   As you can see by comparing this with the code that uses select(),
-   below, this is gratuitously complex.  Quelle surprise, eh?  This is
-   SysV we're talking about, after all, and even in the 90's, it
-   wouldn't do for SysV to make networking *easy*, would it?  Rant,
-   rant... */
+/* Wait for packets to come in using poll().  When a packet comes in,
+   call receive_packet to receive the packet and possibly strip hardware
+   addressing information from it, and then call through the
+   bootp_packet_handler hook to try to do something with it. */
 
 void dispatch ()
 {
@@ -509,8 +510,8 @@ void dispatch ()
 #else
 /* Wait for packets to come in using select().   When one does, call
    receive_packet to receive the packet and possibly strip hardware
-   addressing information from it, and then call do_packet to try to
-   do something with it. */
+   addressing information from it, and then call through the
+   bootp_packet_handler hook to try to do something with it. */
 
 void dispatch ()
 {
@@ -576,7 +577,7 @@ void dispatch ()
 }
 #endif /* USE_POLL */
 
-static void got_one (l)
+void got_one (l)
 	struct protocol *l;
 {
 	struct sockaddr_in from;

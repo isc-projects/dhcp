@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: upf.c,v 1.3 1997/10/20 21:47:15 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: upf.c,v 1.3.2.1 1998/12/20 18:29:48 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -232,6 +232,10 @@ ssize_t send_packet (interface, packet, raw, len, from, to, hto)
 	unsigned char buf [256];
 	struct iovec iov [2];
 
+	if (!strcmp (interface -> name, "fallback"))
+		return send_fallback (interface, packet, raw,
+				      len, from, to, hto);
+
 	/* Assemble the headers... */
 	assemble_hw_header (interface, buf, &bufp, hto);
 	assemble_udp_ip_header (interface, buf, &bufp, from.s_addr,
@@ -294,5 +298,21 @@ ssize_t receive_packet (interface, buf, len, from, hfrom)
 	/* Copy out the data in the packet... */
 	memcpy (buf, &ibuf [bufix], length);
 	return length;
+}
+
+int can_unicast_without_arp ()
+{
+	return 1;
+}
+
+void maybe_setup_fallback ()
+{
+	struct interface_info *fbi;
+	fbi = setup_fallback ();
+	if (fbi) {
+		if_register_fallback (fbi);
+		add_protocol ("fallback", fallback_interface -> wfdesc,
+			      fallback_discard, fallback_interface);
+	}
 }
 #endif

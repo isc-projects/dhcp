@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcrelay.c,v 1.9.2.5 1998/11/24 22:57:56 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcrelay.c,v 1.9.2.6 1998/12/20 18:33:23 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -63,10 +63,6 @@ char *token_line;
 char *tlname;
 
 char *path_dhcrelay_pid = _PATH_DHCRELAY_PID;
-
-#ifdef USE_FALLBACK
-struct interface_info fallback_interface;
-#endif
 
 u_int16_t local_port;
 u_int16_t remote_port;
@@ -249,13 +245,11 @@ void relay (ip, packet, length, from_port, from, hfrom)
 
 	/* If it's a bootreply, forward it to the client. */
 	if (packet -> op == BOOTREPLY) {
-#ifdef USE_FALLBACK
-		if (!(packet -> flags & htons (BOOTP_BROADCAST))) {
+		if (!(packet -> flags & htons (BOOTP_BROADCAST)) &&
+		    can_unicast_without_arp ()) {
 			to.sin_addr = packet -> yiaddr;
 			to.sin_port = remote_port;
-		} else
-#endif
-		{
+		} else {
 			to.sin_addr.s_addr = htonl (INADDR_BROADCAST);
 			to.sin_port = remote_port;
 		}
@@ -314,19 +308,11 @@ void relay (ip, packet, length, from_port, from, hfrom)
 	/* Otherwise, it's a BOOTREQUEST, so forward it to all the
 	   servers. */
 	for (sp = servers; sp; sp = sp -> next) {
-		if (
-#ifdef USE_FALLBACK
-		    send_fallback (&fallback_interface,
-				   (struct packet *)0,
-				   packet, length, ip -> primary_address,
-				   &sp -> to, (struct hardware *)0)
-#else
-		    send_packet (interfaces,
+		if (send_packet ((fallback_interface
+				  ? fallback_interface : interfaces),
 				 (struct packet *)0,
 				 packet, length, ip -> primary_address,
-				 &sp -> to, (struct hardware *)0)
-#endif
-		    < 0) {
+				 &sp -> to, (struct hardware *)0) < 0) {
 			debug ("send_packet: %m");
 		} else {
 			debug ("forwarded BOOTREQUEST for %s to %s",

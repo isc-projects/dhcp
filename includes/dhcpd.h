@@ -482,10 +482,6 @@ extern u_int16_t remote_port;
 extern int log_priority;
 extern int log_perror;
 
-#ifdef USE_FALLBACK
-extern struct interface_info fallback_interface;
-#endif
-
 extern char *path_dhcpd_conf;
 extern char *path_dhcpd_db;
 extern char *path_dhcpd_pid;
@@ -654,7 +650,6 @@ ssize_t send_fallback PROTO ((struct interface_info *,
 			      struct packet *, struct dhcp_packet *, size_t, 
 			      struct in_addr,
 			      struct sockaddr_in *, struct hardware *));
-void fallback_discard PROTO ((struct protocol *));
 #endif
 
 #ifdef USE_SOCKET_SEND
@@ -664,6 +659,7 @@ ssize_t send_packet PROTO ((struct interface_info *,
 			    struct packet *, struct dhcp_packet *, size_t, 
 			    struct in_addr,
 			    struct sockaddr_in *, struct hardware *));
+void fallback_discard PROTO ((struct protocol *));
 #endif
 #ifdef USE_SOCKET_RECEIVE
 void if_reinitialize_receive PROTO ((struct interface_info *));
@@ -673,7 +669,8 @@ ssize_t receive_packet PROTO ((struct interface_info *,
 			       struct sockaddr_in *, struct hardware *));
 #endif
 #if defined (USE_SOCKET_SEND) && !defined (USE_SOCKET_FALLBACK)
-void if_enable PROTO ((struct interface_info *));
+int can_unicast_without_arp PROTO ((void));
+void maybe_setup_fallback PROTO ((void));
 #endif
 
 /* bpf.c */
@@ -696,7 +693,8 @@ ssize_t receive_packet PROTO ((struct interface_info *,
 			       struct sockaddr_in *, struct hardware *));
 #endif
 #if defined (USE_BPF_SEND)
-void if_enable PROTO ((struct interface_info *));
+int can_unicast_without_arp PROTO ((void));
+void maybe_setup_fallback PROTO ((void));
 #endif
 
 /* nit.c */
@@ -719,8 +717,29 @@ ssize_t receive_packet PROTO ((struct interface_info *,
 			       unsigned char *, size_t,
 			       struct sockaddr_in *, struct hardware *));
 #endif
-#if defined (USE_BPF_SEND)
-void if_enable PROTO ((struct interface_info *));
+#if defined (USE_NIT_SEND)
+int can_unicast_without_arp PROTO ((void));
+void maybe_setup_fallback PROTO ((void));
+#endif
+
+#ifdef USE_DLPI_SEND
+void if_reinitialize_send PROTO ((struct interface_info *));
+void if_register_send PROTO ((struct interface_info *));
+ssize_t send_packet PROTO ((struct interface_info *,
+			    struct packet *, struct dhcp_packet *, size_t,
+			    struct in_addr,
+			    struct sockaddr_in *, struct hardware *));
+#endif
+#ifdef USE_DLPI_RECEIVE
+void if_reinitialize_receive PROTO ((struct interface_info *));
+void if_register_receive PROTO ((struct interface_info *));
+ssize_t receive_packet PROTO ((struct interface_info *,
+			       unsigned char *, size_t,
+			       struct sockaddr_in *, struct hardware *));
+#endif
+#if defined (USE_DLPI_SEND)
+int can_unicast_without_arp PROTO ((void));
+void maybe_setup_fallback PROTO ((void));
 #endif
 
 /* raw.c */
@@ -731,10 +750,13 @@ ssize_t send_packet PROTO ((struct interface_info *,
 			    struct packet *, struct dhcp_packet *, size_t,
 			    struct in_addr,
 			    struct sockaddr_in *, struct hardware *));
+int can_unicast_without_arp PROTO ((void));
+void maybe_setup_fallback PROTO ((void));
 #endif
 
 /* dispatch.c */
-extern struct interface_info *interfaces, *dummy_interfaces;
+extern struct interface_info *interfaces,
+	*dummy_interfaces, *fallback_interface;
 extern struct protocol *protocols;
 extern int quiet_interface_discovery;
 extern void (*bootp_packet_handler) PROTO ((struct interface_info *,
@@ -743,9 +765,11 @@ extern void (*bootp_packet_handler) PROTO ((struct interface_info *,
 					    struct iaddr, struct hardware *));
 extern struct timeout *timeouts;
 void discover_interfaces PROTO ((int));
+struct interface_info *setup_fallback PROTO ((void));
 void reinitialize_interfaces PROTO ((void));
 void dispatch PROTO ((void));
 int locate_network PROTO ((struct packet *));
+void got_one PROTO ((struct protocol *));
 void add_timeout PROTO ((TIME, void (*) PROTO ((void *)), void *));
 void cancel_timeout PROTO ((void (*) PROTO ((void *)), void *));
 void add_protocol PROTO ((char *, int,

@@ -460,6 +460,10 @@ ssize_t send_packet (interface, packet, raw, len, from, to, hto)
 	int saplen;
 	int rslt;
 
+	if (!strcmp (interface -> name, "fallback"))
+		return send_fallback (interface, packet, raw,
+				      len, from, to, hto);
+
 	dbuflen = 0;
 
 	/* Assemble the headers... */
@@ -1226,4 +1230,19 @@ static void sigalrm (sig)
 }
 #endif /* !defined (USE_POLL) */
 
+int can_unicast_without_arp ()
+{
+	return 1;
+}
+
+void maybe_setup_fallback ()
+{
+	struct interface_info *fbi;
+	fbi = setup_fallback ();
+	if (fbi) {
+		if_register_fallback (fbi);
+		add_protocol ("fallback", fallback_interface -> wfdesc,
+			      fallback_discard, fallback_interface);
+	}
+}
 #endif /* USE_DLPI */
