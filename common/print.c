@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: print.c,v 1.24 1999/09/22 01:45:49 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: print.c,v 1.25 1999/09/22 17:25:27 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -605,7 +605,6 @@ int token_print_indent (FILE *file, int col, int indent,
 {
 	int len = strlen (buf) + strlen (prefix);
 	if (col + len > 79 && indent + len < 79) {
-		fputc ('\n', file);
 		indent_spaces (file, indent);
 		col = indent;
 	} else if (prefix && *prefix) {
@@ -614,10 +613,14 @@ int token_print_indent (FILE *file, int col, int indent,
 	}
 	fputs (buf, file);
 	col += len;
-	if (col + strlen (suffix) > 79) {
-		fputc ('\n', file);
-		indent_spaces (file, indent);
-		col = indent;
+	if (suffix && *suffix) {
+		if (col + strlen (suffix) > 79) {
+			indent_spaces (file, indent);
+			col = indent;
+		} else {
+			fputs (suffix, file);
+			col += strlen (suffix);
+		}
 	}
 	return col;
 }
@@ -625,6 +628,7 @@ int token_print_indent (FILE *file, int col, int indent,
 void indent_spaces (FILE *file, int indent)
 {
 	int i;
+	fputc ('\n', file);
 	for (i = 0; i < indent; i++)
 		fputc (' ', file);
 }
