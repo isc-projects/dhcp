@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: db.c,v 1.9 1997/03/06 19:29:39 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: db.c,v 1.10 1997/03/06 23:41:27 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -176,6 +176,7 @@ void db_startup ()
 	/* Read in the existing lease file... */
 	read_leases ();
 
+	GET_TIME (&write_time);
 	new_lease_file ();
 }
 
@@ -191,8 +192,8 @@ void new_lease_file ()
 	}
 
 	/* Make a temporary lease file... */
-	time (&t);
-	sprintf (newfname, "%s.%d", path_dhcpd_db, (int) (t & 32767));
+	GET_TIME (&t);
+	sprintf (newfname, "%s.%d", path_dhcpd_db, (int)t);
 	if ((db_file = fopen (newfname, "w")) == NULL) {
 		error ("Can't start new lease file: %m");
 	}
