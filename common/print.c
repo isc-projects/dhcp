@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: print.c,v 1.53.2.3 2001/06/12 18:47:47 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: print.c,v 1.53.2.4 2001/08/08 14:49:20 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1292,7 +1292,10 @@ void print_dns_status (int status, ns_updque *uq)
 		strcpy (s, "empty update");
 		s += strlen (s);
 	}
-	errorp = 1;
+	if (status == NOERROR)
+		errorp = 0;
+	else
+		errorp = 1;
 	en = isc_result_totext (status);
 #if 0
 	switch (status) {
