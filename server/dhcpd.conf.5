@@ -903,6 +903,101 @@ PTR records from the DNS database.   If the client releases its lease
 by sending a DHCPRELEASE message, the server will likewise remove the
 A and PTR records.
 .SH THE INTERIM DNS UPDATE SCHEME
+The interim DNS update scheme operates mostly according to several
+drafts that are being considered by the IETF and are expected to
+become standards, but are not yet standards, and may not be
+standardized exactly as currently proposed.   These are:
+.PP
+.nf
+.ce 3
+draft-ietf-dhc-ddns-resolution-??.txt
+draft-ietf-dhc-fqdn-option-??.txt
+draft-ietf-dnsext-dhcid-rr-??.txt
+.fi
+.PP
+Because our implementation is slightly different than the standard, we
+will briefly document the operation of this update style here.
+.PP
+The first point to understand about this style of DDNS updates is that
+unlike the \fIad-hoc\fR style, the DHCP server does not necessarily
+always update both the A and the PTR records.   The FQDN option
+includes a bit which, when sent by the client, indicates that the
+client wishes to update its own A record.   In that case, the server
+can be configured either to honor the client's intentions or ignore
+them.   This is done with the statement \fIallow client-updates;\fR or
+the statement \fIignore client-updates;\fR.   By default, client
+updates are allowed.
+.PP
+If the server is configured to allow client updates, it will use
+whatever name the client sent in the FQDN option to update the PTR
+record.   For example, let us say that the client is a visitor from
+the "radish.org" domain, whose hostname is "jschmoe".   The server is
+for the "example.org" domain.   The DHCP client indicates in the FQDN
+option that its FQDN is "jschmoe.radish.org.".   It also indicates
+that it wants to update its own A record.   The DHCP server therefore
+does not attempt to set up an A record for the client, but does set up
+a PTR record for the IP address that it assigns the client, pointing
+at jschmoe.radish.org.   Once the DHCP client has an IP address, it
+can update its own A record, assuming that the "radish.org" DNS server
+will allow it to do so.
+.PP
+If the server is configured not to allow client updates, or if the
+client doesn't want to do its own update, the server will simply
+choose a name for the client, possibly using the hostname supplied by
+the client ("jschmoe" in the previous example).   It will use its own
+domain name for the client, just as in the \fIad-hoc\fR update scheme.
+It will then update both the A and PTR record, using the name that it
+chose for the client.
+.PP
+The other difference between the \fIad-hoc\fR scheme and the
+.I interim
+scheme is that with the \fIinterim\fR scheme, a method is used that
+allows more than one DHCP server to update the DNS database without
+accidentally deleting A records that shouldn't be deleted nor failing
+to add A records that should be added.   The scheme works as follows:
+.PP
+When the DHCP server issues a client a new lease, it creates a text
+string that is an MD5 hash over the DHCP client's identification (see
+draft-ietf-dnsext-dhcid-rr-??.txt for details).   The update adds an A
+record with the name the server chose and a TXT record containing the
+hashed identifier string (hashid).   If this update succeeds, the
+server is done.
+.PP
+If the update fails because the A record already exists, then the DHCP
+server attempts to add the A record with the prerequisite that there
+must be a TXT record in the same name as the new A record, and that
+TXT record's contents must be equal to hashid.   If this update
+succeeds, then the client has its A record and PTR record.   If it
+fails, then the name the client has been assigned (or requested) is in
+use, and can't be used by the client.   At this point the DHCP server
+gives up trying to do a DDNS update for the client until the client
+chooses a new name.
+.PP
+The \fIinterim\fR DNS update scheme is called interim for two reasons.
+First, it does not quite follow the drafts.   The current versions of
+the drafts call for a new DHCID RRtype, but this is not yet
+available.   The \fIinterim\fR DNS update scheme uses a TXT record
+instead.   Also, the existing ddns-resolution draft calls for the DHCP
+server to put a DHCID RR on the PTR record, but the \fIinterim\fR
+update method does not do this.   It is our position that this is not
+useful, and we are working with the author in hopes of removing it
+from the next version of the draft, or better understanding why it is
+considered useful.
+.PP
+In addition to these differences, the server also does not update very
+aggressively.  Because each DDNS update involves a round trip to the
+DNS server, there is a cost associated with doing updates even if they
+do not actually modify the DNS database.   So the DHCP server tracks
+whether or not it has updated the record in the past (this information
+is stored on the lease) and does not attempt to update records that it
+thinks it has already updated.
+.PP
+This can lead to cases where the DHCP server adds a record, and then
+the record is deleted through some other mechanism, but the server
+never again updates the DNS because it thinks the data is already
+there.   In this case the data can be removed from the lease through
+operator intervention, and once this has been done, the DNS will be
+updated the next time the client renews.
 .SH DYNAMIC DNS UPDATE SECURITY
 .PP
 When you set your DNS server up to allow updates from the DHCP server,
@@ -1276,6 +1371,18 @@ The \fBdeclines\fR flag tells the DHCP server whether or not to honor
 DHCPDECLINE messages.   If it is set to \fBdeny\fR or \fBignore\fR in
 a particular scope, the DHCP server will not respond to DHCPDECLINE
 messages.
+.B The
+.I client-updates
+.B keyword
+.PP
+ \fBallow client-updates;\fR
+ \fBdeny client-updates;\fR
+.PP
+The \fBclient-updates\fR flag tells the DHCP server whether or not to
+honor the client's intention to do its own update of its A record.
+This is only relevant when doing \fIinterim\fR DDNS updates.   See the
+documentation under the heading THE INTERIM DNS UPDATE SCHEME for
+details.
 .SH ALLOW AND DENY WITHIN POOL DECLARATIONS
 .PP
 The uses of the allow and deny keyword shown in the previous section
