@@ -1159,7 +1159,8 @@ void ack_lease PROTO ((struct packet *, struct lease *,
 		       unsigned int, TIME, char *, int));
 void dhcp_reply PROTO ((struct lease *));
 int find_lease PROTO ((struct lease **, struct packet *,
-		       struct shared_network *, int *, const char *, int));
+		       struct shared_network *, int *, int *,
+		       const char *, int));
 int mockup_lease PROTO ((struct lease **, struct packet *,
 			 struct shared_network *,
 			 struct host_decl *));
@@ -2177,8 +2178,11 @@ isc_result_t dhcp_failover_state_signal PROTO ((omapi_object_t *,
 						const char *, va_list));
 isc_result_t dhcp_failover_state_transition (dhcp_failover_state_t *,
 					     const char *);
+isc_result_t dhcp_failover_set_service_state (dhcp_failover_state_t *state);
 isc_result_t dhcp_failover_set_state (dhcp_failover_state_t *,
 				      enum failover_state);
+isc_result_t dhcp_failover_peer_state_changed (dhcp_failover_state_t *,
+					       failover_message_t *);
 int dhcp_failover_pool_rebalance (dhcp_failover_state_t *);
 int dhcp_failover_pool_check (struct pool *);
 int dhcp_failover_state_pool_check (dhcp_failover_state_t *);
@@ -2193,6 +2197,7 @@ isc_result_t dhcp_failover_state_set_value PROTO ((omapi_object_t *,
 						   omapi_typed_data_t *));
 void dhcp_failover_keepalive (void *);
 void dhcp_failover_reconnect (void *);
+void dhcp_failover_startup_timeout (void *);
 void dhcp_failover_listener_restart (void *);
 isc_result_t dhcp_failover_state_get_value PROTO ((omapi_object_t *,
 						   omapi_object_t *,
@@ -2235,17 +2240,29 @@ isc_result_t dhcp_failover_send_bind_ack (dhcp_failover_state_t *,
 					  int, const char *);
 isc_result_t dhcp_failover_send_poolreq (dhcp_failover_state_t *);
 isc_result_t dhcp_failover_send_poolresp (dhcp_failover_state_t *, int);
+isc_result_t dhcp_failover_send_update_request (dhcp_failover_state_t *);
+isc_result_t dhcp_failover_send_update_request_all (dhcp_failover_state_t *);
+isc_result_t dhcp_failover_send_update_done (dhcp_failover_state_t *);
 isc_result_t dhcp_failover_process_bind_update (dhcp_failover_state_t *,
 						failover_message_t *);
 isc_result_t dhcp_failover_process_bind_ack (dhcp_failover_state_t *,
 					     failover_message_t *);
+isc_result_t dhcp_failover_generate_update_queue (dhcp_failover_state_t *,
+						  int);
+isc_result_t dhcp_failover_process_update_request (dhcp_failover_state_t *,
+						   failover_message_t *);
+isc_result_t dhcp_failover_process_update_request_all (dhcp_failover_state_t *,
+						       failover_message_t *);
+isc_result_t dhcp_failover_process_update_done (dhcp_failover_state_t *,
+						failover_message_t *);
+void dhcp_failover_recover_done (void *);
 void failover_print PROTO ((char *, unsigned *, unsigned, const char *));
 void update_partner PROTO ((struct lease *));
 int load_balance_mine (struct packet *, dhcp_failover_state_t *);
 binding_state_t binding_state_transition_check (struct lease *,
 						dhcp_failover_state_t *,
 						binding_state_t);
-int lease_mine_to_extend (struct lease *);
+int lease_mine_to_reallocate (struct lease *);
 
 OMAPI_OBJECT_ALLOC_DECL (dhcp_failover_state, dhcp_failover_state_t,
 			 dhcp_type_failover_state)
