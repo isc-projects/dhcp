@@ -526,6 +526,17 @@ dhcpctl_status dhcpctl_object_refresh (dhcpctl_handle connection,
 	status = omapi_protocol_send_message (connection -> outer,
 					      (omapi_object_t *)0,
 					      message, (omapi_object_t *)0);
+
+	/* We don't want to send the contents of the object down the
+	   wire, but we do need to reference it so that we know what
+	   to do with the update. */
+	status = omapi_set_object_value (message, (omapi_object_t *)0,
+					 "object", h);
+	if (status != ISC_R_SUCCESS) {
+		omapi_object_dereference (&message, MDL);
+		return status;
+	}
+
 	omapi_object_dereference (&message, MDL);
 	return status;
 }
