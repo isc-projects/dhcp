@@ -1,61 +1,44 @@
 
 
-Network Working Group                                           R. Droms
-INTERNET DRAFT                                       Bucknell University
-Obsoletes: draft-ietf-dhc-dhcp-08.txt                      December 1996
-                                                       Expires June 1997
 
+
+
+
+Network Working Group                                           R. Droms
+Request for Comments: 2131                           Bucknell University
+Obsoletes: 1541                                               March 1997
+Category: Standards Track
 
                   Dynamic Host Configuration Protocol
-                      <draft-ietf-dhc-dhcp-09.txt>
 
 Status of this memo
 
-   This document is an Internet-Draft. Internet-Drafts are working
-   documents of the Internet Engineering Task Force (IETF), its areas,
-   and its working groups. Note that other groups may also distribute
-   working documents as Internet-Drafts.
-
-   Internet-Drafts are draft documents valid for a maximum of six months
-   and may be updated, replaced, or obsoleted by other documents at any
-   time. It is inappropriate to use Internet-Drafts as reference
-   material or to cite them other than as ``work in progress.''
-
-   To learn the current status of any Internet-Draft, please check the
-   ``1id-abstracts.txt'' listing contained in the Internet-Drafts Shadow
-   Directories on ftp.is.co.za (Africa), nic.nordu.net (Europe),
-   munnari.oz.au (Pacific Rim), ds.internic.net (US East Coast), or
-   ftp.isi.edu (US West Coast).
+   This document specifies an Internet standards track protocol for the
+   Internet community, and requests discussion and suggestions for
+   improvements.  Please refer to the current edition of the "Internet
+   Official Protocol Standards" (STD 1) for the standardization state
+   and status of this protocol.  Distribution of this memo is unlimited.
 
 Abstract
 
    The Dynamic Host Configuration Protocol (DHCP) provides a framework
-   for passing configuration information to hosts on a TCP/IP network.
+   for passing configuration information to hosts on a TCPIP network.
    DHCP is based on the Bootstrap Protocol (BOOTP) [7], adding the
    capability of automatic allocation of reusable network addresses and
    additional configuration options [19].  DHCP captures the behavior of
    BOOTP relay agents [7, 21], and DHCP participants can interoperate
    with BOOTP participants [9].
 
-
 Table of Contents
 
    1.  Introduction. . . . . . . . . . . . . . . . . . . . . . . . .  2
-   1.1 Changes to RFC1541. . . . . . . . . . . . . . . . . . . . . .  4
+   1.1 Changes to RFC1541. . . . . . . . . . . . . . . . . . . . . .  3
    1.2 Related Work. . . . . . . . . . . . . . . . . . . . . . . . .  4
-   1.3 Problem definition and issues . . . . . . . . . . . . . . . .  5
+   1.3 Problem definition and issues . . . . . . . . . . . . . . . .  4
    1.4 Requirements. . . . . . . . . . . . . . . . . . . . . . . . .  5
    1.5 Terminology . . . . . . . . . . . . . . . . . . . . . . . . .  6
    1.6 Design goals. . . . . . . . . . . . . . . . . . . . . . . . .  6
    2.  Protocol Summary. . . . . . . . . . . . . . . . . . . . . . .  8
-
-
-
-Droms                                                           [Page 1]
-
-DRAFT             Dynamic Host Configuration Protocol      December 1996
-
-
    2.1 Configuration parameters repository . . . . . . . . . . . . . 11
    2.2 Dynamic allocation of network addresses . . . . . . . . . . . 12
    3.  The Client-Server Protocol. . . . . . . . . . . . . . . . . . 13
@@ -65,22 +48,28 @@ DRAFT             Dynamic Host Configuration Protocol      December 1996
    3.3 Interpretation and representation of time values. . . . . . . 20
    3.4 Obtaining parameters with externally configured network
        address . . . . . . . . . . . . . . . . . . . . . . . . . . . 20
-   3.5 Client parameters in DHCP . . . . . . . . . . . . . . . . . . 20
+   3.5 Client parameters in DHCP . . . . . . . . . . . . . . . . . . 21
    3.6 Use of DHCP in clients with multiple interfaces . . . . . . . 22
    3.7 When clients should use DHCP. . . . . . . . . . . . . . . . . 22
    4.  Specification of the DHCP client-server protocol. . . . . . . 22
+
+
+
+Droms                       Standards Track                     [Page 1]
+
+RFC 2131          Dynamic Host Configuration Protocol         March 1997
+
+
    4.1 Constructing and sending DHCP messages. . . . . . . . . . . . 22
    4.2 DHCP server administrative controls . . . . . . . . . . . . . 25
    4.3 DHCP server behavior. . . . . . . . . . . . . . . . . . . . . 26
-   4.4 DHCP client behavior. . . . . . . . . . . . . . . . . . . . . 33
-   5.  Acknowledgments. . . . . . . . . . . . . . . . . . . . . . . .40
-   6.  References . . . . . . . . . . . . . . . . . . . . . . . . . .41
-   7.  Security Considerations. . . . . . . . . . . . . . . . . . . .42
-   8.  Author's Address . . . . . . . . . . . . . . . . . . . . . . .43
-   A.  Host Configuration Parameters  . . . . . . . . . . . . . . . .44
-
+   4.4 DHCP client behavior. . . . . . . . . . . . . . . . . . . . . 34
+   5.  Acknowledgments. . . . . . . . . . . . . . . . . . . . . . . .42
+   6.  References . . . . . . . . . . . . . . . . . . . . . . . . . .42
+   7.  Security Considerations. . . . . . . . . . . . . . . . . . . .43
+   8.  Author's Address . . . . . . . . . . . . . . . . . . . . . . .44
+   A.  Host Configuration Parameters  . . . . . . . . . . . . . . . .45
 List of Figures
-
    1. Format of a DHCP message . . . . . . . . . . . . . . . . . . .  9
    2. Format of the 'flags' field. . . . . . . . . . . . . . . . . . 11
    3. Timeline diagram of messages exchanged between DHCP client and
@@ -88,9 +77,7 @@ List of Figures
    4. Timeline diagram of messages exchanged between DHCP client and
       servers when reusing a previously allocated network address. . 18
    5. State-transition diagram for DHCP clients. . . . . . . . . . . 34
-
 List of Tables
-
    1. Description of fields in a DHCP message. . . . . . . . . . . . 10
    2. DHCP messages. . . . . . . . . . . . . . . . . . . . . . . . . 14
    3. Fields and options used by DHCP servers. . . . . . . . . . . . 28
@@ -104,13 +91,6 @@ List of Tables
    protocol for delivering host-specific configuration parameters from a
    DHCP server to a host and a mechanism for allocation of network
    addresses to hosts.
-
-
-
-Droms                                                           [Page 2]
-
-DRAFT             Dynamic Host Configuration Protocol      December 1996
-
 
    DHCP is built on a client-server model, where designated DHCP server
    hosts allocate network addresses and deliver configuration parameters
@@ -128,6 +108,14 @@ DRAFT             Dynamic Host Configuration Protocol      December 1996
    dissimilar kinds of network hardware, values for those parameters
    cannot be guessed or assumed to have correct defaults.  Also,
    distributed address allocation schemes depend on a polling/defense
+
+
+
+Droms                       Standards Track                     [Page 2]
+
+RFC 2131          Dynamic Host Configuration Protocol         March 1997
+
+
    mechanism for discovery of addresses that are already in use.  IP
    hosts may not always be able to defend their network addresses, so
    that such a distributed address allocation scheme cannot be
@@ -160,14 +148,6 @@ DRAFT             Dynamic Host Configuration Protocol      December 1996
 
    The format of DHCP messages is based on the format of BOOTP messages,
    to capture the BOOTP relay agent behavior described as part of the
-
-
-
-Droms                                                           [Page 3]
-
-DRAFT             Dynamic Host Configuration Protocol      December 1996
-
-
    BOOTP specification [7, 21] and to allow interoperability of existing
    BOOTP clients with DHCP servers.  Using BOOTP relay agents eliminates
    the necessity of having a DHCP server on each physical network
@@ -183,6 +163,14 @@ DRAFT             Dynamic Host Configuration Protocol      December 1996
    lease time restriction has been removed.  Finally, many editorial
    changes have been made to clarify the text as a result of experience
    gained in DHCP interoperability tests.
+
+
+
+
+Droms                       Standards Track                     [Page 3]
+
+RFC 2131          Dynamic Host Configuration Protocol         March 1997
+
 
 1.2 Related Work
 
@@ -216,14 +204,6 @@ DRAFT             Dynamic Host Configuration Protocol      December 1996
    automate the configuration of new hosts in an existing network.
 
    In other related work, the path minimum transmission unit (MTU)
-
-
-
-Droms                                                           [Page 4]
-
-DRAFT             Dynamic Host Configuration Protocol      December 1996
-
-
    discovery algorithm can determine the MTU of an arbitrary internet
    path [14].  The Address Resolution Protocol (ARP) has been proposed
    as a transport protocol for resource location and selection [6].
@@ -238,6 +218,15 @@ DRAFT             Dynamic Host Configuration Protocol      December 1996
    parameters via DHCP, a DHCP client should be able to exchange packets
    with any other host in the Internet.  The TCP/IP stack parameters
    supplied by DHCP are listed in Appendix A.
+
+
+
+
+
+Droms                       Standards Track                     [Page 4]
+
+RFC 2131          Dynamic Host Configuration Protocol         March 1997
+
 
    Not all of these parameters are required for a newly initialized
    client.  A client and server may negotiate for the transmission of
@@ -267,19 +256,6 @@ DRAFT             Dynamic Host Configuration Protocol      December 1996
         This phrase means that the item is an absolute prohibition
         of this specification.
 
-
-
-
-
-
-
-
-
-Droms                                                           [Page 5]
-
-DRAFT             Dynamic Host Configuration Protocol      December 1996
-
-
       o "SHOULD"
 
         This word or the adjective "RECOMMENDED" means that there
@@ -295,6 +271,19 @@ DRAFT             Dynamic Host Configuration Protocol      December 1996
         and the case carefully weighed before implementing any behavior
         described with this label.
 
+
+
+
+
+
+
+
+
+Droms                       Standards Track                     [Page 5]
+
+RFC 2131          Dynamic Host Configuration Protocol         March 1997
+
+
       o "MAY"
 
         This word or the adjective "OPTIONAL" means that this item is
@@ -309,38 +298,26 @@ DRAFT             Dynamic Host Configuration Protocol      December 1996
 
       o "DHCP client"
 
-        A DHCP client is an Internet host using DHCP to obtain
-        configuration parameters such as a network address.
+      A DHCP client is an Internet host using DHCP to obtain
+      configuration parameters such as a network address.
 
       o "DHCP server"
 
-        A DHCP server is an Internet host that returns configuration
-        parameters to DHCP clients.
+      A DHCP server is an Internet host that returns configuration
+      parameters to DHCP clients.
 
       o "BOOTP relay agent"
 
-        A BOOTP relay agent or relay agent is an Internet host or router that
-        passes DHCP messages between DHCP clients and DHCP servers.  DHCP is
-        designed to use the same relay agent behavior as specified in
-        the BOOTP protocol specification.
-
-
-
-
-
-
-
-
-Droms                                                           [Page 6]
-
-DRAFT             Dynamic Host Configuration Protocol      December 1996
-
+      A BOOTP relay agent or relay agent is an Internet host or router
+      that passes DHCP messages between DHCP clients and DHCP servers.
+      DHCP is designed to use the same relay agent behavior as specified
+      in the BOOTP protocol specification.
 
       o "binding"
 
-        A binding is a collection of configuration parameters, including
-        at least an IP address, associated with or "bound to" a DHCP
-        client.  Bindings are managed by DHCP servers.
+      A binding is a collection of configuration parameters, including
+      at least an IP address, associated with or "bound to" a DHCP
+      client.  Bindings are managed by DHCP servers.
 
 1.6 Design goals
 
@@ -352,22 +329,34 @@ DRAFT             Dynamic Host Configuration Protocol      December 1996
         should be able to enforce local policies concerning allocation
         and access to local resources where desired.
 
-      o Clients should require no manual configuration.  Each client should
-        be able to discover appropriate local configuration parameters
-        without user intervention and incorporate those parameters into
-        its own configuration.
+
+
+
+
+
+
+Droms                       Standards Track                     [Page 6]
+
+RFC 2131          Dynamic Host Configuration Protocol         March 1997
+
+
+      o Clients should require no manual configuration.  Each client
+        should be able to discover appropriate local configuration
+        parameters without user intervention and incorporate those
+        parameters into its own configuration.
 
       o Networks should require no manual configuration for individual
-        clients.  Under normal circumstances, the network manager should
-        not have to enter any per-client configuration parameters.
+        clients.  Under normal circumstances, the network manager
+        should not have to enter any per-client configuration
+        parameters.
 
       o DHCP should not require a server on each subnet.  To allow for
         scale and economy, DHCP must work across routers or through the
         intervention of BOOTP relay agents.
 
-      o A DHCP client must be prepared to receive multiple responses to a
-        request for configuration parameters.  Some installations may
-        include multiple, overlapping DHCP servers to enhance
+      o A DHCP client must be prepared to receive multiple responses
+        to a request for configuration parameters.  Some installations
+        may include multiple, overlapping DHCP servers to enhance
         reliability and increase performance.
 
       o DHCP must coexist with statically configured, non-participating
@@ -381,33 +370,31 @@ DRAFT             Dynamic Host Configuration Protocol      December 1996
    The following list gives design goals specific to the transmission of
    the network layer parameters.  DHCP must:
 
-
-
-
-
-
-
-Droms                                                           [Page 7]
-
-DRAFT             Dynamic Host Configuration Protocol      December 1996
-
-
       o Guarantee that any specific network address will not be in
         use by more than one DHCP client at a time,
 
-      o Retain DHCP client configuration across DHCP client reboot.  A DHCP
-        client should, whenever possible, be assigned the same configuration
-        parameters (e.g., network address) in response to each request,
+      o Retain DHCP client configuration across DHCP client reboot.  A
+        DHCP client should, whenever possible, be assigned the same
+        configuration parameters (e.g., network address) in response
+        to each request,
 
-      o Retain DHCP client configuration across server reboots, and, whenever
-        possible, a DHCP client should be assigned the same configuration
-        parameters despite restarts of the DHCP mechanism,
+      o Retain DHCP client configuration across server reboots, and,
+        whenever possible, a DHCP client should be assigned the same
+        configuration parameters despite restarts of the DHCP mechanism,
 
       o Allow automated assignment of configuration parameters to new
         clients to avoid hand configuration for new clients,
 
       o Support fixed or permanent allocation of configuration
         parameters to specific clients.
+
+
+
+
+Droms                       Standards Track                     [Page 7]
+
+RFC 2131          Dynamic Host Configuration Protocol         March 1997
+
 
 2. Protocol Summary
 
@@ -443,9 +430,26 @@ DRAFT             Dynamic Host Configuration Protocol      December 1996
 
 
 
-Droms                                                           [Page 8]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Droms                       Standards Track                     [Page 8]
 
-DRAFT             Dynamic Host Configuration Protocol      December 1996
+RFC 2131          Dynamic Host Configuration Protocol         March 1997
 
 
    0                   1                   2                   3
@@ -499,9 +503,9 @@ DRAFT             Dynamic Host Configuration Protocol      December 1996
 
 
 
-Droms                                                           [Page 9]
+Droms                       Standards Track                     [Page 9]
 
-DRAFT             Dynamic Host Configuration Protocol      December 1996
+RFC 2131          Dynamic Host Configuration Protocol         March 1997
 
 
    DHCP clarifies the interpretation of the 'siaddr' field as the
@@ -531,8 +535,8 @@ DRAFT             Dynamic Host Configuration Protocol      December 1996
                     began address acquisition or renewal process.
    flags         2  Flags (see figure 2).
    ciaddr        4  Client IP address; only filled in if client is in
-                    BOUND, RENEW or REBINDING state and can respond to ARP
-                    requests.
+                    BOUND, RENEW or REBINDING state and can respond
+                    to ARP requests.
    yiaddr        4  'your' (client) IP address.
    siaddr        4  IP address of next server to use in bootstrap;
                     returned in DHCPOFFER, DHCPACK by server.
@@ -546,7 +550,7 @@ DRAFT             Dynamic Host Configuration Protocol      December 1996
    options     var  Optional parameters field.  See the options
                     documents for a list of defined options.
 
-             Table 1:  Description of fields in a DHCP message
+           Table 1:  Description of fields in a DHCP message
 
    The 'options' field is now variable length. A DHCP client must be
    prepared to receive DHCP messages with an 'options' field of at least
@@ -555,9 +559,9 @@ DRAFT             Dynamic Host Configuration Protocol      December 1996
 
 
 
-Droms                                                          [Page 10]
+Droms                       Standards Track                    [Page 10]
 
-DRAFT             Dynamic Host Configuration Protocol      December 1996
+RFC 2131          Dynamic Host Configuration Protocol         March 1997
 
 
    datagram size an IP host must be prepared to accept [3].  DHCP
@@ -574,8 +578,6 @@ DRAFT             Dynamic Host Configuration Protocol      December 1996
    and BOOTP relay agents may not be able to deliver DHCP messages to
    clients that cannot accept hardware unicast datagrams before the
    TCP/IP software is configured.
-
-
 
    To work around some clients that cannot accept IP unicast datagrams
    before the TCP/IP software is configured as discussed in the previous
@@ -598,7 +600,6 @@ DRAFT             Dynamic Host Configuration Protocol      December 1996
 
                 Figure 2:  Format of the 'flags' field
 
-
 2.1 Configuration parameters repository
 
    The first service provided by DHCP is to provide persistent storage
@@ -609,15 +610,16 @@ DRAFT             Dynamic Host Configuration Protocol      December 1996
    subnet) and the value contains the configuration parameters for the
    client.
 
-
-
-Droms                                                          [Page 11]
-
-DRAFT             Dynamic Host Configuration Protocol      December 1996
-
-
    For example, the key might be the pair (IP-subnet-number, hardware-
    address) (note that the "hardware-address" should be typed by the
+
+
+
+Droms                       Standards Track                    [Page 11]
+
+RFC 2131          Dynamic Host Configuration Protocol         March 1997
+
+
    type of hardware to accommodate possible duplication of hardware
    addresses resulting from bit-ordering problems in a mixed-media,
    bridged network) allowing for serial or concurrent reuse of a
@@ -629,13 +631,11 @@ DRAFT             Dynamic Host Configuration Protocol      December 1996
    the network interface failed and was replaced). The protocol defines
    that the key will be (IP-subnet-number, hardware-address) unless the
    client explicitly supplies an identifier using the 'client
-   identifier' option.
-
-   A client can query the DHCP service to retrieve its configuration
-   parameters.  The client interface to the configuration parameters
-   repository consists of protocol messages to request configuration
-   parameters and responses from the server carrying the configuration
-   parameters.
+   identifier' option.           A client can query the DHCP service to
+   retrieve its configuration parameters.  The client interface to the
+   configuration parameters repository consists of protocol messages to
+   request configuration parameters and responses from the server
+   carrying the configuration parameters.
 
 2.2 Dynamic allocation of network addresses
 
@@ -664,16 +664,16 @@ DRAFT             Dynamic Host Configuration Protocol      December 1996
    address to reuse.  For example, the server may choose the least
    recently assigned address.  As a consistency check, the allocating
    server SHOULD probe the reused address before allocating the address,
-
-
-
-Droms                                                          [Page 12]
-
-DRAFT             Dynamic Host Configuration Protocol      December 1996
-
-
    e.g., with an ICMP echo request, and the client SHOULD probe the
    newly received address, e.g., with ARP.
+
+
+
+
+
+Droms                       Standards Track                    [Page 12]
+
+RFC 2131          Dynamic Host Configuration Protocol         March 1997
 
 
 3. The Client-Server Protocol
@@ -717,17 +717,6 @@ DRAFT             Dynamic Host Configuration Protocol      December 1996
       agents may pass the message on to DHCP servers not on the same
       physical subnet.
 
-
-
-
-
-
-
-Droms                                                          [Page 13]
-
-DRAFT             Dynamic Host Configuration Protocol      December 1996
-
-
    2. Each server may respond with a DHCPOFFER message that includes an
       available network address in the 'yiaddr' field (and other
       configuration parameters in DHCP options).  Servers need not
@@ -735,6 +724,14 @@ DRAFT             Dynamic Host Configuration Protocol      December 1996
       work more efficiently if the server avoids allocating the offered
       network address to another client.  When allocating a new address,
       servers SHOULD check that the offered network address is not
+
+
+
+Droms                       Standards Track                    [Page 13]
+
+RFC 2131          Dynamic Host Configuration Protocol         March 1997
+
+
       already in use; e.g., the server may probe the offered address
       with an ICMP Echo Request.  Servers SHOULD be implemented so that
       network administrators MAY choose to disable probes of newly
@@ -779,9 +776,16 @@ DRAFT             Dynamic Host Configuration Protocol      December 1996
 
 
 
-Droms                                                          [Page 14]
+
+
+
+
+
+
+
+Droms                       Standards Track                    [Page 14]
 
-DRAFT             Dynamic Host Configuration Protocol      December 1996
+RFC 2131          Dynamic Host Configuration Protocol         March 1997
 
 
                 Server          Client          Server
@@ -791,22 +795,22 @@ DRAFT             Dynamic Host Configuration Protocol      December 1996
                   |               |               |
                   |     Begins initialization     |
                   |               |               |
-                  | _____________/|\_____________ |
-                  |/ DHCPDISCOVER | DHCPDISCOVER \|
+                  | _____________/|\____________  |
+                  |/DHCPDISCOVER | DHCPDISCOVER  \|
                   |               |               |
               Determines          |          Determines
              configuration        |         configuration
                   |               |               |
-                  |\              |  ____________/|
-                  | \_________    | /DHCPOFFER    |
-                  |  DHCPOFFER\   |/              |
-                  |            \  |               |
+                  |\             |  ____________/ |
+                  | \________    | /DHCPOFFER     |
+                  | DHCPOFFER\   |/               |
+                  |           \  |                |
                   |       Collects replies        |
-                  |              \|               |
+                  |             \|                |
                   |     Selects configuration     |
                   |               |               |
-                  | _____________/|\_____________ |
-                  |/ DHCPREQUEST  |  DHCPREQUEST \|
+                  | _____________/|\____________  |
+                  |/ DHCPREQUEST  |  DHCPREQUEST\ |
                   |               |               |
                   |               |     Commits configuration
                   |               |               |
@@ -820,8 +824,8 @@ DRAFT             Dynamic Host Configuration Protocol      December 1996
                   |               |               |
                   |      Graceful shutdown        |
                   |               |               |
-                  |               |\_____________ |
-                  |               |  DHCPRELEASE \|
+                  |               |\ ____________ |
+                  |               | DHCPRELEASE  \|
                   |               |               |
                   |               |        Discards lease
                   |               |               |
@@ -835,9 +839,9 @@ DRAFT             Dynamic Host Configuration Protocol      December 1996
 
 
 
-Droms                                                          [Page 15]
+Droms                       Standards Track                    [Page 15]
 
-DRAFT             Dynamic Host Configuration Protocol      December 1996
+RFC 2131          Dynamic Host Configuration Protocol         March 1997
 
 
   3. The client receives one or more DHCPOFFER messages from one or more
@@ -891,9 +895,9 @@ DRAFT             Dynamic Host Configuration Protocol      December 1996
 
 
 
-Droms                                                          [Page 16]
+Droms                       Standards Track                    [Page 16]
 
-DRAFT             Dynamic Host Configuration Protocol      December 1996
+RFC 2131          Dynamic Host Configuration Protocol         March 1997
 
 
      point, the client is configured.  If the client detects that the
@@ -937,6 +941,21 @@ DRAFT             Dynamic Host Configuration Protocol      December 1996
    shows the timing relationships in a typical client-server interaction
    for a client reusing a previously allocated network address.
 
+
+
+
+
+
+
+
+
+
+
+Droms                       Standards Track                    [Page 17]
+
+RFC 2131          Dynamic Host Configuration Protocol         March 1997
+
+
    1. The client broadcasts a DHCPREQUEST message on its local subnet.
       The message includes the client's network address in the
       'requested IP address' option. As the client has not received its
@@ -944,14 +963,6 @@ DRAFT             Dynamic Host Configuration Protocol      December 1996
       relay agents pass the message on to DHCP servers not on the same
       subnet.  If the client used a 'client identifier' to obtain its
       address, the client MUST use the same 'client identifier' in the
-
-
-
-Droms                                                          [Page 17]
-
-DRAFT             Dynamic Host Configuration Protocol      December 1996
-
-
       DHCPREQUEST message.
 
    2. Servers with knowledge of the client's configuration parameters
@@ -962,124 +973,122 @@ DRAFT             Dynamic Host Configuration Protocol      December 1996
                 Server          Client          Server
 
                   v               v               v
-                  |               |               |
-                  |             Begins            |
-                  |         initialization        |
-                  |               |               |
-                  |              /|\              |
-                  |  ___________/ | \___________  |
-                  | /DHCPREQUEST  |  DHCPREQUEST\ |
-                  |/              |              \|
-                  |               |                |
-               Locates            |            Locates
-            configuration         |         configuration
-                  |               |               |
-                  |\              |              /|
-                  | \             |  ___________/ |
-                  |  \            | /  DHCPACK    |
-                  |   \_______    |/              |
-                  |    DHCPACK\   |               |
-                  |         Initialization        |
-                  |            complete           |
-                  |              \|               |
-                  |               |               |
-                  |          (Subsequent          |
-                  |            DHCPACKS           |
-                  |            ignored)           |
-                  |               |               |
-                  |               |               |
-                  v               v               v
+                  |                |               |
+                  |              Begins            |
+                  |          initialization        |
+                  |                |               |
+                  |                /|\             |
+                  |   _________ __/ | \__________  |
+                  | /DHCPREQU EST  |  DHCPREQUEST\ |
+                  |/               |              \|
+                  |                |               |
+               Locates             |            Locates
+            configuration          |         configuration
+                  |                |               |
+                  |\               |              /|
+                  | \              |  ___________/ |
+                  |  \             | /  DHCPACK    |
+                  |   \ _______    |/              |
+                  |     DHCPACK\   |               |
+                  |          Initialization        |
+                  |             complete           |
+                  |               \|               |
+                  |                |               |
+                  |           (Subsequent          |
+                  |             DHCPACKS           |
+                  |             ignored)           |
+                  |                |               |
+                  |                |               |
+                  v                v               v
 
      Figure 4: Timeline diagram of messages exchanged between DHCP
                client and servers when reusing a previously allocated
                network address
 
 
-     If the client's request is invalid (e.g., the client has moved
-     to a new subnet), servers SHOULD respond with a DHCPNAK message to
-     the client. Servers SHOULD NOT respond if their information is not
-     guaranteed to be accurate.  For example, a server that identifies a
-     request for an expired binding that is owned by another server SHOULD
 
-
-
-Droms                                                          [Page 18]
+Droms                       Standards Track                    [Page 18]
 
-DRAFT             Dynamic Host Configuration Protocol      December 1996
+RFC 2131          Dynamic Host Configuration Protocol         March 1997
 
 
-     NOT respond with a DHCPNAK unless the servers are using an explicit
-     mechanism to maintain coherency among the servers.
+      If the client's request is invalid (e.g., the client has moved
+      to a new subnet), servers SHOULD respond with a DHCPNAK message to
+      the client. Servers SHOULD NOT respond if their information is not
+      guaranteed to be accurate.  For example, a server that identifies a
+      request for an expired binding that is owned by another server SHOULD
+      NOT respond with a DHCPNAK unless the servers are using an explicit
+      mechanism to maintain coherency among the servers.
 
-     If 'giaddr' is 0x0 in the DHCPREQUEST message, the client is on
-     the same subnet as the server.  The server MUST
-     broadcast the DHCPNAK message to the 0xffffffff broadcast address
-     because the client may not have a correct network address or subnet
-     mask, and the client may not be answering ARP requests.
-     Otherwise, the server MUST send the DHCPNAK message to the IP
-     address of the BOOTP relay agent, as recorded in 'giaddr'.  The
-     relay agent will, in turn, forward the message directly to the
-     client's hardware address, so that the DHCPNAK can be delivered even
-     if the client has moved to a new network.
+      If 'giaddr' is 0x0 in the DHCPREQUEST message, the client is on
+      the same subnet as the server.  The server MUST
+      broadcast the DHCPNAK message to the 0xffffffff broadcast address
+      because the client may not have a correct network address or subnet
+      mask, and the client may not be answering ARP requests.
+      Otherwise, the server MUST send the DHCPNAK message to the IP
+      address of the BOOTP relay agent, as recorded in 'giaddr'.  The
+      relay agent will, in turn, forward the message directly to the
+      client's hardware address, so that the DHCPNAK can be delivered even
+      if the client has moved to a new network.
 
-  3. The client receives the DHCPACK message with configuration
-     parameters.  The client performs a final check on the parameters
-     (as in section 3.1), and notes the duration of the lease specified
-     in the DHCPACK message.  The specific lease is implicitly identified
-     by the 'client identifier' or 'chaddr' and the network address.  At
-     this point, the client is configured.
+   3. The client receives the DHCPACK message with configuration
+      parameters.  The client performs a final check on the parameters
+      (as in section 3.1), and notes the duration of the lease specified
+      in the DHCPACK message.  The specific lease is implicitly identified
+      by the 'client identifier' or 'chaddr' and the network address.  At
+      this point, the client is configured.
 
-     If the client detects that the IP address in the DHCPACK message
-     is already in use, the client MUST send a DHCPDECLINE message to the
-     server and restarts the configuration process by requesting a
-     new network address.  This action corresponds to the client
-     moving to the INIT state in the DHCP state diagram, which is
-     described in section 4.4.
+      If the client detects that the IP address in the DHCPACK message
+      is already in use, the client MUST send a DHCPDECLINE message to the
+      server and restarts the configuration process by requesting a
+      new network address.  This action corresponds to the client
+      moving to the INIT state in the DHCP state diagram, which is
+      described in section 4.4.
 
-     If the client receives a DHCPNAK message, it cannot reuse its
-     remembered network address.  It must instead request a new
-     address by restarting the configuration process, this time
-     using the (non-abbreviated) procedure described in section
-     3.1.  This action also corresponds to the client moving to
-     the INIT state in the DHCP state diagram.
+      If the client receives a DHCPNAK message, it cannot reuse its
+      remembered network address.  It must instead request a new
+      address by restarting the configuration process, this time
+      using the (non-abbreviated) procedure described in section
+      3.1.  This action also corresponds to the client moving to
+      the INIT state in the DHCP state diagram.
 
-     The client times out and retransmits the DHCPREQUEST message if
-     the client receives neither a DHCPACK nor a DHCPNAK message.  The
-     client retransmits the DHCPREQUEST according to the retransmission
-     algorithm in section 4.1.  The client should choose to retransmit
-     the DHCPREQUEST enough times to give adequate probability of
-     contacting the server without causing the client (and the user of
-     that client) to wait overly long before giving up; e.g., a client
-     retransmitting as described in section 4.1 might retransmit the
-     DHCPREQUEST message four times, for a total delay of 60 seconds,
-     before restarting the initialization procedure.  If the client
-     receives neither a DHCPACK or a DHCPNAK message after employing
-     the retransmission algorithm, the client MAY choose to use the
-     previously allocated network address and configuration parameters
+      The client times out and retransmits the DHCPREQUEST message if
+      the client receives neither a DHCPACK nor a DHCPNAK message.  The
+      client retransmits the DHCPREQUEST according to the retransmission
+      algorithm in section 4.1.  The client should choose to retransmit
+      the DHCPREQUEST enough times to give adequate probability of
+      contacting the server without causing the client (and the user of
+      that client) to wait overly long before giving up; e.g., a client
+      retransmitting as described in section 4.1 might retransmit the
 
 
 
-Droms                                                          [Page 19]
+Droms                       Standards Track                    [Page 19]
 
-DRAFT             Dynamic Host Configuration Protocol      December 1996
+RFC 2131          Dynamic Host Configuration Protocol         March 1997
 
 
-     for the remainder of the unexpired lease.  This corresponds to
-     moving to BOUND state in the client state transition diagram shown
-     in figure 5.
+      DHCPREQUEST message four times, for a total delay of 60 seconds,
+      before restarting the initialization procedure.  If the client
+      receives neither a DHCPACK or a DHCPNAK message after employing
+      the retransmission algorithm, the client MAY choose to use the
+      previously allocated network address and configuration parameters
+      for the remainder of the unexpired lease.  This corresponds to
+      moving to BOUND state in the client state transition diagram shown
+      in figure 5.
 
-  4. The client may choose to relinquish its lease on a network
-     address by sending a DHCPRELEASE message to the server.  The
-     client identifies the lease to be released with its
-     'client identifier', or 'chaddr' and network address in the
-     DHCPRELEASE message.
+   4. The client may choose to relinquish its lease on a network
+      address by sending a DHCPRELEASE message to the server.  The
+      client identifies the lease to be released with its
+      'client identifier', or 'chaddr' and network address in the
+      DHCPRELEASE message.
 
-     Note that in this case, where the client retains its network
-     address locally, the client will not normally relinquish its
-     lease during a graceful shutdown.  Only in the case where the
-     client explicitly needs to relinquish its lease, e.g., the client
-     is about to be moved to a different subnet, will the client send
-     a DHCPRELEASE message.
+      Note that in this case, where the client retains its network
+      address locally, the client will not normally relinquish its
+      lease during a graceful shutdown.  Only in the case where the
+      client explicitly needs to relinquish its lease, e.g., the client
+      is about to be moved to a different subnet, will the client send
+      a DHCPRELEASE message.
 
 3.3 Interpretation and representation of time values
 
@@ -1107,19 +1116,19 @@ DRAFT             Dynamic Host Configuration Protocol      December 1996
 
    If a client has obtained a network address through some other means
    (e.g., manual configuration), it may use a DHCPINFORM request message
+
+
+
+Droms                       Standards Track                    [Page 20]
+
+RFC 2131          Dynamic Host Configuration Protocol         March 1997
+
+
    to obtain other local configuration parameters.  Servers receiving a
    DHCPINFORM message construct a DHCPACK message with any local
    configuration parameters appropriate for the client without:
    allocating a new address, checking for an existing binding, filling
    in 'yiaddr' or including lease time parameters.  The servers SHOULD
-
-
-
-Droms                                                          [Page 20]
-
-DRAFT             Dynamic Host Configuration Protocol      December 1996
-
-
    unicast the DHCPACK reply to the address given in the 'ciaddr' field
    of the DHCPINFORM message.
 
@@ -1163,19 +1172,19 @@ DRAFT             Dynamic Host Configuration Protocol      December 1996
    option to suggest the lease time it would like.  Other options
    representing "hints" at configuration parameters are allowed in a
    DHCPDISCOVER or DHCPREQUEST message.  However, additional options may
+
+
+
+Droms                       Standards Track                    [Page 21]
+
+RFC 2131          Dynamic Host Configuration Protocol         March 1997
+
+
    be ignored by servers, and multiple servers may, therefore, not
    return identical values for some options.  The 'requested IP address'
    option is to be filled in only in a DHCPREQUEST message when the
    client is verifying network parameters obtained previously. The
    client fills in the 'ciaddr' field only when correctly configured
-
-
-
-Droms                                                          [Page 21]
-
-DRAFT             Dynamic Host Configuration Protocol      December 1996
-
-
    with an IP address in BOUND, RENEWING or REBINDING state.
 
    If a server receives a DHCPREQUEST message with an invalid 'requested
@@ -1219,19 +1228,19 @@ DRAFT             Dynamic Host Configuration Protocol      December 1996
    tagged data items in the variable length option area.  The options
    area includes first a four-octet 'magic cookie' (which was described
    in section 3), followed by the options.  The last option must always
+
+
+
+Droms                       Standards Track                    [Page 22]
+
+RFC 2131          Dynamic Host Configuration Protocol         March 1997
+
+
    be the 'end' option.
 
    DHCP uses UDP as its transport protocol.  DHCP messages from a client
    to a server are sent to the 'DHCP server' port (67), and DHCP
    messages from a server to a client are sent to the 'DHCP client' port
-
-
-
-Droms                                                          [Page 22]
-
-DRAFT             Dynamic Host Configuration Protocol      December 1996
-
-
    (68). A server with multiple network address (e.g., a multi-homed
    host) MAY use any of its network addresses in outgoing DHCP messages.
 
@@ -1275,19 +1284,19 @@ DRAFT             Dynamic Host Configuration Protocol      December 1996
    If the options in a DHCP message extend into the 'sname' and 'file'
    fields, the 'option overload' option MUST appear in the 'options'
    field, with value 1, 2 or 3, as specified in RFC 1533.  If the
+
+
+
+Droms                       Standards Track                    [Page 23]
+
+RFC 2131          Dynamic Host Configuration Protocol         March 1997
+
+
    'option overload' option is present in the 'options' field, the
    options in the 'options' field MUST be terminated by an 'end' option,
    and MAY contain one or more 'pad' options to fill the options field.
    The options in the 'sname' and 'file' fields (if in use as indicated
    by the 'options overload' option) MUST begin with the first octet of
-
-
-
-Droms                                                          [Page 23]
-
-DRAFT             Dynamic Host Configuration Protocol      December 1996
-
-
    the field, MUST be terminated by an 'end' option, and MUST be
    followed by 'pad' options to fill the remainder of the field.  Any
    individual option in the 'options', 'sname' and 'file' fields MUST be
@@ -1332,18 +1341,17 @@ DRAFT             Dynamic Host Configuration Protocol      December 1996
    client may choose to reuse the same 'xid' or select a new 'xid' for
    each retransmitted message.
 
+
+
+Droms                       Standards Track                    [Page 24]
+
+RFC 2131          Dynamic Host Configuration Protocol         March 1997
+
+
    Normally, DHCP servers and BOOTP relay agents attempt to deliver
    DHCPOFFER, DHCPACK and DHCPNAK messages directly to the client using
-   unicast delivery.  The IP destination address (in the IP header) is
+   uicast delivery.  The IP destination address (in the IP header) is
    set to the DHCP 'yiaddr' address and the link-layer destination
-
-
-
-Droms                                                          [Page 24]
-
-DRAFT             Dynamic Host Configuration Protocol      December 1996
-
-
    address is set to the DHCP 'chaddr' address.  Unfortunately, some
    client implementations are unable to receive such unicast IP
    datagrams until the implementation has been configured with a valid
@@ -1388,18 +1396,18 @@ DRAFT             Dynamic Host Configuration Protocol      December 1996
    interact; it is beyond the scope of the DHCP specification to
    describe all of the administrative controls that system
    administrators might want to use.  Specific DHCP server
+
+
+
+Droms                       Standards Track                    [Page 25]
+
+RFC 2131          Dynamic Host Configuration Protocol         March 1997
+
+
    implementations may incorporate any controls or policies desired by a
    network administrator.
 
    In some environments, a DHCP server will have to consider the values
-
-
-
-Droms                                                          [Page 25]
-
-DRAFT             Dynamic Host Configuration Protocol      December 1996
-
-
    of the vendor class options included in DHCPDISCOVER or DHCPREQUEST
    messages when determining the correct parameters for a particular
    client.
@@ -1444,17 +1452,17 @@ DRAFT             Dynamic Host Configuration Protocol      December 1996
 
       o DHCPINFORM
 
+
+
+
+Droms                       Standards Track                    [Page 26]
+
+RFC 2131          Dynamic Host Configuration Protocol         March 1997
+
+
    Table 3 gives the use of the fields and options in a DHCP message by
    a server.  The remainder of this section describes the action of the
    DHCP server for each possible incoming message.
-
-
-
-
-Droms                                                          [Page 26]
-
-DRAFT             Dynamic Host Configuration Protocol      December 1996
-
 
 4.3.1 DHCPDISCOVER message
 
@@ -1464,20 +1472,20 @@ DRAFT             Dynamic Host Configuration Protocol      December 1996
    the system administrator. If an address is available, the new address
    SHOULD be chosen as follows:
 
-   o The client's current address as recorded in the client's current
-     binding, ELSE
+      o The client's current address as recorded in the client's current
+        binding, ELSE
 
-   o The client's previous address as recorded in the client's (now
-     expired or released) binding, if that address is in the server's
-     pool of available addresses and not already allocated, ELSE
+      o The client's previous address as recorded in the client's (now
+        expired or released) binding, if that address is in the server's
+        pool of available addresses and not already allocated, ELSE
 
-   o The address requested in the 'Requested IP Address' option, if that
-     address is valid and not already allocated, ELSE
+      o The address requested in the 'Requested IP Address' option, if that
+        address is valid and not already allocated, ELSE
 
-   o A new address allocated from the server's pool of available
-     addresses; the address is selected based on the subnet from which
-     the message was received (if 'giaddr' is 0) or on the address of
-     the relay agent that forwarded the message ('giaddr' when not 0).
+      o A new address allocated from the server's pool of available
+        addresses; the address is selected based on the subnet from which
+        the message was received (if 'giaddr' is 0) or on the address of
+        the relay agent that forwarded the message ('giaddr' when not 0).
 
    As described in section 4.2, a server MAY, for administrative
    reasons, assign an address other than the one requested, or may
@@ -1501,17 +1509,16 @@ DRAFT             Dynamic Host Configuration Protocol      December 1996
    The server must also choose an expiration time for the lease, as
    follows:
 
+
+
+Droms                       Standards Track                    [Page 27]
+
+RFC 2131          Dynamic Host Configuration Protocol         March 1997
+
+
    o IF the client has not requested a specific lease in the
      DHCPDISCOVER message and the client already has an assigned network
      address, the server returns the lease expiration time previously
-
-
-
-Droms                                                          [Page 27]
-
-DRAFT             Dynamic Host Configuration Protocol      December 1996
-
-
      assigned to that address (note that the client must explicitly
      request a specific lease to extend the expiration time on a
      previously assigned address), ELSE
@@ -1527,102 +1534,60 @@ DRAFT             Dynamic Host Configuration Protocol      December 1996
      lease (if the lease is acceptable to local policy) or select
      another lease.
 
+Field      DHCPOFFER            DHCPACK             DHCPNAK
+-----      ---------            -------             -------
+'op'       BOOTREPLY            BOOTREPLY           BOOTREPLY
+'htype'    (From "Assigned Numbers" RFC)
+'hlen'     (Hardware address length in octets)
+'hops'     0                    0                   0
+'xid'      'xid' from client    'xid' from client   'xid' from client
+           DHCPDISCOVER         DHCPREQUEST         DHCPREQUEST
+           message              message             message
+'secs'     0                    0                   0
+'ciaddr'   0                    'ciaddr' from       0
+                                DHCPREQUEST or 0
+'yiaddr'   IP address offered   IP address          0
+           to client            assigned to client
+'siaddr'   IP address of next   IP address of next  0
+           bootstrap server     bootstrap server
+'flags'    'flags' from         'flags' from        'flags' from
+           client DHCPDISCOVER  client DHCPREQUEST  client DHCPREQUEST
+           message              message             message
+'giaddr'   'giaddr' from        'giaddr' from       'giaddr' from
+           client DHCPDISCOVER  client DHCPREQUEST  client DHCPREQUEST
+           message              message             message
+'chaddr'   'chaddr' from        'chaddr' from       'chaddr' from
+           client DHCPDISCOVER  client DHCPREQUEST  client DHCPREQUEST
+           message              message             message
+'sname'    Server host name     Server host name    (unused)
+           or options           or options
+'file'     Client boot file     Client boot file    (unused)
+           name or options      name or options
+'options'  options              options
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Droms                                                          [Page 28]
+Droms                       Standards Track                    [Page 28]
 
-DRAFT             Dynamic Host Configuration Protocol      December 1996
+RFC 2131          Dynamic Host Configuration Protocol         March 1997
 
 
-  Field      DHCPOFFER            DHCPACK             DHCPNAK
-  -----      ---------            -------             -------
-  'op'       BOOTREPLY            BOOTREPLY           BOOTREPLY
-  'htype'    (From "Assigned Numbers" RFC)
-  'hlen'     (Hardware address length in octets)
-  'hops'     0                    0                   0
-  'xid'      'xid' from client    'xid' from client   'xid' from client
-             DHCPDISCOVER         DHCPREQUEST         DHCPREQUEST
-             message              message             message
-  'secs'     0                    0                   0
-  'ciaddr'   0                    'ciaddr' from       0
-                                  DHCPREQUEST or 0
-  'yiaddr'   IP address offered   IP address          0
-             to client            assigned to client
-  'siaddr'   IP address of next   IP address of next  0
-             bootstrap server     bootstrap server
-  'flags'    'flags' from         'flags' from        'flags' from
-             client DHCPDISCOVER  client DHCPREQUEST  client DHCPREQUEST
-             message              message             message
-  'giaddr'   'giaddr' from        'giaddr' from       'giaddr' from
-             client DHCPDISCOVER  client DHCPREQUEST  client DHCPREQUEST
-             message              message             message
-  'chaddr'   'chaddr' from        'chaddr' from       'chaddr' from
-             client DHCPDISCOVER  client DHCPREQUEST  client DHCPREQUEST
-             message              message             message
-  'sname'    Server host name     Server host name    (unused)
-             or options           or options
-  'file'     Client boot file     Client boot file    (unused)
-             name or options      name or options
-  'options'  options              options
-
-  Option                    DHCPOFFER    DHCPACK            DHCPNAK
-  ------                    ---------    -------            -------
-  Requested IP address      MUST NOT     MUST NOT           MUST NOT
-  IP address lease time     MUST         MUST (DHCPREQUEST) MUST NOT
-                                         MUST NOT (DHCPINFORM)
-  Use 'file'/'sname' fields MAY          MAY                MUST NOT
-  DHCP message type         DHCPOFFER    DHCPACK            DHCPNAK
-  Parameter request list    MUST NOT     MUST NOT           MUST NOT
-  Message                   SHOULD       SHOULD             SHOULD
-  Client identifier         MUST NOT     MUST NOT           MAY
-  Vendor class identifier   MAY          MAY                MAY
-  Server identifier         MUST         MUST               MUST
-  Maximum message size      MUST NOT     MUST NOT           MUST NOT
-  All others                MAY          MAY                MUST NOT
+Option                    DHCPOFFER    DHCPACK            DHCPNAK
+------                    ---------    -------            -------
+Requested IP address      MUST NOT     MUST NOT           MUST NOT
+IP address lease time     MUST         MUST (DHCPREQUEST) MUST NOT
+                                       MUST NOT (DHCPINFORM)
+Use 'file'/'sname' fields MAY          MAY                MUST NOT
+DHCP message type         DHCPOFFER    DHCPACK            DHCPNAK
+Parameter request list    MUST NOT     MUST NOT           MUST NOT
+Message                   SHOULD       SHOULD             SHOULD
+Client identifier         MUST NOT     MUST NOT           MAY
+Vendor class identifier   MAY          MAY                MAY
+Server identifier         MUST         MUST               MUST
+Maximum message size      MUST NOT     MUST NOT           MUST NOT
+All others                MAY          MAY                MUST NOT
 
            Table 3:  Fields and options used by DHCP servers
-
-
-
-
-Droms                                                          [Page 29]
-
-DRAFT             Dynamic Host Configuration Protocol      December 1996
-
 
    Once the network address and lease have been determined, the server
    constructs a DHCPOFFER message with the offered configuration
@@ -1656,6 +1621,13 @@ DRAFT             Dynamic Host Configuration Protocol      December 1996
 
         -- The server MUST NOT return a value for that parameter,
 
+
+
+Droms                       Standards Track                    [Page 29]
+
+RFC 2131          Dynamic Host Configuration Protocol         March 1997
+
+
      The server MUST supply as many of the requested parameters as
      possible and MUST omit any parameters it cannot provide.  The
      server MUST include each requested parameter only once unless
@@ -1669,16 +1641,6 @@ DRAFT             Dynamic Host Configuration Protocol      December 1996
      the contents of 'chaddr' or 'client identifier' in the DHCPDISCOVER
      or DHCPREQUEST message), e.g., as configured by the network
      administrator,
-
-
-
-
-
-
-Droms                                                          [Page 30]
-
-DRAFT             Dynamic Host Configuration Protocol      December 1996
-
 
    o Any parameters specific to this client's class (as identified
      by the contents of the 'vendor class identifier'
@@ -1711,6 +1673,17 @@ DRAFT             Dynamic Host Configuration Protocol      December 1996
    parameters in a DHCPDISCOVER message, it MUST include that list in
    all subsequent messages.
 
+
+
+
+
+
+
+Droms                       Standards Track                    [Page 30]
+
+RFC 2131          Dynamic Host Configuration Protocol         March 1997
+
+
    Any configuration parameters in the DHCPACK message SHOULD NOT
    conflict with those in the earlier DHCPOFFER message to which the
    client is responding.  The client SHOULD use the parameters in the
@@ -1720,109 +1693,114 @@ DRAFT             Dynamic Host Configuration Protocol      December 1996
 
    o DHCPREQUEST generated during SELECTING state:
 
-     Client inserts the address of the selected server in 'server
-     identifier', 'ciaddr' MUST be zero, 'requested IP address' MUST be
-     filled in with the yiaddr value from the chosen DHCPOFFER.
+      Client inserts the address of the selected server in 'server
+      identifier', 'ciaddr' MUST be zero, 'requested IP address' MUST be
+      filled in with the yiaddr value from the chosen DHCPOFFER.
 
-     Note that the client may choose to collect several DHCPOFFER
-     messages and select the "best" offer.  The client indicates its
-     selection by identifying the offering server in the DHCPREQUEST
-     message.  If the client receives no acceptable offers, the client
-
-
-
-Droms                                                          [Page 31]
-
-DRAFT             Dynamic Host Configuration Protocol      December 1996
-
-
-     may choose to try another DHCPDISCOVER message.  Therefore, the
-     servers may not receive a specific DHCPREQUEST from which they can
-     decide whether or not the client has accepted the offer.  Because
-     the servers have not committed any network address assignments on
-     the basis of a DHCPOFFER, servers are free to reuse offered network
-     addresses in response to subsequent requests.  As an implementation
-     detail, servers SHOULD NOT reuse offered addresses and may use an
-     implementation-specific timeout mechanism to decide when to reuse
-     an offered address.
+      Note that the client may choose to collect several DHCPOFFER
+      messages and select the "best" offer.  The client indicates its
+      selection by identifying the offering server in the DHCPREQUEST
+      message.  If the client receives no acceptable offers, the client
+      may choose to try another DHCPDISCOVER message.  Therefore, the
+      servers may not receive a specific DHCPREQUEST from which they can
+      decide whether or not the client has accepted the offer.  Because
+      the servers have not committed any network address assignments on
+      the basis of a DHCPOFFER, servers are free to reuse offered
+      network addresses in response to subsequent requests.  As an
+      implementation detail, servers SHOULD NOT reuse offered addresses
+      and may use an implementation-specific timeout mechanism to decide
+      when to reuse an offered address.
 
    o DHCPREQUEST generated during INIT-REBOOT state:
 
-     'server identifier' MUST NOT be filled in, 'requested IP address'
-     option MUST be filled in with client's notion of its previously
-     assigned address. 'ciaddr' MUST be zero. The client is seeking to
-     verify a previously allocated, cached configuration. Server SHOULD
-     send a DHCPNAK message to the client if the 'requested IP address'
-     is incorrect, or is on the wrong network.
+      'server identifier' MUST NOT be filled in, 'requested IP address'
+      option MUST be filled in with client's notion of its previously
+      assigned address. 'ciaddr' MUST be zero. The client is seeking to
+      verify a previously allocated, cached configuration. Server SHOULD
+      send a DHCPNAK message to the client if the 'requested IP address'
+      is incorrect, or is on the wrong network.
 
-     Determining whether a client in the INIT-REBOOT state is on the
-     correct network is done by examining the contents of 'giaddr', the
-     'requested IP address' option, and a database lookup. If the DHCP
-     server detects that the client is on the wrong net (i.e., the
-     result of applying the local subnet mask or remote subnet mask (if
-     'giaddr' is not zero) to 'requested IP address' option value
-     doesn't match reality), then the server SHOULD send a DHCPNAK
-     message to the client.
-
-     If the network is correct, then the DHCP server should check if the
-     client's notion of its IP address is correct. If not, then the
-     server SHOULD send a DHCPNAK message to the client. If the DHCP
-     server has no record of this client, then it MUST remain silent,
-     and MAY output a warning to the network administrator. This
-     behavior is necessary for peaceful coexistence of non-communicating
-     DHCP servers on the same wire.
-
-     If 'giaddr' is 0x0 in the DHCPREQUEST message, the client is on the
-     same subnet as the server.  The server MUST broadcast the DHCPNAK
-     message to the 0xffffffff broadcast address because the client may
-     not have a correct network address or subnet mask, and the client
-     may not be answering ARP requests.
-
-     If 'giaddr' is set in the DHCPREQUEST message, the client is on a
-     different subnet.  The server MUST set the broadcast bit in the
-     DHCPNAK, so that the relay agent will broadcast the DHCPNAK to the
-     client, because the client may not have a correct network address
-     or subnet mask, and the client may not be answering ARP requests.
+      Determining whether a client in the INIT-REBOOT state is on the
+      correct network is done by examining the contents of 'giaddr', the
+      'requested IP address' option, and a database lookup. If the DHCP
+      server detects that the client is on the wrong net (i.e., the
+      result of applying the local subnet mask or remote subnet mask (if
+      'giaddr' is not zero) to 'requested IP address' option value
+      doesn't match reality), then the server SHOULD send a DHCPNAK
+      message to the client.
 
 
 
 
-Droms                                                          [Page 32]
+
+
+
+Droms                       Standards Track                    [Page 31]
 
-DRAFT             Dynamic Host Configuration Protocol      December 1996
+RFC 2131          Dynamic Host Configuration Protocol         March 1997
 
+
+      If the network is correct, then the DHCP server should check if
+      the client's notion of its IP address is correct. If not, then the
+      server SHOULD send a DHCPNAK message to the client. If the DHCP
+      server has no record of this client, then it MUST remain silent,
+      and MAY output a warning to the network administrator. This
+      behavior is necessary for peaceful coexistence of non-
+      communicating DHCP servers on the same wire.
+
+      If 'giaddr' is 0x0 in the DHCPREQUEST message, the client is on
+      the same subnet as the server.  The server MUST broadcast the
+      DHCPNAK message to the 0xffffffff broadcast address because the
+      client may not have a correct network address or subnet mask, and
+      the client may not be answering ARP requests.
+
+      If 'giaddr' is set in the DHCPREQUEST message, the client is on a
+      different subnet.  The server MUST set the broadcast bit in the
+      DHCPNAK, so that the relay agent will broadcast the DHCPNAK to the
+      client, because the client may not have a correct network address
+      or subnet mask, and the client may not be answering ARP requests.
 
    o DHCPREQUEST generated during RENEWING state:
 
-     'server identifier' MUST NOT be filled in, 'requested IP address'
-     option MUST NOT be filled in, 'ciaddr' MUST be filled in with
-     client's IP address. In this situation, the client is completely
-     configured, and is trying to extend its lease. This message will be
-     unicast, so no relay agents will be involved in its transmission.
-     Because 'giaddr' is therefore not filled in, the DHCP server will
-     trust the value in 'ciaddr', and use it when replying to the
-     client.
+      'server identifier' MUST NOT be filled in, 'requested IP address'
+      option MUST NOT be filled in, 'ciaddr' MUST be filled in with
+      client's IP address. In this situation, the client is completely
+      configured, and is trying to extend its lease. This message will
+      be unicast, so no relay agents will be involved in its
+      transmission.  Because 'giaddr' is therefore not filled in, the
+      DHCP server will trust the value in 'ciaddr', and use it when
+      replying to the client.
 
-     A client MAY choose to renew or extend its lease prior to T1.  The
-     server may choose not to extend the lease (as a policy decision by
-     the network administrator), but should return a DHCPACK message
-     regardless.
+      A client MAY choose to renew or extend its lease prior to T1.  The
+      server may choose not to extend the lease (as a policy decision by
+      the network administrator), but should return a DHCPACK message
+      regardless.
 
    o DHCPREQUEST generated during REBINDING state:
 
-     'server identifier' MUST NOT be filled in, 'requested IP address'
-     option MUST NOT be filled in, 'ciaddr' MUST be filled in with
-     client's IP address. In this situation, the client is completely
-     configured, and is trying to extend its lease. This message MUST be
-     broadcast to the 0xffffffff IP broadcast address.  The DHCP server
-     SHOULD check 'ciaddr' for correctness before replying to the
-     DHCPREQUEST.
+      'server identifier' MUST NOT be filled in, 'requested IP address'
+      option MUST NOT be filled in, 'ciaddr' MUST be filled in with
+      client's IP address. In this situation, the client is completely
+      configured, and is trying to extend its lease. This message MUST
+      be broadcast to the 0xffffffff IP broadcast address.  The DHCP
+      server SHOULD check 'ciaddr' for correctness before replying to
+      the DHCPREQUEST.
 
-     The DHCPREQUEST from a REBINDING client is intended to accommodate
-     sites that have multiple DHCP servers and a mechanism for
-     maintaining consistency among leases managed by multiple servers.
-     A DHCP server MAY extend a client's lease only if it has local
-     administrative authority to do so.
+
+
+
+
+
+Droms                       Standards Track                    [Page 32]
+
+RFC 2131          Dynamic Host Configuration Protocol         March 1997
+
+
+      The DHCPREQUEST from a REBINDING client is intended to accommodate
+      sites that have multiple DHCP servers and a mechanism for
+      maintaining consistency among leases managed by multiple servers.
+      A DHCP server MAY extend a client's lease only if it has local
+      administrative authority to do so.
 
 4.3.3 DHCPDECLINE message
 
@@ -1840,13 +1818,6 @@ DRAFT             Dynamic Host Configuration Protocol      December 1996
    subsequent requests from the client.
 
 4.3.5 DHCPINFORM message
-
-
-
-Droms                                                          [Page 33]
-
-DRAFT             Dynamic Host Configuration Protocol      December 1996
-
 
    The server responds to a DHCPINFORM message by sending a DHCPACK
    message directly to the address given in the 'ciaddr' field of the
@@ -1870,16 +1841,27 @@ DRAFT             Dynamic Host Configuration Protocol      December 1996
 
               Table 4: Client messages from different states
 
+
+
+
+
+
+
+Droms                       Standards Track                    [Page 33]
+
+RFC 2131          Dynamic Host Configuration Protocol         March 1997
+
+
 4.4 DHCP client behavior
 
    Figure 5 gives a state-transition diagram for a DHCP client.  A
    client can receive the following messages from a server:
 
-      o DHCPOFFER
+         o DHCPOFFER
 
-      o DHCPACK
+         o DHCPACK
 
-      o DHCPNAK
+         o DHCPNAK
 
    The DHCPINFORM message is not shown in figure 5.  A client simply
    sends the DHCPINFORM and waits for DHCPACK messages.  Once the client
@@ -1899,9 +1881,31 @@ DRAFT             Dynamic Host Configuration Protocol      December 1996
 
 
 
-Droms                                                          [Page 34]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Droms                       Standards Track                    [Page 34]
 
-DRAFT             Dynamic Host Configuration Protocol      December 1996
+RFC 2131          Dynamic Host Configuration Protocol         March 1997
 
 
  --------                               -------
@@ -1955,9 +1959,9 @@ timers T1, T2   ------------  send DHCPREQUEST      |               |
 
 
 
-Droms                                                          [Page 35]
+Droms                       Standards Track                    [Page 35]
 
-DRAFT             Dynamic Host Configuration Protocol      December 1996
+RFC 2131          Dynamic Host Configuration Protocol         March 1997
 
 
 4.4.1 Initialization and allocation of network address
@@ -2011,84 +2015,96 @@ DRAFT             Dynamic Host Configuration Protocol      December 1996
 
 
 
-Droms                                                          [Page 36]
+Droms                       Standards Track                    [Page 36]
 
-DRAFT             Dynamic Host Configuration Protocol      December 1996
+RFC 2131          Dynamic Host Configuration Protocol         March 1997
 
 
-     Field      DHCPDISCOVER          DHCPREQUEST           DHCPDECLINE,
-                DHCPINFORM                                  DHCPRELEASE
-     -----      ------------          -----------           -----------
-     'op'       BOOTREQUEST           BOOTREQUEST           BOOTREQUEST
-     'htype'    (From "Assigned Numbers" RFC)
-     'hlen'     (Hardware address length in octets)
-     'hops'     0                     0                     0
-     'xid'      selected by client    'xid' from server     selected by
-                                      DHCPOFFER message     client
-     'secs'     0 or seconds since    0 or seconds since    0
-                DHCP process started  DHCP process started
-     'flags'    Set 'BROADCAST'       Set 'BROADCAST'       0
-                flag if client        flag if client
-                requires broadcast    requires broadcast
-                reply                 reply
-     'ciaddr'   0 (DHCPDISCOVER)      0 or client's         0 (DHCPDECLINE)
-                client's              network address       client's network
-                network address       (BOUND/RENEW/REBIND)  address
-                (DHCPINFORM)                                (DHCPRELEASE)
-     'yiaddr'   0                     0                     0
-     'siaddr'   0                     0                     0
-     'giaddr'   0                     0                     0
-     'chaddr'   client's hardware     client's hardware     client's hardware
-                address               address               address
-     'sname'    options, if           options, if           (unused)
-                indicated in          indicated in
-                'sname/file'          'sname/file'
-                option; otherwise     option; otherwise
-                unused                unused
-     'file'     options, if           options, if           (unused)
-                indicated in          indicated in
-                'sname/file'          'sname/file'
-                option; otherwise     option; otherwise
-                unused                unused
-     'options'  options               options               (unused)
-
-     Option                     DHCPDISCOVER  DHCPREQUEST      DHCPDECLINE,
-                                DHCPINFORM                     DHCPRELEASE
-     ------                     ------------  -----------      -----------
-     Requested IP address       MAY           MUST (in         MUST
-                                (DISCOVER)    SELECTING or     (DHCPDECLINE),
-                                MUST NOT      INIT-REBOOT)     MUST NOT
-                                (INFORM)      MUST NOT (in     (DHCPRELEASE)
-                                              BOUND or
-                                              RENEWING)
-     IP address lease time      MAY           MAY              MUST NOT
-                                (DISCOVER)
-                                MUST NOT
+Field      DHCPDISCOVER          DHCPREQUEST           DHCPDECLINE,
+           DHCPINFORM                                  DHCPRELEASE
+-----      ------------          -----------           -----------
+'op'       BOOTREQUEST           BOOTREQUEST           BOOTREQUEST
+'htype'    (From "Assigned Numbers" RFC)
+'hlen'     (Hardware address length in octets)
+'hops'     0                     0                     0
+'xid'      selected by client    'xid' from server     selected by
+                                 DHCPOFFER message     client
+'secs'     0 or seconds since    0 or seconds since    0
+           DHCP process started  DHCP process started
+'flags'    Set 'BROADCAST'       Set 'BROADCAST'       0
+           flag if client        flag if client
+           requires broadcast    requires broadcast
+           reply                 reply
+'ciaddr'   0 (DHCPDISCOVER)      0 or client's         0 (DHCPDECLINE)
+           client's              network address       client's network
+           network address       (BOUND/RENEW/REBIND)  address
+           (DHCPINFORM)                                (DHCPRELEASE)
+'yiaddr'   0                     0                     0
+'siaddr'   0                     0                     0
+'giaddr'   0                     0                     0
+'chaddr'   client's hardware     client's hardware     client's hardware
+           address               address               address
+'sname'    options, if           options, if           (unused)
+           indicated in          indicated in
+           'sname/file'          'sname/file'
+           option; otherwise     option; otherwise
+           unused                unused
+'file'     options, if           options, if           (unused)
+           indicated in          indicated in
+           'sname/file'          'sname/file'
+           option; otherwise     option; otherwise
+           unused                unused
+'options'  options               options               (unused)
 
 
 
-Droms                                                          [Page 37]
+
+
+
+
+
+
+
+
+
+
+
+
+
+Droms                       Standards Track                    [Page 37]
 
-DRAFT             Dynamic Host Configuration Protocol      December 1996
+RFC 2131          Dynamic Host Configuration Protocol         March 1997
 
 
-                                (INFORM)
-     Use 'file'/'sname' fields  MAY           MAY              MAY
-     DHCP message type          DHCPDISCOVER/ DHCPREQUEST      DHCPDECLINE/
-                                DHCPINFORM                     DHCPRELEASE
-     Client identifier          MAY           MAY              MAY
-     Vendor class identifier    MAY           MAY              MUST NOT
-     Server identifier          MUST NOT      MUST (after      MUST
-                                              SELECTING)
-                                              MUST NOT (after
-                                              INIT-REBOOT,
-                                              BOUND, RENEWING
-                                              or REBINDING)
-     Parameter request list     MAY           MAY              MUST NOT
-     Maximum message size       MAY           MAY              MUST NOT
-     Message                    SHOULD NOT    SHOULD NOT       SHOULD
-     Site-specific              MAY           MAY              MUST NOT
-     All others                 MAY           MAY              MUST NOT
+Option                     DHCPDISCOVER  DHCPREQUEST      DHCPDECLINE,
+                           DHCPINFORM                     DHCPRELEASE
+------                     ------------  -----------      -----------
+Requested IP address       MAY           MUST (in         MUST
+                           (DISCOVER)    SELECTING or     (DHCPDECLINE),
+                           MUST NOT      INIT-REBOOT)     MUST NOT
+                           (INFORM)      MUST NOT (in     (DHCPRELEASE)
+                                         BOUND or
+                                         RENEWING)
+IP address lease time      MAY           MAY              MUST NOT
+                           (DISCOVER)
+                           MUST NOT
+                           (INFORM)
+Use 'file'/'sname' fields  MAY           MAY              MAY
+DHCP message type          DHCPDISCOVER/ DHCPREQUEST      DHCPDECLINE/
+                           DHCPINFORM                     DHCPRELEASE
+Client identifier          MAY           MAY              MAY
+Vendor class identifier    MAY           MAY              MUST NOT
+Server identifier          MUST NOT      MUST (after      MUST
+                                         SELECTING)
+                                         MUST NOT (after
+                                         INIT-REBOOT,
+                                         BOUND, RENEWING
+                                         or REBINDING)
+Parameter request list     MAY           MAY              MUST NOT
+Maximum message size       MAY           MAY              MUST NOT
+Message                    SHOULD NOT    SHOULD NOT       SHOULD
+Site-specific              MAY           MAY              MUST NOT
+All others                 MAY           MAY              MUST NOT
 
              Table 5:  Fields and options used by DHCP clients
 
@@ -2108,6 +2124,14 @@ DRAFT             Dynamic Host Configuration Protocol      December 1996
    the client must fill in its own hardware address as the sender's
    hardware address, and 0 as the sender's IP address, to avoid
    confusing ARP caches in other hosts on the same subnet.  If the
+
+
+
+Droms                       Standards Track                    [Page 38]
+
+RFC 2131          Dynamic Host Configuration Protocol         March 1997
+
+
    network address appears to be in use, the client MUST send a
    DHCPDECLINE message to the server. The client SHOULD broadcast an ARP
    reply to announce the client's new IP address and clear any outdated
@@ -2120,14 +2144,6 @@ DRAFT             Dynamic Host Configuration Protocol      December 1996
    'requested IP address' option in the DHCPREQUEST message.  The client
    may request specific configuration parameters by including the
    'parameter request list' option.  The client generates and records a
-
-
-
-Droms                                                          [Page 38]
-
-DRAFT             Dynamic Host Configuration Protocol      December 1996
-
-
    random transaction identifier and inserts that identifier into the
    'xid' field.  The client records its own local time for later use in
    computing the lease expiration.  The client MUST NOT include a
@@ -2164,6 +2180,14 @@ DRAFT             Dynamic Host Configuration Protocol      December 1996
    of time (60 seconds or 4 tries if using timeout suggested in section
    4.1), then it SHOULD display a message informing the user of the
    problem, and then SHOULD begin network processing using suitable
+
+
+
+Droms                       Standards Track                    [Page 39]
+
+RFC 2131          Dynamic Host Configuration Protocol         March 1997
+
+
    defaults as per Appendix A.
 
 4.4.4 Use of broadcast and unicast
@@ -2176,14 +2200,6 @@ DRAFT             Dynamic Host Configuration Protocol      December 1996
 
    When the DHCP client knows the address of a DHCP server, in either
    INIT or REBOOTING state, the client may use that address in the
-
-
-
-Droms                                                          [Page 39]
-
-DRAFT             Dynamic Host Configuration Protocol      December 1996
-
-
    DHCPDISCOVER or DHCPREQUEST rather than the IP broadcast address.
    The client may also use unicast to send DHCPINFORM messages to a
    known DHCP server.  If the client receives no response to DHCP
@@ -2221,6 +2237,13 @@ DRAFT             Dynamic Host Configuration Protocol      December 1996
    network address, returns to BOUND state and may continue network
    processing.
 
+
+
+Droms                       Standards Track                    [Page 40]
+
+RFC 2131          Dynamic Host Configuration Protocol         March 1997
+
+
    If no DHCPACK arrives before time T2, the client moves to REBINDING
    state and sends (via broadcast) a DHCPREQUEST message to extend its
    lease.  The client sets the 'ciaddr' field in the DHCPREQUEST to its
@@ -2232,13 +2255,6 @@ DRAFT             Dynamic Host Configuration Protocol      December 1996
    duration_of_lease).  Times T1 and T2 SHOULD be chosen with some
    random "fuzz" around a fixed value, to avoid synchronization of
    client reacquisition.
-
-
-
-Droms                                                          [Page 40]
-
-DRAFT             Dynamic Host Configuration Protocol      December 1996
-
 
    A client MAY choose to renew or extend its lease prior to T1.  The
    server MAY choose to extend the client's lease according to policy
@@ -2268,12 +2284,27 @@ DRAFT             Dynamic Host Configuration Protocol      December 1996
    DHCPRELEASE message to the server.  Note that the correct operation
    of DHCP does not depend on the transmission of DHCPRELEASE messages.
 
+
+
+
+
+
+
+
+
+
+
+
+Droms                       Standards Track                    [Page 41]
+
+RFC 2131          Dynamic Host Configuration Protocol         March 1997
+
+
 5. Acknowledgments
 
    The author thanks the many (and too numerous to mention!) members of
    the DHC WG for their tireless and ongoing efforts in the development
    of DHCP and this document.
-
 
    The efforts of J Allard, Mike Carney, Dave Lapp, Fred Lien and John
    Mendonca in organizing DHCP interoperability testing sessions are
@@ -2282,19 +2313,6 @@ DRAFT             Dynamic Host Configuration Protocol      December 1996
    The development of this document was supported in part by grants from
    the Corporation for National Research Initiatives (CNRI), Bucknell
    University and Sun Microsystems.
-
-
-
-
-
-
-
-
-
-Droms                                                          [Page 41]
-
-DRAFT             Dynamic Host Configuration Protocol      December 1996
-
 
 6. References
 
@@ -2329,53 +2347,53 @@ DRAFT             Dynamic Host Configuration Protocol      December 1996
    [9] Droms, D., "Interoperation between DHCP and BOOTP", RFC 1534,
        Bucknell University, October 1993.
 
-  [10] Finlayson, R., Mann, T., Mogul, J., and M. Theimer, "A Reverse
-       Address Resolution Protocol", RFC 903, Stanford, June 1984.
-
-  [11] Gray C., and D. Cheriton, "Leases: An Efficient Fault-Tolerant
-       Mechanism for Distributed File Cache Consistency", In Proc. of
-       the Twelfth ACM Symposium on Operating Systems Design, 1989.
-
-  [12] Mockapetris, P., "Domain Names -- Concepts and Facilities", STD
-       13, RFC 1034, USC/Information Sciences Institute, November 1987.
-
-  [13] Mockapetris, P., "Domain Names -- Implementation and
-       Specification", STD 13, RFC 1035, USC/Information Sciences
-       Institute, November 1987.
 
 
 
 
-
-Droms                                                          [Page 42]
+Droms                       Standards Track                    [Page 42]
 
-DRAFT             Dynamic Host Configuration Protocol      December 1996
+RFC 2131          Dynamic Host Configuration Protocol         March 1997
 
 
-  [14] Mogul J., and S. Deering, "Path MTU Discovery", RFC 1191,
-       November 1990.
+   [10] Finlayson, R., Mann, T., Mogul, J., and M. Theimer, "A Reverse
+        Address Resolution Protocol", RFC 903, Stanford, June 1984.
 
-  [15] Morgan, R., "Dynamic IP Address Assignment for Ethernet Attached
-       Hosts", Work in Progress.
+   [11] Gray C., and D. Cheriton, "Leases: An Efficient Fault-Tolerant
+        Mechanism for Distributed File Cache Consistency", In Proc. of
+        the Twelfth ACM Symposium on Operating Systems Design, 1989.
 
-  [16] Postel, J., "Internet Control Message Protocol", STD 5, RFC 792,
-       USC/Information Sciences Institute, September 1981.
+   [12] Mockapetris, P., "Domain Names -- Concepts and Facilities", STD
+        13, RFC 1034, USC/Information Sciences Institute, November 1987.
 
-  [17] Reynolds, J., "BOOTP Vendor Information Extensions", RFC 1497,
-       USC/Information Sciences Institute, August 1993.
+   [13] Mockapetris, P., "Domain Names -- Implementation and
+        Specification", STD 13, RFC 1035, USC/Information Sciences
+        Institute, November 1987.
 
-  [18] Reynolds, J., and J. Postel, "Assigned Numbers", STD 2, RFC 1340,
-       USC/Information Sciences Institute, July 1992.
+   [14] Mogul J., and S. Deering, "Path MTU Discovery", RFC 1191,
+        November 1990.
 
-  [19] Jeffrey Schiller and Mark Rosenstein. A Protocol for the Dynamic
-       Assignment of IP Addresses for use on an Ethernet. (Available
-       from the Athena Project, MIT), 1989.
+   [15] Morgan, R., "Dynamic IP Address Assignment for Ethernet Attached
+        Hosts", Work in Progress.
 
-  [20] Sollins, K., "The TFTP Protocol (Revision 2)",  RFC 783, NIC,
-       June 1981.
+   [16] Postel, J., "Internet Control Message Protocol", STD 5, RFC 792,
+        USC/Information Sciences Institute, September 1981.
 
-  [21] Wimer, W., "Clarifications and Extensions for the Bootstrap
-       Protocol", RFC 1542, Carnegie Mellon University, October 1993.
+   [17] Reynolds, J., "BOOTP Vendor Information Extensions", RFC 1497,
+        USC/Information Sciences Institute, August 1993.
+
+   [18] Reynolds, J., and J. Postel, "Assigned Numbers", STD 2, RFC 1700,
+        USC/Information Sciences Institute, October 1994.
+
+   [19] Jeffrey Schiller and Mark Rosenstein. A Protocol for the Dynamic
+        Assignment of IP Addresses for use on an Ethernet. (Available
+        from the Athena Project, MIT), 1989.
+
+   [20] Sollins, K., "The TFTP Protocol (Revision 2)",  RFC 783, NIC,
+        June 1981.
+
+   [21] Wimer, W., "Clarifications and Extensions for the Bootstrap
+        Protocol", RFC 1542, Carnegie Mellon University, October 1993.
 
 7. Security Considerations
 
@@ -2385,6 +2403,14 @@ DRAFT             Dynamic Host Configuration Protocol      December 1996
    not impossible, configuring such hosts with passwords or keys may be
    difficult and inconvenient.  Therefore, DHCP in its current form is
    quite insecure.
+
+
+
+
+Droms                       Standards Track                    [Page 43]
+
+RFC 2131          Dynamic Host Configuration Protocol         March 1997
+
 
    Unauthorized DHCP servers may be easily set up.  Such servers can
    then send false and potentially disruptive information to clients
@@ -2400,26 +2426,16 @@ DRAFT             Dynamic Host Configuration Protocol      December 1996
    claim all resources for itself, thereby denying resources to
    legitimate clients.
 
-
-
-
-Droms                                                          [Page 43]
-
-DRAFT             Dynamic Host Configuration Protocol      December 1996
-
-
 8. Author's Address
 
-   Ralph Droms
-   Computer Science Department
-   323 Dana Engineering
-   Bucknell University
-   Lewisburg, PA 17837
+      Ralph Droms
+      Computer Science Department
+      323 Dana Engineering
+      Bucknell University
+      Lewisburg, PA 17837
 
-   Phone: (717) 524-1145
-   EMail: droms@bucknell.edu
-
-   This document will expire on May 30, 1996.
+      Phone: (717) 524-1145
+      EMail: droms@bucknell.edu
 
 
 
@@ -2447,21 +2463,9 @@ DRAFT             Dynamic Host Configuration Protocol      December 1996
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-Droms                                                          [Page 44]
+Droms                       Standards Track                    [Page 44]
 
-DRAFT             Dynamic Host Configuration Protocol      December 1996
+RFC 2131          Dynamic Host Configuration Protocol         March 1997
 
 
 A. Host Configuration Parameters
@@ -2515,5 +2519,5 @@ Key:
 
 
 
-Droms                                                          [Page 45]
-
+Droms                       Standards Track                    [Page 45]
+
