@@ -41,7 +41,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.110 2000/07/27 09:02:23 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.111 2000/08/28 19:36:39 neild Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1696,7 +1696,8 @@ void make_client_options (client, lease, type, sid, rip, prl, op)
 	/* Run statements that need to be run on transmission. */
 	if (client -> config -> on_transmission)
 		execute_statements_in_scope
-			((struct packet *)0, (struct lease *)0,
+			((struct binding_value **)0,
+			 (struct packet *)0, (struct lease *)0,
 			 (lease ? lease -> options : (struct option_state *)0),
 			 *op, &global_scope,
 			 client -> config -> on_transmission,
@@ -2226,7 +2227,8 @@ void script_write_params (client, prefix, lease)
 		client_envadd (client, prefix, "server_name",
 			       "%s", lease -> server_name);
 
-	execute_statements_in_scope ((struct packet *)0,
+	execute_statements_in_scope ((struct binding_value **)0,
+				     (struct packet *)0,
 				     (struct lease *)0, lease -> options,
 				     lease -> options, &global_scope,
 				     client -> config -> on_receipt,

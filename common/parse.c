@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.79 2000/08/22 21:51:30 neild Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.80 2000/08/28 19:36:31 neild Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1650,8 +1650,29 @@ int parse_executable_statement (result, cfile, lose, case_context)
 		parse_semi (cfile);
 		break;
 
+	      case RETURN:
+		token = next_token (&val, cfile);
+
+		if (!executable_statement_allocate (result, MDL))
+			log_fatal ("no memory for return statement.");
+		(*result) -> op = return_statement;
+
+		if (!parse_expression (&(*result) -> data.retval,
+				       cfile, lose, context_data,
+				       (struct expression **)0, expr_none)) {
+			if (!*lose)
+				parse_warn (cfile,
+					    "expecting data expression.");
+			else
+				*lose = 1;
+			skip_to_semi (cfile);
+			executable_statement_dereference (result, MDL);
+			return 0;
+		}
+		parse_semi (cfile);
+		break;
+
 	      case LOG:
-		      /** XXXDPN: At work. **/
 		token = next_token (&val, cfile);
 
 		if (!executable_statement_allocate (result, MDL))
@@ -1772,6 +1793,31 @@ int parse_executable_statement (result, cfile, lose, case_context)
 					 supersede_option_statement);
 			}
 		}
+
+		if (token == NUMBER_OR_NAME || token == NAME) {
+			/* This is rather ugly.  Since function calls are
+			   data expressions, fake up an eval statement. */
+			if (!executable_statement_allocate (result, MDL))
+				log_fatal ("no memory for eval statement.");
+			(*result) -> op = eval_statement;
+
+			if (!parse_expression (&(*result) -> data.eval,
+					       cfile, lose, context_data,
+					       (struct expression **)0,
+					       expr_none)) {
+				if (!*lose)
+					parse_warn (cfile, "expecting "
+						    "function call.");
+				else
+					*lose = 1;
+				skip_to_semi (cfile);
+				executable_statement_dereference (result, MDL);
+				return 0;
+			}
+			parse_semi (cfile);
+			break;
+		}
+
 		*lose = 0;
 		return 0;
 	}

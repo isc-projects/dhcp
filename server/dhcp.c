@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.160 2000/08/24 18:49:34 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.161 2000/08/28 19:36:10 neild Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -578,7 +578,8 @@ void dhcpdecline (packet, ms_nulltp)
 
 	/* Execute statements in scope starting with the subnet scope. */
 	if (lease)
-		execute_statements_in_scope (packet, (struct lease *)0,
+		execute_statements_in_scope ((struct binding_value **)0,
+					     packet, (struct lease *)0,
 					     packet -> options, options,
 					     &global_scope,
 					     lease -> subnet -> group,
@@ -587,7 +588,8 @@ void dhcpdecline (packet, ms_nulltp)
 	/* Execute statements in the class scopes. */
 	for (i = packet -> class_count; i > 0; i--) {
 		execute_statements_in_scope
-			(packet, (struct lease *)0, packet -> options, options,
+			((struct binding_value **)0,
+			 packet, (struct lease *)0, packet -> options, options,
 			 &global_scope, packet -> classes [i - 1] -> group,
 			 lease ? lease -> subnet -> group : (struct group *)0);
 	}
@@ -718,7 +720,8 @@ void dhcpinform (packet, ms_nulltp)
 
 	/* Execute statements in scope starting with the subnet scope. */
 	if (subnet)
-		execute_statements_in_scope (packet, (struct lease *)0,
+		execute_statements_in_scope ((struct binding_value **)0,
+					     packet, (struct lease *)0,
 					     packet -> options, options,
 					     &global_scope, subnet -> group,
 					     (struct group *)0);
@@ -726,7 +729,8 @@ void dhcpinform (packet, ms_nulltp)
 	/* Execute statements in the class scopes. */
 	for (i = packet -> class_count; i > 0; i--) {
 		execute_statements_in_scope
-			(packet, (struct lease *)0, packet -> options, options,
+			((struct binding_value **)0,
+			 packet, (struct lease *)0, packet -> options, options,
 			 &global_scope, packet -> classes [i - 1] -> group,
 			 subnet ? subnet -> group : (struct group *)0);
 	}
@@ -1249,7 +1253,8 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 	}
 
 	/* Execute statements in scope starting with the subnet scope. */
-	execute_statements_in_scope (packet, lease,
+	execute_statements_in_scope ((struct binding_value **)0,
+				     packet, lease,
 				     packet -> options,
 				     state -> options, &lease -> scope,
 				     lease -> subnet -> group,
@@ -1257,7 +1262,8 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 
 	/* If the lease is from a pool, run the pool scope. */
 	if (lease -> pool)
-		execute_statements_in_scope (packet, lease,
+		execute_statements_in_scope ((struct binding_value **)0,
+					     packet, lease,
 					     packet -> options,
 					     state -> options, &lease -> scope,
 					     lease -> pool -> group,
@@ -1266,7 +1272,8 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 	/* Execute statements from class scopes. */
 	for (i = packet -> class_count; i > 0; i--) {
 		execute_statements_in_scope
-			(packet, lease, packet -> options, state -> options,
+			((struct binding_value **)0,
+			 packet, lease, packet -> options, state -> options,
 			 &lease -> scope, packet -> classes [i - 1] -> group,
 			 (lease -> pool
 			  ? lease -> pool -> group
@@ -1276,7 +1283,8 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 	/* If we have a host_decl structure, run the options associated
 	   with its group. */
 	if (lease -> host)
-		execute_statements_in_scope (packet, lease, packet -> options,
+		execute_statements_in_scope ((struct binding_value **)0,
+					     packet, lease, packet -> options,
 					     state -> options, &lease -> scope,
 					     lease -> host -> group,
 					     (lease -> pool
@@ -1786,7 +1794,8 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 	/* If there are statements to execute when the lease is
 	   committed, execute them. */
 	if (lease -> on_commit && (!offer || offer == DHCPACK)) {
-		execute_statements (packet, lt, packet -> options,
+		execute_statements ((struct binding_value **)0,
+				    packet, lt, packet -> options,
 				    state -> options, &lease -> scope,
 				    lease -> on_commit);
 		if (lease -> on_commit)

@@ -1790,12 +1790,14 @@ int unbill_class PROTO ((struct lease *, struct class *));
 int bill_class PROTO ((struct lease *, struct class *));
 
 /* execute.c */
-int execute_statements PROTO ((struct packet *,
+int execute_statements PROTO ((struct binding_value **result,
+			       struct packet *,
 			       struct lease *,
 			       struct option_state *, struct option_state *,
 			       struct binding_scope **,
 			       struct executable_statement *));
-void execute_statements_in_scope PROTO ((struct packet *,
+void execute_statements_in_scope PROTO ((struct binding_value **result,
+					 struct packet *,
 					 struct lease *,
 					 struct option_state *,
 					 struct option_state *,

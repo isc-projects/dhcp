@@ -63,7 +63,8 @@ struct executable_statement {
 		unset_statement,
 		let_statement,
 		define_statement,
-		log_statement
+		log_statement,
+		return_statement
 	} op;
 	union {
 		struct {
@@ -71,6 +72,7 @@ struct executable_statement {
 			struct expression *expr;
 		} ie;
 		struct expression *eval;
+		struct expression *retval;
 		struct class *add;
 		struct option_cache *option;
 		struct option_cache *supersede;

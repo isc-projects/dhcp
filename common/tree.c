@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.86 2000/08/22 21:21:54 neild Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.87 2000/08/28 19:36:32 neild Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -531,27 +531,13 @@ int evaluate_expression (result, packet, lease,
 		if (scope && *scope)
 			binding_scope_reference (&ns -> outer, *scope, MDL);
 
-		if (execute_statements
-		    (packet, lease, in_options, cfg_options, &ns,
-		     binding -> value -> value.fundef -> statements)) {
-			if (ns -> bindings && ns -> bindings -> name) {
-			    binding_value_reference (result,
-						     ns -> bindings -> value,
-						     MDL);
-			    status = 1;
-			} else
-			    status = 0;
-		} else
-			status = 0;
+		status = (execute_statements
+			  (&bv, packet, lease, in_options, cfg_options, &ns,
+			   binding -> value -> value.fundef -> statements));
 		binding_scope_dereference (&ns, MDL);
-		return status;
-	} else if (expr -> op == expr_funcall) {
-		/* XXXDPN: This can never happen.  Huh? */
-		if (!binding_value_allocate (&bv, MDL))
-			return 0;
-		bv -> type = binding_function;
-		fundef_reference (&bv -> value.fundef, expr -> data.func, MDL);
-		return 1;
+
+		if (!bv)
+			return 1;
         } else if (is_boolean_expression (expr)) {
 		if (!binding_value_allocate (&bv, MDL))
 			return 0;
@@ -585,6 +571,7 @@ int evaluate_expression (result, packet, lease,
 	} else {
 		log_error ("%s: invalid expression type: %d",
 			   "evaluate_expression", expr -> op);
+		return 0;
 	}
 	if (result)
 		binding_value_reference (result, bv, MDL);

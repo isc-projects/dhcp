@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.99 2000/08/07 20:28:13 neild Exp $ Copyright 1995-2000 Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.100 2000/08/28 19:36:12 neild Exp $ Copyright 1995-2000 Internet Software Consortium.";
 #endif
 
   static char copyright[] =
@@ -377,7 +377,8 @@ int main (argc, argv, envp)
 	/* Now try to get the lease file name. */
 	option_state_allocate (&options, MDL);
 
-	execute_statements_in_scope ((struct packet *)0,
+	execute_statements_in_scope ((struct binding_value **)0,
+				     (struct packet *)0,
 				     (struct lease *)0,
 				     (struct option_state *)0,
 				     options, &global_scope,
