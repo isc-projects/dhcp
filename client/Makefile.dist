@@ -79,7 +79,7 @@ distclean: realclean
 # provided in the distribution so that this doesn't become a problem.
 
 dhclient.cat8:	dhclient.man8
-	nroff -man dhclient.man8 >dhclient.man8
+	nroff -man dhclient.man8 >dhclient.cat8
 
 dhclient.man8: dhclient.8
 	sed -e "s#ETCDIR#$(ETC)#g" -e "s#DBDIR#$(VARDB)#g" \
