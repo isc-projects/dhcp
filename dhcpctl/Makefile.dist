@@ -78,7 +78,7 @@ depend:
 	$(MKDEP) $(INCLUDES) $(PREDEFINES) $(SRC)
 
 clean:
-	-rm -f $(OBJ) test.o svtest cltest.o cltest
+	-rm -f $(OBJ) omshell.o omshell cltest.o cltest
 
 realclean: clean
 	-rm -f libdhcpctl.a *~ $(CATMANPAGES) $(SEDMANPAGES)
