@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: conflex.c,v 1.19 1996/09/09 07:04:28 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: conflex.c,v 1.20 1997/02/18 14:32:30 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -360,6 +360,8 @@ static int intern (atom, dfv)
 			return CLASS;
 		if (!strcasecmp (atom + 1, "iaddr"))
 			return CIADDR;
+		if (!strcasecmp (atom + 1, "lient-identifier"))
+			return CLIENT_IDENTIFIER;
 		break;
 	      case 'd':
 		if (!strcasecmp (atom + 1, "efault-lease-time"))
@@ -378,6 +380,8 @@ static int intern (atom, dfv)
 			return ETHERNET;
 		if (!strcasecmp (atom + 1, "nds"))
 			return ENDS;
+		if (!strcasecmp (atom + 1, "xpire"))
+			return EXPIRE;
 		break;
 	      case 'f':
 		if (!strcasecmp (atom + 1, "ilename"))
@@ -396,8 +400,14 @@ static int intern (atom, dfv)
 	      case 'h':
 		if (!strcasecmp (atom + 1, "ost"))
 			return HOST;
+		if (!strcasecmp (atom + 1, "ostname"))
+			return HOSTNAME;
 		if (!strcasecmp (atom + 1, "ardware"))
 			return HARDWARE;
+		break;
+	      case 'i':
+		if (!strcasecmp (atom + 1, "nterface"))
+			return INTERFACE;
 		break;
 	      case 'l':
 		if (!strcasecmp (atom + 1, "ease"))
@@ -426,6 +436,16 @@ static int intern (atom, dfv)
 	      case 'r':
 		if (!strcasecmp (atom + 1, "ange"))
 			return RANGE;
+		if (!strcasecmp (atom + 1, "equest"))
+			return REQUEST;
+		if (!strcasecmp (atom + 1, "equire"))
+			return REQUIRE;
+		if (!strcasecmp (atom + 1, "etry"))
+			return RETRY;
+		if (!strcasecmp (atom + 1, "enew"))
+			return RENEW;
+		if (!strcasecmp (atom + 1, "ebind"))
+			return REBIND;
 		break;
 	      case 's':
 		if (!strcasecmp (atom + 1, "tarts"))
@@ -440,10 +460,16 @@ static int intern (atom, dfv)
 			return SERVER_NAME;
 		if (!strcasecmp (atom + 1, "erver-identifier"))
 			return SERVER_IDENTIFIER;
+		if (!strcasecmp (atom + 1, "elect-timeout"))
+			return SELECT_TIMEOUT;
+		if (!strcasecmp (atom + 1, "cript"))
+			return SCRIPT;
 		break;
 	      case 't':
 		if (!strcasecmp (atom + 1, "imestamp"))
 			return TIMESTAMP;
+		if (!strcasecmp (atom + 1, "imeout"))
+			return TIMEOUT;
 		if (!strcasecmp (atom + 1, "oken-ring"))
 			return TOKEN_RING;
 		break;

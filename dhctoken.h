@@ -90,6 +90,18 @@
 #define ONE_LEASE_PER_CLIENT 294
 #define GET_LEASE_HOSTNAMES 295
 #define USE_HOST_DECL_NAMES 296
+#define HOSTNAME	297
+#define CLIENT_IDENTIFIER 298
+#define REQUEST		299
+#define REQUIRE		300
+#define TIMEOUT		301
+#define RETRY		302
+#define SELECT_TIMEOUT	303
+#define SCRIPT		304
+#define INTERFACE	305
+#define RENEW		306
+#define	REBIND		307
+#define EXPIRE		308
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\
 				 (x) != STRING &&	\
