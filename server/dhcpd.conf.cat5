@@ -472,6 +472,7 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
        versions  of the DHCP server, but it important to be aware
        of it at lease for the time being.
 
+SSUUBBCCLLAASSSSEESS
        In addition to classes, it is  possible  to  declare  sub­
        classes.    A  subclass is a class with the same name as a
        regular class, but with  a  specific  submatch  expression
@@ -481,29 +482,78 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
        that it will be quicker to  find  the  subclasses.    Sub­
        classes work as follows:
 
-       class "vendor-classes" {
-         match option vendor-class-identifier;
+       class "allocation-class-1" {
+         match hardware;
        }
 
-       subclass "vendor-classes" "SUNW.Ultra-5_10" {
-         option vendor-encapsulated-options
-               2:AC:11:41:1:
-               3:12:73:75:6e:64:68:63:70:2d:73:65:72:76:65:72:31:37:2d:31:
-               4:12:2f:65:78:70:6f:72:74:2f:72:6f:6f:74:2f:73:70:61:72:63;
+       class "allocation-class-2" {
+         match hardware;
        }
 
-       subclass "vendor-classes" "SUNW.i86pc" {
-         option vendor-encapsulated-options
-               2:4:AC:11:41:1:
-               3:12:73:75:6e:64:68:63:70:2d:73:65:72:76:65:72:31:37:2d:31:
-               4:12:2f:65:78:70:6f:72:74:2f:72:6f:6f:74:2f:69:38:36:70:63;
+       subclass "allocation-class-1" 1:8:0:2b:4c:39:ad;
+       subclass "allocation-class-2" 1:8:0:2b:a9:cc:e3;
+       subclass "allocation-class-1" 1:0:0:c4:aa:29:44;
+
+       subnet 10.0.0.0 netmask 255.255.255.0 {
+         pool {
+           allow members of "allocation-class-1";
+           range 10.0.0.11 10.0.0.50;
+         }
+         pool {
+           allow members of "allocation-class-2";
+           range 10.0.0.51 10.0.0.100;
+         }
        }
 
-       The  string  following  the  class name for the subclasses
-       specifies the string that is expected to match the expres­
-       sion  in  the  class  declaration  for  the vendor-classes
-       class.
+       The data following the class name in the subclass declara­
+       tion is a constant value to  use  in  matching  the  match
+       expression  for  the  class.  When class matching is done,
+       the server will evaluate the  match  expression  and  then
+       look  the  result  up  in  the hash table.   If it finds a
+       match, the client is considered a member of both the class
+       and the subclass.
 
+       Subclasses can be declared with or without scope.   In the
+       above example, the sole purpose  of  the  subclass  is  to
+       allow some clients access to one address pool, while other
+       clients are given access to the other pool, so these  sub­
+       classes are declared without scopes.   If part of the pur­
+       pose of the subclass were to  define  different  parameter
+       values  for  some  clients, you might want to declare some
+
+
+
+                                                                8
+
+
+
+
+
+dhcpd.conf(5)                                       dhcpd.conf(5)
+
+
+       subclasses with scopes.
+
+       In the above example, if you  had  a  single  client  that
+       needed  some  configuration parameters, while most didn't,
+       you might write the  following  subclass  declaration  for
+       that client:
+
+       subclass "allocation-class-2" 1:08:00:2b:a1:11:31 {
+         option root-path "samsara:/var/diskless/alphapc";
+         filename "/tftpboot/netbsd.alphapc-diskless";
+       }
+
+       In  this  example, we've used subclassing as a way to con­
+       trol address allocation on a per-client  basis.   However,
+       it's also possible to use subclassing in ways that are not
+       specific to clients - for example, to use the value of the
+       vendor-class-identifier option to determine what values to
+       send in the vendor-encapsulated-options option.  An  exam­
+       ple of this is shown under the VENDOR ENCAPSULATED OPTIONS
+       head later on in this document.
+
+PPEERR--CCLLAASSSS LLIIMMIITTSS OONN DDYYNNAAMMIICC AADDDDRREESSSS AALLLLOOCCAATTIIOONN
        You may specify a limit to the  number  of  clients  in  a
        class  that  can  be assigned leases.   The effect of this
        will be to make it difficult for a new client in  a  class
@@ -521,17 +571,6 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
        This will produce a class in which a maximum of four  mem­
        bers may hold a lease at one time.
 
-
-
-                                                                8
-
-
-
-
-
-dhcpd.conf(5)                                       dhcpd.conf(5)
-
-
        It  is  possible  to declare a _s_p_a_w_n_i_n_g _c_l_a_s_s.  A spawning
        class is a class that  automatically  produces  subclasses
        based on what the client sends.   The reason that spawning
@@ -546,10 +585,22 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
 
        Many cable modem head-end systems can be configured to add
        a Relay Agent Information  option  to  DHCP  packets  when
-       relaying  them  to  the DHCP server.   These systems typi­
-       cally add a circuit ID or remote ID option  that  uniquely
-       identifies the customer site.   To take advantage of this,
-       you can write a class declaration as follows:
+       relaying   them   to  the  DHCP  server.    These  systems
+
+
+
+                                                                9
+
+
+
+
+
+dhcpd.conf(5)                                       dhcpd.conf(5)
+
+
+       typically add a  circuit  ID  or  remote  ID  option  that
+       uniquely identifies the customer site.   To take advantage
+       of this, you can write a class declaration as follows:
        class "customer" {
          match if exists agent.circuit-id;
          spawn with option agent.circuit-id;
@@ -586,18 +637,6 @@ DDYYNNAAMMIICC DDNNSS UUPPDDAATTEESS
 
        The  Dynamic DNS update scheme implemented in this version
        of the ISC DHCP server is an interim implementation, which
-
-
-
-                                                                9
-
-
-
-
-
-dhcpd.conf(5)                                       dhcpd.conf(5)
-
-
        does not implement any of the standard update methods that
        have been discussed  in  the  working  group,  but  rather
        implements  some  very basic, yet useful, update capabili­
@@ -612,6 +651,18 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
        ple, if the client's hostname is "hutson"  and  the  _d_d_n_s_-
        _d_o_m_a_i_n_n_a_m_e  is  set to "sneedville.edu", then the client's
        FQDN will be "hutson.sneedville.edu".
+
+
+
+
+                                                               10
+
+
+
+
+
+dhcpd.conf(5)                                       dhcpd.conf(5)
+
 
        The _d_d_n_s_-_r_e_v_-_d_o_m_a_i_n_n_a_m_e parameter  sets  the  domain  name
        that  will be appended to the client's reversed IP address
@@ -652,18 +703,6 @@ HHOOWW DDNNSS UUPPDDAATTEESS WWOORRKK
        Please   note  that  the  current  implementation  assumes
        clients only have a single network interface.    A  client
        with   two   network  interfaces  will  see  unpredictable
-
-
-
-                                                               10
-
-
-
-
-
-dhcpd.conf(5)                                       dhcpd.conf(5)
-
-
        behaviour.   This is considered a bug, and will  be  fixed
        in a later release.   It may be helpful to enable the _o_n_e_-
        _l_e_a_s_e_-_p_e_r_-_c_l_i_e_n_t parameter so that roaming clients do  not
@@ -678,6 +717,18 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
        sent  the  DHCPOFFER.   It only sends the DNS update if it
        has not sent one for the client's address before, in order
        to minimize the impact on the DHCP server.
+
+
+
+
+                                                               11
+
+
+
+
+
+dhcpd.conf(5)                                       dhcpd.conf(5)
+
 
        When the client's lease expires, the DHCP server (if it is
        operating at the time, or  when  next  it  operates)  will
@@ -718,18 +769,6 @@ DDYYNNAAMMIICC DDNNSS UUPPDDAATTEE SSEECCUURRIITTYY
        will be running on the same  computer  -  the  "localhost"
        name  is  taken  in  the DNS server as an alias for all of
        that host's IP addresses, and updates from  any  of  those
-
-
-
-                                                               11
-
-
-
-
-
-dhcpd.conf(5)                                       dhcpd.conf(5)
-
-
        addresses will be accepted.
 
        You may wish to enable logging of DNS transactions on your
@@ -745,6 +784,18 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
                  print-time     yes;
             };
             channel security_info    {
+
+
+
+                                                               12
+
+
+
+
+
+dhcpd.conf(5)                                       dhcpd.conf(5)
+
+
                  file "/var/log/named-auth.info";
                  severity  info;
                  print-category yes;
@@ -784,18 +835,6 @@ RREEFFEERREENNCCEE:: DDEECCLLAARRAATTIIOONNSS
 
        _N_a_m_e should be the name of the shared network.   This name
        is used when printing debugging messages, so it should  be
-
-
-
-                                                               12
-
-
-
-
-
-dhcpd.conf(5)                                       dhcpd.conf(5)
-
-
        descriptive  for  the  shared network.   The name may have
        the syntax of a valid domain name (although it will  never
        be  used  as  such),  or  it  may  be  any arbitrary name,
@@ -810,8 +849,20 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
 
        The _s_u_b_n_e_t statement is used to provide dhcpd with  enough
        information  to  tell  whether  or not an IP address is on
-       that subnet.  It may also be used to  provide  subnet-spe­
-       cific  parameters  and  to  specify  what addresses may be
+       that subnet.  It may  also  be  used  to  provide  subnet-
+
+
+
+                                                               13
+
+
+
+
+
+dhcpd.conf(5)                                       dhcpd.conf(5)
+
+
+       specific  parameters  and to specify what addresses may be
        dynamically allocated to clients booting on  that  subnet.
        Such  addresses are specified using the _r_a_n_g_e declaration.
 
@@ -851,17 +902,6 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
           [ _d_e_c_l_a_r_a_t_i_o_n_s ]
         }}
 
-
-
-                                                               13
-
-
-
-
-
-dhcpd.conf(5)                                       dhcpd.conf(5)
-
-
        There  must be at least one hhoosstt statement for every BOOTP
        client that is to be served.  hhoosstt statements may also  be
        specified  for DHCP clients, although this is not required
@@ -876,6 +916,17 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
        If client-specific boot parameters must  change  based  on
        the network to which the client is attached, then multiple
        hhoosstt statements should be used.
+
+
+
+                                                               14
+
+
+
+
+
+dhcpd.conf(5)                                       dhcpd.conf(5)
+
 
        If a client is to be booted using a fixed address if  it's
        possible, but should be allocated a dynamic address other­
@@ -918,16 +969,6 @@ RREEFFEERREENNCCEE:: AALLLLOOWW AANNDD DDEENNYY
        based on scope.
 
 
-
-                                                               14
-
-
-
-
-
-dhcpd.conf(5)                                       dhcpd.conf(5)
-
-
 AALLLLOOWW AANNDD DDEENNYY IINN SSCCOOPPEE
        The following usages of allow and deny will  work  in  any
        scope, although it is not recommended that they be used in
@@ -941,6 +982,18 @@ AALLLLOOWW AANNDD DDEENNYY IINN SSCCOOPPEE
        The uunnkknnoowwnn--cclliieennttss flag is used to tell dhcpd whether  or
        not  to  dynamically  assign addresses to unknown clients.
        Dynamic address assignment to unknown clients  is  aalllloowwed
+
+
+
+                                                               15
+
+
+
+
+
+dhcpd.conf(5)                                       dhcpd.conf(5)
+
+
        by default.
 
        TThhee _b_o_o_t_p kkeeyywwoorrdd
@@ -982,18 +1035,6 @@ AALLLLOOWW AANNDD DDEENNYY WWIITTHHIINN PPOOOOLL DDEECC
        different.   A client may be denied access  to  one  pool,
        but  allowed  access  to  another pool on the same network
        segment.   In order for this to work, access  control  has
-
-
-
-                                                               15
-
-
-
-
-
-dhcpd.conf(5)                                       dhcpd.conf(5)
-
-
        to  be  done  during address allocation, not after address
        allocation is done.
 
@@ -1007,6 +1048,18 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
        allocation  process is done as described previously in the
        ADDRESS ALLOCATION section.
 
+
+
+
+                                                               16
+
+
+
+
+
+dhcpd.conf(5)                                       dhcpd.conf(5)
+
+
        When declaring permit lists for address allocation  pools,
        the  following syntaxes are recognized following the allow
        or deny keyword:
@@ -1015,7 +1068,9 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
 
        If specified, this statement  either  allows  or  prevents
        allocation  from  this  pool to any client that has a host
-       declaration (i.e., is known).
+       declaration (i.e., is known).  A client is known if it has
+       a  host  declaration  in  _a_n_y  scope, not just the current
+       scope.
 
         uunnkknnoowwnn cclliieennttss;;
 
@@ -1048,18 +1103,6 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
        authenticated  using  the  DHCP  authentication  protocol.
        This is not yet supported.
 
-
-
-
-                                                               16
-
-
-
-
-
-dhcpd.conf(5)                                       dhcpd.conf(5)
-
-
         aallll cclliieennttss;;
 
        If  specified,  this  statement  either allows or prevents
@@ -1070,6 +1113,18 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
        force all clients that have been allocated addresses  from
        this  pool  to  obtain new addresses immediately when they
        next renew.
+
+
+
+
+                                                               17
+
+
+
+
+
+dhcpd.conf(5)                                       dhcpd.conf(5)
+
 
 RREEFFEERREENNCCEE:: PPAARRAAMMEETTEERRSS
        TThhee _d_e_f_a_u_l_t_-_l_e_a_s_e_-_t_i_m_e ssttaatteemmeenntt
@@ -1114,18 +1169,6 @@ RREEFFEERREENNCCEE:: PPAARRAAMMEETTEERRSS
        server  has been given a chance to do so.   If the primary
        server is down, the client  will  bind  to  the  secondary
        server,  but  otherwise  clients should always bind to the
-
-
-
-                                                               17
-
-
-
-
-
-dhcpd.conf(5)                                       dhcpd.conf(5)
-
-
        primary.   Note that this does not, by  itself,  permit  a
        primary  server  and a secondary server to share a pool of
        dynamically-allocatable addresses.
@@ -1137,6 +1180,18 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
        In order for a BOOTP client to be recognized, its  network
        hardware  address must be declared using a _h_a_r_d_w_a_r_e clause
        in the _h_o_s_t statement.  _h_a_r_d_w_a_r_e_-_t_y_p_e must be the name  of
+
+
+
+                                                               18
+
+
+
+
+
+dhcpd.conf(5)                                       dhcpd.conf(5)
+
+
        a  physical hardware interface type.   Currently, only the
        eetthheerrnneett and ttookkeenn--rriinngg  types  are  recognized,  although
        support  for  a ffddddii hardware type (and others) would also
@@ -1180,18 +1235,6 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
 
        The _f_i_x_e_d_-_a_d_d_r_e_s_s statement is used to assign one or  more
        fixed  IP addresses to a client.  It should only appear in
-
-
-
-                                                               18
-
-
-
-
-
-dhcpd.conf(5)                                       dhcpd.conf(5)
-
-
        a _h_o_s_t declaration.  If more than one address is supplied,
        then  when  the  client  boots,  it  will  be assigned the
        address which corresponds to the network on  which  it  is
@@ -1203,6 +1246,17 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
        one or more IP addresses.
 
        TThhee _d_y_n_a_m_i_c_-_b_o_o_t_p_-_l_e_a_s_e_-_c_u_t_o_f_f ssttaatteemmeenntt
+
+
+
+                                                               19
+
+
+
+
+
+dhcpd.conf(5)                                       dhcpd.conf(5)
+
 
         ddyynnaammiicc--bboooottpp--lleeaassee--ccuuttooffff _d_a_t_e;;
 
@@ -1247,17 +1301,6 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
 
        TThhee _g_e_t_-_l_e_a_s_e_-_h_o_s_t_n_a_m_e_s ssttaatteemmeenntt
 
-
-
-                                                               19
-
-
-
-
-
-dhcpd.conf(5)                                       dhcpd.conf(5)
-
-
         ggeett--lleeaassee--hhoossttnnaammeess _f_l_a_g;;
 
        The _g_e_t_-_l_e_a_s_e_-_h_o_s_t_n_a_m_e_s statement is used  to  tell  dhcpd
@@ -1269,6 +1312,17 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
        lookups are done.
 
        TThhee _u_s_e_-_h_o_s_t_-_d_e_c_l_-_n_a_m_e_s ssttaatteemmeenntt
+
+
+
+                                                               20
+
+
+
+
+
+dhcpd.conf(5)                                       dhcpd.conf(5)
+
 
         uussee--hhoosstt--ddeeccll--nnaammeess _f_l_a_g;;
 
@@ -1312,18 +1366,6 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
        get its IP address and try to get a new one.
 
        If  a  DHCP  server is being configured by somebody who is
-
-
-
-                                                               20
-
-
-
-
-
-dhcpd.conf(5)                                       dhcpd.conf(5)
-
-
        not the network administrator and who therefore  does  not
        wish to assert this level of authority, then the statement
        "not authoritative" should be written in  the  appropriate
@@ -1335,6 +1377,18 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
        which it is authoritative and some networks for  which  it
        is not, it may be more appropriate to declare authority on
        a per-network-segment basis.
+
+
+
+
+                                                               21
+
+
+
+
+
+dhcpd.conf(5)                                       dhcpd.conf(5)
+
 
        Note that the most specific scope for which the concept of
        authority  makes any sense is the physical network segment
@@ -1378,18 +1432,6 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
        creating excess broadcast traffic on your network, we rec­
        ommend that you restrict the use of this option to as  few
        clients  as  possible.    For  example, the Microsoft DHCP
-
-
-
-                                                               21
-
-
-
-
-
-dhcpd.conf(5)                                       dhcpd.conf(5)
-
-
        client is known not to have this problem, as are the Open­
        Transport and ISC DHCP clients.
 
@@ -1402,6 +1444,18 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
        cally  free any other leases the client holds.   This pre­
        sumes that when the client sends  a  DHCPREQUEST,  it  has
        forgotten  any  lease  not  mentioned in the DHCPREQUEST -
+
+
+
+                                                               22
+
+
+
+
+
+dhcpd.conf(5)                                       dhcpd.conf(5)
+
+
        i.e., the client has only a single network  interface  _a_n_d
        it  does  not  remember leases it's holding on networks to
        which it is not currently  attached.    Neither  of  these
@@ -1444,18 +1498,6 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
        Another  common  case  is when an alias is defined for the
        purpose of having a consistent IP  address  for  the  DHCP
        server,  and  it  is  desired that the clients use this IP
-
-
-
-                                                               22
-
-
-
-
-
-dhcpd.conf(5)                                       dhcpd.conf(5)
-
-
        address when contacting the server.
 
        Supplying a value for the dhcp-server-identifier option is
@@ -1468,6 +1510,18 @@ RREEFFEERREENNCCEE:: OOPPTTIIOONN SSTTAATTEEMMEENNTTSS
 VVEENNDDOORR EENNCCAAPPSSUULLAATTEEDD OOPPTTIIOONNSS
        The DHCP protocol defines the  vveennddoorr--eennccaappssuullaatteedd--ooppttiioonnss
        option,  which  allows vendors to define their own options
+
+
+
+                                                               23
+
+
+
+
+
+dhcpd.conf(5)                                       dhcpd.conf(5)
+
+
        that will be sent encapsulated in a standard DHCP  option.
        The  format  of  the vveennddoorr--eennccaappssuullaatteedd--ooppttiioonnss option is
        either a hunk of opaque data, or an actual  option  buffer
@@ -1482,16 +1536,20 @@ VVEENNDDOORR EENNCCAAPPSSUULLAATTEEDD OOPPTTIIOONNSS
        ooppttiioonnss option in some scope.
 
        To send a simple clump of data, simply provide a value for
-       the option in the right scope, as  in  the  example  shown
-       earlier in the CCLLIIEENNTT CCLLAASSSSIINNGG section.
+       the option in the right scope - for example:
 
-       To  define  a new option space in which vendor options can
+         option vendor-encapsulated-options
+               2:4:AC:11:41:1:
+               3:12:73:75:6e:64:68:63:70:2d:73:65:72:76:65:72:31:37:2d:31:
+               4:12:2f:65:78:70:6f:72:74:2f:72:6f:6f:74:2f:69:38:36:70:63;
+
+       To define a new option space in which vendor  options  can
        be stored, use the option space statement:
 
        ooppttiioonn ssppaaccee _n_a_m_e ;;
 
-       The name can  then  be  used  in  option  definitions,  as
-       described  in the ddhhccpp--ooppttiioonnss((55)) manual page.   For exam­
+       The  name  can  then  be  used  in  option definitions, as
+       described in the ddhhccpp--ooppttiioonnss((55)) manual page.   For  exam­
        ple:
 
             option space SUNW;
@@ -1499,28 +1557,17 @@ VVEENNDDOORR EENNCCAAPPSSUULLAATTEEDD OOPPTTIIOONNSS
             option SUNW.server-name code 3 = text;
             option SUNW.root-path code 4 = text;
 
-       Once you have defined an option space  and  some  options,
-       you  can  set  up  scopes  that  define  values  for those
-       options, and you can say when to use them.   For  example,
-       suppose  you  want  to  handle  two  different  classes of
-       clients, as in the example in the CCLLIIEENNTT CCLLAASSSSIINNGG section.
-       Using  the option space definition we just did, the CCLLIIEENNTT
-       CCLLAASSSSIINNGG example can be implemented more legibly  as  fol­
-       lows:
+       Once  you  have  defined an option space and some options,
+       you can  set  up  scopes  that  define  values  for  those
+       options,  and  you can say when to use them.  For example,
+       suppose you  want  to  handle  two  different  classes  of
+       clients,  as  in  the  example  in the VVEENNDDOORR EENNCCAAPPSSUULLAATTEEDD
+       OOPPTTIIOONNSS section.  Using the  option  space  definition  we
+       just  did,  the VVEENNDDOORR EENNCCAAPPSSUULLAATTEEDD OOPPTTIIOONNSS example can be
+       implemented more legibly as follows:
        class "vendor-classes" {
          match option vendor-class-identifier;
        }
-
-
-
-                                                               23
-
-
-
-
-
-dhcpd.conf(5)                                       dhcpd.conf(5)
-
 
        option SUNW.server-address 172.17.65.1;
        option SUNW.server-name "sundhcp-server17-1";
@@ -1530,18 +1577,29 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
          option SUNW.root-path "/export/root/sparc";
        }
 
+
+
+                                                               24
+
+
+
+
+
+dhcpd.conf(5)                                       dhcpd.conf(5)
+
+
        subclass "vendor-classes" "SUNW.i86pc" {
          vendor-option-space SUNW;
          option SUNW.root-path "/export/root/i86pc";
        }
 
-       As  you  can see in the preceding example, regular scoping
-       rules apply, so you can define values that are  global  in
+       As you can see in the preceding example,  regular  scoping
+       rules  apply,  so you can define values that are global in
        the global scope, and only define values that are specific
-       to a particular class in the local  scope.    The  vveennddoorr--
+       to  a  particular  class in the local scope.   The vveennddoorr--
        ooppttiioonn--ssppaaccee declaration indicates that in that scope, the
-       vveennddoorr--eennccaappssuullaatteedd--ooppttiioonnss option should  be  constructed
-       using  the  values  of  all the options in the SUNW option
+       vveennddoorr--eennccaappssuullaatteedd--ooppttiioonnss  option  should be constructed
+       using the values of all the options  in  the  SUNW  option
        space.
 
 SSEEEE AALLSSOO
@@ -1549,9 +1607,9 @@ SSEEEE AALLSSOO
 
 AAUUTTHHOORR
        ddhhccppdd((88)) was written by Ted Lemon <mellon@vix.com> under a
-       contract  with  Vixie Labs.   Funding for this project was
+       contract with Vixie Labs.   Funding for this  project  was
        provided by the Internet Software Consortium.  Information
-       about  the  Internet  Software  Consortium can be found at
+       about the Internet Software Consortium  can  be  found  at
        hhttttpp::////wwwwww..iisscc..oorrgg//iisscc..
 
 
@@ -1579,6 +1637,14 @@ AAUUTTHHOORR
 
 
 
-                                                               24
+
+
+
+
+
+
+
+
+                                                               25
 
 
