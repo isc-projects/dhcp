@@ -43,7 +43,8 @@ libdhcpctl.a:	$(OBJ)
 	$(RANLIB) libdhcpctl.a
 
 install: all $(CATMANPAGES)
-	for dir in $(LIBDIR) $(LIBMANDIR) $(INCDIR); do \
+	for dir in $(LIBDIR) $(LIBMANDIR) $(INCDIR) $(USRMANDIR) \
+		$(USERBINDIR); do \
 	  foo=""; \
 	  for bar in `echo $(DESTDIR)$${dir} |tr / ' '`; do \
 	    foo=$${foo}/$$bar; \
@@ -66,7 +67,7 @@ install: all $(CATMANPAGES)
 	$(INSTALL) omshell $(DESTDIR)$(USERBINDIR)
 	$(CHMOD) 755 $(DESTDIR)$(USERBINDIR)/omshell
 	$(MANINSTALL) $(MANFROM) omshell.$(MANCAT)1 $(MANTO) \
-				$(DESTDIR)$(ADMMANDIR)/omshell$(ADMMANEXT)
+				$(DESTDIR)$(USRMANDIR)/omshell$(USRMANEXT)
 
 depend:
 	$(MKDEP) $(INCLUDES) $(PREDEFINES) $(SRC)
