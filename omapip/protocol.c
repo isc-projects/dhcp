@@ -401,23 +401,27 @@ isc_result_t omapi_protocol_signal_handler (omapi_object_t *h,
 	}
 
 	/* If we get a disconnect, dump memory usage. */
-	if (!strcmp (name, "disconnect")
+	if (!strcmp (name, "disconnect")) {
 #if defined (DEBUG_MEMORY_LEAKAGE)
-	     && connect_outstanding != 0xBEADCAFE
-#endif
-		) {
-#if defined (DEBUG_MEMORY_LEAKAGE)
+	    if (connect_outstanding != 0xBEADCAFE) {
 		log_info ("generation %ld: %ld new, %ld outstanding, %ld%s",
 			  dmalloc_generation,
 			  dmalloc_outstanding - previous_outstanding,
 			  dmalloc_outstanding, dmalloc_longterm, " long-term");
+	    }
 #endif
 #if defined (DEBUG_MEMORY_LEAKAGE)
-		dmalloc_dump_outstanding ();
+	    dmalloc_dump_outstanding ();
 #endif
 #if defined (DEBUG_RC_HISTORY_EXHAUSTIVELY)
-		dump_rc_history (0);
+	    dump_rc_history ();
 #endif
+	    for (m = omapi_registered_messages; m; m = m -> next) {
+		if (m -> protocol_object == p) {
+		    if (m -> object)
+			omapi_signal (m -> object, "disconnect");
+		}
+	    }
 	}
 
 	/* Not a signal we recognize? */

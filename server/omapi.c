@@ -50,7 +50,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: omapi.c,v 1.50 2001/07/10 20:36:06 brister Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: omapi.c,v 1.51 2001/08/10 10:50:50 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1868,7 +1868,7 @@ isc_result_t dhcp_class_destroy (omapi_object_t *h, const char *file, int line)
 	isc_result_t status;
 	int i;
 
-	if (h -> type != dhcp_type_class || h -> type != dhcp_type_subclass)
+	if (h -> type != dhcp_type_class && h -> type != dhcp_type_subclass)
 		return ISC_R_INVALIDARG;
 	class = (struct class *)h;
 

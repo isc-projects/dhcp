@@ -592,9 +592,9 @@ struct collection {
 /* XXX classes must be reference-counted. */
 struct class {
 	OMAPI_OBJECT_PREAMBLE;
-	struct class *nic;	/* Next in collection. */
+	struct class *nic;		/* Next in collection. */
 	struct class *superclass;	/* Set for spawned classes only. */
-	char *name;		/* Not set for spawned classes. */
+	char *name;			/* Not set for spawned classes. */
 
 	/* A class may be configured to permit a limited number of leases. */
 	int lease_limit;

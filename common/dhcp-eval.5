@@ -409,33 +409,6 @@ Rebind - DHCP client is in the REBINDING state - it has an IP address,
 and is trying to contact any server to renew it.   The next message to
 be sent will be a DHCPREQUEST, which will be broadcast.
 .RE
-.SH
-FUNCTIONS
-Functions may be defined with the \fBdefine\fR statement.  A function
-definition may occur anywhere that regular statement may appear.
-Functions occupy the same namespace as variables, and obey the same
-scoping rules.
-.PP
-.nf
-define set-hostname(prefix) {
-  option host-name
-    concat (prefix, binary-to-ascii (16, 32, "", leased-address));
-}
-.fi
-.PP
-A function may return a value when used in an expression with the
-\fBreturn\fR statement.  A function with no return statement has a
-value of null.
-.PP
-.nf
-define make-hostname(prefix) {
-  return concat (prefix, binary-to-ascii (16, 32, "", leased-address));
-}
-
-option host-name make-hostname("dyn-");
-.fi
-.PP
-.RE
 .SH REFERENCE: LOGGING
 Logging statements may be used to send information to the standard logging
 channels.  A logging statement includes an optional priority (\fBfatal\fR,

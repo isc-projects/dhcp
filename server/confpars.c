@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.146 2001/07/10 20:36:02 brister Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.147 2001/08/10 10:50:44 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1286,6 +1286,8 @@ void parse_pool_statement (cfile, group, type)
 				parse_warn (cfile,
 					    "failover peer %s: %s", val,
 					    isc_result_totext (status));
+			else
+				pool -> failover_peer -> pool_count++;
 			parse_semi (cfile);
 			break;
 #endif
@@ -1851,7 +1853,7 @@ int parse_class_declaration (cp, cfile, group, type)
 		}
 
 		/* Save the name, if there is one. */
-		class -> name = (char *)name;
+		class -> name = name;
 	}
 
 	if (type == 0 || type == 1 || type == 3)
@@ -2764,6 +2766,7 @@ int parse_lease_declaration (struct lease **lp, struct parse *cfile)
 			break;
 			
 		      case OPTION:
+		      case SUPERSEDE:
 			noequal = 0;
 			seenbit = 0;
 			oc = (struct option_cache *)0;

@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.86 2001/06/27 00:29:54 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.87 2001/08/10 10:49:00 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -82,13 +82,34 @@ int parse_options (packet)
 				  &packet -> raw -> options [4],
 				  (packet -> packet_length -
 				   DHCP_FIXED_NON_UDP - 4),
-				  &dhcp_universe))
-		return 0;
+				  &dhcp_universe)) {
+
+		/* STSN servers have a bug where they send a mangled
+		   domain-name option, and whatever is beyond that in
+		   the packet is junk.   Microsoft clients accept this,
+		   which is probably why whoever implemented the STSN
+		   server isn't aware of the problem yet.   To work around
+		   this, we will accept corrupt packets from the server if
+		   they contain a valid DHCP_MESSAGE_TYPE option, but
+		   will not accept any corrupt client packets (the ISC DHCP
+		   server is sufficiently widely used that it is probably
+		   beneficial for it to be picky) and will not accept
+		   packets whose type can't be determined. */
+
+		if ((op = lookup_option (&dhcp_universe, packet -> options,
+					 DHO_DHCP_MESSAGE_TYPE))) {
+			if (!op -> data.data ||
+			    (op -> data.data [0] != DHCPOFFER &&
+			     op -> data.data [0] != DHCPACK &&
+			     op -> data.data [0] != DHCPNAK))
+				return 0;
+		} else
+			return 0;
+	}
 
 	/* If we parsed a DHCP Option Overload option, parse more
 	   options out of the buffer(s) containing them. */
-	if (packet -> options_valid &&
-	    (op = lookup_option (&dhcp_universe, packet -> options,
+	if ((op = lookup_option (&dhcp_universe, packet -> options,
 				 DHO_DHCP_OPTION_OVERLOAD))) {
 		if (op -> data.data [0] & 1) {
 			if (!parse_option_buffer

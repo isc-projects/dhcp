@@ -956,7 +956,7 @@ client sends a DHCPDISCOVER message, then the server sends a
 DHCPOFFER, then the client sends a DHCPREQUEST, then the server sends
 a DHCPACK.   In the current version of the server, the server will do
 a DNS update after it has received the DHCPREQUEST, and before it has
-sent the DHCPOFFER.   It only sends the DNS update if it has not sent
+sent the DHCPACK.   It only sends the DNS update if it has not sent
 one for the client's address before, in order to minimize the impact
 on the DHCP server.
 .PP
