@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.34.2.7 1997/12/11 20:57:55 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.34.2.8 1998/06/08 19:55:06 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -866,7 +866,7 @@ void ack_lease (packet, lease, offer, when)
 	else
 		nulltp = 0;
 
-	cons_options (packet, &outgoing, options, bufs, nulltp, offer ? 1 : 0);
+	cons_options (packet, &outgoing, options, bufs, nulltp, offer ? 0 : 1);
 	if (!offer && outgoing.packet_length < BOOTP_MIN_LEN)
 		outgoing.packet_length = BOOTP_MIN_LEN;
 
