@@ -114,7 +114,7 @@ option domain-name-servers 10.0.0.1, 10.0.0.2;",
 		exit (1);
 	}
 
-#if 1
+/*#if 0 */
 	memset (&cid, 0, sizeof cid);
 	status = omapi_data_string_new (&cid, 6, MDL);
 	if (status != ISC_R_SUCCESS) {
@@ -127,17 +127,19 @@ option domain-name-servers 10.0.0.1, 10.0.0.2;",
 	cid -> value [2] = 0x5a; cid -> value [3] = 0xf8;
 	cid -> value [4] = 0x00; cid -> value [5] = 0xbb;
 
+      doitagain:
 	status = dhcpctl_set_value (host_handle,
 				    cid, "dhcp-client-identifier");
-#else
-	status = dhcpctl_set_string_value (host_handle, "grosse",
-					   "dhcp-client-identifier");
+/*#else 
+  doitagain: */
+	status = dhcpctl_set_string_value (host_handle, "gnorf",
+					   "name");
 	if (status != ISC_R_SUCCESS) {
 		fprintf (stderr, "dhcpctl_set_value: %s\n",
 			 isc_result_totext (status));
 		exit (1);
 	}
-#endif
+/*#endif*/
 
 	status = dhcpctl_set_value (host_handle, groupname, "group");
 	if (status != ISC_R_SUCCESS) {
@@ -218,6 +220,38 @@ option smtp-server 10.0.0.1;",
 				 isc_result_totext (waitstatus));
 			exit (1);
 		}
+
+		status = dhcpctl_object_remove (connection, host_handle);
+		if (status != ISC_R_SUCCESS) {
+			fprintf (stderr, "dhcpctl_object_remove: %s\n",
+				 isc_result_totext (status));
+			exit (1);
+		}
+		status = dhcpctl_wait_for_completion (host_handle,
+						      &waitstatus);
+		if (status != ISC_R_SUCCESS) {
+			fprintf (stderr,
+				 "remove: dhcpctl_wait_for_completion: %s\n",
+				 isc_result_totext (status));
+			exit (1);
+		}
+		if (waitstatus != ISC_R_SUCCESS) {
+			fprintf (stderr,
+				 "remove: dhcpctl_wait_for_completion: %s\n",
+				 isc_result_totext (waitstatus));
+			exit (1);
+		}
+
+		omapi_object_dereference (&host_handle, MDL);
+
+		status = dhcpctl_new_object (&host_handle, connection, "host");
+		if (status != ISC_R_SUCCESS) {
+			fprintf (stderr, "dhcpctl_new_object: %s\n",
+				 isc_result_totext (status));
+			exit (1);
+		}
+
+		goto doitagain;
 	}
 
 	memset (&result, 0, sizeof result);
