@@ -124,3 +124,8 @@ extern int h_errno;
 
 #define ALIAS_NAMES_PERMUTED
 #define SKIP_DUMMY_INTERFACES
+
+/* Linux needs to define SHUT_* in /usr/include/sys/socket.h someday... */
+#if !defined (SHUT_RD)
+# define SHUT_RD 0
+#endif
