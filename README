@@ -1,7 +1,7 @@
 		     Internet Software Consortium
 	   Dynamic Host Configuration Protocol Distribution
 		   Version 2, Beta 1, Patchlevel 10
-			  February 3, 1998
+			  February 5, 1998
 
 This is the first Beta release of Version 2 of the Internet Software
 Consortium DHCP Distribution.  In version 2.0, this distribution
@@ -12,13 +12,14 @@ running a production environment should probably still use version
 November of 1996.
 
 In this release, the server and relay agent currently work well on
-Digital Alpha OSF/1, SunOS 4.1.4, NetBSD, FreeBSD, BSD/OS and Ultrix.
-They can also be run usefully on Solaris as long as only one broadcast
-network interface is configured.  They also runs on QNX and Linux as
+NetBSD, Linux, FreeBSD, BSD/OS, Ultrix, Digital Alpha OSF/1, and SunOS
+4.1.4.  They can also be run usefully on Solaris as long as only one
+broadcast network interface is configured.  They also runs on QNX as
 long as only one broadcast network interface is configured and a host
 route is added from that interface to the 255.255.255.255 broadcast
-address.  If you are running a Linux 2.0.31 kernel, the DHCP daemons
-may be able to operate on more than one interface.
+address.  If you are running a Linux 2.0.30 or previous kernel, the
+DHCP daemons will only be able to operate on machines with a single
+network interface.
 
 The DHCP client currently only knows how to configure the network on
 NetBSD, FreeBSD, BSD/os, Linux, Solaris and NextStep.  The client
@@ -27,7 +28,7 @@ configuration - support for other operating systems is simply a matter
 of porting this shell script to the new platform.
 
 If you wish to run the DHCP Distribution on Linux, please see the
-Linux-specific notes later in this document.  If you wish to run on a
+Linux-specific notes later in this document.  If you wish to run on an
 SCO release, please see the SCO-specific notes later in this document.
 You particularly need to read these notes if you intend to support
 Windows 95 clients.  If you are running a version of FreeBSD prior to
@@ -78,9 +79,42 @@ before typing ``make install''.
 
 There are three big LINUX issues: the all-ones broadcast address,
 Linux 2.1 ip_bootp_agent enabling, and operations with more than one
-network interface.
+network interface.   There are also two potential compilation/runtime
+problems for Linux 2.1/2.2: the "SO_ATTACH_FILTER undeclared" problem
+and the "protocol not configured" problem.
 
-                              BROADCAST
+		  LINUX: SO_ATTACH_FILTER UNDECLARED
+
+In addition, there is a minor issue that we will mention here because
+this release is so close on the heels of the Linux 2.2 release: there
+is a symlink in /usr/include that points at the linux asm headers.  It
+appears to be not uncommon that this link won't be updated correctly,
+in which case you'll get the following error when you try to build:
+
+   lpf.c: In function `if_register_receive':
+   lpf.c:152: `SO_ATTACH_FILTER' undeclared (first use this function)
+   lpf.c:152: (Each undeclared identifier is reported only once
+   lpf.c:152: for each function it appears in.)
+
+The line numbers may be different, of course.   If you see this
+header, your linux asm header link is probably bad, and you should
+make sure it's pointing to correct linux source directory.
+
+		    LINUX: PROTOCOL NOT CONFIGURED
+
+One additional Linux 2.1/2.2 issue: if you get the following message,
+it's because your kernel doesn't have the linux packetfilter
+configured:
+
+   Can't install packet filter program: Protocol not available
+   exiting.
+
+If this happens, you need to edit your linux kernel .config file, set
+CONFIG_FILTER=y, and rebuild your kernel.   If the preceding sentence
+made no sense to you, ask your Linux vendor/guru for help - please
+don't ask us.
+
+			   LINUX: BROADCAST
 
 In order for dhcpd to work correctly with picky DHCP clients (e.g.,
 Windows 95), it must be able to send packets with an IP destination
@@ -115,7 +149,7 @@ Another route that has worked for some users is:
 If you are not using eth0 as your network interface, you should
 specify the network interface you *are* using in your route command.
 
-			    IP BOOTP AGENT
+			LINUX: IP BOOTP AGENT
 
 Some versions of the Linux 2.1 kernel apparently prevent dhcpd from
 working unless you enable it by doing the following:
@@ -123,7 +157,7 @@ working unless you enable it by doing the following:
 	      echo 1 >/proc/sys/net/ipv4/ip_bootp_agent
 
 
-                        MULTIPLE INTERFACES
+		      LINUX: MULTIPLE INTERFACES
 
 Most older versions of the Linux kernel do not provide a networking
 API that allows dhcpd to operate correctly if the system has more than
@@ -132,20 +166,8 @@ version numbers greater than or equal to 2.0.31 add an API feature:
 the SO_BINDTODEVICE socket option.  If SO_BINDTODEVICE is present, it
 is possible for dhcpd to operate on Linux with more than one network
 interface.  In order to take advantage of this, you must be running a
-2.0.31 or greater kernel, and you must have 2.0.31 system headers
-installed *before* you build dhcpd.
-
-NOTE: People have been having problems finding the 2.0.31 kernel
-because it was only available as a prerelease patch.   As of October
-17, Linux 2.0.31 is the stable Linux kernel, and is available as a
-kernel distribution rather than as a test patch.   With any luck, it
-will be in the latest version of your favourite Linux distribution
-soon.
-
-If you are running a Linux 2.1 kernel, this does not guarantee that you
-have SO_BINDTODEVICE.   Linux 2.0.31 was released quite a while after 2.1
-kernel development began.   The earliest Linux kernel in the 2.1
-development stream with SO_BINDTODEVICE is version 2.1.68.
+2.0.31 or greater kernel, and you must have 2.0.31 or later system
+headers installed *before* you build the DHCP Distribution.
 
 We have heard reports that you must still add routes to 255.255.255.255
 in order for the all-ones broadcast to work, even on 2.0.31 kernels.
