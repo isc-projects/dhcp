@@ -62,7 +62,7 @@ void trace_mr_read_record (struct sockaddr_in *, void *, ssize_t);
 ssize_t trace_mr_recvfrom (int s, void *, size_t, int,
 			   struct sockaddr *, SOCKLEN_T *);
 ssize_t trace_mr_read (int, void *, size_t);
-int trace_mr_connect (int s, const struct sockaddr *, SOCKLEN_T);
+int trace_mr_connect (int s, struct sockaddr *, SOCKLEN_T);
 int trace_mr_socket (int, int, int);
 int trace_mr_bind (int, const struct sockaddr *, SOCKLEN_T);
 int trace_mr_close (int);
@@ -336,7 +336,7 @@ ssize_t trace_mr_read (int d, void *buf, size_t nbytes)
 	return rv;
 }
 
-int trace_mr_connect (int s, const struct sockaddr *name, SOCKLEN_T namelen)
+int trace_mr_connect (int s, struct sockaddr *name, SOCKLEN_T namelen)
 {
 #if defined (TRACING)
 	if (!trace_playback ())
