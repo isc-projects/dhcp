@@ -728,6 +728,7 @@ ssize_t send_packet PROTO ((struct interface_info *,
 /* dispatch.c */
 extern struct interface_info *interfaces, *dummy_interfaces;
 extern struct protocol *protocols;
+extern int quiet_interface_discovery;
 extern void (*bootp_packet_handler) PROTO ((struct interface_info *,
 				     unsigned char *, int, unsigned short,
 				     struct iaddr, struct hardware *));
