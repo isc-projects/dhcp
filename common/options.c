@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.24 1997/05/09 08:07:09 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.25 1997/06/02 22:32:05 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -398,11 +398,12 @@ int store_options (buffer, buflen, options, priority_list, priority_len,
 
 /* Format the specified option so that a human can easily read it. */
 
-char *pretty_print_option (code, data, len, emit_commas)
-	unsigned char code;
+char *pretty_print_option (code, data, len, emit_commas, emit_quotes)
+	unsigned int code;
 	unsigned char *data;
 	int len;
 	int emit_commas;
+	int emit_quotes;
 {
 	static char optbuf [32768]; /* XXX */
 	int hunksize = 0;
@@ -414,6 +415,10 @@ char *pretty_print_option (code, data, len, emit_commas)
 	unsigned char *dp = data;
 	struct in_addr foo;
 	char comma;
+
+	/* Code should be between 0 and 255. */
+	if (code > 255)
+		error ("pretty_print_option: bad code %d\n", code);
 
 	if (emit_commas)
 		comma = ',';
@@ -503,10 +508,12 @@ char *pretty_print_option (code, data, len, emit_commas)
 		for (j = 0; j < numelem; j++) {
 			switch (fmtbuf [j]) {
 			      case 't':
-				*op++ = '"';
+				if (emit_quotes)
+					*op++ = '"';
 				strcpy (op, dp);
 				op += strlen (dp);
-				*op++ = '"';
+				if (emit_quotes)
+					*op++ = '"';
 				*op = 0;
 				break;
 			      case 'I':
