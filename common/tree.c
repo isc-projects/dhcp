@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.31 1999/07/06 17:04:31 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.31.2.1 1999/07/13 18:43:35 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -272,7 +272,7 @@ int option_cache (oc, dp, expr, option)
 	return 1;
 }
 
-int do_host_lookup (result, dns)
+static int do_host_lookup (result, dns)
 	struct data_string *result;
 	struct dns_host_entry *dns;
 {
