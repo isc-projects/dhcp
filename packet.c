@@ -132,7 +132,7 @@ void assemble_hw_header (interface, buf, bufix, to)
 {
 	struct ether_header eh;
 
-	if (to)
+	if (to && to -> hlen == 6) /* XXX */
 		memcpy (eh.ether_dhost, to -> haddr, sizeof eh.ether_dhost);
 	else
 		memset (eh.ether_dhost, 0xff, sizeof (eh.ether_dhost));
