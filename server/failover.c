@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.53.2.4 2001/05/17 21:36:03 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.53.2.5 2001/05/19 18:58:27 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -4254,6 +4254,9 @@ isc_result_t dhcp_failover_process_bind_update (dhcp_failover_state_t *state,
 				(normal_binding_state_transition_check
 				 (lease, state, msg -> binding_status,
 				  msg -> potential_expiry));
+			/* XXX if the transition the peer asked for isn't
+			   XXX allowed, maybe we should make the transition
+			   XXX into potential-conflict at this point. */
 		} else {
 			new_binding_state =
 				(conflict_binding_state_transition_check
@@ -4336,7 +4339,9 @@ isc_result_t dhcp_failover_process_bind_ack (dhcp_failover_state_t *state,
 	if (msg -> options_present & FTB_POTENTIAL_EXPIRY) {
 		/* XXX it could be a problem to do this directly if the
 		   XXX lease is sorted by tsfp. */
-		if (lease -> binding_state == FTS_EXPIRED) {
+		if (lease -> binding_state == FTS_EXPIRED ||
+		    lease -> binding_state == FTS_RESET ||
+		    lease -> binding_state == FTS_RELEASED) {
 			lease -> next_binding_state = FTS_FREE;
 		    supersede_lease (lease, (struct lease *)0, 0, 1, 0);
 		    write_lease (lease);
@@ -4694,13 +4699,21 @@ normal_binding_state_transition_check (struct lease *lease,
 			if (state -> i_am == secondary)
 				return binding_state;
 
-			/* Otherwise, it can't do any sort of state
-			   transition. */
+			/* Otherwise, it can't legitimately do any sort of
+			   state transition.   Because the lease was free,
+			   and the error has already been made, we allow the
+			   peer to change its state anyway, but log a warning
+			   message in hopes that the error will be fixed. */
 		      case FTS_FREE: /* for compiler */
 		      case FTS_EXPIRED:
 		      case FTS_RELEASED:
 		      case FTS_RESET:
-			new_state = FTS_FREE;
+			log_error ("allowing %s: %s to %s",
+				   "invalid peer lease state transition",
+				   (binding_state_print
+				    (lease -> binding_state)),
+				   binding_state_print (binding_state));
+			new_state = binding_state;
 			goto out;
 		}
 	      case FTS_ACTIVE:
@@ -4817,11 +4830,18 @@ normal_binding_state_transition_check (struct lease *lease,
 				return binding_state;
 
 			/* Otherwise, it can't do any sort of state
-			   transition. */
+			   transition, but because the lease was free
+			   we allow it to do the transition, and just
+			   log the error. */
 		      case FTS_EXPIRED:
 		      case FTS_RELEASED:
 		      case FTS_RESET:
-			new_state = lease -> binding_state;
+			log_error ("allowing %s: %s to %s",
+				   "invalid peer lease state transition",
+				   (binding_state_print
+				    (lease -> binding_state)),
+				   binding_state_print (binding_state));
+			new_state = binding_state;
 			goto out;
 
 		      case FTS_BACKUP:
