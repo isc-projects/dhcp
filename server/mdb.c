@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.54 2001/03/14 15:45:41 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.55 2001/03/15 23:22:33 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1488,7 +1488,7 @@ void uid_hash_add (lease)
 	struct lease *lease;
 {
 	struct lease *head = (struct lease *)0;
-	struct lease *scan;
+	struct lease *scan = (struct lease *)0, *next;
 
 
 	/* If it's not in the hash, just add it. */
@@ -1497,9 +1497,13 @@ void uid_hash_add (lease)
 				lease -> uid_len, lease, MDL);
 	else {
 		/* Otherwise, attach it to the end of the list. */
-		for (scan = head; scan -> n_uid; scan = scan -> n_uid)
-			;
-		lease_reference (&scan -> n_uid, lease, MDL);
+		while (head -> n_uid) {
+			lease_reference (&next, head -> n_uid, MDL);
+			lease_dereference (&head, MDL);
+			lease_reference (&head, next, MDL);
+			lease_dereference (&next, MDL);
+		}
+		lease_reference (&head -> n_uid, lease, MDL);
 		lease_dereference (&head, MDL);
 	}
 }
@@ -1558,7 +1562,7 @@ void hw_hash_add (lease)
 	struct lease *lease;
 {
 	struct lease *head = (struct lease *)0;
-	struct lease *scan;
+	struct lease *next = (struct lease *)0;
 
 	/* If it's not in the hash, just add it. */
 	if (!find_lease_by_hw_addr (&head, lease -> hardware_addr.hbuf,
@@ -1569,9 +1573,14 @@ void hw_hash_add (lease)
 				lease, MDL);
 	else {
 		/* Otherwise, attach it to the end of the list. */
-		for (scan = head; scan -> n_hw; scan = scan -> n_hw)
-			;
-		lease_reference (&scan -> n_hw, lease, MDL);
+		while (head -> n_hw) {
+			lease_reference (&next, head -> n_hw, MDL);
+			lease_dereference (&head, MDL);
+			lease_reference (&head, next, MDL);
+			lease_dereference (&next, MDL);
+		}
+
+		lease_reference (&head -> n_hw, lease, MDL);
 		lease_dereference (&head, MDL);
 	}
 }
@@ -1582,7 +1591,7 @@ void hw_hash_delete (lease)
 	struct lease *lease;
 {
 	struct lease *head = (struct lease *)0;
-	struct lease *scan;
+	struct lease *next;
 
 	/* If it's not in the hash, we have no work to do. */
 	if (!find_lease_by_hw_addr (&head, lease -> hardware_addr.hbuf,
@@ -1610,20 +1619,25 @@ void hw_hash_delete (lease)
 		/* Otherwise, look for the lease in the list of leases
 		   attached to the hash table entry, and remove it if
 		   we find it. */
-		for (scan = head; scan -> n_hw; scan = scan -> n_hw) {
-			if (scan -> n_hw == lease) {
-				lease_dereference (&scan -> n_hw, MDL);
+		while (head -> n_hw) {
+			if (head -> n_hw == lease) {
+				lease_dereference (&head -> n_hw, MDL);
 				if (lease -> n_hw) {
-					lease_reference (&scan -> n_hw,
+					lease_reference (&head -> n_hw,
 							 lease -> n_hw, MDL);
 					lease_dereference (&lease -> n_hw,
 							   MDL);
 				}
 				break;
 			}
+			lease_reference (&next, head -> n_hw, MDL);
+			lease_dereference (&head, MDL);
+			lease_reference (&head, next, MDL);
+			lease_dereference (&next, MDL);
 		}
 	}
-	lease_dereference (&head, MDL);
+	if (head)
+		lease_dereference (&head, MDL);
 }
 
 /* Write all interesting leases to permanent storage. */
