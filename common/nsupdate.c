@@ -25,7 +25,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: nsupdate.c,v 1.6 1999/07/19 01:15:11 mellon Exp $ Copyright (c) 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: nsupdate.c,v 1.7 1999/07/31 17:57:36 mellon Exp $ Copyright (c) 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -60,8 +60,9 @@ char *ddns_rev_name(lease, state, packet)
 	oc = lookup_option (&server_universe, state -> options,
 			    SV_DDNS_REV_DOMAIN_NAME);
 	memset (&d, 0, sizeof d);
-	if (oc && evaluate_option_cache (&d, packet,
-					 packet -> options, lease, oc)) {
+	if (oc && evaluate_option_cache (&d, packet, lease,
+					 packet -> options, state -> options,
+					 oc)) {
 		memcpy(revdomain, d.data, d.len);
 		revdomain[d.len]='\0';
 		data_string_forget (&d, "nsupdate");
@@ -105,8 +106,9 @@ char *ddns_fwd_name(lease, state, packet)
 	oc = lookup_option (&server_universe, state -> options,
 			    SV_DDNS_DOMAIN_NAME);
 	memset (&d, 0, sizeof d);
-	if (oc && evaluate_option_cache (&d, packet,
-					 packet -> options, lease, oc)) {
+	if (oc && evaluate_option_cache (&d, packet, lease,
+					 packet -> options, state -> options,
+					 oc)) {
 		memcpy(domain, d.data, d.len);
 		domain[d.len]='\0';
 		data_string_forget (&d, "nsupdate");
@@ -114,8 +116,10 @@ char *ddns_fwd_name(lease, state, packet)
 		oc = lookup_option (&dhcp_universe, state -> options,
 				    DHO_DOMAIN_NAME);
 		memset (&d, 0, sizeof d);
-		if (oc && evaluate_option_cache (&d, packet, packet -> options,
-						 lease, oc)) {
+		if (oc && evaluate_option_cache (&d, packet, lease,
+						 packet -> options,
+						 state -> options,
+						 oc)) {
 			memcpy(domain, d.data, d.len);
 			domain[d.len]='\0';
 			data_string_forget (&d, "nsupdate");
@@ -134,8 +138,9 @@ char *ddns_fwd_name(lease, state, packet)
 	oc = lookup_option (&server_universe, state -> options,
 			    SV_DDNS_HOST_NAME);
 	memset (&d, 0, sizeof d);
-	if (oc && evaluate_option_cache (&d, packet,
-					 state -> options, lease, oc)) {
+	if (oc && evaluate_option_cache (&d, packet, lease,
+					 packet -> options, state -> options,
+					 oc)) {
 		memcpy(hostname, d.data, d.len);
 		hostname[d.len]='\0';
 		data_string_forget (&d, "nsupdate");
@@ -143,8 +148,9 @@ char *ddns_fwd_name(lease, state, packet)
 		oc = lookup_option (&dhcp_universe,
 				    packet -> options, DHO_HOST_NAME);
 		memset (&d, 0, sizeof d);
-		if (oc && evaluate_option_cache (&d, packet, packet -> options,
-						 lease, oc)) {
+		if (oc && evaluate_option_cache (&d, packet, lease,
+						 packet -> options,
+						 state -> options, oc)) {
 			memcpy(hostname, d.data, d.len);
 			hostname[d.len]='\0';
 			data_string_forget (&d, "nsupdate");
