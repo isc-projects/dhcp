@@ -43,7 +43,7 @@ static char rcsid[] = "$NetBSD: inet_addr.c,v 1.6 1996/02/02 15:22:23 mrg Exp $"
 
 #ifndef lint
 static char copyright[] =
-"$Id: inet_addr.c,v 1.2 1997/03/29 10:37:51 mellon Exp $ Copyright (c) 1983, 1990, 1993 The Regents of the University of California.  All rights reserved.\n";
+"$Id: inet_addr.c,v 1.2.2.1 1998/06/26 20:51:35 mellon Exp $ Copyright (c) 1983, 1990, 1993 The Regents of the University of California.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -58,7 +58,7 @@ static char copyright[] =
  */
 int
 inet_aton(cp, addr)
-	char *cp;
+	const char *cp;
 	struct in_addr *addr;
 {
 	register u_long val;
