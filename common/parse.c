@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.92 2000/12/05 07:15:16 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.93 2000/12/28 23:18:36 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1239,7 +1239,7 @@ int parse_base64 (data, cfile)
 			     64, 26, 27, 28, 29, 30, 31, 32,  /* 'abcdefg */
 			     33, 34, 35, 36, 37, 38, 39, 40,  /* hijklmno */
 			     41, 42, 43, 44, 45, 46, 47, 48,  /* pqrstuvw */
-			     59, 50, 51, 64, 64, 64, 64, 64}; /* xyz{|}~  */
+			     49, 50, 51, 64, 64, 64, 64, 64}; /* xyz{|}~  */
 	struct string_list *bufs = (struct string_list *)0,
 			   *last = (struct string_list *)0,
 			   *t;
@@ -1972,6 +1972,7 @@ int parse_zone (struct dns_zone *zone, struct parse *cfile)
 {
 	int token;
 	const char *val;
+	char *key_name;
 	struct option_cache *oc;
 	int done = 0;
 
@@ -2044,15 +2045,21 @@ int parse_zone (struct dns_zone *zone, struct parse *cfile)
 
 		  case KEY:
 		    token = next_token (&val, cfile);
-		    token = next_token (&val, cfile);
-		    if (token != STRING && !is_identifier (token)) {
-			    parse_warn (cfile, "expecting key name.");
-			    skip_to_semi (cfile);
-			    return 0;
+		    token = peek_token (&val, cfile);
+		    if (token == STRING) {
+			    token = next_token (&val, cfile);
+			    key_name = (char *)0;
+		    } else {
+			    key_name = parse_host_name (cfile);
+			    if (!key_name)
+				    return 0;
+			    val = key_name;
 		    }
 		    if (omapi_auth_key_lookup_name (&zone -> key, val) !=
 			ISC_R_SUCCESS)
 			    parse_warn (cfile, "unknown key %s", val);
+		    if (key_name)
+			    dfree (key_name, MDL);
 		    if (!parse_semi (cfile))
 			    return 0;
 		    break;
@@ -2089,24 +2096,30 @@ int parse_key (struct parse *cfile)
 	isc_result_t status;
 	char *s;
 
-	token = next_token (&val, cfile);
-	if (token != STRING && !is_identifier (token)) {
-		parse_warn (cfile, "expecting key name string.");
-		skip_to_semi (cfile);
-		return 0;
-	}
 	key = (struct auth_key *)0;
 	if (omapi_auth_key_new (&key, MDL) != ISC_R_SUCCESS)
-		log_fatal ("no memory for tsig key");
-	key -> name = dmalloc (strlen (val) + 1, MDL);
-	if (!key -> name)
-		log_fatal ("no memory for tsig key name.");
-	strcpy (key -> name, val);
+		log_fatal ("no memory for key");
+
+	token = peek_token (&val, cfile);
+	if (token == STRING) {
+		token = next_token (&val, cfile);
+		key -> name = dmalloc (strlen (val) + 1, MDL);
+		if (!key -> name)
+			log_fatal ("no memory for key name.");
+		strcpy (key -> name, val);
+
+	} else {
+		key -> name = parse_host_name (cfile);
+		if (!key -> name) {
+			skip_to_semi (cfile);
+			goto bad;
+		}
+	}
 
 	token = next_token (&val, cfile);
 	if (token != LBRACE) {
 		parse_warn (cfile, "expecting left brace");
-		return 0;
+		goto bad;
 	}
 
 	do {
@@ -2198,6 +2211,7 @@ int parse_key (struct parse *cfile)
 	omapi_auth_key_dereference (&key, MDL);
 	return 0;
 }
+
 /*
  * on-statement :== event-types LBRACE executable-statements RBRACE
  * event-types :== event-type OR event-types |
