@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.64 2001/04/24 02:31:27 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.65 2001/04/27 21:30:59 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -246,17 +246,27 @@ isc_result_t delete_host (hd, commit)
 					  hd -> interface.hlen, MDL);
 			hw_head = 1;
 		    } else {
-			for (foo = hp; foo; foo = foo -> n_ipaddr) {
+			np = (struct host_decl *)0;
+			foo = (struct host_decl *)0;
+			host_reference (&foo, hp, MDL);
+			while (foo) {
 			    if (foo == hd)
 				    break;
-			    np = foo;
+			    host_reference (&np, foo, MDL);
+			    host_dereference (&foo, MDL);
+			    if (np -> n_ipaddr)
+				    host_reference (&foo, np -> n_ipaddr, MDL);
 			}
+
 			if (foo) {
 			    host_dereference (&np -> n_ipaddr, MDL);
 			    if (hd -> n_ipaddr)
 				host_reference (&np -> n_ipaddr,
 						hd -> n_ipaddr, MDL);
+			    host_dereference (&foo, MDL);
 			}
+			if (np)
+				host_dereference (&np, MDL);
 		    }
 		    host_dereference (&hp, MDL);
 		}
@@ -276,17 +286,27 @@ isc_result_t delete_host (hd, commit)
 					  hd -> client_identifier.len, MDL);
 			uid_head = 1;
 		    } else {
-			for (foo = hp; foo; foo = foo -> n_ipaddr) {
+			np = (struct host_decl *)0;
+			foo = (struct host_decl *)0;
+			host_reference (&foo, hp, MDL);
+			while (foo) {
 			    if (foo == hd)
-				break;
-			    np = foo;
-			}
-			if (foo) {
+				    break;
+			    host_reference (&np, foo, MDL);
+			    host_dereference (&foo, MDL);
 			    if (np -> n_ipaddr)
-				host_dereference (&np -> n_ipaddr, MDL);
-			    host_reference (&np -> n_ipaddr,
-					    hd -> n_ipaddr, MDL);
+				    host_reference (&foo, np -> n_ipaddr, MDL);
 			}
+
+			if (foo) {
+			    host_dereference (&np -> n_ipaddr, MDL);
+			    if (hd -> n_ipaddr)
+				host_reference (&np -> n_ipaddr,
+						hd -> n_ipaddr, MDL);
+			    host_dereference (&foo, MDL);
+			}
+			if (np)
+				host_dereference (&np, MDL);
 		    }
 		    host_dereference (&hp, MDL);
 		}
