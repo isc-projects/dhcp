@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.67.2.13 2002/01/15 20:11:35 mellon Exp $ Copyright (c) 1996-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.67.2.14 2002/01/17 18:46:02 mellon Exp $ Copyright (c) 1996-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -455,10 +455,11 @@ int find_host_for_network (struct subnet **sp, struct host_decl **host,
 	return 0;
 }
 
-void new_address_range (low, high, subnet, pool)
+void new_address_range (low, high, subnet, pool, lpchain)
 	struct iaddr low, high;
 	struct subnet *subnet;
 	struct pool *pool;
+	struct lease **lpchain;
 {
 	struct lease *address_range, *lp, *plp;
 	struct iaddr net;
@@ -568,6 +569,12 @@ void new_address_range (low, high, subnet, pool)
 			lease_hash_add (lease_ip_addr_hash,
 					lp -> ip_addr.iabuf,
 					lp -> ip_addr.len, lp, MDL);
+		/* Put the lease on the chain for the caller. */
+		if (lpchain) {
+			lease_reference (&lp -> next, *lpchain, MDL);
+			lease_dereference (lpchain, MDL);
+			lease_reference (lpchain, lp, MDL);
+		}
 		lease_dereference (&lp, MDL);
 	}
 }

@@ -1157,6 +1157,7 @@ void parse_failover_state_declaration (struct parse *,
 void parse_failover_state PROTO ((struct parse *,
 				  enum failover_state *, TIME *));
 #endif
+int permit_list_match (struct permit *, struct permit *);
 void parse_pool_statement PROTO ((struct parse *, struct group *, int));
 int parse_boolean PROTO ((struct parse *));
 int parse_lbrace PROTO ((struct parse *));
@@ -1170,8 +1171,8 @@ void parse_group_declaration PROTO ((struct parse *, struct group *));
 int parse_fixed_addr_param PROTO ((struct option_cache **, struct parse *));
 TIME parse_timestamp PROTO ((struct parse *));
 int parse_lease_declaration PROTO ((struct lease **, struct parse *));
-void parse_address_range PROTO ((struct parse *,
-				 struct group *, int, struct pool *));
+void parse_address_range PROTO ((struct parse *, struct group *, int,
+				 struct pool *, struct lease **));
 
 /* ddns.c */
 int ddns_updates PROTO ((struct packet *, struct lease *, struct lease *,
@@ -2402,7 +2403,8 @@ int find_hosts_by_uid PROTO ((struct host_decl **, const unsigned char *,
 int find_host_for_network PROTO ((struct subnet **, struct host_decl **,
 				  struct iaddr *, struct shared_network *));
 void new_address_range PROTO ((struct iaddr, struct iaddr,
-			       struct subnet *, struct pool *));
+			       struct subnet *, struct pool *,
+			       struct lease **));
 isc_result_t dhcp_lease_free (omapi_object_t *, const char *, int);
 isc_result_t dhcp_lease_get (omapi_object_t **, const char *, int);
 int find_grouped_subnet PROTO ((struct subnet **, struct shared_network *,

@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.143.2.10 2001/10/27 04:42:41 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.143.2.11 2002/01/17 18:46:00 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -556,7 +556,8 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 			skip_to_semi (cfile);
 			return declaration;
 		}
-		parse_address_range (cfile, group, type, (struct pool *)0);
+		parse_address_range (cfile, group, type, (struct pool *)0,
+				     (struct lease **)0);
 		return declaration;
 
 	      case TOKEN_NOT:
@@ -1211,6 +1212,23 @@ void parse_failover_state (cfile, state, stos)
 }
 #endif /* defined (FAILOVER_PROTOCOL) */
 
+int permit_list_match (struct permit *lhs, struct permit *rhs)
+{
+	struct permit *plp;
+
+	if (!lhs)
+		return 1;
+	if (!rhs)
+		return 0;
+	for (plp = rhs; plp; plp = plp -> next) {
+		if (lhs -> type == plp -> type &&
+		    (lhs -> type != permit_class ||
+		     lhs -> class == plp -> class))
+			return 1;
+	}
+	return permit_list_match (lhs -> next, rhs);
+}
+
 void parse_pool_statement (cfile, group, type)
 	struct parse *cfile;
 	struct group *group;
@@ -1219,11 +1237,12 @@ void parse_pool_statement (cfile, group, type)
 	enum dhcp_token token;
 	const char *val;
 	int done = 0;
-	struct pool *pool, **p;
+	struct pool *pool, **p, *pp;
 	struct permit *permit;
 	struct permit **permit_head;
 	int declaration = 0;
 	isc_result_t status;
+	struct lease *lpchain = (struct lease *)0, *lp;
 
 	pool = (struct pool *)0;
 	status = pool_allocate (&pool, MDL);
@@ -1308,7 +1327,8 @@ void parse_pool_statement (cfile, group, type)
 
 		      case RANGE:
 			next_token (&val, (unsigned *)0, cfile);
-			parse_address_range (cfile, group, type, pool);
+			parse_address_range (cfile, group, type,
+					     pool, &lpchain);
 			break;
 		      case ALLOW:
 			permit_head = &pool -> permit_list;
@@ -1459,10 +1479,61 @@ void parse_pool_statement (cfile, group, type)
       clash_testing_done:				
 #endif /* FAILOVER_PROTOCOL */
 
-	p = &pool -> shared_network -> pools;
-	for (; *p; p = &((*p) -> next))
-		;
-	pool_reference (p, pool, MDL);
+	/* See if there's already a pool into which we can merge this one. */
+	for (pp = pool -> shared_network -> pools; pp; pp = pp -> next) {
+		struct lease *l;
+
+		if (pp -> group -> statements != pool -> group -> statements)
+			continue;
+#if defined (FAILOVER_PROTOCOL)
+		if (pool -> failover_peer != pp -> failover_peer)
+			continue;
+#endif
+		if (!permit_list_match (pp -> permit_list,
+					pool -> permit_list) ||
+		    !permit_list_match (pool -> permit_list,
+					pp -> permit_list) ||
+		    !permit_list_match (pp -> prohibit_list,
+					pool -> prohibit_list) ||
+		    !permit_list_match (pool -> prohibit_list,
+					pp -> prohibit_list))
+			continue;
+
+		/* Okay, we can merge these two pools.    All we have to
+		   do is fix up the leases, which all point to their pool. */
+		for (lp = lpchain; lp; lp = lp -> next) {
+			pool_dereference (&lp -> pool, MDL);
+			pool_reference (&lp -> pool, pp, MDL);
+		}
+		break;
+	}
+
+	/* If we didn't succeed in merging this pool into another, put
+	   it on the list. */
+	if (!pp) {
+		p = &pool -> shared_network -> pools;
+		for (; *p; p = &((*p) -> next))
+			;
+		pool_reference (p, pool, MDL);
+	}
+
+	/* Don't allow a pool declaration with no addresses, since it is
+	   probably a configuration error. */
+	if (!lpchain) {
+		parse_warn (cfile, "Pool declaration with no address range.");
+		log_error ("Pool declarations must always contain at least");
+		log_error ("one range statement.");
+	}
+
+	/* Dereference the lease chain. */
+	lp = (struct lease *)0;
+	while (lpchain) {
+		lease_reference (&lp, lpchain, MDL);
+		lease_dereference (&lpchain, MDL);
+		lease_reference (&lpchain, lp -> next, MDL);
+		lease_dereference (&lp -> next, MDL);
+		lease_dereference (&lp, MDL);
+	}
 	pool_dereference (&pool, MDL);
 }
 
@@ -2972,11 +3043,12 @@ int parse_lease_declaration (struct lease **lp, struct parse *cfile)
 /* address-range-declaration :== ip-address ip-address SEMI
 			       | DYNAMIC_BOOTP ip-address ip-address SEMI */
 
-void parse_address_range (cfile, group, type, inpool)
+void parse_address_range (cfile, group, type, inpool, lpchain)
 	struct parse *cfile;
 	struct group *group;
 	int type;
 	struct pool *inpool;
+	struct lease **lpchain;
 {
 	struct iaddr low, high, net;
 	unsigned char addr [4];
@@ -3130,7 +3202,7 @@ void parse_address_range (cfile, group, type, inpool)
 #endif /* FAILOVER_PROTOCOL */
 
 	/* Create the new address range... */
-	new_address_range (low, high, subnet, pool);
+	new_address_range (low, high, subnet, pool, lpchain);
 	pool_dereference (&pool, MDL);
 }
 
