@@ -69,6 +69,7 @@ void discover_interfaces ()
 	struct subnet *subnet;
 	struct shared_network *share;
 	struct sockaddr_in *foo;
+	int ir;
 #ifdef USE_FALLBACK
 	static struct shared_network fallback_network;
 #endif
@@ -84,6 +85,11 @@ void discover_interfaces ()
 	close (sock);
 	if (i < 0)
 		error ("ioctl: SIOCGIFCONF: %m");
+
+	if (interfaces)
+		ir = 0;
+	else
+		ir = INTERFACE_REQUESTED;
 
 	/* Cycle through the list of interfaces looking for IP addresses.
 	   Go through twice; once to count the number if addresses, and a
@@ -112,6 +118,7 @@ void discover_interfaces ()
 			memset (tmp, 0, sizeof *tmp);
 			strcpy (tmp -> name, ifp -> ifr_name);
 			tmp -> next = interfaces;
+			tmp -> flags = ir;
 			interfaces = tmp;
 		}
 
@@ -196,7 +203,9 @@ void discover_interfaces ()
 	/* Weed out the interfaces that did not have IP addresses. */
 	last = (struct interface_info *)0;
 	for (tmp = interfaces; tmp; tmp = tmp -> next) {
-		if (!tmp -> tif) {
+		if (!tmp -> tif || !(tmp -> flags & INTERFACE_REQUESTED)) {
+			if (tmp -> flags & INTERFACE_REQUESTED)
+				error ("%s: not found", tmp -> name);
 			if (!last)
 				interfaces = interfaces -> next;
 			else
