@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.82 2000/01/26 15:22:57 mellon Exp $ Copyright 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.83 2000/01/26 17:32:15 mellon Exp $ Copyright 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.";
 #endif
 
   static char copyright[] =
@@ -34,6 +34,7 @@ static char url [] = "For info, please visit http://www.isc.org/dhcp-contrib.htm
 
 #include "dhcpd.h"
 #include "version.h"
+#include <omapip/omapip_p.h>
 
 static void usage PROTO ((void));
 
