@@ -61,9 +61,6 @@ extern int h_errno;
 
 #include <net/if.h>
 
-#define ARPHRD_ETHER	1
-#define	ARPHRD_IEEE802	6
-
 #include <sys/time.h>		/* gettimeofday()*/
 #include <linux/time.h>		/* also necessary */
 

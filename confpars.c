@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.35 1996/09/13 18:58:20 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.36 1996/11/08 20:06:28 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -289,7 +289,6 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		if (type == HOST_DECL)
 			parse_warn ("get-lease-hostnames not allowed here.");
 		group -> get_lease_hostnames = parse_boolean (cfile);
-note ("get_lease_hostnames: %d", group -> get_lease_hostnames);
 		break;
 
 	      case USE_HOST_DECL_NAMES:
@@ -866,13 +865,11 @@ void parse_hardware_param (cfile, hardware)
 	token = next_token (&val, cfile);
 	switch (token) {
 	      case ETHERNET:
-		hardware -> htype = ARPHRD_ETHER;
+		hardware -> htype = HTYPE_ETHER;
 		break;
-#ifdef ARPHRD_IEEE802 /* XXX */
 	      case TOKEN_RING:
-		hardware -> htype = ARPHRD_IEEE802;
+		hardware -> htype = HTYPE_IEEE802;
 		break;
-#endif
 	      default:
 		parse_warn ("expecting a network hardware type");
 		skip_to_semi (cfile);

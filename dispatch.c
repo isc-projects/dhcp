@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dispatch.c,v 1.26 1996/09/11 18:53:33 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dispatch.c,v 1.27 1996/11/08 20:06:29 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -153,7 +153,7 @@ void discover_interfaces (serverP)
 			struct sockaddr_dl *foo = ((struct sockaddr_dl *)
 						   (&ifp -> ifr_addr));
 			tmp -> hw_address.hlen = foo -> sdl_alen;
-			tmp -> hw_address.htype = ARPHRD_ETHER; /* XXX */
+			tmp -> hw_address.htype = HTYPE_ETHER; /* XXX */
 			memcpy (tmp -> hw_address.haddr,
 				LLADDR (foo), foo -> sdl_alen);
 		} else

@@ -80,6 +80,10 @@ struct dhcp_packet {
 /* Possible values for flags field... */
 #define BOOTP_BROADCAST 32768L
 
+/* Possible values for hardware type (htype) field... */
+#define HTYPE_ETHER	1               /* Ethernet 10Mbps              */
+#define HTYPE_IEEE802	6               /* IEEE 802.2 Token Ring...	*/
+
 /* Magic cookie validating dhcp options field (and bootp vendor
    extensions field). */
 #define DHCP_OPTIONS_COOKIE	"\143\202\123\143"
