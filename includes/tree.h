@@ -88,6 +88,9 @@ struct tree_cache {
 	int buf_size;
 	TIME timeout;
 	struct tree *tree;
+	int flags;
+#define	TC_AWAITING_RESOLUTION	1
+#define TC_TEMPORARY		2
 };
 
 struct universe {
