@@ -87,6 +87,9 @@ static int get_token (cfile)
 	int c;
 	int i;
 	int ttok;
+#ifdef DEBUG_TOKENS
+	static char tb [2];
+#endif
 
 	do {
 		c = get_char (cfile);
@@ -109,7 +112,13 @@ static int get_token (cfile)
 			ttok = read_num_or_atom (c, cfile);
 			break;
 		} else {
+#ifdef DEBUG_TOKENS
+			tb [0] = c;
+			tb [1] = 0;
+			tval = tb;
+#else
 			tval = 0;
+#endif
 			ttok = c;
 			break;
 		}
@@ -131,6 +140,9 @@ int next_token (rval, cfile)
 	}
 	if (rval)
 		*rval = tval;
+#ifdef DEBUG_TOKENS
+	fprintf (stderr, "%s:%d ", tval, rv);
+#endif
 	return rv;
 }
 
@@ -142,6 +154,9 @@ int peek_token (rval, cfile)
 		token = get_token (cfile);
 	if (rval)
 		*rval = tval;
+#ifdef DEBUG_TOKENS
+	fprintf (stderr, "(%s:%d) ", tval, token);
+#endif
 	return token;
 }
 
@@ -255,11 +270,15 @@ static int intern (atom, dfv)
 	int dfv;
 {
 	switch (atom [0]) {
-	      case 'h':
-		if (!strcasecmp (atom + 1, "ost"))
-			return HOST;
-		if (!strcasecmp (atom + 1, "ardware"))
-			return HARDWARE;
+	      case 'c':
+		if (!strcasecmp (atom + 1, "lass"))
+			return CLASS;
+		break;
+	      case 'e':
+		if (!strcasecmp (atom + 1, "thernet"))
+			return ETHERNET;
+		if (!strcasecmp (atom + 1, "nds"))
+			return ENDS;
 		break;
 	      case 'f':
 		if (!strcasecmp (atom + 1, "ilename"))
@@ -267,13 +286,35 @@ static int intern (atom, dfv)
 		if (!strcasecmp (atom + 1, "ixed-address"))
 			return FIXED_ADDR;
 		break;
-	      case 'e':
-		if (!strcasecmp (atom + 1, "thernet"))
-			return ETHERNET;
+	      case 'h':
+		if (!strcasecmp (atom + 1, "ost"))
+			return HOST;
+		if (!strcasecmp (atom + 1, "ardware"))
+			return HARDWARE;
+		break;
+	      case 'l':
+		if (!strcasecmp (atom + 1, "ease"))
+			return LEASE;
 		break;
 	      case 'o':
 		if (!strcasecmp (atom + 1, "ption"))
 			return OPTION;
+		break;
+	      case 'r':
+		if (!strcasecmp (atom + 1, "ange"))
+			return RANGE;
+		break;
+	      case 's':
+		if (!strcasecmp (atom + 1, "tarts"))
+			return STARTS;
+		break;
+	      case 't':
+		if (!strcasecmp (atom + 1, "timestamp"))
+			return TIMESTAMP;
+		break;
+	      case 'u':
+		if (!strcasecmp (atom + 1, "id"))
+			return UID;
 		break;
 	}
 	return dfv;

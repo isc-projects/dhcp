@@ -152,7 +152,7 @@ void parse_option_buffer (packet, buffer, length)
 
 void cons_options (inpacket, outpacket, hp, overload)
 	struct packet *inpacket;
-	struct dhcp_packet *outpacket;
+	struct packet *outpacket;
 	struct host_decl *hp;
 	int overload;	/* Overload flags that may be set. */
 {
@@ -163,13 +163,13 @@ void cons_options (inpacket, outpacket, hp, overload)
 	unsigned char *priority_list;
 	int priority_len;
 	unsigned char *buffer = inpacket -> raw -> options;
-	int buflen, bufix;
+	int buflen, bufix = 0;
 	int reserved = 3;		/* Reserved space for overload. */
 	unsigned char *overload_ptr = (unsigned char *)0;
 	int stored_length [256];
 	int missed = 0;
-	int missed_code;
-	int missed_length;
+	int missed_code = 0;
+	int missed_length = 0;
 	int result;
 	int i;
 

@@ -92,11 +92,11 @@ struct host_decl *find_host_by_addr (htype, haddr, hlen)
 }
 
 void new_address_range (low, high, netmask)
-	struct in_addr low, high, netmask;
+	struct iaddr low, high, netmask;
 {
 	struct lease *address_range, *lp, *plp;
 	struct subnet *subnet;
-	struct in_addr net;
+	struct iaddr net;
 	int i, max;
 	char lowbuf [16], highbuf [16], netbuf [16];
 
@@ -111,11 +111,11 @@ void new_address_range (low, high, netmask)
 		lease_hw_addr_hash = new_hash ();
 
 	/* Make sure that high and low addresses are in same subnet. */
-	net.s_addr = SUBNET (low, netmask);
-	if (net.s_addr != SUBNET (high, netmask)) {
-		strcpy (lowbuf, inet_ntoa (low));
-		strcpy (highbuf, inet_ntoa (high));
-		strcpy (netbuf, inet_ntoa (netmask));
+	net = subnet_number (low, netmask);
+	if (!addr_eq (net, subnet_number (high, netmask))) {
+		strcpy (lowbuf, piaddr (low));
+		strcpy (highbuf, piaddr (high));
+		strcpy (netbuf, piaddr (netmask));
 		error ("Address range %s to %s, netmask %s spans %s!",
 		       lowbuf, highbuf, netbuf, "multiple subnets");
 	}
@@ -133,27 +133,28 @@ void new_address_range (low, high, netmask)
 	}
 
 	/* Get the high and low host addresses... */
-	max = HOST_ADDR (high, netmask);
-	i = HOST_ADDR (low, netmask);
+	max = host_addr (high, netmask);
+	i = host_addr (low, netmask);
 
 	/* Allow range to be specified high-to-low as well as low-to-high. */
 	if (i > max) {
 		max = i;
-		i = HOST_ADDR (high, netmask);
+		i = host_addr (high, netmask);
 	}
 
 	/* Get a lease structure for each address in the range. */
 	address_range = new_leases (max - i + 1, "new_address_range");
 	if (!address_range) {
-		strcpy (lowbuf, inet_ntoa (low));
-		strcpy (highbuf, inet_ntoa (high));
+		strcpy (lowbuf, piaddr (low));
+		strcpy (highbuf, piaddr (high));
 		error ("No memory for address range %s-%s.", lowbuf, highbuf);
 	}
 	memset (address_range, 0, (sizeof *address_range) * (max - i + 1));
 
 	/* Fill out the lease structures with some minimal information. */
 	for (; i <= max; i++) {
-		address_range [i].ip_addr.s_addr = IP_ADDR (subnet -> net, i);
+		address_range [i].ip_addr =
+			ip_addr (subnet -> net, subnet -> netmask, i);
 		address_range [i].starts =
 			address_range [i].timestamp = MIN_TIME;
 		address_range [i].ends = MIN_TIME;
@@ -163,7 +164,8 @@ void new_address_range (low, high, netmask)
 		address_range [i].next = subnet -> leases;
 		address_range [i].prev = (struct lease *)0;
 		subnet -> leases = &address_range [i];
-		address_range [i].next -> prev = subnet -> leases;
+		if (address_range [i].next)
+			address_range [i].next -> prev = subnet -> leases;
 		add_hash (lease_ip_addr_hash,
 			  (char *)&address_range [i].ip_addr,
 			  sizeof address_range [i].ip_addr,
@@ -173,16 +175,16 @@ void new_address_range (low, high, netmask)
 	/* Find out if any dangling leases are in range... */
 	plp = (struct lease *)0;
 	for (lp = dangling_leases; lp; lp = lp -> next) {
-		struct in_addr lnet;
+		struct iaddr lnet;
 		int lhost;
 
-		lnet.s_addr = SUBNET (lp -> ip_addr, subnet -> netmask);
-		lhost = HOST_ADDR (lp -> ip_addr, subnet -> netmask);
+		lnet = subnet_number (lp -> ip_addr, subnet -> netmask);
+		lhost = host_addr (lp -> ip_addr, subnet -> netmask);
 
 		/* If it's in range, fill in the real lease structure with
 		   the dangling lease's values, and remove the lease from
 		   the list of dangling leases. */
-		if (lnet.s_addr == subnet -> net.s_addr &&
+		if (addr_eq (lnet, subnet -> net) &&
 		    lhost >= i && lhost <= max) {
 			if (plp) {
 				plp -> next = lp -> next;
@@ -198,12 +200,12 @@ void new_address_range (low, high, netmask)
 }
 
 struct subnet *find_subnet (subnet)
-	struct in_addr subnet;
+	struct iaddr subnet;
 {
 	struct subnet *rv;
 
 	return (struct subnet *)hash_lookup (subnet_hash,
-					     (char *)&subnet, sizeof subnet);
+					     (char *)subnet.iabuf, subnet.len);
 }
 
 /* Enter a new subnet into the subnet hash. */
@@ -211,8 +213,8 @@ struct subnet *find_subnet (subnet)
 void enter_subnet (subnet)
 	struct subnet *subnet;
 {
-	add_hash (subnet_hash, (char *)&subnet -> net,
-		  sizeof subnet -> net, (unsigned char *)subnet);
+	add_hash (subnet_hash, (char *)subnet -> net.iabuf,
+		  subnet -> net.len, (unsigned char *)subnet);
 }
 	
 /* Enter a lease into the system.   This is called by the parser each
@@ -232,7 +234,7 @@ void enter_lease (lease)
 		comp = new_lease ("enter_lease");
 		if (!comp) {
 			error ("No memory for lease %s\n",
-			       inet_ntoa (lease -> ip_addr));
+			       piaddr (lease -> ip_addr));
 		}
 		*comp = *lease;
 		lease -> next = dangling_leases;
@@ -273,7 +275,7 @@ void supersede_lease (comp, lease)
 		       lease -> hardware_addr.haddr,
 		       comp -> hardware_addr.hlen))))) {
 		warn ("Lease conflict at %s",
-		      inet_ntoa (comp -> ip_addr));
+		      piaddr (comp -> ip_addr));
 	} else {
 		/* If there's a Unique ID, dissociate it from the hash
 		   table if necessary, and always free it. */
@@ -289,13 +291,13 @@ void supersede_lease (comp, lease)
 			free (comp -> uid);
 		}
 		if (comp -> hardware_addr.htype &&
-		    (comp -> hardware_addr.hlen !=
-		     lease -> hardware_addr.hlen) ||
-		    (comp -> hardware_addr.htype !=
-		     lease -> hardware_addr.htype) ||
-		    memcmp (comp -> hardware_addr.haddr,
-			    lease -> hardware_addr.haddr,
-			    comp -> hardware_addr.hlen)) {
+		    ((comp -> hardware_addr.hlen !=
+		      lease -> hardware_addr.hlen) ||
+		     (comp -> hardware_addr.htype !=
+		      lease -> hardware_addr.htype) ||
+		     memcmp (comp -> hardware_addr.haddr,
+			     lease -> hardware_addr.haddr,
+			     comp -> hardware_addr.hlen))) {
 			delete_hash_entry (lease_hw_addr_hash,
 					   comp -> hardware_addr.haddr,
 					   comp -> hardware_addr.hlen);
@@ -393,3 +395,24 @@ void supersede_lease (comp, lease)
 		comp -> contain -> insertion_point = comp;
 	}
 }
+
+/* Locate the lease associated with a given IP address... */
+
+struct lease *find_lease_by_ip_addr (addr)
+	struct iaddr addr;
+{
+	struct lease *lease = (struct lease *)hash_lookup (lease_ip_addr_hash,
+							   addr.iabuf,
+							   addr.len);
+	return lease;
+}
+
+struct lease *find_lease_by_uid (uid, len)
+	unsigned char *uid;
+	int len;
+{
+	struct lease *lease = (struct lease *)hash_lookup (lease_uid_hash,
+							   uid, len);
+	return lease;
+}
+

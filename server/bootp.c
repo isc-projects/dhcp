@@ -130,7 +130,7 @@ void bootp (packet)
 	/* If we got the magic cookie, send it back. */
 	if (packet -> options_valid)
 		memcpy (reply -> options, packet -> raw -> options, 4);
-	to.sin_port = packet -> client.sin_port;
+	to.sin_port = htons (packet -> client_port);
 	to.sin_family = AF_INET;
 	to.sin_len = sizeof to;
 	memset (to.sin_zero, 0, sizeof to.sin_zero);

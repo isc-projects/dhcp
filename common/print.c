@@ -44,6 +44,8 @@ static char copyright[] =
 "@(#) Copyright (c) 1995 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
+#include "dhcpd.h"
+
 char *print_hw_addr (htype, hlen, data)
 	int htype;
 	int hlen;

@@ -126,7 +126,7 @@ void skip_to_semi (cfile)
 
 /* host_statement :== HOST hostname declarations SEMI
    host_declarations :== <nil> | host_declaration
-			       | host_declarations host_declaration */
+			       | host_declarations host_declaration SEMI */
 
 struct host_decl *parse_host_statement (cfile, bc)
 	FILE *cfile;
@@ -171,7 +171,7 @@ char *parse_host_name (cfile, bc)
 		/* Read a token, which should be an identifier. */
 		token = next_token (&val, cfile);
 		if (!is_identifier (token)) {
-			parse_warn ("expecting an identified in hostname");
+			parse_warn ("expecting an identifier in hostname");
 			skip_to_semi (cfile);
 			longjmp (*bc, 1);
 		}
@@ -560,7 +560,7 @@ void parse_option_decl (cfile, bc, decl)
 	decl -> options [option -> code] = tree_cache (tree);
 }
 
-/* timestamp :== TIMESTAMP date
+/* timestamp :== TIMESTAMP date SEMI
 
    Timestamps are actually not used in dhcpd.conf, which is a static file,
    but rather in the database file and the journal file. */
@@ -569,10 +569,21 @@ TIME parse_timestamp (cfile, bc)
 	FILE *cfile;
 	jmp_buf *bc;
 {
-	return parse_date (cfile, bc);
+	TIME rv;
+	char *val;
+	int token;
+
+	rv = parse_date (cfile, bc);
+	token = next_token (&val, cfile);
+	if (token != SEMI) {
+		parse_warn ("semicolon expected");
+		skip_to_semi (cfile);
+		longjmp (*bc, 1);
+	}
+	return rv;
 }
 		
-/* lease_decl :== LEASE ip_address lease_modifiers
+/* lease_decl :== LEASE ip_address lease_modifiers SEMI
    lease_modifiers :== <nil>
    		|	lease_modifier
 		|	lease_modifier lease_modifiers
@@ -601,7 +612,8 @@ struct lease *parse_lease_statement (cfile, bc)
 
 	/* Get the address for which the lease has been issued. */
 	parse_numeric_aggregate (cfile, bc, addr, &len, DOT, 10, 8);
-	memcpy (&lease.ip_addr, addr, len);
+	memcpy (lease.ip_addr.iabuf, addr, len);
+	lease.ip_addr.len = len;
 
 	do {
 		token = next_token (&val, cfile);
@@ -659,7 +671,7 @@ struct lease *parse_lease_statement (cfile, bc)
 					find_host_by_name (val);
 				if (!lease.host)
 					parse_warn ("lease host ``%s'' is %s",
-						    lease.host,
+						    val,
 						    "no longer known.");
 				break;
 					
@@ -688,34 +700,47 @@ struct lease *parse_lease_statement (cfile, bc)
 		}
 		if (seenmask & seenbit) {
 			parse_warn ("Too many %s declarations in lease %s\n",
-				    tbuf, inet_ntoa (lease.ip_addr));
+				    tbuf, piaddr (lease.ip_addr));
 		} else
 			seenmask |= seenbit;
 	} while (1);
 	return &lease;
 }
 
-/* address_range :== RANGE ip_address ip_address ip_address */
+/* address_range :== RANGE ip_address ip_address ip_address SEMI */
 
 void parse_address_range (cfile, bc)
 	FILE *cfile;
 	jmp_buf *bc;
 {
-	struct in_addr low, high, mask;
+	struct iaddr low, high, mask;
 	unsigned char addr [4];
 	int len = sizeof addr;
+	int token;
+	char *val;
 
 	/* Get the bottom address in the range... */
 	parse_numeric_aggregate (cfile, bc, addr, &len, DOT, 10, 8);
-	memcpy (&low, addr, len);
+	memcpy (low.iabuf, addr, len);
+	low.len = len;
 
 	/* Get the top address in the range... */
 	parse_numeric_aggregate (cfile, bc, addr, &len, DOT, 10, 8);
-	memcpy (&high, addr, len);
+	memcpy (high.iabuf, addr, len);
+	high.len = len;
 
 	/* Get the netmask of the subnet containing the range... */
 	parse_numeric_aggregate (cfile, bc, addr, &len, DOT, 10, 8);
-	memcpy (&mask, addr, len);
+	memcpy (mask.iabuf, addr, len);
+	mask.len = len;
+
+	/* Snarf the semi... */
+	token = next_token (&val, cfile);
+	if (token != SEMI) {
+		parse_warn ("semicolon expected");
+		skip_to_semi (cfile);
+		longjmp (*bc, 1);
+	}
 
 	/* Create the new address range... */
 	new_address_range (low, high, mask);
@@ -744,7 +769,7 @@ TIME parse_date (cfile, bc)
 			skip_to_semi (cfile);
 		longjmp (*bc, 1);
 	}
-	tm.tm_wday = atoi (token);
+	tm.tm_wday = atoi (val);
 
 	/* Year... */
 	token = next_token (&val, cfile);
@@ -754,7 +779,7 @@ TIME parse_date (cfile, bc)
 			skip_to_semi (cfile);
 		longjmp (*bc, 1);
 	}
-	tm.tm_year = atoi (token);
+	tm.tm_year = atoi (val);
 	if (tm.tm_year > 1900)
 		tm.tm_year -= 1900;
 
@@ -775,7 +800,7 @@ TIME parse_date (cfile, bc)
 			skip_to_semi (cfile);
 		longjmp (*bc, 1);
 	}
-	tm.tm_mon = atoi (token);
+	tm.tm_mon = atoi (val);
 
 	/* Slash seperating month from day... */
 	token = next_token (&val, cfile);
@@ -794,7 +819,7 @@ TIME parse_date (cfile, bc)
 			skip_to_semi (cfile);
 		longjmp (*bc, 1);
 	}
-	tm.tm_mday = atoi (token);
+	tm.tm_mday = atoi (val);
 
 	/* Hour... */
 	token = next_token (&val, cfile);
@@ -804,7 +829,7 @@ TIME parse_date (cfile, bc)
 			skip_to_semi (cfile);
 		longjmp (*bc, 1);
 	}
-	tm.tm_hour = atoi (token);
+	tm.tm_hour = atoi (val);
 
 	/* Colon seperating hour from minute... */
 	token = next_token (&val, cfile);
@@ -823,7 +848,7 @@ TIME parse_date (cfile, bc)
 			skip_to_semi (cfile);
 		longjmp (*bc, 1);
 	}
-	tm.tm_min = atoi (token);
+	tm.tm_min = atoi (val);
 
 	/* Colon seperating minute from second... */
 	token = next_token (&val, cfile);
@@ -842,7 +867,7 @@ TIME parse_date (cfile, bc)
 			skip_to_semi (cfile);
 		longjmp (*bc, 1);
 	}
-	tm.tm_sec = atoi (token);
+	tm.tm_sec = atoi (val);
 
 	tm.tm_zone = "GMT";
 	tm.tm_isdst = 0;

@@ -165,6 +165,9 @@ int main (argc, argv, envp)
 
 	/* Receive packets and dispatch them... */
 	dispatch ();
+
+	/* Not reached */
+	return 0;
 }
 
 /* Print usage message. */
@@ -178,11 +181,11 @@ void cleanup ()
 {
 }
 
-void do_packet (packbuf, len, from, fromlen, sock)
+void do_packet (packbuf, len, from_port, from, sock)
 	unsigned char *packbuf;
 	int len;
-	struct sockaddr_in *from;
-	int fromlen;
+	unsigned long from_port;
+	struct iaddr from;
 	int sock;
 {
 	struct packet *tp;
@@ -198,8 +201,8 @@ void do_packet (packbuf, len, from, fromlen, sock)
 	memset (tp, 0, sizeof *tp);
 	tp -> raw = tdp;
 	tp -> packet_length = len;
-	tp -> client = *from;
-	tp -> client_len = fromlen;
+	tp -> client_port = from_port;
+	tp -> client_addr = from;
 	tp -> client_sock = sock;
 	parse_options (tp);
 	if (tp -> options_valid &&
@@ -209,7 +212,7 @@ void do_packet (packbuf, len, from, fromlen, sock)
 		bootp (tp);
 }
 
-dump_packet (tp)
+void dump_packet (tp)
 	struct packet *tp;
 {
 	struct dhcp_packet *tdp = tp -> raw;

@@ -159,6 +159,7 @@ unsigned char packbuf [65536];	/* Should cover the gnarliest MTU... */
 void dispatch ()
 {
 	struct sockaddr_in from;
+	struct iaddr ifrom;
 	int fromlen = sizeof from;
 	fd_set r, w, x;
 	struct socklist *l;
@@ -201,7 +202,10 @@ void dispatch ()
 			note ("request from %s, port %d",
 			      inet_ntoa (from.sin_addr),
 			      htons (from.sin_port));
-			do_packet (packbuf, result, &from, fromlen, l -> sock);
+			ifrom.len = 4;
+			memcpy (ifrom.iabuf, &from.sin_addr, ifrom.len);
+			do_packet (packbuf, result, from.sin_port,
+				   ifrom, l -> sock);
 		}
 	} while (1);
 }

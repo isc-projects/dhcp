@@ -1,6 +1,6 @@
 /* alloc.c
 
-   Memory allocation...
+   Memory allocation... */
 
 /*
  * Copyright (c) 1995 The Internet Software Consortium.  All rights reserved.
@@ -55,7 +55,7 @@ VOIDPTR dmalloc (size, name)
 {
 	VOIDPTR foo = (VOIDPTR)malloc (size);
 	if (!foo)
-		warn ("No memory for %s.\n");
+		warn ("No memory for %s.", name);
 	return foo;
 }
 

@@ -138,7 +138,7 @@ struct tree *tree_concat (left, right)
 		return left;
 
 	/* If both trees are constant, combine them. */
-	if (left -> op = TREE_CONST && right -> op == TREE_CONST) {
+	if (left -> op == TREE_CONST && right -> op == TREE_CONST) {
 		unsigned char *buf = dmalloc (left -> data.const_val.len
 					      + right -> data.const_val.len,
 					      "tree_concat");

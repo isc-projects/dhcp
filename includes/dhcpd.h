@@ -47,11 +47,19 @@
 #include <netdb.h>
 #include <fcntl.h>
 #include <stdio.h>
+#include <unistd.h>
+#include <strings.h>
+#include <malloc.h>
+#include <stdlib.h>
+#include <sys/stat.h>
+#include <ctype.h>
+
 #include "dhcp.h"
 #include "cdefs.h"
 #include "osdep.h"
 #include "tree.h"
 #include "hash.h"
+#include "inet.h"
 
 /* A dhcp packet and the pointers to its option values. */
 struct packet {
@@ -59,8 +67,8 @@ struct packet {
 	int packet_length;
 	int packet_type;
 	int options_valid;
-	struct sockaddr_in client;
-	int client_len;
+	int client_port;
+	struct iaddr client_addr;
 	int client_sock;
 	struct {
 		int len;
@@ -90,7 +98,7 @@ struct host_decl {
 struct lease {
 	struct lease *next;
 	struct lease *prev;
-	struct in_addr ip_addr;
+	struct iaddr ip_addr;
 	TIME starts, ends, timestamp;
 	unsigned char *uid;
 	int uid_len;
@@ -101,8 +109,8 @@ struct lease {
 };
 
 struct subnet {
-	struct in_addr net;
-	struct in_addr netmask;
+	struct iaddr net;
+	struct iaddr netmask;
 	struct lease *leases;
 	struct lease *insertion_point;
 };
@@ -130,10 +138,6 @@ typedef unsigned char option_mask [16];
 #endif
 #endif
 
-/* Subnet macros... */
-#define SUBNET(addr, mask) ((addr).s_addr & (netmask).s_addr)
-#define IP_ADDR(net, host) ((net).s_addr | i)
-#define HOST_ADDR(addr, mask)	((addr).s_addr & ~(netmask).s_addr)
 #define MAX_TIME 0x7fffffff
 #define MIN_TIME 0
 
@@ -143,8 +147,10 @@ typedef unsigned char option_mask [16];
 
 void parse_options PROTO ((struct packet *));
 void parse_option_buffer PROTO ((struct packet *, unsigned char *, int));
-void cons_options PROTO ((struct packet *, struct dhcp_packet *,
+void cons_options PROTO ((struct packet *, struct packet *,
 			  struct host_decl *, int));
+int store_option PROTO ((struct packet *, unsigned char,
+			 unsigned char *, int, int *));
 char *pretty_print_option PROTO ((unsigned char, unsigned char *, int));
 
 /* errwarn.c */
@@ -161,7 +167,9 @@ extern int server_addrcount;
 extern u_int16_t server_port;
 int main PROTO ((int, char **, char **));
 void cleanup PROTO ((void));
-void do_packet PROTO ((unsigned char *, int, struct sockaddr_in *, int, int));
+void do_packet PROTO ((unsigned char *, int,
+		       unsigned long, struct iaddr, int));
+void dump_packet PROTO ((struct packet *));
 u_int32_t pick_interface PROTO ((struct packet *));
 
 
@@ -179,6 +187,7 @@ void parse_host_decl PROTO ((FILE *, jmp_buf *, struct host_decl *));
 void parse_hardware_decl PROTO ((FILE *, jmp_buf *, struct host_decl *));
 struct hardware parse_hardware_addr PROTO ((FILE *, jmp_buf *));
 void parse_filename_decl PROTO ((FILE *, jmp_buf *, struct host_decl *));
+struct tree *parse_ip_addr_or_hostname PROTO ((FILE *, jmp_buf *, int));
 void parse_fixed_addr_decl PROTO ((FILE *, jmp_buf *, struct host_decl *));
 void parse_option_decl PROTO ((FILE *, jmp_buf *, struct host_decl *));
 TIME parse_timestamp PROTO ((FILE *, jmp_buf *));
@@ -210,13 +219,14 @@ void bootp PROTO ((struct packet *));
 void enter_host PROTO ((struct host_decl *));
 struct host_decl *find_host_by_name PROTO ((char *name));
 struct host_decl *find_host_by_addr PROTO ((int, unsigned char *, int));
-extern struct subnet *find_subnet (struct in_addr);
+void new_address_range PROTO ((struct iaddr, struct iaddr,
+			       struct iaddr));
+extern struct subnet *find_subnet (struct iaddr);
 void enter_subnet (struct subnet *);
 void enter_lease PROTO ((struct lease *));
 void supersede_lease PROTO ((struct lease *, struct lease *));
 struct lease *find_lease_by_uid PROTO ((unsigned char *, int));
-struct lease *find_lease_by_ip_addr PROTO ((struct in_addr));
-struct lease *find_next_expiring_lease PROTO ((void));
+struct lease *find_lease_by_ip_addr PROTO ((struct iaddr));
 
 /* alloc.c */
 VOIDPTR dmalloc PROTO ((int, char *));
@@ -261,3 +271,19 @@ extern struct hash_table universe_hash;
 extern struct universe dhcp_universe;
 void initialize_universes PROTO ((void));
 
+/* convert.c */
+unsigned long getULong PROTO ((unsigned char *));
+long getLong PROTO ((unsigned char *));
+unsigned short getUShort PROTO ((unsigned char *));
+short getShort PROTO ((unsigned char *));
+void putULong PROTO ((unsigned char *, unsigned long));
+void putLong PROTO ((unsigned char *, long));
+void putUShort PROTO ((unsigned char *, unsigned short));
+void putShort PROTO ((unsigned char *, short));
+
+/* inet.c */
+struct iaddr subnet_number (struct iaddr, struct iaddr);
+struct iaddr ip_addr (struct iaddr, struct iaddr, unsigned long);
+unsigned long host_addr (struct iaddr, struct iaddr);
+int addr_eq (struct iaddr, struct iaddr);
+char *piaddr (struct iaddr);

@@ -41,6 +41,6 @@
 
 struct iaddr {
 	int len;
-	char iabuf [16];
+	unsigned char iabuf [16];
 };
 

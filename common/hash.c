@@ -46,6 +46,8 @@ static char copyright[] =
 
 #include "dhcpd.h"
 
+static INLINE int do_hash PROTO ((char *, int, int));
+
 struct hash_table *new_hash ()
 {
 	struct hash_table *rv = new_hash_table (DEFAULT_HASH_SIZE, "new_hash");
@@ -56,7 +58,7 @@ struct hash_table *new_hash ()
 	return rv;
 }
 
-static INLINE do_hash (name, len, size)
+static INLINE int do_hash (name, len, size)
 	char *name;
 	int len;
 	int size;

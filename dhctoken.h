@@ -66,6 +66,6 @@
 #define LAST_TOKEN	RANGE
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\
-				 (x) <= FIRST_TOKEN &&	\
+				 (x) <= LAST_TOKEN &&	\
 				 (x) != STRING &&	\
 				 (x) != NUMBER)
