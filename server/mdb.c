@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.15 1999/10/27 23:05:17 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.16 1999/10/28 13:07:06 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1016,11 +1016,12 @@ int supersede_lease (comp, lease, commit)
 					    (struct option_state *)0, /* XXX */
 					    comp -> on_expiry);
 			executable_statement_dereference (&comp -> on_expiry,
-							  "dhcprelease");
+							  "supersede_lease");
 			/* No sense releasing a lease after it's expired. */
 			if (comp -> on_release)
 				executable_statement_dereference
-					(&comp -> on_release);
+					(&comp -> on_release,
+					 "supersede_lease");
 		} else {
 			/* If this is the next lease that will timeout on the
 			   pool, zap the old timeout and set the timeout on
