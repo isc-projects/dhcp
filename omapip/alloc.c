@@ -315,29 +315,39 @@ isc_result_t omapi_object_allocate (omapi_object_t **o,
 				    const char *file, int line)
 {
 	size_t tsize;
-	void *foo;
+	omapi_object_t *foo;
 	isc_result_t status;
 
-	if (type -> sizer)
-		tsize = (*type -> sizer) (size);
-	else
+	if (type -> allocator) {
+		foo = (omapi_object_t *)0;
+		status = (*type -> allocator) (&foo, file, line);
 		tsize = type -> size;
+	} else
+		status = ISC_R_NOMEMORY;
+	if (status == ISC_R_NOMEMORY) {
+		if (type -> sizer)
+			tsize = (*type -> sizer) (size);
+		else
+			tsize = type -> size;
+		
+		/* Sanity check. */
+		if (tsize < sizeof (omapi_object_t))
+			return ISC_R_INVALIDARG;
+		
+		foo = dmalloc (tsize, file, line);
+		if (!foo)
+			return ISC_R_NOMEMORY;
+	}
 
-	/* Sanity check. */
-	if (tsize < sizeof (omapi_object_t))
-		return ISC_R_INVALIDARG;
-
-	foo = dmalloc (tsize, file, line);
-	if (!foo)
-		return ISC_R_NOMEMORY;
-
-	status = omapi_object_initialize ((omapi_object_t *)foo,
-					  type, size, tsize, file, line);
+	status = omapi_object_initialize (foo, type, size, tsize, file, line);
 	if (status != ISC_R_SUCCESS) {
-		dfree (foo, file, line);
+		if (type -> freer)
+			(*type -> freer) (foo, file, line);
+		else
+			dfree (foo, file, line);
 		return status;
 	}
-	return omapi_object_reference (o, (omapi_object_t *)foo, file, line);
+	return omapi_object_reference (o, foo, file, line);
 }
 
 isc_result_t omapi_object_initialize (omapi_object_t *o,
