@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.37 1997/02/18 14:28:53 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.38 1997/02/22 08:48:15 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -148,6 +148,10 @@ void dhcpdiscover (packet)
 		      print_hw_addr (packet -> raw -> htype,
 				     packet -> raw -> hlen,
 				     packet -> raw -> chaddr));
+	} else if (lease -> host &&
+		    !lease -> host -> group -> allow_booting) {
+		note ("Declining to boot client %s",
+		      lease -> host -> name);
 	} else
 		ack_lease (packet, lease, DHCPOFFER, cur_time + 120);
 }
@@ -243,19 +247,6 @@ void dhcprequest (packet)
 		       packet -> raw -> chaddr,
 		       packet -> raw -> hlen)))) {
 		ack_lease (packet, lease, DHCPACK, 0);
-		return;
-	}
-		
-	/* Otherwise, if we have a lease for this client,
-	   release it, and in any case don't reply to the
-	   DHCPREQUEST. */
-	if (packet -> options [DHO_DHCP_SERVER_IDENTIFIER].len
-	    && memcmp (packet ->
-		       options [DHO_DHCP_SERVER_IDENTIFIER].data,
-		       server_identifier.iabuf,
-		       server_identifier.len)) {
-		if (lease)
-			release_lease (lease);
 		return;
 	}
 }
@@ -366,7 +357,7 @@ void nak_lease (packet, cip)
 		cons_options (packet, outgoing.raw, options, 0, 0);
 
 /*	memset (&raw.ciaddr, 0, sizeof raw.ciaddr);*/
-	memcpy (&raw.siaddr, server_identifier.iabuf, 4);
+	raw.siaddr = packet -> interface -> primary_address;
 	raw.giaddr = packet -> raw -> giaddr;
 	memcpy (raw.chaddr, packet -> raw -> chaddr, sizeof raw.chaddr);
 	raw.hlen = packet -> raw -> hlen;
@@ -408,10 +399,7 @@ void nak_lease (packet, cip)
 #endif
 	memset (to.sin_zero, 0, sizeof to.sin_zero);
 
-	if (server_identifier.len)
-		memcpy (&from, server_identifier.iabuf, 4);
-	else
-		memset (&from, 0, 4);
+	from = packet -> interface -> primary_address;
 
 	/* If this was gatewayed, send it back to the gateway.
 	   Otherwise, broadcast it on the local network. */
@@ -708,16 +696,17 @@ void ack_lease (packet, lease, offer, when)
 		options [DHO_DHCP_MESSAGE_TYPE] -> tree = (struct tree *)0;
 
 		options [DHO_DHCP_SERVER_IDENTIFIER] = &server_id_tree;
-		options [DHO_DHCP_SERVER_IDENTIFIER] ->
-			value = server_identifier.iabuf;
-		options [DHO_DHCP_SERVER_IDENTIFIER] ->
-			len = server_identifier.len;
-		options [DHO_DHCP_SERVER_IDENTIFIER] ->
-			buf_size = server_identifier.len;
-		options [DHO_DHCP_SERVER_IDENTIFIER] ->
-			timeout = 0xFFFFFFFF;
-		options [DHO_DHCP_SERVER_IDENTIFIER] ->
-			tree = (struct tree *)0;
+		options [DHO_DHCP_SERVER_IDENTIFIER] -> value =
+			(unsigned char *)
+				&packet -> interface -> primary_address;
+		options [DHO_DHCP_SERVER_IDENTIFIER] -> len =
+			sizeof packet -> interface -> primary_address;
+		options [DHO_DHCP_SERVER_IDENTIFIER] -> buf_size =
+			sizeof packet -> interface -> primary_address;
+		options [DHO_DHCP_SERVER_IDENTIFIER] -> timeout =
+			0xFFFFFFFF;
+		options [DHO_DHCP_SERVER_IDENTIFIER] -> tree =
+			(struct tree *)0;
 
 		/* Sanity check the lease time. */
 		if ((lease->offered_expiry - cur_time) < 15)
@@ -835,7 +824,7 @@ void ack_lease (packet, lease, offer, when)
 		memcpy (&raw.siaddr,
 			lease -> subnet -> interface_address.iabuf, 4);
 	else
-		memcpy (&raw.siaddr, server_identifier.iabuf, 4);
+		raw.siaddr = packet -> interface -> primary_address;
 
 	raw.giaddr = packet -> raw -> giaddr;
 
@@ -869,10 +858,7 @@ void ack_lease (packet, lease, offer, when)
 #endif
 	memset (to.sin_zero, 0, sizeof to.sin_zero);
 
-	if (server_identifier.len)
-		memcpy (&from, server_identifier.iabuf, 4);
-	else
-		memset (&from, 0, 4);
+	from = packet -> interface -> primary_address;
 
 #ifdef DEBUG_PACKET
 	dump_packet (packet);
