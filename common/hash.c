@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: hash.c,v 1.23 2000/05/17 16:15:38 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: hash.c,v 1.24 2000/06/06 23:46:31 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -227,6 +227,27 @@ int hash_lookup (vp, table, name, len, file, line)
 		}
 	}
 	return 0;
+}
+
+int hash_foreach (struct hash_table *table, hash_foreach_func func)
+{
+	int i;
+	struct hash_bucket *bp, *next;
+	int count = 0;
+
+	if (!table)
+		return 0;
+
+	for (i = 0; i < table -> hash_count; i++) {
+		bp = table -> buckets [i];
+		while (bp) {
+			next = bp -> next;
+			(*func) (bp -> name, bp -> len, bp -> value);
+			bp = next;
+			count++;
+		}
+	}
+	return count;
 }
 
 int casecmp (const void *v1, const void *v2, unsigned long len)

@@ -1521,6 +1521,7 @@ void delete_hash_entry PROTO ((struct hash_table *, const unsigned char *,
 			       unsigned, const char *, int));
 int hash_lookup PROTO ((hashed_object_t **, struct hash_table *,
 			const unsigned char *, unsigned, const char *, int));
+int hash_foreach (struct hash_table *, hash_foreach_func);
 int casecmp (const void *s, const void *t, unsigned long len);
 HASH_FUNCTIONS_DECL (group, const char *, struct group_object)
 HASH_FUNCTIONS_DECL (universe, const char *, struct universe)
@@ -2133,6 +2134,8 @@ void uid_hash_delete PROTO ((struct lease *));
 void hw_hash_add PROTO ((struct lease *));
 void hw_hash_delete PROTO ((struct lease *));
 void write_leases PROTO ((void));
+int lease_enqueue (struct lease *);
+void lease_instantiate (const unsigned char *, unsigned, struct lease *);
 void expire_all_pools PROTO ((void));
 void dump_subnets PROTO ((void));
 HASH_FUNCTIONS_DECL (lease, const unsigned char *, struct lease)
@@ -2205,6 +2208,8 @@ isc_result_t dhcp_failover_set_state (dhcp_failover_state_t *,
 int dhcp_failover_pool_rebalance (dhcp_failover_state_t *);
 int dhcp_failover_pool_check (struct pool *);
 int dhcp_failover_state_pool_check (dhcp_failover_state_t *);
+void dhcp_failover_timeout (void *);
+void dhcp_failover_send_contact (void *);
 isc_result_t dhcp_failover_send_updates (dhcp_failover_state_t *);
 int dhcp_failover_queue_update (struct lease *, int);
 void dhcp_failover_ack_queue_remove (dhcp_failover_state_t *, struct lease *);

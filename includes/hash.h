@@ -48,6 +48,8 @@ typedef struct {
 	int foo;
 } hashed_object_t;
 
+typedef void (*hash_foreach_func) (const unsigned char *,
+				   unsigned, hashed_object_t *);
 typedef int (*hash_reference) (hashed_object_t **, hashed_object_t *,
 			       const char *, int);
 typedef int (*hash_dereference) (hashed_object_t **, const char *, int);
@@ -82,7 +84,10 @@ void name##_hash_add (struct hash_table *, bufarg, unsigned, type *,	      \
 void name##_hash_delete (struct hash_table *, bufarg, unsigned,		      \
 			 const char *, int);				      \
 int name##_hash_lookup (type **, struct hash_table *, bufarg, unsigned,	      \
-			const char *, int);
+			const char *, int);				      \
+int name##_hash_foreach (struct hash_table *,				      \
+			 void (*) (bufarg, unsigned, type *));
+
 
 #define HASH_FUNCTIONS(name, bufarg, type)				      \
 void name##_hash_add (struct hash_table *table,				      \
@@ -106,6 +111,12 @@ int name##_hash_lookup (type **ptr, struct hash_table *table,		      \
 {									      \
 	return hash_lookup ((hashed_object_t **)ptr, table,		      \
 			    (const unsigned char *)buf, len, file, line);     \
+}									      \
+									      \
+int name##_hash_foreach (struct hash_table *table,			      \
+			 void (*func) (bufarg, unsigned, type *))	      \
+{									      \
+	return hash_foreach (table, (hash_foreach_func)func);		      \
 }
 
 			    
