@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.138 2001/04/06 05:52:19 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.139 2001/04/16 22:25:04 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -807,12 +807,6 @@ void parse_failover_peer (cfile, group, type)
 	/* Save the name. */
 	peer -> name = name;
 
-	/* Set the initial state. */
-	peer -> me.state = potential_conflict;
-	peer -> me.stos = cur_time;
-	peer -> partner.state = unknown_state;
-	peer -> partner.stos = cur_time;
-
 	do {
 		cp = &peer -> me;
 	      peer:
@@ -981,6 +975,20 @@ void parse_failover_peer (cfile, group, type)
 	if (type == SHARED_NET_DECL) {
 		group -> shared_network -> failover_peer = peer;
 	}
+
+	/* Set the initial state. */
+	if (peer -> i_am == primary) {
+		peer -> me.state = recover;
+		peer -> me.stos = cur_time;
+		peer -> partner.state = unknown_state;
+		peer -> partner.stos = cur_time;
+	} else {
+		peer -> me.state = recover;
+		peer -> me.stos = cur_time;
+		peer -> partner.state = unknown_state;
+		peer -> partner.stos = cur_time;
+	}
+
 	status = enter_failover_peer (peer);
 	if (status != ISC_R_SUCCESS)
 		parse_warn (cfile, "failover peer %s: %s",
@@ -1141,19 +1149,23 @@ void parse_failover_state (cfile, state, stos)
 	}
 
 	token = next_token (&val, (unsigned *)0, cfile);
-	if (token != AT) {
-		parse_warn (cfile, "expecting \"at\"");
-		skip_to_semi (cfile);
-		return;
+	if (token == SEMI) {
+		stos_in = cur_time;
+	} else {
+		if (token != AT) {
+			parse_warn (cfile, "expecting \"at\"");
+			skip_to_semi (cfile);
+			return;
+		}
+		
+		stos_in = parse_date (cfile);
+		if (!stos_in)
+			return;
 	}
 
-	stos_in = parse_date (cfile);
-	if (!stos_in)
-		return;
-
-	/* Now that we've apparently gotten a clean parse, we can trust
-	   that this is a state that was fully committed to disk, so
-	   we can install it. */
+	/* Now that we've apparently gotten a clean parse, we
+	   can trust that this is a state that was fully committed to
+	   disk, so we can install it. */
 	*stos = stos_in;
 	*state = state_in;
 }
@@ -2897,6 +2909,9 @@ int parse_lease_declaration (struct lease **lp, struct parse *cfile)
 		} else
 			lease -> next_binding_state = lease -> binding_state;
 	}
+
+	if (!(seenmask & 65536))
+		lease -> tstp = lease -> ends;
 
 	lease_reference (lp, lease, MDL);
 	lease_dereference (&lease, MDL);
