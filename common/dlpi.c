@@ -84,7 +84,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dlpi.c,v 1.23 2000/09/01 23:03:34 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dlpi.c,v 1.24 2001/01/25 21:54:25 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -509,7 +509,7 @@ ssize_t send_packet (interface, packet, raw, len, from, to, hto)
 	struct hardware *hto;
 {
 	unsigned hbufp = 0;
-	double hh [16];
+	double hh [32];
 	double ih [1536 / sizeof (double)];
 	unsigned char *dbuf = (unsigned char *)ih;
 	unsigned dbuflen;
@@ -529,8 +529,11 @@ ssize_t send_packet (interface, packet, raw, len, from, to, hto)
 	/* Assemble the headers... */
 #ifdef USE_DLPI_RAW
 	assemble_hw_header (interface, (unsigned char *)hh, &dbuflen, hto);
+	if (dbuflen > sizeof hh)
+		abort ("hh is too small!");
 	fudge = dbuflen % 4; /* IP header must be word-aligned. */
 	memcpy (dbuf + fudge, (unsigned char *)hh, dbuflen);
+	dbuflen += fudge;
 #else
 	fudge = 0;
 #endif
