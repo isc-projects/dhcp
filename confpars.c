@@ -737,7 +737,7 @@ char *parse_filename_decl (cfile, bc)
 		skip_to_semi (cfile);
 		longjmp (jdref (bc), 1);
 	}
-	s = (char *)malloc (strlen (val));
+	s = (char *)malloc (strlen (val) + 1);
 	if (!s)
 		error ("no memory for filename.");
 	strcpy (s, val);
@@ -760,7 +760,7 @@ char *parse_servername_decl (cfile, bc)
 		skip_to_semi (cfile);
 		longjmp (jdref (bc), 1);
 	}
-	s = (char *)malloc (strlen (val));
+	s = (char *)malloc (strlen (val) + 1);
 	if (!s)
 		error ("no memory for server name.");
 	strcpy (s, val);
