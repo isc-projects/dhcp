@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: alloc.c,v 1.26 1999/03/25 21:55:14 mellon Exp $ Copyright (c) 1995, 1996, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: alloc.c,v 1.27 1999/04/05 15:23:07 mellon Exp $ Copyright (c) 1995, 1996, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -158,8 +158,14 @@ struct lease_state *new_lease_state (name)
 			(struct lease_state *)(free_lease_states -> next);
 	} else {
 		rval = dmalloc (sizeof (struct lease_state), name);
+		if (!rval)
+			return rval;
 	}
 	memset (rval, 0, sizeof *rval);
+	if (!option_state_allocate (&rval -> options, name)) {
+		free_lease_state (rval, name);
+		return (struct lease_state *)0;
+	}
 	return rval;
 }
 
@@ -208,6 +214,21 @@ void free_option (ptr, name)
 #endif
 }
 
+struct universe *new_universe (name)
+	char *name;
+{
+	struct universe *rval =
+		dmalloc (sizeof (struct universe), name);
+	return rval;
+}
+
+void free_universe (ptr, name)
+	struct universe *ptr;
+	char *name;
+{
+	dfree ((VOIDPTR)ptr, name);
+}
+
 void free_domain_search_list (ptr, name)
 	struct domain_search_list *ptr;
 	char *name;
@@ -219,6 +240,7 @@ void free_lease_state (ptr, name)
 	struct lease_state *ptr;
 	char *name;
 {
+	option_state_dereference (&ptr -> options, name);
 	ptr -> next = free_lease_states;
 	free_lease_states = ptr;
 }
@@ -522,7 +544,8 @@ int buffer_reference (ptr, bp, name)
 	char *name;
 {
 	if (!ptr) {
-		log_error ("Null pointer passed to buffer_reference: %s", name);
+		log_error ("Null pointer passed to buffer_reference: %s",
+			   name);
 		abort ();
 	}
 	if (*ptr) {
@@ -541,7 +564,8 @@ int buffer_dereference (ptr, name)
 	struct buffer *bp;
 
 	if (!ptr || !*ptr) {
-		log_error ("Null pointer passed to buffer_dereference: %s", name);
+		log_error ("Null pointer passed to buffer_dereference: %s",
+			   name);
 		abort ();
 	}
 
@@ -574,7 +598,8 @@ int dns_host_entry_reference (ptr, bp, name)
 	char *name;
 {
 	if (!ptr) {
-		log_error ("Null pointer in dns_host_entry_reference: %s", name);
+		log_error ("Null pointer in dns_host_entry_reference: %s",
+			   name);
 		abort ();
 	}
 	if (*ptr) {
@@ -594,7 +619,8 @@ int dns_host_entry_dereference (ptr, name)
 	struct dns_host_entry *bp;
 
 	if (!ptr || !*ptr) {
-		log_error ("Null pointer in dns_host_entry_dereference: %s", name);
+		log_error ("Null pointer in dns_host_entry_dereference: %s",
+			   name);
 		abort ();
 	}
 
@@ -602,5 +628,57 @@ int dns_host_entry_dereference (ptr, name)
 	if (!(*ptr) -> refcnt)
 		dfree ((*ptr), name);
 	*ptr = (struct dns_host_entry *)0;
+	return 1;
+}
+
+int option_state_allocate (ptr, name)
+	struct option_state **ptr;
+	char *name;
+{
+	int size;
+
+	if (!ptr) {
+		log_error ("Null pointer passed to option_state_allocate: %s",
+			   name);
+		abort ();
+	}
+	if (*ptr) {
+		log_error ("Non-null pointer in option_state_allocate (%s)",
+			   name);
+		abort ();
+	}
+
+	size = sizeof **ptr + (universe_count - 1) * sizeof (VOIDPTR);
+	*ptr = dmalloc (size, name);
+	if (*ptr) {
+		memset (*ptr, 0, size);
+		(*ptr) -> universe_count = universe_count;
+		return 1;
+	}
+	return 0;
+}
+
+int option_state_dereference (ptr, name)
+	struct option_state **ptr;
+	char *name;
+{
+	int i;
+
+	if (!ptr || !*ptr) {
+		log_error ("Null pointer in option_state_dereference: %s",
+			   name);
+		abort ();
+	}
+
+	/* Loop through the per-universe state. */
+	for (i = 0; i < (*ptr) -> universe_count; i++)
+		if ((*ptr) -> universes [i] &&
+		    universes [i] -> option_state_dereference)
+			((*(universes [i] -> option_state_dereference))
+			 (universes [i], *ptr));
+
+	/* No reference count yet. */
+	dfree ((*ptr), name);
+	*ptr = (struct option_state *)0;
 	return 1;
 }
