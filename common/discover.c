@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: discover.c,v 1.11 1999/09/08 01:44:08 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: discover.c,v 1.12 1999/09/09 21:00:46 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -65,10 +65,6 @@ void discover_interfaces (state)
 	isc_result_t status;
 
 	if (!dhcp_type_interface) {
-		status = omapi_init ();
-		if (status != ISC_R_SUCCESS)
-			log_fatal ("Can't initialize OMAPI: %s",
-				   isc_result_totext (status));
 		status = omapi_object_type_register
 			(&dhcp_type_interface, "interface",
 			 interface_set_value, interface_get_value,
