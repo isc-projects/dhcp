@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.37 1999/07/19 15:35:48 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.38 1999/07/19 20:10:52 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -387,7 +387,7 @@ int evaluate_boolean_expression (result, packet, options, lease, expr)
 {
 	struct data_string left, right;
 	struct data_string rrtype, expr1, expr2;
-	int ttl;
+	unsigned long ttl;
 	int s0, s1, s2, s3;
 	int bleft, bright;
 	int sleft, sright;
@@ -1085,7 +1085,7 @@ int evaluate_data_expression (result, packet, options, lease, expr)
 			/* The buffer must be a multiple of the number's
 			   width. */
 			if (other.len % len) {
-				log_info ("binary-to-ascii: %s %d %s %d!",
+				log_info ("reverse: %s %d %s %d!",
 					  "length of buffer", other.len,
 					  "not a multiple of width", len);
 				status = 0;
@@ -1153,9 +1153,9 @@ int evaluate_data_expression (result, packet, options, lease, expr)
 		     (result, packet, options, lease,
 		      expr -> data.pick_first_value.car))) {
 #if defined (DEBUG_EXPRESSIONS)
-			log_info ("data: pick_first_value (%s, ???)",
-				  print_hex_1 (result -> len,
-					       result -> data, 40));
+			log_debug ("data: pick_first_value (%s, ???)",
+				   print_hex_1 (result -> len,
+						result -> data, 40));
 #endif
 			return 1;
 		}
@@ -1163,9 +1163,9 @@ int evaluate_data_expression (result, packet, options, lease, expr)
 		     (result, packet, options, lease,
 		      expr -> data.pick_first_value.cdr))) {
 #if defined (DEBUG_EXPRESSIONS)
-			log_info ("data: pick_first_value (NULL, %s)",
-				  print_hex_1 (result -> len,
-					       result -> data, 40));
+			log_debug ("data: pick_first_value (NULL, %s)",
+				   print_hex_1 (result -> len,
+						result -> data, 40));
 #endif
 			return 1;
 		}
@@ -1180,8 +1180,8 @@ int evaluate_data_expression (result, packet, options, lease, expr)
 			log_error ("data: host_decl_name: not available");
 			return 0;
 		}
-		result -> len = strlen (lease -> host -> name) + 1;
-		if (buffer_allocate (&result -> buffer, result -> len,
+		result -> len = strlen (lease -> host -> name);
+		if (buffer_allocate (&result -> buffer, result -> len + 1,
 				     "host-decl-name")) {
 			result -> data = &result -> buffer -> data [0];
 			strcpy (&result -> data [0], lease -> host -> name);
