@@ -42,13 +42,16 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: clparse.c,v 1.6 1997/03/05 06:24:21 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: clparse.c,v 1.7 1997/03/28 23:50:15 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
 #include "dhctoken.h"
 
 static TIME parsed_time;
+
+struct client_config top_level_config;
+u_int32_t requested_lease_time;
 
 /* client-conf-file :== client-declarations EOF
    client-declarations :== <nil>
@@ -72,6 +75,42 @@ int read_client_conf ()
 
 	/* Initialize the top level client configuration. */
 	memset (&top_level_config, 0, sizeof top_level_config);
+
+	/* Set some defaults... */
+	top_level_config.timeout = 60;
+	top_level_config.select_interval = 0;
+	top_level_config.reboot_timeout = 10;
+	top_level_config.retry_interval = 300;
+	top_level_config.backoff_cutoff = 120;
+	top_level_config.initial_interval = 10;
+	top_level_config.bootp_policy = ACCEPT;
+	top_level_config.script_name = "/etc/dhclient-script";
+	top_level_config.requested_options
+		[top_level_config.requested_option_count++] =
+			DHO_SUBNET_MASK;
+	top_level_config.requested_options
+		[top_level_config.requested_option_count++] =
+			DHO_BROADCAST_ADDRESS;
+	top_level_config.requested_options
+		[top_level_config.requested_option_count++] =
+			DHO_TIME_OFFSET;
+	top_level_config.requested_options
+		[top_level_config.requested_option_count++] =
+			DHO_ROUTERS;
+	top_level_config.requested_options
+		[top_level_config.requested_option_count++] =
+			DHO_DOMAIN_NAME;
+	top_level_config.requested_options
+		[top_level_config.requested_option_count++] =
+			DHO_DOMAIN_NAME_SERVERS;
+	top_level_config.requested_options
+		[top_level_config.requested_option_count++] =
+			DHO_HOST_NAME;
+	requested_lease_time = 7200;
+	top_level_config.requested_options [DHO_DHCP_LEASE_TIME].data
+		= (unsigned char *)&requested_lease_time;
+	top_level_config.requested_options [DHO_DHCP_LEASE_TIME].len
+		= sizeof requested_lease_time;
 
 	if ((cfile = fopen (path_dhclient_conf, "r")) == NULL)
 		error ("Can't open %s: %m", path_dhclient_conf);
