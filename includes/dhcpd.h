@@ -138,6 +138,7 @@ struct group {
 	int dynamic_bootp;
 	int one_lease_per_client;
 	int get_lease_hostnames;
+	int use_host_decl_names;
 
 	struct tree_cache *options [256];
 };

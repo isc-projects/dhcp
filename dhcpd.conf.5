@@ -615,6 +615,39 @@ each address in the lease pool and use that address for the DHCP
 \fIhostname\fR option.  If \fIflag\fR is true, then this lookup is
 done for all addresses in the current scope.   By default, or if
 \fIflag\fR is false, no lookups are done.
+.PP
+.B The
+.I use-host-decl-names
+.B statement
+.PP
+ \fBuse-host-decl-names\fR \fIflag\fR\fB;\fR
+.PP
+If the \fIuse-host-decl-names\fR parameter is true in a given scope,
+then for every host declaration within that scope, the name provided
+for the host declaration will be supplied to the client as its
+hostname.   So, for example,
+.PP
+.nf
+    group {
+      use-host-decl-names on;
+
+      host joe {
+	hardware ethernet 08:00:2b:4c:29:32;
+	fixed-address joe.fugue.com;
+      }
+    }
+
+is equivalent to
+
+      host joe {
+	hardware ethernet 08:00:2b:4c:29:32;
+	fixed-address joe.fugue.com;
+        option host-name "joe";
+      }
+.fi
+.PP
+An \fIoption host-name\fR statement within a host declaration will
+override the use of the name in the host declaration.
 .SH REFERENCE: OPTION STATEMENTS
 .PP
 DHCP \fIoption\fR statements always start with the \fIoption\fR

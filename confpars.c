@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.32 1996/09/02 21:16:25 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.33 1996/09/09 07:04:28 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -143,6 +143,7 @@ void read_leases ()
 	       | BOOT_UNKNOWN_CLIENTS boolean
 	       | ONE_LEASE_PER_CLIENT boolean
 	       | GET_LEASE_HOSTNAMES boolean
+	       | USE_HOST_DECL_NAME boolean
 	       | NEXT_SERVER ip-addr-or-hostname SEMI
 	       | option_parameter
 	       | SERVER-IDENTIFIER ip-addr-or-hostname SEMI
@@ -288,6 +289,12 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		if (type == HOST_DECL)
 			parse_warn ("get-lease-hostnames not allowed here.");
 		group -> get_lease_hostnames = parse_boolean (cfile);
+		break;
+
+	      case USE_HOST_DECL_NAMES:
+		if (type == HOST_DECL)
+			parse_warn ("use-host-decl-names not allowed here.");
+		group -> use_host_decl_names = parse_boolean (cfile);
 		break;
 
 	      case NEXT_SERVER:
@@ -518,7 +525,8 @@ void parse_host_declaration (cfile, group)
 					       declaration);
 	} while (1);
 
-	if (!host -> group -> options [DHO_HOST_NAME]) {
+	if (!host -> group -> options [DHO_HOST_NAME] &&
+	    host -> group -> use_host_decl_names) {
 		host -> group -> options [DHO_HOST_NAME] =
 			new_tree_cache ("parse_host_declaration");
 		if (!host -> group -> options [DHO_HOST_NAME])
@@ -1321,15 +1329,22 @@ struct lease *parse_lease_declaration (cfile)
 					lease.uid_len = strlen (val) + 1;
 					lease.uid = (unsigned char *)
 						malloc (lease.uid_len);
+					if (!lease.uid) {
+						warn ("no space for uid");
+						return (struct lease *)0;
+					}
 					memcpy (lease.uid, val, lease.uid_len);
 				} else {
 					lease.uid_len = 0;
 					lease.uid = parse_numeric_aggregate
 						(cfile, (unsigned char *)0,
 						 &lease.uid_len, ':', 16, 8);
-					if (!lease.uid)
+					if (!lease.uid) {
+						warn ("no space for uid");
 						return (struct lease *)0;
+					}
 					if (lease.uid_len == 0) {
+						lease.uid = (unsigned char *)0;
 						parse_warn ("zero-length uid");
 						seenbit = 0;
 						break;
