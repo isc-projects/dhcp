@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.70 1999/04/05 15:19:59 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.71 1999/04/05 19:00:50 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -893,8 +893,8 @@ struct client_lease *packet_to_lease (packet)
 	memset (lease, 0, sizeof *lease);
 
 	/* Copy the lease options. */
-	lease -> options = packet -> options;
-	memset (&packet -> options, 0, sizeof packet -> options);
+	option_state_reference (&lease -> options,
+				packet -> options, "packet_to_lease");
 
 	lease -> address.len = sizeof (packet -> raw -> yiaddr);
 	memcpy (lease -> address.iabuf, &packet -> raw -> yiaddr,
