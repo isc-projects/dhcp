@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.8 1998/11/05 18:43:23 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.9 1998/11/06 00:13:03 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -676,12 +676,8 @@ TIME parse_date (cfile)
 	tm.tm_yday = 0;
 
 	/* Make sure the date ends in a semicolon... */
-	token = next_token (&val, cfile);
-	if (token != SEMI) {
-		parse_warn ("semicolon expected.");
-		skip_to_semi (cfile);
+	if (!parse_semi (cfile))
 		return 0;
-	}
 
 	/* Guess the time value... */
 	guess = ((((((365 * (tm.tm_year - 70) +	/* Days in years since '70 */
@@ -930,6 +926,13 @@ struct executable_statement *parse_executable_statement (cfile, lose)
 		base.op = break_statement;
 		break;
 
+	      case SEND:
+		*lose = 1;
+		parse_warn ("send not appropriate here.");
+		skip_to_semi (cfile);
+		return (struct executable_statement *)0;
+
+	      case SUPERSEDE:
 	      case OPTION:
 		token = next_token (&val, cfile);
 		option = parse_option_name (cfile);
@@ -1047,9 +1050,16 @@ struct executable_statement *parse_if_statement (cfile, lose)
 			return (struct executable_statement *)0;
 		} else {
 			token = next_token (&val, cfile);
-			false = parse_executable_statement (cfile, lose);
+			false = parse_executable_statements (cfile, lose);
 			if (*lose)
 				return (struct executable_statement *)0;
+			token = next_token (&val, cfile);
+			if (token != RBRACE) {
+				parse_warn ("right brace expected.");
+				skip_to_semi (cfile);
+				*lose = 1;
+				return (struct executable_statement *)0;
+			}
 		}
 	} else if (token == ELSIF) {
 		token = next_token (&val, cfile);
@@ -1690,12 +1700,8 @@ struct executable_statement *parse_option_statement (cfile, lookups,
 		
 #endif /* 0 */
       done:
-	token = next_token (&val, cfile);
-	if (token != SEMI) {
-		parse_warn ("semicolon expected.");
-		skip_to_semi (cfile);
+	if (!parse_semi (cfile))
 		return (struct executable_statement *)0;
-	}
 	stmt = ((struct executable_statement *)
 		dmalloc (sizeof *stmt, "parse_option_statement"));
 	memset (stmt, 0, sizeof *stmt);
