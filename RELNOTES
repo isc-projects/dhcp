@@ -1,6 +1,6 @@
 	    Internet Software Consortium DHCP Distribution
-		   Version 3, Beta 2, Patchlevel 2
-			  September 4, 2000
+		   Version 3, Beta 2, Patchlevel 3
+			  September 7, 2000
 
 			    Release Notes
 
@@ -48,6 +48,16 @@ Measurement Systems, and Brian Murrell at BC Tel Advanced
 Communications.  I'd like to express my thanks to all of these good
 people here, both for working on the code and for prodding me into
 improving it.
+
+		Changes since 3.0 Beta 2 Patchlevel 2
+
+- Fix a case where the DHCP server might inappropriately NAK a
+  RENEWING client.
+
+- Fix a place dhcprequest() where static leases could leak.
+
+- Include memory.h in omapip_p.h so that we don't get warnings about
+  using memcmp().
 
 		Changes since 3.0 Beta 2 Patchlevel 1
 
