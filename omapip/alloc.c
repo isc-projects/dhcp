@@ -481,6 +481,7 @@ isc_result_t omapi_object_dereference (omapi_object_t **h,
 			if (outer_reference)
 				omapi_object_dereference
 					(&(*h) -> outer, file, line);
+			(*h) -> refcnt--;
 			if (!(*h) -> type -> freer)
 				rc_register (file, line, h, *h, 0);
 			if ((*h) -> type -> destroy)
