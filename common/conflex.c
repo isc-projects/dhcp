@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: conflex.c,v 1.92.2.11 2005/03/01 23:07:22 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: conflex.c,v 1.92.2.12 2005/03/01 23:22:34 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -488,12 +488,6 @@ static enum dhcp_token read_number (c, cfile)
 	cfile -> tokbuf [i] = 0;
 	cfile -> tlen = i;
 	cfile -> tval = cfile -> tokbuf;
-
-	/* Check for octal after the fact - octal cannot be a NUMBER as
-	 * atoi() will not parse it properly.
-	 */
-	if ((token == NUMBER) && (cfile->tokbuf[0] == '0') && (i > 1))
-		token = NUMBER_OR_NAME;
 
 	return token;
 }
