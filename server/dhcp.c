@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.184 2001/03/15 23:22:08 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.185 2001/03/16 01:55:38 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2759,10 +2759,11 @@ int find_lease (struct lease **lp,
 			      piaddr (fixed_lease -> ip_addr));
 		}
 #endif
-		if (!fixed_lease)	/* Save the host if we found one. */
-			host_reference (&host, hp, MDL);
-		if (hp)
+		if (hp) {
+			if (!fixed_lease) /* Save the host if we found one. */
+				host_reference (&host, hp, MDL);
 			host_dereference (&hp, MDL);
+		}
 
 		find_lease_by_uid (&uid_lease, client_identifier.data,
 				   client_identifier.len, MDL);
@@ -3207,12 +3208,30 @@ int find_lease (struct lease **lp,
 			log_info ("not choosing hardware lease.");
 #endif
 		} else {
-			lease_reference (&lease, hw_lease, MDL);
-			if (lease -> host)
-				host_dereference (&lease -> host, MDL);
+			/* We're a little lax here - if the client didn't
+			   send a client identifier and it's a bootp client,
+			   but the lease has a client identifier, we still
+			   let the client have a lease. */
+			if (!hw_lease -> uid_len ||
+			    (have_client_identifier
+			     ? (hw_lease -> uid_len ==
+				client_identifier.len &&
+				!memcmp (hw_lease -> uid,
+					 client_identifier.data,
+					 client_identifier.len))
+			     : packet -> packet_type == 0)) {
+				lease_reference (&lease, hw_lease, MDL);
+				if (lease -> host)
+					host_dereference (&lease -> host, MDL);
 #if defined (DEBUG_FIND_LEASE)
-			log_info ("choosing hardware lease.");
+				log_info ("choosing hardware lease.");
 #endif
+			} else {
+#if defined (DEBUG_FIND_LEASE)
+				log_info ("not choosing hardware lease: %s.",
+					  "uid mismatch");
+#endif
+			}
 		}
 		lease_dereference (&hw_lease, MDL);
 	}
