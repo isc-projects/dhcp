@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bootp.c,v 1.28.2.4 1999/03/26 16:57:33 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bootp.c,v 1.28.2.5 1999/04/06 15:15:00 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -67,13 +67,14 @@ void bootp (packet)
 	if (packet -> raw -> op != BOOTREQUEST)
 		return;
 
-	note ("BOOTREQUEST from %s via %s",
+	note ("BOOTREQUEST from %s via %s%s",
 	      print_hw_addr (packet -> raw -> htype,
 			     packet -> raw -> hlen,
 			     packet -> raw -> chaddr),
 	      packet -> raw -> giaddr.s_addr
 	      ? inet_ntoa (packet -> raw -> giaddr)
-	      : packet -> interface -> name);
+	      : packet -> interface -> name,
+	      packet -> options_valid ? "" : " (non-rfc1048)");
 
 
 
@@ -232,7 +233,9 @@ void bootp (packet)
 
 	/* If we didn't get a known vendor magic number on the way in,
 	   just copy the input options to the output. */
-	if (!packet -> options_valid) {
+	if (!packet -> options_valid &&
+	    !subnet -> group -> always_reply_rfc1048 &&
+	    (!hp || !hp -> group -> always_reply_rfc1048)) {
 		memcpy (outgoing.raw -> options,
 			packet -> raw -> options, DHCP_OPTION_LEN);
 		outgoing.packet_length = BOOTP_MIN_LEN;
