@@ -48,9 +48,8 @@ and for prodding me into improving it.
 - The 'ping timeout' debugs from rc12 were removed to -DDEBUG only,
   and reformatted to correct a compilation error on solaris platforms.
 
-- A patch from Ted Lemon was applied which fixes a case where leases
-  read from the leases database do not properly over-ride previously
-  read leases.
+- A patch was applied which fixes a case where leases read from the
+  leases database do not properly over-ride previously read leases.
 
 - dhcpctl.3 manpage was tweaked.
 
