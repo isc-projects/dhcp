@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bootp.c,v 1.43 1999/04/05 16:31:54 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bootp.c,v 1.44 1999/04/08 19:36:23 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -151,11 +151,36 @@ void bootp (packet)
 
 	/* If we didn't get a known vendor magic number on the way in,
 	   just copy the input options to the output. */
-	if (!packet -> options_valid) {
+	if (!packet -> options_valid &&
+	    !(evaluate_boolean_option_cache
+	      (packet, options,
+	       lookup_option (&dhcp_universe, options,
+			      SV_ALWAYS_REPLY_RFC1048)))) {
 		memcpy (outgoing.raw -> options,
 			packet -> raw -> options, DHCP_OPTION_LEN);
 		outgoing.packet_length = BOOTP_MIN_LEN;
 	} else {
+
+		/* Use the subnet mask from the subnet declaration if no other
+		   mask has been provided. */
+
+		oc = (struct option_cache *)0;
+		i = DHO_SUBNET_MASK;
+		if (!lookup_option (&dhcp_universe, options, i)) {
+			if (option_cache_allocate (&oc, "ack_lease")) {
+				if (make_const_data
+				    (&oc -> expression,
+				     lease -> subnet -> netmask.iabuf,
+				     lease -> subnet -> netmask.len, 0, 0)) {
+					oc -> option =
+						dhcp_universe.options [i];
+					save_option (&dhcp_universe,
+						     options, oc);
+				}
+				option_cache_dereference (&oc, "ack_lease");
+			}
+		}
+
 		/* Pack the options into the buffer.  Unlike DHCP, we
 		   can't pack options into the filename and server
 		   name buffers. */
