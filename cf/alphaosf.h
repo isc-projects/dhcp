@@ -1,9 +1,9 @@
-/* netbsd.h
+/* alphaosf.h
 
-   System dependencies for NetBSD... */
+   System dependencies for DEC Alpha/OSF1... */
 
 /*
- * Copyright (c) 1995 RadioMail Corporation.  All rights reserved.
+ * Copyright (c) 1996 Internet Software Consortium.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -74,7 +74,7 @@ extern int h_errno;
 #define ADD_TIME(d, s1, s2) (*(d) = *(s1) + *(s2))
 #define SET_MAX_TIME(x)	(*(x) = INT_MAX)
 
-/* The jmp_buf type is an array on SunOS, so we can't dereference it
+/* The jmp_buf type is an array on OSF/1, so we can't dereference it
    and must declare it differently. */
 #define jbp_decl(x)	jmp_buf x
 #define jref(x)		(x)
