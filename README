@@ -112,6 +112,19 @@ BROADCAST_ADDRESS[0]="255.255.255.255"
 LANCONFIG_ARGS[0]="ether"
 DHCP_ENABLE[0]=0
 
+The above hack supposedly does not work on HP-UX version 9.x.
+However, another hack which supposedly _does_ work on 9.x is to add
+the following entry to your /etc/hosts or DNS database:
+
+255.255.255.255 all-ones
+
+Then modify the broadcast as follows (change to suit your
+configuration, of course):
+
+ifconfig lan0 [your ip addr] netmask [your netmask]  broadcast all-ones
+
+I would appreciate any reports as to how well this works for you.
+
 				ULTRIX
 
 Now that we have Ultrix packet filter support, dhcpd on Ultrix should
