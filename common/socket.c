@@ -51,7 +51,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: socket.c,v 1.48 2000/04/06 23:56:01 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: socket.c,v 1.49 2000/05/01 23:31:49 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -117,7 +117,7 @@ int if_register_socket (info)
 	/* Set up the address we're going to bind to. */
 	name.sin_family = AF_INET;
 	name.sin_port = local_port;
-	name.sin_addr.s_addr = INADDR_ANY;
+	name.sin_addr = local_address;
 	memset (name.sin_zero, 0, sizeof (name.sin_zero));
 
 	/* Make a socket... */
@@ -135,6 +135,12 @@ int if_register_socket (info)
 	if (setsockopt (sock, SOL_SOCKET, SO_BROADCAST,
 			(char *)&flag, sizeof flag) < 0)
 		log_fatal ("Can't set SO_BROADCAST option on dhcp socket: %m");
+
+	/* Set the SO_USELOOPBACK option so that we can broadcast DHCP
+	   responses. */
+	if (setsockopt (sock, SOL_SOCKET, SO_USELOOPBACK,
+			(char *)&flag, sizeof flag) < 0)
+		log_fatal ("Can't set SO_USELOOPBACK on dhcp socket: %m");
 
 	/* Bind the socket to this interface's IP address. */
 	if (bind (sock, (struct sockaddr *)&name, sizeof name) < 0)
