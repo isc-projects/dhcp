@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tables.c,v 1.8 1996/08/27 09:55:25 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tables.c,v 1.9 1996/08/28 01:40:28 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -340,6 +340,7 @@ unsigned char dhcp_option_default_priority_list [] = {
 	DHO_TIME_SERVERS,
 	DHO_NAME_SERVERS,
 	DHO_DOMAIN_NAME_SERVERS,
+	DHO_HOST_NAME,
 	DHO_LOG_SERVERS,
 	DHO_COOKIE_SERVERS,
 	DHO_LPR_SERVERS,
