@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: class.c,v 1.22 2000/09/06 20:26:13 mellon Exp $ Copyright (c) 1998-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: class.c,v 1.23 2000/09/20 09:03:59 mellon Exp $ Copyright (c) 1998-2000 The Internet Software Consortium.  All rights reserved.\n";
 
 #endif /* not lint */
 
@@ -113,7 +113,7 @@ int check_collection (packet, lease, collection)
 				  (&data, packet, lease,
 				   packet -> options, (struct option_state *)0,
 				   &lease -> scope, class -> submatch));
-			if (status) {
+			if (status && data.len) {
 				nc = (struct class *)0;
 				if (class_hash_lookup (&nc, class -> hash,
 						       (const char *)data.data,
