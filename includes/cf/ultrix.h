@@ -98,6 +98,12 @@ extern int h_errno;
 #define TIME time_t
 #define GET_TIME(x)	time ((x))
 
+/* Ultrix doesn't provide an endian.h, but it only runs on little-endian
+   machines, so we'll just hack around the issue. */
+#define BIG_ENDIAN 1
+#define LITTLE_ENDIAN 2
+#define BYTE_ORDER LITTLE_ENDIAN
+
 #if defined (USE_DEFAULT_NETWORK)
-#  define USE_SOCKETS
+#  define USE_UPF
 #endif
