@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.152 2000/06/06 23:59:18 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.153 2000/06/08 21:22:48 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1639,7 +1639,8 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 			   XXX the peer's expiry time for this lease up
 			   XXX by a few seconds - think about this again
 			   XXX later. */
-			if (cur_time + lease_time > lease -> tsfp) {
+			if (lease_time > peer -> mclt &&
+			    cur_time + lease_time > lease -> tsfp) {
 				/* Here we're assuming that if we don't have
 				   to update tstp, there's already an update
 				   queued.   May want to revisit this.  */
