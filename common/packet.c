@@ -40,10 +40,9 @@
  * Enterprises, see ``http://www.vix.com''.
  */
 
-
 #ifndef lint
 static char copyright[] =
-"$Id: packet.c,v 1.13 1997/03/05 06:15:00 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: packet.c,v 1.14 1997/03/05 20:06:03 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -76,6 +75,7 @@ static u_int32_t checksum (buf, nbytes, sum)
 #endif
 		sum += (u_int16_t) ntohs(*((u_int16_t *)buf)++);
 	}	
+
 	/* If there's a single byte left over, checksum it, too.   Network
 	   byte order is big-endian, so the remaining byte is the high byte. */
 	if (i < nbytes) {
@@ -97,20 +97,26 @@ static u_int32_t wrapsum (sum)
 #ifdef DEBUG_CHECKSUM
 	debug ("wrapsum (%x)", sum);
 #endif
-	while (sum >> 16) {
+
+	while (sum > 0x10000) {
+		sum = (sum >> 16) + (sum & 0xFFFF);
 #ifdef DEBUG_CHECKSUM_VERBOSE
 		debug ("sum = %x", sum);
 #endif
-		sum = (sum & 0xFFFF) + (sum >> 16);
+		sum += (sum >> 16);
+#ifdef DEBUG_CHECKSUM_VERBOSE
+		debug ("sum = %x", sum);
+#endif
 	}
+	sum = sum ^ 0xFFFF;
 #ifdef DEBUG_CHECKSUM_VERBOSE
 	debug ("sum = %x", sum);
 #endif
 	
 #ifdef DEBUG_CHECKSUM
-	debug ("wrapsum returns %x", htons (~sum));
+	debug ("wrapsum returns %x", htons (sum));
 #endif
-	return htons(~sum);
+	return htons(sum);
 }
 #endif /* PACKET_ASSEMBLY || PACKET_DECODING */
 
