@@ -204,6 +204,7 @@ struct lease_state {
 	u_int16_t secs;
 	u_int16_t bootp_flags;
 	struct in_addr ciaddr;
+	struct in_addr siaddr;
 	struct in_addr giaddr;
 	u_int8_t hops;
 	u_int8_t offer;
