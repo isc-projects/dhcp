@@ -1,12 +1,26 @@
 		     Internet Software Consortium
 	      Dynamic Host Configuration Protocol Server
-		      Version 1.0, Patchlevel 0
-			   December 6, 1997
+		      Version 1.0, Patchlevel 1
+			    May 17, 1998
 
 			    Release Notes
 
-This is version 1.0 of the Internet Software Consortium DHCP Server
-The previous version was Beta Release 5, Patchlevel 17.
+This is version 1.0 Patchlevel 1 of the Internet Software Consortium
+DHCP Server The previous version was Version 1.0.
+
+              CHANGES FROM VERSION 1.0 BETA 1 PATCHLEVEL 0
+
+- Fix two potential buffer overflow problems.
+
+- Clarify socket API error message on multiple interfaces.
+
+- Fix broken comparison that was setting IP source address to zero.
+
+- Only return 64 bytes of options to BOOTP clients, as specified in
+  BOOTP protocol.
+
+- Documentation fixes.
+
 
 			CHANGES IN VERSION 1.0
 
