@@ -201,7 +201,7 @@ MAN    = dhcpd.8 dhcpd.conf.5
 DEBUG  = -g
 CFLAGS = $(DEBUG) $(PREDEFINES) $(INCLUDES) $(COPTS)
 
-all:	$(PROGS) $(CATMANPAGES)
+all:	$(PROG) $(CATMANPAGES)
 
 install: dhcpd $(CATMANPAGES)
 	$(INSTALL) dhcpd $(BINDIR); $(CHMOD) 755 $(BINDIR)/dhcpd
