@@ -47,7 +47,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bpf.c,v 1.47 2001/04/05 20:47:34 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bpf.c,v 1.48 2001/04/08 21:12:49 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -500,8 +500,7 @@ ssize_t receive_packet (interface, buf, len, from, hfrom)
 					       hdr.bh_caplen);
 			continue;
 		}
-		interface -> rbuf_offset =
-			BPF_WORDALIGN (interface -> rbuf_offset + offset);
+		interface -> rbuf_offset = interface -> rbuf_offset + offset;
 		hdr.bh_caplen -= offset;
 
 		/* If there's not enough room to stash the packet data,
