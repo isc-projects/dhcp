@@ -157,6 +157,7 @@ CSRC   = options.c errwarn.c convert.c \
 COBJ   = options.o errwarn.o convert.o \
 	 tree.o memory.o alloc.o print.o hash.o tables.o inet.o \
 	 dispatch.o bpf.o packet.o raw.o nit.o socket.o
+XOBJ   = dhcpxlt.o xconflex.o xerrwarn.o
 SRCS   = dhcpd.c dhcp.c bootp.c conflex.c confpars.c db.c
 OBJS   = dhcpd.o dhcp.o bootp.o conflex.o confpars.o db.o
 PROGS  = dhcpd dhclient
@@ -165,7 +166,7 @@ MAN    = dhcpd.8 dhcpd.conf.5
 DEBUG  = -g
 CFLAGS = $(DEBUG) $(PREDEFINES) $(INCLUDES) $(COPTS)
 
-all:	dhcpd dhclient $(CATMANPAGES)
+all:	dhcpd dhclient dhcpxlt $(CATMANPAGES)
 
 install: dhcpd $(CATMANPAGES)
 	$(INSTALL) dhcpd $(BINDIR); $(CHMOD) 755 $(BINDIR)/dhcpd
@@ -181,6 +182,12 @@ install: dhcpd $(CATMANPAGES)
 				$(ADMMANDIR)/dhcpd$(ADMMANEXT)
 	$(MANINSTALL) $(MANFROM) dhcpd.conf.cat5 $(MANTO) \
 				$(FFMANDIR)/dhcpd.conf$(FFMANEXT)
+
+clean:
+	-rm -f $(OBJS) $(COBJ) $(XOBJ) dhclient.o
+	
+realclean: clean
+	-rm -f dhcpd dhclient dhcpxlt $(CATMANPAGES)
 
 # These should only be done on 4.4 BSD-based systems, since the mandoc
 # macros aren't available on older unices.   Catted man pages are
@@ -199,6 +206,25 @@ dhcpd:	$(OBJS) $(COBJ)
 
 dhclient:	dhclient.o $(COBJ)
 	$(CC) -o dhclient dhclient.o $(COBJ) $(LIBS)
+
+dhcpxlt:	dhcpxlt.o xerrwarn.o convert.o tables.o inet.o xconflex.o \
+		hash.o alloc.o
+	$(CC) -o dhcpxlt \
+		dhcpxlt.o xerrwarn.o convert.o tables.o inet.o xconflex.o \
+		hash.o alloc.o \
+		$(LIBS)
+
+xconflex.o:	dhcpd.h cdefs.h osdep.h site.h $(CF) dhcp.h tree.h \
+		hash.h inet.h dhctoken.h conflex.c
+		@cp conflex.c xconflex.c
+		$(CC) $(CFLAGS) -c xconflex.c -DSAVE_COMMENTS
+		@-rm -f xconflex.c
+
+xerrwarn.o:	dhcpd.h cdefs.h osdep.h site.h $(CF) dhcp.h tree.h \
+		hash.h inet.h errwarn.c
+		@cp errwarn.c xerrwarn.c
+		$(CC) $(CFLAGS) -c xerrwarn.c -DDEBUG
+		@-rm -f xerrwarn.c
 
 # Dependencies (semi-automatically-generated)
 
