@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.83 1999/09/22 17:32:04 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.84 1999/09/28 23:55:55 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -207,7 +207,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		if (type != HOST_DECL && type != CLASS_DECL)
 			parse_group_declaration (cfile, group);
 		else {
-			parse_warn ("host declarations not allowed here.");
+			parse_warn ("group declarations not allowed here.");
 			skip_to_semi (cfile);
 		}
 		return 1;
@@ -964,6 +964,85 @@ void parse_host_declaration (cfile, group)
 				break;
 			continue;
 		}
+
+		if (token == GROUP) {
+			struct group_object *go;
+			token = next_token (&val, cfile);
+			token = next_token (&val, cfile);
+			if (token != STRING && !is_identifier (token)) {
+				parse_warn ("expecting string or identifier.");
+				skip_to_rbrace (cfile, 1);
+				break;
+			}
+			go = ((struct group_object *)
+			      hash_lookup (group_name_hash,
+					   val, strlen (val)));
+			if (!go) {
+				parse_warn
+					("unknown group %s in host %s",
+					 val, host -> name);
+			} else {
+				if (host -> named_group)
+					omapi_object_dereference
+						((omapi_object_t **)
+						 &host -> named_group,
+						 "parse_host_declaration");
+				omapi_object_reference
+					((omapi_object_t **)
+					 &host -> named_group,
+					 (omapi_object_t *)go,
+					 "parse_host_declaration");
+			}
+			if (!parse_semi (cfile))
+				break;
+			continue;
+		}
+
+		if (token == UID) {
+			char *s;
+			unsigned char *t = 0;
+			int len;
+
+			token = next_token (&val, cfile);
+			data_string_forget (&host -> client_identifier,
+					    "parse_host_declaration");
+
+			/* See if it's a string or a cshl. */
+			token = peek_token (&val, cfile);
+			if (token == STRING) {
+				token = next_token (&val, cfile);
+				s = val;
+				len = strlen (val);
+				host -> client_identifier.terminated = 1;
+			} else {
+				len = 0;
+				t = parse_numeric_aggregate
+					(cfile,
+					 (unsigned char *)0, &len, ':', 16, 8);
+				if (!t) {
+					parse_warn ("expecting hex list.");
+					skip_to_semi (cfile);
+				}
+				s = (char *)t;
+			}
+			if (!buffer_allocate
+			    (&host -> client_identifier.buffer,
+			     len + host -> client_identifier.terminated,
+			     "parse_host_declaration"))
+				log_fatal ("no memory for uid for host %s.",
+					   host -> name);
+			host -> client_identifier.data =
+				host -> client_identifier.buffer -> data;
+			host -> client_identifier.len = len;
+			memcpy (host -> client_identifier.data, s,
+				len + host -> client_identifier.terminated);
+			if (t)
+				dfree (t, "parse_host_declaration");
+
+			if (!parse_semi (cfile))
+				break;
+			continue;
+		}
 		declaration = parse_statement (cfile, host -> group,
 					       HOST_DECL, host,
 					       declaration);
@@ -973,14 +1052,29 @@ void parse_host_declaration (cfile, group)
 		struct host_decl *hp =
 			(struct host_decl *)
 			hash_lookup (host_name_hash,
-				     (unsigned char *)host -> name, strlen (host -> name));
+				     (unsigned char *)host -> name,
+				     strlen (host -> name));
 		if (hp) {
 			delete_host (hp, 0);
 		}
 		dfree (host -> name, "parse_host_declaration");
-		free_group (host -> group, "parse_host_declaration");
+		if (host -> group)
+			free_group (host -> group, "parse_host_declaration");
 		dfree (host, "parse_host_declaration");
 	} else {
+		if (host -> named_group && host -> named_group -> group) {
+			if (host -> group -> statements ||
+			    (host -> group -> authoritative !=
+			     host -> named_group -> group -> authoritative))
+				host -> group -> next =
+					host -> named_group -> group;
+			else {
+				dfree (host -> group,
+				       "parse_host_declaration");
+				host -> group = host -> named_group -> group;
+			}
+		}
+				
 		status = enter_host (host, dynamicp, 0);
 		if (status != ISC_R_SUCCESS)
 			parse_warn ("host %s: %s", isc_result_totext (status));
@@ -1443,8 +1537,24 @@ void parse_group_declaration (cfile, group)
 	enum dhcp_token token;
 	struct group *g;
 	int declaration = 0;
+	struct group_object *t;
+	isc_result_t status;
+	char *name;
+	int deletedp = 0;
+	int dynamicp = 0;
+	int staticp = 0;
 
 	g = clone_group (group, "parse_group_declaration");
+
+	token = peek_token (&val, cfile);
+	if (is_identifier (token) || token == STRING) {
+		next_token (&val, cfile);
+		
+		name = dmalloc (strlen (val) + 1, "parse_group_declaration");
+		if (!name)
+			log_fatal ("no memory for group decl name %s", val);
+		strcpy (name, val);
+	}		
 
 	if (!parse_lbrace (cfile))
 		return;
@@ -1458,11 +1568,48 @@ void parse_group_declaration (cfile, group)
 			token = next_token (&val, cfile);
 			parse_warn ("unexpected end of file");
 			break;
+		} else if (token == DELETED) {
+			token = next_token (&val, cfile);
+			parse_semi (cfile);
+			deletedp = 1;
+		} else if (token == DYNAMIC) {
+			token = next_token (&val, cfile);
+			parse_semi (cfile);
+			dynamicp = 1;
+		} else if (token == STATIC) {
+			token = next_token (&val, cfile);
+			parse_semi (cfile);
+			staticp = 1;
 		}
 		declaration = parse_statement (cfile, g, GROUP_DECL,
 					       (struct host_decl *)0,
 					       declaration);
 	} while (1);
+
+	if (name) {
+		if (deletedp) {
+			if (group_name_hash) {
+				t = ((struct group_object *)
+				     hash_lookup (group_name_hash,
+						  name, strlen (name)));
+				if (t) {
+					delete_group (t, 0);
+				}
+			}
+		} else {
+			t = dmalloc (sizeof *t, "parse_group_declaration");
+			if (!t)
+				log_fatal ("no memory for group decl %s", val);
+			memset (t, 0, sizeof *t);
+			t -> type = dhcp_type_group;
+			t -> group = g;
+			t -> name = name;
+			t -> flags = ((staticp ? GROUP_OBJECT_STATIC : 0) |
+				      (dynamicp ? GROUP_OBJECT_DYNAMIC : 0) |
+				      (deletedp ? GROUP_OBJECT_DELETED : 0));
+			supersede_group (t, 0);
+		}
+	}
 }
 
 /* fixed-addr-parameter :== ip-addrs-or-hostnames SEMI
@@ -1620,7 +1767,7 @@ struct lease *parse_lease_declaration (cfile)
 				token = peek_token (&val, cfile);
 				if (token == STRING) {
 					token = next_token (&val, cfile);
-					lease.uid_len = strlen (val) + 1;
+					lease.uid_len = strlen (val);
 					lease.uid = (unsigned char *)
 						malloc (lease.uid_len);
 					if (!lease.uid) {
@@ -1628,6 +1775,7 @@ struct lease *parse_lease_declaration (cfile)
 						return (struct lease *)0;
 					}
 					memcpy (lease.uid, val, lease.uid_len);
+					parse_semi (cfile);
 				} else {
 					lease.uid_len = 0;
 					lease.uid = parse_numeric_aggregate
