@@ -148,6 +148,10 @@ int main (int argc, char **argv, char **envp)
 		    printf ("%.*s = ", (int)v -> name -> len,
 			    v -> name -> value);
 			
+		    if (!v -> value) {
+			printf ("<null>\n");
+			continue;
+		    }
 		    switch (v -> value -> type) {
 			  case omapi_datatype_int:
 			    printf ("%d\n",
@@ -526,6 +530,39 @@ int main (int argc, char **argv, char **envp)
 			    goto set_usage;
 		    break;
 		    
+		  case UNSET:
+		    token = next_token (&val, (unsigned *)0, cfile);
+
+		    if ((!is_identifier (token) && token != STRING)) {
+			  unset_usage:
+			    printf ("usage: unset <name>\n");
+			    skip_to_semi (cfile);
+			    break;
+		    }
+		    
+		    if (!oh) {
+			    printf ("no open object.\n");
+			    skip_to_semi (cfile);
+			    break;
+		    }
+		    
+		    if (!connected) {
+			    printf ("not connected.\n");
+			    skip_to_semi (cfile);
+			    break;
+		    }
+
+		    s1[0] = '\0';
+		    strncat (s1, val, sizeof(s1)-1);
+		    
+		    token = next_token (&val, (unsigned *)0, cfile);
+		    if (token != END_OF_FILE && token != EOL)
+			    goto unset_usage;
+
+		    dhcpctl_set_null_value (oh, s1);
+		    break;
+
+			    
 		  case TOKEN_CREATE:
 		  case TOKEN_OPEN:
 		    i = token;
