@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.100 1999/07/06 20:35:54 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.100.2.1 1999/07/13 18:46:06 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -348,7 +348,7 @@ void dhcpinform (packet)
 	struct option_state *options = (struct option_state *)0;
 	struct dhcp_packet raw;
 	struct packet outgoing;
-	char dhcpack = DHCPACK;
+	unsigned char dhcpack = DHCPACK;
 	struct subnet *subnet;
 	struct iaddr cip;
 	int i, j, nulltp;
