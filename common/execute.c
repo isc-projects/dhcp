@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: execute.c,v 1.33 2000/06/12 22:22:09 mellon Exp $ Copyright (c) 1998-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: execute.c,v 1.34 2000/07/06 10:04:03 mellon Exp $ Copyright (c) 1998-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -235,7 +235,7 @@ int execute_statements (packet, lease, in_options, out_options, scope,
 #if defined (DEBUG_EXPRESSIONS)
 			log_debug ("exec: set %s", r -> data.set.name);
 #endif
-			if (!binding && status) {
+			if (!binding) {
 				binding = dmalloc (sizeof *binding, MDL);
 				if (binding) {
 				    memset (binding, 0, sizeof *binding);
