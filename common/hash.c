@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: hash.c,v 1.22 2000/05/16 23:02:19 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: hash.c,v 1.23 2000/05/17 16:15:38 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -229,7 +229,7 @@ int hash_lookup (vp, table, name, len, file, line)
 	return 0;
 }
 
-int casecmp (const void *v1, const void *v2, unsigned len)
+int casecmp (const void *v1, const void *v2, unsigned long len)
 {
 	unsigned i;
 	const char *s = v1;
