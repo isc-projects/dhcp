@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.71 1998/11/09 02:46:58 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.72 1998/11/11 08:01:49 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -90,14 +90,15 @@ void dhcpdiscover (packet)
 	struct packet *packet;
 {
 	struct lease *lease;
+	char msgbuf [1024];
 
-	note ("DHCPDISCOVER from %s via %s",
-	      print_hw_addr (packet -> raw -> htype,
-			     packet -> raw -> hlen,
-			     packet -> raw -> chaddr),
-	      packet -> raw -> giaddr.s_addr
-          	      ? inet_ntoa (packet -> raw -> giaddr)
-	      : packet -> interface -> name);
+	sprintf (msgbuf, "DHCPDISCOVER from %s via %s",
+		 print_hw_addr (packet -> raw -> htype,
+				packet -> raw -> hlen,
+				packet -> raw -> chaddr),
+		 (packet -> raw -> giaddr.s_addr
+		  ? inet_ntoa (packet -> raw -> giaddr)
+		  : packet -> interface -> name));
 
 	lease = find_lease (packet, packet -> shared_network, 0);
 
@@ -122,7 +123,7 @@ void dhcpdiscover (packet)
 		}
 	}
 
-	ack_lease (packet, lease, DHCPOFFER, cur_time + 120);
+	ack_lease (packet, lease, DHCPOFFER, cur_time + 120, msgbuf);
 }
 
 void dhcprequest (packet)
@@ -135,6 +136,7 @@ void dhcprequest (packet)
 	struct option_cache *oc;
 	struct data_string data;
 	int status;
+	char msgbuf [1024];
 
 	oc = lookup_option (packet -> options.dhcp_hash,
 			    DHO_DHCP_REQUESTED_ADDRESS);
@@ -159,14 +161,14 @@ void dhcprequest (packet)
 	else
 		lease = (struct lease *)0;
 
-	note ("DHCPREQUEST for %s from %s via %s",
-	      piaddr (cip),
-	      print_hw_addr (packet -> raw -> htype,
-			     packet -> raw -> hlen,
-			     packet -> raw -> chaddr),
-	      packet -> raw -> giaddr.s_addr
-	      ? inet_ntoa (packet -> raw -> giaddr)
-	      : packet -> interface -> name);
+	sprintf (msgbuf, "DHCPREQUEST for %s from %s via %s",
+		 piaddr (cip),
+		 print_hw_addr (packet -> raw -> htype,
+				packet -> raw -> hlen,
+				packet -> raw -> chaddr),
+		 (packet -> raw -> giaddr.s_addr
+		  ? inet_ntoa (packet -> raw -> giaddr)
+		  : packet -> interface -> name));
 
 	/* If a client on a given network REQUESTs a lease on an
 	   address on a different network, NAK it.  If the Requested
@@ -220,6 +222,7 @@ void dhcprequest (packet)
 		   from there.   Fry it. */
 		if (!packet -> shared_network) {
 			if (subnet) {
+				note ("%s: wrong network.", msgbuf);
 				nak_lease (packet, &cip);
 				return;
 			}
@@ -231,6 +234,7 @@ void dhcprequest (packet)
 		   address that is not on that shared network, nak it. */
 		subnet = find_grouped_subnet (packet -> shared_network, cip);
 		if (!subnet) {
+			note ("%s: wrong network.", msgbuf);
 			nak_lease (packet, &cip);
 			return;
 		}
@@ -243,14 +247,18 @@ void dhcprequest (packet)
 		/* If we found the address the client asked for, but
                    it wasn't what got picked, the lease belongs to us,
                    so we can tenuously justify NAKing it. */
-		if (ours)
+		if (ours) {
+			note ("%s: wrong lease %s.", msgbuf, piaddr (cip));
 			nak_lease (packet, &cip);
+		} else
+			note ("%s: unknown lease %s", msgbuf, piaddr (cip));
 		return;
 	}
 
 	/* If the address the client asked for is ours, but it wasn't
            available for the client, NAK it. */
 	if (!lease && ours) {
+		note ("%s: lease %s unavailable.", msgbuf, piaddr (cip));
 		nak_lease (packet, &cip);
 		return;
 	}
@@ -270,9 +278,10 @@ void dhcprequest (packet)
 		       packet -> raw -> chaddr,
 		       packet -> raw -> hlen)))) {
 		data_string_forget (&data, "dhcprequest");
-		ack_lease (packet, lease, DHCPACK, 0);
+		ack_lease (packet, lease, DHCPACK, 0, msgbuf);
 		return;
 	}
+	note ("%s: unknown lease %s.", msgbuf, piaddr (cip));
 	data_string_forget (&data, "dhcprequest");
 }
 
@@ -510,11 +519,12 @@ void nak_lease (packet, cip)
 		warn ("send_packet: %m");
 }
 
-void ack_lease (packet, lease, offer, when)
+void ack_lease (packet, lease, offer, when, msg)
 	struct packet *packet;
 	struct lease *lease;
 	unsigned int offer;
 	TIME when;
+	char *msg;
 {
 	struct lease lt;
 	struct lease_state *state;
@@ -531,10 +541,8 @@ void ack_lease (packet, lease, offer, when)
 	int val;
 
 	/* If we're already acking this lease, don't do it again. */
-	if (lease -> state) {
-		note ("already acking lease %s", piaddr (lease -> ip_addr));
+	if (lease -> state)
 		return;
-	}
 
 	/* Allocate a lease state structure... */
 	state = new_lease_state ("ack_lease");
@@ -584,6 +592,7 @@ void ack_lease (packet, lease, offer, when)
 
 	/* Execute the subnet statements. */
 	execute_statements_in_scope (packet, &state -> options,
+				     &state -> options,
 				     lease -> subnet -> group,
 				     (struct group *)0);
 
@@ -592,6 +601,7 @@ void ack_lease (packet, lease, offer, when)
 		for (i = packet -> class_count; i > 0; i--) {
                         execute_statements_in_scope
 				(packet, &state -> options,
+				 &state -> options,
 				 packet -> classes [i - 1] -> group,
 				 (struct group *)0);
 		}
@@ -601,6 +611,7 @@ void ack_lease (packet, lease, offer, when)
 	   with its group. */
 	if (lease -> host)
 		execute_statements_in_scope (packet, &state -> options,
+					     &state -> options,
 					     lease -> host -> group,
 					     lease -> subnet -> group);
 
@@ -612,6 +623,8 @@ void ack_lease (packet, lease, offer, when)
 					   &packet -> options, oc)) {
 			if (d1.len && packet -> raw -> secs < d1.data [0]) {
 				data_string_forget (&d1, "ack_lease");
+				note ("%s: %d secs < %d",
+				      packet -> raw -> secs, d1.data [0]);
 				return;
 			}
 			data_string_forget (&d1, "ack_lease");
@@ -655,10 +668,7 @@ void ack_lease (packet, lease, offer, when)
 		if (evaluate_option_cache (&d1, packet,
 					   &packet -> options, oc)) {
 			if (d1.len && !d1.data [0]) {
-				note ("Ignoring unknown client %s",
-				      print_hw_addr (packet -> raw -> htype,
-						     packet -> raw -> hlen,
-						     packet -> raw -> chaddr));
+				note ("%s: unknown", msg);
 				data_string_forget (&d1, "ack_lease");
 				return;
 			}
@@ -673,11 +683,8 @@ void ack_lease (packet, lease, offer, when)
 		if (evaluate_option_cache (&d1, packet,
 					   &packet -> options, oc)) {
 			if (d1.len && !d1.data [0]) {
-				note ("Ignoring BOOTP client %s",
-				      print_hw_addr (packet -> raw -> htype,
-						     packet -> raw -> hlen,
-						     packet -> raw -> chaddr));
 				data_string_forget (&d1, "ack_lease");
+				note ("%s: bootp disallowed", msg);
 				return;
 			}
 			data_string_forget (&d1, "ack_lease");
@@ -689,16 +696,46 @@ void ack_lease (packet, lease, offer, when)
 	if (oc &&
 	    evaluate_option_cache (&d1, packet, &packet -> options, oc)) {
 		if (d1.len && !d1.data [0]) {
-			note ("Declining to boot client %s",
-			      lease -> host -> name
-			      ? lease -> host -> name
-			      : print_hw_addr (packet -> raw -> htype,
-					       packet -> raw -> hlen,
-					       packet -> raw -> chaddr));
+			note ("%s: booting disallowed", msg);
 			data_string_forget (&d1, "ack_lease");
 			return;
 		}
 		data_string_forget (&d1, "ack_lease");
+	}
+
+	/* If we are configured to do per-class billing, do it. */
+	if (have_billing_classes) {
+
+		/* See if the lease is currently being billed to a
+		   class, and if so, whether or not it can continue to
+		   be billed to that class. */
+		if (lease -> billing_class) {
+			for (i = 0; i < packet -> class_count; i++)
+				if (packet -> classes [i] ==
+				    lease -> billing_class)
+					break;
+			if (i == packet -> class_count)
+				unbill_class (lease, lease -> billing_class);
+		}
+		
+		/* If we don't have an active billing, see if we need
+		   one, and if we do, try to do so. */
+		if (!lease -> billing_class) {
+			for (i = 0; i < packet -> class_count; i++) {
+				if (!packet -> classes [i] -> lease_limit)
+					break;
+			}
+			if (i == packet -> class_count) {
+				for (i = 0; i < packet -> class_count; i++)
+					if (bill_class (lease,
+							packet -> classes [i]))
+						break;
+				if (i == packet -> class_count) {
+					note ("%s: no available billing", msg);
+					return;
+				}
+			}
+		}
 	}
 
 	/* Figure out the filename. */
@@ -847,6 +884,7 @@ void ack_lease (packet, lease, offer, when)
 	lt.host = lease -> host;
 	lt.subnet = lease -> subnet;
 	lt.shared_network = lease -> shared_network;
+	lt.billing_class = lease -> billing_class;
 
 	/* Don't call supersede_lease on a mocked-up lease. */
 	if (lease -> flags & STATIC_LEASE) {
@@ -869,8 +907,10 @@ void ack_lease (packet, lease, offer, when)
 		   it) either. */
 
 		if (!(supersede_lease (lease, &lt, !offer || offer == DHCPACK)
-		      || (offer && offer != DHCPACK)))
+		      || (offer && offer != DHCPACK))) {
+			note ("%s: database update failed", msg);
 			return;
+		}
 	}
 
 	/* Remember the interface on which the packet arrived. */
@@ -1128,6 +1168,8 @@ void ack_lease (packet, lease, offer, when)
 #endif
 
 	lease -> state = state;
+
+	note ("%s", msg);
 
 	/* If this is a DHCPOFFER, ping the lease address before actually
 	   sending the offer. */
@@ -1440,12 +1482,12 @@ struct lease *find_lease (packet, share, ours)
 			if (hw_lease -> flags & ABANDONED_LEASE)
 				continue;
 			/* If we're allowed to use this lease, do so. */
-			if (!((lease -> pool -> prohibit_list &&
+			if (!((hw_lease -> pool -> prohibit_list &&
 			       permitted (packet,
-					  lease -> pool -> prohibit_list)) ||
-			      (lease -> pool -> permit_list &&
+					  hw_lease -> pool -> prohibit_list)) ||
+			      (hw_lease -> pool -> permit_list &&
 			       !permitted (packet,
-					   lease -> pool -> permit_list))))
+					   hw_lease -> pool -> permit_list))))
 				break;
 		}
 	}
