@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: packet.c,v 1.14 1997/03/05 20:06:03 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: packet.c,v 1.15 1997/03/06 18:27:55 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -52,12 +52,9 @@ static char copyright[] =
 #include "includes/netinet/udp.h"
 #include "includes/netinet/if_ether.h"
 
-static u_int32_t checksum PROTO ((unsigned char *, int, u_int32_t));
-static u_int32_t wrapsum PROTO ((u_int32_t));
-
 /* Compute the easy part of the checksum on a range of bytes. */
 
-static u_int32_t checksum (buf, nbytes, sum)
+u_int32_t checksum (buf, nbytes, sum)
 	unsigned char *buf;
 	int nbytes;
 	u_int32_t sum;
@@ -91,7 +88,7 @@ static u_int32_t checksum (buf, nbytes, sum)
 /* Fold the upper sixteen bits of the checksum down into the lower bits,
    complement the sum, and then put it into network byte order. */
 
-static u_int32_t wrapsum (sum)
+u_int32_t wrapsum (sum)
 	u_int32_t sum;
 {
 #ifdef DEBUG_CHECKSUM
