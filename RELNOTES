@@ -1,6 +1,6 @@
 	    Internet Software Consortium DHCP Distribution
-		   Version 3, Beta 2, Patchlevel 19
-			    March 14, 2001
+		   Version 3, Beta 2, Patchlevel 20
+			    March 16, 2001
 
 			    Release Notes
 
@@ -48,6 +48,20 @@ Measurement Systems, and Brian Murrell at BC Tel Advanced
 Communications.  I'd like to express my thanks to all of these good
 people here, both for working on the code and for prodding me into
 improving it.
+
+	        Changes since 3.0 Beta 2 Patchlevel 19
+
+- Fix a bug that could cause the server to abort if compiled with
+  POINTER_DEBUG enabled.
+
+- Fix a bug that could cause the server to spin when responding to a
+  DHCPREQUEST.
+
+- Apply Joost Mulders' suggested patches for DLPI on x86.
+
+- Support NUL characters in quoted strings.
+
+- Install unformatted man pages on SunOS.
 
 	        Changes since 3.0 Beta 2 Patchlevel 18
 
