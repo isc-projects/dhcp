@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: class.c,v 1.21 2000/08/28 19:36:09 neild Exp $ Copyright (c) 1998-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: class.c,v 1.22 2000/09/06 20:26:13 mellon Exp $ Copyright (c) 1998-2000 The Internet Software Consortium.  All rights reserved.\n";
 
 #endif /* not lint */
 
@@ -126,6 +126,7 @@ int check_collection (packet, lease, collection)
 					data_string_forget (&data, MDL);
 					classify (packet, nc);
 					matched = 1;
+					class_dereference (&nc, MDL);
 					continue;
 				}
 				if (!class -> spawning) {
@@ -136,11 +137,11 @@ int check_collection (packet, lease, collection)
 				log_info ("spawning subclass %s.",
 				      print_hex_1 (data.len, data.data, 60));
 #endif
-				nc = (struct class *)
-					dmalloc (sizeof (struct class), MDL);
-				memset (nc, 0, sizeof *nc);
-				nc -> group = class -> group;
-				nc -> superclass = class;
+				status = class_allocate (&nc, MDL);
+				group_reference (&nc -> group,
+						 class -> group, MDL);
+				class_reference (&nc -> superclass,
+						 class, MDL);
 				nc -> lease_limit = class -> lease_limit;
 				nc -> dirty = 1;
 				if (nc -> lease_limit) {
@@ -155,7 +156,7 @@ int check_collection (packet, lease, collection)
 						data_string_forget
 							(&nc -> hash_string,
 							 MDL);
-						dfree (nc, MDL);
+						class_dereference (&nc, MDL);
 						data_string_forget (&data,
 								    MDL);
 						continue;
