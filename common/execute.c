@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: execute.c,v 1.24 2000/01/26 14:55:34 mellon Exp $ Copyright (c) 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: execute.c,v 1.25 2000/01/26 17:20:46 mellon Exp $ Copyright (c) 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -245,7 +245,7 @@ int execute_statements (packet, lease, in_options, out_options, scope,
 				if (binding) {
 				    binding -> name =
 					    dmalloc (strlen
-						     (r -> data.set.name + 1),
+						     (r -> data.set.name) + 1,
 						     MDL);
 				    if (binding -> name) {
 					strcpy (binding -> name,
