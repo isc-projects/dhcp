@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.26.2.9 1999/04/28 14:58:54 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.26.2.10 1999/05/06 21:54:34 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -478,15 +478,15 @@ char *pretty_print_option (code, data, len, emit_commas, emit_quotes)
 					break;
 			}
 			if (k == len) {
-				--numelem;
 				fmtbuf [i] = 't';
+				numhunk = -2;
 			} else {
 				fmtbuf [i] = 'x';
 				hunksize++;
 				comma = ':';
+				numhunk = 0;
 			}
 			fmtbuf [i + 1] = 0;
-			numhunk = 0;
 			break;
 		      case 't':
 			fmtbuf [i] = 't';
