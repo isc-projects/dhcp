@@ -51,7 +51,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: socket.c,v 1.50 2000/05/03 23:05:37 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: socket.c,v 1.51 2000/07/20 03:15:00 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -137,8 +137,14 @@ int if_register_socket (info)
 		log_fatal ("Can't set SO_BROADCAST option on dhcp socket: %m");
 
 	/* Bind the socket to this interface's IP address. */
-	if (bind (sock, (struct sockaddr *)&name, sizeof name) < 0)
-		log_fatal ("Can't bind to dhcp address: %m");
+	if (bind (sock, (struct sockaddr *)&name, sizeof name) < 0) {
+		log_error ("Can't bind to dhcp address: %m");
+		log_error ("Please make sure there is no other dhcp server");
+		log_error ("running and that there's no entry for dhcp or");
+		log_error ("bootp in /etc/inetd.conf.   Also make sure you");
+		log_error ("are not running HP JetAdmin software, which");
+		log_fatal ("includes a bootp server.");
+	}
 
 #if defined (HAVE_SO_BINDTODEVICE)
 	/* Bind this socket to this interface. */
