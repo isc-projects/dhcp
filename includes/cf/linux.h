@@ -5,7 +5,7 @@
    Based on a configuration originally supplied by Jonathan Stone. */
 
 /*
- * Copyright (c) 1996, 1998 The Internet Software Consortium.
+ * Copyright (c) 1996, 1998, 1999 The Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -47,6 +47,10 @@ typedef unsigned char u_int8_t;
 typedef unsigned short u_int16_t;
 typedef unsigned long u_int32_t;
 #endif /* __BIT_TYPES_DEFINED__ */
+
+typedef u_int8_t u8;
+typedef u_int16_t u16;
+typedef u_int32_t u32;
 
 #include <syslog.h>
 #include <sys/types.h>
