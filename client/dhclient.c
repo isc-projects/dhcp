@@ -41,7 +41,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.114 2000/09/27 19:31:45 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.115 2000/10/10 19:44:37 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1740,7 +1740,8 @@ void make_discover (client, lease)
 		cons_options ((struct packet *)0, &client -> packet,
 			      (struct lease *)0, 0,
 			      (struct option_state *)0, options,
-			      &global_scope, 0, 0, 0, (struct data_string *)0);
+			      &global_scope, 0, 0, 0, (struct data_string *)0,
+			      client -> config -> vendor_space_name);
 	if (client -> packet_length < BOOTP_MIN_LEN)
 		client -> packet_length = BOOTP_MIN_LEN;
 
@@ -1808,7 +1809,8 @@ void make_request (client, lease)
 		cons_options ((struct packet *)0, &client -> packet,
 			      (struct lease *)0, 0,
 			      (struct option_state *)0, options,
-			      &global_scope, 0, 0, 0, (struct data_string *)0);
+			      &global_scope, 0, 0, 0, (struct data_string *)0,
+			      client -> config -> vendor_space_name);
 	if (client -> packet_length < BOOTP_MIN_LEN)
 		client -> packet_length = BOOTP_MIN_LEN;
 
@@ -1873,7 +1875,8 @@ void make_decline (client, lease)
 		cons_options ((struct packet *)0, &client -> packet,
 			      (struct lease *)0, 0,
 			      (struct option_state *)0, options,
-			      &global_scope, 0, 0, 0, (struct data_string *)0);
+			      &global_scope, 0, 0, 0, (struct data_string *)0,
+			      client -> config -> vendor_space_name);
 	if (client -> packet_length < BOOTP_MIN_LEN)
 		client -> packet_length = BOOTP_MIN_LEN;
 	option_state_dereference (&options, MDL);
@@ -1930,7 +1933,8 @@ void make_release (client, lease)
 		cons_options ((struct packet *)0, &client -> packet,
 			      (struct lease *)0, 0,
 			      (struct option_state *)0, options,
-			      &global_scope, 0, 0, 0, (struct data_string *)0);
+			      &global_scope, 0, 0, 0, (struct data_string *)0,
+			      client -> config -> vendor_space_name);
 	if (client -> packet_length < BOOTP_MIN_LEN)
 		client -> packet_length = BOOTP_MIN_LEN;
 	option_state_dereference (&options, MDL);
