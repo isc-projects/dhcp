@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.62 1999/03/09 23:43:36 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.63 1999/03/16 00:56:02 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -985,7 +985,7 @@ struct class *parse_class_declaration (cfile, group, type)
 	   backward compatibility, we have an implicit-vendor-class and an
 	   implicit-user-class.   vendor-class and user-class declarations
 	   are turned into subclasses of the implicit classes, and the
-	   spawn expression of the implicit classes extracts the contents of
+	   submatch expression of the implicit classes extracts the contents of
 	   the vendor class or user class. */
 	if (type == 0 || type == 1) {
 		data.len = strlen (val);
@@ -1130,11 +1130,8 @@ struct class *parse_class_declaration (cfile, group, type)
 			}
 			token = next_token (&val, cfile);
 			token = next_token (&val, cfile);
-			if (token != IF) {
-				parse_warn ("expecting if after match");
-				skip_to_semi (cfile);
-				break;
-			}
+			if (token != IF)
+				goto submatch;
 			parse_boolean_expression (&class -> expr, cfile,
 						  &lose);
 			if (lose)
@@ -1149,11 +1146,6 @@ struct class *parse_class_declaration (cfile, group, type)
 				skip_to_semi (cfile);
 				break;
 			}
-			if (class -> spawn) {
-				parse_warn ("can't override spawn.");
-				skip_to_semi (cfile);
-				break;
-			}
 			token = next_token (&val, cfile);
 			token = next_token (&val, cfile);
 			if (token != WITH) {
@@ -1161,11 +1153,21 @@ struct class *parse_class_declaration (cfile, group, type)
 				skip_to_semi (cfile);
 				break;
 			}
-			parse_data_expression (&class -> spawn, cfile, &lose);
+			class -> spawning = 1;
+		      submatch:
+			if (class -> submatch) {
+				parse_warn ("can't override existing %s.",
+					    "submatch/spawn");
+				skip_to_semi (cfile);
+				break;
+			}
+			parse_data_expression (&class -> submatch,
+					       cfile, &lose);
 			if (lose)
 				break;
 #if defined (DEBUG_EXPRESSION_PARSE)
-			print_expression ("class match", class -> spawn);
+			print_expression ("class submatch",
+					  class -> submatch);
 #endif
 			parse_semi (cfile);
 		} else if (token == LEASE) {

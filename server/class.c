@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: class.c,v 1.8 1999/02/24 17:56:51 mellon Exp $ Copyright (c) 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: class.c,v 1.9 1999/03/16 00:54:09 mellon Exp $ Copyright (c) 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -201,10 +201,10 @@ int check_collection (packet, collection)
 		memset (&data, 0, sizeof data);
 		/* If a class is for billing, don't put the client in the
 		   class if we've already billed it to a different class. */
-		if (class -> spawn) {
+		if (class -> submatch) {
 			status = evaluate_data_expression (&data, packet,
 							   &packet -> options,
-							   class -> spawn);
+							   class -> submatch);
 			if (status) {
 				if ((nc = ((struct class *)
 					   hash_lookup (class -> hash,
@@ -221,6 +221,8 @@ int check_collection (packet, collection)
 					matched = 1;
 					continue;
 				}
+				if (!class -> spawning)
+					continue;
 #if defined (DEBUG_CLASS_MATCHING)
 				log_info ("spawning subclass %s.",
 				      print_hex_1 (data.len, data.data, 60));
