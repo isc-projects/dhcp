@@ -22,6 +22,7 @@
 
 #ifndef _OMAPIP_H_
 #define _OMAPIP_H_
+#include <isc/result.h>
 
 typedef unsigned int omapi_handle_t;
 
