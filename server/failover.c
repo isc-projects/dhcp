@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.53.2.17 2001/10/26 19:55:28 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.53.2.18 2001/10/27 04:17:09 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1810,7 +1810,6 @@ isc_result_t dhcp_failover_peer_state_changed (dhcp_failover_state_t *state,
 		      case unknown_state:
 		      case normal:
 		      case potential_conflict:
-		      case recover:
 		      case recover_done:
 		      case shut_down:
 		      case paused:
@@ -1822,6 +1821,7 @@ isc_result_t dhcp_failover_peer_state_changed (dhcp_failover_state_t *state,
 		      case partner_down:
 		      case communications_interrupted:
 		      case resolution_interrupted:
+		      case recover:
 			break;
 		}
 	}
@@ -4641,6 +4641,7 @@ isc_result_t dhcp_failover_generate_update_queue (dhcp_failover_state_t *state,
 	}
 	if (state -> send_update_done)
 		lease_dereference (&state -> send_update_done, MDL);
+	state -> cur_unacked_updates = 0;
 			
 	/* Loop through each pool in each shared network and call the
 	   expiry routine on the pool. */
