@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: ddns.c,v 1.4 2001/01/04 00:08:16 mellon Exp $ Copyright (c) 2000-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: ddns.c,v 1.5 2001/01/06 21:37:21 mellon Exp $ Copyright (c) 2000-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -217,9 +217,6 @@ static int find_bound_string (struct data_string *value,
 			binding -> value -> value.data.len);
 		value -> data = value -> buffer -> data;
 		value -> len  = binding -> value -> value.data.len;
-
-		data_string_forget (&binding -> value -> value.data, MDL);
-		data_string_copy (&binding -> value -> value.data, value, MDL);
 	}
 
 	return 1;
@@ -241,13 +238,26 @@ int unset (struct binding_scope *scope, const char *name)
 
 
 static ns_rcode ddns_update_a (struct data_string *ddns_fwd_name,
-			       struct data_string *ddns_address,
+			       struct iaddr ddns_addr,
 			       struct data_string *ddns_dhcid,
 			       unsigned long ttl)
 {
 	ns_updque updqueue;
 	ns_updrec *updrec;
 	ns_rcode result;
+	char ddns_address [16];
+
+	if (ddns_addr.len != 4)
+		return SERVFAIL;
+#ifndef NO_SNPRINTF
+	snprintf (ddns_address, 16, "%d.%d.%d.%d",
+		  ddns_addr.iabuf[0], ddns_addr.iabuf[1],
+		  ddns_addr.iabuf[2], ddns_addr.iabuf[3]);
+#else
+	sprintf (ddns_address, "%d.%d.%d.%d",
+		 ddns_addr.iabuf[0], ddns_addr.iabuf[1],
+		 ddns_addr.iabuf[2], ddns_addr.iabuf[3]);
+#endif
 
 	/*
 	 * When a DHCP client or server intends to update an A RR, it first
@@ -281,8 +291,8 @@ static ns_rcode ddns_update_a (struct data_string *ddns_fwd_name,
 				   C_IN, T_A, ttl);
 	if (!updrec) goto error;
 
-	updrec -> r_data = ddns_address -> buffer -> data;
-	updrec -> r_size = ddns_address -> len;
+	updrec -> r_data = ddns_address;
+	updrec -> r_size = strlen (ddns_address);
 	updrec -> r_opcode = ADD;
 
 	ISC_LIST_APPEND (updqueue, updrec, r_link);
@@ -380,8 +390,8 @@ static ns_rcode ddns_update_a (struct data_string *ddns_fwd_name,
 				   C_IN, T_A, ttl);
 	if (!updrec) goto error;
 
-	updrec -> r_data = ddns_address -> buffer -> data;
-	updrec -> r_size = ddns_address -> len;
+	updrec -> r_data = ddns_address;
+	updrec -> r_size = strlen (ddns_address);
 	updrec -> r_opcode = ADD;
 
 	ISC_LIST_APPEND (updqueue, updrec, r_link);
@@ -445,7 +455,6 @@ static ns_rcode ddns_update_a (struct data_string *ddns_fwd_name,
 
 static ns_rcode ddns_update_ptr (struct data_string *ddns_fwd_name,
 				 struct data_string *ddns_rev_name,
-				 struct data_string *ddns_dhcid,
 				 unsigned long ttl)
 {
 	ns_updque updqueue;
@@ -475,7 +484,6 @@ static ns_rcode ddns_update_ptr (struct data_string *ddns_fwd_name,
 
 	ISC_LIST_APPEND (updqueue, updrec, r_link);
 
-
 	/*
 	 * Add PTR RR.
 	 */
@@ -488,21 +496,6 @@ static ns_rcode ddns_update_ptr (struct data_string *ddns_fwd_name,
 	updrec -> r_opcode = ADD;
 
 	ISC_LIST_APPEND (updqueue, updrec, r_link);
-
-
-	/*
-	 * Add DHCID RR.
-	 */
-	updrec = minires_mkupdrec (S_UPDATE, ddns_rev_name -> data,
-				   C_IN, T_DHCID,ttl);
-	if (!updrec) goto error;
-
-	updrec -> r_data = ddns_dhcid -> buffer -> data;
-	updrec -> r_size = ddns_dhcid -> len;
-	updrec -> r_opcode = ADD;
-
-	ISC_LIST_APPEND (updqueue, updrec, r_link);
-
 
 	/*
 	 * Attempt to perform the update.
@@ -524,12 +517,27 @@ static ns_rcode ddns_update_ptr (struct data_string *ddns_fwd_name,
 
 
 static ns_rcode ddns_remove_a (struct data_string *ddns_fwd_name,
-			       struct data_string *ddns_address,
+			       struct iaddr ddns_addr,
 			       struct data_string *ddns_dhcid)
 {
 	ns_updque updqueue;
 	ns_updrec *updrec;
 	ns_rcode result = SERVFAIL;
+	char ddns_address [16];
+
+	if (ddns_addr.len != 4)
+		return SERVFAIL;
+
+#ifndef NO_SNPRINTF
+	snprintf (ddns_address, 16, "%d.%d.%d.%d",
+		  ddns_addr.iabuf[0], ddns_addr.iabuf[1],
+		  ddns_addr.iabuf[2], ddns_addr.iabuf[3]);
+#else
+	sprintf (ddns_address, "%d.%d.%d.%d",
+		 ddns_addr.iabuf[0], ddns_addr.iabuf[1],
+		 ddns_addr.iabuf[2], ddns_addr.iabuf[3]);
+#endif
+
 
 	/*
 	 * The entity chosen to handle the A record for this client (either the
@@ -568,8 +576,8 @@ static ns_rcode ddns_remove_a (struct data_string *ddns_fwd_name,
 				   C_IN, T_A, 0);
 	if (!updrec) goto error;
 
-	updrec -> r_data = ddns_address -> buffer -> data;
-	updrec -> r_size = ddns_address -> len;
+	updrec -> r_data = ddns_address;
+	updrec -> r_size = strlen (ddns_address);
 	updrec -> r_opcode = YXRRSET;
 
 	ISC_LIST_APPEND (updqueue, updrec, r_link);
@@ -582,26 +590,11 @@ static ns_rcode ddns_remove_a (struct data_string *ddns_fwd_name,
 				   C_IN, T_A, 0);
 	if (!updrec) goto error;
 
-	updrec -> r_data   = ddns_address -> buffer -> data;
-	updrec -> r_size   = ddns_address -> len;
+	updrec -> r_data   = ddns_address;
+	updrec -> r_size   = strlen (ddns_address);
 	updrec -> r_opcode = DELETE;
 
 	ISC_LIST_APPEND (updqueue, updrec, r_link);
-
-
-	/*
-	 * Delete appropriate DHCID RR.
-	 */
-	updrec = minires_mkupdrec (S_UPDATE, ddns_fwd_name -> data,
-				   C_IN, T_DHCID, 0);
-	if (!updrec) goto error;
-
-	updrec -> r_data   = ddns_dhcid -> buffer -> data;
-	updrec -> r_size   = ddns_dhcid -> len;
-	updrec -> r_opcode = DELETE;
-
-	ISC_LIST_APPEND (updqueue, updrec, r_link);
-
 
 	/*
 	 * Attempt to perform the update.
@@ -622,6 +615,54 @@ static ns_rcode ddns_remove_a (struct data_string *ddns_fwd_name,
 	 *   -- "Interaction between DHCP and DNS"
 	 */
 
+	if (result != NOERROR)
+		goto error;
+
+	while (!ISC_LIST_EMPTY (updqueue)) {
+		updrec = ISC_LIST_HEAD (updqueue);
+		ISC_LIST_UNLINK (updqueue, updrec, r_link);
+		minires_freeupdrec (updrec);
+	}
+
+	/* If the deletion of the A succeeded, and there are no A records
+	   left for this domain, then we can blow away the DHCID record
+	   as well.   We can't blow away the DHCID record above because
+	   it's possible that more than one A has been added to this
+	   domain name. */
+	ISC_LIST_INIT (updqueue);
+
+	/*
+	 * A RR does not exist.
+	 */
+	updrec = minires_mkupdrec (S_PREREQ, ddns_fwd_name -> data,
+				   C_IN, T_A, 0);
+	if (!updrec) goto error;
+
+	updrec -> r_data = (char *)0;
+	updrec -> r_size = 0;
+	updrec -> r_opcode = NXRRSET;
+
+	ISC_LIST_APPEND (updqueue, updrec, r_link);
+
+	/*
+	 * Delete appropriate DHCID RR.
+	 */
+	updrec = minires_mkupdrec (S_UPDATE, ddns_fwd_name -> data,
+				   C_IN, T_DHCID, 0);
+	if (!updrec)
+		goto error;
+
+	updrec -> r_data   = ddns_dhcid -> buffer -> data;
+	updrec -> r_size   = ddns_dhcid -> len;
+	updrec -> r_opcode = DELETE;
+
+	ISC_LIST_APPEND (updqueue, updrec, r_link);
+
+	/*
+	 * Attempt to perform the update.
+	 */
+	result = minires_nupdate (&resolver_state, ISC_LIST_HEAD (updqueue));
+	print_dns_status ((int)result, &updqueue);
 
 	/* Fall through. */
   error:
@@ -637,8 +678,7 @@ static ns_rcode ddns_remove_a (struct data_string *ddns_fwd_name,
 
 
 static ns_rcode ddns_remove_ptr (struct data_string *ddns_fwd_name,
-				 struct data_string *ddns_rev_name,
-				 struct data_string *ddns_dhcid)
+				 struct data_string *ddns_rev_name)
 {
 	ns_updque updqueue;
 	ns_updrec *updrec;
@@ -668,21 +708,6 @@ static ns_rcode ddns_remove_ptr (struct data_string *ddns_fwd_name,
 
 	ISC_LIST_APPEND (updqueue, updrec, r_link);
 
-
-	/*
-	 * Delete appropriate DHCID RR.
-	 */
-	updrec = minires_mkupdrec (S_UPDATE, ddns_rev_name -> data,
-				   C_IN, T_DHCID, 0);
-	if (!updrec) goto error;
-
-	updrec -> r_data   = ddns_dhcid -> buffer -> data;
-	updrec -> r_size   = ddns_dhcid -> len;
-	updrec -> r_opcode = DELETE;
-
-	ISC_LIST_APPEND (updqueue, updrec, r_link);
-
-
 	/*
 	 * Attempt to perform the update.
 	 */
@@ -711,10 +736,8 @@ int ddns_updates (struct packet *packet,
 	struct data_string ddns_domainname;
 	struct data_string ddns_fwd_name;
 	struct data_string ddns_rev_name;
-	struct data_string ddns_address;
 	struct data_string ddns_dhcid;
 	unsigned len;
-	unsigned ddns_address_len = 0;
 	struct data_string d1;
 	struct option_cache *oc;
 	int s1, s2;
@@ -733,7 +756,6 @@ int ddns_updates (struct packet *packet,
 	memset (&ddns_domainname, 0, sizeof (ddns_domainname));
 	memset (&ddns_fwd_name, 0, sizeof (ddns_fwd_name));
 	memset (&ddns_rev_name, 0, sizeof (ddns_rev_name));
-	memset (&ddns_address, 0, sizeof (ddns_address));
 	memset (&ddns_dhcid, 0, sizeof (ddns_dhcid));
 
 
@@ -794,33 +816,6 @@ int ddns_updates (struct packet *packet,
 		}
 	}
 
-
-	/*
-	 * Look up the lease IP address (as a string).
-	 */
-	/* XXX.XXX.XXX.XXX\0 = 16 characters. */
-	buffer_allocate (&ddns_address.buffer, 16, MDL);
-			 
-#ifndef NO_SNPRINTF
-	snprintf (ddns_address.buffer -> data, 16,
-		  "%d.%d.%d.%d",
-		  lease -> ip_addr . iabuf[0],
-		  lease -> ip_addr . iabuf[1],
-		  lease -> ip_addr . iabuf[2],
-		  lease -> ip_addr . iabuf[3]);
-#else
-	sprintf (ddns_address.buffer -> data,
-		 "%d.%d.%d.%d",
-		 lease -> ip_addr . iabuf[0],
-		 lease -> ip_addr . iabuf[1],
-		 lease -> ip_addr . iabuf[2],
-		 lease -> ip_addr . iabuf[3]);
-#endif
-	ddns_address.data = ddns_address.buffer -> data;
-	ddns_address.len = strlen (ddns_address.data);
-	ddns_address.terminated = 1;
-
-
 	/*
 	 * Look up the reverse IP name.
 	 */
@@ -864,13 +859,11 @@ int ddns_updates (struct packet *packet,
 		data_string_forget (&d1, MDL);
 	}
 
-
 	/*
 	 * Look up the DHCID value.  (Should this be cached in the lease?)
 	 */
 	memset (&ddns_dhcid, 0, sizeof ddns_dhcid);
 	get_dhcid (&ddns_dhcid, lease);
-
 
 	/*
 	 * Start the resolver, if necessary.
@@ -880,17 +873,19 @@ int ddns_updates (struct packet *packet,
 		resolver_inited = 1;
 	}
 
-
 	/*
 	 * Perform updates.
 	 */
-	if (ddns_fwd_name.len && ddns_address.len && ddns_dhcid.len)
-		rcode1 = ddns_update_a(&ddns_fwd_name, &ddns_address,
-				       &ddns_dhcid, ddns_ttl);
+	if (ddns_fwd_name.len && ddns_dhcid.len)
+		rcode1 = ddns_update_a (&ddns_fwd_name, lease -> ip_addr,
+					&ddns_dhcid, ddns_ttl);
 	
-	if (ddns_fwd_name.len && ddns_rev_name.len && ddns_dhcid.len)
-		rcode2 = ddns_update_ptr(&ddns_fwd_name, &ddns_rev_name,
-					 &ddns_dhcid, ddns_ttl);
+	if (rcode1 == NOERROR) {
+		if (ddns_fwd_name.len && ddns_rev_name.len && ddns_dhcid.len)
+			rcode2 = ddns_update_ptr (&ddns_fwd_name,
+						  &ddns_rev_name, ddns_ttl);
+	} else
+		rcode2 = SERVFAIL;
 
 	/* minires_update() can return -1 under certain circumstances. */
 	if (rcode1 == -1)
@@ -898,16 +893,13 @@ int ddns_updates (struct packet *packet,
 	if (rcode2 == -1)
 		rcode2 = SERVFAIL;
 
-	if (rcode1 == NOERROR || rcode2 == NOERROR) {
+	if (rcode1 == NOERROR) {
 		bind_ds_value (&lease -> scope, "ddns-fwd-name",
 			       &ddns_fwd_name);
 		bind_ds_value (&lease -> scope, "ddns-dhcid",
 			       &ddns_dhcid);
 	}
-	if (rcode1 == NOERROR) {
-		bind_ds_value (&lease -> scope, "ddns-address",
-			       &ddns_address);
-	}
+
 	if (rcode2 == NOERROR) {
 		bind_ds_value (&lease -> scope, "ddns-rev-name",
 			       &ddns_rev_name);
@@ -963,7 +955,6 @@ int ddns_updates (struct packet *packet,
 	data_string_forget (&ddns_domainname, MDL);
 	data_string_forget (&ddns_fwd_name, MDL);
 	data_string_forget (&ddns_rev_name, MDL);
-	data_string_forget (&ddns_address, MDL);
 	data_string_forget (&ddns_dhcid, MDL);
 
 	return rcode1 == NOERROR || rcode2 == NOERROR;
@@ -974,13 +965,9 @@ int ddns_removals(struct lease *lease)
 {
 	struct data_string ddns_fwd_name;
 	struct data_string ddns_rev_name;
-	struct data_string ddns_address;
 	struct data_string ddns_dhcid;
 	ns_rcode rcode;
 	struct binding *binding;
-
-	if (ddns_update_style != 2)
-		return 1;
 
 	/* No scope implies that DDNS has not been performed for this lease. */
 	if (!lease -> scope)
@@ -991,13 +978,21 @@ int ddns_removals(struct lease *lease)
 	 */
 	memset (&ddns_fwd_name, 0, sizeof (ddns_fwd_name));
 	memset (&ddns_rev_name, 0, sizeof (ddns_rev_name));
-	memset (&ddns_address, 0, sizeof (ddns_address));
 	memset (&ddns_dhcid, 0, sizeof (ddns_dhcid));
 
-	find_bound_string (&ddns_fwd_name, lease -> scope, "ddns-fwd-name");
-	find_bound_string (&ddns_rev_name, lease -> scope, "ddns-rev-name");
-	find_bound_string (&ddns_address, lease -> scope, "ddns-address");
-	find_bound_string (&ddns_dhcid, lease -> scope, "ddns-dhcid");
+	/* If all the bindings aren't there (ddns-dhcid being the crucial
+	   one), this isn't an interim or rfc3??? record, so we can't do
+	   the delete using this mechanism. */
+	if (!find_bound_string (&ddns_fwd_name,
+				lease -> scope, "ddns-fwd-name") ||
+	    !find_bound_string (&ddns_rev_name,
+				lease -> scope, "ddns-rev-name") ||
+	    !find_bound_string (&ddns_dhcid, lease -> scope, "ddns-dhcid")) {
+		data_string_forget (&ddns_fwd_name, MDL);
+		data_string_forget (&ddns_rev_name, MDL);
+		data_string_forget (&ddns_dhcid, MDL);
+		return 1;
+	}
 
 	/*
 	 * Start the resolver, if necessary.
@@ -1007,27 +1002,24 @@ int ddns_removals(struct lease *lease)
 		resolver_inited = 1;
 	}
 
-
 	/*
 	 * Perform removals.
 	 */
-	if (ddns_fwd_name.len && ddns_address.len && ddns_dhcid.len) {
-		rcode = ddns_remove_a (&ddns_fwd_name, &ddns_address,
+	if (ddns_fwd_name.len && ddns_dhcid.len) {
+		rcode = ddns_remove_a (&ddns_fwd_name, lease -> ip_addr,
 				       &ddns_dhcid);
 	}
-	if (ddns_fwd_name.len && ddns_rev_name.len && ddns_dhcid.len) {
-		rcode = ddns_remove_ptr(&ddns_fwd_name, &ddns_rev_name,
-					&ddns_dhcid);
+	if (rcode != NOERROR &&
+	    ddns_fwd_name.len && ddns_rev_name.len) {
+		rcode = ddns_remove_ptr(&ddns_fwd_name, &ddns_rev_name);
 	}
 
 	unset (lease -> scope, "ddns-fwd-name");
 	unset (lease -> scope, "ddns-rev-name");
-	unset (lease -> scope, "ddns-address");
 	unset (lease -> scope, "ddns-dhcid");
 
 	data_string_forget (&ddns_fwd_name, MDL);
 	data_string_forget (&ddns_rev_name, MDL);
-	data_string_forget (&ddns_address, MDL);
 	data_string_forget (&ddns_dhcid, MDL);
 
 
