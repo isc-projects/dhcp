@@ -3,7 +3,7 @@
    DHCP Protocol engine. */
 
 /*
- * Copyright (c) 1995, 1996 The Internet Software Consortium.
+ * Copyright (c) 1995, 1996, 1997 The Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.34 1996/09/11 05:52:18 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.34.2.1 1997/03/29 08:09:07 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -168,13 +168,14 @@ void dhcprequest (packet)
 		cip.len = 4;
 		memcpy (cip.iabuf, &packet -> raw -> ciaddr.s_addr, 4);
 	}
+	subnet = find_subnet (cip);
 
 	/* Find the lease that matches the address requested by the
 	   client. */
-	subnet = find_subnet (cip);
-	lease = find_lease (packet, (subnet
-				     ? subnet -> shared_network
-				     : (struct shared_network *)0));
+	if (packet -> shared_network)
+		lease = find_lease (packet, packet -> shared_network);
+	else
+		lease = (struct lease *)0;
 
 	note ("DHCPREQUEST for %s from %s via %s",
 	      piaddr (cip),
@@ -184,7 +185,6 @@ void dhcprequest (packet)
 	      packet -> raw -> giaddr.s_addr
 	      ? inet_ntoa (packet -> raw -> giaddr)
 	      : packet -> interface -> name);
-
 
 	/* If a client on a given network wants to request a lease on
 	   an address on a different network, NAK it.   If the Requested
@@ -197,7 +197,7 @@ void dhcprequest (packet)
 	   IP router, we'll just have to assume that it's cool.
 
 	   This violates the protocol spec in the case that the client
-	   is in the REBINDING state and broadcasts a DHCPREQUEST on
+	   is in the INIT-REBOOT state and broadcasts a DHCPREQUEST on
 	   the local wire.  We're supposed to check ciaddr for
 	   validity in that case, but if the packet was unicast
 	   through a router from a client in the RENEWING state, it
@@ -220,13 +220,21 @@ void dhcprequest (packet)
 			return;
 		}
 
-		/* If we do know where it came from and we don't know
-		   where it claims to have come from, same deal - fry it. */
+		/* If we do know where it came from and either we don't
+		   know where it came from at all or it came from a different
+		   shared network than the packet came from, send a nak. */ 
 		subnet = find_grouped_subnet (packet -> shared_network, cip);
 		if (!subnet) {
 			nak_lease (packet, &cip);
 			return;
 		}
+	}
+
+	/* If we found a lease for the client but it's not the one the
+	   client asked for, don't send it - some other server probably
+	   made the cut. */
+	if (lease && !addr_eq (lease -> ip_addr, cip)) {
+		return;
 	}
 
 	/* If we own the lease that the client is asking for,
@@ -243,19 +251,6 @@ void dhcprequest (packet)
 		       packet -> raw -> chaddr,
 		       packet -> raw -> hlen)))) {
 		ack_lease (packet, lease, DHCPACK, 0);
-		return;
-	}
-		
-	/* Otherwise, if we have a lease for this client,
-	   release it, and in any case don't reply to the
-	   DHCPREQUEST. */
-	if (packet -> options [DHO_DHCP_SERVER_IDENTIFIER].len
-	    && memcmp (packet ->
-		       options [DHO_DHCP_SERVER_IDENTIFIER].data,
-		       server_identifier.iabuf,
-		       server_identifier.len)) {
-		if (lease)
-			release_lease (lease);
 		return;
 	}
 }
@@ -492,7 +487,7 @@ void ack_lease (packet, lease, offer, when)
 
 	if (packet -> options [DHO_DHCP_USER_CLASS_ID].len) {
 		user_class =
-			find_class (0,
+			find_class (1,
 				    packet ->
 				    options [DHO_DHCP_USER_CLASS_ID].data,
 				    packet ->
@@ -899,7 +894,7 @@ void ack_lease (packet, lease, offer, when)
 	   is not requesting a broadcast response, sent it directly to
 	   that client. */
 	} else if (raw.ciaddr.s_addr && offer == DHCPACK &&
-		   !(raw.flags & BOOTP_BROADCAST)) {
+		   !(raw.flags & htons (BOOTP_BROADCAST))) {
 		to.sin_addr = packet -> raw -> ciaddr;
 		to.sin_port = htons (ntohs (server_port) + 1); /* XXX */
 
