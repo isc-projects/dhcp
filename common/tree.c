@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.40 1999/07/21 14:28:57 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.41 1999/07/21 19:26:55 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -703,7 +703,6 @@ int evaluate_data_expression (result, packet, options, lease, expr)
 
 		/* Extract an option. */
 	      case expr_option:
-	      case expr_config_option:
 		if (options)
 			s0 = ((*expr -> data.option -> universe -> get_func)
 			      (result, expr -> data.option -> universe,
@@ -714,6 +713,24 @@ int evaluate_data_expression (result, packet, options, lease, expr)
 
 #if defined (DEBUG_EXPRESSIONS)
 		log_debug ("data: option %s.%s = %s",
+		      expr -> data.option -> universe -> name,
+		      expr -> data.option -> name,
+		      s0 ? print_hex_1 (result -> len, result -> data, 60)
+		      : "NULL");
+#endif
+		return s0;
+
+	      case expr_config_option:
+		if (lease -> state && lease -> state -> options)
+			s0 = ((*expr -> data.option -> universe -> get_func)
+			      (result, expr -> data.option -> universe,
+			       packet, lease, lease -> state -> options,
+			       expr -> data.option -> code));
+		else
+			s0 = 0;
+
+#if defined (DEBUG_EXPRESSIONS)
+		log_debug ("data: config-option %s.%s = %s",
 		      expr -> data.option -> universe -> name,
 		      expr -> data.option -> name,
 		      s0 ? print_hex_1 (result -> len, result -> data, 60)
