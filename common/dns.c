@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dns.c,v 1.35.2.11 2002/02/09 03:17:19 mellon Exp $ Copyright (c) 2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dns.c,v 1.35.2.12 2002/02/20 22:28:17 mellon Exp $ Copyright (c) 2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -633,8 +633,8 @@ isc_result_t ddns_update_a (struct data_string *ddns_fwd_name,
 
 	if (result == ISC_R_SUCCESS) {
 		log_info ("Added new forward map from %.*s to %s",
-			  ddns_fwd_name -> len,
-			  ddns_fwd_name -> data, ddns_address);
+			  (int)ddns_fwd_name -> len,
+			  (const char *)ddns_fwd_name -> data, ddns_address);
 		goto error;
 	}
 
@@ -654,8 +654,8 @@ isc_result_t ddns_update_a (struct data_string *ddns_fwd_name,
 
 	if (result != (rrsetp ? ISC_R_YXRRSET : ISC_R_YXDOMAIN)) {
 		log_error ("Unable to add forward map from %.*s to %s: %s",
-			   ddns_fwd_name -> len,
-			   ddns_fwd_name -> data, ddns_address,
+			   (int)ddns_fwd_name -> len,
+			   (const char *)ddns_fwd_name -> data, ddns_address,
 			   isc_result_totext (result));
 		goto error;
 	}
@@ -729,18 +729,19 @@ isc_result_t ddns_update_a (struct data_string *ddns_fwd_name,
 		if (result == YXRRSET || result == YXDOMAIN ||
 		    result == NXRRSET || result == NXDOMAIN)
 			log_error ("Forward map from %.*s to %s already in use",
-				   ddns_fwd_name -> len,
-				   ddns_fwd_name -> data, ddns_address);
+				   (int)ddns_fwd_name -> len,
+				   (const char *)ddns_fwd_name -> data,
+				   ddns_address);
 		else
 			log_error ("Can't update forward map %.*s to %s: %s",
-				   ddns_fwd_name -> len,
-				   ddns_fwd_name -> data, ddns_address,
-				   isc_result_totext (result));
+				   (int)ddns_fwd_name -> len,
+				   (const char *)ddns_fwd_name -> data,
+				   ddns_address, isc_result_totext (result));
 
 	} else {
 		log_info ("Added new forward map from %.*s to %s",
-			  ddns_fwd_name -> len,
-			  ddns_fwd_name -> data, ddns_address);
+			  (int)ddns_fwd_name -> len,
+			  (const char *)ddns_fwd_name -> data, ddns_address);
 	}
 #if defined (DEBUG_DNS_UPDATES)
 	print_dns_status ((int)result, &updqueue);

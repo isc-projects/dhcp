@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: ddns.c,v 1.15.2.8 2002/02/20 07:18:35 mellon Exp $ Copyright (c) 2000-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: ddns.c,v 1.15.2.9 2002/02/20 22:28:18 mellon Exp $ Copyright (c) 2000-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -126,12 +126,16 @@ static isc_result_t ddns_update_ptr (struct data_string *ddns_fwd_name,
 #endif
 	if (result == ISC_R_SUCCESS) {
 		log_info ("added reverse map from %.*s to %.*s",
-			  ddns_rev_name -> len, ddns_rev_name -> data,
-			  ddns_fwd_name -> len, ddns_fwd_name -> data);
+			  (int)ddns_rev_name -> len,
+			  (const char *)ddns_rev_name -> data,
+			  (int)ddns_fwd_name -> len,
+			  (const char *)ddns_fwd_name -> data);
 	} else {
 		log_error ("unable to add reverse map from %.*s to %.*s: %s",
-			   ddns_rev_name -> len, ddns_rev_name -> data,
-			   ddns_fwd_name -> len, ddns_fwd_name -> data,
+			   (int)ddns_rev_name -> len,
+			   (const char *)ddns_rev_name -> data,
+			   (int)ddns_fwd_name -> len,
+			   (const char *)ddns_fwd_name -> data,
 			   isc_result_totext (result));
 	}
 
@@ -191,11 +195,13 @@ static isc_result_t ddns_remove_ptr (struct data_string *ddns_rev_name)
 #endif
 	if (result == ISC_R_SUCCESS) {
 		log_info ("removed reverse map on %.*s",
-			  ddns_rev_name -> len, ddns_rev_name -> data);
+			  (int)ddns_rev_name -> len,
+			  (const char *)ddns_rev_name -> data);
 	} else {
 		if (result != ISC_R_NXRRSET && result != ISC_R_NXDOMAIN)
 			log_error ("can't remove reverse map on %.*s: %s",
-				   ddns_rev_name -> len, ddns_rev_name -> data,
+				   (int)ddns_rev_name -> len,
+				   (const char *)ddns_rev_name -> data,
 				   isc_result_totext (result));
 	}
 
