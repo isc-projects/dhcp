@@ -13,7 +13,7 @@ if [ "$sysname" = "" ]; then
       sysname=bsdos;;
     OSF1)
       if [ $machine = 'alpha' ]; then
-        sysname = alphaosf
+        sysname=alphaosf
       fi;;
     Linux)
       sysname=linux;;
