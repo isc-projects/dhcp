@@ -54,8 +54,11 @@ void bootp (packet)
 	struct host_decl *hp = find_host_by_addr (packet -> raw -> htype,
 						  packet -> raw -> chaddr,
 						  packet -> raw -> hlen);
-	struct dhcp_packet *reply;
+	struct packet outgoing;
+	struct dhcp_packet raw;
 	struct sockaddr_in to;
+	struct tree_cache *options [256];
+	int i;
 
 	/* If the packet is from a host we don't know, drop it on
 	   the floor. XXX */
@@ -66,8 +69,8 @@ void bootp (packet)
 				     packet -> raw -> chaddr));
 		return;
 	}
-	/* If we don't have a fixed address for it, drop it on the floor.
-	   XXX */
+
+	/* If we don't have a fixed address for it, drop it. */
 	if (!hp -> fixed_addr || !tree_evaluate (hp -> fixed_addr)) {
 		note ("No fixed address for BOOTP host %s (%s)",
 		      print_hw_addr (packet -> raw -> htype,
@@ -76,72 +79,83 @@ void bootp (packet)
 		      hp -> name);
 		return;
 	}
-	reply = new_dhcp_packet ("bootp");
-	if (!reply) {
-		free_dhcp_packet (packet -> raw, "bootp");
-		free_packet (packet, "bootp");
-		return;
+
+	/* Set up the outgoing packet... */
+	memset (&outgoing, 0, sizeof outgoing);
+	memset (&raw, 0, sizeof raw);
+	outgoing.raw = &raw;
+
+	/* Come up with a list of options that we want to send to this
+	   client.   Start with the per-subnet options, and then override
+	   those with client-specific options. */
+
+	memcpy (options, packet -> subnet -> options, sizeof options);
+
+	for (i = 0; i < 256; i++) {
+		if (hp -> options [i])
+			options [i] = hp -> options [i];
 	}
+
+	/* Pack the options into the buffer.   Unlike DHCP, we can't
+	   pack options into the filename and server name buffers. */
+
+	cons_options (packet, &outgoing, options, 0);
+	
+
 	/* Take the fields that we care about... */
-	reply -> op = BOOTREPLY;
-	reply -> htype = packet -> raw -> htype;
-	reply -> hlen = packet -> raw -> hlen;
-	memcpy (reply -> chaddr, packet -> raw -> chaddr, reply -> hlen);
-	memset (&reply -> chaddr [reply -> hlen], 0,
-		(sizeof reply -> chaddr) - reply -> hlen);
-	reply -> hops = packet -> raw -> hops;
-	reply -> xid = packet -> raw -> xid;
-	reply -> secs = packet -> raw -> secs;
-	reply -> flags = 0;
-	reply -> ciaddr = packet -> raw -> ciaddr;
+	raw.op = BOOTREPLY;
+	raw.htype = packet -> raw -> htype;
+	raw.hlen = packet -> raw -> hlen;
+	memcpy (raw.chaddr, packet -> raw -> chaddr, raw.hlen);
+	memset (&raw.chaddr [raw.hlen], 0,
+		(sizeof raw.chaddr) - raw.hlen);
+	raw.hops = packet -> raw -> hops;
+	raw.xid = packet -> raw -> xid;
+	raw.secs = packet -> raw -> secs;
+	raw.flags = 0;
+	raw.ciaddr = packet -> raw -> ciaddr;
 	if (!tree_evaluate (hp -> fixed_addr))
 		warn ("tree_evaluate failed.");
 	debug ("fixed_addr: %x %d %d %d %d %x",
 	       *(int *)(hp -> fixed_addr -> value), hp -> fixed_addr -> len,
 	       hp -> fixed_addr -> buf_size, hp -> fixed_addr -> timeout,
 	       hp -> fixed_addr -> tree);
-	memcpy (&reply -> yiaddr, hp -> fixed_addr -> value,
-		sizeof reply -> yiaddr);
-	reply -> siaddr.s_addr = pick_interface (packet);
-	reply -> giaddr = packet -> raw -> giaddr;
+	memcpy (&raw.yiaddr, hp -> fixed_addr -> value,
+		sizeof raw.yiaddr);
+	raw.siaddr.s_addr = pick_interface (packet);
+	raw.giaddr = packet -> raw -> giaddr;
 	if (hp -> server_name) {
-		strncpy (reply -> sname, hp -> server_name,
-			 (sizeof reply -> sname) - 1);
-		reply -> sname [(sizeof reply -> sname) - 1] = 0;
+		strncpy (raw.sname, hp -> server_name,
+			 (sizeof raw.sname) - 1);
+		raw.sname [(sizeof raw.sname) - 1] = 0;
 	}
 	if (hp -> filename) {
-		strncpy (reply -> file, hp -> filename,
-			 (sizeof reply -> file) - 1);
-		reply -> file [(sizeof reply -> file) - 1] = 0;
+		strncpy (raw.file, hp -> filename,
+			 (sizeof raw.file) - 1);
+		raw.file [(sizeof raw.file) - 1] = 0;
 	}
-	reply -> options [0] = 0;
-	/* XXX gateways? */
-	to.sin_port = server_port;
 
-#if 0
-	if (packet -> raw -> flags & BOOTP_BROADCAST)
-#endif
+	/* If this was gatewayed, send it back to the gateway... */
+	if (raw.giaddr.s_addr) {
+		to.sin_addr = raw.giaddr;
+		to.sin_port = server_port;
+	/* Otherwise, broadcast it on the local network. */
+	} else {
 		to.sin_addr.s_addr = INADDR_BROADCAST;
-#if 0
-	else
-		to.sin_addr.s_addr = INADDR_ANY;
-#endif
+		to.sin_port = htons (ntohs (server_port) + 1); /* XXX */
+	}
 
-	memset (reply -> options, 0, sizeof (reply -> options));
-	/* If we got the magic cookie, send it back. */
-	if (packet -> options_valid)
-		memcpy (reply -> options, packet -> raw -> options, 4);
-	to.sin_port = htons (packet -> client_port);
 	to.sin_family = AF_INET;
+#ifdef HAVE_SIN_LEN
 	to.sin_len = sizeof to;
+#endif
 	memset (to.sin_zero, 0, sizeof to.sin_zero);
 
 	note ("Sending bootp reply to %s, port %d",
-	      inet_ntoa (to.sin_addr), htons (to.sin_port));
+	      inet_ntoa (to.sin_addr), to.sin_port);
 
 	errno = 0;
-	result = sendto (packet -> client_sock, reply,
-			 ((char *)(&reply -> options) - (char *)reply) + 64,
+	result = sendto (packet -> client_sock, &raw, outgoing.packet_length,
 			 0, (struct sockaddr *)&to, sizeof to);
 	if (result < 0)
 		warn ("sendto: %m");
