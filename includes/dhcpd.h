@@ -319,8 +319,10 @@ void dhcpdecline PROTO ((struct packet *));
 void dhcpinform PROTO ((struct packet *));
 void nak_lease PROTO ((struct packet *, struct iaddr *cip));
 void ack_lease PROTO ((struct packet *, struct lease *, unsigned char, TIME));
-struct lease *find_lease PROTO ((struct packet *));
-struct lease *mockup_lease PROTO ((struct packet *, struct host_decl *));
+struct lease *find_lease PROTO ((struct packet *, struct shared_network *));
+struct lease *mockup_lease PROTO ((struct packet *,
+				   struct shared_network *,
+				   struct host_decl *));
 
 /* bootp.c */
 void bootp PROTO ((struct packet *));
