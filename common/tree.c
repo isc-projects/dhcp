@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.26 1999/04/12 22:11:12 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.27 1999/04/23 22:22:55 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -634,7 +634,8 @@ int evaluate_data_expression (result, packet, options, expr)
 	      case expr_option:
 		s0 = ((*expr -> data.option -> universe -> get_func)
 		      (result, expr -> data.option -> universe,
-		       packet -> options, expr -> data.option -> code));
+		       options, expr -> data.option -> code));
+
 #if defined (DEBUG_EXPRESSIONS)
 		log_info ("data: option %s.%s = %s",
 		      expr -> data.option -> universe -> name,
