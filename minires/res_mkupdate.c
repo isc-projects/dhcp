@@ -21,7 +21,7 @@
  */
 
 #if !defined(lint) && !defined(SABER)
-static const char rcsid[] = "$Id: res_mkupdate.c,v 1.2 2000/02/02 19:59:16 mellon Exp $";
+static const char rcsid[] = "$Id: res_mkupdate.c,v 1.3 2000/02/02 22:58:09 mellon Exp $";
 #endif /* not lint */
 
 #include <sys/types.h>
@@ -438,6 +438,7 @@ res_nmkupdate(res_state statp,
 			memcpy(cp, buf2, n);
 			cp += n;
 			break;
+#if 0
 		case T_NSAP:
 			if ((n = inet_nsap_addr((char *)startp, (u_char *)buf2, sizeof(buf2))) != 0) {
 				ShrinkBuffer(n);
@@ -447,7 +448,6 @@ res_nmkupdate(res_state statp,
 				return (-1);
 			}
 			break;
-#if 0
 		case T_LOC:
 			if ((n = loc_aton((char *)startp, (u_char *)buf2)) != 0) {
 				ShrinkBuffer(n);
