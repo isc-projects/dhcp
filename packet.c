@@ -46,16 +46,55 @@ static char copyright[] =
 #endif /* not lint */
 
 #include "dhcpd.h"
-#include <sys/ioctl.h>
-
+#if defined (PACKET_ASSEMBLY) || defined (PACKET_DECODING)
 #include <netinet/in_systm.h>
-#include <netinet/ip.h>
-#include <netinet/udp.h>
-#include <netinet/if_ether.h>
+#include "includes/netinet/ip.h"
+#include "includes/netinet/udp.h"
+#include "includes/netinet/if_ether.h"
 
 static u_int32_t checksum PROTO ((unsigned char *, int, u_int32_t));
 static u_int32_t wrapsum PROTO ((u_int32_t));
 
+/* Compute the easy part of the checksum on a range of bytes. */
+
+static u_int32_t checksum (buf, nbytes, sum)
+	unsigned char *buf;
+	int nbytes;
+	u_int32_t sum;
+{
+	int i;
+
+	/* Checksum all the pairs of bytes first... */
+	for (i = 0; i < (nbytes & ~1); i += 2) {
+		sum += (u_int16_t) ntohs(*((u_int16_t *)buf)++);
+	}	
+
+	/* If there's a single byte left over, checksum it, too.   Network
+	   byte order is big-endian, so the remaining byte is the high byte. */
+	if (i < nbytes) {
+		sum += (*buf) << 8;
+	}
+	
+	return sum;
+}
+
+/* Fold the upper sixteen bits of the checksum down into the lower bits,
+   complement the sum, and then put it into network byte order. */
+
+static u_int32_t wrapsum (sum)
+	u_int32_t sum;
+{
+	while (sum > 0x10000) {
+		sum = (sum >> 16) + (sum & 0xFFFF);
+		sum += (sum >> 16);
+	}
+	sum = sum ^ 0xFFFF;
+	
+	return htons(sum);
+}
+#endif /* PACKET_ASSEMBLY || PACKET_DECODING */
+
+#ifdef PACKET_ASSEMBLY
 /* Assemble an hardware header... */
 /* XXX currently only supports ethernet; doesn't check for other types. */
 
@@ -68,14 +107,14 @@ void assemble_hw_header (interface, buf, bufix, to)
 	struct ether_header eh;
 
 	if (to)
-		memcpy (ETHER_DEST (&eh), to -> haddr, sizeof eh.ether_dhost);
+		memcpy (eh.ether_dhost, to -> haddr, sizeof eh.ether_dhost);
 	else
-		memset (ETHER_DEST (&eh), 0xff, sizeof (eh.ether_shost));
+		memset (eh.ether_dhost, 0xff, sizeof (eh.ether_dhost));
 	if (interface -> hw_address.hlen == sizeof (eh.ether_shost))
-		memcpy (ETHER_SRC (&eh), interface -> hw_address.haddr,
+		memcpy (eh.ether_shost, interface -> hw_address.haddr,
 			sizeof (eh.ether_shost));
 	else
-		memset (ETHER_SRC (&eh), 0x00, sizeof (eh.ether_shost));
+		memset (eh.ether_shost, 0x00, sizeof (eh.ether_shost));
 	eh.ether_type = htons (ETHERTYPE_IP);
 
 	memcpy (&buf [*bufix], &eh, sizeof eh);
@@ -139,7 +178,9 @@ void assemble_udp_ip_header (interface, buf, bufix, addr, port, data, len)
 	memcpy (&buf [*bufix], &udp, sizeof udp);
 	*bufix += sizeof udp;
 }
+#endif /* PACKET_ASSEMBLY */
 
+#ifdef PACKET_DECODING
 /* Decode a hardware header... */
 /* XXX currently only supports ethernet; doesn't check for other types. */
 
@@ -157,7 +198,7 @@ size_t decode_hw_header (interface, buf, bufix, from)
   if (ntohs (eh.ether_type) != ETHERTYPE_IP)
 	  return -1;
 #endif
-  memcpy (from -> haddr, ETHER_SRC (&eh), sizeof (eh.ether_shost));
+  memcpy (from -> haddr, eh.ether_shost, sizeof (eh.ether_shost));
   from -> htype = ARPHRD_ETHER;
   from -> hlen = sizeof eh.ether_shost;
 
@@ -241,42 +282,4 @@ size_t decode_udp_ip_header (interface, buf, bufix, from, data, len)
 
   return ip_len + sizeof *udp;
 }
-
-/* Compute the easy part of the checksum on a range of bytes. */
-
-static u_int32_t checksum (buf, nbytes, sum)
-	unsigned char *buf;
-	int nbytes;
-	u_int32_t sum;
-{
-	int i;
-
-	/* Checksum all the pairs of bytes first... */
-	for (i = 0; i < (nbytes & ~1); i += 2) {
-		sum += (u_int16_t) ntohs(*((u_int16_t *)buf)++);
-	}	
-
-	/* If there's a single byte left over, checksum it, too.   Network
-	   byte order is big-endian, so the remaining byte is the high byte. */
-	if (i < nbytes) {
-		sum += (*buf) << 8;
-	}
-	
-	return sum;
-}
-
-/* Fold the upper sixteen bits of the checksum down into the lower bits,
-   complement the sum, and then put it into network byte order. */
-
-static u_int32_t wrapsum (sum)
-	u_int32_t sum;
-{
-	while (sum > 0x10000) {
-		sum = (sum >> 16) + (sum & 0xFFFF);
-		sum += (sum >> 16);
-	}
-	sum = sum ^ 0xFFFF;
-	
-	return htons(sum);
-}
-
+#endif /* PACKET_DECODING */
