@@ -3,7 +3,7 @@
    DHCP Protocol engine. */
 
 /*
- * Copyright (c) 1995, 1996, 1997 The Internet Software Consortium.
+ * Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.61 1998/03/17 18:14:51 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.62 1998/04/09 04:41:52 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -103,6 +103,12 @@ void dhcpdiscover (packet)
 		      inet_ntoa (packet -> raw -> giaddr));
 		return;
 	}
+
+	/* Make sure this packet satisfies the configured minimum
+	   number of seconds. */
+	if (packet -> raw -> secs <
+	    packet -> shared_network -> group -> min_secs)
+		return;
 
 	/* If we didn't find a lease, try to allocate one... */
 	if (!lease) {
@@ -666,6 +672,7 @@ void ack_lease (packet, lease, offer, when)
 					lease_time = (lease -> subnet ->
 						      group -> max_lease_time);
 			}
+
 		} else {
 			if (lease -> host
 			    && lease -> host -> group -> default_lease_time)
@@ -676,6 +683,19 @@ void ack_lease (packet, lease, offer, when)
 					      group -> default_lease_time);
 		}
 		
+		/* Enforce a minimum lease time, if specified. */
+		if (lease -> host) {
+			if (lease_time <
+			    lease -> host -> group -> min_lease_time)
+				lease_time = (lease ->
+					      host -> group -> min_lease_time);
+		} else {
+			if (lease_time <
+			    lease -> subnet -> group -> min_lease_time)
+				lease_time = (lease -> subnet ->
+					      group -> min_lease_time);
+		}
+
 		state -> offered_expiry = cur_time + lease_time;
 		if (when)
 			lt.ends = when;
@@ -853,14 +873,18 @@ void ack_lease (packet, lease, offer, when)
 		state -> options [i] -> tree = (struct tree *)0;
 
 		i = DHO_DHCP_SERVER_IDENTIFIER;
-		state -> options [i] = new_tree_cache ("server-id");
-		state -> options [i] -> value =
-			(unsigned char *)&state -> ip -> primary_address;
-		state -> options [i] -> len =
-			sizeof state -> ip -> primary_address;
-		state -> options [i] -> buf_size = state -> options [i] -> len;
-		state -> options [i] -> timeout = 0xFFFFFFFF;
-		state -> options [i] -> tree = (struct tree *)0;
+		if (!state -> options [i]) {
+			state -> options [i] = new_tree_cache ("server-id");
+			state -> options [i] -> value =
+				(unsigned char *)&state ->
+					ip -> primary_address;
+			state -> options [i] -> len =
+				sizeof state -> ip -> primary_address;
+			state -> options [i] -> buf_size
+				= state -> options [i] -> len;
+			state -> options [i] -> timeout = 0xFFFFFFFF;
+			state -> options [i] -> tree = (struct tree *)0;
+		}
 
 		/* Sanity check the lease time. */
 		if ((state -> offered_expiry - cur_time) < 15)
@@ -961,6 +985,28 @@ void ack_lease (packet, lease, offer, when)
 		state -> options [i] -> len = lease -> subnet -> netmask.len;
 		state -> options [i] -> buf_size =
 			lease -> subnet -> netmask.len;
+		state -> options [i] -> timeout = 0xFFFFFFFF;
+		state -> options [i] -> tree = (struct tree *)0;
+	}
+
+	/* If so directed, use the leased IP address as the router address.
+	   This supposedly makes Win95 machines ARP for all IP addresses,
+	   so if the local router does proxy arp, you win. */
+	if ((lease -> host &&
+	     lease -> host -> group -> use_lease_addr_for_default_route) ||
+	    (lease -> subnet -> group -> use_lease_addr_for_default_route)) {
+		i = DHO_ROUTERS;
+
+		if (state -> options [i] &&
+		    state -> options [i] -> flags & TC_TEMPORARY)
+			free_tree_cache (state -> options [i], "dhcp_reply");
+
+		state -> options [i] = new_tree_cache ("routers");
+		state -> options [i] -> flags = TC_TEMPORARY;
+		state -> options [i] -> value =
+			lease -> ip_addr.iabuf;
+		state -> options [i] -> len = lease -> ip_addr.len;
+		state -> options [i] -> buf_size = lease -> ip_addr.len;
 		state -> options [i] -> timeout = 0xFFFFFFFF;
 		state -> options [i] -> tree = (struct tree *)0;
 	}
@@ -1286,9 +1332,7 @@ struct lease *find_lease (packet, share, ours)
 		int i = DHO_DHCP_CLIENT_IDENTIFIER;
 		/* If for some reason the client has more than one lease
 		   on the subnet that matches its uid, pick the one that
-		   it asked for.    It might be nice in some cases to
-		   release the extraneous leases, but better to leave
-		   that to a human. */
+		   it asked for.   If we have a host */
 		if (packet -> options [i].data &&
 		    ip_lease -> uid_len ==  packet -> options [i].len &&
 		    !memcmp (packet -> options [i].data,
@@ -1378,7 +1422,8 @@ struct lease *find_lease (packet, share, ours)
 	   a better offer, use that; otherwise, release it. */
 	if (ip_lease) {
 		if (lease) {
-			release_lease (ip_lease);
+			if (packet -> packet_type == DHCPREQUEST)
+				release_lease (ip_lease);
 		} else {
 			lease = ip_lease;
 			lease -> host = (struct host_decl *)0;
@@ -1390,7 +1435,8 @@ struct lease *find_lease (packet, share, ours)
 	   the lease that matched the client identifier. */
 	if (uid_lease) {
 		if (lease) {
-			release_lease (uid_lease);
+			if (packet -> packet_type == DHCPREQUEST)	
+				dissociate_lease (uid_lease);
 		} else {
 			lease = uid_lease;
 			lease -> host = (struct host_decl *)0;
@@ -1400,7 +1446,8 @@ struct lease *find_lease (packet, share, ours)
 	/* The lease that matched the hardware address is treated likewise. */
 	if (hw_lease) {
 		if (lease) {
-			release_lease (hw_lease);
+			if (packet -> packet_type == DHCPREQUEST)	
+				dissociate_lease (hw_lease);
 		} else {
 			lease = hw_lease;
 			lease -> host = (struct host_decl *)0;
