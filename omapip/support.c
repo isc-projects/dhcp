@@ -164,36 +164,23 @@ isc_result_t omapi_object_type_register (omapi_object_type_t **type,
 {
 	omapi_object_type_t *t;
 
-	if (!omapi_object_types) {
-		ot_max = 10;
-		omapi_object_types = malloc (ot_max *
-					     sizeof *omapi_object_types);
-		if (!omapi_object_types)
-			return ISC_R_NOMEMORY;
-		memset (omapi_object_types, 0, (ot_max *
-						sizeof *omapi_object_types));
-	} else if (omapi_object_type_count == ot_max) {
-		t = malloc (2 *ot_max * sizeof *t);
-		if (!t)
-			return ISC_R_NOMEMORY;
-		memcpy (t, omapi_object_types, ot_max *sizeof *t);
-		memset (t + ot_max, 0, ot_max * sizeof *t);
-		free (omapi_object_types);
-		omapi_object_types = t;
-	}
-	omapi_object_types [omapi_object_type_count].name = name;
-	omapi_object_types [omapi_object_type_count].set_value = set_value;
-	omapi_object_types [omapi_object_type_count].get_value = get_value;
-	omapi_object_types [omapi_object_type_count].destroy = destroy;
-	omapi_object_types [omapi_object_type_count].signal_handler =
-		signal_handler;
-	omapi_object_types [omapi_object_type_count].stuff_values =
-		stuff_values;
-	omapi_object_types [omapi_object_type_count].lookup = lookup;
-	omapi_object_types [omapi_object_type_count].create = create;
+	t = malloc (sizeof *t);
+	if (!t)
+		return ISC_R_NOMEMORY;
+	memset (t, 0, sizeof *t);
+
+	t -> name = name;
+	t -> set_value = set_value;
+	t -> get_value = get_value;
+	t -> destroy = destroy;
+	t -> signal_handler = signal_handler;
+	t -> stuff_values = stuff_values;
+	t -> lookup = lookup;
+	t -> create = create;
+	t -> next = omapi_object_types;
+	omapi_object_types = t;
 	if (type)
-		*type = &omapi_object_types [omapi_object_type_count];
-	omapi_object_type_count++;
+		*type = t;
 	return ISC_R_SUCCESS;
 }
 
@@ -247,6 +234,25 @@ isc_result_t omapi_set_value (omapi_object_t *h,
 		return (*(outer -> type -> set_value)) (outer,
 							id, name, value);
 	return ISC_R_NOTFOUND;
+}
+
+isc_result_t omapi_set_value_str (omapi_object_t *h,
+				  omapi_object_t *id,
+				  char *name,
+				  omapi_typed_data_t *value)
+{
+	omapi_object_t *outer;
+	omapi_data_string_t *nds;
+	isc_result_t status;
+
+	nds = (omapi_data_string_t *)0;
+	status = omapi_data_string_new (&nds, strlen (name),
+					"omapi_set_value_str");
+	if (status != ISC_R_SUCCESS)
+		return status;
+	memcpy (nds -> value, name, strlen (name));
+
+	return omapi_set_value (h, id, nds, value);
 }
 
 isc_result_t omapi_set_boolean_value (omapi_object_t *h, omapi_object_t *id,
@@ -333,6 +339,34 @@ isc_result_t omapi_set_object_value (omapi_object_t *h, omapi_object_t *id,
 	return status;
 }
 
+isc_result_t omapi_set_string_value (omapi_object_t *h, omapi_object_t *id,
+				     char *name, char *value)
+{
+	isc_result_t status;
+	omapi_typed_data_t *tv = (omapi_typed_data_t *)0;
+	omapi_data_string_t *n = (omapi_data_string_t *)0;
+	int len;
+	int ip;
+
+	status = omapi_data_string_new (&n, strlen (name),
+					"omapi_set_string_value");
+	if (status != ISC_R_SUCCESS)
+		return status;
+	memcpy (n -> value, name, strlen (name));
+
+	status = omapi_typed_data_new (&tv, omapi_datatype_string, value);
+	if (status != ISC_R_SUCCESS) {
+		omapi_data_string_dereference (&n,
+					       "omapi_set_string_value");
+		return status;
+	}
+
+	status = omapi_set_value (h, id, n, tv);
+	omapi_data_string_dereference (&n, "omapi_set_string_value");
+	omapi_typed_data_dereference (&tv, "omapi_set_string_value");
+	return status;
+}
+
 isc_result_t omapi_get_value (omapi_object_t *h,
 			      omapi_object_t *id,
 			      omapi_data_string_t *name,
@@ -357,6 +391,7 @@ isc_result_t omapi_get_value_str (omapi_object_t *h,
 	omapi_data_string_t *nds;
 	isc_result_t status;
 
+	nds = (omapi_data_string_t *)0;
 	status = omapi_data_string_new (&nds, strlen (name),
 					"omapi_get_value_str");
 	if (status != ISC_R_SUCCESS)
@@ -382,6 +417,37 @@ isc_result_t omapi_stuff_values (omapi_object_t *c,
 	if (outer -> type -> stuff_values)
 		return (*(outer -> type -> stuff_values)) (c, id, outer);
 	return ISC_R_NOTFOUND;
+}
+
+isc_result_t omapi_object_create (omapi_object_t **obj, omapi_object_t *id,
+				  omapi_object_type_t *type)
+{
+	if (!type -> create)
+		return ISC_R_NOTIMPLEMENTED;
+	return (*(type -> create)) (obj, id);
+}
+
+isc_result_t omapi_object_update (omapi_object_t *obj, omapi_object_t *id,
+				  omapi_object_t *src)
+{
+	omapi_generic_object_t *gsrc;
+	isc_result_t status;
+	int i;
+
+	if (!src)
+		return ISC_R_INVALIDARG;
+	if (src -> type != omapi_type_generic)
+		return ISC_R_NOTIMPLEMENTED;
+	gsrc = (omapi_generic_object_t *)src;
+	for (i = 0; i < gsrc -> nvalues; i++) {
+		status = omapi_set_value (obj, id,
+					  gsrc -> values [i] -> name,
+					  gsrc -> values [i] -> value);
+		if (status != ISC_R_SUCCESS)
+			return status;
+	}
+	omapi_signal (obj, "updated");
+	return ISC_R_SUCCESS;
 }
 
 int omapi_data_string_cmp (omapi_data_string_t *s1, omapi_data_string_t *s2)
@@ -594,7 +660,7 @@ isc_result_t omapi_get_int_value (u_int32_t *v, omapi_typed_data_t *t)
 		*v = t -> u.integer;
 		return ISC_R_SUCCESS;
 	} else if (t -> type == omapi_datatype_string ||
-		 t -> type == omapi_datatype_data) {
+		   t -> type == omapi_datatype_data) {
 		if (t -> u.buffer.len != sizeof (rv))
 			return ISC_R_INVALIDARG;
 		memcpy (&rv, t -> u.buffer.value, sizeof rv);
