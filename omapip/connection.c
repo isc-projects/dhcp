@@ -670,15 +670,11 @@ isc_result_t omapi_connection_reaper (omapi_object_t *h)
 		log_debug ("omapi_connection_reaper(): disconnect");
 #endif
 		omapi_disconnect (h, 1);
-		if (c -> outer && c -> outer -> type == omapi_type_io_object)
-			omapi_unregister_io_object (c -> outer);
 	}
 	if (c -> state == omapi_connection_closed) {
 #ifdef DEBUG_PROTOCOL
 		log_debug ("omapi_connection_reaper(): closed");
 #endif
-		if (c -> outer && c -> outer -> type == omapi_type_io_object)
-			omapi_unregister_io_object (c -> outer);
 		return ISC_R_NOTCONNECTED;
 	}
 	return ISC_R_SUCCESS;
