@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: print.c,v 1.31 2000/01/08 01:37:32 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: print.c,v 1.32 2000/01/25 01:14:26 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -777,7 +777,7 @@ int token_print_indent_concat (FILE *file, int col,  int indent,
 	}
 	va_end (list);
 
-	t = malloc (len + 1);
+	t = dmalloc (len + 1, MDL);
 	if (!t)
 		log_fatal ("token_print_indent: no memory for copy buffer");
 
@@ -793,7 +793,7 @@ int token_print_indent_concat (FILE *file, int col,  int indent,
 	
 	len = token_print_indent (file, col, indent,
 				  prefix, suffix, t);
-	free (t);
+	dfree (t, MDL);
 	return col;
 }
 
@@ -813,7 +813,7 @@ int token_indent_data_string (FILE *file, int col, int indent,
 
 	/* If we have a purely ASCII string, output it as text. */
 	if (i == data -> len) {
-		char *buf = malloc (data -> len + 3);
+		char *buf = dmalloc (data -> len + 3, MDL);
 		if (buf) {
 			buf [0] = '"';
 			memcpy (buf + 1, data -> data, data -> len);
@@ -821,7 +821,7 @@ int token_indent_data_string (FILE *file, int col, int indent,
 			buf [data -> len + 2] = 0;
 			i = token_print_indent (file, col, indent,
 						prefix, suffix, buf);
-			free (buf);
+			dfree (buf, MDL);
 			return i;
 		}
 	}
@@ -892,6 +892,9 @@ void print_dns_status (int status, ns_updque *uq)
 
 	for (u = HEAD (*uq); u; u = NEXT (u, r_link)) {
 		ttlp = 0;
+		if (s != &obuf [0] && s + 1 < end)
+			*s++ = ' ';
+
 		switch (u -> r_opcode)
 		{
 		      case NXRRSET:
@@ -1022,8 +1025,6 @@ void print_dns_status (int status, ns_updque *uq)
 		}
 		if (u == TAIL (*uq))
 			break;
-		if (s + 1 < end)
-			*s++ = ' ';
 	}
 	if (s == &obuf [0]) {
 		strcpy (s, "empty update");
@@ -1088,8 +1089,6 @@ void print_dns_status (int status, ns_updque *uq)
 	if (s + strlen (en) < end) {
 		strcpy (s, en);
 		s += strlen (en);
-		if (s + 1 < end)
-			*s++ = ' ';
 	}
 	if (s + 1 < end)
 		*s++ = '.';
