@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.36.2.1 1997/03/29 08:06:44 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.36.2.2 1997/04/03 21:09:59 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1595,7 +1595,7 @@ TIME parse_date (cfile)
 		       : 0) +
 		      (tm.tm_mon > 1 &&		/* Leap day this year */
 		       ((tm.tm_year - 72) & 3)) +
-		      tm.tm_mday) * 24) +	/* Day of month */
+		      tm.tm_mday - 1) * 24) +	/* Day of month */
 		    tm.tm_hour) * 60) +
 		  tm.tm_min) * 60) + tm.tm_sec;
 
