@@ -1,6 +1,6 @@
 	    Internet Software Consortium DHCP Distribution
-	     Version 3, Release Candidate 8 Patchlevel 1
-			    June 22, 2001
+	     Version 3, Release Candidate 8 Patchlevel 2
+			    June 26, 2001
 
 			    Release Notes
 
@@ -55,6 +55,21 @@ Measurement Systems, Igor Sharfmesser at Kazakh Telecom, and Brian
 Murrell at BC Tel Advanced Communications.  I'd like to express my
 thanks to all of these good people here, both for working on the code
 and for prodding me into improving it.
+
+	  Changes since 3.0 Release Candidate 8 Patchlevel 1
+
+- Fix a parsing bug that broke dns updates (both interim and ad-hoc).
+  This was introduced in rc8pl1 as an unintended result of the memory
+  leakage fixes that were in pl1.
+
+- Fix a long-standing bug where the server would record that an update
+  had been done for a client with no name, even though no update had
+  been done, and then when the client's lease expired the deletion of
+  that nonexistant record would time out because the name was the null
+  string. 
+
+- Clean up the omshell, dhcpctl and omapi man pages a bit.
+
 
 		Changes since 3.0 Release Candidate 8
 
