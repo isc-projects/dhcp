@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.36 1999/07/19 13:08:29 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.37 1999/07/19 15:35:48 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -386,7 +386,8 @@ int evaluate_boolean_expression (result, packet, options, lease, expr)
 	struct expression *expr;
 {
 	struct data_string left, right;
-	struct data_string rrtype, expr1, expr2, ttl;
+	struct data_string rrtype, expr1, expr2;
+	int ttl;
 	int s0, s1, s2, s3;
 	int bleft, bright;
 	int sleft, sright;
@@ -540,20 +541,19 @@ int evaluate_boolean_expression (result, packet, options, lease, expr)
 		memset (&expr2, 0, sizeof expr2);
 		s2 = evaluate_data_expression (&expr2, packet, options, lease,
 					       expr -> data.dns_update.expr2);
-		memset (&ttl, 0, sizeof ttl);
-		s3 = evaluate_data_expression (&ttl, packet, options, lease,
+		s3 = evaluate_numeric_expression (&ttl, packet, options, lease,
 					          expr -> data.dns_update.ttl);
 
 		*result = 0;	/* assume failure */
 		if (s0 && s1 && s2 && s3) {
 			if (rrtype.len == 1 &&
 			    strncmp(rrtype.data, "a", 1) == 0) {
-log_info("calling updateA(expr1, expr2, %d, lease)", atol(ttl.data));
-				updateA(expr1, expr2, atol(ttl.data), lease);
+log_info("calling updateA(expr1, expr2, %d, lease)", ttl);
+				updateA(expr1, expr2, ttl, lease);
 			} else if (rrtype.len == 3 &&
 				   strncmp(rrtype.data, "ptr", 3) == 0) {
-log_info("calling updatePTR(expr1, expr2, %d, lease)", atol(ttl.data));
-				updatePTR(expr1, expr2, atol(ttl.data), lease);
+log_info("calling updatePTR(expr1, expr2, %d, lease)", ttl);
+				updatePTR(expr1, expr2, ttl, lease);
 			}
 			*result = 1;
 		}
@@ -586,7 +586,6 @@ log_info("calling updatePTR(expr1, expr2, %d, lease)", atol(ttl.data));
 	      case expr_host_decl_name:
 	      case expr_config_option:
 	      case expr_leased_address:
-	      case expr_lease_time:
 		log_error ("Data opcode in evaluate_boolean_expression: %d",
 		      expr -> op);
 		return 0;
@@ -595,6 +594,7 @@ log_info("calling updatePTR(expr1, expr2, %d, lease)", atol(ttl.data));
 	      case expr_extract_int16:
 	      case expr_extract_int32:
 	      case expr_const_int:
+	      case expr_lease_time:
 		log_error ("Numeric opcode in evaluate_boolean_expression: %d",
 		      expr -> op);
 		return 0;
@@ -1195,31 +1195,6 @@ int evaluate_data_expression (result, packet, options, lease, expr)
 #endif
 		return 1;
 
-	      case expr_lease_time:
-		if (!lease) {
-			log_error ("data: leased_lease_time: not available");
-			return 0;
-		}
-		i = lease -> ends - cur_time;
-		if (buffer_allocate (&result -> buffer, 11, "lease-time")) {
-			result -> data = &result -> buffer -> data [0];
-#if defined (NO_SNPRINTF)
-			sprintf (result -> data, "%lu", i);
-#else
-			snprintf (result -> data, 11, "%lu", i);
-#endif
-			result -> len = strlen (result -> data);
-			result -> terminated = 0;
-		} else {
-			log_error ("data: lease-time: no memory.");
-			return 0;
-		}
-#if defined (DEBUG_EXPRESSIONS)
-		log_debug ("data: lease-time = %s",
-			   print_hex_1 (result -> len, result -> data, 60));
-#endif
-		return 1;
- 
 	      case expr_check:
 	      case expr_equal:
 	      case expr_and:
@@ -1235,6 +1210,7 @@ int evaluate_data_expression (result, packet, options, lease, expr)
 	      case expr_extract_int16:
 	      case expr_extract_int32:
 	      case expr_const_int:
+	      case expr_lease_time:
 		log_error ("Numeric opcode in evaluate_data_expression: %d",
 		      expr -> op);
 		return 0;
@@ -1340,8 +1316,22 @@ int evaluate_numeric_expression (result, packet, options, lease, expr)
 
 	      case expr_const_int:
 		*result = expr -> data.const_int;
+#if defined (DEBUG_EXPRESSIONS)
+		log_debug ("number: CONSTANT = %d", *result);
+#endif
 		return 1;
 
+	      case expr_lease_time:
+		if (!lease) {
+			log_error ("data: leased_lease_time: not available");
+			return 0;
+		}
+		*result = lease -> ends - cur_time;
+#if defined (DEBUG_EXPRESSIONS)
+		log_debug ("number: lease-time = %d", *result);
+#endif
+		return 1;
+ 
 	}
 
 	log_error ("evaluate_numeric_expression: bogus opcode %d", expr -> op);
@@ -1640,8 +1630,7 @@ int is_data_expression (expr)
 		expr -> op == expr_host_lookup ||
 		expr -> op == expr_binary_to_ascii ||
 		expr -> op == expr_reverse ||
-		expr -> op == expr_leased_address ||
-		expr -> op == expr_lease_time);
+		expr -> op == expr_leased_address);
 }
 
 int is_numeric_expression (expr)
@@ -1650,7 +1639,8 @@ int is_numeric_expression (expr)
 	return (expr -> op == expr_extract_int8 ||
 		expr -> op == expr_extract_int16 ||
 		expr -> op == expr_extract_int32 ||
-		expr -> op == expr_const_int);
+		expr -> op == expr_const_int ||
+		expr -> op == expr_lease_time);
 }
 
 static int op_val PROTO ((enum expr_op));
@@ -1687,6 +1677,7 @@ static int op_val (op)
 	      case expr_host_decl_name:
 	      case expr_config_option:
 	      case expr_leased_address:
+	      case expr_lease_time:
 		return 100;
 
 	      case expr_equal:
@@ -1742,6 +1733,7 @@ enum expression_context op_context (op)
 	      case expr_host_decl_name:
 	      case expr_config_option:
 	      case expr_leased_address:
+	      case expr_lease_time:
 		return context_any;
 
 	      case expr_equal:

@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.30 1999/07/19 01:15:11 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.31 1999/07/19 15:35:47 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1885,13 +1885,11 @@ int parse_non_binary (expr, cfile, lose, context)
 
 	      case DNS_UPDATE:
 #if !defined (NSUPDATE)
-		parse_warn ("you are using dns-update() but have not compiled with the NSUPDATE switch.");
-		skip_to_semi (cfile);
-		*lose = 1;
-		return 0;
+		parse_warn ("Please rebuild dhcpd with --with-nsupdate.");
 #endif
 		token = next_token (&val, cfile);
-		if (!expression_allocate (expr, "parse_expression: DNS_UPDATE"))
+		if (!expression_allocate (expr,
+					  "parse_expression: DNS_UPDATE"))
 			log_fatal ("can't allocate expression");
 		(*expr) -> op = expr_dns_update;
 
@@ -1929,7 +1927,7 @@ int parse_non_binary (expr, cfile, lose, context)
 		if (token != COMMA)
 			goto nocomma;
 
-		if (!(parse_data_expression
+		if (!(parse_numeric_expression
 		      (&(*expr) -> data.dns_update.ttl, cfile, lose))) {
 			expression_dereference (expr,
 						"parse_expression: nottl");
@@ -1948,9 +1946,9 @@ int parse_non_binary (expr, cfile, lose, context)
 	      case CONFIG_OPTION:
 		if (!expression_allocate (expr, "parse_expression: OPTION"))
 			log_fatal ("can't allocate expression");
-		(*expr) -> op = token == (OPTION
-					  ? expr_option
-					  : expr_config_option);
+		(*expr) -> op = (token == OPTION
+				 ? expr_option
+				 : expr_config_option);
 		token = next_token (&val, cfile);
 		(*expr) -> data.option = parse_option_name (cfile, 0);
 		if (!(*expr) -> data.option) {
