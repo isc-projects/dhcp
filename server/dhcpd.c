@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.115.2.5 2001/06/20 04:37:05 mellon Exp $ Copyright 1995-2001 Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.115.2.6 2001/06/22 02:12:58 mellon Exp $ Copyright 1995-2001 Internet Software Consortium.";
 #endif
 
   static char copyright[] =
@@ -201,6 +201,7 @@ static void omapi_listener_start (void *foo)
 			   isc_result_totext (result));
 		add_timeout (cur_time + 5, omapi_listener_start, 0, 0, 0);
 	}
+	omapi_object_dereference (&listener, MDL);
 }
 
 int main (argc, argv, envp)
@@ -995,7 +996,7 @@ int dhcpd_interface_setup_hook (struct interface_info *ip, struct iaddr *ia)
 		/* If this interface has multiple aliases on the same
 		   subnet, ignore all but the first we encounter. */
 		if (!subnet -> interface) {
-			subnet -> interface = ip;
+			interface_reference (&subnet -> interface, ip, MDL);
 			subnet -> interface_address = *ia;
 		} else if (subnet -> interface != ip) {
 			log_error ("Multiple interfaces match the %s: %s %s", 
@@ -1020,21 +1021,16 @@ int dhcpd_interface_setup_hook (struct interface_info *ip, struct iaddr *ia)
 				   "same shared network",
 				   share -> interface -> name, ip -> name);
 		}
+		subnet_dereference (&subnet, MDL);
 	}
 	return 1;
 }
 
 static TIME shutdown_time;
 static int omapi_connection_count;
-static enum  {
-	shutdown_listeners,
-	shutdown_omapi_connections,
-	shutdown_drop_omapi_connections,
-	shutdown_dhcp,
-	shutdown_done
-} shutdown_state;
+enum dhcp_shutdown_state shutdown_state;
 
-static isc_result_t dhcp_io_shutdown (omapi_object_t *obj, void *foo)
+isc_result_t dhcp_io_shutdown (omapi_object_t *obj, void *foo)
 {
 	/* Shut down all listeners. */
 	if (shutdown_state == shutdown_listeners &&
