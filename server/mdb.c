@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.35 2000/06/30 00:40:19 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.36 2000/07/05 07:38:09 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -532,6 +532,7 @@ void new_address_range (low, high, subnet, pool)
 			lease_hash_add (lease_ip_addr_hash,
 					lp -> ip_addr.iabuf,
 					lp -> ip_addr.len, lp, MDL);
+		lease_dereference (&lp, MDL);
 	}
 }
 
@@ -800,9 +801,12 @@ int supersede_lease (comp, lease, commit, propogate, pimmediate)
 		enter_hwaddr = 1;
 	
 	/* If the lease has been billed to a class, remove the billing. */
-	if (comp -> billing_class &&
-	    comp -> billing_class != lease -> billing_class)
- 		unbill_class (comp, comp -> billing_class);
+	if (comp -> billing_class != lease -> billing_class) {
+		if (comp -> billing_class)
+			unbill_class (comp, comp -> billing_class);
+		if (lease -> billing_class)
+			bill_class (comp, lease -> billing_class);
+	}
 
 	/* Copy the data files, but not the linkages. */
 	comp -> starts = lease -> starts;
@@ -1569,8 +1573,6 @@ void write_leases ()
 		      num_written);
 	}
 
-	/* XXX Write all the billing classes. */
-
 #if defined (FAILOVER_PROTOCOL)
 	/* Write all the failover states. */
 	dhcp_failover_write_all_states ();
@@ -1655,7 +1657,7 @@ int lease_enqueue (struct lease *comp)
 	/* Insertion sort the lease onto the appropriate queue. */
 	prev = (struct lease *)0;
 	for (lp = *lq; lp; lp = lp -> next) {
-		if (lp -> sort_time > comp -> sort_time)
+		if (lp -> sort_time >= comp -> sort_time)
 			break;
 		prev = lp;
 	}
