@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.28.2.1 1999/10/14 21:35:53 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.28.2.2 1999/10/20 02:09:01 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1843,6 +1843,8 @@ int parse_non_binary (expr, cfile, lose, context)
 		if (token != COMMA) {
 			parse_warn ("comma expected.");
 			*lose = 1;
+			expression_dereference
+				(expr, "parse_expression: EXTRACT_INT");
 			return 0;
 		}
 
@@ -1850,6 +1852,8 @@ int parse_non_binary (expr, cfile, lose, context)
 		if (token != NUMBER) {
 			parse_warn ("number expected.");
 			*lose = 1;
+			expression_dereference
+				(expr, "parse_expression: EXTRACT_INT");
 			return 0;
 		}
 		switch (atoi (val)) {
@@ -2253,8 +2257,11 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 		if (token == NUMBER_OR_NAME || token == NUMBER) {
 			if (!expression_allocate (&t, "parse_option_token"))
 				return 0;
-			if (!parse_cshl (&t -> data.const_data, cfile))
+			if (!parse_cshl (&t -> data.const_data, cfile)) {
+				expression_dereference
+					(expr, "parse_option_token: X");
 				return 0;
+			}
 			t -> op = expr_const_data;
 		} else if (token == STRING) {
 			token = next_token (&val, cfile);
