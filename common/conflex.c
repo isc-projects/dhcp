@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: conflex.c,v 1.32 1998/04/20 18:01:08 mellon Exp $ Copyright (c) 1995, 1996, 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: conflex.c,v 1.33 1998/06/25 02:54:29 mellon Exp $ Copyright (c) 1995, 1996, 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -364,6 +364,8 @@ static int intern (atom, dfv)
 			return ALIAS;
 		if (!strcasecmp (atom + 1, "bandoned"))
 			return ABANDONED;
+		if (!strcasecmp (atom + 1, "dd"))
+			return ADD;
 		break;
 	      case 'b':
 		if (!strcasecmp (atom + 1, "ackoff-cutoff"))
@@ -374,6 +376,9 @@ static int intern (atom, dfv)
 			return BOOTING;
 		if (!strcasecmp (atom + 1, "oot-unknown-clients"))
 			return BOOT_UNKNOWN_CLIENTS;
+		if (!strcasecmp (atom + 1, "reak"))
+			return BREAK;
+		break;
 	      case 'c':
 		if (!strcasecmp (atom + 1, "heck"))
 			return CHECK;
@@ -417,6 +422,13 @@ static int intern (atom, dfv)
 			return ENDS;
 		if (!strcasecmp (atom + 1, "xpire"))
 			return EXPIRE;
+		if (!strncasecmp (atom + 1, "ls", 2)) {
+			if (!strcasecmp (atom + 3, "e"))
+				return ELSE;
+			if (!strcasecmp (atom + 3, "if"))
+				return ELSIF;
+			break;
+		}
 		break;
 	      case 'f':
 		if (!strcasecmp (atom + 1, "ilename"))
@@ -445,6 +457,8 @@ static int intern (atom, dfv)
 			return INITIAL_INTERVAL;
 		if (!strcasecmp (atom + 1, "nterface"))
 			return INTERFACE;
+		if (!strcasecmp (atom + 1, "f"))
+			return IF;
 		break;
 	      case 'l':
 		if (!strcasecmp (atom + 1, "ease"))
@@ -467,6 +481,8 @@ static int intern (atom, dfv)
 				return MEDIUM;
 			break;
 		}
+		if (!strcasecmp (atom + 1, "atch"))
+			return MATCH;
 		break;
 	      case 'n':
 		if (!strcasecmp (atom + 1, "ot"))
@@ -513,16 +529,12 @@ static int intern (atom, dfv)
 	      case 's':
 		if (!strcasecmp (atom + 1, "uffix"))
 			return SUFFIX;
-		if (!strcasecmp (atom + 1, "ubstring"))
-			return SUBSTRING;
 		if (!strcasecmp (atom + 1, "earch"))
 			return SEARCH;
 		if (!strcasecmp (atom + 1, "tarts"))
 			return STARTS;
 		if (!strcasecmp (atom + 1, "iaddr"))
 			return SIADDR;
-		if (!strcasecmp (atom + 1, "ubnet"))
-			return SUBNET;
 		if (!strcasecmp (atom + 1, "hared-network"))
 			return SHARED_NETWORK;
 		if (!strcasecmp (atom + 1, "erver-name"))
@@ -537,6 +549,17 @@ static int intern (atom, dfv)
 			return SCRIPT;
 		if (!strcasecmp (atom + 1, "upersede"))
 			return SUPERSEDE;
+		if (!strncasecmp (atom + 1, "ub", 2)) {
+			if (!strcasecmp (atom + 3, "string"))
+				return SUBSTRING;
+			if (!strcasecmp (atom + 3, "net"))
+				return SUBNET;
+			if (!strcasecmp (atom + 3, "class"))
+				return SUBCLASS;
+			break;
+		}
+		if (!strcasecmp (atom + 1, "pawn"))
+			return SPAWN;
 		break;
 	      case 't':
 		if (!strcasecmp (atom + 1, "imestamp"))
@@ -561,6 +584,10 @@ static int intern (atom, dfv)
 	      case 'v':
 		if (!strcasecmp (atom + 1, "endor-class"))
 			return VENDOR_CLASS;
+		break;
+	      case 'w':
+		if (!strcasecmp (atom + 1, "ith"))
+			return WITH;
 		break;
 	      case 'y':
 		if (!strcasecmp (atom + 1, "iaddr"))
