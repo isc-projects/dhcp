@@ -74,7 +74,7 @@ echo "System Type: $sysname"
 
 for foo in . client server relay statmsg sysconfd common; do
 	 (sed -e "/^##--${sysname}--/,/^##--${sysname}--/s/^#//" \
-		<Makefile.conf; cat $foo/Makefile.dist)	\
+		<Makefile.conf; cat site.conf; cat $foo/Makefile.dist)	\
 				>$foo/Makefile
 done
 
