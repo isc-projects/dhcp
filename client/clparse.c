@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: clparse.c,v 1.18 1998/11/05 18:38:43 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: clparse.c,v 1.19 1998/11/06 00:10:58 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -197,18 +197,18 @@ void parse_client_statement (cfile, ip, config)
 	struct option *option;
 	struct executable_statement *stmt, **p;
 	enum statement_op op;
+	int lose;
 
-	switch (next_token (&val, cfile)) {
+	switch (peek_token (&val, cfile)) {
 	      case SEND:
 		p = &config -> on_transmission;
-		op = send_option_statement;
+		op = supersede_option_statement;
 	      do_option:
 		token = next_token (&val, cfile);
 		option = parse_option_name (cfile);
 		if (!option)
 			return;
-		stmt = parse_option_statement (cfile, 1, option,
-					       send_option_statement);
+		stmt = parse_option_statement (cfile, 1, option, op);
 		for (; *p; p = &((*p) -> next))
 			;
 		*p = stmt;
@@ -236,10 +236,12 @@ void parse_client_statement (cfile, ip, config)
 		goto do_option;
 
 	      case MEDIA:
+		token = next_token (&val, cfile);
 		parse_string_list (cfile, &config -> media, 1);
 		return;
 
 	      case HARDWARE:
+		token = next_token (&val, cfile);
 		if (ip) {
 			parse_hardware_param (cfile, &ip -> hw_address);
 		} else {
@@ -250,69 +252,95 @@ void parse_client_statement (cfile, ip, config)
 		return;
 
 	      case REQUEST:
+		token = next_token (&val, cfile);
 		parse_option_list (cfile, &config -> requested_options);
 		return;
 
 	      case REQUIRE:
+		token = next_token (&val, cfile);
 		parse_option_list (cfile, &config -> required_options);
 		return;
 
 	      case TIMEOUT:
+		token = next_token (&val, cfile);
 		parse_lease_time (cfile, &config -> timeout);
 		return;
 
 	      case RETRY:
+		token = next_token (&val, cfile);
 		parse_lease_time (cfile, &config -> retry_interval);
 		return;
 
 	      case SELECT_TIMEOUT:
+		token = next_token (&val, cfile);
 		parse_lease_time (cfile, &config -> select_interval);
 		return;
 
 	      case REBOOT:
+		token = next_token (&val, cfile);
 		parse_lease_time (cfile, &config -> reboot_timeout);
 		return;
 
 	      case BACKOFF_CUTOFF:
+		token = next_token (&val, cfile);
 		parse_lease_time (cfile, &config -> backoff_cutoff);
 		return;
 
 	      case INITIAL_INTERVAL:
+		token = next_token (&val, cfile);
 		parse_lease_time (cfile, &config -> initial_interval);
 		return;
 
 	      case SCRIPT:
+		token = next_token (&val, cfile);
 		config -> script_name = parse_string (cfile);
 		return;
 
 	      case INTERFACE:
+		token = next_token (&val, cfile);
 		if (ip)
 			parse_warn ("nested interface declaration.");
 		parse_interface_declaration (cfile, config);
 		return;
 
 	      case LEASE:
+		token = next_token (&val, cfile);
 		parse_client_lease_statement (cfile, 1);
 		return;
 
 	      case ALIAS:
+		token = next_token (&val, cfile);
 		parse_client_lease_statement (cfile, 2);
 		return;
 
 	      case REJECT:
+		token = next_token (&val, cfile);
 		parse_reject_statement (cfile, config);
 		return;
 
 	      default:
-		parse_warn ("expecting a statement.");
-		skip_to_semi (cfile);
+		lose = 0;
+		stmt = parse_executable_statement (cfile, &lose);
+		if (!stmt) {
+			if (!lose) {
+				parse_warn ("expecting a statement.");
+				skip_to_semi (cfile);
+			}
+		} else {
+			if (!config -> on_receipt) {
+				config -> on_receipt = stmt;
+			} else {
+				struct executable_statement *s;
+				for (s = config -> on_receipt;
+				     s -> next; s = s -> next)
+					;
+				s -> next = stmt;
+			}
+			return;
+		}
 		break;
 	}
-	token = next_token (&val, cfile);
-	if (token != SEMI) {
-		parse_warn ("semicolon expected.");
-		skip_to_semi (cfile);
-	}
+	parse_semi (cfile);
 }
 
 int parse_X (cfile, buf, max)
