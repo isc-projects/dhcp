@@ -1898,6 +1898,27 @@ of the configuration file.
 .RE
 .PP
 The
+.I ping-checks
+statement
+.RS 0.25i
+.PP
+.B ping-checks
+.I flag\fR\fB;\fR
+.PP
+When the DHCP server is considering dynamically allocating an IP
+address to a client, it first sends an ICMP Echo request (a \fIping\fR)
+to the address being assigned.   It waits for a second, and if no
+ICMP Echo response has been heard, it assigns the address.   If a
+response \fIis\fR heard, the lease is abandoned, and the server does
+not respond to the client.
+.PP
+This \fIping check\fR introduces a one-second delay in responding to
+DHCPDISCOVER messages, which can be a problem for some clients.   The
+ping-checks configuration parameter can be used to control checking -
+if its value is false, no ping check is done.
+.RE
+.PP
+The
 .I server-identifier
 statement
 .RS 0.25i
@@ -1977,6 +1998,24 @@ server must do many more DDNS updates.   We do not recommend enabling
 this on large networks with the current DHCP server.   This option
 only affects the behaviour of the \fIinterim\fR DDNS update scheme,
 and has no effect on the \fIad-hoc\fI DDNS update scheme.
+.PP
+The
+.I update-static-leases
+statement
+.RS 0.25i
+.PP
+.B update-static-leases \fIflag\fB;\fR
+.PP
+The \fIupdate-static-leases\fR flag, if enabled, causes the DHCP
+server to do DDNS updates for clients even if those clients are being
+assigned their IP address using a \fIfixed-address\fR statement - that
+is, the client is being given a static assignment.   This can only
+work with the \fIinterim\fR DDNS update scheme.   It is not
+recommended because the DHCP server has no way to tell that the update
+has been done, and therefore will not delete the record when it is not
+in use.   Also, the server must attempt the update each time the
+client renews its lease, which could have a significant performance
+impact in environments that place heavy demands on the DHCP server.
 .PP
 The
 .I use-host-decl-names
