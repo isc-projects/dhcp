@@ -25,7 +25,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: nsupdate.c,v 1.2 1999/07/07 15:28:40 mellon Exp $ Copyright (c) 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: nsupdate.c,v 1.3 1999/07/07 15:32:02 mellon Exp $ Copyright (c) 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -59,7 +59,8 @@ char *ddns_rev_name(lease, state, packet)
 	oc = lookup_option (&server_universe, state -> options,
 			    SV_DDNS_REV_DOMAIN_NAME);
 	memset (&d, 0, sizeof d);
-	if (oc && evaluate_option_cache (&d, packet, packet -> options, oc)) {
+	if (oc && evaluate_option_cache (&d, packet,
+					 packet -> options, lease, oc)) {
 		memcpy(revdomain, d.data, d.len);
 		revdomain[d.len]='\0';
 		data_string_forget (&d, "nsupdate");
@@ -98,7 +99,8 @@ char *ddns_fwd_name(lease, state, packet)
 	oc = lookup_option (&server_universe, state -> options,
 			    SV_DDNS_DOMAIN_NAME);
 	memset (&d, 0, sizeof d);
-	if (oc && evaluate_option_cache (&d, packet, packet -> options, oc)) {
+	if (oc && evaluate_option_cache (&d, packet,
+					 packet -> options, lease, oc)) {
 		memcpy(domain, d.data, d.len);
 		domain[d.len]='\0';
 		data_string_forget (&d, "nsupdate");
@@ -107,7 +109,7 @@ char *ddns_fwd_name(lease, state, packet)
 				    DHO_DOMAIN_NAME);
 		memset (&d, 0, sizeof d);
 		if (oc && evaluate_option_cache (&d, packet, packet -> options,
-						 oc)) {
+						 lease, oc)) {
 			memcpy(domain, d.data, d.len);
 			domain[d.len]='\0';
 			data_string_forget (&d, "nsupdate");
@@ -126,7 +128,8 @@ char *ddns_fwd_name(lease, state, packet)
 	oc = lookup_option (&server_universe, state -> options,
 			    SV_DDNS_HOST_NAME);
 	memset (&d, 0, sizeof d);
-	if (oc && evaluate_option_cache (&d, packet, packet -> options, oc)) {
+	if (oc && evaluate_option_cache (&d, packet,
+					 packet -> options, lease, oc)) {
 		memcpy(hostname, d.data, d.len);
 		hostname[d.len]='\0';
 		data_string_forget (&d, "nsupdate");
@@ -135,7 +138,7 @@ char *ddns_fwd_name(lease, state, packet)
 			      state -> options, DHO_HOST_NAME);
 		memset (&d, 0, sizeof d);
 		if (oc && evaluate_option_cache (&d, packet, packet -> options,
-						 oc)) {
+						 lease, oc)) {
 			memcpy(hostname, d.data, d.len);
 			hostname[d.len]='\0';
 			data_string_forget (&d, "nsupdate");
@@ -196,16 +199,15 @@ int nsupdateA(hostname, ip_addr, ttl, opcode)
 		if (z < 1) 
 			return 0;
 */
-/*
-
 		/* delete all PTR RRs with the same ip address. Wow! */
+/*
 		if (!(u = res_mkupdrec(S_UPDATE, revname, C_IN, T_PTR, 0)))
 			return 0;
 		u->r_opcode = DELETE; u->r_data = NULL; u->r_size = 0;
 		log_info("cleaning all PTR RRs for %s", revname);
 		res_update(u);
 		res_freeupdrec(u);
-   end */
+*/
 		break;
 	case	DELETE:
 		ttl = 0;
