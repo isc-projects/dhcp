@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.53.2.13 2001/08/09 09:56:41 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.53.2.14 2001/08/23 16:25:51 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -4902,6 +4902,9 @@ normal_binding_state_transition_check (struct lease *lease,
 		      case FTS_BACKUP:
 		      case FTS_RESERVED:
 		      case FTS_BOOTP:
+		      case FTS_EXPIRED:
+		      case FTS_RELEASED:
+		      case FTS_RESET:
 			/* If the lease was free, and our peer is primary,
 			   then it can make it active, or abandoned, or
 			   backup.    Abandoned is treated like free in
@@ -4915,15 +4918,6 @@ normal_binding_state_transition_check (struct lease *lease,
 			   peer to change its state anyway, but log a warning
 			   message in hopes that the error will be fixed. */
 		      case FTS_FREE: /* for compiler */
-		      case FTS_EXPIRED:
-		      case FTS_RELEASED:
-		      case FTS_RESET:
-			log_error ("allowing %s%s: %s to %s",
-				   "invalid peer state transition on ",
-				   piaddr (lease -> ip_addr),
-				   (binding_state_print
-				    (lease -> binding_state)),
-				   binding_state_print (binding_state));
 			new_state = binding_state;
 			goto out;
 		}
@@ -4933,6 +4927,10 @@ normal_binding_state_transition_check (struct lease *lease,
 		/* The secondary can't change the state of an active
 		   lease. */
 		if (state -> i_am == primary) {
+			/* Except that the client may send the DHCPRELEASE
+			   to the secondary, and we have to accept that. */
+			if (binding_state == FTS_RELEASED)
+				return binding_state;
 			new_state = lease -> binding_state;
 			goto out;
 		}
@@ -5030,27 +5028,14 @@ normal_binding_state_transition_check (struct lease *lease,
 		      case FTS_FREE:
 		      case FTS_RESERVED:
 		      case FTS_BOOTP:
+		      case FTS_EXPIRED:
+		      case FTS_RELEASED:
+		      case FTS_RESET:
 			/* If the lease was in backup, and our peer is
 			   secondary, then it can make it active, or
 			   abandoned, or free. */
 			if (state -> i_am == primary)
 				return binding_state;
-
-			/* Otherwise, it can't do any sort of state
-			   transition, but because the lease was free
-			   we allow it to do the transition, and just
-			   log the error. */
-		      case FTS_EXPIRED:
-		      case FTS_RELEASED:
-		      case FTS_RESET:
-			log_error ("allowing %s%s: %s to %s",
-				   "invalid peer state transition on ",
-				   piaddr (lease -> ip_addr),
-				   (binding_state_print
-				    (lease -> binding_state)),
-				   binding_state_print (binding_state));
-			new_state = binding_state;
-			goto out;
 
 		      case FTS_BACKUP:
 			new_state = lease -> binding_state;
