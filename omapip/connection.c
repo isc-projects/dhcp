@@ -93,6 +93,15 @@ isc_result_t omapi_connect (omapi_object_t *c,
 		return ISC_R_UNEXPECTED;
 	}
 
+#if defined (HAVE_SETFD)
+	if (fcntl (obj -> socket, F_SETFD, 1) < 0) {
+		close (obj -> socket);
+		omapi_object_dereference ((omapi_object_t **)&obj,
+					  "omapi_connect");
+		return ISC_R_UNEXPECTED;
+	}
+#endif
+
 	/* Set the SO_REUSEADDR flag (this should not fail). */
 	flag = 1;
 	if (setsockopt (obj -> socket, SOL_SOCKET, SO_REUSEADDR,

@@ -69,6 +69,15 @@ isc_result_t omapi_listen (omapi_object_t *h,
 		return ISC_R_UNEXPECTED;
 	}
 	
+#if defined (HAVE_SETFD)
+	if (fcntl (obj -> socket, F_SETFD, 1) < 0) {
+		close (obj -> socket);
+		omapi_object_dereference ((omapi_object_t **)&obj,
+					  "omapi_listen");
+		return ISC_R_UNEXPECTED;
+	}
+#endif
+
 	/* Try to bind to the wildcard address using the port number
            we were given. */
 	if (bind (obj -> socket,
