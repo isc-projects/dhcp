@@ -121,9 +121,9 @@ size_t send_packet (interface, packet, raw, len, to, hto)
 				(unsigned char *)raw, len);
 
 	/* Fire it off */
-	iov [0].iov_base = buf;
+	iov [0].iov_base = (char *)buf;
 	iov [0].iov_len = bufp;
-	iov [1].iov_base = (unsigned char *)raw;
+	iov [1].iov_base = (char *)raw;
 	iov [1].iov_len = len;
 
 	return writev(interface -> wfdesc, iov, 2);
