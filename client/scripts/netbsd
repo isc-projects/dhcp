@@ -38,10 +38,6 @@ if [ x$reason = xPREINIT ]; then
   exit 0
 fi
 
-if [ x$reason = xARPCHECK ] || [ x$reason = xARPSEND ]; then
-  exit 0;
-fi
-  
 if [ x$reason = xBOUND ] || [ x$reason = xRENEW ] || \
    [ x$reason = xREBIND ] || [ x$reason = xREBOOT ]; then
   if [ x$old_ip_address != x ] && [ x$alias_ip_address != x ] && \
@@ -49,7 +45,8 @@ if [ x$reason = xBOUND ] || [ x$reason = xRENEW ] || \
     ifconfig $interface inet -alias $alias_ip_address > /dev/null 2>&1
     route delete $alias_ip_address 127.0.0.1 > /dev/null 2>&1
   fi
-  if [ x$old_ip_address != x ] && [ x$old_ip_address != x$new_ip_address ]; then
+  if [ x$old_ip_address != x ] && [ x$old_ip_address != x$new_ip_address ]
+   then
     ifconfig $interface inet -alias $old_ip_address $medium
     route delete $old_ip_address 127.1 >/dev/null 2>&1
     for router in $old_routers; do
