@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: class.c,v 1.12.2.1 1999/12/22 20:44:03 mellon Exp $ Copyright (c) 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: class.c,v 1.12.2.2 2000/07/01 05:09:53 mellon Exp $ Copyright (c) 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -162,6 +162,7 @@ int check_collection (packet, lease, collection)
 					  nc -> hash_string.data,
 					  nc -> hash_string.len,
 					  (unsigned char *)nc);
+				have_billing_classes = 1;
 				classify (packet, nc);
 			}
 		}
