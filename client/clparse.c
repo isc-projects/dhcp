@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: clparse.c,v 1.53 2001/01/16 22:49:31 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: clparse.c,v 1.54 2001/01/25 08:17:17 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -511,10 +511,25 @@ void parse_client_statement (cfile, ip, config)
 				skip_to_semi (cfile);
 			}
 		} else {
-			struct executable_statement **eptr;
-			if (stmt -> op == send_option_statement)
+			struct executable_statement **eptr, *sptr;
+			if (stmt -> op == send_option_statement ||
+			    (stmt -> op == on_statement &&
+			     (stmt -> data.on.evtypes & ON_TRANSMISSION))) {
 			    eptr = &config -> on_transmission -> statements;
-			else
+			    if (stmt -> op == on_statement) {
+				    sptr = (struct executable_statement *)0;
+				    executable_statement_reference
+					    (&sptr,
+					     stmt -> data.on.statements, MDL);
+				    executable_statement_dereference (&stmt,
+								      MDL);
+				    executable_statement_reference (&stmt,
+								    sptr,
+								    MDL);
+				    executable_statement_dereference (&sptr,
+								      MDL);
+			    }
+			} else
 			    eptr = &config -> on_receipt -> statements;
 
 			for (; *eptr; eptr = &(*eptr) -> next)
