@@ -1,6 +1,6 @@
 	       Internet Systems Consortium DHCP Distribution
 			      Version 3.0.2
-			    December 21, 2004
+			     January 7, 2004
 
 			      README FILE
 
@@ -486,15 +486,17 @@ for AIX would be welcome.
 
 The Internet Systems Consortium DHCP server is developed and distributed
 by ISC in the public trust, thanks to the generous donations of its
-sponsors.  ISC is also signing charter support contracts for ISC DHCP,
-more information about ISC Support Contracts can be found at the
-following URL:
+sponsors.  ISC now also fofers commercial quality support contracts for
+ISC DHCP, more information about ISC Support Contracts can be found at
+the following URL:
 
 	http://www.isc.org/ops/support/
 
 No donators, as yet, have asked for their dollars to be spent providing
 free support to all who ask.  Please understand that we may not respond
-to support inquiries unless you have a support contract.
+to support inquiries unless you have a support contract.  ISC will
+continue its practice of always responding to critical items that effect
+the entire community.
 
 However, ISC DHCP has attracted a fairly sizable following on the
 Internet, which means that there are a lot of knowledgable users who
