@@ -20,14 +20,20 @@
  * http://www.isc.org for more information.
  */
 
-struct failover_option {
+struct failover_option_info {
 	int code;
 	char *name;
-	enum { FT_UINT8, FT_IPADDR, FT_UINT32, FT_BYTES, FT_DDNS,
-	       FT_UINT16, FT_TEXT, FT_UNDEF, FT_DIGEST } data_type;
+	enum { FT_UINT8, FT_IPADDR, FT_UINT32, FT_BYTES, FT_DDNS, FT_DDNS1,
+	       FT_UINT16, FT_TEXT, FT_UNDEF, FT_DIGEST } type;
 	int num_present;
-	int data_offset;
+	int offset;
+	u_int32_t bit;
 };
+
+typedef struct {
+	int count;
+	u_int8_t *data;
+} failover_option_t;
 
 #define FM_OFFSET(x)	((char *)(((struct failover_message *)0).x) - \
 			 (char *)(((struct failover_message *)0)))
@@ -102,3 +108,44 @@ struct failover_option {
 #define FTM_STATE		10
 #define FTM_CONTACT		11
 #define FTM_DISCONNECT		12
+
+#define DHCP_FAILOVER_MAX_MESSAGE_SIZE	2048
+
+typedef struct {
+	u_int8_t type;
+	u_int32_t time;
+	u_int32_t xid;
+	int options_present;
+} failover_message_t;
+
+typedef struct {
+	OMAPI_OBJECT_PREAMBLE;
+	char *peer_name;
+	unsigned peer_port;
+	int options_present;
+	enum dhcp_flink_state {
+		dhcp_flink_start,
+		dhcp_flink_message_length_wait,
+		dhcp_flink_message_wait,
+		dhcp_flink_disconnected,
+		dhcp_flink_state_max
+	} state;
+	failover_message_t *imsg;
+	u_int16_t imsg_len;
+	unsigned imsg_count;
+	u_int8_t imsg_payoff; /* Pay*load* offset. :') */
+} dhcp_failover_link_t;
+
+typedef struct {
+	OMAPI_OBJECT_PREAMBLE;
+	unsigned local_port;
+	char *peer_name;
+} dhcp_failover_listener_t;
+
+typedef struct _dhcp_failover_state {
+	OMAPI_OBJECT_PREAMBLE;
+	struct _dhcp_failover_state *next;
+	char *remote_peer;
+	int listen_port;
+} dhcp_failover_state_t;
+

@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: print.c,v 1.28 1999/11/14 00:01:08 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: print.c,v 1.29 1999/11/20 18:36:10 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -663,11 +663,11 @@ static unsigned print_subexpression (expr, buf, len)
 				 buf + rv, len - rv - 4);
 			buf [rv++] = ' ';
 			rv += print_subexpression
-				(expr -> data.dns_update.expr1,
+				(expr -> data.dns_update.rrname,
 				 buf + rv, len - rv - 3);
 			buf [rv++] = ' ';
 			rv += print_subexpression
-				(expr -> data.dns_update.expr2,
+				(expr -> data.dns_update.rrdata,
 				 buf + rv, len - rv - 2);
 			buf [rv++] = ' ';
 			rv += print_subexpression

@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.64 1999/11/03 16:10:41 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.65 1999/11/20 18:36:10 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -388,9 +388,9 @@ int evaluate_boolean_expression (result, packet, lease, in_options,
 	struct expression *expr;
 {
 	struct data_string left, right;
-	struct data_string rrtype, expr1, expr2;
+	struct data_string rrtype, rrname, rrdata;
 	unsigned long ttl;
-	int s0, s1, s2, s3;
+	int srrtype, srrname, srrdata, sttl;
 	int bleft, bright;
 	int sleft, sright;
 
@@ -557,52 +557,94 @@ int evaluate_boolean_expression (result, packet, lease, in_options,
 		if (!packet || packet -> packet_type != DHCPREQUEST)
 			return 0;
 		memset (&rrtype, 0, sizeof rrtype);
-		s0 = evaluate_data_expression (&rrtype, packet, lease,
+		srrtype = evaluate_data_expression (&rrtype, packet, lease,
 					       in_options, cfg_options,
 					       expr -> data.dns_update.type);
-		memset (&expr1, 0, sizeof expr1);
-		s1 = evaluate_data_expression (&expr1, packet, lease,
+		memset (&rrname, 0, sizeof rrname);
+		srrname = evaluate_data_expression (&rrname, packet, lease,
 					       in_options, cfg_options,
-					       expr -> data.dns_update.expr1);
-		memset (&expr2, 0, sizeof expr2);
-		s2 = evaluate_data_expression (&expr2, packet, lease,
+					       expr -> data.dns_update.rrname);
+		memset (&rrdata, 0, sizeof rrdata);
+		srrdata = evaluate_data_expression (&rrdata, packet, lease,
 					       in_options, cfg_options,
-					       expr -> data.dns_update.expr2);
-		s3 = evaluate_numeric_expression (&ttl, packet, lease,
+					       expr -> data.dns_update.rrdata);
+		sttl = evaluate_numeric_expression (&ttl, packet, lease,
 						  in_options, cfg_options,
 					          expr -> data.dns_update.ttl);
 
 		*result = 0;	/* assume failure */
-		if (s0 && s1 && s2 && s3) {
-		    if (rrtype.len == 1 &&
-			strncmp((const char *)rrtype.data, "a", 1) == 0) {
+		if (!sttl) {
+			log_error("dns-update: RR type subexpression %s",
+				  "evaluates to NULL.");
+			goto done_dns_update;
+		}
+		if (!srrname) {
+			log_error("dns-update: RR name subexpression %s",
+				  "evaluates to NULL.");
+			goto done_dns_update;
+		}
+		if (!srrdata) {
+			log_error("dns-update: RR data subexpression %s",
+				  "evaluates to NULL.");
+			goto done_dns_update;
+		}
+		if (!srrtype) {
+			log_error("dns-update: RR ttl subexpression %s",
+				  "evaluates to NULL.");
+			goto done_dns_update;
+		}
+		if (rrtype.len == 1 &&
+		    strncmp((const char *)rrtype.data, "a", 1) == 0) {
 #if defined (DEBUG_EXPRESSIONS)
-			    log_debug("calling updateA(%s, %s, %ld, lease)",
-				      expr1.data, expr2.data, ttl);
+			log_debug("calling updateA(%s, %s, %ld, lease)",
+				   rrname.data, rrdata.data, ttl);
 #endif
-			    updateA(&expr1, &expr2, ttl, lease);
-		    } else if (rrtype.len == 3 &&
-			       strncmp((const char *)rrtype.data,
-				       "ptr", 3) == 0) {
+			if (!updateA(&rrname, &rrdata, ttl, lease)) {
+				log_error("dns-update: DNS add of A %s",
+					  "record failed");
+				goto done_dns_update;
+			}
+			/* remember this in the lease structure for release */
+			lease -> ddns_fwd_name = dmalloc (rrname.len,
+						"evaluate_boolean_expression");
+			strncpy (lease -> ddns_fwd_name, rrname.data,
+				 rrname.len);
+
+		} else if (rrtype.len == 3 &&
+			   strncmp((const char *)rrtype.data, "ptr", 3) == 0) {
 #if defined (DEBUG_EXPRESSIONS)
 			log_debug ("%s updatePTR(%s, %s, %ld, lease)",
-				   "calling", expr1.data, expr2.data, ttl);
+				   "calling", rrname.data, rrdata.data, ttl);
 #endif
-			updatePTR(&expr1, &expr2, ttl, lease);
-		    }
-		    *result = 1;
-		} else {
-			log_error("dns-update: one or more subexpressions %s",
-				  "evaluate to NULL.");
-			return 0;
+			if (!updatePTR(&rrname, &rrdata, ttl, lease)) {
+				log_error("dns-update: DNS add of PTR %s",
+					  "record failed");
+				goto done_dns_update;
+			}
+			/* remember this in the lease structure for release */
+			lease -> ddns_rev_name = dmalloc (rrname.len,
+						"evaluate_boolean_expression");
+			strncpy (lease -> ddns_rev_name, rrname.data,
+				 rrname.len);
 		}
+		*result = 1;
 #if defined (DEBUG_EXPRESSIONS)
 		log_debug ("dns-update (%s, %s, %s):", 
 			  print_hex_1(rrtype.len, rrtype.data, 60),
-			  print_hex_2(expr1.len, expr1.data, 60),
-			  print_hex_3(expr2.len, expr2.data, 60));
+			  print_hex_2(rrname.len, rrname.data, 60),
+			  print_hex_3(rrdata.len, rrdata.data, 60));
 #endif
-		return 1;
+	      done_dns_update:
+		if (srrname)
+			data_string_forget (&rrname,
+					    "evaluate_boolean_expression");
+		if (srrdata)
+			data_string_forget (&rrdata,
+					    "evaluate_boolean_expression");
+		if (srrtype)
+			data_string_forget (&rrtype,
+					    "evaluate_boolean_expression");
+		return *result;
 #endif /* NSUPDATE */
 
 	      case expr_dns_delete:
@@ -610,50 +652,85 @@ int evaluate_boolean_expression (result, packet, lease, in_options,
 		return 0;
 #else
 		memset (&rrtype, 0, sizeof rrtype);
-		s0 = evaluate_data_expression (&rrtype, packet, lease,
+		srrtype = evaluate_data_expression (&rrtype, packet, lease,
 					       in_options, cfg_options,
 					       expr -> data.dns_update.type);
-		memset (&expr1, 0, sizeof expr1);
-		s1 = evaluate_data_expression (&expr1, packet, lease,
+		memset (&rrname, 0, sizeof rrname);
+		srrname = evaluate_data_expression (&rrname, packet, lease,
 					       in_options, cfg_options,
-					       expr -> data.dns_update.expr1);
-		memset (&expr2, 0, sizeof expr2);
-		s2 = evaluate_data_expression (&expr2, packet, lease,
+					       expr -> data.dns_update.rrname);
+		memset (&rrdata, 0, sizeof rrdata);
+		srrdata = evaluate_data_expression (&rrdata, packet, lease,
 					       in_options, cfg_options,
-					       expr -> data.dns_update.expr2);
+					       expr -> data.dns_update.rrdata);
 
 		*result = 0;	/* assume failure */
-		if (s0 && s1 && s2) {
-			if (rrtype.len == 1 &&
-			    strncmp((const char *)rrtype.data, "a", 1) == 0) {
-#if defined (DEBUG_EXPRESSIONS)
-				log_debug("calling deleteA(%s, %s, lease)",
-					  expr1.data , expr2.data);
-#endif
-				deleteA(&expr1, &expr2, lease);
-			} else if (rrtype.len == 3 &&
-				   strncmp((const char *)rrtype.data,
-					    "ptr", 3) == 0) {
-#if defined (DEBUG_EXPRESSIONS)
-				log_debug ("%s deletePTR(%s, %s, lease)",
-					   "calling", expr1.data,
-					   expr2.data);
-#endif
-				deletePTR(&expr1, &expr2, lease);
-			}
-			*result = 1;
-		} else {
-			log_error("dns-update: one or more subexpressions %s",
-				  "evaluate to NULL.");
-			return 0;
+		if (!srrtype) {
+			log_error("dns-delete: RR type subexpression %s",
+				  "evaluates to NULL.");
+			goto done_dns_delete;
 		}
+		if (!srrname) {
+			log_error("dns-delete: RR name subexpression %s",
+				  "evaluates to NULL.");
+			goto done_dns_delete;
+		}
+		if (!srrdata) {
+			log_error("dns-delete: RR data subexpression %s",
+				  "evaluates to NULL.");
+			goto done_dns_delete;
+		}
+		if (rrtype.len == 1 &&
+		    strncmp((const char *)rrtype.data, "a", 1) == 0) {
+#if defined (DEBUG_EXPRESSIONS)
+			log_debug("calling deleteA(%s, %s, lease)",
+				   rrname.data , rrdata.data);
+#endif
+			if (!deleteA(&rrname, &rrdata, lease)) {
+				log_error("dns-delete: DNS delete of A %s",
+					  "record failed");
+				goto done_dns_delete;
+			}
+			if (lease -> ddns_fwd_name) {
+				dfree (lease -> ddns_fwd_name,
+				       "evaluate_boolean_expression");
+				lease -> ddns_fwd_name = (char *)0;
+			}
+		} else if (rrtype.len == 3 &&
+			   strncmp((const char *)rrtype.data, "ptr", 3) == 0) {
+#if defined (DEBUG_EXPRESSIONS)
+			log_debug ("calling deletePTR(%s, %s, lease)",
+				    rrname.data, rrdata.data);
+#endif
+			if (!deletePTR(&rrname, &rrdata, lease)) {
+				log_error("dns-delete: DNS delete of PTR %s",
+					  "record failed");
+				goto done_dns_delete;
+			}
+			if (lease -> ddns_rev_name) {
+				dfree (lease -> ddns_rev_name,
+				       "evaluate_boolean_expression");
+				lease -> ddns_rev_name = (char *)0;
+			}
+		}
+		*result = 1;
 #if defined (DEBUG_EXPRESSIONS)
 		log_debug ("dns-delete (%s, %s, %s):", 
 			  print_hex_1(rrtype.len, rrtype.data, 60),
-			  print_hex_2(expr1.len, expr1.data, 60),
-			  print_hex_3(expr2.len, expr2.data, 60));
+			  print_hex_2(rrname.len, rrname.data, 60),
+			  print_hex_3(rrdata.len, rrdata.data, 60));
 #endif
-		return 1;
+	      done_dns_delete:
+		if (srrname)
+			data_string_forget (&rrname,
+					    "evaluate_boolean_expression");
+		if (srrdata)
+			data_string_forget (&rrdata,
+					    "evaluate_boolean_expression");
+		if (srrtype)
+			data_string_forget (&rrtype,
+					    "evaluate_boolean_expression");
+		return *result;
 #endif /* NSUPDATE */
 
 	      case expr_none:
@@ -1784,11 +1861,11 @@ void expression_dereference (eptr, name)
 		if (expr -> data.dns_update.type)
 			expression_dereference (&expr -> data.dns_update.type,
 						name);
-		if (expr -> data.dns_update.expr1)
-			expression_dereference (&expr -> data.dns_update.expr1,
+		if (expr -> data.dns_update.rrname)
+			expression_dereference (&expr -> data.dns_update.rrname,
 						name);
-		if (expr -> data.dns_update.expr2)
-			expression_dereference (&expr -> data.dns_update.expr2,
+		if (expr -> data.dns_update.rrdata)
+			expression_dereference (&expr -> data.dns_update.rrdata,
 						name);
 		if (expr -> data.dns_update.ttl)
 			expression_dereference (&expr -> data.dns_update.ttl,
@@ -2344,11 +2421,11 @@ int write_expression (file, expr, col, indent)
 					col, scol);
 		col = token_print_indent (file, col, scol, "", " ",
 					  ",");
-		col = write_expression (file, expr -> data.dns_update.expr1,
+		col = write_expression (file, expr -> data.dns_update.rrname,
 					col, scol);
 		col = token_print_indent (file, col, scol, "", " ",
 					  ",");
-		col = write_expression (file, expr -> data.dns_update.expr2,
+		col = write_expression (file, expr -> data.dns_update.rrdata,
 					col, scol);
 		col = token_print_indent (file, col, scol, "", " ",
 					  ",");
@@ -2380,11 +2457,11 @@ int write_expression (file, expr, col, indent)
 					col, scol);
 		col = token_print_indent (file, col, scol, "", " ",
 					  ",");
-		col = write_expression (file, expr -> data.dns_update.expr1,
+		col = write_expression (file, expr -> data.dns_update.rrname,
 					col, scol);
 		col = token_print_indent (file, col, scol, "", " ",
 					  ",");
-		col = write_expression (file, expr -> data.dns_update.expr2,
+		col = write_expression (file, expr -> data.dns_update.rrdata,
 					col, scol);
 		col = token_print_indent (file, col, indent, "", "",
 					  ")");

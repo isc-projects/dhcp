@@ -116,8 +116,8 @@ struct __omapi_object {
 #define OMAPI_PROTOCOL_PORT	7911
 
 isc_result_t omapi_protocol_connect (omapi_object_t *,
-				     const char *, int, omapi_object_t *);
-isc_result_t omapi_protocol_listen (omapi_object_t *, int, int);
+				     const char *, unsigned, omapi_object_t *);
+isc_result_t omapi_protocol_listen (omapi_object_t *, unsigned, int);
 isc_result_t omapi_protocol_accept (omapi_object_t *);
 isc_result_t omapi_protocol_send_intro (omapi_object_t *, unsigned, unsigned);
 isc_result_t omapi_protocol_ready (omapi_object_t *);
@@ -157,7 +157,7 @@ isc_result_t omapi_protocol_send_status (omapi_object_t *, omapi_object_t *,
 isc_result_t omapi_protocol_send_update (omapi_object_t *, omapi_object_t *,
 					 unsigned, omapi_object_t *);
 
-isc_result_t omapi_connect (omapi_object_t *, const char *, int);
+isc_result_t omapi_connect (omapi_object_t *, const char *, unsigned);
 isc_result_t omapi_disconnect (omapi_object_t *, int);
 int omapi_connection_readfd (omapi_object_t *);
 int omapi_connection_writefd (omapi_object_t *);
@@ -184,7 +184,7 @@ isc_result_t omapi_connection_put_handle (omapi_object_t *c,
 					  omapi_object_t *h);
 
 
-isc_result_t omapi_listen (omapi_object_t *, int, int);
+isc_result_t omapi_listen (omapi_object_t *, unsigned, int);
 isc_result_t omapi_listener_accept (omapi_object_t *);
 int omapi_listener_readfd (omapi_object_t *);
 isc_result_t omapi_accept (omapi_object_t *);
@@ -334,7 +334,7 @@ isc_result_t omapi_make_int_value (omapi_value_t **, omapi_data_string_t *,
 isc_result_t omapi_make_handle_value (omapi_value_t **, omapi_data_string_t *,
 				      omapi_object_t *, const char *);
 isc_result_t omapi_make_string_value (omapi_value_t **, omapi_data_string_t *,
-				      char *, const char *);
+				      const char *, const char *);
 isc_result_t omapi_get_int_value (unsigned long *, omapi_typed_data_t *);
 
 isc_result_t omapi_object_handle (omapi_handle_t *, omapi_object_t *);

@@ -118,6 +118,8 @@ extern int h_errno;
 #define TIME time_t
 #define GET_TIME(x)	time ((x))
 
+#define HAVE_MKSTEMP
+
 /* Solaris prior to 2.5 didn't have random().   Rather than being clever and
    using random() only on versions >2.5, always use rand() and srand(). */
 

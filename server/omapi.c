@@ -29,7 +29,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: omapi.c,v 1.20 1999/11/14 00:39:33 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: omapi.c,v 1.21 1999/11/20 18:36:32 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -41,9 +41,11 @@ omapi_object_type_t *dhcp_type_pool;
 omapi_object_type_t *dhcp_type_shared_network;
 omapi_object_type_t *dhcp_type_subnet;
 omapi_object_type_t *dhcp_type_class;
+#if defined (FAILOVER_PROTOCOL)
 omapi_object_type_t *dhcp_type_failover_state;
 omapi_object_type_t *dhcp_type_failover_link;
 omapi_object_type_t *dhcp_type_failover_listener;
+#endif
 
 void dhcp_db_objects_setup ()
 {

@@ -70,7 +70,7 @@ clean:
 	-rm -f $(OBJ) test.o test
 
 realclean: clean
-	-rm -f libdhcp.a *~ $(CATMANPAGES) $(SEDMANPAGES)
+	-rm -f libomapi.a *~ $(CATMANPAGES) $(SEDMANPAGES)
 
 distclean: realclean
 	-rm -f Makefile

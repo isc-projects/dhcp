@@ -24,7 +24,7 @@
 
 isc_result_t omapi_protocol_connect (omapi_object_t *h,
 				     const char *server_name,
-				     int port,
+				     unsigned port,
 				     omapi_object_t *authinfo)
 {
 	isc_result_t status;
@@ -257,10 +257,8 @@ isc_result_t omapi_protocol_signal_handler (omapi_object_t *h,
 	      case omapi_protocol_intro_wait:
 		/* Get protocol version and header size in network
 		   byte order. */
-		omapi_connection_get_uint32
-			(c, (u_int32_t *)&p -> protocol_version);
-		omapi_connection_get_uint32
-			(c, (u_int32_t *)&p -> header_size);
+		omapi_connection_get_uint32 (c, &p -> protocol_version);
+		omapi_connection_get_uint32 (c, &p -> header_size);
 	
 		/* We currently only support the current protocol version. */
 		if (p -> protocol_version != OMAPI_PROTOCOL_VERSION) {
@@ -282,8 +280,8 @@ isc_result_t omapi_protocol_signal_handler (omapi_object_t *h,
 		/* Register a need for the number of bytes in a
 		   header, and if we already have that many, process
 		   them immediately. */
-		if ((omapi_connection_require
-		     (c, p -> header_size)) != ISC_R_SUCCESS)
+		if ((omapi_connection_require (c, p -> header_size)) !=
+		    ISC_R_SUCCESS)
 			break;
 		/* If we already have the data, fall through. */
 
@@ -296,20 +294,14 @@ isc_result_t omapi_protocol_signal_handler (omapi_object_t *h,
 		}
 
 		/* Swap in the header... */
-		omapi_connection_get_uint32
-			(c, (u_int32_t *)&p -> message -> authid);
+		omapi_connection_get_uint32 (c, &p -> message -> authid);
 
 		/* XXX bind the authenticator here! */
-		omapi_connection_get_uint32
-			(c, (u_int32_t *)&p -> message -> authlen);
-		omapi_connection_get_uint32
-			(c, (u_int32_t *)&p -> message -> op);
-		omapi_connection_get_uint32
-			(c, (u_int32_t *)&p -> message -> handle);
-		omapi_connection_get_uint32
-			(c, (u_int32_t *)&p -> message -> id);
-		omapi_connection_get_uint32
-			(c, (u_int32_t *)&p -> message -> rid);
+		omapi_connection_get_uint32 (c, &p -> message -> authlen);
+		omapi_connection_get_uint32 (c, &p -> message -> op);
+		omapi_connection_get_uint32 (c, &p -> message -> handle);
+		omapi_connection_get_uint32 (c, &p -> message -> id);
+		omapi_connection_get_uint32 (c, &p -> message -> rid);
 
 		/* If there was any extra header data, skip over it. */
 		if (p -> header_size > sizeof (omapi_protocol_header_t)) {
@@ -554,7 +546,7 @@ isc_result_t omapi_protocol_stuff_values (omapi_object_t *c,
    a listener object, not a protocol object. */
 
 isc_result_t omapi_protocol_listen (omapi_object_t *h,
-				    int port,
+				    unsigned port,
 				    int max)
 {
 	isc_result_t status;

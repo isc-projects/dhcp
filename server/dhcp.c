@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.128 1999/11/14 00:22:29 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.129 1999/11/20 18:36:28 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -70,18 +70,32 @@ void dhcpdiscover (packet)
 	struct packet *packet;
 {
 	struct lease *lease;
-	char msgbuf [1024];
+	char msgbuf [1024]; /* XXX */
 	TIME when;
-
-	sprintf (msgbuf, "DHCPDISCOVER from %s via %s",
-		 print_hw_addr (packet -> raw -> htype,
-				packet -> raw -> hlen,
-				packet -> raw -> chaddr),
-		 (packet -> raw -> giaddr.s_addr
-		  ? inet_ntoa (packet -> raw -> giaddr)
-		  : packet -> interface -> name));
+	char *s;
 
 	lease = find_lease (packet, packet -> shared_network, 0);
+
+	if (lease && lease -> client_hostname &&
+	    db_printable (lease -> client_hostname))
+		s = lease -> client_hostname;
+	else
+		s = (char *)0;
+
+	/* Say what we're doing... */
+	sprintf (msgbuf, "DHCPDISCOVER from %s %s%s%svia %s",
+		 (packet -> raw -> htype
+		  ? print_hw_addr (packet -> raw -> htype,
+				   packet -> raw -> hlen,
+				   packet -> raw -> chaddr),
+		  : (lease
+		     ? print_hex_1 (lease -> uid_len, lease -> uid, 
+				    lease -> uid_len)
+		     : "<no identifier>")),
+		  s ? "(" : "", s ? s : "", s ? ") " : "",
+		  packet -> raw -> giaddr.s_addr
+		  ? inet_ntoa (packet -> raw -> giaddr)
+		  : packet -> interface -> name);
 
 	/* Sourceless packets don't make sense here. */
 	if (!packet -> shared_network) {
@@ -123,7 +137,8 @@ void dhcprequest (packet)
 	struct option_cache *oc;
 	struct data_string data;
 	int status;
-	char msgbuf [1024];
+	char msgbuf [1024]; /* XXX */
+	char *s;
 
 	oc = lookup_option (&dhcp_universe, packet -> options,
 			    DHO_DHCP_REQUESTED_ADDRESS);
@@ -150,14 +165,27 @@ void dhcprequest (packet)
 	else
 		lease = (struct lease *)0;
 
-	sprintf (msgbuf, "DHCPREQUEST for %s from %s via %s",
+	if (lease && lease -> client_hostname &&
+	    db_printable (lease -> client_hostname))
+		s = lease -> client_hostname;
+	else
+		s = (char *)0;
+
+	/* Say what we're doing... */
+	sprintf (msgbuf, "DHCPREQUEST for from %s %s%s%svia %s",
 		 piaddr (cip),
-		 print_hw_addr (packet -> raw -> htype,
-				packet -> raw -> hlen,
-				packet -> raw -> chaddr),
-		 (packet -> raw -> giaddr.s_addr
+		 (packet -> raw -> htype
+		  ? print_hw_addr (packet -> raw -> htype,
+				   packet -> raw -> hlen,
+				   packet -> raw -> chaddr),
+		  : (lease
+		     ? print_hex_1 (lease -> uid_len, lease -> uid, 
+				    lease -> uid_len)
+		     : "<no identifier>")),
+		 s ? "(" : "", s ? s : "", s ? ") " : "",
+		  packet -> raw -> giaddr.s_addr
 		  ? inet_ntoa (packet -> raw -> giaddr)
-		  : packet -> interface -> name));
+		  : packet -> interface -> name);
 
 	/* If a client on a given network REQUESTs a lease on an
 	   address on a different network, NAK it.  If the Requested
@@ -297,15 +325,28 @@ void dhcprelease (packet)
 	}
 
 
-	log_info ("DHCPRELEASE of %s from %s via %s (%sfound)",
-	      inet_ntoa (packet -> raw -> ciaddr),
-	      print_hw_addr (packet -> raw -> htype,
+	if (lease && lease -> client_hostname &&
+	    db_printable (lease -> client_hostname))
+		s = lease -> client_hostname;
+	else
+		s = (char *)0;
+
+	/* Say what we're doing... */
+	log_info ("DHCPRELEASE of %s from %s %s%s%svia %s (%sfound)",
+		  inet_ntoa (packet -> raw -> ciaddr),
+		  (packet -> raw -> htype
+		   ? print_hw_addr (packet -> raw -> htype,
 			     packet -> raw -> hlen,
 			     packet -> raw -> chaddr),
-	      packet -> raw -> giaddr.s_addr
-	      ? inet_ntoa (packet -> raw -> giaddr)
-	      : packet -> interface -> name,
-	      lease ? "" : "not ");
+		   : (lease
+		      ? print_hex_1 (lease -> uid_len, lease -> uid, 
+				     lease -> uid_len)
+		      : "<no identifier>")),
+		  s ? "(" : "", s ? s : "", s ? ") " : "",
+		  packet -> raw -> giaddr.s_addr
+		  ? inet_ntoa (packet -> raw -> giaddr)
+		  : packet -> interface -> name,
+		  lease ? "" : "not ");
 
 	/* If we found a lease, release it. */
 	if (lease && lease -> ends > cur_time)
@@ -323,6 +364,7 @@ void dhcpdecline (packet)
 	int ignorep;
 	int i;
 	const char *status;
+	char *s;
 
 	/* DHCPDECLINE must specify address. */
 	if (!(oc = lookup_option (&dhcp_universe, packet -> options,
@@ -372,15 +414,29 @@ void dhcpdecline (packet)
 	} else
 		status = " (ignored)";
 
-	if (!ignorep)
-		log_info ("DHCPDECLINE on %s from %s via %s%s",
+	if (!ignorep) {
+		char *s;
+		if (lease && lease -> client_hostname &&
+		    db_printable (lease -> client_hostname))
+			s = lease -> client_hostname;
+		else
+			s = (char *)0;
+
+		log_info ("DHCPDECLINE of %s from %s %s%s%svia %s %s",
 			  piaddr (cip),
-			  print_hw_addr (packet -> raw -> htype,
-					 packet -> raw -> hlen,
-					 packet -> raw -> chaddr),
+			  (packet -> raw -> htype
+			   ? print_hw_addr (packet -> raw -> htype,
+					    packet -> raw -> hlen,
+					    packet -> raw -> chaddr),
+			   : (lease
+			      ? print_hex_1 (lease -> uid_len, lease -> uid, 
+					     lease -> uid_len)
+			      : "<no identifier>")),
+			  s ? "(" : "", s ? s : "", s ? ") " : "",
 			  packet -> raw -> giaddr.s_addr
 			  ? inet_ntoa (packet -> raw -> giaddr)
-			  : packet -> interface -> name, status);
+			  : packet -> interface -> name,
+			  status);
 		
 	option_state_dereference (&options, "dhcpdecline");
 }
@@ -922,18 +978,25 @@ void ack_lease (packet, lease, offer, when, msg)
 			(struct agent_options *)0;
 	}
 
-	/* Get rid of any old expiry or release statements - by executing
-	   the statements below, we will be inserting new ones if there are
-	   any to insert. */
-	if (lease -> on_expiry)
-		executable_statement_dereference (&lease -> on_expiry,
-						  "ack_lease");
-	if (lease -> on_commit)
-		executable_statement_dereference (&lease -> on_commit,
-						  "ack_lease");
-	if (lease -> on_release)
-		executable_statement_dereference (&lease -> on_release,
-						  "ack_lease");
+	/* If we are offering a lease that is still currently valid, preserve
+	   the events.  We need to do this because if the client does not
+	   REQUEST our offer, it will expire in 2 minutes, overriding the
+	   expire time in the currently in force lease.  We want the expire
+	   events to be executed at that point. */
+	if (lease -> ends <= cur_time && offer != DHCPOFFER) {
+		/* Get rid of any old expiry or release statements - by
+		   executing the statements below, we will be inserting new
+		   ones if there are any to insert. */
+		if (lease -> on_expiry)
+			executable_statement_dereference (&lease -> on_expiry,
+							  "ack_lease");
+		if (lease -> on_commit)
+			executable_statement_dereference (&lease -> on_commit,
+							  "ack_lease");
+		if (lease -> on_release)
+			executable_statement_dereference (&lease -> on_release,
+							  "ack_lease");
+	}
 
 	/* Execute statements in scope starting with the subnet scope. */
 	execute_statements_in_scope (packet, lease,
@@ -1352,20 +1415,6 @@ void ack_lease (packet, lease, offer, when, msg)
 			}
 	}
 
-	/* Do the DDNS update.  It needs to be done here so that the lease
-	   structure values for the forward and reverse names are in place for
-	   supersede() -> write_lease() to be able to write into the
-	   dhcpd.leases file.  We have to pass the "state" structure here as it
-	   is not yet hanging off the lease. */
-	/* why not update for static leases too? */
-	/* Because static leases aren't currently recorded? */
-/* XXX
-#if defined (NSUPDATE)
- 	if (!(lease -> flags & STATIC_LEASE) && offer == DHCPACK)
- 		nsupdate (lease, state, packet, ADD);
-#endif
-*/
-
 	/* If there are statements to execute when the lease is
 	   committed, execute them. */
 	if (lease -> on_commit && (!offer || offer == DHCPACK)) {
@@ -1401,6 +1450,19 @@ void ack_lease (packet, lease, offer, when, msg)
 			free_lease_state (state, "ack_lease");
 			static_lease_dereference (lease, "ack_lease");
 			return;
+		} else {
+			/* If this is a DHCPOFFER transaction, supersede_lease
+			   will not add the timer for the expire event to the
+			   queue.  This is because DHCPOFFERS are not commited,
+			   and supersede_lease only adds commited leases to the
+			   timer queue.  So if supersede_lease set this lease
+			   as the next one to expire for the pool we need to
+			   put it on the timer queue ourself. */
+			/* XXX need to think about this. */
+			if (offer == DHCPOFFER && lease -> pool &&
+			    lease -> pool -> next_expiry == lease)
+				add_timeout (lease -> ends, pool_timer,
+					     lease -> pool);
 		}
 	}
 
@@ -1787,6 +1849,7 @@ void dhcp_reply (lease)
 	struct option_tag *ot, *not;
 	struct data_string d1;
 	struct option_cache *oc;
+	char *s;
 
 	if (!state)
 		log_fatal ("dhcp_reply was supplied lease with no state!");
@@ -1857,21 +1920,25 @@ void dhcp_reply (lease)
 	raw.hops = state -> hops;
 	raw.op = BOOTREPLY;
 
+	if (lease -> client_hostname &&
+	    db_printable (lease -> client_hostname))
+		s = lease -> client_hostname;
+	else
+		s = (char *)0;
+
 	/* Say what we're doing... */
-	log_info ("%s on %s to %s via %s",
+	log_info ("%s on %s to %s %s%s%svia %s",
 		  (state -> offer
 		   ? (state -> offer == DHCPACK ? "DHCPACK" : "DHCPOFFER")
 		   : "BOOTREPLY"),
 		  piaddr (lease -> ip_addr),
-		  (lease -> client_hostname &&
-		   db_printable (lease -> client_hostname))
-		  ? lease -> client_hostname
-		  : (lease -> hardware_addr.htype
-		     ? print_hw_addr (lease -> hardware_addr.htype,
-				      lease -> hardware_addr.hlen,
-				      lease -> hardware_addr.haddr)
-		     : print_hex_1 (lease -> uid_len, lease -> uid, 
-				    lease -> uid_len)),
+		  s ? "(" : "", s ? s : "", s ? ") " : "",
+		  (lease -> hardware_addr.htype
+		   ? print_hw_addr (lease -> hardware_addr.htype,
+				    lease -> hardware_addr.hlen,
+				    lease -> hardware_addr.haddr)
+		   : print_hex_1 (lease -> uid_len, lease -> uid, 
+				  lease -> uid_len)),
 		  state -> giaddr.s_addr
 		  ? inet_ntoa (state -> giaddr)
 		  : state -> ip -> name);

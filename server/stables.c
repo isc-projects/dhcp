@@ -22,73 +22,74 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: stables.c,v 1.1 1999/11/14 00:36:51 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: stables.c,v 1.2 1999/11/20 18:36:32 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
 
 #if defined (FAILOVER_PROTOCOL)
-struct failover_option ft_options [] =
+struct failover_option_info ft_options [] =
 {
-	{ 0, "unused", FT_UNDEF, 0, 0 },
-	{ 1, "binding-status",
-	  FT_UINT8, 1, FM_OFFSET (binding_status) },
-	{ 2, "assigned-IP-address",
-	  FT_IPADDR, 1, FM_OFFSET (assigned_addr) },
-	{ 3, "sending-server-IP-address",
-	  FT_IPADDR, 1, FM_OFFSET (sending_server) },
-	{ 4, "addresses-transferred",
-	  FT_UINT32, 1, FM_OFFSET (addresses_transferred) },
-	{ 5, "client-identifier",
-	  FT_BYTES, 0, FM_OFFSET (client_identifier) },
-	{ 6, "client-hardware-address",
-	  FT_BYTES, 0, FM_OFFSET (chaddr) },
-	{ 7, "DDNS",
-	  FT_DDNS, 1, FM_OFFSET (ddns) },
-	{ 8, "reject-reason",
-	  FT_UINT8, 1, FM_OFFSET (reject_reason) },
-	{ 9, "message",
-	  FT_TEXT, 0, FM_OFFSET (message) },
-	{ 10, "MCLT",
-	  FT_UINT32, 1, FM_OFFSET (mclt) },
-	{ 11, "vendor-class-identifier",
-	  FT_BYTES, 0, FM_OFFSET (vendor_class) },
-	{ 12, "undefined", FT_UNDEF, 0, 0 },
-	{ 13, "lease-expiration-time",
-	  FT_UINT32, 1, FM_OFFSET (expiry) },
-	{ 14, "potential-expiration-time",
-	  FT_UINT32, 1, FM_OFFSET (potential_expiry) },
-	{ 15, "grace-expiration-time",
-	  FT_UINT32, 1, FM_OFFSET (grace_expiry) },
-	{ 16, "client-last-transaction-time",
-	  FT_UINT32, 1, FM_OFFSET (client_ltt) },
-	{ 17, "start-time-of-state",
-	  FT_UINT32, 1, FM_OFFSET (stos) },
-	{ 18, "server-state",
-	  FT_UINT8, 1, FM_OFFSET (server_state) },
-	{ 19, "server-flags",
-	  FT_UINT8, 1, FM_OFFSET (server_flags) },
-	{ 20, "vendor-specific-options",
-	  FT_BYTES, 0, FM_OFFSET (vendor_options) },
-	{ 21, "max-unacked-bndupd",
-	  FT_UINT32, 1, FM_OFFSET (max_unacked) },
+	{ 0, "unused", FT_UNDEF, 0, 0, 0 },
+	{ FTO_BINDING_STATUS, "binding-status",
+	  FT_UINT8, 1, FM_OFFSET (binding_status), FTB_BINDING_STATUS },
+	{ FTO_ASSIGNED_IP_ADDRESS, "assigned-IP-address",
+	  FT_IPADDR, 1, FM_OFFSET (assigned_addr), FTB_ASSIGNED_IP_ADDRESS },
+	{ FTO_SERVER_ADDR, "sending-server-IP-address",
+	  FT_IPADDR, 1, FM_OFFSET (sending_server), FTB_SERVER_ADDR },
+	{ FTO_ADDRESSES_TRANSFERRED, "addresses-transferred",
+	  FT_UINT32, 1, FM_OFFSET (addresses_transferred),
+	  FTB_ADDRESSES_TRANSFERRED },
+	{ FTO_CLIENT_IDENTIFIER, "client-identifier",
+	  FT_BYTES, 0, FM_OFFSET (client_identifier), FTB_CLIENT_IDENTIFIER },
+	{ FTO_CLIENT_HARDWARE_ADDRESS, "client-hardware-address",
+	  FT_BYTES, 0, FM_OFFSET (chaddr), FTB_CLIENT_HARDWARE_ADDRESS },
+	{ FTO_DDNS, "DDNS",
+	  FT_DDNS, 1, FM_OFFSET (ddns), FTB_DDNS },
+	{ FTO_REJECT_REASON, "reject-reason",
+	  FT_UINT8, 1, FM_OFFSET (reject_reason), FTB_REJECT_REASON },
+	{ FTO_MESSAGE, "message",
+	  FT_TEXT, 0, FM_OFFSET (message), FTB_MESSAGE },
+	{ FTO_MCLT, "MCLT",
+	  FT_UINT32, 1, FM_OFFSET (mclt), FTB_MCLT },
+	{ FTO_VENDOR_CLASS, "vendor-class-identifier",
+	  FT_BYTES, 0, FM_OFFSET (vendor_class), FTB_VENDOR_CLASS },
+	{ FTO_UNDEFINED, "undefined", FT_UNDEF, 0, 0, FTB_UNDEFINED },
+	{ FTO_LEASE_EXPIRY, "lease-expiration-time",
+	  FT_UINT32, 1, FM_OFFSET (expiry), FTB_LEASE_EXPIRY },
+	{ FTO_POTENTIAL_EXPIRY, "potential-expiration-time",
+	  FT_UINT32, 1, FM_OFFSET (potential_expiry), FTB_POTENTIAL_EXPIRY },
+	{ FTO_GRACE_EXPIRY, "grace-expiration-time",
+	  FT_UINT32, 1, FM_OFFSET (grace_expiry), FTB_GRACE_EXPIRY },
+	{ FTO_CLTT, "client-last-transaction-time",
+	  FT_UINT32, 1, FM_OFFSET (client_ltt), FTB_CLTT },
+	{ FTO_STOS, "start-time-of-state",
+	  FT_UINT32, 1, FM_OFFSET (stos), FTB_STOS },
+	{ FTO_SERVER_STATE, "server-state",
+	  FT_UINT8, 1, FM_OFFSET (server_state), FTB_SERVER_STATE },
+	{ FTO_SERVER_FLAGS, "server-flags",
+	  FT_UINT8, 1, FM_OFFSET (server_flags), FTB_SERVER_FLAGS },
+	{ FTO_VENDOR_OPTIONS, "vendor-specific-options",
+	  FT_BYTES, 0, FM_OFFSET (vendor_options), FTB_VENDOR_OPTIONS },
+	{ FTO_MAX_UNACKED, "max-unacked-bndupd",
+	  FT_UINT32, 1, FM_OFFSET (max_unacked), FTB_MAX_UNACKED },
 	{ 22, "undefined", FT_UNDEF, 0, 0 },
-	{ 23, "receive-timer",
-	  FT_UINT32, 1, FM_OFFSET (receive_timer) },
-	{ 24, "hash-bucket-assignment",
-	  FT_BYTES, 0, FM_OFFSET (hba) },
-	{ 25, "message-digest",
-	  FT_DIGEST, 0, 0 },
-	{ 26, "protocol-version", 
-	  FT_UINT8, 1, FM_OFFSET (protocol_version) },
-	{ 27, "TLS-request",
-	  FT_UINT8, 2, FM_OFFSET (tls_request) },
-	{ 28, "TLS-reply",
-	  FT_BYTES, 1, FM_OFFSET (tls_reply ) },
-	{ 29, "client-request-options",
-	  FT_BYTES, 0, FM_OFFSET (request_options) },
-	{ 30, "client-reply-options",
-	  FT_BYTES, 0, FM_OFFSET (reply_options) }
+	{ FTO_RECEIVE_TIMER, "receive-timer",
+	  FT_UINT32, 1, FM_OFFSET (receive_timer), FTB_RECEIVE_TIMER },
+	{ FTO_HBA, "hash-bucket-assignment",
+	  FT_BYTES, 0, FM_OFFSET (hba), FTB_HBA },
+	{ FTO_MESSAGE_DIGEST, "message-digest",
+	  FT_DIGEST, 0, 0, FTB_MESSAGE_DIGEST },
+	{ FTO_PROTOCOL_VERSION, "protocol-version", 
+	  FT_UINT8, 1, FM_OFFSET (protocol_version), FTB_PROTOCOL_VERSION },
+	{ FTO_TLS_REQUEST, "TLS-request",
+	  FT_UINT8, 2, FM_OFFSET (tls_request), FTB_TLS_REQUEST },
+	{ FTO_TLS_REPLY, "TLS-reply",
+	  FT_BYTES, 1, FM_OFFSET (tls_reply ), FTB_TLS_REPLY },
+	{ FTO_REQUEST_OPTIONS, "client-request-options",
+	  FT_BYTES, 0, FM_OFFSET (request_options), FTB_REQUEST_OPTIONS },
+	{ FTO_REPLY_OPTIONS, "client-reply-options",
+	  FT_BYTES, 0, FM_OFFSET (reply_options), FTB_REPLY_OPTIONS }
 };
 
 /* These are really options that make sense for a particular request - if
@@ -131,6 +132,14 @@ int ft_sizes [] = {
 	1, /* FT_TEXT */
 	0, /* FT_UNDEF */
 	0, /* FT_DIGEST */
+};
+
+char *dhcp_flink_state_names [] = {
+	"invalid state 0",
+	"startup",
+	"message length wait",
+	"message wait",
+	"disconnected"
 };
 #endif /* FAILOVER_PROTOCOL */
 

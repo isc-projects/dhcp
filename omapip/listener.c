@@ -23,7 +23,7 @@
 #include <omapip/omapip_p.h>
 
 isc_result_t omapi_listen (omapi_object_t *h,
-			   int port,
+			   unsigned port,
 			   int max)
 {
 	struct hostent *he;

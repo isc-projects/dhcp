@@ -25,7 +25,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: nsupdate.c,v 1.13 1999/10/25 15:14:52 mellon Exp $ Copyright (c) 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: nsupdate.c,v 1.14 1999/11/20 18:36:09 mellon Exp $ Copyright (c) 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -332,7 +332,7 @@ int nsupdatePTR (revname, hostname, ttl, opcode)
 		}
 		break;
 	}
-	z = res_update(u);
+	z = res_update (u);
 	log_info ("%s %s: %s %ld IN PTR %s", opcode == ADD ? "add" : 
 		  "delete", z == 1 ? "succeeded" : "failed",
 		  NAME (revname), (unsigned long)ttl, NAME (u -> r_data));
@@ -505,11 +505,11 @@ int updateA (lhs, rhs, ttl, lease)
 	int y;
 
 	hostname[0] = '\0';
-	strncat(hostname, (const char *)lhs -> data, lhs -> len);
+	strncat (hostname, (const char *)lhs -> data, lhs -> len);
 	hostname[lhs -> len] = '\0';
 	
 	ipaddr[0] = '\0';
-	strncat(ipaddr, (const char *)rhs -> data, rhs -> len);
+	strncat (ipaddr, (const char *)rhs -> data, rhs -> len);
 	ipaddr[rhs -> len] = '\0';
 
 #if 0	/* Wrong!  This causes zone churn on every DHCPREQUEST!
@@ -532,10 +532,6 @@ int updateA (lhs, rhs, ttl, lease)
 	if (y < 1)
 		return 0;
 
-	/* remember this in the lease structure for release */
-	lease -> ddns_fwd_name = dmalloc (strlen(hostname) + 1, "nsupdate");
-	strcpy (lease -> ddns_fwd_name, hostname);
-
 	return 1;
 }
 
@@ -552,11 +548,11 @@ int updatePTR (lhs, rhs, ttl, lease)
 	int y;
 
 	revname[0] = '\0';
-	strncat(revname, (const char *)lhs -> data, lhs -> len);
+	strncat (revname, (const char *)lhs -> data, lhs -> len);
 	revname[lhs -> len] = '\0';
 
 	hostname[0] = '\0';
-	strncat(hostname, (const char *)rhs -> data, rhs -> len);
+	strncat (hostname, (const char *)rhs -> data, rhs -> len);
 	hostname[rhs -> len] = '\0';
 
 #if 0	/* Wrong!  This causes zone churn on every DHCPREQUEST!
@@ -579,10 +575,6 @@ int updatePTR (lhs, rhs, ttl, lease)
 	if (y < 1)
 		return 0;
 
-	/* remember this in the lease structure for release */
-	lease -> ddns_rev_name = dmalloc (strlen(revname) + 1, "nsupdate");
-	strcpy (lease -> ddns_rev_name, revname);
-
 	return 1;
 }
 
@@ -598,11 +590,11 @@ int deleteA (lhs, rhs, lease)
 	int y;
 
 	hostname[0] = '\0';
-	strncat(hostname, (const char *)lhs -> data, lhs -> len);
+	strncat (hostname, (const char *)lhs -> data, lhs -> len);
 	hostname[lhs -> len] = '\0';
 	
 	ipaddr[0] = '\0';
-	strncat(ipaddr, (const char *)rhs -> data, rhs -> len);
+	strncat (ipaddr, (const char *)rhs -> data, rhs -> len);
 	ipaddr[rhs -> len] = '\0';
 
 #if 0	/* Wrong!  This causes zone churn on every DHCPREQUEST!
@@ -642,11 +634,11 @@ int deletePTR (lhs, rhs, lease)
 	int y;
 
 	revname[0] = '\0';
-	strncat(revname, (const char *)lhs -> data, lhs -> len);
+	strncat (revname, (const char *)lhs -> data, lhs -> len);
 	revname[lhs -> len] = '\0';
 
 	hostname[0] = '\0';
-	strncat(hostname, (const char *)rhs -> data, rhs -> len);
+	strncat (hostname, (const char *)rhs -> data, rhs -> len);
 	hostname[rhs -> len] = '\0';
 
 #if 0	/* Wrong!  This causes zone churn on every DHCPREQUEST!

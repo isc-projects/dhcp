@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.55 1999/11/13 23:53:57 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.56 1999/11/20 18:36:09 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1992,7 +1992,7 @@ int parse_non_binary (expr, cfile, lose, context)
 			goto nocomma;
 
 		if (!(parse_data_expression
-		      (&(*expr) -> data.dns_update.expr1, cfile, lose)))
+		      (&(*expr) -> data.dns_update.rrname, cfile, lose)))
 			goto nodata;
 
 		token = next_token (&val, cfile);
@@ -2000,7 +2000,7 @@ int parse_non_binary (expr, cfile, lose, context)
 			goto nocomma;
 
 		if (!(parse_data_expression
-		      (&(*expr) -> data.dns_update.expr2, cfile, lose)))
+		      (&(*expr) -> data.dns_update.rrdata, cfile, lose)))
 			goto nodata;
 
 		token = next_token (&val, cfile);
@@ -2052,7 +2052,7 @@ int parse_non_binary (expr, cfile, lose, context)
 			goto nocomma;
 
 		if (!(parse_data_expression
-		      (&(*expr) -> data.dns_update.expr1, cfile, lose)))
+		      (&(*expr) -> data.dns_update.rrname, cfile, lose)))
 			goto nodata;
 
 		token = next_token (&val, cfile);
@@ -2060,7 +2060,7 @@ int parse_non_binary (expr, cfile, lose, context)
 			goto nocomma;
 
 		if (!(parse_data_expression
-		      (&(*expr) -> data.dns_update.expr2, cfile, lose)))
+		      (&(*expr) -> data.dns_update.rrdata, cfile, lose)))
 			goto nodata;
 
 		token = next_token (&val, cfile);

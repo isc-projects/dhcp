@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.91 1999/11/14 00:17:47 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.92 1999/11/20 18:36:27 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -589,7 +589,7 @@ void parse_failover_peer (cfile, group, type)
 
 	if (type != SHARED_NET_DECL && type != ROOT_GROUP) {
 		parse_warn (cfile,
-			    "failover peer statements not in shared-network%s"
+			    "failover peer statements not in shared-network%s",
 			    " declaration or at top level.");
 		skip_to_semi (cfile);
 		return;
@@ -1610,7 +1610,7 @@ void parse_group_declaration (cfile, group)
 	int declaration = 0;
 	struct group_object *t;
 	isc_result_t status;
-	char *name;
+	char *name = NULL;
 	int deletedp = 0;
 	int dynamicp = 0;
 	int staticp = 0;
@@ -2117,7 +2117,7 @@ void parse_address_range (cfile, group, type, pool)
 			     pool -> permit_list &&
 			     !pool -> permit_list -> next &&
 			     (pool -> permit_list -> type ==
-			      permit_dynamic_bootp_clients))) {
+			      permit_all_clients))) {
 				break;
 			}
 			last = pool;
@@ -2135,7 +2135,7 @@ void parse_address_range (cfile, group, type, pool)
 					log_fatal ("no memory for ad-hoc %s.",
 						   "permit");
 				pool -> permit_list -> type =
-					permit_dynamic_bootp_clients;
+					permit_all_clients;
 			}
 			if (share -> pools)
 				last -> next = pool;

@@ -539,7 +539,7 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
        you might write the  following  subclass  declaration  for
        that client:
 
-       subclass "allocation-class-2" 08:00:2b:a1:11:31 {
+       subclass "allocation-class-2" 1:08:00:2b:a1:11:31 {
          option root-path "samsara:/var/diskless/alphapc";
          filename "/tftpboot/netbsd.alphapc-diskless";
        }
@@ -828,16 +828,18 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
 
 RREEFFEERREENNCCEE:: AALLLLOOWW AANNDD DDEENNYY
        The _a_l_l_o_w and _d_e_n_y statements can be used to  control  the
-       behaviour  of  dhcpd  to  various sorts of requests.   The
-       allow and deny keywords actually have  different  meanings
-       depending  on the context.   In a pool context, these key­
-       words can be used to set up access lists for address allo­
-       cation  pools.    In  other  contexts, the keywords simply
+       response  of the DHCP server to various sorts of requests.
+       The allow and deny keywords actually have different  mean­
+       ings  depending  on the context.  In a pool context, these
+       keywords can be used to set up access  lists  for  address
+       allocation  pools.  In other contexts, the keywords simply
        control general server behaviour with respect  to  clients
-       based on scope.
+       based  on  scope.   In a non-pool context, the _i_g_n_o_r_e key­
+       word can be used in place of the _d_e_n_y keyword  to  prevent
+       logging of denied requests.
 
 
-AALLLLOOWW AANNDD DDEENNYY IINN SSCCOOPPEE
+AALLLLOOWW DDEENNYY AANNDD IIGGNNOORREE IINN SSCCOOPPEE
        The  following  usages  of allow and deny will work in any
        scope, although it is not recommended that they be used in
        pool declarations.
@@ -846,10 +848,8 @@ AALLLLOOWW AANNDD DDEENNYY IINN SSCCOOPPEE
 
         aallllooww uunnkknnoowwnn--cclliieennttss;;
         ddeennyy uunnkknnoowwnn--cclliieennttss;;
+        iiggnnoorree uunnkknnoowwnn--cclliieennttss;;
 
-       The  uunnkknnoowwnn--cclliieennttss flag is used to tell dhcpd whether or
-       not to dynamically assign addresses  to  unknown  clients.
-       Dynamic  address  assignment to unknown clients is aalllloowwed
 
 
 
@@ -862,12 +862,16 @@ AALLLLOOWW AANNDD DDEENNYY IINN SSCCOOPPEE
 dhcpd.conf(5)                                       dhcpd.conf(5)
 
 
+       The  uunnkknnoowwnn--cclliieennttss flag is used to tell dhcpd whether or
+       not to dynamically assign addresses  to  unknown  clients.
+       Dynamic  address  assignment to unknown clients is aalllloowwed
        by default.
 
        TThhee _b_o_o_t_p kkeeyywwoorrdd
 
         aallllooww bboooottpp;;
         ddeennyy bboooottpp;;
+        iiggnnoorree bboooottpp;;
 
        The bboooottpp flag is used to tell dhcpd  whether  or  not  to
        respond  to  bootp  queries.  Bootp queries are aalllloowwed by
@@ -877,13 +881,71 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
 
         aallllooww bboooottiinngg;;
         ddeennyy bboooottiinngg;;
+        iiggnnoorree bboooottiinngg;;
 
        The bboooottiinngg flag is used to tell dhcpd whether or  not  to
        respond to queries from a particular client.  This keyword
        only has meaning when it appears in  a  host  declaration.
        By  default, booting is aalllloowwed, but if it is disabled for
        a particular client, then that client will not be able  to
-       get and address from the DHCP server.
+       get and address from the DHCP server.  TThhee _d_u_p_l_i_c_a_t_e_s kkeeyy­­
+       wwoorrdd
+
+        aallllooww dduupplliiccaatteess;;
+        ddeennyy dduupplliiccaatteess;;
+
+       Host declarations can match client messages based  on  the
+       DHCP Client Identifer option or based on the client's net­
+       work hardware type and MAC address.   If the  MAC  address
+       is  used,  the host declaration will match any client with
+       that MAC address -  even  clients  with  different  client
+       identifiers.   This doesn't normally happen, but is possi­
+       ble when one computer has more than one  operating  system
+       installed  on  it  -  for  example,  Microsoft Windows and
+       NetBSD or Linux.
+
+       The dduupplliiccaatteess flag  tells  the  DHCP  server  that  if  a
+       request  is  received  from  a client that matches the MAC
+       address of a host declaration, any other  leases  matching
+       that  MAC  address should be discarded by the server, even
+       if the UID is not the same.   This is a violation  of  the
+       DHCP  protocol, but can prevent clients whose client iden­
+       tifiers change regularly from holding many leases  at  the
+       same  time.   By  default,  duplicates  are  aalllloowwed.  TThhee
+       _d_e_c_l_i_n_e_s kkeeyywwoorrdd
+
+        aallllooww ddeecclliinneess;;
+        ddeennyy ddeecclliinneess;;
+
+
+
+                                                               14
+
+
+
+
+
+dhcpd.conf(5)                                       dhcpd.conf(5)
+
+
+        iiggnnoorree ddeecclliinneess;;
+
+       The DHCPDECLINE message is used by DHCP clients  to  indi­
+       cate  that  the lease the server has offered is not valid.
+       When the server receives a DHCPDECLINE  for  a  particular
+       address,  it normally abandons that address, assuming that
+       some unauthorized system is using  it.   Unfortunately,  a
+       malicious or buggy client can, using DHCPDECLINE messages,
+       completely exhaust  the  DHCP  server's  allocation  pool.
+       The server will reclaim these leases, but while the client
+       is running through the pool, it may cause serious  thrash­
+       ing  in the DNS, and it will also cause the DHCP server to
+       forget old DHCP client address allocations.
+
+       The ddeecclliinneess flag tells the DHCP server whether or not  to
+       honor  DHCPDECLINE  messages.    If  it  is set to ddeennyy or
+       iiggnnoorree in a particular scope, the  DHCP  server  will  not
+       respond to DHCPDECLINE messages.
 
 AALLLLOOWW AANNDD DDEENNYY WWIITTHHIINN PPOOOOLL DDEECCLLAARRAATTIIOONNSS
        The uses of the allow and deny keyword shown in the previ­
@@ -916,10 +978,14 @@ AALLLLOOWW AANNDD DDEENNYY WWIITTHHIINN PPOOOOLL DDEECC
        allocation process is done as described previously in  the
        ADDRESS ALLOCATION section.
 
+       When  declaring permit lists for address allocation pools,
+       the following syntaxes are recognized following the  allow
+       or deny keyword:
 
 
 
-                                                               14
+
+                                                               15
 
 
 
@@ -927,10 +993,6 @@ AALLLLOOWW AANNDD DDEENNYY WWIITTHHIINN PPOOOOLL DDEECC
 
 dhcpd.conf(5)                                       dhcpd.conf(5)
 
-
-       When  declaring permit lists for address allocation pools,
-       the following syntaxes are recognized following the  allow
-       or deny keyword:
 
         kknnoowwnn cclliieennttss;;
 
@@ -981,73 +1043,11 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
        next renew.
 
 RREEFFEERREENNCCEE:: PPAARRAAMMEETTEERRSS
-       TThhee _d_e_f_a_u_l_t_-_l_e_a_s_e_-_t_i_m_e ssttaatteemmeenntt
+       TThhee _l_e_a_s_e_-_f_i_l_e_-_n_a_m_e ssttaatteemmeenntt
 
+       lleeaassee--ffiillee--nnaammee _n_a_m_e;;
 
-
-                                                               15
-
-
-
-
-
-dhcpd.conf(5)                                       dhcpd.conf(5)
-
-
-        ddeeffaauulltt--lleeaassee--ttiimmee _t_i_m_e;;
-
-       _T_i_m_e should be the length in seconds that will be assigned
-       to a lease if the client requesting the lease does not ask
-       for a specific expiration time.
-
-       TThhee _m_a_x_-_l_e_a_s_e_-_t_i_m_e ssttaatteemmeenntt
-
-        mmaaxx--lleeaassee--ttiimmee _t_i_m_e;;
-
-       _T_i_m_e  should be the maximum length in seconds that will be
-       assigned to a lease.   The only exception to this is  that
-       Dynamic  BOOTP  lease  lengths, which are not specified by
-       the client, are not limited by this maximum.
-
-       TThhee _m_i_n_-_l_e_a_s_e_-_t_i_m_e ssttaatteemmeenntt
-
-        mmiinn--lleeaassee--ttiimmee _t_i_m_e;;
-
-       _T_i_m_e should be the minimum length in seconds that will  be
-       assigned to a lease.
-
-       TThhee _m_i_n_-_s_e_c_s ssttaatteemmeenntt
-
-        mmiinn--sseeccss _s_e_c_o_n_d_s;;
-
-       _S_e_c_o_n_d_s  should  be  the minimum number of seconds since a
-       client began trying to acquire a new lease before the DHCP
-       server will respond to its request.  The number of seconds
-       is based on what the client reports, and the maximum value
-       that  the  client  can report is 255 seconds.   Generally,
-       setting this to one will result in  the  DHCP  server  not
-       responding  to  the  client's  first  request,  but always
-       responding to its second request.
-
-       This can be used to set up a secondary DHCP  server  which
-       never  offers  an  address  to  a client until the primary
-       server has been given a chance to do so.   If the  primary
-       server  is  down,  the  client  will bind to the secondary
-       server, but otherwise clients should always  bind  to  the
-       primary.    Note  that  this does not, by itself, permit a
-       primary server and a secondary server to share a  pool  of
-       dynamically-allocatable addresses.
-
-       TThhee _h_a_r_d_w_a_r_e ssttaatteemmeenntt
-
-        hhaarrddwwaarree _h_a_r_d_w_a_r_e_-_t_y_p_e _h_a_r_d_w_a_r_e_-_a_d_d_r_e_s_s;;
-
-       In  order for a BOOTP client to be recognized, its network
-       hardware address must be declared using a _h_a_r_d_w_a_r_e  clause
-       in  the _h_o_s_t statement.  _h_a_r_d_w_a_r_e_-_t_y_p_e must be the name of
-       a physical hardware interface type.   Currently, only  the
-       eetthheerrnneett  and  ttookkeenn--rriinngg  types  are recognized, although
-       support for a ffddddii hardware type (and others)  would  also
+       _N_a_m_e  should  be the name of the DHCP server's lease file.
 
 
 
@@ -1060,19 +1060,102 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
 dhcpd.conf(5)                                       dhcpd.conf(5)
 
 
-       be  desirable.   The  _h_a_r_d_w_a_r_e_-_a_d_d_r_e_s_s  should be a set of
-       hexadecimal octets (numbers from 0 through  ff)  seperated
-       by  colons.    The _h_a_r_d_w_a_r_e statement may also be used for
+       By default, this is /var/db/dhcpd.leases.   This statement
+       mmuusstt appear in the outer scope of the configuration file -
+       if it appears in some other scope, it will have no effect.
+
+       TThhee _p_i_d_-_f_i_l_e_-_n_a_m_e ssttaatteemmeenntt
+
+       ppiidd--ffiillee--nnaammee _n_a_m_e;;
+
+       _N_a_m_e  should  be  the name of the DHCP server's process ID
+       file.   This is the file in which the DHCP  server's  pro­
+       cess  ID  is  stored when the server starts.   By default,
+       this is  /var/run/dhcpd.pid.    Like  the  lease-file-name
+       statement,  this  statement must appear in the outer scope
+       of the configuration file.
+
+       TThhee _d_e_f_a_u_l_t_-_l_e_a_s_e_-_t_i_m_e ssttaatteemmeenntt
+
+        ddeeffaauulltt--lleeaassee--ttiimmee _t_i_m_e;;
+
+       _T_i_m_e should be the length in seconds that will be assigned
+       to a lease if the client requesting the lease does not ask
+       for a specific expiration time.
+
+       TThhee _m_a_x_-_l_e_a_s_e_-_t_i_m_e ssttaatteemmeenntt
+
+        mmaaxx--lleeaassee--ttiimmee _t_i_m_e;;
+
+       _T_i_m_e should be the maximum length in seconds that will  be
+       assigned  to a lease.   The only exception to this is that
+       Dynamic BOOTP lease lengths, which are  not  specified  by
+       the client, are not limited by this maximum.
+
+       TThhee _m_i_n_-_l_e_a_s_e_-_t_i_m_e ssttaatteemmeenntt
+
+        mmiinn--lleeaassee--ttiimmee _t_i_m_e;;
+
+       _T_i_m_e  should be the minimum length in seconds that will be
+       assigned to a lease.
+
+       TThhee _m_i_n_-_s_e_c_s ssttaatteemmeenntt
+
+        mmiinn--sseeccss _s_e_c_o_n_d_s;;
+
+       _S_e_c_o_n_d_s should be the minimum number of  seconds  since  a
+       client began trying to acquire a new lease before the DHCP
+       server will respond to its request.  The number of seconds
+       is based on what the client reports, and the maximum value
+       that the client can report is  255  seconds.    Generally,
+       setting  this  to  one  will result in the DHCP server not
+       responding to  the  client's  first  request,  but  always
+       responding to its second request.
+
+       This  can  be used to set up a secondary DHCP server which
+       never offers an address to  a  client  until  the  primary
+
+
+
+                                                               17
+
+
+
+
+
+dhcpd.conf(5)                                       dhcpd.conf(5)
+
+
+       server  has been given a chance to do so.   If the primary
+       server is down, the client  will  bind  to  the  secondary
+       server,  but  otherwise  clients should always bind to the
+       primary.   Note that this does not, by  itself,  permit  a
+       primary  server  and a secondary server to share a pool of
+       dynamically-allocatable addresses.
+
+       TThhee _h_a_r_d_w_a_r_e ssttaatteemmeenntt
+
+        hhaarrddwwaarree _h_a_r_d_w_a_r_e_-_t_y_p_e _h_a_r_d_w_a_r_e_-_a_d_d_r_e_s_s;;
+
+       In order for a BOOTP client to be recognized, its  network
+       hardware  address must be declared using a _h_a_r_d_w_a_r_e clause
+       in the _h_o_s_t statement.  _h_a_r_d_w_a_r_e_-_t_y_p_e must be the name  of
+       a  physical hardware interface type.   Currently, only the
+       eetthheerrnneett and ttookkeenn--rriinngg  types  are  recognized,  although
+       support  for  a ffddddii hardware type (and others) would also
+       be desirable.  The _h_a_r_d_w_a_r_e_-_a_d_d_r_e_s_s should  be  a  set  of
+       hexadecimal  octets  (numbers from 0 through ff) seperated
+       by colons.   The _h_a_r_d_w_a_r_e statement may also be  used  for
        DHCP clients.
 
        TThhee _f_i_l_e_n_a_m_e ssttaatteemmeenntt
 
         ffiilleennaammee ""_f_i_l_e_n_a_m_e"";;
 
-       The _f_i_l_e_n_a_m_e statement can be used to specify the name  of
-       the  initial  boot file which is to be loaded by a client.
+       The  _f_i_l_e_n_a_m_e statement can be used to specify the name of
+       the initial boot file which is to be loaded by  a  client.
        The _f_i_l_e_n_a_m_e should be a filename recognizable to whatever
-       file  transfer  protocol the client can be expected to use
+       file transfer protocol the client can be expected  to  use
        to load the file.
 
        TThhee _s_e_r_v_e_r_-_n_a_m_e ssttaatteemmeenntt
@@ -1087,99 +1170,16 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
 
         nneexxtt--sseerrvveerr _s_e_r_v_e_r_-_n_a_m_e;;
 
-       The _n_e_x_t_-_s_e_r_v_e_r statement is  used  to  specify  the  host
-       address  of  the  server  from which the initial boot file
-       (specified in the _f_i_l_e_n_a_m_e statement)  is  to  be  loaded.
-       _S_e_r_v_e_r_-_n_a_m_e  should  be  a  numeric IP address or a domain
-       name.   If no _n_e_x_t_-_s_e_r_v_e_r parameter  applies  to  a  given
+       The  _n_e_x_t_-_s_e_r_v_e_r  statement  is  used  to specify the host
+       address of the server from which  the  initial  boot  file
+       (specified  in  the  _f_i_l_e_n_a_m_e  statement) is to be loaded.
+       _S_e_r_v_e_r_-_n_a_m_e should be a numeric IP  address  or  a  domain
+       name.    If  no  _n_e_x_t_-_s_e_r_v_e_r  parameter applies to a given
        client, the DHCP server's IP address is used.
 
        TThhee _f_i_x_e_d_-_a_d_d_r_e_s_s ssttaatteemmeenntt
 
         ffiixxeedd--aaddddrreessss _a_d_d_r_e_s_s [,, _a_d_d_r_e_s_s ... ];;
-
-       The  _f_i_x_e_d_-_a_d_d_r_e_s_s statement is used to assign one or more
-       fixed IP addresses to a client.  It should only appear  in
-       a _h_o_s_t declaration.  If more than one address is supplied,
-       then when the  client  boots,  it  will  be  assigned  the
-       address  which  corresponds  to the network on which it is
-       booting.  If none of the addresses  in  the  _f_i_x_e_d_-_a_d_d_r_e_s_s
-       statement  are on the network on which the client is boot­
-       ing, that client will not match the _h_o_s_t declaration  con­
-       taining that _f_i_x_e_d_-_a_d_d_r_e_s_s statement.  Each _a_d_d_r_e_s_s should
-       be either an IP address or a domain name which resolves to
-       one or more IP addresses.
-
-       TThhee _d_y_n_a_m_i_c_-_b_o_o_t_p_-_l_e_a_s_e_-_c_u_t_o_f_f ssttaatteemmeenntt
-
-        ddyynnaammiicc--bboooottpp--lleeaassee--ccuuttooffff _d_a_t_e;;
-
-
-
-
-                                                               17
-
-
-
-
-
-dhcpd.conf(5)                                       dhcpd.conf(5)
-
-
-       The  _d_y_n_a_m_i_c_-_b_o_o_t_p_-_l_e_a_s_e_-_c_u_t_o_f_f  statement sets the ending
-       time for all leases assigned dynamically to BOOTP clients.
-       Because  BOOTP  clients  do  not  have any way of renewing
-       leases, and don't know that their leases could expire,  by
-       default  dhcpd  assignes  infinite  leases  to  all  BOOTP
-       clients.  However, it may make sense in some situations to
-       set  a cutoff date for all BOOTP leases - for example, the
-       end of a school term, or the time at night when a facility
-       is closed and all machines are required to be powered off.
-
-       _D_a_t_e should be the date on which all assigned BOOTP leases
-       will end.  The date is specified in the form:
-
-                         W YYYY/MM/DD HH:MM:SS
-
-       W  is  the day of the week expressed as a number from zero
-       (Sunday) to six (Saturday).  YYYY is the  year,  including
-       the century.  MM is the month expressed as a number from 1
-       to 12.  DD is the day of the month, counting from  1.   HH
-       is  the hour, from zero to 23.  MM is the minute and SS is
-       the second.  The time is always  in  Greenwich  Mean  Time
-       (GMT), not local time.
-
-       TThhee _d_y_n_a_m_i_c_-_b_o_o_t_p_-_l_e_a_s_e_-_l_e_n_g_t_h ssttaatteemmeenntt
-
-        ddyynnaammiicc--bboooottpp--lleeaassee--lleennggtthh _l_e_n_g_t_h;;
-
-       The  _d_y_n_a_m_i_c_-_b_o_o_t_p_-_l_e_a_s_e_-_l_e_n_g_t_h  statement  is used to set
-       the  length  of  leases  dynamically  assigned  to   BOOTP
-       clients.    At  some  sites,  it may be possible to assume
-       that a lease is no longer in use if  its  holder  has  not
-       used  BOOTP  or  DHCP  to get its address within a certain
-       time period.   The period is specified in _l_e_n_g_t_h as a num­
-       ber  of  seconds.   If a client reboots using BOOTP during
-       the timeout period, the lease duration is reset to _l_e_n_g_t_h,
-       so  a BOOTP client that boots frequently enough will never
-       lose its lease.  Needless to say, this parameter should be
-       adjusted with extreme caution.
-
-       TThhee _g_e_t_-_l_e_a_s_e_-_h_o_s_t_n_a_m_e_s ssttaatteemmeenntt
-
-        ggeett--lleeaassee--hhoossttnnaammeess _f_l_a_g;;
-
-       The  _g_e_t_-_l_e_a_s_e_-_h_o_s_t_n_a_m_e_s  statement  is used to tell dhcpd
-       whether or not to look up the domain name corresponding to
-       the  IP  address of each address in the lease pool and use
-       that address for the DHCP _h_o_s_t_n_a_m_e  option.   If  _f_l_a_g  is
-       true,  then  this  lookup is done for all addresses in the
-       current scope.   By default,  or  if  _f_l_a_g  is  false,  no
-       lookups are done.
-
-       TThhee _u_s_e_-_h_o_s_t_-_d_e_c_l_-_n_a_m_e_s ssttaatteemmeenntt
-
-        uussee--hhoosstt--ddeeccll--nnaammeess _f_l_a_g;;
 
 
 
@@ -1192,9 +1192,91 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
 dhcpd.conf(5)                                       dhcpd.conf(5)
 
 
-       If  the  _u_s_e_-_h_o_s_t_-_d_e_c_l_-_n_a_m_e_s  parameter is true in a given
-       scope, then for every host declaration within that  scope,
-       the  name  provided  for the host declaration will be sup­
+       The _f_i_x_e_d_-_a_d_d_r_e_s_s statement is used to assign one or  more
+       fixed  IP addresses to a client.  It should only appear in
+       a _h_o_s_t declaration.  If more than one address is supplied,
+       then  when  the  client  boots,  it  will  be assigned the
+       address which corresponds to the network on  which  it  is
+       booting.   If  none  of the addresses in the _f_i_x_e_d_-_a_d_d_r_e_s_s
+       statement are on the network on which the client is  boot­
+       ing,  that client will not match the _h_o_s_t declaration con­
+       taining that _f_i_x_e_d_-_a_d_d_r_e_s_s statement.  Each _a_d_d_r_e_s_s should
+       be either an IP address or a domain name which resolves to
+       one or more IP addresses.
+
+       TThhee _d_y_n_a_m_i_c_-_b_o_o_t_p_-_l_e_a_s_e_-_c_u_t_o_f_f ssttaatteemmeenntt
+
+        ddyynnaammiicc--bboooottpp--lleeaassee--ccuuttooffff _d_a_t_e;;
+
+       The _d_y_n_a_m_i_c_-_b_o_o_t_p_-_l_e_a_s_e_-_c_u_t_o_f_f statement sets  the  ending
+       time for all leases assigned dynamically to BOOTP clients.
+       Because BOOTP clients do not  have  any  way  of  renewing
+       leases,  and don't know that their leases could expire, by
+       default  dhcpd  assignes  infinite  leases  to  all  BOOTP
+       clients.  However, it may make sense in some situations to
+       set a cutoff date for all BOOTP leases - for example,  the
+       end of a school term, or the time at night when a facility
+       is closed and all machines are required to be powered off.
+
+       _D_a_t_e should be the date on which all assigned BOOTP leases
+       will end.  The date is specified in the form:
+
+                         W YYYY/MM/DD HH:MM:SS
+
+       W is the day of the week expressed as a number  from  zero
+       (Sunday)  to  six (Saturday).  YYYY is the year, including
+       the century.  MM is the month expressed as a number from 1
+       to  12.   DD is the day of the month, counting from 1.  HH
+       is the hour, from zero to 23.  MM is the minute and SS  is
+       the  second.   The  time  is always in Greenwich Mean Time
+       (GMT), not local time.
+
+       TThhee _d_y_n_a_m_i_c_-_b_o_o_t_p_-_l_e_a_s_e_-_l_e_n_g_t_h ssttaatteemmeenntt
+
+        ddyynnaammiicc--bboooottpp--lleeaassee--lleennggtthh _l_e_n_g_t_h;;
+
+       The _d_y_n_a_m_i_c_-_b_o_o_t_p_-_l_e_a_s_e_-_l_e_n_g_t_h statement is  used  to  set
+       the   length  of  leases  dynamically  assigned  to  BOOTP
+       clients.   At some sites, it may  be  possible  to  assume
+       that  a  lease  is  no longer in use if its holder has not
+       used BOOTP or DHCP to get its  address  within  a  certain
+       time period.   The period is specified in _l_e_n_g_t_h as a num­
+       ber of seconds.   If a client reboots using  BOOTP  during
+       the timeout period, the lease duration is reset to _l_e_n_g_t_h,
+       so a BOOTP client that boots frequently enough will  never
+       lose its lease.  Needless to say, this parameter should be
+       adjusted with extreme caution.
+
+
+
+                                                               19
+
+
+
+
+
+dhcpd.conf(5)                                       dhcpd.conf(5)
+
+
+       TThhee _g_e_t_-_l_e_a_s_e_-_h_o_s_t_n_a_m_e_s ssttaatteemmeenntt
+
+        ggeett--lleeaassee--hhoossttnnaammeess _f_l_a_g;;
+
+       The _g_e_t_-_l_e_a_s_e_-_h_o_s_t_n_a_m_e_s statement is used  to  tell  dhcpd
+       whether or not to look up the domain name corresponding to
+       the IP address of each address in the lease pool  and  use
+       that  address  for  the  DHCP _h_o_s_t_n_a_m_e option.  If _f_l_a_g is
+       true, then this lookup is done for all  addresses  in  the
+       current  scope.    By  default,  or  if  _f_l_a_g is false, no
+       lookups are done.
+
+       TThhee _u_s_e_-_h_o_s_t_-_d_e_c_l_-_n_a_m_e_s ssttaatteemmeenntt
+
+        uussee--hhoosstt--ddeeccll--nnaammeess _f_l_a_g;;
+
+       If the _u_s_e_-_h_o_s_t_-_d_e_c_l_-_n_a_m_e_s parameter is true  in  a  given
+       scope,  then for every host declaration within that scope,
+       the name provided for the host declaration  will  be  sup­
        plied to the client as its hostname.   So, for example,
 
            group {
@@ -1214,7 +1296,7 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
                option host-name "joe";
              }
 
-       An _o_p_t_i_o_n _h_o_s_t_-_n_a_m_e statement within  a  host  declaration
+       An  _o_p_t_i_o_n  _h_o_s_t_-_n_a_m_e  statement within a host declaration
        will override the use of the name in the host declaration.
 
        TThhee _a_u_t_h_o_r_i_t_a_t_i_v_e ssttaatteemmeenntt
@@ -1223,95 +1305,13 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
 
         nnoott aauutthhoorriittaattiivvee;;
 
-       The DHCP server will normally assume that  the  configura­
+       The  DHCP  server will normally assume that the configura­
        tion information about a given network segment is known to
        be correct and is authoritative.   So if a client requests
-       an  IP  address on a given network segment that the server
-       knows is not valid  for  that  segment,  the  server  will
+       an IP address on a given network segment that  the  server
+       knows  is  not  valid  for  that  segment, the server will
        respond with a DHCPNAK message, causing the client to for­
        get its IP address and try to get a new one.
-
-       If a DHCP server is being configured by  somebody  who  is
-       not  the  network administrator and who therefore does not
-       wish to assert this level of authority, then the statement
-       "not  authoritative"  should be written in the appropriate
-       scope in the configuration file.
-
-       Usually, writing nnoott aauutthhoorriittaattiivvee;; at the  top  level  of
-       the file should be sufficient.   However, if a DHCP server
-       is to be set up so that it is aware of some  networks  for
-       which  it  is authoritative and some networks for which it
-       is not, it may be more appropriate to declare authority on
-       a per-network-segment basis.
-
-       Note that the most specific scope for which the concept of
-       authority makes any sense is the physical network  segment
-
-
-
-                                                               19
-
-
-
-
-
-dhcpd.conf(5)                                       dhcpd.conf(5)
-
-
-       -  either a shared-network statement or a subnet statement
-       that is not contained within a  shared-network  statement.
-       It is not meaningful to specify that the server is author­
-       itative for some subnets within a shared network, but  not
-       authoritative  for others, nor is it meaningful to specify
-       that the server is authoritative for  some  host  declara­
-       tions and not others.
-
-       TThhee _a_l_w_a_y_s_-_r_e_p_l_y_-_r_f_c_1_0_4_8 ssttaatteemmeenntt
-
-        aallwwaayyss--rreeppllyy--rrffcc11004488 _f_l_a_g;;
-
-       Some  BOOTP clients expect RFC1048-style responses, but do
-       not follow RFC1048 when sending their requests.   You  can
-       tell  that  a  client  is having this problem if it is not
-       getting the options you have configured for it and if  you
-       see  in the server log the message "(non-rfc1048)" printed
-       with each BOOTREQUEST that is logged.
-
-       If you want to send rfc1048 options to such a client,  you
-       can  set  the aallwwaayyss--rreeppllyy--rrffcc11004488 option in that client's
-       host declaration, and the DHCP server will respond with an
-       RFC-1048-style  vendor  options  field.   This flag can be
-       set in any scope, and will affect all clients  covered  by
-       that scope.
-
-       TThhee _a_l_w_a_y_s_-_b_r_o_a_d_c_a_s_t ssttaatteemmeenntt
-
-        aallwwaayyss--bbrrooaaddccaasstt _f_l_a_g;;
-
-       The  DHCP  and BOOTP protocols both require DHCP and BOOTP
-       clients to set the broadcast bit in the flags field of the
-       BOOTP  message header.  Unfortunately, some DHCP and BOOTP
-       clients do not do this,  and  therefore  may  not  receive
-       responses  from  the DHCP server.   The DHCP server can be
-       made to always broadcast its responses to clients by  set­
-       ting  this flag to 'on' for the relevant scope.   To avoid
-       creating excess broadcast traffic on your network, we rec­
-       ommend  that you restrict the use of this option to as few
-       clients as possible.   For  example,  the  Microsoft  DHCP
-       client is known not to have this problem, as are the Open­
-       Transport and ISC DHCP clients.
-
-       TThhee _o_n_e_-_l_e_a_s_e_-_p_e_r_-_c_l_i_e_n_t ssttaatteemmeenntt
-
-        oonnee--lleeaassee--ppeerr--cclliieenntt _f_l_a_g;;
-
-       If this flag is enabled, whenever a client sends a DHCPRE­
-       QUEST  for  a  particular lease, the server will automati­
-       cally free any other leases the client holds.   This  pre­
-       sumes  that  when  the  client sends a DHCPREQUEST, it has
-       forgotten any lease not mentioned  in  the  DHCPREQUEST  -
-       i.e.,  the  client has only a single network interface _a_n_d
-       it does not remember leases it's holding  on  networks  to
 
 
 
@@ -1324,60 +1324,60 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
 dhcpd.conf(5)                                       dhcpd.conf(5)
 
 
-       which  it  is  not  currently attached.   Neither of these
-       assumptions are guaranteed or provable, so we urge caution
-       in the use of this statement.
+       If  a  DHCP  server is being configured by somebody who is
+       not the network administrator and who therefore  does  not
+       wish to assert this level of authority, then the statement
+       "not authoritative" should be written in  the  appropriate
+       scope in the configuration file.
 
-       TThhee _u_s_e_-_l_e_a_s_e_-_a_d_d_r_-_f_o_r_-_d_e_f_a_u_l_t_-_r_o_u_t_e ssttaatteemmeenntt
+       Usually,  writing  nnoott  aauutthhoorriittaattiivvee;; at the top level of
+       the file should be sufficient.   However, if a DHCP server
+       is  to  be set up so that it is aware of some networks for
+       which it is authoritative and some networks for  which  it
+       is not, it may be more appropriate to declare authority on
+       a per-network-segment basis.
 
-        uussee--lleeaassee--aaddddrr--ffoorr--ddeeffaauulltt--rroouuttee _f_l_a_g;;
+       Note that the most specific scope for which the concept of
+       authority  makes any sense is the physical network segment
+       - either a shared-network statement or a subnet  statement
+       that  is  not contained within a shared-network statement.
+       It is not meaningful to specify that the server is author­
+       itative  for some subnets within a shared network, but not
+       authoritative for others, nor is it meaningful to  specify
+       that  the  server  is authoritative for some host declara­
+       tions and not others.
 
-       If  the _u_s_e_-_l_e_a_s_e_-_a_d_d_r_-_f_o_r_-_d_e_f_a_u_l_t_-_r_o_u_t_e parameter is true
-       in a given scope, then instead of sending the value speci­
-       fied  in  the routers option (or sending no value at all),
-       the IP address of the lease being assigned is sent to  the
-       client.   This supposedly causes Win95 machines to ARP for
-       all IP addresses, which can be helpful if your  router  is
-       configured for proxy ARP.
+       TThhee _a_l_w_a_y_s_-_r_e_p_l_y_-_r_f_c_1_0_4_8 ssttaatteemmeenntt
 
-       TThhee _s_e_r_v_e_r_-_i_d_e_n_t_i_f_i_e_r ssttaatteemmeenntt
+        aallwwaayyss--rreeppllyy--rrffcc11004488 _f_l_a_g;;
 
-        sseerrvveerr--iiddeennttiiffiieerr _h_o_s_t_n_a_m_e;;
+       Some BOOTP clients expect RFC1048-style responses, but  do
+       not  follow RFC1048 when sending their requests.   You can
+       tell that a client is having this problem  if  it  is  not
+       getting  the options you have configured for it and if you
+       see in the server log the message "(non-rfc1048)"  printed
+       with each BOOTREQUEST that is logged.
 
-       The  server-identifier statement can be used to define the
-       value that is sent in the DHCP  Server  Identifier  option
-       for  a  given  scope.    The value specified mmuusstt be an IP
-       address for the DHCP server, and must be reachable by  all
-       clients served by a particular scope.
+       If  you want to send rfc1048 options to such a client, you
+       can set the aallwwaayyss--rreeppllyy--rrffcc11004488 option in  that  client's
+       host declaration, and the DHCP server will respond with an
+       RFC-1048-style vendor options field.   This  flag  can  be
+       set  in  any scope, and will affect all clients covered by
+       that scope.
 
-       The  use  of the server-identifier statement is not recom­
-       mended - the only reason to use it is  to  force  a  value
-       other than the default value to be sent on occasions where
-       the default value would be incorrect.   The default  value
-       is  the first IP address associated with the physical net­
-       work interface on which the request arrived.
+       TThhee _a_l_w_a_y_s_-_b_r_o_a_d_c_a_s_t ssttaatteemmeenntt
 
-       The usual case where the _s_e_r_v_e_r_-_i_d_e_n_t_i_f_i_e_r statement needs
-       to  be sent is when a physical interface has more than one
-       IP address, and the one being sent by default isn't appro­
-       priate  for  some or all clients served by that interface.
-       Another common case is when an alias is  defined  for  the
-       purpose  of  having  a  consistent IP address for the DHCP
-       server, and it is desired that the  clients  use  this  IP
-       address when contacting the server.
+        aallwwaayyss--bbrrooaaddccaasstt _f_l_a_g;;
 
-       Supplying a value for the dhcp-server-identifier option is
-       equivalent to using the server-identifier statement.
-
-RREEFFEERREENNCCEE:: OOPPTTIIOONN SSTTAATTEEMMEENNTTSS
-       DHCP  option  statements  are  documented  in  the   ddhhccpp--
-       ooppttiioonnss((55)) manual page.
-
-VVEENNDDOORR EENNCCAAPPSSUULLAATTEEDD OOPPTTIIOONNSS
-       The DHCP protocol defines the  vveennddoorr--eennccaappssuullaatteedd--ooppttiioonnss
-       option, which allows vendors to define their  own  options
-       that  will be sent encapsulated in a standard DHCP option.
-       The format of the  vveennddoorr--eennccaappssuullaatteedd--ooppttiioonnss  option  is
+       The DHCP and BOOTP protocols both require DHCP  and  BOOTP
+       clients to set the broadcast bit in the flags field of the
+       BOOTP message header.  Unfortunately, some DHCP and  BOOTP
+       clients  do  not  do  this,  and therefore may not receive
+       responses from the DHCP server.   The DHCP server  can  be
+       made  to always broadcast its responses to clients by set­
+       ting this flag to 'on' for the relevant scope.   To  avoid
+       creating excess broadcast traffic on your network, we rec­
+       ommend that you restrict the use of this option to as  few
 
 
 
@@ -1390,15 +1390,96 @@ VVEENNDDOORR EENNCCAAPPSSUULLAATTEEDD OOPPTTIIOONNSS
 dhcpd.conf(5)                                       dhcpd.conf(5)
 
 
-       either  a  hunk of opaque data, or an actual option buffer
+       clients  as  possible.    For  example, the Microsoft DHCP
+       client is known not to have this problem, as are the Open­
+       Transport and ISC DHCP clients.
+
+       TThhee _o_n_e_-_l_e_a_s_e_-_p_e_r_-_c_l_i_e_n_t ssttaatteemmeenntt
+
+        oonnee--lleeaassee--ppeerr--cclliieenntt _f_l_a_g;;
+
+       If this flag is enabled, whenever a client sends a DHCPRE­
+       QUEST for a particular lease, the  server  will  automati­
+       cally  free any other leases the client holds.   This pre­
+       sumes that when the client sends  a  DHCPREQUEST,  it  has
+       forgotten  any  lease  not  mentioned in the DHCPREQUEST -
+       i.e., the client has only a single network  interface  _a_n_d
+       it  does  not  remember leases it's holding on networks to
+       which it is not currently  attached.    Neither  of  these
+       assumptions are guaranteed or provable, so we urge caution
+       in the use of this statement.
+
+       TThhee _u_s_e_-_l_e_a_s_e_-_a_d_d_r_-_f_o_r_-_d_e_f_a_u_l_t_-_r_o_u_t_e ssttaatteemmeenntt
+
+        uussee--lleeaassee--aaddddrr--ffoorr--ddeeffaauulltt--rroouuttee _f_l_a_g;;
+
+       If the _u_s_e_-_l_e_a_s_e_-_a_d_d_r_-_f_o_r_-_d_e_f_a_u_l_t_-_r_o_u_t_e parameter is  true
+       in a given scope, then instead of sending the value speci­
+       fied in the routers option (or sending no value  at  all),
+       the  IP address of the lease being assigned is sent to the
+       client.   This supposedly causes Win95 machines to ARP for
+       all  IP  addresses, which can be helpful if your router is
+       configured for proxy ARP.
+
+       TThhee _s_e_r_v_e_r_-_i_d_e_n_t_i_f_i_e_r ssttaatteemmeenntt
+
+        sseerrvveerr--iiddeennttiiffiieerr _h_o_s_t_n_a_m_e;;
+
+       The server-identifier statement can be used to define  the
+       value  that  is  sent in the DHCP Server Identifier option
+       for a given scope.   The value specified  mmuusstt  be  an  IP
+       address  for the DHCP server, and must be reachable by all
+       clients served by a particular scope.
+
+       The use of the server-identifier statement is  not  recom­
+       mended  -  the  only  reason to use it is to force a value
+       other than the default value to be sent on occasions where
+       the  default value would be incorrect.   The default value
+       is the first IP address associated with the physical  net­
+       work interface on which the request arrived.
+
+       The usual case where the _s_e_r_v_e_r_-_i_d_e_n_t_i_f_i_e_r statement needs
+       to be sent is when a physical interface has more than  one
+       IP address, and the one being sent by default isn't appro­
+       priate for some or all clients served by  that  interface.
+       Another  common  case  is when an alias is defined for the
+       purpose of having a consistent IP  address  for  the  DHCP
+
+
+
+                                                               22
+
+
+
+
+
+dhcpd.conf(5)                                       dhcpd.conf(5)
+
+
+       server,  and  it  is  desired that the clients use this IP
+       address when contacting the server.
+
+       Supplying a value for the dhcp-server-identifier option is
+       equivalent to using the server-identifier statement.
+
+RREEFFEERREENNCCEE:: OOPPTTIIOONN SSTTAATTEEMMEENNTTSS
+       DHCP   option  statements  are  documented  in  the  ddhhccpp--
+       ooppttiioonnss((55)) manual page.
+
+VVEENNDDOORR EENNCCAAPPSSUULLAATTEEDD OOPPTTIIOONNSS
+       The DHCP protocol defines the  vveennddoorr--eennccaappssuullaatteedd--ooppttiioonnss
+       option,  which  allows vendors to define their own options
+       that will be sent encapsulated in a standard DHCP  option.
+       The  format  of  the vveennddoorr--eennccaappssuullaatteedd--ooppttiioonnss option is
+       either a hunk of opaque data, or an actual  option  buffer
        just like a standard DHCP option buffer.
 
-       You can send this option to clients in one of two  ways  -
-       either  define the data directly, using a text string or a
-       colon-seperated list of hexadecimal values, or  define  an
-       option  space,  define  some options in that option space,
-       provide values for them,  and  specify  that  that  option
-       space  should be used to generate the vveennddoorr--eennccaappssuullaatteedd--
+       You  can  send this option to clients in one of two ways -
+       either define the data directly, using a text string or  a
+       colon-seperated  list  of hexadecimal values, or define an
+       option space, define some options in  that  option  space,
+       provide  values  for  them,  and  specify that that option
+       space should be used to generate the  vveennddoorr--eennccaappssuullaatteedd--
        ooppttiioonnss option in some scope.
 
        To send a simple clump of data, simply provide a value for
@@ -1409,13 +1490,13 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
                3:12:73:75:6e:64:68:63:70:2d:73:65:72:76:65:72:31:37:2d:31:
                4:12:2f:65:78:70:6f:72:74:2f:72:6f:6f:74:2f:69:38:36:70:63;
 
-       To  define  a new option space in which vendor options can
+       To define a new option space in which vendor  options  can
        be stored, use the option space statement:
 
        ooppttiioonn ssppaaccee _n_a_m_e ;;
 
-       The name can  then  be  used  in  option  definitions,  as
-       described  in the ddhhccpp--ooppttiioonnss((55)) manual page.   For exam­
+       The  name  can  then  be  used  in  option definitions, as
+       described in the ddhhccpp--ooppttiioonnss((55)) manual page.   For  exam­
        ple:
 
             option space SUNW;
@@ -1423,15 +1504,27 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
             option SUNW.server-name code 3 = text;
             option SUNW.root-path code 4 = text;
 
-       Once you have defined an option space  and  some  options,
-       you  can  set  up  scopes  that  define  values  for those
-       options, and you can say when to use them.   For  example,
-       suppose  you  want  to  handle  two  different  classes of
-       clients, as in the example in the CCLLIIEENNTT CCLLAASSSSIINNGG section.
-       Using  the  option  space definition shown in the previous
-       example, something very  similar  to  the  vendor-encapsu­
-       lated-options definition shown earlier can be done as fol­
-       lows:
+       Once  you  have  defined an option space and some options,
+       you can  set  up  scopes  that  define  values  for  those
+       options,  and you can say when to use them.   For example,
+       suppose you  want  to  handle  two  different  classes  of
+       clients,  as  in  the  example  in the VVEENNDDOORR EENNCCAAPPSSUULLAATTEEDD
+       OOPPTTIIOONNSS section.   Using the option space definition shown
+
+
+
+                                                               23
+
+
+
+
+
+dhcpd.conf(5)                                       dhcpd.conf(5)
+
+
+       in  the  previous  example,  something very similar to the
+       vendor-encapsulated-options definition shown  earlier  can
+       be done as follows:
 
        class "vendor-classes" {
          match option vendor-class-identifier;
@@ -1445,29 +1538,18 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
          option SUNW.root-path "/export/root/sparc";
        }
 
-
-
-                                                               22
-
-
-
-
-
-dhcpd.conf(5)                                       dhcpd.conf(5)
-
-
        subclass "vendor-classes" "SUNW.i86pc" {
          vendor-option-space SUNW;
          option SUNW.root-path "/export/root/i86pc";
        }
 
-       As you can see in the preceding example,  regular  scoping
-       rules  apply,  so you can define values that are global in
+       As  you  can see in the preceding example, regular scoping
+       rules apply, so you can define values that are  global  in
        the global scope, and only define values that are specific
-       to  a  particular  class in the local scope.   The vveennddoorr--
+       to a particular class in the local  scope.    The  vveennddoorr--
        ooppttiioonn--ssppaaccee declaration indicates that in that scope, the
-       vveennddoorr--eennccaappssuullaatteedd--ooppttiioonnss  option  should be constructed
-       using the values of all the options  in  the  SUNW  option
+       vveennddoorr--eennccaappssuullaatteedd--ooppttiioonnss option should  be  constructed
+       using  the  values  of  all the options in the SUNW option
        space.
 
 SSEEEE AALLSSOO
@@ -1475,9 +1557,9 @@ SSEEEE AALLSSOO
 
 AAUUTTHHOORR
        ddhhccppdd((88)) was written by Ted Lemon <mellon@vix.com> under a
-       contract with Vixie Labs.   Funding for this  project  was
+       contract  with  Vixie Labs.   Funding for this project was
        provided by the Internet Software Consortium.  Information
-       about the Internet Software Consortium  can  be  found  at
+       about  the  Internet  Software  Consortium can be found at
        hhttttpp::////wwwwww..iisscc..oorrgg//iisscc..
 
 
@@ -1497,22 +1579,6 @@ AAUUTTHHOORR
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                                                               23
+                                                               24
 
 

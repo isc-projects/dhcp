@@ -145,8 +145,8 @@ struct expression {
 		} pick_first_value;
  		struct {
  			struct expression *type;
- 			struct expression *expr1;
- 			struct expression *expr2;
+ 			struct expression *rrname;
+ 			struct expression *rrdata;
  			struct expression *ttl;
  		} dns_update;
 		struct expression *updated_dns_rr;

@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.20 1999/11/14 00:32:28 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.21 1999/11/20 18:36:32 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -867,7 +867,7 @@ int supersede_lease (comp, lease, commit)
 	/* Copy the data files, but not the linkages. */
 	comp -> starts = lease -> starts;
 	if (lease -> uid) {
-		if (lease -> uid_len < sizeof (lease -> uid_buf)) {
+		if (lease -> uid_len <= sizeof (lease -> uid_buf)) {
 			memcpy (comp -> uid_buf,
 				lease -> uid, lease -> uid_len);
 			comp -> uid = &comp -> uid_buf [0];
@@ -948,9 +948,9 @@ int supersede_lease (comp, lease, commit)
 				break;
 		if (lp && lp -> on_expiry) {
 			comp -> pool -> next_expiry = lp;
-			    if (commit)
-				    add_timeout (lp -> ends,
-						 pool_timer, lp -> pool);
+			if (commit)
+				add_timeout (lp -> ends,
+					     pool_timer, lp -> pool);
 		} else {
 			comp -> pool -> next_expiry = (struct lease *)0;
 			if (commit)
@@ -1096,22 +1096,13 @@ void release_lease (lease, packet)
 #endif
 
 	/* If there are statements to execute when the lease is
-	   committed, execute them. */
+	   released, execute them. */
 	if (lease -> on_release) {
 		execute_statements (packet, lease, packet -> options,
 				    (struct option_state *)0, /* XXX */
 				    lease -> on_release);
 		executable_statement_dereference (&lease -> on_release,
 						  "dhcprelease");
-
-		if (lease -> ddns_fwd_name) {
-			dfree (lease -> ddns_fwd_name, "pool_timer");
-			lease -> ddns_fwd_name = (char *)0;
-		}
-		if (lease -> ddns_rev_name) {
-			dfree (lease -> ddns_rev_name, "pool_timer");
-			lease -> ddns_rev_name = (char *)0;
-		}
 	}
 
 	/* We do either the on_release or the on_expiry events, but

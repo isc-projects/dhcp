@@ -58,12 +58,13 @@
 #include "inet.h"
 #include "auth.h"
 #include "dhctoken.h"
-#if defined (FAILOVER_PROTOCOL)
-# include "failover.h"
-#endif
 
 #include <isc/result.h>
 #include <omapip/omapip.h>
+
+#if defined (FAILOVER_PROTOCOL)
+# include "failover.h"
+#endif
 
 #if !defined (OPTION_HASH_SIZE)
 # define OPTION_HASH_SIZE 17
@@ -101,6 +102,13 @@ struct parse {
 	unsigned bufix, buflen;
 	unsigned bufsiz;
 };
+
+/* Client FQDN option, failover FQDN option, etc. */
+typedef struct {
+	u_int8_t codes [2];
+	unsigned length;
+	u_int8_t *data;
+} ddns_fqdn_t;
 
 /* Variable-length array of data. */
 
@@ -1417,6 +1425,12 @@ extern struct hash_table universe_hash;
 void initialize_common_option_spaces PROTO ((void));
 
 /* stables.c */
+#if defined (FAILOVER_PROTOCOL)
+struct failover_option_info ft_options [0];
+u_int32_t fto_allowed [0];
+int ft_sizes [0];
+char *dhcp_failover_link_state_names [0];
+#endif
 extern struct universe agent_universe;
 extern struct option agent_options [256];
 extern struct universe server_universe;
@@ -1685,6 +1699,11 @@ extern omapi_object_type_t *dhcp_type_pool;
 extern omapi_object_type_t *dhcp_type_shared_network;
 extern omapi_object_type_t *dhcp_type_subnet;
 extern omapi_object_type_t *dhcp_type_class;
+#if defined (FAILOVER_PROTOCOL)
+extern omapi_object_type_t *dhcp_type_failover_state;
+extern omapi_object_type_t *dhcp_type_failover_link;
+extern omapi_object_type_t *dhcp_type_failover_listener;
+#endif
 
 void dhcp_db_objects_setup (void);
 
@@ -1875,3 +1894,59 @@ int deleteA (const struct data_string *, const struct data_string *,
 	     struct lease *);
 int deletePTR (const struct data_string *, const struct data_string *,
 	       struct lease *);
+
+/* failover.c */
+#if defined (FAILOVER_PROTOCOL)
+void enter_failover_peer PROTO ((struct failover_peer *));
+struct failover_peer *find_failover_peer PROTO ((char *));
+isc_result_t dhcp_failover_link_initiate PROTO ((omapi_object_t *));
+isc_result_t dhcp_failover_link_signal PROTO ((omapi_object_t *,
+					       const char *, va_list));
+isc_result_t dhcp_failover_link_set_value PROTO ((omapi_object_t *,
+						  omapi_object_t *,
+						  omapi_data_string_t *,
+						  omapi_typed_data_t *));
+isc_result_t dhcp_failover_link_get_value PROTO ((omapi_object_t *,
+						  omapi_object_t *,
+						  omapi_data_string_t *,
+						  omapi_value_t **));
+isc_result_t dhcp_failover_link_destroy PROTO ((omapi_object_t *,
+						const char *));
+isc_result_t dhcp_failover_link_stuff_values PROTO ((omapi_object_t *,
+						     omapi_object_t *,
+						     omapi_object_t *));
+isc_result_t dhcp_failover_listen PROTO ((omapi_object_t *));
+
+isc_result_t dhcp_failover_listener_signal PROTO ((omapi_object_t *,
+						   const char *,
+						   va_list));
+isc_result_t dhcp_failover_listener_set_value PROTO ((omapi_object_t *,
+						      omapi_object_t *,
+						      omapi_data_string_t *,
+						      omapi_typed_data_t *));
+isc_result_t dhcp_failover_listener_get_value PROTO ((omapi_object_t *,
+						      omapi_object_t *,
+						      omapi_data_string_t *,
+						      omapi_value_t **));
+isc_result_t dhcp_failover_listener_destroy PROTO ((omapi_object_t *,
+						    const char *));
+isc_result_t dhcp_failover_listener_stuff PROTO ((omapi_object_t *,
+						  omapi_object_t *,
+						  omapi_object_t *));
+isc_result_t dhcp_failover_register PROTO ((omapi_object_t *));
+isc_result_t dhcp_failover_state_signal PROTO ((omapi_object_t *,
+						const char *, va_list));
+isc_result_t dhcp_failover_state_set_value PROTO ((omapi_object_t *,
+						   omapi_object_t *,
+						   omapi_data_string_t *,
+						   omapi_typed_data_t *));
+isc_result_t dhcp_failover_state_get_value PROTO ((omapi_object_t *,
+						   omapi_object_t *,
+						   omapi_data_string_t *,
+						   omapi_value_t **));
+isc_result_t dhcp_failover_state_destroy PROTO ((omapi_object_t *,
+						 const char *));
+isc_result_t dhcp_failover_state_stuff PROTO ((omapi_object_t *,
+					       omapi_object_t *,
+					       omapi_object_t *));
+#endif /* FAILOVER_PROTOCOL */

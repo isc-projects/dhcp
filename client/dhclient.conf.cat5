@@ -171,7 +171,15 @@ LLEEAASSEE RREEQQUUIIRREEMMEENNTTSS AANNDD RREEQQUUEES
        any server responding to the client send  the  client  its
        values  for the specified options.   Only the option names
        should be specified in the request statement - not  option
-       parameters.
+       parameters.    By  default,  the  DHCP server requests the
+       subnet-mask,  broadcast-address,   time-offset,   routers,
+       domain-name, domain-name-servers and host-name options.
+
+       In  some  cases,  it may be desirable to send no parameter
+       request list at  all.    To  do  this,  simply  write  the
+       request statement but specify no parameters:
+
+            request;
 
        _T_h_e rreeqquuiirree _s_t_a_t_e_m_e_n_t
 
@@ -182,14 +190,6 @@ LLEEAASSEE RREEQQUUIIRREEMMEENNTTSS AANNDD RREEQQUUEES
        contain all the listed options will be ignored.
 
        _T_h_e sseenndd _s_t_a_t_e_m_e_n_t
-
-        sseenndd  {{  [[ _o_p_t_i_o_n _d_e_c_l_a_r_a_t_i_o_n ] [,, _._._. _o_p_t_i_o_n _d_e_c_l_a_r_a_t_i_o_n
-       ]}}
-
-       The send statement causes the client to send the specified
-       options  to  the  server with the specified values.  These
-       are  full  option  declarations  as  described  in   ddhhccpp--
-       ooppttiioonnss((55)).   Options  that  are  always  sent in the DHCP
 
 
 
@@ -202,11 +202,18 @@ LLEEAASSEE RREEQQUUIIRREEMMEENNTTSS AANNDD RREEQQUUEES
 dhclient.conf(5)                                 dhclient.conf(5)
 
 
-       protocol should not be specified  here,  except  that  the
-       client  can  specify  a  rreeqquueesstteedd--lleeaassee--ttiimmee option other
-       than the default requested lease time, which is two hours.
-       The other obvious use for this statement is to send infor­
-       mation to the server that will allow it  to  differentiate
+        sseenndd  {{  [[ _o_p_t_i_o_n _d_e_c_l_a_r_a_t_i_o_n ] [,, _._._. _o_p_t_i_o_n _d_e_c_l_a_r_a_t_i_o_n
+       ]}}
+
+       The send statement causes the client to send the specified
+       options  to  the  server with the specified values.  These
+       are  full  option  declarations  as  described  in   ddhhccpp--
+       ooppttiioonnss((55)).  Options that are always sent in the DHCP pro­
+       tocol should not be specified here, except that the client
+       can  specify  a rreeqquueesstteedd--lleeaassee--ttiimmee option other than the
+       default requested lease time, which  is  two  hours.   The
+       other  obvious  use for this statement is to send informa­
+       tion to the server that will  allow  it  to  differentiate
        between this client and other clients or kinds of clients.
 
 OOPPTTIIOONN MMOODDIIFFIIEERRSS
@@ -250,13 +257,6 @@ OOPPTTIIOONN MMOODDIIFFIIEERRSS
 
        _T_h_e aappppeenndd _s_t_a_t_e_m_e_n_t
 
-        aappppeenndd [[ _o_p_t_i_o_n _d_e_c_l_a_r_a_t_i_o_n ] ;;
-
-       If for some set of options the client should first use the
-       values supplied by the server, if any, and then use values
-       you supply, these values can  be  defined  in  the  aappppeenndd
-       statement.    The  aappppeenndd  statement  can only be used for
-
 
 
                                                                 4
@@ -268,6 +268,12 @@ OOPPTTIIOONN MMOODDIIFFIIEERRSS
 dhclient.conf(5)                                 dhclient.conf(5)
 
 
+        aappppeenndd [[ _o_p_t_i_o_n _d_e_c_l_a_r_a_t_i_o_n ] ;;
+
+       If for some set of options the client should first use the
+       values supplied by the server, if any, and then use values
+       you supply, these values can  be  defined  in  the  aappppeenndd
+       statement.    The  aappppeenndd  statement  can only be used for
        options which allow more  than  one  value  to  be  given.
        This  restriction  is not enforced - if you ignore it, the
        behaviour will be unpredictable.
@@ -316,12 +322,6 @@ LLEEAASSEE DDEECCLLAARRAATTIIOONNSS
        the client receives a  lease  from  a  server,  it  always
        records  the  interface  number  on which it received that
        lease.   If  predefined  leases  are  specified   in   the
-       dhclient.conf  file,  the  interface should also be speci­
-       fied, although this is not required.
-
-        ffiixxeedd--aaddddrreessss _i_p_-_a_d_d_r_e_s_s;;
-
-       The ffiixxeedd--aaddddrreessss statement is used to set the ip  address
 
 
 
@@ -334,6 +334,12 @@ LLEEAASSEE DDEECCLLAARRAATTIIOONNSS
 dhclient.conf(5)                                 dhclient.conf(5)
 
 
+       dhclient.conf  file,  the  interface should also be speci­
+       fied, although this is not required.
+
+        ffiixxeedd--aaddddrreessss _i_p_-_a_d_d_r_e_s_s;;
+
+       The ffiixxeedd--aaddddrreessss statement is used to set the ip  address
        of  a  particular  lease.   This is required for all lease
        statements.   The IP address must be specified as a dotted
        quad (e.g., 12.34.56.78).
@@ -382,12 +388,6 @@ dhclient.conf(5)                                 dhclient.conf(5)
        passed on the ifconfig command line  when  configuring  te
        interface.
 
-       The  dhcp  client automatically declares this parameter if
-       it used a media type (see the mmeeddiiaa statement)  when  con­
-       figuring  the  interface in order to obtain a lease.  This
-       statement should be used in predefined leases only if  the
-       network interface requires media type configuration.
-
 
 
 
@@ -399,6 +399,12 @@ dhclient.conf(5)                                 dhclient.conf(5)
 
 dhclient.conf(5)                                 dhclient.conf(5)
 
+
+       The  dhcp  client automatically declares this parameter if
+       it used a media type (see the mmeeddiiaa statement)  when  con­
+       figuring  the  interface in order to obtain a lease.  This
+       statement should be used in predefined leases only if  the
+       network interface requires media type configuration.
 
         rreenneeww _d_a_t_e;;
 
@@ -449,12 +455,6 @@ AALLIIAASS DDEECCLLAARRAATTIIOONNSS
        the dhcp client can be set up to  configure  an  IP  alias
        using the aalliiaass declaration.
 
-       The  alias  declaration  resembles  a  lease  declaration,
-       except that options other than the subnet-mask option  are
-       ignored  by  the standard client configuration script, and
-       expiry times are ignored.   A  typical  alias  declaration
-       includes   an   interface   declaration,  a  fixed-address
-
 
 
                                                                 7
@@ -466,9 +466,14 @@ AALLIIAASS DDEECCLLAARRAATTIIOONNSS
 dhclient.conf(5)                                 dhclient.conf(5)
 
 
-       declaration for the IP alias address,  and  a  subnet-mask
-       option  declaration.    A medium statement should never be
-       included in an alias declaration.
+       The  alias  declaration  resembles  a  lease  declaration,
+       except that options other than the subnet-mask option  are
+       ignored  by  the standard client configuration script, and
+       expiry times are ignored.   A  typical  alias  declaration
+       includes  an interface declaration, a fixed-address decla­
+       ration for the IP alias address, and a subnet-mask  option
+       declaration.   A medium statement should never be included
+       in an alias declaration.
 
 OOTTHHEERR DDEECCLLAARRAATTIIOONNSS
         rreejjeecctt _i_p_-_a_d_d_r_e_s_s;;
@@ -516,11 +521,6 @@ OOTTHHEERR DDEECCLLAARRAATTIIOONNSS
                  script "/etc/dhclient-secondary";
             }
 
-       The client script for the pseudo-interface should not con­
-       figure the interface up or  down  -  essentially,  all  it
-       needs  to  handle  are  the  states where a lease has been
-       acquired or renewed, and the  states  where  a  lease  has
-
 
 
                                                                 8
@@ -532,6 +532,10 @@ OOTTHHEERR DDEECCLLAARRAATTIIOONNSS
 dhclient.conf(5)                                 dhclient.conf(5)
 
 
+       The client script for the pseudo-interface should not con­
+       figure the interface up or  down  -  essentially,  all  it
+       needs  to  handle  are  the  states where a lease has been
+       acquired or renewed, and the  states  where  a  lease  has
        expired.   See ddhhcclliieenntt--ssccrriipptt((88)) for more information.
 
         mmeeddiiaa ""_m_e_d_i_a _s_e_t_u_p"" _[ ,, ""_m_e_d_i_a _s_e_t_u_p"",, _._._. _];;
@@ -582,10 +586,6 @@ SSAAMMPPLLEE
            request subnet-mask, broadcast-address, time-offset, routers,
                 domain-name, domain-name-servers, host-name;
            require subnet-mask, domain-name-servers;
-           script "/etc/dhclient-script";
-           media "media 10baseT/UTP", "media 10base2/BNC";
-       }
-
 
 
 
@@ -597,6 +597,10 @@ SSAAMMPPLLEE
 
 dhclient.conf(5)                                 dhclient.conf(5)
 
+
+           script "/etc/dhclient-script";
+           media "media 10baseT/UTP", "media 10base2/BNC";
+       }
 
        alias {
          interface "ep0";
@@ -618,10 +622,6 @@ AAUUTTHHOORR
        ject  was  provided  by  the Internet Software Consortium.
        Information about the Internet Software Consortium can  be
        found at hhttttpp::////wwwwww..iisscc..oorrgg//iisscc..
-
-
-
-
 
 
 

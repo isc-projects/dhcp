@@ -639,7 +639,7 @@ isc_result_t omapi_make_handle_value (omapi_value_t **vp,
 
 isc_result_t omapi_make_string_value (omapi_value_t **vp,
 				      omapi_data_string_t *name,
-				      char *value, const char *caller)
+				      const char *value, const char *caller)
 {
 	isc_result_t status;
 

@@ -24,7 +24,7 @@
 
 isc_result_t omapi_connect (omapi_object_t *c,
 			    const char *server_name,
-			    int port)
+			    unsigned port)
 {
 	struct hostent *he;
 	int hix;
