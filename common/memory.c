@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: memory.c,v 1.22 1996/11/08 20:09:10 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: memory.c,v 1.23 1996/12/31 02:02:54 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -806,7 +806,7 @@ struct class *add_class (type, name)
 		add_hash (user_class_hash,
 			  tname, strlen (tname), (unsigned char *)class);
 	else
-		add_hash (user_class_hash,
+		add_hash (vendor_class_hash,
 			  tname, strlen (tname), (unsigned char *)class);
 	return class;
 }

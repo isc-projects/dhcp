@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.34 1996/09/11 05:52:18 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.35 1996/12/31 02:02:17 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -492,7 +492,7 @@ void ack_lease (packet, lease, offer, when)
 
 	if (packet -> options [DHO_DHCP_USER_CLASS_ID].len) {
 		user_class =
-			find_class (0,
+			find_class (1,
 				    packet ->
 				    options [DHO_DHCP_USER_CLASS_ID].data,
 				    packet ->
