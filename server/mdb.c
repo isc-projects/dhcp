@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.62 2001/04/24 01:02:24 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.63 2001/04/24 01:18:08 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1314,7 +1314,11 @@ void release_lease (lease, packet)
 	if (lease -> on_expiry)
 		executable_statement_dereference (&lease -> on_expiry, MDL);
 
-	if (lease -> ends > cur_time) {
+	if (lease -> binding_state != FTS_FREE &&
+	    lease -> binding_state != FTS_BACKUP &&
+	    lease -> binding_state != FTS_RELEASED &&
+	    lease -> binding_state != FTS_EXPIRED &&
+	    lease -> binding_state != FTS_RESET) {
 		if (lease -> on_commit)
 			executable_statement_dereference (&lease -> on_commit,
 							  MDL);
@@ -1332,8 +1336,6 @@ void release_lease (lease, packet)
 #else
 		lease -> next_binding_state = FTS_FREE;
 #endif
-		if (lease -> billing_class)
-			unbill_class (&lease -> billing_class, MDL);
 		supersede_lease (lease, (struct lease *)0, 1, 1, 1);
 	}
 }
@@ -1350,19 +1352,6 @@ void abandon_lease (lease, message)
 	if (!lease_copy (&lt, lease, MDL))
 		return;
 
-#if 0
-	if (lt -> on_expiry)
-		executable_statement_dereference (&lease -> on_expiry, MDL);
-	if (lt -> on_release)
-		executable_statement_dereference (&lease -> on_release, MDL);
-	if (lt -> on_commit)
-		executable_statement_dereference (&lease -> on_commit, MDL);
-
-	/* Blow away any bindings. */
-	if (lt -> scope)
-		binding_scope_dereference (&lt -> scope, MDL);
-#endif
-
 	lt -> ends = cur_time; /* XXX */
 	lt -> next_binding_state = FTS_ABANDONED;
 
@@ -1374,8 +1363,6 @@ void abandon_lease (lease, message)
 	lt -> uid = (unsigned char *)0;
 	lt -> uid_len = 0;
 	lt -> uid_max = 0;
-	if (lt -> billing_class)
-		unbill_class (&lt -> billing_class, MDL);
 	supersede_lease (lease, lt, 1, 1, 1);
 	lease_dereference (&lt, MDL);
 }
@@ -1390,19 +1377,6 @@ void dissociate_lease (lease)
 
 	if (!lease_copy (&lt, lease, MDL))
 		return;
-
-#if 0
-	if (lt -> on_expiry)
-		executable_statement_dereference (&lease -> on_expiry, MDL);
-	if (lt -> on_release)
-		executable_statement_dereference (&lease -> on_release, MDL);
-	if (lt -> on_commit)
-		executable_statement_dereference (&lease -> on_commit, MDL);
-
-	/* Blow away any bindings. */
-	if (lt -> scope)
-		binding_scope_dereference (&lt -> scope, MDL);
-#endif
 
 #if defined (FAILOVER_PROTOCOL)
 	if (lease -> pool && lease -> pool -> failover_peer) {
@@ -1420,8 +1394,6 @@ void dissociate_lease (lease)
 	lt -> uid = (unsigned char *)0;
 	lt -> uid_len = 0;
 	lt -> uid_max = 0;
-	if (lt -> billing_class)
-		unbill_class (&lt -> billing_class, MDL);
 	supersede_lease (lease, lt, 1, 1, 1);
 	lease_dereference (&lt, MDL);
 }
