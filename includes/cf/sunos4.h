@@ -119,6 +119,8 @@ extern int h_errno;
 #define NO_STRERROR
 char *strerror PROTO ((int));
 
+#define NEED_INET_ATON
+
 /* SunOS select() doesn't work on streams, so we have to use poll -
    as usual, SysV can't do networking to save its life. */
 #define USE_POLL
