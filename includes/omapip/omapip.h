@@ -248,6 +248,7 @@ isc_result_t omapi_register_io_object (omapi_object_t *,
 				       isc_result_t (*)(omapi_object_t *),
 				       isc_result_t (*)(omapi_object_t *),
 				       isc_result_t (*)(omapi_object_t *));
+isc_result_t omapi_unregister_io_object (omapi_object_t *);
 isc_result_t omapi_dispatch (struct timeval *);
 isc_result_t omapi_wait_for_completion (omapi_object_t *, struct timeval *);
 isc_result_t omapi_one_dispatch (omapi_object_t *, struct timeval *);
