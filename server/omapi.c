@@ -50,7 +50,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: omapi.c,v 1.46.2.12 2002/04/27 05:16:35 murray Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: omapi.c,v 1.46.2.13 2002/05/27 04:11:57 murray Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -244,8 +244,8 @@ isc_result_t dhcp_lease_set_value  (omapi_object_t *h,
 	    if (lease -> binding_state != bar) {
 		lease -> next_binding_state = bar;
 		if (supersede_lease (lease, 0, 1, 1, 1)) {
-			log_info ("lease %d state changed from %s to %s",
-				  ols, nls);
+			log_info ("lease %s state changed from %s to %s",
+				  lease->ip_addr, ols, nls);
 			return ISC_R_SUCCESS;
 		}
 		log_info ("lease state change from %s to %s failed.",
