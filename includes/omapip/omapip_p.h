@@ -152,6 +152,9 @@ typedef struct __omapi_connection_object {
 	omapi_connection_state_t state;
 	struct sockaddr_in remote_addr;
 	struct sockaddr_in local_addr;
+	omapi_addr_list_t *connect_list;	/* List of addresses to which
+						   to connect. */
+	int cptr;		/* Current element we are connecting to. */
 	u_int32_t bytes_needed;	/* Bytes of input needed before wakeup. */
 	u_int32_t in_bytes;	/* Bytes of input already buffered. */
 	omapi_buffer_t *inbufs;
