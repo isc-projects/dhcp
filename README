@@ -13,23 +13,28 @@ the ISC DHCP Distribution.
 	1	WHERE TO FIND DOCUMENTATION
 	2	RELEASE STATUS
 	3	BUILDING THE DHCP DISTRIBUTION
+	 3.1	 UNPACKING IT
+	 3.2	 CONFIGURING IT
+	  3.2.1	  DYNAMIC DNS UPDATES
+	 3.3	 BUILDING IT
 	4	INSTALLING THE DHCP DISTRIBUTION
 	5	USING THE DHCP DISTRIBUTION
-	 5.1	LINUX
-	  5.1.1	SO_ATTACH_FILTER UNDECLARED
-	  5.1.2	PROTOCOL NOT CONFIGURED
-	  5.1.3	BROADCAST
-	  5.1.4	FIREWALL RULES
-	  5.1.5	IP BOOTP AGENT
-	  5.1.6	MULTIPLE INTERFACES
-	 5.2	SCO
-	 5.3	HP-UX
-	 5.4	ULTRIX
-	 5.5	FreeBSD
-	 5.6	NeXTSTEP
-	 5.7	SOLARIS
+	 5.1	 LINUX
+	  5.1.1	  IF_TR.H NOT FOUND
+	  5.1.2	  SO_ATTACH_FILTER UNDECLARED
+	  5.1.3	  PROTOCOL NOT CONFIGURED
+	  5.1.4	  BROADCAST
+	  5.1.5	  FIREWALL RULES
+	  5.1.6	  IP BOOTP AGENT
+	  5.1.7	  MULTIPLE INTERFACES
+	 5.2	 SCO
+	 5.3	 HP-UX
+	 5.4	 ULTRIX
+	 5.5	 FreeBSD
+	 5.6	 NeXTSTEP
+	 5.7	 SOLARIS
 	6	SUPPORT
-	 6.1	HOW TO REPORT BUGS
+	 6.1	 HOW TO REPORT BUGS
 	7	KNOWN BUGS
 
 		      WHERE TO FIND DOCUMENTATION
@@ -125,6 +130,8 @@ information.   On Digital Unix, type ``man pfilt''.
 
 		    BUILDING THE DHCP DISTRIBUTION
 
+			     UNPACKING IT
+
 To build the DHCP Distribution, unpack the compressed tar file using
 the tar utility and the gzip command - type something like:
 
@@ -132,6 +139,8 @@ the tar utility and the gzip command - type something like:
 
 On BSD/OS, you have to type gzcat, not zcat, and you may run into
 similar problems on other operating systems.
+
+			    CONFIGURING IT
 
 Now, cd to the dhcp-3.0b1pl0 subdirectory that you've just
 created and configure the source tree by typing:
@@ -143,6 +152,34 @@ running on, it will create a custom Makefile for you for that
 system; otherwise, it will complain.  If it can't figure out what
 system you are using, that system is not supported - you are on
 your own.
+
+			 DYNAMIC DNS UPDATES
+
+An interim implementation of dynamic DNS updates is included in this
+release.   This implementation is not currently supported, and is not
+built by default.   To use this implementation, you must have
+installed the latest version of bind 8.2 (see http://www.isc.org for
+more information about BIND).   The configuration utility assumes that
+the BIND 8.2 distribution libraries and includes are under the
+/usr/local/bind directory, so if you have installed them elsewhere,
+you should set the BINDLIB and BINDINC variables in site.conf to
+override the values that will be set by the configure script from
+Makefile.conf.
+
+Assuming that you have BIND 8.2 installed, you can build dynamic DNS
+update support using:
+
+		     ./configure --with-nsupdate
+
+Note that there's no documentation for the dynamic DNS support yet,
+and not many people are using it, so you should expect it to be
+difficult to set up.   We will do our best to help you on the mailing
+list, and more documentation will be forthcoming later.
+
+Also, please note that this implementation is not the final DNS update
+code, and the final code will probably be substantially different.
+
+			     BUILDING IT
 
 Once you've run configure, just type ``make'', and after a while
 you should have a dhcp server.  If you get compile errors on one
@@ -170,6 +207,16 @@ Linux 2.1 ip_bootp_agent enabling, and operations with more than one
 network interface.   There are also two potential compilation/runtime
 problems for Linux 2.1/2.2: the "SO_ATTACH_FILTER undeclared" problem
 and the "protocol not configured" problem.
+
+		       LINUX: IF_TR.H NOT FOUND
+
+When you compile the distribution on Linux, you may get an error
+message indicating that the include file if_tr.h could not be found.
+If this happens, go into includes/cf/linux.h and delete the line that
+defined HAVE_TR_SUPPORT, or look into installing a new version of libc
+that includes the if_tr.h file.   We will be working on removing this
+problem in the future, but for now, if you run into it, this should be
+a viable workaround.
 
 		  LINUX: SO_ATTACH_FILTER UNDECLARED
 
