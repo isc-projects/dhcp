@@ -547,12 +547,6 @@ omapi_message_process_internal (omapi_object_t *mo, omapi_object_t *po)
 				 "unsearchable object type");
 		}
 
-		if (!message -> object) {
-			return omapi_protocol_send_status
-				(po, message -> id_object,
-				 ISC_R_NOTFOUND, message -> id,
-				 "no lookup key specified");
-		}
 		status = (*(type -> lookup)) (&object, message -> id_object,
 					      message -> object);
 
