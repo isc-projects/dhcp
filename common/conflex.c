@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: conflex.c,v 1.30 1998/03/17 06:09:11 mellon Exp $ Copyright (c) 1995, 1996, 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: conflex.c,v 1.31 1998/04/09 04:28:20 mellon Exp $ Copyright (c) 1995, 1996, 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -447,6 +447,13 @@ static int intern (atom, dfv)
 	      case 'm':
 		if (!strcasecmp (atom + 1, "ax-lease-time"))
 			return MAX_LEASE_TIME;
+		if (!strncasecmp (atom + 1, "in-", 3)) {
+			if (!strcasecmp (atom + 4, "lease-time"))
+				return MIN_LEASE_TIME;
+			if (!strcasecmp (atom + 4, "secs"))
+				return MIN_SECS;
+			break;
+		}
 		if (!strncasecmp (atom + 1, "edi", 3)) {
 			if (!strcasecmp (atom + 4, "a"))
 				return MEDIA;
@@ -531,6 +538,8 @@ static int intern (atom, dfv)
 		if (!strcasecmp (atom + 1, "ser-class"))
 			return USER_CLASS;
 		if (!strcasecmp (atom + 1, "se-host-decl-names"))
+			return USE_HOST_DECL_NAMES;
+		if (!strcasecmp (atom + 1, "se-lease-addr-for-default-route"))
 			return USE_HOST_DECL_NAMES;
 		if (!strcasecmp (atom + 1, "nknown-clients"))
 			return UNKNOWN_CLIENTS;
