@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.72 2000/12/11 18:56:31 neild Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.73 2000/12/28 23:16:19 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -388,11 +388,14 @@ int fqdn_universe_decode (struct option_state *options,
 					 &bp -> data[6], first_len,
 					 &fqdn_options [FQDN_HOSTNAME], 1))
 			goto bad;
-		if (!save_option_buffer (&fqdn_universe, options, bp,
-					 &bp -> data[6 + first_len],
-					 total_len - first_len,
-					 &fqdn_options [FQDN_DOMAINNAME], 1))
+		if (first_len != total_len) {
+			if (!save_option_buffer
+			    (&fqdn_universe, options, bp,
+			     &bp -> data[6 + first_len],
+			     total_len - first_len,
+			     &fqdn_options [FQDN_DOMAINNAME], 1))
 			goto bad;
+		}
 	}
 	return 1;
 }
@@ -430,6 +433,7 @@ int cons_options (inpacket, outpacket, lease, client_state,
 	struct option_cache *op;
 	struct data_string ds;
 	pair pp, *hash;
+	int need_endopt = 0;
 
 	memset (&ds, 0, sizeof ds);
 
@@ -591,11 +595,9 @@ int cons_options (inpacket, outpacket, lease, client_state,
 		memcpy (&outpacket -> options [mainbufix],
 			buffer, option_size);
 		mainbufix += option_size;
-		if (mainbufix < main_buffer_size) {
-			agentix = mainbufix;
-			outpacket -> options [mainbufix++] = DHO_END;
-		} else
-			agentix = mainbufix;
+		agentix = mainbufix;
+		if (mainbufix < main_buffer_size)
+			need_endopt = 1;
 		length = DHCP_FIXED_NON_UDP + mainbufix;
 	} else {
 		outpacket -> options [mainbufix++] = DHO_DHCP_OPTION_OVERLOAD;
@@ -645,7 +647,7 @@ int cons_options (inpacket, outpacket, lease, client_state,
 	/* Now hack in the agent options if there are any. */
 	priority_list [0] = DHO_DHCP_AGENT_OPTIONS;
 	priority_len = 1;
-	length +=
+	agentix +=
 		store_options (&outpacket -> options [agentix],
 			       1500 - DHCP_FIXED_LEN - agentix,
 			       inpacket, lease, client_state,
@@ -653,6 +655,13 @@ int cons_options (inpacket, outpacket, lease, client_state,
 			       priority_list, priority_len,
 			       1500 - DHCP_FIXED_LEN - agentix,
 			       1500 - DHCP_FIXED_LEN - agentix, 0, (char *)0);
+
+	/* Tack a DHO_END option onto the packet if we need to. */
+	if (agentix < 1500 - DHCP_FIXED_LEN && need_endopt)
+		outpacket -> options [agentix++] = DHO_END;
+
+	/* Figure out the length. */
+	length = DHCP_FIXED_NON_UDP + agentix;
 	return length;
 }
 
@@ -714,6 +723,8 @@ int store_options (buffer, buflen, packet, lease, client_state,
 	    int have_encapsulation = 0;
 	    struct data_string encapsulation;
 
+	    memset (&encapsulation, 0, sizeof encapsulation);
+
 	    /* Code for next option to try to store. */
 	    code = priority_list [i];
 	    
@@ -768,7 +779,6 @@ int store_options (buffer, buflen, packet, lease, client_state,
 		    /* If we found a universe, and there are options configured
 		       for that universe, try to encapsulate it. */
 		    if (name.len) {
-			memset (&encapsulation, 0, sizeof encapsulation);
 			have_encapsulation =
 				(option_space_encapsulate
 				 (&encapsulation, packet, lease, client_state,
