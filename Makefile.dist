@@ -130,7 +130,8 @@ VARDB = /var/db
 #ADMMANEXT = .8
 #FFMANDIR = /usr/man/man5
 #FFMANEXT = .5
-#VARRUN = /etc
+#VARRUN = /var/run
+#VARDB = /var/dhcpd
 ##--linux--
 
 ## SCO
@@ -193,6 +194,10 @@ install: dhcpd $(CATMANPAGES)
 	  mkdir $(FFMANDIR); \
 	  chmod 755 $(FFMANDIR); \
         fi
+	if [ ! -d $(VARDB) ]; then \
+	  mkdir $(VARDB); \
+	  chmod 755 $(VARDB); \
+	fi
 	$(MANINSTALL) $(MANFROM) dhcpd.cat8 $(MANTO) \
 				$(ADMMANDIR)/dhcpd$(ADMMANEXT)
 	$(MANINSTALL) $(MANFROM) dhcpd.conf.cat5 $(MANTO) \
@@ -202,7 +207,10 @@ clean:
 	-rm -f $(OBJS) $(COBJ) $(XOBJ) dhclient.o
 	
 realclean: clean
-	-rm -f dhcpd dhclient dhcpxlt $(CATMANPAGES)
+	-rm -f dhcpd dhclient dhcpxlt $(CATMANPAGES) *~ #*
+
+distclean: clean
+	-rm -f dhcpd dhclient dhcpxlt $(CATMANPAGES) Makefile
 
 # These should only be done on 4.4 BSD-based systems, since the mandoc
 # macros aren't available on older unices.   Catted man pages are
