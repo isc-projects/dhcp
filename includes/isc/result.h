@@ -75,8 +75,21 @@ ISC_LANG_BEGINDECLS
 #define ISC_R_KEY_UNKNOWN		47
 #define ISC_R_INVALIDKEY		48
 #define ISC_R_INCOMPLETE		49
+#define ISC_R_FORMERR			50
+#define	ISC_R_SERVFAIL			51
+#define	ISC_R_NXDOMAIN			52
+#define	ISC_R_NOTIMPL			53
+#define	ISC_R_REFUSED			54
+#define	ISC_R_YXDOMAIN			55
+#define	ISC_R_YXRRSET			56
+#define	ISC_R_NXRRSET			57
+#define	ISC_R_NOTAUTH			58
+#define	ISC_R_NOTZONE			59
+#define	ISC_R_BADSIG			60
+#define	ISC_R_BADKEY			61
+#define	ISC_R_BADTIME			62
 
-#define ISC_R_NRESULTS 			50	/* Number of results */
+#define ISC_R_NRESULTS 			62	/* Number of results */
 
 const char *		isc_result_totext(isc_result_t);
 isc_result_t		isc_result_register(unsigned int base,
