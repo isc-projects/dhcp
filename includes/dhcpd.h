@@ -1017,7 +1017,7 @@ int subnet_inner_than PROTO ((struct subnet *, struct subnet *, int));
 void enter_subnet PROTO ((struct subnet *));
 void enter_lease PROTO ((struct lease *));
 int supersede_lease PROTO ((struct lease *, struct lease *, int));
-void release_lease PROTO ((struct lease *));
+void release_lease PROTO ((struct lease *, struct packet *));
 void abandon_lease PROTO ((struct lease *, char *));
 void dissociate_lease PROTO ((struct lease *));
 struct lease *find_lease_by_uid PROTO ((unsigned char *, int));

@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: memory.c,v 1.52 1999/07/02 20:57:24 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: memory.c,v 1.52.2.1 1999/10/07 22:06:53 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -648,10 +648,15 @@ int supersede_lease (comp, lease, commit)
 
 /* Release the specified lease and re-hash it as appropriate. */
 
-void release_lease (lease)
+void release_lease (lease, packet)
 	struct lease *lease;
+	struct packet *packet;
 {
 	struct lease lt;
+
+#if defined (NSUPDATE)
+	nsupdate (lease, lease -> state, packet, DELETE);
+#endif
 
 	lt = *lease;
 	if (lt.ends > cur_time) {

@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.100.2.3 1999/10/07 21:36:27 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.100.2.4 1999/10/07 22:06:55 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -294,10 +294,7 @@ void dhcprelease (packet)
 
 	/* If we found a lease, release it. */
 	if (lease) {
-#if defined (NSUPDATE)
-		nsupdate (lease, lease -> state, packet, DELETE);
-#endif
-		release_lease (lease);
+		release_lease (lease, packet);
 	}
 }
 
@@ -915,7 +912,7 @@ void ack_lease (packet, lease, offer, when, msg)
 					seek = seek -> n_uid;
 				}
 				if (seek) {
-					release_lease (seek);
+					release_lease (seek, packet);
 				}
 			} while (seek);
 		} else {
@@ -930,7 +927,7 @@ void ack_lease (packet, lease, offer, when, msg)
 					seek = seek -> n_hw;
 				}
 				if (seek) {
-					release_lease (seek);
+					release_lease (seek, packet);
 				}
 			} while (seek);
 		}
@@ -1981,7 +1978,7 @@ struct lease *find_lease (packet, share, ours)
 #endif
 			next = uid_lease -> n_uid;
 			if (!packet -> raw -> ciaddr.s_addr)
-				release_lease (uid_lease);
+				release_lease (uid_lease, packet);
 			continue;
 		}
 		break;
@@ -2033,7 +2030,7 @@ struct lease *find_lease (packet, share, ours)
 #endif
 			next = hw_lease -> n_hw;
 			if (!packet -> raw -> ciaddr.s_addr)
-				release_lease (hw_lease);
+				release_lease (hw_lease, packet);
 			continue;
 		}
 		break;
@@ -2173,7 +2170,7 @@ struct lease *find_lease (packet, share, ours)
 	     (ip_lease -> pool -> permit_list &&
 	      !permitted (packet, ip_lease -> pool -> permit_list)))) {
 		if (!packet -> raw -> ciaddr.s_addr)
-			release_lease (ip_lease);
+			release_lease (ip_lease, packet);
 		ip_lease = (struct lease *)0;
 	}
 
@@ -2229,7 +2226,7 @@ struct lease *find_lease (packet, share, ours)
 	if (ip_lease) {
 		if (lease) {
 			if (!packet -> raw -> ciaddr.s_addr)
-				release_lease (ip_lease);
+				release_lease (ip_lease, packet);
 #if defined (DEBUG_FIND_LEASE)
 			log_info ("not choosing requested address (!).");
 #endif
