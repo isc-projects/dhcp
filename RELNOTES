@@ -51,6 +51,9 @@ improving it.
 
 		Changes since 3.0 Beta 2 Patchlevel 2
 
+- Fix a case where spawning subclasses were being allocated
+  incorrectly, resulting in a core dump.
+
 - Fix a case where the DHCP server might inappropriately NAK a
   RENEWING client.
 
