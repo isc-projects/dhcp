@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: print.c,v 1.36 2000/02/03 04:31:25 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: print.c,v 1.37 2000/02/03 04:38:08 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -900,8 +900,6 @@ void print_dns_status (int status, ns_updque *uq)
 
 	for (u = ISC_LIST_HEAD (*uq); u; u = ISC_LIST_NEXT (u, r_link)) {
 		ttlp = 0;
-		if (s != &obuf [0] && s + 1 < end)
-			*s++ = ' ';
 
 		switch (u -> r_opcode)
 		{
@@ -928,29 +926,29 @@ void print_dns_status (int status, ns_updque *uq)
 			break;
 		}
 		if (!position) {
+			if (s != &obuf [0] && s + 1 < end)
+				*s++ = ' ';
 			if (s + strlen (op) < end) {
 				strcpy (s, op);
 				s += strlen (s);
-				if (s + 1 < end)
-					*s++ = ' ';
 			}
 		} else {
+			if (s != obuf [0] && s + 1 < end)
+				*s++ = ' ';
 			if (s + strlen (predicate) < end) {
 				strcpy (s, predicate);
 				s += strlen (s);
-				if (s + 1 < end)
-					*s++ = ' ';
 			}
 			predicate = "and";
 		}
 		if (ttlp) {
+			if (s + 1 < end)
+				*s++ = ' ';
 			/* 27 is as big as a ttl can get. */
 			if (s + 27 < end) {
 				sprintf (s, "%lu",
 					 (unsigned long)(u -> r_ttl));
 				s += strlen (s);
-				if (s + 1 < end)
-					*s++ = ' ';
 			}
 		}
 		switch (u -> r_class) {
@@ -968,10 +966,10 @@ void print_dns_status (int status, ns_updque *uq)
 			break;
 		}
 		if (s + strlen (en) < end) {
-			strcpy (s, en);
-			s += strlen (en);
 			if (s + 1 < end)
 				*s++ = ' ';
+			strcpy (s, en);
+			s += strlen (en);
 		}
 		switch (u -> r_type) {
 		      case T_A:
@@ -994,20 +992,22 @@ void print_dns_status (int status, ns_updque *uq)
 			break;
 		}
 		if (s + strlen (en) < end) {
-			strcpy (s, en);
-			s += strlen (en);
 			if (s + 1 < end)
 				*s++ = ' ';
+			strcpy (s, en);
+			s += strlen (en);
 		}
 		if (u -> r_dname) {
+			if (s + 1 < end)
+				*s++ = ' ';
 			if (s + strlen (u -> r_dname) < end) {
 				strcpy (s, u -> r_dname);
 				s += strlen (s);
-				if (s + 1 < end)
-					*s++ = ' ';
 			}
 		}
 		if (u -> r_data) {
+			if (s + 1 < end)
+				*s++ = ' ';
 			if (u -> r_type == T_TXT) {
 				if (s + 1 < end)
 					*s++ = '"';
@@ -1019,16 +1019,14 @@ void print_dns_status (int status, ns_updque *uq)
 					if (s + 1 < end)
 						*s++ = '"';
 				}
-				if (s + 1 < end)
-					*s++ = ' ';
 			}
 		}
 		if (position) {
+			if (s + 1 < end)
+				*s++ = ' ';
 			if (s + strlen (op) < end) {
 				strcpy (s, op);
 				s += strlen (s);
-				if (s + 1 < end)
-					*s++ = ' ';
 			}
 		}
 		if (u == ISC_LIST_TAIL (*uq))
@@ -1040,6 +1038,10 @@ void print_dns_status (int status, ns_updque *uq)
 	}
 	errorp = 1;
 	switch (status) {
+	      case -1:
+		en = "resolver failed";
+		break;
+
 	      case FORMERR:
 		en = "format error";
 		break;
