@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dns.c,v 1.22 2000/05/01 23:26:38 mellon Exp $ Copyright (c) 2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dns.c,v 1.23 2000/05/03 23:04:43 mellon Exp $ Copyright (c) 2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -339,7 +339,7 @@ int find_cached_zone (const char *dname, ns_class class,
 	const char *np;
 	struct dns_zone *zone = (struct dns_zone *)0;
 	struct data_string nsaddrs;
-	int aix;
+	int ix;
 
 	/* The absence of the zcookie pointer indicates that we
 	   succeeded previously, but the update itself failed, meaning
@@ -372,7 +372,7 @@ int find_cached_zone (const char *dname, ns_class class,
 	strcpy (zname, zone -> name);
 
 	memset (&nsaddrs, 0, sizeof nsaddrs);
-	aix = 0;
+	ix = 0;
 
 	if (zone -> primary) {
 		if (evaluate_option_cache (&nsaddrs, (struct packet *)0,
@@ -382,12 +382,12 @@ int find_cached_zone (const char *dname, ns_class class,
 					   &global_scope,
 					   zone -> primary, MDL)) {
 			int ip = 0;
-			while (aix < naddrs) {
+			while (ix < naddrs) {
 				if (ip + 4 > nsaddrs.len)
 					break;
-				memcpy (&addrs [aix], &nsaddrs.data [ip], 4);
+				memcpy (&addrs [ix], &nsaddrs.data [ip], 4);
 				ip += 4;
-				aix++;
+				ix++;
 			}
 			data_string_forget (&nsaddrs, MDL);
 		}
@@ -400,12 +400,12 @@ int find_cached_zone (const char *dname, ns_class class,
 					   &global_scope,
 					   zone -> secondary, MDL)) {
 			int ip = 0;
-			while (aix < naddrs) {
+			while (ix < naddrs) {
 				if (ip + 4 > nsaddrs.len)
 					break;
-				memcpy (&addrs [aix], &nsaddrs.data [ip], 4);
+				memcpy (&addrs [ix], &nsaddrs.data [ip], 4);
 				ip += 4;
-				aix++;
+				ix++;
 			}
 			data_string_forget (&nsaddrs, MDL);
 		}
@@ -417,7 +417,7 @@ int find_cached_zone (const char *dname, ns_class class,
 	if (!*zcookie)
 		dns_zone_reference (zcookie, zone, MDL);
 	dns_zone_dereference (&zone, MDL);
-	return aix;
+	return ix;
 }
 
 void forget_zone (struct dns_zone **zone)
