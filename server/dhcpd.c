@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.104 2000/12/05 07:30:37 mellon Exp $ Copyright 1995-2000 Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.105 2000/12/11 18:56:43 neild Exp $ Copyright 1995-2000 Internet Software Consortium.";
 #endif
 
   static char copyright[] =
@@ -63,86 +63,15 @@ TIME cur_time;
 struct iaddr server_identifier;
 int server_identifier_matched;
 
-/* This is the standard name service updater that is executed whenever a
-   lease is committed.   Right now it's not following the DHCP-DNS draft
-   at all, but as soon as I fix the resolver it should try to. */
-
 #if defined (NSUPDATE)
 char std_nsupdate [] = "						    \n\
-on commit {								    \n\
-  if (not static and							    \n\
-      ((config-option server.ddns-updates = null) or			    \n\
-       (config-option server.ddns-updates != 0))) {			    \n\
-    set new-ddns-fwd-name =						    \n\
-      concat (pick (config-option server.ddns-hostname,			    \n\
-		    option host-name), \".\",				    \n\
-	      pick (config-option server.ddns-domainname,		    \n\
-		    config-option domain-name));			    \n\
-    if (defined (ddns-fwd-name) and ddns-fwd-name != new-ddns-fwd-name) {   \n\
-      switch (ns-update (delete (IN, A, ddns-fwd-name, leased-address))) {  \n\
-      case NOERROR:							    \n\
-	unset ddns-fwd-name;						    \n\
-	on expiry or release {						    \n\
-	}								    \n\
-      }									    \n\
-    }									    \n\
-									    \n\
-    if (not defined (ddns-fwd-name)) {					    \n\
-      set ddns-fwd-name = new-ddns-fwd-name;				    \n\
-      if defined (ddns-fwd-name) {					    \n\
-	switch (ns-update (not exists (IN, A, ddns-fwd-name, null),	    \n\
-			   add (IN, A, ddns-fwd-name, leased-address,	    \n\
-				lease-time / 2))) {			    \n\
-	default:							    \n\
-	  unset ddns-fwd-name;						    \n\
-	  break;							    \n\
-									    \n\
-	case NOERROR:							    \n\
-	  set ddns-rev-name =						    \n\
-	    concat (binary-to-ascii (10, 8, \".\",			    \n\
-				     reverse (1,			    \n\
-					      leased-address)), \".\",	    \n\
-		    pick (config-option server.ddns-rev-domainname,	    \n\
-			  \"in-addr.arpa.\"));				    \n\
-	  switch (ns-update (delete (IN, PTR, ddns-rev-name, null),	    \n\
-			     add (IN, PTR, ddns-rev-name, ddns-fwd-name,    \n\
-				  lease-time / 2)))			    \n\
-	    {								    \n\
-	    default:							    \n\
-	      unset ddns-rev-name;					    \n\
-	      on release or expiry {					    \n\
-		switch (ns-update (delete (IN, A, ddns-fwd-name,	    \n\
-					   leased-address))) {		    \n\
-		case NOERROR:						    \n\
-		  unset ddns-fwd-name;					    \n\
-		  break;						    \n\
-		}							    \n\
-		on release or expiry;					    \n\
-	      }								    \n\
-	      break;							    \n\
-									    \n\
-	    case NOERROR:						    \n\
-	      on release or expiry {					    \n\
-		switch (ns-update (delete (IN, PTR, ddns-rev-name, null))) {\n\
-		case NOERROR:						    \n\
-		  unset ddns-rev-name;					    \n\
-		  break;						    \n\
-		}							    \n\
-		switch (ns-update (delete (IN, A, ddns-fwd-name,	    \n\
-					   leased-address))) {		    \n\
-		case NOERROR:						    \n\
-		  unset ddns-fwd-name;					    \n\
-		  break;						    \n\
-		}							    \n\
-		on release or expiry;					    \n\
-	      }								    \n\
-	    }								    \n\
-	}								    \n\
-      }									    \n\
-    }									    \n\
-    unset new-ddns-fwd-name;						    \n\
-  }									    \n\
-}";
+option server.ddns-hostname =                                               \n\
+  pick (option fqdn.hostname, option host-name);                            \n\
+option server.ddns-domainname =                                             \n\
+  pick (option fqdn.domainname, option domain-name);                        \n\
+option server.ddns-ttl = encode-int(lease-time / 2, 32);                    \n\
+option server.ddns-rev-domainname = \"in-addr.arpa.\";                      \n\
+";
 #endif /* NSUPDATE */
 
 const char *path_dhcpd_conf = _PATH_DHCPD_CONF;

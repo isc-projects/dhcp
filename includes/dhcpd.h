@@ -377,6 +377,7 @@ struct lease_state {
 #define SV_LOCAL_ADDRESS		35
 #define SV_OMAPI_KEY			36
 #define SV_STASH_AGENT_OPTIONS		37
+#define SV_DDNS_TTL			38
 
 #if !defined (DEFAULT_DEFAULT_LEASE_TIME)
 # define DEFAULT_DEFAULT_LEASE_TIME 43200
@@ -388,6 +389,10 @@ struct lease_state {
 
 #if !defined (DEFAULT_MAX_LEASE_TIME)
 # define DEFAULT_MAX_LEASE_TIME 86400
+#endif
+
+#if !defined (DEFAULT_DDNS_TTL)
+# define DEFAULT_DDNS_TTL 3600
 #endif
 
 /* Client option names */
@@ -1091,6 +1096,11 @@ TIME parse_timestamp PROTO ((struct parse *));
 int parse_lease_declaration PROTO ((struct lease **, struct parse *));
 void parse_address_range PROTO ((struct parse *,
 				 struct group *, int, struct pool *));
+
+/* ddns.c */
+int ddns_updates PROTO ((struct packet *, struct lease *,
+			 struct lease_state *));
+int ddns_removals PROTO ((struct lease *));
 
 /* parse.c */
 void skip_to_semi PROTO ((struct parse *));

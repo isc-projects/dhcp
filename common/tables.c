@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tables.c,v 1.46 2000/10/10 22:48:20 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tables.c,v 1.47 2000/12/11 18:56:32 neild Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -615,8 +615,8 @@ struct option fqdn_options [256] = {
 	{ "encoded", "f",				&fqdn_universe, 3 },
 	{ "rcode1", "B",				&fqdn_universe, 4 },
 	{ "rcode2", "B",				&fqdn_universe, 5 },
-	{ "name", "t",					&fqdn_universe, 6 },
-	{ "option-7", "X",				&fqdn_universe, 7 },
+	{ "hostname", "t",				&fqdn_universe, 6 },
+	{ "domainname", "t",				&fqdn_universe, 7 },
 	{ "option-8", "X",				&fqdn_universe, 8 },
 	{ "option-9", "X",				&fqdn_universe, 9 },
 	{ "option-10", "X",				&fqdn_universe, 10 },

@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.71 2000/11/29 13:38:36 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.72 2000/12/11 18:56:31 neild Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -181,6 +181,11 @@ int parse_option_buffer (options, buffer, length, universe)
 	buffer_dereference (&bp, MDL);
 	return 1;
 }
+
+/* If an option in an option buffer turns out to be an encapsulation,
+   figure out what to do.   If we don't know how to de-encapsulate it,
+   or it's not well-formed, return zero; otherwise, return 1, indicating
+   that we succeeded in de-encapsulating it. */
 
 struct universe *find_option_universe (struct option *eopt, const char *uname)
 {
@@ -321,36 +326,72 @@ int fqdn_universe_decode (struct option_state *options,
 
 	/* Not encoded using DNS format? */
 	if (!bp -> data [0]) {
+		unsigned i;
+
+		/* Determine the length of the hostname component of the
+		   name.  If the name contains no '.' character, it
+		   represents a non-qualified label. */
+		for (i = 3; i < length && buffer [i] != '.'; i++);
+		i -= 3;
+
+		/* Note: If the client sends a FQDN, the first '.' will
+		   be used as a NUL terminator for the hostname. */
 		if (!save_option_buffer (&fqdn_universe, options, bp,
-					 &bp -> data [5], length - 3,
-					 &fqdn_options [FQDN_NAME], 1))
+					 &bp -> data[5], i,
+					 &fqdn_options [FQDN_HOSTNAME], 1))
+			goto bad;
+		/* Note: If the client sends a single label, the
+		   hostname's terminal NUL will be reused for the
+		   (0-length) domainname. */
+		if (!save_option_buffer (&fqdn_universe, options, bp,
+					 &bp -> data[5 + i], length - 3 - i,
+					 &fqdn_options [FQDN_DOMAINNAME], 1))
 			goto bad;
 	} else {
-		int len;
-		unsigned char *s, *t, *u;
+		unsigned len;
+		unsigned total_len = 0;
+		unsigned first_len = 0;
+		int terminated = 0;
+		unsigned char *s;
 
-		u = t = s = &bp -> data [5];
+		s = &bp -> data[5];
+
 		do {
-			len = *s++;
+			len = *s;
 			if (len > 63) {
 				log_info ("fancy bits in fqdn option");
 				return 0;
 			}	
 			if (len == 0) {
-				*t++ = '.';
+				terminated = 1;
 				break;
 			}
 			if (s + len > &bp -> data [0] + length + 3) {
 				log_info ("fqdn tag longer than buffer");
 				return 0;
 			}
-			while (len--)
-				*t++ = *s++;
-			*t++ = '.';
-		} while (s + len < &bp -> data [0] + length + 3);
+
+			if (first_len == 0) {
+				first_len = len;
+			}
+
+			*s = '.';
+			s += len + 1;
+			total_len += len;
+		} while (s < &bp -> data[0] + length + 3);
+
+		if (!terminated) {
+			first_len = total_len;
+		}
+
 		if (!save_option_buffer (&fqdn_universe, options, bp,
-					 &bp -> data [5], (unsigned)(t - u),
-					 &fqdn_options [FQDN_NAME], 1))
+					 &bp -> data[6], first_len,
+					 &fqdn_options [FQDN_HOSTNAME], 1))
+			goto bad;
+		if (!save_option_buffer (&fqdn_universe, options, bp,
+					 &bp -> data[6 + first_len],
+					 total_len - first_len,
+					 &fqdn_options [FQDN_DOMAINNAME], 1))
 			goto bad;
 	}
 	return 1;
@@ -1662,7 +1703,7 @@ int fqdn_option_space_encapsulate (result, packet, lease, client_state,
 				       packet, lease, client_state, in_options,
 				       cfg_options, scope,  oc, MDL);
 	}
-	len = 4 + results [FQDN_NAME].len;
+	len = 6 + results [FQDN_HOSTNAME].len + results [FQDN_DOMAINNAME].len;
 	/* Save the contents of the option in a buffer. */
 	if (!buffer_allocate (&bp, len, MDL)) {
 		log_error ("no memory for option buffer.");
@@ -1684,39 +1725,59 @@ int fqdn_option_space_encapsulate (result, packet, lease, client_state,
 	if (results [FQDN_RCODE2].len)
 		bp -> data [2] = results [FQDN_RCODE2].data [0];
 
-	if (results [FQDN_ENCODED].len &&
-	    results [FQDN_ENCODED].data [0]) {
+	if (results [FQDN_HOSTNAME].len == 0) {
+		/* Can't send just a domainname. */
+		bp -> data[3] = 0;
+		result -> len = 3;
+	} else if (results [FQDN_ENCODED].len &&
+		   results [FQDN_ENCODED].data [0]) {
 		unsigned char *out;
 		int i;
 		bp -> data [0] |= 4;
 		out = &bp -> data [3];
-		if (results [FQDN_NAME].len) {
-			i = 0;
-			while (i < results [FQDN_NAME].len) {
-				int j;
-				for (j = i; ('.' !=
-					     results [FQDN_NAME].data [j]) &&
-					     j < results [FQDN_NAME].len; j++)
-					;
-				*out++ = j - i;
-				memcpy (out, &results [FQDN_NAME].data [i],
-					(unsigned)(j - i));
-				out += j - i;
-				i = j;
-				if (results [FQDN_NAME].data [j] == '.')
-					i++;
-			}
-			if ((results [FQDN_NAME].data
-			     [results [FQDN_NAME].len - 1] == '.'))
-				*out++ = 0;
-			result -> len = out - result -> data;
-			result -> terminated = 0;
+
+		memcpy (out + 1,
+			results [FQDN_HOSTNAME].data,
+			results [FQDN_HOSTNAME].len);
+
+		len = results [FQDN_HOSTNAME].len + 1;
+
+		if (results [FQDN_DOMAINNAME].len) {
+			out [len] = '.';
+			memcpy (out + len + 1,
+				results [FQDN_DOMAINNAME].data,
+				results [FQDN_DOMAINNAME].len);
+
+			len += results [FQDN_DOMAINNAME].len + 1;
+
+			out[len] = '.';
+			len++;
 		}
+
+		for (i = 0; i < len; ) {
+			int j;
+			for (j = i + 1; (('.' != out [j]) && (j < len)); j++)
+				;
+			
+			out[i] = j - i - 1;
+			i = j;
+		}
+
+		result -> len += len;
+		result -> terminated = 0;
 	} else {
-		if (results [FQDN_NAME].len) {
-			memcpy (&bp -> data [3], results [FQDN_NAME].data,
-				results [FQDN_NAME].len);
-			result -> len += results [FQDN_NAME].len;
+		memcpy (&bp -> data[3],
+			results [FQDN_HOSTNAME].data,
+			results [FQDN_HOSTNAME].len);
+		result -> len += results [FQDN_HOSTNAME].len;
+
+		if (results [FQDN_DOMAINNAME].len) {
+			bp -> data[result -> len] = '.';
+			result -> len++;
+			memcpy (&bp -> data[result -> len],
+				results [FQDN_DOMAINNAME].data,
+				results [FQDN_DOMAINNAME].len);
+			result -> len += results [FQDN_DOMAINNAME].len;
 			result -> terminated = 0;
 		}
 	}

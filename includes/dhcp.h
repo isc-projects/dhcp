@@ -192,5 +192,6 @@ struct dhcp_packet {
 #define FQDN_ENCODED			3
 #define FQDN_RCODE1			4
 #define FQDN_RCODE2			5
-#define FQDN_NAME			6
-#define FQDN_SUBOPTION_COUNT		6
+#define FQDN_HOSTNAME			6
+#define FQDN_DOMAINNAME			7
+#define FQDN_SUBOPTION_COUNT		7

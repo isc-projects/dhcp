@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.45 2000/12/05 07:32:26 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.46 2000/12/11 18:56:44 neild Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1063,6 +1063,7 @@ void process_state_transition (struct lease *lease)
 	     lease -> binding_state == FTS_RESERVED) &&
 	    lease -> next_binding_state != FTS_RELEASED) {
 		if (lease -> on_expiry) {
+			ddns_removals (lease);
 			execute_statements ((struct binding_value **)0,
 					    (struct packet *)0, lease,
 					    (struct client_state *)0,
@@ -1090,6 +1091,7 @@ void process_state_transition (struct lease *lease)
 	     lease -> binding_state == FTS_RESERVED) &&
 	    lease -> next_binding_state == FTS_RELEASED) {
 		if (lease -> on_release) {
+			ddns_removals (lease);
 			execute_statements ((struct binding_value **)0,
 					    (struct packet *)0, lease,
 					    (struct client_state *)0,
@@ -1211,6 +1213,7 @@ void release_lease (lease, packet)
 	/* If there are statements to execute when the lease is
 	   released, execute them. */
 	if (lease -> on_release) {
+		ddns_removals (lease);
 		execute_statements ((struct binding_value **)0,
 				    packet, lease, (struct client_state *)0,
 				    packet -> options,

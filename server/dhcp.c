@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.172 2000/12/05 07:21:31 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.173 2000/12/11 18:56:42 neild Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1976,6 +1976,12 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 		data_string_forget (&d1, MDL);
 	}
 
+	/* Record the hardware address, if given... */
+	lt -> hardware_addr.hlen = packet -> raw -> hlen + 1;
+	lt -> hardware_addr.hbuf [0] = packet -> raw -> htype;
+	memcpy (&lt -> hardware_addr.hbuf [1], packet -> raw -> chaddr,
+		sizeof packet -> raw -> chaddr);
+
 	lt -> flags = lease -> flags & ~PERSISTENT_FLAGS;
 
 	/* If there are statements to execute when the lease is
@@ -1991,6 +1997,19 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 							  MDL);
 	}
 
+#ifdef NSUPDATE
+	/* Perform DDNS updates, if configured to. */
+	if ((!offer || offer == DHCPACK) &&
+	    (oc = lookup_option (&server_universe, state -> options,
+				 SV_DDNS_UPDATES)) &&
+	    evaluate_boolean_option_cache (&ignorep, packet, lt,
+					   (struct client_state *)0,
+					   packet -> options, state -> options,
+					   &lt -> scope, oc, MDL)) {
+		ddns_updates (packet, lt, state);
+	}
+#endif /* NSUPDATE */
+
 	/* Don't call supersede_lease on a mocked-up lease. */
 	if (lease -> flags & STATIC_LEASE) {
 		/* Copy the hardware address into the static lease
@@ -2001,12 +2020,6 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 			packet -> raw -> chaddr,
 			sizeof packet -> raw -> chaddr); /* XXX */
 	} else {
-		/* Record the hardware address, if given... */
-		lt -> hardware_addr.hlen = packet -> raw -> hlen + 1;
-		lt -> hardware_addr.hbuf [0] = packet -> raw -> htype;
-		memcpy (&lt -> hardware_addr.hbuf [1], packet -> raw -> chaddr,
-			sizeof packet -> raw -> chaddr);
-
 		/* Install the new information about this lease in the
 		   database.  If this is a DHCPACK or a dynamic BOOTREPLY
 		   and we can't write the lease, don't ACK it (or BOOTREPLY
