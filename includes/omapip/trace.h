@@ -120,3 +120,4 @@ isc_result_t trace_get_next_packet (trace_type_t **, tracepacket_t *,
 isc_result_t trace_get_file (trace_type_t *,
 			     const char *, unsigned *, char **);
 isc_result_t trace_get_packet (trace_type_t **, unsigned *, char **);
+time_t trace_snoop_time (void);

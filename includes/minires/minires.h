@@ -215,3 +215,7 @@ isc_result_t ns_rcode_to_isc (int);
 
 #define USE_MD5
 #endif
+
+#if defined (TRACING)
+void trace_mr_statp_setup (res_state);
+#endif
