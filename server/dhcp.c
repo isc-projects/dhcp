@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.164 2000/09/01 18:30:36 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.165 2000/09/08 01:23:43 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -317,10 +317,7 @@ void dhcprequest (packet, ms_nulltp)
 	   If ciaddr was specified and Requested Address was not, then
 	   we really only know for sure what network a packet came from
 	   if it came through a BOOTP gateway - if it came through an
-	   IP router, we can't respond.   However, a client in REBINDING
-	   state with the wrong IP address will also look like this, and
-	   this is more likely, so we NAK these packets - if the packet
-	   came through a router, the NAK won't reach the client anyway.
+	   IP router, we'll just have to assume that it's cool.
 
 	   If we don't think we know where the packet came from, it
 	   came through a gateway from an unknown network, so it's not
@@ -356,17 +353,16 @@ void dhcprequest (packet, ms_nulltp)
 	if (!packet -> shared_network ||
 	    (packet -> raw -> ciaddr.s_addr &&
 	     packet -> raw -> giaddr.s_addr) ||
-	    (!oc && packet -> raw -> ciaddr.s_addr) ||
 	    (oc && !packet -> raw -> ciaddr.s_addr)) {
 		
 		/* If we don't know where it came from but we do know
 		   where it claims to have come from, it didn't come
-		   from there.   Fry it. */
+		   from there. */
 		if (!packet -> shared_network) {
 			if (subnet && subnet -> group -> authoritative) {
 				log_info ("%s: wrong network.", msgbuf);
 				nak_lease (packet, &cip);
-				return;
+				goto out;
 			}
 			/* Otherwise, ignore it. */
 			log_info ("%s: ignored (not authoritative).", msgbuf);
@@ -383,7 +379,7 @@ void dhcprequest (packet, ms_nulltp)
 			{
 				log_info ("%s: wrong network.", msgbuf);
 				nak_lease (packet, &cip);
-				return;
+				goto out;
 			}
 			log_info ("%s: ignored (not authoritative).", msgbuf);
 			return;
