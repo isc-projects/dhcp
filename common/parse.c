@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.28.2.8 2000/02/02 17:01:11 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.28.2.9 2000/03/30 02:20:39 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1017,7 +1017,7 @@ int parse_option_code_definition (cfile, option)
 		}
 		no_more_in_record = 1;
 		break;
-	      case STRING:
+	      case STRING_TOKEN:
 		type = 'X';
 		goto no_arrays;
 
