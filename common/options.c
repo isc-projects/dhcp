@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.23 1997/03/06 06:55:06 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.24 1997/05/09 08:07:09 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -585,7 +585,7 @@ void do_packet (interface, packbuf, len, from_port, from, hfrom)
 			tp.options [DHO_DHCP_MESSAGE_TYPE].data [0];
 	if (tp.packet_type)
 		dhcp (&tp);
-	else if (tdp.op == BOOTREQUEST)
+	else
 		bootp (&tp);
 }
 
