@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.80 2001/01/19 10:56:06 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.81 2001/01/25 08:21:59 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -417,6 +417,7 @@ int fqdn_universe_decode (struct option_state *options,
 				 &fqdn_options [FQDN_RCODE2], 0))
 		goto bad;
 
+	buffer_dereference (&bp, MDL);
 	return 1;
 }
 
@@ -828,6 +829,7 @@ int store_options (buffer, buflen, packet, lease, client_state,
 				       cfg_options, scope, oc, MDL);
 		if (!od.len) {
 		    data_string_forget (&encapsulation, MDL);
+		    have_encapsulation = 0;
 		    continue;
 		}
 	    }
@@ -1747,15 +1749,19 @@ int fqdn_option_space_encapsulate (result, packet, lease, client_state,
 	unsigned i;
 	unsigned len;
 	struct buffer *bp = (struct buffer *)0;
+	struct option_chain_head *head;
 
 	/* If there's no FQDN universe, don't encapsulate. */
-	if (!cfg_options -> universes [fqdn_universe.index])
+	if (fqdn_universe.index >= cfg_options -> universe_count)
+		return 0;
+	head = ((struct option_chain_head *)
+		cfg_options -> universes [fqdn_universe.index]);
+	if (!head)
 		return 0;
 
 	/* Figure out the values of all the suboptions. */
 	memset (results, 0, sizeof results);
-	for (ocp = ((pair)cfg_options -> universes [universe -> index]);
-	     ocp; ocp = ocp -> cdr) {
+	for (ocp = head -> first; ocp; ocp = ocp -> cdr) {
 		struct option_cache *oc = (struct option_cache *)(ocp -> car);
 		if (oc -> option -> code > FQDN_SUBOPTION_COUNT)
 			continue;
@@ -1769,7 +1775,7 @@ int fqdn_option_space_encapsulate (result, packet, lease, client_state,
 		log_error ("no memory for option buffer.");
 		return 0;
 	}
-	result -> buffer = bp;
+	buffer_reference (&result -> buffer, bp, MDL);
 	result -> len = 3;
 	result -> data = &bp -> data [0];
 
@@ -1825,6 +1831,7 @@ int fqdn_option_space_encapsulate (result, packet, lease, client_state,
 		if (results [i].len)
 			data_string_forget (&results [i], MDL);
 	}
+	buffer_dereference (&bp, MDL);
 	return 1;
 }
 
@@ -1916,11 +1923,21 @@ void save_linked_option (universe, options, oc)
 {
 	pair *tail;
 	pair np = (pair )0;
+	struct option_chain_head *head;
+
+	if (universe -> index >= options -> universe_count)
+		return;
+	head = ((struct option_chain_head *)
+		options -> universes [universe -> index]);
+	if (!head) {
+		if (!option_chain_head_allocate (&head, MDL))
+			return;
+		((struct option_chain_head *)
+		 options -> universes [universe -> index]) = head;
+	}
 
 	/* Find the tail of the list. */
-	for (tail = ((pair *)
-		     &options -> universes [universe -> index]);
-	     *tail; tail = &((*tail) -> cdr)) {
+	for (tail = &head -> first; *tail; tail = &((*tail) -> cdr)) {
 		if (oc -> option ==
 		    ((struct option_cache *)((*tail) -> car)) -> option) {
 			option_cache_dereference ((struct option_cache **)
@@ -1951,13 +1968,17 @@ int linked_option_space_encapsulate (result, packet, lease, client_state,
 {
 	int status;
 	pair oc;
+	struct option_chain_head *head;
 
 	if (universe -> index >= cfg_options -> universe_count)
 		return 0;
+	head = ((struct option_chain_head *)
+		cfg_options -> universes [universe -> index]);
+	if (!head)
+		return 0;
 
 	status = 0;
-	for (oc = ((pair)cfg_options -> universes [universe -> index]);
-	     oc; oc = oc -> cdr) {
+	for (oc = head -> first; oc; oc = oc -> cdr) {
 		if (store_option (result, universe, packet,
 				  lease, client_state, in_options, cfg_options,
 				  scope, (struct option_cache *)(oc -> car)))
@@ -1973,9 +1994,16 @@ void delete_linked_option (universe, options, code)
 	int code;
 {
 	pair *tail, tmp = (pair)0;
+	struct option_chain_head *head;
 
-	for (tail = ((pair *)&options -> universes [universe -> index]);
-	     *tail; tail = &((*tail) -> cdr)) {
+	if (universe -> index >= options -> universe_count)
+		return;
+	head = ((struct option_chain_head *)
+		options -> universes [universe -> index]);
+	if (!head)
+		return;
+
+	for (tail = &head -> first; *tail; tail = &((*tail) -> cdr)) {
 		if (code ==
 		    ((struct option_cache *)(*tail) -> car) -> option -> code)
 		{
@@ -1995,12 +2023,16 @@ struct option_cache *lookup_linked_option (universe, options, code)
 	unsigned code;
 {
 	pair oc;
+	struct option_chain_head *head;
 
 	if (universe -> index >= options -> universe_count)
 		return 0;
+	head = ((struct option_chain_head *)
+		options -> universes [universe -> index]);
+	if (!head)
+		return 0;
 
-	for (oc = ((pair)options -> universes [universe -> index]);
-	     oc; oc = oc -> cdr) {
+	for (oc = head -> first; oc; oc = oc -> cdr) {
 		if (code ==
 		    ((struct option_cache *)(oc -> car)) -> option -> code) {
 			return (struct option_cache *)(oc -> car);
@@ -2016,17 +2048,9 @@ int linked_option_state_dereference (universe, state, file, line)
 	const char *file;
 	int line;
 {
-	pair car, cdr;
-
-	for (car = (pair)(state -> universes [universe -> index]);
-	     car; car = cdr) {
-		cdr = car -> cdr;
-		option_cache_dereference ((struct option_cache **)
-					  (&car -> car), MDL);
-		dfree (car, MDL);
-		car = cdr;
-	}
-	return 1;
+	return (option_chain_head_dereference
+		((struct option_chain_head **)
+		 (&state -> universes [universe -> index]), MDL));
 }
 
 void linked_option_space_foreach (struct packet *packet, struct lease *lease,
@@ -2045,12 +2069,15 @@ void linked_option_space_foreach (struct packet *packet, struct lease *lease,
 						struct universe *, void *))
 {
 	pair car;
+	struct option_chain_head *head;
 
 	if (u -> index >= cfg_options -> universe_count)
 		return;
-
-	for (car = ((pair)cfg_options -> universes [u -> index]);
-	     car; car = car -> cdr) {
+	head = ((struct option_chain_head *)
+		cfg_options -> universes [u -> index]);
+	if (!head)
+		return;
+	for (car = head -> first; car; car = car -> cdr) {
 		(*func) ((struct option_cache *)(car -> car),
 			 packet, lease, client_state,
 			 in_options, cfg_options, scope, u, stuff);
