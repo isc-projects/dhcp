@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.112 2001/02/22 00:18:54 mellon Exp $ Copyright 1995-2001 Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.113 2001/03/01 22:11:50 mellon Exp $ Copyright 1995-2001 Internet Software Consortium.";
 #endif
 
   static char copyright[] =
@@ -439,7 +439,8 @@ int main (argc, argv, envp)
 #endif
 
 	/* Initialize icmp support... */
-	icmp_startup (1, lease_pinged);
+	if (!cftest && !lftest)
+		icmp_startup (1, lease_pinged);
 
 #if defined (TRACING)
 	if (traceinfile) {
