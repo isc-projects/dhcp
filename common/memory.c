@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: memory.c,v 1.27 1997/03/06 19:28:18 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: memory.c,v 1.28 1997/03/06 19:45:20 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -633,9 +633,9 @@ void abandon_lease (lease, message)
 {
 	struct lease lt;
 
+	lease -> flags |= ABANDONED_LEASE;
 	lt = *lease;
 	lt.ends = 0xFFFFFFFF;
-	lt.flags |= ABANDONED_LEASE;
 	warn ("Abandoning IP address %s: %s",
 	      piaddr (lease -> ip_addr), message);
 	lt.hardware_addr.htype = -1;
