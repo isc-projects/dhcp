@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: clparse.c,v 1.16 1998/04/20 18:05:44 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: clparse.c,v 1.17 1998/10/22 04:52:23 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -51,7 +51,6 @@ static char copyright[] =
 static TIME parsed_time;
 
 struct client_config top_level_config;
-u_int32_t requested_lease_time;
 
 /* client-conf-file :== client-declarations EOF
    client-declarations :== <nil>
@@ -106,11 +105,11 @@ int read_client_conf ()
 	top_level_config.requested_options
 		[top_level_config.requested_option_count++] =
 			DHO_HOST_NAME;
-	requested_lease_time = 7200;
-	top_level_config.send_options [DHO_DHCP_LEASE_TIME].data
-		= (unsigned char *)&requested_lease_time;
-	top_level_config.send_options [DHO_DHCP_LEASE_TIME].len
-		= sizeof requested_lease_time;
+	top_level_config.requested_lease_time = 7200;
+	top_level_config.send_options.dhcp_options [DHO_DHCP_LEASE_TIME].data
+		= (unsigned char *)&top_level_config.requested_lease_time;
+	top_level_config.send_options.dhcp_options [DHO_DHCP_LEASE_TIME].len
+		= sizeof top_level_config.requested_lease_time;
 
 	if ((cfile = fopen (path_dhclient_conf, "r")) != NULL) {
 		do {
@@ -126,7 +125,7 @@ int read_client_conf ()
 	}
 
 	/* Set up state and config structures for clients that don't
-	   have per-interface configuration declarations. */
+	   have per-interface configuration statements. */
 	config = (struct client_config *)0;
 	for (ip = interfaces; ip; ip = ip -> next) {
 		if (!ip -> client) {
@@ -136,6 +135,7 @@ int read_client_conf ()
 				error ("no memory for client state.");
 			memset (ip -> client, 0, sizeof *(ip -> client));
 		}
+
 		if (!ip -> client -> config) {
 			if (!config) {
 				config = (struct client_config *)
@@ -144,6 +144,12 @@ int read_client_conf ()
 					error ("no memory for client config.");
 				memcpy (config, &top_level_config,
 					sizeof top_level_config);
+				i = DHO_DHCP_LEASE_TIME;
+				config -> send_options.dhcp_options [i].data =
+					(unsigned char *)&config -> requested_lease_time;
+	top_level_config.send_options.dhcp_options [DHO_DHCP_LEASE_TIME].len
+		= sizeof top_level_config.requested_lease_time;
+
 			}
 			ip -> client -> config = config;
 		}
@@ -208,39 +214,47 @@ void parse_client_statement (cfile, ip, config)
 	int token;
 	char *val;
 	struct option *option;
+	struct executable_statement *stmt, **p;
+	enum statement op op;
 
 	switch (next_token (&val, cfile)) {
 	      case SEND:
-		parse_option_decl (cfile, &config -> send_options [0]);
+		p = &config -> on_tranmission;
+		op = send_option_statement;
+	      do_option:
+		token = next_token (&val, cfile);
+		option = parse_option_name (cfile);
+		if (!option) {
+			*lose = 1;
+			return (struct executable_statement *)0;
+		}
+		stmt = parse_option_statement (cfile, 1, option,
+					       send_option_statement);
+		for (; *p; p = &((*p) -> next))
+			;
+		*p = stmt;
+		stmt -> next = (struct executable_statement *)0;
 		return;
 
 	      case DEFAULT:
-		option = parse_option_decl (cfile, &config -> defaults [0]);
-		if (option)
-			config -> default_actions [option -> code] =
-				ACTION_DEFAULT;
-		return;
+		p = &config -> on_receipt;
+		op = default_option_statement;
+		goto do_option;
 
 	      case SUPERSEDE:
-		option = parse_option_decl (cfile, &config -> defaults [0]);
-		if (option)
-			config -> default_actions [option -> code] =
-				ACTION_SUPERSEDE;
-		return;
+		p = &config -> on_receipt;
+		op = supersede_option_statement;
+		goto do_option;
 
 	      case APPEND:
-		option = parse_option_decl (cfile, &config -> defaults [0]);
-		if (option)
-			config -> default_actions [option -> code] =
-				ACTION_APPEND;
-		return;
+		p = &config -> on_receipt;
+		op = append_option_statement;
+		goto do_option;
 
 	      case PREPEND:
-		option = parse_option_decl (cfile, &config -> defaults [0]);
-		if (option)
-			config -> default_actions [option -> code] =
-				ACTION_PREPEND;
-		return;
+		p = &config -> on_receipt;
+		op = prepend_option_statement;
+		goto do_option;
 
 	      case MEDIA:
 		parse_string_list (cfile, &config -> media, 1);
