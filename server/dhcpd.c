@@ -93,7 +93,7 @@ int main (argc, argv, envp)
 			if (++i == argc)
 				usage ();
 			server_port = htons (atoi (argv [i]));
-			debug ("binding to user-specified port %d\n",
+			debug ("binding to user-specified port %d",
 			       ntohs (server_port));
 #if 0
 		} else if (!strcmp (argv [i], "-a")) {
