@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.58 1999/02/14 19:40:22 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.59 1999/02/23 19:07:14 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -369,6 +369,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 
 	      case TOKEN_NOT:
 		token = next_token (&val, cfile);
+		token = next_token (&val, cfile);
 		switch (token) {
 		      case AUTHORITATIVE:
 			group -> authoritative = 0;
@@ -380,11 +381,11 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		}
 		break;
 	      case AUTHORITATIVE:
+		token = next_token (&val, cfile);
 		group -> authoritative = 1;
 	      authoritative:
-		if (type == HOST_DECL ||
-		    (type == SUBNET_DECL && share && share -> subnets &&
-		     share -> subnets -> next_sibling))
+		if (type == HOST_DECL)
+			parse_warn ("authority makes no sense here."); 
 		parse_semi (cfile);
 		break;
 
