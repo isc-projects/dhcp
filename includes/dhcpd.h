@@ -233,6 +233,19 @@ struct hardware {
 	u_int8_t hbuf [17];
 };
 
+typedef enum {
+	server_startup = 0,
+	server_running = 1,
+	server_shutdown = 2,
+	server_hibernate = 3,
+	server_awaken = 4
+} control_object_state_t;
+
+typedef struct {
+	OMAPI_OBJECT_PREAMBLE;
+	control_object_state_t state;
+} dhcp_control_object_t;
+
 /* Lease states: */
 typedef enum {
 	FTS_FREE = 1,
@@ -1078,6 +1091,8 @@ void cleanup PROTO ((void));
 void lease_pinged PROTO ((struct iaddr, u_int8_t *, int));
 void lease_ping_timeout PROTO ((void *));
 int dhcpd_interface_setup_hook (struct interface_info *ip, struct iaddr *ia);
+isc_result_t dhcp_set_control_state (control_object_state_t oldstate,
+				     control_object_state_t newstate);
 
 /* conflex.c */
 isc_result_t new_parse PROTO ((struct parse **, int,
@@ -1348,6 +1363,9 @@ OMAPI_OBJECT_ALLOC_DECL (subnet, struct subnet, dhcp_type_subnet)
 OMAPI_OBJECT_ALLOC_DECL (shared_network, struct shared_network,
 			 dhcp_type_shared_network)
 OMAPI_OBJECT_ALLOC_DECL (group_object, struct group_object, dhcp_type_group)
+OMAPI_OBJECT_ALLOC_DECL (dhcp_control,
+			 dhcp_control_object_t, dhcp_type_control)
+
 
 int option_chain_head_allocate (struct option_chain_head **,
 				const char *, int);
@@ -1770,6 +1788,7 @@ void state_init PROTO ((void *));
 void state_selecting PROTO ((void *));
 void state_requesting PROTO ((void *));
 void state_bound PROTO ((void *));
+void state_stop PROTO ((void *));
 void state_panic PROTO ((void *));
 
 void bind_lease PROTO ((struct client_state *));
@@ -1828,7 +1847,7 @@ void write_billing_classes (void);
 int write_billing_class PROTO ((struct class *));
 int commit_leases PROTO ((void));
 void db_startup PROTO ((int));
-void new_lease_file PROTO ((void));
+int new_lease_file PROTO ((void));
 int group_writer (struct group_object *);
 
 /* packet.c */
@@ -2018,6 +2037,8 @@ extern omapi_object_type_t *dhcp_type_interface;
 extern omapi_object_type_t *dhcp_type_group;
 extern omapi_object_type_t *dhcp_type_shared_network;
 extern omapi_object_type_t *dhcp_type_subnet;
+extern omapi_object_type_t *dhcp_type_control;
+extern dhcp_control_object_t *dhcp_control_object;
 
 void dhcp_common_objects_setup (void);
 
@@ -2039,6 +2060,25 @@ isc_result_t dhcp_group_create (omapi_object_t **,
 				omapi_object_t *);
 isc_result_t dhcp_group_remove (omapi_object_t *,
 				omapi_object_t *);
+
+isc_result_t dhcp_control_set_value  (omapi_object_t *, omapi_object_t *,
+				      omapi_data_string_t *,
+				      omapi_typed_data_t *);
+isc_result_t dhcp_control_get_value (omapi_object_t *, omapi_object_t *,
+				     omapi_data_string_t *,
+				     omapi_value_t **); 
+isc_result_t dhcp_control_destroy (omapi_object_t *, const char *, int);
+isc_result_t dhcp_control_signal_handler (omapi_object_t *,
+					  const char *, va_list);
+isc_result_t dhcp_control_stuff_values (omapi_object_t *,
+					omapi_object_t *,
+					omapi_object_t *);
+isc_result_t dhcp_control_lookup (omapi_object_t **,
+				  omapi_object_t *, omapi_object_t *);
+isc_result_t dhcp_control_create (omapi_object_t **,
+				  omapi_object_t *);
+isc_result_t dhcp_control_remove (omapi_object_t *,
+				  omapi_object_t *);
 
 isc_result_t dhcp_subnet_set_value  (omapi_object_t *, omapi_object_t *,
 				     omapi_data_string_t *,
@@ -2324,7 +2364,7 @@ void uid_hash_add PROTO ((struct lease *));
 void uid_hash_delete PROTO ((struct lease *));
 void hw_hash_add PROTO ((struct lease *));
 void hw_hash_delete PROTO ((struct lease *));
-void write_leases PROTO ((void));
+int write_leases PROTO ((void));
 int lease_enqueue (struct lease *);
 void lease_instantiate (const unsigned char *, unsigned, struct lease *);
 void expire_all_pools PROTO ((void));
@@ -2350,8 +2390,9 @@ int deletePTR (const struct data_string *, const struct data_string *,
 
 /* failover.c */
 #if defined (FAILOVER_PROTOCOL)
+extern dhcp_failover_state_t *failover_states;
 void dhcp_failover_startup PROTO ((void));
-void dhcp_failover_write_all_states (void);
+int dhcp_failover_write_all_states (void);
 isc_result_t enter_failover_peer PROTO ((dhcp_failover_state_t *));
 isc_result_t find_failover_peer PROTO ((dhcp_failover_state_t **,
 					const char *, const char *, int));
