@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.62 1999/10/19 15:31:40 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.63 1999/10/21 02:35:40 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1576,7 +1576,9 @@ int evaluate_option_cache (result, packet, lease, in_options, cfg_options, oc)
 /* Evaluate an option cache and extract a boolean from the result,
    returning the boolean.   Return false if there is no data. */
 
-int evaluate_boolean_option_cache (packet, lease, in_options, cfg_options, oc)
+int evaluate_boolean_option_cache (ignorep,
+				   packet, lease, in_options, cfg_options, oc)
+	int *ignorep;
 	struct packet *packet;
 	struct lease *lease;
 	struct option_state *in_options;
@@ -1595,9 +1597,14 @@ int evaluate_boolean_option_cache (packet, lease, in_options, cfg_options, oc)
 				    in_options, cfg_options, oc))
 		return 0;
 
-	if (ds.len && ds.data [0])
-		result = 1;
-	else
+	if (ds.len) {
+		result = ds.data [0];
+		if (result == 2) {
+			result = 0;
+			*ignorep = 1;
+		} else
+			*ignorep = 0;
+	} else
 		result = 0;
 	data_string_forget (&ds, "evaluate_boolean_option_cache");
 	return result;
@@ -1607,8 +1614,9 @@ int evaluate_boolean_option_cache (packet, lease, in_options, cfg_options, oc)
 /* Evaluate a boolean expression and return the result of the evaluation,
    or FALSE if it failed. */
 
-int evaluate_boolean_expression_result (packet, lease,
+int evaluate_boolean_expression_result (ignorep, packet, lease,
 					in_options, cfg_options, expr)
+	int *ignorep;
 	struct packet *packet;
 	struct lease *lease;
 	struct option_state *in_options;
@@ -1625,6 +1633,11 @@ int evaluate_boolean_expression_result (packet, lease,
 					  in_options, cfg_options, expr))
 		return 0;
 
+	if (result == 2) {
+		*ignorep = 1;
+		result = 0;
+	} else
+		*ignorep = 0;
 	return result;
 }
 		
