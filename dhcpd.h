@@ -96,6 +96,7 @@ struct lease {
 	TIME offered_expiry;
 	unsigned char *uid;
 	int uid_len;
+	char *hostname;
 	struct host_decl *host;
 	struct subnet *subnet;
 	struct shared_network *shared_network;
@@ -135,6 +136,7 @@ struct group {
 
 	int boot_unknown_clients;
 	int dynamic_bootp;
+	int one_lease_per_client;
 
 	struct tree_cache *options [256];
 };
@@ -278,6 +280,7 @@ extern int server_identifier_matched;
 
 extern u_int16_t server_port;
 extern int log_priority;
+extern int log_perror;
 
 #ifdef USE_FALLBACK
 extern struct interface_info fallback_interface;
@@ -288,7 +291,9 @@ void cleanup PROTO ((void));
 
 /* conflex.c */
 extern int lexline, lexchar;
-extern char *tlname;
+extern char *token_line, *tlname;
+extern char comments [4096];
+extern int comment_index;
 void new_parse PROTO ((char *));
 int next_token PROTO ((char **, FILE *));
 int peek_token PROTO ((char **, FILE *));
@@ -299,6 +304,8 @@ void read_leases PROTO ((void));
 int parse_statement PROTO ((FILE *,
 			     struct group *, int, struct host_decl *, int));
 void skip_to_semi PROTO ((FILE *));
+int parse_boolean PROTO ((FILE *));
+int parse_semi PROTO ((FILE *));
 int parse_lbrace PROTO ((FILE *));
 void parse_host_statement PROTO ((FILE *, struct group *));
 char *parse_host_name PROTO ((FILE *));
@@ -308,8 +315,7 @@ void parse_shared_net_statement PROTO ((FILE *, struct group *));
 void parse_subnet_statement PROTO ((FILE *, struct shared_network *));
 void parse_group_statement PROTO ((FILE *, struct group *));
 void parse_hardware_decl PROTO ((FILE *, struct hardware *));
-char *parse_filename_decl PROTO ((FILE *));
-char *parse_servername_decl PROTO ((FILE *));
+char *parse_string PROTO ((FILE *));
 struct tree *parse_ip_addr_or_hostname PROTO ((FILE *, int));
 struct tree_cache *parse_fixed_addr_decl PROTO ((FILE *));
 void parse_option_decl PROTO ((FILE *, struct group *));
