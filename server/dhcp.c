@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.76 1999/02/25 23:30:40 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.77 1999/03/09 23:45:04 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -227,6 +227,7 @@ void dhcprequest (packet)
 				return;
 			}
 			/* Otherwise, ignore it. */
+			log_info ("%s: ignored.", msgbuf);
 			return;
 		}
 
@@ -238,7 +239,9 @@ void dhcprequest (packet)
 			{
 				log_info ("%s: wrong network.", msgbuf);
 				nak_lease (packet, &cip);
+				return;
 			}
+			log_info ("%s: ignored.", msgbuf);
 			return;
 		}
 	}
@@ -254,9 +257,10 @@ void dhcprequest (packet)
 	/* If we found a lease, but the client identifier on the lease
 	   exists and is different than the id the client sent, then
 	   we can't send this lease to the client. */
-	if (lease)
+	if (lease) {
+		log_info ("%s", msgbuf);
 		ack_lease (packet, lease, DHCPACK, 0, msgbuf);
-	else
+	} else
 		log_info ("%s: unknown lease %s.", msgbuf, piaddr (cip));
 }
 
@@ -503,7 +507,9 @@ void ack_lease (packet, lease, offer, when, msg)
 	TIME lease_time;
 	TIME offered_lease_time;
 	struct data_string d1;
-	TIME comp_lease_time;
+	TIME min_lease_time;
+	TIME max_lease_time;
+	TIME default_lease_time;
 	struct option_cache *oc;
 	struct expression *expr;
 	int status;
@@ -745,6 +751,18 @@ void ack_lease (packet, lease, offer, when, msg)
 	/* Figure out how long a lease to assign.    If this is a
 	   dynamic BOOTP lease, its duration must be infinite. */
 	if (offer) {
+		default_lease_time = DEFAULT_DEFAULT_LEASE_TIME;
+		if ((oc = lookup_option (state -> options.server_hash,
+					 SV_DEFAULT_LEASE_TIME))) {
+			if (evaluate_option_cache (&d1, packet,
+						   &packet -> options, oc)) {
+				if (d1.len == sizeof (u_int32_t))
+					default_lease_time =
+						getULong (d1.data);
+				data_string_forget (&d1, "ack_lease");
+			}
+		}
+
 		if ((oc = lookup_option (packet -> options.dhcp_hash,
 					 DHO_DHCP_LEASE_TIME)))
 			s1 = evaluate_option_cache (&d1, packet,
@@ -754,54 +772,45 @@ void ack_lease (packet, lease, offer, when, msg)
 		if (s1 && d1.len == sizeof (u_int32_t)) {
 			lease_time = getULong (d1.data);
 			data_string_forget (&d1, "ack_lease");
-			comp_lease_time = DEFAULT_MAX_LEASE_TIME;
+			max_lease_time = DEFAULT_MAX_LEASE_TIME;
 			if ((oc = lookup_option (state -> options.server_hash,
 						 SV_MAX_LEASE_TIME))) {
 				if (evaluate_option_cache (&d1, packet,
 							   &packet -> options,
 							   oc)) {
 					if (d1.len == sizeof (u_int32_t))
-						comp_lease_time =
+						max_lease_time =
 							getULong (d1.data);
 					data_string_forget (&d1, "ack_lease");
 				}
 			}
 
 			/* Enforce the maximum lease length. */
-			if (lease_time > comp_lease_time)
-				lease_time = comp_lease_time;
+			if (lease_time < 0 || /* XXX */
+			    lease_time > max_lease_time)
+				lease_time = max_lease_time;
 			
 		} else {
-			if (s1)
-				data_string_forget (&d1, "ack_lease");
-			
-			lease_time = DEFAULT_DEFAULT_LEASE_TIME;
-			if ((oc = lookup_option (state -> options.server_hash,
-						 SV_DEFAULT_LEASE_TIME))) {
-				if (evaluate_option_cache (&d1, packet,
-							   &packet -> options,
-							   oc)) {
-					if (d1.len == sizeof (u_int32_t))
-						lease_time =
-							getULong (d1.data);
-					data_string_forget (&d1, "ack_lease");
-				}
-			}
+			lease_time = default_lease_time;
 		}
 		
-		comp_lease_time = DEFAULT_MIN_LEASE_TIME;
+		min_lease_time = DEFAULT_MIN_LEASE_TIME;
 		if ((oc = lookup_option (state -> options.server_hash,
 					 SV_MIN_LEASE_TIME))) {
 			if (evaluate_option_cache (&d1, packet,
 						   &packet -> options, oc)) {
 				if (d1.len == sizeof (u_int32_t))
-					comp_lease_time = getULong (d1.data);
+					min_lease_time = getULong (d1.data);
 				data_string_forget (&d1, "ack_lease");
 			}
 		}
 
-		if (lease_time < comp_lease_time)
-			lease_time = comp_lease_time;
+		if (lease_time < min_lease_time) {
+			if (min_lease_time)
+				lease_time = min_lease_time;
+			else
+				lease_time = default_lease_time;
+		}
 
 		state -> offered_expiry = cur_time + lease_time;
 		if (when)
@@ -1597,15 +1606,21 @@ struct lease *find_lease (packet, share, ours)
 		ip_lease = (struct lease *)0;
 	}
 
-	/* Toss ip_lease if it hasn't yet expired and the uid doesn't
-	   match */
+	/* Toss ip_lease if it hasn't yet expired and doesn't belong to the
+	   client. */
 	if (ip_lease &&
 	    ip_lease -> ends >= cur_time &&
-	    ip_lease -> uid &&
-	    (!have_client_identifier ||
-	     ip_lease -> uid_len != client_identifier.len ||
-	     memcmp (ip_lease -> uid, client_identifier.data,
-		     ip_lease -> uid_len))) {
+	    ((ip_lease -> uid &&
+	      (!have_client_identifier ||
+	       ip_lease -> uid_len != client_identifier.len ||
+	       memcmp (ip_lease -> uid, client_identifier.data,
+		       ip_lease -> uid_len))) ||
+	     (!ip_lease -> uid &&
+	      (ip_lease -> hardware_addr.htype != packet -> raw -> htype ||
+	       ip_lease -> hardware_addr.hlen != packet -> raw -> hlen ||
+	       memcmp (ip_lease -> hardware_addr.haddr,
+		       packet -> raw -> chaddr,
+		       ip_lease -> hardware_addr.hlen))))) {
 #if defined (DEBUG_FIND_LEASE)
 		if (ip_lease)
 			log_info ("rejecting lease for requested address.");
@@ -1623,7 +1638,8 @@ struct lease *find_lease (packet, share, ours)
 		    (ip_lease -> uid_len == client_identifier.len) &&
 		    !memcmp (client_identifier.data,
 			     ip_lease -> uid, ip_lease -> uid_len)) {
-			if (uid_lease && uid_lease -> ends > cur_time)
+			if (uid_lease) {
+			    if (uid_lease -> ends > cur_time) {
 				log_error ("client %s has duplicate%s on %s",
 					   " leases",
 					   (print_hw_addr
@@ -1633,22 +1649,18 @@ struct lease *find_lease (packet, share, ours)
 				      (ip_lease -> subnet ->
 				       shared_network -> name));
 
-			/* If the client is REQUESTing the lease, it shouldn't
-			   still be using the old one, so we can free it for
-			   allocation.   This is only true if the duplicate
-			   lease is on the same network, of course. */
-
-			if (uid_lease &&
-			    !packet -> raw -> ciaddr.s_addr &&
-			    share == uid_lease -> subnet -> shared_network)
-				dissociate_lease (uid_lease);
-
-			uid_lease = ip_lease;
+				/* If the client is REQUESTing the lease,
+				   it shouldn't still be using the old
+				   one, so we can free it for allocation. */
+				if (uid_lease &&
+				    !packet -> raw -> ciaddr.s_addr &&
+				    (share ==
+				     uid_lease -> subnet -> shared_network))
+					dissociate_lease (uid_lease);
+			    }
+			    uid_lease = ip_lease;
+			}
 		}
-		strcpy (dhcp_message, "requested address is not available");
-		ip_lease = (struct lease *)0;
-		if (ours)
-			*ours = 1;
 
 		/* If we get to here and fixed_lease is not null, that means
 		   that there are both a dynamic lease and a fixed-address
