@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.112 1999/10/05 02:46:17 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.113 1999/10/05 03:25:38 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -931,7 +931,7 @@ void ack_lease (packet, lease, offer, when, msg)
 					if (seek != lease &&
 					    seek -> ends > cur_time)
 						break;
-					seek = lease -> n_uid;
+					seek = seek -> n_uid;
 				}
 				if (seek) {
 					release_lease (seek, packet);
@@ -946,7 +946,7 @@ void ack_lease (packet, lease, offer, when, msg)
 					if (seek != lease &&
 					    seek -> ends > cur_time)
 						break;
-					seek = lease -> n_hw;
+					seek = seek -> n_hw;
 				}
 				if (seek) {
 					release_lease (seek, packet);
