@@ -417,6 +417,7 @@ struct lease_state {
 #define SV_PING_CHECKS			42
 #define SV_UPDATE_STATIC_LEASES		43
 #define SV_LOG_FACILITY			44
+#define SV_DO_FORWARD_UPDATES		45
 
 #if !defined (DEFAULT_DEFAULT_LEASE_TIME)
 # define DEFAULT_DEFAULT_LEASE_TIME 43200
@@ -742,6 +743,7 @@ struct client_state {
 	u_int16_t secs;			    /* secs value from DHCPDISCOVER. */
 	TIME first_sending;			/* When was first copy sent? */
 	TIME interval;		      /* What's the current resend interval? */
+	int dns_update_timeout;		 /* Last timeout set for DNS update. */
 	struct string_list *medium;		   /* Last media type tried. */
 	struct dhcp_packet packet;		    /* Outgoing DHCP packet. */
 	unsigned packet_length;	       /* Actual length of generated packet. */
@@ -1896,7 +1898,8 @@ void do_release PROTO ((struct client_state *));
 int dhclient_interface_shutdown_hook (struct interface_info *);
 int dhclient_interface_discovery_hook (struct interface_info *);
 isc_result_t dhclient_interface_startup_hook (struct interface_info *);
-void client_dns_update (struct client_state *client, int, int);
+void client_dns_update_timeout (void *cp);
+isc_result_t client_dns_update (struct client_state *client, int, int);
 
 /* db.c */
 int write_lease PROTO ((struct lease *));
