@@ -38,6 +38,10 @@ FFMANEXT = .0
 INSTALL = install
 MANINSTALL = install
 CHMOD = chmod
+CATMANPAGES = dhcpd.cat8 dhcpd.conf.cat5
+ETC = /etc
+VARRUN = /var/run
+VARDB = /var/db
 
 ## Porting::
 #
@@ -58,6 +62,8 @@ CHMOD = chmod
 #BINDIR=/usr/etc
 #ADMMANEXT = .8
 #FFMANEXT = .5
+#VARRUN = /etc
+#VARDB = /etc
 ##--sunos4--
 
 ## Solaris 2.5 (with gcc)
@@ -73,6 +79,8 @@ CHMOD = chmod
 #ADMMANEXT = .1m
 #FFMANDIR = /usr/share/man/cat4
 #FFMANEXT = .4
+#VARRUN = /etc
+#VARDB = /etc
 ##--sunos5--
 
 ## DEC Alpha/OSF1
@@ -83,6 +91,8 @@ CHMOD = chmod
 #CF = cf/alphaosf.h
 #ADMMANEXT = .8
 #FFMANEXT = .5
+#VARRUN = /etc
+#VARDB = /etc
 ##--alphaosf--
 
 ## BSD/OS 2.1
@@ -90,19 +100,16 @@ CHMOD = chmod
 #LIBS=
 #CC=gcc2
 #CF = cf/bsdos.h
-#CATMANPAGES = dhcpd.cat8 dhcpd.conf.cat5
 ##--bsdos--
 
 ## FreeBSD
 ##++freebsd++
 #CF = cf/freebsd.h
-#CATMANPAGES = dhcpd.cat8 dhcpd.conf.cat5
 ##--freebsd--
 
 ## NetBSD
 ##++netbsd++
 #CF = cf/netbsd.h
-#CATMANPAGES = dhcpd.cat8 dhcpd.conf.cat5
 #COPTS  = -Wall -Wstrict-prototypes -Wno-unused -Wno-implicit -Wno-comment \
 #	  -Wno-uninitialized -Werror
 ##--netbsd--
@@ -123,6 +130,7 @@ CHMOD = chmod
 #ADMMANEXT = .8
 #FFMANDIR = /usr/man/man5
 #FFMANEXT = .5
+#VARRUN = /etc
 ##--linux--
 
 ## SCO
@@ -138,6 +146,9 @@ CHMOD = chmod
 #MANFROM = <
 #MANINSTALL = compress
 #MANTO = >
+#VARRUN = /etc
+#VARDB = /etc
+#CATMANPAGES=
 ##--sco--
 
 CSRC   = options.c errwarn.c convert.c \
@@ -176,10 +187,12 @@ install: dhcpd $(CATMANPAGES)
 # provided in the distribution so that this doesn't become a problem.
 
 dhcpd.cat8:	dhcpd.8
-	nroff -mandoc dhcpd.8 >dhcpd.cat8
+	sed -e "s#ETCDIR#$(ETC)#" -e "s#DBDIR#$(VARDB)#" \
+		-e "s#RUNDIR#$(VARRUN)#" < dhcpd.8 \
+			| nroff -man >dhcpd.cat8
 
 dhcpd.conf.cat5:	dhcpd.conf.5
-	nroff -mandoc dhcpd.conf.5 >dhcpd.conf.cat5
+	nroff -man dhcpd.conf.5 >dhcpd.conf.cat5
 
 dhcpd:	$(OBJS) $(COBJ)
 	$(CC) -o dhcpd $(OBJS) $(COBJ) $(LIBS)
