@@ -49,7 +49,7 @@
     a copyright message followed by a message referring to an ISC web
     page or other ISC documentation, you may not modify the the file
     in such a way that, when compiled, it no longer produces
-    executable code to print such a message.
+    executable code to print such a message when invoked in the same way.
 
 9.  Any source file covered by this license will specify within the
     Bootstrap License the name of the ISC distribution from which it
