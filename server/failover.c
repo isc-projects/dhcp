@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.53.2.12 2001/08/08 14:38:45 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.53.2.13 2001/08/09 09:56:41 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -72,6 +72,15 @@ void dhcp_failover_startup ()
 	for (state = failover_states; state; state = state -> next) {
 		dhcp_failover_state_transition (state, "startup");
 
+		if (state -> pool_count == 0) {
+			log_error ("failover peer declaration with no %s",
+				   "referring pools.");
+			log_error ("In order to use failover, you MUST %s",
+				   "refer to your main failover declaration");
+			log_error ("in each pool declaration.   You MUST %s",
+				   "NOT use range declarations outside");
+			log_fatal ("of pool declarations.");
+		}
 		/* In case the peer is already running, immediately try
 		   to establish a connection with it. */
 		status = dhcp_failover_link_initiate ((omapi_object_t *)state);
@@ -243,7 +252,7 @@ isc_result_t dhcp_failover_link_initiate (omapi_object_t *h)
 		local_addr.addrtype = AF_INET;
 		local_addr.addrlen = sizeof (struct in_addr);
 		if (!state -> server_identifier.len) {
-			log_fatal ("failover peer %s: no identifier.",
+			log_fatal ("failover peer %s: no local address.",
 				   state -> name);
 		}
 	} else {
