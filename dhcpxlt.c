@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcpxlt.c,v 1.3 1996/08/29 09:17:25 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcpxlt.c,v 1.4 1996/08/29 18:36:41 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -68,7 +68,7 @@ void cleanup () {
 /* conf-file :== statements
    declarations :== <nil> | declaration | declarations declaration */
 
-void readconf ()
+int readconf ()
 {
 	FILE *cfile;
 	char *val;
@@ -84,6 +84,7 @@ void readconf ()
 		convert_statement (cfile);
 	} while (1);
 	token = next_token (&val, cfile);
+	return 0;
 }
 
 /* statement :== host_statement */
