@@ -224,6 +224,10 @@
 # define BPF_FORMAT "/dev/bpf%d"
 #endif
 
+#if defined (F_SETFD) && !defined (HAVE_SETFD)
+# define HAVE_SETFD
+#endif
+
 #if defined (IFF_POINTOPOINT) && !defined (HAVE_IFF_POINTOPOINT)
 # define HAVE_IFF_POINTOPOINT
 #endif
