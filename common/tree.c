@@ -291,19 +291,25 @@ static TIME do_host_lookup (bufix, bufp, bufcount, dns)
 	int i;
 	int new_len;
 
+#ifdef DEBUG_EVAL
 	debug ("time: now = %d  dns = %d %d  diff = %d",
 	       cur_time, dns -> timeout, cur_time - dns -> timeout);
+#endif
 
 	/* If the record hasn't timed out, just copy the data and return. */
 	if (cur_time <= dns -> timeout) {
+#ifdef DEBUG_EVAL
 		debug ("easy copy: %x %d %x",
 		       dns -> data, dns -> data_len,
 		       dns -> data ? *(int *)(dns -> data) : 0);
+#endif
 		do_data_copy (bufix, bufp, bufcount,
 			      dns -> data, dns -> data_len);
 		return dns -> timeout;
 	}
+#ifdef DEBUG_EVAL
 	debug ("Looking up %s", dns -> hostname);
+#endif
 
 	/* Otherwise, look it up... */
 	h = gethostbyname (dns -> hostname);
@@ -328,8 +334,10 @@ static TIME do_host_lookup (bufix, bufp, bufcount, dns)
 		return cur_time + 60;
 	}
 
+#ifdef DEBUG_EVAL
 	debug ("Lookup succeeded; first address is %x",
 	       h -> h_addr_list [0]);
+#endif
 
 	/* Count the number of addresses we got... */
 	for (i = 0; h -> h_addr_list [i]; i++)
@@ -360,16 +368,20 @@ static TIME do_host_lookup (bufix, bufp, bufcount, dns)
 		memcpy (dns -> data + h -> h_length * i,
 			h -> h_addr_list [i], h -> h_length);
 	}
+#ifdef DEBUG_EVAL
 	debug ("dns -> data: %x  h -> h_addr_list [0]: %x",
 	       *(int *)(dns -> data), h -> h_addr_list [0]);
+#endif
 	dns -> data_len = new_len;
 
 	/* Set the timeout for an hour from now.
 	   XXX This should really use the time on the DNS reply. */
 	dns -> timeout = cur_time + 3600;
 
+#ifdef DEBUG_EVAL
 	debug ("hard copy: %x %d %x",
 	       dns -> data, dns -> data_len, *(int *)(dns -> data));
+#endif
 	do_data_copy (bufix, bufp, bufcount, dns -> data, dns -> data_len);
 	return dns -> timeout;
 }
