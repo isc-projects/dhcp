@@ -3,7 +3,7 @@
    Definitions for dhcpd... */
 
 /*
- * Copyright (c) 1995, 1996, 1997 The Internet Software Consortium.
+ * Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -460,7 +460,7 @@ char *pretty_print_option PROTO ((unsigned int,
 				  unsigned char *, int, int, int));
 void do_packet PROTO ((struct interface_info *,
 		       struct dhcp_packet *, int,
-		       unsigned short, struct iaddr, struct hardware *));
+		       unsigned int, struct iaddr, struct hardware *));
 
 /* errwarn.c */
 extern int warnings_occurred;
@@ -553,7 +553,7 @@ void dhcprelease PROTO ((struct packet *));
 void dhcpdecline PROTO ((struct packet *));
 void dhcpinform PROTO ((struct packet *));
 void nak_lease PROTO ((struct packet *, struct iaddr *cip));
-void ack_lease PROTO ((struct packet *, struct lease *, unsigned char, TIME));
+void ack_lease PROTO ((struct packet *, struct lease *, unsigned int, TIME));
 void dhcp_reply PROTO ((struct lease *));
 struct lease *find_lease PROTO ((struct packet *,
 				 struct shared_network *, int *));
@@ -590,7 +590,7 @@ void uid_hash_delete PROTO ((struct lease *));
 void hw_hash_add PROTO ((struct lease *));
 void hw_hash_delete PROTO ((struct lease *));
 struct class *add_class PROTO ((int, char *));
-struct class *find_class PROTO ((int, char *, int));
+struct class *find_class PROTO ((int, unsigned char *, int));
 struct group *clone_group PROTO ((struct group *, char *));
 void write_leases PROTO ((void));
 void dump_subnets PROTO ((void));
@@ -735,7 +735,7 @@ extern struct protocol *protocols;
 extern int quiet_interface_discovery;
 extern void (*bootp_packet_handler) PROTO ((struct interface_info *,
 					    struct dhcp_packet *, int,
-					    unsigned short,
+					    unsigned int,
 					    struct iaddr, struct hardware *));
 extern struct timeout *timeouts;
 void discover_interfaces PROTO ((int));
@@ -754,9 +754,10 @@ void remove_protocol PROTO ((struct protocol *));
 
 /* hash.c */
 struct hash_table *new_hash PROTO ((void));
-void add_hash PROTO ((struct hash_table *, char *, int, unsigned char *));
-void delete_hash_entry PROTO ((struct hash_table *, char *, int));
-unsigned char *hash_lookup PROTO ((struct hash_table *, char *, int));
+void add_hash PROTO ((struct hash_table *, unsigned char *,
+		      int, unsigned char *));
+void delete_hash_entry PROTO ((struct hash_table *, unsigned char *, int));
+unsigned char *hash_lookup PROTO ((struct hash_table *, unsigned char *, int));
 
 /* tables.c */
 extern struct option dhcp_options [256];
@@ -774,8 +775,8 @@ u_int16_t getUShort PROTO ((unsigned char *));
 int16_t getShort PROTO ((unsigned char *));
 void putULong PROTO ((unsigned char *, u_int32_t));
 void putLong PROTO ((unsigned char *, int32_t));
-void putUShort PROTO ((unsigned char *, u_int16_t));
-void putShort PROTO ((unsigned char *, int16_t));
+void putUShort PROTO ((unsigned char *, unsigned int));
+void putShort PROTO ((unsigned char *, int));
 
 /* inet.c */
 struct iaddr subnet_number PROTO ((struct iaddr, struct iaddr));
@@ -914,7 +915,7 @@ void parse_reject_statement PROTO ((FILE *, struct client_config *));
 
 /* dhcrelay.c */
 void relay PROTO ((struct interface_info *, struct dhcp_packet *, int,
-		   unsigned short, struct iaddr, struct hardware *));
+		   unsigned int, struct iaddr, struct hardware *));
 
 /* icmp.c */
 void icmp_startup PROTO ((int, void (*) PROTO ((struct iaddr,

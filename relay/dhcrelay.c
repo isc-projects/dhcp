@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcrelay.c,v 1.9.2.3 1998/06/25 18:34:47 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcrelay.c,v 1.9.2.4 1998/06/25 21:11:34 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -233,7 +233,7 @@ void relay (ip, packet, length, from_port, from, hfrom)
 	struct interface_info *ip;
 	struct dhcp_packet *packet;
 	int length;
-	u_int16_t from_port;
+	unsigned int from_port;
 	struct iaddr from;
 	struct hardware *hfrom;
 {

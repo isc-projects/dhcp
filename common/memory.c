@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: memory.c,v 1.35.2.1 1998/06/25 05:47:29 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: memory.c,v 1.35.2.2 1998/06/25 21:11:30 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -838,16 +838,18 @@ struct class *add_class (type, name)
 
 	if (type)
 		add_hash (user_class_hash,
-			  tname, strlen (tname), (unsigned char *)class);
+			  (unsigned char *)tname, strlen (tname),
+			  (unsigned char *)class);
 	else
 		add_hash (vendor_class_hash,
-			  tname, strlen (tname), (unsigned char *)class);
+			  (unsigned char *)tname, strlen (tname),
+			  (unsigned char *)class);
 	return class;
 }
 
 struct class *find_class (type, name, len)
 	int type;
-	char *name;
+	unsigned char *name;
 	int len;
 {
 	struct class *class =

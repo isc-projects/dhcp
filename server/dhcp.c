@@ -3,7 +3,7 @@
    DHCP Protocol engine. */
 
 /*
- * Copyright (c) 1995, 1996, 1997 The Internet Software Consortium.
+ * Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -42,14 +42,14 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.57.2.1 1998/05/18 05:28:06 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.57.2.2 1998/06/25 21:11:35 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
 
 int outstanding_pings;
 
-static unsigned char dhcp_message [256];
+static char dhcp_message [256];
 
 void dhcp (packet)
 	struct packet *packet;
@@ -427,9 +427,9 @@ void nak_lease (packet, cip)
 
 	/* Set DHCP_MESSAGE to whatever the message is */
 	options [DHO_DHCP_MESSAGE] = &dhcpmsg_tree;
-	options [DHO_DHCP_MESSAGE] -> value = dhcp_message;
-	options [DHO_DHCP_MESSAGE] -> len = strlen (dhcp_message);
-	options [DHO_DHCP_MESSAGE] -> buf_size = strlen (dhcp_message);
+	options [DHO_DHCP_MESSAGE] -> value = (unsigned char *)dhcp_message;
+	options [DHO_DHCP_MESSAGE] -> len =
+		options [DHO_DHCP_MESSAGE] -> buf_size = strlen (dhcp_message);
 	options [DHO_DHCP_MESSAGE] -> timeout = 0xFFFFFFFF;
 	options [DHO_DHCP_MESSAGE] -> tree = (struct tree *)0;
 
@@ -521,7 +521,7 @@ void nak_lease (packet, cip)
 void ack_lease (packet, lease, offer, when)
 	struct packet *packet;
 	struct lease *lease;
-	unsigned char offer;
+	unsigned int offer;
 	TIME when;
 {
 	struct lease lt;

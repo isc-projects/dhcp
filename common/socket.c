@@ -50,7 +50,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: socket.c,v 1.26.2.1 1998/05/18 05:45:49 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: socket.c,v 1.26.2.2 1998/06/25 21:11:32 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -224,7 +224,7 @@ ssize_t receive_packet (interface, buf, len, from, hfrom)
 	int retry = 0;
 	do {
 #endif
-		result = recvfrom (interface -> rfdesc, buf, len, 0,
+		result = recvfrom (interface -> rfdesc, (char *)buf, len, 0,
 				   (struct sockaddr *)from, &flen);
 #ifdef IGNORE_HOSTUNREACH
 	} while (result < 0 &&

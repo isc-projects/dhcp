@@ -3,7 +3,7 @@
    Common parser code for dhcpd and dhclient. */
 
 /*
- * Copyright (c) 1995, 1996, 1997 The Internet Software Consortium.
+ * Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.2 1997/05/09 08:08:53 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.2.2.1 1998/06/25 21:11:31 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -297,7 +297,8 @@ unsigned char *parse_numeric_aggregate (cfile, buf,
 {
 	char *val;
 	int token;
-	unsigned char *bufp = buf, *s, *t;
+	unsigned char *bufp = buf, *s;
+	char *t;
 	int count = 0;
 	pair c = (pair)0;
 
@@ -343,7 +344,7 @@ unsigned char *parse_numeric_aggregate (cfile, buf,
 			convert_num (s, val, base, size);
 			s += size / 8;
 		} else {
-			t = (unsigned char *)malloc (strlen (val) + 1);
+			t = (char *)malloc (strlen (val) + 1);
 			if (!t)
 				error ("no temp space for number.");
 			strcpy (t, val);
