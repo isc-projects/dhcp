@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: ddns.c,v 1.15.2.11 2004/06/10 17:59:52 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: ddns.c,v 1.15.2.12 2004/06/14 16:39:57 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -336,6 +336,12 @@ int ddns_updates (struct packet *packet,
 					    &lease -> scope, oc, MDL);
 
 	if (s1 && s2) {
+		if (ddns_hostname.len + ddns_domainname.len > 253) {
+			log_error ("ddns_update: host.domain name too long");
+
+			goto out;
+		}
+
 		buffer_allocate (&ddns_fwd_name.buffer,
 				 ddns_hostname.len + ddns_domainname.len + 2,
 				 MDL);
@@ -440,6 +446,11 @@ int ddns_updates (struct packet *packet,
 	if (!ddns_fwd_name.len)
 		goto out;
 
+	if (ddns_fwd_name.len > 255) {
+		log_error ("client provided fqdn: too long");
+		goto out;
+	}
+
 	/*
 	 * Compute the RR TTL.
 	 */
@@ -470,7 +481,13 @@ int ddns_updates (struct packet *packet,
 					    packet -> options,
 					    state -> options,
 					    &lease -> scope, oc, MDL);
-	
+
+	if (d1.len > 238) {
+		log_error ("ddns_update: Calculated rev domain name too long.");
+		s1 = 0;
+		data_string_forget (&d1, MDL);
+	}
+
 	if (oc && s1) {
 		/* Buffer length:
 		   XXX.XXX.XXX.XXX.<ddns-rev-domain-name>\0 */
