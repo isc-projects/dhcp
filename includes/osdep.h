@@ -54,8 +54,12 @@
 #endif
 
 
-#ifdef sun
+#if defined (sun)
+# if defined (__svr4__)
+#  include "cf/sunos5-5.h"
+# else
 #  include "cf/sunos4.h"
+# endif
 #endif
 
 #ifdef bsdi
@@ -69,11 +73,6 @@
 #ifdef __FreeBSD__
 #  include "cf/freebsd.h"
 #endif
-
-#ifdef sun
-#  include "cf/sunos4.h"
-#endif
-
 
 #ifdef ultrix
 #  include "cf/ultrix.h"
@@ -113,6 +112,9 @@
 #endif
 #ifndef jdref
 # define jdref(x)	(*(x))
+#endif
+#ifndef jrefproto
+# define jrefproto	jmp_buf *
 #endif
 
 /* On some systems, the struct ether_header source and destinations buffers
