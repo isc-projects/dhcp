@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: class.c,v 1.12 1999/07/02 20:58:48 mellon Exp $ Copyright (c) 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: class.c,v 1.13 1999/07/31 18:09:51 mellon Exp $ Copyright (c) 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -43,27 +43,21 @@ int have_billing_classes;
 void classification_setup ()
 {
 	struct executable_statement *rules;
-	struct expression *me;
+
+	/* eval ... */
+	rules = (struct executable_statement *)0;
+	if (!executable_statement_allocate (&rules,
+					    "default collection check rule"))
+		log_fatal ("Can't allocate check of default collection");
+	rules -> op = eval_statement;
 
 	/* check-collection "default" */
-	me = (struct expression *)dmalloc (sizeof (struct expression),
-					   "default check expression");
-	if (!me)
+	if (!expression_allocate (&rules -> data.eval,
+				  "default check expression"))
 		log_fatal ("Can't allocate default check expression");
-	memset (me, 0, sizeof *me);
-	me -> op = expr_check;
-	me -> data.check = &default_collection;
+	rules -> data.eval -> op = expr_check;
+	rules -> data.eval -> data.check = &default_collection;
 	
-	/* eval ... */
-	rules = (struct executable_statement *)
-		dmalloc (sizeof (struct executable_statement),
-			 "add default collection check rule");
-	if (!rules)
-		log_fatal ("Can't allocate check of default collection");
-	memset (rules, 0, sizeof *rules);
-	rules -> op = eval_statement;
-	rules -> data.eval = me;
-
 	default_classification_rules = rules;
 }
 
@@ -93,11 +87,10 @@ int check_collection (packet, lease, collection)
 		/* If a class is for billing, don't put the client in the
 		   class if we've already billed it to a different class. */
 		if (class -> submatch) {
-			status = evaluate_data_expression (&data,
-							   packet,
-							   packet -> options,
-							   lease,
-							   class -> submatch);
+			status = (evaluate_data_expression
+				  (&data, packet, lease,
+				   packet -> options, (struct option_state *)0,
+				   class -> submatch));
 			if (status) {
 				if ((nc = ((struct class *)
 					   hash_lookup (class -> hash,
@@ -162,7 +155,9 @@ int check_collection (packet, lease, collection)
 		}
 
 		status = (evaluate_boolean_expression_result
-			  (packet, packet -> options, lease, class -> expr));
+			  (packet, lease,
+			   packet -> options, (struct option_state *)0,
+			   class -> expr));
 		if (status) {
 			matched = 1;
 #if defined (DEBUG_CLASS_MATCHING)
