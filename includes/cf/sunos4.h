@@ -49,7 +49,26 @@
  *
  */
 
+#define u_int8_t	unsigned char 	/* Not quite POSIX... */
+#define u_int16_t	unsigned short 
+#define u_int32_t	unsigned long 
+
+/* The jmp_buf type is an array on SunOS, so we can't dereference it
+   and must declare it differently. */
+#define jbp_decl(x)	jmp_buf x
+#define jref(x)		(x)
+#define jdref(x)	(x)
+
+/* struct ether_host source and destination are structs on SunOS. */
+#ifndef ETHER_SRC
+# define ETHER_SRC(x)	(&((x) -> ether_shost))
+#endif
+#ifndef ETHER_DEST
+# define ETHER_DEST(x)	(&((x) -> ether_dhost))
+#endif
+
 #include <sys/types.h>
+
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
@@ -57,6 +76,7 @@
 #include <signal.h>
 #include <setjmp.h>
 #include <limits.h>
+#include <poll.h>
 
 #include <netdb.h>
 extern int h_errno;
@@ -64,13 +84,17 @@ extern int h_errno;
 #include <net/if.h>
 #include <net/if_arp.h>
 
-/*#define _PATH_DHCPD_PID	"/var/run/dhcpd.pid"*/
-
 /*
- * SunOS systems don't have /var/run, but some sites have added it.
- * if yours  is one, edit this file or define _PATH_DHCPD_PID externally.
+ * Definitions for IP type of service (ip_tos)
  */
-/*#define _PATH_DHCPD_PID	"/var/run/dhcpd.pid"*/
+#define IPTOS_LOWDELAY          0x10
+#define IPTOS_THROUGHPUT        0x08
+#define IPTOS_RELIABILITY       0x04
+/*      IPTOS_LOWCOST           0x02 XXX */
+
+/* SunOS systems don't have /var/run, but some sites have added it.
+   If you want to put dhcpd.pid in /var/run, define _PATH_DHCPD_PID
+   in site.h. */
 #ifndef _PATH_DHCPD_PID
 #define _PATH_DHCPD_PID	"/etc/dhcpd.pid"
 #endif
@@ -81,32 +105,27 @@ extern int h_errno;
 #define VA_DOTDOTDOT ...
 #define VA_start(list, last) va_start (list, last)
 #define va_dcl
-#define vsnprintf(buf, size, fmt, list) vsprintf (buf, fmt, list)
-#define snprintf(buf, size, fmt, a1, a2, a3) \
-	sprintf(buf, fmt, a1, a2, a3) \
-
 #else /* !__GNUC__*/
 /* Varargs stuff... */
 #include <varargs.h>
 #define VA_DOTDOTDOT va_alist
 #define VA_start(list, last) va_start (list)
-
-#define vsnprintf(buf, size, fmt, list) vsprintf (buf, fmt, list)
 #endif /* !__GNUC__*/
+
+/* SunOS doesn't support limited sprintfs. */
+#define vsnprintf(buf, size, fmt, list) vsprintf (buf, fmt, list)
+#define NO_SNPRINTF
+
+/* SunOS doesn't supply strerror... */
+#define NO_STRERROR
+char *strerror PROTO ((int));
+
+/* SunOS select() doesn't work on streams, so we have to use poll -
+   as usual, SysV can't do networking to save its life. */
+#define USE_POLL
 
 #define EOL	'\n'
 #define VOIDPTR	void *
-
-
-/*
- * strerror is used in  errwarn.c.  If your system doesn't have it,
- * install  one BIND 4.9.3 or sendmail.
- */
-#ifdef __STDC__
-extern char *strerror(int);
-#else
-extern char *strerror();
-#endif
 
 /*
  * Time stuff...
