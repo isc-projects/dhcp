@@ -64,14 +64,24 @@ static u_int32_t checksum (buf, nbytes, sum)
 {
 	int i;
 
+#ifdef DEBUG_CHECKSUM
+	debug ("checksum (%x %d %x)", buf, nbytes, sum);
+#endif
+
 	/* Checksum all the pairs of bytes first... */
 	for (i = 0; i < (nbytes & ~1); i += 2) {
+#ifdef DEBUG_CHECKSUM_VERBOSE
+		debug ("sum = %x", sum);
+#endif
 		sum += (u_int16_t) ntohs(*((u_int16_t *)buf)++);
 	}	
 
 	/* If there's a single byte left over, checksum it, too.   Network
 	   byte order is big-endian, so the remaining byte is the high byte. */
 	if (i < nbytes) {
+#ifdef DEBUG_CHECKSUM_VERBOSE
+		debug ("sum = %x", sum);
+#endif
 		sum += (*buf) << 8;
 	}
 	
@@ -84,12 +94,28 @@ static u_int32_t checksum (buf, nbytes, sum)
 static u_int32_t wrapsum (sum)
 	u_int32_t sum;
 {
+#ifdef DEBUG_CHECKSUM
+	debug ("wrapsum (%x)", sum);
+#endif
+
 	while (sum > 0x10000) {
 		sum = (sum >> 16) + (sum & 0xFFFF);
+#ifdef DEBUG_CHECKSUM_VERBOSE
+		debug ("sum = %x", sum);
+#endif
 		sum += (sum >> 16);
+#ifdef DEBUG_CHECKSUM_VERBOSE
+		debug ("sum = %x", sum);
+#endif
 	}
 	sum = sum ^ 0xFFFF;
+#ifdef DEBUG_CHECKSUM_VERBOSE
+	debug ("sum = %x", sum);
+#endif
 	
+#ifdef DEBUG_CHECKSUM
+	debug ("wrapsum returns %x", htons (sum));
+#endif
 	return htons(sum);
 }
 #endif /* PACKET_ASSEMBLY || PACKET_DECODING */
@@ -158,7 +184,7 @@ void assemble_udp_ip_header (interface, buf, bufix,
 	*bufix += sizeof ip;
 
 	/* Fill out the UDP header */
-	udp.uh_sport = htons (67);		/* XXX */
+	udp.uh_sport = server_port;		/* XXX */
 	udp.uh_dport = port;			/* XXX */
 	udp.uh_ulen = htons(sizeof(udp) + len);
 	memset (&udp.uh_sum, 0, sizeof udp.uh_sum);
@@ -166,6 +192,7 @@ void assemble_udp_ip_header (interface, buf, bufix,
 	/* Compute UDP checksums, including the ``pseudo-header'', the UDP
 	   header and the data. */
 
+#if 0
 	udp.uh_sum =
 		wrapsum (checksum ((unsigned char *)&udp, sizeof udp,
 				   checksum (data, len, 
@@ -175,6 +202,7 @@ void assemble_udp_ip_header (interface, buf, bufix,
 						       IPPROTO_UDP +
 						       (u_int32_t)
 						       ntohs (udp.uh_ulen)))));
+#endif
 
 	/* Copy the udp header into the buffer... */
 	memcpy (&buf [*bufix], &udp, sizeof udp);
@@ -254,6 +282,7 @@ size_t decode_udp_ip_header (interface, buf, bufix, from, data, len)
 	  len -= ip_len + sizeof *udp;
   }
 
+#if 0
   usum = udp -> uh_sum;
   udp -> uh_sum = 0;
 
@@ -270,6 +299,7 @@ size_t decode_udp_ip_header (interface, buf, bufix, from, data, len)
 	  note ("Bad udp checksum: %x %x", usum, sum);
 	  return -1;
   }
+#endif
 
   /* Copy out the port... */
   memcpy (&from -> sin_port, &udp -> uh_sport, sizeof udp -> uh_sport);
