@@ -53,25 +53,37 @@ omapi_object_type_t *dhcpctl_remote_type;
 
 dhcpctl_status dhcpctl_initialize ()
 {
-	omapi_init();
-	omapi_object_type_register (&dhcpctl_callback_type,
-				    "dhcpctl-callback",
-				    dhcpctl_callback_set_value,
-				    dhcpctl_callback_get_value,
-				    dhcpctl_callback_destroy,
-				    dhcpctl_callback_signal_handler,
-				    dhcpctl_callback_stuff_values,
-				    0, 0, 0, 0, 0, 0,
-				    sizeof (dhcpctl_callback_object_t));
-	omapi_object_type_register (&dhcpctl_remote_type,
-				    "dhcpctl-remote",
-				    dhcpctl_remote_set_value,
-				    dhcpctl_remote_get_value,
-				    dhcpctl_remote_destroy,
-				    dhcpctl_remote_signal_handler,
-				    dhcpctl_remote_stuff_values,
-				    0, 0, 0, 0, 0, 0,
-				    sizeof (dhcpctl_remote_object_t));
+	isc_result_t status;
+
+	status = omapi_init();
+	if (status != ISC_R_SUCCESS)
+		return status;
+
+	status = omapi_object_type_register (&dhcpctl_callback_type,
+					     "dhcpctl-callback",
+					     dhcpctl_callback_set_value,
+					     dhcpctl_callback_get_value,
+					     dhcpctl_callback_destroy,
+					     dhcpctl_callback_signal_handler,
+					     dhcpctl_callback_stuff_values,
+					     0, 0, 0, 0, 0, 0,
+					     sizeof
+					     (dhcpctl_callback_object_t));
+	if (status != ISC_R_SUCCESS)
+		return status;
+
+	status = omapi_object_type_register (&dhcpctl_remote_type,
+					     "dhcpctl-remote",
+					     dhcpctl_remote_set_value,
+					     dhcpctl_remote_get_value,
+					     dhcpctl_remote_destroy,
+					     dhcpctl_remote_signal_handler,
+					     dhcpctl_remote_stuff_values,
+					     0, 0, 0, 0, 0, 0,
+					     sizeof (dhcpctl_remote_object_t));
+	if (status != ISC_R_SUCCESS)
+		return status;
+
 	return ISC_R_SUCCESS;
 }
 
