@@ -51,7 +51,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: socket.c,v 1.54 2000/09/12 20:23:54 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: socket.c,v 1.55 2000/09/30 01:24:55 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -357,6 +357,13 @@ void maybe_setup_fallback ()
 	struct interface_info *fbi = (struct interface_info *)0;
 	if (setup_fallback (&fbi, MDL)) {
 		fbi -> wfdesc = if_register_socket (fbi);
+		fbi -> rfdesc = fbi -> wfdesc;
+		log_info ("Sending on   Socket/%s%s%s",
+		      fbi -> name,
+		      (fbi -> shared_network ? "/" : ""),
+		      (fbi -> shared_network ?
+		       fbi -> shared_network -> name : ""));
+	
 		status = omapi_register_io_object ((omapi_object_t *)fbi,
 						   if_readsocket, 0,
 						   fallback_discard, 0, 0);
