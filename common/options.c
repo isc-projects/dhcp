@@ -195,6 +195,8 @@ void cons_options (inpacket, outpacket, options, overload)
 
 	/* If the client has provided a list of options that it wishes
 	   returned, use it to prioritize. */
+	/* XXX Some options are *required*, and client may not ask for
+	   them. */
 	if (inpacket &&
 	    inpacket -> options [DHO_DHCP_PARAMETER_REQUEST_LIST].data) {
 		priority_list =
@@ -400,8 +402,6 @@ int store_option (options, code, buffer, buflen, stored_length)
 {
 	int length = options [code] -> len - stored_length [code];
 	int bufix = 0;
-printf ("store_option: length = %d  buflen = %d  packet %d  stored %d\n",
-	length, buflen, options [code] -> len, stored_length [code]);
 	if (length > buflen) {
 		length = buflen;
 	}
@@ -512,7 +512,6 @@ char *pretty_print_option (code, data, len)
 	if (numhunk < 0)
 		numhunk = 1;
 
-printf ("numhunk = %d  numelem = %d\n", numhunk, numelem);
 	/* Cycle through the array (or hunk) printing the data. */
 	for (i = 0; i < numhunk; i++) {
 		for (j = 0; j < numelem; j++) {
