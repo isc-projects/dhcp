@@ -70,7 +70,7 @@
 
 #if defined(LIBC_SCCS) && !defined(lint)
 static const char sccsid[] = "@(#)res_init.c	8.1 (Berkeley) 6/7/93";
-static const char rcsid[] = "$Id: res_init.c,v 1.4 2001/02/22 07:28:23 mellon Exp $";
+static const char rcsid[] = "$Id: res_init.c,v 1.4.2.1 2001/06/22 02:57:54 mellon Exp $";
 #endif /* LIBC_SCCS and not lint */
 
 #include <sys/types.h>
@@ -132,7 +132,7 @@ static u_int32_t net_mask (struct in_addr);
  *
  * Return 0 if completes successfully, -1 on error
  */
-extern int __res_vinit(res_state, int);
+extern int minires_vinit(res_state, int);
 
 #if defined (TRACING)
 u_int trace_mr_res_randomid(u_int);
@@ -141,12 +141,12 @@ u_int trace_mr_res_randomid(u_int);
 int
 res_ninit(res_state statp) {
 
-	return (__res_vinit(statp, 0));
+	return (minires_vinit(statp, 0));
 }
 
 /* This function has to be reachable by res_data.c but not publically. */
 int
-__res_vinit(res_state statp, int preinit) {
+minires_vinit(res_state statp, int preinit) {
 	register FILE *fp;
 	register char *cp, **pp;
 	register int n;
