@@ -49,11 +49,10 @@ typedef struct {
 } dhcpctl_remote_object_t;
 
 #ifndef __cplusplus
-// for some reason, these cause problems when included in C++ classes
+/* for some reason, these cause problems when included in C++ classes */
 omapi_object_type_t *dhcpctl_callback_type;
 omapi_object_type_t *dhcpctl_remote_type;
 #endif
-#endif _DHCPCTL_H_
 
 dhcpctl_status dhcpctl_initialize (void);
 dhcpctl_status dhcpctl_connect (dhcpctl_handle *,
@@ -101,3 +100,4 @@ isc_result_t dhcpctl_remote_signal_handler (omapi_object_t *,
 isc_result_t dhcpctl_remote_stuff_values (omapi_object_t *,
 					  omapi_object_t *,
 					  omapi_object_t *);
+#endif /* _DHCPCTL_H_ */
