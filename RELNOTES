@@ -1,6 +1,6 @@
 		     nternet Software Consortium
 	   Dynamic Host Configuration Protocol Distribution
-		   Version 3, Beta 1, Patchlevel 10
+		   Version 3, Beta 1, Patchlevel 11
 			   November 12, 1999
 
 			    Release Notes
@@ -39,6 +39,9 @@ and Brian Murrell at BC Tel Advanced Communications.   I'd like to
 express my thanks to all of these good people here.
 
 		     Changes since November 3, 1999
+
+- Patchlevel 10 was mis-tagged, so this is a retag of what should have
+  been pl10.   Sigh.
 
 - Fix a structure size bug on Linux/ARM32, thanks to Chris Demetriou and
   some other unidentified guy at Bell Labs.
@@ -81,13 +84,12 @@ express my thanks to all of these good people here.
   pool expiry that is done after the database is read results in
   leases being written, the server will not dump core.
 
->>>>>>> 1.23.2.9
 		       Changes on October 27, 1999
 
 - Fix a core dump that happens with clients that send DHCPRELEASE
   messages with no client identifier.
 
-		     Changes since October 27, 1999
+		     Changes on October 26, 1999
 
 - Add new PTR record _after_ zapping old PTR record - otherwise, the net
   result is that there's no PTR record!   Thanks to Irina Goble for catching
