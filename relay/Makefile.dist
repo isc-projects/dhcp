@@ -31,6 +31,7 @@
 #
 
 CATMANPAGES = dhcrelay.cat8
+SEDMANPAGES = dhcrelay.cat8
 SRCS   = dhcrelay.c
 OBJS   = dhcrelay.o
 PROG   = dhcrelay
@@ -63,7 +64,7 @@ clean:
 	-rm -f $(OBJS) dhclient.o
 	
 realclean: clean
-	-rm -f $(PROG) $(CATMANPAGES) *~ #*
+	-rm -f $(PROG) $(CATMANPAGES) $(SEDMANPAGES) *~ #*
 
 distclean: realclean
 	-rm -f Makefile
