@@ -1,6 +1,5 @@
 	    Internet Software Consortium DHCP Distribution
-		    Version 3, Release Candidate 4
-			    April 30, 2001
+		    Version 3.1, Working Branch
 
 			    Release Notes
 
@@ -56,6 +55,10 @@ Murrell at BC Tel Advanced Communications.  I'd like to express my
 thanks to all of these good people here, both for working on the code
 and for prodding me into improving it.
 
+		Changes since 3.0 Release Candidate 9
+
+- Fix a bug in lease allocation for Dynamic BOOTP clients.
+
 	  Changes since 3.0 Release Candidate 8 Patchlevel 2
 
 - Fix a bug that prevented update-static-leases from working.
@@ -77,7 +80,6 @@ and for prodding me into improving it.
   string. 
 
 - Clean up the omshell, dhcpctl and omapi man pages a bit.
-
 
 		Changes since 3.0 Release Candidate 8
 
@@ -177,6 +179,80 @@ and for prodding me into improving it.
 - Fix a bunch of bugs in the handling of clients that have existing
   leases when the try to renew their leases while failover is
   operating.
+
+		Changes since 3.0 Release Candidate 6
+
+- Fix a core dump that could happen when processing a DHCPREQUEST from
+  a client that had a host declaration that contained both a
+  fixed-address declaration and a dhcp-client-identifier option
+  declaration, if the client identifier was longer than nine bytes.
+
+- Fix a memory leak that could happen in certain obscure cases when
+  using omapi to manipulate leases.
+
+- Fix some bugs and omissions in omshell.
+
+
+		Changes since 3.0 Release Candidate 5
+
+- Fix a bug in omapi_object_dereference that prevented objects in
+  chains from having their reference counts decreased on dereference.
+
+- Fix a bug in omapi_object_dereference that would prevent object
+  chains from being freed upon removal of the last reference external
+  to the chain.
+
+- Fix a number of other memory leaks in the OMAPI protocol subsystem.
+
+- Add code in the OMAPI protocol handler to trace memory leakage.
+
+- Clean up the memory allocation/reference history printer.
+
+- Support input of dotted quads and colon-seperated hex lists as
+  attribute values in omshell.
+
+- Fix a typo in the linux interface discovery code.
+
+- Conditionalize a piece of trace code that wasn't conditional.
+
+		Changes since 3.0 Release Candidate 4
+
+- Fix a bug that would prevent leases from being abandoned properly on
+  DHCPDECLINE.
+
+- Fix failover peer OMAPI support.
+
+- In failover, correctly handle expiration of leases.   Previously,
+  leases would never be reclaimed because they couldn't make the
+  transition from EXPIRED to FREE.
+
+- Fix some broken failover state transitions.
+
+- Documentation fixes.
+
+- Take out an unnecessary check in DHCP relay agent information option
+  stashing code that was preventing REBINDING clients from rebinding.
+
+- Prevent failover peers from allocating leases in DHCPREQUEST
+  processing if the lease belongs to the other server.
+
+- Record server version in lease file introductory comment.
+
+- Correctly report connection errors in OMAPI and failover.
+
+- Make authentication signature algorithm name comparisons in OMAPI
+  case-insensitive.
+
+- Fix compile problem on SunOS 4.x
+
+- If a signature algorithm is not termined with '.', terminate it so
+  that comparisons between fully-qualified names will work
+  consistently.
+
+- Different SIOCGIFCONF probe code, may "fix" problem on some Linux
+  systems with the probe not working correctly.
+
+- Don't allow user to type omapi key on command line of omshell.
 
 		Changes since 3.0 Release Candidate 3
 
