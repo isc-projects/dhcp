@@ -552,7 +552,7 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
        you can write a class declaration as follows:
        class "customer" {
          match if exists agent.circuit-id;
-         spawn with agent.circuit-id;
+         spawn with option agent.circuit-id;
          lease limit 4;
        }
 
@@ -1179,7 +1179,7 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
        set in any scope, and will affect all clients  covered  by
        that scope.
 
-       TThhee _u_s_e_-_l_e_a_s_e_-_a_d_d_r_-_f_o_r_-_d_e_f_a_u_l_t_-_r_o_u_t_e ssttaatteemmeenntt
+       TThhee _a_l_w_a_y_s_-_b_r_o_a_d_c_a_s_t ssttaatteemmeenntt
 
 
 
@@ -1191,6 +1191,38 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
 
 dhcpd.conf(5)                                       dhcpd.conf(5)
 
+
+        aallwwaayyss--bbrrooaaddccaasstt _f_l_a_g;;
+
+       The  DHCP  and BOOTP protocols both require DHCP and BOOTP
+       clients to set the broadcast bit in the flags field of the
+       BOOTP  message header.  Unfortunately, some DHCP and BOOTP
+       clients do not do this,  and  therefore  may  not  receive
+       responses  from  the DHCP server.   The DHCP server can be
+       made to always broadcast its responses to clients by  set­
+       ting  this flag to 'on' for the relevant scope.   To avoid
+       creating excess broadcast traffic on your network, we rec­
+       ommend  that you restrict the use of this option to as few
+       clients as possible.   For  example,  the  Microsoft  DHCP
+       client is known not to have this problem, as are the Open­
+       Transport and ISC DHCP clients.
+
+       TThhee _o_n_e_-_l_e_a_s_e_-_p_e_r_-_c_l_i_e_n_t ssttaatteemmeenntt
+
+        oonnee--lleeaassee--ppeerr--cclliieenntt _f_l_a_g;;
+
+       If this flag is enabled, whenever a client sends a DHCPRE­
+       QUEST  for  a  particular lease, the server will automati­
+       cally free any other leases the client holds.   This  pre­
+       sumes  that  when  the  client sends a DHCPREQUEST, it has
+       forgotten any lease not mentioned  in  the  DHCPREQUEST  -
+       i.e.,  the  client has only a single network interface _a_n_d
+       it does not remember leases it's holding  on  networks  to
+       which  it  is  not  currently attached.   Neither of these
+       assumptions are guaranteed or provable, so we urge caution
+       in the use of this statement.
+
+       TThhee _u_s_e_-_l_e_a_s_e_-_a_d_d_r_-_f_o_r_-_d_e_f_a_u_l_t_-_r_o_u_t_e ssttaatteemmeenntt
 
         uussee--lleeaassee--aaddddrr--ffoorr--ddeeffaauulltt--rroouuttee _f_l_a_g;;
 
@@ -1214,6 +1246,18 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
 
        The  use  of the server-identifier statement is not recom­
        mended - the only reason to use it is  to  force  a  value
+
+
+
+                                                               19
+
+
+
+
+
+dhcpd.conf(5)                                       dhcpd.conf(5)
+
+
        other than the default value to be sent on occasions where
        the default value would be incorrect.   The default  value
        is  the first IP address associated with the physical net­
@@ -1246,18 +1290,6 @@ VVEENNDDOORR EENNCCAAPPSSUULLAATTEEDD OOPPTTIIOONNSS
        You can send this option to clients in one of two  ways  -
        either  define the data directly, using a text string or a
        colon-seperated list of hexadecimal values, or  define  an
-
-
-
-                                                               19
-
-
-
-
-
-dhcpd.conf(5)                                       dhcpd.conf(5)
-
-
        option  space,  define  some options in that option space,
        provide values for them,  and  specify  that  that  option
        space  should be used to generate the vveennddoorr--eennccaappssuullaatteedd--
@@ -1280,6 +1312,17 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
             option SUNW.server-address code 2 = ip-address;
             option SUNW.server-name code 3 = text;
             option SUNW.root-path code 4 = text;
+
+
+
+                                                               20
+
+
+
+
+
+dhcpd.conf(5)                                       dhcpd.conf(5)
+
 
        Once  you  have  defined an option space and some options,
        you can  set  up  scopes  that  define  values  for  those
@@ -1312,18 +1355,6 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
        to  a  particular  class in the local scope.   The vveennddoorr--
        ooppttiioonn--ssppaaccee declaration indicates that in that scope, the
        vveennddoorr--eennccaappssuullaatteedd--ooppttiioonnss  option  should be constructed
-
-
-
-                                                               20
-
-
-
-
-
-dhcpd.conf(5)                                       dhcpd.conf(5)
-
-
        using the values of all the options  in  the  SUNW  option
        space.
 
@@ -1336,37 +1367,6 @@ AAUUTTHHOORR
        provided by the Internet Software Consortium.  Information
        about the Internet Software Consortium  can  be  found  at
        hhttttpp::////wwwwww..iisscc..oorrgg//iisscc..
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
