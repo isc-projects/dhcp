@@ -1,5 +1,5 @@
 #if !defined(lint) && !defined(SABER)
-static const char rcsid[] = "$Id: res_findzonecut.c,v 1.1 2000/02/02 07:28:15 mellon Exp $";
+static const char rcsid[] = "$Id: res_findzonecut.c,v 1.2 2000/02/02 08:21:08 mellon Exp $";
 #endif /* not lint */
 
 /*
@@ -75,7 +75,6 @@ static void	free_nsrr(rrset_ns *, rr_ns *);
 static rr_ns *	find_ns(rrset_ns *, const char *);
 static int	do_query(res_state, const char *, ns_class, ns_type,
 			 u_char *, ns_msg *);
-static void	dprintf(const char *, ...);
 
 /* Public. */
 
@@ -579,15 +578,4 @@ do_query(res_state statp, const char *dname, ns_class class, ns_type qtype,
 		       ns_rr_type(rr) == ns_t_dname));
 	}
 	return (n);
-}
-
-static void
-dprintf(const char *fmt, ...) {
-	va_list ap;
-
-	va_start(ap, fmt);
-	fputs(";; res_findzonecut: ", stderr);
-	vfprintf(stderr, fmt, ap);
-	fputc('\n', stderr);
-	va_end(ap);
 }
