@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.57 1997/12/06 04:04:50 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.57.2.1 1998/05/18 05:28:06 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -114,6 +114,15 @@ void dhcpdiscover (packet)
 			note ("no free leases on subnet %s",
 			      packet -> shared_network -> name);
 			return;
+		}
+
+		/* If we find an abandoned lease, take it, but print a
+		   warning message, so that if it continues to lose,
+		   the administrator will eventually investigate. */
+		if (lease -> flags & ABANDONED_LEASE) {
+			warn ("Reclaiming abandoned IP address %s.\n",
+			      piaddr (lease -> ip_addr));
+			lease -> flags &= ~ABANDONED_LEASE;
 		}
 
 		/* Try to find a host_decl that matches the client
