@@ -5,6 +5,9 @@
 
 - Always write out two digits for single-byte quantities in arrays.
 
+- When parsing a lease database, correctly transfer the client
+  hostname and hostname to the memory-resident lease structure.
+
 970605
 
 - Add client-hostname token to lexer so that the parser can use it.

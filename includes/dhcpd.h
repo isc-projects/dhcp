@@ -547,7 +547,8 @@ void dhcpinform PROTO ((struct packet *));
 void nak_lease PROTO ((struct packet *, struct iaddr *cip));
 void ack_lease PROTO ((struct packet *, struct lease *, unsigned char, TIME));
 void dhcp_reply PROTO ((struct lease *));
-struct lease *find_lease PROTO ((struct packet *, struct shared_network *));
+struct lease *find_lease PROTO ((struct packet *,
+				 struct shared_network *, int *));
 struct lease *mockup_lease PROTO ((struct packet *,
 				   struct shared_network *,
 				   struct host_decl *));
