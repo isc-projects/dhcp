@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dispatch.c,v 1.19 1996/08/27 09:48:40 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dispatch.c,v 1.20 1996/08/28 01:37:06 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -63,12 +63,13 @@ void discover_interfaces ()
 	struct interface_info *last;
 	static char buf [8192];
 	struct ifconf ic;
+	struct ifreq ifr;
 	int i;
 	int sock;
 	int address_count = 0;
 	struct subnet *subnet;
 	struct shared_network *share;
-	struct sockaddr_in *foo;
+	struct sockaddr_in foo;
 	int ir;
 	char *s;
 #ifdef USE_FALLBACK
@@ -83,7 +84,7 @@ void discover_interfaces ()
 	ic.ifc_len = sizeof buf;
 	ic.ifc_ifcu.ifcu_buf = (caddr_t)buf;
 	i = ioctl(sock, SIOCGIFCONF, &ic);
-	close (sock);
+
 	if (i < 0)
 		error ("ioctl: SIOCGIFCONF: %m");
 
@@ -109,6 +110,19 @@ void discover_interfaces ()
 		}
 #endif
 
+
+		/* See if this is the sort of interface we want to
+		   deal with. */
+		strcpy (ifr.ifr_name, ifp -> ifr_name);
+		if (ioctl (sock, SIOCGIFFLAGS, &ifr) < 0)
+			error ("Can't get interface flags for %s: %m",
+			       ifr.ifr_name);
+
+		/* Skip loopback and point-to-point interfaces. */
+		if ((ifr.ifr_flags & IFF_LOOPBACK) ||
+		    (ifr.ifr_flags & IFF_POINTOPOINT))
+			continue;
+		
 
 		/* See if we've seen an interface that matches this one. */
 		for (tmp = interfaces; tmp; tmp = tmp -> next)
@@ -147,11 +161,13 @@ void discover_interfaces ()
 			struct iaddr addr;
 
 			/* Get a pointer to the address... */
-			foo = (struct sockaddr_in *)(&ifp -> ifr_addr);
+			memcpy (&foo, &ifp -> ifr_addr,
+				sizeof ifp -> ifr_addr);
 
 			/* We don't want the loopback interface. */
-			if (foo -> sin_addr.s_addr == htonl (INADDR_LOOPBACK))
+			if (foo.sin_addr.s_addr == htonl (INADDR_LOOPBACK))
 				continue;
+
 
 			/* If this is the first real IP address we've
 			   found, keep a pointer to ifreq structure in
@@ -161,7 +177,7 @@ void discover_interfaces ()
 
 			/* Grab the address... */
 			addr.len = 4;
-			memcpy (addr.iabuf, &foo -> sin_addr.s_addr,
+			memcpy (addr.iabuf, &foo.sin_addr.s_addr,
 				addr.len);
 
 			/* If this address matches the server identifier,
@@ -222,7 +238,8 @@ void discover_interfaces ()
 		}
 		last = tmp;
 
-		foo = (struct sockaddr_in *)(&tmp -> tif -> ifr_addr);
+		memcpy (&foo, &tmp -> tif -> ifr_addr,
+			sizeof tmp -> tif -> ifr_addr);
 
 		/* Find subnets that don't have valid interface
 		   addresses... */
@@ -238,7 +255,7 @@ void discover_interfaces ()
 				   to the first address we found. */
 				subnet -> interface_address.len = 4;
 				memcpy (subnet -> interface_address.iabuf,
-					&foo -> sin_addr.s_addr, 4);
+					&foo.sin_addr.s_addr, 4);
 			}
 		}
 
@@ -249,7 +266,7 @@ void discover_interfaces ()
 				warn ("no server identifier specified.");
 			server_identifier.len = 4;
 			memcpy (server_identifier.iabuf,
-				&foo -> sin_addr.s_addr, 4);
+				&foo.sin_addr.s_addr, 4);
 			/* Flag the server identifier as having matched,
 			   so we don't generate a spurious warning. */
 			server_identifier_matched = 1;
@@ -264,6 +281,8 @@ void discover_interfaces ()
 	}
 	if (!server_identifier_matched)
 		warn ("no interface address matches server identifier");
+
+	close (sock);
 
 #ifdef USE_FALLBACK
 	strcpy (fallback_interface.name, "fallback");	
