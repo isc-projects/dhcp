@@ -41,7 +41,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.120 2001/02/12 19:26:35 mellon Exp $ Copyright (c) 1995-2001 Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.121 2001/02/15 22:17:05 neild Exp $ Copyright (c) 1995-2001 Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2243,7 +2243,7 @@ void script_init (client, reason, medium)
 				       "", "medium", "%s", medium -> string);
 
 		client_envadd (client, "", "reason", "%s", reason);
-		client_envadd (client, "", "pid", "%d", getpid ());
+		client_envadd (client, "", "pid", "%ld", (long int)getpid ());
 	}
 }
 
