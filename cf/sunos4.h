@@ -45,6 +45,17 @@
 #define u_int16_t	unsigned short 
 #define u_int32_t	unsigned long 
 
+/* No endian.h either. */
+/*
+ * Definitions for byte order, according to byte significance from low
+ * address to high.
+ */
+#define LITTLE_ENDIAN   1234    /* LSB first: i386, vax */
+#define BIG_ENDIAN      4321    /* MSB first: 68000, ibm, net */
+#define PDP_ENDIAN      3412    /* LSB first in word, MSW first in long */
+
+#define BYTE_ORDER      BIG_ENDIAN
+
 /* The jmp_buf type is an array on SunOS, so we can't dereference it
    and must declare it differently. */
 #define jbp_decl(x)	jmp_buf x
