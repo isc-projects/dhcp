@@ -16,7 +16,7 @@
  */
 
 #ifndef lint
-static const char rcsid[] = "$Id: ns_name.c,v 1.1.2.2 2002/11/14 19:52:04 dhankins Exp $";
+static const char rcsid[] = "$Id: ns_name.c,v 1.1.2.3 2002/11/14 22:06:39 dhankins Exp $";
 #endif
 
 #include <sys/types.h>
@@ -255,17 +255,21 @@ ns_name_ntol(const u_char *src, u_char *dst, size_t dstsiz) {
 	dn = dst;
 	eom = dst + dstsiz;
 
+	if (dn >= eom) {
+		errno = EMSGSIZE;
+		return (-1);
+	}
 	while ((n = *cp++) != 0) {
 		if ((n & NS_CMPRSFLGS) != 0) {
 			/* Some kind of compression pointer. */
 			errno = EMSGSIZE;
 			return (-1);
 		}
+		*dn++ = n;
 		if (dn + n >= eom) {
 			errno = EMSGSIZE;
 			return (-1);
 		}
-		*dn++ = n;
 		for ((void)NULL; n > 0; n--) {
 			c = *cp++;
 			if (isupper(c))
@@ -273,10 +277,6 @@ ns_name_ntol(const u_char *src, u_char *dst, size_t dstsiz) {
 			else
 				*dn++ = c;
 		}
-	}
-	if (dn >= eom) {
-		errno = EMSGSIZE;
-		return (-1);
 	}
 	*dn++ = '\0';
 	return (dn - dst);

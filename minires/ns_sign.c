@@ -16,7 +16,7 @@
  */
 
 #ifndef lint
-static const char rcsid[] = "$Id: ns_sign.c,v 1.4.2.1 2001/05/17 20:47:33 mellon Exp $";
+static const char rcsid[] = "$Id: ns_sign.c,v 1.4.2.2 2002/11/14 22:06:39 dhankins Exp $";
 #endif
 
 #if defined (TRACING)
@@ -87,7 +87,7 @@ ns_sign(u_char *msg, unsigned *msglen, unsigned msgsize, int error, void *k,
 
 	dst_init();
 	if (msg == NULL || msglen == NULL || sig == NULL || siglen == NULL)
-		ISC_R_INVALIDARG;
+		return ISC_R_INVALIDARG;
 
 	/* Name. */
 	if (key != NULL && error != ns_r_badsig && error != ns_r_badkey)
@@ -118,7 +118,7 @@ ns_sign(u_char *msg, unsigned *msglen, unsigned msgsize, int error, void *k,
 	else
 		n = dn_comp("", cp, (unsigned)(eob - cp), NULL, NULL);
 	if (n < 0)
-		ISC_R_NOSPACE;
+		return ISC_R_NOSPACE;
 	alg = cp;
 	cp += n;
 	
@@ -190,7 +190,7 @@ ns_sign(u_char *msg, unsigned *msglen, unsigned msgsize, int error, void *k,
 		n = dst_sign_data(SIG_MODE_FINAL, key, &ctx, NULL, 0,
 				  sig, *siglen);
 		if (n < 0)
-			ISC_R_BADKEY;
+			return ISC_R_BADKEY;
 		*siglen = n;
 	} else
 		*siglen = 0;
