@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dispatch.c,v 1.27.2.1 1997/09/16 23:08:51 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dispatch.c,v 1.27.2.2 1997/11/29 08:04:30 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -350,8 +350,12 @@ void dispatch ()
 		GET_TIME (&cur_time);
 
 		/* Not likely to be transitory... */
-		if (count < 0)
-			error ("poll: %m");
+		if (count < 0) {
+			if (errno == EAGAIN || errno == EINTR)
+				continue;
+			else
+				error ("poll: %m");
+		}
 
 		i = 0;
 		for (l = interfaces; l; l = l -> next) {
