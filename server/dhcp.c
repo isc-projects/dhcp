@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.103 1999/07/19 01:15:22 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.104 1999/07/21 14:30:28 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1247,6 +1247,19 @@ void ack_lease (packet, lease, offer, when, msg)
 	lt.subnet = lease -> subnet;
 	lt.billing_class = lease -> billing_class;
 
+	/* Set a flag if this client is a broken client that NUL
+	   terminates string options and expects us to do likewise. */
+	lease -> flags &= ~MS_NULL_TERMINATION;
+	if ((oc = lookup_option (&dhcp_universe, packet -> options,
+				 DHO_HOST_NAME))) {
+		if (!oc -> expression)
+			if (oc -> data.len &&
+			    oc -> data.data [oc -> data.len - 1] == 0) {
+				lease -> flags |= MS_NULL_TERMINATION;
+				oc -> data.len--;
+			}
+	}
+
 	/* Do the DDNS update.  It needs to be done here so that the lease
 	   structure values for the forward and reverse names are in place for
 	   supercede()->write_lease() to be able to write into the dhcpd.leases
@@ -1301,19 +1314,6 @@ void ack_lease (packet, lease, offer, when, msg)
 
 	/* Remember the interface on which the packet arrived. */
 	state -> ip = packet -> interface;
-
-	/* Set a flag if this client is a broken client that NUL
-	   terminates string options and expects us to do likewise. */
-	lease -> flags &= ~MS_NULL_TERMINATION;
-	if ((oc = lookup_option (&dhcp_universe, packet -> options,
-				 DHO_HOST_NAME))) {
-		if (evaluate_option_cache (&d1, packet,
-					   packet -> options, lease, oc)) {
-			if (d1.data [d1.len - 1] == '\0')
-				lease -> flags |= MS_NULL_TERMINATION;
-			data_string_forget (&d1, "ack_lease");
-		}
-	}
 
 	/* Remember the giaddr, xid, secs, flags and hops. */
 	state -> giaddr = packet -> raw -> giaddr;
