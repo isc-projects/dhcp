@@ -89,6 +89,8 @@ enum expr_op {
 	expr_config_option,
 	expr_host_decl_name,
 	expr_pick_first_value,
+ 	expr_lease_time,
+ 	expr_dns_update,
 };
 
 struct expression {
@@ -137,6 +139,12 @@ struct expression {
 			struct expression *car;
 			struct expression *cdr;
 		} pick_first_value;
+ 		struct {
+ 			struct expression *type;
+ 			struct expression *expr1;
+ 			struct expression *expr2;
+ 			struct expression *ttl;
+ 		} dns_update;
 	} data;
 	int flags;
 #	define EXPR_EPHEMERAL	1

@@ -191,6 +191,8 @@ enum dhcp_token {
 	EXPIRY = 409,
 	RELEASE = 410,
 	COMMIT = 411,
+	DNS_UPDATE = 412,
+	LEASE_TIME = 413,
 };
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\

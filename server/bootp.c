@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bootp.c,v 1.52 1999/07/18 19:38:33 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bootp.c,v 1.53 1999/07/19 01:15:22 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -268,7 +268,7 @@ void bootp (packet)
 
 	/* Execute the commit statements, if there are any. */
 	execute_statements (packet, lease, packet -> options,
-			    state -> options, lease -> on_commit);
+			    options, lease -> on_commit);
 
 	/* We're done with the option state. */
 	option_state_dereference (&options, "bootrequest");

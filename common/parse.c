@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.29 1999/07/16 21:33:59 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.30 1999/07/19 01:15:11 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1883,6 +1883,67 @@ int parse_non_binary (expr, cfile, lose, context)
 			goto norparen;
 		break;
 
+	      case DNS_UPDATE:
+#if !defined (NSUPDATE)
+		parse_warn ("you are using dns-update() but have not compiled with the NSUPDATE switch.");
+		skip_to_semi (cfile);
+		*lose = 1;
+		return 0;
+#endif
+		token = next_token (&val, cfile);
+		if (!expression_allocate (expr, "parse_expression: DNS_UPDATE"))
+			log_fatal ("can't allocate expression");
+		(*expr) -> op = expr_dns_update;
+
+		token = next_token (&val, cfile);
+		if (token != LPAREN)
+			goto nolparen;
+
+		if (!(parse_data_expression
+		      (&(*expr) -> data.dns_update.type, cfile, lose))) {
+			expression_dereference (expr,
+						"parse_expression: noRRtype");
+			parse_warn ("expecting DNS RR type.");
+			skip_to_semi (cfile);
+			*lose = 1;
+			return 0;
+		}
+
+		token = next_token (&val, cfile);
+		if (token != COMMA)
+			goto nocomma;
+
+		if (!(parse_data_expression
+		      (&(*expr) -> data.dns_update.expr1, cfile, lose)))
+			goto nodata;
+
+		token = next_token (&val, cfile);
+		if (token != COMMA)
+			goto nocomma;
+
+		if (!(parse_data_expression
+		      (&(*expr) -> data.dns_update.expr2, cfile, lose)))
+			goto nodata;
+
+		token = next_token (&val, cfile);
+		if (token != COMMA)
+			goto nocomma;
+
+		if (!(parse_data_expression
+		      (&(*expr) -> data.dns_update.ttl, cfile, lose))) {
+			expression_dereference (expr,
+						"parse_expression: nottl");
+			parse_warn ("expecting data expression.");
+			skip_to_semi (cfile);
+			*lose = 1;
+			return 0;
+		}
+
+		token = next_token (&val, cfile);
+		if (token != RPAREN)
+			goto norparen;
+		break;
+
 	      case OPTION:
 	      case CONFIG_OPTION:
 		if (!expression_allocate (expr, "parse_expression: OPTION"))
@@ -1913,6 +1974,14 @@ int parse_non_binary (expr, cfile, lose, context)
 					  "parse_expression: LEASED_ADDRESS"))
 			log_fatal ("can't allocate expression");
 		(*expr) -> op = expr_leased_address;
+		break;
+
+	      case LEASE_TIME:
+		token = next_token (&val, cfile);
+		if (!expression_allocate (expr,
+					"parse_expression: LEASED_LEASE_TIME"))
+			log_fatal ("can't allocate expression");
+		(*expr) -> op = expr_lease_time;
 		break;
 
 	      case HOST_DECL_NAME:

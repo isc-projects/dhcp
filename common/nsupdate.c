@@ -25,7 +25,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: nsupdate.c,v 1.5 1999/07/18 19:37:23 mellon Exp $ Copyright (c) 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: nsupdate.c,v 1.6 1999/07/19 01:15:11 mellon Exp $ Copyright (c) 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -38,7 +38,8 @@ static char copyright[] =
    necessary which can be any combination and number of remove A, add A,
    remove PTR, add PTR */
 
-/* Return the forward name of a lease. */
+#if 0
+/* Return the reverse name of a lease. */
 char *ddns_rev_name(lease, state, packet)
 	struct lease *lease;
 	struct lease_state *state;
@@ -176,8 +177,9 @@ char *ddns_fwd_name(lease, state, packet)
 #endif
 	return hostname;
 }
+#endif
 
-int nsupdateA(hostname, ip_addr, ttl, opcode)
+static int nsupdateA(hostname, ip_addr, ttl, opcode)
 	char *hostname;
 	char *ip_addr;
 	u_int32_t ttl;
@@ -237,7 +239,7 @@ int nsupdateA(hostname, ip_addr, ttl, opcode)
 	return z;
 }
 
-int nsupdatePTR(hostname, revname, ttl, opcode)
+static int nsupdatePTR(revname, hostname, ttl, opcode)
 	char *hostname;
 	char *revname;
 	u_int32_t ttl;
@@ -262,6 +264,7 @@ int nsupdatePTR(hostname, revname, ttl, opcode)
 	return z;
 }
 
+#if 0
 void nsupdate(lease, state, packet, opcode)
 	struct lease *lease;
 	struct lease_state *state;
@@ -271,6 +274,7 @@ void nsupdate(lease, state, packet, opcode)
 	char	*hostname, *revname;
 	u_int32_t	ttl = 0;
 
+return;
 	if (!(opcode == ADD || opcode == DELETE))
 		return;
 
@@ -325,7 +329,7 @@ void nsupdate(lease, state, packet, opcode)
 			if (lease -> ddns_rev_name &&
 			    (strcmp(hostname, lease -> ddns_fwd_name) ||
 			     strcmp(revname, lease -> ddns_rev_name)) &&
-			    nsupdatePTR(lease -> ddns_fwd_name, revname,
+			    nsupdatePTR(revname, lease -> ddns_fwd_name,
 					      ttl, DELETE)) {
 				/* clear the forward DNS name pointer */
 				if (lease -> ddns_rev_name)
@@ -366,7 +370,7 @@ void nsupdate(lease, state, packet, opcode)
 
 		if (!lease -> ddns_rev_name) {
 			/* add a PTR RR */
-			if (nsupdatePTR(hostname, revname, ttl, ADD)) {
+			if (nsupdatePTR(revname, hostname, ttl, ADD)) {
 				/* remember in the lease struct for a release */
 				lease -> ddns_rev_name =
 				       dmalloc(strlen(revname) + 1, "nsupdate");
@@ -382,8 +386,9 @@ void nsupdate(lease, state, packet, opcode)
 				      piaddr(lease->ip_addr), ttl, DELETE);
 
 			if (lease -> ddns_rev_name &&
-			    nsupdatePTR(lease -> ddns_fwd_name,
-					lease -> ddns_rev_name, ttl, opcode)) {
+			    nsupdatePTR(lease -> ddns_rev_name,
+					lease -> ddns_fwd_name,
+					ttl, opcode)) {
 				/* clear the reverse DNS name pointer */
 				if (lease -> ddns_rev_name)
 					dfree(lease -> ddns_rev_name,
@@ -403,5 +408,96 @@ void nsupdate(lease, state, packet, opcode)
 	}
 	
 	return;
+}
+#endif
+
+/* public function to update an A record if needed */
+int updateA(struct data_string *lhs, struct data_string *rhs, unsigned int ttl,
+	struct lease *lease)
+{
+
+	static char hostname[MAXDNAME];
+	static char ipaddr[MAXDNAME];
+
+	hostname[0] = '\0';
+	strncat(hostname, lhs->data, lhs->len);
+	hostname[lhs->len] = '\0';
+	
+	ipaddr[0] = '\0';
+	strncat(ipaddr, rhs->data, rhs->len);
+	ipaddr[rhs->len] = '\0';
+	
+	/* delete an existing A if the one to be added is different */
+	if (lease -> ddns_fwd_name &&
+	    strcmp(hostname, lease -> ddns_fwd_name)) {
+		int y;
+		y=nsupdateA(lease -> ddns_fwd_name, ipaddr, 0, DELETE);
+
+		if (y) {
+			/* clear the forward DNS name pointer */
+			if (lease -> ddns_fwd_name)
+				dfree(lease -> ddns_fwd_name, "nsupdate");
+			lease -> ddns_fwd_name = 0;
+		}
+	}
+	/* only update if there is no A record there already */
+	if (!lease -> ddns_fwd_name) {
+		int y;
+	    	y=nsupdateA(hostname, ipaddr, ttl, ADD);
+		if (y < 1)
+			return 0;
+
+		/* remember this in the lease structure for release */
+		lease -> ddns_fwd_name = dmalloc(strlen(hostname) + 1,
+					 	 "nsupdate");
+		strcpy (lease -> ddns_fwd_name, hostname);
+	}
+
+	return 1;
+}
+
+/* public function to update an A record if needed */
+int updatePTR(struct data_string *lhs, struct data_string *rhs,
+	      unsigned int ttl, struct lease *lease)
+{
+
+	static char hostname[MAXDNAME];
+	static char revname[MAXDNAME];
+
+	revname[0] = '\0';
+	strncat(revname, lhs->data, lhs->len);
+	revname[lhs->len] = '\0';
+
+	hostname[0] = '\0';
+	strncat(hostname, rhs->data, rhs->len);
+	hostname[rhs->len] = '\0';
+	
+	/* delete an existing PTR if the one to be added is different */
+	if (lease -> ddns_rev_name &&
+	    strcmp(revname, lease -> ddns_rev_name)) {
+		int y;
+		y=nsupdatePTR(revname, hostname, 0, DELETE);
+
+		if (y) {
+			/* clear the reverse DNS name pointer */
+			if (lease -> ddns_rev_name)
+				dfree(lease -> ddns_rev_name, "nsupdate");
+			lease -> ddns_rev_name = 0;
+		}
+	}
+	/* only update if there is no PTR record there already */
+	if (!lease -> ddns_rev_name) {
+		int y;
+	    	y=nsupdatePTR(revname, hostname, ttl, ADD);
+		if (y < 1)
+			return 0;
+
+		/* remember this in the lease structure for release */
+		lease -> ddns_rev_name = dmalloc(strlen(revname) + 1,
+					 	 "nsupdate");
+		strcpy (lease -> ddns_rev_name, revname);
+	}
+
+	return 1;
 }
 #endif /* defined (NSUPDATE) */

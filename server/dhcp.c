@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.102 1999/07/18 19:39:14 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.103 1999/07/19 01:15:22 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -294,14 +294,14 @@ void dhcprelease (packet)
 
 	/* If we found a lease, release it. */
 	if (lease) {
-#if defined (NSUPDATE)
+#if defined (NSUPDATE) && 0
 		nsupdate (lease, lease -> state, packet, DELETE);
 #endif
 	/* If there are statements to execute when the lease is
 	   committed, execute them. */
 		if (lease -> on_release) {
 			execute_statements (packet, lease, packet -> options,
-					    state -> options,
+					    (struct option_state *)0, /* XXX */
 					    lease -> on_release);
 			executable_statement_dereference (&lease -> on_release,
 							  "dhcprelease");
@@ -1254,10 +1254,12 @@ void ack_lease (packet, lease, offer, when, msg)
 	   hanging off the lease. */
 	/* why not update for static leases too? */
 	/* Because static leases aren't currently recorded? */
+/* XXX
 #if defined (NSUPDATE)
  	if (!(lease -> flags & STATIC_LEASE) && offer == DHCPACK)
  		nsupdate (lease, state, packet, ADD);
 #endif
+*/
 
 	/* If there are statements to execute when the lease is
 	   committed, execute them. */
