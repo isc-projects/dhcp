@@ -241,18 +241,31 @@ One additional Linux 2.1/2.2 issue: if you get the following message,
 it's because your kernel doesn't have the linux packetfilter or raw
 packet socket configured:
 
- Set CONFIG_PACKET=y and CONFIG_FILTER=y in your kernel configuration
+ Make sure CONFIG_PACKET (Packet socket) and CONFIG_FILTER (Socket
+ Filtering) are enabled in your kernel configuration
 
-If this happens, you need to edit your linux kernel .config file, set
-CONFIG_FILTER=y and CONFIG_PACKET=y, and rebuild your kernel.  If the
-preceding sentence made no sense to you, ask your Linux vendor/guru
-for help - please don't ask us.
+If this happens, you need to configure your Linux kernel to support
+Socket Filtering and the Packet socket.  You can do this by typing
+``make config'', ``make menuconfig'' or ``make xconfig'', and then
+enabling the Packet socket and Socket Filtering options that you'll
+see displayed on the menu or in the questionnaire.  You can also edit
+your linux kernel .config file directly: set CONFIG_FILTER=y and
+CONFIG_PACKET=y.  If you do this, make sure you run ``make oldconfig''
+afterwards, so that the changes you've made are propogated to the
+kernel header files.   After you've reconfigured, you need to type
+``make'' to build a new Linux kernel, and then install it in the
+appropriate place (probably /linux).  Make sure to save a copy of your
+old /linux.
+
+If the preceding paragraph made no sense to you, ask your Linux
+vendor/guru for help - please don't ask us.
 
 If you set CONFIG_PACKET=m or CONFIG_FILTER=m, then you must tell the
 kernel module loader to load the appropriate modules.  If this doesn't
 make sense to you, don't use CONFIG_whatever=m - use CONFIG_whatever=y.  
 Don't ask for help with this on the DHCP mailing list - it's a Linux
-kernel issue.
+kernel issue.   This is probably not a problem with the most recent
+Linux 2.2.x kernels.
 
 			   LINUX: BROADCAST
 
