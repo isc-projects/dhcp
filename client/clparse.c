@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: clparse.c,v 1.4 1997/02/22 12:23:22 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: clparse.c,v 1.5 1997/02/27 03:39:11 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -269,7 +269,7 @@ int parse_X (cfile, buf, max)
 			if (token == COLON)
 				token = next_token (&val, cfile);
 		} while (token == COLON);
-		val = buf;
+		val = (char *)buf;
 	} else if (token == STRING) {
 		token = next_token (&val, cfile);
 		len = strlen (val);
@@ -650,7 +650,7 @@ void parse_option_decl (cfile, options)
 	struct universe *universe;
 	struct option *option;
 	struct iaddr ip_addr;
-	char *dp;
+	u_int8_t *dp;
 	int len;
 	int nul_term = 0;
 
