@@ -49,6 +49,10 @@ static char copyright[] =
 
 FILE *db_file;
 
+static int counting = 0;
+static int count = 0;
+TIME write_time;
+
 /* Write the specified lease to the current lease database file. */
 
 int write_lease (lease)
@@ -57,6 +61,8 @@ int write_lease (lease)
 	struct tm *t;
 	char tbuf [64];
 
+	if (counting)
+		++count;
 	errno = 0;
 	fprintf (db_file, "lease %s\n", piaddr (lease -> ip_addr));
 
@@ -91,6 +97,16 @@ int write_lease (lease)
 
 int commit_leases ()
 {
+	/* If we've written more than a thousand leases or if
+	   we haven't rewritten the lease database in over an
+	   hour, rewrite it now. */
+	if (count > 1000 || (count && cur_time - write_time > 3600)) {
+		count = 0;
+		write_time = cur_time;
+		new_lease_file ();
+		return 1;
+	}
+
 	if (fflush (db_file) == EOF)
 		return 0;
 	if (fsync (fileno (db_file)) < 0)
@@ -125,6 +141,7 @@ void new_lease_file ()
 	}
 
 	/* Write out all the leases that we know of... */
+	counting = 0;
 	write_leases ();
 
 	/* Get the old database out of the way... */
@@ -134,4 +151,6 @@ void new_lease_file ()
 	
 	/* Move in the new file... */
 	rename (newfname, _PATH_DHCPD_DB);
+
+	counting = 1;
 }
