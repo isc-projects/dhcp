@@ -3,7 +3,7 @@
    Definitions for dhcpd... */
 
 /*
- * Copyright (c) 1995, 1996 The Internet Software Consortium.
+ * Copyright (c) 1995, 1996, 1997 The Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -130,6 +130,7 @@ struct lease {
 #define DISCOVER_RUNNING	0
 #define DISCOVER_SERVER		1
 #define DISCOVER_UNCONFIGURED	2
+#define DISCOVER_RELAY		3
 
 /* Group of declarations that share common parameters. */
 struct group {
@@ -252,6 +253,7 @@ struct client_state {
 	struct client_lease *new;			       /* New lease. */
 	struct client_lease *offered_leases;	    /* Leases offered to us. */
 	struct client_lease *leases;		/* Leases we currently hold. */
+	struct client_lease *alias;			     /* Alias lease. */
 
 	enum dhcp_state state;		/* Current state for this interface. */
 	struct iaddr destination;		    /* Where to send packet. */

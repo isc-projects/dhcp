@@ -3,7 +3,7 @@
    Lexical scanner for dhcpd config file... */
 
 /*
- * Copyright (c) 1995, 1996 The Internet Software Consortium.
+ * Copyright (c) 1995, 1996, 1997 The Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: conflex.c,v 1.21 1997/02/22 08:29:24 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: conflex.c,v 1.22 1997/02/22 12:23:40 mellon Exp $ Copyright (c) 1995, 1996, 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -355,6 +355,8 @@ static int intern (atom, dfv)
 	      case 'a':
 		if (!strcasecmp (atom + 1, "llow"))
 			return ALLOW;
+		if (!strcasecmp (atom + 1, "lias"))
+			return ALIAS;
 		break;
 	      case 'b':
 		if (!strcasecmp (atom + 1, "ootp"))

@@ -3,7 +3,7 @@
    Tokens for config file lexer and parser. */
 
 /*
- * Copyright (c) 1995, 1996 The Internet Software Consortium.
+ * Copyright (c) 1995, 1996, 1997 The Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -110,6 +110,7 @@
 #define DEFAULT		314
 #define MEDIA		315
 #define MEDIUM		316
+#define ALIAS		317
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\
 				 (x) != STRING &&	\

@@ -3,7 +3,7 @@
    Parser for dhclient config and lease files... */
 
 /*
- * Copyright (c) 1995, 1996, 1997 The Internet Software Consortium.
+ * Copyright (c) 1997 The Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: clparse.c,v 1.3 1997/02/22 08:38:32 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: clparse.c,v 1.4 1997/02/22 12:23:22 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -113,7 +113,7 @@ int read_client_conf ()
 
 /* lease-file :== client-lease-statements EOF
    client-lease-statements :== <nil>
-		     | client-lease-statements client-lease-statement */
+		     | client-lease-statements LEASE client-lease-statement */
 
 void read_client_leases ()
 {
@@ -152,7 +152,8 @@ void read_client_leases ()
 	SELECT_TIMEOUT number |
 	SCRIPT string |
 	interface-declaration |
-	client-lease-statement */
+	LEASE client-lease-statement |
+	ALIAS client-lease-statement */
 
 void parse_client_statement (cfile, ip, config)
 	FILE *cfile;
@@ -220,6 +221,10 @@ void parse_client_statement (cfile, ip, config)
 
 	      case LEASE:
 		parse_client_lease_statement (cfile, 1);
+		return;
+
+	      case ALIAS:
+		parse_client_lease_statement (cfile, 2);
 		return;
 
 	      default:
@@ -434,7 +439,7 @@ void make_client_config (ip, config)
 }
 
 /* client-lease-statement :==
-	LEASE RBRACE client-lease-declarations LBRACE
+	RBRACE client-lease-declarations LBRACE
 
 	client-lease-declarations :==
 		<nil> |
@@ -488,6 +493,12 @@ void parse_client_lease_statement (cfile, is_static)
 	/* Make sure there's a client state structure... */
 	if (!ip -> client)
 		make_client_state (ip);
+
+	/* If this is an alias lease, it doesn't need to be sorted in. */
+	if (is_static == 2) {
+		ip -> client -> alias = lease;
+		return;
+	}
 
 	/* The last lease in the lease file on a particular interface is
 	   the active lease for that interface.    Of course, we don't know

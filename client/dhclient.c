@@ -56,7 +56,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhclient.c,v 1.25 1997/02/22 08:44:15 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.26 1997/02/22 12:24:28 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -185,6 +185,9 @@ int main (argc, argv, envp)
 		/* Call the script with the list of interfaces. */
 		for (ip = interfaces; ip; ip = ip -> next) {
 			script_init (ip, "PREINIT", (struct string_list *)0);
+			if (ip -> client -> alias)
+				script_write_params (ip, "alias_",
+						     ip -> client -> alias);
 			script_go (ip);
 		}
 	}
@@ -430,6 +433,8 @@ void dhcpack (packet)
 	if (ip -> client -> active)
 		script_write_params (ip, "old_", ip -> client -> active);
 	script_write_params (ip, "new_", ip -> client -> new);
+	if (ip -> client -> alias)
+		script_write_params (ip, "alias_", ip -> client -> alias);
 	script_go (ip);
 
 	/* Replace the old active lease with the new one. */
@@ -855,6 +860,9 @@ void state_panic (ip)
 				     ip -> client -> active -> medium);
 			script_write_params (ip, "new_",
 					     ip -> client -> active);
+			if (ip -> client -> alias)
+				script_write_params (ip, "alias_",
+						     ip -> client -> alias);
 
 			/* If the old lease is still good and doesn't
 			   yet need renewal, go into BOUND state and
@@ -908,6 +916,8 @@ void state_panic (ip)
 	   and try again later. */
 	note ("No working leases in persistent database - sleeping.\n");
 	script_init (ip, "FAIL", (struct string_list *)0);
+	if (ip -> client -> alias)
+		script_write_params (ip, "alias_", ip -> client -> alias);
 	script_go (ip);
 	ip -> client -> state = S_INIT;
 	add_timeout (cur_time + ip -> client -> config -> retry_interval,
@@ -932,6 +942,9 @@ void send_request (ip)
 		/* Run the client script with the new parameters. */
 		script_init (ip, "EXPIRE", (struct string_list *)0);
 		script_write_params (ip, "old_", ip -> client -> active);
+		if (ip -> client -> alias)
+			script_write_params (ip, "alias_",
+					     ip -> client -> alias);
 		script_go (ip);
 
 		ip -> client -> state = S_INIT;
