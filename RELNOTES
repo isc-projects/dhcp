@@ -1,6 +1,6 @@
 	    Internet Software Consortium DHCP Distribution
-	     Version 3, Release Candidate 1 Patchlevel 1
-			    April 18, 2001
+		    Version 3, Release Candidate 2
+			    April 20, 2001
 
 			    Release Notes
 
@@ -56,15 +56,54 @@ Murrell at BC Tel Advanced Communications.  I'd like to express my
 thanks to all of these good people here, both for working on the code
 and for prodding me into improving it.
 
-		Changes since 3.0 Release Candidate 1
+	  Changes since 3.0 Release Candidate 1 Patchlevel 1
 
-- Fix a small bug in binary-to-ascii, thanks to H. Peter Anvin of
-  Transmeta.
+- Fix the dhcp_failover_put_message to not attempt to allocate a
+  zero-length buffer.   Some versions of malloc() fail if you try to
+  allocate a zero-length buffer, and this was causing problems on,
+  e.g., Digital Unix.
+
+- Fix a case where the failover code was printing an error message
+  when no error had occurred.
+
+- Fix a problem where when a server went down and back up again, the
+  peer would not see a state transition and so would stay in the
+  non-communicating state.
+
+- Be smart about going into recover_wait.
+
+- Fix a problem in the failover implementation where peers would fail
+  to come into sync if interrupted in the RECOVER state.   This could
+  have been the cause of some problems people have reported recently.
+
+- Fix a problem with billing classes where they would not be unbilled
+  when the client lease expired.
+
+- If select fails, figure out which descriptor is bad, and cut it out
+  of the I/O loop.   This prevents a potentially nasty spin.  I
+  haven't heard any report it in a while, but it came up consistently
+  in testing.
+
+- Fix a bug in the relay agent where if you specified interfaces on
+  the command line, it would fail.
+
+- Fix a couple of small bugs in the omapi connection object (no known
+  user impact).
+
+- Add the missing 3.0 Beta 1 lease conversion script.
+
+- Read dhcp client script hooks if they exist, rather than only if
+  they're executable.
+
+		Changes since 3.0 Release Candidate 1
 
 - Fix a memory smash that happens when fixed-address leases are used.
   ANY SITE AT WHICH FIXED-ADDRESS STATEMENTS ARE BEING USED SHOULD
   UPGRADE IMMEDIATELY.   This has been a long-standing bug - thanks to
   Alvise Nobile for discovering it and helping me to find it!
+
+- Fix a small bug in binary-to-ascii, thanks to H. Peter Anvin of
+  Transmeta.
 
 - There is a known problem with the DHCP server doing failover on
   Compaq Alpha systems.   This patchlevel is not a release candidate
@@ -73,7 +112,6 @@ and for prodding me into improving it.
 
 - There is a known problem in the DDNS update code that is probably a
   bug, and is not, as far as we know, fixed in this patchlevel.
-
 
 		Changes since 3.0 Beta 2 Patchlevel 24
 
