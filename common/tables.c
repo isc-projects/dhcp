@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tables.c,v 1.16 1998/06/25 03:09:09 mellon Exp $ Copyright (c) 1995, 1996, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tables.c,v 1.17 1998/11/05 18:44:41 mellon Exp $ Copyright (c) 1995, 1996, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -323,91 +323,6 @@ struct option dhcp_options [256] = {
 	{ "option-254", "X",				&dhcp_universe, 254 },
 	{ "option-end", "e",				&dhcp_universe, 255 },
 };
-
-/* Default dhcp option priority list (this is ad hoc and should not be
-   mistaken for a carefully crafted and optimized list). */
-unsigned char dhcp_option_default_priority_list [] = {
-	DHO_DHCP_REQUESTED_ADDRESS,
-	DHO_DHCP_OPTION_OVERLOAD,
-	DHO_DHCP_MAX_MESSAGE_SIZE,
-	DHO_DHCP_RENEWAL_TIME,
-	DHO_DHCP_REBINDING_TIME,
-	DHO_DHCP_CLASS_IDENTIFIER,
-	DHO_DHCP_CLIENT_IDENTIFIER,
-	DHO_SUBNET_MASK,
-	DHO_TIME_OFFSET,
-	DHO_ROUTERS,
-	DHO_TIME_SERVERS,
-	DHO_NAME_SERVERS,
-	DHO_DOMAIN_NAME_SERVERS,
-	DHO_HOST_NAME,
-	DHO_LOG_SERVERS,
-	DHO_COOKIE_SERVERS,
-	DHO_LPR_SERVERS,
-	DHO_IMPRESS_SERVERS,
-	DHO_RESOURCE_LOCATION_SERVERS,
-	DHO_HOST_NAME,
-	DHO_BOOT_SIZE,
-	DHO_MERIT_DUMP,
-	DHO_DOMAIN_NAME,
-	DHO_SWAP_SERVER,
-	DHO_ROOT_PATH,
-	DHO_EXTENSIONS_PATH,
-	DHO_IP_FORWARDING,
-	DHO_NON_LOCAL_SOURCE_ROUTING,
-	DHO_POLICY_FILTER,
-	DHO_MAX_DGRAM_REASSEMBLY,
-	DHO_DEFAULT_IP_TTL,
-	DHO_PATH_MTU_AGING_TIMEOUT,
-	DHO_PATH_MTU_PLATEAU_TABLE,
-	DHO_INTERFACE_MTU,
-	DHO_ALL_SUBNETS_LOCAL,
-	DHO_BROADCAST_ADDRESS,
-	DHO_PERFORM_MASK_DISCOVERY,
-	DHO_MASK_SUPPLIER,
-	DHO_ROUTER_DISCOVERY,
-	DHO_ROUTER_SOLICITATION_ADDRESS,
-	DHO_STATIC_ROUTES,
-	DHO_TRAILER_ENCAPSULATION,
-	DHO_ARP_CACHE_TIMEOUT,
-	DHO_IEEE802_3_ENCAPSULATION,
-	DHO_DEFAULT_TCP_TTL,
-	DHO_TCP_KEEPALIVE_INTERVAL,
-	DHO_TCP_KEEPALIVE_GARBAGE,
-	DHO_NIS_DOMAIN,
-	DHO_NIS_SERVERS,
-	DHO_NTP_SERVERS,
-	DHO_VENDOR_ENCAPSULATED_OPTIONS,
-	DHO_NETBIOS_NAME_SERVERS,
-	DHO_NETBIOS_DD_SERVER,
-	DHO_NETBIOS_NODE_TYPE,
-	DHO_NETBIOS_SCOPE,
-	DHO_FONT_SERVERS,
-	DHO_X_DISPLAY_MANAGER,
-	DHO_DHCP_PARAMETER_REQUEST_LIST,
-
-	/* Presently-undefined options... */
-	62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76,
-	78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92,
-	93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106,
-	107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118,
-	119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130,
-	131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142,
-	143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154,
-	155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166,
-	167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177, 178,
-	179, 180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190,
-	191, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202,
-	203, 204, 205, 206, 207, 208, 209, 210, 211, 212, 213, 214,
-	215, 216, 217, 218, 219, 220, 221, 222, 223, 224, 225, 226,
-	227, 228, 229, 230, 231, 232, 233, 234, 235, 236, 237, 238,
-	239, 240, 241, 242, 243, 244, 245, 246, 247, 248, 249, 250,
-	251, 252, 253, 254,
-};
-
-int sizeof_dhcp_option_default_priority_list =
-	sizeof dhcp_option_default_priority_list;
-
 
 char *hardware_types [] = {
 	"unknown-0",
@@ -1186,7 +1101,6 @@ struct option server_options [256] = {
 	{ "option-254", "X",			&server_universe, 254 },
 	{ "option-end", "e",			&server_universe, 255 },
 };
-
 
 struct hash_table universe_hash;
 
