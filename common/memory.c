@@ -663,14 +663,16 @@ void dump_subnets ()
 	struct subnet *n;
 	int i;
 
-	for (n = s -> subnets; n; n = n -> next_subnet) {
-		debug ("Subnet %s", piaddr (n -> net));
-		debug ("   netmask %s",
-		       piaddr (n -> netmask));
+	for (s = shared_networks; s; s = s -> next) {
+		for (n = subnets; n; n = n -> next_sibling) {
+			debug ("Subnet %s", piaddr (n -> net));
+			debug ("   netmask %s",
+			       piaddr (n -> netmask));
+		}
+		for (l = s -> leases; l; l = l -> next) {
+			print_lease (l);
+		}
+		debug ("Last Lease:");
+		print_lease (s -> last_lease);
 	}
-	for (l = s -> leases; l; l = l -> next) {
-		print_lease (l);
-	}
-	debug ("Last Lease:");
-	print_lease (s -> last_lease);
 }
