@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.40 1997/02/22 12:25:11 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.41 1997/03/05 06:18:55 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -190,13 +190,6 @@ void dhcprequest (packet)
 	      ? inet_ntoa (packet -> raw -> giaddr)
 	      : packet -> interface -> name);
 
-	/* If we found a lease for the client but it's not the one the
-	   client asked for, don't send it - some other server probably
-	   made the cut. */
-	if (lease && !addr_eq (lease -> ip_addr, cip)) {
-		return;
-	}
-
 	/* If a client on a given network wants to request a lease on
 	   an address on a different network, NAK it.   If the Requested
 	   Address option was used, the protocol says that it must have
@@ -208,7 +201,7 @@ void dhcprequest (packet)
 	   IP router, we'll just have to assume that it's cool.
 
 	   This violates the protocol spec in the case that the client
-	   is in the REBINDING state and broadcasts a DHCPREQUEST on
+	   is in the INIT-REBOOT state and broadcasts a DHCPREQUEST on
 	   the local wire.  We're supposed to check ciaddr for
 	   validity in that case, but if the packet was unicast
 	   through a router from a client in the RENEWING state, it
@@ -231,13 +224,21 @@ void dhcprequest (packet)
 			return;
 		}
 
-		/* If we do know where it came from and we don't know
-		   where it claims to have come from, same deal - fry it. */
+		/* If we do know where it came from and either we don't
+		   know where it came from at all or it came from a different
+		   shared network than the packet came from, send a nak. */ 
 		subnet = find_grouped_subnet (packet -> shared_network, cip);
 		if (!subnet) {
 			nak_lease (packet, &cip);
 			return;
 		}
+	}
+
+	/* If we found a lease for the client but it's not the one the
+	   client asked for, don't send it - some other server probably
+	   made the cut. */
+	if (lease && !addr_eq (lease -> ip_addr, cip)) {
+		return;
 	}
 
 	/* If we own the lease that the client is asking for,
