@@ -42,13 +42,12 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcpxlt.c,v 1.4 1996/08/29 18:36:41 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcpxlt.c,v 1.5 1996/08/30 23:41:07 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
 #include "dhctoken.h"
 
-static TIME parsed_time;
 int log_priority;
 int log_perror = 1;
 
@@ -95,7 +94,6 @@ void convert_statement (cfile)
 	int token;
 	char *val;
 	jmp_buf bc;
-	int i;
 
 	switch (next_token (&val, cfile)) {
 	      case HOST:
@@ -271,9 +269,6 @@ void convert_host_name (cfile, bc)
 	char *val;
 	int token;
 	int len = 0;
-	char *s;
-	char *t;
-	pair c = (pair)0;
 	
 	/* Read a dotted hostname... */
 	do {
@@ -309,7 +304,6 @@ void convert_class_statement (cfile, bc, type)
 {
 	char *val;
 	int token;
-	struct class *class;
 
 	token = next_token (&val, cfile);
 	if (token != STRING) {
@@ -397,12 +391,6 @@ void convert_shared_net_statement (cfile, bc)
 {
 	char *val;
 	int token;
-	struct shared_network *share;
-	struct subnet *first_net = (struct subnet *)0;
-	struct subnet *last_net = (struct subnet *)0;
-	struct subnet *next_net;
-	char *name;
-	struct tree_cache *server_next;
 
 	/* Get the name of the shared network... */
 	token = next_token (&val, cfile);
@@ -497,10 +485,6 @@ void convert_subnet_statement (cfile, bc)
 {
 	char *val;
 	int token;
-	struct subnet *subnet;
-	struct iaddr net, netmask;
-	unsigned char addr [4];
-	int len = sizeof addr;
 
 	indent (0);
 	printf ("subnet ");
@@ -669,8 +653,6 @@ void convert_hardware_addr (cfile, bc)
 {
 	char *val;
 	int token;
-	int hlen;
-	unsigned char *t;
 
 	token = next_token (&val, cfile);
 	switch (token) {
@@ -806,11 +788,8 @@ void convert_option_decl (cfile, bc)
 	char *val;
 	int token;
 	unsigned char buf [4];
-	char *vendor;
 	char *fmt;
-	struct universe *universe;
 	struct option *option;
-	struct tree *tree = (struct tree *)0;
 
 	indent (0);
 	printf ("option ");
@@ -973,7 +952,6 @@ void convert_timestamp (cfile, bc)
 	FILE *cfile;
 	jbp_decl (bc);
 {
-	TIME rv;
 	char *val;
 	int token;
 

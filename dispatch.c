@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dispatch.c,v 1.20 1996/08/28 01:37:06 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dispatch.c,v 1.21 1996/08/30 23:41:07 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -71,7 +71,9 @@ void discover_interfaces ()
 	struct shared_network *share;
 	struct sockaddr_in foo;
 	int ir;
+#ifdef ALIAS_NAMES_PERMUTED
 	char *s;
+#endif
 #ifdef USE_FALLBACK
 	static struct shared_network fallback_network;
 #endif
