@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.57 1997/12/06 04:04:50 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.58 1998/02/06 01:08:38 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -431,7 +431,8 @@ void nak_lease (packet, cip)
 
 	/* Set up the option buffer... */
 	outgoing.packet_length =
-		cons_options (packet, outgoing.raw, options, 0, 0, 0);
+		cons_options (packet, outgoing.raw, 0,
+			      options, packet -> agent_options, 0, 0, 0);
 
 /*	memset (&raw.ciaddr, 0, sizeof raw.ciaddr);*/
 	raw.siaddr = packet -> interface -> primary_address;
@@ -719,13 +720,13 @@ void ack_lease (packet, lease, offer, when)
 		lease -> hardware_addr.hlen = packet -> raw -> hlen;
 		lease -> hardware_addr.htype = packet -> raw -> htype;
 		memcpy (lease -> hardware_addr.haddr, packet -> raw -> chaddr,
-			packet -> raw -> hlen);
+			sizeof packet -> raw -> chaddr); /* XXX */
 	} else {
 		/* Record the hardware address, if given... */
 		lt.hardware_addr.hlen = packet -> raw -> hlen;
 		lt.hardware_addr.htype = packet -> raw -> htype;
 		memcpy (lt.hardware_addr.haddr, packet -> raw -> chaddr,
-			packet -> raw -> hlen);
+			sizeof packet -> raw -> chaddr);
 
 		/* Install the new information about this lease in the
 		   database.  If this is a DHCPACK or a dynamic BOOTREPLY
@@ -757,6 +758,20 @@ void ack_lease (packet, lease, offer, when)
 	state -> bootp_flags = packet -> raw -> flags;
 	state -> hops = packet -> raw -> hops;
 	state -> offer = offer;
+
+	/* Get the Maximum Message Size option from the packet, if one
+	   was sent. */
+	if (packet -> options [DHO_DHCP_MAX_MESSAGE_SIZE].data) {
+		state -> max_message_size =
+			getUShort (packet ->
+				   options [DHO_DHCP_MAX_MESSAGE_SIZE].data);
+	}
+
+	/* Steal the agent options from the packet. */
+	if (packet -> agent_options) {
+		state -> agent_options = packet -> agent_options;
+		packet -> agent_options = (struct agent_options *)0;
+	}
 
 	/* Figure out what options to send to the client: */
 
@@ -968,6 +983,8 @@ void dhcp_reply (lease)
 	int i;
 	struct lease_state *state = lease -> state;
 	int nulltp, bootpp;
+	struct agent_options *a, *na;
+	struct option_tag *ot, *not;
 
 	if (!state)
 		error ("dhcp_reply was supplied lease with no state!");
@@ -989,8 +1006,7 @@ void dhcp_reply (lease)
 	else
 		bufs |= 2; /* XXX */
 
-	memcpy (raw.chaddr, lease -> hardware_addr.haddr,
-		lease -> hardware_addr.hlen);
+	memcpy (raw.chaddr, lease -> hardware_addr.haddr, sizeof raw.chaddr);
 	raw.hlen = lease -> hardware_addr.hlen;
 	raw.htype = lease -> hardware_addr.htype;
 
@@ -1009,7 +1025,10 @@ void dhcp_reply (lease)
 
 	/* Insert such options as will fit into the buffer. */
 	packet_length = cons_options ((struct packet *)0, &raw,
-				      state -> options, bufs, nulltp, bootpp);
+				      state -> max_message_size,
+				      state -> options,
+				      state -> agent_options,
+				      bufs, nulltp, bootpp);
 
 	/* Having done the cons_options(), we can release the tree_cache
 	   entries. */
@@ -1017,6 +1036,15 @@ void dhcp_reply (lease)
 		if (state -> options [i] &&
 		    state -> options [i] -> flags & TC_TEMPORARY)
 			free_tree_cache (state -> options [i], "dhcp_reply");
+	}
+
+	/* We can also release the agent options, if any... */
+	for (a = state -> agent_options; a; a = na) {
+		na = a -> next;
+		for (ot = a -> first; ot; ot = not) {
+			not = ot -> next;
+			free (ot);
+		}
 	}
 
 	memcpy (&raw.ciaddr, &state -> ciaddr, sizeof raw.ciaddr);
