@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.38 1999/04/05 15:40:59 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.39 1999/04/05 19:03:59 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -501,8 +501,7 @@ int store_options (buffer, buflen, options, priority_list, priority_len,
 		}
 
 		/* Find the value of the option... */
-		evaluate_option_cache (&od, (struct packet *)0,
-				       (struct option_state *)0, oc);
+		evaluate_option_cache (&od, (struct packet *)0, options, oc);
 		if (!od.len) {
 			continue;
 		}
