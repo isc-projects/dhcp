@@ -2386,6 +2386,7 @@ isc_result_t dhcp_failover_send_state (dhcp_failover_state_t *);
 isc_result_t dhcp_failover_send_updates (dhcp_failover_state_t *);
 int dhcp_failover_queue_update (struct lease *, int);
 int dhcp_failover_send_acks (dhcp_failover_state_t *);
+void dhcp_failover_toack_queue_timeout (void *);
 int dhcp_failover_queue_ack (dhcp_failover_state_t *, failover_message_t *msg);
 void dhcp_failover_ack_queue_remove (dhcp_failover_state_t *, struct lease *);
 isc_result_t dhcp_failover_state_set_value PROTO ((omapi_object_t *,
