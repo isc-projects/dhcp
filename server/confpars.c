@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.143.2.9 2001/10/17 03:30:33 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.143.2.10 2001/10/27 04:42:41 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -985,6 +985,12 @@ void parse_failover_peer (cfile, group, type)
 		parse_warn (cfile,
 			    "primary failover server must have mclt.");
 	    }
+	}
+	if (!peer -> me.max_flying_updates) {
+		peer -> me.max_flying_updates = 100;
+	}
+	if (!peer -> me.max_response_delay) {
+		peer -> me.max_response_delay = 60;
 	}
 
 	if (type == SHARED_NET_DECL) {
