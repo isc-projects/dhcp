@@ -50,7 +50,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: omapi.c,v 1.44 2001/04/05 22:54:57 mellon Exp $ Copyright (c) 1999-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: omapi.c,v 1.45 2001/04/30 22:39:10 mellon Exp $ Copyright (c) 1999-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -419,7 +419,7 @@ isc_result_t dhcp_lease_signal_handler (omapi_object_t *h,
 	}
 
 	/* Try to find some inner object that can take the value. */
-	if (h -> inner && h -> inner -> type -> get_value) {
+	if (h -> inner && h -> inner -> type -> signal_handler) {
 		status = ((*(h -> inner -> type -> signal_handler))
 			  (h -> inner, name, ap));
 		if (status == ISC_R_SUCCESS)
@@ -577,6 +577,42 @@ isc_result_t dhcp_lease_stuff_values (omapi_object_t *c,
 	status = (omapi_connection_copyin
 		  (c,
 		   (const unsigned char *)&(lease -> starts), sizeof (TIME)));
+	if (status != ISC_R_SUCCESS)
+		return status;
+
+	status = omapi_connection_put_name (c, "tstp");
+	if (status != ISC_R_SUCCESS)
+		return status;
+	status = omapi_connection_put_uint32 (c, sizeof (TIME));
+	if (status != ISC_R_SUCCESS)
+		return status;
+	status = (omapi_connection_copyin
+		  (c,
+		   (const unsigned char *)&(lease -> tstp), sizeof (TIME)));
+	if (status != ISC_R_SUCCESS)
+		return status;
+
+	status = omapi_connection_put_name (c, "tsfp");
+	if (status != ISC_R_SUCCESS)
+		return status;
+	status = omapi_connection_put_uint32 (c, sizeof (TIME));
+	if (status != ISC_R_SUCCESS)
+		return status;
+	status = (omapi_connection_copyin
+		  (c,
+		   (const unsigned char *)&(lease -> tsfp), sizeof (TIME)));
+	if (status != ISC_R_SUCCESS)
+		return status;
+
+	status = omapi_connection_put_name (c, "cltt");
+	if (status != ISC_R_SUCCESS)
+		return status;
+	status = omapi_connection_put_uint32 (c, sizeof (TIME));
+	if (status != ISC_R_SUCCESS)
+		return status;
+	status = (omapi_connection_copyin
+		  (c,
+		   (const unsigned char *)&(lease -> cltt), sizeof (TIME)));
 	if (status != ISC_R_SUCCESS)
 		return status;
 
@@ -1037,7 +1073,7 @@ isc_result_t dhcp_host_signal_handler (omapi_object_t *h,
 	}
 
 	/* Try to find some inner object that can take the value. */
-	if (h -> inner && h -> inner -> type -> get_value) {
+	if (h -> inner && h -> inner -> type -> signal_handler) {
 		status = ((*(h -> inner -> type -> signal_handler))
 			  (h -> inner, name, ap));
 		if (status == ISC_R_SUCCESS)
@@ -1459,7 +1495,7 @@ isc_result_t dhcp_pool_signal_handler (omapi_object_t *h,
 	/* Can't write pools yet. */
 
 	/* Try to find some inner object that can take the value. */
-	if (h -> inner && h -> inner -> type -> get_value) {
+	if (h -> inner && h -> inner -> type -> signal_handler) {
 		status = ((*(h -> inner -> type -> signal_handler))
 			  (h -> inner, name, ap));
 		if (status == ISC_R_SUCCESS)
@@ -1600,7 +1636,7 @@ isc_result_t dhcp_class_signal_handler (omapi_object_t *h,
 	/* Can't write classs yet. */
 
 	/* Try to find some inner object that can take the value. */
-	if (h -> inner && h -> inner -> type -> get_value) {
+	if (h -> inner && h -> inner -> type -> signal_handler) {
 		status = ((*(h -> inner -> type -> signal_handler))
 			  (h -> inner, name, ap));
 		if (status == ISC_R_SUCCESS)
@@ -1742,7 +1778,7 @@ isc_result_t dhcp_subclass_signal_handler (omapi_object_t *h,
 	/* Can't write subclasss yet. */
 
 	/* Try to find some inner object that can take the value. */
-	if (h -> inner && h -> inner -> type -> get_value) {
+	if (h -> inner && h -> inner -> type -> signal_handler) {
 		status = ((*(h -> inner -> type -> signal_handler))
 			  (h -> inner, name, ap));
 		if (status == ISC_R_SUCCESS)
