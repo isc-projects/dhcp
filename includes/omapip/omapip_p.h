@@ -173,6 +173,7 @@ typedef struct {
 typedef struct __omapi_listener_object {
 	OMAPI_OBJECT_PREAMBLE;
 	int socket;		/* Connection socket. */
+	int32_t index;
 	struct sockaddr_in address;
 	isc_result_t (*verify_addr) (omapi_object_t *, omapi_addr_t *);
 } omapi_listener_object_t;
@@ -180,7 +181,7 @@ typedef struct __omapi_listener_object {
 typedef struct __omapi_connection_object {
 	OMAPI_OBJECT_PREAMBLE;
 	int socket;		/* Connection socket. */
-	int index;
+	int32_t index;
 	omapi_connection_state_t state;
 	struct sockaddr_in remote_addr;
 	struct sockaddr_in local_addr;
@@ -268,6 +269,8 @@ isc_result_t omapi_listener_connect (omapi_connection_object_t **obj,
 				     int socket,
 				     struct sockaddr_in *remote_addr);
 void omapi_listener_trace_setup (void);
+void omapi_connection_trace_setup (void);
+void omapi_buffer_trace_setup (void);
 void omapi_connection_register (omapi_connection_object_t *,
 				const char *, int);
 OMAPI_ARRAY_TYPE_DECL(omapi_listener, omapi_listener_object_t);
