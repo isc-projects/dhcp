@@ -158,6 +158,9 @@ typedef struct {
 
 #define DHCP_FAILOVER_MAX_MESSAGE_SIZE	2048
 
+/* Failover server flags. */
+#define FTF_STARTUP	1
+
 typedef struct {
 	u_int8_t type;
 
@@ -226,9 +229,25 @@ enum failover_state {
 	partner_down,
 	normal,
 	communications_interrupted,
-	potential_conflict_nic,
+	resolution_interrupted,
 	potential_conflict,
-	recover
+	recover,
+	recover_done,
+	shut_down,
+	paused
+};
+
+/* Service states are simplifications of failover states, particularly
+   useful because the startup state isn't actually implementable as a
+   seperate failover state without maintaining a state stack. */
+
+enum service_state {
+	unknown_service_state,
+	cooperating,
+	not_cooperating,
+	service_partner_down,
+	not_responding,
+	service_startup
 };
 
 #if defined (FAILOVER_PROTOCOL)
@@ -251,6 +270,10 @@ typedef struct _dhcp_failover_state {
 	TIME partner_stos;
 	enum failover_state my_state;
 	TIME my_stos;
+	enum service_state service_state;
+	const char *nrr;	/* Printable reason why we're in the
+				   not_responding service state (empty
+				   string if we are responding. */
 
 	dhcp_failover_link_t *link_to_peer;	/* Currently-established link
 						   to peer. */
@@ -277,6 +300,9 @@ typedef struct _dhcp_failover_state {
 	struct lease *ack_queue_head;	/* List of lease updates the peer
 					   hasn't yet acked. */
 	struct lease *ack_queue_tail;
+
+	struct lease *send_update_done;	/* When we get a BNDACK for this
+					   lease, send an UPDDONE message. */
 	int cur_unacked_updates;	/* Number of updates we've sent
 					   that have not yet been acked. */
 } dhcp_failover_state_t;
