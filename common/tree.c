@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.74 2000/02/02 20:01:41 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.75 2000/02/03 04:31:46 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1790,13 +1790,7 @@ int evaluate_numeric_expression (result, packet, lease,
 
 		/* Do the update and record the error code, if there was
 		   an error; otherwise set it to NOERROR. */
-		if (minires_nupdate (&res, ISC_LIST_HEAD (uq), NULL))
-			*result = NOERROR;
-		else
-			/* The resolver doesn't return any actual error
-			   codes - just 1 for success, zero for failure! */
-			/* *result = res.res_h_errno; */
-			*result = SERVFAIL;
+		*result = minires_nupdate (&res, ISC_LIST_HEAD (uq), NULL);
 		status = 1;
 
 		print_dns_status ((int)*result, &uq);
