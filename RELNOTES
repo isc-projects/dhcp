@@ -1,6 +1,6 @@
 	      Internet Systems Consortium DHCP Distribution
-			      Version 3.0.2
-			    February 15, 2005
+			   Version 3.0.2-pbsg0
+			    February 17, 2005
 
 			     Release Notes
 
@@ -42,6 +42,16 @@ Measurement Systems, Igor Sharfmesser at Kazakh Telecom, and Brian
 Murrell at BC Tel Advanced Communications.  I'd like to express my
 thanks to all of these good people here, both for working on the code
 and for prodding me into improving it.
+
+
+			Changes since 3.0.2
+
+- A bug in DDNS was repaired, where if the server's first DDNS action was
+  a DDNS removal rather than a DDNS update, the resolver library's
+  retransmit timer and retry timer was set to the default, implying a
+  15 second timeout interval.  Which is a little excessive in a synchronous,
+  single-threaded system.  In all cases, ISC DHCP should now hold fast to
+  a 1-second timeout, trying only once.
 
 			Changes since 3.0.2rc3
 

@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: ddns.c,v 1.15.2.15 2004/11/24 17:39:18 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: ddns.c,v 1.15.2.15.36.1 2005/02/17 22:36:06 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -683,6 +683,8 @@ int ddns_removals (struct lease *lease)
 	if (!resolver_inited) {
 		minires_ninit (&resolver_state);
 		resolver_inited = 1;
+		resolver_state.retrans = 1;
+		resolver_state.retry = 1;
 	}
 
 	/* We need the fwd name whether we are deleting both records or just
