@@ -45,6 +45,9 @@ and for prodding me into improving it.
 
 			Changes since 3.0.1
 
+- The FreeBSD client script was changed to support the case where a domain
+  name was not provided by the server.
+
 - A memory leak in 'omshell' per each command line parsed was
   repaired, thanks to a patch from Jarkko Torppa.
 
