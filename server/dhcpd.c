@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.38 1997/02/22 08:49:44 mellon Exp $ Copyright 1995, 1996 The Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.39 1997/03/06 07:02:54 mellon Exp $ Copyright 1995, 1996 The Internet Software Consortium.";
 #endif
 
 static char copyright[] =
@@ -247,8 +247,11 @@ int main (argc, argv, envp)
 	}
 #endif /* !DEBUG */
 
+	/* Set up the bootp packet handler... */
+	bootp_packet_handler = do_packet;
+
 	/* Receive packets and dispatch them... */
-	dispatch (1);
+	dispatch ();
 
 	/* Not reached */
 	return 0;
