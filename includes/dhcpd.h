@@ -1719,6 +1719,10 @@ isc_result_t dns_zone_lookup (struct dns_zone **, const char *);
 isc_result_t enter_tsig_key (struct tsig_key *);
 isc_result_t tsig_key_lookup (struct tsig_key **, const char *);
 int dns_zone_dereference PROTO ((struct dns_zone **, const char *, int));
+#if defined (NSUPDATE)
+int find_cached_zone (const char *, ns_class,
+		      char *, size_t, struct in_addr *, int);
+#endif /* NSUPDATE */
 
 /* resolv.c */
 extern char path_resolv_conf [];
