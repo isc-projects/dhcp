@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: hash.c,v 1.9.2.2 1999/04/08 21:25:44 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: hash.c,v 1.9.2.3 1999/04/09 17:39:41 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -150,10 +150,11 @@ unsigned char *hash_lookup (table, name, len)
 
 	if (!table)
 		return (unsigned char *)0;
-	hashno = do_hash (name, len, table -> hash_count);
 
 	if (!len)
 		len = strlen ((char *)name);
+
+	hashno = do_hash (name, len, table -> hash_count);
 
 	for (bp = table -> buckets [hashno]; bp; bp = bp -> next) {
 		if (len == bp -> len && !memcmp (bp -> name, name, len))
