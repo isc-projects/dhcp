@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tables.c,v 1.22 1999/03/16 05:50:37 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tables.c,v 1.23 1999/03/25 22:01:03 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -106,7 +106,7 @@ struct option dhcp_options [256] = {
 	{ "dhcp-max-message-size", "S",			&dhcp_universe, 57 },
 	{ "dhcp-renewal-time", "L",			&dhcp_universe, 58 },
 	{ "dhcp-rebinding-time", "L",			&dhcp_universe, 59 },
-	{ "vendor-class-identifier", "t",		&dhcp_universe, 60 },
+	{ "vendor-class-identifier", "X",		&dhcp_universe, 60 },
 	{ "dhcp-client-identifier", "X",		&dhcp_universe, 61 },
 	{ "option-62", "X",				&dhcp_universe, 62 },
 	{ "option-63", "X",				&dhcp_universe, 63 },
