@@ -2385,6 +2385,8 @@ void dhcp_failover_send_contact (void *);
 isc_result_t dhcp_failover_send_state (dhcp_failover_state_t *);
 isc_result_t dhcp_failover_send_updates (dhcp_failover_state_t *);
 int dhcp_failover_queue_update (struct lease *, int);
+int dhcp_failover_send_acks (dhcp_failover_state_t *);
+int dhcp_failover_queue_ack (dhcp_failover_state_t *, failover_message_t *msg);
 void dhcp_failover_ack_queue_remove (dhcp_failover_state_t *, struct lease *);
 isc_result_t dhcp_failover_state_set_value PROTO ((omapi_object_t *,
 						   omapi_object_t *,
@@ -2434,7 +2436,7 @@ isc_result_t dhcp_failover_send_disconnect PROTO ((omapi_object_t *,
 isc_result_t dhcp_failover_send_bind_update (dhcp_failover_state_t *,
 					     struct lease *);
 isc_result_t dhcp_failover_send_bind_ack (dhcp_failover_state_t *,
-					  struct lease *, failover_message_t *,
+					  failover_message_t *,
 					  int, const char *);
 isc_result_t dhcp_failover_send_poolreq (dhcp_failover_state_t *);
 isc_result_t dhcp_failover_send_poolresp (dhcp_failover_state_t *, int);
