@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.93 1999/06/22 13:28:12 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.94 1999/07/01 19:58:12 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -292,6 +292,9 @@ void dhcprelease (packet)
 
 	/* If we found a lease, release it. */
 	if (lease) {
+#if defined (NSUPDATE)
+		nsupdate (lease, lease -> state, packet, DELETE);
+#endif
 		release_lease (lease);
 	}
 }
@@ -1156,6 +1159,18 @@ void ack_lease (packet, lease, offer, when, msg)
 	lt.host = lease -> host;
 	lt.subnet = lease -> subnet;
 	lt.billing_class = lease -> billing_class;
+
+	/* Do the DDNS update.  It needs to be done here so that the lease
+	   structure values for the forward and reverse names are in place for
+	   supercede()->write_lease() to be able to write into the dhcpd.leases
+	   file.  We have to pass the "state" structure here as it is not yet
+	   hanging off the lease. */
+	/* why not update for static leases too? */
+	/* Because static leases aren't currently recorded? */
+#if defined (NSUPDATE)
+ 	if (!(lease -> flags & STATIC_LEASE) && offer == DHCPACK)
+ 		nsupdate (lease, state, packet, ADD);
+#endif
 
 	/* Don't call supersede_lease on a mocked-up lease. */
 	if (lease -> flags & STATIC_LEASE) {
