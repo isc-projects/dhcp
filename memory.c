@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"@(#) Copyright (c) 1995 The Internet Software Consortium.  All rights reserved.\n";
+"@(#) Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -162,8 +162,8 @@ void new_address_range (low, high, subnet)
 		if (address_range [i].next)
 			address_range [i].next -> prev = subnet -> leases;
 		add_hash (lease_ip_addr_hash,
-			  (char *)&address_range [i].ip_addr,
-			  sizeof address_range [i].ip_addr,
+			  address_range [i].ip_addr.iabuf,
+			  address_range [i].ip_addr.len,
 			  (unsigned char *)&address_range [i]);
 	}
 
@@ -187,7 +187,7 @@ void new_address_range (low, high, subnet)
 				dangling_leases = lp -> next;
 			}
 			lp -> next = (struct lease *)0;
-			supersede_lease (&address_range [lhost - i], lp);
+			supersede_lease (&address_range [lhost - i], lp, 0);
 			free_lease (lp, "new_address_range");
 		} else
 			plp = lp;
@@ -230,6 +230,7 @@ void enter_lease (lease)
 	/* If we don't have a place for this lease yet, save it for
 	   later. */
 	if (!comp) {
+printf ("didn't find the lease...\n");
 		comp = new_lease ("enter_lease");
 		if (!comp) {
 			error ("No memory for lease %s\n",
@@ -240,7 +241,8 @@ void enter_lease (lease)
 		lease -> prev = (struct lease *)0;
 		dangling_leases = lease;
 	} else {
-		supersede_lease (comp, lease);
+printf ("superseding lease...\n");
+		supersede_lease (comp, lease, 0);
 	}
 }
 
@@ -249,8 +251,9 @@ void enter_lease (lease)
    list of leases by expiry time so that we can always find the oldest
    lease. */
 
-void supersede_lease (comp, lease)
+int supersede_lease (comp, lease, commit)
 	struct lease *comp, *lease;
+	int commit;
 {
 	int enter_uid = 0;
 	int enter_hwaddr = 0;
@@ -402,6 +405,10 @@ void supersede_lease (comp, lease)
 		comp -> contain -> insertion_point = comp;
 		comp -> ends = lease -> ends;
 	}
+
+	/* Return zero if we didn't commit the lease to permanent storage;
+	   nonzero if we did. */
+	return commit && write_lease (comp) && commit_leases ();
 }
 
 /* Release the specified lease and re-hash it as appropriate. */
@@ -413,7 +420,7 @@ void release_lease (lease)
 
 	lt = *lease;
 	lt.ends = cur_time;
-	supersede_lease (lease, &lt);
+	supersede_lease (lease, &lt, 1);
 }
 
 /* Abandon the specified lease (set its timeout to infinity and its
@@ -432,7 +439,7 @@ void abandon_lease (lease)
 	lt.hardware_addr.hlen = 0;
 	lt.uid = (char *)0;
 	lt.uid_len = 0;
-	supersede_lease (lease, &lt);
+	supersede_lease (lease, &lt, 1);
 }
 
 /* Locate the lease associated with a given IP address... */
@@ -503,6 +510,23 @@ struct class *find_class (type, name, len)
 					     : vendor_class_hash, name, len);
 	return class;
 }	
+
+/* Write all interesting leases to permanent storage. */
+
+void write_leases ()
+{
+	struct lease *l;
+	struct subnet *s;
+	int i;
+
+	for (s = subnets; s; s = s -> next) {
+		for (l = s -> leases; l; l = l -> next) {
+			if (l -> hardware_addr.hlen || l -> uid_len)
+				write_lease (l);
+		}
+	}
+	commit_leases ();
+}
 
 void dump_subnets ()
 {

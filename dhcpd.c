@@ -132,6 +132,9 @@ int main (argc, argv, envp)
 	/* Read the dhcpd.conf file... */
 	readconf ();
 
+	/* Start up the database... */
+	db_startup ();
+
 #if 0
 	/* If addresses were specified on the command line, resolve them;
 	   otherwise, just get a list of the addresses that are configured

@@ -379,8 +379,12 @@ void ack_lease (packet, lease, offer, when)
 	/* Record the transaction id... */
 	lt.xid = packet -> raw -> xid;
 
-	/* Install the new information about this lease in the database. */
-	supersede_lease (lease, &lt);
+	/* Install the new information about this lease in the database.
+	   If this is a DHCPACK and we can't write the lease, don't
+	   ACK it either. */
+	if (!(supersede_lease (lease, &lt, offer == DHCPACK)
+	      || offer != DHCPACK))
+	  return;
 
 	/* Send a response to the client... */
 

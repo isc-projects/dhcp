@@ -70,6 +70,38 @@ void readconf (void)
 			break;
 		parse_statement (cfile);
 	} while (1);
+	token = next_token (&val, cfile);
+}
+
+void read_leases (void)
+{
+	FILE *cfile;
+	char *val;
+	int token;
+	jmp_buf bc;
+
+	/* Open the lease file... */
+	if ((cfile = fopen (_PATH_DHCPD_DB, "r")) == NULL)
+		warn ("Can't open lease database %s: %m", _PATH_DHCPD_DB);
+	do {
+		token = next_token (&val, cfile);
+printf ("token = %d\n", token);
+		if (token == EOF)
+			break;
+		if (token != LEASE) {
+			warn ("Corrupt lease file - possible data loss!");
+			skip_to_semi (cfile);
+		} else {
+			if (!setjmp (bc)) {
+				struct lease *lease;
+printf ("Parsing a lease...\n");
+				lease = parse_lease_statement (cfile, &bc);
+				enter_lease (lease);
+print_lease (lease);
+			}
+		}
+
+	} while (1);
 }
 
 /* statement :== host_statement */

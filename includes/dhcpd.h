@@ -154,8 +154,10 @@ typedef unsigned char option_mask [16];
 #ifndef _PATH_DHCPD_CONF
 #ifdef DEBUG
 #define _PATH_DHCPD_CONF	"dhcpd.conf"
+#define _PATH_DHCPD_DB		"dhcpd.leases"
 #else
 #define _PATH_DHCPD_CONF	"/etc/dhcpd.conf"
+#define _PATH_DHCPD_CONF	"/etc/dhcpd.leases"
 #endif
 #endif
 
@@ -170,12 +172,12 @@ void parse_options PROTO ((struct packet *));
 void parse_option_buffer PROTO ((struct packet *, unsigned char *, int));
 void cons_options PROTO ((struct packet *, struct packet *,
 			  struct tree_cache **, int));
-void new_cons_options PROTO ((struct packet *, struct packet *,
-			  struct tree_cache **, int));
+/* void new_cons_options PROTO ((struct packet *, struct packet *,
+			  struct tree_cache **, int)); */
 int store_options PROTO ((unsigned char *, int, struct tree_cache **,
-			   unsigned char *, int));
-int store_option PROTO ((struct tree_cache **, unsigned char,
-			 unsigned char *, int, int *));
+			   unsigned char *, int, int, int));
+/* int store_option PROTO ((struct tree_cache **, unsigned char,
+			 unsigned char *, int, int *)); */
 char *pretty_print_option PROTO ((unsigned char, unsigned char *, int));
 
 /* errwarn.c */
@@ -209,6 +211,7 @@ int peek_token PROTO ((char **, FILE *));
 
 /* confpars.c */
 void readconf PROTO ((void));
+void read_leases PROTO ((void));
 void parse_statement PROTO ((FILE *));
 void skip_to_semi PROTO ((FILE *));
 struct host_decl *parse_host_statement PROTO ((FILE *, jmp_buf *));
@@ -266,7 +269,7 @@ void new_address_range PROTO ((struct iaddr, struct iaddr,
 extern struct subnet *find_subnet (struct iaddr);
 void enter_subnet (struct subnet *);
 void enter_lease PROTO ((struct lease *));
-void supersede_lease PROTO ((struct lease *, struct lease *));
+int supersede_lease PROTO ((struct lease *, struct lease *, int));
 void release_lease PROTO ((struct lease *));
 void abandon_lease PROTO ((struct lease *));
 struct lease *find_lease_by_uid PROTO ((unsigned char *, int));
@@ -274,6 +277,7 @@ struct lease *find_lease_by_hw_addr PROTO ((unsigned char *, int));
 struct lease *find_lease_by_ip_addr PROTO ((struct iaddr));
 struct class *add_class PROTO ((int, char *));
 struct class *find_class PROTO ((int, char *, int));
+void write_leases PROTO ((void));
 void dump_subnets PROTO ((void));
 
 /* alloc.c */
@@ -319,6 +323,7 @@ unsigned char *hash_lookup PROTO ((struct hash_table *, char *, int));
 extern struct option dhcp_options [256];
 extern unsigned char dhcp_option_default_priority_list [];
 extern int sizeof_dhcp_option_default_priority_list;
+extern char *hardware_types [256];
 extern struct hash_table universe_hash;
 extern struct universe dhcp_universe;
 void initialize_universes PROTO ((void));
@@ -334,12 +339,17 @@ void putUShort PROTO ((unsigned char *, unsigned short));
 void putShort PROTO ((unsigned char *, short));
 
 /* inet.c */
-struct iaddr subnet_number (struct iaddr, struct iaddr);
-struct iaddr ip_addr (struct iaddr, struct iaddr, unsigned long);
-unsigned long host_addr (struct iaddr, struct iaddr);
-int addr_eq (struct iaddr, struct iaddr);
-char *piaddr (struct iaddr);
+struct iaddr subnet_number PROTO ((struct iaddr, struct iaddr));
+struct iaddr ip_addr PROTO ((struct iaddr, struct iaddr, unsigned long));
+unsigned long host_addr PROTO ((struct iaddr, struct iaddr));
+int addr_eq PROTO ((struct iaddr, struct iaddr));
+char *piaddr PROTO ((struct iaddr));
 
 /* dhclient.c */
-void parse_client_statement (FILE *, struct host_decl *);
+void parse_client_statement PROTO ((FILE *, struct host_decl *));
 
+/* db.c */
+int write_lease PROTO ((struct lease *));
+int commit_leases PROTO ((void));
+void db_startup PROTO ((void));
+void new_lease_file PROTO ((void));
