@@ -289,7 +289,9 @@ void do_a_line (sock)
 /*	inet_aton ("130.129.63.255", &to.sin_addr);*//* XXX bcst bug */
 
 	to.sin_family = AF_INET;
+#ifdef HAVE_SIN_LEN
 	to.sin_len = sizeof to;
+#endif
 	memset (to.sin_zero, 0, sizeof to.sin_zero);
 	
 	note ("Sending dhcp request to %s, port %d",
