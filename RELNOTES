@@ -1,6 +1,6 @@
 	    Internet Software Consortium DHCP Distribution
 			     Version 3.0.1
-			 Release Candidate 10
+			 Release Candidate 12
 			       June, 2002
 
 			     Release Notes
@@ -45,6 +45,12 @@ Measurement Systems, Igor Sharfmesser at Kazakh Telecom, and Brian
 Murrell at BC Tel Advanced Communications.  I'd like to express my
 thanks to all of these good people here, both for working on the code
 and for prodding me into improving it.
+
+			Changes since 3.0.1rc11
+
+- A patch from Florian Lohoff was applied with some modifications to
+  dhcrelay.  It now discards packets whose hop count exceeds 10 by default,
+  and a command-line option (-c) can be used to set this value.
 
 			Changes since 3.0.1rc10
 
