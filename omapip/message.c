@@ -386,7 +386,7 @@ isc_result_t omapi_message_process (omapi_object_t *mo, omapi_object_t *po)
 		  dmalloc_outstanding - previous_outstanding,
 		  dmalloc_outstanding, dmalloc_longterm);
 #endif
-#if (defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL)) && 0
+#if defined (DEBUG_MEMORY_LEAKAGE) && 0
 	dmalloc_dump_outstanding ();
 #endif
 #if defined (DEBUG_RC_HISTORY_EXHAUSTIVELY) && 0
