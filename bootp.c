@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bootp.c,v 1.20 1996/11/08 20:08:34 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bootp.c,v 1.21 1996/12/31 02:00:33 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -100,6 +100,7 @@ void bootp (packet)
 			for (; hp; hp = hp -> n_ipaddr) {
 				if (!hp -> fixed_addr) {
 					host = hp;
+					break;
 				}
 			}
 		}
@@ -107,8 +108,8 @@ void bootp (packet)
 		/* If we've been told not to boot unknown clients,
 		   and we didn't find any host record for this client,
 		   ignore it. */
-		if (!hp && !(packet -> shared_network ->
-			     group -> boot_unknown_clients)) {
+		if (!host && !(packet -> shared_network ->
+			       group -> boot_unknown_clients)) {
 			note ("Ignoring unknown BOOTP client %s via %s",
 			      print_hw_addr (packet -> raw -> htype,
 					     packet -> raw -> hlen,
