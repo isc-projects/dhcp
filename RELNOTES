@@ -62,6 +62,9 @@ improving it.
 
 - Fix a small memory leak in the relay agent option support code.
 
+- Fix a core dump that would occur if a packet was sent with no
+  options.
+
 	        Changes since 3.0 Beta 2 Patchlevel 14
 
 - Finish fixing a long-standing bug in the agent options code.   This
