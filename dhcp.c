@@ -3,7 +3,7 @@
    DHCP Protocol engine. */
 
 /*
- * Copyright (c) 1995, 1996 The Internet Software Consortium.
+ * Copyright (c) 1995, 1996, 1997 The Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.39 1997/02/22 10:22:05 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.40 1997/02/22 12:25:11 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -191,9 +191,9 @@ void dhcprequest (packet)
 	      : packet -> interface -> name);
 
 	/* If we found a lease for the client but it's not the one the
-	   client asked for, NAK it. */
+	   client asked for, don't send it - some other server probably
+	   made the cut. */
 	if (lease && !addr_eq (lease -> ip_addr, cip)) {
-		nak_lease (packet, &cip);
 		return;
 	}
 
