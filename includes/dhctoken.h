@@ -287,7 +287,11 @@ enum dhcp_token {
 	ERROR = 583,
 	TOKEN_DEBUG = 584,
 	INFO = 585,
-	RETURN = 586
+	RETURN = 586,
+	PAUSED = 587,
+	RECOVER_DONE = 588,
+	SHUTDOWN = 589,
+	STARTUP = 590
 };
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\
