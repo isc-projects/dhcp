@@ -85,7 +85,7 @@ extern int h_errno;
 #define _PATH_DHCPD_PID	"/etc/dhcpd.pid"
 #endif
 
-#ifdef __GNUC__
+#if defined (__GNUC__) || defined (__SVR4)
 /* Varargs stuff: use stdarg.h instead ... */
 #include <stdarg.h>
 #define VA_DOTDOTDOT ...
@@ -120,3 +120,5 @@ extern int h_errno;
 
 #define TIME time_t
 #define GET_TIME(x)	time ((x))
+
+#define random()	rand()

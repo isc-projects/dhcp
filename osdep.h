@@ -62,7 +62,7 @@
    If you add a new system configuration file, include it here: */
 
 #if defined (sun)
-# if defined (__svr4__)
+# if defined (__svr4__) || defined (__SVR4)
 #  include "cf/sunos5-5.h"
 # else
 #  include "cf/sunos4.h"
