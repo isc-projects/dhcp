@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: ddns.c,v 1.15.2.5 2001/10/26 21:26:41 mellon Exp $ Copyright (c) 2000-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: ddns.c,v 1.15.2.6 2001/10/30 06:04:54 mellon Exp $ Copyright (c) 2000-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -609,6 +609,9 @@ int ddns_removals (struct lease *lease)
 
 	/* No scope implies that DDNS has not been performed for this lease. */
 	if (!lease -> scope)
+		return 0;
+
+	if (ddns_update_style != 2)
 		return 0;
 
 	/*
