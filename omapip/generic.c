@@ -125,6 +125,7 @@ isc_result_t omapi_generic_set_value (omapi_object_t *h,
 			(vm_new - g -> va_max) * sizeof *va);
 		free (g -> values);
 		g -> values = va;
+		g -> va_max = vm_new;
 	}
 	status = omapi_value_new (&g -> values [g -> nvalues],
 				  "omapi_generic_set_value");
