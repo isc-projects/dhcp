@@ -34,6 +34,8 @@ CFLAGS = $(DEBUG) $(PREDEFINES) $(INCLUDES) $(COPTS) -DHMAC_MD5 -DMINIRES_LIB
 
 all:	libres.a
 
+install:
+
 libres.a:	$(OBJ)
 	rm -f res.a
 	ar cruv libres.a $(OBJ)
