@@ -77,7 +77,7 @@ extern int h_errno;
 #define _PATH_DHCPD_PID	"/etc/dhcpd.pid"
 #endif
 
-#define INADDR_LOOPBACK	((u_int32_t) htonl((u_int32_t)0x7f000001))
+#define INADDR_LOOPBACK	((u_int32_t)0x7f000001)
 
 /* Varargs stuff: use stdarg.h instead ... */
 #include <stdarg.h>
