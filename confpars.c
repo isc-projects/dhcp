@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.26 1996/08/28 01:28:27 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.27 1996/08/29 09:14:39 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -50,16 +50,16 @@ static char copyright[] =
 
 static TIME parsed_time;
 
-/* conf-file :== declarations statements EOF
-   declarations :== <nil> | declaration | declarations declaration
-   statements :== <nil> | statement | statements statement */
+/* conf-file :== parameters declarations EOF
+   parameters :== <nil> | parameter | parameters parameter
+   declarations :== <nil> | declaration | declarations declaration */
 
 void readconf ()
 {
 	FILE *cfile;
 	char *val;
 	int token;
-	int statement = 0;
+	int declaration = 0;
 
 	new_parse (_PATH_DHCPD_CONF);
 
@@ -78,17 +78,18 @@ void readconf ()
 		token = peek_token (&val, cfile);
 		if (token == EOF)
 			break;
-		statement = parse_statement (cfile, &root_group,
-					     ROOT_GROUP, (struct host_decl *)0,
-					     statement);
+		declaration = parse_statement (cfile, &root_group,
+						 ROOT_GROUP,
+						 (struct host_decl *)0,
+						 declaration);
 	} while (1);
 	token = next_token (&val, cfile);
 }
 
-/* lease-file :== lease-statements EOF
+/* lease-file :== lease-declarations EOF
    lease-statments :== <nil>
-   		     | lease-statement
-		     | lease-statements lease-statement */
+   		     | lease-declaration
+		     | lease-declarations lease-declaration */
 
 void read_leases ()
 {
@@ -121,7 +122,7 @@ void read_leases ()
 			skip_to_semi (cfile);
 		} else {
 			struct lease *lease;
-			lease = parse_lease_statement (cfile);
+			lease = parse_lease_declaration (cfile);
 			if (lease)
 				enter_lease (lease);
 			else
@@ -131,35 +132,37 @@ void read_leases ()
 	} while (1);
 }
 
-/* declaration :== timestamp
-   		 | DEFAULT_LEASE_TIME lease_time
-		 | MAX_LEASE_TIME lease_time
-		 | DYNAMIC_BOOTP_LEASE_CUTOFF date
-		 | DYNAMIC_BOOTP_LEASE_LENGTH lease_time
-		 | BOOT_UNKNOWN_CLIENTS boolean
-		 | ONE_LEASE_PER_CLIENT boolean
-		 | NEXT_SERVER ip-addr-or-hostname SEMI
-		 | option_declaration
-		 | SERVER-IDENTIFIER ip-addr-or-hostname SEMI
-		 | FILENAME string-declaration
-		 | SERVER_NAME string-declaration
-		 | hardware-declaration
-		 | fixed-address-declaration
+/* statement :== parameter | declaration
 
-   statement :== host-statement
-   	       | group-statement
-	       | shared-network-statment
-	       | subnet-statement
-	       | VENDOR_CLASS class-statement
-	       | USER_CLASS class-statement
-	       | RANGE address-range-statement */
+   parameter :== timestamp
+   	       | DEFAULT_LEASE_TIME lease_time
+	       | MAX_LEASE_TIME lease_time
+	       | DYNAMIC_BOOTP_LEASE_CUTOFF date
+	       | DYNAMIC_BOOTP_LEASE_LENGTH lease_time
+	       | BOOT_UNKNOWN_CLIENTS boolean
+	       | ONE_LEASE_PER_CLIENT boolean
+	       | NEXT_SERVER ip-addr-or-hostname SEMI
+	       | option_parameter
+	       | SERVER-IDENTIFIER ip-addr-or-hostname SEMI
+	       | FILENAME string-parameter
+	       | SERVER_NAME string-parameter
+	       | hardware-parameter
+	       | fixed-address-parameter
 
-int parse_statement (cfile, group, type, host_decl, statement)
+   declaration :== host-declaration
+		 | group-declaration
+		 | shared-network-declaration
+		 | subnet-declaration
+		 | VENDOR_CLASS class-declaration
+		 | USER_CLASS class-declaration
+		 | RANGE address-range-declaration */
+
+int parse_statement (cfile, group, type, host_decl, declaration)
 	FILE *cfile;
 	struct group *group;
 	int type;
 	struct host_decl *host_decl;
-	int statement;
+	int declaration;
 {
 	int token;
 	char *val;
@@ -172,19 +175,19 @@ int parse_statement (cfile, group, type, host_decl, statement)
 
 	switch (next_token (&val, cfile)) {
 	      case HOST:
-		if (type != HOST_STMT)
-			parse_host_statement (cfile, group);
+		if (type != HOST_DECL)
+			parse_host_declaration (cfile, group);
 		else {
-			parse_warn ("host statements not allowed here.");
+			parse_warn ("host declarations not allowed here.");
 			skip_to_semi (cfile);
 		}
 		return 1;
 
 	      case GROUP:
-		if (type != HOST_STMT)
-			parse_group_statement (cfile, group);
+		if (type != HOST_DECL)
+			parse_group_declaration (cfile, group);
 		else {
-			parse_warn ("host statements not allowed here.");
+			parse_warn ("host declarations not allowed here.");
 			skip_to_semi (cfile);
 		}
 		return 1;
@@ -194,29 +197,29 @@ int parse_statement (cfile, group, type, host_decl, statement)
 		break;
 
 	      case SHARED_NETWORK:
-		if (type == SHARED_NET_STMT ||
-		    type == HOST_STMT ||
-		    type == SUBNET_STMT) {
-			parse_warn ("shared-network declarations not %s.",
+		if (type == SHARED_NET_DECL ||
+		    type == HOST_DECL ||
+		    type == SUBNET_DECL) {
+			parse_warn ("shared-network parameters not %s.",
 				    "allowed here");
 			skip_to_semi (cfile);
 			break;
 		}
 
-		parse_shared_net_statement (cfile, group);
+		parse_shared_net_declaration (cfile, group);
 		return 1;
 
 	      case SUBNET:
-		if (type == HOST_STMT || type == SUBNET_STMT) {
-			parse_warn ("subnet statements not allowed here.");
+		if (type == HOST_DECL || type == SUBNET_DECL) {
+			parse_warn ("subnet declarations not allowed here.");
 			skip_to_semi (cfile);
 			return 1;
 		}
 
-		/* If we're in a subnet statement, just do the parse. */
+		/* If we're in a subnet declaration, just do the parse. */
 		if (group -> shared_network) {
-			parse_subnet_statement (cfile,
-						group -> shared_network);
+			parse_subnet_declaration (cfile,
+						  group -> shared_network);
 			break;
 		}
 
@@ -229,7 +232,7 @@ int parse_statement (cfile, group, type, host_decl, statement)
 		share -> group = clone_group (group, "parse_statement:subnet");
 		share -> group -> shared_network = share;
 
-		parse_subnet_statement (cfile, share);
+		parse_subnet_declaration (cfile, share);
 		if (share -> subnets) {
 			share -> interface =
 				share -> subnets -> interface;
@@ -245,11 +248,11 @@ int parse_statement (cfile, group, type, host_decl, statement)
 		return 1;
 
 	      case VENDOR_CLASS:
-		parse_class_statement (cfile, group, 0);
+		parse_class_declaration (cfile, group, 0);
 		return 1;
 
 	      case USER_CLASS:
-		parse_class_statement (cfile, group, 1);
+		parse_class_declaration (cfile, group, 1);
 		return 1;
 
 	      case DEFAULT_LEASE_TIME:
@@ -269,13 +272,13 @@ int parse_statement (cfile, group, type, host_decl, statement)
 		break;
 
 	      case BOOT_UNKNOWN_CLIENTS:
-		if (type == HOST_STMT)
+		if (type == HOST_DECL)
 			parse_warn ("boot-unknown-clients not allowed here.");
 		group -> boot_unknown_clients = parse_boolean (cfile);
 		break;
 
 	      case ONE_LEASE_PER_CLIENT:
-		if (type == HOST_STMT)
+		if (type == HOST_DECL)
 			parse_warn ("one-lease-per-client not allowed here.");
 		group -> one_lease_per_client = parse_boolean (cfile);
 		break;
@@ -294,7 +297,7 @@ int parse_statement (cfile, group, type, host_decl, statement)
 		break;
 			
 	      case OPTION:
-		parse_option_decl (cfile, group);
+		parse_option_param (cfile, group);
 		break;
 
 	      case SERVER_IDENTIFIER:
@@ -303,7 +306,7 @@ int parse_statement (cfile, group, type, host_decl, statement)
 				    "level.");
 		tree = parse_ip_addr_or_hostname (cfile, 0);
 		if (!tree)
-			return statement;
+			return declaration;
 		cache = tree_cache (tree);
 		if (type == ROOT_GROUP) {
 			if (!tree_evaluate (cache))
@@ -324,43 +327,43 @@ int parse_statement (cfile, group, type, host_decl, statement)
 		break;
 
 	      case HARDWARE:
-		parse_hardware_decl (cfile, &hardware);
+		parse_hardware_param (cfile, &hardware);
 		if (host_decl)
 			host_decl -> interface = hardware;
 		else
-			parse_warn ("hardware address declaration %s",
+			parse_warn ("hardware address parameter %s",
 				    "not allowed here.");
 		break;
 
 	      case FIXED_ADDR:
-		cache = parse_fixed_addr_decl (cfile);
+		cache = parse_fixed_addr_param (cfile);
 		if (host_decl)
 			host_decl -> fixed_addr = cache;
 		else
-			parse_warn ("fixed-address declaration not %s",
+			parse_warn ("fixed-address parameter not %s",
 				    "allowed here.");
 		break;
 
 	      case RANGE:
-		if (type != SUBNET_STMT || !group -> subnet) {
-			parse_warn ("range statement not allowed here.");
+		if (type != SUBNET_DECL || !group -> subnet) {
+			parse_warn ("range declaration not allowed here.");
 			skip_to_semi (cfile);
-			return statement;
+			return declaration;
 		}
 		parse_address_range (cfile, group -> subnet);
-		return statement;
+		return declaration;
 
 	      default:
-		if (statement)
-			parse_warn ("expecting a statement.");
+		if (declaration)
+			parse_warn ("expecting a declaration.");
 		else
-			parse_warn ("expecting a declaration or statement.");
+			parse_warn ("expecting a parameter or declaration.");
 		skip_to_semi (cfile);
-		return statement;
+		return declaration;
 	}
 
-	if (statement) {
-		parse_warn ("declarations not allowed after first statement.");
+	if (declaration) {
+		parse_warn ("parameters not allowed after first declaration.");
 		return 1;
 	}
 
@@ -466,9 +469,9 @@ int parse_lbrace (cfile)
 }
 
 
-/* host-statement :== hostname RBRACE declarations statements LBRACE */
+/* host-declaration :== hostname RBRACE parameters declarations LBRACE */
 
-void parse_host_statement (cfile, group)
+void parse_host_declaration (cfile, group)
 	FILE *cfile;
 	struct group *group;
 {
@@ -476,18 +479,18 @@ void parse_host_statement (cfile, group)
 	int token;
 	struct host_decl *host;
 	char *name = parse_host_name (cfile);
-	int statement = 0;
+	int declaration = 0;
 
 	if (!name)
 		return;
 
 	host = (struct host_decl *)dmalloc (sizeof (struct host_decl),
-					    "parse_host_statement");
+					    "parse_host_declaration");
 	if (!host)
 		error ("can't allocate host decl struct %s.", name);
 
 	host -> name = name;
-	host -> group = clone_group (group, "parse_host_statement");
+	host -> group = clone_group (group, "parse_host_declaration");
 
 	if (!parse_lbrace (cfile))
 		return;
@@ -503,14 +506,14 @@ void parse_host_statement (cfile, group)
 			parse_warn ("unexpected end of file");
 			break;
 		}
-		statement = parse_statement (cfile, host -> group,
-					     HOST_STMT, host,
-					     statement);
+		declaration = parse_statement (cfile, host -> group,
+					       HOST_DECL, host,
+					       declaration);
 	} while (1);
 
 	if (!host -> group -> options [DHO_HOST_NAME]) {
 		host -> group -> options [DHO_HOST_NAME] =
-			new_tree_cache ("parse_host_statement");
+			new_tree_cache ("parse_host_declaration");
 		if (!host -> group -> options [DHO_HOST_NAME])
 			error ("can't allocate a tree cache for hostname.");
 		host -> group -> options [DHO_HOST_NAME] -> len =
@@ -581,10 +584,10 @@ char *parse_host_name (cfile)
 	return s;
 }
 
-/* class-statement :== STRING LBRACE declarations statements RBRACE
+/* class-declaration :== STRING LBRACE parameters declarations RBRACE
 */
 
-void parse_class_statement (cfile, group, type)
+void parse_class_declaration (cfile, group, type)
 	FILE *cfile;
 	struct group *group;
 	int type;
@@ -592,7 +595,7 @@ void parse_class_statement (cfile, group, type)
 	char *val;
 	int token;
 	struct class *class;
-	int statement;
+	int declaration;
 
 	token = next_token (&val, cfile);
 	if (token != STRING) {
@@ -604,7 +607,7 @@ void parse_class_statement (cfile, group, type)
 	class = add_class (type, val);
 	if (!class)
 		error ("No memory for class %s.", val);
-	class -> group = clone_group (group, "parse_class_statement");
+	class -> group = clone_group (group, "parse_class_declaration");
 
 	if (!parse_lbrace (cfile))
 		return;
@@ -619,10 +622,10 @@ void parse_class_statement (cfile, group, type)
 			parse_warn ("unexpected end of file");
 			break;
 		} else {
-			statement = parse_statement (cfile, class -> group,
-						     CLASS_STMT,
-						     (struct host_decl *)0,
-						     statement);
+			declaration = parse_statement (cfile, class -> group,
+						       CLASS_DECL,
+						       (struct host_decl *)0,
+						       declaration);
 		}
 	} while (1);
 }
@@ -649,9 +652,10 @@ void parse_lease_time (cfile, timep)
 	parse_semi (cfile);
 }
 
-/* shared-network-statement :== LBRACE statements declarations RBRACE */
+/* shared-network-declaration :==
+			hostname LBRACE declarations parameters RBRACE */
 
-void parse_shared_net_statement (cfile, group)
+void parse_shared_net_declaration (cfile, group)
 	FILE *cfile;
 	struct group *group;
 {
@@ -663,9 +667,9 @@ void parse_shared_net_statement (cfile, group)
 	struct subnet *next_net;
 	char *name;
 	struct tree_cache *server_next;
-	int statement = 0;
+	int declaration = 0;
 
-	share = new_shared_network ("parse_shared_net_statement");
+	share = new_shared_network ("parse_shared_net_declaration");
 	if (!share)
 		error ("No memory for shared subnet");
 	share -> leases = (struct lease *)0;
@@ -673,7 +677,7 @@ void parse_shared_net_statement (cfile, group)
 	share -> insertion_point = (struct lease *)0;
 	share -> next = (struct shared_network *)0;
 	share -> interface = (struct interface_info *)0;
-	share -> group = clone_group (group, "parse_shared_net_statement");
+	share -> group = clone_group (group, "parse_shared_net_declaration");
 	share -> group -> shared_network = share;
 
 	/* Get the name of the shared network... */
@@ -715,16 +719,17 @@ void parse_shared_net_statement (cfile, group)
 			break;
 		}
 
-		statement = parse_statement (cfile, share -> group,
-					     SHARED_NET_STMT,
-					     (struct host_decl *)0, statement);
+		declaration = parse_statement (cfile, share -> group,
+					       SHARED_NET_DECL,
+					       (struct host_decl *)0,
+					       declaration);
 	} while (1);
 }
 
-/* subnet-statement :==
-	net NETMASK netmask RBRACE declarations statements LBRACE */
+/* subnet-declaration :==
+	net NETMASK netmask RBRACE parameters declarations LBRACE */
 
-void parse_subnet_statement (cfile, share)
+void parse_subnet_declaration (cfile, share)
 	FILE *cfile;
 	struct shared_network *share;
 {
@@ -734,15 +739,15 @@ void parse_subnet_statement (cfile, share)
 	struct iaddr iaddr;
 	unsigned char addr [4];
 	int len = sizeof addr;
-	int statement = 0;
+	int declaration = 0;
 
-	subnet = new_subnet ("parse_subnet_statement");
+	subnet = new_subnet ("parse_subnet_declaration");
 	if (!subnet)
 		error ("No memory for new subnet");
 	subnet -> next_subnet = subnet -> next_sibling = (struct subnet *)0;
 	subnet -> shared_network = share;
 	subnet -> group = clone_group (share -> group,
-				       "parse_subnet_statement");
+				       "parse_subnet_declaration");
 	subnet -> group -> subnet = subnet;
 
 	/* Get the network number... */
@@ -781,9 +786,10 @@ void parse_subnet_statement (cfile, share)
 			parse_warn ("unexpected end of file");
 			break;
 		}
-		statement = parse_statement (cfile, subnet -> group,
-					     SUBNET_STMT,
-					     (struct host_decl *)0, statement);
+		declaration = parse_statement (cfile, subnet -> group,
+					       SUBNET_DECL,
+					       (struct host_decl *)0,
+					       declaration);
 	} while (1);
 
 	/* If this subnet supports dynamic bootp, flag it so in the
@@ -803,18 +809,18 @@ void parse_subnet_statement (cfile, share)
 	}
 }
 
-/* group-statement :== RBRACE declarations statements LBRACE */
+/* group-declaration :== RBRACE parameters declarations LBRACE */
 
-void parse_group_statement (cfile, group)
+void parse_group_declaration (cfile, group)
 	FILE *cfile;
 	struct group *group;
 {
 	char *val;
 	int token;
 	struct group *g;
-	int statement = 0;
+	int declaration = 0;
 
-	g = clone_group (group, "parse_group_statement");
+	g = clone_group (group, "parse_group_declaration");
 
 	if (!parse_lbrace (cfile))
 		return;
@@ -829,15 +835,16 @@ void parse_group_statement (cfile, group)
 			parse_warn ("unexpected end of file");
 			break;
 		}
-		statement = parse_statement (cfile, g, GROUP_STMT,
-					     (struct host_decl *)0, statement);
+		declaration = parse_statement (cfile, g, GROUP_DECL,
+					       (struct host_decl *)0,
+					       declaration);
 	} while (1);
 }
 
-/* hardware-declaration :== HARDWARE ETHERNET csns SEMI
+/* hardware-parameter :== HARDWARE ETHERNET csns SEMI
    csns :== NUMBER | csns COLON NUMBER */
 
-void parse_hardware_decl (cfile, hardware)
+void parse_hardware_param (cfile, hardware)
 	FILE *cfile;
 	struct hardware *hardware;
 {
@@ -891,7 +898,7 @@ void parse_hardware_decl (cfile, hardware)
 	}
 }
 
-/* string-declaration :== STRING SEMI */
+/* string-parameter :== STRING SEMI */
 
 char *parse_string (cfile)
 	FILE *cfile;
@@ -960,11 +967,11 @@ struct tree *parse_ip_addr_or_hostname (cfile, uniform)
 }	
 	
 
-/* fixed-addr-declaration :== ip-addrs-or-hostnames SEMI
-   ip-addrs-or-hostnames :== ip-addr-or-hostname |
-			     ip-addrs-or-hostnames ip-addr-or-hostname */
+/* fixed-addr-parameter :== ip-addrs-or-hostnames SEMI
+   ip-addrs-or-hostnames :== ip-addr-or-hostname
+			   | ip-addrs-or-hostnames ip-addr-or-hostname */
 
-struct tree_cache *parse_fixed_addr_decl (cfile)
+struct tree_cache *parse_fixed_addr_param (cfile)
 	FILE *cfile;
 {
 	char *val;
@@ -988,14 +995,14 @@ struct tree_cache *parse_fixed_addr_decl (cfile)
 	return tree_cache (tree);
 }
 
-/* option_declaration :== identifier DOT identifier <syntax> SEMI |
-			  identifier <syntax> SEMI
+/* option_parameter :== identifier DOT identifier <syntax> SEMI
+		      | identifier <syntax> SEMI
 
    Option syntax is handled specially through format strings, so it
    would be painful to come up with BNF for it.   However, it always
    starts as above and ends in a SEMI. */
 
-void parse_option_decl (cfile, group)
+void parse_option_param (cfile, group)
 	FILE *cfile;
 	struct group *group;
 {
@@ -1037,7 +1044,7 @@ void parse_option_decl (cfile, group)
 		universe = (struct universe *)hash_lookup (&universe_hash,
 							   vendor, 0);
 		/* If it's not there, we can't parse the rest of the
-		   statement. */
+		   declaration. */
 		if (!universe) {
 			parse_warn ("no vendor named %s.", vendor);
 			skip_to_semi (cfile);
@@ -1080,13 +1087,13 @@ void parse_option_decl (cfile, group)
 			switch (*fmt) {
 			      case 'X':
 				token = peek_token (&val, cfile);
-				if (token == NUMBER_OR_ATOM ||
+				if (token == NUMBER_OR_NAME ||
 				    token == NUMBER) {
 					do {
 						token = next_token
 							(&val, cfile);
 						if (token != NUMBER
-						    && token != NUMBER_OR_ATOM)
+						    && token != NUMBER_OR_NAME)
 							goto need_number;
 						convert_num (buf, val, 16, 8);
 						tree = tree_concat
@@ -1184,7 +1191,7 @@ void parse_option_decl (cfile, group)
 				tree = tree_concat (tree, tree_const (buf, 1));
 				break;
 			      default:
-				warn ("Bad format %c in parse_option_decl.",
+				warn ("Bad format %c in parse_option_param.",
 				      *fmt);
 				skip_to_semi (cfile);
 				return;
@@ -1226,20 +1233,22 @@ TIME parse_timestamp (cfile)
 	return rv;
 }
 		
-/* lease_statement :== LEASE ip_address LBRACE lease_declarations RBRACE
-   lease_declarations :== <nil>
-   		| lease_declaration
-		| lease_declarations lease_declaration
-   lease_declaration :== STARTS date
-		       | ENDS date
-		       | TIMESTAMP date
-		       | HARDWARE hardware-declaration
-		       | UID hex_numbers SEMI
-		       | HOST hostname SEMI
-		       | CLASS identifier SEMI
-		       | DYNAMIC_BOOTP SEMI */
+/* lease_declaration :== LEASE ip_address LBRACE lease_parameters RBRACE
 
-struct lease *parse_lease_statement (cfile)
+   lease_parameters :== <nil>
+		      | lease_parameter
+		      | lease_parameters lease_parameter
+
+   lease_parameter :== STARTS date
+		     | ENDS date
+		     | TIMESTAMP date
+		     | HARDWARE hardware-parameter
+		     | UID hex_numbers SEMI
+		     | HOST hostname SEMI
+		     | CLASS identifier SEMI
+		     | DYNAMIC_BOOTP SEMI */
+
+struct lease *parse_lease_declaration (cfile)
 	FILE *cfile;
 {
 	char *val;
@@ -1342,7 +1351,7 @@ struct lease *parse_lease_statement (cfile)
 
 			      case HARDWARE:
 				seenbit = 64;
-				parse_hardware_decl (cfile,
+				parse_hardware_param (cfile,
 						     &lease.hardware_addr);
 				break;
 
@@ -1367,7 +1376,7 @@ struct lease *parse_lease_statement (cfile)
 			}
 		}
 		if (seenmask & seenbit) {
-			parse_warn ("Too many %s declarations in lease %s\n",
+			parse_warn ("Too many %s parameters in lease %s\n",
 				    tbuf, piaddr (lease.ip_addr));
 		} else
 			seenmask |= seenbit;
@@ -1376,8 +1385,8 @@ struct lease *parse_lease_statement (cfile)
 	return &lease;
 }
 
-/* address-range-statement :== ip-address ip-address SEMI |
-			       DYNAMIC_BOOTP ip-address ip-address SEMI */
+/* address-range-declaration :== ip-address ip-address SEMI
+			       | DYNAMIC_BOOTP ip-address ip-address SEMI */
 
 void parse_address_range (cfile, subnet)
 	FILE *cfile;
@@ -1406,11 +1415,17 @@ void parse_address_range (cfile, subnet)
 	memcpy (low.iabuf, addr, len);
 	low.len = len;
 
+	/* Only one address? */
+	token = peek_token (&val, cfile);
+	if (token == SEMI)
+		high = low;
+	else {
 	/* Get the top address in the range... */
-	if (!parse_numeric_aggregate (cfile, addr, &len, DOT, 10, 8))
-		return;
-	memcpy (high.iabuf, addr, len);
-	high.len = len;
+		if (!parse_numeric_aggregate (cfile, addr, &len, DOT, 10, 8))
+			return;
+		memcpy (high.iabuf, addr, len);
+		high.len = len;
+	}
 
 	token = next_token (&val, cfile);
 	if (token != SEMI) {
@@ -1635,9 +1650,9 @@ unsigned char *parse_numeric_aggregate (cfile, buf,
 			break;
 		}
 
-		/* Allow NUMBER_OR_ATOM if base is 16. */
+		/* Allow NUMBER_OR_NAME if base is 16. */
 		if (token != NUMBER &&
-		    (base != 16 || token != NUMBER_OR_ATOM)) {
+		    (base != 16 || token != NUMBER_OR_NAME)) {
 			parse_warn ("expecting numeric value.");
 			skip_to_semi (cfile);
 			return (unsigned char *)0;
