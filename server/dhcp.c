@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.179 2001/01/25 08:32:26 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.180 2001/01/26 05:57:35 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1363,17 +1363,18 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 			   packet -> options, DHO_DHCP_SERVER_IDENTIFIER))
 		state -> got_server_identifier = 1;
 
-	/* If this is not a unicast DHCPREQUEST, steal the agent options
-	   from the packet.   Do not do this if the packet looks like
-	   it came from a client in the RENEWING state or if it was not
-	   relayed (giaddr is not set). */
-	if (!packet -> raw -> ciaddr.s_addr &&
-	    packet -> raw -> giaddr.s_addr &&
+	/* If there were agent options in the incoming packet, return
+	   them.  Do not return the agent options if they were stashed
+	   on the lease. */
+	if (packet -> raw -> giaddr.s_addr &&
 	    packet -> options -> universe_count > agent_universe.index &&
 	    packet -> options -> universes [agent_universe.index] &&
 	    (state -> options -> universe_count <= agent_universe.index ||
-	     !state -> options -> universes [agent_universe.index])) {
-	    option_chain_head_reference
+	     !state -> options -> universes [agent_universe.index]) &&
+	    lease -> agent_options !=
+	    ((struct option_chain_head *)
+	     packet -> options -> universes [agent_universe.index])) {
+		option_chain_head_reference
 		    ((struct option_chain_head **)
 		     &(state -> options -> universes [agent_universe.index]),
 		     (struct option_chain_head *)
@@ -1962,6 +1963,8 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 					       packet -> options,
 					       state -> options,
 					       &lease -> scope, oc, MDL)) {
+		if (lt -> agent_options)
+		    option_chain_head_dereference (&lt -> agent_options, MDL);
 		option_chain_head_reference
 			(&lt -> agent_options,
 			 (struct option_chain_head *)
