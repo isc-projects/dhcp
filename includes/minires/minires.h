@@ -26,6 +26,80 @@
  * <viraj_bais@ccm.fm.intel.com>
  */
 
+int minires_mkupdate (ns_updrec *, unsigned char *, unsigned);
+int minires_update (ns_updrec *);
+ns_updrec *minires_mkupdrec (int, const char *, unsigned int,
+			     unsigned int, unsigned long);
+void minires_freeupdrec (ns_updrec *);
+int minires_nmkupdate (res_state, ns_updrec *, unsigned char *, unsigned);
+int minires_nupdate (res_state, ns_updrec *, ns_tsig_key *);
+int minires_ninit (res_state);
+
+#if defined (MINIRES_LIB)
+#define res_update minires_update
+#define res_mkupdate minires_mkupdate
+#define res_mkupdrec minires_mkupdrec
+#define res_freeupdrec minires_freeupdrec
+#define res_nmkupdate minires_nmkupdate
+#define res_nupdate minires_nupdate
+#define __p_type_syms MR__p_type_syms
+#define dn_comp MRdn_comp
+#define loc_aton MRloc_aton
+#define sym_ston MRsym_ston
+#define res_buildservicelist MRres_buildservicelist
+#define res_destroyservicelist MRres_destroyservicelist
+#define res_buildprotolist MRres_buildprotolist
+#define res_destroyprotolist MRres_destroyprotolist
+#define res_servicenumber MRres_servicenumber
+#define res_protocolnumber MRres_protocolnumber
+#define res_protocolname MRres_protocolname
+#define res_servicename MRres_servicename
+#define ns_datetosecs MRns_datetosecs
+#define b64_pton MRb64_pton
+#define res_ninit minires_ninit
+#define res_randomid MRres_randomid
+#define res_findzonecut MRres_findzonecut
+#define res_nsend MRres_nsend
+#define res_nsendsigned MRres_nsendsigned
+#define ns_samename MRns_samename
+#define res_nameinquery MRres_nameinquery
+#define res_queriesmatch MRres_queriesmatch
+#define dn_expand MRdn_expand
+#define ns_get16 MRns_get16
+#define res_close MRres_close
+#define res_nclose MRres_nclose
+#define res_ourserver_p MRres_ourserver_p
+#define ns_sign MRns_sign
+#define p_class MRp_class
+#define p_section MRp_section
+#define ns_makecanon MRns_makecanon
+#define ns_parserr MRns_parserr
+#define ns_samedomain MRns_samedomain
+#define ns_name_uncompress MRns_name_uncompress
+#define res_nmkquery MRres_nmkquery
+#define ns_initparse MRns_initparse
+#define res_nquery MRres_nquery
+#define res_nsearch MRres_nsearch
+#define res_hostalias MRres_hostalias
+#define res_nquerydomain MRres_nquerydomain
+#define ns_skiprr MRns_skiprr
+#define dn_skipname MRdn_skipname
+#define ns_name_ntol MRns_name_ntol
+#define ns_sign_tcp_init MRns_sign_tcp_init
+#define ns_sign_tcp MRns_sign_tcp
+#define ns_name_ntop MRns_name_ntop
+#define ns_name_pton MRns_name_pton
+#define ns_name_unpack MRns_name_unpack
+#define ns_name_pack MRns_name_pack
+#define ns_name_compress MRns_name_compress
+#define ns_name_skip MRns_name_skip
+#define ns_subdomain MRns_subdomain
+#define ns_find_tsig MRns_find_tsig
+#define ns_verify MRns_verify
+#define ns_verify_tcp_init MRns_verify_tcp_init
+#define ns_verify_tcp MRns_verify_tcp
+#define b64_ntop MRb64_ntop
+
 extern const struct res_sym __p_type_syms[];
 extern time_t cur_time;
 
@@ -43,7 +117,6 @@ const char *res_protocolname(int);
 const char *res_servicename(u_int16_t, const char *);
 u_int32_t ns_datetosecs (const char *cp, int *errp);
 int b64_pton (char const *, unsigned char *, size_t);
-int res_ninit (res_state);
 unsigned int res_randomid (void);
 int res_findzonecut (res_state, const char *, ns_class, int,
 		     char *, size_t, struct in_addr *, int);
@@ -84,13 +157,6 @@ const char *res_hostalias (const res_state, const char *, char *, size_t);
 int res_nquerydomain(res_state, const char *, const char *,
 		     ns_class class, ns_class type, unsigned char *, unsigned);
 
-int res_mkupdate (ns_updrec *, unsigned char *, unsigned);
-int res_update (ns_updrec *);
-ns_updrec *res_mkupdrec (int, const char *, unsigned int,
-			 unsigned int, unsigned long);
-void res_freeupdrec (ns_updrec *);
-int res_nmkupdate (res_state, ns_updrec *, unsigned char *, unsigned);
-int res_nupdate (res_state, ns_updrec *, ns_tsig_key *);
 int ns_skiprr(const unsigned char *, const unsigned char *, ns_sect, int);
 int dn_skipname (const unsigned char *, const unsigned char *);
 u_int32_t getULong (const unsigned char *);
@@ -135,3 +201,4 @@ int b64_ntop (unsigned char const *, size_t, char *, size_t);
 #define DPRINTF(x)
 
 #define USE_MD5
+#endif

@@ -30,7 +30,7 @@ OBJ    = res_mkupdate.o res_init.o res_update.o res_send.o res_comp.o \
 
 DEBUG  = -g
 INCLUDES = $(BINDINC) -I../includes
-CFLAGS = $(DEBUG) $(PREDEFINES) $(INCLUDES) $(COPTS) -DHMAC_MD5
+CFLAGS = $(DEBUG) $(PREDEFINES) $(INCLUDES) $(COPTS) -DHMAC_MD5 -DMINIRES_LIB
 
 all:	libres.a
 

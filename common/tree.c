@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.72 2000/02/02 07:22:33 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.73 2000/02/02 08:01:45 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -471,11 +471,13 @@ int evaluate_dns_expression (result, packet, lease, in_options,
 		} else
 			r2 = 0;
 		if (r0 && r1 && (r2 || expr -> op != expr_ns_add)) {
-		    *result = res_mkupdrec (((expr -> op == expr_ns_add ||
-					      expr -> op == expr_ns_delete)
-					     ? S_UPDATE : S_PREREQ),
-					    tname, expr -> data.ns_add.rrclass,
-					    expr -> data.ns_add.rrtype, ttl);
+		    *result = minires_mkupdrec (((expr -> op == expr_ns_add ||
+						  expr -> op == expr_ns_delete)
+						 ? S_UPDATE : S_PREREQ),
+						tname,
+						expr -> data.ns_add.rrclass,
+						expr -> data.ns_add.rrtype,
+						ttl);
 		    if (!*result) {
 			  ngood:
 			    if (r2) {
@@ -508,7 +510,7 @@ int evaluate_dns_expression (result, packet, lease, in_options,
 								   MDL);
 				    if (!(*result) -> r_data) {
 				      dpngood: /* double plus ungood. */
-					res_freeupdrec (*result);
+					minires_freeupdrec (*result);
 					*result = 0;
 					goto ngood;
 				    }
@@ -1768,7 +1770,7 @@ int evaluate_numeric_expression (result, packet, lease,
 		return 0;
 #else
 		if (!inited) {
-			res_ninit (&res);
+			minires_ninit (&res);
 			inited = 1;
 		}
 		ISC_LIST_INIT (uq);
@@ -1787,7 +1789,7 @@ int evaluate_numeric_expression (result, packet, lease,
 
 		/* Do the update and record the error code, if there was
 		   an error; otherwise set it to NOERROR. */
-		if (res_nupdate (&res, ISC_LIST_HEAD (uq), NULL))
+		if (minires_nupdate (&res, ISC_LIST_HEAD (uq), NULL))
 			*result = NOERROR;
 		else
 			/* The resolver doesn't return any actual error
@@ -1806,7 +1808,7 @@ int evaluate_numeric_expression (result, packet, lease,
 				dfree (tmp -> r_data, MDL);
 				tmp -> r_data = (char *)0;
 			}
-			res_freeupdrec (tmp);
+			minires_freeupdrec (tmp);
 		}
 		return status;
 #endif /* NSUPDATE */
