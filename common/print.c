@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: print.c,v 1.12 1997/02/22 08:32:05 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: print.c,v 1.13 1997/03/05 06:33:06 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -95,9 +95,8 @@ void print_lease (lease)
 	       print_hw_addr (lease -> hardware_addr.htype,
 			       lease -> hardware_addr.hlen,
 			       lease -> hardware_addr.haddr));
-	debug ("  host %s  state %x",
-	       lease -> host ? lease -> host -> name : "<none>",
-	       lease -> state);
+	debug ("  host %s  ",
+	       lease -> host ? lease -> host -> name : "<none>");
 }	
 
 void dump_packet (tp)
