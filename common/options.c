@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.44.2.3 1999/12/21 19:26:59 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.44.2.4 1999/12/22 02:55:47 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -841,6 +841,10 @@ void do_packet (interface, packet, len, from_port, from, hfrom)
 		bootp (&tp);
 
 	option_state_dereference (&tp.options, "do_packet");
+#if defined (DEBUG_MEMORY_LEAKAGE)
+	log_info ("%ld outstanding, %ld long-term\n",
+		  dmalloc_outstanding, dmalloc_longterm);
+#endif
 }
 
 int hashed_option_get (result, universe, packet, lease, options, code)
