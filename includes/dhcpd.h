@@ -435,6 +435,10 @@ typedef unsigned char option_mask [16];
 #define _PATH_RESOLV_CONF	"/etc/resolv.conf"
 #endif
 
+#ifndef _PATH_DHCRELAY_PID
+#define _PATH_DHCRELAY_PID	"/var/run/dhcrelay.pid"
+#endif
+
 #ifndef DHCPD_LOG_FACILITY
 #define DHCPD_LOG_FACILITY	LOG_DAEMON
 #endif
