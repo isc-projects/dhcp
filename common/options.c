@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.85.2.9 2002/11/17 02:26:58 dhankins Exp $ Copyright (c) 1995-2002 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.85.2.10 2003/02/10 01:22:37 dhankins Exp $ Copyright (c) 1995-2002 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -166,7 +166,8 @@ int parse_option_buffer (options, buffer, length, universe)
 		   the parse fails, or the option isn't an encapsulation (by
 		   far the most common case), or the option isn't entirely
 		   an encapsulation, keep the raw data as well. */
-		if (!((universe -> options [code] -> format [0] == 'e' ||
+		if (universe -> options [code] &&
+		    !((universe -> options [code] -> format [0] == 'e' ||
 		       universe -> options [code] -> format [0] == 'E') &&
 		      (parse_encapsulated_suboptions
 		       (options, universe -> options [code],
