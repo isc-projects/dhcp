@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dns.c,v 1.28 2000/09/14 11:29:43 mellon Exp $ Copyright (c) 2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dns.c,v 1.29 2000/10/12 08:58:11 mellon Exp $ Copyright (c) 2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -395,6 +395,70 @@ void repudiate_zone (struct dns_zone **zone)
 
 	(*zone) -> timeout = cur_time - 1;
 	dns_zone_dereference (zone, MDL);
+}
+
+void cache_found_zone (ns_class class,
+		       char *zname, struct in_addr *addrs, int naddrs)
+{
+	isc_result_t status = ISC_R_NOTFOUND;
+	const char *np;
+	struct dns_zone *zone = (struct dns_zone *)0;
+	struct data_string nsaddrs;
+	int ix = strlen (zname);
+
+	if (zname [ix - 1] == '.')
+		ix = 0;
+
+	/* See if there's already such a zone. */
+	if (dns_zone_lookup (&zone, np) == ISC_R_SUCCESS) {
+		/* If it's not a dynamic zone, leave it alone. */
+		if (!zone -> timeout)
+			return;
+		/* Address may have changed, so just blow it away. */
+		if (zone -> primary)
+			option_cache_dereference (&zone -> primary, MDL);
+		if (zone -> secondary)
+			option_cache_dereference (&zone -> secondary, MDL);
+	}
+
+	if (!dns_zone_allocate (&zone, MDL))
+		return;
+
+	if (!zone -> name) {
+		zone -> name =
+			dmalloc (strlen (zname) + 1 + (ix != 0), MDL);
+		if (!zone -> name) {
+			dns_zone_dereference (&zone, MDL);
+			return;
+		}
+		strcpy (zone -> name, zname);
+		/* Add a trailing '.' if it was missing. */
+		if (ix) {
+			zone -> name [ix] = '.';
+			zone -> name [ix + 1] = 0;
+		}
+	}
+
+	/* XXX Need to get the lower-level code to push the actual zone
+	   XXX TTL up to us. */
+	zone -> timeout = cur_time + 1800;
+	
+	if (!option_cache_allocate (&zone -> primary, MDL)) {
+		dns_zone_dereference (&zone, MDL);
+		return;
+	}
+	if (!buffer_allocate (&zone -> primary -> data.buffer,
+			      naddrs * sizeof (struct in_addr), MDL)) {
+		dns_zone_dereference (&zone, MDL);
+		return;
+	}
+	memcpy (zone -> primary -> data.buffer -> data,
+		addrs, naddrs * sizeof *addrs);
+	zone -> primary -> data.data =
+		&zone -> primary -> data.buffer -> data [0];
+	zone -> primary -> data.len = naddrs * sizeof *addrs;
+
+	enter_dns_zone (zone);
 }
 #endif /* NSUPDATE */
 
