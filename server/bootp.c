@@ -3,7 +3,7 @@
    BOOTP Protocol support. */
 
 /*
- * Copyright (c) 1995-2000 Internet Software Consortium.
+ * Copyright (c) 1995-2001 Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bootp.c,v 1.69.2.1 2001/05/17 07:16:53 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bootp.c,v 1.69.2.2 2001/06/04 21:31:03 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -151,7 +151,11 @@ void bootp (packet)
 			ack_lease (packet, lease, 0, 0, msgbuf, 0);
 			goto out;
 		}
+		/* XXX just ignore BOOTREQUESTS from unknown clients if
+		   XXX we can't allocate IP addresses for them. */
+#if 0
 		log_info ("%s: no available leases", msgbuf);
+#endif
 		goto out;
 	}
 
