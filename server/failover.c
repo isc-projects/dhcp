@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.47 2001/04/20 18:34:27 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.48 2001/04/20 18:48:25 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1673,10 +1673,29 @@ isc_result_t dhcp_failover_peer_state_changed (dhcp_failover_state_t *state,
 	new_state = msg -> server_state;
 	startupp = (msg -> server_flags & FTF_STARTUP) ? 1 : 0;
 
-	if (state -> partner.state == new_state) {
-		if (state -> me.state == startup)
+	if (state -> partner.state == new_state && state -> me.state) {
+		switch (state -> me.state) {
+		      case startup:
 			dhcp_failover_set_state (state, state -> saved_state);
-		return ISC_R_SUCCESS;
+			return ISC_R_SUCCESS;
+
+		      case unknown_state:
+		      case normal:
+		      case potential_conflict:
+		      case recover:
+		      case recover_done:
+		      case shut_down:
+		      case paused:
+		      case recover_wait:
+			return ISC_R_SUCCESS;
+
+			/* If we get a peer state change when we're
+			   disconnected, we always process it. */
+		      case partner_down:
+		      case communications_interrupted:
+		      case resolution_interrupted:
+			break;
+		}
 	}
 
 	state -> partner.state = new_state;
