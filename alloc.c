@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: alloc.c,v 1.8 1996/08/27 09:31:27 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: alloc.c,v 1.9 1996/08/28 01:19:42 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -208,8 +208,6 @@ void free_hash_bucket (ptr, name)
 	struct hash_bucket *ptr;
 	char *name;
 {
-	if (ptr -> name)
-		dfree ((VOIDPTR)ptr -> name, name);
 	dfree ((VOIDPTR)ptr, name);
 }
 
