@@ -101,6 +101,10 @@
 #  include "cf/hpux.h"
 #endif
 
+#ifdef __QNX__
+#  include "cf/qnx.h"
+#endif
+
 /* Porting::
 
    If you add a new network API, and have it set up so that it can be
