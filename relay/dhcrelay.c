@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcrelay.c,v 1.4 1997/03/05 06:16:44 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcrelay.c,v 1.5 1997/03/06 06:58:37 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -162,17 +162,25 @@ int main (argc, argv, envp)
 	/* Discover all the network interfaces. */
 	discover_interfaces (DISCOVER_RELAY);
 
+	/* Set up the bootp packet handler... */
+	bootp_packet_handler = relay;
+
 	/* Start dispatching packets and timeouts... */
-	dispatch (0);
+	dispatch ();
+
 	/*NOTREACHED*/
 	return 0;
 }
 
-void relay (ip, packet, length)
+void relay (ip, packbuf, length, from_port, from, hfrom)
 	struct interface_info *ip;
-	struct dhcp_packet *packet;
+	u_int8_t *packbuf;
 	int length;
+	u_int16_t from_port;
+	struct iaddr from;
+	struct hardware *hfrom;
 {
+	struct dhcp_packet *packet = (struct dhcp_packet *)packbuf;
 	struct server_list *sp;
 	struct sockaddr_in to;
 	struct interface_info *out;
