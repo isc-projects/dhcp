@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.28 1999/05/07 17:10:38 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.29 1999/05/27 14:30:00 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -524,6 +524,9 @@ int evaluate_boolean_expression (result, packet, options, expr)
 	      case expr_concat:
 	      case expr_encapsulate:
 	      case expr_host_lookup:
+	      case expr_encode_int8:
+	      case expr_encode_int16:
+	      case expr_encode_int32:
 		log_error ("Data opcode in evaluate_boolean_expression: %d",
 		      expr -> op);
 		return 0;
@@ -629,7 +632,7 @@ int evaluate_data_expression (result, packet, options, expr)
 		       ? print_hex_2 (result -> len, result -> data, 30)
 		       : NULL));
 #endif
-		return 1;
+		return s0 && s1;
 
 		/* Extract an option. */
 	      case expr_option:
@@ -797,6 +800,88 @@ int evaluate_data_expression (result, packet, options, expr)
 #endif
 		return s0 || s1;
 
+	      case expr_encode_int8:
+		s0 = evaluate_numeric_expression (&len, packet, options,
+						  expr -> data.packet.len);
+		if (s0) {
+			result -> len = 1;
+			if (!buffer_allocate (&result -> buffer, 1,
+					      "expr_encode_int8")) {
+				log_error ("data: encode_int8: no memory");
+				result -> len = 0;
+				s0 = 0;
+			} else {
+				result -> data = &result -> buffer -> data [0];
+				result -> data [0] = len;
+			}
+		} else
+			result -> len = 0;
+
+#if defined (DEBUG_EXPRESSIONS)
+		if (!s0)
+			log_info ("data: encode_int8 (NULL) = NULL");
+		else
+			log_info ("data: encode_int8 (%d) = %s", len,
+				  print_hex_2 (result -> len,
+					       result -> data, 20));
+#endif
+		return s0;
+			
+		
+	      case expr_encode_int16:
+		s0 = evaluate_numeric_expression (&len, packet, options,
+						  expr -> data.packet.len);
+		if (s0) {
+			result -> len = 2;
+			if (!buffer_allocate (&result -> buffer, 2,
+					      "expr_encode_int16")) {
+				log_error ("data: encode_int16: no memory");
+				result -> len = 0;
+				s0 = 0;
+			} else {
+				result -> data = &result -> buffer -> data [0];
+				putUShort (result -> data, len);
+			}
+		} else
+			result -> len = 0;
+
+#if defined (DEBUG_EXPRESSIONS)
+		if (!s0)
+			log_info ("data: encode_int16 (NULL) = NULL");
+		else
+			log_info ("data: encode_int16 (%d) = %s", len,
+				  print_hex_2 (result -> len,
+					       result -> data, 20));
+#endif
+		return s0;
+
+	      case expr_encode_int32:
+		s0 = evaluate_numeric_expression (&len, packet, options,
+						  expr -> data.packet.len);
+		if (s0) {
+			result -> len = 4;
+			if (!buffer_allocate (&result -> buffer, 4,
+					      "expr_encode_int32")) {
+				log_error ("data: encode_int32: no memory");
+				result -> len = 0;
+				s0 = 0;
+			} else {
+				result -> data = &result -> buffer -> data [0];
+				putULong (result -> data, len);
+			}
+		} else
+			result -> len = 0;
+
+#if defined (DEBUG_EXPRESSIONS)
+		if (!s0)
+			log_info ("data: encode_int32 (NULL) = NULL");
+		else
+			log_info ("data: encode_int32 (%d) = %s", len,
+				  print_hex_2 (result -> len,
+					       result -> data, 20));
+#endif
+		return s0;
+
 	      case expr_check:
 	      case expr_equal:
 	      case expr_and:
@@ -851,6 +936,9 @@ int evaluate_numeric_expression (result, packet, options, expr)
 	      case expr_concat:
 	      case expr_encapsulate:
 	      case expr_host_lookup:
+	      case expr_encode_int8:
+	      case expr_encode_int16:
+	      case expr_encode_int32:
 		log_error ("Data opcode in evaluate_numeric_expression: %d",
 		      expr -> op);
 		return 0;
@@ -1065,6 +1153,14 @@ void expression_dereference (eptr, name)
 						name);
 		break;
 
+	      case expr_encode_int8:
+	      case expr_encode_int16:
+	      case expr_encode_int32:
+		if (expr -> data.encode_int)
+			expression_dereference (&expr -> data.encode_int,
+						name);
+		break;
+
 	      case expr_encapsulate:
 	      case expr_const_data:
 		data_string_forget (&expr -> data.const_data, name);
@@ -1154,6 +1250,9 @@ int is_data_expression (expr)
 		expr -> op == expr_packet ||
 		expr -> op == expr_concat ||
 		expr -> op == expr_encapsulate ||
+		expr -> op == expr_encode_int8 ||
+		expr -> op == expr_encode_int16 ||
+		expr -> op == expr_encode_int32 ||
 		expr -> op == expr_host_lookup);
 }
 
@@ -1188,6 +1287,9 @@ static int op_val (op)
 	      case expr_extract_int8:
 	      case expr_extract_int16:
 	      case expr_extract_int32:
+	      case expr_encode_int8:
+	      case expr_encode_int16:
+	      case expr_encode_int32:
 	      case expr_const_int:
 	      case expr_exists:
 	      case expr_known:
@@ -1233,6 +1335,9 @@ enum expression_context op_context (op)
 	      case expr_extract_int8:
 	      case expr_extract_int16:
 	      case expr_extract_int32:
+	      case expr_encode_int8:
+	      case expr_encode_int16:
+	      case expr_encode_int32:
 	      case expr_const_int:
 	      case expr_exists:
 	      case expr_known:
