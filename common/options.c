@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.85.2.22 2004/10/04 22:03:33 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.85.2.23 2004/10/04 23:38:04 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -654,7 +654,7 @@ int cons_options (inpacket, outpacket, lease, client_state,
 			overload = 1;
 		else if (ocount == 1 && (overload & 2))
 			overload = 2;
-		else if (ocount == 2)
+		else if (ocount == 3)
 			overload = 3;
 		else
 			overload = 0;
