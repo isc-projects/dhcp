@@ -29,7 +29,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: omapi.c,v 1.21 1999/11/20 18:36:32 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: omapi.c,v 1.22 1999/11/23 22:24:31 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -115,7 +115,7 @@ void dhcp_db_objects_setup ()
 					     dhcp_failover_state_get_value,
 					     dhcp_failover_state_destroy,
 					     dhcp_failover_state_signal,
-					     dhcp_failover_state_stuff_values,
+					     dhcp_failover_state_stuff,
 					     dhcp_failover_state_lookup, 
 					     dhcp_failover_state_create,
 					     dhcp_failover_state_remove);
@@ -130,7 +130,7 @@ void dhcp_db_objects_setup ()
 					     dhcp_failover_link_get_value,
 					     dhcp_failover_link_destroy,
 					     dhcp_failover_link_signal,
-					     dhcp_failover_link_stuff,
+					     dhcp_failover_link_stuff_values,
 					     0, 0, 0);
 
 	if (status != ISC_R_SUCCESS)
