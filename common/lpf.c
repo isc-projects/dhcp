@@ -23,7 +23,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: lpf.c,v 1.12 1999/05/27 17:43:27 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: lpf.c,v 1.13 1999/06/10 00:10:50 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -140,14 +140,14 @@ void if_register_receive (info)
 		lpf_gen_filter_setup (info);
 
 	if (!quiet_interface_discovery)
-		note ("Listening on LPF/%s/%s%s%s",
-		      info -> name,
-		      print_hw_addr (info -> hw_address.htype,
-				     info -> hw_address.hlen,
-				     info -> hw_address.haddr),
-		      (info -> shared_network ? "/" : ""),
-		      (info -> shared_network ?
-		       info -> shared_network -> name : ""));
+		log_info ("Listening on LPF/%s/%s%s%s",
+			  info -> name,
+			  print_hw_addr (info -> hw_address.htype,
+					 info -> hw_address.hlen,
+					 info -> hw_address.haddr),
+			  (info -> shared_network ? "/" : ""),
+			  (info -> shared_network ?
+			   info -> shared_network -> name : ""));
 }
 
 static void lpf_gen_filter_setup (info)
