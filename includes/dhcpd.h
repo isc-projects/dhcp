@@ -696,7 +696,6 @@ struct client_config {
 
 	struct iaddrlist *reject_list;	/* Servers to reject. */
 
-	struct option_state *send_options;	/* Options to send. */
 	int omapi_port;			/* port on which to accept OMAPI
 					   connections, or -1 for no
 					   listener. */
@@ -729,6 +728,8 @@ struct client_state {
 	struct client_config *config;		    /* Client configuration. */
 	struct string_list *env;	       /* Client script environment. */
 	int envc;			/* Number of entries in environment. */
+
+	struct option_state *sent_options;	/* Options we sent. */
 };
 
 /* Information about each network interface. */
@@ -1833,6 +1834,7 @@ void do_release PROTO ((struct client_state *));
 int dhclient_interface_shutdown_hook (struct interface_info *);
 int dhclient_interface_discovery_hook (struct interface_info *);
 isc_result_t dhclient_interface_startup_hook (struct interface_info *);
+void client_dns_update (struct client_state *client);
 
 /* db.c */
 int write_lease PROTO ((struct lease *));
@@ -1918,6 +1920,8 @@ void set_ip_address PROTO ((struct interface_info *, struct in_addr));
 
 /* clparse.c */
 isc_result_t read_client_conf PROTO ((void));
+int read_client_conf_file (const char *,
+			   struct interface_info *, struct client_config *);
 void read_client_leases PROTO ((void));
 void parse_client_statement PROTO ((struct parse *, struct interface_info *,
 				    struct client_config *));
@@ -1974,7 +1978,11 @@ isc_result_t find_cached_zone (const char *, ns_class, char *,
 void forget_zone (struct dns_zone **);
 void repudiate_zone (struct dns_zone **);
 void cache_found_zone (ns_class, char *, struct in_addr *, int);
-int get_dhcid (struct data_string *, struct lease *);
+int get_dhcid (struct data_string *, int, const u_int8_t *, unsigned);
+isc_result_t ddns_update_a (struct data_string *, struct iaddr,
+			    struct data_string *, unsigned long, int);
+isc_result_t ddns_remove_a (struct data_string *,
+			    struct iaddr, struct data_string *);
 #endif /* NSUPDATE */
 HASH_FUNCTIONS_DECL (dns_zone, const char *, struct dns_zone)
 
