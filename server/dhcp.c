@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.192.2.17 2001/12/07 21:55:21 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.192.2.18 2002/01/15 15:24:31 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -717,7 +717,7 @@ void dhcprelease (packet, ms_nulltp)
 	if (lease &&
 	    (lease -> hardware_addr.hlen != packet -> raw -> hlen + 1 ||
 	     lease -> hardware_addr.hbuf [0] != packet -> raw -> htype ||
-	     memcmp (&lease -> hardware_addr.hbuf [0],
+	     memcmp (&lease -> hardware_addr.hbuf [1],
 		     packet -> raw -> chaddr, packet -> raw -> hlen)))
 		lease_dereference (&lease, MDL);
 
