@@ -56,7 +56,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.44.2.18 1999/02/16 20:36:57 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.44.2.19 1999/02/19 17:40:52 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1701,7 +1701,7 @@ void make_release (ip, lease)
 	ip -> client -> packet.htype = ip -> hw_address.htype;
 	ip -> client -> packet.hlen = ip -> hw_address.hlen;
 	ip -> client -> packet.hops = 0;
-	ip -> client -> packet.xid = ip -> client -> xid;
+	ip -> client -> packet.xid = random ();
 	ip -> client -> packet.secs = 0;
 	ip -> client -> packet.flags = 0;
 	memcpy (&ip -> client -> packet.ciaddr,
