@@ -43,11 +43,12 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: ddns.c,v 1.9 2001/01/11 23:16:07 mellon Exp $ Copyright (c) 2000-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: ddns.c,v 1.10 2001/01/16 23:48:30 mellon Exp $ Copyright (c) 2000-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
-#include "../minires/md5.h"
+#include "minires/md5.h"
+#include "minires/minires.h"
 
 #ifdef NSUPDATE
 
@@ -67,18 +68,18 @@ static void data_string_append (struct data_string *ds1,
 	ds1 -> len += ds2 -> len;
 }
 
-static ns_rcode ddns_update_a (struct data_string *ddns_fwd_name,
-			       struct iaddr ddns_addr,
-			       struct data_string *ddns_dhcid,
-			       unsigned long ttl)
+static isc_result_t ddns_update_a (struct data_string *ddns_fwd_name,
+				   struct iaddr ddns_addr,
+				   struct data_string *ddns_dhcid,
+				   unsigned long ttl)
 {
 	ns_updque updqueue;
 	ns_updrec *updrec;
-	ns_rcode result;
+	isc_result_t result;
 	char ddns_address [16];
 
 	if (ddns_addr.len != 4)
-		return SERVFAIL;
+		return ISC_R_INVALIDARG;
 #ifndef NO_SNPRINTF
 	snprintf (ddns_address, 16, "%d.%d.%d.%d",
 		  ddns_addr.iabuf[0], ddns_addr.iabuf[1],
@@ -106,7 +107,10 @@ static ns_rcode ddns_update_a (struct data_string *ddns_fwd_name,
 	updrec = minires_mkupdrec (S_PREREQ,
 				   (const char *)ddns_fwd_name -> data,
 				   C_IN, T_A, 0);
-	if (!updrec) goto error;
+	if (!updrec) {
+		result = ISC_R_NOMEMORY;
+		goto error;
+	}
 
 	updrec -> r_data = (unsigned char *)0;
 	updrec -> r_size = 0;
@@ -121,7 +125,10 @@ static ns_rcode ddns_update_a (struct data_string *ddns_fwd_name,
 	updrec = minires_mkupdrec (S_UPDATE,
 				   (const char *)ddns_fwd_name -> data,
 				   C_IN, T_A, ttl);
-	if (!updrec) goto error;
+	if (!updrec) {
+		result = ISC_R_NOMEMORY;
+		goto error;
+	}
 
 	updrec -> r_data = (unsigned char *)ddns_address;
 	updrec -> r_size = strlen (ddns_address);
@@ -136,7 +143,10 @@ static ns_rcode ddns_update_a (struct data_string *ddns_fwd_name,
 	updrec = minires_mkupdrec (S_UPDATE,
 				   (const char *)ddns_fwd_name -> data,
 				   C_IN, T_DHCID, ttl);
-	if (!updrec) goto error;
+	if (!updrec) {
+		result = ISC_R_NOMEMORY;
+		goto error;
+	}
 
 	updrec -> r_data = ddns_dhcid -> data;
 	updrec -> r_size = ddns_dhcid -> len;
@@ -167,7 +177,7 @@ static ns_rcode ddns_update_a (struct data_string *ddns_fwd_name,
 	 *   -- "Interaction between DHCP and DNS"
 	 */
 
-	if (result == NOERROR)
+	if (result == ISC_R_SUCCESS)
 		return result;
 
 
@@ -184,7 +194,7 @@ static ns_rcode ddns_update_a (struct data_string *ddns_fwd_name,
 	 *   -- "Interaction between DHCP and DNS"
 	 */
 
-	if (result != YXDOMAIN)
+	if (result != ISC_R_YXDOMAIN)
 		return result;
 
 
@@ -194,7 +204,10 @@ static ns_rcode ddns_update_a (struct data_string *ddns_fwd_name,
 	updrec = minires_mkupdrec (S_PREREQ,
 				   (const char *)ddns_fwd_name -> data,
 				   C_IN, T_DHCID, 0);
-	if (!updrec) goto error;
+	if (!updrec) {
+		result = ISC_R_NOMEMORY;
+		goto error;
+	}
 
 	updrec -> r_data = ddns_dhcid -> data;
 	updrec -> r_size = ddns_dhcid -> len;
@@ -209,7 +222,10 @@ static ns_rcode ddns_update_a (struct data_string *ddns_fwd_name,
 	updrec = minires_mkupdrec (S_UPDATE,
 				   (const char *)ddns_fwd_name -> data,
 				   C_IN, T_A, 0);
-	if (!updrec) goto error;
+	if (!updrec) {
+		result = ISC_R_NOMEMORY;
+		goto error;
+	}
 
 	updrec -> r_data = (unsigned char *)0;
 	updrec -> r_size = 0;
@@ -224,7 +240,10 @@ static ns_rcode ddns_update_a (struct data_string *ddns_fwd_name,
 	updrec = minires_mkupdrec (S_UPDATE,
 				   (const char *)ddns_fwd_name -> data,
 				   C_IN, T_A, ttl);
-	if (!updrec) goto error;
+	if (!updrec) {
+		result = ISC_R_NOMEMORY;
+		goto error;
+	}
 
 	updrec -> r_data = (unsigned char *)ddns_address;
 	updrec -> r_size = strlen (ddns_address);
@@ -256,7 +275,7 @@ static ns_rcode ddns_update_a (struct data_string *ddns_fwd_name,
 	 *   -- "Interaction between DHCP and DNS"
 	 */
 
-	if (result == NOERROR)
+	if (result == ISC_R_SUCCESS)
 		return result;
 
 
@@ -313,7 +332,10 @@ static ns_rcode ddns_update_ptr (struct data_string *ddns_fwd_name,
 	updrec = minires_mkupdrec (S_UPDATE,
 				   (const char *)ddns_rev_name -> data,
 				   C_IN, T_PTR, 0);
-	if (!updrec) goto error;
+	if (!updrec) {
+		result = ISC_R_NOMEMORY;
+		goto error;
+	}
 
 	updrec -> r_data = (unsigned char *)0;
 	updrec -> r_size = 0;
@@ -327,7 +349,10 @@ static ns_rcode ddns_update_ptr (struct data_string *ddns_fwd_name,
 	updrec = minires_mkupdrec (S_UPDATE,
 				   (const char *)ddns_rev_name -> data,
 				   C_IN, T_PTR, ttl);
-	if (!updrec) goto error;
+	if (!updrec) {
+		result = ISC_R_NOMEMORY;
+		goto error;
+	}
 
 	updrec -> r_data = ddns_fwd_name -> data;
 	updrec -> r_size = ddns_fwd_name -> len;
@@ -342,7 +367,7 @@ static ns_rcode ddns_update_ptr (struct data_string *ddns_fwd_name,
 	print_dns_status ((int)result, &updqueue);
 
 	/* Fall through. */
-  error:
+      error:
 
 	while (!ISC_LIST_EMPTY (updqueue)) {
 		updrec = ISC_LIST_HEAD (updqueue);
@@ -399,7 +424,10 @@ static ns_rcode ddns_remove_a (struct data_string *ddns_fwd_name,
 	updrec = minires_mkupdrec (S_PREREQ,
 				   (const char *)ddns_fwd_name -> data,
 				   C_IN, T_DHCID,0);
-	if (!updrec) goto error;
+	if (!updrec) {
+		result = ISC_R_NOMEMORY;
+		goto error;
+	}
 
 	updrec -> r_data = ddns_dhcid -> data;
 	updrec -> r_size = ddns_dhcid -> len;
@@ -414,7 +442,10 @@ static ns_rcode ddns_remove_a (struct data_string *ddns_fwd_name,
 	updrec = minires_mkupdrec (S_PREREQ,
 				   (const char *)ddns_fwd_name -> data,
 				   C_IN, T_A, 0);
-	if (!updrec) goto error;
+	if (!updrec) {
+		result = ISC_R_NOMEMORY;
+		goto error;
+	}
 
 	updrec -> r_data = (unsigned char *)ddns_address;
 	updrec -> r_size = strlen (ddns_address);
@@ -429,7 +460,10 @@ static ns_rcode ddns_remove_a (struct data_string *ddns_fwd_name,
 	updrec = minires_mkupdrec (S_UPDATE,
 				   (const char *)ddns_fwd_name -> data,
 				   C_IN, T_A, 0);
-	if (!updrec) goto error;
+	if (!updrec) {
+		result = ISC_R_NOMEMORY;
+		goto error;
+	}
 
 	updrec -> r_data = (unsigned char *)ddns_address;
 	updrec -> r_size = strlen (ddns_address);
@@ -456,7 +490,7 @@ static ns_rcode ddns_remove_a (struct data_string *ddns_fwd_name,
 	 *   -- "Interaction between DHCP and DNS"
 	 */
 
-	if (result != NOERROR)
+	if (result != ISC_R_SUCCESS)
 		goto error;
 
 	while (!ISC_LIST_EMPTY (updqueue)) {
@@ -478,7 +512,10 @@ static ns_rcode ddns_remove_a (struct data_string *ddns_fwd_name,
 	updrec = minires_mkupdrec (S_PREREQ,
 				   (const char *)ddns_fwd_name -> data,
 				   C_IN, T_A, 0);
-	if (!updrec) goto error;
+	if (!updrec) {
+		result = ISC_R_NOMEMORY;
+		goto error;
+	}
 
 	updrec -> r_data = (unsigned char *)0;
 	updrec -> r_size = 0;
@@ -492,8 +529,10 @@ static ns_rcode ddns_remove_a (struct data_string *ddns_fwd_name,
 	updrec = minires_mkupdrec (S_UPDATE,
 				  (const char *)ddns_fwd_name -> data,
 				   C_IN, T_DHCID, 0);
-	if (!updrec)
+	if (!updrec) {
+		result = ISC_R_NOMEMORY;
 		goto error;
+	}
 
 	updrec -> r_data = ddns_dhcid -> data;
 	updrec -> r_size = ddns_dhcid -> len;
@@ -524,7 +563,7 @@ static ns_rcode ddns_remove_ptr (struct data_string *ddns_rev_name)
 {
 	ns_updque updqueue;
 	ns_updrec *updrec;
-	ns_rcode result = SERVFAIL;
+	isc_result_t result;
 
 	/*
 	 * When a lease expires or a DHCP client issues a DHCPRELEASE request,
@@ -543,7 +582,10 @@ static ns_rcode ddns_remove_ptr (struct data_string *ddns_rev_name)
 	updrec = minires_mkupdrec (S_UPDATE,
 				   (const char *)ddns_rev_name -> data,
 				   C_IN, T_PTR, 0);
-	if (!updrec) goto error;
+	if (!updrec) {
+		result = ISC_R_NOMEMORY;
+		goto error;
+	}
 
 	updrec -> r_data = (unsigned char *)0;
 	updrec -> r_size = 0;
@@ -558,7 +600,7 @@ static ns_rcode ddns_remove_ptr (struct data_string *ddns_rev_name)
 	print_dns_status ((int)result, &updqueue);
 
 	/* Fall through. */
-  error:
+      error:
 
 	while (!ISC_LIST_EMPTY (updqueue)) {
 		updrec = ISC_LIST_HEAD (updqueue);
@@ -571,7 +613,7 @@ static ns_rcode ddns_remove_ptr (struct data_string *ddns_rev_name)
 
 
 int ddns_updates (struct packet *packet,
-		  struct lease *lease,
+		  struct lease *lease, struct lease *old,
 		  struct lease_state *state)
 {
 	unsigned long ddns_ttl = DEFAULT_DDNS_TTL;
@@ -586,7 +628,7 @@ int ddns_updates (struct packet *packet,
 	struct option_cache *oc;
 	int s1, s2;
 	int result = 0;
-	ns_rcode rcode1 = NOERROR, rcode2 = NOERROR;
+	isc_result_t rcode1 = ISC_R_SUCCESS, rcode2 = ISC_R_SUCCESS;
 	int server_updates_a = 1;
 	struct buffer *bp = (struct buffer *)0;
 	int ignorep = 0;
@@ -637,6 +679,20 @@ int ddns_updates (struct packet *packet,
 		goto client_updates;
 	}
       noclient:
+
+	/* If it's a static lease, then don't do the DNS update unless we're
+	   specifically configured to do so.   If the client asked to do its
+	   own update and we allowed that, we don't do this test. */
+	if (lease -> flags & STATIC_LEASE) {
+		if (!(oc = lookup_option (&fqdn_universe, packet -> options,
+					  SV_UPDATE_STATIC_LEASES)) ||
+		    !evaluate_boolean_option_cache (&ignorep, packet, lease,
+						    (struct client_state *)0,
+						    packet -> options,
+						    state -> options,
+						    &lease -> scope, oc, MDL))
+			return 0;
+	}
 
 	/*
 	 * Compute the name for the A record.
@@ -701,20 +757,20 @@ int ddns_updates (struct packet *packet,
 			   So if the expiry and release events look like
 			   they're the same, run them.   This should delete
 			   the old DDNS data. */
-			if (lease -> on_expiry == lease -> on_release) {
+			if (old -> on_expiry == old -> on_release) {
 				execute_statements ((struct binding_value **)0,
 						    (struct packet *)0, lease,
 						    (struct client_state *)0,
 						    (struct option_state *)0,
 						    (struct option_state *)0,
 						    &lease -> scope,
-						    lease -> on_expiry);
-				if (lease -> on_expiry)
+						    old -> on_expiry);
+				if (old -> on_expiry)
 					executable_statement_dereference
-						(&lease -> on_expiry, MDL);
-				if (lease -> on_release)
+						(&old -> on_expiry, MDL);
+				if (old -> on_release)
 					executable_statement_dereference
-						(&lease -> on_release, MDL);
+						(&old -> on_release, MDL);
 				/* Now, install the DDNS data the new way. */
 				goto in;
 			}
@@ -829,6 +885,8 @@ int ddns_updates (struct packet *packet,
 	if (!resolver_inited) {
 		minires_ninit (&resolver_state);
 		resolver_inited = 1;
+		resolver_state.retrans = 1;
+		resolver_state.retry = 1;
 	}
 
 	/*
@@ -838,21 +896,15 @@ int ddns_updates (struct packet *packet,
 		rcode1 = ddns_update_a (&ddns_fwd_name, lease -> ip_addr,
 					&ddns_dhcid, ddns_ttl);
 	
-	if (rcode1 == NOERROR) {
+	if (rcode1 == ISC_R_SUCCESS) {
 		if (ddns_fwd_name.len && ddns_rev_name.len)
 			rcode2 = ddns_update_ptr (&ddns_fwd_name,
 						  &ddns_rev_name, ddns_ttl);
 	} else
-		rcode2 = SERVFAIL;
+		rcode2 = rcode1;
 
-	/* minires_update() can return -1 under certain circumstances. */
-	if (rcode1 == -1)
-		rcode1 = SERVFAIL;
-	if (rcode2 == -1)
-		rcode2 = SERVFAIL;
-
-	if (rcode1 == NOERROR &&
-	    (server_updates_a || rcode2 == NOERROR)) {
+	if (rcode1 == ISC_R_SUCCESS &&
+	    (server_updates_a || rcode2 == ISC_R_SUCCESS)) {
 		bind_ds_value (&lease -> scope, 
 			       (server_updates_a
 				? "ddns-fwd-name" : "ddns-client-fqdn"),
@@ -862,7 +914,7 @@ int ddns_updates (struct packet *packet,
 				       &ddns_dhcid);
 	}
 
-	if (rcode2 == NOERROR) {
+	if (rcode2 == ISC_R_SUCCESS) {
 		bind_ds_value (&lease -> scope, "ddns-rev-name",
 			       &ddns_rev_name);
 	}
@@ -904,13 +956,13 @@ int ddns_updates (struct packet *packet,
 					 &fqdn_options [FQDN_ENCODED],
 					 0))
 			goto badfqdn;
-		bp -> data [3] = rcode1;
+		bp -> data [3] = isc_rcode_to_ns (rcode1);
 		if (!save_option_buffer (&fqdn_universe, state -> options,
 					 bp, &bp -> data [3], 1,
 					 &fqdn_options [FQDN_RCODE1],
 					 0))
 			goto badfqdn;
-		bp -> data [4] = rcode2;
+		bp -> data [4] = isc_rcode_to_ns (rcode2);
 		if (!save_option_buffer (&fqdn_universe, state -> options,
 					 bp, &bp -> data [4], 1,
 					 &fqdn_options [FQDN_RCODE2],
@@ -948,7 +1000,7 @@ int ddns_removals (struct lease *lease)
 	struct data_string ddns_fwd_name;
 	struct data_string ddns_rev_name;
 	struct data_string ddns_dhcid;
-	ns_rcode rcode;
+	isc_result_t rcode;
 	struct binding *binding;
 	int result = 0;
 	int client_updated = 0;
@@ -998,7 +1050,7 @@ int ddns_removals (struct lease *lease)
 	 */
 	rcode = ddns_remove_a (&ddns_fwd_name, lease -> ip_addr, &ddns_dhcid);
 
-	if (rcode == NOERROR) {
+	if (rcode == ISC_R_SUCCESS) {
 		result = 1;
 		unset (lease -> scope, "ddns-fwd-name");
 		unset (lease -> scope, "ddns-txt");
