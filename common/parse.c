@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.44 1999/10/07 06:35:44 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.45 1999/10/07 06:42:51 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -255,7 +255,7 @@ void parse_hardware_param (cfile, hardware)
 {
 	const char *val;
 	enum dhcp_token token;
-	int hlen;
+	unsigned hlen;
 	unsigned char *t;
 
 	token = next_token (&val, cfile);

@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.114 1999/10/07 06:36:31 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.115 1999/10/07 06:42:53 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2411,7 +2411,7 @@ struct lease *mockup_lease (packet, share, hp)
 		return (struct lease *)0;
 	mock.next = mock.prev = (struct lease *)0;
 	mock.host = hp;
-	(const char *)mock.uid = hp -> client_identifier.data;
+	(const unsigned char *)mock.uid = hp -> client_identifier.data;
 	mock.uid_len = hp -> client_identifier.len;
 	mock.hardware_addr = hp -> interface;
 	mock.starts = mock.timestamp = mock.ends = MIN_TIME;

@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.46 1999/10/07 06:35:43 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.47 1999/10/07 06:42:50 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -247,7 +247,7 @@ int cons_options (inpacket, outpacket, lease, mms, in_options, cfg_options,
 	struct data_string *prl;
 {
 #define PRIORITY_COUNT 300
-	int priority_list [PRIORITY_COUNT];
+	unsigned priority_list [PRIORITY_COUNT];
 	int priority_len;
 	unsigned char buffer [4096];	/* Really big buffer... */
 	unsigned main_buffer_size;
