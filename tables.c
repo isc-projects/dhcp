@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tables.c,v 1.11 1996/09/11 06:34:25 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tables.c,v 1.11.2.1 1997/03/29 08:17:03 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -109,7 +109,7 @@ struct option dhcp_options [256] = {
 	{ "nis-domain", "t",				&dhcp_universe, 40 },
 	{ "nis-servers", "IA",				&dhcp_universe, 41 },
 	{ "ntp-servers", "IA",				&dhcp_universe, 42 },
-	{ "vendor-encapsulated-options", "t",		&dhcp_universe, 43 },
+	{ "vendor-encapsulated-options", "X",		&dhcp_universe, 43 },
 	{ "netbios-name-servers", "IA",			&dhcp_universe, 44 },
 	{ "netbios-dd-server", "IA",			&dhcp_universe, 45 },
 	{ "netbios-node-type", "B",			&dhcp_universe, 46 },
