@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: clparse.c,v 1.30 1999/03/26 19:19:43 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: clparse.c,v 1.31 1999/04/05 15:08:13 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -292,6 +292,20 @@ void parse_client_statement (cfile, ip, config)
 
 	      case OPTION:
 		token = next_token (&val, cfile);
+
+		token = peek_token (&val, cfile);
+		if (token == SPACE) {
+			if (ip) {
+				parse_warn ("option space definitions %s",
+					    " may not be scoped.");
+				skip_to_semi (cfile);
+				free_option (option, "parse_statement");
+				break;
+			}
+			parse_option_space_decl (cfile);
+			return;
+		}
+
 		option = parse_option_name (cfile, 1);
 		if (!option)
 			return;
@@ -714,6 +728,9 @@ void parse_client_lease_statement (cfile, is_static)
 		log_fatal ("no memory for lease.\n");
 	memset (lease, 0, sizeof *lease);
 	lease -> is_static = is_static;
+	if (!option_state_allocate (&lease -> options,
+				    "parse_client_lease_statement"))
+		log_fatal ("no memory for lease options.\n");
 
 	do {
 		token = peek_token (&val, cfile);
@@ -903,9 +920,8 @@ void parse_client_lease_declaration (cfile, lease, ipp, clientp)
 	      case OPTION:
 		oc = (struct option_cache *)0;
 		if (parse_option_decl (&oc, cfile)) {
-			/* XXX save_option here ought to account for the
-			   XXX correct option universe, but it doesn't. */
-			save_option (lease -> options.dhcp_hash, oc);
+			save_option (oc -> option -> universe,
+				     lease -> options, oc);
 			option_cache_dereference
 				(&oc, "parse_client_lease_declaration");
 		}
