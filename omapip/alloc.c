@@ -4,7 +4,7 @@
    protocol... */
 
 /*
- * Copyright (c) 1999-2000 Internet Software Consortium.
+ * Copyright (c) 1999-2001 Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -44,7 +44,8 @@
 
 #include <omapip/omapip_p.h>
 
-#if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL)
+#if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL) || \
+		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
 struct dmalloc_preamble *dmalloc_list;
 unsigned long dmalloc_outstanding;
 unsigned long dmalloc_longterm;
@@ -70,7 +71,8 @@ VOIDPTR dmalloc (size, file, line)
 	unsigned char *foo = malloc (size + DMDSIZE);
 	int i;
 	VOIDPTR *bar;
-#if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL)
+#if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL) || \
+		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
 	struct dmalloc_preamble *dp;
 #endif
 	if (!foo)
@@ -78,7 +80,8 @@ VOIDPTR dmalloc (size, file, line)
 	bar = (VOIDPTR)(foo + DMDOFFSET);
 	memset (bar, 0, size);
 
-#if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL)
+#if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL) || \
+		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
 	dp = (struct dmalloc_preamble *)foo;
 	dp -> prev = dmalloc_list;
 	if (dmalloc_list)
@@ -139,7 +142,8 @@ void dfree (ptr, file, line)
 		log_error ("dfree %s(%d): free on null pointer.", file, line);
 		return;
 	}
-#if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL)
+#if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL) || \
+		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
 	{
 		unsigned char *bar = ptr;
 		struct dmalloc_preamble *dp, *cur;
@@ -193,7 +197,8 @@ void dfree (ptr, file, line)
 	free (ptr);
 }
 
-#if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL)
+#if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL) || \
+		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
 /* For allocation functions that keep their own free lists, we want to
    account for the reuse of the memory. */
 
@@ -288,7 +293,8 @@ void dmalloc_dump_outstanding ()
 			}
 		}
 #endif
-#if defined (DEBUG_MEMORY_LEAKAGE)
+#if defined (DEBUG_MEMORY_LEAKAGE) || \
+		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
 		/* Don't count data that's actually on a free list
                    somewhere. */
 		if (dp -> file) {
@@ -342,7 +348,7 @@ static void print_rc_hist_entry (int i)
 		  rc_history [i].refcnt);
 }
 
-void dump_rc_history ()
+void dump_rc_history (void *addr)
 {
 	int i;
 
@@ -357,7 +363,8 @@ void dump_rc_history ()
 	rc_history_count = 0;
 		
 	while (rc_history [i].file) {
-		print_rc_hist_entry (i);
+		if (!addr || addr == rc_history [i].addr)
+			print_rc_hist_entry (i);
 		++i;
 		if (i == RC_HISTORY_MAX)
 			i = 0;
@@ -366,6 +373,85 @@ void dump_rc_history ()
 	}
 }
 #endif
+
+#if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL) || \
+		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
+struct caller {
+	struct dmalloc_preamble *dp;
+	int count;
+};
+
+static int dmalloc_find_entry (struct dmalloc_preamble *dp,
+			       struct caller *array,
+			       int min, int max)
+{
+	int middle;
+	int cmp;
+
+	middle = (min + max) / 2;
+	if (middle == min)
+		return middle;
+	if (array [middle].dp -> file == dp -> file) {
+		if (array [middle].dp -> line == dp -> line)
+			return middle;
+		else if (array [middle].dp -> line < dp -> line)
+			return dmalloc_find_entry (dp, array, middle, max);
+		else
+			return dmalloc_find_entry (dp, array, 0, middle);
+	} else if (array [middle].dp -> file < dp -> file)
+		return dmalloc_find_entry (dp, array, middle, max);
+	else
+		return dmalloc_find_entry (dp, array, 0, middle);
+}
+
+void omapi_print_dmalloc_usage_by_caller ()
+{
+	struct dmalloc_preamble *dp;
+	unsigned char *foo;
+	int ccur, cmax, i, j;
+	struct caller cp [1024];
+
+	cmax = 1024;
+	ccur = 0;
+
+	memset (cp, 0, sizeof cp);
+	for (dp = dmalloc_list; dp; dp = dp -> prev) {
+		i = dmalloc_find_entry (dp, cp, 0, ccur);
+		if ((i == ccur ||
+		     cp [i].dp -> file != dp -> file ||
+		     cp [i].dp -> line != dp -> line) &&
+		    ccur == cmax) {
+			log_error ("no space for memory usage summary.");
+			return;
+		}
+		if (i == ccur) {
+			cp [ccur++].dp = dp;
+			cp [i].count = 1;
+		} else if (cp [i].dp -> file < dp -> file ||
+			   (cp [i].dp -> file == dp -> file &&
+			    cp [i].dp -> line < dp -> line)) {
+			if (i + 1 != ccur)
+				memmove (cp + i + 2, cp + i + 1,
+					 (ccur - i) * sizeof *cp);
+			cp [i + 1].dp = dp;
+			cp [i + 1].count = 1;
+			ccur++;
+		} else if (cp [i].dp -> file != dp -> file ||
+			   cp [i].dp -> line != dp -> line) {
+			memmove (cp + i + 1,
+				 cp + i, (ccur - i) * sizeof *cp);
+			cp [i].dp = dp;
+			cp [i].count = 1;
+			ccur++;
+		} else
+			cp [i].count++;
+	}
+	for (i = 0; i < ccur; i++) {
+		printf ("%d\t%s:%d\t%d\n", i,
+			cp [i].dp -> file, cp [i].dp -> line, cp [i].count);
+	}
+}
+#endif /* DEBUG_MEMORY_LEAKAGE || DEBUG_MALLOC_POOL */
 
 isc_result_t omapi_object_allocate (omapi_object_t **o,
 				    omapi_object_type_t *type,
@@ -438,8 +524,8 @@ isc_result_t omapi_object_reference (omapi_object_t **r,
 	}
 	*r = h;
 	h -> refcnt++;
-	if (!h -> type -> freer) {
 		rc_register (file, line, r, h, h -> refcnt);
+	if (!h -> type -> freer) {
 		dmalloc_reuse (h, file, line, 1);
 	}
 	return ISC_R_SUCCESS;
@@ -471,7 +557,7 @@ isc_result_t omapi_object_dereference (omapi_object_t **h,
 		log_error ("%s(%d): dereference of pointer with refcnt of zero!",
 			   file, line);
 #if defined (DEBUG_RC_HISTORY)
-		dump_rc_history ();
+		dump_rc_history (*h);
 #endif
 		abort ();
 #else
@@ -544,7 +630,7 @@ isc_result_t omapi_object_dereference (omapi_object_t **h,
 				omapi_object_dereference
 					(&(*h) -> outer, file, line);
 			(*h) -> refcnt--;
-			if (!(*h) -> type -> freer)
+/*			if (!(*h) -> type -> freer) */
 				rc_register (file, line, h, *h, 0);
 			if ((*h) -> type -> destroy)
 				(*((*h) -> type -> destroy)) (*h, file, line);
@@ -554,13 +640,13 @@ isc_result_t omapi_object_dereference (omapi_object_t **h,
 				dfree (*h, file, line);
 		} else {
 			(*h) -> refcnt--;
-			if (!(*h) -> type -> freer)
+/*			if (!(*h) -> type -> freer) */
 				rc_register (file, line,
 					     h, *h, (*h) -> refcnt);
 		}
 	} else {
 		(*h) -> refcnt--;
-		if (!(*h) -> type -> freer)
+/*		if (!(*h) -> type -> freer) */
 			rc_register (file, line, h, *h, (*h) -> refcnt);
 	}
 	*h = 0;
@@ -627,7 +713,7 @@ isc_result_t omapi_buffer_dereference (omapi_buffer_t **h,
 		log_error ("%s(%d): dereference of pointer with refcnt of zero!",
 			   file, line);
 #if defined (DEBUG_RC_HISTORY)
-		dump_rc_history ();
+		dump_rc_history (*h);
 #endif
 		abort ();
 #else
@@ -753,7 +839,7 @@ isc_result_t omapi_typed_data_dereference (omapi_typed_data_t **h,
 		log_error ("%s(%d): dereference of pointer with refcnt of zero!",
 			   file, line);
 #if defined (DEBUG_RC_HISTORY)
-		dump_rc_history ();
+		dump_rc_history (*h);
 #endif
 		abort ();
 #else
@@ -837,7 +923,7 @@ isc_result_t omapi_data_string_dereference (omapi_data_string_t **h,
 		log_error ("%s(%d): dereference of pointer with refcnt of zero!",
 			   file, line);
 #if defined (DEBUG_RC_HISTORY)
-		dump_rc_history ();
+		dump_rc_history (*h);
 #endif
 		abort ();
 #else
@@ -910,7 +996,7 @@ isc_result_t omapi_value_dereference (omapi_value_t **h,
 		log_error ("%s(%d): dereference of pointer with refcnt of zero!",
 			   file, line);
 #if defined (DEBUG_RC_HISTORY)
-		dump_rc_history ();
+		dump_rc_history (*h);
 #endif
 		abort ();
 #else
@@ -993,7 +1079,7 @@ isc_result_t omapi_addr_list_dereference (omapi_addr_list_t **h,
 		log_error ("%s(%d): dereference of pointer with zero refcnt!",
 			   file, line);
 #if defined (DEBUG_RC_HISTORY)
-		dump_rc_history ();
+		dump_rc_history (*h);
 #endif
 		abort ();
 #else
