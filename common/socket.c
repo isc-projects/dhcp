@@ -50,7 +50,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: socket.c,v 1.20 1997/02/26 05:20:53 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: socket.c,v 1.21 1997/03/06 06:55:53 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -216,14 +216,18 @@ size_t receive_packet (interface, buf, len, from, hfrom)
 #ifdef USE_SOCKET_FALLBACK
 /* This just reads in a packet and silently discards it. */
 
-size_t fallback_discard (interface)
-	struct interface_info *interface;
+void fallback_discard (protocol)
+	struct protocol *protocol;
 {
 	char buf [1540];
 	struct sockaddr_in from;
 	int flen = sizeof from;
+	int status;
+	struct interface_info *interface = protocol -> local;
 
-	return recvfrom (interface -> wfdesc, buf, sizeof buf, 0,
-			 (struct sockaddr *)&from, &flen);
+	status = recvfrom (interface -> wfdesc, buf, sizeof buf, 0,
+			   (struct sockaddr *)&from, &flen);
+	if (status < 0)
+		warn ("fallback_discard: %m");
 }
 #endif /* USE_SOCKET_RECEIVE */
