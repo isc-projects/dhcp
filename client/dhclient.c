@@ -41,7 +41,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.129.2.12 2002/11/07 23:26:38 dhankins Exp $ Copyright (c) 1995-2002 Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.129.2.13 2003/03/29 21:12:02 dhankins Exp $ Copyright (c) 1995-2002 Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -192,6 +192,8 @@ int main (argc, argv, envp)
 			if (++i == argc)
 				usage ();
 			relay = argv [i];
+		} else if (!strcmp (argv [i], "-nw")) {
+			nowait = 1;
 		} else if (!strcmp (argv [i], "-n")) {
 			/* do not start up any interfaces */
 			interfaces_requested = 1;
@@ -212,8 +214,6 @@ int main (argc, argv, envp)
 		} else if (!strcmp (argv [i], "--version")) {
 			log_info ("isc-dhclient-%s", DHCP_VERSION);
 			exit (0);
-		} else if (!strcmp (argv [i], "-nw")) {
-			nowait = 1;
  		} else if (argv [i][0] == '-') {
  		    usage ();
 		} else {
