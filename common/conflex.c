@@ -22,88 +22,125 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: conflex.c,v 1.54 1999/09/09 23:25:27 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: conflex.c,v 1.55 1999/10/01 03:13:43 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
-#include "dhctoken.h"
 #include <ctype.h>
 
-int lexline;
-int lexchar;
-char *token_line;
-char *prev_line;
-char *cur_line;
-char *tlname;
-int eol_token;
-
-static char line1 [81];
-static char line2 [81];
-static int lpos;
-static int line;
-static int tlpos;
-static int tline;
-static enum dhcp_token token;
-static int ugflag;
-static char *tval;
-static char tokbuf [1500];
-
-#ifdef OLD_LEXER
-char comments [4096];
-int comment_index;
-#endif
-
-
-static int get_char PROTO ((FILE *));
-static enum dhcp_token get_token PROTO ((FILE *));
-static void skip_to_eol PROTO ((FILE *));
-static enum dhcp_token read_string PROTO ((FILE *));
-static enum dhcp_token read_number PROTO ((int, FILE *));
-static enum dhcp_token read_num_or_name PROTO ((int, FILE *));
+static int get_char PROTO ((struct parse *));
+static enum dhcp_token get_token PROTO ((struct parse *));
+static void skip_to_eol PROTO ((struct parse *));
+static enum dhcp_token read_string PROTO ((struct parse *));
+static enum dhcp_token read_number PROTO ((int, struct parse *));
+static enum dhcp_token read_num_or_name PROTO ((int, struct parse *));
 static enum dhcp_token intern PROTO ((char *, enum dhcp_token));
 
-void new_parse (name)
+isc_result_t new_parse (cfile, file, inbuf, buflen, name)
+	struct parse **cfile;
+	int file;
+	char *inbuf;
+	int buflen;
 	char *name;
 {
-	tlname = name;
-	lpos = line = 1;
-	cur_line = line1;
-	prev_line = line2;
-	token_line = cur_line;
-	cur_line [0] = prev_line [0] = 0;
-	warnings_occurred = 0;
+	struct parse *tmp;
+
+	tmp = dmalloc (sizeof (struct parse), "new_parse");
+	if (!tmp)
+		return ISC_R_NOMEMORY;
+	memset (tmp, 0, sizeof *tmp);
+
+	tmp -> tlname = name;
+	tmp -> lpos = tmp -> line = 1;
+	tmp -> cur_line = tmp -> line1;
+	tmp -> prev_line = tmp -> line2;
+	tmp -> token_line = tmp -> cur_line;
+	tmp -> cur_line [0] = tmp -> prev_line [0] = 0;
+	tmp -> warnings_occurred = 0;
+	tmp -> file = file;
+
+	tmp -> bufix = 0;
+	tmp -> buflen = buflen;
+	if (inbuf) {
+		tmp -> bufsiz = 0;
+		tmp -> inbuf = inbuf;
+	} else {
+		tmp -> inbuf = dmalloc (8192, "new_parse");
+		if (!tmp -> inbuf) {
+			dfree (tmp, "new_parse");
+			return ISC_R_NOMEMORY;
+		}
+		tmp -> bufsiz = 8192;
+	}
+
+	*cfile = tmp;
+	return ISC_R_SUCCESS;
+}
+
+isc_result_t end_parse (cfile)
+	struct parse **cfile;
+{
+	if ((*cfile) -> bufsiz)
+		dfree ((*cfile) -> inbuf, "end_parse");
+	dfree (*cfile, "end_parse");
+	*cfile = (struct parse *)0;
+	return ISC_R_SUCCESS;
 }
 
 static int get_char (cfile)
-	FILE *cfile;
+	struct parse *cfile;
 {
-	int c = getc (cfile);
-	if (!ugflag) {
-		if (c == EOL) {
-			if (cur_line == line1) {	
-				cur_line = line2;
-				prev_line = line1;
+	/* My kingdom for WITH... */
+	int c;
+
+	if (cfile -> bufix == cfile -> buflen) {
+		if (cfile -> file != -1) {
+			cfile -> buflen =
+				read (cfile -> file,
+				      cfile -> inbuf, cfile -> bufsiz);
+			if (cfile -> buflen == 0) {
+				c = EOF;
+				cfile -> bufix = 0;
+			} else if (cfile -> buflen < 0) {
+				c = EOF;
+				cfile -> bufix = cfile -> buflen = 0;
 			} else {
-				cur_line = line1;
-				prev_line = line2;
+				c = cfile -> inbuf [0];
+				cfile -> bufix = 1;
 			}
-			line++;
-			lpos = 1;
-			cur_line [0] = 0;
+		} else
+			c = EOF;
+	} else {
+		c = cfile -> inbuf [cfile -> bufix];
+		cfile -> bufix++;
+	}
+
+	if (!cfile -> ugflag) {
+		if (c == EOL) {
+			if (cfile -> cur_line == cfile -> line1) {	
+				cfile -> cur_line = cfile -> line2;
+				cfile -> prev_line = cfile -> line1;
+			} else {
+				cfile -> cur_line = cfile -> line1;
+				cfile -> prev_line = cfile -> line2;
+			}
+			cfile -> line++;
+			cfile -> lpos = 1;
+			cfile -> cur_line [0] = 0;
 		} else if (c != EOF) {
-			if (lpos <= 80) {
-				cur_line [lpos - 1] = c;
-				cur_line [lpos] = 0;
+			if (cfile -> lpos <= 80) {
+				cfile -> cur_line [cfile -> lpos - 1] = c;
+				cfile -> cur_line [cfile -> lpos] = 0;
 			}
-			lpos++;
+			cfile -> lpos++;
 		}
 	} else
-		ugflag = 0;
+		cfile -> ugflag = 0;
 	return c;		
 }
 
 static enum dhcp_token get_token (cfile)
-	FILE *cfile;
+	struct parse *cfile;
 {
 	int c;
 	enum dhcp_token ttok;
@@ -111,49 +148,50 @@ static enum dhcp_token get_token (cfile)
 	int l, p, u;
 
 	do {
-		l = line;
-		p = lpos;
-		u = ugflag;
+		l = cfile -> line;
+		p = cfile -> lpos;
+		u = cfile -> ugflag;
 
 		c = get_char (cfile);
 #ifdef OLD_LEXER
 		if (c == '\n' && p == 1 && !u
-		    && comment_index < sizeof comments)
-			comments [comment_index++] = '\n';
+		    && cfile -> comment_index < sizeof cfile -> comments)
+			cfile -> comments [cfile -> comment_index++] = '\n';
 #endif
 
-		if (!(c == '\n' && eol_token) && isascii (c) && isspace (c))
+		if (!(c == '\n' && cfile -> eol_token)
+		    && isascii (c) && isspace (c))
 			continue;
 		if (c == '#') {
 #ifdef OLD_LEXER
-			if (comment_index < sizeof comments)
-				comments [comment_index++] = '#';
+			if (cfile -> comment_index < sizeof cfile -> comments)
+			    cfile -> comments [cfile -> comment_index++] = '#';
 #endif
 			skip_to_eol (cfile);
 			continue;
 		}
 		if (c == '"') {
-			lexline = l;
-			lexchar = p;
+			cfile -> lexline = l;
+			cfile -> lexchar = p;
 			ttok = read_string (cfile);
 			break;
 		}
 		if ((isascii (c) && isdigit (c)) || c == '-') {
-			lexline = l;
-			lexchar = p;
+			cfile -> lexline = l;
+			cfile -> lexchar = p;
 			ttok = read_number (c, cfile);
 			break;
 		} else if (isascii (c) && isalpha (c)) {
-			lexline = l;
-			lexchar = p;
+			cfile -> lexline = l;
+			cfile -> lexchar = p;
 			ttok = read_num_or_name (c, cfile);
 			break;
 		} else {
-			lexline = l;
-			lexchar = p;
+			cfile -> lexline = l;
+			cfile -> lexchar = p;
 			tb [0] = c;
 			tb [1] = 0;
-			tval = tb;
+			cfile -> tval = tb;
 			ttok = c;
 			break;
 		}
@@ -163,54 +201,60 @@ static enum dhcp_token get_token (cfile)
 
 enum dhcp_token next_token (rval, cfile)
 	char **rval;
-	FILE *cfile;
+	struct parse *cfile;
 {
 	int rv;
 
-	if (token) {
-		if (lexline != tline)
-			token_line = cur_line;
-		lexchar = tlpos;
-		lexline = tline;
-		rv = token;
-		token = 0;
+	if (cfile -> token) {
+		if (cfile -> lexline != cfile -> tline)
+			cfile -> token_line = cfile -> cur_line;
+		cfile -> lexchar = cfile -> tlpos;
+		cfile -> lexline = cfile -> tline;
+		rv = cfile -> token;
+		cfile -> token = 0;
 	} else {
 		rv = get_token (cfile);
-		token_line = cur_line;
+		cfile -> token_line = cfile -> cur_line;
 	}
 	if (rval)
-		*rval = tval;
+		*rval = cfile -> tval;
 #ifdef DEBUG_TOKENS
-	fprintf (stderr, "%s:%d ", tval, rv);
+	fprintf (stderr, "%s:%d ", cfile -> tval, rv);
 #endif
 	return rv;
 }
 
 enum dhcp_token peek_token (rval, cfile)
 	char **rval;
-	FILE *cfile;
+	struct parse *cfile;
 {
 	int x;
 
-	if (!token) {
-		tlpos = lexchar;
-		tline = lexline;
-		token = get_token (cfile);
-		if (lexline != tline)
-			token_line = prev_line;
-		x = lexchar; lexchar = tlpos; tlpos = x;
-		x = lexline; lexline = tline; tline = x;
+	if (!cfile -> token) {
+		cfile -> tlpos = cfile -> lexchar;
+		cfile -> tline = cfile -> lexline;
+		cfile -> token = get_token (cfile);
+		if (cfile -> lexline != cfile -> tline)
+			cfile -> token_line = cfile -> prev_line;
+
+		x = cfile -> lexchar;
+		cfile -> lexchar = cfile -> tlpos;
+		cfile -> tlpos = x;
+
+		x = cfile -> lexline;
+		cfile -> lexline = cfile -> tline;
+		cfile -> tline = x;
 	}
 	if (rval)
-		*rval = tval;
+		*rval = cfile -> tval;
 #ifdef DEBUG_TOKENS
-	fprintf (stderr, "(%s:%d) ", tval, token);
+	fprintf (stderr, "(%s:%d) ", cfile -> tval, cfile -> token);
 #endif
-	return token;
+	return cfile -> token;
 }
 
 static void skip_to_eol (cfile)
-	FILE *cfile;
+	struct parse *cfile;
 {
 	int c;
 	do {
@@ -218,8 +262,8 @@ static void skip_to_eol (cfile)
 		if (c == EOF)
 			return;
 #ifdef OLD_LEXER
-		if (comment_index < sizeof (comments))
-			comments [comment_index++] = c;
+		if (cfile -> comment_index < sizeof (cfile -> comments))
+			comments [cfile -> comment_index++] = c;
 #endif
 		if (c == EOL) {
 			return;
@@ -228,49 +272,50 @@ static void skip_to_eol (cfile)
 }
 
 static enum dhcp_token read_string (cfile)
-	FILE *cfile;
+	struct parse *cfile;
 {
 	int i;
 	int bs = 0;
 	int c;
 
-	for (i = 0; i < sizeof tokbuf; i++) {
+	for (i = 0; i < sizeof cfile -> tokbuf; i++) {
 		c = get_char (cfile);
 		if (c == EOF) {
-			parse_warn ("eof in string constant");
+			parse_warn (cfile, "eof in string constant");
 			break;
 		}
 		if (bs) {
 			bs = 0;
-			tokbuf [i] = c;
+			cfile -> tokbuf [i] = c;
 		} else if (c == '\\')
 			bs = 1;
 		else if (c == '"')
 			break;
 		else
-			tokbuf [i] = c;
+			cfile -> tokbuf [i] = c;
 	}
 	/* Normally, I'd feel guilty about this, but we're talking about
 	   strings that'll fit in a DHCP packet here... */
-	if (i == sizeof tokbuf) {
-		parse_warn ("string constant larger than internal buffer");
+	if (i == sizeof cfile -> tokbuf) {
+		parse_warn (cfile,
+			    "string constant larger than internal buffer");
 		--i;
 	}
-	tokbuf [i] = 0;
-	tval = tokbuf;
+	cfile -> tokbuf [i] = 0;
+	cfile -> tval = cfile -> tokbuf;
 	return STRING;
 }
 
 static enum dhcp_token read_number (c, cfile)
 	int c;
-	FILE *cfile;
+	struct parse *cfile;
 {
 	int seenx = 0;
 	int i = 0;
 	int token = NUMBER;
 
-	tokbuf [i++] = c;
-	for (; i < sizeof tokbuf; i++) {
+	cfile -> tokbuf [i++] = c;
+	for (; i < sizeof cfile -> tokbuf; i++) {
 		c = get_char (cfile);
 		if (!seenx && c == 'x') {
 			seenx = 1;
@@ -282,47 +327,48 @@ static enum dhcp_token read_number (c, cfile)
 			token = NUMBER_OR_NAME;
 #endif
 		} else if (!isascii (c) || !isxdigit (c)) {
-			ungetc (c, cfile);
-			ugflag = 1;
+			cfile -> bufix--;
+			cfile -> ugflag = 1;
 			break;
 		}
-		tokbuf [i] = c;
+		cfile -> tokbuf [i] = c;
 	}
-	if (i == sizeof tokbuf) {
-		parse_warn ("numeric token larger than internal buffer");
+	if (i == sizeof cfile -> tokbuf) {
+		parse_warn (cfile,
+			    "numeric token larger than internal buffer");
 		--i;
 	}
-	tokbuf [i] = 0;
-	tval = tokbuf;
+	cfile -> tokbuf [i] = 0;
+	cfile -> tval = cfile -> tokbuf;
 	return token;
 }
 
 static enum dhcp_token read_num_or_name (c, cfile)
 	int c;
-	FILE *cfile;
+	struct parse *cfile;
 {
 	int i = 0;
 	enum dhcp_token rv = NUMBER_OR_NAME;
-	tokbuf [i++] = c;
-	for (; i < sizeof tokbuf; i++) {
+	cfile -> tokbuf [i++] = c;
+	for (; i < sizeof cfile -> tokbuf; i++) {
 		c = get_char (cfile);
 		if (!isascii (c) ||
 		    (c != '-' && c != '_' && !isalnum (c))) {
-			ungetc (c, cfile);
-			ugflag = 1;
+			cfile -> bufix--;
+			cfile -> ugflag = 1;
 			break;
 		}
 		if (!isxdigit (c))
 			rv = NAME;
-		tokbuf [i] = c;
+		cfile -> tokbuf [i] = c;
 	}
-	if (i == sizeof tokbuf) {
-		parse_warn ("token larger than internal buffer");
+	if (i == sizeof cfile -> tokbuf) {
+		parse_warn (cfile, "token larger than internal buffer");
 		--i;
 	}
-	tokbuf [i] = 0;
-	tval = tokbuf;
-	return intern (tval, rv);
+	cfile -> tokbuf [i] = 0;
+	cfile -> tval = cfile -> tokbuf;
+	return intern (cfile -> tval, rv);
 }
 
 static enum dhcp_token intern (atom, dfv)
