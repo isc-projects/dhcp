@@ -24,8 +24,8 @@
 
 int main (int argc, char **argv)
 {
-	omapi_object_t listener = (omapi_object_t)0;
-	omapi_object_t connection = (omapi_object_t)0;
+	omapi_object_t *listener = (omapi_object_t*)0;
+	omapi_object_t *connection = (omapi_object_t*)0;
 	isc_result_t status;
 
 	omapi_init ();
