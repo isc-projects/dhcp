@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dispatch.c,v 1.48 1998/03/16 06:09:58 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dispatch.c,v 1.49 1998/04/09 04:30:00 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -177,10 +177,14 @@ void discover_interfaces (state)
 		if (ifp -> ifr_addr.sa_family == AF_LINK) {
 			struct sockaddr_dl *foo = ((struct sockaddr_dl *)
 						   (&ifp -> ifr_addr));
+#if defined (HAVE_SIN_LEN)
 			tmp -> hw_address.hlen = foo -> sdl_alen;
+#else
+			tmp -> hw_address.hlen = 6; /* XXX!!! */
+#endif
 			tmp -> hw_address.htype = HTYPE_ETHER; /* XXX */
 			memcpy (tmp -> hw_address.haddr,
-				LLADDR (foo), foo -> sdl_alen);
+				LLADDR (foo), tmp -> hw_address.hlen);
 		} else
 #endif /* AF_LINK */
 
@@ -708,7 +712,7 @@ void cancel_timeout (where, what)
 }
 
 /* Add a protocol to the list of protocols... */
-void add_protocol (name, fd, handler, local)
+struct protocol *add_protocol (name, fd, handler, local)
 	char *name;
 	int fd;
 	void (*handler) PROTO ((struct protocol *));
@@ -726,6 +730,7 @@ void add_protocol (name, fd, handler, local)
 
 	p -> next = protocols;
 	protocols = p;
+	return p;
 }
 
 void remove_protocol (proto)
