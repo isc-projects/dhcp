@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.192.2.12 2001/06/22 02:08:55 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.192.2.13 2001/06/29 20:13:31 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2919,6 +2919,7 @@ int find_lease (struct lease **lp,
 		   be two "free" leases for the same uid, but only one of
 		   them that's available for this failover peer to allocate. */
 		if (uid_lease -> binding_state != FTS_ACTIVE &&
+		    uid_lease -> binding_state != FTS_BOOTP &&
 		    !lease_mine_to_reallocate (uid_lease)) {
 #if defined (DEBUG_FIND_LEASE)
 			log_info ("not mine to allocate: %s",
@@ -2982,6 +2983,7 @@ int find_lease (struct lease **lp,
 		   be two "free" leases for the same uid, but only one of
 		   them that's available for this failover peer to allocate. */
 		if (hw_lease -> binding_state != FTS_ACTIVE &&
+		    hw_lease -> binding_state != FTS_BOOTP &&
 		    !lease_mine_to_reallocate (hw_lease)) {
 #if defined (DEBUG_FIND_LEASE)
 			log_info ("not mine to allocate: %s",
@@ -3114,6 +3116,7 @@ int find_lease (struct lease **lp,
 	   is not active, and is not ours to reallocate, forget about it. */
 	if (ip_lease && (uid_lease || hw_lease) &&
 	    ip_lease -> binding_state != FTS_ACTIVE &&
+	    ip_lease -> binding_state != FTS_BOOTP &&
 	    !lease_mine_to_reallocate (ip_lease) &&
 	    packet -> packet_type == DHCPDISCOVER) {
 #if defined (DEBUG_FIND_LEASE)
@@ -3126,14 +3129,16 @@ int find_lease (struct lease **lp,
 	   on the subnet that matches its uid, pick the one that
 	   it asked for and (if we can) free the other. */
 	if (ip_lease &&
-	    ip_lease -> binding_state == FTS_ACTIVE &&
+	    (ip_lease -> binding_state == FTS_ACTIVE ||
+	     ip_lease -> binding_state == FTS_BOOTP) &&
 	    ip_lease -> uid && ip_lease != uid_lease) {
 		if (have_client_identifier &&
 		    (ip_lease -> uid_len == client_identifier.len) &&
 		    !memcmp (client_identifier.data,
 			     ip_lease -> uid, ip_lease -> uid_len)) {
 			if (uid_lease) {
-			    if (uid_lease -> binding_state == FTS_ACTIVE) {
+			    if (uid_lease -> binding_state == FTS_ACTIVE ||
+				uid_lease -> binding_state == FTS_BOOTP) {
 				log_error ("client %s has duplicate%s on %s",
 					   (print_hw_addr
 					    (packet -> raw -> htype,
@@ -3147,7 +3152,10 @@ int find_lease (struct lease **lp,
 				   it shouldn't still be using the old
 				   one, so we can free it for allocation. */
 				if (uid_lease &&
-				    uid_lease -> binding_state == FTS_ACTIVE &&
+				    (uid_lease -> binding_state == FTS_ACTIVE
+				     ||
+				     uid_lease -> binding_state == FTS_BOOTP)
+				    &&
 				    !packet -> raw -> ciaddr.s_addr &&
 				    (share ==
 				     uid_lease -> subnet -> shared_network) &&
@@ -3302,7 +3310,8 @@ int find_lease (struct lease **lp,
 		if (lease) {
 			if (!packet -> raw -> ciaddr.s_addr &&
 			    packet -> packet_type == DHCPREQUEST &&
-			    uid_lease -> binding_state == FTS_ACTIVE)
+			    (uid_lease -> binding_state == FTS_ACTIVE ||
+			     uid_lease -> binding_state == FTS_BOOTP))
 				dissociate_lease (uid_lease);
 #if defined (DEBUG_FIND_LEASE)
 			log_info ("not choosing uid lease.");
