@@ -82,7 +82,7 @@ dhcpd.cat8:	dhcpd.8
 dhcpd.conf.cat5:	dhcpd.conf.5
 	nroff -man dhcpd.conf.5 >dhcpd.conf.cat5
 
-dhcpd:	$(OBJS) $(COBJ)
+dhcpd:	$(OBJS) $(COBJ) $(DHCPLIB)
 	$(CC) $(LFLAGS) -o dhcpd $(OBJS) $(DHCPLIB) $(LIBS)
 
 # Dependencies (semi-automatically-generated)
