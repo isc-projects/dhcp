@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.101 1999/07/13 18:00:22 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.102 1999/07/18 19:39:14 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -297,6 +297,15 @@ void dhcprelease (packet)
 #if defined (NSUPDATE)
 		nsupdate (lease, lease -> state, packet, DELETE);
 #endif
+	/* If there are statements to execute when the lease is
+	   committed, execute them. */
+		if (lease -> on_release) {
+			execute_statements (packet, lease, packet -> options,
+					    state -> options,
+					    lease -> on_release);
+			executable_statement_dereference (&lease -> on_release,
+							  "dhcprelease");
+		}
 		release_lease (lease);
 	}
 }
@@ -886,7 +895,7 @@ void ack_lease (packet, lease, offer, when, msg)
 					     (lease -> pool
 					      ? lease -> pool -> group
 					      : lease -> subnet -> group));
-
+	
 	/* See if the client is only supposed to have one lease at a time,
 	   and if so, find its other leases and release them.    We can only
 	   do this on DHCPREQUEST.    It's a little weird to do this before
@@ -949,6 +958,7 @@ void ack_lease (packet, lease, offer, when, msg)
 				log_info ("%s: %d secs < %d",
 				      packet -> raw -> secs, d1.data [0]);
 				free_lease_state (state, "ack_lease");
+				static_lease_dereference (lease, "ack_lease");
 				return;
 			}
 			data_string_forget (&d1, "ack_lease");
@@ -995,6 +1005,7 @@ void ack_lease (packet, lease, offer, when, msg)
 				log_info ("%s: unknown", msg);
 				data_string_forget (&d1, "ack_lease");
 				free_lease_state (state, "ack_lease");
+				static_lease_dereference (lease, "ack_lease");
 				return;
 			}
 			data_string_forget (&d1, "ack_lease"); /* mmm, C... */
@@ -1011,6 +1022,7 @@ void ack_lease (packet, lease, offer, when, msg)
 				data_string_forget (&d1, "ack_lease");
 				log_info ("%s: bootp disallowed", msg);
 				free_lease_state (state, "ack_lease");
+				static_lease_dereference (lease, "ack_lease");
 				return;
 			}
 			data_string_forget (&d1, "ack_lease");
@@ -1027,6 +1039,7 @@ void ack_lease (packet, lease, offer, when, msg)
 			log_info ("%s: booting disallowed", msg);
 			data_string_forget (&d1, "ack_lease");
 			free_lease_state (state, "ack_lease");
+			static_lease_dereference (lease, "ack_lease");
 			return;
 		}
 		data_string_forget (&d1, "ack_lease");
@@ -1065,6 +1078,9 @@ void ack_lease (packet, lease, offer, when, msg)
 					log_info ("%s: no available billing",
 						  msg);
 					free_lease_state (state, "ack_lease");
+					/* XXX probably not necessary: */
+					static_lease_dereference (lease,
+								  "ack_lease");
 					return;
 				}
 			}
@@ -1243,6 +1259,15 @@ void ack_lease (packet, lease, offer, when, msg)
  		nsupdate (lease, state, packet, ADD);
 #endif
 
+	/* If there are statements to execute when the lease is
+	   committed, execute them. */
+	if (lease -> on_commit && (!offer || offer == DHCPACK)) {
+		execute_statements (packet, lease, packet -> options,
+				    state -> options, lease -> on_commit);
+		executable_statement_dereference (&lease -> on_commit,
+						  "ack_lease");
+	}
+
 	/* Don't call supersede_lease on a mocked-up lease. */
 	if (lease -> flags & STATIC_LEASE) {
 		/* Copy the hardware address into the static lease
@@ -1267,6 +1292,7 @@ void ack_lease (packet, lease, offer, when, msg)
 		      || (offer && offer != DHCPACK))) {
 			log_info ("%s: database update failed", msg);
 			free_lease_state (state, "ack_lease");
+			static_lease_dereference (lease, "ack_lease");
 			return;
 		}
 	}
@@ -1637,6 +1663,7 @@ void ack_lease (packet, lease, offer, when, msg)
 		++outstanding_pings;
 	} else {
 		lease -> timestamp = cur_time;
+		static_lease_dereference (lease, "ack_lease");
 		dhcp_reply (lease);
 	}
 }
@@ -2347,6 +2374,25 @@ struct lease *mockup_lease (packet, share, hp)
 	mock.starts = mock.timestamp = mock.ends = MIN_TIME;
 	mock.flags = STATIC_LEASE;
 	return &mock;
+}
+
+/* Dereference all dynamically-allocated information that may be dangling
+   off of a static lease.   Otherwise, once ack_lease returns, the information
+   dangling from the lease will be lost, so reference counts will be screwed
+   up and memory leaks will occur. */
+
+void static_lease_dereference (lease, name)
+	struct lease *lease;
+	char *name;
+{
+	if (!(lease -> flags & STATIC_LEASE))
+		return;
+	if (lease -> on_release)
+		executable_statement_dereference (&lease -> on_release, name);
+	if (lease -> on_expiry)
+		executable_statement_dereference (&lease -> on_expiry, name);
+	if (lease -> on_commit)
+		executable_statement_dereference (&lease -> on_commit, name);
 }
 
 /* Look through all the pools in a list starting with the specified pool
