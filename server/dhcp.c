@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.192.2.2 2001/05/04 23:34:48 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.192.2.3 2001/05/17 07:16:51 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1589,7 +1589,6 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 					  d1.data [0]);
 				data_string_forget (&d1, MDL);
 				free_lease_state (state, MDL);
-				static_lease_dereference (lease, MDL);
 				return;
 			}
 			data_string_forget (&d1, MDL);
@@ -1649,7 +1648,6 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 		if (!ignorep)
 			log_info ("%s: unknown client", msg);
 		free_lease_state (state, MDL);
-		static_lease_dereference (lease, MDL);
 		return;
 	} 
 
@@ -1666,7 +1664,6 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 		if (!ignorep)
 			log_info ("%s: bootp disallowed", msg);
 		free_lease_state (state, MDL);
-		static_lease_dereference (lease, MDL);
 		return;
 	} 
 
@@ -1683,7 +1680,6 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 		if (!ignorep)
 			log_info ("%s: booting disallowed", msg);
 		free_lease_state (state, MDL);
-		static_lease_dereference (lease, MDL);
 		return;
 	}
 
@@ -1720,7 +1716,6 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 						  msg);
 					free_lease_state (state, MDL);
 					/* XXX probably not necessary: */
-					static_lease_dereference (lease, MDL);
 					return;
 				}
 			}
@@ -1753,7 +1748,6 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 		log_info ("%s: can't allocate temporary lease structure: %s",
 			  msg, isc_result_totext (result));
 		free_lease_state (state, MDL);
-		static_lease_dereference (lease, MDL);
 		return;
 	}
 		
@@ -2106,7 +2100,6 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 				      offer == DHCPACK, offer == DHCPACK)) {
 			log_info ("%s: database update failed", msg);
 			free_lease_state (state, MDL);
-			static_lease_dereference (lease, MDL);
 			lease_dereference (&lt, MDL);
 			return;
 		}
@@ -2485,7 +2478,6 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 		++outstanding_pings;
 	} else {
 		lease -> timestamp = cur_time;
-		static_lease_dereference (lease, MDL);
 		dhcp_reply (lease);
 	}
 }
@@ -3374,38 +3366,6 @@ int mockup_lease (struct lease **lp, struct packet *packet,
 	lease_dereference (&lease, MDL);
 	host_dereference (&rhp, MDL);
 	return 1;
-}
-
-/* Dereference all dynamically-allocated information that may be dangling
-   off of a static lease.   Otherwise, once ack_lease returns, the information
-   dangling from the lease will be lost, so reference counts will be screwed
-   up and memory leaks will occur. */
-
-void static_lease_dereference (lease, file, line)
-	struct lease *lease;
-	const char *file;
-	int line;
-{
-	if (!(lease -> flags & STATIC_LEASE))
-		return;
-	if (lease -> on_release)
-		executable_statement_dereference (&lease -> on_release,
-						  file, line);
-	if (lease -> on_expiry)
-		executable_statement_dereference (&lease -> on_expiry,
-						  file, line);
-	if (lease -> on_commit)
-		executable_statement_dereference (&lease -> on_commit,
-						  file, line);
-	if (lease -> scope)
-		binding_scope_dereference (&lease -> scope, file, line);
-	if (lease -> agent_options)
-		option_chain_head_dereference (&lease -> agent_options,
-					       file, line);
-	if (lease -> uid != lease -> uid_buf) {
-		dfree (lease -> uid, file, line);
-		lease -> uid = (unsigned char *)0;
-	}
 }
 
 /* Look through all the pools in a list starting with the specified pool

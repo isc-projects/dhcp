@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bootp.c,v 1.69 2001/02/12 20:51:26 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bootp.c,v 1.69.2.1 2001/05/17 07:16:53 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -341,7 +341,6 @@ void bootp (packet)
 
 	/* We're done with the option state. */
 	option_state_dereference (&options, MDL);
-	static_lease_dereference (lease, MDL);
 
 	/* Set up the hardware destination address... */
 	hto.hbuf [0] = packet -> raw -> htype;
@@ -403,10 +402,8 @@ void bootp (packet)
       out:
 	if (options)
 		option_state_dereference (&options, MDL);
-	if (lease) {
-		static_lease_dereference (lease, MDL);
+	if (lease)
 		lease_dereference (&lease, MDL);
-	}
 	if (hp)
 		host_dereference (&hp, MDL);
 	if (host)
