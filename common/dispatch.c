@@ -42,13 +42,15 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dispatch.c,v 1.28 1997/01/02 12:00:16 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dispatch.c,v 1.29 1997/02/18 14:33:43 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
 #include <sys/ioctl.h>
 
 struct interface_info *interfaces;
+struct timeout *timeouts;
+static struct timeout *free_timeouts;
 
 static void got_one PROTO ((struct interface_info *));
 
@@ -57,8 +59,8 @@ static void got_one PROTO ((struct interface_info *));
    register that interface with the network I/O software, figure out what
    subnet it's on, and add it to the list of interfaces. */
 
-void discover_interfaces (serverP)
-	int serverP;
+void discover_interfaces (state)
+	int state;
 {
 	struct interface_info *tmp;
 	struct interface_info *last;
@@ -91,7 +93,9 @@ void discover_interfaces (serverP)
 	if (i < 0)
 		error ("ioctl: SIOCGIFCONF: %m");
 
-	if (interfaces)
+	/* If we already have a list of interfaces, and we're running as
+	   a DHCP server, the interfaces were requested. */
+	if (interfaces && state == DISCOVER_SERVER)
 		ir = 0;
 	else
 		ir = INTERFACE_REQUESTED;
@@ -121,10 +125,13 @@ void discover_interfaces (serverP)
 			error ("Can't get interface flags for %s: %m",
 			       ifr.ifr_name);
 
-		/* Skip loopback, point-to-point and down interfaces. */
+		/* Skip loopback, point-to-point and down interfaces,
+		   except don't skip down interfaces if we're trying to
+		   get a list of configurable interfaces. */
 		if ((ifr.ifr_flags & IFF_LOOPBACK) ||
 		    (ifr.ifr_flags & IFF_POINTOPOINT) ||
-		    !(ifr.ifr_flags & IFF_UP))
+		    (!(ifr.ifr_flags & IFF_UP) &&
+		     state != DISCOVER_UNCONFIGURED))
 			continue;
 		
 		/* See if we've seen an interface that matches this one. */
@@ -220,11 +227,6 @@ void discover_interfaces (serverP)
 			memcpy (addr.iabuf, &foo.sin_addr.s_addr,
 				addr.len);
 
-			/* If this address matches the server identifier,
-			   make a note of it. */
-			if (addr_eq (addr, server_identifier))
-				server_identifier_matched = 1;
-
 			/* If there's a registered subnet for this address,
 			   connect it together... */
 			if ((subnet = find_subnet (addr))) {
@@ -264,6 +266,11 @@ void discover_interfaces (serverP)
 		}
 	}
 
+	/* If we're just trying to get a list of interfaces that we might
+	   be able to configure, we can quit now. */
+	if (state == DISCOVER_UNCONFIGURED)
+		return;
+
 	/* Weed out the interfaces that did not have IP addresses. */
 	last = (struct interface_info *)0;
 	for (tmp = interfaces; tmp; tmp = tmp -> next) {
@@ -282,7 +289,7 @@ void discover_interfaces (serverP)
 			sizeof tmp -> tif -> ifr_addr);
 
 		/* We must have a subnet declaration for each interface. */
-		if (!tmp -> shared_network && serverP)
+		if (!tmp -> shared_network && (state == DISCOVER_SERVER))
 			error ("No subnet declaration for %s (%s).",
 			       tmp -> name, inet_ntoa (foo.sin_addr));
 
@@ -301,28 +308,12 @@ void discover_interfaces (serverP)
 			}
 		}
 
-		/* If a server identifier wasn't specified, take it
-		   from the first IP address we see... */
-		if (!server_identifier.len) {
-			if (address_count > 1)
-				warn ("no server identifier specified.");
-			server_identifier.len = 4;
-			memcpy (server_identifier.iabuf,
-				&foo.sin_addr.s_addr, 4);
-			/* Flag the server identifier as having matched,
-			   so we don't generate a spurious warning. */
-			server_identifier_matched = 1;
-		}
-			
-
 		/* Register the interface... */
 		if_register_receive (tmp, tmp -> tif);
 		if_register_send (tmp, tmp -> tif);
 
 		tmp -> tif = (struct ifreq *)0; /* Can't keep this. */
 	}
-	if (!server_identifier_matched && serverP)
-		warn ("no interface address matches server identifier");
 
 	close (sock);
 
@@ -353,6 +344,7 @@ void dispatch ()
 	struct pollfd *fds;
 	int count;
 	int i;
+	int to_msec;
 
 	nfds = 0;
 	for (l = interfaces; l; l = l -> next) {
@@ -381,8 +373,37 @@ void dispatch ()
 #endif
 
 	do {
+
+		/* Call any expired timeouts, and then if there's
+		   still a timeout registered, time out the select
+		   call then. */
+	      another:
+		if (timeouts) {
+			struct timeout *t;
+			if (timeouts -> when <= cur_time) {
+				t = timeouts;
+				timeouts = timeouts -> next;
+				(*(t -> func)) (t -> interface);
+				t -> next = free_timeouts;
+				free_timeouts = t;
+				goto another;
+			}
+			/* Figure timeout in milliseconds, and check for
+			   potential overflow.   We assume that integers
+			   are 32 bits, which is harmless if they're 64
+			   bits - we'll just get extra timeouts in that
+			   case.    Lease times would have to be quite
+			   long in order for a 32-bit integer to overflow,
+			   anyway. */
+			to_msec = timeouts -> when - cur_time;
+			if (to_msec > 2147483)
+				to_msec = 2147483;
+			to_msec *= 1000;
+		} else
+			to_msec = -1;
+
 		/* Wait for a packet or a timeout... XXX */
-		count = poll (fds, nfds, -1);
+		count = poll (fds, nfds, to_msec);
 
 		/* Get the current time... */
 		GET_TIME (&cur_time);
@@ -417,6 +438,7 @@ void dispatch ()
 	struct interface_info *l;
 	int max = 0;
 	int count;
+	struct timeval tv, *tvp;
 
 	FD_ZERO (&r);
 	FD_ZERO (&w);
@@ -436,8 +458,28 @@ void dispatch ()
 				max = fallback_interface.wfdesc;
 #endif
 
+		/* Call any expired timeouts, and then if there's
+		   still a timeout registered, time out the select
+		   call then. */
+	      another:
+		if (timeouts) {
+			struct timeout *t;
+			if (timeouts -> when <= cur_time) {
+				t = timeouts;
+				timeouts = timeouts -> next;
+				(*(t -> func)) (t -> interface);
+				t -> next = free_timeouts;
+				free_timeouts = t;
+				goto another;
+			}
+			tv.tv_sec = timeouts -> when - cur_time;
+			tv.tv_usec = 0;
+			tvp = &tv;
+		} else
+			tvp = (struct timeval *)0;
+
 		/* Wait for a packet or a timeout... XXX */
-		count = select (max + 1, &r, &w, &x, (struct timeval *)0);
+		count = select (max + 1, &r, &w, &x, tvp);
 
 		/* Get the current time... */
 		GET_TIME (&cur_time);
@@ -538,4 +580,92 @@ int locate_network (packet)
 	if (packet -> shared_network)
 		return 1;
 	return 0;
+}
+
+void add_timeout (when, where, what)
+	TIME when;
+	void (*where) (struct interface_info *);
+	struct interface_info *what;
+{
+	struct timeout *t, *q;
+
+	/* See if this timeout supersedes an existing timeout. */
+	t = (struct timeout *)0;
+	for (q = timeouts; q; q = q -> next) {
+		if (q -> func == where && q -> interface == what) {
+			if (t)
+				t -> next = q -> next;
+			else
+				timeouts = q -> next;
+			break;
+		}
+		t = q;
+	}
+
+	/* If we didn't supersede a timeout, allocate a timeout
+	   structure now. */
+	if (!q) {
+		if (free_timeouts) {
+			q = free_timeouts;
+			free_timeouts = q -> next;
+			q -> func = where;
+			q -> interface = what;
+		} else {
+			q = (struct timeout *)malloc (sizeof (struct timeout));
+			if (!q)
+				error ("Can't allocate timeout structure!");
+			q -> func = where;
+			q -> interface = what;
+		}
+	}
+
+	q -> when = when;
+
+	/* Now sort this timeout into the timeout list. */
+
+	/* Beginning of list? */
+	if (!timeouts || timeouts -> when > q -> when) {
+		q -> next = timeouts;
+		timeouts = q;
+		return;
+	}
+
+	/* Middle of list? */
+	for (t = timeouts; t -> next; t = t -> next) {
+		if (t -> next -> when > q -> when) {
+			q -> next = t -> next;
+			t -> next = q;
+			return;
+		}
+	}
+
+	/* End of list. */
+	t -> next = q;
+	q -> next = (struct timeout *)0;
+}
+
+void cancel_timeout (where, what)
+	void (*where) (struct interface_info *);
+	struct interface_info *what;
+{
+	struct timeout *t, *q;
+
+	/* Look for this timeout on the list, and unlink it if we find it. */
+	t = (struct timeout *)0;
+	for (q = timeouts; q; q = q -> next) {
+		if (q -> func == where && q -> interface == what) {
+			if (t)
+				t -> next = q -> next;
+			else
+				timeouts = q -> next;
+			break;
+		}
+		t = q;
+	}
+
+	/* If we found the timeout, put it on the free list. */
+	if (q) {
+		q -> next = free_timeouts;
+		free_timeouts = q;
+	}
 }
