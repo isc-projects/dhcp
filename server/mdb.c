@@ -3,7 +3,7 @@
    Server-specific in-memory database support. */
 
 /*
- * Copyright (c) 1996-1999 Internet Software Consortium.
+ * Copyright (c) 1996-2000 Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.32 2000/05/16 23:03:46 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.33 2000/06/02 21:27:19 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -498,44 +498,26 @@ void new_address_range (low, high, subnet, pool)
 						    subnet -> netmask,
 						    i + min)),
 				   isc_result_totext (status));
-		/* Fill in the last lease if it hasn't been already... */
-		if (!pool -> last_lease) {
-			lease_reference (&pool -> last_lease, lp, MDL);
-		}
 #endif
 		lp -> ip_addr = ip_addr (subnet -> net,
-				      subnet -> netmask, i + min);
+					 subnet -> netmask, i + min);
 		lp -> starts = lp -> timestamp = MIN_TIME;
 		lp -> ends = MIN_TIME;
 		subnet_reference (&lp -> subnet, subnet, MDL);
 		pool_reference (&lp -> pool, pool, MDL);
-#if defined (FAILOVER_PROTOCOL)
-		if (pool -> failover_peer &&
-		    pool -> failover_peer -> i_am == secondary)
-			lp -> flags = PEER_IS_OWNER;
-		else
-			lp -> flags = 0;
-#endif
+		lp -> binding_state = FTS_FREE;
+		lp -> next_binding_state = FTS_FREE;
+		lp -> flags = 0;
 
 		/* Link this entry into the list. */
-		if (pool -> leases) {
-			lease_reference (&lp -> next, pool -> leases, MDL);
-			lease_dereference (&pool -> leases, MDL);
+		if (pool -> free) {
+			lease_reference (&lp -> next, pool -> free, MDL);
+			lease_dereference (&pool -> free, MDL);
 		}
-		lease_reference (&pool -> leases, lp, MDL);
-		if (lp -> next)
-			lease_reference (&lp -> next -> prev,
-					 pool -> leases, MDL);
+		lease_reference (&pool -> free, lp, MDL);
 		lease_hash_add (lease_ip_addr_hash, lp -> ip_addr.iabuf,
 				lp -> ip_addr.len, lp, MDL);
 	}
-
-#if defined (COMPACT_LEASES)
-	/* Fill in the last lease if it hasn't been already... */
-	if (!pool -> last_lease) {
-		lease_reference (&pool -> last_lease, &address_range [0], MDL);
-	}
-#endif
 
 	/* Find out if any dangling leases are in range... */
 	plp = (struct lease *)0;
@@ -568,7 +550,7 @@ void new_address_range (low, high, subnet, pool)
 				lp -> hostname = (char *)0;
 				lt -> client_hostname = lp -> client_hostname;
 				lp -> client_hostname = (char *)0;
-				supersede_lease (lt, lp, 0, 0);
+				supersede_lease (lt, lp, 0, 0, 0);
 				lease_dereference (&lt, MDL);
 			}
 			lease_dereference (&lp, MDL);
@@ -744,15 +726,13 @@ void enter_lease (lease)
 	/* If we don't have a place for this lease yet, save it for
 	   later. */
 	if (!find_lease_by_ip_addr (&comp, lease -> ip_addr, MDL)) {
-		if (comp -> next)
-			lease_dereference (&comp -> next, MDL);
+		if (lease -> next)
+			lease_dereference (&lease -> next, MDL);
 		if (dangling_leases)
-			lease_reference (&comp -> next, dangling_leases, MDL);
-		lease_reference (&dangling_leases, comp, MDL);
-		if (comp -> prev)
-			lease_dereference (&comp -> prev, MDL);
+			lease_reference (&lease -> next, dangling_leases, MDL);
+		lease_reference (&dangling_leases, lease, MDL);
 	} else {
-		supersede_lease (comp, lease, 0, 0);
+		supersede_lease (comp, lease, 0, 0, 0);
 	}
 }
 
@@ -761,14 +741,20 @@ void enter_lease (lease)
    list of leases by expiry time so that we can always find the oldest
    lease. */
 
-int supersede_lease (comp, lease, commit, propogate)
+int supersede_lease (comp, lease, commit, propogate, pimmediate)
 	struct lease *comp, *lease;
 	int commit;
 	int propogate;
+	int pimmediate;
 {
 	int enter_uid = 0;
 	int enter_hwaddr = 0;
-	struct lease *lp;
+	struct lease *lp, **lq, *prev;
+	TIME lp_next_state;
+
+	/* If there is no sample lease, just do the move. */
+	if (!lease)
+		goto just_move_it;
 
 	/* Static leases are not currently kept in the database... */
 	if (lease -> flags & STATIC_LEASE)
@@ -783,8 +769,10 @@ int supersede_lease (comp, lease, commit, propogate)
 	   lease, then we allow that, in case a dynamic BOOTP lease is
 	   requested *after* a DHCP lease has been assigned. */
 
-	if (!(lease -> flags & ABANDONED_LEASE) &&
-	    comp -> ends > cur_time &&
+	if (lease -> binding_state != FTS_ABANDONED &&
+	    (comp -> binding_state == FTS_ACTIVE ||
+	     comp -> binding_state == FTS_RESERVED ||
+	     comp -> binding_state == FTS_BOOTP) &&
 	    (((comp -> uid && lease -> uid) &&
 	      (comp -> uid_len != lease -> uid_len ||
 	       memcmp (comp -> uid, lease -> uid, comp -> uid_len))) ||
@@ -905,272 +893,232 @@ int supersede_lease (comp, lease, commit, propogate)
 		hw_hash_add (comp);
 	}
 	
-	/* Remove the lease from its current place in the 
-	   timeout sequence. */
-	if (comp -> prev) {
-		lease_dereference (&comp -> prev -> next, MDL);
-		if (comp -> next) {
-			lease_reference (&comp -> prev -> next,
-					 comp -> next, MDL);
-			lease_dereference (&comp -> next, MDL);
-		}
-	} else {
-		lease_dereference (&comp -> pool -> leases, MDL);
-		if (comp -> next) {
-			lease_reference (&comp -> pool -> leases,
-					 comp -> next, MDL);
-		}
-	}
-	if (comp -> next) {
-		lease_dereference (&comp -> next -> prev, MDL);
-		if (comp -> prev) {
-			lease_reference (&comp -> next -> prev,
-					 comp -> prev, MDL);
-		}
-	}
-	if (comp -> pool -> last_lease == comp) {
-		lease_dereference (&comp -> pool -> last_lease, MDL);
-		if (comp -> prev)
-			lease_reference (&comp -> pool -> last_lease,
-					 comp -> prev, MDL);
-	}
-	if (comp -> prev)
-		lease_dereference (&comp -> prev, MDL);
-	if (comp -> next)
-		lease_dereference (&comp -> next, MDL);
-
-
-	/* If there's an expiry event on this lease, get rid of it
-	   (we may wind up putting it back, but we can't count on
-	   that here without too much additional complexity). */
-	if (comp -> pool -> next_expiry == comp) {
 #if defined (FAILOVER_PROTOCOL)
-		lp = comp -> prev;
-#else
-		for (lp = comp -> prev; lp; lp = lp -> prev)
-			if (lp -> on_expiry)
-				break;
-#endif
-		if (lp
-#if !defined (FAILOVER_PROTOCOL)
-		    && lp -> on_expiry
-#endif
-			) {
-			lease_dereference (&comp -> pool -> next_expiry, MDL);
-			lease_reference (&comp -> pool -> next_expiry,
-					 lp, MDL);
-			if (commit)
-				add_timeout (lp -> ends,
-					     pool_timer, lp -> pool,
-					     (tvref_t)pool_reference,
-					     (tvunref_t)pool_dereference);
-		} else {
-			lease_dereference (&comp -> pool -> next_expiry, MDL);
-			if (commit)
-				cancel_timeout (pool_timer, comp -> pool);
-		}
-	}
-	
-	/* Find the last insertion point... */
-	if (comp == comp -> pool -> insertion_point ||
-	    !comp -> pool -> insertion_point) {
-		lp = comp -> pool -> leases;
-	} else {
-		lp = comp -> pool -> insertion_point;
-	}
-	
-	if (!lp) {
-		/* Nothing on the list yet?    Just make comp the
-		   head of the list. */
-		lease_reference (&comp -> pool -> leases, comp, MDL);
-		if (comp -> pool -> last_lease) {
-			lease_dereference (&comp -> pool -> last_lease, MDL);
-			lease_reference (&comp -> pool -> last_lease,
-					 comp, MDL);
-		}
-	} else if (lp -> ends > lease -> ends) {
-		/* Skip down the list until we run out of list
-		   or find a place for comp. */
-		while (lp -> next && lp -> ends > lease -> ends) {
-			lp = lp -> next;
-		}
-		if (lp -> ends > lease -> ends) {
-			/* If we ran out of list, put comp at the end. */
-			lease_reference (&lp -> next, comp, MDL);
-			lease_reference (&comp -> prev, lp, MDL);
-			if (comp -> pool -> last_lease)
-				lease_dereference (&comp -> pool -> last_lease,
-						   MDL);
-			lease_reference (&comp -> pool -> last_lease,
-					 comp, MDL);
-		} else {
-			/* If we didn't, put it between lp and
-			   the previous item on the list. */
-			if (lp -> prev) {
-				lease_reference (&comp -> prev,
-						 lp -> prev, MDL);
-				lease_dereference (&lp -> prev -> next, MDL);
-				lease_reference (&comp -> prev -> next,
-						 comp, MDL);
-				lease_dereference (&lp -> prev, MDL);
-			} else {
-				if (comp -> pool -> leases)
-					lease_dereference
-						(&comp -> pool -> leases, MDL);
-				lease_reference (&comp -> pool -> leases,
-						 comp, MDL);
-			}
-			lease_reference (&comp -> next, lp, MDL);
-			lease_reference (&lp -> prev, comp, MDL);
-		}
-	} else {
-		/* Skip up the list until we run out of list
-		   or find a place for comp. */
-		while (lp -> prev && lp -> ends < lease -> ends) {
-			lp = lp -> prev;
-		}
-		if (lp -> ends < lease -> ends) {
-			/* If we ran out of list, put comp at the beginning. */
-			lease_reference (&lp -> prev, comp, MDL);
-			lease_reference (&comp -> next, lp, MDL);
-			if (comp -> pool -> leases)
-				lease_dereference (&comp -> pool -> leases,
-						   MDL);
-			lease_reference (&comp -> pool -> leases, comp, MDL);
-		} else {
-			/* If we didn't, put it between lp and
-			   the next item on the list. */
-			if (lp -> next) {
-				lease_reference (&comp -> next,
-						 lp -> next, MDL);
-				lease_dereference (&lp -> next -> prev, MDL);
-				lease_reference (&lp -> next -> prev,
-						 comp, MDL);
-				lease_dereference (&lp -> next, MDL);
-			} else {
-				/* XXX are we really supposed to
-				   XXX be doing this? */
-				if (comp -> pool -> last_lease)
-					lease_dereference
-						(&comp -> pool -> last_lease,
-						 MDL);
-				lease_reference (&comp -> pool -> last_lease,
-						 comp, MDL);
-			}
-			lease_reference (&comp -> prev, lp, MDL);
-			lease_reference (&lp -> next, comp, MDL);
-		}
-	}
-	if (comp -> pool -> insertion_point)
-		lease_dereference (&comp -> pool -> insertion_point, MDL);
-	lease_reference (&comp -> pool -> insertion_point, comp, MDL);
-#if defined (FAILOVER_PROTOCOL)
-	if (comp -> ends <= cur_time && lease -> ends > cur_time) {
-		if (lease -> flags & PEER_IS_OWNER)
-			comp -> pool -> peer_leases--;
-		else
-			comp -> pool -> local_leases--;
-	} else if (comp -> ends > cur_time && lease -> ends <= cur_time) {
-		if (lease -> flags & PEER_IS_OWNER)
-			comp -> pool -> peer_leases++;
-		else
-			comp -> pool -> local_leases++;
-	}		
 	comp -> cltt = lease -> cltt;
 	comp -> tstp = lease -> tstp;
 	comp -> tsfp = lease -> tsfp;
 #endif /* FAILOVER_PROTOCOL */
 	comp -> ends = lease -> ends;
+	comp -> next_binding_state = lease -> next_binding_state;
 
-	/* If there's an expiry event on this lease, process it or
-	   queue it. */
-#if !defined (FAILOVER_PROTOCOL)
-	if (comp -> on_expiry) {
-#endif
-		if (comp -> ends <= cur_time && commit) {
-		    if (comp -> on_expiry) {
-			execute_statements ((struct packet *)0, lease,
-					    (struct option_state *)0,
-					    (struct option_state *)0, /* XXX */
-					    &lease -> scope,
-					    comp -> on_expiry);
-			executable_statement_dereference (&comp -> on_expiry,
-							  MDL);
-		    }
+      just_move_it:
+	/* Figure out which queue it's on. */
+	switch (comp -> binding_state) {
+	      case FTS_FREE:
+		lq = &comp -> pool -> free;
+		comp -> pool -> free_leases--;
+		break;
 
-		    /* No sense releasing a lease after it's expired. */
-		    if (comp -> on_release)
-			    executable_statement_dereference
-				    (&comp -> on_release, MDL);
-		} else {
-			/* If this is the next lease that will timeout on the
-			   pool, zap the old timeout and set the timeout on
-			   this pool to the time that the lease ends.
-			   
-			   We do not actually set the timeout unless commit is
-			   true - we don't want to thrash the timer queue when
-			   reading the lease database.  Instead, the database
-			   code calls the expiry event on each pool after
-			   reading in the lease file, and the expiry code sets
-			   the timer if there's anything left to expire after
-			   it's run any outstanding expiry events on the
-			   pool. */
-			if (comp -> pool) {
-			    if (!comp -> pool -> next_expiry ||
-				(comp -> ends <
-				 comp -> pool -> next_expiry -> ends)) {
-				    if (comp -> pool -> next_expiry)
-					lease_dereference
-						(&comp -> pool -> next_expiry,
-						 MDL);
-				    lease_reference
-					    (&comp -> pool -> next_expiry,
-					     comp, MDL);
-				    if (commit)
-					add_timeout (comp -> ends,
-						     pool_timer,
-						     comp -> pool,
-						     (tvref_t)pool_reference,
-						     (tvunref_t)
-						     pool_dereference);
-                            } else if (comp -> ends ==
-                                       comp -> pool -> next_expiry -> ends) {
-                                    /* If there are other leases that expire at
-                                       the same time as comp, we need to make
-                                       sure that we have the one that appears
-                                       last on the list that needs an expiry
-                                       event - otherwise we'll miss expiry
-                                       events until the server restarts. */
-                                    struct lease *foo;
-                                    struct lease *install = comp;
-                                    for (foo = comp;
-					 foo && foo -> ends == comp -> ends;
-                                         foo = foo -> next) {
-#if !defined (FAILOVER_PROTOCOL)
-                                            if (foo -> on_expiry)
-#endif
-                                                    install = foo;
-                                    }
-				    lease_dereference
-					    (&comp -> pool -> next_expiry,
-					     MDL);
-                                    lease_reference
-					    (&comp -> pool -> next_expiry,
-					     install, MDL);
-                            }
-			}
-		}
-#if !defined (FAILOVER_PROTOCOL)
+	      case FTS_ACTIVE:
+	      case FTS_RESERVED:
+	      case FTS_BOOTP:
+		lq = &comp -> pool -> active;
+		break;
+
+	      case FTS_EXPIRED:
+	      case FTS_RELEASED:
+	      case FTS_RESET:
+		lq = &comp -> pool -> expired;
+		break;
+
+	      case FTS_ABANDONED:
+		lq = &comp -> pool -> abandoned;
+		break;
+
+	      case FTS_BACKUP:
+		lq = &comp -> pool -> backup;
+		comp -> pool -> backup_leases--;
+		break;
+
+	      default:
+		log_error ("Lease with bogus binding state: %d",
+			   comp -> binding_state);
+		return 0;
 	}
-#endif
+
+	/* Remove the lease from its current place in its current
+	   timer sequence. */
+	prev = (struct lease *)0;
+	for (lp = *lq; lp; lp = lp -> next) {
+		if (lp == comp)
+			break;
+		prev = lp;
+	}
+
+	if (!lp) {
+		log_error ("Lease with binding state %s not on its queue.",
+			   (comp -> binding_state < 1 &&
+			    comp -> binding_state < FTS_BOOTP)
+			   ? "unknown"
+			   : binding_state_names [comp -> binding_state - 1]);
+		return 0;
+	}
+	
+	if (prev) {
+		lease_dereference (&prev -> next, MDL);
+		if (comp -> next) {
+			lease_reference (&prev -> next, comp -> next, MDL);
+			lease_dereference (&comp -> next, MDL);
+		}
+	} else {
+		lease_dereference (lq, MDL);
+		if (comp -> next) {
+			lease_reference (lq, comp -> next, MDL);
+			lease_dereference (&comp -> next, MDL);
+		}
+	}
+
+	/* Make the state transition. */
+	if (commit)
+		process_state_transition (comp);
+
+	/* Figure out which queue it's going to. */
+	switch (comp -> binding_state) {
+	      case FTS_FREE:
+		lq = &comp -> pool -> free;
+		comp -> pool -> free_leases++;
+		comp -> sort_time = comp -> ends;
+		break;
+
+	      case FTS_ACTIVE:
+	      case FTS_RESERVED:
+	      case FTS_BOOTP:
+		lq = &comp -> pool -> active;
+		comp -> sort_time = comp -> ends;
+		break;
+
+	      case FTS_EXPIRED:
+	      case FTS_RELEASED:
+	      case FTS_RESET:
+		lq = &comp -> pool -> expired;
+		comp -> sort_time = comp -> ends;
+
+		break;
+
+	      case FTS_ABANDONED:
+		lq = &comp -> pool -> abandoned;
+		comp -> sort_time = comp -> ends;
+		break;
+
+	      case FTS_BACKUP:
+		lq = &comp -> pool -> backup;
+		comp -> pool -> backup_leases++;
+		comp -> sort_time = comp -> ends;
+		break;
+
+	      default:
+		log_error ("Lease with bogus binding state: %d",
+			   comp -> binding_state);
+		return 0;
+	}
+
+	/* Insertion sort the lease onto the appropriate queue. */
+	prev = (struct lease *)0;
+	for (lp = *lq; lp; lp = lp -> next) {
+		if (lp -> sort_time > comp -> sort_time)
+			break;
+		prev = lp;
+	}
+	if (prev) {
+		if (prev -> next) {
+			lease_reference (&comp -> next, prev -> next, MDL);
+			lease_dereference (&prev -> next, MDL);
+		}
+		lease_reference (&prev -> next, comp, MDL);
+	} else {
+		if (*lq) {
+			lease_reference (&comp -> next, *lq, MDL);
+			lease_dereference (lq, MDL);
+		}
+		lease_reference (lq, comp, MDL);
+	}
+
+	/* If this is the next lease that will timeout on the pool,
+	   zap the old timeout and set the timeout on this pool to the
+	   time that the lease's next event will happen.
+		   
+	   We do not actually set the timeout unless commit is true -
+	   we don't want to thrash the timer queue when reading the
+	   lease database.  Instead, the database code calls the
+	   expiry event on each pool after reading in the lease file,
+	   and the expiry code sets the timer if there's anything left
+	   to expire after it's run any outstanding expiry events on
+	   the pool. */
+	if (commit &&
+	    comp -> sort_time != MIN_TIME &&
+	    comp -> sort_time < cur_time &&
+	    comp -> sort_time < comp -> pool -> next_event_time) {
+		comp -> pool -> next_event_time = comp -> sort_time;
+		add_timeout (comp -> pool -> next_event_time,
+			     pool_timer, comp -> pool,
+			     (tvref_t)pool_reference,
+			     (tvunref_t)pool_dereference);
+	}
 
 	/* Return zero if we didn't commit the lease to permanent storage;
 	   nonzero if we did. */
 	return commit && write_lease (comp) && commit_leases ()
 #if defined (FAILOVER_PROTOCOL)
-		&& (!propogate || dhcp_failover_queue_update (comp))
+		&& (!propogate ||
+		    dhcp_failover_queue_update (comp, pimmediate))
 #endif
 		;
+}
+
+void process_state_transition (struct lease *lease)
+{
+	/* If the lease was active and is now no longer active, but isn't
+	   released, then it just expired, so do the expiry event. */
+	if (lease -> next_binding_state != lease -> binding_state &&
+	    (lease -> binding_state == FTS_ACTIVE ||
+	     lease -> binding_state == FTS_BOOTP ||
+	     lease -> binding_state == FTS_RESERVED) &&
+	    lease -> next_binding_state != FTS_RELEASED) {
+		if (lease -> on_expiry) {
+			execute_statements ((struct packet *)0, lease,
+					    (struct option_state *)0,
+					    (struct option_state *)0, /* XXX */
+					    &lease -> scope,
+					    lease -> on_expiry);
+			executable_statement_dereference (&lease -> on_expiry,
+							  MDL);
+		}
+		
+		/* No sense releasing a lease after it's expired. */
+		if (lease -> on_release)
+			executable_statement_dereference (&lease -> on_release,
+							  MDL);
+		/* Send the expiry time to the peer. */
+		lease -> tstp = lease -> ends;
+	}
+
+	/* If the lease was active and is now released, do the release
+	   event. */
+	if ((lease -> binding_state == FTS_ACTIVE ||
+	     lease -> binding_state == FTS_BOOTP ||
+	     lease -> binding_state == FTS_RESERVED) &&
+	    lease -> next_binding_state == FTS_RELEASED) {
+		if (lease -> on_release) {
+			execute_statements ((struct packet *)0, lease,
+					    (struct option_state *)0,
+					    (struct option_state *)0, /* XXX */
+					    &lease -> scope,
+					    lease -> on_release);
+			executable_statement_dereference (&lease -> on_release,
+							  MDL);
+		}
+		
+		/* A released lease can't expire. */
+		if (lease -> on_expiry)
+			executable_statement_dereference (&lease -> on_expiry,
+							  MDL);
+
+		/* Send the release time (should be == cur_time) to the
+		   peer. */
+		lease -> tstp = lease -> ends;
+	}
+
+	lease -> binding_state = lease -> next_binding_state;
 }
 
 /* Copy the contents of one lease into another, correctly maintaining
@@ -1242,6 +1190,8 @@ int lease_copy (struct lease **lp,
 	lt -> tstp = lease -> tstp;
 	lt -> tsfp = lease -> tsfp;
 	lt -> cltt = lease -> cltt;
+	lt -> binding_state = lease -> binding_state;
+	lt -> next_binding_state = lease -> next_binding_state;
 	status = lease_reference (lp, lt, file, line);
 	lease_dereference (&lt, MDL);
 	return status == ISC_R_SUCCESS;
@@ -1252,8 +1202,6 @@ void release_lease (lease, packet)
 	struct lease *lease;
 	struct packet *packet;
 {
-	struct lease *lt;
-
 	/* If there are statements to execute when the lease is
 	   released, execute them. */
 	if (lease -> on_release) {
@@ -1272,21 +1220,26 @@ void release_lease (lease, packet)
 		executable_statement_dereference (&lease -> on_expiry, MDL);
 
 	if (lease -> ends > cur_time) {
-		if (!lease_copy (&lt, lease, MDL))
-			return;
-
-		if (lt -> on_commit)
-			executable_statement_dereference (&lt -> on_commit,
+		if (lease -> on_commit)
+			executable_statement_dereference (&lease -> on_commit,
 							  MDL);
 
 		/* Blow away any bindings. */
-		lt -> scope.bindings = (struct binding *)0;
-
-		lt -> ends = cur_time;
-		if (lt -> billing_class)
-			class_dereference (&lt -> billing_class, MDL);
-		supersede_lease (lease, lt, 1, 1);
-		lease_dereference (&lt, MDL);
+		/* XXX free them?!? */
+		lease -> scope.bindings = (struct binding *)0;
+		lease -> ends = cur_time;
+#if defined (FAILOVER_PROTOCOL)
+		if (lease -> pool && lease -> pool -> failover_peer) {
+			lease -> next_binding_state = FTS_RELEASED;
+		} else {
+			lease -> next_binding_state = FTS_FREE;
+		}
+#else
+		lease -> next_binding_state = FTS_FREE;
+#endif
+		if (lease -> billing_class)
+			class_dereference (&lease -> billing_class, MDL);
+		supersede_lease (lease, (struct lease *)0, 1, 1, 1);
 	}
 }
 
@@ -1299,7 +1252,6 @@ void abandon_lease (lease, message)
 {
 	struct lease *lt = (struct lease *)0;
 
-	lease -> flags |= ABANDONED_LEASE;
 	if (!lease_copy (&lt, lease, MDL))
 		return;
 
@@ -1312,8 +1264,9 @@ void abandon_lease (lease, message)
 
 	/* Blow away any bindings. */
 	lt -> scope.bindings = (struct binding *)0;
-
 	lt -> ends = cur_time; /* XXX */
+	lt -> next_binding_state = FTS_ABANDONED;
+
 	log_error ("Abandoning IP address %s: %s",
 	      piaddr (lease -> ip_addr), message);
 	lt -> hardware_addr.hlen = 0;
@@ -1324,7 +1277,7 @@ void abandon_lease (lease, message)
 	lt -> uid_max = 0;
 	if (lt -> billing_class)
 		class_dereference (&lt -> billing_class, MDL);
-	supersede_lease (lease, lt, 1, 1);
+	supersede_lease (lease, lt, 1, 1, 1);
 	lease_dereference (&lt, MDL);
 }
 
@@ -1349,6 +1302,15 @@ void dissociate_lease (lease)
 	/* Blow away any bindings. */
 	lt -> scope.bindings = (struct binding *)0;
 
+#if defined (FAILOVER_PROTOCOL)
+	if (lease -> pool && lease -> pool -> failover_peer) {
+		lt -> next_binding_state = FTS_RESET;
+	} else {
+		lt -> next_binding_state = FTS_FREE;
+	}
+#else
+	lt -> next_binding_state = FTS_FREE;
+#endif
 	lt -> ends = cur_time; /* XXX */
 	lt -> hardware_addr.hlen = 0;
 	if (lt -> uid != lt -> uid_buf)
@@ -1358,7 +1320,7 @@ void dissociate_lease (lease)
 	lt -> uid_max = 0;
 	if (lt -> billing_class)
 		class_dereference (&lt -> billing_class, MDL);
-	supersede_lease (lease, lt, 1, 1);
+	supersede_lease (lease, lt, 1, 1, 1);
 	lease_dereference (&lt, MDL);
 }
 
@@ -1367,72 +1329,75 @@ void pool_timer (vpool)
 	void *vpool;
 {
 	struct pool *pool;
-	struct lease *lease;
+	struct lease *lt = (struct lease *)0;
+	struct lease *next = (struct lease *)0;
+	struct lease *lease = (struct lease *)0;
+	struct lease **lptr [5];
+	TIME next_expiry = MAX_TIME;
+	int i;
 
 	pool = (struct pool *)vpool;
-	for (lease = pool -> next_expiry; lease; lease = lease -> prev) {
-		/* Stop processing when we get to the first lease that has not
-                   yet expired. */
-		if (lease -> ends > cur_time)
-			break;
 
-		/* Skip entries that aren't set to expire. */
-		if (lease -> on_expiry) {
-			/* Okay, the current lease needs to expire, so
-                           do it. */
-			execute_statements ((struct packet *)0, lease,
-					    (struct option_state *)0,
-					    (struct option_state *)0, /* XXX */
-					    &lease -> scope,
-					    lease -> on_expiry);
-			if (lease -> on_expiry)
-				executable_statement_dereference
-					(&lease -> on_expiry, MDL);
-		}			
+#define FREE_LEASES 0
+	lptr [FREE_LEASES] = &pool -> free;
+#define ACTIVE_LEASES 1
+	lptr [ACTIVE_LEASES] = &pool -> active;
+#define EXPIRED_LEASES 2
+	lptr [EXPIRED_LEASES] = &pool -> expired;
+#define ABANDONED_LEASES 3
+	lptr [ABANDONED_LEASES] = &pool -> abandoned;
+#define BACKUP_LEASES 4
+	lptr [BACKUP_LEASES] = &pool -> backup;
 
-		/* If there's an on_release event, blow it away. */
-		if (lease -> on_release)
-			executable_statement_dereference (&lease -> on_release,
-							  MDL);
+	for (i = FREE_LEASES; i <= BACKUP_LEASES; i++) {
+		/* If there's nothing on the queue, skip it. */
+		if (!*(lptr [i]))
+			continue;
 		
-		/* There are two problems with writing the lease out here.
+		lease_reference (&lease, *(lptr [i]), MDL);
 
-		   The first is that we've just done a commit, and the write
-		   may fail, in which case we will redo the operation.  If the
-		   operation is not idempotent, we're in trouble here.  I have
-		   no proposed solution for this problem - make the event
-		   idempotent, or make sure that it at least isn't harmful to
-		   do it twice.
+		while (lease) {
+			/* Remember the next lease in the list. */
+			if (next)
+				lease_dereference (&next, MDL);
+			if (lease -> next)
+				lease_reference (&next, lease -> next, MDL);
 
-		   The second is that if we just read in the lease file and ran
-		   all the expiry events, we're going to rewrite all expiring
-		   leases twice.  There's no real answer for this - if we
-		   postpone writing until we've expired all leases, we're
-		   increasing the window to lose as described above.  I guess a
-		   dirty bit on the lease would work.  Hm. */
-		if (!write_lease (lease)) {
-			log_error ("Error updating lease %s after expiry",
-				   piaddr (lease -> ip_addr));
+			/* If we've run out of things to expire on this list,
+			   stop. */
+			if (lease -> sort_time > cur_time) {
+				if (lease -> sort_time < next_expiry)
+					next_expiry = lease -> sort_time;
+				break;
+			}
+
+			/* If there is a pending state change, and
+			   this lease has gotten to the time when the
+			   state change should happen, just call
+			   supersede_lease on it to make the change
+			   happen. */
+			if (lease -> next_binding_state !=
+			    lease -> binding_state)
+				supersede_lease (lease,
+						 (struct lease *)0, 1, 1, 1);
+
+			lease_dereference (&lease, MDL);
+			if (next)
+				lease_reference (&lease, next, MDL);
 		}
-		if (!commit_leases ()) {
-			log_error ("Error committing after writing lease %s",
-				   piaddr (lease -> ip_addr));
-		}
-#if defined (FAILOVER_PROTOCOL)
-		if (lease -> flags & PEER_IS_OWNER)
-			pool -> peer_leases++;
-		else
-			pool -> local_leases++;
-#endif
+		if (next)
+			lease_dereference (&next, MDL);
+		if (lease)
+			lease_dereference (&lease, MDL);
 	}
-	if (pool -> next_expiry)
-		lease_dereference (&pool -> next_expiry, MDL);
-	if (lease) {
-		lease_reference (&pool -> next_expiry, lease, MDL);
-		add_timeout (lease -> ends, pool_timer, pool,
+	if (next_expiry != MAX_TIME) {
+		pool -> next_event_time = next_expiry;
+		add_timeout (pool -> next_event_time, pool_timer, pool,
 			     (tvref_t)pool_reference,
 			     (tvunref_t)pool_dereference);
-	}
+	} else
+		pool -> next_event_time = MIN_TIME;
+
 }
 
 /* Locate the lease associated with a given IP address... */
@@ -1618,6 +1583,7 @@ void write_leases ()
 	struct hash_bucket *hb;
 	int i;
 	int num_written;
+	struct lease **lptr [5];
 
 	/* Write all the dynamically-created group declarations. */
 	if (group_name_hash) {
@@ -1682,18 +1648,25 @@ void write_leases ()
 	/* Write all the leases. */
 	num_written = 0;
 	for (s = shared_networks; s; s = s -> next) {
-		for (p = s -> pools; p; p = p -> next) {
-			for (l = p -> leases; l; l = l -> next) {
-				if (l -> hardware_addr.hlen ||
-				    l -> uid_len ||
-				    (l -> flags & ABANDONED_LEASE)) {
-					if (!write_lease (l))
-						log_fatal ("Can't rewrite %s",
-							   "lease database");
-					num_written++;
-				}
+	    for (p = s -> pools; p; p = p -> next) {
+		lptr [FREE_LEASES] = &p -> free;
+		lptr [ACTIVE_LEASES] = &p -> active;
+		lptr [EXPIRED_LEASES] = &p -> expired;
+		lptr [ABANDONED_LEASES] = &p -> abandoned;
+		lptr [BACKUP_LEASES] = &p -> backup;
+
+		for (i = FREE_LEASES; i <= BACKUP_LEASES; i++) {
+		    for (l = *(lptr [i]); l; l = l -> next) {
+			if (l -> hardware_addr.hlen ||
+			    l -> uid_len ||
+			    (l -> binding_state != FTS_FREE)) {
+			    if (!write_lease (l))
+				log_fatal ("Can't rewrite lease database");
+			    num_written++;
 			}
+		    }
 		}
+	    }
 	}
 	log_info ("Wrote %d leases to leases file.", num_written);
 	if (!commit_leases ())
@@ -1712,6 +1685,7 @@ void expire_all_pools ()
 	struct hash_bucket *hb;
 	int i;
 	struct lease *l;
+	struct lease **lptr [5];
 
 	/* Loop through each pool in each shared network and call the
 	   expiry routine on the pool. */
@@ -1721,21 +1695,29 @@ void expire_all_pools ()
 
 #if defined (FAILOVER_PROTOCOL)
 		p -> lease_count = 0;
-		p -> local_leases = 0;
-		p -> peer_leases = 0;
+		p -> free_leases = 0;
+		p -> backup_leases = 0;
 		
-		for (l = p -> leases; l; l = l -> next) {
+		lptr [FREE_LEASES] = &p -> free;
+		lptr [ACTIVE_LEASES] = &p -> active;
+		lptr [EXPIRED_LEASES] = &p -> expired;
+		lptr [ABANDONED_LEASES] = &p -> abandoned;
+		lptr [BACKUP_LEASES] = &p -> backup;
+
+		for (i = FREE_LEASES; i <= BACKUP_LEASES; i++) {
+		    for (l = *(lptr [i]); l; l = l -> next) {
 			p -> lease_count++;
 			if (l -> ends <= cur_time) {
-				if (l -> flags & PEER_IS_OWNER)
-					p -> peer_leases++;
-				else
-					p -> local_leases++;
+				if (l -> binding_state == FTS_FREE)
+					p -> free_leases++;
+				else if (l -> binding_state == FTS_BACKUP)
+					p -> backup_leases++;
 			}
 			if (p -> failover_peer &&
 			    l -> tstp > l -> tsfp &&
 			    !(l -> flags & ON_UPDATE_QUEUE))
-				dhcp_failover_queue_update (l);
+				dhcp_failover_queue_update (l, 1);
+		    }
 		}
 #endif
 	    }
@@ -1748,6 +1730,8 @@ void dump_subnets ()
 	struct shared_network *s;
 	struct subnet *n;
 	struct pool *p;
+	struct lease **lptr [5];
+	int i;
 
 	log_info ("Subnets:");
 	for (n = subnets; n; n = n -> next_subnet) {
@@ -1757,14 +1741,20 @@ void dump_subnets ()
 	}
 	log_info ("Shared networks:");
 	for (s = shared_networks; s; s = s -> next) {
-		log_info ("  %s", s -> name);
-		for (p = s -> pools; p; p = p -> next) {
-			for (l = p -> leases; l; l = l -> next) {
-				print_lease (l);
-			}
-			log_debug ("Last Lease:");
-			print_lease (p -> last_lease);
+	    log_info ("  %s", s -> name);
+	    for (p = s -> pools; p; p = p -> next) {
+		lptr [FREE_LEASES] = &p -> free;
+		lptr [ACTIVE_LEASES] = &p -> active;
+		lptr [EXPIRED_LEASES] = &p -> expired;
+		lptr [ABANDONED_LEASES] = &p -> abandoned;
+		lptr [BACKUP_LEASES] = &p -> backup;
+
+		for (i = FREE_LEASES; i <= BACKUP_LEASES; i++) {
+		    for (l = *(lptr [i]); l; l = l -> next) {
+			    print_lease (l);
+		    }
 		}
+	    }
 	}
 }
 

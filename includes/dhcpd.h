@@ -238,12 +238,10 @@ struct hardware {
 struct lease {
 	OMAPI_OBJECT_PREAMBLE;
 	struct lease *next;
-	struct lease *prev;
 	struct lease *n_uid, *n_hw;
-	struct lease *waitq_next;
 
 	struct iaddr ip_addr;
-	TIME starts, ends, timestamp;
+	TIME starts, ends, timestamp, sort_time;
 	unsigned char *uid;
 	unsigned uid_len;
 	unsigned uid_max;
@@ -261,19 +259,17 @@ struct lease {
 	struct executable_statement *on_commit;
 	struct executable_statement *on_release;
 
-	int flags;
+	u_int16_t flags;
 #       define STATIC_LEASE		1
-#       define BOOTP_LEASE		2
 #	define PERSISTENT_FLAGS		(0)
 #	define MS_NULL_TERMINATION	8
-#	define ABANDONED_LEASE		16
-#	define PEER_IS_OWNER		32
-#	define ON_UPDATE_QUEUE		64
-#	define ON_ACK_QUEUE		128
-#	define EPHEMERAL_FLAGS		(BOOTP_LEASE | MS_NULL_TERMINATION | \
-					 ABANDONED_LEASE | PEER_IS_OWNER | \
+#	define ON_UPDATE_QUEUE		16
+#	define ON_ACK_QUEUE		32
+#	define EPHEMERAL_FLAGS		(MS_NULL_TERMINATION | \
 					 ON_ACK_QUEUE | ON_UPDATE_QUEUE)
-
+	binding_state_t binding_state;	/* See failover.h, FTS_*. */
+	binding_state_t next_binding_state;	/* See failover.h, FTS_*. */
+	
 	struct lease_state *state;
 
 	TIME tstp;	/* Time sent to partner. */
@@ -500,14 +496,16 @@ struct pool {
 	struct shared_network *shared_network;
 	struct permit *permit_list;
 	struct permit *prohibit_list;
-	struct lease *leases;
-	struct lease *insertion_point;
-	struct lease *last_lease;
-	struct lease *next_expiry;
+	struct lease *active;
+	struct lease *expired;
+	struct lease *free;
+	struct lease *backup;
+	struct lease *abandoned;
+	TIME next_event_time;
 #if defined (FAILOVER_PROTOCOL)
 	int lease_count;
-	int local_leases;
-	int peer_leases;
+	int free_leases;
+	int backup_leases;
 	dhcp_failover_state_t *failover_peer;
 #endif
 };
@@ -1550,6 +1548,8 @@ extern u_int32_t fto_allowed [];
 extern int ft_sizes [];
 extern const char *dhcp_flink_state_names [];
 #endif
+extern const char *binding_state_names [];
+
 extern struct universe agent_universe;
 extern struct option agent_options [256];
 extern struct universe server_universe;
@@ -1617,8 +1617,8 @@ void make_release PROTO ((struct client_state *, struct client_lease *));
 
 void destroy_client_lease PROTO ((struct client_lease *));
 void rewrite_client_leases PROTO ((void));
-void write_client_lease PROTO ((struct client_state *,
-				 struct client_lease *, int));
+int write_client_lease PROTO ((struct client_state *,
+			       struct client_lease *, int, int));
 char *dhcp_option_ev_name PROTO ((struct option *));
 
 void script_init PROTO ((struct client_state *, const char *,
@@ -2115,7 +2115,8 @@ void new_shared_network_interface PROTO ((struct parse *,
 int subnet_inner_than PROTO ((struct subnet *, struct subnet *, int));
 void enter_subnet PROTO ((struct subnet *));
 void enter_lease PROTO ((struct lease *));
-int supersede_lease PROTO ((struct lease *, struct lease *, int, int));
+int supersede_lease PROTO ((struct lease *, struct lease *, int, int, int));
+void process_state_transition (struct lease *);
 int lease_copy PROTO ((struct lease **, struct lease *, const char *, int));
 void release_lease PROTO ((struct lease *, struct packet *));
 void abandon_lease PROTO ((struct lease *, const char *));
@@ -2205,7 +2206,7 @@ int dhcp_failover_pool_rebalance (dhcp_failover_state_t *);
 int dhcp_failover_pool_check (struct pool *);
 int dhcp_failover_state_pool_check (dhcp_failover_state_t *);
 isc_result_t dhcp_failover_send_updates (dhcp_failover_state_t *);
-int dhcp_failover_queue_update (struct lease *);
+int dhcp_failover_queue_update (struct lease *, int);
 void dhcp_failover_ack_queue_remove (dhcp_failover_state_t *, struct lease *);
 isc_result_t dhcp_failover_state_set_value PROTO ((omapi_object_t *,
 						   omapi_object_t *,
@@ -2243,7 +2244,9 @@ failover_option_t *dhcp_failover_make_option PROTO ((unsigned, char *,
 isc_result_t dhcp_failover_put_message (dhcp_failover_link_t *,
 					omapi_object_t *, int, ...);
 isc_result_t dhcp_failover_send_connect PROTO ((omapi_object_t *));
-isc_result_t dhcp_failover_send_connectack PROTO ((omapi_object_t *, int));
+isc_result_t dhcp_failover_send_connectack PROTO ((omapi_object_t *,
+						   dhcp_failover_state_t *,
+						   int, const char *));
 isc_result_t dhcp_failover_send_disconnect PROTO ((omapi_object_t *,
 						   int, const char *));
 isc_result_t dhcp_failover_send_bind_update (dhcp_failover_state_t *,
@@ -2260,6 +2263,11 @@ isc_result_t dhcp_failover_process_bind_ack (dhcp_failover_state_t *,
 void failover_print PROTO ((char *, unsigned *, unsigned, const char *));
 void update_partner PROTO ((struct lease *));
 int load_balance_mine (struct packet *, dhcp_failover_state_t *);
+binding_state_t binding_state_transition_check (struct lease *,
+						dhcp_failover_state_t *,
+						binding_state_t);
+int lease_mine_to_extend (struct lease *);
+
 OMAPI_OBJECT_ALLOC_DECL (dhcp_failover_state, dhcp_failover_state_t,
 			 dhcp_type_failover_state)
 OMAPI_OBJECT_ALLOC_DECL (dhcp_failover_listener, dhcp_failover_listener_t,

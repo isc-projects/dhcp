@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: stables.c,v 1.12 2000/05/16 23:03:49 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: stables.c,v 1.13 2000/06/02 21:27:21 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -175,6 +175,12 @@ const char *dhcp_flink_state_names [] = {
 	"disconnected"
 };
 #endif /* FAILOVER_PROTOCOL */
+
+/* Failover binding state names.   These are used even if there is no
+   failover protocol support. */
+const char *binding_state_names [] = {
+	"free", "active", "expired", "released", "abandoned",
+	"reset", "backup", "reserved", "bootp" };
 
 struct universe agent_universe;
 struct option agent_options [256] = {

@@ -50,7 +50,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: omapi.c,v 1.28 2000/05/16 23:03:48 mellon Exp $ Copyright (c) 1999-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: omapi.c,v 1.29 2000/06/02 21:27:20 mellon Exp $ Copyright (c) 1999-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -179,27 +179,21 @@ isc_result_t dhcp_lease_set_value  (omapi_object_t *h,
 	lease = (struct lease *)h;
 
 	/* We're skipping a lot of things it might be interesting to
-	   set - for now, we just make it possible to whack the abandoned
-	   flag. */
-	if (!omapi_ds_strcmp (name, "abandoned")) {
-		int bar;
+	   set - for now, we just make it possible to whack the state. */
+	if (!omapi_ds_strcmp (name, "state")) {
+		unsigned long bar;
+		status = omapi_get_int_value (&bar, value);
+		if (status != ISC_R_SUCCESS)
+			return status;
 
-		if (value -> type == omapi_datatype_int)
-			bar = value -> u.integer;
-		else if (value -> type == omapi_datatype_data &&
-			 value -> u.buffer.len == sizeof (int)) {
-			memcpy (&bar, value -> u.buffer.value, sizeof bar);
-			/* No need to byte-swap here. */
-		} else
+		if (bar < 1 || bar > FTS_BOOTP)
 			return ISC_R_INVALIDARG;
-
-		foo = lease -> flags;
-		if (bar)
-			lease -> flags |= ABANDONED_LEASE;
-		else
-			lease -> flags &= ~ABANDONED_LEASE;
-		if (foo != lease -> flags)
-			return ISC_R_SUCCESS;
+		if (lease -> binding_state != bar) {
+			lease -> next_binding_state = bar;
+			if (supersede_lease (lease, 0, 1, 1, 1))
+				return ISC_R_SUCCESS;
+			return ISC_R_IOERROR;
+		}
 		return ISC_R_UNCHANGED;
 	}
 
@@ -226,14 +220,9 @@ isc_result_t dhcp_lease_get_value (omapi_object_t *h, omapi_object_t *id,
 		return ISC_R_INVALIDARG;
 	lease = (struct lease *)h;
 
-	if (!omapi_ds_strcmp (name, "abandoned"))
+	if (!omapi_ds_strcmp (name, "state"))
 		return omapi_make_int_value (value, name,
-					     (lease -> flags &
-					      ABANDONED_LEASE) ? 1 : 0, MDL);
-	else if (!omapi_ds_strcmp (name, "bootpp"))
-		return omapi_make_int_value (value, name,
-					     (lease -> flags &
-					      BOOTP_LEASE) ? 1 : 0, MDL);
+					     (int)lease -> binding_state, MDL);
 	else if (!omapi_ds_strcmp (name, "ip-address"))
 		return omapi_make_const_value (value, name,
 					       lease -> ip_addr.iabuf,
@@ -362,7 +351,7 @@ isc_result_t dhcp_lease_signal_handler (omapi_object_t *h,
 			return ISC_R_INVALIDARG;
 		if (!write_lease (lease) || !commit_leases ()
 #if defined (FAILOVER_PROTOCOL)
-		    || !dhcp_failover_queue_update (lease)
+		    || !dhcp_failover_queue_update (lease, 1)
 #endif
 			) {
 			return ISC_R_IOERROR;
@@ -395,26 +384,13 @@ isc_result_t dhcp_lease_stuff_values (omapi_object_t *c,
 
 	/* Write out all the values. */
 
-	status = omapi_connection_put_name (c, "abandoned");
+	status = omapi_connection_put_name (c, "state");
 	if (status != ISC_R_SUCCESS)
 		return status;
 	status = omapi_connection_put_uint32 (c, sizeof (int));
 	if (status != ISC_R_SUCCESS)
 		return status;
-	status = omapi_connection_put_uint32 (c, (lease -> flags &
-						  ABANDONED_LEASE) ? 1U : 0U);
-	if (status != ISC_R_SUCCESS)
-		return status;
-
-	status = omapi_connection_put_name (c, "bootpp");
-	if (status != ISC_R_SUCCESS)
-		return status;
-	status = omapi_connection_put_uint32 (c, sizeof (int));
-	if (status != ISC_R_SUCCESS)
-		return status;
-	status = omapi_connection_put_uint32 (c, ((unsigned) 
-						  ((lease -> flags &
-						    BOOTP_LEASE) ? 1 : 0)));
+	status = omapi_connection_put_uint32 (c, lease -> binding_state);
 	if (status != ISC_R_SUCCESS)
 		return status;
 

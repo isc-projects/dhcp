@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: clparse.c,v 1.44 2000/05/16 23:01:57 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: clparse.c,v 1.45 2000/06/02 21:26:55 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -291,7 +291,7 @@ void parse_client_statement (cfile, ip, config)
 				return;
 			}
 			config -> auth_policy = policy;
-		} else if (token != BOOTP) {
+		} else if (token != TOKEN_BOOTP) {
 			if (policy != P_PREFER &&
 			    policy != P_IGNORE &&
 			    policy != P_ACCEPT) {
@@ -919,7 +919,7 @@ void parse_client_lease_declaration (cfile, lease, ipp, clientp)
 			parse_warn (cfile, "unknown key %s", val);
 		parse_semi (cfile);
 		break;
-	      case BOOTP:
+	      case TOKEN_BOOTP:
 		lease -> is_bootp = 1;
 		break;
 

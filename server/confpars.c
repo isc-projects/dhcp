@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.112 2000/05/18 20:21:43 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.113 2000/06/02 21:27:11 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -711,6 +711,10 @@ void parse_failover_peer (cfile, group, type)
 
 		      case SECONDARY:
 			peer -> i_am = secondary;
+			if (peer -> hba)
+				parse_warn (cfile,
+					    "secondary may not define %s",
+					    "load balance settings.");
 			break;
 
 		      case PEER:
@@ -783,6 +787,10 @@ void parse_failover_peer (cfile, group, type)
 
 		      case HBA:
 			hba_len = 32;
+			if (peer -> i_am == secondary)
+				parse_warn (cfile,
+					    "secondary may not define %s",
+					    "load balance settings.");
 			if (!parse_numeric_aggregate (cfile, hba, &hba_len,
 						      COLON, 16, 8)) {
 				skip_to_rbrace (cfile, 1);
@@ -806,6 +814,10 @@ void parse_failover_peer (cfile, group, type)
 
 		      case SPLIT:
 			token = next_token (&val, cfile);
+			if (peer -> i_am == secondary)
+				parse_warn (cfile,
+					    "secondary may not define %s",
+					    "load balance settings.");
 			if (token != NUMBER) {
 				parse_warn (cfile, "expecting number");
 			      badsplit:
@@ -868,6 +880,11 @@ void parse_failover_peer (cfile, group, type)
 		}
 	} while (token != RBRACE);
 		
+	if (peer -> i_am == primary && !peer -> hba) {
+		parse_warn (cfile, 
+			    "primary failover server must have hba or split.");
+	}
+
 	if (type == SHARED_NET_DECL) {
 		group -> shared_network -> failover_peer = peer;
 	}
@@ -1175,7 +1192,7 @@ void parse_pool_statement (cfile, group, type)
 				
 			      case DYNAMIC:
 				permit -> type = permit_dynamic_bootp_clients;
-				if (next_token (&val, cfile) != BOOTP) {
+				if (next_token (&val, cfile) != TOKEN_BOOTP) {
 					parse_warn (cfile,
 						    "expecting \"bootp\"");
 					skip_to_semi (cfile);
@@ -1385,7 +1402,7 @@ void parse_host_declaration (cfile, group)
 		}
 		/* If the host declaration was created by the server,
 		   remember to save it. */
-		if (token == DELETED) {
+		if (token == TOKEN_DELETED) {
 			deleted = 1;
 			token = next_token (&val, cfile);
 			if (!parse_semi (cfile))
@@ -2071,7 +2088,7 @@ void parse_group_declaration (cfile, group)
 			token = next_token (&val, cfile);
 			parse_warn (cfile, "unexpected end of file");
 			break;
-		} else if (token == DELETED) {
+		} else if (token == TOKEN_DELETED) {
 			token = next_token (&val, cfile);
 			parse_semi (cfile);
 			deletedp = 1;
@@ -2215,6 +2232,7 @@ int parse_lease_declaration (struct lease **lp, struct parse *cfile)
 	int noequal, newbinding;
 	struct binding *binding;
 	isc_result_t status;
+	binding_state_t *statep;
 
 	lease = (struct lease *)0;
 	status = lease_allocate (&lease, MDL);
@@ -2351,34 +2369,76 @@ int parse_lease_declaration (struct lease **lp, struct parse *cfile)
 			break;
 
 		      case DYNAMIC_BOOTP:
-			seenbit = 128;
-			lease -> flags |= BOOTP_LEASE;
+			seenbit = 256;
+			lease -> binding_state = FTS_BOOTP;
+			lease -> next_binding_state = FTS_BOOTP;
 			parse_semi (cfile);
 			break;
 			
-		      case PEER:
-			token = next_token (&val, cfile);
-			if (token != IS) {
-				parse_warn (cfile, "expecting \"is\".");
-				skip_to_rbrace (cfile, 1);
-				lease_dereference (&lease, MDL);
-				return 0;
-			}
-			token = next_token (&val, cfile);
-			if (token != OWNER) {
-				parse_warn (cfile, "expecting \"owner\".");
-				skip_to_rbrace (cfile, 1);
-				lease_dereference (&lease, MDL);
-				return 0;
-			}
-			seenbit = 262144;
-			lease -> flags |= PEER_IS_OWNER;
+		      case TOKEN_ABANDONED:
+			seenbit = 256;
+			lease -> binding_state = FTS_ABANDONED;
+			lease -> next_binding_state = FTS_ABANDONED;
 			parse_semi (cfile);
 			break;
 
-		      case ABANDONED:
+		      case TOKEN_NEXT:
+			seenbit = 128;
+			statep = &lease -> next_binding_state;
+			goto do_binding_state;
+
+		      case BINDING:
 			seenbit = 256;
-			lease -> flags |= ABANDONED_LEASE;
+			statep = &lease -> binding_state;
+
+		      do_binding_state:
+			token = next_token (&val, cfile);
+			if (token != STATE) {
+				parse_warn (cfile, "expecting 'state'");
+				skip_to_semi (cfile);
+				break;
+			}
+			token = next_token (&val, cfile);
+			switch (token) {
+			      case TOKEN_ABANDONED:
+				*statep = FTS_ABANDONED;
+				break;
+			      case TOKEN_FREE:
+				*statep = FTS_FREE;
+				break;
+			      case TOKEN_ACTIVE:
+				*statep = FTS_ACTIVE;
+				break;
+			      case TOKEN_EXPIRED:
+				*statep = FTS_EXPIRED;
+				break;
+			      case TOKEN_RELEASED:
+				*statep = FTS_RELEASED;
+				break;
+			      case TOKEN_RESET:
+				*statep = FTS_RESET;
+				break;
+			      case TOKEN_BACKUP:
+				*statep = FTS_BACKUP;
+				break;
+			      case TOKEN_RESERVED:
+				*statep = FTS_RESERVED;
+				break;
+			      case TOKEN_BOOTP:
+				*statep = FTS_BOOTP;
+				break;
+			      default:
+				parse_warn (cfile,
+					    "%s: expecting a binding state.",
+					    val);
+				skip_to_semi (cfile);
+				break;
+			}
+			/* If no next binding state is specified, it's
+			   the same as the current state. */
+			if (!(seenmask & 128) && seenbit == 256)
+				lease -> next_binding_state =
+					lease -> binding_state;
 			parse_semi (cfile);
 			break;
 
@@ -2817,7 +2877,7 @@ int parse_allow_deny (oc, cfile, flag)
 
 	token = next_token (&val, cfile);
 	switch (token) {
-	      case BOOTP:
+	      case TOKEN_BOOTP:
 		status = option_cache (oc, (struct data_string *)0, data,
 				       &server_options [SV_ALLOW_BOOTP]);
 		break;

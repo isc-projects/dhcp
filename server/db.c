@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: db.c,v 1.50 2000/05/16 23:03:39 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: db.c,v 1.51 2000/06/02 21:27:12 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -143,13 +143,19 @@ int write_lease (lease)
 		}
 	}
 
-	if (lease -> flags & PEER_IS_OWNER) {
-		errno = 0;
-		fprintf (db_file, "\n  peer is owner;");
-		if (errno) {
-			++errors;
-		}
-	}
+	fprintf (db_file, "\n  binding state %s;",
+		 ((lease -> binding_state > 0 &&
+		   lease -> binding_state <= FTS_BOOTP)
+		  ? binding_state_names [lease -> binding_state - 1]
+		  : "abandoned"));
+
+	if (lease -> binding_state != lease -> next_binding_state)
+		fprintf (db_file, "\n  next binding state %s;",
+			 ((lease -> next_binding_state > 0 &&
+			   lease -> next_binding_state <= FTS_BOOTP)
+			  ? (binding_state_names
+			     [lease -> next_binding_state - 1])
+		  : "abandoned"));
 
 	/* If this lease is billed to a class and is still valid,
 	   write it out. */
@@ -188,20 +194,6 @@ int write_lease (lease)
 				}
 			}
 			putc (';', db_file);
-		}
-	}
-	if (lease -> flags & BOOTP_LEASE) {
-		errno = 0;
-		fprintf (db_file, "\n  dynamic-bootp;");
-		if (errno) {
-			++errors;
-		}
-	}
-	if (lease -> flags & ABANDONED_LEASE) {
-		errno = 0;
-		fprintf (db_file, "\n  abandoned;");
-		if (errno) {
-			++errors;
 		}
 	}
 	for (b = lease -> scope.bindings; b; b = b -> next) {

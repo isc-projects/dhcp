@@ -41,7 +41,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.104 2000/05/30 21:43:42 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.105 2000/06/02 21:26:57 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -779,7 +779,7 @@ void bind_lease (client)
 	}
 
 	/* Write out the new lease. */
-	write_client_lease (client, client -> new, 0);
+	write_client_lease (client, client -> new, 0, 0);
 
 	/* Replace the old active lease with the new one. */
 	if (client -> active)
@@ -1561,18 +1561,50 @@ void send_release (cpp)
 	struct client_state *client = cpp;
 
 	int result;
+	struct sockaddr_in destination;
+	struct in_addr from;
+
+	memcpy (&from, client -> active -> address.iabuf,
+		sizeof from);
+	memcpy (&destination.sin_addr.s_addr,
+		client -> destination.iabuf,
+		sizeof destination.sin_addr.s_addr);
+	destination.sin_port = remote_port;
+	destination.sin_family = AF_INET;
+#ifdef HAVE_SA_LEN
+	destination.sin_len = sizeof destination;
+#endif
+
+
+	/* Set the lease to end now, so that we don't accidentally
+	   reuse it if we restart before the old expiry time. */
+	client -> active -> expiry =
+		client -> active -> renewal =
+		client -> active -> rebind = cur_time;
+	if (!write_client_lease (client, client -> active, 1, 1)) {
+		log_error ("Can't release lease: lease write failed.");
+		return;
+	}
 
 	log_info ("DHCPRELEASE on %s to %s port %d",
 	      client -> name ? client -> name : client -> interface -> name,
-	      inet_ntoa (sockaddr_broadcast.sin_addr),
-	      ntohs (sockaddr_broadcast.sin_port));
+	      inet_ntoa (destination.sin_addr),
+	      ntohs (destination.sin_port));
 
-	/* Send out a packet. */
-	result = send_packet (client -> interface, (struct packet *)0,
-			      &client -> packet,
-			      client -> packet_length,
-			      inaddr_any, &sockaddr_broadcast,
-			      (struct hardware *)0);
+	if (fallback_interface)
+		result = send_packet (fallback_interface,
+				      (struct packet *)0,
+				      &client -> packet,
+				      client -> packet_length,
+				      from, &destination,
+				      (struct hardware *)0);
+	else
+		/* Send out a packet. */
+		result = send_packet (client -> interface, (struct packet *)0,
+				      &client -> packet,
+				      client -> packet_length,
+				      from, &destination,
+				      (struct hardware *)0);
 }
 
 void make_client_options (client, lease, type, sid, rip, prl, op)
@@ -1926,11 +1958,11 @@ void rewrite_client_leases ()
 	for (ip = interfaces; ip; ip = ip -> next) {
 		for (client = ip -> client; client; client = client -> next) {
 			for (lp = client -> leases; lp; lp = lp -> next) {
-				write_client_lease (client, lp, 1);
+				write_client_lease (client, lp, 1, 0);
 			}
 			if (client -> active)
 				write_client_lease (client,
-						    client -> active, 1);
+						    client -> active, 1, 0);
 		}
 	}
 
@@ -1939,20 +1971,21 @@ void rewrite_client_leases ()
 	for (ip = dummy_interfaces; ip; ip = ip -> next) {
 		for (client = ip -> client; client; client = client -> next) {
 			for (lp = client -> leases; lp; lp = lp -> next) {
-				write_client_lease (client, lp, 1);
+				write_client_lease (client, lp, 1, 0);
 			}
 			if (client -> active)
 				write_client_lease (client,
-						    client -> active, 1);
+						    client -> active, 1, 0);
 		}
 	}
 	fflush (leaseFile);
 }
 
-void write_client_lease (client, lease, rewrite)
+int write_client_lease (client, lease, rewrite, makesure)
 	struct client_state *client;
 	struct client_lease *lease;
 	int rewrite;
+	int makesure;
 {
 	int i;
 	struct tm *t;
@@ -1960,6 +1993,7 @@ void write_client_lease (client, lease, rewrite)
 	struct option_cache *oc;
 	struct data_string ds;
 	pair *hash;
+	int errors = 0;
 
 	if (!rewrite) {
 		if (leases_written++ > 20) {
@@ -1971,7 +2005,7 @@ void write_client_lease (client, lease, rewrite)
 	/* If the lease came from the config file, we don't need to stash
 	   a copy in the lease database. */
 	if (lease -> is_static)
-		return;
+		return 1;
 
 	if (!leaseFile) {	/* XXX */
 		leaseFile = fopen (path_dhclient_db, "w");
@@ -1979,6 +2013,7 @@ void write_client_lease (client, lease, rewrite)
 			log_fatal ("can't create %s: %m", path_dhclient_db);
 	}
 
+	errno = 0;
 	fprintf (leaseFile, "lease {\n");
 	if (lease -> is_bootp)
 		fprintf (leaseFile, "  bootp;\n");
@@ -1997,6 +2032,10 @@ void write_client_lease (client, lease, rewrite)
 	if (lease -> medium)
 		fprintf (leaseFile, "  medium \"%s\";\n",
 			 lease -> medium -> string);
+	if (errno != 0) {
+		errors++;
+		errno = 0;
+	}
 
 	memset (&ds, 0, sizeof ds);
 
@@ -2018,6 +2057,10 @@ void write_client_lease (client, lease, rewrite)
 					 (oc -> option -> code,
 					  ds.data, ds.len, 1, 1));
 				data_string_forget (&ds, MDL);
+				if (errno != 0) {
+					errors++;
+					errno = 0;
+				}
 			}
 		}
 	}
@@ -2045,6 +2088,17 @@ void write_client_lease (client, lease, rewrite)
 		 t -> tm_hour, t -> tm_min, t -> tm_sec);
 	fprintf (leaseFile, "}\n");
 	fflush (leaseFile);
+	if (errno != 0) {
+		errors++;
+		errno = 0;
+	}
+	if (!errors && makesure) {
+		if (fsync (fileno (leaseFile)) < 0) {
+			log_info ("write_client_lease: %m");
+			return 0;
+		}
+	}
+	return errors ? 0 : 1;
 }
 
 /* Variables holding name of script and file pointer for writing to
@@ -2357,6 +2411,9 @@ void client_location_changed ()
 void do_release(client) 
 	struct client_state *client;
 {
+	struct data_string ds;
+	struct option_cache *oc;
+
 	/* make_request doesn't initialize xid because it normally comes
 	   from the DHCPDISCOVER, but we haven't sent a DHCPDISCOVER,
 	   so pick an xid now. */
@@ -2367,7 +2424,25 @@ void do_release(client)
 		/* Make a DHCPRELEASE packet, and set appropriate per-interface
 		   flags. */
 		make_release (client, client -> active);
-		client -> destination = iaddr_broadcast;
+
+		memset (&ds, 0, sizeof ds);
+		oc = lookup_option (&dhcp_universe,
+				    client -> active -> options,
+				    DHO_DHCP_SERVER_IDENTIFIER);
+		if (oc &&
+		    evaluate_option_cache (&ds, (struct packet *)0,
+					   (struct lease *)0,
+					   (struct option_state *)0,
+					   client -> active -> options,
+					   &global_scope, oc, MDL)) {
+			if (ds.len > 3) {
+				memcpy (client -> destination.iabuf,
+					ds.data, 4);
+				client -> destination.len = 4;
+			} else
+				client -> destination = iaddr_broadcast;
+		} else
+			client -> destination = iaddr_broadcast;
 		client -> first_sending = cur_time;
 		client -> interval = client -> config -> initial_interval;
 	
@@ -2376,13 +2451,8 @@ void do_release(client)
 	
 		/* Send out the first and only DHCPRELEASE packet. */
 		send_release (client);
-	}
 
-	/* remove the timeouts for this client */
-	cancel_timeout (NULL, client);
-
-	/* if there was no lease, nothing to "do" */
-	if (client -> active) {
+		/* Do the client script RELEASE operation. */
 		script_init (client,
 			     "RELEASE", (struct string_list *)0);
 		if (client -> alias)
@@ -2390,6 +2460,9 @@ void do_release(client)
 					     client -> alias);
 		script_go (client);
 	}
+
+	/* remove the timeouts for this client */
+	cancel_timeout (0, client);
 }
 
 int dhclient_interface_shutdown_hook (struct interface_info *interface)
