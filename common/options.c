@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.44 1999/07/06 16:53:30 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.44.2.1 1999/10/14 21:33:36 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -808,24 +808,28 @@ void do_packet (interface, packet, len, from_port, from, hfrom)
 		log_info ("Discarding packet with bogus hlen.");
 		return;
 	}
-	if (!parse_options (&tp)) {
-		if (tp.options)
-			option_state_dereference (&tp.options, "do_packet");
-		return;
-	}
 
-	if (tp.options_valid &&
-	    (op = lookup_option (&dhcp_universe, tp.options, 
-				 DHO_DHCP_MESSAGE_TYPE))) {
-		struct data_string dp;
-		memset (&dp, 0, sizeof dp);
-		evaluate_option_cache (&dp, &tp, tp.options,
-				       (struct lease *)0, op);
-		if (dp.len > 0)
-			tp.packet_type = dp.data [0];
-		else
-			tp.packet_type = 0;
-		data_string_forget (&dp, "do_packet");
+	if (tp.packet_length >= DHCP_FIXED_NON_UDP + 4) {
+		if (!parse_options (&tp)) {
+			if (tp.options)
+				option_state_dereference (&tp.options,
+							  "do_packet");
+			return;
+		}
+		
+		if (tp.options_valid &&
+		    (op = lookup_option (&dhcp_universe, tp.options, 
+					 DHO_DHCP_MESSAGE_TYPE))) {
+			struct data_string dp;
+			memset (&dp, 0, sizeof dp);
+			evaluate_option_cache (&dp, &tp, tp.options,
+					       (struct lease *)0, op);
+			if (dp.len > 0)
+				tp.packet_type = dp.data [0];
+			else
+				tp.packet_type = 0;
+			data_string_forget (&dp, "do_packet");
+		}
 	}
 		
 	if (tp.packet_type)
