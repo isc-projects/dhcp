@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.73.2.5 1999/12/09 00:46:39 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.73.2.6 1999/12/21 19:31:38 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -252,7 +252,8 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 
 			/* Make the shared network name from network number. */
 			n = piaddr (share -> subnets -> net);
-			t = malloc (strlen (n) + 1);
+			t = dmalloc (strlen (n) + 1,
+				     "parse_statement");
 			if (!t)
 				log_fatal ("no memory for subnet name");
 			strcpy (t, n);
@@ -1229,7 +1230,8 @@ void parse_shared_net_declaration (cfile, group)
 			parse_warn ("zero-length shared network name");
 			val = "<no-name-given>";
 		}
-		name = malloc (strlen (val) + 1);
+		name = dmalloc (strlen (val) + 1,
+				"parse_shared_net_declaration");
 		if (!name)
 			log_fatal ("no memory for shared network name");
 		strcpy (name, val);
@@ -1539,7 +1541,8 @@ struct lease *parse_lease_declaration (cfile)
 					token = next_token (&val, cfile);
 					lease.uid_len = strlen (val) + 1;
 					lease.uid = (unsigned char *)
-						malloc (lease.uid_len);
+					   dmalloc (lease.uid_len,
+						    "parse_lease_declaration");
 					if (!lease.uid) {
 						log_error ("no space for uid");
 						return (struct lease *)0;
@@ -1790,20 +1793,21 @@ void parse_address_range (cfile, group, type, pool)
 		if (!pool) {
 			struct permit *p;
 			pool = new_pool ("parse_address_range");
+			if (!pool)
 				log_fatal ("no memory for ad-hoc pool.");
 			p = new_permit ("parse_address_range");
 			if (!p)
 				log_fatal ("no memory for ad-hoc permit.");
-			pool -> permit_list -> type =
-				dynamic ? permit_all_clients
-					: permit_dynamic_bootp_clients;
-
 			/* Dynamic pools permit all clients.   Otherwise
 			   we prohibit BOOTP clients. */
-			if (dynamic)
+			if (dynamic) {
+				p -> type = permit_all_clients;
 				pool -> permit_list = p;
-			else
+			} else {
+				p -> type = permit_dynamic_bootp_clients;
 				pool -> prohibit_list = p;
+			}
+
 			if (share -> pools)
 				last -> next = pool;
 			else
