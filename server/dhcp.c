@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.170 2000/11/28 23:27:17 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.171 2000/11/30 14:04:06 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -500,8 +500,8 @@ void dhcprequest (packet, ms_nulltp, ip_lease)
 	   RENEWING client, so we can punt on this issue. */
 
 	if (!packet -> shared_network ||
-	    (packet -> raw -> ciaddr.s_addr /* &&
-	     packet -> raw -> giaddr.s_addr */) ||
+	    (packet -> raw -> ciaddr.s_addr &&
+	     packet -> raw -> giaddr.s_addr) ||
 	    (oc && !packet -> raw -> ciaddr.s_addr)) {
 		
 		/* If we don't know where it came from but we do know
