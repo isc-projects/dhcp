@@ -53,11 +53,7 @@ TIME cur_time;
 TIME default_lease_time = 43200; /* 12 hours... */
 TIME max_lease_time = 86400; /* 24 hours... */
 
-struct subnet *local_subnet;
-u_int32_t *server_addrlist;
-int server_addrcount;
 u_int16_t server_port;
-struct iaddr siaddr;
 
 int main (argc, argv, envp)
 	int argc;
@@ -134,49 +130,6 @@ int main (argc, argv, envp)
 
 	/* Start up the database... */
 	db_startup ();
-
-#if 0
-	/* If addresses were specified on the command line, resolve them;
-	   otherwise, just get a list of the addresses that are configured
-	   on this host and listen on all of them. */
-	if (addrtree) {
-		tree_evaluate ((unsigned char **)&addrlist,
-			       &addrcount, addrtree);
-		addrcount /= 4;
-		if (!addrcount)
-			error ("Server addresses resolve to nothing.");
-	} else {
-/*		addrlist = get_interface_list (&addrcount); */
-#endif
-		addr.s_addr = 0;
-		addrlist = (u_int32_t *)&(addr.s_addr);
-		addrcount = 1;
-#if 0
-	}
-#endif
-
-	siaddr.len = 0;
-	server_addrlist = get_interface_list (&server_addrcount);
-	for (i = 0; i < server_addrcount; i++) {
-		struct sockaddr_in foo;
-		foo.sin_addr.s_addr = server_addrlist [i];
-
-		if (server_addrlist [i] != htonl (INADDR_LOOPBACK)) {
-			if (siaddr.len) {
-				error ("dhcpd currently does not support "
-				       "multiple interfaces");
-			}
-			siaddr.len = 4;
-			memcpy (siaddr.iabuf, &server_addrlist [i], 4);
-			local_subnet = find_subnet (siaddr);
-		}
-	}
-
-	/* Listen on the specified (or default) port on each specified
-	   (or default) IP address. */
-	for (i = 0; i < addrcount; i++) {
-		listen_on (server_port, addrlist [i]);
-	}
 
 	/* Write a pid file. */
 	if ((i = open (_PATH_DHCPD_PID, O_WRONLY | O_CREAT, 0640)) >= 0) {
