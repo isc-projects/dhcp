@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.45.2.2 1998/06/25 22:12:59 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.45.2.3 1998/07/07 17:50:29 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -322,11 +322,8 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		tree = parse_ip_addr_or_hostname (cfile, 0);
 		if (!tree)
 			return declaration;
-		cache = tree_cache (tree);
-		if (type == ROOT_GROUP) {
-			if (!tree_evaluate (cache))
-				error ("server-identifier is not known");
-		}
+		group -> options [DHO_DHCP_SERVER_IDENTIFIER] =
+			tree_cache (tree);
 		token = next_token (&val, cfile);
 		break;
 			
