@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.45.2.1 1998/06/25 21:11:34 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.45.2.2 1998/06/25 22:12:59 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -319,9 +319,6 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		break;
 
 	      case SERVER_IDENTIFIER:
-		if (type != ROOT_GROUP)
-			parse_warn ("server-identifier only allowed at top %s",
-				    "level.");
 		tree = parse_ip_addr_or_hostname (cfile, 0);
 		if (!tree)
 			return declaration;
