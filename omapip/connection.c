@@ -21,6 +21,7 @@
  */
 
 #include <omapip/omapip_p.h>
+#include <arpa/inet.h>
 
 isc_result_t omapi_connect (omapi_object_t *c,
 			    const char *server_name,
