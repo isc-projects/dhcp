@@ -459,7 +459,7 @@ int store_options PROTO ((unsigned char *, int, struct tree_cache **,
 char *pretty_print_option PROTO ((unsigned int,
 				  unsigned char *, int, int, int));
 void do_packet PROTO ((struct interface_info *,
-		       unsigned char *, int,
+		       struct dhcp_packet *, int,
 		       unsigned short, struct iaddr, struct hardware *));
 
 /* errwarn.c */
@@ -734,8 +734,9 @@ extern struct interface_info *interfaces, *dummy_interfaces;
 extern struct protocol *protocols;
 extern int quiet_interface_discovery;
 extern void (*bootp_packet_handler) PROTO ((struct interface_info *,
-				     unsigned char *, int, unsigned short,
-				     struct iaddr, struct hardware *));
+					    struct dhcp_packet *, int,
+					    unsigned short,
+					    struct iaddr, struct hardware *));
 extern struct timeout *timeouts;
 void discover_interfaces PROTO ((int));
 void reinitialize_interfaces PROTO ((void));
@@ -912,7 +913,7 @@ int parse_ip_addr PROTO ((FILE *, struct iaddr *));
 void parse_reject_statement PROTO ((FILE *, struct client_config *));
 
 /* dhcrelay.c */
-void relay PROTO ((struct interface_info *, u_int8_t *, int,
+void relay PROTO ((struct interface_info *, struct dhcp_packet *, int,
 		   unsigned short, struct iaddr, struct hardware *));
 
 /* icmp.c */
