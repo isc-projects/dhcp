@@ -159,6 +159,8 @@ enum dhcp_token {
 	MEMBERS = 359,
 	OF = 360,
 	PSEUDO = 361,
+	LIMIT = 362,
+	BILLING = 363,
 };
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\
