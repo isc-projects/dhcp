@@ -542,6 +542,7 @@ struct pool {
 	int lease_count;
 	int free_leases;
 	int backup_leases;
+	int index;
 #if defined (FAILOVER_PROTOCOL)
 	dhcp_failover_state_t *failover_peer;
 #endif
@@ -1469,6 +1470,7 @@ int dns_zone_reference PROTO ((struct dns_zone **,
 /* print.c */
 char *quotify_string (const char *, const char *, int);
 char *quotify_buf (const unsigned char *, unsigned, const char *, int);
+char *print_base64 (const unsigned char *, unsigned, const char *, int);
 char *print_hw_addr PROTO ((int, int, unsigned char *));
 void print_lease PROTO ((struct lease *));
 void dump_raw PROTO ((const unsigned char *, unsigned));
@@ -1775,6 +1777,8 @@ struct iaddr broadcast_addr PROTO ((struct iaddr, struct iaddr));
 u_int32_t host_addr PROTO ((struct iaddr, struct iaddr));
 int addr_eq PROTO ((struct iaddr, struct iaddr));
 char *piaddr PROTO ((struct iaddr));
+char *piaddrmask (struct iaddr, struct iaddr, const char *, int);
+char *piaddr1 PROTO ((struct iaddr));
 
 /* dhclient.c */
 extern const char *path_dhclient_conf;
