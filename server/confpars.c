@@ -3,8 +3,8 @@
    Parser for dhcpd config file... */
 
 /*
- * Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.
- * All rights reserved.
+ * Copyright (c) 1995, 1996, 1997, 1998, 1999
+ * The Internet Software Consortium.   All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.56 1998/11/11 07:59:53 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.57 1999/02/14 19:08:51 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -65,6 +65,8 @@ int readconf ()
 
 	/* Set up the initial dhcp option universe. */
 	initialize_universes ();
+
+	root_group.authoritative = 0;
 
 	if ((cfile = fopen (path_dhcpd_conf, "r")) == NULL)
 		error ("Can't open %s: %m", path_dhcpd_conf);
@@ -148,6 +150,8 @@ void read_leases ()
 	       | ALLOW allow-deny-keyword
 	       | DENY allow-deny-keyword
 	       | USE_LEASE_ADDR_FOR_DEFAULT_ROUTE boolean
+	       | AUTHORITATIVE
+	       | NOT AUTHORITATIVE
 
    declaration :== host-declaration
 		 | group-declaration
@@ -243,16 +247,24 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		share -> group -> shared_network = share;
 
 		parse_subnet_declaration (cfile, share);
+
+		/* share -> subnets is the subnet we just parsed. */
 		if (share -> subnets) {
 			share -> interface =
 				share -> subnets -> interface;
 
+			/* Make the shared network name from network number. */
 			n = piaddr (share -> subnets -> net);
 			t = malloc (strlen (n) + 1);
 			if (!t)
 				error ("no memory for subnet name");
 			strcpy (t, n);
 			share -> name = t;
+
+			/* Copy the authoritative parameter from the subnet,
+			   since there is no opportunity to declare it here. */
+			share -> group -> authoritative =
+				share -> subnets -> group -> authoritative;
 			enter_shared_network (share);
 		}
 		return 1;
@@ -355,6 +367,27 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		et -> data.option = cache;
 		goto insert_statement;
 
+	      case TOKEN_NOT:
+		token = next_token (&val, cfile);
+		switch (token) {
+		      case AUTHORITATIVE:
+			group -> authoritative = 0;
+			goto authoritative;
+		      default:
+			parse_warn ("expecting assertion");
+			skip_to_semi (cfile);
+			break;
+		}
+		break;
+	      case AUTHORITATIVE:
+		group -> authoritative = 1;
+	      authoritative:
+		if (type == HOST_DECL ||
+		    (type == SUBNET_DECL && share && share -> subnets &&
+		     share -> subnets -> next_sibling))
+		parse_semi (cfile);
+		break;
+
 	      case OPTION:
 		token = next_token (&val, cfile);
 		option = parse_option_name (cfile);
@@ -369,6 +402,12 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 			return declaration;
 
 		break;
+
+#if defined (FAILOVER_PROTOCOL)
+	      case FAILOVER:
+		parse_failover_peer (cfile, group, type);
+		break;
+#endif
 
 	      default:
 		et = (struct executable_statement *)0;
@@ -427,6 +466,178 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 
 	return 0;
 }
+
+#if defined (FAILOVER_PROTOCOL)
+void parse_failover_peer (cfile, group, type)
+	FILE *cfile;
+	struct group *group;
+	int type;
+{
+	enum dhcp_token token;
+	char *val;
+	struct failover_peer *peer;
+	TIME *tp;
+	char *name;
+
+	if (type != SHARED_NET_DECL && type != ROOT_GROUP) {
+		parse_warn ("failover peer statements not in shared-network%s"
+			    " declaration or at top level.");
+		skip_to_semi (cfile);
+		return;
+	}
+
+	token = next_token (&val, cfile);
+	if (token != PEER) {
+		parse_warn ("expecting peer keyword");
+		skip_to_semi (cfile);
+		return;
+	}
+
+	token = next_token (&val, cfile);
+	if (is_identifier (token) || token == STRING) {
+		name = dmalloc (strlen (name) + 1, "peer name");
+		if (!peer -> name)
+			error ("no memory for peer name %s", name);
+	} else {
+		parse_warn ("expecting identifier or left brace");
+		skip_to_semi (cfile);
+		return;
+	}
+
+	/* See if there's a peer declaration by this name. */
+	peer = find_failover_peer (name);
+
+	token = next_token (&val, cfile);
+	if (token == SEMI) {
+		dfree (name, "peer name");
+		if (type != SHARED_NET_DECL)
+			parse_warn ("failover peer reference not %s",
+				    "in shared-network declaration");
+		else {
+			if (!peer) {
+				parse_warn ("reference to unknown%s%s",
+					    " failover peer ", name);
+				return;
+			}
+			group -> shared_network -> failover_peer =
+				peer;
+		}
+		return;
+	} else if (token == MY || token == PARTNER) {
+		if (!peer) {
+			parse_warn ("reference to unknown%s%s",
+				    " failover peer ", name);
+			return;
+		}
+		if ((token == MY
+		     ? peer -> my_state
+		     : peer -> partner_state) = parse_failover_state (cfile) ==
+		    invalid_state)
+			skip_to_semi (cfile);
+		else
+			parse_semi (cfile);
+		return;
+	} else if (token != LBRACE) {
+		parse_warn ("expecting left brace");
+		skip_to_semi (cfile);
+	}
+
+	/* Make sure this isn't a redeclaration. */
+	if (peer) {
+		parse_warn ("redeclaration of failover peer %s", name);
+		skip_to_rbrace (cfile, 1);
+		return;
+	}
+
+	peer = new_failover_peer ("parse_failover_peer");
+	if (!peer)
+		error ("no memory for %sfailover peer%s%s.",
+		       name ? "" : "anonymous", name ? " " : "", name);
+
+	/* Save the name. */
+	peer -> name = name;
+
+	do {
+		token = next_token (&val, cfile);
+		switch (token) {
+		      case RBRACE:
+			break;
+		      case PRIMARY:
+			peer -> i_am = primary;
+			break;
+		      case SECONDARY:
+			peer -> i_am = secondary;
+			break;
+		      case IDENTIFIER:
+			if (!parse_ip_addr_or_hostname (&peer -> address,
+							cfile, 0)) {
+				skip_to_rbrace (cfile, 1);
+				return;
+			}
+			break;
+		      case PORT:
+			token = next_token (&val, cfile);
+			if (token != NUMBER) {
+				parse_warn ("expecting number");
+				skip_to_rbrace (cfile, 1);
+			}
+			peer -> port = atoi (val);
+			if (!parse_semi (cfile)) {
+				skip_to_rbrace (cfile, 1);
+				return;
+			}
+			break;
+		      case MAX_TRANSMIT_IDLE:
+			tp = &peer -> max_transmit_idle;
+			goto parse_idle;
+		      case MAX_RESPONSE_DELAY:
+			tp = &peer -> max_transmit_idle;
+		      parse_idle:
+			token = next_token (&val, cfile);
+			if (token != NUMBER) {
+				parse_warn ("expecting number.");
+				skip_to_rbrace (cfile, 1);
+				return;
+			}
+			*tp = atoi (val);
+		      default:
+			parse_warn ("invalid statement in peer declaration");
+			skip_to_rbrace (cfile, 1);
+			return;
+		}
+	} while (token != RBRACE);
+		
+	if (type == SHARED_NET_DECL) {
+		group -> shared_network -> failover_peer = peer;
+	}
+	enter_failover_peer (peer);
+}
+
+enum failover_state parse_failover_state (cfile)
+	FILE *cfile;
+{
+	enum dhcp_token token;
+	char *val;
+
+	token = next_token (&val, cfile);
+	switch (token) {
+	      case PARTNER_DOWN:
+		return partner_down;
+	      case NORMAL:
+		return normal;
+	      case COMMUNICATIONS_INTERRUPTED:
+		return communications_interrupted;
+	      case POTENTIAL_CONFLICT:
+		return potential_conflict;
+	      case RECOVER:
+		return recover;
+	      default:
+		parse_warn ("unknown failover state");
+		break;
+	}
+	return invalid_state;
+}
+#endif /* defined (FAILOVER_PROTOCOL) */
 
 void parse_pool_statement (cfile, group, type)
 	FILE *cfile;
@@ -1062,7 +1273,7 @@ void parse_subnet_declaration (cfile, share)
 {
 	char *val;
 	enum dhcp_token token;
-	struct subnet *subnet, *t;
+	struct subnet *subnet, *t, *u;
 	struct iaddr iaddr;
 	unsigned char addr [4];
 	int len = sizeof addr;
@@ -1122,9 +1333,20 @@ void parse_subnet_declaration (cfile, share)
 	if (!share -> subnets)
 		share -> subnets = subnet;
 	else {
+		u = (struct subnet *)0;
 		for (t = share -> subnets;
-		     t -> next_sibling; t = t -> next_sibling)
-			;
+		     t -> next_sibling; t = t -> next_sibling) {
+		     t -> next_sibling; t = t -> next_sibling) {
+			if (subnet_inner_than (subnet, t, 0)) {
+				if (u)
+					u -> next_sibling = subnet;
+				else
+					share -> subnets = subnet;
+				subnet -> next_sibling = t;
+				return;
+			}
+			u = t;
+		}
 		t -> next_sibling = subnet;
 	}
 }
