@@ -996,6 +996,7 @@ struct lease *find_lease PROTO ((struct packet *,
 struct lease *mockup_lease PROTO ((struct packet *,
 				   struct shared_network *,
 				   struct host_decl *));
+void static_lease_dereference PROTO ((struct lease *));
 
 struct lease *allocate_lease PROTO ((struct packet *, struct pool *, int));
 int permitted PROTO ((struct packet *, struct permit *));
