@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dispatch.c,v 1.32 1997/02/22 10:55:40 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dispatch.c,v 1.33 1997/02/22 12:26:41 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -96,7 +96,8 @@ void discover_interfaces (state)
 
 	/* If we already have a list of interfaces, and we're running as
 	   a DHCP server, the interfaces were requested. */
-	if (interfaces && state == DISCOVER_SERVER)
+	if (interfaces &&
+	    (state == DISCOVER_SERVER || state == DISCOVER_RELAY))
 		ir = 0;
 	else
 		ir = INTERFACE_REQUESTED;
