@@ -54,13 +54,14 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: raw.c,v 1.7 1996/08/27 09:53:42 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: raw.c,v 1.8 1996/09/04 07:06:39 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
-#include <sys/uio.h>
 
 #if defined (USE_RAW_SEND)
+#include <sys/uio.h>
+
 /* Generic interface registration routine... */
 void if_register_send (info, interface)
 	struct interface_info *info;
