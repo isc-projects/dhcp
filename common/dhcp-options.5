@@ -126,20 +126,11 @@ For example:
 .fi
 .SH STANDARD DHCP OPTIONS
 The documentation for the various options mentioned below is taken
-from the latest IETF draft document on DHCP options.   Options which
-are not listed by name may be defined by the name option-\fInnn\fR,
-where \fInnn\fR is the decimal number of the option code.   These
-options may be followed either by a string, enclosed in quotes, or by
-a series of octets, expressed as two-digit hexadecimal numbers seperated
-by colons.   For example:
-.PP
-.nf
-option option-133 "my-option-133-text";
-option option-129 1:54:c9:2b:47;
-.fi
-.PP
-Because dhcpd does not know the format of these undefined option codes,
-no checking is done to ensure the correctness of the entered data.
+from the latest IETF draft document on DHCP options.  Options not
+listed below may not yet be implemented, but it is possible to use
+such options by defining them in the configuration file.  Please see
+the DEFINING NEW OPTIONS heading later in this document for more
+information.
 .PP
 The standard options are:
 .PP
