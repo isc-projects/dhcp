@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.97 2001/01/16 23:06:06 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.98 2001/01/25 08:23:49 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2103,8 +2103,11 @@ int parse_zone (struct dns_zone *zone, struct parse *cfile)
 			    key_name = (char *)0;
 		    } else {
 			    key_name = parse_host_name (cfile);
-			    if (!key_name)
+			    if (!key_name) {
+				    parse_warn (cfile, "expecting key name.");
+				    skip_to_semi (cfile);
 				    return 0;
+			    }
 			    val = key_name;
 		    }
 		    if (omapi_auth_key_lookup_name (&zone -> key, val) !=
@@ -2163,6 +2166,7 @@ int parse_key (struct parse *cfile)
 	} else {
 		key -> name = parse_host_name (cfile);
 		if (!key -> name) {
+			parse_warn (cfile, "expecting key name.");
 			skip_to_semi (cfile);
 			goto bad;
 		}
@@ -2298,6 +2302,10 @@ int parse_on_statement (result, cfile, lose)
 			(*result) -> data.on.evtypes |= ON_RELEASE;
 			break;
 			
+		      case TRANSMISSION:
+			(*result) -> data.on.evtypes |= ON_TRANSMISSION;
+			break;
+
 		      default:
 			parse_warn (cfile, "expecting a lease event type");
 			skip_to_semi (cfile);
@@ -4197,7 +4205,7 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 	unsigned char *ob;
 	struct iaddr addr;
 	int num;
-	const char *f;
+	const char *f, *g;
 	struct enumeration_value *e;
 
 	switch (**fmt) {
@@ -4217,13 +4225,14 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 		break;
 
 	      case 'E':
-		*fmt = strchr (*fmt, '.');
-		if (!*fmt) {
+		g = strchr (*fmt, '.');
+		if (!g) {
 			parse_warn (cfile,
 				    "malformed encapsulation format (bug!)");
 			skip_to_semi (cfile);
 			return 0;
 		}
+		*fmt = g;
 	      case 'X':
 		token = peek_token (&val, cfile);
 		if (token == NUMBER_OR_NAME || token == NUMBER) {
@@ -4267,14 +4276,15 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 		
 	      case 'N':
 		f = (*fmt) + 1;
-		*fmt = strchr (*fmt, '.');
-		if (!fmt) {
+		g = strchr (*fmt, '.');
+		if (!g) {
 			parse_warn (cfile, "malformed %s (bug!)",
 				    "enumeration format");
 		      foo:
 			skip_to_semi (cfile);
 			return 0;
 		}
+		*fmt = g;
 		token = next_token (&val, cfile);
 		if (!is_identifier (token)) {
 			parse_warn (cfile,
