@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.79 1999/03/10 21:32:59 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.80 1999/03/13 18:26:05 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1348,7 +1348,8 @@ void dhcp_reply (lease)
 			result = send_packet (fallback_interface,
 					      (struct packet *)0,
 					      &raw, packet_length,
-					      raw.siaddr, &to, &hto);
+					      raw.siaddr, &to,
+					      (struct hardware *)0);
 
 			data_string_forget (&state -> parameter_request_list,
 					    "dhcp_reply");
@@ -1357,31 +1358,38 @@ void dhcp_reply (lease)
 			return;
 		}
 
-	/* If it comes from a client that already knows its address and
-	   is not requesting a broadcast response, sent it directly to
-	   that client. */
-	} else if (raw.ciaddr.s_addr && state -> offer == DHCPACK &&
-		   !(raw.flags & htons (BOOTP_BROADCAST)) &&
-		   can_unicast_without_arp ()) {
-		to.sin_addr = state -> ciaddr;
-		to.sin_port = remote_port; /* XXX */
+	/* If the client is RENEWING, unicast to the client using the
+	   regular IP stack. */
+	} else if (raw.ciaddr.s_addr && state -> offer == DHCPACK) {
+		to.sin_addr = packet -> raw -> ciaddr;
+		to.sin_port = remote_port;
 
 		if (fallback_interface) {
 			result = send_packet (fallback_interface,
 					      (struct packet *)0,
 					      &raw, packet_length,
-					      raw.siaddr, &to, &hto);
+					      raw.siaddr, &to,
+					      (struct hardware *)0);
 			data_string_forget (&state -> parameter_request_list,
 					    "dhcp_reply");
-			free_lease_state (state, "dhcp_reply fallback 1");
+			free_lease_state (state, "dhcp_reply fallback 2");
 			lease -> state = (struct lease_state *)0;
 			return;
 		}
 
+	/* If it comes from a client that already knows its address
+	   and is not requesting a broadcast response, and we can
+	   unicast to a client without using the ARP protocol, sent it
+	   directly to that client. */
+	} else if (!(raw.flags & htons (BOOTP_BROADCAST)) &&
+		   can_unicast_without_arp ()) {
+		to.sin_addr = state -> yiaddr;
+		to.sin_port = remote_port;
+
 	/* Otherwise, broadcast it on the local network. */
 	} else {
 		to.sin_addr.s_addr = htonl (INADDR_BROADCAST);
-		to.sin_port = remote_port; /* XXX */
+		to.sin_port = remote_port;
 	}
 
 	memcpy (&from, state -> from.iabuf, sizeof from);
