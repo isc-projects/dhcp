@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.90 1999/05/07 17:40:26 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.91 1999/05/27 14:56:51 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -520,7 +520,7 @@ void dhcpinform (packet)
 	/* If a site option space has been specified, use that for
 	   site option codes. */
 	i = SV_SITE_OPTION_SPACE;
-	if ((oc = lookup_option (&dhcp_universe, options, i)) &&
+	if ((oc = lookup_option (&server_universe, options, i)) &&
 	    evaluate_option_cache (&d1, packet, packet -> options, oc)) {
 		struct universe *u;
 		
@@ -991,12 +991,14 @@ void ack_lease (packet, lease, offer, when, msg)
 		   one, and if we do, try to do so. */
 		if (!lease -> billing_class) {
 			for (i = 0; i < packet -> class_count; i++) {
-				if (!packet -> classes [i] -> lease_limit)
+				if (packet -> classes [i] -> lease_limit)
 					break;
 			}
-			if (i == packet -> class_count) {
+			if (i != packet -> class_count) {
 				for (i = 0; i < packet -> class_count; i++)
-					if (bill_class (lease,
+					if ((packet -> 
+					     classes [i] -> lease_limit) &&
+					    bill_class (lease,
 							packet -> classes [i]))
 						break;
 				if (i == packet -> class_count) {
@@ -1409,7 +1411,7 @@ void ack_lease (packet, lease, offer, when, msg)
 	/* If we don't have a hostname yet, and we've been asked to do
 	   a reverse lookup to find the hostname, do it. */
 	j = SV_GET_LEASE_HOSTNAMES;
-	if (!lookup_option (&dhcp_universe, state -> options, i) &&
+	if (!lookup_option (&server_universe, state -> options, i) &&
 	    (evaluate_boolean_option_cache
 	     (packet, packet -> options,
 	      lookup_option (&server_universe, state -> options, j)))) {
@@ -1491,7 +1493,7 @@ void ack_lease (packet, lease, offer, when, msg)
 	/* If a site option space has been specified, use that for
 	   site option codes. */
 	i = SV_SITE_OPTION_SPACE;
-	if ((oc = lookup_option (&dhcp_universe, state -> options, i)) &&
+	if ((oc = lookup_option (&server_universe, state -> options, i)) &&
 	    evaluate_option_cache (&d1, packet, state -> options, oc)) {
 		struct universe *u;
 		
@@ -1698,7 +1700,9 @@ void dhcp_reply (lease)
 	   and will therefore get a relayed response from the above
 	   code. */
 	} else if (raw.ciaddr.s_addr &&
-		   !(state -> got_server_identifier &&
+		   !((state -> got_server_identifier ||
+		      (raw.flags & htons (BOOTP_BROADCAST))) &&
+		     /* XXX This won't work if giaddr isn't zero, but it is: */
 		     (state -> shared_network ==
 		      lease -> subnet -> shared_network)) &&
 		   state -> offer == DHCPACK) {
@@ -2198,12 +2202,12 @@ struct lease *find_lease (packet, share, ours)
 	   requested, we assume that previous bugginess on the part
 	   of the client, or a server database loss, caused the lease to
 	   be abandoned, so we reclaim it and let the client have it. */
-	if (lease && lease -> flags & ABANDONED_LEASE && lease == ip_lease &&
+	if (lease && (lease -> flags & ABANDONED_LEASE) && lease == ip_lease &&
 	    packet -> packet_type == DHCPREQUEST) {
 		log_error ("Reclaiming REQUESTed abandoned IP address %s.",
 		      piaddr (lease -> ip_addr));
 		lease -> flags &= ~ABANDONED_LEASE;
-	} else if (lease && lease -> flags & ABANDONED_LEASE) {
+	} else if (lease && (lease -> flags & ABANDONED_LEASE)) {
 	/* Otherwise, if it's not the one the client requested, we do not
 	   return it - instead, we claim it's ours, causing a DHCPNAK to be
 	   sent if this lookup is for a DHCPREQUEST, and force the client
@@ -2285,7 +2289,7 @@ struct lease *allocate_lease (packet, pool, ok)
 
 	/* If we find an abandoned lease, and no other lease qualifies
 	   better, take it. */
-	if (lease -> flags & ABANDONED_LEASE) {
+	if ((lease -> flags & ABANDONED_LEASE)) {
 		/* If we already have a non-abandoned lease that we didn't
 		   love, but that's okay, don't reclaim the abandoned lease. */
 		if (ok)
