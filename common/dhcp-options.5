@@ -112,8 +112,8 @@ The standard options are:
 This option specifies whether or not the client may assume that all
 subnets of the IP network to which the client is connected use the
 same MTU as the subnet of that network to which the client is
-directly connected.  A value of 1 indicates that all subnets share
-the same MTU.  A value of 0 means that the client should assume that
+directly connected.  A value of true indicates that all subnets share
+the same MTU.  A value of false means that the client should assume that
 some subnets of the directly connected network may have smaller MTUs.
 .RE
 .PP
@@ -258,8 +258,8 @@ character set restrictions.
 .PP
 This option specifies whether or not the client should use Ethernet
 Version 2 (RFC 894) or IEEE 802.3 (RFC 1042) encapsulation if the
-interface is an Ethernet.  A value of 0 indicates that the client
-should use RFC 894 encapsulation.  A value of 1 means that the client
+interface is an Ethernet.  A value of false indicates that the client
+should use RFC 894 encapsulation.  A value of true means that the client
 should use RFC 1042 encapsulation.
 .RE
 .PP
@@ -292,8 +292,8 @@ legal value for the MTU is 68.
 .RS 0.25i
 .PP
 This option specifies whether the client should configure its IP
-layer for packet forwarding.  A value of 0 means disable IP
-forwarding, and a value of 1 means enable IP forwarding.
+layer for packet forwarding.  A value of false means disable IP
+forwarding, and a value of true means enable IP forwarding.
 .RE
 .PP
 .B option \fBirc-server\fR \fIip-address\fR [\fB,\fR
@@ -326,8 +326,8 @@ of preference.
 .RS 0.25i
 .PP
 This option specifies whether or not the client should respond to
-subnet mask requests using ICMP.  A value of 0 indicates that the
-client should not respond.  A value of 1 means that the client should
+subnet mask requests using ICMP.  A value of false indicates that the
+client should not respond.  A value of true means that the client should
 respond.
 .RE
 .PP
@@ -489,7 +489,7 @@ client.  Servers should be listed in order of preference.
 This option specifies whether the client should configure its IP
 layer to allow forwarding of datagrams with non-local source routes
 (see Section 3.3.5 of [4] for a discussion of this topic).  A value
-of 0 means disallow forwarding of such datagrams, and a value of 1
+of 0 means disallow forwarding of such datagrams, and a value of true
 means allow forwarding.
 .RE
 .PP
@@ -523,8 +523,8 @@ The minimum MTU value cannot be smaller than 68.
 .RS 0.25i
 .PP
 This option specifies whether or not the client should perform subnet
-mask discovery using ICMP.  A value of 0 indicates that the client
-should not perform mask discovery.  A value of 1 means that the
+mask discovery using ICMP.  A value of false indicates that the client
+should not perform mask discovery.  A value of true means that the
 client should perform mask discovery.
 .RE
 .PP
@@ -576,8 +576,8 @@ characters from the NVT ASCII character set.
 .PP
 This option specifies whether or not the client should solicit
 routers using the Router Discovery mechanism defined in RFC 1256.
-A value of 0 indicates that the client should not perform
-router discovery.  A value of 1 means that the client should perform
+A value of false indicates that the client should not perform
+router discovery.  A value of true means that the client should perform
 router discovery.
 .RE
 .PP
@@ -672,8 +672,8 @@ This specifies the IP address of the client's swap server.
 .PP
 This option specifies the whether or not the client should send TCP
 keepalive messages with a octet of garbage for compatibility with
-older implementations.  A value of 0 indicates that a garbage octet
-should not be sent. A value of 1 indicates that a garbage octet
+older implementations.  A value of false indicates that a garbage octet
+should not be sent. A value of true indicates that a garbage octet
 should be sent.
 .RE
 .PP
@@ -718,7 +718,7 @@ preference.
 This option specifies whether or not the client should negotiate the
 use of trailers (RFC 893 [14]) when using the ARP protocol.  A value
 of 0 indicates that the client should not attempt to use trailers.  A
-value of 1 means that the client should attempt to use trailers.
+value of true means that the client should attempt to use trailers.
 .RE
 .PP
 .B option \fBuap-servers\fR \fItext\fR\fB;\fR
