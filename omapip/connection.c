@@ -43,6 +43,7 @@
 
 #include <omapip/omapip_p.h>
 #include <arpa/inet.h>
+#include <arpa/nameser.h>
 
 OMAPI_OBJECT_ALLOC (omapi_connection,
 		    omapi_connection_object_t, omapi_type_connection)
@@ -373,6 +374,7 @@ isc_result_t omapi_connection_connect (omapi_object_t *h)
 				}
 				return status;
 			}
+printf("EINPROGRESS\n");
 			c -> state = omapi_connection_connecting;
 			return ISC_R_INCOMPLETE;
 		}
@@ -456,7 +458,11 @@ static isc_result_t make_dst_key (DST_KEY **dst_key, omapi_object_t *a) {
 			(a, (omapi_object_t *)0, "key", &key);
 
 	if (status == ISC_R_SUCCESS) {
-		if (omapi_td_strcmp (algorithm -> value, "hmac-md5") == 0) {
+		if ((algorithm -> value -> type == omapi_datatype_data ||
+		     algorithm -> value -> type == omapi_datatype_string) &&
+		    strncasecmp (algorithm -> value -> u.buffer.value,
+		                 NS_TSIG_ALG_HMAC_MD5 ".",
+		                 algorithm -> value -> u.buffer.len) == 0) {
 			algorithm_id = KEY_HMAC_MD5;
 		} else {
 			status = ISC_R_INVALIDARG;
