@@ -63,9 +63,9 @@ extern int h_errno;
 #define _PATH_DHCPD_PID	"/etc/dhcpd.pid"
 #endif
 
-typedef char int8_t;
-typedef short int16_t;
-typedef long int32_t;
+#define int8_t		char
+#define int16_t		short 
+#define int32_t		long 
 
 #define u_int8_t	unsigned char		/* Not quite POSIX... */
 #define u_int16_t	unsigned short 
