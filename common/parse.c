@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.49 1999/10/20 19:12:32 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.50 1999/10/20 20:55:44 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2767,6 +2767,11 @@ int parse_allow_deny (oc, cfile, flag)
 		status = (option_cache
 			  (oc, (struct data_string *)0, data,
 			   &server_options [SV_BOOT_UNKNOWN_CLIENTS]));
+		break;
+
+	      case DUPLICATES:
+		status = option_cache (oc, (struct data_string *)0, data,
+				       &server_options [SV_DUPLICATES]);
 		break;
 
 	      default:
