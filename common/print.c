@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: print.c,v 1.45 2000/10/12 08:59:07 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: print.c,v 1.46 2000/11/28 23:18:40 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -693,6 +693,10 @@ static unsigned print_subexpression (expr, buf, len)
 
 	      case expr_leased_address:
 		s = "leased-address";
+		goto astring;
+
+	      case expr_client_state:
+		s = "client-state";
 		goto astring;
 
 	      case expr_host_decl_name:
