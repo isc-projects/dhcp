@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.49 1997/06/08 03:58:47 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.50 1997/06/08 04:10:41 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1162,7 +1162,7 @@ struct lease *find_lease (packet, share, ours)
 	/* If ip_lease is valid at this point, set ours to one, so that
 	   even if we choose a different lease, we know that the address
 	   the client was requesting was ours, and thus we can NAK it. */
-	if (ip_lease)
+	if (ip_lease && ours)
 		*ours = 1;
 
 	/* If the requested IP address isn't on the network the packet
