@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: auth.c,v 1.3 1999/10/07 06:35:40 mellon Exp $ Copyright 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.";
+"$Id: auth.c,v 1.4 2000/03/06 19:38:19 mellon Exp $ Copyright 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.";
 #endif
 
 #include "dhcpd.h"
@@ -34,7 +34,7 @@ void enter_auth_key (key_id, key)
 	struct auth_key *key;
 {
 	if (!auth_key_hash)
-		auth_key_hash = new_hash ();
+		auth_key_hash = new_hash (0, 0);
 	if (!auth_key_hash)
 		log_fatal ("Can't allocate authentication key hash.");
 	add_hash (auth_key_hash, key_id -> data, key_id -> len,
