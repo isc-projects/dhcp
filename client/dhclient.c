@@ -41,7 +41,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.129.2.2 2001/06/01 17:29:49 mellon Exp $ Copyright (c) 1995-2001 Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.129.2.3 2001/06/02 05:48:42 mellon Exp $ Copyright (c) 1995-2001 Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1049,6 +1049,7 @@ void dhcpoffer (packet)
 	const char *name = packet -> packet_type ? "DHCPOFFER" : "BOOTREPLY";
 	struct iaddrlist *ap;
 	struct option_cache *oc;
+	char obuf [1024];
 	
 #ifdef DEBUG_PACKET
 	dump_packet (packet);
@@ -1073,17 +1074,20 @@ void dhcpoffer (packet)
 		return;
 	}
 
-	log_info ("%s from %s", name, piaddr (packet -> client_addr));
+	sprintf (obuf, "%s from %s", name, piaddr (packet -> client_addr));
 
 
 	/* If this lease doesn't supply the minimum required parameters,
 	   blow it off. */
 	if (client -> config -> required_options) {
-		for (i = 0; client -> config -> required_options [i]; i++) {
-			if (!lookup_option
-			    (&dhcp_universe, packet -> options,
-			     client -> config -> required_options [i])) {
-				log_info ("%s isn't satisfactory.", name);
+	    for (i = 0; client -> config -> required_options [i]; i++) {
+		if (!lookup_option
+		    (&dhcp_universe, packet -> options,
+		     client -> config -> required_options [i])) {
+		    log_info ("%s: no %s option.",
+			      obuf, (dhcp_universe.options
+				     [client -> config -> required_options [i]]
+				     -> name));
 				return;
 			}
 		}
@@ -1094,14 +1098,14 @@ void dhcpoffer (packet)
 		if (lease -> address.len == sizeof packet -> raw -> yiaddr &&
 		    !memcmp (lease -> address.iabuf,
 			     &packet -> raw -> yiaddr, lease -> address.len)) {
-			log_debug ("%s already seen.", name);
+			log_debug ("%s: already seen.", obuf);
 			return;
 		}
 	}
 
 	lease = packet_to_lease (packet, client);
 	if (!lease) {
-		log_info ("packet_to_lease failed.");
+		log_info ("%s: packet_to_lease failed.", obuf);
 		return;
 	}
 
@@ -1147,6 +1151,7 @@ void dhcpoffer (packet)
 		add_timeout (stop_selecting, state_selecting, client, 0, 0);
 		cancel_timeout (send_discover, client);
 	}
+	log_info ("%s", obuf);
 }
 
 /* Allocate a client_lease structure and initialize it from the parameters
