@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.100.2.1 1999/07/13 18:46:06 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.100.2.2 1999/08/19 18:57:09 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1239,7 +1239,7 @@ void ack_lease (packet, lease, offer, when, msg)
 	/* why not update for static leases too? */
 	/* Because static leases aren't currently recorded? */
 #if defined (NSUPDATE)
- 	if (!(lease -> flags & STATIC_LEASE) && offer == DHCPACK)
+ 	if (!(lease -> flags & STATIC_LEASE) && (offer == DHCPACK || !offer))
  		nsupdate (lease, state, packet, ADD);
 #endif
 
@@ -2458,9 +2458,15 @@ int permitted (packet, permit_list)
 			break;
 			
 		      case permit_class:
-			for (i = 0; i < packet -> class_count; i++)
+			for (i = 0; i < packet -> class_count; i++) {
 				if (p -> class == packet -> classes [i])
 					return 1;
+				if (packet -> classes [i] &&
+				    packet -> classes [i] -> superclass &&
+				    (packet -> classes [i] -> superclass ==
+				     p -> class))
+					return 1;
+			}
 			break;
 		}
 	}
