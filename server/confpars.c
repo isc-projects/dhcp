@@ -43,12 +43,27 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.131 2001/01/25 08:28:22 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.132 2001/02/12 20:53:04 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
 
 static TIME parsed_time;
+
+#if defined (TRACING)
+trace_type_t *trace_readconf_type;
+trace_type_t *trace_readleases_type;
+#endif
+
+void parse_trace_setup ()
+{
+	trace_readconf_type = trace_type_register ("readconf", (void *)0,
+						   trace_conf_input,
+						   trace_conf_stop, MDL);
+	trace_readleases_type = trace_type_register ("readleases", (void *)0,
+						     trace_conf_input,
+						     trace_conf_stop, MDL);
+}
 
 /* conf-file :== parameters declarations EOF
    parameters :== <nil> | parameter | parameters parameter
@@ -56,28 +71,171 @@ static TIME parsed_time;
 
 isc_result_t readconf ()
 {
-	return parse_conf_file (path_dhcpd_conf, root_group, ROOT_GROUP);
+	return read_conf_file (path_dhcpd_conf, root_group, ROOT_GROUP, 0);
 }
+
+isc_result_t read_conf_file (const char *filename, struct group *group,
+			     int group_type, int leasep)
+{
+	int file;
+	struct parse *cfile;
+	isc_result_t status;
+#if defined (TRACING)
+	char *fbuf, *dbuf;
+	off_t flen;
+	int result;
+	unsigned tflen, ulen;
+	trace_type_t *ttype;
+
+	if (leasep)
+		ttype = trace_readleases_type;
+	else
+		ttype = trace_readconf_type;
+
+	/* If we're in playback, we need to snarf the contents of the
+	   named file out of the playback file rather than trying to
+	   open and read it. */
+	if (trace_playback ()) {
+		dbuf = (char *)0;
+		tflen = 0;
+		status = trace_get_file (ttype, filename, &tflen, &dbuf);
+		if (status != ISC_R_SUCCESS)
+			return status;
+		ulen = tflen;
+
+		/* What we get back is filename\0contents, where contents is
+		   terminated just by the length.  So we figure out the length
+		   of the filename, and subtract that and the NUL from the
+		   total length to get the length of the contents of the file.
+		   We make fbuf a pointer to the contents of the file, and
+		   leave dbuf as it is so we can free it later. */
+		tflen = strlen (dbuf);
+		ulen = ulen - tflen - 1;
+		fbuf = dbuf + tflen + 1;
+		goto memfile;
+	}
+#endif
+
+	if ((file = open (filename, O_RDONLY)) < 0) {
+		if (leasep) {
+			log_error ("Can't open lease database %s: %m --",
+				   path_dhcpd_db);
+			log_error ("  check for failed database %s!",
+				   "rewrite attempt");
+			log_error ("Please read the dhcpd.leases manual%s",
+				   " page if you");
+			log_fatal ("don't know what to do about this.");
+		} else {
+			log_fatal ("Can't open %s: %m", filename);
+		}
+	}
+
+	cfile = (struct parse *)0;
+#if defined (TRACING)
+	flen = lseek (file, (off_t)0, SEEK_END);
+	if (flen < 0) {
+	      boom:
+		log_fatal ("Can't lseek on %s: %m", filename);
+	}
+	if (lseek (file, (off_t)0, SEEK_SET) < 0)
+		goto boom;
+	/* Can't handle files greater than 2^31-1. */
+	if (flen > 0x7FFFFFFFUL)
+		log_fatal ("%s: file is too long to buffer.", filename);
+	ulen = flen;
+
+	/* Allocate a buffer that will be what's written to the tracefile,
+	   and also will be what we parse from. */
+	tflen = strlen (filename);
+	dbuf = dmalloc (ulen + tflen + 1, MDL);
+	if (!dbuf)
+		log_fatal ("No memory for %s (%d bytes)",
+			   filename, ulen);
+
+	/* Copy the name into the beginning, nul-terminated. */
+	strcpy (dbuf, filename);
+
+	/* Load the file in after the NUL. */
+	fbuf = dbuf + tflen + 1;
+	result = read (file, fbuf, ulen);
+	if (result < 0)
+		log_fatal ("Can't read in %s: %m", filename);
+	if (result != ulen)
+		log_fatal ("%s: short read of %d bytes instead of %d.",
+			   filename, ulen, result);
+      memfile:
+	/* If we're recording, write out the filename and file contents. */
+	if (trace_record ())
+		trace_write_packet (ttype, ulen + tflen + 1, dbuf, MDL);
+	new_parse (&cfile, -1, fbuf, ulen, filename); /* XXX */
+#else
+	new_parse (&cfile, file, (char *)0, 0, filename);
+#endif
+	if (leasep)
+		status = lease_file_subparse (cfile);
+	else
+		status = conf_file_subparse (cfile, group, group_type);
+	end_parse (&cfile);
+#if defined (TRACING)
+	dfree (dbuf, MDL);
+#endif
+	close (file);
+	return status;
+}
+
+#if defined (TRACING)
+void trace_conf_input (trace_type_t *ttype, unsigned len, char *data)
+{
+	char *fbuf;
+	unsigned flen;
+	unsigned tflen;
+	struct parse *cfile = (struct parse *)0;
+	static int postconf_initialized;
+	static int leaseconf_initialized;
+	
+	/* Do what's done above, except that we don't have to read in the
+	   data, because it's already been read for us. */
+	tflen = strlen (data);
+	flen = len - tflen - 1;
+	fbuf = data + tflen + 1;
+
+	/* If we're recording, write out the filename and file contents. */
+	if (trace_record ())
+		trace_write_packet (ttype, len, data, MDL);
+	new_parse (&cfile, -1, fbuf, flen, data);
+	if (ttype == trace_readleases_type)
+		lease_file_subparse (cfile);
+	else
+		conf_file_subparse (cfile, root_group, ROOT_GROUP);
+	end_parse (&cfile);
+
+	/* Postconfiguration needs to be done after the config file
+	   has been loaded. */
+	if (!postconf_initialized && ttype == trace_readconf_type) {
+		postconf_initialization (0);
+		postconf_initialized = 1;
+	}
+
+	if (!leaseconf_initialized && ttype == trace_readleases_type) {
+		db_startup (0);
+		leaseconf_initialized = 1;
+	}
+}
+
+void trace_conf_stop (trace_type_t *ttype) { }
+#endif
 
 /* conf-file :== parameters declarations EOF
    parameters :== <nil> | parameter | parameters parameter
    declarations :== <nil> | declaration | declarations declaration */
 
-isc_result_t parse_conf_file (const char *filename, struct group *group,
-			      int group_type)
+isc_result_t conf_file_subparse (struct parse *cfile, struct group *group,
+				 int group_type)
 {
-	int file;
-	struct parse *cfile;
 	const char *val;
 	enum dhcp_token token;
 	int declaration = 0;
 	int status;
-
-	if ((file = open (filename, O_RDONLY)) < 0)
-		log_fatal ("Can't open %s: %m", filename);
-
-	cfile = (struct parse *)0;
-	new_parse (&cfile, file, (char *)0, 0, filename);
 
 	do {
 		token = peek_token (&val, cfile);
@@ -90,9 +248,6 @@ isc_result_t parse_conf_file (const char *filename, struct group *group,
 	token = next_token (&val, cfile); /* Clear the peek buffer */
 
 	status = cfile -> warnings_occurred ? ISC_R_BADPARSE : ISC_R_SUCCESS;
-
-	end_parse (&cfile);
-	close (file);
 	return status;
 }
 
@@ -101,33 +256,11 @@ isc_result_t parse_conf_file (const char *filename, struct group *group,
    		     | lease-declaration
 		     | lease-declarations lease-declaration */
 
-isc_result_t read_leases ()
+isc_result_t lease_file_subparse (struct parse *cfile)
 {
-	struct parse *cfile;
-	int file;
 	const char *val;
 	enum dhcp_token token;
 	isc_result_t status;
-
-	/* Open the lease file.   If we can't open it, fail.   The reason
-	   for this is that although on initial startup, the absence of
-	   a lease file is perfectly benign, if dhcpd has been running 
-	   and this file is absent, it means that dhcpd tried and failed
-	   to rewrite the lease database.   If we proceed and the
-	   problem which caused the rewrite to fail has been fixed, but no
-	   human has corrected the database problem, then we are left
-	   thinking that no leases have been assigned to anybody, which
-	   could create severe network chaos. */
-	if ((file = open (path_dhcpd_db, O_RDONLY)) < 0) {
-		log_error ("Can't open lease database %s: %m -- %s",
-			   path_dhcpd_db,
-			   "check for failed database rewrite attempt!");
-		log_error ("Please read the dhcpd.leases manual page if you");
- 		log_fatal ("don't know what to do about this.");
-	}
-
-	cfile = (struct parse *)0;
-	new_parse (&cfile, file, (char *)0, 0, path_dhcpd_db);
 
 	do {
 		token = next_token (&val, cfile);
@@ -158,10 +291,6 @@ isc_result_t read_leases ()
 	} while (1);
 
 	status = cfile -> warnings_occurred ? ISC_R_BADPARSE : ISC_R_SUCCESS;
-
-	end_parse (&cfile);
-	close (file);
-
 	return status;
 }
 
@@ -229,7 +358,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 			parse_warn (cfile, "filename string expected.");
 			skip_to_semi (cfile);
 		} else {
-			status = parse_conf_file (val, group, type);
+			status = read_conf_file (val, group, type, 0);
 			if (status != ISC_R_SUCCESS)
 				parse_warn (cfile, "%s: bad parse.", val);
 			parse_semi (cfile);
@@ -2232,9 +2361,9 @@ int parse_lease_declaration (struct lease **lp, struct parse *cfile)
 	int noequal, newbinding;
 	struct binding *binding;
 	isc_result_t status;
-	binding_state_t *statep;
 	struct option_cache *oc;
 	pair *p;
+	binding_state_t new_state;
 
 	lease = (struct lease *)0;
 	status = lease_allocate (&lease, MDL);
@@ -2328,11 +2457,11 @@ int parse_lease_declaration (struct lease **lp, struct parse *cfile)
 				memcpy (tuid, val, lease -> uid_len);
 				lease -> uid = tuid;
 			} else {
-				lease -> uid_len = 0;
+				unsigned uid_len = 0;
 				lease -> uid = (parse_numeric_aggregate
 						(cfile, (unsigned char *)0,
-						 &lease -> uid_len, ':',
-						 16, 8));
+						 &uid_len, ':', 16, 8));
+				lease -> uid_len = uid_len;
 				if (!lease -> uid) {
 					lease_dereference (&lease, MDL);
 					return 0;
@@ -2386,7 +2515,6 @@ int parse_lease_declaration (struct lease **lp, struct parse *cfile)
 
 		      case TOKEN_NEXT:
 			seenbit = 128;
-			statep = &lease -> next_binding_state;
 			token = next_token (&val, cfile);
 			if (token != BINDING) {
 				parse_warn (cfile, "expecting 'binding'");
@@ -2397,7 +2525,6 @@ int parse_lease_declaration (struct lease **lp, struct parse *cfile)
 
 		      case BINDING:
 			seenbit = 256;
-			statep = &lease -> binding_state;
 
 		      do_binding_state:
 			token = next_token (&val, cfile);
@@ -2409,31 +2536,31 @@ int parse_lease_declaration (struct lease **lp, struct parse *cfile)
 			token = next_token (&val, cfile);
 			switch (token) {
 			      case TOKEN_ABANDONED:
-				*statep = FTS_ABANDONED;
+				new_state = FTS_ABANDONED;
 				break;
 			      case TOKEN_FREE:
-				*statep = FTS_FREE;
+				new_state = FTS_FREE;
 				break;
 			      case TOKEN_ACTIVE:
-				*statep = FTS_ACTIVE;
+				new_state = FTS_ACTIVE;
 				break;
 			      case TOKEN_EXPIRED:
-				*statep = FTS_EXPIRED;
+				new_state = FTS_EXPIRED;
 				break;
 			      case TOKEN_RELEASED:
-				*statep = FTS_RELEASED;
+				new_state = FTS_RELEASED;
 				break;
 			      case TOKEN_RESET:
-				*statep = FTS_RESET;
+				new_state = FTS_RESET;
 				break;
 			      case TOKEN_BACKUP:
-				*statep = FTS_BACKUP;
+				new_state = FTS_BACKUP;
 				break;
 			      case TOKEN_RESERVED:
-				*statep = FTS_RESERVED;
+				new_state = FTS_RESERVED;
 				break;
 			      case TOKEN_BOOTP:
-				*statep = FTS_BOOTP;
+				new_state = FTS_BOOTP;
 				break;
 			      default:
 				parse_warn (cfile,
@@ -2442,32 +2569,20 @@ int parse_lease_declaration (struct lease **lp, struct parse *cfile)
 				skip_to_semi (cfile);
 				break;
 			}
-			/* If no next binding state is specified, it's
-			   the same as the current state. */
-			if (!(seenmask & 128) && seenbit == 256)
-				lease -> next_binding_state =
-					lease -> binding_state;
+
+			if (seenbit == 256) {
+				lease -> binding_state = new_state;
+
+				/* If no next binding state is specified, it's
+				   the same as the current state. */
+				if (!(seenmask & 128))
+				    lease -> next_binding_state = new_state;
+			} else
+				lease -> next_binding_state = new_state;
+				
 			parse_semi (cfile);
 			break;
 
-		      case HOSTNAME:
-			seenbit = 512;
-			token = peek_token (&val, cfile);
-			if (token == STRING)
-				lease -> hostname = parse_string (cfile);
-			else {
-				lease -> hostname = parse_host_name (cfile);
-				if (lease -> hostname)
-					parse_semi (cfile);
-			}
-			if (!lease -> hostname) {
-				parse_warn (cfile, "expecting a hostname.");
-				skip_to_semi (cfile);
-				seenbit = 0;
-				return 0;
-			}
-			break;
-			
 		      case CLIENT_HOSTNAME:
 			seenbit = 1024;
 			token = peek_token (&val, cfile);
