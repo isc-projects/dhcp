@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: clparse.c,v 1.31 1999/04/05 15:08:13 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: clparse.c,v 1.31.2.1 1999/10/14 20:22:16 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -116,7 +116,7 @@ int read_client_conf ()
 				config = (struct client_config *)
 					malloc (sizeof (struct client_config));
 				if (!config)
-					log_fatal ("no memory for client config.");
+				    log_fatal ("no memory for client config.");
 				memcpy (config, &top_level_config,
 					sizeof top_level_config);
 			}
@@ -365,6 +365,8 @@ void parse_client_statement (cfile, ip, config)
 
 	      case REQUEST:
 		token = next_token (&val, cfile);
+		if (config -> requested_options == default_requested_options)
+			config -> requested_options = (u_int32_t *)0;
 		parse_option_list (cfile, &config -> requested_options);
 		return;
 
@@ -533,7 +535,7 @@ void parse_option_list (cfile, list)
 				break;
 		}
 		if (i == 256) {
-			parse_warn ("%s: expected option name.");
+			parse_warn ("%s: expected option name.", val);
 			skip_to_semi (cfile);
 			return;
 		}
@@ -1072,8 +1074,8 @@ int parse_option_decl (oc, cfile)
 				goto alloc;
 
 			      default:
-				log_error ("Bad format %c in parse_option_param.",
-				      *fmt);
+				log_error ("parse_option_param: Bad format %c",
+					   *fmt);
 				skip_to_semi (cfile);
 				return 0;
 			}
