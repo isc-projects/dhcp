@@ -56,7 +56,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhclient.c,v 1.33 1997/03/06 20:13:42 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.34 1997/03/28 23:57:47 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -65,8 +65,6 @@ TIME cur_time;
 TIME default_lease_time = 43200; /* 12 hours... */
 TIME max_lease_time = 86400; /* 24 hours... */
 struct tree_cache *global_options [256];
-
-struct client_config top_level_config;
 
 char *path_dhclient_conf = _PATH_DHCLIENT_CONF;
 char *path_dhclient_db = _PATH_DHCLIENT_DB;
@@ -274,7 +272,7 @@ void state_reboot (ipp)
 	ip -> client -> xid = ip -> client -> packet.xid;
 	ip -> client -> destination = iaddr_broadcast;
 	ip -> client -> first_sending = cur_time;
-	ip -> client -> interval = 0;
+	ip -> client -> interval = ip -> client -> config -> initial_interval;
 
 	/* Add an immediate timeout to cause the first DHCPDISCOVER packet
 	   to go out. */
@@ -298,7 +296,7 @@ void state_init (ipp)
 	ip -> client -> destination = iaddr_broadcast;
 	ip -> client -> state = S_SELECTING;
 	ip -> client -> first_sending = cur_time;
-	ip -> client -> interval = 0;
+	ip -> client -> interval = ip -> client -> config -> initial_interval;
 
 	/* Add an immediate timeout to cause the first DHCPDISCOVER packet
 	   to go out. */
@@ -365,7 +363,7 @@ void state_selecting (ipp)
 	ip -> client -> destination = iaddr_broadcast;
 	ip -> client -> state = S_REQUESTING;
 	ip -> client -> first_sending = cur_time;
-	ip -> client -> interval = 0;
+	ip -> client -> interval = ip -> client -> config -> initial_interval;
 
 	/* Make a DHCPREQUEST packet from the lease we picked. */
 	make_request (ip, picked);
@@ -388,15 +386,10 @@ void dhcpack (packet)
 	struct client_lease *lease;
 	int i;
 	
-	note ("DHCPACK from %s",
-	      print_hw_addr (packet -> raw -> htype,
-			     packet -> raw -> hlen,
-			     packet -> raw -> chaddr));
-
 	/* If we're not receptive to an offer right now, or if the offer
 	   has an unrecognizable transaction id, then just drop it. */
 	if (packet -> interface -> client -> xid != packet -> raw -> xid) {
-		note ("DHCPACK in wrong transaction.");
+		debug ("DHCPACK in wrong transaction.");
 		return;
 	}
 
@@ -404,9 +397,14 @@ void dhcpack (packet)
 	    ip -> client -> state != S_REQUESTING &&
 	    ip -> client -> state != S_RENEWING &&
 	    ip -> client -> state != S_REBINDING) {
-		note ("DHCPACK in wrong state.");
+		debug ("DHCPACK in wrong state.");
 		return;
 	}
+
+	note ("DHCPACK from %s",
+	      print_hw_addr (packet -> raw -> htype,
+			     packet -> raw -> hlen,
+			     packet -> raw -> chaddr));
 
 	lease = packet_to_lease (packet);
 	if (!lease) {
@@ -513,7 +511,7 @@ void state_bound (ipp)
 		ip -> client -> destination = iaddr_broadcast;
 
 	ip -> client -> first_sending = cur_time;
-	ip -> client -> interval = 0;
+	ip -> client -> interval = ip -> client -> config -> initial_interval;
 	ip -> client -> state = S_RENEWING;
 
 	/* Send the first packet immediately. */
@@ -573,12 +571,6 @@ void dhcpoffer (packet)
 	int i;
 	int arp_timeout_needed, stop_selecting;
 	
-	note ("DHCPOFFER from %s",
-	      print_hw_addr (packet -> raw -> htype,
-			     packet -> raw -> hlen,
-			     packet -> raw -> chaddr));
-
-
 #ifdef DEBUG_PACKET
 	dump_packet (packet);
 #endif	
@@ -587,9 +579,14 @@ void dhcpoffer (packet)
 	   has an unrecognizable transaction id, then just drop it. */
 	if (ip -> client -> state != S_SELECTING ||
 	    packet -> interface -> client -> xid != packet -> raw -> xid) {
-		note ("DHCPOFFER in wrong transaction.");
+		debug ("DHCPOFFER in wrong transaction.");
 		return;
 	}
+
+	note ("DHCPOFFER from %s",
+	      print_hw_addr (packet -> raw -> htype,
+			     packet -> raw -> hlen,
+			     packet -> raw -> chaddr));
 
 	/* If this lease doesn't supply the minimum required parameters,
 	   blow it off. */
@@ -607,7 +604,7 @@ void dhcpoffer (packet)
 		if (lease -> address.len == sizeof packet -> raw -> yiaddr &&
 		    !memcmp (lease -> address.iabuf,
 			     &packet -> raw -> yiaddr, lease -> address.len)) {
-			note ("DHCPOFFER already seen.");
+			debug ("DHCPOFFER already seen.");
 			return;
 		}
 	}
@@ -773,15 +770,10 @@ void dhcpnak (packet)
 {
 	struct interface_info *ip = packet -> interface;
 
-	note ("DHCPNAK from %s",
-	      print_hw_addr (packet -> raw -> htype,
-			     packet -> raw -> hlen,
-			     packet -> raw -> chaddr));
-
 	/* If we're not receptive to an offer right now, or if the offer
 	   has an unrecognizable transaction id, then just drop it. */
 	if (packet -> interface -> client -> xid != packet -> raw -> xid) {
-		note ("DHCPNAK in wrong transaction.");
+		debug ("DHCPNAK in wrong transaction.");
 		return;
 	}
 
@@ -789,9 +781,14 @@ void dhcpnak (packet)
 	    ip -> client -> state != S_REQUESTING &&
 	    ip -> client -> state != S_RENEWING &&
 	    ip -> client -> state != S_REBINDING) {
-		note ("DHCPNAK in wrong state.");
+		debug ("DHCPNAK in wrong state.");
 		return;
 	}
+
+	note ("DHCPNAK from %s",
+	      print_hw_addr (packet -> raw -> htype,
+			     packet -> raw -> hlen,
+			     packet -> raw -> chaddr));
 
 	if (!ip -> client -> active) {
 		note ("DHCPNAK with no active lease.\n");
@@ -869,18 +866,24 @@ void send_discover (ipp)
 	   will double with every transmission. */
 	if (increase) {
 		if (!ip -> client -> interval)
-			ip -> client -> interval = 1;
+			ip -> client -> interval =
+				ip -> client -> config -> initial_interval;
 		else {
 			ip -> client -> interval +=
-				random () % (2 * ip -> client -> interval);
+				((random () >> 2) %
+				 (2 * ip -> client -> interval));
 		}
 
-		/* Don't backoff past 30 seconds. */
-		if (ip -> client -> interval > 30)
+		/* Don't backoff past cutoff. */
+		if (ip -> client -> interval >
+		    ip -> client -> config -> backoff_cutoff)
 			ip -> client -> interval =
-				15 + random () % ip -> client -> interval;
+				((ip -> client -> config -> backoff_cutoff / 2)
+				 + ((random () >> 2)
+				    % ip -> client -> interval));
 	} else if (!ip -> client -> interval)
-		ip -> client -> interval = 1;
+		ip -> client -> interval =
+			ip -> client -> config -> initial_interval;
 		
 	/* If the backoff would take us to the panic timeout, just use that
 	   as the interval. */
@@ -894,6 +897,12 @@ void send_discover (ipp)
 	      ip -> name,
 	      inet_ntoa (sockaddr_broadcast.sin_addr),
 	      ntohs (sockaddr_broadcast.sin_port), ip -> client -> interval);
+
+	/* Record the number of seconds since we started sending. */
+	if (interval < 255)
+		ip -> client -> packet -> secs = interval;
+	else
+		ip -> client -> packet -> secs = 255;
 
 	/* Send out a packet. */
 	result = send_packet (ip, (struct packet *)0,
@@ -981,7 +990,9 @@ void state_panic (ipp)
 		for (lp = ip -> client -> leases; lp -> next; lp = lp -> next)
 			;
 		lp -> next = ip -> client -> active;
-		lp -> next -> next = (struct client_lease *)0;
+		if (lp -> next) {
+			lp -> next -> next = (struct client_lease *)0;
+		}
 		ip -> client -> active = ip -> client -> leases;
 		ip -> client -> leases = ip -> client -> leases -> next;
 
@@ -1018,15 +1029,18 @@ void send_request (ipp)
 	/* Figure out how long it's been since we started transmitting. */
 	interval = cur_time - ip -> client -> first_sending;
 
-	/* If we're in INIT-REBOOT and we're past the reboot timeout,
-	   go to INIT and see if we can DISCOVER an address... */
-	/* XXX if we don't get an ACK, it means either that we're on
-	   a network with no DHCP server, or that our server is down.
-	   In the latter case, DHCPDISCOVER will get us a new address,
-	   but we could also have successfully reused our old address.
-	   In the former case, we're hosed anyway.   This is not a win-prone
-	   situation. */
-	if (ip -> client -> state == S_REBOOTING &&
+	/* If we're in the INIT-REBOOT or REQUESTING state and we're
+	   past the reboot timeout, go to INIT and see if we can
+	   DISCOVER an address... */
+	/* XXX In the INIT-REBOOT state, if we don't get an ACK, it
+	   means either that we're on a network with no DHCP server,
+	   or that our server is down.  In the latter case, assuming
+	   that there is a backup DHCP server, DHCPDISCOVER will get
+	   us a new address, but we could also have successfully
+	   reused our old address.  In the former case, we're hosed
+	   anyway.  This is not a win-prone situation. */
+	if ((ip -> client -> state == S_REBOOTING ||
+	     ip -> client -> state == S_REQUESTING) &&
 	    interval > ip -> client -> config -> reboot_timeout) {
 		ip -> client -> state = S_INIT;
 		cancel_timeout (send_request, ip);
@@ -1053,15 +1067,21 @@ void send_request (ipp)
 
 	/* Do the exponential backoff... */
 	if (!ip -> client -> interval)
-		ip -> client -> interval = 1;
-	else
-		ip -> client -> interval +=
-			random () % (2 * ip -> client -> interval);
-
-	/* Don't backoff past 30 seconds. */
-	if (ip -> client -> interval > 30)
 		ip -> client -> interval =
-			15 + random () % ip -> client -> interval;
+			ip -> client -> config -> initial_interval;
+	else {
+		ip -> client -> interval +=
+			((random () >> 2) %
+			 (2 * ip -> client -> interval));
+	}
+	
+	/* Don't backoff past cutoff. */
+	if (ip -> client -> interval >
+	    ip -> client -> config -> backoff_cutoff)
+		ip -> client -> interval =
+			((ip -> client -> config -> backoff_cutoff / 2)
+			 + ((random () >> 2)
+			    % ip -> client -> interval));
 
 	/* If the backoff would take us to the expiry time, just set the
 	   timeout to the expiry time. */
@@ -1091,6 +1111,12 @@ void send_request (ipp)
 			sizeof from);
 	else
 		from.s_addr = INADDR_ANY;
+
+	/* Record the number of seconds since we started sending. */
+	if (interval < 255)
+		ip -> client -> packet -> secs = interval;
+	else
+		ip -> client -> packet -> secs = 255;
 
 	note ("DHCPREQUEST on %s to %s port %d", ip -> name,
 	      inet_ntoa (destination.sin_addr),
