@@ -20,6 +20,9 @@
  * http://www.isc.org for more information.
  */
 
+#ifndef _OMAPIP_H_
+#define _OMAPIP_H_
+
 #ifndef __CYGWIN32__
 #include <sys/types.h>
 #include <netinet/in.h>
@@ -490,3 +493,5 @@ isc_result_t omapi_get_int_value (u_int32_t *, omapi_typed_data_t *);
 isc_result_t omapi_object_handle (omapi_handle_t *, omapi_object_t *);
 isc_result_t omapi_handle_lookup (omapi_object_t **, omapi_handle_t);
 isc_result_t omapi_handle_td_lookup (omapi_object_t **, omapi_typed_data_t *);
+
+#endif _OMAPIP_H_
