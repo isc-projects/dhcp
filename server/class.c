@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: class.c,v 1.2 1998/04/20 18:03:33 mellon Exp $ Copyright (c) 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: class.c,v 1.3 1998/06/25 03:42:18 mellon Exp $ Copyright (c) 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -91,10 +91,10 @@ static char copyright[] =
 /*
  * Expressions used to make matches:
  *
- * match_expr :== LPAREN match_expr RPAREN |
- *		  match_expr OR match_expr |
- *		  match_expr AND match_expr |
- *		  NOT match_expr |
+ * expression :== LPAREN expression RPAREN |
+ *		  expression OR expression |
+ *		  expression AND expression |
+ *		  NOT expression |
  *		  test_expr
  *
  * test_expr :== extract_expr EQUALS extract_expr |
@@ -132,12 +132,6 @@ static char copyright[] =
  * rules apply:
  *
  * classification-rules {
- *	if chaddr in known-hardware {
- *		add-class "known-clients";
- *	} else {
- *		add-class "unknown-clients";
- *	}
- *
  *	check-collection "default";
  *  }
  *
@@ -147,8 +141,8 @@ struct class unknown_class = {
 	(struct class *)0,
 	"unknown",
 	(struct hash_table *)0,
-	(struct match_expr *)0,
-	(struct match_expr *)0,
+	(struct expression *)0,
+	(struct expression *)0,
 	(struct group *)0,
 };
 
@@ -156,8 +150,8 @@ struct class known_class = {
 	(struct class *)0,
 	"unknown",
 	(struct hash_table *)0,
-	(struct match_expr *)0,
-	(struct match_expr *)0,
+	(struct expression *)0,
+	(struct expression *)0,
 	(struct group *)0,
 };
 
@@ -168,34 +162,32 @@ struct collection default_collection = {
 };
 
 struct collection *collections = &default_collection;
-struct classification_rule *default_classification_rules;
-struct named_hash *named_hashes;
-struct named_hash *known_hardware_hash;
+struct executable_statement *default_classification_rules;
 
 /* Build the default classification rule tree. */
 
 void classification_setup ()
 {
-	struct classification_rule *rules;
-	struct match_expr *me;
+	struct executable_statement *rules;
+	struct expression *me;
 
 	/* check-collection "default" */
-	me = (struct match_expr *)dmalloc (sizeof (struct match_expr),
+	me = (struct expression *)dmalloc (sizeof (struct expression),
 					   "default check expression");
 	if (!me)
 		error ("Can't allocate default check expression");
 	memset (me, 0, sizeof *me);
-	me -> op = match_check;
+	me -> op = expr_check;
 	me -> data.check = &default_collection;
 	
 	/* eval ... */
-	rules = (struct classification_rule *)
-		dmalloc (sizeof (struct classification_rule),
+	rules = (struct executable_statement *)
+		dmalloc (sizeof (struct executable_statement),
 			 "add default collection check rule");
 	if (!rules)
 		error ("Can't allocate check of default collection");
 	memset (rules, 0, sizeof *rules);
-	rules -> op = classify_eval;
+	rules -> op = eval_statement;
 	rules -> data.eval = me;
 
 	default_classification_rules = rules;
@@ -204,302 +196,8 @@ void classification_setup ()
 void classify_client (packet)
 	struct packet *packet;
 {
-	run_classification_ruleset (packet, default_classification_rules);
-}
-
-int run_classification_ruleset (packet, ruleset)
-	struct packet *packet;
-	struct classification_rule *ruleset;
-{
-	struct classification_rule *r;
-
-	for (r = ruleset; r; r = r -> next) {
-		switch (r -> op) {
-		      case classify_if:
-			if (!run_classification_ruleset
-			    (packet,
-			     evaluate_match_expression (packet,
-							r -> data.ie.expr)
-			     ? r -> data.ie.true : r -> data.ie.false))
-				return 0;
-			break;
-
-		      case classify_eval:
-			evaluate_match_expression (packet, r -> data.eval);
-			break;
-
-		      case classify_add:
-			classify (packet, r -> data.add);
-			break;
-
-		      case classify_break:
-			return 0;
-
-		      default:
-			error ("bogus classification rule type %d\n", r -> op);
-		}
-	}
-
-	return 1;
-}
-
-int evaluate_match_expression (packet, expr)
-	struct packet *packet;
-	struct match_expr *expr;
-{
-	struct data_string left, right;
-	int result;
-
-	switch (expr -> op) {
-	      case match_check:
-		return check_collection (packet, expr -> data.check);
-
-	      case match_equal:
-		left = evaluate_data_expression (packet,
-						 expr -> data.equal [0]);
-		right = evaluate_data_expression (packet,
-						  expr -> data.equal [1]);
-		if (left.len == right.len && !memcmp (left.data,
-						      right.data, left.len))
-			result = 1;
-		else
-			result = 0;
-		if (left.buffer)
-			dfree ("evaluate_match_expression", left.buffer);
-		if (right.buffer)
-			dfree ("evaluate_match_expression", right.buffer);
-		return result;
-
-	      case match_and:
-		return (evaluate_match_expression (packet,
-						   expr -> data.and [0]) &&
-			evaluate_match_expression (packet,
-						   expr -> data.and [1]));
-
-	      case match_or:
-		return (evaluate_match_expression (packet,
-						   expr -> data.or [0]) ||
-			evaluate_match_expression (packet,
-						   expr -> data.or [1]));
-
-	      case match_not:
-		return (!evaluate_match_expression (packet, expr -> data.not));
-
-#if 0
-	      case match_in:
-		left = evaluate_data_expression (packet, expr -> data.in.expr);
-		return (int)hash_lookup (expr -> data.in.hash -> hash,
-					 left.data, left.len);
-#endif
-
-	      case match_substring:
-	      case match_suffix:
-	      case match_option:
-	      case match_hardware:
-	      case match_const_data:
-	      case match_packet:
-		warn ("Data opcode in evaluate_match_expression: %d",
-		      expr -> op);
-		return 0;
-
-	      case match_extract_int8:
-	      case match_extract_int16:
-	      case match_extract_int32:
-	      case match_const_int:
-		warn ("Numeric opcode in evaluate_match_expression: %d",
-		      expr -> op);
-		return 0;
-	}
-
-	warn ("Bogus opcode in evaluate_match_expression: %d", expr -> op);
-	return 0;
-}
-
-struct data_string evaluate_data_expression (packet, expr)
-	struct packet *packet;
-	struct match_expr *expr;
-{
-	struct data_string result, data;
-	int offset, len;
-
-	switch (expr -> op) {
-		/* Extract N bytes starting at byte M of a data string. */
-	      case match_substring:
-		data = evaluate_data_expression (packet,
-						 expr -> data.substring.expr);
-
-		/* Evaluate the offset and length. */
-		offset = evaluate_numeric_expression
-			(packet, expr -> data.substring.offset);
-		len = evaluate_numeric_expression
-			(packet, expr -> data.substring.len);
-
-		/* If the offset is after end of the string, return
-		   an empty string. */
-		if (data.len <= offset) {
-			if (data.buffer)
-				dfree ("match_substring", data.buffer);
-			memset (&result, 0, sizeof result);
-			return result;
-		}
-
-		/* Otherwise, do the adjustments and return what's left. */
-		data.len -= offset;
-		if (data.len > len) {
-			data.len = len;
-			data.terminated = 0;
-		}
-		data.data += offset;
-		return data;
-
-		/* Extract the last N bytes of a data string. */
-	      case match_suffix:
-		data = evaluate_data_expression (packet,
-						 expr -> data.suffix.expr);
-
-		/* Evaluate the length. */
-		len = evaluate_numeric_expression
-			(packet, expr -> data.substring.len);
-
-		/* If we are returning the last N bytes of a string whose
-		   length is <= N, just return the string. */
-		if (data.len <= len)
-			return data;
-		data.data += data.len - len;
-		data.len = len;
-		return data;
-
-		/* Extract an option. */
-	      case match_option:
-		return ((*expr -> data.option -> universe -> lookup_func)
-			(packet, expr -> data.option -> code));
-
-		/* Combine the hardware type and address. */
-	      case match_hardware:
-		result.len = packet -> raw -> hlen + 1;
-		result.buffer = dmalloc (result.len,
-					 "match_hardware");
-		if (!result.buffer) {
-			warn ("no memory for match_hardware");
-			result.len = 0;
-		} else {
-			result.buffer [0] = packet -> raw -> htype;
-			memcpy (&result.buffer [1], packet -> raw -> chaddr,
-				packet -> raw -> hlen);
-		}
-		result.data = result.buffer;
-		result.terminated = 0;
-		return result;
-
-		/* Extract part of the raw packet. */
-	      case match_packet:
-		len = evaluate_numeric_expression (packet,
-						   expr -> data.packet.len);
-		offset = evaluate_numeric_expression (packet,
-						      expr -> data.packet.len);
-		if (offset > packet -> packet_length) {
-			warn ("match_packet on %s: length %d + offset %d > %d",
-			      print_hw_addr (packet -> raw -> htype,
-					     packet -> raw -> hlen,
-					     packet -> raw -> chaddr),
-			      len, offset, packet -> packet_length);
-			memset (&result, 0, sizeof result);
-			return result;
-		}
-		if (offset + len > packet -> packet_length)
-			result.len = packet -> packet_length - offset;
-		else
-			result.len = len;
-		result.data = ((unsigned char *)(packet -> raw)) + offset;
-		result.buffer = (unsigned char *)0;
-		result.terminated = 0;
-		return result;
-
-		/* Some constant data... */
-	      case match_const_data:
-		return expr -> data.const_data;
-
-	      case match_check:
-	      case match_equal:
-	      case match_and:
-	      case match_or:
-	      case match_not:
-		warn ("Boolean opcode in evaluate_data_expression: %d",
-		      expr -> op);
-		goto null_return;
-
-	      case match_extract_int8:
-	      case match_extract_int16:
-	      case match_extract_int32:
-	      case match_const_int:
-		warn ("Numeric opcode in evaluate_data_expression: %d",
-		      expr -> op);
-		goto null_return;
-	}
-
-	warn ("Bogus opcode in evaluate_data_expression: %d", expr -> op);
-      null_return:
-	memset (&result, 0, sizeof result);
-	return result;
-}	
-
-unsigned long evaluate_numeric_expression (packet, expr)
-	struct packet *packet;
-	struct match_expr *expr;
-{
-	struct data_string data;
-	unsigned long result;
-
-	switch (expr -> op) {
-	      case match_check:
-	      case match_equal:
-	      case match_and:
-	      case match_or:
-	      case match_not:
-		warn ("Boolean opcode in evaluate_numeric_expression: %d",
-		      expr -> op);
-		return 0;
-
-	      case match_substring:
-	      case match_suffix:
-	      case match_option:
-	      case match_hardware:
-	      case match_const_data:
-	      case match_packet:
-		warn ("Data opcode in evaluate_numeric_expression: %d",
-		      expr -> op);
-		return 0;
-
-	      case match_extract_int8:
-		data = evaluate_data_expression (packet,
-						 expr ->
-						 data.extract_int.expr);
-		if (data.len < 1)
-			return 0;
-		return data.data [0];
-
-	      case match_extract_int16:
-		data = evaluate_data_expression (packet,
-						 expr ->
-						 data.extract_int.expr);
-		if (data.len < 2)
-			return 0;
-		return getUShort (data.data);
-
-	      case match_extract_int32:
-		data = evaluate_data_expression (packet,
-						 expr ->
-						 data.extract_int.expr);
-		if (data.len < 4)
-			return 0;
-		return getULong (data.data);
-
-	      case match_const_int:
-		return expr -> data.const_int;
-	}
-
-	warn ("Bogus opcode in evaluate_numeric_expression: %d", expr -> op);
-	return 0;
+	execute_statements (packet, (struct option_state *)0,
+			    default_classification_rules);
 }
 
 int check_collection (packet, collection)
@@ -523,8 +221,7 @@ int check_collection (packet, collection)
 			}
 		}
 		if (class -> expr &&
-		    evaluate_match_expression (packet,
-					       class -> expr)) {
+		    evaluate_boolean_expression (packet, class -> expr)) {
 			if (class -> spawn) {
 				data = evaluate_data_expression
 					(packet, class -> spawn);
@@ -560,3 +257,16 @@ void classify (packet, class)
 				     packet -> raw -> chaddr));
 }
 
+struct class *find_class (name)
+	char *name;
+{
+	struct collection *lp;
+	struct class *cp;
+
+	for (lp = collections; lp; lp = lp -> next) {
+		for (cp = lp -> classes; cp; cp = cp -> nic)
+			if (cp -> name && !strcmp (name, cp -> name))
+				return cp;
+	}
+	return (struct class *)0;
+}
