@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: memory.c,v 1.52.2.3 1999/10/25 02:12:20 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: memory.c,v 1.52.2.4 1999/10/25 18:33:54 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -710,11 +710,16 @@ void release_lease (lease, packet)
 /* Abandon the specified lease (set its timeout to infinity and its
    particulars to zero, and re-hash it as appropriate. */
 
-void abandon_lease (lease, message)
+void abandon_lease (lease, packet, message)
 	struct lease *lease;
+	struct packet *packet;
 	char *message;
 {
 	struct lease lt;
+
+#if defined (NSUPDATE)
+	nsupdate (lease, (struct lease_state *)0, packet, DELETE);
+#endif
 
 	lease -> flags |= ABANDONED_LEASE;
 	lt = *lease;
@@ -732,10 +737,15 @@ void abandon_lease (lease, message)
 /* Abandon the specified lease (set its timeout to infinity and its
    particulars to zero, and re-hash it as appropriate. */
 
-void dissociate_lease (lease)
+void dissociate_lease (lease, packet)
 	struct lease *lease;
+	struct packet *packet;
 {
 	struct lease lt;
+
+#if defined (NSUPDATE)
+	nsupdate (lease, (struct lease_state *)0, packet, DELETE);
+#endif
 
 	lt = *lease;
 	if (lt.ends > cur_time)
