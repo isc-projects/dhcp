@@ -25,7 +25,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: nsupdate.c,v 1.7 1999/07/31 17:57:36 mellon Exp $ Copyright (c) 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: nsupdate.c,v 1.8 1999/09/16 01:14:52 mellon Exp $ Copyright (c) 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -187,7 +187,7 @@ char *ddns_fwd_name(lease, state, packet)
 
 static int nsupdateA(hostname, ip_addr, ttl, opcode)
 	char *hostname;
-	char *ip_addr;
+	unsigned char *ip_addr;
 	u_int32_t ttl;
 	int	opcode;
 {
@@ -205,7 +205,7 @@ static int nsupdateA(hostname, ip_addr, ttl, opcode)
 		}
 		n->r_opcode = opcode;
 		n->r_data = ip_addr;
-		n->r_size = strlen(n->r_data);
+		n->r_size = strlen((const char *)n->r_data);
 		u->r_next = n;
 		z = res_update(u);
 		log_info("add %s: %s %d IN A %s",
@@ -234,7 +234,7 @@ static int nsupdateA(hostname, ip_addr, ttl, opcode)
 			return 0;
 		u->r_opcode = opcode;
 		u->r_data = ip_addr;
-		u->r_size = strlen(u->r_data);
+		u->r_size = strlen((const char *)u->r_data);
 		z = res_update(u);
 		log_info("delete %s: %s %d IN A %s",
 			 z == 1 ? "succeeded" : "failed",
@@ -246,7 +246,7 @@ static int nsupdateA(hostname, ip_addr, ttl, opcode)
 }
 
 static int nsupdatePTR(revname, hostname, ttl, opcode)
-	char *hostname;
+	unsigned char *hostname;
 	char *revname;
 	u_int32_t ttl;
 	int	opcode;
@@ -260,7 +260,7 @@ static int nsupdatePTR(revname, hostname, ttl, opcode)
 		return 0;
 	u->r_opcode = opcode;
 	u->r_data = hostname;
-	u->r_size = strlen(u->r_data);
+	u->r_size = strlen((const char *)u->r_data);
 	z = res_update(u);
 	log_info("%s %s: %s %d IN PTR %s", 
 		 opcode == ADD ? "add" : 
@@ -426,11 +426,11 @@ int updateA(struct data_string *lhs, struct data_string *rhs, unsigned int ttl,
 	static char ipaddr[MAXDNAME];
 
 	hostname[0] = '\0';
-	strncat(hostname, lhs->data, lhs->len);
+	strncat(hostname, (const char *)lhs->data, lhs->len);
 	hostname[lhs->len] = '\0';
 	
 	ipaddr[0] = '\0';
-	strncat(ipaddr, rhs->data, rhs->len);
+	strncat(ipaddr, (const char *)rhs->data, rhs->len);
 	ipaddr[rhs->len] = '\0';
 	
 	/* delete an existing A if the one to be added is different */
@@ -471,11 +471,11 @@ int updatePTR(struct data_string *lhs, struct data_string *rhs,
 	static char revname[MAXDNAME];
 
 	revname[0] = '\0';
-	strncat(revname, lhs->data, lhs->len);
+	strncat(revname, (const char *)lhs->data, lhs->len);
 	revname[lhs->len] = '\0';
 
 	hostname[0] = '\0';
-	strncat(hostname, rhs->data, rhs->len);
+	strncat(hostname, (const char *)rhs->data, rhs->len);
 	hostname[rhs->len] = '\0';
 	
 	/* delete an existing PTR if the one to be added is different */

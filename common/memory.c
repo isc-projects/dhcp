@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: memory.c,v 1.57 1999/09/15 19:47:27 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: memory.c,v 1.58 1999/09/16 01:19:52 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -155,14 +155,14 @@ void enter_host (hd, dynamicp, commit)
 	} else {
 		hp = (struct host_decl *)
 			hash_lookup (host_name_hash,
-					     hd -> name,
+					     (unsigned char *)hd -> name,
 					     strlen (hd -> name));
 
 		/* If there isn't already a host decl matching this
 		   address, add it to the hash table. */
 		if (!hp) {
 			add_hash (host_name_hash,
-				  hd -> name, strlen (hd -> name),
+				  (unsigned char *)hd -> name, strlen (hd -> name),
 				  (unsigned char *)hd);
 			hd -> refcnt++; /* XXX */
 		} else
@@ -284,14 +284,14 @@ void delete_host (hd, commit)
 			add_hash (host_uid_hash,
 				  hd -> n_ipaddr -> client_identifier.data,
 				  hd -> n_ipaddr -> client_identifier.len,
-				  (char *)hd -> n_ipaddr);
+				  (unsigned char *)hd -> n_ipaddr);
 			hd -> n_ipaddr -> refcnt++;
 		}
 		if (hw_head && hd -> n_ipaddr -> interface.hlen) {
 			add_hash (host_hw_addr_hash,
 				  hd -> n_ipaddr -> interface.haddr,
 				  hd -> n_ipaddr -> interface.hlen,
-				  (char *)hd -> n_ipaddr);
+				  (unsigned char *)hd -> n_ipaddr);
 			hd -> n_ipaddr -> refcnt++;
 		}
 		omapi_object_dereference ((omapi_object_t **)&hd -> n_ipaddr,
@@ -301,12 +301,12 @@ void delete_host (hd, commit)
 	if (host_name_hash) {
 		hp = (struct host_decl *)
 			hash_lookup (host_name_hash,
-				     hd -> name, strlen (hd -> name));
+				     (unsigned char *)hd -> name, strlen (hd -> name));
 		
 		if (hp) {
 			if (hp == hd) {
 				delete_hash_entry (host_name_hash,
-						   hd -> name,
+						   (unsigned char *)hd -> name,
 						   strlen (hd -> name));
 				--hd -> refcnt;
 			}
