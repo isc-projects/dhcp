@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.23 1999/03/16 05:50:37 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.24 1999/04/05 16:28:09 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -129,7 +129,7 @@ int make_const_data (expr, data, len, terminated, allocate)
 			if (!buffer_allocate (&nt -> data.const_data.buffer,
 					      len + terminated,
 					      "make_const_data")) {
-				log_error ("Can't allocate const_data buffer.");
+				log_error ("Can't allocate const_data buffer");
 				expression_dereference (expr,
 							"make_const_data");
 				return 0;
@@ -178,6 +178,22 @@ int make_concat (expr, left, right)
 			      left, "make_concat");
 	expression_reference (&(*expr) -> data.concat [1],
 			      right, "make_concat");
+	return 1;
+}
+
+int make_encapsulation (expr, name)
+	struct expression **expr;
+	struct data_string *name;
+{
+	/* Allocate a new node to store the encapsulation. */
+	if (!expression_allocate (expr, "make_encapsulation")) {
+		log_error ("No memory for encapsulation expression node.");
+		return 0;
+	}
+		
+	(*expr) -> op = expr_encapsulate;
+	data_string_copy (&(*expr) -> data.encapsulate,
+			  name, "make_concat");
 	return 1;
 }
 
@@ -468,8 +484,9 @@ int evaluate_boolean_expression (result, packet, options, expr)
 
 	      case expr_exists:
 		memset (&left, 0, sizeof left);
-		if (!((*expr -> data.option -> universe -> lookup_func)
-		      (&left, options, expr -> data.exists -> code)))
+		if (!((*expr -> data.option -> universe -> get_func)
+		      (&left, expr -> data.exists -> universe,
+		       options, expr -> data.exists -> code)))
 			*result = 0;
 		else {
 			*result = 1;
@@ -490,6 +507,7 @@ int evaluate_boolean_expression (result, packet, options, expr)
 	      case expr_const_data:
 	      case expr_packet:
 	      case expr_concat:
+	      case expr_encapsulate:
 	      case expr_host_lookup:
 		log_error ("Data opcode in evaluate_boolean_expression: %d",
 		      expr -> op);
@@ -599,9 +617,9 @@ int evaluate_data_expression (result, packet, options, expr)
 
 		/* Extract an option. */
 	      case expr_option:
-		s0 = ((*expr -> data.option -> universe -> lookup_func)
-		      (result, &packet -> options,
-		       expr -> data.option -> code));
+		s0 = ((*expr -> data.option -> universe -> get_func)
+		      (result, expr -> data.option -> universe,
+		       packet -> options, expr -> data.option -> code));
 #if defined (DEBUG_EXPRESSIONS)
 		log_info ("data: option %s.%s = %s",
 		      expr -> data.option -> universe -> name,
@@ -678,6 +696,19 @@ int evaluate_data_expression (result, packet, options, expr)
 					result -> data, 60) : NULL);
 #endif
 		return s2;
+
+		/* The encapsulation of all defined options in an
+		   option space... */
+	      case expr_encapsulate:
+		memset (&data, 0, sizeof data);
+		s0 = option_space_encapsulate (&data, packet -> options,
+					       &expr -> data.encapsulate);
+#if defined (DEBUG_EXPRESSIONS)
+		log_info ("data: encapsulate = %s",
+		      print_hex_1 (expr -> data.const_data.len,
+				   expr -> data.const_data.data, 60));
+#endif
+		return s1;
 
 		/* Some constant data... */
 	      case expr_const_data:
@@ -792,6 +823,7 @@ int evaluate_numeric_expression (result, packet, options, expr)
 	      case expr_const_data:
 	      case expr_packet:
 	      case expr_concat:
+	      case expr_encapsulate:
 	      case expr_host_lookup:
 		log_error ("Data opcode in evaluate_numeric_expression: %d",
 		      expr -> op);
@@ -1003,6 +1035,7 @@ void expression_dereference (eptr, name)
 						name);
 		break;
 
+	      case expr_encapsulate:
 	      case expr_const_data:
 		data_string_forget (&expr -> data.const_data, name);
 		break;
@@ -1026,46 +1059,6 @@ void expression_dereference (eptr, name)
 	}
 
 	free_expression (expr, "expression_dereference");
-}
-
-
-/* Free all of the state in an option state buffer.   The buffer itself is
-   not freed, since these buffers are always contained in other structures. */
-
-void option_state_dereference (state)
-	struct option_state *state;
-{
-	int i;
-	struct agent_options *a, *na;
-	struct option_tag *ot, *not;
-	pair cp, next;
-
-	/* Having done the cons_options(), we can release the tree_cache
-	   entries. */
-	for (i = 0; i < OPTION_HASH_SIZE; i++) {
-		for (cp = state -> dhcp_hash [i]; cp; cp = next) {
-			next = cp -> cdr;
-			option_cache_dereference
-				((struct option_cache **)&cp -> car,
-				 "option_state_dereference");
-			free_pair (cp, "option_state_dereference");
-		}
-		for (cp = state -> server_hash [i]; cp; cp = next) {
-			next = cp -> cdr;
-			option_cache_dereference
-				((struct option_cache **)&cp -> car,
-						  "option_state_dereference");
-		}
-	}
-
-	/* We can also release the agent options, if any... */
-	for (a = state -> agent_options; a; a = na) {
-		na = a -> next;
-		for (ot = a -> first; ot; ot = not) {
-			not = ot -> next;
-			free (ot);
-		}
-	}
 }
 
 /* Make a copy of the data in data_string, upping the buffer reference
@@ -1128,6 +1121,7 @@ int is_data_expression (expr)
 		expr -> op == expr_const_data ||
 		expr -> op == expr_packet ||
 		expr -> op == expr_concat ||
+		expr -> op == expr_encapsulate ||
 		expr -> op == expr_host_lookup);
 }
 
@@ -1152,6 +1146,7 @@ static int op_val (op)
 	      case expr_substring:
 	      case expr_suffix:
 	      case expr_concat:
+	      case expr_encapsulate:
 	      case expr_host_lookup:
 	      case expr_not:
 	      case expr_option:
@@ -1195,6 +1190,7 @@ enum expression_context op_context (op)
 	      case expr_substring:
 	      case expr_suffix:
 	      case expr_concat:
+	      case expr_encapsulate:
 	      case expr_host_lookup:
 	      case expr_not:
 	      case expr_option:
