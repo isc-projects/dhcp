@@ -115,7 +115,8 @@ void if_register_send (info, interface)
 	      print_hw_addr (info -> hw_address.htype,
 			     info -> hw_address.hlen,
 			     info -> hw_address.haddr),
-	      info -> shared_network -> name);
+	      (info -> shared_network ?
+	       info -> shared_network -> name : "unattached"));
 }
 #endif /* USE_BPF_SEND */
 
@@ -213,7 +214,8 @@ void if_register_receive (info, interface)
 	      print_hw_addr (info -> hw_address.htype,
 			     info -> hw_address.hlen,
 			     info -> hw_address.haddr),
-	      info -> shared_network -> name);
+	      (info -> shared_network ?
+	       info -> shared_network -> name : "unattached"));
 }
 #endif /* USE_BPF_RECEIVE */
 

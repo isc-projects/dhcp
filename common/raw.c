@@ -96,7 +96,9 @@ void if_register_send (info, interface)
 
 	info -> wfdesc = sock;
 	note ("Sending on   Raw/%s/%s",
-	      info -> name, info -> shared_network -> name);
+	      info -> name,
+	      (info -> shared_network ?
+	       info -> shared_network -> name : "unattached"));
 }
 
 size_t send_packet (interface, packet, raw, len, from, to, hto)

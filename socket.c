@@ -132,7 +132,9 @@ void if_register_send (info, interface)
 	info -> wfdesc = info -> rfdesc;
 #endif
 	note ("Sending on   Socket/%s/%s",
-	      info -> name, info -> shared_network -> name);
+	      info -> name,
+	      (info -> shared_network ?
+	       info -> shared_network -> name : "unattached"));
 
 }
 #endif /* USE_SOCKET_SEND */
@@ -145,7 +147,10 @@ void if_register_receive (info, interface)
 	/* If we're using the socket API for sending and receiving,
 	   we don't need to register this interface twice. */
 	info -> rfdesc = if_register_socket (info, interface);
-	note ("Listening on Socket/%s", piaddr (info -> address));
+	note ("Listening on Socket/%s/%s",
+	      info -> name,
+	      (info -> shared_network ?
+	       info -> shared_network -> name : "unattached"));
 }
 #endif /* USE_SOCKET_RECEIVE */
 
