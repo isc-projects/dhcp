@@ -39,8 +39,20 @@
  * Enterprises, see ``http://www.vix.com''.
  */
 
+/* An internet address of up to 128 bits. */
+
 struct iaddr {
 	int len;
 	unsigned char iabuf [16];
 };
 
+/* Information about each network interface. */
+
+struct interface_info {
+	struct interface_info *next;	/* Next interface in list... */
+	struct subnet *local_subnet;	/* This interface's subnet. */
+	struct iaddr address;		/* Its IP address. */
+	int rfdesc;			/* Its read file descriptor. */
+	int wfdesc;			/* Its write file descriptor, if
+					   different. */
+};
