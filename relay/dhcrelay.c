@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcrelay.c,v 1.8 1997/11/22 07:55:36 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcrelay.c,v 1.9 1997/12/06 04:03:04 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -205,7 +205,7 @@ int main (argc, argv, envp)
 				warn ("Can't fdopen %s: %m",
 				      path_dhcrelay_pid);
 			else {
-				fprintf (pf, "%d\n", getpid ());
+				fprintf (pf, "%ld\n", (long)getpid ());
 				fclose (pf);
 			}	
 		}

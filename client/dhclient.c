@@ -56,7 +56,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhclient.c,v 1.43 1997/11/20 04:19:21 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.44 1997/12/06 04:02:35 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2049,7 +2049,7 @@ void write_client_pid_file ()
 	if (!pf)
 		warn ("Can't fdopen %s: %m", path_dhclient_pid);
 	else {
-		fprintf (pf, "%d\n", getpid ());
+		fprintf (pf, "%ld\n", (long)getpid ());
 		fclose (pf);
 	}
 }
