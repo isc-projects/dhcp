@@ -3,7 +3,7 @@
    System dependencies for DEC Alpha/OSF1... */
 
 /*
- * Copyright (c) 1996 Internet Software Consortium.  All rights reserved.
+ * Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -14,15 +14,15 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of RadioMail Corporation nor the names of its
+ * 3. Neither the name of The Internet Software Consortium nor the names of its
  *    contributors may be used to endorse or promote products derived
  *    from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY RADIOMAIL CORPORATION AND CONTRIBUTORS
- * ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * THIS SOFTWARE IS PROVIDED BY THE INTERNET SOFTWARE CONSORTIUM AND
+ * CONTRIBUTORS ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING,
+ * BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
  * FOR A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL
- * RADIOMAIL CORPORATION OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+ * THE INTERNET SOFTWARE CONSORTIUM OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
  * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
  * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
@@ -31,9 +31,8 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * This software was written for RadioMail Corporation by Ted Lemon
- * under a contract with Vixie Enterprises, and is based on an earlier
- * design by Paul Vixie.
+ * This software was written for the Internet Software Consortium by Ted Lemon
+ * under a contract with Vixie Laboratories.
  */
 
 #include <syslog.h>
@@ -69,10 +68,6 @@ extern int h_errno;
 #include <sys/time.h>
 #define TIME time_t
 #define GET_TIME(x)	time ((x))
-#define TIME_DIFF(high, low)	 	(*(high) - *(low))
-#define SET_TIME(x, y)	(*(x) = (y))
-#define ADD_TIME(d, s1, s2) (*(d) = *(s1) + *(s2))
-#define SET_MAX_TIME(x)	(*(x) = INT_MAX)
 
 /* The jmp_buf type is an array on OSF/1, so we can't dereference it
    and must declare it differently. */
