@@ -59,6 +59,11 @@ extern int h_errno;
 #define va_dcl
 #define VA_start(list, last) va_start (list, last)
 
+#if defined(__alpha__) || defined(__amd64__) || defined(__ia64__) || \
+	defined(__sparc64__)
+# define PTRSIZE_64BIT
+#endif
+
 #ifndef _PATH_DHCPD_PID
 #define _PATH_DHCPD_PID	"/var/run/dhcpd.pid"
 #endif

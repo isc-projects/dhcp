@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.192.2.35 2004/06/17 20:54:40 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.192.2.36 2004/09/01 17:06:36 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -957,7 +957,7 @@ void dhcpinform (packet, ms_nulltp)
 	   source address if they didn't set ciaddr. */
 	if (!packet -> raw -> ciaddr.s_addr) {
 		cip.len = 4;
-		memcpy (cip.iabuf, &packet -> client_addr, 4);
+		memcpy (cip.iabuf, &packet -> client_addr.iabuf, 4);
 	} else {
 		cip.len = 4;
 		memcpy (cip.iabuf, &packet -> raw -> ciaddr, 4);
@@ -1719,10 +1719,17 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 		}
 	}
 
-	/* Try to find a matching host declaration for this lease. */
-	if (!lease -> host) {
+	/* Try to find a matching host declaration for this lease.
+	 * If this is an offer, then verify our host for the lease is the
+	 * right one for the host we're offering to...by dereffing and
+	 * re-finding.
+	 */
+	if ((offer == DHCPOFFER) || !lease -> host) {
 		struct host_decl *hp = (struct host_decl *)0;
 		struct host_decl *h;
+
+		if (lease -> host)
+			host_dereference (&lease -> host, MDL);
 
 		/* Try to find a host_decl that matches the client
 		   identifier or hardware address on the packet, and

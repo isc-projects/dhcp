@@ -43,6 +43,25 @@ Murrell at BC Tel Advanced Communications.  I'd like to express my
 thanks to all of these good people here, both for working on the code
 and for prodding me into improving it.
 
+			Changes since 3.0.1
+
+- 64bit pointer sizes are detected properly on FreeBSD now.
+
+- A bug was repaired where the DHCP server would leave stale references
+  to host records on leases it once thought about offering to certain
+  clients.  The result would be to apply host and 'known' scopes to the
+  wrong clients (possibly denying booting).
+
+- A bug was repaired in the server's DHCPINFORM handling, where it
+  tried to divine the client's address from the source packet and
+  would get it wrong.  Thanks to Anshuman Singh Rawat.
+
+- A log message was introduced to help illuminate the case where the
+  server was unable to find a lease to assign to any BOOTP client.
+  Thanks to Daniel Baker.
+
+- A minor dhcpd.conf.5 manpage error was fixed.
+
 			Changes since 3.0.1rc14
 
 - The global variable 'cur_time' was centralized and is now uniformly of a

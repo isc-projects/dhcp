@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bootp.c,v 1.69.2.7 2004/06/17 20:54:39 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: bootp.c,v 1.69.2.8 2004/09/01 17:06:36 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -145,11 +145,10 @@ void bootp (packet)
 			ack_lease (packet, lease, 0, 0, msgbuf, 0);
 			goto out;
 		}
-		/* XXX just ignore BOOTREQUESTS from unknown clients if
-		   XXX we can't allocate IP addresses for them. */
-#if 0
-		log_info ("%s: no available leases", msgbuf);
-#endif
+
+		/* We couldn't find an address to give this bootp client. */
+		log_info ("%s: BOOTP from unknown client and no dynamic leases",
+			msgbuf);
 		goto out;
 	}
 
