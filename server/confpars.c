@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.70 1999/04/05 16:36:25 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.71 1999/04/08 19:39:54 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -166,7 +166,9 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 	int lose;
 	struct data_string key_id;
 
-	switch (peek_token (&val, cfile)) {
+	token = peek_token (&val, cfile);
+
+	switch (token) {
 	      case AUTH_KEY:
 		memset (&key_id, 0, sizeof key_id);
 		if (parse_auth_key (&key_id, cfile)) {
@@ -347,25 +349,6 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		}
 		parse_address_range (cfile, group, type, (struct pool *)0);
 		return declaration;
-
-#if 0
-	      case ALLOW:
-	      case DENY:
-		token = next_token (&val, cfile);
-		cache = (struct option_cache *)0;
-		if (!parse_allow_deny (&cache, cfile,
-				       token == ALLOW ? 1 : 0))
-			return declaration;
-		et = (struct executable_statement *)dmalloc (sizeof *et,
-							     "allow/deny");
-		if (!et)
-			log_fatal ("no memory for %s statement",
-			       token == ALLOW ? "allow" : "deny");
-		memset (et, 0, sizeof *et);
-		et -> op = supersede_option_statement;
-		et -> data.option = cache;
-		goto insert_statement;
-#endif
 
 	      case TOKEN_NOT:
 		token = next_token (&val, cfile);
@@ -1011,6 +994,9 @@ struct class *parse_class_declaration (cfile, group, type)
 			memset (&data, 0, sizeof data);
 			if (!parse_cshl (&data, cfile))
 				return (struct class *)0;
+		} else {
+			parse_warn ("Expecting string or hex list.");
+			return (struct class *)0;
 		}
 	}
 
@@ -1030,22 +1016,21 @@ struct class *parse_class_declaration (cfile, group, type)
 		memset (class, 0, sizeof *class);
 		if (pc) {
 			class -> group = pc -> group;
-			class -> group = pc -> group;
 			class -> superclass = pc;
 			class -> lease_limit = pc -> lease_limit;
 			if (class -> lease_limit) {
 				class -> billed_leases =
 					dmalloc (class -> lease_limit *
 						 sizeof (struct lease *),
-						 "check_collection");
+						 "parse_class_declaration");
 				if (!class -> billed_leases)
-					log_fatal ("no memory for billed leases");
+					log_fatal ("no memory for billing");
 				memset (class -> billed_leases, 0,
 					(class -> lease_limit *
 					 sizeof class -> billed_leases));
 			}
 			data_string_copy (&class -> hash_string, &data,
-					  "check_collection");
+					  "parse_class_declaration");
 			if (!pc -> hash)
 				pc -> hash = new_hash ();
 			add_hash (pc -> hash,
@@ -1085,12 +1070,18 @@ struct class *parse_class_declaration (cfile, group, type)
 	}
 
 	if (type == 0 || type == 1 || type == 3)
-		data_string_forget (&data, "check_collection");
+		data_string_forget (&data, "parse_class_declaration");
 
 	/* Spawned classes don't have their own settings. */
 	if (class -> superclass) {
-		parse_semi (cfile);
-		return class;
+		token = peek_token (&val, cfile);
+		if (token == SEMI) {
+			next_token (&val, cfile);
+			return class;
+		}
+		/* Give the subclass its own group. */
+		class -> group = clone_group (class -> group,
+					      "parse_class_declaration");
 	}
 
 	if (!parse_lbrace (cfile))
@@ -1117,9 +1108,10 @@ struct class *parse_class_declaration (cfile, group, type)
 				break;
 			}
 			token = next_token (&val, cfile);
-			token = next_token (&val, cfile);
+			token = peek_token (&val, cfile);
 			if (token != IF)
 				goto submatch;
+			token = next_token (&val, cfile);
 			parse_boolean_expression (&class -> expr, cfile,
 						  &lose);
 			if (lose)
@@ -1178,7 +1170,7 @@ struct class *parse_class_declaration (cfile, group, type)
 			class -> billed_leases =
 				dmalloc (class -> lease_limit *
 					 sizeof (struct lease *),
-					 "check_collection");
+					 "parse_class_declaration");
 			if (!class -> billed_leases)
 				log_fatal ("no memory for billed leases.");
 			memset (class -> billed_leases, 0,
