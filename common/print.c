@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: print.c,v 1.38 2000/02/03 04:43:36 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: print.c,v 1.39 2000/02/05 18:05:45 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -752,7 +752,31 @@ static unsigned print_subexpression (expr, buf, len)
 			return 6;
 		}
 		break;
-		
+	      case expr_funcall:
+		rv = 12 + strlen (expr -> data.funcall.name);
+		if (len > rv + 1) {
+			strcpy (buf, "(funcall  ");
+			strcpy (buf + 9, expr -> data.funcall.name);
+			buf [rv++] = ' ';
+			rv += print_subexpression
+				(expr -> data.funcall.arglist, buf + rv,
+				 len - rv - 1);
+			buf [rv++] = ')';
+			buf [rv] = 0;
+			return rv;
+		}
+		break;
+
+	      case expr_arg:
+		rv = print_subexpression (expr -> data.arg.val, buf, len);
+		if (expr -> data.arg.next && rv + 2 < len) {
+			buf [rv++] = ' ';
+			rv += print_subexpression (expr -> data.arg.next,
+						   buf, len);
+		}
+		if (rv + 1 < len)
+			buf [rv++] = 0;
+		break;
 	}
 	return 0;
 }
