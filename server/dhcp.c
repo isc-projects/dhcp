@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.129 1999/11/20 18:36:28 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.130 1999/11/23 19:08:24 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -87,7 +87,7 @@ void dhcpdiscover (packet)
 		 (packet -> raw -> htype
 		  ? print_hw_addr (packet -> raw -> htype,
 				   packet -> raw -> hlen,
-				   packet -> raw -> chaddr),
+				   packet -> raw -> chaddr)
 		  : (lease
 		     ? print_hex_1 (lease -> uid_len, lease -> uid, 
 				    lease -> uid_len)
@@ -172,12 +172,12 @@ void dhcprequest (packet)
 		s = (char *)0;
 
 	/* Say what we're doing... */
-	sprintf (msgbuf, "DHCPREQUEST for from %s %s%s%svia %s",
+	sprintf (msgbuf, "DHCPREQUEST for %s from %s %s%s%svia %s",
 		 piaddr (cip),
 		 (packet -> raw -> htype
 		  ? print_hw_addr (packet -> raw -> htype,
 				   packet -> raw -> hlen,
-				   packet -> raw -> chaddr),
+				   packet -> raw -> chaddr)
 		  : (lease
 		     ? print_hex_1 (lease -> uid_len, lease -> uid, 
 				    lease -> uid_len)
@@ -285,6 +285,7 @@ void dhcprelease (packet)
 	struct iaddr cip;
 	struct option_cache *oc;
 	struct data_string data;
+	char *s;
 
 	/* DHCPRELEASE must not specify address in requested-address
            option, but old protocol specs weren't explicit about this,
@@ -337,7 +338,7 @@ void dhcprelease (packet)
 		  (packet -> raw -> htype
 		   ? print_hw_addr (packet -> raw -> htype,
 			     packet -> raw -> hlen,
-			     packet -> raw -> chaddr),
+			     packet -> raw -> chaddr)
 		   : (lease
 		      ? print_hex_1 (lease -> uid_len, lease -> uid, 
 				     lease -> uid_len)
@@ -427,7 +428,7 @@ void dhcpdecline (packet)
 			  (packet -> raw -> htype
 			   ? print_hw_addr (packet -> raw -> htype,
 					    packet -> raw -> hlen,
-					    packet -> raw -> chaddr),
+					    packet -> raw -> chaddr)
 			   : (lease
 			      ? print_hex_1 (lease -> uid_len, lease -> uid, 
 					     lease -> uid_len)
@@ -437,6 +438,7 @@ void dhcpdecline (packet)
 			  ? inet_ntoa (packet -> raw -> giaddr)
 			  : packet -> interface -> name,
 			  status);
+	}
 		
 	option_state_dereference (&options, "dhcpdecline");
 }
@@ -1932,16 +1934,16 @@ void dhcp_reply (lease)
 		   ? (state -> offer == DHCPACK ? "DHCPACK" : "DHCPOFFER")
 		   : "BOOTREPLY"),
 		  piaddr (lease -> ip_addr),
-		  s ? "(" : "", s ? s : "", s ? ") " : "",
 		  (lease -> hardware_addr.htype
 		   ? print_hw_addr (lease -> hardware_addr.htype,
 				    lease -> hardware_addr.hlen,
 				    lease -> hardware_addr.haddr)
 		   : print_hex_1 (lease -> uid_len, lease -> uid, 
 				  lease -> uid_len)),
-		  state -> giaddr.s_addr
-		  ? inet_ntoa (state -> giaddr)
-		  : state -> ip -> name);
+		  s ? "(" : "", s ? s : "", s ? ") " : "",
+		  (state -> giaddr.s_addr
+		   ? inet_ntoa (state -> giaddr)
+		   : state -> ip -> name));
 
 	/* Set up the hardware address... */
 	hto.htype = lease -> hardware_addr.htype;
