@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.47 1999/09/09 23:53:14 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.48 1999/09/16 01:10:19 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -570,14 +570,14 @@ int evaluate_boolean_expression (result, packet, lease, in_options,
 		*result = 0;	/* assume failure */
 		if (s0 && s1 && s2 && s3) {
 			if (rrtype.len == 1 &&
-			    strncmp(rrtype.data, "a", 1) == 0) {
+			    strncmp((const char *)rrtype.data, "a", 1) == 0) {
 #if defined (DEBUG_EXPRESSIONS)
 				log_debug("calling updateA(%s, %s, %d, lease)",
 					  expr1.data , expr2.data, ttl);
 #endif
 				updateA(expr1, expr2, ttl, lease);
 			} else if (rrtype.len == 3 &&
-				   strncmp(rrtype.data, "ptr", 3) == 0) {
+				   strncmp((const char *)rrtype.data, "ptr", 3) == 0) {
 #if defined (DEBUG_EXPRESSIONS)
 				log_debug ("%s updatePTR(%s, %s, %d, lease)",
 					   "calling", expr1.data,
@@ -1252,7 +1252,7 @@ int evaluate_data_expression (result, packet, lease,
 		if (buffer_allocate (&result -> buffer, result -> len + 1,
 				     "host-decl-name")) {
 			result -> data = &result -> buffer -> data [0];
-			strcpy (&result -> data [0], lease -> host -> name);
+			strcpy ((char *)&result -> data [0], lease -> host -> name);
 			result -> terminated = 1;
 		} else {
 			log_error ("data: host-decl-name: no memory.");
