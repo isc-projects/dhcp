@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.44 1997/10/20 21:38:03 mellon Exp $ Copyright 1995, 1996 The Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.45 1997/10/20 21:52:36 mellon Exp $ Copyright 1995, 1996 The Internet Software Consortium.";
 #endif
 
 static char copyright[] =
@@ -73,7 +73,6 @@ int log_perror = -1;
 #else
 int log_perror = 1;
 #endif
-int quiet_startup;
 
 char *path_dhcpd_conf = _PATH_DHCPD_CONF;
 char *path_dhcpd_db = _PATH_DHCPD_DB;
@@ -93,6 +92,7 @@ int main (argc, argv, envp)
 	char pbuf [20];
 	int daemon = 1;
 #endif
+	int quiet = 0;
 
 	/* Initially, log errors to stderr as well as to syslogd. */
 #ifdef SYSLOG_4_2
@@ -150,7 +150,8 @@ int main (argc, argv, envp)
 			cftest = 1;
 			log_perror = -1;
 		} else if (!strcmp (argv [i], "-q")) {
-			quiet_startup = 1;
+			quiet = 1;
+			quiet_interface_discovery = 1;
 		} else if (argv [i][0] == '-') {
 			usage ();
 		} else {
@@ -168,7 +169,7 @@ int main (argc, argv, envp)
 		}
 	}
 
-	if (!quiet_startup) {
+	if (!quiet) {
 		note (message);
 		note (copyright);
 		note (arr);
