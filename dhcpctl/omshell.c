@@ -598,14 +598,18 @@ int main (int argc, char **argv, char **envp)
 		  case REMOVE:
 		    token = next_token (&val, (unsigned *)0, cfile);
 		    if (token != END_OF_FILE && token != EOL) {
-			    printf ("usage: %s\n", val);
+			    printf ("usage: remove\n");
 			    skip_to_semi (cfile);
 			    break;
 		    }
 		    
 		    if (!connected) {
 			    printf ("not connected.\n");
-			    skip_to_semi (cfile);
+			    break;
+		    }
+
+		    if (!oh) {
+			    printf ("no object.\n");
 			    break;
 		    }
 
@@ -617,6 +621,38 @@ int main (int argc, char **argv, char **envp)
 			    status = waitstatus;
 		    if (status != ISC_R_SUCCESS) {
 			    printf ("can't destroy object: %s\n",
+				    isc_result_totext (status));
+			    break;
+		    }
+		    omapi_object_dereference (&oh, MDL);
+		    break;
+
+		  case REFRESH:
+		    token = next_token (&val, (unsigned *)0, cfile);
+		    if (token != END_OF_FILE && token != EOL) {
+			    printf ("usage: refresh\n");
+			    skip_to_semi (cfile);
+			    break;
+		    }
+		    
+		    if (!connected) {
+			    printf ("not connected.\n");
+			    break;
+		    }
+
+		    if (!oh) {
+			    printf ("no object.\n");
+			    break;
+		    }
+
+		    status = dhcpctl_object_refresh(connection, oh);
+		    if (status == ISC_R_SUCCESS)
+			    status = dhcpctl_wait_for_completion
+				    (oh, &waitstatus);
+		    if (status == ISC_R_SUCCESS)
+			    status = waitstatus;
+		    if (status != ISC_R_SUCCESS) {
+			    printf ("can't refresh object: %s\n",
 				    isc_result_totext (status));
 			    break;
 		    }
