@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: class.c,v 1.14 1999/10/07 06:36:30 mellon Exp $ Copyright (c) 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: class.c,v 1.15 1999/10/21 03:09:13 mellon Exp $ Copyright (c) 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -78,6 +78,7 @@ int check_collection (packet, lease, collection)
 	struct data_string data;
 	int matched = 0;
 	int status;
+	int ignorep;
 
 	for (class = collection -> classes; class; class = class -> nic) {
 #if defined (DEBUG_CLASS_MATCHING)
@@ -155,7 +156,7 @@ int check_collection (packet, lease, collection)
 		}
 
 		status = (evaluate_boolean_expression_result
-			  (packet, lease,
+			  (&ignorep, packet, lease,
 			   packet -> options, (struct option_state *)0,
 			   class -> expr));
 		if (status) {
