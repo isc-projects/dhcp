@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dispatch.c,v 1.36 1997/03/06 06:52:30 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dispatch.c,v 1.37 1997/03/06 07:06:08 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -68,7 +68,7 @@ void discover_interfaces (state)
 	int state;
 {
 	struct interface_info *tmp;
-	struct interface_info *last;
+	struct interface_info *last, *next;
 	char buf [8192];
 	struct ifconf ic;
 	struct ifreq ifr;
@@ -292,7 +292,8 @@ void discover_interfaces (state)
 
 	/* Weed out the interfaces that did not have IP addresses. */
 	last = (struct interface_info *)0;
-	for (tmp = interfaces; tmp; tmp = tmp -> next) {
+	for (tmp = interfaces; tmp; tmp = next) {
+		next = tmp -> next;
 		if (!tmp -> ifp || !(tmp -> flags & INTERFACE_REQUESTED)) {
 			if ((tmp -> flags & INTERFACE_REQUESTED) != ir)
 				error ("%s: not found", tmp -> name);
