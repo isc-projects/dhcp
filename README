@@ -1,7 +1,7 @@
 		     Internet Software Consortium
 	   Dynamic Host Configuration Protocol Distribution
-		   Version 3, Beta 1, Patchlevel 0
-			     July 7, 1999
+		   Version 3, Beta 2, Patchlevel 0
+			   January 21, 2000
 
 			     README FILE
 
@@ -135,14 +135,14 @@ information.   On Digital Unix, type ``man pfilt''.
 To build the DHCP Distribution, unpack the compressed tar file using
 the tar utility and the gzip command - type something like:
 
-	zcat dhcp-3.0b1pl0.tar.gz |tar xvf -
+	zcat dhcp-3.0b2pl0.tar.gz |tar xvf -
 
 On BSD/OS, you have to type gzcat, not zcat, and you may run into
 similar problems on other operating systems.
 
 			    CONFIGURING IT
 
-Now, cd to the dhcp-3.0b1pl0 subdirectory that you've just
+Now, cd to the dhcp-3.0b2pl0 subdirectory that you've just
 created and configure the source tree by typing:
 
 		./configure
@@ -160,13 +160,14 @@ release.  This implementation is not built by default.  To use this
 implementation, you must have installed the latest version of bind 8.2
 (see http://www.isc.org for more information about BIND).  The
 configuration utility assumes that the BIND 8.2 distribution libraries
-and includes are under the /usr/local/bind directory, so if you have
+and includes are under the /usr/local/bind directory, except on
+FreeBSD, where it assumes they are in /usr/local.   If you have
 installed them elsewhere, you should set the BINDLIB and BINDINC
 variables in site.conf to override the values that will be set by the
 configure script from Makefile.conf.
 
-Assuming that you have BIND 8.2 installed, you can build dynamic DNS
-update support using:
+Assuming that you have BIND 8.2.2-P3 or later installed, you can build
+dynamic DNS update support using:
 
 		     ./configure --with-nsupdate
 
@@ -264,6 +265,8 @@ Linux 2.2.x kernels.
 
 			   LINUX: BROADCAST
 
+On older versions of Linux (versions prior to 2.2), there is a
+potential problem with the broadcast address being sent incorrectly.
 In order for dhcpd to work correctly with picky DHCP clients (e.g.,
 Windows 95), it must be able to send packets with an IP destination
 address of 255.255.255.255.  Unfortunately, Linux changes an IP
