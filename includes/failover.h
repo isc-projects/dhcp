@@ -201,6 +201,7 @@ enum failover_state {
 	partner_down,
 	normal,
 	communications_interrupted,
+	potential_conflict_nic,
 	potential_conflict,
 	recover
 };
@@ -211,17 +212,22 @@ typedef struct _dhcp_failover_state {
 	struct _dhcp_failover_state *next;
 	char *name;			/* Name of this failover instance. */
 	struct option_cache *address;	/* Partner's IP address or hostname. */
-	int listen_port;
 	int port;			/* Partner's TCP port. */
-	struct iaddr server_addr;
+	struct option_cache *server_addr; /* IP address on which to listen. */
+	int listen_port;		/* Port on which to listen. */
 	u_int32_t max_flying_updates;
 	u_int32_t mclt;
-	u_int8_t *hba;
+
+	u_int8_t *hba;	/* Hash bucket array for load balancing. */
+	int load_balance_max_secs;
 
 	enum failover_state partner_state;
 	TIME partner_stos;
 	enum failover_state my_state;
 	TIME my_stos;
+
+	omapi_object_t *link_to_peer;	/* Currently-established link
+					   to peer. */
 
 	enum {
 		primary, secondary
@@ -238,16 +244,13 @@ typedef struct _dhcp_failover_state {
 					   last packet we received is older
 					   than this, communications have been
 					   interrupted. */
-	/* The ack queue and update queue are circular lists, so you can
-	   tell whether or not a lease is on one of the lists by looking
-	   at its next pointer.   Or maybe we should just flag it as
-	   UPDATE_PENDING or ACK_PENDING.    But anyway, two seperate
-	   queues.   Hm. Maybe these should be hash tables, with no pointer
-	   from the peer to the lease. */
-	struct lease *update_queue;	/* List of leases we haven't sent
-					   to peer. */
-	struct lease *ack_queue;	/* List of lease updates the peer
+	struct lease *update_queue_head; /* List of leases we haven't sent
+					    to peer. */
+	struct lease *update_queue_tail;
+
+	struct lease *ack_queue_head;	/* List of lease updates the peer
 					   hasn't yet acked. */
+	struct lease *ack_queue_tail;
 	int cur_unacked_updates;	/* Number of updates we've sent
 					   that have not yet been acked. */
 } dhcp_failover_state_t;
