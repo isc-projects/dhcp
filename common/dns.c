@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dns.c,v 1.35.2.8 2001/10/17 03:24:49 mellon Exp $ Copyright (c) 2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dns.c,v 1.35.2.9 2001/10/18 20:10:40 mellon Exp $ Copyright (c) 2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -258,7 +258,7 @@ int dns_zone_dereference (ptr, file, line)
 	dns_zone = *ptr;
 	*ptr = (struct dns_zone *)0;
 	--dns_zone -> refcnt;
-	rc_register (file, line, ptr, dns_zone, dns_zone -> refcnt, 1);
+	rc_register (file, line, ptr, dns_zone, dns_zone -> refcnt, 1, RC_MISC);
 	if (dns_zone -> refcnt > 0)
 		return 1;
 
