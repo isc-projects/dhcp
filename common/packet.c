@@ -33,7 +33,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: packet.c,v 1.40.2.4 2004/11/24 17:39:16 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: packet.c,v 1.40.2.5 2005/02/22 20:54:24 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -218,7 +218,7 @@ ssize_t decode_udp_ip_header (interface, buf, bufix, from, buflen)
 	unsigned buflen;
 {
   unsigned char *data;
-  struct ip *ip;
+  struct ip ip;
   struct udphdr *udp;
   u_int32_t ip_len = (buf [bufix] & 0xf) << 2;
   u_int32_t sum, usum;
@@ -232,12 +232,12 @@ ssize_t decode_udp_ip_header (interface, buf, bufix, from, buflen)
   unsigned ulen;
   int ignore = 0;
 
-  ip = (struct ip *)(buf + bufix);
+  memcpy(&ip, buf + bufix, sizeof (struct ip));
   udp = (struct udphdr *)(buf + bufix + ip_len);
 
 #ifdef USERLAND_FILTER
   /* Is it a UDP packet? */
-  if (ip -> ip_p != IPPROTO_UDP)
+  if (ip.ip_p != IPPROTO_UDP)
 	  return -1;
 
   /* Is it to the port we're serving? */
@@ -266,16 +266,16 @@ ssize_t decode_udp_ip_header (interface, buf, bufix, from, buflen)
   }
 
   /* Check the IP packet length. */
-  if (ntohs (ip -> ip_len) != buflen) {
-	  if ((ntohs (ip -> ip_len + 2) & ~1) == buflen)
+  if (ntohs (ip.ip_len) != buflen) {
+	  if ((ntohs (ip.ip_len + 2) & ~1) == buflen)
 		  ignore = 1;
 	  else
 		  log_debug ("ip length %d disagrees with bytes received %d.",
-			     ntohs (ip -> ip_len), buflen);
+			     ntohs (ip.ip_len), buflen);
   }
 
   /* Copy out the IP source address... */
-  memcpy (&from -> sin_addr, &ip -> ip_src, 4);
+  memcpy (&from -> sin_addr, &ip.ip_src, 4);
 
   /* Compute UDP checksums, including the ``pseudo-header'', the UDP
      header and the data.   If the UDP checksum field is zero, we're
@@ -312,8 +312,8 @@ ssize_t decode_udp_ip_header (interface, buf, bufix, from, buflen)
   sum = wrapsum (checksum ((unsigned char *)udp, sizeof *udp,
 			   checksum (data, len,
 				     checksum ((unsigned char *)
-					       &ip -> ip_src,
-					       2 * sizeof ip -> ip_src,
+					       &ip.ip_src,
+					       2 * sizeof ip.ip_src,
 					       IPPROTO_UDP +
 					       (u_int32_t)ulen))));
 
