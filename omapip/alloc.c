@@ -128,7 +128,7 @@ VOIDPTR dmalloc (size, file, line)
 #endif
 #endif
 #ifdef DEBUG_REFCNT_DMALLOC_FREE
-	rc_register (file, line, 0, foo + DMDOFFSET, 1);
+	rc_register (file, line, 0, foo + DMDOFFSET, 1, 0);
 #endif
 	return bar;
 }
@@ -192,7 +192,7 @@ void dfree (ptr, file, line)
 	}
 #endif
 #ifdef DEBUG_REFCNT_DMALLOC_FREE
-	rc_register (file, line, 0, (unsigned char *)ptr + DMDOFFSET, 0);
+	rc_register (file, line, 0, (unsigned char *)ptr + DMDOFFSET, 0, 1);
 #endif
 	free (ptr);
 }
@@ -372,6 +372,55 @@ void dump_rc_history (void *addr)
 			break;
 	}
 }
+void rc_history_next (int d)
+{
+#if defined (RC_HISTORY_COMPRESSION)
+	int i, j = 0, m, n = 0;
+	void *ap, *rp;
+
+	/* If we are decreasing the reference count, try to find the
+	   entry where the reference was made and eliminate it; then
+	   we can also eliminate this reference. */
+	if (d) {
+	    m = rc_history_index - 1000;
+	    if (m < -1)
+		m = -1;
+	    ap = rc_history [rc_history_index].addr;
+	    rp = rc_history [rc_history_index].reference;
+	    for (i = rc_history_index - 1; i > m; i--) {
+		if (rc_history [i].addr == ap) {
+		    if (rc_history [i].reference == rp) {
+			if (n > 10) {
+			    for (n = i; n <= rc_history_index; n++)
+				    print_rc_hist_entry (n);
+			    n = 11;
+			}
+			memmove (&rc_history [i],
+				 &rc_history [i + 1],
+				 (unsigned)((rc_history_index - i) *
+					    sizeof (struct rc_history_entry)));
+			--rc_history_count;
+			--rc_history_index;
+			for (j = i; j < rc_history_count; j++) {
+			    if (rc_history [j].addr == ap)
+				--rc_history [j].refcnt;
+			}
+			if (n > 10) {
+			    for (n = i; n <= rc_history_index; n++)
+				    print_rc_hist_entry (n);
+			    n = 11;
+			    exit (0);
+			}
+			return;
+		    }
+		}
+	    }
+	}
+#endif
+	if (++rc_history_index == RC_HISTORY_MAX)
+		rc_history_index = 0;
+	++rc_history_count;
+}
 #endif
 
 #if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL) || \
@@ -445,10 +494,15 @@ void omapi_print_dmalloc_usage_by_caller ()
 			ccur++;
 		} else
 			cp [i].count++;
+#if 0
+		printf ("%d\t%s:%d\n", i, dp -> file, dp -> line);
+		dump_rc_history (dp + 1);
+#endif
 	}
 	for (i = 0; i < ccur; i++) {
 		printf ("%d\t%s:%d\t%d\n", i,
 			cp [i].dp -> file, cp [i].dp -> line, cp [i].count);
+		dump_rc_history (cp [i].dp + 1);
 	}
 }
 #endif /* DEBUG_MEMORY_LEAKAGE || DEBUG_MALLOC_POOL */
@@ -524,10 +578,7 @@ isc_result_t omapi_object_reference (omapi_object_t **r,
 	}
 	*r = h;
 	h -> refcnt++;
-		rc_register (file, line, r, h, h -> refcnt);
-	if (!h -> type -> freer) {
-		dmalloc_reuse (h, file, line, 1);
-	}
+	rc_register (file, line, r, h, h -> refcnt, 0);
 	return ISC_R_SUCCESS;
 }
 
@@ -538,7 +589,7 @@ isc_result_t omapi_object_dereference (omapi_object_t **h,
 	int inner_reference = 0;
 	int handle_reference = 0;
 	int extra_references;
-	omapi_object_t *p;
+	omapi_object_t *p, *hp;
 
 	if (!h)
 		return ISC_R_INVALIDARG;
@@ -623,31 +674,33 @@ isc_result_t omapi_object_dereference (omapi_object_t **h,
 			extra_references = 0;
 
 		if (!extra_references) {
+			hp = *h;
+			*h = 0;
+			hp -> refcnt--;
 			if (inner_reference)
 				omapi_object_dereference
-					(&(*h) -> inner, file, line);
+					(&hp -> inner, file, line);
 			if (outer_reference)
 				omapi_object_dereference
-					(&(*h) -> outer, file, line);
-			(*h) -> refcnt--;
-/*			if (!(*h) -> type -> freer) */
-				rc_register (file, line, h, *h, 0);
-			if ((*h) -> type -> destroy)
-				(*((*h) -> type -> destroy)) (*h, file, line);
-			if ((*h) -> type -> freer)
-				((*h) -> type -> freer (*h, file, line));
+					(&hp -> outer, file, line);
+/*			if (!hp -> type -> freer) */
+				rc_register (file, line, h, hp, 0, 1);
+			if (hp -> type -> destroy)
+				(*(hp -> type -> destroy)) (hp, file, line);
+			if (hp -> type -> freer)
+				(hp -> type -> freer (hp, file, line));
 			else
-				dfree (*h, file, line);
+				dfree (hp, file, line);
 		} else {
 			(*h) -> refcnt--;
 /*			if (!(*h) -> type -> freer) */
 				rc_register (file, line,
-					     h, *h, (*h) -> refcnt);
+					     h, *h, (*h) -> refcnt, 1);
 		}
 	} else {
 		(*h) -> refcnt--;
 /*		if (!(*h) -> type -> freer) */
-			rc_register (file, line, h, *h, (*h) -> refcnt);
+			rc_register (file, line, h, *h, (*h) -> refcnt, 1);
 	}
 	*h = 0;
 	return ISC_R_SUCCESS;
@@ -688,8 +741,7 @@ isc_result_t omapi_buffer_reference (omapi_buffer_t **r,
 	}
 	*r = h;
 	h -> refcnt++;
-	rc_register (file, line, r, h, h -> refcnt);
-	dmalloc_reuse (h, file, line, 1);
+	rc_register (file, line, r, h, h -> refcnt, 0);
 	return ISC_R_SUCCESS;
 }
 
@@ -723,7 +775,7 @@ isc_result_t omapi_buffer_dereference (omapi_buffer_t **h,
 	}
 
 	--(*h) -> refcnt;
-	rc_register (file, line, h, *h, (*h) -> refcnt);
+	rc_register (file, line, h, *h, (*h) -> refcnt, 1);
 	if ((*h) -> refcnt == 0)
 		dfree (*h, file, line);
 	*h = 0;
@@ -814,8 +866,7 @@ isc_result_t omapi_typed_data_reference (omapi_typed_data_t **r,
 	}
 	*r = h;
 	h -> refcnt++;
-	rc_register (file, line, r, h, h -> refcnt);
-	dmalloc_reuse (h, file, line, 1);
+	rc_register (file, line, r, h, h -> refcnt, 0);
 	return ISC_R_SUCCESS;
 }
 
@@ -849,7 +900,7 @@ isc_result_t omapi_typed_data_dereference (omapi_typed_data_t **h,
 	}
 	
 	--((*h) -> refcnt);
-	rc_register (file, line, h, *h, (*h) -> refcnt);
+	rc_register (file, line, h, *h, (*h) -> refcnt, 1);
 	if ((*h) -> refcnt <= 0 ) {
 		switch ((*h) -> type) {
 		      case omapi_datatype_int:
@@ -898,8 +949,7 @@ isc_result_t omapi_data_string_reference (omapi_data_string_t **r,
 	}
 	*r = h;
 	h -> refcnt++;
-	rc_register (file, line, r, h, h -> refcnt);
-	dmalloc_reuse (h, file, line, 1);
+	rc_register (file, line, r, h, h -> refcnt, 0);
 	return ISC_R_SUCCESS;
 }
 
@@ -933,7 +983,7 @@ isc_result_t omapi_data_string_dereference (omapi_data_string_t **h,
 	}
 
 	--((*h) -> refcnt);
-	rc_register (file, line, h, *h, (*h) -> refcnt);
+	rc_register (file, line, h, *h, (*h) -> refcnt, 1);
 	if ((*h) -> refcnt <= 0 ) {
 		dfree (*h, file, line);
 	}
@@ -971,8 +1021,7 @@ isc_result_t omapi_value_reference (omapi_value_t **r,
 	}
 	*r = h;
 	h -> refcnt++;
-	rc_register (file, line, r, h, h -> refcnt);
-	dmalloc_reuse (h, file, line, 1);
+	rc_register (file, line, r, h, h -> refcnt, 0);
 	return ISC_R_SUCCESS;
 }
 
@@ -1006,7 +1055,7 @@ isc_result_t omapi_value_dereference (omapi_value_t **h,
 	}
 	
 	--((*h) -> refcnt);
-	rc_register (file, line, h, *h, (*h) -> refcnt);
+	rc_register (file, line, h, *h, (*h) -> refcnt, 1);
 	if ((*h) -> refcnt == 0) {
 		if ((*h) -> name)
 			omapi_data_string_dereference (&(*h) -> name,
@@ -1054,8 +1103,7 @@ isc_result_t omapi_addr_list_reference (omapi_addr_list_t **r,
 	}
 	*r = h;
 	h -> refcnt++;
-	rc_register (file, line, r, h, h -> refcnt);
-	dmalloc_reuse (h, file, line, 1);
+	rc_register (file, line, r, h, h -> refcnt, 0);
 	return ISC_R_SUCCESS;
 }
 
@@ -1089,7 +1137,7 @@ isc_result_t omapi_addr_list_dereference (omapi_addr_list_t **h,
 	}
 
 	--((*h) -> refcnt);
-	rc_register (file, line, h, *h, (*h) -> refcnt);
+	rc_register (file, line, h, *h, (*h) -> refcnt, 1);
 	if ((*h) -> refcnt <= 0 ) {
 		dfree (*h, file, line);
 	}
