@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: conflex.c,v 1.92.2.3 2001/06/04 21:18:39 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: conflex.c,v 1.92.2.4 2002/01/10 19:35:59 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -436,8 +436,10 @@ static enum dhcp_token read_number (c, cfile)
 			token = NUMBER_OR_NAME;
 #endif
 		} else if (!isascii (c) || !isxdigit (c)) {
-			cfile -> bufix--;
-			cfile -> ugflag = 1;
+			if (c != EOF) {
+				cfile -> bufix--;
+				cfile -> ugflag = 1;
+			}
 			break;
 		}
 		cfile -> tokbuf [i] = c;
@@ -464,8 +466,10 @@ static enum dhcp_token read_num_or_name (c, cfile)
 		c = get_char (cfile);
 		if (!isascii (c) ||
 		    (c != '-' && c != '_' && !isalnum (c))) {
-			cfile -> bufix--;
-			cfile -> ugflag = 1;
+			if (c != EOF) {
+				cfile -> bufix--;
+				cfile -> ugflag = 1;
+			}
 			break;
 		}
 		if (!isxdigit (c))
