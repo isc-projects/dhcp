@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: clparse.c,v 1.1 1997/02/18 14:27:53 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: clparse.c,v 1.2 1997/02/19 10:53:16 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -94,6 +94,8 @@ int read_client_conf ()
 			if (!ip -> client)
 				error ("no memory for client state.");
 			memset (ip -> client, 0, sizeof *(ip -> client));
+		}
+		if (!ip -> client -> config) {
 			if (!config) {
 				config = (struct client_config *)
 					malloc (sizeof (struct client_config));
@@ -134,7 +136,7 @@ void read_client_leases ()
 			skip_to_semi (cfile);
 			break;
 		} else
-			parse_client_lease_statement (cfile);
+			parse_client_lease_statement (cfile, 0);
 
 	} while (1);
 }
@@ -160,7 +162,7 @@ void parse_client_statement (cfile, ip, config)
 	int token;
 	char *val;
 	char *t, *n;
-	struct hardware hardware;
+	u_int8_t buf [1024];
 
 	switch (next_token (&val, cfile)) {
 	      case HOSTNAME:
@@ -168,8 +170,14 @@ void parse_client_statement (cfile, ip, config)
 		return;
 
 	      case CLIENT_IDENTIFIER:
-		config -> cid_len = parse_X (cfile,
-					     &config -> client_identifier);
+		config -> cid_len = parse_X (cfile, buf, sizeof buf);
+		if (config -> cid_len == 0)
+			break;
+		config -> client_identifier = malloc (config -> cid_len + 1);
+		if (!config -> client_identifier)
+			error ("no memory for client identifier.");
+		memcpy (config -> client_identifier, buf, config -> cid_len);
+		config -> client_identifier [config -> cid_len] = 0;
 		break;
 
 	      case HARDWARE:
@@ -216,7 +224,7 @@ void parse_client_statement (cfile, ip, config)
 		return;
 
 	      case LEASE:
-		parse_client_lease_statement (cfile);
+		parse_client_lease_statement (cfile, 1);
 		return;
 
 	      default:
@@ -231,31 +239,30 @@ void parse_client_statement (cfile, ip, config)
 	}
 }
 
-int parse_X (cfile, p)
+int parse_X (cfile, buf, max)
 	FILE *cfile;
-	u_int8_t **p;
+	u_int8_t *buf;
+	int max;
 {
 	int token;
 	char *val;
-	unsigned char buf [1024];
-	int buflen;
-	unsigned char *s;
+	int len;
+	u_int8_t *s;
 
 	token = peek_token (&val, cfile);
 	if (token == NUMBER_OR_NAME || token == NUMBER) {
+		len = 0;
 		do {
 			token = next_token (&val, cfile);
 			if (token != NUMBER && token != NUMBER_OR_NAME) {
 				parse_warn ("expecting hexadecimal constant.");
 				skip_to_semi (cfile);
-				*p = (u_int8_t *)0;
 				return 0;
 			}
-			convert_num (&buf [buflen], val, 16, 8);
-			if (buflen++ > sizeof buf) {
+			convert_num (&buf [len], val, 16, 8);
+			if (len++ > max) {
 				parse_warn ("hexadecimal constant too long.");
 				skip_to_semi (cfile);
-				*p = (u_int8_t *)0;
 				return 0;
 			}
 			token = peek_token (&val, cfile);
@@ -265,18 +272,19 @@ int parse_X (cfile, p)
 		val = buf;
 	} else if (token == STRING) {
 		token = next_token (&val, cfile);
-		buflen = strlen (val) + 1;
+		len = strlen (val);
+		if (len + 1 > max) {
+			parse_warn ("string constant too long.");
+			skip_to_semi (cfile);
+			return 0;
+		}
+		memcpy (buf, val, len + 1);
 	} else {
 		parse_warn ("expecting string or hexadecimal data");
 		skip_to_semi (cfile);
-		*p = (u_int8_t *)0;
 		return 0;
 	}
-	*p = malloc (buflen);
-	if (!*p)
-		error ("out of memory allocating client id.\n");
-	memcpy (*p, val, buflen);
-	return buflen;
+	return len;
 }
 
 /* option-list :== option_name |
@@ -344,38 +352,13 @@ void parse_interface_declaration (cfile, outer_config)
 		return;
 	}
 
-	/* Find the interface (if any) that matches the name. */
-	for (ip = interfaces; ip; ip = ip -> next) {
-		if (!strcmp (ip -> name, val))
-			break;
-	}
+	ip = interface_or_dummy (val);
 
-	/* If we didn't find an interface, put up a dummy interface so
-	   that we have some place to parse the bogus data.   Otherwise,
-	   allocate a client state and client config structure for the
-	   interface. */
-	if (!ip) {
-		parse_warn ("interface %s not found.", val);
-		ip = &dummy_interface;
-		memset (ip, 0, sizeof dummy_interface);
-		ip -> client = &dummy_state;
-		memset (ip -> client, 0, sizeof dummy_state);
-		ip -> client -> config = &dummy_config;
-	} else {
-		ip -> client = ((struct client_state *)
-				malloc (sizeof (struct client_state)));
-		if (!ip -> client)
-			error ("no memory for state for %s\n", val);
-		memset (ip -> client, 0, sizeof *(ip -> client));
-		ip -> client -> config =
-			((struct client_config *)
-			 malloc (sizeof (struct client_config)));
-		if (!ip -> client -> config)
-			error ("no memory for config for %s\n", val);
-		memset (ip -> client -> config, 0,
-			sizeof *(ip -> client -> config));
-	}
-	memcpy (ip -> client -> config, outer_config, sizeof *outer_config);
+	if (!ip -> client)
+		make_client_state (ip);
+
+	if (!ip -> client -> config)
+		make_client_config (ip, outer_config);
 
 	token = next_token (&val, cfile);
 	if (token != LBRACE) {
@@ -397,6 +380,64 @@ void parse_interface_declaration (cfile, outer_config)
 	token = next_token (&val, cfile);
 }
 
+struct interface_info *interface_or_dummy (name)
+	char *name;
+{
+	struct interface_info *ip;
+
+	/* Find the interface (if any) that matches the name. */
+	for (ip = interfaces; ip; ip = ip -> next) {
+		if (!strcmp (ip -> name, name))
+			break;
+	}
+
+	/* If it's not a real interface, see if it's on the dummy list. */
+	if (!ip) {
+		for (ip = dummy_interfaces; ip; ip = ip -> next) {
+			if (!strcmp (ip -> name, name))
+				break;
+		}
+	}
+
+	/* If we didn't find an interface, make a dummy interface as
+	   a placeholder. */
+	if (!ip) {
+		ip = ((struct interface_info *)malloc (sizeof *ip));
+		if (!ip)
+			error ("Insufficient memory to record interface %s",
+			       name);
+		memset (ip, 0, sizeof *ip);
+		strcpy (ip -> name, name);
+		ip -> next = dummy_interfaces;
+		dummy_interfaces = ip;
+	}
+	return ip;
+}
+
+void make_client_state (ip)
+	struct interface_info *ip;
+{
+	ip -> client =
+		((struct client_state *)malloc (sizeof *(ip -> client)));
+	if (!ip -> client)
+		error ("no memory for state on %s\n", ip -> name);
+	memset (ip -> client, 0, sizeof *(ip -> client));
+}
+
+void make_client_config (ip, config)
+	struct interface_info *ip;
+	struct client_config *config;
+{
+	ip -> client -> config =
+		((struct client_config *)
+		 malloc (sizeof (struct client_config)));
+	if (!ip -> client -> config)
+		error ("no memory for config for %s\n", ip -> name);
+	memset (ip -> client -> config, 0,
+		sizeof *(ip -> client -> config));
+	memcpy (ip -> client -> config, config, sizeof *config);
+}
+
 /* client-lease-statement :==
 	LEASE RBRACE client-lease-declarations LBRACE
 
@@ -406,8 +447,9 @@ void parse_interface_declaration (cfile, outer_config)
 		client-lease-declarations client-lease-declaration */
 
 
-void parse_client_lease_statement (cfile)
+void parse_client_lease_statement (cfile, is_static)
 	FILE *cfile;
+	int is_static;
 {
 	struct client_lease *lease, *lp, *pl;
 	struct interface_info *ip;
@@ -425,6 +467,7 @@ void parse_client_lease_statement (cfile)
 	if (!lease)
 		error ("no memory for lease.\n");
 	memset (lease, 0, sizeof *lease);
+	lease -> is_static = is_static;
 
 	ip = (struct interface_info *)0;
 
@@ -446,6 +489,10 @@ void parse_client_lease_statement (cfile)
 		free_client_lease (lease);
 		return;
 	}
+
+	/* Make sure there's a client state structure... */
+	if (!ip -> client)
+		make_client_state (ip);
 
 	/* The last lease in the lease file on a particular interface is
 	   the active lease for that interface.    Of course, we don't know
@@ -523,10 +570,7 @@ void parse_client_lease_declaration (cfile, lease, ipp)
 			skip_to_semi (cfile);
 			break;
 		}
-		for (ip = interfaces; ip; ip = ip -> next) {
-			if (!strcmp (ip -> name, val))
-				break;
-		}
+		ip = interface_or_dummy (val);
 		*ipp = ip;
 		break;
 
@@ -588,7 +632,9 @@ void parse_option_decl (cfile, options)
 {
 	char *val;
 	int token;
-	unsigned char buf [4];
+	u_int8_t buf [4];
+	u_int8_t hunkbuf [1024];
+	int hunkix = 0;
 	char *vendor;
 	char *fmt;
 	struct universe *universe;
@@ -596,6 +642,7 @@ void parse_option_decl (cfile, options)
 	struct iaddr ip_addr;
 	char *dp;
 	int len;
+	int nul_term = 0;
 
 	token = next_token (&val, cfile);
 	if (!is_identifier (token)) {
@@ -669,17 +716,28 @@ void parse_option_decl (cfile, options)
 				break;
 			switch (*fmt) {
 			      case 'X':
-				options [option -> code].len =
-					parse_X (cfile,
-						 (&options
-						  [option -> code].data));
+				len = parse_X (cfile, &hunkbuf [hunkix],
+					       sizeof hunkbuf - hunkix);
+				hunkix += len;
 				break;
 					
 			      case 't': /* Text string... */
-				options [option -> code].data =
-					parse_string (cfile);
-				options [option -> code].len =
-					strlen (options [option -> code].data);
+				token = next_token (&val, cfile);
+				if (token != STRING) {
+					parse_warn ("expecting string.");
+					skip_to_semi (cfile);
+					return;
+				}
+				len = strlen (val);
+				if (hunkix + len + 1 > sizeof hunkbuf) {
+					parse_warn ("option data buffer %s",
+						    "overflow");
+					skip_to_semi (cfile);
+					return;
+				}
+				memcpy (&hunkbuf [hunkix], val, len + 1);
+				nul_term = 1;
+				hunkix += len;
 				break;
 
 			      case 'I': /* IP address. */
@@ -688,12 +746,14 @@ void parse_option_decl (cfile, options)
 				dp = ip_addr.iabuf;
 
 			      alloc:
-				options [option -> code].data =	malloc (len);
-				if (!options [option -> code].data)
-					error ("no memory for option data.");
-				memcpy (options [option -> code].data,
-					dp, len);
-				options [option -> code].len = len;
+				if (hunkix + len > sizeof hunkbuf) {
+					parse_warn ("option data buffer %s",
+						    "overflow");
+					skip_to_semi (cfile);
+					return;
+				}
+				memcpy (&hunkbuf [hunkix], dp, len);
+				hunkix += len;
 				break;
 
 			      case 'L': /* Unsigned 32-bit integer... */
@@ -761,21 +821,18 @@ void parse_option_decl (cfile, options)
 				return;
 			}
 		}
-		if (*fmt == 'A') {
-			token = peek_token (&val, cfile);
-			if (token == COMMA) {
-				token = next_token (&val, cfile);
-				continue;
-			}
-			break;
-		}
-	} while (*fmt == 'A');
+		token = next_token (&val, cfile);
+	} while (*fmt == 'A' && token == COMMA);
 
-	token = next_token (&val, cfile);
 	if (token != SEMI) {
 		parse_warn ("semicolon expected.");
 		skip_to_semi (cfile);
 		return;
 	}
-}
 
+	options [option -> code].data = malloc (hunkix + nul_term);
+	if (!options [option -> code].data)
+		error ("out of memory allocating option data.");
+	memcpy (options [option -> code].data, hunkbuf, hunkix + nul_term);
+	options [option -> code].len = hunkix;
+}
