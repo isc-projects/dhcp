@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.30 1996/08/27 09:37:50 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.31 1996/08/28 01:29:25 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -460,12 +460,13 @@ void ack_lease (packet, lease, offer, when)
 	struct hardware hto;
 	int result;
 
-	struct tree_cache dhcpoffer_tree;
 	unsigned char lease_time_buf [4];
 	struct tree_cache lease_time_tree;
+	struct tree_cache dhcpoffer_tree;
 	struct tree_cache server_id_tree;
 	struct tree_cache vendor_class_tree;
 	struct tree_cache user_class_tree;
+	struct tree_cache hostname_tree;
 
 	struct class *vendor_class, *user_class;
 	char *filename;
@@ -674,6 +675,18 @@ void ack_lease (packet, lease, offer, when)
 			if (lease -> host -> group -> options [i])
 				options [i] = (lease -> host ->
 					       group -> options [i]);
+	}
+
+	/* If we didn't get a hostname from an option somewhere, see if
+	   we can get one from the lease. */
+	if (!options [DHO_HOST_NAME] && lease -> hostname) {
+		options [DHO_HOST_NAME] = &hostname_tree;
+		options [DHO_HOST_NAME] -> value = lease -> hostname;
+		options [DHO_HOST_NAME] -> buf_size = 
+			options [DHO_HOST_NAME] -> len =
+				strlen (lease -> hostname);
+		options [DHO_HOST_NAME] -> timeout = 0xFFFFFFFF;
+		options [DHO_HOST_NAME] -> tree = (struct tree *)0;
 	}
 
 	/* Now, if appropriate, put in DHCP-specific options that
