@@ -1,6 +1,6 @@
 	    Internet Software Consortium DHCP Distribution
-		    Version 3, Release Candidate 1
-			    April 17, 2001
+	     Version 3, Release Candidate 1 Patchlevel 1
+			    April 18, 2001
 
 			    Release Notes
 
@@ -36,7 +36,7 @@ anything other than documentation and any remaining bug fixes to the
 The 3.0 Release Candidate 1 lease file is not backwards compatible
 with the 3.0 Beta 1 lease file, so if you have to go back, you will
 have to convert your lease files back to the 3.0 Beta 1 format - if
-you try to run a 3.0 Beta 1 server on a 3.0 Beta 2 lease file, it will
+you try to run a 3.0 Beta 1 server on a 3.0 lease file, it will
 cheerfully delete all your leases.
 
 If you are running 3.0 beta 1 and are doing dynamic DNS updates, the
@@ -55,6 +55,25 @@ Measurement Systems, Igor Sharfmesser at Kazakh Telecom, and Brian
 Murrell at BC Tel Advanced Communications.  I'd like to express my
 thanks to all of these good people here, both for working on the code
 and for prodding me into improving it.
+
+		Changes since 3.0 Release Candidate 1
+
+- Fix a small bug in binary-to-ascii, thanks to H. Peter Anvin of
+  Transmeta.
+
+- Fix a memory smash that happens when fixed-address leases are used.
+  ANY SITE AT WHICH FIXED-ADDRESS STATEMENTS ARE BEING USED SHOULD
+  UPGRADE IMMEDIATELY.   This has been a long-standing bug - thanks to
+  Alvise Nobile for discovering it and helping me to find it!
+
+- There is a known problem with the DHCP server doing failover on
+  Compaq Alpha systems.   This patchlevel is not a release candidate
+  because of this bug.   The bug should be straightforward to fix, so
+  a new release candidate is expected shortly.
+
+- There is a known problem in the DDNS update code that is probably a
+  bug, and is not, as far as we know, fixed in this patchlevel.
+
 
 		Changes since 3.0 Beta 2 Patchlevel 24
 
