@@ -33,6 +33,9 @@ enum dhcp_token {
 	EQUAL = '=',
 	BANG = '!',
 	PERCENT = '%',
+ 	PLUS = '+',
+	MINUS = '-',
+	ASTERISK = '*',
 
 	HOST = 256,
 	FIRST_TOKEN = HOST,
@@ -229,7 +232,10 @@ enum dhcp_token {
 	DEFINED,
 	UNSET,
 	EVAL,
-	LET
+	LET,
+	FUNCTION,
+	DEFINE,
+	TSIG_KEY
 };
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\
