@@ -32,6 +32,26 @@ Bakeoff participants at Connectathon who tried their clients against
 dhcpd and told me where it was busted, or, later on, that it wasn't
 busted anymore.
 
+			      DEBUGGING
+
+dhcpd logs to LOG_DAEMON.   Depending on the logging level that you
+choose with syslog, you can get quite a bit of information about what
+dhcpd is doing.   To get the most logging, put the following in your
+/etc/syslog.conf file and restart syslog:
+
+daemon.debug:	/var/log/daemon.log
+
+(obviously, change the filename to suit your taste).
+
+This change may have the unfortunate side effect of capturing a lot of
+information from daemons other than dhcpd that you don't want to look
+at.
+
+You can also compile dhcpd with ``make DEBUG="-g -DDEBUG"''.  If you
+do this, dhcpd will run in the foreground rather than as a daemon, and
+will print its log messages to standard error.  It will also dump the
+contents of all packets it receives and sends.
+
 				 BUGS
 
 Currently, ISC dhcpd supports the DHCP protocol strictly the standard

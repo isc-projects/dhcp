@@ -1,6 +1,6 @@
-/* netbsd.h
+/* bsdos.h
 
-   System dependencies for NetBSD... */
+   System dependencies for BSDI BSD/OS... */
 
 /*
  * Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.

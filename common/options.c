@@ -173,12 +173,15 @@ void cons_options (inpacket, outpacket, options, overload)
 	/* XXX Maybe it would be safe to assume that we can send a packet
 	   to the client that's as big as the one it sent us, even if it
 	   didn't specify a large MTU. */
-	if (inpacket && inpacket -> options [DHO_DHCP_MAX_MESSAGE_SIZE].data)
+	if (inpacket && inpacket -> options [DHO_DHCP_MAX_MESSAGE_SIZE].data) {
 		main_buffer_size =
 			(getUShort (inpacket -> options
 				    [DHO_DHCP_MAX_MESSAGE_SIZE].data)
 			 - DHCP_FIXED_LEN);
-	else
+		/* Enforce a minimum packet size... */
+		if (main_buffer_size < (576 - DHCP_FIXED_LEN))
+			main_buffer_size = 576 - DHCP_FIXED_LEN;
+	} else
 		main_buffer_size = 576 - DHCP_FIXED_LEN;
 
 	/* Preload the option priority list with mandatory options. */

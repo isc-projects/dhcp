@@ -179,9 +179,9 @@ int main (argc, argv, envp)
 	}
 
 	/* Write a pid file. */
-	if ((i = open (_PATH_DHCPD_PID, O_WRONLY | O_CREAT)) >= 0) {
+	if ((i = open (_PATH_DHCPD_PID, O_WRONLY | O_CREAT, 0640)) >= 0) {
 		char obuf [20];
-		sprintf (obuf, "%d\n", getpid ());
+		sprintf (obuf, "%d\n", (int)getpid ());
 		write (i, obuf, strlen (obuf));
 		close (i);
 	}

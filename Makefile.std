@@ -11,7 +11,7 @@ DEBUG=-g
 CFLAGS=$(DEBUG)
 
 dhcpd:	$(OBJS) $(COBJ)
-	cc -o dhcpd $(OBJS) $(COBJ)
+	$(CC) -o dhcpd $(OBJS) $(COBJ)
 
 dhclient:	dhclient.o $(COBJ)
-	cc -o dhclient dhclient.o $(COBJ)
+	$(CC) -o dhclient dhclient.o $(COBJ)

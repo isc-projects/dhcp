@@ -83,6 +83,11 @@ void dhcpdiscover (packet)
 {
 	struct lease *lease = find_lease (packet);
 
+	debug ("Received DHCPDISCOVER from %s",
+	       print_hw_addr (packet -> raw -> htype,
+			      packet -> raw -> hlen,
+			      packet -> raw -> chaddr));
+
 	/* If we didn't find a lease, try to allocate one... */
 	if (!lease) {
 		lease = packet -> subnet -> last_lease;
@@ -106,17 +111,29 @@ void dhcprequest (packet)
 	struct lease *lease = find_lease (packet);
 	struct iaddr cip;
 
-	/* If a client on our local network wants to renew a lease on
-	   an address off our local network, NAK it. */
 	if (packet -> options [DHO_DHCP_REQUESTED_ADDRESS].len) {
 		cip.len = 4;
 		memcpy (cip.iabuf,
 			packet -> options [DHO_DHCP_REQUESTED_ADDRESS].data,
 			4);
+	} else {
+		cip.len = 4;
+		memcpy (cip.iabuf, &packet -> raw -> ciaddr.s_addr, 4);
+	}
+
+	debug ("Received DHCPREQUEST from %s for %s",
+	       print_hw_addr (packet -> raw -> htype,
+			      packet -> raw -> hlen,
+			      packet -> raw -> chaddr),
+	       piaddr (cip));
+
+	/* If a client on our local network wants to renew a lease on
+	   an address off our local network, NAK it. */
+	if (packet -> options [DHO_DHCP_REQUESTED_ADDRESS].len) {
 		if (!addr_eq (packet -> subnet -> net,
 			      subnet_number (cip,
 					     packet -> subnet -> netmask))) {
-			nak_lease (packet);
+			nak_lease (packet, &cip);
 			return;
 		}
 	}
@@ -127,7 +144,7 @@ void dhcprequest (packet)
 		if (!addr_eq (packet -> subnet -> net,
 			      subnet_number (cip,
 					     packet -> subnet -> netmask))) {
-			nak_lease (packet);
+			nak_lease (packet, &cip);
 			return;
 		}
 	}
@@ -149,7 +166,7 @@ void dhcprequest (packet)
 
 	/* If we didn't find a lease, don't try to allocate one... */
 	if (!lease) {
-		nak_lease (packet);
+		nak_lease (packet, &cip);
 		return;
 	}
 
@@ -161,6 +178,12 @@ void dhcprelease (packet)
 {
 	struct lease *lease = find_lease (packet);
 
+	debug ("Received DHCPRELEASE from %s for %s",
+	       print_hw_addr (packet -> raw -> htype,
+			      packet -> raw -> hlen,
+			      packet -> raw -> chaddr),
+	       inet_ntoa (packet -> raw -> ciaddr));
+
 	/* If we found a lease, release it. */
 	if (lease) {
 		release_lease (lease);
@@ -171,6 +194,22 @@ void dhcpdecline (packet)
 	struct packet *packet;
 {
 	struct lease *lease = find_lease (packet);
+	struct iaddr cip;
+
+	if (packet -> options [DHO_DHCP_REQUESTED_ADDRESS].len) {
+		cip.len = 4;
+		memcpy (cip.iabuf,
+			packet -> options [DHO_DHCP_REQUESTED_ADDRESS].data,
+			4);
+	} else {
+		cip.len = 0;
+	}
+
+	debug ("Received DHCPDECLINE from %s for %s",
+	       print_hw_addr (packet -> raw -> htype,
+			      packet -> raw -> hlen,
+			      packet -> raw -> chaddr),
+	       piaddr (cip));
 
 	/* If we found a lease, mark it as unusable and complain. */
 	if (lease) {
@@ -181,10 +220,17 @@ void dhcpdecline (packet)
 void dhcpinform (packet)
 	struct packet *packet;
 {
+	debug ("Received DHCPINFORM from %s for %s",
+	       print_hw_addr (packet -> raw -> htype,
+			      packet -> raw -> hlen,
+			      packet -> raw -> chaddr),
+	       inet_ntoa (packet -> raw -> ciaddr));
+
 }
 
-void nak_lease (packet)
+void nak_lease (packet, cip)
 	struct packet *packet;
+	struct iaddr *cip;
 {
 	struct sockaddr_in to;
 	int result;
@@ -244,8 +290,8 @@ void nak_lease (packet)
 		to.sin_addr = raw.giaddr;
 		to.sin_port = server_port;
 	} else {
-		to.sin_addr.s_addr = INADDR_BROADCAST;
-		to.sin_port = htons (ntohs (server_port) + 1); /* XXX */
+		memcpy (&to.sin_addr.s_addr, cip->iabuf, 4);
+		to.sin_port = packet->client_port;
 	}
 
 	to.sin_family = AF_INET;
@@ -254,14 +300,17 @@ void nak_lease (packet)
 #endif
 	memset (to.sin_zero, 0, sizeof to.sin_zero);
 
-	note ("Sending dhcp NAK to %s, port %d",
+	note ("Sending DHCPNAK to %s at IP address %s",
+	       print_hw_addr (packet -> raw -> htype,
+			      packet -> raw -> hlen,
+			      packet -> raw -> chaddr),
 	      inet_ntoa (to.sin_addr), htons (to.sin_port));
 
 	errno = 0;
-	result = sendto (packet -> client_sock, &raw, outgoing.packet_length,
-			 0, (struct sockaddr *)&to, sizeof to);
+	result = sendpkt (packet, &raw, outgoing.packet_length,
+				(struct sockaddr *) &to, sizeof(to));
 	if (result < 0)
-		warn ("sendto: %m");
+		warn ("sendpkt: %m");
 
 #ifdef DEBUG
 	dump_packet (packet);
@@ -471,6 +520,15 @@ void ack_lease (packet, lease, offer, when)
 		options [DHO_DHCP_USER_CLASS_ID] -> tree = (struct tree *)0;
 	}
 
+	/* Sanity check the lease time. */
+ 	if ((lease->offered_expiry - cur_time) < 0)
+ 		putULong(lease_time_buf, packet->subnet->default_lease_time);
+ 	else if (lease -> offered_expiry - cur_time >
+		 packet -> subnet -> max_lease_time) 
+ 		putULong (lease_time_buf, packet -> subnet -> max_lease_time);
+	else 
+		putULong(lease_time_buf, lease -> offered_expiry - cur_time);
+
 	putULong (lease_time_buf, lease -> offered_expiry - cur_time);
 	options [DHO_DHCP_LEASE_TIME] = &lease_time_tree;
 	options [DHO_DHCP_LEASE_TIME] -> value = lease_time_buf;
@@ -508,7 +566,7 @@ void ack_lease (packet, lease, offer, when)
 
 	/* Otherwise, broadcast it on the local network. */
 	} else {
-		to.sin_addr.s_addr = INADDR_BROADCAST;
+		memcpy (&to.sin_addr.s_addr, lease -> ip_addr.iabuf, 4);
 		to.sin_port = htons (ntohs (server_port) + 1); /* XXX */
 	}
 
@@ -518,14 +576,18 @@ void ack_lease (packet, lease, offer, when)
 #endif
 	memset (to.sin_zero, 0, sizeof to.sin_zero);
 
-	note ("Sending dhcp reply to %s, port %d",
+	note ("Sending %s to %s at IP address %s",
+	      offer == DHCPACK ? "DHCPACK" : "DHCPOFFER",
+	      print_hw_addr (packet -> raw -> htype,
+			     packet -> raw -> hlen,
+			     packet -> raw -> chaddr),
 	      inet_ntoa (to.sin_addr), htons (to.sin_port));
 
 	errno = 0;
-	result = sendto (packet -> client_sock, &raw, outgoing.packet_length,
-			 0, (struct sockaddr *)&to, sizeof to);
+	result = sendpkt (packet, &raw, outgoing.packet_length,
+				(struct sockaddr *) &to, sizeof(to));
 	if (result < 0)
-		warn ("sendto: %m");
+		warn ("sendpkt: %m");
 
 #ifdef DEBUG
 	dump_packet (packet);

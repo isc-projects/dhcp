@@ -1024,7 +1024,7 @@ TIME parse_date (cfile, bc)
 			skip_to_semi (cfile);
 		longjmp (*bc, 1);
 	}
-	tm.tm_mon = atoi (val);
+	tm.tm_mon = atoi (val) - 1;
 
 	/* Slash seperating month from day... */
 	token = next_token (&val, cfile);
@@ -1093,9 +1093,12 @@ TIME parse_date (cfile, bc)
 	}
 	tm.tm_sec = atoi (val);
 
+#ifndef BROKEN_TM_GMT
+	/* linux does not implement these yet */
 	tm.tm_zone = "GMT";
-	tm.tm_isdst = 0;
 	tm.tm_gmtoff = 0;
+#endif
+	tm.tm_isdst = 0;
 
 	/* XXX */ /* We assume that mktime does not use tm_yday. */
 	tm.tm_yday = 0;

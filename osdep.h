@@ -48,3 +48,19 @@
 #include "cf/netbsd.h"
 #endif
 
+#ifdef __FreeBSD__
+#include "cf/freebsd.h"
+#endif
+
+#ifdef sun
+#include "cf/sunos4.h"
+#endif
+
+
+#ifdef ultrix
+#include "cf/ultrix.h"
+#endif
+
+#ifdef linux
+#include "cf/linux.h"
+#endif

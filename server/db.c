@@ -117,7 +117,7 @@ void new_lease_file ()
 
 	/* Make a temporary lease file... */
 	time (&t);
-	sprintf (newfname, "%s.%d", _PATH_DHCPD_DB, t & 32767);
+	sprintf (newfname, "%s.%d", _PATH_DHCPD_DB, (int) (t & 32767));
 	if ((db_file = fopen (newfname, "w")) == NULL) {
 		error ("Can't start new lease file: %m");
 	}

@@ -151,8 +151,11 @@ void bootp (packet)
 #endif
 	memset (to.sin_zero, 0, sizeof to.sin_zero);
 
-	note ("Sending bootp reply to %s, port %d",
-	      inet_ntoa (to.sin_addr), to.sin_port);
+	note ("Sending BOOTREPLY to %s, address %s",
+	      print_hw_addr (packet -> raw -> htype,
+			     packet -> raw -> hlen,
+			     packet -> raw -> chaddr),
+	      inet_ntoa (packet -> raw -> yiaddr));
 
 	errno = 0;
 	result = sendto (packet -> client_sock, &raw, outgoing.packet_length,

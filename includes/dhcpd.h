@@ -54,9 +54,9 @@
 #include <ctype.h>
 #include <time.h>
 
+#include "osdep.h"
 #include "dhcp.h"
 #include "cdefs.h"
-#include "osdep.h"
 #include "tree.h"
 #include "hash.h"
 #include "inet.h"
@@ -150,13 +150,20 @@ typedef unsigned char option_mask [16];
 #define OPTION_SPACE(x)		((x) + 2 * ((x) / 255 + 1))
 
 /* Default path to dhcpd config file. */
-#ifndef _PATH_DHCPD_CONF
 #ifdef DEBUG
 #define _PATH_DHCPD_CONF	"dhcpd.conf"
 #define _PATH_DHCPD_DB		"dhcpd.leases"
 #else
+#ifndef _PATH_DHCPD_CONF
 #define _PATH_DHCPD_CONF	"/etc/dhcpd.conf"
+#endif
+
+#ifndef _PATH_DHCPD_DB
 #define _PATH_DHCPD_DB		"/etc/dhcpd.leases"
+#endif
+
+#ifndef _PATH_DHCPD_PID
+#define _PATH_DHCPD_PID		"/var/run/dhcpd.pid"
 #endif
 #endif
 
@@ -252,7 +259,7 @@ void dhcprequest PROTO ((struct packet *));
 void dhcprelease PROTO ((struct packet *));
 void dhcpdecline PROTO ((struct packet *));
 void dhcpinform PROTO ((struct packet *));
-void nak_lease PROTO ((struct packet *));
+void nak_lease PROTO ((struct packet *, struct iaddr *cip));
 void ack_lease PROTO ((struct packet *, struct lease *, unsigned char, TIME));
 struct lease *find_lease PROTO ((struct packet *));
 
@@ -309,8 +316,11 @@ void dump_raw PROTO ((unsigned char *, int));
 
 /* socket.c */
 u_int32_t *get_interface_list PROTO ((int *));
+char *get_interface PROTO ((u_int32_t));
 void listen_on PROTO ((u_int16_t, u_int32_t));
 void dispatch PROTO ((void));
+int sendpkt PROTO ((struct packet *, struct dhcp_packet *,
+			size_t, struct sockaddr *, int));
 
 /* hash.c */
 struct hash_table *new_hash PROTO ((void));

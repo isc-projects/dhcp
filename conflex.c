@@ -106,7 +106,7 @@ static int get_token (cfile)
 			ttok = read_string (cfile);
 			break;
 		}
-		if (isascii (c) && isdigit (c)) {
+		if ((isascii (c) && isdigit (c)) || c == '-') {
 			ttok = read_number (c, cfile);
 			break;
 		} else if (isascii (c) && isalpha (c)) {
