@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.24 2000/01/08 01:48:42 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.25 2000/01/25 01:42:48 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -132,11 +132,9 @@ isc_result_t enter_host (hd, dynamicp, commit)
 		    (esp -> data.option -> option -> code ==
 		     DHO_DHCP_CLIENT_IDENTIFIER)) {
 			evaluate_option_cache
-				(&hd -> client_identifier,
-				 (struct packet *)0,
-				 (struct lease *)0,
-				 (struct option_state *)0,
-				 (struct option_state *)0,
+				(&hd -> client_identifier, (struct packet *)0,
+				 (struct lease *)0, (struct option_state *)0,
+				 (struct option_state *)0, &global_scope,
 				 esp -> data.option);
 			break;
 		}
@@ -361,7 +359,7 @@ struct subnet *find_host_for_network (host, addr, share)
 					    (struct lease *)0,
 					    (struct option_state *)0,
 					    (struct option_state *)0,
-					    hp -> fixed_addr))
+					    &global_scope, hp -> fixed_addr))
 			continue;
 		for (i = 0; i < fixed_addr.len; i += 4) {
 			ip_address.len = 4;
@@ -886,6 +884,10 @@ int supersede_lease (comp, lease, commit)
 	comp -> hardware_addr = lease -> hardware_addr;
 	comp -> flags = ((lease -> flags & ~PERSISTENT_FLAGS) |
 			 (comp -> flags & ~EPHEMERAL_FLAGS));
+	if (comp -> scope.bindings)
+		free_bindings (&comp -> scope, "supersede_lease");
+	comp -> scope.bindings = lease -> scope.bindings;
+	lease -> scope.bindings = (struct binding *)0;
 
 	if (lease -> on_expiry) {
 		if (comp -> on_expiry)
@@ -1036,6 +1038,7 @@ int supersede_lease (comp, lease, commit)
 			execute_statements ((struct packet *)0, lease,
 					    (struct option_state *)0,
 					    (struct option_state *)0, /* XXX */
+					    &lease -> scope,
 					    comp -> on_expiry);
 			executable_statement_dereference (&comp -> on_expiry,
 							  "supersede_lease");
@@ -1108,18 +1111,15 @@ void release_lease (lease, packet)
 {
 	struct lease lt;
 
-#if defined (NSUPDATE) && 0
-	nsupdate (lease, lease -> state, packet, DELETE);
-#endif
-
 	/* If there are statements to execute when the lease is
 	   released, execute them. */
 	if (lease -> on_release) {
 		execute_statements (packet, lease, packet -> options,
 				    (struct option_state *)0, /* XXX */
-				    lease -> on_release);
-		executable_statement_dereference (&lease -> on_release,
-						  "dhcprelease");
+				    &lease -> scope, lease -> on_release);
+		if (lease -> on_release)
+			executable_statement_dereference (&lease -> on_release,
+							  "dhcprelease");
 	}
 
 	/* We do either the on_release or the on_expiry events, but
@@ -1137,6 +1137,9 @@ void release_lease (lease, packet)
 		lt.on_expiry = 0;
 		lt.on_release = 0;
 		lt.on_commit = 0;
+
+		/* Blow away any bindings. */
+		lt.scope.bindings = (struct binding *)0;
 
 		lt.ends = cur_time;
 		lt.billing_class = (struct class *)0;
@@ -1162,6 +1165,9 @@ void abandon_lease (lease, message)
 	lt.on_release = 0;
 	lt.on_commit = 0;
 
+	/* Blow away any bindings. */
+	lt.scope.bindings = (struct binding *)0;
+
 	lt.ends = cur_time; /* XXX */
 	log_error ("Abandoning IP address %s: %s",
 	      piaddr (lease -> ip_addr), message);
@@ -1186,6 +1192,9 @@ void dissociate_lease (lease)
 	lt.on_expiry = 0;
 	lt.on_release = 0;
 	lt.on_commit = 0;
+
+	/* Blow away any bindings. */
+	lt.scope.bindings = (struct binding *)0;
 
 	if (lt.ends > cur_time)
 		lt.ends = cur_time;
@@ -1217,9 +1226,11 @@ void pool_timer (vpool)
 			execute_statements ((struct packet *)0, lease,
 					    (struct option_state *)0,
 					    (struct option_state *)0, /* XXX */
+					    &lease -> scope,
 					    lease -> on_expiry);
-			executable_statement_dereference (&lease -> on_expiry,
-							  "pool_timer");
+			if (lease -> on_expiry)
+				executable_statement_dereference
+					(&lease -> on_expiry, "pool_timer");
 		}			
 
 		/* If there's an on_release event, blow it away. */
