@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: conflex.c,v 1.42 1999/04/05 15:33:11 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: conflex.c,v 1.43 1999/04/08 17:46:15 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -43,7 +43,7 @@ static int lpos;
 static int line;
 static int tlpos;
 static int tline;
-static int token;
+static enum dhcp_token token;
 static int ugflag;
 static char *tval;
 static char tokbuf [1500];
@@ -55,12 +55,12 @@ int comment_index;
 
 
 static int get_char PROTO ((FILE *));
-static int get_token PROTO ((FILE *));
+static enum dhcp_token get_token PROTO ((FILE *));
 static void skip_to_eol PROTO ((FILE *));
-static int read_string PROTO ((FILE *));
-static int read_number PROTO ((int, FILE *));
-static int read_num_or_name PROTO ((int, FILE *));
-static int intern PROTO ((char *, int));
+static enum dhcp_token read_string PROTO ((FILE *));
+static enum dhcp_token read_number PROTO ((int, FILE *));
+static enum dhcp_token read_num_or_name PROTO ((int, FILE *));
+static enum dhcp_token intern PROTO ((char *, enum dhcp_token));
 
 void new_parse (name)
 	char *name;
@@ -102,11 +102,11 @@ static int get_char (cfile)
 	return c;		
 }
 
-static int get_token (cfile)
+static enum dhcp_token get_token (cfile)
 	FILE *cfile;
 {
 	int c;
-	int ttok;
+	enum dhcp_token ttok;
 	static char tb [2];
 	int l, p, u;
 
@@ -161,7 +161,7 @@ static int get_token (cfile)
 	return ttok;
 }
 
-int next_token (rval, cfile)
+enum dhcp_token next_token (rval, cfile)
 	char **rval;
 	FILE *cfile;
 {
@@ -186,7 +186,7 @@ int next_token (rval, cfile)
 	return rv;
 }
 
-int peek_token (rval, cfile)
+enum dhcp_token peek_token (rval, cfile)
 	char **rval;
 	FILE *cfile;
 {
@@ -227,7 +227,7 @@ static void skip_to_eol (cfile)
 	} while (1);
 }
 
-static int read_string (cfile)
+static enum dhcp_token read_string (cfile)
 	FILE *cfile;
 {
 	int i;
@@ -261,7 +261,7 @@ static int read_string (cfile)
 	return STRING;
 }
 
-static int read_number (c, cfile)
+static enum dhcp_token read_number (c, cfile)
 	int c;
 	FILE *cfile;
 {
@@ -297,12 +297,12 @@ static int read_number (c, cfile)
 	return token;
 }
 
-static int read_num_or_name (c, cfile)
+static enum dhcp_token read_num_or_name (c, cfile)
 	int c;
 	FILE *cfile;
 {
 	int i = 0;
-	int rv = NUMBER_OR_NAME;
+	enum dhcp_token rv = NUMBER_OR_NAME;
 	tokbuf [i++] = c;
 	for (; i < sizeof tokbuf; i++) {
 		c = get_char (cfile);
@@ -325,9 +325,9 @@ static int read_num_or_name (c, cfile)
 	return intern (tval, rv);
 }
 
-static int intern (atom, dfv)
+static enum dhcp_token intern (atom, dfv)
 	char *atom;
-	int dfv;
+	enum dhcp_token dfv;
 {
 	if (!isascii (atom [0]))
 		return dfv;
