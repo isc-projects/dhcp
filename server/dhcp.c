@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.130 1999/11/23 19:08:24 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.131 2000/01/05 18:16:36 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -858,9 +858,10 @@ void nak_lease (packet, cip)
 	dump_raw ((unsigned char *)&raw, outgoing.packet_length);
 #endif
 
-	hto.htype = packet -> raw -> htype;
+	hto.hbuf [0] = packet -> raw -> htype;
 	hto.hlen = packet -> raw -> hlen;
-	memcpy (hto.haddr, packet -> raw -> chaddr, hto.hlen);
+	memcpy (&hto.hbuf [1], packet -> raw -> chaddr, hto.hlen);
+	hto.hlen++;
 
 	/* Set up the common stuff... */
 	to.sin_family = AF_INET;
@@ -1078,7 +1079,7 @@ void ack_lease (packet, lease, offer, when, msg)
 						     state -> options, oc))) {
 			do {
 				seek = (find_lease_by_hw_addr
-					(lease -> hardware_addr.haddr,
+					(lease -> hardware_addr.hbuf,
 					 lease -> hardware_addr.hlen));
 				while (seek) {
 					if (seek != lease &&
@@ -1330,6 +1331,45 @@ void ack_lease (packet, lease, offer, when, msg)
 				lease_time = default_lease_time;
 		}
 
+#if defined (FAILOVER_PROTOCOL)
+		/* Okay, we know the lease duration.   Now check the
+		   failover state, if any. */
+		if (lease -> pool -> shared_network -> failover_peer) {
+			dhcp_failover_state_t *peer =
+			    lease -> pool -> failover_peer;
+
+			/* If the lease time we arrived at exceeds what
+			   the peer has, first update the peer. */
+			/* XXX This may result in updates that only push
+			   XXX the peer's expiry time for this lease up
+			   XXX by a few seconds - think about this again
+			   XXX later. */
+			if (cur_time + lease_time > lease -> tsfp) {
+				/* Here we're assuming that if we don't have
+				   to update tstp, there's already an update
+				   queued.   May want to revisit this.  */
+				if (cur_time + lease_time < lease -> tstp) {
+					lease -> tstp = cur_time + lease_time;
+					if (offer == DHCPACK)
+						update_partner (lease);
+				}
+				/* Now choose a lease time that is either
+				   MCLT, for a lease that's never before been
+				   assigned, or TSFP + MCLT for a lease that
+				   has.
+				   XXX Note that TSFP may be < cur_time.
+				   XXX What do we do in this case?
+				   XXX should the expiry timer on the lease
+				   XXX set tsfp and tstp to zero? */
+				if (lease -> tsfp == 0)
+					lease_time = peer -> mclt;
+				else
+					lease_time = (lease -> tsfp  - cur_time
+						      + peer -> mclt);
+			}
+		}
+#endif /* FAILOVER_PROTOCOL */
+
 		/* If the lease duration causes the time value to wrap,
 		   use the maximum expiry time. */
 		if (cur_time + lease_time < cur_time)
@@ -1430,15 +1470,16 @@ void ack_lease (packet, lease, offer, when, msg)
 	if (lease -> flags & STATIC_LEASE) {
 		/* Copy the hardware address into the static lease
 		   structure. */
-		lease -> hardware_addr.hlen = packet -> raw -> hlen;
-		lease -> hardware_addr.htype = packet -> raw -> htype;
-		memcpy (lease -> hardware_addr.haddr, packet -> raw -> chaddr,
+		lease -> hardware_addr.hlen = packet -> raw -> hlen + 1;
+		lease -> hardware_addr.hbuf [0] = packet -> raw -> htype;
+		memcpy (&lease -> hardware_addr.hbuf [1],
+			packet -> raw -> chaddr,
 			sizeof packet -> raw -> chaddr); /* XXX */
 	} else {
 		/* Record the hardware address, if given... */
-		lt.hardware_addr.hlen = packet -> raw -> hlen;
-		lt.hardware_addr.htype = packet -> raw -> htype;
-		memcpy (lt.hardware_addr.haddr, packet -> raw -> chaddr,
+		lt.hardware_addr.hlen = packet -> raw -> hlen + 1;
+		lt.hardware_addr.hbuf [0] = packet -> raw -> htype;
+		memcpy (&lt.hardware_addr.hbuf [1], packet -> raw -> chaddr,
 			sizeof packet -> raw -> chaddr);
 
 		/* Install the new information about this lease in the
@@ -1886,9 +1927,10 @@ void dhcp_reply (lease)
 	} else
 		bufs |= 2; /* XXX */
 
-	memcpy (raw.chaddr, lease -> hardware_addr.haddr, sizeof raw.chaddr);
-	raw.hlen = lease -> hardware_addr.hlen;
-	raw.htype = lease -> hardware_addr.htype;
+	memcpy (raw.chaddr,
+		&lease -> hardware_addr.hbuf [1], sizeof raw.chaddr);
+	raw.hlen = lease -> hardware_addr.hlen - 1;
+	raw.htype = lease -> hardware_addr.hbuf [0];
 
 	/* See if this is a Microsoft client that NUL-terminates its
 	   strings and expects us to do likewise... */
@@ -1934,10 +1976,10 @@ void dhcp_reply (lease)
 		   ? (state -> offer == DHCPACK ? "DHCPACK" : "DHCPOFFER")
 		   : "BOOTREPLY"),
 		  piaddr (lease -> ip_addr),
-		  (lease -> hardware_addr.htype
-		   ? print_hw_addr (lease -> hardware_addr.htype,
-				    lease -> hardware_addr.hlen,
-				    lease -> hardware_addr.haddr)
+		  (lease -> hardware_addr.hlen
+		   ? print_hw_addr (lease -> hardware_addr.hbuf [0],
+				    lease -> hardware_addr.hlen - 1,
+				    &lease -> hardware_addr.hbuf [1])
 		   : print_hex_1 (lease -> uid_len, lease -> uid, 
 				  lease -> uid_len)),
 		  s ? "(" : "", s ? s : "", s ? ") " : "",
@@ -1946,9 +1988,8 @@ void dhcp_reply (lease)
 		   : state -> ip -> name));
 
 	/* Set up the hardware address... */
-	hto.htype = lease -> hardware_addr.htype;
 	hto.hlen = lease -> hardware_addr.hlen;
-	memcpy (hto.haddr, lease -> hardware_addr.haddr, hto.hlen);
+	memcpy (hto.hbuf, lease -> hardware_addr.hbuf, hto.hlen);
 
 	to.sin_family = AF_INET;
 #ifdef HAVE_SA_LEN
@@ -2300,11 +2341,11 @@ struct lease *find_lease (packet, share, ours)
 	       memcmp (ip_lease -> uid, client_identifier.data,
 		       ip_lease -> uid_len))) ||
 	     (!ip_lease -> uid &&
-	      (ip_lease -> hardware_addr.htype != packet -> raw -> htype ||
-	       ip_lease -> hardware_addr.hlen != packet -> raw -> hlen ||
-	       memcmp (ip_lease -> hardware_addr.haddr,
+	      (ip_lease -> hardware_addr.hbuf [0] != packet -> raw -> htype ||
+	       ip_lease -> hardware_addr.hlen != packet -> raw -> hlen + 1 ||
+	       memcmp (&ip_lease -> hardware_addr.hbuf,
 		       packet -> raw -> chaddr,
-		       ip_lease -> hardware_addr.hlen))))) {
+		       (unsigned)(ip_lease -> hardware_addr.hlen - 1)))))) {
 #if defined (DEBUG_FIND_LEASE)
 		if (ip_lease)
 			log_info ("rejecting lease for requested address.");
@@ -2607,6 +2648,20 @@ struct lease *allocate_lease (packet, pool, ok)
 
 	lease = pool -> last_lease;
 
+#if defined (FAILOVER_PROTOCOL)
+	/* XXX Do we need code here to ignore PEER_IS_OWNER and just check
+	   XXX tstp if we're in, e.g., PARTNER_DOWN?   Where do we deal with
+	   XXX CONFLICT_DETECTED, et al? */
+	/* Skip to the most expired lease in the pool that is not owned by a
+	   failover peer. */
+	if (lease -> pool && lease -> pool -> failover_peer) {
+		while ((lease -> flags & PEER_IS_OWNER) &&
+		       (lease -> ends <=
+			cur_time + lease -> pool -> failover_peer -> mclt))
+			lease = lease -> prev;
+	}
+#endif
+
 	/* If there are no leases in the pool that have
 	   expired, try the next one. */
 	if (!lease || lease -> ends > cur_time)
@@ -2614,6 +2669,8 @@ struct lease *allocate_lease (packet, pool, ok)
 
 	/* If we find an abandoned lease, and no other lease qualifies
 	   better, take it. */
+	/* XXX what if there are non-abandoned leases that are younger
+	   XXX than this?   Shouldn't we hunt for those here? */
 	if ((lease -> flags & ABANDONED_LEASE)) {
 		/* If we already have a non-abandoned lease that we didn't
 		   love, but that's okay, don't reclaim the abandoned lease. */
