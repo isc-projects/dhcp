@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: db.c,v 1.7 1996/08/27 09:42:26 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: db.c,v 1.8 1996/09/02 21:16:24 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -185,7 +185,7 @@ void new_lease_file ()
 
 	/* Make a temporary lease file... */
 	time (&t);
-	sprintf (newfname, "%s.%d", _PATH_DHCPD_DB, (int) (t & 32767));
+	sprintf (newfname, "%s.%d", path_dhcpd_db, (int) (t & 32767));
 	if ((db_file = fopen (newfname, "w")) == NULL) {
 		error ("Can't start new lease file: %m");
 	}
@@ -195,18 +195,18 @@ void new_lease_file ()
 	write_leases ();
 
 	/* Get the old database out of the way... */
-	sprintf (backfname, "%s~", _PATH_DHCPD_DB);
+	sprintf (backfname, "%s~", path_dhcpd_db);
 	if (unlink (backfname) < 0 && errno != ENOENT)
 		error ("Can't remove old lease database backup %s: %m",
 		       backfname);
-	if (link (_PATH_DHCPD_DB, backfname) < 0)
+	if (link (path_dhcpd_db, backfname) < 0)
 		error ("Can't backup lease database %s to %s: %m",
-		       _PATH_DHCPD_DB, backfname);
+		       path_dhcpd_db, backfname);
 	
 	/* Move in the new file... */
-	if (rename (newfname, _PATH_DHCPD_DB) < 0)
+	if (rename (newfname, path_dhcpd_db) < 0)
 		error ("Can't install new lease database %s to %s: %m",
-		       newfname, _PATH_DHCPD_DB);
+		       newfname, path_dhcpd_db);
 
 	counting = 1;
 }

@@ -288,6 +288,10 @@ extern int log_perror;
 extern struct interface_info fallback_interface;
 #endif
 
+extern char *path_dhcpd_conf;
+extern char *path_dhcpd_db;
+extern char *path_dhcpd_pid;
+
 int main PROTO ((int, char **, char **));
 void cleanup PROTO ((void));
 

@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.31 1996/08/30 23:39:37 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.32 1996/09/02 21:16:25 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -61,7 +61,7 @@ int readconf ()
 	int token;
 	int declaration = 0;
 
-	new_parse (_PATH_DHCPD_CONF);
+	new_parse (path_dhcpd_conf);
 
 	/* Set up the initial dhcp option universe. */
 	initialize_universes ();
@@ -72,8 +72,8 @@ int readconf ()
 	root_group.bootp_lease_cutoff = MAX_TIME;
 	root_group.boot_unknown_clients = 1;
 
-	if ((cfile = fopen (_PATH_DHCPD_CONF, "r")) == NULL)
-		error ("Can't open %s: %m", _PATH_DHCPD_CONF);
+	if ((cfile = fopen (path_dhcpd_conf, "r")) == NULL)
+		error ("Can't open %s: %m", path_dhcpd_conf);
 	do {
 		token = peek_token (&val, cfile);
 		if (token == EOF)
@@ -99,7 +99,7 @@ void read_leases ()
 	char *val;
 	int token;
 
-	new_parse (_PATH_DHCPD_DB);
+	new_parse (path_dhcpd_db);
 
 	/* Open the lease file.   If we can't open it, fail.   The reason
 	   for this is that although on initial startup, the absence of
@@ -110,9 +110,9 @@ void read_leases ()
 	   human has corrected the database problem, then we are left
 	   thinking that no leases have been assigned to anybody, which
 	   could create severe network chaos. */
-	if ((cfile = fopen (_PATH_DHCPD_DB, "r")) == NULL)
+	if ((cfile = fopen (path_dhcpd_db, "r")) == NULL)
 		error ("Can't open lease database %s: %m -- %s",
-		       _PATH_DHCPD_DB,
+		       path_dhcpd_db,
 		       "check for failed database rewrite attempt!");
 	do {
 		token = next_token (&val, cfile);

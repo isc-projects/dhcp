@@ -51,6 +51,14 @@ dhcpd - Dynamic Host Configuration Protocol Server
 .B -d
 ]
 [
+.B -cf
+.I config-file
+]
+[
+.B -lf
+.I lease-file
+]
+[
 .I if0
 [
 .I ...ifN
@@ -153,6 +161,15 @@ complete log of all dhcp activity must be kept but syslogd is not
 reliable or otherwise cannot be used.   Normally, dhcpd will log all
 output using the syslog(3) function with the log facility set to
 LOG_DAEMON.
+.PP
+Dhcpd can be made to use an alternate configuration file with the
+.B -cf
+flag, or an alternate lease file with the
+.B -lf
+flag.   Because of the importance of using the same lease database at
+all times when running dhcpd in production, these options should be
+used \fBonly\fR for testing lease files or database files in a
+non-production environment.
 .SH CONFIGURATION
 The syntax of the dhcpd.conf(8) file is discussed seperately.   This
 section should be used as an overview of the configuration process,
