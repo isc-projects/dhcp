@@ -1906,9 +1906,9 @@ isc_result_t enter_dns_zone (struct dns_zone *);
 isc_result_t dns_zone_lookup (struct dns_zone **, const char *);
 int dns_zone_dereference PROTO ((struct dns_zone **, const char *, int));
 #if defined (NSUPDATE)
-ns_rcode find_cached_zone (const char *, ns_class, char *,
-			   size_t, struct in_addr *, int, int *,
-			   struct dns_zone **);
+isc_result_t find_cached_zone (const char *, ns_class, char *,
+			       size_t, struct in_addr *, int, int *,
+			       struct dns_zone **);
 void forget_zone (struct dns_zone **);
 void repudiate_zone (struct dns_zone **);
 void cache_found_zone (ns_class, char *, struct in_addr *, int);
