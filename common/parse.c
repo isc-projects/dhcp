@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.17 1999/03/16 06:37:49 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.18 1999/03/25 21:59:36 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -700,12 +700,13 @@ TIME parse_date (cfile)
  		   IDENTIFIER . IDENTIFIER
  */
 
-struct option *parse_option_name (cfile)
+struct option *parse_option_name (cfile, allocate)
 	FILE *cfile;
+	int allocate;
 {
 	char *val;
 	enum dhcp_token token;
-	char *vendor;
+	char *uname;
 	struct universe *universe;
 	struct option *option;
 
@@ -716,10 +717,10 @@ struct option *parse_option_name (cfile)
 			skip_to_semi (cfile);
 		return (struct option *)0;
 	}
-	vendor = malloc (strlen (val) + 1);
-	if (!vendor)
-		log_fatal ("no memory for vendor information.");
-	strcpy (vendor, val);
+	uname = malloc (strlen (val) + 1);
+	if (!uname)
+		log_fatal ("no memory for uname information.");
+	strcpy (uname, val);
 	token = peek_token (&val, cfile);
 	if (token == DOT) {
 		/* Go ahead and take the DOT token... */
@@ -735,21 +736,21 @@ struct option *parse_option_name (cfile)
 		}
 
 		/* Look up the option name hash table for the specified
-		   vendor. */
+		   uname. */
 		universe = ((struct universe *)
 			    hash_lookup (&universe_hash,
-					 (unsigned char *)vendor, 0));
+					 (unsigned char *)uname, 0));
 		/* If it's not there, we can't parse the rest of the
 		   declaration. */
 		if (!universe) {
-			parse_warn ("no vendor named %s.", vendor);
+			parse_warn ("no option space named %s.", uname);
 			skip_to_semi (cfile);
 			return (struct option *)0;
 		}
 	} else {
 		/* Use the default hash table, which contains all the
 		   standard dhcp option names. */
-		val = vendor;
+		val = uname;
 		universe = &dhcp_universe;
 	}
 
@@ -759,18 +760,247 @@ struct option *parse_option_name (cfile)
 
 	/* If we didn't get an option structure, it's an undefined option. */
 	if (!option) {
-		if (val == vendor)
+		/* If we've been told to allocate, that means that this
+		   (might) be an option code definition, so we'll create
+		   an option structure just in case. */
+		if (allocate) {
+			option = new_option ("parse_option_name");
+			if (val == uname)
+				option -> name = val;
+			else {
+				free (uname);
+				option -> name = dmalloc (strlen (val) + 1,
+							  "parse_option_name");
+				if (!option -> name)
+					log_fatal ("no memory for option %s.%s",
+					           universe -> name, val);
+				strcpy (option -> name, val);
+			}
+			option -> universe = universe;
+			option -> code = -1;
+			return option;
+		}
+		if (val == uname)
 			parse_warn ("no option named %s", val);
 		else
-			parse_warn ("no option named %s for vendor %s",
-				    val, vendor);
+			parse_warn ("no option named %s in space %s",
+				    val, uname);
 		skip_to_semi (cfile);
 		return (struct option *)0;
 	}
 
 	/* Free the initial identifier token. */
-	free (vendor);
+	free (uname);
 	return option;
+}
+
+/* This is faked up to look good right now.   Ideally, this should do a
+   recursive parse and allow arbitrary data structure definitions, but for
+   now it just allows you to specify a single type, an array of single types,
+   a sequence of types, or an array of sequences of types.
+
+   ocd :== NUMBER EQUALS ocsd SEMI
+
+   ocsd :== ocsd_type |
+	    ocsd_type_sequence |
+	    ARRAY OF ocsd_type |
+	    ARRAY OF ocsd_type_sequence
+
+   ocsd_type :== BOOLEAN |
+		 INTEGER NUMBER |
+		 SIGNED INTEGER NUMBER |
+		 UNSIGNED INTEGER NUMBER |
+		 IP-ADDRESS |
+		 TEXT |
+		 STRING
+
+   ocsd_type_sequence :== LBRACE ocsd_types RBRACE
+
+   ocsd_type :== ocsd_type |
+		 ocsd_types ocsd_type */
+
+int parse_option_code_definition (cfile, option)
+	FILE *cfile;
+	struct option *option;
+{
+	char *val;
+	enum dhcp_token token;
+	int arrayp = 0;
+	int recordp = 0;
+	int no_more_in_record = 0;
+	char tokbuf [128];
+	int tokix = 0;
+	char type;
+	int code;
+	int is_signed;
+	
+	/* Parse the option code. */
+	token = next_token (&val, cfile);
+	if (token != NUMBER) {
+		parse_warn ("expecting option code number.");
+		skip_to_semi (cfile);
+		return 0;
+	}
+	option -> code = atoi (val);
+
+	token = next_token (&val, cfile);
+	if (token != EQUAL) {
+		parse_warn ("expecting \"=\"");
+		skip_to_semi (cfile);
+		return 0;
+	}
+
+	/* See if this is an array. */
+	token = next_token (&val, cfile);
+	if (token == ARRAY) {
+		token = next_token (&val, cfile);
+		if (token != OF) {
+			parse_warn ("expecting \"of\".");
+			skip_to_semi (cfile);
+			return 0;
+		}
+		arrayp = 1;
+		token = next_token (&val, cfile);
+	}
+
+	if (token == LBRACE) {
+		recordp = 1;
+		token = next_token (&val, cfile);
+	}
+
+	/* At this point we're expecting a data type. */
+      next_type:
+	switch (token) {
+	      case BOOLEAN:
+		type = 'f';
+		break;
+	      case INTEGER:
+		is_signed = 1;
+	      parse_integer:
+		token = next_token (&val, cfile);
+		if (token != NUMBER) {
+			parse_warn ("expecting number.");
+			skip_to_rbrace (cfile, recordp);
+			if (recordp)
+				skip_to_semi (cfile);
+			return 0;
+		}
+		switch (atoi (val)) {
+		      case 8:
+			type = is_signed ? 'b' : 'B';
+			break;
+		      case 16:
+			type = is_signed ? 's' : 'S';
+			break;
+		      case 32:
+			type = is_signed ? 'l' : 'L';
+			break;
+		      default:
+			parse_warn ("%s bit precision is not supported.", val);
+			skip_to_rbrace (cfile, recordp);
+			if (recordp)
+				skip_to_semi (cfile);
+			return 0;
+		}
+		break;
+	      case SIGNED:
+		is_signed = 1;
+	      parse_signed:
+		token = next_token (&val, cfile);
+		if (token != INTEGER) {
+			parse_warn ("expecting \"integer\" keyword.");
+			skip_to_rbrace (cfile, recordp);
+			if (recordp)
+				skip_to_semi (cfile);
+			return 0;
+		}
+		goto parse_integer;
+	      case UNSIGNED:
+		is_signed = 0;
+		goto parse_signed;
+
+	      case IP_ADDRESS:
+		type = 'I';
+		break;
+	      case TEXT:
+		type = 't';
+	      no_arrays:
+		if (arrayp) {
+			parse_warn ("arrays of text strings not %s",
+				    "yet supported.");
+			skip_to_rbrace (cfile, recordp);
+			if (recordp)
+				skip_to_semi (cfile);
+			return 0;
+		}
+		no_more_in_record = 1;
+		break;
+	      case STRING:
+		type = 'X';
+		goto no_arrays;
+
+	      default:
+		parse_warn ("unknown data type %s", val);
+		skip_to_rbrace (cfile, recordp);
+		if (recordp)
+			skip_to_semi (cfile);
+		return 0;
+	}
+
+	if (tokix == sizeof tokbuf) {
+		parse_warn ("too many types in record.");
+		skip_to_rbrace (cfile, recordp);
+		if (recordp)
+			skip_to_semi (cfile);
+		return 0;
+	}
+	tokbuf [tokix++] = type;
+
+	if (recordp) {
+		token = next_token (&val, cfile);
+		if (token == COMMA) {
+			if (no_more_in_record) {
+				parse_warn ("%s must be at end of record.",
+					    type == 't' ? "text" : "string");
+				skip_to_rbrace (cfile, 1);
+				if (recordp)
+					skip_to_semi (cfile);
+				return 0;
+			}
+			token = next_token (&val, cfile);
+			goto next_type;
+		}
+		if (token != RBRACE) {
+			parse_warn ("expecting right brace.");
+			skip_to_rbrace (cfile, 1);
+			if (recordp)
+				skip_to_semi (cfile);
+			return 0;
+		}
+	}
+	if (!parse_semi (cfile)) {
+		parse_warn ("semicolon expected.");
+		skip_to_semi (cfile);
+		if (recordp)
+			skip_to_semi (cfile);
+		return 0;
+	}
+	option -> format = dmalloc (tokix + arrayp + 1,
+				    "parse_option_code_definition");
+	if (!option -> format)
+		log_fatal ("no memory for option format.");
+	memcpy (option -> format, tokbuf, tokix);
+	if (arrayp)
+		option -> format [tokix++] = 'A';
+	option -> format [tokix] = 0;
+	if (option -> universe -> options [option -> code]) {
+		/* XXX Free the option, but we can't do that now because they
+		   XXX may start out static. */
+	}
+	option -> universe -> options [option -> code] = option;
+	add_hash (option -> universe -> hash,
+		  (unsigned char *)option -> name, 0, (unsigned char *)option);
+	return 1;
 }
 
 /*
@@ -929,7 +1159,7 @@ struct executable_statement *parse_executable_statement (cfile, lose)
 	      case SUPERSEDE:
 	      case OPTION:
 		token = next_token (&val, cfile);
-		option = parse_option_name (cfile);
+		option = parse_option_name (cfile, 0);
 		if (!option) {
 			*lose = 1;
 			return (struct executable_statement *)0;
@@ -939,7 +1169,7 @@ struct executable_statement *parse_executable_statement (cfile, lose)
 
 	      case DEFAULT:
 		token = next_token (&val, cfile);
-		option = parse_option_name (cfile);
+		option = parse_option_name (cfile, 0);
 		if (!option) {
 			*lose = 1;
 			return (struct executable_statement *)0;
@@ -949,7 +1179,7 @@ struct executable_statement *parse_executable_statement (cfile, lose)
 
 	      case PREPEND:
 		token = next_token (&val, cfile);
-		option = parse_option_name (cfile);
+		option = parse_option_name (cfile, 0);
 		if (!option) {
 			*lose = 1;
 			return (struct executable_statement *)0;
@@ -959,7 +1189,7 @@ struct executable_statement *parse_executable_statement (cfile, lose)
 
 	      case APPEND:
 		token = next_token (&val, cfile);
-		option = parse_option_name (cfile);
+		option = parse_option_name (cfile, 0);
 		if (!option) {
 			*lose = 1;
 			return (struct executable_statement *)0;
@@ -1225,7 +1455,7 @@ int parse_non_binary (expr, cfile, lose, context)
 		if (!expression_allocate (expr, "parse_expression: EXISTS"))
 			log_fatal ("can't allocate expression");
 		(*expr) -> op = expr_exists;
-		(*expr) -> data.option = parse_option_name (cfile);
+		(*expr) -> data.option = parse_option_name (cfile, 0);
 		if (!(*expr) -> data.option) {
 			*lose = 1;
 			expression_dereference (expr,
@@ -1336,7 +1566,7 @@ int parse_non_binary (expr, cfile, lose, context)
 		if (!expression_allocate (expr, "parse_expression: OPTION"))
 			log_fatal ("can't allocate expression");
 		(*expr) -> op = expr_option;
-		(*expr) -> data.option = parse_option_name (cfile);
+		(*expr) -> data.option = parse_option_name (cfile, 0);
 		if (!(*expr) -> data.option) {
 			*lose = 1;
 			expression_dereference (expr,
