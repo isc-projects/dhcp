@@ -59,7 +59,7 @@ struct hash_bucket {
 	hashed_object_t *value;
 };
 
-typedef int (*hash_comparator_t)(const void *, const void *, size_t);
+typedef int (*hash_comparator_t)(const void *, const void *, unsigned long);
 
 struct hash_table {
 	unsigned hash_count;

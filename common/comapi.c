@@ -50,7 +50,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: comapi.c,v 1.1 2000/05/16 23:12:09 mellon Exp $ Copyright (c) 1999-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: comapi.c,v 1.2 2000/05/17 16:03:59 mellon Exp $ Copyright (c) 1999-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -367,6 +367,7 @@ isc_result_t dhcp_group_lookup (omapi_object_t **lp,
 		group = (struct group_object *)0;
 		if (group_name_hash &&
 		    group_hash_lookup (&group, group_name_hash,
+				       (const char *)
 				       tv -> value -> u.buffer.value,
 				       tv -> value -> u.buffer.len, MDL)) {
 			omapi_value_dereference (&tv, MDL);

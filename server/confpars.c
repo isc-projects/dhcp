@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.110 2000/05/16 23:03:37 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.111 2000/05/17 16:04:23 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -615,7 +615,7 @@ void parse_failover_peer (cfile, group, type)
 	char *name;
 	u_int32_t split;
 	u_int8_t hba [32];
-	int hba_len = sizeof hba;
+	unsigned hba_len = sizeof hba;
 	int i;
 	struct expression *expr;
 	isc_result_t status;

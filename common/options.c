@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.59 2000/05/16 23:02:27 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.60 2000/05/17 16:04:02 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -1194,7 +1194,7 @@ int option_space_encapsulate (result, packet, lease,
 
 	u = (struct universe *)0;
 	universe_hash_lookup (&u, universe_hash,
-			      name -> data, name -> len, MDL);
+			      (const char *)name -> data, name -> len, MDL);
 	if (!u) {
 		log_error ("unknown option space %s.", name -> data);
 		return 0;

@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.73 2000/05/16 23:02:28 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.74 2000/05/17 16:04:03 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1122,7 +1122,7 @@ int parse_option_code_definition (cfile, option)
 	}
 	option -> universe -> options [option -> code] = option;
 	option_hash_add (option -> universe -> hash,
-			 (const unsigned char *)option -> name,
+			 (const char *)option -> name,
 			 0, option, MDL);
 	return 1;
 }

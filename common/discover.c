@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: discover.c,v 1.27 2000/05/16 23:02:12 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: discover.c,v 1.28 2000/05/17 16:04:00 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -325,8 +325,8 @@ void discover_interfaces (state)
 			interface_dereference (&tmp, MDL);
 			tmp = interfaces;
 
-			if (interface_discovery_hook)
-				(*interface_discovery_hook (tmp);
+			if (dhcp_interface_discovery_hook)
+				(*dhcp_interface_discovery_hook) (tmp);
 
 		}
 		fclose (proc_dev);

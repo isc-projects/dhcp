@@ -307,7 +307,7 @@ isc_result_t omapi_connection_connect (omapi_object_t *h)
 	if (c -> state == omapi_connection_connecting) {
 		sl = sizeof error;
 		if (getsockopt (c -> socket, SOL_SOCKET, SO_ERROR,
-				&error, &sl) < 0) {
+				(char *)&error, &sl) < 0) {
 			omapi_disconnect (h, 1);
 			return ISC_R_SUCCESS;
 		}

@@ -1182,7 +1182,7 @@ struct lease *new_leases PROTO ((unsigned, const char *, int));
 OMAPI_OBJECT_ALLOC_DECL (lease, struct lease, dhcp_type_lease)
 OMAPI_OBJECT_ALLOC_DECL (class, struct class, dhcp_type_class)
 OMAPI_OBJECT_ALLOC_DECL (pool, struct pool, dhcp_type_pool)
-OMAPI_OBJECT_ALLOC_DECL (host, struct host_decl, dhcp_type_host);
+OMAPI_OBJECT_ALLOC_DECL (host, struct host_decl, dhcp_type_host)
 
 /* alloc.c */
 OMAPI_OBJECT_ALLOC_DECL (subnet, struct subnet, dhcp_type_subnet)
@@ -1512,7 +1512,7 @@ struct protocol *add_protocol PROTO ((const char *, int,
 
 void remove_protocol PROTO ((struct protocol *));
 OMAPI_OBJECT_ALLOC_DECL (interface,
-			 struct interface_info, dhcp_type_interface);
+			 struct interface_info, dhcp_type_interface)
 
 /* hash.c */
 struct hash_table *new_hash PROTO ((hash_reference, hash_dereference, int));
@@ -1523,7 +1523,7 @@ void delete_hash_entry PROTO ((struct hash_table *, const unsigned char *,
 			       unsigned, const char *, int));
 int hash_lookup PROTO ((hashed_object_t **, struct hash_table *,
 			const unsigned char *, unsigned, const char *, int));
-int casecmp (const void *s, const void *t, unsigned len);
+int casecmp (const void *s, const void *t, unsigned long len);
 HASH_FUNCTIONS_DECL (group, const char *, struct group_object)
 HASH_FUNCTIONS_DECL (universe, const char *, struct universe)
 HASH_FUNCTIONS_DECL (option, const char *, struct option)
@@ -2233,16 +2233,15 @@ isc_result_t dhcp_failover_state_remove PROTO ((omapi_object_t *,
 int dhcp_failover_state_match (dhcp_failover_state_t *, u_int8_t *, unsigned);
 const char *dhcp_failover_reject_reason_print (int);
 const char *dhcp_failover_state_name_print (enum failover_state);
-failover_option_t *dhcp_failover_option_printf PROTO ((unsigned, char *,
-						       unsigned *,
-						       unsigned, 
-						       const char *, ...));
+failover_option_t *dhcp_failover_option_printf (unsigned, char *,
+						unsigned *,
+						unsigned, 
+						const char *, ...);
 failover_option_t *dhcp_failover_make_option PROTO ((unsigned, char *,
 						     unsigned *,
 						     unsigned, ...));
-isc_result_t dhcp_failover_put_message PROTO ((dhcp_failover_link_t *,
-					       omapi_object_t *,
-					       int, ...));
+isc_result_t dhcp_failover_put_message (dhcp_failover_link_t *,
+					omapi_object_t *, int, ...);
 isc_result_t dhcp_failover_send_connect PROTO ((omapi_object_t *));
 isc_result_t dhcp_failover_send_connectack PROTO ((omapi_object_t *, int));
 isc_result_t dhcp_failover_send_disconnect PROTO ((omapi_object_t *,

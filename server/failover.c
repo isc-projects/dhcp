@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.14 2000/05/16 23:03:45 mellon Exp $ Copyright (c) 1999-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.15 2000/05/17 16:04:26 mellon Exp $ Copyright (c) 1999-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1140,7 +1140,8 @@ isc_result_t dhcp_failover_state_signal (omapi_object_t *o,
 		} else if (link -> imsg -> type == FTM_POOLREQ) {
 			dhcp_failover_pool_rebalance (state);
 		} else if (link -> imsg -> type == FTM_POOLRESP) {
-			log_info ("pool response: %d leases",
+			log_info ("pool response: %ld leases",
+				  (unsigned long)
 				  link -> imsg -> addresses_transferred);
 		}
 	}
@@ -2353,6 +2354,7 @@ failover_option_t *dhcp_failover_make_option (unsigned code,
 
 	      case FT_UNDEF:
 	      default:
+		break;
 	}
 
 	failover_print (obuf, obufix, obufmax, ")");

@@ -133,9 +133,9 @@ isc_result_t omapi_protocol_send_message (omapi_object_t *po,
 
 	if (po -> type != omapi_type_protocol ||
 	    !po -> outer || po -> outer -> type != omapi_type_connection ||
-	    m -> type != omapi_type_message)
+	    mo -> type != omapi_type_message)
 		return ISC_R_INVALIDARG;
-	if (om && om -> type != omapi_type_message)
+	if (omo && omo -> type != omapi_type_message)
 		return ISC_R_INVALIDARG;
 	p = (omapi_protocol_object_t *)po;
 	c = (omapi_object_t *)(po -> outer);
