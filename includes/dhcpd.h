@@ -385,6 +385,34 @@ struct protocol {
 	void *local;
 };
 
+struct dns_query; /* forward */
+
+struct dns_wakeup {
+	struct dns_wakeup *next;	/* Next wakeup in chain. */
+	void (*func) PROTO ((struct dns_query *));
+};
+
+struct dns_query {
+	struct dns_query *next;		/* Next query in hash bucket. */
+	TIME expiry;			/* Query expiry time (zero if not yet
+					   answered. */
+	u_int16_t id;			/* Query ID (also hash table index) */
+	caddr_t waiters;		/* Pointer to list of things waiting
+					   on this query. */
+	unsigned char buf [512];	/* Query buffer. */
+	unsigned char *question;	/* Pointer to question being asked,
+					   within query buffer. */
+	int question_len;		/* Length of name (we hash on name) */
+	unsigned char *answer;		/* Pointer to answer to question. */
+	int answer_len;			/* Length of answer. */
+	int len;			/* Length of entire query. */
+	int sent;			/* The query has been sent. */
+	struct dns_wakeup *wakeups;	/* Wakeups to call if this query is
+					   answered. */
+	struct name_server *next_server;	/* Next server to try. */
+	int backoff;			/* Current backoff, in seconds. */
+};
+
 /* Bitmask of dhcp option codes. */
 typedef unsigned char option_mask [16];
 
@@ -715,9 +743,27 @@ ssize_t receive_packet PROTO ((struct interface_info *,
 			       unsigned char *, size_t,
 			       struct sockaddr_in *, struct hardware *));
 #endif
-#if defined (USE_BPF_SEND)
+#if defined (USE_NIT_SEND)
 void if_enable PROTO ((struct interface_info *));
 #endif
+
+
+/* dlpi.c */
+#ifdef USE_DLPI_SEND
+void if_register_send PROTO ((struct interface_info *, struct ifreq *));
+size_t send_packet PROTO ((struct interface_info *,
+			   struct packet *, struct dhcp_packet *, size_t,
+			   struct in_addr,
+			   struct sockaddr_in *, struct hardware *));
+#endif
+#ifdef USE_DLPI_RECEIVE
+void if_register_receive PROTO ((struct interface_info *, struct ifreq *));
+size_t receive_packet PROTO ((struct interface_info *,
+			     unsigned char *, size_t,
+			     struct sockaddr_in *, struct hardware *));
+#endif
+
+
 
 /* raw.c */
 #ifdef USE_RAW_SEND
@@ -923,7 +969,10 @@ void icmp_echoreply PROTO ((struct protocol *));
 
 /* dns.c */
 void dns_startup PROTO ((void));
-int ns_inaddr_lookup PROTO ((u_int16_t, struct iaddr));
+struct dns_query *ns_inaddr_lookup PROTO ((struct iaddr, struct dns_wakeup *));
+struct dns_query *ns_query PROTO ((unsigned char *, int, struct dns_wakeup *));
+struct dns_query *find_dns_query PROTO ((unsigned char *, int, int));
+void dns_timeout PROTO ((void *));
 void dns_packet PROTO ((struct protocol *));
 
 /* resolv.c */
@@ -932,7 +981,7 @@ struct name_server *name_servers;
 struct domain_search_list *domains;
 
 void read_resolv_conf PROTO ((TIME));
-struct sockaddr_in *pick_name_server PROTO ((void));
+struct name_server *first_name_server PROTO ((void));
 
 /* inet_addr.c */
 #ifdef NEED_INET_ATON
