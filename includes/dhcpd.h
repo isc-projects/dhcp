@@ -316,6 +316,8 @@ struct lease_state {
 #define SV_DDNS_REV_DOMAIN_NAME		25
 #define SV_LEASE_FILE_NAME		26
 #define SV_PID_FILE_NAME		27
+#define SV_DUPLICATES			28
+#define SV_DECLINES			29
 
 #if !defined (DEFAULT_DEFAULT_LEASE_TIME)
 # define DEFAULT_DEFAULT_LEASE_TIME 43200
@@ -1045,11 +1047,13 @@ int evaluate_option_cache PROTO ((struct data_string *,
 				  struct packet *, struct lease *,
 				  struct option_state *, struct option_state *,
 				  struct option_cache *));
-int evaluate_boolean_option_cache PROTO ((struct packet *, struct lease *,
+int evaluate_boolean_option_cache PROTO ((int *,
+					  struct packet *, struct lease *,
 					  struct option_state *,
 					  struct option_state *,
 					  struct option_cache *));
-int evaluate_boolean_expression_result PROTO ((struct packet *, struct lease *,
+int evaluate_boolean_expression_result PROTO ((int *,
+					       struct packet *, struct lease *,
 					       struct option_state *,
 					       struct option_state *,
 					       struct expression *));
