@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.53.2.29 2004/06/14 21:08:51 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.53.2.30 2004/06/15 16:15:59 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -3500,7 +3500,7 @@ failover_option_t *dhcp_failover_make_option (unsigned code,
 	putUShort (&option.data [2], size - 4);
 
 #if defined (DEBUG_FAILOVER_MESSAGES)	
-	sprintf (tbuf, " (%s<%d>", info -> name, option.count);
+	snprintf (tbuf, sizeof tbuf, " (%s<%d>", info -> name, option.count);
 	failover_print (obuf, obufix, obufmax, tbuf);
 #endif
 
@@ -3571,7 +3571,7 @@ failover_option_t *dhcp_failover_make_option (unsigned code,
 	      case FT_TEXT_OR_BYTES:
 	      case FT_TEXT:
 #if defined (DEBUG_FAILOVER_MESSAGES)
-		sprintf (tbuf, "\"%s\"", txt);
+		snprintf (tbuf, sizeof tbuf, "\"%s\"", txt);
 		failover_print (obuf, obufix, obufmax, tbuf);
 #endif
 		memcpy (&option.data [4], txt, count);

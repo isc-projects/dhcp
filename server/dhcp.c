@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.192.2.33 2004/06/14 21:08:51 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.192.2.34 2004/06/15 16:15:58 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -264,7 +264,7 @@ void dhcpdiscover (packet, ms_nulltp)
 		s = (char *)0;
 
 	/* Say what we're doing... */
-	sprintf (msgbuf, "DHCPDISCOVER from %s %s%s%svia %s",
+	snprintf (msgbuf, sizeof msgbuf, "DHCPDISCOVER from %s %s%s%svia %s",
 		 (packet -> raw -> htype
 		  ? print_hw_addr (packet -> raw -> htype,
 				   packet -> raw -> hlen,
@@ -461,7 +461,8 @@ void dhcprequest (packet, ms_nulltp, ip_lease)
 		smbuf [0] = 0;
 
 	/* Say what we're doing... */
-	sprintf (msgbuf, "DHCPREQUEST for %s%s from %s %s%s%svia %s",
+	snprintf (msgbuf, sizeof msgbuf,
+		 "DHCPREQUEST for %s%s from %s %s%s%svia %s",
 		 piaddr (cip), smbuf,
 		 (packet -> raw -> htype
 		  ? print_hw_addr (packet -> raw -> htype,
@@ -747,7 +748,7 @@ void dhcprelease (packet, ms_nulltp)
 	cstr[15] = '\0';
 
 	/* Say what we're doing... */
-	sprintf (msgbuf,
+	snprintf (msgbuf, sizeof msgbuf,
 		 "DHCPRELEASE of %s from %s %s%s%svia %s (%sfound)",
 		 cstr,
 		 (packet -> raw -> htype
@@ -834,7 +835,8 @@ void dhcpdecline (packet, ms_nulltp)
 	} else
 		s = (char *)0;
 
-	sprintf (msgbuf, "DHCPDECLINE of %s from %s %s%s%svia %s",
+	snprintf (msgbuf, sizeof msgbuf,
+		 "DHCPDECLINE of %s from %s %s%s%svia %s",
 		 piaddr (cip),
 		 (packet -> raw -> htype
 		  ? print_hw_addr (packet -> raw -> htype,
@@ -945,7 +947,7 @@ void dhcpinform (packet, ms_nulltp)
 		memcpy (cip.iabuf, &packet -> raw -> ciaddr, 4);
 	}
 
-	sprintf (msgbuf, "DHCPINFORM from %s via %s",
+	snprintf (msgbuf, sizeof msgbuf, "DHCPINFORM from %s via %s",
 		 piaddr (cip), packet -> interface -> name);
 
 	/* If the IP source address is zero, don't respond. */

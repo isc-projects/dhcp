@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: db.c,v 1.63.2.9 2004/06/10 17:59:51 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: db.c,v 1.63.2.10 2004/06/15 16:15:58 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -773,7 +773,7 @@ int new_lease_file ()
 
 	/* Make a temporary lease file... */
 	GET_TIME (&t);
-	sprintf (newfname, "%s.%d", path_dhcpd_db, (int)t);
+	snprintf (newfname, sizeof newfname, "%s.%d", path_dhcpd_db, (int)t);
 	db_fd = open (newfname, O_WRONLY | O_TRUNC | O_CREAT, 0664);
 	if (db_fd < 0) {
 		log_error ("Can't create new lease file: %m");
@@ -824,7 +824,7 @@ int new_lease_file ()
 	if (!trace_playback ()) {
 #endif
 	    /* Get the old database out of the way... */
-	    sprintf (backfname, "%s~", path_dhcpd_db);
+	    snprintf (backfname, sizeof backfname, "%s~", path_dhcpd_db);
 	    if (unlink (backfname) < 0 && errno != ENOENT) {
 		log_error ("Can't remove old lease database backup %s: %m",
 			   backfname);
