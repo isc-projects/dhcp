@@ -98,6 +98,8 @@ void read_leases ()
 				lease = parse_lease_statement (cfile,
 							       jref (bc));
 				enter_lease (lease);
+			} else {
+				parse_warn ("possibly corrupt lease file");
 			}
 		}
 
@@ -109,6 +111,7 @@ void read_leases ()
 void parse_statement (cfile)
 	FILE *cfile;
 {
+	int token;
 	char *val;
 	jmp_buf bc;
 
@@ -134,9 +137,40 @@ void parse_statement (cfile)
 			parsed_time = parse_timestamp (cfile, jref (bc));
 		}
 		break;
+	      case SHARED_NETWORK:
+		if (!setjmp (bc)) {
+			parse_shared_net_statement (cfile, jref (bc));
+		}
+		break;
 	      case SUBNET:
 		if (!setjmp (bc)) {
-			parse_subnet_statement (cfile, jref (bc));
+			struct shared_network *share;
+			struct subnet *subnet;
+			char *t, *n;
+
+			share = new_shared_network ("parse_statement");
+			if (!share)
+				error ("No memory for shared subnet");
+			share -> leases = (struct lease *)0;
+			share -> last_lease = (struct lease *)0;
+			share -> insertion_point = (struct lease *)0;
+			share -> next = (struct shared_network *)0;
+			share -> default_lease_time = default_lease_time;
+			share -> max_lease_time = max_lease_time;
+			memcpy (share -> options,
+				global_options, sizeof global_options);
+
+			subnet = parse_subnet_statement (cfile, jref (bc),
+							 share);
+			share -> subnets = subnet;
+			n = piaddr (subnet -> net);
+			t = dmalloc (strlen (n) + 1, "parse_statement");
+			if (!t)
+				error ("no memory for subnet name");
+			strcpy (t, n);
+			share -> name = t;
+			enter_shared_network (share);
+			goto need_semi;
 		}
 		break;
 	      case VENDOR_CLASS:
@@ -149,10 +183,58 @@ void parse_statement (cfile)
 			parse_class_statement (cfile, jref (bc), 1);
 		}
 		break;
+
+	      case DEFAULT_LEASE_TIME:
+		if (!setjmp (bc)) {
+			parse_lease_time (cfile, jref (bc),
+					  &default_lease_time);
+			goto need_semi;
+		}
+		break;
+
+	      case MAX_LEASE_TIME:
+		if (!setjmp (bc)) {
+			parse_lease_time (cfile, jref (bc), &max_lease_time);
+			goto need_semi;
+		}
+		break;
+
+	      case OPTION:
+		if (!setjmp (bc)) {
+			parse_option_decl (cfile, jref (bc), global_options);
+			goto need_semi;
+		}
+		break;
+
+	      case SERVER_IDENTIFIER:
+		if (!setjmp (bc)) {
+			struct tree_cache *server_id =
+				tree_cache (parse_ip_addr_or_hostname
+					    (cfile, jref (bc), 0));
+			if (!tree_evaluate (server_id))
+				error ("server identifier is not known");
+			if (server_id -> len > 4)
+				warn ("server identifier evaluates to more %s"
+				      "than one IP address");
+			server_identifier.len = 4;
+			memcpy (server_identifier.iabuf,
+				server_id -> value, server_identifier.len);
+			goto need_semi;
+		}
+		break;
+			
 	      default:
 		parse_warn ("expecting a declaration.");
 		skip_to_semi (cfile);
 		break;
+	}
+	return;
+
+      need_semi:
+	token = next_token (&val, cfile);
+	if (token != SEMI) {
+		parse_warn ("semicolon expected");
+		skip_to_semi (cfile);
 	}
 }
 
@@ -317,13 +399,122 @@ void parse_class_decl (cfile, bc, class)
 	}
 }
 
-/* subnet_statement :== SUBNET net NETMASK netmask declarations SEMI
+/* lease_time :== NUMBER */
+
+void parse_lease_time (cfile, bc, timep)
+	FILE *cfile;
+	jbp_decl (bc);
+	TIME *timep;
+{
+	char *val;
+	int token;
+
+	token = next_token (&val, cfile);
+	if (token != NUMBER) {
+		parse_warn ("Expecting numeric lease time");
+		skip_to_semi (cfile);
+		longjmp (jdref (bc), 1);
+	}
+	convert_num ((unsigned char *)timep, val, 10, 32);
+	/* Unswap the number - convert_num returns stuff in NBO. */
+	*timep = ntohl (*timep); /* XXX */
+}
+
+/* shared_network_statement :== SHARED_NETWORK subnet_statements SEMI
+   subnet_statements :== subnet_statement |
+   			 subnet_statements subnet_statement */
+
+void parse_shared_net_statement (cfile, bc)
+	FILE *cfile;
+	jbp_decl (bc);
+{
+	char *val;
+	int token;
+	struct shared_network *share;
+	struct subnet *first_net = (struct subnet *)0;
+	struct subnet *last_net = (struct subnet *)0;
+	struct subnet *next_net;
+	char *name;
+
+	share = new_shared_network ("parse_shared_net_statement");
+	if (!share)
+		error ("No memory for shared subnet");
+	share -> leases = (struct lease *)0;
+	share -> last_lease = (struct lease *)0;
+	share -> insertion_point = (struct lease *)0;
+	share -> next = (struct shared_network *)0;
+	share -> default_lease_time = default_lease_time;
+	share -> max_lease_time = max_lease_time;
+	memcpy (share -> options, global_options, sizeof global_options);
+
+	/* Get the name of the shared network... */
+	token = next_token (&val, cfile);
+	if (!is_identifier (token) && token != STRING) {
+		skip_to_semi (cfile);
+		parse_warn ("expecting shared network name");
+		longjmp (jdref (bc), 1);
+	}
+	if (val [0] == 0) {
+		parse_warn ("zero-length shared network name");
+		val = "<no-name-given>";
+	}
+	name = dmalloc (strlen (val), "parse_shared_net_statement");
+	if (!name)
+		error ("no memory for shared network name");
+	strcpy (name, val);
+	share -> name = name;
+
+	do {
+		token = next_token (&val, cfile);
+		switch (token) {
+		      case SEMI:
+			if (!first_net) {
+				parse_warn ("empty shared-network decl");
+				return;
+			}
+			share -> subnets = first_net;
+			enter_shared_network (share);
+			return;
+
+		      case SUBNET:
+			next_net = parse_subnet_statement (cfile, bc, share);
+			if (!first_net)
+				first_net = next_net;
+			if (last_net)
+				last_net -> next_sibling = next_net;
+			last_net = next_net;
+			break;
+
+		      case OPTION:
+			parse_option_decl (cfile, bc, share -> options);
+			break;
+
+		      case DEFAULT_LEASE_TIME:
+			parse_lease_time (cfile, bc,
+					  &share -> default_lease_time);
+			break;
+
+		      case MAX_LEASE_TIME:
+			parse_lease_time (cfile, bc,
+					  &share -> max_lease_time);
+			break;
+
+		      default:
+			parse_warn ("expecting subnet declaration");
+			skip_to_semi (cfile);
+			longjmp (jdref (bc), 1);
+		}
+	} while (1);
+}
+
+/* subnet_statement :== SUBNET net NETMASK netmask declarations
    host_declarations :== <nil> | host_declaration
 			       | host_declarations host_declaration SEMI */
 
-struct subnet *parse_subnet_statement (cfile, bc)
+struct subnet *parse_subnet_statement (cfile, bc, share)
 	FILE *cfile;
 	jbp_decl (bc);
+	struct shared_network *share;
 {
 	char *val;
 	int token;
@@ -335,11 +526,11 @@ struct subnet *parse_subnet_statement (cfile, bc)
 	subnet = new_subnet ("parse_subnet_statement");
 	if (!subnet)
 		error ("No memory for new subnet");
-	subnet -> leases = (struct lease *)0;
-	subnet -> last_lease = (struct lease *)0;
-	subnet -> next = (struct subnet *)0;
-	subnet -> default_lease_time = default_lease_time;
-	subnet -> max_lease_time = max_lease_time;
+	subnet -> next_subnet = subnet -> next_sibling = (struct subnet *)0;
+	subnet -> shared_network = share;
+	subnet -> default_lease_time = share -> default_lease_time;
+	subnet -> max_lease_time = share -> max_lease_time;
+	memcpy (subnet -> options, share -> options, sizeof subnet -> options);
 
 	/* Get the network number... */
 	parse_numeric_aggregate (cfile, bc, addr, &len, DOT, 10, 8);
@@ -364,12 +555,15 @@ struct subnet *parse_subnet_statement (cfile, bc)
 
 	do {
 		token = peek_token (&val, cfile);
-		if (token == SEMI) {
-			token = next_token (&val, cfile);
+		if (token == SEMI || token == SUBNET)
 			break;
-		}
 		parse_subnet_decl (cfile, bc, subnet);
 	} while (1);
+
+	/* If this subnet supports dynamic bootp, flag it so in the
+	   shared_network containing it. */
+	if (subnet -> dynamic_bootp)
+		share -> dynamic_bootp = 1;
 	return subnet;
 }
 
@@ -395,31 +589,13 @@ void parse_subnet_decl (cfile, bc, decl)
 		break;
 
 	      case DEFAULT_LEASE_TIME:
-		token = next_token (&val, cfile);
-		if (token != NUMBER) {
-			parse_warn ("Expecting numeric default lease time");
-			skip_to_semi (cfile);
-			longjmp (jdref (bc), 1);
-		}
-		convert_num ((unsigned char *)&decl -> default_lease_time,
-			     val, 10, 32);
-		/* Unswap the number - convert_num returns stuff in NBO. */
-		decl -> default_lease_time =
-			ntohl (decl -> default_lease_time);
+		parse_lease_time (cfile, bc,
+				  &decl -> default_lease_time);
 		break;
-
+		
 	      case MAX_LEASE_TIME:
-		token = next_token (&val, cfile);
-		if (token != NUMBER) {
-			parse_warn ("Expecting numeric max lease time");
-			skip_to_semi (cfile);
-			longjmp (jdref (bc), 1);
-		}
-		convert_num ((unsigned char *)&decl -> max_lease_time,
-			     val, 10, 32);
-		/* Unswap the number - convert_num returns stuff in NBO. */
-		decl -> max_lease_time =
-			ntohl (decl -> max_lease_time);
+		parse_lease_time (cfile, bc,
+				  &decl -> max_lease_time);
 		break;
 
 	      default:
@@ -431,7 +607,8 @@ void parse_subnet_decl (cfile, bc, decl)
 }
 
 /* host_declaration :== hardware_declaration | filename_declaration
-		      | fixed_addr_declaration | option_declaration */
+		      | fixed_addr_declaration | option_declaration
+		      | max_lease_declaration | default_lease_declaration */
 
 void parse_host_decl (cfile, bc, decl)
 	FILE *cfile;
@@ -449,11 +626,22 @@ void parse_host_decl (cfile, bc, decl)
 	      case FILENAME:
 		decl -> filename = parse_filename_decl (cfile, bc);
 		break;
+	      case SERVER_NAME:
+		decl -> server_name = parse_servername_decl (cfile, bc);
+		break;
 	      case FIXED_ADDR:
 		parse_fixed_addr_decl (cfile, bc, decl);
 		break;
 	      case OPTION:
 		parse_option_decl (cfile, bc, decl -> options);
+		break;
+	      case DEFAULT_LEASE_TIME:
+		parse_lease_time (cfile, bc,
+				  &decl -> default_lease_time);
+		break;
+	      case MAX_LEASE_TIME:
+		parse_lease_time (cfile, bc,
+				  &decl -> max_lease_time);
 		break;
 	      case CIADDR:
 		decl -> ciaddr =
@@ -493,25 +681,10 @@ void parse_hardware_decl (cfile, bc, decl)
 
 	hw = parse_hardware_addr (cfile, bc);
 
-	/* Find space for the new interface... */
-	if (decl -> interfaces) {
-		decl -> interfaces =
-			(struct hardware *)realloc (decl -> interfaces,
-						    ++decl -> interface_count *
-						    sizeof (struct hardware));
-	} else {
-		decl -> interfaces =
-			(struct hardware *)malloc (sizeof (struct hardware));
-		decl -> interface_count = 1;
-	}
-	if (!decl -> interfaces)
-		error ("no memory for hardware interface info.");
-
 	/* Copy out the information... */
-	decl -> interfaces [decl -> interface_count - 1].htype = hw.htype;
-	decl -> interfaces [decl -> interface_count - 1].hlen = hw.hlen;
-	memcpy (decl -> interfaces [decl -> interface_count - 1].haddr,
-		&hw.haddr [0], hw.hlen);
+	decl -> interface.htype = hw.htype;
+	decl -> interface.hlen = hw.hlen;
+	memcpy (decl -> interface.haddr, &hw.haddr [0], hw.hlen);
 }
 
 struct hardware parse_hardware_addr (cfile, bc)
@@ -564,6 +737,29 @@ char *parse_filename_decl (cfile, bc)
 	return s;
 }
 
+/* servername_decl :== SERVER_NAME STRING */
+
+char *parse_servername_decl (cfile, bc)
+	FILE *cfile;
+	jbp_decl (bc);
+{
+	char *val;
+	int token;
+	char *s;
+
+	token = next_token (&val, cfile);
+	if (token != STRING) {
+		parse_warn ("server name must be a string");
+		skip_to_semi (cfile);
+		longjmp (jdref (bc), 1);
+	}
+	s = (char *)malloc (strlen (val));
+	if (!s)
+		error ("no memory for server name.");
+	strcpy (s, val);
+	return s;
+}
+
 /* ip_addr_or_hostname :== ip_address | hostname
    ip_address :== NUMBER DOT NUMBER DOT NUMBER DOT NUMBER
    
@@ -602,15 +798,33 @@ struct tree *parse_ip_addr_or_hostname (cfile, bc, uniform)
 }	
 	
 
-/* fixed_addr_declaration :== FIXED_ADDR ip_addr_or_hostname */
+/* fixed_addr_clause :==
+	FIXED_ADDR fixed_addr_decls
+
+   fixed_addr_decls :== ip_addr_or_hostname |
+   			fixed_addr_decls ip_addr_or_hostname */
 
 void parse_fixed_addr_decl (cfile, bc, decl)
 	FILE *cfile;
 	jbp_decl (bc);
 	struct host_decl *decl;
 {
-	decl -> fixed_addr =
-		tree_cache (parse_ip_addr_or_hostname (cfile, bc, 0));
+	char *val;
+	int token;
+	struct tree *tree = (struct tree *)0;
+	struct tree *tmp;
+
+	do {
+		tmp = parse_ip_addr_or_hostname (cfile, bc, 0);
+		if (tree)
+			tree = tree_concat (tree, tmp);
+		else
+			tree = tmp;
+		token = peek_token (&val, cfile);
+		if (token == COMMA)
+			token = next_token (&val, cfile);
+	} while (token == COMMA);
+	decl -> fixed_addr = tree_cache (tree);
 }
 
 /* option_declaration :== OPTION identifier DOT identifier <syntax> |
@@ -790,10 +1004,6 @@ void parse_option_decl (cfile, bc, options)
 		}
 	} while (*fmt == 'A');
 
-	if (options [option -> code]) {
-		parse_warn ("duplicate option code %d (%s).",
-			    option -> code, option -> name);
-	}
 	options [option -> code] = tree_cache (tree);
 }
 
@@ -829,7 +1039,8 @@ TIME parse_timestamp (cfile, bc)
 		|	UID hex_numbers
 		|	HOST identifier
 		|	CLASS identifier
-		|	TIMESTAMP number */
+		|	TIMESTAMP number
+		|	DYNAMIC_BOOTP */
 
 struct lease *parse_lease_statement (cfile, bc)
 	FILE *cfile;
@@ -912,6 +1123,7 @@ struct lease *parse_lease_statement (cfile, bc)
 				memcpy (lease.uid, s, lease.uid_len);
 				break;
 
+#if 0
 			      case HOST:
 				seenbit = 16;
 				token = next_token (&val, cfile);
@@ -927,6 +1139,7 @@ struct lease *parse_lease_statement (cfile, bc)
 						    val,
 						    "no longer known.");
 				break;
+#endif
 					
 			      case CLASS:
 				seenbit = 32;
@@ -945,6 +1158,11 @@ struct lease *parse_lease_statement (cfile, bc)
 					= parse_hardware_addr (cfile, bc);
 				break;
 
+			      case DYNAMIC_BOOTP:
+				seenbit = 128;
+				lease.flags |= BOOTP_LEASE;
+				break;
+
 			      default:
 				if (token != SEMI)
 					skip_to_semi (cfile);
@@ -960,7 +1178,8 @@ struct lease *parse_lease_statement (cfile, bc)
 	return &lease;
 }
 
-/* address_range :== RANGE ip_address ip_address */
+/* address_range :== RANGE ip_address ip_address |
+		     RANGE dynamic_bootp_statement ip_address ip_address */
 
 void parse_address_range (cfile, bc, subnet)
 	FILE *cfile;
@@ -972,6 +1191,12 @@ void parse_address_range (cfile, bc, subnet)
 	int len = sizeof addr;
 	int token;
 	char *val;
+	int dynamic = 0;
+
+	if ((token = peek_token (&val, cfile)) == DYNAMIC_BOOTP) {
+		token = next_token (&val, cfile);
+		subnet -> dynamic_bootp = dynamic = 1;
+	}
 
 	/* Get the bottom address in the range... */
 	parse_numeric_aggregate (cfile, bc, addr, &len, DOT, 10, 8);
@@ -984,7 +1209,7 @@ void parse_address_range (cfile, bc, subnet)
 	high.len = len;
 
 	/* Create the new address range... */
-	new_address_range (low, high, subnet);
+	new_address_range (low, high, subnet, dynamic);
 }
 
 /* date :== NUMBER NUMBER/NUMBER/NUMBER NUMBER:NUMBER:NUMBER
