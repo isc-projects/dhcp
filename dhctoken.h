@@ -82,4 +82,5 @@
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\
 				 (x) != STRING &&	\
-				 (x) != NUMBER)
+				 (x) != NUMBER &&	\
+				 (x) != EOF)
