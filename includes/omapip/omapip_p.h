@@ -31,11 +31,6 @@
 #include <sys/un.h>
 #include <arpa/inet.h>
 
-#if defined (NSUPDATE)
-# include <arpa/nameser.h>
-# include <resolv.h>
-#endif
-
 #include <netdb.h>
 #else
 #define fd_set cygwin_fd_set
