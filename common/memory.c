@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: memory.c,v 1.43 1998/11/09 02:44:32 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: memory.c,v 1.44 1998/11/11 07:52:35 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -288,7 +288,7 @@ void new_address_range (low, high, subnet, pool)
 		address_range [i].ends = MIN_TIME;
 		address_range [i].subnet = subnet;
 		address_range [i].pool = pool;
-		address_range [i].class = (struct class *)0;
+		address_range [i].billing_class = (struct class *)0;
 		address_range [i].shared_network = share;
 		address_range [i].flags = 0;
 
@@ -476,144 +476,147 @@ int supersede_lease (comp, lease, commit)
 		warn ("Lease conflict at %s",
 		      piaddr (comp -> ip_addr));
 		return 0;
-	} else {
-		/* If there's a Unique ID, dissociate it from the hash
-		   table and free it if necessary. */
-		if (comp -> uid) {
-			uid_hash_delete (comp);
-			enter_uid = 1;
-			if (comp -> uid != &comp -> uid_buf [0]) {
-				free (comp -> uid);
-				comp -> uid_max = 0;
-				comp -> uid_len = 0;
-			}
-			comp -> uid = (unsigned char *)0;
-		} else
-			enter_uid = 1;
-
-		if (comp -> hardware_addr.htype &&
-		    ((comp -> hardware_addr.hlen !=
-		      lease -> hardware_addr.hlen) ||
-		     (comp -> hardware_addr.htype !=
-		      lease -> hardware_addr.htype) ||
-		     memcmp (comp -> hardware_addr.haddr,
-			     lease -> hardware_addr.haddr,
-			     comp -> hardware_addr.hlen))) {
-			hw_hash_delete (comp);
-			enter_hwaddr = 1;
-		} else if (!comp -> hardware_addr.htype)
-			enter_hwaddr = 1;
-
-		/* Copy the data files, but not the linkages. */
-		comp -> starts = lease -> starts;
-		comp -> timestamp = lease -> timestamp;
-		if (lease -> uid) {
-			if (lease -> uid_len < sizeof (lease -> uid_buf)) {
-				memcpy (comp -> uid_buf,
-					lease -> uid, lease -> uid_len);
-				comp -> uid = &comp -> uid_buf [0];
-				comp -> uid_max = sizeof comp -> uid_buf;
-			} else if (lease -> uid != &lease -> uid_buf [0]) {
-				comp -> uid = lease -> uid;
-				comp -> uid_max = lease -> uid_max;
-				lease -> uid = (unsigned char *)0;
-				lease -> uid_max = 0;
-			} else {
-				error ("corrupt lease uid."); /* XXX */
-			}
-		} else {
-			comp -> uid = (unsigned char *)0;
-			comp -> uid_max = 0;
-		}
-		comp -> uid_len = lease -> uid_len;
-		comp -> host = lease -> host;
-		comp -> hardware_addr = lease -> hardware_addr;
-		comp -> flags = ((lease -> flags & ~PERSISTENT_FLAGS) |
-				 (comp -> flags & ~EPHEMERAL_FLAGS));
-
-		/* Record the lease in the uid hash if necessary. */
-		if (enter_uid && lease -> uid) {
-			uid_hash_add (comp);
-		}
-
-		/* Record it in the hardware address hash if necessary. */
-		if (enter_hwaddr && lease -> hardware_addr.htype) {
-			hw_hash_add (comp);
-		}
-
-		/* Remove the lease from its current place in the 
-		   timeout sequence. */
-		if (comp -> prev) {
-			comp -> prev -> next = comp -> next;
-		} else {
-			comp -> pool -> leases = comp -> next;
-		}
-		if (comp -> next) {
-			comp -> next -> prev = comp -> prev;
-		}
-		if (comp -> pool -> last_lease == comp) {
-			comp -> pool -> last_lease = comp -> prev;
-		}
-
-		/* Find the last insertion point... */
-		if (comp == comp -> pool -> insertion_point ||
-		    !comp -> pool -> insertion_point) {
-			lp = comp -> pool -> leases;
-		} else {
-			lp = comp -> pool -> insertion_point;
-		}
-
-		if (!lp) {
-			/* Nothing on the list yet?    Just make comp the
-			   head of the list. */
-			comp -> pool -> leases = comp;
-			comp -> pool -> last_lease = comp;
-		} else if (lp -> ends > lease -> ends) {
-			/* Skip down the list until we run out of list
-			   or find a place for comp. */
-			while (lp -> next && lp -> ends > lease -> ends) {
-				lp = lp -> next;
-			}
-			if (lp -> ends > lease -> ends) {
-				/* If we ran out of list, put comp
-				   at the end. */
-				lp -> next = comp;
-				comp -> prev = lp;
-				comp -> next = (struct lease *)0;
-				comp -> pool -> last_lease = comp;
-			} else {
-				/* If we didn't, put it between lp and
-				   the previous item on the list. */
-				if ((comp -> prev = lp -> prev))
-					comp -> prev -> next = comp;
-				comp -> next = lp;
-				lp -> prev = comp;
-			}
-		} else {
-			/* Skip up the list until we run out of list
-			   or find a place for comp. */
-			while (lp -> prev && lp -> ends < lease -> ends) {
-				lp = lp -> prev;
-			}
-			if (lp -> ends < lease -> ends) {
-				/* If we ran out of list, put comp
-				   at the beginning. */
-				lp -> prev = comp;
-				comp -> next = lp;
-				comp -> prev = (struct lease *)0;
-				comp -> pool -> leases = comp;
-			} else {
-				/* If we didn't, put it between lp and
-				   the next item on the list. */
-				if ((comp -> next = lp -> next))
-					comp -> next -> prev = comp;
-				comp -> prev = lp;
-				lp -> next = comp;
-			}
-		}
-		comp -> pool -> insertion_point = comp;
-		comp -> ends = lease -> ends;
 	}
+
+	/* If there's a Unique ID, dissociate it from the hash
+	   table and free it if necessary. */
+	if (comp -> uid) {
+		uid_hash_delete (comp);
+		enter_uid = 1;
+		if (comp -> uid != &comp -> uid_buf [0]) {
+			free (comp -> uid);
+			comp -> uid_max = 0;
+			comp -> uid_len = 0;
+		}
+		comp -> uid = (unsigned char *)0;
+	} else
+		enter_uid = 1;
+	
+	if (comp -> hardware_addr.htype &&
+	    ((comp -> hardware_addr.hlen !=
+	      lease -> hardware_addr.hlen) ||
+	     (comp -> hardware_addr.htype !=
+	      lease -> hardware_addr.htype) ||
+	     memcmp (comp -> hardware_addr.haddr,
+		     lease -> hardware_addr.haddr,
+		     comp -> hardware_addr.hlen))) {
+		hw_hash_delete (comp);
+		enter_hwaddr = 1;
+	} else if (!comp -> hardware_addr.htype)
+		enter_hwaddr = 1;
+	
+	/* If the lease has been billed to a class, remove the billing. */
+	if (comp -> billing_class &&
+	    comp -> billing_class != lease -> billing_class)
+		unbill_class (comp, comp -> billing_class);
+
+	/* Copy the data files, but not the linkages. */
+	comp -> starts = lease -> starts;
+	comp -> timestamp = lease -> timestamp;
+	if (lease -> uid) {
+		if (lease -> uid_len < sizeof (lease -> uid_buf)) {
+			memcpy (comp -> uid_buf,
+				lease -> uid, lease -> uid_len);
+			comp -> uid = &comp -> uid_buf [0];
+			comp -> uid_max = sizeof comp -> uid_buf;
+		} else if (lease -> uid != &lease -> uid_buf [0]) {
+			comp -> uid = lease -> uid;
+			comp -> uid_max = lease -> uid_max;
+			lease -> uid = (unsigned char *)0;
+			lease -> uid_max = 0;
+		} else {
+			error ("corrupt lease uid."); /* XXX */
+		}
+	} else {
+		comp -> uid = (unsigned char *)0;
+		comp -> uid_max = 0;
+	}
+	comp -> uid_len = lease -> uid_len;
+	comp -> host = lease -> host;
+	comp -> hardware_addr = lease -> hardware_addr;
+	comp -> flags = ((lease -> flags & ~PERSISTENT_FLAGS) |
+			 (comp -> flags & ~EPHEMERAL_FLAGS));
+	
+	/* Record the lease in the uid hash if necessary. */
+	if (enter_uid && lease -> uid) {
+		uid_hash_add (comp);
+	}
+	
+	/* Record it in the hardware address hash if necessary. */
+	if (enter_hwaddr && lease -> hardware_addr.htype) {
+		hw_hash_add (comp);
+	}
+	
+	/* Remove the lease from its current place in the 
+	   timeout sequence. */
+	if (comp -> prev) {
+		comp -> prev -> next = comp -> next;
+	} else {
+		comp -> pool -> leases = comp -> next;
+	}
+	if (comp -> next) {
+		comp -> next -> prev = comp -> prev;
+	}
+	if (comp -> pool -> last_lease == comp) {
+		comp -> pool -> last_lease = comp -> prev;
+	}
+	
+	/* Find the last insertion point... */
+	if (comp == comp -> pool -> insertion_point ||
+	    !comp -> pool -> insertion_point) {
+		lp = comp -> pool -> leases;
+	} else {
+		lp = comp -> pool -> insertion_point;
+	}
+	
+	if (!lp) {
+		/* Nothing on the list yet?    Just make comp the
+		   head of the list. */
+		comp -> pool -> leases = comp;
+		comp -> pool -> last_lease = comp;
+	} else if (lp -> ends > lease -> ends) {
+		/* Skip down the list until we run out of list
+		   or find a place for comp. */
+		while (lp -> next && lp -> ends > lease -> ends) {
+			lp = lp -> next;
+		}
+		if (lp -> ends > lease -> ends) {
+			/* If we ran out of list, put comp at the end. */
+			lp -> next = comp;
+			comp -> prev = lp;
+			comp -> next = (struct lease *)0;
+			comp -> pool -> last_lease = comp;
+		} else {
+			/* If we didn't, put it between lp and
+			   the previous item on the list. */
+			if ((comp -> prev = lp -> prev))
+				comp -> prev -> next = comp;
+			comp -> next = lp;
+			lp -> prev = comp;
+		}
+	} else {
+		/* Skip up the list until we run out of list
+		   or find a place for comp. */
+		while (lp -> prev && lp -> ends < lease -> ends) {
+			lp = lp -> prev;
+		}
+		if (lp -> ends < lease -> ends) {
+			/* If we ran out of list, put comp at the beginning. */
+			lp -> prev = comp;
+			comp -> next = lp;
+			comp -> prev = (struct lease *)0;
+			comp -> pool -> leases = comp;
+		} else {
+			/* If we didn't, put it between lp and
+			   the next item on the list. */
+			if ((comp -> next = lp -> next))
+				comp -> next -> prev = comp;
+			comp -> prev = lp;
+			lp -> next = comp;
+		}
+	}
+	comp -> pool -> insertion_point = comp;
+	comp -> ends = lease -> ends;
 
 	/* Return zero if we didn't commit the lease to permanent storage;
 	   nonzero if we did. */
@@ -629,6 +632,7 @@ void release_lease (lease)
 
 	lt = *lease;
 	lt.ends = cur_time;
+	lt.billing_class = (struct class *)0;
 	supersede_lease (lease, &lt, 1);
 }
 
@@ -650,6 +654,7 @@ void abandon_lease (lease, message)
 	lt.hardware_addr.hlen = 0;
 	lt.uid = (unsigned char *)0;
 	lt.uid_len = 0;
+	lt.billing_class = (struct class *)0;
 	supersede_lease (lease, &lt, 1);
 }
 
@@ -668,6 +673,7 @@ void dissociate_lease (lease)
 	lt.hardware_addr.hlen = 0;
 	lt.uid = (unsigned char *)0;
 	lt.uid_len = 0;
+	lt.billing_class = (struct class *)0;
 	supersede_lease (lease, &lt, 1);
 }
 
