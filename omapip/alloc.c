@@ -41,7 +41,7 @@ VOIDPTR dmalloc (size, file, line)
 	const char *file;
 	int line;
 {
-	unsigned char *foo = dmalloc (size + DMDSIZE, file, line);
+	unsigned char *foo = malloc (size + DMDSIZE);
 	int i;
 	VOIDPTR *bar;
 #if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL)
