@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: conflex.c,v 1.48.2.1 1999/10/14 20:47:27 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: conflex.c,v 1.48.2.2 1999/12/17 21:49:48 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -234,19 +234,90 @@ static enum dhcp_token read_string (cfile)
 	int i;
 	int bs = 0;
 	int c;
+	int value;
+	int hex;
 
 	for (i = 0; i < sizeof tokbuf; i++) {
+	      again:
 		c = get_char (cfile);
 		if (c == EOF) {
 			parse_warn ("eof in string constant");
 			break;
 		}
-		if (bs) {
+		if (bs == 1) {
+			switch (c) {
+			      case 't':
+				tokbuf [i] = '\t';
+				break;
+			      case 'r':
+				tokbuf [i] = '\r';
+				break;
+			      case 'n':
+				tokbuf [i] = '\n';
+				break;
+			      case 'b':
+				tokbuf [i] = '\b';
+				break;
+			      case '0':
+			      case '1':
+			      case '2':
+			      case '3':
+				hex = 0;
+				value = c - '0';
+				++bs;
+				goto again;
+			      case 'x':
+				hex = 1;
+				value = 0;
+				++bs;
+				goto again;
+			      default:
+				tokbuf [i] = c;
+				bs = 0;
+				break;
+			}
 			bs = 0;
-			tokbuf [i] = c;
-		} else if (c == '\\')
+		} else if (bs > 1) {
+			if (hex) {
+				if (c >= '0' && c <= '9') {
+					value = value * 16 + (c - '0');
+				} else if (c >= 'a' && c <= 'f') {
+					value = value * 16 + (c - 'a' + 10);
+				} else if (c >= 'A' && c <= 'F') {
+					value = value * 16 + (c - 'A' + 10);
+				} else {
+					parse_warn ("invalid hex digit: %x",
+						    c);
+					bs = 0;
+					continue;
+				}
+				if (++bs == 4) {
+					tokbuf [i] = value;
+					bs = 0;
+				} else
+					goto again;
+			} else {
+				if (c >= '0' && c <= '9') {
+					value = value * 8 + (c - '0');
+				} else {
+				    if (value != 0) {
+					parse_warn ("invalid octal digit %x",
+						    c);
+					continue;
+				    } else
+					tokbuf [i] = 0;
+				    bs = 0;
+				}
+				if (++bs == 4) {
+					tokbuf [i] = value;
+					bs = 0;
+				} else
+					goto again;
+			}
+		} else if (c == '\\') {
 			bs = 1;
-		else if (c == '"')
+			goto again;
+		} else if (c == '"')
 			break;
 		else
 			tokbuf [i] = c;
