@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.45.2.9 1999/03/29 22:27:06 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.45.2.10 1999/04/06 15:18:27 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -308,6 +308,10 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		if (type == HOST_DECL)
 			parse_warn ("get-lease-hostnames not allowed here.");
 		group -> get_lease_hostnames = parse_boolean (cfile);
+		break;
+
+	      case ALWAYS_REPLY_RFC1048:
+		group -> always_reply_rfc1048 = parse_boolean (cfile);
 		break;
 
 	      case USE_HOST_DECL_NAMES:
