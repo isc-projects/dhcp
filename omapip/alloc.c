@@ -473,7 +473,10 @@ isc_result_t omapi_object_dereference (omapi_object_t **h,
 				rc_register (file, line, h, *h, 0);
 			if ((*h) -> type -> destroy)
 				(*((*h) -> type -> destroy)) (*h, file, line);
-			dfree (*h, file, line);
+			if ((*h) -> type -> freer)
+				((*h) -> type -> freer (*h, file, line));
+			else
+				dfree (*h, file, line);
 		}
 	} else {
 		(*h) -> refcnt--;
