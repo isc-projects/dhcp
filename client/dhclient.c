@@ -86,7 +86,7 @@ int main (argc, argv, envp)
 
 #ifdef SYSLOG_4_2
 	openlog ("dhclient", LOG_NDELAY);
-	log_facility = LOG_DAEMON;
+	log_priority = LOG_DAEMON;
 #else
 	openlog ("dhclient", LOG_NDELAY, LOG_DAEMON);
 #endif
