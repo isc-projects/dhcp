@@ -46,6 +46,15 @@ Murrell at BC Tel Advanced Communications.  I'd like to express my
 thanks to all of these good people here, both for working on the code
 and for prodding me into improving it.
 
+			Changes since 3.0.1rc10
+
+- Buffer overflows in minires repaired.
+
+- A change to the linux client script to use /bin/bash, since /bin/sh may
+  not be bash.
+
+- Some missing va_end cleanups thanks to a patch from Thomas Klausner.
+
 			Changes since 3.0.1rc9
 
 - A format string was corrected to fix compiler warnings.
