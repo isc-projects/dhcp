@@ -56,7 +56,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhclient.c,v 1.32 1997/03/06 20:00:51 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.33 1997/03/06 20:13:42 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1385,6 +1385,7 @@ void make_decline (ip, lease)
 	struct tree_cache message_type_tree;
 	struct tree_cache requested_address_tree;
 	struct tree_cache server_id_tree;
+	struct tree_cache client_id_tree;
 
 	memset (options, 0, sizeof options);
 	memset (&ip -> client -> packet, 0, sizeof (ip -> client -> packet));
@@ -1415,6 +1416,21 @@ void make_decline (ip, lease)
 	options [i] -> buf_size = lease -> address.len;
 	options [i] -> timeout = 0xFFFFFFFF;
 	options [i] -> tree = (struct tree *)0;
+
+	/* Send the uid if the user supplied one. */
+	i = DHO_DHCP_CLIENT_IDENTIFIER;
+	if (ip -> client -> config -> send_options [i].len) {
+		options [i] = &client_id_tree;
+		options [i] -> value = ip -> client -> config ->
+			send_options [i].data;
+		options [i] -> len = ip -> client -> config ->
+			send_options [i].len;
+		options [i] -> buf_size = ip -> client -> config ->
+			send_options [i].len;
+		options [i] -> timeout = 0xFFFFFFFF;
+		options [i] -> tree = (struct tree *)0;
+	}
+
 
 	/* Set up the option buffer... */
 	ip -> client -> packet_length =
