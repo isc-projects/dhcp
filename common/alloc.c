@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: alloc.c,v 1.53.2.1 2001/05/31 19:25:26 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: alloc.c,v 1.53.2.2 2001/06/05 17:48:21 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -440,6 +440,19 @@ void free_pair (foo, file, line)
 	dmalloc_reuse (free_pairs, (char *)0, 0, 0);
 }
 
+#if defined (DEBUG_MEMORY_LEAKAGE)
+void relinquish_free_pairs ()
+{
+	pair pf, pc;
+
+	for (pf = free_pairs; pf; pf = pc) {
+		pc = pf -> cdr;
+		dfree (pf, MDL);
+	}
+	free_pairs = (pair)0;
+}
+#endif
+
 struct expression *free_expressions;
 
 int expression_allocate (cptr, file, line)
@@ -499,6 +512,19 @@ void free_expression (expr, file, line)
 	free_expressions = expr;
 	dmalloc_reuse (free_expressions, (char *)0, 0, 0);
 }
+
+#if defined (DEBUG_MEMORY_LEAKAGE)
+void relinquish_free_expressions ()
+{
+	struct expression *e, *n;
+
+	for (e = free_expressions; e; e = n) {
+		n = e -> data.not;
+		dfree (e, MDL);
+	}
+	free_expressions = (struct expression *)0;
+}
+#endif
 
 struct binding_value *free_binding_values;
 				
@@ -560,6 +586,19 @@ void free_binding_value (bv, file, line)
 	dmalloc_reuse (free_binding_values, (char *)0, 0, 0);
 }
 
+#if defined (DEBUG_MEMORY_LEAKAGE)
+void relinquish_free_binding_values ()
+{
+	struct binding_value *b, *n;
+
+	for (b = free_binding_values; b; b = n) {
+		n = b -> value.bv;
+		dfree (b, MDL);
+	}
+	free_binding_values = (struct binding_value *)0;
+}
+#endif
+
 int fundef_allocate (cptr, file, line)
 	struct fundef **cptr;
 	const char *file;
@@ -604,6 +643,19 @@ int fundef_reference (ptr, src, file, line)
 }
 
 struct option_cache *free_option_caches;
+
+#if defined (DEBUG_MEMORY_LEAKAGE)
+void relinquish_free_option_caches ()
+{
+	struct option_cache *o, *n;
+
+	for (o = free_option_caches; o; o = n) {
+		n = (struct option_cache *)(o -> expression);
+		dfree (o, MDL);
+	}
+	free_option_caches = (struct option_cache *)0;
+}
+#endif
 
 int option_cache_allocate (cptr, file, line)
 	struct option_cache **cptr;
@@ -980,6 +1032,18 @@ int executable_statement_reference (ptr, bp, file, line)
 }
 
 static struct packet *free_packets;
+
+#if defined (DEBUG_MEMORY_LEAKAGE)
+void relinquish_free_packets ()
+{
+	struct packet *p, *n;
+	for (p = free_packets; p; p = n) {
+		n = (struct packet *)(p -> raw);
+		dfree (p, MDL);
+	}
+	free_packets = (struct packet *)0;
+}
+#endif
 
 int packet_allocate (ptr, file, line)
 	struct packet **ptr;
