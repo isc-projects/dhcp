@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.79.2.6 1999/12/22 20:29:21 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.79.2.7 2000/07/01 05:44:14 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -301,6 +301,13 @@ void classify (packet, class)
 	struct packet *packet;
 	struct class *class;
 {
+}
+
+int bill_class (lease, class)
+	struct lease *lease;
+	struct class *class;
+{
+	return 0;
 }
 
 int unbill_class (lease, class)
