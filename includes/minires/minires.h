@@ -192,7 +192,8 @@ int ns_verify_tcp_init (void *,
 int ns_verify_tcp (unsigned char *, unsigned *, ns_tcp_tsig_state *, int);
 int b64_ntop (unsigned char const *, size_t, char *, size_t);
 
-
+int find_cached_zone (const char *, ns_class,
+		      char *, size_t, struct in_addr *, int);
 
 #define DprintQ(a,b,c,d)
 #define Dprint(a,b)
