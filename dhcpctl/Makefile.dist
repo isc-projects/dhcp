@@ -39,7 +39,7 @@ cltest:	cltest.o $(DHCPCTLLIBS)
 
 libdhcpctl.a:	$(OBJ)
 	rm -f libdhcpctl.a
-	ar cruv libdhcpctl.a $(OBJ)
+	$(AR) cruv libdhcpctl.a $(OBJ)
 	$(RANLIB) libdhcpctl.a
 
 install: all $(CATMANPAGES)
