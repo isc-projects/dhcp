@@ -182,7 +182,8 @@ enum expr_op {
 	expr_remainder,
 	expr_binary_and,
 	expr_binary_or,
-	expr_binary_xor
+	expr_binary_xor,
+	expr_client_state
 };
 
 struct expression {
@@ -281,6 +282,7 @@ struct packet; /* forward */
 struct option_state; /* forward */
 struct decoded_option_state; /* forward */
 struct lease; /* forward */
+struct client_state; /* forward */
 
 struct universe {
 	const char *name;
@@ -289,11 +291,13 @@ struct universe {
 					     unsigned);
 	void (*save_func) (struct universe *, struct option_state *,
 			   struct option_cache *);
-	void (*foreach) (struct packet *, struct lease *,
+	void (*foreach) (struct packet *,
+			 struct lease *, struct client_state *,
 			 struct option_state *, struct option_state *,
 			 struct binding_scope **, struct universe *, void *,
 			 void (*) (struct option_cache *, struct packet *,
-				   struct lease *, struct option_state *,
+				   struct lease *, struct client_state *,
+				   struct option_state *,
 				   struct option_state *,
 				   struct binding_scope **,
 				   struct universe *, void *));
@@ -305,8 +309,8 @@ struct universe {
 	int (*decode) (struct option_state *,
 		       const unsigned char *, unsigned, struct universe *);
 	int (*encapsulate) (struct data_string *, struct packet *,
-			    struct lease *, struct option_state *,
-			    struct option_state *,
+			    struct lease *, struct client_state *,
+			    struct option_state *, struct option_state *,
 			    struct binding_scope **,
 			    struct universe *);
 	void (*store_tag) PROTO ((unsigned char *, u_int32_t));

@@ -265,6 +265,7 @@ struct lease {
 	struct pool *pool;
 	struct class *billing_class;
 	struct hardware hardware_addr;
+	struct option_cache *agent_options;
 
 	struct executable_statement *on_expiry;
 	struct executable_statement *on_commit;
@@ -375,6 +376,7 @@ struct lease_state {
 #define SV_REMOTE_PORT			34
 #define SV_LOCAL_ADDRESS		35
 #define SV_OMAPI_KEY			36
+#define SV_STASH_AGENT_OPTIONS		37
 
 #if !defined (DEFAULT_DEFAULT_LEASE_TIME)
 # define DEFAULT_DEFAULT_LEASE_TIME 43200
@@ -609,13 +611,13 @@ struct client_lease {
 
 /* Possible states in which the client can be. */
 enum dhcp_state {
-	S_REBOOTING,
-	S_INIT,
-	S_SELECTING,
-	S_REQUESTING, 
-	S_BOUND,
-	S_RENEWING,
-	S_REBINDING
+	S_REBOOTING = 1,
+	S_INIT = 2,
+	S_SELECTING = 3,
+	S_REQUESTING = 4, 
+	S_BOUND = 5,
+	S_RENEWING = 6,
+	S_REBINDING = 7
 };
 
 /* Authentication and BOOTP policy possibilities (not all values work
@@ -892,20 +894,22 @@ int parse_encapsulated_suboptions (struct option_state *, struct option *,
 				   const unsigned char *, unsigned,
 				   struct universe *, const char *);
 int cons_options PROTO ((struct packet *, struct dhcp_packet *, struct lease *,
+			 struct client_state *,
 			 int, struct option_state *, struct option_state *,
 			 struct binding_scope **,
 			 int, int, int, struct data_string *, const char *));
 int fqdn_universe_decode (struct option_state *,
 			  const unsigned char *, unsigned, struct universe *);
 int store_options PROTO ((unsigned char *, unsigned, struct packet *,
-			  struct lease *, struct option_state *,
+			  struct lease *, struct client_state *,
+			  struct option_state *,
 			  struct option_state *, struct binding_scope **,
 			  unsigned *, int, unsigned, unsigned,
 			  int, const char *));
 const char *pretty_print_option PROTO ((struct option *, const unsigned char *,
 					unsigned, int, int));
 int get_option (struct data_string *, struct universe *,
-		struct packet *, struct lease *,
+		struct packet *, struct lease *, struct client_state *,
 		struct option_state *, struct option_state *,
 		struct option_state *, struct binding_scope **, unsigned);
 void set_option (struct universe *, struct option_state *,
@@ -932,56 +936,61 @@ int hashed_option_state_dereference PROTO ((struct universe *,
 					    const char *, int));
 int store_option PROTO ((struct data_string *,
 			 struct universe *, struct packet *, struct lease *,
+			 struct client_state *,
 			 struct option_state *, struct option_state *,
 			 struct binding_scope **, struct option_cache *));
 int option_space_encapsulate PROTO ((struct data_string *,
 				     struct packet *, struct lease *,
+				     struct client_state *,
 				     struct option_state *,
 				     struct option_state *,
 				     struct binding_scope **,
 				     struct data_string *));
 int hashed_option_space_encapsulate PROTO ((struct data_string *,
 					    struct packet *, struct lease *,
+					    struct client_state *,
 					    struct option_state *,
 					    struct option_state *,
 					    struct binding_scope **,
 					    struct universe *));
 int nwip_option_space_encapsulate PROTO ((struct data_string *,
 					  struct packet *, struct lease *,
+					  struct client_state *,
 					  struct option_state *,
 					  struct option_state *,
 					  struct binding_scope **,
 					  struct universe *));
 int fqdn_option_space_encapsulate (struct data_string *,
 				   struct packet *, struct lease *,
+				   struct client_state *,
 				   struct option_state *,
 				   struct option_state *,
 				   struct binding_scope **,
 				   struct universe *);
-void suboption_foreach (struct packet *, struct lease *,
-			struct option_state *,
-			struct option_state *,
-			struct binding_scope **,
-			struct universe *, void *,
-			void (*) (struct option_cache *,
-				  struct packet *,
-				  struct lease *, struct option_state *,
-				  struct option_state *,
+void suboption_foreach (struct packet *, struct lease *, struct client_state *,
+			struct option_state *, struct option_state *,
+			struct binding_scope **, struct universe *, void *,
+			void (*) (struct option_cache *, struct packet *,
+				  struct lease *, struct client_state *,
+				  struct option_state *, struct option_state *,
 				  struct binding_scope **,
 				  struct universe *, void *),
 			struct option_cache *, const char *);
 void option_space_foreach (struct packet *, struct lease *,
+			   struct client_state *,
 			   struct option_state *,
 			   struct option_state *,
 			   struct binding_scope **,
 			   struct universe *, void *,
 			   void (*) (struct option_cache *,
 				     struct packet *,
-				     struct lease *, struct option_state *,
+				     struct lease *, struct client_state *,
+				     struct option_state *,
 				     struct option_state *,
 				     struct binding_scope **,
 				     struct universe *, void *));
 void hashed_option_space_foreach (struct packet *, struct lease *,
+				  struct client_state *,
 				  struct option_state *,
 				  struct option_state *,
 				  struct binding_scope **,
@@ -989,12 +998,14 @@ void hashed_option_space_foreach (struct packet *, struct lease *,
 				  void (*) (struct option_cache *,
 					    struct packet *,
 					    struct lease *,
+					    struct client_state *,
 					    struct option_state *,
 					    struct option_state *,
 					    struct binding_scope **,
 					    struct universe *, void *));
 int linked_option_get PROTO ((struct data_string *, struct universe *,
 			      struct packet *, struct lease *,
+			      struct client_state *,
 			      struct option_state *, struct option_state *,
 			      struct option_state *, struct binding_scope **,
 			      unsigned));
@@ -1004,6 +1015,7 @@ int linked_option_state_dereference PROTO ((struct universe *,
 void save_linked_option (struct universe *, struct option_state *,
 			 struct option_cache *);
 void linked_option_space_foreach (struct packet *, struct lease *,
+				  struct client_state *,
 				  struct option_state *,
 				  struct option_state *,
 				  struct binding_scope **,
@@ -1011,12 +1023,14 @@ void linked_option_space_foreach (struct packet *, struct lease *,
 				  void (*) (struct option_cache *,
 					    struct packet *,
 					    struct lease *,
+					    struct client_state *,
 					    struct option_state *,
 					    struct option_state *,
 					    struct binding_scope **,
 					    struct universe *, void *));
 int linked_option_space_encapsulate (struct data_string *, struct packet *,
-				     struct lease *, struct option_state *,
+				     struct lease *, struct client_state *,
+				     struct option_state *,
 				     struct option_state *,
 				     struct binding_scope **,
 				     struct universe *);
@@ -1159,42 +1173,48 @@ int make_let PROTO ((struct executable_statement **, const char *));
 int option_cache PROTO ((struct option_cache **, struct data_string *,
 			 struct expression *, struct option *));
 int evaluate_expression (struct binding_value **, struct packet *,
-			 struct lease *, struct option_state *,
-			 struct option_state *, struct binding_scope **,
-			 struct expression *);
+			 struct lease *, struct client_state *,
+			 struct option_state *, struct option_state *,
+			 struct binding_scope **, struct expression *);
 int binding_value_dereference (struct binding_value **, const char *, int);
 #if defined (NSUPDATE)
 int evaluate_dns_expression PROTO ((ns_updrec **, struct packet *,
-				    struct lease *, struct option_state *,
+				    struct lease *, 
+				    struct client_state *,
+				    struct option_state *,
 				    struct option_state *,
 				    struct binding_scope **,
 				    struct expression *));
 #endif
 int evaluate_boolean_expression PROTO ((int *,
 					struct packet *,  struct lease *,
+					struct client_state *,
 					struct option_state *,
 					struct option_state *,
 					struct binding_scope **,
 					struct expression *));
 int evaluate_data_expression PROTO ((struct data_string *,
 				     struct packet *, struct lease *,
+				     struct client_state *,
 				     struct option_state *,
 				     struct option_state *,
 				     struct binding_scope **,
 				     struct expression *));
-int evaluate_numeric_expression PROTO
-	((unsigned long *, struct packet *, struct lease *,
-	  struct option_state *, struct option_state *,
-	  struct binding_scope **,
-	  struct expression *));
+int evaluate_numeric_expression (unsigned long *, struct packet *,
+				 struct lease *, struct client_state *,
+				 struct option_state *, struct option_state *,
+				 struct binding_scope **,
+				 struct expression *);
 int evaluate_option_cache PROTO ((struct data_string *,
 				  struct packet *, struct lease *,
+				  struct client_state *,
 				  struct option_state *, struct option_state *,
 				  struct binding_scope **,
 				  struct option_cache *,
 				  const char *, int));
 int evaluate_boolean_option_cache PROTO ((int *,
 					  struct packet *, struct lease *,
+					  struct client_state *,
 					  struct option_state *,
 					  struct option_state *,
 					  struct binding_scope **,
@@ -1202,6 +1222,7 @@ int evaluate_boolean_option_cache PROTO ((int *,
 					  const char *, int));
 int evaluate_boolean_expression_result PROTO ((int *,
 					       struct packet *, struct lease *,
+					       struct client_state *,
 					       struct option_state *,
 					       struct option_state *,
 					       struct binding_scope **,
@@ -1228,7 +1249,7 @@ extern int outstanding_pings;
 
 void dhcp PROTO ((struct packet *));
 void dhcpdiscover PROTO ((struct packet *, int));
-void dhcprequest PROTO ((struct packet *, int));
+void dhcprequest PROTO ((struct packet *, int, struct lease *));
 void dhcprelease PROTO ((struct packet *, int));
 void dhcpdecline PROTO ((struct packet *, int));
 void dhcpinform PROTO ((struct packet *, int));
@@ -1237,7 +1258,7 @@ void ack_lease PROTO ((struct packet *, struct lease *,
 		       unsigned int, TIME, char *, int));
 void dhcp_reply PROTO ((struct lease *));
 int find_lease PROTO ((struct lease **, struct packet *,
-		       struct shared_network *, int *, int *,
+		       struct shared_network *, int *, int *, struct lease *,
 		       const char *, int));
 int mockup_lease PROTO ((struct lease **, struct packet *,
 			 struct shared_network *,
@@ -1364,9 +1385,9 @@ char *print_hw_addr PROTO ((int, int, unsigned char *));
 void print_lease PROTO ((struct lease *));
 void dump_raw PROTO ((const unsigned char *, unsigned));
 void dump_packet_option (struct option_cache *, struct packet *,
-			 struct lease *, struct option_state *,
-			 struct option_state *, struct binding_scope **,
-			 struct universe *, void *);
+			 struct lease *, struct client_state *,
+			 struct option_state *, struct option_state *,
+			 struct binding_scope **, struct universe *, void *);
 void dump_packet PROTO ((struct packet *));
 void hash_dump PROTO ((struct hash_table *));
 char *print_hex_1 PROTO ((unsigned, const u_int8_t *, unsigned));
@@ -1687,9 +1708,9 @@ void make_release PROTO ((struct client_state *, struct client_lease *));
 void destroy_client_lease PROTO ((struct client_lease *));
 void rewrite_client_leases PROTO ((void));
 void write_lease_option (struct option_cache *, struct packet *,
-			 struct lease *, struct option_state *,
-			 struct option_state *, struct binding_scope **,
-			 struct universe *, void *);
+			 struct lease *, struct client_state *,
+			 struct option_state *, struct option_state *,
+			 struct binding_scope **, struct universe *, void *);
 int write_client_lease PROTO ((struct client_state *,
 			       struct client_lease *, int, int));
 int dhcp_option_ev_name (char *, size_t, struct option *);
@@ -1697,9 +1718,9 @@ int dhcp_option_ev_name (char *, size_t, struct option *);
 void script_init PROTO ((struct client_state *, const char *,
 			 struct string_list *));
 void client_option_envadd (struct option_cache *, struct packet *,
-			   struct lease *, struct option_state *,
-			   struct option_state *, struct binding_scope **,
-			   struct universe *, void *);
+			   struct lease *, struct client_state *,
+			   struct option_state *, struct option_state *,
+			   struct binding_scope **, struct universe *, void *);
 void script_write_params PROTO ((struct client_state *,
 				 const char *, struct client_lease *));
 int script_go PROTO ((struct client_state *));
@@ -1891,14 +1912,14 @@ int bill_class PROTO ((struct lease *, struct class *));
 
 /* execute.c */
 int execute_statements PROTO ((struct binding_value **result,
-			       struct packet *,
-			       struct lease *,
+			       struct packet *, struct lease *,
+			       struct client_state *,
 			       struct option_state *, struct option_state *,
 			       struct binding_scope **,
 			       struct executable_statement *));
 void execute_statements_in_scope PROTO ((struct binding_value **result,
-					 struct packet *,
-					 struct lease *,
+					 struct packet *, struct lease *,
+					 struct client_state *,
 					 struct option_state *,
 					 struct option_state *,
 					 struct binding_scope **,
@@ -1907,7 +1928,7 @@ int executable_statement_dereference PROTO ((struct executable_statement **,
 					     const char *, int));
 void write_statements (FILE *, struct executable_statement *, int);
 int find_matching_case (struct executable_statement **,
-			struct packet *, struct lease *,
+			struct packet *, struct lease *, struct client_state *,
 			struct option_state *, struct option_state *,
 			struct binding_scope **,
 			struct expression *, struct executable_statement *);
