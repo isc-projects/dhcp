@@ -264,7 +264,7 @@ isc_result_t omapi_one_dispatch (omapi_object_t *wo,
 		/* Check for a read socket.   If we shouldn't be
 		   trying to read for this I/O object, either there
 		   won't be a readfd function, or it'll return -1. */
-		if (io -> readfd &&
+		if (io -> readfd && io -> inner &&
 		    (desc = (*(io -> readfd)) (io -> inner)) >= 0) {
 			FD_SET (desc, &r);
 			if (desc > max)
@@ -272,7 +272,7 @@ isc_result_t omapi_one_dispatch (omapi_object_t *wo,
 		}
 		
 		/* Same deal for write fdets. */
-		if (io -> writefd &&
+		if (io -> writefd && io -> inner &&
 		    (desc = (*(io -> writefd)) (io -> inner)) >= 0) {
 			FD_SET (desc, &w);
 			if (desc > max)
@@ -292,6 +292,8 @@ isc_result_t omapi_one_dispatch (omapi_object_t *wo,
 		return ISC_R_UNEXPECTED;
 
 	for (io = omapi_io_states.next; io; io = io -> next) {
+		if (!io -> inner)
+			continue;
 		omapi_object_reference (&tmp, io -> inner, MDL);
 		/* Check for a read descriptor, and if there is one,
 		   see if we got input on that socket. */
@@ -318,8 +320,9 @@ isc_result_t omapi_one_dispatch (omapi_object_t *wo,
 	prev = (omapi_io_object_t *)0;
 	for (io = omapi_io_states.next; io; io = io -> next) {
 		if (io -> reaper) {
-			status = (*(io -> reaper)) (io -> inner);
-			if (status != ISC_R_SUCCESS) {
+			if (io -> inner)
+				status = (*(io -> reaper)) (io -> inner);
+			if (!io -> inner || status != ISC_R_SUCCESS) {
 				omapi_io_object_t *tmp =
 					(omapi_io_object_t *)0;
 				/* Save a reference to the next
