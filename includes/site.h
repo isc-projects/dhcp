@@ -42,6 +42,16 @@
 
 /* #define DEBUG_CLASS_MATCHING */
 
+/* Define this if you want to track memory usage for the purpose of
+   noticing memory leaks quickly. */
+
+/* #define DEBUG_MEMORY_LEAKAGE */
+
+/* Define this if you want exhaustive (and very slow) checking of the
+   malloc pool for corruption. */
+
+/* #define DEBUG_MALLOC_POOL */
+
 /* Define this if you want dhcpd to dump core when a non-fatal memory
    allocation error is detected (i.e., something that would cause a
    memory leak rather than a memory smash). */
