@@ -216,6 +216,7 @@ struct lease_state {
 
 	struct option_state options;
 	struct agent_options *agent_options;
+	struct data_string parameter_request_list;
 	int max_message_size;
 	u_int32_t expiry, renewal, rebind;
 	struct data_string filename, server_name;
@@ -801,7 +802,7 @@ int parse_option_buffer PROTO ((struct packet *, unsigned char *, int));
 int parse_agent_information_option PROTO ((struct packet *, int, u_int8_t *));
 int cons_options PROTO ((struct packet *, struct dhcp_packet *, int,
 			  struct option_state *, struct agent_options *,
-			 int, int, int));
+			 int, int, int, struct data_string *));
 int store_options PROTO ((unsigned char *, int, struct option_state *,
 			   int *, int, int, int, int));
 char *pretty_print_option PROTO ((unsigned int,
