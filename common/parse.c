@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.36 1999/08/01 14:26:49 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.37 1999/09/08 01:45:29 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -536,6 +536,7 @@ void convert_num (buf, str, base, size)
  *		NUMBER COLON NUMBER COLON NUMBER SEMI |
  *          NUMBER NUMBER SLASH NUMBER SLASH NUMBER 
  *		NUMBER COLON NUMBER COLON NUMBER NUMBER SEMI |
+ *	    NEVER
  *
  * Dates are stored in GMT or with a timezone offset; first number is day
  * of week; next is year/month/day; next is hours:minutes:seconds on a
@@ -554,8 +555,14 @@ TIME parse_date (cfile)
 	static int months [11] = { 31, 59, 90, 120, 151, 181,
 					  212, 243, 273, 304, 334 };
 
-	/* Day of week... */
+	/* Day of week, or "never"... */
 	token = next_token (&val, cfile);
+	if (token == NEVER) {
+		if (!parse_semi (cfile))
+			return 0;
+		return MAX_TIME;
+	}
+
 	if (token != NUMBER) {
 		parse_warn ("numeric day of week expected.");
 		if (token != SEMI)
