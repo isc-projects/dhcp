@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: print.c,v 1.53.2.4 2001/08/08 14:49:20 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: print.c,v 1.53.2.4.2.1 2002/04/30 04:35:37 murray Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1366,8 +1366,8 @@ void print_dns_status (int status, ns_updque *uq)
 		*s++ = '.';
 	*s++ = 0;
 	if (errorp)
-		log_error (obuf);
+		log_error ("%s", obuf);
 	else
-		log_info (obuf);
+		log_info ("%s", obuf);
 }
 #endif /* NSUPDATE */
