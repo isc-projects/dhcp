@@ -1,6 +1,6 @@
 		     Internet Software Consortium
 	   Dynamic Host Configuration Protocol Distribution
-		   Version 2, Beta 1, Patchlevel 6
+		   Version 2, Beta 1, Patchlevel 7
 			    June 26, 1998
 
 			    Release Notes
@@ -45,6 +45,99 @@ support for a DHCP Interserver Protocol and live querying of the DHCP
 database.   This release is not expected to be stable in the near
 future, and is intended for sites that are in a position to
 experiment, or for sites that desperately need the new features.
+
+	      CHANGES FROM VERSION 2.0 BETA 1 PATCHLEVEL 6
+
+- Add support for Linux Packet Filter (thanks to Brian Murrell, Interlinx).
+
+- Add support for FDDI hardware type.
+
+- Fix a long-standing bug in DLPI support where the ethertype was
+  being set incorrectly (thanks to Gong Wei, CCENet).
+
+- Don't use DLPI RAW mode on Solaris.
+
+- In the client, when a lease expires, the interface to which that
+  lease is attached is unconfigured.   On systems that use the socket
+  API, the interface needs to then be reconfigured with the 0.0.0.0
+  address so that it can be used to get a new address.
+
+- Add fallback support for Linux.   This fixes a problem with the
+  relay agent when relaying over non-broadcast links, and may also fix
+  some obscure problems with unicasting DHCPACKs in both the server and
+  relay agent.
+
+- When allocating leases, if the oldest lease is abandoned, try to
+  find a younger-but-still-expired lease rather than reclaiming the
+  abandoned lease.
+
+- Add more documentation to README.
+
+- The absence of the /etc/dhclient.conf file is no longer considered
+  an error.
+
+- The dhcp client's lease file name can be specified on the command
+  line.
+
+- The DHCP client should no longer zap interfaces that it has not been
+  directed to configure.
+
+- If a client starts up in the init-reboot state, the xid will be a
+  "random" number rather than always being zero, as was previously the
+  case.
+
+- In addition to comparing transaction IDs, compare hardware addresses
+  in response packets to verify that they are ours.
+
+- Rewrite the client lease database after 20 leases have been written.
+
+- Fix the exponential backoff code.
+
+- Add a Y2k comment to indicate that something suspicious-looking is
+  in fact _not_ a problem.
+
+- Use mkstemp if possible.
+
+- Add missing fi in various client scripts.
+
+- Use "search" instead of "domain" in linux resolv.conf files.
+
+- Specify a hop count in all route command on solaris.
+
+- If an allocation fails, don't try to zero out the allocation buffer
+  we didn't get.
+
+- Support subnets that are subsets of other subnets - that is, for
+  example, 10.0.1.0/24 and 10.0.0.0/16.   This is useful in fairly
+  obscure circumstances.
+
+- Don't set the lease end time if it's already expired.
+
+- Don't define INADDR_LOOPBACK on FreeBSD if it's already defined in a
+  system header.
+
+- Use the broadcast address in the relay agent if we are using the BSD
+  socket API.
+
+- Allow host declarations without names.
+
+- Allow the server identifier option to be specified.
+
+- Don't dump hostnames into the lease file if they contain
+  non-printable characters.
+
+- Copy the entire client hardware address buffer that the client sends
+  to the output packet, not just the portion of it that's supposedly
+  significant according to the hardware address length field.   This
+  is done for the benefit of certain Microsoft clients.
+
+- Don't send a second ICMP echo request if we receive two DHCPDISCOVER
+  messages in quick succession.   This prevents a rather annoying
+  timing race in configuring some Win95 clients.
+
+- Fix up dhcp-options man page to make it more readable.   Note that
+  netbios-name-server is the same thing as WINS.
+  
 
 	      CHANGES FROM VERSION 2.0 BETA 1 PATCHLEVEL 5
 
