@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.24 2000/09/01 17:22:48 mellon Exp $ Copyright (c) 1999-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.25 2000/09/04 22:32:34 mellon Exp $ Copyright (c) 1999-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -218,7 +218,9 @@ isc_result_t dhcp_failover_link_initiate (omapi_object_t *h)
 	data_string_forget (&ds, MDL);
 
 	/* Now figure out the local address that we're supposed to use. */
-	if (!evaluate_option_cache (&ds, (struct packet *)0, (struct lease *)0,
+	if (!state -> me.address ||
+	    !evaluate_option_cache (&ds, (struct packet *)0,
+				    (struct lease *)0,
 				    (struct option_state *)0,
 				    (struct option_state *)0,
 				    &global_scope, state -> me.address,
