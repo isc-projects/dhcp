@@ -245,6 +245,7 @@ struct lease_state {
 #define	SV_NEXT_SERVER			17
 #define SV_AUTHORITATIVE		18
 #define SV_VENDOR_OPTION_SPACE		19
+#define SV_ALWAYS_REPLY_RFC1048		20
 
 #if !defined (DEFAULT_DEFAULT_LEASE_TIME)
 # define DEFAULT_DEFAULT_LEASE_TIME 43200
@@ -829,8 +830,8 @@ extern char comments [4096];
 extern int comment_index;
 extern int eol_token;
 void new_parse PROTO ((char *));
-int next_token PROTO ((char **, FILE *));
-int peek_token PROTO ((char **, FILE *));
+enum dhcp_token next_token PROTO ((char **, FILE *));
+enum dhcp_token peek_token PROTO ((char **, FILE *));
 
 /* confpars.c */
 int readconf PROTO ((void));
