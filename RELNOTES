@@ -46,6 +46,18 @@ database.   This release is not expected to be stable in the near
 future, and is intended for sites that are in a position to
 experiment, or for sites that desperately need the new features.
 
+	      CHANGES FROM VERSION 2.0 BETA 1 PATCHLEVEL 4
+
+- Do not use -Wstrict-prototypes on Solaris with gcc - if the Internet
+  Software Consortium BIND distribution is not installed, this produces
+  errors.
+
+- Actually use the new DLPI support on Solaris - although the code was
+  added in Patchlevel 2, it wasn't enabled (blush).
+
+- Fix a prototype bug that's exposed when DLPI support is enabled on
+  Solaris.
+
 	      CHANGES FROM VERSION 2.0 BETA 1 PATCHLEVEL 3
 
 - Fix a makefile botch that prevents the DHCP Distribution from
