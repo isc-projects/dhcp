@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.31.2.2 1999/10/15 12:49:12 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.31.2.3 1999/10/15 17:18:42 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -640,7 +640,7 @@ int evaluate_data_expression (result, packet, options, lease, expr)
 		}
 
 #if defined (DEBUG_EXPRESSIONS)
-		log_info ("data: suffix (%s, %d) = %s",
+		log_info ("data: suffix (%s, %s) = %s",
 		      s0 ? print_hex_1 (data.len, data.data, 30) : "NULL",
 		      s1 ? print_dec_1 (len) : "NULL",
 		      ((s0 && s1)
@@ -704,9 +704,10 @@ int evaluate_data_expression (result, packet, options, lease, expr)
 			return 0;
 		}
 
-		s0 = evaluate_numeric_expression (&len, packet, options, lease,
-						  expr -> data.packet.len);
-		s1 = evaluate_numeric_expression (&offset,
+		s0 = evaluate_numeric_expression (&offset,
+						  packet, options, lease,
+						  expr -> data.packet.offset);
+		s1 = evaluate_numeric_expression (&len,
 						  packet, options, lease,
 						  expr -> data.packet.len);
 		if (s0 && s1 && offset < packet -> packet_length) {
@@ -730,7 +731,7 @@ int evaluate_data_expression (result, packet, options, lease, expr)
 		} else
 			s2 = 0;
 #if defined (DEBUG_EXPRESSIONS)
-		log_info ("data: packet (%d, %d) = %s",
+		log_info ("data: packet (%ld, %ld) = %s",
 		      offset, len,
 		      s2 ? print_hex_1 (result -> len,
 					result -> data, 60) : NULL);
@@ -839,7 +840,7 @@ int evaluate_data_expression (result, packet, options, lease, expr)
 		if (!s0)
 			log_info ("data: encode_int8 (NULL) = NULL");
 		else
-			log_info ("data: encode_int8 (%d) = %s", len,
+			log_info ("data: encode_int8 (%ld) = %s", len,
 				  print_hex_2 (result -> len,
 					       result -> data, 20));
 #endif
@@ -867,7 +868,7 @@ int evaluate_data_expression (result, packet, options, lease, expr)
 		if (!s0)
 			log_info ("data: encode_int16 (NULL) = NULL");
 		else
-			log_info ("data: encode_int16 (%d) = %s", len,
+			log_info ("data: encode_int16 (%ld) = %s", len,
 				  print_hex_2 (result -> len,
 					       result -> data, 20));
 #endif
@@ -894,7 +895,7 @@ int evaluate_data_expression (result, packet, options, lease, expr)
 		if (!s0)
 			log_info ("data: encode_int32 (NULL) = NULL");
 		else
-			log_info ("data: encode_int32 (%d) = %s", len,
+			log_info ("data: encode_int32 (%ld) = %s", len,
 				  print_hex_2 (result -> len,
 					       result -> data, 20));
 #endif
