@@ -1,6 +1,6 @@
 	    Internet Software Consortium DHCP Distribution
-		   Version 3, Beta 2, Patchlevel 22
-			    March 20, 2001
+		   Version 3, Beta 2, Patchlevel 23
+			    March 22, 2001
 
 			    Release Notes
 
@@ -48,6 +48,13 @@ Measurement Systems, and Brian Murrell at BC Tel Advanced
 Communications.  I'd like to express my thanks to all of these good
 people here, both for working on the code and for prodding me into
 improving it.
+
+	        Changes since 3.0 Beta 2 Patchlevel 22
+
+- Apply some patches suggested by Cyrille Lefevre, who is maintaining
+  the FreeBSD ISC DHCP Distribution port.
+
+- Fix a core dump in DHCPRELEASE.
 
 	        Changes since 3.0 Beta 2 Patchlevel 21
 
