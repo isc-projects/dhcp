@@ -57,6 +57,11 @@ supported systems mentioned earlier, please let us know.  If you get
 errors on a system not mentioned above, you will need to do some
 programming or debugging on your own to get the DHCP Distribution working.
 
+Once you have successfully gotten the DHCP Distribution to build, you
+can install it by typing ``make install''.   If you already have an old
+version of the DHCP Distribution installed, you may want to save it
+before typing ``make install''.
+ 
 				LINUX
 
 There are three big LINUX issues: the all-ones broadcast address,
