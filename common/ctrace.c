@@ -289,7 +289,8 @@ void trace_seed_input (trace_type_t *ttype, unsigned length, char *buf)
 	if (length != sizeof seed) {
 		log_error ("trace_seed_input: wrong size (%d)", length);
 	}
-	srandom (ntohs (*seed));
+	seed = (u_int32_t *)buf;
+	srandom (ntohl (*seed));
 }
 
 void trace_seed_stop (trace_type_t *ttype) { }
