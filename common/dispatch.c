@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dispatch.c,v 1.47.2.6 1998/12/23 14:14:48 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dispatch.c,v 1.47.2.7 1999/02/03 19:06:58 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -299,10 +299,24 @@ void discover_interfaces (state)
 				if (!strcmp (tmp -> name, name))
 					break;
 
-			/* If we already found the interface with SIOCGIFCONF,
-			   go on to the next. */
-			if (tmp)
+			/* If we found one, and it already has an ifreq
+			   structure, nothing more to do.. */
+			if (tmp && tmp -> ifp)
 				continue;
+
+			/* Make up an ifreq structure. */
+			tif = (struct ifreq *)malloc (sizeof (struct ifreq));
+			if (!tif)
+				error ("no space to remember ifp.");
+			memset (tif, 0, sizeof (struct ifreq));
+			strcpy (tif -> ifr_name, name);
+
+			/* Now, if we just needed the ifreq structure, hook
+			   it in and move on. */
+			if (tmp) {
+				tmp -> ifp = tif;
+				continue;
+			}
 
 			/* Otherwise, allocate one. */
 			tmp = ((struct interface_info *)
@@ -313,12 +327,6 @@ void discover_interfaces (state)
 			memset (tmp, 0, sizeof *tmp);
 			strcpy (tmp -> name, name);
 
-			/* Mock up an ifreq structure. */
-			tif = (struct ifreq *)malloc (sizeof (struct ifreq));
-			if (!tif)
-				error ("no space to remember ifp.");
-			memset (tif, 0, sizeof (struct ifreq));
-			strcpy (tif -> ifr_name, name);
 			tmp -> ifp = tif;
 			tmp -> flags = ir;
 			tmp -> next = interfaces;
