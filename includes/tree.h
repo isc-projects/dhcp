@@ -55,10 +55,43 @@ struct data_string {
 	int terminated;
 };
 
+enum expression_context {
+	context_any, /* indefinite */
+	context_boolean,
+	context_data,
+	context_numeric,
+	context_dns,
+	context_data_or_numeric, /* indefinite */
+	context_function
+};
+
+struct fundef {
+	struct string_list *args;
+	struct executable_statement *statements;
+};
+
+struct binding_value {
+	int refcnt;
+	enum {
+		binding_boolean,
+		binding_data,
+		binding_numeric,
+		binding_dns,
+		binding_function
+	} type;
+	union value {
+		struct data_string data;
+		unsigned long intval;
+		int boolean;
+		ns_updrec *dns;
+		struct fundef fundef;
+	} value;
+};
+
 struct binding {
 	struct binding *next;
 	char *name;
-	struct data_string value;
+	struct binding_value *value;
 };
 
 struct binding_scope {
@@ -112,7 +145,9 @@ enum expr_op {
 	expr_variable_exists,
 	expr_variable_reference,
 	expr_filename,
- 	expr_sname
+ 	expr_sname,
+	expr_arg,
+	expr_funcall
 };
 
 struct expression {
@@ -179,6 +214,14 @@ struct expression {
  			struct expression *rrdata;
  		} ns_delete, ns_exists, ns_not_exists;
 		char *variable;
+		struct {
+			struct expression *val;
+			struct expression *next;
+		} arg;
+		struct {
+			char *name;
+			struct expression *arglist;
+		} funcall;
 	} data;
 	int flags;
 #	define EXPR_EPHEMERAL	1
@@ -235,13 +278,4 @@ struct option {
 	const char *format;
 	struct universe *universe;
 	unsigned code;
-};
-
-enum expression_context {
-	context_any,
-	context_boolean,
-	context_data,
-	context_numeric,
-	context_dns,
-	context_data_or_numeric
 };
