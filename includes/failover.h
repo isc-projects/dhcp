@@ -22,7 +22,7 @@
 
 struct failover_option_info {
 	int code;
-	char *name;
+	const char *name;
 	enum { FT_UINT8, FT_IPADDR, FT_UINT32, FT_BYTES, FT_TEXT_OR_BYTES,
 	       FT_DDNS, FT_DDNS1, FT_UINT16, FT_TEXT,
 	       FT_UNDEF, FT_DIGEST } type;
@@ -32,12 +32,11 @@ struct failover_option_info {
 };
 
 typedef struct {
-	int count;
+	unsigned count;
 	u_int8_t *data;
 } failover_option_t;
 
-#define FM_OFFSET(x)	((char *)(((struct failover_message *)0).x) - \
-			 (char *)(((struct failover_message *)0)))
+#define FM_OFFSET(x) (long)(&(((failover_message_t *)0) -> x))
 
 #define FTO_BINDING_STATUS		1
 #define FTB_BINDING_STATUS			0x00000002
@@ -49,8 +48,8 @@ typedef struct {
 #define FTB_ADDRESSES_TRANSFERRED		0x00000010
 #define FTO_CLIENT_IDENTIFIER		5
 #define FTB_CLIENT_IDENTIFIER			0x00000020
-#define FTO_CLIENT_HARDWARE_ADDRESS	6
-#define FTB_CLIENT_HARDWARE_ADDRESS		0x00000040
+#define FTO_CHADDR			6
+#define FTB_CHADDR				0x00000040
 #define FTO_DDNS			7
 #define FTB_DDNS				0x00000080
 #define FTO_REJECT_REASON		8
@@ -61,8 +60,8 @@ typedef struct {
 #define FTB_MCLT				0x00000400
 #define FTO_VENDOR_CLASS		11
 #define FTB_VENDOR_CLASS			0x00000800
-#define FTO_EXPIRY			13
-#define FTB_EXPIRY				0x00002000
+#define FTO_LEASE_EXPIRY		13
+#define FTB_LEASE_EXPIRY			0x00002000
 #define FTO_POTENTIAL_EXPIRY		14
 #define FTB_POTENTIAL_EXPIRY			0x00004000
 #define FTO_GRACE_EXPIRY		15
@@ -114,8 +113,37 @@ typedef struct {
 
 typedef struct {
 	u_int8_t type;
+
+	u_int8_t binding_status;
+	u_int8_t protocol_version;
+	u_int8_t reject_reason;
+	u_int8_t server_flags;
+	u_int8_t server_state;
+	u_int8_t tls_reply;
+	u_int8_t tls_request;
+	u_int32_t stos;
 	u_int32_t time;
 	u_int32_t xid;
+	u_int32_t addresses_transferred;
+	u_int32_t assigned_addr;
+	u_int32_t client_ltt;
+	u_int32_t expiry;
+	u_int32_t grace_expiry;
+	u_int32_t max_unacked;
+	u_int32_t mclt;
+	u_int32_t potential_expiry;
+	u_int32_t receive_timer;
+	u_int32_t server_addr;
+	failover_option_t chaddr;
+	failover_option_t client_identifier;
+	failover_option_t hba;
+	failover_option_t message;
+	failover_option_t reply_options;
+	failover_option_t request_options;
+	ddns_fqdn_t ddns;
+	failover_option_t vendor_class;
+	failover_option_t vendor_options;
+
 	int options_present;
 } failover_message_t;
 
@@ -132,9 +160,11 @@ typedef struct {
 		dhcp_flink_state_max
 	} state;
 	failover_message_t *imsg;
+	struct _dhcp_failover_state *state_object;
 	u_int16_t imsg_len;
 	unsigned imsg_count;
 	u_int8_t imsg_payoff; /* Pay*load* offset. :') */
+	u_int32_t xid;
 } dhcp_failover_link_t;
 
 typedef struct {
@@ -148,5 +178,11 @@ typedef struct _dhcp_failover_state {
 	struct _dhcp_failover_state *next;
 	char *remote_peer;
 	int listen_port;
+	struct iaddr server_addr;
+	unsigned max_flying_updates;
+	unsigned partner_timeout;
+	unsigned mclt;
+	u_int8_t *hba;
 } dhcp_failover_state_t;
 
+#define DHCP_FAILOVER_VERSION		1
