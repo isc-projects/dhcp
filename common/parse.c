@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.48 1999/10/20 16:43:35 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.49 1999/10/20 19:12:32 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1483,9 +1483,9 @@ int parse_if_statement (result, cfile, lose)
 			if (!parse_if_statement (&(*result) -> data.ie.false,
 						 cfile, lose)) {
 				if (*lose) {
-					return 0;
 					executable_statement_dereference
 						(result, "parse_if_statement");
+					return 0;
 				}
 			}
 		} else if (token != LBRACE) {
@@ -1518,9 +1518,9 @@ int parse_if_statement (result, cfile, lose)
 		if (!parse_if_statement (&(*result) -> data.ie.false,
 					 cfile, lose)) {
 			if (*lose) {
-				return 0;
 				executable_statement_dereference
 					(result, "parse_if_statement");
+				return 0;
 			}
 		}
 	} else
@@ -2611,9 +2611,9 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 			if (!expression_allocate (&t, "parse_option_token"))
 				return 0;
 			if (!parse_cshl (&t -> data.const_data, cfile)) {
-				return 0;
 				expression_dereference
 					(&t, "parse_option_token: X");
+				return 0;
 			}
 			t -> op = expr_const_data;
 		} else if (token == STRING) {
