@@ -214,7 +214,7 @@ void parse_statement (cfile)
 			if (!tree_evaluate (server_id))
 				error ("server identifier is not known");
 			if (server_id -> len > 4)
-				warn ("server identifier evaluates to more %s"
+				warn ("server identifier evaluates to more %s",
 				      "than one IP address");
 			server_identifier.len = 4;
 			memcpy (server_identifier.iabuf,
