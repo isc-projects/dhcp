@@ -154,6 +154,9 @@ struct packet {
 #endif
 	int class_count;
 	struct class *classes [PACKET_MAX_CLASSES];
+
+	int known;
+	int authenticated;
 };
 
 /* A network interface's MAC address. */
@@ -182,13 +185,14 @@ struct lease {
 	struct host_decl *host;
 	struct subnet *subnet;
 	struct shared_network *shared_network;
+	struct pool *pool;
+	struct class *class;
 	struct hardware hardware_addr;
 
 	int flags;
 #       define STATIC_LEASE		1
 #       define BOOTP_LEASE		2
-#	define DYNAMIC_BOOTP_OK		4
-#	define PERSISTENT_FLAGS		(DYNAMIC_BOOTP_OK)
+#	define PERSISTENT_FLAGS		(0)
 #	define MS_NULL_TERMINATION	8
 #	define ABANDONED_LEASE		16
 #	define EPHEMERAL_FLAGS		(BOOTP_LEASE | MS_NULL_TERMINATION | \
@@ -345,14 +349,36 @@ struct host_decl {
 	struct group *group;
 };
 
+struct permit {
+	struct permit *next;
+	enum {
+		permit_unknown_clients,
+		permit_known_clients,
+		permit_authenticated_clients,
+		permit_unauthenticated_clients,
+		permit_all_clients,
+		permit_dynamic_bootp_clients,
+		permit_class,
+	} type;
+	struct class *class;
+};
+
+struct pool {
+	struct pool *next;
+	struct shared_network *shared_network;
+	struct permit *permit_list;
+	struct permit *prohibit_list;
+	struct lease *leases;
+	struct lease *insertion_point;
+	struct lease *last_lease;
+};
+
 struct shared_network {
 	struct shared_network *next;
 	char *name;
 	struct subnet *subnets;
 	struct interface_info *interface;
-	struct lease *leases;
-	struct lease *insertion_point;
-	struct lease *last_lease;
+	struct pool *pools;
 
 	struct group *group;
 };
@@ -378,7 +404,11 @@ struct collection {
 
 struct class {
 	struct class *nic;	/* Next in collection. */
-	char *name;	/* Optional... */
+	char *name; /* not set for spawned classes. */
+
+	/* A class may be configured to permit a limited number of leases. */
+	int lease_limit;
+	struct lease *billed_leases;
 
 	struct hash_table *hash;
 	struct expression *expr;
@@ -466,6 +496,10 @@ struct client_config {
 
 /* Per-interface state used in the dhcp client... */
 struct client_state {
+	struct client_state *next;
+	struct interface_info *interface;
+	char *name;
+
 	struct client_lease *active;		  /* Currently active lease. */
 	struct client_lease *new;			       /* New lease. */
 	struct client_lease *offered_leases;	    /* Leases offered to us. */
@@ -752,6 +786,7 @@ int readconf PROTO ((void));
 void read_leases PROTO ((void));
 int parse_statement PROTO ((FILE *,
 			    struct group *, int, struct host_decl *, int));
+void parse_pool_statement PROTO ((FILE *, struct group *, int));
 int parse_allow_deny PROTO ((struct option_cache **, FILE *, int));
 int parse_boolean PROTO ((FILE *));
 int parse_lbrace PROTO ((FILE *));
@@ -763,7 +798,7 @@ void parse_group_declaration PROTO ((FILE *, struct group *));
 int parse_fixed_addr_param PROTO ((struct option_cache **, FILE *));
 TIME parse_timestamp PROTO ((FILE *));
 struct lease *parse_lease_declaration PROTO ((FILE *));
-void parse_address_range PROTO ((FILE *, struct subnet *));
+void parse_address_range PROTO ((FILE *, struct group *, int, struct pool *));
 
 /* parse.c */
 void skip_to_semi PROTO ((FILE *));
@@ -864,6 +899,9 @@ struct lease *mockup_lease PROTO ((struct packet *,
 				   struct shared_network *,
 				   struct host_decl *));
 
+struct lease *allocate_lease PROTO ((struct packet *, struct pool *, int));
+int permitted PROTO ((struct packet *, struct permit *));
+
 /* bootp.c */
 void bootp PROTO ((struct packet *));
 
@@ -875,7 +913,7 @@ struct subnet *find_host_for_network PROTO ((struct host_decl **,
 					     struct iaddr *,
 					     struct shared_network *));
 void new_address_range PROTO ((struct iaddr, struct iaddr,
-			       struct subnet *, int));
+			       struct subnet *, struct pool *));
 extern struct subnet *find_grouped_subnet PROTO ((struct shared_network *,
 						  struct iaddr));
 extern struct subnet *find_subnet PROTO ((struct iaddr));
@@ -929,6 +967,10 @@ void free_packet PROTO ((struct packet *, char *));
 void free_dhcp_packet PROTO ((struct dhcp_packet *, char *));
 struct client_lease *new_client_lease PROTO ((char *));
 void free_client_lease PROTO ((struct client_lease *, char *));
+struct pool *new_pool PROTO ((char *));
+void free_pool PROTO ((struct pool *, char *));
+struct permit *new_permit PROTO ((char *));
+void free_permit PROTO ((struct permit *, char *));
 pair new_pair PROTO ((char *));
 void free_pair PROTO ((pair, char *));
 int expression_allocate PROTO ((struct expression **, char *));
@@ -1160,29 +1202,29 @@ void state_requesting PROTO ((void *));
 void state_bound PROTO ((void *));
 void state_panic PROTO ((void *));
 
-void bind_lease PROTO ((struct interface_info *));
+void bind_lease PROTO ((struct client_state *));
 
-void make_client_options PROTO ((struct interface_info *,
+void make_client_options PROTO ((struct client_state *,
 				 struct client_lease *, u_int8_t *,
 				 struct option_cache *, struct iaddr *,
 				 u_int32_t *, struct executable_statement *,
 				 struct option_state *));
-void make_discover PROTO ((struct interface_info *, struct client_lease *));
-void make_request PROTO ((struct interface_info *, struct client_lease *));
-void make_decline PROTO ((struct interface_info *, struct client_lease *));
-void make_release PROTO ((struct interface_info *, struct client_lease *));
+void make_discover PROTO ((struct client_state *, struct client_lease *));
+void make_request PROTO ((struct client_state *, struct client_lease *));
+void make_decline PROTO ((struct client_state *, struct client_lease *));
+void make_release PROTO ((struct client_state *, struct client_lease *));
 
 void destroy_client_lease PROTO ((struct client_lease *));
 void rewrite_client_leases PROTO ((void));
-void write_client_lease PROTO ((struct interface_info *,
+void write_client_lease PROTO ((struct client_state *,
 				 struct client_lease *, int));
 char *dhcp_option_ev_name PROTO ((struct option *));
 
-void script_init PROTO ((struct interface_info *, char *,
+void script_init PROTO ((struct client_state *, char *,
 			 struct string_list *));
-void script_write_params PROTO ((struct interface_info *,
+void script_write_params PROTO ((struct client_state *,
 				 char *, struct client_lease *));
-int script_go PROTO ((struct interface_info *));
+int script_go PROTO ((struct client_state *));
 
 struct client_lease *packet_to_lease PROTO ((struct packet *));
 void go_daemon PROTO ((void));
@@ -1255,14 +1297,16 @@ void parse_client_statement PROTO ((FILE *, struct interface_info *,
 				    struct client_config *));
 int parse_X PROTO ((FILE *, u_int8_t *, int));
 void parse_option_list PROTO ((FILE *, u_int32_t **));
-void parse_interface_declaration PROTO ((FILE *, struct client_config *));
+void parse_interface_declaration PROTO ((FILE *,
+					 struct client_config *, char *));
 struct interface_info *interface_or_dummy PROTO ((char *));
-void make_client_state PROTO ((struct interface_info *));
-void make_client_config PROTO ((struct interface_info *,
+void make_client_state PROTO ((struct client_state **));
+void make_client_config PROTO ((struct client_state *,
 				struct client_config *));
 void parse_client_lease_statement PROTO ((FILE *, int));
 void parse_client_lease_declaration PROTO ((FILE *, struct client_lease *,
-					    struct interface_info **));
+					    struct interface_info **,
+					    struct client_state **));
 int parse_option_decl PROTO ((struct option_cache **, FILE *));
 void parse_string_list PROTO ((FILE *, struct string_list **, int));
 int parse_ip_addr PROTO ((FILE *, struct iaddr *));
