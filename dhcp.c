@@ -402,6 +402,9 @@ void nak_lease (packet, cip)
 		to.sin_addr = raw.giaddr;
 		to.sin_port = server_port;
 
+		if (outgoing.packet_length < BOOTP_MIN_LEN)
+			outgoing.packet_length = BOOTP_MIN_LEN;
+
 #ifdef USE_FALLBACK
 		result = send_fallback (&fallback_interface,
 					packet, &raw, outgoing.packet_length,
@@ -717,6 +720,8 @@ void ack_lease (packet, lease, offer, when)
 	}
 
 	cons_options (packet, &outgoing, options, bufs);
+	if (!offer && outgoing.packet_length < BOOTP_MIN_LEN)
+		outgoing.packet_length = BOOTP_MIN_LEN;
 
 	raw.ciaddr = packet -> raw -> ciaddr;
 	memcpy (&raw.yiaddr, lease -> ip_addr.iabuf, 4);
@@ -769,6 +774,10 @@ void ack_lease (packet, lease, offer, when)
 	if (raw.giaddr.s_addr) {
 		to.sin_addr = raw.giaddr;
 		to.sin_port = server_port;
+
+		if (outgoing.packet_length < BOOTP_MIN_LEN)
+			outgoing.packet_length = BOOTP_MIN_LEN;
+
 #ifdef USE_FALLBACK
 		result = send_fallback (&fallback_interface,
 					packet, &raw, outgoing.packet_length,
