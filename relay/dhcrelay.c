@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcrelay.c,v 1.46 2000/09/29 18:14:00 mellon Exp $ Copyright (c) 1997-2000 Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcrelay.c,v 1.47 2000/10/12 09:05:04 mellon Exp $ Copyright (c) 1997-2000 Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -474,6 +474,30 @@ int find_subnet (struct subnet **sp,
 {
 	return 0;
 }
+
+#if defined (DEBUG)
+int check_collection (struct packet *p, struct lease *l,
+		      struct collection *c)
+{
+	return 0;
+}
+
+void classify (struct packet *p, struct class *c)
+{
+}
+
+isc_result_t find_class (struct class **class, const char *c1,
+			 const char *c2, int i)
+{
+	return ISC_R_NOTFOUND;
+}
+
+int parse_allow_deny (struct option_cache **oc, struct parse *p, int i)
+{
+	return 0;
+}
+
+#endif
 
 /* Strip any Relay Agent Information options from the DHCP packet
    option buffer.   If an RAI option is found whose Agent ID matches
