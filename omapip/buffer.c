@@ -51,7 +51,7 @@ isc_result_t omapi_connection_reader (omapi_object_t *h)
 		for (buffer = c -> inbufs; buffer -> next;
 		     buffer = buffer -> next)
 			;
-		if (!BUFFER_BYTES_AVAIL (buffer)) {
+		if (!BUFFER_BYTES_FREE (buffer)) {
 			status = omapi_buffer_new (&buffer -> next,
 						   "omapi_private_read");
 			if (status != ISC_R_SUCCESS)
@@ -66,19 +66,19 @@ isc_result_t omapi_connection_reader (omapi_object_t *h)
 		buffer = c -> inbufs;
 	}
 
-	bytes_to_read = BUFFER_BYTES_AVAIL (buffer);
+	bytes_to_read = BUFFER_BYTES_FREE (buffer);
 
 	while (bytes_to_read) {
-		if (buffer -> tail >= buffer -> head)
-			read_len = sizeof (buffer -> buf) - buffer -> tail - 1;
+		if (buffer -> tail > buffer -> head)
+			read_len = sizeof (buffer -> buf) - buffer -> tail;
 		else
-			read_len = buffer -> tail - buffer -> head - 1;
+			read_len = buffer -> head - buffer -> tail;
 
 		read_status = read (c -> socket,
 				    &buffer -> buf [buffer -> tail], read_len);
 		if (read_status < 0) {
 			if (errno == EWOULDBLOCK)
-				return ISC_R_NOMORE;
+				break;
 			else if (errno == EIO)
 				return ISC_R_IOERROR;
 			else if (errno == EINVAL)
@@ -89,6 +89,8 @@ isc_result_t omapi_connection_reader (omapi_object_t *h)
 			} else
 				return ISC_R_UNEXPECTED;
 		}
+		/* If we got a zero-length read, as opposed to EWOULDBLOCK,
+		   the remote end closed the connection. */
 		if (read_status == 0) {
 			omapi_disconnect (h, 0);
 			return ISC_R_SHUTTINGDOWN;
@@ -142,7 +144,7 @@ isc_result_t omapi_connection_copyin (omapi_object_t *h,
 	while (bytes_copied < len) {
 		/* If there is no space available in this buffer,
                    allocate a new one. */
-		if (!BUFFER_BYTES_AVAIL (buffer)) {
+		if (!BUFFER_BYTES_FREE (buffer)) {
 			status = (omapi_buffer_new
 				  (&buffer -> next,
 				   "omapi_private_buffer_copyin"));
@@ -151,10 +153,11 @@ isc_result_t omapi_connection_copyin (omapi_object_t *h,
 			buffer = buffer -> next;
 		}
 
-		if (buffer -> tail < buffer -> head)
-			copy_len = buffer -> tail - buffer -> head - 1;
+		if (buffer -> tail > buffer -> head)
+			copy_len = sizeof (buffer -> buf) - buffer -> tail;
 		else
-			copy_len = sizeof (buffer -> buf) - buffer -> tail - 1;
+			copy_len = buffer -> head - buffer -> tail;
+
 		if (copy_len > (len - bytes_copied))
 			copy_len = len - bytes_copied;
 
@@ -178,6 +181,7 @@ isc_result_t omapi_connection_copyout (unsigned char *buf,
 {
 	unsigned bytes_remaining;
 	unsigned bytes_this_copy;
+	unsigned first_byte;
 	omapi_buffer_t *buffer;
 	unsigned char *bufp;
 	omapi_connection_object_t *c;
@@ -195,36 +199,39 @@ isc_result_t omapi_connection_copyout (unsigned char *buf,
 	while (bytes_remaining) {
 		if (!buffer)
 			return ISC_R_UNEXPECTED;
-		if (buffer -> head != buffer -> tail) {
-			if (buffer -> head > buffer -> tail) {
+		if (BYTES_IN_BUFFER (buffer)) {
+			if (buffer -> head == (sizeof buffer -> buf) - 1)
+				first_byte = 0;
+			else
+				first_byte = buffer -> head + 1;
+
+			if (first_byte > buffer -> tail) {
 				bytes_this_copy = (sizeof buffer -> buf -
-						   buffer -> head);
+						   first_byte);
 			} else {
 				bytes_this_copy =
-					buffer -> tail - buffer -> head;
+					buffer -> tail - first_byte;
 			}
 			if (bytes_this_copy > bytes_remaining)
 				bytes_this_copy = bytes_remaining;
 			if (bufp) {
-				memcpy (bufp, &buffer -> buf [buffer -> head],
+				memcpy (bufp, &buffer -> buf [first_byte],
 					bytes_this_copy);
 				bufp += bytes_this_copy;
 			}
 			bytes_remaining -= bytes_this_copy;
-			buffer -> head += bytes_this_copy;
-			if (buffer -> head == sizeof buffer -> buf)
-				buffer -> head = 0;
+			buffer -> head = first_byte + bytes_this_copy - 1;
 			c -> in_bytes -= bytes_this_copy;
 		}
 			
-		if (buffer -> head == buffer -> tail)
+		if (!BYTES_IN_BUFFER (buffer))
 			buffer = buffer -> next;
 	}
 
 	/* Get rid of any input buffers that we emptied. */
 	buffer = (omapi_buffer_t *)0;
 	while (c -> inbufs &&
-	       c -> inbufs -> head == c -> inbufs -> tail) {
+	       !BYTES_IN_BUFFER (c -> inbufs)) {
 		if (c -> inbufs -> next) {
 			omapi_buffer_reference
 				(&buffer,
@@ -236,11 +243,13 @@ isc_result_t omapi_connection_copyout (unsigned char *buf,
 		}
 		omapi_buffer_dereference (&c -> inbufs,
 					  "omapi_private_buffer_copyout");
-		omapi_buffer_reference (&c -> inbufs,
-					buffer,
-					"omapi_private_buffer_copyout");
-		omapi_buffer_dereference (&buffer,
-					  "omapi_private_buffer_copyout");
+		if (buffer) {
+			omapi_buffer_reference
+				(&c -> inbufs, buffer,
+				 "omapi_private_buffer_copyout");
+			omapi_buffer_dereference
+				(&buffer, "omapi_private_buffer_copyout");
+		}
 	}
 	return ISC_R_SUCCESS;
 }
@@ -249,6 +258,7 @@ isc_result_t omapi_connection_writer (omapi_object_t *h)
 {
 	unsigned bytes_this_write;
 	unsigned bytes_written;
+	unsigned first_byte;
 	omapi_buffer_t *buffer;
 	unsigned char *bufp;
 	omapi_connection_object_t *c;
@@ -266,16 +276,21 @@ isc_result_t omapi_connection_writer (omapi_object_t *h)
 	while (c -> out_bytes) {
 		if (!buffer)
 			return ISC_R_UNEXPECTED;
-		if (buffer -> head != buffer -> tail) {
-			if (buffer -> head > buffer -> tail) {
+		if (BYTES_IN_BUFFER (buffer)) {
+			if (buffer -> head == (sizeof buffer -> buf) - 1)
+				first_byte = 0;
+			else
+				first_byte = buffer -> head + 1;
+
+			if (first_byte > buffer -> tail) {
 				bytes_this_write = (sizeof buffer -> buf -
-						   buffer -> head);
+						   first_byte);
 			} else {
 				bytes_this_write =
-					(buffer -> tail - buffer -> head);
+					buffer -> tail - first_byte;
 			}
 			bytes_written = write (c -> socket,
-					       &buffer -> buf [buffer -> head],
+					       &buffer -> buf [first_byte],
 					       bytes_this_write);
 			/* If the write failed with EWOULDBLOCK or we wrote
 			   zero bytes, a further write would block, so we have
@@ -302,9 +317,7 @@ isc_result_t omapi_connection_writer (omapi_object_t *h)
 			if (bytes_written == 0)
 				return ISC_R_SUCCESS;
 
-			buffer -> head += bytes_written;
-			if (buffer -> head == sizeof buffer -> buf)
-				buffer -> head = 0;
+			buffer -> head = first_byte + bytes_written - 1;
 			c -> out_bytes -= bytes_written;
 
 			/* If we didn't finish out the write, we filled the
@@ -314,14 +327,14 @@ isc_result_t omapi_connection_writer (omapi_object_t *h)
 				return ISC_R_SUCCESS;
 		}
 			
-		if (buffer -> head == buffer -> tail)
+		if (!BYTES_IN_BUFFER (buffer))
 			buffer = buffer -> next;
 	}
 		
 	/* Get rid of any output buffers we emptied. */
 	buffer = (omapi_buffer_t *)0;
 	while (c -> outbufs &&
-	       c -> outbufs -> head == c -> outbufs -> tail) {
+	       !BYTES_IN_BUFFER (c -> outbufs)) {
 		if (c -> outbufs -> next) {
 			omapi_buffer_reference
 				(&buffer, c -> outbufs -> next,
