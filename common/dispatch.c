@@ -3,7 +3,7 @@
    Network input dispatcher... */
 
 /*
- * Copyright (c) 1995, 1996, 1998 The Internet Software Consortium.
+ * Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dispatch.c,v 1.51 1998/10/17 13:35:24 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dispatch.c,v 1.52 1999/02/14 18:46:20 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -54,16 +54,10 @@ static struct timeout *free_timeouts;
 int interfaces_invalidated;
 
 #ifdef USE_POLL
-/* Wait for packets to come in using poll().  Anyway, when a packet
-   comes in, call receive_packet to receive the packet and possibly
-   strip hardware addressing information from it, and then call
-   do_packet to try to do something with it. 
-
-   As you can see by comparing this with the code that uses select(),
-   below, this is gratuitously complex.  Quelle surprise, eh?  This is
-   SysV we're talking about, after all, and even in the 90's, it
-   wouldn't do for SysV to make networking *easy*, would it?  Rant,
-   rant... */
+/* Wait for packets to come in using poll().  When a packet comes in,
+   call receive_packet to receive the packet and possibly strip hardware
+   addressing information from it, and then call through the
+   bootp_packet_handler hook to try to do something with it. */
 
 void dispatch ()
 {
@@ -151,8 +145,8 @@ void dispatch ()
 #else
 /* Wait for packets to come in using select().   When one does, call
    receive_packet to receive the packet and possibly strip hardware
-   addressing information from it, and then call do_packet to try to
-   do something with it. */
+   addressing information from it, and then call through the
+   bootp_packet_handler hook to try to do something with it. */
 
 void dispatch ()
 {
