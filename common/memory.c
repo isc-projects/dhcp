@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: memory.c,v 1.52.2.7 1999/11/12 16:18:36 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: memory.c,v 1.52.2.8 1999/11/12 22:06:41 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -599,7 +599,7 @@ int supersede_lease (comp, lease, commit)
 		} else {
 			comp -> pool -> next_expiry = (struct lease *)0;
 			if (commit)
-				cancel_timeout (pool_timer, lp -> pool);
+				cancel_timeout (pool_timer, comp -> pool);
 		}
 	}
 	
