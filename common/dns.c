@@ -4,7 +4,7 @@
 
 /*
  * Copyright (C) 1992 by Ted Lemon.
- * Copyright (c) 1997 The Internet Software Consortium.
+ * Copyright (c) 1997, 1998 The Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -48,7 +48,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dns.c,v 1.6 1998/01/12 01:00:09 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dns.c,v 1.7 1998/03/15 20:50:53 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -64,7 +64,8 @@ static int nslookup PROTO ((u_int8_t, char *, int, u_int16_t, u_int16_t));
 static int zonelookup PROTO ((u_int8_t, char *, int, u_int16_t));
 u_int16_t dns_port;
 
-struct dns_query *queries [65536];
+#define DNS_QUERY_HASH_SIZE	293
+struct dns_query *dns_query_hash [DNS_QUERY_HASH_SIZE];
 
 /* Initialize the DNS protocol. */
 
@@ -90,7 +91,7 @@ void dns_startup ()
 	if (dns_protocol_fd < 0)
 		error ("unable to create dns socket: %m");
 
-	pick_name_server ();
+	first_name_server ();
 
 	add_protocol ("dns", dns_protocol_fd, dns_packet, 0);
 }
@@ -147,38 +148,159 @@ static int copy_out_name (base, name, buf)
 		+ copy_out_name (base, name + *name + 1, buf + *name + 1));
 }
 
+/* Compute a hash on the question. */
+
+static inline u_int32_t dns_hash_question (struct dns_question *question)
+{
+	u_int32_t sum;
+	u_int32_t remainder;
+	u_int32_t *p = (u_int32_t *)question;
+	u_int8_t *s;
+
+	/* First word. */
+	sum = *p++;
+	s = (u_int8_t *)p;
+
+	remainder = 0;
+	while (s [0]) {
+		remainder = s [0];
+		if (s [1]) {
+			remainder = (remainder << 8) + s [1];
+			if (s [2]) {
+				remainder = (remainder << 8) + s [2];
+				if (s [3])
+					remainder = (remainder << 8) + s [3];
+				else
+					goto done;
+			} else
+				goto done;
+		} else {
+		      done:
+			sum += remainder;
+			break;
+		}
+		if ((sum & 0x80000000) && (remainder & 0x80000000))
+			++sum;
+		sum += remainder;
+		s += 4;
+	}
+
+	while (sum > DNS_QUERY_HASH_SIZE) {
+		remainder = sum / DNS_QUERY_HASH_SIZE;
+		sum = sum % DNS_QUERY_HASH_SIZE;
+		while (remainder) {
+			sum += remainder % DNS_QUERY_HASH_SIZE;
+			remainder /= DNS_QUERY_HASH_SIZE;
+		}
+	} 
+
+	return sum;
+}
+
+/* Find a query that matches the specified name.  If one can't be
+   found, and new is nonzero, allocate one, hash it in, and save the
+   question.  Otherwise, if new is nonzero, free() the question.
+   Return the query if one was found or allocated. */
+
+struct dns_query *find_dns_query (question, new)
+	struct dns_question *question;
+	int new;
+{
+	int hash = dns_hash_question (question);
+	struct dns_query *q;
+
+	for (q = dns_query_hash [hash]; q; q = q -> next) {
+		if (q -> question -> type == question -> type &&
+		    q -> question -> class == question -> class &&
+		    !strcmp (q -> question -> data, question -> data))
+			break;
+	}
+	if (q || !new) {
+		if (new)
+			free (question);
+		return q;
+	}
+
+	/* Allocate and zap a new query. */
+	q = (struct dns_query *)malloc (sizeof (struct dns_query));
+	memset (q, 0, sizeof *q);
+
+	/* All we need to set up is the question and the hash. */
+	q -> question = question;
+	q -> next = dns_query_hash [hash];
+	dns_query_hash [hash] = q;
+	q -> hash = hash;
+	return q;
+}
+
+/* Free up all memory associated with a DNS query and remove it from the
+   query hash. */
+
+void destroy_dns_query (query)
+	struct dns_query *query;
+{
+	struct dns_query *q;
+
+	/* Free up attached free data. */
+	if (query -> question)
+		free (query -> question);
+	if (query -> answer)
+		free (query -> answer);
+	if (query -> query)
+		free (query -> query);
+
+	/* Remove query from hash table. */
+	if (dns_query_hash [query -> hash] == query)
+		dns_query_hash [query -> hash] = query -> next;
+	else {
+		for (q = dns_query_hash [query -> hash];
+		     q -> next && q -> next != query; q = q -> next)
+			;
+		if (q -> next)
+			q -> next = query -> next;
+	}
+
+	/* Free the query structure. */
+	free (query);
+}
+
 /* ns_inaddr_lookup constructs a PTR lookup query for an internet address -
-   e.g., 1.200.9.192.in-addr.arpa.   If the specified timeout period passes
-   before the query is satisfied, or if the query fails, the callback is
-   called with a null pointer.   Otherwise, the callback is called with the
-   address of the string returned by the name server. */
+   e.g., 1.200.9.192.in-addr.arpa.   It then passes it on to ns_query for
+   completion. */
 
 struct dns_query *ns_inaddr_lookup (inaddr, wakeup)
 	struct iaddr inaddr;
 	struct dns_wakeup *wakeup;
 {
-	unsigned char question [512];
+	unsigned char query [512];
 	unsigned char *s;
 	unsigned char *label;
 	int i;
 	unsigned char c;
+	struct dns_question *question;
 
-	s = question;
+	/* First format the query in the internal format. */
+	sprintf (query, "%d.%d.%d.%d.in-addr.arpa.",
+		 inaddr.iabuf [0], inaddr.iabuf [1],
+		 inaddr.iabuf [2], inaddr.iabuf [3]);
+
+	question = (struct dns_question *)malloc (strlen (query) +
+						  sizeof *question);
+	if (!question)
+		return (struct dns_query *)-1;
+	question -> type = T_PTR;
+	question -> class = C_IN;
+	strcpy (question -> data, query);
+
+	/* Now format the query for the name server. */
+	s = query;
 
 	/* Copy out the digits. */
 	for (i = 3; i >= 0; --i) {
 		label = s++;
-		*label = 1;
-		c = inaddr.iabuf [i];
-		if (c > 100) {
-			++*label;
-			*s++ = '0' + c / 100;
-		}
-		if (c > 10) {
-			++*label;
-			*s++ = '0' + ((c / 10) % 10);
-		}
-		*s++ = '0' + (c % 10);
+		sprintf (s, "%d", inaddr.iabuf [i]);
+		*label = strlen (s);
+		s += *label;
 	}
 	s += addlabel (s, "in-addr");
 	s += addlabel (s, "arpa");
@@ -192,26 +314,41 @@ struct dns_query *ns_inaddr_lookup (inaddr, wakeup)
 	putUShort (s, C_IN);
 	s += sizeof (u_int16_t);
 
-	return ns_query (question, s - question, wakeup);
+	return ns_query (question, query, s - query, wakeup);
 }
 
-struct dns_query *ns_query (question, len, wakeup)
-	unsigned char *question;
+/* Try to satisfy a query out of the local cache.  If no answer has
+   been cached, and if there isn't already a query pending on this
+   question, send it.  If the query can be immediately satisfied,
+   a pointer to the dns_query structure is returned.  If the query
+   can't even be made for some reason, (struct dns_query *)-1 is
+   returned.  Otherwise, the null pointer is returned, indicating that
+   a wakeup will be performed later when the answer comes back. */
+
+struct dns_query *ns_query (question, formatted_query, len, wakeup)
+	struct dns_question *question;
+	unsigned char *formatted_query;
 	int len;
 	struct dns_wakeup *wakeup;
 {
 	HEADER *hdr;
 	struct dns_query *query;
 	unsigned char *s;
+	unsigned char buf [512];
+
+	/* If the query won't fit, don't bother setting it up. */
+	if (len > 255) {
+		free (question);
+		return (struct dns_query *)-1;
+	}
 
 	/* See if there's already a query for this name, and allocate a
 	   query if none exists. */
-	query = find_dns_query (question, len, 1);
+	query = find_dns_query (question, 1);
 
 	/* If we can't allocate a query, report that the query failed. */
-	if (!query) {
+	if (!query)
 		return (struct dns_query *)-1;
-	}
 
 	/* If the query has already been answered, return it. */
 	if (query -> expiry > cur_time)
@@ -230,22 +367,28 @@ struct dns_query *ns_query (question, len, wakeup)
 		return (struct dns_query *)0;
 
 	/* Construct a header... */
-	hdr = (HEADER *)query -> buf;
+	hdr = (HEADER *)buf;
 	memset (hdr, 0, sizeof *hdr);
 	hdr -> id = query -> id;
 	hdr -> rd = 1;
 	hdr -> opcode = QUERY;
 	hdr -> qdcount = htons (1);
 
-	/* Copy the name into the buffer. */
+	/* Copy the formatted name into the buffer. */
 	s = (unsigned char *)hdr + 1;
-	memcpy (s, question, len);
-	query -> question = s;
-	query -> question_len = len;
+	memcpy (s, formatted_query, len);
 
 	/* Figure out how long the whole message is */
 	s += len;
-	query -> len = s - query -> buf;
+	query -> len = s - buf;
+
+	/* Save the raw query data. */
+	query -> query = malloc (len);
+	if (!query -> query) {
+		destroy_dns_query (query);
+		return (struct dns_query *)-1;
+	}
+	memcpy (query, buf, query -> len);
 
 	/* Flag the query as having been sent. */
 	query -> sent = 1;
@@ -272,7 +415,7 @@ void dns_timeout (qv)
 	/* Send the query. */
 	if (query -> next_server)
 		status = sendto (dns_protocol_fd,
-				 query -> buf, query -> len, 0,
+				 query -> query, query -> len, 0,
 				 ((struct sockaddr *)&query ->
 				  next_server -> addr),
 				 sizeof query -> next_server -> addr);
@@ -311,6 +454,10 @@ void dns_packet (protocol)
 	struct sockaddr_in from;
 	struct dns_wakeup *wakeup;
 	unsigned char buf [512];
+	union {
+		unsigned char u [512];
+		struct dns_question q;
+	} qbuf;
 	unsigned char *base;
 	unsigned char *dptr, *name;
 	u_int16_t type;
@@ -344,7 +491,9 @@ void dns_packet (protocol)
 	/* If this is a response to a query from us, there should have
            been only one query. */
 	if (ntohs (ns_header -> qdcount) != 1) {
-		dns_bogus (buf, len);
+		warn ("Bogus DNS answer packet from %s claims %d queries.\n",
+		      inet_ntoa (from.sin_addr),
+		      ntohs (ns_header -> qdcount));
 		return;
 	}
 
@@ -352,28 +501,23 @@ void dns_packet (protocol)
 	name = dptr;
 
 	/* Skip over the name. */
-	dptr += skipname (dptr);
+	dptr += copy_out_name (name, name, qbuf.q.data);
 
 	/* Skip over the query type and query class. */
-	dptr += 2 * sizeof (u_int16_t);
+	qbuf.q.type = getUShort (dptr);
+	dptr += sizeof (u_int16_t);
+	qbuf.q.class = getUShort (dptr);
+	dptr += sizeof (u_int16_t);
 
 	/* See if we asked this question. */
-	query = find_dns_query (name, dptr - name, 0);
+	query = find_dns_query (&qbuf.q, 0);
 	if (!query) {
-		dns_bogus (buf, len);
+warn ("got answer for question %s from DNS, which we didn't ask.",
+qbuf.q.data);
 		return;
 	}
 
-	/* Save the response. */
-	memcpy (buf, query -> buf, len);
-
-	/* Remember where the question is and how long it is. */
-	query -> question = name;
-	query -> question_len = dptr - name;
-
-	/* Remember where the answer is and how long it is. */
-	query -> answer = dptr;
-	query -> answer_len = len - (dptr - buf);
+note ("got answer for question %s from DNS", qbuf.q.data);
 
 	/* Wake up everybody who's waiting. */
 	for (wakeup = query -> wakeups; wakeup; wakeup = wakeup -> next) {
