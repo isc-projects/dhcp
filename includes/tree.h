@@ -44,6 +44,8 @@ struct buffer {
    XXX a reference to the data in the caller's space, which the caller
    XXX then has to dereference - instead, the reference should be
    XXX ephemeral by default and be made a persistent reference explicitly. */
+/* XXX on the other hand, it seems to work pretty nicely, so maybe the
+   XXX above comment is meshuggenah. */
 
 /* A string of data bytes, possibly accompanied by a larger buffer. */
 struct data_string {
@@ -74,6 +76,9 @@ enum expr_op {
 	expr_extract_int8,
 	expr_extract_int16,
 	expr_extract_int32,
+	expr_encode_int8,
+	expr_encode_int16,
+	expr_encode_int32,
 	expr_const_int,
 	expr_exists,
 	expr_encapsulate,
@@ -105,6 +110,7 @@ struct expression {
 		} packet;
 		struct data_string const_data;
 		struct expression *extract_int;
+		struct expression *encode_int;
 		unsigned long const_int;
 		struct expression *concat [2];
 		struct dns_host_entry *host_lookup;
