@@ -282,6 +282,66 @@ It is also possible to set up entirely different subnets for known and
 unknown clients - address pools exist at the level of shared networks,
 so address ranges within pool declarations can be on different
 subnets.
+.PP
+As you can see in the preceding example, pools can have permit lists
+that control which clients are allowed access to the pool and which
+aren't.  Each entry in a pool's permit list is introduced with the
+.I allow
+or \fIdeny\fR keyword.   If a pool has a permit list, then only those
+clients that match specific entries on the permit list will be
+elegible to be assigned addresses from the pool.   If a pool has a
+deny list, then only those clients that do not match any entries on
+the deny list will be elegible.    If both permit and deny lists exist
+for a pool, then only clients that match the permit list and do not
+match the deny list will be allowed access.
+.SH ADDRESS ALLOCATION
+Address allocation is actually only done when a client is in the INIT
+state and has sent a DHCPDISCOVER message.  If the client thinks it
+has a valid lease and sends a DHCPREQUEST to initiate or renew that
+lease, the server has only three choices - it can ignore the
+DHCPREQUEST, send a DHCPNAK to tell the client it should stop using
+the address, or send a DHCPACK, telling the client to go ahead and use
+the address for a while.  If the server finds the address the client
+is requesting, and that address is available to the client, the server
+will send a DHCPACK.  If the address is no longer available, or the
+client isn't permitted to have it, the server will send a DHCPNAK.  If
+the server knows nothing about the, it will remain silent, unless the
+address is incorrect for the network segment to which the client has
+been attached and the server is authoritative for that network
+segment, in which case the server will send a DHCPNAK even though it
+doesn't know about the address.
+.PP
+When the DHCP server allocates a new address for a client (remember,
+this only happens if the client has sent a DHCPDISCOVER), it first
+looks to see if the client already has a valid lease on an IP address,
+or if there is an old IP address the client had before that hasn't yet
+been reassigned.  In that case, the server will take that address and
+check it to see if the client is still permitted to use it.  If the
+client is no longer permitted to use it, the lease is freed if the
+server thought it was still in use - the fact that the client has sent
+a DHCPDISCOVER proves to the server that the client is no longer using
+the lease.
+.PP
+If no existing lease is found, or if the client is forbidden to
+receive the existing lease, then the server will look in the list of
+address pools for the network segment to which the client is attached
+for a lease that is not in use and that the client is permitted to
+have.   It looks through each pool declaration in sequence (all
+.I range
+declarations that appear outside of pool declarations are grouped into
+a single pool with no permit list).   If the permit list for the pool
+allows the client to be allocated an address from that pool, the pool
+is examined to see if there is an address available.   If so, then the
+client is tentatively assigned that address.   Otherwise, the next
+pool is tested.   If no addresses are found that can be assigned to
+the client, no response is sent to the client.
+.PP
+If an address is found that the client is permitted to have, and that
+has never been assigned to any client before, the address is
+immediately allocated to the client.   If the address is available for
+allocation but has been previously assigned to a different client, the
+server will keep looking in hopes of finding an address that has never
+before been assigned to a client.
 .SH CLIENT CLASSING
 Clients can be seperated into classes, and treated differently
 depending on what class they are in.   This seperation can be done
@@ -548,15 +608,22 @@ be used for all clients that may boot using the BOOTP protocol.
 The group statement is used simply to apply one or more parameters to
 a group of declarations.   It can be used to group hosts, shared
 networks, subnets, or even other groups.
-.SH REFERENCE: ALLOW and DENY
-.PP
+.SH REFERENCE: ALLOW AND DENY
 The
 .I allow
 and
 .I deny
 statements can be used to control the behaviour of dhcpd to various
-sorts of requests.
+sorts of requests.   The allow and deny keywords actually have
+different meanings depending on the context.   In a pool context,
+these keywords can be used to set up access lists for address
+allocation pools.   In other contexts, the keywords simply control
+general server behaviour with respect to clients based on scope.
 .PP
+.SH ALLOW AND DENY IN SCOPE
+The following usages of allow and deny will work in any scope,
+although it is not recommended that they be used in pool
+declarations.
 .PP
 .B The
 .I unknown-clients
@@ -592,6 +659,78 @@ to queries from a particular client.  This keyword only has meaning
 when it appears in a host declaration.   By default, booting is
 \fBallow\fRed, but if it is disabled for a particular client, then
 that client will not be able to get and address from the DHCP server.
+.SH ALLOW AND DENY WITHIN POOL DECLARATIONS
+.PP
+The uses of the allow and deny keyword shown in the previous section
+work pretty much the same way whether the client is sending a
+DHCPDISCOVER or a DHCPREQUEST message - an address will be allocated
+to the client (either the old address it's requesting, or a new
+address) and then that address will be tested to see if it's okay to
+let the client have it.   If the client requested it, and it's not
+okay, the server will send a DHCPNAK message.   Otherwise, the server
+will simply not respond to the client.   If it is okay to give the
+address to the client, the server will send a DHCPACK message.
+.PP
+The primary motivation behind pool declarations is to have address
+allocation pools whose allocation policies are different.   A client
+may be denied access to one pool, but allowed access to another pool
+on the same network segment.   In order for this to work, access
+control has to be done during address allocation, not after address
+allocation is done.
+.PP
+When a DHCPREQUEST message is processed, address allocation simply
+consists of looking up the address the client is requesting and seeing
+if it's still available for the client.  If it is, then the DHCP
+server checks both the address pool permit lists and the relevant
+in-scope allow and deny statements to see if it's okay to give the
+lease to the client.  In the case of a DHCPDISCOVER message, the
+allocation process is done as described previously in the ADDRESS
+ALLOCATION section.
+.PP
+When declaring permit lists for address allocation pools, the
+following syntaxes are recognized following the allow or deny keyword:
+.PP
+ \fBknown clients;\fR
+.PP
+If specified, this statement either allows or prevents allocation from
+this pool to any client that has a host declaration (i.e., is known).
+.PP
+ \fBunknown clients;\fR
+.PP
+If specified, this statement either allows or prevents allocation from
+this pool to any client that has no host declaration (i.e., is not
+known).
+.PP
+ \fBmembers of "\fRclass\fB";\fR
+.PP
+If specified, this statement either allows or prevents allocation from
+this pool to any client that is a member of the named class.
+.PP
+ \fBdynamic bootp clients;\fR
+.PP
+If specified, this statement either allows or prevents allocation from
+this pool to any bootp client.
+.PP
+ \fBauthenticated clients;\fR
+.PP
+If specified, this statement either allows or prevents allocation from
+this pool to any client that has been authenticated using the DHCP
+authentication protocol.   This is not yet supported.
+.PP
+ \fBunauthenticated clients;\fR
+.PP
+If specified, this statement either allows or prevents allocation from
+this pool to any client that has not been authenticated using the DHCP
+authentication protocol.   This is not yet supported.
+.PP
+ \fBall clients;\fR
+.PP
+If specified, this statement either allows or prevents allocation from
+this pool to all clients.   This can be used when you want to write a
+pool declaration for some reason, but hold it in reserve, or when you
+want to renumber your network quickly, and thus want the server to
+force all clients that have been allocated addresses from this pool to
+obtain new addresses immediately when they next renew.
 .SH REFERENCE: PARAMETERS
 .PP
 .B The
