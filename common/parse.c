@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.28.2.2 1999/10/20 02:09:01 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.28.2.3 1999/10/20 02:19:48 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2259,7 +2259,7 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 				return 0;
 			if (!parse_cshl (&t -> data.const_data, cfile)) {
 				expression_dereference
-					(expr, "parse_option_token: X");
+					(&t, "parse_option_token: X");
 				return 0;
 			}
 			t -> op = expr_const_data;
