@@ -653,6 +653,7 @@ void enter_lease PROTO ((struct lease *));
 int supersede_lease PROTO ((struct lease *, struct lease *, int));
 void release_lease PROTO ((struct lease *));
 void abandon_lease PROTO ((struct lease *, char *));
+void dissociate_lease PROTO ((struct lease *, char *));
 struct lease *find_lease_by_uid PROTO ((unsigned char *, int));
 struct lease *find_lease_by_hw_addr PROTO ((unsigned char *, int));
 struct lease *find_lease_by_ip_addr PROTO ((struct iaddr));
