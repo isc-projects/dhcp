@@ -50,7 +50,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: socket.c,v 1.26.2.3 1998/12/20 18:28:14 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: socket.c,v 1.26.2.4 1998/12/22 22:45:05 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -102,7 +102,7 @@ int if_register_socket (info)
 	int sock;
 	int flag;
 
-#ifndef SO_BINDTODEVICE
+#if !defined (SO_BINDTODEVICE) && !defined (USE_FALLBACK)
 	/* Make sure only one interface is registered. */
 	if (once)
 		error ("The standard socket API can only support %s",
@@ -136,7 +136,7 @@ int if_register_socket (info)
 	if (bind (sock, (struct sockaddr *)&name, sizeof name) < 0)
 		error ("Can't bind to dhcp address: %m");
 
-#ifdef SO_BINDTODEVICE
+#if defined (SO_BINDTODEVICE)
 	/* Bind this socket to this interface. */
 	if (info -> ifp &&
 	    setsockopt (sock, SOL_SOCKET, SO_BINDTODEVICE,
@@ -272,7 +272,7 @@ void maybe_setup_fallback ()
 	fbi = setup_fallback ();
 	if (fbi) {
 		fbi -> wfdesc = if_register_socket (fbi);
-		add_protocol ("fallback, fbi -> rfdesc, got_one, fbi);
+		add_protocol ("fallback", fbi -> rfdesc, got_one, fbi);
 	}
 #endif
 }
