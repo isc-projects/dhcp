@@ -521,6 +521,7 @@ isc_result_t omapi_object_update (omapi_object_t *, omapi_object_t *,
 int omapi_data_string_cmp (omapi_data_string_t *, omapi_data_string_t *);
 int omapi_ds_strcmp (omapi_data_string_t *, const char *);
 int omapi_td_strcmp (omapi_typed_data_t *, const char *);
+int omapi_td_strcasecmp (omapi_typed_data_t *, const char *);
 isc_result_t omapi_make_value (omapi_value_t **, omapi_data_string_t *,
 			       omapi_typed_data_t *, const char *, int);
 isc_result_t omapi_make_const_value (omapi_value_t **, omapi_data_string_t *,

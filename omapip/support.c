@@ -621,6 +621,31 @@ int omapi_td_strcmp (omapi_typed_data_t *s1, const char *s2)
 	return 0;
 }
 
+int omapi_td_strcasecmp (omapi_typed_data_t *s1, const char *s2)
+{
+	unsigned len, slen;
+	int rv;
+
+	/* If the data type is not compatible, never equal. */
+	if (s1 -> type != omapi_datatype_data &&
+	    s1 -> type != omapi_datatype_string)
+		return -1;
+
+	slen = strlen (s2);
+	if (slen > s1 -> u.buffer.len)
+		len = s1 -> u.buffer.len;
+	else
+		len = slen;
+	rv = casecmp (s1 -> u.buffer.value, s2, len);
+	if (rv)
+		return rv;
+	if (s1 -> u.buffer.len > slen)
+		return 1;
+	else if (s1 -> u.buffer.len < slen)
+		return -1;
+	return 0;
+}
+
 isc_result_t omapi_make_value (omapi_value_t **vp,
 			       omapi_data_string_t *name,
 			       omapi_typed_data_t *value,
