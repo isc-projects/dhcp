@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.75 2000/02/03 04:31:46 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.76 2000/02/05 17:45:20 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -402,6 +402,209 @@ static int do_host_lookup (result, dns)
 	return 1;
 }
 
+int evaluate_expression (result, packet, lease,
+			 in_options, cfg_options, scope, expr)
+	struct binding_value **result;
+	struct packet *packet;
+	struct lease *lease;
+	struct option_state *in_options;
+	struct option_state *cfg_options;
+	struct binding_scope *scope;
+	struct expression *expr;
+{
+	struct binding_value *bv;
+	int status;
+	struct binding *binding;
+
+	bv = (struct binding_value *)0;
+
+	if (expr -> op == expr_variable_reference) {
+		binding = find_binding (scope, expr -> data.variable);
+
+		if (binding && binding -> value) {
+			if (result)
+				binding_value_reference (result,
+							 binding -> value,
+							 MDL);
+			return 1;
+		} else
+			return 0;
+	} else if (expr -> op == expr_funcall) {
+		struct string_list *s;
+		struct expression *arg;
+		struct binding_scope *ns;
+		struct binding *nb;
+		binding = find_binding (scope, expr -> data.funcall.name);
+
+		if (!binding || !binding -> value) {
+			log_error ("%s: no such function.",
+				   expr -> data.funcall.name);
+			return 0;
+		}
+		if (binding -> value -> type != binding_function) {
+			log_error ("%s: not a function.",
+				   expr -> data.funcall.name);
+			return 0;
+		}
+
+		/* Create a new binding scope in which to define
+		   the arguments to the function. */
+		ns = (struct binding_scope *)0;
+		if (!binding_scope_allocate (&ns, MDL)) {
+			log_error ("%s: can't allocate argument scope.",
+				   expr -> data.funcall.name);
+			return 0;
+		}
+
+		arg = expr -> data.funcall.arglist;
+		s = binding -> value -> value.fundef.args;
+		while (arg && s) {
+			nb = dmalloc (sizeof *nb, MDL);
+			if (!nb) {
+			      blb:
+				binding_scope_dereference (&ns, MDL);
+				return 0;
+			} else {
+				nb -> name = dmalloc (strlen (s -> string) + 1,
+						      MDL);
+				if (nb -> name)
+					strcpy (binding -> name, s -> string);
+				else {
+					dfree (nb, MDL);
+					nb = (struct binding *)0;
+					goto blb;
+				}
+			}
+			evaluate_expression (&nb -> value, packet, lease,
+					     in_options, cfg_options, scope,
+					     arg -> data.arg.val);
+			nb -> next = ns -> bindings;
+			ns -> bindings = nb;
+			arg = arg -> data.arg.next;
+			s = s -> next;
+		}
+		if (arg) {
+			log_error ("%s: too many arguments.",
+				   expr -> data.funcall.name);
+			binding_scope_dereference (&ns, MDL);
+			return 0;
+		}
+		if (s) {
+			log_error ("%s: too few arguments.",
+				   expr -> data.funcall.name);
+			binding_scope_dereference (&ns, MDL);
+			return 0;
+		}
+
+		ns -> outer = scope;
+		if (execute_statements
+		    (packet, lease, in_options, cfg_options, ns,
+		     binding -> value -> value.fundef.statements)) {
+			if (ns -> bindings && ns -> bindings -> name) {
+			    binding_value_reference (result,
+						     ns -> bindings -> value,
+						     MDL);
+			    status = 1;
+			} else
+			    status = 0;
+		} else
+			status = 0;
+		binding_scope_dereference (&ns, MDL);
+		return status;
+        } else if (is_boolean_expression (expr)) {
+		if (!binding_value_allocate (&bv, MDL))
+			return 0;
+		bv -> type = binding_boolean;
+		status = (evaluate_boolean_expression
+			  (&bv -> value.boolean, packet, lease, in_options,
+			   cfg_options, scope, expr));
+	} else if (is_numeric_expression (expr)) {
+		if (!binding_value_allocate (&bv, MDL))
+			return 0;
+		bv -> type = binding_numeric;
+		status = (evaluate_numeric_expression
+			  (&bv -> value.intval, packet, lease, in_options,
+			   cfg_options, scope, expr));
+	} else if (is_data_expression  (expr)) {
+		if (!binding_value_allocate (&bv, MDL))
+			return 0;
+		bv -> type = binding_data;
+		status = (evaluate_data_expression
+			  (&bv -> value.data, packet, lease, in_options,
+			   cfg_options, scope, expr));
+	} else if (is_dns_expression (expr)) {
+#if defined (NSUPDATE)
+		if (!binding_value_allocate (&bv, MDL))
+			return 0;
+		bv -> type = binding_dns;
+		status = (evaluate_dns_expression
+			  (&bv -> value.dns, packet, lease, in_options,
+			   cfg_options, scope, expr));
+#endif
+	} else {
+		log_error ("%s: invalid expression type: %d",
+			   "evaluate_expression", expr -> op);
+	}
+	if (result)
+		binding_value_reference (result, bv, MDL);
+	binding_value_dereference (&bv, MDL);
+
+	return status;
+}
+
+int binding_value_dereference (struct binding_value **v,
+			       const char *file, int line)
+{
+	struct binding_value *bv = *v;
+
+	*v = (struct binding_value *)0;
+
+	/* Decrement the reference count.   If it's nonzero, we're
+	   done. */
+	--(bv -> refcnt);
+	rc_register (file, line, v, bv, bv -> refcnt);
+	if (bv -> refcnt > 0)
+		return 1;
+	if (bv -> refcnt < 0) {
+		log_error ("%s(%d): negative refcnt!", file, line);
+#if defined (DEBUG_RC_HISTORY)
+		dump_rc_history ();
+#endif
+#if defined (POINTER_DEBUG)
+		abort ();
+#else
+		return 0;
+#endif
+	}
+
+	switch (bv -> type) {
+	      case binding_boolean:
+	      case binding_numeric:
+		break;
+	      case binding_data:
+		if (bv -> value.data.buffer)
+			data_string_forget (&bv -> value.data, file, line);
+		break;
+	      case binding_dns:
+#if defined (NSUPDATE)
+		if (bv -> value.dns) {
+			if (bv -> value.dns -> r_data) {
+				dfree (bv -> value.dns -> r_data, MDL);
+				bv -> value.dns -> r_data = (unsigned char *)0;
+			}
+			minires_freeupdrec (bv -> value.dns);
+		}
+		break;
+#endif
+	      default:
+		log_error ("%s(%d): invalid binding type: %d",
+			   file, line, bv -> type);
+		return 0;
+	}
+	dfree (bv, file, line);
+	return 1;
+}
+
 #if defined (NSUPDATE)
 int evaluate_dns_expression (result, packet, lease, in_options,
 			     cfg_options, scope, expr)
@@ -563,6 +766,16 @@ int evaluate_dns_expression (result, packet, lease, in_options,
 	      case expr_ns_not_exists:
 		return 0;
 #endif
+	      case expr_funcall:
+		log_error ("%s: dns values for functions not supported.",
+			   expr -> data.funcall.name);
+		break;
+
+	      case expr_variable_reference:
+		log_error ("%s: dns values for variables not supported.",
+			   expr -> data.variable);
+		break;
+
 	      case expr_check:
 	      case expr_equal:
 	      case expr_not_equal:
@@ -600,7 +813,6 @@ int evaluate_dns_expression (result, packet, lease, in_options,
 	      case expr_config_option:
 	      case expr_leased_address:
 	      case expr_null:
-	      case expr_variable_reference:
 		log_error ("Data opcode in evaluate_dns_expression: %d",
 		      expr -> op);
 		return 0;
@@ -614,6 +826,9 @@ int evaluate_dns_expression (result, packet, lease, in_options,
 		log_error ("Numeric opcode in evaluate_dns_expression: %d",
 		      expr -> op);
 		return 0;
+
+	      case expr_arg:
+		break;
 	}
 
 	log_error ("Bogus opcode in evaluate_dns_expression: %d",
@@ -639,6 +854,7 @@ int evaluate_boolean_expression (result, packet, lease, in_options,
 	int bleft, bright;
 	int sleft, sright;
 	struct binding *binding;
+	struct binding_value *bv;
 
 	switch (expr -> op) {
 	      case expr_check:
@@ -804,7 +1020,7 @@ int evaluate_boolean_expression (result, packet, lease, in_options,
 		binding = find_binding (scope, expr -> data.variable);
 
 		if (binding) {
-			if (binding -> value.data)
+			if (binding -> value)
 				*result = 1;
 			else
 				*result = 0;
@@ -812,9 +1028,51 @@ int evaluate_boolean_expression (result, packet, lease, in_options,
 			*result = 0;
 #if defined (DEBUG_EXPRESSIONS)
 		log_debug ("boolean: %s? = %s", expr -> variable,
-			   s0 ? "true" : "false");
+			   sleft ? "true" : "false");
 #endif
 		return 1;
+
+	      case expr_variable_reference:
+		binding = find_binding (scope, expr -> data.variable);
+
+		if (binding && binding -> value) {
+			if (binding -> value -> type == binding_boolean) {
+				*result = binding -> value -> value.boolean;
+			    sleft = 1;
+			} else {
+				log_error ("binding type %d in %s.",
+					   binding -> value -> type,
+					   "evaluate_boolean_expression");
+				sleft = 0;
+			}
+		} else
+			sleft = 0;
+#if defined (DEBUG_EXPRESSIONS)
+		log_debug ("boolean: %s = %s", expr -> variable,
+			   sleft ? (*result ? "true" : "false") : "NULL");
+#endif
+		return sleft;
+
+	      case expr_funcall:
+		bv = (struct binding_value *)0;
+		sleft = evaluate_expression (&bv, packet, lease,
+					  in_options, cfg_options,
+					  scope, expr);
+		if (sleft) {
+			if (bv -> type != binding_boolean)
+				log_error ("%s() returned type %d in %s.",
+					   expr -> data.funcall.name,
+					   bv -> type,
+					   "evaluate_boolean_expression");
+			else
+				*result = bv -> value.boolean;
+			binding_value_dereference (&bv, MDL);
+		}
+#if defined (DEBUG_EXPRESSIONS)
+		log_debug ("boolean: %s() = %s", expr -> data.funcall.name,
+			   sleft ? (*result ? "true" : "false") : "NULL");
+#endif
+		break;
 
 	      case expr_none:
 	      case expr_match:
@@ -837,7 +1095,6 @@ int evaluate_boolean_expression (result, packet, lease, in_options,
 	      case expr_config_option:
 	      case expr_leased_address:
 	      case expr_null:
-	      case expr_variable_reference:
 	      case expr_filename:
 	      case expr_sname:
 		log_error ("Data opcode in evaluate_boolean_expression: %d",
@@ -861,6 +1118,9 @@ int evaluate_boolean_expression (result, packet, lease, in_options,
 		log_error ("dns opcode in evaluate_boolean_expression: %d",
 		      expr -> op);
 		return 0;
+
+	      case expr_arg:
+		break;
 	}
 
 	log_error ("Bogus opcode in evaluate_boolean_expression: %d",
@@ -884,6 +1144,7 @@ int evaluate_data_expression (result, packet, lease,
 	int status;
 	struct binding *binding;
 	char *s;
+	struct binding_value *bv;
 
 	switch (expr -> op) {
 		/* Extract N bytes starting at byte M of a data string. */
@@ -1511,21 +1772,50 @@ int evaluate_data_expression (result, packet, lease,
 	      case expr_variable_reference:
 		binding = find_binding (scope, expr -> data.variable);
 
-		if (binding) {
-			if (binding -> value.data) {
-				data_string_copy (result,
-						  &binding -> value, MDL);
-				s0 = 1;
-			} else
-				s0 = 0;
+		if (binding && binding -> value) {
+		    if (binding -> value -> type == binding_data) {
+			    data_string_copy (result,
+					      &binding -> value -> value.data,
+					      MDL);
+			    s0 = 1;
+		    } else if (binding -> value -> type != binding_data) {
+			    log_error ("binding type %d in %s.",
+				       binding -> value -> type,
+				       "evaluate_data_expression");
+			    s0 = 0;
+		    } else
+			    s0 = 0;
 		} else
 			s0 = 0;
 #if defined (DEBUG_EXPRESSIONS)
 		log_debug ("data: %s = %s", expr -> variable,
 			   s0 ? print_hex_1 (result -> len,
-					     result -> data, 50);
+					     result -> data, 50) : "NULL");
 #endif
 		return s0;
+
+	      case expr_funcall:
+		bv = (struct binding_value *)0;
+		s0 = evaluate_expression (&bv, packet, lease,
+					  in_options, cfg_options,
+					  scope, expr);
+		if (s0) {
+			if (bv -> type != binding_data)
+				log_error ("%s() returned type %d in %s.",
+					   expr -> data.funcall.name,
+					   bv -> type,
+					   "evaluate_data_expression");
+			else
+				data_string_copy (result, &bv -> value.data,
+						  MDL);
+			binding_value_dereference (&bv, MDL);
+		}
+#if defined (DEBUG_EXPRESSIONS)
+		log_debug ("data: %s = %s", expr -> funcall.name,
+			   s0 ? print_hex_1 (result -> len,
+					     result -> data, 50) : "NULL");
+#endif
+		break;
 
 		/* Extract the filename. */
 	      case expr_filename:
@@ -1624,6 +1914,8 @@ int evaluate_data_expression (result, packet, lease,
 		log_error ("dns update opcode in evaluate_data_expression: %d",
 		      expr -> op);
 		return 0;
+		      case expr_arg:
+			break;
 	}
 
 	log_error ("Bogus opcode in evaluate_data_expression: %d", expr -> op);
@@ -1649,6 +1941,8 @@ int evaluate_numeric_expression (result, packet, lease,
 	static int inited;
 #endif
 	struct expression *cur, *next;
+	struct binding *binding;
+	struct binding_value *bv;
 
 	switch (expr -> op) {
 	      case expr_check:
@@ -1688,7 +1982,6 @@ int evaluate_numeric_expression (result, packet, lease,
 	      case expr_config_option:
 	      case expr_leased_address:
 	      case expr_null:
-	      case expr_variable_reference:
 		log_error ("Data opcode in evaluate_numeric_expression: %d",
 		      expr -> op);
 		return 0;
@@ -1808,6 +2101,48 @@ int evaluate_numeric_expression (result, packet, lease,
 		return status;
 #endif /* NSUPDATE */
 
+	      case expr_variable_reference:
+		binding = find_binding (scope, expr -> data.variable);
+
+		if (binding && binding -> value) {
+			if (binding -> value -> type == binding_numeric) {
+				*result = binding -> value -> value.intval;
+			    status = 1;
+			} else {
+				log_error ("binding type %d in %s.",
+					   binding -> value -> type,
+					   "evaluate_numeric_expression");
+				status = 0;
+			}
+		} else
+			status = 0;
+#if defined (DEBUG_EXPRESSIONS)
+		log_debug ("numeric: %s = %s", expr -> variable,
+			   status ? *result : 0);
+#endif
+		return status;
+
+	      case expr_funcall:
+		bv = (struct binding_value *)0;
+		status = evaluate_expression (&bv, packet, lease,
+					  in_options, cfg_options,
+					  scope, expr);
+		if (status) {
+			if (bv -> type != binding_numeric)
+				log_error ("%s() returned type %d in %s.",
+					   expr -> data.funcall.name,
+					   bv -> type,
+					   "evaluate_numeric_expression");
+			else
+				*result = bv -> value.intval;
+			binding_value_dereference (&bv, MDL);
+		}
+#if defined (DEBUG_EXPRESSIONS)
+		log_debug ("data: %s = %d", expr -> funcall.name,
+			   status ? *result : 0);
+#endif
+		break;
+
 	      case expr_ns_add:
 	      case expr_ns_delete:
 	      case expr_ns_exists:
@@ -1815,6 +2150,9 @@ int evaluate_numeric_expression (result, packet, lease,
 		log_error ("dns opcode in evaluate_numeric_expression: %d",
 		      expr -> op);
 		return 0;
+
+	      case expr_arg:
+		break;
 	}
 
 	log_error ("evaluate_numeric_expression: bogus opcode %d", expr -> op);
@@ -2101,6 +2439,23 @@ void expression_dereference (eptr, file, line)
 			dfree (expr -> data.variable, file, line);
 		break;
 
+	      case expr_funcall:
+		if (expr -> data.funcall.name)
+			dfree (expr -> data.funcall.name, file, line);
+		if (expr -> data.funcall.arglist)
+			expression_dereference (&expr -> data.funcall.arglist,
+						file, line);
+		break;
+
+	      case expr_arg:
+		if (expr -> data.arg.val)
+			expression_dereference (&expr -> data.arg.val,
+						file, line);
+		if (expr -> data.arg.next)
+			expression_dereference (&expr -> data.arg.next,
+						file, line);
+		break;
+
 		/* No subexpressions. */
 	      case expr_leased_address:
 	      case expr_lease_time:
@@ -2168,8 +2523,7 @@ int is_data_expression (expr)
 		expr -> op == expr_host_decl_name ||
 		expr -> op == expr_leased_address ||
 		expr -> op == expr_config_option ||
-		expr -> op == expr_null ||
-		expr -> op == expr_variable_reference);
+		expr -> op == expr_null);
 }
 
 int is_numeric_expression (expr)
@@ -2253,6 +2607,8 @@ static int op_val (op)
 	      case expr_ns_delete:
 	      case expr_ns_exists:
 	      case expr_ns_not_exists:
+	      case expr_arg:
+	      case expr_funcall:
 		return 100;
 
 	      case expr_equal:
@@ -2321,6 +2677,8 @@ enum expression_context op_context (op)
 	      case expr_ns_exists:
 	      case expr_ns_not_exists:
 	      case expr_dns_transaction:
+	      case expr_arg:
+	      case expr_funcall:
 		return context_any;
 
 	      case expr_equal:
@@ -2809,8 +3167,8 @@ int free_bindings (struct binding_scope *scope, const char *file, int line)
 		next = bp -> next;
 		if (bp -> name)
 			dfree (bp -> name, file, line);
-		if (bp -> value.data)
-			data_string_forget (&bp -> value, file, line);
+		if (bp -> value)
+			binding_value_dereference (&bp -> value, file, line);
 		dfree (bp, file, line);
 	}
 	scope -> bindings = (struct binding *)0;
