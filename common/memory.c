@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: memory.c,v 1.52.2.16 2000/07/04 19:29:09 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: memory.c,v 1.52.2.17 2000/07/20 04:16:42 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -62,15 +62,13 @@ void enter_host (hd)
 			add_hash (host_hw_addr_hash,
 				  hd -> interface.haddr, hd -> interface.hlen,
 				  (unsigned char *)hd);
-	}
-
-	/* If there was already a host declaration for this hardware
-	   address, add this one to the end of the list. */
-
-	if (hp) {
-		for (np = hp; np -> n_ipaddr; np = np -> n_ipaddr)
-			;
-		np -> n_ipaddr = hd;
+		/* If there was already a host declaration for this hardware
+		   address, add this one to the end of the list. */
+		else {
+			for (np = hp; np -> n_ipaddr; np = np -> n_ipaddr)
+				;
+			np -> n_ipaddr = hd;
+		}
 	}
 
 	/* See if there's a statement that sets the client identifier.
