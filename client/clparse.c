@@ -3,7 +3,7 @@
    Parser for dhclient config and lease files... */
 
 /*
- * Copyright (c) 1996-2002 Internet Software Consortium.
+ * Copyright (c) 1996-2004 Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: clparse.c,v 1.62.2.4 2003/02/10 00:39:57 dhankins Exp $ Copyright (c) 1996-2002 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: clparse.c,v 1.62.2.5 2004/01/08 22:55:08 dhankins Exp $ Copyright (c) 1996-2004 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -839,7 +839,7 @@ void parse_client_lease_statement (cfile, is_static)
 	struct parse *cfile;
 	int is_static;
 {
-	struct client_lease *lease, *lp, *pl;
+	struct client_lease *lease, *lp, *pl, *next;
 	struct interface_info *ip = (struct interface_info *)0;
 	int token;
 	const char *val;
@@ -899,17 +899,19 @@ void parse_client_lease_statement (cfile, is_static)
 	   lease list looking for a lease with the same address, and
 	   if we find it, toss it. */
 	pl = (struct client_lease *)0;
-	for (lp = client -> leases; lp; lp = lp -> next) {
+	for (lp = client -> leases; lp; lp = next) {
+		next = lp -> next;
 		if (lp -> address.len == lease -> address.len &&
 		    !memcmp (lp -> address.iabuf, lease -> address.iabuf,
 			     lease -> address.len)) {
 			if (pl)
-				pl -> next = lp -> next;
+				pl -> next = next;
 			else
-				client -> leases = lp -> next;
+				client -> leases = next;
 			destroy_client_lease (lp);
 			break;
-		}
+		} else
+			pl = lp;
 	}
 
 	/* If this is a preloaded lease, just put it on the list of recorded
