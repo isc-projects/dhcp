@@ -550,7 +550,7 @@ isc_result_t omapi_make_value (omapi_value_t **vp, omapi_data_string_t *name,
 
 isc_result_t omapi_make_const_value (omapi_value_t **vp,
 				     omapi_data_string_t *name,
-				     const u_int8_t *value,
+				     const unsigned char *value,
 				     unsigned len, const char *caller)
 {
 	isc_result_t status;
@@ -663,7 +663,7 @@ isc_result_t omapi_make_string_value (omapi_value_t **vp,
 	return ISC_R_SUCCESS;
 }
 
-isc_result_t omapi_get_int_value (u_int32_t *v, omapi_typed_data_t *t)
+isc_result_t omapi_get_int_value (unsigned long *v, omapi_typed_data_t *t)
 {
 	u_int32_t rv;
 

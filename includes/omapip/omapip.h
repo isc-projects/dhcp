@@ -326,16 +326,15 @@ int omapi_td_strcmp (omapi_typed_data_t *, const char *);
 isc_result_t omapi_make_value (omapi_value_t **, omapi_data_string_t *,
 			       omapi_typed_data_t *, const char *);
 isc_result_t omapi_make_const_value (omapi_value_t **, omapi_data_string_t *,
-				     const u_int8_t *, unsigned, const char *);
+				     const unsigned char *,
+				     unsigned, const char *);
 isc_result_t omapi_make_int_value (omapi_value_t **, omapi_data_string_t *,
 				   int, const char *);
 isc_result_t omapi_make_handle_value (omapi_value_t **, omapi_data_string_t *,
 				      omapi_object_t *, const char *);
 isc_result_t omapi_make_string_value (omapi_value_t **, omapi_data_string_t *,
 				      char *, const char *);
-isc_result_t omapi_get_int_value (u_int32_t *, omapi_typed_data_t *);
-
-
+isc_result_t omapi_get_int_value (unsigned long *, omapi_typed_data_t *);
 
 isc_result_t omapi_object_handle (omapi_handle_t *, omapi_object_t *);
 isc_result_t omapi_handle_lookup (omapi_object_t **, omapi_handle_t);
