@@ -42,6 +42,12 @@
 
 /* #define DEBUG_CLASS_MATCHING */
 
+/* Define this if you want dhcpd to dump core when a non-fatal memory
+   allocation error is detected (i.e., something that would cause a
+   memory leak rather than a memory smash). */
+
+/* #define POINTER_DEBUG */
+
 /* Define this if you want the dhcpd.pid file to go somewhere other than
    the default (which varies from system to system, but is usually either
    /etc or /var/run. */
