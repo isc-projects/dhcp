@@ -152,9 +152,9 @@ struct dhcp_packet {
 #define DHO_DHCP_MAX_MESSAGE_SIZE	57
 #define DHO_DHCP_RENEWAL_TIME		58
 #define DHO_DHCP_REBINDING_TIME		59
-#define DHO_DHCP_CLASS_IDENTIFIER	60
+#define DHO_VENDOR_CLASS_IDENTIFIER	60
 #define DHO_DHCP_CLIENT_IDENTIFIER	61
-#define DHO_DHCP_USER_CLASS_ID		77
+#define DHO_USER_CLASS			77
 #define DHO_DHCP_AGENT_OPTIONS		82
 /* The DHO_AUTHENTICATE option is not a standard yet, so I've
    allocated an option out of the "local" option space for it on a
