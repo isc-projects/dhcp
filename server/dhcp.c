@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.57.2.24 1999/03/30 20:40:59 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.57.2.25 1999/04/08 21:49:45 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -322,8 +322,8 @@ void dhcprequest (packet)
 				     packet -> raw -> hlen,
 				     packet -> raw -> chaddr));
 		return;
-	} else if (lease -> host &&
-		    !lease -> host -> group -> allow_booting) {
+	} else if (lease && lease -> host &&
+		   !lease -> host -> group -> allow_booting) {
 		note ("Declining to renew client %s",
 		      lease -> host -> name
 		      ? lease -> host -> name
