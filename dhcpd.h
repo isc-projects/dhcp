@@ -180,6 +180,8 @@ struct interface_info {
 	size_t rbuf_len;		/* Length of data in buffer. */
 
 	struct ifreq *tif;		/* Temp. pointer to ifreq struct. */
+	u_int32_t flags;		/* Control flags... */
+#define INTERFACE_REQUESTED 1
 };
 
 struct hardware_link {
