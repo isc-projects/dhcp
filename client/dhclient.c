@@ -56,7 +56,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhclient.c,v 1.38 1997/06/02 22:45:08 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.39 1997/06/03 01:40:58 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -598,7 +598,7 @@ void dhcp (packet)
 	struct packet *packet;
 {
 	struct iaddrlist *ap;
-	void (*handler) (struct packet *);
+	void (*handler) PROTO ((struct packet *));
 	char *type;
 
 	switch (packet -> packet_type) {
