@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.91 2000/05/16 23:03:43 mellon Exp $ Copyright 1995-2000 Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.92 2000/06/08 21:25:47 mellon Exp $ Copyright 1995-2000 Internet Software Consortium.";
 #endif
 
   static char copyright[] =
@@ -298,7 +298,7 @@ int main (argc, argv, envp)
 	/* Initialize the omapi system. */
 	result = omapi_init ();
 	if (result != ISC_R_SUCCESS)
-		log_fatal ("Can't initialize OMAPI: %s\n",
+		log_fatal ("Can't initialize OMAPI: %s",
 			   isc_result_totext (result));
 
 	/* Set up the OMAPI wrappers for various server database internal
@@ -485,7 +485,7 @@ int main (argc, argv, envp)
 	listener = (omapi_object_t *)0;
 	result = omapi_generic_new (&listener, MDL);
 	if (result != ISC_R_SUCCESS)
-		log_fatal ("Can't allocate new generic object: %s\n",
+		log_fatal ("Can't allocate new generic object: %s",
 			   isc_result_totext (result));
 	result = omapi_protocol_listen (listener, omapi_port, 1);
 	if (result != ISC_R_SUCCESS)
@@ -525,7 +525,7 @@ int main (argc, argv, envp)
 				pidfilewritten = 1;
 			}
 		} else
-			log_fatal ("There's already a DHCP server running.\n");
+			log_fatal ("There's already a DHCP server running.");
 	}
 
 	/* If we were requested to log to stdout on the command line,
@@ -610,13 +610,15 @@ void lease_pinged (from, packet, length)
 	}
 
 	if (!lp -> state) {
-		log_debug ("ICMP Echo Reply for %s late or spurious.\n",
-			   piaddr (from));
+		if (!lp -> pool ||
+		    !lp -> pool -> failover_peer)
+			log_debug ("ICMP Echo Reply for %s late or spurious.",
+				   piaddr (from));
 		goto out;
 	}
 
 	if (lp -> ends > cur_time) {
-		log_debug ("ICMP Echo reply while lease %s valid\n",
+		log_debug ("ICMP Echo reply while lease %s valid.",
 			   piaddr (from));
 	}
 
