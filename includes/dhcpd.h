@@ -291,7 +291,6 @@ struct match_expr {
 		match_suffix,
 		match_and,
 		match_or,
-		match_in,
 		match_not,
 		match_option,
 		match_hardware,
@@ -308,33 +307,25 @@ struct match_expr {
 			struct match_expr *offset;
 			struct match_expr *len;
 		} substring;
-		struct {
-			struct match_expr *left, *right;
-		} equal;
+		struct match_expr *equal [2];
+		struct match_expr *and [2];
+		struct match_expr *or [2];
+		struct match_expr *not;
+		struct collection *check;
 		struct {
 			struct match_expr *expr;
 			struct match_expr *len;
 		} suffix;
-		struct match_expr *and [2];
-		struct match_expr *or [2];
-		struct match_expr *not;
-		struct {
-			struct match_expr *expr;
-			struct named_hash *hash;
-		} in;
-		struct collection *check;
-		struct {
-			struct universe *universe;
-			int code;
-		} option;
+		struct option *option;
 		struct {
 			struct match_expr *offset;
 			struct match_expr *len;
 		} packet;
 		struct data_string const_data;
-		struct match_expr *extract_int8;
-		struct match_expr *extract_int16;
-		struct match_expr *extract_int32;
+		struct {
+			struct match_expr *expr;
+			struct match_expr *width;
+		} extract_int;
 		unsigned long const_int;
 	} data;
 };		
@@ -713,30 +704,37 @@ void read_leases PROTO ((void));
 int parse_statement PROTO ((FILE *,
 			    struct group *, int, struct host_decl *, int));
 void parse_allow_deny PROTO ((FILE *, struct group *, int));
-void skip_to_semi PROTO ((FILE *));
 int parse_boolean PROTO ((FILE *));
-int parse_semi PROTO ((FILE *));
 int parse_lbrace PROTO ((FILE *));
 void parse_host_declaration PROTO ((FILE *, struct group *));
-char *parse_host_name PROTO ((FILE *));
 void parse_class_declaration PROTO ((FILE *, struct group *, int));
-void parse_lease_time PROTO ((FILE *, TIME *));
 void parse_shared_net_declaration PROTO ((FILE *, struct group *));
 void parse_subnet_declaration PROTO ((FILE *, struct shared_network *));
 void parse_group_declaration PROTO ((FILE *, struct group *));
-void parse_hardware_param PROTO ((FILE *, struct hardware *));
-char *parse_string PROTO ((FILE *));
-struct tree *parse_ip_addr_or_hostname PROTO ((FILE *, int));
 struct tree_cache *parse_fixed_addr_param PROTO ((FILE *));
 void parse_option_param PROTO ((FILE *, struct group *));
 TIME parse_timestamp PROTO ((FILE *));
 struct lease *parse_lease_declaration PROTO ((FILE *));
 void parse_address_range PROTO ((FILE *, struct subnet *));
-TIME parse_date PROTO ((FILE *));
+struct match_expr *parse_boolean_expression PROTO ((FILE *, int *));
+struct match_expr *parse_data_expression PROTO ((FILE *, int *));
+struct match_expr *parse_numeric_expression PROTO ((FILE *, int *));
+
+/* parse.c */
+void skip_to_semi PROTO ((FILE *));
+int parse_semi PROTO ((FILE *));
+char *parse_string PROTO ((FILE *));
+char *parse_host_name PROTO ((FILE *));
+struct tree *parse_ip_addr_or_hostname PROTO ((FILE *, int));
+void parse_hardware_param PROTO ((FILE *, struct hardware *));
+void parse_lease_time PROTO ((FILE *, TIME *));
 unsigned char *parse_numeric_aggregate PROTO ((FILE *,
 					       unsigned char *, int *,
 					       int, int, int));
 void convert_num PROTO ((unsigned char *, char *, int, int));
+TIME parse_date PROTO ((FILE *));
+struct option *parse_option_name PROTO ((FILE *));
+unsigned char *parse_cshl PROTO ((FILE *, int *));
 
 /* tree.c */
 pair cons PROTO ((caddr_t, pair));
@@ -1194,6 +1192,7 @@ extern struct interact_actions top_level_actions;
 struct class unknown_class;
 struct class known_class;
 struct collection default_collection;
+struct collection *collections;
 struct classification_rule *default_classification_rules;
 struct named_hash *named_hashes;
 struct named_hash *known_hardware_hash;
