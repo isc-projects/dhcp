@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: conflex.c,v 1.28 1997/06/06 01:55:15 mellon Exp $ Copyright (c) 1995, 1996, 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: conflex.c,v 1.29 1997/10/29 18:32:53 mellon Exp $ Copyright (c) 1995, 1996, 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -431,6 +431,8 @@ static int intern (atom, dfv)
 			return HOST;
 		if (!strcasecmp (atom + 1, "ardware"))
 			return HARDWARE;
+		if (!strcasecmp (atom + 1, "ostname"))
+			return HOSTNAME;
 		break;
 	      case 'i':
 		if (!strcasecmp (atom + 1, "nitial-interval"))
