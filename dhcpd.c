@@ -131,6 +131,9 @@ int main (argc, argv, envp)
 	/* Start up the database... */
 	db_startup ();
 
+	/* Discover all the network interfaces and initialize them. */
+	discover_interfaces ();
+
 	/* Write a pid file. */
 	if ((i = open (_PATH_DHCPD_PID, O_WRONLY | O_CREAT, 0640)) >= 0) {
 		char obuf [20];
@@ -157,66 +160,50 @@ void cleanup ()
 {
 }
 
-void do_packet (packbuf, len, from_port, from, sock)
+void do_packet (interface, packbuf, len, from_port, from, hfrom)
+	struct interface_info *interface;
 	unsigned char *packbuf;
 	int len;
-	unsigned long from_port;
+	unsigned short from_port;
 	struct iaddr from;
-	int sock;
+	struct hardware *hfrom;
 {
-	struct packet *tp;
-	struct dhcp_packet *tdp;
+	struct packet tp;
+	struct dhcp_packet tdp;
 	struct iaddr ia;
 
-	if (!(tp = new_packet ("do_packet")))
-		return;
-	if (!(tdp = new_dhcp_packet ("do_packet"))) {
-		free_packet (tp, "do_packet");
-		return;
-	}
-	memcpy (tdp, packbuf, len);
-	memset (tp, 0, sizeof *tp);
-	tp -> raw = tdp;
-	tp -> packet_length = len;
-	tp -> client_port = from_port;
-	tp -> client_addr = from;
-	tp -> client_sock = sock;
+	memcpy (&tdp, packbuf, len);
+	memset (&tp, 0, sizeof tp);
+	tp.raw = &tdp;
+	tp.packet_length = len;
+	tp.client_port = from_port;
+	tp.client_addr = from;
+	tp.interface = interface;
+	tp.haddr = hfrom;
 	
 	/* If this came through a gateway, find the corresponding subnet... */
-	if (tp -> raw -> giaddr.s_addr) {
+	if (tp.raw -> giaddr.s_addr) {
 		ia.len = 4;
-		memcpy (ia.iabuf, &tp -> raw -> giaddr, 4);
-		tp -> subnet = find_subnet (ia);
+		memcpy (ia.iabuf, &tp.raw -> giaddr, 4);
+		tp.subnet = find_subnet (ia);
 	} else {
-		tp -> subnet = local_subnet;
+		tp.subnet = interface -> local_subnet;
 	}
 
 	/* If the subnet from whence this packet came is unknown to us,
 	   drop it on the floor... */
-	if (!tp -> subnet)
+	if (!tp.subnet)
 		note ("Packet from unknown subnet: %s",
-		      inet_ntoa (tp -> raw -> giaddr));
+		      inet_ntoa (tp.raw -> giaddr));
 	else {
-		parse_options (tp);
-		if (tp -> options_valid &&
-		    tp -> options [DHO_DHCP_MESSAGE_TYPE].data)
-			tp -> packet_type =
-				tp -> options [DHO_DHCP_MESSAGE_TYPE].data [0];
-		if (tp -> packet_type)
-			dhcp (tp);
+		parse_options (&tp);
+		if (tp.options_valid &&
+		    tp.options [DHO_DHCP_MESSAGE_TYPE].data)
+			tp.packet_type =
+				tp.options [DHO_DHCP_MESSAGE_TYPE].data [0];
+		if (tp.packet_type)
+			dhcp (&tp);
 		else
-			bootp (tp);
+			bootp (&tp);
 	}
-}
-
-/* Based on the contents of packet, figure out which interface address
-   to use from server_addrlist.   Currently just picks the first
-   interface. */
-
-u_int32_t pick_interface (packet)
-	struct packet *packet;
-{
-	if (server_addrlist)
-		return server_addrlist [0];
-	return 0;
 }
