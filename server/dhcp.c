@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.180 2001/01/26 05:57:35 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.181 2001/02/12 21:00:02 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -51,6 +51,10 @@ static char copyright[] =
 int outstanding_pings;
 
 static char dhcp_message [256];
+
+#if defined (TRACING)
+# define send_packet trace_packet_send
+#endif
 
 void dhcp (packet)
 	struct packet *packet;
@@ -380,6 +384,8 @@ void dhcprequest (packet, ms_nulltp, ip_lease)
 #if defined (FAILOVER_PROTOCOL)
 	dhcp_failover_state_t *peer;
 #endif
+	int have_server_identifier = 0;
+	int have_requested_addr = 0;
 
 	oc = lookup_option (&dhcp_universe, packet -> options,
 			    DHO_DHCP_REQUESTED_ADDRESS);
@@ -392,6 +398,7 @@ void dhcprequest (packet, ms_nulltp, ip_lease)
 		cip.len = 4;
 		memcpy (cip.iabuf, data.data, 4);
 		data_string_forget (&data, MDL);
+		have_requested_addr = 1;
 	} else {
 		oc = (struct option_cache *)0;
 		cip.len = 4;
@@ -427,6 +434,7 @@ void dhcprequest (packet, ms_nulltp, ip_lease)
 		memcpy (sip.iabuf, data.data, 4);
 		data_string_forget (&data, MDL);
 		sprintf (smbuf, " (%s)", piaddr (sip));
+		have_server_identifier = 1;
 	} else
 		smbuf [0] = 0;
 
@@ -517,7 +525,7 @@ void dhcprequest (packet, ms_nulltp, ip_lease)
 	if (!packet -> shared_network ||
 	    (packet -> raw -> ciaddr.s_addr &&
 	     packet -> raw -> giaddr.s_addr) ||
-	    (oc && !packet -> raw -> ciaddr.s_addr)) {
+	    (have_requested_addr && !packet -> raw -> ciaddr.s_addr)) {
 		
 		/* If we don't know where it came from but we do know
 		   where it claims to have come from, it didn't come
