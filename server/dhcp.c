@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.119 1999/10/20 16:52:25 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.120 1999/10/20 20:54:42 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -957,7 +957,15 @@ void ack_lease (packet, lease, offer, when, msg)
 					release_lease (seek, packet);
 				}
 			} while (seek);
-		} else {
+		}
+		if (!lease -> uid_len ||
+		    (lease -> host &&
+		     !lease -> host -> client_identifier.len &&
+		     (oc = lookup_option (&server_universe, state -> options,
+					  SV_DUPLICATES)) &&
+		     !evaluate_boolean_option_cache (packet, lease,
+						     packet -> options,
+						     state -> options, oc))) {
 			do {
 				seek = (find_lease_by_hw_addr
 					(lease -> hardware_addr.haddr,
