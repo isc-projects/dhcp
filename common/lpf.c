@@ -23,7 +23,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: lpf.c,v 1.10 1999/03/29 18:51:37 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: lpf.c,v 1.11 1999/04/12 21:34:37 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -74,9 +74,9 @@ int if_register_lpf (info)
 		    errno == ESOCKTNOSUPPORT || errno == EPFNOSUPPORT ||
 		    errno == EAFNOSUPPORT || errno == EINVAL)
 			log_fatal ("socket: %m - make sure %s %s!",
-			       "CONFIG_PACKET and CONFIG_FILTER are defined",
-			       "in your kernel configuration");
-		error("Open a socket for LPF: %m");
+				   "CONFIG_PACKET and CONFIG_FILTER are",
+				   "defined in your kernel configuration");
+		log_fatal ("Open a socket for LPF: %m");
 	}
 
 	/* Bind to the interface name */
@@ -88,9 +88,9 @@ int if_register_lpf (info)
 		    errno == ESOCKTNOSUPPORT || errno == EPFNOSUPPORT ||
 		    errno == EAFNOSUPPORT || errno == EINVAL)
 			log_fatal ("socket: %m - make sure %s %s!",
-			       "CONFIG_PACKET and CONFIG_FILTER are defined",
-			       "in your kernel configuration");
-		error("Bind socket to interface: %m");
+				   "CONFIG_PACKET and CONFIG_FILTER are",
+				   "defined in your kernel configuration");
+		log_fatal ("Bind socket to interface: %m");
 	}
 
 	return sock;
