@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcrelay.c,v 1.1 1997/02/22 09:47:09 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcrelay.c,v 1.2 1997/02/22 12:28:26 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -117,28 +117,30 @@ int main (argc, argv, envp)
  		    usage ();
  		} else {
 			struct hostent *he;
-			sp = (struct server_list *)malloc (sizeof *sp);
-			if (!sp)
-				error ("no memory for server.\n");
-			sp -> next = servers;
 			he = gethostbyname (argv [i]);
 			if (!he) {
 				herror (argv [i]);
+			} else {
+				sp = (struct server_list *)malloc (sizeof *sp);
+				if (!sp)
+					error ("no memory for server.\n");
+				sp -> next = servers;
+				servers = sp;
+				memcpy (&sp -> to.sin_addr,
+					he -> h_addr_list [0], he -> h_length);
 			}
-			memcpy (&sp -> to.sin_addr,
-				he -> h_addr_list [0], he -> h_length);
  		}
 	}
 	/* Default to the DHCP/BOOTP port. */
 	if (!local_port) {
-		ent = getservbyname ("dhcpc", "udp");
+		ent = getservbyname ("dhcps", "udp");
 		if (!ent)
-			local_port = htons (68);
+			local_port = htons (67);
 		else
 			local_port = ent -> s_port;
 		endservent ();
 	}
-	remote_port = local_port;
+	remote_port = htons (ntohs (local_port) + 1);
   
 	/* We need at least one server. */
 	if (!sp) {
@@ -158,7 +160,7 @@ int main (argc, argv, envp)
 	GET_TIME (&cur_time);
 
 	/* Discover all the network interfaces. */
-	discover_interfaces (DISCOVER_SERVER);
+	discover_interfaces (DISCOVER_RELAY);
 
 	/* Start dispatching packets and timeouts... */
 	dispatch (0);
@@ -176,19 +178,17 @@ void relay (ip, packet, length)
 	struct interface_info *out;
 	struct hardware hto;
 
-	packet -> giaddr = ip -> primary_address;
-
 	/* If it's a bootreply, forward it to the client. */
 	if (packet -> op == BOOTREPLY) {
 #ifndef USE_FALLBACK
 		if (!packet -> flags & htons (BOOTP_BROADCAST)) {
 			to.sin_addr = packet -> raw -> ciaddr;
-			to.sin_port = remote_port; /* XXX */
+			to.sin_port = remote_port;
 		} else
 #endif
 		{
 			to.sin_addr.s_addr = htonl (INADDR_BROADCAST);
-			to.sin_port = remote_port; /* XXX */
+			to.sin_port = remote_port;
 		}
 		to.sin_family = AF_INET;
 #ifdef HAVE_SA_LEN
@@ -220,8 +220,27 @@ void relay (ip, packet, length)
 				 packet, length, out -> primary_address,
 				 &to, &hto) < 0)
 			debug ("sendpkt: %m");
+		else
+			debug ("forwarded BOOTREPLY for %s to %s",
+			       print_hw_addr (packet -> htype, packet -> hlen,
+					      packet -> chaddr),
+			       inet_ntoa (to.sin_addr));
+
 		return;
 	}
+
+	/* If giaddr is set on a BOOTREQUEST, ignore it - it's already
+	   been gatewayed. */
+	if (packet -> giaddr.s_addr) {
+		note ("ignoring BOOTREQUEST with giaddr of %s\n",
+		      inet_ntoa (packet -> giaddr));
+		return;
+	}
+
+	/* Set the giaddr so the server can figure out what net it's
+	   from and so that we can later forward the response to the
+	   correct net. */
+	packet -> giaddr = ip -> primary_address;
 
 	/* Otherwise, it's a BOOTREQUEST, so forward it to all the
 	   servers. */
