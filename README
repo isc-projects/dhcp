@@ -1,0 +1,58 @@
+		     Internet Software Consortium
+	      Dynamic Host Configuration Protocol Server
+			    Beta Release 0
+			    March 6, 1996
+
+This is the first Beta release of the Internet Software Consortium
+DHCP Server (ISC dhcpd).  In this Beta release, support for the core
+DHCP protocol is provided.  BOOTP support is also provided for
+backwards compatibility.  The beta release currently runs on NetBSD
+and BSD/OS, and may run on Ultrix.  It should port fairly easily to a
+variety of UNIX-like systems.
+
+The default Makefile is a 4.4BSD-style makefile.   If you do not have
+access to a 4.4BSD-style make, use Makefile.std.   This is an
+old-style makefile and should work on most systems.
+
+Last week (February 26-28), I brought ISC dhcpd to Connectathon and
+worked out many bugs.  ISC dhcpd was able to boot all of the DHCP
+clients at Connectathon by the time I left.  Many thanks to Audrey Van
+Belleghem for getting me in to Connectathon even though we weren't
+able to budget for it, to Mike Carney for running the DHCP testing in
+general and helping me out in particular, and to all the other DHCP
+participants at Connectathon who tried their clients against ISC dhcpd
+and told me where it was busted, or, later on, that it wasn't busted
+anymore.
+
+				 BUGS
+
+Currently, dhcpd supports the DHCP protocol strictly the standard
+Berkeley socket interface to UDP/IP.  This makes it very portable, but
+has several drawbacks.  First of all, it is impossible to identify the
+interface on which a DHCP request was received.  As a consequence,
+dhcpd currently exits if it discovers that it's running on a machine
+with more than one network address.
+
+Secondly, it is difficult to send a broadcast to the all-ones IP
+broadcast address as required by the DHCP protocol.  I have had some
+luck on 4.4BSD-based systems declaring a route to 255.255.255.255
+through the local IP address, and have also found that some clients
+will accept broadcasts from the local subnet broadcast address.  I
+would be interested in hearing about your experiences with this.
+
+A socket interface abstraction which can be layered atop sun's NIT or
+the Berkeley Packet Filter will be included in the next beta release,
+but probably won't work on as many systems.   On those systems where
+it works, though, it will solve both the multiple interface problem
+and the all-ones broadcast problem.
+
+This release of dhcpd does not contain support for DHCPINFORM.
+Support for DHCPINFORM will be present in the next release.
+DHCPINFORM is somewhat tangential to the main purpose of the DHCP
+protocol, so this probably won't be a major problem for most users.
+
+The man page for dhcpd.leases is not yet ready.
+
+The system is painful to configure.   I will try to get GNU configure
+going in the next release.
+
