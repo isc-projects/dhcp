@@ -29,7 +29,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: errwarn.c,v 1.17 1999/03/16 05:50:34 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: errwarn.c,v 1.18 1999/03/29 18:51:19 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -203,6 +203,8 @@ int parse_warn (ANSI_DECL (char *) fmt, VA_DOTDOTDOT)
 {
 	va_list list;
 	static char spaces [] = "                                                                                ";
+	char lexbuf [256];
+	int i, lix;
 	
 	do_percentm (mbuf, fmt);
 #ifndef NO_SNPRINTF
@@ -217,12 +219,23 @@ int parse_warn (ANSI_DECL (char *) fmt, VA_DOTDOTDOT)
 	vsnprintf (mbuf, sizeof mbuf, fbuf, list);
 	va_end (list);
 
+	lix = 0;
+	for (i = 0; token_line [i] && i < (lexchar - 1); i++) {
+		if (lix < (sizeof lexbuf) - 1)
+			lexbuf [lix++] = ' ';
+		if (token_line [i] == '\t') {
+			for (lix;
+			     lix < (sizeof lexbuf) - 1 && (lix & 7); lix++)
+				lexbuf [lix] = ' ';
+		}
+	}
+	lexbuf [lix] = 0;
+
 #ifndef DEBUG
 	syslog (log_priority | LOG_ERR, mbuf);
 	syslog (log_priority | LOG_ERR, token_line);
-	if (lexline < 81)
-		syslog (log_priority | LOG_ERR,
-			"%s^", &spaces [sizeof spaces - lexchar]);
+	if (lexchar < 81)
+		syslog (log_priority | LOG_ERR, "%s^", lexbuf);
 #endif
 
 	if (log_perror) {
@@ -230,7 +243,8 @@ int parse_warn (ANSI_DECL (char *) fmt, VA_DOTDOTDOT)
 		write (2, "\n", 1);
 		write (2, token_line, strlen (token_line));
 		write (2, "\n", 1);
-		write (2, spaces, lexchar - 1);
+		if (lexchar < 81)
+			write (2, lexbuf, lix);
 		write (2, "^\n", 2);
 	}
 
