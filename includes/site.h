@@ -108,3 +108,8 @@
 /* Define this to change the logging facility used by dhcpd. */
 
 /* #define DHCPD_LOG_FACILITY LOG_DAEMON */
+
+/* Define this to support the failover protocol.   This probably won't work
+   right now. */
+
+/* #define FAILOVER_PROTOCOL */
