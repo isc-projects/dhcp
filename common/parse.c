@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.104.2.21 2005/03/01 16:26:20 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.104.2.22 2005/03/02 19:11:48 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -4320,7 +4320,7 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 
 	switch (**fmt) {
 	      case 'U':
-		token = next_token (&val, (unsigned *)0, cfile);
+		token = next_token (&val, &len, cfile);
 		if (!is_identifier (token)) {
 			if ((*fmt) [1] != 'o') {
 				parse_warn (cfile, "expecting identifier.");
@@ -4382,7 +4382,7 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 		goto make_string;
 
 	      case 't': /* Text string... */
-		token = next_token (&val, (unsigned *)0, cfile);
+		token = next_token (&val, &len, cfile);
 		if (token != STRING && !is_identifier (token)) {
 			if ((*fmt) [1] != 'o') {
 				parse_warn (cfile, "expecting string.");
