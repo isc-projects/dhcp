@@ -1,18 +1,18 @@
 		     Internet Software Consortium
 	      Dynamic Host Configuration Protocol Server
-			    Beta Release 5
-			     Patchlevel 17
-			   December 2, 1997
+		      Version 1.0, Patchlevel 0
+			   December 6, 1997
 
 			    Release Notes
 
-This patchlevel is on the Internet Software Consortium DHCP Server
-Release 1.0 track.   The previous version was Beta Release 5,
-Patchlevel 16.   This patchlevel is strictly a bug-fix patchlevel.
-Unlike Patchlevel 16, this patchlevel has some somewhat risky bug
-fixes, so please do not install it in a production environment.
+This is version 1.0 of the Internet Software Consortium DHCP Server
+The previous version was Beta Release 5, Patchlevel 17.
 
-The following changes have been made in this release:
+			CHANGES IN VERSION 1.0
+
+- Minor adjustment to dhcpd.8 documentation.
+
+	    CHANGES IN VERSION 1.0, BETA 5, PATCHLEVEL 17
 
 - Added a man page for dhcpd.leases.
 

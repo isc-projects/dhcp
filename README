@@ -1,18 +1,16 @@
 		     Internet Software Consortium
 	      Dynamic Host Configuration Protocol Server
-			    Beta Release 5
-			     Patchlevel 16
-			     May 8, 1997
+			     Version 1.0
+			   December 6, 1997
 
-This is the fifth Beta release of the Internet Software Consortium
-DHCP Server (ISC dhcpd).  In this Beta release, support for the core
-DHCP and BOOTP protocols are provided.  This release currently works
-well on Digital Alpha OSF/1, SunOS 4.1.4, NetBSD, FreeBSD, BSD/OS and
-Ultrix.  It can also be run usefully on Solaris as long as only one
-broadcast network interface is configured.  It also runs on QNX and
-Linux as long as only one broadcast network interface is configured
-and a host route is added from that interface to the 255.255.255.255
-broadcast address.
+This is Version 1.0 of the Internet Software Consortium DHCP Server
+(ISC dhcpd).  In this release, support for the core DHCP and BOOTP
+protocols are provided.  This release currently works well on Digital
+Alpha OSF/1, SunOS 4.1.4, NetBSD, FreeBSD, BSD/OS and Ultrix.  It can
+also be run usefully on Solaris as long as only one broadcast network
+interface is configured.  It also runs on QNX and Linux as long as
+only one broadcast network interface is configured and a host route is
+added from that interface to the 255.255.255.255 broadcast address.
 
 If you wish to run dhcpd on Linux, please see the Linux-specific notes
 later in this document.  If you wish to run on a SCO release, please
