@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.85.2.10 2003/02/10 01:22:37 dhankins Exp $ Copyright (c) 1995-2002 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.85.2.11 2003/03/29 21:37:36 dhankins Exp $ Copyright (c) 1995-2002 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -471,14 +471,18 @@ int cons_options (inpacket, outpacket, lease, client_state,
 	   and no alternate maximum message size has been specified, take the
 	   one in the packet. */
 
-	if (!mms && inpacket &&
+	if (inpacket &&
 	    (op = lookup_option (&dhcp_universe, inpacket -> options,
 				 DHO_DHCP_MAX_MESSAGE_SIZE))) {
 		evaluate_option_cache (&ds, inpacket,
 				       lease, client_state, in_options,
 				       cfg_options, scope, op, MDL);
-		if (ds.len >= sizeof (u_int16_t))
-			mms = getUShort (ds.data);
+		if (ds.len >= sizeof (u_int16_t)) {
+			i = getUShort (ds.data);
+
+			if(!mms || (i < mms))
+				mms = i;
+		}
 		data_string_forget (&ds, MDL);
 	}
 
