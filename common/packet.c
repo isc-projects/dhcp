@@ -157,7 +157,7 @@ size_t decode_hw_header (interface, buf, bufix, from)
   if (ntohs (eh.ether_type) != ETHERTYPE_IP)
 	  return -1;
 #endif
-  memcpy (from -> haddr, eh.ether_shost, sizeof (eh.ether_shost));
+  memcpy (from -> haddr, ETHER_SRC (&eh), sizeof (eh.ether_shost));
   from -> htype = ARPHRD_ETHER;
   from -> hlen = sizeof eh.ether_shost;
 
