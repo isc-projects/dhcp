@@ -50,7 +50,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: omapi.c,v 1.46.2.3 2001/05/19 07:37:20 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: omapi.c,v 1.46.2.4 2001/05/31 20:15:15 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -661,6 +661,9 @@ isc_result_t dhcp_lease_lookup (omapi_object_t **lp,
 	isc_result_t status;
 	struct lease *lease;
 
+	if (!ref)
+		return ISC_R_NOKEYS;
+
 	/* First see if we were sent a handle. */
 	status = omapi_get_value_str (ref, id, "handle", &tv);
 	if (status == ISC_R_SUCCESS) {
@@ -1217,6 +1220,9 @@ isc_result_t dhcp_host_lookup (omapi_object_t **lp,
 	omapi_value_t *tv = (omapi_value_t *)0;
 	isc_result_t status;
 	struct host_decl *host;
+
+	if (!ref)
+		return ISC_R_NOKEYS;
 
 	/* First see if we were sent a handle. */
 	status = omapi_get_value_str (ref, id, "handle", &tv);
@@ -1874,19 +1880,210 @@ isc_result_t binding_scope_set_value (struct binding_scope *scope, int createp,
 				      omapi_data_string_t *name,
 				      omapi_typed_data_t *value)
 {
-	return ISC_R_UNKNOWNATTRIBUTE;
+	struct binding *bp;
+	char *nname;
+	struct binding_value *nv;
+	nname = dmalloc (name -> len + 1, MDL);
+	if (!nname)
+		return ISC_R_NOMEMORY;
+	memcpy (nname, name -> value, name -> len);
+	nname [name -> len] = 0;
+	bp = find_binding (scope, nname);
+	if (!bp && !createp) {
+		dfree (nname, MDL);
+		return ISC_R_UNKNOWNATTRIBUTE;
+	} 
+	if (!value) {
+		dfree (nname, MDL);
+		if (!bp)
+			return ISC_R_UNKNOWNATTRIBUTE;
+		binding_value_dereference (&bp -> value, MDL);
+		return ISC_R_SUCCESS;
+	}
+
+	nv = (struct binding_value *)0;
+	if (!binding_value_allocate (&nv, MDL)) {
+		dfree (nname, MDL);
+		return ISC_R_NOMEMORY;
+	}
+	switch (value -> type) {
+	      case omapi_datatype_int:
+		nv -> type = binding_numeric;
+		nv -> value.intval = value -> u.integer;
+		break;
+
+	      case omapi_datatype_string:
+	      case omapi_datatype_data:
+		if (!buffer_allocate (&nv -> value.data.buffer,
+				      value -> u.buffer.len, MDL)) {
+			binding_value_dereference (&nv, MDL);
+			dfree (nname, MDL);
+			return ISC_R_NOMEMORY;
+		}
+		memcpy (&nv -> value.data.buffer -> data [1],
+			value -> u.buffer.value, value -> u.buffer.len);
+		nv -> value.data.len = value -> u.buffer.len;
+		break;
+
+	      case omapi_datatype_object:
+		binding_value_dereference (&nv, MDL);
+		dfree (nname, MDL);
+		return ISC_R_INVALIDARG;
+	}
+
+	if (!bp) {
+		bp = dmalloc (sizeof *bp, MDL);
+		if (!bp) {
+			binding_value_dereference (&nv, MDL);
+			dfree (nname, MDL);
+			return ISC_R_NOMEMORY;
+		}
+		memset (bp, 0, sizeof *bp);
+		bp -> name = nname;
+		nname = (char *)0;
+		bp -> next = scope -> bindings;
+		scope -> bindings = bp;
+	} else {
+		if (bp -> value)
+			binding_value_dereference (&bp -> value, MDL);
+		dfree (nname, MDL);
+	}
+	binding_value_reference (&bp -> value, nv, MDL);
+	binding_value_dereference (&nv, MDL);
+	return ISC_R_SUCCESS;
 }
 
 isc_result_t binding_scope_get_value (omapi_value_t **value,
 				      struct binding_scope *scope,
 				      omapi_data_string_t *name)
 {
-	return ISC_R_UNKNOWNATTRIBUTE;
+	struct binding *bp;
+	omapi_typed_data_t *td;
+	isc_result_t status;
+	char *nname;
+	nname = dmalloc (name -> len + 1, MDL);
+	if (!nname)
+		return ISC_R_NOMEMORY;
+	memcpy (nname, name -> value, name -> len);
+	nname [name -> len] = 0;
+	bp = find_binding (scope, nname);
+	dfree (nname, MDL);
+	if (!bp)
+		return ISC_R_UNKNOWNATTRIBUTE;
+	if (!bp -> value)
+		return ISC_R_UNKNOWNATTRIBUTE;
+
+	switch (bp -> value -> type) {
+	      case binding_boolean:
+		td = (omapi_typed_data_t *)0;
+		status = omapi_typed_data_new (MDL, &td, omapi_datatype_int,
+					       bp -> value -> value.boolean);
+		break;
+
+	      case binding_numeric:
+		td = (omapi_typed_data_t *)0;
+		status = omapi_typed_data_new (MDL, &td, omapi_datatype_int,
+					       (int)
+					       bp -> value -> value.intval);
+		break;
+
+	      case binding_data:
+		td = (omapi_typed_data_t *)0;
+		status = omapi_typed_data_new (MDL, &td, omapi_datatype_data,
+					       bp -> value -> value.data.len);
+		if (status != ISC_R_SUCCESS)
+			return status;
+		memcpy (&td -> u.buffer.value [0],
+			bp -> value -> value.data.data,
+			bp -> value -> value.data.len);
+		break;
+
+		/* Can't return values for these two (yet?). */
+	      case binding_dns:
+	      case binding_function:
+		return ISC_R_INVALIDARG;
+	}
+
+	if (status != ISC_R_SUCCESS)
+		return status;
+	status = omapi_value_new (value, MDL);
+	if (status != ISC_R_SUCCESS) {
+		omapi_typed_data_dereference (&td, MDL);
+		return status;
+	}
+	
+	omapi_data_string_reference (&(*value) -> name, name, MDL);
+	omapi_typed_data_reference (&(*value) -> value, td, MDL);
+	omapi_typed_data_dereference (&td, MDL);
+
+	return ISC_R_SUCCESS;
 }
 
 isc_result_t binding_scope_stuff_values (omapi_object_t *c,
 					 struct binding_scope *scope)
 {
+	struct binding *bp;
+	unsigned len;
+	isc_result_t status;
+
+	for (bp = scope -> bindings; bp; bp = bp -> next) {
+	    if (bp -> value) {
+		if (bp -> value -> type == binding_dns ||
+		    bp -> value -> type == binding_function)
+			continue;
+
+		/* Stuff the name. */
+		len = strlen (bp -> name);
+		status = omapi_connection_put_uint16 (c, len);
+		if (status != ISC_R_SUCCESS)
+		    return status;
+		status = omapi_connection_copyin (c, bp -> name, len);
+		if (status != ISC_R_SUCCESS)
+			return status;
+
+		switch (bp -> value -> type) {
+		  case binding_boolean:
+		    status = omapi_connection_put_uint32 (c,
+							  sizeof (u_int32_t));
+		    if (status != ISC_R_SUCCESS)
+			return status;
+		    status = (omapi_connection_put_uint32
+			      (c,
+			       ((u_int32_t)(bp -> value -> value.boolean))));
+		    break;
+
+		  case binding_data:
+		    status = (omapi_connection_put_uint32
+			      (c, bp -> value -> value.data.len));
+		    if (status != ISC_R_SUCCESS)
+			return status;
+		    if (bp -> value -> value.data.len) {
+			status = (omapi_connection_copyin
+				  (c, bp -> value -> value.data.data,
+				   bp -> value -> value.data.len));
+			if (status != ISC_R_SUCCESS)
+			    return status;
+		    }
+		    break;
+
+		  case binding_numeric:
+		    status = (omapi_connection_put_uint32
+			      (c, sizeof (u_int32_t)));
+		    if (status != ISC_R_SUCCESS)
+			    return status;
+		    status = (omapi_connection_put_uint32
+			      (c, ((u_int32_t)
+				   (bp -> value -> value.intval))));
+		    break;
+
+
+		    /* NOTREACHED */
+		  case binding_dns:
+		  case binding_function:
+		    break;
+		}
+	    }
+	}
 	return ISC_R_SUCCESS;
 }
 
