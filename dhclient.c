@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhclient.c,v 1.18 1996/08/28 01:28:53 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.19 1996/08/29 09:15:35 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -72,7 +72,6 @@ int main (argc, argv, envp)
 	int argc;
 	char **argv, **envp;
 {
-	struct in_addr addr;
 	int i;
 	struct servent *ent;
 	struct interface_info *interface;
