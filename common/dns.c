@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dns.c,v 1.30 2000/11/02 00:04:40 neild Exp $ Copyright (c) 2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dns.c,v 1.31 2000/11/24 03:55:46 mellon Exp $ Copyright (c) 2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -305,6 +305,10 @@ ns_rcode find_cached_zone (const char *dname, ns_class class,
 	if (!zcookie)
 		return ns_r_servfail;
 
+	/* We can't look up a null zone. */
+	if (!dname || !*dname)
+		return ns_r_servfail;
+
 	/* For each subzone, try to find a cached zone. */
 	for (np = dname - 1; np; np = strchr (np, '.')) {
 		np++;
@@ -418,9 +422,7 @@ void cache_found_zone (ns_class class,
 			option_cache_dereference (&zone -> primary, MDL);
 		if (zone -> secondary)
 			option_cache_dereference (&zone -> secondary, MDL);
-	}
-
-	if (!dns_zone_allocate (&zone, MDL))
+	} else if (!dns_zone_allocate (&zone, MDL))
 		return;
 
 	if (!zone -> name) {
