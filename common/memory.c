@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: memory.c,v 1.66 2000/05/16 23:02:23 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: memory.c,v 1.66.2.1 2001/06/20 03:25:22 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -167,10 +167,6 @@ int clone_group (struct group **gp, struct group *group,
 		*gp = (struct group *)0;
 	group_reference (gp, g, MDL);
 	g -> authoritative = group -> authoritative;
-	if (group -> shared_network) {
-		shared_network_reference (&g -> shared_network,
-					  group -> shared_network, MDL);
-	}
 	group_reference (&g -> next, group, MDL);
 	group_dereference (&g, MDL);
 	return 1;
