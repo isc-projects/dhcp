@@ -51,16 +51,46 @@
 
 int main (int, char **);
 
+static void usage (char *s) {
+	fprintf (stderr,
+		 "Usage: %s [-n <username>] [-p <password>] "
+		 "[-a <algorithm>]\n", s);
+	exit (1);
+}
+
 int main (argc, argv)
 	int argc;
 	char **argv;
 {
 	isc_result_t status, waitstatus;
 	dhcpctl_handle connection;
+	dhcpctl_handle authenticator;
 	dhcpctl_handle host_handle, group_handle, lease_handle;
 	dhcpctl_data_string cid, ip_addr;
 	dhcpctl_data_string result, groupname, identifier;
+	const char *name = 0, *pass = 0, *algorithm = "hmac-md5";
 	int i;
+
+	for (i = 1; i < argc; i++) {
+		if (!strcmp (argv[i], "-n")) {
+			if (++i == argc)
+				usage(argv[0]);
+			name = argv[i];
+		} else if (!strcmp (argv[i], "-p")) {
+			if (++i == argc)
+				usage(argv[0]);
+			pass = argv[i];
+		} else if (!strcmp (argv[i], "-a")) {
+			if (++i == argc)
+				usage(argv[0]);
+			algorithm = argv[i];
+		} else {
+			usage(argv[0]);
+		}
+	}
+
+	if ((name || pass) && !(name && pass))
+		usage(argv[0]);
 
 	status = dhcpctl_initialize ();
 	if (status != ISC_R_SUCCESS) {
@@ -69,9 +99,22 @@ int main (argc, argv)
 		exit (1);
 	}
 
+	authenticator = dhcpctl_null_handle;
+
+	if (name) {
+		status = dhcpctl_new_authenticator (&authenticator,
+						    name, algorithm, pass,
+						    strlen (pass) + 1);
+		if (status != ISC_R_SUCCESS) {
+			fprintf (stderr, "Cannot create authenticator: %s\n",
+				 isc_result_totext (status));
+			exit (1);
+		}
+	}
+
 	memset (&connection, 0, sizeof connection);
 	status = dhcpctl_connect (&connection, "127.0.0.1", 7911,
-				  (dhcpctl_handle)0);
+				  authenticator);
 	if (status != ISC_R_SUCCESS) {
 		fprintf (stderr, "dhcpctl_connect: %s\n",
 			 isc_result_totext (status));
