@@ -3,8 +3,8 @@
    BOOTP Protocol support. */
 
 /*
- * Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.
- * All rights reserved.
+ * Copyright (c) 1995, 1996, 1997, 1998, 1999
+ * The Internet Software Consortium.   All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bootp.c,v 1.35 1998/11/11 07:57:21 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bootp.c,v 1.36 1999/02/14 19:06:57 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -156,7 +156,7 @@ void bootp (packet)
 
 	if (evaluate_boolean_option_cache (packet, &options,
 					   lookup_option (options.dhcp_hash,
-							  SV_ALLOW_BOOTP))) {
+							  SV_ALLOW_BOOTING))) {
 		note ("%s: booting disallowed", msgbuf);
 		return;
 	}
@@ -198,7 +198,8 @@ void bootp (packet)
 	memcpy (&raw.yiaddr, ip_address.iabuf, sizeof raw.yiaddr);
 
 	/* Figure out the address of the next server. */
-	raw.siaddr = lease -> shared_network -> interface -> primary_address;
+	raw.siaddr = (lease -> subnet -> shared_network ->
+		      interface -> primary_address);
 	oc = lookup_option (options.dhcp_hash, SV_NEXT_SERVER);
 	if (oc &&
 	    evaluate_option_cache (&d1, packet, &options, oc)) {
@@ -220,7 +221,8 @@ void bootp (packet)
 			memset (&raw.file [d1.len],
 				0, (sizeof raw.file) - d1.len);
 		data_string_forget (&d1, "bootrequest");
-	}
+	} else {
+		memcpy (raw.file, packet -> raw -> file, sizeof raw.file);
 
 	/* Choose a server name as above. */
 	oc = lookup_option (options.dhcp_hash, SV_SERVER_NAME);
@@ -264,15 +266,15 @@ void bootp (packet)
 		to.sin_addr = raw.giaddr;
 		to.sin_port = local_port;
 
-#ifdef USE_FALLBACK
-		result = send_fallback (&fallback_interface,
-					(struct packet *)0,
-					&raw, outgoing.packet_length,
-					from, &to, &hto);
-		if (result < 0)
-			warn ("send_fallback: %m");
-		return;
-#endif
+		if (fallback_interface) {
+			result = send_packet (fallback_interface,
+					      (struct packet *)0,
+					      &raw, outgoing.packet_length,
+					      from, &to, &hto);
+			if (result < 0)
+				warn ("send_packet: %m");
+			return;
+		}
 	/* Otherwise, broadcast it on the local network. */
 	} else {
 		to.sin_addr.s_addr = INADDR_BROADCAST;
