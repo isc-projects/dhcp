@@ -40,9 +40,17 @@
  * Enterprises, see ``http://www.vix.com''.
  */
 
+/* SO_BINDTODEVICE support added by Elliot Poger (poger@leland.stanford.edu).
+ * This sockopt allows a socket to be bound to a particular interface,
+ * thus enabling the use of DHCPD on a multihomed host.
+ * If SO_BINDTODEVICE is defined in your system header files, the use of
+ * this sockopt will be automatically enabled. 
+ * I have implemented it under Linux; other systems should be doable also.
+ */
+
 #ifndef lint
 static char copyright[] =
-"$Id: socket.c,v 1.16 1996/08/27 09:54:48 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: socket.c,v 1.17 1997/01/02 12:00:18 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -62,6 +70,8 @@ int if_register_socket (info, interface)
 	struct sockaddr_in name;
 	int sock;
 	int flag;
+
+#ifndef SO_BINDTODEVICE
 	static int once = 0;
 
 	/* Make sure only one interface is registered. */
@@ -72,22 +82,8 @@ int if_register_socket (info, interface)
 		       "you must compile in BPF or NIT support.   If neither ",
 		       "option is supported on your system, please let us ",
 		       "know.");
-
-	/* Technically, we need to know what interface every packet
-	   comes in on, which means that we can only operate on a
-	   machine with a single interface configured.   However,
-	   we generally don't expect to get broadcast packets on
-	   point-to-point interfaces, so we can bend the rules a bit
-	   and not count them.   This won't allow DHCP-over-PPP,
-	   but it's probably right in a lot of cases, and the issue
-	   will have to be revisited when DHCP-over-PPP support is
-	   done.   Currently we determine whether an interface is
-	   point-to-point by seeing if it has a link-level address.
-	   This only works on 4.4BSD and derivative networking. */
-#ifdef AF_LINK
-	if (info -> hw_address.hlen) /* XXX */
+	once = 1;
 #endif
-		once = 1;
 
 	/* Set up the address we're going to bind to. */
 	name.sin_family = AF_INET;
@@ -111,9 +107,25 @@ int if_register_socket (info, interface)
 			(char *)&flag, sizeof flag) < 0)
 		error ("Can't set SO_BROADCAST option on dhcp socket: %m");
 
+#ifndef USE_SOCKET_FALLBACK
+	/* The following will make all-ones broadcasts go out this interface
+	 * on those platforms which use the standard sockets API (assuming 
+	 * the OS-specific routines called by enable_sending() are present
+	 * for this platform). */
+	if_enable (info);
+#endif
+ 
 	/* Bind the socket to this interface's IP address. */
 	if (bind (sock, (struct sockaddr *)&name, sizeof name) < 0)
 		error ("Can't bind to dhcp address: %m");
+
+#ifdef SO_BINDTODEVICE
+	/* Bind this socket to this interface. */
+	if (setsockopt(sock, SOL_SOCKET, SO_BINDTODEVICE,
+		       (char *)interface, sizeof(*interface)) < 0) {
+		error("setting SO_BINDTODEVICE");
+	}
+#endif
 
 	return sock;
 }
@@ -197,3 +209,30 @@ size_t fallback_discard (interface)
 			 (struct sockaddr *)&from, &flen);
 }
 #endif /* USE_SOCKET_RECEIVE */
+
+#if defined (USE_SOCKET_SEND) && !defined (USE_SOCKET_FALLBACK)
+/* If we're using the standard socket API without SO_BINDTODEVICE,
+ * we need this kludge to force DHCP broadcasts to go out
+ * this interface, even though it's not available for general
+ * use until we get a lease!
+ * This should work _OK_, but it will cause ALL all-ones
+ * broadcasts on this host to go out this interface--it
+ * could interfere with other interfaces.  And God help you
+ * if you run this on multiple interfaces simultaneously.
+ * SO_BINDTODEVICE really is better! */
+void if_enable (interface)
+     struct interface_info *interface;
+{
+#ifndef SO_BINDTODEVICE
+	struct in_addr broad_addr;
+	broad_addr.s_addr = htonl(INADDR_BROADCAST);
+
+	/* Delete old routes for broadcast address. */
+	remove_routes(NULL, &broad_addr);
+
+	/* Add a route for broadcast address to this interface. */
+	/* POTENTIAL PROBLEM: Don't do this to more than one interface! */
+	add_route_direct(interface, &broad_addr);
+#endif
+}
+#endif

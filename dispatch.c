@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dispatch.c,v 1.27 1996/11/08 20:06:29 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dispatch.c,v 1.28 1997/01/02 12:00:16 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -161,6 +161,44 @@ void discover_interfaces (serverP)
 
 		if (ifp -> ifr_addr.sa_family == AF_INET) {
 			struct iaddr addr;
+
+#if defined (SIOCGIFHWADDR) && !defined (AF_LINK)
+			struct ifreq ifr;
+			struct sockaddr sa;
+			int b, sk;
+			
+			/* Read the hardware address from this interface. */
+			ifr = *ifp;
+			if (ioctl (sock, SIOCGIFHWADDR, &ifr) < 0)
+				error ("Can't get hardware address for %s: %m",
+				       ifr.ifr_name);
+
+			sa = *(struct sockaddr *)&ifr.ifr_hwaddr;
+					
+			switch (sa.sa_family) {
+			      case ARPHRD_LOOPBACK:
+				/* ignore loopback interface */
+				break;
+
+			      case ARPHRD_ETHER:
+				tmp -> hw_address.hlen = 6;
+				tmp -> hw_address.htype = ARPHRD_ETHER;
+				memcpy (tmp -> hw_address.haddr,
+					sa.sa_data, 6);
+				break;
+
+			      case ARPHRD_METRICOM:
+				tmp -> hw_address.hlen = 6;
+				tmp -> hw_address.htype = ARPHRD_METRICOM;
+				memcpy (tmp -> hw_address.haddr,
+					sa.sa_data, 6);
+				break;
+
+			      default:
+				error ("%s: unknown hardware address type %d",
+				       ifr.ifr_name, sa.sa_family);
+			}
+#endif /* defined (SIOCGIFHWADDR) && !defined (AF_LINK) */
 
 			/* Get a pointer to the address... */
 			memcpy (&foo, &ifp -> ifr_addr,

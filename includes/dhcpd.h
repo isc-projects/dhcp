@@ -451,6 +451,9 @@ size_t receive_packet PROTO ((struct interface_info *,
 			   unsigned char *, size_t,
 			   struct sockaddr_in *, struct hardware *));
 #endif
+#if defined (USE_SOCKET_SEND) && !defined (USE_SOCKET_FALLBACK)
+void if_enable PROTO ((struct interface_info *));
+#endif
 
 /* bpf.c */
 #if defined (USE_BPF_SEND) || defined (USE_BPF_RECEIVE)
@@ -469,6 +472,9 @@ size_t receive_packet PROTO ((struct interface_info *,
 			   unsigned char *, size_t,
 			   struct sockaddr_in *, struct hardware *));
 #endif
+#if defined (USE_BPF_SEND)
+void if_enable PROTO ((struct interface_info *));
+#endif
 
 /* nit.c */
 #ifdef USE_NIT_SEND
@@ -483,6 +489,9 @@ void if_register_receive PROTO ((struct interface_info *, struct ifreq *));
 size_t receive_packet PROTO ((struct interface_info *,
 			   unsigned char *, size_t,
 			   struct sockaddr_in *, struct hardware *));
+#endif
+#if defined (USE_BPF_SEND)
+void if_enable PROTO ((struct interface_info *));
 #endif
 
 /* raw.c */
@@ -541,6 +550,27 @@ void dhcpack PROTO ((struct packet *));
 void dhcpnak PROTO ((struct packet *));
 void send_discover PROTO ((struct interface_info *));
 void send_request PROTO ((struct packet *));
+void send_release PROTO ((struct packet *));
+void dhclient_fail PROTO ((void));
+void handle_kill PROTO ((int));
+void disable_interface PROTO ((struct interface_info *));
+void route_broadcasts PROTO ((struct interface_info *));
+void apply_parameters PROTO ((struct interface_info *, struct packet *));
+void dhclient_state_machine PROTO ((void));
+int state_init PROTO ((void));
+int state_selecting PROTO ((void));
+int state_requesting PROTO ((void));
+int state_bound PROTO ((void));
+int state_renewing PROTO ((void));
+int state_rebinding PROTO ((void));
+TIME abs_time PROTO ((struct packet *, int));
+void deep_packet_copy PROTO ((struct packet *, struct packet *));
+void read_packet PROTO ((struct interface_info *, struct packet *));
+void send_packet_struct PROTO ((struct interface_info *,
+				u_long, struct packet *));
+void make_discover PROTO ((struct interface_info *, struct packet *));
+void make_request PROTO ((struct packet *, struct packet *));
+void make_release PROTO ((struct packet *, struct packet *));
 
 /* db.c */
 int write_lease PROTO ((struct lease *));
@@ -584,3 +614,16 @@ void convert_address_range PROTO ((FILE *, jrefproto));
 void convert_date PROTO ((FILE *, jrefproto, char *));
 void convert_numeric_aggregate PROTO ((FILE *, jrefproto, int, int, int, int));
 void indent PROTO ((int));
+
+/* route.c */
+void add_route_direct PROTO ((struct interface_info *, struct in_addr));
+void add_route_net PROTO ((struct interface_info *, struct in_addr,
+			   struct in_addr));
+void add_route_default_gateway PROTO ((struct interface_info *, 
+				       struct in_addr));
+void remove_routes PROTO ((struct in_addr));
+void remove_if_route PROTO ((struct interface_info *, struct in_addr));
+void remove_all_if_routes PROTO ((struct interface_info *));
+void set_netmask PROTO ((struct interface_info *, struct in_addr));
+void set_broadcast_addr PROTO ((struct interface_info *, struct in_addr));
+void set_ip_address PROTO ((struct interface_info *, struct in_addr));

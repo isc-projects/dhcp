@@ -52,6 +52,7 @@
 #define DHCP_OPTION_LEN		(DHCP_MTU_MAX - DHCP_FIXED_LEN)
 
 #define BOOTP_MIN_LEN		300
+#define DHCP_MIN_LEN            548
 
 struct dhcp_packet {
   	u_int8_t  op;		/* Message opcode/type */

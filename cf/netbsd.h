@@ -52,6 +52,10 @@ extern int h_errno;
 
 #include <net/if.h>
 #include <net/if_dl.h>
+#include <net/route.h>
+#include <sys/sockio.h>
+
+#define ifr_netmask ifr_addr
 
 /* Varargs stuff... */
 #include <stdarg.h>
