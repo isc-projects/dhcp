@@ -160,3 +160,25 @@ void dump_raw (buf, len)
 	note (lbuf);
 }
 
+void hash_dump (table)
+	struct hash_table *table;
+{
+	int i;
+	struct hash_bucket *bp;
+
+	if (!table)
+		return;
+
+	for (i = 0; i < table -> hash_count; i++) {
+		if (!table -> buckets [i])
+			continue;
+		note ("hash bucket %d:", i);
+		for (bp = table -> buckets [i]; bp; bp = bp -> next) {
+			if (bp -> len)
+				dump_raw (bp -> name, bp -> len);
+			else
+				note (bp -> name);
+		}
+	}
+}
+
