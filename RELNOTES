@@ -1,6 +1,6 @@
 	    Internet Software Consortium DHCP Distribution
-		    Version 3, Release Candidate 6
-			    May 11, 2001
+		    Version 3, Release Candidate 7
+			    May 17, 2001
 
 			    Release Notes
 
@@ -55,6 +55,19 @@ Measurement Systems, Igor Sharfmesser at Kazakh Telecom, and Brian
 Murrell at BC Tel Advanced Communications.  I'd like to express my
 thanks to all of these good people here, both for working on the code
 and for prodding me into improving it.
+
+		Changes since 3.0 Release Candidate 6
+
+- Fix a core dump that could happen when processing a DHCPREQUEST from
+  a client that had a host declaration that contained both a
+  fixed-address declaration and a dhcp-client-identifier option
+  declaration, if the client identifier was longer than nine bytes.
+
+- Fix a memory leak that could happen in certain obscure cases when
+  using omapi to manipulate leases.
+
+- Fix some bugs and omissions in omshell.
+
 
 		Changes since 3.0 Release Candidate 5
 
