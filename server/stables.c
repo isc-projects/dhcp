@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: stables.c,v 1.24 2001/01/17 00:21:03 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: stables.c,v 1.25 2001/01/25 08:37:03 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -489,7 +489,7 @@ struct option server_options [256] = {
 	{ "update-optimization", "f",		&server_universe, 41 },
 	{ "ping-check", "f",			&server_universe, 42 },
 	{ "update-static-leases", "f",		&server_universe, 43 },
-	{ "option-44", "X",			&server_universe, 44 },
+	{ "log-facility", "Nsyslog-facilities.", &server_universe, 44 },
 	{ "option-45", "X",			&server_universe, 45 },
 	{ "option-46", "X",			&server_universe, 46 },
 	{ "option-47", "X",			&server_universe, 47 },
@@ -714,6 +714,76 @@ struct enumeration ddns_styles = {
 	(struct enumeration *)0,
 	"ddns-styles",
 	ddns_styles_values
+};
+
+struct enumeration_value syslog_values [] = {
+#if defined (LOG_KERN)
+	{ "kern", LOG_KERN },
+#endif
+#if defined (LOG_USER)
+	{ "user", LOG_USER },
+#endif
+#if defined (LOG_MAIL)
+	{ "mail", LOG_MAIL },
+#endif
+#if defined (LOG_DAEMON)
+	{ "daemon", LOG_DAEMON },
+#endif
+#if defined (LOG_AUTH)
+	{ "auth", LOG_AUTH },
+#endif
+#if defined (LOG_SYSLOG)
+	{ "syslog", LOG_SYSLOG },
+#endif
+#if defined (LOG_LPR)
+	{ "lpr", LOG_LPR },
+#endif
+#if defined (LOG_NEWS)
+	{ "news", LOG_NEWS },
+#endif
+#if defined (LOG_UUCP)
+	{ "uucp", LOG_UUCP },
+#endif
+#if defined (LOG_CRON)
+	{ "cron", LOG_CRON },
+#endif
+#if defined (LOG_AUTHPRIV)
+	{ "authpriv", LOG_AUTHPRIV },
+#endif
+#if defined (LOG_FTP)
+	{ "ftp", LOG_FTP },
+#endif
+#if defined (LOG_LOCAL0)
+	{ "local0", LOG_LOCAL0 },
+#endif
+#if defined (LOG_LOCAL1)
+	{ "local1", LOG_LOCAL1 },
+#endif
+#if defined (LOG_LOCAL2)
+	{ "local2", LOG_LOCAL2 },
+#endif
+#if defined (LOG_LOCAL3)
+	{ "local3", LOG_LOCAL3 },
+#endif
+#if defined (LOG_LOCAL4)
+	{ "local4", LOG_LOCAL4 },
+#endif
+#if defined (LOG_LOCAL5)
+	{ "local5", LOG_LOCAL5 },
+#endif
+#if defined (LOG_LOCAL6)
+	{ "local6", LOG_LOCAL6 },
+#endif
+#if defined (LOG_LOCAL7)
+	{ "local7", LOG_LOCAL7 },
+#endif
+	{ (char *)0, 0 }
+};
+
+struct enumeration syslog_enum = {
+	(struct enumeration *)0,
+	"syslog-facilities",
+	syslog_values
 };
 
 void initialize_server_option_spaces()
