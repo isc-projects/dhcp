@@ -137,8 +137,17 @@ struct packet {
 						   was received. */
 	struct hardware *haddr;		/* Physical link address
 					   of local sender (maybe gateway). */
+
+	/* Information for relay agent options (see
+	   draft-ietf-dhc-agent-options-xx.txt). */
+	u_int8_t *circuit_id;		/* Circuit ID of client connection. */
+	int circuit_id_len;
+	u_int8_t *remote_id;		/* Remote ID of client. */
+	int remote_id_len;
+
 	struct shared_network *shared_network;
 	struct option_state options;
+	struct agent_options *agent_options;
 
 #if !defined (PACKET_MAX_CLASSES)
 # define PACKET_MAX_CLASSES 5
@@ -196,6 +205,7 @@ struct lease_state {
 	TIME offered_expiry;
 
 	struct option_state options;
+	struct agent_options *agent_options;
 	int max_message_size;
 	u_int32_t expiry, renewal, rebind;
 	struct data_string filename, server_name;
@@ -484,6 +494,15 @@ struct interface_info {
 				/* Networks connected to this interface. */
 	struct hardware hw_address;	/* Its physical address. */
 	struct in_addr primary_address;	/* Primary interface address. */
+
+	u_int8_t *circuit_id;		/* Circuit ID associated with this
+					   interface. */
+	int circuit_id_len;		/* Length of Circuit ID, if there
+					   is one. */
+	u_int8_t *remote_id;		/* Remote ID associated with this
+					   interface (if any). */
+	int remote_id_len;		/* Length of Remote ID. */
+
 	char name [IFNAMSIZ];		/* Its name... */
 	int rfdesc;			/* Its read file descriptor. */
 	int wfdesc;			/* Its write file descriptor, if
@@ -662,7 +681,8 @@ int parse_options PROTO ((struct packet *));
 int parse_option_buffer PROTO ((struct packet *, unsigned char *, int));
 int parse_agent_information_option PROTO ((struct packet *, int, u_int8_t *));
 int cons_options PROTO ((struct packet *, struct dhcp_packet *, int,
-			  struct option_state *, int, int, int));
+			  struct option_state *, struct agent_options *,
+			 int, int, int));
 int store_options PROTO ((unsigned char *, int, struct option_state *,
 			   int *, int, int, int, int));
 char *pretty_print_option PROTO ((unsigned int,
@@ -1251,6 +1271,15 @@ void parse_reject_statement PROTO ((FILE *, struct client_config *));
 /* dhcrelay.c */
 void relay PROTO ((struct interface_info *, struct dhcp_packet *, int,
 		   unsigned int, struct iaddr, struct hardware *));
+int strip_relay_agent_options PROTO ((struct interface_info *,
+				      struct interface_info **,
+				      struct dhcp_packet *, int));
+int find_interface_by_agent_option PROTO ((struct dhcp_packet *,
+					   struct interface_info **,
+					   u_int8_t *, int));
+int add_relay_agent_options PROTO ((struct interface_info *ip,
+				    struct dhcp_packet *packet,
+				    int length, struct in_addr giaddr));
 
 /* icmp.c */
 void icmp_startup PROTO ((int, void (*) PROTO ((struct iaddr,
