@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tables.c,v 1.39 2000/03/18 02:15:37 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tables.c,v 1.40 2000/03/18 03:34:06 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -846,7 +846,7 @@ const char *hardware_types [] = {
 	"unknown-254",
 	"unknown-255" };
 
-struct hash_table universe_hash;
+struct hash_table *universe_hash;
 struct universe **universes;
 int universe_count, universe_max;
 
@@ -920,11 +920,11 @@ void initialize_common_option_spaces()
 	}
 
 	/* Set up the hash of universes. */
-	universe_hash.hash_count = DEFAULT_HASH_SIZE;	
-	add_hash (&universe_hash,
+	universe_hash = new_hash (0, 0, 1);
+	add_hash (universe_hash,
 		  (const unsigned char *)dhcp_universe.name, 0,
 		  (unsigned char *)&dhcp_universe);
-	add_hash (&universe_hash,
+	add_hash (universe_hash,
 		  (const unsigned char *)nwip_universe.name, 0,
 		  (unsigned char *)&nwip_universe);
 }

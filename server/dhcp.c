@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.142 2000/03/17 04:00:31 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.143 2000/03/18 03:34:10 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -726,7 +726,7 @@ void dhcpinform (packet, ms_nulltp)
 		const struct universe *u;
 		
 		u = ((const struct universe *)
-		     hash_lookup (&universe_hash, d1.data, d1.len));
+		     hash_lookup (universe_hash, d1.data, d1.len));
 		if (!u) {
 			log_error ("unknown option space %s.", d1.data);
 			option_state_dereference (&options, MDL);
@@ -1926,7 +1926,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 		const struct universe *u;
 		
 		u = ((const struct universe *)
-		     hash_lookup (&universe_hash, d1.data, d1.len));
+		     hash_lookup (universe_hash, d1.data, d1.len));
 		if (!u) {
 			log_error ("unknown option space %s.", d1.data);
 			return;

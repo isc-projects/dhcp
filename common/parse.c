@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.67 2000/03/18 02:15:37 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.68 2000/03/18 03:34:05 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -794,7 +794,7 @@ struct option *parse_option_name (cfile, allocate, known)
 		/* Look up the option name hash table for the specified
 		   uname. */
 		universe = ((struct universe *)
-			    hash_lookup (&universe_hash,
+			    hash_lookup (universe_hash,
 					 (unsigned char *)uname, 0));
 		/* If it's not there, we can't parse the rest of the
 		   declaration. */
@@ -907,7 +907,7 @@ void parse_option_space_decl (cfile)
 	nu -> hash = new_hash (0, 0, 1);
 	if (!nu -> hash)
 		log_fatal ("Can't allocate %s option hash table.", nu -> name);
-	add_hash (&universe_hash,
+	add_hash (universe_hash,
 		  (const unsigned char *)nu -> name, 0, (unsigned char *)nu);
 	parse_semi (cfile);
 }

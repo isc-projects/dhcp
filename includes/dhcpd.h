@@ -1491,7 +1491,7 @@ extern int dhcp_option_default_priority_list_count;
 extern const char *hardware_types [256];
 int universe_count, universe_max;
 struct universe **universes;
-extern struct hash_table universe_hash;
+extern struct hash_table *universe_hash;
 void initialize_common_option_spaces PROTO ((void));
 struct universe *config_universe;
 

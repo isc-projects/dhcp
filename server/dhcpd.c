@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.86 2000/03/17 04:00:31 mellon Exp $ Copyright 1995-2000 The Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.87 2000/03/18 03:34:10 mellon Exp $ Copyright 1995-2000 The Internet Software Consortium.";
 #endif
 
   static char copyright[] =
@@ -76,52 +76,53 @@ struct in_addr limited_broadcast;
    at all, but as soon as I fix the resolver it should try to. */
 
 #if defined (NSUPDATE)
-char std_nsupdate [] = "						      \
-on commit {								      \
-  if (not defined (ddns-fwd-name)) {					      \
-    set ddns-fwd-name = concat (pick (config-option server.ddns-hostname,     \
-				      option host-name), \".\",		      \
-			        pick (config-option server.ddns-domainname,   \
-				      config-option domain-name));	      \
-    if defined (ddns-fwd-name) {					      \
-      switch (ns-update (not exists (IN, A, ddns-fwd-name, null),	      \
-		         add (IN, A, ddns-fwd-name, leased-address,	      \
-			      lease-time / 2))) {			      \
-       default:								      \
-        unset ddns-fwd-name;						      \
-        break;								      \
-									      \
-       case NOERROR:							      \
-        set ddns-rev-name =						      \
-		concat (binary-to-ascii (10, 8, \".\",			      \
-					 reverse (1, leased-address)), \".\", \
-			pick (config-option server.ddns-rev-domainname,	      \
-			      \".in-addr.arpa.\"));			      \
-        switch (ns-update (delete (IN, PTR, ddns-rev-name, null),	      \
-			   add (IN, PTR, ddns-rev-name, ddns-fwd-name,	      \
-				lease-time / 2)))			      \
-	{								      \
-         default:							      \
-	  unset ddns-rev-name;						      \
-	  on release or expiry {					      \
-	    eval ns-update (delete (IN, A, ddns-fwd-name, leased-address));   \
-	    unset ddns-fwd-name;					      \
-	    on release or expiry;					      \
-          }								      \
-	  break;							      \
-									      \
-         case NOERROR:							      \
-	  on release or expiry {					      \
-	    eval ns-update (delete (IN, A, ddns-fwd-name, leased-address));   \
-	    eval ns-update (delete (IN, PTR, ddns-rev-name, null));	      \
-	    unset ddns-rev-name;					      \
-	    unset ddns-fwd-name;					      \
-	    on release or expiry;					      \
-	  }								      \
-        }								      \
-      }									      \
-    }									      \
-  }									      \
+char std_nsupdate [] = "						    \n\
+on commit {								    \n\
+  if (not defined (ddns-fwd-name)) {					    \n\
+    set ddns-fwd-name = concat (pick (config-option server.ddns-hostname,   \n\
+				      option host-name), \".\",		    \n\
+			        pick (config-option server.ddns-domainname, \n\
+				      config-option domain-name));	    \n\
+    if defined (ddns-fwd-name) {					    \n\
+      switch (ns-update (not exists (IN, A, ddns-fwd-name, null),	    \n\
+		         add (IN, A, ddns-fwd-name, leased-address,	    \n\
+			      lease-time / 2))) {			    \n\
+       default:								    \n\
+        unset ddns-fwd-name;						    \n\
+        break;								    \n\
+									    \n\
+       case NOERROR:							    \n\
+        set ddns-rev-name =						    \n\
+		concat (binary-to-ascii (10, 8, \".\",			    \n\
+					 reverse (1,			    \n\
+						  leased-address)), \".\",  \n\
+			pick (config-option server.ddns-rev-domainname,	    \n\
+			    \n\".in-addr.arpa.\"));			    \n\
+        switch (ns-update (delete (IN, PTR, ddns-rev-name, null),	    \n\
+			   add (IN, PTR, ddns-rev-name, ddns-fwd-name,	    \n\
+				lease-time / 2)))			    \n\
+	{								    \n\
+         default:							    \n\
+	  unset ddns-rev-name;						    \n\
+	  on release or expiry {					    \n\
+	    eval ns-update (delete (IN, A, ddns-fwd-name, leased-address)); \n\
+	    unset ddns-fwd-name;					    \n\
+	    on release or expiry;					    \n\
+          }								    \n\
+	  break;							    \n\
+									    \n\
+         case NOERROR:							    \n\
+	  on release or expiry {					    \n\
+	    eval ns-update (delete (IN, A, ddns-fwd-name, leased-address)); \n\
+	    eval ns-update (delete (IN, PTR, ddns-rev-name, null));	    \n\
+	    unset ddns-rev-name;					    \n\
+	    unset ddns-fwd-name;					    \n\
+	    on release or expiry;					    \n\
+	  }								    \n\
+        }								    \n\
+      }									    \n\
+    }									    \n\
+  }									    \n\
 }";
 #endif /* NSUPDATE */
 

@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: stables.c,v 1.9 2000/03/18 02:15:52 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: stables.c,v 1.10 2000/03/18 03:34:11 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -748,10 +748,10 @@ void initialize_server_option_spaces()
 	}
 
 	/* Add the server and agent option spaces to the option space hash. */
-	add_hash (&universe_hash,
+	add_hash (universe_hash,
 		  (const unsigned char *)agent_universe.name, 0,
 		  (unsigned char *)&agent_universe);
-	add_hash (&universe_hash,
+	add_hash (universe_hash,
 		  (const unsigned char *)server_universe.name, 0,
 		  (unsigned char *)&server_universe);
 
