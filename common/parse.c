@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.81 2000/08/28 21:22:34 neild Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.82 2000/09/01 23:07:35 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1137,7 +1137,7 @@ int parse_base64 (data, cfile)
 {
 	enum dhcp_token token;
 	const char *val;
-	int i, j;
+	int i, j, k;
 	unsigned acc = 0;
 	static unsigned char
 		from64 [] = {64, 64, 64, 64, 64, 64, 64, 64,  /*  \"#$%&' */
@@ -1152,9 +1152,15 @@ int parse_base64 (data, cfile)
 			     33, 34, 35, 36, 37, 38, 39, 40,  /* hijklmno */
 			     41, 42, 43, 44, 45, 46, 47, 48,  /* pqrstuvw */
 			     59, 50, 51, 64, 64, 64, 64, 64}; /* xyz{|}~  */
+	struct string_list *bufs = (struct string_list *)0,
+			   *last = (struct string_list *)0,
+			   *t;
+	int cc = 0;
+	int terminated = 0;
 	
-	token = next_token (&val, cfile);
+	token = peek_token (&val, cfile);
 	if (token == STRING) {
+		token = next_token (&val, cfile);
 		data -> len = strlen (val) + 1;
 		if (!buffer_allocate (&data -> buffer, data -> len, MDL)) {
 			parse_warn (cfile, "can't allocate string buffer");
@@ -1166,7 +1172,30 @@ int parse_base64 (data, cfile)
 		return 1;
 	}
 
-	data -> len = strlen (val);
+	/* It's possible for a + or a / to cause a base64 quantity to be
+	   tokenized into more than one token, so we have to parse them all
+	   in before decoding. */
+	do {
+		int l;
+
+		token = next_token (&val, cfile);
+		l = strlen (val);
+		t = dmalloc (l + sizeof *t, MDL);
+		if (!t)
+			log_fatal ("no memory for base64 buffer.");
+		memset (t, 0, (sizeof *t) - 1);
+		strcpy (t -> string, val);
+		cc += l;
+		if (last)
+			last -> next = t;
+		else
+			bufs = t;
+		last = t;
+		token = peek_token (&val, cfile);
+	} while (token == NUMBER_OR_NAME || token == NAME || token == EQUAL ||
+		 token == NUMBER || token == PLUS || token == SLASH);
+
+	data -> len = cc;
 	data -> len = (data -> len * 3) / 4;
 	if (!buffer_allocate (&data -> buffer, data -> len, MDL)) {
 		parse_warn (cfile, "can't allocate buffer for base64 data.");
@@ -1175,43 +1204,71 @@ int parse_base64 (data, cfile)
 		return 0;
 	}
 		
-	j = 0;
-	for (i = 0; val [i] != '=' && val [i]; i++) {
-		unsigned foo = val [i];
+	j = k = 0;
+	for (t = bufs; t; t = t -> next) {
+	    for (i = 0; t -> string [i]; i++) {
+		unsigned foo = t -> string [i];
+		if (terminated && foo != '=') {
+			parse_warn (cfile,
+				    "stuff after base64 '=' terminator: %s.",
+				    &t -> string [i]);
+			goto bad;
+		}
 		if (foo < ' ' || foo > 'z') {
 		      bad64:
 			parse_warn (cfile,
-				    "invalid base64 character %d.", val [i]);
+				    "invalid base64 character %d.",
+				    t -> string [i]);
+		      bad:
 			data_string_forget (data, MDL);
-			return 0;
+			goto out;
 		}
-		foo = from64 [foo - ' '];
-		if (foo == 64)
-			goto bad64;
-		acc = (acc << 6) + foo;
-		switch (i % 4) {
-		      case 0:
-			break;
-		      case 1:
-			data -> buffer -> data [j++] = (acc >> 4);
-			acc = acc & 0x0f;
-			break;
-
-		      case 2:
-			data -> buffer -> data [j++] = (acc >> 2);
-			acc = acc & 0x03;
-			break;
-		      case 3:
-			data -> buffer -> data [j++] = acc;
-			acc = 0;
-			break;
+		if (foo == '=')
+			terminated = 1;
+		else {
+			foo = from64 [foo - ' '];
+			if (foo == 64)
+				goto bad64;
+			acc = (acc << 6) + foo;
+			switch (k % 4) {
+			      case 0:
+				break;
+			      case 1:
+				data -> buffer -> data [j++] = (acc >> 4);
+				acc = acc & 0x0f;
+				break;
+				
+			      case 2:
+				data -> buffer -> data [j++] = (acc >> 2);
+				acc = acc & 0x03;
+				break;
+			      case 3:
+				data -> buffer -> data [j++] = acc;
+				acc = 0;
+				break;
+			}
+		}
+		k++;
+	    }
+	}
+	if (k % 4) {
+		if (acc) {
+			parse_warn (cfile,
+				    "partial base64 value left over: %d.",
+				    acc);
 		}
 	}
-	if (i % 4)
-		parse_warn (cfile, "partial base64 value left over: %d.", acc);
 	data -> len = j;
 	data -> data = data -> buffer -> data;
-	return 1;
+      out:
+	for (t = bufs; t; t = last) {
+		last = t -> next;
+		dfree (t, MDL);
+	}
+	if (data -> len)
+		return 1;
+	else
+		return 0;
 }
 
 
