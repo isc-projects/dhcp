@@ -197,6 +197,12 @@ all:	$(PROG) $(CATMANPAGES)
 
 install: $(PROG) $(CATMANPAGES)
 	$(INSTALL) dhclient $(BINDIR); $(CHMOD) 755 $(BINDIR)/dhclient
+	if [ x$(SCRIPT) = xnone ]; then \
+	  echo "No client script available." \
+	else \
+	  $(INSTALL) scripts/$(SCRIPT) $(ETCDIR)/dhclient-script \
+	  $(CHMOD) 700 $(ETCDIR)/dhclient-script \
+	fi
 	if [ ! -d $(ADMMANDIR) ]; then \
 	  mkdir $(ADMMANDIR); \
 	  chmod 755 $(ADMMANDIR); \
