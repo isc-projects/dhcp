@@ -41,7 +41,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.129.2.15 2003/03/29 21:42:36 dhankins Exp $ Copyright (c) 1995-2002 Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.129.2.16 2003/04/26 21:51:39 dhankins Exp $ Copyright (c) 1995-2002 Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -252,15 +252,24 @@ int main (argc, argv, envp)
 
 	/* first kill of any currently running client */
 	if (release_mode) {
-	        /* XXX inelegant hack to prove concept */
-		char command[1024];
+		FILE *pidfd;
+		pid_t oldpid;
+		long temp;
+		int e;
 
-#if !defined (NO_SNPRINTF)
-		snprintf (command, 1024, "kill `cat %s`", path_dhclient_pid);
-#else
-		sprintf (command, "kill `cat %s`", path_dhclient_pid);
-#endif
-		system (command);
+		oldpid = 0;
+		if ((pidfd = fopen(path_dhclient_pid, "r")) != NULL) {
+			e = fscanf(pidfd, "%ld\n", &temp);
+			oldpid = (pid_t)temp;
+
+			if (e != 0 && e != EOF) {
+				if (oldpid) {
+					if (kill(oldpid, SIGTERM) == 0)
+						unlink(path_dhclient_pid);
+				}
+			}
+			fclose(pidfd);
+		}
 	}
 
 	if (!quiet) {
