@@ -532,9 +532,48 @@ dhcpd-options(5)                                 dhcpd-options(5)
 dhcpd-options(5)                                 dhcpd-options(5)
 
 
+RREELLAAYY AAGGEENNTT IINNFFOORRMMAATTIIOONN OOPPTTIIOONN
+       An   IETF   draft,    draft-ietf-dhc-agent-options-03.txt,
+       defines  a  series  of  encapsulated  options that a relay
+       agent can add to a DHCP packet when  relaying  it  to  the
+       DHCP server.   The server can then make address allocation
+       decisions (or whatever other decisions it wants) based  on
+       these  options.   The server also returns these options in
+       any replies it sends through the relay agent, so that  the
+       relay  agent  can use the information in these options for
+       delivery or accounting purposes.
+
+       The current draft  defines  two  options.    To  reference
+       these options in the dhcp server, specify the option space
+       name, "agent", followed  by  a  period,  followed  by  the
+       option name.   It isn't useful to specify these options to
+       be sent, nor is it useful to reference them at all in  the
+       client.  ooppttiioonn aaggeenntt..cciirrccuuiitt--iidd _d_a_t_a_-_s_t_r_i_n_g;;
+
+          The circuit-id suboption encodes an agent-local identi­
+          fier of the circuit from which a DHCP  client-to-server
+          packet  was received.  It is intended for use by agents
+          in relaying DHCP responses back to the proper  circuit.
+          The  format  of  this option is currently defined to be
+          vendor-dependent, and will probably  remain  that  way,
+          although the current draft allows for for the possibil­
+          ity of standardizing the format in the future.
+
+       ooppttiioonn aaggeenntt..cciirrccuuiitt--iidd _d_a_t_a_-_s_t_r_i_n_g;;
+
+          The remote-id suboption encodes information  about  the
+          remote  host  end  of  a circuit.   Examples of what it
+          might contain include caller ID  information,  username
+          information,  remote  ATM  address, cable modem ID, and
+          similar things.   In  principal,  the  meaning  is  not
+          well-specified,  and  it should generally be assumed to
+          be an opaque object that is administratively guaranteed
+          to be unique to a particular remote end of a circuit.
+
 SSEEEE AALLSSOO
        dhcpd.conf(5),  dhcpd.leases(5),  dhclient.conf(5),  dhcp-
-       eval(5), dhcpd(8), dhclient(8), RFC2132, RFC2131.
+       eval(5), dhcpd(8), dhclient(8), RFC2132,  RFC2131,  draft-
+       ietf-dhc-agent-options-??.txt.
 
 AAUUTTHHOORR
        The  Internet  Software  Consortium  DHCP Distribution was
@@ -543,45 +582,6 @@ AAUUTTHHOORR
        through the  Internet  Software  Consortium.   Information
        about  the  Internet  Software  Consortium can be found at
        hhttttpp::////wwwwww..iisscc..oorrgg//iisscc..
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
