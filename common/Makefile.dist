@@ -69,13 +69,25 @@ realclean: clean
 distclean: realclean
 	-rm -f Makefile
 
-dhcp-options.cat5:	dhcp-options.5
-	nroff -man dhcp-options.5 >dhcp-options.cat5
+dhcp-options.cat5:	dhcp-options.man5
+	nroff -man dhcp-options.man5 >dhcp-options.cat5
 
-dhcp-eval.cat5:	dhcp-eval.5
-	nroff -man dhcp-eval.5 >dhcp-eval.cat5
+dhcp-options.man5:	dhcp-options.5
+	sed -e "s#ETCDIR#$(ETC)#g" -e "s#DBDIR#$(VARDB)#g" \
+		-e "s#RUNDIR#$(VARRUN)#g" < dhcp-options.5 >dhcp-options.man5
 
-dhcp-contrib.cat5:	dhcp-contrib.5
-	nroff -man dhcp-contrib.5 >dhcp-contrib.cat5
+dhcp-eval.cat5:	dhcp-eval.man5
+	nroff -man dhcp-eval.man5 >dhcp-eval.cat5
+
+dhcp-eval.man5:	dhcp-eval.5
+	sed -e "s#ETCDIR#$(ETC)#g" -e "s#DBDIR#$(VARDB)#g" \
+		-e "s#RUNDIR#$(VARRUN)#g" < dhcp-eval.5 >dhcp-eval.man5
+
+dhcp-contrib.cat5:	dhcp-contrib.man5
+	nroff -man dhcp-contrib.man5 >dhcp-contrib.cat5
+
+dhcp-contrib.man5:	dhcp-contrib.5
+	sed -e "s#ETCDIR#$(ETC)#g" -e "s#DBDIR#$(VARDB)#g" \
+		-e "s#RUNDIR#$(VARRUN)#g" < dhcp-contrib.5 >dhcp-contrib.man5
 
 # Dependencies (semi-automatically-generated)
