@@ -3,7 +3,7 @@
    Support for executable statements. */
 
 /*
- * Copyright (c) 1998-2000 Internet Software Consortium.
+ * Copyright (c) 1998-2001 Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: execute.c,v 1.44.2.4 2001/06/20 04:23:57 mellon Exp $ Copyright (c) 1998-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: execute.c,v 1.44.2.5 2001/06/21 16:53:57 mellon Exp $ Copyright (c) 1998-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -190,7 +190,7 @@ int execute_statements (result, packet, lease, client_state,
 			status = evaluate_expression
 				((struct binding_value **)0,
 				 packet, lease, client_state, in_options,
-				 out_options, scope, r -> data.eval);
+				 out_options, scope, r -> data.eval, MDL);
 #if defined (DEBUG_EXPRESSIONS)
 			log_debug ("exec: evaluate: %s",
 				   (status ? "succeeded" : "failed"));
@@ -201,7 +201,7 @@ int execute_statements (result, packet, lease, client_state,
 			status = evaluate_expression
 				(result, packet,
 				 lease, client_state, in_options,
-				 out_options, scope, r -> data.retval);
+				 out_options, scope, r -> data.retval, MDL);
 #if defined (DEBUG_EXPRESSIONS)
 			log_debug ("exec: return: %s",
 				   (status ? "succeeded" : "failed"));
@@ -307,7 +307,8 @@ int execute_statements (result, packet, lease, client_state,
 						  (&binding -> value, packet,
 						   lease, client_state,
 						   in_options, out_options,
-						   scope, r -> data.set.expr));
+						   scope, r -> data.set.expr,
+						   MDL));
 				} else {
 				    if (!(binding_value_allocate
 					  (&binding -> value, MDL))) {
@@ -384,7 +385,7 @@ int execute_statements (result, packet, lease, client_state,
 					  (&binding -> value, packet, lease,
 					   client_state,
 					   in_options, out_options,
-					   scope, e -> data.set.expr));
+					   scope, e -> data.set.expr, MDL));
 				binding -> next = ns -> bindings;
 				ns -> bindings = binding;
 			}
@@ -417,7 +418,8 @@ int execute_statements (result, packet, lease, client_state,
 			status = (evaluate_data_expression
 				  (&ds, packet,
 				   lease, client_state, in_options,
-				   out_options, scope, r -> data.log.expr));
+				   out_options, scope, r -> data.log.expr,
+				   MDL));
 			
 #if defined (DEBUG_EXPRESSIONS)
 			log_debug ("exec: log");
@@ -921,14 +923,15 @@ int find_matching_case (struct executable_statement **ep,
 
 		status = (evaluate_data_expression (&ds, packet, lease,
 						    client_state, in_options,
-						    out_options, scope, expr));
+						    out_options, scope, expr,
+						    MDL));
 		if (status) {
 		    for (s = stmt; s; s = s -> next) {
 			if (s -> op == case_statement) {
 				sub = (evaluate_data_expression
 				       (&cd, packet, lease, client_state,
 					in_options, out_options,
-					scope, s -> data.c_case));
+					scope, s -> data.c_case, MDL));
 				if (sub && cd.len == ds.len &&
 				    !memcmp (cd.data, ds.data, cd.len))
 				{
