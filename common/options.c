@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.49 1999/11/13 23:51:50 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.50 2000/01/08 01:35:06 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -1201,6 +1201,78 @@ int hashed_option_space_encapsulate (result, packet, lease,
 					  (struct option_cache *)p -> car))
 				status = 1;
 		}
+	}
+
+	return status;
+}
+
+int nwip_option_space_encapsulate (result, packet, lease,
+				   in_options, cfg_options, universe)
+	struct data_string *result;
+	struct packet *packet;
+	struct lease *lease;
+	struct option_state *in_options;
+	struct option_state *cfg_options;
+	struct universe *universe;
+{
+	pair p, *hash;
+	int status;
+	int i;
+	static struct option_cache *no_nwip;
+	struct data_string ds;
+
+	if (universe -> index >= cfg_options -> universe_count)
+		return 0;
+
+	hash = cfg_options -> universes [universe -> index];
+	status = 0;
+	for (i = 0; hash && i < OPTION_HASH_SIZE; i++) {
+		for (p = hash [i]; p; p = p -> cdr) {
+			if (store_option (result, universe, packet, lease,
+					  in_options, cfg_options,
+					  (struct option_cache *)p -> car))
+				status = 1;
+		}
+	}
+
+	/* If there's no data, the nwip suboption is supposed to contain
+	   a suboption saying there's no data. */
+	if (!status) {
+		if (!no_nwip) {
+			static unsigned char nni [] = { 1, 0 };
+			memset (&ds, 0, sizeof ds);
+			ds.data = nni;
+			ds.len = 2;
+			if (option_cache_allocate
+			    (&no_nwip, "nwip_option_space_encapsulate")) {
+				data_string_copy
+					(&no_nwip -> data, &ds,
+					 "nwip_option_space_encapsulate");
+			}
+		}
+		if (no_nwip) {
+			if (store_option (result, universe, packet, lease,
+					  in_options, cfg_options,
+					  (struct option_cache *)p -> car))
+				status = 1;
+		}
+	} else {
+		/* If we have nwip options, the first one has to be the
+		   nwip-exists-in-option-area option. */
+		if (!buffer_allocate (&ds.buffer, result -> len + 2,
+				      "nwip_option_space_encapsulate")) {
+			data_string_forget (result,
+					    "nwip_option_space_encapsulate");
+			return 0;
+		}
+		ds.data = &ds.buffer -> data [0];
+		ds.buffer -> data [0] = 2;
+		ds.buffer -> data [1] = 0;
+		memcpy (&ds.buffer -> data [2], result -> data, result -> len);
+		data_string_forget (result, "nwip_option_space_encapsulate");
+		data_string_copy (result, &ds,
+				  "nwip_option_space_encapsulate");
+		data_string_forget (&ds, "nwip_option_space_encapsulate");
 	}
 
 	return status;
