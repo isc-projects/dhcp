@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcrelay.c,v 1.52.2.1 2002/04/27 05:34:20 murray Exp $ Copyright (c) 1997-2000 Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcrelay.c,v 1.52.2.2 2002/08/26 02:59:05 dhankins Exp $ Copyright (c) 1997-2000 Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -507,6 +507,14 @@ isc_result_t find_class (struct class **class, const char *c1,
 int parse_allow_deny (struct option_cache **oc, struct parse *p, int i)
 {
 	return 0;
+}
+
+/* As a wise man once said in dhcpctl/omshell.c: */
+/* Sigh */
+isc_result_t dhcp_set_control_state (control_object_state_t oldstate,
+				     control_object_state_t newstate)
+{
+	return ISC_R_SUCCESS;
 }
 
 #endif
