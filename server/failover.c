@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.53 2001/05/03 18:31:28 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.53.2.1 2001/05/04 22:32:16 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1363,6 +1363,7 @@ isc_result_t dhcp_failover_state_transition (dhcp_failover_state_t *state,
 		      case resolution_interrupted:
 		      case partner_down:
 		      case communications_interrupted:
+		      case recover:
 			/* Already in the right state? */
 			if (state -> me.state == startup)
 				return (dhcp_failover_set_state
@@ -1373,14 +1374,6 @@ isc_result_t dhcp_failover_state_transition (dhcp_failover_state_t *state,
 			return dhcp_failover_set_state
 				(state, resolution_interrupted);
 				
-		      case recover:
-			/* XXX I don't think it makes sense to make a
-			   XXX transition from recover to communications-
-			   XXX interrupted, because then when the connect
-			   XXX occurred, we'd make a transition into
-			   XXX normal, not recover. */
-			break;	/* Kim says stay in recover. */
-
 		      case normal:
 			return dhcp_failover_set_state
 				(state, communications_interrupted);
