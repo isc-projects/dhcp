@@ -45,6 +45,8 @@
 #define COLON ':'
 #define COMMA ','
 #define SLASH '/'
+#define LBRACE '{'
+#define RBRACE '}'
 
 #define FIRST_TOKEN	HOST
 #define HOST		256
@@ -79,6 +81,12 @@
 #define SERVER_NAME	285
 #define DYNAMIC_BOOTP	286
 #define SERVER_IDENTIFIER 287
+#define DYNAMIC_BOOTP_LEASE_CUTOFF 288
+#define DYNAMIC_BOOTP_LEASE_LENGTH 289
+#define BOOT_UNKNOWN_CLIENTS 290
+#define NEXT_SERVER	291
+#define TOKEN_RING	292
+#define GROUP		293
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\
 				 (x) != STRING &&	\
