@@ -47,8 +47,10 @@ static char copyright[] =
 
 #include "dhcpd.h"
 
-static struct host_decl *hosts;
 static struct subnet *subnets;
+static struct shared_network *shared_networks;
+static struct hash_table *host_hw_addr_hash;
+static struct hash_table *host_uid_hash;
 static struct hash_table *lease_uid_hash;
 static struct hash_table *lease_ip_addr_hash;
 static struct hash_table *lease_hw_addr_hash;
@@ -60,25 +62,73 @@ static struct hash_table *user_class_hash;
 void enter_host (hd)
 	struct host_decl *hd;
 {
-	hd -> n_name = hosts;
-	hd -> n_haddr = hosts;
-	hd -> n_cid = hosts;
-	
-	hosts = hd;
+	struct host_decl *hp = (struct host_decl *)0;
+	struct host_decl *np = (struct host_decl *)0;
+
+	hd -> n_ipaddr = (struct host_decl *)0;
+
+	if (hd -> interface.hlen) {
+		if (!host_hw_addr_hash)
+			host_hw_addr_hash = new_hash ();
+		else
+			hp = (struct host_decl *)
+				hash_lookup (host_hw_addr_hash,
+					     hd -> interface.haddr,
+					     hd -> interface.hlen);
+
+		if (!hp)
+			add_hash (host_hw_addr_hash,
+				  hd -> interface.haddr, hd -> interface.hlen,
+				  (unsigned char *)hd);
+	}
+	/* If there's already a host declaration for this hardware
+	   address, add this one to the end of the list.  Otherwise,
+	   add it to the hash table. */
+
+	if (hp) {
+		for (np = hp; np -> n_ipaddr; np = np -> n_ipaddr)
+			;
+		np -> n_ipaddr = hd;
+	}
+
+	if (hd -> options [DHO_DHCP_CLIENT_IDENTIFIER]) {
+		if (!tree_evaluate (hd -> options
+				    [DHO_DHCP_CLIENT_IDENTIFIER]))
+			return;
+			
+		if (!host_uid_hash)
+			host_uid_hash = new_hash ();
+		else
+			hp = (struct host_decl *) hash_lookup
+				(host_uid_hash,
+				 hd -> options
+				 [DHO_DHCP_CLIENT_IDENTIFIER] -> value,
+				 hd -> options
+				 [DHO_DHCP_CLIENT_IDENTIFIER] -> len);
+
+		/* If there's already a host declaration for this
+		   client identifier, add this one to the end of the
+		   list.  Otherwise, add it to the hash table. */
+		if (hp) {
+			/* Don't link it in twice... */
+			if (!np) {
+				for (np = hp; np -> n_ipaddr;
+				     np = np -> n_ipaddr)
+					;
+				np -> n_ipaddr = hd;
+			}
+		} else {
+			add_hash (host_uid_hash,
+				  hd -> options
+				  [DHO_DHCP_CLIENT_IDENTIFIER] -> value,
+				  hd -> options
+				  [DHO_DHCP_CLIENT_IDENTIFIER] -> len,
+				  (unsigned char *)hd);
+		}
+	}
 }
 
-struct host_decl *find_host_by_name (name)
-	char *name;
-{
-	struct host_decl *foo;
-
-	for (foo = hosts; foo; foo = foo -> n_name)
-		if (!strcmp (name, foo -> name))
-			return foo;
-	return (struct host_decl *)0;
-}
-
-struct host_decl *find_host_by_addr (htype, haddr, hlen)
+struct host_decl *find_hosts_by_haddr (htype, haddr, hlen)
 	int htype;
 	unsigned char *haddr;
 	int hlen;
@@ -86,23 +136,75 @@ struct host_decl *find_host_by_addr (htype, haddr, hlen)
 	struct host_decl *foo;
 	int i;
 
-	for (foo = hosts; foo; foo = foo -> n_haddr)
-		for (i = 0; i < foo -> interface_count; i++)
-			if (foo -> interfaces [i].htype == htype &&
-			    foo -> interfaces [i].hlen == hlen &&
-			    !memcmp (foo -> interfaces [i].haddr, haddr, hlen))
-				return foo;
-	return (struct host_decl *)0;
+	foo = (struct host_decl *)hash_lookup (host_hw_addr_hash,
+					       haddr, hlen);
+	return foo;
 }
 
-void new_address_range (low, high, subnet)
+struct host_decl *find_hosts_by_uid (data, len)
+	unsigned char *data;
+	int len;
+{
+	struct host_decl *foo;
+	int i;
+
+	foo = (struct host_decl *)hash_lookup (host_uid_hash, data, len);
+	return foo;
+}
+
+/* More than one host_decl can be returned by find_hosts_by_haddr or
+   find_hosts_by_uid, and each host_decl can have multiple addresses.
+   Loop through the list of hosts, and then for each host, through the
+   list of addresses, looking for an address that's in the same shared
+   network as the one specified.    Store the matching address through
+   the addr pointer, update the host pointer to point at the host_decl
+   that matched, and return the subnet that matched. */
+
+struct subnet *find_host_for_network (host, addr, share)
+	struct host_decl **host;
+	struct iaddr *addr;
+	struct shared_network *share;
+{
+	int i;
+	struct subnet *subnet;
+	struct iaddr ip_address;
+	struct host_decl *hp;
+
+	for (hp = *host; hp; hp = hp -> n_ipaddr) {
+		if (!hp -> fixed_addr || !tree_evaluate (hp -> fixed_addr))
+			continue;
+		for (i = 0; i < hp -> fixed_addr -> len; i += 4) {
+			ip_address.len = 4;
+			memcpy (ip_address.iabuf,
+				hp -> fixed_addr -> value + i, 4);
+			subnet = find_grouped_subnet (share, ip_address);
+			if (subnet) {
+				*addr = ip_address;
+				*host = hp;
+				return subnet;
+			}
+		}
+	}
+	return (struct subnet *)0;
+}
+
+void new_address_range (low, high, subnet, dynamic)
 	struct iaddr low, high;
 	struct subnet *subnet;
+	int dynamic;
 {
 	struct lease *address_range, *lp, *plp;
 	struct iaddr net;
 	int min, max, i;
 	char lowbuf [16], highbuf [16], netbuf [16];
+	struct shared_network *share = subnet -> shared_network;
+
+	/* All subnets should have attached shared network structures. */
+	if (!share) {
+		strcpy (netbuf, piaddr (subnet -> net));
+		error ("No shared network for network %s (%s)",
+		       netbuf, piaddr (subnet -> netmask));
+	}
 
 	/* Initialize the hash table if it hasn't been done yet. */
 	if (!lease_uid_hash)
@@ -142,8 +244,8 @@ void new_address_range (low, high, subnet)
 	memset (address_range, 0, (sizeof *address_range) * (max - min + 1));
 
 	/* Fill in the last lease if it hasn't been already... */
-	if (!subnet -> last_lease) {
-		subnet -> last_lease = &address_range [0];
+	if (!share -> last_lease) {
+		share -> last_lease = &address_range [0];
 	}
 
 	/* Fill out the lease structures with some minimal information. */
@@ -153,14 +255,16 @@ void new_address_range (low, high, subnet)
 		address_range [i].starts =
 			address_range [i].timestamp = MIN_TIME;
 		address_range [i].ends = MIN_TIME;
-		address_range [i].contain = subnet;
+		address_range [i].subnet = subnet;
+		address_range [i].shared_network = share;
+		address_range [i].flags = dynamic ? DYNAMIC_BOOTP_OK : 0;
 
 		/* Link this entry into the list. */
-		address_range [i].next = subnet -> leases;
+		address_range [i].next = share -> leases;
 		address_range [i].prev = (struct lease *)0;
-		subnet -> leases = &address_range [i];
+		share -> leases = &address_range [i];
 		if (address_range [i].next)
-			address_range [i].next -> prev = subnet -> leases;
+			address_range [i].next -> prev = share -> leases;
 		add_hash (lease_ip_addr_hash,
 			  address_range [i].ip_addr.iabuf,
 			  address_range [i].ip_addr.len,
@@ -199,7 +303,20 @@ struct subnet *find_subnet (addr)
 {
 	struct subnet *rv;
 
-	for (rv = subnets; rv; rv = rv -> next) {
+	for (rv = subnets; rv; rv = rv -> next_subnet) {
+		if (addr_eq (subnet_number (addr, rv -> netmask), rv -> net))
+			return rv;
+	}
+	return (struct subnet *)0;
+}
+
+struct subnet *find_grouped_subnet (share, addr)
+	struct shared_network *share;
+	struct iaddr addr;
+{
+	struct subnet *rv;
+
+	for (rv = share -> subnets; rv; rv = rv -> next_sibling) {
 		if (addr_eq (subnet_number (addr, rv -> netmask), rv -> net))
 			return rv;
 	}
@@ -212,8 +329,18 @@ void enter_subnet (subnet)
 	struct subnet *subnet;
 {
 	/* XXX Sort the nets into a balanced tree to make searching quicker. */
-	subnet -> next = subnets;
+	subnet -> next_subnet = subnets;
 	subnets = subnet;
+}
+	
+/* Enter a new subnet into the subnet hash. */
+
+void enter_shared_network (share)
+	struct shared_network *share;
+{
+	/* XXX Sort the nets into a balanced tree to make searching quicker. */
+	share -> next = shared_networks;
+	shared_networks = share;
 }
 	
 /* Enter a lease into the system.   This is called by the parser each
@@ -255,7 +382,6 @@ int supersede_lease (comp, lease, commit)
 {
 	int enter_uid = 0;
 	int enter_hwaddr = 0;
-	struct subnet *parent;
 	struct lease *lp;
 
 	/* If the existing lease hasn't expired and has a different
@@ -316,6 +442,8 @@ int supersede_lease (comp, lease, commit)
 		comp -> host = lease -> host;
 		comp -> hardware_addr = lease -> hardware_addr;
 		comp -> state = lease -> state;
+		comp -> flags = ((lease -> flags & ~PERSISTENT_FLAGS) |
+				 (comp -> flags & ~EPHEMERAL_FLAGS));
 
 		/* Record the lease in the uid hash if necessary. */
 		if (enter_uid && lease -> uid) {
@@ -335,28 +463,28 @@ int supersede_lease (comp, lease, commit)
 		if (comp -> prev) {
 			comp -> prev -> next = comp -> next;
 		} else {
-			comp -> contain -> leases = comp -> next;
+			comp -> shared_network -> leases = comp -> next;
 		}
 		if (comp -> next) {
 			comp -> next -> prev = comp -> prev;
 		}
-		if (comp -> contain -> last_lease == comp) {
-			comp -> contain -> last_lease = comp -> prev;
+		if (comp -> shared_network -> last_lease == comp) {
+			comp -> shared_network -> last_lease = comp -> prev;
 		}
 
 		/* Find the last insertion point... */
-		if (comp == comp -> contain -> insertion_point ||
-		    !comp -> contain -> insertion_point) {
-			lp = comp -> contain -> leases;
+		if (comp == comp -> shared_network -> insertion_point ||
+		    !comp -> shared_network -> insertion_point) {
+			lp = comp -> shared_network -> leases;
 		} else {
-			lp = comp -> contain -> insertion_point;
+			lp = comp -> shared_network -> insertion_point;
 		}
 
 		if (!lp) {
 			/* Nothing on the list yet?    Just make comp the
 			   head of the list. */
-			comp -> contain -> leases = comp;
-			comp -> contain -> last_lease = comp;
+			comp -> shared_network -> leases = comp;
+			comp -> shared_network -> last_lease = comp;
 		} else if (lp -> ends > lease -> ends) {
 			/* Skip down the list until we run out of list
 			   or find a place for comp. */
@@ -369,7 +497,7 @@ int supersede_lease (comp, lease, commit)
 				lp -> next = comp;
 				comp -> prev = lp;
 				comp -> next = (struct lease *)0;
-				comp -> contain -> last_lease = comp;
+				comp -> shared_network -> last_lease = comp;
 			} else {
 				/* If we didn't, put it between lp and
 				   the previous item on the list. */
@@ -390,7 +518,7 @@ int supersede_lease (comp, lease, commit)
 				lp -> prev = comp;
 				comp -> next = lp;
 				comp -> prev = (struct lease *)0;
-				comp -> contain -> leases = comp;
+				comp -> shared_network -> leases = comp;
 			} else {
 				/* If we didn't, put it between lp and
 				   the next item on the list. */
@@ -400,7 +528,7 @@ int supersede_lease (comp, lease, commit)
 				lp -> next = comp;
 			}
 		}
-		comp -> contain -> insertion_point = comp;
+		comp -> shared_network -> insertion_point = comp;
 		comp -> ends = lease -> ends;
 	}
 
@@ -516,10 +644,10 @@ struct class *find_class (type, name, len)
 void write_leases ()
 {
 	struct lease *l;
-	struct subnet *s;
+	struct shared_network *s;
 	int i;
 
-	for (s = subnets; s; s = s -> next) {
+	for (s = shared_networks; s; s = s -> next) {
 		for (l = s -> leases; l; l = l -> next) {
 			if (l -> hardware_addr.hlen || l -> uid_len)
 				write_lease (l);
@@ -531,17 +659,18 @@ void write_leases ()
 void dump_subnets ()
 {
 	struct lease *l;
-	struct subnet *s;
+	struct shared_network *s;
+	struct subnet *n;
 	int i;
 
-	for (s = subnets; s; s = s -> next) {
-		debug ("Subnet %s", piaddr (s -> net));
+	for (n = s -> subnets; n; n = n -> next_subnet) {
+		debug ("Subnet %s", piaddr (n -> net));
 		debug ("   netmask %s",
-		       piaddr (s -> netmask));
-		for (l = s -> leases; l; l = l -> next) {
-			print_lease (l);
-		}
-		debug ("Last Lease:");
-		print_lease (s -> last_lease);
+		       piaddr (n -> netmask));
 	}
+	for (l = s -> leases; l; l = l -> next) {
+		print_lease (l);
+	}
+	debug ("Last Lease:");
+	print_lease (s -> last_lease);
 }
