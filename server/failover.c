@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.53.2.14 2001/08/23 16:25:51 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.53.2.15 2001/10/17 03:31:02 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -51,7 +51,6 @@ static char copyright[] =
 #include <omapip/omapip_p.h>
 
 #if defined (FAILOVER_PROTOCOL)
-static struct hash_table *failover_hash;
 dhcp_failover_state_t *failover_states;
 static isc_result_t do_a_failover_option (omapi_object_t *,
 					  dhcp_failover_link_t *);
