@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.57.2.18 1999/02/23 17:47:05 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.57.2.19 1999/02/23 22:12:17 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1454,7 +1454,7 @@ struct lease *find_lease (packet, share, ours)
 		uid_lease = (struct lease *)0;
 	}
 	if (hw_lease &&
-	    (share != hw_lease -> shared_network))
+	    (share != hw_lease -> shared_network)) {
 		if (packet -> packet_type == DHCPREQUEST)
 			release_lease (hw_lease);
 		hw_lease = (struct lease *)0;
