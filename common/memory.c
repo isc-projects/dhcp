@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: memory.c,v 1.21 1996/08/30 20:14:03 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: memory.c,v 1.22 1996/11/08 20:09:10 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -429,6 +429,10 @@ int supersede_lease (comp, lease, commit)
 	int enter_uid = 0;
 	int enter_hwaddr = 0;
 	struct lease *lp;
+
+	/* Static leases are not currently kept in the database... */
+	if (lease -> flags & STATIC_LEASE)
+		return 1;
 
 	/* If the existing lease hasn't expired and has a different
 	   unique identifier or, if it doesn't have a unique
