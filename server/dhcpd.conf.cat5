@@ -1503,13 +1503,13 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
        Supplying a value for the dhcp-server-identifier option is
        equivalent to using the server-identifier statement.
 
-RREEFFEERREENNCCEE:: OOPPTTIIOONN SSTTAATTEEMMEENNTTSS
-       DHCP   option  statements  are  documented  in  the  ddhhccpp--
-       ooppttiioonnss((55)) manual page.
+       TThhee _d_d_n_s_-_u_p_d_a_t_e_s ssttaatteemmeenntt
 
-VVEENNDDOORR EENNCCAAPPSSUULLAATTEEDD OOPPTTIIOONNSS
-       The DHCP protocol defines the  vveennddoorr--eennccaappssuullaatteedd--ooppttiioonnss
-       option,  which  allows vendors to define their own options
+        ddddnnss--uuppddaatteess _f_l_a_g;;
+
+       The  _d_d_n_s_-_u_p_d_a_t_e_s  parameter  controls  whether or not the
+       server will attempt to do a ddns update when  a  lease  is
+       confirmed.    Set  this  to  _o_f_f  if the server should not
 
 
 
@@ -1522,6 +1522,16 @@ VVEENNDDOORR EENNCCAAPPSSUULLAATTEEDD OOPPTTIIOONNSS
 dhcpd.conf(5)                                       dhcpd.conf(5)
 
 
+       attempt to do updates within a certain scope.   The  _d_d_n_s_-
+       _u_p_d_a_t_e_s parameter is on by default.
+
+RREEFFEERREENNCCEE:: OOPPTTIIOONN SSTTAATTEEMMEENNTTSS
+       DHCP   option  statements  are  documented  in  the  ddhhccpp--
+       ooppttiioonnss((55)) manual page.
+
+VVEENNDDOORR EENNCCAAPPSSUULLAATTEEDD OOPPTTIIOONNSS
+       The DHCP protocol defines the  vveennddoorr--eennccaappssuullaatteedd--ooppttiioonnss
+       option,  which  allows vendors to define their own options
        that will be sent encapsulated in a standard DHCP  option.
        The  format  of  the vveennddoorr--eennccaappssuullaatteedd--ooppttiioonnss option is
        either a hunk of opaque data, or an actual  option  buffer
@@ -1566,16 +1576,6 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
        just  did,  the VVEENNDDOORR EENNCCAAPPSSUULLAATTEEDD OOPPTTIIOONNSS example can be
        implemented more legibly as follows:
        class "vendor-classes" {
-         match option vendor-class-identifier;
-       }
-
-       option SUNW.server-address 172.17.65.1;
-       option SUNW.server-name "sundhcp-server17-1";
-
-       subclass "vendor-classes" "SUNW.Ultra-5_10" {
-         vendor-option-space SUNW;
-         option SUNW.root-path "/export/root/sparc";
-       }
 
 
 
@@ -1587,6 +1587,17 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
 
 dhcpd.conf(5)                                       dhcpd.conf(5)
 
+
+         match option vendor-class-identifier;
+       }
+
+       option SUNW.server-address 172.17.65.1;
+       option SUNW.server-name "sundhcp-server17-1";
+
+       subclass "vendor-classes" "SUNW.Ultra-5_10" {
+         vendor-option-space SUNW;
+         option SUNW.root-path "/export/root/sparc";
+       }
 
        subclass "vendor-classes" "SUNW.i86pc" {
          vendor-option-space SUNW;
@@ -1611,17 +1622,6 @@ AAUUTTHHOORR
        provided by the Internet Software Consortium.  Information
        about the Internet Software Consortium  can  be  found  at
        hhttttpp::////wwwwww..iisscc..oorrgg//iisscc..
-
-
-
-
-
-
-
-
-
-
-
 
 
 
