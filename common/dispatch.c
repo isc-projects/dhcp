@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dispatch.c,v 1.46 1997/11/29 07:51:09 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dispatch.c,v 1.47 1997/12/06 04:03:37 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -210,6 +210,16 @@ void discover_interfaces (state)
 			      case ARPHRD_ETHER:
 				tmp -> hw_address.hlen = 6;
 				tmp -> hw_address.htype = ARPHRD_ETHER;
+				memcpy (tmp -> hw_address.haddr,
+					sa.sa_data, 6);
+				break;
+
+#ifndef ARPHRD_IEEE802
+# define ARPHRD_IEEE802 HTYPE_IEEE802
+#endif
+			      case ARPHRD_IEEE802:
+				tmp -> hw_address.hlen = 6;
+				tmp -> hw_address.htype = ARPHRD_IEEE802;
 				memcpy (tmp -> hw_address.haddr,
 					sa.sa_data, 6);
 				break;
