@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: execute.c,v 1.37 2000/08/22 21:51:29 neild Exp $ Copyright (c) 1998-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: execute.c,v 1.38 2000/08/23 00:32:46 neild Exp $ Copyright (c) 1998-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -273,12 +273,8 @@ int execute_statements (packet, lease, in_options, out_options, scope,
 				    if (binding -> name) {
 					strcpy (binding -> name,
 						r -> data.set.name);
-					if (lease) {
-					    binding -> next =
-						    lease -> scope -> bindings;
-					    lease -> scope -> bindings =
-						    binding;
-					}
+					binding -> next = (*scope) -> bindings;
+					(*scope) -> bindings = binding;
 				    } else {
 				       badalloc:
 					dfree (binding, MDL);
