@@ -4,8 +4,8 @@
    Support Services in Vancouver, B.C. */
 
 /*
- * Copyright (c) 1995, 1996, 1998 The Internet Software Consortium.
- * All rights reserved.
+ * Copyright (c) 1995, 1996, 1998, 1999
+ * The Internet Software Consortium.    All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: lpf.c,v 1.1 1998/12/22 22:34:54 mellon Exp $ Copyright (c) 1995, 1996, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: lpf.c,v 1.2 1999/02/14 06:05:49 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -51,7 +51,9 @@ static char copyright[] =
 #include <sys/ioctl.h>
 #include <sys/uio.h>
 
-#include <net/bpf.h>
+#include <asm/types.h>
+#include <linux/filter.h>
+#include <linux/if_ether.h>
 #include <netinet/in_systm.h>
 #include "includes/netinet/ip.h"
 #include "includes/netinet/udp.h"
@@ -87,15 +89,29 @@ int if_register_lpf (info)
 	struct sockaddr sa;
 
 	/* Make an LPF socket. */
-	if ((sock = socket(PF_INET, SOCK_PACKET, htons(ETH_P_ALL))) < 0)
+	if ((sock = socket(PF_PACKET, SOCK_PACKET, htons(ETH_P_ALL))) < 0) {
+		if (errno == ENOPROTOOPT || errno == EPROTONOSUPPORT ||
+		    errno == ESOCKTNOSUPPORT || errno == EPFNOSUPPORT ||
+		    errno == EAFNOSUPPORT)
+			error ("socket: %m - make sure %s %s!",
+			       "CONFIG_PACKET and CONFIG_FILTER are defined",
+			       "in your kernel configuration");
 		error("Open a socket for LPF: %m");
+	}
 
 	/* Bind to the interface name */
 	memset (&sa, 0, sizeof sa);
-	sa.sa_family = AF_INET;
+	sa.sa_family = AF_PACKET;
 	strncpy (sa.sa_data, (const char *)info -> ifp, sizeof sa.sa_data);
-	if (bind (sock, &sa, sizeof sa))
+	if (bind (sock, &sa, sizeof sa)) {
+		if (errno == ENOPROTOOPT || errno == EPROTONOSUPPORT ||
+		    errno == ESOCKTNOSUPPORT || errno == EPFNOSUPPORT ||
+		    errno == EAFNOSUPPORT)
+			error ("socket: %m - make sure %s %s!",
+			       "CONFIG_PACKET and CONFIG_FILTER are defined",
+			       "in your kernel configuration");
 		error("Bind socket to interface: %m");
+	}
 
 	return sock;
 }
@@ -126,19 +142,21 @@ void if_register_send (info)
 #ifdef USE_LPF_RECEIVE
 /* Defined in bpf.c.   We can't extern these in dhcpd.h without pulling
    in bpf includes... */
-extern struct bpf_insn dhcp_bpf_filter [];
+extern struct sock_filter dhcp_bpf_filter [];
 extern int dhcp_bpf_filter_len;
 
 void if_register_receive (info)
 	struct interface_info *info;
 {
+	struct sock_fprog p;
+
 	/* Open a LPF device and hang it on this interface... */
 	info -> rfdesc = if_register_lpf (info);
 
 	/* Set up the bpf filter program structure.    This is defined in
 	   bpf.c */
-	p.bf_len = dhcp_bpf_filter_len;
-	p.bf_insns = dhcp_bpf_filter;
+	p.len = dhcp_bpf_filter_len;
+	p.filter = dhcp_bpf_filter;
 
         /* Patch the server port into the LPF  program...
 	   XXX changes to filter program may require changes
@@ -146,8 +164,15 @@ void if_register_receive (info)
 	dhcp_bpf_filter [8].k = ntohs (local_port);
 
 	if (setsockopt (info -> rfdesc, SOL_SOCKET, SO_ATTACH_FILTER, &p,
-			sizeof p) < 0)
+			sizeof p) < 0) {
+		if (errno == ENOPROTOOPT || errno == EPROTONOSUPPORT ||
+		    errno == ESOCKTNOSUPPORT || errno == EPFNOSUPPORT ||
+		    errno == EAFNOSUPPORT)
+			error ("socket: %m - make sure %s %s!",
+			       "CONFIG_PACKET and CONFIG_FILTER are defined",
+			       "in your kernel configuration");
 		error ("Can't install packet filter program: %m");
+	}
 	if (!quiet_interface_discovery)
 		note ("Listening on LPF/%s/%s/%s",
 		      info -> name,
@@ -171,6 +196,7 @@ ssize_t send_packet (interface, packet, raw, len, from, to, hto)
 {
 	int bufp = 0;
 	unsigned char buf [1500];
+	struct sockaddr sa;
 
 	if (!strcmp (interface -> name, "fallback"))
 		return send_fallback (interface, packet, raw,
@@ -182,7 +208,16 @@ ssize_t send_packet (interface, packet, raw, len, from, to, hto)
 				to -> sin_addr.s_addr, to -> sin_port,
 				(unsigned char *)raw, len);
 	memcpy (buf + bufp, raw, len);
-	return send (interface -> wfdesc, buf, bufp + len, 0);
+
+	/* For some reason, SOCK_PACKET sockets can't be connected,
+	   so we have to do a sentdo every time. */
+	memset (&sa, 0, sizeof sa);
+	sa.sa_family = AF_PACKET;
+	strncpy (sa.sa_data,
+		 (const char *)interface -> ifp, sizeof sa.sa_data);
+
+	return sendto (interface -> wfdesc, buf, bufp + len, 0,
+		       &sa, sizeof sa);
 }
 #endif /* USE_LPF_SEND */
 
@@ -197,14 +232,14 @@ ssize_t receive_packet (interface, buf, len, from, hfrom)
 	int nread;
 	int length = 0;
 	int offset = 0;
-	unsigned char ibuf [1500 + sizeof (struct enstamp)];
+	unsigned char ibuf [1500];
 	int bufix = 0;
 
 	length = read (interface -> rfdesc, ibuf, sizeof ibuf);
 	if (length <= 0)
 		return length;
 
-	bufix = sizeof (struct enstamp);
+	bufix = 0;
 	/* Decode the physical header... */
 	offset = decode_hw_header (interface, ibuf, bufix, hfrom);
 
