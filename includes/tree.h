@@ -303,7 +303,7 @@ struct universe {
 					 struct option_state *,
 					 const char *, int);
 	int (*decode) (struct option_state *,
-		       unsigned char *, unsigned, struct universe *);
+		       const unsigned char *, unsigned, struct universe *);
 	int (*encapsulate) (struct data_string *, struct packet *,
 			    struct lease *, struct option_state *,
 			    struct option_state *,
