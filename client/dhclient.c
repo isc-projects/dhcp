@@ -41,7 +41,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.113 2000/09/14 12:42:01 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.114 2000/09/27 19:31:45 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2596,7 +2596,6 @@ int parse_agent_information_option (packet, len, data)
 	int len;
 	u_int8_t *data;
 {
-	log_info ("relay agent information option received.");
 	return 1;
 }
 
