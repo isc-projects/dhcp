@@ -3,7 +3,8 @@
    Lexical scanner for dhcpd config file... */
 
 /*
- * Copyright (c) 1995 The Internet Software Consortium.  All rights reserved.
+ * Copyright (c) 1995, 1996 The Internet Software Consortium.
+ * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -295,6 +296,10 @@ static int intern (atom, dfv)
 	      case 'l':
 		if (!strcasecmp (atom + 1, "ease"))
 			return LEASE;
+		break;
+	      case 'p':
+		if (!strcasecmp (atom + 1, "acket"))
+			return PACKET;
 		break;
 	      case 'o':
 		if (!strcasecmp (atom + 1, "ption"))

@@ -63,7 +63,8 @@
 #define CLASS		270
 #define LEASE		271
 #define RANGE		272
-#define LAST_TOKEN	RANGE
+#define PACKET		273
+#define LAST_TOKEN	PACKET
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\
 				 (x) <= LAST_TOKEN &&	\

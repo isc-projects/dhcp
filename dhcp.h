@@ -64,8 +64,9 @@ struct dhcp_packet {
 	char chaddr [16];	/* Client hardware address */
 	char sname [64];	/* Server name */
 	char file [128];	/* Boot filename */
-	char options [DHCP_OPTION_LEN];	/* Optional parameters
-					   (actual length dependent on MTU). */
+	unsigned char options [DHCP_OPTION_LEN];
+				/* Optional parameters
+				   (actual length dependent on MTU). */
 };
 
 /* BOOTP (rfc951) message types */

@@ -295,7 +295,8 @@ static TIME do_host_lookup (bufix, bufp, bufcount, dns)
 	/* If the record hasn't timed out, just copy the data and return. */
 	if (cur_time <= dns -> timeout) {
 		debug ("easy copy: %x %d %x",
-		       dns -> data, dns -> data_len, *(int *)(dns -> data));
+		       dns -> data, dns -> data_len,
+		       dns -> data ? *(int *)(dns -> data) : 0);
 		do_data_copy (bufix, bufp, bufcount,
 			      dns -> data, dns -> data_len);
 		return dns -> timeout;

@@ -94,6 +94,8 @@ void parse_option_buffer (packet, buffer, length)
 	int len;
 	int code;
 
+printf ("parse_option_buffer (%x, %x, %d)\n",
+(unsigned long)packet, (unsigned long)buffer, length);
 	for (s = buffer; *s != DHO_END && s < end; ) {
 		code = s [0];
 		/* Pad options don't have a length - just skip them. */
@@ -124,6 +126,8 @@ void parse_option_buffer (packet, buffer, length)
 			t [len] = 0;
 			packet -> options [code].len = len;
 			packet -> options [code].data = t;
+printf ("%s=%s\n", dhcp_options [code].name,
+pretty_print_option (code, t, len));
 		} else {
 			/* If it's a repeat, concatenate it to whatever
 			   we last saw.   This is really only required
@@ -162,7 +166,7 @@ void cons_options (inpacket, outpacket, hp, overload)
 	option_mask temp;		/* Working option mask. */
 	unsigned char *priority_list;
 	int priority_len;
-	unsigned char *buffer = inpacket -> raw -> options;
+	unsigned char *buffer = outpacket -> raw -> options;
 	int buflen, bufix = 0;
 	int reserved = 3;		/* Reserved space for overload. */
 	unsigned char *overload_ptr = (unsigned char *)0;
@@ -186,7 +190,7 @@ void cons_options (inpacket, outpacket, hp, overload)
 	/* XXX Maybe it would be safe to assume that we can send a packet
 	   to the client that's as big as the one it sent us, even if it
 	   didn't specify a large MTU. */
-	if (inpacket -> options [DHO_DHCP_MAX_MESSAGE_SIZE].data)
+	if (inpacket && inpacket -> options [DHO_DHCP_MAX_MESSAGE_SIZE].data)
 		buflen = (getUShort (inpacket -> options
 				     [DHO_DHCP_MAX_MESSAGE_SIZE].data)
 			  - DHCP_FIXED_LEN);
@@ -195,7 +199,8 @@ void cons_options (inpacket, outpacket, hp, overload)
 
 	/* If the client has provided a list of options that it wishes
 	   returned, use it to prioritize. */
-	if (inpacket -> options [DHO_DHCP_PARAMETER_REQUEST_LIST].data) {
+	if (inpacket &&
+	    inpacket -> options [DHO_DHCP_PARAMETER_REQUEST_LIST].data) {
 		priority_list =
 			inpacket -> options
 				[DHO_DHCP_PARAMETER_REQUEST_LIST].data;
@@ -219,6 +224,10 @@ void cons_options (inpacket, outpacket, hp, overload)
 		if (hp -> options [i])
 			OPTION_SET (options_have, i);
 	
+	/* Put the cookie up front... */
+	memcpy (buffer, DHCP_OPTIONS_COOKIE, 4);
+	bufix += 4;
+
       again:
 	/* Try copying out options that fit easily. */
 	for (i = 0; i < priority_len; i++) {
@@ -241,6 +250,13 @@ void cons_options (inpacket, outpacket, hp, overload)
 		if (!tree_evaluate (hp -> options [code]))
 			continue;
 
+printf ("hp -> options [%d] = %x %d %d %d %x\n",
+code, (unsigned long)(hp -> options [code] -> value),
+hp -> options [code] -> len, hp -> options [code] -> buf_size,
+hp -> options [code] -> timeout,
+(unsigned long)(hp -> options [code] -> tree));
+printf ("buffer = %x  buflen = %d  bufix = %d\n",
+(unsigned int)buffer, buflen, bufix);
 		/* We should now have a constant length for the option. */
 		length = (hp -> options [code] -> len - stored_length [code]);
 
@@ -255,7 +271,7 @@ void cons_options (inpacket, outpacket, hp, overload)
 		}
 		
 		/* Otherwise, store the option. */
-		result = store_option (outpacket, code,
+		result = store_option (hp, code,
 				       buffer + bufix,
 				       buflen - bufix - reserved,
 				       stored_length);
@@ -278,6 +294,10 @@ void cons_options (inpacket, outpacket, hp, overload)
 		}
 	}
 
+	if (buffer == outpacket -> raw -> options) {
+		outpacket -> packet_length = DHCP_FIXED_LEN + bufix;
+	}
+
 	/* If we didn't miss any options, we're done. */
 	/* XXX Maybe we want to try to encode options the client didn't
 	   request but that we have available? */
@@ -291,7 +311,7 @@ void cons_options (inpacket, outpacket, hp, overload)
 	   overloading. */
 	if (reserved && missed == 1
 	    && (bufix + OPTION_SPACE (missed_length) <= buflen)) {
-		result = store_option (outpacket, missed_code,
+		result = store_option (hp, missed_code,
 				       buffer + bufix, buflen - bufix,
 				       stored_length);
 		bufix += result;
@@ -314,7 +334,7 @@ void cons_options (inpacket, outpacket, hp, overload)
 	   option into the current buffer and part into the next. */
 	if (bufix + OPTION_SPACE (missed_length) + reserved
 	    < buflen + (overload & 1 ? 128 : 0) + (overload & 2 ? 64 : 0)) {
-		result = store_option (outpacket, missed_code,
+		result = store_option (hp, missed_code,
 				       buffer + bufix,
 				       buflen - bufix - reserved,
 				       stored_length);
@@ -358,16 +378,16 @@ void cons_options (inpacket, outpacket, hp, overload)
 
 	/* Can we use the file buffer? */
 	if (overload & 1) {
-		buffer = inpacket -> raw -> file;
-		buflen = sizeof inpacket -> raw -> file;
+		buffer = outpacket -> raw -> file;
+		buflen = sizeof outpacket -> raw -> file;
 		bufix = 0;
 		overload &= ~1;
 		goto again;
 	}
 	/* Can we use the sname buffer? */
 	if (overload & 2) {
-		buffer = inpacket -> raw -> sname;
-		buflen = sizeof inpacket -> raw -> sname;
+		buffer = outpacket -> raw -> sname;
+		buflen = sizeof outpacket -> raw -> sname;
 		bufix = 0;
 		overload &= ~2;
 		goto again;
@@ -382,18 +402,18 @@ void cons_options (inpacket, outpacket, hp, overload)
    data that has been stored so far.   Return 1 if all the option data
    has been stored. */
    
-int store_option (packet, code, buffer, buflen, stored_length)
-	struct packet *packet;
+int store_option (hp, code, buffer, buflen, stored_length)
+	struct host_decl *hp;
 	unsigned char code;
 	unsigned char *buffer;
 	int buflen;
 	int *stored_length;
 {
-	int length = packet -> options [code].len - stored_length [code];
+	int length = hp -> options [code] -> len - stored_length [code];
 	int bufix = 0;
-	int rv = 1;
+printf ("store_option: length = %d  buflen = %d  packet %d  stored %d\n",
+	length, buflen, hp -> options [code] -> len, stored_length [code]);
 	if (length > buflen) {
-		rv = 0;
 		length = buflen;
 	}
 
@@ -406,13 +426,13 @@ int store_option (packet, code, buffer, buflen, stored_length)
 		unsigned char incr = length > 255 ? 255 : length;
 		buffer [bufix] = code;
 		buffer [bufix + 1] = incr;
-		memcpy (buffer + bufix + 2, (packet -> options [code].data
+		memcpy (buffer + bufix + 2, (hp -> options [code] -> value
 					     + stored_length [code]), incr);
 		length -= incr;
 		stored_length [code] += incr;
 		bufix += 2 + incr;
 	}
-	return rv;
+	return bufix;
 }
 
 /* Format the specified option so that a human can easily read it. */

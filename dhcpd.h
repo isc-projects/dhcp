@@ -149,7 +149,7 @@ void parse_options PROTO ((struct packet *));
 void parse_option_buffer PROTO ((struct packet *, unsigned char *, int));
 void cons_options PROTO ((struct packet *, struct packet *,
 			  struct host_decl *, int));
-int store_option PROTO ((struct packet *, unsigned char,
+int store_option PROTO ((struct host_decl *, unsigned char,
 			 unsigned char *, int, int *));
 char *pretty_print_option PROTO ((unsigned char, unsigned char *, int));
 
@@ -287,3 +287,7 @@ struct iaddr ip_addr (struct iaddr, struct iaddr, unsigned long);
 unsigned long host_addr (struct iaddr, struct iaddr);
 int addr_eq (struct iaddr, struct iaddr);
 char *piaddr (struct iaddr);
+
+/* dhclient.c */
+void parse_client_statement (FILE *);
+
