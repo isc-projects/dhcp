@@ -3,7 +3,8 @@
    System dependencies for Solaris 2.x (tested on 2.5 with gcc)... */
 
 /*
- * Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.
+ * Copyright (c) 1996, 1998 The Internet Software Consortium.
+ * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -120,7 +121,7 @@ extern int h_errno;
    This actually works pretty well on Solaris, which doesn't censor
    the all-ones broadcast address. */
 #if defined (USE_DEFAULT_NETWORK)
-# define USE_SOCKETS
+# define USE_DLPI
 #endif
 
 #define USE_POLL
