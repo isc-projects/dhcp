@@ -938,7 +938,7 @@ struct sockaddr_in *pick_name_server PROTO ((void));
 
 /* inet_addr.c */
 #ifdef NEED_INET_ATON
-int inet_aton PROTO ((char *, struct in_addr *));
+int inet_aton PROTO ((const char *, struct in_addr *));
 #endif
 
 /* sysconf.c */
