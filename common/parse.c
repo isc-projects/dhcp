@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.64 2000/02/15 19:41:01 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.65 2000/03/06 23:17:24 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -158,6 +158,10 @@ char *parse_host_name (cfile)
 		if (token == DOT)
 			token = next_token (&val, cfile);
 	} while (token == DOT);
+
+	/* Should be at least one token. */
+	if (!len)
+		return (char *)0;
 
 	/* Assemble the hostname together into a string. */
 	if (!(s = (char *)dmalloc (len, MDL)))
@@ -879,7 +883,7 @@ void parse_option_space_decl (cfile)
 		universes = ua;
 	}
 	universes [nu -> index] = nu;
-	nu -> hash = new_hash ();
+	nu -> hash = new_hash (0, 0);
 	if (!nu -> hash)
 		log_fatal ("Can't allocate %s option hash table.", nu -> name);
 	add_hash (&universe_hash,
@@ -1212,6 +1216,9 @@ int parse_executable_statement (result, cfile, lose, case_context)
 	struct option_cache *cache;
 	int known;
 	int flag;
+	struct dns_zone *zone;
+	struct tsig_key *tkey;
+	isc_result_t status;
 
 	token = peek_token (&val, cfile);
 	switch (token) {
@@ -1530,6 +1537,87 @@ int parse_executable_statement (result, cfile, lose, case_context)
 		parse_semi (cfile);
 		break;
 
+		/* Not really a statement, but we parse it here anyway
+		   because it's appropriate for all DHCP agents with
+		   parsers. */
+	      case ZONE:
+		token = next_token (&val, cfile);
+		if (!dns_zone_allocate (&zone, MDL))
+			log_fatal ("no memory for new zone.");
+		zone -> name = parse_host_name (cfile);
+		if (!zone -> name) {
+		      badzone:
+			*lose = 1;
+			skip_to_semi (cfile);
+			dns_zone_dereference (&zone, MDL);
+			return 0;
+		}
+		token = next_token (&val, cfile);
+		if (token != LBRACE) {
+			parse_warn (cfile, "expecting left brace");
+			goto badzone;
+		}
+		if (!parse_zone (zone, cfile))
+			goto badzone;
+		token = next_token (&val, cfile);
+		if (token != RBRACE) {
+			parse_warn (cfile, "expecting right brace.");
+			goto badzone;
+		}
+		status = enter_dns_zone (zone);
+		if (status == ISC_R_NOMEMORY)
+			log_fatal ("no memory to hash dns zone %s",
+				   zone -> name);
+		if (status != ISC_R_SUCCESS) {
+			if (parse_semi (cfile))
+				parse_warn (cfile, "tsig key %s: %s",
+					    tkey -> name,
+					    isc_result_totext (status));
+			dns_zone_dereference (&zone, MDL);
+			return 0;
+		}
+		return 1;
+		
+		/* Also not really a statement, but same idea as above. */
+	      case TSIG_KEY:
+		token = next_token (&val, cfile);
+		token = next_token (&val, cfile);
+		if (token != STRING) {
+			parse_warn (cfile, "expecting key name string.");
+			*lose = 1;
+			skip_to_semi (cfile);
+			return 0;
+		}
+		if (!tsig_key_allocate (&tkey, MDL))
+			log_fatal ("no memory for tsig key");
+		tkey -> name = dmalloc (strlen (val) + 1, MDL);
+		if (!tkey -> name)
+			log_fatal ("no memory for tsig key name.");
+		strcpy (tkey -> name, val);
+		tkey -> algorithm = parse_host_name (cfile);
+		if (!tkey -> algorithm) {
+			parse_warn (cfile, "expecting key algorithim name.");
+		      badtkey:
+			skip_to_semi (cfile);
+			tsig_key_dereference (&tkey, MDL);
+			return 0;
+		}
+		if (!parse_cshl (&tkey -> key, cfile))
+			goto badtkey;
+		status = enter_tsig_key (tkey);
+		if (status == ISC_R_NOMEMORY)
+			log_fatal ("no memory to hash tsig key %s",
+				   tkey -> name);
+		if (status != ISC_R_SUCCESS) {
+			if (parse_semi (cfile))
+				parse_warn (cfile, "tsig key %s: %s",
+					    tkey -> name,
+					    isc_result_totext (status));
+			tsig_key_dereference (&tkey, MDL);
+			return 0;
+		}
+		return parse_semi (cfile);
+			
 	      default:
 		if (config_universe && is_identifier (token)) {
 			option = ((struct option *)
@@ -1545,6 +1633,106 @@ int parse_executable_statement (result, cfile, lose, case_context)
 		*lose = 0;
 		return 0;
 	}
+
+	return 1;
+}
+
+/* zone-statements :== zone-statement |
+		       zone-statement zone-statements
+   zone-statement :==
+	PRIMARY ip-addresses SEMI |
+	SECONDARY ip-addresses SEMI |
+	TSIG_KEY STRING SEMI
+   ip-addresses = ip-addr-or-hostname |
+		  ip-addr-or-hostname COMMA ip-addresses */
+
+int parse_zone (struct dns_zone *zone, struct parse *cfile)
+{
+	int token;
+	const char *val;
+	struct option_cache *oc;
+	int done = 0;
+
+	do {
+	    token = peek_token (&val, cfile);
+	    switch (token) {
+		  case PRIMARY:
+		    if (zone -> primary) {
+			    parse_warn (cfile,
+					"more than one primary.");
+			    skip_to_semi (cfile);
+			    return 0;
+		    }
+		    if (!option_cache_allocate (&zone -> primary, MDL))
+			    log_fatal ("can't allocate primary option cache.");
+		    oc = zone -> primary;
+		    goto consemup;
+		    
+		  case SECONDARY:
+		    if (zone -> secondary) {
+			    parse_warn (cfile, "more than one secondary.");
+			skip_to_semi (cfile);
+			return 0;
+		    }
+		    if (!option_cache_allocate (&zone -> secondary, MDL))
+			    log_fatal ("can't allocate secondary.");
+		    oc = zone -> secondary;
+		  consemup:
+		    token = next_token (&val, cfile);
+		    do {
+			    struct expression *expr = (struct expression *)0;
+			    if (!parse_ip_addr_or_hostname (&expr, cfile, 0)) {
+				parse_warn (cfile,
+					    "expecting IP addr or hostname.");
+				skip_to_semi (cfile);
+				return 0;
+			    }
+			    if (oc -> expression) {
+				    struct expression *old =
+					    (struct expression *)0;
+				    expression_reference (&old,
+							  oc -> expression,
+							  MDL);
+				    expression_dereference (&oc -> expression,
+							    MDL);
+				    if (!make_concat (&oc -> expression,
+						      old, expr))
+					log_fatal ("no memory for concat.");
+				    expression_dereference (&expr, MDL);
+				    expression_dereference (&old, MDL);
+			    } else {
+				    expression_reference (&oc -> expression,
+							  expr, MDL);
+				    expression_dereference (&expr, MDL);
+			    }
+			    token = next_token (&val, cfile);
+		    } while (token == COMMA);
+		    if (token != SEMI) {
+			    parse_warn (cfile, "expecting semicolon.");
+			    skip_to_semi (cfile);
+			    return 0;
+		    }
+		    break;
+
+		  case TSIG_KEY:
+		    token = next_token (&val, cfile);
+		    token = next_token (&val, cfile);
+		    if (token != STRING) {
+			    parse_warn (cfile, "expecting key name.");
+			    skip_to_semi (cfile);
+			    return 0;
+		    }
+		    if (tsig_key_lookup (&zone -> key, val) != ISC_R_SUCCESS)
+			    parse_warn (cfile, "unknown key %s", val);
+		    if (!parse_semi (cfile))
+			    return 0;
+		    break;
+		    
+		  default:
+		    done = 1;
+		    break;
+	    }
+	} while (!done);
 
 	return 1;
 }
