@@ -56,16 +56,20 @@ typedef unsigned long u_int32_t;
 #include <signal.h>
 #include <setjmp.h>
 #include <limits.h>
-#include <linux/netdevice.h>
 
 extern int h_errno;
 
 #include <net/if.h>
-#include <linux/if_arp.h>
+
+#define ARPHRD_ETHER	1
+#define	ARPHRD_IEEE802	6
+
 #include <sys/time.h>		/* gettimeofday()*/
 #include <linux/time.h>		/* also necessary */
 
+#ifndef _PATH_DHCPD_PID
 #define _PATH_DHCPD_PID	"/var/run/dhcpd.pid"
+#endif
 
 /* Varargs stuff... */
 #include <stdarg.h>
