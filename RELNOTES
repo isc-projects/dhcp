@@ -88,6 +88,11 @@ and for prodding me into improving it.
 - The function which discovers interfaces will now skip non-broadcast or
   point-to-point interfaces, thanks to a patch from David Brownlee.
 
+- Options not yet known by the dhcpd or dhclient have had their names
+  changed such that they do not contain # symbols, in case they should ever
+  appear in a lease file.  An option that might have been named "#144" is
+  now "unknown-144".
+
 			Changes since 3.0.1rc10
 
 - Potential buffer overflows in minires repaired.
