@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dispatch.c,v 1.47 1997/12/06 04:03:37 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dispatch.c,v 1.48 1998/03/16 06:09:58 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -54,7 +54,7 @@ struct timeout *timeouts;
 static struct timeout *free_timeouts;
 static int interfaces_invalidated;
 void (*bootp_packet_handler) PROTO ((struct interface_info *,
-				     unsigned char *, int, unsigned short,
+				     unsigned char *, int, unsigned int,
 				     struct iaddr, struct hardware *));
 
 static void got_one PROTO ((struct protocol *));

@@ -3,7 +3,7 @@
    Packet assembly code, originally contributed by Archie Cobbs. */
 
 /*
- * Copyright (c) 1995, 1996 The Internet Software Consortium.
+ * Copyright (c) 1995, 1996, 1998 The Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: packet.c,v 1.18 1997/06/08 04:08:01 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: packet.c,v 1.19 1998/03/16 06:14:08 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -158,7 +158,7 @@ void assemble_udp_ip_header (interface, buf, bufix,
 	int *bufix;
 	u_int32_t from;
 	u_int32_t to;
-	u_int16_t port;
+	u_int32_t port;
 	unsigned char *data;
 	int len;
 {

@@ -3,7 +3,7 @@
    DHCP/BOOTP Relay Agent. */
 
 /*
- * Copyright (c) 1997 The Internet Software Consortium.
+ * Copyright (c) 1997, 1998 The Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcrelay.c,v 1.11 1998/03/15 21:07:11 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcrelay.c,v 1.12 1998/03/16 06:16:54 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -229,7 +229,7 @@ void relay (ip, packbuf, length, from_port, from, hfrom)
 	struct interface_info *ip;
 	u_int8_t *packbuf;
 	int length;
-	u_int16_t from_port;
+	unsigned int from_port;
 	struct iaddr from;
 	struct hardware *hfrom;
 {
