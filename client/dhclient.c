@@ -41,7 +41,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.99 2000/03/24 00:20:33 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.100 2000/04/04 06:24:37 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -359,7 +359,7 @@ int main (argc, argv, envp)
 		log_fatal ("Can't allocate new generic object: %s\n",
 			   isc_result_totext (result));
 	result = omapi_protocol_listen (listener,
-					OMAPI_PROTOCOL_PORT, 1);
+					OMAPI_PROTOCOL_PORT + 1, 1);
 	if (result != ISC_R_SUCCESS)
 		log_fatal ("Can't start OMAPI protocol: %s",
 			   isc_result_totext (result));
