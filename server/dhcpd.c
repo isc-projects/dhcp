@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.83 2000/01/26 17:32:15 mellon Exp $ Copyright 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.84 2000/02/08 04:49:06 mellon Exp $ Copyright 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.";
 #endif
 
   static char copyright[] =
@@ -54,6 +54,7 @@ struct in_addr limited_broadcast;
    lease is committed.   Right now it's not following the DHCP-DNS draft
    at all, but as soon as I fix the resolver it should try to. */
 
+#if defined (NSUPDATE)
 char std_nsupdate [] = "						      \
 on commit {								      \
   if (not defined (ddns-fwd-name)) {					      \
@@ -99,6 +100,7 @@ on commit {								      \
     }									      \
   }									      \
 }";
+#endif /* NSUPDATE */
 
 const char *path_dhcpd_conf = _PATH_DHCPD_CONF;
 const char *path_dhcpd_db = _PATH_DHCPD_DB;
@@ -284,6 +286,7 @@ int main (argc, argv, envp)
 
 	root_group.authoritative = 0;
 
+#if defined (NSUPDATE)
 	/* Set up the standard name service updater routine. */
 	parse = (struct parse *)0;
 	status = new_parse (&parse, -1,
@@ -298,6 +301,7 @@ int main (argc, argv, envp)
 		log_fatal ("can't parse standard name service updater!");
 	}
 	end_parse (&parse);
+#endif
 
 	/* Read the dhcpd.conf file... */
 	if (readconf () != ISC_R_SUCCESS)
