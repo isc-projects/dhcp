@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.130 2001/01/16 22:46:01 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.131 2001/01/25 08:28:22 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1339,8 +1339,11 @@ void parse_host_declaration (cfile, group)
 	isc_result_t status;
 
 	name = parse_host_name (cfile);
-	if (!name)
+	if (!name) {
+		parse_warn (cfile, "expecting a name for host declaration.");
+		skip_to_semi (cfile);
 		return;
+	}
 
 	host = (struct host_decl *)0;
 	status = host_allocate (&host, MDL);
@@ -1871,6 +1874,9 @@ void parse_shared_net_declaration (cfile, group)
 	} else {
 		name = parse_host_name (cfile);
 		if (!name) {
+			parse_warn (cfile,
+				     "expecting a name for shared-network");
+			skip_to_semi (cfile);
 			shared_network_dereference (&share, MDL);
 			return;
 		}
@@ -2227,7 +2233,8 @@ int parse_lease_declaration (struct lease **lp, struct parse *cfile)
 	struct binding *binding;
 	isc_result_t status;
 	binding_state_t *statep;
-	struct option_cache *oc, *optr;
+	struct option_cache *oc;
+	pair *p;
 
 	lease = (struct lease *)0;
 	status = lease_allocate (&lease, MDL);
@@ -2454,6 +2461,8 @@ int parse_lease_declaration (struct lease **lp, struct parse *cfile)
 					parse_semi (cfile);
 			}
 			if (!lease -> hostname) {
+				parse_warn (cfile, "expecting a hostname.");
+				skip_to_semi (cfile);
 				seenbit = 0;
 				return 0;
 			}
@@ -2472,6 +2481,8 @@ int parse_lease_declaration (struct lease **lp, struct parse *cfile)
 					parse_semi (cfile);
 			}
 			if (!lease -> client_hostname) {
+				parse_warn (cfile, "expecting a hostname.");
+				skip_to_semi (cfile);
 				seenbit = 0;
 				lease_dereference (&lease, MDL);
 				return 0;
@@ -2540,25 +2551,26 @@ int parse_lease_declaration (struct lease **lp, struct parse *cfile)
 			seenbit = 0;
 			oc = (struct option_cache *)0;
 			if (parse_option_decl (&oc, cfile)) {
-				if (oc -> option -> universe !=
-				    &agent_universe) {
-					parse_warn (cfile,
-						    "agent option expected.");
-					option_cache_dereference (&oc, MDL);
-					break;
-				}
-				if (lease -> agent_options) {
-					for (optr = lease -> agent_options;
-					     optr -> next;
-					     optr = optr -> next)
-						;
-					option_cache_reference (&optr -> next,
-								oc, MDL);
-				} else
-					option_cache_reference
-						(&lease -> agent_options,
-						 oc, MDL);
-				option_cache_dereference (&oc, MDL);
+			    if (oc -> option -> universe !=
+				&agent_universe) {
+				    parse_warn (cfile,
+						"agent option expected.");
+				    option_cache_dereference (&oc, MDL);
+				    break;
+			    }
+			    if (!lease -> agent_options &&
+				!(option_chain_head_allocate
+				  (&lease -> agent_options, MDL))) {
+				log_error ("no memory to stash agent option");
+				break;
+			    }
+			    for (p = &lease -> agent_options -> first;
+				 *p; p = &((*p) -> cdr))
+				    ;
+			    *p = cons (0, 0);
+			    option_cache_reference (((struct option_cache **)
+						     &((*p) -> car)), oc, MDL);
+			    option_cache_dereference (&oc, MDL);
 			}
 			break;
 
