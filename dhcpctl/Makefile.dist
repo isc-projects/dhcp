@@ -33,10 +33,10 @@ DHCPCTLLIBS = libdhcpctl.a ../common/libdhcp.a $(BINDLIB) \
 all:	libdhcpctl.a omshell cltest $(CATMANPAGES)
 
 omshell:	omshell.o $(DHCPCTLLIBS)
-	$(CC) $(DEBUG) $(LFLAGS) -o omshell omshell.o $(DHCPCTLLIBS)
+	$(CC) $(DEBUG) $(LFLAGS) -o omshell omshell.o $(DHCPCTLLIBS) $(LIBS)
 
 cltest:	cltest.o $(DHCPCTLLIBS)
-	$(CC) $(DEBUG) $(LFLAGS) -o cltest cltest.o $(DHCPCTLLIBS)
+	$(CC) $(DEBUG) $(LFLAGS) -o cltest cltest.o $(DHCPCTLLIBS) $(LIBS)
 
 libdhcpctl.a:	$(OBJ)
 	rm -f libdhcpctl.a
