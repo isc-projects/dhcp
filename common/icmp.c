@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: icmp.c,v 1.9 1998/03/16 06:13:01 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: icmp.c,v 1.10 1998/06/25 02:55:56 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -117,6 +117,7 @@ int icmp_echorequest (addr)
 #else
 	icmp.icmp_id = (u_int32_t)addr;
 #endif
+	memset (&icmp.icmp_dun, 0, sizeof icmp.icmp_dun);
 
 	icmp.icmp_cksum = wrapsum (checksum ((unsigned char *)&icmp,
 					     sizeof icmp, 0));
