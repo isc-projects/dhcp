@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.28 1996/08/29 09:49:52 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.29 1996/08/29 20:12:37 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -520,7 +520,8 @@ void parse_host_declaration (cfile, group)
 			error ("can't allocate a tree cache for hostname.");
 		host -> group -> options [DHO_HOST_NAME] -> len =
 			strlen (name);
-		host -> group -> options [DHO_HOST_NAME] -> value = name;
+		host -> group -> options [DHO_HOST_NAME] -> value =
+			(unsigned char *)name;
 		host -> group -> options [DHO_HOST_NAME] -> buf_size =
 			host -> group -> options [DHO_HOST_NAME] -> len;
 		host -> group -> options [DHO_HOST_NAME] -> timeout =
