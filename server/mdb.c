@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.37 2000/07/06 06:26:42 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.38 2000/07/06 10:27:41 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -981,8 +981,9 @@ int supersede_lease (comp, lease, commit, propogate, pimmediate)
 	   the pool. */
 	if (commit &&
 	    comp -> sort_time != MIN_TIME &&
-	    comp -> sort_time < cur_time &&
-	    comp -> sort_time < comp -> pool -> next_event_time) {
+	    comp -> sort_time > cur_time &&
+	    (comp -> sort_time < comp -> pool -> next_event_time ||
+	     comp -> pool -> next_event_time == MIN_TIME)) {
 		comp -> pool -> next_event_time = comp -> sort_time;
 		add_timeout (comp -> pool -> next_event_time,
 			     pool_timer, comp -> pool,
@@ -1055,6 +1056,15 @@ void process_state_transition (struct lease *lease)
 	}
 
 	lease -> binding_state = lease -> next_binding_state;
+	if (lease -> binding_state == FTS_ACTIVE ||
+	    lease -> binding_state == FTS_BACKUP) {
+#if defined (FAILOVER_PROTOCOL)
+		if (lease -> pool && lease -> pool -> failover_peer)
+			lease -> next_binding_state = FTS_EXPIRED;
+		else
+#endif
+			lease -> next_binding_state = FTS_FREE;
+	}
 }
 
 /* Copy the contents of one lease into another, correctly maintaining
@@ -1736,7 +1746,6 @@ void expire_all_pools ()
 	    for (p = s -> pools; p; p = p -> next) {
 		pool_timer (p);
 
-#if defined (FAILOVER_PROTOCOL)
 		p -> lease_count = 0;
 		p -> free_leases = 0;
 		p -> backup_leases = 0;
@@ -1756,13 +1765,14 @@ void expire_all_pools ()
 				else if (l -> binding_state == FTS_BACKUP)
 					p -> backup_leases++;
 			}
+#if defined (FAILOVER_PROTOCOL)
 			if (p -> failover_peer &&
 			    l -> tstp > l -> tsfp &&
 			    !(l -> flags & ON_UPDATE_QUEUE))
 				dhcp_failover_queue_update (l, 1);
+#endif
 		    }
 		}
-#endif
 	    }
 	}
 }
