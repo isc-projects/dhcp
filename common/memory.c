@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: memory.c,v 1.52.2.8 1999/11/12 22:06:41 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: memory.c,v 1.52.2.9 1999/11/13 13:36:03 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -588,14 +588,14 @@ int supersede_lease (comp, lease, commit)
 	   (we may wind up putting it back, but we can't count on
 	   that here without too much additional complexity). */
 	if (comp -> pool -> next_expiry == comp) {
-		for (lp = comp -> pool -> next_expiry; lp; lp = lp -> prev)
+		for (lp = comp -> prev; lp; lp = lp -> prev)
 			if (lp -> ddns_fwd_name)
 				break;
 		if (lp && lp -> ddns_fwd_name) {
-			comp -> pool -> next_expiry = comp;
-			    if (commit)
-				    add_timeout (lp -> ends,
-						 pool_timer, lp -> pool);
+			comp -> pool -> next_expiry = lp;
+			if (commit)
+				add_timeout (lp -> ends,
+					     pool_timer, lp -> pool);
 		} else {
 			comp -> pool -> next_expiry = (struct lease *)0;
 			if (commit)
