@@ -100,6 +100,7 @@ void if_register_send (info, interface)
 		       piaddr (info -> address), inet_ntoa (name.sin_addr));
 
 	info -> wfdesc = sock;
+	note ("Sending on   Raw/%s", piaddr (info -> address));
 }
 
 size_t send_packet (interface, packet, raw, len, to, hto)
