@@ -142,7 +142,7 @@ struct option {
 	char *name;
 	char *format;
 	struct universe *universe;
-	unsigned char code;
+	int code;
 };
 
 enum expression_context {
