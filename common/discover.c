@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: discover.c,v 1.45 2002/06/09 22:49:51 murray Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: discover.c,v 1.46 2002/06/09 22:52:39 murray Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -135,7 +135,7 @@ void discover_interfaces (state)
 {
 	struct interface_info *tmp, *ip;
 	struct interface_info *last, *next;
-	char buf [2048];
+	char buf [4096];
 	struct ifconf ic;
 	struct ifreq ifr;
 	int i;
