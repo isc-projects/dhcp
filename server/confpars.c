@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.121 2000/07/27 09:03:01 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.122 2000/08/15 22:23:33 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -685,7 +685,7 @@ void parse_failover_peer (cfile, group, type)
 	peer -> name = name;
 
 	/* Set the initial state. */
-	peer -> my_state = communications_interrupted;
+	peer -> my_state = potential_conflict;
 	peer -> my_stos = cur_time;
 	peer -> partner_state = unknown_state;
 	peer -> partner_stos = cur_time;
@@ -1491,11 +1491,14 @@ void parse_host_declaration (cfile, group)
 		if (host -> named_group && host -> named_group -> group) {
 			if (host -> group -> statements ||
 			    (host -> group -> authoritative !=
-			     host -> named_group -> group -> authoritative))
+			     host -> named_group -> group -> authoritative)) {
+				if (host -> group -> next)
+				    group_dereference (&host -> group -> next,
+						       MDL);
 				group_reference (&host -> group -> next,
 						 host -> named_group -> group,
 						 MDL);
-			else {
+			} else {
 				group_dereference (&host -> group, MDL);
 				group_reference (&host -> group,
 						 host -> named_group -> group,
