@@ -1,6 +1,6 @@
-/* rcode.c
+/* toisc.c
 
-   Convert non-ISC result codes to ISC result codes.
+   Convert non-ISC result codes to ISC result codes. */
 
 /*
  * Copyright (c) 2001 Internet Software Consortium.
