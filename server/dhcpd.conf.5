@@ -125,16 +125,14 @@ A typical dhcpd.conf file will look something like this:
 
 .I global parameters...
 
-shared-network ISC-BIGGIE {
-  \fIshared-network-specific parameters...\fR
-  subnet 204.254.239.0 netmask 255.255.255.224 {
-    \fIsubnet-specific parameters...\fR
-    range 204.254.239.10 204.254.239.30;
-  }
-  subnet 204.254.239.32 netmask 255.255.255.224 {
-    \fIsubnet-specific parameters...\fR
-    range 204.254.239.42 204.254.239.62;
-  }
+subnet 204.254.239.0 netmask 255.255.255.224 {
+  \fIsubnet-specific parameters...\fR
+  range 204.254.239.10 204.254.239.30;
+}
+
+subnet 204.254.239.32 netmask 255.255.255.224 {
+  \fIsubnet-specific parameters...\fR
+  range 204.254.239.42 204.254.239.62;
 }
 
 subnet 204.254.239.64 netmask 255.255.255.224 {
@@ -173,25 +171,11 @@ the entire organization), and so on.   So, for example:
 Figure 2
 .fi
 .PP
-As you can see in Figure 2, it's legal to specify host addresses in
-parameters as domain names rather than as numeric IP addresses.  If a
-given hostname resolves to more than one IP address (for example, if
-that host has two ethernet interfaces), both addresses are supplied to
-the client.
-.PP
-In Figure 1, you can see that both the shared-network statement and
-the subnet statements can have parameters.   Let us say that the
-shared network \fIISC-BIGGIE\fR supports an entire department -
-perhaps the accounting department.   If accounting has its own domain,
-then a shared-network-specific parameter might be:
-.nf
-
-	option domain-name "accounting.isc.org";
-.fi
-.PP
-All subnet declarations appearing in the shared-network declaration
-would then have the domain-name option set to "accounting.isc.org"
-instead of just "isc.org".
+As you can see in Figure 2, you can specify host addresses in
+parameters using their domain names rather than their numeric IP
+addresses.  If a given hostname resolves to more than one IP address
+(for example, if that host has two ethernet interfaces), then where
+possible, both addresses are supplied to the client.
 .PP
 The most obvious reason for having subnet-specific parameters as
 shown in Figure 1 is that each subnet, of necessity, has its own
@@ -276,6 +260,165 @@ group {
   host ncd8 { hardware ethernet 0:c0:c3:cc:a:8f; }
 }
 .fi
+.SH ADDRESS POOLS
+.PP
+The
+.B pool
+declaration can be used to specify a pool of addresses that will be
+treated differently than another pool of addresses, even on the same
+network segment or subnet.   For example, you may want to provide a
+large set of addresses that can be assigned to DHCP clients that are
+registered to your DHCP server, while providing a smaller set of
+addresses, possibly with short lease times, that are available for
+unknown clients.   If you have a firewall, you may be able to arrange
+for addresses from one pool to be allowed access to the Internet,
+while addresses in another pool are not, thus encouraging users to
+register their DHCP clients.   To do this, you would set up a pair of
+pool declarations:
+.PP
+.nf
+subnet 10.0.0.0 netmask 255.255.255.0 {
+  option routers 10.0.0.254;
+
+  # Unknown clients get this pool.
+  pool {
+    option domain-name-servers bogus.example.com;
+    max-lease-time 300;
+    range 10.0.0.200 10.0.0.253;
+    allow unknown clients;
+  }
+
+  # Known clients get this pool.
+  pool {
+    option domain-name-servers ns1.example.com, ns2.example.com;
+    max-lease-time 28800;
+    range 10.0.0.5 10.0.0.199;
+    deny unknown clients;
+  }
+}
+.fi
+.PP
+It is also possible to set up entirely different subnets for known and
+unknown clients - address pools exist at the level of shared networks,
+so address ranges within pool declarations can be on different
+subnets.
+.SH CLIENT CLASSING
+Clients can be seperated into classes, and treated differently
+depending on what class they are in.   This seperation can be done
+either with a conditional statement, or with a match statement within
+the class declaration.   It is possible to specify a limit on the
+total number of clients within a particular class or subclass that may
+hold leases at one time, and it is possible to specify automatic
+subclassing based on the contents of the client packet.
+.PP
+To add clients to classes based on conditional evaluation, you would
+write an conditional statement to match the clients you wanted in the
+class, and then put an
+.B add
+statement in the conditional's list of statements:
+.PP
+.nf
+if substring (option dhcp-client-identifier, 0, 3) = "RAS" {
+  add ras-clients;
+}
+.fi
+.PP
+An equivalent way to do this is to simply specify the conditional
+expression as a matching expression in the class statement:
+.PP
+.nf
+class ras-clients {
+  match if substring (option dhcp-client-identifier, 0, 3) = "RAS";
+}
+.fi
+.PP
+In addition to classes, it is possible to declare subclasses.   A
+subclass is a class with the same name as a regular class, but with a
+specific submatch expression which is hashed for quick matching.
+This is essentially a speed hack - the main difference between five
+classes with match expressions and one class with five subclasses is
+that it will be quicker to find the subclasses.   Subclasses work as
+follows:
+.PP
+.nf
+class vendor-classes {
+  match option vendor-class-identifier;
+}
+
+subclass vendor-classes "SUNW.Ultra-5_10" {
+  option vendor-encapsulated-options 
+	   2:AC:11:41:1:
+	   3:12:73:75:6e:64:68:63:70:2d:73:65:72:76:65:72:31:37:2d:31:
+	   4:12:2f:65:78:70:6f:72:74:2f:72:6f:6f:74:2f:73:70:61:72:63;
+}
+
+subclass vendor-classes "SUNW.i86pc" {
+  option vendor-encapsulated-options
+	   2:4:AC:11:41:1:
+	   3:12:73:75:6e:64:68:63:70:2d:73:65:72:76:65:72:31:37:2d:31:
+	   4:12:2f:65:78:70:6f:72:74:2f:72:6f:6f:74:2f:69:38:36:70:63;
+}
+.fi
+.PP
+The string following the class name for the subclasses specifies the
+string that is expected to match the expression in the class
+declaration for the vendor-classes class.
+.PP
+You may specify a limit to the number of clients in a class that can
+be assigned leases.   The effect of this will be to make it difficult
+for a new client in a class to get an address.   Once a class with
+such a limit has reached its limit, the only way a new client in that
+class can get a lease is for an existing client to relinquish its
+lease, either by letting it expire, or by sending a DHCPRELEASE
+packet.   Classes with lease limits are specified as follows:
+.PP
+.nf
+class limited-1 {
+  lease limit 4;
+}
+.fi
+.PP
+This will produce a class in which a maximum of four members may hold
+a lease at one time.
+.PP
+It is possible to declare a
+.I spawning class\fR.
+A spawning class is a class that automatically produces subclasses
+based on what the client sends.   The reason that spawning classes
+were created was to make it possible to create lease-limited classes
+on the fly.   The envisioned application is a cable-modem environment
+where the ISP wishes to provide clients at a particular site with more
+than one IP address, but does not wish to provide such clients with
+their own subnet, nor give them an unlimited number of IP addresses
+from the network segment to which they are connected.
+.PP
+Many cable modem head-end systems can be configured to add a Relay
+Agent Information option to DHCP packets when relaying them to the
+DHCP server.   These systems typically add a circuit ID or remote ID
+option that uniquely identifies the customer site.   To take advantage
+of this, you can write a class declaration as follows:
+.nf
+class customer {
+  match if exists agent.circuit-id;
+  spawn with agent.circuit-id;
+  lease limit 4;
+}
+.fi
+.PP
+Now whenever a request comes in from a customer site, the circuit ID
+option will be checked against the class's hash table.   If a subclass
+is found that matches the circuit ID, the client will be classified in
+that subclass and treated accordingly.   If no subclass is found
+matching the circuit ID, a new one will be created and logged in the
+.B dhcpd.leases
+file, and the client will be classified in this new class.   Once the
+client has been classified, it will be treated according to the rules
+of the class, including, in this case, being subject to the per-site
+limit of four leases.
+.PP
+The use of the subclass spawning mechanism is not restricted to relay
+agent options - this particular example is given only because it is a
+fairly straightforward one.
 .SH REFERENCE: DECLARATIONS
 .PP
 .B The 
@@ -347,7 +490,7 @@ override the subnet mask declared in the subnet statement.
 .B statement
 .PP
 .nf
- \fBrange\fR [ \fBdynamic-bootp\fR ] \fIlow-address\fR [ \fIhigh-address\fR]\fB;\fR
+.B range\fR [ \fBdynamic-bootp\fR ] \fIlow-address\fR [ \fIhigh-address\fR]\fB;\fR
 .fi
 .PP
 For any subnet on which addresses will be assigned dynamically, there
