@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.85.2.17 2004/10/01 22:50:29 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.85.2.18 2004/10/01 23:25:17 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -968,10 +968,11 @@ int store_options (ocount, buffer, buflen, packet, lease, client_state,
 
 		for (i = 0; i < bufix; ) {
 			len = buffer [i + 1] + 2;
-			if (((i + len > first_cutoff) &&
-			     (len > second_bufsize)) ||
-			    ((i + len > second_cutoff) &&
-			     (len > third_bufsize)) &&
+			if (((i + len + 4 > first_cutoff) &&
+			     (len + 1 > second_bufsize)) ||
+			    (second_cutoff &&
+			     (i + len + 5 > second_cutoff) &&
+			     (len + 1 > third_bufsize)) &&
 			    len < first_cutoff - firstix) {
 				memcpy (ovbuf, &buffer [i], len);
 				memmove (&buffer [firstix + len],
@@ -994,14 +995,14 @@ int store_options (ocount, buffer, buflen, packet, lease, client_state,
 	    /* Find the first cutoff point. */
 	    for (i = 0; i < bufix; ) {
 		len = buffer [i + 1] + 2;
-		if (i + len > first_cutoff)
+		if (i + len + 4 > first_cutoff)
 			break;
 		i += len;
 	    }
 	    /* Copy down any options that can fill out this buffer. */
-	    for (j = i + len; (j < bufix) && (i < first_cutoff); ) {
+	    for (j = i + len; (j < bufix) && (i + 4 < first_cutoff); ) {
 		len = buffer [j + 1] + 2;
-		if (i + len <= first_cutoff) {
+		if (i + len + 4 < first_cutoff) {
 			memcpy (ovbuf, &buffer [j], len);
 			memmove (&buffer [i + len], &buffer [i], j - i);
 			memcpy (&buffer [i], ovbuf, len);
@@ -1014,30 +1015,28 @@ int store_options (ocount, buffer, buflen, packet, lease, client_state,
 	     * the space between the end of options buffer and the start of
 	     * the first overload buffer, if there is any.
 	     */
-	    if (i != first_cutoff) {
-		memcpy (ovbuf, &buffer [i], bufix - i);
+	    memcpy (ovbuf, &buffer [i], bufix - i);
 
-		/* We only want to pad from 'i' to 'first_cutoff' at the
-		 * moment.  But since there may not be a second_cutoff, we
-		 * actually MUST pad from 'i' to ('first_cutoff' +
-		 * DHCP_FILE_LEN * at least.  Since we're not supposed to
-		 * know about that, we wind up enforcing padding to the end
-		 * of buflen if there is not a second cutoff.
-		 */
-		memset (&buffer [i], DHO_PAD,
-			(second_cutoff ? first_cutoff : buflen) - i);
+	    /* We only want to pad from 'i' to 'first_cutoff' at the
+	     * moment.  But since there may not be a second_cutoff, we
+	     * actually MUST pad from 'i' to ('first_cutoff' +
+	     * DHCP_FILE_LEN * at least.  Since we're not supposed to
+	     * know about that, we wind up enforcing padding to the end
+	     * of buflen if there is not a second cutoff.
+	     */
+	    memset (&buffer [i], DHO_PAD,
+		    (second_cutoff ? first_cutoff : buflen) - i);
 
-		memcpy (&buffer [first_cutoff], ovbuf, bufix - i);
-		bufix += (first_cutoff - i);
-	    }
+	    memcpy (&buffer [first_cutoff], ovbuf, bufix - i);
 	    ix = i;
+	    bufix += (first_cutoff - i);
 	    i = first_cutoff;
 
 	    /* If there is no second field, the first one still MUST be
 	     * terminated with an END option.
 	     */
 	    if (!second_cutoff) {
-		buffer[bufix++] = DHO_END:
+		buffer[bufix++] = DHO_END;
 	    }
 	    else {
 		for (j = i + buffer [i + 1] + 2; j < bufix; ) {
