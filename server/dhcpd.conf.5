@@ -415,11 +415,11 @@ subclass "allocation-class-1" 1:0:0:c4:aa:29:44;
 
 subnet 10.0.0.0 netmask 255.255.255.0 {
   pool {
-    permit members of "allocation-class-1";
+    allow members of "allocation-class-1";
     range 10.0.0.11 10.0.0.50;
   }
   pool {
-    permit members of "allocation-class-2";
+    allow members of "allocation-class-2";
     range 10.0.0.51 10.0.0.100;
   }
 }
