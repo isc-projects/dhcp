@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bootp.c,v 1.51.2.1 1999/10/20 02:18:54 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bootp.c,v 1.51.2.2 1999/12/22 20:43:52 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -221,7 +221,8 @@ void bootp (packet)
 	memset (&d1, 0, sizeof d1);
 	oc = lookup_option (&server_universe, options, SV_NEXT_SERVER);
 	if (oc &&
-	    evaluate_option_cache (&d1, packet, options, lease, oc)) {
+	    evaluate_option_cache (&d1, packet, options, lease, oc,
+				   "bootp: NS")) {
 		/* If there was more than one answer, take the first. */
 		if (d1.len >= 4 && d1.data)
 			memcpy (&raw.siaddr, d1.data, 4);
@@ -239,7 +240,8 @@ void bootp (packet)
 	/* Figure out the filename. */
 	oc = lookup_option (&server_universe, options, SV_FILENAME);
 	if (oc &&
-	    evaluate_option_cache (&d1, packet, options, lease, oc)) {
+	    evaluate_option_cache (&d1, packet, options, lease, oc,
+				   "bootp: FN")) {
 		memcpy (raw.file, d1.data,
 			d1.len > sizeof raw.file ? sizeof raw.file : d1.len);
 		if (sizeof raw.file > d1.len)
@@ -252,7 +254,8 @@ void bootp (packet)
 	/* Choose a server name as above. */
 	oc = lookup_option (&server_universe, options, SV_SERVER_NAME);
 	if (oc &&
-	    evaluate_option_cache (&d1, packet, options, lease, oc)) {
+	    evaluate_option_cache (&d1, packet, options, lease, oc,
+				   "bootp: SN")) {
 		memcpy (raw.sname, d1.data,
 			d1.len > sizeof raw.sname ? sizeof raw.sname : d1.len);
 		if (sizeof raw.sname > d1.len)

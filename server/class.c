@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: class.c,v 1.12 1999/07/02 20:58:48 mellon Exp $ Copyright (c) 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: class.c,v 1.12.2.1 1999/12/22 20:44:03 mellon Exp $ Copyright (c) 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -114,8 +114,11 @@ int check_collection (packet, lease, collection)
 					matched = 1;
 					continue;
 				}
-				if (!class -> spawning)
+				if (!class -> spawning) {
+					data_string_forget
+						(&data, "check_collection");
 					continue;
+				}
 #if defined (DEBUG_CLASS_MATCHING)
 				log_info ("spawning subclass %s.",
 				      print_hex_1 (data.len, data.data, 60));
@@ -141,6 +144,9 @@ int check_collection (packet, lease, collection)
 							(&nc -> hash_string,
 							 "check_collection");
 						dfree (nc, "check_collection");
+						data_string_forget
+							(&data,
+							 "check_collection");
 						continue;
 					}
 					memset (nc -> billed_leases, 0,
@@ -158,7 +164,6 @@ int check_collection (packet, lease, collection)
 					  (unsigned char *)nc);
 				classify (packet, nc);
 			}
-			data_string_forget (&data, "check_collection");
 		}
 
 		status = (evaluate_boolean_expression_result
