@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: memory.c,v 1.28 1997/03/06 19:45:20 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: memory.c,v 1.29 1997/03/06 20:21:32 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -452,7 +452,8 @@ int supersede_lease (comp, lease, commit)
 	   lease, then we allow that, in case a dynamic BOOTP lease is
 	   requested *after* a DHCP lease has been assigned. */
 
-	if (comp -> ends > cur_time &&
+	if (!(lease -> flags & ABANDONED_LEASE) &&
+	    comp -> ends > cur_time &&
 	    ((comp -> uid && (lease -> uid ||
 			      !(lease -> flags & DYNAMIC_BOOTP_OK)) &&
 	      (comp -> uid_len != lease -> uid_len ||
