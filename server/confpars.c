@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"@(#) Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.25 1996/08/27 09:40:17 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -58,12 +58,18 @@ void readconf ()
 	FILE *cfile;
 	char *val;
 	int token;
+	int statement = 0;
 
-	tlname = _PATH_DHCPD_CONF;
-	tlpos = tline = 0;
+	new_parse (_PATH_DHCPD_CONF);
 
 	/* Set up the initial dhcp option universe. */
 	initialize_universes ();
+
+	/* Set up the global defaults... */
+	root_group.default_lease_time = 43200; /* 12 hours. */
+	root_group.max_lease_time = 86400; /* 24 hours. */
+	root_group.bootp_lease_cutoff = MAX_TIME;
+	root_group.boot_unknown_clients = 1;
 
 	if ((cfile = fopen (_PATH_DHCPD_CONF, "r")) == NULL)
 		error ("Can't open %s: %m", _PATH_DHCPD_CONF);
@@ -71,7 +77,9 @@ void readconf ()
 		token = peek_token (&val, cfile);
 		if (token == EOF)
 			break;
-		parse_statement (cfile);
+		statement = parse_statement (cfile, &root_group,
+					     ROOT_GROUP, (struct host_decl *)0,
+					     statement);
 	} while (1);
 	token = next_token (&val, cfile);
 }
@@ -83,14 +91,21 @@ void read_leases ()
 	int token;
 	jmp_buf bc;
 
-	tlname = _PATH_DHCPD_DB;
-	tlpos = tline = 0;
+	new_parse (_PATH_DHCPD_DB);
 
-	/* Open the lease file... */
-	if ((cfile = fopen (_PATH_DHCPD_DB, "r")) == NULL) {
-		warn ("Can't open lease database %s: %m", _PATH_DHCPD_DB);
-		return;
-	}
+	/* Open the lease file.   If we can't open it, fail.   The reason
+	   for this is that although on initial startup, the absence of
+	   a lease file is perfectly benign, if dhcpd has been running 
+	   and this file is absent, it means that dhcpd tried and failed
+	   to rewrite the lease database.   If we proceed and the
+	   problem which caused the rewrite to fail has been fixed, but no
+	   human has corrected the database problem, then we are left
+	   thinking that no leases have been assigned to anybody, which
+	   could create severe network chaos. */
+	if ((cfile = fopen (_PATH_DHCPD_DB, "r")) == NULL)
+		error ("Can't open lease database %s: %m -- %s",
+		       _PATH_DHCPD_DB,
+		       "check for failed database rewrite attempt!");
 	do {
 		token = next_token (&val, cfile);
 		if (token == EOF)
@@ -99,14 +114,12 @@ void read_leases ()
 			warn ("Corrupt lease file - possible data loss!");
 			skip_to_semi (cfile);
 		} else {
-			if (!setjmp (bc)) {
-				struct lease *lease;
-				lease = parse_lease_statement (cfile,
-							       jref (bc));
+			struct lease *lease;
+			lease = parse_lease_statement (cfile);
+			if (lease)
 				enter_lease (lease);
-			} else {
+			else
 				parse_warn ("possibly corrupt lease file");
-			}
 		}
 
 	} while (1);
@@ -114,182 +127,339 @@ void read_leases ()
 
 /* statement :== host_statement */
 
-void parse_statement (cfile)
+int parse_statement (cfile, group, type, host_decl, statement)
 	FILE *cfile;
+	struct group *group;
+	int type;
+	struct host_decl *host_decl;
+	int statement;
 {
 	int token;
 	char *val;
-	jmp_buf bc;
+	struct shared_network *share;
+	struct subnet *subnet;
+	char *t, *n;
+	struct tree *tree;
+	struct tree_cache *cache;
+	struct hardware hardware;
 
 	switch (next_token (&val, cfile)) {
 	      case HOST:
-		if (!setjmp (bc)) {
-			struct host_decl *hd =
-				parse_host_statement (cfile, jref (bc));
-			if (hd) {
-				enter_host (hd);
-			}
+		if (type != HOST_STMT)
+			parse_host_statement (cfile, group);
+		else {
+			parse_warn ("host statements not allowed here.");
+			skip_to_semi (cfile);
 		}
-		break;
-	      case LEASE:
-		if (!setjmp (bc)) {
-			struct lease *lease =
-				parse_lease_statement (cfile, jref (bc));
-			enter_lease (lease);
+		return 1;
+
+	      case GROUP:
+		if (type != HOST_STMT)
+			parse_group_statement (cfile, group);
+		else {
+			parse_warn ("host statements not allowed here.");
+			skip_to_semi (cfile);
 		}
-		break;
+		return 1;
+
 	      case TIMESTAMP:
-		if (!setjmp (bc)) {
-			parsed_time = parse_timestamp (cfile, jref (bc));
-		}
+		parsed_time = parse_timestamp (cfile);
 		break;
+
 	      case SHARED_NETWORK:
-		if (!setjmp (bc)) {
-			parse_shared_net_statement (cfile, jref (bc));
+		if (type == SHARED_NET_STMT ||
+		    type == HOST_STMT ||
+		    type == SUBNET_STMT) {
+			parse_warn ("shared-network declarations not %s.",
+				    "allowed here");
+			skip_to_semi (cfile);
+			break;
 		}
-		break;
+
+		parse_shared_net_statement (cfile, group);
+		return 1;
+
 	      case SUBNET:
-		if (!setjmp (bc)) {
-			struct shared_network *share;
-			struct subnet *subnet;
-			char *t, *n;
+		if (type == HOST_STMT || type == SUBNET_STMT) {
+			parse_warn ("subnet statements not allowed here.");
+			skip_to_semi (cfile);
+			return 1;
+		}
 
-			share = new_shared_network ("parse_statement");
-			if (!share)
-				error ("No memory for shared subnet");
-			share -> leases = (struct lease *)0;
-			share -> last_lease = (struct lease *)0;
-			share -> insertion_point = (struct lease *)0;
-			share -> next = (struct shared_network *)0;
-			share -> default_lease_time = default_lease_time;
-			share -> max_lease_time = max_lease_time;
-			memcpy (share -> options,
-				global_options, sizeof global_options);
+		/* If we're in a subnet statement, just do the parse. */
+		if (group -> shared_network) {
+			parse_subnet_statement (cfile,
+						group -> shared_network);
+			break;
+		}
 
-			subnet = parse_subnet_statement (cfile, jref (bc),
-							 share);
-			share -> subnets = subnet;
-			share -> interface = (struct interface_info *)0;
-			n = piaddr (subnet -> net);
-			t = dmalloc (strlen (n) + 1, "parse_statement");
+		/* Otherwise, cons up a fake shared network structure
+		   and populate it with the lone subnet... */
+
+		share = new_shared_network ("parse_statement");
+		if (!share)
+			error ("No memory for shared subnet");
+		share -> group = clone_group (group, "parse_statement:subnet");
+		share -> group -> shared_network = share;
+
+		parse_subnet_statement (cfile, share);
+		if (share -> subnets) {
+			share -> interface =
+				share -> subnets -> interface;
+
+			n = piaddr (share -> subnets -> net);
+			t = malloc (strlen (n) + 1);
 			if (!t)
 				error ("no memory for subnet name");
 			strcpy (t, n);
 			share -> name = t;
 			enter_shared_network (share);
-			goto need_semi;
 		}
-		break;
+		return 1;
+
 	      case VENDOR_CLASS:
-		if (!setjmp (bc)) {
-			parse_class_statement (cfile, jref (bc), 0);
-		}
-		break;
+		parse_class_statement (cfile, group, 0);
+		return 1;
+
 	      case USER_CLASS:
-		if (!setjmp (bc)) {
-			parse_class_statement (cfile, jref (bc), 1);
-		}
-		break;
+		parse_class_statement (cfile, group, 1);
+		return 1;
 
 	      case DEFAULT_LEASE_TIME:
-		if (!setjmp (bc)) {
-			parse_lease_time (cfile, jref (bc),
-					  &default_lease_time);
-			goto need_semi;
-		}
+		parse_lease_time (cfile, &group -> default_lease_time);
 		break;
 
 	      case MAX_LEASE_TIME:
-		if (!setjmp (bc)) {
-			parse_lease_time (cfile, jref (bc), &max_lease_time);
-			goto need_semi;
+		parse_lease_time (cfile, &group -> max_lease_time);
+		break;
+
+	      case DYNAMIC_BOOTP_LEASE_CUTOFF:
+		group -> bootp_lease_cutoff = parse_date (cfile);
+		break;
+
+	      case DYNAMIC_BOOTP_LEASE_LENGTH:
+		parse_lease_time (cfile, &group -> bootp_lease_length);
+		break;
+
+	      case BOOT_UNKNOWN_CLIENTS:
+		if (type == HOST_STMT)
+			parse_warn ("boot-unknown-clients not allowed here.");
+
+		token = next_token (&val, cfile);
+		if (token != NUMBER ||
+		    (strcmp (val, "0") && strcmp (val, "1"))) {
+			parse_warn ("0 or 1 expected");
+			skip_to_semi (cfile);
+			break;
+		}
+		group -> boot_unknown_clients = atoi (val);
+		token = next_token (&val, cfile);
+		if (token != SEMI) {
+			parse_warn ("expecting semicolon");
+			skip_to_semi (cfile);
 		}
 		break;
 
-	      case OPTION:
-		if (!setjmp (bc)) {
-			parse_option_decl (cfile, jref (bc), global_options);
-			goto need_semi;
-		}
-		break;
-
-	      case SERVER_IDENTIFIER:
-		if (!setjmp (bc)) {
-			struct tree_cache *server_id =
-				tree_cache (parse_ip_addr_or_hostname
-					    (cfile, jref (bc), 0));
-			if (!tree_evaluate (server_id))
-				error ("server identifier is not known");
-			if (server_id -> len > 4)
-				warn ("server identifier evaluates to more %s",
-				      "than one IP address");
-			server_identifier.len = 4;
-			memcpy (server_identifier.iabuf,
-				server_id -> value, server_identifier.len);
-			goto need_semi;
+	      case NEXT_SERVER:
+		tree = parse_ip_addr_or_hostname (cfile, 0);
+		if (!tree)
+			break;
+		cache = tree_cache (tree);
+		if (!tree_evaluate (cache))
+			error ("next-server is not known");
+		group -> next_server.len = 4;
+		memcpy (group -> next_server.iabuf,
+			cache -> value, group -> next_server.len);
+		token = next_token (&val, cfile);
+		if (token != SEMI) {
+			parse_warn ("expecting semicolon");
+			skip_to_semi (cfile);
 		}
 		break;
 			
-	      default:
-		parse_warn ("expecting a declaration.");
-		skip_to_semi (cfile);
+	      case OPTION:
+		parse_option_decl (cfile, group);
 		break;
-	}
-	return;
 
-      need_semi:
-	token = next_token (&val, cfile);
-	if (token != SEMI) {
-		parse_warn ("semicolon expected");
+	      case SERVER_IDENTIFIER:
+		if (type != ROOT_GROUP)
+			parse_warn ("server-identifier only allowed at top %s",
+				    "level.");
+		tree = parse_ip_addr_or_hostname (cfile, 0);
+		if (!tree)
+			return statement;
+		cache = tree_cache (tree);
+		if (type == ROOT_GROUP) {
+			if (!tree_evaluate (cache))
+				error ("server-identifier is not known");
+			group -> next_server.len = 4;
+			memcpy (server_identifier.iabuf,
+				cache -> value, server_identifier.len);
+		}
+		token = next_token (&val, cfile);
+		if (token != SEMI) {
+			parse_warn ("expecting semicolon");
+			skip_to_semi (cfile);
+		}
+		break;
+			
+	      case FILENAME:
+		group -> filename = parse_filename_decl (cfile);
+		break;
+
+	      case SERVER_NAME:
+		group -> server_name = parse_servername_decl (cfile);
+		break;
+
+	      case HARDWARE:
+		parse_hardware_decl (cfile, &hardware);
+		if (host_decl)
+			host_decl -> interface = hardware;
+		else
+			parse_warn ("hardware address declaration %s",
+				    "not allowed here.");
+		break;
+
+	      case FIXED_ADDR:
+		cache = parse_fixed_addr_decl (cfile);
+		if (host_decl)
+			host_decl -> fixed_addr = cache;
+		else
+			parse_warn ("fixed-address declaration not %s",
+				    "allowed here.");
+		break;
+
+	      case RANGE:
+		if (type != SUBNET_STMT || !group -> subnet) {
+			parse_warn ("range statement not allowed here.");
+			skip_to_semi (cfile);
+			return statement;
+		}
+		parse_address_range (cfile, group -> subnet);
+		return statement;
+
+	      default:
+		if (statement)
+			parse_warn ("expecting a statement.");
+		else
+			parse_warn ("expecting a declaration or statement.");
 		skip_to_semi (cfile);
+		return statement;
 	}
+
+	if (statement) {
+		parse_warn ("declarations not allowed after first statement.");
+		return 1;
+	}
+
+	return 0;
 }
+
+/* Skip to the semicolon ending the current statement.   If we encounter
+   braces, the matching closing brace terminates the statement.   If we
+   encounter a right brace but haven't encountered a left brace, return
+   leaving the brace in the token buffer for the caller.   If we see a
+   semicolon and haven't seen a left brace, return.   This lets us skip
+   over:
+
+   	statement;
+	statement foo bar { }
+	statement foo bar { statement { } }
+	statement}
+ 
+	...et cetera. */
 
 void skip_to_semi (cfile)
 	FILE *cfile;
 {
 	int token;
 	char *val;
+	int brace_count = 0;
 
 	do {
+		token = peek_token (&val, cfile);
+		if (token == RBRACE) {
+			if (brace_count) {
+				token = next_token (&val, cfile);
+				if (!--brace_count)
+					return;
+			} else
+				return;
+		} else if (token == LBRACE) {
+			brace_count++;
+		} else if (token == SEMI && !brace_count) {
+			token = next_token (&val, cfile);
+			return;
+		}
 		token = next_token (&val, cfile);
-	} while (token != SEMI && token != EOF);
+	} while (token != EOF);
 }
+
+/* Expect a left brace; if there isn't one, skip over the rest of the
+   statement and return zero; otherwise, return 1. */
+
+int parse_lbrace (cfile)
+	FILE *cfile;
+{
+	int token;
+	char *val;
+
+	token = next_token (&val, cfile);
+	if (token != LBRACE) {
+		parse_warn ("expecting left brace.");
+		skip_to_semi (cfile);
+		return 0;
+	}
+	return 1;
+}
+
 
 /* host_statement :== HOST hostname declarations SEMI
    host_declarations :== <nil> | host_declaration
 			       | host_declarations host_declaration SEMI */
 
-struct host_decl *parse_host_statement (cfile, bc)
+void parse_host_statement (cfile, group)
 	FILE *cfile;
-	jbp_decl (bc);
+	struct group *group;
 {
 	char *val;
 	int token;
-	struct host_decl tmp, *perm;
+	struct host_decl *host;
+	char *name = parse_host_name (cfile);
+	int statement = 0;
 
-	memset (&tmp, 0, sizeof tmp);
-	tmp.name = parse_host_name (cfile, bc);
+	if (!name)
+		return;
+
+	host = (struct host_decl *)dmalloc (sizeof (struct host_decl),
+					    "parse_host_statement");
+	if (!host)
+		error ("can't allocate host decl struct %s.", name);
+
+	host -> name = name;
+	host -> group = clone_group (group, "parse_host_statement");
+
+	if (!parse_lbrace (cfile))
+		return;
+
 	do {
 		token = peek_token (&val, cfile);
-		if (token == SEMI) {
+		if (token == RBRACE) {
 			token = next_token (&val, cfile);
 			break;
 		}
-		parse_host_decl (cfile, bc, &tmp);
+		statement = parse_statement (cfile, host -> group,
+					     HOST_STMT, host,
+					     statement);
 	} while (1);
-	perm = (struct host_decl *)malloc (sizeof (struct host_decl));
-	if (!perm)
-		error ("can't allocate host decl struct for %s.", tmp.name);
-	*perm = tmp;
-	return perm;
+
+	enter_host (host);
 }
 
 /* host_name :== identifier | host_name DOT identifier */
 
-char *parse_host_name (cfile, bc)
+char *parse_host_name (cfile)
 	FILE *cfile;
-	jbp_decl (bc);
 {
 	char *val;
 	int token;
@@ -302,10 +472,10 @@ char *parse_host_name (cfile, bc)
 	do {
 		/* Read a token, which should be an identifier. */
 		token = next_token (&val, cfile);
-		if (!is_identifier (token)) {
+		if (!is_identifier (token) && token != NUMBER) {
 			parse_warn ("expecting an identifier in hostname");
 			skip_to_semi (cfile);
-			longjmp (jdref (bc), 1);
+			return (char *)0;
 		}
 		/* Store this identifier... */
 		if (!(s = (char *)malloc (strlen (val) + 1)))
@@ -346,71 +516,49 @@ char *parse_host_name (cfile, bc)
 			        | option_declarations option_declaration SEMI
 */
 
-void parse_class_statement (cfile, bc, type)
+void parse_class_statement (cfile, group, type)
 	FILE *cfile;
-	jbp_decl (bc);
+	struct group *group;
 	int type;
 {
 	char *val;
 	int token;
 	struct class *class;
+	int statement;
 
 	token = next_token (&val, cfile);
 	if (token != STRING) {
 		parse_warn ("Expecting class name");
 		skip_to_semi (cfile);
-		longjmp (jdref (bc), 1);
+		return;
 	}
 
 	class = add_class (type, val);
 	if (!class)
-		error ("No memory for new class");
+		error ("No memory for class %s.", val);
+	class -> group = clone_group (group, "parse_class_statement");
+
+	if (!parse_lbrace (cfile))
+		return;
 
 	do {
 		token = peek_token (&val, cfile);
-		if (token == SEMI) {
+		if (token == RBRACE) {
 			token = next_token (&val, cfile);
 			break;
 		} else {
-			parse_class_decl (cfile, bc, class);
+			statement = parse_statement (cfile, class -> group,
+						     CLASS_STMT,
+						     (struct host_decl *)0,
+						     statement);
 		}
 	} while (1);
 }
 
-/* class_declaration :== filename_declaration
-   		       | option_declaration
-		       | DEFAULT_LEASE_TIME NUMBER
-		       | MAX_LEASE_TIME NUMBER */
-
-void parse_class_decl (cfile, bc, class)
-	FILE *cfile;
-	jbp_decl (bc);
-	struct class *class;
-{
-	char *val;
-	int token;
-
-	token = next_token (&val, cfile);
-	switch (token) {
-	      case FILENAME:
-		class -> filename = parse_filename_decl (cfile, bc);
-		break;
-	      case OPTION:
-		parse_option_decl (cfile, bc, class -> options);
-		break;
-	      default:
-		parse_warn ("expecting a dhcp option declaration.");
-		skip_to_semi (cfile);
-		longjmp (jdref (bc), 1);
-		break;
-	}
-}
-
 /* lease_time :== NUMBER */
 
-void parse_lease_time (cfile, bc, timep)
+void parse_lease_time (cfile, timep)
 	FILE *cfile;
-	jbp_decl (bc);
 	TIME *timep;
 {
 	char *val;
@@ -420,20 +568,26 @@ void parse_lease_time (cfile, bc, timep)
 	if (token != NUMBER) {
 		parse_warn ("Expecting numeric lease time");
 		skip_to_semi (cfile);
-		longjmp (jdref (bc), 1);
+		return;
 	}
 	convert_num ((unsigned char *)timep, val, 10, 32);
 	/* Unswap the number - convert_num returns stuff in NBO. */
 	*timep = ntohl (*timep); /* XXX */
+
+	token = next_token (&val, cfile);
+	if (token != SEMI) {
+		parse_warn ("semicolon expected.");
+		skip_to_semi (cfile);
+	}
 }
 
 /* shared_network_statement :== SHARED_NETWORK subnet_statements SEMI
    subnet_statements :== subnet_statement |
    			 subnet_statements subnet_statement */
 
-void parse_shared_net_statement (cfile, bc)
+void parse_shared_net_statement (cfile, group)
 	FILE *cfile;
-	jbp_decl (bc);
+	struct group *group;
 {
 	char *val;
 	int token;
@@ -442,6 +596,8 @@ void parse_shared_net_statement (cfile, bc)
 	struct subnet *last_net = (struct subnet *)0;
 	struct subnet *next_net;
 	char *name;
+	struct tree_cache *server_next;
+	int statement = 0;
 
 	share = new_shared_network ("parse_shared_net_statement");
 	if (!share)
@@ -450,67 +606,48 @@ void parse_shared_net_statement (cfile, bc)
 	share -> last_lease = (struct lease *)0;
 	share -> insertion_point = (struct lease *)0;
 	share -> next = (struct shared_network *)0;
-	share -> default_lease_time = default_lease_time;
-	share -> max_lease_time = max_lease_time;
 	share -> interface = (struct interface_info *)0;
-	memcpy (share -> options, global_options, sizeof global_options);
+	share -> group = clone_group (group, "parse_shared_net_statement");
+	share -> group -> shared_network = share;
 
 	/* Get the name of the shared network... */
-	token = next_token (&val, cfile);
-	if (!is_identifier (token) && token != STRING) {
-		skip_to_semi (cfile);
-		parse_warn ("expecting shared network name");
-		longjmp (jdref (bc), 1);
+	token = peek_token (&val, cfile);
+	if (token == STRING) {
+		token = next_token (&val, cfile);
+
+		if (val [0] == 0) {
+			parse_warn ("zero-length shared network name");
+			val = "<no-name-given>";
+		}
+		name = malloc (strlen (val) + 1);
+		if (!name)
+			error ("no memory for shared network name");
+		strcpy (name, val);
+	} else {
+		name = parse_host_name (cfile);
+		if (!name)
+			return;
 	}
-	if (val [0] == 0) {
-		parse_warn ("zero-length shared network name");
-		val = "<no-name-given>";
-	}
-	name = dmalloc (strlen (val) + 1, "parse_shared_net_statement");
-	if (!name)
-		error ("no memory for shared network name");
-	strcpy (name, val);
 	share -> name = name;
 
+	if (!parse_lbrace (cfile))
+		return;
+
 	do {
-		token = next_token (&val, cfile);
-		switch (token) {
-		      case SEMI:
-			if (!first_net) {
+		token = peek_token (&val, cfile);
+		if (token == RBRACE) {
+			token = next_token (&val, cfile);
+			if (!share -> subnets) {
 				parse_warn ("empty shared-network decl");
 				return;
 			}
-			share -> subnets = first_net;
 			enter_shared_network (share);
 			return;
-
-		      case SUBNET:
-			next_net = parse_subnet_statement (cfile, bc, share);
-			if (!first_net)
-				first_net = next_net;
-			if (last_net)
-				last_net -> next_sibling = next_net;
-			last_net = next_net;
-			break;
-
-		      case OPTION:
-			parse_option_decl (cfile, bc, share -> options);
-			break;
-
-		      case DEFAULT_LEASE_TIME:
-			parse_lease_time (cfile, bc,
-					  &share -> default_lease_time);
-			break;
-
-		      case MAX_LEASE_TIME:
-			parse_lease_time (cfile, bc,
-					  &share -> max_lease_time);
-			break;
-
-		      default:
-			parse_warn ("expecting subnet declaration");
-			skip_to_semi (cfile);
-			longjmp (jdref (bc), 1);
+		} else {
+			statement = parse_statement (cfile, share -> group,
+						     SHARED_NET_STMT,
+						     (struct host_decl *)0,
+						     statement);
 		}
 	} while (1);
 }
@@ -519,200 +656,131 @@ void parse_shared_net_statement (cfile, bc)
    host_declarations :== <nil> | host_declaration
 			       | host_declarations host_declaration SEMI */
 
-struct subnet *parse_subnet_statement (cfile, bc, share)
+void parse_subnet_statement (cfile, share)
 	FILE *cfile;
-	jbp_decl (bc);
 	struct shared_network *share;
 {
 	char *val;
 	int token;
-	struct subnet *subnet;
-	struct iaddr net, netmask;
+	struct subnet *subnet, *t;
+	struct iaddr iaddr;
 	unsigned char addr [4];
 	int len = sizeof addr;
+	int statement = 0;
 
 	subnet = new_subnet ("parse_subnet_statement");
 	if (!subnet)
 		error ("No memory for new subnet");
 	subnet -> next_subnet = subnet -> next_sibling = (struct subnet *)0;
 	subnet -> shared_network = share;
-	subnet -> default_lease_time = share -> default_lease_time;
-	subnet -> max_lease_time = share -> max_lease_time;
-	memcpy (subnet -> options, share -> options, sizeof subnet -> options);
+	subnet -> group = clone_group (share -> group,
+				       "parse_subnet_statement");
+	subnet -> group -> subnet = subnet;
 
 	/* Get the network number... */
-	parse_numeric_aggregate (cfile, bc, addr, &len, DOT, 10, 8);
-	memcpy (net.iabuf, addr, len);
-	net.len = len;
-	subnet -> net = net;
+	if (!parse_numeric_aggregate (cfile, addr, &len, DOT, 10, 8))
+		return;
+	memcpy (iaddr.iabuf, addr, len);
+	iaddr.len = len;
+	subnet -> net = iaddr;
 
 	token = next_token (&val, cfile);
 	if (token != NETMASK) {
 		parse_warn ("Expecting netmask");
 		skip_to_semi (cfile);
-		longjmp (jdref (bc), 1);
+		return;
 	}
 
 	/* Get the netmask... */
-	parse_numeric_aggregate (cfile, bc, addr, &len, DOT, 10, 8);
-	memcpy (netmask.iabuf, addr, len);
-	netmask.len = len;
-	subnet -> netmask = netmask;
+	if (!parse_numeric_aggregate (cfile, addr, &len, DOT, 10, 8))
+		return;
+	memcpy (iaddr.iabuf, addr, len);
+	iaddr.len = len;
+	subnet -> netmask = iaddr;
 
 	enter_subnet (subnet);
 
+	if (!parse_lbrace (cfile))
+		return;
+
 	do {
 		token = peek_token (&val, cfile);
-		if (token == SEMI || token == SUBNET)
+		if (token == RBRACE) {
+			token = next_token (&val, cfile);
 			break;
-		parse_subnet_decl (cfile, bc, subnet);
+		}
+		statement = parse_statement (cfile, subnet -> group,
+					     SUBNET_STMT,
+					     (struct host_decl *)0, statement);
 	} while (1);
 
 	/* If this subnet supports dynamic bootp, flag it so in the
 	   shared_network containing it. */
-	if (subnet -> dynamic_bootp)
-		share -> dynamic_bootp = 1;
-	return subnet;
-}
-
-/* subnet_declaration :== hardware_declaration | filename_declaration
-		        | fixed_addr_declaration | option_declaration */
-
-void parse_subnet_decl (cfile, bc, decl)
-	FILE *cfile;
-	jbp_decl (bc);
-	struct subnet *decl;
-{
-	char *val;
-	int token;
-
-	token = next_token (&val, cfile);
-	switch (token) {
-	      case RANGE:
-		parse_address_range (cfile, bc, decl);
-		break;
-
-	      case OPTION:
-		parse_option_decl (cfile, bc, decl -> options);
-		break;
-
-	      case DEFAULT_LEASE_TIME:
-		parse_lease_time (cfile, bc,
-				  &decl -> default_lease_time);
-		break;
-		
-	      case MAX_LEASE_TIME:
-		parse_lease_time (cfile, bc,
-				  &decl -> max_lease_time);
-		break;
-
-	      default:
-		parse_warn ("expecting a subnet declaration.");
-		skip_to_semi (cfile);
-		longjmp (jdref (bc), 1);
-		break;
+	if (subnet -> group -> dynamic_bootp)
+		share -> group -> dynamic_bootp = 1;
+	if (!share -> subnets)
+		share -> subnets = subnet;
+	else {
+		for (t = share -> subnets;
+		     t -> next_subnet;
+		     t = t -> next_subnet)
+			;
+		t -> next_subnet = subnet;
 	}
 }
 
-/* host_declaration :== hardware_declaration | filename_declaration
-		      | fixed_addr_declaration | option_declaration
-		      | max_lease_declaration | default_lease_declaration */
+/* group_statement :== group RBRACE declarations statements LBRACE */
 
-void parse_host_decl (cfile, bc, decl)
+
+void parse_group_statement (cfile, group)
 	FILE *cfile;
-	jbp_decl (bc);
-	struct host_decl *decl;
+	struct group *group;
 {
 	char *val;
 	int token;
+	struct group *g;
+	int statement = 0;
 
-	token = next_token (&val, cfile);
-	switch (token) {
-	      case HARDWARE:
-		parse_hardware_decl (cfile, bc, decl);
-		break;
-	      case FILENAME:
-		decl -> filename = parse_filename_decl (cfile, bc);
-		break;
-	      case SERVER_NAME:
-		decl -> server_name = parse_servername_decl (cfile, bc);
-		break;
-	      case FIXED_ADDR:
-		parse_fixed_addr_decl (cfile, bc, decl);
-		break;
-	      case OPTION:
-		parse_option_decl (cfile, bc, decl -> options);
-		break;
-	      case DEFAULT_LEASE_TIME:
-		parse_lease_time (cfile, bc,
-				  &decl -> default_lease_time);
-		break;
-	      case MAX_LEASE_TIME:
-		parse_lease_time (cfile, bc,
-				  &decl -> max_lease_time);
-		break;
-	      case CIADDR:
-		decl -> ciaddr =
-			tree_cache (parse_ip_addr_or_hostname (cfile, bc, 0));
-		break;
-	      case YIADDR:
-		decl -> yiaddr =
-			tree_cache (parse_ip_addr_or_hostname (cfile, bc, 0));
-		break;
-	      case SIADDR:
-		decl -> siaddr =
-			tree_cache (parse_ip_addr_or_hostname (cfile, bc, 0));
-		break;
-	      case GIADDR:
-		decl -> giaddr =
-			tree_cache (parse_ip_addr_or_hostname (cfile, bc, 0));
-		break;
-	      default:
-		parse_warn ("expecting a dhcp option declaration.");
-		skip_to_semi (cfile);
-		longjmp (jdref (bc), 1);
-		break;
-	}
+	g = clone_group (group, "parse_group_statement");
+
+	if (!parse_lbrace (cfile))
+		return;
+
+	do {
+		token = peek_token (&val, cfile);
+		if (token == RBRACE)
+			break;
+		statement = parse_statement (cfile, g, GROUP_STMT,
+					     (struct host_decl *)0, statement);
+	} while (1);
 }
 
 /* hardware_decl :== HARDWARE ETHERNET NUMBER COLON NUMBER COLON NUMBER COLON
    				       NUMBER COLON NUMBER COLON NUMBER */
 
-void parse_hardware_decl (cfile, bc, decl)
+void parse_hardware_decl (cfile, hardware)
 	FILE *cfile;
-	jbp_decl (bc);
-	struct host_decl *decl;
-{
-	int token;
-	struct hardware hw;
-
-	hw = parse_hardware_addr (cfile, bc);
-
-	/* Copy out the information... */
-	decl -> interface.htype = hw.htype;
-	decl -> interface.hlen = hw.hlen;
-	memcpy (decl -> interface.haddr, &hw.haddr [0], hw.hlen);
-}
-
-struct hardware parse_hardware_addr (cfile, bc)
-	FILE *cfile;
-	jbp_decl (bc);
+	struct hardware *hardware;
 {
 	char *val;
 	int token;
 	int hlen;
-	struct hardware rv;
 	unsigned char *t;
 
 	token = next_token (&val, cfile);
 	switch (token) {
 	      case ETHERNET:
-		rv.htype = ARPHRD_ETHER;
+		hardware -> htype = ARPHRD_ETHER;
 		break;
+#ifdef ARPHRD_IEEE802 /* XXX */
+	      case TOKEN_RING:
+		hardware -> htype = ARPHRD_IEEE802;
+		break;
+#endif
 	      default:
 		parse_warn ("expecting a network hardware type");
 		skip_to_semi (cfile);
-		longjmp (jdref (bc), 1);
+		return;
 	}
 
 	/* Parse the hardware address information.   Technically,
@@ -723,25 +791,31 @@ struct hardware parse_hardware_addr (cfile, bc)
 	   that data in the lease file rather than simply failing on such
 	   clients.   Yuck. */
 	hlen = 0;
-	t = parse_numeric_aggregate (cfile, bc,
-				     (unsigned char *)0, &hlen,
+	t = parse_numeric_aggregate (cfile, (unsigned char *)0, &hlen,
 				     COLON, 16, 8);
-	if (hlen > sizeof rv.haddr) {
+	if (!t)
+		return;
+	if (hlen > sizeof hardware -> haddr) {
 		free (t);
 		parse_warn ("hardware address too long");
-		longjmp (jdref (bc), 1);
+	} else {
+		hardware -> hlen = hlen;
+		memcpy ((unsigned char *)&hardware -> haddr [0],
+			t, hardware -> hlen);
+		free (t);
 	}
-	rv.hlen = hlen;
-	memcpy ((unsigned char *)&rv.haddr [0], t, rv.hlen);
-	free (t);
-	return rv;
+	
+	token = next_token (&val, cfile);
+	if (token != SEMI) {
+		parse_warn ("expecting semicolon.");
+		skip_to_semi (cfile);
+	}
 }
 
 /* filename_decl :== FILENAME STRING */
 
-char *parse_filename_decl (cfile, bc)
+char *parse_filename_decl (cfile)
 	FILE *cfile;
-	jbp_decl (bc);
 {
 	char *val;
 	int token;
@@ -751,20 +825,26 @@ char *parse_filename_decl (cfile, bc)
 	if (token != STRING) {
 		parse_warn ("filename must be a string");
 		skip_to_semi (cfile);
-		longjmp (jdref (bc), 1);
+		return (char *)0;
 	}
 	s = (char *)malloc (strlen (val) + 1);
 	if (!s)
 		error ("no memory for filename.");
 	strcpy (s, val);
+
+	token = next_token (&val, cfile);
+	if (token != SEMI) {
+		parse_warn ("expecting semicolon.");
+		skip_to_semi (cfile);
+		return (char *)0;
+	}
 	return s;
 }
 
 /* servername_decl :== SERVER_NAME STRING */
 
-char *parse_servername_decl (cfile, bc)
+char *parse_servername_decl (cfile)
 	FILE *cfile;
-	jbp_decl (bc);
 {
 	char *val;
 	int token;
@@ -774,12 +854,19 @@ char *parse_servername_decl (cfile, bc)
 	if (token != STRING) {
 		parse_warn ("server name must be a string");
 		skip_to_semi (cfile);
-		longjmp (jdref (bc), 1);
+		return (char *)0;
 	}
 	s = (char *)malloc (strlen (val) + 1);
 	if (!s)
 		error ("no memory for server name.");
 	strcpy (s, val);
+
+	token = next_token (&val, cfile);
+	if (token != SEMI) {
+		parse_warn ("expecting semicolon.");
+		skip_to_semi (cfile);
+		return (char *)0;
+	}
 	return s;
 }
 
@@ -790,9 +877,8 @@ char *parse_servername_decl (cfile, bc)
    a TREE_LIMIT node to catch hostnames that evaluate to more than
    one IP address. */
 
-struct tree *parse_ip_addr_or_hostname (cfile, bc, uniform)
+struct tree *parse_ip_addr_or_hostname (cfile, uniform)
 	FILE *cfile;
-	jbp_decl (bc);
 	int uniform;
 {
 	char *val;
@@ -804,19 +890,23 @@ struct tree *parse_ip_addr_or_hostname (cfile, bc, uniform)
 
 	token = peek_token (&val, cfile);
 	if (is_identifier (token)) {
-		name = parse_host_name (cfile, bc);
+		name = parse_host_name (cfile);
+		if (!name)
+			return (struct tree *)0;
 		rv = tree_host_lookup (name);
 		if (!uniform)
 			rv = tree_limit (rv, 4);
 	} else if (token == NUMBER) {
-		parse_numeric_aggregate (cfile, bc, addr, &len, DOT, 10, 8);
+		if (!parse_numeric_aggregate (cfile, addr, &len, DOT, 10, 8))
+			return (struct tree *)0;
 		rv = tree_const (addr, len);
 	} else {
 		parse_warn ("%s (%d): expecting IP address or hostname",
 			    val, token);
 		skip_to_semi (cfile);
-		longjmp (jdref (bc), 1);
+		return (struct tree *)0;
 	}
+
 	return rv;
 }	
 	
@@ -827,10 +917,8 @@ struct tree *parse_ip_addr_or_hostname (cfile, bc, uniform)
    fixed_addr_decls :== ip_addr_or_hostname |
    			fixed_addr_decls ip_addr_or_hostname */
 
-void parse_fixed_addr_decl (cfile, bc, decl)
+struct tree_cache *parse_fixed_addr_decl (cfile)
 	FILE *cfile;
-	jbp_decl (bc);
-	struct host_decl *decl;
 {
 	char *val;
 	int token;
@@ -838,16 +926,22 @@ void parse_fixed_addr_decl (cfile, bc, decl)
 	struct tree *tmp;
 
 	do {
-		tmp = parse_ip_addr_or_hostname (cfile, bc, 0);
+		tmp = parse_ip_addr_or_hostname (cfile, 0);
 		if (tree)
 			tree = tree_concat (tree, tmp);
 		else
 			tree = tmp;
 		token = peek_token (&val, cfile);
-		if (token == COMMA)
+		if (token == COMMA || token == SEMI)
 			token = next_token (&val, cfile);
 	} while (token == COMMA);
-	decl -> fixed_addr = tree_cache (tree);
+
+	if (token != SEMI) {
+		parse_warn ("expecting semicolon.");
+		skip_to_semi (cfile);
+		return (struct tree_cache *)0;
+	}
+	return tree_cache (tree);
 }
 
 /* option_declaration :== OPTION identifier DOT identifier <syntax> |
@@ -857,10 +951,9 @@ void parse_fixed_addr_decl (cfile, bc, decl)
    would be painful to come up with BNF for it.   However, it always
    starts as above. */
 
-void parse_option_decl (cfile, bc, options)
+void parse_option_decl (cfile, group)
 	FILE *cfile;
-	jbp_decl (bc);
-	struct tree_cache **options;
+	struct group *group;
 {
 	char *val;
 	int token;
@@ -870,15 +963,16 @@ void parse_option_decl (cfile, bc, options)
 	struct universe *universe;
 	struct option *option;
 	struct tree *tree = (struct tree *)0;
+	struct tree *t;
 
 	token = next_token (&val, cfile);
 	if (!is_identifier (token)) {
 		parse_warn ("expecting identifier after option keyword.");
 		if (token != SEMI)
 			skip_to_semi (cfile);
-		longjmp (jdref (bc), 1);
+		return;
 	}
-	vendor = dmalloc (strlen (val) + 1, "parse_option_decl");
+	vendor = malloc (strlen (val) + 1);
 	strcpy (vendor, val);
 	token = peek_token (&val, cfile);
 	if (token == DOT) {
@@ -891,7 +985,7 @@ void parse_option_decl (cfile, bc, options)
 			parse_warn ("expecting identifier after '.'");
 			if (token != SEMI)
 				skip_to_semi (cfile);
-			longjmp (jdref (bc), 1);
+			return;
 		}
 
 		/* Look up the option name hash table for the specified
@@ -903,7 +997,7 @@ void parse_option_decl (cfile, bc, options)
 		if (!universe) {
 			parse_warn ("no vendor named %s.", vendor);
 			skip_to_semi (cfile);
-			longjmp (jdref (bc), 1);
+			return;
 		}
 	} else {
 		/* Use the default hash table, which contains all the
@@ -923,7 +1017,7 @@ void parse_option_decl (cfile, bc, options)
 			parse_warn ("no option named %s for vendor %s",
 				    val, vendor);
 		skip_to_semi (cfile);
-		longjmp (jdref (bc), 1);
+		return;
 	}
 
 	/* Free the initial identifier token. */
@@ -970,7 +1064,7 @@ void parse_option_decl (cfile, bc, options)
 					parse_warn ("expecting string %s.",
 						    "or hexadecimal data");
 					skip_to_semi (cfile);
-					longjmp (jdref (bc), 1);
+					return;
 				}
 				break;
 					
@@ -981,7 +1075,7 @@ void parse_option_decl (cfile, bc, options)
 					parse_warn ("expecting string.");
 					if (token != SEMI)
 						skip_to_semi (cfile);
-					longjmp (jdref (bc), 1);
+					return;
 				}
 				tree = tree_concat (tree,
 						    tree_const (val,
@@ -989,9 +1083,10 @@ void parse_option_decl (cfile, bc, options)
 				break;
 
 			      case 'I': /* IP address or hostname. */
-				tree = tree_concat (tree,
-						    parse_ip_addr_or_hostname
-						    (cfile, bc, uniform));
+				t = parse_ip_addr_or_hostname (cfile, uniform);
+				if (!t)
+					return;
+				tree = tree_concat (tree, t);
 				break;
 
 			      case 'L': /* Unsigned 32-bit integer... */
@@ -1002,7 +1097,7 @@ void parse_option_decl (cfile, bc, options)
 					parse_warn ("expecting number.");
 					if (token != SEMI)
 						skip_to_semi (cfile);
-					longjmp (jdref (bc), 1);
+					return;
 				}
 				convert_num (buf, val, 0, 32);
 				tree = tree_concat (tree, tree_const (buf, 4));
@@ -1030,7 +1125,7 @@ void parse_option_decl (cfile, bc, options)
 				      bad_flag:
 					if (token != SEMI)
 						skip_to_semi (cfile);
-					longjmp (jdref (bc), 1);
+					return;
 				}
 				if (!strcasecmp (val, "true")
 				    || !strcasecmp (val, "on"))
@@ -1048,7 +1143,7 @@ void parse_option_decl (cfile, bc, options)
 				warn ("Bad format %c in parse_option_decl.",
 				      *fmt);
 				skip_to_semi (cfile);
-				longjmp (jdref (bc), 1);
+				return;
 			}
 		}
 		if (*fmt == 'A') {
@@ -1061,7 +1156,13 @@ void parse_option_decl (cfile, bc, options)
 		}
 	} while (*fmt == 'A');
 
-	options [option -> code] = tree_cache (tree);
+	token = next_token (&val, cfile);
+	if (token != SEMI) {
+		parse_warn ("semicolon expected.");
+		skip_to_semi (cfile);
+		return;
+	}
+	group -> options [option -> code] = tree_cache (tree);
 }
 
 /* timestamp :== TIMESTAMP date SEMI
@@ -1069,21 +1170,14 @@ void parse_option_decl (cfile, bc, options)
    Timestamps are actually not used in dhcpd.conf, which is a static file,
    but rather in the database file and the journal file. */
 
-TIME parse_timestamp (cfile, bc)
+TIME parse_timestamp (cfile)
 	FILE *cfile;
-	jbp_decl (bc);
 {
 	TIME rv;
 	char *val;
 	int token;
 
-	rv = parse_date (cfile, bc);
-	token = next_token (&val, cfile);
-	if (token != SEMI) {
-		parse_warn ("semicolon expected");
-		skip_to_semi (cfile);
-		longjmp (jdref (bc), 1);
-	}
+	rv = parse_date (cfile);
 	return rv;
 }
 		
@@ -1099,9 +1193,8 @@ TIME parse_timestamp (cfile, bc)
 		|	TIMESTAMP number
 		|	DYNAMIC_BOOTP */
 
-struct lease *parse_lease_statement (cfile, bc)
+struct lease *parse_lease_statement (cfile)
 	FILE *cfile;
-	jbp_decl (bc);
 {
 	char *val;
 	int token;
@@ -1116,13 +1209,17 @@ struct lease *parse_lease_statement (cfile, bc)
 	memset (&lease, 0, sizeof lease);
 
 	/* Get the address for which the lease has been issued. */
-	parse_numeric_aggregate (cfile, bc, addr, &len, DOT, 10, 8);
+	if (!parse_numeric_aggregate (cfile, addr, &len, DOT, 10, 8))
+		return (struct lease *)0;
 	memcpy (lease.ip_addr.iabuf, addr, len);
 	lease.ip_addr.len = len;
 
+	if (!parse_lbrace (cfile))
+		return (struct lease *)0;
+
 	do {
 		token = next_token (&val, cfile);
-		if (token == SEMI)
+		if (token == RBRACE)
 			break;
 		strncpy (val, tbuf, sizeof tbuf);
 		tbuf [(sizeof tbuf) - 1] = 0;
@@ -1130,7 +1227,7 @@ struct lease *parse_lease_statement (cfile, bc)
 		/* Parse any of the times associated with the lease. */
 		if (token == STARTS || token == ENDS || token == TIMESTAMP) {
 			TIME t;
-			t = parse_date (cfile, bc);
+			t = parse_date (cfile);
 			switch (token) {
 			      case STARTS:
 				seenbit = 1;
@@ -1167,8 +1264,10 @@ struct lease *parse_lease_statement (cfile, bc)
 				} else {
 					lease.uid_len = 0;
 					lease.uid = parse_numeric_aggregate
-						(cfile, bc, (unsigned char *)0,
+						(cfile, (unsigned char *)0,
 						 &lease.uid_len, ':', 16, 8);
+					if (!lease.uid)
+						return (struct lease *)0;
 					if (lease.uid_len == 0) {
 						parse_warn ("zero-length uid");
 						seenbit = 0;
@@ -1180,39 +1279,21 @@ struct lease *parse_lease_statement (cfile, bc)
 				}
 				break;
 
-#if 0
-			      case HOST:
-				seenbit = 16;
-				token = next_token (&val, cfile);
-				if (!is_identifier (token)) {
-					if (token != SEMI)
-						skip_to_semi (cfile);
-					longjmp (jdref (bc), 1);
-				}
-				lease.host =
-					find_host_by_name (val);
-				if (!lease.host)
-					parse_warn ("lease host ``%s'' is %s",
-						    val,
-						    "no longer known.");
-				break;
-#endif
-					
 			      case CLASS:
 				seenbit = 32;
 				token = next_token (&val, cfile);
 				if (!is_identifier (token)) {
 					if (token != SEMI)
 						skip_to_semi (cfile);
-					longjmp (jdref (bc), 1);
+					return (struct lease *)0;
 				}
 				/* for now, we aren't using this. */
 				break;
 
 			      case HARDWARE:
 				seenbit = 64;
-				lease.hardware_addr
-					= parse_hardware_addr (cfile, bc);
+				parse_hardware_decl (cfile,
+						     &lease.hardware_addr);
 				break;
 
 			      case DYNAMIC_BOOTP:
@@ -1221,11 +1302,18 @@ struct lease *parse_lease_statement (cfile, bc)
 				break;
 
 			      default:
-				if (token != SEMI)
-					skip_to_semi (cfile);
-				longjmp (jdref (bc), 1);
-				/*NOTREACHED*/
+				skip_to_semi (cfile);
 				seenbit = 0;
+				return (struct lease *)0;
+			}
+
+			if (token != HARDWARE) {
+				token = next_token (&val, cfile);
+				if (token != SEMI) {
+					parse_warn ("semicolon expected.");
+					skip_to_semi (cfile);
+					return (struct lease *)0;
+				}
 			}
 		}
 		if (seenmask & seenbit) {
@@ -1233,6 +1321,7 @@ struct lease *parse_lease_statement (cfile, bc)
 				    tbuf, piaddr (lease.ip_addr));
 		} else
 			seenmask |= seenbit;
+
 	} while (1);
 	return &lease;
 }
@@ -1240,9 +1329,8 @@ struct lease *parse_lease_statement (cfile, bc)
 /* address_range :== RANGE ip_address ip_address |
 		     RANGE dynamic_bootp_statement ip_address ip_address */
 
-void parse_address_range (cfile, bc, subnet)
+void parse_address_range (cfile, subnet)
 	FILE *cfile;
-	jbp_decl (bc);
 	struct subnet *subnet;
 {
 	struct iaddr low, high;
@@ -1253,19 +1341,33 @@ void parse_address_range (cfile, bc, subnet)
 	int dynamic = 0;
 
 	if ((token = peek_token (&val, cfile)) == DYNAMIC_BOOTP) {
-		token = next_token (&val, cfile);
-		subnet -> dynamic_bootp = dynamic = 1;
+		if (subnet -> group -> boot_unknown_clients) {
+			token = next_token (&val, cfile);
+			subnet -> group -> dynamic_bootp = dynamic = 1;
+		} else {
+			parse_warn ("dynamic-bootp conflicts with %s",
+				    "boot_unknown_hosts 0");
+		}
 	}
 
 	/* Get the bottom address in the range... */
-	parse_numeric_aggregate (cfile, bc, addr, &len, DOT, 10, 8);
+	if (!parse_numeric_aggregate (cfile, addr, &len, DOT, 10, 8))
+		return;
 	memcpy (low.iabuf, addr, len);
 	low.len = len;
 
 	/* Get the top address in the range... */
-	parse_numeric_aggregate (cfile, bc, addr, &len, DOT, 10, 8);
+	if (!parse_numeric_aggregate (cfile, addr, &len, DOT, 10, 8))
+		return;
 	memcpy (high.iabuf, addr, len);
 	high.len = len;
+
+	token = next_token (&val, cfile);
+	if (token != SEMI) {
+		parse_warn ("semicolon expected.");
+		skip_to_semi (cfile);
+		return;
+	}
 
 	/* Create the new address range... */
 	new_address_range (low, high, subnet, dynamic);
@@ -1277,13 +1379,15 @@ void parse_address_range (cfile, bc, subnet)
    year/month/day; next is hours:minutes:seconds on a 24-hour
    clock. */
 
-TIME parse_date (cfile, bc)
+TIME parse_date (cfile)
 	FILE *cfile;
-	jbp_decl (bc);
 {
-	struct tm tm;
+	struct tm tm, *ap;
+	int guess;
 	char *val;
 	int token;
+	static int months [11] = { 31, 59, 90, 120, 151, 181,
+					  212, 243, 273, 304, 334 };
 
 	/* Day of week... */
 	token = next_token (&val, cfile);
@@ -1291,7 +1395,7 @@ TIME parse_date (cfile, bc)
 		parse_warn ("numeric day of week expected.");
 		if (token != SEMI)
 			skip_to_semi (cfile);
-		longjmp (jdref (bc), 1);
+		return (TIME)0;
 	}
 	tm.tm_wday = atoi (val);
 
@@ -1301,7 +1405,7 @@ TIME parse_date (cfile, bc)
 		parse_warn ("numeric year expected.");
 		if (token != SEMI)
 			skip_to_semi (cfile);
-		longjmp (jdref (bc), 1);
+		return (TIME)0;
 	}
 	tm.tm_year = atoi (val);
 	if (tm.tm_year > 1900)
@@ -1313,7 +1417,7 @@ TIME parse_date (cfile, bc)
 		parse_warn ("expected slash seperating year from month.");
 		if (token != SEMI)
 			skip_to_semi (cfile);
-		longjmp (jdref (bc), 1);
+		return (TIME)0;
 	}
 
 	/* Month... */
@@ -1322,7 +1426,7 @@ TIME parse_date (cfile, bc)
 		parse_warn ("numeric month expected.");
 		if (token != SEMI)
 			skip_to_semi (cfile);
-		longjmp (jdref (bc), 1);
+		return (TIME)0;
 	}
 	tm.tm_mon = atoi (val) - 1;
 
@@ -1332,7 +1436,7 @@ TIME parse_date (cfile, bc)
 		parse_warn ("expected slash seperating month from day.");
 		if (token != SEMI)
 			skip_to_semi (cfile);
-		longjmp (jdref (bc), 1);
+		return (TIME)0;
 	}
 
 	/* Month... */
@@ -1341,7 +1445,7 @@ TIME parse_date (cfile, bc)
 		parse_warn ("numeric day of month expected.");
 		if (token != SEMI)
 			skip_to_semi (cfile);
-		longjmp (jdref (bc), 1);
+		return (TIME)0;
 	}
 	tm.tm_mday = atoi (val);
 
@@ -1351,7 +1455,7 @@ TIME parse_date (cfile, bc)
 		parse_warn ("numeric hour expected.");
 		if (token != SEMI)
 			skip_to_semi (cfile);
-		longjmp (jdref (bc), 1);
+		return (TIME)0;
 	}
 	tm.tm_hour = atoi (val);
 
@@ -1361,7 +1465,7 @@ TIME parse_date (cfile, bc)
 		parse_warn ("expected colon seperating hour from minute.");
 		if (token != SEMI)
 			skip_to_semi (cfile);
-		longjmp (jdref (bc), 1);
+		return (TIME)0;
 	}
 
 	/* Minute... */
@@ -1370,7 +1474,7 @@ TIME parse_date (cfile, bc)
 		parse_warn ("numeric minute expected.");
 		if (token != SEMI)
 			skip_to_semi (cfile);
-		longjmp (jdref (bc), 1);
+		return (TIME)0;
 	}
 	tm.tm_min = atoi (val);
 
@@ -1380,7 +1484,7 @@ TIME parse_date (cfile, bc)
 		parse_warn ("expected colon seperating hour from minute.");
 		if (token != SEMI)
 			skip_to_semi (cfile);
-		longjmp (jdref (bc), 1);
+		return (TIME)0;
 	}
 
 	/* Minute... */
@@ -1389,7 +1493,7 @@ TIME parse_date (cfile, bc)
 		parse_warn ("numeric minute expected.");
 		if (token != SEMI)
 			skip_to_semi (cfile);
-		longjmp (jdref (bc), 1);
+		return (TIME)0;
 	}
 	tm.tm_sec = atoi (val);
 	tm.tm_isdst = 0;
@@ -1397,7 +1501,36 @@ TIME parse_date (cfile, bc)
 	/* XXX */ /* We assume that mktime does not use tm_yday. */
 	tm.tm_yday = 0;
 
-	return mktime (&tm);
+	/* Make sure the date ends in a semicolon... */
+	token = next_token (&val, cfile);
+	if (token != SEMI) {
+		parse_warn ("semicolon expected.");
+		skip_to_semi (cfile);
+		return 0;
+	}
+
+	/* Guess the time value... */
+	guess = ((((((365 * (tm.tm_year - 70) +	/* Days in years since '70 */
+		      (tm.tm_year - 72) / 4 +	/* Leap days since '70 */
+		      (tm.tm_mon		/* Days in months this year */
+		       ? months [tm.tm_mon - 1]
+		       : 0) +
+		      (tm.tm_mon > 1 &&		/* Leap day this year */
+		       ((tm.tm_year - 72) & 3)) +
+		      tm.tm_mday) * 24) +	/* Day of month */
+		    tm.tm_hour) * 60) +
+		  tm.tm_min) * 60) + tm.tm_sec;
+
+	/* This guess could be wrong because of leap seconds or other
+	   weirdness we don't know about that the system does.   For
+	   now, we're just going to accept the guess, but at some point
+	   it might be nice to do a successive approximation here to
+	   get an exact value.   Even if the error is small, if the
+	   server is restarted frequently (and thus the lease database
+	   is reread), the error could accumulate into something
+	   significant. */
+
+	return guess;
 }
 
 /* No BNF for numeric aggregates - that's defined by the caller.  What
@@ -1407,10 +1540,9 @@ TIME parse_date (cfile, bc)
    expected.  Base and size tell us how to internalize the numbers
    once they've been tokenized. */
 
-unsigned char *parse_numeric_aggregate (cfile, bc, buf,
+unsigned char *parse_numeric_aggregate (cfile, buf,
 					max, seperator, base, size)
 	FILE *cfile;
-	jbp_decl (bc);
 	unsigned char *buf;
 	int *max;
 	int seperator;
@@ -1438,7 +1570,7 @@ unsigned char *parse_numeric_aggregate (cfile, bc, buf,
 					break;
 				parse_warn ("too few numbers.");
 				skip_to_semi (cfile);
-				longjmp (jdref (bc), 1);
+				return (unsigned char *)0;
 			}
 			token = next_token (&val, cfile);
 		}
@@ -1448,7 +1580,7 @@ unsigned char *parse_numeric_aggregate (cfile, bc, buf,
 		    (base != 16 || token != NUMBER_OR_ATOM)) {
 			parse_warn ("expecting numeric value.");
 			skip_to_semi (cfile);
-			longjmp (jdref (bc), 1);
+			return (unsigned char *)0;
 		}
 		/* If we can, convert the number now; otherwise, build
 		   a linked list of all the numbers. */
