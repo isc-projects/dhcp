@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.30 1999/07/02 20:57:26 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.31 1999/07/06 17:04:31 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -904,9 +904,9 @@ int evaluate_data_expression (result, packet, options, lease, expr)
 		/* Evaluate the base (offset) and width (len): */
 		s0 = evaluate_numeric_expression
 			(&offset, packet, options, lease,
-			 expr -> data.substring.offset);
+			 expr -> data.b2a.base);
 		s1 = evaluate_numeric_expression (&len, packet, options, lease,
-						  expr -> data.substring.len);
+						  expr -> data.b2a.width);
 
 		/* Evaluate the seperator string. */
 		memset (&data, 0, sizeof data);
@@ -915,7 +915,7 @@ int evaluate_data_expression (result, packet, options, lease, expr)
 
 		/* Evaluate the data to be converted. */
 		memset (&other, 0, sizeof other);
-		s3 = evaluate_data_expression (&data, packet, options, lease,
+		s3 = evaluate_data_expression (&other, packet, options, lease,
 					       expr -> data.b2a.buffer);
 
 		if (s0 && s1 && s2 && s3) {
@@ -1022,18 +1022,12 @@ int evaluate_data_expression (result, packet, options, lease, expr)
 		/* Evaluate the width (len): */
 		s0 = evaluate_numeric_expression
 			(&len, packet, options, lease,
-			 expr -> data.substring.offset);
+			 expr -> data.reverse.width);
 
 		/* Evaluate the data. */
 		memset (&data, 0, sizeof data);
 		s1 = evaluate_data_expression (&data, packet, options, lease,
-					       expr -> data.b2a.seperator);
-
-		if (len != 8 && len != 16 && len != 32) {
-			log_info ("reverse: invalid width %d!", len);
-			goto b2a_out;
-		}
-		len /= 8;
+					       expr -> data.reverse.buffer);
 
 		if (s0 && s1) {
 			char *upper;
