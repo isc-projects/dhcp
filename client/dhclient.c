@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.79 1999/07/06 16:48:34 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.79.2.1 1999/10/14 20:27:29 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -659,9 +659,9 @@ void bind_lease (client)
 	add_timeout (client -> active -> renewal,
 		     state_bound, client);
 
-	log_info ("bound to %s -- renewal in %d seconds.",
-	      piaddr (client -> active -> address),
-	      client -> active -> renewal - cur_time);
+	log_info ("bound to %s -- renewal in %ld seconds.",
+		  piaddr (client -> active -> address),
+		  (long)(client -> active -> renewal - cur_time));
 	client -> state = S_BOUND;
 	reinitialize_interfaces ();
 	go_daemon ();
@@ -721,7 +721,8 @@ int write_lease (lease)
 	return 0;
 }
 
-void db_startup ()
+void db_startup (writep)
+	int writep;
 {
 }
 
@@ -1180,23 +1181,21 @@ void state_panic (cpp)
 			   yet need renewal, go into BOUND state and
 			   timeout at the renewal time. */
 			if (!script_go (client)) {
-				if (cur_time <
-				    client -> active -> renewal) {
-					client -> state = S_BOUND;
-					log_info ("bound: renewal in %d seconds.",
-					      client -> active -> renewal
-					      - cur_time);
-					add_timeout ((client ->
-						      active -> renewal),
-						     state_bound, client);
-				} else {
-					client -> state = S_BOUND;
-					log_info ("bound: immediate renewal.");
-					state_bound (client);
-				}
-				reinitialize_interfaces ();
-				go_daemon ();
-				return;
+			    if (cur_time < client -> active -> renewal) {
+				client -> state = S_BOUND;
+				log_info ("bound: renewal in %ld %s.",
+					  (long)(client -> active -> renewal -
+						 cur_time), "seconds");
+				add_timeout (client -> active -> renewal,
+					     state_bound, client);
+			    } else {
+				client -> state = S_BOUND;
+				log_info ("bound: immediate renewal.");
+				state_bound (client);
+			    }
+			    reinitialize_interfaces ();
+			    go_daemon ();
+			    return;
 			}
 		}
 
@@ -1854,7 +1853,7 @@ void write_client_lease (client, lease, rewrite)
 			 lease -> filename);
 	if (lease -> server_name)
 		fprintf (leaseFile, "  server-name \"%s\";\n",
-			 lease -> filename);
+			 lease -> server_name);
 	if (lease -> medium)
 		fprintf (leaseFile, "  medium \"%s\";\n",
 			 lease -> medium -> string);
@@ -1928,8 +1927,8 @@ void script_init (client, reason, medium)
 		fd = mkstemp (scriptName);
 #else
 		if (!mktemp (scriptName))
-			log_fatal ("can't create temporary client script %s: %m",
-			       scriptName);
+			log_fatal ("can't create temporary script %s: %m",
+				   scriptName);
 		fd = creat (scriptName, 0600);
 	} while (fd < 0);
 #endif
@@ -2104,7 +2103,8 @@ char *dhcp_option_ev_name (option)
 	int i;
 
 	if (strlen (option -> name) + 1 > sizeof evbuf)
-		log_fatal ("option %s name is larger than static buffer.");
+		log_fatal ("option %s name is larger than static buffer.",
+			   option -> name);
 	for (i = 0; option -> name [i]; i++) {
 		if (option -> name [i] == '-')
 			evbuf [i] = '_';
