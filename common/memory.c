@@ -3,8 +3,8 @@
    Memory-resident database... */
 
 /*
- * Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.
- * All rights reserved.
+ * Copyright (c) 1995, 1996, 1997, 1998, 1999
+ * The Internet Software Consortium.   All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: memory.c,v 1.44 1998/11/11 07:52:35 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: memory.c,v 1.45 1999/02/14 18:49:45 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -289,7 +289,6 @@ void new_address_range (low, high, subnet, pool)
 		address_range [i].subnet = subnet;
 		address_range [i].pool = pool;
 		address_range [i].billing_class = (struct class *)0;
-		address_range [i].shared_network = share;
 		address_range [i].flags = 0;
 
 		/* Link this entry into the list. */
@@ -359,36 +358,58 @@ struct subnet *find_grouped_subnet (share, addr)
 	return (struct subnet *)0;
 }
 
-/* Enter a new subnet into the subnet list. */
+int subnet_inner_than (subnet, scan, warnp)
+	struct subnet *subnet, *scan;
+	int warnp;
+{
+	if (addr_eq (subnet_number (subnet -> net, scan -> netmask),
+		     scan -> net) ||
+	    addr_eq (subnet_number (scan -> net, subnet -> netmask),
+		     subnet -> net)) {
+		char n1buf [16];
+		int i, j;
+		for (i = 0; i < 32; i++)
+			if (subnet -> netmask.iabuf [3 - (i >> 3)]
+			    & (1 << (i & 7)))
+				break;
+		for (j = 0; j < 32; j++)
+			if (scan -> netmask.iabuf [3 - (j >> 3)] &
+			    (1 << (j & 7)))
+				break;
+		strcpy (n1buf, piaddr (subnet -> net));
+		if (warnp)
+			warn ("%ssubnet %s/%d conflicts with subnet %s/%d",
+			      "Warning: ", n1buf, 32 - i,
+			      piaddr (scan -> net), 32 - j);
+		if (i < j)
+			return 1;
+	}
+	return 0;
+}
 
+/* Enter a new subnet into the subnet list. */
 void enter_subnet (subnet)
 	struct subnet *subnet;
 {
-	struct subnet *scan;
+	struct subnet *scan, *prev = (struct subnet *)0;
 
 	/* Check for duplicates... */
 	for (scan = subnets; scan; scan = scan -> next_subnet) {
-		if (addr_eq (subnet_number (subnet -> net, scan -> netmask),
-			     scan -> net) ||
-		    addr_eq (subnet_number (scan -> net, subnet -> netmask),
-			     subnet -> net)) {
-			char n1buf [16];
-			int i, j;
-			for (i = 0; i < 32; i++)
-				if (subnet -> netmask.iabuf [3 - (i >> 3)]
-				    & (1 << (i & 7)))
-					break;
-			for (j = 0; j < 32; j++)
-				if (scan -> netmask.iabuf [3 - (j >> 3)]
-				    & (1 << (j & 7)))
-					break;
-			strcpy (n1buf, piaddr (subnet -> net));
-			error ("subnet %s/%d conflicts with subnet %s/%d",
-			       n1buf, i, piaddr (scan -> net), j);
+		/* When we find a conflict, make sure that the
+		   subnet with the narrowest subnet mask comes
+		   first. */
+		if (subnet_inner_than (subnet, scan, 1)) {
+			if (prev) {
+				prev -> next_subnet = subnet; 
+			} else
+				subnets = subnet;
+			subnet -> next_subnet = scan;
+			return;
 		}
+		prev = scan;
 	}
 
-	/* XXX Sort the nets into a balanced tree to make searching quicker. */
+	/* XXX use the BSD radix tree code instead of a linked list. */
 	subnet -> next_subnet = subnets;
 	subnets = subnet;
 }
@@ -631,9 +652,11 @@ void release_lease (lease)
 	struct lease lt;
 
 	lt = *lease;
-	lt.ends = cur_time;
-	lt.billing_class = (struct class *)0;
-	supersede_lease (lease, &lt, 1);
+	if (lt.ends > cur_time) {
+		lt.ends = cur_time;
+		lt.billing_class = (struct class *)0;
+		supersede_lease (lease, &lt, 1);
+	}
 }
 
 /* Abandon the specified lease (set its timeout to infinity and its
@@ -886,12 +909,15 @@ void dump_subnets ()
 	struct subnet *n;
 	struct pool *p;
 
+	note ("Subnets:");
+	for (n = subnets; n; n = n -> next_subnet) {
+		debug ("  Subnet %s", piaddr (n -> net));
+		debug ("     netmask %s",
+		       piaddr (n -> netmask));
+	}
+	note ("Shared networks:");
 	for (s = shared_networks; s; s = s -> next) {
-		for (n = subnets; n; n = n -> next_sibling) {
-			debug ("Subnet %s", piaddr (n -> net));
-			debug ("   netmask %s",
-			       piaddr (n -> netmask));
-		}
+		note ("  %s", s -> name);
 		for (p = s -> pools; p; p = p -> next) {
 			for (l = p -> leases; l; l = l -> next) {
 				print_lease (l);
