@@ -1,5 +1,5 @@
 #if !defined(lint) && !defined(SABER)
-static const char rcsid[] = "$Id: res_update.c,v 1.2 2000/02/02 19:59:16 mellon Exp $";
+static const char rcsid[] = "$Id: res_update.c,v 1.3 2000/02/03 04:33:03 mellon Exp $";
 #endif /* not lint */
 
 /*
@@ -75,18 +75,19 @@ static int	nscopy(struct sockaddr_in *, const struct sockaddr_in *, int);
 static int	nsprom(struct sockaddr_in *, const struct in_addr *, int);
 static void	dprintf(const char *, ...);
 
-int
+ns_rcode
 res_nupdate(res_state statp, ns_updrec *rrecp_in, ns_tsig_key *key) {
 	ns_updrec *rrecp;
 	u_char answer[PACKETSZ], packet[2*PACKETSZ];
 	struct zonegrp *zptr, tgrp;
-	ISC_LIST(struct zonegrp) zgrps;
 	int nzones = 0, nscount = 0;
 	unsigned n;
 	struct sockaddr_in nsaddrs[MAXNS];
+	ns_rcode rcode;
 
-	/* Thread all of the updates onto a list of groups. */
-	ISC_LIST_INIT(zgrps);
+	/* Make sure all the updates are in the same zone, and find out
+	   what zone they are in. */
+	zptr = NULL;
 	for (rrecp = rrecp_in; rrecp; rrecp = ISC_LIST_NEXT(rrecp, r_link)) {
 		/* Find the origin for it if there is one. */
 		tgrp.z_class = rrecp->r_class;
@@ -97,86 +98,75 @@ res_nupdate(res_state statp, ns_updrec *rrecp_in, ns_tsig_key *key) {
 					sizeof tgrp.z_origin,
 					tgrp.z_nsaddrs, MAXNS);
 		if (tgrp.z_nscount <= 0) {
-			DPRINTF(("res_findzonecut failed (%d)",
-				 tgrp.z_nscount));
+			rcode = ns_r_notzone;
 			goto done;
 		}
-		/* Find the group for it if there is one. */
-		for (zptr = ISC_LIST_HEAD(zgrps); zptr != NULL;
-		     zptr = ISC_LIST_NEXT(zptr, z_link))
-			if (ns_samename(tgrp.z_origin, zptr->z_origin) == 1 &&
-			    tgrp.z_class == zptr->z_class)
-				break;
 		/* Make a group for it if there isn't one. */
 		if (zptr == NULL) {
 			zptr = malloc(sizeof *zptr);
 			if (zptr == NULL) {
-				DPRINTF(("malloc failed"));
 				goto done;
 			}
 			*zptr = tgrp;
 			zptr->z_flags = 0;
 			ISC_LIST_INIT(zptr->z_rrlist);
-			ISC_LIST_APPEND(zgrps, zptr, z_link);
+		} else if (ns_samename(tgrp.z_origin, zptr->z_origin) == 0 ||
+			   tgrp.z_class != zptr->z_class) {
+			/* Some of the records are in different zones. */
+			rcode = ns_r_notzone;
+			goto done;
 		}
-		/* Thread this rrecp onto the right group. */
+		/* Thread this rrecp onto the zone group. */
 		ISC_LIST_APPEND(zptr->z_rrlist, rrecp, r_glink);
 	}
 
-	for (zptr = ISC_LIST_HEAD(zgrps); zptr != NULL;
-	     zptr = ISC_LIST_NEXT(zptr, z_link)) {
-		/* Construct zone section and prepend it. */
-		rrecp = res_mkupdrec(ns_s_zn, zptr->z_origin,
-				     zptr->z_class, ns_t_soa, 0);
-		if (rrecp == NULL) {
-			DPRINTF(("res_mkupdrec failed"));
-			goto done;
-		}
-		ISC_LIST_PREPEND(zptr->z_rrlist, rrecp, r_glink);
-		zptr->z_flags |= ZG_F_ZONESECTADDED;
-
-		/* Marshall the update message. */
-		n = res_nmkupdate(statp, ISC_LIST_HEAD(zptr->z_rrlist),
-				  packet, sizeof packet);
-		DPRINTF(("res_mkupdate -> %d", n));
-		if (n < 0)
-			goto done;
-
-		/* Temporarily replace the resolver's nameserver set. */
-		nscount = nscopy(nsaddrs, statp->nsaddr_list, statp->nscount);
-		statp->nscount = nsprom(statp->nsaddr_list,
-					zptr->z_nsaddrs, zptr->z_nscount);
-
-		/* Send the update and remember the result. */
-		if (key != NULL)
-			n = res_nsendsigned(statp, packet, n, key,
-					    answer, sizeof answer);
-		else
-			n = res_nsend(statp, packet, n, answer, sizeof answer);
-		if (n < 0) {
-			DPRINTF(("res_nsend: send error, n=%d (%s)\n",
-				 n, strerror(errno)));
-			goto done;
-		}
-		if (((HEADER *)answer)->rcode == NOERROR)
-			nzones++;
-
-		/* Restore resolver's nameserver set. */
-		statp->nscount = nscopy(statp->nsaddr_list, nsaddrs, nscount);
-		nscount = 0;
+	/* Construct zone section and prepend it. */
+	rrecp = res_mkupdrec(ns_s_zn, zptr->z_origin,
+			     zptr->z_class, ns_t_soa, 0);
+	if (rrecp == NULL) {
+		rcode = -1; /* XXX */
+		goto done;
 	}
+	ISC_LIST_PREPEND(zptr->z_rrlist, rrecp, r_glink);
+	zptr->z_flags |= ZG_F_ZONESECTADDED;
+
+	/* Marshall the update message. */
+	n = res_nmkupdate(statp, ISC_LIST_HEAD(zptr->z_rrlist),
+			  packet, sizeof packet);
+	if (n < 0) {
+		rcode = -1;
+		goto done;
+	}
+
+	/* Temporarily replace the resolver's nameserver set. */
+	nscount = nscopy(nsaddrs, statp->nsaddr_list, statp->nscount);
+	statp->nscount = nsprom(statp->nsaddr_list,
+				zptr->z_nsaddrs, zptr->z_nscount);
+
+	/* Send the update and remember the result. */
+	if (key != NULL)
+		n = res_nsendsigned(statp, packet, n, key,
+				    answer, sizeof answer);
+	else
+		n = res_nsend(statp, packet, n, answer, sizeof answer);
+	if (n < 0) {
+		rcode = -1;
+		goto undone;
+	}
+	rcode = ((HEADER *)answer)->rcode;
+
+ undone:
+	/* Restore resolver's nameserver set. */
+	statp->nscount = nscopy(statp->nsaddr_list, nsaddrs, nscount);
+	nscount = 0;
  done:
-	while (!ISC_LIST_EMPTY(zgrps)) {
-		zptr = ISC_LIST_HEAD(zgrps);
+	if (zptr) {
 		if ((zptr->z_flags & ZG_F_ZONESECTADDED) != 0)
 			res_freeupdrec(ISC_LIST_HEAD(zptr->z_rrlist));
-		ISC_LIST_UNLINK(zgrps, zptr, z_link);
 		free(zptr);
 	}
-	if (nscount != 0)
-		statp->nscount = nscopy(statp->nsaddr_list, nsaddrs, nscount);
 
-	return (nzones);
+	return rcode;
 }
 
 /* Private. */
