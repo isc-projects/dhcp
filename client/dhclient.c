@@ -41,7 +41,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.129.2.4 2001/06/03 04:52:48 mellon Exp $ Copyright (c) 1995-2001 Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.129.2.5 2001/06/08 23:08:22 mellon Exp $ Copyright (c) 1995-2001 Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2947,7 +2947,7 @@ isc_result_t dhcp_set_control_state (control_object_state_t oldstate,
 
 		  case server_shutdown:
 		    if (client -> active &&
-			client -> active -> expiry < cur_time) {
+			client -> active -> expiry > cur_time) {
 			    client_dns_update (client, 0);
 			    do_release (client);
 		    }
