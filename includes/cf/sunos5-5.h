@@ -122,6 +122,8 @@ extern int h_errno;
    the all-ones broadcast address. */
 #if defined (USE_DEFAULT_NETWORK)
 # define USE_DLPI
+# define USE_DLPI_RAW
+# define USE_DLPI_PFMOD
 #endif
 
 #define USE_POLL
