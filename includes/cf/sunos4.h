@@ -3,7 +3,7 @@
    System dependencies for SunOS 4 (tested on 4.1.4)... */
 
 /*
- * Copyright (c) 1996-1999 Internet Software Consortium.
+ * Copyright (c) 1996-2001 Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -56,7 +56,7 @@
 #define SOCKLEN_T	int
 
 #define fpos_t		long
-#define fgetpos(f, p)	((*pos = ftell (f)) == -1 ? -1 : 0)
+#define fgetpos(f, p)	(((*(p)) = ftell (f)) == -1 ? -1 : 0)
 #define fsetpos(f, p)	(fseek (f, p, SEEK_SET))
 
 /* No endian.h either. */

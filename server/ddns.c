@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: ddns.c,v 1.16 2001/06/27 00:31:05 mellon Exp $ Copyright (c) 2000-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: ddns.c,v 1.17 2001/06/29 18:34:54 mellon Exp $ Copyright (c) 2000-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -266,7 +266,7 @@ int ddns_updates (struct packet *packet,
 	   specifically configured to do so.   If the client asked to do its
 	   own update and we allowed that, we don't do this test. */
 	if (lease -> flags & STATIC_LEASE) {
-		if (!(oc = lookup_option (&server_universe, packet -> options,
+		if (!(oc = lookup_option (&server_universe, state -> options,
 					  SV_UPDATE_STATIC_LEASES)) ||
 		    !evaluate_boolean_option_cache (&ignorep, packet, lease,
 						    (struct client_state *)0,

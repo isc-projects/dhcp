@@ -56,6 +56,14 @@ Murrell at BC Tel Advanced Communications.  I'd like to express my
 thanks to all of these good people here, both for working on the code
 and for prodding me into improving it.
 
+	  Changes since 3.0 Release Candidate 8 Patchlevel 2
+
+- Fix a bug that prevented update-static-leases from working.
+
+- Document failover-state OMAPI object.
+
+- Fix a compilation error on SunOS 4.
+
 	  Changes since 3.0 Release Candidate 8 Patchlevel 1
 
 - Fix a parsing bug that broke dns updates (both interim and ad-hoc).
