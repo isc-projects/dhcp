@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: clparse.c,v 1.12 1997/09/16 18:08:32 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: clparse.c,v 1.13 1997/10/27 20:13:21 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -183,7 +183,7 @@ void read_client_leases ()
 /* client-declaration :== 
 	SEND option-decl |
 	DEFAULT option-decl |
-	SUPERCEDE option-decl |
+	SUPERSEDE option-decl |
 	PREPEND option-decl |
 	APPEND option-decl |
 	hardware-declaration |
