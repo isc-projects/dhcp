@@ -43,14 +43,18 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: fddi.c,v 1.2 2000/04/14 16:24:05 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: fddi.c,v 1.3 2000/04/18 23:02:09 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
 
-#ifdef DEC_FDDI
+#if defined (DEC_FDDI)
 #include <netinet/if_fddi.h>
 #include <net/if_llc.h>
+
+#if defined (PACKET_ASSEMBLY) || defined (PACKET_DECODING)
+#include "includes/netinet/if_ether.h"
+#endif /* PACKET_ASSEMBLY || PACKET_DECODING */
 
 #if defined (PACKET_ASSEMBLY)
 /* Assemble an hardware header... */
