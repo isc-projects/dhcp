@@ -110,6 +110,7 @@ extern int h_errno;
 #endif
 
 #define USE_POLL
+#define ALIAS_NAMES_PERMUTED
 
 #define EOL	'\n'
 #define VOIDPTR	void *
@@ -122,3 +123,4 @@ extern int h_errno;
 #define GET_TIME(x)	time ((x))
 
 #define random()	rand()
+
