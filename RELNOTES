@@ -43,6 +43,12 @@ Murrell at BC Tel Advanced Communications.  I'd like to express my
 thanks to all of these good people here, both for working on the code
 and for prodding me into improving it.
 
+			Changes since 3.0.2rc2
+
+- A bug introduced in 3.0.2b1 in the DHCP Option Overloading support
+  bugfix was repaired.  This bug only surfaces in the case where neither
+  the FILE nor SNAME fields are available for overloading.
+
 			Changes since 3.0.2rc1
 
 - allocate_lease() was rewritten to repair a bug in which the server would
