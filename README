@@ -241,18 +241,31 @@ One additional Linux 2.1/2.2 issue: if you get the following message,
 it's because your kernel doesn't have the linux packetfilter or raw
 packet socket configured:
 
- Set CONFIG_PACKET=y and CONFIG_FILTER=y in your kernel configuration
+ Make sure CONFIG_PACKET (Packet socket) and CONFIG_FILTER (Socket
+ Filtering) are enabled in your kernel configuration
 
-If this happens, you need to edit your linux kernel .config file, set
-CONFIG_FILTER=y and CONFIG_PACKET=y, and rebuild your kernel.  If the
-preceding sentence made no sense to you, ask your Linux vendor/guru
-for help - please don't ask us.
+If this happens, you need to configure your Linux kernel to support
+Socket Filtering and the Packet socket.  You can do this by typing
+``make config'', ``make menuconfig'' or ``make xconfig'', and then
+enabling the Packet socket and Socket Filtering options that you'll
+see displayed on the menu or in the questionnaire.  You can also edit
+your linux kernel .config file directly: set CONFIG_FILTER=y and
+CONFIG_PACKET=y.  If you do this, make sure you run ``make oldconfig''
+afterwards, so that the changes you've made are propogated to the
+kernel header files.   After you've reconfigured, you need to type
+``make'' to build a new Linux kernel, and then install it in the
+appropriate place (probably /linux).  Make sure to save a copy of your
+old /linux.
+
+If the preceding paragraph made no sense to you, ask your Linux
+vendor/guru for help - please don't ask us.
 
 If you set CONFIG_PACKET=m or CONFIG_FILTER=m, then you must tell the
 kernel module loader to load the appropriate modules.  If this doesn't
 make sense to you, don't use CONFIG_whatever=m - use CONFIG_whatever=y.  
 Don't ask for help with this on the DHCP mailing list - it's a Linux
-kernel issue.
+kernel issue.   This is probably not a problem with the most recent
+Linux 2.2.x kernels.
 
 			   LINUX: BROADCAST
 
@@ -396,22 +409,23 @@ must install this extension in order to get dhcpd or dhclient to work.
 One problem which has been observed and is not fixed in this
 patchlevel has to do with using DLPI on Solaris machines.  The symptom
 of this problem is that the DHCP server never receives any requests.
-If you are using Solaris 2.6, and you encounter this symptom, and
-you are running the DHCP server on a machine with a single broadcast
-network interface, you may wish to edit the includes/site.h file and
-uncomment the #define USE_SOCKETS line.  Then type ``make clean;
-make''.
+This has been observed with Solaris 2.6 and Solaris 7 on Intel x86
+systems, although it may occur with other systems as well.  If you
+encounter this symptom, and you are running the DHCP server on a
+machine with a single broadcast network interface, you may wish to
+edit the includes/site.h file and uncomment the #define USE_SOCKETS
+line.  Then type ``make clean; make''.
 
 The DHCP client on Solaris will only work with DLPI.  If you run it
 and it just keeps saying it's sending DHCPREQUEST packets, but never
 gets a response, you may be having DLPI trouble as described above.
-If so, you are SOL.  Also, because Solaris requires you to "plumb" an
-interface before it can be detected by the DHCP client, you must
-either specify the name(s) of the interface(s) you want to configure
-on the command line, or must plumb the interfaces prior to invoking
-the DHCP client.   This can be done with ``ifconfig iface plumb'',
-where iface is the name of the interface (e.g., ``ifconfig hme0
-plumb'').
+If so, we have no solution to offer at this time.  Also, because
+Solaris requires you to "plumb" an interface before it can be detected
+by the DHCP client, you must either specify the name(s) of the
+interface(s) you want to configure on the command line, or must plumb
+the interfaces prior to invoking the DHCP client.  This can be done
+with ``ifconfig iface plumb'', where iface is the name of the
+interface (e.g., ``ifconfig hme0 plumb'').
 
 It should be noted that Solaris versions from 2.6 onward include a
 DHCP client that you can run with ``/sbin/ifconfig iface dhcp start''
