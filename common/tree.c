@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.31.2.6 1999/11/13 04:01:59 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.31.2.7 1999/12/22 20:33:00 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -612,9 +612,10 @@ int evaluate_data_expression (result, packet, options, lease, expr)
 		      (s3 ? print_hex_2 (result -> len, result -> data, 30)
 		          : "NULL"));
 #endif
+		if (s0)
+			data_string_forget (&data, "evaluate_data_expression");
 		if (s3)
 			return 1;
-		data_string_forget (&data, "evaluate_data_expression");
 		return 0;
 
 
@@ -1298,16 +1299,16 @@ int evaluate_numeric_expression (result, packet, options, lease, expr)
    result of that evaluation.   There should never be both an expression
    and a valid data_string. */
 
-int evaluate_option_cache (result, packet, options, lease, oc)
+int evaluate_option_cache (result, packet, options, lease, oc, name)
 	struct data_string *result;
 	struct packet *packet;
 	struct option_state *options;
 	struct lease *lease;
 	struct option_cache *oc;
+	char *name;
 {
 	if (oc -> data.len) {
-		data_string_copy (result,
-				  &oc -> data, "evaluate_option_cache");
+		data_string_copy (result, &oc -> data, name);
 		return 1;
 	}
 	if (!oc -> expression)
@@ -1333,7 +1334,8 @@ int evaluate_boolean_option_cache (packet, options, lease, oc)
 		return 0;
 	
 	memset (&ds, 0, sizeof ds);
-	if (!evaluate_option_cache (&ds, packet, options, lease, oc))
+	if (!evaluate_option_cache (&ds, packet, options, lease, oc,
+				    "evaluate_boolean_option_cache"))
 		return 0;
 
 	if (ds.len && ds.data [0])
