@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.9 1999/10/08 22:17:41 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.10 1999/10/13 16:28:00 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -377,11 +377,11 @@ struct subnet *find_host_for_network (host, addr, share)
 	for (hp = *host; hp; hp = hp -> n_ipaddr) {
 		if (!hp -> fixed_addr)
 			continue;
-		if (!evaluate_data_expression (&fixed_addr, (struct packet *)0,
-					       (struct lease *)0,
-					       (struct option_state *)0,
-					       (struct option_state *)0,
-					       hp -> fixed_addr -> expression))
+		if (!evaluate_option_cache (&fixed_addr, (struct packet *)0,
+					    (struct lease *)0,
+					    (struct option_state *)0,
+					    (struct option_state *)0,
+					    hp -> fixed_addr))
 			continue;
 		for (i = 0; i < fixed_addr.len; i += 4) {
 			ip_address.len = 4;
