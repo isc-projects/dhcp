@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.53.2.21 2001/11/02 01:01:16 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.53.2.22 2001/11/05 01:54:40 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2182,7 +2182,7 @@ int dhcp_failover_pool_rebalance (dhcp_failover_state_t *state)
 			  (unsigned long)p,
 			  (p -> shared_network ?
 			   p -> shared_network -> name : ""), p -> lease_count,
-			  p -> free_leases, p -> backup_leases, "backup", lts);
+			  p -> free_leases, "backup", p -> backup_leases, lts);
 
 		    lease_reference (&lp, *lq, MDL);
 
