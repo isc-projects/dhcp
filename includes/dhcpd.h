@@ -2475,11 +2475,12 @@ void update_partner PROTO ((struct lease *));
 int load_balance_mine (struct packet *, dhcp_failover_state_t *);
 binding_state_t normal_binding_state_transition_check (struct lease *,
 						       dhcp_failover_state_t *,
-						       binding_state_t);
+						       binding_state_t,
+						       u_int32_t);
 binding_state_t
 conflict_binding_state_transition_check (struct lease *,
 					 dhcp_failover_state_t *,
-					 binding_state_t);
+					 binding_state_t, u_int32_t);
 int lease_mine_to_reallocate (struct lease *);
 
 OMAPI_OBJECT_ALLOC_DECL (dhcp_failover_state, dhcp_failover_state_t,
