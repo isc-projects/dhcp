@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: memory.c,v 1.54 1999/09/08 01:44:57 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: memory.c,v 1.55 1999/09/09 21:03:40 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -38,9 +38,13 @@ struct hash_table *host_name_hash;
 static struct lease *dangling_leases;
 static struct host_decl *dynamic_hosts;
 
-void enter_host (hd, dynamicp)
+omapi_object_type_t *dhcp_type_host;
+
+
+void enter_host (hd, dynamicp, commit)
 	struct host_decl *hd;
 	int dynamicp;
+	int commit;
 {
 	struct host_decl *hp = (struct host_decl *)0;
 	struct host_decl *np = (struct host_decl *)0;
@@ -48,9 +52,12 @@ void enter_host (hd, dynamicp)
 
 	if (dynamicp) {
 		hd -> n_dynamic = dynamic_hosts;
-		dynamic_hosts = hd -> n_dynamic;
+		dynamic_hosts = hd;
 	}
 	hd -> n_ipaddr = (struct host_decl *)0;
+
+	if (!hd -> type)
+		hd -> type = dhcp_type_host;
 
 	if (hd -> interface.hlen) {
 		if (!host_hw_addr_hash) {
@@ -65,10 +72,12 @@ void enter_host (hd, dynamicp)
 
 		/* If there isn't already a host decl matching this
 		   address, add it to the hash table. */
-		if (!hp)
+		if (!hp) {
 			add_hash (host_hw_addr_hash,
 				  hd -> interface.haddr, hd -> interface.hlen,
 				  (unsigned char *)hd);
+			hd -> refcnt++;	/* XXX */
+		}
 	}
 
 	/* If there was already a host declaration for this hardware
@@ -78,6 +87,7 @@ void enter_host (hd, dynamicp)
 		for (np = hp; np -> n_ipaddr; np = np -> n_ipaddr)
 			;
 		np -> n_ipaddr = hd;
+		hd -> refcnt++;	/* XXX */
 	}
 
 	/* See if there's a statement that sets the client identifier.
@@ -127,12 +137,14 @@ void enter_host (hd, dynamicp)
 				     np = np -> n_ipaddr)
 					;
 				np -> n_ipaddr = hd;
+				hd -> refcnt++; /* XXX */
 			}
 		} else {
 			add_hash (host_uid_hash,
 				  hd -> client_identifier.data,
 				  hd -> client_identifier.len,
 				  (unsigned char *)hd);
+			hd -> refcnt++; /* XXX */
 		}
 	}
 
@@ -148,14 +160,19 @@ void enter_host (hd, dynamicp)
 
 		/* If there isn't already a host decl matching this
 		   address, add it to the hash table. */
-		if (!hp)
+		if (!hp) {
 			add_hash (host_name_hash,
 				  hd -> name, strlen (hd -> name),
 				  (unsigned char *)hd);
-		else
+			hd -> refcnt++; /* XXX */
+		} else
 			/* XXX actually, we have to delete the old one
 			   XXX carefully and replace it.   Not done yet. */
 			log_fatal ("duplicate hostname: %s!", hd -> name);
+	}
+	if (dynamicp && commit) {
+		write_host (hd);
+		commit_leases ();
 	}
 }
 
