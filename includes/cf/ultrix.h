@@ -70,6 +70,8 @@ extern int h_errno;
 #define u_int16_t	unsigned short 
 #define u_int32_t	unsigned long 
 
+#define	ssize_t		size_t
+
 /* The jmp_buf type is an array on ultrix, so we can't dereference it
    and must declare it differently. */
 #define jbp_decl(x)	jmp_buf x
