@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.192.2.3 2001/05/17 07:16:51 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.192.2.4 2001/05/19 07:35:36 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -296,6 +296,29 @@ void dhcpdiscover (packet, ms_nulltp)
 		goto out;
 	}
 
+#if defined (FAILOVER_PROTOCOL)
+	if (lease && lease -> pool && lease -> pool -> failover_peer) {
+		peer = lease -> pool -> failover_peer;
+
+		/* If the lease is ours to allocate, then allocate it,
+		   but set the allocatedp flag. */
+		if (lease_mine_to_reallocate (lease))
+			allocatedp = 1;
+
+		/* If the lease is active, and we're primary or
+		   partner is down, then we can DHCPOFFER the
+		   lease. */
+		else if (lease -> binding_state == FTS_ACTIVE &&
+			 (peer -> i_am == primary ||
+			  peer -> service_state == service_partner_down)) {
+		}
+
+		/* Otherwise, we can't let the client have this lease. */
+		else
+			lease_dereference (&lease, MDL);
+	}
+#endif
+
 	/* If we didn't find a lease, try to allocate one... */
 	if (!lease) {
 		if (!allocate_lease (&lease, packet,
@@ -479,10 +502,9 @@ void dhcprequest (packet, ms_nulltp, ip_lease)
 
 		/* Don't let a client allocate a lease using DHCPREQUEST
 		   if the lease isn't ours to allocate. */
-		if ((lease -> binding_state == FTS_FREE &&
-		     peer -> i_am == secondary) ||
-		    (lease -> binding_state == FTS_BACKUP &&
-		     peer -> i_am == primary)) {
+		if ((lease -> binding_state == FTS_FREE ||
+		     lease -> binding_state == FTS_BACKUP) &&
+		    !lease_mine_to_reallocate (lease)) {
 			log_debug ("%s: expired", msgbuf);
 			goto out;
 		}
