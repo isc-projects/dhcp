@@ -54,7 +54,7 @@
 
 #ifndef lint
 static char copyright[] =
-"@(#) Copyright (c) 1995 The Internet Software Consortium.  All rights reserved.\n";
+"@(#) Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -93,11 +93,6 @@ void if_register_send (info, interface)
 	   headers... */
 	if (setsockopt (sock, IPPROTO_IP, IP_HDRINCL, &flag, sizeof flag) < 0)
 		error ("Can't set IP_HDRINCL flag: %m");
-
-	/* Connect to the broadcast address... */
-	if (connect (sock, (struct sockaddr *)&name, sizeof name) < 0)
-		error ("Can't connect %s to %s: %m",
-		       piaddr (info -> address), inet_ntoa (name.sin_addr));
 
 	info -> wfdesc = sock;
 	note ("Sending on   Raw/%s", piaddr (info -> address));
