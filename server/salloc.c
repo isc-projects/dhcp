@@ -3,7 +3,7 @@
    Memory allocation for the DHCP server... */
 
 /*
- * Copyright (c) 1996-2000 Internet Software Consortium.
+ * Copyright (c) 1996-2001 Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -43,20 +43,111 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: salloc.c,v 1.2.2.2 2001/06/20 04:22:15 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: salloc.c,v 1.2.2.3 2001/06/22 02:31:39 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
 #include <omapip/omapip_p.h>
+
+#if defined (COMPACT_LEASES)
+struct lease *free_leases;
+
+# if defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
+struct lease *lease_hunks;
+
+void relinquish_lease_hunks ()
+{
+	struct lease *c, *n, **p, *f;
+	int i;
+
+	/* Account for all the leases on the free list. */
+	for (n = lease_hunks; n; n = n -> next) {
+	    for (i = 1; i < n -> starts + 1; i++) {
+		p = &free_leases;
+		for (c = free_leases; c; c = c -> next) {
+		    if (c == &n [i]) {
+			*p = c -> next;
+			n -> ends++;
+			break;
+		    }
+		    p = &c -> next;
+		}
+		if (!c) {
+		    log_info ("lease %s refcnt %d",
+			      piaddr (n [i].ip_addr), n [i].refcnt);
+		    dump_rc_history (&n [i]);
+		}
+	    }
+	}
+		
+	for (c = lease_hunks; c; c = n) {
+		n = c -> next;
+		if (c -> ends != c -> starts) {
+			log_info ("lease hunk %lx leases %ld free %ld",
+				  (unsigned long)c, (unsigned long)c -> starts,
+				  (unsigned long)c -> ends);
+		}
+		dfree (c, MDL);
+	}
+
+	/* Free all the rogue leases. */
+	for (c = free_leases; c; c = n) {
+		n = c -> next;
+		dfree (c, MDL);
+	}
+}
+#endif
 
 struct lease *new_leases (n, file, line)
 	unsigned n;
 	const char *file;
 	int line;
 {
-	struct lease *rval = dmalloc (n * sizeof (struct lease), file, line);
+	struct lease *rval;
+#if defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
+	rval = dmalloc ((n + 1) * sizeof (struct lease), file, line);
+	memset (rval, 0, sizeof (struct lease));
+	rval -> starts = n;
+	rval -> next = lease_hunks;
+	lease_hunks = rval;
+	rval++;
+#else
+	rval = dmalloc (n * sizeof (struct lease), file, line);
+#endif
 	return rval;
 }
+
+/* If we are allocating leases in aggregations, there's really no way
+   to free one, although perhaps we can maintain a free list. */
+
+isc_result_t dhcp_lease_free (omapi_object_t *lo,
+			      const char *file, int line)
+{
+	struct lease *lease;
+	if (lo -> type != dhcp_type_lease)
+		return ISC_R_INVALIDARG;
+	lease = (struct lease *)lo;
+	memset (lease, 0, sizeof (struct lease));
+	lease -> next = free_leases;
+	free_leases = lease;
+	return ISC_R_SUCCESS;
+}
+
+isc_result_t dhcp_lease_get (omapi_object_t **lp,
+			     const char *file, int line)
+{
+	struct lease **lease = (struct lease **)lp;
+	struct lease *lt;
+
+	if (free_leases) {
+		lt = free_leases;
+		free_leases = lt -> next;
+		*lease = lt;
+		return ISC_R_SUCCESS;
+	}
+	return ISC_R_NOMEMORY;
+}
+#endif /* COMPACT_LEASES */
 
 OMAPI_OBJECT_ALLOC (lease, struct lease, dhcp_type_lease)
 OMAPI_OBJECT_ALLOC (class, struct class, dhcp_type_class)
@@ -170,5 +261,7 @@ void free_permit (permit, file, line)
 	const char *file;
 	int line;
 {
+	if (permit -> type == permit_class)
+		class_dereference (&permit -> class, MDL);
 	dfree (permit, file, line);
 }
