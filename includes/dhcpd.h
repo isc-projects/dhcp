@@ -216,6 +216,7 @@ struct group {
 
 	TIME default_lease_time;
 	TIME max_lease_time;
+	TIME min_lease_time;
 	TIME bootp_lease_cutoff;
 	TIME bootp_lease_length;
 
@@ -230,6 +231,8 @@ struct group {
 	int one_lease_per_client;
 	int get_lease_hostnames;
 	int use_host_decl_names;
+	int use_lease_addr_for_default_route;
+	int min_secs;
 
 	struct tree_cache *options [256];
 };
@@ -452,6 +455,36 @@ struct dns_query {
 	int backoff;			/* Current backoff, in seconds. */
 };
 
+struct interact_client; /* forward */
+
+/* Actions that can be taken by an interactive connection to the dhcp server
+   or client. */
+
+struct interact_actions {
+	void (*ls) PROTO ((struct interact_client *));
+	void (*print) PROTO ((struct interact_client *, char *));
+	void (*set) PROTO ((struct interact_client *, char *));
+	void (*rm) PROTO ((struct interact_client *, char *));
+	void (*cd) PROTO ((struct interact_client *, char *));
+	void (*cdup) PROTO ((struct interact_client *));
+	void * (*next) PROTO ((struct interact_client *, void *));
+};
+
+/* Interactive connection state. */
+
+struct interact_client {
+	struct interact_client *next;
+	int fd;
+	struct interact_actions cur_node_actions;
+	void *cur_node;
+	int cur_node_classp;
+	int last_input;
+	struct protocol *proto;
+
+	char ibuf [1024];
+	int ibuflen;
+};
+
 /* Bitmask of dhcp option codes. */
 typedef unsigned char option_mask [16];
 
@@ -653,7 +686,7 @@ void enter_lease PROTO ((struct lease *));
 int supersede_lease PROTO ((struct lease *, struct lease *, int));
 void release_lease PROTO ((struct lease *));
 void abandon_lease PROTO ((struct lease *, char *));
-void dissociate_lease PROTO ((struct lease *, char *));
+void dissociate_lease PROTO ((struct lease *));
 struct lease *find_lease_by_uid PROTO ((unsigned char *, int));
 struct lease *find_lease_by_hw_addr PROTO ((unsigned char *, int));
 struct lease *find_lease_by_ip_addr PROTO ((struct iaddr));
@@ -840,8 +873,9 @@ void add_timeout PROTO ((TIME, void (*) PROTO ((void *)), void *));
 void add_fast_timeout PROTO ((UTIME, void (*) PROTO ((void *)), void *));
 #endif
 void cancel_timeout PROTO ((void (*) PROTO ((void *)), void *));
-void add_protocol PROTO ((char *, int,
-			  void (*) PROTO ((struct protocol *)), void *));
+struct protocol *add_protocol PROTO ((char *, int,
+				      void (*) PROTO ((struct protocol *)),
+				      void *));
 
 void remove_protocol PROTO ((struct protocol *));
 
@@ -1043,3 +1077,12 @@ int inet_aton PROTO ((char *, struct in_addr *));
 void sysconf_startup PROTO ((void (*) (struct sysconf_header *, void *)));
 void sysconf_restart PROTO ((void *));
 void sysconf_message PROTO ((struct protocol *proto));
+
+/* interact.c */
+void interact_startup PROTO ((void));
+void new_interact_connection PROTO ((struct protocol *));
+void interact_client_input PROTO ((struct protocol *));
+int interact_client_write PROTO ((struct interact_client *, char *, int));
+
+/* dhcpdi.c */
+extern struct interact_actions top_level_actions;
