@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.108 1999/09/28 23:58:17 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.109 1999/10/01 03:25:24 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1301,9 +1301,9 @@ void ack_lease (packet, lease, offer, when, msg)
 
 	/* Do the DDNS update.  It needs to be done here so that the lease
 	   structure values for the forward and reverse names are in place for
-	   supercede()->write_lease() to be able to write into the dhcpd.leases
-	   file.  We have to pass the "state" structure here as it is not yet
-	   hanging off the lease. */
+	   supersede() -> write_lease() to be able to write into the
+	   dhcpd.leases file.  We have to pass the "state" structure here as it
+	   is not yet hanging off the lease. */
 	/* why not update for static leases too? */
 	/* Because static leases aren't currently recorded? */
 /* XXX
