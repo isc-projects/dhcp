@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.83 1999/03/16 06:37:52 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.84 1999/03/25 22:07:54 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -238,7 +238,6 @@ void dhcprequest (packet)
 	   exists and is different than the id the client sent, then
 	   we can't send this lease to the client. */
 	if (lease) {
-		log_info ("%s", msgbuf);
 		ack_lease (packet, lease, DHCPACK, 0, msgbuf);
 	} else
 		log_info ("%s: unknown lease %s.", msgbuf, piaddr (cip));
@@ -589,7 +588,8 @@ void ack_lease (packet, lease, offer, when, msg)
 
 	/* Make sure this packet satisfies the configured minimum
 	   number of seconds. */
-	if ((oc = lookup_option (state -> options.server_hash,
+	if (offer == DHCPOFFER &&
+	    (oc = lookup_option (state -> options.server_hash,
 				 SV_MIN_SECS))) {
 		if (evaluate_option_cache (&d1, packet,
 					   &packet -> options, oc)) {
