@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dispatch.c,v 1.55 1999/09/08 01:44:21 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dispatch.c,v 1.56 1999/09/28 22:50:02 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -70,30 +70,6 @@ void dispatch ()
 		/* Wait for a packet or a timeout... XXX */
 		status = omapi_one_dispatch (0, tvp);
 	} while (status == ISC_R_TIMEDOUT || status == ISC_R_SUCCESS);
-}
-
-int locate_network (packet)
-	struct packet *packet;
-{
-	struct iaddr ia;
-
-	/* If this came through a gateway, find the corresponding subnet... */
-	if (packet -> raw -> giaddr.s_addr) {
-		struct subnet *subnet;
-		ia.len = 4;
-		memcpy (ia.iabuf, &packet -> raw -> giaddr, 4);
-		subnet = find_subnet (ia);
-		if (subnet)
-			packet -> shared_network = subnet -> shared_network;
-		else
-			packet -> shared_network = (struct shared_network *)0;
-	} else {
-		packet -> shared_network =
-			packet -> interface -> shared_network;
-	}
-	if (packet -> shared_network)
-		return 1;
-	return 0;
 }
 
 void add_timeout (when, where, what)
