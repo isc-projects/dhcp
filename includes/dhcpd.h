@@ -73,9 +73,7 @@ typedef struct {
 	u_int8_t *data;
 } ddns_fqdn_t;
 
-#if defined (FAILOVER_PROTOCOL)
-# include "failover.h"
-#endif
+#include "failover.h"
 
 /* A parsing context. */
 
@@ -250,11 +248,9 @@ struct lease {
 
 	struct lease_state *state;
 
-#if defined (FAILOVER_PROTOCOL)
 	TIME tstp;	/* Time sent to partner. */
 	TIME tsfp;	/* Time sent from partner. */
 	TIME cltt;	/* Client last transaction time. */
-#endif
 };
 
 struct lease_state {
