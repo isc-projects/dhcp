@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: memory.c,v 1.59 1999/09/16 05:12:33 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: memory.c,v 1.60 1999/09/22 17:24:11 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -756,6 +756,31 @@ int supersede_lease (comp, lease, commit)
 	comp -> hardware_addr = lease -> hardware_addr;
 	comp -> flags = ((lease -> flags & ~PERSISTENT_FLAGS) |
 			 (comp -> flags & ~EPHEMERAL_FLAGS));
+
+	if (lease -> on_expiry) {
+		if (comp -> on_expiry)
+			executable_statement_dereference (&comp -> on_expiry,
+							  "supersede_lease");
+		executable_statement_reference (&comp -> on_expiry,
+						lease -> on_expiry,
+						"supersede_lease");
+	}
+	if (lease -> on_commit) {
+		if (comp -> on_commit)
+			executable_statement_dereference (&comp -> on_commit,
+							  "supersede_lease");
+		executable_statement_reference (&comp -> on_commit,
+						lease -> on_commit,
+						"supersede_lease");
+	}
+	if (lease -> on_release) {
+		if (comp -> on_release)
+			executable_statement_dereference (&comp -> on_release,
+							  "supersede_lease");
+		executable_statement_reference (&comp -> on_release,
+						lease -> on_release,
+						"supersede_lease");
+	}
 	
 	/* Record the lease in the uid hash if necessary. */
 	if (enter_uid && lease -> uid) {
