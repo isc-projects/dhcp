@@ -1,7 +1,7 @@
 	    Internet Software Consortium DHCP Distribution
 			     Version 3.0.1
-			  Release Candidate 7
-			   February 20, 2002
+			  Release Candidate 8
+			   February 21, 2002
 
 			    Release Notes
 
@@ -45,6 +45,12 @@ Measurement Systems, Igor Sharfmesser at Kazakh Telecom, and Brian
 Murrell at BC Tel Advanced Communications.  I'd like to express my
 thanks to all of these good people here, both for working on the code
 and for prodding me into improving it.
+
+			Changes since 3.0.1rc7
+
+- Fix two compiler warnings that are generated when compiling on Solaris
+  with gcc.   These stop the build, even though they weren't actually
+  errors, because we prefer that our builds generate no warnings.
 
 			Changes since 3.0.1rc6
 
