@@ -257,7 +257,7 @@ isc_result_t omapi_connection_copyout (unsigned char *buf,
 isc_result_t omapi_connection_writer (omapi_object_t *h)
 {
 	unsigned bytes_this_write;
-	unsigned bytes_written;
+	int bytes_written;
 	unsigned first_byte;
 	omapi_buffer_t *buffer;
 	unsigned char *bufp;
