@@ -246,6 +246,49 @@ expression.   If both expressions evaluate to null, then the result is
 null.
 .RE
 .PP
+.PP
+.B reverse (\fInumeric-expr1\fB, \fIdata-expr2\fB)\fR
+.RS 0.25i
+The two expressions are evaluated, and then the result of evaluating
+the data expression is reversed in place, using hunks of the size
+specified in the numeric expression.   For example, if the numeric
+expression evaluates to four, and the data expression evaluates to 
+twelve bytes of data, then the reverse expression will evaluate to
+twelve bytes of data, consisting of the last four bytes of the the
+input data, followed by the middle four bytes, followed by the first
+four bytes.
+.RE
+.PP
+.B leased-address
+.RS 0.25i
+In any context where the client whose request is being processed has
+been assigned an IP address, this data expression returns that IP
+address.
+.RE
+.PP
+.B binary-to-ascii (\fInumeric-expr1\fB, \fInumeric-expr2\fB,
+.B \fIdata-expr1\fB,\fR \fIdata-expr2\fB)\fR
+.RS 0.25i
+Converts the result of evaluating data-expr2 into a text string
+containing one number for each element of the result of evaluating
+data-expr2.   Each number is seperated from the other by the result of
+evaluating data-expr1.   The result of evaluating numeric-expr1
+specifies the base (2 through 16) into which the numbers should be
+converted.   The result of evaluating numeric-expr2 specifies the
+width in bits of each number, which may be either 8, 16 or 32.
+.PP
+As an example of the preceding three types of expressions, to produce
+the name of a PTR record for the IP address being assigned to a
+client, one could write the following expression:
+.RE
+.PP
+.nf
+        concat (binary-to-ascii (10, 8, ".",
+                                 reverse (1, leased-address)),
+                ".in-addr.arpa.");
+
+.fi
+.PP
 .B encode-int (\fInumeric-expr\fB, \fIwidth\fB)\fR
 .RS 0.25i
 Numeric-expr is evaluated and encoded as a data string of the
