@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.192.2.14 2001/08/23 16:17:15 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.192.2.15 2001/10/04 22:21:00 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -332,12 +332,12 @@ void dhcpdiscover (packet, ms_nulltp)
 				     packet -> shared_network -> pools, 
 				     &peer_has_leases)) {
 			if (peer_has_leases)
-				log_info ("%s: peer holds all free leases",
-					  msgbuf);
+				log_error ("%s: peer holds all free leases",
+					   msgbuf);
 			else
-				log_info ("%s: network %s: no free leases",
-					  msgbuf,
-					  packet -> shared_network -> name);
+				log_error ("%s: network %s: no free leases",
+					   msgbuf,
+					   packet -> shared_network -> name);
 			return;
 		}
 #if defined (FAILOVER_PROTOCOL)
@@ -2254,7 +2254,8 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 				noc -> option = oc -> option;
 		}
 
-		save_option (&dhcp_universe, state -> options, oc);
+		save_option (&dhcp_universe, state -> options, noc);
+		option_cache_dereference (&noc, MDL);
 	}
 
 	/* Now, if appropriate, put in DHCP-specific options that
