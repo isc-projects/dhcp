@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcpxlt.c,v 1.6 1996/08/31 00:48:48 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcpxlt.c,v 1.7 1996/09/02 21:17:26 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -268,7 +268,6 @@ void convert_host_name (cfile, bc)
 {
 	char *val;
 	int token;
-	int len = 0;
 	
 	/* Read a dotted hostname... */
 	do {
@@ -526,7 +525,6 @@ void convert_subnet_decl (cfile, bc)
 {
 	char *val;
 	int token;
-	struct tree_cache *server_next;
 
 	token = next_token (&val, cfile);
 	switch (token) {
@@ -787,7 +785,6 @@ void convert_option_decl (cfile, bc)
 {
 	char *val;
 	int token;
-	unsigned char buf [4];
 	char *fmt;
 	struct option *option;
 
@@ -894,7 +891,6 @@ void convert_option_decl (cfile, bc)
 			      case 'B':	/* Unsigned 8-bit integer. */
 				token = next_token (&val, cfile);
 				if (token != NUMBER) {
-				      need_number:
 					parse_warn ("expecting number.");
 					if (token != SEMI)
 						skip_to_semi (cfile);
