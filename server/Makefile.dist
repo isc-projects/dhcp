@@ -42,7 +42,7 @@ CFLAGS = $(DEBUG) $(PREDEFINES) $(INCLUDES) $(COPTS)
 
 all:	$(PROG) $(CATMANPAGES)
 
-install: $(PROGS $(CATMANPAGES)
+install: $(PROG) $(CATMANPAGES)
 	$(INSTALL) dhcpd $(BINDIR); $(CHMOD) 755 $(BINDIR)/dhcpd
 	if [ ! -d $(ADMMANDIR) ]; then \
 	  mkdir $(ADMMANDIR); \
