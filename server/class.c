@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: class.c,v 1.4 1998/11/06 00:16:22 mellon Exp $ Copyright (c) 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: class.c,v 1.5 1998/11/06 03:25:45 mellon Exp $ Copyright (c) 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -211,6 +211,9 @@ int check_collection (packet, collection)
 	int status;
 
 	for (class = collection -> classes; class; class = class -> nic) {
+#if defined (DEBUG_CLASS_MATCHING)
+		note ("checking against class %s...", class -> name);
+#endif
 		if (class -> hash) {
 			memset (&data, 0, sizeof data);
 			status = evaluate_data_expression (&data, packet,
@@ -220,20 +223,32 @@ int check_collection (packet, collection)
 			    (nc = (struct class *)hash_lookup (class -> hash,
 							       data.data,
 							       data.len))) {
+#if defined (DEBUG_CLASS_MATCHING)
+				note ("matches subclass %s.",
+				      data.len, data.data);
+#endif
 				classify (packet, class);
 				matched = 1;
 				continue;
 			}
 		}
 		memset (&data, 0, sizeof data);
-		if ((matched =
-		     evaluate_boolean_expression_result (packet,
-							 &packet -> options,
-							 class -> expr) &&
+		status = (evaluate_boolean_expression_result
+			  (packet, &packet -> options, class -> expr));
+		if (status)
+			matched = 1;
+#if defined (DEBUG_CLASS_MATCHING)
+				note ("matches class.");
+#endif
+		if (status &&
 		    class -> spawn &&
 		    evaluate_data_expression (&data, packet,
 					      &packet -> options,
-					      class -> spawn))) {
+					      class -> spawn)) {
+#if defined (DEBUG_CLASS_MATCHING)
+				note ("spawning subclass %s.",
+				      print_hex_1 (data.len, data.data));
+#endif
 			nc = (struct class *)
 				dmalloc (sizeof (struct class), "class spawn");
 			memset (nc, 0, sizeof *nc);
@@ -244,9 +259,8 @@ int check_collection (packet, collection)
 				  data.data, data.len,
 				  (unsigned char *)nc);
 			classify (packet, nc);
-		} else
+		} else if (status)
 			classify (packet, class);
-		matched = 1;
 	}
 	return matched;
 }
