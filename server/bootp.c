@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bootp.c,v 1.31 1998/06/25 03:41:03 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bootp.c,v 1.32 1998/11/05 18:52:13 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -64,6 +64,7 @@ void bootp (packet)
 	struct iaddr ip_address;
 	int i;
 	struct data_string d1;
+	struct option_cache *oc;
 
 	if (packet -> raw -> op != BOOTREQUEST)
 		return;
@@ -166,32 +167,26 @@ void bootp (packet)
 				     lease -> subnet -> group);
 	
 	/* Drop the request if it's not allowed for this client. */
-	if (options.server_options [SV_ALLOW_BOOTP]) {
-		d1 = evaluate_data_expression
-			(packet, (options.server_options
-				  [SV_ALLOW_BOOTP] -> expression));
-		if (d1.len && !d1.data [0]) {
-			note ("Ignoring BOOTP client %s",
-			      print_hw_addr (packet -> raw -> htype,
-					     packet -> raw -> hlen,
-					     packet -> raw -> chaddr));
-			return;
-		}
+	if (evaluate_boolean_option_cache (packet, &options,
+					   lookup_option (options.dhcp_hash,
+							  SV_ALLOW_BOOTP))) {
+		note ("Ignoring BOOTP client %s",
+		      print_hw_addr (packet -> raw -> htype,
+				     packet -> raw -> hlen,
+				     packet -> raw -> chaddr));
+		return;
 	} 
 
-	if (options.server_options [SV_ALLOW_BOOTING]) {
-		d1 = evaluate_data_expression
-			(packet, (options.server_options
-				  [SV_ALLOW_BOOTING] -> expression));
-		if (d1.len && !d1.data [0]) {
-			note ("Declining to boot client %s",
-			      lease -> host -> name
-			      ? lease -> host -> name
-			      : print_hw_addr (packet -> raw -> htype,
-					       packet -> raw -> hlen,
-					       packet -> raw -> chaddr));
-			return;
-		}
+	if (evaluate_boolean_option_cache (packet, &options,
+					   lookup_option (options.dhcp_hash,
+							  SV_ALLOW_BOOTP))) {
+		note ("Declining to boot client %s",
+		      lease -> host -> name
+		      ? lease -> host -> name
+		      : print_hw_addr (packet -> raw -> htype,
+				       packet -> raw -> hlen,
+				       packet -> raw -> chaddr));
+		return;
 	}
 
 	/* Set up the outgoing packet... */
@@ -231,39 +226,39 @@ void bootp (packet)
 
 	/* Figure out the address of the next server. */
 	raw.siaddr = lease -> shared_network -> interface -> primary_address;
-	i = SV_NEXT_SERVER;
-	if (options.server_options [i]) {
-		d1 = evaluate_data_expression
-			(packet, options.server_options [i] -> expression);
+	oc = lookup_option (options.dhcp_hash, SV_NEXT_SERVER);
+	if (oc &&
+	    evaluate_option_cache (&d1, packet, &options, oc)) {
 		/* If there was more than one answer, take the first. */
 		if (d1.len >= 4 && d1.data)
 			memcpy (&raw.siaddr, d1.data, 4);
+		data_string_forget (&d1, "bootrequest");
 	}
 
 	raw.giaddr = packet -> raw -> giaddr;
 
 	/* Figure out the filename. */
-	i = SV_FILENAME;
-	if (options.server_options [i]) {
-		d1 = evaluate_data_expression
-			(packet, options.server_options [i] -> expression);
+	oc = lookup_option (options.dhcp_hash, SV_FILENAME);
+	if (oc &&
+	    evaluate_option_cache (&d1, packet, &options, oc)) {
 		memcpy (raw.file, d1.data,
 			d1.len > sizeof raw.file ? sizeof raw.file : d1.len);
 		if (sizeof raw.file > d1.len)
 			memset (&raw.file [d1.len],
 				0, (sizeof raw.file) - d1.len);
+		data_string_forget (&d1, "bootrequest");
 	}
 
 	/* Choose a server name as above. */
-	i = SV_SERVER_NAME;
-	if (options.server_options [i]) {
-		d1 = evaluate_data_expression
-			(packet, options.server_options [i] -> expression);
+	oc = lookup_option (options.dhcp_hash, SV_SERVER_NAME);
+	if (oc &&
+	    evaluate_option_cache (&d1, packet, &options, oc)) {
 		memcpy (raw.sname, d1.data,
 			d1.len > sizeof raw.sname ? sizeof raw.sname : d1.len);
 		if (sizeof raw.sname > d1.len)
 			memset (&raw.sname [d1.len],
 				0, (sizeof raw.sname) - d1.len);
+		data_string_forget (&d1, "bootrequest");
 	}
 
 	/* Set up the hardware destination address... */
