@@ -41,7 +41,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.124 2001/03/15 23:12:03 mellon Exp $ Copyright (c) 1995-2001 Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.125 2001/03/22 06:59:09 mellon Exp $ Copyright (c) 1995-2001 Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -54,6 +54,8 @@ TIME max_lease_time = 86400; /* 24 hours... */
 const char *path_dhclient_conf = _PATH_DHCLIENT_CONF;
 const char *path_dhclient_db = _PATH_DHCLIENT_DB;
 const char *path_dhclient_pid = _PATH_DHCLIENT_PID;
+static char path_dhclient_script_array [] = _PATH_DHCLIENT_SCRIPT;
+char *path_dhclient_script = path_dhclient_script_array;
 
 int dhcp_max_agent_option_packet_length = 0;
 
@@ -80,6 +82,8 @@ int no_daemon;
 int save_scripts;
 struct string_list *client_env;
 int client_env_count;
+int onetry;
+int quiet;
 
 static void usage PROTO ((void));
 
@@ -94,7 +98,6 @@ int main (argc, argv, envp)
 	struct interface_info *ip;
 	struct client_state *client;
 	unsigned seed;
-	int quiet = 0;
 	char *server = (char *)0;
 	char *relay = (char *)0;
 	isc_result_t status;
@@ -106,6 +109,7 @@ int main (argc, argv, envp)
 	int no_dhclient_conf = 0;
 	int no_dhclient_db = 0;
 	int no_dhclient_pid = 0;
+	int no_dhclient_script = 0;
 	char *s;
 
 #ifdef SYSLOG_4_2
@@ -161,6 +165,13 @@ int main (argc, argv, envp)
                                 usage ();
                         path_dhclient_db = argv [i];
 			no_dhclient_db = 1;
+		} else if (!strcmp (argv [i], "-sf")) {
+			if (++i == argc)
+				usage ();
+                        path_dhclient_script = argv [i];
+			no_dhclient_script = 1;
+		} else if (!strcmp (argv [i], "-1")) {
+			onetry = 1;
 		} else if (!strcmp (argv [i], "-q")) {
 			quiet = 1;
 			quiet_interface_discovery = 1;
@@ -223,6 +234,9 @@ int main (argc, argv, envp)
 	}
 	if (!no_dhclient_pid && (s = getenv ("PATH_DHCLIENT_PID"))) {
 		path_dhclient_pid = s;
+	}
+	if (!no_dhclient_script && (s = getenv ("PATH_DHCLIENT_SCRIPT"))) {
+		path_dhclient_script = s;
 	}
 
 	/* first kill of any currently running client */
@@ -445,10 +459,11 @@ static void usage ()
 	log_info (arr);
 	log_info (url);
 
-	log_error ("Usage: dhclient [-d] [-D] [-q] [-p <port>] %s",
+	log_error ("Usage: dhclient [-1dDqr] [-p <port>] %s",
 		   "[-s server]");
-	log_fatal ("                [-lf lease-file] [-pf pid-file]%s",
-		   "[-cf config-file] [interface] [-e VAR=val]");
+	log_error ("                [-cf config-file] [-lf lease-file]%s",
+		   "[-pf pid-file] [-e VAR=val]");
+	log_fatal ("                [-sf script-file] [interface]");
 }
 
 isc_result_t find_class (struct class **c,
@@ -1453,6 +1468,13 @@ void state_panic (cpp)
 	/* No leases were available, or what was available didn't work, so
 	   tell the shell script that we failed to allocate an address,
 	   and try again later. */
+	if (onetry) {
+		if (!quiet)
+			log_info ("Unable to obtain a lease on first try.%s",
+				  "  Exiting.");
+		exit (2);
+	}
+
 	log_info ("No working leases in persistent database - sleeping.");
 	script_init (client, "FAIL", (struct string_list *)0);
 	if (client -> alias)
