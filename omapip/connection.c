@@ -361,7 +361,7 @@ isc_result_t omapi_connection_connect (omapi_object_t *h)
 				return ISC_R_UNEXPECTED;
 			}
 			c -> state = omapi_connection_connecting;
-			return ISC_R_SUCCESS;
+			return ISC_R_INCOMPLETE;
 		}
 		c -> state = omapi_connection_connected;
 	}
