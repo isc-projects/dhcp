@@ -14,10 +14,10 @@ DDEESSCCRRIIPPTTIIOONN
        The dhcpd.conf file is a free-form ASCII text  file.    It
        is  parsed  by  the  recursive-descent  parser  built into
        dhcpd.   The file may contain extra tabs and newlines  for
-       formatting  purposes.   Keywords  in  the  file  are case-
-       insensitive.   Comments may be placed anywhere within  the
-       file  (except  within quotes).   Comments begin with the #
-       character and end at the end of the line.
+       formatting purposes.  Keywords in the file are case-insen-
+       sitive.   Comments may be placed anywhere within the  file
+       (except  within quotes).   Comments begin with the # char-
+       acter and end at the end of the line.
 
        The file essentially consists of  a  list  of  statements.
        Statements fall into two broad categories - parameters and
@@ -268,11 +268,11 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
 dhcpd.conf(5)                                       dhcpd.conf(5)
 
 
-       Imagine  that  you  have  a  site  with  a  lot  of NCD X-
-       Terminals.   These terminals come in a variety of  models,
-       and  you  want  to specify the boot files for each models.
-       One way to do this would be to have host declarations  for
-       each server and group them by model:
+       Imagine  that  you  have a site with a lot of NCD X-Termi-
+       nals.   These terminals come in a variety of  models,  and
+       you  want to specify the boot files for each models.   One
+       way to do this would be to have host declarations for each
+       server and group them by model:
 
        group {
          filename "Xncd19r";
@@ -363,8 +363,8 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
 
        The  _s_u_b_n_e_t statement is used to provide dhcpd with enough
        information to tell whether or not an  IP  address  is  on
-       that  subnet.   It  may  also  be  used to provide subnet-
-       specific parameters and to specify what addresses  may  be
+       that  subnet.   It may also be used to provide subnet-spe-
+       cific parameters and to  specify  what  addresses  may  be
        dynamically  allocated  to clients booting on that subnet.
        Such addresses are specified using the _r_a_n_g_e  declaration.
 
@@ -473,6 +473,42 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
        group hosts,  shared  networks,  subnets,  or  even  other
        groups.
 
+RREEFFEERREENNCCEE:: AALLLLOOWW aanndd DDEENNYY
+       The  _a_l_l_o_w  and _d_e_n_y statements can be used to control the
+       behaviour of dhcpd to various sorts of requests.
+
+
+       TThhee _u_n_k_n_o_w_n_-_c_l_i_e_n_t_s kkeeyywwoorrdd
+
+        aallllooww uunnkknnoowwnn--cclliieennttss;;
+        ddeennyy uunnkknnoowwnn--cclliieennttss;;
+
+       The uunnkknnoowwnn--cclliieennttss flag is used to tell dhcpd whether  or
+       not  to  dynamically  assign addresses to unknown clients.
+       Dynamic address assignment to unknown clients  is  aalllloowwed
+       by default.
+
+       TThhee _b_o_o_t_p kkeeyywwoorrdd
+
+        aallllooww bboooottpp;;
+        ddeennyy bboooottpp;;
+
+       The  uunnkknnoowwnn--cclliieennttss flag is used to tell dhcpd whether or
+       not to  respond  to  bootp  queries.   Bootp  queries  are
+       aalllloowwed by default.
+
+       TThhee _b_o_o_t_i_n_g kkeeyywwoorrdd
+
+        aallllooww bboooottiinngg;;
+        ddeennyy bboooottiinngg;;
+
+       The  bboooottiinngg  flag is used to tell dhcpd whether or not to
+       respond to queries from a particular client.  This keyword
+       only  has  meaning  when it appears in a host declaration.
+       By default, booting is aalllloowwed, but if it is disabled  for
+       a  particular client, then that client will not be able to
+       get and address from the DHCP server.
+
 RREEFFEERREENNCCEE:: PPAARRAAMMEETTEERRSS
        TThhee _d_e_f_a_u_l_t_-_l_e_a_s_e_-_t_i_m_e ssttaatteemmeenntt
 
@@ -484,42 +520,6 @@ RREEFFEERREENNCCEE:: PPAARRAAMMEETTEERRSS
 
        TThhee _m_a_x_-_l_e_a_s_e_-_t_i_m_e ssttaatteemmeenntt
 
-        mmaaxx--lleeaassee--ttiimmee _t_i_m_e;;
-
-       _T_i_m_e  should be the maximum length in seconds that will be
-       assigned to a lease if the  client  requesting  the  lease
-       asks for a specific expiration time.
-
-       TThhee _h_a_r_d_w_a_r_e ssttaatteemmeenntt
-
-        hhaarrddwwaarree _h_a_r_d_w_a_r_e_-_t_y_p_e _h_a_r_d_w_a_r_e_-_a_d_d_r_e_s_s;;
-
-       In  order for a BOOTP client to be recognized, its network
-       hardware address must be declared using a _h_a_r_d_w_a_r_e  clause
-       in  the _h_o_s_t statement.  _h_a_r_d_w_a_r_e_-_t_y_p_e must be the name of
-       a physical hardware interface type.   Currently, only  the
-       eetthheerrnneett  type  is recognized, although support for ttookkeenn--
-       rriinngg and ffddddii hardware types would also be desirable.  The
-       _h_a_r_d_w_a_r_e_-_a_d_d_r_e_s_s  should  be  a  set of hexadecimal octets
-       (numbers from 0 through ff)  seperated  by  colons.    The
-       _h_a_r_d_w_a_r_e_f_R _s_t_a_t_e_m_e_n_t _m_a_y _a_l_s_o _b_e _u_s_e_d _f_o_r _D_H_C_P _c_l_i_e_n_t_s_.
-
-       TThhee _f_i_l_e_n_a_m_e ssttaatteemmeenntt
-
-        ffiilleennaammee ""_f_i_l_e_n_a_m_e"";;
-
-       The  _f_i_l_e_n_a_m_e statement can be used to specify the name of
-       the initial boot file which is to be loaded by  a  client.
-       The _f_i_l_e_n_a_m_e should be a filename recognizable to whatever
-       file transfer protocol the client can be expected  to  use
-       to load the file.
-
-       TThhee _s_e_r_v_e_r_-_n_a_m_e ssttaatteemmeenntt
-
-        sseerrvveerr--nnaammee ""_n_a_m_e"";;
-
-       The _s_e_r_v_e_r_-_n_a_m_e statement can be used to inform the client
-       of the name of the server from which it is booting.   _N_a_m_e
 
 
 
@@ -532,60 +532,60 @@ RREEFFEERREENNCCEE:: PPAARRAAMMEETTEERRSS
 dhcpd.conf(5)                                       dhcpd.conf(5)
 
 
+        mmaaxx--lleeaassee--ttiimmee _t_i_m_e;;
+
+       _T_i_m_e should be the maximum length in seconds that will  be
+       assigned  to  a  lease  if the client requesting the lease
+       asks for a specific expiration time.
+
+       TThhee _h_a_r_d_w_a_r_e ssttaatteemmeenntt
+
+        hhaarrddwwaarree _h_a_r_d_w_a_r_e_-_t_y_p_e _h_a_r_d_w_a_r_e_-_a_d_d_r_e_s_s;;
+
+       In order for a BOOTP client to be recognized, its  network
+       hardware  address must be declared using a _h_a_r_d_w_a_r_e clause
+       in the _h_o_s_t statement.  _h_a_r_d_w_a_r_e_-_t_y_p_e must be the name  of
+       a  physical hardware interface type.   Currently, only the
+       eetthheerrnneett type is recognized, although support  for  ttookkeenn--
+       rriinngg and ffddddii hardware types would also be desirable.  The
+       _h_a_r_d_w_a_r_e_-_a_d_d_r_e_s_s should be a  set  of  hexadecimal  octets
+       (numbers  from  0  through  ff) seperated by colons.   The
+       _h_a_r_d_w_a_r_e_f_R _s_t_a_t_e_m_e_n_t _m_a_y _a_l_s_o _b_e _u_s_e_d _f_o_r _D_H_C_P _c_l_i_e_n_t_s_.
+
+       TThhee _f_i_l_e_n_a_m_e ssttaatteemmeenntt
+
+        ffiilleennaammee ""_f_i_l_e_n_a_m_e"";;
+
+       The _f_i_l_e_n_a_m_e statement can be used to specify the name  of
+       the  initial  boot file which is to be loaded by a client.
+       The _f_i_l_e_n_a_m_e should be a filename recognizable to whatever
+       file  transfer  protocol the client can be expected to use
+       to load the file.
+
+       TThhee _s_e_r_v_e_r_-_n_a_m_e ssttaatteemmeenntt
+
+        sseerrvveerr--nnaammee ""_n_a_m_e"";;
+
+       The _s_e_r_v_e_r_-_n_a_m_e statement can be used to inform the client
+       of the name of the server from which it is booting.   _N_a_m_e
        should be the name that will be provided to the client.
 
        TThhee _n_e_x_t_-_s_e_r_v_e_r ssttaatteemmeenntt
 
         nneexxtt--sseerrvveerr _s_e_r_v_e_r_-_n_a_m_e;;
 
-       The  _n_e_x_t_-_s_e_r_v_e_r  statement  is  used  to specify the host
-       address of the server from which  the  initial  boot  file
-       (specified  in  the  _f_i_l_e_n_a_m_e  statement) is to be loaded.
-       _S_e_r_v_e_r_-_n_a_m_e should be a numeric IP  address  or  a  domain
-       name.    If  no  _n_e_x_t_-_s_e_r_v_e_r  parameter applies to a given
-       client, the address  specified  in  the  _s_e_r_v_e_r_-_i_d_e_n_t_i_f_i_e_r
+       The _n_e_x_t_-_s_e_r_v_e_r statement is  used  to  specify  the  host
+       address  of  the  server  from which the initial boot file
+       (specified in the _f_i_l_e_n_a_m_e statement)  is  to  be  loaded.
+       _S_e_r_v_e_r_-_n_a_m_e  should  be  a  numeric IP address or a domain
+       name.   If no _n_e_x_t_-_s_e_r_v_e_r parameter  applies  to  a  given
+       client,  the  address  specified  in the _s_e_r_v_e_r_-_i_d_e_n_t_i_f_i_e_r
        statement is used.
 
        TThhee _f_i_x_e_d_-_a_d_d_r_e_s_s ssttaatteemmeenntt
 
         ffiixxeedd--aaddddrreessss _a_d_d_r_e_s_s [,, _a_d_d_r_e_s_s ... ];;
 
-       The  _f_i_x_e_d_-_a_d_d_r_e_s_s statement is used to assign one or more
-       fixed IP addresses to a client.  It should only appear  in
-       a _h_o_s_t declaration.  If more than one address is supplied,
-       then when the  client  boots,  it  will  be  assigned  the
-       address  which  corresponds  to the network on which it is
-       booting.  If none of the addresses  in  the  _f_i_x_e_d_-_a_d_d_r_e_s_s
-       statement  are on the network on which the client is boot-
-       ing, that client will not match the _h_o_s_t declaration  con-
-       taining that _f_i_x_e_d_-_a_d_d_r_e_s_s statement.  Each _a_d_d_r_e_s_s should
-       be either an IP address or a domain name which resolves to
-       one or more IP addresses.
-
-       TThhee _d_y_n_a_m_i_c_-_b_o_o_t_p_-_l_e_a_s_e_-_c_u_t_o_f_f ssttaatteemmeenntt
-
-        ddyynnaammiicc--bboooottpp--lleeaassee--ccuuttooffff _d_a_t_e;;
-
-       The  _d_y_n_a_m_i_c_-_b_o_o_t_p_-_l_e_a_s_e_-_c_u_t_o_f_f  statement sets the ending
-       time for all leases assigned dynamically to BOOTP clients.
-       Because  BOOTP  clients  do  not  have any way of renewing
-       leases, and don't know that their leases could expire,  by
-       default  dhcpd  assignes  infinite  leases  to  all  BOOTP
-       clients.  However, it may make sense in some situations to
-       set  a cutoff date for all BOOTP leases - for example, the
-       end of a school term, or the time at night when a facility
-       is closed and all machines are required to be powered off.
-
-       _D_a_t_e should be the date on which all assigned BOOTP leases
-       will end.  The date is specified in the form:
-
-                         W YYYY/MM/DD HH:MM:SS
-
-       W  is  the day of the week expressed as a number from zero
-       (Sunday) to six (Saturday).  YYYY is the  year,  including
-       the century.  MM is the month expressed as a number from 1
-       to 12.  DD is the day of the month, counting from  1.   HH
-       is  the hour, from zero to 23.  MM is the minute and SS is
 
 
 
@@ -598,35 +598,71 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
 dhcpd.conf(5)                                       dhcpd.conf(5)
 
 
-       the second.  The time is always  in  Greenwich  Mean  Time
+       The _f_i_x_e_d_-_a_d_d_r_e_s_s statement is used to assign one or  more
+       fixed  IP addresses to a client.  It should only appear in
+       a _h_o_s_t declaration.  If more than one address is supplied,
+       then  when  the  client  boots,  it  will  be assigned the
+       address which corresponds to the network on  which  it  is
+       booting.   If  none  of the addresses in the _f_i_x_e_d_-_a_d_d_r_e_s_s
+       statement are on the network on which the client is  boot-
+       ing,  that client will not match the _h_o_s_t declaration con-
+       taining that _f_i_x_e_d_-_a_d_d_r_e_s_s statement.  Each _a_d_d_r_e_s_s should
+       be either an IP address or a domain name which resolves to
+       one or more IP addresses.
+
+       TThhee _d_y_n_a_m_i_c_-_b_o_o_t_p_-_l_e_a_s_e_-_c_u_t_o_f_f ssttaatteemmeenntt
+
+        ddyynnaammiicc--bboooottpp--lleeaassee--ccuuttooffff _d_a_t_e;;
+
+       The _d_y_n_a_m_i_c_-_b_o_o_t_p_-_l_e_a_s_e_-_c_u_t_o_f_f statement sets  the  ending
+       time for all leases assigned dynamically to BOOTP clients.
+       Because BOOTP clients do not  have  any  way  of  renewing
+       leases,  and don't know that their leases could expire, by
+       default  dhcpd  assignes  infinite  leases  to  all  BOOTP
+       clients.  However, it may make sense in some situations to
+       set a cutoff date for all BOOTP leases - for example,  the
+       end of a school term, or the time at night when a facility
+       is closed and all machines are required to be powered off.
+
+       _D_a_t_e should be the date on which all assigned BOOTP leases
+       will end.  The date is specified in the form:
+
+                         W YYYY/MM/DD HH:MM:SS
+
+       W is the day of the week expressed as a number  from  zero
+       (Sunday)  to  six (Saturday).  YYYY is the year, including
+       the century.  MM is the month expressed as a number from 1
+       to  12.   DD is the day of the month, counting from 1.  HH
+       is the hour, from zero to 23.  MM is the minute and SS  is
+       the  second.   The  time  is always in Greenwich Mean Time
        (GMT), not local time.
 
        TThhee _d_y_n_a_m_i_c_-_b_o_o_t_p_-_l_e_a_s_e_-_l_e_n_g_t_h ssttaatteemmeenntt
 
         ddyynnaammiicc--bboooottpp--lleeaassee--lleennggtthh _l_e_n_g_t_h;;
 
-       The  _d_y_n_a_m_i_c_-_b_o_o_t_p_-_l_e_a_s_e_-_l_e_n_g_t_h  statement  is used to set
-       the  length  of  leases  dynamically  assigned  to   BOOTP
-       clients.    At  some  sites,  it may be possible to assume
-       that a lease is no longer in use if  its  holder  has  not
-       used  BOOTP  or  DHCP  to get its address within a certain
+       The _d_y_n_a_m_i_c_-_b_o_o_t_p_-_l_e_a_s_e_-_l_e_n_g_t_h statement is  used  to  set
+       the   length  of  leases  dynamically  assigned  to  BOOTP
+       clients.   At some sites, it may  be  possible  to  assume
+       that  a  lease  is  no longer in use if its holder has not
+       used BOOTP or DHCP to get its  address  within  a  certain
        time period.   The period is specified in _l_e_n_g_t_h as a num-
-       ber  of  seconds.   If a client reboots using BOOTP during
+       ber of seconds.   If a client reboots using  BOOTP  during
        the timeout period, the lease duration is reset to _l_e_n_g_t_h,
-       so  a BOOTP client that boots frequently enough will never
+       so a BOOTP client that boots frequently enough will  never
        lose its lease.  Needless to say, this parameter should be
        adjusted with extreme caution.
 
-       TThhee _b_o_o_t_-_u_n_k_n_o_w_n_-_c_l_i_e_n_t_s ssttaatteemmeenntt
 
-        bboooott--uunnkknnoowwnn--cclliieennttss _f_l_a_g;;
 
-       The  _b_o_o_t_-_u_n_k_n_o_w_n_-_c_l_i_e_n_t_s  statement is used to tell dhcpd
-       whether or not to dynamically assign addresses to  unknown
-       clients.   If  _f_l_a_g  is true (the default), then addresses
-       are dynamically assigned to unknown  clients  when  avail-
-       able.   If _f_l_a_g is false, then addresses are provided only
-       to clients which match at least one host declaration.
+                                                               10
+
+
+
+
+
+dhcpd.conf(5)                                       dhcpd.conf(5)
+
 
        TThhee _g_e_t_-_l_e_a_s_e_-_h_o_s_t_n_a_m_e_s ssttaatteemmeenntt
 
@@ -651,18 +687,6 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
 
            group {
              use-host-decl-names on;
-
-
-
-
-                                                               10
-
-
-
-
-
-dhcpd.conf(5)                                       dhcpd.conf(5)
-
 
              host joe {
             hardware ethernet 08:00:2b:4c:29:32;
@@ -694,6 +718,18 @@ RREEFFEERREENNCCEE:: OOPPTTIIOONN SSTTAATTEEMMEENNTTSS
 
        The  iipp--aaddddrreessss  data  type  can  be  entered either as an
        explicit IP address (e.g., 239.254.197.10) or as a  domain
+
+
+
+                                                               11
+
+
+
+
+
+dhcpd.conf(5)                                       dhcpd.conf(5)
+
+
        name (e.g., haagen.isc.org).  When entering a domain name,
        be sure that that domain name  resolves  to  a  single  IP
        address.
@@ -717,20 +753,8 @@ RREEFFEERREENNCCEE:: OOPPTTIIOONN SSTTAATTEEMMEENNTTSS
 
        The ddaattaa--ssttrriinngg data type specifies either  an  NVT  ASCII
        string  enclosed  in  double quotes, or a series of octets
-       specified  in  hexadecimal,  seperated  by  colons.    For
-
-
-
-                                                               11
-
-
-
-
-
-dhcpd.conf(5)                                       dhcpd.conf(5)
-
-
-       example:
+       specified in hexadecimal, seperated by colons.   For exam-
+       ple:
 
             option client-identifier "CLIENT-FOO";
        or
@@ -760,6 +784,18 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
        as per RFC 950.  If no subnet mask option is provided any-
        where in scope, as a last resort dhcpd will use the subnet
        mask  from the subnet declaration for the network on which
+
+
+
+                                                               12
+
+
+
+
+
+dhcpd.conf(5)                                       dhcpd.conf(5)
+
+
        an address is being assigned.   However,  _a_n_y  subnet-mask
        option  declaration that is in scope for the address being
        assigned will override the subnet mask  specified  in  the
@@ -784,17 +820,6 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
        in order of preference.
 
         ooppttiioonn nnaammee--sseerrvveerrss _i_p_-_a_d_d_r_e_s_s [,, _i_p_-_a_d_d_r_e_s_s ... ];
-
-
-
-                                                               12
-
-
-
-
-
-dhcpd.conf(5)                                       dhcpd.conf(5)
-
 
        The  name-servers  option specifies a list of IEN 116 name
        servers available to the client.  Servers should be listed
@@ -826,6 +851,17 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
        printer servers available to the client.   Servers  should
        be listed in order of preference.
 
+
+
+                                                               13
+
+
+
+
+
+dhcpd.conf(5)                                       dhcpd.conf(5)
+
+
         ooppttiioonn iimmpprreessss--sseerrvveerrss _i_p_-_a_d_d_r_e_s_s [,, _i_p_-_a_d_d_r_e_s_s ... ];;
 
        The  impress-server  option  specifies  a  list  of Imagen
@@ -850,18 +886,6 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
         ooppttiioonn bboooott--ssiizzee _u_i_n_t_1_6;;
 
        This option specifies the length in  512-octet  blocks  of
-
-
-
-                                                               13
-
-
-
-
-
-dhcpd.conf(5)                                       dhcpd.conf(5)
-
-
        the default boot image for the client.
 
         ooppttiioonn mmeerriitt--dduummpp _s_t_r_i_n_g;;
@@ -892,6 +916,18 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
 
        This option specifies whether the client should  configure
        its  IP  layer  for packet forwarding.  A value of 0 means
+
+
+
+                                                               14
+
+
+
+
+
+dhcpd.conf(5)                                       dhcpd.conf(5)
+
+
        disable IP forwarding, and a value of 1  means  enable  IP
        forwarding.
 
@@ -915,18 +951,6 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
        Any source routed datagram whose next-hop address does not
        match  one  of  the  filters  should  be  discarded by the
        client.
-
-
-
-
-                                                               14
-
-
-
-
-
-dhcpd.conf(5)                                       dhcpd.conf(5)
-
 
        See STD 3 (RFC1122) for further information.
 
@@ -958,6 +982,18 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
         ooppttiioonn iinntteerrffaaccee--mmttuu _u_i_n_t_1_6;;
 
        This  option  specifies  the MTU to use on this interface.
+
+
+
+                                                               15
+
+
+
+
+
+dhcpd.conf(5)                                       dhcpd.conf(5)
+
+
        The minimum legal value for the MTU is 68.
 
         ooppttiioonn aallll--ssuubbnneettss--llooccaall _f_l_a_g;;
@@ -982,18 +1018,6 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
        perform  subnet  mask  discovery using ICMP.  A value of 0
        indicates that the client should not perform mask  discov-
        ery.   A  value  of 1 means that the client should perform
-
-
-
-                                                               15
-
-
-
-
-
-dhcpd.conf(5)                                       dhcpd.conf(5)
-
-
        mask discovery.
 
         ooppttiioonn mmaasskk--ssuupppplliieerr _f_l_a_g;;
@@ -1024,6 +1048,18 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
        routes  to  the  same  destination are specified, they are
        listed in descending order of priority.
 
+
+
+
+                                                               16
+
+
+
+
+
+dhcpd.conf(5)                                       dhcpd.conf(5)
+
+
        The routes consist of a list of  IP  address  pairs.   The
        first  address  is the destination address, and the second
        address is the router for the destination.
@@ -1048,18 +1084,6 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
         ooppttiioonn iieeeeee880022--33--eennccaappssuullaattiioonn _f_l_a_g;;
 
        This option specifies whether or not the client should use
-
-
-
-                                                               16
-
-
-
-
-
-dhcpd.conf(5)                                       dhcpd.conf(5)
-
-
        Ethernet Version 2 (RFC 894)  or  IEEE  802.3  (RFC  1042)
        encapsulation if the interface is an Ethernet.  A value of
        0 indicates that the client should use RFC 894  encapsula-
@@ -1091,6 +1115,17 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
 
         ooppttiioonn nniiss--ddoommaaiinn _s_t_r_i_n_g;;
 
+
+
+                                                               17
+
+
+
+
+
+dhcpd.conf(5)                                       dhcpd.conf(5)
+
+
        This  option  specifies  the name of the client's NIS (Sun
        Network Information Services) domain.  The domain is  for-
        matted as a character string consisting of characters from
@@ -1114,17 +1149,6 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
        The  NetBIOS name server (NBNS) option specifies a list of
        RFC 1001/1002 NBNS name servers listed in order of prefer-
        ence.
-
-
-
-                                                               17
-
-
-
-
-
-dhcpd.conf(5)                                       dhcpd.conf(5)
-
 
         ooppttiioonn nneettbbiiooss--dddd--sseerrvveerr _i_p_-_a_d_d_r_e_s_s [,, _i_p_-_a_d_d_r_e_s_s ... ];;
 
@@ -1157,6 +1181,17 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
 
         ooppttiioonn xx--ddiissppllaayy--mmaannaaggeerr _i_p_-_a_d_d_r_e_s_s [,, _i_p_-_a_d_d_r_e_s_s ... ];;
 
+
+
+                                                               18
+
+
+
+
+
+dhcpd.conf(5)                                       dhcpd.conf(5)
+
+
        This option specifies a list of systems that  are  running
        the  X  Window System Display Manager and are available to
        the client.  Addresses should be listed in order of  pref-
@@ -1183,6 +1218,37 @@ AAUUTTHHOORR
 
 
 
-                                                               18
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                               19
 
 

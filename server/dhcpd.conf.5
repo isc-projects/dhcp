@@ -443,6 +443,50 @@ be used for all clients that may boot using the BOOTP protocol.
 The group statement is used simply to apply one or more parameters to
 a group of declarations.   It can be used to group hosts, shared
 networks, subnets, or even other groups.
+.SH REFERENCE: ALLOW and DENY
+.PP
+The
+.I allow
+and
+.I deny
+statements can be used to control the behaviour of dhcpd to various
+sorts of requests.
+.PP
+.PP
+.B The
+.I unknown-clients
+.B keyword
+.PP
+ \fBallow unknown-clients;\fR
+ \fBdeny unknown-clients;\fR
+.PP
+The \fBunknown-clients\fR flag is used to tell dhcpd whether
+or not to dynamically assign addresses to unknown clients.   Dynamic
+address assignment to unknown clients is \fBallow\fRed by default.
+.PP
+.B The
+.I bootp
+.B keyword
+.PP
+ \fBallow bootp;\fR
+ \fBdeny bootp;\fR
+.PP
+The \fBunknown-clients\fR flag is used to tell dhcpd whether
+or not to respond to bootp queries.  Bootp queries are \fBallow\fRed
+by default.
+.PP
+.B The
+.I booting
+.B keyword
+.PP
+ \fBallow booting;\fR
+ \fBdeny booting;\fR
+.PP
+The \fBbooting\fR flag is used to tell dhcpd whether or not to respond
+to queries from a particular client.  This keyword only has meaning
+when it appears in a host declaration.   By default, booting is
+\fBallow\fRed, but if it is disabled for a particular client, then
+that client will not be able to get and address from the DHCP server.
 .SH REFERENCE: PARAMETERS
 .PP
 .B The
@@ -589,19 +633,6 @@ timeout period, the lease duration is reset to \fIlength\fR, so a
 BOOTP client that boots frequently enough will never lose its lease.
 Needless to say, this parameter should be adjusted with extreme
 caution.
-.PP
-.B The
-.I boot-unknown-clients
-.B statement
-.PP
- \fBboot-unknown-clients\fR \fIflag\fR\fB;\fR
-.PP
-The \fIboot-unknown-clients\fR statement is used to tell dhcpd whether
-or not to dynamically assign addresses to unknown clients.  If
-\fIflag\fR is true (the default), then addresses are dynamically
-assigned to unknown clients when available.  If \fIflag\fR is
-false, then addresses are provided only to clients which match at
-least one host declaration.
 .PP
 .B The
 .I get-lease-hostnames

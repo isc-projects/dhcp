@@ -105,9 +105,9 @@ CCOOMMMMAANNDD LLIINNEE
        unable to identify non-broadcast  interfaces,  but  should
        not  be  required on other systems.  If no interface names
        are specified on the command line dhcpd will identify  all
-       network   interfaces  which  are  up,  elimininating  non-
-       broadcast interfaces if  possible,  and  listen  for  DHCP
-       broadcasts on each interface.
+       network  interfaces which are up, elimininating non-broad-
+       cast interfaces if possible, and listen  for  DHCP  broad-
+       casts on each interface.
 
        If  dhcpd  should listen on a port other than the standard
        (port 67), the --pp flag may used.  It should be followed by
@@ -301,7 +301,7 @@ FFIILLEESS
        //vvaarr//ddbb//ddhhccppdd..lleeaasseess~~..
 
 SSEEEE AALLSSOO
-       dhcpd.conf(5), dhcpd.leases(5)
+       dhclient(8), dhcrelay(8), dhcpd.conf(5), dhcpd.leases(5)
 
 AAUUTTHHOORR
        ddhhccppdd((88)) was written by Ted Lemon <mellon@vix.com> under a
