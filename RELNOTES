@@ -49,6 +49,11 @@ Communications.  I'd like to express my thanks to all of these good
 people here, both for working on the code and for prodding me into
 improving it.
 
+	        Changes since 3.0 Beta 2 Patchlevel 16
+
+- A bug in nit.c for older SunOS machines was fixed by a patch sent in
+  by Takeshi Hagiwara.
+
 	        Changes since 3.0 Beta 2 Patchlevel 15
 
 - Some documentation tweaks.
