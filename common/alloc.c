@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: alloc.c,v 1.30.2.1 1999/10/14 20:40:27 mellon Exp $ Copyright (c) 1995, 1996, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: alloc.c,v 1.30.2.2 1999/12/21 19:24:00 mellon Exp $ Copyright (c) 1995, 1996, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -30,16 +30,51 @@ static char copyright[] =
 struct dhcp_packet *dhcp_free_list;
 struct packet *packet_free_list;
 
+#if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL)
+struct dmalloc_preamble *dmalloc_list;
+unsigned long dmalloc_outstanding;
+unsigned long dmalloc_longterm;
+unsigned long dmalloc_generation;
+unsigned long dmalloc_cutoff_generation;
+#endif
+
 VOIDPTR dmalloc (size, name)
 	int size;
 	char *name;
 {
-	VOIDPTR foo = (VOIDPTR)malloc (size);
-	if (!foo)
+	char *foo = malloc (size + DMDSIZE);
+	int i;
+	VOIDPTR *bar;
+	if (!foo) {
 		log_error ("No memory for %s.", name);
-	else
-		memset (foo, 0, size);
-	return foo;
+		return (VOIDPTR)0;
+	}
+	bar = (VOIDPTR)(foo + DMDOFFSET);
+	memset (bar, 0, size);
+#if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL)
+	{
+		struct dmalloc_preamble *dp = (struct dmalloc_preamble *)foo;
+		dp -> prev = dmalloc_list;
+		if (dmalloc_list)
+			dmalloc_list -> next = dp;
+		dmalloc_list = dp;
+		dp -> next = (struct dmalloc_preamble *)0;
+		dp -> size = size;
+		dp -> name = name;
+		dp -> generation = dmalloc_generation++;
+		dmalloc_outstanding += size;
+		for (i = 0; i < DMLFSIZE; i++)
+			dp -> low_fence [i] =
+				(((unsigned long)
+				  (&dp -> low_fence [i])) % 143) + 113;
+		for (i = DMDOFFSET; i < DMDSIZE; i++)
+			foo [i + size] =
+				(((unsigned long)
+				  (&foo [i + size])) % 143) + 113;
+		dmalloc_outstanding += size;
+	}
+#endif
+	return bar;
 }
 
 void dfree (ptr, name)
@@ -50,6 +85,50 @@ void dfree (ptr, name)
 		log_error ("dfree %s: free on null pointer.", name);
 		return;
 	}
+#if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL)
+	{
+		unsigned char *bar = ptr;
+		struct dmalloc_preamble *dp, *cur;
+		int i;
+		bar -= DMDOFFSET;
+		cur = (struct dmalloc_preamble *)bar;
+		for (dp = dmalloc_list; dp; dp = dp -> prev)
+			if (dp == cur)
+				break;
+		if (!dp) {
+			log_error ("freeing unaccounted-for memory: %lx",
+				   (unsigned long)cur);
+			abort ();
+		}
+		if (dp -> prev)
+			dp -> prev -> next = dp -> next;
+		if (dp -> next)
+			dp -> next -> prev = dp -> prev;
+		if (dp -> generation >= dmalloc_cutoff_generation)
+			dmalloc_outstanding -= dp -> size;
+		else
+			dmalloc_longterm -= dp -> size;
+		for (i = 0; i < DMLFSIZE; i++)
+			if (dp -> low_fence [i] !=
+				(((unsigned long)
+				  (&dp -> low_fence [i])) % 143) + 113)
+			{
+				log_error ("malloc fence modified: %s",
+					   dp -> name);
+				abort ();
+			}
+		for (i = DMDOFFSET; i < DMDSIZE; i++) {
+			if (bar [i + dp -> size] !=
+				(((unsigned long)
+				  (&bar [i + dp -> size])) % 143) + 113) {
+				log_error ("malloc fence modified: %s",
+					   dp -> name);
+				abort ();
+			}
+		}
+		ptr = bar;
+	}
+#endif
 	free (ptr);
 }
 
