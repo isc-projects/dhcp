@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.51 1999/10/21 02:34:32 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.52 1999/10/21 03:08:38 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1287,8 +1287,7 @@ int parse_executable_statement (result, cfile, lose)
 	      pad:
 		token = next_token (&val, cfile);
 		cache = (struct option_cache *)0;
-		if (!parse_allow_deny (&cache, cfile,
-				       token == ALLOW ? 1 : 0))
+		if (!parse_allow_deny (&cache, cfile, flag))
 			return 0;
 		if (!executable_statement_allocate
 		    (result, "parse_executable_statement"))
@@ -2787,6 +2786,8 @@ int parse_allow_deny (oc, cfile, flag)
 	      case DECLINES:
 		status = option_cache (oc, (struct data_string *)0, data,
 				       &server_options [SV_DECLINES]);
+		break;
+
 	      default:
 		parse_warn (cfile, "expecting allow/deny key");
 		skip_to_semi (cfile);
