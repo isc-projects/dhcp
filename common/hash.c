@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: hash.c,v 1.19 2000/03/18 02:15:36 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: hash.c,v 1.20 2000/03/18 03:31:39 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -90,7 +90,7 @@ static int do_case_hash (name, len, size)
 			c = tolower (c);
 
 		/* Add the character in... */
-		accum += *s++;
+		accum += c;
 		/* Add carry back in... */
 		while (accum > 255) {
 			accum = (accum & 255) + (accum >> 8);
