@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.34.2.3 1997/05/09 06:43:59 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.34.2.4 1997/09/16 23:07:28 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1049,9 +1049,9 @@ struct lease *find_lease (packet, share)
 	   a uid) we let the client get away with it. */
 	if (hw_lease &&
 	    hw_lease -> ends >= cur_time &&
-	    hw_lease -> uid && hw_lease != uid_lease &&
-	    (packet -> packet_type != 0 ||
-	     !(hw_lease -> flags & DYNAMIC_BOOTP_OK)))
+	    hw_lease -> uid &&
+	    packet -> options [DHO_DHCP_CLIENT_IDENTIFIER].len &&
+	    hw_lease != uid_lease)
 		hw_lease = (struct lease *)0;
 
 	/* Toss extra pointers to the same lease... */
