@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.136 2000/01/31 23:43:11 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.137 2000/02/02 20:38:47 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -320,7 +320,8 @@ void dhcprelease (packet)
 				break;
 			}
 		}
-	}
+	} else
+		lease = (struct lease *)0;
 
 	/* The client is supposed to pass a valid client-identifier,
 	   but the spec on this has changed historically, so try the
