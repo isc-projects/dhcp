@@ -1,9 +1,10 @@
 /* dhcp.c
 
-   DHCP Protocol support. */
+   DHCP Protocol engine. */
 
 /*
- * Copyright (c) 1995 The Internet Software Consortium.  All rights reserved.
+ * Copyright (c) 1995, 1996 The Internet Software Consortium.
+ * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -46,11 +47,11 @@ static char copyright[] =
 
 #include "dhcpd.h"
 
+static char dhcp_message [256];
+
 void dhcp (packet)
 	struct packet *packet;
 {
-	dump_packet (packet);
-
 	switch (packet -> packet_type) {
 	      case DHCPDISCOVER:
 		dhcpdiscover (packet);
@@ -60,9 +61,16 @@ void dhcp (packet)
 		dhcprequest (packet);
 		break;
 
-	      case DHCPDECLINE:
 	      case DHCPRELEASE:
 		dhcprelease (packet);
+		break;
+
+	      case DHCPDECLINE:
+		dhcpdecline (packet);
+		break;
+
+	      case DHCPINFORM:
+		dhcpinform (packet);
 		break;
 
 	      default:
@@ -96,6 +104,33 @@ void dhcprequest (packet)
 	struct packet *packet;
 {
 	struct lease *lease = find_lease (packet);
+	struct iaddr cip;
+
+	/* If a client on our local network wants to renew a lease on
+	   an address off our local network, NAK it. */
+	if (packet -> options [DHO_DHCP_REQUESTED_ADDRESS].len) {
+		cip.len = 4;
+		memcpy (cip.iabuf,
+			packet -> options [DHO_DHCP_REQUESTED_ADDRESS].data,
+			4);
+		if (!addr_eq (packet -> subnet -> net,
+			      subnet_number (cip,
+					     packet -> subnet -> netmask))) {
+			nak_lease (packet);
+			return;
+		}
+	}
+
+	if (packet -> raw -> ciaddr.s_addr) {
+		cip.len = 4;
+		memcpy (cip.iabuf, &packet -> raw -> ciaddr, 4);
+		if (!addr_eq (packet -> subnet -> net,
+			      subnet_number (cip,
+					     packet -> subnet -> netmask))) {
+			nak_lease (packet);
+			return;
+		}
+	}
 
 	/* Look for server identifier... */
 	if (packet -> options [DHO_DHCP_SERVER_IDENTIFIER].len) {
@@ -109,17 +144,16 @@ void dhcprequest (packet)
 			return;
 		}
 	} else {
-		/* If no server identifier, drop it on the floor -
-		   it's a protocol violation. */
 		return;
 	}
-	/* If we didn't find a lease, try to allocate one... */
+
+	/* If we didn't find a lease, don't try to allocate one... */
 	if (!lease) {
 		nak_lease (packet);
 		return;
 	}
 
-	ack_lease (packet, lease, DHCPOFFER, cur_time + 120);
+	ack_lease (packet, lease, DHCPACK, 0);
 }
 
 void dhcprelease (packet)
@@ -127,10 +161,26 @@ void dhcprelease (packet)
 {
 	struct lease *lease = find_lease (packet);
 
-	/* If we didn't find a lease, try to allocate one... */
+	/* If we found a lease, release it. */
 	if (lease) {
 		release_lease (lease);
 	}
+}
+
+void dhcpdecline (packet)
+	struct packet *packet;
+{
+	struct lease *lease = find_lease (packet);
+
+	/* If we found a lease, mark it as unusable and complain. */
+	if (lease) {
+		abandon_lease (lease);
+	}
+}
+
+void dhcpinform (packet)
+	struct packet *packet;
+{
 }
 
 void nak_lease (packet)
@@ -144,6 +194,7 @@ void nak_lease (packet)
 
 	struct tree_cache *options [256];
 	struct tree_cache dhcpnak_tree;
+	struct tree_cache dhcpmsg_tree;
 
 	memset (options, 0, sizeof options);
 	memset (&outgoing, 0, sizeof outgoing);
@@ -158,28 +209,45 @@ void nak_lease (packet)
 	options [DHO_DHCP_MESSAGE_TYPE] -> timeout = 0xFFFFFFFF;
 	options [DHO_DHCP_MESSAGE_TYPE] -> tree = (struct tree *)0;
 
+	/* Set DHCP_MESSAGE to whatever the message is */
+	options [DHO_DHCP_MESSAGE] = &dhcpmsg_tree;
+	options [DHO_DHCP_MESSAGE] -> value = dhcp_message;
+	options [DHO_DHCP_MESSAGE] -> len = strlen (dhcp_message);
+	options [DHO_DHCP_MESSAGE] -> buf_size = strlen (dhcp_message);
+	options [DHO_DHCP_MESSAGE] -> timeout = 0xFFFFFFFF;
+	options [DHO_DHCP_MESSAGE] -> tree = (struct tree *)0;
+
+	/* Do not use the client's requested parameter list. */
+	packet -> options [DHO_DHCP_PARAMETER_REQUEST_LIST].len = 0;
+	packet -> options [DHO_DHCP_PARAMETER_REQUEST_LIST].data =
+		(unsigned char *)0;
+
 	/* Set up the option buffer... */
 	cons_options (packet, &outgoing, options, 0);
 
-	raw.ciaddr = packet -> raw -> ciaddr;
+/*	memset (&raw.ciaddr, 0, sizeof raw.ciaddr);*/
 	memcpy (&raw.siaddr, siaddr.iabuf, 4);
 	raw.giaddr = packet -> raw -> giaddr;
+	memcpy (raw.chaddr, packet -> raw -> chaddr, sizeof raw.chaddr);
+	raw.hlen = packet -> raw -> hlen;
+	raw.htype = packet -> raw -> htype;
 
 	raw.xid = packet -> raw -> xid;
 	raw.secs = packet -> raw -> secs;
-	raw.flags = packet -> raw -> flags;
+	raw.flags = packet -> raw -> flags | htons (BOOTP_BROADCAST);
 	raw.hops = packet -> raw -> hops;
 	raw.op = BOOTREPLY;
 
-	/* If this was gatewayed, send it back to the gateway... */
-	if (raw.giaddr.s_addr)
+	/* If this was gatewayed, send it back to the gateway.
+	   Otherwise, broadcast it on the local network. */
+	if (raw.giaddr.s_addr) {
 		to.sin_addr = raw.giaddr;
-	/* Otherwise, broadcast it on the local network. */
-	else
-/*		inet_aton ("204.254.239.2", &to.sin_addr); /* XXX bcst bug */
+		to.sin_port = server_port;
+	} else {
 		to.sin_addr.s_addr = INADDR_BROADCAST;
+		to.sin_port = htons (ntohs (server_port) + 1); /* XXX */
+	}
 
-	to.sin_port = htons (ntohs (server_port) + 1); /* XXX */
 	to.sin_family = AF_INET;
 	to.sin_len = sizeof to;
 	memset (to.sin_zero, 0, sizeof to.sin_zero);
@@ -193,6 +261,12 @@ void nak_lease (packet)
 	if (result < 0)
 		warn ("sendto: %m");
 
+#if 0
+	dump_packet (packet);
+	dump_raw ((unsigned char *)packet -> raw, packet -> packet_length);
+	dump_packet (&outgoing);
+	dump_raw ((unsigned char *)&raw, outgoing.packet_length);
+#endif
 }
 
 void ack_lease (packet, lease, offer, when)
@@ -215,6 +289,40 @@ void ack_lease (packet, lease, offer, when)
 	unsigned char lease_time_buf [4];
 	struct tree_cache lease_time_tree;
 	struct tree_cache server_id_tree;
+	struct tree_cache vendor_class_tree;
+	struct tree_cache user_class_tree;
+
+	struct class *vendor_class, *user_class;
+	char *filename;
+	int i;
+
+	if (packet -> options [DHO_DHCP_CLASS_IDENTIFIER].len) {
+		vendor_class =
+			find_class (0,
+				    packet ->
+				    options [DHO_DHCP_CLASS_IDENTIFIER].data,
+				    packet ->
+				    options [DHO_DHCP_CLASS_IDENTIFIER].len);
+	} else {
+		vendor_class = (struct class *)0;
+	}
+
+	if (packet -> options [DHO_DHCP_USER_CLASS_ID].len) {
+		user_class =
+			find_class (0,
+				    packet ->
+				    options [DHO_DHCP_USER_CLASS_ID].data,
+				    packet ->
+				    options [DHO_DHCP_USER_CLASS_ID].len);
+	} else {
+		user_class = (struct class *)0;
+	}
+
+	if (user_class && user_class -> filename)
+		filename = user_class -> filename;
+	else if (vendor_class  && vendor_class -> filename)
+		filename = vendor_class -> filename;
+	else filename = (char *)0;
 
 	/* At this point, we have a lease that we can offer the client.
 	   Now we construct a lease structure that contains what we want,
@@ -282,7 +390,10 @@ void ack_lease (packet, lease, offer, when)
 
 	/* Copy in the filename if given; otherwise, flag the filename
 	   buffer as available for options. */
-	bufs |= 1; /* XXX */
+	if (filename)
+		strncpy (raw.file, filename, sizeof raw.file);
+	else
+		bufs |= 1;
 
 	/* Copy in the server name if given; otherwise, flag the
 	   server_name buffer as available for options. */
@@ -294,6 +405,22 @@ void ack_lease (packet, lease, offer, when)
 
 	/* Start out with the subnet options... */
 	memcpy (options, packet -> subnet -> options, sizeof options);
+
+	/* If we have a vendor class, install those options, superceding
+	   any subnet options. */
+	if (vendor_class) {
+		for (i = 0; i < 256; i++)
+			if (vendor_class -> options [i])
+				options [i] = vendor_class -> options [i];
+	}
+
+	/* If we have a user class, install those options, superceding
+	   any subnet and vendor class options. */
+	if (user_class) {
+		for (i = 0; i < 256; i++)
+			if (user_class -> options [i])
+				options [i] = user_class -> options [i];
+	}
 
 	/* Now put in options that override those. */
 	options [DHO_DHCP_MESSAGE_TYPE] = &dhcpoffer_tree;
@@ -310,6 +437,34 @@ void ack_lease (packet, lease, offer, when)
 	options [DHO_DHCP_SERVER_IDENTIFIER] -> timeout = 0xFFFFFFFF;
 	options [DHO_DHCP_SERVER_IDENTIFIER] -> tree = (struct tree *)0;
 
+	/* If we used the vendor class the client specified, we have to
+	   return it. */
+	if (vendor_class) {
+		options [DHO_DHCP_CLASS_IDENTIFIER] = &vendor_class_tree;
+		options [DHO_DHCP_CLASS_IDENTIFIER] -> value =
+			vendor_class -> name;
+		options [DHO_DHCP_CLASS_IDENTIFIER] -> len = 
+			strlen (vendor_class -> name);
+		options [DHO_DHCP_CLASS_IDENTIFIER] -> buf_size =
+			strlen (vendor_class -> name);
+		options [DHO_DHCP_CLASS_IDENTIFIER] -> timeout = 0xFFFFFFFF;
+		options [DHO_DHCP_CLASS_IDENTIFIER] -> tree = (struct tree *)0;
+	}
+
+	/* If we used the user class the client specified, we have to return
+	   it. */
+	if (user_class) {
+		options [DHO_DHCP_USER_CLASS_ID] = &user_class_tree;
+		options [DHO_DHCP_USER_CLASS_ID] -> value =
+			user_class -> name;
+		options [DHO_DHCP_USER_CLASS_ID] -> len = 
+			strlen (user_class -> name);
+		options [DHO_DHCP_USER_CLASS_ID] -> buf_size =
+			strlen (user_class -> name);
+		options [DHO_DHCP_USER_CLASS_ID] -> timeout = 0xFFFFFFFF;
+		options [DHO_DHCP_USER_CLASS_ID] -> tree = (struct tree *)0;
+	}
+
 	putULong (lease_time_buf, lease -> offered_expiry - cur_time);
 	options [DHO_DHCP_LEASE_TIME] = &lease_time_tree;
 	options [DHO_DHCP_LEASE_TIME] -> value = lease_time_buf;
@@ -325,8 +480,6 @@ void ack_lease (packet, lease, offer, when)
 	memcpy (&raw.siaddr, siaddr.iabuf, 4);
 	raw.giaddr = packet -> raw -> giaddr;
 
-	dump_packet (&outgoing);
-
 	raw.xid = packet -> raw -> xid;
 	raw.secs = packet -> raw -> secs;
 	raw.flags = packet -> raw -> flags;
@@ -334,18 +487,24 @@ void ack_lease (packet, lease, offer, when)
 	raw.op = BOOTREPLY;
 
 	/* If this was gatewayed, send it back to the gateway... */
-	if (raw.giaddr.s_addr)
+	if (raw.giaddr.s_addr) {
 		to.sin_addr = raw.giaddr;
+		to.sin_port = server_port;
+
 	/* If it comes from a client who already knows its address,
 	   sent it directly to that client. */
-	else if (raw.ciaddr.s_addr && offer == DHCPACK)
+	} else if (raw.ciaddr.s_addr && offer == DHCPACK) {
 		to.sin_addr = packet -> raw -> ciaddr;
+		to.sin_port = htons (ntohs (server_port) + 1); /* XXX */
+
 	/* Otherwise, if we can (we can't), unicast it to the client's
 	   hardware address */
+
 	/* Otherwise, broadcast it on the local network. */
-	else
-/*		inet_aton ("204.254.239.255", &to.sin_addr); /* XXX bcst bug */
+	} else {
 		to.sin_addr.s_addr = INADDR_BROADCAST;
+		to.sin_port = htons (ntohs (server_port) + 1); /* XXX */
+	}
 
 	to.sin_port = htons (ntohs (server_port) + 1); /* XXX */
 	to.sin_family = AF_INET;
@@ -360,6 +519,13 @@ void ack_lease (packet, lease, offer, when)
 			 0, (struct sockaddr *)&to, sizeof to);
 	if (result < 0)
 		warn ("sendto: %m");
+
+#if 0
+	dump_packet (packet);
+	dump_raw ((unsigned char *)packet -> raw, packet -> packet_length);
+	dump_packet (&outgoing);
+	dump_raw ((unsigned char *)&raw, outgoing.packet_length);
+#endif
 }
 
 struct lease *find_lease (packet)
@@ -414,6 +580,15 @@ struct lease *find_lease (packet)
 	if (ip_lease &&
 	    ip_lease -> ends >= cur_time)
 		ip_lease = (struct lease *)0;
+
+	/* If we've already eliminated the lease, it wasn't there to
+	   begin with.   If we have come up with a matching lease,
+	   set the message to bad network in case we have to throw it out. */
+	if (!ip_lease && !hw_lease && !uid_lease) {
+		strcpy (dhcp_message, "requested address not available");
+	} else {
+		strcpy (dhcp_message, "requested address on bad subnet");
+	}
 
 	/* Now eliminate leases that are on the wrong subnet... */
 	if (ip_lease && packet -> subnet != ip_lease -> contain) {
