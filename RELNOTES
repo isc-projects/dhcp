@@ -1,204 +1,87 @@
 		     Internet Software Consortium
 	      Dynamic Host Configuration Protocol Server
 			    Beta Release 5
-			   August 29, 1996
+			     Patchlevel 15
+			    March 29, 1997
 
 			    Release Notes
 
-		      !!!!!!! IMPORTANT !!!!!!!
+This patchlevel is on the Internet Software Consortium DHCP Server
+Release 1.0 track.   The previous version was Beta Release 5,
+Patchlevel 14.   This patchlevel is strictly a bug-fix patchlevel.
+The only new feature is Ultrix Packetfilter support, which is sufficiently
+far from the DHCP protocol engine that its inclusion was felt to be very
+low-risk.
 
-  THE FORMAT OF THE  dhcpd.conf AND dhcpd.leases FILES HAS CHANGED!
+The following bug fixes have been made in this release:
 
-		      !!!!!!! IMPORTANT !!!!!!!
+- When the server saw a DHCPREQUEST for a client that it knew had a
+  lease on a different network, it would release that lease.   This
+  behaviour is incorrect according to the protocol - there is nothing
+  in the protocol that says that a client can't simultaneously hold a
+  lease on two addresses on two different networks.
 
-If you are currently using dhcpd Beta 4 Patchlevel 7 or earlier, YOU
-MUST CONVERT YOUR LEASE DATABASE AND CONFIGURATION FILES before
-running the new version of DHCPD.   At best, dhcpd will not work.   At
-worst, the lease database could be erased.
+- On little-endian machines (e.g., intel machines and DEC machines),
+  if a client requested that responses to it be broadcast rather than
+  unicast, this request would not be honored because of a
+  byte-swapping error.
 
-To convert your dhcpd.leases and dhcpd.conf files, make a backup copy
-of each file and then run the dhcpxlt command with the old config file
-as input and the new config file as output.   For example:
+- The server would print a banner on startup and then go into a
+  background (daemon) mode.   If there was a parse error in the
+  dhcpd.conf file, this was not detected until the server had gone
+  into the background, and thus there was no immediate notification.
+  This caused service failures for some users which were difficult to
+  diagnose.   Dhcpd now continues to log messages to the console until
+  after it has successfully parsed the config file and lease file.
+  Also, if dhcpd runs into a problem which causes it to exit, it now
+  logs the message ``exited'' at CRITICAL priority, which should show
+  up on the system console.
 
-	mv /etc/dhcpd.conf /etc/dhcpd.conf.old
-	./dhcpxlt </etc/dhcpd.conf.old >/etc/dhcpd.conf
-	mv /var/db/dhcpd.leases /var/db/dhcpd.leases.old
-	./dhcpxlt </var/db/dhcpd.leases.old >/var/db/dhcpd.leases
+- On Linux, spurious Host Unreachable and Connection Refused errors
+  could delay or foil the DHCP protocol by preventing the transmission
+  of some packets.   This is because of a Linux kernel bug whereby
+  bogus ICMP errors can be communicated to the user program.
 
-The dhcpxlt command has been tested and appears to work, but it is
-brand new and has only been tested by one person - me - at one site -
-mine.   Unfortunately, my site is relatively simple, so there's a
-decent chance that I've overlooked something.   Please proceed with
-caution.
+- DHCPNAK behaviour wasn't correct.   In some cases, the server would
+  not NAK DHCPREQUEST messages if they were on the wrong network.
+  This has now been fixed.
 
-			     NEW FEATURES
+- DHCPACK behaviour was incorrect.   If a client sent a DHCPREQUEST
+  for an address that the server was not willing to provide, the
+  server could respond with a DHCPACK for a different address, when it
+  should have ignored the DHCPREQUEST.
 
-			NEW CONFIG FILE FORMAT
+- DHCPDECLINE processing wasn't being done correctly, with the result
+  that DHCPDECLINEs were effectively being ignored.   DHCPDECLINEs are
+  now processed correctly - leases which have been DECLINEed are
+  abandoned and never again offered to clients, at lease until the
+  administrator intervenes. Warning: this bug fix does open up the
+  DHCP server to a denial of service attack that was formerly not
+  possible - a client can successively request and DECLINE every lease
+  in the server's database. 
 
-Obviously, the first new feature is that the configuration file
-formats have been changed.   The old format was a major source of
-confusion for new users.   The new format uses braces for nesting and
-semicolons to end every statement, so what in the old version looked
-like:
+- The lease file was being rewritten twice whenever it was time to
+  rewrite it.   This no longer happens.
 
-shared-network FOO
-  option domain-name "fugue.com"
-  subnet 204.254.239.0 netmask 255.255.255.224
-    option routers 204.254.239.1
-  subnet 205.254.239.32 netmask 255.255.255.224
-    option routers 204.254.239.33;
+- BOOTP clients for which there was a host entry with no fixed-address
+  would not be allowed to boot if the dynamic-bootp flag and the
+  boot-unknown-clients flags were set.
 
-Now looks like:    
+- If an address range specified within a subnet declaration was on the
+  wrong network, dhcpd would silently mask off the erroneous network
+  number and mask in the network number from the subnet declaration,
+  resulting in incorrect and potentially harmful behaviour.   Dhcpd
+  now flags this as an error.
 
-shared-network FOO {
-  option domain-name "fugue.com";
-  subnet 204.254.239.0 netmask 255.255.255.224 {
-    option routers 204.254.239.1;
-  }
-  subnet 205.254.239.32 netmask 255.255.255.224 {
-    option routers 204.254.239.33;
-  }
-}
+- The vendor-encapsulated-options option was specified as a text
+  string, which was incorrect.   It is now specified as an arbitrary
+  string of hexadecimal values, so that a user may mock up vendor
+  tags.   This behaviour will eventually be superseded by correct
+  vendor option support.
 
-I'm hoping that this will reduce confusion somewhat.
+- On Ultrix, the executable was not being installed in the correct
+  directory.
 
-In addition to changing the file format, I've also documented it
-(finally)!  The definitive documentation is in dhcpd.conf.5, and gives
-a complete and hopefully fairly readable description of the syntax,
-along with examples and a reference section.
-
-Also, the parser should now report line numbers correctly.   Instead
-of reporting the character position at which the offending token
-starts, it now prints the line containing the offending token with an
-arrow pointing at that token.
-
-Hostnames may now begin with numbers - previously, a hostname like
-1Q7.isc.org would not have been allowed.
-
-Dhcpd will now exit if errors are found in the config file - before,
-it would try to press on.   I added this so that dhcpd would not even
-try to read the dhcpd.leases file if the config file was broken.
-
-			 README FILE UPDATED
-
-Please take a look at the new README file - it's been brought forward
-into the 20th century.
-
-			     QNX SUPPORT
-
-Brian Stecher of Watcom has donated configuration code for the QNX
-operating system.
-
-			     MAKEFILE FUN
-
-Several people donated clean targets for the Makefile.   The idea
-being that you type ``make clean'', and all the object files are
-removed.   I added the target I liked best (donated by Mark Sirota).
-
-			 DYNAMIC BOOTP LEASES
-
-Mark also suggested a change that would set the expiry date on leases
-for Dynamic BOOTP clients to something other than infinity.   Two
-different keywords have been added so that you can set either a cutoff
-date or just a shorter lease length.
-
-		       MEMORY ALLOCATION ZAPPED
-
-A lot of bugs cropped up in Beta 4 having to do with uninitialized
-allocated memory.   I finally gave up and put code in the allocator to
-just zero out every hunk of memory that gets allocated.   Ugly, but
-probably worthwhile.
-
-			NEW GROUP DECLARATION
-
-Several users have asked for the ability to define client groupings
-with common boot parameters which don't correspond with subnet
-boundaries.   This would be useful for a LAN where several departments
-are spread out so that each department has some machines on one subnet
-and some machines on another.   It would also be useful for grouping
-particular kinds of hardware together.   The syntax looks like this:
-
-	group {
-		option domain-name "accounting.isc.org";
-
-		host foo {...}
-		host bar {...}
-		host baz {...}
-	}
-
-		       NEXT BOOT SERVER SUPPORT
-
-DHCP and BOOTP clients often need to load a kernel using TFTP or NFS
-once they've configured their network interface.  If your TFTP or NFS
-server was the same as your DHCP server, this worked fine, but
-otherwise, there was no way to boot.  The next-server parameter now
-allows you to specify the address of the server from which the boot
-file should be loaded.
-
-			   RESTRICTED DHCP
-
-It is now possible to restrict access to dynamic addresses using the
-boot-unknown-clients parameter.   If boot-unknown-clients is turned
-off on a given network, dhcpd will only provide addresses to clients
-for which host entries exist.
-
-			      DEBUGGING
-
-It is now possible to start dhcpd without having it immediately go
-into the background, using the -f option.   This is handy for running
-under a debugger or for running dhcpd out of /etc/inittab.   It is
-also possible to get a normally-compiled version of dhcpd to log its
-debugging information to standard error as well as to syslogd, using
-the -d flag.
-
-			      HOSTNAMES
-
-Dhcpd now looks up the hostnames for each address in the allocation
-pool using gethostbyaddr.   If a hostname option was not specified for
-a client, the name is taken from the name of the client's host
-declaration, if there is one.   Otherwise, it's taken from the domain
-name associated with the address being assigned to the client.   This
-only affects clients that want to learn their hostnames from the
-server.
-
-		    DHCPD.PID FILE WRITTEN SOONER
-
-One user complained that the dhcpd.pid file was being written after
-the lease database was loaded, and this could take a very significant
-amount of time.   Dhcpd now reads the pid file before loading the
-database, and if no server is running on that pid, dhcpd rewrites the
-pid file immediately.   There are still race conditions here, but this
-should improve things somewhat.
-
-   LOOPBACK AND POINT-TO-POINT INTERFACES AUTOMATICALLY ELIMINATED
-
-I have added code which works everywhere I've tested it so far to
-determine what kind of network connection each identified interface
-provides, and to ignore any interface claiming to be a loopback
-interface or a point-to-point interface.   I am somewhat concerned
-that this code may fail on Linux, but it should work on BSD-derived
-TCP stacks, which are present on most Unix systems.
-
-			  NUMEROUS BUG FIXES
-
-Beta 4 Patchlevel 7 was not a very successful release, mostly because
-I had to do it from Montreal over an X terminal, and so I wasn't able
-to test it.   A bunch of bugs introduced in Beta 4.7 have been fixed,
-including:
-
-	- NIT no longer consumes excessive resources on SunOS
-	- NIT no longer fails on SunOS versions prior to 4.1.4.
-	- Mobile hosts should no longer corrupt the in-memory lease
-	  database (I can't test this here - please let me know)
-	- DHCPD no longer gets infinite BOOTREQUESTs when booting
-	  BOOTP clients on the other side of a BOOTP gateway.
-	- DHCPD should dump core less often - a lot of bogus pointer
-	  dereferences have been fixed.
-	- IP aliases should now be handled correctly on Linux
-	  machines.   It would be nice if somebody could test this - I
-	  can't.
-	- Lease times are now printed using printf and read in using a
-	  hand-coded conversion routine.   As a result, dhcpd no
-	  longer puts GMT times on syslog messages.
-	- The lease database code is more robust (I don't know if this
-	  ever caused any problems).
+- Got rid of change warnings in the configure script - these warnings
+  were instituted in August of 1996, and probably anybody who would be
+  affected by them is already aware of them.
