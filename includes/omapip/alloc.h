@@ -3,7 +3,7 @@
    Definitions for the object management API protocol memory allocation... */
 
 /*
- * Copyright (c) 1996-1999 Internet Software Consortium.
+ * Copyright (c) 1996-2001 Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -87,11 +87,11 @@ struct rc_history_entry {
 	rc_history [rc_history_index].refcnt = (z); \
 	rc_history_next (d); \
 	} while (0)
-#define rc_register_mdl(r, y, z) \
-	rc_register (__FILE__, __LINE__, r, y, z)
+#define rc_register_mdl(r, y, z, d) \
+	rc_register (__FILE__, __LINE__, r, y, z, d)
 #else
-#define rc_register(file, line, reference, addr, refcnt)
-#define rc_register_mdl(reference, addr, refcnt)
+#define rc_register(file, line, reference, addr, refcnt, d)
+#define rc_register_mdl(reference, addr, refcnt, d)
 #endif
 
 #if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL) || \
