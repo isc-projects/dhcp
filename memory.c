@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: memory.c,v 1.18 1996/08/27 09:51:24 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: memory.c,v 1.19 1996/08/28 01:40:01 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -201,6 +201,8 @@ void new_address_range (low, high, subnet, dynamic)
 	int min, max, i;
 	char lowbuf [16], highbuf [16], netbuf [16];
 	struct shared_network *share = subnet -> shared_network;
+	struct hostent *h;
+	struct in_addr ia;
 
 	/* All subnets should have attached shared network structures. */
 	if (!share) {
@@ -261,6 +263,19 @@ void new_address_range (low, high, subnet, dynamic)
 		address_range [i].subnet = subnet;
 		address_range [i].shared_network = share;
 		address_range [i].flags = dynamic ? DYNAMIC_BOOTP_OK : 0;
+
+		memcpy (&ia, address_range [i].ip_addr.iabuf, 4);
+		h = gethostbyaddr ((char *)&ia, sizeof ia, AF_INET);
+		if (!h)
+			warn ("No hostname for %s", inet_ntoa (ia));
+		else {
+			address_range [i].hostname =
+				malloc (strlen (h -> h_name) + 1);
+			if (!address_range [i].hostname)
+				error ("no memory to save hostname %s.",
+				       h -> h_name);
+			strcpy (address_range [i].hostname, h -> h_name);
+		}
 
 		/* Link this entry into the list. */
 		address_range [i].next = share -> leases;
