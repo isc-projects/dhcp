@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: clparse.c,v 1.14 1998/03/16 06:02:14 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: clparse.c,v 1.15 1998/03/16 20:00:00 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -112,16 +112,18 @@ int read_client_conf ()
 	top_level_config.send_options [DHO_DHCP_LEASE_TIME].len
 		= sizeof requested_lease_time;
 
-	if ((cfile = fopen (path_dhclient_conf, "r")) == NULL)
-		error ("Can't open %s: %m", path_dhclient_conf);
-	do {
-		token = peek_token (&val, cfile);
-		if (token == EOF)
-			break;
-		parse_client_statement (cfile, (struct interface_info *)0,
-					&top_level_config);
-	} while (1);
-	token = next_token (&val, cfile); /* Clear the peek buffer */
+	if ((cfile = fopen (path_dhclient_conf, "r")) != NULL) {
+		do {
+			token = peek_token (&val, cfile);
+			if (token == EOF)
+				break;
+			parse_client_statement (cfile,
+						(struct interface_info *)0,
+						&top_level_config);
+		} while (1);
+		token = next_token (&val, cfile); /* Clear the peek buffer */
+		fclose (cfile);
+	}
 
 	/* Set up state and config structures for clients that don't
 	   have per-interface configuration declarations. */
