@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.73.2.7 2000/02/02 17:01:19 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.73.2.8 2000/06/26 23:12:42 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1388,7 +1388,7 @@ int parse_fixed_addr_param (oc, cfile)
 					(&expr, "parse_fixed_addr_param");
 				expression_dereference
 					(&tmp, "parse_fixed_addr_param");
-				if (status)
+				if (!status)
 					return 0;
 				expr = new;
 			} else
