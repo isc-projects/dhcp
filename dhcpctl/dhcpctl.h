@@ -102,4 +102,6 @@ isc_result_t dhcpctl_remote_signal_handler (omapi_object_t *,
 isc_result_t dhcpctl_remote_stuff_values (omapi_object_t *,
 					  omapi_object_t *,
 					  omapi_object_t *);
+isc_result_t dhcpctl_data_string_dereference (dhcpctl_data_string *,
+					      const char *);
 #endif /* _DHCPCTL_H_ */
