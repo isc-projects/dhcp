@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.53.2.8 2001/06/03 04:56:23 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.53.2.9 2001/06/05 17:59:45 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -808,11 +808,14 @@ isc_result_t dhcp_failover_link_destroy (omapi_object_t *h,
 	if (h -> type != dhcp_type_failover_link)
 		return ISC_R_INVALIDARG;
 	link = (dhcp_failover_link_t *)h;
-	if (link -> imsg) {
-		failover_message_dereference (&link -> imsg, MDL);
-	}
+
+	if (link -> peer_address)
+		option_cache_dereference (&link -> peer_address, file, line);
+	if (link -> imsg)
+		failover_message_dereference (&link -> imsg, file, line);
 	if (link -> state_object)
-		dhcp_failover_state_dereference (&link -> state_object, MDL);
+		dhcp_failover_state_dereference (&link -> state_object,
+						 file, line);
 	return ISC_R_SUCCESS;
 }
 
@@ -1054,8 +1057,14 @@ isc_result_t dhcp_failover_listener_get_value (omapi_object_t *h,
 isc_result_t dhcp_failover_listener_destroy (omapi_object_t *h,
 					      const char *file, int line)
 {
+	dhcp_failover_listener_t *l;
+
 	if (h -> type != dhcp_type_failover_listener)
 		return ISC_R_INVALIDARG;
+	l = (dhcp_failover_listener_t *)h;
+	if (l -> next)
+		dhcp_failover_listener_dereference (&l -> next, file, line);
+
 	return ISC_R_SUCCESS;
 }
 
@@ -2663,15 +2672,37 @@ isc_result_t dhcp_failover_state_destroy (omapi_object_t *h,
 	if (h -> type != dhcp_type_failover_state)
 		return ISC_R_INVALIDARG;
 	s = (dhcp_failover_state_t *)h;
+
 	if (s -> link_to_peer)
-		dhcp_failover_link_dereference (&s -> link_to_peer, MDL);
-	if (s -> name)
+	    dhcp_failover_link_dereference (&s -> link_to_peer, file, line);
+	if (s -> name) {
 		dfree (s -> name, MDL);
+		s -> name = (char *)0;
+	}
 	if (s -> partner.address)
-		option_cache_dereference (&s -> partner.address, MDL);
+		option_cache_dereference (&s -> partner.address, file, line);
 	if (s -> me.address)
-		option_cache_dereference (&s -> me.address, MDL);
-	
+		option_cache_dereference (&s -> me.address, file, line);
+	if (s -> hba) {
+		dfree (s -> hba, file, line);
+		s -> hba = (u_int8_t *)0;
+	}
+	if (s -> update_queue_head)
+		lease_dereference (&s -> update_queue_head, file, line);
+	if (s -> update_queue_tail)
+		lease_dereference (&s -> update_queue_tail, file, line);
+	if (s -> ack_queue_head)
+		lease_dereference (&s -> ack_queue_head, file, line);
+	if (s -> ack_queue_tail)
+		lease_dereference (&s -> ack_queue_tail, file, line);
+	if (s -> send_update_done)
+		lease_dereference (&s -> send_update_done, file, line);
+	if (s -> toack_queue_head)
+		failover_message_dereference (&s -> toack_queue_head,
+					      file, line);
+	if (s -> toack_queue_tail)
+		failover_message_dereference (&s -> toack_queue_tail,
+					      file, line);
 	return ISC_R_SUCCESS;
 }
 
@@ -5062,9 +5093,32 @@ static isc_result_t failover_message_reference (failover_message_t **mp,
 static isc_result_t failover_message_dereference (failover_message_t **mp,
 						  const char *file, int line)
 {
-	(*mp) -> refcnt--;
-	if ((*mp) -> refcnt == 0) {
-		dfree (*mp, MDL);
+	failover_message_t *m;
+	m = (*mp);
+	m -> refcnt--;
+	if (m -> refcnt == 0) {
+		if (m -> next)
+			failover_message_dereference (&m -> next,
+						      file, line);
+		if (m -> chaddr.data)
+			dfree (m -> chaddr.data, file, line);
+		if (m -> client_identifier.data)
+			dfree (m -> client_identifier.data, file, line);
+		if (m -> hba.data)
+			dfree (m -> hba.data, file, line);
+		if (m -> message.data)
+			dfree (m -> message.data, file, line);
+		if (m -> reply_options.data)
+			dfree (m -> reply_options.data, file, line);
+		if (m -> request_options.data)
+			dfree (m -> request_options.data, file, line);
+		if (m -> vendor_class.data)
+			dfree (m -> vendor_class.data, file, line);
+		if (m -> vendor_options.data)
+			dfree (m -> vendor_options.data, file, line);
+		if (m -> ddns.data)
+			dfree (m -> ddns.data, file, line);
+		dfree (*mp, file, line);
 	}
 	*mp = 0;
 	return ISC_R_SUCCESS;
