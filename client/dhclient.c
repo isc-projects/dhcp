@@ -56,7 +56,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhclient.c,v 1.44.2.4 1998/12/20 18:20:39 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.44.2.5 1998/12/22 22:23:59 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -89,6 +89,13 @@ int log_priority;
 int no_daemon;
 int save_scripts;
 
+static char copyright[] =
+"Copyright 1995, 1996, 1997, 1998 The Internet Software Consortium.";
+static char arr [] = "All rights reserved.";
+static char message [] = "Internet Software Consortium DHCP Client V2.0b1pl7 ";
+static char contrib [] = "Please contribute if you find this software useful.";
+static char url [] = "For info: http://www.isc.org/dhcp-contrib.html";
+
 static void usage PROTO ((void));
 
 int main (argc, argv, envp)
@@ -99,6 +106,7 @@ int main (argc, argv, envp)
 	struct servent *ent;
 	struct interface_info *ip;
 	int seed;
+	int quiet;
 
 #ifdef SYSLOG_4_2
 	openlog ("dhclient", LOG_NDELAY);
@@ -126,6 +134,9 @@ int main (argc, argv, envp)
 			if (++i == argc)
 				usage ();
 			path_dhclient_db = argv [i];
+		} else if (!strcmp (argv [i], "-q")) {
+			quiet = 1;
+			quiet_interface_discovery = 1;
  		} else if (argv [i][0] == '-') {
  		    usage ();
  		} else {
@@ -143,6 +154,15 @@ int main (argc, argv, envp)
  		    interfaces = tmp;
  		}
 	}
+
+	if (!quiet) {
+		note (message);
+		note (copyright);
+		note (arr);
+		note (contrib);
+		note (url);
+	}
+
 	/* Default to the DHCP/BOOTP port. */
 	if (!local_port) {
 		ent = getservbyname ("dhcpc", "udp");
