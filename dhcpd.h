@@ -66,6 +66,11 @@ struct option_data {
 	u_int8_t *data;
 };
 
+struct string_list {
+	struct string_list *next;
+	char string [1];
+};
+
 /* A dhcp packet and the pointers to its option values. */
 struct packet {
 	struct dhcp_packet *raw;
@@ -144,6 +149,8 @@ struct group {
 
 	int boot_unknown_clients;
 	int dynamic_bootp;
+	int allow_bootp;
+	int allow_booting;
 	int one_lease_per_client;
 	int get_lease_hostnames;
 	int use_host_decl_names;
@@ -197,6 +204,7 @@ struct client_lease {
 	struct iaddr address;			    /* Address being leased. */
 	char *server_name;			     /* Name of boot server. */
 	char *filename;		     /* Name of file we're supposed to boot. */
+	struct string_list *medium;			  /* Network medium. */
 
 	int is_static;		 /* If nonzero, lease came from config file. */
 
@@ -215,13 +223,11 @@ enum dhcp_state {
 
 /* Configuration information from the config file... */
 struct client_config {
-	struct tree_cache *defaults [256]; /* Default values for options. */
+	struct option_data defaults [256]; /* Default values for options. */
+	struct option_data send_options [256]; /* Send these to server. */
 	u_int8_t required_options [256]; /* Options server must supply. */
 	u_int8_t requested_options [256]; /* Options to request from server. */
 	int requested_option_count;	/* Number of requested options. */
-	char *dns_hostname;		/* Hostname for Dynamic DNS. */
-	unsigned char *client_identifier; /* Client idenfitier string. */
-	int cid_len;			/* Length of client identifier. */
 	TIME timeout;			/* Start to panic if we don't get a
 					   lease in this time period when
 					   SELECTING. */
@@ -232,10 +238,12 @@ struct client_config {
 	TIME select_interval;		/* Wait this many seconds from the
 					   first DHCPDISCOVER before
 					   picking an offered lease. */
+	struct string_list *media;	/* Possible network media values. */
 	char *script_name;		/* Name of config script. */
 	enum { IGNORE, ACCEPT, PREFER } bootp_policy;
 					/* Ignore, accept or prefer BOOTP
 					   responses. */
+	struct string_list *medium;	/* Current network medium. */
 };
 
 /* Per-interface state used in the dhcp client... */
@@ -249,7 +257,8 @@ struct client_state {
 	struct iaddr destination;		    /* Where to send packet. */
 	u_int32_t xid;					  /* Transaction ID. */
 	TIME first_sending;			/* When was first copy sent? */
-	TIME last_sending;	    /* When was a packet most recently sent? */
+	TIME interval;		      /* What's the current resend interval? */
+	struct string_list *medium;		   /* Last media type tried. */
 
 	struct dhcp_packet packet;		    /* Outgoing DHCP packet. */
 	int packet_length;	       /* Actual length of generated packet. */
@@ -266,6 +275,7 @@ struct interface_info {
 	struct shared_network *shared_network;
 				/* Networks connected to this interface. */
 	struct hardware hw_address;	/* Its physical address. */
+	struct in_addr primary_address;	/* Primary interface address. */
 	char name [IFNAMSIZ];		/* Its name... */
 	int rfdesc;			/* Its read file descriptor. */
 	int wfdesc;			/* Its write file descriptor, if
@@ -360,7 +370,7 @@ int cons_options PROTO ((struct packet *, struct dhcp_packet *,
 			  struct tree_cache **, int, int));
 int store_options PROTO ((unsigned char *, int, struct tree_cache **,
 			   unsigned char *, int, int, int, int));
-char *pretty_print_option PROTO ((unsigned char, unsigned char *, int));
+char *pretty_print_option PROTO ((unsigned char, unsigned char *, int, int));
 
 /* errwarn.c */
 extern int warnings_occurred;
@@ -373,9 +383,6 @@ int parse_warn PROTO ((char *, ...));
 /* dhcpd.c */
 extern TIME cur_time;
 extern struct group root_group;
-
-extern struct iaddr server_identifier;
-extern int server_identifier_matched;
 
 extern u_int16_t local_port;
 extern u_int16_t remote_port;
@@ -407,6 +414,7 @@ int readconf PROTO ((void));
 void read_leases PROTO ((void));
 int parse_statement PROTO ((FILE *,
 			    struct group *, int, struct host_decl *, int));
+void parse_allow_deny PROTO ((FILE *, struct group *, int));
 void skip_to_semi PROTO ((FILE *));
 int parse_boolean PROTO ((FILE *));
 int parse_semi PROTO ((FILE *));
@@ -621,7 +629,7 @@ extern struct interface_info *interfaces, *dummy_interfaces;
 extern struct timeout *timeouts;
 void discover_interfaces PROTO ((int));
 void reinitialize_interfaces PROTO ((void));
-void dispatch PROTO ((void));
+void dispatch PROTO ((int));
 void do_packet PROTO ((struct interface_info *,
 		       unsigned char *, int,
 		       unsigned short, struct iaddr, struct hardware *));
@@ -696,7 +704,8 @@ void write_client_lease PROTO ((struct interface_info *,
 				 struct client_lease *));
 char *dhcp_option_ev_name PROTO ((struct option *));
 
-void script_init PROTO ((struct interface_info *, char *));
+void script_init PROTO ((struct interface_info *, char *,
+			 struct string_list *));
 void script_write_params PROTO ((struct interface_info *,
 				 char *, struct client_lease *));
 int script_go PROTO ((struct interface_info *));
@@ -777,3 +786,7 @@ void parse_client_lease_declaration PROTO ((FILE *, struct client_lease *,
 					    struct interface_info **));
 void parse_ip_addr PROTO ((FILE *, struct iaddr *));
 void parse_option_decl PROTO ((FILE *, struct option_data *));
+void parse_string_list PROTO ((FILE *, struct string_list **, int));
+
+/* dhcrelay.c */
+void relay PROTO ((struct interface_info *, struct dhcp_packet *, int));
