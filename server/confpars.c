@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.90 1999/10/25 01:52:52 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.91 1999/11/14 00:17:47 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -43,7 +43,8 @@ isc_result_t readconf ()
 	int status;
 
 	/* Set up the initial dhcp option universe. */
-	initialize_universes ();
+	initialize_common_option_spaces ();
+	initialize_server_option_spaces ();
 
 	root_group.authoritative = 0;
 
@@ -2148,5 +2149,66 @@ void parse_address_range (cfile, group, type, pool)
 
 	/* Create the new address range... */
 	new_address_range (low, high, subnet, pool);
+}
+
+/* allow-deny-keyword :== BOOTP
+   			| BOOTING
+			| DYNAMIC_BOOTP
+			| UNKNOWN_CLIENTS */
+
+int parse_allow_deny (oc, cfile, flag)
+	struct option_cache **oc;
+	struct parse *cfile;
+	int flag;
+{
+	enum dhcp_token token;
+	const char *val;
+	unsigned char rf = flag;
+	struct expression *data = (struct expression *)0;
+	int status;
+
+	if (!make_const_data (&data, &rf, 1, 0, 1))
+		return 0;
+
+	token = next_token (&val, cfile);
+	switch (token) {
+	      case BOOTP:
+		status = option_cache (oc, (struct data_string *)0, data,
+				       &server_options [SV_ALLOW_BOOTP]);
+		break;
+
+	      case BOOTING:
+		status = option_cache (oc, (struct data_string *)0, data,
+				       &server_options [SV_ALLOW_BOOTING]);
+		break;
+
+	      case DYNAMIC_BOOTP:
+		status = option_cache (oc, (struct data_string *)0, data,
+				       &server_options [SV_DYNAMIC_BOOTP]);
+		break;
+
+	      case UNKNOWN_CLIENTS:
+		status = (option_cache
+			  (oc, (struct data_string *)0, data,
+			   &server_options [SV_BOOT_UNKNOWN_CLIENTS]));
+		break;
+
+	      case DUPLICATES:
+		status = option_cache (oc, (struct data_string *)0, data,
+				       &server_options [SV_DUPLICATES]);
+		break;
+
+	      case DECLINES:
+		status = option_cache (oc, (struct data_string *)0, data,
+				       &server_options [SV_DECLINES]);
+		break;
+
+	      default:
+		parse_warn (cfile, "expecting allow/deny key");
+		skip_to_semi (cfile);
+		return 0;
+	}
+	parse_semi (cfile);
+	return status;
 }
 
