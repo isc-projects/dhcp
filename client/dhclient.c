@@ -55,8 +55,8 @@
  */
 
 #ifndef lint
-static char copyright[] =
-"$Id: dhclient.c,v 1.54 1999/02/14 18:37:42 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+static char ocopyright[] =
+"$Id: dhclient.c,v 1.55 1999/02/14 19:40:20 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1656,11 +1656,11 @@ void make_request (client, lease)
 	    client -> state == S_REBINDING) {
 		memcpy (&client -> packet.ciaddr,
 			lease -> address.iabuf, lease -> address.len);
-		ip -> client -> packet.flags = 0;
+		client -> packet.flags = 0;
 	} else {
 		memset (&client -> packet.ciaddr, 0,
 			sizeof client -> packet.ciaddr);
-		ip -> client -> packet.flags = htons (BOOTP_BROADCAST);
+		client -> packet.flags = htons (BOOTP_BROADCAST);
 	}
 
 	memset (&client -> packet.yiaddr, 0,

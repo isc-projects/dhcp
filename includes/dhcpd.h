@@ -1221,7 +1221,7 @@ void maybe_setup_fallback PROTO ((void));
 
 /* dispatch.c */
 extern struct interface_info *interfaces,
-	*dummy_interfaces, fallback_interface;
+	*dummy_interfaces, *fallback_interface;
 extern struct protocol *protocols;
 extern int quiet_interface_discovery;
 extern void (*bootp_packet_handler) PROTO ((struct interface_info *,

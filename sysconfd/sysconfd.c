@@ -44,7 +44,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: sysconfd.c,v 1.6 1998/11/05 18:36:34 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: sysconfd.c,v 1.7 1999/02/14 19:40:19 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -62,7 +62,6 @@ static void client_input PROTO ((struct protocol *));
 int log_priority;
 int log_perror;
 
-struct interface_info fallback_interface;
 TIME cur_time;
 u_int16_t local_port;
 

@@ -50,7 +50,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: socket.c,v 1.28 1999/02/14 18:55:32 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: socket.c,v 1.29 1999/02/14 19:40:21 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -102,7 +102,7 @@ int if_register_socket (info)
 	int sock;
 	int flag;
 
-#ifndef SO_BINDTODEVICE && !defined (USE_FALLBACK)
+#if !defined (SO_BINDTODEVICE) && !defined (USE_FALLBACK)
 	/* Make sure only one interface is registered. */
 	if (once)
 		error ("The standard socket API can only support %s",

@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bootp.c,v 1.36 1999/02/14 19:06:57 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bootp.c,v 1.37 1999/02/14 19:40:22 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -221,7 +221,7 @@ void bootp (packet)
 			memset (&raw.file [d1.len],
 				0, (sizeof raw.file) - d1.len);
 		data_string_forget (&d1, "bootrequest");
-	} else {
+	} else
 		memcpy (raw.file, packet -> raw -> file, sizeof raw.file);
 
 	/* Choose a server name as above. */
