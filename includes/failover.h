@@ -60,6 +60,7 @@ typedef struct {
 
 #define FM_OFFSET(x) (long)(&(((failover_message_t *)0) -> x))
 
+/* Failover message options: */
 #define FTO_BINDING_STATUS		1
 #define FTB_BINDING_STATUS			0x00000002
 #define FTO_ASSIGNED_IP_ADDRESS		2
@@ -118,6 +119,7 @@ typedef struct {
 #define FTB_REPLY_OPTIONS			0x40000000
 #define FTO_MAX				FTO_REPLY_OPTIONS
 
+/* Failover protocol message types: */
 #define FTM_POOLREQ		1
 #define FTM_POOLRESP		2
 #define FTM_BNDUPD		3
@@ -130,6 +132,29 @@ typedef struct {
 #define FTM_STATE		10
 #define FTM_CONTACT		11
 #define FTM_DISCONNECT		12
+
+/* Reject reasons: */
+
+#define FTR_ILLEGAL_IP_ADDR	1
+#define FTR_FATAL_CONFLICT	2
+#define FTR_MISSING_BINDINFO	3
+#define FTR_TIMEMISMATCH	4
+#define FTR_INVALID_MCLT	5
+#define FTR_MISC_REJECT		6
+#define FTR_DUP_CONNECTION	7
+#define FTR_INVALID_PARTNER	8
+#define FTR_TLS_UNSUPPORTED	9
+#define FTR_TLS_UNCONFIGURED	10
+#define FTR_TLS_REQUIRED	11
+#define FTR_DIGEST_UNSUPPORTED	12
+#define FTR_DIGEST_UNCONFIGURED	13
+#define FTR_VERSION_MISMATCH	14
+#define FTR_MISSING_BIND_INFO	15
+#define FTR_OUTDATED_BIND_INFO	16
+#define FTR_LESS_CRIT_BIND_INFO	17
+#define FTR_NO_TRAFFIC		18
+#define FTR_HBA_CONFLICT	19
+#define FTR_UNKNOWN		254
 
 #define DHCP_FAILOVER_MAX_MESSAGE_SIZE	2048
 
@@ -197,7 +222,7 @@ typedef struct {
 
 /* A failover peer. */
 enum failover_state {
-	invalid_state,
+	unknown_state,
 	partner_down,
 	normal,
 	communications_interrupted,
@@ -214,6 +239,7 @@ typedef struct _dhcp_failover_state {
 	struct option_cache *address;	/* Partner's IP address or hostname. */
 	int port;			/* Partner's TCP port. */
 	struct option_cache *server_addr; /* IP address on which to listen. */
+	struct data_string server_identifier; /* Server identifier (IP addr) */
 	int listen_port;		/* Port on which to listen. */
 	u_int32_t max_flying_updates;
 	u_int32_t mclt;
