@@ -85,7 +85,13 @@ experiment, or for sites that desperately need the new features.
 
 - Define ssize_t on Ultrix.
 
+	     CHANGES FROM VERSION 2.0 BETA 1 PATCHLEVEL 7
 
+- Generalize FDDI support.
+
+- Fix potential core dump in interface discovery code.
+
+- Put explicit release versions on startup messages.
 
 	     CHANGES FROM VERSION 2.0 BETA 1 PATCHLEVEL 6
 
