@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.104.2.2 2001/06/05 06:31:21 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.104.2.3 2001/06/11 05:58:25 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1295,7 +1295,7 @@ int parse_base64 (data, cfile)
 		from64 [] = {64, 64, 64, 64, 64, 64, 64, 64,  /*  \"#$%&' */
 			     64, 64, 64, 62, 64, 64, 64, 63,  /* ()*+,-./ */
 			     52, 53, 54, 55, 56, 57, 58, 59,  /* 01234567 */
-			     60, 61, 64, 64, 64, 64, 64, 64,  /* 90:;<=>? */
+			     60, 61, 64, 64, 64, 64, 64, 64,  /* 89:;<=>? */
 			     64, 0, 1, 2, 3, 4, 5, 6,	      /* @ABCDEFG */
 			     7, 8, 9, 10, 11, 12, 13, 14,     /* HIJKLMNO */
 			     15, 16, 17, 18, 19, 20, 21, 22,  /* PQRSTUVW */
