@@ -42,11 +42,12 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dns.c,v 1.32 2000/11/28 22:34:02 mellon Exp $ Copyright (c) 2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dns.c,v 1.33 2001/01/11 02:12:16 mellon Exp $ Copyright (c) 2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
 #include "arpa/nameser.h"
+#include "../minires/md5.h"
 
 /* This file is kind of a crutch for the BIND 8 nsupdate code, which has
  * itself been cruelly hacked from its original state.   What this code
@@ -462,6 +463,71 @@ void cache_found_zone (ns_class class,
 	zone -> primary -> data.len = naddrs * sizeof *addrs;
 
 	enter_dns_zone (zone);
+}
+
+int get_dhcid (struct data_string *id, struct lease *lease)
+{
+	unsigned char buf[MD5_DIGEST_LENGTH];
+	MD5_CTX md5;
+	int i;
+
+	if (!buffer_allocate (&id -> buffer,
+			      (MD5_DIGEST_LENGTH * 2) + 3, MDL))
+		return 0;
+	id -> data = id -> buffer -> data;
+
+	/*
+	 * DHCP clients and servers should use the following forms of client
+	 * identification, starting with the most preferable, and finishing
+	 * with the least preferable.  If the client does not send any of these
+	 * forms of identification, the DHCP/DDNS interaction is not defined by
+	 * this specification.  The most preferable form of identification is
+	 * the Globally Unique Identifier Option [TBD].  Next is the DHCP
+	 * Client Identifier option.  Last is the client's link-layer address,
+	 * as conveyed in its DHCPREQUEST message.  Implementors should note
+	 * that the link-layer address cannot be used if there are no
+	 * significant bytes in the chaddr field of the DHCP client's request,
+	 * because this does not constitute a unique identifier.
+	 *   -- "Interaction between DHCP and DNS"
+	 *      <draft-ietf-dhc-dhcp-dns-12.txt>
+	 *      M. Stapp, Y. Rekhter
+	 */
+
+	MD5_Init (&md5);
+
+	if (lease -> uid) {
+		id -> buffer -> data [0] =
+			"0123456789abcdef" [DHO_DHCP_CLIENT_IDENTIFIER >> 4];
+		id -> buffer -> data [1] =
+			"0123456789abcdef" [DHO_DHCP_CLIENT_IDENTIFIER % 15];
+		/* Use the DHCP Client Identifier option. */
+		MD5_Update (&md5, lease -> uid, lease -> uid_len);
+	} else if (lease -> hardware_addr.hlen) {
+		id -> buffer -> data [0] = '0';
+		id -> buffer -> data [1] = '0';
+		/* Use the link-layer address. */
+		MD5_Update (&md5,
+			    lease -> hardware_addr.hbuf,
+			    lease -> hardware_addr.hlen);
+	} else {
+		/* Uh-oh.  Something isn't right here. */
+		return 1;
+	}
+
+	MD5_Final (buf, &md5);
+
+	/* Convert into ASCII. */
+	for (i = 0; i < MD5_DIGEST_LENGTH; i++) {
+		id -> buffer -> data [i * 2 + 2] =
+			"0123456789abcdef" [(buf [i] >> 4) & 0xf];
+		id -> buffer -> data [i * 2 + 3] =
+			"0123456789abcdef" [buf [i] & 0xf];
+	}
+	id -> len = MD5_DIGEST_LENGTH * 2 + 2;
+	id -> buffer -> data [id -> len] = 0;
+	id -> terminated = 1;
+
+	return 0;
 }
 #endif /* NSUPDATE */
 
