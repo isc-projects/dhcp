@@ -485,7 +485,9 @@ isc_result_t omapi_message_process (omapi_object_t *mo, omapi_object_t *po)
 		status = (*(type -> lookup)) (&object, (omapi_object_t *)0,
 					      message -> object);
 
-		if (status != ISC_R_SUCCESS && status != ISC_R_NOTFOUND) {
+		if (status != ISC_R_SUCCESS &&
+		    status != ISC_R_NOTFOUND &&
+		    status != ISC_R_NOKEYS) {
 			return omapi_protocol_send_status
 				(po, (omapi_object_t *)0,
 				 status, message -> id,
