@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.31 1996/08/30 23:40:28 mellon Exp $ Copyright 1995, 1996 The Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.32 1996/09/02 21:16:55 mellon Exp $ Copyright 1995, 1996 The Internet Software Consortium.";
 #endif
 
 static char copyright[] =
@@ -66,7 +66,15 @@ struct interface_info fallback_interface;
 
 u_int16_t server_port;
 int log_priority;
+#ifdef DEBUG
+int log_perror = -1;
+#else
 int log_perror = 1;
+#endif
+
+char *path_dhcpd_conf = _PATH_DHCPD_CONF;
+char *path_dhcpd_db = _PATH_DHCPD_DB;
+char *path_dhcpd_pid = _PATH_DHCPD_PID;
 
 int main (argc, argv, envp)
 	int argc;
@@ -74,12 +82,14 @@ int main (argc, argv, envp)
 {
 	int i, status;
 	struct servent *ent;
-	int pidfilewritten = 0;
 	char *s;
 #ifndef DEBUG
+	int pidfilewritten = 0;
 	int pid;
 	char pbuf [20];
 	int daemon = 1;
+#else
+	int daemon = 0;
 #endif
 
 	/* Initially, log errors to stderr as well as to syslogd. */
@@ -119,10 +129,16 @@ int main (argc, argv, envp)
 			daemon = 0;
 #endif
 		} else if (!strcmp (argv [i], "-d")) {
-#ifndef DEBUG
 			daemon = 0;
 			log_perror = -1;
-#endif
+		} else if (!strcmp (argv [i], "-cf")) {
+			if (++i == argc)
+				usage ();
+			path_dhcpd_conf = argv [i];
+		} else if (!strcmp (argv [i], "-lf")) {
+			if (++i == argc)
+				usage ();
+			path_dhcpd_db = argv [i];
 		} else if (argv [i][0] == '-') {
 			usage ();
 		} else {
@@ -147,7 +163,6 @@ int main (argc, argv, envp)
 	else
 		log_perror = 0;
 
-#ifndef DEBUG
 	if (daemon) {
 		/* Become a daemon... */
 		if ((pid = fork ()) < 0)
@@ -158,8 +173,9 @@ int main (argc, argv, envp)
 		pid = setsid ();
 	}
 
+#ifndef DEBUG
 	/* Read previous pid file. */
-	if ((i = open (_PATH_DHCPD_PID, O_RDONLY)) >= 0) {
+	if ((i = open (path_dhcpd_pid, O_RDONLY)) >= 0) {
 		status = read (i, pbuf, (sizeof pbuf) - 1);
 		close (i);
 		pbuf [status] = 0;
@@ -168,8 +184,8 @@ int main (argc, argv, envp)
 		/* If the previous server process is not still running,
 		   write a new pid file immediately. */
 		if (pid && kill (pid, 0) < 0) {
-			unlink (_PATH_DHCPD_PID);
-			if ((i = open (_PATH_DHCPD_PID,
+			unlink (path_dhcpd_pid);
+			if ((i = open (path_dhcpd_pid,
 				       O_WRONLY | O_CREAT, 0640)) >= 0) {
 				sprintf (pbuf, "%d\n", (int)getpid ());
 				write (i, pbuf, strlen (pbuf));
@@ -210,8 +226,8 @@ int main (argc, argv, envp)
 	   meaning nothing is listening on the bootp port, then write
 	   the pid file out - what's in it now is bogus anyway. */
 	if (!pidfilewritten) {
-		unlink (_PATH_DHCPD_PID);
-		if ((i = open (_PATH_DHCPD_PID,
+		unlink (path_dhcpd_pid);
+		if ((i = open (path_dhcpd_pid,
 			       O_WRONLY | O_CREAT, 0640)) >= 0) {
 			sprintf (pbuf, "%d\n", (int)getpid ());
 			write (i, pbuf, strlen (pbuf));
@@ -232,7 +248,8 @@ int main (argc, argv, envp)
 
 static void usage ()
 {
-	error ("Usage: dhcpd [-p <UDP port #>] [-d] [-f] [if0 [...ifN]]");
+	error ("Usage: dhcpd [-p <UDP port #>] [-d] [-f] [-cf config-file]%s",
+	       "\n            [-l lease-file] [if0 [...ifN]]");
 }
 
 void cleanup ()
