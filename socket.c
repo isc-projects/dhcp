@@ -155,7 +155,7 @@ void listen_on (port, address)
 	sockets = tmp;
 }
 
-unsigned char packbuf [65536];	/* Should cover the gnarliest MTU... */
+unsigned char packbuf [4095];	/* Should cover the gnarliest MTU... */
 
 void dispatch ()
 {
@@ -208,6 +208,7 @@ void dispatch ()
 			      htons (from.sin_port));
 			ifrom.len = 4;
 			memcpy (ifrom.iabuf, &from.sin_addr, ifrom.len);
+
 			do_packet (packbuf, result, from.sin_port,
 				   ifrom, l -> sock);
 		}
