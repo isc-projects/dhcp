@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.53.2.2 2001/05/05 04:19:30 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.53.2.3 2001/05/17 21:31:48 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1585,9 +1585,11 @@ isc_result_t dhcp_failover_set_state (dhcp_failover_state_t *state,
     saved_state = state -> me.state;
     saved_stos = state -> me.stos;
     /* Keep the old stos if we're going into recover_wait. */
-    if (new_state != recover_wait)
+    if (new_state != recover_wait && new_state != startup)
 	    state -> me.stos = cur_time;
     state -> me.state = new_state;
+    if (new_state == startup && saved_state != startup)
+	state -> saved_state = saved_state;
 
     if (!write_failover_state (state) || !commit_leases ()) {
 	    /* XXX What to do?   What to do? */
@@ -1627,8 +1629,6 @@ isc_result_t dhcp_failover_set_state (dhcp_failover_state_t *state,
 	    break;
 	    
 	  case startup:
-	    if (saved_state != startup)
-		    state -> saved_state = saved_state;
 	    add_timeout (cur_time + 15,
 			 dhcp_failover_startup_timeout,
 			 state,
