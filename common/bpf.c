@@ -42,22 +42,32 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bpf.c,v 1.19.2.2 1998/12/22 22:39:19 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bpf.c,v 1.19.2.3 1999/02/03 19:05:42 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
-#if defined (USE_BPF_SEND) || defined (USE_BPF_RECEIVE)
-#include <sys/ioctl.h>
-#include <sys/uio.h>
+#if defined (USE_BPF_SEND) || defined (USE_BPF_RECEIVE)	\
+				|| defined (USE_LPF_RECEIVE)
+# if defined (USE_LPF_RECEIVE)
+#  include <asm/types.h>
+#  include <linux/filter.h>
+#  include <net/ethernet.h>
+#  define bpf_insn sock_filter /* Linux: dare to be gratuitously different. */
+# else
+#  include <sys/ioctl.h>
+#  include <sys/uio.h>
 
-#include <net/bpf.h>
-#ifdef NEED_OSF_PFILT_HACKS
-#include <net/pfilt.h>
-#endif
+#  include <net/bpf.h>
+#  if defined (NEED_OSF_PFILT_HACKS)
+#   include <net/pfilt.h>
+#  endif
+# endif
+
 #include <netinet/in_systm.h>
 #include "includes/netinet/ip.h"
 #include "includes/netinet/udp.h"
 #include "includes/netinet/if_ether.h"
+#endif
 
 /* Reinitializes the specified interface after an address change.   This
    is not required for packet-filter APIs. */
@@ -80,6 +90,7 @@ void if_reinitialize_receive (info)
    Opens a packet filter for each interface and adds it to the select
    mask. */
 
+#if defined (USE_BPF_SEND) || defined (USE_BPF_RECEIVE)
 int if_register_bpf (info)
 	struct interface_info *info;
 {
