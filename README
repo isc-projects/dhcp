@@ -1,6 +1,6 @@
 	    Internet Software Consortium DHCP Distribution
-	     Version 3, Release Candidate 8 Patchlevel 2
-			    June 26, 2000
+		    Version 3, Release Candidate 9
+			    June 28, 2001
 
 			     README FILE
 
@@ -142,14 +142,14 @@ information.   On Digital Unix, type ``man pfilt''.
 To build the DHCP Distribution, unpack the compressed tar file using
 the tar utility and the gzip command - type something like:
 
-	zcat dhcp-3.0rc8pl2.tar.gz |tar xvf -
+	zcat dhcp-3.0rc9.tar.gz |tar xvf -
 
 On BSD/OS, you have to type gzcat, not zcat, and you may run into
 similar problems on other operating systems.
 
 			    CONFIGURING IT
 
-Now, cd to the dhcp-3.0rc8pl2 subdirectory that you've just
+Now, cd to the dhcp-3.0rc9 subdirectory that you've just
 created and configure the source tree by typing:
 
 		./configure
