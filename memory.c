@@ -54,6 +54,9 @@ static struct hash_table *lease_ip_addr_hash;
 static struct hash_table *lease_hw_addr_hash;
 static struct lease *dangling_leases;
 
+static struct hash_table *vendor_class_hash;
+static struct hash_table *user_class_hash;
+
 void enter_host (hd)
 	struct host_decl *hd;
 {
@@ -413,6 +416,25 @@ void release_lease (lease)
 	supersede_lease (lease, &lt);
 }
 
+/* Abandon the specified lease (set its timeout to infinity and its
+   particulars to zero, and re-hash it as appropriate. */
+
+void abandon_lease (lease)
+	struct lease *lease;
+{
+	struct lease lt;
+
+	lt = *lease;
+	lt.ends = 0xFFFFFFFF;
+	warn ("Abandoning IP address %s\n",
+	      piaddr (lease -> ip_addr));
+	lt.hardware_addr.htype = -1;
+	lt.hardware_addr.hlen = 0;
+	lt.uid = (char *)0;
+	lt.uid_len = 0;
+	supersede_lease (lease, &lt);
+}
+
 /* Locate the lease associated with a given IP address... */
 
 struct lease *find_lease_by_ip_addr (addr)
@@ -442,6 +464,46 @@ struct lease *find_lease_by_hw_addr (hwaddr, hwlen)
 	return lease;
 }
 
+struct class *add_class (type, name)
+	int type;
+	char *name;
+{
+	struct class *class = new_class ("add_class");
+	char *tname = (char *)malloc (strlen (name) + 1);
+
+	if (!vendor_class_hash)
+		vendor_class_hash = new_hash ();
+	if (!user_class_hash)
+		user_class_hash = new_hash ();
+
+	if (!tname || !class || !vendor_class_hash || !user_class_hash)
+		return (struct class *)0;
+
+	memset (class, 0, sizeof *class);
+	strcpy (tname, name);
+	class -> name = tname;
+
+	if (type)
+		add_hash (user_class_hash,
+			  tname, strlen (tname), (unsigned char *)class);
+	else
+		add_hash (user_class_hash,
+			  tname, strlen (tname), (unsigned char *)class);
+	return class;
+}
+
+struct class *find_class (type, name, len)
+	int type;
+	char *name;
+	int len;
+{
+	struct class *class =
+		(struct class *)hash_lookup (type
+					     ? user_class_hash
+					     : vendor_class_hash, name, len);
+	return class;
+}	
+
 void dump_subnets ()
 {
 	struct lease *l;
@@ -449,13 +511,13 @@ void dump_subnets ()
 	int i;
 
 	for (s = subnets; s; s = s -> next) {
-		printf ("Subnet %s", piaddr (s -> net));
-		printf (" netmask %s\n",
-			piaddr (s -> netmask));
+		debug ("Subnet %s", piaddr (s -> net));
+		debug ("   netmask %s",
+		       piaddr (s -> netmask));
 		for (l = s -> leases; l; l = l -> next) {
 			print_lease (l);
 		}
-		printf ("Last Lease:\n");
+		debug ("Last Lease:");
 		print_lease (s -> last_lease);
 	}
 }
