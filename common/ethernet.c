@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: ethernet.c,v 1.6 2000/03/24 00:22:20 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: ethernet.c,v 1.6.2.1 2001/06/14 19:15:27 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -61,7 +61,7 @@ void assemble_ethernet_header (interface, buf, bufix, to)
 	unsigned *bufix;
 	struct hardware *to;
 {
-	struct ether_header eh;
+	struct isc_ether_header eh;
 
 	if (to && to -> hlen == 7) /* XXX */
 		memcpy (eh.ether_dhost, &to -> hbuf [1],
@@ -90,7 +90,7 @@ ssize_t decode_ethernet_header (interface, buf, bufix, from)
      unsigned bufix;
      struct hardware *from;
 {
-  struct ether_header eh;
+  struct isc_ether_header eh;
 
   memcpy (&eh, buf + bufix, ETHER_HEADER_SIZE);
 
