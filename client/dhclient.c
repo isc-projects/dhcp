@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhclient.c,v 1.20 1996/09/11 05:51:25 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.21 1996/09/11 18:53:32 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -118,7 +118,7 @@ int main (argc, argv, envp)
 	GET_TIME (&cur_time);
 
 	/* Discover all the network interfaces and initialize them. */
-	discover_interfaces ();
+	discover_interfaces (0);
 
 	for (interface = interfaces; interface; interface = interface -> next)
 		send_discover (interface);

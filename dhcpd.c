@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.34 1996/09/09 07:05:49 mellon Exp $ Copyright 1995, 1996 The Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.35 1996/09/11 18:53:32 mellon Exp $ Copyright 1995, 1996 The Internet Software Consortium.";
 #endif
 
 static char copyright[] =
@@ -218,7 +218,7 @@ int main (argc, argv, envp)
 	db_startup ();
 
 	/* Discover all the network interfaces and initialize them. */
-	discover_interfaces ();
+	discover_interfaces (1);
 
 #ifndef DEBUG
 	/* If we didn't write the pid file earlier because we found a

@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dispatch.c,v 1.25 1996/09/11 06:35:16 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dispatch.c,v 1.26 1996/09/11 18:53:33 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -57,7 +57,8 @@ static void got_one PROTO ((struct interface_info *));
    register that interface with the network I/O software, figure out what
    subnet it's on, and add it to the list of interfaces. */
 
-void discover_interfaces ()
+void discover_interfaces (serverP)
+	int serverP;
 {
 	struct interface_info *tmp;
 	struct interface_info *last;
@@ -243,7 +244,7 @@ void discover_interfaces ()
 			sizeof tmp -> tif -> ifr_addr);
 
 		/* We must have a subnet declaration for each interface. */
-		if (!tmp -> shared_network)
+		if (!tmp -> shared_network && serverP)
 			error ("No subnet declaration for %s (%s).",
 			       tmp -> name, inet_ntoa (foo.sin_addr));
 
@@ -282,7 +283,7 @@ void discover_interfaces ()
 
 		tmp -> tif = (struct ifreq *)0; /* Can't keep this. */
 	}
-	if (!server_identifier_matched)
+	if (!server_identifier_matched && serverP)
 		warn ("no interface address matches server identifier");
 
 	close (sock);
