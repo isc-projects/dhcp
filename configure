@@ -173,7 +173,7 @@ if [ ! -d $workname ]; then
 fi
 
 for foo in . client server relay common omapip dhcpctl minires; do
-	if [ ! -d work.${sysname}/$foo ]; then
+	if [ ! -d ${workname}/$foo ]; then
 	  mkdir ${workname}/$foo
 	fi
 	(sed $majversubst $minversubst \
