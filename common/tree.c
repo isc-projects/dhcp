@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.20 1999/03/09 20:01:56 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.21 1999/03/10 20:41:29 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -619,7 +619,8 @@ int evaluate_data_expression (result, packet, options, expr)
 		/* Extract an option. */
 	      case expr_option:
 		s0 = ((*expr -> data.option -> universe -> lookup_func)
-		      (result, options, expr -> data.option -> code));
+		      (result, &packet -> options,
+		       expr -> data.option -> code));
 #if defined (DEBUG_EXPRESSIONS)
 		log_info ("data: option %s.%s = %s",
 		      expr -> data.option -> universe -> name,
@@ -1115,9 +1116,10 @@ void data_string_truncate (dp, len)
 	struct data_string *dp;
 	int len;
 {
-	if (len < dp -> len)
+	if (len < dp -> len) {
 		dp -> terminated = 0;
-	dp -> len = len;
+		dp -> len = len;
+	}
 }
 
 int is_boolean_expression (expr)
