@@ -44,7 +44,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: inet.c,v 1.8.2.2 2001/06/14 20:44:24 mellon Exp $ Copyright (c) 1995-1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: inet.c,v 1.8.2.3 2001/06/21 16:59:00 mellon Exp $ Copyright (c) 1995-1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -215,12 +215,12 @@ char *piaddrmask (struct iaddr addr, struct iaddr mask,
 			break;
 	}
 	mw = 32 - i;
-	len = mw > 10 ? 2 : 1;
+	len = mw > 9 ? 2 : 1;
 	len += 4;	/* three dots and a slash. */
 	for (i = 0; i < (mw / 8) + 1; i++) {
-		if (addr.iabuf [i] > 100)
+		if (addr.iabuf [i] > 99)
 			len += 3;
-		else if (addr.iabuf [i] > 10)
+		else if (addr.iabuf [i] > 9)
 			len += 2;
 		else
 			len++;
