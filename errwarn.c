@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"@(#) Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: errwarn.c,v 1.8 1996/08/27 09:49:06 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -188,7 +188,7 @@ int parse_warn (ANSI_DECL (char *) fmt, VA_DOTDOTDOT)
 	do_percentm (mbuf, fmt);
 #ifndef NO_SNPRINTF
 	snprintf (fbuf, sizeof fbuf, "%s line %d char %d: %s",
-		  tlname, tline, tlpos, mbuf);
+		  tlname, lexline, lexchar, mbuf);
 #else
 	sprintf (fbuf, "%s line %d char %d: %s", tlname, tline, tlpos, mbuf);
 #endif
