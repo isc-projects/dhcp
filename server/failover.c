@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.33 2001/02/15 21:35:30 neild Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.34 2001/02/15 22:14:41 neild Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1911,9 +1911,6 @@ int dhcp_failover_pool_rebalance (dhcp_failover_state_t *state)
 	    for (p = s -> pools; p; p = p -> next) {
 		if (p -> failover_peer != state)
 		    continue;
-		log_info ("pool %lx total %d  free %d  backup %d",
-			  (unsigned long)p, p -> lease_count,
-			  p -> free_leases, p -> backup_leases);
 
 		/* Right now we're giving the peer half of the free leases.
 		   If we have more leases than the peer (i.e., more than
