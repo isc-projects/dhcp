@@ -1,9 +1,10 @@
-/* dhclient.c
+/* dhcp.c
 
-   DHCP client program.   Intended for testing. */
+   DHCP Client (really lame DHCP client). */
 
 /*
- * Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.
+ * Copyright (c) 1995, 1996 The Internet Software Consortium.
+ * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,271 +40,376 @@
  * Enterprises, see ``http://www.vix.com''.
  */
 
+#ifndef lint
+static char copyright[] =
+"@(#) Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+#endif /* not lint */
+
 #include "dhcpd.h"
-#include "dhctoken.h"
-
-void do_a_packet (int);
-void do_a_line (int);
-
-TIME default_lease_time = 43200; /* 12 hours... */
-TIME max_lease_time = 86400; /* 24 hours... */
 
 TIME cur_time;
-unsigned char packbuf [65536];	/* Should cover the gnarliest MTU... */
+TIME default_lease_time = 43200; /* 12 hours... */
+TIME max_lease_time = 86400; /* 24 hours... */
+struct tree_cache *global_options [256];
+
+struct iaddr server_identifier;
+int server_identifier_matched;
+
+#ifdef USE_FALLBACK
+struct interface_info fallback_interface;
+#endif
+
+u_int16_t server_port;
+int log_priority;
+
+int tline, tlpos;
+
+static void usage PROTO ((void));
 
 int main (argc, argv, envp)
 	int argc;
-	char **argv;
-	char **envp;
+	char **argv, **envp;
 {
-	FILE *cfile = stdin;
-	char *val;
-	struct sockaddr_in name;
-	int sock;
-	int flag;
-	int token;
-	struct dhcp_packet incoming, raw;
-	struct packet ip, outgoing;
-	struct sockaddr_in from, to;
-	struct iaddr ifrom;
-	int fromlen = sizeof from;
-	int max = 0;
-	int count;
-	int result;
+	struct in_addr addr;
+	int port = 0;
 	int i;
-	struct host_decl decl;
-	int xid = 1;
+	struct sockaddr_in name;
+	u_int32_t *addrlist = (u_int32_t *)0;
+	int addrcount = 0;
+	struct tree *addrtree = (struct tree *)0;
+	struct servent *ent;
+	int sock;
+	int pid;
+	int result;
+	int flag;
+	struct interface_info *interface;
 
-	memset (&ip, 0, sizeof ip);
+#ifdef SYSLOG_4_2
+	openlog ("dhclient", LOG_NDELAY);
+	log_facility = LOG_DAEMON;
+#else
+	openlog ("dhclient", LOG_NDELAY, LOG_DAEMON);
+#endif
 
-	/* Set up the initial dhcp option universe. */
-	initialize_universes ();
+#ifndef	NO_PUTENV
+	/* ensure mktime() calls are processed in UTC */
+	putenv("TZ=GMT0");
+#endif /* !NO_PUTENV */
 
+#ifndef DEBUG
+	setlogmask (LOG_UPTO (LOG_INFO));
+#endif	
+
+	for (i = 1; i < argc; i++) {
+		if (!strcmp (argv [i], "-p")) {
+			if (++i == argc)
+				usage ();
+			server_port = htons (atoi (argv [i]));
+			debug ("binding to user-specified port %d",
+			       ntohs (server_port));
+#if 0
+		} else if (!strcmp (argv [i], "-a")) {
+			if (++i == argc)
+				usage ();
+			if (inet_aton (argv [i], &addr)) {
+				addrtree =
+					tree_concat (addrtree,
+						     tree_const
+						     ((unsigned char *)&addr,
+						      sizeof addr));
+			} else {
+				addrtree = tree_concat (addrtree,
+							tree_host_lookup
+							(argv [i]));
+			}
+#endif
+		} else
+			usage ();
+	}
+
+	/* Default to the DHCP/BOOTP port. */
+	if (!server_port)
+	{
+		ent = getservbyname ("dhcpc", "udp");
+		if (!ent)
+			server_port = htons (68);
+		else
+			server_port = ent -> s_port;
+		endservent ();
+	}
+  
 	/* Get the current time... */
 	GET_TIME (&cur_time);
 
-	name.sin_family = AF_INET;
-	name.sin_port = htons (2001);
-	name.sin_addr.s_addr = htonl (INADDR_ANY);
-	memset (name.sin_zero, 0, sizeof (name.sin_zero));
+	/* Discover all the network interfaces and initialize them. */
+	discover_interfaces ();
 
-	/* List addresses on which we're listening. */
-	note ("Receiving on %s, port %d",
-	      inet_ntoa (name.sin_addr), htons (name.sin_port));
-	if ((sock = socket (AF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0)
-		error ("Can't create dhcp socket: %m");
+	for (interface = interfaces; interface; interface = interface -> next)
+		send_discover (interface);
 
-	flag = 1;
-	if (setsockopt (sock, SOL_SOCKET, SO_REUSEADDR,
-			&flag, sizeof flag) < 0)
-		error ("Can't set SO_REUSEADDR option on dhcp socket: %m");
+	/* Receive packets and dispatch them... */
+	dispatch ();
 
-	if (setsockopt (sock, SOL_SOCKET, SO_BROADCAST,
-			&flag, sizeof flag) < 0)
-		error ("Can't set SO_BROADCAST option on dhcp socket: %m");
-
-	if (bind (sock, (struct sockaddr *)&name, sizeof name) < 0)
-		error ("Can't bind to dhcp address: %m");
-
-	if (fork() == 0) {
-		while (1)
-			do_a_packet (sock);
-	} else {
-		while (1)
-			do_a_line (sock);
-	}
+	/* Not reached */
+	return 0;
 }
 
-/* statement :== host_statement */
-
-void parse_client_statement (cfile, decl)
-	FILE *cfile;
-	struct host_decl *decl;
+static void usage ()
 {
-	char *val;
-	jmp_buf bc;
-	int token;
-
-	switch (next_token (&val, cfile)) {
-	      case PACKET:
-		memset (decl, 0, sizeof decl);
-		if (!setjmp (bc)) {
-			do {
-				token = peek_token (&val, cfile);
-				if (token == SEMI) {
-					token = next_token (&val, cfile);
-					break;
-				}
-				parse_host_decl (cfile, &bc, decl);
-			} while (1);
-		}
-		break;
-	      default:
-		parse_warn ("expecting a declaration.");
-		skip_to_semi (cfile);
-		break;
-	}
+	error ("Usage: dhclient [-p <port>]");
 }
 
 void cleanup ()
 {
 }
 
-void do_a_packet (sock)
-	int sock;
+int commit_leases ()
 {
-	struct sockaddr_in name;
-	int flag;
-	struct dhcp_packet incoming;
-	struct packet ip;
-	struct sockaddr_in from;
-	struct iaddr ifrom;
-	int fromlen = sizeof from;
-	int max = 0;
-	int count;
-	int result;
-	int i;
-	int xid = 1;
-
-	if ((result = recvfrom (sock, packbuf, sizeof packbuf, 0,
-				(struct sockaddr *)&from, &fromlen)) < 0) {
-		warn ("recvfrom failed: %m");
-		sleep (5);
-		return;
-	}
-	note ("request from %s, port %d",
-	      inet_ntoa (from.sin_addr), htons (from.sin_port));
-	ifrom.len = 4;
-	memcpy (ifrom.iabuf, &from.sin_addr, ifrom.len);
-	memcpy (&incoming, packbuf, result);
-	memset (&ip, 0, sizeof ip);
-	ip.raw = &incoming;
-	ip.packet_length = result;
-	ip.client_port = ntohs (from.sin_port);
-	ip.client_addr = ifrom;
-	ip.client_sock = sock;
-	parse_options (&ip);
-
-	dump_packet (&ip);
+	return 0;
 }
 
-void do_a_line (sock)
-	int sock;
+int write_lease (lease)
+	struct lease *lease;
 {
-	int bufs = 0;
-	FILE *cfile = stdin;
-	char *val;
-	int flag;
-	int token;
-	struct dhcp_packet raw;
-	struct packet outgoing;
+	return 0;
+}
+
+void db_startup ()
+{
+}
+
+void bootp (packet)
+	struct packet *packet;
+{
+	note ("BOOTREPLY from %s",
+	      print_hw_addr (packet -> raw -> htype,
+			     packet -> raw -> hlen,
+			     packet -> raw -> chaddr));
+}
+
+void dhcp (packet)
+	struct packet *packet;
+{
+	switch (packet -> packet_type) {
+	      case DHCPOFFER:
+		dhcpoffer (packet);
+		break;
+
+	      case DHCPNAK:
+		dhcpnak (packet);
+		break;
+
+	      case DHCPACK:
+		dhcpack (packet);
+		break;
+
+	      default:
+		break;
+	}
+}
+
+void dhcpoffer (packet)
+	struct packet *packet;
+{
+	note ("DHCPOFFER from %s",
+	      print_hw_addr (packet -> raw -> htype,
+			     packet -> raw -> hlen,
+			     packet -> raw -> chaddr));
+
+	dump_packet (packet);
+	send_request (packet);
+}
+
+void dhcpack (packet)
+	struct packet *packet;
+{
+	note ("DHCPACK from %s",
+	      print_hw_addr (packet -> raw -> htype,
+			     packet -> raw -> hlen,
+			     packet -> raw -> chaddr));
+	dump_packet (packet);
+}
+
+void dhcpnak (packet)
+	struct packet *packet;
+{
+	note ("DHCPNAK from %s",
+	      print_hw_addr (packet -> raw -> htype,
+			     packet -> raw -> hlen,
+			     packet -> raw -> chaddr));
+}
+
+static u_int8_t requested_options [] = {
+	DHO_DHCP_REQUESTED_ADDRESS,
+	DHO_SUBNET_MASK,
+	DHO_ROUTERS,
+	DHO_DOMAIN_NAME_SERVERS,
+	DHO_HOST_NAME,
+	DHO_DOMAIN_NAME,
+	DHO_BROADCAST_ADDRESS };
+
+void send_discover (interface)
+	struct interface_info *interface;
+{
 	struct sockaddr_in to;
-	int max = 0;
-	int count;
 	int result;
-	int i;
-	struct host_decl decl;
-	int xid = 1;
+	struct dhcp_packet raw;
+	unsigned char discover = DHCPDISCOVER;
+	struct packet outgoing;
 
-	/* Parse a packet declaration from stdin, or exit if
-	   we've hit EOF. */
-	token = peek_token (&val, cfile);
-	if (token == EOF)
-		return;
-	memset (&decl, 0, sizeof decl);
-	parse_client_statement (cfile, &decl);
+	struct tree_cache *options [256];
+	struct tree_cache dhcpdiscover_tree;
+	struct tree_cache dhcprqo_tree;
 
-	/* Fill in a packet based on the information
-	   entered by the user. */
+	memset (options, 0, sizeof options);
 	memset (&outgoing, 0, sizeof outgoing);
 	memset (&raw, 0, sizeof raw);
 	outgoing.raw = &raw;
-	
-	/* Copy in the filename if given; otherwise, flag
-	   the filename buffer as available for options. */
-	if (decl.filename)
-		strncpy (raw.file,
-			 decl.filename, sizeof raw.file);
-	else
-		bufs |= 1;
-		
-	/* Copy in the server name if given; otherwise, flag
-	   the server_name buffer as available for options. */
-	if (decl.server_name)
-		strncpy (raw.sname,
-			 decl.server_name, sizeof raw.sname);
-	else
-		bufs |= 2;
-		
-	if (decl.interface_count) {
-		memcpy (raw.chaddr,
-			decl.interfaces [0].haddr,
-			decl.interfaces [0].hlen);
-		raw.htype = decl.interfaces [0].htype;
-		raw.hlen = decl.interfaces [0].hlen;
-		if (decl.interface_count > 1)
-			note ("Only one interface used.");
-	} else {
-		raw.htype = raw.hlen = 0;
-	}
-	
-	cons_options ((struct packet *)0,
-		      &outgoing, decl.options, bufs);
-	
-	if (decl.ciaddr) {
-		tree_evaluate (decl.ciaddr);
-		memcpy (&raw.ciaddr, decl.ciaddr -> value, decl.ciaddr -> len);
-	} else
-		memset (&raw.ciaddr, 0, sizeof raw.ciaddr);
-		
-	if (decl.yiaddr) {
-		tree_evaluate (decl.yiaddr);
-		memcpy (&raw.yiaddr,
-			decl.yiaddr -> value,
-			decl.yiaddr -> len);
-	} else
-		memset (&raw.yiaddr, 0, sizeof raw.yiaddr);
-	
-	if (decl.siaddr) {
-		tree_evaluate (decl.siaddr);
-		memcpy (&raw.siaddr,
-			decl.siaddr -> value,
-			decl.siaddr -> len);
-	} else
-		memset (&raw.siaddr, 0, sizeof raw.siaddr);
-	
-	if (decl.giaddr) {
-		tree_evaluate (decl.giaddr);
-		memcpy (&raw.giaddr,
-			decl.giaddr -> value,
-			decl.giaddr -> len);
-	} else
-		memset (&raw.giaddr, 0, sizeof raw.giaddr);
-	
-	raw.xid = xid++;
-	raw.xid = htons (raw.xid);
-	raw.secs = 0;
+
+	/* Set DHCP_MESSAGE_TYPE to DHCPNAK */
+	options [DHO_DHCP_MESSAGE_TYPE] = &dhcpdiscover_tree;
+	options [DHO_DHCP_MESSAGE_TYPE] -> value = &discover;
+	options [DHO_DHCP_MESSAGE_TYPE] -> len = sizeof discover;
+	options [DHO_DHCP_MESSAGE_TYPE] -> buf_size = sizeof discover;
+	options [DHO_DHCP_MESSAGE_TYPE] -> timeout = 0xFFFFFFFF;
+	options [DHO_DHCP_MESSAGE_TYPE] -> tree = (struct tree *)0;
+
+	/* Set DHCP_MESSAGE to whatever the message is */
+	options [DHO_DHCP_MESSAGE] = &dhcprqo_tree;
+	options [DHO_DHCP_MESSAGE] -> value = requested_options;
+	options [DHO_DHCP_MESSAGE] -> len = sizeof requested_options;
+	options [DHO_DHCP_MESSAGE] -> buf_size = sizeof requested_options;
+	options [DHO_DHCP_MESSAGE] -> timeout = 0xFFFFFFFF;
+	options [DHO_DHCP_MESSAGE] -> tree = (struct tree *)0;
+
+	/* Set up the option buffer... */
+	cons_options ((struct packet *)0, &outgoing, options, 0);
+
+	memset (&raw.ciaddr, 0, sizeof raw.ciaddr);
+	memset (&raw.siaddr, 0, sizeof raw.siaddr);
+	memset (&raw.giaddr, 0, sizeof raw.giaddr);
+	memcpy (raw.chaddr,
+		interface -> hw_address.haddr, interface -> hw_address.hlen);
+	raw.hlen = interface -> hw_address.hlen;
+	raw.htype = interface -> hw_address.htype;
+
+	raw.xid = random ();
+	raw.secs = 1;
 	raw.flags = htons (BOOTP_BROADCAST);
 	raw.hops = 0;
 	raw.op = BOOTREQUEST;
-		
-	to.sin_port = htons (2000);
-	to.sin_addr.s_addr = INADDR_BROADCAST; 
-/*	inet_aton ("130.129.63.255", &to.sin_addr);*//* XXX bcst bug */
 
+	/* Report what we're sending... */
+	note ("DHCPDISCOVER to %s", interface -> name);
+
+#ifdef DEBUG_PACKET
+	dump_packet (&outgoing);
+	dump_raw ((unsigned char *)&raw, outgoing.packet_length);
+#endif
+
+	/* Set up the common stuff... */
 	to.sin_family = AF_INET;
-#ifdef HAVE_SIN_LEN
+#ifdef HAVE_SA_LEN
 	to.sin_len = sizeof to;
 #endif
 	memset (to.sin_zero, 0, sizeof to.sin_zero);
-	
-	note ("Sending dhcp request to %s, port %d",
-	      inet_ntoa (to.sin_addr), htons (to.sin_port));
-	
+
+	to.sin_addr.s_addr = htonl (INADDR_BROADCAST);
+	to.sin_port = htons (ntohs (server_port) - 1); /* XXX */
+
 	errno = 0;
-	result = sendto (sock, &raw,
-			 outgoing.packet_length,
-			 0, (struct sockaddr *)&to, sizeof to);
+	result = send_packet (interface, (struct packet *)0,
+			      &raw, outgoing.packet_length,
+			      raw.siaddr, &to, (struct hardware *)0);
 	if (result < 0)
-		warn ("sendto: %m");
+		warn ("send_packet: %m");
+}
+
+void send_request (packet)
+	struct packet *packet;
+{
+	struct sockaddr_in to;
+	int result;
+	struct dhcp_packet raw;
+	unsigned char request = DHCPREQUEST;
+	struct packet outgoing;
+
+	struct tree_cache *options [256];
+	struct tree_cache dhcprequest_tree;
+	struct tree_cache dhcprqo_tree;
+	struct tree_cache dhcprqa_tree;
+
+	memset (options, 0, sizeof options);
+	memset (&outgoing, 0, sizeof outgoing);
+	memset (&raw, 0, sizeof raw);
+	outgoing.raw = &raw;
+
+	/* Set DHCP_MESSAGE_TYPE to DHCPNAK */
+	options [DHO_DHCP_MESSAGE_TYPE] = &dhcprequest_tree;
+	options [DHO_DHCP_MESSAGE_TYPE] -> value = &request;
+	options [DHO_DHCP_MESSAGE_TYPE] -> len = sizeof request;
+	options [DHO_DHCP_MESSAGE_TYPE] -> buf_size = sizeof request;
+	options [DHO_DHCP_MESSAGE_TYPE] -> timeout = 0xFFFFFFFF;
+	options [DHO_DHCP_MESSAGE_TYPE] -> tree = (struct tree *)0;
+
+	/* Set DHCP_MESSAGE to whatever the message is */
+	options [DHO_DHCP_MESSAGE] = &dhcprqo_tree;
+	options [DHO_DHCP_MESSAGE] -> value = requested_options;
+	options [DHO_DHCP_MESSAGE] -> len = sizeof requested_options;
+	options [DHO_DHCP_MESSAGE] -> buf_size = sizeof requested_options;
+	options [DHO_DHCP_MESSAGE] -> timeout = 0xFFFFFFFF;
+	options [DHO_DHCP_MESSAGE] -> tree = (struct tree *)0;
+
+	options [DHO_DHCP_REQUESTED_ADDRESS] = &dhcprqa_tree;
+	options [DHO_DHCP_REQUESTED_ADDRESS] -> value = 
+		packet -> options [DHO_DHCP_REQUESTED_ADDRESS].data;
+	options [DHO_DHCP_REQUESTED_ADDRESS] -> len =
+		packet -> options [DHO_DHCP_REQUESTED_ADDRESS].len;
+	options [DHO_DHCP_REQUESTED_ADDRESS] -> buf_size =
+		packet -> options [DHO_DHCP_REQUESTED_ADDRESS].len;
+	options [DHO_DHCP_REQUESTED_ADDRESS] -> timeout = 0xFFFFFFFF;
+	options [DHO_DHCP_REQUESTED_ADDRESS] -> tree = (struct tree *)0;
+
+	/* Set up the option buffer... */
+	cons_options ((struct packet *)0, &outgoing, options, 0);
+
+	memset (&raw.ciaddr, 0, sizeof raw.ciaddr);
+	raw.siaddr = packet -> raw -> siaddr;
+	raw.giaddr = packet -> raw -> giaddr;
+	memcpy (raw.chaddr,
+		packet -> interface -> hw_address.haddr,
+		packet -> interface -> hw_address.hlen);
+	raw.hlen = packet -> interface -> hw_address.hlen;
+	raw.htype = packet -> interface -> hw_address.htype;
+
+	raw.xid = packet -> raw -> xid;
+	raw.secs = packet -> raw -> secs;
+	raw.flags = htons (BOOTP_BROADCAST);
+	raw.hops = packet -> raw -> hops;
+	raw.op = BOOTREQUEST;
+
+	/* Report what we're sending... */
+	note ("DHCPREQUEST to %s", packet -> interface -> name);
+
+#ifdef DEBUG_PACKET
+	dump_packet (&outgoing);
+	dump_raw ((unsigned char *)&raw, outgoing.packet_length);
+#endif
+
+	/* Set up the common stuff... */
+	to.sin_family = AF_INET;
+#ifdef HAVE_SA_LEN
+	to.sin_len = sizeof to;
+#endif
+	memset (to.sin_zero, 0, sizeof to.sin_zero);
+
+	to.sin_addr.s_addr = htonl (INADDR_BROADCAST);
+	to.sin_port = htons (ntohs (server_port) - 1); /* XXX */
+
+	errno = 0;
+	result = send_packet (packet -> interface, (struct packet *)0,
+			      &raw, outgoing.packet_length,
+			      raw.siaddr, &to, (struct hardware *)0);
+	if (result < 0)
+		warn ("send_packet: %m");
 }
