@@ -89,13 +89,18 @@ if [ "$sysname" = "" ]; then
     FreeBSD)
       sysname=freebsd;;
     hpux)
-      sysname=hpux;;
+      set `which gcc`
+	if [ $# = 1 ]; then
+	  sysname=hpux-gcc
+	else
+	  sysname=hpux-cc
+	fi;;
     HP-UX)
       set `which gcc`
 	if [ $# = 1 ]; then
 	  sysname=hpux-gcc
 	else
-	  sysname=hpux
+	  sysname=hpux-cc
 	fi;;
     QNX)
       sysname=qnx;;
