@@ -142,14 +142,20 @@ void dump_raw (buf, len)
 	int len;
 {
 	int i;
+	char lbuf [80];
+	int lbix = 0;
 
 	for (i = 0; i < len; i++) {
-		if ((i & 15) == 0)
-			fprintf (stderr, "\n%03x:", i);
-		else if ((i & 7) == 0)
-			fprintf (stderr, " ");
-		fprintf (stderr, " %02x", buf [i]);
+		if ((i & 15) == 0) {
+			if (lbix)
+				note (lbuf);
+			sprintf (lbuf, "%03x:", i);
+			lbix = 4;
+		} else if ((i & 7) == 0)
+			lbuf [lbix++] = ' ';
+		sprintf (&lbuf [lbix], " %02x", buf [i]);
+		lbix += 3;
 	}
-	fprintf (stderr, "\n");
+	note (lbuf);
 }
 
