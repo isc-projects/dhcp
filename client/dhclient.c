@@ -56,7 +56,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhclient.c,v 1.48 1998/03/16 06:08:41 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.49 1998/04/09 04:26:24 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -991,8 +991,8 @@ void send_discover (ipp)
 		    ip -> client -> config -> backoff_cutoff)
 			ip -> client -> interval =
 				((ip -> client -> config -> backoff_cutoff / 2)
-				 + ((random () >> 2)
-				    % ip -> client -> interval));
+				 + ((random () >> 2) %
+				    ip -> client -> config -> backoff_cutoff));
 	} else if (!ip -> client -> interval)
 		ip -> client -> interval =
 			ip -> client -> config -> initial_interval;
