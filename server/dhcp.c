@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.192.2.30 2004/01/09 00:41:00 dhankins Exp $ Copyright (c) 1995-2002 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.192.2.31 2004/06/08 18:58:49 dhankins Exp $ Copyright (c) 1995-2002 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -268,10 +268,13 @@ void dhcpdiscover (packet, ms_nulltp)
 	find_lease (&lease, packet, packet -> shared_network,
 		    0, &allocatedp, (struct lease *)0, MDL);
 
-	if (lease && lease -> client_hostname &&
-	    db_printable (lease -> client_hostname))
-		s = lease -> client_hostname;
-	else
+	if (lease && lease -> client_hostname) {
+		if ((strlen (lease -> client_hostname) <= 64) &&
+		    db_printable (lease -> client_hostname))
+			s = lease -> client_hostname;
+		else
+			s = "Hostname Unsuitable for Printing";
+	} else
 		s = (char *)0;
 
 	/* Say what we're doing... */
@@ -446,10 +449,13 @@ void dhcprequest (packet, ms_nulltp, ip_lease)
 	/* XXX consider using allocatedp arg to find_lease to see
 	   XXX that this isn't a compliant DHCPREQUEST. */
 
-	if (lease && lease -> client_hostname &&
-	    db_printable (lease -> client_hostname))
-		s = lease -> client_hostname;
-	else
+	if (lease && lease -> client_hostname) {
+		if ((strlen (lease -> client_hostname) <= 64) &&
+		    db_printable (lease -> client_hostname))
+			s = lease -> client_hostname;
+		else
+			s = "Hostname Unsuitable for Printing";
+	} else
 		s = (char *)0;
 
 	oc = lookup_option (&dhcp_universe, packet -> options,
@@ -742,10 +748,13 @@ void dhcprelease (packet, ms_nulltp)
 		     packet -> raw -> chaddr, packet -> raw -> hlen)))
 		lease_dereference (&lease, MDL);
 
-	if (lease && lease -> client_hostname &&
-	    db_printable (lease -> client_hostname))
-		s = lease -> client_hostname;
-	else
+	if (lease && lease -> client_hostname) {
+		if ((strlen (lease -> client_hostname) <= 64) &&
+		    db_printable (lease -> client_hostname))
+			s = lease -> client_hostname;
+		else
+			s = "Hostname Unsuitable for Printing";
+	} else
 		s = (char *)0;
 
 	strncpy(cstr, inet_ntoa (packet -> raw -> ciaddr), 15);
@@ -830,10 +839,13 @@ void dhcpdecline (packet, ms_nulltp)
 	data_string_forget (&data, MDL);
 	find_lease_by_ip_addr (&lease, cip, MDL);
 
-	if (lease && lease -> client_hostname &&
-	    db_printable (lease -> client_hostname))
-		s = lease -> client_hostname;
-	else
+	if (lease && lease -> client_hostname) {
+		if ((strlen (lease -> client_hostname) <= 64) &&
+		    db_printable (lease -> client_hostname))
+			s = lease -> client_hostname;
+		else
+			s = "Hostname Unsuitable for Printing";
+	} else
 		s = (char *)0;
 
 	sprintf (msgbuf, "DHCPDECLINE of %s from %s %s%s%svia %s",
@@ -2748,10 +2760,13 @@ void dhcp_reply (lease)
 	raw.hops = state -> hops;
 	raw.op = BOOTREPLY;
 
-	if (lease -> client_hostname &&
-	    db_printable (lease -> client_hostname))
-		s = lease -> client_hostname;
-	else
+	if (lease -> client_hostname) {
+		if ((strlen (lease -> client_hostname) <= 64) &&
+		    db_printable (lease -> client_hostname))
+			s = lease -> client_hostname;
+		else
+			s = "Hostname Unsuitable for Printing";
+	} else
 		s = (char *)0;
 
 	/* Say what we're doing... */
