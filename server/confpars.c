@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.140 2001/04/20 18:07:29 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.141 2001/04/27 22:23:44 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2385,6 +2385,7 @@ int parse_lease_declaration (struct lease **lp, struct parse *cfile)
 	pair *p;
 	binding_state_t new_state;
 	unsigned buflen = 0;
+	struct class *class;
 
 	lease = (struct lease *)0;
 	status = lease_allocate (&lease, MDL);
@@ -2640,6 +2641,7 @@ int parse_lease_declaration (struct lease **lp, struct parse *cfile)
 			
 		      case BILLING:
 			seenbit = 2048;
+			class = (struct class *)0;
 			token = next_token (&val, (unsigned *)0, cfile);
 			if (token == CLASS) {
 				token = next_token (&val,
@@ -2654,8 +2656,8 @@ int parse_lease_declaration (struct lease **lp, struct parse *cfile)
 				if (lease -> billing_class)
 					unbill_class (lease,
 						      lease -> billing_class);
-				find_class (&lease -> billing_class, val, MDL);
-				if (!lease -> billing_class)
+				find_class (&class, val, MDL);
+				if (!class)
 					parse_warn (cfile,
 						    "unknown class %s", val);
 				parse_semi (cfile);
@@ -2664,12 +2666,16 @@ int parse_lease_declaration (struct lease **lp, struct parse *cfile)
 					unbill_class (lease,
 						      lease -> billing_class);
 				parse_class_declaration
-					(&lease -> billing_class,
+					(&class,
 					 cfile, (struct group *)0, 3);
 			} else {
 				parse_warn (cfile, "expecting \"class\"");
 				if (token != SEMI)
 					skip_to_semi (cfile);
+			}
+			if (class) {
+				bill_class (lease, class);
+				class_dereference (&class, MDL);
 			}
 			break;
 
