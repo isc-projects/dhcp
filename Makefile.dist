@@ -200,8 +200,9 @@ CFLAGS = $(DEBUG) $(PREDEFINES) $(INCLUDES) $(COPTS)
 
 all:	dhcpd dhclient dhcpxlt $(CATMANPAGES)
 
-install: dhcpd $(CATMANPAGES)
+install: dhcpd dhclient $(CATMANPAGES)
 	$(INSTALL) dhcpd $(BINDIR); $(CHMOD) 755 $(BINDIR)/dhcpd
+	$(INSTALL) dhclient $(BINDIR); $(CHMOD) 755 $(BINDIR)/dhclient
 	if [ ! -d $(ADMMANDIR) ]; then \
 	  mkdir $(ADMMANDIR); \
 	  chmod 755 $(ADMMANDIR); \
