@@ -270,6 +270,7 @@ struct lease_state {
 #define SV_DDNS_DOMAIN_NAME		23
 #define SV_DDNS_HOST_NAME		24
 #define SV_DDNS_REV_DOMAIN_NAME		25
+#define SV_DDNS_UPDATES			26
 
 #if !defined (DEFAULT_DEFAULT_LEASE_TIME)
 # define DEFAULT_DEFAULT_LEASE_TIME 43200

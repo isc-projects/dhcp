@@ -1289,6 +1289,17 @@ that the clients use this IP address when contacting the server.
 .PP
 Supplying a value for the dhcp-server-identifier option is equivalent
 to using the server-identifier statement.
+.PP
+.B The  
+.I ddns-updates
+.B statement
+.PP
+ \fBddns-updates \fIflag\fR\fB;\fR
+.PP
+The \fIddns-updates\fR parameter controls whether or not the server will
+attempt to do a ddns update when a lease is confirmed.   Set this to \fIoff\fR
+if the server should not attempt to do updates within a certain scope.
+The \fIddns-updates\fR parameter is on by default.
 .SH REFERENCE: OPTION STATEMENTS
 .PP
 DHCP option statements are documented in the

@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tables.c,v 1.28.2.1 1999/10/15 12:47:59 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tables.c,v 1.28.2.2 1999/10/27 21:36:08 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -851,7 +851,7 @@ struct option server_options [256] = {
 	{ "ddns-domainname", "t",		&server_universe, 23 },
 	{ "ddns-hostname", "t",			&server_universe, 24 },
 	{ "ddns-rev-domainname", "t",		&server_universe, 25 },
-	{ "option-26", "X",			&server_universe, 26 },
+	{ "ddns-updates", "f",			&server_universe, 26 },
 	{ "option-27", "X",			&server_universe, 27 },
 	{ "option-28", "X",			&server_universe, 28 },
 	{ "option-29", "X",			&server_universe, 29 },
