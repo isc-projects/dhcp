@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: execute.c,v 1.30 2000/03/17 03:59:01 mellon Exp $ Copyright (c) 1998-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: execute.c,v 1.31 2000/04/13 21:48:34 mellon Exp $ Copyright (c) 1998-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -89,6 +89,9 @@ int execute_statements (packet, lease, in_options, out_options, scope,
 		      case on_statement:
 			if (lease) {
 			    if (r -> data.on.evtypes & ON_EXPIRY) {
+#if defined (DEBUG_EXPRESSIONS)
+				    log_debug ("exec: on expiry");
+#endif
 				if (lease -> on_expiry)
 					executable_statement_dereference
 						(&lease -> on_expiry, MDL);
@@ -98,6 +101,9 @@ int execute_statements (packet, lease, in_options, out_options, scope,
 						 r -> data.on.statements, MDL);
 			    }
 			    if (r -> data.on.evtypes & ON_RELEASE) {
+#if defined (DEBUG_EXPRESSIONS)
+				    log_debug ("exec: on release");
+#endif
 				if (lease -> on_release)
 					executable_statement_dereference
 						(&lease -> on_release, MDL);
@@ -107,6 +113,9 @@ int execute_statements (packet, lease, in_options, out_options, scope,
 						 r -> data.on.statements, MDL);
 			    }
 			    if (r -> data.on.evtypes & ON_COMMIT) {
+#if defined (DEBUG_EXPRESSIONS)
+				    log_debug ("exec: on commit");
+#endif
 				if (lease -> on_commit)
 					executable_statement_dereference
 						(&lease -> on_commit, MDL);
@@ -119,14 +128,21 @@ int execute_statements (packet, lease, in_options, out_options, scope,
 			break;
 
 		      case switch_statement:
+#if defined (DEBUG_EXPRESSIONS)
+			log_debug ("exec: switch");
+#endif
 			e = find_matching_case (packet, lease,
 						in_options, out_options, scope,
 						r -> data.s_switch.expr,
 						r -> data.s_switch.statements);
+#if defined (DEBUG_EXPRESSIONS)
+			log_debug ("exec: switch: case %lx", (unsigned long)e);
+#endif
 			if (e && !execute_statements (packet, lease,
 						      in_options, out_options,
 						      scope, e))
 				return 0;
+			break;
 
 			/* These have no effect when executed. */
 		      case case_statement:
@@ -159,7 +175,7 @@ int execute_statements (packet, lease, in_options, out_options, scope,
 				 out_options, scope, r -> data.eval);
 #if defined (DEBUG_EXPRESSIONS)
 			log_debug ("exec: evaluate: %s",
-				   (status "succeeded" : "failed"));
+				   (status ? "succeeded" : "failed"));
 #endif
 			break;
 
@@ -176,7 +192,7 @@ int execute_statements (packet, lease, in_options, out_options, scope,
 #if defined (DEBUG_EXPRESSIONS)
 			log_debug ("exec: break");
 #endif
-			return 0;
+			return 1;
 
 		      case supersede_option_statement:
 #if defined (DEBUG_EXPRESSIONS)
@@ -216,6 +232,9 @@ int execute_statements (packet, lease, in_options, out_options, scope,
 
 		      case set_statement:
 			binding = find_binding (scope, r -> data.set.name);
+#if defined (DEBUG_EXPRESSIONS)
+			log_debug ("exec: set %s", r -> data.set.name);
+#endif
 			if (!binding && status) {
 				binding = dmalloc (sizeof *binding, MDL);
 				if (binding) {
@@ -259,6 +278,9 @@ int execute_statements (packet, lease, in_options, out_options, scope,
 
 		      case unset_statement:
 			binding = find_binding (scope, r -> data.unset);
+#if defined (DEBUG_EXPRESSIONS)
+			log_debug ("exec: unset %s", r -> data.unset);
+#endif
 			if (binding) {
 				if (binding -> value)
 					binding_value_dereference
@@ -273,6 +295,9 @@ int execute_statements (packet, lease, in_options, out_options, scope,
 			break;
 
 		      case let_statement:
+#if defined (DEBUG_EXPRESSIONS)
+			log_debug ("exec: let %s", r -> data.let.name);
+#endif
 			ns = (struct binding_scope *)0;
 			binding_scope_allocate (&ns, MDL);
 			e = r;
