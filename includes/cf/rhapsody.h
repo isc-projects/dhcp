@@ -3,7 +3,7 @@
    System dependencies for NetBSD... */
 
 /*
- * Copyright (c) 1996-1999 Internet Software Consortium.
+ * Copyright (c) 1996-2001 Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -100,6 +100,8 @@ extern int h_errno;
 #ifdef __alpha__
 #define PTRSIZE_64BIT
 #endif
+
+#define SOCKLEN_T int
 
 #ifdef NEED_PRAND_CONF
 const char *cmds[] = {
