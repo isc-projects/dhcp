@@ -413,9 +413,21 @@ list of RFC 1001/1002 NBDD servers listed in order of preference.
 The NetBIOS node type option allows NetBIOS over TCP/IP clients which
 are configurable to be configured as described in RFC 1001/1002.  The
 value is specified as a single octet which identifies the client type.
-A value of 1 corresponds to a NetBIOS B-node; a value of 2 corresponds
-to a P-node; a value of 4 corresponds to an M-node; a value of 8
-corresponds to an H-node.
+.PP
+Possible node types are:
+.PP
+.BL
+.IT 1
+B-node: Broadcast - no WINS
+.IT 2
+P-node: Peer - WINS only.
+.IT 4
+M-node: Mixed - broadcast, then WINS
+.IT 8
+H-node: Hybrid - WINS, then broadcast
+.EL
+.PP
+option netbios-node-type 2;
 .PP
  \fBoption\fR \fBnetbios-scope\fR \fIstring\fR\fB;\fR
 .PP
