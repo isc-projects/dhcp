@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.86 1999/04/12 22:18:58 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.87 1999/04/23 23:17:52 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -195,7 +195,7 @@ void dhcprequest (packet)
 	if (!packet -> shared_network ||
 	    (packet -> raw -> ciaddr.s_addr &&
 	     packet -> raw -> giaddr.s_addr) ||
-	    oc) {
+	    (oc && !packet -> raw -> ciaddr.s_addr)) {
 		
 		/* If we don't know where it came from but we do know
 		   where it claims to have come from, it didn't come
@@ -365,7 +365,6 @@ void dhcpinform (packet)
 	if (!subnet) {
 		log_info ("%s: unknown subnet %s",
 			  msgbuf, inet_ntoa (packet -> raw -> giaddr));
-		return;
 	}
 
 	memset (&d1, 0, sizeof d1);
@@ -375,15 +374,17 @@ void dhcpinform (packet)
 	outgoing.raw = &raw;
 
 	/* Execute statements in scope starting with the subnet scope. */
-	execute_statements_in_scope (packet, packet -> options, options,
-				     subnet -> group, (struct group *)0);
+	if (subnet)
+		execute_statements_in_scope (packet, packet -> options,
+					     options, subnet -> group,
+					     (struct group *)0);
 
 	/* Execute statements in the class scopes. */
 	for (i = packet -> class_count; i > 0; i--) {
 		execute_statements_in_scope
 			(packet, packet -> options,
 			 options, packet -> classes [i - 1] -> group,
-			 subnet -> group);
+			 subnet ? subnet -> group : (struct group *)0);
 	}
 
 	/* Figure out the filename. */
@@ -398,8 +399,7 @@ void dhcpinform (packet)
 	}
 
 	/* Choose a server name as above. */
-	oc = lookup_option (&server_universe, options,
-			    SV_SERVER_NAME);
+	oc = lookup_option (&server_universe, options, SV_SERVER_NAME);
 	if (oc && evaluate_option_cache (&d1, packet, packet -> options, oc)) {
 		i = d1.len;
 		if (i > sizeof raw.sname)
@@ -466,7 +466,7 @@ void dhcpinform (packet)
 	/* Use the subnet mask from the subnet declaration if no other
 	   mask has been provided. */
 	i = DHO_SUBNET_MASK;
-	if (!lookup_option (&dhcp_universe, options, i)) {
+	if (subnet && !lookup_option (&dhcp_universe, options, i)) {
 		if (option_cache_allocate (&oc, "dhcpinform")) {
 			if (make_const_data (&oc -> expression,
 					     subnet -> netmask.iabuf,
@@ -485,8 +485,7 @@ void dhcpinform (packet)
 	j = SV_VENDOR_OPTION_SPACE;
 	if (!lookup_option (&dhcp_universe, options, i) &&
 	    (oc = lookup_option (&server_universe, options, j)) &&
-	    evaluate_option_cache (&d1,
-				   packet, options, oc)) {
+	    evaluate_option_cache (&d1, packet, packet -> options, oc)) {
 		oc = (struct option_cache *)0;
 		if (option_cache_allocate (&oc, "dhcpinform")) {
 			if (make_encapsulation (&oc -> expression, &d1)) {
@@ -496,6 +495,28 @@ void dhcpinform (packet)
 			option_cache_dereference (&oc, "dhcpinform");
 		}
 		data_string_forget (&d1, "dhcpinform");
+	}
+
+	/* If a site option space has been specified, use that for
+	   site option codes. */
+	i = SV_SITE_OPTION_SPACE;
+	if ((oc = lookup_option (&dhcp_universe, options, i)) &&
+	    evaluate_option_cache (&d1, packet, packet -> options, oc)) {
+		struct universe *u;
+		
+		u = ((struct universe *)
+		     hash_lookup (&universe_hash, d1.data, d1.len));
+		if (!u) {
+			log_error ("unknown option space %s.", d1.data);
+			return;
+		}
+
+		options -> site_universe = u -> index;
+		options -> site_code_min = 128; /* XXX */
+		data_string_forget (&d1, "dhcpinform");
+	} else {
+		options -> site_universe = dhcp_universe.index;
+		options -> site_code_min = 0; /* Trust me, it works. */
 	}
 
 	/* If the client has provided a list of options that it wishes
@@ -517,6 +538,20 @@ void dhcpinform (packet)
 
 	log_info ("%s", msgbuf);
 
+	/* Figure out the address of the boot file server. */
+	raw.siaddr = from;
+	if ((oc =
+	     lookup_option (&server_universe, options, SV_NEXT_SERVER))) {
+		if (evaluate_option_cache (&d1, packet,
+					   packet -> options, oc)) {
+			/* If there was more than one answer,
+			   take the first. */
+			if (d1.len >= 4 && d1.data)
+				memcpy (&raw.siaddr, d1.data, 4);
+			data_string_forget (&d1, "dhcpinform");
+		}
+	}
+
 	/* Set up the option buffer... */
 	outgoing.packet_length =
 		cons_options (packet, outgoing.raw, 0, options,
@@ -528,20 +563,6 @@ void dhcpinform (packet)
 	if (outgoing.packet_length < BOOTP_MIN_LEN)
 		outgoing.packet_length = BOOTP_MIN_LEN;
 
-
-	/* Figure out the address of the next server. */
-	raw.siaddr = from;
-	if ((oc =
-	     lookup_option (&server_universe, options, SV_NEXT_SERVER))) {
-		if (evaluate_option_cache (&d1,
-					   packet, packet -> options, oc)) {
-			/* If there was more than one answer,
-			   take the first. */
-			if (d1.len >= 4 && d1.data)
-				memcpy (&raw.siaddr, d1.data, 4);
-			data_string_forget (&d1, "dhcpinform");
-		}
-	}
 
 	raw.giaddr = packet -> raw -> giaddr;
 	memcpy (raw.chaddr, packet -> raw -> chaddr, sizeof raw.chaddr);
@@ -787,17 +808,24 @@ void ack_lease (packet, lease, offer, when, msg)
 			(struct agent_options *)0;
 	}
 
-	/* Execute statements in scope starting with the pool group. */
-	execute_statements_in_scope (packet, state -> options,
+	/* Execute statements in scope starting with the subnet scope. */
+	execute_statements_in_scope (packet, packet -> options,
 				     state -> options,
 				     lease -> subnet -> group,
 				     (struct group *)0);
 
-	/* Vendor and user classes are only supported for DHCP clients. */
+	/* If the lease is from a pool, run the pool scope. */
+	if (lease -> pool)
+		execute_statements_in_scope (packet, packet -> options,
+					     state -> options,
+					     lease -> pool -> group,
+					     lease -> subnet -> group);
+
+	/* Execute statements from class scopes. */
 	if (offer) {
 		for (i = packet -> class_count; i > 0; i--) {
                         execute_statements_in_scope
-				(packet, state -> options,
+				(packet, packet -> options,
 				 state -> options,
 				 packet -> classes [i - 1] -> group,
 				 (lease -> pool
@@ -806,17 +834,10 @@ void ack_lease (packet, lease, offer, when, msg)
 		}
 	}
 
-	/* If the lease is from a pool, run the pool scope. */
-	if (lease -> pool)
-		execute_statements_in_scope (packet, state -> options,
-					     state -> options,
-					     lease -> pool -> group,
-					     lease -> subnet -> group);
-
 	/* If we have a host_decl structure, run the options associated
 	   with its group. */
 	if (lease -> host)
-		execute_statements_in_scope (packet, state -> options,
+		execute_statements_in_scope (packet, packet -> options,
 					     state -> options,
 					     lease -> host -> group,
 					     (lease -> pool
@@ -1016,16 +1037,15 @@ void ack_lease (packet, lease, offer, when, msg)
 					data_string_forget (&d1, "ack_lease");
 				}
 			}
-
-			/* Enforce the maximum lease length. */
-			if (lease_time < 0 || /* XXX */
-			    lease_time > max_lease_time)
-				lease_time = max_lease_time;
-			
 		} else {
 			lease_time = default_lease_time;
 		}
 		
+		/* Enforce the maximum lease length. */
+		if (lease_time < 0 || /* XXX */
+		    lease_time > max_lease_time)
+			lease_time = max_lease_time;
+			
 		min_lease_time = DEFAULT_MIN_LEASE_TIME;
 		if ((oc = lookup_option (&server_universe, state -> options,
 					 SV_MIN_LEASE_TIME))) {
@@ -1137,7 +1157,7 @@ void ack_lease (packet, lease, offer, when, msg)
 	/* Remember the interface on which the packet arrived. */
 	state -> ip = packet -> interface;
 
-	/* Set a flag if this client is a lame Microsoft client that NUL
+	/* Set a flag if this client is a broken client that NUL
 	   terminates string options and expects us to do likewise. */
 	lease -> flags &= ~MS_NULL_TERMINATION;
 	if ((oc = lookup_option (&dhcp_universe, packet -> options,
@@ -1284,6 +1304,27 @@ void ack_lease (packet, lease, offer, when, msg)
 			}
 			option_cache_dereference (&oc, "ack_lease");
 		}
+	} else {
+		state -> from.len =
+			sizeof state -> ip -> primary_address;
+		memcpy (state -> from.iabuf,
+			&state -> ip -> primary_address,
+			state -> from.len);
+	}
+
+	/* Figure out the address of the boot file server. */
+	memcpy (&state -> siaddr, state -> from.iabuf, sizeof state -> siaddr);
+	if ((oc =
+	     lookup_option (&server_universe,
+			    state -> options, SV_NEXT_SERVER))) {
+		if (evaluate_option_cache (&d1, packet,
+					   packet -> options, oc)) {
+			/* If there was more than one answer,
+			   take the first. */
+			if (d1.len >= 4 && d1.data)
+				memcpy (&raw.siaddr, d1.data, 4);
+			data_string_forget (&d1, "ack_lease");
+		}
 	}
 
 	/* Use the subnet mask from the subnet declaration if no other
@@ -1411,6 +1452,28 @@ void ack_lease (packet, lease, offer, when, msg)
 		data_string_forget (&d1, "ack_lease");
 	}
 
+	/* If a site option space has been specified, use that for
+	   site option codes. */
+	i = SV_SITE_OPTION_SPACE;
+	if ((oc = lookup_option (&dhcp_universe, state -> options, i)) &&
+	    evaluate_option_cache (&d1, packet, state -> options, oc)) {
+		struct universe *u;
+		
+		u = ((struct universe *)
+		     hash_lookup (&universe_hash, d1.data, d1.len));
+		if (!u) {
+			log_error ("unknown option space %s.", d1.data);
+			return;
+		}
+
+		state -> options -> site_universe = u -> index;
+		state -> options -> site_code_min = 128; /* XXX */
+		data_string_forget (&d1, "ack_lease");
+	} else {
+		state -> options -> site_code_min = 0;
+		state -> options -> site_universe = dhcp_universe.index;
+	}
+
 	/* If the client has provided a list of options that it wishes
 	   returned, use it to prioritize.  Otherwise, prioritize
 	   based on the default priority list. */
@@ -1522,27 +1585,7 @@ void dhcp_reply (lease)
 
 	memcpy (&raw.ciaddr, &state -> ciaddr, sizeof raw.ciaddr);
 	memcpy (&raw.yiaddr, lease -> ip_addr.iabuf, 4);
-
-	/* Figure out the address of the next server. */
-	raw.siaddr = state -> ip -> primary_address;
-	if ((oc =
-	     lookup_option (&server_universe,
-			    state -> options, SV_NEXT_SERVER))) {
-		if (evaluate_option_cache (&d1, (struct packet *)0,
-					   (struct option_state *)0, oc)) {
-			/* If there was more than one answer,
-			   take the first. */
-			if (d1.len >= 4 && d1.data)
-				memcpy (&raw.siaddr, d1.data, 4);
-			data_string_forget (&d1, "dhcp_reply");
-		}
-	}
-
-	/*
-	 * Free all of the entries in the option_state structure
-	 * now that we're done with them.
-	 */
-
+	raw.siaddr = state -> siaddr;
 	raw.giaddr = state -> giaddr;
 
 	raw.xid = state -> xid;
@@ -1642,6 +1685,9 @@ void dhcp_reply (lease)
 	result = send_packet (state -> ip,
 			      (struct packet *)0, &raw, packet_length,
 			      from, &to, &hto);
+
+	/* Free all of the entries in the option_state structure
+	   now that we're done with them. */
 
 	data_string_forget (&state -> parameter_request_list,
 			    "dhcp_reply");
