@@ -131,6 +131,11 @@
 #  define USE_NIT_RECEIVE
 #endif
 
+#ifdef USE_UPF
+#  define USE_UPF_SEND
+#  define USE_UPF_RECEIVE
+#endif
+
 /* Porting::
 
    If you add support for sending packets directly out an interface,
@@ -139,7 +144,7 @@
    Currently, all low-level packet interfaces use BSD sockets as a
    fallback. */
 
-#if defined (USE_BPF_SEND) || defined (USE_NIT_SEND)
+#if defined (USE_BPF_SEND) || defined (USE_NIT_SEND) || defined (USE_UPF_SEND)
 #  define USE_SOCKET_FALLBACK
 #  define USE_FALLBACK
 #endif
@@ -150,7 +155,8 @@
    and need to be able to assemble packets, add the USE_XXX_SEND
    definition for your interface to the list tested below. */
 
-#if defined (USE_RAW_SEND) || defined (USE_BPF_SEND) || defined (USE_NIT_SEND)
+#if defined (USE_RAW_SEND) || defined (USE_BPF_SEND) || \
+		defined (USE_NIT_SEND) || defined (USE_UPF_SEND)
 #  define PACKET_ASSEMBLY
 #endif
 
@@ -160,8 +166,8 @@
    and need to be able to decode raw packets, add the USE_XXX_RECEIVE
    definition for your interface to the list tested below. */
 
-#if defined (USE_RAW_RECEIVE) || defined (USE_BPF_RECEIVE) \
-	|| defined (USE_NIT_RECEIVE)
+#if defined (USE_RAW_RECEIVE) || defined (USE_BPF_SEND) || \
+		defined (USE_NIT_RECEIVE) || defined (USE_UPF_SEND)
 #  define PACKET_DECODING
 #endif
 
