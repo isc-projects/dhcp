@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.143.2.7 2001/08/09 09:54:07 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.143.2.8 2001/10/04 22:08:35 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -519,9 +519,16 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		next_token (&val, (unsigned *)0, cfile);
 		cache = (struct option_cache *)0;
 		if (parse_fixed_addr_param (&cache, cfile)) {
-			if (host_decl)
-				host_decl -> fixed_addr = cache;
-			else {
+			if (host_decl) {
+				if (host_decl -> fixed_addr) {
+					option_cache_dereference (&cache, MDL);
+					parse_warn (cfile,
+						    "Only one fixed address%s",
+						    " declaration per host.");
+				} else {
+					host_decl -> fixed_addr = cache;
+				}
+			} else {
 				parse_warn (cfile,
 					    "fixed-address parameter not %s",
 					    "allowed here.");
@@ -970,9 +977,14 @@ void parse_failover_peer (cfile, group, type)
 		}
 	} while (token != RBRACE);
 		
-	if (peer -> i_am == primary && !peer -> hba) {
-		parse_warn (cfile, 
+	if (peer -> i_am == primary) {
+	    if (!peer -> hba) {
+		parse_warn (cfile,
 			    "primary failover server must have hba or split.");
+	    } else if (!peer -> mclt) {
+		parse_warn (cfile,
+			    "primary failover server must have mclt.");
+	    }
 	}
 
 	if (type == SHARED_NET_DECL) {
