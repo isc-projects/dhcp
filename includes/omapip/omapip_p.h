@@ -103,10 +103,10 @@ typedef struct __omapi_message_object {
 	omapi_typed_data_t *authenticator;
 	u_int32_t authid;
 	omapi_object_t *id_object;
-	unsigned op;
-	omapi_handle_t h;
-	unsigned id;
-	unsigned rid;
+	u_int32_t op;
+	u_int32_t h;
+	u_int32_t id;
+	u_int32_t rid;
 } omapi_message_object_t;
 
 typedef struct {
