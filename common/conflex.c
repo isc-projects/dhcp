@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: conflex.c,v 1.48 1999/07/06 20:41:22 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: conflex.c,v 1.48.2.1 1999/10/14 20:47:27 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -65,6 +65,7 @@ static enum dhcp_token intern PROTO ((char *, enum dhcp_token));
 void new_parse (name)
 	char *name;
 {
+	token = 0;
 	tlname = name;
 	lpos = line = 1;
 	cur_line = line1;
@@ -439,17 +440,17 @@ static enum dhcp_token intern (atom, dfv)
 		if (isascii (atom [1]) && tolower (atom [1]) == 'x') {
 			if (!strcasecmp (atom + 2, "tract-int"))
 				return EXTRACT_INT;
-			if (!strcasecmp (atom + 2, "ncode-int"))
-				return ENCODE_INT;
 			if (!strcasecmp (atom + 2, "ists"))
 				return EXISTS;
+			if (!strcasecmp (atom + 2, "pire"))
+				return EXPIRE;
 		}
+		if (!strcasecmp (atom + 1, "ncode-int"))
+			return ENCODE_INT;
 		if (!strcasecmp (atom + 1, "thernet"))
 			return ETHERNET;
 		if (!strcasecmp (atom + 1, "nds"))
 			return ENDS;
-		if (!strcasecmp (atom + 1, "xpire"))
-			return EXPIRE;
 		if (!strncasecmp (atom + 1, "ls", 2)) {
 			if (!strcasecmp (atom + 3, "e"))
 				return ELSE;
@@ -485,6 +486,8 @@ static enum dhcp_token intern (atom, dfv)
 	      case 'i':
 		if (!strcasecmp (atom + 1, "nteger"))
 			return INTEGER;
+		if (!strcasecmp (atom + 1, "nfinite"))
+			return INFINITE;
 		if (!strcasecmp (atom + 1, "p-address"))
 			return IP_ADDRESS;
 		if (!strcasecmp (atom + 1, "nitial-interval"))
@@ -545,6 +548,8 @@ static enum dhcp_token intern (atom, dfv)
 			return NAMESERVER;
 		if (!strcasecmp (atom + 1, "etmask"))
 			return NETMASK;
+		if (!strcasecmp (atom + 1, "ever"))
+			return NEVER;
 		if (!strcasecmp (atom + 1, "ext-server"))
 			return NEXT_SERVER;
 		if (!strcasecmp (atom + 1, "ot"))
@@ -553,6 +558,8 @@ static enum dhcp_token intern (atom, dfv)
 	      case 'o':
 		if (!strcasecmp (atom + 1, "r"))
 			return OR;
+		if (!strcasecmp (atom + 1, "n"))
+			return ON;
 		if (!strcasecmp (atom + 1, "ption"))
 			return OPTION;
 		if (!strcasecmp (atom + 1, "ne-lease-per-client"))
