@@ -47,8 +47,8 @@ install: $(PROG) $(CATMANPAGES)
 	if [ x$(SCRIPT) = xnone ]; then \
 	  echo "No client script available."; \
 	else \
-	  $(INSTALL) scripts/$(SCRIPT) $(ETCDIR)/dhclient-script; \
-	  $(CHMOD) 700 $(ETCDIR)/dhclient-script; \
+	  $(INSTALL) scripts/$(SCRIPT) $(ETC)/dhclient-script; \
+	  $(CHMOD) 700 $(ETC)/dhclient-script; \
 	fi
 	if [ ! -d $(ADMMANDIR) ]; then \
 	  mkdir $(ADMMANDIR); \
