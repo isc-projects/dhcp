@@ -1962,6 +1962,23 @@ details).
 .RE
 .PP
 The
+.I update-optimization
+statement
+.RS 0.25i
+.PP
+.B update-optimization \fIflag\fB;\fR
+.PP
+If the \fIupdate-optimization\fR parameter is true for a given client,
+the server will attempt a DDNS update for that client each time the
+client renews its lease, rather than only attempting an update when it
+appears to be necessary.   This will allow the DNS to heal from
+database inconsistencies more easily, but the cost is that the DHCP
+server must do many more DDNS updates.   We do not recommend enabling
+this on large networks with the current DHCP server.   This option
+only affects the behaviour of the \fIinterim\fR DDNS update scheme,
+and has no effect on the \fIad-hoc\fI DDNS update scheme.
+.PP
+The
 .I use-host-decl-names
 statement
 .RS 0.25i
