@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.85.2.11 2003/03/29 21:37:36 dhankins Exp $ Copyright (c) 1995-2002 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.85.2.12 2003/03/31 03:06:55 dhankins Exp $ Copyright (c) 1995-2002 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -173,9 +173,29 @@ int parse_option_buffer (options, buffer, length, universe)
 		       (options, universe -> options [code],
 			buffer + offset + 2, len,
 			universe, (const char *)0)))) {
-		    save_option_buffer (universe, options, bp,
-					&bp -> data [offset + 2], len,
-					universe -> options [code], 1);
+		    op = lookup_option (universe, options, code);
+		    if (op) {
+			struct data_string new;
+			memset (&new, 0, sizeof new);
+			if (!buffer_allocate (&new.buffer, op -> data.len + len,
+					      MDL)) {
+			    log_error ("parse_option_buffer: No memory.");
+			    return 0;
+			}
+			memcpy (new.buffer -> data, op -> data.data,
+				op -> data.len);
+			memcpy (&new.buffer -> data [op -> data.len],
+				&bp -> data [offset + 2], len);
+			new.len = op -> data.len + len;
+			new.data = new.buffer -> data;
+			data_string_forget (&op -> data, MDL);
+			data_string_copy (&op -> data, &new, MDL);
+			data_string_forget (&new, MDL);
+		    } else {
+			save_option_buffer (universe, options, bp,
+					    &bp -> data [offset + 2], len,
+					    universe -> options [code], 1);
+		    }
 		}
 		offset += len + 2;
 	}
