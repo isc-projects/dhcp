@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.31.2.9 1999/12/22 21:44:01 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.31.2.10 2000/02/02 17:02:58 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1524,7 +1524,8 @@ int is_boolean_expression (expr)
 		expr -> op == expr_equal ||
 		expr -> op == expr_and ||
 		expr -> op == expr_or ||
-		expr -> op == expr_not);
+		expr -> op == expr_not ||
+		expr -> op == expr_known);
 }
 
 int is_data_expression (expr)
