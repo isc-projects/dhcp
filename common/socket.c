@@ -30,7 +30,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: socket.c,v 1.35 1999/03/16 06:37:50 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: socket.c,v 1.36 1999/05/06 20:21:39 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -121,7 +121,7 @@ int if_register_socket (info)
 	if (info -> ifp &&
 	    setsockopt (sock, SOL_SOCKET, SO_BINDTODEVICE,
 			(char *)(info -> ifp), sizeof *(info -> ifp)) < 0) {
-		error("setsockopt: SO_BINDTODEVICE: %m");
+		log_fatal ("setsockopt: SO_BINDTODEVICE: %m");
 	}
 #endif
 
