@@ -1,5 +1,5 @@
 #if !defined(lint) && !defined(SABER)
-static const char rcsid[] = "$Id: res_findzonecut.c,v 1.14.2.1 2001/05/17 20:47:35 mellon Exp $";
+static const char rcsid[] = "$Id: res_findzonecut.c,v 1.14.2.1.2.1 2002/12/07 02:19:43 dhankins Exp $";
 #endif /* not lint */
 
 /*
@@ -355,7 +355,7 @@ get_soa(res_state statp, const char *dname, ns_class class,
 		while (*dname != '.') {
 			if (*dname == '\\')
 				if (*++dname == '\0') {
-					ISC_R_NOSPACE;
+					return ISC_R_NOSPACE;
 				}
 			dname++;
 		}
