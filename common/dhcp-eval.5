@@ -157,6 +157,13 @@ is also null.
 The \fBexists\fR expression returns true if the specified option
 exists in the incoming DHCP packet being processed.
 .RE
+.B known
+.PP
+.RS 0.25i
+The \fBknown\fR expression returns true if the client whose request is
+currently being processed is known - that is, if there's a host
+declaration for it.
+.RE
 .SH DATA EXPRESSIONS
 Several of the boolean expressions above depend on the results of
 evaluating data expressions.   A list of these expressions is provided
