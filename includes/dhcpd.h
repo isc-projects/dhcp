@@ -272,8 +272,7 @@ typedef enum {
 	FTS_ABANDONED = 5,
 	FTS_RESET = 6,
 	FTS_BACKUP = 7,
-	FTS_RESERVED = 8,
-	FTS_BOOTP = 9
+	FTS_LAST = 8
 } binding_state_t;
 
 /* A dhcp lease declaration structure. */
@@ -304,16 +303,19 @@ struct lease {
 
 	u_int8_t flags;
 #       define STATIC_LEASE		1
+#	define BOOTP_LEASE		2
 #	define PERSISTENT_FLAGS		(ON_ACK_QUEUE | ON_UPDATE_QUEUE)
 #	define MS_NULL_TERMINATION	8
 #	define ON_UPDATE_QUEUE		16
 #	define ON_ACK_QUEUE		32
 #	define UNICAST_BROADCAST_HACK	64
+#	define ON_DEFERRED_QUEUE	128
 #	define EPHEMERAL_FLAGS		(MS_NULL_TERMINATION | \
 					 UNICAST_BROADCAST_HACK)
 
 	binding_state_t __attribute__ ((mode (__byte__))) binding_state;
 	binding_state_t __attribute__ ((mode (__byte__))) next_binding_state;
+	binding_state_t __attribute__ ((mode (__byte__))) desired_binding_state;
 	
 	struct lease_state *state;
 
