@@ -91,10 +91,6 @@ typedef unsigned long u_int64_t;
 #define jdref(x)	(x)
 #define jrefproto	jmp_buf
 
-/* OSF/1 doesn't support limited sprintfs. */
-#define vsnprintf(buf, size, fmt, list) vsprintf (buf, fmt, list)
-#define NO_SNPRINTF
-
 #define NEED_OSF_PFILT_HACKS
 #define BPF_FORMAT "/dev/pf/pfilt%d"
 
