@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.143.2.19 2003/01/14 23:15:24 dhankins Exp $ Copyright (c) 1995-2003 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.143.2.20 2003/05/18 23:36:41 dhankins Exp $ Copyright (c) 1995-2003 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -648,7 +648,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		break;
 
 	      case FAILOVER:
-		if (type != ROOT_GROUP && type != SHARED_NETWORK) {
+		if (type != ROOT_GROUP && type != SHARED_NET_DECL) {
 			parse_warn (cfile, "failover peers may only be %s",
 				    "defined in shared-network");
 			log_error ("declarations and the outer scope.");
