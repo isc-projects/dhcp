@@ -47,7 +47,7 @@ int main (int argc, char **argv)
 			exit (1);
 		}
 		status = omapi_protocol_listen (listener,
-						atoi (argv [2]), 1);
+						(unsigned)atoi (argv [2]), 1);
 		if (status != ISC_R_SUCCESS) {
 			fprintf (stderr, "omapi_listen: %s\n",
 				 isc_result_totext (status));
@@ -66,7 +66,8 @@ int main (int argc, char **argv)
 			exit (1);
 		}
 		status = omapi_protocol_connect (connection,
-						 argv [2], atoi (argv [3]), 0);
+						 argv [2],
+						 (unsigned)atoi (argv [3]), 0);
 		fprintf (stderr, "connect: %s\n", isc_result_totext (status));
 		if (status != ISC_R_SUCCESS)
 			exit (1);
