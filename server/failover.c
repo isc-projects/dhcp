@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.43 2001/04/17 04:10:47 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.44 2001/04/18 19:00:42 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1715,6 +1715,8 @@ isc_result_t dhcp_failover_peer_state_changed (dhcp_failover_state_t *state,
 	      case recover:
 		switch (new_state) {
 		      case recover:
+			log_info ("failover peer %s: requesting %s",
+				  state -> name, "full update from peer");
 			dhcp_failover_send_update_request_all (state);
 			break;
 
@@ -2151,7 +2153,9 @@ int dhcp_failover_queue_update (struct lease *lease, int immediate)
 #if defined (POINTER_DEBUG)
 	if (lease -> next_pending) {
 		log_error ("next pending on update queue lease.");
+#if defined (DEBUG_RC_HISTORY)
 		dump_rc_history ();
+#endif
 		abort ();
 	}
 #endif
@@ -4398,6 +4402,9 @@ isc_result_t
 dhcp_failover_process_update_done (dhcp_failover_state_t *state,
 				      failover_message_t *msg)
 {
+	log_info ("failover peer %s: peer update completed.",
+		  state -> name);
+
 	switch (state -> me.state) {
 	      case unknown_state:
 	      case partner_down:
