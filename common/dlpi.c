@@ -70,7 +70,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dlpi.c,v 1.16 1999/10/14 17:44:02 mellon Exp $ Copyright (c) 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dlpi.c,v 1.17 2000/01/25 01:05:01 mellon Exp $ Copyright (c) 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -211,14 +211,14 @@ int if_register_dlpi (info)
 	    switch (dlp -> info_ack.dl_mac_type) {
 	      case DL_CSMACD: /* IEEE 802.3 */
 	      case DL_ETHER:
-		info -> hw_address.htype = HTYPE_ETHER;
+		info -> hw_address.hbuf [0] = HTYPE_ETHER;
 		break;
 	      /* adding token ring 5/1999 - mayer@ping.at  */ 
 	      case DL_TPR:
-		info -> hw_address.htype = HTYPE_IEEE802;
+		info -> hw_address.hbuf [0] = HTYPE_IEEE802;
 		break;
 	      case DL_FDDI:
-		info -> hw_address.htype = HTYPE_FDDI;
+		info -> hw_address.hbuf [0] = HTYPE_FDDI;
 		break;
 	      default:
 		log_fatal ("%s: unknown DLPI MAC type %ld",
@@ -259,8 +259,8 @@ int if_register_dlpi (info)
 		   info -> name);
 	}
 
-	info -> hw_address.hlen = dlp -> physaddr_ack.dl_addr_length;
-	memcpy (info -> hw_address.haddr,
+	info -> hw_address.hlen = dlp -> physaddr_ack.dl_addr_length + 1;
+	memcpy (&info -> hw_address.hbuf [1],
 		(char *)buf + dlp -> physaddr_ack.dl_addr_offset,
 		dlp -> physaddr_ack.dl_addr_length);
 
@@ -341,9 +341,9 @@ void if_register_send (info)
         if (!quiet_interface_discovery)
 		log_info ("Sending on   DLPI/%s/%s%s%s",
 		      info -> name,
-		      print_hw_addr (info -> hw_address.htype,
-				     info -> hw_address.hlen,
-				     info -> hw_address.haddr),
+		      print_hw_addr (info -> hw_address.hbuf [0],
+				     info -> hw_address.hlen - 1,
+				     &info -> hw_address.hbuf [1]),
 		      (info -> shared_network ? "/" : ""),
 		      (info -> shared_network ?
 		       info -> shared_network -> name : ""));
@@ -424,9 +424,9 @@ void if_register_receive (info)
         if (!quiet_interface_discovery)
 		log_info ("Listening on DLPI/%s/%s%s%s",
 		      info -> name,
-		      print_hw_addr (info -> hw_address.htype,
-				     info -> hw_address.hlen,
-				     info -> hw_address.haddr),
+		      print_hw_addr (info -> hw_address.hbuf [0],
+				     info -> hw_address.hlen - 1,
+				     &info -> hw_address.hbuf [1]),
 		      (info -> shared_network ? "/" : ""),
 		      (info -> shared_network ?
 		       info -> shared_network -> name : ""));
@@ -489,7 +489,8 @@ ssize_t send_packet (interface, packet, raw, len, from, to, hto)
 
 	/* Setup the destination address */
 	if (hto && hto -> hlen == interface -> hw_address.hlen) {
-	    dlpi_makeaddr (hto -> haddr, hto -> hlen, sap, saplen, dstaddr);
+		dlpi_makeaddr (&hto -> hbuf [1],
+			       hto -> hlen - 1, sap, saplen, dstaddr);
 	} else {
 	    /* XXX: Assumes broadcast addr is all ones */
 	    /* Really should get the broadcast address as part of the
@@ -497,11 +498,12 @@ ssize_t send_packet (interface, packet, raw, len, from, to, hto)
 	     */
 	    unsigned char bcast_ether [DLPI_MAXDLADDR];
 
-	    memset ((char *)bcast_ether, 0xFF, interface -> hw_address.hlen);
-	    dlpi_makeaddr (bcast_ether, interface -> hw_address.hlen,
-			 sap, saplen, dstaddr);
+	    memset ((char *)bcast_ether, 0xFF,
+		    interface -> hw_address.hlen - 1);
+	    dlpi_makeaddr (bcast_ether, interface -> hw_address.hlen - 1,
+			   sap, saplen, dstaddr);
 	}
-	addrlen = interface -> hw_address.hlen + ABS (saplen);
+	addrlen = interface -> hw_address.hlen - 1 + ABS (saplen);
 
 	/* Send the packet down the wire... */
 	result = dlpiunitdatareq (interface -> wfdesc, dstaddr, addrlen,
@@ -548,13 +550,14 @@ ssize_t receive_packet (interface, buf, len, from, hfrom)
 	/* Copy sender info */
 	/* XXX: Assumes ethernet, where SAP comes at end of haddr */
 	saplen = -2;
-	if (hfrom && srcaddrlen == ABS(saplen) + interface -> hw_address.hlen) {
-	    hfrom -> htype = interface -> hw_address.htype;
-	    hfrom -> hlen = interface -> hw_address.hlen;
-	    dlpi_parseaddr (srcaddr, hfrom -> haddr,
-			    interface -> hw_address.hlen, sap, saplen);
+	if (hfrom && (srcaddrlen ==
+		      ABS (saplen) + interface -> hw_address.hlen - 1)) {
+		hfrom -> hbuf [0] = interface -> hw_address.hbuf [0];
+		hfrom -> hlen = interface -> hw_address.hlen;
+		dlpi_parseaddr (srcaddr, &hfrom -> hbuf [1],
+				interface -> hw_address.hlen - 1, sap, saplen);
 	} else if (hfrom) {
-	    memset ((char *)hfrom, '\0', sizeof (*hfrom));
+		memset (hfrom, '\0', sizeof *hfrom);
 	}
 #endif
 

@@ -23,7 +23,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: lpf.c,v 1.18 1999/10/21 12:31:53 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: lpf.c,v 1.19 2000/01/25 01:07:19 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -113,9 +113,9 @@ void if_register_send (info)
 	if (!quiet_interface_discovery)
 		log_info ("Sending on   LPF/%s/%s%s%s",
 		      info -> name,
-		      print_hw_addr (info -> hw_address.htype,
-				     info -> hw_address.hlen,
-				     info -> hw_address.haddr),
+		      print_hw_addr (info -> hw_address.hbuf [0],
+				     info -> hw_address.hlen - 1,
+				     &info -> hw_address.hbuf [1]),
 		      (info -> shared_network ? "/" : ""),
 		      (info -> shared_network ?
 		       info -> shared_network -> name : ""));
@@ -147,9 +147,9 @@ void if_register_receive (info)
 	if (!quiet_interface_discovery)
 		log_info ("Listening on LPF/%s/%s%s%s",
 			  info -> name,
-			  print_hw_addr (info -> hw_address.htype,
-					 info -> hw_address.hlen,
-					 info -> hw_address.haddr),
+			  print_hw_addr (info -> hw_address.hbuf [0],
+					 info -> hw_address.hlen - 1,
+					 &info -> hw_address.hbuf [1]),
 			  (info -> shared_network ? "/" : ""),
 			  (info -> shared_network ?
 			   info -> shared_network -> name : ""));

@@ -23,7 +23,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: nit.c,v 1.25 1999/10/07 06:47:50 mellon Exp $ Copyright (c) 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: nit.c,v 1.26 2000/01/25 01:07:41 mellon Exp $ Copyright (c) 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -97,9 +97,10 @@ int if_register_nit (info)
 		       info -> name);
 
 	/* XXX code below assumes ethernet interface! */
-	info -> hw_address.hlen = 6;
-	info -> hw_address.htype = ARPHRD_ETHER;
-	memcpy (info -> hw_address.haddr, ifr.ifr_ifru.ifru_addr.sa_data, 6);
+	info -> hw_address.hlen = 7;
+	info -> hw_address.hbuf [0] = ARPHRD_ETHER;
+	memcpy (&info -> hw_address.jbuf [1],
+		ifr.ifr_ifru.ifru_addr.sa_data, 6);
 
 	if (ioctl (sock, I_PUSH, "pf") < 0)
 		log_fatal ("Can't push packet filter onto NIT for %s: %m",
@@ -137,9 +138,9 @@ void if_register_send (info)
 #endif
         if (!quiet_interface_discovery)
 		log_info ("Sending on   NIT/%s%s%s",
-		      print_hw_addr (info -> hw_address.htype,
-				     info -> hw_address.hlen,
-				     info -> hw_address.haddr),
+		      print_hw_addr (info -> hw_address.hbuf [0],
+				     info -> hw_address.hlen - 1,
+				     &info -> hw_address.hbuf [1]),
 		      (info -> shared_network ? "/" : ""),
 		      (info -> shared_network ?
 		       info -> shared_network -> name : ""));
@@ -221,9 +222,9 @@ void if_register_receive (info)
 
         if (!quiet_interface_discovery)
 		log_info ("Listening on NIT/%s%s%s",
-		      print_hw_addr (info -> hw_address.htype,
-				     info -> hw_address.hlen,
-				     info -> hw_address.haddr),
+		      print_hw_addr (info -> hw_address.hbuf [0],
+				     info -> hw_address.hlen - 1,
+				     &info -> hw_address.hbuf [1]),
 		      (info -> shared_network ? "/" : ""),
 		      (info -> shared_network ?
 		       info -> shared_network -> name : ""));
