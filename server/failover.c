@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.53.2.20 2001/10/30 07:10:01 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.53.2.21 2001/11/02 01:01:16 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2146,6 +2146,7 @@ int dhcp_failover_pool_rebalance (dhcp_failover_state_t *state)
 	binding_state_t peer_lease_state;
 	binding_state_t my_lease_state;
 	struct lease **lq;
+	int tenper;
 
 	if (state -> me.state != normal || state -> i_am == secondary)
 		return 0;
@@ -2173,13 +2174,16 @@ int dhcp_failover_pool_rebalance (dhcp_failover_state_t *state)
 			lq = &p -> backup;
 		}
 
-		log_info ("pool %lx %s  total %d  free %d  backup %d  lts %d",
+		tenper = (p -> backup_leases + p -> free_leases) / 10;
+		if (tenper == 0)
+			tenper = 1;
+		if (lts > tenper) {
+		    log_info ("pool %lx %s  total %d  free %d  %s %d  lts %d",
 			  (unsigned long)p,
 			  (p -> shared_network ?
 			   p -> shared_network -> name : ""), p -> lease_count,
-			  p -> free_leases, p -> backup_leases, lts);
+			  p -> free_leases, p -> backup_leases, "backup", lts);
 
-		if (lts > 1) {
 		    lease_reference (&lp, *lq, MDL);
 
 		    while (lp && lts) {
@@ -2228,9 +2232,12 @@ int dhcp_failover_pool_check (struct pool *pool)
 {
 	int lts;
 	struct lease *lp;
+	int tenper;
 
+	/* According to the draft, only the secondary ever sends a pool
+	   request, but this doesn't really make a lot of sense. */
 	if (!pool -> failover_peer ||
-	    pool -> failover_peer -> i_am == primary ||
+/*	    pool -> failover_peer -> i_am == primary || */
 	    pool -> failover_peer -> me.state != normal)
 		return 0;
 
@@ -2245,7 +2252,10 @@ int dhcp_failover_pool_check (struct pool *pool)
 		  pool -> lease_count,
 		  pool -> free_leases, pool -> backup_leases, lts);
 
-	if (lts > 1) {
+	tenper = (pool -> backup_leases + pool -> free_leases) / 10;
+	if (tenper == 0)
+		tenper = 1;
+	if (lts > tenper) {
 		/* XXX What about multiple pools? */
 		dhcp_failover_send_poolreq (pool -> failover_peer);
 		return 1;
