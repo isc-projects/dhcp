@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: execute.c,v 1.44.2.3 2001/06/20 03:24:24 mellon Exp $ Copyright (c) 1998-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: execute.c,v 1.44.2.4 2001/06/20 04:23:57 mellon Exp $ Copyright (c) 1998-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1051,6 +1051,7 @@ int executable_statement_foreach (struct executable_statement *stmt,
 		break;
 	      case log_statement:
 	      case return_statement:
+		break;
 	    }
 	}
 	return ok;
