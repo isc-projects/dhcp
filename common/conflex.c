@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: conflex.c,v 1.26 1997/05/09 07:57:54 mellon Exp $ Copyright (c) 1995, 1996, 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: conflex.c,v 1.27 1997/06/02 22:30:52 mellon Exp $ Copyright (c) 1995, 1996, 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -486,6 +486,8 @@ static int intern (atom, dfv)
 			return REBIND;
 		if (!strcasecmp (atom + 1, "eboot"))
 			return REBOOT;
+		if (!strcasecmp (atom + 1, "eject"))
+			return REJECT;
 		break;
 	      case 's':
 		if (!strcasecmp (atom + 1, "earch"))
