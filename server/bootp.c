@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bootp.c,v 1.46 1999/05/27 14:58:07 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bootp.c,v 1.47 1999/06/10 00:36:18 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -117,13 +117,21 @@ void bootp (packet)
 	option_state_allocate (&options, "bootrequest");
 	
 	/* Execute the subnet statements. */
-	execute_statements_in_scope (packet, options, options,
+	execute_statements_in_scope (packet, packet -> options, options,
 				     lease -> subnet -> group,
 				     (struct group *)0);
 	
+	/* Execute statements from class scopes. */
+	for (i = packet -> class_count; i > 0; i--) {
+		execute_statements_in_scope
+			(packet, packet -> options, options,
+			 packet -> classes [i - 1] -> group,
+			 lease -> subnet -> group);
+	}
+
 	/* Execute the host statements. */
-	execute_statements_in_scope (packet, options, options, hp -> group,
-				     hp -> group);
+	execute_statements_in_scope (packet, packet -> options, options,
+				     hp -> group, subnet -> group);
 	
 	/* Drop the request if it's not allowed for this client. */
 	if (evaluate_boolean_option_cache (packet, options,
