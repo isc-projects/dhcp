@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.192.2.41 2004/09/21 21:42:23 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.192.2.42 2004/09/30 14:56:16 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1725,6 +1725,8 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 					  d1.data [0]);
 				data_string_forget (&d1, MDL);
 				free_lease_state (state, MDL);
+				if (host)
+					host_dereference (&host, MDL);
 				return;
 			}
 			data_string_forget (&d1, MDL);
@@ -1798,6 +1800,8 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 		if (!ignorep)
 			log_info ("%s: unknown client", msg);
 		free_lease_state (state, MDL);
+		if (host)
+			host_dereference (&host, MDL);
 		return;
 	} 
 
@@ -1814,6 +1818,8 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 		if (!ignorep)
 			log_info ("%s: bootp disallowed", msg);
 		free_lease_state (state, MDL);
+		if (host)
+			host_dereference (&host, MDL);
 		return;
 	} 
 
@@ -1830,6 +1836,8 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 		if (!ignorep)
 			log_info ("%s: booting disallowed", msg);
 		free_lease_state (state, MDL);
+		if (host)
+			host_dereference (&host, MDL);
 		return;
 	}
 
@@ -1865,7 +1873,9 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 					log_info ("%s: no available billing",
 						  msg);
 					free_lease_state (state, MDL);
-					/* XXX probably not necessary: */
+					if (host)
+						host_dereference (&host, MDL);
+					/* XXX possibly not necessary: */
 					return;
 				}
 			}
@@ -1898,6 +1908,8 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 		log_info ("%s: can't allocate temporary lease structure: %s",
 			  msg, isc_result_totext (result));
 		free_lease_state (state, MDL);
+		if (host)
+			host_dereference (&host, MDL);
 		return;
 	}
 		
