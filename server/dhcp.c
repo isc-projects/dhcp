@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.192.2.20 2002/02/19 20:44:22 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.192.2.21 2002/04/20 21:58:49 murray Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -978,7 +978,7 @@ void dhcpinform (packet, ms_nulltp)
 			log_info ("please write an `authoritative;' directi%s",
 				  "ve either in the");
 			log_info ("subnet declaration or in some scope that%s",
-				  "encloses the");
+				  " encloses the");
 			log_info ("subnet declaration - for example, write %s",
 				  "it at the top");
 			log_info ("of the dhcpd.conf file.");
