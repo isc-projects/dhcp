@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: ddns.c,v 1.14 2001/02/22 07:37:15 mellon Exp $ Copyright (c) 2000-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: ddns.c,v 1.15 2001/03/16 00:23:59 mellon Exp $ Copyright (c) 2000-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -300,7 +300,7 @@ static isc_result_t ddns_update_ptr (struct data_string *ddns_fwd_name,
 {
 	ns_updque updqueue;
 	ns_updrec *updrec;
-	ns_rcode result = ISC_R_UNEXPECTED;
+	isc_result_t result = ISC_R_UNEXPECTED;
 
 	/*
 	 * The DHCP server submits a DNS query which deletes all of the PTR RRs
@@ -371,7 +371,7 @@ static isc_result_t ddns_remove_a (struct data_string *ddns_fwd_name,
 {
 	ns_updque updqueue;
 	ns_updrec *updrec;
-	ns_rcode result = SERVFAIL;
+	isc_result_t result = SERVFAIL;
 	char ddns_address [16];
 
 	if (ddns_addr.len != 4)
