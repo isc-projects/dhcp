@@ -195,13 +195,13 @@ COBJ   = options.o errwarn.o convert.o \
 XOBJ   = dhcpxlt.o xconflex.o
 SRCS   = dhcpd.c dhcp.c bootp.c conflex.c confpars.c db.c
 OBJS   = dhcpd.o dhcp.o bootp.o conflex.o confpars.o db.o
-PROGS  = dhcpd dhclient
+PROG   = dhcpd dhcpxlt
 MAN    = dhcpd.8 dhcpd.conf.5
 
 DEBUG  = -g
 CFLAGS = $(DEBUG) $(PREDEFINES) $(INCLUDES) $(COPTS)
 
-all:	dhcpd dhclient dhcpxlt $(CATMANPAGES)
+all:	$(PROGS) $(CATMANPAGES)
 
 install: dhcpd $(CATMANPAGES)
 	$(INSTALL) dhcpd $(BINDIR); $(CHMOD) 755 $(BINDIR)/dhcpd
@@ -223,13 +223,13 @@ install: dhcpd $(CATMANPAGES)
 				$(FFMANDIR)/dhcpd.conf$(FFMANEXT)
 
 clean:
-	-rm -f $(OBJS) $(COBJ) $(XOBJ) dhclient.o
+	-rm -f $(OBJS) $(COBJ) $(XOBJ)
 	
 realclean: clean
-	-rm -f dhcpd dhclient dhcpxlt $(CATMANPAGES) *~ #*
+	-rm -f $(PROGS) $(CATMANPAGES) *~ #*
 
 distclean: clean
-	-rm -f dhcpd dhclient dhcpxlt $(CATMANPAGES) Makefile
+	-rm -f $(PROGS) $(CATMANPAGES) Makefile
 
 # These should only be done on 4.4 BSD-based systems, since the mandoc
 # macros aren't available on older unices.   Catted man pages are
@@ -245,9 +245,6 @@ dhcpd.conf.cat5:	dhcpd.conf.5
 
 dhcpd:	$(OBJS) $(COBJ)
 	$(CC) $(LFLAGS) -o dhcpd $(OBJS) $(COBJ) $(LIBS)
-
-dhclient:	dhclient.o $(COBJ)
-	$(CC) $(LFLAGS) -o dhclient dhclient.o $(COBJ) $(LIBS)
 
 dhcpxlt:	dhcpxlt.o errwarn.o convert.o tables.o inet.o xconflex.o \
 		hash.o alloc.o
@@ -330,6 +327,3 @@ dhcp.o:		dhcpd.h cdefs.h osdep.h site.h $(CF) dhcp.h tree.h hash.h \
 		inet.h 
 bootp.o:	dhcpd.h cdefs.h osdep.h site.h $(CF) dhcp.h tree.h hash.h \
 		inet.h 
-
-dhclient.o:	dhcpd.h cdefs.h osdep.h site.h $(CF) dhcp.h tree.h hash.h \
-		inet.h dhctoken.h 
