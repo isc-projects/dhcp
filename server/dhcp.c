@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.57.2.19 1999/02/23 22:12:17 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.57.2.20 1999/02/27 21:47:16 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1358,33 +1358,45 @@ struct lease *find_lease (packet, share, ours)
 		strcpy (dhcp_message, "requested address on bad subnet");
 	}
 
-	/* Toss ip_lease if it hasn't yet expired and the uid doesn't
-	   match */
+	/* Toss ip_lease if it hasn't yet expired and isn't owned by the
+	   client. */
 	if (ip_lease &&
 	    ip_lease -> ends >= cur_time &&
-	    ip_lease -> uid && ip_lease != uid_lease) {
+	    ip_lease != uid_lease) {
 		int i = DHO_DHCP_CLIENT_IDENTIFIER;
-		/* If for some reason the client has more than one lease
-		   on the subnet that matches its uid, pick the one that
-		   it asked for.    It might be nice in some cases to
-		   release the extraneous leases, but better to leave
-		   that to a human. */
-		if (packet -> options [i].data &&
-		    ip_lease -> uid_len ==  packet -> options [i].len &&
-		    !memcmp (packet -> options [i].data,
-			     ip_lease -> uid, ip_lease -> uid_len)) {
-			if (uid_lease && uid_lease -> ends > cur_time)
+		/* Make sure that ip_lease actually belongs to the client,
+		   and toss it if not. */
+		if ((ip_lease -> uid_len &&
+		     packet -> options [i].data &&
+		     ip_lease -> uid_len ==  packet -> options [i].len &&
+		     !memcmp (packet -> options [i].data,
+			      ip_lease -> uid, ip_lease -> uid_len)) ||
+		    (!ip_lease -> uid_len &&
+		     (ip_lease -> hardware_addr.htype ==
+		      packet -> raw -> htype) &&
+		     ip_lease -> hardware_addr.hlen == packet -> raw -> hlen &&
+		     !memcmp (ip_lease -> hardware_addr.haddr,
+			      packet -> raw -> chaddr,
+			      ip_lease -> hardware_addr.hlen))) {
+			if (uid_lease) {
+			    if (uid_lease -> ends > cur_time) {
 				warn ("client %s has duplicate leases on %s",
 				      print_hw_addr (packet -> raw -> htype,
 						     packet -> raw -> hlen,
 						     packet -> raw -> chaddr),
 				      ip_lease -> shared_network -> name);
-			uid_lease = ip_lease;
+
+				if (uid_lease &&
+				    !packet -> raw -> ciaddr.s_addr)
+					release_lease (uid_lease);
+			    }
+			    uid_lease = ip_lease;
+			}
+		} else {
+			strcpy (dhcp_message,
+				"requested address is not available");
+			ip_lease = (struct lease *)0;
 		}
-		strcpy (dhcp_message, "requested address is not available");
-		ip_lease = (struct lease *)0;
-		if (ours)
-			*ours = 1;
 
 		/* If we get to here and fixed_lease is not null, that means
 		   that there are both a dynamic lease and a fixed-address
