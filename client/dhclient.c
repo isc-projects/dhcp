@@ -33,17 +33,15 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * This code was originally written by Ted Lemon.  Elliot Poger wrote
- * a state machine to fully implement the client side of the DHCP
- * protocol.  Ted Lemon then added the configuration file, stuffed the
- * state machine into its own data structure so there could be more
- * than one, and added the client scripting code to produce the first
- * ISC release (2.0b1pl0) of the client.
+ * This code is based on the original client state machine that was
+ * written by Elliot Poger.  The code has been extensively hacked on
+ * by Ted Lemon since then, so any mistakes you find are probably his
+ * fault and not Elliot's.
  */
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.98 2000/03/17 03:58:56 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.99 2000/03/24 00:20:33 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
