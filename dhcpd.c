@@ -160,7 +160,6 @@ int main (argc, argv, envp)
 	for (i = 0; i < server_addrcount; i++) {
 		struct sockaddr_in foo;
 		foo.sin_addr.s_addr = server_addrlist [i];
-		printf ("Address %d: %s\n", i, inet_ntoa (foo.sin_addr));
 
 		if (server_addrlist [i] != htonl (INADDR_LOOPBACK)) {
 			if (siaddr.len) {
