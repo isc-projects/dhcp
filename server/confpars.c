@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.111 2000/05/17 16:04:23 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.112 2000/05/18 20:21:43 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2757,10 +2757,14 @@ void parse_address_range (cfile, group, type, inpool)
 						  share, MDL);
 			if (!clone_group (&pool -> group, share -> group, MDL))
 				log_fatal ("no memory for anon pool group.");
+		} else {
+			pool = (struct pool *)0;
+			pool_reference (&pool, last, MDL);
 		}
-
-	} else
+	} else {
+		pool = (struct pool *)0;
 		pool_reference (&pool, inpool, MDL);
+	}
 
 #if defined (FAILOVER_PROTOCOL)
 	if (pool -> failover_peer && dynamic) {
