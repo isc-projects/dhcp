@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: memory.c,v 1.39 1998/04/09 04:30:41 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: memory.c,v 1.40 1998/06/25 02:59:15 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -56,14 +56,12 @@ static struct hash_table *lease_ip_addr_hash;
 static struct hash_table *lease_hw_addr_hash;
 static struct lease *dangling_leases;
 
-static struct hash_table *vendor_class_hash;
-static struct hash_table *user_class_hash;
-
 void enter_host (hd)
 	struct host_decl *hd;
 {
 	struct host_decl *hp = (struct host_decl *)0;
 	struct host_decl *np = (struct host_decl *)0;
+	struct executable_statement *esp;
 
 	hd -> n_ipaddr = (struct host_decl *)0;
 
@@ -93,23 +91,37 @@ void enter_host (hd)
 		np -> n_ipaddr = hd;
 	}
 
-	if (hd -> group -> options [DHO_DHCP_CLIENT_IDENTIFIER]) {
-		if (!tree_evaluate (hd -> group -> options
-				    [DHO_DHCP_CLIENT_IDENTIFIER]))
-			return;
-			
+	/* See if there's a statement that sets the client identifier.
+	   This is a kludge - the client identifier really shouldn't be
+	   set with an executable statement. */
+	for (esp = hd -> group -> statements; esp; esp = esp -> next) {
+		if (esp -> op == supersede_option_statement &&
+		    esp -> data.option &&
+		    (esp -> data.option -> option -> universe ==
+		     &dhcp_universe) &&
+		    (esp -> data.option -> option -> code ==
+		     DHO_DHCP_CLIENT_IDENTIFIER)) {
+			hd -> client_identifier =
+				evaluate_data_expression
+					((struct packet *)0,
+					 esp -> data.option -> expression);
+			break;
+		}
+	}
+
+	/* If we got a client identifier, hash this entry by
+	   client identifier. */
+	if (hd -> client_identifier.len) {
 		/* If there's no uid hash, make one; otherwise, see if
 		   there's already an entry in the hash for this host. */
 		if (!host_uid_hash) {
 			host_uid_hash = new_hash ();
 			hp = (struct host_decl *)0;
 		} else
-			hp = (struct host_decl *) hash_lookup
-				(host_uid_hash,
-				 hd -> group -> options
-				 [DHO_DHCP_CLIENT_IDENTIFIER] -> value,
-				 hd -> group -> options
-				 [DHO_DHCP_CLIENT_IDENTIFIER] -> len);
+			hp = ((struct host_decl *)
+			      hash_lookup (host_uid_hash,
+					   hd -> client_identifier.data,
+					   hd -> client_identifier.len));
 
 		/* If there's already a host declaration for this
 		   client identifier, add this one to the end of the
@@ -124,10 +136,8 @@ void enter_host (hd)
 			}
 		} else {
 			add_hash (host_uid_hash,
-				  hd -> group -> options
-				  [DHO_DHCP_CLIENT_IDENTIFIER] -> value,
-				  hd -> group -> options
-				  [DHO_DHCP_CLIENT_IDENTIFIER] -> len,
+				  hd -> client_identifier.data,
+				  hd -> client_identifier.len,
 				  (unsigned char *)hd);
 		}
 	}
@@ -172,14 +182,20 @@ struct subnet *find_host_for_network (host, addr, share)
 	struct subnet *subnet;
 	struct iaddr ip_address;
 	struct host_decl *hp;
+	struct data_string fixed_addr;
 
 	for (hp = *host; hp; hp = hp -> n_ipaddr) {
-		if (!hp -> fixed_addr || !tree_evaluate (hp -> fixed_addr))
+		if (!hp -> fixed_addr)
 			continue;
-		for (i = 0; i < hp -> fixed_addr -> len; i += 4) {
+		fixed_addr = (evaluate_data_expression
+			      ((struct packet *)0,
+			       hp -> fixed_addr -> expression));
+		if (!fixed_addr.len)
+			continue;
+		for (i = 0; i < fixed_addr.len; i += 4) {
 			ip_address.len = 4;
 			memcpy (ip_address.iabuf,
-				hp -> fixed_addr -> value + i, 4);
+				fixed_addr.data + i, 4);
 			subnet = find_grouped_subnet (share, ip_address);
 			if (subnet) {
 				*addr = ip_address;
@@ -201,8 +217,6 @@ void new_address_range (low, high, subnet, dynamic)
 	int min, max, i;
 	char lowbuf [16], highbuf [16], netbuf [16];
 	struct shared_network *share = subnet -> shared_network;
-	struct hostent *h;
-	struct in_addr ia;
 
 	/* All subnets should have attached shared network structures. */
 	if (!share) {
@@ -272,29 +286,6 @@ void new_address_range (low, high, subnet, dynamic)
 		address_range [i].subnet = subnet;
 		address_range [i].shared_network = share;
 		address_range [i].flags = dynamic ? DYNAMIC_BOOTP_OK : 0;
-
-		if (subnet -> group -> get_lease_hostnames) {
-			/* XXX This is how we want it done. */
-#if 0
-			ns_inaddr_lookup (address_range [i].ip_addr, 0);
-#endif
-			
-			/* XXX This is how it's done now. */
-			memcpy (&ia, address_range [i].ip_addr.iabuf, 4);
-
-			h = gethostbyaddr ((char *)&ia, sizeof ia, AF_INET);
-			if (!h)
-				warn ("No hostname for %s", inet_ntoa (ia));
-			else {
-				address_range [i].hostname =
-					malloc (strlen (h -> h_name) + 1);
-				if (!address_range [i].hostname)
-					error ("no memory for hostname %s.",
-					       h -> h_name);
-				strcpy (address_range [i].hostname,
-					h -> h_name);
-			}
-		}
 
 		/* Link this entry into the list. */
 		address_range [i].next = share -> leases;
@@ -427,9 +418,9 @@ void enter_lease (lease)
 			       piaddr (lease -> ip_addr));
 		}
 		*comp = *lease;
-		lease -> next = dangling_leases;
-		lease -> prev = (struct lease *)0;
-		dangling_leases = lease;
+		comp -> next = dangling_leases;
+		comp -> prev = (struct lease *)0;
+		dangling_leases = comp;
 	} else {
 		/* Record the hostname information in the lease. */
 		comp -> hostname = lease -> hostname;
@@ -839,48 +830,6 @@ void hw_hash_delete (lease)
 	}
 	lease -> n_hw = (struct lease *)0;
 }
-
-
-struct class *add_class (type, name)
-	int type;
-	char *name;
-{
-	struct class *class = new_class ("add_class");
-	char *tname = (char *)malloc (strlen (name) + 1);
-
-	if (!vendor_class_hash)
-		vendor_class_hash = new_hash ();
-	if (!user_class_hash)
-		user_class_hash = new_hash ();
-
-	if (!tname || !class || !vendor_class_hash || !user_class_hash)
-		return (struct class *)0;
-
-	memset (class, 0, sizeof *class);
-	strcpy (tname, name);
-	class -> name = tname;
-
-	if (type)
-		add_hash (user_class_hash, (unsigned char *)tname,
-			  strlen (tname), (unsigned char *)class);
-	else
-		add_hash (vendor_class_hash, (unsigned char *)tname,
-			  strlen (tname), (unsigned char *)class);
-	return class;
-}
-
-struct class *find_class (type, name, len)
-	int type;
-	char *name;
-	int len;
-{
-	struct class *class =
-		(struct class *)hash_lookup ((type
-					      ? user_class_hash
-					      : vendor_class_hash),
-					     (unsigned char *)name, len);
-	return class;
-}	
 
 struct group *clone_group (group, caller)
 	struct group *group;
