@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: resolv.c,v 1.4 1997/06/08 04:05:20 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: resolv.c,v 1.5 1997/12/06 04:04:07 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -143,7 +143,8 @@ void read_resolv_conf (parse_time)
 			}
 			ns -> rcdate = parse_time;
 			skip_to_semi (cfile);
-		}
+		} else
+			skip_to_semi (cfile); /* Ignore what we don't grok. */
 	} while (1);
 	token = next_token (&val, cfile); /* Clear the peek buffer */
 
