@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.192.2.40 2004/09/21 19:39:52 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.192.2.41 2004/09/21 21:42:23 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1490,7 +1490,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 	struct lease *lt;
 	struct lease_state *state;
 	struct lease *next;
-	struct host_decl *host;
+	struct host_decl *host = (struct host_decl *)0;
 	TIME lease_time;
 	TIME offered_lease_time;
 	struct data_string d1;
@@ -1516,8 +1516,6 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 	/* If the lease carries a host record, remember it. */
 	if (lease -> host)
 		host_reference (&host, lease -> host, MDL);
-	else
-		host = (struct host_decl *) 0;
 
 	/* Allocate a lease state structure... */
 	state = new_lease_state (MDL);
