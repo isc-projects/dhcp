@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: memory.c,v 1.42 1998/11/06 02:40:40 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: memory.c,v 1.43 1998/11/09 02:44:32 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -210,10 +210,10 @@ struct subnet *find_host_for_network (host, addr, share)
 	return (struct subnet *)0;
 }
 
-void new_address_range (low, high, subnet, dynamic)
+void new_address_range (low, high, subnet, pool)
 	struct iaddr low, high;
 	struct subnet *subnet;
-	int dynamic;
+	struct pool *pool;
 {
 	struct lease *address_range, *lp, *plp;
 	struct iaddr net;
@@ -275,8 +275,8 @@ void new_address_range (low, high, subnet, dynamic)
 	memset (address_range, 0, (sizeof *address_range) * (max - min + 1));
 
 	/* Fill in the last lease if it hasn't been already... */
-	if (!share -> last_lease) {
-		share -> last_lease = &address_range [0];
+	if (!pool -> last_lease) {
+		pool -> last_lease = &address_range [0];
 	}
 
 	/* Fill out the lease structures with some minimal information. */
@@ -287,15 +287,17 @@ void new_address_range (low, high, subnet, dynamic)
 			address_range [i].timestamp = MIN_TIME;
 		address_range [i].ends = MIN_TIME;
 		address_range [i].subnet = subnet;
+		address_range [i].pool = pool;
+		address_range [i].class = (struct class *)0;
 		address_range [i].shared_network = share;
-		address_range [i].flags = dynamic ? DYNAMIC_BOOTP_OK : 0;
+		address_range [i].flags = 0;
 
 		/* Link this entry into the list. */
-		address_range [i].next = share -> leases;
+		address_range [i].next = pool -> leases;
 		address_range [i].prev = (struct lease *)0;
-		share -> leases = &address_range [i];
+		pool -> leases = &address_range [i];
 		if (address_range [i].next)
-			address_range [i].next -> prev = share -> leases;
+			address_range [i].next -> prev = pool -> leases;
 		add_hash (lease_ip_addr_hash,
 			  address_range [i].ip_addr.iabuf,
 			  address_range [i].ip_addr.len,
@@ -544,28 +546,28 @@ int supersede_lease (comp, lease, commit)
 		if (comp -> prev) {
 			comp -> prev -> next = comp -> next;
 		} else {
-			comp -> shared_network -> leases = comp -> next;
+			comp -> pool -> leases = comp -> next;
 		}
 		if (comp -> next) {
 			comp -> next -> prev = comp -> prev;
 		}
-		if (comp -> shared_network -> last_lease == comp) {
-			comp -> shared_network -> last_lease = comp -> prev;
+		if (comp -> pool -> last_lease == comp) {
+			comp -> pool -> last_lease = comp -> prev;
 		}
 
 		/* Find the last insertion point... */
-		if (comp == comp -> shared_network -> insertion_point ||
-		    !comp -> shared_network -> insertion_point) {
-			lp = comp -> shared_network -> leases;
+		if (comp == comp -> pool -> insertion_point ||
+		    !comp -> pool -> insertion_point) {
+			lp = comp -> pool -> leases;
 		} else {
-			lp = comp -> shared_network -> insertion_point;
+			lp = comp -> pool -> insertion_point;
 		}
 
 		if (!lp) {
 			/* Nothing on the list yet?    Just make comp the
 			   head of the list. */
-			comp -> shared_network -> leases = comp;
-			comp -> shared_network -> last_lease = comp;
+			comp -> pool -> leases = comp;
+			comp -> pool -> last_lease = comp;
 		} else if (lp -> ends > lease -> ends) {
 			/* Skip down the list until we run out of list
 			   or find a place for comp. */
@@ -578,7 +580,7 @@ int supersede_lease (comp, lease, commit)
 				lp -> next = comp;
 				comp -> prev = lp;
 				comp -> next = (struct lease *)0;
-				comp -> shared_network -> last_lease = comp;
+				comp -> pool -> last_lease = comp;
 			} else {
 				/* If we didn't, put it between lp and
 				   the previous item on the list. */
@@ -599,7 +601,7 @@ int supersede_lease (comp, lease, commit)
 				lp -> prev = comp;
 				comp -> next = lp;
 				comp -> prev = (struct lease *)0;
-				comp -> shared_network -> leases = comp;
+				comp -> pool -> leases = comp;
 			} else {
 				/* If we didn't, put it between lp and
 				   the next item on the list. */
@@ -609,7 +611,7 @@ int supersede_lease (comp, lease, commit)
 				lp -> next = comp;
 			}
 		}
-		comp -> shared_network -> insertion_point = comp;
+		comp -> pool -> insertion_point = comp;
 		comp -> ends = lease -> ends;
 	}
 
@@ -853,14 +855,18 @@ void write_leases ()
 {
 	struct lease *l;
 	struct shared_network *s;
+	struct pool *p;
 
 	for (s = shared_networks; s; s = s -> next) {
-		for (l = s -> leases; l; l = l -> next) {
-			if (l -> hardware_addr.hlen ||
-			    l -> uid_len ||
-			    (l -> flags & ABANDONED_LEASE))
-				if (!write_lease (l))
-					error ("Can't rewrite lease database");
+		for (p = s -> pools; p; p = p -> next) {
+			for (l = p -> leases; l; l = l -> next) {
+				if (l -> hardware_addr.hlen ||
+				    l -> uid_len ||
+				    (l -> flags & ABANDONED_LEASE))
+					if (!write_lease (l))
+						error ("Can't rewrite %s",
+						       "lease database");
+			}
 		}
 	}
 	if (!commit_leases ())
@@ -872,6 +878,7 @@ void dump_subnets ()
 	struct lease *l;
 	struct shared_network *s;
 	struct subnet *n;
+	struct pool *p;
 
 	for (s = shared_networks; s; s = s -> next) {
 		for (n = subnets; n; n = n -> next_sibling) {
@@ -879,10 +886,12 @@ void dump_subnets ()
 			debug ("   netmask %s",
 			       piaddr (n -> netmask));
 		}
-		for (l = s -> leases; l; l = l -> next) {
-			print_lease (l);
+		for (p = s -> pools; p; p = p -> next) {
+			for (l = p -> leases; l; l = l -> next) {
+				print_lease (l);
+			}
+			debug ("Last Lease:");
+			print_lease (p -> last_lease);
 		}
-		debug ("Last Lease:");
-		print_lease (s -> last_lease);
 	}
 }
