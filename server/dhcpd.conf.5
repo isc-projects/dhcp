@@ -28,7 +28,7 @@
 .\" see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
 .\" ``http://www.nominum.com''.
 .\"
-.\" $Id: dhcpd.conf.5,v 1.63.2.22 2004/09/29 23:01:50 dhankins Exp $
+.\" $Id: dhcpd.conf.5,v 1.63.2.23 2004/12/15 19:11:42 dhankins Exp $
 .\"
 .TH dhcpd.conf 5
 .SH NAME
@@ -1960,6 +1960,25 @@ statement
 .PP
 This statement causes the DHCP server to listen for DHCP requests on
 the UDP port specified in \fIport\fR, rather than on port 67.
+.RE
+.PP
+The
+.I local-address
+statement
+.RS 0.25i
+.PP
+.B local-address \fIaddress\fB;\fR
+.PP
+This statemet causes the DHCP server to listen for DHCP requests sent
+to the specified \fIaddress\fR, rather than requests sent to all addresses.
+.PP
+Note:  This statement is only effective if the server was compiled using
+the USE_SOCKETS #define statement, which is default on a small number of
+operating systems, and must be explicitly chosen at compile-time.  You
+can be sure if your server is compiled with USE_SOCKETS if you see lines
+of this format at startup:
+.PP
+ Listening on Socket/eth0
 .RE
 .PP
 The
