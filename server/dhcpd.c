@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.43 1997/06/03 01:41:31 mellon Exp $ Copyright 1995, 1996 The Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.44 1997/10/20 21:38:03 mellon Exp $ Copyright 1995, 1996 The Internet Software Consortium.";
 #endif
 
 static char copyright[] =
@@ -73,6 +73,7 @@ int log_perror = -1;
 #else
 int log_perror = 1;
 #endif
+int quiet_startup;
 
 char *path_dhcpd_conf = _PATH_DHCPD_CONF;
 char *path_dhcpd_db = _PATH_DHCPD_DB;
@@ -108,9 +109,6 @@ int main (argc, argv, envp)
 #endif
 #endif
 #endif	
-	note (message);
-	note (copyright);
-	note (arr);
 
 	for (i = 1; i < argc; i++) {
 		if (!strcmp (argv [i], "-p")) {
@@ -151,6 +149,8 @@ int main (argc, argv, envp)
 #endif
 			cftest = 1;
 			log_perror = -1;
+		} else if (!strcmp (argv [i], "-q")) {
+			quiet_startup = 1;
 		} else if (argv [i][0] == '-') {
 			usage ();
 		} else {
@@ -168,36 +168,11 @@ int main (argc, argv, envp)
 		}
 	}
 
-#ifndef DEBUG
-	if (daemon) {
-		/* First part of becoming a daemon... */
-		if ((pid = fork ()) < 0)
-			error ("Can't fork daemon: %m");
-		else if (pid)
-			exit (0);
+	if (!quiet_startup) {
+		note (message);
+		note (copyright);
+		note (arr);
 	}
-
-	/* Read previous pid file. */
-	if ((i = open (path_dhcpd_pid, O_RDONLY)) >= 0) {
-		status = read (i, pbuf, (sizeof pbuf) - 1);
-		close (i);
-		pbuf [status] = 0;
-		pid = atoi (pbuf);
-
-		/* If the previous server process is not still running,
-		   write a new pid file immediately. */
-		if (pid && kill (pid, 0) < 0) {
-			unlink (path_dhcpd_pid);
-			if ((i = open (path_dhcpd_pid,
-				       O_WRONLY | O_CREAT, 0640)) >= 0) {
-				sprintf (pbuf, "%d\n", (int)getpid ());
-				write (i, pbuf, strlen (pbuf));
-				close (i);
-				pidfilewritten = 1;
-			}
-		}
-	}
-#endif /* !DEBUG */
 
 	/* Default to the DHCP/BOOTP port. */
 	if (!local_port)
@@ -238,6 +213,35 @@ int main (argc, argv, envp)
 	icmp_startup (1, lease_pinged);
 
 #ifndef DEBUG
+	if (daemon) {
+		/* First part of becoming a daemon... */
+		if ((pid = fork ()) < 0)
+			error ("Can't fork daemon: %m");
+		else if (pid)
+			exit (0);
+	}
+
+	/* Read previous pid file. */
+	if ((i = open (path_dhcpd_pid, O_RDONLY)) >= 0) {
+		status = read (i, pbuf, (sizeof pbuf) - 1);
+		close (i);
+		pbuf [status] = 0;
+		pid = atoi (pbuf);
+
+		/* If the previous server process is not still running,
+		   write a new pid file immediately. */
+		if (pid && kill (pid, 0) < 0) {
+			unlink (path_dhcpd_pid);
+			if ((i = open (path_dhcpd_pid,
+				       O_WRONLY | O_CREAT, 0640)) >= 0) {
+				sprintf (pbuf, "%d\n", (int)getpid ());
+				write (i, pbuf, strlen (pbuf));
+				close (i);
+				pidfilewritten = 1;
+			}
+		}
+	}
+
 	/* If we were requested to log to stdout on the command line,
 	   keep doing so; otherwise, stop. */
 	if (log_perror == -1)
@@ -283,6 +287,10 @@ int main (argc, argv, envp)
 
 static void usage ()
 {
+	note (message);
+	note (copyright);
+	note (arr);
+
 	error ("Usage: dhcpd [-p <UDP port #>] [-d] [-f] [-cf config-file]%s",
 	       "\n            [-lf lease-file] [if0 [...ifN]]");
 }
