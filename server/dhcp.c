@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.192.2.6 2001/05/19 19:18:44 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.192.2.7 2001/05/31 19:57:23 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -305,13 +305,14 @@ void dhcpdiscover (packet, ms_nulltp)
 		if (lease_mine_to_reallocate (lease))
 			allocatedp = 1;
 
-		/* If the lease is active, and we're primary or
-		   partner is down, then we can DHCPOFFER the
-		   lease. */
+		/* If the lease is active, do load balancing to see who
+		   allocates the lease (if it's active, it already belongs
+		   to the client, or we wouldn't have gotten it from
+		   find_lease (). */
 		else if (lease -> binding_state == FTS_ACTIVE &&
-			 (peer -> i_am == primary ||
-			  peer -> service_state == service_partner_down)) {
-		}
+			 (peer -> service_state != cooperating ||
+			  load_balance_mine (packet, peer)))
+			;
 
 		/* Otherwise, we can't let the client have this lease. */
 		else
@@ -514,20 +515,29 @@ void dhcprequest (packet, ms_nulltp, ip_lease)
 			goto out;
 		}
 
-		/* If the client is SELECTING, and this lease is active,
-		   and we are not primary and we are cooperating,
-		   let the primary respond.   This is an optimization
-		   because in this state the client may not even accept
-		   our DHCPACK (Win2k apparently doesn't), so there's no
-		   point in sending it.   In this state there is no chance
-		   that we sent the DHCPOFFER. */
-		if (!packet -> raw -> ciaddr.s_addr &&
-		    lease -> binding_state == FTS_ACTIVE &&
-		    peer -> i_am == secondary &&
-		    peer -> service_state == cooperating) {
-			log_debug ("%s: letting primary respond", msgbuf);
-			goto out;
-		}
+		/* At this point it's possible that we will get a broadcast
+		   DHCPREQUEST for a lease that we didn't offer, because
+		   both we and the peer are in a position to offer it.
+		   In that case, we probably shouldn't answer.   In order
+		   to not answer, we would have to compare the server
+		   identifier sent by the client with the list of possible
+		   server identifiers we can send, and if the client's
+		   identifier isn't on the list, drop the DHCPREQUEST.
+		   We aren't currently doing that for two reasons - first,
+		   it's not clear that all clients do the right thing
+		   with respect to sending the client identifier, which
+		   could mean that we might simply not respond to a client
+		   that is depending on us to respond.   Secondly, we allow
+		   the user to specify the server identifier to send, and
+		   we don't enforce that the server identifier should be
+		   one of our IP addresses.   This is probably not a big
+		   deal, but it's theoretically an issue.
+
+		   The reason we care about this is that if both servers
+		   send a DHCPACK to the DHCPREQUEST, they are then going
+		   to send dueling BNDUPD messages, which could cause
+		   trouble.   I think it causes no harm, but it seems
+		   wrong. */
 	} else
 		peer = (dhcp_failover_state_t *)0;
 #endif
@@ -1944,7 +1954,13 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 			lt -> ends = when;
 		else
 			lt -> ends = state -> offered_expiry;
-		lt -> next_binding_state = FTS_ACTIVE;
+
+		/* Don't make lease active until we actually get a
+		   DHCPREQUEST. */
+		if (offer == DHCPACK)
+			lt -> next_binding_state = FTS_ACTIVE;
+		else
+			lt -> next_binding_state = lease -> binding_state;
 	} else {
 		lease_time = MAX_TIME - cur_time;
 
