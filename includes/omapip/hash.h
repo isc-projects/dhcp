@@ -123,11 +123,13 @@ int name##_hash_foreach (struct hash_table *table,			      \
 }
 
 
+void relinquish_hash_bucket_hunks (void);
 struct hash_table *new_hash_table (int, const char *, int);
 void free_hash_table (struct hash_table *, const char *, int);
 struct hash_bucket *new_hash_bucket (const char *, int);
 void free_hash_bucket (struct hash_bucket *, const char *, int);
-struct hash_table *new_hash (hash_reference, hash_dereference, int);
+struct hash_table *new_hash (hash_reference, hash_dereference, int,
+			     const char *, int);
 void add_hash (struct hash_table *,
 		      const unsigned char *, unsigned, hashed_object_t *,
 		      const char *, int);

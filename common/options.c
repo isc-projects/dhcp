@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.85 2001/03/01 21:44:31 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.86 2001/06/27 00:29:54 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -933,6 +933,8 @@ const char *pretty_print_option (option, data, len, emit_commas, emit_quotes)
 {
 	static char optbuf [32768]; /* XXX */
 	int hunksize = 0;
+	int opthunk = 0;
+	int hunkinc = 0;
 	int numhunk = -1;
 	int numelem = 0;
 	char fmtbuf [32];
@@ -942,6 +944,7 @@ const char *pretty_print_option (option, data, len, emit_commas, emit_quotes)
 	const unsigned char *dp = data;
 	struct in_addr foo;
 	char comma;
+	unsigned long tval;
 
 	if (emit_commas)
 		comma = ',';
@@ -996,6 +999,7 @@ const char *pretty_print_option (option, data, len, emit_commas, emit_quotes)
 			}
 			fmtbuf [l + 1] = 0;
 			break;
+		      case 'd':
 		      case 't':
 			fmtbuf [l] = 't';
 			fmtbuf [l + 1] = 0;
@@ -1006,25 +1010,34 @@ const char *pretty_print_option (option, data, len, emit_commas, emit_quotes)
 			while (option -> format [i] &&
 			       option -> format [i] != '.')
 				i++;
-			enumbuf [l] = find_enumeration (&option -> format [k],
-							i - k);
+			enumbuf [l] =
+				find_enumeration (&option -> format [k] + 1,
+						  i - k - 1);
 			hunksize += 1;
+			hunkinc = 1;
 			break;
 		      case 'I':
 		      case 'l':
 		      case 'L':
+		      case 'T':
 			hunksize += 4;
+			hunkinc = 4;
 			break;
 		      case 's':
 		      case 'S':
 			hunksize += 2;
+			hunkinc = 2;
 			break;
 		      case 'b':
 		      case 'B':
 		      case 'f':
 			hunksize++;
+			hunkinc = 1;
 			break;
 		      case 'e':
+			break;
+		      case 'o':
+			opthunk += hunkinc;
 			break;
 		      default:
 			log_error ("%s: garbage in format string: %s",
@@ -1035,7 +1048,7 @@ const char *pretty_print_option (option, data, len, emit_commas, emit_quotes)
 	}
 
 	/* Check for too few bytes... */
-	if (hunksize > len) {
+	if (hunksize - opthunk > len) {
 		log_error ("%s: expecting at least %d bytes; got %d",
 		      option -> name,
 		      hunksize, len);
@@ -1115,6 +1128,13 @@ const char *pretty_print_option (option, data, len, emit_commas, emit_quotes)
 				sprintf (op, "%ld", (long)getLong (dp));
 				dp += 4;
 				break;
+			      case 'T':
+				tval = getULong (dp);
+				if (tval == -1)
+					sprintf (op, "%s", "infinite");
+				else
+					sprintf (op, "%ld", tval);
+				break;
 			      case 'L':
 				sprintf (op, "%ld",
 					 (unsigned long)getULong (dp));
@@ -1146,19 +1166,22 @@ const char *pretty_print_option (option, data, len, emit_commas, emit_quotes)
 					   fmtbuf [j]);
 			}
 			op += strlen (op);
+			if (dp == data + len)
+				break;
 			if (j + 1 < numelem && comma != ':')
 				*op++ = ' ';
 		}
 		if (i + 1 < numhunk) {
 			*op++ = comma;
 		}
-		
+		if (dp == data + len)
+			break;
 	}
 	return optbuf;
 }
 
 int get_option (result, universe, packet, lease, client_state,
-		in_options, cfg_options, options, scope, code)
+		in_options, cfg_options, options, scope, code, file, line)
 	struct data_string *result;
 	struct universe *universe;
 	struct packet *packet;
@@ -1169,6 +1192,8 @@ int get_option (result, universe, packet, lease, client_state,
 	struct option_state *options;
 	struct binding_scope **scope;
 	unsigned code;
+	const char *file;
+	int line;
 {
 	struct option_cache *oc;
 
@@ -1178,7 +1203,8 @@ int get_option (result, universe, packet, lease, client_state,
 	if (!oc)
 		return 0;
 	if (!evaluate_option_cache (result, packet, lease, client_state,
-				    in_options, cfg_options, scope, oc, MDL))
+				    in_options, cfg_options, scope, oc,
+				    file, line))
 		return 0;
 	return 1;
 }
@@ -1490,7 +1516,7 @@ int option_cache_dereference (ptr, file, line)
 	}
 
 	(*ptr) -> refcnt--;
-	rc_register (file, line, ptr, *ptr, (*ptr) -> refcnt);
+	rc_register (file, line, ptr, *ptr, (*ptr) -> refcnt, 1);
 	if (!(*ptr) -> refcnt) {
 		if ((*ptr) -> data.buffer)
 			data_string_forget (&(*ptr) -> data, file, line);
@@ -1508,7 +1534,7 @@ int option_cache_dereference (ptr, file, line)
 	if ((*ptr) -> refcnt < 0) {
 		log_error ("%s(%d): negative refcnt!", file, line);
 #if defined (DEBUG_RC_HISTORY)
-		dump_rc_history ();
+		dump_rc_history (*ptr);
 #endif
 #if defined (POINTER_DEBUG)
 		abort ();
@@ -2174,11 +2200,11 @@ void do_packet (interface, packet, len, from_port, from, hfrom)
 		  dmalloc_outstanding - previous_outstanding,
 		  dmalloc_outstanding, dmalloc_longterm);
 #endif
-#if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL)
+#if defined (DEBUG_MEMORY_LEAKAGE)
 	dmalloc_dump_outstanding ();
 #endif
 #if defined (DEBUG_RC_HISTORY_EXHAUSTIVELY)
-	dump_rc_history ();
+	dump_rc_history (0);
 #endif
 }
 

@@ -307,6 +307,8 @@ isc_result_t dhcpctl_remote_signal_handler (omapi_object_t *o,
 
 	if (!strcmp (name, "updated")) {
 		p -> waitstatus = ISC_R_SUCCESS;
+		if (o -> inner -> type == omapi_type_generic)
+			omapi_generic_clear_flags (o -> inner);
 		return omapi_signal_in (o -> inner, "ready");
 	}
 	if (!strcmp (name, "status")) {

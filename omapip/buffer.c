@@ -72,7 +72,7 @@ void omapi_buffer_trace_setup ()
 static void trace_connection_input_input (trace_type_t *ttype,
 					  unsigned length, char *buf)
 {
-	unsigned left, ol, cc = 0;
+	unsigned left, taken, cc = 0;
 	char *s;
 	int32_t connect_index;
 	isc_result_t status;
@@ -85,6 +85,7 @@ static void trace_connection_input_input (trace_type_t *ttype,
 				   omapi_connection_object_t, lp) {
 		if (lp -> index == ntohl (connect_index)) {
 			omapi_connection_reference (&c, lp, MDL);
+			omapi_connection_dereference (&lp, MDL);
 			break;
 		}
 	} omapi_array_foreach_end (omapi_connections,
@@ -97,27 +98,30 @@ static void trace_connection_input_input (trace_type_t *ttype,
 	}
 
 	s = buf + sizeof connect_index;
-	left = length - sizeof connect_index;;
+	left = length - sizeof connect_index;
 
 	while (left) {
-		ol = left;
+		taken = 0;
 		status = omapi_connection_reader_trace ((omapi_object_t *)c,
-							left, s, &length);
+							left, s, &taken);
 		if (status != ISC_R_SUCCESS) {
 			log_error ("trace connection input: %s",
 				   isc_result_totext (status));
 			break;
 		}
-		if (ol == left) {
+		if (!taken) {
 			if (cc > 0) {
 				log_error ("trace connection_input: %s",
 					   "input is not being consumed.");
 				break;
 			}
 			cc++;
-		} else
+		} else {
 			cc = 0;
+			left -= taken;
+		}
 	}
+	omapi_connection_dereference (&c, MDL);
 }
 
 static void trace_connection_input_stop (trace_type_t *ttype) { }

@@ -3,6 +3,8 @@ authoritative;
 lease-file-name "dhcp-2.leases";
 pid-file-name "dhcp-2.pid";
 local-port 50000;
+remote-port 50001;
+omapi-port 50005;
 
 ddns-update-style none;
 
@@ -11,9 +13,9 @@ max-lease-time 600;
 
 failover peer "foo" {
   secondary;
-  address 204.152.187.41;
-  port 51000;
-  peer address 204.152.187.24;
+  address 10.0.0.1;
+  port 51001;
+  peer address 10.0.0.1;
   peer port 51000;
   max-response-delay 7;
   max-unacked-updates 10;
@@ -56,6 +58,10 @@ option domain-name "connectathon.org.";
 option SUNW.root-server-ip-address 172.16.113.1;
 option SUNW.root-server-hostname "sundhcp-server17-1";
 
+class "sniffer" {
+  match if option host-name = "sniffer";
+}
+
 key FOO {
   algorithm HMAC-MD5.SIG-ALG.REG.INT;
   secret ABCD;
@@ -80,7 +86,19 @@ subnet 204.152.186.128 netmask 255.255.255.192 {
   not authoritative;
 }
 
-shared-network {
+shared-network LOCAL {
+  subnet 127.0.0.0 netmask 255.255.255.0 {
+  }
+  subnet 10.0.2.0 netmask 255.255.255.0 {
+    pool {
+      deny dynamic bootp clients;
+      failover peer "foo";
+      range 10.0.2.100 10.0.2.200;
+    }
+  }
+}
+
+shared-network 187-NET {
   subnet 204.152.187.0 netmask 255.255.255.0 {
   }
   subnet 10.0.1.0 netmask 255.255.255.0 {
@@ -95,8 +113,15 @@ shared-network {
 subnet 10.0.0.0 netmask 255.255.255.0 {
   pool {
     deny dynamic bootp clients;
+    deny members of "sniffer";
     failover peer "foo";
     range 10.0.0.10 10.0.0.200;
+  }
+  pool {
+    deny dynamic bootp clients;
+    allow members of "sniffer";
+    failover peer "foo";
+    range 10.0.0.9 10.0.0.9;
   }
   option routers 10.0.0.1;
   option domain-name "bisbee.fugue.com";

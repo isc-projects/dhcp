@@ -343,6 +343,9 @@ isc_result_t omapi_protocol_send_message (omapi_object_t *po,
 		}
 	}
 
+	if (!omo) {
+		omapi_protocol_reference (&m -> protocol_object, p, MDL);
+	}
 	return ISC_R_SUCCESS;
 }
 					  
@@ -353,6 +356,7 @@ isc_result_t omapi_protocol_signal_handler (omapi_object_t *h,
 	isc_result_t status;
 	omapi_protocol_object_t *p;
 	omapi_object_t *c;
+	omapi_message_object_t *m;
 	omapi_value_t *signature;
 	u_int16_t nlen;
 	u_int32_t vlen;
@@ -408,11 +412,11 @@ isc_result_t omapi_protocol_signal_handler (omapi_object_t *h,
 			  dmalloc_outstanding - previous_outstanding,
 			  dmalloc_outstanding, dmalloc_longterm, " long-term");
 #endif
-#if (defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL))
+#if defined (DEBUG_MEMORY_LEAKAGE)
 		dmalloc_dump_outstanding ();
 #endif
 #if defined (DEBUG_RC_HISTORY_EXHAUSTIVELY)
-		dump_rc_history ();
+		dump_rc_history (0);
 #endif
 	}
 
@@ -664,7 +668,8 @@ isc_result_t omapi_protocol_signal_handler (omapi_object_t *h,
 			return status;
 		}
 		omapi_data_string_dereference (&p -> name, MDL);
-		omapi_typed_data_dereference (&p -> value, MDL);
+		if (p -> value)
+			omapi_typed_data_dereference (&p -> value, MDL);
 		goto need_name_length;
 
 	      signature_wait:

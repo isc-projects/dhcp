@@ -69,7 +69,7 @@ struct executable_statement {
 	} op;
 	union {
 		struct {
-			struct executable_statement *true, *false;
+			struct executable_statement *tc, *fc;
 			struct expression *expr;
 		} ie;
 		struct expression *eval;

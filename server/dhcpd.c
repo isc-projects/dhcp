@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.115 2001/05/02 07:08:15 mellon Exp $ Copyright 1995-2001 Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.116 2001/06/27 00:31:09 mellon Exp $ Copyright 1995-2001 Internet Software Consortium.";
 #endif
 
   static char copyright[] =
@@ -181,6 +181,29 @@ static isc_result_t verify_auth (omapi_object_t *p, omapi_auth_key_t *a) {
 	return ISC_R_SUCCESS;
 }
 
+static void omapi_listener_start (void *foo)
+{
+	omapi_object_t *listener;
+	isc_result_t result;
+
+	listener = (omapi_object_t *)0;
+	result = omapi_generic_new (&listener, MDL);
+	if (result != ISC_R_SUCCESS)
+		log_fatal ("Can't allocate new generic object: %s",
+			   isc_result_totext (result));
+	result = omapi_protocol_listen (listener,
+					(unsigned)omapi_port, 1);
+	if (result == ISC_R_SUCCESS && omapi_key)
+		result = omapi_protocol_configure_security
+			(listener, verify_addr, verify_auth);
+	if (result != ISC_R_SUCCESS) {
+		log_error ("Can't start OMAPI protocol: %s",
+			   isc_result_totext (result));
+		add_timeout (cur_time + 5, omapi_listener_start, 0, 0, 0);
+	}
+	omapi_object_dereference (&listener, MDL);
+}
+
 int main (argc, argv, envp)
 	int argc;
 	char **argv, **envp;
@@ -199,7 +222,6 @@ int main (argc, argv, envp)
 	int quiet = 0;
 	char *server = (char *)0;
 	isc_result_t result;
-	omapi_object_t *listener;
 	unsigned seed;
 	struct interface_info *ip;
 	struct parse *parse;
@@ -461,6 +483,13 @@ int main (argc, argv, envp)
 		    log_fatal ("   lease file when playing back a trace. **");
 	    }		
 	    trace_file_replay (traceinfile);
+
+#if defined (DEBUG_MEMORY_LEAKAGE) || \
+                defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
+            free_everything ();
+            omapi_print_dmalloc_usage_by_caller (); 
+#endif
+
 	    exit (0);
 	}
 #endif
@@ -469,11 +498,11 @@ int main (argc, argv, envp)
 	if (readconf () != ISC_R_SUCCESS)
 		log_fatal ("Configuration file errors encountered -- exiting");
 
+	postconf_initialization (quiet);
+
         /* test option should cause an early exit */
  	if (cftest && !lftest) 
  		exit(0);
-
-	postconf_initialization (quiet);
 
 	group_write_hook = group_writer;
 
@@ -503,28 +532,7 @@ int main (argc, argv, envp)
 #if defined (TRACING)
 	trace_seed_stash (trace_srandom, seed + cur_time);
 #endif
-
-	/* Start up a listener for the object management API protocol. */
-	if (omapi_port != -1) {
-		listener = (omapi_object_t *)0;
-		result = omapi_generic_new (&listener, MDL);
-		if (result != ISC_R_SUCCESS)
-			log_fatal ("Can't allocate new generic object: %s",
-				   isc_result_totext (result));
-		result = omapi_protocol_listen (listener,
-						(unsigned)omapi_port, 1);
-		if (result == ISC_R_SUCCESS && omapi_key)
-			result = omapi_protocol_configure_security
-				(listener, verify_addr, verify_auth);
-		if (result != ISC_R_SUCCESS)
-			log_fatal ("Can't start OMAPI protocol: %s",
-				   isc_result_totext (result));
-	}
-
-#if defined (FAILOVER_PROTOCOL)
-	/* Start the failover protocol. */
-	dhcp_failover_startup ();
-#endif
+	postdb_startup ();
 
 #ifndef DEBUG
 	if (daemon) {
@@ -588,7 +596,8 @@ int main (argc, argv, envp)
 	}
 #endif /* !DEBUG */
 
-#if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL)
+#if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL) || \
+		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
 	dmalloc_cutoff_generation = dmalloc_generation;
 	dmalloc_longterm = dmalloc_outstanding;
 	dmalloc_outstanding = 0;
@@ -597,6 +606,9 @@ int main (argc, argv, envp)
 #if defined (DEBUG_RC_HISTORY_EXHAUSTIVELY)
 	dump_rc_history ();
 #endif
+
+	omapi_set_int_value ((omapi_object_t *)dhcp_control_object,
+			     (omapi_object_t *)0, "state", server_running);
 
 	/* Receive packets and dispatch them... */
 	dispatch ();
@@ -687,7 +699,8 @@ void postconf_initialization (int quiet)
 		result = omapi_auth_key_lookup_name (&omapi_key, s);
 		dfree (s, MDL);
 		if (result != ISC_R_SUCCESS)
-			log_fatal ("Invalid OMAPI key: %s", s);
+			log_fatal ("OMAPI key %s: %s",
+				   s, isc_result_totext (result));
 	}
 
 	oc = lookup_option (&server_universe, options, SV_LOCAL_PORT);
@@ -852,6 +865,19 @@ void postconf_initialization (int quiet)
 #endif
 }
 
+void postdb_startup (void)
+{
+	/* Initialize the omapi listener state. */
+	if (omapi_port != -1) {
+		omapi_listener_start (0);
+	}
+
+#if defined (FAILOVER_PROTOCOL)
+	/* Initialize the failover listener state. */
+	dhcp_failover_startup ();
+#endif
+}
+
 /* Print usage message. */
 
 static void usage ()
@@ -938,7 +964,7 @@ void lease_ping_timeout (vlp)
 		  dmalloc_outstanding - previous_outstanding,
 		  dmalloc_outstanding, dmalloc_longterm);
 #endif
-#if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL)
+#if defined (DEBUG_MEMORY_LEAKAGE)
 	dmalloc_dump_outstanding ();
 #endif
 }
@@ -970,7 +996,7 @@ int dhcpd_interface_setup_hook (struct interface_info *ip, struct iaddr *ia)
 		/* If this interface has multiple aliases on the same
 		   subnet, ignore all but the first we encounter. */
 		if (!subnet -> interface) {
-			subnet -> interface = ip;
+			interface_reference (&subnet -> interface, ip, MDL);
 			subnet -> interface_address = *ia;
 		} else if (subnet -> interface != ip) {
 			log_error ("Multiple interfaces match the %s: %s %s", 
@@ -995,6 +1021,150 @@ int dhcpd_interface_setup_hook (struct interface_info *ip, struct iaddr *ia)
 				   "same shared network",
 				   share -> interface -> name, ip -> name);
 		}
+		subnet_dereference (&subnet, MDL);
 	}
 	return 1;
+}
+
+static TIME shutdown_time;
+static int omapi_connection_count;
+enum dhcp_shutdown_state shutdown_state;
+
+isc_result_t dhcp_io_shutdown (omapi_object_t *obj, void *foo)
+{
+	/* Shut down all listeners. */
+	if (shutdown_state == shutdown_listeners &&
+	    obj -> type == omapi_type_listener &&
+	    obj -> inner &&
+	    obj -> inner -> type == omapi_type_protocol_listener) {
+		omapi_listener_destroy (obj, MDL);
+		return ISC_R_SUCCESS;
+	}
+
+	/* Shut down all existing omapi connections. */
+	if (obj -> type == omapi_type_connection &&
+	    obj -> inner &&
+	    obj -> inner -> type == omapi_type_protocol) {
+		if (shutdown_state == shutdown_drop_omapi_connections) {
+			omapi_disconnect (obj, 1);
+		}
+		omapi_connection_count++;
+		if (shutdown_state == shutdown_omapi_connections) {
+			omapi_disconnect (obj, 0);
+			return ISC_R_SUCCESS;
+		}
+	}
+
+	/* Shutdown all DHCP interfaces. */
+	if (obj -> type == dhcp_type_interface &&
+	    shutdown_state == shutdown_dhcp) {
+		dhcp_interface_remove (obj, (omapi_object_t *)0);
+		return ISC_R_SUCCESS;
+	}
+	return ISC_R_SUCCESS;
+}
+
+static isc_result_t dhcp_io_shutdown_countdown (void *vlp)
+{
+	dhcp_failover_state_t *state;
+#if defined (FAILOVER_PROTOCOL)
+	int failover_connection_count = 0;
+#endif
+
+      oncemore:
+	if (shutdown_state == shutdown_listeners ||
+	    shutdown_state == shutdown_omapi_connections ||
+	    shutdown_state == shutdown_drop_omapi_connections ||
+	    shutdown_state == shutdown_dhcp) {
+		omapi_connection_count = 0;
+		omapi_io_state_foreach (dhcp_io_shutdown, 0);
+	}
+
+	if ((shutdown_state == shutdown_listeners ||
+	     shutdown_state == shutdown_omapi_connections ||
+	     shutdown_state == shutdown_drop_omapi_connections) &&
+	    omapi_connection_count == 0) {
+		shutdown_state = shutdown_dhcp;
+		shutdown_time = cur_time;
+		goto oncemore;
+	} else if (shutdown_state == shutdown_listeners &&
+		   cur_time - shutdown_time > 4) {
+		shutdown_state = shutdown_omapi_connections;
+		shutdown_time = cur_time;
+	} else if (shutdown_state == shutdown_omapi_connections &&
+		   cur_time - shutdown_time > 4) {
+		shutdown_state = shutdown_drop_omapi_connections;
+		shutdown_time = cur_time;
+	} else if (shutdown_state == shutdown_drop_omapi_connections &&
+		   cur_time - shutdown_time > 4) {
+		shutdown_state = shutdown_dhcp;
+		shutdown_time = cur_time;
+		goto oncemore;
+	} else if (shutdown_state == shutdown_dhcp &&
+		   cur_time - shutdown_time > 4) {
+		shutdown_state = shutdown_done;
+		shutdown_time = cur_time;
+	}
+
+#if defined (FAILOVER_PROTOCOL)
+	/* Set all failover peers into the shutdown state. */
+	if (shutdown_state == shutdown_dhcp) {
+	    for (state = failover_states; state; state = state -> next) {
+		if (state -> me.state == normal) {
+		    dhcp_failover_set_state (state, shut_down);
+		    failover_connection_count++;
+		}
+		if (state -> me.state == shut_down &&
+		    state -> partner.state != partner_down)
+			failover_connection_count++;
+	    }
+	}
+
+	if (shutdown_state == shutdown_done) {
+	    for (state = failover_states; state; state = state -> next) {
+		if (state -> me.state == shut_down) {
+		    if (state -> link_to_peer)
+			dhcp_failover_link_dereference (&state -> link_to_peer,
+							MDL);
+		    dhcp_failover_set_state (state, recover);
+		}
+	    }
+#if defined (DEBUG_MEMORY_LEAKAGE) || \
+		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
+	    free_everything ();
+	    omapi_print_dmalloc_usage_by_caller ();
+#endif
+	    exit (0);
+	}		
+#else
+	if (shutdown_state == shutdown_done) {
+#if defined (DEBUG_MEMORY_LEAKAGE) || \
+                defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
+            free_everything ();
+            omapi_print_dmalloc_usage_by_caller (); 
+#endif
+		exit (0);
+	}
+#endif
+	if (shutdown_state == shutdown_dhcp &&
+	    !failover_connection_count) {
+		shutdown_state = shutdown_done;
+		shutdown_time = cur_time;
+		goto oncemore;
+	}
+	add_timeout (cur_time + 1,
+		     (void (*)(void *))dhcp_io_shutdown_countdown, 0, 0, 0);
+	return ISC_R_SUCCESS;
+}
+
+isc_result_t dhcp_set_control_state (control_object_state_t oldstate,
+				     control_object_state_t newstate)
+{
+	if (newstate == server_shutdown) {
+		shutdown_time = cur_time;
+		shutdown_state = shutdown_listeners;
+		dhcp_io_shutdown_countdown (0);
+		return ISC_R_SUCCESS;
+	}
+	return ISC_R_INVALIDARG;
 }

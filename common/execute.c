@@ -3,7 +3,7 @@
    Support for executable statements. */
 
 /*
- * Copyright (c) 1998-2000 Internet Software Consortium.
+ * Copyright (c) 1998-2001 Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: execute.c,v 1.44 2001/01/16 22:56:56 mellon Exp $ Copyright (c) 1998-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: execute.c,v 1.45 2001/06/27 00:29:48 mellon Exp $ Copyright (c) 1998-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -182,7 +182,7 @@ int execute_statements (result, packet, lease, client_state,
 			if (!execute_statements
 			    (result, packet, lease, client_state,
 			     in_options, out_options, scope,
-			     rc ? r -> data.ie.true : r -> data.ie.false))
+			     rc ? r -> data.ie.tc : r -> data.ie.fc))
 				return 0;
 			break;
 
@@ -190,7 +190,7 @@ int execute_statements (result, packet, lease, client_state,
 			status = evaluate_expression
 				((struct binding_value **)0,
 				 packet, lease, client_state, in_options,
-				 out_options, scope, r -> data.eval);
+				 out_options, scope, r -> data.eval, MDL);
 #if defined (DEBUG_EXPRESSIONS)
 			log_debug ("exec: evaluate: %s",
 				   (status ? "succeeded" : "failed"));
@@ -201,7 +201,7 @@ int execute_statements (result, packet, lease, client_state,
 			status = evaluate_expression
 				(result, packet,
 				 lease, client_state, in_options,
-				 out_options, scope, r -> data.retval);
+				 out_options, scope, r -> data.retval, MDL);
 #if defined (DEBUG_EXPRESSIONS)
 			log_debug ("exec: return: %s",
 				   (status ? "succeeded" : "failed"));
@@ -307,7 +307,8 @@ int execute_statements (result, packet, lease, client_state,
 						  (&binding -> value, packet,
 						   lease, client_state,
 						   in_options, out_options,
-						   scope, r -> data.set.expr));
+						   scope, r -> data.set.expr,
+						   MDL));
 				} else {
 				    if (!(binding_value_allocate
 					  (&binding -> value, MDL))) {
@@ -384,7 +385,7 @@ int execute_statements (result, packet, lease, client_state,
 					  (&binding -> value, packet, lease,
 					   client_state,
 					   in_options, out_options,
-					   scope, e -> data.set.expr));
+					   scope, e -> data.set.expr, MDL));
 				binding -> next = ns -> bindings;
 				ns -> bindings = binding;
 			}
@@ -417,7 +418,8 @@ int execute_statements (result, packet, lease, client_state,
 			status = (evaluate_data_expression
 				  (&ds, packet,
 				   lease, client_state, in_options,
-				   out_options, scope, r -> data.log.expr));
+				   out_options, scope, r -> data.log.expr,
+				   MDL));
 			
 #if defined (DEBUG_EXPRESSIONS)
 			log_debug ("exec: log");
@@ -543,7 +545,7 @@ int executable_statement_dereference (ptr, file, line)
 	}
 
 	(*ptr) -> refcnt--;
-	rc_register (file, line, ptr, *ptr, (*ptr) -> refcnt);
+	rc_register (file, line, ptr, *ptr, (*ptr) -> refcnt, 1);
 	if ((*ptr) -> refcnt > 0) {
 		*ptr = (struct executable_statement *)0;
 		return 1;
@@ -552,7 +554,7 @@ int executable_statement_dereference (ptr, file, line)
 	if ((*ptr) -> refcnt < 0) {
 		log_error ("%s(%d): negative refcnt!", file, line);
 #if defined (DEBUG_RC_HISTORY)
-		dump_rc_history ();
+		dump_rc_history (*ptr);
 #endif
 #if defined (POINTER_DEBUG)
 		abort ();
@@ -596,12 +598,12 @@ int executable_statement_dereference (ptr, file, line)
 		if ((*ptr) -> data.ie.expr)
 			expression_dereference (&(*ptr) -> data.ie.expr,
 						file, line);
-		if ((*ptr) -> data.ie.true)
+		if ((*ptr) -> data.ie.tc)
 			executable_statement_dereference
-				(&(*ptr) -> data.ie.true, file, line);
-		if ((*ptr) -> data.ie.false)
+				(&(*ptr) -> data.ie.tc, file, line);
+		if ((*ptr) -> data.ie.fc)
 			executable_statement_dereference
-				(&(*ptr) -> data.ie.false, file, line);
+				(&(*ptr) -> data.ie.fc, file, line);
 		break;
 
 	      case eval_statement:
@@ -737,23 +739,23 @@ void write_statements (file, statements, indent)
 						indent + 3, indent + 3, 1);
 		      else_if:
 			token_print_indent (file, col, indent, " ", "", "{");
-			write_statements (file, x -> data.ie.true, indent + 2);
-			if (x -> data.ie.false &&
-			    x -> data.ie.false -> op == if_statement &&
-			    !x -> data.ie.false -> next) {
+			write_statements (file, x -> data.ie.tc, indent + 2);
+			if (x -> data.ie.fc &&
+			    x -> data.ie.fc -> op == if_statement &&
+			    !x -> data.ie.fc -> next) {
 				indent_spaces (file, indent);
 				fprintf (file, "} elsif ");
-				x = x -> data.ie.false;
+				x = x -> data.ie.fc;
 				col = write_expression (file,
 							x -> data.ie.expr,
 							indent + 6,
 							indent + 6, 1);
 				goto else_if;
 			}
-			if (x -> data.ie.false) {
+			if (x -> data.ie.fc) {
 				indent_spaces (file, indent);
 				fprintf (file, "} else {");
-				write_statements (file, x -> data.ie.false,
+				write_statements (file, x -> data.ie.fc,
 						  indent + 2);
 			}
 			indent_spaces (file, indent);
@@ -921,14 +923,15 @@ int find_matching_case (struct executable_statement **ep,
 
 		status = (evaluate_data_expression (&ds, packet, lease,
 						    client_state, in_options,
-						    out_options, scope, expr));
+						    out_options, scope, expr,
+						    MDL));
 		if (status) {
 		    for (s = stmt; s; s = s -> next) {
 			if (s -> op == case_statement) {
 				sub = (evaluate_data_expression
 				       (&cd, packet, lease, client_state,
 					in_options, out_options,
-					scope, s -> data.c_case));
+					scope, s -> data.c_case, MDL));
 				if (sub && cd.len == ds.len &&
 				    !memcmp (cd.data, ds.data, cd.len))
 				{
@@ -977,4 +980,82 @@ int find_matching_case (struct executable_statement **ep,
 		return 1;
 	}
 	return 0;
+}
+
+int executable_statement_foreach (struct executable_statement *stmt,
+				  int (*callback) (struct
+						   executable_statement *,
+						   void *, int),
+				  void *vp, int condp)
+{
+	struct executable_statement *foo;
+	int ok = 0;
+	int result;
+
+	for (foo = stmt; foo; foo = foo -> next) {
+	    if ((*callback) (foo, vp, condp) != 0)
+		ok = 1;
+	    switch (foo -> op) {
+	      case null_statement:
+		break;
+	      case if_statement:
+		if (executable_statement_foreach (stmt -> data.ie.tc,
+						  callback, vp, 1))
+			ok = 1;
+		if (executable_statement_foreach (stmt -> data.ie.fc,
+						  callback, vp, 1))
+			ok = 1;
+		break;
+	      case add_statement:
+		break;
+	      case eval_statement:
+		break;
+	      case break_statement:
+		break;
+	      case default_option_statement:
+		break;
+	      case supersede_option_statement:
+		break;
+	      case append_option_statement:
+		break;
+	      case prepend_option_statement:
+		break;
+	      case send_option_statement:
+		break;
+	      case statements_statement:
+		if ((executable_statement_foreach
+		     (stmt -> data.statements, callback, vp, condp)))
+			ok = 1;
+		break;
+	      case on_statement:
+		if ((executable_statement_foreach
+		     (stmt -> data.on.statements, callback, vp, 1)))
+			ok = 1;
+		break;
+	      case switch_statement:
+		if ((executable_statement_foreach
+		     (stmt -> data.s_switch.statements, callback, vp, 1)))
+			ok = 1;
+		break;
+	      case case_statement:
+		break;
+	      case default_statement:
+		break;
+	      case set_statement:
+		break;
+	      case unset_statement:
+		break;
+	      case let_statement:
+		if ((executable_statement_foreach
+		     (stmt -> data.let.statements, callback, vp, 0)))
+			ok = 1;
+		break;
+	      case define_statement:
+		break;
+	      case log_statement:
+	      case return_statement:
+		break;
+	    }
+	}
+	return ok;
 }

@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: memory.c,v 1.66 2000/05/16 23:02:23 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: memory.c,v 1.67 2001/06/27 00:29:52 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -131,7 +131,7 @@ isc_result_t supersede_group (struct group_object *group, int writep)
 		group_name_hash = new_hash ((hash_reference)
 					    group_object_reference,
 					    (hash_dereference)
-					    group_object_dereference, 0);
+					    group_object_dereference, 0, MDL);
 		t = (struct group_object *)0;
 	}
 
@@ -165,13 +165,9 @@ int clone_group (struct group **gp, struct group *group,
 		return 0;
 	if (group == *gp)
 		*gp = (struct group *)0;
-	group_reference (gp, g, MDL);
+	group_reference (gp, g, file, line);
 	g -> authoritative = group -> authoritative;
-	if (group -> shared_network) {
-		shared_network_reference (&g -> shared_network,
-					  group -> shared_network, MDL);
-	}
-	group_reference (&g -> next, group, MDL);
-	group_dereference (&g, MDL);
+	group_reference (&g -> next, group, file, line);
+	group_dereference (&g, file, line);
 	return 1;
 }

@@ -23,10 +23,12 @@
 # of the $1 in its args.
 
 function make_resolv_conf() {
-  echo search $new_domain_name >/etc/resolv.conf
-  for nameserver in $new_domain_name_servers; do
-    echo nameserver $nameserver >>/etc/resolv.conf
-  done
+  if [ "x$new_domain_name" != x ] && [ x"$new_domain_name_servers" != x ]; then
+    echo search $new_domain_name >/etc/resolv.conf
+    for nameserver in $new_domain_name_servers; do
+      echo nameserver $nameserver >>/etc/resolv.conf
+    done
+  fi
 }
 
 # Must be used on exit.   Invokes the local dhcp client exit hooks, if any.
@@ -147,7 +149,8 @@ if [ x$reason = xBOUND ] || [ x$reason = xRENEW ] || \
   exit_with_hooks 0
 fi
 
-if [ x$reason = xEXPIRE ] || [ x$reason = xFAIL ]; then
+if [ x$reason = xEXPIRE ] || [ x$reason = xFAIL ] || [ x$reason = xRELEASE ] \
+   || [ x$reason = xSTOP ]; then
   if [ x$alias_ip_address != x ]; then
     # Turn off alias interface.
     ifconfig $interface:0- inet 0

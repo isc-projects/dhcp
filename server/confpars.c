@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.144 2001/06/22 16:47:14 brister Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.145 2001/06/27 00:31:03 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -219,6 +219,7 @@ void trace_conf_input (trace_type_t *ttype, unsigned len, char *data)
 	if (!leaseconf_initialized && ttype == trace_readleases_type) {
 		db_startup (0);
 		leaseconf_initialized = 1;
+		postdb_startup ();
 	}
 }
 
@@ -450,12 +451,9 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 					     MDL);
 
 			/* Make the shared network name from network number. */
-			n = piaddr (share -> subnets -> net);
-			t = dmalloc (strlen (n) + 1, MDL);
-			if (!t)
-				log_fatal ("no memory for subnet name");
-			strcpy (t, n);
-			share -> name = t;
+			n = piaddrmask (share -> subnets -> net,
+					share -> subnets -> netmask, MDL);
+			share -> name = n;
 
 			/* Copy the authoritative parameter from the subnet,
 			   since there is no opportunity to declare it here. */
@@ -463,6 +461,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 				share -> subnets -> group -> authoritative;
 			enter_shared_network (share);
 		}
+		shared_network_dereference (&share, MDL);
 		return 1;
 
 	      case VENDOR_CLASS:
@@ -694,6 +693,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 			if (!multi) {
 				executable_statement_reference (&ep -> next,
 								et, MDL);
+				executable_statement_dereference (&et, MDL);
 				return declaration;
 			}
 
@@ -712,9 +712,12 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 							  MDL);
 			executable_statement_reference (&group -> statements,
 							ep, MDL);
-		} else
+			executable_statement_dereference (&ep, MDL);
+		} else {
 			executable_statement_reference (&group -> statements,
 							et, MDL);
+		}
+		executable_statement_dereference (&et, MDL);
 		return declaration;
 	}
 
@@ -844,7 +847,7 @@ void parse_failover_peer (cfile, group, type)
 			}
 			option_cache (&cp -> address,
 				      (struct data_string *)0, expr,
-				      (struct option *)0);
+				      (struct option *)0, MDL);
 			expression_dereference (&expr, MDL);
 			break;
 
@@ -1079,9 +1082,24 @@ void parse_failover_state_declaration (struct parse *cfile,
 			cp = &state -> partner;
 			goto do_state;
 
+		      case MCLT:
+			if (state -> i_am == primary) {
+				parse_warn (cfile,
+					    "mclt not valid for primary");
+				goto bogus;
+			}
+			token = next_token (&val, (unsigned *)0, cfile);
+			if (token != NUMBER) {
+				parse_warn (cfile, "expecting a number.");
+				goto bogus;
+			}
+			state -> mclt = atoi (val);
+			parse_semi (cfile);
+			break;
+			
 		      default:
-		      bogus:
 			parse_warn (cfile, "expecting state setting.");
+		      bogus:
 			skip_to_rbrace (cfile, 1);	
 			dhcp_failover_state_dereference (&state, MDL);
 			return;
@@ -1676,7 +1694,8 @@ int parse_class_declaration (cp, cfile, group, type)
 	int declaration = 0;
 	int lose = 0;
 	struct data_string data;
-	const char *name;
+	char *name;
+	const char *tname;
 	struct executable_statement *stmt = (struct executable_statement *)0;
 	struct expression *expr;
 	int new = 1;
@@ -1724,20 +1743,20 @@ int parse_class_declaration (cp, cfile, group, type)
 		data.data = &data.buffer -> data [0];
 		data.terminated = 1;
 
-		name = type ? "implicit-vendor-class" : "implicit-user-class";
+		tname = type ? "implicit-vendor-class" : "implicit-user-class";
 	} else if (type == 2) {
-		name = val;
+		tname = val;
 	} else {
-		name = (char *)0;
+		tname = (const char *)0;
 	}
 
-	if (name) {
-		char *tname;
-		if (!(tname = dmalloc (strlen (val) + 1, MDL)))
-			log_fatal ("No memory for class name %s.", val);
-		strcpy (tname, val);
-		name = tname;
-	}
+	if (tname) {
+		name = dmalloc (strlen (tname) + 1, MDL);
+		if (!name)
+			log_fatal ("No memory for class name %s.", tname);
+		strcpy (name, val);
+	} else
+		name = (char *)0;
 
 	/* If this is a straight subclass, parse the hash string. */
 	if (type == 3) {
@@ -1764,7 +1783,8 @@ int parse_class_declaration (cp, cfile, group, type)
 			}
 		} else {
 			parse_warn (cfile, "Expecting string or hex list.");
-			class_dereference (&pc, MDL);
+			if (pc)
+				class_dereference (&pc, MDL);
 			return 0;
 		}
 	}
@@ -1799,7 +1819,8 @@ int parse_class_declaration (cp, cfile, group, type)
 					new_hash ((hash_reference)
 						  omapi_object_reference,
 						  (hash_dereference)
-						  omapi_object_dereference, 0);
+						  omapi_object_dereference,
+						  0, MDL);
 			add_hash (pc -> hash,
 				  class -> hash_string.data,
 				  class -> hash_string.len,
@@ -1844,6 +1865,8 @@ int parse_class_declaration (cp, cfile, group, type)
 			if (cp)
 				status = class_reference (cp, class, MDL);
 			class_dereference (&class, MDL);
+			if (pc)
+				class_dereference (&pc, MDL);
 			return cp ? (status == ISC_R_SUCCESS) : 1;
 		}
 		/* Give the subclass its own group. */
@@ -2357,7 +2380,7 @@ int parse_fixed_addr_param (oc, cfile)
 		return 0;
 	}
 	status = option_cache (oc, (struct data_string *)0, expr,
-			       (struct option *)0);
+			       (struct option *)0, MDL);
 	expression_dereference (&expr, MDL);
 	return status;
 }
@@ -2790,18 +2813,18 @@ int parse_lease_declaration (struct lease **lp, struct parse *cfile)
 				if (!(binding_scope_allocate
 				      (&lease -> scope, MDL)))
 					log_fatal ("no memory for scope");
-				binding = dmalloc (sizeof *binding, MDL);
-				if (!binding)
-					log_fatal ("No memory for lease %s.",
-						   "binding");
-				memset (binding, 0, sizeof *binding);
-				binding -> name =
-					dmalloc (strlen (val) + 1, MDL);
-				if (!binding -> name)
-					log_fatal ("No memory for binding %s.",
-						   "name");
-				strcpy (binding -> name, val);
-				newbinding = 1;
+			    binding = dmalloc (sizeof *binding, MDL);
+			    if (!binding)
+				    log_fatal ("No memory for lease %s.",
+					       "binding");
+			    memset (binding, 0, sizeof *binding);
+			    binding -> name =
+				    dmalloc (strlen (val) + 1, MDL);
+			    if (!binding -> name)
+				    log_fatal ("No memory for binding %s.",
+					       "name");
+			    strcpy (binding -> name, val);
+			    newbinding = 1;
 			} else if (binding -> value) {
 				binding_value_dereference (&binding -> value,
 							   MDL);
@@ -3141,45 +3164,48 @@ int parse_allow_deny (oc, cfile, flag)
 	struct expression *data = (struct expression *)0;
 	int status;
 
-	if (!make_const_data (&data, &rf, 1, 0, 1))
+	if (!make_const_data (&data, &rf, 1, 0, 1, MDL))
 		return 0;
 
 	token = next_token (&val, (unsigned *)0, cfile);
 	switch (token) {
 	      case TOKEN_BOOTP:
 		status = option_cache (oc, (struct data_string *)0, data,
-				       &server_options [SV_ALLOW_BOOTP]);
+				       &server_options [SV_ALLOW_BOOTP], MDL);
 		break;
 
 	      case BOOTING:
 		status = option_cache (oc, (struct data_string *)0, data,
-				       &server_options [SV_ALLOW_BOOTING]);
+				       &server_options [SV_ALLOW_BOOTING],
+				       MDL);
 		break;
 
 	      case DYNAMIC_BOOTP:
 		status = option_cache (oc, (struct data_string *)0, data,
-				       &server_options [SV_DYNAMIC_BOOTP]);
+				       &server_options [SV_DYNAMIC_BOOTP],
+				       MDL);
 		break;
 
 	      case UNKNOWN_CLIENTS:
 		status = (option_cache
 			  (oc, (struct data_string *)0, data,
-			   &server_options [SV_BOOT_UNKNOWN_CLIENTS]));
+			   &server_options [SV_BOOT_UNKNOWN_CLIENTS], MDL));
 		break;
 
 	      case DUPLICATES:
 		status = option_cache (oc, (struct data_string *)0, data,
-				       &server_options [SV_DUPLICATES]);
+				       &server_options [SV_DUPLICATES], MDL);
 		break;
 
 	      case DECLINES:
 		status = option_cache (oc, (struct data_string *)0, data,
-				       &server_options [SV_DECLINES]);
+				       &server_options [SV_DECLINES], MDL);
 		break;
 
 	      case CLIENT_UPDATES:
 		status = option_cache (oc, (struct data_string *)0, data,
-				       &server_options [SV_CLIENT_UPDATES]);
+				       &server_options [SV_CLIENT_UPDATES],
+				       MDL);
 		break;
 
 	      default:
@@ -3187,6 +3213,7 @@ int parse_allow_deny (oc, cfile, flag)
 		skip_to_semi (cfile);
 		return 0;
 	}
+	expression_dereference (&data, MDL);
 	parse_semi (cfile);
 	return status;
 }

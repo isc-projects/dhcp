@@ -1,5 +1,5 @@
 #if !defined(lint) && !defined(SABER)
-static const char rcsid[] = "$Id: res_findzonecut.c,v 1.14 2001/04/27 20:01:29 mellon Exp $";
+static const char rcsid[] = "$Id: res_findzonecut.c,v 1.15 2001/06/27 00:30:34 mellon Exp $";
 #endif /* not lint */
 
 /*
@@ -36,7 +36,7 @@ static const char rcsid[] = "$Id: res_findzonecut.c,v 1.14 2001/04/27 20:01:29 m
 #include <stdlib.h>
 #include <string.h>
 
-#include <isc/list.h>
+#include <isc-dhcp/list.h>
 
 #include "minires/minires.h"
 #include "arpa/nameser.h"

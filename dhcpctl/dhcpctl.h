@@ -87,6 +87,7 @@ dhcpctl_status dhcpctl_set_string_value (dhcpctl_handle, const char *,
 					 const char *);
 dhcpctl_status dhcpctl_set_data_value (dhcpctl_handle,
 				       const char *, unsigned, const char *);
+dhcpctl_status dhcpctl_set_null_value (dhcpctl_handle, const char *);
 dhcpctl_status dhcpctl_set_boolean_value (dhcpctl_handle, int, const char *);
 dhcpctl_status dhcpctl_set_int_value (dhcpctl_handle, int, const char *);
 dhcpctl_status dhcpctl_object_update (dhcpctl_handle, dhcpctl_handle);

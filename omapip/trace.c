@@ -57,6 +57,40 @@ static tracefile_header_t tracefile_header;
 static int trace_playback_flag;
 trace_type_t trace_time_marker;
 
+#if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
+extern omapi_array_t *trace_listeners;
+extern omapi_array_t *omapi_connections;
+
+void trace_free_all ()
+{
+	trace_type_t *tp;
+	int i;
+	tp = new_trace_types;
+	while (tp) {
+		new_trace_types = tp -> next;
+		if (tp -> name) {
+			dfree (tp -> name, MDL);
+			tp -> name = (char *)0;
+		}
+		dfree (tp, MDL);
+		tp = new_trace_types;
+	}
+	for (i = 0; i < trace_type_count; i++) {
+		if (trace_types [i]) {
+			if (trace_types [i] -> name)
+				dfree (trace_types [i] -> name, MDL);
+			dfree (trace_types [i], MDL);
+		}
+	}
+	dfree (trace_types, MDL);
+	trace_types = (trace_type_t **)0;
+	trace_type_count = trace_type_max = 0;
+
+	omapi_array_free (&trace_listeners, MDL);
+	omapi_array_free (&omapi_connections, MDL);
+}
+#endif
+
 static isc_result_t trace_type_record (trace_type_t *,
 				       unsigned, const char *, int);
 
@@ -88,6 +122,8 @@ isc_result_t trace_init (void (*set_time) (u_int32_t),
 					 trace_index_stop_tracing, file, line);
 	if (!root_type)
 		return ISC_R_UNEXPECTED;
+	if (new_trace_types == root_type)
+		new_trace_types = new_trace_types -> next;
 	root_type -> index = 0;
 	trace_type_stash (root_type);
 

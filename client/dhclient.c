@@ -41,7 +41,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.129 2001/04/16 22:07:33 mellon Exp $ Copyright (c) 1995-2001 Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.130 2001/06/27 00:29:29 mellon Exp $ Copyright (c) 1995-2001 Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -445,7 +445,8 @@ int main (argc, argv, envp)
 	/* Set up the bootp packet handler... */
 	bootp_packet_handler = do_packet;
 
-#if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL)
+#if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL) || \
+		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
 	dmalloc_cutoff_generation = dmalloc_generation;
 	dmalloc_longterm = dmalloc_outstanding;
 	dmalloc_outstanding = 0;
@@ -551,7 +552,8 @@ void state_reboot (cpp)
 
 	/* If we don't remember an active lease, go straight to INIT. */
 	if (!client -> active ||
-	    client -> active -> is_bootp) {
+	    client -> active -> is_bootp ||
+	    client -> active -> expiry <= cur_time) {
 		state_init (client);
 		return;
 	}
@@ -880,6 +882,7 @@ void bind_lease (client)
 	client -> state = S_BOUND;
 	reinitialize_interfaces ();
 	go_daemon ();
+	client_dns_update (client, 1);
 }  
 
 /* state_bound is called when we've successfully bound to a particular
@@ -923,6 +926,32 @@ void state_bound (cpp)
 
 	/* Send the first packet immediately. */
 	send_request (client);
+}  
+
+/* state_stop is called when we've been told to shut down.   We unconfigure
+   the interfaces, and then stop operating until told otherwise. */
+
+void state_stop (cpp)
+	void *cpp;
+{
+	struct client_state *client = cpp;
+	int i;
+
+	/* Cancel all timeouts. */
+	cancel_timeout (state_selecting, client);
+	cancel_timeout (send_discover, client);
+	cancel_timeout (send_request, client);
+	cancel_timeout (state_bound, client);
+
+	/* If we have an address, unconfigure it. */
+	if (client -> active) {
+		script_init (client, "STOP", client -> active -> medium);
+		script_write_params (client, "old_", client -> active);
+		if (client -> alias)
+			script_write_params (client, "alias_",
+					     client -> alias);
+		script_go (client);
+	}
 }  
 
 int commit_leases ()
@@ -1021,6 +1050,7 @@ void dhcpoffer (packet)
 	const char *name = packet -> packet_type ? "DHCPOFFER" : "BOOTREPLY";
 	struct iaddrlist *ap;
 	struct option_cache *oc;
+	char obuf [1024];
 	
 #ifdef DEBUG_PACKET
 	dump_packet (packet);
@@ -1045,17 +1075,20 @@ void dhcpoffer (packet)
 		return;
 	}
 
-	log_info ("%s from %s", name, piaddr (packet -> client_addr));
+	sprintf (obuf, "%s from %s", name, piaddr (packet -> client_addr));
 
 
 	/* If this lease doesn't supply the minimum required parameters,
 	   blow it off. */
 	if (client -> config -> required_options) {
-		for (i = 0; client -> config -> required_options [i]; i++) {
-			if (!lookup_option
-			    (&dhcp_universe, packet -> options,
-			     client -> config -> required_options [i])) {
-				log_info ("%s isn't satisfactory.", name);
+	    for (i = 0; client -> config -> required_options [i]; i++) {
+		if (!lookup_option
+		    (&dhcp_universe, packet -> options,
+		     client -> config -> required_options [i])) {
+		    log_info ("%s: no %s option.",
+			      obuf, (dhcp_universe.options
+				     [client -> config -> required_options [i]]
+				     -> name));
 				return;
 			}
 		}
@@ -1066,14 +1099,14 @@ void dhcpoffer (packet)
 		if (lease -> address.len == sizeof packet -> raw -> yiaddr &&
 		    !memcmp (lease -> address.iabuf,
 			     &packet -> raw -> yiaddr, lease -> address.len)) {
-			log_debug ("%s already seen.", name);
+			log_debug ("%s: already seen.", obuf);
 			return;
 		}
 	}
 
 	lease = packet_to_lease (packet, client);
 	if (!lease) {
-		log_info ("packet_to_lease failed.");
+		log_info ("%s: packet_to_lease failed.", obuf);
 		return;
 	}
 
@@ -1114,11 +1147,12 @@ void dhcpoffer (packet)
 	   state_selecting().  Otherwise, time out into
 	   state_selecting at the select interval. */
 	if (stop_selecting <= 0)
-		state_selecting (ip);
+		state_selecting (client);
 	else {
 		add_timeout (stop_selecting, state_selecting, client, 0, 0);
 		cancel_timeout (send_discover, client);
 	}
+	log_info ("%s", obuf);
 }
 
 /* Allocate a client_lease structure and initialize it from the parameters
@@ -1741,6 +1775,10 @@ void make_client_options (client, lease, type, sid, rip, prl, op)
 	struct option_cache *oc;
 	struct buffer *bp = (struct buffer *)0;
 
+	/* If there are any leftover options, get rid of them. */
+	if (*op)
+		option_state_dereference (op, MDL);
+
 	/* Allocate space for options. */
 	option_state_allocate (op, MDL);
 
@@ -1870,7 +1908,6 @@ void make_request (client, lease)
 	int i, j;
 	unsigned char *tmp, *digest;
 	unsigned char *old_digest_loc;
-	struct option_state *options = (struct option_state *)0;
 	struct option_cache *oc;
 
 	memset (&client -> packet, 0, sizeof (client -> packet));
@@ -1887,13 +1924,13 @@ void make_request (client, lease)
 			      ? &lease -> address
 			      : (struct iaddr *)0),
 			     client -> config -> requested_options,
-			     &options);
+			     &client -> sent_options);
 
 	/* Set up the option buffer... */
 	client -> packet_length =
 		cons_options ((struct packet *)0, &client -> packet,
 			      (struct lease *)0, client, 0,
-			      (struct option_state *)0, options,
+			      (struct option_state *)0, client -> sent_options,
 			      &global_scope, 0, 0, 0, (struct data_string *)0,
 			      client -> config -> vendor_space_name);
 	if (client -> packet_length < BOOTP_MIN_LEN)
@@ -2750,6 +2787,7 @@ void do_release(client)
 		if (client -> alias)
 			script_write_params (client, "alias_",
 					     client -> alias);
+		script_write_params (client, "old_", client -> active);
 		script_go (client);
 	}
 
@@ -2885,4 +2923,154 @@ unsigned cons_agent_information_options (cfg_options, outpacket,
 	unsigned length;
 {
 	return length;
+}
+
+static void shutdown_exit (void *foo)
+{
+	exit (0);
+}
+
+isc_result_t dhcp_set_control_state (control_object_state_t oldstate,
+				     control_object_state_t newstate)
+{
+	struct interface_info *ip;
+	struct client_state *client;
+
+	/* Do the right thing for each interface. */
+	for (ip = interfaces; ip; ip = ip -> next) {
+	    for (client = ip -> client; client; client = client -> next) {
+		switch (newstate) {
+		  case server_startup:
+		    return ISC_R_SUCCESS;
+
+		  case server_running:
+		    return ISC_R_SUCCESS;
+
+		  case server_shutdown:
+		    if (client -> active &&
+			client -> active -> expiry > cur_time) {
+			    client_dns_update (client, 0);
+			    do_release (client);
+		    }
+		    break;
+
+		  case server_hibernate:
+		    state_stop (client);
+		    break;
+
+		  case server_awaken:
+		    state_reboot (client);
+		    break;
+		}
+	    }
+	}
+	if (newstate == server_shutdown)
+		add_timeout (cur_time + 1, shutdown_exit, 0, 0, 0);
+	return ISC_R_SUCCESS;
+}
+
+/* See if we should do a DNS update, and if so, do it. */
+
+void client_dns_update (struct client_state *client, int addp)
+{
+	struct data_string ddns_fqdn, ddns_fwd_name,
+	       ddns_dhcid, client_identifier;
+	struct option_cache *oc;
+	int ignorep;
+	int result;
+	isc_result_t rcode;
+
+	/* If we didn't send an FQDN option, we certainly aren't going to
+	   be doing an update. */
+	if (!client -> sent_options)
+		return;
+
+	/* If we don't have a lease, we can't do an update. */
+	if (!client -> active)
+		return;
+
+	/* If we set the no client update flag, don't do the update. */
+	if ((oc = lookup_option (&fqdn_universe, client -> sent_options,
+				  FQDN_NO_CLIENT_UPDATE)) &&
+	    evaluate_boolean_option_cache (&ignorep, (struct packet *)0,
+					   (struct lease *)0, client,
+					   client -> sent_options,
+					   (struct option_state *)0,
+					   &global_scope, oc, MDL))
+		return;
+	
+	/* If we set the "server, please update" flag, or didn't set it
+	   to false, don't do the update. */
+	if (!(oc = lookup_option (&fqdn_universe, client -> sent_options,
+				  FQDN_SERVER_UPDATE)) ||
+	    evaluate_boolean_option_cache (&ignorep, (struct packet *)0,
+					   (struct lease *)0, client,
+					   client -> sent_options,
+					   (struct option_state *)0,
+					   &global_scope, oc, MDL))
+		return;
+	
+	/* If no FQDN option was supplied, don't do the update. */
+	memset (&ddns_fwd_name, 0, sizeof ddns_fwd_name);
+	if (!(oc = lookup_option (&fqdn_universe, client -> sent_options,
+				  FQDN_FQDN)) ||
+	    !evaluate_option_cache (&ddns_fwd_name, (struct packet *)0, 
+				    (struct lease *)0, client,
+				    client -> sent_options,
+				    (struct option_state *)0,
+				    &global_scope, oc, MDL))
+		return;
+
+	/* Make a dhcid string out of either the client identifier,
+	   if we are sending one, or the interface's MAC address,
+	   otherwise. */
+	memset (&ddns_dhcid, 0, sizeof ddns_dhcid);
+
+	memset (&client_identifier, 0, sizeof client_identifier);
+	if ((oc = lookup_option (&dhcp_universe, client -> sent_options,
+				 DHO_DHCP_CLIENT_IDENTIFIER)) &&
+	    evaluate_option_cache (&client_identifier, (struct packet *)0, 
+				   (struct lease *)0, client,
+				   client -> sent_options,
+				   (struct option_state *)0,
+				   &global_scope, oc, MDL)) {
+		result = get_dhcid (&ddns_dhcid,
+				    DHO_DHCP_CLIENT_IDENTIFIER,
+				    client_identifier.data,
+				    client_identifier.len);
+		data_string_forget (&client_identifier, MDL);
+	} else
+		result = get_dhcid (&ddns_dhcid, 0,
+				    client -> interface -> hw_address.hbuf,
+				    client -> interface -> hw_address.hlen);
+	if (!result) {
+		data_string_forget (&ddns_fwd_name, MDL);
+		return;
+	}
+
+	/* Start the resolver, if necessary. */
+	if (!resolver_inited) {
+		minires_ninit (&resolver_state);
+		resolver_inited = 1;
+		resolver_state.retrans = 1;
+		resolver_state.retry = 1;
+	}
+
+	/*
+	 * Perform updates.
+	 */
+	if (ddns_fwd_name.len && ddns_dhcid.len) {
+		if (addp)
+			rcode = ddns_update_a (&ddns_fwd_name,
+					       client -> active -> address,
+					       &ddns_dhcid, DEFAULT_DDNS_TTL,
+					       1);
+		else
+			rcode = ddns_remove_a (&ddns_fwd_name,
+					       client -> active -> address,
+					       &ddns_dhcid);
+	}
+	
+	data_string_forget (&ddns_fwd_name, MDL);
+	data_string_forget (&ddns_dhcid, MDL);
 }

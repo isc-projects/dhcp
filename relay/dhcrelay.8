@@ -106,18 +106,17 @@ are specified on the command line dhcrelay will identify all network
 interfaces, elimininating non-broadcast interfaces if possible, and
 attempt to configure each interface.
 .PP
-If a relay agent is running on a system that is connected to one or
-more networks on which no DHCP servers are present, and is also
-connected to one or more networks on which DHCP servers
-.I are
-connected, it is may not be helpful for the relay agent to relay
-requests from those networks on which a DHCP server already exists.
-To avoid such a situation, the interfaces on which the relay agent
-should listen should be specified with the
+The
 .B -i
-flag.
+flag can be used to specify the network interfaces on which the relay
+agent should listen.   In general, it must listen not only on those
+network interfaces to which clients are attached, but also on those
+network interfaces to which the server (or the router that reaches the
+server) is attached.   However, in some cases it may be necessary to
+exclude some networks; in this case, you must list all those network
+interfaces that should \fInot\fR be excluded using the \fB-i\fR flag.
 .PP
-Note that in some cases it
+In some cases it
 .I is
 helpful for the relay agent to forward requests from networks on which
 a DHCP server is running to other DHCP servers.   This would be the
@@ -138,7 +137,7 @@ flag should be specified.  This is useful when running dhcrelay under
 a debugger, or when running it out of inittab on System V systems.
 .PP
 Dhcrelay will normally print its network configuration on startup.
-This can be annoying in a system startup script - to disable this
+This can be unhelpful in a system startup script - to disable this
 behaviour, specify the
 .B -q
 flag.

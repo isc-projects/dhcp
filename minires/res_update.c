@@ -1,5 +1,5 @@
 #if !defined(lint) && !defined(SABER)
-static const char rcsid[] = "$Id: res_update.c,v 1.11 2001/01/17 08:22:20 mellon Exp $";
+static const char rcsid[] = "$Id: res_update.c,v 1.12 2001/06/27 00:30:38 mellon Exp $";
 #endif /* not lint */
 
 /*
@@ -39,7 +39,7 @@ static const char rcsid[] = "$Id: res_update.c,v 1.11 2001/01/17 08:22:20 mellon
 #include <stdlib.h>
 #include <string.h>
 
-#include <isc/list.h>
+#include <isc-dhcp/list.h>
 #include "minires/minires.h"
 #include "arpa/nameser.h"
 
@@ -134,7 +134,7 @@ res_nupdate(res_state statp, ns_updrec *rrecp_in) {
 	rrecp = res_mkupdrec(ns_s_zn, zptr->z_origin,
 			     zptr->z_class, ns_t_soa, 0);
 	if (rrecp == NULL) {
-		rcode = -1; /* XXX */
+		rcode = ISC_R_UNEXPECTED;
 		goto done;
 	}
 	ISC_LIST_PREPEND(zptr->z_rrlist, rrecp, r_glink);
@@ -154,17 +154,18 @@ res_nupdate(res_state statp, ns_updrec *rrecp_in) {
 
 	/* Send the update and remember the result. */
 	key = (ns_tsig_key *)0;
-	if (!find_tsig_key (&key, zptr->z_origin, zcookie)) {
+	rcode = find_tsig_key (&key, zptr->z_origin, zcookie);
+	if (rcode == ISC_R_SUCCESS) {
 		rcode = res_nsendsigned(statp, packet, n, key,
 					answer, sizeof answer, &rval);
 		tkey_free (&key);
-	} else {
+	} else if (rcode == ISC_R_NOTFOUND || rcode == ISC_R_KEY_UNKNOWN) {
 		rcode = res_nsend(statp, packet, n,
 				  answer, sizeof answer, &rval);
 	}
-	if (rcode != ISC_R_SUCCESS) {
+	if (rcode != ISC_R_SUCCESS)
 		goto undone;
-	}
+
 	rcode = ns_rcode_to_isc (((HEADER *)answer)->rcode);
 	if (zcookie && rcode == ISC_R_BADSIG) {
 		repudiate_zone (&zcookie);

@@ -43,7 +43,7 @@
 
 #ifndef _OMAPIP_H_
 #define _OMAPIP_H_
-#include <isc/result.h>
+#include <isc-dhcp/result.h>
 
 typedef unsigned int omapi_handle_t;
 
@@ -215,6 +215,12 @@ isc_result_t name##_array_allocate (omapi_array_t **p,			      \
 		 file, line));						      \
 }									      \
 									      \
+isc_result_t name##_array_free (omapi_array_t **p,			      \
+				const char *file, int line)		      \
+{									      \
+	return omapi_array_free (p, file, line);			      \
+}									      \
+									      \
 isc_result_t name##_array_extend (omapi_array_t *pptr, stype *ptr, int *index,\
 				  const char *file, int line)		      \
 {									      \
@@ -235,6 +241,7 @@ isc_result_t name##_array_lookup (stype **ptr, omapi_array_t *pptr,	      \
 
 #define OMAPI_ARRAY_TYPE_DECL(name, stype) \
 isc_result_t name##_array_allocate (omapi_array_t **, const char *, int);     \
+isc_result_t name##_array_free (omapi_array_t **, const char *, int);	      \
 isc_result_t name##_array_extend (omapi_array_t *, stype *, int *,	      \
 				  const char *, int);			      \
 isc_result_t name##_array_set (omapi_array_t *,				      \
@@ -247,6 +254,7 @@ isc_result_t name##_array_lookup (stype **,				      \
 		int omapi_array_foreach_index;				      \
 		stype *var = (stype *)0;				      \
 		for (omapi_array_foreach_index = 0;			      \
+			     array &&					      \
 			     omapi_array_foreach_index < (array) -> count;    \
 		     omapi_array_foreach_index++) {			      \
 			if ((array) -> data [omapi_array_foreach_index]) {    \
@@ -395,6 +403,9 @@ isc_result_t omapi_io_stuff_values (omapi_object_t *,
 				    omapi_object_t *);
 isc_result_t omapi_waiter_signal_handler (omapi_object_t *,
 					  const char *, va_list);
+isc_result_t omapi_io_state_foreach (isc_result_t (*func) (omapi_object_t *,
+							   void *),
+				     void *p);
 
 isc_result_t omapi_generic_new (omapi_object_t **, const char *, int);
 isc_result_t omapi_generic_set_value  (omapi_object_t *, omapi_object_t *,
@@ -409,6 +420,7 @@ isc_result_t omapi_generic_signal_handler (omapi_object_t *,
 isc_result_t omapi_generic_stuff_values (omapi_object_t *,
 					 omapi_object_t *,
 					 omapi_object_t *);
+isc_result_t omapi_generic_clear_flags (omapi_object_t *);
 
 isc_result_t omapi_message_new (omapi_object_t **, const char *, int);
 isc_result_t omapi_message_set_value  (omapi_object_t *, omapi_object_t *,
@@ -456,6 +468,7 @@ extern omapi_object_type_t *omapi_type_auth_key;
 
 extern omapi_object_type_t *omapi_object_types;
 
+void omapi_type_relinquish (void);
 isc_result_t omapi_init (void);
 isc_result_t omapi_object_type_register (omapi_object_type_t **,
 					 const char *,
@@ -545,7 +558,8 @@ isc_result_t omapi_handle_td_lookup (omapi_object_t **, omapi_typed_data_t *);
 
 void * dmalloc (unsigned, const char *, int);
 void dfree (void *, const char *, int);
-#if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL)
+#if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL) || \
+		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
 void dmalloc_reuse (void *, const char *, int, int);
 void dmalloc_dump_outstanding (void);
 #else
@@ -553,8 +567,10 @@ void dmalloc_dump_outstanding (void);
 #endif
 #define MDL __FILE__, __LINE__
 #if defined (DEBUG_RC_HISTORY)
-void dump_rc_history (void);
+void dump_rc_history (void *);
+void rc_history_next (int);
 #endif
+void omapi_print_dmalloc_usage_by_caller (void);
 isc_result_t omapi_object_allocate (omapi_object_t **,
 				    omapi_object_type_t *,
 				    size_t, const char *, int);
@@ -592,6 +608,7 @@ isc_result_t omapi_addr_list_dereference (omapi_addr_list_t **,
 
 isc_result_t omapi_array_allocate (omapi_array_t **, omapi_array_ref_t,
 				   omapi_array_deref_t, const char *, int);
+isc_result_t omapi_array_free (omapi_array_t **, const char *, int);
 isc_result_t omapi_array_extend (omapi_array_t *, char *, int *,
 				 const char *, int);
 isc_result_t omapi_array_set (omapi_array_t *, void *, int, const char *, int);

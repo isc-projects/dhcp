@@ -96,6 +96,7 @@ typedef struct {
 	u_int16_t port;
 } trace_addr_t;
 
+void trace_free_all (void);
 int trace_playback (void);
 int trace_record (void);
 isc_result_t trace_init (void (*set_time) (u_int32_t), const char *, int);

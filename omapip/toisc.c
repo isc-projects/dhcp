@@ -208,7 +208,7 @@ isc_result_t uerr2isc (int err)
 		return ISC_R_TIMEDOUT;
 
 	      case ECONNRESET:
-		return ISC_R_CONNREFUSED;
+		return ISC_R_CONNRESET;
 
 	      case ENOBUFS:
 		return ISC_R_NOSPACE;

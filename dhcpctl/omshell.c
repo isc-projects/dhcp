@@ -47,7 +47,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
-#include <isc/result.h>
+#include <isc-dhcp/result.h>
 #include "dhcpctl.h"
 #include "dhcpd.h"
 
@@ -69,9 +69,7 @@ int check_collection (struct packet *p, struct lease *l, struct collection *c)
 void classify (struct packet *packet, struct class *class) { }
 
 static void usage (char *s) {
-	fprintf (stderr,
-		 "Usage: %s [-n <username>] [-p <password>] "
-		 "[-a <algorithm>] [-P <port>]\n", s);
+	fprintf (stderr, "Usage: %s\n", s);
 	exit (1);
 }
 
@@ -109,10 +107,10 @@ int main (int argc, char **argv, char **envp)
 
 	/* Initially, log errors to stderr as well as to syslogd. */
 #ifdef SYSLOG_4_2
-	openlog ("dhcpd", LOG_NDELAY);
+	openlog ("omshell", LOG_NDELAY);
 	log_priority = DHCPD_LOG_FACILITY;
 #else
-	openlog ("dhcpd", LOG_NDELAY, DHCPD_LOG_FACILITY);
+	openlog ("omshell", LOG_NDELAY, DHCPD_LOG_FACILITY);
 #endif
 	status = dhcpctl_initialize ();
 	if (status != ISC_R_SUCCESS) {
@@ -145,9 +143,16 @@ int main (int argc, char **argv, char **envp)
 		for (i = 0; i < g -> nvalues; i++) {
 		    omapi_value_t *v = g -> values [i];
 			
+		    if (!g -> values [i])
+			    continue;
+
 		    printf ("%.*s = ", (int)v -> name -> len,
 			    v -> name -> value);
 			
+		    if (!v -> value) {
+			printf ("<null>\n");
+			continue;
+		    }
 		    switch (v -> value -> type) {
 			  case omapi_datatype_int:
 			    printf ("%d\n",
@@ -502,7 +507,8 @@ int main (int argc, char **argv, char **envp)
 			    s = buf;
 			    val = buf;
 			    do {
-				convert_num (cfile, s, val, 16, 8);
+				convert_num (cfile, (unsigned char *)s,
+					     val, 16, 8);
 				++s;
 				token = next_token (&val,
 						    (unsigned *)0, cfile);
@@ -525,6 +531,39 @@ int main (int argc, char **argv, char **envp)
 			    goto set_usage;
 		    break;
 		    
+		  case UNSET:
+		    token = next_token (&val, (unsigned *)0, cfile);
+
+		    if ((!is_identifier (token) && token != STRING)) {
+			  unset_usage:
+			    printf ("usage: unset <name>\n");
+			    skip_to_semi (cfile);
+			    break;
+		    }
+		    
+		    if (!oh) {
+			    printf ("no open object.\n");
+			    skip_to_semi (cfile);
+			    break;
+		    }
+		    
+		    if (!connected) {
+			    printf ("not connected.\n");
+			    skip_to_semi (cfile);
+			    break;
+		    }
+
+		    s1[0] = '\0';
+		    strncat (s1, val, sizeof(s1)-1);
+		    
+		    token = next_token (&val, (unsigned *)0, cfile);
+		    if (token != END_OF_FILE && token != EOL)
+			    goto unset_usage;
+
+		    dhcpctl_set_null_value (oh, s1);
+		    break;
+
+			    
 		  case TOKEN_CREATE:
 		  case TOKEN_OPEN:
 		    i = token;
@@ -580,6 +619,12 @@ int main (int argc, char **argv, char **envp)
 			    break;
 		    }
 
+		    if (!oh) {
+			    printf ("you haven't opened an object yet!\n");
+			    skip_to_semi (cfile);
+			    break;
+		    }
+
 		    status = dhcpctl_object_update(connection, oh);
 		    if (status == ISC_R_SUCCESS)
 			    status = dhcpctl_wait_for_completion
@@ -597,14 +642,18 @@ int main (int argc, char **argv, char **envp)
 		  case REMOVE:
 		    token = next_token (&val, (unsigned *)0, cfile);
 		    if (token != END_OF_FILE && token != EOL) {
-			    printf ("usage: %s\n", val);
+			    printf ("usage: remove\n");
 			    skip_to_semi (cfile);
 			    break;
 		    }
 		    
 		    if (!connected) {
 			    printf ("not connected.\n");
-			    skip_to_semi (cfile);
+			    break;
+		    }
+
+		    if (!oh) {
+			    printf ("no object.\n");
 			    break;
 		    }
 
@@ -619,10 +668,49 @@ int main (int argc, char **argv, char **envp)
 				    isc_result_totext (status));
 			    break;
 		    }
+		    omapi_object_dereference (&oh, MDL);
+		    break;
+
+		  case REFRESH:
+		    token = next_token (&val, (unsigned *)0, cfile);
+		    if (token != END_OF_FILE && token != EOL) {
+			    printf ("usage: refresh\n");
+			    skip_to_semi (cfile);
+			    break;
+		    }
+		    
+		    if (!connected) {
+			    printf ("not connected.\n");
+			    break;
+		    }
+
+		    if (!oh) {
+			    printf ("no object.\n");
+			    break;
+		    }
+
+		    status = dhcpctl_object_refresh(connection, oh);
+		    if (status == ISC_R_SUCCESS)
+			    status = dhcpctl_wait_for_completion
+				    (oh, &waitstatus);
+		    if (status == ISC_R_SUCCESS)
+			    status = waitstatus;
+		    if (status != ISC_R_SUCCESS) {
+			    printf ("can't refresh object: %s\n",
+				    isc_result_totext (status));
+			    break;
+		    }
 		    
 		    break;
 	    }
 	} while (1);
 
 	exit (0);
+}
+
+/* Sigh */
+isc_result_t dhcp_set_control_state (control_object_state_t oldstate,
+				     control_object_state_t newstate)
+{
+	return ISC_R_SUCCESS;
 }

@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: alloc.c,v 1.53 2001/01/25 08:18:37 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: alloc.c,v 1.54 2001/06/27 00:29:39 mellon Exp $ Copyright (c) 1996-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -52,17 +52,13 @@ static char copyright[] =
 struct dhcp_packet *dhcp_free_list;
 struct packet *packet_free_list;
 
-OMAPI_OBJECT_ALLOC (subnet, struct subnet, dhcp_type_subnet)
-OMAPI_OBJECT_ALLOC (shared_network, struct shared_network,
-		    dhcp_type_shared_network)
-OMAPI_OBJECT_ALLOC (group_object, struct group_object, dhcp_type_group)
-
 int option_chain_head_allocate (ptr, file, line)
 	struct option_chain_head **ptr;
 	const char *file;
 	int line;
 {
 	int size;
+	struct option_chain_head *h;
 
 	if (!ptr) {
 		log_error ("%s(%d): null pointer", file, line);
@@ -81,11 +77,10 @@ int option_chain_head_allocate (ptr, file, line)
 #endif
 	}
 
-	*ptr = dmalloc (sizeof **ptr, file, line);
-	if (*ptr) {
-		memset (*ptr, 0, sizeof **ptr);
-		(*ptr) -> refcnt = 1;
-		return 1;
+	h = dmalloc (sizeof *h, file, line);
+	if (h) {
+		memset (h, 0, sizeof *h);
+		return option_chain_head_reference (ptr, h, file, line);
 	}
 	return 0;
 }
@@ -114,8 +109,7 @@ int option_chain_head_reference (ptr, bp, file, line)
 	}
 	*ptr = bp;
 	bp -> refcnt++;
-	rc_register (file, line, ptr, bp, bp -> refcnt);
-	dmalloc_reuse (bp, file, line, 1);
+	rc_register (file, line, ptr, bp, bp -> refcnt, 0);
 	return 1;
 }
 
@@ -141,14 +135,14 @@ int option_chain_head_dereference (ptr, file, line)
 	*ptr = (struct option_chain_head *)0;
 	--option_chain_head -> refcnt;
 	rc_register (file, line, ptr,
-		     option_chain_head, option_chain_head -> refcnt);
+		     option_chain_head, option_chain_head -> refcnt, 1);
 	if (option_chain_head -> refcnt > 0)
 		return 1;
 
 	if (option_chain_head -> refcnt < 0) {
 		log_error ("%s(%d): negative refcnt!", file, line);
 #if defined (DEBUG_RC_HISTORY)
-		dump_rc_history ();
+		dump_rc_history (option_chain_head);
 #endif
 #if defined (POINTER_DEBUG)
 		abort ();
@@ -177,6 +171,7 @@ int group_allocate (ptr, file, line)
 	int line;
 {
 	int size;
+	struct group *g;
 
 	if (!ptr) {
 		log_error ("%s(%d): null pointer", file, line);
@@ -195,11 +190,10 @@ int group_allocate (ptr, file, line)
 #endif
 	}
 
-	*ptr = dmalloc (sizeof **ptr, file, line);
-	if (*ptr) {
-		memset (*ptr, 0, sizeof **ptr);
-		(*ptr) -> refcnt = 1;
-		return 1;
+	g = dmalloc (sizeof *g, file, line);
+	if (g) {
+		memset (g, 0, sizeof *g);
+		return group_reference (ptr, g, file, line);
 	}
 	return 0;
 }
@@ -228,8 +222,7 @@ int group_reference (ptr, bp, file, line)
 	}
 	*ptr = bp;
 	bp -> refcnt++;
-	rc_register (file, line, ptr, bp, bp -> refcnt);
-	dmalloc_reuse (bp, file, line, 1);
+	rc_register (file, line, ptr, bp, bp -> refcnt, 0);
 	return 1;
 }
 
@@ -253,14 +246,14 @@ int group_dereference (ptr, file, line)
 	group = *ptr;
 	*ptr = (struct group *)0;
 	--group -> refcnt;
-	rc_register (file, line, ptr, group, group -> refcnt);
+	rc_register (file, line, ptr, group, group -> refcnt, 1);
 	if (group -> refcnt > 0)
 		return 1;
 
 	if (group -> refcnt < 0) {
 		log_error ("%s(%d): negative refcnt!", file, line);
 #if defined (DEBUG_RC_HISTORY)
-		dump_rc_history ();
+		dump_rc_history (group);
 #endif
 #if defined (POINTER_DEBUG)
 		abort ();
@@ -270,13 +263,17 @@ int group_dereference (ptr, file, line)
 	}
 
 	if (group -> object)
-		group_object_dereference (&group -> object, MDL);
+		group_object_dereference (&group -> object, file, line);
 	if (group -> subnet)	
-		subnet_dereference (&group -> subnet, MDL);
+		subnet_dereference (&group -> subnet, file, line);
 	if (group -> shared_network)
-		shared_network_dereference (&group -> shared_network, MDL);
+		shared_network_dereference (&group -> shared_network,
+					    file, line);
 	if (group -> statements)
-		executable_statement_dereference (&group -> statements, MDL);
+		executable_statement_dereference (&group -> statements,
+						  file, line);
+	if (group -> next)
+		group_dereference (&group -> next, file, line);
 	dfree (group, file, line);
 	return 1;
 }
@@ -439,6 +436,20 @@ void free_pair (foo, file, line)
 	dmalloc_reuse (free_pairs, (char *)0, 0, 0);
 }
 
+#if defined (DEBUG_MEMORY_LEAKAGE) || \
+		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
+void relinquish_free_pairs ()
+{
+	pair pf, pc;
+
+	for (pf = free_pairs; pf; pf = pc) {
+		pc = pf -> cdr;
+		dfree (pf, MDL);
+	}
+	free_pairs = (pair)0;
+}
+#endif
+
 struct expression *free_expressions;
 
 int expression_allocate (cptr, file, line)
@@ -451,6 +462,7 @@ int expression_allocate (cptr, file, line)
 	if (free_expressions) {
 		rval = free_expressions;
 		free_expressions = rval -> data.not;
+		dmalloc_reuse (rval, file, line, 1);
 	} else {
 		rval = dmalloc (sizeof (struct expression), file, line);
 		if (!rval)
@@ -484,8 +496,7 @@ int expression_reference (ptr, src, file, line)
 	}
 	*ptr = src;
 	src -> refcnt++;
-	rc_register (file, line, ptr, src, src -> refcnt);
-	dmalloc_reuse (src, file, line, 1);
+	rc_register (file, line, ptr, src, src -> refcnt, 0);
 	return 1;
 }
 
@@ -499,6 +510,20 @@ void free_expression (expr, file, line)
 	dmalloc_reuse (free_expressions, (char *)0, 0, 0);
 }
 
+#if defined (DEBUG_MEMORY_LEAKAGE) || \
+		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
+void relinquish_free_expressions ()
+{
+	struct expression *e, *n;
+
+	for (e = free_expressions; e; e = n) {
+		n = e -> data.not;
+		dfree (e, MDL);
+	}
+	free_expressions = (struct expression *)0;
+}
+#endif
+
 struct binding_value *free_binding_values;
 				
 int binding_value_allocate (cptr, file, line)
@@ -511,6 +536,7 @@ int binding_value_allocate (cptr, file, line)
 	if (free_binding_values) {
 		rval = free_binding_values;
 		free_binding_values = rval -> value.bv;
+		dmalloc_reuse (rval, file, line, 1);
 	} else {
 		rval = dmalloc (sizeof (struct binding_value), file, line);
 		if (!rval)
@@ -544,8 +570,7 @@ int binding_value_reference (ptr, src, file, line)
 	}
 	*ptr = src;
 	src -> refcnt++;
-	rc_register (file, line, ptr, src, src -> refcnt);
-	dmalloc_reuse (src, file, line, 1);
+	rc_register (file, line, ptr, src, src -> refcnt, 0);
 	return 1;
 }
 
@@ -558,6 +583,20 @@ void free_binding_value (bv, file, line)
 	free_binding_values = bv;
 	dmalloc_reuse (free_binding_values, (char *)0, 0, 0);
 }
+
+#if defined (DEBUG_MEMORY_LEAKAGE) || \
+		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
+void relinquish_free_binding_values ()
+{
+	struct binding_value *b, *n;
+
+	for (b = free_binding_values; b; b = n) {
+		n = b -> value.bv;
+		dfree (b, MDL);
+	}
+	free_binding_values = (struct binding_value *)0;
+}
+#endif
 
 int fundef_allocate (cptr, file, line)
 	struct fundef **cptr;
@@ -597,12 +636,25 @@ int fundef_reference (ptr, src, file, line)
 	}
 	*ptr = src;
 	src -> refcnt++;
-	rc_register (file, line, ptr, src, src -> refcnt);
-	dmalloc_reuse (src, file, line, 1);
+	rc_register (file, line, ptr, src, src -> refcnt, 0);
 	return 1;
 }
 
 struct option_cache *free_option_caches;
+
+#if defined (DEBUG_MEMORY_LEAKAGE) || \
+		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
+void relinquish_free_option_caches ()
+{
+	struct option_cache *o, *n;
+
+	for (o = free_option_caches; o; o = n) {
+		n = (struct option_cache *)(o -> expression);
+		dfree (o, MDL);
+	}
+	free_option_caches = (struct option_cache *)0;
+}
+#endif
 
 int option_cache_allocate (cptr, file, line)
 	struct option_cache **cptr;
@@ -649,8 +701,7 @@ int option_cache_reference (ptr, src, file, line)
 	}
 	*ptr = src;
 	src -> refcnt++;
-	rc_register (file, line, ptr, src, src -> refcnt);
-	dmalloc_reuse (src, file, line, 1);
+	rc_register (file, line, ptr, src, src -> refcnt, 0);
 	return 1;
 }
 
@@ -694,8 +745,7 @@ int buffer_reference (ptr, bp, file, line)
 	}
 	*ptr = bp;
 	bp -> refcnt++;
-	rc_register (file, line, ptr, bp, bp -> refcnt);
-	dmalloc_reuse (bp, file, line, 1);
+	rc_register (file, line, ptr, bp, bp -> refcnt, 0);
 	return 1;
 }
 
@@ -725,13 +775,13 @@ int buffer_dereference (ptr, file, line)
 	}
 
 	(*ptr) -> refcnt--;
-	rc_register (file, line, ptr, *ptr, (*ptr) -> refcnt);
+	rc_register (file, line, ptr, *ptr, (*ptr) -> refcnt, 1);
 	if (!(*ptr) -> refcnt) {
 		dfree ((*ptr), file, line);
 	} else if ((*ptr) -> refcnt < 0) {
 		log_error ("%s(%d): negative refcnt!", file, line);
 #if defined (DEBUG_RC_HISTORY)
-		dump_rc_history ();
+		dump_rc_history (*ptr);
 #endif
 #if defined (POINTER_DEBUG)
 		abort ();
@@ -784,8 +834,7 @@ int dns_host_entry_reference (ptr, bp, file, line)
 	}
 	*ptr = bp;
 	bp -> refcnt++;
-	rc_register (file, line, ptr, bp, bp -> refcnt);
-	dmalloc_reuse (bp, file, line, 1);
+	rc_register (file, line, ptr, bp, bp -> refcnt, 0);
 	return 1;
 }
 
@@ -806,13 +855,13 @@ int dns_host_entry_dereference (ptr, file, line)
 	}
 
 	(*ptr) -> refcnt--;
-	rc_register (file, line, ptr, *ptr, (*ptr) -> refcnt);
+	rc_register (file, line, ptr, *ptr, (*ptr) -> refcnt, 1);
 	if (!(*ptr) -> refcnt)
 		dfree ((*ptr), file, line);
 	if ((*ptr) -> refcnt < 0) {
 		log_error ("%s(%d): negative refcnt!", file, line);
 #if defined (DEBUG_RC_HISTORY)
-		dump_rc_history ();
+		dump_rc_history (*ptr);
 #endif
 #if defined (POINTER_DEBUG)
 		abort ();
@@ -854,7 +903,7 @@ int option_state_allocate (ptr, file, line)
 		memset (*ptr, 0, size);
 		(*ptr) -> universe_count = universe_count;
 		(*ptr) -> refcnt = 1;
-		rc_register (file, line, ptr, *ptr, (*ptr) -> refcnt);
+		rc_register (file, line, ptr, *ptr, (*ptr) -> refcnt, 0);
 		return 1;
 	}
 	return 0;
@@ -884,8 +933,7 @@ int option_state_reference (ptr, bp, file, line)
 	}
 	*ptr = bp;
 	bp -> refcnt++;
-	rc_register (file, line, ptr, bp, bp -> refcnt);
-	dmalloc_reuse (bp, file, line, 1);
+	rc_register (file, line, ptr, bp, bp -> refcnt, 0);
 	return 1;
 }
 
@@ -909,14 +957,14 @@ int option_state_dereference (ptr, file, line)
 	options = *ptr;
 	*ptr = (struct option_state *)0;
 	--options -> refcnt;
-	rc_register (file, line, ptr, options, options -> refcnt);
+	rc_register (file, line, ptr, options, options -> refcnt, 1);
 	if (options -> refcnt > 0)
 		return 1;
 
 	if (options -> refcnt < 0) {
 		log_error ("%s(%d): negative refcnt!", file, line);
 #if defined (DEBUG_RC_HISTORY)
-		dump_rc_history ();
+		dump_rc_history (options);
 #endif
 #if defined (POINTER_DEBUG)
 		abort ();
@@ -973,12 +1021,24 @@ int executable_statement_reference (ptr, bp, file, line)
 	}
 	*ptr = bp;
 	bp -> refcnt++;
-	rc_register (file, line, ptr, bp, bp -> refcnt);
-	dmalloc_reuse (bp, file, line, 1);
+	rc_register (file, line, ptr, bp, bp -> refcnt, 0);
 	return 1;
 }
 
 static struct packet *free_packets;
+
+#if defined (DEBUG_MEMORY_LEAKAGE) || \
+		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
+void relinquish_free_packets ()
+{
+	struct packet *p, *n;
+	for (p = free_packets; p; p = n) {
+		n = (struct packet *)(p -> raw);
+		dfree (p, MDL);
+	}
+	free_packets = (struct packet *)0;
+}
+#endif
 
 int packet_allocate (ptr, file, line)
 	struct packet **ptr;
@@ -986,6 +1046,7 @@ int packet_allocate (ptr, file, line)
 	int line;
 {
 	int size;
+	struct packet *p;
 
 	if (!ptr) {
 		log_error ("%s(%d): null pointer", file, line);
@@ -1005,15 +1066,15 @@ int packet_allocate (ptr, file, line)
 	}
 
 	if (free_packets) {
-		*ptr = free_packets;
-		free_packets = (struct packet *)((*ptr) -> raw);
+		p = free_packets;
+		free_packets = (struct packet *)(p -> raw);
+		dmalloc_reuse (p, file, line, 1);
 	} else {
-		*ptr = dmalloc (sizeof **ptr, file, line);
+		p = dmalloc (sizeof *p, file, line);
 	}
-	if (*ptr) {
-		memset (*ptr, 0, sizeof **ptr);
-		(*ptr) -> refcnt = 1;
-		return 1;
+	if (p) {
+		memset (p, 0, sizeof *p);
+		return packet_reference (ptr, p, file, line);
 	}
 	return 0;
 }
@@ -1042,8 +1103,7 @@ int packet_reference (ptr, bp, file, line)
 	}
 	*ptr = bp;
 	bp -> refcnt++;
-	rc_register (file, line, ptr, bp, bp -> refcnt);
-	dmalloc_reuse (bp, file, line, 1);
+	rc_register (file, line, ptr, bp, bp -> refcnt, 0);
 	return 1;
 }
 
@@ -1067,14 +1127,14 @@ int packet_dereference (ptr, file, line)
 	packet = *ptr;
 	*ptr = (struct packet *)0;
 	--packet -> refcnt;
-	rc_register (file, line, ptr, packet, packet -> refcnt);
+	rc_register (file, line, ptr, packet, packet -> refcnt, 1);
 	if (packet -> refcnt > 0)
 		return 1;
 
 	if (packet -> refcnt < 0) {
 		log_error ("%s(%d): negative refcnt!", file, line);
 #if defined (DEBUG_RC_HISTORY)
-		dump_rc_history ();
+		dump_rc_history (packet);
 #endif
 #if defined (POINTER_DEBUG)
 		abort ();
@@ -1087,6 +1147,13 @@ int packet_dereference (ptr, file, line)
 		option_state_dereference (&packet -> options, file, line);
 	if (packet -> interface)
 		interface_dereference (&packet -> interface, MDL);
+	if (packet -> shared_network)
+		shared_network_dereference (&packet -> shared_network, MDL);
+	for (i = 0; i < packet -> class_count && i < PACKET_MAX_CLASSES; i++) {
+		if (packet -> classes [i])
+			omapi_object_dereference ((omapi_object_t **)
+						  &packet -> classes [i], MDL);
+	}
 	packet -> raw = (struct dhcp_packet *)free_packets;
 	free_packets = packet;
 	dmalloc_reuse (free_packets, (char *)0, 0, 0);
@@ -1099,6 +1166,7 @@ int dns_zone_allocate (ptr, file, line)
 	int line;
 {
 	int size;
+	struct dns_zone *d;
 
 	if (!ptr) {
 		log_error ("%s(%d): null pointer", file, line);
@@ -1117,11 +1185,10 @@ int dns_zone_allocate (ptr, file, line)
 #endif
 	}
 
-	*ptr = dmalloc (sizeof **ptr, file, line);
-	if (*ptr) {
-		memset (*ptr, 0, sizeof **ptr);
-		(*ptr) -> refcnt = 1;
-		return 1;
+	d = dmalloc (sizeof *d, file, line);
+	if (d) {
+		memset (d, 0, sizeof *d);
+		return dns_zone_reference (ptr, d, file, line);
 	}
 	return 0;
 }
@@ -1150,8 +1217,7 @@ int dns_zone_reference (ptr, bp, file, line)
 	}
 	*ptr = bp;
 	bp -> refcnt++;
-	rc_register (file, line, ptr, bp, bp -> refcnt);
-	dmalloc_reuse (bp, file, line, 1);
+	rc_register (file, line, ptr, bp, bp -> refcnt, 0);
 	return 1;
 }
 
@@ -1212,8 +1278,7 @@ int binding_scope_reference (ptr, bp, file, line)
 	}
 	*ptr = bp;
 	bp -> refcnt++;
-	rc_register (file, line, ptr, bp, bp -> refcnt);
-	dmalloc_reuse (bp, file, line, 1);
+	rc_register (file, line, ptr, bp, bp -> refcnt, 0);
 	return 1;
 }
 

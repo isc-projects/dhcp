@@ -573,9 +573,32 @@ isc_result_t omapi_waiter_signal_handler (omapi_object_t *h,
 		return ISC_R_SUCCESS;
 	}
 
+	if (!strcmp (name, "disconnect")) {
+		waiter = (omapi_waiter_object_t *)h;
+		waiter -> ready = 1;
+		waiter -> waitstatus = ISC_R_CONNRESET;
+		return ISC_R_SUCCESS;
+	}
+
 	if (h -> inner && h -> inner -> type -> signal_handler)
 		return (*(h -> inner -> type -> signal_handler)) (h -> inner,
 								  name, ap);
 	return ISC_R_NOTFOUND;
 }
 
+isc_result_t omapi_io_state_foreach (isc_result_t (*func) (omapi_object_t *,
+							   void *),
+				     void *p)
+{
+	omapi_io_object_t *io;
+	isc_result_t status;
+
+	for (io = omapi_io_states.next; io; io = io -> next) {
+		if (io -> inner) {
+			status = (*func) (io -> inner, p);
+			if (status != ISC_R_SUCCESS)
+				return status;
+		}
+	}
+	return ISC_R_SUCCESS;
+}

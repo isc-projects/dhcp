@@ -3,7 +3,7 @@
    Definitions for the object management API protocol memory allocation... */
 
 /*
- * Copyright (c) 1996-1999 Internet Software Consortium.
+ * Copyright (c) 1996-2001 Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -46,7 +46,8 @@ isc_result_t omapi_buffer_reference (omapi_buffer_t **,
 				     omapi_buffer_t *, const char *, int);
 isc_result_t omapi_buffer_dereference (omapi_buffer_t **, const char *, int);
 
-#if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL)
+#if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL) || \
+		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
 #define DMDOFFSET (sizeof (struct dmalloc_preamble))
 #define DMLFSIZE 16
 #define DMUFSIZE 16
@@ -78,24 +79,23 @@ struct rc_history_entry {
 	int refcnt;
 };
 
-#define rc_register(x, l, r, y, z) do { \
+#define rc_register(x, l, r, y, z, d) do { \
 	rc_history [rc_history_index].file = (x); \
 	rc_history [rc_history_index].line = (l); \
 	rc_history [rc_history_index].reference = (r); \
 	rc_history [rc_history_index].addr = (y); \
 	rc_history [rc_history_index].refcnt = (z); \
-	if (++rc_history_index == RC_HISTORY_MAX) \
-		rc_history_index = 0; \
-	++rc_history_count; \
+	rc_history_next (d); \
 	} while (0)
-#define rc_register_mdl(r, y, z) \
-	rc_register (__FILE__, __LINE__, r, y, z)
+#define rc_register_mdl(r, y, z, d) \
+	rc_register (__FILE__, __LINE__, r, y, z, d)
 #else
-#define rc_register(file, line, reference, addr, refcnt)
-#define rc_register_mdl(reference, addr, refcnt)
+#define rc_register(file, line, reference, addr, refcnt, d)
+#define rc_register_mdl(reference, addr, refcnt, d)
 #endif
 
-#if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL)
+#if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL) || \
+		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
 extern struct dmalloc_preamble *dmalloc_list;
 extern unsigned long dmalloc_outstanding;
 extern unsigned long dmalloc_longterm;

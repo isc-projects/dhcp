@@ -246,6 +246,37 @@ supplying the
 flag.
 .SH CONFIGURATION
 The syntax of the dhclient.conf(8) file is discussed seperately.
+.SH OMAPI
+The DHCP client provides some ability to control it while it is
+running, without stopping it.  This capability is provided using OMAPI,
+an API for manipulating remote objects.  OMAPI clients connect to the
+client using TCP/IP, authenticate, and can then examine the client's
+current status and make changes to it. 
+.PP
+Rather than implementing the underlying OMAPI protocol directly, user
+programs should use the dhcpctl API or OMAPI itself.   Dhcpctl is a
+wrapper that handles some of the housekeeping chores that OMAPI does
+not do automatically.   Dhcpctl and OMAPI are documented in \fBdhcpctl(3)\fR
+and \fBomapi(3)\fR.   Most things you'd want to do with the client can
+be done directly using the \fBomshell(1)\fR command, rather than
+having to write a special program.
+.SH THE CONTROL OBJECT
+The control object allows you to shut the client down, releasing all
+leases that it holds and deleting any DNS records it may have added.
+It also allows you to pause the client - this unconfigures any
+interfaces the client is using.   You can then restart it, which
+causes it to reconfigure those interfaces.   You would normally pause
+the client prior to going into hibernation or sleep on a laptop
+computer.   You would then resume it after the power comes back.
+This allows PC cards to be shut down while the computer is hibernating
+or sleeping, and then reinitialized to their previous state once the
+computer comes out of hibernation or sleep.
+.PP
+The control object has one attribute - the state attribute.   To shut
+the client down, set its state attribute to 2.   It will automatically
+do a DHCPRELEASE.   To pause it, set its state attribute to 3.   To
+resume it, set its state attribute to 4.
+.PP
 .SH FILES
 .B CLIENTBINDIR/dhclient-script,
 .B ETCDIR/dhclient.conf, DBDIR/dhclient.leases, RUNDIR/dhclient.pid,

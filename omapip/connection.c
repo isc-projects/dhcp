@@ -193,6 +193,7 @@ isc_result_t omapi_connect_list (omapi_object_t *c,
 					return ISC_R_NOPERM;
 				return ISC_R_UNEXPECTED;
 			}
+			obj -> local_addr = local_sin;
 		}
 
 #if defined (HAVE_SETFD)
@@ -317,6 +318,7 @@ static void trace_connect_input (trace_type_t *ttype,
 	char *s = buf;
 	omapi_connection_object_t *obj;
 	isc_result_t status;
+	int i;
 
 	if (length != ((sizeof connect_index) +
 		       (sizeof remote.sin_port) +
@@ -327,9 +329,9 @@ static void trace_connect_input (trace_type_t *ttype,
 
 	memset (&remote, 0, sizeof remote);
 	memset (&local, 0, sizeof local);
-	memcpy (&connect_index, buf, sizeof connect_index);
+	memcpy (&connect_index, s, sizeof connect_index);
 	s += sizeof connect_index;
-	memcpy (&listener_index, buf, sizeof listener_index);
+	memcpy (&listener_index, s, sizeof listener_index);
 	s += sizeof listener_index;
 	memcpy (&remote.sin_port, s, sizeof remote.sin_port);
 	s += sizeof remote.sin_port;
@@ -354,7 +356,7 @@ static void trace_connect_input (trace_type_t *ttype,
 				omapi_listener_reference (&listener, lp, MDL);
 				omapi_listener_dereference (&lp, MDL);
 				break;
-			}
+			} 
 		} omapi_array_foreach_end (trace_listeners,
 					   omapi_listener_object_t, lp);
 		if (!listener) {
@@ -380,13 +382,19 @@ static void trace_connect_input (trace_type_t *ttype,
 	/* Find the matching connect object, if there is one. */
 	omapi_array_foreach_begin (omapi_connections,
 				   omapi_connection_object_t, lp) {
-		if (lp -> local_addr.sin_port == local.sin_port &&
-		    (lp -> local_addr.sin_addr.s_addr == htonl (INADDR_ANY) ||
-		     (lp -> local_addr.sin_addr.s_addr ==
-		      local.sin_addr.s_addr))) {
+	    for (i = 0; (lp -> connect_list &&
+			 i < lp -> connect_list -> count); i++) {
+		    if (!memcmp (&remote.sin_addr,
+				 &lp -> connect_list -> addresses [i].address,
+				 sizeof remote.sin_addr) &&
+			(ntohs (remote.sin_port) ==
+			 lp -> connect_list -> addresses [i].port))
 			lp -> state = omapi_connection_connected;
 			lp -> remote_addr = remote;
 			lp -> remote_addr.sin_family = AF_INET;
+#if defined (HAVE_SIN_LEN)
+			lp -> remote_addr.sin_len = sizeof remote;
+#endif
 			omapi_addr_list_dereference (&lp -> connect_list, MDL);
 			lp -> index = connect_index;
 			status = omapi_signal_in ((omapi_object_t *)lp,
