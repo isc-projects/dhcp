@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.62 1998/04/09 04:41:52 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.63 1998/04/19 23:34:43 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -86,8 +86,11 @@ void dhcp (packet)
 void dhcpdiscover (packet)
 	struct packet *packet;
 {
-	struct lease *lease = find_lease (packet, packet -> shared_network, 0);
+	struct lease *lease;
 	struct host_decl *hp;
+
+	/* Classify the client. */
+	classify_client (packet);
 
 	note ("DHCPDISCOVER from %s via %s",
 	      print_hw_addr (packet -> raw -> htype,
@@ -96,6 +99,8 @@ void dhcpdiscover (packet)
 	      packet -> raw -> giaddr.s_addr
 	      ? inet_ntoa (packet -> raw -> giaddr)
 	      : packet -> interface -> name);
+
+	lease = find_lease (packet, packet -> shared_network, 0);
 
 	/* Sourceless packets don't make sense here. */
 	if (!packet -> shared_network) {
@@ -901,6 +906,9 @@ void ack_lease (packet, lease, offer, when)
 		putULong ((unsigned char *)&state -> expiry,
 			  offered_lease_time);
 		i = DHO_DHCP_LEASE_TIME;
+		if (state -> options [i])
+			warn ("dhcp-lease-time option for %s overridden.",
+			      inet_ntoa (state -> ciaddr));
 		state -> options [i] = new_tree_cache ("lease-expiry");
 		state -> options [i] -> flags = TC_TEMPORARY;
 		state -> options [i] -> value =
@@ -915,6 +923,9 @@ void ack_lease (packet, lease, offer, when)
 		putULong ((unsigned char *)&state -> renewal,
 			  offered_lease_time);
 		i = DHO_DHCP_RENEWAL_TIME;
+		if (state -> options [i])
+			warn ("dhcp-renewal-time option for %s overridden.",
+			      inet_ntoa (state -> ciaddr));
 		state -> options [i] = new_tree_cache ("renewal-time");
 		state -> options [i] -> flags = TC_TEMPORARY;
 		state -> options [i] -> value =
@@ -931,6 +942,9 @@ void ack_lease (packet, lease, offer, when)
 		putULong ((unsigned char *)&state -> rebind,
 			  offered_lease_time);
 		i = DHO_DHCP_REBINDING_TIME;
+		if (state -> options [i])
+			warn ("dhcp-rebinding-time option for %s overridden.",
+			      inet_ntoa (state -> ciaddr));
 		state -> options [i] = new_tree_cache ("rebind-time");
 		state -> options [i] -> flags = TC_TEMPORARY;
 		state -> options [i] -> value =
