@@ -43,10 +43,10 @@ depend:
 	makedepend $(INCLUDES) $(PREDEFINES) $(SRCS)
 
 clean:
-	-rm -f $(OBJ) test.o test cltest.o cltest
+	-rm -f $(OBJ) libres.a
 
 realclean: clean
-	-rm -f libdhcpctl.a *~ $(CATMANPAGES) $(SEDMANPAGES)
+	-rm -f *~ $(CATMANPAGES) $(SEDMANPAGES)
 
 distclean: realclean
 	-rm -f Makefile

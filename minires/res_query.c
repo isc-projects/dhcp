@@ -70,7 +70,7 @@
 
 #if defined(LIBC_SCCS) && !defined(lint)
 static const char sccsid[] = "@(#)res_query.c	8.1 (Berkeley) 6/4/93";
-static const char rcsid[] = "$Id: res_query.c,v 1.1 2000/02/02 07:28:15 mellon Exp $";
+static const char rcsid[] = "$Id: res_query.c,v 1.2 2000/02/02 19:59:16 mellon Exp $";
 #endif /* LIBC_SCCS and not lint */
 
 #include <sys/types.h>
@@ -85,8 +85,8 @@ static const char rcsid[] = "$Id: res_query.c,v 1.1 2000/02/02 07:28:15 mellon E
 #include <string.h>
 #include <sys/socket.h>
 
-#include "arpa/nameser.h"
 #include "minires/minires.h"
+#include "arpa/nameser.h"
 
 /* Options.  Leave them on. */
 #define DEBUG
@@ -317,7 +317,7 @@ int
 res_nquerydomain(res_state statp,
 	    const char *name,
 	    const char *domain,
-	    ns_class class, ns_class type,
+	    ns_class class, ns_type type,
 	    u_char *answer,
 	    unsigned anslen)
 {

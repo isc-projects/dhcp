@@ -16,7 +16,7 @@
  */
 
 #ifndef lint
-static const char rcsid[] = "$Id: ns_sign.c,v 1.1 2000/02/02 07:28:15 mellon Exp $";
+static const char rcsid[] = "$Id: ns_sign.c,v 1.2 2000/02/02 19:59:15 mellon Exp $";
 #endif
 
 /* Import. */
@@ -36,10 +36,10 @@ static const char rcsid[] = "$Id: ns_sign.c,v 1.1 2000/02/02 07:28:15 mellon Exp
 #include <unistd.h>
 #include <time.h>
 
-#include <isc/dst.h>
-
 #include "minires/minires.h"
 #include "arpa/nameser.h"
+
+#include <isc/dst.h>
 
 #define BOUNDS_CHECK(ptr, count) \
 	do { \

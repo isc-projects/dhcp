@@ -1,5 +1,5 @@
 #ifndef LINT
-static const char rcsid[] = "$Header: /tmp/cvstest/DHCP/minires/Attic/prandom.c,v 1.1 2000/02/02 07:28:15 mellon Exp $";
+static const char rcsid[] = "$Header: /tmp/cvstest/DHCP/minires/Attic/prandom.c,v 1.2 2000/02/02 19:59:16 mellon Exp $";
 #endif
 /*
  * Portions Copyright (c) 1995-1998 by Trusted Information Systems, Inc.
@@ -30,14 +30,13 @@ static const char rcsid[] = "$Header: /tmp/cvstest/DHCP/minires/Attic/prandom.c,
 #include <sys/stat.h>
 #include <sys/time.h>
 
-#include "dst_internal.h"
-
 #include <netinet/in.h>
 #include <sys/socket.h>
-#include "arpa/nameser.h"
 #define NEED_PRAND_CONF
 #include "minires/minires.h"
-/* XXX #include "prand_conf.h" XXX */
+#include "dst_internal.h"
+#include "arpa/nameser.h"
+
 
 #ifndef DST_NUM_HASHES
 #define DST_NUM_HASHES 4

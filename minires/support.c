@@ -1,4 +1,4 @@
-static const char rcsid[] = "$Header: /tmp/cvstest/DHCP/minires/Attic/support.c,v 1.1 2000/02/02 07:28:15 mellon Exp $";
+static const char rcsid[] = "$Header: /tmp/cvstest/DHCP/minires/Attic/support.c,v 1.2 2000/02/02 19:59:16 mellon Exp $";
 
 
 /*
@@ -26,8 +26,8 @@ static const char rcsid[] = "$Header: /tmp/cvstest/DHCP/minires/Attic/support.c,
 #include <sys/stat.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
-#include "arpa/nameser.h"
 #include "minires/minires.h"
+#include "arpa/nameser.h"
 
 #include "dst_internal.h"
 
@@ -384,7 +384,7 @@ int
 dst_s_build_filename(char *filename, const char *name, unsigned id,
 		     int alg, const char *suffix, size_t filename_length)
 {
-	u_int32_t my_id;
+	unsigned my_id;
 	if (filename == NULL)
 		return (-1);
 	memset(filename, 0, filename_length);

@@ -70,7 +70,7 @@
 
 #if defined(LIBC_SCCS) && !defined(lint)
 static const char sccsid[] = "@(#)res_mkquery.c	8.1 (Berkeley) 6/4/93";
-static const char rcsid[] = "$Id: res_mkquery.c,v 1.1 2000/02/02 07:28:15 mellon Exp $";
+static const char rcsid[] = "$Id: res_mkquery.c,v 1.2 2000/02/02 19:59:16 mellon Exp $";
 #endif /* LIBC_SCCS and not lint */
 
 #include <sys/types.h>
@@ -94,7 +94,7 @@ int
 res_nmkquery(res_state statp,
 	     int op,			/* opcode of query */
 	     const char *dname,		/* domain name */
-	     ns_class class, ns_class type,	/* class and type of query */
+	     ns_class class, ns_type type,	/* class and type of query */
 	     const u_char *data,	/* resource record data */
 	     unsigned datalen,		/* length of data */
 	     const u_char *newrr_in,	/* new rr for modify or append */

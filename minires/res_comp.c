@@ -70,7 +70,7 @@
 
 #if defined(LIBC_SCCS) && !defined(lint)
 static const char sccsid[] = "@(#)res_comp.c	8.1 (Berkeley) 6/4/93";
-static const char rcsid[] = "$Id: res_comp.c,v 1.1 2000/02/02 07:28:15 mellon Exp $";
+static const char rcsid[] = "$Id: res_comp.c,v 1.2 2000/02/02 19:59:16 mellon Exp $";
 #endif /* LIBC_SCCS and not lint */
 
 #include <sys/types.h>
@@ -82,8 +82,8 @@ static const char rcsid[] = "$Id: res_comp.c,v 1.1 2000/02/02 07:28:15 mellon Ex
 #include <unistd.h>
 #include <sys/socket.h>
 
-#include "arpa/nameser.h"
 #include "minires/minires.h"
+#include "arpa/nameser.h"
 
 /*
  * Expand compressed domain name 'comp_dn' to full domain name.

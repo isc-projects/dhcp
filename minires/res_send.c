@@ -70,7 +70,7 @@
 
 #if defined(LIBC_SCCS) && !defined(lint)
 static const char sccsid[] = "@(#)res_send.c	8.1 (Berkeley) 6/4/93";
-static const char rcsid[] = "$Id: res_send.c,v 1.1 2000/02/02 07:28:15 mellon Exp $";
+static const char rcsid[] = "$Id: res_send.c,v 1.2 2000/02/02 19:59:16 mellon Exp $";
 #endif /* LIBC_SCCS and not lint */
 
 /*
@@ -94,8 +94,8 @@ static const char rcsid[] = "$Id: res_send.c,v 1.1 2000/02/02 07:28:15 mellon Ex
 #include <string.h>
 #include <unistd.h>
 
-#include "arpa/nameser.h"
 #include "minires/minires.h"
+#include "arpa/nameser.h"
 
 #define	CHECK_SRVR_ADDR
 		
@@ -312,7 +312,7 @@ res_nsend(res_state statp,
 			if (statp->_sock >= 0 &&
 			    (statp->_flags & RES_F_VC) != 0) {
 				struct sockaddr_in peer;
-				int size = sizeof(peer);
+				socklen_t size = sizeof(peer);
 
 				if (getpeername(statp->_sock,
 						(struct sockaddr *)&peer,
@@ -478,7 +478,8 @@ res_nsend(res_state statp,
 			int start, timeout, finish;
 			fd_set dsmask;
 			struct sockaddr_in from;
-			int fromlen, seconds;
+			socklen_t fromlen;
+			int seconds;
 
 			if (statp->_sock < 0 ||
 			    (statp->_flags & RES_F_VC) != 0) {
@@ -557,7 +558,8 @@ res_nsend(res_state statp,
 						       sizeof no_addr);
 #else
 					struct sockaddr_in local_addr;
-					int len, result, s1;
+					socklen_t len;
+					int result, s1;
 
 					len = sizeof(local_addr);
 					s1 = socket(PF_INET, SOCK_DGRAM, 0);

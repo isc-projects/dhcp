@@ -21,14 +21,13 @@
  */
 
 #if !defined(lint) && !defined(SABER)
-static const char rcsid[] = "$Id: res_mkupdate.c,v 1.1 2000/02/02 07:28:15 mellon Exp $";
+static const char rcsid[] = "$Id: res_mkupdate.c,v 1.2 2000/02/02 19:59:16 mellon Exp $";
 #endif /* not lint */
 
 #include <sys/types.h>
 #include <sys/param.h>
 
 #include <netinet/in.h>
-#include "arpa/nameser.h"
 #include <arpa/inet.h>
 #include <sys/socket.h>
 
@@ -42,6 +41,7 @@ static const char rcsid[] = "$Id: res_mkupdate.c,v 1.1 2000/02/02 07:28:15 mello
 #include <ctype.h>
 
 #include "minires/minires.h"
+#include "arpa/nameser.h"
 
 /* Options.  Leave them on. */
 #define DEBUG
@@ -93,7 +93,6 @@ res_nmkupdate(res_state statp,
 	unsigned n;
 	ns_updrec *rrecp;
 	struct in_addr ina;
-	struct in6_addr in6a;
         char buf2[MAXDNAME];
 	u_char buf3[MAXDNAME];
 	int section, numrrs = 0, counts[ns_s_max];

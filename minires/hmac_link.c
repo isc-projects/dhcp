@@ -1,6 +1,6 @@
 #ifdef HMAC_MD5
 #ifndef LINT
-static const char rcsid[] = "$Header: /tmp/cvstest/DHCP/minires/Attic/hmac_link.c,v 1.2 2000/02/02 07:37:19 mellon Exp $";
+static const char rcsid[] = "$Header: /tmp/cvstest/DHCP/minires/Attic/hmac_link.c,v 1.3 2000/02/02 19:59:15 mellon Exp $";
 #endif
 /*
  * Portions Copyright (c) 1995-1998 by Trusted Information Systems, Inc.
@@ -33,8 +33,8 @@ static const char rcsid[] = "$Header: /tmp/cvstest/DHCP/minires/Attic/hmac_link.
 #include <netinet/in.h>
 #include <sys/socket.h>
 
-#include "arpa/nameser.h"
 #include "minires/minires.h"
+#include "arpa/nameser.h"
 
 #include "dst_internal.h"
 

@@ -70,7 +70,7 @@
 
 #if defined(LIBC_SCCS) && !defined(lint)
 static const char sccsid[] = "@(#)res_init.c	8.1 (Berkeley) 6/7/93";
-static const char rcsid[] = "$Id: res_init.c,v 1.2 2000/02/02 07:37:19 mellon Exp $";
+static const char rcsid[] = "$Id: res_init.c,v 1.3 2000/02/02 19:59:16 mellon Exp $";
 #endif /* LIBC_SCCS and not lint */
 
 #include <sys/types.h>
@@ -87,8 +87,8 @@ static const char rcsid[] = "$Id: res_init.c,v 1.2 2000/02/02 07:37:19 mellon Ex
 #include <string.h>
 #include <unistd.h>
 
-#include "arpa/nameser.h"
 #include "minires/minires.h"
+#include "arpa/nameser.h"
 
 /* Options.  Should all be left alone. */
 #define RESOLVSORT

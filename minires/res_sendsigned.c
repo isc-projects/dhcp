@@ -5,8 +5,6 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 
-#include <isc/dst.h>
-
 #include <errno.h>
 #include <netdb.h>
 #include <stdio.h>
@@ -14,8 +12,10 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "arpa/nameser.h"
 #include "minires/minires.h"
+#include "arpa/nameser.h"
+
+#include <isc/dst.h>
 
 /* res_nsendsigned */
 int

@@ -19,11 +19,6 @@
  */
 #include <limits.h>
 #include <sys/param.h>
-#if (!defined(BSD)) || (BSD < 199306)
-# include <sys/bitypes.h>
-#else
-# include <sys/types.h>
-#endif
 
 #ifndef PATH_MAX
 # ifdef POSIX_PATH_MAX
@@ -38,8 +33,8 @@ typedef struct dst_key {
 	int	dk_key_size;    /* this is the size of the key in bits */
 	int	dk_proto;       /* what protocols this key can be used for */
 	int	dk_alg;         /* algorithm number from key record */
-	u_int32_t dk_flags;     /* and the flags of the public key */
-	u_int16_t dk_id;        /* identifier of the key */
+	unsigned dk_flags;     /* and the flags of the public key */
+	unsigned dk_id;        /* identifier of the key */
 	void	*dk_KEY_struct; /* pointer to key in crypto pkg fmt */
 	struct dst_func *dk_func; /* point to cryptto pgk specific function table */
 } DST_KEY;

@@ -1,5 +1,5 @@
 #if !defined(lint) && !defined(SABER)
-static const char rcsid[] = "$Id: res_update.c,v 1.1 2000/02/02 07:28:15 mellon Exp $";
+static const char rcsid[] = "$Id: res_update.c,v 1.2 2000/02/02 19:59:16 mellon Exp $";
 #endif /* not lint */
 
 /*
@@ -40,8 +40,8 @@ static const char rcsid[] = "$Id: res_update.c,v 1.1 2000/02/02 07:28:15 mellon 
 #include <string.h>
 
 #include <isc/list.h>
-#include "arpa/nameser.h"
 #include "minires/minires.h"
+#include "arpa/nameser.h"
 
 /*
  * Separate a linked list of records into groups so that all records
