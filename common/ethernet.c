@@ -1,4 +1,4 @@
-/* packet.c
+/* ethernet.c
 
    Packet assembly code, originally contributed by Archie Cobbs. */
 
@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: ethernet.c,v 1.5 2000/03/17 03:59:01 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: ethernet.c,v 1.6 2000/03/24 00:22:20 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -54,7 +54,6 @@ static char copyright[] =
 
 #if defined (PACKET_ASSEMBLY)
 /* Assemble an hardware header... */
-/* XXX currently only supports ethernet; doesn't check for other types. */
 
 void assemble_ethernet_header (interface, buf, bufix, to)
 	struct interface_info *interface;
@@ -75,11 +74,7 @@ void assemble_ethernet_header (interface, buf, bufix, to)
 	else
 		memset (eh.ether_shost, 0x00, sizeof (eh.ether_shost));
 
-#ifdef BROKEN_FREEBSD_BPF /* Fixed in FreeBSD 2.2 */
-	eh.ether_type = ETHERTYPE_IP;
-#else
 	eh.ether_type = htons (ETHERTYPE_IP);
-#endif
 
 	memcpy (&buf [*bufix], &eh, ETHER_HEADER_SIZE);
 	*bufix += ETHER_HEADER_SIZE;
