@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.51 1997/09/16 18:20:30 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.52 1997/10/20 22:28:18 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -913,7 +913,7 @@ void ack_lease (packet, lease, offer, when)
 
 	/* If this is a DHCPOFFER, ping the lease address before actually
 	   sending the offer. */
-	if (offer == DHCPOFFER) {
+	if (offer == DHCPOFFER && !(lease -> flags & STATIC_LEASE)) {
 		icmp_echorequest (&lease -> ip_addr);
 		add_timeout (cur_time + 1, lease_ping_timeout, lease);
 		++outstanding_pings;
