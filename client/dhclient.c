@@ -32,7 +32,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.129.2.19 2004/07/10 00:11:16 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.129.2.20 2004/09/01 22:26:59 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1946,6 +1946,9 @@ void make_request (client, lease)
 	else
 		oc = (struct option_cache *)0;
 
+	if (client -> sent_options)
+		option_state_dereference (&client -> sent_options, MDL);
+
 	make_client_options (client, lease, &request, oc,
 			     ((client -> state == S_REQUESTING ||
 			       client -> state == S_REBOOTING)
@@ -1968,7 +1971,6 @@ void make_request (client, lease)
 			      (struct data_string *)0,
 			      client -> config -> vendor_space_name);
 
-	option_state_dereference (&client -> sent_options, MDL);
 	if (client -> packet_length < BOOTP_MIN_LEN)
 		client -> packet_length = BOOTP_MIN_LEN;
 

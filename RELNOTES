@@ -45,6 +45,10 @@ and for prodding me into improving it.
 
 			Changes since 3.0.1
 
+- A bug was fixed in dhclient that kept it from doing client-side
+  ddns updates.  Thanks to a patch from Andreas Gustafsson, which
+  underwent some modification after review by Jason Vas Dias.
+
 - Failover implementations disconnected due to the network between
   them (rather than one of the two shutting down) will now try to
   re-establish the failover connection every 5 seconds, rather than
