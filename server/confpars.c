@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.128 2000/11/28 23:50:01 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.129 2001/01/11 23:15:31 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -791,8 +791,6 @@ void parse_failover_peer (cfile, group, type)
 				return;
 			}
 			split = atoi (val);
-			if (!parse_semi (cfile))
-				goto badsplit;
 			if (split > 255) {
 				parse_warn (cfile, "split must be < 256");
 			} else {
@@ -2968,6 +2966,11 @@ int parse_allow_deny (oc, cfile, flag)
 	      case DECLINES:
 		status = option_cache (oc, (struct data_string *)0, data,
 				       &server_options [SV_DECLINES]);
+		break;
+
+	      case CLIENT_UPDATES:
+		status = option_cache (oc, (struct data_string *)0, data,
+				       &server_options [SV_CLIENT_UPDATES]);
 		break;
 
 	      default:
