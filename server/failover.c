@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.51 2001/05/01 20:02:10 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.52 2001/05/01 23:12:06 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1850,10 +1850,10 @@ isc_result_t dhcp_failover_peer_state_changed (dhcp_failover_state_t *state,
 		switch (new_state) {
 			/* This is where we should be. */
 		      case recover:
+		      case recover_wait:
 			break;
 
 		      case recover_done:
-		      case recover_wait:
 			dhcp_failover_set_state (state, normal);
 			break;
 
