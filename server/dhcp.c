@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.125 1999/10/24 19:38:53 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.126 1999/11/07 20:32:03 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2263,7 +2263,8 @@ struct lease *find_lease (packet, share, ours)
 				if (uid_lease &&
 				    !packet -> raw -> ciaddr.s_addr &&
 				    (share ==
-				     uid_lease -> subnet -> shared_network))
+				     uid_lease -> subnet -> shared_network) &&
+				    packet -> packet_type == DHCPREQUEST)
 					dissociate_lease (uid_lease);
 			    }
 			    uid_lease = ip_lease;
@@ -2381,7 +2382,8 @@ struct lease *find_lease (packet, share, ours)
 	   the lease that matched the client identifier. */
 	if (uid_lease) {
 		if (lease) {
-			if (!packet -> raw -> ciaddr.s_addr)
+			if (!packet -> raw -> ciaddr.s_addr &&
+			    packet -> packet_type == DHCPREQUEST)
 				dissociate_lease (uid_lease);
 #if defined (DEBUG_FIND_LEASE)
 			log_info ("not choosing uid lease.");
@@ -2398,7 +2400,8 @@ struct lease *find_lease (packet, share, ours)
 	/* The lease that matched the hardware address is treated likewise. */
 	if (hw_lease) {
 		if (lease) {
-			if (!packet -> raw -> ciaddr.s_addr)
+			if (!packet -> raw -> ciaddr.s_addr &&
+			    packet -> packet_type == DHCPREQUEST)
 				dissociate_lease (hw_lease);
 #if defined (DEBUG_FIND_LEASE)
 			log_info ("not choosing hardware lease.");
