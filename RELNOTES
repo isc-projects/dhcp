@@ -60,6 +60,9 @@ and for prodding me into improving it.
 	- Some problems with long option processing have been fixed.
 	- Some fixes to minires so that updates of KEY records will work.
 
+- contrib/ms2isc was updated by Shu-Min Chang of the Intel Corporation.
+  see contrib/ms2isc/readme.txt for revision notes.
+
 			Changes since 3.0.1rc10
 
 - Potential buffer overflows in minires repaired.
