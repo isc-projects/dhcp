@@ -1,4 +1,4 @@
-.\"	$Id: dhcp-eval.5,v 1.17.2.8 2004/10/12 18:45:10 dhankins Exp $
+.\"	$Id: dhcp-eval.5,v 1.17.2.9 2005/01/19 19:55:47 dhankins Exp $
 .\"
 .\" Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 1996-2003 by Internet Software Consortium
@@ -251,7 +251,7 @@ means TAB, '\\r' means carriage return, '\\n' means newline, and '\\b' means
 bell.   Any octal value can be specified with '\\nnn', where nnn is any
 positive octal number less than 0400.  Any hexadecimal value can be
 specified with '\\xnn', where nn is any positive hexadecimal number less
-than 0xff.
+than or equal to 0xff.
 .RE
 .PP
 .I colon-separated hexadecimal list
