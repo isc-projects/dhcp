@@ -1,6 +1,6 @@
 	    Internet Software Consortium DHCP Distribution
-			     Version 3.0.1
-			    January 27, 2004
+			   Version 3.0.1rc13
+			   February 04, 2004
 
 			     Release Notes
 
@@ -44,6 +44,21 @@ thanks to all of these good people here, both for working on the code
 and for prodding me into improving it.
 
 			Changes since 3.0.1rc12
+
+- Fixed a bug in omapi lease lookup function, to form the hardware
+  address for the hash lookup correctly, thanks to a patch from
+  Richard Hirst.
+
+- Fixed a bug where dhcrelay was sending relayed responses back to the
+  broadcast address, but with the source's unicast mac address.  Should
+  now conform to rfc2131 section 4.1.
+
+- Cross-compile bug fix; use $(AR) instead of ar.  Thanks to Morten Brorup.
+
+- Fixed a crash bug in dhclient where dhcpd servers that do not provide
+  renewal times results in an FPE.  As a side effect, dhclient can now
+  properly handle 0xFFFFFFFF (-1) expiry times supplied by servers.  Thanks
+  to a patch from Burt Silverman.
 
 - The 'ping timeout' debugs from rc12 were removed to -DDEBUG only,
   and reformatted to correct a compilation error on solaris platforms.

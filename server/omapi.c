@@ -50,7 +50,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: omapi.c,v 1.46.2.15 2002/11/17 02:29:32 dhankins Exp $ Copyright (c) 1999-2002 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: omapi.c,v 1.46.2.16 2004/02/04 20:18:08 dhankins Exp $ Copyright (c) 1999-2002 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -774,12 +774,54 @@ isc_result_t dhcp_lease_lookup (omapi_object_t **lp,
 	/* Now look for a hardware address. */
 	status = omapi_get_value_str (ref, id, "hardware-address", &tv);
 	if (status == ISC_R_SUCCESS) {
-		lease = (struct lease *)0;
-		lease_hash_lookup (&lease, lease_hw_addr_hash,
-				   tv -> value -> u.buffer.value,
-				   tv -> value -> u.buffer.len, MDL);
+		unsigned char *haddr;
+		unsigned int len;
+
+		len = tv -> value -> u.buffer.len + 1;
+		haddr = dmalloc (len, MDL);
+		if (!haddr) {
+			omapi_value_dereference (&tv, MDL);
+			return ISC_R_NOMEMORY;
+		}
+
+		memcpy (haddr + 1, tv -> value -> u.buffer.value, len - 1);
 		omapi_value_dereference (&tv, MDL);
-			
+
+		status = omapi_get_value_str (ref, id, "hardware-type", &tv);
+		if (status == ISC_R_SUCCESS) {
+			if (tv -> value -> type == omapi_datatype_data) {
+				if ((tv -> value -> u.buffer.len != 4) ||
+				    (tv -> value -> u.buffer.value[0] != 0) ||
+				    (tv -> value -> u.buffer.value[1] != 0) ||
+				    (tv -> value -> u.buffer.value[2] != 0)) {
+					omapi_value_dereference (&tv, MDL);
+					dfree (haddr, MDL);
+					return ISC_R_INVALIDARG;
+				}
+
+				haddr[0] = tv -> value -> u.buffer.value[3];
+			} else if (tv -> value -> type == omapi_datatype_int) {
+				haddr[0] = (unsigned char)
+					tv -> value -> u.integer;
+			} else {
+				omapi_value_dereference (&tv, MDL);
+				dfree (haddr, MDL);
+				return ISC_R_INVALIDARG;
+			}
+
+			omapi_value_dereference (&tv, MDL);
+		} else {
+			/* If no hardware-type is specified, default to
+			   ethernet.  This may or may not be a good idea,
+			   but Telus is currently relying on this behavior.
+			   - DPN */
+			haddr[0] = HTYPE_ETHER;
+		}
+
+		lease = (struct lease *)0;
+		lease_hash_lookup (&lease, lease_hw_addr_hash, haddr, len, MDL);
+		dfree (haddr, MDL);
+
 		if (*lp && *lp != (omapi_object_t *)lease) {
 			omapi_object_dereference (lp, MDL);
 			lease_dereference (&lease, MDL);
