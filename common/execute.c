@@ -22,23 +22,28 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: execute.c,v 1.22 2000/01/08 01:30:29 mellon Exp $ Copyright (c) 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: execute.c,v 1.23 2000/01/25 01:07:00 mellon Exp $ Copyright (c) 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
 
-int execute_statements (packet, lease, in_options, out_options, statements)
+int execute_statements (packet, lease, in_options, out_options, scope,
+			statements)
 	struct packet *packet;
 	struct lease *lease;
 	struct option_state *in_options;
 	struct option_state *out_options;
+	struct binding_scope *scope;
 	struct executable_statement *statements;
 {
 	struct executable_statement *r, *e;
 	int result;
 	int status;
+	unsigned long num;
+	struct binding_scope *outer;
 	struct binding *binding;
 	struct data_string ds;
+	struct binding_scope *ns;
 
 	if (!statements)
 		return 1;
@@ -49,8 +54,8 @@ int execute_statements (packet, lease, in_options, out_options, statements)
 #if defined (DEBUG_EXPRESSIONS)
 			log_debug ("exec: statements");
 #endif
-			status = execute_statements (packet, lease,
-						     in_options, out_options,
+			status = execute_statements (packet, lease, in_options,
+						     out_options, scope,
 						     r -> data.statements);
 #if defined (DEBUG_EXPRESSIONS)
 			log_debug ("exec: statements returns %d", status);
@@ -66,42 +71,45 @@ int execute_statements (packet, lease, in_options, out_options, statements)
 					executable_statement_dereference
 						(&lease -> on_expiry,
 						 "execute_statements");
-				executable_statement_reference
-					(&lease -> on_expiry,
-					 r -> data.on.statements,
-					 "execute_statements");
+				if (r -> data.on.statements)
+					executable_statement_reference
+						(&lease -> on_expiry,
+						 r -> data.on.statements,
+						 "execute_statements");
 			    }
 			    if (r -> data.on.evtypes & ON_RELEASE) {
 				if (lease -> on_release)
 					executable_statement_dereference
 						(&lease -> on_release,
 						 "execute_statements");
-				executable_statement_reference
-					(&lease -> on_release,
-					 r -> data.on.statements,
-					 "execute_statements");
+				if (r -> data.on.statements)
+					executable_statement_reference
+						(&lease -> on_release,
+						 r -> data.on.statements,
+						 "execute_statements");
 			    }
 			    if (r -> data.on.evtypes & ON_COMMIT) {
 				if (lease -> on_commit)
 					executable_statement_dereference
 						(&lease -> on_commit,
 						 "execute_statements");
-				executable_statement_reference
-					(&lease -> on_commit,
-					 r -> data.on.statements,
-					 "execute_statements");
+				if (r -> data.on.statements)
+					executable_statement_reference
+						(&lease -> on_commit,
+						 r -> data.on.statements,
+						 "execute_statements");
 			    }
 			}
 			break;
 
 		      case switch_statement:
 			e = find_matching_case (packet, lease,
-						in_options, out_options,
+						in_options, out_options, scope,
 						r -> data.s_switch.expr,
 						r -> data.s_switch.statements);
 			if (e && !execute_statements (packet, lease,
 						      in_options, out_options,
-						      e))
+						      scope, e))
 				return 0;
 
 			/* These have no effect when executed. */
@@ -111,8 +119,8 @@ int execute_statements (packet, lease, in_options, out_options, statements)
 
 		      case if_statement:
 			status = evaluate_boolean_expression
-				(&result, packet, lease,
-				 in_options, out_options, r -> data.ie.expr);
+				(&result, packet, lease, in_options,
+				 out_options, scope, r -> data.ie.expr);
 			
 #if defined (DEBUG_EXPRESSIONS)
 			log_debug ("exec: if %s", (status
@@ -123,19 +131,60 @@ int execute_statements (packet, lease, in_options, out_options, statements)
 			if (!status)
 				result = 0;
 			if (!execute_statements
-			    (packet, lease, in_options, out_options,
+			    (packet, lease, in_options, out_options, scope,
 			     result ? r -> data.ie.true : r -> data.ie.false))
 				return 0;
 			break;
 
 		      case eval_statement:
-			status = evaluate_boolean_expression
-				(&result, packet, lease,
-				 in_options, out_options, r -> data.eval);
+			if (is_boolean_expression (r -> data.eval)) {
+				status = (evaluate_boolean_expression
+					  (&result, packet, lease, in_options,
+					   out_options, scope,
+					   r -> data.eval));
+			} else if (is_numeric_expression (r -> data.eval)) {
+				status = (evaluate_numeric_expression
+					  (&num, packet, lease, in_options,
+					   out_options, scope,
+					   r -> data.eval));
+			} else if (is_data_expression  (r -> data.eval)) {
+				memset (&ds, 0, sizeof ds);
+				status = (evaluate_data_expression
+					  (&ds, packet, lease, in_options,
+					   out_options, scope,
+					   r -> data.eval));
+				if (status && ds.data)
+					data_string_forget
+						(&ds, "execute_statements");
+			} else if (is_dns_expression (r -> data.eval)) {
+				ns_updrec *nut;
+				nut = 0;
+				status = (evaluate_dns_expression
+					  (&nut, packet, lease, in_options,
+					   out_options, scope,
+					   r -> data.eval));
+				if (status) {
+					if (nut -> r_data) {
+						dfree (nut -> r_data,
+						       "execute_statements");
+						nut -> r_data = (char *)0;
+					}
+					if (nut -> r_dname) {
+						dfree (nut -> r_dname,
+						       "execute_statements");
+						nut -> r_dname = (char *)0;
+					}
+					res_freeupdrec (nut);
+				}
+			} else {
+				log_error ("%s: invalid expression type: %d",
+					   "execute_statements",
+					   r -> data.eval -> op);
+			}
+
 #if defined (DEBUG_EXPRESSIONS)
 			log_debug ("exec: evaluate: %s",
-			      (status
-			       ? (result ? "true" : "false") : "NULL"));
+				   (status "succeeded" : "failed"));
 #endif
 			break;
 
@@ -191,26 +240,12 @@ int execute_statements (packet, lease, in_options, out_options, statements)
 			break;
 
 		      case set_statement:
-			if (!lease) {
-#if defined (DEBUG_EXPRESSIONS)
-				log_debug ("exec: set %s = NULL",
-					   r -> data.set.name);
-#endif
-				break;
-			}
-
 			memset (&ds, 0, sizeof ds);
 			status = (evaluate_data_expression
 				  (&ds, packet, lease, in_options, out_options,
-				   r -> data.set.expr));
+				   scope, r -> data.set.expr));
 
-			for (binding = lease -> bindings;
-			     binding; binding = binding -> next) {
-				if (!(strcasecmp
-				      (lease -> bindings -> name,
-				       r -> data.set.name)))
-					break;
-			}
+			binding = find_binding (scope, r -> data.set.name);
 			if (!binding && status) {
 				binding = dmalloc (sizeof *binding,
 						   "execute_statements");
@@ -219,34 +254,122 @@ int execute_statements (packet, lease, in_options, out_options, statements)
 					    dmalloc (strlen
 						     (r -> data.set.name + 1),
 						     "execute_statements");
-				    if (binding -> name)
+				    if (binding -> name) {
 					strcpy (binding -> name,
 						r -> data.set.name);
-				    else
-					dfree (binding,
-					       "execute_statements");
-				    binding -> next = lease -> bindings;
-				    lease -> bindings = binding;
-				} else
-				    status = 0;
+					if (lease) {
+					    binding -> next =
+						    lease -> scope.bindings;
+					    lease -> scope.bindings = binding;
+					} else {
+					    binding -> next =
+						    global_scope.bindings;
+					    global_scope.bindings = binding;
+					}
+				    } else {
+				       badalloc:
+					dfree (binding, "execute_statements");
+					binding = (struct binding *)0;
+				    }
+				}
 			}
 			if (binding) {
-				data_string_forget (&binding -> value,
-						    "execute_statements");
+				if (binding -> value.data)
+				    data_string_forget (&binding -> value,
+							"execute_statements");
 				if (status)
-					data_string_copy
-						(&binding -> value, &ds,
-						 "execute_statements");
+				    data_string_copy (&binding -> value, &ds,
+						      "execute_statements");
 			}
 			if (status)
 			    data_string_forget (&ds, "execute_statements");
 #if defined (DEBUG_EXPRESSIONS)
 			log_debug ("exec: set %s = %s", r -> data.set.name,
-				   (status
+				   (status && binding
 				    ? print_hex_1 (binding -> value.len,
 						   binding -> value.data, 50)
 				    : "NULL"));
 #endif
+			break;
+
+		      case unset_statement:
+			binding = find_binding (scope, r -> data.unset);
+			if (binding) {
+				if (binding -> value.data)
+					data_string_forget
+						(&binding -> value,
+						 "execute_statements");
+				status = 1;
+			} else
+				status = 0;
+#if defined (DEBUG_EXPRESSIONS)
+			log_debug ("exec: unset %s: %s", r -> data.unset,
+				   (status ? "found" : "NULL"));
+#endif
+			break;
+
+		      case let_statement:
+			memset (&ds, 0, sizeof ds);
+			status = (evaluate_data_expression
+				  (&ds, packet, lease, in_options, out_options,
+				   scope, r -> data.let.expr));
+
+			ns = (struct binding_scope *)0;
+			binding_scope_allocate (&ns, "execute_statements");
+
+		      next_let:
+			if (ns) {
+				binding = dmalloc (sizeof *binding,
+						   "execute_statements");
+				if (!binding) {
+				   blb:
+				    binding_scope_dereference
+						(&ns, "execute_statements");
+				} else {
+				    binding -> name =
+					    dmalloc (strlen
+						     (r -> data.let.name + 1),
+						     "execute_statements");
+				    if (binding -> name)
+					strcpy (binding -> name,
+						r -> data.let.name);
+				    else {
+					dfree (binding, "execute_statements");
+					binding = (struct binding *)0;
+					goto blb;
+				    }
+				}
+			}
+			if (ns && binding && status) {
+				data_string_copy (&binding -> value, &ds,
+						  "execute_statements");
+				binding -> next = ns -> bindings;
+				ns -> bindings = binding;
+			}
+
+			if (status)
+			    data_string_forget (&ds, "execute_statements");
+#if defined (DEBUG_EXPRESSIONS)
+			log_debug ("exec: let %s = %s", r -> data.let.name,
+				   (status && binding
+				    ? print_hex_1 (binding -> value.len,
+						   binding -> value.data, 50)
+				    : "NULL"));
+#endif
+			if (!r -> data.let.statements) {
+			} else if (r -> data.let.statements -> op ==
+				   let_statement) {
+				r = r -> data.let.statements;
+				goto next_let;
+			} else if (ns) {
+				ns -> outer = scope;
+				execute_statements
+				      (packet, lease, in_options, out_options,
+				       ns, r -> data.let.statements);
+			}
+			if (ns)
+				binding_scope_dereference
+					(&ns, "execute_statements");
 			break;
 
 		      default:
@@ -265,15 +388,15 @@ int execute_statements (packet, lease, in_options, out_options, statements)
    the most outer scope first. */
 
 void execute_statements_in_scope (packet, lease, in_options, out_options,
-				  group, limiting_group)
+				  scope, group, limiting_group)
 	struct packet *packet;
 	struct lease *lease;
 	struct option_state *in_options;
 	struct option_state *out_options;
+	struct binding_scope *scope;
 	struct group *group;
 	struct group *limiting_group;
 {
-	struct group *scope;
 	struct group *limit;
 
 	/* If we've recursed as far as we can, return. */
@@ -310,10 +433,10 @@ void execute_statements_in_scope (packet, lease, in_options, out_options,
 
 	if (group -> next)
 		execute_statements_in_scope (packet, lease,
-					     in_options, out_options,
+					     in_options, out_options, scope,
 					     group -> next, limiting_group);
-	execute_statements (packet, lease,
-			    in_options, out_options, group -> statements);
+	execute_statements (packet, lease, in_options, out_options, scope,
+			    group -> statements);
 }
 
 /* Dereference or free any subexpressions of a statement being freed. */
@@ -335,9 +458,22 @@ int executable_statement_dereference (ptr, name)
 	}
 
 	(*ptr) -> refcnt--;
-	if ((*ptr) -> refcnt) {
+	rc_register (file, line, (*ptr), (*ptr) -> refcnt);
+	if ((*ptr) -> refcnt > 0) {
 		*ptr = (struct executable_statement *)0;
 		return 1;
+	}
+
+	if ((*ptr) -> refcnt < 0) {
+		log_error ("option_state_dereference: negative refcnt!");
+#if defined (DEBUG_RC_HISTORY)
+		dump_rc_history ();
+#endif
+#if defined (POINTER_DEBUG)
+		abort ();
+#else
+		return 0;
+#endif
 	}
 
 	if ((*ptr) -> next)
@@ -396,6 +532,11 @@ int executable_statement_dereference (ptr, name)
 						name);
 		break;
 
+	      case unset_statement:
+		if ((*ptr)->data.unset)
+			dfree ((*ptr)->data.unset, name);
+		break;
+
 	      case supersede_option_statement:
 	      case default_option_statement:
 	      case append_option_statement:
@@ -440,21 +581,27 @@ void write_statements (file, statements, indent)
 			fprintf (file, "on ");
 			s = "";
 			if (r -> data.on.evtypes & ON_EXPIRY) {
-				fprintf (file, "expiry");
-				s = "or";
+				fprintf (file, "%sexpiry", s);
+				s = " or ";
 			}
 			if (r -> data.on.evtypes & ON_COMMIT) {
-				fprintf (file, "commit");
+				fprintf (file, "%scommit", s);
 				s = "or";
 			}
 			if (r -> data.on.evtypes & ON_RELEASE) {
-				fprintf (file, "release");
+				fprintf (file, "%srelease", s);
 				s = "or";
 			}
-			write_statements (file, r -> data.on.statements,
-					  indent + 2);
-			indent_spaces (file, indent);
-			fprintf (file, "}");
+			if (r -> data.on.statements) {
+				fprintf (file, " {");
+				write_statements (file,
+						  r -> data.on.statements,
+						  indent + 2);
+				indent_spaces (file, indent);
+				fprintf (file, "}");
+			} else {
+				fprintf (file, ";");
+			}
 			break;
 
 		      case switch_statement:
@@ -599,6 +746,15 @@ void write_statements (file, statements, indent)
 						  " ", "", ";");
 			break;
 			
+		      case unset_statement:
+			indent_spaces (file, indent);
+			fprintf (file, "unset ");
+			col = token_print_indent (file, indent + 6, indent + 6,
+						  "", "", r -> data.set.name);
+			col = token_print_indent (file, col, indent + 6,
+						  " ", "", ";");
+			break;
+			
 		      default:
 			log_fatal ("bogus statement type %d\n", r -> op);
 		}
@@ -611,13 +767,14 @@ void write_statements (file, statements, indent)
    return that (the default statement can precede all the case statements).
    Otherwise, return the null statement. */
 
-struct executable_statement *find_matching_case (packet, lease,
-						 in_options, out_options,
+struct executable_statement *find_matching_case (packet, lease, in_options,
+						 out_options, scope,
 						 expr, stmt)
 	struct packet *packet;
 	struct lease *lease;
 	struct option_state *in_options;
 	struct option_state *out_options;
+	struct binding_scope *scope;
 	struct expression *expr;
 	struct executable_statement *stmt;
 {
@@ -631,14 +788,15 @@ struct executable_statement *find_matching_case (packet, lease,
 		memset (&ds, 0, sizeof ds);
 		memset (&cd, 0, sizeof cd);
 
-		status = (evaluate_data_expression
-			  (&ds, packet, lease, in_options, out_options, expr));
+		status = (evaluate_data_expression (&ds, packet, lease,
+						    in_options, out_options,
+						    scope, expr));
 		if (status) {
 		    for (s = stmt; s; s = s -> next) {
 			if (s -> op == case_statement) {
 				sub = (evaluate_data_expression
 				       (&cd, packet, lease, in_options,
-					out_options, s -> data.c_case));
+					out_options, scope, s -> data.c_case));
 				if (sub && cd.len == ds.len &&
 				    !memcmp (cd.data, ds.data, cd.len))
 				{
@@ -655,15 +813,16 @@ struct executable_statement *find_matching_case (packet, lease,
 		}
 	} else {
 		unsigned long n, c;
-		status = (evaluate_numeric_expression
-			  (&n, packet, lease, in_options, out_options, expr));
+		status = evaluate_numeric_expression (&n, packet, lease,
+						      in_options, out_options,
+						      scope, expr);
 
 		if (status) {
 		    for (s = stmt; s; s = s -> next) {
 			if (s -> op == case_statement) {
 				sub = (evaluate_numeric_expression
 				       (&c, packet, lease, in_options,
-					out_options, s -> data.c_case));
+					out_options, scope, s -> data.c_case));
 				if (sub && n == c)
 					return s -> next;
 			}
