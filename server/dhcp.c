@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.57.2.15 1999/02/09 04:57:29 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.57.2.16 1999/02/16 19:18:35 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1249,6 +1249,19 @@ struct lease *find_lease (packet, share, ours)
 	struct lease *fixed_lease;
 	int i;
 
+	/* Figure out what IP address the client is requesting, if any. */
+	if (packet -> options [DHO_DHCP_REQUESTED_ADDRESS].len &&
+	    packet -> options [DHO_DHCP_REQUESTED_ADDRESS].len == 4) {
+		cip.len = 4;
+		memcpy (cip.iabuf,
+			packet -> options [DHO_DHCP_REQUESTED_ADDRESS].data,
+			cip.len);
+	} else if (packet -> raw -> ciaddr.s_addr) {
+		cip.len = 4;
+		memcpy (cip.iabuf, &packet -> raw -> ciaddr, 4);
+	} else
+		cip.len = 0;
+
 	/* Try to find a host or lease that's been assigned to the
 	   specified unique client identifier. */
 	if (packet -> options [DHO_DHCP_CLIENT_IDENTIFIER].len) {
@@ -1295,6 +1308,19 @@ struct lease *find_lease (packet, share, ours)
 		}
 	}
 
+	/* If fixed_lease is present but does not match the requested
+	   IP address, and this is a DHCPREQUEST, then we can't return
+	   any other lease, so we might as well return now. */
+	if (packet -> packet_type == DHCPREQUEST && fixed_lease &&
+	    (fixed_lease -> ip_addr.len != cip.len ||
+	     memcmp (fixed_lease -> ip_addr.iabuf,
+		     cip.iabuf, cip.len))) {
+		if (ours)
+			*ours = 1;
+		strcpy (dhcp_message, "requested address is incorrect");
+		return (struct lease *)0;
+	}
+
 	/* Try to find a lease that's been attached to the client's
 	   hardware address... */
 	hw_lease = find_lease_by_hw_addr (packet -> raw -> chaddr,
@@ -1315,18 +1341,9 @@ struct lease *find_lease (packet, share, ours)
 
 	/* Try to find a lease that's been allocated to the client's
 	   IP address. */
-	if (packet -> options [DHO_DHCP_REQUESTED_ADDRESS].len &&
-	    packet -> options [DHO_DHCP_REQUESTED_ADDRESS].len == 4) {
-		cip.len = 4;
-		memcpy (cip.iabuf,
-			packet -> options [DHO_DHCP_REQUESTED_ADDRESS].data,
-			cip.len);
+	if (cip.len)
 		ip_lease = find_lease_by_ip_addr (cip);
-	} else if (packet -> raw -> ciaddr.s_addr) {
-		cip.len = 4;
-		memcpy (cip.iabuf, &packet -> raw -> ciaddr, 4);
-		ip_lease = find_lease_by_ip_addr (cip);
-	} else
+	else
 		ip_lease = (struct lease *)0;
 
 	/* If ip_lease is valid at this point, set ours to one, so that
@@ -1342,8 +1359,11 @@ struct lease *find_lease (packet, share, ours)
 	   that thought it had this lease answered an ARP or PING, causing the
 	   lease to be abandoned.   If so, this request probably came from
 	   that client. */
-	if (ip_lease && (ip_lease -> shared_network != share))
+	if (ip_lease && (ip_lease -> shared_network != share)) {
+		*ours = 1;
 		ip_lease = (struct lease *)0;
+		strcpy (dhcp_message, "requested address on bad subnet");
+	}
 
 	/* Toss ip_lease if it hasn't yet expired and the uid doesn't
 	   match */
@@ -1368,8 +1388,37 @@ struct lease *find_lease (packet, share, ours)
 				      ip_lease -> shared_network -> name);
 			uid_lease = ip_lease;
 		}
+		strcpy (dhcp_message, "requested address is not available");
 		ip_lease = (struct lease *)0;
+		*ours = 1;
+
+		/* If we get to here and fixed_lease is not null, that means
+		   that there are both a dynamic lease and a fixed-address
+		   declaration for the same IP address. */
+		if (packet -> packet_type == DHCPREQUEST && fixed_lease) {
+			fixed_lease = (struct lease *)0;
+		      db_conflict:
+			warn ("Both dynamic and static leases present for %s.",
+			      piaddr (cip));
+			warn ("Either remove host declaration %s or remove %s",
+			      (fixed_lease && fixed_lease -> host
+			       ? (fixed_lease -> host -> name
+				  ? fixed_lease -> host -> name : piaddr (cip))
+			       : piaddr (cip)),
+			      piaddr (cip));
+			warn ("from the dynamic address pool for %s",
+			      ip_lease -> subnet -> shared_network -> name);
+			if (fixed_lease)
+				ip_lease = (struct lease *)0;
+			strcpy (dhcp_message,
+				"database conflict - call for help!");
+		}
 	}
+
+	/* If we get to here with both fixed_lease and ip_lease not
+	   null, then we have a configuration file bug. */
+	if (packet -> packet_type == DHCPREQUEST && fixed_lease && ip_lease)
+		goto db_conflict;
 
 	/* Toss hw_lease if it hasn't yet expired and the uid doesn't
 	   match, except that if the hardware address matches and the
@@ -1383,29 +1432,18 @@ struct lease *find_lease (packet, share, ours)
 		hw_lease = (struct lease *)0;
 
 	/* Toss extra pointers to the same lease... */
-	if (ip_lease == hw_lease)
-		ip_lease = (struct lease *)0;
 	if (hw_lease == uid_lease)
 		hw_lease = (struct lease *)0;
+	if (ip_lease == hw_lease)
+		hw_lease = (struct lease *)0;
 	if (ip_lease == uid_lease)
-		ip_lease = (struct lease *)0;
-
-	/* If we got an ip address lease, make sure it isn't assigned to
-	   some *other* client!   If it was assigned to this client, we'd
-	   have zeroed it out above, so the only way we can take it at this
-	   point is if some other client had it but it's timed out, or if no
-	   other client has ever had it. */
-	if (ip_lease &&
-	    ip_lease -> ends >= cur_time)
-		ip_lease = (struct lease *)0;
+		uid_lease = (struct lease *)0;
 
 	/* If we've already eliminated the lease, it wasn't there to
 	   begin with.   If we have come up with a matching lease,
 	   set the message to bad network in case we have to throw it out. */
-	if (!ip_lease && !hw_lease && !uid_lease) {
+	if (!ip_lease) {
 		strcpy (dhcp_message, "requested address not available");
-	} else {
-		strcpy (dhcp_message, "requested address on bad subnet");
 	}
 
 	/* Now eliminate leases that are on the wrong network... */
@@ -1424,6 +1462,12 @@ struct lease *find_lease (packet, share, ours)
 		release_lease (hw_lease);
 		hw_lease = (struct lease *)0;
 	}
+
+	/* If this is a DHCPREQUEST, make sure the lease we're going to return
+	   matches the requested IP address.   If it doesn't, don't return a
+	   lease at all. */
+	if (packet -> packet_type == DHCPREQUEST && !ip_lease && !fixed_lease)
+		return (struct lease *)0;
 
 	/* At this point, if fixed_lease is nonzero, we can assign it to
 	   this client. */
