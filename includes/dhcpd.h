@@ -1909,6 +1909,7 @@ int db_printable_len PROTO ((const unsigned char *, unsigned));
 void write_named_billing_class (const char *, unsigned, struct class *);
 void write_billing_classes (void);
 int write_billing_class PROTO ((struct class *));
+void commit_leases_timeout PROTO ((void *));
 int commit_leases PROTO ((void));
 void db_startup PROTO ((int));
 int new_lease_file PROTO ((void));

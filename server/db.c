@@ -3,7 +3,7 @@
    Persistent database management routines for DHCPD... */
 
 /*
- * Copyright (c) 1995-2001 Internet Software Consortium.
+ * Copyright (c) 1995-2002 Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: db.c,v 1.63.2.5 2002/02/19 20:42:59 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: db.c,v 1.63.2.6 2002/02/20 05:30:21 mellon Exp $ Copyright (c) 1995-2002 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -693,6 +693,12 @@ int write_billing_class (class)
 	if (errors)
 		lease_file_is_corrupt = 1;
 	return !errors;
+}
+
+/* Commit leases after a timeout. */
+void commit_leases_timeout (void *foo)
+{
+	commit_leases ();
 }
 
 /* Commit any leases that have been written out... */
