@@ -61,10 +61,15 @@ extern int h_errno;
 
 #include <net/if.h>
 #include <net/route.h>
-#include <linux/if_arp.h>
+
+#if defined (LINUX_1_X)
+# include <linux/if_arp.h>
+# include <linux/time.h>		/* also necessary */
+#else
+# include <net/if_arp.h>
+#endif
 
 #include <sys/time.h>		/* gettimeofday()*/
-#include <linux/time.h>		/* also necessary */
 
 #ifndef _PATH_DHCPD_PID
 #define _PATH_DHCPD_PID	"/var/run/dhcpd.pid"
