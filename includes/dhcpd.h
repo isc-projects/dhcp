@@ -26,6 +26,12 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <arpa/inet.h>
+
+#if defined (NSUPDATE)
+# include <arpa/nameser.h>
+# include <resolv.h>
+#endif
+
 #include <netdb.h>
 #else
 #define fd_set cygwin_fd_set
@@ -172,6 +178,8 @@ struct lease {
 	unsigned char uid_buf [32];
 	char *hostname;
 	char *client_hostname;
+	char *ddns_fwd_name;
+	char *ddns_rev_name;
 	struct host_decl *host;
 	struct subnet *subnet;
 	struct pool *pool;
@@ -258,6 +266,9 @@ struct lease_state {
 #define SV_ALWAYS_REPLY_RFC1048		20
 #define SV_SITE_OPTION_SPACE		21
 #define SV_ALWAYS_BROADCAST		22
+#define SV_DDNS_DOMAIN_NAME		23
+#define SV_DDNS_HOST_NAME		24
+#define SV_DDNS_REV_DOMAIN_NAME		25
 
 #if !defined (DEFAULT_DEFAULT_LEASE_TIME)
 # define DEFAULT_DEFAULT_LEASE_TIME 43200
