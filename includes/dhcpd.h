@@ -1348,6 +1348,10 @@ int dns_zone_reference PROTO ((struct dns_zone **,
 char *print_hw_addr PROTO ((int, int, unsigned char *));
 void print_lease PROTO ((struct lease *));
 void dump_raw PROTO ((const unsigned char *, unsigned));
+void dump_packet_option (struct option_cache *, struct packet *,
+			 struct lease *, struct option_state *,
+			 struct option_state *, struct binding_scope **,
+			 struct universe *, void *);
 void dump_packet PROTO ((struct packet *));
 void hash_dump PROTO ((struct hash_table *));
 char *print_hex_1 PROTO ((unsigned, const u_int8_t *, unsigned));
@@ -1835,6 +1839,7 @@ ns_rcode find_cached_zone (const char *, ns_class, char *,
 			   struct dns_zone **);
 void forget_zone (struct dns_zone **);
 void repudiate_zone (struct dns_zone **);
+void cache_found_zone (ns_class, char *, struct in_addr *, int);
 #endif /* NSUPDATE */
 HASH_FUNCTIONS_DECL (dns_zone, const char *, struct dns_zone)
 
