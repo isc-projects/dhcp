@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: discover.c,v 1.42.2.5 2001/06/08 23:07:24 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: discover.c,v 1.42.2.6 2001/06/20 03:19:15 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -846,22 +846,16 @@ isc_result_t dhcp_interface_destroy (omapi_object_t *h,
 	}
 	if (interface -> next)
 		interface_dereference (&interface -> next, file, line);
-	if (interface -> circuit_id) {
-		dfree (interface -> circuit_id, file, line);
-		interface -> circuit_id = 0;
-		interface -> circuit_id_len = 0;
-	}
-	if (interface -> remote_id) {
-		dfree (interface -> remote_id, file, line);
-		interface -> remote_id = 0;
-		interface -> remote_id_len = 0;
-	}		
 	if (interface -> rbuf) {
 		dfree (interface -> rbuf, file, line);
 		interface -> rbuf = (unsigned char *)0;
 	}
 	if (interface -> client)
 		interface -> client = (struct client_state *)0;
+
+	if (interface -> shared_network)
+		omapi_object_dereference ((omapi_object_t **)
+					  &interface -> shared_network, MDL);
 
 	return ISC_R_SUCCESS;
 }
