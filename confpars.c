@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.25 1996/08/27 09:40:17 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.26 1996/08/28 01:28:27 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -50,8 +50,9 @@ static char copyright[] =
 
 static TIME parsed_time;
 
-/* conf-file :== statements
-   declarations :== <nil> | declaration | declarations declaration */
+/* conf-file :== declarations statements EOF
+   declarations :== <nil> | declaration | declarations declaration
+   statements :== <nil> | statement | statements statement */
 
 void readconf ()
 {
@@ -83,6 +84,11 @@ void readconf ()
 	} while (1);
 	token = next_token (&val, cfile);
 }
+
+/* lease-file :== lease-statements EOF
+   lease-statments :== <nil>
+   		     | lease-statement
+		     | lease-statements lease-statement */
 
 void read_leases ()
 {
@@ -125,7 +131,28 @@ void read_leases ()
 	} while (1);
 }
 
-/* statement :== host_statement */
+/* declaration :== timestamp
+   		 | DEFAULT_LEASE_TIME lease_time
+		 | MAX_LEASE_TIME lease_time
+		 | DYNAMIC_BOOTP_LEASE_CUTOFF date
+		 | DYNAMIC_BOOTP_LEASE_LENGTH lease_time
+		 | BOOT_UNKNOWN_CLIENTS boolean
+		 | ONE_LEASE_PER_CLIENT boolean
+		 | NEXT_SERVER ip-addr-or-hostname SEMI
+		 | option_declaration
+		 | SERVER-IDENTIFIER ip-addr-or-hostname SEMI
+		 | FILENAME string-declaration
+		 | SERVER_NAME string-declaration
+		 | hardware-declaration
+		 | fixed-address-declaration
+
+   statement :== host-statement
+   	       | group-statement
+	       | shared-network-statment
+	       | subnet-statement
+	       | VENDOR_CLASS class-statement
+	       | USER_CLASS class-statement
+	       | RANGE address-range-statement */
 
 int parse_statement (cfile, group, type, host_decl, statement)
 	FILE *cfile;
@@ -244,20 +271,13 @@ int parse_statement (cfile, group, type, host_decl, statement)
 	      case BOOT_UNKNOWN_CLIENTS:
 		if (type == HOST_STMT)
 			parse_warn ("boot-unknown-clients not allowed here.");
+		group -> boot_unknown_clients = parse_boolean (cfile);
+		break;
 
-		token = next_token (&val, cfile);
-		if (token != NUMBER ||
-		    (strcmp (val, "0") && strcmp (val, "1"))) {
-			parse_warn ("0 or 1 expected");
-			skip_to_semi (cfile);
-			break;
-		}
-		group -> boot_unknown_clients = atoi (val);
-		token = next_token (&val, cfile);
-		if (token != SEMI) {
-			parse_warn ("expecting semicolon");
-			skip_to_semi (cfile);
-		}
+	      case ONE_LEASE_PER_CLIENT:
+		if (type == HOST_STMT)
+			parse_warn ("one-lease-per-client not allowed here.");
+		group -> one_lease_per_client = parse_boolean (cfile);
 		break;
 
 	      case NEXT_SERVER:
@@ -270,11 +290,7 @@ int parse_statement (cfile, group, type, host_decl, statement)
 		group -> next_server.len = 4;
 		memcpy (group -> next_server.iabuf,
 			cache -> value, group -> next_server.len);
-		token = next_token (&val, cfile);
-		if (token != SEMI) {
-			parse_warn ("expecting semicolon");
-			skip_to_semi (cfile);
-		}
+		parse_semi (cfile);
 		break;
 			
 	      case OPTION:
@@ -297,18 +313,14 @@ int parse_statement (cfile, group, type, host_decl, statement)
 				cache -> value, server_identifier.len);
 		}
 		token = next_token (&val, cfile);
-		if (token != SEMI) {
-			parse_warn ("expecting semicolon");
-			skip_to_semi (cfile);
-		}
 		break;
 			
 	      case FILENAME:
-		group -> filename = parse_filename_decl (cfile);
+		group -> filename = parse_string (cfile);
 		break;
 
 	      case SERVER_NAME:
-		group -> server_name = parse_servername_decl (cfile);
+		group -> server_name = parse_string (cfile);
 		break;
 
 	      case HARDWARE:
@@ -395,6 +407,46 @@ void skip_to_semi (cfile)
 	} while (token != EOF);
 }
 
+/* boolean :== ON SEMI | OFF SEMI | TRUE SEMI | FALSE SEMI */
+
+int parse_boolean (cfile)
+	FILE *cfile;
+{
+	int token;
+	char *val;
+	int rv;
+
+	token = next_token (&val, cfile);
+	if (!strcasecmp (val, "true")
+	    || !strcasecmp (val, "on"))
+		rv = 0;
+	else if (!strcasecmp (val, "false")
+		 || !strcasecmp (val, "off"))
+		rv = 0;
+	else {
+		parse_warn ("boolean value (true/false/on/off) expected");
+		skip_to_semi (cfile);
+		return 0;
+	}
+	parse_semi (cfile);
+	return rv;
+}
+
+int parse_semi (cfile)
+	FILE *cfile;
+{
+	int token;
+	char *val;
+
+	token = next_token (&val, cfile);
+	if (token != SEMI) {
+		parse_warn ("semicolon expected.");
+		skip_to_semi (cfile);
+		return 0;
+	}
+	return 1;
+}
+
 /* Expect a left brace; if there isn't one, skip over the rest of the
    statement and return zero; otherwise, return 1. */
 
@@ -414,9 +466,7 @@ int parse_lbrace (cfile)
 }
 
 
-/* host_statement :== HOST hostname declarations SEMI
-   host_declarations :== <nil> | host_declaration
-			       | host_declarations host_declaration SEMI */
+/* host-statement :== hostname RBRACE declarations statements LBRACE */
 
 void parse_host_statement (cfile, group)
 	FILE *cfile;
@@ -448,15 +498,36 @@ void parse_host_statement (cfile, group)
 			token = next_token (&val, cfile);
 			break;
 		}
+		if (token == EOF) {
+			token = next_token (&val, cfile);
+			parse_warn ("unexpected end of file");
+			break;
+		}
 		statement = parse_statement (cfile, host -> group,
 					     HOST_STMT, host,
 					     statement);
 	} while (1);
 
+	if (!host -> group -> options [DHO_HOST_NAME]) {
+		host -> group -> options [DHO_HOST_NAME] =
+			new_tree_cache ("parse_host_statement");
+		if (!host -> group -> options [DHO_HOST_NAME])
+			error ("can't allocate a tree cache for hostname.");
+		host -> group -> options [DHO_HOST_NAME] -> len =
+			strlen (name);
+		host -> group -> options [DHO_HOST_NAME] -> value = name;
+		host -> group -> options [DHO_HOST_NAME] -> buf_size =
+			host -> group -> options [DHO_HOST_NAME] -> len;
+		host -> group -> options [DHO_HOST_NAME] -> timeout =
+			0xFFFFFFFF;
+		host -> group -> options [DHO_HOST_NAME] -> tree =
+			(struct tree *)0;
+	}
+
 	enter_host (host);
 }
 
-/* host_name :== identifier | host_name DOT identifier */
+/* hostname :== identifier | hostname DOT identifier */
 
 char *parse_host_name (cfile)
 	FILE *cfile;
@@ -510,10 +581,7 @@ char *parse_host_name (cfile)
 	return s;
 }
 
-/* class_statement :== VENDOR_CLASS STRING class_declarations SEMI
-   		     | USER_CLASS class_declarations SEMI
-   class_declarations :== <nil> | option_declaration
-			        | option_declarations option_declaration SEMI
+/* class-statement :== STRING LBRACE declarations statements RBRACE
 */
 
 void parse_class_statement (cfile, group, type)
@@ -546,6 +614,10 @@ void parse_class_statement (cfile, group, type)
 		if (token == RBRACE) {
 			token = next_token (&val, cfile);
 			break;
+		} else if (token == EOF) {
+			token = next_token (&val, cfile);
+			parse_warn ("unexpected end of file");
+			break;
 		} else {
 			statement = parse_statement (cfile, class -> group,
 						     CLASS_STMT,
@@ -555,7 +627,7 @@ void parse_class_statement (cfile, group, type)
 	} while (1);
 }
 
-/* lease_time :== NUMBER */
+/* lease-time :== NUMBER SEMI */
 
 void parse_lease_time (cfile, timep)
 	FILE *cfile;
@@ -574,16 +646,10 @@ void parse_lease_time (cfile, timep)
 	/* Unswap the number - convert_num returns stuff in NBO. */
 	*timep = ntohl (*timep); /* XXX */
 
-	token = next_token (&val, cfile);
-	if (token != SEMI) {
-		parse_warn ("semicolon expected.");
-		skip_to_semi (cfile);
-	}
+	parse_semi (cfile);
 }
 
-/* shared_network_statement :== SHARED_NETWORK subnet_statements SEMI
-   subnet_statements :== subnet_statement |
-   			 subnet_statements subnet_statement */
+/* shared-network-statement :== LBRACE statements declarations RBRACE */
 
 void parse_shared_net_statement (cfile, group)
 	FILE *cfile;
@@ -643,18 +709,20 @@ void parse_shared_net_statement (cfile, group)
 			}
 			enter_shared_network (share);
 			return;
-		} else {
-			statement = parse_statement (cfile, share -> group,
-						     SHARED_NET_STMT,
-						     (struct host_decl *)0,
-						     statement);
+		} else if (token == EOF) {
+			token = next_token (&val, cfile);
+			parse_warn ("unexpected end of file");
+			break;
 		}
+
+		statement = parse_statement (cfile, share -> group,
+					     SHARED_NET_STMT,
+					     (struct host_decl *)0, statement);
 	} while (1);
 }
 
-/* subnet_statement :== SUBNET net NETMASK netmask declarations
-   host_declarations :== <nil> | host_declaration
-			       | host_declarations host_declaration SEMI */
+/* subnet-statement :==
+	net NETMASK netmask RBRACE declarations statements LBRACE */
 
 void parse_subnet_statement (cfile, share)
 	FILE *cfile;
@@ -708,6 +776,10 @@ void parse_subnet_statement (cfile, share)
 		if (token == RBRACE) {
 			token = next_token (&val, cfile);
 			break;
+		} else if (token == EOF) {
+			token = next_token (&val, cfile);
+			parse_warn ("unexpected end of file");
+			break;
 		}
 		statement = parse_statement (cfile, subnet -> group,
 					     SUBNET_STMT,
@@ -718,6 +790,8 @@ void parse_subnet_statement (cfile, share)
 	   shared_network containing it. */
 	if (subnet -> group -> dynamic_bootp)
 		share -> group -> dynamic_bootp = 1;
+	if (subnet -> group -> one_lease_per_client)
+		share -> group -> one_lease_per_client = 1;
 	if (!share -> subnets)
 		share -> subnets = subnet;
 	else {
@@ -729,8 +803,7 @@ void parse_subnet_statement (cfile, share)
 	}
 }
 
-/* group_statement :== group RBRACE declarations statements LBRACE */
-
+/* group-statement :== RBRACE declarations statements LBRACE */
 
 void parse_group_statement (cfile, group)
 	FILE *cfile;
@@ -748,15 +821,21 @@ void parse_group_statement (cfile, group)
 
 	do {
 		token = peek_token (&val, cfile);
-		if (token == RBRACE)
+		if (token == RBRACE) {
+			token = next_token (&val, cfile);
 			break;
+		} else if (token == EOF) {
+			token = next_token (&val, cfile);
+			parse_warn ("unexpected end of file");
+			break;
+		}
 		statement = parse_statement (cfile, g, GROUP_STMT,
 					     (struct host_decl *)0, statement);
 	} while (1);
 }
 
-/* hardware_decl :== HARDWARE ETHERNET NUMBER COLON NUMBER COLON NUMBER COLON
-   				       NUMBER COLON NUMBER COLON NUMBER */
+/* hardware-declaration :== HARDWARE ETHERNET csns SEMI
+   csns :== NUMBER | csns COLON NUMBER */
 
 void parse_hardware_decl (cfile, hardware)
 	FILE *cfile;
@@ -812,9 +891,9 @@ void parse_hardware_decl (cfile, hardware)
 	}
 }
 
-/* filename_decl :== FILENAME STRING */
+/* string-declaration :== STRING SEMI */
 
-char *parse_filename_decl (cfile)
+char *parse_string (cfile)
 	FILE *cfile;
 {
 	char *val;
@@ -829,49 +908,16 @@ char *parse_filename_decl (cfile)
 	}
 	s = (char *)malloc (strlen (val) + 1);
 	if (!s)
-		error ("no memory for filename.");
+		error ("no memory for string %s.", val);
 	strcpy (s, val);
 
-	token = next_token (&val, cfile);
-	if (token != SEMI) {
-		parse_warn ("expecting semicolon.");
-		skip_to_semi (cfile);
+	if (!parse_semi (cfile))
 		return (char *)0;
-	}
 	return s;
 }
 
-/* servername_decl :== SERVER_NAME STRING */
-
-char *parse_servername_decl (cfile)
-	FILE *cfile;
-{
-	char *val;
-	int token;
-	char *s;
-
-	token = next_token (&val, cfile);
-	if (token != STRING) {
-		parse_warn ("server name must be a string");
-		skip_to_semi (cfile);
-		return (char *)0;
-	}
-	s = (char *)malloc (strlen (val) + 1);
-	if (!s)
-		error ("no memory for server name.");
-	strcpy (s, val);
-
-	token = next_token (&val, cfile);
-	if (token != SEMI) {
-		parse_warn ("expecting semicolon.");
-		skip_to_semi (cfile);
-		return (char *)0;
-	}
-	return s;
-}
-
-/* ip_addr_or_hostname :== ip_address | hostname
-   ip_address :== NUMBER DOT NUMBER DOT NUMBER DOT NUMBER
+/* ip-addr-or-hostname :== ip-address | hostname
+   ip-address :== NUMBER DOT NUMBER DOT NUMBER DOT NUMBER
    
    Parse an ip address or a hostname.   If uniform is zero, put in
    a TREE_LIMIT node to catch hostnames that evaluate to more than
@@ -901,9 +947,12 @@ struct tree *parse_ip_addr_or_hostname (cfile, uniform)
 			return (struct tree *)0;
 		rv = tree_const (addr, len);
 	} else {
+		if (token != RBRACE && token != LBRACE)
+			token = next_token (&val, cfile);
 		parse_warn ("%s (%d): expecting IP address or hostname",
 			    val, token);
-		skip_to_semi (cfile);
+		if (token != SEMI)
+			skip_to_semi (cfile);
 		return (struct tree *)0;
 	}
 
@@ -911,11 +960,9 @@ struct tree *parse_ip_addr_or_hostname (cfile, uniform)
 }	
 	
 
-/* fixed_addr_clause :==
-	FIXED_ADDR fixed_addr_decls
-
-   fixed_addr_decls :== ip_addr_or_hostname |
-   			fixed_addr_decls ip_addr_or_hostname */
+/* fixed-addr-declaration :== ip-addrs-or-hostnames SEMI
+   ip-addrs-or-hostnames :== ip-addr-or-hostname |
+			     ip-addrs-or-hostnames ip-addr-or-hostname */
 
 struct tree_cache *parse_fixed_addr_decl (cfile)
 	FILE *cfile;
@@ -932,24 +979,21 @@ struct tree_cache *parse_fixed_addr_decl (cfile)
 		else
 			tree = tmp;
 		token = peek_token (&val, cfile);
-		if (token == COMMA || token == SEMI)
+		if (token == COMMA)
 			token = next_token (&val, cfile);
 	} while (token == COMMA);
 
-	if (token != SEMI) {
-		parse_warn ("expecting semicolon.");
-		skip_to_semi (cfile);
+	if (!parse_semi (cfile))
 		return (struct tree_cache *)0;
-	}
 	return tree_cache (tree);
 }
 
-/* option_declaration :== OPTION identifier DOT identifier <syntax> |
-			  OPTION identifier <syntax>
+/* option_declaration :== identifier DOT identifier <syntax> SEMI |
+			  identifier <syntax> SEMI
 
    Option syntax is handled specially through format strings, so it
    would be painful to come up with BNF for it.   However, it always
-   starts as above. */
+   starts as above and ends in a SEMI. */
 
 void parse_option_decl (cfile, group)
 	FILE *cfile;
@@ -1165,10 +1209,11 @@ void parse_option_decl (cfile, group)
 	group -> options [option -> code] = tree_cache (tree);
 }
 
-/* timestamp :== TIMESTAMP date SEMI
+/* timestamp :== date
 
    Timestamps are actually not used in dhcpd.conf, which is a static file,
-   but rather in the database file and the journal file. */
+   but rather in the database file and the journal file.  (Okay, actually
+   they're not even used there yet). */
 
 TIME parse_timestamp (cfile)
 	FILE *cfile;
@@ -1181,17 +1226,18 @@ TIME parse_timestamp (cfile)
 	return rv;
 }
 		
-/* lease_decl :== LEASE ip_address lease_modifiers SEMI
-   lease_modifiers :== <nil>
-   		|	lease_modifier
-		|	lease_modifier lease_modifiers
-   lease_modifier :==	STARTS date
-   		|	ENDS date
-		|	UID hex_numbers
-		|	HOST identifier
-		|	CLASS identifier
-		|	TIMESTAMP number
-		|	DYNAMIC_BOOTP */
+/* lease_statement :== LEASE ip_address LBRACE lease_declarations RBRACE
+   lease_declarations :== <nil>
+   		| lease_declaration
+		| lease_declarations lease_declaration
+   lease_declaration :== STARTS date
+		       | ENDS date
+		       | TIMESTAMP date
+		       | HARDWARE hardware-declaration
+		       | UID hex_numbers SEMI
+		       | HOST hostname SEMI
+		       | CLASS identifier SEMI
+		       | DYNAMIC_BOOTP SEMI */
 
 struct lease *parse_lease_statement (cfile)
 	FILE *cfile;
@@ -1221,6 +1267,10 @@ struct lease *parse_lease_statement (cfile)
 		token = next_token (&val, cfile);
 		if (token == RBRACE)
 			break;
+		else if (token == EOF) {
+			parse_warn ("unexpected end of file");
+			break;
+		}
 		strncpy (val, tbuf, sizeof tbuf);
 		tbuf [(sizeof tbuf) - 1] = 0;
 
@@ -1326,8 +1376,8 @@ struct lease *parse_lease_statement (cfile)
 	return &lease;
 }
 
-/* address_range :== RANGE ip_address ip_address |
-		     RANGE dynamic_bootp_statement ip_address ip_address */
+/* address-range-statement :== ip-address ip-address SEMI |
+			       DYNAMIC_BOOTP ip-address ip-address SEMI */
 
 void parse_address_range (cfile, subnet)
 	FILE *cfile;
@@ -1341,8 +1391,8 @@ void parse_address_range (cfile, subnet)
 	int dynamic = 0;
 
 	if ((token = peek_token (&val, cfile)) == DYNAMIC_BOOTP) {
+		token = next_token (&val, cfile);
 		if (subnet -> group -> boot_unknown_clients) {
-			token = next_token (&val, cfile);
 			subnet -> group -> dynamic_bootp = dynamic = 1;
 		} else {
 			parse_warn ("dynamic-bootp conflicts with %s",
@@ -1373,7 +1423,8 @@ void parse_address_range (cfile, subnet)
 	new_address_range (low, high, subnet, dynamic);
 }
 
-/* date :== NUMBER NUMBER/NUMBER/NUMBER NUMBER:NUMBER:NUMBER
+/* date :== NUMBER NUMBER SLASH NUMBER SLASH NUMBER 
+   		NUMBER COLON NUMBER COLON NUMBER SEMI
 
    Dates are always in GMT; first number is day of week; next is
    year/month/day; next is hours:minutes:seconds on a 24-hour
@@ -1568,13 +1619,22 @@ unsigned char *parse_numeric_aggregate (cfile, buf,
 			if (token != seperator) {
 				if (!*max)
 					break;
+				if (token != RBRACE && token != LBRACE)
+					token = next_token (&val, cfile);
 				parse_warn ("too few numbers.");
-				skip_to_semi (cfile);
+				if (token != SEMI)
+					skip_to_semi (cfile);
 				return (unsigned char *)0;
 			}
 			token = next_token (&val, cfile);
 		}
 		token = next_token (&val, cfile);
+
+		if (token == EOF) {
+			parse_warn ("unexpected end of file");
+			break;
+		}
+
 		/* Allow NUMBER_OR_ATOM if base is 16. */
 		if (token != NUMBER &&
 		    (base != 16 || token != NUMBER_OR_ATOM)) {
