@@ -1,6 +1,6 @@
 	    Internet Software Consortium DHCP Distribution
-		   Version 3, Beta 2, Patchlevel 15
-			   January 25, 2000
+		   Version 3, Beta 2, Patchlevel 16
+			   January 26, 2000
 
 			    Release Notes
 
@@ -48,6 +48,19 @@ Measurement Systems, and Brian Murrell at BC Tel Advanced
 Communications.  I'd like to express my thanks to all of these good
 people here, both for working on the code and for prodding me into
 improving it.
+
+	        Changes since 3.0 Beta 2 Patchlevel 15
+
+- Some documentation tweaks.
+
+- Maybe fix a problem in the DLPI code.
+
+- Fix some error code space inconsistencies in ddns update code.
+
+- Support relay agents that intercept unicast DHCP messages to stuff
+  agent options into them.
+
+- Fix a small memory leak in the relay agent option support code.
 
 	        Changes since 3.0 Beta 2 Patchlevel 14
 
