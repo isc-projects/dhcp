@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: alloc.c,v 1.38 2000/01/26 14:55:33 mellon Exp $ Copyright (c) 1995, 1996, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: alloc.c,v 1.39 2000/01/26 17:20:16 mellon Exp $ Copyright (c) 1995, 1996, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -892,7 +892,12 @@ int packet_allocate (ptr, file, line)
 #endif
 	}
 
-	*ptr = dmalloc (sizeof **ptr, file, line);
+	if (free_packets) {
+		*ptr = free_packets;
+		free_packets = (struct packet *)((*ptr) -> raw);
+	} else {
+		*ptr = dmalloc (sizeof **ptr, file, line);
+	}
 	if (*ptr) {
 		memset (*ptr, 0, sizeof **ptr);
 		(*ptr) -> refcnt = 1;
