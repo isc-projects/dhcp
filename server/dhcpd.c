@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.114 2001/04/05 22:52:48 mellon Exp $ Copyright 1995-2001 Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.115 2001/05/02 07:08:15 mellon Exp $ Copyright 1995-2001 Internet Software Consortium.";
 #endif
 
   static char copyright[] =
@@ -435,7 +435,7 @@ int main (argc, argv, envp)
 	parse = (struct parse *)0;
 	status = new_parse (&parse, -1,
 			    std_nsupdate, (sizeof std_nsupdate) - 1,
-			    "standard name service update routine");
+			    "standard name service update routine", 0);
 	if (status != ISC_R_SUCCESS)
 		log_fatal ("can't begin parsing name service updater!");
 
@@ -837,7 +837,7 @@ void postconf_initialization (int quiet)
 		parse = (struct parse *)0;
 		result = new_parse (&parse, -1,
 				 old_nsupdate, (sizeof old_nsupdate) - 1,
-				 "old name service update routine");
+				 "old name service update routine", 0);
 		if (result != ISC_R_SUCCESS)
 			log_fatal ("can't begin parsing old ddns updater!");
 

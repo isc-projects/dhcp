@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.142 2001/04/30 22:38:32 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.143 2001/05/02 07:05:52 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -167,9 +167,9 @@ isc_result_t read_conf_file (const char *filename, struct group *group,
 	/* If we're recording, write out the filename and file contents. */
 	if (trace_record ())
 		trace_write_packet (ttype, ulen + tflen + 1, dbuf, MDL);
-	new_parse (&cfile, -1, fbuf, ulen, filename); /* XXX */
+	new_parse (&cfile, -1, fbuf, ulen, filename, 0); /* XXX */
 #else
-	new_parse (&cfile, file, (char *)0, 0, filename);
+	new_parse (&cfile, file, (char *)0, 0, filename, 0);
 #endif
 	if (leasep)
 		status = lease_file_subparse (cfile);
@@ -202,7 +202,7 @@ void trace_conf_input (trace_type_t *ttype, unsigned len, char *data)
 	/* If we're recording, write out the filename and file contents. */
 	if (trace_record ())
 		trace_write_packet (ttype, len, data, MDL);
-	new_parse (&cfile, -1, fbuf, flen, data);
+	new_parse (&cfile, -1, fbuf, flen, data, 0);
 	if (ttype == trace_readleases_type)
 		lease_file_subparse (cfile);
 	else
