@@ -25,7 +25,7 @@ PROG   = dhcrelay
 MAN    = dhcrelay.8
 
 DEBUG  = -g
-INCLUDES = -I.. -I../includes
+INCLUDES = -I.. $(BINDINC) -I../includes
 DHCPLIB = ../common/libdhcp.a
 CFLAGS = $(DEBUG) $(PREDEFINES) $(INCLUDES) $(COPTS)
 
