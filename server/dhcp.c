@@ -429,7 +429,7 @@ void ack_lease (packet, lease, offer, when)
 
 	/* Choose a filename; first from the host_decl, if any, then from
 	   the user class, then from the vendor class. */
-	if (lease -> host -> filename)
+	if (lease -> host && lease -> host -> filename)
 		filename = lease -> host -> filename;
 	else if (user_class && user_class -> filename)
 		filename = user_class -> filename;
@@ -438,7 +438,7 @@ void ack_lease (packet, lease, offer, when)
 	else filename = (char *)0;
 
 	/* Choose a server name as above. */
-	if (lease -> host -> server_name)
+	if (lease -> host && lease -> host -> server_name)
 		server_name = lease -> host -> server_name;
 	else if (user_class && user_class -> server_name)
 		server_name = user_class -> server_name;
