@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.53.2.35 2004/11/24 17:39:19 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.53.2.36 2005/02/22 20:34:52 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1946,7 +1946,15 @@ isc_result_t dhcp_failover_peer_state_changed (dhcp_failover_state_t *state,
 			   XXX clever detection of when we should send an
 			   XXX UPDREQALL message rather than an UPDREQ
 			   XXX message.   What to do, what to do? */
-			dhcp_failover_send_update_request (state);
+			/* Currently when we enter recover state, no matter
+			 * the reason, we send an UPDREQALL.  So, it makes
+			 * the most sense to stick to that until something
+			 * better is done.
+			 * Furthermore, we only went to send the update
+			 * request if we are not in startup state.
+			 */
+			if (state -> me.state == recover)
+				dhcp_failover_send_update_request_all (state);
 			break;
 
 		      case shut_down:
@@ -4338,10 +4346,16 @@ isc_result_t dhcp_failover_send_update_request (dhcp_failover_state_t *state)
 	if (!link -> outer || link -> outer -> type != omapi_type_connection)
 		return ISC_R_INVALIDARG;
 
+	if (state -> curUPD)
+		return ISC_R_ALREADYRUNNING;
+
 	status = (dhcp_failover_put_message
 		  (link, link -> outer,
 		   FTM_UPDREQ,
 		   (failover_option_t *)0));
+
+	if (status == ISC_R_SUCCESS)
+		state -> curUPD = FTM_UPDREQ;
 
 #if defined (DEBUG_FAILOVER_MESSAGES)
 	if (status != ISC_R_SUCCESS)
@@ -4378,10 +4392,17 @@ isc_result_t dhcp_failover_send_update_request_all (dhcp_failover_state_t
 	if (!link -> outer || link -> outer -> type != omapi_type_connection)
 		return ISC_R_INVALIDARG;
 
+	/* If there is an UPDREQ in progress, then upgrade to UPDREQALL. */
+	if (state -> curUPD && (state -> curUPD != FTM_UPDREQ))
+		return ISC_R_ALREADYRUNNING;
+
 	status = (dhcp_failover_put_message
 		  (link, link -> outer,
 		   FTM_UPDREQALL,
 		   (failover_option_t *)0));
+
+	if (status == ISC_R_SUCCESS)
+		state -> curUPD = FTM_UPDREQALL;
 
 #if defined (DEBUG_FAILOVER_MESSAGES)
 	if (status != ISC_R_SUCCESS)
@@ -4826,6 +4847,8 @@ dhcp_failover_process_update_done (dhcp_failover_state_t *state,
 {
 	log_info ("failover peer %s: peer update completed.",
 		  state -> name);
+
+	state -> curUPD = 0;
 
 	switch (state -> me.state) {
 	      case unknown_state:

@@ -43,6 +43,14 @@ Murrell at BC Tel Advanced Communications.  I'd like to express my
 thanks to all of these good people here, both for working on the code
 and for prodding me into improving it.
 
+			Changes since 3.0.2
+
+- In the case where a secondary server lost its stable storage while the
+  primary was still in communications-interrupted, and came back online,
+  the lease databases would not be fully transferred to the secondary.
+  This was due to the secondary errantly sending an extra UPDREQ message
+  when the primary made its state transition to PARTNER-DOWN known.
+
 			Changes since 3.0.2rc3
 
 - A previously undocumented configuration directive, 'local-address',

@@ -307,6 +307,8 @@ typedef struct _dhcp_failover_state {
 					   queue. */
 	int pool_count;			/* Number of pools referencing this
 					   failover state object. */
+	int curUPD;			/* If an UPDREQ* message is in motion,
+					   this value indicates which one. */
 } dhcp_failover_state_t;
 
 #define DHCP_FAILOVER_VERSION		1
