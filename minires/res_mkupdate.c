@@ -21,7 +21,7 @@
  */
 
 #if !defined(lint) && !defined(SABER)
-static const char rcsid[] = "$Id: res_mkupdate.c,v 1.6 2000/12/02 00:10:20 neild Exp $";
+static const char rcsid[] = "$Id: res_mkupdate.c,v 1.7 2001/01/11 02:16:24 mellon Exp $";
 #endif /* not lint */
 
 #include <sys/types.h>
@@ -47,10 +47,12 @@ static const char rcsid[] = "$Id: res_mkupdate.c,v 1.6 2000/12/02 00:10:20 neild
 #define DEBUG
 #define MAXPORT 1024
 
-static int getnum_str(u_char **, u_char *);
-static int gethexnum_str(u_char **, u_char *);
-static int getword_str(char *, int, u_char **, u_char *);
-static int getstr_str(char *, int, u_char **, u_char *);
+static int getnum_str(const u_char **, const u_char *);
+static int gethexnum_str(const u_char **, const u_char *);
+static int getword_str(char *, int,
+		       const unsigned char **,
+		       const unsigned char *);
+static int getstr_str(char *, int, const u_char **, const u_char *);
 
 struct valuelist {
 	struct valuelist *	next;
@@ -88,7 +90,8 @@ res_nmkupdate(res_state statp,
 	      ns_updrec *rrecp_in, double *bp, unsigned *blp) {
 	ns_updrec *rrecp_start = rrecp_in;
 	HEADER *hp;
-	u_char *cp, *sp1, *sp2, *startp, *endp;
+	u_char *cp, *sp1, *sp2;
+	const unsigned char *startp, *endp;
 	int n, i, soanum, multiline;
 	ns_updrec *rrecp;
 	struct in_addr ina;
@@ -662,7 +665,7 @@ res_nmkupdate(res_state statp,
  * word in the string.
  */
 static int
-getword_str(char *buf, int size, u_char **startpp, u_char *endp) {
+getword_str(char *buf, int size, const u_char **startpp, const u_char *endp) {
         char *cp;
         int c;
  
@@ -692,7 +695,7 @@ getword_str(char *buf, int size, u_char **startpp, u_char *endp) {
  */
 static char digits[] = "0123456789";
 static int
-getstr_str(char *buf, int size, u_char **startpp, u_char *endp) {
+getstr_str(char *buf, int size, const u_char **startpp, const u_char *endp) {
         char *cp;
         int c, c1 = 0;
 	int inquote = 0;
@@ -769,12 +772,13 @@ getstr_str(char *buf, int size, u_char **startpp, u_char *endp) {
  * update the start pointer to point after the number in the string.
  */
 static int
-gethexnum_str(u_char **startpp, u_char *endp) {
+gethexnum_str(const u_char **startpp, const u_char *endp) {
         int c, n;
         int seendigit = 0;
         int m = 0;
 
-	if (*startpp + 2 >= endp || strncasecmp((char *)*startpp, "0x", 2) != 0)
+	if (*startpp + 2 >= endp ||
+	    strncasecmp((const char *)*startpp, "0x", 2) != 0)
 		return getnum_str(startpp, endp);
 	(*startpp)+=2;
         for (n = 0; *startpp <= endp; ) {
@@ -817,7 +821,7 @@ gethexnum_str(u_char **startpp, u_char *endp) {
  * update the start pointer to point after the number in the string.
  */
 static int
-getnum_str(u_char **startpp, u_char *endp) {
+getnum_str(const u_char **startpp, const u_char *endp) {
         int c, n;
         int seendigit = 0;
         int m = 0;
