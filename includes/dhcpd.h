@@ -1101,6 +1101,7 @@ void parse_address_range PROTO ((struct parse *,
 				 struct group *, int, struct pool *));
 
 /* ddns.c */
+int unset (struct binding_scope *, const char *);
 int ddns_updates PROTO ((struct packet *, struct lease *,
 			 struct lease_state *));
 int ddns_removals PROTO ((struct lease *));
@@ -1163,13 +1164,18 @@ int parse_option_statement PROTO ((struct executable_statement **,
 				   struct parse *, int,
 				   struct option *, enum statement_op));
 int parse_option_token PROTO ((struct expression **, struct parse *,
-			       const char *, struct expression *, int, int));
+			       const char **, struct expression *, int, int));
 int parse_allow_deny PROTO ((struct option_cache **, struct parse *, int));
 int parse_auth_key PROTO ((struct data_string *, struct parse *));
 int parse_warn (struct parse *, const char *, ...)
 	__attribute__((__format__(__printf__,2,3)));
 
 /* tree.c */
+#if defined (NSUPDATE)
+extern struct __res_state resolver_state;
+extern int resolver_inited;
+#endif
+
 extern struct binding_scope *global_scope;
 pair cons PROTO ((caddr_t, pair));
 int make_const_option_cache PROTO ((struct option_cache **, struct buffer **,
