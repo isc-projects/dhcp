@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.53 1998/11/06 00:31:08 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.54 1998/11/06 02:58:17 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -382,13 +382,16 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 			lose = 0;
 			et = parse_executable_statement (cfile, &lose);
 			if (!et) {
-				if (declaration && !lose)
-					parse_warn ("expecting a %s.",
-						    "declaration");
-				else if (!lose)
-					parse_warn ("expecting a parameter%s.",
-						    " or declaration");
-				skip_to_semi (cfile);
+				if (!lose) {
+					if (declaration)
+						parse_warn ("expecting a %s.",
+							    "declaration");
+					else
+						parse_warn ("expecting a%s%s.",
+							    " parameter",
+							    " or declaration");
+					skip_to_semi (cfile);
+				}
 				return declaration;
 			}
 		}
@@ -573,13 +576,14 @@ void parse_class_declaration (cfile, group, type)
 {
 	char *val;
 	enum dhcp_token token;
-	struct class *class, *pc;
+	struct class *class = (struct class *)0, *pc;
 	int declaration = 0;
 	int lose;
 	struct data_string data;
 	char *name;
 	struct executable_statement *stmt = (struct executable_statement *)0;
 	struct expression *expr;
+	int new = 1;
 
 	token = next_token (&val, cfile);
 	if (token != STRING) {
@@ -594,6 +598,7 @@ void parse_class_declaration (cfile, group, type)
 	/* If this isn't a subclass, we're updating an existing class. */
 	if (pc && type != 0 && type != 1 && type != 3) {
 		class = pc;
+		new = 0;
 		pc = (struct class *)0;
 	}
 
@@ -648,8 +653,6 @@ void parse_class_declaration (cfile, group, type)
 			memset (&data, 0, sizeof data);
 			if (!parse_cshl (&data, cfile))
 				return;
-			data.terminated = 0;
-			data.buffer = 0;
 		}
 	}
 
@@ -700,6 +703,9 @@ void parse_class_declaration (cfile, group, type)
 			}
 			class -> statements = stmt;
 		}
+
+		/* Save the name, if there is one. */
+		class -> name = name;
 	}
 
 	if (!parse_lbrace (cfile))
@@ -739,6 +745,7 @@ void parse_class_declaration (cfile, group, type)
 #if defined (DEBUG_EXPRESSION_PARSE)
 			print_expression ("class match", class -> expr);
 #endif
+			parse_semi (cfile);
 		} else if (token == SPAWN) {
 			if (pc) {
 				parse_warn ("invalid spawn in subclass.");
@@ -763,6 +770,7 @@ void parse_class_declaration (cfile, group, type)
 #if defined (DEBUG_EXPRESSION_PARSE)
 			print_expression ("class match", class -> spawn);
 #endif
+			parse_semi (cfile);
 		} else {
 			declaration = parse_statement (cfile, class -> group,
 						       CLASS_DECL,
@@ -770,6 +778,17 @@ void parse_class_declaration (cfile, group, type)
 						       declaration);
 		}
 	} while (1);
+	if (type == 2 && new) {
+		if (!collections -> classes)
+			collections -> classes = class;
+		else {
+			struct class *cp;
+			for (cp = collections -> classes;
+			     cp -> nic; cp = cp -> nic)
+				;
+			cp -> nic = class;
+		}
+	}
 }
 
 /* shared-network-declaration :==
