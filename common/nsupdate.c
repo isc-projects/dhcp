@@ -25,7 +25,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: nsupdate.c,v 1.3.2.4 1999/10/25 17:44:12 mellon Exp $ Copyright (c) 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: nsupdate.c,v 1.3.2.5 1999/10/25 20:26:53 mellon Exp $ Copyright (c) 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -142,8 +142,9 @@ char *ddns_fwd_name(lease, state, packet)
 		      evaluate_option_cache (&hostname, packet,
 					     packet -> options, lease, oc))) {
 			if (lease -> host && lease -> host -> name) {
-				hostname.data = lease -> host -> name;
-				hostname.len = strlen (hostname.data);
+				hostname.data =
+					(unsigned char *)lease -> host -> name;
+				hostname.len = strlen ((char *)hostname.data);
 			} else {
 				log_info ("ddns_fwd_name: no hostname.");
 				log_info ("either client must specify %s",
@@ -203,8 +204,8 @@ int nsupdateA(hostname, ip_addr, ttl, opcode)
 			return 0;
 		}
 		n->r_opcode = opcode;
-		n->r_data = ip_addr;
-		n->r_size = strlen(n->r_data);
+		n->r_data = (unsigned char *)ip_addr;
+		n->r_size = strlen (ip_addr);
 		APPEND(listuprec, n, r_link);
 		res_ninit(&res);
 		z = res_nupdate(&res, HEAD(listuprec), NULL);
@@ -238,8 +239,8 @@ int nsupdateA(hostname, ip_addr, ttl, opcode)
 		if (!(u = res_mkupdrec(S_UPDATE, hostname, C_IN, T_A, ttl)))
 			return 0;
 		u->r_opcode = opcode;
-		u->r_data = ip_addr;
-		u->r_size = strlen(u->r_data);
+		u->r_data = (unsigned char *)ip_addr;
+		u->r_size = strlen (ip_addr);
 		z = res_update(u);
 		log_info("delete %s: %s %d IN A %s",
 			 z == 1 ? "succeeded" : "failed",
@@ -272,8 +273,8 @@ int nsupdatePTR(hostname, revname, ttl, opcode)
 	if (!(u = res_mkupdrec(S_UPDATE, revname, C_IN, T_PTR, ttl)))
 		return 0;
 	u->r_opcode = opcode;
-	u->r_data = hostname;
-	u->r_size = strlen(u->r_data);
+	u->r_data = (unsigned char *)hostname;
+	u->r_size = strlen(hostname);
 	INIT_LIST(listuprec);
 	APPEND (listuprec, u, r_link);
 	if (n) {
