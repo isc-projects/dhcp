@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: clparse.c,v 1.62.2.6 2004/06/10 17:59:11 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: clparse.c,v 1.62.2.7 2004/11/24 17:39:14 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -611,7 +611,7 @@ void parse_option_list (cfile, list)
 	int ix;
 	int token;
 	const char *val;
-	pair p = (pair)0, q, r;
+	pair p = (pair)0, q = (pair)0, r;
 	struct option *option;
 
 	ix = 0;
@@ -771,9 +771,7 @@ int interface_or_dummy (struct interface_info **pi, const char *name)
 	/* If we didn't find an interface, make a dummy interface as
 	   a placeholder. */
 	if (!ip) {
-		isc_result_t status;
-		status = interface_allocate (&ip, MDL);
-		if (status != ISC_R_SUCCESS)
+		if ((status = interface_allocate (&ip, MDL)) != ISC_R_SUCCESS)
 			log_fatal ("Can't record interface %s: %s",
 				   name, isc_result_totext (status));
 		strcpy (ip -> name, name);
@@ -786,6 +784,8 @@ int interface_or_dummy (struct interface_info **pi, const char *name)
 	}
 	if (pi)
 		status = interface_reference (pi, ip, MDL);
+	else
+		status = ISC_R_FAILURE;
 	interface_dereference (&ip, MDL);
 	if (status != ISC_R_SUCCESS)
 		return 0;

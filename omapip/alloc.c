@@ -512,8 +512,11 @@ isc_result_t omapi_object_allocate (omapi_object_t **o,
 		foo = (omapi_object_t *)0;
 		status = (*type -> allocator) (&foo, file, line);
 		tsize = type -> size;
-	} else
+	} else {
 		status = ISC_R_NOMEMORY;
+		tsize = 0;
+	}
+
 	if (status == ISC_R_NOMEMORY) {
 		if (type -> sizer)
 			tsize = (*type -> sizer) (size);
@@ -784,11 +787,11 @@ isc_result_t omapi_typed_data_new (const char *file, int line,
 	va_list l;
 	omapi_typed_data_t *new;
 	unsigned len;
-	unsigned val;
-	int intval;
-	char *s;
+	unsigned val = 0;
+	int intval = 0;
+	char *s = NULL;
 	isc_result_t status;
-	omapi_object_t *obj;
+	omapi_object_t *obj = NULL;
 
 	va_start (l, type);
 

@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.101.2.10 2004/09/29 19:25:29 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.101.2.11 2004/11/24 17:39:16 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -702,8 +702,10 @@ int evaluate_dns_expression (result, packet, lease, client_state, in_options,
 					 in_options, cfg_options, scope,
 					 expr -> data.ns_add.rrdata, MDL);
 			}
-		} else
+		} else {
 			r2 = 0;
+			tname = NULL;
+		}
 		if (r0 && r1 && (r2 || expr -> op != expr_ns_add)) {
 		    *result = minires_mkupdrec (((expr -> op == expr_ns_add ||
 						  expr -> op == expr_ns_delete)
@@ -1713,6 +1715,7 @@ int evaluate_data_expression (result, packet, lease, client_state,
 			if (len != 8 && len != 16 && len != 32) {
 				log_info ("binary_to_ascii: %s %ld!",
 					  "invalid width", len);
+				status = 0;
 				goto b2a_out;
 			}
 			len /= 8;

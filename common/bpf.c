@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bpf.c,v 1.48.2.6 2004/06/17 20:54:38 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: bpf.c,v 1.48.2.7 2004/11/24 17:39:15 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -478,7 +478,6 @@ ssize_t receive_packet (interface, buf, len, from, hfrom)
 					       interface -> rbuf,
 					       interface -> rbuf_offset,
 					       from,
-					       (unsigned char *)0,
 					       hdr.bh_caplen);
 
 		/* If the IP or UDP checksum was bad, skip the packet... */

@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.143.2.23 2004/09/30 17:31:18 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.143.2.24 2004/11/24 17:39:18 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -154,6 +154,7 @@ isc_result_t read_conf_file (const char *filename, struct group *group,
 	if (result != ulen)
 		log_fatal ("%s: short read of %d bytes instead of %d.",
 			   filename, ulen, result);
+	close (file);
       memfile:
 	/* If we're recording, write out the filename and file contents. */
 	if (trace_record ())
@@ -161,6 +162,7 @@ isc_result_t read_conf_file (const char *filename, struct group *group,
 	new_parse (&cfile, -1, fbuf, ulen, filename, 0); /* XXX */
 #else
 	new_parse (&cfile, file, (char *)0, 0, filename, 0);
+	close (file);
 #endif
 	if (leasep)
 		status = lease_file_subparse (cfile);
@@ -170,7 +172,6 @@ isc_result_t read_conf_file (const char *filename, struct group *group,
 #if defined (TRACING)
 	dfree (dbuf, MDL);
 #endif
-	close (file);
 	return status;
 }
 
@@ -1822,7 +1823,7 @@ int parse_class_declaration (cp, cfile, group, type)
 	struct executable_statement *stmt = (struct executable_statement *)0;
 	struct expression *expr;
 	int new = 1;
-	isc_result_t status;
+	isc_result_t status = ISC_R_FAILURE;
 
 	token = next_token (&val, (unsigned *)0, cfile);
 	if (token != STRING) {
@@ -2607,7 +2608,8 @@ int parse_lease_declaration (struct lease **lp, struct parse *cfile)
 				break;
 				
 			      default: /* for gcc, we'll never get here. */
-				break;
+				log_fatal ("Impossible error at %s:%d.", MDL);
+				return 0;
 			}
 			break;
 
@@ -2748,7 +2750,7 @@ int parse_lease_declaration (struct lease **lp, struct parse *cfile)
 					    "%s: expecting a binding state.",
 					    val);
 				skip_to_semi (cfile);
-				break;
+				return 0;
 			}
 
 			if (seenbit == 256) {
@@ -2922,11 +2924,13 @@ int parse_lease_declaration (struct lease **lp, struct parse *cfile)
 					       "name");
 			    strcpy (binding -> name, val);
 			    newbinding = 1;
-			} else if (binding -> value) {
-				binding_value_dereference (&binding -> value,
+			} else  {
+				if (binding -> value)
+				  binding_value_dereference (&binding -> value,
 							   MDL);
 				newbinding = 0;
 			}
+
 			if (!binding_value_allocate (&binding -> value, MDL))
 				log_fatal ("no memory for binding value.");
 

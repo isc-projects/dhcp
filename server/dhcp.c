@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.192.2.43 2004/11/04 00:03:43 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.192.2.44 2004/11/24 17:39:19 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1947,6 +1947,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 						    &lease -> scope, oc, MDL);
 		else
 			s1 = 0;
+
 		if (s1 && d1.len == sizeof (u_int32_t)) {
 			lease_time = getULong (d1.data);
 			data_string_forget (&d1, MDL);
@@ -1955,7 +1956,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 				data_string_forget (&d1, MDL);
 			lease_time = default_lease_time;
 		}
-		
+
 		/* See if there's a maximum lease time. */
 		max_lease_time = DEFAULT_MAX_LEASE_TIME;
 		if ((oc = lookup_option (&server_universe, state -> options,
@@ -2201,6 +2202,9 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 					    packet -> options,
 					    (struct option_state *)0,
 					    &global_scope, oc, MDL);
+	else
+		s1 = 0;
+
 	if (oc && s1 &&
 	    lease -> client_hostname &&
 	    strlen (lease -> client_hostname) == d1.len &&
@@ -2675,20 +2679,19 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 		/* Determine wether to use configured or default ping timeout.
 		 */
 		if ((oc = lookup_option (&server_universe, state -> options,
-						SV_PING_TIMEOUT))) {
-			if (evaluate_option_cache (&d1, packet, lease,
-						(struct client_state *)0,
+						SV_PING_TIMEOUT)) &&
+		    evaluate_option_cache (&d1, packet, lease, NULL,
 						packet -> options,
 						state -> options,
 						&lease -> scope, oc, MDL)) {
-				if (d1.len == sizeof (u_int32_t))
-					ping_timeout =
-						getULong (d1.data);
-				data_string_forget (&d1, MDL);
-			}
-		} else {
+			if (d1.len == sizeof (u_int32_t))
+				ping_timeout = getULong (d1.data);
+			else
+				ping_timeout = DEFAULT_PING_TIMEOUT;
+
+			data_string_forget (&d1, MDL);
+		} else
 			ping_timeout = DEFAULT_PING_TIMEOUT;
-		}
 
 #ifdef DEBUG
 		log_debug ("Ping timeout: %ld", (long)ping_timeout);

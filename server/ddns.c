@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: ddns.c,v 1.15.2.14 2004/06/17 20:54:40 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: ddns.c,v 1.15.2.15 2004/11/24 17:39:18 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -315,8 +315,6 @@ int ddns_updates (struct packet *packet,
 	/*
 	 * Compute the name for the A record.
 	 */
-	s1 = s2 = 0;
-
 	oc = lookup_option (&server_universe, state -> options,
 			    SV_DDNS_HOST_NAME);
 	if (oc)
@@ -325,6 +323,8 @@ int ddns_updates (struct packet *packet,
 					    packet -> options,
 					    state -> options,
 					    &lease -> scope, oc, MDL);
+	else
+		s1 = 0;
 
 	oc = lookup_option (&server_universe, state -> options,
 			    SV_DDNS_DOMAIN_NAME);
@@ -334,6 +334,8 @@ int ddns_updates (struct packet *packet,
 					    packet -> options,
 					    state -> options,
 					    &lease -> scope, oc, MDL);
+	else
+		s2 = 0;
 
 	if (s1 && s2) {
 		if (ddns_hostname.len + ddns_domainname.len > 253) {
@@ -481,8 +483,10 @@ int ddns_updates (struct packet *packet,
 					    packet -> options,
 					    state -> options,
 					    &lease -> scope, oc, MDL);
+	else
+		s1 = 0;
 
-	if (d1.len > 238) {
+	if (s1 && (d1.len > 238)) {
 		log_error ("ddns_update: Calculated rev domain name too long.");
 		s1 = 0;
 		data_string_forget (&d1, MDL);

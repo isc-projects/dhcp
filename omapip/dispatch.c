@@ -211,7 +211,6 @@ isc_result_t omapi_one_dispatch (omapi_object_t *wo,
 	int desc;
 	struct timeval now, to;
 	omapi_io_object_t *io, *prev;
-	isc_result_t status;
 	omapi_waiter_object_t *waiter;
 	omapi_object_t *tmp = (omapi_object_t *)0;
 
@@ -354,7 +353,7 @@ isc_result_t omapi_one_dispatch (omapi_object_t *wo,
 				    if (len)
 					omapi_value_dereference (&ov, MDL);
 				}
-				status = (*(io -> reaper)) (io -> inner);
+				(*(io -> reaper)) (io -> inner);
 				if (prev) {
 				    omapi_io_dereference (&prev -> next, MDL);
 				    if (io -> next)
@@ -406,8 +405,7 @@ isc_result_t omapi_one_dispatch (omapi_object_t *wo,
 		if (io -> readfd &&
 		    (desc = (*(io -> readfd)) (tmp)) >= 0) {
 			if (FD_ISSET (desc, &r))
-				status = ((*(io -> reader)) (tmp));
-				/* XXX what to do with status? */
+				((*(io -> reader)) (tmp));
 		}
 		
 		/* Same deal for write descriptors. */
@@ -415,8 +413,7 @@ isc_result_t omapi_one_dispatch (omapi_object_t *wo,
 		    (desc = (*(io -> writefd)) (tmp)) >= 0)
 		{
 			if (FD_ISSET (desc, &w))
-				status = ((*(io -> writer)) (tmp));
-				/* XXX what to do with status? */
+				((*(io -> writer)) (tmp));
 		}
 		omapi_object_dereference (&tmp, MDL);
 	}
@@ -426,9 +423,9 @@ isc_result_t omapi_one_dispatch (omapi_object_t *wo,
 	prev = (omapi_io_object_t *)0;
 	for (io = omapi_io_states.next; io; io = io -> next) {
 		if (io -> reaper) {
-			if (io -> inner)
-				status = (*(io -> reaper)) (io -> inner);
-			if (!io -> inner || status != ISC_R_SUCCESS) {
+			if (!io -> inner ||
+			    ((*(io -> reaper)) (io -> inner) !=
+							ISC_R_SUCCESS)) {
 				omapi_io_object_t *tmp =
 					(omapi_io_object_t *)0;
 				/* Save a reference to the next
@@ -494,27 +491,44 @@ isc_result_t omapi_io_get_value (omapi_object_t *h,
 	return ISC_R_NOTFOUND;
 }
 
+/* omapi_io_destroy (object, MDL);
+ *
+ *	Find the requsted IO [object] and remove it from the list of io
+ * states, causing the cleanup functions to destroy it.  Note that we must
+ * hold a reference on the object while moving its ->next reference and
+ * removing the reference in the chain to the target object...otherwise it
+ * may be cleaned up from under us.
+ */
 isc_result_t omapi_io_destroy (omapi_object_t *h, const char *file, int line)
 {
-	omapi_io_object_t *obj, *p, *last;
+	omapi_io_object_t *obj = NULL, *p, *last = NULL, **holder;
 
 	if (h -> type != omapi_type_io_object)
 		return ISC_R_INVALIDARG;
 	
-	obj = (omapi_io_object_t *)h;
-
 	/* remove from the list of I/O states */
 	for (p = omapi_io_states.next; p; p = p -> next) {
-		if (p == obj) {
-			omapi_io_dereference (&last -> next, MDL);
-			omapi_io_reference (&last -> next, p -> next, MDL);
-			omapi_io_dereference (&p, MDL);
-			break;
+		if (p == (omapi_io_object_t *)h) {
+			omapi_io_reference (&obj, p, MDL);
+
+			if (last)
+				holder = &last -> next;
+			else
+				holder = &omapi_io_states.next;
+
+			omapi_io_dereference (holder, MDL);
+
+			if (obj -> next) {
+				omapi_io_reference (holder, obj -> next, MDL);
+				omapi_io_dereference (&obj -> next, MDL);
+			}
+
+			return omapi_io_dereference (&obj, MDL);
 		}
 		last = p;
 	}
-		
-	return ISC_R_SUCCESS;
+
+	return ISC_R_NOTFOUND;
 }
 
 isc_result_t omapi_io_signal_handler (omapi_object_t *h,

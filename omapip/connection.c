@@ -708,8 +708,8 @@ static isc_result_t make_dst_key (DST_KEY **dst_key, omapi_object_t *a) {
 	omapi_value_t *name      = (omapi_value_t *)0;
 	omapi_value_t *algorithm = (omapi_value_t *)0;
 	omapi_value_t *key       = (omapi_value_t *)0;
-	int algorithm_id;
-	char *name_str;
+	int algorithm_id = UNKNOWN_KEYALG;
+	char *name_str = NULL;
 	isc_result_t status = ISC_R_SUCCESS;
 
 	if (status == ISC_R_SUCCESS)

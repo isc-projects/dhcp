@@ -33,7 +33,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: packet.c,v 1.40.2.3 2004/06/10 17:59:19 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: packet.c,v 1.40.2.4 2004/11/24 17:39:16 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -210,14 +210,14 @@ ssize_t decode_hw_header (interface, buf, bufix, from)
 
 /* UDP header and IP header decoded together for convenience. */
 
-ssize_t decode_udp_ip_header (interface, buf, bufix, from, data, buflen)
+ssize_t decode_udp_ip_header (interface, buf, bufix, from, buflen)
 	struct interface_info *interface;
 	unsigned char *buf;
 	unsigned bufix;
 	struct sockaddr_in *from;
-	unsigned char *data;
 	unsigned buflen;
 {
+  unsigned char *data;
   struct ip *ip;
   struct udphdr *udp;
   u_int32_t ip_len = (buf [bufix] & 0xf) << 2;
@@ -281,31 +281,29 @@ ssize_t decode_udp_ip_header (interface, buf, bufix, from, data, buflen)
      header and the data.   If the UDP checksum field is zero, we're
      not supposed to do a checksum. */
 
-  if (!data) {
-	  data = buf + bufix + ip_len + sizeof *udp;
-	  len = ulen - sizeof *udp;
-	  ++udp_packets_length_checked;
-	  if (len + data > buf + bufix + buflen) {
-		  ++udp_packets_length_overflow;
-		  if (udp_packets_length_checked > 4 &&
-		      (udp_packets_length_checked /
-		       udp_packets_length_overflow) < 2) {
-			  log_info ("%d udp packets in %d too long - dropped",
-				    udp_packets_length_overflow,
-				    udp_packets_length_checked);
-			  udp_packets_length_overflow =
-				  udp_packets_length_checked = 0;
-		  }
-		  return -1;
+  data = buf + bufix + ip_len + sizeof *udp;
+  len = ulen - sizeof *udp;
+  ++udp_packets_length_checked;
+  if (len + data > buf + bufix + buflen) {
+	  ++udp_packets_length_overflow;
+	  if (udp_packets_length_checked > 4 &&
+	      (udp_packets_length_checked /
+	       udp_packets_length_overflow) < 2) {
+		  log_info ("%d udp packets in %d too long - dropped",
+			    udp_packets_length_overflow,
+			    udp_packets_length_checked);
+		  udp_packets_length_overflow =
+			  udp_packets_length_checked = 0;
 	  }
-	  if (len + data < buf + bufix + buflen &&
-	      len + data != buf + bufix + buflen && !ignore)
-		  log_debug ("accepting packet with data after udp payload.");
-	  if (len + data > buf + bufix + buflen) {
-		  log_debug ("dropping packet with bogus uh_ulen %ld",
-			     (long)(len + sizeof *udp));
-		  return -1;
-	  }
+	  return -1;
+  }
+  if (len + data < buf + bufix + buflen &&
+      len + data != buf + bufix + buflen && !ignore)
+	  log_debug ("accepting packet with data after udp payload.");
+  if (len + data > buf + bufix + buflen) {
+	  log_debug ("dropping packet with bogus uh_ulen %ld",
+		     (long)(len + sizeof *udp));
+	  return -1;
   }
 
   usum = udp -> uh_sum;

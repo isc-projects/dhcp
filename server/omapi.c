@@ -41,7 +41,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: omapi.c,v 1.46.2.18 2004/09/30 20:23:07 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: omapi.c,v 1.46.2.19 2004/11/24 17:39:19 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2142,6 +2142,10 @@ isc_result_t binding_scope_get_value (omapi_value_t **value,
 	      case binding_dns:
 	      case binding_function:
 		return ISC_R_INVALIDARG;
+
+	      default:
+		log_fatal ("Impossible case at %s:%d.", MDL);
+		return ISC_R_FAILURE;
 	}
 
 	if (status != ISC_R_SUCCESS)

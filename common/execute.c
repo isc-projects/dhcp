@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: execute.c,v 1.44.2.11 2004/09/10 21:02:31 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: execute.c,v 1.44.2.12 2004/11/24 17:39:15 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -370,7 +370,9 @@ int execute_statements (result, packet, lease, client_state,
 					goto blb;
 				    }
 				}
-			}
+			} else
+				binding = NULL;
+
 			if (ns && binding) {
 				status = (evaluate_expression
 					  (&binding -> value, packet, lease,
@@ -850,7 +852,7 @@ void write_statements (file, statements, indent)
 		      case log_statement:
 			indent_spaces (file, indent);
 			fprintf (file, "log ");
-			col = token_print_indent (file, col, indent + 4,
+			col = token_print_indent (file, indent + 4, indent + 4,
 						  "", "", "(");
 			switch (r -> data.log.priority) {
 			case log_priority_fatal:

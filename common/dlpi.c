@@ -79,7 +79,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dlpi.c,v 1.28.2.2 2004/06/10 17:59:17 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dlpi.c,v 1.28.2.3 2004/11/24 17:39:15 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -679,7 +679,7 @@ ssize_t receive_packet (interface, buf, len, from, hfrom)
 	length -= offset;
 #endif
 	offset = decode_udp_ip_header (interface, dbuf, bufix,
-				       from, (unsigned char *)0, length);
+				       from, length);
 
 	/* If the IP or UDP checksum was bad, skip the packet... */
 	if (offset < 0) {

@@ -45,9 +45,16 @@ and for prodding me into improving it.
 
 			Changes since 3.0.2rc2
 
-- A bug introduced in 3.0.2b1 in the DHCP Option Overloading support
-  bugfix was repaired.  This bug only surfaces in the case where neither
-  the FILE nor SNAME fields are available for overloading.
+- Two varaibles introduced in 3.0.2b1 were used without being initialized
+  in the case where neither the FILE nor SNAME fields were available for
+  overloading.  This was repaired.
+
+- Many other instances of variables being used without being initialized
+  were repaired.
+
+- An uninitialized variable in omapi_io_destroy() led to the discovery
+  that this function may result in orphaned pointers (and hence, a memory
+  leak).
 
 			Changes since 3.0.2rc1
 

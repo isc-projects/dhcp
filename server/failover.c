@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.53.2.34 2004/09/29 16:21:01 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.53.2.35 2004/11/24 17:39:19 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -3454,9 +3454,9 @@ failover_option_t *dhcp_failover_make_option (unsigned code,
 	unsigned size, count;
 	unsigned val;
 	u_int8_t *iaddr;
-	unsigned ilen;
+	unsigned ilen = 0;
 	u_int8_t *bval;
-	char *txt;
+	char *txt = NULL;
 #if defined (DEBUG_FAILOVER_MESSAGES)
 	char tbuf [256];
 #endif
@@ -3519,7 +3519,7 @@ failover_option_t *dhcp_failover_make_option (unsigned code,
 			/* shouldn't get here. */
 			log_fatal ("bogus type in failover_make_option: %d",
 				   info -> type);
-			break;
+			return &null_failover_option;
 		}
 	}
 	
@@ -5029,6 +5029,10 @@ normal_binding_state_transition_check (struct lease *lease,
 		      case FTS_FREE: /* for compiler */
 			new_state = binding_state;
 			goto out;
+
+		      default:
+			log_fatal ("Impossible case at %s:%d.", MDL);
+			return FTS_RESET;
 		}
 	      case FTS_ACTIVE:
 		/* The secondary can't change the state of an active
@@ -5071,6 +5075,9 @@ normal_binding_state_transition_check (struct lease *lease,
 		      case FTS_ACTIVE:
 			return binding_state;
 
+		      default:
+			log_fatal ("Impossible case at %s:%d.", MDL);
+			return FTS_RESET;
 		}
 		break;
 	      case FTS_EXPIRED:
@@ -5091,6 +5098,10 @@ normal_binding_state_transition_check (struct lease *lease,
 		      case FTS_RESET:
 		      case FTS_EXPIRED:
 			return binding_state;
+
+		      default:
+			log_fatal ("Impossible case at %s:%d.", MDL);
+			return FTS_RESET;
 		}
 	      case FTS_RELEASED:
 		switch (binding_state) {
@@ -5105,6 +5116,10 @@ normal_binding_state_transition_check (struct lease *lease,
 		      case FTS_ACTIVE:
 		      case FTS_RELEASED:
 			return binding_state;
+
+		      default:
+			log_fatal ("Impossible case at %s:%d.", MDL);
+			return FTS_RESET;
 		}
 	      case FTS_RESET:
 		switch (binding_state) {
@@ -5124,6 +5139,10 @@ normal_binding_state_transition_check (struct lease *lease,
 		      case FTS_ABANDONED:
 		      case FTS_RESET:
 			return binding_state;
+
+		      default:
+			log_fatal ("Impossible case at %s:%d.", MDL);
+			return FTS_RESET;
 		}
 	      case FTS_BACKUP:
 		switch (binding_state) {
@@ -5147,7 +5166,15 @@ normal_binding_state_transition_check (struct lease *lease,
 		      case FTS_BACKUP:
 			new_state = lease -> binding_state;
 			goto out;
+
+		      default:
+			log_fatal ("Impossible case at %s:%d.", MDL);
+			return FTS_RESET;
 		}
+
+	      default:
+		log_fatal ("Impossible case at %s:%d.", MDL);
+		return FTS_RESET;
 	}
       out:
 	return new_state;
@@ -5204,8 +5231,16 @@ conflict_binding_state_transition_check (struct lease *lease,
 			      case FTS_ACTIVE:
 				new_state = binding_state;
 				break;
+
+			      default:
+				log_fatal ("Impossible case at %s:%d.", MDL);
+				return FTS_RESET;
 			}
 			break;
+
+		      default:
+			log_fatal ("Impossible case at %s:%d.", MDL);
+			return FTS_RESET;
 		}
 	}
 	return new_state;
