@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.73 1999/07/01 19:32:29 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.73.2.1 1999/07/12 23:58:28 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1649,7 +1649,6 @@ struct lease *parse_lease_declaration (cfile)
 				token = BILLING;
 				break;
 
-#if defined (NSUPDATE)
 			      case DDNS_FWD_NAME:
 				seenbit = 4096;
 				token = peek_token (&val, cfile);
@@ -1671,7 +1670,6 @@ struct lease *parse_lease_declaration (cfile)
 					lease.ddns_rev_name =
 						parse_host_name (cfile);
 				break;
-#endif
 
 			      default:
 				skip_to_semi (cfile);
