@@ -15,7 +15,7 @@
 #include "minires/minires.h"
 #include "arpa/nameser.h"
 
-#include <isc/dst.h>
+#include <isc-dhcp/dst.h>
 
 /* res_nsendsigned */
 isc_result_t

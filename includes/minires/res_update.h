@@ -16,7 +16,7 @@
  */
 
 /*
- *	$Id: res_update.h,v 1.2 2001/01/11 02:16:09 mellon Exp $
+ *	$Id: res_update.h,v 1.2.2.1 2001/05/17 20:47:28 mellon Exp $
  */
 
 #ifndef __RES_UPDATE_H
@@ -24,7 +24,7 @@
 
 #include <sys/types.h>
 #include "arpa/nameser.h"
-#include <isc/list.h>
+#include <isc-dhcp/list.h>
 
 /*
  * This RR-like structure is particular to UPDATE.

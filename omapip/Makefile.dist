@@ -59,12 +59,14 @@ install: all
 	$(INSTALL) libomapi.a $(DESTDIR)$(LIBDIR)
 	$(CHMOD) 644 $(DESTDIR)$(LIBDIR)/libomapi.a
 	for file in alloc.h buffer.h omapip.h; do \
-	  $(INSTALL) $(TOP)/includes/omapip/$$file $(DESTDIR)$(INCDIR)/omapip; \
+	  $(INSTALL) $(TOP)/includes/omapip/$$file \
+						$(DESTDIR)$(INCDIR)/omapip; \
 	  $(CHMOD) 644 $(DESTDIR)$(INCDIR)/omapip/$$file; \
 	done
 	for file in boolean.h dst.h int.h lang.h list.h result.h types.h; do \
-	  $(INSTALL) $(TOP)/includes/isc/$$file $(DESTDIR)$(INCDIR)/isc; \
-	  $(CHMOD) 644 $(DESTDIR)$(INCDIR)/isc/$$file; \
+	  $(INSTALL) $(TOP)/includes/isc-dhcp/$$file \
+						$(DESTDIR)$(INCDIR)/isc-dhcp; \
+	  $(CHMOD) 644 $(DESTDIR)$(INCDIR)/isc-dhcp/$$file; \
 	done
 	for man in $(MAN); do \
 	  prefix=`echo $$man |sed -e 's/\.[0-9]$$//'`; \

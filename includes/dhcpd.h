@@ -76,7 +76,7 @@
 #include "inet.h"
 #include "dhctoken.h"
 
-#include <isc/result.h>
+#include <isc-dhcp/result.h>
 #include <omapip/omapip_p.h>
 
 #if !defined (OPTION_HASH_SIZE)

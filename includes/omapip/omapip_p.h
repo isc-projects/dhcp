@@ -69,8 +69,8 @@
 #include "cdefs.h"
 #include "osdep.h"
 
-#include <isc/dst.h>
-#include <isc/result.h>
+#include <isc-dhcp/dst.h>
+#include <isc-dhcp/result.h>
 
 #include <omapip/convert.h>
 #include <omapip/hash.h>

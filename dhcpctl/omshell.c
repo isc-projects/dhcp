@@ -47,7 +47,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
-#include <isc/result.h>
+#include <isc-dhcp/result.h>
 #include "dhcpctl.h"
 #include "dhcpd.h"
 

@@ -16,7 +16,7 @@
  */
 
 #ifndef lint
-static const char rcsid[] = "$Id: ns_verify.c,v 1.5 2001/02/22 07:28:22 mellon Exp $";
+static const char rcsid[] = "$Id: ns_verify.c,v 1.5.2.1 2001/05/17 20:47:34 mellon Exp $";
 #endif
 
 #define time(x)		trace_mr_time (x)
@@ -40,7 +40,7 @@ static const char rcsid[] = "$Id: ns_verify.c,v 1.5 2001/02/22 07:28:22 mellon E
 
 #include "minires/minires.h"
 #include "arpa/nameser.h"
-#include <isc/dst.h>
+#include <isc-dhcp/dst.h>
 
 time_t trace_mr_time (time_t *);
 
