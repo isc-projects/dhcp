@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.86 1999/10/14 17:40:05 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.87 1999/10/24 19:44:15 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -47,6 +47,7 @@ struct iaddr iaddr_broadcast = { 4, { 255, 255, 255, 255 } };
 struct iaddr iaddr_any = { 4, { 0, 0, 0, 0 } };
 struct in_addr inaddr_any;
 struct sockaddr_in sockaddr_broadcast;
+struct in_addr giaddr;
 
 /* ASSERT_STATE() does nothing now; it used to be
    assert (state_is == state_shouldbe). */
@@ -78,6 +79,7 @@ int main (argc, argv, envp)
 	unsigned seed;
 	int quiet = 0;
 	char *server = (char *)0;
+	char *relay = (char *)0;
 	isc_result_t status;
 
 #ifdef SYSLOG_4_2
@@ -121,6 +123,10 @@ int main (argc, argv, envp)
 			if (++i == argc)
 				usage ();
 			server = argv [i];
+		} else if (!strcmp (argv [i], "-g")) {
+			if (++i == argc)
+				usage ();
+			relay = argv [i];
  		} else if (argv [i][0] == '-') {
  		    usage ();
  		} else {
@@ -147,18 +153,43 @@ int main (argc, argv, envp)
 		log_info (url);
 	}
 
+	/* If we're given a relay agent address to insert, for testing
+	   purposes, figure out what it is. */
+	if (relay) {
+		if (!inet_aton (relay, &giaddr)) {
+			struct hostent *he;
+			he = gethostbyname (relay);
+			if (he) {
+				memcpy (&giaddr, he -> h_addr_list [0],
+					sizeof giaddr);
+			} else {
+				log_fatal ("%s: no such host", relay);
+			}
+		}
+	}
+
 	/* Default to the DHCP/BOOTP port. */
 	if (!local_port) {
-		ent = getservbyname ("dhcpc", "udp");
-		if (!ent)
-			local_port = htons (68);
-		else
-			local_port = ent -> s_port;
+		if (relay && giaddr.s_addr != INADDR_LOOPBACK) {
+			local_port = 67;
+		} else {
+			ent = getservbyname ("dhcpc", "udp");
+			if (!ent)
+				local_port = htons (68);
+			else
+				local_port = ent -> s_port;
 #ifndef __CYGWIN32__
-		endservent ();
+			endservent ();
 #endif
+		}
 	}
-	remote_port = htons (ntohs (local_port) - 1);	/* XXX */
+
+	/* If we're faking a relay agent, and we're not using loopback,
+	   use the server port, not the client port. */
+	if (relay && giaddr.s_addr != INADDR_LOOPBACK)
+		remote_port = 67;
+	else
+		remote_port = htons (ntohs (local_port) - 1);	/* XXX */
   
 	/* Get the current time... */
 	GET_TIME (&cur_time);
@@ -180,9 +211,7 @@ int main (argc, argv, envp)
 	} else {
 		sockaddr_broadcast.sin_addr.s_addr = INADDR_BROADCAST;
 	}
-#ifdef HAVE_SA_LEN
-	sockaddr_broadcast.sin_len = sizeof sockaddr_broadcast;
-#endif
+
 	inaddr_any.s_addr = INADDR_ANY;
 
 	/* Set up the OMAPI. */
@@ -263,7 +292,10 @@ int main (argc, argv, envp)
 	for (ip = interfaces; ip; ip = ip -> next) {
 		for (client = ip -> client; client; client = client -> next) {
 			client -> state = S_INIT;
-			state_reboot (client);
+			/* Set up a timeout to start the initialization
+			   process. */
+			add_timeout (cur_time + random () % 5,
+			     	     state_reboot, client);
 		}
 	}
 
@@ -591,6 +623,11 @@ void dhcpack (packet)
 		client -> new -> renewal =
 			client -> new -> expiry / 2;
 
+	/* Now introduce some randomness to the renewal time: */
+	client -> new -> renewal = (((client -> new -> renewal + 3) * 3 / 4) +
+				    (random () % /* XXX NUMS */
+				     ((client -> new -> renewal + 3) / 4)));
+
 	/* Same deal with the rebind time. */
 	oc = lookup_option (&dhcp_universe, client -> new -> options,
 			    DHO_DHCP_REBINDING_TIME);
@@ -608,9 +645,12 @@ void dhcpack (packet)
 
 	if (!client -> new -> rebind)
 		client -> new -> rebind =
-			client -> new -> renewal +
-				client -> new -> renewal / 2 +
-					client -> new -> renewal / 4;
+			(client -> new -> expiry * 7) / 8; /* XXX NUMS */
+
+	/* Make sure our randomness didn't run the renewal time past the
+	   rebind time. */
+	if (client -> new -> renewal > client -> new -> rebind)
+		client -> new -> renewal = (client -> new -> rebind * 3) / 4;
 
 	client -> new -> expiry += cur_time;
 	/* Lease lengths can never be negative. */
@@ -1251,13 +1291,15 @@ void state_panic (cpp)
 	/* No leases were available, or what was available didn't work, so
 	   tell the shell script that we failed to allocate an address,
 	   and try again later. */
-	log_info ("No working leases in persistent database - sleeping.\n");
+	log_info ("No working leases in persistent database - sleeping.");
 	script_init (client, "FAIL", (struct string_list *)0);
 	if (client -> alias)
 		script_write_params (client, "alias_", client -> alias);
 	script_go (client);
 	client -> state = S_INIT;
-	add_timeout (cur_time + client -> config -> retry_interval,
+	add_timeout (cur_time +
+		     ((client -> config -> retry_interval + 1) / 2 +
+		      (random () % client -> config -> retry_interval)),
 		     state_init, client);
 	go_daemon ();
 }
@@ -1579,8 +1621,7 @@ void make_discover (client, lease)
 		0, sizeof client -> packet.yiaddr);
 	memset (&(client -> packet.siaddr),
 		0, sizeof client -> packet.siaddr);
-	memset (&(client -> packet.giaddr),
-		0, sizeof client -> packet.giaddr);
+	client -> packet.giaddr = giaddr;
 	memcpy (client -> packet.chaddr,
 		client -> interface -> hw_address.haddr,
 		client -> interface -> hw_address.hlen);
@@ -1657,8 +1698,7 @@ void make_request (client, lease)
 		sizeof client -> packet.yiaddr);
 	memset (&client -> packet.siaddr, 0,
 		sizeof client -> packet.siaddr);
-	memset (&client -> packet.giaddr, 0,
-		sizeof client -> packet.giaddr);
+	client -> packet.giaddr = giaddr;
 	memcpy (client -> packet.chaddr,
 		client -> interface -> hw_address.haddr,
 		client -> interface -> hw_address.hlen);
@@ -1713,8 +1753,7 @@ void make_decline (client, lease)
 		sizeof client -> packet.yiaddr);
 	memset (&client -> packet.siaddr, 0,
 		sizeof client -> packet.siaddr);
-	memset (&client -> packet.giaddr, 0,
-		sizeof client -> packet.giaddr);
+	client -> packet.giaddr = giaddr;
 	memcpy (client -> packet.chaddr,
 		client -> interface -> hw_address.haddr,
 		client -> interface -> hw_address.hlen);
@@ -1766,8 +1805,7 @@ void make_release (client, lease)
 		sizeof client -> packet.yiaddr);
 	memset (&client -> packet.siaddr, 0,
 		sizeof client -> packet.siaddr);
-	memset (&client -> packet.giaddr, 0,
-		sizeof client -> packet.giaddr);
+	client -> packet.giaddr = giaddr;
 	memcpy (client -> packet.chaddr,
 		client -> interface -> hw_address.haddr,
 		client -> interface -> hw_address.hlen);
