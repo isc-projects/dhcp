@@ -3,7 +3,7 @@
    Tables of information only used by server... */
 
 /*
- * Copyright (c) 1995-2001 Internet Software Consortium.
+ * Copyright (c) 1995-2002 Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: stables.c,v 1.25.2.4 2001/10/17 03:32:03 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: stables.c,v 1.25.2.5 2002/02/20 07:18:41 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -490,7 +490,7 @@ struct option server_options [256] = {
 	{ "ping-check", "f",			&server_universe, 42 },
 	{ "update-static-leases", "f",		&server_universe, 43 },
 	{ "log-facility", "Nsyslog-facilities.", &server_universe, 44 },
-	{ "#45", "X",			&server_universe, 45 },
+	{ "do-forward-updates", "f",		&server_universe, 45 },
 	{ "#46", "X",			&server_universe, 46 },
 	{ "#47", "X",			&server_universe, 47 },
 	{ "#48", "X",			&server_universe, 48 },

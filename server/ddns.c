@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: ddns.c,v 1.15.2.7 2002/02/09 03:28:27 mellon Exp $ Copyright (c) 2000-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: ddns.c,v 1.15.2.8 2002/02/20 07:18:35 mellon Exp $ Copyright (c) 2000-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -288,6 +288,18 @@ int ddns_updates (struct packet *packet,
 		goto client_updates;
 	}
       noclient:
+	/* If do-forward-updates is disabled, this basically means don't
+	   do an update unless the client is participating, so if we get
+	   here and do-forward-updates is disabled, we can stop. */
+	if ((oc = lookup_option (&server_universe, state -> options,
+				 SV_DO_FORWARD_UPDATES)) &&
+	    !evaluate_boolean_option_cache (&ignorep, packet, lease,
+					    (struct client_state *)0,
+					    packet -> options,
+					    state -> options,
+					    &lease -> scope, oc, MDL)) {
+		return 0;
+	}
 
 	/* If it's a static lease, then don't do the DNS update unless we're
 	   specifically configured to do so.   If the client asked to do its
