@@ -68,6 +68,7 @@ if [ "$sysname" = "" ]; then
 	  gcc_path=$foo/gcc
         fi
       done
+      IFS=" "
 
       case $major in
         4) 
@@ -97,11 +98,13 @@ if [ "$sysname" = "" ]; then
     FreeBSD)
       sysname=freebsd;;
     hpux)
+      IFS=":"
       for foo in $PATH; do
         if [ x$gcc_path = x ] && [ -x $foo/gcc ]; then
 	  gcc_path=$foo/gcc
         fi
       done
+      IFS=" "
 
       if [ x$gcc_path = x ]; then
 	  sysname=hpux-cc
@@ -111,11 +114,13 @@ if [ "$sysname" = "" ]; then
 	  sysname_print=hpux
 	fi;;
     HP-UX)
+      IFS=":"
       for foo in $PATH; do
         if [ x$gcc_path = x ] && [ -x $foo/gcc ]; then
 	  gcc_path=$foo/gcc
         fi
       done
+      IFS=" "
 
       if [ x$gcc_path = x ]; then
 	  sysname=hpux-cc
