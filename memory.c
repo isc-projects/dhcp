@@ -385,9 +385,15 @@ int supersede_lease (comp, lease, commit)
 	/* If the existing lease hasn't expired and has a different
 	   unique identifier or, if it doesn't have a unique
 	   identifier, a different hardware address, then the two
-	   leases are in conflict. */
+	   leases are in conflict.  If the existing lease has a uid
+	   and the new one doesn't, but they both have the same
+	   hardware address, and dynamic bootp is allowed on this
+	   lease, then we allow that, in case a dynamic BOOTP lease is
+	   requested *after* a DHCP lease has been assigned. */
+
 	if (comp -> ends > cur_time &&
-	    ((comp -> uid &&
+	    ((comp -> uid && (lease -> uid ||
+			      !(lease -> flags & DYNAMIC_BOOTP_OK)) &&
 	      (comp -> uid_len != lease -> uid_len ||
 	       memcmp (comp -> uid, lease -> uid, comp -> uid_len))) ||
 	     (!comp -> uid &&
