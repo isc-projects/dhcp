@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.2.2.1 1998/06/25 21:11:31 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.2.2.2 1998/11/24 22:35:43 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -247,6 +247,9 @@ void parse_hardware_param (cfile, hardware)
 		hardware -> hlen = hlen;
 		memcpy ((unsigned char *)&hardware -> haddr [0],
 			t, hardware -> hlen);
+		if (hlen < sizeof hardware -> haddr)
+			memset (&hardware -> haddr [hlen], 0,
+				(sizeof hardware -> haddr) - hlen);
 		free (t);
 	}
 	
