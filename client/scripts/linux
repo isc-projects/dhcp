@@ -129,7 +129,7 @@ if [ x$reason = xTIMEOUT ]; then
     for router in $new_routers; do
       route add default gw $router
     done
-    echo domain $new_domain_name >/etc/resolv.conf.std
+    echo search $new_domain_name >/etc/resolv.conf.std
     for nameserver in $new_domain_name_servers; do
       echo nameserver $nameserver >>/etc/resolv.conf.std
     done
