@@ -28,6 +28,8 @@ if [ "$sysname" = "" ]; then
       sysname=freebsd;;
     hpux)
       sysname=hpux;;
+    QNX)
+      sysname=qnx;;
   esac
 fi
 
@@ -47,6 +49,7 @@ if [ "$sysname" = "" ]; then
   echo "   netbsd	NetBSD 1.1 or higher"
   echo "   freebsd	FreeBSD"
   echo "   hpux		HP-UX"
+  echo "   qnx		QNX 4.2 or higher"
   exit 1;
 fi
 

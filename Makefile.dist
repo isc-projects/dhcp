@@ -151,6 +151,21 @@ VARDB = /var/db
 #CATMANPAGES=
 ##--sco--
 
+## QNX
+##++qnx++
+#CF = cf/qnx.h
+#ADMMANDIR = /usr/man/man8
+#ADMMANEXT = .8
+#FFMANDIR = /usr/man/man5
+#FFMANEXT = .5
+#VARRUN = /etc
+#COPTS=-w3 -Dlint
+#LFLAGS=$(DEBUG) "-Wl,op symfile"
+#MANINSTALL = /bin/true 
+#INSTALL = cp
+#BINDIR = /etc
+##--qnx--
+
 CSRC   = options.c errwarn.c convert.c \
 	 tree.c memory.c alloc.c print.c hash.c tables.c inet.c \
 	 dispatch.c bpf.c packet.c raw.c nit.c socket.c
@@ -202,14 +217,14 @@ dhcpd.conf.cat5:	dhcpd.conf.5
 	nroff -man dhcpd.conf.5 >dhcpd.conf.cat5
 
 dhcpd:	$(OBJS) $(COBJ)
-	$(CC) -o dhcpd $(OBJS) $(COBJ) $(LIBS)
+	$(CC) $(LFLAGS) -o dhcpd $(OBJS) $(COBJ) $(LIBS)
 
 dhclient:	dhclient.o $(COBJ)
-	$(CC) -o dhclient dhclient.o $(COBJ) $(LIBS)
+	$(CC) $(LFLAGS) -o dhclient dhclient.o $(COBJ) $(LIBS)
 
 dhcpxlt:	dhcpxlt.o errwarn.o convert.o tables.o inet.o xconflex.o \
 		hash.o alloc.o
-	$(CC) -o dhcpxlt \
+	$(CC) $(LFLAGS) -o dhcpxlt \
 		dhcpxlt.o errwarn.o convert.o tables.o inet.o xconflex.o \
 		hash.o alloc.o \
 		$(LIBS)
