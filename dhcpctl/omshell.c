@@ -215,7 +215,7 @@ int main (int argc, char **argv, char **envp)
 			    if (se)
 				    port = ntohs (se -> s_port);
 			    else {
-				    printf ("unknown service name: %s", val);
+				    printf ("unknown service name: %s\n", val);
 				    break;
 			    }
 		    } else if (token == NUMBER) {
@@ -294,7 +294,7 @@ int main (int argc, char **argv, char **envp)
 
 		    s = dmalloc (strlen (val) + 1, MDL);
 		    if (!server) {
-			    printf ("no memory to store server name.");
+			    printf ("no memory to store server name.\n");
 			    skip_to_semi (cfile);
 			    break;
 		    }
@@ -312,13 +312,13 @@ int main (int argc, char **argv, char **envp)
 		  case KEY:
 		    token = next_token (&val, (unsigned *)0, cfile);
 		    if (!is_identifier (token)) {
-			    printf ("usage: key <name> <value>");
+			    printf ("usage: key <name> <value>\n");
 			    skip_to_semi (cfile);
 			    break;
 		    }
 		    s = dmalloc (strlen (val) + 1, MDL);
 		    if (!s) {
-			    printf ("no memory for key name.");
+			    printf ("no memory for key name.\n");
 			    skip_to_semi (cfile);
 			    break;
 		    }
@@ -386,7 +386,7 @@ int main (int argc, char **argv, char **envp)
 		    }
 		    
 		    if (!connected) {
-			    printf ("not connected.");
+			    printf ("not connected.\n");
 			    skip_to_semi (cfile);
 			    break;
 		    }
@@ -415,7 +415,7 @@ int main (int argc, char **argv, char **envp)
 		    }
 
 		    if (!connected) {
-			    printf ("not connected.");
+			    printf ("not connected.\n");
 			    skip_to_semi (cfile);
 			    break;
 		    }
@@ -441,7 +441,7 @@ int main (int argc, char **argv, char **envp)
 		    }
 		    
 		    if (!connected) {
-			    printf ("not connected.");
+			    printf ("not connected.\n");
 			    skip_to_semi (cfile);
 			    break;
 		    }
@@ -491,7 +491,7 @@ int main (int argc, char **argv, char **envp)
 							s1);
 				break;
 			    }
-			    dhcpctl_set_int_value (oh, atoi (val), s1);
+			    dhcpctl_set_int_value (oh, atoi (buf), s1);
 			    token = next_token (&val, (unsigned *)0, cfile);
 			  badnum:
 			    break;
@@ -506,7 +506,7 @@ int main (int argc, char **argv, char **envp)
 				++s;
 				token = next_token (&val,
 						    (unsigned *)0, cfile);
-				if (token != DOT)
+				if (token != COLON)
 				    break;
 				token = next_token (&val,
 						    (unsigned *)0, cfile);
@@ -536,7 +536,13 @@ int main (int argc, char **argv, char **envp)
 		    }
 		    
 		    if (!connected) {
-			    printf ("not connected.");
+			    printf ("not connected.\n");
+			    skip_to_semi (cfile);
+			    break;
+		    }
+
+		    if (!oh) {
+			    printf ("you must make a new object first!\n");
 			    skip_to_semi (cfile);
 			    break;
 		    }
@@ -569,7 +575,7 @@ int main (int argc, char **argv, char **envp)
 		    }
 		    
 		    if (!connected) {
-			    printf ("not connected.");
+			    printf ("not connected.\n");
 			    skip_to_semi (cfile);
 			    break;
 		    }
