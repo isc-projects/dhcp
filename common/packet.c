@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: packet.c,v 1.29 1999/10/07 06:35:43 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: packet.c,v 1.30 2000/01/29 05:47:50 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -100,7 +100,7 @@ void assemble_hw_header (interface, buf, bufix, to)
 	struct hardware *to;
 {
 #if defined (HAVE_TR_SUPPORT)
-	if (interface -> hw_address.htype == HTYPE_IEEE802)
+	if (interface -> hw_address.hbuf [0] == HTYPE_IEEE802)
 		assemble_tr_header (interface, buf, bufix, to);
 	else
 #endif
@@ -180,7 +180,7 @@ ssize_t decode_hw_header (interface, buf, bufix, from)
      struct hardware *from;
 {
 #if defined (HAVE_TR_SUPPORT)
-	if (interface -> hw_address.htype == HTYPE_IEEE802)
+	if (interface -> hw_address.hbuf [0] == HTYPE_IEEE802)
 		return decode_tr_header (interface, buf, bufix, from);
 	else
 #endif
