@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: db.c,v 1.39 2000/01/05 18:43:33 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: db.c,v 1.40 2000/01/08 01:46:54 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -43,6 +43,7 @@ int write_lease (lease)
 	char tbuf [64];
 	int errors = 0;
 	int i;
+	struct binding *b;
 
 	if (counting)
 		++count;
@@ -83,24 +84,27 @@ int write_lease (lease)
 		++errors;
 	}
 
-	t = gmtime (&lease -> tstp);
-	errno = 0;
-	fprintf (db_file, "\ttstp %d %d/%02d/%02d %02d:%02d:%02d;",
-		 t -> tm_wday, t -> tm_year + 1900,
-		 t -> tm_mon + 1, t -> tm_mday,
-		 t -> tm_hour, t -> tm_min, t -> tm_sec);
-	if (errno) {
-		++errors;
+	if (lease -> tstp) {
+		t = gmtime (&lease -> tstp);
+		errno = 0;
+		fprintf (db_file, "\n\ttstp %d %d/%02d/%02d %02d:%02d:%02d;",
+			 t -> tm_wday, t -> tm_year + 1900,
+			 t -> tm_mon + 1, t -> tm_mday,
+			 t -> tm_hour, t -> tm_min, t -> tm_sec);
+		if (errno) {
+			++errors;
+		}
 	}
-
-	t = gmtime (&lease -> tsfp);
-	errno = 0;
-	fprintf (db_file, "\ttsfp %d %d/%02d/%02d %02d:%02d:%02d;",
-		 t -> tm_wday, t -> tm_year + 1900,
-		 t -> tm_mon + 1, t -> tm_mday,
-		 t -> tm_hour, t -> tm_min, t -> tm_sec);
-	if (errno) {
-		++errors;
+	if (lease -> tsfp) {
+		t = gmtime (&lease -> tsfp);
+		errno = 0;
+		fprintf (db_file, "\n\ttsfp %d %d/%02d/%02d %02d:%02d:%02d;",
+			 t -> tm_wday, t -> tm_year + 1900,
+			 t -> tm_mon + 1, t -> tm_mday,
+			 t -> tm_hour, t -> tm_min, t -> tm_sec);
+		if (errno) {
+			++errors;
+		}
 	}
 
 	if (lease -> flags & PEER_IS_OWNER) {
@@ -164,21 +168,32 @@ int write_lease (lease)
 			++errors;
 		}
 	}
-	if (lease -> ddns_fwd_name && db_printable (lease -> ddns_fwd_name)) {
-		errno = 0;
-		fprintf (db_file, "\n\tddns-fwd-name \"%s\";",
-			 lease -> ddns_fwd_name);
-		if (errno) {
-			++errors;
-		}
-	}
-	if (lease -> ddns_rev_name && db_printable (lease -> ddns_rev_name)) {
-		errno = 0;
-		fprintf (db_file, "\n\tddns-rev-name \"%s\";",
-			 lease -> ddns_rev_name);
-		if (errno) {
-			++errors;
-		}
+	for (b = lease -> bindings; b; b = b -> next) {
+	    if (b -> value.data) {
+		    if (b -> value.terminated &&
+			db_printable (b -> value.data)) {
+			    errno = 0;
+			    fprintf (db_file, "\n\tset %s = \"%s\";",
+				     b -> name, b -> value.data);
+		    } else {
+			    errno = 0;
+			    fprintf (db_file, "\n\tset %s = ", b -> name);
+			    if (errno) {
+				    ++errors;
+			    }
+			    for (i = 0; i < b -> value.len; i++) {
+				    errno = 0;
+				    fprintf (db_file, "%2.2x%s",
+					     b -> value.data [i],
+					     i + 1 == b -> value.len
+					     ? ":" : "");
+				    if (errno) {
+					    ++errors;
+				    }
+			    }
+			    putc (';', db_file);
+		    }
+	    }
 	}
 	if (lease -> client_hostname &&
 	    db_printable (lease -> client_hostname)) {
@@ -199,14 +214,16 @@ int write_lease (lease)
 	}
 	if (lease -> on_expiry) {
 		errno = 0;
-		fprintf (db_file, "\n\ton expiry {");
+		fprintf (db_file, "\n\ton expiry%s {",
+			 lease -> on_expiry == lease -> on_release
+			 ? "or release" : "");
 		if (errno)
 			++errors;
 		write_statements (db_file, lease -> on_expiry, 10);
 		/* XXX */
 		fprintf (db_file, "\n\t}");
 	}
-	if (lease -> on_release) {
+	if (lease -> on_release && lease -> on_release != lease -> on_expiry) {
 		errno = 0;
 		fprintf (db_file, "\n\ton release {");
 		if (errno)
