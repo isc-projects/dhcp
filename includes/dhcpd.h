@@ -73,6 +73,13 @@ struct string_list {
 	char string [1];
 };
 
+/* A string of data bytes, possibly accompanied by a larger buffer. */
+struct data_string {
+	unsigned char *data, *buffer;
+	int len;
+	int terminated;
+};
+
 /* A name server, from /etc/resolv.conf. */
 struct name_server {
 	struct name_server *next;
@@ -128,6 +135,12 @@ struct packet {
 	struct shared_network *shared_network;
 	struct option_data options [256];
 	struct agent_options *agent_options;	/* Received agent options. */
+
+#if !defined (PACKET_MAX_CLASSES)
+# define PACKET_MAX_CLASSES 5
+#endif
+	int class_count;
+	struct class *classes [PACKET_MAX_CLASSES];
 };
 
 /* A network interface's MAC address. */
@@ -270,9 +283,95 @@ struct subnet {
 	struct group *group;
 };
 
-struct class {
-	char *name;
+struct match_expr {
+	enum {
+		match_check,
+		match_equal,
+		match_substring,
+		match_suffix,
+		match_and,
+		match_or,
+		match_in,
+		match_not,
+		match_option,
+		match_hardware,
+		match_packet,
+		match_const_data,
+		match_extract_int8,
+		match_extract_int16,
+		match_extract_int32,
+		match_const_int,
+	} op;
+	union {
+		struct {
+			struct match_expr *expr;
+			struct match_expr *offset;
+			struct match_expr *len;
+		} substring;
+		struct {
+			struct match_expr *left, *right;
+		} equal;
+		struct {
+			struct match_expr *expr;
+			struct match_expr *len;
+		} suffix;
+		struct match_expr *and [2];
+		struct match_expr *or [2];
+		struct match_expr *not;
+		struct {
+			struct match_expr *expr;
+			struct named_hash *hash;
+		} in;
+		struct collection *check;
+		struct {
+			struct universe *universe;
+			int code;
+		} option;
+		struct {
+			struct match_expr *offset;
+			struct match_expr *len;
+		} packet;
+		struct data_string const_data;
+		struct match_expr *extract_int8;
+		struct match_expr *extract_int16;
+		struct match_expr *extract_int32;
+		unsigned long const_int;
+	} data;
+};		
 
+struct classification_rule {
+	struct classification_rule *next;
+	enum classification_op {
+		classify_if,
+		classify_eval,
+		classify_add,
+		classify_break,
+	} op;
+	union {
+		struct {
+			struct classification_rule *true, *false;
+			struct match_expr *expr;
+		} ie;
+		struct match_expr *eval;
+		struct class *add;
+	} data;
+};
+
+struct collection {
+	struct collection *next;
+	
+	char *name;
+	struct class *classes;
+};
+
+struct class {
+	struct class *nic;	/* Next in collection. */
+	char *name;	/* Optional... */
+
+	struct hash_table *hash;
+	struct match_expr *expr;
+	struct match_expr *spawn;
+	
 	struct group *group;
 };
 
@@ -563,6 +662,8 @@ char *pretty_print_option PROTO ((unsigned int,
 void do_packet PROTO ((struct interface_info *,
 		       unsigned char *, int,
 		       unsigned int, struct iaddr, struct hardware *));
+struct data_string dhcp_option_lookup PROTO ((struct packet *, int));
+struct data_string agent_suboption_lookup PROTO ((struct packet *, int));
 
 /* errwarn.c */
 extern int warnings_occurred;
@@ -887,12 +988,14 @@ void delete_hash_entry PROTO ((struct hash_table *, unsigned char *, int));
 unsigned char *hash_lookup PROTO ((struct hash_table *, unsigned char *, int));
 
 /* tables.c */
+extern struct universe dhcp_universe;
 extern struct option dhcp_options [256];
+extern struct universe agent_universe;
+extern struct option agent_options [256];
 extern unsigned char dhcp_option_default_priority_list [];
 extern int sizeof_dhcp_option_default_priority_list;
 extern char *hardware_types [256];
 extern struct hash_table universe_hash;
-extern struct universe dhcp_universe;
 void initialize_universes PROTO ((void));
 
 /* convert.c */
@@ -1086,3 +1189,23 @@ int interact_client_write PROTO ((struct interact_client *, char *, int));
 
 /* dhcpdi.c */
 extern struct interact_actions top_level_actions;
+
+/* class.c */
+struct class unknown_class;
+struct class known_class;
+struct collection default_collection;
+struct classification_rule *default_classification_rules;
+struct named_hash *named_hashes;
+struct named_hash *known_hardware_hash;
+
+void classification_setup PROTO ((void));
+void classify_client PROTO ((struct packet *));
+int run_classification_ruleset PROTO ((struct packet *,
+				       struct classification_rule *));
+int evaluate_match_expression PROTO ((struct packet *, struct match_expr *));
+struct data_string evaluate_data_expression PROTO ((struct packet *,
+						    struct match_expr *));
+unsigned long evaluate_numeric_expression PROTO ((struct packet *,
+						  struct match_expr *));
+int check_collection PROTO ((struct packet *, struct collection *));
+void classify PROTO ((struct packet *, struct class *));
