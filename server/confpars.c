@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.124 2000/08/31 04:39:41 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.125 2000/09/01 00:10:26 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1603,8 +1603,8 @@ int parse_class_declaration (cp, cfile, group, type)
 			memset (&data, 0, sizeof data);
 			if (!parse_cshl (&data, cfile)) {
 				class_dereference (&pc, MDL);
-			}
 				return 0;
+			}
 		} else {
 			parse_warn (cfile, "Expecting string or hex list.");
 			class_dereference (&pc, MDL);
@@ -1744,6 +1744,8 @@ int parse_class_declaration (cp, cfile, group, type)
 				break;
 			}
 			token = next_token (&val, cfile);
+			class -> spawning = 1;
+		      submatch:
 			token = next_token (&val, cfile);
 			if (token != WITH) {
 				parse_warn (cfile,
@@ -1751,8 +1753,6 @@ int parse_class_declaration (cp, cfile, group, type)
 				skip_to_semi (cfile);
 				break;
 			}
-			class -> spawning = 1;
-		      submatch:
 			if (class -> submatch) {
 				parse_warn (cfile,
 					    "can't override existing %s.",
