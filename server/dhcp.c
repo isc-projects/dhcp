@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.146 2000/05/03 06:29:15 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.147 2000/05/03 23:03:50 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -108,6 +108,11 @@ void dhcpdiscover (packet, ms_nulltp)
 	char msgbuf [1024]; /* XXX */
 	TIME when;
 	char *s;
+	int allocatedp = 0;
+	int peer_has_leases = 0;
+#if defined (FAILOVER_PROTOCOL)
+	dhcp_failover_state_t *peer;
+#endif
 
 	lease = find_lease (packet, packet -> shared_network, 0);
 
@@ -132,6 +137,19 @@ void dhcpdiscover (packet, ms_nulltp)
 		  ? inet_ntoa (packet -> raw -> giaddr)
 		  : packet -> interface -> name);
 
+#if defined (FAILOVER_PROTOCOL)
+	if (lease && lease -> pool &&
+	    lease -> pool -> failover_peer) {
+		peer = lease -> pool -> failover_peer;
+		if ((lease -> flags & PEER_IS_OWNER) &&
+		    peer -> my_state == normal) {
+			log_info ("%s: letting peer %s respond.",
+				  msgbuf, peer -> name);
+			return;
+		}
+	}
+#endif
+
 	/* Sourceless packets don't make sense here. */
 	if (!packet -> shared_network) {
 		log_info ("Packet from unknown subnet: %s",
@@ -142,26 +160,41 @@ void dhcpdiscover (packet, ms_nulltp)
 	/* If we didn't find a lease, try to allocate one... */
 	if (!lease) {
 		lease = allocate_lease (packet,
-					packet -> shared_network -> pools, 0);
+					packet -> shared_network -> pools, 
+					0, &peer_has_leases);
 		if (!lease) {
-			log_info ("no free leases on network %s match %s",
-			      packet -> shared_network -> name,
-			      print_hw_addr (packet -> raw -> htype,
-					     packet -> raw -> hlen,
-					     packet -> raw -> chaddr));
+			if (peer_has_leases)
+				log_info ("%s: peer holds all free leases",
+					  msgbuf);
+			else
+				log_info ("%s: network %s: no free leases",
+					  msgbuf,
+					  packet -> shared_network -> name);
 			return;
 		}
+		allocatedp = 1;
 	}
 
 #if defined (FAILOVER_PROTOCOL)
 	/* Do load balancing if configured. */
-	if (lease -> pool &&
-	    lease -> pool -> failover_peer &&
-	    lease -> pool -> failover_peer -> hba &&
-	    lease -> pool -> failover_peer -> my_state == normal) {
-		if (!load_balance_mine (packet,
-					lease -> pool -> failover_peer))
-			return;
+	/* If the lease is newly allocated, and we're not the server that
+	   the client would normally get with load balancing, and the
+	   failover protocol state is normal, let the other server get this.
+	   XXX Check protocol spec to make sure that predicating this on
+	   XXX allocatedp is okay - I'm doing this so that the client won't
+	   XXX be forced to switch servers (and IP addresses) just because
+	   XXX of bad luck, when it's possible for it to get the address it
+	   XXX is requesting.    Not sure this is allowed.  */
+	if (allocatedp && lease && lease -> pool &&
+	    lease -> pool -> failover_peer) {
+		peer = lease -> pool -> failover_peer;
+		if (peer -> hba && peer -> my_state == normal) {
+			if (!load_balance_mine (packet, peer)) {
+				log_debug ("%s: load balance to peer %s",
+					   msgbuf, peer -> name);
+				return;
+			}
+		}
 	}
 #endif
 
@@ -2794,10 +2827,11 @@ void static_lease_dereference (lease, file, line)
    lease.   If all of these possibilities fail to pan out, we don't return
    a lease at all. */
 
-struct lease *allocate_lease (packet, pool, ok)
+struct lease *allocate_lease (packet, pool, ok, peer_has_leases)
 	struct packet *packet;
 	struct pool *pool;
 	int ok;
+	int *peer_has_leases;
 {
 	struct lease *lease, *lp;
 	struct permit *permit;
@@ -2809,28 +2843,41 @@ struct lease *allocate_lease (packet, pool, ok)
 	if ((pool -> prohibit_list &&
 	     permitted (packet, pool -> prohibit_list)) ||
 	    (pool -> permit_list && !permitted (packet, pool -> permit_list)))
-		return allocate_lease (packet, pool -> next, ok);
+		return allocate_lease (packet, pool -> next, ok,
+				       peer_has_leases);
 
 	lease = pool -> last_lease;
 
 #if defined (FAILOVER_PROTOCOL)
+	/* Peer_has_leases just says that we found at least one free lease.
+	   If no free lease is returned, the caller can deduce that this
+	   means the peer is hogging all the free leases, so we can print
+	   a better error message. */
+	if (lease)
+		*peer_has_leases = 1;
+
 	/* XXX Do we need code here to ignore PEER_IS_OWNER and just check
 	   XXX tstp if we're in, e.g., PARTNER_DOWN?   Where do we deal with
 	   XXX CONFLICT_DETECTED, et al? */
 	/* Skip to the most expired lease in the pool that is not owned by a
 	   failover peer. */
 	if (lease -> pool && lease -> pool -> failover_peer) {
-		while ((lease -> flags & PEER_IS_OWNER) &&
+		while (lease &&
+		       (lease -> flags & PEER_IS_OWNER) &&
 		       (lease -> ends <=
 			cur_time + lease -> pool -> failover_peer -> mclt))
 			lease = lease -> prev;
+		/* We didn't find an unexpired lease that we own? */
+		if (lease && lease -> flags & PEER_IS_OWNER)
+			lease = (struct lease *)0;
 	}
 #endif
 
 	/* If there are no leases in the pool that have
 	   expired, try the next one. */
 	if (!lease || lease -> ends > cur_time)
-		return allocate_lease (packet, pool -> next, ok);
+		return allocate_lease (packet,
+				       pool -> next, ok, peer_has_leases);
 
 	/* If we find an abandoned lease, and no other lease qualifies
 	   better, take it. */
@@ -2840,8 +2887,9 @@ struct lease *allocate_lease (packet, pool, ok)
 		/* If we already have a non-abandoned lease that we didn't
 		   love, but that's okay, don't reclaim the abandoned lease. */
 		if (ok)
-			return allocate_lease (packet, pool -> next, ok);
-		lp = allocate_lease (packet, pool -> next, 0);
+			return allocate_lease (packet, pool -> next,
+					       ok, peer_has_leases);
+		lp = allocate_lease (packet, pool -> next, 0, peer_has_leases);
 		if (!lp) {
 			log_error ("Reclaiming abandoned IP address %s.",
 			      piaddr (lease -> ip_addr));
@@ -2858,9 +2906,10 @@ struct lease *allocate_lease (packet, pool, ok)
 		/* If we're already in that boat, no need to consider
 		   allocating this particular lease. */
 		if (ok)
-			return allocate_lease (packet, pool -> next, ok);
+			return allocate_lease (packet, pool -> next,
+					       ok, peer_has_leases);
 
-		lp = allocate_lease (packet, pool -> next, 1);
+		lp = allocate_lease (packet, pool -> next, 1, peer_has_leases);
 		if (lp)
 			return lp;
 		return lease;
