@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.192.2.4 2001/05/19 07:35:36 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.192.2.5 2001/05/19 18:08:16 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -490,9 +490,14 @@ void dhcprequest (packet, ms_nulltp, ip_lease)
 		   If it's RENEWING, we are the only server to hear it, so
 		   we have to serve it.   If it's REBINDING, it's out of
 		   communication with the other server, so there's no point
-		   in waiting to serve it. */
+		   in waiting to serve it.    However, if the lease we're
+		   offering is not a free lease, then we may be the only
+		   server that can offer it, so we can't load balance if
+		   the lease isn't in the free or backup state. */
 		if (peer -> service_state == cooperating &&
-		    !packet -> raw -> ciaddr.s_addr) {
+		    !packet -> raw -> ciaddr.s_addr &&
+		    (lease -> binding_state == FTS_FREE ||
+		     lease -> binding_state == FTS_BACKUP)) {
 			if (!load_balance_mine (packet, peer)) {
 				log_debug ("%s: load balance to peer %s",
 					   msgbuf, peer -> name);
@@ -508,6 +513,22 @@ void dhcprequest (packet, ms_nulltp, ip_lease)
 			log_debug ("%s: expired", msgbuf);
 			goto out;
 		}
+
+		/* If the client is SELECTING, and this lease is active,
+		   and we are not primary and we are cooperating,
+		   let the primary respond.   This is an optimization
+		   because in this state the client may not even accept
+		   our DHCPACK (Win2k apparently doesn't), so there's no
+		   point in sending it.   In this state there is no chance
+		   that we sent the DHCPOFFER. */
+		if (!packet -> raw -> ciaddr.s_addr &&
+		    lease -> binding_state == FTS_ACTIVE &&
+		    peer -> i_am == secondary &&
+		    peer -> service_state == cooperating) {
+			log_debug ("%s: letting primary respond", msgbuf);
+		}
+
+
 	} else
 		peer = (dhcp_failover_state_t *)0;
 #endif
