@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.53 1999/11/03 16:10:40 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.54 1999/11/07 20:27:04 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1446,6 +1446,7 @@ int parse_if_statement (result, cfile, lose)
 			parse_warn (cfile, "boolean expression expected.");
 		executable_statement_dereference (result,
 						  "parse_if_statement");
+		*lose = 1;
 		return 0;
 	}
 #if defined (DEBUG_EXPRESSION_PARSE)
@@ -1489,11 +1490,13 @@ int parse_if_statement (result, cfile, lose)
 			token = next_token (&val, cfile);
 			if (!parse_if_statement (&(*result) -> data.ie.false,
 						 cfile, lose)) {
-				if (*lose) {
-					executable_statement_dereference
-						(result, "parse_if_statement");
-					return 0;
-				}
+				if (!*lose)
+					parse_warn (cfile,
+						    "expecting conditional.");
+				executable_statement_dereference
+					(result, "parse_if_statement");
+				*lose = 1;
+				return 0;
 			}
 		} else if (token != LBRACE) {
 			parse_warn (cfile, "left brace or if expected.");
@@ -1524,11 +1527,13 @@ int parse_if_statement (result, cfile, lose)
 		token = next_token (&val, cfile);
 		if (!parse_if_statement (&(*result) -> data.ie.false,
 					 cfile, lose)) {
-			if (*lose) {
-				executable_statement_dereference
-					(result, "parse_if_statement");
-				return 0;
-			}
+			if (!*lose)
+				parse_warn (cfile,
+					    "expecting conditional.");
+			executable_statement_dereference
+				(result, "parse_if_statement");
+			*lose = 1;
+			return 0;
 		}
 	} else
 		(*result) -> data.ie.false = (struct executable_statement *)0;
@@ -1559,6 +1564,7 @@ int parse_boolean_expression (expr, cfile, lose)
 	if (!is_boolean_expression (*expr)) {
 		parse_warn (cfile, "Expecting a boolean expression.");
 		*lose = 1;
+		expression_dereference (expr, "parse_boolean_expression");
 		return 0;
 	}
 	return 1;
