@@ -3,7 +3,12 @@
 # libraries.
 
 # SunOS 4.1
+#LIBS = -lresolv
+
+# Solaris 2.5 (with gcc)
 LIBS = -lresolv
+CC=gcc -Wall -Wstrict-prototypes -Wno-unused -Wno-implicit -Wno-comment \
+	  -Wno-uninitialized -Werror
 
 CSRC = options.c errwarn.c convert.c conflex.c confpars.c \
        tree.c memory.c alloc.c print.c hash.c tables.c inet.c db.c \
