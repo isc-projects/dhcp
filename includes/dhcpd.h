@@ -102,6 +102,7 @@ struct option_cache {
 };
 
 struct option_state {
+	int refcnt;
 	int universe_count;
 	VOIDPTR universes [1];
 };
@@ -1054,6 +1055,8 @@ int dns_host_entry_reference PROTO ((struct dns_host_entry **,
 				     struct dns_host_entry *, char *));
 int dns_host_entry_dereference PROTO ((struct dns_host_entry **, char *));
 int option_state_allocate PROTO ((struct option_state **, char *));
+int option_state_reference PROTO ((struct option_state **,
+				   struct option_state *, char *));
 int option_state_dereference PROTO ((struct option_state **, char *));
 
 /* print.c */
