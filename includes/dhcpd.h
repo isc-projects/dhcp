@@ -2049,6 +2049,9 @@ int find_matching_case (struct executable_statement **,
 			struct option_state *, struct option_state *,
 			struct binding_scope **,
 			struct expression *, struct executable_statement *);
+int executable_statement_foreach (struct executable_statement *,
+				  int (*) (struct executable_statement *,
+					   void *, int), void *, int);
 
 /* comapi.c */
 extern omapi_object_type_t *dhcp_type_interface;
