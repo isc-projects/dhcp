@@ -3,7 +3,7 @@
    DHCP Server Daemon. */
 
 /*
- * Copyright (c) 1995, 1996 The Internet Software Consortium.
+ * Copyright (c) 1995, 1996, 1997 The Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.36 1996/09/12 09:28:13 mellon Exp $ Copyright 1995, 1996 The Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.36.2.1 1997/03/29 08:11:03 mellon Exp $ Copyright 1995, 1996 The Internet Software Consortium.";
 #endif
 
 static char copyright[] =
@@ -156,25 +156,13 @@ int main (argc, argv, envp)
 		}
 	}
 
-	/* If we were requested to log to stdout on the command line,
-	   keep doing so; otherwise, stop. */
-	if (log_perror == -1)
-		log_perror = 1;
-	else
-		log_perror = 0;
-
 #ifndef DEBUG
 	if (daemon) {
-		/* Become a daemon... */
+		/* First part of becoming a daemon... */
 		if ((pid = fork ()) < 0)
 			error ("Can't fork daemon: %m");
 		else if (pid)
 			exit (0);
-		/* Become session leader and get pid... */
-		close (0);
-		close (1);
-		close (2);
-		pid = setsid ();
 	}
 
 	/* Read previous pid file. */
@@ -224,6 +212,21 @@ int main (argc, argv, envp)
 	discover_interfaces (1);
 
 #ifndef DEBUG
+	/* If we were requested to log to stdout on the command line,
+	   keep doing so; otherwise, stop. */
+	if (log_perror == -1)
+		log_perror = 1;
+	else
+		log_perror = 0;
+
+	if (daemon) {
+		/* Become session leader and get pid... */
+		close (0);
+		close (1);
+		close (2);
+		pid = setsid ();
+	}
+
 	/* If we didn't write the pid file earlier because we found a
 	   process running the logged pid, but we made it to here,
 	   meaning nothing is listening on the bootp port, then write
