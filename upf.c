@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: upf.c,v 1.1.2.1 1997/03/29 07:16:26 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: upf.c,v 1.1.2.2 1997/03/29 09:43:41 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -105,7 +105,7 @@ int if_register_upf (info)
 	}
 
 	/* Set the UPF device to point at this interface. */
-	if (ioctl (sock, EIOCSETIF, info -> ifp) < 0)
+	if (ioctl (sock, EIOCSETIF, info -> tif) < 0)
 		error ("Can't attach interface %s to upf device %s: %m",
 		       info -> name, filename);
 
@@ -202,7 +202,7 @@ void if_register_receive (info)
 	pf.enf_Filter [pf.enf_FilterLen++] = ENF_CAND;
 	pf.enf_Filter [pf.enf_FilterLen++] = ENF_PUSHWORD + 18;
 	pf.enf_Filter [pf.enf_FilterLen++] = ENF_PUSHLIT + ENF_CAND;
-	pf.enf_Filter [pf.enf_FilterLen++] = local_port;
+	pf.enf_Filter [pf.enf_FilterLen++] = server_port;
 
 	if (ioctl (info -> rfdesc, EIOCSETF, &pf) < 0)
 		error ("Can't install packet filter program: %m");
