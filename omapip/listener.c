@@ -44,7 +44,7 @@
 #include <omapip/omapip_p.h>
 
 #if defined (TRACING)
-static omapi_array_t *trace_listeners;
+omapi_array_t *trace_listeners;
 static void trace_listener_accept_input (trace_type_t *, unsigned, char *);
 static void trace_listener_remember (omapi_listener_object_t *,
 				     const char *, int);
@@ -317,7 +317,7 @@ OMAPI_ARRAY_TYPE(omapi_listener, omapi_listener_object_t);
 
 void omapi_listener_trace_setup (void) {
 	trace_listener_accept =
-		trace_type_register ("listener_accept", (void *)0,
+		trace_type_register ("listener-accept", (void *)0,
 				     trace_listener_accept_input,
 				     trace_listener_accept_stop, MDL);
 }
@@ -336,8 +336,8 @@ static void trace_listener_remember (omapi_listener_object_t *obj,
 			return;
 		}
 	}
-	status = omapi_listener_array_extend (trace_listeners,
-					      obj, (int *)0, MDL);
+	status = omapi_listener_array_extend (trace_listeners, obj,
+					      &obj -> index, MDL);
 	if (status != ISC_R_SUCCESS)
 		goto foo;
 }
@@ -366,6 +366,7 @@ static void trace_listener_accept_input (trace_type_t *ttype,
 			obj = (omapi_connection_object_t *)0;
 			status = omapi_listener_connect (&obj,
 							 lp, 0, &remote_addr);
+			omapi_listener_dereference (&lp, MDL);
 			return;
 		}
 	} omapi_array_foreach_end (trace_listeners,
