@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcrelay.c,v 1.52.2.4 2003/02/05 06:52:31 dhankins Exp $ Copyright (c) 1997-2002 Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcrelay.c,v 1.52.2.5 2004/02/03 22:15:27 dhankins Exp $ Copyright (c) 1997-2002 Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -346,7 +346,7 @@ void relay (ip, packet, length, from_port, from, hfrom)
 	struct server_list *sp;
 	struct sockaddr_in to;
 	struct interface_info *out;
-	struct hardware hto;
+	struct hardware hto, *htop;
 
 	if (packet -> hlen > sizeof packet -> chaddr) {
 		log_info ("Discarding packet with invalid hlen.");
@@ -372,9 +372,15 @@ void relay (ip, packet, length, from_port, from, hfrom)
 			can_unicast_without_arp (out)) {
 			to.sin_addr = packet -> yiaddr;
 			to.sin_port = remote_port;
+
+			/* and hardware address is not broadcast */
+			htop = &hto;
 		} else {
 			to.sin_addr.s_addr = htonl (INADDR_BROADCAST);
 			to.sin_port = remote_port;
+
+			/* hardware address is broadcast */
+			htop = NULL;
 		}
 		to.sin_family = AF_INET;
 #ifdef HAVE_SA_LEN
@@ -403,7 +409,7 @@ void relay (ip, packet, length, from_port, from, hfrom)
 		if (send_packet (out,
 				 (struct packet *)0,
 				 packet, length, out -> primary_address,
-				 &to, &hto) < 0) {
+				 &to, htop) < 0) {
 			++server_packet_errors;
 		} else {
 			log_debug ("forwarded BOOTREPLY for %s to %s",
