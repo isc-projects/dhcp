@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: alloc.c,v 1.25 1999/03/16 05:50:31 mellon Exp $ Copyright (c) 1995, 1996, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: alloc.c,v 1.26 1999/03/25 21:55:14 mellon Exp $ Copyright (c) 1995, 1996, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -184,6 +184,28 @@ void free_name_server (ptr, name)
 	char *name;
 {
 	dfree ((VOIDPTR)ptr, name);
+}
+
+struct option *new_option (name)
+	char *name;
+{
+	struct option *rval =
+		dmalloc (sizeof (struct option), name);
+	if (rval)
+		memset (rval, 0, sizeof *rval);
+	return rval;
+}
+
+void free_option (ptr, name)
+	struct option *ptr;
+	char *name;
+{
+/* XXX have to put all options on heap before this is possible. */
+#if 0
+	if (ptr -> name)
+		dfree ((VOIDPTR)option -> name, name);
+	dfree ((VOIDPTR)ptr, name);
+#endif
 }
 
 void free_domain_search_list (ptr, name)
