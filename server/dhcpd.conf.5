@@ -503,10 +503,13 @@ failover.  A pool declaration that utilizes failover would look like this:
 .nf
 pool {
 	failover peer "foo";
+	deny dynamic bootp clients;
 	\fIpool specific parameters\fR
 };
 .fi
 .PP
+Dynamic BOOTP leases are not compatible with failover, and, as such,
+you need to disallow BOOTP in pools that you are using failover for.
 .PP
 The  server currently  does very  little  sanity checking,  so if  you
 configure it wrong, it will just  fail in odd ways.  I would recommend
@@ -1423,6 +1426,11 @@ heading ALLOW AND DENY WITHIN POOL DECLARAIONS.
 The \fBbootp\fR flag is used to tell dhcpd whether
 or not to respond to bootp queries.  Bootp queries are \fBallow\fRed
 by default.
+.PP
+This option does not satisfy the requirement of failover peers for denying
+dynamic bootp clients.  The \fBdeny dynamic bootp clients;\fR option should
+be used instead. See the ALLOW AND DENY WITHIN POOL DECLARATIONS section
+of this man page for more details.
 .PP
 .B The
 .I booting
