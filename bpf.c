@@ -107,10 +107,7 @@ void if_register_send (info, interface)
 #else
 	info -> wfdesc = info -> rfdesc;
 #endif
-	note ("Sending on   BPF/%s/%s",
-	      print_hw_addr (info -> hw_address.htype,
-			     info -> hw_address.hlen,
-			     info -> hw_address.haddr),
+	note ("Sending on   BPF/%s",
 	      piaddr (info -> address));
 }
 #endif /* USE_BPF_SEND */
@@ -204,10 +201,7 @@ void if_register_receive (info, interface)
 
 	if (ioctl (info -> rfdesc, BIOCSETF, &p) < 0)
 		error ("Can't install packet filter program: %m");
-	note ("Listening on BPF/%s/%s",
-	      print_hw_addr (info -> hw_address.htype,
-			     info -> hw_address.hlen,
-			     info -> hw_address.haddr),
+	note ("Listening on BPF/%s",
 	      piaddr (info -> address));
 }
 #endif /* USE_BPF_RECEIVE */
