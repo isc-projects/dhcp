@@ -119,7 +119,7 @@ enum dhcp_token {
 	CHECK = 339,
 	EXTRACT_INT = 340,
 	IF = 341,
-	ADD = 342,
+	TOKEN_ADD = 342,
 	BREAK = 343,
 	ELSE = 344,
 	ELSIF = 345,
@@ -177,6 +177,8 @@ enum dhcp_token {
 	SPACE = 397,
 	CONCAT = 398,
 	ENCODE_INT = 399,
+	DDNS_FWD_NAME = 400,
+	DDNS_REV_NAME = 401,
 };
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\
