@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.45 1997/10/20 21:52:36 mellon Exp $ Copyright 1995, 1996 The Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.46 1998/02/06 01:10:28 mellon Exp $ Copyright 1995, 1996 The Internet Software Consortium.";
 #endif
 
 static char copyright[] =
@@ -77,6 +77,8 @@ int log_perror = 1;
 char *path_dhcpd_conf = _PATH_DHCPD_CONF;
 char *path_dhcpd_db = _PATH_DHCPD_DB;
 char *path_dhcpd_pid = _PATH_DHCPD_PID;
+
+int dhcp_max_agent_option_packet_length = DHCP_MTU_MAX;
 
 int main (argc, argv, envp)
 	int argc;
