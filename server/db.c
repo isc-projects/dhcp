@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: db.c,v 1.61 2001/02/12 20:53:56 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: db.c,v 1.62 2001/02/15 21:28:25 neild Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -684,10 +684,10 @@ int commit_leases ()
 		return 0;
 	}
 
-	/* If we've written more than a thousand leases or if
-	   we haven't rewritten the lease database in over an
-	   hour, rewrite it now. */
-	if (count > 1000 || (count && cur_time - write_time > 3600)) {
+	/* If we haven't rewritten the lease database in over an
+	   hour, rewrite it now.  (The length of time should probably
+	   be configurable. */
+	if (count && cur_time - write_time > 3600) {
 		count = 0;
 		write_time = cur_time;
 		new_lease_file ();
