@@ -8,8 +8,8 @@ NNAAMMEE
        dhcpd - Dynamic Host Configuration Protocol Server
 
 SSYYNNOOPPSSIISS
-       ddhhccppdd [ --pp _p_o_r_t ] [ --ff ] [ --dd ] [ --qq ] [ --ccff _c_o_n_f_i_g_-_f_i_l_e ]
-       [ --llff _l_e_a_s_e_-_f_i_l_e ] [ _i_f_0 [ _._._._i_f_N ] ]
+       ddhhccppdd  [  --pp _p_o_r_t ] [ --ff ] [ --dd ] [ --qq ] [ --tt | --TT ] [ --ccff
+       _c_o_n_f_i_g_-_f_i_l_e ] [ --llff _l_e_a_s_e_-_f_i_l_e ] [ _i_f_0 [ _._._._i_f_N ] ]
 
 DDEESSCCRRIIPPTTIIOONN
        The  Internet  Software  Consortium  DHCP  Server,  dhcpd,
@@ -167,6 +167,16 @@ dhcpd(8)                                                 dhcpd(8)
        copyright  message  on  startup.    To avoid printing this
        message, the --qq flag may be specified.
 
+       The DHCP server reads two files on startup:  a  configura­
+       tion file, and a lease database.   If the --tt flag is spec­
+       ified, the server will simply test the configuration  file
+       for  correct  syntax,  but will not attempt to perform any
+       network operations.   This can be used to test the  a  new
+       configuration file automatically before installing it.
+
+       The --TT flag can be used to test the lease database file in
+       a similar way.
+
 CCOONNFFIIGGUURRAATTIIOONN
        The syntax of the dhcpd.conf(5) file is  discussed  seper­
        ately.   This section should be used as an overview of the
@@ -180,16 +190,6 @@ SSuubbnneettss
        tion,  in order to dynamically allocate addresses, it must
        be assigned one or more ranges of addresses on each subnet
        which  it can in turn assign to client hosts as they boot.
-       Thus, a very simple configuration providing  DHCP  support
-       might look like this:
-
-            subnet 239.252.197.0 netmask 255.255.255.0 {
-              range 239.252.197.10 239.252.197.250;
-               }
-
-       Multiple address ranges may be specified like this:
-
-            subnet 239.252.197.0 netmask 255.255.255.0 {
 
 
 
@@ -202,6 +202,16 @@ SSuubbnneettss
 dhcpd(8)                                                 dhcpd(8)
 
 
+       Thus, a very simple configuration providing  DHCP  support
+       might look like this:
+
+            subnet 239.252.197.0 netmask 255.255.255.0 {
+              range 239.252.197.10 239.252.197.250;
+               }
+
+       Multiple address ranges may be specified like this:
+
+            subnet 239.252.197.0 netmask 255.255.255.0 {
               range 239.252.197.10 239.252.197.107;
               range 239.252.197.113 239.252.197.250;
             }
@@ -246,16 +256,6 @@ LLeeaassee LLeennggtthhss
        Each subnet need not have the same lease--in the  case  of
        an  office  environment  and  a  manufacturing environment
        served by the same DHCP server, it  might  make  sense  to
-       have widely disparate values for default and maximum lease
-       times on each subnet.
-
-BBOOOOTTPP SSuuppppoorrtt
-       Each BOOTP client  must  be  explicitly  declared  in  the
-       dhcpd.conf  file.    A  very basic client declaration will
-       specify the client network  interface's  hardware  address
-       and  the  IP  address  to  assign to that client.   If the
-       client needs to be able to  load  a  boot  file  from  the
-       server,  that  file's  name  must be specified.   A simple
 
 
 
@@ -268,6 +268,16 @@ BBOOOOTTPP SSuuppppoorrtt
 dhcpd(8)                                                 dhcpd(8)
 
 
+       have widely disparate values for default and maximum lease
+       times on each subnet.
+
+BBOOOOTTPP SSuuppppoorrtt
+       Each BOOTP client  must  be  explicitly  declared  in  the
+       dhcpd.conf  file.    A  very basic client declaration will
+       specify the client network  interface's  hardware  address
+       and  the  IP  address  to  assign to that client.   If the
+       client needs to be able to  load  a  boot  file  from  the
+       server,  that  file's  name  must be specified.   A simple
        bootp client declaration might look like this:
 
             host haagen {
@@ -312,16 +322,6 @@ OOppttiioonnss
               filename "/tftpboot/haagen.boot";
               option domain-name-servers 192.5.5.1;
               option domain-name "vix.com";
-            }
-
-       A  more complete description of the dhcpd.conf file syntax
-       is provided in dhcpd.conf(5).
-
-FFIILLEESS
-       //eettcc//ddhhccppdd..ccoonnff,, //vvaarr//ddbb//ddhhccppdd..lleeaasseess,, //vvaarr//rruunn//ddhhccppdd..ppiidd,,
-       //vvaarr//ddbb//ddhhccppdd..lleeaasseess~~..
-
-
 
 
 
@@ -334,6 +334,15 @@ FFIILLEESS
 dhcpd(8)                                                 dhcpd(8)
 
 
+            }
+
+       A  more complete description of the dhcpd.conf file syntax
+       is provided in dhcpd.conf(5).
+
+FFIILLEESS
+       //eettcc//ddhhccppdd..ccoonnff,, //vvaarr//ddbb//ddhhccppdd..lleeaasseess,, //vvaarr//rruunn//ddhhccppdd..ppiidd,,
+       //vvaarr//ddbb//ddhhccppdd..lleeaasseess~~..
+
 SSEEEE AALLSSOO
        dhclient(8), dhcrelay(8), dhcpd.conf(5), dhcpd.leases(5)
 
@@ -343,15 +352,6 @@ AAUUTTHHOORR
        provided by the Internet Software Consortium.  Information
        about the Internet Software Consortium  can  be  found  at
        hhttttpp::////wwwwww..iisscc..oorrgg//iisscc..
-
-
-
-
-
-
-
-
-
 
 
 
