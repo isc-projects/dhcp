@@ -1,5 +1,5 @@
 #if !defined(lint) && !defined(SABER)
-static const char rcsid[] = "$Id: res_update.c,v 1.4 2000/03/18 02:15:49 mellon Exp $";
+static const char rcsid[] = "$Id: res_update.c,v 1.5 2000/04/06 23:02:59 mellon Exp $";
 #endif /* not lint */
 
 /*
@@ -85,6 +85,7 @@ res_nupdate(res_state statp, ns_updrec *rrecp_in) {
 	struct zonegrp *zptr, tgrp;
 	int nzones = 0, nscount = 0;
 	unsigned n;
+	int rval;
 	struct sockaddr_in nsaddrs[MAXNS];
 	ns_rcode rcode;
 	ns_tsig_key *key;
@@ -135,9 +136,8 @@ res_nupdate(res_state statp, ns_updrec *rrecp_in) {
 	zptr->z_flags |= ZG_F_ZONESECTADDED;
 
 	/* Marshall the update message. */
-	n = res_nmkupdate(statp, ISC_LIST_HEAD(zptr->z_rrlist),
-			  packet, sizeof packet);
-	if (n < 0) {
+	n = sizeof packet;
+	if (res_nmkupdate(statp, ISC_LIST_HEAD(zptr->z_rrlist), packet, &n)) {
 		rcode = -1;
 		goto done;
 	}
@@ -150,13 +150,13 @@ res_nupdate(res_state statp, ns_updrec *rrecp_in) {
 	/* Send the update and remember the result. */
 	key = (ns_tsig_key *)0;
 	if (!find_tsig_key (&key, zptr->z_origin)) {
-		n = res_nsendsigned(statp, packet, n, key,
-				    answer, sizeof answer);
+		rval = res_nsendsigned(statp, packet, n, key,
+				       answer, sizeof answer);
 		tkey_free (&key);
 	} else {
-		n = res_nsend(statp, packet, n, answer, sizeof answer);
+		rval = res_nsend(statp, packet, n, answer, sizeof answer);
 	}
-	if (n < 0) {
+	if (rval < 0) {
 		rcode = -1;
 		goto undone;
 	}
