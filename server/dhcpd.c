@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.113 2001/03/01 22:11:50 mellon Exp $ Copyright 1995-2001 Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.114 2001/04/05 22:52:48 mellon Exp $ Copyright 1995-2001 Internet Software Consortium.";
 #endif
 
   static char copyright[] =
@@ -214,6 +214,16 @@ int main (argc, argv, envp)
 	char *traceinfile = (char *)0;
 	char *traceoutfile = (char *)0;
 #endif
+
+	/* Make sure we have stdin, stdout and stderr. */
+	status = open ("/dev/null", O_RDWR);
+	if (status == 0)
+		status = open ("/dev/null", O_RDWR);
+	if (status == 1) {
+		status = open ("/dev/null", O_RDWR);
+		log_perror = 0; /* No sense logging to /dev/null. */
+	} else if (status != -1)
+		close (status);
 
 	/* Set up the client classification system. */
 	classification_setup ();
