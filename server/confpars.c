@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.95 2000/01/08 01:43:52 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.96 2000/01/25 01:38:17 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -41,12 +41,6 @@ isc_result_t readconf ()
 	enum dhcp_token token;
 	int declaration = 0;
 	int status;
-
-	/* Set up the initial dhcp option universe. */
-	initialize_common_option_spaces ();
-	initialize_server_option_spaces ();
-
-	root_group.authoritative = 0;
 
 	if ((file = open (path_dhcpd_conf, O_RDONLY)) < 0)
 		log_fatal ("Can't open %s: %m", path_dhcpd_conf);
@@ -116,16 +110,13 @@ isc_result_t read_leases ()
 				enter_lease (lease);
 				if (lease -> on_expiry)
 					executable_statement_dereference
-						(&lease -> on_expiry,
-						 "read_leases");
+						(&lease -> on_expiry, MDL);
 				if (lease -> on_commit)
 					executable_statement_dereference
-						(&lease -> on_commit,
-						 "read_leases");
+						(&lease -> on_commit, MDL);
 				if (lease -> on_release)
 					executable_statement_dereference
-						(&lease -> on_release,
-						 "read_leases");
+						(&lease -> on_release, MDL);
 			} else
 				parse_warn (cfile,
 					    "possibly corrupt lease file");
@@ -210,8 +201,8 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		if (parse_auth_key (&key_id, cfile)) {
 			if (type == HOST_DECL)
 				data_string_copy (&host_decl -> auth_key_id,
-						  &key_id, "parse_statement");
-			data_string_forget (&key_id, "parse_statement");
+						  &key_id, MDL);
+			data_string_forget (&key_id, MDL);
 		}
 		break;
 	      case HOST:
@@ -276,10 +267,10 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		/* Otherwise, cons up a fake shared network structure
 		   and populate it with the lone subnet... */
 
-		share = new_shared_network ("parse_statement");
+		share = new_shared_network (MDL);
 		if (!share)
 			log_fatal ("No memory for shared subnet");
-		share -> group = clone_group (group, "parse_statement:subnet");
+		share -> group = clone_group (group, MDL);
 		share -> group -> shared_network = share;
 
 		parse_subnet_declaration (cfile, share);
@@ -291,7 +282,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 
 			/* Make the shared network name from network number. */
 			n = piaddr (share -> subnets -> net);
-			t = malloc (strlen (n) + 1);
+			t = dmalloc (strlen (n) + 1, MDL);
 			if (!t)
 				log_fatal ("no memory for subnet name");
 			strcpy (t, n);
@@ -368,7 +359,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		else {
 			parse_warn (cfile, "fixed-address parameter not %s",
 				    "allowed here.");
-			option_cache_dereference (&cache, "parse_statement");
+			option_cache_dereference (&cache, MDL);
 		}
 		break;
 
@@ -430,9 +421,9 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 			if (type != ROOT_GROUP) {
 				parse_warn (cfile,
 					    "option space definitions %s",
-					    " may not be scoped.");
+					    "may not be scoped.");
 				skip_to_semi (cfile);
-				free_option (option, "parse_statement");
+				free_option (option, MDL);
 				break;
 			}
 			parse_option_space_decl (cfile);
@@ -449,15 +440,13 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 						    "option definitions%s",
 						    " may not be scoped.");
 					skip_to_semi (cfile);
-					free_option (option,
-						     "parse_statement");
+					free_option (option, MDL);
 					break;
 				}
 				next_token (&val, cfile);
 				if (!parse_option_code_definition (cfile,
 								   option))
-					free_option (option,
-						     "parse_statement");
+					free_option (option, MDL);
 				return declaration;
 			}
 
@@ -468,7 +457,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 					    option -> universe -> name,
 					    option -> name);
 				skip_to_semi (cfile);
-				free_option (option, "parse_statement");
+				free_option (option, MDL);
 				return declaration;
 			}
 
@@ -550,8 +539,8 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 				if (ep -> refcnt > 1) /* XXX */
 					multi = 1;
 			if (!multi) {
-				executable_statement_reference
-					(&ep -> next, et, "parse_statement");
+				executable_statement_reference (&ep -> next,
+								et, MDL);
 				return declaration;
 			}
 
@@ -559,22 +548,20 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 			   current group statements first and the new
 			   statement in the next pointer. */
 			ep = (struct executable_statement *)0;
-			if (!executable_statement_allocate
-			    (&ep, "parse_statement"))
+			if (!executable_statement_allocate (&ep, MDL))
 				log_fatal ("No memory for statements.");
 			ep -> op = statements_statement;
-			executable_statement_reference
-				(&ep -> data.statements,
-				 group -> statements, "parse_statement");
-			executable_statement_reference
-				(&ep -> next, et, "parse_statement");
-			executable_statement_dereference
-				(&group -> statements, "parse_statement");
-			executable_statement_reference
-				(&group -> statements, ep, "parse_statements");
+			executable_statement_reference (&ep -> data.statements,
+							group -> statements,
+							MDL);
+			executable_statement_reference (&ep -> next, et, MDL);
+			executable_statement_dereference (&group -> statements,
+							  MDL);
+			executable_statement_reference (&group -> statements,
+							ep, MDL);
 		} else
-			executable_statement_reference
-				(&group -> statements, et, "parse_statements");
+			executable_statement_reference (&group -> statements,
+							et, MDL);
 		return declaration;
 	}
 
@@ -613,7 +600,7 @@ void parse_failover_peer (cfile, group, type)
 
 	token = next_token (&val, cfile);
 	if (is_identifier (token) || token == STRING) {
-		name = dmalloc (strlen (val) + 1, "peer name");
+		name = dmalloc (strlen (val) + 1, MDL);
 		if (!name)
 			log_fatal ("no memory for peer name %s", name);
 		strcpy (name, val);
@@ -629,7 +616,7 @@ void parse_failover_peer (cfile, group, type)
 
 	token = next_token (&val, cfile);
 	if (token == SEMI) {
-		dfree (name, "peer name");
+		dfree (name, MDL);
 		if (type != SHARED_NET_DECL)
 			parse_warn (cfile, "failover peer reference not %s",
 				    "in shared-network declaration");
@@ -699,8 +686,7 @@ void parse_failover_peer (cfile, group, type)
 			option_cache (&peer -> address,
 				      (struct data_string *)0, expr,
 				      (struct option *)0);
-			expression_dereference (&expr,
-						"parse_failover_peer");
+			expression_dereference (&expr, MDL);
 			break;
 		      case PORT:
 			token = next_token (&val, cfile);
@@ -747,10 +733,10 @@ void parse_failover_peer (cfile, group, type)
 			}
 			parse_semi (cfile);
 		      make_hba:
-			peer -> hba = dmalloc (32, "parse_failover_peer");
+			peer -> hba = dmalloc (32, MDL);
 			if (!peer -> hba) {
-				dfree (peer -> name, "parse_failover_peer");
-				dfree (peer, "parse_failover_peer");
+				dfree (peer -> name, MDL);
+				dfree (peer, MDL);
 			}
 			memcpy (peer -> hba, hba, 32);
 			break;
@@ -862,11 +848,11 @@ void parse_pool_statement (cfile, group, type)
 	struct permit **permit_head;
 	int declaration = 0;
 
-	pool = new_pool ("parse_pool_statement");
+	pool = new_pool (MDL);
 	if (!pool)
 		log_fatal ("no memory for pool.");
 
-	pool -> group = clone_group (group, "parse_pool_statement");
+	pool -> group = clone_group (group, MDL);
 
 	if (type == SUBNET_DECL)
 		pool -> shared_network = group -> subnet -> shared_network;
@@ -880,7 +866,7 @@ void parse_pool_statement (cfile, group, type)
 				    &pool -> failover_peer, 
 				    (omapi_object_t *)
 				    pool -> shared_network -> failover_peer,
-				    "parse_pool_statement");
+				    MDL);
 #endif
 
 	if (!parse_lbrace (cfile))
@@ -902,8 +888,7 @@ void parse_pool_statement (cfile, group, type)
 			if (pool -> failover_peer)
 				omapi_object_dereference
 					((omapi_object_t **)
-					 &pool -> failover_peer,
-					 "parse_pool_statement");
+					 &pool -> failover_peer, MDL);
 			/* XXX Flag error if there's no failover peer? */
 #endif
 			break;
@@ -915,7 +900,7 @@ void parse_pool_statement (cfile, group, type)
 		      case ALLOW:
 			permit_head = &pool -> permit_list;
 		      get_permit:
-			permit = new_permit ("parse_pool_statement");
+			permit = new_permit (MDL);
 			if (!permit)
 				log_fatal ("no memory for permit");
 			next_token (&val, cfile);
@@ -928,8 +913,7 @@ void parse_pool_statement (cfile, group, type)
 					parse_warn (cfile,
 						    "expecting \"clients\"");
 					skip_to_semi (cfile);
-					free_permit (permit,
-						     "parse_pool_statement");
+					free_permit (permit, MDL);
 					continue;
 				}
 				break;
@@ -962,8 +946,7 @@ void parse_pool_statement (cfile, group, type)
 					parse_warn (cfile,
 						    "expecting \"bootp\"");
 					skip_to_semi (cfile);
-					free_permit (permit,
-						     "parse_pool_statement");
+					free_permit (permit, MDL);
 					continue;
 				}
 				goto get_clients;
@@ -972,16 +955,14 @@ void parse_pool_statement (cfile, group, type)
 				if (next_token (&val, cfile) != OF) {
 					parse_warn (cfile, "expecting \"of\"");
 					skip_to_semi (cfile);
-					free_permit (permit,
-						     "parse_pool_statement");
+					free_permit (permit, MDL);
 					continue;
 				}
 				if (next_token (&val, cfile) != STRING) {
 					parse_warn (cfile,
 						    "expecting class name.");
 					skip_to_semi (cfile);
-					free_permit (permit,
-						     "parse_pool_statement");
+					free_permit (permit, MDL);
 					continue;
 				}
 				permit -> type = permit_class;
@@ -1140,13 +1121,12 @@ void parse_host_declaration (cfile, group)
 		name = (char *)0;
 	}
 
-	host = (struct host_decl *)dmalloc (sizeof (struct host_decl),
-					    "parse_host_declaration");
+	host = (struct host_decl *)dmalloc (sizeof (struct host_decl), MDL);
 	if (!host)
 		log_fatal ("can't allocate host decl struct %s.", name);
 	memset (host, 0, sizeof *host);
 	host -> name = name;
-	host -> group = clone_group (group, "parse_host_declaration");
+	host -> group = clone_group (group, MDL);
 
 	if (!parse_lbrace (cfile))
 		return;
@@ -1202,13 +1182,11 @@ void parse_host_declaration (cfile, group)
 				if (host -> named_group)
 					omapi_object_dereference
 						((omapi_object_t **)
-						 &host -> named_group,
-						 "parse_host_declaration");
+						 &host -> named_group, MDL);
 				omapi_object_reference
 					((omapi_object_t **)
 					 &host -> named_group,
-					 (omapi_object_t *)go,
-					 "parse_host_declaration");
+					 (omapi_object_t *)go, MDL);
 			}
 			if (!parse_semi (cfile))
 				break;
@@ -1221,8 +1199,7 @@ void parse_host_declaration (cfile, group)
 			unsigned len;
 
 			token = next_token (&val, cfile);
-			data_string_forget (&host -> client_identifier,
-					    "parse_host_declaration");
+			data_string_forget (&host -> client_identifier, MDL);
 
 			/* See if it's a string or a cshl. */
 			token = peek_token (&val, cfile);
@@ -1245,8 +1222,7 @@ void parse_host_declaration (cfile, group)
 			}
 			if (!buffer_allocate
 			    (&host -> client_identifier.buffer,
-			     len + host -> client_identifier.terminated,
-			     "parse_host_declaration"))
+			     len + host -> client_identifier.terminated, MDL))
 				log_fatal ("no memory for uid for host %s.",
 					   host -> name);
 			host -> client_identifier.data =
@@ -1255,7 +1231,7 @@ void parse_host_declaration (cfile, group)
 			memcpy (host -> client_identifier.buffer -> data, s,
 				len + host -> client_identifier.terminated);
 			if (t)
-				dfree (t, "parse_host_declaration");
+				dfree (t, MDL);
 
 			if (!parse_semi (cfile))
 				break;
@@ -1275,10 +1251,10 @@ void parse_host_declaration (cfile, group)
 		if (hp) {
 			delete_host (hp, 0);
 		}
-		dfree (host -> name, "parse_host_declaration");
+		dfree (host -> name, MDL);
 		if (host -> group)
-			free_group (host -> group, "parse_host_declaration");
-		dfree (host, "parse_host_declaration");
+			free_group (host -> group, MDL);
+		dfree (host, MDL);
 	} else {
 		if (host -> named_group && host -> named_group -> group) {
 			if (host -> group -> statements ||
@@ -1287,8 +1263,7 @@ void parse_host_declaration (cfile, group)
 				host -> group -> next =
 					host -> named_group -> group;
 			else {
-				dfree (host -> group,
-				       "parse_host_declaration");
+				dfree (host -> group, MDL);
 				host -> group = host -> named_group -> group;
 			}
 		}
@@ -1359,8 +1334,7 @@ struct class *parse_class_declaration (cfile, group, type)
 	if (type == 0 || type == 1) {
 		data.len = strlen (val);
 		data.buffer = (struct buffer *)0;
-		if (!buffer_allocate (&data.buffer,
-				      data.len + 1, "parse_class_declaration"))
+		if (!buffer_allocate (&data.buffer, data.len + 1, MDL))
 			log_fatal ("no memoy for class name.");
 		data.data = &data.buffer -> data [0];
 		data.terminated = 1;
@@ -1368,8 +1342,7 @@ struct class *parse_class_declaration (cfile, group, type)
 		name = type ? "implicit-vendor-class" : "implicit-user-class";
 	} else if (type == 2) {
 		char *tname;
-		if (!(tname = dmalloc (strlen (val) + 1,
-				       "parse_class_declaration")))
+		if (!(tname = dmalloc (strlen (val) + 1, MDL)))
 			log_fatal ("No memory for class name %s.", val);
 		strcpy (tname, val);
 		name = tname;
@@ -1384,8 +1357,7 @@ struct class *parse_class_declaration (cfile, group, type)
 			token = next_token (&val, cfile);
 			data.len = strlen (val);
 			data.buffer = (struct buffer *)0;
-			if (!buffer_allocate (&data.buffer, data.len + 1,
-					     "parse_class_declaration"))
+			if (!buffer_allocate (&data.buffer, data.len + 1, MDL))
 				return (struct class *)0;
 			data.terminated = 1;
 			data.data = &data.buffer -> data [0];
@@ -1409,8 +1381,7 @@ struct class *parse_class_declaration (cfile, group, type)
 	/* If we didn't find an existing class, allocate a new one. */
 	if (!class) {
 		/* Allocate the class structure... */
-		class = (struct class *)dmalloc (sizeof (struct class),
-						 "parse_class_declaration");
+		class = (struct class *)dmalloc (sizeof (struct class), MDL);
 		if (!class)
 			log_fatal ("No memory for class %s.", val);
 		memset (class, 0, sizeof *class);
@@ -1421,16 +1392,14 @@ struct class *parse_class_declaration (cfile, group, type)
 			if (class -> lease_limit) {
 				class -> billed_leases =
 					dmalloc (class -> lease_limit *
-						 sizeof (struct lease *),
-						 "parse_class_declaration");
+						 sizeof (struct lease *), MDL);
 				if (!class -> billed_leases)
 					log_fatal ("no memory for billing");
 				memset (class -> billed_leases, 0,
 					(class -> lease_limit *
 					 sizeof class -> billed_leases));
 			}
-			data_string_copy (&class -> hash_string, &data,
-					  "parse_class_declaration");
+			data_string_copy (&class -> hash_string, &data, MDL);
 			if (!pc -> hash)
 				pc -> hash = new_hash ();
 			add_hash (pc -> hash,
@@ -1439,7 +1408,7 @@ struct class *parse_class_declaration (cfile, group, type)
 				  (unsigned char *)class);
 		} else {
 			class -> group =
-				clone_group (group, "parse_class_declaration");
+				clone_group (group, MDL);
 		}
 
 		/* If this is an implicit vendor or user class, add a
@@ -1448,13 +1417,13 @@ struct class *parse_class_declaration (cfile, group, type)
 		if (type == 0 || type == 1) {
 			stmt = ((struct executable_statement *)
 				dmalloc (sizeof (struct executable_statement),
-					 "implicit user/vendor class"));
+					 MDL));
 			if (!stmt)
 				log_fatal ("no memory for class statement.");
 			memset (stmt, 0, sizeof *stmt);
 			stmt -> op = supersede_option_statement;
 			if (option_cache_allocate (&stmt -> data.option,
-						   "parse_class_statement")) {
+						   MDL)) {
 				stmt -> data.option -> data = data;
 				stmt -> data.option -> option =
 					dhcp_universe.options
@@ -1470,7 +1439,7 @@ struct class *parse_class_declaration (cfile, group, type)
 	}
 
 	if (type == 0 || type == 1 || type == 3)
-		data_string_forget (&data, "parse_class_declaration");
+		data_string_forget (&data, MDL);
 
 	/* Spawned classes don't have their own settings. */
 	if (class -> superclass) {
@@ -1480,8 +1449,7 @@ struct class *parse_class_declaration (cfile, group, type)
 			return class;
 		}
 		/* Give the subclass its own group. */
-		class -> group = clone_group (class -> group,
-					      "parse_class_declaration");
+		class -> group = clone_group (class -> group, MDL);
 	}
 
 	if (!parse_lbrace (cfile))
@@ -1573,8 +1541,7 @@ struct class *parse_class_declaration (cfile, group, type)
 			class -> lease_limit = atoi (val);
 			class -> billed_leases =
 				dmalloc (class -> lease_limit *
-					 sizeof (struct lease *),
-					 "parse_class_declaration");
+					 sizeof (struct lease *), MDL);
 			if (!class -> billed_leases)
 				log_fatal ("no memory for billed leases.");
 			memset (class -> billed_leases, 0,
@@ -1616,13 +1583,13 @@ void parse_shared_net_declaration (cfile, group)
 	char *name;
 	int declaration = 0;
 
-	share = new_shared_network ("parse_shared_net_declaration");
+	share = new_shared_network (MDL);
 	if (!share)
 		log_fatal ("No memory for shared subnet");
 	share -> pools = (struct pool *)0;
 	share -> next = (struct shared_network *)0;
 	share -> interface = (struct interface_info *)0;
-	share -> group = clone_group (group, "parse_shared_net_declaration");
+	share -> group = clone_group (group, MDL);
 	share -> group -> shared_network = share;
 
 	/* Get the name of the shared network... */
@@ -1634,7 +1601,7 @@ void parse_shared_net_declaration (cfile, group)
 			parse_warn (cfile, "zero-length shared network name");
 			val = "<no-name-given>";
 		}
-		name = malloc (strlen (val) + 1);
+		name = dmalloc (strlen (val) + 1, MDL);
 		if (!name)
 			log_fatal ("no memory for shared network name");
 		strcpy (name, val);
@@ -1653,8 +1620,7 @@ void parse_shared_net_declaration (cfile, group)
 		if (token == RBRACE) {
 			token = next_token (&val, cfile);
 			if (!share -> subnets) {
-				parse_warn (cfile,
-					    "empty shared-network decl");
+				parse_warn (cfile, MDL);
 				return;
 			}
 			enter_shared_network (share);
@@ -1695,12 +1661,11 @@ void parse_subnet_declaration (cfile, share)
 	int declaration = 0;
 	struct interface_info *ip;
 
-	subnet = new_subnet ("parse_subnet_declaration");
+	subnet = new_subnet (MDL);
 	if (!subnet)
 		log_fatal ("No memory for new subnet");
 	subnet -> shared_network = share;
-	subnet -> group = clone_group (share -> group,
-				       "parse_subnet_declaration");
+	subnet -> group = clone_group (share -> group, MDL);
 	subnet -> group -> subnet = subnet;
 
 	/* Get the network number... */
@@ -1790,13 +1755,13 @@ void parse_group_declaration (cfile, group)
 	int dynamicp = 0;
 	int staticp = 0;
 
-	g = clone_group (group, "parse_group_declaration");
+	g = clone_group (group, MDL);
 
 	token = peek_token (&val, cfile);
 	if (is_identifier (token) || token == STRING) {
 		next_token (&val, cfile);
 		
-		name = dmalloc (strlen (val) + 1, "parse_group_declaration");
+		name = dmalloc (strlen (val) + 1, MDL);
 		if (!name)
 			log_fatal ("no memory for group decl name %s", val);
 		strcpy (name, val);
@@ -1844,7 +1809,7 @@ void parse_group_declaration (cfile, group)
 				}
 			}
 		} else {
-			t = dmalloc (sizeof *t, "parse_group_declaration");
+			t = dmalloc (sizeof *t, MDL);
 			if (!t)
 				log_fatal ("no memory for group decl %s", val);
 			memset (t, 0, sizeof *t);
@@ -1879,10 +1844,8 @@ int parse_fixed_addr_param (oc, cfile)
 			if (expr) {
 				new = (struct expression *)0;
 				status = make_concat (&new, expr, tmp);
-				expression_dereference
-					(&expr, "parse_fixed_addr_param");
-				expression_dereference
-					(&tmp, "parse_fixed_addr_param");
+				expression_dereference (&expr, MDL);
+				expression_dereference (&tmp, MDL);
 				if (status)
 					return 0;
 				expr = new;
@@ -1890,8 +1853,7 @@ int parse_fixed_addr_param (oc, cfile)
 				expr = tmp;
 		} else {
 			if (expr)
-				expression_dereference
-					(&expr, "parse_fixed_addr_param");
+				expression_dereference (&expr, MDL);
 			return 0;
 		}
 		token = peek_token (&val, cfile);
@@ -1901,13 +1863,12 @@ int parse_fixed_addr_param (oc, cfile)
 
 	if (!parse_semi (cfile)) {
 		if (expr)
-			expression_dereference (&expr,
-						"parse_fixed_addr_param");
+			expression_dereference (&expr, MDL);
 		return 0;
 	}
 	status = option_cache (oc, (struct data_string *)0, expr,
 			       (struct option *)0);
-	expression_dereference (&expr, "parse_fixed_addr_param");
+	expression_dereference (&expr, MDL);
 	return status;
 }
 
@@ -1937,8 +1898,6 @@ TIME parse_timestamp (cfile)
 		     | TIMESTAMP date
 		     | HARDWARE hardware-parameter
 		     | UID hex_numbers SEMI
-		     | DDNS_FWD_NAME hostname
-		     | DDNS_REV_NAME hostname
 		     | HOSTNAME hostname SEMI
 		     | CLIENT_HOSTNAME hostname SEMI
 		     | CLASS identifier SEMI
@@ -1956,8 +1915,13 @@ struct lease *parse_lease_declaration (cfile)
 	char tbuf [32];
 	static struct lease lease;
 	struct executable_statement *on;
+	struct expression *exp;
+	struct data_string ds;
 	int lose;
 	TIME t;
+	char *s;
+	int noequal, newbinding;
+	struct binding *binding;
 
 	/* Zap the lease structure... */
 	memset (&lease, 0, sizeof lease);
@@ -2028,7 +1992,8 @@ struct lease *parse_lease_declaration (cfile)
 				unsigned char *tuid;
 				token = next_token (&val, cfile);
 				lease.uid_len = strlen (val);
-				tuid = (unsigned char *)malloc (lease.uid_len);
+				tuid = ((unsigned char *)
+					dmalloc (lease.uid_len, MDL));
 				if (!tuid) {
 					log_error ("no space for uid");
 					return (struct lease *)0;
@@ -2040,10 +2005,8 @@ struct lease *parse_lease_declaration (cfile)
 				lease.uid = (parse_numeric_aggregate
 					     (cfile, (unsigned char *)0,
 					      &lease.uid_len, ':', 16, 8));
-				if (!lease.uid) {
-					log_error ("no space for uid");
+				if (!lease.uid)
 					return (struct lease *)0;
-				}
 				if (lease.uid_len == 0) {
 					lease.uid = (unsigned char *)0;
 					parse_warn (cfile, "zero-length uid");
@@ -2173,27 +2136,117 @@ struct lease *parse_lease_declaration (cfile)
 				skip_to_rbrace (cfile, 1);
 				return (struct lease *)0;
 			}
+			seenbit = 0;
 			if ((on -> data.on.evtypes & ON_EXPIRY) &&
 			    on -> data.on.statements) {
-				seenbit = 16384;
+				seenbit |= 16384;
 				executable_statement_reference
 					(&lease.on_expiry,
-					 on -> data.on.statements,
-					 "parse_lease_declaration");
+					 on -> data.on.statements, MDL);
 			}
 			if ((on -> data.on.evtypes & ON_RELEASE) &&
 			    on -> data.on.statements) {
-				seenbit = 32768;
+				seenbit |= 32768;
 				executable_statement_reference
 					(&lease.on_release,
-					 on -> data.on.statements,
-					 "parse_lease_declaration");
+					 on -> data.on.statements, MDL);
 			}
-			executable_statement_dereference
-				(&on, "parse_lease_declaration");
+			executable_statement_dereference (&on, MDL);
 			break;
 			
+		      case TOKEN_SET:
+			noequal = 0;
+			
+			token = next_token (&val, cfile);
+			if (token != NAME && token != NUMBER_OR_NAME) {
+				parse_warn (cfile,
+					    "%s can't be a variable name",
+					    val);
+			      badset:
+				skip_to_semi (cfile);
+				return (struct lease *)0;
+			}
+			
+			seenbit = 0;
+		      special_set:
+			binding = find_binding (&lease.scope, val);
+			if (!binding) {
+				binding = dmalloc (sizeof *binding, MDL);
+				if (!binding)
+					log_fatal ("No memory for lease %s.",
+						   "binding");
+				memset (binding, 0, sizeof *binding);
+				binding -> name =
+					dmalloc (strlen (val) + 1, MDL);
+				if (!binding -> name)
+					log_fatal ("No memory for binding %s.",
+						   "name");
+				strcpy (binding -> name, val);
+				newbinding = 1;
+			} else if (binding -> value.data) {
+				data_string_forget (&binding -> value, MDL);
+				newbinding = 0;
+			}
+
+			if (!noequal) {
+			    token = next_token (&val, cfile);
+			    if (token != EQUAL) {
+				parse_warn (cfile,
+					    "expecting '=' in set statement.");
+				goto badset;
+			    }
+			}
+
+			token = peek_token (&val, cfile);
+			if (token == STRING) {
+				unsigned char *tuid;
+				token = next_token (&val, cfile);
+				binding -> value.len = strlen (val); /* !! */
+				if (!(buffer_allocate
+				      (&binding -> value.buffer,
+				       binding -> value.len + 1, MDL)))
+					log_fatal ("No memory for binding.");
+				strcpy (binding -> value.buffer -> data, val);
+				binding -> value.data =
+					binding -> value.buffer -> data;
+				binding -> value.terminated = 1;
+			} else {
+				s = (parse_numeric_aggregate
+				     (cfile, (unsigned char *)0,
+				      &binding -> value.len, ':', 16, 8));
+				if (!s)
+					return (struct lease *)0;
+				if (binding -> value.len) {
+				    if (!(buffer_allocate
+					  (&binding -> value.buffer,
+					   binding -> value.len + 1, MDL)))
+					    log_fatal ("No memory for%s.",
+						       " binding");
+				    memcpy (binding -> value.buffer -> data,
+					    s, binding -> value.len);
+				    dfree (s, MDL);
+				    binding -> value.data =
+					    binding -> value.buffer -> data;
+				}
+			}
+			if (newbinding) {
+				binding -> next = lease.scope.bindings;
+				lease.scope.bindings = binding;
+			}
+			parse_semi (cfile);
+			break;
+
+
 		      default:
+			if (!strcasecmp (val, "ddns-fwd-name")) {
+				seenbit = 4096;
+				noequal = 1;
+				goto special_set;
+			} else if (!strcasecmp (val, "ddns-rev-name")) {
+				seenbit = 8192;
+				noequal = 1;
+				goto special_set;
+			}
 			skip_to_semi (cfile);
 			seenbit = 0;
 			return (struct lease *)0;
@@ -2318,43 +2371,49 @@ void parse_address_range (cfile, group, type, pool)
 		
 		/* If we're permitting dynamic bootp for this range,
 		   then look for a pool with an empty prohibit list and
-		   a permit list with one entry which permits dynamic
-		   bootp. */
+		   a permit list with one entry that permits all clients. */
 		for (pool = share -> pools; pool; pool = pool -> next) {
-			if ((!dynamic &&
-			     !pool -> permit_list && !pool -> prohibit_list) ||
-			    (dynamic &&
-			     !pool -> prohibit_list &&
+			if ((!dynamic && !pool -> permit_list && 
+			     pool -> prohibit_list &&
+			     !pool -> prohibit_list -> next &&
+			     (pool -> prohibit_list -> type ==
+			      permit_dynamic_bootp_clients)) ||
+			    (dynamic && !pool -> prohibit_list &&
 			     pool -> permit_list &&
 			     !pool -> permit_list -> next &&
 			     (pool -> permit_list -> type ==
 			      permit_all_clients))) {
-				break;
+  				break;
 			}
 			last = pool;
 		}
 
 		/* If we didn't get a pool, make one. */
 		if (!pool) {
-			pool = new_pool ("parse_address_range");
+			struct permit *p;
+			pool = new_pool (MDL);
 			if (!pool)
 				log_fatal ("no memory for ad-hoc pool.");
+			p = new_permit (MDL);
+			if (!p)
+				log_fatal ("no memory for ad-hoc permit.");
+
+			/* Dynamic pools permit all clients.   Otherwise
+			   we prohibit BOOTP clients. */
 			if (dynamic) {
-				pool -> permit_list =
-					new_permit ("parse_address_range");
-				if (!pool -> permit_list)
-					log_fatal ("no memory for ad-hoc %s.",
-						   "permit");
-				pool -> permit_list -> type =
-					permit_all_clients;
+				p -> type = permit_all_clients;
+				pool -> permit_list = p;
+			} else {
+				p -> type = permit_dynamic_bootp_clients;
+				pool -> prohibit_list = p;
 			}
+
 			if (share -> pools)
 				last -> next = pool;
 			else
 				share -> pools = pool;
 			pool -> shared_network = share;
-			pool -> group = clone_group (share -> group,
-						     "parse_address_range");
+			pool -> group = clone_group (share -> group, MDL);
 		}
 	}
 
