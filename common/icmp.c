@@ -23,7 +23,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: icmp.c,v 1.13 1999/03/16 05:50:34 mellon Exp $ Copyright (c) 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: icmp.c,v 1.13.2.1 1999/12/09 00:26:51 mellon Exp $ Copyright (c) 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -60,11 +60,16 @@ void icmp_startup (routep, handler)
 	if (icmp_protocol_fd < 0)
 		log_fatal ("unable to create icmp socket: %m");
 
+#if defined (HAVE_SETFD)
+	if (fcntl (icmp_protocol_fd, F_SETFD, 1) < 0)
+		log_error ("Can't set close-on-exec on icmp socket: %m");
+#endif
+
 	/* Make sure it does routing... */
 	state = 0;
 	if (setsockopt (icmp_protocol_fd, SOL_SOCKET, SO_DONTROUTE,
 			(char *)&state, sizeof state) < 0)
-		log_fatal ("Unable to disable SO_DONTROUTE on ICMP socket: %m");
+		log_fatal ("Can't disable SO_DONTROUTE on ICMP socket: %m");
 
 	add_protocol ("icmp", icmp_protocol_fd,
 		      icmp_echoreply, (void *)handler);
