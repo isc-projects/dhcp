@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: icmp.c,v 1.7 1997/06/04 20:59:40 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: icmp.c,v 1.8 1998/01/12 01:00:42 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -135,10 +135,11 @@ void icmp_echoreply (protocol)
 	struct protocol *protocol;
 {
 	struct icmp *icfrom;
+	struct ip *ip;
 	struct sockaddr_in from;
 	unsigned char icbuf [1500];
 	int status;
-	int len;
+	int len, hlen;
 	struct iaddr ia;
 	void (*handler) PROTO ((struct iaddr, u_int8_t *, int));
 
@@ -150,13 +151,17 @@ void icmp_echoreply (protocol)
 		return;
 	}
 
-	/* Probably not for us. */
-	if (status < (sizeof (struct ip)) + (sizeof *icfrom)) {
+	/* Find the IP header length... */
+	ip = (struct ip *)icbuf;
+	hlen = ip -> ip_hl << 2;
+
+	/* Short packet? */
+	if (status < hlen + (sizeof *icfrom)) {
 		return;
 	}
 
-	len = status - sizeof (struct ip);
-	icfrom = (struct icmp *)(icbuf + sizeof (struct ip));
+	len = status - hlen;
+	icfrom = (struct icmp *)(icbuf + hlen);
 
 	/* Silently discard ICMP packets that aren't echoreplies. */
 	if (icfrom -> icmp_type != ICMP_ECHOREPLY) {
