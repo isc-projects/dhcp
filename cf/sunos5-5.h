@@ -35,6 +35,16 @@
  * under a contract with Vixie Laboratories.
  */
 
+/* Basic Integer Types not defined in SunOS headers... */
+
+#define int8_t		char
+#define int16_t		short
+#define int32_t		long
+
+#define u_int8_t	unsigned char
+#define u_int16_t	unsigned short 
+#define u_int32_t	unsigned long 
+
 /* The jmp_buf type is an array on Solaris, so we can't dereference it
    and must declare it differently. */
 
@@ -45,7 +55,6 @@
 
 #include <syslog.h>
 #include <sys/types.h>
-#include <sys/bitypes.h>
 #include <sys/sockio.h>
 
 #include <string.h>
@@ -99,6 +108,8 @@ extern int h_errno;
 #if defined (USE_DEFAULT_NETWORK)
 # define USE_SOCKETS
 #endif
+
+#define USE_POLL
 
 #define EOL	'\n'
 #define VOIDPTR	void *
