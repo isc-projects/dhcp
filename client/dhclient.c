@@ -41,7 +41,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.122 2001/02/26 22:21:04 mellon Exp $ Copyright (c) 1995-2001 Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.123 2001/03/14 15:37:52 mellon Exp $ Copyright (c) 1995-2001 Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2439,7 +2439,8 @@ int script_go (client)
 	}
 	dfree (envp, MDL);
 	GET_TIME (&cur_time);
-	return wstatus & 0xff;
+	return (WIFEXITED (wstatus) ?
+		WEXITSTATUS (wstatus) : -WTERMSIG (wstatus));
 }
 
 void client_envadd (struct client_state *client,
