@@ -72,7 +72,7 @@ fi
 
 echo "System Type: $sysname"
 
-for foo in . client server relay statmsg sysconfd common; do
+for foo in . client server relay statmsg sysconfd common dhcpctl; do
 	 (sed -e "/^##--${sysname}--/,/^##--${sysname}--/s/^#//" \
 		<Makefile.conf; cat site.conf; cat $foo/Makefile.dist)	\
 				>$foo/Makefile
