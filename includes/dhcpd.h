@@ -451,6 +451,7 @@ struct pool {
 	struct lease *leases;
 	struct lease *insertion_point;
 	struct lease *last_lease;
+	struct lease *next_expiry;
 };
 
 /* A failover peer. */
@@ -1821,6 +1822,7 @@ int supersede_lease PROTO ((struct lease *, struct lease *, int));
 void release_lease PROTO ((struct lease *, struct packet *));
 void abandon_lease PROTO ((struct lease *, const char *));
 void dissociate_lease PROTO ((struct lease *));
+void pool_timer PROTO ((void *));
 struct lease *find_lease_by_uid PROTO ((const unsigned char *, unsigned));
 struct lease *find_lease_by_hw_addr PROTO ((const unsigned char *, unsigned));
 struct lease *find_lease_by_ip_addr PROTO ((struct iaddr));
@@ -1829,6 +1831,7 @@ void uid_hash_delete PROTO ((struct lease *));
 void hw_hash_add PROTO ((struct lease *));
 void hw_hash_delete PROTO ((struct lease *));
 void write_leases PROTO ((void));
+void expire_all_pools PROTO ((void));
 void dump_subnets PROTO ((void));
 
 /* nsupdate.c */
