@@ -1,6 +1,6 @@
-	    Internet Software Consortium DHCP Distribution
-			   Version 3.0.1rc13
-			   February 04, 2004
+	      Internet Systems Consortium DHCP Distribution
+			     Version 3.0.1
+			     June 09, 2004
 
 			     Release Notes
 
@@ -42,6 +42,16 @@ Measurement Systems, Igor Sharfmesser at Kazakh Telecom, and Brian
 Murrell at BC Tel Advanced Communications.  I'd like to express my
 thanks to all of these good people here, both for working on the code
 and for prodding me into improving it.
+
+			Changes since 3.0.1rc13
+
+- Five stack overflow exploits were closed in logging messages with
+  excessively long hostnames provided by the clients.  It is highly
+  probable that these could have been used by attackers to gain
+  arbitrary root access on systems using ISC DHCP.  Special thanks to
+  Gregory Duchemin for both finding and solving the problem.
+
+- 'The cross-compile bug fix' was backed out.
 
 			Changes since 3.0.1rc12
 

@@ -1,42 +1,33 @@
 .\"	dhcrelay.8
 .\"
-.\" Copyright (c) 1997, 1998 The Internet Software Consortium.
-.\" All rights reserved.
+.\" Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
+.\" Copyright (c) 1997-2003 by Internet Software Consortium
 .\"
-.\" Redistribution and use in source and binary forms, with or without
-.\" modification, are permitted provided that the following conditions
-.\" are met:
+.\" Permission to use, copy, modify, and distribute this software for any
+.\" purpose with or without fee is hereby granted, provided that the above
+.\" copyright notice and this permission notice appear in all copies.
 .\"
-.\" 1. Redistributions of source code must retain the above copyright
-.\"    notice, this list of conditions and the following disclaimer.
-.\" 2. Redistributions in binary form must reproduce the above copyright
-.\"    notice, this list of conditions and the following disclaimer in the
-.\"    documentation and/or other materials provided with the distribution.
-.\" 3. Neither the name of The Internet Software Consortium nor the names
-.\"    of its contributors may be used to endorse or promote products derived
-.\"    from this software without specific prior written permission.
+.\" THE SOFTWARE IS PROVIDED "AS IS" AND ISC DISCLAIMS ALL WARRANTIES
+.\" WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+.\" MERCHANTABILITY AND FITNESS.  IN NO EVENT SHALL ISC BE LIABLE FOR
+.\" ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+.\" WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+.\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT
+.\" OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
-.\" THIS SOFTWARE IS PROVIDED BY THE INTERNET SOFTWARE CONSORTIUM AND
-.\" CONTRIBUTORS ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES,
-.\" INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-.\" MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-.\" DISCLAIMED.  IN NO EVENT SHALL THE INTERNET SOFTWARE CONSORTIUM OR
-.\" CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-.\" SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-.\" LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF
-.\" USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-.\" ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-.\" OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
-.\" OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
-.\" SUCH DAMAGE.
+.\"   Internet Systems Consortium, Inc.
+.\"   950 Charter Street
+.\"   Redwood City, CA 94063
+.\"   <info@isc.org>
+.\"   http://www.isc.org/
 .\"
-.\" This software has been written for the Internet Software Consortium
+.\" This software has been written for Internet Systems Consortium
 .\" by Ted Lemon in cooperation with Vixie
-.\" Enterprises.  To learn more about the Internet Software Consortium,
+.\" Enterprises.  To learn more about Internet Systems Consortium,
 .\" see ``http://www.isc.org/isc''.  To learn more about Vixie
 .\" Enterprises, see ``http://www.vix.com''.
 .\"
-.\" $Id: dhcrelay.8,v 1.5.4.4 2003/02/05 06:52:31 dhankins Exp $
+.\" $Id: dhcrelay.8,v 1.5.4.5 2004/06/10 17:59:50 dhankins Exp $
 .\"
 .TH dhcrelay 8
 .SH NAME
@@ -91,7 +82,7 @@ dhcrelay - Dynamic Host Configuration Protocol Relay Agent
 .I ...serverN
 ]
 .SH DESCRIPTION
-The Internet Software Consortium DHCP Relay Agent, dhcrelay, provides a
+The Internet Systems Consortium DHCP Relay Agent, dhcrelay, provides a
 means for relaying DHCP and BOOTP requests from a subnet to which
 no DHCP server is directly connected to one or more DHCP servers on other
 subnets.
@@ -183,7 +174,7 @@ handle a much larger packet than most DHCP clients would send.   The
 current Agent Options draft requires that the relay agent use a
 maximum packet size of 576 bytes.   
 .PP
-It is recommended that with the Internet Software Consortium DHCP
+It is recommended that with the Internet Systems Consortium DHCP
 server, the maximum packet size be set to about 1400, allowing plenty
 of extra space in which the relay agent can put the agent option
 field, while still fitting into the Ethernet MTU size.  This can be
@@ -215,7 +206,7 @@ the packet unchanged.   Or, it may
 .I discard
 it.
 .PP
-Which of these behaviours is followed by the Internet Software
+Which of these behaviours is followed by the Internet Systems
 Consortium DHCP Relay Agent may be configured with the
 .B -m
 flag, followed by one of the four keywords specified in
@@ -250,9 +241,9 @@ however, the relay agent needs to be able to learn about the network
 topology, which requires that it have a configuration file.
 .SH AUTHOR
 .B dhcrelay(8)
-has been written for the Internet Software Consortium
+has been written for Internet Systems Consortium
 by Ted Lemon in cooperation with Vixie
-Enterprises.  To learn more about the Internet Software Consortium,
+Enterprises.  To learn more about Internet Systems Consortium,
 see
 .B http://www.isc.org/isc.
 To learn more about Vixie
