@@ -3,8 +3,8 @@
    Definitions for dhcpd... */
 
 /*
- * Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.
- * All rights reserved.
+ * Copyright (c) 1995, 1996, 1997, 1998, 1999
+ * The Internet Software Consortium.   All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -174,6 +174,10 @@ struct lease {
 	struct lease *n_uid, *n_hw;
 	struct lease *waitq_next;
 
+#if defined (FAILOVER)
+	TIME tstp;	/* Time sent to partner. */
+	TIME trfp;	/* Time sent from partner. */
+#endif
 	struct iaddr ip_addr;
 	TIME starts, ends, timestamp;
 	unsigned char *uid;
@@ -184,7 +188,6 @@ struct lease {
 	char *client_hostname;
 	struct host_decl *host;
 	struct subnet *subnet;
-	struct shared_network *shared_network;
 	struct pool *pool;
 	struct class *billing_class;
 	struct hardware hardware_addr;
@@ -258,6 +261,7 @@ struct lease_state {
 #define	SV_FILENAME			15
 #define SV_SERVER_NAME			16
 #define	SV_NEXT_SERVER			17
+#define SV_AUTHORITATIVE		18
 
 #if !defined (DEFAULT_DEFAULT_LEASE_TIME)
 # define DEFAULT_DEFAULT_LEASE_TIME 43200
@@ -336,6 +340,7 @@ struct group {
 
 	struct subnet *subnet;
 	struct shared_network *shared_network;
+	int authoritative;
 	struct executable_statement *statements;
 };
 
@@ -347,6 +352,8 @@ struct host_decl {
 	struct data_string client_identifier;
 	struct option_cache *fixed_addr;
 	struct group *group;
+	int client_key_length;
+	u_int8_t *client_key;
 };
 
 struct permit {
@@ -373,13 +380,63 @@ struct pool {
 	struct lease *last_lease;
 };
 
+/* A failover peer. */
+#if defined (FAILOVER_PROTOCOL)
+enum failover_state {
+	invalid_state,
+	partner_down,
+	normal,
+	communications_interrupted,
+	potential_conflict,
+	recover
+};
+
+struct failover_peer {
+	char *name;			/* Name of this failover instance. */
+	struct expression *address;	/* Partner's IP address or hostname. */
+	int port;			/* Partner's TCP port. */
+	enum failover_state partner_state;
+	enum failover_state my_state;
+	enum {
+		primary, secondary
+	} i_am;		/* We are primary or secondary in this relationship. */
+
+	TIME last_packet_sent;		/* Timestamp on last packet we sent. */
+	TIME last_timestamp_received;	/* The last timestamp we sent that
+					   has been returned by our partner. */
+	TIME skew;	/* The skew between our clock and our partner's. */
+	TIME max_transmit_idle;	/* Always send a poll if we haven't sent
+				   some other packet more recently than
+				   this. */
+	TIME max_response_delay;	/* If the returned timestamp on the
+					   last packet we received is older
+					   than this, communications have been
+					   interrupted. */
+	struct lease *update_queue;	/* List of leases we haven't sent
+					   to peer. */
+	struct lease *ack_queue;	/* List of lease updates the peer
+					   hasn't yet acked. */
+	/* XXX Is ack_queue just a pointer to earlier in the same list?
+	   XXX Make sure that if we send an update before an ack has
+	   XXX been received on a previous update, that we don't either
+	   XXX take the previous ack as an ack for the subsequent update
+	   XXX or, when putting the lease back on the update list,
+	   XXX accidentally set the ack queue pointer forward, which would
+	   XXX happen if the ack queue and update queue are the same list
+	   XXX and the ack queue pointer is pointing at the lease that
+	   XXX gets put back on the update queue. */
+};
+#endif /* defined (FAILOVER_PROTOCOL) */
+
 struct shared_network {
 	struct shared_network *next;
 	char *name;
 	struct subnet *subnets;
 	struct interface_info *interface;
 	struct pool *pools;
-
+#if defined (FAILOVER_PROTOCOL)
+	struct failover_peer *failover_peer;
+#endif
 	struct group *group;
 };
 
@@ -770,10 +827,6 @@ extern u_int16_t remote_port;
 extern int log_priority;
 extern int log_perror;
 
-#ifdef USE_FALLBACK
-extern struct interface_info fallback_interface;
-#endif
-
 extern char *path_dhcpd_conf;
 extern char *path_dhcpd_db;
 extern char *path_dhcpd_pid;
@@ -800,6 +853,8 @@ int readconf PROTO ((void));
 void read_leases PROTO ((void));
 int parse_statement PROTO ((FILE *,
 			    struct group *, int, struct host_decl *, int));
+void parse_failover_peer PROTO ((FILE *, struct group *, int));
+enum failover_state parse_failover_state PROTO ((FILE *));
 void parse_pool_statement PROTO ((FILE *, struct group *, int));
 int parse_allow_deny PROTO ((struct option_cache **, FILE *, int));
 int parse_boolean PROTO ((FILE *));
@@ -816,6 +871,7 @@ void parse_address_range PROTO ((FILE *, struct group *, int, struct pool *));
 
 /* parse.c */
 void skip_to_semi PROTO ((FILE *));
+void skip_to_rbrace PROTO ((FILE *, int));
 int parse_semi PROTO ((FILE *));
 char *parse_string PROTO ((FILE *));
 char *parse_host_name PROTO ((FILE *));
@@ -933,6 +989,7 @@ extern struct subnet *find_grouped_subnet PROTO ((struct shared_network *,
 						  struct iaddr));
 extern struct subnet *find_subnet PROTO ((struct iaddr));
 void enter_shared_network PROTO ((struct shared_network *));
+int subnet_inner_than PROTO ((struct subnet *, struct subnet *, int));
 void enter_subnet PROTO ((struct subnet *));
 void enter_lease PROTO ((struct lease *));
 int supersede_lease PROTO ((struct lease *, struct lease *, int));
@@ -984,6 +1041,8 @@ struct client_lease *new_client_lease PROTO ((char *));
 void free_client_lease PROTO ((struct client_lease *, char *));
 struct pool *new_pool PROTO ((char *));
 void free_pool PROTO ((struct pool *, char *));
+struct failover_peer *new_failover_peer PROTO ((char *));
+void free_failover_peer PROTO ((struct failover_peer *, char *));
 struct permit *new_permit PROTO ((char *));
 void free_permit PROTO ((struct permit *, char *));
 pair new_pair PROTO ((char *));
@@ -1049,7 +1108,8 @@ ssize_t receive_packet PROTO ((struct interface_info *,
 			       struct sockaddr_in *, struct hardware *));
 #endif
 #if defined (USE_SOCKET_SEND) && !defined (USE_SOCKET_FALLBACK)
-void if_enable PROTO ((struct interface_info *));
+int can_unicast_without_arp PROTO ((void));
+void maybe_setup_fallback PROTO ((void));
 #endif
 
 /* bpf.c */
@@ -1072,7 +1132,32 @@ ssize_t receive_packet PROTO ((struct interface_info *,
 			       struct sockaddr_in *, struct hardware *));
 #endif
 #if defined (USE_BPF_SEND)
-void if_enable PROTO ((struct interface_info *));
+int can_unicast_without_arp PROTO ((void));
+void maybe_setup_fallback PROTO ((void));
+#endif
+
+/* lpf.c */
+#if defined (USE_LPF_SEND) || defined (USE_LPF_RECEIVE)
+int if_register_lpf PROTO ( (struct interface_info *));
+#endif
+#ifdef USE_LPF_SEND
+void if_reinitialize_send PROTO ((struct interface_info *));
+void if_register_send PROTO ((struct interface_info *));
+ssize_t send_packet PROTO ((struct interface_info *,
+			    struct packet *, struct dhcp_packet *, size_t,
+			    struct in_addr,
+			    struct sockaddr_in *, struct hardware *));
+#endif
+#ifdef USE_LPF_RECEIVE
+void if_reinitialize_receive PROTO ((struct interface_info *));
+void if_register_receive PROTO ((struct interface_info *));
+ssize_t receive_packet PROTO ((struct interface_info *,
+			       unsigned char *, size_t,
+			       struct sockaddr_in *, struct hardware *));
+#endif
+#if defined (USE_LPF_SEND)
+int can_unicast_without_arp PROTO ((void));
+void maybe_setup_fallback PROTO ((void));
 #endif
 
 /* nit.c */
@@ -1096,7 +1181,8 @@ ssize_t receive_packet PROTO ((struct interface_info *,
 			       struct sockaddr_in *, struct hardware *));
 #endif
 #if defined (USE_NIT_SEND)
-void if_enable PROTO ((struct interface_info *));
+int can_unicast_without_arp PROTO ((void));
+void maybe_setup_fallback PROTO ((void));
 #endif
 
 /* dlpi.c */
@@ -1129,10 +1215,13 @@ ssize_t send_packet PROTO ((struct interface_info *,
 			    struct packet *, struct dhcp_packet *, size_t,
 			    struct in_addr,
 			    struct sockaddr_in *, struct hardware *));
+int can_unicast_without_arp PROTO ((void));
+void maybe_setup_fallback PROTO ((void));
 #endif
 
 /* dispatch.c */
-extern struct interface_info *interfaces, *dummy_interfaces;
+extern struct interface_info *interfaces,
+	*dummy_interfaces, fallback_interface;
 extern struct protocol *protocols;
 extern int quiet_interface_discovery;
 extern void (*bootp_packet_handler) PROTO ((struct interface_info *,
@@ -1141,13 +1230,12 @@ extern void (*bootp_packet_handler) PROTO ((struct interface_info *,
 					    struct iaddr, struct hardware *));
 extern struct timeout *timeouts;
 void discover_interfaces PROTO ((int));
+struct interface_info *setup_fallback PROTO ((void));
 void reinitialize_interfaces PROTO ((void));
 void dispatch PROTO ((void));
 int locate_network PROTO ((struct packet *));
+void got_one PROTO ((struct protocol *));
 void add_timeout PROTO ((TIME, void (*) PROTO ((void *)), void *));
-#if 0
-void add_fast_timeout PROTO ((UTIME, void (*) PROTO ((void *)), void *));
-#endif
 void cancel_timeout PROTO ((void (*) PROTO ((void *)), void *));
 struct protocol *add_protocol PROTO ((char *, int,
 				      void (*) PROTO ((struct protocol *)),
@@ -1407,3 +1495,6 @@ void execute_statements_in_scope PROTO ((struct packet *,
 					 struct option_state *,
 					 struct option_state *,
 					 struct group *, struct group *));
+/* failover.c */
+void enter_failover_peer PROTO ((struct failover_peer *));
+struct failover_peer *find_failover_peer PROTO ((char *));
