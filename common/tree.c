@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.55 1999/10/05 19:43:40 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.56 1999/10/06 01:01:13 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -551,7 +551,7 @@ int evaluate_boolean_expression (result, packet, lease, in_options,
 		/* we only want to do this on a DHCPREQUEST */
 		if (!packet || packet -> packet_type != DHCPREQUEST)
 			return 0;
-		memset (&rrtype, 0, sizeof expr1);
+		memset (&rrtype, 0, sizeof rrtype);
 		s0 = evaluate_data_expression (&rrtype, packet, lease,
 					       in_options, cfg_options,
 					       expr -> data.dns_update.type);
@@ -594,6 +594,57 @@ int evaluate_boolean_expression (result, packet, lease, in_options,
 		}
 #if defined (DEBUG_EXPRESSIONS)
 		log_debug ("dns-update (%s, %s, %s):", 
+			  print_hex_1(rrtype.len, rrtype.data, 60),
+			  print_hex_2(expr1.len, expr1.data, 60),
+			  print_hex_3(expr2.len, expr2.data, 60));
+#endif
+		return 1;
+#endif /* NSUPDATE */
+
+	      case expr_dns_delete:
+#if !defined (NSUPDATE)
+		return 0;
+#else
+		memset (&rrtype, 0, sizeof rrtype);
+		s0 = evaluate_data_expression (&rrtype, packet, lease,
+					       in_options, cfg_options,
+					       expr -> data.dns_update.type);
+		memset (&expr1, 0, sizeof expr1);
+		s1 = evaluate_data_expression (&expr1, packet, lease,
+					       in_options, cfg_options,
+					       expr -> data.dns_update.expr1);
+		memset (&expr2, 0, sizeof expr2);
+		s2 = evaluate_data_expression (&expr2, packet, lease,
+					       in_options, cfg_options,
+					       expr -> data.dns_update.expr2);
+
+		*result = 0;	/* assume failure */
+		if (s0 && s1 && s2) {
+			if (rrtype.len == 1 &&
+			    strncmp((const char *)rrtype.data, "a", 1) == 0) {
+#if defined (DEBUG_EXPRESSIONS)
+				log_debug("calling deleteA(%s, %s, lease)",
+					  expr1.data , expr2.data);
+#endif
+				deleteA(expr1, expr2, lease);
+			} else if (rrtype.len == 3 &&
+				   strncmp((const char *)rrtype.data,
+					    "ptr", 3) == 0) {
+#if defined (DEBUG_EXPRESSIONS)
+				log_debug ("%s deletePTR(%s, %s, lease)",
+					   "calling", expr1.data,
+					   expr2.data);
+#endif
+				deletePTR(expr1, expr2, lease);
+			}
+			*result = 1;
+		} else {
+			log_error("dns-update: one or more subexpressions %s",
+				  "evaluate to NULL.");
+			return 0;
+		}
+#if defined (DEBUG_EXPRESSIONS)
+		log_debug ("dns-delete (%s, %s, %s):", 
 			  print_hex_1(rrtype.len, rrtype.data, 60),
 			  print_hex_2(expr1.len, expr1.data, 60),
 			  print_hex_3(expr2.len, expr2.data, 60));
@@ -1230,7 +1281,9 @@ int evaluate_data_expression (result, packet, lease,
 #endif
 			return 1;
 		}
-		if ((evaluate_data_expression
+
+		if (expr -> data.pick_first_value.cdr &&
+		    (evaluate_data_expression
 		     (result, packet, lease, in_options, cfg_options,
 		      expr -> data.pick_first_value.cdr))) {
 #if defined (DEBUG_EXPRESSIONS)
@@ -1242,7 +1295,7 @@ int evaluate_data_expression (result, packet, lease,
 		}
 
 #if defined (DEBUG_EXPRESSIONS)
-		log_info ("data: pick_first_value (NULL, NULL) = NULL");
+		log_debug ("data: pick_first_value (NULL, NULL) = NULL");
 #endif
 		return 0;
 
@@ -1263,7 +1316,7 @@ int evaluate_data_expression (result, packet, lease,
 			return 0;
 		}
 #if defined (DEBUG_EXPRESSIONS)
-		log_info ("data: host-decl-name = %s", lease -> host -> name);
+		log_debug ("data: host-decl-name = %s", lease -> host -> name);
 #endif
 		return 1;
 
@@ -1276,7 +1329,7 @@ int evaluate_data_expression (result, packet, lease,
 		}
 		memset (&data, 0, sizeof data);
 		s0 = evaluate_data_expression
-			(result, packet, lease, in_options, cfg_options,
+			(&data, packet, lease, in_options, cfg_options,
 			 expr -> data.updated_dns_rr);
 		if (!s0) {
 #if defined (DEBUG_EXPRESSIONS)
@@ -1310,13 +1363,13 @@ int evaluate_data_expression (result, packet, lease,
 #if defined (DEBUG_EXPRESSIONS)
 			log_debug ("data: updated-dns-rr (%*s)",
 				   result -> len > 50 ? 50 : result -> len,
-				   result -> data));
+				   result -> data);
 #endif
 			log_error ("data: updated-dns-rr: no memory.");
 			return 0;
 		}
 #if defined (DEBUG_EXPRESSIONS)
-		log_info ("data: updated-dns-rr (%s) = %s",
+		log_debug ("data: updated-dns-rr (%*s) = %s",
 			  result -> len > 50 ? 50 : result -> len,
 			  result -> data, s);
 #endif
@@ -1692,13 +1745,13 @@ void expression_dereference (eptr, name)
 			expression_dereference (&expr -> data.dns_update.type,
 						name);
 		if (expr -> data.dns_update.expr1)
-			expression_dereference (&expr -> data.dns_update.type,
+			expression_dereference (&expr -> data.dns_update.expr1,
 						name);
 		if (expr -> data.dns_update.expr2)
-			expression_dereference (&expr -> data.dns_update.type,
+			expression_dereference (&expr -> data.dns_update.expr2,
 						name);
 		if (expr -> data.dns_update.ttl)
-			expression_dereference (&expr -> data.dns_update.type,
+			expression_dereference (&expr -> data.dns_update.ttl,
 						name);
 
 		/* No subexpressions. */
@@ -1769,6 +1822,7 @@ int is_boolean_expression (expr)
 		expr -> op == expr_and ||
 		expr -> op == expr_or ||
 		expr -> op == expr_dns_update ||
+		expr -> op == expr_dns_delete ||
 		expr -> op == expr_not ||
 		expr -> op == expr_known ||
 		expr -> op == expr_static);
@@ -1845,6 +1899,7 @@ static int op_val (op)
 	      case expr_leased_address:
 	      case expr_lease_time:
 	      case expr_dns_update:
+	      case expr_dns_delete:
 	      case expr_updated_dns_rr:
 		return 100;
 
@@ -1904,6 +1959,7 @@ enum expression_context op_context (op)
 	      case expr_leased_address:
 	      case expr_lease_time:
 	      case expr_dns_update:
+	      case expr_dns_delete:
 	      case expr_updated_dns_rr:
 		return context_any;
 
@@ -2257,7 +2313,7 @@ int write_expression (file, expr, col, indent)
 
 	      case expr_updated_dns_rr:
 		col = token_print_indent (file, col, indent, "", "",
-					  "dns-rev-name");
+					  "updated-dns-rr");
 		col = token_print_indent (file, col, indent, " ", "",
 					  "(");
 		scol = col;
@@ -2265,6 +2321,31 @@ int write_expression (file, expr, col, indent)
 					col, scol);
 		col = token_print_indent (file, col, indent, "", "",
 					  ")");
+		break;
+
+	      case expr_dns_delete:
+		col = token_print_indent (file, col, indent, "", "",
+					  "dns-delete");
+		col = token_print_indent (file, col, indent, " ", "",
+					  "(");
+		scol = col;
+		col = write_expression (file, expr -> data.dns_update.type,
+					col, scol);
+		col = token_print_indent (file, col, scol, "", " ",
+					  ",");
+		col = write_expression (file, expr -> data.dns_update.expr1,
+					col, scol);
+		col = token_print_indent (file, col, scol, "", " ",
+					  ",");
+		col = write_expression (file, expr -> data.dns_update.expr2,
+					col, scol);
+		col = token_print_indent (file, col, indent, "", "",
+					  ")");
+		break;
+
+	      case expr_static:
+		col = token_print_indent (file, col, indent, "", "",
+					  "static");
 		break;
 
 	      default:
