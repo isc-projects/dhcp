@@ -3,48 +3,26 @@
    Handling for client classes. */
 
 /*
- * Copyright (c) 1998-2000 Internet Software Consortium.
- * All rights reserved.
+ * Copyright (c) 1996-1999 Internet Software Consortium.
+ * Use is subject to license terms which appear in the file named
+ * ISC-LICENSE that should have accompanied this file when you
+ * received it.   If a file named ISC-LICENSE did not accompany this
+ * file, or you are not sure the one you have is correct, you may
+ * obtain an applicable copy of the license at:
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
+ *             http://www.isc.org/isc-license-1.0.html. 
  *
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of The Internet Software Consortium nor the names
- *    of its contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
+ * This file is part of the ISC DHCP distribution.   The documentation
+ * associated with this file is listed in the file DOCUMENTATION,
+ * included in the top-level directory of this release.
  *
- * THIS SOFTWARE IS PROVIDED BY THE INTERNET SOFTWARE CONSORTIUM AND
- * CONTRIBUTORS ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES,
- * INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED.  IN NO EVENT SHALL THE INTERNET SOFTWARE CONSORTIUM OR
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF
- * USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
- * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
- * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
- * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- * SUCH DAMAGE.
- *
- * This software has been written for the Internet Software Consortium
- * by Ted Lemon in cooperation with Vixie Enterprises and Nominum, Inc.
- * To learn more about the Internet Software Consortium, see
- * ``http://www.isc.org/''.  To learn more about Vixie Enterprises,
- * see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
- * ``http://www.nominum.com''.
+ * Support and other services are available for ISC products - see
+ * http://www.isc.org for more information.
  */
 
 #ifndef lint
 static char copyright[] =
-"$Id: class.c,v 1.27 2000/11/28 23:27:14 mellon Exp $ Copyright (c) 1998-2000 The Internet Software Consortium.  All rights reserved.\n";
-
+"$Id: class.c,v 1.12 1999/07/02 20:58:48 mellon Exp $ Copyright (c) 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -65,29 +43,36 @@ int have_billing_classes;
 void classification_setup ()
 {
 	struct executable_statement *rules;
-
-	/* eval ... */
-	rules = (struct executable_statement *)0;
-	if (!executable_statement_allocate (&rules, MDL))
-		log_fatal ("Can't allocate check of default collection");
-	rules -> op = eval_statement;
+	struct expression *me;
 
 	/* check-collection "default" */
-	if (!expression_allocate (&rules -> data.eval, MDL))
+	me = (struct expression *)dmalloc (sizeof (struct expression),
+					   "default check expression");
+	if (!me)
 		log_fatal ("Can't allocate default check expression");
-	rules -> data.eval -> op = expr_check;
-	rules -> data.eval -> data.check = &default_collection;
+	memset (me, 0, sizeof *me);
+	me -> op = expr_check;
+	me -> data.check = &default_collection;
 	
+	/* eval ... */
+	rules = (struct executable_statement *)
+		dmalloc (sizeof (struct executable_statement),
+			 "add default collection check rule");
+	if (!rules)
+		log_fatal ("Can't allocate check of default collection");
+	memset (rules, 0, sizeof *rules);
+	rules -> op = eval_statement;
+	rules -> data.eval = me;
+
 	default_classification_rules = rules;
 }
 
 void classify_client (packet)
 	struct packet *packet;
 {
-	execute_statements ((struct binding_value **)0, packet,
-			    (struct lease *)0, (struct client_state *)0,
-			    packet -> options, (struct option_state *)0,
-			    &global_scope, default_classification_rules);
+	execute_statements (packet, (struct lease *)0, packet -> options,
+			    (struct option_state *)0,
+			    default_classification_rules);
 }
 
 int check_collection (packet, lease, collection)
@@ -99,79 +84,48 @@ int check_collection (packet, lease, collection)
 	struct data_string data;
 	int matched = 0;
 	int status;
-	int ignorep;
 
 	for (class = collection -> classes; class; class = class -> nic) {
 #if defined (DEBUG_CLASS_MATCHING)
 		log_info ("checking against class %s...", class -> name);
 #endif
 		memset (&data, 0, sizeof data);
-
-		/* If there is a "match if" expression, check it.   If
-		   we get a match, and there's no subclass expression,
-		   it's a match.   If we get a match and there is a subclass
-		   expression, then we check the submatch.   If it's not a
-		   match, that's final - we don't check the submatch. */
-
-		if (class -> expr) {
-			status = (evaluate_boolean_expression_result
-				  (&ignorep, packet, lease,
-				   (struct client_state *)0,
-				   packet -> options, (struct option_state *)0,
-				   lease ? &lease -> scope : &global_scope,
-				   class -> expr));
-			if (status) {
-				if (!class -> submatch) {
-					matched = 1;
-#if defined (DEBUG_CLASS_MATCHING)
-					log_info ("matches class.");
-#endif
-					classify (packet, class);
-					continue;
-				}
-			} else
-				continue;
-		}
-
-		/* Check to see if the client matches an existing subclass.
-		   If it doesn't, and this is a spawning class, spawn a new
-		   subclass and put the client in it. */
+		/* If a class is for billing, don't put the client in the
+		   class if we've already billed it to a different class. */
 		if (class -> submatch) {
-			status = (evaluate_data_expression
-				  (&data, packet, lease,
-				   (struct client_state *)0,
-				   packet -> options, (struct option_state *)0,
-				   lease ? &lease -> scope : &global_scope,
-				   class -> submatch));
-			if (status && data.len) {
-				nc = (struct class *)0;
-				if (class_hash_lookup (&nc, class -> hash,
-						       (const char *)data.data,
-						       data.len, MDL)) {
+			status = evaluate_data_expression (&data,
+							   packet,
+							   packet -> options,
+							   lease,
+							   class -> submatch);
+			if (status) {
+				if ((nc = ((struct class *)
+					   hash_lookup (class -> hash,
+							data.data,
+							data.len)))) {
 #if defined (DEBUG_CLASS_MATCHING)
 					log_info ("matches subclass %s.",
 					      print_hex_1 (data.len,
 							   data.data, 60));
 #endif
-					data_string_forget (&data, MDL);
+					data_string_forget
+						(&data, "check_collection");
 					classify (packet, nc);
 					matched = 1;
-					class_dereference (&nc, MDL);
 					continue;
 				}
-				if (!class -> spawning) {
-					data_string_forget (&data, MDL);
+				if (!class -> spawning)
 					continue;
-				}
 #if defined (DEBUG_CLASS_MATCHING)
 				log_info ("spawning subclass %s.",
 				      print_hex_1 (data.len, data.data, 60));
 #endif
-				status = class_allocate (&nc, MDL);
-				group_reference (&nc -> group,
-						 class -> group, MDL);
-				class_reference (&nc -> superclass,
-						 class, MDL);
+				nc = (struct class *)
+					dmalloc (sizeof (struct class),
+						 "class spawn");
+				memset (nc, 0, sizeof *nc);
+				nc -> group = class -> group;
+				nc -> superclass = class;
 				nc -> lease_limit = class -> lease_limit;
 				nc -> dirty = 1;
 				if (nc -> lease_limit) {
@@ -179,16 +133,14 @@ int check_collection (packet, lease, collection)
 						(dmalloc
 						 (nc -> lease_limit *
 						  sizeof (struct lease *),
-						  MDL));
+						  "check_collection"));
 					if (!nc -> billed_leases) {
 						log_error ("no memory for%s",
 							   " billing");
 						data_string_forget
 							(&nc -> hash_string,
-							 MDL);
-						class_dereference (&nc, MDL);
-						data_string_forget (&data,
-								    MDL);
+							 "check_collection");
+						dfree (nc, "check_collection");
 						continue;
 					}
 					memset (nc -> billed_leases, 0,
@@ -196,17 +148,27 @@ int check_collection (packet, lease, collection)
 						 sizeof nc -> billed_leases));
 				}
 				data_string_copy (&nc -> hash_string, &data,
-						  MDL);
-				data_string_forget (&data, MDL);
+						  "check_collection");
+				data_string_forget (&data, "check_collection");
 				if (!class -> hash)
-					class -> hash = new_hash (0, 0, 0);
-				class_hash_add (class -> hash,
-						(const char *)
-						nc -> hash_string.data,
-						nc -> hash_string.len,
-						nc, MDL);
+					class -> hash = new_hash ();
+				add_hash (class -> hash,
+					  nc -> hash_string.data,
+					  nc -> hash_string.len,
+					  (unsigned char *)nc);
 				classify (packet, nc);
 			}
+			data_string_forget (&data, "check_collection");
+		}
+
+		status = (evaluate_boolean_expression_result
+			  (packet, packet -> options, lease, class -> expr));
+		if (status) {
+			matched = 1;
+#if defined (DEBUG_CLASS_MATCHING)
+			log_info ("matches class.");
+#endif
+			classify (packet, class);
 		}
 	}
 	return matched;
@@ -217,8 +179,7 @@ void classify (packet, class)
 	struct class *class;
 {
 	if (packet -> class_count < PACKET_MAX_CLASSES)
-		class_reference (&packet -> classes [packet -> class_count++],
-				 class, MDL);
+		packet -> classes [packet -> class_count++] = class;
 	else
 		log_error ("too many groups for %s",
 		      print_hw_addr (packet -> raw -> htype,
@@ -226,19 +187,18 @@ void classify (packet, class)
 				     packet -> raw -> chaddr));
 }
 
-isc_result_t find_class (struct class **class, const char *name,
-			 const char *file, int line)
+struct class *find_class (name)
+	char *name;
 {
 	struct collection *lp;
 	struct class *cp;
 
 	for (lp = collections; lp; lp = lp -> next) {
 		for (cp = lp -> classes; cp; cp = cp -> nic)
-			if (cp -> name && !strcmp (name, cp -> name)) {
-				return class_reference (class, cp, file, line);
-			}
+			if (cp -> name && !strcmp (name, cp -> name))
+				return cp;
 	}
-	return ISC_R_NOTFOUND;
+	return (struct class *)0;
 }
 
 int unbill_class (lease, class)
@@ -255,8 +215,8 @@ int unbill_class (lease, class)
 		      piaddr (lease -> ip_addr));
 		return 0;
 	}
-	class_dereference (&lease -> billing_class, MDL);
-	lease_dereference (&class -> billed_leases [i], MDL);
+	lease -> billing_class = (struct class *)0;
+	class -> billed_leases [i] = (struct lease *)0;
 	class -> leases_consumed--;
 	return 1;
 }
@@ -279,8 +239,8 @@ int bill_class (lease, class)
 		return 0;
 	}
 
-	lease_reference (&class -> billed_leases [i], lease, MDL);
-	class_reference (&lease -> billing_class, class, MDL);
+	class -> billed_leases [i] = lease;
+	lease -> billing_class = class;
 	class -> leases_consumed++;
 	return 1;
 }

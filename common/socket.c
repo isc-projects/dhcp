@@ -3,42 +3,21 @@
    BSD socket interface code... */
 
 /*
- * Copyright (c) 1995-2000 Internet Software Consortium.
- * All rights reserved.
+ * Copyright (c) 1996-1999 Internet Software Consortium.
+ * Use is subject to license terms which appear in the file named
+ * ISC-LICENSE that should have accompanied this file when you
+ * received it.   If a file named ISC-LICENSE did not accompany this
+ * file, or you are not sure the one you have is correct, you may
+ * obtain an applicable copy of the license at:
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
+ *             http://www.isc.org/isc-license-1.0.html. 
  *
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of The Internet Software Consortium nor the names
- *    of its contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
+ * This file is part of the ISC DHCP distribution.   The documentation
+ * associated with this file is listed in the file DOCUMENTATION,
+ * included in the top-level directory of this release.
  *
- * THIS SOFTWARE IS PROVIDED BY THE INTERNET SOFTWARE CONSORTIUM AND
- * CONTRIBUTORS ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES,
- * INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED.  IN NO EVENT SHALL THE INTERNET SOFTWARE CONSORTIUM OR
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF
- * USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
- * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
- * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
- * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- * SUCH DAMAGE.
- *
- * This software has been written for the Internet Software Consortium
- * by Ted Lemon in cooperation with Vixie Enterprises and Nominum, Inc.
- * To learn more about the Internet Software Consortium, see
- * ``http://www.isc.org/''.  To learn more about Vixie Enterprises,
- * see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
- * ``http://www.nominum.com''.
+ * Support and other services are available for ISC products - see
+ * http://www.isc.org for more information.
  */
 
 /* SO_BINDTODEVICE support added by Elliot Poger (poger@leland.stanford.edu).
@@ -51,7 +30,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: socket.c,v 1.55 2000/09/30 01:24:55 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: socket.c,v 1.37.2.2 1999/10/25 15:45:01 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -117,7 +96,7 @@ int if_register_socket (info)
 	/* Set up the address we're going to bind to. */
 	name.sin_family = AF_INET;
 	name.sin_port = local_port;
-	name.sin_addr = local_address;
+	name.sin_addr.s_addr = INADDR_ANY;
 	memset (name.sin_zero, 0, sizeof (name.sin_zero));
 
 	/* Make a socket... */
@@ -131,23 +110,14 @@ int if_register_socket (info)
 			(char *)&flag, sizeof flag) < 0)
 		log_fatal ("Can't set SO_REUSEADDR option on dhcp socket: %m");
 
-	/* Set the BROADCAST option so that we can broadcast DHCP responses.
-	   We shouldn't do this for fallback devices, and we can detect that
-	   a device is a fallback because it has no ifp structure. */
-	if (info -> ifp &&
-	    (setsockopt (sock, SOL_SOCKET, SO_BROADCAST,
-			 (char *)&flag, sizeof flag) < 0))
+	/* Set the BROADCAST option so that we can broadcast DHCP responses. */
+	if (setsockopt (sock, SOL_SOCKET, SO_BROADCAST,
+			(char *)&flag, sizeof flag) < 0)
 		log_fatal ("Can't set SO_BROADCAST option on dhcp socket: %m");
 
 	/* Bind the socket to this interface's IP address. */
-	if (bind (sock, (struct sockaddr *)&name, sizeof name) < 0) {
-		log_error ("Can't bind to dhcp address: %m");
-		log_error ("Please make sure there is no other dhcp server");
-		log_error ("running and that there's no entry for dhcp or");
-		log_error ("bootp in /etc/inetd.conf.   Also make sure you");
-		log_error ("are not running HP JetAdmin software, which");
-		log_fatal ("includes a bootp server.");
-	}
+	if (bind (sock, (struct sockaddr *)&name, sizeof name) < 0)
+		log_fatal ("Can't bind to dhcp address: %m");
 
 #if defined (HAVE_SO_BINDTODEVICE)
 	/* Bind this socket to this interface. */
@@ -183,24 +153,6 @@ void if_register_send (info)
 		      (info -> shared_network ?
 		       info -> shared_network -> name : ""));
 }
-
-#if defined (USE_SOCKET_SEND)
-void if_deregister_send (info)
-	struct interface_info *info;
-{
-#ifndef USE_SOCKET_RECEIVE
-	close (info -> wfdesc);
-#endif
-	info -> wfdesc = -1;
-
-	if (!quiet_interface_discovery)
-		log_info ("Disabling output on Socket/%s%s%s",
-		      info -> name,
-		      (info -> shared_network ? "/" : ""),
-		      (info -> shared_network ?
-		       info -> shared_network -> name : ""));
-}
-#endif /* USE_SOCKET_SEND */
 #endif /* USE_SOCKET_SEND || USE_SOCKET_FALLBACK */
 
 #ifdef USE_SOCKET_RECEIVE
@@ -212,20 +164,6 @@ void if_register_receive (info)
 	info -> rfdesc = if_register_socket (info);
 	if (!quiet_interface_discovery)
 		log_info ("Listening on Socket/%s%s%s",
-		      info -> name,
-		      (info -> shared_network ? "/" : ""),
-		      (info -> shared_network ?
-		       info -> shared_network -> name : ""));
-}
-
-void if_deregister_receive (info)
-	struct interface_info *info;
-{
-	close (info -> rfdesc);
-	info -> rfdesc = -1;
-
-	if (!quiet_interface_discovery)
-		log_info ("Disabling input on Socket/%s%s%s",
 		      info -> name,
 		      (info -> shared_network ? "/" : ""),
 		      (info -> shared_network ?
@@ -275,7 +213,7 @@ ssize_t receive_packet (interface, buf, len, from, hfrom)
 	struct sockaddr_in *from;
 	struct hardware *hfrom;
 {
-	SOCKLEN_T flen = sizeof *from;
+	int flen = sizeof *from;
 	int result;
 
 #ifdef IGNORE_HOSTUNREACH
@@ -297,26 +235,19 @@ ssize_t receive_packet (interface, buf, len, from, hfrom)
 #if defined (USE_SOCKET_FALLBACK)
 /* This just reads in a packet and silently discards it. */
 
-isc_result_t fallback_discard (object)
-	omapi_object_t *object;
+void fallback_discard (protocol)
+	struct protocol *protocol;
 {
 	char buf [1540];
 	struct sockaddr_in from;
-	SOCKLEN_T flen = sizeof from;
+	int flen = sizeof from;
 	int status;
-	struct interface_info *interface;
-
-	if (object -> type != dhcp_type_interface)
-		return ISC_R_INVALIDARG;
-	interface = (struct interface_info *)object;
+	struct interface_info *interface = protocol -> local;
 
 	status = recvfrom (interface -> wfdesc, buf, sizeof buf, 0,
 			   (struct sockaddr *)&from, &flen);
-	if (status < 0) {
+	if (status < 0)
 		log_error ("fallback_discard: %m");
-		return ISC_R_UNEXPECTED;
-	}
-	return ISC_R_SUCCESS;
 }
 #endif /* USE_SOCKET_FALLBACK */
 
@@ -337,40 +268,18 @@ int can_receive_unicast_unconfigured (ip)
 #endif
 }
 
-int supports_multiple_interfaces (ip)
-	struct interface_info *ip;
-{
-#if defined (SO_BINDTODEVICE)
-	return 1;
-#else
-	return 0;
-#endif
-}
-
 /* If we have SO_BINDTODEVICE, set up a fallback interface; otherwise,
    do not. */
 
 void maybe_setup_fallback ()
 {
 #if defined (USE_SOCKET_FALLBACK)
-	isc_result_t status;
-	struct interface_info *fbi = (struct interface_info *)0;
-	if (setup_fallback (&fbi, MDL)) {
+	struct interface_info *fbi;
+	fbi = setup_fallback ();
+	if (fbi) {
 		fbi -> wfdesc = if_register_socket (fbi);
-		fbi -> rfdesc = fbi -> wfdesc;
-		log_info ("Sending on   Socket/%s%s%s",
-		      fbi -> name,
-		      (fbi -> shared_network ? "/" : ""),
-		      (fbi -> shared_network ?
-		       fbi -> shared_network -> name : ""));
-	
-		status = omapi_register_io_object ((omapi_object_t *)fbi,
-						   if_readsocket, 0,
-						   fallback_discard, 0, 0);
-		if (status != ISC_R_SUCCESS)
-			log_fatal ("Can't register I/O handle for %s: %s",
-				   fbi -> name, isc_result_totext (status));
-		interface_dereference (&fbi, MDL);
+		add_protocol ("fallback",
+			      fbi -> wfdesc, fallback_discard, fbi);
 	}
 #endif
 }

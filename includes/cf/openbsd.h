@@ -4,41 +4,20 @@
 
 /*
  * Copyright (c) 1996-1999 Internet Software Consortium.
- * All rights reserved.
+ * Use is subject to license terms which appear in the file named
+ * ISC-LICENSE that should have accompanied this file when you
+ * received it.   If a file named ISC-LICENSE did not accompany this
+ * file, or you are not sure the one you have is correct, you may
+ * obtain an applicable copy of the license at:
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
+ *             http://www.isc.org/isc-license-1.0.html. 
  *
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of The Internet Software Consortium nor the names
- *    of its contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
+ * This file is part of the ISC DHCP distribution.   The documentation
+ * associated with this file is listed in the file DOCUMENTATION,
+ * included in the top-level directory of this release.
  *
- * THIS SOFTWARE IS PROVIDED BY THE INTERNET SOFTWARE CONSORTIUM AND
- * CONTRIBUTORS ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES,
- * INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED.  IN NO EVENT SHALL THE INTERNET SOFTWARE CONSORTIUM OR
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF
- * USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
- * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
- * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
- * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- * SUCH DAMAGE.
- *
- * This software has been written for the Internet Software Consortium
- * by Ted Lemon in cooperation with Vixie Enterprises and Nominum, Inc.
- * To learn more about the Internet Software Consortium, see
- * ``http://www.isc.org/''.  To learn more about Vixie Enterprises,
- * see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
- * ``http://www.nominum.com''.
+ * Support and other services are available for ISC products - see
+ * http://www.isc.org for more information.
  */
 
 #include <syslog.h>
@@ -100,45 +79,3 @@ extern int h_errno;
 #ifdef __alpha__
 #define PTRSIZE_64BIT
 #endif
-
-/* socklen_t first used right around the time 2.5 branched, it looks like. */
-#if OpenBSD < 199905
-#define SOCKLEN_T int
-#endif
-
-#ifdef NEED_PRAND_CONF
-#ifndef HAVE_DEV_RANDOM
- # define HAVE_DEV_RANDOM 1
- #endif /* HAVE_DEV_RANDOM */
-
-const char *cmds[] = {
-	"/bin/ps -axlw 2>&1",
-	"/usr/sbin/arp -an 2>&1",
-	"/usr/bin/netstat -an 2>&1",
-	"/bin/df  2>&1",
-	"/usr/bin/netstat -an 2>&1",
-	"/usr/sbin/iostat  2>&1",
-	"/usr/bin/vmstat  2>&1",
-	"/usr/bin/w  2>&1",
-	NULL
-};
-
-const char *dirs[] = {
-	"/tmp",
-	"/var/tmp",
-	".",
-	"/",
-	"/var/spool",
-	"/dev",
-	"/var/mail",
-	"/home",
-	NULL
-};
-
-const char *files[] = {
-	"/var/log/messages",
-	"/var/log/wtmp",
-	"/var/log/lastlog",
-	NULL
-};
-#endif /* NEED_PRAND_CONF */

@@ -27,10 +27,9 @@ PROG   = dhclient
 MAN    = dhclient.8 dhclient.conf.5 dhclient-script.8 dhclient.leases.5
 
 DEBUG  = -g
-INCLUDES = -I$(TOP) $(BINDINC) -I$(TOP)/includes
-DHCPLIB = ../common/libdhcp.a ../omapip/libomapi.a $(BINDLIB)
-CFLAGS = $(DEBUG) $(PREDEFINES) $(INCLUDES) $(COPTS) \
-		-DCLIENT_PATH=${CLIENT_PATH}
+INCLUDES = -I.. $(BINDINC) -I../includes
+DHCPLIB = ../common/libdhcp.a
+CFLAGS = $(DEBUG) $(PREDEFINES) $(INCLUDES) $(COPTS)
 
 all:	$(PROG) $(CATMANPAGES)
 
@@ -51,8 +50,7 @@ install: all
 	if [ x$(SCRIPT) = xnone ]; then \
 	  echo "No client script available."; \
 	else \
-	  $(INSTALL) $(TOP)/client/scripts/$(SCRIPT)\
-					$(DESTDIR)$(ETC)/dhclient-script; \
+	  $(INSTALL) scripts/$(SCRIPT) $(DESTDIR)$(ETC)/dhclient-script; \
 	  $(CHMOD) 700 $(DESTDIR)$(ETC)/dhclient-script; \
 	fi
 	$(MANINSTALL) $(MANFROM) dhclient.$(MANCAT)8 $(MANTO) \
@@ -61,11 +59,11 @@ install: all
 			$(DESTDIR)$(ADMMANDIR)/dhclient-script$(ADMMANEXT)
 	$(MANINSTALL) $(MANFROM) dhclient.conf.$(MANCAT)5 $(MANTO) \
 			$(DESTDIR)$(FFMANDIR)/dhclient.conf$(FFMANEXT)
-	$(MANINSTALL) $(MANFROM) dhclient.leases.$(MANCAT)5 $(MANTO) \
+	$(MANINSTALL) $(MANFROM) dhclient.leases.cat5 $(MANTO) \
 			$(DESTDIR)$(FFMANDIR)/dhclient.leases$(FFMANEXT)
 
 depend:
-	$(MKDEP) $(INCLUDES) $(PREDEFINES) $(SRCS)
+	makedepend $(INCLUDES) $(PREDEFINES) $(SRCS)
 
 clean:
 	-rm -f $(OBJS)
@@ -75,14 +73,6 @@ realclean: clean
 
 distclean: realclean
 	-rm -f Makefile
-
-links:
-	@for foo in $(SRCS) $(MAN); do \
-	  if [ ! -b $$foo ]; then \
-	    rm -f $$foo; \
-	  fi; \
-	  ln -s $(TOP)/client/$$foo $$foo; \
-	done
 
 # These should only be done on 4.4 BSD-based systems, since the mandoc
 # macros aren't available on older unices.   Catted man pages are

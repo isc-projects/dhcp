@@ -53,9 +53,6 @@ dhclient - Dynamic Host Configuration Protocol Client
 server
 ]
 [
-.B -w
-]
-[
 .I if0
 [
 .I ...ifN
@@ -95,7 +92,7 @@ dhclient.leases file.   In order to prevent the file from becoming
 arbitrarily large, from time to time dhclient creates a new
 dhclient.leases file from its in-core lease database.  The old version
 of the dhclient.leases file is retained under the name
-.IR dhclient.leases~
+.IR dhcpd.leases~
 until the next time dhclient rewrites the database.
 .PP
 Old leases are kept around in case the DHCP server is unavailable when
@@ -191,18 +188,6 @@ particularly useful if, for example,
 or
 .B RUNDIR
 has not yet been mounted when the DHCP client is started.
-.PP
-The DHCP client normally exits if it isn't able to identify any
-network interfaces to configure.   On laptop computers and other
-computers with hot-swappable I/O buses, it is possible that a
-broadcast interface may be added after system startup.   The
-.B -w
-flag can be used to cause the client not to exit when it doesn't find
-any such interfaces.   The
-.B dhcpccp (8)
-program can then be used to notify the client when a network interface
-has been added or removed, so that the client can configure an IP
-address on that interface.
 .SH CONFIGURATION
 The syntax of the dhclient.conf(8) file is discussed seperately.
 .SH FILES

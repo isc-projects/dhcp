@@ -19,16 +19,14 @@
 
 CATMANPAGES = dhcpd.cat8 dhcpd.conf.cat5 dhcpd.leases.cat5
 SEDMANPAGES = dhcpd.man8 dhcpd.conf.man5 dhcpd.leases.man5
-SRCS   = dhcpd.c dhcp.c bootp.c confpars.c db.c class.c failover.c \
-	 omapi.c mdb.c stables.c salloc.c
-OBJS   = dhcpd.o dhcp.o bootp.o confpars.o db.o class.o failover.o \
-	 omapi.o mdb.o stables.o salloc.o
+SRCS   = dhcpd.c dhcp.c bootp.c confpars.c db.c class.c failover.c
+OBJS   = dhcpd.o dhcp.o bootp.o confpars.o db.o class.o failover.o
 PROG   = dhcpd
 MAN    = dhcpd.8 dhcpd.conf.5 dhcpd.leases.5
 
 DEBUG  = -g
-INCLUDES = -I$(TOP) $(BINDINC) -I$(TOP)/includes
-DHCPLIB = ../common/libdhcp.a ../omapip/libomapi.a $(BINDLIB)
+INCLUDES = -I.. $(BINDINC) -I../includes
+DHCPLIB = ../common/libdhcp.a
 CFLAGS = $(DEBUG) $(PREDEFINES) $(INCLUDES) $(COPTS)
 
 all:	$(PROG) $(CATMANPAGES)
@@ -54,7 +52,7 @@ install: all
 			$(DESTDIR)$(FFMANDIR)/dhcpd.leases$(FFMANEXT)
 
 depend:
-	$(MKDEP) $(INCLUDES) $(PREDEFINES) $(SRCS)
+	makedepend $(INCLUDES) $(PREDEFINES) $(SRCS)
 
 clean:
 	-rm -f $(OBJS)
@@ -64,14 +62,6 @@ realclean: clean
 
 distclean: realclean
 	-rm -f Makefile
-
-links:
-	@for foo in $(SRCS) $(MAN); do \
-	  if [ ! -b $$foo ]; then \
-	    rm -f $$foo; \
-	  fi; \
-	  ln -s $(TOP)/server/$$foo $$foo; \
-	done
 
 # These should only be done on 4.4 BSD-based systems, since the mandoc
 # macros aren't available on older unices.   Catted man pages are

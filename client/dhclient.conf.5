@@ -170,17 +170,7 @@ are called \fIDHCP Options\fR.  DHCP Options are defined in
 The request statement causes the client to request that any server
 responding to the client send the client its values for the specified
 options.   Only the option names should be specified in the request
-statement - not option parameters.   By default, the DHCP server
-requests the subnet-mask, broadcast-address, time-offset, routers,
-domain-name, domain-name-servers and host-name options. 
-.PP
-In some cases, it may be desirable to send no parameter request list
-at all.   To do this, simply write the request statement but specify
-no parameters:
-.PP
-.nf
-	request;
-.fi
+statement - not option parameters.
 .PP
 .I The
 .B require
@@ -366,18 +356,7 @@ interface's final configuration once a lease has been acquired.   If
 no lease is acquired, the script is used to test predefined leases, if
 any, and also called once if no valid lease can be identified.   For
 more information, see
-.B dhclient-script(8).
-.PP
- \fBvendor option space "\fIname\fB";\fR
-.PP
-The
-.B vendor option space
-statement is used to specify which option space should be used for
-decoding the vendor-encapsulate-options option if one is received.
-The \fIdhcp-vendor-identifier\fR can be used to request a specific
-class of vendor options from the server.   See
-.B dhcp-options(5)
-for details.
+.B dhclient-lease(8).
 .PP
  \fBmedium "\fImedia setup\fB";\fR
 .PP

@@ -3,54 +3,32 @@
    Parser for dhclient config and lease files... */
 
 /*
- * Copyright (c) 1996-2000 Internet Software Consortium.
- * All rights reserved.
+ * Copyright (c) 1996-1999 Internet Software Consortium.
+ * Use is subject to license terms which appear in the file named
+ * ISC-LICENSE that should have accompanied this file when you
+ * received it.   If a file named ISC-LICENSE did not accompany this
+ * file, or you are not sure the one you have is correct, you may
+ * obtain an applicable copy of the license at:
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
+ *             http://www.isc.org/isc-license-1.0.html. 
  *
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of The Internet Software Consortium nor the names
- *    of its contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
+ * This file is part of the ISC DHCP distribution.   The documentation
+ * associated with this file is listed in the file DOCUMENTATION,
+ * included in the top-level directory of this release.
  *
- * THIS SOFTWARE IS PROVIDED BY THE INTERNET SOFTWARE CONSORTIUM AND
- * CONTRIBUTORS ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES,
- * INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED.  IN NO EVENT SHALL THE INTERNET SOFTWARE CONSORTIUM OR
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF
- * USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
- * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
- * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
- * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- * SUCH DAMAGE.
- *
- * This software has been written for the Internet Software Consortium
- * by Ted Lemon in cooperation with Vixie Enterprises and Nominum, Inc.
- * To learn more about the Internet Software Consortium, see
- * ``http://www.isc.org/''.  To learn more about Vixie Enterprises,
- * see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
- * ``http://www.nominum.com''.
+ * Support and other services are available for ISC products - see
+ * http://www.isc.org for more information.
  */
 
 #ifndef lint
 static char copyright[] =
-"$Id: clparse.c,v 1.52 2000/11/28 22:07:09 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: clparse.c,v 1.31.2.3 1999/11/13 04:01:09 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
+#include "dhctoken.h"
 
 static TIME parsed_time;
-
-char client_script_name [] = "/etc/dhclient-script";
 
 struct client_config top_level_config;
 
@@ -70,20 +48,20 @@ u_int32_t default_requested_options [] = {
 			 | client-declaration
 			 | client-declarations client-declaration */
 
-isc_result_t read_client_conf ()
+int read_client_conf ()
 {
-	int file;
-	struct parse *cfile;
-	const char *val;
+	FILE *cfile;
+	char *val;
 	int token;
 	int declaration = 0;
 	struct client_config *config;
 	struct client_state *state;
 	struct interface_info *ip;
-	isc_result_t status;
+
+	new_parse (path_dhclient_conf);
 
 	/* Set up the initial dhcp option universe. */
-	initialize_common_option_spaces ();
+	initialize_universes ();
 
 	/* Initialize the top level client configuration. */
 	memset (&top_level_config, 0, sizeof top_level_config);
@@ -96,22 +74,18 @@ isc_result_t read_client_conf ()
 	top_level_config.backoff_cutoff = 15;
 	top_level_config.initial_interval = 3;
 	top_level_config.bootp_policy = P_ACCEPT;
-	top_level_config.script_name = client_script_name;
+	top_level_config.script_name = "/etc/dhclient-script";
 	top_level_config.requested_options = default_requested_options;
-	top_level_config.omapi_port = -1;
 
-	group_allocate (&top_level_config.on_receipt, MDL);
+	top_level_config.on_receipt = new_group ("read_client_conf");
 	if (!top_level_config.on_receipt)
 		log_fatal ("no memory for top-level on_receipt group");
 
-	group_allocate (&top_level_config.on_transmission, MDL);
+	top_level_config.on_transmission = new_group ("read_client_conf");
 	if (!top_level_config.on_transmission)
 		log_fatal ("no memory for top-level on_transmission group");
 
-	if ((file = open (path_dhclient_conf, O_RDONLY)) >= 0) {
-		cfile = (struct parse *)0;
-		new_parse (&cfile, file, (char *)0, 0, path_dhclient_conf);
-
+	if ((cfile = fopen (path_dhclient_conf, "r")) != NULL) {
 		do {
 			token = peek_token (&val, cfile);
 			if (token == EOF)
@@ -121,11 +95,7 @@ isc_result_t read_client_conf ()
 						&top_level_config);
 		} while (1);
 		token = next_token (&val, cfile); /* Clear the peek buffer */
-		status = (cfile -> warnings_occurred
-			  ? ISC_R_BADPARSE
-			  : ISC_R_SUCCESS);
-		close (file);
-		end_parse (&cfile);
+		fclose (cfile);
 	}
 
 	/* Set up state and config structures for clients that don't
@@ -134,7 +104,7 @@ isc_result_t read_client_conf ()
 	for (ip = interfaces; ip; ip = ip -> next) {
 		if (!ip -> client) {
 			ip -> client = (struct client_state *)
-				dmalloc (sizeof (struct client_state), MDL);
+				malloc (sizeof (struct client_state));
 			if (!ip -> client)
 				log_fatal ("no memory for client state.");
 			memset (ip -> client, 0, sizeof *(ip -> client));
@@ -144,8 +114,7 @@ isc_result_t read_client_conf ()
 		if (!ip -> client -> config) {
 			if (!config) {
 				config = (struct client_config *)
-					dmalloc (sizeof (struct client_config),
-						 MDL);
+					malloc (sizeof (struct client_config));
 				if (!config)
 				    log_fatal ("no memory for client config.");
 				memcpy (config, &top_level_config,
@@ -154,7 +123,8 @@ isc_result_t read_client_conf ()
 			ip -> client -> config = config;
 		}
 	}
-	return status;
+
+	return !warnings_occurred;
 }
 
 /* lease-file :== client-lease-statements EOF
@@ -163,18 +133,16 @@ isc_result_t read_client_conf ()
 
 void read_client_leases ()
 {
-	int file;
-	struct parse *cfile;
-	const char *val;
+	FILE *cfile;
+	char *val;
 	int token;
+
+	new_parse (path_dhclient_db);
 
 	/* Open the lease file.   If we can't open it, just return -
 	   we can safely trust the server to remember our state. */
-	if ((file = open (path_dhclient_db, O_RDONLY)) < 0)
+	if ((cfile = fopen (path_dhclient_db, "r")) == NULL)
 		return;
-	cfile = (struct parse *)0;
-	new_parse (&cfile, file, (char *)0, 0, path_dhclient_db);
-
 	do {
 		token = next_token (&val, cfile);
 		if (token == EOF)
@@ -187,9 +155,6 @@ void read_client_leases ()
 			parse_client_lease_statement (cfile, 0);
 
 	} while (1);
-
-	close (file);
-	end_parse (&cfile);
 }
 
 /* client-declaration :== 
@@ -206,19 +171,18 @@ void read_client_leases ()
 	REBOOT number |
 	SELECT_TIMEOUT number |
 	SCRIPT string |
-	VENDOR_SPACE string |
 	interface-declaration |
 	LEASE client-lease-statement |
 	ALIAS client-lease-statement |
-	KEY key-definition */
+	AUTH_KEY key_id key_data */
 
 void parse_client_statement (cfile, ip, config)
-	struct parse *cfile;
+	FILE *cfile;
 	struct interface_info *ip;
 	struct client_config *config;
 {
 	int token;
-	const char *val;
+	char *val;
 	struct option *option;
 	struct executable_statement *stmt, **p;
 	enum statement_op op;
@@ -226,11 +190,9 @@ void parse_client_statement (cfile, ip, config)
 	char *name;
 	struct data_string key_id;
 	enum policy policy;
-	int known;
-	int tmp, i;
 
 	switch (peek_token (&val, cfile)) {
-	      case KEY:
+	      case AUTH_KEY:
 		next_token (&val, cfile);
 		if (ip) {
 			/* This may seem arbitrary, but there's a reason for
@@ -245,11 +207,13 @@ void parse_client_statement (cfile, ip, config)
 			   want to lull them into believing they've gotten
 			   their way.   This is a bit contrived, but people
 			   tend not to be entirely rational about security. */
-			parse_warn (cfile, "key definition not allowed here.");
+			parse_warn ("auth-key not allowed here.");
 			skip_to_semi (cfile);
 			break;
 		}
-		parse_key (cfile);
+		memset (&key_id, 0, sizeof key_id);
+		if (parse_auth_key (&key_id, cfile))
+			data_string_forget (&key_id, "parse_client_statement");
 		return;
 
 		/* REQUIRE can either start a policy statement or a
@@ -290,23 +254,22 @@ void parse_client_statement (cfile, ip, config)
 			if (policy != P_PREFER &&
 			    policy != P_REQUIRE &&
 			    policy != P_DONT) {
-				parse_warn (cfile,
-					    "invalid authentication policy.");
+				parse_warn ("invalid authentication policy.");
 				skip_to_semi (cfile);
 				return;
 			}
 			config -> auth_policy = policy;
-		} else if (token != TOKEN_BOOTP) {
+		} else if (token != BOOTP) {
 			if (policy != P_PREFER &&
 			    policy != P_IGNORE &&
 			    policy != P_ACCEPT) {
-				parse_warn (cfile, "invalid bootp policy.");
+				parse_warn ("invalid bootp policy.");
 				skip_to_semi (cfile);
 				return;
 			}
 			config -> bootp_policy = policy;
 		} else {
-			parse_warn (cfile, "expecting a policy type.");
+			parse_warn ("expecting a policy type.");
 			skip_to_semi (cfile);
 			return;
 		} 
@@ -317,16 +280,13 @@ void parse_client_statement (cfile, ip, config)
 		op = supersede_option_statement;
 	      do_option:
 		token = next_token (&val, cfile);
-		known = 0;
-		option = parse_option_name (cfile, 0, &known);
+		option = parse_option_name (cfile, 0);
 		if (!option)
 			return;
-		stmt = (struct executable_statement *)0;
-		if (!parse_option_statement (&stmt, cfile, 1, option, op))
-			return;
+		stmt = parse_option_statement (cfile, 1, option, op);
 		for (; *p; p = &((*p) -> next))
 			;
-		executable_statement_reference (p, stmt, MDL);
+		*p = stmt;
 		stmt -> next = (struct executable_statement *)0;
 		return;
 
@@ -336,9 +296,8 @@ void parse_client_statement (cfile, ip, config)
 		token = peek_token (&val, cfile);
 		if (token == SPACE) {
 			if (ip) {
-				parse_warn (cfile,
-					    "option space definitions %s",
-					    " may not be scoped.");
+				parse_warn ("option space definitions %s",
+					    "may not be scoped.");
 				skip_to_semi (cfile);
 				break;
 			}
@@ -346,27 +305,26 @@ void parse_client_statement (cfile, ip, config)
 			return;
 		}
 
-		option = parse_option_name (cfile, 1, &known);
+		option = parse_option_name (cfile, 1);
 		if (!option)
 			return;
 
 		token = next_token (&val, cfile);
 		if (token != CODE) {
-			parse_warn (cfile, "expecting \"code\" keyword.");
+			parse_warn ("expecting \"code\" keyword.");
 			skip_to_semi (cfile);
-			free_option (option, MDL);
+			free_option (option, "parse_statement");
 			return;
 		}
 		if (ip) {
-			parse_warn (cfile,
-				    "option definitions may only appear in %s",
+			parse_warn ("option definitions may only appear in %s",
 				    "the outermost scope.");
 			skip_to_semi (cfile);
-			free_option (option, MDL);
+			free_option (option, "parse_statement");
 			return;
 		}
 		if (!parse_option_code_definition (cfile, option))
-			free_option (option, MDL);
+			free_option (option, "parse_statement");
 		return;
 
 	      case DEFAULT:
@@ -399,7 +357,7 @@ void parse_client_statement (cfile, ip, config)
 		if (ip) {
 			parse_hardware_param (cfile, &ip -> hw_address);
 		} else {
-			parse_warn (cfile, "hardware address parameter %s",
+			parse_warn ("hardware address parameter %s",
 				    "not allowed here.");
 			skip_to_semi (cfile);
 		}
@@ -427,31 +385,6 @@ void parse_client_statement (cfile, ip, config)
 		parse_lease_time (cfile, &config -> select_interval);
 		return;
 
-	      case OMAPI:
-		token = next_token (&val, cfile);
-		if (token != PORT) {
-			parse_warn (cfile,
-				    "unexpected omapi subtype: %s", val);
-			skip_to_semi (cfile);
-			return;
-		}
-		token = next_token (&val, cfile);
-		if (token != NUMBER) {
-			parse_warn (cfile, "invalid port number: `%s'", val);
-			skip_to_semi (cfile);
-			return;
-		}
-		tmp = atoi (val);
-		if (tmp < 0 || tmp > 65535)
-			parse_warn (cfile, "invalid omapi port %d.", tmp);
-		else if (config != &top_level_config)
-			parse_warn (cfile,
-				    "omapi port only works at top level.");
-		else
-			config -> omapi_port = tmp;
-		parse_semi (cfile);
-		return;
-		
 	      case REBOOT:
 		token = next_token (&val, cfile);
 		parse_lease_time (cfile, &config -> reboot_timeout);
@@ -472,52 +405,17 @@ void parse_client_statement (cfile, ip, config)
 		config -> script_name = parse_string (cfile);
 		return;
 
-	      case VENDOR:
-		token = next_token (&val, cfile);
-		token = next_token (&val, cfile);
-		if (token != OPTION) {
-			parse_warn (cfile, "expecting 'vendor option space'");
-			skip_to_semi (cfile);
-			return;
-		}
-		token = next_token (&val, cfile);
-		if (token != SPACE) {
-			parse_warn (cfile, "expecting 'vendor option space'");
-			skip_to_semi (cfile);
-			return;
-		}
-		token = next_token (&val, cfile);
-		if (!is_identifier (token)) {
-			parse_warn (cfile, "expecting an identifier.");
-			skip_to_semi (cfile);
-			return;
-		}
-		config -> vendor_space_name = dmalloc (strlen (val) + 1, MDL);
-		if (!config -> vendor_space_name)
-			log_fatal ("no memory for vendor option space name.");
-		strcpy (config -> vendor_space_name, val);
-		for (i = 0; i < universe_count; i++)
-			if (!strcmp (universes [i] -> name,
-				     config -> vendor_space_name))
-				break;
-		if (i == universe_count) {
-			log_error ("vendor option space %s not found.",
-				   config -> vendor_space_name);
-		}
-		parse_semi (cfile);
-		return;
-
 	      case INTERFACE:
 		token = next_token (&val, cfile);
 		if (ip)
-			parse_warn (cfile, "nested interface declaration.");
+			parse_warn ("nested interface declaration.");
 		parse_interface_declaration (cfile, config, (char *)0);
 		return;
 
 	      case PSEUDO:
 		token = next_token (&val, cfile);
 		token = next_token (&val, cfile);
-		name = dmalloc (strlen (val) + 1, MDL);
+		name = dmalloc (strlen (val) + 1, "parse_client_statement");
 		if (!name)
 			log_fatal ("no memory for pseudo interface name");
 		strcpy (name, val);
@@ -541,25 +439,21 @@ void parse_client_statement (cfile, ip, config)
 
 	      default:
 		lose = 0;
-		stmt = (struct executable_statement *)0;
-		if (!parse_executable_statement (&stmt,
-						 cfile, &lose, context_any)) {
+		stmt = parse_executable_statement (cfile, &lose);
+		if (!stmt) {
 			if (!lose) {
-				parse_warn (cfile, "expecting a statement.");
+				parse_warn ("expecting a statement.");
 				skip_to_semi (cfile);
 			}
 		} else {
 			if (!config -> on_receipt -> statements) {
-				executable_statement_reference
-					(&config -> on_receipt -> statements,
-					 stmt, MDL);
+				config -> on_receipt -> statements = stmt;
 			} else {
 				struct executable_statement *s;
 				for (s = config -> on_receipt -> statements;
 				     s -> next; s = s -> next)
 					;
-				executable_statement_reference (&s -> next,
-								stmt, MDL);
+				s -> next = stmt;
 			}
 			return;
 		}
@@ -568,25 +462,71 @@ void parse_client_statement (cfile, ip, config)
 	parse_semi (cfile);
 }
 
+int parse_X (cfile, buf, max)
+	FILE *cfile;
+	u_int8_t *buf;
+	int max;
+{
+	int token;
+	char *val;
+	int len;
+	u_int8_t *s;
+
+	token = peek_token (&val, cfile);
+	if (token == NUMBER_OR_NAME || token == NUMBER) {
+		len = 0;
+		do {
+			token = next_token (&val, cfile);
+			if (token != NUMBER && token != NUMBER_OR_NAME) {
+				parse_warn ("expecting hexadecimal constant.");
+				skip_to_semi (cfile);
+				return 0;
+			}
+			convert_num (&buf [len], val, 16, 8);
+			if (len++ > max) {
+				parse_warn ("hexadecimal constant too long.");
+				skip_to_semi (cfile);
+				return 0;
+			}
+			token = peek_token (&val, cfile);
+			if (token == COLON)
+				token = next_token (&val, cfile);
+		} while (token == COLON);
+		val = (char *)buf;
+	} else if (token == STRING) {
+		token = next_token (&val, cfile);
+		len = strlen (val);
+		if (len + 1 > max) {
+			parse_warn ("string constant too long.");
+			skip_to_semi (cfile);
+			return 0;
+		}
+		memcpy (buf, val, len + 1);
+	} else {
+		parse_warn ("expecting string or hexadecimal data");
+		skip_to_semi (cfile);
+		return 0;
+	}
+	return len;
+}
+
 /* option-list :== option_name |
    		   option_list COMMA option_name */
 
 void parse_option_list (cfile, list)
-	struct parse *cfile;
+	FILE *cfile;
 	u_int32_t **list;
 {
 	int ix, i;
 	int token;
-	const char *val;
+	char *val;
 	pair p = (pair)0, q, r;
 
 	ix = 0;
 	do {
 		token = next_token (&val, cfile);
-		if (token == SEMI)
-			break;
 		if (!is_identifier (token)) {
-			parse_warn (cfile, "%s: expected option name.", val);
+			parse_warn ("expected option name.");
 			skip_to_semi (cfile);
 			return;
 		}
@@ -595,11 +535,11 @@ void parse_option_list (cfile, list)
 				break;
 		}
 		if (i == 256) {
-			parse_warn (cfile, "%s: expected option name.", val);
+			parse_warn ("%s: expected option name.", val);
 			skip_to_semi (cfile);
 			return;
 		}
-		r = new_pair (MDL);
+		r = new_pair ("parse_option_list");
 		if (!r)
 			log_fatal ("can't allocate pair for option code.");
 		r -> car = (caddr_t)i;
@@ -613,27 +553,25 @@ void parse_option_list (cfile, list)
 		token = next_token (&val, cfile);
 	} while (token == COMMA);
 	if (token != SEMI) {
-		parse_warn (cfile, "expecting semicolon.");
+		parse_warn ("expecting semicolon.");
 		skip_to_semi (cfile);
 		return;
 	}
 	if (*list)
-		dfree (*list, MDL);
-	if (ix) {
-		*list = dmalloc ((ix + 1) * sizeof **list, MDL);
-		if (!*list)
-			log_error ("no memory for option list.");
-		else {
-			ix = 0;
-			for (q = p; q; q = q -> cdr)
-				(*list) [ix++] = (u_int32_t)q -> car;
-			(*list) [ix] = 0;
-		}
-		while (p) {
-			q = p -> cdr;
-			free_pair (p, MDL);
-			p = q;
-		}
+		dfree (*list, "parse_option_list");
+	*list = dmalloc ((ix + 1) * sizeof **list, "parse_option_list");
+	if (!*list)
+		log_error ("no memory for option list.");
+	else {
+		ix = 0;
+		for (q = p; q; q = q -> cdr)
+			(*list) [ix++] = (u_int32_t)q -> car;
+		(*list) [ix] = 0;
+	}
+	while (p) {
+		q = p -> cdr;
+		free_pair (p, "parse_option_list");
+		p = q;
 	}
 }
 
@@ -641,24 +579,23 @@ void parse_option_list (cfile, list)
    	INTERFACE string LBRACE client-declarations RBRACE */
 
 void parse_interface_declaration (cfile, outer_config, name)
-	struct parse *cfile;
+	FILE *cfile;
 	struct client_config *outer_config;
 	char *name;
 {
 	int token;
-	const char *val;
+	char *val;
 	struct client_state *client, **cp;
-	struct interface_info *ip = (struct interface_info *)0;
+	struct interface_info *ip;
 
 	token = next_token (&val, cfile);
 	if (token != STRING) {
-		parse_warn (cfile, "expecting interface name (in quotes).");
+		parse_warn ("expecting interface name (in quotes).");
 		skip_to_semi (cfile);
 		return;
 	}
 
-	if (!interface_or_dummy (&ip, val))
-		log_fatal ("Can't allocate interface %s.", val);
+	ip = interface_or_dummy (val);
 
 	/* If we were given a name, this is a pseudo-interface. */
 	if (name) {
@@ -684,7 +621,7 @@ void parse_interface_declaration (cfile, outer_config, name)
 
 	token = next_token (&val, cfile);
 	if (token != LBRACE) {
-		parse_warn (cfile, "expecting left brace.");
+		parse_warn ("expecting left brace.");
 		skip_to_semi (cfile);
 		return;
 	}
@@ -692,8 +629,7 @@ void parse_interface_declaration (cfile, outer_config, name)
 	do {
 		token = peek_token (&val, cfile);
 		if (token == EOF) {
-			parse_warn (cfile,
-				    "unterminated interface declaration.");
+			parse_warn ("unterminated interface declaration.");
 			return;
 		}
 		if (token == RBRACE)
@@ -703,58 +639,45 @@ void parse_interface_declaration (cfile, outer_config, name)
 	token = next_token (&val, cfile);
 }
 
-int interface_or_dummy (struct interface_info **pi, const char *name)
+struct interface_info *interface_or_dummy (name)
+	char *name;
 {
-	struct interface_info *i;
-	struct interface_info *ip = (struct interface_info *)0;
-	isc_result_t status;
+	struct interface_info *ip;
 
 	/* Find the interface (if any) that matches the name. */
-	for (i = interfaces; i; i = i -> next) {
-		if (!strcmp (i -> name, name)) {
-			interface_reference (&ip, i, MDL);
+	for (ip = interfaces; ip; ip = ip -> next) {
+		if (!strcmp (ip -> name, name))
 			break;
-		}
 	}
 
 	/* If it's not a real interface, see if it's on the dummy list. */
 	if (!ip) {
 		for (ip = dummy_interfaces; ip; ip = ip -> next) {
-			if (!strcmp (ip -> name, name)) {
-				interface_reference (&ip, i, MDL);
+			if (!strcmp (ip -> name, name))
 				break;
-			}
 		}
 	}
 
 	/* If we didn't find an interface, make a dummy interface as
 	   a placeholder. */
 	if (!ip) {
-		isc_result_t status;
-		status = interface_allocate (&ip, MDL);
-		if (status != ISC_R_SUCCESS)
-			log_fatal ("Can't record interface %s: %s",
-				   name, isc_result_totext (status));
+		ip = ((struct interface_info *)malloc (sizeof *ip));
+		if (!ip)
+			log_fatal ("Insufficient memory to record interface %s",
+			       name);
+		memset (ip, 0, sizeof *ip);
 		strcpy (ip -> name, name);
-		if (dummy_interfaces) {
-			interface_reference (&ip -> next,
-					     dummy_interfaces, MDL);
-			interface_dereference (&dummy_interfaces, MDL);
-		}
-		interface_reference (&dummy_interfaces, ip, MDL);
+		ip -> next = dummy_interfaces;
+		dummy_interfaces = ip;
 	}
-	if (pi)
-		status = interface_reference (pi, ip, MDL);
-	interface_dereference (&ip, MDL);
-	if (status != ISC_R_SUCCESS)
-		return 0;
-	return 1;
+	return ip;
 }
 
 void make_client_state (state)
 	struct client_state **state;
 {
-	*state = ((struct client_state *)dmalloc (sizeof **state, MDL));
+	*state = ((struct client_state *)dmalloc (sizeof **state,
+						  "make_client_state"));
 	if (!*state)
 		log_fatal ("no memory for client state\n");
 	memset (*state, 0, sizeof **state);
@@ -765,15 +688,15 @@ void make_client_config (client, config)
 	struct client_config *config;
 {
 	client -> config = (((struct client_config *)
-			     dmalloc (sizeof (struct client_config), MDL)));
+			     dmalloc (sizeof (struct client_config),
+				      "make_client_config")));
 	if (!client -> config)
 		log_fatal ("no memory for client config\n");
 	memcpy (client -> config, config, sizeof *config);
-	if (!clone_group (&client -> config -> on_receipt,
-			  config -> on_receipt, MDL) ||
-	    !clone_group (&client -> config -> on_transmission,
-			  config -> on_transmission, MDL))
-		log_fatal ("no memory for client state groups.");
+	client -> config -> on_receipt =
+		clone_group (config -> on_receipt, "make_client_config");
+	client -> config -> on_transmission =
+		clone_group (config -> on_transmission, "make_client_config");
 }
 
 /* client-lease-statement :==
@@ -786,35 +709,35 @@ void make_client_config (client, config)
 
 
 void parse_client_lease_statement (cfile, is_static)
-	struct parse *cfile;
+	FILE *cfile;
 	int is_static;
 {
 	struct client_lease *lease, *lp, *pl;
 	struct interface_info *ip = (struct interface_info *)0;
 	int token;
-	const char *val;
+	char *val;
 	struct client_state *client = (struct client_state *)0;
 
 	token = next_token (&val, cfile);
 	if (token != LBRACE) {
-		parse_warn (cfile, "expecting left brace.");
+		parse_warn ("expecting left brace.");
 		skip_to_semi (cfile);
 		return;
 	}
 
-	lease = ((struct client_lease *)
-		 dmalloc (sizeof (struct client_lease), MDL));
+	lease = (struct client_lease *)malloc (sizeof (struct client_lease));
 	if (!lease)
 		log_fatal ("no memory for lease.\n");
 	memset (lease, 0, sizeof *lease);
 	lease -> is_static = is_static;
-	if (!option_state_allocate (&lease -> options, MDL))
+	if (!option_state_allocate (&lease -> options,
+				    "parse_client_lease_statement"))
 		log_fatal ("no memory for lease options.\n");
 
 	do {
 		token = peek_token (&val, cfile);
 		if (token == EOF) {
-			parse_warn (cfile, "unterminated lease declaration.");
+			parse_warn ("unterminated lease declaration.");
 			return;
 		}
 		if (token == RBRACE)
@@ -910,16 +833,16 @@ void parse_client_lease_statement (cfile, is_static)
 	RENEW time-decl |
 	REBIND time-decl |
 	EXPIRE time-decl |
-	KEY id */
+	AUTH_KEY id */
 
 void parse_client_lease_declaration (cfile, lease, ipp, clientp)
-	struct parse *cfile;
+	FILE *cfile;
 	struct client_lease *lease;
 	struct interface_info **ipp;
 	struct client_state **clientp;
 {
 	int token;
-	const char *val;
+	char *val;
 	char *t, *n;
 	struct interface_info *ip;
 	struct option_cache *oc;
@@ -927,46 +850,43 @@ void parse_client_lease_declaration (cfile, lease, ipp, clientp)
 	struct data_string key_id;
 
 	switch (next_token (&val, cfile)) {
-	      case KEY:
-		token = next_token (&val, cfile);
-		if (token != STRING && !is_identifier (token)) {
-			parse_warn (cfile, "expecting key name.");
-			skip_to_semi (cfile);
-			break;
+	      case AUTH_KEY:
+		memset (&key_id, 0, sizeof key_id);
+		if (parse_auth_key (&key_id, cfile)) {
+			data_string_copy (&lease -> auth_key_id,
+					  &key_id,
+					  "parse_client_lease_declaration");
+			data_string_forget (&key_id,
+					    "parse_client_lease_declaration");
 		}
-		if (omapi_auth_key_lookup_name (&lease -> key, val) !=
-		    ISC_R_SUCCESS)
-			parse_warn (cfile, "unknown key %s", val);
-		parse_semi (cfile);
 		break;
-	      case TOKEN_BOOTP:
+	      case BOOTP:
 		lease -> is_bootp = 1;
 		break;
 
 	      case INTERFACE:
 		token = next_token (&val, cfile);
 		if (token != STRING) {
-			parse_warn (cfile,
-				    "expecting interface name (in quotes).");
+			parse_warn ("expecting interface name (in quotes).");
 			skip_to_semi (cfile);
 			break;
 		}
-		interface_or_dummy (ipp, val);
+		ip = interface_or_dummy (val);
+		*ipp = ip;
 		break;
 
 	      case NAME:
 		token = next_token (&val, cfile);
 		ip = *ipp;
 		if (!ip) {
-			parse_warn (cfile, "state name precedes interface.");
+			parse_warn ("state name precedes interface.");
 			break;
 		}
 		for (client = ip -> client; client; client = client -> next)
 			if (client -> name && !strcmp (client -> name, val))
 				break;
 		if (!client)
-			parse_warn (cfile,
-				    "lease specified for unknown pseudo.");
+			parse_warn ("lease specified for unknown pseudo.");
 		*clientp = client;
 		break;
 
@@ -1004,29 +924,196 @@ void parse_client_lease_declaration (cfile, lease, ipp, clientp)
 		if (parse_option_decl (&oc, cfile)) {
 			save_option (oc -> option -> universe,
 				     lease -> options, oc);
-			option_cache_dereference (&oc, MDL);
+			option_cache_dereference
+				(&oc, "parse_client_lease_declaration");
 		}
 		return;
 
 	      default:
-		parse_warn (cfile, "expecting lease declaration.");
+		parse_warn ("expecting lease declaration.");
 		skip_to_semi (cfile);
 		break;
 	}
 	token = next_token (&val, cfile);
 	if (token != SEMI) {
-		parse_warn (cfile, "expecting semicolon.");
+		parse_warn ("expecting semicolon.");
 		skip_to_semi (cfile);
 	}
 }
 
+int parse_option_decl (oc, cfile)
+	struct option_cache **oc;
+	FILE *cfile;
+{
+	char *val;
+	int token;
+	u_int8_t buf [4];
+	u_int8_t hunkbuf [1024];
+	int hunkix = 0;
+	char *fmt;
+	struct option *option;
+	struct iaddr ip_addr;
+	u_int8_t *dp;
+	int len;
+	int nul_term = 0;
+	struct buffer *bp;
+
+	option = parse_option_name (cfile, 0);
+	if (!option)
+		return 0;
+
+	/* Parse the option data... */
+	do {
+		/* Set a flag if this is an array of a simple type (i.e.,
+		   not an array of pairs of IP addresses, or something
+		   like that. */
+		int uniform = option -> format [1] == 'A';
+
+		for (fmt = option -> format; *fmt; fmt++) {
+			if (*fmt == 'A')
+				break;
+			switch (*fmt) {
+			      case 'X':
+				len = parse_X (cfile, &hunkbuf [hunkix],
+					       sizeof hunkbuf - hunkix);
+				hunkix += len;
+				break;
+					
+			      case 't': /* Text string... */
+				token = next_token (&val, cfile);
+				if (token != STRING) {
+					parse_warn ("expecting string.");
+					skip_to_semi (cfile);
+					return 0;
+				}
+				len = strlen (val);
+				if (hunkix + len + 1 > sizeof hunkbuf) {
+					parse_warn ("option data buffer %s",
+						    "overflow");
+					skip_to_semi (cfile);
+					return 0;
+				}
+				memcpy (&hunkbuf [hunkix], val, len + 1);
+				nul_term = 1;
+				hunkix += len;
+				break;
+
+			      case 'I': /* IP address. */
+				if (!parse_ip_addr (cfile, &ip_addr))
+					return 0;
+				len = ip_addr.len;
+				dp = ip_addr.iabuf;
+
+			      alloc:
+				if (hunkix + len > sizeof hunkbuf) {
+					parse_warn ("option data buffer %s",
+						    "overflow");
+					skip_to_semi (cfile);
+					return 0;
+				}
+				memcpy (&hunkbuf [hunkix], dp, len);
+				hunkix += len;
+				break;
+
+			      case 'L': /* Unsigned 32-bit integer... */
+			      case 'l':	/* Signed 32-bit integer... */
+				token = next_token (&val, cfile);
+				if (token != NUMBER) {
+				      need_number:
+					parse_warn ("expecting number.");
+					if (token != SEMI)
+						skip_to_semi (cfile);
+					return 0;
+				}
+				convert_num (buf, val, 0, 32);
+				len = 4;
+				dp = buf;
+				goto alloc;
+
+			      case 's':	/* Signed 16-bit integer. */
+			      case 'S':	/* Unsigned 16-bit integer. */
+				token = next_token (&val, cfile);
+				if (token != NUMBER)
+					goto need_number;
+				convert_num (buf, val, 0, 16);
+				len = 2;
+				dp = buf;
+				goto alloc;
+
+			      case 'b':	/* Signed 8-bit integer. */
+			      case 'B':	/* Unsigned 8-bit integer. */
+				token = next_token (&val, cfile);
+				if (token != NUMBER)
+					goto need_number;
+				convert_num (buf, val, 0, 8);
+				len = 1;
+				dp = buf;
+				goto alloc;
+
+			      case 'f': /* Boolean flag. */
+				token = next_token (&val, cfile);
+				if (!is_identifier (token)) {
+					parse_warn ("expecting identifier.");
+				      bad_flag:
+					if (token != SEMI)
+						skip_to_semi (cfile);
+					return 0;
+				}
+				if (!strcasecmp (val, "true")
+				    || !strcasecmp (val, "on"))
+					buf [0] = 1;
+				else if (!strcasecmp (val, "false")
+					 || !strcasecmp (val, "off"))
+					buf [0] = 0;
+				else {
+					parse_warn ("expecting boolean.");
+					goto bad_flag;
+				}
+				len = 1;
+				dp = buf;
+				goto alloc;
+
+			      default:
+				log_error ("parse_option_param: Bad format %c",
+					   *fmt);
+				skip_to_semi (cfile);
+				return 0;
+			}
+		}
+		token = next_token (&val, cfile);
+	} while (*fmt == 'A' && token == COMMA);
+
+	if (token != SEMI) {
+		parse_warn ("semicolon expected.");
+		skip_to_semi (cfile);
+		return 0;
+	}
+
+	bp = (struct buffer *)0;
+	if (!buffer_allocate (&bp, hunkix + nul_term, "parse_option_decl"))
+		log_fatal ("no memory to store option declaration.");
+	if (!bp -> data)
+		log_fatal ("out of memory allocating option data.");
+	memcpy (bp -> data, hunkbuf, hunkix + nul_term);
+	
+	if (!option_cache_allocate (oc, "parse_option_decl"))
+		log_fatal ("out of memory allocating option cache.");
+
+	(*oc) -> data.buffer = bp;
+	(*oc) -> data.data = &bp -> data [0];
+	(*oc) -> data.terminated = nul_term;
+	(*oc) -> data.len = hunkix;
+	(*oc) -> option = option;
+	return 1;
+}
+
 void parse_string_list (cfile, lp, multiple)
-	struct parse *cfile;
+	FILE *cfile;
 	struct string_list **lp;
 	int multiple;
 {
 	int token;
-	const char *val;
+	char *val;
 	struct string_list *cur, *tmp;
 
 	/* Find the last medium in the media list. */
@@ -1040,14 +1127,14 @@ void parse_string_list (cfile, lp, multiple)
 	do {
 		token = next_token (&val, cfile);
 		if (token != STRING) {
-			parse_warn (cfile, "Expecting media options.");
+			parse_warn ("Expecting media options.");
 			skip_to_semi (cfile);
 			return;
 		}
 
-		tmp = ((struct string_list *)
-		       dmalloc (strlen (val) + 1 +
-				sizeof (struct string_list *), MDL));
+		tmp = (struct string_list *)malloc (strlen (val) + 1 +
+						    sizeof
+						    (struct string_list *));
 		if (!tmp)
 			log_fatal ("no memory for string list entry.");
 
@@ -1065,29 +1152,28 @@ void parse_string_list (cfile, lp, multiple)
 	} while (multiple && token == COMMA);
 
 	if (token != SEMI) {
-		parse_warn (cfile, "expecting semicolon.");
+		parse_warn ("expecting semicolon.");
 		skip_to_semi (cfile);
 	}
 }
 
 void parse_reject_statement (cfile, config)
-	struct parse *cfile;
+	FILE *cfile;
 	struct client_config *config;
 {
 	int token;
-	const char *val;
+	char *val;
 	struct iaddr addr;
 	struct iaddrlist *list;
 
 	do {
 		if (!parse_ip_addr (cfile, &addr)) {
-			parse_warn (cfile, "expecting IP address.");
+			parse_warn ("expecting IP address.");
 			skip_to_semi (cfile);
 			return;
 		}
 
-		list = (struct iaddrlist *)dmalloc (sizeof (struct iaddrlist),
-						    MDL);
+		list = (struct iaddrlist *)malloc (sizeof (struct iaddrlist));
 		if (!list)
 			log_fatal ("no memory for reject list!");
 
@@ -1099,29 +1185,7 @@ void parse_reject_statement (cfile, config)
 	} while (token == COMMA);
 
 	if (token != SEMI) {
-		parse_warn (cfile, "expecting semicolon.");
+		parse_warn ("expecting semicolon.");
 		skip_to_semi (cfile);
 	}
 }	
-
-/* allow-deny-keyword :== BOOTP
-   			| BOOTING
-			| DYNAMIC_BOOTP
-			| UNKNOWN_CLIENTS */
-
-int parse_allow_deny (oc, cfile, flag)
-	struct option_cache **oc;
-	struct parse *cfile;
-	int flag;
-{
-	enum dhcp_token token;
-	const char *val;
-	unsigned char rf = flag;
-	struct expression *data = (struct expression *)0;
-	int status;
-
-	parse_warn (cfile, "allow/deny/ignore not permitted here.");
-	skip_to_semi (cfile);
-	return 0;
-}
-

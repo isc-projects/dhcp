@@ -3,47 +3,26 @@
    Network input dispatcher... */
 
 /*
- * Copyright (c) 1995-2000 Internet Software Consortium.
- * All rights reserved.
+ * Copyright (c) 1996-1999 Internet Software Consortium.
+ * Use is subject to license terms which appear in the file named
+ * ISC-LICENSE that should have accompanied this file when you
+ * received it.   If a file named ISC-LICENSE did not accompany this
+ * file, or you are not sure the one you have is correct, you may
+ * obtain an applicable copy of the license at:
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
+ *             http://www.isc.org/isc-license-1.0.html. 
  *
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of The Internet Software Consortium nor the names
- *    of its contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
+ * This file is part of the ISC DHCP distribution.   The documentation
+ * associated with this file is listed in the file DOCUMENTATION,
+ * included in the top-level directory of this release.
  *
- * THIS SOFTWARE IS PROVIDED BY THE INTERNET SOFTWARE CONSORTIUM AND
- * CONTRIBUTORS ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES,
- * INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED.  IN NO EVENT SHALL THE INTERNET SOFTWARE CONSORTIUM OR
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF
- * USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
- * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
- * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
- * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- * SUCH DAMAGE.
- *
- * This software has been written for the Internet Software Consortium
- * by Ted Lemon in cooperation with Vixie Enterprises and Nominum, Inc.
- * To learn more about the Internet Software Consortium, see
- * ``http://www.isc.org/''.  To learn more about Vixie Enterprises,
- * see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
- * ``http://www.nominum.com''.
+ * Support and other services are available for ISC products - see
+ * http://www.isc.org for more information.
  */
 
 #ifndef lint
 static char copyright[] =
-"$Id: discover.c,v 1.34 2000/10/10 22:31:41 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: discover.c,v 1.9.2.2 1999/10/14 21:11:49 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -52,30 +31,10 @@ static char copyright[] =
 struct interface_info *interfaces, *dummy_interfaces, *fallback_interface;
 extern int interfaces_invalidated;
 int quiet_interface_discovery;
-u_int16_t local_port;
-u_int16_t remote_port;
-int (*dhcp_interface_setup_hook) (struct interface_info *, struct iaddr *);
-int (*dhcp_interface_discovery_hook) (struct interface_info *);
-
-struct in_addr limited_broadcast;
-struct in_addr local_address;
 
 void (*bootp_packet_handler) PROTO ((struct interface_info *,
-				     struct dhcp_packet *, unsigned,
-				     unsigned int,
+				     struct dhcp_packet *, int, unsigned int,
 				     struct iaddr, struct hardware *));
-
-omapi_object_type_t *dhcp_type_interface;
-
-OMAPI_OBJECT_ALLOC (interface, struct interface_info, dhcp_type_interface)
-
-isc_result_t interface_initialize (omapi_object_t *ipo,
-				   const char *file, int line)
-{
-	struct interface_info *ip = (struct interface_info *)ipo;
-	ip -> rfdesc = ip -> wfdesc = -1;
-	return ISC_R_SUCCESS;
-}
 
 /* Use the SIOCGIFCONF ioctl to get a list of all the attached interfaces.
    For each interface that's of type INET and not the loopback interface,
@@ -85,9 +44,9 @@ isc_result_t interface_initialize (omapi_object_t *ipo,
 void discover_interfaces (state)
 	int state;
 {
-	struct interface_info *tmp, *ip;
+	struct interface_info *tmp;
 	struct interface_info *last, *next;
-	char buf [2048];
+	char buf [8192];
 	struct ifconf ic;
 	struct ifreq ifr;
 	int i;
@@ -101,22 +60,6 @@ void discover_interfaces (state)
 #ifdef ALIAS_NAMES_PERMUTED
 	char *s;
 #endif
-	isc_result_t status;
-	static int setup_fallback = 0;
-	int wifcount = 0;
-
-	if (!dhcp_type_interface) {
-		status = omapi_object_type_register
-			(&dhcp_type_interface, "interface",
-			 interface_set_value, interface_get_value,
-			 interface_destroy, interface_signal_handler,
-			 interface_stuff_values, 0, 0, 0, 0, 0, 0,
-			 sizeof (struct interface_info),
-			 interface_initialize);
-		if (status != ISC_R_SUCCESS)
-			log_fatal ("Can't create interface object type: %s",
-				   isc_result_totext (status));
-	}
 
 	/* Create an unbound datagram socket to do the SIOCGIFADDR ioctl on. */
 	if ((sock = socket (AF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0)
@@ -125,22 +68,11 @@ void discover_interfaces (state)
 	/* Get the interface configuration information... */
 	ic.ifc_len = sizeof buf;
 	ic.ifc_ifcu.ifcu_buf = (caddr_t)buf;
-      gifconf_again:
 	i = ioctl(sock, SIOCGIFCONF, &ic);
 
 	if (i < 0)
 		log_fatal ("ioctl: SIOCGIFCONF: %m");
 
-	/* If the SIOCGIFCONF resulted in more data than would fit in
-	   a buffer, allocate a bigger buffer. */
-	if (ic.ifc_ifcu.ifcu_buf == buf &&
-	    ic.ifc_len > sizeof buf) {
-		ic.ifc_ifcu.ifcu_buf = dmalloc ((size_t)ic.ifc_len, MDL);
-		if (!ic.ifc_ifcu.ifcu_buf)
-			log_fatal ("Can't allocate SIOCGIFCONF buffer.");
-		goto gifconf_again;
-	}
-		
 	/* If we already have a list of interfaces, and we're running as
 	   a DHCP server, the interfaces were requested. */
 	if (interfaces && (state == DISCOVER_SERVER ||
@@ -198,30 +130,20 @@ void discover_interfaces (state)
 		/* If there isn't already an interface by this name,
 		   allocate one. */
 		if (!tmp) {
-			tmp = (struct interface_info *)0;
-			status = interface_allocate (&tmp, MDL);
-			if (status != ISC_R_SUCCESS)
-				log_fatal ("Error allocating interface %s: %s",
-					   ifp -> ifr_name,
-					   isc_result_totext (status));
+			tmp = ((struct interface_info *)
+			       dmalloc (sizeof *tmp, "discover_interfaces"));
+			if (!tmp)
+				log_fatal ("Insufficient memory to %s %s",
+				       "record interface", ifp -> ifr_name);
 			strcpy (tmp -> name, ifp -> ifr_name);
 			tmp -> circuit_id = (u_int8_t *)tmp -> name;
 			tmp -> circuit_id_len = strlen (tmp -> name);
 			tmp -> remote_id = 0;
 			tmp -> remote_id_len = 0;
+			tmp -> next = interfaces;
 			tmp -> flags = ir;
-			if (interfaces) {
-				interface_reference (&tmp -> next,
-						     interfaces, MDL);
-				interface_dereference (&interfaces, MDL);
-			}
-			interface_reference (&interfaces, tmp, MDL);
-			interface_dereference (&tmp, MDL);
-			tmp = interfaces;
+			interfaces = tmp;
 		}
-
-		if (dhcp_interface_discovery_hook)
-			(*dhcp_interface_discovery_hook) (tmp);
 
 		/* If we have the capability, extract link information
 		   and record it in a linked list. */
@@ -234,10 +156,9 @@ void discover_interfaces (state)
 #else
 			tmp -> hw_address.hlen = 6; /* XXX!!! */
 #endif
-			tmp -> hw_address.hbuf [0] = HTYPE_ETHER; /* XXX */
-			memcpy (&tmp -> hw_address.hbuf [1],
+			tmp -> hw_address.htype = HTYPE_ETHER; /* XXX */
+			memcpy (tmp -> hw_address.haddr,
 				LLADDR (foo), tmp -> hw_address.hlen);
-			tmp -> hw_address.hlen++;	/* for type. */
 		} else
 #endif /* AF_LINK */
 
@@ -248,7 +169,6 @@ void discover_interfaces (state)
 			memcpy (&foo, &ifp -> ifr_addr,
 				sizeof ifp -> ifr_addr);
 
-			/* We don't want the loopback interface. */
 			if (foo.sin_addr.s_addr == htonl (INADDR_LOOPBACK) &&
 			    ((tmp -> flags & INTERFACE_AUTOMATIC) &&
 			     state == DISCOVER_SERVER))
@@ -260,14 +180,14 @@ void discover_interfaces (state)
 			   which we found it. */
 			if (!tmp -> ifp) {
 #ifdef HAVE_SA_LEN
-				unsigned len = ((sizeof ifp -> ifr_name) +
-						ifp -> ifr_addr.sa_len);
+				int len = ((sizeof ifp -> ifr_name) +
+					   ifp -> ifr_addr.sa_len);
 #else
-				unsigned len = sizeof *ifp;
+				int len = sizeof *ifp;
 #endif
-				tif = (struct ifreq *)dmalloc (len, MDL);
+				tif = (struct ifreq *)malloc (len);
 				if (!tif)
-					log_fatal ("no space for ifp.");
+					log_fatal ("no space to remember ifp.");
 				memcpy (tif, ifp, len);
 				tmp -> ifp = tif;
 				tmp -> primary_address = foo.sin_addr;
@@ -277,21 +197,56 @@ void discover_interfaces (state)
 			addr.len = 4;
 			memcpy (addr.iabuf, &foo.sin_addr.s_addr,
 				addr.len);
-			if (dhcp_interface_setup_hook)
-				(*dhcp_interface_setup_hook) (tmp, &addr);
+
+			/* If there's a registered subnet for this address,
+			   connect it together... */
+			if ((subnet = find_subnet (addr))) {
+				/* If this interface has multiple aliases
+				   on the same subnet, ignore all but the
+				   first we encounter. */
+				if (!subnet -> interface) {
+					subnet -> interface = tmp;
+					subnet -> interface_address = addr;
+				} else if (subnet -> interface != tmp) {
+					log_error ("Multiple %s %s: %s %s", 
+					      "interfaces match the",
+					      "same subnet",
+					      subnet -> interface -> name,
+					      tmp -> name);
+				}
+				share = subnet -> shared_network;
+				if (tmp -> shared_network &&
+				    tmp -> shared_network != share) {
+					log_error ("Interface %s matches %s",
+					      tmp -> name,
+					      "multiple shared networks");
+				} else {
+					tmp -> shared_network = share;
+				}
+
+				if (!share -> interface) {
+					share -> interface = tmp;
+				} else if (share -> interface != tmp) {
+					log_error ("Multiple %s %s: %s %s", 
+					      "interfaces match the",
+					      "same shared network",
+					      share -> interface -> name,
+					      tmp -> name);
+				}
+			}
 		}
 	}
 
-	/* If we allocated a buffer, free it. */
-	if (ic.ifc_ifcu.ifcu_buf != buf)
-		dfree (ic.ifc_ifcu.ifcu_buf, MDL);
-
 #if defined (LINUX_SLASHPROC_DISCOVERY)
-	/* On Linux, interfaces that don't have IP addresses don't
-	   show up in the SIOCGIFCONF syscall.  This only matters for
-	   the DHCP client, of course - the relay agent and server
-	   should only care about interfaces that are configured with
-	   IP addresses anyway.
+	/* On Linux, interfaces that don't have IP addresses don't show up
+	   in the SIOCGIFCONF syscall.   We got away with this prior to
+	   Linux 2.1 because we would give each interface an IP address of
+	   0.0.0.0 before trying to boot, but that doesn't work after 2.1
+	   because we're using LPF, because we can't configure interfaces
+	   with IP addresses of 0.0.0.0 anymore (grumble).   This only
+	   matters for the DHCP client, of course - the relay agent and
+	   server should only care about interfaces that are configured
+	   with IP addresses anyway.
 
 	   The PROCDEV_DEVICE (/proc/net/dev) is a kernel-supplied file
 	   that, when read, prints a human readable network status.   We
@@ -299,7 +254,8 @@ void discover_interfaces (state)
 	   two lines (which are header) and then parsing off everything
 	   up to the colon in each subsequent line - these lines start
 	   with the interface name, then a colon, then a bunch of
-	   statistics. */
+	   statistics.   Yes, Virgina, this is a kludge, but you work
+	   with what you have. */
 
 	if (state == DISCOVER_UNCONFIGURED) {
 		FILE *proc_dev;
@@ -338,21 +294,17 @@ void discover_interfaces (state)
 				continue;
 
 			/* Otherwise, allocate one. */
-			tmp = (struct interface_info *)0;
-			status = interface_allocate (&tmp, MDL);
-			if (status != ISC_R_SUCCESS)
-				log_fatal ("Can't allocate interface %s: %s",
-					   name, isc_result_totext (status));
+			tmp = ((struct interface_info *)
+			       dmalloc (sizeof *tmp, "discover_interfaces"));
+			if (!tmp)
+				log_fatal ("Insufficient memory to %s %s",
+				       "record interface", name);
+			memset (tmp, 0, sizeof *tmp);
+			strcpy (tmp -> name, name);
+
 			tmp -> flags = ir;
-			interface_reference (&tmp -> next, interfaces, MDL);
-			interface_dereference (&interfaces, MDL);
-			interface_reference (&interfaces, tmp, MDL);
-			interface_dereference (&tmp, MDL);
-			tmp = interfaces;
-
-			if (dhcp_interface_discovery_hook)
-				(*dhcp_interface_discovery_hook) (tmp);
-
+			tmp -> next = interfaces;
+			interfaces = tmp;
 		}
 		fclose (proc_dev);
 	}
@@ -368,8 +320,7 @@ void discover_interfaces (state)
 		
 		if (!tmp -> ifp) {
 			/* Make up an ifreq structure. */
-			tif = (struct ifreq *)dmalloc (sizeof (struct ifreq),
-						       MDL);
+			tif = (struct ifreq *)malloc (sizeof (struct ifreq));
 			if (!tif)
 				log_fatal ("no space to remember ifp.");
 			memset (tif, 0, sizeof (struct ifreq));
@@ -399,50 +350,50 @@ void discover_interfaces (state)
 #endif
 
 		      case ARPHRD_ETHER:
-			tmp -> hw_address.hlen = 7;
-			tmp -> hw_address.hbuf [0] = ARPHRD_ETHER;
-			memcpy (&tmp -> hw_address.hbuf [1], sa.sa_data, 6);
+			tmp -> hw_address.hlen = 6;
+			tmp -> hw_address.htype = ARPHRD_ETHER;
+			memcpy (tmp -> hw_address.haddr, sa.sa_data, 6);
 			break;
 
 #ifndef HAVE_ARPHRD_IEEE802
 # define ARPHRD_IEEE802 HTYPE_IEEE802
 #endif
 		      case ARPHRD_IEEE802:
-			tmp -> hw_address.hlen = 7;
-			tmp -> hw_address.hbuf [0] = ARPHRD_IEEE802;
-			memcpy (&tmp -> hw_address.hbuf [1], sa.sa_data, 6);
+			tmp -> hw_address.hlen = 6;
+			tmp -> hw_address.htype = ARPHRD_IEEE802;
+			memcpy (tmp -> hw_address.haddr, sa.sa_data, 6);
 			break;
 
 #ifndef HAVE_ARPHRD_FDDI
 # define ARPHRD_FDDI HTYPE_FDDI
 #endif
 		      case ARPHRD_FDDI:
-			tmp -> hw_address.hlen = 17;
-			tmp -> hw_address.hbuf [0] = HTYPE_FDDI; /* XXX */
-			memcpy (&tmp -> hw_address.hbuf [1], sa.sa_data, 16);
+			tmp -> hw_address.hlen = 16;
+			tmp -> hw_address.htype = HTYPE_FDDI; /* XXX */
+			memcpy (tmp -> hw_address.haddr, sa.sa_data, 16);
 			break;
 
 #ifdef HAVE_ARPHRD_METRICOM
 		      case ARPHRD_METRICOM:
-			tmp -> hw_address.hlen = 7;
-			tmp -> hw_address.hbuf [0] = ARPHRD_METRICOM;
-			memcpy (&tmp -> hw_address.hbuf [0], sa.sa_data, 6);
+			tmp -> hw_address.hlen = 6;
+			tmp -> hw_address.htype = ARPHRD_METRICOM;
+			memcpy (tmp -> hw_address.haddr, sa.sa_data, 6);
 			break;
 #endif
 
 #ifdef HAVE_ARPHRD_AX25
 		      case ARPHRD_AX25:
-			tmp -> hw_address.hlen = 7;
-			tmp -> hw_address.hbuf [0] = ARPHRD_AX25;
-			memcpy (&tmp -> hw_address.hbuf [1], sa.sa_data, 6);
+			tmp -> hw_address.hlen = 6;
+			tmp -> hw_address.htype = ARPHRD_AX25;
+			memcpy (tmp -> hw_address.haddr, sa.sa_data, 6);
 			break;
 #endif
 
 #ifdef HAVE_ARPHRD_NETROM
 		      case ARPHRD_NETROM:
-			tmp -> hw_address.hlen = 7;
-			tmp -> hw_address.hbuf [0] = ARPHRD_NETROM;
-			memcpy (&tmp -> hw_address.hbuf [1], sa.sa_data, 6);
+			tmp -> hw_address.hlen = 6;
+			tmp -> hw_address.htype = ARPHRD_NETROM;
+			memcpy (tmp -> hw_address.haddr, sa.sa_data, 6);
 			break;
 #endif
 
@@ -456,23 +407,13 @@ void discover_interfaces (state)
 
 	/* If we're just trying to get a list of interfaces that we might
 	   be able to configure, we can quit now. */
-	if (state == DISCOVER_UNCONFIGURED) {
-		close (sock);
+	if (state == DISCOVER_UNCONFIGURED)
 		return;
-	}
 
 	/* Weed out the interfaces that did not have IP addresses. */
-	tmp = last = next = (struct interface_info *)0;
-	if (interfaces)
-		interface_reference (&tmp, interfaces, MDL);
-	while (tmp) {
-		if (next)
-			interface_dereference (&next, MDL);
-		if (tmp -> next)
-			interface_reference (&next, tmp -> next, MDL);
-		/* skip interfaces that are running already */
-		if (tmp -> flags & INTERFACE_RUNNING)
-			continue;
+	last = (struct interface_info *)0;
+	for (tmp = interfaces; tmp; tmp = next) {
+		next = tmp -> next;
 		if ((tmp -> flags & INTERFACE_AUTOMATIC) &&
 		    state == DISCOVER_REQUESTED)
 			tmp -> flags &= ~(INTERFACE_AUTOMATIC |
@@ -480,29 +421,15 @@ void discover_interfaces (state)
 		if (!tmp -> ifp || !(tmp -> flags & INTERFACE_REQUESTED)) {
 			if ((tmp -> flags & INTERFACE_REQUESTED) != ir)
 				log_fatal ("%s: not found", tmp -> name);
-			if (!last) {
-				if (interfaces)
-					interface_dereference (&interfaces,
-							       MDL);
-				interface_reference (&interfaces, next, MDL);
-			} else {
-				interface_dereference (&last -> next, MDL);
-				interface_reference (&last -> next, next, MDL);
-			}
-			if (tmp -> next)
-				interface_dereference (&tmp -> next, MDL);
+			if (!last)
+				interfaces = interfaces -> next;
+			else
+				last -> next = tmp -> next;
 
 			/* Remember the interface in case we need to know
 			   about it later. */
-			if (dummy_interfaces) {
-				interface_reference (&tmp -> next,
-						     dummy_interfaces, MDL);
-				interface_dereference (&dummy_interfaces, MDL);
-			}
-			interface_reference (&dummy_interfaces, tmp, MDL);
-			interface_dereference (&tmp, MDL);
-			if (next)
-				interface_reference (&tmp, next, MDL);
+			tmp -> next = dummy_interfaces;
+			dummy_interfaces = tmp;
 			continue;
 		}
 		last = tmp;
@@ -512,30 +439,12 @@ void discover_interfaces (state)
 
 		/* We must have a subnet declaration for each interface. */
 		if (!tmp -> shared_network && (state == DISCOVER_SERVER)) {
-			log_error ("%s", "");
 			log_error ("No subnet declaration for %s (%s).",
 				   tmp -> name, inet_ntoa (foo.sin_addr));
-			if (supports_multiple_interfaces (tmp)) {
-				log_error ("Ignoring requests on %s.",
-					   tmp -> name);
-				log_error ("If this is not what you want, %s",
-				   "please write");
-				log_error ("a subnet declaration in your %s",
-				   "dhcpd.conf file for");
-				log_error ("the network segment to %s %s %s",
-					   "which interface",
-					   tmp -> name, "is attached.");
-				goto next;
-			} else {
-				log_error ("You must write a subnet %s",
-					   " declaration for this");
-				log_error ("subnet.   You cannot prevent %s",
-					   "the DHCP server");
-				log_error ("from listening on this subnet %s",
-					   "because your");
-				log_fatal ("operating system does not %s.",
-					   "support this capability");
-			}
+			log_error ("Please write a subnet declaration in %s",
+				   "your dhcpd.conf file for the");
+			log_fatal ("network segment to which interface %s %s",
+				   tmp -> name, "is attached.");
 		}
 
 		/* Find subnets that don't have valid interface
@@ -556,87 +465,34 @@ void discover_interfaces (state)
 		/* Register the interface... */
 		if_register_receive (tmp);
 		if_register_send (tmp);
-		wifcount++;
-#if defined (HAVE_SETFD)
-		if (fcntl (tmp -> rfdesc, F_SETFD, 1) < 0)
-			log_error ("Can't set close-on-exec on %s: %m",
-				   tmp -> name);
-		if (tmp -> rfdesc != tmp -> wfdesc) {
-			if (fcntl (tmp -> wfdesc, F_SETFD, 1) < 0)
-				log_error ("Can't set close-on-exec on %s: %m",
-					   tmp -> name);
-		}
-#endif
-	      next:
-		interface_dereference (&tmp, MDL);
-		if (next)
-			interface_reference (&tmp, next, MDL);
 	}
 
 	/* Now register all the remaining interfaces as protocols. */
-	for (tmp = interfaces; tmp; tmp = tmp -> next) {
-		/* not if it's been registered before */
-		if (tmp -> flags & INTERFACE_RUNNING)
-			continue;
-		if (tmp -> rfdesc == -1)
-			continue;
-		status = omapi_register_io_object ((omapi_object_t *)tmp,
-						   if_readsocket, 0,
-						   got_one, 0, 0);
-		if (status != ISC_R_SUCCESS)
-			log_fatal ("Can't register I/O handle for %s: %s",
-				   tmp -> name, isc_result_totext (status));
-	}
+	for (tmp = interfaces; tmp; tmp = tmp -> next)
+		add_protocol (tmp -> name, tmp -> rfdesc, got_one, tmp);
 
 	close (sock);
 
-	if (state == DISCOVER_SERVER && wifcount == 0) {
-		log_info ("%s", "");
-		log_fatal ("Not configured to listen on any interfaces!");
-	}
-
-	if (!setup_fallback) {
-		setup_fallback = 1;
-		maybe_setup_fallback ();
-	}
-
-#if defined (HAVE_SETFD)
-	if (fallback_interface) {
-	    if (fcntl (fallback_interface -> rfdesc, F_SETFD, 1) < 0)
-		log_error ("Can't set close-on-exec on fallback: %m");
-	    if (fallback_interface -> rfdesc != fallback_interface -> wfdesc) {
-		if (fcntl (fallback_interface -> wfdesc, F_SETFD, 1) < 0)
-		    log_error ("Can't set close-on-exec on fallback: %m");
-	    }
-	}
-#endif
+	maybe_setup_fallback ();
 }
 
-int if_readsocket (h)
-	omapi_object_t *h;
+struct interface_info *setup_fallback ()
 {
-	struct interface_info *ip;
-
-	if (h -> type != dhcp_type_interface)
-		return -1;
-	ip = (struct interface_info *)h;
-	return ip -> rfdesc;
-}
-
-int setup_fallback (struct interface_info **fp, const char *file, int line)
-{
-	isc_result_t status;
-
-	status = interface_allocate (&fallback_interface, file, line);
-	if (status != ISC_R_SUCCESS)
-		log_fatal ("Error allocating fallback interface: %s",
-			   isc_result_totext (status));
+	fallback_interface =
+		((struct interface_info *)
+		 dmalloc (sizeof *fallback_interface, "discover_interfaces"));
+	if (!fallback_interface)
+		log_fatal ("Insufficient memory to record fallback interface.");
+	memset (fallback_interface, 0, sizeof *fallback_interface);
 	strcpy (fallback_interface -> name, "fallback");
-	if (dhcp_interface_setup_hook)
-		(*dhcp_interface_setup_hook) (fallback_interface,
-					      (struct iaddr *)0);
-	status = interface_reference (fp, fallback_interface, file, line);
-	return status == ISC_R_SUCCESS;
+	fallback_interface -> shared_network =
+		new_shared_network ("parse_statement");
+	if (!fallback_interface -> shared_network)
+		log_fatal ("No memory for shared subnet");
+	memset (fallback_interface -> shared_network, 0,
+		sizeof (struct shared_network));
+	fallback_interface -> shared_network -> name = "fallback-net";
+	return fallback_interface;
 }
 
 void reinitialize_interfaces ()
@@ -654,8 +510,8 @@ void reinitialize_interfaces ()
 	interfaces_invalidated = 1;
 }
 
-isc_result_t got_one (h)
-	omapi_object_t *h;
+void got_one (l)
+	struct protocol *l;
 {
 	struct sockaddr_in from;
 	struct hardware hfrom;
@@ -667,19 +523,15 @@ isc_result_t got_one (h)
 						 possible MTU. */
 		struct dhcp_packet packet;
 	} u;
-	struct interface_info *ip;
-
-	if (h -> type != dhcp_type_interface)
-		return ISC_R_INVALIDARG;
-	ip = (struct interface_info *)h;
+	struct interface_info *ip = l -> local;
 
 	if ((result =
 	     receive_packet (ip, u.packbuf, sizeof u, &from, &hfrom)) < 0) {
 		log_error ("receive_packet failed on %s: %m", ip -> name);
-		return ISC_R_UNEXPECTED;
+		return;
 	}
 	if (result == 0)
-		return ISC_R_UNEXPECTED;
+		return;
 
 	/* If we didn't at least get the fixed portion of the BOOTP
 	   packet, drop the packet.  We're allowing packets with no
@@ -687,81 +539,14 @@ isc_result_t got_one (h)
 	   client that sends such packets, but this definitely falls
 	   into the category of being forgiving. */
 	if (result < DHCP_FIXED_NON_UDP - DHCP_SNAME_LEN - DHCP_FILE_LEN)
-		return ISC_R_UNEXPECTED;
+		return;
 
 	if (bootp_packet_handler) {
 		ifrom.len = 4;
 		memcpy (ifrom.iabuf, &from.sin_addr, ifrom.len);
 
-		(*bootp_packet_handler) (ip, &u.packet, (unsigned)result,
+		(*bootp_packet_handler) (ip, &u.packet, result,
 					 from.sin_port, ifrom, &hfrom);
 	}
-	return ISC_R_SUCCESS;
-}
-
-isc_result_t interface_set_value (omapi_object_t *h,
-				  omapi_object_t *id,
-				  omapi_data_string_t *name,
-				  omapi_typed_data_t *value)
-{
-	if (h -> type != dhcp_type_interface)
-		return ISC_R_INVALIDARG;
-	
-	if (h -> inner && h -> inner -> type -> set_value)
-		return (*(h -> inner -> type -> set_value))
-			(h -> inner, id, name, value);
-	return ISC_R_NOTFOUND;
-}
-
-isc_result_t interface_get_value (omapi_object_t *h,
-				  omapi_object_t *id,
-				  omapi_data_string_t *name,
-				  omapi_value_t **value)
-{
-	if (h -> type != dhcp_type_interface)
-		return ISC_R_INVALIDARG;
-	
-	if (h -> inner && h -> inner -> type -> get_value)
-		return (*(h -> inner -> type -> get_value))
-			(h -> inner, id, name, value);
-	return ISC_R_NOTFOUND;
-}
-
-isc_result_t interface_stuff_values (omapi_object_t *c,
-				     omapi_object_t *id,
-				     omapi_object_t *m)
-{
-	if (m -> type != dhcp_type_interface)
-		return ISC_R_INVALIDARG;
-	
-	if (m -> inner && m -> inner -> type -> stuff_values)
-		return (*(m -> inner -> type -> stuff_values)) (c, id,
-								m -> inner);
-	return ISC_R_NOTFOUND;
-}
-
-isc_result_t interface_destroy (omapi_object_t *h, const char *file, int line)
-{
-	int i;
-
-	struct interface_info *p;
-	if (h -> type != dhcp_type_interface)
-		return ISC_R_INVALIDARG;
-	/* Nothing to do yet, AFAIK - interfaces should never be
-	   destroyed.   Revisit this later when we handle interface
-	   detection/deletion on the fly. */
-	return ISC_R_SUCCESS;
-}
-
-isc_result_t interface_signal_handler (omapi_object_t *h,
-				       const char *name, va_list ap)
-{
-	if (h -> type != dhcp_type_interface)
-		return ISC_R_INVALIDARG;
-	
-	if (h -> inner && h -> inner -> type -> signal_handler)
-		return (*(h -> inner -> type -> signal_handler)) (h -> inner,
-								  name, ap);
-	return ISC_R_NOTFOUND;
 }
 

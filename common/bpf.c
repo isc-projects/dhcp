@@ -3,51 +3,26 @@
    BPF socket interface code, originally contributed by Archie Cobbs. */
 
 /*
- * Copyright (c) 1996-2000 Internet Software Consortium.
- * All rights reserved.
+ * Copyright (c) 1996-1999 Internet Software Consortium.
+ * Use is subject to license terms which appear in the file named
+ * ISC-LICENSE that should have accompanied this file when you
+ * received it.   If a file named ISC-LICENSE did not accompany this
+ * file, or you are not sure the one you have is correct, you may
+ * obtain an applicable copy of the license at:
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
+ *             http://www.isc.org/isc-license-1.0.html. 
  *
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of The Internet Software Consortium nor the names
- *    of its contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
+ * This file is part of the ISC DHCP distribution.   The documentation
+ * associated with this file is listed in the file DOCUMENTATION,
+ * included in the top-level directory of this release.
  *
- * THIS SOFTWARE IS PROVIDED BY THE INTERNET SOFTWARE CONSORTIUM AND
- * CONTRIBUTORS ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES,
- * INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED.  IN NO EVENT SHALL THE INTERNET SOFTWARE CONSORTIUM OR
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF
- * USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
- * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
- * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
- * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- * SUCH DAMAGE.
- *
- * This software was contributed to the Internet Software Consortium
- * by Archie Cobbs, and is now maintained by Ted Lemon in cooperation
- * with Nominum, Inc.  To learn more about the Internet Software
- * Consortium, see ``http://www.isc.org/''.  To learn more about Vixie
- * Enterprises, see ``http://www.vix.com''.  To learn more about
- * Nominum, Inc., see ``http://www.nominum.com''.
- *
- * Patches for FDDI support on Digital Unix were written by Bill
- * Stapleton, and maintained for a while by Mike Meredith before he
- * managed to get me to integrate them.
+ * Support and other services are available for ISC products - see
+ * http://www.isc.org for more information.
  */
 
 #ifndef lint
 static char copyright[] =
-"$Id: bpf.c,v 1.43 2000/10/10 22:00:09 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bpf.c,v 1.27.2.2 1999/11/12 22:05:18 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -148,30 +123,9 @@ void if_register_send (info)
 	if (!quiet_interface_discovery)
 		log_info ("Sending on   BPF/%s/%s%s%s",
 		      info -> name,
-		      print_hw_addr (info -> hw_address.hbuf [0],
-				     info -> hw_address.hlen - 1,
-				     &info -> hw_address.hbuf [1]),
-		      (info -> shared_network ? "/" : ""),
-		      (info -> shared_network ?
-		       info -> shared_network -> name : ""));
-}
-
-void if_deregister_send (info)
-	struct interface_info *info;
-{
-	/* If we're using the bpf API for sending and receiving,
-	   we don't need to register this interface twice. */
-#ifndef USE_BPF_RECEIVE
-	close (info -> wfdesc);
-#endif
-	info -> wfdesc = -1;
-
-	if (!quiet_interface_discovery)
-		log_info ("Disabling output on BPF/%s/%s%s%s",
-		      info -> name,
-		      print_hw_addr (info -> hw_address.hbuf [0],
-				     info -> hw_address.hlen - 1,
-				     &info -> hw_address.hbuf [1]),
+		      print_hw_addr (info -> hw_address.htype,
+				     info -> hw_address.hlen,
+				     info -> hw_address.haddr),
 		      (info -> shared_network ? "/" : ""),
 		      (info -> shared_network ?
 		       info -> shared_network -> name : ""));
@@ -210,12 +164,7 @@ struct bpf_insn dhcp_bpf_filter [] = {
 	BPF_STMT(BPF_RET+BPF_K, 0),
 };
 
-#if defined (DEC_FDDI)
-struct bpf_insn *bpf_fddi_filter;
-#endif
-
 int dhcp_bpf_filter_len = sizeof dhcp_bpf_filter / sizeof (struct bpf_insn);
-#if defined (HAVE_TR_SUPPORT)
 struct bpf_insn dhcp_bpf_tr_filter [] = {
         /* accept all token ring packets due to variable length header */
         /* if we want to get clever, insert the program here */
@@ -229,8 +178,7 @@ struct bpf_insn dhcp_bpf_tr_filter [] = {
 
 int dhcp_bpf_tr_filter_len = (sizeof dhcp_bpf_tr_filter /
 			      sizeof (struct bpf_insn));
-#endif /* HAVE_TR_SUPPORT */
-#endif /* USE_LPF_RECEIVE || USE_BPF_RECEIVE */
+#endif
 
 #if defined (USE_BPF_RECEIVE)
 void if_register_receive (info)
@@ -241,9 +189,6 @@ void if_register_receive (info)
 	u_int32_t addr;
 	struct bpf_program p;
 	u_int32_t bits;
-#ifdef DEC_FDDI
-	int link_layer;
-#endif /* DEC_FDDI */
 
 	/* Open a BPF device and hang it on this interface... */
 	info -> rfdesc = if_register_bpf (info);
@@ -280,41 +225,15 @@ void if_register_receive (info)
 	/* Get the required BPF buffer length from the kernel. */
 	if (ioctl (info -> rfdesc, BIOCGBLEN, &info -> rbuf_max) < 0)
 		log_fatal ("Can't get bpf buffer length: %m");
-	info -> rbuf = dmalloc (info -> rbuf_max, MDL);
+	info -> rbuf = malloc (info -> rbuf_max);
 	if (!info -> rbuf)
-		log_fatal ("Can't allocate %d bytes for bpf input buffer.",
-			   info -> rbuf_max);
+		log_fatal ("Can't allocate %ld bytes for bpf input buffer.",
+			   (long)(info -> rbuf_max));
 	info -> rbuf_offset = 0;
 	info -> rbuf_len = 0;
 
 	/* Set up the bpf filter program structure. */
 	p.bf_len = dhcp_bpf_filter_len;
-
-#ifdef DEC_FDDI
-	/* See if this is an FDDI interface, flag it for later. */
-	if (ioctl(info -> rfdesc, BIOCGDLT, &link_layer) >= 0 &&
-	    link_layer == DLT_FDDI) {
-		if (!bpf_fddi_filter) {
-			bpf_fddi_filter = dmalloc (sizeof bpf_fddi_filter,
-						    MDL);
-			if (!bpf_fddi_filter)
-				log_fatal ("No memory for FDDI filter.");
-			memcpy (bpf_fddi_filter,
-				dhcp_bpf_filter, sizeof dhcp_bpf_filter);
-			/* Patch the BPF program to account for the difference
-			   in length between ethernet headers (14), FDDI and
-			   802.2 headers (16 +8=24, +10).
-			   XXX changes to filter program may require changes to
-			   XXX the insn number(s) used below! */
-			bpf_fddi_filter[0].k += 10;
-			bpf_fddi_filter[2].k += 10;
-			bpf_fddi_filter[4].k += 10;
-			bpf_fddi_filter[6].k += 10;
-			bpf_fddi_filter[7].k += 10;
-		}
-		p.bf_insns = bpf_fddi_filter;
-	} else
-#endif /* DEC_FDDI */
 	p.bf_insns = dhcp_bpf_filter;
 
         /* Patch the server port into the BPF  program...
@@ -327,26 +246,9 @@ void if_register_receive (info)
 	if (!quiet_interface_discovery)
 		log_info ("Listening on BPF/%s/%s%s%s",
 		      info -> name,
-		      print_hw_addr (info -> hw_address.hbuf [0],
-				     info -> hw_address.hlen - 1,
-				     &info -> hw_address.hbuf [1]),
-		      (info -> shared_network ? "/" : ""),
-		      (info -> shared_network ?
-		       info -> shared_network -> name : ""));
-}
-
-void if_deregister_receive (info)
-	struct interface_info *info;
-{
-	close (info -> rfdesc);
-	info -> rfdesc = -1;
-
-	if (!quiet_interface_discovery)
-		log_info ("Disabling input on BPF/%s/%s%s%s",
-		      info -> name,
-		      print_hw_addr (info -> hw_address.hbuf [0],
-				     info -> hw_address.hlen - 1,
-				     &info -> hw_address.hbuf [1]),
+		      print_hw_addr (info -> hw_address.htype,
+				     info -> hw_address.hlen,
+				     info -> hw_address.haddr),
 		      (info -> shared_network ? "/" : ""),
 		      (info -> shared_network ?
 		       info -> shared_network -> name : ""));
@@ -363,33 +265,28 @@ ssize_t send_packet (interface, packet, raw, len, from, to, hto)
 	struct sockaddr_in *to;
 	struct hardware *hto;
 {
-	unsigned hbufp = 0, ibufp = 0;
-	double hw [4];
-	double ip [32];
-	struct iovec iov [3];
+	int bufp = 0;
+	unsigned char buf [256];
+	struct iovec iov [2];
 	int result;
-	int fudge;
 
 	if (!strcmp (interface -> name, "fallback"))
 		return send_fallback (interface, packet, raw,
 				      len, from, to, hto);
 
 	/* Assemble the headers... */
-	assemble_hw_header (interface, (unsigned char *)hw, &hbufp, hto);
-	assemble_udp_ip_header (interface,
-				(unsigned char *)ip, &ibufp, from.s_addr,
+	assemble_hw_header (interface, buf, &bufp, hto);
+	assemble_udp_ip_header (interface, buf, &bufp, from.s_addr,
 				to -> sin_addr.s_addr, to -> sin_port,
 				(unsigned char *)raw, len);
 
 	/* Fire it off */
-	iov [0].iov_base = ((char *)hw);
-	iov [0].iov_len = hbufp;
-	iov [1].iov_base = ((char *)ip);
-	iov [1].iov_len = ibufp;
-	iov [2].iov_base = (char *)raw;
-	iov [2].iov_len = len;
+	iov [0].iov_base = (char *)buf;
+	iov [0].iov_len = bufp;
+	iov [1].iov_base = (char *)raw;
+	iov [1].iov_len = len;
 
-	result = writev(interface -> wfdesc, iov, 3);
+	result = writev(interface -> wfdesc, iov, 2);
 	if (result < 0)
 		log_error ("send_packet: %m");
 	return result;
@@ -521,25 +418,14 @@ int can_receive_unicast_unconfigured (ip)
 	return 1;
 }
 
-int supports_multiple_interfaces (ip)
-	struct interface_info *ip;
-{
-	return 1;
-}
-
 void maybe_setup_fallback ()
 {
-	isc_result_t status;
-	struct interface_info *fbi = (struct interface_info *)0;
-	if (setup_fallback (&fbi, MDL)) {
+	struct interface_info *fbi;
+	fbi = setup_fallback ();
+	if (fbi) {
 		if_register_fallback (fbi);
-		status = omapi_register_io_object ((omapi_object_t *)fbi,
-						   if_readsocket, 0,
-						   fallback_discard, 0, 0);
-		if (status != ISC_R_SUCCESS)
-			log_fatal ("Can't register I/O handle for %s: %s",
-				   fbi -> name, isc_result_totext (status));
-		interface_dereference (&fbi, MDL);
+		add_protocol ("fallback", fallback_interface -> wfdesc,
+			      fallback_discard, fallback_interface);
 	}
 }
 #endif

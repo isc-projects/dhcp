@@ -3,164 +3,63 @@
    DHCP Server Daemon. */
 
 /*
- * Copyright (c) 1996-2000 Internet Software Consortium.
- * All rights reserved.
+ * Copyright (c) 1996-1999 Internet Software Consortium.
+ * Use is subject to license terms which appear in the file named
+ * ISC-LICENSE that should have accompanied this file when you
+ * received it.   If a file named ISC-LICENSE did not accompany this
+ * file, or you are not sure the one you have is correct, you may
+ * obtain an applicable copy of the license at:
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
+ *             http://www.isc.org/isc-license-1.0.html. 
  *
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of Internet Software Consortium nor the names
- *    of its contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
+ * This file is part of the ISC DHCP distribution.   The documentation
+ * associated with this file is listed in the file DOCUMENTATION,
+ * included in the top-level directory of this release.
  *
- * THIS SOFTWARE IS PROVIDED BY THE INTERNET SOFTWARE CONSORTIUM AND
- * CONTRIBUTORS ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES,
- * INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED.  IN NO EVENT SHALL THE INTERNET SOFTWARE CONSORTIUM OR
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF
- * USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
- * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
- * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
- * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- * SUCH DAMAGE.
- *
- * This software has been written for the Internet Software Consortium
- * by Ted Lemon in cooperation with Vixie Enterprises and Nominum, Inc.
- * To learn more about the Internet Software Consortium, see
- * ``http://www.isc.org/''.  To learn more about Vixie Enterprises,
- * see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
- * ``http://www.nominum.com''.
+ * Support and other services are available for ISC products - see
+ * http://www.isc.org for more information.
  */
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.102 2000/11/28 23:27:19 mellon Exp $ Copyright 1995-2000 Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.71.2.3 1999/10/27 20:45:19 mellon Exp $ Copyright 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.";
 #endif
 
   static char copyright[] =
-"Copyright 1995-2000 Internet Software Consortium.";
+"Copyright 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.";
 static char arr [] = "All rights reserved.";
 static char message [] = "Internet Software Consortium DHCP Server";
-static char url [] = "For info, please visit http://www.isc.org/products/DHCP";
+static char contrib [] = "\nPlease contribute if you find this software useful.";
+static char url [] = "For info, please visit http://www.isc.org/dhcp-contrib.html\n";
 
 #include "dhcpd.h"
 #include "version.h"
-#include <omapip/omapip_p.h>
 
 static void usage PROTO ((void));
 
 TIME cur_time;
+struct group root_group;
 
 struct iaddr server_identifier;
 int server_identifier_matched;
 
-/* This is the standard name service updater that is executed whenever a
-   lease is committed.   Right now it's not following the DHCP-DNS draft
-   at all, but as soon as I fix the resolver it should try to. */
+u_int16_t local_port;
+u_int16_t remote_port;
 
-#if defined (NSUPDATE)
-char std_nsupdate [] = "						    \n\
-on commit {								    \n\
-  if (((config-option server.ddns-updates = null) or			    \n\
-       (config-option server.ddns-updates != 0))) {			    \n\
-    set new-ddns-fwd-name =						    \n\
-      concat (pick (config-option server.ddns-hostname,			    \n\
-		    option host-name), \".\",				    \n\
-	      pick (config-option server.ddns-domainname,		    \n\
-		    config-option domain-name));			    \n\
-    if (defined (ddns-fwd-name) and ddns-fwd-name != new-ddns-fwd-name) {   \n\
-      switch (ns-update (delete (IN, A, ddns-fwd-name, leased-address))) {  \n\
-      case NOERROR:							    \n\
-	unset ddns-fwd-name;						    \n\
-	on expiry or release {						    \n\
-	}
-      }									    \n\
-    }									    \n\
-									    \n\
-    if (not defined (ddns-fwd-name)) {					    \n\
-      set ddns-fwd-name = new-ddns-fwd-name;				    \n\
-      if defined (ddns-fwd-name) {					    \n\
-	switch (ns-update (not exists (IN, A, ddns-fwd-name, null),	    \n\
-			   add (IN, A, ddns-fwd-name, leased-address,	    \n\
-				lease-time / 2))) {			    \n\
-	default:							    \n\
-	  unset ddns-fwd-name;						    \n\
-	  break;							    \n\
-									    \n\
-	case NOERROR:							    \n\
-	  set ddns-rev-name =						    \n\
-	    concat (binary-to-ascii (10, 8, \".\",			    \n\
-				     reverse (1,			    \n\
-					      leased-address)), \".\",	    \n\
-		    pick (config-option server.ddns-rev-domainname,	    \n\
-			  \"in-addr.arpa.\"));				    \n\
-	  switch (ns-update (delete (IN, PTR, ddns-rev-name, null),	    \n\
-			     add (IN, PTR, ddns-rev-name, ddns-fwd-name,    \n\
-				  lease-time / 2)))			    \n\
-	    {								    \n\
-	    default:							    \n\
-	      unset ddns-rev-name;					    \n\
-	      on release or expiry {					    \n\
-		switch (ns-update (delete (IN, A, ddns-fwd-name,	    \n\
-					   leased-address))) {		    \n\
-		case NOERROR:						    \n\
-		  unset ddns-fwd-name;					    \n\
-		  break;						    \n\
-		}							    \n\
-		on release or expiry;					    \n\
-	      }								    \n\
-	      break;							    \n\
-									    \n\
-	    case NOERROR:						    \n\
-	      on release or expiry {					    \n\
-		switch (ns-update (delete (IN, PTR, ddns-rev-name, null))) {\n\
-		case NOERROR:						    \n\
-		  unset ddns-rev-name;					    \n\
-		  break;						    \n\
-		}							    \n\
-		switch (ns-update (delete (IN, A, ddns-fwd-name,	    \n\
-					   leased-address))) {		    \n\
-		case NOERROR:						    \n\
-		  unset ddns-fwd-name;					    \n\
-		  break;						    \n\
-		}							    \n\
-		on release or expiry;					    \n\
-	      }								    \n\
-	    }								    \n\
-	}								    \n\
-      }									    \n\
-    }									    \n\
-    unset new-ddns-fwd-name;						    \n\
-  }									    \n\
-}";
-#endif /* NSUPDATE */
+struct in_addr limited_broadcast;
 
-const char *path_dhcpd_conf = _PATH_DHCPD_CONF;
-const char *path_dhcpd_db = _PATH_DHCPD_DB;
-const char *path_dhcpd_pid = _PATH_DHCPD_PID;
+int log_priority;
+#ifdef DEBUG
+int log_perror = -1;
+#else
+int log_perror = 1;
+#endif
+
+char *path_dhcpd_conf = _PATH_DHCPD_CONF;
+char *path_dhcpd_db = _PATH_DHCPD_DB;
+char *path_dhcpd_pid = _PATH_DHCPD_PID;
 
 int dhcp_max_agent_option_packet_length = DHCP_MTU_MAX;
-
-static omapi_auth_key_t *omapi_key = (omapi_auth_key_t *)0;
-
-static isc_result_t verify_addr (omapi_object_t *l, omapi_addr_t *addr) {
-	return ISC_R_SUCCESS;
-}
-
-static isc_result_t verify_auth (omapi_object_t *p, omapi_auth_key_t *a) {
-	if (a != omapi_key)
-		return ISC_R_INVALIDKEY;
-	return ISC_R_SUCCESS;
-}
 
 int main (argc, argv, envp)
 	int argc;
@@ -179,36 +78,6 @@ int main (argc, argv, envp)
 #endif
 	int quiet = 0;
 	char *server = (char *)0;
-	isc_result_t result;
-	omapi_object_t *listener;
-	unsigned seed;
-	struct interface_info *ip;
-	struct data_string db;
-	struct option_cache *oc;
-	struct option_state *options = (struct option_state *)0;
-	struct parse *parse;
-	int lose;
-	int omapi_port;
-	omapi_object_t *auth;
-	struct tsig_key *key;
-	omapi_typed_data_t *td;
-	int no_dhcpd_conf = 0;
-	int no_dhcpd_db = 0;
-	int no_dhcpd_pid = 0;
-
-	/* Set up the client classification system. */
-	classification_setup ();
-
-	/* Initialize the omapi system. */
-	result = omapi_init ();
-	if (result != ISC_R_SUCCESS)
-		log_fatal ("Can't initialize OMAPI: %s",
-			   isc_result_totext (result));
-
-	/* Set up the OMAPI wrappers for various server database internal
-	   objects. */
-	dhcp_db_objects_setup ();
-	dhcp_common_objects_setup ();
 
 	/* Initially, log errors to stderr as well as to syslogd. */
 #ifdef SYSLOG_4_2
@@ -217,6 +86,14 @@ int main (argc, argv, envp)
 #else
 	openlog ("dhcpd", LOG_NDELAY, DHCPD_LOG_FACILITY);
 #endif
+
+#ifndef DEBUG
+#ifndef SYSLOG_4_2
+#ifndef __CYGWIN32__ /* XXX */
+	setlogmask (LOG_UPTO (LOG_INFO));
+#endif
+#endif
+#endif	
 
 	for (i = 1; i < argc; i++) {
 		if (!strcmp (argv [i], "-p")) {
@@ -250,17 +127,14 @@ int main (argc, argv, envp)
 			if (++i == argc)
 				usage ();
 			path_dhcpd_conf = argv [i];
-			no_dhcpd_conf = 1;
 		} else if (!strcmp (argv [i], "-lf")) {
 			if (++i == argc)
 				usage ();
 			path_dhcpd_db = argv [i];
-			no_dhcpd_db = 1;
 		} else if (!strcmp (argv [i], "-pf")) {
 			if (++i == argc)
 				usage ();
 			path_dhcpd_pid = argv [i];
-			no_dhcpd_pid = 1;
                 } else if (!strcmp (argv [i], "-t")) {
 			/* test configurations only */
 #ifndef DEBUG
@@ -283,42 +157,27 @@ int main (argc, argv, envp)
 			usage ();
 		} else {
 			struct interface_info *tmp =
-				(struct interface_info *)0;
-			result = interface_allocate (&tmp, MDL);
-			if (result != ISC_R_SUCCESS)
-				log_fatal ("Insufficient memory to %s %s: %s",
-					   "record interface", argv [i],
-					   isc_result_totext (result));
+				((struct interface_info *)
+				 dmalloc (sizeof *tmp, "get_interface_list"));
+			if (!tmp)
+				log_fatal ("Insufficient memory to %s %s",
+				       "record interface", argv [i]);
+			memset (tmp, 0, sizeof *tmp);
 			strcpy (tmp -> name, argv [i]);
-			if (interfaces) {
-				interface_reference (&tmp -> next,
-						     interfaces, MDL);
-				interface_dereference (&interfaces, MDL);
-			}
-			interface_reference (&interfaces, tmp, MDL);
+			tmp -> next = interfaces;
 			tmp -> flags = INTERFACE_REQUESTED;
+			interfaces = tmp;
 		}
-	}
-
-	if (!no_dhcpd_conf && (s = getenv ("PATH_DHCPD_CONF"))) {
-		path_dhcpd_conf = s;
-	}
-	if (!no_dhcpd_db && (s = getenv ("PATH_DHCPD_DB"))) {
-		path_dhcpd_db = s;
-	}
-	if (!no_dhcpd_pid && (s = getenv ("PATH_DHCPD_PID"))) {
-		path_dhcpd_pid = s;
 	}
 
 	if (!quiet) {
 		log_info ("%s %s", message, DHCP_VERSION);
 		log_info (copyright);
 		log_info (arr);
+		log_info (contrib);
 		log_info (url);
-	} else {
-		quiet = 0;
+	} else
 		log_perror = 0;
-	}
 
 	/* Default to the DHCP/BOOTP port. */
 	if (!local_port)
@@ -353,174 +212,21 @@ int main (argc, argv, envp)
 	/* Get the current time... */
 	GET_TIME (&cur_time);
 
-	/* Set up the initial dhcp option universe. */
-	initialize_common_option_spaces ();
-	initialize_server_option_spaces ();
-
-	if (!group_allocate (&root_group, MDL))
-		log_fatal ("Can't allocate root group!");
-	root_group -> authoritative = 0;
-
-#if defined (NSUPDATE)
-	/* Set up the standard name service updater routine. */
-	parse = (struct parse *)0;
-	status = new_parse (&parse, -1,
-			    std_nsupdate, (sizeof std_nsupdate) - 1,
-			    "standard name service update routine");
-	if (status != ISC_R_SUCCESS)
-		log_fatal ("can't begin parsing name service updater!");
-
-	lose = 0;
-	if (!(parse_executable_statements
-	      (&root_group -> statements, parse, &lose, context_any))) {
-		end_parse (&parse);
-		log_fatal ("can't parse standard name service updater!");
-	}
-	end_parse (&parse);
+	/* Initialize DNS support... */
+#if 0
+	dns_startup (); 
 #endif
 
+	/* Set up the client classification system. */
+	classification_setup ();
+
 	/* Read the dhcpd.conf file... */
-	if (readconf () != ISC_R_SUCCESS)
+	if (!readconf ())
 		log_fatal ("Configuration file errors encountered -- exiting");
 
         /* test option should cause an early exit */
  	if (cftest && !lftest) 
  		exit(0);
-
-	/* Now try to get the lease file name. */
-	option_state_allocate (&options, MDL);
-
-	execute_statements_in_scope ((struct binding_value **)0,
-				     (struct packet *)0,
-				     (struct lease *)0,
-				     (struct client_state *)0,
-				     (struct option_state *)0,
-				     options, &global_scope,
-				     root_group,
-				     (struct group *)0);
-	memset (&db, 0, sizeof db);
-	oc = lookup_option (&server_universe, options, SV_LEASE_FILE_NAME);
-	if (oc &&
-	    evaluate_option_cache (&db, (struct packet *)0,
-				   (struct lease *)0, (struct client_state *)0,
-				   options, (struct option_state *)0,
-				   &global_scope, oc, MDL)) {
-		s = dmalloc (db.len + 1, MDL);
-		if (!s)
-			log_fatal ("no memory for lease db filename.");
-		memcpy (s, db.data, db.len);
-		s [db.len] = 0;
-		data_string_forget (&db, MDL);
-		path_dhcpd_db = s;
-	}
-	
-	oc = lookup_option (&server_universe, options, SV_PID_FILE_NAME);
-	if (oc &&
-	    evaluate_option_cache (&db, (struct packet *)0,
-				   (struct lease *)0, (struct client_state *)0,
-				   options, (struct option_state *)0,
-				   &global_scope, oc, MDL)) {
-		s = dmalloc (db.len + 1, MDL);
-		if (!s)
-			log_fatal ("no memory for lease db filename.");
-		memcpy (s, db.data, db.len);
-		s [db.len] = 0;
-		data_string_forget (&db, MDL);
-		path_dhcpd_pid = s;
-	}
-
-	omapi_port = -1;
-	oc = lookup_option (&server_universe, options, SV_OMAPI_PORT);
-	if (oc &&
-	    evaluate_option_cache (&db, (struct packet *)0,
-				   (struct lease *)0, (struct client_state *)0,
-				   options, (struct option_state *)0,
-				   &global_scope, oc, MDL)) {
-		if (db.len == 2) {
-			omapi_port = getUShort (db.data);
-		} else
-			log_fatal ("invalid omapi port data length");
-		data_string_forget (&db, MDL);
-	}
-
-	oc = lookup_option (&server_universe, options, SV_OMAPI_KEY);
-	if (oc &&
-	    evaluate_option_cache (&db, (struct packet *)0,
-				   (struct lease *)0, (struct client_state *)0,
-				   options,
-				   (struct option_state *)0,
-				   &global_scope, oc, MDL)) {
-		s = dmalloc (db.len + 1, MDL);
-		if (!s)
-			log_fatal ("no memory for OMAPI key filename.");
-		memcpy (s, db.data, db.len);
-		s [db.len] = 0;
-		data_string_forget (&db, MDL);
-		result = omapi_auth_key_lookup_name (&omapi_key, s);
-		dfree (s, MDL);
-		if (result != ISC_R_SUCCESS)
-			log_fatal ("Invalid OMAPI key: %s", s);
-	}
-
-	oc = lookup_option (&server_universe, options, SV_LOCAL_PORT);
-	if (oc &&
-	    evaluate_option_cache (&db, (struct packet *)0,
-				   (struct lease *)0, (struct client_state *)0,
-				   options,
-				   (struct option_state *)0,
-				   &global_scope, oc, MDL)) {
-		if (db.len == 2) {
-			local_port = htons (getUShort (db.data));
-		} else
-			log_fatal ("invalid local port data length");
-		data_string_forget (&db, MDL);
-	}
-
-	oc = lookup_option (&server_universe, options, SV_REMOTE_PORT);
-	if (oc &&
-	    evaluate_option_cache (&db, (struct packet *)0,
-				   (struct lease *)0, (struct client_state *)0,
-				   options, (struct option_state *)0,
-				   &global_scope, oc, MDL)) {
-		if (db.len == 2) {
-			remote_port = htons (getUShort (db.data));
-		} else
-			log_fatal ("invalid remote port data length");
-		data_string_forget (&db, MDL);
-	}
-
-	oc = lookup_option (&server_universe, options,
-			    SV_LIMITED_BROADCAST_ADDRESS);
-	if (oc &&
-	    evaluate_option_cache (&db, (struct packet *)0,
-				   (struct lease *)0, (struct client_state *)0,
-				   options, (struct option_state *)0,
-				   &global_scope, oc, MDL)) {
-		if (db.len == 4) {
-			memcpy (&limited_broadcast, db.data, 4);
-		} else
-			log_fatal ("invalid remote port data length");
-		data_string_forget (&db, MDL);
-	}
-
-	oc = lookup_option (&server_universe, options,
-			    SV_LOCAL_ADDRESS);
-	if (oc &&
-	    evaluate_option_cache (&db, (struct packet *)0,
-				   (struct lease *)0, (struct client_state *)0,
-				   options, (struct option_state *)0,
-				   &global_scope, oc, MDL)) {
-		if (db.len == 4) {
-			memcpy (&local_address, db.data, 4);
-		} else
-			log_fatal ("invalid remote port data length");
-		data_string_forget (&db, MDL);
-	}
-
-	/* Don't need the options anymore. */
-	option_state_dereference (&options, MDL);
-	
-	group_write_hook = group_writer;
 
 	/* Start up the database... */
 	db_startup (lftest);
@@ -528,50 +234,11 @@ int main (argc, argv, envp)
 	if (lftest)
 		exit (0);
 
-	dhcp_interface_setup_hook = dhcpd_interface_setup_hook;
-
 	/* Discover all the network interfaces and initialize them. */
 	discover_interfaces (DISCOVER_SERVER);
 
-	/* Make up a seed for the random number generator from current
-	   time plus the sum of the last four bytes of each
-	   interface's hardware address interpreted as an integer.
-	   Not much entropy, but we're booting, so we're not likely to
-	   find anything better. */
-	seed = 0;
-	for (ip = interfaces; ip; ip = ip -> next) {
-		int junk;
-		memcpy (&junk,
-			&ip -> hw_address.hbuf [ip -> hw_address.hlen -
-					       sizeof seed], sizeof seed);
-		seed += junk;
-	}
-	srandom (seed + cur_time);
-
 	/* Initialize icmp support... */
 	icmp_startup (1, lease_pinged);
-
-	/* Start up a listener for the object management API protocol. */
-	if (omapi_port != -1) {
-		listener = (omapi_object_t *)0;
-		result = omapi_generic_new (&listener, MDL);
-		if (result != ISC_R_SUCCESS)
-			log_fatal ("Can't allocate new generic object: %s",
-				   isc_result_totext (result));
-		result = omapi_protocol_listen (listener,
-						(unsigned)omapi_port, 1);
-		if (result == ISC_R_SUCCESS && omapi_key)
-			result = omapi_protocol_configure_security
-				(listener, verify_addr, verify_auth);
-		if (result != ISC_R_SUCCESS)
-			log_fatal ("Can't start OMAPI protocol: %s",
-				   isc_result_totext (result));
-	}
-
-#if defined (FAILOVER_PROTOCOL)
-	/* Start the failover protocol. */
-	dhcp_failover_startup ();
-#endif
 
 #ifndef DEBUG
 	if (daemon) {
@@ -601,7 +268,7 @@ int main (argc, argv, envp)
 				pidfilewritten = 1;
 			}
 		} else
-			log_fatal ("There's already a DHCP server running.");
+			log_fatal ("There's already a DHCP server running.\n");
 	}
 
 	/* If we were requested to log to stdout on the command line,
@@ -638,12 +305,6 @@ int main (argc, argv, envp)
 	/* Set up the bootp packet handler... */
 	bootp_packet_handler = do_packet;
 
-#if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL)
-	dmalloc_cutoff_generation = dmalloc_generation;
-	dmalloc_longterm = dmalloc_outstanding;
-	dmalloc_outstanding = 0;
-#endif
-
 	/* Receive packets and dispatch them... */
 	dispatch ();
 
@@ -659,9 +320,12 @@ static void usage ()
 	log_info (copyright);
 	log_info (arr);
 
-	log_fatal ("Usage: dhcpd [-p <UDP port #>] [-d] [-f]%s%s",
-		   "\n             [-cf config-file] [-lf lease-file]",
-		   "\n             [-t] [-T] [-s server] [if0 [...ifN]]");
+	log_fatal ("Usage: dhcpd [-p <UDP port #>] [-d] [-f] [-cf config-file]%s",
+	       "\n            [-lf lease-file] [if0 [...ifN]]");
+}
+
+void cleanup ()
+{
 }
 
 void lease_pinged (from, packet, length)
@@ -678,39 +342,34 @@ void lease_pinged (from, packet, length)
 	if (!outstanding_pings)
 		return;
 
-	lp = (struct lease *)0;
-	if (!find_lease_by_ip_addr (&lp, from, MDL)) {
-		log_debug ("unexpected ICMP Echo Reply from %s",
-			   piaddr (from));
+	lp = find_lease_by_ip_addr (from);
+
+	if (!lp) {
+		log_info ("unexpected ICMP Echo Reply from %s", piaddr (from));
 		return;
 	}
 
 	if (!lp -> state) {
-#if defined (FAILOVER_PROTOCOL)
-		if (!lp -> pool ||
-		    !lp -> pool -> failover_peer)
-#endif
-			log_debug ("ICMP Echo Reply for %s late or spurious.",
-				   piaddr (from));
-		goto out;
+		log_error ("ICMP Echo Reply for %s late or spurious.\n",
+		      piaddr (from));
+		return;
 	}
 
 	if (lp -> ends > cur_time) {
-		log_debug ("ICMP Echo reply while lease %s valid.",
-			   piaddr (from));
+		log_error ("ICMP Echo reply while lease %s is valid.\n",
+		      piaddr (from));
 	}
 
 	/* At this point it looks like we pinged a lease and got a
 	   response, which shouldn't have happened. */
-	data_string_forget (&lp -> state -> parameter_request_list, MDL);
-	free_lease_state (lp -> state, MDL);
+	data_string_forget (&lp -> state -> parameter_request_list,
+			    "lease_pinged");
+	free_lease_state (lp -> state, "lease_pinged");
 	lp -> state = (struct lease_state *)0;
 
-	abandon_lease (lp, "pinged before offer");
+	abandon_lease (lp, (struct packet *)0, "pinged before offer");
 	cancel_timeout (lease_ping_timeout, lp);
 	--outstanding_pings;
-      out:
-	lease_dereference (&lp, MDL);
 }
 
 void lease_ping_timeout (vlp)
@@ -718,76 +377,6 @@ void lease_ping_timeout (vlp)
 {
 	struct lease *lp = vlp;
 
-#if defined (DEBUG_MEMORY_LEAKAGE)
-	unsigned long previous_outstanding = dmalloc_outstanding;
-#endif
-
 	--outstanding_pings;
 	dhcp_reply (lp);
-
-#if defined (DEBUG_MEMORY_LEAKAGE)
-	log_info ("generation %ld: %ld new, %ld outstanding, %ld long-term",
-		  dmalloc_generation,
-		  dmalloc_outstanding - previous_outstanding,
-		  dmalloc_outstanding, dmalloc_longterm);
-#endif
-#if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL)
-	dmalloc_dump_outstanding ();
-#endif
-}
-
-int dhcpd_interface_setup_hook (struct interface_info *ip, struct iaddr *ia)
-{
-	struct subnet *subnet;
-	struct shared_network *share;
-	isc_result_t status;
-
-	/* Special case for fallback network - not sure why this is
-	   necessary. */
-	if (!ia) {
-		const char *fnn = "fallback-net";
-		char *s;
-		status = shared_network_allocate (&ip -> shared_network, MDL);
-		if (status != ISC_R_SUCCESS)
-			log_fatal ("No memory for shared subnet: %s",
-				   isc_result_totext (status));
-		ip -> shared_network -> name = dmalloc (strlen (fnn) + 1, MDL);
-		strcpy (ip -> shared_network -> name, fnn);
-		return 1;
-	}
-
-	/* If there's a registered subnet for this address,
-	   connect it together... */
-	subnet = (struct subnet *)0;
-	if (find_subnet (&subnet, *ia, MDL)) {
-		/* If this interface has multiple aliases on the same
-		   subnet, ignore all but the first we encounter. */
-		if (!subnet -> interface) {
-			subnet -> interface = ip;
-			subnet -> interface_address = *ia;
-		} else if (subnet -> interface != ip) {
-			log_error ("Multiple interfaces match the %s: %s %s", 
-				   "same subnet",
-				   subnet -> interface -> name, ip -> name);
-		}
-		share = subnet -> shared_network;
-		if (ip -> shared_network &&
-		    ip -> shared_network != share) {
-			log_fatal ("Interface %s matches multiple shared %s",
-				   ip -> name, "networks");
-		} else {
-			if (!ip -> shared_network)
-				shared_network_reference
-					(&ip -> shared_network, share, MDL);
-		}
-		
-		if (!share -> interface) {
-			interface_reference (&share -> interface, ip, MDL);
-		} else if (share -> interface != ip) {
-			log_error ("Multiple interfaces match the %s: %s %s", 
-				   "same shared network",
-				   share -> interface -> name, ip -> name);
-		}
-	}
-	return 1;
 }

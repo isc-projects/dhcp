@@ -4,47 +4,26 @@
    with one crucial tidbit of help from Stu Grossmen. */
 
 /*
- * Copyright (c) 1996-2000 Internet Software Consortium.
- * All rights reserved.
+ * Copyright (c) 1996-1999 Internet Software Consortium.
+ * Use is subject to license terms which appear in the file named
+ * ISC-LICENSE that should have accompanied this file when you
+ * received it.   If a file named ISC-LICENSE did not accompany this
+ * file, or you are not sure the one you have is correct, you may
+ * obtain an applicable copy of the license at:
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
+ *             http://www.isc.org/isc-license-1.0.html. 
  *
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of The Internet Software Consortium nor the names
- *    of its contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
+ * This file is part of the ISC DHCP distribution.   The documentation
+ * associated with this file is listed in the file DOCUMENTATION,
+ * included in the top-level directory of this release.
  *
- * THIS SOFTWARE IS PROVIDED BY THE INTERNET SOFTWARE CONSORTIUM AND
- * CONTRIBUTORS ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES,
- * INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED.  IN NO EVENT SHALL THE INTERNET SOFTWARE CONSORTIUM OR
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF
- * USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
- * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
- * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
- * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- * SUCH DAMAGE.
- *
- * This software has been written for the Internet Software Consortium
- * by Ted Lemon in cooperation with Vixie Enterprises and Nominum, Inc.
- * To learn more about the Internet Software Consortium, see
- * ``http://www.isc.org/''.  To learn more about Vixie Enterprises,
- * see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
- * ``http://www.nominum.com''.
+ * Support and other services are available for ISC products - see
+ * http://www.isc.org for more information.
  */
 
 #ifndef lint
 static char copyright[] =
-"$Id: nit.c,v 1.33 2000/09/20 00:05:24 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: nit.c,v 1.22 1999/03/16 06:37:49 mellon Exp $ Copyright (c) 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -118,10 +97,9 @@ int if_register_nit (info)
 		       info -> name);
 
 	/* XXX code below assumes ethernet interface! */
-	info -> hw_address.hlen = 7;
-	info -> hw_address.hbuf [0] = ARPHRD_ETHER;
-	memcpy (&info -> hw_address.hbuf [1],
-		ifr.ifr_ifru.ifru_addr.sa_data, 6);
+	info -> hw_address.hlen = 6;
+	info -> hw_address.htype = ARPHRD_ETHER;
+	memcpy (info -> hw_address.haddr, ifr.ifr_ifru.ifru_addr.sa_data, 6);
 
 	if (ioctl (sock, I_PUSH, "pf") < 0)
 		log_fatal ("Can't push packet filter onto NIT for %s: %m",
@@ -159,28 +137,9 @@ void if_register_send (info)
 #endif
         if (!quiet_interface_discovery)
 		log_info ("Sending on   NIT/%s%s%s",
-		      print_hw_addr (info -> hw_address.hbuf [0],
-				     info -> hw_address.hlen - 1,
-				     &info -> hw_address.hbuf [1]),
-		      (info -> shared_network ? "/" : ""),
-		      (info -> shared_network ?
-		       info -> shared_network -> name : ""));
-}
-
-void if_deregister_send (info)
-	struct interface_info *info;
-{
-	/* If we're using the nit API for sending and receiving,
-	   we don't need to register this interface twice. */
-#ifndef USE_NIT_RECEIVE
-	close (info -> wfdesc);
-#endif
-	info -> wfdesc = -1;
-        if (!quiet_interface_discovery)
-		log_info ("Disabling output on NIT/%s%s%s",
-		      print_hw_addr (info -> hw_address.hbuf [0],
-				     info -> hw_address.hlen - 1,
-				     &info -> hw_address.hbuf [1]),
+		      print_hw_addr (info -> hw_address.htype,
+				     info -> hw_address.hlen,
+				     info -> hw_address.haddr),
 		      (info -> shared_network ? "/" : ""),
 		      (info -> shared_network ?
 		       info -> shared_network -> name : ""));
@@ -262,27 +221,9 @@ void if_register_receive (info)
 
         if (!quiet_interface_discovery)
 		log_info ("Listening on NIT/%s%s%s",
-		      print_hw_addr (info -> hw_address.hbuf [0],
-				     info -> hw_address.hlen - 1,
-				     &info -> hw_address.hbuf [1]),
-		      (info -> shared_network ? "/" : ""),
-		      (info -> shared_network ?
-		       info -> shared_network -> name : ""));
-}
-
-void if_deregister_receive (info)
-	struct interface_info *info;
-{
-	/* If we're using the nit API for sending and receiving,
-	   we don't need to register this interface twice. */
-	close (info -> rfdesc);
-	info -> rfdesc = -1;
-
-        if (!quiet_interface_discovery)
-		log_info ("Disabling input on NIT/%s%s%s",
-		      print_hw_addr (info -> hw_address.hbuf [0],
-				     info -> hw_address.hlen - 1,
-				     &info -> hw_address.hbuf [1]),
+		      print_hw_addr (info -> hw_address.htype,
+				     info -> hw_address.hlen,
+				     info -> hw_address.haddr),
 		      (info -> shared_network ? "/" : ""),
 		      (info -> shared_network ?
 		       info -> shared_network -> name : ""));
@@ -299,12 +240,11 @@ ssize_t send_packet (interface, packet, raw, len, from, to, hto)
 	struct sockaddr_in *to;
 	struct hardware *hto;
 {
-	unsigned hbufp, ibufp;
-	double hh [16];
-	double ih [1536 / sizeof (double)];
-	unsigned char *buf = (unsigned char *)ih;
+	int bufp;
+	unsigned char buf [1536 + sizeof (struct sockaddr)];
 	struct sockaddr *junk;
 	struct strbuf ctl, data;
+	int hw_end;
 	struct sockaddr_in foo;
 	int result;
 
@@ -313,30 +253,34 @@ ssize_t send_packet (interface, packet, raw, len, from, to, hto)
 				      len, from, to, hto);
 
 	/* Start with the sockaddr struct... */
-	junk = (struct sockaddr *)&hh [0];
-	hbufp = ((unsigned char *)&junk -> sa_data [0]) - &buf [0];
-	ibufp = 0;
+	junk = (struct sockaddr *)&buf [0];
+	bufp = ((unsigned char *)&junk -> sa_data [0]) - &buf [0];
 
 	/* Assemble the headers... */
-	assemble_hw_header (interface, (unsigned char *)junk, &hbufp, hto);
-	assemble_udp_ip_header (interface, buf, &ibufp,
-				from.s_addr, to -> sin_addr.s_addr,
-				to -> sin_port, (unsigned char *)raw, len);
+	assemble_hw_header (interface, buf, &bufp, hto);
+	hw_end = bufp;
+	assemble_udp_ip_header (interface, buf, &bufp, from.s_addr,
+				to -> sin_addr.s_addr, to -> sin_port,
+				raw, len);
 
 	/* Copy the data into the buffer (yuk). */
-	memcpy (buf + ibufp, raw, len);
+	memcpy (buf + bufp, raw, len);
 
 	/* Set up the sockaddr structure... */
 #if USE_SIN_LEN
-	junk -> sa_len = hbufp - 2; /* XXX */
+	junk -> sa_len = hw_end - 2; /* XXX */
 #endif
 	junk -> sa_family = AF_UNSPEC;
 
+#if 0 /* Already done. */
+	memcpy (junk.sa_data, buf, hw_len);
+#endif
+
 	/* Set up the msg_buf structure... */
-	ctl.buf = (char *)&hh [0];
-	ctl.maxlen = ctl.len = hbufp;
-	data.buf = (char *)&ih [0];
-	data.maxlen = data.len = ibufp + len;
+	ctl.buf = (char *)&buf [0];
+	ctl.maxlen = ctl.len = hw_end;
+	data.buf = (char *)&buf [hw_end];
+	data.maxlen = data.len = bufp + len - hw_end;
 
 	result = putmsg (interface -> wfdesc, &ctl, &data, 0);
 	if (result < 0)
@@ -404,25 +348,14 @@ int can_receive_unicast_unconfigured (ip)
 	return 1;
 }
 
-int supports_multiple_interfaces (ip)
-	struct interface_info *ip;
-{
-	return 1;
-}
-
 void maybe_setup_fallback ()
 {
-	isc_result_t status;
-	struct interface_info *fbi = (struct interface_info *)0;
-	if (setup_fallback (&fbi, MDL)) {
+	struct interface_info *fbi;
+	fbi = setup_fallback ();
+	if (fbi) {
 		if_register_fallback (fbi);
-		status = omapi_register_io_object ((omapi_object_t *)fbi,
-						   if_readsocket, 0,
-						   fallback_discard, 0, 0);
-		if (status != ISC_R_SUCCESS)
-			log_fatal ("Can't register I/O handle for %s: %s",
-				   fbi -> name, isc_result_totext (status));
-		interface_dereference (&fbi, MDL);
+		add_protocol ("fallback", fallback_interface -> wfdesc,
+			      fallback_discard, fallback_interface);
 	}
 }
 #endif

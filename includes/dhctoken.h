@@ -4,41 +4,20 @@
 
 /*
  * Copyright (c) 1996-1999 Internet Software Consortium.
- * All rights reserved.
+ * Use is subject to license terms which appear in the file named
+ * ISC-LICENSE that should have accompanied this file when you
+ * received it.   If a file named ISC-LICENSE did not accompany this
+ * file, or you are not sure the one you have is correct, you may
+ * obtain an applicable copy of the license at:
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
+ *             http://www.isc.org/isc-license-1.0.html. 
  *
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of The Internet Software Consortium nor the names
- *    of its contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
+ * This file is part of the ISC DHCP distribution.   The documentation
+ * associated with this file is listed in the file DOCUMENTATION,
+ * included in the top-level directory of this release.
  *
- * THIS SOFTWARE IS PROVIDED BY THE INTERNET SOFTWARE CONSORTIUM AND
- * CONTRIBUTORS ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES,
- * INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED.  IN NO EVENT SHALL THE INTERNET SOFTWARE CONSORTIUM OR
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF
- * USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
- * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
- * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
- * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- * SUCH DAMAGE.
- *
- * This software has been written for the Internet Software Consortium
- * by Ted Lemon in cooperation with Vixie Enterprises and Nominum, Inc.
- * To learn more about the Internet Software Consortium, see
- * ``http://www.isc.org/''.  To learn more about Vixie Enterprises,
- * see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
- * ``http://www.nominum.com''.
+ * Support and other services are available for ISC products - see
+ * http://www.isc.org for more information.
  */
 
 enum dhcp_token {
@@ -52,14 +31,6 @@ enum dhcp_token {
 	LPAREN = '(',
 	RPAREN = ')',
 	EQUAL = '=',
-	BANG = '!',
-	PERCENT = '%',
- 	PLUS = '+',
-	MINUS = '-',
-	ASTERISK = '*',
-	AMPERSAND = '&',
-	PIPE = '|',
-	CARET = '^',
 
 	HOST = 256,
 	FIRST_TOKEN = HOST,
@@ -117,6 +88,7 @@ enum dhcp_token {
 	EXPIRE = 308,
 	UNKNOWN_CLIENTS = 309,
 	ALLOW = 310,
+	BOOTP = 311,
 	DENY = 312,
 	BOOTING = 313,
 	DEFAULT = 314,
@@ -124,7 +96,7 @@ enum dhcp_token {
 	MEDIUM = 316,
 	ALIAS = 317,
 	REBOOT = 318,
-	TOKEN_ABANDONED = 319,
+	ABANDONED = 319,
 	BACKOFF_CUTOFF = 320,
 	INITIAL_INTERVAL = 321,
 	NAMESERVER = 322,
@@ -141,6 +113,9 @@ enum dhcp_token {
 	MIN_SECS = 333,
 	AND = 334,
 	OR = 335,
+#if 0
+	NOT = 336,
+#endif
 	SUBSTRING = 337,
 	SUFFIX = 338,
 	CHECK = 339,
@@ -186,6 +161,7 @@ enum dhcp_token {
 	FDDI = 379,
 	AUTHORITATIVE = 380,
 	TOKEN_NOT = 381,
+	AUTH_KEY = 382,
 	AUTHENTICATION = 383,
 	IGNORE = 384,
 	ACCEPT = 385,
@@ -203,105 +179,14 @@ enum dhcp_token {
 	SPACE = 397,
 	CONCAT = 398,
 	ENCODE_INT = 399,
+	DDNS_FWD_NAME = 400,
+	DDNS_REV_NAME = 401,
 	REVERSE = 402,
 	LEASED_ADDRESS = 403,
 	BINARY_TO_ASCII = 404,
-	PICK = 405,
-	CONFIG_OPTION = 406,
-	HOST_DECL_NAME = 407,
-	ON = 408,
-	EXPIRY = 409,
-	RELEASE = 410,
-	COMMIT = 411,
-	DNS_UPDATE = 412,
-	LEASE_TIME = 413,
-	STATIC = 414,
+	ON = 405,
 	NEVER = 415,
 	INFINITE = 416,
-	TOKEN_DELETED = 417,
-	UPDATED_DNS_RR = 418,
-	DNS_DELETE = 419,
-	DUPLICATES = 420,
-	DECLINES = 421,
-	TSTP = 422,
-	TSFP = 423,
-	OWNER = 424,
-	IS = 425,
-	HBA = 426,
-	MAX_UNACKED_UPDATES = 427,
-	MCLT = 428,
-	SPLIT = 429,
-	AT = 430,
-	NO = 431,
-	TOKEN_DELETE = 432,
-	NS_UPDATE = 433,
-	UPDATE = 434,
-	SWITCH = 435,
-	CASE = 436,
-	NS_FORMERR = 437,
-	NS_NOERROR = 438,
-	NS_NOTAUTH = 439,
-	NS_NOTIMP = 440,
-	NS_NOTZONE = 441,
-	NS_NXDOMAIN = 442,
-	NS_NXRRSET = 443,
-	NS_REFUSED = 444,
-	NS_SERVFAIL = 445,
-	NS_YXDOMAIN = 446,
-	NS_YXRRSET = 447,
-	TOKEN_NULL = 448,
-	TOKEN_SET = 449,
-	DEFINED = 450,
-	UNSET = 451,
-	EVAL = 452,
-	LET = 453,
-	FUNCTION = 454,
-	DEFINE = 455,
-	ZONE = 456,
-	KEY = 457,
-	SECRET = 458,
-	ALGORITHM = 459,
-	LOAD = 460,
-	BALANCE = 461,
-	TOKEN_MAX = 462,
-	SECONDS = 463,
-	ADDRESS = 464,
-	RESOLUTION_INTERRUPTED = 465,
-	STATE = 466,
-	UNKNOWN_STATE = 567,
-	CLTT = 568,
-	INCLUDE = 569,
-	BINDING = 570,
-	TOKEN_FREE = 571,
-	TOKEN_ACTIVE = 572,
-	TOKEN_EXPIRED = 573,
-	TOKEN_RELEASED = 574,
-	TOKEN_RESET = 575,
-	TOKEN_BACKUP = 576,
-	TOKEN_RESERVED = 577,
-	TOKEN_BOOTP = 578,
-	TOKEN_NEXT = 579,
-	OMAPI = 580,
-	LOG = 581,
-	FATAL = 582,
-	ERROR = 583,
-	TOKEN_DEBUG = 584,
-	INFO = 585,
-	RETURN = 586,
-	PAUSED = 587,
-	RECOVER_DONE = 588,
-	SHUTDOWN = 589,
-	STARTUP = 590,
-	ENCAPSULATE = 591,
-	VENDOR = 592,
-	CLIENT_STATE = 593,
-	INIT_REBOOT = 594,
-	TOKEN_INIT = 595,
-	SELECTING = 596,
-	REQUESTING = 597,
-	BOUND = 598,
-	RENEWING = 599,
-	REBINDING
 };
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\

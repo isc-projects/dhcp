@@ -3,47 +3,26 @@
    DHCP Protocol engine. */
 
 /*
- * Copyright (c) 1995-2000 Internet Software Consortium.
- * All rights reserved.
+ * Copyright (c) 1996-1999 Internet Software Consortium.
+ * Use is subject to license terms which appear in the file named
+ * ISC-LICENSE that should have accompanied this file when you
+ * received it.   If a file named ISC-LICENSE did not accompany this
+ * file, or you are not sure the one you have is correct, you may
+ * obtain an applicable copy of the license at:
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
+ *             http://www.isc.org/isc-license-1.0.html. 
  *
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of The Internet Software Consortium nor the names
- *    of its contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
+ * This file is part of the ISC DHCP distribution.   The documentation
+ * associated with this file is listed in the file DOCUMENTATION,
+ * included in the top-level directory of this release.
  *
- * THIS SOFTWARE IS PROVIDED BY THE INTERNET SOFTWARE CONSORTIUM AND
- * CONTRIBUTORS ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES,
- * INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED.  IN NO EVENT SHALL THE INTERNET SOFTWARE CONSORTIUM OR
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF
- * USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
- * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
- * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
- * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- * SUCH DAMAGE.
- *
- * This software has been written for the Internet Software Consortium
- * by Ted Lemon in cooperation with Vixie Enterprises and Nominum, Inc.
- * To learn more about the Internet Software Consortium, see
- * ``http://www.isc.org/''.  To learn more about Vixie Enterprises,
- * see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
- * ``http://www.nominum.com''.
+ * Support and other services are available for ISC products - see
+ * http://www.isc.org for more information.
  */
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.170 2000/11/28 23:27:17 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.100.2.14 1999/11/13 04:02:17 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -55,318 +34,80 @@ static char dhcp_message [256];
 void dhcp (packet)
 	struct packet *packet;
 {
-	int ms_nulltp = 0;
-	struct option_cache *oc;
-	struct lease *lease = (struct lease *)0;
-	const char *errmsg;
-	struct data_string data;
-
-	if (!locate_network (packet) &&
-	    packet -> packet_type != DHCPREQUEST &&
-	    packet -> packet_type != DHCPINFORM) {
-		static const char *dhcp_type_names [] = { 
-			"DHCPDISCOVER",
-			"DHCPOFFER",
-			"DHCPREQUEST",
-			"DHCPDECLINE",
-			"DHCPACK",
-			"DHCPNAK",
-			"DHCPRELEASE",
-			"DHCPINFORM"
-		};
-		const int dhcp_type_name_max = ((sizeof dhcp_type_names) / 
-						sizeof (char *));
-		const char *s;
-		char typebuf [32];
-		errmsg = "unknown network segment";
-	      bad_packet:
-		
-		if (packet -> packet_type > 0 &&
-		    packet -> packet_type < dhcp_type_name_max - 1) {
-			s = dhcp_type_names [packet -> packet_type - 1];
-		} else {
-#if defined (HAVE_SNPRINTF)
-			snprintf (typebuf, sizeof typebuf,
-				  "type %d", packet -> packet_type);
-#else
-			sprintf (typebuf, 
-				  "type %d", packet -> packet_type);
-#endif
-			s = typebuf;
-		}
-		
-		log_info ("%s from %s via %s: %s", s,
-			  (packet -> raw -> htype
-			   ? print_hw_addr (packet -> raw -> htype,
-					    packet -> raw -> hlen,
-					    packet -> raw -> chaddr)
-			   : "<no identifier>"),
-			  packet -> raw -> giaddr.s_addr
-			  ? inet_ntoa (packet -> raw -> giaddr)
-			  : packet -> interface -> name, errmsg);
-		goto out;
-	}
-
-	/* There is a problem with the relay agent information option,
-	   which is that in order for a normal relay agent to append
-	   this option, the relay agent has to have been involved in
-	   getting the packet from the client to the server.  Note
-	   that this is the software entity known as the relay agent,
-	   _not_ the hardware entity known as a router in which the
-	   relay agent may be running, so the fact that a router has
-	   forwarded a packet does not mean that the relay agent in
-	   the router was involved.
-
-	   So when the client is in INIT or INIT-REBOOT or REBINDING
-	   state, the relay agent gets to tack on its options, but
-	   when it's not, the relay agent doesn't get to do this,
-	   which means that any decisions the DHCP server may make
-	   based on the agent options will be made incorrectly.  
-
-	   We work around this in the following way: if this is a
-	   DHCPREQUEST and doesn't have relay agent information
-	   options, we see if there's an existing lease for this IP
-	   address and this client that _does_ have stashed agent
-	   options.   If so, then we tack those options onto the
-	   packet as if they came from the client.   Later on, when we
-	   are deciding whether to steal the agent options from the
-	   packet, if the agent options stashed on the lease are the
-	   same as those stashed on the packet, we don't steal them -
-	   this ensures that the client never receives its agent
-	   options. */
-
-	if (packet -> packet_type == DHCPREQUEST &&
-	    packet -> raw -> ciaddr.s_addr &&
-	    !packet -> raw -> giaddr.s_addr &&
-	    (packet -> options -> universe_count < agent_universe.index ||
-	     !packet -> options -> universes [agent_universe.index]))
-	{
-		struct iaddr cip;
-
-		cip.len = sizeof packet -> raw -> ciaddr;
-		memcpy (cip.iabuf, &packet -> raw -> ciaddr,
-			sizeof packet -> raw -> ciaddr);
-		if (!find_lease_by_ip_addr (&lease, cip, MDL))
-			goto nolease;
-
-		/* If there are no agent options on the lease, it's not
-		   interesting. */
-		if (!lease -> agent_options)
-			goto nolease;
-
-		/* The client should not be unicasting a renewal if its lease
-		   has expired, so make it go through the process of getting
-		   its agent options legally. */
-		if (lease -> ends < cur_time)
-			goto nolease;
-
-		if (lease -> uid_len) {
-			oc = lookup_option (&dhcp_universe, packet -> options,
-					    DHO_DHCP_CLIENT_IDENTIFIER);
-			if (!oc)
-				goto nolease;
-
-			memset (&data, 0, sizeof data);
-			if (!evaluate_option_cache (&data,
-						    packet, (struct lease *)0,
-						    (struct client_state *)0,
-						    packet -> options,
-						    (struct option_state *)0,
-						    &global_scope, oc, MDL))
-				goto nolease;
-			if (lease -> uid_len != data.len ||
-			    memcmp (lease -> uid, data.data, data.len)) {
-				data_string_forget (&data, MDL);
-				goto nolease;
-			}
-			data_string_forget (&data, MDL);
-		} else
-			if ((lease -> hardware_addr.hbuf [0] !=
-			     packet -> raw -> htype) ||
-			    (lease -> hardware_addr.hlen - 1 !=
-			     packet -> raw -> hlen) ||
-			    memcmp (&lease -> hardware_addr.hbuf [1],
-				    packet -> raw -> chaddr,
-				    packet -> raw -> hlen))
-				goto nolease;
-
-		/* Okay, so we found a lease that matches the client. */
-		option_cache_reference ((struct option_cache **)
-					&(packet -> options -> universes
-					  [agent_universe.index]),
-					lease -> agent_options, MDL);
-	}
-      nolease:
+	if (!locate_network (packet) && packet -> packet_type != DHCPREQUEST)
+		return;
 
 	/* Classify the client. */
-	if ((oc = lookup_option (&dhcp_universe, packet -> options,
-				 DHO_HOST_NAME))) {
-		if (!oc -> expression)
-			if (oc -> data.len &&
-			    oc -> data.data [oc -> data.len - 1] == 0) {
-				ms_nulltp = 1;
-				oc -> data.len--;
-			}
-	}
-
 	classify_client (packet);
 
 	switch (packet -> packet_type) {
 	      case DHCPDISCOVER:
-		dhcpdiscover (packet, ms_nulltp);
+		dhcpdiscover (packet);
 		break;
 
 	      case DHCPREQUEST:
-		dhcprequest (packet, ms_nulltp, lease);
+		dhcprequest (packet);
 		break;
 
 	      case DHCPRELEASE:
-		dhcprelease (packet, ms_nulltp);
+		dhcprelease (packet);
 		break;
 
 	      case DHCPDECLINE:
-		dhcpdecline (packet, ms_nulltp);
+		dhcpdecline (packet);
 		break;
 
 	      case DHCPINFORM:
-		dhcpinform (packet, ms_nulltp);
-		break;
-
-
-	      case DHCPACK:
-	      case DHCPOFFER:
-	      case DHCPNAK:
+		dhcpinform (packet);
 		break;
 
 	      default:
-		errmsg = "unknown packet type";
-		goto bad_packet;
+		break;
 	}
-      out:
-	if (lease)
-		lease_dereference (&lease, MDL);
 }
 
-void dhcpdiscover (packet, ms_nulltp)
+void dhcpdiscover (packet)
 	struct packet *packet;
-	int ms_nulltp;
 {
-	struct lease *lease = (struct lease *)0;
-	char msgbuf [1024]; /* XXX */
-	TIME when;
-	char *s;
-	int allocatedp = 0;
-	int peer_has_leases = 0;
-#if defined (FAILOVER_PROTOCOL)
-	dhcp_failover_state_t *peer;
-#endif
+	struct lease *lease;
+	char msgbuf [1024];
 
-	find_lease (&lease, packet, packet -> shared_network,
-		    0, &allocatedp, (struct lease *)0, MDL);
-
-	if (lease && lease -> client_hostname &&
-	    db_printable (lease -> client_hostname))
-		s = lease -> client_hostname;
-	else
-		s = (char *)0;
-
-	/* Say what we're doing... */
-	sprintf (msgbuf, "DHCPDISCOVER from %s %s%s%svia %s",
-		 (packet -> raw -> htype
-		  ? print_hw_addr (packet -> raw -> htype,
-				   packet -> raw -> hlen,
-				   packet -> raw -> chaddr)
-		  : (lease
-		     ? print_hex_1 (lease -> uid_len, lease -> uid, 
-				    lease -> uid_len)
-		     : "<no identifier>")),
-		  s ? "(" : "", s ? s : "", s ? ") " : "",
-		  packet -> raw -> giaddr.s_addr
+	sprintf (msgbuf, "DHCPDISCOVER from %s via %s",
+		 print_hw_addr (packet -> raw -> htype,
+				packet -> raw -> hlen,
+				packet -> raw -> chaddr),
+		 (packet -> raw -> giaddr.s_addr
 		  ? inet_ntoa (packet -> raw -> giaddr)
-		  : packet -> interface -> name);
+		  : packet -> interface -> name));
 
-#if defined (FAILOVER_PROTOCOL)
-	if (lease && lease -> pool && lease -> pool -> failover_peer) {
-		peer = lease -> pool -> failover_peer;
-		if (peer -> service_state == not_responding ||
-		    peer -> service_state == service_startup) {
-			log_info ("%s: not responding%s",
-				  peer -> name, peer -> nrr);
-			goto out;
-		}
-	} else
-		peer = (dhcp_failover_state_t *)0;
-#endif
+	lease = find_lease (packet, packet -> shared_network, 0);
 
 	/* Sourceless packets don't make sense here. */
 	if (!packet -> shared_network) {
 		log_info ("Packet from unknown subnet: %s",
 		      inet_ntoa (packet -> raw -> giaddr));
-		goto out;
+		return;
 	}
 
 	/* If we didn't find a lease, try to allocate one... */
 	if (!lease) {
-		if (!allocate_lease (&lease, packet,
-				     packet -> shared_network -> pools, 
-				     &peer_has_leases)) {
-			if (peer_has_leases)
-				log_info ("%s: peer holds all free leases",
-					  msgbuf);
-			else
-				log_info ("%s: network %s: no free leases",
-					  msgbuf,
-					  packet -> shared_network -> name);
+		lease = allocate_lease (packet,
+					packet -> shared_network -> pools, 0);
+		if (!lease) {
+			log_info ("no free leases on network %s match %s",
+			      packet -> shared_network -> name,
+			      print_hw_addr (packet -> raw -> htype,
+					     packet -> raw -> hlen,
+					     packet -> raw -> chaddr));
 			return;
 		}
-#if defined (FAILOVER_PROTOCOL)
-		if (lease -> pool && lease -> pool -> failover_peer)
-			dhcp_failover_pool_check (lease -> pool);
-#endif
-		allocatedp = 1;
 	}
 
-#if defined (FAILOVER_PROTOCOL)
-	/* Do load balancing if configured. */
-	/* If the lease is newly allocated, and we're not the server that
-	   the client would normally get with load balancing, and the
-	   failover protocol state is normal, let the other server get this.
-	   XXX Check protocol spec to make sure that predicating this on
-	   XXX allocatedp is okay - I'm doing this so that the client won't
-	   XXX be forced to switch servers (and IP addresses) just because
-	   XXX of bad luck, when it's possible for it to get the address it
-	   XXX is requesting.    Not sure this is allowed.  */
-	if (allocatedp && peer) {
-		if (peer -> service_state == cooperating) {
-			if (!load_balance_mine (packet, peer)) {
-				log_debug ("%s: load balance to peer %s",
-					   msgbuf, peer -> name);
-				goto out;
-			}
-		}
-	}
-#endif
-
-	/* If it's an expired lease, get rid of any bindings. */
-	if (lease -> ends < cur_time && lease -> scope)
-		binding_scope_dereference (&lease -> scope, MDL);
-
-	/* Set the lease to really expire in 2 minutes, unless it has
-	   not yet expired, in which case leave its expiry time alone. */
-	when = cur_time + 120;
-	if (when < lease -> ends)
-		when = lease -> ends;
-
-	ack_lease (packet, lease, DHCPOFFER, when, msgbuf, ms_nulltp);
-      out:
-	if (lease)
-		lease_dereference (&lease, MDL);
+	ack_lease (packet, lease, DHCPOFFER, cur_time + 120, msgbuf);
 }
 
-void dhcprequest (packet, ms_nulltp, ip_lease)
+void dhcprequest (packet)
 	struct packet *packet;
-	int ms_nulltp;
-	struct lease *ip_lease;
 {
 	struct lease *lease;
 	struct iaddr cip;
@@ -375,87 +116,40 @@ void dhcprequest (packet, ms_nulltp, ip_lease)
 	struct option_cache *oc;
 	struct data_string data;
 	int status;
-	char msgbuf [1024]; /* XXX */
-	char *s;
-#if defined (FAILOVER_PROTOCOL)
-	dhcp_failover_state_t *peer;
-#endif
+	char msgbuf [1024];
 
 	oc = lookup_option (&dhcp_universe, packet -> options,
 			    DHO_DHCP_REQUESTED_ADDRESS);
 	memset (&data, 0, sizeof data);
 	if (oc &&
-	    evaluate_option_cache (&data, packet, (struct lease *)0,
-				   (struct client_state *)0,
-				   packet -> options, (struct option_state *)0,
-				   &global_scope, oc, MDL)) {
+	    evaluate_option_cache (&data, packet, packet -> options,
+				   (struct lease *)0, oc)) {
 		cip.len = 4;
 		memcpy (cip.iabuf, data.data, 4);
-		data_string_forget (&data, MDL);
+		data_string_forget (&data, "dhcprequest");
 	} else {
 		oc = (struct option_cache *)0;
 		cip.len = 4;
 		memcpy (cip.iabuf, &packet -> raw -> ciaddr.s_addr, 4);
 	}
+	subnet = find_subnet (cip);
 
 	/* Find the lease that matches the address requested by the
 	   client. */
 
-	subnet = (struct subnet *)0;
-	lease = (struct lease *)0;
-	if (find_subnet (&subnet, cip, MDL))
-		find_lease (&lease, packet,
-			    subnet -> shared_network, &ours, 0, ip_lease, MDL);
-	/* XXX consider using allocatedp arg to find_lease to see
-	   XXX that this isn't a compliant DHCPREQUEST. */
-
-	if (lease && lease -> client_hostname &&
-	    db_printable (lease -> client_hostname))
-		s = lease -> client_hostname;
+	if (subnet)
+		lease = find_lease (packet, subnet -> shared_network, &ours);
 	else
-		s = (char *)0;
+		lease = (struct lease *)0;
 
-	/* Say what we're doing... */
-	sprintf (msgbuf, "DHCPREQUEST for %s from %s %s%s%svia %s",
+	sprintf (msgbuf, "DHCPREQUEST for %s from %s via %s",
 		 piaddr (cip),
-		 (packet -> raw -> htype
-		  ? print_hw_addr (packet -> raw -> htype,
-				   packet -> raw -> hlen,
-				   packet -> raw -> chaddr)
-		  : (lease
-		     ? print_hex_1 (lease -> uid_len, lease -> uid, 
-				    lease -> uid_len)
-		     : "<no identifier>")),
-		 s ? "(" : "", s ? s : "", s ? ") " : "",
-		  packet -> raw -> giaddr.s_addr
+		 print_hw_addr (packet -> raw -> htype,
+				packet -> raw -> hlen,
+				packet -> raw -> chaddr),
+		 (packet -> raw -> giaddr.s_addr
 		  ? inet_ntoa (packet -> raw -> giaddr)
-		  : packet -> interface -> name);
-
-#if defined (FAILOVER_PROTOCOL)
-	if (lease && lease -> pool && lease -> pool -> failover_peer) {
-		peer = lease -> pool -> failover_peer;
-		if (peer -> service_state == not_responding ||
-		    peer -> service_state == service_startup) {
-			log_info ("%s: not responding%s",
-				  peer -> name, peer -> nrr);
-			goto out;
-		}
-		if (peer -> service_state == cooperating) {
-			/* XXX */
-			/* If the client is in RENEWING state and sends
-			   us a DHCPREQUEST, we're going to ignore it,
-			   so it's going to have to fall back to REBINDING
-			   state before it can get a response from the
-			   other server.   Ick. */
-			if (!load_balance_mine (packet, peer)) {
-				log_debug ("%s: load balance to peer %s",
-					   msgbuf, peer -> name);
-				goto out;
-			}
-		}
-	} else
-		peer = (dhcp_failover_state_t *)0;
-#endif
+		  : packet -> interface -> name));
 
 	/* If a client on a given network REQUESTs a lease on an
 	   address on a different network, NAK it.  If the Requested
@@ -500,35 +194,33 @@ void dhcprequest (packet, ms_nulltp, ip_lease)
 	   RENEWING client, so we can punt on this issue. */
 
 	if (!packet -> shared_network ||
-	    (packet -> raw -> ciaddr.s_addr /* &&
-	     packet -> raw -> giaddr.s_addr */) ||
+	    (packet -> raw -> ciaddr.s_addr &&
+	     packet -> raw -> giaddr.s_addr) ||
 	    (oc && !packet -> raw -> ciaddr.s_addr)) {
 		
 		/* If we don't know where it came from but we do know
 		   where it claims to have come from, it didn't come
-		   from there. */
+		   from there.   Fry it. */
 		if (!packet -> shared_network) {
 			if (subnet && subnet -> group -> authoritative) {
 				log_info ("%s: wrong network.", msgbuf);
 				nak_lease (packet, &cip);
-				goto out;
+				return;
 			}
 			/* Otherwise, ignore it. */
 			log_info ("%s: ignored (not authoritative).", msgbuf);
-			goto out;
+			return;
 		}
 
 		/* If we do know where it came from and it asked for an
 		   address that is not on that shared network, nak it. */
-		if (subnet)
-			subnet_dereference (&subnet, MDL);
-		if (!find_grouped_subnet (&subnet, packet -> shared_network,
-					  cip, MDL)) {
+		subnet = find_grouped_subnet (packet -> shared_network, cip);
+		if (!subnet) {
 			if (packet -> shared_network -> group -> authoritative)
 			{
 				log_info ("%s: wrong network.", msgbuf);
 				nak_lease (packet, &cip);
-				goto out;
+				return;
 			}
 			log_info ("%s: ignored (not authoritative).", msgbuf);
 			return;
@@ -540,34 +232,23 @@ void dhcprequest (packet, ms_nulltp, ip_lease)
 	if (!lease && ours) {
 		log_info ("%s: lease %s unavailable.", msgbuf, piaddr (cip));
 		nak_lease (packet, &cip);
-		goto out;
+		return;
 	}
 
 	/* Otherwise, send the lease to the client if we found one. */
 	if (lease) {
-		ack_lease (packet, lease, DHCPACK, 0, msgbuf, ms_nulltp);
+		ack_lease (packet, lease, DHCPACK, 0, msgbuf);
 	} else
 		log_info ("%s: unknown lease %s.", msgbuf, piaddr (cip));
-
-      out:
-	if (subnet)
-		subnet_dereference (&subnet, MDL);
-	if (lease)
-		lease_dereference (&lease, MDL);
-	return;
 }
 
-void dhcprelease (packet, ms_nulltp)
+void dhcprelease (packet)
 	struct packet *packet;
-	int ms_nulltp;
 {
-	struct lease *lease = (struct lease *)0;
+	struct lease *lease;
 	struct iaddr cip;
 	struct option_cache *oc;
 	struct data_string data;
-	char *s;
-	char msgbuf [1024]; /* XXX */
-
 
 	/* DHCPRELEASE must not specify address in requested-address
            option, but old protocol specs weren't explicit about this,
@@ -584,12 +265,10 @@ void dhcprelease (packet, ms_nulltp)
 			    DHO_DHCP_CLIENT_IDENTIFIER);
 	memset (&data, 0, sizeof data);
 	if (oc &&
-	    evaluate_option_cache (&data, packet, (struct lease *)0,
-				   (struct client_state *)0,
-				   packet -> options, (struct option_state *)0,
-				   &global_scope, oc, MDL)) {
-		find_lease_by_uid (&lease, data.data, data.len, MDL);
-		data_string_forget (&data, MDL);
+	    evaluate_option_cache (&data, packet, packet -> options, 
+				   (struct lease *)0, oc)) {
+		lease = find_lease_by_uid (data.data, data.len);
+		data_string_forget (&data, "dhcprelease");
 
 		/* See if we can find a lease that matches the IP address
 		   the client is claiming. */
@@ -599,82 +278,36 @@ void dhcprelease (packet, ms_nulltp)
 				break;
 			}
 		}
-	}
-
-	/* The client is supposed to pass a valid client-identifier,
-	   but the spec on this has changed historically, so try the
-	   IP address in ciaddr if the client-identifier fails. */
-	if (!lease) {
+	} else {
+		/* The client is supposed to pass a valid client-identifier,
+		   but the spec on this has changed historically, so try the
+		   IP address in ciaddr if the client-identifier was
+		   not specified. */
 		cip.len = 4;
 		memcpy (cip.iabuf, &packet -> raw -> ciaddr, 4);
-		find_lease_by_ip_addr (&lease, cip, MDL);
+		lease = find_lease_by_ip_addr (cip);
 	}
 
-
-	if (lease && lease -> client_hostname &&
-	    db_printable (lease -> client_hostname))
-		s = lease -> client_hostname;
-	else
-		s = (char *)0;
-
-	/* Say what we're doing... */
-	sprintf (msgbuf,
-		 "DHCPRELEASE of %s from %s %s%s%svia %s (%sfound)",
-		 inet_ntoa (packet -> raw -> ciaddr),
-		 (packet -> raw -> htype
-		  ? print_hw_addr (packet -> raw -> htype,
-				   packet -> raw -> hlen,
-				   packet -> raw -> chaddr)
-		  : (lease
-		     ? print_hex_1 (lease -> uid_len, lease -> uid, 
-				    lease -> uid_len)
-		     : "<no identifier>")),
-		 s ? "(" : "", s ? s : "", s ? ") " : "",
-		 packet -> raw -> giaddr.s_addr
-		 ? inet_ntoa (packet -> raw -> giaddr)
-		 : packet -> interface -> name,
-		 lease ? "" : "not ");
-
-#if defined (FAILOVER_PROTOCOL)
-	if (lease && lease -> pool && lease -> pool -> failover_peer) {
-		dhcp_failover_state_t *peer = lease -> pool -> failover_peer;
-		if (peer -> service_state == not_responding ||
-		    peer -> service_state == service_startup) {
-			log_info ("%s: ignored%s",
-				  peer -> name, peer -> nrr);
-			goto out;
-		}
-
-		/* DHCPRELEASE messages are unicast, so if the client
-		   sent the DHCPRELEASE to us, it's not going to send it
-		   to the peer.   Not sure why this would happen, and
-		   if it does happen I think we still have to change the
-		   lease state, so that's what we're doing.
-		   XXX See what it says in the draft about this. */
-	}
-#endif
+	log_info ("DHCPRELEASE of %s from %s via %s (%sfound)",
+	      inet_ntoa (packet -> raw -> ciaddr),
+	      print_hw_addr (packet -> raw -> htype,
+			     packet -> raw -> hlen,
+			     packet -> raw -> chaddr),
+	      packet -> raw -> giaddr.s_addr
+	      ? inet_ntoa (packet -> raw -> giaddr)
+	      : packet -> interface -> name,
+	      lease ? "" : "not ");
 
 	/* If we found a lease, release it. */
 	if (lease && lease -> ends > cur_time) {
 		release_lease (lease, packet);
-		log_info ("%s", msgbuf);
 	}
-      out:
-	if (lease)
-		lease_dereference (&lease, MDL);
 }
 
-void dhcpdecline (packet, ms_nulltp)
+void dhcpdecline (packet)
 	struct packet *packet;
-	int ms_nulltp;
 {
-	struct lease *lease = (struct lease *)0;
-	struct option_state *options = (struct option_state *)0;
-	int ignorep = 0;
-	int i;
-	const char *status;
-	char *s;
-	char msgbuf [1024]; /* XXX */
+	struct lease *lease;
 	struct iaddr cip;
 	struct option_cache *oc;
 	struct data_string data;
@@ -684,108 +317,32 @@ void dhcpdecline (packet, ms_nulltp)
 				  DHO_DHCP_REQUESTED_ADDRESS)))
 		return;
 	memset (&data, 0, sizeof data);
-	if (!evaluate_option_cache (&data, packet, (struct lease *)0,
-				    (struct client_state *)0,
-				    packet -> options,
-				    (struct option_state *)0,
-				    &global_scope, oc, MDL))
+	if (!evaluate_option_cache (&data, packet, packet -> options,
+				    (struct lease *)0, oc))
 		return;
 
 	cip.len = 4;
 	memcpy (cip.iabuf, data.data, 4);
-	data_string_forget (&data, MDL);
-	find_lease_by_ip_addr (&lease, cip, MDL);
+	data_string_forget (&data, "dhcpdecline");
+	lease = find_lease_by_ip_addr (cip);
 
-	if (lease && lease -> client_hostname &&
-	    db_printable (lease -> client_hostname))
-		s = lease -> client_hostname;
-	else
-		s = (char *)0;
+	log_info ("DHCPDECLINE on %s from %s via %s",
+	      piaddr (cip),
+	      print_hw_addr (packet -> raw -> htype,
+			     packet -> raw -> hlen,
+			     packet -> raw -> chaddr),
+	      packet -> raw -> giaddr.s_addr
+	      ? inet_ntoa (packet -> raw -> giaddr)
+	      : packet -> interface -> name);
 
-	sprintf (msgbuf, "DHCPDECLINE of %s from %s %s%s%svia %s",
-		 piaddr (cip),
-		 (packet -> raw -> htype
-		  ? print_hw_addr (packet -> raw -> htype,
-				   packet -> raw -> hlen,
-				   packet -> raw -> chaddr)
-		  : (lease
-		     ? print_hex_1 (lease -> uid_len, lease -> uid, 
-				    lease -> uid_len)
-		     : "<no identifier>")),
-		 s ? "(" : "", s ? s : "", s ? ") " : "",
-		 packet -> raw -> giaddr.s_addr
-		 ? inet_ntoa (packet -> raw -> giaddr)
-		 : packet -> interface -> name);
-
-	option_state_allocate (&options, MDL);
-
-	/* Execute statements in scope starting with the subnet scope. */
-	if (lease)
-		execute_statements_in_scope ((struct binding_value **)0,
-					     packet, (struct lease *)0,
-					     (struct client_state *)0,
-					     packet -> options, options,
-					     &global_scope,
-					     lease -> subnet -> group,
-					     (struct group *)0);
-
-	/* Execute statements in the class scopes. */
-	for (i = packet -> class_count; i > 0; i--) {
-		execute_statements_in_scope
-			((struct binding_value **)0, packet, (struct lease *)0,
-			 (struct client_state *)0, packet -> options, options,
-			 &global_scope, packet -> classes [i - 1] -> group,
-			 lease ? lease -> subnet -> group : (struct group *)0);
+	/* If we found a lease, mark it as unusable and complain. */
+	if (lease) {
+		abandon_lease (lease, packet, "declined.");
 	}
-
-	/* Drop the request if dhcpdeclines are being ignored. */
-	oc = lookup_option (&server_universe, options, SV_DECLINES);
-	if (!oc ||
-	    evaluate_boolean_option_cache (&ignorep, packet, lease,
-					   (struct client_state *)0,
-					   packet -> options, options,
-					   &lease -> scope, oc, MDL)) {
-	    /* If we found a lease, mark it as unusable and complain. */
-	    if (lease) {
-#if defined (FAILOVER_PROTOCOL)
-		if (lease -> pool && lease -> pool -> failover_peer) {
-		    dhcp_failover_state_t *peer =
-			    lease -> pool -> failover_peer;
-		    if (peer -> service_state == not_responding ||
-			peer -> service_state == service_startup) {
-			if (!ignorep)
-			    log_info ("%s: ignored%s",
-				      peer -> name, peer -> nrr);
-			goto out;
-		    }
-
-		    /* DHCPDECLINE messages are broadcast, so we can safely
-		       ignore the DHCPDECLINE if the peer has the lease.
-		       XXX Of course, at this point that information has been
-		       lost. */
-		}
-#endif
-
-		abandon_lease (lease, "declined.");
-		status = "abandoned";
-	    }
-	    status = "not found";
-	} else
-	    status = "ignored";
-
-	if (!ignorep)
-		log_info ("%s: %s", msgbuf, status);
-		
-      out:
-	if (options)
-		option_state_dereference (&options, MDL);
-	if (lease)
-		lease_dereference (&lease, MDL);
 }
 
-void dhcpinform (packet, ms_nulltp)
+void dhcpinform (packet)
 	struct packet *packet;
-	int ms_nulltp;
 {
 	char msgbuf [1024];
 	struct data_string d1, prl;
@@ -795,10 +352,9 @@ void dhcpinform (packet, ms_nulltp)
 	struct dhcp_packet raw;
 	struct packet outgoing;
 	unsigned char dhcpack = DHCPACK;
-	struct subnet *subnet = (struct subnet *)0;
+	struct subnet *subnet;
 	struct iaddr cip;
-	unsigned i, j;
-	int nulltp;
+	int i, j, nulltp;
 	struct sockaddr_in to;
 	struct in_addr from;
 
@@ -824,7 +380,7 @@ void dhcpinform (packet, ms_nulltp)
 
 	/* Find the subnet that the client is on. */
 	oc = (struct option_cache *)0;
-	find_subnet (&subnet , cip, MDL);
+	subnet = find_subnet (cip);
 
 	/* Sourceless packets don't make sense here. */
 	if (!subnet) {
@@ -837,81 +393,57 @@ void dhcpinform (packet, ms_nulltp)
 	   there's overhead involved in checking this, so let's see how people
 	   react first. */
 	if (subnet && !subnet -> group -> authoritative) {
-		static int eso = 0;
 		log_info ("%s: not authoritative for subnet %s",
 			  msgbuf, piaddr (subnet -> net));
-		if (!eso) {
-			log_info ("If this DHCP server is authoritative for%s",
-				  " that subnet,");
-			log_info ("please write an `authoritative;' directi%s",
-				  "ve either in the");
-			log_info ("subnet declaration or in some scope that%s",
-				  "encloses the");
-			log_info ("subnet declaration - for example, write %s",
-				  "it at the top");
-			log_info ("of the dhcpd.conf file.");
-		}
-		if (eso++ == 100)
-			eso = 0;
-		subnet_dereference (&subnet, MDL);
 		return;
 	}
 
 	memset (&d1, 0, sizeof d1);
-	option_state_allocate (&options, MDL);
+	option_state_allocate (&options, "dhcpinform");
 	memset (&outgoing, 0, sizeof outgoing);
 	memset (&raw, 0, sizeof raw);
 	outgoing.raw = &raw;
 
 	/* Execute statements in scope starting with the subnet scope. */
 	if (subnet)
-		execute_statements_in_scope ((struct binding_value **)0,
-					     packet, (struct lease *)0,
-					     (struct client_state *)0,
-					     packet -> options, options,
-					     &global_scope, subnet -> group,
+		execute_statements_in_scope (packet, (struct lease *)0,
+					     packet -> options,
+					     options, subnet -> group,
 					     (struct group *)0);
 
 	/* Execute statements in the class scopes. */
 	for (i = packet -> class_count; i > 0; i--) {
 		execute_statements_in_scope
-			((struct binding_value **)0, packet, (struct lease *)0,
-			 (struct client_state *)0, packet -> options, options,
-			 &global_scope, packet -> classes [i - 1] -> group,
+			(packet, (struct lease *)0, packet -> options,
+			 options, packet -> classes [i - 1] -> group,
 			 subnet ? subnet -> group : (struct group *)0);
 	}
 
 	/* Figure out the filename. */
 	memset (&d1, 0, sizeof d1);
 	oc = lookup_option (&server_universe, options, SV_FILENAME);
-	if (oc &&
-	    evaluate_option_cache (&d1, packet, (struct lease *)0,
-				   (struct client_state *)0,
-				   packet -> options, (struct option_state *)0,
-				   &global_scope, oc, MDL)) {
+	if (oc && evaluate_option_cache (&d1, packet, packet -> options,
+					 (struct lease *)0, oc)) {
 		i = d1.len;
 		if (i > sizeof raw.file)
 			i = sizeof raw.file;
 		else
 			raw.file [i] = 0;
 		memcpy (raw.file, d1.data, i);
-		data_string_forget (&d1, MDL);
+		data_string_forget (&d1, "dhcpinform");
 	}
 
 	/* Choose a server name as above. */
 	oc = lookup_option (&server_universe, options, SV_SERVER_NAME);
-	if (oc &&
-	    evaluate_option_cache (&d1, packet, (struct lease *)0,
-				   (struct client_state *)0,
-				   packet -> options, (struct option_state *)0,
-				   &global_scope, oc, MDL)) {
+	if (oc && evaluate_option_cache (&d1, packet, packet -> options,
+					 (struct lease *)0, oc)) {
 		i = d1.len;
 		if (i > sizeof raw.sname)
 			i = sizeof raw.sname;
 		else
 			raw.sname [i] = 0;
 		memcpy (raw.sname, d1.data, i);
-		data_string_forget (&d1, MDL);
+		data_string_forget (&d1, "dhcpinform");
 	}
 
 	/* Set a flag if this client is a lame Microsoft client that NUL
@@ -919,32 +451,30 @@ void dhcpinform (packet, ms_nulltp)
 	nulltp = 0;
 	if ((oc = lookup_option (&dhcp_universe, packet -> options,
 				 DHO_HOST_NAME))) {
-		if (evaluate_option_cache (&d1, packet, (struct lease *)0,
-					   (struct client_state *)0,
-					   packet -> options, options,
-					   &global_scope, oc, MDL)) {
+		if (evaluate_option_cache (&d1, packet, packet -> options,
+					   (struct lease *)0, oc)) {
 			if (d1.data [d1.len - 1] == '\0')
 				nulltp = 1;
-			data_string_forget (&d1, MDL);
+			data_string_forget (&d1, "dhcpinform");
 		}
 	}
 
 	/* Put in DHCP-specific options. */
 	i = DHO_DHCP_MESSAGE_TYPE;
 	oc = (struct option_cache *)0;
-	if (option_cache_allocate (&oc, MDL)) {
+	if (option_cache_allocate (&oc, "dhcpinform")) {
 		if (make_const_data (&oc -> expression, &dhcpack, 1, 0, 0)) {
 			oc -> option = dhcp_universe.options [i];
 			save_option (&dhcp_universe, options, oc);
 		}
-		option_cache_dereference (&oc, MDL);
+		option_cache_dereference (&oc, "dhcpinform");
 	}
 
 	i = DHO_DHCP_SERVER_IDENTIFIER;
 	if (!(oc = lookup_option (&dhcp_universe, options, i))) {
 	      use_primary:
 		oc = (struct option_cache *)0;
-		if (option_cache_allocate (&oc, MDL)) {
+		if (option_cache_allocate (&oc, "dhcpinform")) {
 			if (make_const_data
 			    (&oc -> expression,
 			     ((unsigned char *)
@@ -956,20 +486,18 @@ void dhcpinform (packet, ms_nulltp)
 				save_option (&dhcp_universe,
 					     options, oc);
 			}
-			option_cache_dereference (&oc, MDL);
+			option_cache_dereference (&oc, "dhcpinform");
 		}
 		from = packet -> interface -> primary_address;
 	} else {
-		if (evaluate_option_cache (&d1, packet, (struct lease *)0,
-					   (struct client_state *)0,
-					   packet -> options, options,
-					   &global_scope, oc, MDL)) {
+		if (evaluate_option_cache (&d1, packet, packet -> options,
+					   (struct lease *)0, oc)) {
 			if (!d1.len || d1.len != sizeof from) {
-				data_string_forget (&d1, MDL);
+				data_string_forget (&d1, "dhcpinform");
 				goto use_primary;
 			}
 			memcpy (&from, d1.data, sizeof from);
-			data_string_forget (&d1, MDL);
+			data_string_forget (&d1, "dhcpinform");
 		} else
 			goto use_primary;
 	}
@@ -979,40 +507,55 @@ void dhcpinform (packet, ms_nulltp)
 	i = DHO_SUBNET_MASK;
 	if (subnet && !lookup_option (&dhcp_universe, options, i)) {
 		oc = (struct option_cache *)0;
-		if (option_cache_allocate (&oc, MDL)) {
+		if (option_cache_allocate (&oc, "dhcpinform")) {
 			if (make_const_data (&oc -> expression,
 					     subnet -> netmask.iabuf,
 					     subnet -> netmask.len, 0, 0)) {
 				oc -> option = dhcp_universe.options [i];
 				save_option (&dhcp_universe, options, oc);
 			}
-			option_cache_dereference (&oc, MDL);
+			option_cache_dereference (&oc, "dhcpinform");
 		}
+	}
+
+	/* If we've been given a vendor option space, and there's something
+	   in it, and we weren't given a vendor-encapsulated-options option,
+	   then cons one up. */
+	i = DHO_VENDOR_ENCAPSULATED_OPTIONS;
+	j = SV_VENDOR_OPTION_SPACE;
+	if (!lookup_option (&dhcp_universe, options, i) &&
+	    (oc = lookup_option (&server_universe, options, j)) &&
+	    evaluate_option_cache (&d1, packet, packet -> options,
+				   (struct lease *)0, oc)) {
+		oc = (struct option_cache *)0;
+		if (option_cache_allocate (&oc, "dhcpinform")) {
+			if (make_encapsulation (&oc -> expression, &d1)) {
+				oc -> option = dhcp_universe.options [i];
+				save_option (&dhcp_universe, options, oc);
+			}
+			option_cache_dereference (&oc, "dhcpinform");
+		}
+		data_string_forget (&d1, "dhcpinform");
 	}
 
 	/* If a site option space has been specified, use that for
 	   site option codes. */
 	i = SV_SITE_OPTION_SPACE;
 	if ((oc = lookup_option (&server_universe, options, i)) &&
-	    evaluate_option_cache (&d1, packet, (struct lease *)0,
-				   (struct client_state *)0,
-				   packet -> options, options,
-				   &global_scope, oc, MDL)) {
-		struct universe *u = (struct universe *)0;
+	    evaluate_option_cache (&d1, packet,
+				   packet -> options, (struct lease *)0, oc)) {
+		struct universe *u;
 		
-		if (!universe_hash_lookup (&u, universe_hash,
-					   (const char *)d1.data, d1.len,
-					   MDL)) {
+		u = ((struct universe *)
+		     hash_lookup (&universe_hash, d1.data, d1.len));
+		if (!u) {
 			log_error ("unknown option space %s.", d1.data);
-			option_state_dereference (&options, MDL);
-			if (subnet)
-				subnet_dereference (&subnet, MDL);
 			return;
 		}
 
 		options -> site_universe = u -> index;
 		options -> site_code_min = 128; /* XXX */
-		data_string_forget (&d1, MDL);
+		data_string_forget (&d1, "dhcpinform");
 	} else {
 		options -> site_universe = dhcp_universe.index;
 		options -> site_code_min = 0; /* Trust me, it works. */
@@ -1033,10 +576,8 @@ void dhcpinform (packet, ms_nulltp)
 				    DHO_DHCP_PARAMETER_REQUEST_LIST);
 
 	if (oc)
-		evaluate_option_cache (&prl, packet, (struct lease *)0,
-				       (struct client_state *)0,
-				       packet -> options, options,
-				       &global_scope, oc, MDL);
+		evaluate_option_cache (&prl, packet, packet -> options,
+				       (struct lease *)0, oc);
 
 #ifdef DEBUG_PACKET
 	dump_packet (packet);
@@ -1049,28 +590,23 @@ void dhcpinform (packet, ms_nulltp)
 	raw.siaddr = from;
 	if ((oc =
 	     lookup_option (&server_universe, options, SV_NEXT_SERVER))) {
-		if (evaluate_option_cache (&d1, packet, (struct lease *)0,
-					   (struct client_state *)0,
-					   packet -> options, options,
-					   &global_scope, oc, MDL)) {
+		if (evaluate_option_cache (&d1, packet, packet -> options,
+					   (struct lease *)0, oc)) {
 			/* If there was more than one answer,
 			   take the first. */
 			if (d1.len >= 4 && d1.data)
 				memcpy (&raw.siaddr, d1.data, 4);
-			data_string_forget (&d1, MDL);
+			data_string_forget (&d1, "dhcpinform");
 		}
 	}
 
 	/* Set up the option buffer... */
 	outgoing.packet_length =
 		cons_options (packet, outgoing.raw, (struct lease *)0,
-			      (struct client_state *)0,
-			      0, packet -> options, options, &global_scope,
-			      0, nulltp, 0,
-			      prl.len ? &prl : (struct data_string *)0,
-			      (char *)0);
-	option_state_dereference (&options, MDL);
-	data_string_forget (&prl, MDL);
+			      0, options, 0, nulltp, 0,
+			      prl.len ? &prl : (struct data_string *)0);
+	option_state_dereference (&options, "dhcpinform");
+	data_string_forget (&prl, "dhcpinform");
 
 	/* Make sure that the packet is at least as big as a BOOTP packet. */
 	if (outgoing.packet_length < BOOTP_MIN_LEN)
@@ -1112,8 +648,6 @@ void dhcpinform (packet, ms_nulltp)
 		      ? fallback_interface : packet -> interface),
 		     &outgoing, &raw, outgoing.packet_length,
 		     from, &to, (struct hardware *)0);
-	if (subnet)
-		subnet_dereference (&subnet, MDL);
 }
 
 void nak_lease (packet, cip)
@@ -1127,90 +661,51 @@ void nak_lease (packet, cip)
 	unsigned char nak = DHCPNAK;
 	struct packet outgoing;
 	struct hardware hto;
-	unsigned i;
+	int i;
 	struct data_string data;
 	struct option_state *options = (struct option_state *)0;
 	struct expression *expr;
 	struct option_cache *oc = (struct option_cache *)0;
-	struct iaddr myfrom;
 
-	option_state_allocate (&options, MDL);
+	option_state_allocate (&options, "nak_lease");
 	memset (&outgoing, 0, sizeof outgoing);
 	memset (&raw, 0, sizeof raw);
 	outgoing.raw = &raw;
 
 	/* Set DHCP_MESSAGE_TYPE to DHCPNAK */
-	if (!option_cache_allocate (&oc, MDL)) {
+	if (!option_cache_allocate (&oc, "nak_lease")) {
 		log_error ("No memory for DHCPNAK message type.");
-		option_state_dereference (&options, MDL);
+		option_state_dereference (&options, "nak_lease");
 		return;
 	}
 	if (!make_const_data (&oc -> expression, &nak, sizeof nak, 0, 0)) {
 		log_error ("No memory for expr_const expression.");
-		option_cache_dereference (&oc, MDL);
-		option_state_dereference (&options, MDL);
+		option_cache_dereference (&oc, "nak_lease");
+		option_state_dereference (&options, "nak_lease");
 		return;
 	}
 	oc -> option = dhcp_universe.options [DHO_DHCP_MESSAGE_TYPE];
 	save_option (&dhcp_universe, options, oc);
-	option_cache_dereference (&oc, MDL);
+	option_cache_dereference (&oc, "nak_lease");
 		     
 	/* Set DHCP_MESSAGE to whatever the message is */
-	if (!option_cache_allocate (&oc, MDL)) {
+	if (!option_cache_allocate (&oc, "nak_lease")) {
 		log_error ("No memory for DHCPNAK message type.");
-		option_state_dereference (&options, MDL);
+		option_state_dereference (&options, "nak_lease");
 		return;
 	}
 	if (!make_const_data (&oc -> expression,
 			      (unsigned char *)dhcp_message,
 			      strlen (dhcp_message), 1, 0)) {
 		log_error ("No memory for expr_const expression.");
-		option_cache_dereference (&oc, MDL);
-		option_state_dereference (&options, MDL);
+		option_cache_dereference (&oc, "nak_lease");
+		option_state_dereference (&options, "nak_lease");
 		return;
 	}
 	oc -> option = dhcp_universe.options [DHO_DHCP_MESSAGE];
 	save_option (&dhcp_universe, options, oc);
-	option_cache_dereference (&oc, MDL);
+	option_cache_dereference (&oc, "nak_lease");
 		     
-	i = DHO_DHCP_SERVER_IDENTIFIER;
-	if (!(oc = lookup_option (&dhcp_universe, options, i))) {
-	      use_primary:
-		oc = (struct option_cache *)0;
-		if (option_cache_allocate (&oc, MDL)) {
-			if (make_const_data
-			    (&oc -> expression,
-			     ((unsigned char *)
-			      &packet -> interface -> primary_address),
-			     sizeof packet -> interface -> primary_address,
-			     0, 0)) {
-				oc -> option =
-					dhcp_universe.options [i];
-				save_option (&dhcp_universe, options, oc);
-			}
-			option_cache_dereference (&oc, MDL);
-		}
-		myfrom.len = sizeof packet -> interface -> primary_address;
-		memcpy (myfrom.iabuf,
-			&packet -> interface -> primary_address, myfrom.len);
-	} else {
-		memset (&data, 0, sizeof data);
-		if (evaluate_option_cache (&data, packet, (struct lease *)0,
-					   (struct client_state *)0,
-					   packet -> options, options,
-					   &global_scope, oc, MDL)) {
-			if (!data.len ||
-			    data.len > sizeof myfrom.iabuf) {
-				data_string_forget (&data, MDL);
-				goto use_primary;
-			}
-			memcpy (myfrom.iabuf, data.data, data.len);
-			myfrom.len = data.len;
-			data_string_forget (&data, MDL);
-		} else
-			goto use_primary;
-	}
-
 	/* Do not use the client's requested parameter list. */
 	delete_option (&dhcp_universe, packet -> options,
 		       DHO_DHCP_PARAMETER_REQUEST_LIST);
@@ -1218,10 +713,9 @@ void nak_lease (packet, cip)
 	/* Set up the option buffer... */
 	outgoing.packet_length =
 		cons_options (packet, outgoing.raw, (struct lease *)0,
-			      (struct client_state *)0,
-			      0, packet -> options, options, &global_scope,
-			      0, 0, 0, (struct data_string *)0, (char *)0);
-	option_state_dereference (&options, MDL);
+			      0, options, 0, 0, 0,
+			      (struct data_string *)0);
+	option_state_dereference (&options, "nak_lease");
 
 /*	memset (&raw.ciaddr, 0, sizeof raw.ciaddr);*/
 	raw.siaddr = packet -> interface -> primary_address;
@@ -1255,12 +749,9 @@ void nak_lease (packet, cip)
 	dump_raw ((unsigned char *)&raw, outgoing.packet_length);
 #endif
 
-#if 0
-	hto.hbuf [0] = packet -> raw -> htype;
+	hto.htype = packet -> raw -> htype;
 	hto.hlen = packet -> raw -> hlen;
-	memcpy (&hto.hbuf [1], packet -> raw -> chaddr, hto.hlen);
-	hto.hlen++;
-#endif
+	memcpy (hto.haddr, packet -> raw -> chaddr, hto.hlen);
 
 	/* Set up the common stuff... */
 	to.sin_family = AF_INET;
@@ -1269,7 +760,7 @@ void nak_lease (packet, cip)
 #endif
 	memset (to.sin_zero, 0, sizeof to.sin_zero);
 
-	memcpy (&from, myfrom.iabuf, sizeof from);
+	from = packet -> interface -> primary_address;
 
 	/* Make sure that the packet is at least as big as a BOOTP packet. */
 	if (outgoing.packet_length < BOOTP_MIN_LEN)
@@ -1302,15 +793,14 @@ void nak_lease (packet, cip)
 			      from, &to, (struct hardware *)0);
 }
 
-void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
+void ack_lease (packet, lease, offer, when, msg)
 	struct packet *packet;
 	struct lease *lease;
 	unsigned int offer;
 	TIME when;
 	char *msg;
-	int ms_nulltp;
 {
-	struct lease *lt;
+	struct lease lt;
 	struct lease_state *state;
 	TIME lease_time;
 	TIME offered_lease_time;
@@ -1321,93 +811,83 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 	struct option_cache *oc;
 	struct expression *expr;
 	int status;
-	isc_result_t result;
 
-	unsigned i, j;
-	int s1, s2;
+	int i, j, s1, s2;
 	int val;
-	int ignorep;
 
 	/* If we're already acking this lease, don't do it again. */
 	if (lease -> state)
 		return;
 
 	/* Allocate a lease state structure... */
-	state = new_lease_state (MDL);
+	state = new_lease_state ("ack_lease");
 	if (!state)
 		log_fatal ("unable to allocate lease state!");
 	state -> got_requested_address = packet -> got_requested_address;
-	shared_network_reference (&state -> shared_network,
-				  packet -> interface -> shared_network, MDL);
+	state -> shared_network = packet -> interface -> shared_network;
 
 	/* See if we got a server identifier option. */
 	if (lookup_option (&dhcp_universe,
 			   packet -> options, DHO_DHCP_SERVER_IDENTIFIER))
 		state -> got_server_identifier = 1;
 
-	/* If this is not a unicast DHCPREQUEST, steal the agent options
-	   from the packet.   Do not do this if the packet looks like
-	   it came from a client in the RENEWING state or if it was not
-	   relayed (giaddr is not set). */
-	if (!packet -> raw -> ciaddr.s_addr &&
-	    packet -> raw -> giaddr.s_addr &&
-	    packet -> options -> universe_count > agent_universe.index &&
-	    packet -> options -> universes [agent_universe.index] &&
-	    (state -> options -> universe_count <= agent_universe.index ||
-	     !state -> options -> universes [agent_universe.index])) {
-	    option_cache_reference
-		    ((struct option_cache **)
-		     &(state -> options -> universes [agent_universe.index]),
-		     (struct option_cache *)
-		     packet -> options -> universes [agent_universe.index],
-		     MDL);
+	/* Replace the old lease hostname with the new one, if it's changed. */
+	oc = lookup_option (&dhcp_universe, packet -> options, DHO_HOST_NAME);
+	memset (&d1, 0, sizeof d1);
+	if (oc)
+		s1 = evaluate_option_cache (&d1, packet, packet -> options,
+					    (struct lease *)0, oc);
+	if (oc && s1 &&
+	    lease -> client_hostname &&
+	    strlen (lease -> client_hostname) == d1.len &&
+	    !memcmp (lease -> client_hostname, d1.data, d1.len)) {
+		/* Hasn't changed. */
+		data_string_forget (&d1, "ack_lease");
+	} else if (oc && s1) {
+		if (lease -> client_hostname)
+			dfree (lease -> client_hostname, "ack_lease");
+		lease -> client_hostname =
+			dmalloc (d1.len + 1, "ack_lease");
+		if (!lease -> client_hostname)
+			log_error ("no memory for client hostname.");
+		else {
+			memcpy (lease -> client_hostname, d1.data, d1.len);
+			lease -> client_hostname [d1.len] = 0;
+		}
+		data_string_forget (&d1, "ack_lease");
+	} else if (lease -> client_hostname) {
+		dfree (lease -> client_hostname, "ack_lease");
+		lease -> client_hostname = 0;
 	}
 
-	/* If we are offering a lease that is still currently valid, preserve
-	   the events.  We need to do this because if the client does not
-	   REQUEST our offer, it will expire in 2 minutes, overriding the
-	   expire time in the currently in force lease.  We want the expire
-	   events to be executed at that point. */
-	if (lease -> ends <= cur_time && offer != DHCPOFFER) {
-		/* Get rid of any old expiry or release statements - by
-		   executing the statements below, we will be inserting new
-		   ones if there are any to insert. */
-		if (lease -> on_expiry)
-			executable_statement_dereference (&lease -> on_expiry,
-							  MDL);
-		if (lease -> on_commit)
-			executable_statement_dereference (&lease -> on_commit,
-							  MDL);
-		if (lease -> on_release)
-			executable_statement_dereference (&lease -> on_release,
-							  MDL);
+	/* Steal the agent options from the packet. */
+	if (packet -> options -> universes [agent_universe.index]) {
+		state -> options -> universes [agent_universe.index] =
+			packet -> options -> universes [agent_universe.index];
+		packet -> options -> universes [agent_universe.index] =
+			(struct agent_options *)0;
 	}
 
 	/* Execute statements in scope starting with the subnet scope. */
-	execute_statements_in_scope ((struct binding_value **)0,
-				     packet, lease, (struct client_state *)0,
+	execute_statements_in_scope (packet, lease,
 				     packet -> options,
-				     state -> options, &lease -> scope,
+				     state -> options,
 				     lease -> subnet -> group,
 				     (struct group *)0);
 
 	/* If the lease is from a pool, run the pool scope. */
 	if (lease -> pool)
-		execute_statements_in_scope ((struct binding_value **)0,
-					     packet, lease,
-					     (struct client_state *)0,
+		execute_statements_in_scope (packet, lease,
 					     packet -> options,
-					     state -> options, &lease -> scope,
+					     state -> options,
 					     lease -> pool -> group,
 					     lease -> subnet -> group);
 
 	/* Execute statements from class scopes. */
 	for (i = packet -> class_count; i > 0; i--) {
 		execute_statements_in_scope
-			((struct binding_value **)0,
-			 packet, lease, (struct client_state *)0,
-			 packet -> options, state -> options,
-			 &lease -> scope, packet -> classes [i - 1] -> group,
+			(packet, lease, packet -> options, state -> options,
+			 packet -> classes [i - 1] -> group,
 			 (lease -> pool
 			  ? lease -> pool -> group
 			  : lease -> subnet -> group));
@@ -1416,16 +896,13 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 	/* If we have a host_decl structure, run the options associated
 	   with its group. */
 	if (lease -> host)
-		execute_statements_in_scope ((struct binding_value **)0,
-					     packet, lease,
-					     (struct client_state *)0,
-					     packet -> options,
-					     state -> options, &lease -> scope,
+		execute_statements_in_scope (packet, lease, packet -> options,
+					     state -> options,
 					     lease -> host -> group,
 					     (lease -> pool
 					      ? lease -> pool -> group
 					      : lease -> subnet -> group));
-	
+
 	/* See if the client is only supposed to have one lease at a time,
 	   and if so, find its other leases and release them.    We can only
 	   do this on DHCPREQUEST.    It's a little weird to do this before
@@ -1438,96 +915,65 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 	if (packet -> packet_type == DHCPREQUEST &&
 	    (oc = lookup_option (&server_universe, state -> options,
 				 SV_ONE_LEASE_PER_CLIENT)) &&
-	    evaluate_boolean_option_cache (&ignorep,
-					   packet, lease,
-					   (struct client_state *)0,
-					   packet -> options,
-					   state -> options, &lease -> scope,
-					   oc, MDL)) {
+	    evaluate_boolean_option_cache (packet,
+					   packet -> options, lease, oc)) {
 		struct lease *seek;
 		if (lease -> uid_len) {
-			struct lease *s;
 			do {
-				seek = (struct lease *)0;
-				find_lease_by_uid (&seek, lease -> uid,
-						   lease -> uid_len, MDL);
-
+				seek = find_lease_by_uid (lease -> uid,
+							  lease -> uid_len);
 				/* Don't release expired leases, and don't
 				   release the lease we're going to assign. */
-				s = seek;
-				while (s) {
-					if (s != lease &&
-					    s -> ends > cur_time)
+				while (seek) {
+					if (seek != lease &&
+					    seek -> ends > cur_time)
 						break;
-					s = s -> n_uid;
+					seek = seek -> n_uid;
 				}
-				if (s) {
+				if (seek) {
 					release_lease (seek, packet);
 				}
-				if (seek)
-					lease_dereference (&seek, MDL);
-			} while (s);
-		}
-		if (!lease -> uid_len ||
-		    (lease -> host &&
-		     !lease -> host -> client_identifier.len &&
-		     (oc = lookup_option (&server_universe, state -> options,
-					  SV_DUPLICATES)) &&
-		     !evaluate_boolean_option_cache (&ignorep, packet, lease,
-						     (struct client_state *)0,
-						     packet -> options,
-						     state -> options,
-						     &lease -> scope,
-						     oc, MDL))) {
-			struct lease *s;
+			} while (seek);
+		} else {
 			do {
-				seek = (struct lease *)0;
-				find_lease_by_hw_addr
-					(&seek, lease -> hardware_addr.hbuf,
-					 lease -> hardware_addr.hlen, MDL);
-				s = seek;
-				while (s) {
-					if (s != lease &&
-					    s -> ends > cur_time)
+				seek = (find_lease_by_hw_addr
+					(lease -> hardware_addr.haddr,
+					 lease -> hardware_addr.hlen));
+				while (seek) {
+					if (seek != lease &&
+					    seek -> ends > cur_time)
 						break;
-					s = s -> n_hw;
+					seek = seek -> n_hw;
 				}
-				if (s) {
-					release_lease (s, packet);
+				if (seek) {
+					release_lease (seek, packet);
 				}
-				if (seek)
-					lease_dereference (&s, MDL);
-			} while (s);
+			} while (seek);
 		}
 	}
 	
 
 	/* Make sure this packet satisfies the configured minimum
 	   number of seconds. */
-	memset (&d1, 0, sizeof d1);
 	if (offer == DHCPOFFER &&
 	    (oc = lookup_option (&server_universe, state -> options,
 				 SV_MIN_SECS))) {
-		if (evaluate_option_cache (&d1, packet, lease,
-					   (struct client_state *)0,
-					   packet -> options, state -> options,
-					   &lease -> scope, oc, MDL)) {
+		if (evaluate_option_cache (&d1, packet,
+					   packet -> options, lease, oc)) {
 			if (d1.len && packet -> raw -> secs < d1.data [0]) {
+				data_string_forget (&d1, "ack_lease");
 				log_info ("%s: %d secs < %d", msg,
-					  packet -> raw -> secs, d1.data [0]);
-				data_string_forget (&d1, MDL);
-				free_lease_state (state, MDL);
-				static_lease_dereference (lease, MDL);
+				      packet -> raw -> secs, d1.data [0]);
+				free_lease_state (state, "ack_lease");
 				return;
 			}
-			data_string_forget (&d1, MDL);
+			data_string_forget (&d1, "ack_lease");
 		}
 	}
 
 	/* Try to find a matching host declaration for this lease. */
 	if (!lease -> host) {
-		struct host_decl *hp = (struct host_decl *)0;
-		struct host_decl *h;
+		struct host_decl *hp;
 
 		/* Try to find a host_decl that matches the client
 		   identifier or hardware address on the packet, and
@@ -1537,86 +983,74 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 		oc = lookup_option (&dhcp_universe, packet -> options,
 				    DHO_DHCP_CLIENT_IDENTIFIER);
 		if (oc &&
-		    evaluate_option_cache (&d1, packet, lease,
-					   (struct client_state *)0,
-					   packet -> options, state -> options,
-					   &lease -> scope, oc, MDL)) {
-			find_hosts_by_uid (&hp, d1.data, d1.len, MDL);
-			data_string_forget (&d1, MDL);
-			if (hp)
-				host_reference (&lease -> host, hp, MDL);
-		}
-		if (!hp) {
-			find_hosts_by_haddr (&hp,
-					     packet -> raw -> htype,
-					     packet -> raw -> chaddr,
-					     packet -> raw -> hlen,
-					     MDL);
-			for (h = hp; h; h = h -> n_ipaddr) {
-				if (!h -> fixed_addr)
+		    evaluate_option_cache (&d1, packet,
+					   packet -> options, lease, oc)) {
+			hp = find_hosts_by_uid (d1.data, d1.len);
+			data_string_forget (&d1, "dhcpdiscover");
+			if (!hp)
+				hp = find_hosts_by_haddr
+					(packet -> raw -> htype,
+					 packet -> raw -> chaddr,
+					 packet -> raw -> hlen);
+			for (; hp; hp = hp -> n_ipaddr) {
+				if (!hp -> fixed_addr)
 					break;
 			}
-			if (h)
-				host_reference (&lease -> host, hp, MDL);
-		}
-		if (hp)
-			host_dereference (&hp, MDL);
+			lease -> host = hp;
+		} else
+			lease -> host = (struct host_decl *)0;
 	}
 
-	/* Drop the request if it's not allowed for this client.   By
-	   default, unknown clients are allowed. */
+	/* Drop the request if it's not allowed for this client. */
 	if (!lease -> host &&
 	    (oc = lookup_option (&server_universe, state -> options,
-				 SV_BOOT_UNKNOWN_CLIENTS)) &&
-	    !evaluate_boolean_option_cache (&ignorep,
-					    packet, lease,
-					    (struct client_state *)0,
-					    packet -> options,
-					    state -> options,
-					    &lease -> scope, oc, MDL)) {
-		if (!ignorep)
-			log_info ("%s: unknown client", msg);
-		free_lease_state (state, MDL);
-		static_lease_dereference (lease, MDL);
-		return;
+				 SV_BOOT_UNKNOWN_CLIENTS))) {
+		if (evaluate_option_cache (&d1, packet,
+					   packet -> options, lease, oc)) {
+			if (d1.len && !d1.data [0]) {
+				log_info ("%s: unknown", msg);
+				data_string_forget (&d1, "ack_lease");
+				free_lease_state (state, "ack_lease");
+				return;
+			}
+			data_string_forget (&d1, "ack_lease"); /* mmm, C... */
+		}
 	} 
 
 	/* Drop the request if it's not allowed for this client. */
 	if (!offer &&
 	    (oc = lookup_option (&server_universe, state -> options,
-				   SV_ALLOW_BOOTP)) &&
-	    !evaluate_boolean_option_cache (&ignorep,
-					    packet, lease,
-					    (struct client_state *)0,
-					    packet -> options,
-					    state -> options,
-					    &lease -> scope, oc, MDL)) {
-		if (!ignorep)
-			log_info ("%s: bootp disallowed", msg);
-		free_lease_state (state, MDL);
-		static_lease_dereference (lease, MDL);
-		return;
+				 SV_ALLOW_BOOTP))) {
+		if (evaluate_option_cache (&d1, packet,
+					   packet -> options, lease, oc)) {
+			if (d1.len && !d1.data [0]) {
+				data_string_forget (&d1, "ack_lease");
+				log_info ("%s: bootp disallowed", msg);
+				free_lease_state (state, "ack_lease");
+				return;
+			}
+			data_string_forget (&d1, "ack_lease");
+		}
 	} 
 
 	/* Drop the request if booting is specifically denied. */
 	oc = lookup_option (&server_universe, state -> options,
 			    SV_ALLOW_BOOTING);
 	if (oc &&
-	    !evaluate_boolean_option_cache (&ignorep,
-					    packet, lease,
-					    (struct client_state *)0,
-					    packet -> options,
-					    state -> options,
-					    &lease -> scope, oc, MDL)) {
-		if (!ignorep)
+	    evaluate_option_cache (&d1, packet, packet -> options,
+				   lease, oc)) {
+		if (d1.len && !d1.data [0]) {
 			log_info ("%s: booting disallowed", msg);
-		free_lease_state (state, MDL);
-		static_lease_dereference (lease, MDL);
-		return;
+			data_string_forget (&d1, "ack_lease");
+			free_lease_state (state, "ack_lease");
+			return;
+		}
+		data_string_forget (&d1, "ack_lease");
 	}
 
 	/* If we are configured to do per-class billing, do it. */
-	if (have_billing_classes && !(lease -> flags & STATIC_LEASE)) {
+	if (have_billing_classes) {
+
 		/* See if the lease is currently being billed to a
 		   class, and if so, whether or not it can continue to
 		   be billed to that class. */
@@ -1646,9 +1080,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 				if (i == packet -> class_count) {
 					log_info ("%s: no available billing",
 						  msg);
-					free_lease_state (state, MDL);
-					/* XXX probably not necessary: */
-					static_lease_dereference (lease, MDL);
+					free_lease_state (state, "ack_lease");
 					return;
 				}
 			}
@@ -1658,39 +1090,27 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 	/* Figure out the filename. */
 	oc = lookup_option (&server_universe, state -> options, SV_FILENAME);
 	if (oc)
-		evaluate_option_cache (&state -> filename, packet, lease,
-				       (struct client_state *)0,
-				       packet -> options, state -> options,
-				       &lease -> scope, oc, MDL);
+		evaluate_option_cache (&state -> filename,
+				       packet, packet -> options, lease, oc);
 
 	/* Choose a server name as above. */
 	oc = lookup_option (&server_universe, state -> options,
 			    SV_SERVER_NAME);
 	if (oc)
-		evaluate_option_cache (&state -> server_name, packet, lease,
-				       (struct client_state *)0,
-				       packet -> options, state -> options,
-				       &lease -> scope, oc, MDL);
+		evaluate_option_cache (&state -> server_name, packet,
+				       packet -> options, lease, oc);
 
 	/* At this point, we have a lease that we can offer the client.
 	   Now we construct a lease structure that contains what we want,
 	   and call supersede_lease to do the right thing with it. */
-	lt = (struct lease *)0;
-	result = lease_allocate (&lt, MDL);
-	if (result != ISC_R_SUCCESS) {
-		log_info ("%s: can't allocate temporary lease structure: %s",
-			  msg, isc_result_totext (result));
-		free_lease_state (state, MDL);
-		static_lease_dereference (lease, MDL);
-		return;
-	}
-		
+	memset (&lt, 0, sizeof lt);
+
 	/* Use the ip address of the lease that we finally found in
 	   the database. */
-	lt -> ip_addr = lease -> ip_addr;
+	lt.ip_addr = lease -> ip_addr;
 
 	/* Start now. */
-	lt -> starts = cur_time;
+	lt.starts = cur_time;
 
 	/* Figure out how long a lease to assign.    If this is a
 	   dynamic BOOTP lease, its duration must be infinite. */
@@ -1698,33 +1118,29 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 		default_lease_time = DEFAULT_DEFAULT_LEASE_TIME;
 		if ((oc = lookup_option (&server_universe, state -> options,
 					 SV_DEFAULT_LEASE_TIME))) {
-			if (evaluate_option_cache (&d1, packet, lease,
-						   (struct client_state *)0,
+			if (evaluate_option_cache (&d1, packet,
 						   packet -> options,
-						   state -> options,
-						   &lease -> scope, oc, MDL)) {
+						   lease, oc)) {
 				if (d1.len == sizeof (u_int32_t))
 					default_lease_time =
 						getULong (d1.data);
-				data_string_forget (&d1, MDL);
+				data_string_forget (&d1, "ack_lease");
 			}
 		}
 
 		if ((oc = lookup_option (&dhcp_universe, packet -> options,
 					 DHO_DHCP_LEASE_TIME)))
-			s1 = evaluate_option_cache (&d1, packet, lease,
-						    (struct client_state *)0,
+			s1 = evaluate_option_cache (&d1, packet,
 						    packet -> options,
-						    state -> options,
-						    &lease -> scope, oc, MDL);
+						    lease, oc);
 		else
 			s1 = 0;
 		if (s1 && d1.len == sizeof (u_int32_t)) {
 			lease_time = getULong (d1.data);
-			data_string_forget (&d1, MDL);
+			data_string_forget (&d1, "ack_lease");
 		} else {
 			if (s1)
-				data_string_forget (&d1, MDL);
+				data_string_forget (&d1, "ack_lease");
 			lease_time = default_lease_time;
 		}
 		
@@ -1732,15 +1148,13 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 		max_lease_time = DEFAULT_MAX_LEASE_TIME;
 		if ((oc = lookup_option (&server_universe, state -> options,
 					 SV_MAX_LEASE_TIME))) {
-			if (evaluate_option_cache (&d1, packet, lease,
-						   (struct client_state *)0,
+			if (evaluate_option_cache (&d1, packet,
 						   packet -> options,
-						   state -> options,
-						   &lease -> scope, oc, MDL)) {
+						   lease, oc)) {
 				if (d1.len == sizeof (u_int32_t))
 					max_lease_time =
 						getULong (d1.data);
-				data_string_forget (&d1, MDL);
+				data_string_forget (&d1, "ack_lease");
 			}
 		}
 
@@ -1755,14 +1169,12 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 
 		if ((oc = lookup_option (&server_universe, state -> options,
 					 SV_MIN_LEASE_TIME))) {
-			if (evaluate_option_cache (&d1, packet, lease,
-						   (struct client_state *)0,
+			if (evaluate_option_cache (&d1, packet,
 						   packet -> options,
-						   state -> options,
-						   &lease -> scope, oc, MDL)) {
+						   lease, oc)) {
 				if (d1.len == sizeof (u_int32_t))
 					min_lease_time = getULong (d1.data);
-				data_string_forget (&d1, MDL);
+				data_string_forget (&d1, "ack_lease");
 			}
 		}
 
@@ -1773,236 +1185,119 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 				lease_time = default_lease_time;
 		}
 
-#if defined (FAILOVER_PROTOCOL)
-		/* Okay, we know the lease duration.   Now check the
-		   failover state, if any. */
-		if (lease -> pool && lease -> pool -> failover_peer) {
-			dhcp_failover_state_t *peer =
-			    lease -> pool -> failover_peer;
-
-			/* If the lease time we arrived at exceeds what
-			   the peer has, we can only issue a lease of
-			   peer -> mclt, but we can tell the peer we
-			   want something longer in the future. */
-			/* XXX This may result in updates that only push
-			   XXX the peer's expiry time for this lease up
-			   XXX by a few seconds - think about this again
-			   XXX later. */
-			if (lease_time > peer -> mclt &&
-			    cur_time + lease_time > lease -> tsfp) {
-				/* Here we're assuming that if we don't have
-				   to update tstp, there's already an update
-				   queued.   May want to revisit this.  */
-				if (cur_time + lease_time > lease -> tstp)
-					lt -> tstp = (cur_time + lease_time +
-						      peer -> mclt / 2);
-
-				/* Now choose a lease time that is either
-				   MCLT, for a lease that's never before been
-				   assigned, or TSFP + MCLT for a lease that
-				   has.
-				   XXX Note that TSFP may be < cur_time.
-				   XXX What do we do in this case?
-				   XXX should the expiry timer on the lease
-				   XXX set tsfp and tstp to zero? */
-				if (lease -> tsfp < cur_time) {
-					lease_time = peer -> mclt;
-				} else {
-					lease_time = (lease -> tsfp  - cur_time
-						      + peer -> mclt);
-				}
-			} else {
-				if (cur_time + lease_time > lease -> tsfp &&
-				    lease_time > peer -> mclt / 2) {
-					lt -> tstp = (cur_time + lease_time +
-						      peer -> mclt / 2);
-				} else { 
-					lt -> tstp = (cur_time + lease_time +
-						      lease_time / 2);
-				}
-			}
-
-			lt -> cltt = cur_time;
-		}
-#endif /* FAILOVER_PROTOCOL */
-
 		/* If the lease duration causes the time value to wrap,
 		   use the maximum expiry time. */
 		if (cur_time + lease_time < cur_time)
-			state -> offered_expiry = MAX_TIME - 1;
+			state -> offered_expiry = MAX_TIME;
 		else
 			state -> offered_expiry = cur_time + lease_time;
+
 		if (when)
-			lt -> ends = when;
+			lt.ends = when;
 		else
-			lt -> ends = state -> offered_expiry;
-		lt -> next_binding_state = FTS_ACTIVE;
+			lt.ends = state -> offered_expiry;
 	} else {
 		lease_time = MAX_TIME - cur_time;
 
 		if ((oc = lookup_option (&server_universe, state -> options,
 					 SV_BOOTP_LEASE_LENGTH))) {
-			if (evaluate_option_cache (&d1, packet, lease,
-						   (struct client_state *)0,
-						   packet -> options,
-						   state -> options,
-						   &lease -> scope, oc, MDL)) {
+			if (evaluate_option_cache (&d1, packet,
+						   packet -> options, lease,
+						   oc)) {
 				if (d1.len == sizeof (u_int32_t))
 					lease_time = getULong (d1.data);
-				data_string_forget (&d1, MDL);
+				data_string_forget (&d1, "ack_lease");
 			}
 		}
 
 		if ((oc = lookup_option (&server_universe, state -> options,
 					 SV_BOOTP_LEASE_CUTOFF))) {
-			if (evaluate_option_cache (&d1, packet, lease,
-						   (struct client_state *)0,
+			if (evaluate_option_cache (&d1, packet,
 						   packet -> options,
-						   state -> options,
-						   &lease -> scope, oc, MDL)) {
+						   lease, oc)) {
 				if (d1.len == sizeof (u_int32_t))
 					lease_time = (getULong (d1.data) -
 						      cur_time);
-				data_string_forget (&d1, MDL);
+				data_string_forget (&d1, "ack_lease");
 			}
 		}
 
-		lt -> ends = state -> offered_expiry = cur_time + lease_time;
-		lt -> next_binding_state = FTS_BOOTP;
+		lt.ends = state -> offered_expiry = cur_time + lease_time;
+		lt.flags = BOOTP_LEASE;
 	}
 
-	lt -> timestamp = cur_time;
+	lt.timestamp = cur_time;
 
 	/* Record the uid, if given... */
 	oc = lookup_option (&dhcp_universe, packet -> options,
 			    DHO_DHCP_CLIENT_IDENTIFIER);
 	if (oc &&
-	    evaluate_option_cache (&d1, packet, lease,
-				   (struct client_state *)0,
-				   packet -> options, state -> options,
-				   &lease -> scope, oc, MDL)) {
-		if (d1.len <= sizeof lt -> uid_buf) {
-			memcpy (lt -> uid_buf, d1.data, d1.len);
-			lt -> uid = lt -> uid_buf;
-			lt -> uid_max = sizeof lt -> uid_buf;
-			lt -> uid_len = d1.len;
+	    evaluate_option_cache (&d1, packet, packet -> options,
+				   lease, oc)) {
+		if (d1.len <= sizeof lt.uid_buf) {
+			memcpy (lt.uid_buf, d1.data, d1.len);
+			lt.uid = lt.uid_buf;
+			lt.uid_max = sizeof lt.uid_buf;
+			lt.uid_len = d1.len;
 		} else {
-			unsigned char *tuid;
-			lt -> uid_max = d1.len;
-			lt -> uid_len = d1.len;
-			tuid = (unsigned char *)dmalloc (lt -> uid_max, MDL);
+			lt.uid_max = d1.len;
+			lt.uid_len = d1.len;
+			lt.uid = (unsigned char *)dmalloc (lt.uid_max,
+							   "ack_lease");
 			/* XXX inelegant */
-			if (!tuid)
+			if (!lt.uid)
 				log_fatal ("no memory for large uid.");
-			memcpy (tuid, d1.data, lt -> uid_len);
-			lt -> uid = tuid;
+			memcpy (lt.uid, d1.data, lt.uid_len);
 		}
-		data_string_forget (&d1, MDL);
+		data_string_forget (&d1, "ack_lease");
 	}
 
-	if (lease -> host)
-		host_reference (&lt -> host, lease -> host, MDL);
-	if (lease -> subnet)
-		subnet_reference (&lt -> subnet, lease -> subnet, MDL);
-	if (lease -> billing_class)
-		class_reference (&lt -> billing_class,
-				 lease -> billing_class, MDL);
+	lt.host = lease -> host;
+	lt.subnet = lease -> subnet;
+	lt.billing_class = lease -> billing_class;
 
 	/* Set a flag if this client is a broken client that NUL
 	   terminates string options and expects us to do likewise. */
-	if (ms_nulltp)
-		lease -> flags |= MS_NULL_TERMINATION;
-	else
-		lease -> flags &= ~MS_NULL_TERMINATION;
-
-	/* Save any bindings. */
-	if (lease -> scope) {
-		binding_scope_reference (&lt -> scope, lease -> scope, MDL);
-		binding_scope_dereference (&lease -> scope, MDL);
+	lease -> flags &= ~MS_NULL_TERMINATION;
+	if ((oc = lookup_option (&dhcp_universe, packet -> options,
+				 DHO_HOST_NAME))) {
+		if (!oc -> expression)
+			if (oc -> data.len &&
+			    oc -> data.data [oc -> data.len - 1] == 0) {
+				lease -> flags |= MS_NULL_TERMINATION;
+				oc -> data.len--;
+			}
 	}
 
-	/* If we got relay agent information options, and the packet really
-	   looks like it came through a relay agent, and if this feature is
-	   not disabled, save the relay agent information options that came
-	   in with the packet, so that we can use them at renewal time when
-	   the packet won't have gone through a relay agent. */
-	if (!packet -> raw -> ciaddr.s_addr &&
-	    packet -> raw -> giaddr.s_addr &&
-	    packet -> options -> universe_count > agent_universe.index &&
-	    packet -> options -> universes [agent_universe.index] &&
-	    (state -> options -> universe_count <= agent_universe.index ||
-	     state -> options -> universes [agent_universe.index] ==
-	     packet -> options -> universes [agent_universe.index])) {
-	    oc = lookup_option (&server_universe, state -> options,
-				SV_STASH_AGENT_OPTIONS);
-	    if (!oc ||
-		evaluate_boolean_option_cache (&ignorep, packet, lease,
-					       (struct client_state *)0,
-					       packet -> options,
-					       state -> options,
-					       &lease -> scope, oc, MDL)) {
-		option_cache_reference
-			(&lt -> agent_options,
-			 (struct option_cache *)
-			 packet -> options -> universes [agent_universe.index],
-			 MDL);
-	    }
-	}
-
-	/* Replace the old lease hostname with the new one, if it's changed. */
-	oc = lookup_option (&dhcp_universe, packet -> options, DHO_HOST_NAME);
-	if (oc)
-		s1 = evaluate_option_cache (&d1, packet, (struct lease *)0,
-					    (struct client_state *)0,
-					    packet -> options,
-					    (struct option_state *)0,
-					    &global_scope, oc, MDL);
-	if (oc && s1 &&
-	    lease -> client_hostname &&
-	    strlen (lease -> client_hostname) == d1.len &&
-	    !memcmp (lease -> client_hostname, d1.data, d1.len)) {
-		/* Hasn't changed. */
-		data_string_forget (&d1, MDL);
-		lt -> client_hostname = lease -> client_hostname;
-		lease -> client_hostname = (char *)0;
-	} else if (oc && s1) {
-		lt -> client_hostname = dmalloc (d1.len + 1, MDL);
-		if (!lt -> client_hostname)
-			log_error ("no memory for client hostname.");
-		else {
-			memcpy (lt -> client_hostname, d1.data, d1.len);
-			lt -> client_hostname [d1.len] = 0;
-		}
-		data_string_forget (&d1, MDL);
-	}
-
-	/* If there are statements to execute when the lease is
-	   committed, execute them. */
-	if (lease -> on_commit && (!offer || offer == DHCPACK)) {
-		execute_statements ((struct binding_value **)0,
-				    packet, lt, (struct client_state *)0,
-				    packet -> options,
-				    state -> options, &lt -> scope,
-				    lease -> on_commit);
-		if (lease -> on_commit)
-			executable_statement_dereference (&lease -> on_commit,
-							  MDL);
-	}
+	/* Do the DDNS update.  It needs to be done here so that the lease
+	   structure values for the forward and reverse names are in place for
+	   supersede()->write_lease() to be able to write into the dhcpd.leases
+	   file.  We have to pass the "state" structure here as it is not yet
+	   hanging off the lease. */
+	/* why not update for static leases too? */
+	/* Because static leases aren't currently recorded? */
+#if defined (NSUPDATE)
+ 	if (!(lease -> flags & STATIC_LEASE) && (offer == DHCPACK || !offer) &&
+	    (!(oc = lookup_option (&server_universe, state -> options,
+				   SV_DDNS_UPDATES)) ||
+	     evaluate_boolean_option_cache (packet, packet -> options,
+					    lease, oc)))
+ 		nsupdate (lease, state, packet, ADD);
+#endif
 
 	/* Don't call supersede_lease on a mocked-up lease. */
 	if (lease -> flags & STATIC_LEASE) {
 		/* Copy the hardware address into the static lease
 		   structure. */
-		lease -> hardware_addr.hlen = packet -> raw -> hlen + 1;
-		lease -> hardware_addr.hbuf [0] = packet -> raw -> htype;
-		memcpy (&lease -> hardware_addr.hbuf [1],
-			packet -> raw -> chaddr,
+		lease -> hardware_addr.hlen = packet -> raw -> hlen;
+		lease -> hardware_addr.htype = packet -> raw -> htype;
+		memcpy (lease -> hardware_addr.haddr, packet -> raw -> chaddr,
 			sizeof packet -> raw -> chaddr); /* XXX */
 	} else {
 		/* Record the hardware address, if given... */
-		lt -> hardware_addr.hlen = packet -> raw -> hlen + 1;
-		lt -> hardware_addr.hbuf [0] = packet -> raw -> htype;
-		memcpy (&lt -> hardware_addr.hbuf [1], packet -> raw -> chaddr,
+		lt.hardware_addr.hlen = packet -> raw -> hlen;
+		lt.hardware_addr.htype = packet -> raw -> htype;
+		memcpy (lt.hardware_addr.haddr, packet -> raw -> chaddr,
 			sizeof packet -> raw -> chaddr);
 
 		/* Install the new information about this lease in the
@@ -2010,17 +1305,13 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 		   and we can't write the lease, don't ACK it (or BOOTREPLY
 		   it) either. */
 
-		if (!(supersede_lease (lease, lt, !offer || offer == DHCPACK,
-				       offer == DHCPACK, offer == DHCPACK)
+		if (!(supersede_lease (lease, &lt, !offer || offer == DHCPACK)
 		      || (offer && offer != DHCPACK))) {
 			log_info ("%s: database update failed", msg);
-			free_lease_state (state, MDL);
-			static_lease_dereference (lease, MDL);
-			lease_dereference (&lt, MDL);
+			free_lease_state (state, "ack_lease");
 			return;
 		}
 	}
-	lease_dereference (&lt, MDL);
 
 	/* Remember the interface on which the packet arrived. */
 	state -> ip = packet -> interface;
@@ -2038,10 +1329,8 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 	   the broadcast bit in the bootp flags field. */
 	if ((oc = lookup_option (&server_universe, state -> options,
 				SV_ALWAYS_BROADCAST)) &&
-	    evaluate_boolean_option_cache (&ignorep, packet, lease,
-					   (struct client_state *)0,
-					   packet -> options, state -> options,
-					   &lease -> scope, oc, MDL))
+	    evaluate_boolean_option_cache (packet, packet -> options,
+					   lease, oc))
 		state -> bootp_flags |= htons (BOOTP_BROADCAST);
 
 	/* Get the Maximum Message Size option from the packet, if one
@@ -2049,26 +1338,11 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 	oc = lookup_option (&dhcp_universe, packet -> options,
 			    DHO_DHCP_MAX_MESSAGE_SIZE);
 	if (oc &&
-	    evaluate_option_cache (&d1, packet, lease,
-				   (struct client_state *)0,
-				   packet -> options, state -> options,
-				   &lease -> scope, oc, MDL)) {
+	    evaluate_option_cache (&d1, packet, packet -> options,
+				   lease, oc)) {
 		if (d1.len == sizeof (u_int16_t))
 			state -> max_message_size = getUShort (d1.data);
-		data_string_forget (&d1, MDL);
-	} else {
-		oc = lookup_option (&dhcp_universe, state -> options,
-				    DHO_DHCP_MAX_MESSAGE_SIZE);
-		if (oc &&
-		    evaluate_option_cache (&d1, packet, lease,
-					   (struct client_state *)0,
-					   packet -> options, state -> options,
-					   &lease -> scope, oc, MDL)) {
-			if (d1.len == sizeof (u_int16_t))
-				state -> max_message_size =
-					getUShort (d1.data);
-			data_string_forget (&d1, MDL);
-		}
+		data_string_forget (&d1, "ack_lease");
 	}
 
 	/* Now, if appropriate, put in DHCP-specific options that
@@ -2076,7 +1350,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 	if (state -> offer) {
 		i = DHO_DHCP_MESSAGE_TYPE;
 		oc = (struct option_cache *)0;
-		if (option_cache_allocate (&oc, MDL)) {
+		if (option_cache_allocate (&oc, "ack_lease")) {
 			if (make_const_data (&oc -> expression,
 					     &state -> offer, 1, 0, 0)) {
 				oc -> option =
@@ -2084,14 +1358,14 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 				save_option (&dhcp_universe,
 					     state -> options, oc);
 			}
-			option_cache_dereference (&oc, MDL);
+			option_cache_dereference (&oc, "ack_lease");
 		}
 		i = DHO_DHCP_SERVER_IDENTIFIER;
 		if (!(oc = lookup_option (&dhcp_universe,
 					  state -> options, i))) {
 		 use_primary:
 			oc = (struct option_cache *)0;
-			if (option_cache_allocate (&oc, MDL)) {
+			if (option_cache_allocate (&oc, "ack_lease")) {
 				if (make_const_data
 				    (&oc -> expression,
 				     ((unsigned char *)
@@ -2103,7 +1377,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 					save_option (&dhcp_universe,
 						     state -> options, oc);
 				}
-				option_cache_dereference (&oc, MDL);
+				option_cache_dereference (&oc, "ack_lease");
 			}
 			state -> from.len =
 				sizeof state -> ip -> primary_address;
@@ -2111,19 +1385,17 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 				&state -> ip -> primary_address,
 				state -> from.len);
 		} else {
-			if (evaluate_option_cache (&d1, packet, lease,
-						   (struct client_state *)0,
+			if (evaluate_option_cache (&d1, packet,
 						   packet -> options,
-						   state -> options,
-						   &lease -> scope, oc, MDL)) {
+						   lease, oc)) {
 				if (!d1.len ||
 				    d1.len > sizeof state -> from.iabuf) {
-					data_string_forget (&d1, MDL);
+					data_string_forget (&d1, "ack_lease");
 					goto use_primary;
 				}
 				memcpy (state -> from.iabuf, d1.data, d1.len);
 				state -> from.len = d1.len;
-				data_string_forget (&d1, MDL);
+				data_string_forget (&d1, "ack_lease");
 			} else
 				goto use_primary;
 		}
@@ -2132,13 +1404,13 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 			state -> offered_expiry - cur_time;
 
 		putULong ((unsigned char *)&state -> expiry,
-			  (unsigned long)offered_lease_time);
+			  offered_lease_time);
 		i = DHO_DHCP_LEASE_TIME;
 		if (lookup_option (&dhcp_universe, state -> options, i))
 			log_error ("dhcp-lease-time option for %s overridden.",
 			      inet_ntoa (state -> ciaddr));
 		oc = (struct option_cache *)0;
-		if (option_cache_allocate (&oc, MDL)) {
+		if (option_cache_allocate (&oc, "ack_lease")) {
 			if (make_const_data (&oc -> expression,
 					     (unsigned char *)&state -> expiry,
 					     sizeof state -> expiry, 0, 0)) {
@@ -2146,19 +1418,19 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 				save_option (&dhcp_universe,
 					     state -> options, oc);
 			}
-			option_cache_dereference (&oc, MDL);
+			option_cache_dereference (&oc, "ack_lease");
 		}
 
 		/* Renewal time is lease time * 0.5. */
 		offered_lease_time /= 2;
 		putULong ((unsigned char *)&state -> renewal,
-			  (unsigned long)offered_lease_time);
+			  offered_lease_time);
 		i = DHO_DHCP_RENEWAL_TIME;
 		if (lookup_option (&dhcp_universe, state -> options, i))
 			log_error ("overriding dhcp-renewal-time for %s.",
 				   inet_ntoa (state -> ciaddr));
 		oc = (struct option_cache *)0;
-		if (option_cache_allocate (&oc, MDL)) {
+		if (option_cache_allocate (&oc, "ack_lease")) {
 			if (make_const_data (&oc -> expression,
 					     (unsigned char *)
 					     &state -> renewal,
@@ -2167,20 +1439,20 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 				save_option (&dhcp_universe,
 					     state -> options, oc);
 			}
-			option_cache_dereference (&oc, MDL);
+			option_cache_dereference (&oc, "ack_lease");
 		}
 
 		/* Rebinding time is lease time * 0.875. */
 		offered_lease_time += (offered_lease_time / 2
 				       + offered_lease_time / 4);
 		putULong ((unsigned char *)&state -> rebind,
-			  (unsigned)offered_lease_time);
+			  offered_lease_time);
 		i = DHO_DHCP_REBINDING_TIME;
 		if (lookup_option (&dhcp_universe, state -> options, i))
 			log_error ("overriding dhcp-rebinding-time for %s.",
 			      inet_ntoa (state -> ciaddr));
 		oc = (struct option_cache *)0;
-		if (option_cache_allocate (&oc, MDL)) {
+		if (option_cache_allocate (&oc, "ack_lease")) {
 			if (make_const_data (&oc -> expression,
 					     (unsigned char *)&state -> rebind,
 					     sizeof state -> rebind, 0, 0)) {
@@ -2188,7 +1460,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 				save_option (&dhcp_universe,
 					     state -> options, oc);
 			}
-			option_cache_dereference (&oc, MDL);
+			option_cache_dereference (&oc, "ack_lease");
 		}
 	} else {
 		state -> from.len =
@@ -2203,15 +1475,13 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 	if ((oc =
 	     lookup_option (&server_universe,
 			    state -> options, SV_NEXT_SERVER))) {
-		if (evaluate_option_cache (&d1, packet, lease,
-					   (struct client_state *)0,
-					   packet -> options, state -> options,
-					   &lease -> scope, oc, MDL)) {
+		if (evaluate_option_cache (&d1, packet,
+					   packet -> options, lease, oc)) {
 			/* If there was more than one answer,
 			   take the first. */
 			if (d1.len >= 4 && d1.data)
 				memcpy (&state -> siaddr, d1.data, 4);
-			data_string_forget (&d1, MDL);
+			data_string_forget (&d1, "ack_lease");
 		}
 	}
 
@@ -2219,8 +1489,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 	   mask has been provided. */
 	i = DHO_SUBNET_MASK;
 	if (!lookup_option (&dhcp_universe, state -> options, i)) {
-		oc = (struct option_cache *)0;
-		if (option_cache_allocate (&oc, MDL)) {
+		if (option_cache_allocate (&oc, "ack_lease")) {
 			if (make_const_data (&oc -> expression,
 					     lease -> subnet -> netmask.iabuf,
 					     lease -> subnet -> netmask.len,
@@ -2229,7 +1498,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 				save_option (&dhcp_universe,
 					     state -> options, oc);
 			}
-			option_cache_dereference (&oc, MDL);
+			option_cache_dereference (&oc, "ack_lease");
 		}
 	}
 
@@ -2241,11 +1510,11 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 	if (!lookup_option (&dhcp_universe, state -> options, i) &&
 	    lease -> host && lease -> host -> name &&
 	    (evaluate_boolean_option_cache
-	     (&ignorep, packet, lease, (struct client_state *)0,
-	      packet -> options, state -> options, &lease -> scope,
-	      lookup_option (&server_universe, state -> options, j), MDL))) {
+	     (packet, packet -> options, lease, 
+	      (lookup_option
+	       (&server_universe, state -> options, j))))) {
 		oc = (struct option_cache *)0;
-		if (option_cache_allocate (&oc, MDL)) {
+		if (option_cache_allocate (&oc, "ack_lease")) {
 			if (make_const_data (&oc -> expression,
 					     ((unsigned char *)
 					      lease -> host -> name),
@@ -2255,7 +1524,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 				save_option (&dhcp_universe,
 					     state -> options, oc);
 			}
-			option_cache_dereference (&oc, MDL);
+			option_cache_dereference (&oc, "ack_lease");
 		}
 	}
 
@@ -2264,9 +1533,8 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 	j = SV_GET_LEASE_HOSTNAMES;
 	if (!lookup_option (&server_universe, state -> options, i) &&
 	    (evaluate_boolean_option_cache
-	     (&ignorep, packet, lease, (struct client_state *)0,
-	      packet -> options, state -> options, &lease -> scope,
-	      lookup_option (&server_universe, state -> options, j), MDL))) {
+	     (packet, packet -> options, lease,
+	      lookup_option (&server_universe, state -> options, j)))) {
 		struct in_addr ia;
 		struct hostent *h;
 		
@@ -2277,7 +1545,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 			log_error ("No hostname for %s", inet_ntoa (ia));
 		else {
 			oc = (struct option_cache *)0;
-			if (option_cache_allocate (&oc, MDL)) {
+			if (option_cache_allocate (&oc, "ack_lease")) {
 				if (make_const_data (&oc -> expression,
 						     ((unsigned char *)
 						      h -> h_name),
@@ -2288,7 +1556,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 					save_option (&dhcp_universe,
 						     state -> options, oc);
 				}
-				option_cache_dereference (&oc, MDL);
+				option_cache_dereference (&oc, "ack_lease");
 			}
 		}
 	}
@@ -2298,15 +1566,14 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 	   so if the local router does proxy arp, you win. */
 
 	if (evaluate_boolean_option_cache
-	    (&ignorep, packet, lease, (struct client_state *)0,
-	     packet -> options, state -> options, &lease -> scope,
+	    (packet, state -> options, lease,
 	     lookup_option (&server_universe, state -> options,
-			    SV_USE_LEASE_ADDR_FOR_DEFAULT_ROUTE), MDL)) {
+			    SV_USE_LEASE_ADDR_FOR_DEFAULT_ROUTE))) {
 		i = DHO_ROUTERS;
 		oc = lookup_option (&dhcp_universe, state -> options, i);
 		if (!oc) {
 			oc = (struct option_cache *)0;
-			if (option_cache_allocate (&oc, MDL)) {
+			if (option_cache_allocate (&oc, "ack_lease")) {
 				if (make_const_data (&oc -> expression,
 						     lease -> ip_addr.iabuf,
 						     lease -> ip_addr.len,
@@ -2316,31 +1583,50 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 					save_option (&dhcp_universe,
 						     state -> options, oc);
 				}
-				option_cache_dereference (&oc, MDL);	
 			}
 		}
+		if (oc)
+			option_cache_dereference (&oc, "ack_lease");
+	}
+
+	/* If we've been given a vendor option space, and there's something
+	   in it, and we weren't given a vendor-encapsulated-options option,
+	   then cons one up. */
+	i = DHO_VENDOR_ENCAPSULATED_OPTIONS;
+	j = SV_VENDOR_OPTION_SPACE;
+	if (!lookup_option (&dhcp_universe, state -> options, i) &&
+	    (oc = lookup_option (&server_universe, state -> options, j)) &&
+	    evaluate_option_cache (&d1,
+				   packet, state -> options, lease, oc)) {
+		oc = (struct option_cache *)0;
+		if (option_cache_allocate (&oc, "ack_lease")) {
+			if (make_encapsulation (&oc -> expression, &d1)) {
+				oc -> option = dhcp_universe.options [i];
+				save_option (&dhcp_universe,
+					     state -> options, oc);
+			}
+			option_cache_dereference (&oc, "ack_lease");
+		}
+		data_string_forget (&d1, "ack_lease");
 	}
 
 	/* If a site option space has been specified, use that for
 	   site option codes. */
 	i = SV_SITE_OPTION_SPACE;
 	if ((oc = lookup_option (&server_universe, state -> options, i)) &&
-	    evaluate_option_cache (&d1, packet, lease,
-				   (struct client_state *)0,
-				   packet -> options, state -> options,
-				   &lease -> scope, oc, MDL)) {
-		struct universe *u = (struct universe *)0;
-
-		if (!universe_hash_lookup (&u, universe_hash,
-					   (const char *)d1.data, d1.len,
-					   MDL)) {
+	    evaluate_option_cache (&d1, packet, state -> options, lease, oc)) {
+		struct universe *u;
+		
+		u = ((struct universe *)
+		     hash_lookup (&universe_hash, d1.data, d1.len));
+		if (!u) {
 			log_error ("unknown option space %s.", d1.data);
 			return;
 		}
 
 		state -> options -> site_universe = u -> index;
 		state -> options -> site_code_min = 128; /* XXX */
-		data_string_forget (&d1, MDL);
+		data_string_forget (&d1, "ack_lease");
 	} else {
 		state -> options -> site_code_min = 0;
 		state -> options -> site_universe = dhcp_universe.index;
@@ -2359,9 +1645,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 				    DHO_DHCP_PARAMETER_REQUEST_LIST);
 	if (oc)
 		evaluate_option_cache (&state -> parameter_request_list,
-				       packet, lease, (struct client_state *)0,
-				       packet -> options, state -> options,
-				       &lease -> scope, oc, MDL);
+				       packet, packet -> options, lease, oc);
 
 #ifdef DEBUG_PACKET
 	dump_packet (packet);
@@ -2372,22 +1656,16 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 
 	log_info ("%s", msg);
 
-	/* Hang the packet off the lease state. */
-	packet_reference (&lease -> state -> packet, packet, MDL);
-
 	/* If this is a DHCPOFFER, ping the lease address before actually
 	   sending the offer. */
 	if (offer == DHCPOFFER && !(lease -> flags & STATIC_LEASE) &&
 	    cur_time - lease -> timestamp > 60) {
 		lease -> timestamp = cur_time;
 		icmp_echorequest (&lease -> ip_addr);
-		add_timeout (cur_time + 1, lease_ping_timeout, lease,
-			     (tvref_t)lease_reference,
-			     (tvunref_t)lease_dereference);
+		add_timeout (cur_time + 1, lease_ping_timeout, lease);
 		++outstanding_pings;
 	} else {
 		lease -> timestamp = cur_time;
-		static_lease_dereference (lease, MDL);
 		dhcp_reply (lease);
 	}
 }
@@ -2396,7 +1674,7 @@ void dhcp_reply (lease)
 	struct lease *lease;
 {
 	int bufs = 0;
-	unsigned packet_length;
+	int packet_length;
 	struct dhcp_packet raw;
 	struct sockaddr_in to;
 	struct in_addr from;
@@ -2404,11 +1682,11 @@ void dhcp_reply (lease)
 	int result;
 	int i;
 	struct lease_state *state = lease -> state;
-	int nulltp, bootpp, unicastp = 1;
+	int nulltp, bootpp;
+	struct agent_options *a, *na;
 	struct option_tag *ot, *not;
 	struct data_string d1;
 	struct option_cache *oc;
-	char *s;
 
 	if (!state)
 		log_fatal ("dhcp_reply was supplied lease with no state!");
@@ -2443,10 +1721,9 @@ void dhcp_reply (lease)
 	} else
 		bufs |= 2; /* XXX */
 
-	memcpy (raw.chaddr,
-		&lease -> hardware_addr.hbuf [1], sizeof raw.chaddr);
-	raw.hlen = lease -> hardware_addr.hlen - 1;
-	raw.htype = lease -> hardware_addr.hbuf [0];
+	memcpy (raw.chaddr, lease -> hardware_addr.haddr, sizeof raw.chaddr);
+	raw.hlen = lease -> hardware_addr.hlen;
+	raw.htype = lease -> hardware_addr.htype;
 
 	/* See if this is a Microsoft client that NUL-terminates its
 	   strings and expects us to do likewise... */
@@ -2462,14 +1739,11 @@ void dhcp_reply (lease)
 		bootpp = 1;
 
 	/* Insert such options as will fit into the buffer. */
-	packet_length = cons_options (state -> packet, &raw, lease,
-				      (struct client_state *)0,
+	packet_length = cons_options ((struct packet *)0, &raw, lease,
 				      state -> max_message_size,
-				      state -> packet -> options,
-				      state -> options, &global_scope,
+				      state -> options,
 				      bufs, nulltp, bootpp,
-				      &state -> parameter_request_list,
-				      (char *)0);
+				      &state -> parameter_request_list);
 
 	memcpy (&raw.ciaddr, &state -> ciaddr, sizeof raw.ciaddr);
 	memcpy (&raw.yiaddr, lease -> ip_addr.iabuf, 4);
@@ -2482,32 +1756,23 @@ void dhcp_reply (lease)
 	raw.hops = state -> hops;
 	raw.op = BOOTREPLY;
 
-	if (lease -> client_hostname &&
-	    db_printable (lease -> client_hostname))
-		s = lease -> client_hostname;
-	else
-		s = (char *)0;
-
 	/* Say what we're doing... */
-	log_info ("%s on %s to %s %s%s%svia %s",
-		  (state -> offer
-		   ? (state -> offer == DHCPACK ? "DHCPACK" : "DHCPOFFER")
-		   : "BOOTREPLY"),
-		  piaddr (lease -> ip_addr),
-		  (lease -> hardware_addr.hlen
-		   ? print_hw_addr (lease -> hardware_addr.hbuf [0],
-				    lease -> hardware_addr.hlen - 1,
-				    &lease -> hardware_addr.hbuf [1])
-		   : print_hex_1 (lease -> uid_len, lease -> uid, 
-				  lease -> uid_len)),
-		  s ? "(" : "", s ? s : "", s ? ") " : "",
-		  (state -> giaddr.s_addr
-		   ? inet_ntoa (state -> giaddr)
-		   : state -> ip -> name));
+	log_info ("%s on %s to %s via %s",
+	      (state -> offer
+	       ? (state -> offer == DHCPACK ? "DHCPACK" : "DHCPOFFER")
+	       : "BOOTREPLY"),
+	      piaddr (lease -> ip_addr),
+	      print_hw_addr (lease -> hardware_addr.htype,
+			     lease -> hardware_addr.hlen,
+			     lease -> hardware_addr.haddr),
+	      state -> giaddr.s_addr
+	      ? inet_ntoa (state -> giaddr)
+	      : state -> ip -> name);
 
 	/* Set up the hardware address... */
+	hto.htype = lease -> hardware_addr.htype;
 	hto.hlen = lease -> hardware_addr.hlen;
-	memcpy (hto.hbuf, lease -> hardware_addr.hbuf, hto.hlen);
+	memcpy (hto.haddr, lease -> hardware_addr.haddr, hto.hlen);
 
 	to.sin_family = AF_INET;
 #ifdef HAVE_SA_LEN
@@ -2539,7 +1804,9 @@ void dhcp_reply (lease)
 					      raw.siaddr, &to,
 					      (struct hardware *)0);
 
-			free_lease_state (state, MDL);
+			data_string_forget (&state -> parameter_request_list,
+					    "dhcp_reply");
+			free_lease_state (state, "dhcp_reply fallback 1");
 			lease -> state = (struct lease_state *)0;
 			return;
 		}
@@ -2571,7 +1838,9 @@ void dhcp_reply (lease)
 					      &raw, packet_length,
 					      raw.siaddr, &to,
 					      (struct hardware *)0);
-			free_lease_state (state, MDL);
+			data_string_forget (&state -> parameter_request_list,
+					    "dhcp_reply");
+			free_lease_state (state, "dhcp_reply fallback 2");
 			lease -> state = (struct lease_state *)0;
 			return;
 		}
@@ -2589,66 +1858,55 @@ void dhcp_reply (lease)
 	} else {
 		to.sin_addr = limited_broadcast;
 		to.sin_port = remote_port;
-		if (!(lease -> flags & UNICAST_BROADCAST_HACK))
-			unicastp = 0;
 	}
 
 	memcpy (&from, state -> from.iabuf, sizeof from);
 
 	result = send_packet (state -> ip,
 			      (struct packet *)0, &raw, packet_length,
-			      from, &to,
-			      unicastp ? &hto : (struct hardware *)0);
+			      from, &to, &hto);
 
 	/* Free all of the entries in the option_state structure
 	   now that we're done with them. */
 
-	free_lease_state (state, MDL);
+	data_string_forget (&state -> parameter_request_list,
+			    "dhcp_reply");
+	free_lease_state (state, "dhcp_reply");
 	lease -> state = (struct lease_state *)0;
 }
 
-int find_lease (struct lease **lp,
-		struct packet *packet, struct shared_network *share, int *ours,
-		int *allocatedp, struct lease *ip_lease_in,
-		const char *file, int line)
+struct lease *find_lease (packet, share, ours)
+	struct packet *packet;
+	struct shared_network *share;
+	int *ours;
 {
-	struct lease *uid_lease = (struct lease *)0;
-	struct lease *ip_lease = (struct lease *)0;
-	struct lease *hw_lease = (struct lease *)0;
+	struct lease *uid_lease, *ip_lease, *hw_lease;
 	struct lease *lease = (struct lease *)0;
 	struct iaddr cip;
-	struct host_decl *hp = (struct host_decl *)0;
-	struct host_decl *host = (struct host_decl *)0;
-	struct lease *fixed_lease = (struct lease *)0;
-	struct lease *next;
+	struct host_decl *hp, *host = (struct host_decl *)0;
+	struct lease *fixed_lease, *next;
 	struct option_cache *oc;
 	struct data_string d1;
 	int have_client_identifier = 0;
 	struct data_string client_identifier;
 	int status;
-	struct hardware h;
 
-	if (packet -> raw -> ciaddr.s_addr) {
+	/* Look up the requested address. */
+	oc = lookup_option (&dhcp_universe, packet -> options,
+			    DHO_DHCP_REQUESTED_ADDRESS);
+	memset (&d1, 0, sizeof d1);
+	if (oc &&
+	    evaluate_option_cache (&d1, packet, packet -> options,
+				   (struct lease *)0, oc)) {
+		packet -> got_requested_address = 1;
+		cip.len = 4;
+		memcpy (cip.iabuf, d1.data, cip.len);
+		data_string_forget (&d1, "find_lease");
+	} else if (packet -> raw -> ciaddr.s_addr) {
 		cip.len = 4;
 		memcpy (cip.iabuf, &packet -> raw -> ciaddr, 4);
-	} else {
-		/* Look up the requested address. */
-		oc = lookup_option (&dhcp_universe, packet -> options,
-				    DHO_DHCP_REQUESTED_ADDRESS);
-		memset (&d1, 0, sizeof d1);
-		if (oc &&
-		    evaluate_option_cache (&d1, packet, (struct lease *)0,
-					   (struct client_state *)0,
-					   packet -> options,
-					   (struct option_state *)0,
-					   &global_scope, oc, MDL)) {
-			packet -> got_requested_address = 1;
-			cip.len = 4;
-			memcpy (cip.iabuf, d1.data, cip.len);
-			data_string_forget (&d1, MDL);
-		} else 
-			cip.len = 0;
-	}
+	} else
+		cip.len = 0;
 
 	/* Try to find a host or lease that's been assigned to the
 	   specified unique client identifier. */
@@ -2657,21 +1915,21 @@ int find_lease (struct lease **lp,
 	memset (&client_identifier, 0, sizeof client_identifier);
 	if (oc &&
 	    evaluate_option_cache (&client_identifier,
-				   packet, (struct lease *)0,
-				   (struct client_state *)0,
-				   packet -> options, (struct option_state *)0,
-				   &global_scope, oc, MDL)) {
+				   packet, packet -> options,
+				   (struct lease *)0, oc)) {
 		/* Remember this for later. */
 		have_client_identifier = 1;
 
 		/* First, try to find a fixed host entry for the specified
 		   client identifier... */
-		if (find_hosts_by_uid (&hp, client_identifier.data,
-				       client_identifier.len, MDL)) {
+		hp = find_hosts_by_uid (client_identifier.data,
+					client_identifier.len);
+		if (hp) {
 			/* Remember if we know of this client. */
 			packet -> known = 1;
-			mockup_lease (&fixed_lease, packet, share, hp);
-		}
+			fixed_lease = mockup_lease (packet, share, hp);
+		} else
+			fixed_lease = (struct lease *)0;
 
 #if defined (DEBUG_FIND_LEASE)
 		if (fixed_lease) {
@@ -2679,28 +1937,27 @@ int find_lease (struct lease **lp,
 			      piaddr (fixed_lease -> ip_addr));
 		}
 #endif
-		if (!fixed_lease)	/* Save the host if we found one. */
-			host_reference (&host, hp, MDL);
-		if (hp)
-			host_dereference (&hp, MDL);
+		if (!fixed_lease)
+			host = hp;	/* Save the host if we found one. */
 
-		find_lease_by_uid (&uid_lease, client_identifier.data,
-				   client_identifier.len, MDL);
+		uid_lease = find_lease_by_uid (client_identifier.data,
+					       client_identifier.len);
+	} else {
+		uid_lease = (struct lease *)0;
+		fixed_lease = (struct lease *)0;
 	}
 
 	/* If we didn't find a fixed lease using the uid, try doing
 	   it with the hardware address... */
 	if (!fixed_lease && !host) {
-		if (find_hosts_by_haddr (&hp, packet -> raw -> htype,
-					 packet -> raw -> chaddr,
-					 packet -> raw -> hlen, MDL)) {
+		hp = find_hosts_by_haddr (packet -> raw -> htype,
+					  packet -> raw -> chaddr,
+					  packet -> raw -> hlen);
+		if (hp) {
 			/* Remember if we know of this client. */
 			packet -> known = 1;
-			if (host)
-				host_dereference (&host, MDL);
-			host_reference (&host, hp, MDL);
-			host_dereference (&hp, MDL);
-			mockup_lease (&fixed_lease, packet, share, host);
+			host = hp; /* Save it for later. */
+			fixed_lease = mockup_lease (packet, share, hp);
 #if defined (DEBUG_FIND_LEASE)
 			if (fixed_lease) {
 				log_info ("Found host for link address: %s.",
@@ -2733,7 +1990,7 @@ int find_lease (struct lease **lp,
 	   can't do this until we get here because we depend on
 	   packet -> known, which may be set by either the uid host
 	   lookup or the haddr host lookup. */
-	while (uid_lease) {
+	for (; uid_lease; uid_lease = next) {
 #if defined (DEBUG_FIND_LEASE)
 		log_info ("trying next lease matching client id: %s",
 			  piaddr (uid_lease -> ip_addr));
@@ -2744,8 +2001,6 @@ int find_lease (struct lease **lp,
 				  piaddr (uid_lease -> ip_addr));
 #endif
 			next = uid_lease -> n_uid;
-			lease_dereference (&uid_lease, MDL);
-			lease_reference (&uid_lease, next, MDL);
 			continue;
 		}
 		if ((uid_lease -> pool -> prohibit_list &&
@@ -2759,8 +2014,6 @@ int find_lease (struct lease **lp,
 			next = uid_lease -> n_uid;
 			if (!packet -> raw -> ciaddr.s_addr)
 				release_lease (uid_lease, packet);
-			lease_dereference (&uid_lease, MDL);
-			lease_reference (&uid_lease, next, MDL);
 			continue;
 		}
 		break;
@@ -2774,11 +2027,9 @@ int find_lease (struct lease **lp,
 	/* Find a lease whose hardware address matches, whose client
 	   identifier matches, that's permitted, and that's on the
 	   correct subnet. */
-	h.hlen = packet -> raw -> hlen + 1;
-	h.hbuf [0] = packet -> raw -> htype;
-	memcpy (&h.hbuf [1], packet -> raw -> chaddr, packet -> raw -> hlen);
-	find_lease_by_hw_addr (&hw_lease, h.hbuf, h.hlen, MDL);
-	while (hw_lease) {
+	hw_lease = find_lease_by_hw_addr (packet -> raw -> chaddr,
+					  packet -> raw -> hlen);
+	for (; hw_lease; hw_lease = next) {
 #if defined (DEBUG_FIND_LEASE)
 		log_info ("trying next lease matching hw addr: %s",
 			  piaddr (hw_lease -> ip_addr));
@@ -2794,8 +2045,6 @@ int find_lease (struct lease **lp,
 				  piaddr (hw_lease -> ip_addr));
 #endif
 			next = hw_lease -> n_hw;
-			lease_dereference (&hw_lease, MDL);
-			lease_reference (&hw_lease, next, MDL);
 			continue;
 		}
 		if (hw_lease -> subnet -> shared_network != share) {
@@ -2804,8 +2053,6 @@ int find_lease (struct lease **lp,
 				  piaddr (hw_lease -> ip_addr));
 #endif
 			next = hw_lease -> n_hw;
-			lease_dereference (&hw_lease, MDL);
-			lease_reference (&hw_lease, next, MDL);
 			continue;
 		}
 		if ((hw_lease -> pool -> prohibit_list &&
@@ -2819,8 +2066,6 @@ int find_lease (struct lease **lp,
 			next = hw_lease -> n_hw;
 			if (!packet -> raw -> ciaddr.s_addr)
 				release_lease (hw_lease, packet);
-			lease_dereference (&hw_lease, MDL);
-			lease_reference (&hw_lease, next, MDL);
 			continue;
 		}
 		break;
@@ -2833,10 +2078,10 @@ int find_lease (struct lease **lp,
 
 	/* Try to find a lease that's been allocated to the client's
 	   IP address. */
-	if (ip_lease_in)
-		lease_reference (&ip_lease, ip_lease_in, MDL);
-	else if (cip.len)
-		find_lease_by_ip_addr (&ip_lease, cip, MDL);
+	if (cip.len)
+		ip_lease = find_lease_by_ip_addr (cip);
+	else
+		ip_lease = (struct lease *)0;
 
 #if defined (DEBUG_FIND_LEASE)
 	if (ip_lease)
@@ -2864,58 +2109,43 @@ int find_lease (struct lease **lp,
 		log_info ("...but it was on the wrong shared network.");
 #endif
 		strcpy (dhcp_message, "requested address on bad subnet");
-		lease_dereference (&ip_lease, MDL);
+		ip_lease = (struct lease *)0;
 	}
 
 	/* Toss ip_lease if it hasn't yet expired and doesn't belong to the
 	   client. */
 	if (ip_lease &&
-	    (ip_lease -> uid ?
-	     (!have_client_identifier ||
-	      ip_lease -> uid_len != client_identifier.len ||
-	      memcmp (ip_lease -> uid, client_identifier.data,
-		      ip_lease -> uid_len)) :
-	     (ip_lease -> hardware_addr.hbuf [0] != packet -> raw -> htype ||
-	      ip_lease -> hardware_addr.hlen != packet -> raw -> hlen + 1 ||
-	      memcmp (&ip_lease -> hardware_addr.hbuf [1],
-		      packet -> raw -> chaddr,
-		      (unsigned)(ip_lease -> hardware_addr.hlen - 1))))) {
-		/* If we're not doing failover, the only state in which
-		   we can allocate this lease to the client is FTS_FREE.
-		   If we are doing failover, things are more complicated. */
-		if (
-#if !defined (FAILOVER_PROTOCOL)
-			(ip_lease -> binding_state != FTS_FREE &&
-			 ip_lease -> binding_state != FTS_BACKUP)
-#else
-			!lease_mine_to_reallocate (lease)
-#endif
-			) {
+	    ip_lease -> ends >= cur_time &&
+	    ((ip_lease -> uid &&
+	      (!have_client_identifier ||
+	       ip_lease -> uid_len != client_identifier.len ||
+	       memcmp (ip_lease -> uid, client_identifier.data,
+		       ip_lease -> uid_len))) ||
+	     (!ip_lease -> uid &&
+	      (ip_lease -> hardware_addr.htype != packet -> raw -> htype ||
+	       ip_lease -> hardware_addr.hlen != packet -> raw -> hlen ||
+	       memcmp (ip_lease -> hardware_addr.haddr,
+		       packet -> raw -> chaddr,
+		       ip_lease -> hardware_addr.hlen))))) {
 #if defined (DEBUG_FIND_LEASE)
+		if (ip_lease)
 			log_info ("rejecting lease for requested address.");
 #endif
-			/* If we're rejecting it because the peer has
-			   it, don't set "ours", because we shouldn't NAK. */
-			if (ours && ip_lease -> binding_state != FTS_ACTIVE)
-				*ours = 0;
-			lease_dereference (&ip_lease, MDL);
-		} else
-			if (allocatedp)
-				*allocatedp = 1;
+		ip_lease = (struct lease *)0;
 	}
 
 	/* If for some reason the client has more than one lease
 	   on the subnet that matches its uid, pick the one that
 	   it asked for and (if we can) free the other. */
 	if (ip_lease &&
-	    ip_lease -> binding_state == FTS_ACTIVE &&
+	    ip_lease -> ends >= cur_time &&
 	    ip_lease -> uid && ip_lease != uid_lease) {
 		if (have_client_identifier &&
 		    (ip_lease -> uid_len == client_identifier.len) &&
 		    !memcmp (client_identifier.data,
 			     ip_lease -> uid, ip_lease -> uid_len)) {
 			if (uid_lease) {
-			    if (uid_lease -> binding_state == FTS_ACTIVE) {
+			    if (uid_lease -> ends > cur_time) {
 				log_error ("client %s has duplicate%s on %s",
 					   (print_hw_addr
 					    (packet -> raw -> htype,
@@ -2931,12 +2161,10 @@ int find_lease (struct lease **lp,
 				if (uid_lease &&
 				    !packet -> raw -> ciaddr.s_addr &&
 				    (share ==
-				     uid_lease -> subnet -> shared_network) &&
-				    packet -> packet_type == DHCPREQUEST)
-					dissociate_lease (uid_lease);
+				     uid_lease -> subnet -> shared_network))
+					dissociate_lease (uid_lease, packet);
 			    }
-			    lease_dereference (&uid_lease, MDL);
-			    lease_reference (&uid_lease, ip_lease, MDL);
+			    uid_lease = ip_lease;
 			}
 		}
 
@@ -2944,7 +2172,7 @@ int find_lease (struct lease **lp,
 		   that there are both a dynamic lease and a fixed-address
 		   declaration for the same IP address. */
 		if (packet -> packet_type == DHCPREQUEST && fixed_lease) {
-			lease_dereference (&fixed_lease, MDL);
+			fixed_lease = (struct lease *)0;
 		      db_conflict:
 			log_error ("Dynamic and static leases present for %s.",
 				   piaddr (cip));
@@ -2959,16 +2187,9 @@ int find_lease (struct lease **lp,
 				   ip_lease -> subnet -> shared_network -> name
 				  );
 			if (fixed_lease)
-				lease_dereference (&ip_lease, MDL);
+				ip_lease = (struct lease *)0;
 			strcpy (dhcp_message,
 				"database conflict - call for help!");
-		}
-
-		if (ip_lease && ip_lease != uid_lease) {
-#if defined (DEBUG_FIND_LEASE)
-			log_info ("requested address not available.");
-#endif
-			lease_dereference (&ip_lease, MDL);
 		}
 	}
 
@@ -2976,26 +2197,6 @@ int find_lease (struct lease **lp,
 	   null, then we have a configuration file bug. */
 	if (packet -> packet_type == DHCPREQUEST && fixed_lease && ip_lease)
 		goto db_conflict;
-
-	/* Toss extra pointers to the same lease... */
-	if (hw_lease && hw_lease == uid_lease) {
-#if defined (DEBUG_FIND_LEASE)
-		log_info ("hardware lease and uid lease are identical.");
-#endif
-		lease_dereference (&hw_lease, MDL);
-	}
-	if (ip_lease && ip_lease == hw_lease) {
-		lease_dereference (&hw_lease, MDL);
-#if defined (DEBUG_FIND_LEASE)
-		log_info ("hardware lease and ip lease are identical.");
-#endif
-	}
-	if (ip_lease && ip_lease == uid_lease) {
-		lease_dereference (&uid_lease, MDL);
-#if defined (DEBUG_FIND_LEASE)
-		log_info ("uid lease and ip lease are identical.");
-#endif
-	}
 
 	/* Make sure the client is permitted to use the requested lease. */
 	if (ip_lease &&
@@ -3005,27 +2206,27 @@ int find_lease (struct lease **lp,
 	      !permitted (packet, ip_lease -> pool -> permit_list)))) {
 		if (!packet -> raw -> ciaddr.s_addr)
 			release_lease (ip_lease, packet);
-		lease_dereference (&ip_lease, MDL);
+		ip_lease = (struct lease *)0;
 	}
 
-	if (uid_lease &&
-	    ((uid_lease -> pool -> prohibit_list &&
-	      permitted (packet, uid_lease -> pool -> prohibit_list)) ||
-	     (uid_lease -> pool -> permit_list &&
-	      !permitted (packet, uid_lease -> pool -> permit_list)))) {
-		if (!packet -> raw -> ciaddr.s_addr)
-			release_lease (uid_lease, packet);
-		lease_dereference (&uid_lease, MDL);
+	/* Toss extra pointers to the same lease... */
+	if (hw_lease == uid_lease) {
+#if defined (DEBUG_FIND_LEASE)
+		log_info ("hardware lease and uid lease are identical.");
+#endif
+		hw_lease = (struct lease *)0;
 	}
-
-	if (hw_lease &&
-	    ((hw_lease -> pool -> prohibit_list &&
-	      permitted (packet, hw_lease -> pool -> prohibit_list)) ||
-	     (hw_lease -> pool -> permit_list &&
-	      !permitted (packet, hw_lease -> pool -> permit_list)))) {
-		if (!packet -> raw -> ciaddr.s_addr)
-			release_lease (hw_lease, packet);
-		lease_dereference (&hw_lease, MDL);
+	if (ip_lease == hw_lease) {
+		hw_lease = (struct lease *)0;
+#if defined (DEBUG_FIND_LEASE)
+		log_info ("hardware lease and ip lease are identical.");
+#endif
+	}
+	if (ip_lease == uid_lease) {
+		uid_lease = (struct lease *)0;
+#if defined (DEBUG_FIND_LEASE)
+		log_info ("uid lease and ip lease are identical.");
+#endif
 	}
 
 	/* If we've already eliminated the lease, it wasn't there to
@@ -3049,8 +2250,7 @@ int find_lease (struct lease **lp,
 	/* At this point, if fixed_lease is nonzero, we can assign it to
 	   this client. */
 	if (fixed_lease) {
-		lease_reference (&lease, fixed_lease, MDL);
-		lease_dereference (&fixed_lease, MDL);
+		lease = fixed_lease;
 #if defined (DEBUG_FIND_LEASE)
 		log_info ("choosing fixed address.");
 #endif
@@ -3069,11 +2269,9 @@ int find_lease (struct lease **lp,
 #if defined (DEBUG_FIND_LEASE)
 			log_info ("choosing lease on requested address.");
 #endif
-			lease_reference (&lease, ip_lease, MDL);
-			if (lease -> host)
-				host_dereference (&lease -> host, MDL);
+			lease = ip_lease;
+			lease -> host = (struct host_decl *)0;
 		}
-		lease_dereference (&ip_lease, MDL);
 	}
 
 	/* If we got a lease that matched the client identifier, we may want
@@ -3081,41 +2279,35 @@ int find_lease (struct lease **lp,
 	   the lease that matched the client identifier. */
 	if (uid_lease) {
 		if (lease) {
-			if (!packet -> raw -> ciaddr.s_addr &&
-			    packet -> packet_type == DHCPREQUEST)
-				dissociate_lease (uid_lease);
+			if (!packet -> raw -> ciaddr.s_addr)
+				dissociate_lease (uid_lease, packet);
 #if defined (DEBUG_FIND_LEASE)
 			log_info ("not choosing uid lease.");
 #endif
 		} else {
-			lease_reference (&lease, uid_lease, MDL);
-			if (lease -> host)
-				host_dereference (&lease -> host, MDL);
+			lease = uid_lease;
+			lease -> host = (struct host_decl *)0;
 #if defined (DEBUG_FIND_LEASE)
 			log_info ("choosing uid lease.");
 #endif
 		}
-		lease_dereference (&uid_lease, MDL);
 	}
 
 	/* The lease that matched the hardware address is treated likewise. */
 	if (hw_lease) {
 		if (lease) {
-			if (!packet -> raw -> ciaddr.s_addr &&
-			    packet -> packet_type == DHCPREQUEST)
-				dissociate_lease (hw_lease);
+			if (!packet -> raw -> ciaddr.s_addr)
+				dissociate_lease (hw_lease, packet);
 #if defined (DEBUG_FIND_LEASE)
 			log_info ("not choosing hardware lease.");
 #endif
 		} else {
-			lease_reference (&lease, hw_lease, MDL);
-			if (lease -> host)
-				host_dereference (&lease -> host, MDL);
+			lease = hw_lease;
+			lease -> host = (struct host_decl *)0;
 #if defined (DEBUG_FIND_LEASE)
 			log_info ("choosing hardware lease.");
 #endif
 		}
-		lease_dereference (&hw_lease, MDL);
 	}
 
 	/* If we found a host_decl but no matching address, try to
@@ -3125,7 +2317,7 @@ int find_lease (struct lease **lp,
 	if (lease && host && !lease -> host) {
 		for (; host; host = host -> n_ipaddr) {
 			if (!host -> fixed_addr) {
-				host_reference (&lease -> host, host, MDL);
+				lease -> host = host;
 				break;
 			}
 		}
@@ -3135,124 +2327,58 @@ int find_lease (struct lease **lp,
 	   requested, we assume that previous bugginess on the part
 	   of the client, or a server database loss, caused the lease to
 	   be abandoned, so we reclaim it and let the client have it. */
-	if (lease &&
-	    (lease -> binding_state == FTS_ABANDONED) &&
-	    lease == ip_lease &&
+	if (lease && (lease -> flags & ABANDONED_LEASE) && lease == ip_lease &&
 	    packet -> packet_type == DHCPREQUEST) {
 		log_error ("Reclaiming REQUESTed abandoned IP address %s.",
 		      piaddr (lease -> ip_addr));
-	} else if (lease && (lease -> binding_state == FTS_ABANDONED)) {
+		lease -> flags &= ~ABANDONED_LEASE;
+	} else if (lease && (lease -> flags & ABANDONED_LEASE)) {
 	/* Otherwise, if it's not the one the client requested, we do not
 	   return it - instead, we claim it's ours, causing a DHCPNAK to be
 	   sent if this lookup is for a DHCPREQUEST, and force the client
 	   to go back through the allocation process. */
 		if (ours)
 			*ours = 1;
-		lease_dereference (&lease, MDL);
+		lease = (struct lease *)0;
 	}
-
-	if (lease && allocatedp && lease -> ends <= cur_time)
-		*allocatedp = 1;
 
       out:
 	if (have_client_identifier)
-		data_string_forget (&client_identifier, MDL);
+		data_string_forget (&client_identifier, "find_lease");
 
-	if (fixed_lease)
-		lease_dereference (&fixed_lease, MDL);
-	if (hw_lease)
-		lease_dereference (&hw_lease, MDL);
-	if (uid_lease)
-		lease_dereference (&uid_lease, MDL);
-	if (ip_lease)
-		lease_dereference (&ip_lease, MDL);
-	if (host)
-		host_dereference (&host, MDL);
-
-	if (lease) {
 #if defined (DEBUG_FIND_LEASE)
+	if (lease)
 		log_info ("Returning lease: %s.",
 		      piaddr (lease -> ip_addr));
+	else
+		log_info ("Not returning a lease.");
 #endif
-		lease_reference (lp, lease, file, line);
-		lease_dereference (&lease, MDL);
-		return 1;
-	}
-#if defined (DEBUG_FIND_LEASE)
-	log_info ("Not returning a lease.");
-#endif
-	return 0;
+
+	return lease;
 }
 
 /* Search the provided host_decl structure list for an address that's on
    the specified shared network.  If one is found, mock up and return a
    lease structure for it; otherwise return the null pointer. */
 
-int mockup_lease (struct lease **lp, struct packet *packet,
-		  struct shared_network *share, struct host_decl *hp)
+struct lease *mockup_lease (packet, share, hp)
+	struct packet *packet;
+	struct shared_network *share;
+	struct host_decl *hp;
 {
-	struct lease *lease = (struct lease *)0;
-	const unsigned char **s;
-	isc_result_t status;
+	static struct lease mock;
 	
-	status = lease_allocate (&lease, MDL);
-	if (status != ISC_R_SUCCESS)
-		return 0;
-	if (!find_host_for_network (&lease -> subnet,
-				    &hp, &lease -> ip_addr, share)) {
-		lease_dereference (&lease, MDL);
-		return 0;
-	}
-	host_reference (&lease -> host, hp, MDL);
-	if (hp -> client_identifier.len > sizeof lease -> uid_buf)
-		lease -> uid = dmalloc (hp -> client_identifier.len, MDL);
-	else
-		lease -> uid = lease -> uid_buf;
-	if (!lease -> uid) {
-		lease_dereference (&lease, MDL);
-		return 0;
-	}
-	memcpy (lease -> uid, hp -> client_identifier.data,
-		hp -> client_identifier.len);
-	lease -> uid_len = hp -> client_identifier.len;
-	lease -> hardware_addr = hp -> interface;
-	lease -> starts = lease -> timestamp = lease -> ends = MIN_TIME;
-	lease -> flags = STATIC_LEASE;
-	lease -> binding_state = FTS_FREE;
-	lease_reference (lp, lease, MDL);
-	lease_dereference (&lease, MDL);
-	return 1;
-}
-
-/* Dereference all dynamically-allocated information that may be dangling
-   off of a static lease.   Otherwise, once ack_lease returns, the information
-   dangling from the lease will be lost, so reference counts will be screwed
-   up and memory leaks will occur. */
-
-void static_lease_dereference (lease, file, line)
-	struct lease *lease;
-	const char *file;
-	int line;
-{
-	if (!(lease -> flags & STATIC_LEASE))
-		return;
-	if (lease -> on_release)
-		executable_statement_dereference (&lease -> on_release,
-						  file, line);
-	if (lease -> on_expiry)
-		executable_statement_dereference (&lease -> on_expiry,
-						  file, line);
-	if (lease -> on_commit)
-		executable_statement_dereference (&lease -> on_commit,
-						  file, line);
-	if (lease -> scope)
-		binding_scope_dereference (&lease -> scope, file, line);
-	if (lease -> agent_options)
-		option_cache_dereference (&lease -> agent_options, file, line);
-	if (lease -> uid != lease -> uid_buf) {
-		dfree (lease -> uid, file, line);
-		lease -> uid = (unsigned char *)0;
-	}
+	mock.subnet = find_host_for_network (&hp, &mock.ip_addr, share);
+	if (!mock.subnet)
+		return (struct lease *)0;
+	mock.next = mock.prev = (struct lease *)0;
+	mock.host = hp;
+	mock.uid = hp -> client_identifier.data;
+	mock.uid_len = hp -> client_identifier.len;
+	mock.hardware_addr = hp -> interface;
+	mock.starts = mock.timestamp = mock.ends = MIN_TIME;
+	mock.flags = STATIC_LEASE;
+	return &mock;
 }
 
 /* Look through all the pools in a list starting with the specified pool
@@ -3262,82 +2388,45 @@ void static_lease_dereference (lease, file, line)
    lease.   If all of these possibilities fail to pan out, we don't return
    a lease at all. */
 
-int allocate_lease (struct lease **lp, struct packet *packet,
-		    struct pool *pool, int *peer_has_leases)
+struct lease *allocate_lease (packet, pool, ok)
+	struct packet *packet;
+	struct pool *pool;
+	int ok;
 {
-	struct lease *lease = (struct lease *)0;
-	struct lease **lq;
+	struct lease *lease, *lp;
 	struct permit *permit;
 
 	if (!pool)
-		return 0;
+		return (struct lease *)0;
 
 	/* If we aren't elegible to try this pool, try a subsequent one. */
 	if ((pool -> prohibit_list &&
 	     permitted (packet, pool -> prohibit_list)) ||
 	    (pool -> permit_list && !permitted (packet, pool -> permit_list)))
-		return allocate_lease (lp, packet, pool -> next,
-				       peer_has_leases);
+		return allocate_lease (packet, pool -> next, ok);
 
-#if defined (FAILOVER_PROTOCOL)
-	/* Peer_has_leases just says that we found at least one free lease.
-	   If no free lease is returned, the caller can deduce that this
-	   means the peer is hogging all the free leases, so we can print
-	   a better error message. */
-
-	/* XXX Do we need code here to ignore PEER_IS_OWNER and just check
-	   XXX tstp if we're in, e.g., PARTNER_DOWN?   Where do we deal with
-	   XXX CONFLICT_DETECTED, et al? */
-	/* XXX This should be handled by the lease binding "state machine" -
-	   XXX that is, when we get here, if a lease could be allocated, it
-	   XXX will have the correct binding state so that the following code
-	   XXX will result in its being allocated. */
-	/* Skip to the most expired lease in the pool that is not owned by a
-	   failover peer. */
-	if (pool -> failover_peer) {
-		if (pool -> failover_peer -> i_am == primary) {
-			if (pool -> backup)
-				*peer_has_leases = 1;
-			lease = pool -> free;
-			if (!lease)
-				lease = pool -> abandoned;
-		} else {
-			if (pool -> free)
-				*peer_has_leases = 1;
-			lease = pool -> backup;
-		}
-	} else
-		lease = pool -> free;
-#else
-	if (pool -> free)
-		lease = pool -> free;
-	else
-		lease = pool -> abandoned;
-#endif
+	lease = pool -> last_lease;
 
 	/* If there are no leases in the pool that have
 	   expired, try the next one. */
 	if (!lease || lease -> ends > cur_time)
-		return allocate_lease (lp, packet,
-				       pool -> next, peer_has_leases);
+		return allocate_lease (packet, pool -> next, ok);
 
 	/* If we find an abandoned lease, and no other lease qualifies
 	   better, take it. */
-	/* XXX what if there are non-abandoned leases that are younger
-	   XXX than this?   Shouldn't we hunt for those here? */
-	if (lease -> binding_state == FTS_ABANDONED) {
+	if ((lease -> flags & ABANDONED_LEASE)) {
 		/* If we already have a non-abandoned lease that we didn't
 		   love, but that's okay, don't reclaim the abandoned lease. */
-		if (*lp)
-			return allocate_lease (lp, packet, pool -> next,
-					       peer_has_leases);
-		if (!allocate_lease (lp, packet,
-				     pool -> next, peer_has_leases)) {
+		if (ok)
+			return allocate_lease (packet, pool -> next, ok);
+		lp = allocate_lease (packet, pool -> next, 0);
+		if (!lp) {
 			log_error ("Reclaiming abandoned IP address %s.",
 			      piaddr (lease -> ip_addr));
-			lease_reference (lp, lease, MDL);
+			lease -> flags &= ~ABANDONED_LEASE;
+			return lease;
 		}
-		return 1;
+		return lp;
 	}
 
 	/* If there's a lease we could take, but it had previously been
@@ -3346,17 +2435,16 @@ int allocate_lease (struct lease **lp, struct packet *packet,
 	if (lease -> uid_len || lease -> hardware_addr.hlen) {
 		/* If we're already in that boat, no need to consider
 		   allocating this particular lease. */
-		if (*lp)
-			return allocate_lease (lp, packet, pool -> next,
-					       peer_has_leases);
+		if (ok)
+			return allocate_lease (packet, pool -> next, ok);
 
-		allocate_lease (lp, packet, pool -> next, peer_has_leases);
-		if (*lp)
-			return 1;
+		lp = allocate_lease (packet, pool -> next, 1);
+		if (lp)
+			return lp;
+		return lease;
 	}
 
-	lease_reference (lp, lease, MDL);
-	return 1;
+	return lease;
 }
 
 /* Determine whether or not a permit exists on a particular permit list
@@ -3417,60 +2505,3 @@ int permitted (packet, permit_list)
 	return 0;
 }
 
-int locate_network (packet)
-	struct packet *packet;
-{
-	struct iaddr ia;
-	struct data_string data;
-	struct subnet *subnet = (struct subnet *)0;
-	struct option_cache *oc;
-
-	/* See if there's a subnet selection option. */
-	oc = lookup_option (&dhcp_universe, packet -> options,
-			    DHO_SUBNET_SELECTION);
-
-	/* If there's no SSO and no giaddr, then use the shared_network
-	   from the interface, if there is one.   If not, fail. */
-	if (!oc && !packet -> raw -> giaddr.s_addr) {
-		if (packet -> interface -> shared_network) {
-			shared_network_reference
-				(&packet -> shared_network,
-				 packet -> interface -> shared_network, MDL);
-			return 1;
-		}
-		return 0;
-	}
-
-	/* If there's an SSO, and it's valid, use it to figure out the
-	   subnet.    If it's not valid, fail. */
-	if (oc) {
-		memset (&data, 0, sizeof data);
-		if (!evaluate_option_cache (&data, packet, (struct lease *)0,
-					    (struct client_state *)0,
-					    packet -> options,
-					    (struct option_state *)0,
-					    &global_scope, oc, MDL)) {
-			return 0;
-		}
-		if (data.len != 4) {
-			return 0;
-		}
-		ia.len = 4;
-		memcpy (ia.iabuf, data.data, 4);
-		data_string_forget (&data, MDL);
-	} else {
-		ia.len = 4;
-		memcpy (ia.iabuf, &packet -> raw -> giaddr, 4);
-	}
-
-	/* If we know the subnet on which the IP address lives, use it. */
-	if (find_subnet (&subnet, ia, MDL)) {
-		shared_network_reference (&packet -> shared_network,
-					  subnet -> shared_network, MDL);
-		subnet_dereference (&subnet, MDL);
-		return 1;
-	}
-
-	/* Otherwise, fail. */
-	return 0;
-}
