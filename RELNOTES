@@ -45,6 +45,10 @@ and for prodding me into improving it.
 
 			Changes since 3.0.1
 
+- A problem that kept DHCP Failover secondaries from tearing down
+  ddns records was repaired.  Thanks to a patch from Ulf Ekberg from
+  Infoblox.
+
 - 64bit pointer sizes are detected properly on FreeBSD now.
 
 - A bug was repaired where the DHCP server would leave stale references

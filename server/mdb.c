@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.67.2.19 2004/06/10 17:59:56 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.67.2.20 2004/09/01 20:19:44 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1119,7 +1119,9 @@ void make_binding_state_transition (struct lease *lease)
 	    ((
 #if defined (FAILOVER_PROTOCOL)
 		    peer &&
-		    lease -> binding_state == FTS_EXPIRED &&
+		    (lease -> binding_state == FTS_EXPIRED ||
+		     (peer -> i_am == secondary &&
+		      lease -> binding_state == FTS_ACTIVE)) &&
 		    (lease -> next_binding_state == FTS_FREE ||
 		     lease -> next_binding_state == FTS_BACKUP)) ||
 	     (!peer &&
