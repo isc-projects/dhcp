@@ -1432,6 +1432,8 @@ int dns_zone_reference PROTO ((struct dns_zone **,
 			       struct dns_zone *, const char *, int));
 
 /* print.c */
+char *quotify_string (const char *, const char *, int);
+char *quotify_buf (const unsigned char *, unsigned, const char *, int);
 char *print_hw_addr PROTO ((int, int, unsigned char *));
 void print_lease PROTO ((struct lease *));
 void dump_raw PROTO ((const unsigned char *, unsigned));
