@@ -29,7 +29,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: omapi.c,v 1.24 2000/01/08 01:49:36 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: omapi.c,v 1.25 2000/01/25 01:43:48 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1193,6 +1193,7 @@ isc_result_t dhcp_host_get_value (omapi_object_t *h, omapi_object_t *id,
 					   (struct lease *)0,
 					   (struct option_state *)0,
 					   (struct option_state *)0,
+					   &global_scope,
 					   host -> fixed_addr)) {
 			status = (omapi_make_const_value
 				  (value, name, ip_addrs.data, ip_addrs.len,
@@ -1327,6 +1328,7 @@ isc_result_t dhcp_host_stuff_values (omapi_object_t *c,
 				   (struct lease *)0,
 				   (struct option_state *)0,
 				   (struct option_state *)0,
+				   &global_scope,
 				   host -> fixed_addr)) {
 		status = omapi_connection_put_name (c, "ip-address");
 		if (status != ISC_R_SUCCESS)
