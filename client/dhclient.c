@@ -41,7 +41,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.106 2000/06/24 06:02:01 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.107 2000/07/17 20:56:11 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -104,6 +104,10 @@ int main (argc, argv, envp)
 	isc_result_t result;
 	int persist = 0;
 	int omapi_port;
+	int no_dhclient_conf = 0;
+	int no_dhclient_db = 0;
+	int no_dhclient_pid = 0;
+	char *s;
 
 #ifdef SYSLOG_4_2
 	openlog ("dhclient", LOG_NDELAY);
@@ -147,14 +151,17 @@ int main (argc, argv, envp)
                         if (++i == argc)
                                 usage ();
                         path_dhclient_pid = argv [i];
+			no_dhclient_pid = 1;
                 } else if (!strcmp (argv [i], "-cf")) {
                         if (++i == argc)
                                 usage ();
                         path_dhclient_conf = argv [i];
+			no_dhclient_conf = 1;
                 } else if (!strcmp (argv [i], "-lf")) {
                         if (++i == argc)
                                 usage ();
                         path_dhclient_db = argv [i];
+			no_dhclient_db = 1;
 		} else if (!strcmp (argv [i], "-q")) {
 			quiet = 1;
 			quiet_interface_discovery = 1;
@@ -193,6 +200,16 @@ int main (argc, argv, envp)
  		    tmp -> flags = INTERFACE_REQUESTED;
 		    interfaces_requested = 1;
  		}
+	}
+
+	if (!no_dhclient_conf && (s = getenv ("PATH_DHCLIENT_CONF"))) {
+		path_dhclient_conf = s;
+	}
+	if (!no_dhclient_db && (s = getenv ("PATH_DHCLIENT_DB"))) {
+		path_dhclient_db = s;
+	}
+	if (!no_dhclient_pid && (s = getenv ("PATH_DHCLIENT_PID"))) {
+		path_dhclient_pid = s;
 	}
 
 	/* first kill of any currently running client */
@@ -2168,6 +2185,7 @@ void script_write_params (client, prefix, lease)
 	struct data_string data;
 	struct option_cache *oc;
 	pair *hash;
+	char *s, *t;
 
 	fprintf (scriptFile, "%sip_address=\"%s\"\n",
 		 prefix, piaddr (lease -> address));
