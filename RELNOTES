@@ -40,6 +40,10 @@ express my thanks to all of these good people here.
 
 		     Changes since October 27, 1999
 
+- Add new PTR record _after_ zapping old PTR record - otherwise, the net
+  result is that there's no PTR record!   Thanks to Irina Goble for catching
+  this!
+
 - Clean up a loophole in the code that sets up the pool expiry timer that
   could result in the DNS record for a lease not being cleaned up if a lease
   were granted that expired earlier than what had previously been the earliest
