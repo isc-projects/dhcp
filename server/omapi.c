@@ -50,7 +50,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: omapi.c,v 1.36 2000/09/27 23:37:44 mellon Exp $ Copyright (c) 1999-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: omapi.c,v 1.37 2000/09/29 18:22:05 mellon Exp $ Copyright (c) 1999-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -769,6 +769,7 @@ isc_result_t dhcp_host_set_value  (omapi_object_t *h,
 			memcpy (&type,
 				value -> u.buffer.value,
 				value -> u.buffer.len);
+			type = ntohl (type);
 		} else if (value -> type == omapi_datatype_int)
 			type = value -> u.integer;
 		else
