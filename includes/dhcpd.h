@@ -717,6 +717,9 @@ struct client_config {
 	int omapi_port;			/* port on which to accept OMAPI
 					   connections, or -1 for no
 					   listener. */
+	int do_forward_update;		/* If nonzero, and if we have the
+					   information we need, update the
+					   A record for the address we get. */
 };
 
 /* Per-interface state used in the dhcp client... */
@@ -1891,7 +1894,7 @@ void do_release PROTO ((struct client_state *));
 int dhclient_interface_shutdown_hook (struct interface_info *);
 int dhclient_interface_discovery_hook (struct interface_info *);
 isc_result_t dhclient_interface_startup_hook (struct interface_info *);
-void client_dns_update (struct client_state *client, int);
+void client_dns_update (struct client_state *client, int, int);
 
 /* db.c */
 int write_lease PROTO ((struct lease *));
