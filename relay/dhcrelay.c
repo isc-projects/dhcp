@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcrelay.c,v 1.49 2001/02/12 20:50:31 mellon Exp $ Copyright (c) 1997-2000 Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcrelay.c,v 1.50 2001/02/26 22:21:14 mellon Exp $ Copyright (c) 1997-2000 Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -819,8 +819,8 @@ int add_relay_agent_options (ip, packet, length, giaddr)
 	/* Relay option's total length shouldn't ever get to be more than
 	   257 bytes. */
 	if (sp - op > 257)
-		log_fatal ("total agent option length exceeds 257 (%d) on %s\n",
-		       sp - op, ip -> name);
+	    log_fatal ("total agent option length exceeds 257 (%ld) on %s\n",
+		       (long)(sp - op), ip -> name);
 
 	/* Calculate length of RAI option. */
 	op [1] = sp - op - 2;

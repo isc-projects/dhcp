@@ -47,7 +47,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bpf.c,v 1.45 2000/12/28 23:13:07 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bpf.c,v 1.46 2001/02/26 22:21:05 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -282,8 +282,8 @@ void if_register_receive (info)
 		log_fatal ("Can't get bpf buffer length: %m");
 	info -> rbuf = dmalloc (info -> rbuf_max, MDL);
 	if (!info -> rbuf)
-		log_fatal ("Can't allocate %d bytes for bpf input buffer.",
-			   info -> rbuf_max);
+		log_fatal ("Can't allocate %ld bytes for bpf input buffer.",
+			   (long)(info -> rbuf_max));
 	info -> rbuf_offset = 0;
 	info -> rbuf_len = 0;
 

@@ -50,7 +50,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: comapi.c,v 1.7 2000/12/28 23:14:05 mellon Exp $ Copyright (c) 1999-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: comapi.c,v 1.8 2001/02/26 22:21:06 mellon Exp $ Copyright (c) 1999-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -267,7 +267,7 @@ isc_result_t dhcp_group_signal_handler (omapi_object_t *h,
 		if (!group -> name) {
 			char hnbuf [64];
 			sprintf (hnbuf, "ng%08lx%08lx",
-				 cur_time, (unsigned long)group);
+				 (unsigned long)cur_time, (unsigned long)group);
 			group -> name = dmalloc (strlen (hnbuf) + 1, MDL);
 			if (!group -> name)
 				return ISC_R_NOMEMORY;

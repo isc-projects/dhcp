@@ -68,8 +68,8 @@ void trace_interface_input (trace_type_t *ttype, unsigned len, char *buf)
 	isc_result_t status;
 
 	if (len != sizeof *tipkt) {
-		log_error ("trace interface packet size mismatch: %d != %d",
-			   sizeof *tipkt, len);
+		log_error ("trace interface packet size mismatch: %ld != %d",
+			   (long)(sizeof *tipkt), len);
 		return;
 	}
 	tipkt = (trace_interface_packet_t *)buf;

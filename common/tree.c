@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.98 2001/01/25 08:24:33 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.99 2001/02/26 22:21:11 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2220,7 +2220,7 @@ int evaluate_numeric_expression (result, packet, lease, client_state,
 		if (lease -> ends < cur_time) {
 			log_error ("%s %lu when it is now %lu",
 				   "data: lease_time: lease ends at",
-				   lease -> ends, cur_time);
+				   (long)(lease -> ends), (long)cur_time);
 			return 0;
 		}
 		*result = lease -> ends - cur_time;

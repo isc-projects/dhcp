@@ -130,8 +130,8 @@ isc_result_t trace_begin (const char *filename,
 		log_error ("%s(%d): trace_begin write failed: %m", file, line);
 		return ISC_R_UNEXPECTED;
 	} else if (status != sizeof tfh) {
-		log_error ("%s(%d): trace_begin: short write (%d:%d)",
-			   file, line, status, sizeof tfh);
+		log_error ("%s(%d): trace_begin: short write (%d:%ld)",
+			   file, line, status, (long)(sizeof tfh));
 		trace_stop ();
 		return ISC_R_UNEXPECTED;
 	}
@@ -207,8 +207,8 @@ isc_result_t trace_write_packet_iov (trace_type_t *ttype,
 			   file, line);
 		return ISC_R_UNEXPECTED;
 	} else if (status != sizeof tmp) {
-		log_error ("%s(%d): trace_write_packet: short write (%d:%d)",
-			   file, line, status, sizeof tmp);
+		log_error ("%s(%d): trace_write_packet: short write (%d:%ld)",
+			   file, line, status, (long)(sizeof tmp));
 		trace_stop ();
 	}
 
@@ -408,8 +408,8 @@ void trace_file_replay (const char *filename)
 		if (ferror (traceinfile))
 			log_error ("Error reading trace file header: %m");
 		else
-			log_error ("Short read on trace file header: %d %d.",
-				   status, sizeof tracefile_header);
+			log_error ("Short read on trace file header: %d %ld.",
+				   status, (long)(sizeof tracefile_header));
 		goto out;
 	}
 	tracefile_header.magic = ntohl (tracefile_header.magic);

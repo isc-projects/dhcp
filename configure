@@ -83,7 +83,8 @@ if [ "$sysname" = "" ]; then
     NetBSD)
       hw=`uname -m`
       case $hw in
-	arm32) sysname=netbsd-arm32;;
+	arm32) sysname=netbsd-nocast;;
+	alpha) sysname=netbsd-nocast;;
 	*) sysname=netbsd;;
       esac;;
     OpenBSD)

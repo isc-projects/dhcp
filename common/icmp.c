@@ -44,7 +44,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: icmp.c,v 1.27 2001/02/17 21:34:50 mellon Exp $ Copyright (c) 1996-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: icmp.c,v 1.28 2001/02/26 22:21:08 mellon Exp $ Copyright (c) 1996-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -311,7 +311,7 @@ void trace_icmp_output_input (trace_type_t *ttype, unsigned length, char *buf)
 
 	if (length != (sizeof (*icmp) + (sizeof *ia))) {
 		log_error ("trace_icmp_output_input: data size mismatch %d:%d",
-			   length, (sizeof (*icmp) + (sizeof *ia)));
+			   length, (int)((sizeof (*icmp)) + (sizeof *ia)));
 		return;
 	}
 	ia = (struct iaddr *)buf;

@@ -41,7 +41,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.121 2001/02/15 22:17:05 neild Exp $ Copyright (c) 1995-2001 Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.122 2001/02/26 22:21:04 mellon Exp $ Copyright (c) 1995-2001 Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -201,8 +201,8 @@ int main (argc, argv, envp)
  			log_fatal ("Can't record interface %s:%s",
 				   argv [i], isc_result_totext (status));
 		    if (strlen (argv [i]) > sizeof tmp -> name)
-			    log_fatal ("%s: interface name too long (max %d)",
-				       argv [i], strlen (argv [i]));
+			    log_fatal ("%s: interface name too long (max %ld)",
+				       argv [i], (long)strlen (argv [i]));
  		    strcpy (tmp -> name, argv [i]);
 		    if (interfaces) {
 			    interface_reference (&tmp -> next,
@@ -1352,7 +1352,7 @@ void send_discover (cpp)
 	log_info ("DHCPDISCOVER on %s to %s port %d interval %ld",
 	      client -> name ? client -> name : client -> interface -> name,
 	      inet_ntoa (sockaddr_broadcast.sin_addr),
-	      ntohs (sockaddr_broadcast.sin_port), client -> interval);
+	      ntohs (sockaddr_broadcast.sin_port), (long)(client -> interval));
 
 	/* Send out a packet. */
 	result = send_packet (client -> interface, (struct packet *)0,
