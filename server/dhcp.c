@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.100.2.11 1999/10/27 21:57:23 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.100.2.12 1999/10/28 20:33:10 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -279,16 +279,13 @@ void dhcprelease (packet)
 			}
 		}
 	} else {
-
 		/* The client is supposed to pass a valid client-identifier,
 		   but the spec on this has changed historically, so try the
 		   IP address in ciaddr if the client-identifier was
 		   not specified. */
-		if (!lease) {
-			cip.len = 4;
-			memcpy (cip.iabuf, &packet -> raw -> ciaddr, 4);
-			lease = find_lease_by_ip_addr (cip);
-		}
+		cip.len = 4;
+		memcpy (cip.iabuf, &packet -> raw -> ciaddr, 4);
+		lease = find_lease_by_ip_addr (cip);
 	}
 
 	log_info ("DHCPRELEASE of %s from %s via %s (%sfound)",
