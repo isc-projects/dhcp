@@ -47,7 +47,7 @@ static char copyright[] =
 
 #include "dhcpd.h"
 
-static char dhcp_message [256];
+static unsigned char dhcp_message [256];
 
 void dhcp (packet)
 	struct packet *packet;
@@ -319,7 +319,7 @@ void nak_lease (packet, cip)
 	if (result < 0)
 		warn ("sendpkt: %m");
 
-#ifdef DEBUG
+#ifdef DEBUG_PACKET
 	dump_packet (packet);
 	dump_raw ((unsigned char *)packet -> raw, packet -> packet_length);
 	dump_packet (&outgoing);
@@ -508,7 +508,7 @@ void ack_lease (packet, lease, offer, when)
 	if (vendor_class) {
 		options [DHO_DHCP_CLASS_IDENTIFIER] = &vendor_class_tree;
 		options [DHO_DHCP_CLASS_IDENTIFIER] -> value =
-			vendor_class -> name;
+			(unsigned char *)vendor_class -> name;
 		options [DHO_DHCP_CLASS_IDENTIFIER] -> len = 
 			strlen (vendor_class -> name);
 		options [DHO_DHCP_CLASS_IDENTIFIER] -> buf_size =
@@ -522,7 +522,7 @@ void ack_lease (packet, lease, offer, when)
 	if (user_class) {
 		options [DHO_DHCP_USER_CLASS_ID] = &user_class_tree;
 		options [DHO_DHCP_USER_CLASS_ID] -> value =
-			user_class -> name;
+			(unsigned char *)user_class -> name;
 		options [DHO_DHCP_USER_CLASS_ID] -> len = 
 			strlen (user_class -> name);
 		options [DHO_DHCP_USER_CLASS_ID] -> buf_size =
@@ -604,7 +604,7 @@ void ack_lease (packet, lease, offer, when)
 	if (result < 0)
 		warn ("sendpkt: %m");
 
-#ifdef DEBUG
+#ifdef DEBUG_PACKET
 	dump_packet (packet);
 	dump_raw ((unsigned char *)packet -> raw, packet -> packet_length);
 	dump_packet (&outgoing);
