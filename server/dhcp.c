@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.192.2.42 2004/09/30 14:56:16 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.192.2.43 2004/11/04 00:03:43 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -3624,100 +3624,92 @@ int mockup_lease (struct lease **lp, struct packet *packet,
    a lease at all. */
 
 int allocate_lease (struct lease **lp, struct packet *packet,
-		    struct pool *pool, int *peer_has_leases)
+                    struct pool *pool, int *peer_has_leases)
 {
 	struct lease *lease = (struct lease *)0;
-	struct lease **lq;
-	struct permit *permit;
+	struct lease *candl = (struct lease *)0;
 
-	if (!pool)
-		return 0;
-
-	/* If we aren't elegible to try this pool, try a subsequent one. */
-	if ((pool -> prohibit_list &&
-	     permitted (packet, pool -> prohibit_list)) ||
-	    (pool -> permit_list && !permitted (packet, pool -> permit_list)))
-		return allocate_lease (lp, packet, pool -> next,
-				       peer_has_leases);
+	for (; pool ; pool = pool -> next) {
+		if ((pool -> prohibit_list &&
+		     permitted (packet, pool -> prohibit_list)) ||
+		    (pool -> permit_list &&
+		     !permitted (packet, pool -> permit_list)))
+			continue;
 
 #if defined (FAILOVER_PROTOCOL)
-	/* Peer_has_leases just says that we found at least one free lease.
-	   If no free lease is returned, the caller can deduce that this
-	   means the peer is hogging all the free leases, so we can print
-	   a better error message. */
-
-	/* XXX Do we need code here to ignore PEER_IS_OWNER and just check
-	   XXX tstp if we're in, e.g., PARTNER_DOWN?   Where do we deal with
-	   XXX CONFLICT_DETECTED, et al? */
-	/* XXX This should be handled by the lease binding "state machine" -
-	   XXX that is, when we get here, if a lease could be allocated, it
-	   XXX will have the correct binding state so that the following code
-	   XXX will result in its being allocated. */
-	/* Skip to the most expired lease in the pool that is not owned by a
-	   failover peer. */
-	if (pool -> failover_peer) {
-		if (pool -> failover_peer -> i_am == primary) {
-			if (pool -> backup)
-				*peer_has_leases = 1;
-			lease = pool -> free;
-			if (!lease)
-				lease = pool -> abandoned;
-		} else {
-			if (pool -> free)
-				*peer_has_leases = 1;
-			lease = pool -> backup;
-		}
-	} else
+		/* Peer_has_leases just says that we found at least one
+		   free lease.  If no free lease is returned, the caller
+		   can deduce that this means the peer is hogging all the
+		   free leases, so we can print a better error message. */
+		/* XXX Do we need code here to ignore PEER_IS_OWNER and
+		 * XXX just check tstp if we're in, e.g., PARTNER_DOWN?
+		 * XXX Where do we deal with CONFLICT_DETECTED, et al? */
+		/* XXX This should be handled by the lease binding "state
+		 * XXX machine" - that is, when we get here, if a lease
+		 * XXX could be allocated, it will have the correct
+		 * XXX binding state so that the following code will
+		 * XXX result in its being allocated. */
+		/* Skip to the most expired lease in the pool that is not
+		 * owned by a failover peer. */
+		if (pool -> failover_peer) {
+			if (pool -> failover_peer -> i_am == primary) {
+				if (pool -> backup)
+					*peer_has_leases = 1;
+				candl = pool -> free;
+				if (!candl)
+					candl = pool -> abandoned;
+			} else {
+				if (pool -> free)
+					*peer_has_leases = 1;
+				candl = pool -> backup;
+			}
+		} else
 #endif
-	{
-		if (pool -> free)
-			lease = pool -> free;
-		else
-			lease = pool -> abandoned;
+		{
+			if (pool -> free)
+				candl = pool -> free;
+			else
+				candl = pool -> abandoned;
+		}
+
+		if (!candl || (candl -> ends > cur_time))
+			continue;
+
+		if (!lease) {
+			lease = candl;
+			continue;
+		}
+
+		if ((lease -> binding_state == FTS_ABANDONED) &&
+		    ((candl -> binding_state != FTS_ABANDONED) ||
+		     (candl -> ends < lease -> ends))) {
+			lease = candl;
+			continue;
+		} else if (candl -> binding_state == FTS_ABANDONED)
+			continue;
+
+		if ((lease -> uid_len || lease -> hardware_addr.hlen) &&
+		    ((!candl -> uid_len && !candl -> hardware_addr.hlen) ||
+		     (candl -> ends < lease -> ends))) {
+			lease = candl;
+			continue;
+		} else if (candl -> uid_len || candl -> hardware_addr.hlen)
+			continue;
+
+		if (candl -> ends < lease -> ends)
+			lease = candl;
 	}
 
-	/* If there are no leases in the pool that have
-	   expired, try the next one. */
-	if (!lease || lease -> ends > cur_time)
-		return allocate_lease (lp, packet,
-				       pool -> next, peer_has_leases);
+	if (lease) {
+		if (lease -> binding_state == FTS_ABANDONED)
+			log_error ("Reclaiming abandoned lease %s.",
+				   piaddr (lease -> ip_addr));
 
-	/* If we find an abandoned lease, and no other lease qualifies
-	   better, take it. */
-	/* XXX what if there are non-abandoned leases that are younger
-	   XXX than this?   Shouldn't we hunt for those here? */
-	if (lease -> binding_state == FTS_ABANDONED) {
-		/* If we already have a non-abandoned lease that we didn't
-		   love, but that's okay, don't reclaim the abandoned lease. */
-		if (*lp)
-			return allocate_lease (lp, packet, pool -> next,
-					       peer_has_leases);
-		if (!allocate_lease (lp, packet,
-				     pool -> next, peer_has_leases)) {
-			log_error ("Reclaiming abandoned IP address %s.",
-			      piaddr (lease -> ip_addr));
-			lease_reference (lp, lease, MDL);
-		}
+		lease_reference (lp, lease, MDL);
 		return 1;
 	}
 
-	/* If there's a lease we could take, but it had previously been
-	   allocated to a different client, try for a virgin lease before
-	   stealing it. */
-	if (lease -> uid_len || lease -> hardware_addr.hlen) {
-		/* If we're already in that boat, no need to consider
-		   allocating this particular lease. */
-		if (*lp)
-			return allocate_lease (lp, packet, pool -> next,
-					       peer_has_leases);
-
-		allocate_lease (lp, packet, pool -> next, peer_has_leases);
-		if (*lp)
-			return 1;
-	}
-
-	lease_reference (lp, lease, MDL);
-	return 1;
+	return 0;
 }
 
 /* Determine whether or not a permit exists on a particular permit list
