@@ -530,7 +530,7 @@ isc_result_t omapi_object_update (omapi_object_t *obj, omapi_object_t *id,
 		status = omapi_set_value (obj, id,
 					  gsrc -> values [i] -> name,
 					  gsrc -> values [i] -> value);
-		if (status != ISC_R_SUCCESS)
+		if (status != ISC_R_SUCCESS && status != ISC_R_UNCHANGED)
 			return status;
 	}
 	if (handle)
