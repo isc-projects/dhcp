@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: execute.c,v 1.39 2000/08/28 19:36:30 neild Exp $ Copyright (c) 1998-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: execute.c,v 1.40 2000/10/10 23:22:39 mellon Exp $ Copyright (c) 1998-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -248,12 +248,8 @@ int execute_statements (result, packet, lease, in_options, out_options, scope,
 			      r -> data.option -> option -> name);
 		      option_statement:
 #endif
-			if (r -> data.option -> option -> universe -> set_func)
-				((r -> data.option -> option ->
-				  universe -> set_func)
-				 (r -> data.option -> option -> universe,
-				  out_options,
-				  r -> data.option, r -> op));
+			set_option (r -> data.option -> option -> universe,
+				    out_options, r -> data.option, r -> op);
 			break;
 
 		      case set_statement:
