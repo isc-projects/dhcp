@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: upf.c,v 1.14 1999/10/07 06:47:49 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: upf.c,v 1.15 2000/01/25 01:17:01 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -103,9 +103,9 @@ int if_register_upf (info)
 		log_fatal ("Invalid hardware address length on %s: %d",
 		       info -> name, param.end_addr_len);
 
-	info -> hw_address.hlen = 6;
-	info -> hw_address.htype = ARPHRD_ETHER;
-	memcpy (&info -> hw_address.haddr [0], param.end_addr, 6);
+	info -> hw_address.hlen = 7;
+	info -> hw_address.hbuf [0] = ARPHRD_ETHER;
+	memcpy (&info -> hw_address.hbuf [1], param.end_addr, 6);
 
 	return sock;
 }
@@ -125,9 +125,9 @@ void if_register_send (info)
         if (!quiet_interface_discovery)
 		log_info ("Sending on   UPF/%s/%s%s%s",
 		      info -> name,
-		      print_hw_addr (info -> hw_address.htype,
-				     info -> hw_address.hlen,
-				     info -> hw_address.haddr),
+		      print_hw_addr (info -> hw_address.hbuf [0],
+				     info -> hw_address.hlen - 1,
+				     &info -> hw_address.hbuf [1]),
 		      (info -> shared_network ? "/" : ""),
 		      (info -> shared_network ?
 		       info -> shared_network -> name : ""));
@@ -191,9 +191,9 @@ void if_register_receive (info)
         if (!quiet_interface_discovery)
 		log_info ("Listening on UPF/%s/%s%s%s",
 		      info -> name,
-		      print_hw_addr (info -> hw_address.htype,
-				     info -> hw_address.hlen,
-				     info -> hw_address.haddr),
+		      print_hw_addr (info -> hw_address.hbuf [0],
+				     info -> hw_address.hlen - 1,
+				     &info -> hw_address.hbuf [1]),
 		      (info -> shared_network ? "/" : ""),
 		      (info -> shared_network ?
 		       info -> shared_network -> name : ""));
