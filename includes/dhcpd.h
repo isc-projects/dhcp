@@ -1061,6 +1061,14 @@ void write_leases PROTO ((void));
 void dump_subnets PROTO ((void));
 
 /* alloc.c */
+#if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL)
+extern struct dmalloc_preamble *dmalloc_list;
+extern unsigned long dmalloc_outstanding;
+extern unsigned long dmalloc_longterm;
+extern unsigned long dmalloc_generation;
+extern unsigned long dmalloc_cutoff_generation;
+#endif
+
 VOIDPTR dmalloc PROTO ((int, char *));
 void dfree PROTO ((VOIDPTR, char *));
 struct packet *new_packet PROTO ((char *));
