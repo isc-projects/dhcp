@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcrelay.c,v 1.45 2000/09/27 19:35:56 mellon Exp $ Copyright (c) 1997-2000 Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcrelay.c,v 1.46 2000/09/29 18:14:00 mellon Exp $ Copyright (c) 1997-2000 Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -146,19 +146,24 @@ int main (argc, argv, envp)
 			no_daemon = 1;
  		} else if (!strcmp (argv [i], "-i")) {
 			struct interface_info *tmp =
-				((struct interface_info *)
-				 dmalloc (sizeof *tmp, MDL));
-			if (!tmp)
-				log_fatal ("Insufficient memory to %s %s",
-				       "record interface", argv [i]);
+				(struct interface_info *)0;
+			status = interface_allocate (&tmp, MDL);
+			if (status != ISC_R_SUCCESS)
+				log_fatal ("%s: interface_allocate: %s",
+					   argv [i],
+					   isc_result_totext (status));
 			if (++i == argc) {
 				usage ();
 			}
-			memset (tmp, 0, sizeof *tmp);
 			strcpy (tmp -> name, argv [i]);
-			tmp -> next = interfaces;
 			tmp -> flags = INTERFACE_REQUESTED;
-			interfaces = tmp;
+			if (interfaces) {
+				interface_reference (&tmp -> next, interfaces,
+						     MDL);
+				interface_dereference (&interfaces, MDL);
+			}
+			interface_reference (&interfaces, tmp, MDL);
+			interface_dereference (&tmp, MDL);
 		} else if (!strcmp (argv [i], "-q")) {
 			quiet = 1;
 			quiet_interface_discovery = 1;
