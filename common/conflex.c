@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: conflex.c,v 1.63 2000/01/05 17:59:12 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: conflex.c,v 1.64 2000/01/08 01:27:54 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -506,6 +506,8 @@ static enum dhcp_token intern (atom, dfv)
 			return BOOLEAN;
 		break;
 	      case 'c':
+		if (!strcasecmp (atom + 1, "ase"))
+			return CASE;
 		if (!strcasecmp (atom + 1, "ommit"))
 			return COMMIT;
 		if (!strcasecmp (atom + 1, "ode"))
@@ -572,6 +574,8 @@ static enum dhcp_token intern (atom, dfv)
 			return DUPLICATES;
 		if (!strcasecmp (atom + 1, "eclines"))
 			return DECLINES;
+		if (!strcasecmp (atom + 1, "efined"))
+			return DEFINED;
 		break;
 	      case 'e':
 		if (isascii (atom [1]) && tolower (atom [1]) == 'x') {
@@ -605,6 +609,8 @@ static enum dhcp_token intern (atom, dfv)
 			return FIXED_ADDR;
 		if (!strcasecmp (atom + 1, "ddi"))
 			return FDDI;
+		if (!strcasecmp (atom + 1, "ormerr"))
+			return NS_FORMERR;
 		break;
 	      case 'g':
 		if (!strcasecmp (atom + 1, "iaddr"))
@@ -711,6 +717,20 @@ static enum dhcp_token intern (atom, dfv)
 			return NO;
 		if (!strcasecmp (atom + 1, "s-update"))
 			return NS_UPDATE;
+		if (!strcasecmp (atom + 1, "oerror"))
+			return NS_NOERROR;
+		if (!strcasecmp (atom + 1, "otauth"))
+			return NS_NOTAUTH;
+		if (!strcasecmp (atom + 1, "otimp"))
+			return NS_NOTIMP;
+		if (!strcasecmp (atom + 1, "otzone"))
+			return NS_NOTZONE;
+		if (!strcasecmp (atom + 1, "xdomain"))
+			return NS_NXDOMAIN;
+		if (!strcasecmp (atom + 1, "xrrset"))
+			return NS_NXRRSET;
+		if (!strcasecmp (atom + 1, "ull"))
+			return TOKEN_NULL;
 		break;
 	      case 'o':
 		if (!strcasecmp (atom + 1, "r"))
@@ -777,8 +797,14 @@ static enum dhcp_token intern (atom, dfv)
 			return REVERSE;
 		if (!strcasecmp (atom + 1, "elease"))
 			return RELEASE;
+		if (!strcasecmp (atom + 1, "efused"))
+			return NS_REFUSED;
 		break;
 	      case 's':
+		if (!strcasecmp (atom + 1, "ervfail"))
+			return NS_SERVFAIL;
+		if (!strcasecmp (atom + 1, "witch"))
+			return SWITCH;
 		if (!strcasecmp (atom + 1, "igned"))
 			return SIGNED;
 		if (!strcasecmp (atom + 1, "tring"))
@@ -823,7 +849,9 @@ static enum dhcp_token intern (atom, dfv)
 		if (!strcasecmp (atom + 1, "tatic"))
 			return STATIC;
 		if (!strcasecmp (atom + 1, "plit"))
-		    return SPLIT;
+			return SPLIT;
+		if (!strcasecmp (atom + 1, "et"))
+			return TOKEN_SET;
 		break;
 	      case 't':
 		if (!strcasecmp (atom + 1, "imestamp"))
@@ -879,6 +907,10 @@ static enum dhcp_token intern (atom, dfv)
 	      case 'y':
 		if (!strcasecmp (atom + 1, "iaddr"))
 			return YIADDR;
+		if (!strcasecmp (atom + 1, "xdomain"))
+			return NS_YXDOMAIN;
+		if (!strcasecmp (atom + 1, "xrrset"))
+			return NS_YXRRSET;
 		break;
 	}
 	return dfv;
