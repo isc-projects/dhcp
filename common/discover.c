@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: discover.c,v 1.22 2000/01/29 16:15:52 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: discover.c,v 1.23 2000/02/15 20:40:30 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -64,6 +64,7 @@ void discover_interfaces (state)
 	char *s;
 #endif
 	isc_result_t status;
+	static int setup_fallback = 0;
 
 	if (!dhcp_type_interface) {
 		status = omapi_object_type_register
@@ -165,12 +166,12 @@ void discover_interfaces (state)
 		last = 0;
 		for (ip = dummy_interfaces; ip; ip = ip -> next) {
 			if (!strcmp (ip -> name, tmp -> name)) {
-				/* remove from dummy_interfaces */
+				/* Remove from dummy_interfaces */
 				if (last)
 					last -> next = ip -> next;
 				else
 					dummy_interfaces = ip -> next;
-				/* copy "client" to tmp */
+				/* Copy "client" to tmp */
 				if (ip -> client) {
 					tmp -> client = ip -> client;
 					tmp -> client -> interface = tmp;
@@ -470,8 +471,10 @@ void discover_interfaces (state)
 
 	/* If we're just trying to get a list of interfaces that we might
 	   be able to configure, we can quit now. */
-	if (state == DISCOVER_UNCONFIGURED)
+	if (state == DISCOVER_UNCONFIGURED) {
+		close (sock);
 		return;
+	}
 
 	/* Weed out the interfaces that did not have IP addresses. */
 	last = (struct interface_info *)0;
@@ -560,7 +563,11 @@ void discover_interfaces (state)
 
 	close (sock);
 
-	maybe_setup_fallback ();
+	if (!setup_fallback) {
+		setup_fallback = 1;
+		maybe_setup_fallback ();
+	}
+
 #if defined (HAVE_SETFD)
 	if (fallback_interface) {
 	    if (fcntl (fallback_interface -> rfdesc, F_SETFD, 1) < 0)

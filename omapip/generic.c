@@ -117,7 +117,8 @@ isc_result_t omapi_generic_set_value (omapi_object_t *h,
 			memcpy (va, g -> values, g -> va_max * sizeof *va);
 		memset (va + g -> va_max, 0,
 			(vm_new - g -> va_max) * sizeof *va);
-		dfree (g -> values, MDL);
+		if (g -> values)
+			dfree (g -> values, MDL);
 		g -> values = va;
 		g -> va_max = vm_new;
 	}

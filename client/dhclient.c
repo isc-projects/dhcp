@@ -29,7 +29,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.96 2000/02/02 20:47:55 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.97 2000/02/15 20:40:27 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1854,7 +1854,7 @@ void make_release (client, lease)
 		sizeof client -> packet.siaddr);
 	client -> packet.giaddr = giaddr;
 	memcpy (client -> packet.chaddr,
-		&client -> interface -> hw_address.hbuf [0],
+		&client -> interface -> hw_address.hbuf [1],
 		client -> interface -> hw_address.hlen);
 
 #ifdef DEBUG_PACKET
@@ -2332,25 +2332,34 @@ void do_release(client)
 	   so pick an xid now. */
 	client -> xid = random ();
 
-	/* Make a DHCPREQUEST packet, and set appropriate per-interface
-	   flags. */
-	make_release (client, client -> active);
-	client -> destination = iaddr_broadcast;
-	client -> first_sending = cur_time;
-	client -> interval = client -> config -> initial_interval;
+	/* is there even a lease to release? */
+	if (client -> active) {
+		/* Make a DHCPRELEASE packet, and set appropriate per-interface
+		   flags. */
+		make_release (client, client -> active);
+		client -> destination = iaddr_broadcast;
+		client -> first_sending = cur_time;
+		client -> interval = client -> config -> initial_interval;
+	
+		/* Zap the medium list... */
+		client -> medium = (struct string_list *)0;
+	
+		/* Send out the first and only DHCPRELEASE packet. */
+		send_release (client);
+	}
 
-	/* Zap the medium list... */
-	client -> medium = (struct string_list *)0;
+	/* remove the timeouts for this client */
+	cancel_timeout (NULL, client);
 
-	/* Send out the first DHCPREQUEST packet. */
-	send_release (client);
-
-	script_init (client,
-		     "RELEASE", (struct string_list *)0);
-	if (client -> alias)
-		script_write_params (client, "alias_",
-				     client -> alias);
-	script_go (client);
+	/* if there was no lease, nothing to "do" */
+	if (client -> active) {
+		script_init (client,
+			     "RELEASE", (struct string_list *)0);
+		if (client -> alias)
+			script_write_params (client, "alias_",
+					     client -> alias);
+		script_go (client);
+	}
 }
 
 

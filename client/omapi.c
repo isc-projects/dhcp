@@ -4,7 +4,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: omapi.c,v 1.2 2000/02/02 07:36:32 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: omapi.c,v 1.3 2000/02/15 20:40:27 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -255,5 +255,35 @@ isc_result_t dhclient_interface_create (omapi_object_t **lp,
 isc_result_t dhclient_interface_remove (omapi_object_t *lp,
 					omapi_object_t *id)
 {
-	return ISC_R_NOTIMPLEMENTED;
+ 	struct interface_info *interface, *ip, *last;
+
+	interface = (struct interface_info *)lp;
+
+	/* remove from interfaces */
+	last = 0;
+	for (ip = interfaces; ip; ip = ip -> next) {
+		if (!strcmp (ip -> name, interface -> name)) {
+			if (last)
+				last -> next = ip -> next;
+			else
+				interfaces = ip -> next;
+			break;
+		}
+		last = ip;
+	}
+
+	/* add the interface to the dummy_interface list */
+	interface -> next = dummy_interfaces;
+	dummy_interfaces = interface;
+
+	/* do a DHCPRELEASE */
+	do_release (interface -> client);
+
+	/* remove the io object */
+	omapi_io_destroy (interface -> outer, MDL);
+
+	if_deregister_send (interface);
+	if_deregister_receive (interface);
+
+	return ISC_R_SUCCESS;
 }

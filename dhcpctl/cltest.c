@@ -11,6 +11,8 @@
 
 int main (int, char **);
 
+enum modes { up, down };
+
 int main (argc, argv)
 	int argc;
 	char **argv;
@@ -21,6 +23,17 @@ int main (argc, argv)
 	dhcpctl_data_string cid;
 	dhcpctl_data_string result, groupname, identifier;
 	int i;
+	int mode;
+	char *action;
+
+	if (!strcmp (argv [1], "-u")) {
+		mode = up;
+	} else if (!strcmp (argv [1], "-d")) {
+		mode = down;
+	} else {
+		fprintf (stderr, "Unknown switch \"%s\"\n", argv [1]);
+		exit (1);
+	}
 
 	status = dhcpctl_initialize ();
 	if (status != ISC_R_SUCCESS) {
@@ -46,19 +59,52 @@ int main (argc, argv)
 		exit (1);
 	}
 
-	status = dhcpctl_set_string_value (interface_handle, argv[1], "name");
+	status = dhcpctl_set_string_value (interface_handle, argv [2], "name");
 	if (status != ISC_R_SUCCESS) {
 		fprintf (stderr, "dhcpctl_set_value: %s\n",
 			 isc_result_totext (status));
 		exit (1);
 	}
 
-	status = dhcpctl_open_object (interface_handle, connection,
-				      DHCPCTL_CREATE | DHCPCTL_EXCL);
-	if (status != ISC_R_SUCCESS) {
-		fprintf (stderr, "dhcpctl_open_object: %s\n",
-			 isc_result_totext (status));
-		exit (1);
+	if (mode == up) {
+		/* "up" the interface */
+		printf ("upping interface %s\n", argv [2]);
+		action = "create";
+		status = dhcpctl_open_object (interface_handle, connection,
+					      DHCPCTL_CREATE | DHCPCTL_EXCL);
+		if (status != ISC_R_SUCCESS) {
+			fprintf (stderr, "dhcpctl_open_object: %s\n",
+				 isc_result_totext (status));
+			exit (1);
+		}
+	} else {
+		/* down the interface */
+		printf ("downing interface %s\n", argv [2]);
+		action = "remove";
+		status = dhcpctl_open_object (interface_handle, connection, 0);
+		if (status != ISC_R_SUCCESS) {
+			fprintf (stderr, "dhcpctl_open_object: %s\n",
+				 isc_result_totext (status));
+			exit (1);
+		}
+		status = dhcpctl_wait_for_completion (interface_handle,
+						      &waitstatus);
+		if (status != ISC_R_SUCCESS) {
+			fprintf (stderr, "dhcpctl_wait_for_completion: %s\n",
+				 isc_result_totext (status));
+			exit (1);
+		}
+		if (waitstatus != ISC_R_SUCCESS) {
+			fprintf (stderr, "dhcpctl_wait_for_completion: %s\n",
+				 isc_result_totext (waitstatus));
+			exit (1);
+		}
+		status = dhcpctl_object_remove (connection, interface_handle);
+		if (status != ISC_R_SUCCESS) {
+			fprintf (stderr, "dhcpctl_open_object: %s\n",
+				 isc_result_totext (status));
+			exit (1);
+		}
 	}
 
 	status = dhcpctl_wait_for_completion (interface_handle, &waitstatus);
@@ -68,7 +114,7 @@ int main (argc, argv)
 		exit (1);
 	}
 	if (waitstatus != ISC_R_SUCCESS) {
-		fprintf (stderr, "interface object create: %s\n",
+		fprintf (stderr, "interface object %s: %s\n", action,
 			 isc_result_totext (waitstatus));
 		exit (1);
 	}

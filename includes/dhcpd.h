@@ -1717,12 +1717,14 @@ void enter_auth_key PROTO ((struct data_string *, struct auth_key *));
 const struct auth_key *auth_key_lookup PROTO ((struct data_string *));
 
 /* omapi.c */
+extern omapi_object_type_t *dhcp_type_interface;
 extern omapi_object_type_t *dhcp_type_lease;
 extern omapi_object_type_t *dhcp_type_group;
 extern omapi_object_type_t *dhcp_type_pool;
 extern omapi_object_type_t *dhcp_type_shared_network;
 extern omapi_object_type_t *dhcp_type_subnet;
 extern omapi_object_type_t *dhcp_type_class;
+
 #if defined (FAILOVER_PROTOCOL)
 extern omapi_object_type_t *dhcp_type_failover_state;
 extern omapi_object_type_t *dhcp_type_failover_link;

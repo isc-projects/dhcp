@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dispatch.c,v 1.59 2000/01/26 14:55:33 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dispatch.c,v 1.60 2000/02/15 20:40:30 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -84,7 +84,8 @@ void add_timeout (when, where, what)
 	/* See if this timeout supersedes an existing timeout. */
 	t = (struct timeout *)0;
 	for (q = timeouts; q; q = q -> next) {
-		if (q -> func == where && q -> what == what) {
+		if ((where == NULL || q -> func == where) &&
+		    q -> what == what) {
 			if (t)
 				t -> next = q -> next;
 			else

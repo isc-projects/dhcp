@@ -23,7 +23,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: lpf.c,v 1.20 2000/01/27 23:27:38 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: lpf.c,v 1.21 2000/02/15 20:40:30 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -106,12 +106,34 @@ void if_register_send (info)
 	/* If we're using the lpf API for sending and receiving,
 	   we don't need to register this interface twice. */
 #ifndef USE_LPF_RECEIVE
-	info -> wfdesc = if_register_lpf (info, interface);
+	info -> wfdesc = if_register_lpf (info);
 #else
 	info -> wfdesc = info -> rfdesc;
 #endif
 	if (!quiet_interface_discovery)
 		log_info ("Sending on   LPF/%s/%s%s%s",
+		      info -> name,
+		      print_hw_addr (info -> hw_address.hbuf [0],
+				     info -> hw_address.hlen - 1,
+				     &info -> hw_address.hbuf [1]),
+		      (info -> shared_network ? "/" : ""),
+		      (info -> shared_network ?
+		       info -> shared_network -> name : ""));
+}
+
+void if_deregister_send (info)
+	struct interface_info *info;
+{
+	/* don't need to close twice if we are using lpf for sending and
+	   receiving */
+#ifndef USE_LPF_RECEIVE
+	/* for LPF this is simple, packet filters are removed when sockets
+	   are closed */
+	close (info -> wfdesc);
+#endif
+	info -> wfdesc = 0;
+	if (!quiet_interface_discovery)
+		log_info ("NOT Sending on   LPF/%s/%s%s%s",
 		      info -> name,
 		      print_hw_addr (info -> hw_address.hbuf [0],
 				     info -> hw_address.hlen - 1,
@@ -146,6 +168,24 @@ void if_register_receive (info)
 
 	if (!quiet_interface_discovery)
 		log_info ("Listening on LPF/%s/%s%s%s",
+			  info -> name,
+			  print_hw_addr (info -> hw_address.hbuf [0],
+					 info -> hw_address.hlen - 1,
+					 &info -> hw_address.hbuf [1]),
+			  (info -> shared_network ? "/" : ""),
+			  (info -> shared_network ?
+			   info -> shared_network -> name : ""));
+}
+
+void if_deregister_receive (info)
+	struct interface_info *info;
+{
+	/* for LPF this is simple, packet filters are removed when sockets
+	   are closed */
+	close (info -> rfdesc);
+	info -> rfdesc = 0;
+	if (!quiet_interface_discovery)
+		log_info ("NOT Listening on LPF/%s/%s%s%s",
 			  info -> name,
 			  print_hw_addr (info -> hw_address.hbuf [0],
 					 info -> hw_address.hlen - 1,

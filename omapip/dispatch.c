@@ -342,8 +342,29 @@ isc_result_t omapi_io_get_value (omapi_object_t *h,
 
 isc_result_t omapi_io_destroy (omapi_object_t *h, const char *file, int line)
 {
+	omapi_io_object_t *obj, *p, *last;
+
 	if (h -> type != omapi_type_io_object)
 		return ISC_R_INVALIDARG;
+	
+	obj = (omapi_io_object_t *)h;
+
+	/* only ios for interface objects? */
+	if (strcmp (obj -> inner -> type ->name, "interface") == 0) {
+		/* remove from the list of I/O states */
+		for (p = omapi_io_states.next; p; p = p -> next) {
+			if (p == obj) {
+				last -> next = p -> next;
+				break;
+			}
+			last = p;
+		}
+		
+		/*
+		 * omapi_object_dereference ((omapi_object_t **)&obj, MDL);
+		 */
+	}
+	
 	return ISC_R_SUCCESS;
 }
 
