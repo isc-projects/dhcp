@@ -38,14 +38,14 @@ dhcpctl_status dhcpctl_initialize ()
 				    dhcpctl_callback_get_value,
 				    dhcpctl_callback_destroy,
 				    dhcpctl_callback_signal_handler,
-				    dhcpctl_callback_stuff_values, 0, 0);
+				    dhcpctl_callback_stuff_values, 0, 0, 0);
 	omapi_object_type_register (&dhcpctl_remote_type,
 				    "dhcpctl-remote",
 				    dhcpctl_remote_set_value,
 				    dhcpctl_remote_get_value,
 				    dhcpctl_remote_destroy,
 				    dhcpctl_remote_signal_handler,
-				    dhcpctl_remote_stuff_values, 0, 0);
+				    dhcpctl_remote_stuff_values, 0, 0, 0);
 	return ISC_R_SUCCESS;
 }
 
@@ -362,21 +362,21 @@ dhcpctl_status dhcpctl_object_update (dhcpctl_handle connection,
 	isc_result_t status;
 	omapi_object_t *message = (omapi_object_t *)0;
 
-	status = omapi_message_new (&message, "dhcpctl_open_object");
+	status = omapi_message_new (&message, "dhcpctl_object_update");
 	if (status != ISC_R_SUCCESS) {
-		omapi_object_dereference (&message, "dhcpctl_open_object");
+		omapi_object_dereference (&message, "dhcpctl_object_update");
 		return status;
 	}
 	status = omapi_set_int_value (message, (omapi_object_t *)0,
 				      "op", OMAPI_OP_UPDATE);
 	if (status != ISC_R_SUCCESS) {
-		omapi_object_dereference (&message, "dhcpctl_open_object");
+		omapi_object_dereference (&message, "dhcpctl_object_update");
 		return status;
 	}
 	status = omapi_set_object_value (message, (omapi_object_t *)0,
 					 "object", h);
 	if (status != ISC_R_SUCCESS) {
-		omapi_object_dereference (&message, "dhcpctl_open_object");
+		omapi_object_dereference (&message, "dhcpctl_object_update");
 		return status;
 	}
 
@@ -398,21 +398,71 @@ dhcpctl_status dhcpctl_object_refresh (dhcpctl_handle connection,
 	isc_result_t status;
 	omapi_object_t *message = (omapi_object_t *)0;
 
-	status = omapi_message_new (&message, "dhcpctl_open_object");
+	status = omapi_message_new (&message, "dhcpctl_object_refresh");
 	if (status != ISC_R_SUCCESS) {
-		omapi_object_dereference (&message, "dhcpctl_open_object");
+		omapi_object_dereference (&message, "dhcpctl_object_refresh");
 		return status;
 	}
 	status = omapi_set_int_value (message, (omapi_object_t *)0,
 				      "op", OMAPI_OP_REFRESH);
 	if (status != ISC_R_SUCCESS) {
-		omapi_object_dereference (&message, "dhcpctl_open_object");
+		omapi_object_dereference (&message, "dhcpctl_object_refresh");
 		return status;
 	}
 	status = omapi_set_int_value (message, (omapi_object_t *)0,
 				      "handle", h -> handle);
 	if (status != ISC_R_SUCCESS) {
-		omapi_object_dereference (&message, "dhcpctl_open_object");
+		omapi_object_dereference (&message, "dhcpctl_object_refresh");
+		return status;
+	}
+
+	omapi_message_register (message);
+	status = omapi_protocol_send_message (connection -> outer,
+					      (omapi_object_t *)0,
+					      message, (omapi_object_t *)0);
+	omapi_object_dereference (&message, "dhcpctl_object_update");
+	return status;
+}
+
+/* Requests a refresh on the object referenced by the handle (there
+   can't be any other work in progress on the handle).   A
+   refresh means local parameters are updated from the server. */
+
+dhcpctl_status dhcpctl_object_delete (dhcpctl_handle connection,
+				      dhcpctl_handle h)
+{
+	isc_result_t status;
+	omapi_object_t *message = (omapi_object_t *)0;
+	dhcpctl_remote_object_t *ro;
+
+	if (h -> type != dhcpctl_remote_type)
+		return ISC_R_INVALIDARG;
+	ro = (dhcpctl_remote_object_t *)h;
+
+	status = omapi_message_new (&message, "dhcpctl_object_delete");
+	if (status != ISC_R_SUCCESS) {
+		omapi_object_dereference (&message, "dhcpctl_object_delete");
+		return status;
+	}
+	status = omapi_set_int_value (message, (omapi_object_t *)0,
+				      "op", OMAPI_OP_DELETE);
+	if (status != ISC_R_SUCCESS) {
+		omapi_object_dereference (&message, "dhcpctl_object_delete");
+		return status;
+	}
+
+	status = omapi_set_int_value (message, (omapi_object_t *)0, "handle",
+				      ro -> remote_handle);
+	if (status != ISC_R_SUCCESS) {
+		omapi_object_dereference (&message,
+					  "dhcpctl_object_delete");
+		return status;
+	}
+
+	status = omapi_set_object_value (message, (omapi_object_t *)0,
+					 "notify-object", h);
+	if (status != ISC_R_SUCCESS) {
+		omapi_object_dereference (&message, "dhcpctl_object_delete");
 		return status;
 	}
 
