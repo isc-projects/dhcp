@@ -22,10 +22,11 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.76 1999/05/06 20:44:58 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.77 1999/05/07 17:32:37 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
+#include "version.h"
 
 TIME cur_time;
 TIME default_lease_time = 43200; /* 12 hours... */
@@ -54,7 +55,7 @@ struct sockaddr_in sockaddr_broadcast;
 static char copyright[] =
 "Copyright 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.";
 static char arr [] = "All rights reserved.";
-static char message [] = "Internet Software Consortium DHCP Client V3.0-alpha-19990506";
+static char message [] = "Internet Software Consortium DHCP Client";
 static char contrib [] = "\nPlease contribute if you find this software useful.";
 static char url [] = "For info, please visit http://www.isc.org/dhcp-contrib.html\n";
 
@@ -133,7 +134,7 @@ int main (argc, argv, envp)
 	}
 
 	if (!quiet) {
-		log_info (message);
+		log_info ("%s %s", message, DHCP_VERSION);
 		log_info (copyright);
 		log_info (arr);
 		log_info (contrib);
