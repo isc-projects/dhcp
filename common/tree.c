@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.13 1998/11/05 18:45:23 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.14 1998/11/06 00:13:36 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -77,9 +77,10 @@ int make_const_option_cache (oc, buffer, data, len, option, name)
 		*buffer = 0;
 	} else {
 		bp = (struct buffer *)0;
-		if (!buffer_allocate (&bp, len, name))
+		if (!buffer_allocate (&bp, len, name)) {
 			warn ("%s: can't allocate buffer.", name);	
-		return 0;
+			return 0;
+		}
 	}
 
 	if (!option_cache_allocate (oc, name)) {
@@ -722,7 +723,7 @@ int evaluate_data_expression (result, packet, options, expr)
 		memset (&data, 0, sizeof data);
 		s0 = evaluate_data_expression (&data, packet, options,
 					       expr -> data.concat [0]);
-		memset (&data, 0, sizeof data);
+		memset (&other, 0, sizeof other);
 		s1 = evaluate_data_expression (&other, packet, options,
 					       expr -> data.concat [1]);
 
