@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.85.2.18 2004/10/01 23:25:17 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.85.2.19 2004/10/01 23:31:45 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -986,7 +986,7 @@ int store_options (ocount, buffer, buflen, packet, lease, client_state,
 		loop_count++;
 	    } while (firstix && (loop_count < 10));
 
-	    /* If this ever happens, I want to hear about it. */
+	    /* If this ever happens, we want to hear about it. */
 	    if (loop_count == 10) {
 		log_error ("Unable to sort overloaded options after 10 tries.");
 		return 0;
