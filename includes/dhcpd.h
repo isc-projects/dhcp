@@ -98,24 +98,41 @@ struct lease {
 	struct lease *next;
 	struct lease *prev;
 	struct lease *n_uid, *n_hw;
+	struct lease *waitq_next;
+
 	struct iaddr ip_addr;
 	TIME starts, ends, timestamp;
 	TIME offered_expiry;
 	unsigned char *uid;
 	int uid_len;
+	int uid_max;
+	unsigned char uid_buf [32];
 	char *hostname;
 	struct host_decl *host;
 	struct subnet *subnet;
 	struct shared_network *shared_network;
+	struct interface_info *ip;
 	struct hardware hardware_addr;
-	int state;
-	int xid;
+
 	int flags;
 #       define STATIC_LEASE		1
 #       define BOOTP_LEASE		2
 #	define DYNAMIC_BOOTP_OK		4
 #	define PERSISTENT_FLAGS		(DYNAMIC_BOOTP_OK)
 #	define EPHEMERAL_FLAGS		(BOOTP_LEASE)
+#	define MS_NULL_TERMINATION	8
+
+	struct tree_cache *options [256];
+	u_int32_t expiry, renewal, rebind;
+	char *filename, *server_name;
+
+	u_int32_t xid;
+	u_int16_t secs;
+	u_int16_t bootp_flags;
+	struct in_addr ciaddr;
+	struct in_addr giaddr;
+	u_int8_t hops;
+	u_int8_t offer;
 };
 
 #define	ROOT_GROUP	0
@@ -214,6 +231,7 @@ struct client_lease {
 
 /* Possible states in which the client can be. */
 enum dhcp_state {
+	S_REBOOTING,
 	S_INIT,
 	S_SELECTING,
 	S_REQUESTING, 
@@ -239,6 +257,9 @@ struct client_config {
 	TIME select_interval;		/* Wait this many seconds from the
 					   first DHCPDISCOVER before
 					   picking an offered lease. */
+	TIME reboot_timeout;		/* When in INIT-REBOOT, wait this
+					   long before giving up and going
+					   to INIT. */
 	struct string_list *media;	/* Possible network media values. */
 	char *script_name;		/* Name of config script. */
 	enum { IGNORE, ACCEPT, PREFER } bootp_policy;
@@ -461,6 +482,7 @@ void dhcpdecline PROTO ((struct packet *));
 void dhcpinform PROTO ((struct packet *));
 void nak_lease PROTO ((struct packet *, struct iaddr *cip));
 void ack_lease PROTO ((struct packet *, struct lease *, unsigned char, TIME));
+void dhcp_reply PROTO ((struct lease *));
 struct lease *find_lease PROTO ((struct packet *, struct shared_network *));
 struct lease *mockup_lease PROTO ((struct packet *,
 				   struct shared_network *,
@@ -689,6 +711,7 @@ void send_request PROTO ((struct interface_info *));
 void send_release PROTO ((struct interface_info *));
 void send_decline PROTO ((struct interface_info *));
 
+void state_reboot PROTO ((struct interface_info *));
 void state_init PROTO ((struct interface_info *));
 void state_selecting PROTO ((struct interface_info *));
 void state_requesting PROTO ((struct interface_info *));
