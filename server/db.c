@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: db.c,v 1.26 1999/09/08 01:49:56 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: db.c,v 1.27 1999/09/09 23:33:18 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -194,59 +194,71 @@ int write_host (host)
 		++errors;
 	}
 
-	errno = 0;
-	fprintf (db_file, "\n\tdynamic;");
-	if (errno)
-		++errors;
-	if (host -> interface.hlen) {
+	if (host -> flags & HOST_DECL_DYNAMIC) {
 		errno = 0;
-		fprintf (db_file, "\n\thardware %s %s;",
-			 hardware_types [host -> interface.htype],
-			 print_hw_addr (host -> interface.htype,
-					host -> interface.hlen,
-					host -> interface.haddr));
-		if (errno) {
+		fprintf (db_file, "\n\tdynamic;");
+		if (errno)
 			++errors;
-		}
 	}
-	if (host -> client_identifier.len) {
-		int i;
+
+	if (host -> flags & HOST_DECL_DELETED) {
 		errno = 0;
-		fprintf (db_file, "\n\toption dhcp-client-identifier %2.2x",
-			 host -> client_identifier.data [0]);
-		if (errno) {
+		fprintf (db_file, "\n\tdeleted;");
+		if (errno)
 			++errors;
-		}
-		for (i = 1; i < host -> client_identifier.len; i++) {
+	} else {
+		if (host -> interface.hlen) {
 			errno = 0;
-			fprintf (db_file, ":%2.2x",
-				 host -> client_identifier.data [i]);
+			fprintf (db_file, "\n\thardware %s %s;",
+				 hardware_types [host -> interface.htype],
+				 print_hw_addr (host -> interface.htype,
+						host -> interface.hlen,
+						host -> interface.haddr));
 			if (errno) {
 				++errors;
 			}
 		}
-		putc (';', db_file);
-	}
-
-	if (host -> fixed_addr &&
-	    evaluate_option_cache (&ip_addrs, (struct packet *)0,
-				   (struct lease *)0,
-				   (struct option_state *)0,
-				   (struct option_state *)0,
-				   host -> fixed_addr)) {
-		
-		fprintf (db_file, "\n\tfixed-address ");
-		if (errno) {
-			++errors;
-		}
-		for (i = 0; i < ip_addrs.len - 3; i += 4) {
-			fprintf (db_file, "\n\t%d.%d.%d.%d%s",
-				 ip_addrs.data [i], ip_addrs.data [i + 1],
-				 ip_addrs.data [i + 2], ip_addrs.data [i + 3],
-				 i + 7 < ip_addrs.len ? "," : "");
-			
+		if (host -> client_identifier.len) {
+			int i;
+			errno = 0;
+			fprintf (db_file,
+				 "\n\toption dhcp-client-identifier %2.2x",
+				 host -> client_identifier.data [0]);
 			if (errno) {
 				++errors;
+			}
+			for (i = 1; i < host -> client_identifier.len; i++) {
+				errno = 0;
+				fprintf (db_file, ":%2.2x",
+					 host -> client_identifier.data [i]);
+				if (errno) {
+					++errors;
+				}
+			}
+			putc (';', db_file);
+		}
+		
+		if (host -> fixed_addr &&
+		    evaluate_option_cache (&ip_addrs, (struct packet *)0,
+					   (struct lease *)0,
+					   (struct option_state *)0,
+					   (struct option_state *)0,
+					   host -> fixed_addr)) {
+		
+			fprintf (db_file, "\n\tfixed-address ");
+			if (errno) {
+				++errors;
+			}
+			for (i = 0; i < ip_addrs.len - 3; i += 4) {
+				fprintf (db_file, "\n\t%d.%d.%d.%d%s",
+					 ip_addrs.data [i],
+					 ip_addrs.data [i + 1],
+					 ip_addrs.data [i + 2],
+					 ip_addrs.data [i + 3],
+					 i + 7 < ip_addrs.len ? "," : "");
+				if (errno) {
+					++errors;
+				}
 			}
 		}
 	}
