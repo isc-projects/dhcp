@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.65 1999/03/26 21:27:23 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.66 1999/03/29 18:49:58 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1517,6 +1517,12 @@ void make_discover (client, lease)
 	client -> packet.hops = 0;
 	client -> packet.xid = random ();
 	client -> packet.secs = 0; /* filled in by send_discover. */
+
+	if (can_receive_unicast_unconfigured (client -> interface))
+		client -> packet.flags = 0;
+	else
+		client -> packet.flags = htons (BOOTP_BROADCAST);
+
 	memset (&(client -> packet.ciaddr),
 		0, sizeof client -> packet.ciaddr);
 	memset (&(client -> packet.yiaddr),
@@ -1578,10 +1584,6 @@ void make_request (client, lease)
 	client -> packet.hops = 0;
 	client -> packet.xid = client -> xid;
 	client -> packet.secs = 0; /* Filled in by send_request. */
-	if (can_receive_unicast_unconfigured (client -> interface))
-		client -> packet.flags = 0;
-	else
-		client -> packet.flags = htons (BOOTP_BROADCAST);
 
 	/* If we own the address we're requesting, put it in ciaddr;
 	   otherwise set ciaddr to zero. */
@@ -1594,6 +1596,10 @@ void make_request (client, lease)
 	} else {
 		memset (&client -> packet.ciaddr, 0,
 			sizeof client -> packet.ciaddr);
+		if (can_receive_unicast_unconfigured (client -> interface))
+			client -> packet.flags = 0;
+		else
+			client -> packet.flags = htons (BOOTP_BROADCAST);
 	}
 
 	memset (&client -> packet.yiaddr, 0,
