@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.135 2000/01/27 22:21:32 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.136 2000/01/31 23:43:11 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -641,7 +641,7 @@ void dhcpinform (packet)
 		oc = (struct option_cache *)0;
 		if (option_cache_allocate (&oc, MDL)) {
 			memset (&d1, 0, sizeof d1);
-			d1.data = "nwip";
+			d1.data = (const unsigned char *)"nwip";
 			d1.len = 4;
 			if (make_encapsulation (&oc -> expression, &d1)) {
 				oc -> option = dhcp_universe.options [i];
@@ -1843,7 +1843,7 @@ void ack_lease (packet, lease, offer, when, msg)
 		oc = (struct option_cache *)0;
 		if (option_cache_allocate (&oc, MDL)) {
 			memset (&d1, 0, sizeof d1);
-			d1.data = "nwip";
+			d1.data = (const unsigned char *)"nwip";
 			d1.len = 4;
 			if (make_encapsulation (&oc -> expression, &d1)) {
 				oc -> option = dhcp_universe.options [i];
@@ -2652,13 +2652,21 @@ struct lease *mockup_lease (packet, share, hp)
 	struct host_decl *hp;
 {
 	static struct lease mock;
+	const unsigned char **s;
 	
 	mock.subnet = find_host_for_network (&hp, &mock.ip_addr, share);
 	if (!mock.subnet)
 		return (struct lease *)0;
 	mock.next = mock.prev = (struct lease *)0;
 	mock.host = hp;
-	(const unsigned char *)mock.uid = hp -> client_identifier.data;
+	if (hp -> client_identifier.len > sizeof mock.uid_buf)
+		mock.uid = dmalloc (hp -> client_identifier.len, MDL);
+	else
+		mock.uid = mock.uid_buf;
+	if (!mock.uid)
+		return (struct lease *)0;
+	memcpy (mock.uid, hp -> client_identifier.data,
+		hp -> client_identifier.len);
 	mock.uid_len = hp -> client_identifier.len;
 	mock.hardware_addr = hp -> interface;
 	mock.starts = mock.timestamp = mock.ends = MIN_TIME;
@@ -2689,6 +2697,10 @@ void static_lease_dereference (lease, file, line)
 						  file, line);
 	if (&lease -> scope)
 		free_bindings (&lease -> scope, file, line);
+	if (lease -> uid != lease -> uid_buf) {
+		dfree (lease -> uid, file, line);
+		lease -> uid = (unsigned char *)0;
+	}
 }
 
 /* Look through all the pools in a list starting with the specified pool
