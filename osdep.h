@@ -3,7 +3,7 @@
    Operating system dependencies... */
 
 /*
- * Copyright (c) 1995 RadioMail Corporation.  All rights reserved.
+ * Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -14,15 +14,15 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of RadioMail Corporation nor the names of its
+ * 3. Neither the name of The Internet Software Consortium nor the names of its
  *    contributors may be used to endorse or promote products derived
  *    from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY RADIOMAIL CORPORATION AND CONTRIBUTORS
- * ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * THIS SOFTWARE IS PROVIDED BY THE INTERNET SOFTWARE CONSORTIUM AND
+ * CONTRIBUTORS ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING,
+ * BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
  * FOR A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL
- * RADIOMAIL CORPORATION OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+ * THE INTERNET SOFTWARE CONSORTIUM OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
  * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
  * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
@@ -31,12 +31,15 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * This software was written for RadioMail Corporation by Ted Lemon
- * under a contract with Vixie Enterprises, and is based on an earlier
- * design by Paul Vixie.
+ * This software was written for the Internet Software Consortium by Ted Lemon
+ * under a contract with Vixie Laboratories.
  */
 
 #include "site.h"
+
+/* Porting::
+
+   If you add a new network API, you must add a check for it below: */
 
 #if !defined (USE_SOCKETS) && \
     !defined (USE_SOCKET_SEND) && \
@@ -53,6 +56,10 @@
 #  define USE_DEFAULT_NETWORK
 #endif
 
+
+/* Porting::
+
+   If you add a new system configuration file, include it here: */
 
 #if defined (sun)
 # if defined (__svr4__)
@@ -86,6 +93,16 @@
 #  include "cf/linux.h"
 #endif
 
+#ifdef SCO
+#  include "cf/sco.h"
+#endif
+
+/* Porting::
+
+   If you add a new network API, and have it set up so that it can be
+   used for sending or receiving, but doesn't have to be used for both,
+   then set up an ifdef like the ones below: */
+
 #ifdef USE_SOCKETS
 #  define USE_SOCKET_SEND
 #  define USE_SOCKET_RECEIVE
@@ -106,6 +123,27 @@
 #  define USE_NIT_RECEIVE
 #endif
 
+/* Porting::
+
+   If you add support for sending packets directly out an interface
+   and need to be able to assemble packets, add the USE_XXX_SEND
+   definition for your interface to the list tested below. */
+
+#if defined (USE_RAW_SEND) || defined (USE_BPF_SEND) || defined (USE_NIT_SEND)
+#  define PACKET_ASSEMBLY
+#endif
+
+/* Porting::
+
+   If you add support for receiving packets directly from an interface
+   and need to be able to decode raw packets, add the USE_XXX_RECEIVE
+   definition for your interface to the list tested below. */
+
+#if defined (USE_RAW_RECEIVE) || defined (USE_BPF_RECEIVE) \
+	|| defined (USE_NIT_RECEIVE)
+#  define PACKET_DECODING
+#endif
+
 /* jmp_buf is assumed to be a struct unless otherwise defined in the
    system header. */
 #ifndef jbp_decl
@@ -119,16 +157,6 @@
 #endif
 #ifndef jrefproto
 # define jrefproto	jmp_buf *
-#endif
-
-/* On some systems, the struct ether_header source and destinations buffers
-   are arrays; on others, they are structs.   We assume they're arrays
-   unless otherwise defined in the system header. */
-#ifndef ETHER_SRC
-# define ETHER_SRC(x)	((x) -> ether_shost)
-#endif
-#ifndef ETHER_DEST
-# define ETHER_DEST(x)	((x) -> ether_dhost)
 #endif
 
 #ifndef BPF_FORMAT
