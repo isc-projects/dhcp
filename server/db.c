@@ -43,11 +43,12 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: db.c,v 1.63 2001/03/15 23:21:25 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: db.c,v 1.63.2.1 2001/05/10 19:14:03 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
 #include <ctype.h>
+#include "version.h"
 
 FILE *db_file;
 
@@ -741,7 +742,9 @@ void new_lease_file ()
 		 "confusing to you, we sincerely\n");
 	fprintf (db_file, "# apologize.   Seriously, though - don't ask.\n");
 	fprintf (db_file, "# The format of this file is documented in the %s",
-		 "dhcpd.leases(5) manual page.\n\n");
+		 "dhcpd.leases(5) manual page.\n");
+	fprintf (db_file, "# This lease file was written by isc-dhcp-%s\n\n",
+		 DHCP_VERSION);
 
 	/* Write out all the leases that we know of... */
 	counting = 0;
