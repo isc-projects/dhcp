@@ -291,4 +291,7 @@ int log_info (const char *, ...)
 int log_debug (const char *, ...)
 	__attribute__((__format__(__printf__,1,2)));
 void do_percentm (char *obuf, const char *ibuf);
+
+isc_result_t uerr2isc (int);
+isc_result_t ns_rcode_to_isc (int);
 #endif /* __OMAPIP_OMAPIP_P_H__ */
