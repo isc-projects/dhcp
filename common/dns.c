@@ -48,7 +48,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dns.c,v 1.8 1998/03/16 06:11:30 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dns.c,v 1.9 1998/03/17 06:09:59 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -389,7 +389,7 @@ struct dns_query *ns_query (question, formatted_query, len, wakeup)
 		destroy_dns_query (query);
 		return (struct dns_query *)-1;
 	}
-	memcpy (query, buf, query -> len);
+	memcpy (query -> query, buf, query -> len);
 
 	/* Flag the query as having been sent. */
 	query -> sent = 1;
