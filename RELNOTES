@@ -1,7 +1,7 @@
 		     Internet Software Consortium
 	   Dynamic Host Configuration Protocol Distribution
-		   Version 2, Beta 1, Patchlevel 1
-			    May 17, 1998
+		   Version 2, Beta 1, Patchlevel 2
+			    June 25, 1998
 
 			    Release Notes
 
@@ -45,6 +45,25 @@ support for a DHCP Interserver Protocol and live querying of the DHCP
 database.   This release is not expected to be stable in the near
 future, and is intended for sites that are in a position to
 experiment, or for sites that desperately need the new features.
+
+	      CHANGES FROM VERSION 2.0 BETA 1 PATCHLEVEL 1
+
+- Use -Wno-char-subscript on Solaris to prevent bogus warnings from
+  gcc on Solaris 2.6.
+
+- Add support for Apple's new Rhapsody operating system.
+
+- Use DLPI on Solaris instead of using the BSD Sockets API.
+
+- Fix two network input buffer overflow problems which could allow an
+  attacker to pervert the stack.
+
+- Fix an ancient typo that could theoretically cause memory
+  corruption.
+
+- Sort abandoned leases in at current time rather than end of time.
+  This allows abandoned leases to be reclaimed if there are no
+  available free leases.
 
 	      CHANGES FROM VERSION 2.0 BETA 1 PATCHLEVEL 0
 
