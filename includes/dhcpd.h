@@ -941,7 +941,7 @@ int option_cache_reference PROTO ((struct option_cache **,
 int buffer_allocate PROTO ((struct buffer **, int, char *));
 int buffer_reference PROTO ((struct buffer **, struct buffer *, char *));
 int buffer_dereference PROTO ((struct buffer **, char *));
-int dns_host_entry_allocate PROTO ((struct dns_host_entry **, char *));
+int dns_host_entry_allocate PROTO ((struct dns_host_entry **, char *, char *));
 int dns_host_entry_reference PROTO ((struct dns_host_entry **,
 				     struct dns_host_entry *, char *));
 int dns_host_entry_dereference PROTO ((struct dns_host_entry **, char *));
