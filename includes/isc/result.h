@@ -70,8 +70,10 @@ ISC_LANG_BEGINDECLS
 #define ISC_R_UNCHANGED			42
 #define ISC_R_MULTIPLE			43
 #define ISC_R_KEYCONFLICT		44
+#define ISC_R_BADPARSE			45
+#define ISC_R_NOKEYS			46
 
-#define ISC_R_NRESULTS 			45	/* Number of results */
+#define ISC_R_NRESULTS 			47	/* Number of results */
 
 char *			isc_result_totext(isc_result_t);
 isc_result_t		isc_result_register(unsigned int base,
