@@ -116,6 +116,7 @@ void dhcprequest (packet)
 	/* If we didn't find a lease, try to allocate one... */
 	if (!lease) {
 		nak_lease (packet);
+		return;
 	}
 
 	ack_lease (packet, lease, DHCPOFFER, cur_time + 120);
@@ -175,8 +176,8 @@ void nak_lease (packet)
 		to.sin_addr = raw.giaddr;
 	/* Otherwise, broadcast it on the local network. */
 	else
-		inet_aton ("204.254.239.255", &to.sin_addr); /* XXX bcst bug */
-/*		to.sin_addr.s_addr = INADDR_BROADCAST; XXX */
+/*		inet_aton ("204.254.239.2", &to.sin_addr); /* XXX bcst bug */
+		to.sin_addr.s_addr = INADDR_BROADCAST;
 
 	to.sin_port = htons (ntohs (server_port) + 1); /* XXX */
 	to.sin_family = AF_INET;
@@ -243,6 +244,8 @@ void ack_lease (packet, lease, offer, when)
 	lt.offered_expiry = cur_time + lease_time;
 	if (when)
 		lt.ends = when;
+	else
+		lt.ends = lt.offered_expiry;
 
 	lt.timestamp = cur_time;
 
@@ -341,8 +344,8 @@ void ack_lease (packet, lease, offer, when)
 	   hardware address */
 	/* Otherwise, broadcast it on the local network. */
 	else
-		inet_aton ("204.254.239.255", &to.sin_addr); /* XXX bcst bug */
-/*		to.sin_addr.s_addr = INADDR_BROADCAST; XXX */
+/*		inet_aton ("204.254.239.255", &to.sin_addr); /* XXX bcst bug */
+		to.sin_addr.s_addr = INADDR_BROADCAST;
 
 	to.sin_port = htons (ntohs (server_port) + 1); /* XXX */
 	to.sin_family = AF_INET;
