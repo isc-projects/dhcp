@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.11 1999/10/14 18:27:38 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.12 1999/10/24 17:19:46 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -740,6 +740,41 @@ void enter_shared_network (share)
 	shared_networks = share;
 }
 	
+void new_shared_network_interface (cfile, share, name)
+	struct parse *cfile;
+	struct shared_network *share;
+	const char *name;
+{
+	struct interface_info *ip;
+
+	if (share -> interface) {
+		parse_warn (cfile, 
+			    "A subnet or shared network can't be connected %s",
+			    "to two interfaces.");
+		return;
+	}
+	
+	for (ip = interfaces; ip; ip = ip -> next)
+		if (!strcmp (ip -> name, name))
+			break;
+	if (!ip) {
+		ip = dmalloc (sizeof *ip, "parse_subnet_declaration");
+		if (!ip)
+			log_fatal ("No memory to record interface %s", name);
+		memset (ip, 0, sizeof *ip);
+		if (strlen (name) > sizeof ip -> name) {
+			memcpy (ip -> name, name, (sizeof ip -> name) - 1);
+			ip -> name [(sizeof ip -> name) - 1] = 0;
+		} else
+			strcpy (ip -> name, name);
+		ip -> next = interfaces;
+		ip -> flags = INTERFACE_REQUESTED;
+		interfaces = ip;
+		ip -> shared_network = share;
+		share -> interface = ip;
+	}
+}
+
 /* Enter a lease into the system.   This is called by the parser each
    time it reads in a new lease.   If the subnet for that lease has
    already been read in (usually the case), just update that lease;
