@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bootp.c,v 1.61 2000/03/17 04:00:30 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bootp.c,v 1.62 2000/05/03 22:57:42 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -68,6 +68,7 @@ void bootp (packet)
 	struct option_cache *oc;
 	char msgbuf [1024];
 	int ignorep;
+	int peer_has_leases = 0;
 
 	if (packet -> raw -> op != BOOTREQUEST)
 		return;
@@ -124,7 +125,8 @@ void bootp (packet)
 
 		/* Otherwise, try to allocate one. */
 		lease = allocate_lease (packet,
-					packet -> shared_network -> pools, 0);
+					packet -> shared_network -> pools, 0,
+					&peer_has_leases);
 		if (lease) {
 			lease -> host = host;
 			ack_lease (packet, lease, 0, 0, msgbuf, 0);
