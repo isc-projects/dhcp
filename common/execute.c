@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: execute.c,v 1.3 1998/11/06 00:11:53 mellon Exp $ Copyright (c) 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: execute.c,v 1.4 1998/11/11 07:51:41 mellon Exp $ Copyright (c) 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -153,19 +153,25 @@ int execute_statements (packet, in_options, out_options, statements)
 /* Execute all the statements in a particular scope, and all statements in
    scopes outer from that scope, but if a particular limiting scope is
    reached, do not execute statements in that scope or in scopes outer
-   from it. */
+   from it.   More specific scopes need to take precedence over less
+   specific scopes, so we recursively traverse the scope list, executing
+   the most outer scope first. */
 
-void execute_statements_in_scope (packet, options, group, limiting_group)
+void execute_statements_in_scope (packet, in_options, out_options,
+				  group, limiting_group)
 	struct packet *packet;
-	struct option_state *options;
+	struct option_state *in_options;
+	struct option_state *out_options;
 	struct group *group;
 	struct group *limiting_group;
 {
 	struct group *scope;
 
-	for (scope = group;
-	     scope && scope != limiting_group; scope = scope -> next) {
-		execute_statements (packet, options, options,
-				    scope -> statements);
-	}
+	if (group == limiting_group)
+		return;
+	if (group -> next)
+		execute_statements_in_scope (packet, in_options, out_options,
+					     group -> next, limiting_group);
+	execute_statements (packet,
+			    in_options, out_options, group -> statements);
 }
