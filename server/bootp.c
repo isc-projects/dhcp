@@ -190,7 +190,8 @@ void bootp (packet)
 	   pack options into the filename and server name buffers. */
 
 	cons_options (packet, &outgoing, options, 0);
-	
+	if (outgoing.packet_length < BOOTP_MIN_LEN)
+		outgoing.packet_length = BOOTP_MIN_LEN;
 
 	/* Take the fields that we care about... */
 	raw.op = BOOTREPLY;
