@@ -119,11 +119,22 @@ void bootp (packet)
 		   and it's still okay to use dynamic bootp on
 		   that lease, reassign it. */
 		if (lease) {
-			if (lease -> flags & DYNAMIC_BOOTP_OK) {
+			/* If this lease can be used for dynamic bootp,
+			   do so. */
+			if ((lease -> flags & DYNAMIC_BOOTP_OK)) {
+
+				/* If it's not a DYNAMIC_BOOTP lease,
+				   release it before reassigning it
+				   so that we don't get a lease
+				   conflict. */
+				if (!(lease -> flags & BOOTP_LEASE))
+					release_lease (lease);
+
 				lease -> host = host;
 				ack_lease (packet, lease, 0, 0);
 				return;
 			}
+
 			 /* If dynamic BOOTP is no longer allowed for
 			   this lease, set it free. */
 			release_lease (lease);
