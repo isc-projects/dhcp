@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.27 1999/04/23 22:22:55 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.28 1999/05/07 17:10:38 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -484,7 +484,8 @@ int evaluate_boolean_expression (result, packet, options, expr)
 
 	      case expr_exists:
 		memset (&left, 0, sizeof left);
-		if (!((*expr -> data.option -> universe -> get_func)
+		if (!options ||
+		    !((*expr -> data.option -> universe -> get_func)
 		      (&left, expr -> data.exists -> universe,
 		       options, expr -> data.exists -> code)))
 			*result = 0;
@@ -632,9 +633,12 @@ int evaluate_data_expression (result, packet, options, expr)
 
 		/* Extract an option. */
 	      case expr_option:
-		s0 = ((*expr -> data.option -> universe -> get_func)
-		      (result, expr -> data.option -> universe,
-		       options, expr -> data.option -> code));
+		if (options)
+			s0 = ((*expr -> data.option -> universe -> get_func)
+			      (result, expr -> data.option -> universe,
+			       options, expr -> data.option -> code));
+		else
+			s0 = 0;
 
 #if defined (DEBUG_EXPRESSIONS)
 		log_info ("data: option %s.%s = %s",
@@ -658,7 +662,7 @@ int evaluate_data_expression (result, packet, options, expr)
 		}
 		result -> len = packet -> raw -> hlen + 1;
 		if (buffer_allocate (&result -> buffer, result -> len,
-					  "evaluate_data_expression")) {
+				     "evaluate_data_expression")) {
 			result -> data = &result -> buffer -> data [0];
 			result -> data [0] = packet -> raw -> htype;
 			memcpy (&result -> data [1], packet -> raw -> chaddr,
@@ -699,7 +703,7 @@ int evaluate_data_expression (result, packet, options, expr)
 					 + offset), result -> len);
 				result -> terminated = 0;
 			} else {
-				log_error ("data: packet: no memory for buffer.");
+				log_error ("data: packet: no buffer memory.");
 				return 0;
 			}
 			s2 = 1;
@@ -716,8 +720,12 @@ int evaluate_data_expression (result, packet, options, expr)
 		/* The encapsulation of all defined options in an
 		   option space... */
 	      case expr_encapsulate:
-		s0 = option_space_encapsulate (result, options,
-					       &expr -> data.encapsulate);
+		if (options)
+			s0 = option_space_encapsulate
+				(result, options, &expr -> data.encapsulate);
+		else
+			s0 = 0;
+
 #if defined (DEBUG_EXPRESSIONS)
 		log_info ("data: encapsulate (%s) = %s",
 			  expr -> data.encapsulate.data,
@@ -902,7 +910,7 @@ int evaluate_numeric_expression (result, packet, options, expr)
 		return 1;
 	}
 
-	log_error ("Bogus opcode in evaluate_numeric_expression: %d", expr -> op);
+	log_error ("evaluate_numeric_expression: bogus opcode %d", expr -> op);
 	return 0;
 }
 
@@ -940,7 +948,7 @@ int evaluate_boolean_option_cache (packet, options, oc)
 	int result;
 
 	/* So that we can be called with option_lookup as an argument. */
-	if (!oc)
+	if (!oc || !options)
 		return 0;
 	
 	memset (&ds, 0, sizeof ds);
@@ -994,7 +1002,11 @@ void expression_dereference (eptr, name)
 		return;
 	if (expr -> refcnt < 0) {
 		log_error ("expression_dereference: negative refcnt!");
+#if defined (POINTER_DEBUG)
 		abort ();
+#else
+		return;
+#endif
 	}
 
 	/* Dereference subexpressions. */
@@ -1124,6 +1136,7 @@ int is_boolean_expression (expr)
 	struct expression *expr;
 {
 	return (expr -> op == expr_check ||
+		expr -> op == expr_exists ||
 		expr -> op == expr_equal ||
 		expr -> op == expr_and ||
 		expr -> op == expr_or ||
