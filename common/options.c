@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.73 2000/12/28 23:16:19 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.74 2000/12/29 06:45:00 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -913,6 +913,7 @@ const char *pretty_print_option (option, data, len, emit_commas, emit_quotes)
 	int numhunk = -1;
 	int numelem = 0;
 	char fmtbuf [32];
+	struct enumeration *enumbuf [32];
 	int i, j, k, l;
 	char *op = optbuf;
 	const unsigned char *dp = data;
@@ -924,6 +925,8 @@ const char *pretty_print_option (option, data, len, emit_commas, emit_quotes)
 	else
 		comma = ' ';
 	
+	memset (enumbuf, 0, sizeof enumbuf);
+
 	/* Figure out the size of the data. */
 	for (l = i = 0; option -> format [i]; i++, l++) {
 		if (!numhunk) {
@@ -974,6 +977,15 @@ const char *pretty_print_option (option, data, len, emit_commas, emit_quotes)
 			fmtbuf [l] = 't';
 			fmtbuf [l + 1] = 0;
 			numhunk = -2;
+			break;
+		      case 'N':
+			k = i;
+			while (option -> format [i] &&
+			       option -> format [i] != '.')
+				i++;
+			enumbuf [l] = find_enumeration (&option -> format [k],
+							i - k);
+			hunksize += 1;
 			break;
 		      case 'I':
 		      case 'l':
@@ -1056,6 +1068,21 @@ const char *pretty_print_option (option, data, len, emit_commas, emit_quotes)
 					*op++ = '"';
 				*op = 0;
 				break;
+				/* pretty-printing an array of enums is
+				   going to get ugly. */
+			      case 'N':
+				if (!enumbuf [j])
+					goto enum_as_num;
+				for (i = 0; ;i++) {
+					if (!enumbuf [j] -> values [i].name)
+						goto enum_as_num;
+					if (enumbuf [j] -> values [i].value ==
+					    *dp)
+						break;
+				}
+				strcpy (op, enumbuf [j] -> values [i].name);
+				op += strlen (op);
+				break;
 			      case 'I':
 				foo.s_addr = htonl (getULong (dp));
 				strcpy (op, inet_ntoa (foo));
@@ -1082,6 +1109,7 @@ const char *pretty_print_option (option, data, len, emit_commas, emit_quotes)
 				sprintf (op, "%d", *(const char *)dp++);
 				break;
 			      case 'B':
+			      enum_as_num:
 				sprintf (op, "%d", *dp++);
 				break;
 			      case 'x':
