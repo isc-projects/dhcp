@@ -135,7 +135,7 @@ typedef struct __omapi_object_type_t {
 	isc_result_t (*lookup) (omapi_object_t **, omapi_object_t *,
 				omapi_object_t *);
 	isc_result_t (*create) (omapi_object_t **, omapi_object_t *);
-	isc_result_t (*delete) (omapi_object_t *, omapi_object_t *);
+	isc_result_t (*remove) (omapi_object_t *, omapi_object_t *);
 } omapi_object_type_t;
 
 #define OMAPI_OBJECT_PREAMBLE \

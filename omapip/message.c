@@ -650,13 +650,13 @@ isc_result_t omapi_message_process (omapi_object_t *mo, omapi_object_t *po)
 				 "no matching handle");
 		}
 
-		if (!object -> type -> delete)
+		if (!object -> type -> remove)
 			return omapi_protocol_send_status
 				(po, (omapi_object_t *)0,
 				 ISC_R_NOTIMPLEMENTED, message -> id,
-				 "no delete method for object");
+				 "no remove method for object");
 
-		status = (*(object -> type -> delete)) (object,
+		status = (*(object -> type -> remove)) (object,
 							(omapi_object_t *)0);
 		omapi_object_dereference (&object,
 					  "omapi_message_process");

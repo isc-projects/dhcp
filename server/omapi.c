@@ -29,7 +29,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: omapi.c,v 1.5 1999/09/16 00:51:27 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: omapi.c,v 1.6 1999/09/16 04:53:38 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -54,7 +54,7 @@ void dhcp_db_objects_setup ()
 					     dhcp_lease_stuff_values,
 					     dhcp_lease_lookup, 
 					     dhcp_lease_create,
-					     dhcp_lease_delete);
+					     dhcp_lease_remove);
 	if (status != ISC_R_SUCCESS)
 		log_fatal ("Can't register lease object type: %s",
 			   isc_result_totext (status));
@@ -68,7 +68,7 @@ void dhcp_db_objects_setup ()
 					     dhcp_host_stuff_values,
 					     dhcp_host_lookup, 
 					     dhcp_host_create,
-					     dhcp_host_delete);
+					     dhcp_host_remove);
 if (status != ISC_R_SUCCESS)
 		log_fatal ("Can't register host object type: %s",
 			   isc_result_totext (status));
@@ -82,7 +82,7 @@ if (status != ISC_R_SUCCESS)
 					     dhcp_pool_stuff_values,
 					     dhcp_pool_lookup, 
 					     dhcp_pool_create,
-					     dhcp_pool_delete);
+					     dhcp_pool_remove);
 	if (status != ISC_R_SUCCESS)
 		log_fatal ("Can't register pool object type: %s",
 			   isc_result_totext (status));
@@ -578,7 +578,7 @@ isc_result_t dhcp_lease_create (omapi_object_t **lp,
 	return ISC_R_NOTIMPLEMENTED;
 }
 
-isc_result_t dhcp_lease_delete (omapi_object_t *lp,
+isc_result_t dhcp_lease_remove (omapi_object_t *lp,
 				omapi_object_t *id)
 {
 	return ISC_R_NOTIMPLEMENTED;
@@ -1068,7 +1068,7 @@ isc_result_t dhcp_host_create (omapi_object_t **lp,
 				       "dhcp_host_create");
 }
 
-isc_result_t dhcp_host_delete (omapi_object_t *lp,
+isc_result_t dhcp_host_remove (omapi_object_t *lp,
 			       omapi_object_t *id)
 {
 	struct host_decl *hp;
@@ -1212,7 +1212,7 @@ isc_result_t dhcp_pool_create (omapi_object_t **lp,
 	return ISC_R_NOTIMPLEMENTED;
 }
 
-isc_result_t dhcp_pool_delete (omapi_object_t *lp,
+isc_result_t dhcp_pool_remove (omapi_object_t *lp,
 			       omapi_object_t *id)
 {
 	return ISC_R_NOTIMPLEMENTED;

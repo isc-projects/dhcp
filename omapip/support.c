@@ -161,7 +161,7 @@ isc_result_t omapi_object_type_register (omapi_object_type_t **type,
 					 isc_result_t (*create)
 						(omapi_object_t **,
 						 omapi_object_t *),
-					 isc_result_t (*delete)
+					 isc_result_t (*remove)
 						(omapi_object_t *,
 						 omapi_object_t *))
 {
@@ -180,7 +180,7 @@ isc_result_t omapi_object_type_register (omapi_object_type_t **type,
 	t -> stuff_values = stuff_values;
 	t -> lookup = lookup;
 	t -> create = create;
-	t -> delete = delete;
+	t -> remove = remove;
 	t -> next = omapi_object_types;
 	omapi_object_types = t;
 	if (type)

@@ -1654,7 +1654,7 @@ isc_result_t dhcp_lease_lookup (omapi_object_t **,
 				omapi_object_t *, omapi_object_t *);
 isc_result_t dhcp_lease_create (omapi_object_t **,
 				omapi_object_t *);
-isc_result_t dhcp_lease_delete (omapi_object_t *,
+isc_result_t dhcp_lease_remove (omapi_object_t *,
 				omapi_object_t *);
 #if 0
 isc_result_t dhcp_group_set_value  (omapi_object_t *, omapi_object_t *,
@@ -1688,7 +1688,7 @@ isc_result_t dhcp_host_lookup (omapi_object_t **,
 			       omapi_object_t *, omapi_object_t *);
 isc_result_t dhcp_host_create (omapi_object_t **,
 			       omapi_object_t *);
-isc_result_t dhcp_host_delete (omapi_object_t *,
+isc_result_t dhcp_host_remove (omapi_object_t *,
 			       omapi_object_t *);
 isc_result_t dhcp_pool_set_value  (omapi_object_t *, omapi_object_t *,
 				   omapi_data_string_t *,
@@ -1705,7 +1705,7 @@ isc_result_t dhcp_pool_lookup (omapi_object_t **,
 			       omapi_object_t *, omapi_object_t *);
 isc_result_t dhcp_pool_create (omapi_object_t **,
 			       omapi_object_t *);
-isc_result_t dhcp_pool_delete (omapi_object_t *,
+isc_result_t dhcp_pool_remove (omapi_object_t *,
 			       omapi_object_t *);
 isc_result_t dhcp_shared_network_set_value  (omapi_object_t *,
 					     omapi_object_t *,
