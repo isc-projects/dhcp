@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.85.2.20 2004/10/02 00:09:20 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.85.2.21 2004/10/04 16:50:12 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -942,7 +942,7 @@ int store_options (ocount, buffer, buflen, packet, lease, client_state,
 	/* Do we need to do overloading? */
 	if (first_cutoff && bufix > first_cutoff) {
 	    int second_bufsize, third_bufsize;
-	    int firstix, loop_count;
+	    int firstix, loop_count, rightshift;
 	    int j;
 	    unsigned len;
 	    unsigned char *ovbuf;
@@ -964,16 +964,20 @@ int store_options (ocount, buffer, buflen, packet, lease, client_state,
 	       buffer into the first buffer. */
 	    loop_count = 0;
 	    do {
+		rightshift = 4;
 		firstix = 0;
 
 		for (i = 0; i < bufix; ) {
 			len = buffer [i + 1] + 2;
+
+			if ((i < first_cutoff) && (i + len + 4 > first_cutoff))
+				rightshift = first_cutoff - i;
+
 			if (((i + len + 4 > first_cutoff) &&
 			     (len + 1 > second_bufsize)) ||
 			    (second_cutoff &&
-			     (i + len + 5 > second_cutoff) &&
-			     (len + 1 > third_bufsize)) &&
-			    len < first_cutoff - firstix) {
+			     (i + len + rightshift + 1 > second_cutoff) &&
+			     (len + 1 > third_bufsize))) {
 				memcpy (ovbuf, &buffer [i], len);
 				memmove (&buffer [firstix + len],
 					 &buffer [firstix], i - firstix);
@@ -1021,7 +1025,7 @@ int store_options (ocount, buffer, buflen, packet, lease, client_state,
 	    /* We only want to pad from 'i' to 'first_cutoff' at the
 	     * moment.  But since there may not be a second_cutoff, we
 	     * actually MUST pad from 'i' to ('first_cutoff' +
-	     * DHCP_FILE_LEN * at least.  Since we're not supposed to
+	     * DHCP_FILE_LEN) at least.  Since we're not supposed to
 	     * know about that, we wind up enforcing padding to the end
 	     * of buflen if there is not a second cutoff.
 	     */
@@ -1053,9 +1057,9 @@ int store_options (ocount, buffer, buflen, packet, lease, client_state,
 			    buffer [bufix++] = DHO_END;
 
 			    /* We MUST initialize the remainder of the
-			     * sname field to the PAD value (0).
+			     * field to the PAD value (0).
 			     */
-			    if (bufix - second_cutoff < DHCP_SNAME_LEN)
+			    if (bufix != buflen)
 			    	memset (&buffer[bufix], DHO_PAD,
 					buflen - bufix);
 
