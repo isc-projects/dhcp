@@ -234,8 +234,10 @@ isc_result_t uerr2isc (int err)
 	      case EHOSTUNREACH:
 		return ISC_R_HOSTUNREACH;
 
+#ifdef EDQUOT
 	      case EDQUOT:
 		return ISC_R_QUOTA;
+#endif
 
 #ifdef EBADRPC
 	      case EBADRPC:

@@ -483,7 +483,11 @@ isc_result_t omapi_connection_writer (omapi_object_t *h)
 					return ISC_R_SUCCESS;
 				else if (errno == EPIPE)
 					return ISC_R_NOCONN;
+#ifdef EDQUOT
 				else if (errno == EFBIG || errno == EDQUOT)
+#else
+				else if (errno == EFBIG)
+#endif
 					return ISC_R_NORESOURCES;
 				else if (errno == ENOSPC)
 					return ISC_R_NOSPACE;
