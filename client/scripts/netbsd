@@ -1,5 +1,21 @@
 #!/bin/sh
 
+if [ x$new_broadcast_address != x ]; then
+  new_broadcast_arg="broadcast $new_broadcast_address"
+fi
+if [ x$old_broadcast_address != x ]; then
+  old_broadcast_arg="broadcast $old_broadcast_address"
+fi
+if [ x$new_subnet_mask != x ]; then
+  new_netmask_arg="netmask $new_subnet_mask"
+fi
+if [ x$old_subnet_mask != x ]; then
+  old_netmask_arg="netmask $old_subnet_mask"
+fi
+if [ x$alias_subnet_mask != x ]; then
+  alias_subnet_arg="netmask $alias_subnet_mask"
+fi
+
 if [ x$reason = xMEDIUM ]; then
   ifconfig $interface $medium
   ifconfig $interface inet -alias 0.0.0.0 $medium >/dev/null 2>&1
@@ -39,8 +55,8 @@ if [ x$reason = xBOUND ] || [ x$reason = xRENEW ] || [ x$reason = xREBIND ];
   fi
   if [ x$old_ip_address = x ] || [ x$old_ip_address != x$new_ip_address ] || \
      [ x$reason = xBOUND ]; then
-    ifconfig $interface inet $new_ip_address netmask $new_subnet_mask \
-			broadcast $new_broadcast_address $medium
+    ifconfig $interface inet $new_ip_address $new_subnet_arg \
+					$new_broadcast_arg $medium
     route add $new_ip_address 127.1 >/dev/null 2>&1
     for router in $new_routers; do
       route add default $router >/dev/null 2>&1
@@ -48,7 +64,7 @@ if [ x$reason = xBOUND ] || [ x$reason = xRENEW ] || [ x$reason = xREBIND ];
   fi
   if [ x$new_ip_address != x$alias_ip_address ] && [ x$alias_ip_address != x ];
    then
-    ifconfig $interface inet alias $alias_ip_address netmask $alias_netmask
+    ifconfig $interface inet alias $alias_ip_address $alias_subnet_arg
     route add $alias_ip_address 127.0.0.1
   fi
   echo search $new_domain_name >/etc/resolv.conf
@@ -72,7 +88,7 @@ if [ x$reason = xEXPIRE ] || [ x$reason = xFAIL ]; then
     arp -a | sed -n -e 's/^.*(\(.*\)) at .*$/arp -d \1/p' |sh >/dev/null 2>&1
   fi
   if [ x$alias_ip_address != x ]; then
-    ifconfig $interface inet alias $alias_ip_address netmask $alias_netmask
+    ifconfig $interface inet alias $alias_ip_address $alias_subnet_arg
     route add $alias_ip_address 127.0.0.1
   fi
   exit 0
@@ -83,13 +99,13 @@ if [ x$reason = xTIMEOUT ]; then
     ifconfig $interface inet -alias $alias_ip_address > /dev/null 2>&1
     route delete $alias_ip_address 127.0.0.1 > /dev/null 2>&1
   fi
-  ifconfig $interface inet $new_ip_address netmask $new_subnet_mask \
-			broadcast $new_broadcast_address $medium
+  ifconfig $interface inet $new_ip_address $new_netmask_arg \
+					$new_broadcast_arg $medium
   set $new_routers
   if ping -q -c 1 -w 1 $1; then
     if [ x$new_ip_address != x$alias_ip_address ] && \
 			[ x$alias_ip_address != x ]; then
-      ifconfig $interface inet alias $alias_ip_address netmask $alias_netmask
+      ifconfig $interface inet alias $alias_ip_address $alias_subnet_arg
       route add $alias_ip_address 127.0.0.1
     fi
     route add $new_ip_address 127.1 >/dev/null 2>&1
