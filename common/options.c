@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.44.2.6 1999/12/22 21:43:18 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.44.2.7 2000/06/24 07:52:58 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -309,6 +309,8 @@ int cons_options (inpacket, outpacket, lease,
 	priority_list [priority_len++] = DHO_DHCP_LEASE_TIME;
 	priority_list [priority_len++] = DHO_DHCP_MESSAGE;
 	priority_list [priority_len++] = DHO_DHCP_REQUESTED_ADDRESS;
+	priority_list [priority_len++] = DHO_DHCP_RENEWAL_TIME;
+	priority_list [priority_len++] = DHO_DHCP_REBINDING_TIME;
 
 	if (prl && prl -> len > 0) {
 		data_string_truncate (prl, (PRIORITY_COUNT - priority_len));
@@ -732,8 +734,22 @@ char *pretty_print_option (code, data, len, emit_commas, emit_quotes)
 			      case 't':
 				if (emit_quotes)
 					*op++ = '"';
-				strcpy (op, (char *)dp);
-				op += strlen ((char *)dp);
+				for (; dp < data + len; dp++) {
+					if (!isascii (*dp) ||
+					    !isprint (*dp)) {
+						sprintf (op, "\\%03o",
+							 *dp);
+						op += 4;
+					} else if (*dp == '"' ||
+						   *dp == '\'' ||
+						   *dp == '$' ||
+						   *dp == '`' ||
+						   *dp == '\\') {
+						*op++ = '\\';
+						*op++ = *dp;
+					} else
+						*op++ = *dp;
+				}
 				if (emit_quotes)
 					*op++ = '"';
 				*op = 0;
