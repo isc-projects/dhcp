@@ -48,6 +48,12 @@ and for prodding me into improving it.
 
 			Changes since 3.0.1rc11
 
+- The 'ping timeout' debugs from rc12 were removed.
+
+- A patch from Ted Lemon was applied which fixes a case where leases
+  read from the leases database do not properly over-ride previously
+  read leases.
+
 - A patch from Steve Campbell was applied with minor modifications to
   permit reverse dns PTR record updates with values containing spaces.
 
