@@ -70,13 +70,10 @@ typedef unsigned long u_int64_t;
 #define VA_start(list, last) va_start (list, last)
 
 /* Our reports say that OSF/1 versions 4.0G and later have v/snprintf
- * implementations.  4.0F and previous do not.  This is the only way
- * that could be found to fingerprint these systems...if an Alpha/OSF
- * expert has a better idea, please submit patches.
+ * implementations.  4.0F and previous do not.  This is detected at
+ * ./configure time from 'sizer -v'.
  */
-#include <conf/version.id>
-#define OSF_CUTOFF ((0x04 << 58) | (0x00 << 53) | ('G' << 43))
-#if (BUILTIN_VERS_ID_HIGH < OSF_CUTOFF)
+#ifndef HAVE_SNPRINTF
 # define NO_SNPRINTF
 #endif
 
