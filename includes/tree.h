@@ -93,7 +93,7 @@ enum expr_op {
  	expr_dns_update,
 	expr_static,
 	expr_updated_dns_rr,
- 	expr_dns_delete,
+ 	expr_dns_delete
 };
 
 struct expression {

@@ -74,7 +74,7 @@ typedef enum {
 	omapi_datatype_int,
 	omapi_datatype_string,
 	omapi_datatype_data,
-	omapi_datatype_object,
+	omapi_datatype_object
 } omapi_datatype_t;
 
 typedef struct {
@@ -169,7 +169,7 @@ typedef enum {
 	omapi_connection_connecting,
 	omapi_connection_connected,
 	omapi_connection_disconnecting,
-	omapi_connection_closed,
+	omapi_connection_closed
 } omapi_connection_state_t;
 
 typedef enum {
@@ -179,7 +179,7 @@ typedef enum {
 	omapi_protocol_name_wait,
 	omapi_protocol_name_length_wait,
 	omapi_protocol_value_wait,
-	omapi_protocol_value_length_wait,
+	omapi_protocol_value_length_wait
 } omapi_protocol_state_t;
 
 typedef struct __omapi_message_object {
@@ -494,4 +494,4 @@ isc_result_t omapi_object_handle (omapi_handle_t *, omapi_object_t *);
 isc_result_t omapi_handle_lookup (omapi_object_t **, omapi_handle_t);
 isc_result_t omapi_handle_td_lookup (omapi_object_t **, omapi_typed_data_t *);
 
-#endif _OMAPIP_H_
+#endif /* _OMAPIP_H_ */

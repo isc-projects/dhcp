@@ -435,7 +435,7 @@ struct permit {
 		permit_unauthenticated_clients,
 		permit_all_clients,
 		permit_dynamic_bootp_clients,
-		permit_class,
+		permit_class
 	} type;
 	struct class *class;
 };

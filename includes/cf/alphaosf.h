@@ -51,6 +51,8 @@ extern int h_errno;
 /* Varargs stuff... */
 #include <stdarg.h>
 #define VA_DOTDOTDOT ...
+#undef va_dcl
+#define va_dcl
 #define VA_start(list, last) va_start (list, last)
 
 #ifndef _PATH_DHCPD_PID

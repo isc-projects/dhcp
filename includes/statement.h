@@ -34,7 +34,7 @@ struct executable_statement {
 		prepend_option_statement,
 		send_option_statement,
 		statements_statement,
-		on_statement,
+		on_statement
 	} op;
 	union {
 		struct {
