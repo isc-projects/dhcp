@@ -50,7 +50,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: omapi.c,v 1.46.2.4 2001/05/31 20:15:15 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: omapi.c,v 1.46.2.5 2001/06/05 18:02:49 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -112,7 +112,7 @@ void dhcp_db_objects_setup ()
 					     "subclass",
 					     dhcp_subclass_set_value,
 					     dhcp_subclass_get_value,
-					     dhcp_subclass_destroy,
+					     dhcp_class_destroy,
 					     dhcp_subclass_signal_handler,
 					     dhcp_subclass_stuff_values,
 					     dhcp_subclass_lookup, 
@@ -423,6 +423,15 @@ isc_result_t dhcp_lease_destroy (omapi_object_t *h, const char *file, int line)
 	if (lease -> billing_class)
 		class_dereference
 			(&lease -> billing_class, file, line);
+
+#if defined (DEBUG_MEMORY_LEAKAGE)
+	/* XXX we should never be destroying a lease with a next
+	   XXX pointer except on exit... */
+	if (lease -> next)
+		lease_dereference (&lease -> next, file, line);
+	if (lease -> next_pending)
+		lease_dereference (&lease -> next_pending, file, line);
+#endif
 
 	return ISC_R_SUCCESS;
 }
@@ -1061,9 +1070,25 @@ isc_result_t dhcp_host_destroy (omapi_object_t *h, const char *file, int line)
 		return ISC_R_INVALIDARG;
 	host = (struct host_decl *)h;
 
-	/* Currently, this is completely hopeless - have to complete
-           reference counting support for server OMAPI objects. */
-	/* XXX okay, that's completed - now what? */
+#if defined (DEBUG_MEMORY_LEAKAGE)
+	if (host -> n_ipaddr)
+		host_dereference (&host -> n_ipaddr, file, line);
+	if (host -> n_dynamic)
+		host_dereference (&host -> n_dynamic, file, line);
+	if (host -> name) {
+		dfree (host -> name, file, line);
+		host -> name = (char *)0;
+	}
+	data_string_forget (&host -> client_identifier, file, line);
+	if (host -> fixed_addr)
+		option_cache_dereference (&host -> fixed_addr, file, line);
+	if (host -> group)
+		group_dereference (&host -> group, file, line);
+	if (host -> named_group)
+		omapi_object_dereference ((omapi_object_t **)
+					  &host -> named_group, file, line);
+	data_string_forget (&host -> auth_key_id, file, line);
+#endif
 
 	return ISC_R_SUCCESS;
 }
@@ -1506,12 +1531,46 @@ isc_result_t dhcp_pool_destroy (omapi_object_t *h, const char *file, int line)
 {
 	struct pool *pool;
 	isc_result_t status;
+	struct permit *pc, *pn;
 
 	if (h -> type != dhcp_type_pool)
 		return ISC_R_INVALIDARG;
 	pool = (struct pool *)h;
 
-	/* Can't destroy pools yet. */
+#if defined (DEBUG_MEMORY_LEAKAGE)
+	if (pool -> next)
+		pool_dereference (&pool -> next, file, line);
+	if (pool -> group)
+		group_dereference (&pool -> group, file, line);
+	if (pool -> shared_network)
+	    shared_network_dereference (&pool -> shared_network, file, line);
+	if (pool -> active)
+		lease_dereference (&pool -> active, file, line);
+	if (pool -> expired)
+		lease_dereference (&pool -> expired, file, line);
+	if (pool -> free)
+		lease_dereference (&pool -> free, file, line);
+	if (pool -> backup)
+		lease_dereference (&pool -> backup, file, line);
+	if (pool -> abandoned)
+		lease_dereference (&pool -> abandoned, file, line);
+#if defined (FAILOVER_PROTOCOL)
+	if (pool -> failover_peer)
+		dhcp_failover_state_dereference (&pool -> failover_peer,
+						 file, line);
+#endif
+	for (pc = pool -> permit_list; pc; pc = pn) {
+		pn = pc -> next;
+		dfree (pc, file, line);
+	}
+	pool -> permit_list = (struct permit *)0;
+
+	for (pc = pool -> prohibit_list; pc; pc = pn) {
+		pn = pc -> next;
+		dfree (pc, file, line);
+	}
+	pool -> prohibit_list = (struct permit *)0;
+#endif
 
 	return ISC_R_SUCCESS;
 }
@@ -1647,12 +1706,47 @@ isc_result_t dhcp_class_destroy (omapi_object_t *h, const char *file, int line)
 {
 	struct class *class;
 	isc_result_t status;
+	int i;
 
-	if (h -> type != dhcp_type_class)
+	if (h -> type != dhcp_type_class && h -> type != dhcp_type_subclass)
 		return ISC_R_INVALIDARG;
 	class = (struct class *)h;
 
-	/* Can't destroy classs yet. */
+#if defined (DEBUG_MEMORY_LEAKAGE)
+	if (class -> nic)
+		class_dereference (&class -> nic, file, line);
+	if (class -> superclass)
+		class_dereference (&class -> superclass, file, line);
+	if (class -> name) {
+		dfree (class -> name, file, line);
+		class -> name = (char *)0;
+	}
+	if (class -> billed_leases) {
+		for (i = 0; i < class -> lease_limit; i++) {
+			if (class -> billed_leases [i]) {
+				lease_dereference (&class -> billed_leases [i],
+						   file, line);
+			}
+		}
+		dfree (class -> billed_leases, file, line);
+		class -> billed_leases = (struct lease **)0;
+	}
+	if (class -> hash) {
+		free_hash_table (class -> hash, file, line);
+		class -> hash = (struct hash_table *)0;
+	}
+	data_string_forget (&class -> hash_string, file, line);
+
+	if (class -> expr)
+		expression_dereference (&class -> expr, file, line);
+	if (class -> submatch)
+		expression_dereference (&class -> submatch, file, line);
+	if (class -> group)
+		group_dereference (&class -> group, file, line);
+	if (class -> statements)
+		executable_statement_dereference (&class -> statements,
+						  file, line);
+#endif
 
 	return ISC_R_SUCCESS;
 }
@@ -1782,21 +1876,6 @@ isc_result_t dhcp_subclass_get_value (omapi_object_t *h, omapi_object_t *id,
 			return status;
 	}
 	return ISC_R_UNKNOWNATTRIBUTE;
-}
-
-isc_result_t dhcp_subclass_destroy (omapi_object_t *h,
-				    const char *file, int line)
-{
-	struct subclass *subclass;
-	isc_result_t status;
-
-	if (h -> type != dhcp_type_subclass)
-		return ISC_R_INVALIDARG;
-	subclass = (struct subclass *)h;
-
-	/* Can't destroy subclasss yet. */
-
-	return ISC_R_SUCCESS;
 }
 
 isc_result_t dhcp_subclass_signal_handler (omapi_object_t *h,
@@ -2037,7 +2116,9 @@ isc_result_t binding_scope_stuff_values (omapi_object_t *c,
 		status = omapi_connection_put_uint16 (c, len);
 		if (status != ISC_R_SUCCESS)
 		    return status;
-		status = omapi_connection_copyin (c, bp -> name, len);
+		status = omapi_connection_copyin (c,
+						  (unsigned char *)bp -> name,
+						  len);
 		if (status != ISC_R_SUCCESS)
 			return status;
 
