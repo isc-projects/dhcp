@@ -56,7 +56,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhclient.c,v 1.41 1997/10/20 21:35:34 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.42 1997/10/20 22:00:17 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -231,8 +231,8 @@ int main (argc, argv, envp)
 	/* Set up the bootp packet handler... */
 	bootp_packet_handler = do_packet;
 
-	/* Start listening on the systat socket... */
-	systat_startup (status_message);
+	/* Start listening on the sysconf socket... */
+	sysconf_startup (status_message);
 
 	/* Start dispatching packets and timeouts... */
 	dispatch ();
@@ -2015,7 +2015,7 @@ void write_client_pid_file ()
 }
 
 void status_message (header, data)
-	struct systat_header *header;
+	struct sysconf_header *header;
 	void *data;
 {
 	switch (header -> type) {

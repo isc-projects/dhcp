@@ -42,7 +42,7 @@
 
 #define SYSCONF_SOCKET "/var/run/sysconf"
 
-struct systat_header {
+struct sysconf_header {
 	u_int32_t type;		/* Type of status message... */
 	u_int32_t length;	/* Length of message. */
 };

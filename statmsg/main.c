@@ -44,7 +44,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: main.c,v 1.1 1997/09/16 18:20:53 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: main.c,v 1.2 1997/10/20 22:04:23 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -58,8 +58,8 @@ int main (argc, argv, envp)
 	char **envp;
 {
 	struct sockaddr_un name;
-	int systat_fd;
-	struct systat_header hdr;
+	int sysconf_fd;
+	struct sysconf_header hdr;
 	int status;
 	char *buf;
 
@@ -83,31 +83,31 @@ int main (argc, argv, envp)
 	else
 		error ("unknown status message type %s", argv [1]);
 
-	systat_fd = socket (AF_UNIX, SOCK_STREAM, 0);
-	if (systat_fd < 0)
-		error ("unable to create systat socket: %m");
+	sysconf_fd = socket (AF_UNIX, SOCK_STREAM, 0);
+	if (sysconf_fd < 0)
+		error ("unable to create sysconf socket: %m");
 
 	/* XXX for now... */
 	name.sun_family = PF_UNIX;
-	strcpy (name.sun_path, "/var/run/systat");
+	strcpy (name.sun_path, "/var/run/sysconf");
 	name.sun_len = ((sizeof name) - (sizeof name.sun_path) +
 			strlen (name.sun_path));
 
-	if (connect (systat_fd, (struct sockaddr *)&name, name.sun_len) < 0)
-		error ("can't connect to systat socket: %m");
+	if (connect (sysconf_fd, (struct sockaddr *)&name, name.sun_len) < 0)
+		error ("can't connect to sysconf socket: %m");
 
-	status = write (systat_fd, &hdr, sizeof hdr);
+	status = write (sysconf_fd, &hdr, sizeof hdr);
 	if (status < 0)
-		error ("systat: %m");
+		error ("sysconf: %m");
 	if (status < sizeof (hdr))
-		error ("systat: short write");
+		error ("sysconf: short write");
 
 	if (hdr.length) {
-		status = write (systat_fd, buf, hdr.length);
+		status = write (sysconf_fd, buf, hdr.length);
 		if (status < 0)
-			error ("systat payload write: %m");
+			error ("sysconf payload write: %m");
 		if (status != hdr.length)
-			error ("systat payload: short write");
+			error ("sysconf payload: short write");
 	}
 
 	exit (0);
