@@ -123,3 +123,14 @@ dhclient:	$(OBJS) $(DHCPLIB)
 	$(CC) $(LFLAGS) -o $(PROG) $(OBJS) $(DHCPLIB) $(LIBS)
 
 # Dependencies (semi-automatically-generated)
+
+dhclient.o: dhclient.c ../includes/dhcpd.h \
+ ../includes/cdefs.h ../includes/osdep.h ../includes/site.h \
+ ../includes/cf/netbsd.h ../includes/dhcp.h \
+ ../includes/tree.h ../includes/hash.h ../includes/inet.h \
+ ../includes/sysconf.h ../includes/version.h
+clparse.o: clparse.c ../includes/dhcpd.h \
+ ../includes/cdefs.h ../includes/osdep.h ../includes/site.h \
+ ../includes/cf/netbsd.h ../includes/dhcp.h \
+ ../includes/tree.h ../includes/hash.h ../includes/inet.h \
+ ../includes/sysconf.h ../includes/dhctoken.h

@@ -83,3 +83,122 @@ dhcp-options.man5:	dhcp-options.5
 		-e "s#RUNDIR#$(VARRUN)#g" < dhcp-options.5 >dhcp-options.man5
 
 # Dependencies (semi-automatically-generated)
+
+raw.o: raw.c ../includes/dhcpd.h \
+ ../includes/cdefs.h ../includes/osdep.h ../includes/site.h \
+ ../includes/cf/netbsd.h ../includes/dhcp.h \
+ ../includes/tree.h ../includes/hash.h ../includes/inet.h \
+ ../includes/sysconf.h
+parse.o: parse.c ../includes/dhcpd.h \
+ ../includes/cdefs.h ../includes/osdep.h ../includes/site.h \
+ ../includes/cf/netbsd.h \
+ ../includes/dhcp.h ../includes/tree.h ../includes/hash.h ../includes/inet.h \
+ ../includes/sysconf.h ../includes/dhctoken.h
+nit.o: nit.c ../includes/dhcpd.h \
+ ../includes/cdefs.h ../includes/osdep.h ../includes/site.h \
+ ../includes/cf/netbsd.h ../includes/dhcp.h \
+ ../includes/tree.h ../includes/hash.h ../includes/inet.h \
+ ../includes/sysconf.h
+icmp.o: icmp.c ../includes/dhcpd.h \
+ ../includes/cdefs.h ../includes/osdep.h ../includes/site.h \
+ ../includes/cf/netbsd.h ../includes/dhcp.h \
+ ../includes/tree.h ../includes/hash.h ../includes/inet.h \
+ ../includes/sysconf.h ../includes/netinet/ip.h \
+ ../includes/netinet/ip_icmp.h
+dispatch.o: dispatch.c ../includes/dhcpd.h \
+ ../includes/cdefs.h ../includes/osdep.h ../includes/site.h \
+ ../includes/cf/netbsd.h ../includes/dhcp.h \
+ ../includes/tree.h ../includes/hash.h ../includes/inet.h \
+ ../includes/sysconf.h \
+ conflex.c ../includes/dhcpd.h \
+ ../includes/cdefs.h ../includes/osdep.h ../includes/site.h \
+ ../includes/cf/netbsd.h ../includes/dhcp.h \
+ ../includes/tree.h ../includes/hash.h ../includes/inet.h \
+ ../includes/sysconf.h ../includes/dhctoken.h
+upf.o: upf.c ../includes/dhcpd.h \
+ ../includes/cdefs.h ../includes/osdep.h ../includes/site.h \
+ ../includes/cf/netbsd.h ../includes/dhcp.h \
+ ../includes/tree.h ../includes/hash.h ../includes/inet.h \
+ ../includes/sysconf.h
+bpf.o: bpf.c ../includes/dhcpd.h \
+ ../includes/cdefs.h ../includes/osdep.h ../includes/site.h \
+ ../includes/cf/netbsd.h ../includes/dhcp.h \
+ ../includes/tree.h ../includes/hash.h ../includes/inet.h \
+ ../includes/sysconf.h ../includes/netinet/ip.h ../includes/netinet/udp.h \
+ ../includes/netinet/if_ether.h
+socket.o: socket.c ../includes/dhcpd.h \
+ ../includes/cdefs.h ../includes/osdep.h ../includes/site.h \
+ ../includes/cf/netbsd.h ../includes/dhcp.h \
+ ../includes/tree.h ../includes/hash.h ../includes/inet.h \
+ ../includes/sysconf.h
+lpf.o: lpf.c ../includes/dhcpd.h \
+ ../includes/cdefs.h ../includes/osdep.h ../includes/site.h \
+ ../includes/cf/netbsd.h ../includes/dhcp.h \
+ ../includes/tree.h ../includes/hash.h ../includes/inet.h \
+ ../includes/sysconf.h
+packet.o: packet.c ../includes/dhcpd.h \
+ ../includes/cdefs.h ../includes/osdep.h ../includes/site.h \
+ ../includes/cf/netbsd.h ../includes/dhcp.h \
+ ../includes/tree.h ../includes/hash.h ../includes/inet.h \
+ ../includes/sysconf.h ../includes/netinet/ip.h \
+ ../includes/netinet/udp.h ../includes/netinet/if_ether.h
+memory.o: memory.c ../includes/dhcpd.h \
+ ../includes/cdefs.h ../includes/osdep.h ../includes/site.h \
+ ../includes/cf/netbsd.h ../includes/dhcp.h \
+ ../includes/tree.h ../includes/hash.h ../includes/inet.h \
+ ../includes/sysconf.h
+print.o: print.c ../includes/dhcpd.h \
+ ../includes/cdefs.h ../includes/osdep.h ../includes/site.h \
+ ../includes/cf/netbsd.h ../includes/dhcp.h \
+ ../includes/tree.h ../includes/hash.h ../includes/inet.h \
+ ../includes/sysconf.h
+options.o: options.c ../includes/dhcpd.h \
+ ../includes/cdefs.h ../includes/osdep.h ../includes/site.h \
+ ../includes/cf/netbsd.h ../includes/dhcp.h \
+ ../includes/tree.h ../includes/hash.h ../includes/inet.h \
+ ../includes/sysconf.h
+inet.o: inet.c ../includes/dhcpd.h \
+ ../includes/cdefs.h ../includes/osdep.h ../includes/site.h \
+ ../includes/cf/netbsd.h ../includes/dhcp.h \
+ ../includes/tree.h ../includes/hash.h ../includes/inet.h \
+ ../includes/sysconf.h
+convert.o: convert.c ../includes/dhcpd.h \
+ ../includes/cdefs.h ../includes/osdep.h ../includes/site.h \
+ ../includes/cf/netbsd.h ../includes/dhcp.h \
+ ../includes/tree.h ../includes/hash.h ../includes/inet.h \
+ ../includes/sysconf.h
+tree.o: tree.c ../includes/dhcpd.h \
+ ../includes/cdefs.h ../includes/osdep.h ../includes/site.h \
+ ../includes/cf/netbsd.h ../includes/dhcp.h \
+ ../includes/tree.h ../includes/hash.h ../includes/inet.h \
+ ../includes/sysconf.h
+tables.o: tables.c ../includes/dhcpd.h \
+ ../includes/cdefs.h ../includes/osdep.h ../includes/site.h \
+ ../includes/cf/netbsd.h ../includes/dhcp.h \
+ ../includes/tree.h ../includes/hash.h ../includes/inet.h \
+ ../includes/sysconf.h
+hash.o: hash.c ../includes/dhcpd.h \
+ ../includes/cdefs.h ../includes/osdep.h ../includes/site.h \
+ ../includes/cf/netbsd.h ../includes/dhcp.h \
+ ../includes/tree.h ../includes/hash.h ../includes/inet.h \
+ ../includes/sysconf.h
+alloc.o: alloc.c ../includes/dhcpd.h \
+ ../includes/cdefs.h ../includes/osdep.h ../includes/site.h \
+ ../includes/cf/netbsd.h ../includes/dhcp.h \
+ ../includes/tree.h ../includes/hash.h ../includes/inet.h \
+ ../includes/sysconf.h
+errwarn.o: errwarn.c ../includes/dhcpd.h \
+ ../includes/cdefs.h ../includes/osdep.h ../includes/site.h \
+ ../includes/cf/netbsd.h ../includes/dhcp.h \
+ ../includes/tree.h ../includes/hash.h ../includes/inet.h \
+ ../includes/sysconf.h
+inet_addr.o: inet_addr.c ../includes/dhcpd.h \
+ ../includes/cdefs.h ../includes/osdep.h ../includes/site.h \
+ ../includes/cf/netbsd.h ../includes/dhcp.h \
+ ../includes/tree.h ../includes/hash.h ../includes/inet.h \
+ ../includes/sysconf.h
+dlpi.o: dlpi.c ../includes/dhcpd.h \
+ ../includes/cdefs.h ../includes/osdep.h ../includes/site.h \
+ ../includes/cf/netbsd.h ../includes/dhcp.h \
+ ../includes/tree.h ../includes/hash.h ../includes/inet.h \
+ ../includes/sysconf.h
