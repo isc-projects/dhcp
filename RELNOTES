@@ -45,11 +45,22 @@ and for prodding me into improving it.
 
 			Changes since 3.0.1rc13
 
-- Five stack overflow exploits were closed in logging messages with
-  excessively long hostnames provided by the clients.  It is highly
-  probable that these could have been used by attackers to gain
-  arbitrary root access on systems using ISC DHCP.  Special thanks to
-  Gregory Duchemin for both finding and solving the problem.
+! CAN-2004-0460 - CERT VU#317350: Five stack overflow exploits were closed
+  in logging messages with excessively long hostnames provided by the
+  clients.  It is highly probable that these could have been used by
+  attackers to gain arbitrary root access on systems using ISC DHCP.
+  Special thanks to Gregory Duchemin for both finding and solving the
+  problem.
+
+! CAN-2004-0461 - CERT VU#654390: Once the above was closed, an opening
+  in log_*() functions was evidented, on some specific platforms where
+  vsnprintf() was not believed to be available and calls were wrapped to
+  sprintf() instead.  Again, credit goes to Gregory Duchemin for finding
+  the problem.  Calls to snprintf() are now linked to a distribution-local
+  snprintf implementation, only in those cases where the architecture is
+  not known to provide one (see includes/cf/[arch].h).  If you experience
+  linking problems with snprintf/vsnprintf or 'isc_print_' functions, this
+  is where to look.
 
 - 'The cross-compile bug fix' was backed out.
 
