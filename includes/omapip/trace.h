@@ -47,8 +47,8 @@
 typedef struct {
 	u_int32_t magic;	/* Magic number for trace file. */
 	u_int32_t version;	/* Version of file. */
-	u_int32_t hlen;		/* Length of this header. */
-	u_int32_t phlen;	/* Length of packet headers. */
+	int32_t hlen;		/* Length of this header. */
+	int32_t phlen;		/* Length of packet headers. */
 } tracefile_header_t;
 
 /* The trace file is composed of a bunch of trace packets.   Each such packet
@@ -120,4 +120,4 @@ isc_result_t trace_get_next_packet (trace_type_t **, tracepacket_t *,
 isc_result_t trace_get_file (trace_type_t *,
 			     const char *, unsigned *, char **);
 isc_result_t trace_get_packet (trace_type_t **, unsigned *, char **);
-time_t trace_snoop_time (void);
+time_t trace_snoop_time (trace_type_t **);
