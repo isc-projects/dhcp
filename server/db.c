@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: db.c,v 1.63.2.7 2002/04/27 05:19:48 murray Exp $ Copyright (c) 1995-2002 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: db.c,v 1.63.2.8 2002/11/03 00:28:44 dhankins Exp $ Copyright (c) 1995-2002 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -257,21 +257,17 @@ int write_lease (lease)
 	    pair p;
 
 	    memset (&ds, 0, sizeof ds);
-	    if (lease -> agent_options) {
-		for (p = lease -> agent_options -> first; p; p = p -> cdr) {
-		    oc = (struct option_cache *)p -> car;
-		    if (oc -> data.len) {
-			errno = 0;
-			fprintf (db_file, "\n  option agent.%s %s;",
-				 oc -> option -> name,
-				 pretty_print_option (oc -> option,
-						      oc -> data.data,
-						      oc -> data.len,
-						      1, 1));
-			if (errno)
-			    ++errors;
-		    }
-		}
+	    for (p = lease -> agent_options -> first; p; p = p -> cdr) {
+	        oc = (struct option_cache *)p -> car;
+	        if (oc -> data.len) {
+	    	errno = 0;
+	    	fprintf (db_file, "\n  option agent.%s %s;",
+	    		 oc -> option -> name,
+	    		 pretty_print_option (oc -> option, oc -> data.data,
+				      		oc -> data.len, 1, 1));
+	    	if (errno)
+		    ++errors;
+	        }
 	    }
 	}
 	if (lease -> client_hostname &&
