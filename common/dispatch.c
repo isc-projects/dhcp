@@ -296,7 +296,7 @@ void dispatch ()
 
 	do {
 		/* Wait for a packet or a timeout... XXX */
-		count = poll (fds, nfds, (struct timeval *)-1);
+		count = poll (fds, nfds, -1);
 
 		/* Get the current time... */
 		GET_TIME (&cur_time);
