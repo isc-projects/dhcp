@@ -293,7 +293,15 @@ enum dhcp_token {
 	SHUTDOWN = 589,
 	STARTUP = 590,
 	ENCAPSULATE = 591,
-	VENDOR = 592
+	VENDOR = 592,
+	CLIENT_STATE = 593,
+	INIT_REBOOT = 594,
+	TOKEN_INIT = 595,
+	SELECTING = 596,
+	REQUESTING = 597,
+	BOUND = 598,
+	RENEWING = 599,
+	REBINDING
 };
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\
