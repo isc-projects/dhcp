@@ -23,7 +23,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: convert.c,v 1.8 1999/07/02 20:57:24 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: convert.c,v 1.9 1999/07/06 16:51:19 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -167,6 +167,12 @@ int binary_to_ascii (outbuf, inbuf, base, width)
 		outbuf [i] = h2a [number % base];
 		number /= base;
 		power++;
+	}
+
+	for (j = 0; j < i / 2; j++) {
+		unsigned char t = outbuf [j];
+		outbuf [j] = outbuf [i - j - 1];
+		outbuf [i - j - 1] = t;
 	}
 	return power;
 }
