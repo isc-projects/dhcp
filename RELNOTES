@@ -1,7 +1,7 @@
 		     Internet Software Consortium
 	   Dynamic Host Configuration Protocol Distribution
 		      Version 3, Alpha Snapshot
-			    March 30, 1999
+			    April 8, 1999
 
 			    Release Notes
 
@@ -54,6 +54,42 @@ system and does all the stuff that I have thought to test, there's a
 pretty decent chance it will do something other than what you expect
 when you try to use it.  Pointing out inconsistencies between the
 documentation and the source code will always be appreciated.
+
+		     Changes since March 30, 1999
+
+- Install unformatted manual pages on Linux
+
+- SGI Irix support
+
+- Generalize option support and add parser support for defining new
+  option spaces.
+
+- Support for generating vendor-encapsulated-options option from
+  user-specified option space, rather than having to encode it as
+  hex.
+
+- Fix hash table code to do the right thing with nul-terminated
+  strings - before they'd all get hashed into the same bucket.
+
+- Fix a parser bug caused by dereferencing an uninitialized variable
+  that prevented the parser from working correctly on some systems but
+  allowed it to work on others.
+
+- Document how to define new options, as well as how to set up
+  vendor-encapsulated-options option.
+
+- When responding to bootp clients, use the subnet mask from the
+  subnet declaration as we do for DHCP clients if no explicit subnet
+  mask option was defined.
+
+- Add always-send-rfc1048 option to force the server to send
+  rfc1048-style options (what everybody uses now) even if the client
+  doesn't send the right magic cookie.
+
+- Fix some bugs in class support that became obvious when I tried to
+  use the vendor-encapsulated-option support in a reasonable way.
+
+- Fix some memory leaks.
 
 	    Changes since March 29, 1999 (second snapshot)
 
