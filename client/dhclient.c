@@ -41,7 +41,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.112 2000/09/01 23:06:34 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.113 2000/09/14 12:42:01 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -227,6 +227,7 @@ int main (argc, argv, envp)
 		log_info (copyright);
 		log_info (arr);
 		log_info (url);
+		log_info ("%s", "");
 	} else
 		log_perror = 0;
 
@@ -411,9 +412,14 @@ int main (argc, argv, envp)
 
 static void usage ()
 {
+	log_info ("%s %s", message, DHCP_VERSION);
+	log_info (copyright);
+	log_info (arr);
+	log_info (url);
+
 	log_error ("Usage: dhclient [-d] [-D] [-q] [-p <port>] %s",
 		   "[-s server]");
-	log_error ("                [-lf lease-file] [-pf pid-file]%s",
+	log_fatal ("                [-lf lease-file] [-pf pid-file]%s",
 		   "[-cf config-file] [interface]");
 }
 
@@ -1071,7 +1077,7 @@ struct client_lease *packet_to_lease (packet, client)
 	lease = (struct client_lease *)new_client_lease (MDL);
 
 	if (!lease) {
-		log_error ("dhcpoffer: no memory to record lease.\n");
+		log_error ("packet_to_lease: no memory to record lease.\n");
 		return (struct client_lease *)0;
 	}
 
@@ -1137,6 +1143,14 @@ struct client_lease *packet_to_lease (packet, client)
 			lease -> filename [len] = 0;
 		}
 	}
+
+	execute_statements_in_scope ((struct binding_value **)0,
+				     (struct packet *)packet,
+				     (struct lease *)0, lease -> options,
+				     lease -> options, &global_scope,
+				     client -> config -> on_receipt,
+				     (struct group *)0);
+
 	return lease;
 }	
 
@@ -2226,13 +2240,6 @@ void script_write_params (client, prefix, lease)
 	if (lease -> server_name)
 		client_envadd (client, prefix, "server_name",
 			       "%s", lease -> server_name);
-
-	execute_statements_in_scope ((struct binding_value **)0,
-				     (struct packet *)0,
-				     (struct lease *)0, lease -> options,
-				     lease -> options, &global_scope,
-				     client -> config -> on_receipt,
-				     (struct group *)0);
 
 	hash = lease -> options -> universes [dhcp_universe.index];
 	for (i = 0; i < OPTION_HASH_SIZE; i++) {
