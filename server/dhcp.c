@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.105 1999/07/31 18:08:28 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.106 1999/08/19 18:59:13 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1180,6 +1180,9 @@ void ack_lease (packet, lease, offer, when, msg)
 			lease_time = max_lease_time;
 			
 		min_lease_time = DEFAULT_MIN_LEASE_TIME;
+		if (min_lease_time > max_lease_time)
+			min_lease_time = max_lease_time;
+
 		if ((oc = lookup_option (&server_universe, state -> options,
 					 SV_MIN_LEASE_TIME))) {
 			if (evaluate_option_cache (&d1, packet, lease,
@@ -1198,7 +1201,12 @@ void ack_lease (packet, lease, offer, when, msg)
 				lease_time = default_lease_time;
 		}
 
-		state -> offered_expiry = cur_time + lease_time;
+		/* If the lease duration causes the time value to wrap,
+		   use the maximum expiry time. */
+		if (cur_time + lease_time < cur_time)
+			state -> offered_expiry = MAX_TIME;
+		else
+			state -> offered_expiry = cur_time + lease_time;
 		if (when)
 			lt.ends = when;
 		else
@@ -2535,9 +2543,15 @@ int permitted (packet, permit_list)
 			break;
 			
 		      case permit_class:
-			for (i = 0; i < packet -> class_count; i++)
+			for (i = 0; i < packet -> class_count; i++) {
 				if (p -> class == packet -> classes [i])
 					return 1;
+				if (packet -> classes [i] &&
+				    packet -> classes [i] -> superclass &&
+				    (packet -> classes [i] -> superclass ==
+				     p -> class))
+					return 1;
+			}
 			break;
 		}
 	}
