@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.166 2000/09/12 20:09:14 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.167 2000/09/14 12:15:33 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1789,7 +1789,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 	if (lease -> on_commit && (!offer || offer == DHCPACK)) {
 		execute_statements ((struct binding_value **)0,
 				    packet, lt, packet -> options,
-				    state -> options, &lease -> scope,
+				    state -> options, &lt -> scope,
 				    lease -> on_commit);
 		if (lease -> on_commit)
 			executable_statement_dereference (&lease -> on_commit,
