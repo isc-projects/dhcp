@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.26.2.1 1998/05/18 05:24:23 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.26.2.2 1998/06/25 05:49:39 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -571,20 +571,23 @@ char *pretty_print_option (code, data, len, emit_commas, emit_quotes)
 	return optbuf;
 }
 
-void do_packet (interface, packbuf, len, from_port, from, hfrom)
+void do_packet (interface, packet, len, from_port, from, hfrom)
 	struct interface_info *interface;
-	unsigned char *packbuf;
+	struct dhcp_packet *packet;
 	int len;
 	unsigned short from_port;
 	struct iaddr from;
 	struct hardware *hfrom;
 {
 	struct packet tp;
-	struct dhcp_packet tdp;
 
-	memcpy (&tdp, packbuf, len);
+	if (packet -> hlen > sizeof packet -> chaddr) {
+		note ("Discarding packet with invalid hlen.");
+		return;
+	}
+
 	memset (&tp, 0, sizeof tp);
-	tp.raw = &tdp;
+	tp.raw = packet;
 	tp.packet_length = len;
 	tp.client_port = from_port;
 	tp.client_addr = from;

@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcrelay.c,v 1.9.2.1 1997/12/09 20:19:52 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcrelay.c,v 1.9.2.2 1998/06/25 05:50:23 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -223,19 +223,23 @@ int main (argc, argv, envp)
 	return 0;
 }
 
-void relay (ip, packbuf, length, from_port, from, hfrom)
+void relay (ip, packet, length, from_port, from, hfrom)
 	struct interface_info *ip;
-	u_int8_t *packbuf;
+	struct dhcp_packet *packet;
 	int length;
 	u_int16_t from_port;
 	struct iaddr from;
 	struct hardware *hfrom;
 {
-	struct dhcp_packet *packet = (struct dhcp_packet *)packbuf;
 	struct server_list *sp;
 	struct sockaddr_in to;
 	struct interface_info *out;
 	struct hardware hto;
+
+	if (packet -> hlen > sizeof packet -> chaddr) {
+		note ("Discarding packet with invalid hlen.");
+		return;
+	}
 
 	/* If it's a bootreply, forward it to the client. */
 	if (packet -> op == BOOTREPLY) {
