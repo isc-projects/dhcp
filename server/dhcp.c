@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.57.2.20 1999/02/27 21:47:16 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.57.2.21 1999/03/05 16:10:56 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -550,6 +550,8 @@ void ack_lease (packet, lease, offer, when)
 	struct lease_state *state;
 	TIME lease_time;
 	TIME offered_lease_time;
+	TIME max_lease_time;
+	TIME default_lease_time;
 	int ulafdr;
 
 	struct class *vendor_class, *user_class;
@@ -677,6 +679,22 @@ void ack_lease (packet, lease, offer, when)
 	/* Start now. */
 	lt.starts = cur_time;
 
+	/* Figure out maximum lease time. */
+	if (lease -> host &&
+	    lease -> host -> group -> max_lease_time)
+		max_lease_time = lease -> host -> group -> max_lease_time;
+	else
+		max_lease_time = lease -> subnet -> group -> max_lease_time;
+
+	/* Figure out default lease time. */
+	if (lease -> host
+	    && lease -> host -> group -> default_lease_time)
+		default_lease_time =
+			lease -> host -> group -> default_lease_time;
+	else
+		default_lease_time =
+			lease -> subnet -> group -> default_lease_time;
+
 	/* Figure out how long a lease to assign.    If this is a
 	   dynamic BOOTP lease, its duration must be infinite. */
 	if (offer) {
@@ -686,27 +704,10 @@ void ack_lease (packet, lease, offer, when)
 			
 			/* Don't let the client ask for a longer lease than
 			   is supported for this subnet or host. */
-			if (lease -> host &&
-			    lease -> host -> group -> max_lease_time) {
-				if (lease_time >
-				    lease -> host -> group -> max_lease_time)
-					lease_time = (lease -> host ->
-						      group -> max_lease_time);
-			} else {
-				if (lease_time >
-				    lease -> subnet -> group -> max_lease_time)
-					lease_time = (lease -> subnet ->
-						      group -> max_lease_time);
-			}
-		} else {
-			if (lease -> host
-			    && lease -> host -> group -> default_lease_time)
-				lease_time = (lease -> host ->
-					      group -> default_lease_time);
-			else
-				lease_time = (lease -> subnet ->
-					      group -> default_lease_time);
-		}
+			if (lease_time > max_lease_time)
+				lease_time = max_lease_time;
+		} else
+			lease_time = default_lease_time;
 		
 		state -> offered_expiry = cur_time + lease_time;
 		if (when)
@@ -903,12 +904,9 @@ void ack_lease (packet, lease, offer, when)
 
 		/* Sanity check the lease time. */
 		if ((state -> offered_expiry - cur_time) < 15)
-			offered_lease_time = (lease -> subnet ->
-					      group -> default_lease_time);
-		else if (state -> offered_expiry - cur_time >
-			 lease -> subnet -> group -> max_lease_time) 
-			offered_lease_time = (lease -> subnet ->
-					      group -> max_lease_time);
+			offered_lease_time = default_lease_time;
+		else if (state -> offered_expiry - cur_time > max_lease_time)
+			offered_lease_time = max_lease_time;
 		else 
 			offered_lease_time =
 				state -> offered_expiry - cur_time;
@@ -1536,10 +1534,13 @@ struct lease *find_lease (packet, share, ours)
 	/* If we find an abandoned lease, take it, but print a
 	   warning message, so that if it continues to lose,
 	   the administrator will eventually investigate. */
-	if (lease && lease -> flags & ABANDONED_LEASE) {
-		warn ("Reclaiming REQUESTed abandoned IP address %s.",
-		      piaddr (lease -> ip_addr));
-		lease -> flags &= ~ABANDONED_LEASE;
+	if (lease && (lease -> flags & ABANDONED_LEASE)) {
+		if (packet -> packet_type == DHCPREQUEST) {
+			warn ("Reclaiming REQUESTed abandoned IP address %s.",
+			      piaddr (lease -> ip_addr));
+			lease -> flags &= ~ABANDONED_LEASE;
+		} else
+			lease = (struct lease *)0;
 	}
 
 	return lease;
