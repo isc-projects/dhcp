@@ -95,3 +95,7 @@ typedef signed long	int32_t;
     where <hostname> is replaced by the hostname or IP number of the
     machine that dhcpd is running on.
 */
+
+#ifdef NEED_PRAND_CONF
+UHOH...   (this isn't present in the BIND distribution either)
+#endif /* NEED_PRAND_CONF */

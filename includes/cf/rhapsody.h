@@ -78,3 +78,31 @@ extern int h_errno;
 #ifdef __alpha__
 #define PTRSIZE_64BIT
 #endif
+
+#ifdef NEED_PRAND_CONF
+const char *cmds[] = {
+	"/bin/ps -axlw 2>&1",
+	"/usr/sbin/netstat -an 2>&1",
+	"/bin/df  2>&1",
+	"/usr/bin/uptime  2>&1",
+	"/usr/bin/printenv  2>&1",
+	"/usr/sbin/netstat -s 2>&1",
+	"/usr/bin/vm_stat  2>&1",
+	"/usr/bin/w  2>&1",
+	NULL
+};
+
+const char *dirs[] = {
+	"/var/tmp",
+	".",
+	"/",
+	"/var/spool",
+	"/var/mail",
+	NULL
+};
+
+const char *files[] = {
+	"/var/log/wtmp",
+	NULL
+};
+#endif /* NEED_PRAND_CONF */

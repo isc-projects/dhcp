@@ -103,3 +103,32 @@ extern int h_errno;
 
 #define TIME time_t
 #define GET_TIME(x)	time ((x))
+
+#ifdef NEED_PRAND_CONF
+const char *cmds[] = {
+	"/bin/ps -ef 2>&1",
+	"/etc/arp -n -a 2>&1",
+	"/usr/bin/netstat -an 2>&1",
+	"/bin/df  2>&1",
+	"/usr/bin/uptime  2>&1",
+	"/usr/bin/netstat -s 2>&1",
+	"/usr/bin/vmstat  2>&1",
+	"/usr/bin/w  2>&1",
+	NULL
+};
+
+const char *dirs[] = {
+	"/tmp",
+	"/usr/tmp",
+	".",
+	"/",
+	"/var/spool",
+	"/var/adm",
+	"/dev",
+	NULL
+};
+
+const char *files[] = {
+	NULL
+};
+#endif /* NEED_PRAND_CONF */

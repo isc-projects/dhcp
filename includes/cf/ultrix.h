@@ -99,3 +99,35 @@ extern int h_errno;
 #if defined (USE_DEFAULT_NETWORK)
 #  define USE_UPF
 #endif
+
+#ifdef NEED_PRAND_CONF
+const char *cmds[] = {
+	"/bin/ps -aux 2>&1",
+	"/usr/etc/arp -an 2>&1",
+	"/usr/ucb/netstat -an 2>&1",
+	"/usr/bin/df  2>&1",
+	"/usr/ucb/uptime  2>&1",
+	"/usr/ucb/netstat -an 2>&1",
+	"/usr/bin/iostat  2>&1",
+	NULL
+};
+
+const char *dirs[] = {
+	"/tmp",
+	"/var/tmp",
+	".",
+	"/",
+	"/var/spool",
+	"/var/adm",
+	"/dev",
+	"/var/spool/mail",
+	NULL
+};
+
+const char *files[] = {
+	"/var/spool/mqueue/syslog",
+	"/var/adm/wtmp",
+	"/var/adm/lastlog",
+	NULL
+};
+#endif /* NEED_PRAND_CONF */

@@ -1,6 +1,8 @@
-/* aix.h */
+/* irix.h */
+
 /*
- * Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.
+ * Copyright (c) 1996, 1999 The Internet Software Consortium.
+ * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -45,17 +47,19 @@
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
-#include <sys/select.h>
 #include <sys/wait.h>
 #include <signal.h>
 #include <setjmp.h>
 #include <limits.h>
+#include <net/if_dl.h>
 
 extern int h_errno;
 
 #include <net/if.h>
 #include <net/if_arp.h>
-#include <net/if_dl.h>
+
+#define _PATH_DHCPD_CONF "/usr/local/etc/dhcpd.conf"
+#define _PATH_DHCPD_DB   "/usr/local/etc/dhcp/dhcpd.leases"
 
 #ifndef _PATH_DHCPD_PID
 #define _PATH_DHCPD_PID	"/etc/dhcpd.pid"
@@ -69,11 +73,15 @@ extern int h_errno;
 
 #include <stdarg.h>
 #define VA_DOTDOTDOT ...
-#define VA_start(list, last) va_start (list)
+#define VA_start(list, last) va_start (list, last)
 #define va_dcl
 
 #define vsnprintf(buf, size, fmt, list) vsprintf (buf, fmt, list)
 #define NO_SNPRINTF
+
+#if defined (USE_DEFAULT_NETWORK)
+# define USE_RAW_SOCKETS
+#endif
 
 #define EOL '\n'
 #define VOIDPTR void *
@@ -84,20 +92,18 @@ extern int h_errno;
 #define GET_TIME(x)	time ((x))
 
 #define random	rand
-
-#define USE_SOCKETS	1
-#define HAVE_SA_LEN	1
-#undef FDDI
-
 #ifdef NEED_PRAND_CONF
 const char *cmds[] = {
 	"/bin/ps -ef 2>&1",
-	"/usr/bin/netstat -an 2>&1",
+	"/usr/etc/arp -a 2>&1",
+	"/usr/etc/netstat -an 2>&1",
 	"/bin/df  2>&1",
-	"/usr/bin/uptime  2>&1",
+	"/usr/bin/dig com. soa +ti=1 2>&1",
+	"/usr/bsd/uptime  2>&1",
 	"/usr/bin/printenv  2>&1",
-	"/usr/bin/netstat -s 2>&1",
-	"/usr/bin/w  2>&1",
+	"/usr/etc/netstat -s 2>&1",
+	"/usr/bin/dig . soa +ti=1 2>&1",
+	"/usr/bsd/w  2>&1",
 	NULL
 };
 
@@ -109,13 +115,11 @@ const char *dirs[] = {
 	"/var/spool",
 	"/var/adm",
 	"/dev",
-	"/var/spool/mail",
-	"/home",
+	"/var/mail",
 	NULL
 };
 
 const char *files[] = {
-	"/var/adm/wtmp",
 	NULL
 };
 #endif /* NEED_PRAND_CONF */

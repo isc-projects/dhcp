@@ -80,3 +80,33 @@ extern int h_errno;
 
 #define BYTE_ORDER BIG_ENDIAN
 #define BIG_ENDIAN 1
+#ifdef NEED_PRAND_CONF
+const char *cmds[] = {
+	"/usr/bin/ps -ef 2>&1",
+	"/usr/sbin/arp -an 2>&1",
+	"/usr/bin/netstat -an 2>&1",
+	"/usr/bin/df  2>&1",
+	"/usr/bin/netstat -an 2>&1",
+	"/usr/bin/vmstat  2>&1",
+	"/usr/bin/w  2>&1",
+	NULL
+};
+
+const char *dirs[] = {
+	"/tmp",
+	"/var/tmp",
+	".",
+	"/",
+	"/var/spool",
+	"/var/adm",
+	"/dev",
+	"/var/mail",
+	"/home",
+	NULL
+};
+
+const char *files[] = {
+	"/var/adm/wtmp",
+	NULL
+};
+#endif /* NEED_PRAND_CONF */
