@@ -43,20 +43,20 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: auth.c,v 1.3.2.1 2001/05/31 19:45:23 mellon Exp $ Copyright 1998-2000 The Internet Software Consortium.";
+"$Id: auth.c,v 1.3.2.2 2001/06/22 00:27:12 mellon Exp $ Copyright 1998-2000 The Internet Software Consortium.";
 #endif
 
 #include <omapip/omapip_p.h>
 
 OMAPI_OBJECT_ALLOC (omapi_auth_key, omapi_auth_key_t, omapi_type_auth_key)
 
-static struct hash_table *auth_key_hash = (struct hash_table *)0;
+struct hash_table *auth_key_hash = (struct hash_table *)0;
 HASH_FUNCTIONS_DECL (omapi_auth_key, const char *, omapi_auth_key_t)
 
 isc_result_t omapi_auth_key_new (omapi_auth_key_t **o, const char *file,
 				 int line)
 {
-	return omapi_auth_key_allocate (o, MDL);
+	return omapi_auth_key_allocate (o, file, line);
 }
 
 isc_result_t omapi_auth_key_destroy (omapi_object_t *h,
@@ -105,7 +105,7 @@ isc_result_t omapi_auth_key_enter (omapi_auth_key_t *a)
 		auth_key_hash =
 			new_hash ((hash_reference)omapi_auth_key_reference,
 				  (hash_dereference)omapi_auth_key_dereference,
-				  1);
+				  1, MDL);
 		if (!auth_key_hash)
 			return ISC_R_NOMEMORY;
 	}
