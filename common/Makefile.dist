@@ -72,6 +72,9 @@ install: $(CATMANPAGES)
 	$(MANINSTALL) $(MANFROM) dhcp-options.cat5 $(MANTO) \
 				$(FFMANDIR)/dhcp-options$(FFMANEXT)
 
+depend:
+	makedepend $(INCLUDES) $(PREDEFINES) $(SRCS)
+
 clean:
 	-rm -f $(OBJ)
 

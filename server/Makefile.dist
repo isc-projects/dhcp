@@ -68,9 +68,12 @@ install: $(PROG) $(CATMANPAGES)
 	$(MANINSTALL) $(MANFROM) dhcpd.leases.cat5 $(MANTO) \
 				$(FFMANDIR)/dhcpd.leases$(FFMANEXT)
 
+depend:
+	makedepend $(INCLUDES) $(PREDEFINES) $(SRCS)
+
 clean:
 	-rm -f $(OBJS)
-	
+
 realclean: clean
 	-rm -f $(PROG) $(CATMANPAGES) *~ #*
 

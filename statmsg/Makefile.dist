@@ -65,9 +65,12 @@ install: $(PROG) $(CATMANPAGES)
 #	$(MANINSTALL) $(MANFROM) statmsg.cat8 $(MANTO) \
 #				$(ADMMANDIR)/statmsg$(ADMMANEXT)
 
+depend:
+	makedepend $(INCLUDES) $(PREDEFINES) $(SRCS)
+
 clean:
 	-rm -f $(OBJS)
-	
+
 realclean: clean
 	-rm -f $(PROG) $(CATMANPAGES) *~ #*
 

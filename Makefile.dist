@@ -44,6 +44,12 @@ install:
 		(cd $$dir; $(MAKE) install); \
 	 done
 
+depend:
+	@for dir in ${SUBDIRS}; do \
+		echo "Making dependencies in $$dir"; \
+		(cd $$dir; $(MAKE) depend); \
+	 done
+
 clean:
 	@for dir in ${SUBDIRS}; do \
 		echo "Cleaning in $$dir"; \

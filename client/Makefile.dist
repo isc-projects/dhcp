@@ -79,9 +79,12 @@ install: $(PROG) $(CATMANPAGES)
 	$(MANINSTALL) $(MANFROM) dhclient.leases.cat5 $(MANTO) \
 				$(FFMANDIR)/dhclient.leases$(FFMANEXT)
 
+depend:
+	makedepend $(INCLUDES) $(PREDEFINES) $(SRCS)
+
 clean:
 	-rm -f $(OBJS)
-	
+
 realclean: clean
 	-rm -f $(PROG) $(CATMANPAGES) *~ #*
 

@@ -65,6 +65,9 @@ install: $(PROG) $(CATMANPAGES)
 #	$(MANINSTALL) $(MANFROM) sysconfd.cat8 $(MANTO) \
 #				$(ADMMANDIR)/sysconfd$(ADMMANEXT)
 
+depend:
+	makedepend $(INCLUDES) $(PREDEFINES) $(SRCS)
+
 clean:
 	-rm -f $(OBJS)
 	
