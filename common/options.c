@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.18 1996/09/05 23:57:33 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.19 1996/09/11 05:52:18 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -155,11 +155,12 @@ void parse_option_buffer (packet, buffer, length)
    three seperate buffers if needed.  This allows us to cons up a set
    of vendor options using the same routine. */
 
-void cons_options (inpacket, outpacket, options, overload)
+void cons_options (inpacket, outpacket, options, overload, terminate)
 	struct packet *inpacket;
 	struct packet *outpacket;
 	struct tree_cache **options;
 	int overload;	/* Overload flags that may be set. */
+	int terminate;
 {
 	unsigned char priority_list [300];
 	int priority_len;
@@ -220,7 +221,8 @@ void cons_options (inpacket, outpacket, options, overload)
 				     options, priority_list, priority_len,
 				     main_buffer_size,
 				     (main_buffer_size +
-				      ((overload & 1) ? DHCP_FILE_LEN : 0)));
+				      ((overload & 1) ? DHCP_FILE_LEN : 0)),
+				     terminate);
 
 	/* Put the cookie up front... */
 	memcpy (outpacket -> raw -> options, DHCP_OPTIONS_COOKIE, 4);
@@ -287,18 +289,20 @@ void cons_options (inpacket, outpacket, options, overload)
 /* Store all the requested options into the requested buffer. */
 
 int store_options (buffer, buflen, options, priority_list, priority_len,
-		   first_cutoff, second_cutoff)
+		   first_cutoff, second_cutoff, terminate)
 	unsigned char *buffer;
 	int buflen;
 	struct tree_cache **options;
 	unsigned char *priority_list;
 	int priority_len;
 	int first_cutoff, second_cutoff;
+	int terminate;
 {
 	int bufix = 0;
 	int option_stored [256];
 	int i;
 	int ix;
+	int tto;
 
 	/* Zero out the stored-lengths array. */
 	memset (option_stored, 0, sizeof option_stored);
@@ -333,6 +337,14 @@ int store_options (buffer, buflen, options, priority_list, priority_len,
 		/* We should now have a constant length for the option. */
 		length = options [code] -> len;
 
+		/* Do we add a NUL? */
+		if (terminate && dhcp_options [code].format [0] == 't') {
+			length++;
+			tto = 1;
+		} else {
+			tto = 0;
+		}
+
 		/* Try to store the option. */
 
 		/* If the option's length is more than 255, we must store it
@@ -366,8 +378,15 @@ int store_options (buffer, buflen, options, priority_list, priority_len,
 			/* Everything looks good - copy it in! */
 			buffer [bufix] = code;
 			buffer [bufix + 1] = incr;
-			memcpy (buffer + bufix + 2,
-				options [code] -> value + ix, incr);
+			if (tto && incr == length) {
+				memcpy (buffer + bufix + 2,
+					options [code] -> value + ix,
+					incr - 1);
+				buffer [bufix + 2 + incr - 1] = 0;
+			} else {
+				memcpy (buffer + bufix + 2,
+					options [code] -> value + ix, incr);
+			}
 			length -= incr;
 			ix += incr;
 			bufix += 2 + incr;

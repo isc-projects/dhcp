@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.33 1996/09/05 23:52:10 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.34 1996/09/11 05:52:18 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -362,7 +362,7 @@ void nak_lease (packet, cip)
 		(unsigned char *)0;
 
 	/* Set up the option buffer... */
-	cons_options (packet, &outgoing, options, 0);
+	cons_options (packet, &outgoing, options, 0, 0);
 
 /*	memset (&raw.ciaddr, 0, sizeof raw.ciaddr);*/
 	memcpy (&raw.siaddr, server_identifier.iabuf, 4);
@@ -807,7 +807,14 @@ void ack_lease (packet, lease, offer, when)
 		netmask_tree.tree = (struct tree *)0;
 	}
 
-	cons_options (packet, &outgoing, options, bufs);
+	/* See if this is a Microsoft client that NUL-terminates its
+	   strings and expects us to do likewise... */
+	if (packet -> options [DHO_HOST_NAME].data &&
+	    packet -> options [DHO_HOST_NAME].data
+	    [packet -> options [DHO_HOST_NAME].len - 1] == '\0')
+		cons_options (packet, &outgoing, options, bufs, 1);
+	else
+		cons_options (packet, &outgoing, options, bufs, 0);
 	if (!offer && outgoing.packet_length < BOOTP_MIN_LEN)
 		outgoing.packet_length = BOOTP_MIN_LEN;
 
