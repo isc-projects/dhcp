@@ -140,7 +140,7 @@ isc_result_t omapi_accept (omapi_object_t *h)
 		accept (listener -> socket,
 			((struct sockaddr *)
 			 &(obj -> remote_addr)), &len);
-	if (!obj -> socket) {
+	if (obj -> socket < 0) {
 		omapi_object_dereference ((omapi_object_t **)&obj,
 					  "omapi_accept");
 		if (errno == EMFILE || errno == ENFILE || errno == ENOBUFS)
