@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.101 2000/02/02 17:10:43 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.102 2000/02/05 17:39:24 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2164,10 +2164,13 @@ struct lease *parse_lease_declaration (cfile)
 						   "name");
 				strcpy (binding -> name, val);
 				newbinding = 1;
-			} else if (binding -> value.data) {
-				data_string_forget (&binding -> value, MDL);
+			} else if (binding -> value) {
+				binding_value_dereference (&binding -> value,
+							   MDL);
 				newbinding = 0;
 			}
+			if (!binding_value_allocate (&binding -> value, MDL))
+				log_fatal ("no memory for binding value.");
 
 			if (!noequal) {
 			    token = next_token (&val, cfile);
@@ -2180,38 +2183,79 @@ struct lease *parse_lease_declaration (cfile)
 
 			token = peek_token (&val, cfile);
 			if (token == STRING) {
-				unsigned char *tuid;
-				token = next_token (&val, cfile);
-				binding -> value.len = strlen (val); /* !! */
+			    unsigned char *tuid;
+			    token = next_token (&val, cfile);
+			    binding -> value -> type = binding_data;
+			    binding -> value -> value.data.len = strlen (val);
+			    if (!(buffer_allocate
+				  (&binding -> value -> value.data.buffer,
+				   binding -> value-> value.data.len + 1,
+				   MDL)))
+				log_fatal ("No memory for binding.");
+			    strcpy ((char *)
+				    (binding -> value ->
+				     value.data.buffer -> data), val);
+			    binding -> value -> value.data.data =
+				binding -> value -> value.data.buffer -> data;
+			    binding -> value -> value.data.terminated = 1;
+			} else if (token == NUMBER_OR_NAME) {
+			    binding -> value -> type = binding_data;
+			    s = ((char *)
+				 (parse_numeric_aggregate
+				  (cfile, (unsigned char *)0,
+				   &binding -> value -> value.data.len,
+				   ':', 16, 8)));
+			    if (!s) {
+				    binding_value_dereference
+					    (&binding -> value, MDL);
+				    return (struct lease *)0;
+			    }
+			    if (binding -> value -> value.data.len) {
 				if (!(buffer_allocate
-				      (&binding -> value.buffer,
-				       binding -> value.len + 1, MDL)))
+				      (&binding -> value -> value.data.buffer,
+				       binding -> value -> value.data.len + 1,
+				       MDL)))
 					log_fatal ("No memory for binding.");
-				strcpy ((char *)
-					binding -> value.buffer -> data, val);
-				binding -> value.data =
-					binding -> value.buffer -> data;
-				binding -> value.terminated = 1;
+				memcpy ((binding -> value ->
+					 value.data.buffer -> data), s,
+					binding -> value -> value.data.len);
+				dfree (s, MDL);
+				binding -> value -> value.data.data =
+				 binding -> value -> value.data.buffer -> data;
+			    }
+			} else if (token == PERCENT) {
+			    token = next_token (&val, cfile);
+			    token = next_token (&val, cfile);
+			    if (token != NUMBER) {
+				    parse_warn (cfile,
+						"expecting decimal number.");
+				    if (token != SEMI)
+					    skip_to_semi (cfile);
+				    binding_value_dereference
+					    (&binding -> value, MDL);
+				    return (struct lease *)0;
+			    }
+			    binding -> value -> type = binding_numeric;
+			    binding -> value -> value.intval = atol (val);
+			} else if (token == NAME) {
+				token = next_token (&val, cfile);
+				binding -> value -> type = binding_boolean;
+				if (!strcasecmp (val, "true"))
+					binding -> value -> value.boolean = 1;
+				else if (!strcasecmp (val, "false"))
+					binding -> value -> value.boolean = 0;
+				else
+					goto badbool;
 			} else {
-				s = ((char *)
-				     (parse_numeric_aggregate
-				      (cfile, (unsigned char *)0,
-				       &binding -> value.len, ':', 16, 8)));
-				if (!s)
-					return (struct lease *)0;
-				if (binding -> value.len) {
-				    if (!(buffer_allocate
-					  (&binding -> value.buffer,
-					   binding -> value.len + 1, MDL)))
-					    log_fatal ("No memory for%s.",
-						       " binding");
-				    memcpy (binding -> value.buffer -> data,
-					    s, binding -> value.len);
-				    dfree (s, MDL);
-				    binding -> value.data =
-					    binding -> value.buffer -> data;
-				}
+			      badbool:
+				parse_warn (cfile,
+					    "expecting a constant value.");
+				skip_to_semi (cfile);
+				binding_value_dereference (&binding -> value,
+							   MDL);
+				return (struct lease *)0;
 			}
+				
 			if (newbinding) {
 				binding -> next = lease.scope.bindings;
 				lease.scope.bindings = binding;

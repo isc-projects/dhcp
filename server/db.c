@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: db.c,v 1.43 2000/02/01 03:19:56 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: db.c,v 1.44 2000/02/05 17:38:17 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -169,31 +169,65 @@ int write_lease (lease)
 		}
 	}
 	for (b = lease -> scope.bindings; b; b = b -> next) {
-		if (b -> value.data) {
-		    if (db_printable_len (b -> value.data,
-					  b -> value.len)) {
+		if (!b -> value)
+			continue;
+		if (b -> value -> type == binding_data) {
+		    if (b -> value -> value.data.data) {
+			if (db_printable_len (b -> value -> value.data.data,
+					      b -> value -> value.data.len)) {
 			    errno = 0;
 			    fprintf (db_file, "\n  set %s = \"%.*s\";",
 				     b -> name,
-				     (int)b -> value.len, b -> value.data);
-		    } else {
-			    errno = 0;
-			    fprintf (db_file, "\n  set %s = ", b -> name);
+				     (int)b -> value -> value.data.len,
+				     b -> value -> value.data.data);
 			    if (errno) {
 				    ++errors;
 			    }
-			    for (i = 0; i < b -> value.len; i++) {
-				    errno = 0;
-				    fprintf (db_file, "%2.2x%s",
-					     b -> value.data [i],
-					     i + 1 == b -> value.len
-					     ? "" : ":");
-				    if (errno) {
-					    ++errors;
-				    }
+			} else {
+			    errno = 0;
+			    fprintf (db_file, "\n  set %s = ", b -> name);
+			    if (errno) {
+				++errors;
 			    }
+			    for (i = 0; i < b -> value -> value.data.len; i++)
+			    {
+				errno = 0;
+				fprintf (db_file, "%2.2x%s",
+					 b -> value -> value.data.data [i],
+					 i + 1 == b -> value -> value.data.len
+					 ? "" : ":");
+				if (errno) {
+				    ++errors;
+				}
+			    }
+			    errno = 0;
 			    putc (';', db_file);
+			}
 		    }
+		} else if (b -> value -> type == binding_numeric) {
+		    errno = 0;
+		    fprintf (db_file, "\n  set %s = %%%ld;",
+			     b -> name, b -> value -> value.intval);
+		    if (errno) {
+			++errors;
+		    }
+		} else if (b -> value -> type == binding_boolean) {
+		    errno = 0;
+		    fprintf (db_file, "\n  set %s = %s;",
+			     b -> name,
+			     b -> value -> value.intval ? "true" : "false");
+		    if (errno) {
+			    ++errors;
+		    }
+		} else if (b -> value -> type == binding_dns) {
+			log_error ("%s: persistent dns values not supported.",
+				   b -> name);
+		} else if (b -> value -> type == binding_function) {
+			log_error ("%s: persistent functions not supported.",
+				   b -> name);
+		} else {
+			log_error ("%s: unknown binding type %d",
+				   b -> name, b -> value -> type);
 		}
 	}
 	if (lease -> client_hostname &&
