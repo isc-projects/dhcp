@@ -321,6 +321,43 @@ dhcpctl_status dhcpctl_set_string_value (dhcpctl_handle h, const char *value,
 	return status;
 }
 
+/* dhcpctl_set_buffer_value
+
+   Sets a NUL-terminated ASCII value on an object referred to by
+   a dhcpctl_handle.   like dhcpctl_set_value, but saves the
+   trouble of creating a data_string for a NUL-terminated string.
+   Does not update the server - just sets the value on the handle. */
+
+dhcpctl_status dhcpctl_set_data_value (dhcpctl_handle h,
+				       const char *value, unsigned len,
+				       const char *value_name)
+{
+	isc_result_t status;
+	omapi_typed_data_t *tv = (omapi_typed_data_t *)0;
+	omapi_data_string_t *name = (omapi_data_string_t *)0;
+	int ip;
+	unsigned ll;
+
+	ll = strlen (value_name);
+	status = omapi_data_string_new (&name, ll, MDL);
+	if (status != ISC_R_SUCCESS)
+		return status;
+	memcpy (name -> value, value_name, ll);
+
+	status = omapi_typed_data_new (MDL, &tv,
+				       omapi_datatype_data, len, value);
+	if (status != ISC_R_SUCCESS) {
+		omapi_data_string_dereference (&name, MDL);
+		return status;
+	}
+	memcpy (tv -> u.buffer.value, value, len);
+
+	status = omapi_set_value (h, (omapi_object_t *)0, name, tv);
+	omapi_data_string_dereference (&name, MDL);
+	omapi_typed_data_dereference (&tv, MDL);
+	return status;
+}
+
 /* dhcpctl_set_boolean_value
 
    Sets a boolean value on an object - like dhcpctl_set_value,

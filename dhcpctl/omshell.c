@@ -453,9 +453,60 @@ int main (int argc, char **argv, char **envp)
 			    break;
 			    
 			  case NUMBER:
+			    strcpy (buf, val);
+			    token = peek_token (&val, (unsigned *)0, cfile);
+			    /* Colon-seperated hex list? */
+			    if (token == COLON)
+				goto cshl;
+			    else if (token == DOT) {
+				s = buf;
+				val = buf;
+				do {
+				    int intval = atoi (val);
+				    if (intval > 255) {
+					parse_warn (cfile,
+						    "dotted octet > 255: %s",
+						    val);
+					skip_to_semi (cfile);
+					goto badnum;
+				    }
+				    *s++ = intval;
+				    token = next_token (&val,
+							(unsigned *)0, cfile);
+				    if (token != DOT)
+					    break;
+				    token = next_token (&val,
+							(unsigned *)0, cfile);
+				} while (token == NUMBER);
+				dhcpctl_set_data_value (oh, buf,
+							(unsigned)(s - buf),
+							s1);
+				break;
+			    }
 			    dhcpctl_set_int_value (oh, atoi (val), s1);
+			  badnum:
 			    break;
 			    
+			  case NUMBER_OR_NAME:
+			    strcpy (buf, val);
+			  cshl:
+			    s = buf;
+			    val = buf;
+			    do {
+				convert_num (cfile, s, val, 16, 8);
+				++s;
+				token = next_token (&val,
+						    (unsigned *)0, cfile);
+				if (token != DOT)
+				    break;
+				token = next_token (&val,
+						    (unsigned *)0, cfile);
+			    } while (token == NUMBER ||
+				     token == NUMBER_OR_NAME);
+			    dhcpctl_set_data_value (oh, buf,
+						    (unsigned)(s - buf), s1);
+			    break;
+
 			  default:
 			    printf ("invalid value.\n");
 		    }
