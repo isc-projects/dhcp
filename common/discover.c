@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: discover.c,v 1.35 2000/12/28 23:14:46 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: discover.c,v 1.36 2001/01/03 23:13:46 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -85,7 +85,7 @@ isc_result_t interface_setup ()
 					     dhcp_interface_remove,
 					     0, 0, 0,
 					     sizeof (struct interface_info),
-					     0);
+					     interface_initialize);
 	if (status != ISC_R_SUCCESS)
 		log_fatal ("Can't register interface object type: %s",
 			   isc_result_totext (status));
@@ -526,15 +526,16 @@ void discover_interfaces (state)
 			log_error ("No subnet declaration for %s (%s).",
 				   tmp -> name, inet_ntoa (foo.sin_addr));
 			if (supports_multiple_interfaces (tmp)) {
-				log_error ("Ignoring requests on %s.",
-					   tmp -> name);
-				log_error ("If this is not what you want, %s",
-				   "please write");
-				log_error ("a subnet declaration in your %s",
-				   "dhcpd.conf file for");
-				log_error ("the network segment to %s %s %s",
+				log_error ("** Ignoring requests on %s.  %s",
+					   tmp -> name, "If this is not what");
+				log_error ("   you want, please write %s",
+					   "a subnet declaration");
+				log_error ("   in your dhcpd.conf file %s",
+					   "for the network segment");
+				log_error ("   to %s %s %s",
 					   "which interface",
-					   tmp -> name, "is attached.");
+					   tmp -> name, "is attached. **");
+				log_error ("%s", "");
 				goto next;
 			} else {
 				log_error ("You must write a subnet %s",
