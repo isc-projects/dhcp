@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.2 1999/09/28 22:52:50 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.3 1999/10/01 03:26:45 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -38,7 +38,6 @@ struct hash_table *host_name_hash;
 static struct lease *dangling_leases;
 static struct host_decl *dynamic_hosts;
 
-struct group_object *groups;
 struct hash_table *group_name_hash;
 
 omapi_object_type_t *dhcp_type_host;
@@ -176,14 +175,16 @@ isc_result_t enter_host (hd, dynamicp, commit)
 	}
 
 	if (dynamicp && commit) {
-		write_host (hd);
-		commit_leases ();
+		if (!write_host (hd))
+			return ISC_R_IOERROR;
+		if (!commit_leases ())
+			return ISC_R_IOERROR;
 	}
 
 	return ISC_R_SUCCESS;
 }
 
-void delete_host (hd, commit)
+isc_result_t delete_host (hd, commit)
 	struct host_decl *hd;
 	int commit;
 {
@@ -194,7 +195,7 @@ void delete_host (hd, commit)
 
 	/* Don't need to do it twice. */
 	if (hd -> flags & HOST_DECL_DELETED)
-		return;
+		return ISC_R_SUCCESS;
 
 	/* But we do need to do it once!   :') */
 	hd -> flags |= HOST_DECL_DELETED;
@@ -322,9 +323,12 @@ void delete_host (hd, commit)
 	}
 
 	if (commit) {
-		write_host (hd);
-		commit_leases ();
+		if (!write_host (hd))
+			return ISC_R_IOERROR;
+		if (!commit_leases ())
+			return ISC_R_IOERROR;
 	}
+	return ISC_R_SUCCESS;
 }
 
 struct host_decl *find_hosts_by_haddr (htype, haddr, hlen)
@@ -397,80 +401,53 @@ struct subnet *find_host_for_network (host, addr, share)
 	return (struct subnet *)0;
 }
 
-void delete_group (struct group_object *group, int writep)
+isc_result_t delete_group (struct group_object *group, int writep)
 {
-	struct group_object *g, *d;
+	struct group_object *d;
 
-	/* If it's dynamic, and we're deleting it, we can remove it from
-	   the list of dynamically-created groups. */
-	if (group -> n_dynamic && (group -> flags & GROUP_OBJECT_DYNAMIC)) {
-		g = (struct group_object *)0;
-		omapi_object_reference ((omapi_object_t **)&g,
-					(omapi_object_t *)group -> n_dynamic,
-					"delete_group");
-		omapi_object_dereference ((omapi_object_t **)
-					  &group -> n_dynamic, "delete_group");
-
-		if (group != groups) {
-			for (d = groups; d; d = d -> n_dynamic)
-				if (d -> n_dynamic == group)
-					break;
-			if (d) {
-				omapi_object_dereference
-					((omapi_object_t **)&d -> n_dynamic,
-					 "delete_group");
-				omapi_object_reference
-					((omapi_object_t **)&d -> n_dynamic,
-					 (omapi_object_t *)g,
-					 "delete_group");
-			}
-		} else {
-			omapi_object_dereference ((omapi_object_t **)&groups,
-						  "delete_group");
-			omapi_object_reference ((omapi_object_t **)&groups,
-						(omapi_object_t *)g,
-						"delete_group");
-		}
-		omapi_object_dereference ((omapi_object_t **)&g,
-					  "delete_group");
-
-		/* We can also get rid of the hash entry now. */
+	/* The group should exist and be hashed - if not, it's invalid. */
+	if (group_name_hash)
 		d = ((struct group_object *)
 		     hash_lookup (group_name_hash,
 				  group -> name, strlen (group -> name)));
-		if (d) {
-			delete_hash_entry (group_name_hash,
-					   group -> name,
-					   strlen (group -> name));
+	else
+		return ISC_R_INVALIDARG;
+	if (!d)
+		return ISC_R_INVALIDARG;
+
+	/* Also not okay to delete a group that's not the one in
+	   the hash table. */
+	if (d != group)
+		return ISC_R_INVALIDARG;
+
+	/* If it's dynamic, and we're deleting it, we can just blow away the
+	   hash table entry. */
+	if ((group -> flags & GROUP_OBJECT_DYNAMIC) &&
+	    !(group -> flags & GROUP_OBJECT_STATIC)) {
+		delete_hash_entry (group_name_hash, group -> name,
+				   strlen (group -> name));
 			--group -> refcnt;
+	} else {
+		group -> flags |= GROUP_OBJECT_DELETED;
+		if (group -> group) {
+			dfree (group -> group, "delete_group");
+			group -> group = (struct group *)0;
 		}
 	}
 
-	/* Conversely, if it's not dynamic, and we're deleting it,
-	   then we need to _add_ it to the list of dynamic hosts,
-	   because we're recording the erasure of something that's
-	   (for all we know, anyway) on permanent record in the
-	   dhcpd.conf file. */
-	if (!group -> n_dynamic &&
-	    group != groups && !(group -> flags & GROUP_OBJECT_DYNAMIC)) {
-		omapi_object_reference ((omapi_object_t **)&group -> n_dynamic,
-					(omapi_object_t *)groups,
-					"delete_group");
-		omapi_object_dereference ((omapi_object_t **)&groups,
-					  "delete_group");
-		omapi_object_reference ((omapi_object_t **)&groups,
-					(omapi_object_t *)group,
-					"delete_group");
-	}
-
 	/* Store the group declaration in the lease file. */
-	if (writep)
-		write_group (group);
+	if (writep) {
+		if (!write_group (group))
+			return ISC_R_IOERROR;
+		if (!commit_leases ())
+			return ISC_R_IOERROR;
+	}
+	return ISC_R_SUCCESS;
 }
 
 isc_result_t supersede_group (struct group_object *group, int writep)
 {
-	struct group_object *t;
+	struct group_object *t, *u;
 	isc_result_t status;
 
 	/* Register the group in the group name hash table,
@@ -521,9 +498,10 @@ isc_result_t supersede_group (struct group_object *group, int writep)
 
 	/* Store the group declaration in the lease file. */
 	if (writep) {
-		status = write_group (group);
-		if (status != ISC_R_SUCCESS)
-			return status;
+		if (!write_group (group))
+			return ISC_R_IOERROR;
+		if (!commit_leases ())
+			return ISC_R_IOERROR;
 	}
 
 	return ISC_R_SUCCESS;
@@ -1229,14 +1207,24 @@ void write_leases ()
 	struct pool *p;
 	struct host_decl *hp;
 	struct group_object *gp;
+	struct hash_bucket *hb;
+	int i;
+
+	/* Write all the dynamically-created group declarations. */
+	for (i = 0; i < group_name_hash -> hash_count; i++) {
+		for (hb = group_name_hash -> buckets [i];
+		     hb; hb = hb -> next) {
+			gp = (struct group_object *)hb -> value;
+			if ((gp -> flags & GROUP_OBJECT_DYNAMIC) ||
+			    ((gp -> flags & GROUP_OBJECT_STATIC) &&
+			     (gp -> flags & GROUP_OBJECT_DELETED)))
+				write_group (gp);
+		}
+	}
 
 	/* Write all the dynamically-created host declarations. */
 	for (hp = dynamic_hosts; hp; hp = hp -> n_dynamic)
 		write_host (hp);
-
-	/* Write all the dynamically-created group declarations. */
-	for (gp = groups; gp; gp = gp -> n_dynamic)
-		write_group (gp);
 
 	/* Write all the leases. */
 	for (s = shared_networks; s; s = s -> next) {
