@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: alloc.c,v 1.13 1997/05/09 07:56:13 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: alloc.c,v 1.14 1998/03/17 06:08:49 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -57,7 +57,8 @@ VOIDPTR dmalloc (size, name)
 	VOIDPTR foo = (VOIDPTR)malloc (size);
 	if (!foo)
 		warn ("No memory for %s.", name);
-	memset (foo, 0, size);
+	else
+		memset (foo, 0, size);
 	return foo;
 }
 
