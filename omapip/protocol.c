@@ -20,7 +20,7 @@
  * http://www.isc.org for more information.
  */
 
-#include <omapip/omapip.h>
+#include <omapip/omapip_p.h>
 
 isc_result_t omapi_protocol_connect (omapi_object_t *h,
 				     const char *server_name,

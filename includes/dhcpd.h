@@ -56,6 +56,7 @@
 #include "auth.h"
 #include "dhctoken.h"
 
+#include <isc/result.h>
 #include <omapip/omapip.h>
 
 #if !defined (OPTION_HASH_SIZE)

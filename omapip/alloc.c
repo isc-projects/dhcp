@@ -21,7 +21,7 @@
  * http://www.isc.org for more information.
  */
 
-#include <omapip/omapip.h>
+#include <omapip/omapip_p.h>
 
 isc_result_t omapi_object_reference (omapi_object_t **r,
 				     omapi_object_t *h,

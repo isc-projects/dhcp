@@ -20,7 +20,7 @@
  * http://www.isc.org for more information.
  */
 
-#include <omapip/omapip.h>
+#include <omapip/omapip_p.h>
 
 omapi_object_type_t *omapi_type_connection;
 omapi_object_type_t *omapi_type_listener;

@@ -29,10 +29,11 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: omapi.c,v 1.15 1999/10/07 06:36:35 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: omapi.c,v 1.16 1999/10/08 03:43:15 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
+#include <omapip/omapip_p.h>
 
 omapi_object_type_t *dhcp_type_lease;
 omapi_object_type_t *dhcp_type_group;

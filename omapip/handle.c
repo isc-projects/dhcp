@@ -20,7 +20,7 @@
  * http://www.isc.org for more information.
  */
 
-#include <omapip/omapip.h>
+#include <omapip/omapip_p.h>
 
 /* The handle table is a hierarchical tree designed for quick mapping
    of handle identifiers to objects.  Objects contain their own handle

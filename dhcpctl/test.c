@@ -20,6 +20,11 @@
  * http://www.isc.org for more information.
  */
 
+#include <time.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdarg.h>
+#include <isc/result.h>
 #include "dhcpctl.h"
 
 int main (int, char **);

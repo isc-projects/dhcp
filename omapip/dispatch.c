@@ -20,7 +20,7 @@
  * http://www.isc.org for more information.
  */
 
-#include <omapip/omapip.h>
+#include <omapip/omapip_p.h>
 
 static omapi_io_object_t omapi_io_states;
 u_int32_t cur_time;
@@ -137,7 +137,7 @@ isc_result_t omapi_wait_for_completion (omapi_object_t *object,
 		waiter = (omapi_waiter_object_t *)0;
 
 	do {
-		status = omapi_one_dispatch (waiter, t);
+		status = omapi_one_dispatch ((omapi_object_t *)waiter, t);
 		if (status != ISC_R_SUCCESS)
 			return status;
 	} while (!waiter || !waiter -> ready);
@@ -164,7 +164,7 @@ isc_result_t omapi_wait_for_completion (omapi_object_t *object,
 	return ISC_R_SUCCESS;
 }
 
-isc_result_t omapi_one_dispatch (omapi_waiter_object_t *waiter,
+isc_result_t omapi_one_dispatch (omapi_object_t *wo,
 				 struct timeval *t)
 {
 	fd_set r, w, x;
@@ -174,6 +174,12 @@ isc_result_t omapi_one_dispatch (omapi_waiter_object_t *waiter,
 	struct timeval now, to;
 	omapi_io_object_t *io, *prev;
 	isc_result_t status;
+	omapi_waiter_object_t *waiter;
+
+	if (!wo || wo -> type != omapi_type_waiter)
+		waiter = (omapi_waiter_object_t *)0;
+	else
+		waiter = (omapi_waiter_object_t *)wo;
 
 	FD_ZERO (&x);
 

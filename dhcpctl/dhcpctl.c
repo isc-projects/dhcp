@@ -20,6 +20,7 @@
  * http://www.isc.org for more information.
  */
 
+#include <omapip/omapip_p.h>
 #include "dhcpctl.h"
 
 omapi_object_type_t *dhcpctl_callback_type;

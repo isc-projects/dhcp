@@ -20,7 +20,7 @@
  * http://www.isc.org for more information.
  */
 
-#include <omapip/omapip.h>
+#include <omapip/omapip_p.h>
 
 omapi_message_object_t *omapi_registered_messages;
 

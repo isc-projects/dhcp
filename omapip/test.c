@@ -20,6 +20,11 @@
  * http://www.isc.org for more information.
  */
 
+#include <time.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdarg.h>
+#include <isc/result.h>
 #include <omapip/omapip.h>
 
 int main (int argc, char **argv)

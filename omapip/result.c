@@ -21,7 +21,7 @@
  * http://www.isc.org for more information.
  */
 
-#include <omapip/omapip.h>
+#include <omapip/omapip_p.h>
 
 static const char *text[ISC_R_NRESULTS] = {
 	"success",				/*  0 */

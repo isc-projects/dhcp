@@ -20,27 +20,7 @@
  * http://www.isc.org for more information.
  */
 
-isc_result_t omapi_object_reference (omapi_object_t **,
-				     omapi_object_t *, const char *);
-isc_result_t omapi_object_dereference (omapi_object_t **, const char *);
-
 isc_result_t omapi_buffer_new (omapi_buffer_t **, const char *);
 isc_result_t omapi_buffer_reference (omapi_buffer_t **,
 				     omapi_buffer_t *, const char *);
 isc_result_t omapi_buffer_dereference (omapi_buffer_t **, const char *);
-isc_result_t omapi_typed_data_new (omapi_typed_data_t **,
-				   omapi_datatype_t, ...);
-isc_result_t omapi_typed_data_reference (omapi_typed_data_t **,
-					 omapi_typed_data_t *, const char *);
-isc_result_t omapi_typed_data_dereference (omapi_typed_data_t **,
-					   const char *);
-isc_result_t omapi_data_string_new (omapi_data_string_t **,
-				    unsigned, const char *);
-isc_result_t omapi_data_string_reference (omapi_data_string_t **,
-					  omapi_data_string_t *, const char *);
-isc_result_t omapi_data_string_dereference (omapi_data_string_t **,
-					    const char *);
-isc_result_t omapi_value_new (omapi_value_t **, const char *);
-isc_result_t omapi_value_reference (omapi_value_t **,
-				    omapi_value_t *, const char *);
-isc_result_t omapi_value_dereference (omapi_value_t **, const char *);

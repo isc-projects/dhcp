@@ -20,6 +20,7 @@
  * http://www.isc.org for more information.
  */
 
+#include <omapip/omapip_p.h>
 #include "dhcpctl.h"
 
 /* dhcpctl_set_callback

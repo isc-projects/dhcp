@@ -20,7 +20,7 @@
  * http://www.isc.org for more information.
  */
 
-#include <omapip/omapip.h>
+#include <omapip/omapip_p.h>
 
 /* Make sure that at least len bytes are in the input buffer, and if not,
    read enough bytes to make up the difference. */
