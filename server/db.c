@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: db.c,v 1.31 1999/10/04 23:19:36 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: db.c,v 1.32 1999/10/05 02:44:37 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -314,7 +314,8 @@ int write_host (host)
 
 		if (host -> group &&
 		    (!host -> named_group ||
-		     host -> group != host -> named_group -> group)) {
+		     host -> group != host -> named_group -> group) &&
+		    host -> group != &root_group) {
 			errno = 0;
 			write_statements (db_file,
 					  host -> group -> statements, 8);
