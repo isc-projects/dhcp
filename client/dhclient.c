@@ -56,7 +56,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhclient.c,v 1.31 1997/03/06 06:48:09 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.32 1997/03/06 20:00:51 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -356,7 +356,8 @@ void state_selecting (ipp)
 	/* If we just tossed all the leases we were offered, go back
 	   to square one. */
 	if (!picked) {
-		send_discover (ip);
+		ip -> client -> state = S_INIT;
+		state_init (ip);
 		return;
 	}
 
