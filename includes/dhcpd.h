@@ -68,16 +68,13 @@
 #include "hash.h"
 #include "inet.h"
 #include "sysconf.h"
+#include "auth.h"
 
 #if !defined (OPTION_HASH_SIZE)
 # define OPTION_HASH_SIZE 17
 #endif
 
 /* Variable-length array of data. */
-struct auth_key {
-	int length;
-	u_int8_t data [1];
-};
 
 struct string_list {
 	struct string_list *next;
@@ -506,6 +503,7 @@ struct client_lease {
 	char *server_name;			     /* Name of boot server. */
 	char *filename;		     /* Name of file we're supposed to boot. */
 	struct string_list *medium;			  /* Network medium. */
+	struct data_string auth_key_id;	      /* Authentication key ID used. */
 
 	unsigned int is_static : 1;    /* If set, lease is from config file. */
 	unsigned int is_bootp: 1;   /* If set, lease was aquired with BOOTP. */
@@ -524,6 +522,10 @@ enum dhcp_state {
 	S_REBINDING
 };
 
+/* Authentication and BOOTP policy possibilities (not all values work
+   for each). */
+enum policy { P_IGNORE, P_ACCEPT, P_PREFER, P_REQUIRE, P_DONT };
+
 /* Configuration information from the config file... */
 struct client_config {
 	/*
@@ -536,6 +538,7 @@ struct client_config {
 	 * When a message is sent, run these statements.
 	 */
 	struct group *on_transmission;
+
 
 	u_int32_t *required_options; /* Options server must supply. */
 	u_int32_t *requested_options; /* Options to request from server. */
@@ -562,9 +565,13 @@ struct client_config {
 					   doesn't configure one. */
 	struct string_list *media;	/* Possible network media values. */
 	char *script_name;		/* Name of config script. */
-	enum { IGNORE, ACCEPT, PREFER } bootp_policy;
+	enum policy bootp_policy;
 					/* Ignore, accept or prefer BOOTP
 					   responses. */
+	enum policy auth_policy;
+					/* Require authentication, prefer
+					   authentication, or don't try to
+					   authenticate. */
 	struct string_list *medium;	/* Current network medium. */
 
 	struct iaddrlist *reject_list;	/* Servers to reject. */
