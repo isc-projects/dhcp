@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.76 2000/06/29 20:05:18 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.77 2000/07/06 09:57:23 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2437,6 +2437,26 @@ int parse_non_binary (expr, cfile, lose, context)
 			}
 			*lose = 1;
 			expression_dereference (expr, MDL);
+			return 0;
+		}
+		break;
+
+	      case LPAREN:
+		token = next_token (&val, cfile);
+		if (!parse_expression (expr, cfile, lose, context,
+				       (struct expression **)0, expr_none)) {
+			if (!*lose) {
+				parse_warn (cfile, "expression expected");
+				skip_to_semi (cfile);
+			}
+			*lose = 1;
+			return 0;
+		}
+		token = next_token (&val, cfile);
+		if (token != RPAREN) {
+			*lose = 1;
+			parse_warn (cfile, "right paren expected");
+			skip_to_semi (cfile);
 			return 0;
 		}
 		break;
