@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.53.2.26 2002/11/17 02:29:31 dhankins Exp $ Copyright (c) 1999-2002 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.53.2.27 2003/04/18 19:55:49 dhankins Exp $ Copyright (c) 1999-2002 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -3086,7 +3086,7 @@ isc_result_t dhcp_failover_state_lookup (omapi_object_t **sp,
 	if (status == ISC_R_SUCCESS) {
 		for (s = failover_states; s; s = s -> next) {
 			unsigned l = strlen (s -> name);
-			if (l == tv -> value -> u.buffer.len ||
+			if (l == tv -> value -> u.buffer.len &&
 			    !memcmp (s -> name,
 				     tv -> value -> u.buffer.value, l))
 				break;
