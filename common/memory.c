@@ -435,7 +435,7 @@ void abandon_lease (lease)
 	      piaddr (lease -> ip_addr));
 	lt.hardware_addr.htype = -1;
 	lt.hardware_addr.hlen = 0;
-	lt.uid = (char *)0;
+	lt.uid = (unsigned char *)0;
 	lt.uid_len = 0;
 	supersede_lease (lease, &lt, 1);
 }
