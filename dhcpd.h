@@ -49,7 +49,6 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <strings.h>
-#include <malloc.h>
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <ctype.h>
@@ -157,7 +156,7 @@ typedef unsigned char option_mask [16];
 #define _PATH_DHCPD_DB		"dhcpd.leases"
 #else
 #define _PATH_DHCPD_CONF	"/etc/dhcpd.conf"
-#define _PATH_DHCPD_CONF	"/etc/dhcpd.leases"
+#define _PATH_DHCPD_DB		"/etc/dhcpd.leases"
 #endif
 #endif
 
