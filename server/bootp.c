@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bootp.c,v 1.25 1997/03/06 07:27:56 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bootp.c,v 1.26 1997/05/09 08:20:12 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -63,6 +63,9 @@ void bootp (packet)
 	struct lease *lease;
 	struct iaddr ip_address;
 	int i;
+
+	if (packet -> raw -> op != BOOTREQUEST)
+		return;
 
 	note ("BOOTREQUEST from %s via %s",
 	      print_hw_addr (packet -> raw -> htype,
