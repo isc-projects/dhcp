@@ -1,7 +1,7 @@
 	    Internet Software Consortium DHCP Distribution
 			     Version 3.0.1
 			  Release Candidate 9
-			    April 29, 2002
+			    April 30, 2002
 
 			     Release Notes
 
@@ -78,6 +78,10 @@ and for prodding me into improving it.
 - Don't rerun the shared_network when evaluating the pool.
 
 - Fix a reversed test in the parser.
+
+- Change the type of rbuf_max.
+
+- Make FTS_LAST a manifest constant to quiet warnings.
 
 			Changes since 3.0.1rc7
 
