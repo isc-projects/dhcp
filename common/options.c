@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.26.2.6 1999/03/29 23:12:55 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.26.2.7 1999/03/30 02:57:47 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -233,9 +233,7 @@ int cons_options (inpacket, outpacket, mms,
 		if (prl_len + priority_len > sizeof priority_list)
 			prl_len = (sizeof priority_list) - priority_len;
 
-		memcpy (&priority_list [priority_len],
-			(inpacket -> options
-			 [DHO_DHCP_PARAMETER_REQUEST_LIST].data), prl_len);
+		memcpy (&priority_list [priority_len], prl, prl_len);
 		priority_len += prl_len;
 		prl = priority_list;
 	} else {
