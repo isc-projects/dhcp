@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.54 1999/10/05 19:01:32 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.55 1999/10/05 19:43:40 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -619,8 +619,7 @@ int evaluate_boolean_expression (result, packet, lease, in_options,
 	      case expr_host_decl_name:
 	      case expr_config_option:
 	      case expr_leased_address:
-	      case expr_dns_fwd_name:
-	      case expr_dns_rev_name:
+	      case expr_updated_dns_rr:
 		log_error ("Data opcode in evaluate_boolean_expression: %d",
 		      expr -> op);
 		return 0;
@@ -653,6 +652,7 @@ int evaluate_data_expression (result, packet, lease,
 	unsigned long offset, len, i;
 	int s0, s1, s2, s3;
 	int status;
+	char *s;
 
 	switch (expr -> op) {
 		/* Extract N bytes starting at byte M of a data string. */
@@ -1267,47 +1267,58 @@ int evaluate_data_expression (result, packet, lease,
 #endif
 		return 1;
 
-	      case expr_dns_fwd_name:
-		if (!lease || !lease -> ddns_fwd_name) {
-			log_error ("data: dns-fwd-name: not available");
-			return 0;
-		}
-		result -> len = strlen (lease -> ddns_fwd_name);
-		if (buffer_allocate (&result -> buffer, result -> len + 1,
-				     "ddns-fwd-name")) {
-			result -> data = &result -> buffer -> data [0];
-			strcpy ((char *)&result -> data [0],
-				lease -> ddns_fwd_name);
-			result -> terminated = 1;
-		} else {
-			log_error ("data: ddns-fwd-name: no memory.");
-			return 0;
-		}
+	      case expr_updated_dns_rr:
+		if (!lease) {
 #if defined (DEBUG_EXPRESSIONS)
-		log_info ("data: ddns-fwd-name = %s",
-			  lease -> ddns_fwd_name);
+			log_debug ("data: updated-dns-rr w/no lease = NULL");
 #endif
-		return 1;
-
-	      case expr_dns_rev_name:
-		if (!lease || !lease -> ddns_rev_name) {
-			log_error ("data: ddns-rev-name: not available");
 			return 0;
 		}
-		result -> len = strlen (lease -> ddns_rev_name);
+		memset (&data, 0, sizeof data);
+		s0 = evaluate_data_expression
+			(result, packet, lease, in_options, cfg_options,
+			 expr -> data.updated_dns_rr);
+		if (!s0) {
+#if defined (DEBUG_EXPRESSIONS)
+			log_debug ("data: updated-dns-rr (NULL) = NULL");
+#endif
+			return 0;
+		}
+		if (data.len == 1 &&
+		    !strncasecmp (data.data, "a", 1)) {
+			s = lease -> ddns_fwd_name;
+		} else if (data.len == 3 &&
+			   !strncasecmp (data.data, "ptr", 3)) {
+			s = lease -> ddns_rev_name;
+		} else {
+#if defined (DEBUG_EXPRESSIONS)
+			log_debug ("data: updated-dns-rr (%*s) = NULL",
+				   result -> len > 50 ? 50 : result -> len,
+				   result -> data);
+#endif
+			data_string_forget (&data, "data: updated-dns-rr");
+			return 0;
+		}
+		data_string_forget (&data, "data: updated-dns-rr");
+		result -> len = strlen (s);
 		if (buffer_allocate (&result -> buffer, result -> len + 1,
-				     "ddns-rev-name")) {
+				     "updated-dns-rr")) {
 			result -> data = &result -> buffer -> data [0];
-			strcpy ((char *)&result -> data [0],
-				lease -> ddns_rev_name);
+			strcpy ((char *)&result -> data [0], s);
 			result -> terminated = 1;
 		} else {
-			log_error ("data: ddns-rev-name: no memory.");
+#if defined (DEBUG_EXPRESSIONS)
+			log_debug ("data: updated-dns-rr (%*s)",
+				   result -> len > 50 ? 50 : result -> len,
+				   result -> data));
+#endif
+			log_error ("data: updated-dns-rr: no memory.");
 			return 0;
 		}
 #if defined (DEBUG_EXPRESSIONS)
-		log_info ("data: ddns-rev-name = %s",
-			  lease -> ddns_rev_name);
+		log_info ("data: updated-dns-rr (%s) = %s",
+			  result -> len > 50 ? 50 : result -> len,
+			  result -> data, s);
 #endif
 		return 1;
 
@@ -1699,8 +1710,7 @@ void expression_dereference (eptr, name)
 	      case expr_hardware:
 	      case expr_exists:
 	      case expr_known:
-	      case expr_dns_fwd_name:
-	      case expr_dns_rev_name:
+	      case expr_updated_dns_rr:
 		break;
 
 	      default:
@@ -1785,8 +1795,7 @@ int is_data_expression (expr)
 		expr -> op == expr_host_decl_name ||
 		expr -> op == expr_leased_address ||
 		expr -> op == expr_config_option ||
-		expr -> op == expr_dns_fwd_name ||
-		expr -> op == expr_dns_rev_name);
+		expr -> op == expr_updated_dns_rr);
 }
 
 int is_numeric_expression (expr)
@@ -1836,8 +1845,7 @@ static int op_val (op)
 	      case expr_leased_address:
 	      case expr_lease_time:
 	      case expr_dns_update:
-	      case expr_dns_fwd_name:
-	      case expr_dns_rev_name:
+	      case expr_updated_dns_rr:
 		return 100;
 
 	      case expr_equal:
@@ -1896,8 +1904,7 @@ enum expression_context op_context (op)
 	      case expr_leased_address:
 	      case expr_lease_time:
 	      case expr_dns_update:
-	      case expr_dns_fwd_name:
-	      case expr_dns_rev_name:
+	      case expr_updated_dns_rr:
 		return context_any;
 
 	      case expr_equal:
@@ -2248,14 +2255,16 @@ int write_expression (file, expr, col, indent)
 					  ")");
 		break;
 
-	      case expr_dns_fwd_name:
-		col = token_print_indent (file, col, indent, "", "",
-					  "dns-fwd-name");
-		break;
-
-	      case expr_dns_rev_name:
+	      case expr_updated_dns_rr:
 		col = token_print_indent (file, col, indent, "", "",
 					  "dns-rev-name");
+		col = token_print_indent (file, col, indent, " ", "",
+					  "(");
+		scol = col;
+		col = write_expression (file, expr -> data.updated_dns_rr,
+					col, scol);
+		col = token_print_indent (file, col, indent, "", "",
+					  ")");
 		break;
 
 	      default:

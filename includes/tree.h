@@ -92,8 +92,7 @@ enum expr_op {
  	expr_lease_time,
  	expr_dns_update,
 	expr_static,
-	expr_dns_fwd_name,
-	expr_dns_rev_name,
+	expr_updated_dns_rr,
 };
 
 struct expression {
@@ -148,6 +147,7 @@ struct expression {
  			struct expression *expr2;
  			struct expression *ttl;
  		} dns_update;
+		struct expression *updated_dns_rr;
 	} data;
 	int flags;
 #	define EXPR_EPHEMERAL	1

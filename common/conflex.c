@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: conflex.c,v 1.56 1999/10/01 03:33:44 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: conflex.c,v 1.57 1999/10/05 19:43:41 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -758,6 +758,8 @@ static enum dhcp_token intern (atom, dfv)
 		}
 		if (!strcasecmp (atom + 1, "nauthenticated"))
 			return AUTHENTICATED;
+		if (!strcasecmp (atom + 1, "pdated-dns-rr"))
+			return UPDATED_DNS_RR;
 		break;
 	      case 'v':
 		if (!strcasecmp (atom + 1, "endor-class"))

@@ -197,6 +197,7 @@ enum dhcp_token {
 	NEVER = 415,
 	INFINITE = 416,
 	DELETED = 417,
+	UPDATED_DNS_RR = 418,
 };
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\
