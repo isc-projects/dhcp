@@ -3,7 +3,7 @@
    Server-specific in-memory database support. */
 
 /*
- * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004,2005 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.67.2.20 2004/09/01 20:19:44 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.67.2.20.38.1 2005/02/17 22:52:30 dhankins Exp $ Copyright (c) 2004,2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1403,6 +1403,9 @@ void abandon_lease (lease, message)
 
 	if (!lease_copy (&lt, lease, MDL))
 		return;
+
+	if (lt->scope)
+		binding_scope_dereference(&lt->scope, MDL);
 
 	lt -> ends = cur_time; /* XXX */
 	lt -> next_binding_state = FTS_ABANDONED;

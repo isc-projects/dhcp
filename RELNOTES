@@ -43,7 +43,6 @@ Murrell at BC Tel Advanced Communications.  I'd like to express my
 thanks to all of these good people here, both for working on the code
 and for prodding me into improving it.
 
-
 			Changes since 3.0.2
 
 - A bug in DDNS was repaired, where if the server's first DDNS action was
@@ -52,6 +51,16 @@ and for prodding me into improving it.
   15 second timeout interval.  Which is a little excessive in a synchronous,
   single-threaded system.  In all cases, ISC DHCP should now hold fast to
   a 1-second timeout, trying only once.
+
+- A bug was repaired where failover servers would let stale client identifiers
+  persist on leases that were reallocated to new clients not sending an id.
+
+- Binding scopes ("set var = value;") are now removed from leases allocated
+  by failover peers if the lease had expired.  This should help reduce the
+  number of stale binding scopes on leases.
+
+- A small memory leak was closed involving client identifiers larger than
+  7 bytes, and failover.
 
 			Changes since 3.0.2rc3
 
