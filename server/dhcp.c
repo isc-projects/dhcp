@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.178 2001/01/19 11:03:56 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.179 2001/01/25 08:32:26 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -191,10 +191,10 @@ void dhcp (packet)
 				goto nolease;
 
 		/* Okay, so we found a lease that matches the client. */
-		option_cache_reference ((struct option_cache **)
-					&(packet -> options -> universes
-					  [agent_universe.index]),
-					lease -> agent_options, MDL);
+		option_chain_head_reference ((struct option_chain_head **)
+					     &(packet -> options -> universes
+					       [agent_universe.index]),
+					     lease -> agent_options, MDL);
 	}
       nolease:
 
@@ -1296,7 +1296,7 @@ void nak_lease (packet, cip)
 	   Otherwise, broadcast it on the local network. */
 	if (raw.giaddr.s_addr) {
 		to.sin_addr = raw.giaddr;
-		if (raw.giaddr.s_addr != INADDR_LOOPBACK)
+		if (raw.giaddr.s_addr != htonl (INADDR_LOOPBACK))
 			to.sin_port = local_port;
 		else
 			to.sin_port = remote_port; /* for testing. */
@@ -1373,10 +1373,10 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 	    packet -> options -> universes [agent_universe.index] &&
 	    (state -> options -> universe_count <= agent_universe.index ||
 	     !state -> options -> universes [agent_universe.index])) {
-	    option_cache_reference
-		    ((struct option_cache **)
+	    option_chain_head_reference
+		    ((struct option_chain_head **)
 		     &(state -> options -> universes [agent_universe.index]),
-		     (struct option_cache *)
+		     (struct option_chain_head *)
 		     packet -> options -> universes [agent_universe.index],
 		     MDL);
 	}
@@ -1938,6 +1938,9 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 		binding_scope_reference (&lt -> scope, lease -> scope, MDL);
 		binding_scope_dereference (&lease -> scope, MDL);
 	}
+	if (lease -> agent_options)
+		option_chain_head_reference (&lt -> agent_options,
+					     lease -> agent_options, MDL);
 
 	/* If we got relay agent information options, and the packet really
 	   looks like it came through a relay agent, and if this feature is
@@ -1959,9 +1962,9 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 					       packet -> options,
 					       state -> options,
 					       &lease -> scope, oc, MDL)) {
-		option_cache_reference
+		option_chain_head_reference
 			(&lt -> agent_options,
-			 (struct option_cache *)
+			 (struct option_chain_head *)
 			 packet -> options -> universes [agent_universe.index],
 			 MDL);
 	    }
@@ -2568,7 +2571,7 @@ void dhcp_reply (lease)
 	/* If this was gatewayed, send it back to the gateway... */
 	if (raw.giaddr.s_addr) {
 		to.sin_addr = raw.giaddr;
-		if (raw.giaddr.s_addr != INADDR_LOOPBACK)
+		if (raw.giaddr.s_addr != htonl (INADDR_LOOPBACK))
 			to.sin_port = local_port;
 		else
 			to.sin_port = remote_port; /* For debugging. */
@@ -2784,10 +2787,14 @@ int find_lease (struct lease **lp,
 			log_info ("wrong network segment: %s",
 				  piaddr (uid_lease -> ip_addr));
 #endif
-			lease_reference (&next, uid_lease -> n_uid, MDL);
+			if (uid_lease -> n_uid)
+				lease_reference (&next,
+						 uid_lease -> n_uid, MDL);
 			lease_dereference (&uid_lease, MDL);
-			lease_reference (&uid_lease, next, MDL);
-			lease_dereference (&next, MDL);
+			if (next) {
+				lease_reference (&uid_lease, next, MDL);
+				lease_dereference (&next, MDL);
+			}
 			continue;
 		}
 		if ((uid_lease -> pool -> prohibit_list &&
@@ -2798,12 +2805,16 @@ int find_lease (struct lease **lp,
 			log_info ("not permitted: %s",
 				  piaddr (uid_lease -> ip_addr));
 #endif
-			lease_reference (&next, uid_lease -> n_uid, MDL);
+			if (uid_lease -> n_uid)
+				lease_reference (&next,
+						 uid_lease -> n_uid, MDL);
 			if (!packet -> raw -> ciaddr.s_addr)
 				release_lease (uid_lease, packet);
 			lease_dereference (&uid_lease, MDL);
-			lease_reference (&uid_lease, next, MDL);
-			lease_dereference (&next, MDL);
+			if (next) {
+				lease_reference (&uid_lease, next, MDL);
+				lease_dereference (&next, MDL);
+			}
 			continue;
 		}
 		break;
@@ -2836,10 +2847,13 @@ int find_lease (struct lease **lp,
 			log_info ("wrong client identifier: %s",
 				  piaddr (hw_lease -> ip_addr));
 #endif
-			lease_reference (&next, hw_lease -> n_hw, MDL);
+			if (hw_lease -> n_hw)
+				lease_reference (&next, hw_lease -> n_hw, MDL);
 			lease_dereference (&hw_lease, MDL);
-			lease_reference (&hw_lease, next, MDL);
-			lease_dereference (&next, MDL);
+			if (next) {
+				lease_reference (&hw_lease, next, MDL);
+				lease_dereference (&next, MDL);
+			}
 			continue;
 		}
 		if (hw_lease -> subnet -> shared_network != share) {
@@ -2847,10 +2861,13 @@ int find_lease (struct lease **lp,
 			log_info ("wrong network segment: %s",
 				  piaddr (hw_lease -> ip_addr));
 #endif
-			lease_reference (&next, hw_lease -> n_hw, MDL);
+			if (hw_lease -> n_hw)
+				lease_reference (&next, hw_lease -> n_hw, MDL);
 			lease_dereference (&hw_lease, MDL);
-			lease_reference (&hw_lease, next, MDL);
-			lease_dereference (&next, MDL);
+			if (next) {
+				lease_reference (&hw_lease, next, MDL);
+				lease_dereference (&next, MDL);
+			}
 			continue;
 		}
 		if ((hw_lease -> pool -> prohibit_list &&
@@ -2861,12 +2878,15 @@ int find_lease (struct lease **lp,
 			log_info ("not permitted: %s",
 				  piaddr (hw_lease -> ip_addr));
 #endif
-			lease_reference (&next, hw_lease -> n_hw, MDL);
+			if (hw_lease -> n_hw)
+				lease_reference (&next, hw_lease -> n_hw, MDL);
 			if (!packet -> raw -> ciaddr.s_addr)
 				release_lease (hw_lease, packet);
 			lease_dereference (&hw_lease, MDL);
-			lease_reference (&hw_lease, next, MDL);
-			lease_dereference (&next, MDL);
+			if (next) {
+				lease_reference (&hw_lease, next, MDL);
+				lease_dereference (&next, MDL);
+			}
 			continue;
 		}
 		break;
@@ -3294,7 +3314,8 @@ void static_lease_dereference (lease, file, line)
 	if (lease -> scope)
 		binding_scope_dereference (&lease -> scope, file, line);
 	if (lease -> agent_options)
-		option_cache_dereference (&lease -> agent_options, file, line);
+		option_chain_head_dereference (&lease -> agent_options,
+					       file, line);
 	if (lease -> uid != lease -> uid_buf) {
 		dfree (lease -> uid, file, line);
 		lease -> uid = (unsigned char *)0;
