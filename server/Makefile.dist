@@ -51,6 +51,7 @@ install: all
 			$(DESTDIR)$(FFMANDIR)/dhcpd.conf$(FFMANEXT)
 	$(MANINSTALL) $(MANFROM) dhcpd.leases.$(MANCAT)5 $(MANTO) \
 			$(DESTDIR)$(FFMANDIR)/dhcpd.leases$(FFMANEXT)
+	umask 177; $(TOUCH) $(DESTDIR)$(VARDB)/dhcpd.leases
 
 depend:
 	$(MKDEP) $(INCLUDES) $(PREDEFINES) $(SRCS)
