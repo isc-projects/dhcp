@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: db.c,v 1.22 1999/03/16 05:50:43 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: db.c,v 1.23 1999/04/23 22:30:56 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -273,6 +273,15 @@ void new_lease_file ()
 	if ((db_file = fdopen (db_fd, "w")) == NULL) {
 		log_fatal ("Can't fdopen new lease file!");
 	}
+
+	/* Write an introduction so people don't complain about time
+	   being off. */
+	fprintf (db_file, "# All times in this file are in UTC (GMT), not %s",
+		 "your local timezone.   This is\n");
+	fprintf (db_file, "# not a bug, so please don't ask about it.   %s",
+		 "The format of this file is\n");
+	fprintf (db_file,
+		 "# documented in the dhcpd.leases(5) manual page.\n\n");
 
 	/* Write out all the leases that we know of... */
 	counting = 0;
