@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: db.c,v 1.46 2000/04/04 06:28:52 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: db.c,v 1.47 2000/04/13 21:41:34 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -607,6 +607,8 @@ void db_startup (testp)
 
 	if (!testp) {
 		db_file = fopen (path_dhcpd_db, "a");
+		if (!db_file)
+			log_fatal ("Can't open %s for append.", path_dhcpd_db);
 		expire_all_pools ();
 		GET_TIME (&write_time);
 		new_lease_file ();
