@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.131 2000/01/05 18:16:36 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.132 2000/01/08 01:47:37 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -619,6 +619,23 @@ void dhcpinform (packet)
 			if (make_const_data (&oc -> expression,
 					     subnet -> netmask.iabuf,
 					     subnet -> netmask.len, 0, 0)) {
+				oc -> option = dhcp_universe.options [i];
+				save_option (&dhcp_universe, options, oc);
+			}
+			option_cache_dereference (&oc, "dhcpinform");
+		}
+	}
+
+	/* Make an encapsulation for the NWIP suboptions if the client
+	   asked for them. */
+	i = DHO_NWIP_SUBOPTIONS;
+	if (!lookup_option (&dhcp_universe, options, i)) {
+		oc = (struct option_cache *)0;
+		if (option_cache_allocate (&oc, "dhcpinform")) {
+			memset (&d1, 0, sizeof d1);
+			d1.data = "nwip";
+			d1.len = 4;
+			if (make_encapsulation (&oc -> expression, &d1)) {
 				oc -> option = dhcp_universe.options [i];
 				save_option (&dhcp_universe, options, oc);
 			}
@@ -1785,6 +1802,24 @@ void ack_lease (packet, lease, offer, when, msg)
 		}
 		if (oc)
 			option_cache_dereference (&oc, "ack_lease");
+	}
+
+	/* Make an encapsulation for the NWIP suboptions if the client
+	   asked for them. */
+	i = DHO_NWIP_SUBOPTIONS;
+	if (!(oc = lookup_option (&dhcp_universe, state -> options, i))) {
+		oc = (struct option_cache *)0;
+		if (option_cache_allocate (&oc, "dhcpinform")) {
+			memset (&d1, 0, sizeof d1);
+			d1.data = "nwip";
+			d1.len = 4;
+			if (make_encapsulation (&oc -> expression, &d1)) {
+				oc -> option = dhcp_universe.options [i];
+				save_option (&dhcp_universe,
+					     state -> options, oc);
+			}
+			option_cache_dereference (&oc, "dhcpinform");
+		}
 	}
 
 	/* If we've been given a vendor option space, and there's something
