@@ -127,9 +127,8 @@ soon.
 
 If you are running a Linux 2.1 kernel, this does not guarantee that you
 have SO_BINDTODEVICE.   Linux 2.0.31 was released quite a while after 2.1
-kernel development began.   I do not know what version of Linux 2.1 has
-this feature.   To find out if yours does, check /usr/include/sys/sock*.h
-to see if SO_BINDTODEVICE is defined.
+kernel development began.   The earliest Linux kernel in the 2.1
+development stream with SO_BINDTODEVICE is version 2.1.68.
 
 We have heard reports that you must still add routes to 255.255.255.255
 in order for the all-ones broadcast to work, even on 2.0.31 kernels.
