@@ -105,7 +105,7 @@ void dhcpdiscover (packet)
 
 		/* If there are no leases in that subnet that have
 		   expired, we have nothing to offer this client. */
-		if (lease -> ends > cur_time) {
+		if (!lease || lease -> ends > cur_time) {
 			note ("no free leases on subnet %s",
 			      packet -> shared_network -> name);
 			return;
