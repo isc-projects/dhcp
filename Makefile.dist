@@ -74,7 +74,7 @@ VARDB = /var/db
 #LIBS = -lresolv -lsocket -lnsl -lgen
 #CC=gcc
 #COPTS = -Wall -Wstrict-prototypes -Wno-unused -Wno-implicit -Wno-comment \
-#	 -Wno-uninitialized -Werror
+#	 -Wno-uninitialized -Wno-char-subscript -Werror
 #CF = cf/sunos5-5.h
 #ADMMANDIR = /usr/share/man/cat1m
 #ADMMANEXT = .1m
@@ -143,8 +143,9 @@ VARDB = /var/db
 #FFMANEXT = .5
 ##--ultrix--
 
-## Linux
-##--linux--
+## Linux 1.x
+##--linux-1--
+#COPTS = -DLINUX_1_X
 #CF = cf/linux.h
 #ADMMANDIR = /usr/man/man8
 #ADMMANEXT = .8
@@ -152,7 +153,34 @@ VARDB = /var/db
 #FFMANEXT = .5
 #VARRUN = /var/run
 #VARDB = /var/dhcpd
-##--linux--
+#SCRIPT=linux
+##--linux-1--
+
+## Linux 2.0
+##--linux-2.0--
+#COPTS = -DLINUX_2_0
+#CF = cf/linux.h
+#ADMMANDIR = /usr/man/man8
+#ADMMANEXT = .8
+#FFMANDIR = /usr/man/man5
+#FFMANEXT = .5
+#VARRUN = /var/run
+#VARDB = /var/dhcpd
+#SCRIPT=linux
+##--linux-2.0--
+
+## Linux 2.1
+##--linux-2.1--
+#COPTS = -DLINUX_2_1
+#CF = cf/linux.h
+#ADMMANDIR = /usr/man/man8
+#ADMMANEXT = .8
+#FFMANDIR = /usr/man/man5
+#FFMANEXT = .5
+#VARRUN = /var/run
+#VARDB = /var/dhcpd
+#SCRIPT=linux
+##--linux-2.1--
 
 ## SCO
 ##--sco--
