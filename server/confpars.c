@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.107 2000/05/01 23:57:51 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.108 2000/05/03 06:19:29 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -145,6 +145,11 @@ isc_result_t read_leases ()
 			parse_host_declaration (cfile, &root_group);
 		} else if (token == GROUP) {
 			parse_group_declaration (cfile, &root_group);
+#if defined (FAILOVER_PROTOCOL)
+		} else if (token == FAILOVER) {
+			parse_failover_state_declaration
+				(cfile, (dhcp_failover_state_t *)0);
+#endif
 		} else {
 			log_error ("Corrupt lease file - possible data loss!");
 			skip_to_semi (cfile);
@@ -625,18 +630,13 @@ void parse_failover_peer (cfile, group, type)
 				peer;
 		}
 		return;
-	} else if (token == MY || token == PARTNER) {
+	} else if (token == STATE) {
 		if (!peer) {
-			parse_warn (cfile, "reference to unknown%s%s",
+			parse_warn (cfile, "state declaration for unknown%s%s",
 				    " failover peer ", name);
 			return;
 		}
-		if (token == MY)
-			parse_failover_state (cfile, &peer -> my_state,
-					      &peer -> my_stos);
-		else
-			parse_failover_state (cfile, &peer -> partner_state,
-					      &peer -> partner_stos);
+		parse_failover_state_declaration (cfile, peer);
 		return;
 	} else if (token != LBRACE) {
 		parse_warn (cfile, "expecting left brace");
@@ -659,6 +659,12 @@ void parse_failover_peer (cfile, group, type)
 
 	/* Save the name. */
 	peer -> name = name;
+
+	/* Set the initial state. */
+	peer -> my_state = communications_interrupted;
+	peer -> my_stos = cur_time;
+	peer -> partner_state = unknown_state;
+	peer -> partner_stos = cur_time;
 
 	do {
 		token = next_token (&val, cfile);
@@ -831,6 +837,95 @@ void parse_failover_peer (cfile, group, type)
 			    peer -> name, isc_result_totext (status));
 }
 
+void parse_failover_state_declaration (struct parse *cfile,
+				       dhcp_failover_state_t *peer)
+{
+	enum dhcp_token token;
+	const char *val;
+	char *name;
+	dhcp_failover_state_t *state;
+
+	if (!peer) {
+		token = next_token (&val, cfile);
+		if (token != PEER) {
+			parse_warn (cfile, "expecting \"peer\"");
+			skip_to_semi (cfile);
+			return;
+		}
+
+		token = next_token (&val, cfile);
+		if (is_identifier (token) || token == STRING) {
+			name = dmalloc (strlen (val) + 1, MDL);
+			if (!name)
+				log_fatal ("failover peer name %s: no memory",
+					   name);
+			strcpy (name, val);
+		} else {
+			parse_warn (cfile, "expecting failover peer name.");
+			skip_to_semi (cfile);
+			return;
+		}
+
+		/* See if there's a peer declaration by this name. */
+		state = (dhcp_failover_state_t *)0;
+		find_failover_peer (&state, name);
+		if (!state) {
+			parse_warn (cfile, "unknown failover peer: %s", name);
+			skip_to_semi (cfile);
+			return;
+		}
+
+		token = next_token (&val, cfile);
+		if (token != STATE) {
+			parse_warn (cfile, "expecting 'state'");
+			if (token != SEMI)
+				skip_to_semi (cfile);
+			return;
+		}
+	} else
+		state = peer;
+	token = next_token (&val, cfile);
+	if (token != LBRACE) {
+		parse_warn (cfile, "expecting left brace");
+		if (token != SEMI)
+			skip_to_semi (cfile);
+		return;
+	}
+	do {
+		token = next_token (&val, cfile);
+		switch (token) {
+		      case RBRACE:
+			break;
+		      case MY:
+			token = next_token (&val, cfile);
+			if (token != STATE) {
+				parse_warn (cfile, "expecting 'state'");
+				skip_to_rbrace (cfile, 1);
+				return;
+			}
+			parse_failover_state (cfile,
+					      &state -> my_state,
+					      &state -> my_stos);
+			break;
+		      case PARTNER:
+			token = next_token (&val, cfile);
+			if (token != STATE) {
+				parse_warn (cfile, "expecting 'state'");
+				skip_to_rbrace (cfile, 1);
+				return;
+			}
+			parse_failover_state (cfile,
+					      &state -> partner_state,
+					      &state -> partner_stos);
+			break;
+		      default:
+			parse_warn (cfile, "expecting state setting.");
+			skip_to_rbrace (cfile, 1);
+			return;
+		}
+	} while (token != RBRACE);
+}
+
 void parse_failover_state (cfile, state, stos)
 	struct parse *cfile;
 	enum failover_state *state;
@@ -859,8 +954,16 @@ void parse_failover_state (cfile, state, stos)
 		state_in = potential_conflict;
 		break;
 
+	      case POTENTIAL_CONFLICT_NIC:
+		state_in = potential_conflict;
+		break;
+
 	      case RECOVER:
 		state_in = recover;
+		break;
+		
+	      case UNKNOWN_STATE:
+		state_in = unknown_state;
 		break;
 
 	      default:
@@ -947,6 +1050,7 @@ void parse_pool_statement (cfile, group, type)
 #endif
 			break;
 				
+#if defined (FAILOVER_PROTOCOL)
 		      case FAILOVER:
 			next_token (&val, cfile);
 			token = next_token (&val, cfile);
@@ -973,6 +1077,7 @@ void parse_pool_statement (cfile, group, type)
 					    isc_result_totext (status));
 			parse_semi (cfile);
 			break;
+#endif
 
 		      case RANGE:
 			next_token (&val, cfile);
