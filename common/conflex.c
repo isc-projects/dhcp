@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: conflex.c,v 1.92.2.10 2005/03/01 16:26:19 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: conflex.c,v 1.92.2.11 2005/03/01 23:07:22 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -426,28 +426,30 @@ static enum dhcp_token read_number (c, cfile)
 		 * a NAME at '0x', and returned to NUMBER_OR_NAME once it's
 		 * verified to be at least 0xf or less.
 		 */
-		switch(token) {
+		switch(isascii(c) ? token : BREAK) {
 		    case NUMBER:
-			if(isascii(c) && isdigit(c))
+			if(isdigit(c))
 				break;
-			token = NUMBER_OR_NAME;
 			/* FALLTHROUGH */
 		    case NUMBER_OR_NAME:
-			if(isascii(c) && isxdigit(c))
+			if(isxdigit(c)) {
+				token = NUMBER_OR_NAME;
 				break;
-			token = NAME;
+			}
 			/* FALLTHROUGH */
 		    case NAME:
-			if((i == 2) && isascii(c) && isxdigit(c) &&
+			if((i == 2) && isxdigit(c) &&
 				(cfile->tokbuf[0] == '0') &&
 				((cfile->tokbuf[1] == 'x') ||
 				 (cfile->tokbuf[1] == 'X'))) {
 				token = NUMBER_OR_NAME;
 				break;
-			} else if((c == '-') || (c == '_') ||
-				  (isascii(c) && isalnum(c)))
+			} else if(((c == '-') || (c == '_') || isalnum(c))) {
+				token = NAME;
 				break;
-
+			}
+			/* FALLTHROUGH */
+		    case BREAK:
 			/* At this point c is either EOF or part of the next
 			 * token.  If not EOF, rewind the file one byte so
 			 * the next token is read from there.
