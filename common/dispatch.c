@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dispatch.c,v 1.34 1997/02/26 18:24:40 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dispatch.c,v 1.35 1997/03/05 08:39:38 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -540,7 +540,7 @@ void dispatch (parse)
 		    !interfaces_invalidated)
 			fallback_discard (&fallback_interface);
 #endif
-		interfaces_invalidated = 1;
+		interfaces_invalidated = 0;
 	} while (1);
 }
 #endif /* USE_POLL */
