@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.42 2001/04/16 22:28:50 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.43 2001/04/17 04:10:47 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2148,11 +2148,13 @@ int dhcp_failover_queue_update (struct lease *lease, int immediate)
 	} else {
 		lease_reference (&state -> update_queue_head, lease, MDL);
 	}
+#if defined (POINTER_DEBUG)
 	if (lease -> next_pending) {
 		log_error ("next pending on update queue lease.");
 		dump_rc_history ();
 		abort ();
 	}
+#endif
 	lease_reference (&state -> update_queue_tail, lease, MDL);
 	lease -> flags |= ON_UPDATE_QUEUE;
 	if (immediate)
@@ -4869,7 +4871,6 @@ OMAPI_OBJECT_ALLOC (dhcp_failover_link, dhcp_failover_link_t,
 		    dhcp_type_failover_link)
 #endif /* defined (FAILOVER_PROTOCOL) */
 
-#if defined (DEBUG_LEASE_STATE_TRANSITIONS)
 const char *binding_state_print (enum failover_state state)
 {
 	switch (state) {
@@ -4914,4 +4915,3 @@ const char *binding_state_print (enum failover_state state)
 		break;
 	}
 }
-#endif
