@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: clparse.c,v 1.31 1999/04/05 15:08:13 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: clparse.c,v 1.32 1999/07/17 17:59:02 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -283,10 +283,13 @@ void parse_client_statement (cfile, ip, config)
 		option = parse_option_name (cfile, 0);
 		if (!option)
 			return;
-		stmt = parse_option_statement (cfile, 1, option, op);
+		stmt = (struct executable_statement *)0;
+		if (!parse_option_statement (&stmt, cfile, 1, option, op))
+			return;
 		for (; *p; p = &((*p) -> next))
 			;
-		*p = stmt;
+		executable_statement_reference (p, stmt,
+						"parse_client_statement");
 		stmt -> next = (struct executable_statement *)0;
 		return;
 
@@ -437,21 +440,25 @@ void parse_client_statement (cfile, ip, config)
 
 	      default:
 		lose = 0;
-		stmt = parse_executable_statement (cfile, &lose);
-		if (!stmt) {
+		stmt = (struct executable_statement *)0;
+		if (!parse_executable_statement (&stmt, cfile, &lose)) {
 			if (!lose) {
 				parse_warn ("expecting a statement.");
 				skip_to_semi (cfile);
 			}
 		} else {
 			if (!config -> on_receipt -> statements) {
-				config -> on_receipt -> statements = stmt;
+				executable_statement_reference
+					(&config -> on_receipt -> statements,
+					 stmt, "parse_client_statements");
 			} else {
 				struct executable_statement *s;
 				for (s = config -> on_receipt -> statements;
 				     s -> next; s = s -> next)
 					;
-				s -> next = stmt;
+				executable_statement_reference
+					(&s -> next, stmt,
+					 "parse_client_statements");
 			}
 			return;
 		}
