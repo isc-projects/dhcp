@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.88 2000/04/14 16:28:07 mellon Exp $ Copyright 1995-2000 The Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.89 2000/05/02 00:11:49 mellon Exp $ Copyright 1995-2000 The Internet Software Consortium.";
 #endif
 
   static char copyright[] =
@@ -65,11 +65,6 @@ struct binding_scope global_scope;
 
 struct iaddr server_identifier;
 int server_identifier_matched;
-
-u_int16_t local_port;
-u_int16_t remote_port;
-
-struct in_addr limited_broadcast;
 
 /* This is the standard name service updater that is executed whenever a
    lease is committed.   Right now it's not following the DHCP-DNS draft
@@ -164,11 +159,12 @@ int main (argc, argv, envp)
 	omapi_object_t *listener;
 	unsigned seed;
 	struct interface_info *ip;
-	struct data_string fname;
+	struct data_string db;
 	struct option_cache *oc;
 	struct option_state *options = (struct option_state *)0;
 	struct parse *parse;
 	int lose;
+	u_int16_t omapi_port;
 
 	/* Initially, log errors to stderr as well as to syslogd. */
 #ifdef SYSLOG_4_2
@@ -350,35 +346,103 @@ int main (argc, argv, envp)
 				     options, &global_scope,
 				     &root_group,
 				     (struct group *)0);
-	memset (&fname, 0, sizeof fname);
+	memset (&db, 0, sizeof db);
 	oc = lookup_option (&server_universe, options, SV_LEASE_FILE_NAME);
 	if (oc &&
-	    evaluate_option_cache (&fname, (struct packet *)0,
+	    evaluate_option_cache (&db, (struct packet *)0,
 				   (struct lease *)0, options,
 				   (struct option_state *)0,
 				   &global_scope, oc, MDL)) {
-		s = dmalloc (fname.len + 1, MDL);
+		s = dmalloc (db.len + 1, MDL);
 		if (!s)
 			log_fatal ("no memory for lease db filename.");
-		memcpy (s, fname.data, fname.len);
-		s [fname.len] = 0;
-		data_string_forget (&fname, MDL);
+		memcpy (s, db.data, db.len);
+		s [db.len] = 0;
+		data_string_forget (&db, MDL);
 		path_dhcpd_db = s;
 	}
 	
 	oc = lookup_option (&server_universe, options, SV_PID_FILE_NAME);
 	if (oc &&
-	    evaluate_option_cache (&fname, (struct packet *)0,
+	    evaluate_option_cache (&db, (struct packet *)0,
 				   (struct lease *)0, options,
 				   (struct option_state *)0,
 				   &global_scope, oc, MDL)) {
-		s = dmalloc (fname.len + 1, MDL);
+		s = dmalloc (db.len + 1, MDL);
 		if (!s)
 			log_fatal ("no memory for lease db filename.");
-		memcpy (s, fname.data, fname.len);
-		s [fname.len] = 0;
-		data_string_forget (&fname, MDL);
+		memcpy (s, db.data, db.len);
+		s [db.len] = 0;
+		data_string_forget (&db, MDL);
 		path_dhcpd_pid = s;
+	}
+
+	omapi_port = OMAPI_PROTOCOL_PORT;
+	oc = lookup_option (&server_universe, options, SV_OMAPI_PORT);
+	if (oc &&
+	    evaluate_option_cache (&db, (struct packet *)0,
+				   (struct lease *)0, options,
+				   (struct option_state *)0,
+				   &global_scope, oc, MDL)) {
+		if (db.len == 2) {
+			omapi_port = getUShort (db.data);
+		} else
+			log_fatal ("invalid omapi port data length");
+		data_string_forget (&db, MDL);
+	}
+
+	oc = lookup_option (&server_universe, options, SV_LOCAL_PORT);
+	if (oc &&
+	    evaluate_option_cache (&db, (struct packet *)0,
+				   (struct lease *)0, options,
+				   (struct option_state *)0,
+				   &global_scope, oc, MDL)) {
+		if (db.len == 2) {
+			local_port = htons (getUShort (db.data));
+		} else
+			log_fatal ("invalid local port data length");
+		data_string_forget (&db, MDL);
+	}
+
+	oc = lookup_option (&server_universe, options, SV_REMOTE_PORT);
+	if (oc &&
+	    evaluate_option_cache (&db, (struct packet *)0,
+				   (struct lease *)0, options,
+				   (struct option_state *)0,
+				   &global_scope, oc, MDL)) {
+		if (db.len == 2) {
+			remote_port = htons (getUShort (db.data));
+		} else
+			log_fatal ("invalid remote port data length");
+		data_string_forget (&db, MDL);
+	}
+
+	oc = lookup_option (&server_universe, options,
+			    SV_LIMITED_BROADCAST_ADDRESS);
+	if (oc &&
+	    evaluate_option_cache (&db, (struct packet *)0,
+				   (struct lease *)0, options,
+				   (struct option_state *)0,
+				   &global_scope, oc, MDL)) {
+		if (db.len == 4) {
+			memcpy (&limited_broadcast, db.data, 4);
+		} else
+			log_fatal ("invalid remote port data length");
+		data_string_forget (&db, MDL);
+	}
+
+	oc = lookup_option (&server_universe, options,
+			    SV_LOCAL_ADDRESS);
+	if (oc &&
+	    evaluate_option_cache (&db, (struct packet *)0,
+				   (struct lease *)0, options,
+				   (struct option_state *)0,
+				   &global_scope, oc, MDL)) {
+		if (db.len == 4) {
+			memcpy (&local_address, db.data, 4);
+		} else
+			log_fatal ("invalid remote port data length");
+		data_string_forget (&db, MDL);
 	}
 
 	/* Don't need the options anymore. */
@@ -417,11 +481,15 @@ int main (argc, argv, envp)
 	if (result != ISC_R_SUCCESS)
 		log_fatal ("Can't allocate new generic object: %s\n",
 			   isc_result_totext (result));
-	result = omapi_protocol_listen (listener,
-					OMAPI_PROTOCOL_PORT, 1);
+	result = omapi_protocol_listen (listener, omapi_port, 1);
 	if (result != ISC_R_SUCCESS)
 		log_fatal ("Can't start OMAPI protocol: %s",
 			   isc_result_totext (result));
+
+#if defined (FAILOVER_PROTOCOL)
+	/* Start the failover protocol. */
+	dhcp_failover_startup ();
+#endif
 
 #ifndef DEBUG
 	if (daemon) {
