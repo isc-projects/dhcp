@@ -1784,6 +1784,25 @@ time.
 .RE
 .PP
 The
+.I do-forward-updates
+statement
+.RS 0.25i
+.PP
+.B do-forward-updates \fIflag\fB;\fR
+.PP
+The \fIdo-forward-updates\fR statement instructs the DHCP server as
+to whether it should attempt to update a DHCP client's A record
+when the client acquires or renews a lease.   This statement has no
+effect unless DNS updates are enabled and \fBddns-update-style\fR is
+set to \fBinterim\fR.   Forward updates are enabled by default.   If
+this statement is used to disable forward updates, the DHCP server
+will never attempt to update the client's A record, and will only ever
+attempt to update the client's PTR record if the client supplies an
+FQDN that should be placed in the PTR record using the fqdn option.
+If forward updates are enabled, the DHCP server will still honor the
+setting of the \fBclient-updates\fR flag.
+.PP
+The
 .I dynamic-bootp-lease-cutoff
 statement
 .RS 0.25i
