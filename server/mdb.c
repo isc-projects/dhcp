@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.46 2000/12/11 18:56:44 neild Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.47 2000/12/28 23:34:08 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1511,8 +1511,8 @@ void uid_hash_delete (lease)
 				break;
 			}
 		}
-		lease_dereference (&head, MDL);
 	}
+	lease_dereference (&head, MDL);
 }
 
 /* Add the specified lease to the hardware address hash. */
