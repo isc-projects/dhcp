@@ -888,6 +888,24 @@ struct lease *find_lease (packet, share)
 	} else
 		ip_lease = (struct lease *)0;
 
+	/* Toss ip_lease if it hasn't yet expired and the uid doesn't
+	   match */
+	if (ip_lease &&
+	    ip_lease -> ends >= cur_time &&
+	    ip_lease -> uid && ip_lease != uid_lease)
+		ip_lease = (struct lease *)0;
+
+	/* Toss hw_lease if it hasn't yet expired and the uid doesn't
+	   match, except that if the hardware address matches and the
+	   client is now doing dynamic BOOTP (and thus hasn't provided
+	   a uid) we let the client get away with it. */
+	if (hw_lease &&
+	    hw_lease -> ends >= cur_time &&
+	    hw_lease -> uid && hw_lease != uid_lease &&
+	    (packet -> packet_type != 0 ||
+	     !(lease -> flags & DYNAMIC_BOOTP_OK)))
+		hw_lease = (struct lease *)0;
+
 	/* Toss extra pointers to the same lease... */
 	if (ip_lease == hw_lease)
 		ip_lease = (struct lease *)0;
