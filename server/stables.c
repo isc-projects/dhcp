@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: stables.c,v 1.16 2000/08/03 21:00:41 neild Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: stables.c,v 1.17 2000/08/31 04:40:24 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -144,9 +144,9 @@ u_int32_t fto_allowed [] = {
 	(FTB_SERVER_ADDR | FTB_MAX_UNACKED | FTB_RECEIVE_TIMER |
 	 FTB_VENDOR_CLASS | FTB_PROTOCOL_VERSION | FTB_TLS_REPLY |
 	 FTB_REJECT_REASON | FTB_MESSAGE), /* CONNECTACK */
-	0,	/* 7 UPDREQ */
-	0,	/* 8 UPDDONE */
-	0,	/* 9 UPDREQALL */
+	0, /* 7 UPDREQ */
+	0, /* 8 UPDDONE */
+	0, /* 9 UPDREQALL */
 	(FTB_SERVER_STATE | FTB_SERVER_FLAGS | FTB_STOS), /* 10 STATE */
 	0,	/* 11 CONTACT */
 	(FTB_REJECT_REASON | FTB_MESSAGE) /* 12 DISCONNECT */
