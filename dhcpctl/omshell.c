@@ -107,6 +107,13 @@ int main (int argc, char **argv, char **envp)
 		usage(argv[0]);
 	}
 
+	/* Initially, log errors to stderr as well as to syslogd. */
+#ifdef SYSLOG_4_2
+	openlog ("dhcpd", LOG_NDELAY);
+	log_priority = DHCPD_LOG_FACILITY;
+#else
+	openlog ("dhcpd", LOG_NDELAY, DHCPD_LOG_FACILITY);
+#endif
 	status = dhcpctl_initialize ();
 	if (status != ISC_R_SUCCESS) {
 		fprintf (stderr, "dhcpctl_initialize: %s\n",
