@@ -96,6 +96,9 @@ and for prodding me into improving it.
 - A small memory leak was closed involving client identifiers larger than
   7 bytes, and failover.
 
+- Configuring a subnet in dhcpd.conf with a subnet mask of 32 bits might
+  cause an internal function to overflow heap.
+
 			Changes since 3.0.2rc3
 
 - A previously undocumented configuration directive, 'local-address',

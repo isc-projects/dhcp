@@ -1827,7 +1827,6 @@ u_int32_t host_addr PROTO ((struct iaddr, struct iaddr));
 int addr_eq PROTO ((struct iaddr, struct iaddr));
 char *piaddr PROTO ((struct iaddr));
 char *piaddrmask (struct iaddr, struct iaddr, const char *, int);
-char *piaddr1 PROTO ((struct iaddr));
 
 /* dhclient.c */
 extern const char *path_dhclient_conf;
