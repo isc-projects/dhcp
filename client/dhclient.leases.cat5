@@ -1,41 +1,37 @@
 
 
 
-Headers, Environments, and Macros              dhclient.leases(5)
+dhclient.leases(5)                             dhclient.leases(5)
 
 
+NNAAMMEE
+       dhclient.leases - DHCP client lease database
 
-NNNNAAAAMMMMEEEE
-     dhclient.leases - DHCP client lease database
+DDEESSCCRRIIPPTTIIOONN
+       The  Internet Software Consortium DHCP client keeps a per­
+       sistent database of leases that it has acquired  that  are
+       still valid.   The database is a free-form ASCII file con­
+       taining one valid declaration per lease.    If  more  than
+       one declaration appears for a given lease, the last one in
+       the file is used.   The file is written as a log, so  this
+       is not an unusual occurrance.
 
-DDDDEEEESSSSCCCCRRRRIIIIPPPPTTTTIIIIOOOONNNN
-     The Internet Software Consortium DHCP client  keeps  a  per-
-     sistent  database  of  leases  that it has acquired that are
-     still valid.   The database is a free-form ASCII  file  con-
-     taining  one valid declaration per lease.   If more than one
-     declaration appears for a given lease, the last one  in  the
-     file is used.   The file is written as a log, so this is not
-     an unusual occurrance.
+       The  format  of  the  lease  declarations  is described in
+       ddhhcclliieenntt..ccoonnff((55))..
 
-     The  format  of  the  lease  declarations  is  described  in
-     ddddhhhhcccclllliiiieeeennnntttt....ccccoooonnnnffff((((5555))))....
+FFIILLEESS
+       //vvaarr//ddbb//ddhhcclliieenntt..lleeaasseess
 
-FFFFIIIILLLLEEEESSSS
-     ////eeeettttcccc////ddddhhhhcccclllliiiieeeennnntttt....lllleeeeaaaasssseeeessss
+SSEEEE AALLSSOO
+       dhclient(8), dhcp-options(5), dhclient.conf(5),  dhcpd(8),
+       dhcpd.conf(5), RFC2132, RFC2131.
 
-SSSSEEEEEEEE AAAALLLLSSSSOOOO
-     dhclient(8),  dhcp-options(5),  dhclient.conf(5),  dhcpd(8),
-     dhcpd.conf(5), RFC2132, RFC2131.
-
-AAAAUUUUTTTTHHHHOOOORRRR
-     ddddhhhhcccclllliiiieeeennnntttt((((8888)))) was written by Ted Lemon <mellon@vix.com>  under
-     a  contract  with Vixie Labs.   Funding for this project was
-     provided by the Internet Software  Consortium.   Information
-     about  the  Internet  Software  Consortium  can  be found at
-     hhhhttttttttpppp::::////////wwwwwwwwwwww....iiiisssscccc....oooorrrrgggg////iiiisssscccc....
-
-
-
+AAUUTTHHOORR
+       ddhhcclliieenntt((88))  was  written  by  Ted  Lemon <mellon@vix.com>
+       under a contract with Vixie Labs.   Funding for this  pro­
+       ject  was  provided  by  the Internet Software Consortium.
+       Information about the Internet Software Consortium can  be
+       found at hhttttpp::////wwwwww..iisscc..oorrgg//iisscc..
 
 
 
@@ -60,7 +56,11 @@ AAAAUUUUTTTTHHHHOOOORRRR
 
 
 
-SunOS 5.6                 Last change:                          1
 
+
+
+
+
+                                                                1
 
 

@@ -1,186 +1,189 @@
 
 
 
-Headers, Environments, and Macros                 dhcpd.leases(5)
+dhcpd.leases(5)                                   dhcpd.leases(5)
 
 
+NNAAMMEE
+       dhcpd.leases - DHCP client lease database
 
-NNNNAAAAMMMMEEEE
-     dhcpd.leases - DHCP client lease database
+DDEESSCCRRIIPPTTIIOONN
+       The  Internet Software Consortium DHCP Server keeps a per­
+       sistent database of leases that  it  has  assigned.   This
+       database  is a free-form ASCII file containing a series of
+       lease declarations.   Every  time  a  lease  is  acquired,
+       renewed  or released, its new value is recorded at the end
+       of the lease  file.   So  if  more  than  one  declaration
+       appears for a given lease, the last one in the file is the
+       current one.
 
-DDDDEEEESSSSCCCCRRRRIIIIPPPPTTTTIIIIOOOONNNN
-     The Internet Software Consortium DHCP Server  keeps  a  per-
-     sistent database of leases that it has assigned.  This data-
-     base is a free-form ASCII file containing a series of  lease
-     declarations.   Every  time  a lease is acquired, renewed or
-     released, its new value is recorded at the end of the  lease
-     file.   So  if more than one declaration appears for a given
-     lease, the last one in the file is the current one.
+       When dhcpd is first installed, there is no lease database.
+       However,  dhcpd  requires that a lease database be present
+       before it will start.  To make the initial lease database,
+       just create an empty file called /var/db/dhcpd.leases.
 
-     When dhcpd is first installed, there is no  lease  database.
-     However,  dhcpd  requires  that  a lease database be present
-     before it will start.  To make the initial  lease  database,
-     just create an empty file called /etc/dhcpd.leases.
+       In  order to prevent the lease database from growing with­
+       out bound, the  file  is  rewritten  from  time  to  time.
+       First, a temporary lease database is created and all known
+       leases are dumped to it.   Then, the old lease database is
+       renamed  /var/db/dhcpd.leases~.   Finally, the newly writ­
+       ten lease database is moved into place.
 
-     In order to prevent the lease database from growing  without
-     bound,  the  file is rewritten from time to time.   First, a
-     temporary lease database is created and all known leases are
-     dumped  to  it.    Then,  the  old lease database is renamed
-     /etc/dhcpd.leases~.   Finally, the newly written lease data-
-     base is moved into place.
+       There is a window of vulnerability where if the dhcpd pro­
+       cess  is  killed or the system crashes after the old lease
+       database has been renamed but before the new one has  been
+       moved  into  place, there will be no /var/db/dhcpd.leases.
+       In this case, dhcpd will refuse to start, and will require
+       manual  intervention.    DDOO  NNOOTT simply create a new lease
+       file when this happens - if you do, you will lose all your
+       old  bindings,  and  chaos  will  ensue.   Instead, rename
+       /var/db/dhcpd.leases~ to  /var/db/dhcpd.leases,  restoring
+       the  old,  valid  lease file, and then start dhcpd.   This
+       guarantees that a valid lease file will be restored.
 
-     There is a window of vulnerability where if the  dhcpd  pro-
-     cess  is  killed  or  the system crashes after the old lease
-     database has been renamed but before the new  one  has  been
-     moved  into  place, there will be no /etc/dhcpd.leases.   In
-     this case, dhcpd will refuse  to  start,  and  will  require
-     manual intervention.   DDDDOOOO NNNNOOOOTTTT simply create a new lease file
-     when this happens - if you do, you will lose  all  your  old
-     bindings,   and   chaos   will   ensue.     Instead,  rename
-     /etc/dhcpd.leases~ to /etc/dhcpd.leases, restoring the  old,
-     valid  lease  file,  and then start dhcpd.   This guarantees
-     that a valid lease file will be restored.
+FFOORRMMAATT
+       Lease descriptions are stored in a format that  is  parsed
+       by  the  same  recursive  descent  parser used to read the
+       ddhhccppdd..ccoonnff((55)) and ddhhcclliieenntt..ccoonnff((55)) files.   Currently, the
+       only  declaration that is used in the dhcpd.leases file is
+       the lleeaassee declaration.
 
-FFFFOOOORRRRMMMMAAAATTTT
-     Lease descriptions are stored in a format that is parsed  by
-     the   same   recursive  descent  parser  used  to  read  the
-     ddddhhhhccccppppdddd....ccccoooonnnnffff((((5555)))) and ddddhhhhcccclllliiiieeeennnntttt....ccccoooonnnnffff((((5555)))) files.    Currently,  the
-     only  declaration  that  is used in the dhcpd.leases file is
-     the lllleeeeaaaasssseeee declaration.
+        lleeaassee _i_p_-_a_d_d_r_e_s_s {{ _s_t_a_t_e_m_e_n_t_s_._._. }}
 
-      lllleeeeaaaasssseeee _i_p-_a_d_d_r_e_s_s {{{{ _s_t_a_t_e_m_e_n_t_s... }}}}
+       Each lease declaration include the single IP address  that
+       has been leased to the client.   The statements within the
+       braces define the duration of the lease and to whom it  is
+       assigned.
 
-     Each lease declaration include the single  IP  address  that
-     has  been  leased to the client.   The statements within the
-     braces define the duration of the lease and to  whom  it  is
-     assigned.
+       The  start  and end time of a lease are recorded using the
+       ``starts'' and ``ends'' statements:
 
-     The start and end time of a lease  are  recorded  using  the
-     ``starts'' and ``ends'' statements:
 
 
 
-SunOS 5.6                 Last change:                          1
+                                                                1
 
 
 
 
 
+dhcpd.leases(5)                                   dhcpd.leases(5)
 
-Headers, Environments, and Macros                 dhcpd.leases(5)
 
+         ssttaarrttss _d_a_t_e;;
+         eennddss _d_a_t_e;;
 
+       Dates are specified as follows:
 
-       ssssttttaaaarrrrttttssss _d_a_t_e;;;;
-       eeeennnnddddssss _d_a_t_e;;;;
+        _w_e_e_k_d_a_y _y_e_a_r//_m_o_n_t_h//_d_a_y _h_o_u_r::_m_i_n_u_t_e::_s_e_c_o_n_d
 
-     Dates are specified as follows:
+       The weekday is present to make it easy for a human to tell
+       when  a  lease  expires  - it's specified as a number from
+       zero to six, with zero being Sunday.  The day of  week  is
+       ignored on input.  The year is specified with the century,
+       so it should generally be four digits  except  for  really
+       long  leases.  The month is specified as a number starting
+       with 1 for January.  The day  of  the  month  is  likewise
+       specified starting with 1.  The hour is a number between 0
+       and 23, the minute a number between 0 and 59, and the sec­
+       ond also a number between 0 and 59.
 
-      _w_e_e_k_d_a_y _y_e_a_r////_m_o_n_t_h////_d_a_y _h_o_u_r::::_m_i_n_u_t_e::::_s_e_c_o_n_d
+       Lease  times  are  specified in Greenwich Mean Time (GMT),
+       not in the local time zone.   Since Greenwich is  actually
+       on Daylight Savings Time part of the year, there is proba­
+       bly nowhere in the world where the  times  recorded  on  a
+       lease  are always the same as wall clock times.  On a unix
+       machine, one can often figure out the current time in  GMT
+       by typing ddaattee --uu.
 
-     The weekday is present to make it easy for a human  to  tell
-     when  a lease expires - it's specified as a number from zero
-     to six, with zero being Sunday.  The day of week is  ignored
-     on  input.   The  year  is specified with the century, so it
-     should generally be  four  digits  except  for  really  long
-     leases.   The month is specified as a number starting with 1
-     for January.  The day of the  month  is  likewise  specified
-     starting with 1.  The hour is a number between 0 and 23, the
-     minute a number between 0 and 59,  and  the  second  also  a
-     number between 0 and 59.
+       The  MAC address of the network interface that was used to
+       acquire the lease is recorded with the hhaarrddwwaarree statement:
 
-     Lease times are specified in Greenwich Mean Time (GMT),  not
-     in  the  local  time  zone.   Since Greenwich is actually on
-     Daylight Savings Time part of the year,  there  is  probably
-     nowhere in the world where the times recorded on a lease are
-     always the same as wall clock times.  On a unix machine, one
-     can  often figure out the current time in GMT by typing ddddaaaatttteeee
-     ----uuuu.
+        hhaarrddwwaarree _h_a_r_d_w_a_r_e_-_t_y_p_e _m_a_c_-_a_d_d_r_e_s_s;;
 
-     The MAC address of the network interface that  was  used  to
-     acquire the lease is recorded with the hhhhaaaarrrrddddwwwwaaaarrrreeee statement:
+       The  MAC  address  is specified as a series of hexadecimal
+       octets, seperated by colons.
 
-      hhhhaaaarrrrddddwwwwaaaarrrreeee _h_a_r_d_w_a_r_e-_t_y_p_e _m_a_c-_a_d_d_r_e_s_s;;;;
+       If the client used a  client  identifier  to  acquire  its
+       address,  the  client identifier is recorded using the uuiidd
+       statement:
 
-     The MAC address is specified  as  a  series  of  hexadecimal
-     octets, seperated by colons.
+        uuiidd _c_l_i_e_n_t_-_i_d_e_n_t_i_f_i_e_r;;
 
-     If the client  used  a  client  identifier  to  acquire  its
-     address,  the  client  identifier  is recorded using the uuuuiiiidddd
-     statement:
+       The client identifier is recorded as a series of hexadeci­
+       mal  octets, regardless of whether the client specifies an
+       ASCII string or uses the newer hardware  type/MAC  address
+       format.
 
-      uuuuiiiidddd _c_l_i_e_n_t-_i_d_e_n_t_i_f_i_e_r;;;;
+       If  the  client sends a hostname using the _C_l_i_e_n_t _H_o_s_t_n_a_m_e
+       option, as specified in  some  versions  of  the  DHCP-DNS
+       Interaction  draft,  that  hostname  is recorded using the
+       cclliieenntt--hhoossttnnaammee statement.
 
-     The client identifier is recorded as a series of hexadecimal
-     octets,  regardless of whether the client specifies an ASCII
-     string or uses the newer hardware type/MAC address format.
+        cclliieenntt--hhoossttnnaammee ""_h_o_s_t_n_a_m_e"";;
 
-     If the client sends a hostname  using  the  _C_l_i_e_n_t  _H_o_s_t_n_a_m_e
-     option,  as  specified  in  some  versions  of  the DHCP-DNS
-     Interaction draft,  that  hostname  is  recorded  using  the
-     cccclllliiiieeeennnntttt----hhhhoooossssttttnnnnaaaammmmeeee statement.
+       If the  client  sends  its  hostname  using  the  _H_o_s_t_n_a_m_e
+       option,  as  Windows  95  does,  it  is recorded using the
 
-      cccclllliiiieeeennnntttt----hhhhoooossssttttnnnnaaaammmmeeee """"_h_o_s_t_n_a_m_e"""";;;;
 
 
+                                                                2
 
 
 
-SunOS 5.6                 Last change:                          2
 
 
+dhcpd.leases(5)                                   dhcpd.leases(5)
 
 
+       hhoossttnnaammee statement.
 
+        hhoossttnnaammee ""_h_o_s_t_n_a_m_e"";;
 
-Headers, Environments, and Macros                 dhcpd.leases(5)
+       The DHCP server may determine that a lease has  been  mis­
+       used  in  some  way, either because a client that has been
+       assigned a lease NAKs it,  or  because  the  server's  own
+       attempt to see if an address is in use prior to reusing it
+       reveals that the address is in fact already in  use.    In
+       that  case,  the aabbaannddoonneedd statement will be used to indi­
+       cate that the lease should not be reassigned.
 
+        aabbaannddoonneedd;;
 
+       Abandoned leases are  reclaimed  automatically.    When  a
+       client  asks  for a new address, and the server finds that
+       there are no new addresses, it checks to see if there  are
+       any  abandoned  leases,  and  allocates the least recently
+       abandoned lease.   The standard  mechanisms  for  checking
+       for  lease address conflicts are still followed, so if the
+       abandoned lease's IP address is still in use, it  will  be
+       reabandoned.
 
-     If the client sends its hostname using the _H_o_s_t_n_a_m_e  option,
-     as Windows 95 does, it is recorded using the hhhhoooossssttttnnnnaaaammmmeeee state-
-     ment.
+       If  a  client  rreeqquueessttss  an  abandoned address, the server
+       assumes that the reason the address was abandoned was that
+       the  lease  file was corrupted, and that the client is the
+       machine that responded when the lease was probed,  causing
+       it to be abandoned.   In that case, the address is immedi­
+       ately assigned to the client.
 
-      hhhhoooossssttttnnnnaaaammmmeeee """"_h_o_s_t_n_a_m_e"""";;;;
+FFIILLEESS
+       //vvaarr//ddbb//ddhhccppdd..lleeaasseess
 
-     The DHCP server may determine that a lease has been  misused
-     in  some way, either because a client that has been assigned
-     a lease NAKs it, or because the server's own attempt to  see
-     if an address is in use prior to reusing it reveals that the
-     address is in fact already in use.   In that case, the aaaabbbbaaaannnn----
-     ddddoooonnnneeeedddd  statement  will  be  used  to indicate that the lease
-     should not be reassigned.
+SSEEEE AALLSSOO
+       dhcpd(8),   dhcp-options(5),    dhcpd.conf(5),    RFC2132,
+       RFC2131.
 
-      aaaabbbbaaaannnnddddoooonnnneeeedddd;;;;
+AAUUTTHHOORR
+       ddhhccppdd((88)) was written by Ted Lemon <mellon@vix.com> under a
+       contract with Vixie Labs.   Funding for this  project  was
+       provided  by  the Internet Software Corporation.  Informa­
+       tion about the Internet Software Consortium can  be  found
+       at hhttttpp::////wwwwww..iisscc..oorrgg//iisscc..
 
-     Abandoned  leases  are  reclaimed  automatically.    When  a
-     client  asks  for  a  new address, and the server finds that
-     there are no new addresses, it checks to see  if  there  are
-     any abandoned leases, and allocates the least recently aban-
-     doned lease.   The  standard  mechanisms  for  checking  for
-     lease  address conflicts are still followed, so if the aban-
-     doned lease's IP address is still in use, it will be reaban-
-     doned.
 
-     If a  client  rrrreeeeqqqquuuueeeessssttttssss  an  abandoned  address,  the  server
-     assumes  that  the reason the address was abandoned was that
-     the lease file was corrupted, and that  the  client  is  the
-     machine that responded when the lease was probed, causing it
-     to be abandoned.   In that case, the address is  immediately
-     assigned to the client.
 
-FFFFIIIILLLLEEEESSSS
-     ////eeeettttcccc////ddddhhhhccccppppdddd....lllleeeeaaaasssseeeessss
 
-SSSSEEEEEEEE AAAALLLLSSSSOOOO
-     dhcpd(8), dhcp-options(5), dhcpd.conf(5), RFC2132, RFC2131.
 
-AAAAUUUUTTTTHHHHOOOORRRR
-     ddddhhhhccccppppdddd((((8888)))) was written by Ted Lemon <mellon@vix.com>  under  a
-     contract  with  Vixie  Labs.    Funding for this project was
-     provided by the Internet Software Corporation.   Information
-     about  the  Internet  Software  Consortium  can  be found at
-     hhhhttttttttpppp::::////////wwwwwwwwwwww....iiiisssscccc....oooorrrrgggg////iiiisssscccc....
 
 
 
@@ -190,9 +193,6 @@ AAAAUUUUTTTTHHHHOOOORRRR
 
 
 
-
-
-SunOS 5.6                 Last change:                          3
-
+                                                                3
 
 
