@@ -466,7 +466,7 @@ void parse_shared_net_statement (cfile, bc)
 		parse_warn ("zero-length shared network name");
 		val = "<no-name-given>";
 	}
-	name = dmalloc (strlen (val), "parse_shared_net_statement");
+	name = dmalloc (strlen (val) + 1, "parse_shared_net_statement");
 	if (!name)
 		error ("no memory for shared network name");
 	strcpy (name, val);
@@ -951,7 +951,7 @@ void parse_option_decl (cfile, bc, options)
 						 tree_const (val,
 							     strlen (val)));
 				} else {
-					parse_warn ("expecting string %s."
+					parse_warn ("expecting string %s.",
 						    "or hexadecimal data");
 					skip_to_semi (cfile);
 					longjmp (jdref (bc), 1);
