@@ -182,6 +182,8 @@ isc_result_t omapi_init (void)
 
 #if defined (TRACING)
 	omapi_listener_trace_setup ();
+	omapi_connection_trace_setup ();
+	omapi_buffer_trace_setup ();
 #endif
 
 	/* This seems silly, but leave it. */
