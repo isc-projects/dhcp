@@ -42,10 +42,12 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.43 1997/03/06 07:02:00 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.44 1997/03/06 18:40:22 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
+
+int outstanding_pings;
 
 static unsigned char dhcp_message [256];
 
@@ -304,10 +306,9 @@ void dhcpdecline (packet)
 	      ? inet_ntoa (packet -> raw -> giaddr)
 	      : packet -> interface -> name);
 
-
 	/* If we found a lease, mark it as unusable and complain. */
 	if (lease) {
-		abandon_lease (lease);
+		abandon_lease (lease, "declined.");
 	}
 }
 
@@ -824,7 +825,16 @@ void ack_lease (packet, lease, offer, when)
 #endif
 
 	lease -> state = state;
-	dhcp_reply (lease);
+
+	/* If this is a DHCPOFFER, ping the lease address before actually
+	   sending the offer. */
+	if (offer == DHCPOFFER) {
+		icmp_echorequest (&lease -> ip_addr);
+		add_timeout (cur_time + 1, lease_ping_timeout, lease);
+		++outstanding_pings;
+	} else {
+		dhcp_reply (lease);
+	}
 }
 
 void dhcp_reply (lease)
