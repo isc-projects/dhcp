@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.92 2000/11/28 23:23:13 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.93 2000/12/28 23:20:28 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1067,7 +1067,12 @@ int evaluate_boolean_expression (result, packet, lease, client_state,
 	      case expr_static:
 		if (!lease || !(lease -> flags & STATIC_LEASE)) {
 #if defined (DEBUG_EXPRESSIONS)
-			log_debug ("bool: static = false");
+			log_debug ("bool: static = false (%s %s %s %d)",
+				   lease ? "y" : "n",
+				   (lease && (lease -> flags & STATIC_LEASE)
+				    ? "y" : "n"),
+				   piaddr (lease -> ip_addr),
+				   lease ? lease -> flags : 0);
 #endif
 			*result = 0;
 			return 1;
