@@ -38,6 +38,18 @@ programming or debugging on your own to get dhcpd working.
 
 				LINUX
 
+There are two big LINUX issues: Linux 2.1 ip_bootp_agent enabling and
+the all-ones broadcast address.
+
+			 BOOTP AGENT ENABLING
+
+Also, some versions of the Linux 2.1 kernel apparently prevent dhcpd
+from working unless you enable it by doing the following:
+
+	      echo 1 >/proc/sys/net/ipv4/ip_bootp_agent
+
+			      BROADCAST
+
 In order for dhcpd to work correctly with picky DHCP clients (e.g.,
 Windows 95), it must be able to send packets with an IP destination
 address of 255.255.255.255.  Unfortunately, Linux insists on changing
@@ -49,8 +61,8 @@ see DHCPOFFER messages from the server.
 
 It is possible to work around this problem on some versions of Linux
 by creating a host route from your network interface address to
-255.255.255.255.   The command you need to use to do this on Linux
-varies from version to version.   The easiest version is:
+255.255.255.255.  The command you need to use to do this on Linux
+varies from version to version.  The easiest version is:
 
 	route add -host 255.255.255.255 dev eth0
 
