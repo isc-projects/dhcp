@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: packet.c,v 1.37 2000/10/13 18:54:56 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: packet.c,v 1.38 2000/10/14 07:56:59 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -238,6 +238,7 @@ ssize_t decode_udp_ip_header (interface, buf, bufix, from, data, buflen)
   static int udp_packets_length_checked;
   static int udp_packets_length_overflow;
   unsigned len;
+  unsigned ulen;
 
   ip = (struct ip *)(buf + bufix);
   udp = (struct udphdr *)(buf + bufix + ip_len);
@@ -252,9 +253,9 @@ ssize_t decode_udp_ip_header (interface, buf, bufix, from, data, buflen)
 	  return -1;
 #endif /* USERLAND_FILTER */
 
-  if (udp -> uh_ulen < sizeof udp ||
-      ((unsigned char *)udp) + udp -> uh_ulen > buf + buflen) {
-	  log_info ("bogus UDP packet length: %d\n", udp -> uh_ulen);
+  ulen = ntohs (udp -> uh_ulen);
+  if (ulen < sizeof udp || ((unsigned char *)udp) + ulen > buf + buflen) {
+	  log_info ("bogus UDP packet length: %d", ulen);
 	  return -1;
   }
 
@@ -285,7 +286,7 @@ ssize_t decode_udp_ip_header (interface, buf, bufix, from, data, buflen)
 
   if (!data) {
 	  data = buf + bufix + ip_len + sizeof *udp;
-	  len = ntohs (udp -> uh_ulen) - sizeof *udp;
+	  len = ulen - sizeof *udp;
 	  ++udp_packets_length_checked;
 	  if (len + data > buf + bufix + buflen) {
 		  ++udp_packets_length_overflow;
@@ -318,8 +319,7 @@ ssize_t decode_udp_ip_header (interface, buf, bufix, from, data, buflen)
 					       &ip -> ip_src,
 					       2 * sizeof ip -> ip_src,
 					       IPPROTO_UDP +
-					       (u_int32_t)
-					       ntohs (udp -> uh_ulen)))));
+					       (u_int32_t)ulen))));
 
   udp_packets_seen++;
   if (usum && usum != sum) {
