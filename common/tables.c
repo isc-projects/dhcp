@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tables.c,v 1.25 1999/04/08 19:33:00 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tables.c,v 1.26 1999/04/23 22:20:49 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -111,20 +111,20 @@ struct option dhcp_options [256] = {
 	{ "dhcp-client-identifier", "X",		&dhcp_universe, 61 },
 	{ "option-62", "X",				&dhcp_universe, 62 },
 	{ "option-63", "X",				&dhcp_universe, 63 },
-	{ "option-64", "X",				&dhcp_universe, 64 },
-	{ "option-65", "X",				&dhcp_universe, 65 },
-	{ "option-66", "X",				&dhcp_universe, 66 },
-	{ "option-67", "X",				&dhcp_universe, 67 },
-	{ "option-68", "X",				&dhcp_universe, 68 },
-	{ "option-69", "X",				&dhcp_universe, 69 },
-	{ "option-70", "X",				&dhcp_universe, 70 },
-	{ "option-71", "X",				&dhcp_universe, 71 },
-	{ "option-72", "X",				&dhcp_universe, 72 },
-	{ "option-73", "X",				&dhcp_universe, 73 },
-	{ "option-74", "X",				&dhcp_universe, 74 },
-	{ "option-75", "X",				&dhcp_universe, 75 },
-	{ "option-76", "X",				&dhcp_universe, 76 },
-	{ "dhcp-user-class-identifier", "t",		&dhcp_universe, 77 },
+	{ "nisplus-domain", "t",			&dhcp_universe, 64 },
+	{ "nisplus-servers", "IA",			&dhcp_universe, 65 },
+	{ "tftp-server-name", "t",			&dhcp_universe, 66 },
+	{ "bootfile-name", "t",				&dhcp_universe, 67 },
+	{ "mobile-ip-home-agent", "IA",			&dhcp_universe, 68 },
+	{ "smtp-server", "IA",				&dhcp_universe, 69 },
+	{ "pop-server", "IA",				&dhcp_universe, 70 },
+	{ "nntp-server", "IA",				&dhcp_universe, 71 },
+	{ "www-server", "IA",				&dhcp_universe, 72 },
+	{ "finger-server", "IA",			&dhcp_universe, 73 },
+	{ "irc-server", "IA",				&dhcp_universe, 74 },
+	{ "streettalk-server", "IA",			&dhcp_universe, 75 },
+	{ "streettalk-directory-assistance-server", "IA", &dhcp_universe, 76 },
+	{ "user-class", "t",				&dhcp_universe, 77 },
 	{ "option-78", "X",				&dhcp_universe, 78 },
 	{ "option-79", "X",				&dhcp_universe, 79 },
 	{ "option-80", "X",				&dhcp_universe, 80 },
@@ -829,8 +829,8 @@ struct option server_options [256] = {
 	{ "default-lease-time", "L",		&server_universe, 1 },
 	{ "max-lease-time", "L",		&server_universe, 2 },
 	{ "min-lease-time", "L",		&server_universe, 3 },
-	{ "bootp-lease-cutoff", "L",		&server_universe, 4 },
-	{ "bootp-lease-length", "L",		&server_universe, 5 },
+	{ "dynamic-bootp-lease-cutoff", "L",	&server_universe, 4 },
+	{ "dynamic-bootp-lease-length", "L",	&server_universe, 5 },
 	{ "boot-unknown-clients", "f",		&server_universe, 6 },
 	{ "dynamic-bootp", "f",			&server_universe, 7 },
 	{ "allow-bootp", "f",			&server_universe, 8 },
@@ -846,7 +846,7 @@ struct option server_options [256] = {
 	{ "authoritative", "f",			&server_universe, 18 },
 	{ "vendor-option-space", "U",		&server_universe, 19 },
 	{ "always-reply-rfc1048", "f",		&server_universe, 20 },
-	{ "option-21", "X",			&server_universe, 21 },
+	{ "site-option-space", "X",		&server_universe, 21 },
 	{ "option-22", "X",			&server_universe, 22 },
 	{ "option-23", "X",			&server_universe, 23 },
 	{ "option-24", "X",			&server_universe, 24 },
