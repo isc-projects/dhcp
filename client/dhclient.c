@@ -32,7 +32,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.129.2.24 2005/02/22 20:51:34 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.129.2.25 2005/02/22 21:02:51 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1253,7 +1253,7 @@ struct client_lease *packet_to_lease (packet, client)
 				break;
 		lease -> server_name = dmalloc (len + 1, MDL);
 		if (!lease -> server_name) {
-			log_error ("dhcpoffer: no memory for filename.\n");
+			log_error ("dhcpoffer: no memory for server name.\n");
 			destroy_client_lease (lease);
 			return (struct client_lease *)0;
 		} else {

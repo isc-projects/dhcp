@@ -66,6 +66,9 @@ and for prodding me into improving it.
   alignment of the 32-bit IP address value.  Thanks to a patch from Dr.
   Peter Poeml.
 
+- An incorrect log message was corrected thanks to a patch from
+  Dr. Peter Poeml.
+
 			Changes since 3.0.2rc3
 
 - A previously undocumented configuration directive, 'local-address',
