@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.53.2.19 2001/10/27 17:22:35 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.53.2.20 2001/10/30 07:10:01 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2239,7 +2239,7 @@ int dhcp_failover_pool_check (struct pool *pool)
 	else
 		lts = (pool -> free_leases - pool -> backup_leases) / 2;
 
-	log_info ("pool %lx total %d  free %d  backup %d  lts %d",
+	log_info ("pool %lx %s total %d  free %d  backup %d  lts %d",
 		  (unsigned long)pool,
 		  pool -> shared_network ? pool -> shared_network -> name : "",
 		  pool -> lease_count,
