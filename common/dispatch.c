@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dispatch.c,v 1.47.2.5 1998/12/22 22:41:06 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dispatch.c,v 1.47.2.6 1998/12/23 14:14:48 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -337,7 +337,7 @@ void discover_interfaces (state)
 		int b, sk;
 		
 		/* Read the hardware address from this interface. */
-		ifr = *ifp;
+		ifr = *tmp -> ifp;
 		if (ioctl (sock, SIOCGIFHWADDR, &ifr) < 0)
 			continue;
 		
@@ -370,7 +370,7 @@ void discover_interfaces (state)
 #endif
 		      case ARPHRD_FDDI:
 			tmp -> hw_address.hlen = 16;
-			tmp -> hw_address.htype = ARPHRD_FDDI;
+			tmp -> hw_address.htype = HTYPE_FDDI; /* XXX */
 			memcpy (tmp -> hw_address.haddr, sa.sa_data, 16);
 			break;
 
