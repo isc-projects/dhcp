@@ -76,6 +76,9 @@ extern int h_errno;
 #define VA_start(list, last) va_start (list)
 #define va_dcl
 
+/* XXX: We don't believe this system has v/snprintf().  Please verify this. */
+#define NO_SNPRINTF
+
 #define EOL '\n'
 #define VOIDPTR void *
 
