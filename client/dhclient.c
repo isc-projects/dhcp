@@ -3,7 +3,7 @@
    DHCP Client. */
 
 /*
- * Copyright (c) 1995-2001 Internet Software Consortium.
+ * Copyright (c) 1995-2002 Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -41,7 +41,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.129.2.7 2001/08/08 14:46:14 mellon Exp $ Copyright (c) 1995-2001 Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.129.2.8 2002/02/09 03:14:47 mellon Exp $ Copyright (c) 1995-2001 Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -882,7 +882,9 @@ void bind_lease (client)
 	client -> state = S_BOUND;
 	reinitialize_interfaces ();
 	go_daemon ();
-	client_dns_update (client, 1);
+	if (client -> config -> do_forward_update)
+		client_dns_update (client, 1,
+				   client -> active -> renewal - cur_time);
 }  
 
 /* state_bound is called when we've successfully bound to a particular
@@ -1183,12 +1185,13 @@ struct client_lease *packet_to_lease (packet, client)
 	memcpy (lease -> address.iabuf, &packet -> raw -> yiaddr,
 		lease -> address.len);
 
+	memset (&data, 0, sizeof data);
+
 	if (client -> config -> vendor_space_name) {
 		i = DHO_VENDOR_ENCAPSULATED_OPTIONS;
 
 		/* See if there was a vendor encapsulation option. */
 		oc = lookup_option (&dhcp_universe, lease -> options, i);
-		memset (&data, 0, sizeof data);
 		if (oc &&
 		    client -> config -> vendor_space_name &&
 		    evaluate_option_cache (&data, packet,
@@ -2960,7 +2963,8 @@ isc_result_t dhcp_set_control_state (control_object_state_t oldstate,
 		  case server_shutdown:
 		    if (client -> active &&
 			client -> active -> expiry > cur_time) {
-			    client_dns_update (client, 0);
+			    if (client -> config -> do_forward_update)
+				    client_dns_update (client, 0, 0);
 			    do_release (client);
 		    }
 		    break;
@@ -2982,7 +2986,7 @@ isc_result_t dhcp_set_control_state (control_object_state_t oldstate,
 
 /* See if we should do a DNS update, and if so, do it. */
 
-void client_dns_update (struct client_state *client, int addp)
+void client_dns_update (struct client_state *client, int addp, int ttl)
 {
 	struct data_string ddns_fqdn, ddns_fwd_name,
 	       ddns_dhcid, client_identifier;
@@ -3074,7 +3078,7 @@ void client_dns_update (struct client_state *client, int addp)
 		if (addp)
 			rcode = ddns_update_a (&ddns_fwd_name,
 					       client -> active -> address,
-					       &ddns_dhcid, DEFAULT_DDNS_TTL,
+					       &ddns_dhcid, ttl,
 					       1);
 		else
 			rcode = ddns_remove_a (&ddns_fwd_name,
