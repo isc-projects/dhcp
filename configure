@@ -91,7 +91,12 @@ if [ "$sysname" = "" ]; then
     hpux)
       sysname=hpux;;
     HP-UX)
-      sysname=hpux;;
+      set `which gcc`
+	if [ $# = 1 ]; then
+	  sysname=hpux-gcc
+	else
+	  sysname=hpux
+	fi;;
     QNX)
       sysname=qnx;;
     NEXTSTEP)
