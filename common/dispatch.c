@@ -42,18 +42,22 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dispatch.c,v 1.35 1997/03/05 08:39:38 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dispatch.c,v 1.36 1997/03/06 06:52:30 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
 #include <sys/ioctl.h>
 
 struct interface_info *interfaces, *dummy_interfaces;
+struct protocol *protocols;
 struct timeout *timeouts;
 static struct timeout *free_timeouts;
 static int interfaces_invalidated;
+void (*bootp_packet_handler) PROTO ((struct interface_info *,
+				     unsigned char *, int, unsigned short,
+				     struct iaddr, struct hardware *));
 
-static void got_one PROTO ((struct interface_info *, int));
+static void got_one PROTO ((struct protocol *));
 
 /* Use the SIOCGIFCONF ioctl to get a list of all the attached interfaces.
    For each interface that's of type INET and not the loopback interface,
@@ -145,7 +149,7 @@ void discover_interfaces (state)
 		   allocate one. */
 		if (!tmp) {
 			tmp = ((struct interface_info *)
-			       dmalloc (sizeof *tmp, "get_interface_list"));
+			       dmalloc (sizeof *tmp, "discover_interfaces"));
 			if (!tmp)
 				error ("Insufficient memory to %s %s",
 				       "record interface", ifp -> ifr_name);
@@ -333,6 +337,10 @@ void discover_interfaces (state)
 		if_register_send (tmp);
 	}
 
+	/* Now register all the remaining interfaces as protocols. */
+	for (tmp = interfaces; tmp; tmp = tmp -> next)
+		add_protocol (tmp -> name, tmp -> rfdesc, got_one, tmp);
+
 	close (sock);
 
 #ifdef USE_FALLBACK
@@ -340,6 +348,8 @@ void discover_interfaces (state)
 	fallback_interface.shared_network = &fallback_network;
 	fallback_network.name = "fallback-net";
 	if_register_fallback (&fallback_interface);
+	add_protocol ("fallback", fallback_interface.wfdesc,
+		      fallback_discard, &fallback_interface);
 #endif
 }
 
@@ -371,10 +381,9 @@ void reinitialize_interfaces ()
    wouldn't do for SysV to make networking *easy*, would it?  Rant,
    rant... */
 
-void dispatch (parse)
-	int parse;
+void dispatch ()
 {
-	struct interface_info *l;
+	struct protocol *l;
 	int nfds = 0;
 	struct pollfd *fds;
 	int count;
@@ -382,7 +391,7 @@ void dispatch (parse)
 	int to_msec;
 
 	nfds = 0;
-	for (l = interfaces; l; l = l -> next) {
+	for (l = protocols; l; l = l -> next) {
 		++nfds;
 	}
 #ifdef USE_FALLBACK
@@ -423,19 +432,12 @@ void dispatch (parse)
 
 		/* Set up the descriptors to be polled. */
 		i = 0;
-		for (l = interfaces; l; l = l -> next) {
-			fds [i].fd = l -> rfdesc;
+		for (l = protocols; l; l = l -> next) {
+			fds [i].fd = l -> fd;
 			fds [i].events = POLLIN;
 			fds [i].revents = 0;
 			++i;
 		}
-
-#ifdef USE_FALLBACK
-		fds [i].fd = fallback_interface.wfdesc;
-		fds [i].events = POLLIN;
-		fds [i].revents = 0;
-		++i;
-#endif
 
 		/* Wait for a packet or a timeout... XXX */
 		count = poll (fds, nfds, to_msec);
@@ -448,19 +450,16 @@ void dispatch (parse)
 			error ("poll: %m");
 
 		i = 0;
-		for (l = interfaces; l; l = l -> next) {
+		for (l = protocols; l; l = l -> next) {
 			if ((fds [i].revents & POLLIN)) {
 				fds [i].revents = 0;
-				got_one (l, parse);
+				if (l -> handler)
+					(*(l -> handler)) (l);
 				if (interfaces_invalidated)
 					break;
 			}
 			++i;
 		}
-#ifdef USE_FALLBACK
-		if ((fds [i].revents & POLLIN) && !interfaces_invalidated)
-			fallback_discard (&fallback_interface);
-#endif
 		interfaces_invalidated = 0;
 	} while (1);
 }
@@ -470,11 +469,10 @@ void dispatch (parse)
    addressing information from it, and then call do_packet to try to
    do something with it. */
 
-void dispatch (parse)
-	int parse;
+void dispatch ()
 {
 	fd_set r, w, x;
-	struct interface_info *l;
+	struct protocol *l;
 	int max = 0;
 	int count;
 	struct timeval tv, *tvp;
@@ -492,7 +490,7 @@ void dispatch (parse)
 			if (timeouts -> when <= cur_time) {
 				t = timeouts;
 				timeouts = timeouts -> next;
-				(*(t -> func)) (t -> interface);
+				(*(t -> func)) (t -> what);
 				t -> next = free_timeouts;
 				free_timeouts = t;
 				goto another;
@@ -506,17 +504,12 @@ void dispatch (parse)
 		/* Set up the read mask. */
 		FD_ZERO (&r);
 
-		for (l = interfaces; l; l = l -> next) {
-			FD_SET (l -> rfdesc, &r);
-			FD_SET (l -> rfdesc, &x);
-			if (l -> rfdesc > max)
-				max = l -> rfdesc;
+		for (l = protocols; l; l = l -> next) {
+			FD_SET (l -> fd, &r);
+			FD_SET (l -> fd, &x);
+			if (l -> fd > max)
+				max = l -> fd;
 		}
-#ifdef USE_FALLBACK
-		FD_SET (fallback_interface.wfdesc, &r);
-		if (fallback_interface.wfdesc > max)
-				max = fallback_interface.wfdesc;
-#endif
 
 		/* Wait for a packet or a timeout... XXX */
 		count = select (max + 1, &r, &w, &x, tvp);
@@ -528,26 +521,21 @@ void dispatch (parse)
 		if (count < 0)
 			error ("select: %m");
 
-		for (l = interfaces; l; l = l -> next) {
-			if (!FD_ISSET (l -> rfdesc, &r))
+		for (l = protocols; l; l = l -> next) {
+			if (!FD_ISSET (l -> fd, &r))
 				continue;
-			got_one (l, parse);
+			if (l -> handler)
+				(*(l -> handler)) (l);
 			if (interfaces_invalidated)
 				break;
 		}
-#ifdef USE_FALLBACK
-		if (FD_ISSET (fallback_interface.wfdesc, &r) &&
-		    !interfaces_invalidated)
-			fallback_discard (&fallback_interface);
-#endif
 		interfaces_invalidated = 0;
 	} while (1);
 }
 #endif /* USE_POLL */
 
-static void got_one (l, parse)
-	struct interface_info *l;
-	int parse;
+static void got_one (l)
+	struct protocol *l;
 {
 	struct sockaddr_in from;
 	struct hardware hfrom;
@@ -556,54 +544,23 @@ static void got_one (l, parse)
 	static unsigned char packbuf [4095]; /* Packet input buffer.
 						Must be as large as largest
 						possible MTU. */
+	struct interface_info *ip = l -> local;
 
-	if ((result = receive_packet (l, packbuf, sizeof packbuf,
+	if ((result = receive_packet (ip, packbuf, sizeof packbuf,
 				      &from, &hfrom)) < 0) {
-		warn ("receive_packet failed on %s: %m", l -> name);
+		warn ("receive_packet failed on %s: %m", ip -> name);
 		return;
 	}
 	if (result == 0)
 		return;
 
-	if (parse) {
+	if (bootp_packet_handler) {
 		ifrom.len = 4;
 		memcpy (ifrom.iabuf, &from.sin_addr, ifrom.len);
-	
-		do_packet (l, packbuf, result,
-			   from.sin_port, ifrom, &hfrom);
-	} else
-		relay (l, (struct dhcp_packet *)packbuf, result);
-}
 
-void do_packet (interface, packbuf, len, from_port, from, hfrom)
-	struct interface_info *interface;
-	unsigned char *packbuf;
-	int len;
-	unsigned short from_port;
-	struct iaddr from;
-	struct hardware *hfrom;
-{
-	struct packet tp;
-	struct dhcp_packet tdp;
-
-	memcpy (&tdp, packbuf, len);
-	memset (&tp, 0, sizeof tp);
-	tp.raw = &tdp;
-	tp.packet_length = len;
-	tp.client_port = from_port;
-	tp.client_addr = from;
-	tp.interface = interface;
-	tp.haddr = hfrom;
-	
-	parse_options (&tp);
-	if (tp.options_valid &&
-	    tp.options [DHO_DHCP_MESSAGE_TYPE].data)
-		tp.packet_type =
-			tp.options [DHO_DHCP_MESSAGE_TYPE].data [0];
-	if (tp.packet_type)
-		dhcp (&tp);
-	else if (tdp.op == BOOTREQUEST)
-		bootp (&tp);
+		(*bootp_packet_handler) (ip, packbuf, result,
+					 from.sin_port, ifrom, &hfrom);
+	}
 }
 
 int locate_network (packet)
@@ -632,15 +589,15 @@ int locate_network (packet)
 
 void add_timeout (when, where, what)
 	TIME when;
-	void (*where) PROTO ((struct interface_info *));
-	struct interface_info *what;
+	void (*where) PROTO ((void *));
+	void *what;
 {
 	struct timeout *t, *q;
 
 	/* See if this timeout supersedes an existing timeout. */
 	t = (struct timeout *)0;
 	for (q = timeouts; q; q = q -> next) {
-		if (q -> func == where && q -> interface == what) {
+		if (q -> func == where && q -> what == what) {
 			if (t)
 				t -> next = q -> next;
 			else
@@ -657,13 +614,13 @@ void add_timeout (when, where, what)
 			q = free_timeouts;
 			free_timeouts = q -> next;
 			q -> func = where;
-			q -> interface = what;
+			q -> what = what;
 		} else {
 			q = (struct timeout *)malloc (sizeof (struct timeout));
 			if (!q)
 				error ("Can't allocate timeout structure!");
 			q -> func = where;
-			q -> interface = what;
+			q -> what = what;
 		}
 	}
 
@@ -693,15 +650,15 @@ void add_timeout (when, where, what)
 }
 
 void cancel_timeout (where, what)
-	void (*where) PROTO ((struct interface_info *));
-	struct interface_info *what;
+	void (*where) PROTO ((void *));
+	void *what;
 {
 	struct timeout *t, *q;
 
 	/* Look for this timeout on the list, and unlink it if we find it. */
 	t = (struct timeout *)0;
 	for (q = timeouts; q; q = q -> next) {
-		if (q -> func == where && q -> interface == what) {
+		if (q -> func == where && q -> what == what) {
 			if (t)
 				t -> next = q -> next;
 			else
@@ -716,4 +673,25 @@ void cancel_timeout (where, what)
 		q -> next = free_timeouts;
 		free_timeouts = q;
 	}
+}
+
+/* Add a protocol to the list of protocols... */
+void add_protocol (name, fd, handler, local)
+	char *name;
+	int fd;
+	void (*handler) (struct protocol *);
+	void *local;
+{
+	struct protocol *p;
+
+	p = (struct protocol *)malloc (sizeof *p);
+	if (!p)
+		error ("can't allocate protocol struct for %s", name);
+
+	p -> fd = fd;
+	p -> handler = handler;
+	p -> local = local;
+
+	p -> next = protocols;
+	protocols = p;
 }
