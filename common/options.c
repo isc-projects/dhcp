@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.67 2000/10/11 07:57:20 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.68 2000/10/13 18:47:21 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -732,7 +732,6 @@ int store_options (buffer, buflen, packet, lease,
 		evaluate_option_cache (&od, packet, lease, in_options,
 				       cfg_options, scope, oc, MDL);
 		if (!od.len) {
-		    option_cache_dereference (&oc, MDL);
 		    data_string_forget (&encapsulation, MDL);
 		    continue;
 		}
@@ -820,8 +819,6 @@ int store_options (buffer, buflen, packet, lease,
 		    bufix += 2 + incr;
 	    }
 	    data_string_forget (&od, MDL);
-	    if (oc)
-		    option_cache_dereference (&oc, MDL);
 	}
 
 	return bufix;
@@ -1248,6 +1245,9 @@ void save_hashed_option (universe, options, oc)
 	int hashix;
 	pair bptr;
 	pair *hash = options -> universes [universe -> index];
+
+	if (oc -> refcnt == 0)
+		abort ();
 
 	/* Compute the hash. */
 	hashix = compute_option_hash (oc -> option -> code);
