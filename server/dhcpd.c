@@ -94,7 +94,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.56 1999/02/25 23:30:40 mellon Exp $ Copyright 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.57 1999/03/10 20:42:43 mellon Exp $ Copyright 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.";
 #endif
 
   static char copyright[] =
@@ -401,6 +401,8 @@ void lease_pinged (from, packet, length)
 
 	/* At this point it looks like we pinged a lease and got a
 	   response, which shouldn't have happened. */
+	data_string_forget (&lp -> state -> parameter_request_list,
+			    "lease_pinged");
 	free_lease_state (lp -> state, "lease_pinged");
 	lp -> state = (struct lease_state *)0;
 
