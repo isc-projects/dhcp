@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.85.2.21 2004/10/04 16:50:12 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.85.2.22 2004/10/04 22:03:33 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -1021,17 +1021,7 @@ int store_options (ocount, buffer, buflen, packet, lease, client_state,
 	     * the first overload buffer, if there is any.
 	     */
 	    memcpy (ovbuf, &buffer [i], bufix - i);
-
-	    /* We only want to pad from 'i' to 'first_cutoff' at the
-	     * moment.  But since there may not be a second_cutoff, we
-	     * actually MUST pad from 'i' to ('first_cutoff' +
-	     * DHCP_FILE_LEN) at least.  Since we're not supposed to
-	     * know about that, we wind up enforcing padding to the end
-	     * of buflen if there is not a second cutoff.
-	     */
-	    memset (&buffer [i], DHO_PAD,
-		    (second_cutoff ? first_cutoff : buflen) - i);
-
+	    memset (&buffer [i], DHO_PAD, first_cutoff - i);
 	    memcpy (&buffer [first_cutoff], ovbuf, bufix - i);
 	    ix = i;
 	    bufix += (first_cutoff - i);
@@ -1040,8 +1030,9 @@ int store_options (ocount, buffer, buflen, packet, lease, client_state,
 	    /* If there is no second field, the first one still MUST be
 	     * terminated with an END option.
 	     */
-	    if (!second_cutoff) {
+	    if (!second_cutoff || (bufix < second_cutoff)) {
 		buffer[bufix++] = DHO_END;
+		memset (&buffer[bufix], DHO_PAD, buflen - bufix);
 	    }
 	    else {
 		for (j = i + buffer [i + 1] + 2; j < bufix; ) {
