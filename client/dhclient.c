@@ -41,7 +41,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.123 2001/03/14 15:37:52 mellon Exp $ Copyright (c) 1995-2001 Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.124 2001/03/15 23:12:03 mellon Exp $ Copyright (c) 1995-2001 Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2121,6 +2121,7 @@ int write_client_lease (client, lease, rewrite, makesure)
 	struct data_string ds;
 	pair *hash;
 	int errors = 0;
+	char *s;
 
 	if (!rewrite) {
 		if (leases_written++ > 20) {
@@ -2142,23 +2143,69 @@ int write_client_lease (client, lease, rewrite, makesure)
 
 	errno = 0;
 	fprintf (leaseFile, "lease {\n");
-	if (lease -> is_bootp)
+	if (lease -> is_bootp) {
 		fprintf (leaseFile, "  bootp;\n");
+		if (errno) {
+			++errors;
+			errno = 0;
+		}
+	}
 	fprintf (leaseFile, "  interface \"%s\";\n",
 		 client -> interface -> name);
-	if (client -> name)
+	if (errno) {
+		++errors;
+		errno = 0;
+	}
+	if (client -> name) {
 		fprintf (leaseFile, "  name \"%s\";\n", client -> name);
+		if (errno) {
+			++errors;
+			errno = 0;
+		}
+	}
 	fprintf (leaseFile, "  fixed-address %s;\n",
 		 piaddr (lease -> address));
-	if (lease -> filename)
-		fprintf (leaseFile, "  filename \"%s\";\n",
-			 lease -> filename);
-	if (lease -> server_name)
-		fprintf (leaseFile, "  server-name \"%s\";\n",
-			 lease -> server_name);
-	if (lease -> medium)
-		fprintf (leaseFile, "  medium \"%s\";\n",
-			 lease -> medium -> string);
+	if (errno) {
+		++errors;
+		errno = 0;
+	}
+	if (lease -> filename) {
+		s = quotify_string (lease -> filename, MDL);
+		if (s) {
+			fprintf (leaseFile, "  filename \"%s\";\n", s);
+			if (errno) {
+				++errors;
+				errno = 0;
+			}
+			dfree (s, MDL);
+		} else
+			errors++;
+
+	}
+	if (lease -> server_name) {
+		s = quotify_string (lease -> filename, MDL);
+		if (s) {
+			fprintf (leaseFile, "  server-name \"%s\";\n", s);
+			if (errno) {
+				++errors;
+				errno = 0;
+			}
+			dfree (s, MDL);
+		} else
+			++errors;
+	}
+	if (lease -> medium) {
+		s = quotify_string (lease -> medium -> string, MDL);
+		if (s) {
+			fprintf (leaseFile, "  medium \"%s\";\n", s);
+			if (errno) {
+				++errors;
+				errno = 0;
+			}
+			dfree (s, MDL);
+		} else
+			errors++;
+	}
 	if (errno != 0) {
 		errors++;
 		errno = 0;
@@ -2183,19 +2230,35 @@ int write_client_lease (client, lease, rewrite, makesure)
 		 t -> tm_wday, t -> tm_year + 1900,
 		 t -> tm_mon + 1, t -> tm_mday,
 		 t -> tm_hour, t -> tm_min, t -> tm_sec);
+	if (errno != 0) {
+		errors++;
+		errno = 0;
+	}
 	t = gmtime (&lease -> rebind);
 	fprintf (leaseFile,
 		 "  rebind %d %d/%d/%d %02d:%02d:%02d;\n",
 		 t -> tm_wday, t -> tm_year + 1900,
 		 t -> tm_mon + 1, t -> tm_mday,
 		 t -> tm_hour, t -> tm_min, t -> tm_sec);
+	if (errno != 0) {
+		errors++;
+		errno = 0;
+	}
 	t = gmtime (&lease -> expiry);
 	fprintf (leaseFile,
 		 "  expire %d %d/%d/%d %02d:%02d:%02d;\n",
 		 t -> tm_wday, t -> tm_year + 1900,
 		 t -> tm_mon + 1, t -> tm_mday,
 		 t -> tm_hour, t -> tm_min, t -> tm_sec);
+	if (errno != 0) {
+		errors++;
+		errno = 0;
+	}
 	fprintf (leaseFile, "}\n");
+	if (errno != 0) {
+		errors++;
+		errno = 0;
+	}
 	fflush (leaseFile);
 	if (errno != 0) {
 		errors++;
