@@ -50,7 +50,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: omapi.c,v 1.46.2.5 2001/06/05 18:02:49 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: omapi.c,v 1.46.2.6 2001/06/20 04:21:39 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -424,7 +424,8 @@ isc_result_t dhcp_lease_destroy (omapi_object_t *h, const char *file, int line)
 		class_dereference
 			(&lease -> billing_class, file, line);
 
-#if defined (DEBUG_MEMORY_LEAKAGE)
+#if defined (DEBUG_MEMORY_LEAKAGE) || \
+		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
 	/* XXX we should never be destroying a lease with a next
 	   XXX pointer except on exit... */
 	if (lease -> next)
@@ -1070,7 +1071,8 @@ isc_result_t dhcp_host_destroy (omapi_object_t *h, const char *file, int line)
 		return ISC_R_INVALIDARG;
 	host = (struct host_decl *)h;
 
-#if defined (DEBUG_MEMORY_LEAKAGE)
+#if defined (DEBUG_MEMORY_LEAKAGE) || \
+		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
 	if (host -> n_ipaddr)
 		host_dereference (&host -> n_ipaddr, file, line);
 	if (host -> n_dynamic)
@@ -1537,7 +1539,8 @@ isc_result_t dhcp_pool_destroy (omapi_object_t *h, const char *file, int line)
 		return ISC_R_INVALIDARG;
 	pool = (struct pool *)h;
 
-#if defined (DEBUG_MEMORY_LEAKAGE)
+#if defined (DEBUG_MEMORY_LEAKAGE) || \
+		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
 	if (pool -> next)
 		pool_dereference (&pool -> next, file, line);
 	if (pool -> group)
@@ -1712,7 +1715,8 @@ isc_result_t dhcp_class_destroy (omapi_object_t *h, const char *file, int line)
 		return ISC_R_INVALIDARG;
 	class = (struct class *)h;
 
-#if defined (DEBUG_MEMORY_LEAKAGE)
+#if defined (DEBUG_MEMORY_LEAKAGE) || \
+		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
 	if (class -> nic)
 		class_dereference (&class -> nic, file, line);
 	if (class -> superclass)
