@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.38 1999/07/19 20:10:52 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.39 1999/07/19 20:38:59 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1630,6 +1630,8 @@ int is_data_expression (expr)
 		expr -> op == expr_host_lookup ||
 		expr -> op == expr_binary_to_ascii ||
 		expr -> op == expr_reverse ||
+		expr -> op == expr_pick_first_value ||
+		expr -> op == expr_host_decl_name ||
 		expr -> op == expr_leased_address);
 }
 
