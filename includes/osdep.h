@@ -113,7 +113,11 @@
 #endif
 
 #ifdef NeXT
+# ifdef __APPLE__
+#  include "cf/rhapsody.h"
+# else
 #  include "cf/nextstep.h"
+# endif
 #endif
 
 /* Porting::
