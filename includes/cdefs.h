@@ -27,6 +27,14 @@
  * with Vixie Laboratories.
  */
 
+#if !defined (__ISC_DHCP_CDEFS_H__)
+#define __ISC_DHCP_CDEFS_H__
+/* Delete attributes if not gcc or not the right version of gcc. */
+#if !defined(__GNUC__) || __GNUC__ < 2 || \
+        (__GNUC__ == 2 && __GNUC_MINOR__ < 5)
+#define __attribute__(x)
+#endif
+
 #if (defined (__GNUC__) || defined (__STDC__)) && !defined (BROKEN_ANSI)
 #define PROTO(x)	x
 #define KandR(x)
@@ -42,3 +50,4 @@
 #define ANSI_DECL(x)
 #define INLINE
 #endif /* __GNUC__ || __STDC__ */
+#endif /* __ISC_DHCP_CDEFS_H__ */
