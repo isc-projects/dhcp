@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.51 1998/06/25 03:51:59 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.52 1998/11/06 00:16:52 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -58,7 +58,7 @@ int readconf ()
 {
 	FILE *cfile;
 	char *val;
-	int token;
+	enum dhcp_token token;
 	int declaration = 0;
 
 	new_parse (path_dhcpd_conf);
@@ -91,7 +91,7 @@ void read_leases ()
 {
 	FILE *cfile;
 	char *val;
-	int token;
+	enum dhcp_token token;
 
 	new_parse (path_dhcpd_db);
 
@@ -164,7 +164,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 	struct host_decl *host_decl;
 	int declaration;
 {
-	int token;
+	enum dhcp_token token;
 	char *val;
 	struct shared_network *share;
 	char *t, *n;
@@ -309,12 +309,15 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 
 	      case FIXED_ADDR:
 		next_token (&val, cfile);
-		cache = parse_fixed_addr_param (cfile);
+		cache = (struct option_cache *)0;
+		parse_fixed_addr_param (&cache, cfile);
 		if (host_decl)
 			host_decl -> fixed_addr = cache;
-		else
+		else {
 			parse_warn ("fixed-address parameter not %s",
 				    "allowed here.");
+			option_cache_dereference (&cache, "parse_statement");
+		}
 		break;
 
 	      case RANGE:
@@ -330,8 +333,10 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 	      case ALLOW:
 	      case DENY:
 		token = next_token (&val, cfile);
-		cache = parse_allow_deny (cfile,
-					  token == ALLOW ? 1 : 0);
+		cache = (struct option_cache *)0;
+		if (!parse_allow_deny (&cache, cfile,
+				       token == ALLOW ? 1 : 0))
+			return declaration;
 		et = (struct executable_statement *)dmalloc (sizeof *et,
 							     "allow/deny");
 		if (!et)
@@ -342,6 +347,21 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		et -> data.option = cache;
 		goto insert_statement;
 
+	      case OPTION:
+		token = next_token (&val, cfile);
+		option = parse_option_name (cfile);
+		if (option) {
+			et = parse_option_statement
+				(cfile, 1, option,
+				 supersede_option_statement);
+			if (!et)
+				return declaration;
+			goto insert_statement;
+		} else
+			return declaration;
+
+		break;
+
 	      default:
 		et = (struct executable_statement *)0;
 		if (is_identifier (token)) {
@@ -349,6 +369,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 				  hash_lookup (server_universe.hash,
 					       (unsigned char *)val, 0));
 			if (option) {
+				token = next_token (&val, cfile);
 				et = parse_option_statement
 					(cfile, 1, option,
 					 supersede_option_statement);
@@ -364,7 +385,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 				if (declaration && !lose)
 					parse_warn ("expecting a %s.",
 						    "declaration");
-				else
+				else if (!lose)
 					parse_warn ("expecting a parameter%s.",
 						    " or declaration");
 				skip_to_semi (cfile);
@@ -383,7 +404,9 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 				;
 			ep -> next = et;
 
-		}
+		} else
+			group -> statements = et;
+		return declaration;
 	}
 
 	if (declaration) {
@@ -399,44 +422,50 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 			| DYNAMIC_BOOTP
 			| UNKNOWN_CLIENTS */
 
-struct option_cache *parse_allow_deny (cfile, flag)
+int parse_allow_deny (oc, cfile, flag)
+	struct option_cache **oc;
 	FILE *cfile;
 	int flag;
 {
-	int token;
+	enum dhcp_token token;
 	char *val;
 	char rf = flag;
-	struct option_cache *oc;
+	struct expression *data = (struct expression *)0;
+	int status;
+
+	if (!make_const_data (&data, &rf, 1, 0, 1))
+		return 0;
 
 	token = next_token (&val, cfile);
 	switch (token) {
 	      case BOOTP:
-		oc = option_cache (make_const_data (&rf, 1, 0, 1),
-				   &server_options [SV_ALLOW_BOOTP]);
+		status = option_cache (oc, (struct data_string *)0, data,
+				       &server_options [SV_ALLOW_BOOTP]);
 		break;
 
 	      case BOOTING:
-		oc = option_cache (make_const_data (&rf, 1, 0, 1),
-				   &server_options [SV_ALLOW_BOOTING]);
+		status = option_cache (oc, (struct data_string *)0, data,
+				       &server_options [SV_ALLOW_BOOTING]);
 		break;
 
 	      case DYNAMIC_BOOTP:
-		oc = option_cache (make_const_data (&rf, 1, 0, 1),
-				   &server_options [SV_DYNAMIC_BOOTP]);
+		status = option_cache (oc, (struct data_string *)0, data,
+				       &server_options [SV_DYNAMIC_BOOTP]);
 		break;
 
 	      case UNKNOWN_CLIENTS:
-		oc = option_cache (make_const_data (&rf, 1, 0, 1),
-				   &server_options [SV_BOOT_UNKNOWN_CLIENTS]);
+		status = (option_cache
+			  (oc, (struct data_string *)0, data,
+			   &server_options [SV_BOOT_UNKNOWN_CLIENTS]));
 		break;
 
 	      default:
 		parse_warn ("expecting allow/deny key");
 		skip_to_semi (cfile);
-		return (struct option_cache *)0;
+		return 0;
 	}
 	parse_semi (cfile);
-	return oc;
+	return status;
 }
 
 /* boolean :== ON SEMI | OFF SEMI | TRUE SEMI | FALSE SEMI */
@@ -444,7 +473,7 @@ struct option_cache *parse_allow_deny (cfile, flag)
 int parse_boolean (cfile)
 	FILE *cfile;
 {
-	int token;
+	enum dhcp_token token;
 	char *val;
 	int rv;
 
@@ -470,7 +499,7 @@ int parse_boolean (cfile)
 int parse_lbrace (cfile)
 	FILE *cfile;
 {
-	int token;
+	enum dhcp_token token;
 	char *val;
 
 	token = next_token (&val, cfile);
@@ -490,7 +519,7 @@ void parse_host_declaration (cfile, group)
 	struct group *group;
 {
 	char *val;
-	int token;
+	enum dhcp_token token;
 	struct host_decl *host;
 	char *name;
 	int declaration = 0;
@@ -543,7 +572,7 @@ void parse_class_declaration (cfile, group, type)
 	int type;
 {
 	char *val;
-	int token;
+	enum dhcp_token token;
 	struct class *class, *pc;
 	int declaration = 0;
 	int lose;
@@ -585,8 +614,11 @@ void parse_class_declaration (cfile, group, type)
 	   the vendor class or user class. */
 	if (type == 0 || type == 1) {
 		data.len = strlen (val);
-		data.data = dmalloc (data.len + 1, "parse_class_declaration");
-		data.buffer = (char *)0;
+		data.buffer = (struct buffer *)0;
+		if (!buffer_allocate (&data.buffer,
+				      data.len + 1, "parse_class_declaration"))
+			error ("no memoy for class name.");
+		data.data = &data.buffer -> data [0];
 		data.terminated = 1;
 
 		name = type ? "implicit-vendor-class" : "implicit-user-class";
@@ -605,13 +637,16 @@ void parse_class_declaration (cfile, group, type)
 		if (token == STRING) {
 			token = next_token (&val, cfile);
 			data.len = strlen (val);
-			data.data = dmalloc (data.len + 1,
-					     "parse_class_declaration");
-			data.buffer = (char *)0;
+			data.buffer = (struct buffer *)0;
+			if (!buffer_allocate (&data.buffer, data.len + 1,
+					     "parse_class_declaration"))
+				return;
 			data.terminated = 1;
+			data.data = &data.buffer -> data [0];
+			strcpy (data.data, val);
 		} else if (token == NUMBER_OR_NAME || token == NUMBER) {
-			data.data = parse_cshl (cfile, &data.len);
-			if (!data.data)
+			memset (&data, 0, sizeof data);
+			if (!parse_cshl (&data, cfile))
 				return;
 			data.terminated = 0;
 			data.buffer = 0;
@@ -654,13 +689,15 @@ void parse_class_declaration (cfile, group, type)
 				error ("no memory for class statement.");
 			memset (stmt, 0, sizeof *stmt);
 			stmt -> op = supersede_option_statement;
-			stmt -> data.option =
-				(option_cache
-				 (make_const_data (data.data, data.len, 0, 1),
-				  dhcp_universe.options
-				  [type
-				   ? DHO_DHCP_CLASS_IDENTIFIER
-				   : DHO_DHCP_USER_CLASS_ID]));
+			if (option_cache_allocate (&stmt -> data.option,
+						   "parse_class_statement")) {
+				stmt -> data.option -> data = data;
+				stmt -> data.option -> option =
+					dhcp_universe.options
+					[type
+					? DHO_DHCP_CLASS_IDENTIFIER
+					: DHO_DHCP_USER_CLASS_ID];
+			}
 			class -> statements = stmt;
 		}
 	}
@@ -695,10 +732,13 @@ void parse_class_declaration (cfile, group, type)
 				skip_to_semi (cfile);
 				break;
 			}
-			class -> expr =
-				parse_boolean_expression (cfile, &lose);
+			parse_boolean_expression (&class -> expr, cfile,
+						  &lose);
 			if (lose)
 				break;
+#if defined (DEBUG_EXPRESSION_PARSE)
+			print_expression ("class match", class -> expr);
+#endif
 		} else if (token == SPAWN) {
 			if (pc) {
 				parse_warn ("invalid spawn in subclass.");
@@ -717,10 +757,12 @@ void parse_class_declaration (cfile, group, type)
 				skip_to_semi (cfile);
 				break;
 			}
-			class -> spawn =
-				parse_data_expression (cfile, &lose);
+			parse_data_expression (&class -> spawn, cfile, &lose);
 			if (lose)
 				break;
+#if defined (DEBUG_EXPRESSION_PARSE)
+			print_expression ("class match", class -> spawn);
+#endif
 		} else {
 			declaration = parse_statement (cfile, class -> group,
 						       CLASS_DECL,
@@ -738,7 +780,7 @@ void parse_shared_net_declaration (cfile, group)
 	struct group *group;
 {
 	char *val;
-	int token;
+	enum dhcp_token token;
 	struct shared_network *share;
 	char *name;
 	int declaration = 0;
@@ -808,7 +850,7 @@ void parse_subnet_declaration (cfile, share)
 	struct shared_network *share;
 {
 	char *val;
-	int token;
+	enum dhcp_token token;
 	struct subnet *subnet, *t;
 	struct iaddr iaddr;
 	unsigned char addr [4];
@@ -883,7 +925,7 @@ void parse_group_declaration (cfile, group)
 	struct group *group;
 {
 	char *val;
-	int token;
+	enum dhcp_token token;
 	struct group *g;
 	int declaration = 0;
 
@@ -912,28 +954,49 @@ void parse_group_declaration (cfile, group)
    ip-addrs-or-hostnames :== ip-addr-or-hostname
 			   | ip-addrs-or-hostnames ip-addr-or-hostname */
 
-struct option_cache *parse_fixed_addr_param (cfile)
+int parse_fixed_addr_param (oc, cfile)
+	struct option_cache **oc;
 	FILE *cfile;
 {
 	char *val;
-	int token;
+	enum dhcp_token token;
 	struct expression *expr = (struct expression *)0;
-	struct expression *tmp;
+	struct expression *tmp, *new;
+	int status;
 
 	do {
-		tmp = parse_ip_addr_or_hostname (cfile, 0);
-		if (expr)
-			expr = make_concat (expr, tmp);
-		else
-			expr = tmp;
+		tmp = (struct expression *)0;
+		if (parse_ip_addr_or_hostname (&tmp, cfile, 1)) {
+			new = (struct expression *)0;
+			status = make_concat (&new, expr, tmp);
+			expression_dereference (&expr,
+						"parse_fixed_addr_param");
+			expression_dereference (&tmp,
+						"parse_fixed_addr_param");
+			if (status)
+				return 0;
+			expr = new;
+		} else {
+			if (expr)
+				expression_dereference
+					(&expr, "parse_fixed_addr_param");
+			return 0;
+		}
 		token = peek_token (&val, cfile);
 		if (token == COMMA)
 			token = next_token (&val, cfile);
 	} while (token == COMMA);
 
-	if (!parse_semi (cfile))
-		return (struct option_cache *)0;
-	return option_cache (expr, (struct option *)0);
+	if (!parse_semi (cfile)) {
+		if (expr)
+			expression_dereference (&expr,
+						"parse_fixed_addr_param");
+		return 0;
+	}
+	status = option_cache (oc, (struct data_string *)0, expr,
+			       (struct option *)0);
+	expression_dereference (&expr, "parse_fixed_addr_param");
+	return status;
 }
 
 /* timestamp :== date
@@ -971,7 +1034,7 @@ struct lease *parse_lease_declaration (cfile)
 	FILE *cfile;
 {
 	char *val;
-	int token;
+	enum dhcp_token token;
 	unsigned char addr [4];
 	int len = sizeof addr;
 	int seenmask = 0;
@@ -1151,7 +1214,7 @@ void parse_address_range (cfile, subnet)
 	struct iaddr low, high;
 	unsigned char addr [4];
 	int len = sizeof addr;
-	int token;
+	enum dhcp_token token;
 	char *val;
 	int dynamic = 0;
 
