@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.45.2.3 1998/07/07 17:50:29 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.45.2.4 1998/11/24 23:02:54 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -658,7 +658,7 @@ void parse_subnet_declaration (cfile, share)
 {
 	char *val;
 	int token;
-	struct subnet *subnet, *t;
+	struct subnet *subnet, *t, *u;
 	struct iaddr iaddr;
 	unsigned char addr [4];
 	int len = sizeof addr;
@@ -725,9 +725,19 @@ void parse_subnet_declaration (cfile, share)
 	if (!share -> subnets)
 		share -> subnets = subnet;
 	else {
+		u = (struct subnet *)0;
 		for (t = share -> subnets;
-		     t -> next_sibling; t = t -> next_sibling)
-			;
+		     t -> next_sibling; t = t -> next_sibling) {
+			if (subnet_inner_than (subnet, t, 0)) {
+				if (u)
+					u -> next_sibling = subnet;
+				else
+					share -> subnets = subnet;
+				subnet -> next_sibling = t;
+				return;
+			}
+			u = t;
+		}
 		t -> next_sibling = subnet;
 	}
 }
