@@ -708,6 +708,25 @@ struct dns_query {
 	int backoff;			/* Current backoff, in seconds. */
 };
 
+#if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL)
+#define DMDOFFSET (sizeof (struct dmalloc_preamble))
+#define DMLFSIZE 16
+#define DMUFSIZE 16
+#define DMDSIZE (DMDOFFSET + DMLFSIZE + DMUFSIZE)
+
+struct dmalloc_preamble {
+	struct dmalloc_preamble *prev, *next;
+	size_t size;
+	const char *name;
+	unsigned long generation;
+	unsigned long pad;
+	unsigned char low_fence [DMLFSIZE];
+};
+#else
+#define DMDOFFSET 0
+#define DMDSIZE 0
+#endif
+
 /* Bitmask of dhcp option codes. */
 typedef unsigned char option_mask [16];
 
