@@ -230,6 +230,7 @@ isc_result_t omapi_protocol_signal_handler (omapi_object_t *h,
 	omapi_object_t *c;
 	u_int16_t nlen;
 	u_int32_t vlen;
+	u_int32_t th;
 
 	if (h -> type != omapi_type_protocol) {
 		/* XXX shouldn't happen.   Put an assert here? */
@@ -299,7 +300,8 @@ isc_result_t omapi_protocol_signal_handler (omapi_object_t *h,
 		/* XXX bind the authenticator here! */
 		omapi_connection_get_uint32 (c, &p -> message -> authlen);
 		omapi_connection_get_uint32 (c, &p -> message -> op);
-		omapi_connection_get_uint32 (c, &p -> message -> handle);
+		omapi_connection_get_uint32 (c, &th);
+		p -> message -> handle = th;
 		omapi_connection_get_uint32 (c, &p -> message -> id);
 		omapi_connection_get_uint32 (c, &p -> message -> rid);
 
