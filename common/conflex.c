@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"@(#) Copyright (c) 1995 The Internet Software Consortium.  All rights reserved.\n";
+"@(#) Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -270,7 +270,10 @@ static int intern (atom, dfv)
 	char *atom;
 	int dfv;
 {
-	switch (atom [0]) {
+	if (!isascii (atom [0]))
+		return dfv;
+
+	switch (tolower (atom [0])) {
 	      case 'c':
 		if (!strcasecmp (atom + 1, "lass"))
 			return CLASS;
@@ -280,6 +283,8 @@ static int intern (atom, dfv)
 	      case 'd':
 		if (!strcasecmp (atom + 1, "efault-lease-time"))
 			return DEFAULT_LEASE_TIME;
+		if (!strcasecmp (atom + 1, "ynamic-bootp"))
+			return DYNAMIC_BOOTP;
 		break;
 	      case 'e':
 		if (!strcasecmp (atom + 1, "thernet"))
@@ -334,9 +339,15 @@ static int intern (atom, dfv)
 			return SIADDR;
 		if (!strcasecmp (atom + 1, "ubnet"))
 			return SUBNET;
+		if (!strcasecmp (atom + 1, "hared-network"))
+			return SHARED_NETWORK;
+		if (!strcasecmp (atom + 1, "erver-name"))
+			return SERVER_NAME;
+		if (!strcasecmp (atom + 1, "erver-identifier"))
+			return SERVER_IDENTIFIER;
 		break;
 	      case 't':
-		if (!strcasecmp (atom + 1, "timestamp"))
+		if (!strcasecmp (atom + 1, "imestamp"))
 			return TIMESTAMP;
 		break;
 	      case 'u':
