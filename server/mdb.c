@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.67.2.7 2001/06/20 04:20:25 mellon Exp $ Copyright (c) 1996-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.67.2.8 2001/06/22 02:26:14 mellon Exp $ Copyright (c) 1996-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -96,7 +96,7 @@ isc_result_t enter_host (hd, dynamicp, commit)
 	if (!host_name_hash) {
 		host_name_hash =
 			new_hash ((hash_reference)host_reference,
-				  (hash_dereference)host_dereference, 0);
+				  (hash_dereference)host_dereference, 0, MDL);
 		if (!host_name_hash)
 			log_fatal ("Can't allocate host name hash");
 		host_hash_add (host_name_hash,
@@ -153,7 +153,7 @@ isc_result_t enter_host (hd, dynamicp, commit)
 			host_hw_addr_hash =
 				new_hash ((hash_reference)host_reference,
 					  (hash_dereference)host_dereference,
-					  0);
+					  0, MDL);
 			if (!host_hw_addr_hash)
 				log_fatal ("Can't allocate host/hw hash");
 		} else {
@@ -201,7 +201,7 @@ isc_result_t enter_host (hd, dynamicp, commit)
 			host_uid_hash =
 				new_hash ((hash_reference)host_reference,
 					  (hash_dereference)host_dereference,
-					  0);
+					  0, MDL);
 			if (!host_uid_hash)
 				log_fatal ("Can't allocate host/uid hash");
 
@@ -483,21 +483,21 @@ void new_address_range (low, high, subnet, pool)
 	if (!lease_uid_hash) {
 		lease_uid_hash =
 			new_hash ((hash_reference)lease_reference,
-				  (hash_dereference)lease_dereference, 0);
+				  (hash_dereference)lease_dereference, 0, MDL);
 		if (!lease_uid_hash)
 			log_fatal ("Can't allocate lease/uid hash");
 	}
 	if (!lease_ip_addr_hash) {
 		lease_ip_addr_hash =
 			new_hash ((hash_reference)lease_reference,
-				  (hash_dereference)lease_dereference, 0);
+				  (hash_dereference)lease_dereference, 0, MDL);
 		if (!lease_uid_hash)
 			log_fatal ("Can't allocate lease/ip hash");
 	}
 	if (!lease_hw_addr_hash) {
 		lease_hw_addr_hash =
 			new_hash ((hash_reference)lease_reference,
-				  (hash_dereference)lease_dereference, 0);
+				  (hash_dereference)lease_dereference, 0, MDL);
 		if (!lease_uid_hash)
 			log_fatal ("Can't allocate lease/hw hash");
 	}
@@ -584,48 +584,6 @@ void new_address_range (low, high, subnet, pool)
 		lease_dereference (&lp, MDL);
 	}
 }
-
-
-#if defined (COMPACT_LEASES)
-struct lease *free_leases;
-
-#if defined (DEBUG_MEMORY_LEAKAGE) && 0
-void relinquish_free_leases ()
-{
-	
-}
-#endif
-
-/* If we are allocating leases in aggregations, there's really no way
-   to free one, although perhaps we can maintain a free list. */
-
-isc_result_t dhcp_lease_free (omapi_object_t *lo,
-			      const char *file, int line)
-{
-	struct lease *lease;
-	if (lo -> type != dhcp_type_lease)
-		return ISC_R_INVALIDARG;
-	lease = (struct lease *)lo;
-	lease -> next = free_leases;
-	free_leases = lease;
-	return ISC_R_SUCCESS;
-}
-
-isc_result_t dhcp_lease_get (omapi_object_t **lp,
-			     const char *file, int line)
-{
-	struct lease **lease = (struct lease **)lp;
-	struct lease *lt;
-
-	if (free_leases) {
-		lt = free_leases;
-		free_leases = lt -> next;
-		*lease = lt;
-		return ISC_R_SUCCESS;
-	}
-	return ISC_R_NOMEMORY;
-}
-#endif
 
 int find_subnet (struct subnet **sp,
 		 struct iaddr addr, const char *file, int line)
@@ -721,8 +679,11 @@ void enter_subnet (subnet)
 		subnet_dereference (&scan, MDL);
 		return;
 	    }
-	    prev = scan;
+	    subnet_reference (&prev, scan, MDL);
+	    subnet_dereference (&scan, MDL);
 	}
+	if (prev)
+		subnet_dereference (&prev, MDL);
 
 	/* XXX use the BSD radix tree code instead of a linked list. */
 	if (subnets) {
@@ -2077,6 +2038,20 @@ HASH_FUNCTIONS (class, const char *, struct class)
 
 #if defined (DEBUG_MEMORY_LEAKAGE) || \
 		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
+extern struct hash_table *dns_zone_hash;
+extern struct interface_info **interface_vector;
+extern int interface_count;
+dhcp_control_object_t *dhcp_control_object;
+extern struct hash_table *auth_key_hash;
+struct hash_table *universe_hash;
+struct universe **universes;
+int universe_count, universe_max;
+extern int end;
+
+#if defined (COMPACT_LEASES)
+extern struct lease *lease_hunks;
+#endif
+
 void free_everything ()
 {
 	struct subnet *sc = (struct subnet *)0, *sn = (struct subnet *)0;
@@ -2086,7 +2061,13 @@ void free_everything ()
 	struct lease *lc = (struct lease *)0, *ln = (struct lease *)0;
 	struct interface_info *ic = (struct interface_info *)0,
 		*in = (struct interface_info *)0;
-	void *st = shared_networks;
+	struct class *cc = (struct class *)0, *cn = (struct class *)0;
+	struct collection *lp;
+	void *st = (shared_networks
+		    ? (shared_networks -> next
+		       ? shared_networks -> next -> next : 0) : 0);
+	int i;
+
 
 	/* Get rid of all the hash tables. */
 	if (host_hw_addr_hash)
@@ -2107,6 +2088,70 @@ void free_everything ()
 	if (host_name_hash)
 		free_hash_table (host_name_hash, MDL);
 	host_name_hash = 0;
+	if (dns_zone_hash)
+		free_hash_table (dns_zone_hash, MDL);
+	dns_zone_hash = 0;
+	if (auth_key_hash)
+		free_hash_table (auth_key_hash, MDL);
+	auth_key_hash = 0;
+
+	omapi_object_dereference ((omapi_object_t **)&dhcp_control_object,
+				  MDL);
+
+	for (lp = collections; lp; lp = lp -> next) {
+	    if (lp -> classes) {
+		class_reference (&cn, lp -> classes, MDL);
+		do {
+		    if (cn) {
+			class_reference (&cc, cn, MDL);
+			class_dereference (&cn, MDL);
+		    }
+		    if (cc -> nic) {
+			class_reference (&cn, cc -> nic, MDL);
+			class_dereference (&cc -> nic, MDL);
+		    }
+		    group_dereference (&cc -> group, MDL);
+		    if (cc -> hash) {
+			    free_hash_table (cc -> hash, MDL);
+			    cc -> hash = (struct hash_table *)0;
+		    }
+		    class_dereference (&cc, MDL);
+		} while (cn);
+		class_dereference (&lp -> classes, MDL);
+	    }
+	}
+
+	if (interface_vector) {
+	    for (i = 0; i < interface_count; i++) {
+		if (interface_vector [i])
+		    interface_dereference (&interface_vector [i], MDL);
+	    }
+	    dfree (interface_vector, MDL);
+	    interface_vector = 0;
+	}
+
+	if (interfaces) {
+	    interface_reference (&in, interfaces, MDL);
+	    do {
+		if (in) {
+		    interface_reference (&ic, in, MDL);
+		    interface_dereference (&in, MDL);
+		}
+		if (ic -> next) {
+		    interface_reference (&in, ic -> next, MDL);
+		    interface_dereference (&ic -> next, MDL);
+		}
+		omapi_unregister_io_object ((omapi_object_t *)ic);
+		if (ic -> shared_network) {
+		    if (ic -> shared_network -> interface)
+			interface_dereference
+				(&ic -> shared_network -> interface, MDL);
+		    shared_network_dereference (&ic -> shared_network, MDL);
+		}
+		interface_dereference (&ic, MDL);
+	    } while (in);
+	    interface_dereference (&interfaces, MDL);
+	}
 
 	/* Subnets are complicated because of the extra links. */
 	if (subnets) {
@@ -2125,6 +2170,8 @@ void free_everything ()
 		if (sc -> shared_network)
 		    shared_network_dereference (&sc -> shared_network, MDL);
 		group_dereference (&sc -> group, MDL);
+		if (sc -> interface)
+		    interface_dereference (&sc -> interface, MDL);
 		subnet_dereference (&sc, MDL);
 	    } while (sn);
 	    subnet_dereference (&subnets, MDL);
@@ -2148,7 +2195,6 @@ void free_everything ()
 		    pool_reference (&pn, nc -> pools, MDL);
 		    do {
 			struct lease **lptr [5];
-			int i;
 			
 			if (pn) {
 			    pool_reference (&pc, pn, MDL);
@@ -2178,13 +2224,26 @@ void free_everything ()
 					lease_reference (&ln, lc -> next, MDL);
 					lease_dereference (&lc -> next, MDL);
 				    }
+				    if (lc -> billing_class)
+				       class_dereference (&lc -> billing_class,
+							  MDL);
+				    if (lc -> state)
+					free_lease_state (lc -> state, MDL);
+				    lc -> state = (struct lease_state *)0;
+				    if (lc -> n_hw)
+					lease_dereference (&lc -> n_hw, MDL);
+				    if (lc -> n_uid)
+					lease_dereference (&lc -> n_uid, MDL);
 				    lease_dereference (&lc, MDL);
 				} while (ln);
-				
 				lease_dereference (lptr [i], MDL);
 			    }
 			}
-			group_dereference (&pc -> group, MDL);
+			if (pc -> group)
+			    group_dereference (&pc -> group, MDL);
+			if (pc -> shared_network)
+			    shared_network_dereference (&pc -> shared_network,
+							MDL);
 			pool_dereference (&pc, MDL);
 		    } while (pn);
 		    pool_dereference (&nc -> pools, MDL);
@@ -2197,33 +2256,48 @@ void free_everything ()
 	    shared_network_dereference (&shared_networks, MDL);
 	}
 
+	cancel_all_timeouts ();
+	relinquish_timeouts ();
+	trace_free_all ();
+	group_dereference (&root_group, MDL);
+	executable_statement_dereference (&default_classification_rules, MDL);
+
+	shutdown_state = shutdown_drop_omapi_connections;
+	omapi_io_state_foreach (dhcp_io_shutdown, 0);
+	shutdown_state = shutdown_listeners;
+	omapi_io_state_foreach (dhcp_io_shutdown, 0);
+	shutdown_state = shutdown_dhcp;
+	omapi_io_state_foreach (dhcp_io_shutdown, 0);
+
+	omapi_object_dereference ((omapi_object_t **)&icmp_state, MDL);
+
+	free_hash_table (universe_hash, MDL);
+	for (i = 0; i < universe_count; i++) {
+		union {
+			const char *c;
+			char *s;
+		} foo;
+		if (universes [i]) {
+			if (universes [i] -> hash)
+				free_hash_table (universes [i] -> hash, MDL);
+			if (universes [i] -> name > (char *)&end) {
+				foo.c = universes [i] -> name;
+				dfree (foo.s, MDL);
+			}
+			if (universes [i] > (struct universe *)&end)
+				dfree (universes [i], MDL);
+		}
+	}
+	dfree (universes, MDL);
+
 	relinquish_free_lease_states ();
 	relinquish_free_pairs ();
 	relinquish_free_expressions ();
 	relinquish_free_binding_values ();
 	relinquish_free_option_caches ();
 	relinquish_free_packets ();
-	trace_free_all ();
-	group_dereference (&root_group, MDL);
-
-	if (interfaces) {
-	    interface_reference (&in, interfaces, MDL);
-	    do {
-		if (in) {
-		    interface_reference (&ic, in, MDL);
-		    interface_dereference (&in, MDL);
-		}
-		if (ic -> next) {
-		    interface_reference (&in, ic -> next, MDL);
-		    interface_dereference (&ic -> next, MDL);
-		}
-		omapi_unregister_io_object ((omapi_object_t *)ic);
-		interface_dereference (&ic, MDL);
-	    } while (in);
-	    interface_dereference (&interfaces, MDL);
-	}
-
-	if (st)
-		dump_rc_history (st);
+	relinquish_lease_hunks ();
+	relinquish_hash_bucket_hunks ();
+	omapi_type_relinquish ();
 }
 #endif /* DEBUG_MEMORY_LEAKAGE */
