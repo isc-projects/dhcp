@@ -42,17 +42,20 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: execute.c,v 1.1 1998/06/25 03:57:00 mellon Exp $ Copyright (c) 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: execute.c,v 1.2 1998/11/05 18:40:40 mellon Exp $ Copyright (c) 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
 
-int execute_statements (packet, options, statements)
+int execute_statements (packet, in_options, out_options, statements)
 	struct packet *packet;
-	struct option_state *options;
+	struct option_state *in_options;
+	struct option_state *out_options;
 	struct executable_statement *statements;
 {
 	struct executable_statement *r;
+	int result;
+	int status;
 
 	if (!statements)
 		return 1;
@@ -60,32 +63,81 @@ int execute_statements (packet, options, statements)
 	for (r = statements; r; r = r -> next) {
 		switch (r -> op) {
 		      case if_statement:
+			status = evaluate_boolean_expression
+				(&result, packet,
+				 in_options, r -> data.ie.expr);
+			
+#if defined (DEBUG_EXPRESSIONS)
+			note ("exec: if %s", (status
+					      ? (result ? "true" : "false")
+					      : "NULL"));
+#endif
+			/* XXX Treat NULL as false */
+			if (!status)
+				result = 0;
 			if (!execute_statements
-			    (packet, options,
-			     evaluate_boolean_expression (packet,
-							  r -> data.ie.expr)
-			     ? r -> data.ie.true : r -> data.ie.false))
+			    (packet, in_options, out_options,
+			     result ? r -> data.ie.true : r -> data.ie.false))
 				return 0;
 			break;
 
 		      case eval_statement:
-			evaluate_boolean_expression (packet, r -> data.eval);
+			status = evaluate_boolean_expression
+				(&result,
+				 packet, in_options, r -> data.eval);
+#if defined (DEBUG_EXPRESSIONS)
+			note ("exec: evaluate: %s",
+			      (status
+			       ? (result ? "true" : "false") : "NULL"));
+#endif
 			break;
 
 		      case add_statement:
+#if defined (DEBUG_EXPRESSIONS)
+			note ("exec: add %s", (r -> data.add -> name
+					       ? r -> data.add -> name
+					       : "<unnamed class>"));
+#endif
 			classify (packet, r -> data.add);
 			break;
 
 		      case break_statement:
+#if defined (DEBUG_EXPRESSIONS)
+			note ("exec: break");
+#endif
 			return 0;
 
 		      case supersede_option_statement:
+#if defined (DEBUG_EXPRESSIONS)
+			note ("exec: supersede option %s.%s",
+			      r -> data.option -> option -> universe -> name,
+			      r -> data.option -> option -> name);
+			goto option_statement;
+#endif
 		      case default_option_statement:
+#if defined (DEBUG_EXPRESSIONS)
+			note ("exec: default option %s.%s",
+			      r -> data.option -> option -> universe -> name,
+			      r -> data.option -> option -> name);
+			goto option_statement;
+#endif
 		      case append_option_statement:
+#if defined (DEBUG_EXPRESSIONS)
+			note ("exec: append option %s.%s",
+			      r -> data.option -> option -> universe -> name,
+			      r -> data.option -> option -> name);
+			goto option_statement;
+#endif
 		      case prepend_option_statement:
+#if defined (DEBUG_EXPRESSIONS)
+			note ("exec: prepend option %s.%s",
+			      r -> data.option -> option -> universe -> name,
+			      r -> data.option -> option -> name);
+		      option_statement:
+#endif
 			if (r -> data.option -> option -> universe -> set_func)
 				(r -> data.option -> option ->
-				 universe -> set_func) (options,
+				 universe -> set_func) (out_options,
 							r -> data.option,
 							r -> op);
 			break;
@@ -113,6 +165,7 @@ void execute_statements_in_scope (packet, options, group, limiting_group)
 
 	for (scope = group;
 	     scope && scope != limiting_group; scope = scope -> next) {
-		execute_statements (packet, options, scope -> statements);
+		execute_statements (packet, options, options,
+				    scope -> statements);
 	}
 }
