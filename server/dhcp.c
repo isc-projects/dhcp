@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.192.2.13 2001/06/29 20:13:31 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.192.2.14 2001/08/23 16:17:15 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2234,6 +2234,27 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 					getUShort (d1.data);
 			data_string_forget (&d1, MDL);
 		}
+	}
+
+	/* Get the Subnet Selection option from the packet, if one
+	   was sent. */
+	if ((oc = lookup_option (&dhcp_universe, packet -> options,
+				 DHO_SUBNET_SELECTION))) {
+
+		/* Make a copy of the data. */
+		struct option_cache *noc = (struct option_cache *)0;
+		if (option_cache_allocate (&noc, MDL)) {
+			if (oc -> data.len)
+				data_string_copy (&noc -> data,
+						  &oc -> data, MDL);
+			if (oc -> expression)
+				expression_reference (&noc -> expression,
+						      oc -> expression, MDL);
+			if (oc -> option)
+				noc -> option = oc -> option;
+		}
+
+		save_option (&dhcp_universe, state -> options, oc);
 	}
 
 	/* Now, if appropriate, put in DHCP-specific options that
