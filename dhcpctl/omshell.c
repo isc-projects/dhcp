@@ -457,6 +457,7 @@ int main (int argc, char **argv, char **envp)
 		    switch (token) {
 			  case STRING:
 			    dhcpctl_set_string_value (oh, val, s1);
+			    token = next_token (&val, (unsigned *)0, cfile);
 			    break;
 			    
 			  case NUMBER:
@@ -491,6 +492,7 @@ int main (int argc, char **argv, char **envp)
 				break;
 			    }
 			    dhcpctl_set_int_value (oh, atoi (val), s1);
+			    token = next_token (&val, (unsigned *)0, cfile);
 			  badnum:
 			    break;
 			    
@@ -516,9 +518,9 @@ int main (int argc, char **argv, char **envp)
 
 			  default:
 			    printf ("invalid value.\n");
+			    skip_to_semi (cfile);
 		    }
 		    
-		    token = next_token (&val, (unsigned *)0, cfile);
 		    if (token != END_OF_FILE && token != EOL)
 			    goto set_usage;
 		    break;
@@ -584,7 +586,7 @@ int main (int argc, char **argv, char **envp)
 		    
 		    break;
 	    }
-	} while (token != END_OF_FILE);
+	} while (1);
 
 	exit (0);
 }
