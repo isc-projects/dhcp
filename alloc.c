@@ -65,7 +65,7 @@ void dfree (ptr, name)
 	char *name;
 {
 	if (!ptr) {
-		warn ("dfree %s: free on null pointer.");
+		warn ("dfree %s: free on null pointer.", name);
 		return;
 	}
 	free (ptr);
