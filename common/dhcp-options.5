@@ -204,6 +204,18 @@ sending TCP segments.  The minimum value is 1.
 This option can be used to specify the a DHCP client identifier in a
 host declaration, so that dhcpd can find the host record by matching
 against the client identifier.
+.PP
+Please be aware that some DHCP clients, when configured with client
+identifiers that are ASCII text, will prepend a zero to the ASCII
+text.   So you may need to write:
+.nf
+
+	option dhcp-client-identifier "\\0foo";
+
+rather than:
+
+	option dhcp-client-identifier "foo";
+.fi
 .RE
 .PP
 .B option \fBdhcp-max-message-size\fR \fIuint16\fR\fB;\fR
