@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: conflex.c,v 1.38 1999/02/25 23:30:33 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: conflex.c,v 1.39 1999/03/09 23:39:41 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -354,6 +354,20 @@ static int intern (atom, dfv)
 
 	switch (tolower (atom [0])) {
 	      case 'a':
+		if (!strncasecmp (atom + 1, "uth", 3)) {
+			if (!strncasecmp (atom + 3, "uthenticat", 10)) {
+				if (!strcasecmp (atom + 13, "ed"))
+					return AUTHENTICATED;
+				if (!strcasecmp (atom + 13, "ion"))
+					return AUTHENTICATION;
+				break;
+			}
+			if (!strcasecmp (atom + 1, "uthoritative"))
+				return AUTHORITATIVE;
+			if (!strcasecmp (atom + 1, "uth-key"))
+				return AUTH_KEY;
+			break;
+		}
 		if (!strcasecmp (atom + 1, "nd"))
 			return AND;
 		if (!strcasecmp (atom + 1, "ppend"))
@@ -364,14 +378,8 @@ static int intern (atom, dfv)
 			return ALIAS;
 		if (!strcasecmp (atom + 1, "bandoned"))
 			return ABANDONED;
-		if (!strcasecmp (atom + 1, "uthoritative"))
-			return AUTHORITATIVE;
 		if (!strcasecmp (atom + 1, "dd"))
 			return ADD;
-		if (!strcasecmp (atom + 1, "uthenticated"))
-			return AUTHENTICATED;
-		if (!strcasecmp (atom + 1, "uth-key"))
-			return AUTH_KEY;
 		if (!strcasecmp (atom + 1, "ll"))
 			return ALL;
 		break;
