@@ -288,4 +288,8 @@
 # define SHUT_RD 0
 #endif
 
+#if !defined (SOCKLEN_T)
+#define SOCKLEN_T socklen_t
+#endif
+
 #endif /* __ISC_DHCP_OSDEP_H__ */
