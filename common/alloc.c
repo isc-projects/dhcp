@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: alloc.c,v 1.53.2.4 2001/06/20 03:07:56 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: alloc.c,v 1.53.2.5 2001/06/21 16:43:18 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -58,6 +58,7 @@ int option_chain_head_allocate (ptr, file, line)
 	int line;
 {
 	int size;
+	struct option_chain_head *h;
 
 	if (!ptr) {
 		log_error ("%s(%d): null pointer", file, line);
@@ -76,11 +77,10 @@ int option_chain_head_allocate (ptr, file, line)
 #endif
 	}
 
-	*ptr = dmalloc (sizeof **ptr, file, line);
-	if (*ptr) {
-		memset (*ptr, 0, sizeof **ptr);
-		(*ptr) -> refcnt = 1;
-		return 1;
+	h = dmalloc (sizeof *h, file, line);
+	if (h) {
+		memset (h, 0, sizeof *h);
+		return option_chain_head_reference (ptr, h, file, line);
 	}
 	return 0;
 }
@@ -110,7 +110,6 @@ int option_chain_head_reference (ptr, bp, file, line)
 	*ptr = bp;
 	bp -> refcnt++;
 	rc_register (file, line, ptr, bp, bp -> refcnt);
-	dmalloc_reuse (bp, file, line, 1);
 	return 1;
 }
 
@@ -172,6 +171,7 @@ int group_allocate (ptr, file, line)
 	int line;
 {
 	int size;
+	struct group *g;
 
 	if (!ptr) {
 		log_error ("%s(%d): null pointer", file, line);
@@ -190,11 +190,10 @@ int group_allocate (ptr, file, line)
 #endif
 	}
 
-	*ptr = dmalloc (sizeof **ptr, file, line);
-	if (*ptr) {
-		memset (*ptr, 0, sizeof **ptr);
-		(*ptr) -> refcnt = 1;
-		return 1;
+	g = dmalloc (sizeof *g, file, line);
+	if (g) {
+		memset (g, 0, sizeof *g);
+		return group_reference (ptr, g, file, line);
 	}
 	return 0;
 }
@@ -224,7 +223,6 @@ int group_reference (ptr, bp, file, line)
 	*ptr = bp;
 	bp -> refcnt++;
 	rc_register (file, line, ptr, bp, bp -> refcnt);
-	dmalloc_reuse (bp, file, line, 1);
 	return 1;
 }
 
@@ -464,6 +462,7 @@ int expression_allocate (cptr, file, line)
 	if (free_expressions) {
 		rval = free_expressions;
 		free_expressions = rval -> data.not;
+		dmalloc_reuse (rval, file, line, 1);
 	} else {
 		rval = dmalloc (sizeof (struct expression), file, line);
 		if (!rval)
@@ -498,7 +497,6 @@ int expression_reference (ptr, src, file, line)
 	*ptr = src;
 	src -> refcnt++;
 	rc_register (file, line, ptr, src, src -> refcnt);
-	dmalloc_reuse (src, file, line, 1);
 	return 1;
 }
 
@@ -538,6 +536,7 @@ int binding_value_allocate (cptr, file, line)
 	if (free_binding_values) {
 		rval = free_binding_values;
 		free_binding_values = rval -> value.bv;
+		dmalloc_reuse (rval, file, line, 1);
 	} else {
 		rval = dmalloc (sizeof (struct binding_value), file, line);
 		if (!rval)
@@ -572,7 +571,6 @@ int binding_value_reference (ptr, src, file, line)
 	*ptr = src;
 	src -> refcnt++;
 	rc_register (file, line, ptr, src, src -> refcnt);
-	dmalloc_reuse (src, file, line, 1);
 	return 1;
 }
 
@@ -639,7 +637,6 @@ int fundef_reference (ptr, src, file, line)
 	*ptr = src;
 	src -> refcnt++;
 	rc_register (file, line, ptr, src, src -> refcnt);
-	dmalloc_reuse (src, file, line, 1);
 	return 1;
 }
 
@@ -705,7 +702,6 @@ int option_cache_reference (ptr, src, file, line)
 	*ptr = src;
 	src -> refcnt++;
 	rc_register (file, line, ptr, src, src -> refcnt);
-	dmalloc_reuse (src, file, line, 1);
 	return 1;
 }
 
@@ -750,7 +746,6 @@ int buffer_reference (ptr, bp, file, line)
 	*ptr = bp;
 	bp -> refcnt++;
 	rc_register (file, line, ptr, bp, bp -> refcnt);
-	dmalloc_reuse (bp, file, line, 1);
 	return 1;
 }
 
@@ -840,7 +835,6 @@ int dns_host_entry_reference (ptr, bp, file, line)
 	*ptr = bp;
 	bp -> refcnt++;
 	rc_register (file, line, ptr, bp, bp -> refcnt);
-	dmalloc_reuse (bp, file, line, 1);
 	return 1;
 }
 
@@ -940,7 +934,6 @@ int option_state_reference (ptr, bp, file, line)
 	*ptr = bp;
 	bp -> refcnt++;
 	rc_register (file, line, ptr, bp, bp -> refcnt);
-	dmalloc_reuse (bp, file, line, 1);
 	return 1;
 }
 
@@ -1029,7 +1022,6 @@ int executable_statement_reference (ptr, bp, file, line)
 	*ptr = bp;
 	bp -> refcnt++;
 	rc_register (file, line, ptr, bp, bp -> refcnt);
-	dmalloc_reuse (bp, file, line, 1);
 	return 1;
 }
 
@@ -1054,6 +1046,7 @@ int packet_allocate (ptr, file, line)
 	int line;
 {
 	int size;
+	struct packet *p;
 
 	if (!ptr) {
 		log_error ("%s(%d): null pointer", file, line);
@@ -1073,15 +1066,15 @@ int packet_allocate (ptr, file, line)
 	}
 
 	if (free_packets) {
-		*ptr = free_packets;
-		free_packets = (struct packet *)((*ptr) -> raw);
+		p = free_packets;
+		free_packets = (struct packet *)(p -> raw);
+		dmalloc_reuse (p, file, line, 1);
 	} else {
-		*ptr = dmalloc (sizeof **ptr, file, line);
+		p = dmalloc (sizeof *p, file, line);
 	}
-	if (*ptr) {
-		memset (*ptr, 0, sizeof **ptr);
-		(*ptr) -> refcnt = 1;
-		return 1;
+	if (p) {
+		memset (p, 0, sizeof *p);
+		return packet_reference (ptr, p, file, line);
 	}
 	return 0;
 }
@@ -1111,7 +1104,6 @@ int packet_reference (ptr, bp, file, line)
 	*ptr = bp;
 	bp -> refcnt++;
 	rc_register (file, line, ptr, bp, bp -> refcnt);
-	dmalloc_reuse (bp, file, line, 1);
 	return 1;
 }
 
@@ -1155,6 +1147,13 @@ int packet_dereference (ptr, file, line)
 		option_state_dereference (&packet -> options, file, line);
 	if (packet -> interface)
 		interface_dereference (&packet -> interface, MDL);
+	if (packet -> shared_network)
+		shared_network_dereference (&packet -> shared_network, MDL);
+	for (i = 0; i < packet -> class_count && i < PACKET_MAX_CLASSES; i++) {
+		if (packet -> classes [i])
+			omapi_object_dereference ((omapi_object_t **)
+						  &packet -> classes [i], MDL);
+	}
 	packet -> raw = (struct dhcp_packet *)free_packets;
 	free_packets = packet;
 	dmalloc_reuse (free_packets, (char *)0, 0, 0);
@@ -1167,6 +1166,7 @@ int dns_zone_allocate (ptr, file, line)
 	int line;
 {
 	int size;
+	struct dns_zone *d;
 
 	if (!ptr) {
 		log_error ("%s(%d): null pointer", file, line);
@@ -1185,11 +1185,10 @@ int dns_zone_allocate (ptr, file, line)
 #endif
 	}
 
-	*ptr = dmalloc (sizeof **ptr, file, line);
-	if (*ptr) {
-		memset (*ptr, 0, sizeof **ptr);
-		(*ptr) -> refcnt = 1;
-		return 1;
+	d = dmalloc (sizeof *d, file, line);
+	if (d) {
+		memset (d, 0, sizeof *d);
+		return dns_zone_reference (ptr, d, file, line);
 	}
 	return 0;
 }
@@ -1219,7 +1218,6 @@ int dns_zone_reference (ptr, bp, file, line)
 	*ptr = bp;
 	bp -> refcnt++;
 	rc_register (file, line, ptr, bp, bp -> refcnt);
-	dmalloc_reuse (bp, file, line, 1);
 	return 1;
 }
 
@@ -1281,7 +1279,6 @@ int binding_scope_reference (ptr, bp, file, line)
 	*ptr = bp;
 	bp -> refcnt++;
 	rc_register (file, line, ptr, bp, bp -> refcnt);
-	dmalloc_reuse (bp, file, line, 1);
 	return 1;
 }
 
