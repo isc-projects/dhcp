@@ -55,7 +55,7 @@ isc_result_t omapi_register_io_object (omapi_object_t *h,
 		return ISC_R_NOMEMORY;
 	memset (obj, 0, sizeof *obj);
 	obj -> refcnt = 1;
-	rc_register_mdl (obj, obj -> refcnt);
+	rc_register_mdl (&obj, obj, obj -> refcnt);
 	obj -> type = omapi_type_io_object;
 
 	status = omapi_object_reference (&obj -> inner, h, MDL);
@@ -107,7 +107,7 @@ isc_result_t omapi_wait_for_completion (omapi_object_t *object,
 			return ISC_R_NOMEMORY;
 		memset (waiter, 0, sizeof *waiter);
 		waiter -> refcnt = 1;
-		rc_register_mdl (waiter, waiter -> refcnt);
+		rc_register_mdl (&waiter, waiter, waiter -> refcnt);
 		waiter -> type = omapi_type_waiter;
 
 		/* Paste the waiter object onto the inner object we're

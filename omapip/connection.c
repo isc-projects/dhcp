@@ -38,7 +38,7 @@ isc_result_t omapi_connect (omapi_object_t *c,
 		return ISC_R_NOMEMORY;
 	memset (obj, 0, sizeof *obj);
 	obj -> refcnt = 1;
-	rc_register_mdl (obj, obj -> refcnt);
+	rc_register_mdl (&obj, obj, obj -> refcnt);
 	obj -> type = omapi_type_connection;
 
 	status = omapi_object_reference (&c -> outer, (omapi_object_t *)obj,

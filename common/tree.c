@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.70 2000/01/26 17:22:58 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.71 2000/01/27 22:40:49 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1940,7 +1940,7 @@ void expression_dereference (eptr, file, line)
 	/* Decrement the reference count.   If it's nonzero, we're
 	   done. */
 	--(expr -> refcnt);
-	rc_register (file, line, expr, expr -> refcnt);
+	rc_register (file, line, eptr, expr, expr -> refcnt);
 	if (expr -> refcnt > 0)
 		return;
 	if (expr -> refcnt < 0) {

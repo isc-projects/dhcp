@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: alloc.c,v 1.40 2000/01/27 22:14:36 mellon Exp $ Copyright (c) 1995, 1996, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: alloc.c,v 1.41 2000/01/27 22:40:49 mellon Exp $ Copyright (c) 1995, 1996, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -473,7 +473,7 @@ int expression_reference (ptr, src, file, line)
 	}
 	*ptr = src;
 	src -> refcnt++;
-	rc_register (file, line, src, src -> refcnt);
+	rc_register (file, line, ptr, src, src -> refcnt);
 	dmalloc_reuse (src, file, line, 1);
 	return 1;
 }
@@ -536,7 +536,7 @@ int option_cache_reference (ptr, src, file, line)
 	}
 	*ptr = src;
 	src -> refcnt++;
-	rc_register (file, line, src, src -> refcnt);
+	rc_register (file, line, ptr, src, src -> refcnt);
 	dmalloc_reuse (src, file, line, 1);
 	return 1;
 }
@@ -581,7 +581,7 @@ int buffer_reference (ptr, bp, file, line)
 	}
 	*ptr = bp;
 	bp -> refcnt++;
-	rc_register (file, line, bp, bp -> refcnt);
+	rc_register (file, line, ptr, bp, bp -> refcnt);
 	dmalloc_reuse (bp, file, line, 1);
 	return 1;
 }
@@ -612,7 +612,7 @@ int buffer_dereference (ptr, file, line)
 	}
 
 	(*ptr) -> refcnt--;
-	rc_register (file, line, *ptr, (*ptr) -> refcnt);
+	rc_register (file, line, ptr, *ptr, (*ptr) -> refcnt);
 	if (!(*ptr) -> refcnt)
 		dfree ((*ptr), file, line);
 	if ((*ptr) -> refcnt < 0) {
@@ -671,7 +671,7 @@ int dns_host_entry_reference (ptr, bp, file, line)
 	}
 	*ptr = bp;
 	bp -> refcnt++;
-	rc_register (file, line, bp, bp -> refcnt);
+	rc_register (file, line, ptr, bp, bp -> refcnt);
 	dmalloc_reuse (bp, file, line, 1);
 	return 1;
 }
@@ -693,7 +693,7 @@ int dns_host_entry_dereference (ptr, file, line)
 	}
 
 	(*ptr) -> refcnt--;
-	rc_register (file, line, bp, bp -> refcnt);
+	rc_register (file, line, ptr, bp, bp -> refcnt);
 	if (!(*ptr) -> refcnt)
 		dfree ((*ptr), file, line);
 	if ((*ptr) -> refcnt < 0) {
@@ -741,7 +741,7 @@ int option_state_allocate (ptr, file, line)
 		memset (*ptr, 0, size);
 		(*ptr) -> universe_count = universe_count;
 		(*ptr) -> refcnt = 1;
-		rc_register (file, line, *ptr, (*ptr) -> refcnt);
+		rc_register (file, line, ptr, *ptr, (*ptr) -> refcnt);
 		return 1;
 	}
 	return 0;
@@ -771,7 +771,7 @@ int option_state_reference (ptr, bp, file, line)
 	}
 	*ptr = bp;
 	bp -> refcnt++;
-	rc_register (file, line, bp, bp -> refcnt);
+	rc_register (file, line, ptr, bp, bp -> refcnt);
 	dmalloc_reuse (bp, file, line, 1);
 	return 1;
 }
@@ -796,7 +796,7 @@ int option_state_dereference (ptr, file, line)
 	options = *ptr;
 	*ptr = (struct option_state *)0;
 	--options -> refcnt;
-	rc_register (file, line, options, options -> refcnt);
+	rc_register (file, line, ptr, options, options -> refcnt);
 	if (options -> refcnt > 0)
 		return 1;
 
@@ -860,7 +860,7 @@ int executable_statement_reference (ptr, bp, file, line)
 	}
 	*ptr = bp;
 	bp -> refcnt++;
-	rc_register (file, line, bp, bp -> refcnt);
+	rc_register (file, line, ptr, bp, bp -> refcnt);
 	dmalloc_reuse (bp, file, line, 1);
 	return 1;
 }
@@ -929,7 +929,7 @@ int packet_reference (ptr, bp, file, line)
 	}
 	*ptr = bp;
 	bp -> refcnt++;
-	rc_register (file, line, bp, bp -> refcnt);
+	rc_register (file, line, ptr, bp, bp -> refcnt);
 	dmalloc_reuse (bp, file, line, 1);
 	return 1;
 }
@@ -954,7 +954,7 @@ int packet_dereference (ptr, file, line)
 	packet = *ptr;
 	*ptr = (struct packet *)0;
 	--packet -> refcnt;
-	rc_register (file, line, packet, packet -> refcnt);
+	rc_register (file, line, ptr, packet, packet -> refcnt);
 	if (packet -> refcnt > 0)
 		return 1;
 

@@ -35,7 +35,7 @@ isc_result_t omapi_message_new (omapi_object_t **o, const char *file, int line)
 		return ISC_R_NOMEMORY;
 	memset (m, 0, sizeof *m);
 	m -> type = omapi_type_message;
-	rc_register (file, line, m, m -> refcnt);
+	rc_register (file, line, &m, m, m -> refcnt);
 	m -> refcnt = 1;
 
 	g = (omapi_object_t *)0;

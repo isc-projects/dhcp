@@ -46,7 +46,7 @@ dhcpctl_status dhcpctl_new_object (dhcpctl_handle *h,
 	memset (m, 0, sizeof *m);
 	m -> type = dhcpctl_remote_type;
 	m -> refcnt = 1;
-	rc_register_mdl (m, m -> refcnt);
+	rc_register_mdl (&m, m, m -> refcnt);
 
 	g = (omapi_object_t *)0;
 	status = omapi_generic_new (&g, MDL);

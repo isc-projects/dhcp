@@ -35,7 +35,7 @@ isc_result_t omapi_protocol_connect (omapi_object_t *h,
 		return ISC_R_NOMEMORY;
 	memset (obj, 0, sizeof *obj);
 	obj -> refcnt = 1;
-	rc_register_mdl (obj, obj -> refcnt);
+	rc_register_mdl (&obj, obj, obj -> refcnt);
 	obj -> type = omapi_type_protocol;
 
 	status = omapi_connect ((omapi_object_t *)obj, server_name, port);
