@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: stables.c,v 1.3 1999/11/23 22:24:49 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: stables.c,v 1.4 2000/01/05 18:23:44 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -32,6 +32,7 @@ static char copyright[] =
 /* This is used to indicate some kind of failure when generating a
    failover option. */
 failover_option_t null_failover_option = { 0, 0 };
+failover_option_t skip_failover_option = { 0, 0 };
 
 /* Information about failover options, for printing, encoding
    and decoding. */
