@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: db.c,v 1.29 1999/09/28 23:57:47 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: db.c,v 1.30 1999/10/01 03:24:59 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -337,7 +337,60 @@ int write_host (host)
 int write_group (group)
 	struct group_object *group;
 {
-	return 0;
+	int errors = 0;
+	int i;
+
+	if (!db_printable (group -> name))
+		return 0;
+
+	if (counting)
+		++count;
+	errno = 0;
+
+	fprintf (db_file, "group %s {", group -> name);
+	if (errno) {
+		++errors;
+	}
+
+	if (group -> flags & GROUP_OBJECT_DYNAMIC) {
+		errno = 0;
+		fprintf (db_file, "\n\tdynamic;");
+		if (errno)
+			++errors;
+	}
+
+	if (group -> flags & GROUP_OBJECT_STATIC) {
+		errno = 0;
+		fprintf (db_file, "\n\tstatic;");
+		if (errno)
+			++errors;
+	}
+
+	if (group -> flags & GROUP_OBJECT_DELETED) {
+		errno = 0;
+		fprintf (db_file, "\n\tdeleted;");
+		if (errno)
+			++errors;
+	} else {
+		if (group -> group) {
+			errno = 0;
+			write_statements (db_file,
+					  group -> group -> statements, 8);
+			if (errno) {
+				++errors;
+			}
+		}
+	}
+
+	errno = 0;
+	fputs ("\n}\n", db_file);
+	if (errno) {
+		++errors;
+	}
+	if (errors)
+		log_info ("write_group: unable to write group %s",
+			  group -> name);
+	return !errors;
 }
 
 int db_printable (s)
@@ -442,13 +495,16 @@ int commit_leases ()
 	return 1;
 }
 
-void db_startup ()
+void db_startup (testp)
+	int testp;
 {
 	/* Read in the existing lease file... */
 	read_leases ();
 
-	GET_TIME (&write_time);
-	new_lease_file ();
+	if (!testp) {
+		GET_TIME (&write_time);
+		new_lease_file ();
+	}
 }
 
 void new_lease_file ()
