@@ -169,7 +169,9 @@ option domain-name-servers 10.0.0.1, 10.0.0.2;",
 		exit (1);
 	}
 
-	printf ("group name = %.*s\n", groupname -> len, groupname -> value);
+	printf ("group name = %.*s\n",
+		(int)groupname -> len,
+		groupname -> value);
 
 	memset (&host_handle, 0, sizeof host_handle);
 	status = dhcpctl_new_object (&host_handle, connection, "host");
@@ -327,7 +329,7 @@ option smtp-server 10.0.0.1;",
 		exit (1);
 	}
 
-	printf ("host name = %.*s\n", result -> len, result -> value);
+	printf ("host name = %.*s\n", (int)result -> len, result -> value);
 
 #if 0
 	status = dhcpctl_object_remove (connection, host_handle);

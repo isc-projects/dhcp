@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: db.c,v 1.55 2000/08/08 18:11:22 neild Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: db.c,v 1.56 2000/08/11 01:26:08 neild Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -623,7 +623,7 @@ int write_billing_class (class)
 	if (i == class -> hash_string.len) {
 		errno = 0;
 		fprintf (db_file, " \"%.*s\";",
-			 class -> hash_string.len,
+			 (int)class -> hash_string.len,
 			 class -> hash_string.data);
 		if (errno)
 			++errors;
