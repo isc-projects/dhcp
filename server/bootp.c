@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bootp.c,v 1.53 1999/07/19 01:15:22 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bootp.c,v 1.54 1999/07/31 18:07:16 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -134,7 +134,8 @@ void bootp (packet)
 				     hp -> group, subnet -> group);
 	
 	/* Drop the request if it's not allowed for this client. */
-	if (evaluate_boolean_option_cache (packet, options, lease,
+	if (evaluate_boolean_option_cache (packet, lease,
+					   packet -> options, options, 
 					   lookup_option (&server_universe,
 							  options,
 							  SV_ALLOW_BOOTP))) {
@@ -144,7 +145,8 @@ void bootp (packet)
 		return;
 	} 
 
-	if (evaluate_boolean_option_cache (packet, options, lease,
+	if (evaluate_boolean_option_cache (packet, lease,
+					   packet -> options, options, 
 					   lookup_option (&server_universe,
 							  options,
 							  SV_ALLOW_BOOTING))) {
@@ -163,7 +165,7 @@ void bootp (packet)
 	   just copy the input options to the output. */
 	if (!packet -> options_valid &&
 	    !(evaluate_boolean_option_cache
-	      (packet, options, lease,
+	      (packet, lease, packet -> options, options,
 	       lookup_option (&server_universe, options,
 			      SV_ALWAYS_REPLY_RFC1048)))) {
 		memcpy (outgoing.raw -> options,
@@ -196,7 +198,8 @@ void bootp (packet)
 		   name buffers. */
 
 		outgoing.packet_length =
-			cons_options (packet, outgoing.raw, lease, 0, options,
+			cons_options (packet, outgoing.raw, lease, 0,
+				      packet -> options, options,
 				      0, 0, 1, (struct data_string *)0);
 		if (outgoing.packet_length < BOOTP_MIN_LEN)
 			outgoing.packet_length = BOOTP_MIN_LEN;
@@ -218,15 +221,16 @@ void bootp (packet)
 	   the broadcast bit in the bootp flags field. */
 	if ((oc = lookup_option (&server_universe,
 				options, SV_ALWAYS_BROADCAST)) &&
-	    evaluate_boolean_option_cache (packet, packet -> options,
-					   lease, oc))
+	    evaluate_boolean_option_cache (packet, lease,
+					   packet -> options, options, oc))
 		raw.flags |= htons (BOOTP_BROADCAST);
 
 	/* Figure out the address of the next server. */
 	memset (&d1, 0, sizeof d1);
 	oc = lookup_option (&server_universe, options, SV_NEXT_SERVER);
 	if (oc &&
-	    evaluate_option_cache (&d1, packet, options, lease, oc)) {
+	    evaluate_option_cache (&d1, packet, lease,
+				   packet -> options, options, oc)) {
 		/* If there was more than one answer, take the first. */
 		if (d1.len >= 4 && d1.data)
 			memcpy (&raw.siaddr, d1.data, 4);
@@ -244,7 +248,8 @@ void bootp (packet)
 	/* Figure out the filename. */
 	oc = lookup_option (&server_universe, options, SV_FILENAME);
 	if (oc &&
-	    evaluate_option_cache (&d1, packet, options, lease, oc)) {
+	    evaluate_option_cache (&d1, packet, lease,
+				   packet -> options, options, oc)) {
 		memcpy (raw.file, d1.data,
 			d1.len > sizeof raw.file ? sizeof raw.file : d1.len);
 		if (sizeof raw.file > d1.len)
@@ -257,7 +262,8 @@ void bootp (packet)
 	/* Choose a server name as above. */
 	oc = lookup_option (&server_universe, options, SV_SERVER_NAME);
 	if (oc &&
-	    evaluate_option_cache (&d1, packet, options, lease, oc)) {
+	    evaluate_option_cache (&d1, packet, lease,
+				   packet -> options, options, oc)) {
 		memcpy (raw.sname, d1.data,
 			d1.len > sizeof raw.sname ? sizeof raw.sname : d1.len);
 		if (sizeof raw.sname > d1.len)
