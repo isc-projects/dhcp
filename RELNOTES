@@ -85,6 +85,9 @@ and for prodding me into improving it.
 - A memory leak in configuration parsing was closed thanks to a patch from
   Steve G.
 
+- The function which discovers interfaces will now skip non-broadcast or
+  point-to-point interfaces, thanks to a patch from David Brownlee.
+
 			Changes since 3.0.1rc10
 
 - Potential buffer overflows in minires repaired.
