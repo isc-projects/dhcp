@@ -50,7 +50,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: omapi.c,v 1.29 2000/06/02 21:27:20 mellon Exp $ Copyright (c) 1999-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: omapi.c,v 1.30 2000/06/07 00:28:21 mellon Exp $ Copyright (c) 1999-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -79,7 +79,12 @@ void dhcp_db_objects_setup ()
 					     dhcp_lease_lookup, 
 					     dhcp_lease_create,
 					     dhcp_lease_remove,
-					     dhcp_lease_free, 0,
+#if defined (COMPACT_LEASES)
+					     dhcp_lease_free,
+#else
+					     0,
+#endif
+					     0,
 					     sizeof (struct lease));
 	if (status != ISC_R_SUCCESS)
 		log_fatal ("Can't register lease object type: %s",
