@@ -76,15 +76,6 @@ isc_result_t omapi_protocol_connect (omapi_object_t *h,
 		return status;
 	}
 
-	/* Send the introductory message. */
-	status = omapi_protocol_send_intro ((omapi_object_t *)obj,
-					    OMAPI_PROTOCOL_VERSION,
-					    sizeof (omapi_protocol_header_t));
-	if (status != ISC_R_SUCCESS) {
-		omapi_object_dereference ((omapi_object_t **)&obj, MDL);
-		return status;
-	}
-
 	if (authinfo)
 		omapi_object_reference (&obj -> authinfo, authinfo, MDL);
 	omapi_object_dereference ((omapi_object_t **)&obj, MDL);
@@ -252,6 +243,19 @@ isc_result_t omapi_protocol_signal_handler (omapi_object_t *h,
 		return ISC_R_UNEXPECTED;
 	}
 	p = (omapi_protocol_object_t *)h;
+
+	if (!strcmp (name, "connect")) {
+		/* Send the introductory message. */
+		status = omapi_protocol_send_intro
+			((omapi_object_t *)obj,
+			 OMAPI_PROTOCOL_VERSION,
+			 sizeof (omapi_protocol_header_t));
+		if (status != ISC_R_SUCCESS) {
+			omapi_disconnect (p -> outer, 1);
+			return status;
+		}
+		return ISC_R_SUCCESS;
+	}
 
 	/* Not a signal we recognize? */
 	if (strcmp (name, "ready")) {
