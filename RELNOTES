@@ -1,12 +1,25 @@
 		     Internet Software Consortium
 	      Dynamic Host Configuration Protocol Server
-		      Version 1.0, Patchlevel 1
-			    May 17, 1998
+		      Version 1.0, Patchlevel 2
+			    June 24, 1998
 
 			    Release Notes
 
-This is version 1.0 Patchlevel 1 of the Internet Software Consortium
-DHCP Server The previous version was Version 1.0.
+This is version 1.0 Patchlevel 2 of the Internet Software Consortium
+DHCP Server The previous version was Version 1.0 Patchlevel 1.
+
+              CHANGES FROM VERSION 1.0 BETA 1 PATCHLEVEL 1
+
+- Fix two more potential buffer overflow problems.
+
+- Disable certain warnings on Solaris.
+
+- Include different headers on Linux 1.x and 2.x.
+
+- Fix stupid typo in cons_option call in dhcp.c which caused long dhcp
+  packets to be sent incorrectly.
+
+- Fix ancient typo in memory.c.
 
               CHANGES FROM VERSION 1.0 BETA 1 PATCHLEVEL 0
 
