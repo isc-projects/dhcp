@@ -109,7 +109,7 @@ to contact a DHCP server.   By default, this is five minutes.
  \fBselect-timeout \fItime\fR\fB;\fR
 .PP
 It is possible (some might say desirable) for there to be more than
-one dhcp server serving any given network.   In this case, it is
+one DHCP server serving any given network.   In this case, it is
 possible that a client may be sent more than one offer in response to
 its initial lease discovery message.   It may be that one of these
 offers is preferable to the other (e.g., one offer may have the
@@ -124,6 +124,9 @@ received by the time the
 .I select-timeout
 has expired, the client will accept the first offer that arrives.
 .PP
+By default, the select-timeout is zero seconds - that is, the client
+will take the first offer it sees.
+.PP
 .I The
 .B reboot
 .I statement
@@ -137,7 +140,7 @@ ran, this is the quickest way to get started.   The
 .I reboot
 statement sets the time that must elapse after the client first tries
 to reacquire its old address before it gives up and tries to discover
-a new address.
+a new address.   By default, the reboot timeout is ten seconds.
 .PP
 .I The
 .B backoff-cutoff
@@ -161,11 +164,11 @@ allowed to back off.   It defaults to two minutes.
 The
 .I initial-interval
 statement sets the amount of time between the first attempt to reach a
-server and the second attempt to reach a server.   It defaults to ten
-seconds.   Each time a message is sent, the interval between messages
-is incremented by twice the current interval multiplied by a random
-number between zero and one.   If it is greater than the
-backoff-cutoff amount, it is set to that amount.
+server and the second attempt to reach a server.  Each time a message
+is sent, the interval between messages is incremented by twice the
+current interval multiplied by a random number between zero and one.
+If it is greater than the backoff-cutoff amount, it is set to that
+amount.  It defaults to ten seconds.
 .SH LEASE REQUIREMENTS AND REQUESTS
 The DHCP protocol allows the client to request that the server send it
 specific information, and not send it other information that it is not
@@ -182,7 +185,7 @@ are called \fIDHCP Options\fR.  DHCP Options are defined in
 .B request
 .I statement
 .PP
- \fBrequest [ \fBoption\fR ] [\fB,\fI ... \fIoption\fR ]\fB;\fR
+ \fBrequest [ \fIoption\fR ] [\fB,\fI ... \fIoption\fR ]\fB;\fR
 .PP
 The request statement causes the client to request that any server
 responding to the client send the client its values for the specified
@@ -193,11 +196,11 @@ statement - not option parameters.
 .B require
 .I statement
 .PP
- \fBrequire [ \fBoption\fR ] [\fB,\fI ... \fIoption\fR ]\fB;\fR
+ \fBrequire [ \fIoption\fR ] [\fB,\fI ... \fIoption ]\fB;\fR
 .PP
-The require statement causes the client to reject offers from servers
-that do not provide one or more of the listed options.   Such offers
-will simply be ignored.
+The require statement lists options that must be sent in order for an
+offer to be accepted.   Offers that do not contain all the listed
+options will be ignored.
 .PP
 .I The
 .B send
@@ -207,11 +210,11 @@ will simply be ignored.
 [\fB,\fI ... \fIoption declaration\fR ]\fB}\fR
 .PP
 The send statement causes the client to send the specified options to
-the server with the specified values.   These are full option
-declarations as described in \fBdhcp(5)\fR.   Options that are always
-sent in the DHCP protocol should not be specified here, except that
-the client can specify a \fBrequested-lease-time\fR option other than
-the default requested lease time, which is two hours.   The other
+the server with the specified values.  These are full option
+declarations as described in \fBdhcp-options(5)\fR.  Options that are
+always sent in the DHCP protocol should not be specified here, except
+that the client can specify a \fBrequested-lease-time\fR option other
+than the default requested lease time, which is two hours.  The other
 obvious use for this statement is to send information to the server
 that will allow it to differentiate between this client and other
 clients or kinds of clients.
@@ -529,7 +532,7 @@ This is a very complicated dhclient.conf file - in general, yours
 should be much simpler.   In many cases, it's sufficient to just
 create an empty dhclient.conf file - the defaults are usually fine.
 .SH SEE ALSO
-dhcp(5), dhcpd.conf(5), dhcp-options(5), dhclient.leases(5), RFC2132,
+dhcp-options(5), dhclient.leases(5), dhcpd(8), dhcpd.conf(5), RFC2132,
 RFC2131.
 .SH AUTHOR
 .B dhclient(8)
