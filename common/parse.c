@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.40 1999/10/01 03:17:59 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.41 1999/10/05 19:01:33 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2035,6 +2035,22 @@ int parse_non_binary (expr, cfile, lose, context)
 					  "parse_expression: HOST_DECL_NAME"))
 			log_fatal ("can't allocate expression");
 		(*expr) -> op = expr_host_decl_name;
+		break;
+
+	      case DDNS_FWD_NAME:
+		token = next_token (&val, cfile);
+		if (!expression_allocate (expr,
+					  "parse_expression: DDNS_FWD_NAME"))
+			log_fatal ("can't allocate expression");
+		(*expr) -> op = expr_dns_fwd_name;
+		break;
+
+	      case DDNS_REV_NAME:
+		token = next_token (&val, cfile);
+		if (!expression_allocate (expr,
+					  "parse_expression: DDNS_REV_NAME"))
+			log_fatal ("can't allocate expression");
+		(*expr) -> op = expr_dns_rev_name;
 		break;
 
 	      case PACKET:
