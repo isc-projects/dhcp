@@ -44,7 +44,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: sysconfd.c,v 1.4 1998/03/16 06:19:16 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: sysconfd.c,v 1.5 1998/04/09 04:22:30 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -144,14 +144,18 @@ void new_connection (proto)
 	int new_fd;
 
 	tmp = (struct sysconf_client *)malloc (sizeof *tmp);
-	if (!tmp)
-		error ("Can't find memory for new client!");
+	if (!tmp) {
+		warn ("Can't find memory for new client!");
+		return;
+	}
 	memset (tmp, 0, sizeof *tmp);
 
 	namelen = sizeof name;
 	new_fd = accept (proto -> fd, (struct sockaddr *)&name, &namelen);
-	if (new_fd < 0)
+	if (new_fd < 0) {
 		warn ("accept: %m");
+		return;
+	}
 
 	tmp -> next = clients;
 	tmp -> fd = new_fd;
