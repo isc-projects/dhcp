@@ -1455,7 +1455,7 @@ char *print_hex_3 PROTO ((unsigned, const u_int8_t *, unsigned));
 char *print_dotted_quads PROTO ((unsigned, const u_int8_t *));
 char *print_dec_1 PROTO ((unsigned long));
 char *print_dec_2 PROTO ((unsigned long));
-void print_expression PROTO ((char *, struct expression *));
+void print_expression PROTO ((const char *, struct expression *));
 int token_print_indent_concat (FILE *, int, int,
 			       const char *, const char *, ...);
 int token_indent_data_string (FILE *, int, int, const char *, const char *,
