@@ -44,8 +44,9 @@
 				 8)   /* UDP header */
 #define DHCP_SNAME_LEN		64
 #define DHCP_FILE_LEN		128
-#define DHCP_FIXED_LEN		(236 + DHCP_UDP_OVERHEAD) /* Everything but
-							     options. */
+#define DHCP_FIXED_NON_UDP	236
+#define DHCP_FIXED_LEN		(DHCP_FIXED_NON_UDP + DHCP_UDP_OVERHEAD)
+						/* Everything but options. */
 #define DHCP_MTU_MAX		1500
 #define DHCP_OPTION_LEN		(DHCP_MTU_MAX - DHCP_FIXED_LEN)
 
@@ -144,6 +145,7 @@ struct dhcp_packet {
 #define DHO_DHCP_REBINDING_TIME		59
 #define DHO_DHCP_CLASS_IDENTIFIER	60
 #define DHO_DHCP_CLIENT_IDENTIFIER	61
+#define DHO_DHCP_USER_CLASS_ID		77
 #define DHO_END				255
 
 /* DHCP message types. */
@@ -154,3 +156,4 @@ struct dhcp_packet {
 #define DHCPACK		5
 #define DHCPNAK		6
 #define DHCPRELEASE	7
+#define DHCPINFORM	8
