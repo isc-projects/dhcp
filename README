@@ -1,6 +1,6 @@
 	    Internet Software Consortium DHCP Distribution
-		   Version 3, Beta 2, Patchlevel 1
-			  September 1, 2000
+		   Version 3, Beta 2, Patchlevel 2
+			  September 4, 2000
 
 			     README FILE
 
@@ -141,14 +141,14 @@ information.   On Digital Unix, type ``man pfilt''.
 To build the DHCP Distribution, unpack the compressed tar file using
 the tar utility and the gzip command - type something like:
 
-	zcat dhcp-3.0b2pl1.tar.gz |tar xvf -
+	zcat dhcp-3.0b2pl2.tar.gz |tar xvf -
 
 On BSD/OS, you have to type gzcat, not zcat, and you may run into
 similar problems on other operating systems.
 
 			    CONFIGURING IT
 
-Now, cd to the dhcp-3.0b2pl1 subdirectory that you've just
+Now, cd to the dhcp-3.0b2pl2 subdirectory that you've just
 created and configure the source tree by typing:
 
 		./configure
@@ -520,7 +520,7 @@ Distribution.
           may be hard for you to figure it out, so don't go crazy
           trying.
 	- The specific version of the DHCP distribution you're
-          running, for example 2.0b1pl19, not 2.0.
+          running, for example "2.0b1pl19", not "2.0".
 	- Please explain the problem carefully, thinking through what
           you're saying to ensure that you don't assume we know
           something about your situation that we don't know.

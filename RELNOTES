@@ -1,6 +1,6 @@
 	    Internet Software Consortium DHCP Distribution
-		   Version 3, Beta 2, Patchlevel 1
-			  September 1, 2000
+		   Version 3, Beta 2, Patchlevel 2
+			  September 4, 2000
 
 			    Release Notes
 
@@ -48,3 +48,17 @@ Measurement Systems, and Brian Murrell at BC Tel Advanced
 Communications.  I'd like to express my thanks to all of these good
 people here, both for working on the code and for prodding me into
 improving it.
+
+		Changes since 3.0 Beta 2 Patchlevel 1
+
+- Notice when SIOCFIGCONF returns more data than fit in the buffer -
+  allocate a larger buffer, and retry.   Thanks to Greg Fausak for
+  pointing this out.
+
+- In the server, if no interfaces were configured, report an error and
+  exit.
+
+- Don't ever record a state of 'startup'.
+
+- Don't try to evaluate the local failover binding address if none was
+  specified.   Thanks to Joseph Breu for finding this.
