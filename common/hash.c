@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: hash.c,v 1.8 1996/08/28 01:39:20 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: hash.c,v 1.9 1996/09/09 07:04:45 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -142,6 +142,7 @@ void delete_hash_entry (table, name, len)
 			free_hash_bucket (bp, "delete_hash_entry");
 			break;
 		}
+		pbp = bp;	/* jwg, 9/6/96 - nice catch! */
 	}
 }
 
