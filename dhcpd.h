@@ -106,6 +106,7 @@ struct lease {
 	struct lease *prev;
 	struct iaddr ip_addr;
 	TIME starts, ends, timestamp;
+	TIME offered_expiry;
 	unsigned char *uid;
 	int uid_len;
 	struct host_decl *host;
@@ -230,6 +231,12 @@ int tree_evaluate PROTO ((struct tree_cache *));
 
 /* dhcp.c */
 void dhcp PROTO ((struct packet *));
+void dhcpdiscover PROTO ((struct packet *));
+void dhcprequest PROTO ((struct packet *));
+void dhcprelease PROTO ((struct packet *));
+void nak_lease PROTO ((struct packet *));
+void ack_lease PROTO ((struct packet *, struct lease *, unsigned char, TIME));
+struct lease *find_lease PROTO ((struct packet *));
 
 /* bootp.c */
 void bootp PROTO ((struct packet *));
