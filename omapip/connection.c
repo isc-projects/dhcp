@@ -57,6 +57,10 @@ isc_result_t omapi_connect (omapi_object_t *c,
 	struct in_addr foo;
 	isc_result_t status;
 
+#ifdef DEBUG_PROTOCOL
+	log_debug ("omapi_connect(%s, port=%d)", server_name, port);
+#endif
+
 	if (!inet_aton (server_name, &foo)) {
 		/* If we didn't get a numeric address, try for a domain
 		   name.  It's okay for this call to block. */
@@ -208,6 +212,10 @@ isc_result_t omapi_disconnect (omapi_object_t *h,
 			       int force)
 {
 	omapi_connection_object_t *c;
+
+#ifdef DEBUG_PROTOCOL
+	log_debug ("omapi_disconnect(%s)", force ? "force" : "");
+#endif
 
 	c = (omapi_connection_object_t *)h;
 	if (c -> type != omapi_type_connection)
@@ -399,10 +407,18 @@ isc_result_t omapi_connection_reaper (omapi_object_t *h)
 
 	c = (omapi_connection_object_t *)h;
 	if (c -> state == omapi_connection_disconnecting &&
-	    c -> out_bytes == 0)
+	    c -> out_bytes == 0) {
+#ifdef DEBUG_PROTOCOL
+		log_debug ("omapi_connection_reaper(): disconnect");
+#endif
 		omapi_disconnect (h, 1);
-	if (c -> state == omapi_connection_closed)
+	}
+	if (c -> state == omapi_connection_closed) {
+#ifdef DEBUG_PROTOCOL
+		log_debug ("omapi_connection_reaper(): closed");
+#endif
 		return ISC_R_NOTCONNECTED;
+	}
 	return ISC_R_SUCCESS;
 }
 
@@ -664,6 +680,10 @@ isc_result_t omapi_connection_destroy (omapi_object_t *h,
 {
 	omapi_connection_object_t *c;
 
+#ifdef DEBUG_PROTOCOL
+	log_debug ("omapi_connection_destroy()");
+#endif
+
 	if (h -> type != omapi_type_connection)
 		return ISC_R_UNEXPECTED;
 	c = (omapi_connection_object_t *)(h);
@@ -681,6 +701,10 @@ isc_result_t omapi_connection_signal_handler (omapi_object_t *h,
 {
 	if (h -> type != omapi_type_connection)
 		return ISC_R_INVALIDARG;
+
+#ifdef DEBUG_PROTOCOL
+	log_debug ("omapi_connection_signal_handler(%s)", name);
+#endif
 	
 	if (h -> inner && h -> inner -> type -> signal_handler)
 		return (*(h -> inner -> type -> signal_handler)) (h -> inner,

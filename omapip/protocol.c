@@ -56,6 +56,10 @@ isc_result_t omapi_protocol_connect (omapi_object_t *h,
 	isc_result_t status;
 	omapi_protocol_object_t *obj;
 
+#ifdef DEBUG_PROTOCOL
+	log_debug ("omapi_protocol_connect(%s port=%d)", server_name, port);
+#endif
+
 	obj = (omapi_protocol_object_t *)0;
 	status = omapi_protocol_allocate (&obj, MDL);
 	if (status != ISC_R_SUCCESS)
@@ -114,6 +118,10 @@ isc_result_t omapi_protocol_send_intro (omapi_object_t *h,
 	isc_result_t status;
 	omapi_protocol_object_t *p;
 
+#ifdef DEBUG_PROTOCOL
+	log_debug ("omapi_protocol_send_intro()");
+#endif
+
 	if (h -> type != omapi_type_protocol)
 		return ISC_R_INVALIDARG;
 	p = (omapi_protocol_object_t *)h;
@@ -166,6 +174,14 @@ isc_result_t omapi_protocol_send_message (omapi_object_t *po,
 	c = (omapi_object_t *)(po -> outer);
 	m = (omapi_message_object_t *)mo;
 	om = (omapi_message_object_t *)omo;
+
+#ifdef DEBUG_PROTOCOL
+	log_debug ("omapi_protocol_send_message()"
+		   "op=%ld  handle=%#lx  id=%#lx  rid=%#lx",
+		   (long)m -> op,
+		   (long)(m -> object ? m -> object -> handle : m -> handle),
+		   (long)p -> next_xid, (long)m -> rid);
+#endif
 
 	/* Find the authid to use for this message. */
 	if (id) {
@@ -696,6 +712,11 @@ isc_result_t omapi_protocol_add_auth (omapi_object_t *po,
 	if (po -> type != omapi_type_protocol)
 		return ISC_R_INVALIDARG;
 	p = (omapi_protocol_object_t *)po;
+
+#ifdef DEBUG_PROTOCOL
+	log_debug ("omapi_protocol_add_auth(name=%s)",
+		   ((omapi_auth_key_t *)ao) -> name);
+#endif
 
 	if (p -> verify_auth) {
 		status = (p -> verify_auth) (po, (omapi_auth_key_t *)ao);

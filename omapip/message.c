@@ -355,6 +355,20 @@ isc_result_t omapi_message_unregister (omapi_object_t *mo)
 	return ISC_R_SUCCESS;
 }
 
+#ifdef DEBUG_PROTOCOL
+static const char *omapi_message_op_name(int op) {
+	switch (op) {
+	case OMAPI_OP_OPEN:    return "OMAPI_OP_OPEN";
+	case OMAPI_OP_REFRESH: return "OMAPI_OP_REFRESH";
+	case OMAPI_OP_UPDATE:  return "OMAPI_OP_UPDATE";
+	case OMAPI_OP_STATUS:  return "OMAPI_OP_STATUS";
+	case OMAPI_OP_DELETE:  return "OMAPI_OP_DELETE";
+	case OMAPI_OP_NOTIFY:  return "OMAPI_OP_NOTIFY";
+	default:               return "(unknown op)";
+	}
+}
+#endif
+
 isc_result_t omapi_message_process (omapi_object_t *mo, omapi_object_t *po)
 {
 	omapi_message_object_t *message, *m;
@@ -368,6 +382,13 @@ isc_result_t omapi_message_process (omapi_object_t *mo, omapi_object_t *po)
 	if (mo -> type != omapi_type_message)
 		return ISC_R_INVALIDARG;
 	message = (omapi_message_object_t *)mo;
+
+#ifdef DEBUG_PROTOCOL
+	log_debug ("omapi_message_process(): "
+		   "op=%s  handle=%#x  id=%#x  rid=%#x",
+		   omapi_message_op_name (message -> op),
+		   message -> h, message -> id, message -> rid);
+#endif
 
 	if (message -> rid) {
 		for (m = omapi_registered_messages; m; m = m -> next)

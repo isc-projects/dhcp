@@ -51,6 +51,11 @@ isc_result_t omapi_listen (omapi_object_t *h,
 			   int max)
 {
 	omapi_addr_t addr;
+
+#ifdef DEBUG_PROTOCOL
+	log_debug ("omapi_listen(port=%d, max=%d)", port, max);
+#endif
+
 	addr.addrtype = AF_INET;
 	addr.addrlen = sizeof (struct in_addr);
 	memset (addr.address, 0, sizeof addr.address); /* INADDR_ANY */
@@ -190,6 +195,10 @@ isc_result_t omapi_accept (omapi_object_t *h)
 	if (h -> type != omapi_type_listener)
 		return ISC_R_INVALIDARG;
 	listener = (omapi_listener_object_t *)h;
+
+#ifdef DEBUG_PROTOCOL
+	log_debug ("omapi_accept()");
+#endif
 	
 	/* Get the handle. */
 	obj = (omapi_connection_object_t *)0;
@@ -300,6 +309,10 @@ isc_result_t omapi_listener_destroy (omapi_object_t *h,
 	if (h -> type != omapi_type_listener)
 		return ISC_R_INVALIDARG;
 	l = (omapi_listener_object_t *)h;
+
+#ifdef DEBUG_PROTOCOL
+	log_debug ("omapi_listener_destroy()");
+#endif
 	
 	if (l -> socket != -1) {
 		close (l -> socket);
