@@ -135,14 +135,6 @@ isc_result_t omapi_listen_addr (omapi_object_t *h,
 		return ISC_R_UNEXPECTED;
 	}
 
-	/* Set the SO_USELOOPBACK flag (this should not fail). */
-	i = 1;
-	if (setsockopt (obj -> socket, SOL_SOCKET, SO_USELOOPBACK,
-			(char *)&i, sizeof i) < 0) {
-		omapi_object_dereference ((omapi_object_t **)&obj, MDL);
-		return ISC_R_UNEXPECTED;
-	}
-	
 	/* Now tell the kernel to listen for connections. */
 	if (listen (obj -> socket, max)) {
 		omapi_object_dereference ((omapi_object_t **)&obj, MDL);
