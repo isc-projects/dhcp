@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.44.2.1 1999/10/14 21:33:36 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.44.2.2 1999/11/12 18:56:21 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -655,7 +655,10 @@ char *pretty_print_option (code, data, len, emit_commas, emit_quotes)
 				    !isprint (data [k]))
 					break;
 			}
-			if (k == len) {
+			/* If we found no bogus characters, or the bogus
+			   character we found is a trailing NUL, it's
+			   okay to print this option as text. */
+			if (k == len || (k + 1 == len && data [k] == 0)) {
 				fmtbuf [i] = 't';
 				numhunk = -2;
 			} else {
