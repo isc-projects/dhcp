@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: print.c,v 1.35 2000/02/02 20:01:41 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: print.c,v 1.36 2000/02/03 04:31:25 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1012,9 +1012,9 @@ void print_dns_status (int status, ns_updque *uq)
 				if (s + 1 < end)
 					*s++ = '"';
 			}
-			if (s + strlen ((char *)u -> r_data) < end) {
-				strcpy (s, (char *)u -> r_data);
-				s += strlen (s);
+			if (s + u -> r_size < end) {
+				memcpy (s, u -> r_data, u -> r_size);
+				s += u -> r_size;
 				if (u -> r_type == T_TXT) {
 					if (s + 1 < end)
 						*s++ = '"';
@@ -1058,7 +1058,7 @@ void print_dns_status (int status, ns_updque *uq)
 		break;
 
 	      case NOTZONE:
-		en = "not a valid zone";
+		en = "not a single valid zone";
 		break;
 
 	      case NXDOMAIN:
