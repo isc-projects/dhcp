@@ -48,10 +48,15 @@ typedef struct _omapi_buffer {
 					   the buffer data structure. */
 } omapi_buffer_t;	
 
-#define BUFFER_BYTES_AVAIL(x)	\
-	(((x) -> head < (x) -> tail \
-	  ? (x) -> tail - (x) -> head \
-	  : sizeof ((x) -> buf) - ((x) -> head - (x) -> tail)) - 1)
+#define BUFFER_BYTES_FREE(x)	\
+	((x) -> tail > (x) -> head \
+	  ? sizeof ((x) -> buf) - ((x) -> tail - (x) -> head) \
+	  : (x) -> head - (x) -> tail)
+
+#define BYTES_IN_BUFFER(x)	\
+	((x) -> tail > (x) -> head \
+	 ? (x) -> tail - (x) -> head - 1 \
+	 : sizeof ((x) -> buf) - ((x) -> head - (x) -> tail) - 1)
 
 isc_result_t omapi_connection_require (omapi_object_t *, unsigned);
 isc_result_t omapi_connection_copyout (unsigned char *,
