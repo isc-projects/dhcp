@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: discover.c,v 1.8 1999/03/26 19:19:44 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: discover.c,v 1.9 1999/04/23 15:23:08 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -121,7 +121,8 @@ void discover_interfaces (state)
 		/* Skip loopback, point-to-point and down interfaces,
 		   except don't skip down interfaces if we're trying to
 		   get a list of configurable interfaces. */
-		if ((!(ifr.ifr_flags & IFF_BROADCAST) && !tmp) ||
+		if (((ifr.ifr_flags & IFF_LOOPBACK ||
+		      ifr.ifr_flags & IFF_POINTOPOINT) && !tmp) ||
 		    (!(ifr.ifr_flags & IFF_UP) &&
 		     state != DISCOVER_UNCONFIGURED))
 			continue;
