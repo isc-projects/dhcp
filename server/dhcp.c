@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.100.2.17 2000/01/27 21:54:56 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.100.2.18 2000/06/24 07:59:31 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -80,14 +80,16 @@ void dhcpdiscover (packet)
 		  ? inet_ntoa (packet -> raw -> giaddr)
 		  : packet -> interface -> name));
 
-	lease = find_lease (packet, packet -> shared_network, 0);
-
 	/* Sourceless packets don't make sense here. */
 	if (!packet -> shared_network) {
 		log_info ("Packet from unknown subnet: %s",
 		      inet_ntoa (packet -> raw -> giaddr));
 		return;
 	}
+
+	lease = find_lease (packet, packet -> shared_network, 0);
+	if (lease && lease -> flags & ABANDONED_LEASE)
+		lease = (struct lease *)0;
 
 	/* If we didn't find a lease, try to allocate one... */
 	if (!lease) {
@@ -998,18 +1000,18 @@ void ack_lease (packet, lease, offer, when, msg)
 					   "ack_lease DCI")) {
 			hp = find_hosts_by_uid (d1.data, d1.len);
 			data_string_forget (&d1, "dhcpdiscover");
-			if (!hp)
-				hp = find_hosts_by_haddr
-					(packet -> raw -> htype,
-					 packet -> raw -> chaddr,
-					 packet -> raw -> hlen);
+		}
+		if (!hp) {
+			hp = find_hosts_by_haddr
+				(packet -> raw -> htype,
+				 packet -> raw -> chaddr,
+				 packet -> raw -> hlen);
 			for (; hp; hp = hp -> n_ipaddr) {
 				if (!hp -> fixed_addr)
 					break;
 			}
-			lease -> host = hp;
-		} else
-			lease -> host = (struct host_decl *)0;
+		}
+		lease -> host = hp;
 	}
 
 	/* Drop the request if it's not allowed for this client. */
