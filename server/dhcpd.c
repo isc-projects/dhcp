@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.39 1997/03/06 07:02:54 mellon Exp $ Copyright 1995, 1996 The Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.40 1997/03/06 18:41:36 mellon Exp $ Copyright 1995, 1996 The Internet Software Consortium.";
 #endif
 
 static char copyright[] =
@@ -215,6 +215,9 @@ int main (argc, argv, envp)
 	/* Discover all the network interfaces and initialize them. */
 	discover_interfaces (1);
 
+	/* Initialize icmp support... */
+	icmp_startup (1, lease_pinged);
+
 #ifndef DEBUG
 	/* If we were requested to log to stdout on the command line,
 	   keep doing so; otherwise, stop. */
@@ -267,4 +270,50 @@ static void usage ()
 
 void cleanup ()
 {
+}
+
+void lease_pinged (from, packet, length)
+	struct iaddr from;
+	u_int8_t *packet;
+	int length;
+{
+	struct lease *lp;
+
+	/* Don't try to look up a pinged lease if we aren't trying to
+	   ping one - otherwise somebody could easily make us churn by
+	   just forging repeated ICMP EchoReply packets for us to look
+	   up. */
+	if (!outstanding_pings)
+		return;
+
+	lp = find_lease_by_ip_addr (from);
+
+	if (!lp) {
+		note ("unexpected ICMP Echo Reply from %s", piaddr (from));
+		return;
+	}
+
+	if (!lp -> state) {
+		warn ("ICMP Echo Reply for %s arrived late or is spurious.\n",
+		      piaddr (from));
+		return;
+	}
+
+	/* At this point it looks like we pinged a lease and got a
+	   response, which shouldn't have happened. */
+	free_lease_state (lp -> state, "lease_pinged");
+	lp -> state = (struct lease_state *)0;
+
+	abandon_lease (lp, "pinged before offer");
+	cancel_timeout (lease_ping_timeout, lp);
+	--outstanding_pings;
+}
+
+void lease_ping_timeout (vlp)
+	void *vlp;
+{
+	struct lease *lp = vlp;
+
+	--outstanding_pings;
+	dhcp_reply (lp);
 }
