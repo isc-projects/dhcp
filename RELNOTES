@@ -49,6 +49,16 @@ Communications.  I'd like to express my thanks to all of these good
 people here, both for working on the code and for prodding me into
 improving it.
 
+		Changes since 3.0 Beta 2 Patchlevel 4
+
+- Incorporated Peter Marschall's proposed change to array/record
+  parsing, which allows things like the slp-agent option to be encoded
+  correctly.   Thanks very much to Peter for taking the initiative to
+  do this, and for doing such a careful job of it (e.g., updating the
+  comments)!
+
+- Added an encoding for the slp-agent option.   :')
+
 		Changes since 3.0 Beta 2 Patchlevel 3
 
 - In the DHCP client, execute client statements prior to using the values
