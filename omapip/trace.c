@@ -57,6 +57,9 @@ static tracefile_header_t tracefile_header;
 static int trace_playback_flag;
 trace_type_t trace_time_marker;
 
+static isc_result_t trace_type_record (trace_type_t *,
+				       unsigned, const char *, int);
+
 int trace_playback ()
 {
 	return trace_playback_flag;
@@ -97,6 +100,8 @@ isc_result_t trace_begin (const char *filename,
 {
 	tracefile_header_t tfh;
 	int status;
+	trace_type_t *tptr, *next;
+	isc_result_t result;
 
 	if (traceoutfile) {
 		log_error ("%s(%d): trace_begin called twice",
@@ -128,7 +133,25 @@ isc_result_t trace_begin (const char *filename,
 		log_error ("%s(%d): trace_begin: short write (%d:%d)",
 			   file, line, status, sizeof tfh);
 		trace_stop ();
+		return ISC_R_UNEXPECTED;
 	}
+
+	/* Stash all the types that have already been set up. */
+	if (new_trace_types) {
+		next = new_trace_types;
+		new_trace_types = (trace_type_t *)0;
+		for (tptr = next; tptr; tptr = next) {
+			next = tptr -> next;
+			if (tptr -> index != 0) {
+				result = (trace_type_record
+					  (tptr,
+					   strlen (tptr -> name), file, line));
+				if (result != ISC_R_SUCCESS)
+					return status;
+			}
+		}
+	}
+	
 	return ISC_R_SUCCESS;
 }
 
@@ -258,24 +281,13 @@ trace_type_t *trace_type_register (const char *name,
 				   const char *file, int line)
 {
 	trace_type_t *ttmp, *tptr;
-	trace_index_mapping_t *tim;
 	unsigned slen = strlen (name);
-
-	if (traceoutfile) {
-		tim = dmalloc (slen + TRACE_INDEX_MAPPING_SIZE, file, line);
-		if (!tim)
-			return (trace_type_t *)0;
-	}
+	isc_result_t status;
 
 	ttmp = dmalloc (sizeof *ttmp, file, line);
-	if (!ttmp) {
-		dfree (tim, file, line);
+	if (!ttmp)
 		return ttmp;
-	}
-	if (traceoutfile)
-		ttmp -> index = ++traceindex;
-	else
-		ttmp -> index = -1;
+	ttmp -> index = -1;
 	ttmp -> name = dmalloc (slen + 1, file, line);
 	if (!ttmp -> name) {
 		dfree (ttmp, file, line);
@@ -285,33 +297,41 @@ trace_type_t *trace_type_register (const char *name,
 	ttmp -> have_packet = have_packet;
 	ttmp -> stop_tracing = stop_tracing;
 	
-	if (ttmp) {
-		if (ttmp -> index != -1)
-			trace_type_stash (ttmp);
-		else {
-			ttmp -> next = new_trace_types;
-			new_trace_types = ttmp;
-		}
-	}
-
-	/* Assemble the trace mapping to be written out to the trace file. */
 	if (traceoutfile) {
-		tim -> index = htonl (ttmp -> index);
-		memcpy (tim -> name, name, slen);
-		if (trace_write_packet (trace_types [0],
-					slen + TRACE_INDEX_MAPPING_SIZE,
-					(char *)tim, file, line) !=
-		    ISC_R_SUCCESS) {
+		status = trace_type_record (ttmp, slen, file, line);
+		if (status != ISC_R_SUCCESS) {
 			dfree (ttmp -> name, file, line);
 			dfree (ttmp, file, line);
-			ttmp = (trace_type_t *)0;
+			return (trace_type_t *)0;
 		}
-		dfree (tim, file, line);
+	} else {
+		ttmp -> next = new_trace_types;
+		new_trace_types = ttmp;
 	}
 
 	return ttmp;
 }
 						   
+static isc_result_t trace_type_record (trace_type_t *ttmp, unsigned slen,
+				       const char *file, int line)
+{
+	trace_index_mapping_t *tim;
+	isc_result_t status;
+
+	tim = dmalloc (slen + TRACE_INDEX_MAPPING_SIZE, file, line);
+	if (!tim)
+		return ISC_R_NOMEMORY;
+	ttmp -> index = ++traceindex;
+	trace_type_stash (ttmp);
+	tim -> index = htonl (ttmp -> index);
+	memcpy (tim -> name, ttmp -> name, slen);
+	status = trace_write_packet (trace_types [0],
+				     slen + TRACE_INDEX_MAPPING_SIZE,
+				     (char *)tim, file, line);
+	dfree (tim, file, line);
+	return status;
+}
+
 /* Stop all registered trace types from trying to trace. */
 
 void trace_stop (void)
