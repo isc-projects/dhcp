@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.134 2000/01/26 14:56:18 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.135 2000/01/27 22:21:32 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1831,10 +1831,9 @@ void ack_lease (packet, lease, offer, when, msg)
 					save_option (&dhcp_universe,
 						     state -> options, oc);
 				}
+				option_cache_dereference (&oc, MDL);	
 			}
 		}
-		if (oc)
-			option_cache_dereference (&oc, MDL);
 	}
 
 	/* Make an encapsulation for the NWIP suboptions if the client
