@@ -47,7 +47,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bpf.c,v 1.44 2000/11/30 18:12:56 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bpf.c,v 1.45 2000/12/28 23:13:07 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -425,7 +425,7 @@ ssize_t receive_packet (interface, buf, len, from, hfrom)
 			if (length <= 0)
 				return length;
 			interface -> rbuf_offset = 0;
-			interface -> rbuf_len = length;
+			interface -> rbuf_len = BPF_WORDALIGN (length);
 		}
 
 		/* If there isn't room for a whole bpf header, something went
