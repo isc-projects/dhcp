@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.81 2000/01/26 14:56:18 mellon Exp $ Copyright 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.82 2000/01/26 15:22:57 mellon Exp $ Copyright 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.";
 #endif
 
   static char copyright[] =
@@ -39,6 +39,7 @@ static void usage PROTO ((void));
 
 TIME cur_time;
 struct group root_group;
+struct binding_scope global_scope;
 
 struct iaddr server_identifier;
 int server_identifier_matched;
@@ -47,6 +48,56 @@ u_int16_t local_port;
 u_int16_t remote_port;
 
 struct in_addr limited_broadcast;
+
+/* This is the standard name service updater that is executed whenever a
+   lease is committed.   Right now it's not following the DHCP-DNS draft
+   at all, but as soon as I fix the resolver it should try to. */
+
+char std_nsupdate [] = "						      \
+on commit {								      \
+  if (not defined (ddns-fwd-name)) {					      \
+    set ddns-fwd-name = concat (pick (config-option server.ddns-hostname,     \
+				      option host-name), \".\",		      \
+			        pick (config-option server.ddns-domainname,   \
+				      config-option domain-name));	      \
+    if defined (ddns-fwd-name) {					      \
+      switch (ns-update (not exists (IN, A, ddns-fwd-name, null),	      \
+		         add (IN, A, ddns-fwd-name, leased-address, 300))) {  \
+       default:								      \
+        unset ddns-fwd-name;						      \
+        break;								      \
+									      \
+       case NOERROR:							      \
+        set ddns-rev-name =						      \
+		concat (binary-to-ascii (10, 8, \".\",			      \
+					 reverse (1, leased-address)), \".\", \
+			pick (config-option server.ddns-rev-domainname,	      \
+			      \".in-addr.arpa.\"));			      \
+        switch (ns-update (delete (IN, PTR, ddns-rev-name, null),	      \
+			   add (IN, PTR, ddns-rev-name, ddns-fwd-name, 300))) \
+	{								      \
+         default:							      \
+	  unset ddns-rev-name;						      \
+	  on release or expiry {					      \
+	    eval ns-update (delete (IN, A, ddns-fwd-name, leased-address));   \
+	    unset ddns-fwd-name;					      \
+	    on release or expiry;					      \
+          }								      \
+	  break;							      \
+									      \
+         case NOERROR:							      \
+	  on release or expiry {					      \
+	    eval ns-update (delete (IN, A, ddns-fwd-name, leased-address));   \
+	    eval ns-update (delete (IN, PTR, ddns-rev-name, null));	      \
+	    unset ddns-rev-name;					      \
+	    unset ddns-fwd-name;					      \
+	    on release or expiry;					      \
+	  }								      \
+        }								      \
+      }									      \
+    }									      \
+  }									      \
+}";
 
 const char *path_dhcpd_conf = _PATH_DHCPD_CONF;
 const char *path_dhcpd_db = _PATH_DHCPD_DB;
@@ -77,7 +128,9 @@ int main (argc, argv, envp)
 	struct interface_info *ip;
 	struct data_string fname;
 	struct option_cache *oc;
-	struct option_state *options = (struct option_state *)0;;
+	struct option_state *options = (struct option_state *)0;
+	struct parse *parse;
+	int lose;
 
 	/* Initially, log errors to stderr as well as to syslogd. */
 #ifdef SYSLOG_4_2
@@ -168,8 +221,10 @@ int main (argc, argv, envp)
 		log_info (arr);
 		log_info (contrib);
 		log_info (url);
-	} else
+	} else {
 		quiet = 0;
+		log_perror = 0;
+	}
 
 	/* Default to the DHCP/BOOTP port. */
 	if (!local_port)
@@ -221,6 +276,27 @@ int main (argc, argv, envp)
 	/* Set up the OMAPI wrappers for various server database internal
 	   objects. */
 	dhcp_db_objects_setup ();
+
+	/* Set up the initial dhcp option universe. */
+	initialize_common_option_spaces ();
+	initialize_server_option_spaces ();
+
+	root_group.authoritative = 0;
+
+	/* Set up the standard name service updater routine. */
+	parse = (struct parse *)0;
+	status = new_parse (&parse, -1,
+			    std_nsupdate, (sizeof std_nsupdate) - 1,
+			    "standard name service update routine");
+	if (status != ISC_R_SUCCESS)
+		log_fatal ("can't parse standard name service updater!");
+
+	if (!(parse_executable_statements
+	      (&root_group.statements, parse, &lose, context_any))) {
+		end_parse (&parse);
+		log_fatal ("can't parse standard name service updater!");
+	}
+	end_parse (&parse);
 
 	/* Read the dhcpd.conf file... */
 	if (readconf () != ISC_R_SUCCESS)
@@ -377,6 +453,12 @@ int main (argc, argv, envp)
 	/* Set up the bootp packet handler... */
 	bootp_packet_handler = do_packet;
 
+#if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL)
+	dmalloc_cutoff_generation = dmalloc_generation;
+	dmalloc_longterm = dmalloc_outstanding;
+	dmalloc_outstanding = 0;
+#endif
+
 	/* Receive packets and dispatch them... */
 	dispatch ();
 
@@ -392,8 +474,9 @@ static void usage ()
 	log_info (copyright);
 	log_info (arr);
 
-	log_fatal ("Usage: dhcpd [-p <UDP port #>] [-d] [-f] [-cf config-file]%s",
-	       "\n            [-lf lease-file] [if0 [...ifN]]");
+	log_fatal ("Usage: dhcpd [-p <UDP port #>] [-d] [-f]%s%s",
+		   "\n             [-cf config-file] [-lf lease-file]",
+		   "\n             [-t] [-T] [-s server] [if0 [...ifN]]");
 }
 
 void lease_pinged (from, packet, length)
@@ -418,7 +501,7 @@ void lease_pinged (from, packet, length)
 	}
 
 	if (!lp -> state) {
-		log_error ("ICMP Echo Reply for %s arrived late or is spurious.\n",
+		log_error ("ICMP Echo Reply for %s late or spurious.\n",
 		      piaddr (from));
 		return;
 	}
@@ -444,6 +527,20 @@ void lease_ping_timeout (vlp)
 {
 	struct lease *lp = vlp;
 
+#if defined (DEBUG_MEMORY_LEAKAGE)
+	unsigned long previous_outstanding = dmalloc_outstanding;
+#endif
+
 	--outstanding_pings;
 	dhcp_reply (lp);
+
+#if defined (DEBUG_MEMORY_LEAKAGE)
+	log_info ("generation %ld: %ld new, %ld outstanding, %ld long-term",
+		  dmalloc_generation,
+		  dmalloc_outstanding - previous_outstanding,
+		  dmalloc_outstanding, dmalloc_longterm);
+#endif
+#if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL)
+	dmalloc_dump_outstanding ();
+#endif
 }
