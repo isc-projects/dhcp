@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.85.2.1 2001/06/04 21:20:26 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.85.2.2 2001/06/11 05:56:49 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -933,6 +933,8 @@ const char *pretty_print_option (option, data, len, emit_commas, emit_quotes)
 {
 	static char optbuf [32768]; /* XXX */
 	int hunksize = 0;
+	int opthunk = 0;
+	int hunkinc = 0;
 	int numhunk = -1;
 	int numelem = 0;
 	char fmtbuf [32];
@@ -942,6 +944,7 @@ const char *pretty_print_option (option, data, len, emit_commas, emit_quotes)
 	const unsigned char *dp = data;
 	struct in_addr foo;
 	char comma;
+	unsigned long tval;
 
 	if (emit_commas)
 		comma = ',';
@@ -1007,25 +1010,34 @@ const char *pretty_print_option (option, data, len, emit_commas, emit_quotes)
 			while (option -> format [i] &&
 			       option -> format [i] != '.')
 				i++;
-			enumbuf [l] = find_enumeration (&option -> format [k],
-							i - k);
+			enumbuf [l] =
+				find_enumeration (&option -> format [k] + 1,
+						  i - k - 1);
 			hunksize += 1;
+			hunkinc = 1;
 			break;
 		      case 'I':
 		      case 'l':
 		      case 'L':
+		      case 'T':
 			hunksize += 4;
+			hunkinc = 4;
 			break;
 		      case 's':
 		      case 'S':
 			hunksize += 2;
+			hunkinc = 2;
 			break;
 		      case 'b':
 		      case 'B':
 		      case 'f':
 			hunksize++;
+			hunkinc = 1;
 			break;
 		      case 'e':
+			break;
+		      case 'o':
+			opthunk += hunkinc;
 			break;
 		      default:
 			log_error ("%s: garbage in format string: %s",
@@ -1036,7 +1048,7 @@ const char *pretty_print_option (option, data, len, emit_commas, emit_quotes)
 	}
 
 	/* Check for too few bytes... */
-	if (hunksize > len) {
+	if (hunksize - opthunk > len) {
 		log_error ("%s: expecting at least %d bytes; got %d",
 		      option -> name,
 		      hunksize, len);
@@ -1116,6 +1128,13 @@ const char *pretty_print_option (option, data, len, emit_commas, emit_quotes)
 				sprintf (op, "%ld", (long)getLong (dp));
 				dp += 4;
 				break;
+			      case 'T':
+				tval = getULong (dp);
+				if (tval == -1)
+					sprintf (op, "%s", "infinite");
+				else
+					sprintf (op, "%ld", tval);
+				break;
 			      case 'L':
 				sprintf (op, "%ld",
 					 (unsigned long)getULong (dp));
@@ -1147,13 +1166,16 @@ const char *pretty_print_option (option, data, len, emit_commas, emit_quotes)
 					   fmtbuf [j]);
 			}
 			op += strlen (op);
+			if (dp == data + len)
+				break;
 			if (j + 1 < numelem && comma != ':')
 				*op++ = ' ';
 		}
 		if (i + 1 < numhunk) {
 			*op++ = comma;
 		}
-		
+		if (dp == data + len)
+			break;
 	}
 	return optbuf;
 }
