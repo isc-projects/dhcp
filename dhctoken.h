@@ -87,6 +87,7 @@
 #define NEXT_SERVER	291
 #define TOKEN_RING	292
 #define GROUP		293
+#define ONE_LEASE_PER_CLIENT 294
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\
 				 (x) != STRING &&	\
