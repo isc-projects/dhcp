@@ -136,21 +136,21 @@ CHMOD = chmod
 #MANTO = >
 ##--sco--
 
-CSRC   = options.c errwarn.c convert.c conflex.c confpars.c \
-	 tree.c memory.c alloc.c print.c hash.c tables.c inet.c db.c \
-	 dispatch.c bpf.c packet.c raw.c nit.c
-COBJ   = options.o errwarn.o convert.o conflex.o confpars.o \
-	 tree.o memory.o alloc.o print.o hash.o tables.o inet.o db.o \
-	 dispatch.o bpf.o packet.o raw.o nit.o
-SRCS   = dhcpd.c socket.c dhcp.c bootp.c
-OBJS   = dhcpd.o socket.o dhcp.o bootp.o
+CSRC   = options.c errwarn.c convert.c \
+	 tree.c memory.c alloc.c print.c hash.c tables.c inet.c \
+	 dispatch.c bpf.c packet.c raw.c nit.c socket.c
+COBJ   = options.o errwarn.o convert.o \
+	 tree.o memory.o alloc.o print.o hash.o tables.o inet.o \
+	 dispatch.o bpf.o packet.o raw.o nit.o socket.o
+SRCS   = dhcpd.c dhcp.c bootp.c conflex.c confpars.c db.c
+OBJS   = dhcpd.o dhcp.o bootp.o conflex.o confpars.o db.o
 PROGS  = dhcpd dhclient
 MAN    = dhcpd.8 dhcpd.conf.5
 
 DEBUG  = -g
 CFLAGS = $(DEBUG) $(PREDEFINES) $(INCLUDES) $(COPTS)
 
-all:	dhcpd $(CATMANPAGES)
+all:	dhcpd dhclient $(CATMANPAGES)
 
 install: dhcpd $(CATMANPAGES)
 	$(INSTALL) dhcpd $(BINDIR); $(CHMOD) 755 $(BINDIR)/dhcpd
