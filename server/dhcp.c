@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.57.2.26 1999/04/24 16:52:33 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.57.2.27 1999/05/08 18:22:49 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -633,6 +633,12 @@ void ack_lease (packet, lease, offer, when)
 	if (!state)
 		error ("unable to allocate lease state!");
 	memset (state, 0, sizeof *state);
+	state -> got_requested_address = packet -> got_requested_address;
+	state -> shared_network = packet -> interface -> shared_network;
+
+	/* Remember if we got a server identifier option. */
+	if (packet -> options [DHO_DHCP_SERVER_IDENTIFIER].len)
+		state -> got_server_identifier = 1;
 
 	/* Replace the old lease hostname with the new one, if it's changed. */
 	if (packet -> options [DHO_HOST_NAME].len &&
@@ -829,30 +835,6 @@ void ack_lease (packet, lease, offer, when)
 	state -> hops = packet -> raw -> hops;
 	state -> offer = offer;
 
-	/* Get the Maximum Message Size option from the packet, if one
-	   was sent. */
-	if (packet -> options [DHO_DHCP_MAX_MESSAGE_SIZE].data &&
-	    (packet -> options [DHO_DHCP_MAX_MESSAGE_SIZE].len >=
-	     sizeof (u_int16_t)))
-		state -> max_message_size =
-			getUShort (packet -> options
-				   [DHO_DHCP_MAX_MESSAGE_SIZE].data);
-
-	/* Save the parameter request list if there is one. */
-	i = DHO_DHCP_PARAMETER_REQUEST_LIST;
-	if (packet -> options [i].data) {
-		state -> prl = dmalloc (packet -> options [i].len,
-					"ack_lease: prl");
-		if (!state -> prl)
-			warn ("no memory for parameter request list");
-		else {
-			memcpy (state -> prl,
-				packet -> options [i].data,
-				packet -> options [i].len);
-			state -> prl_len = packet -> options [i].len;
-		}
-	}
-
 	/* Figure out what options to send to the client: */
 
 	/* Start out with the subnet options... */
@@ -891,6 +873,33 @@ void ack_lease (packet, lease, offer, when)
 			if (lease -> host -> group -> options [i])
 				state -> options [i] = (lease -> host ->
 							group -> options [i]);
+	}
+
+	/* Get the Maximum Message Size option from the packet, if one
+	   was sent. */
+	i = DHO_DHCP_MAX_MESSAGE_SIZE
+	if (packet -> options [i].data &&
+	    (packet -> options [i].len == sizeof (u_int16_t)))
+		state -> max_message_size =
+			getUShort (packet -> options [i].data);
+	/* Otherwise, if a maximum message size was specified, use that. */
+	else if (state -> options [i].len)
+		state -> max_message_size =
+			getUShort (packet -> options [i].data);
+
+	/* Save the parameter request list if there is one. */
+	i = DHO_DHCP_PARAMETER_REQUEST_LIST;
+	if (packet -> options [i].data) {
+		state -> prl = dmalloc (packet -> options [i].len,
+					"ack_lease: prl");
+		if (!state -> prl)
+			warn ("no memory for parameter request list");
+		else {
+			memcpy (state -> prl,
+				packet -> options [i].data,
+				packet -> options [i].len);
+			state -> prl_len = packet -> options [i].len;
+		}
 	}
 
 	/* If we didn't get a hostname from an option somewhere, see if
@@ -1120,6 +1129,8 @@ void dhcp_reply (lease)
 	int i;
 	struct lease_state *state = lease -> state;
 	int nulltp, bootpp;
+	u_int8_t *prl;
+	int prl_len;
 
 	if (!state)
 		error ("dhcp_reply was supplied lease with no state!");
@@ -1158,11 +1169,23 @@ void dhcp_reply (lease)
 	else
 		bootpp = 1;
 
+	if (state -> options [DHO_DHCP_PARAMETER_REQUEST_LIST].len) {
+		prl = state -> options [DHO_DHCP_PARAMETER_REQUEST_LIST].data;
+		prl_len =
+			state -> options [DHO_DHCP_PARAMETER_REQUEST_LIST].len;
+	} else if (state -> prl) {
+		prl = state -> prl;
+		prl_len = state -> prl_len;
+	} else {
+		prl = (u_int8_t *)0;
+		prl_len = 0;
+	}
+
 	/* Insert such options as will fit into the buffer. */
 	packet_length = cons_options ((struct packet *)0, &raw,
 				      state -> max_message_size,
-				      state -> options, bufs, nulltp, bootpp,
-				      state -> prl, state -> prl_len);
+				      state -> options,
+				      bufs, nulltp, bootpp, prl, prl_len);
 
 	/* Having done the cons_options(), we can release the tree_cache
 	   entries. */
@@ -1247,8 +1270,22 @@ void dhcp_reply (lease)
 		}
 
 	/* If the client is RENEWING, unicast to the client using the
-	   regular IP stack. */
-	} else if (raw.ciaddr.s_addr && state -> offer == DHCPACK) {
+	   regular IP stack.  Some clients, particularly those that
+	   follow RFC1541, are buggy, and send both ciaddr and
+	   server-identifier.  We deal with this situation by assuming
+	   that if we got both dhcp-server-identifier and ciaddr, and
+	   giaddr was not set, then the client is on the local
+	   network, and we can therefore unicast or broadcast to it
+	   successfully.  A client in REQUESTING state on another
+	   network that's making this mistake will have set giaddr,
+	   and will therefore get a relayed response from the above
+	   code. */
+	} else if (raw.ciaddr.s_addr &&
+		   !((state -> got_server_identifier ||
+		      (raw.flags & HTONS (BOOTP_BROADCAST))) &&
+		     /* XXX This won't work if giaddr isn't zero, but it is: */
+		     (state -> shared_network == lease -> shared_network)) &&
+		   state -> offer == DHCPACK) {
 		to.sin_addr = raw.ciaddr;
 		to.sin_port = remote_port;
 
@@ -1303,6 +1340,7 @@ struct lease *find_lease (packet, share, ours)
 	/* Figure out what IP address the client is requesting, if any. */
 	if (packet -> options [DHO_DHCP_REQUESTED_ADDRESS].len &&
 	    packet -> options [DHO_DHCP_REQUESTED_ADDRESS].len == 4) {
+		packet -> got_requested_address = 1;
 		cip.len = 4;
 		memcpy (cip.iabuf,
 			packet -> options [DHO_DHCP_REQUESTED_ADDRESS].data,
