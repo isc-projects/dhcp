@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.57 2000/01/05 18:03:49 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.58 2000/01/08 01:36:39 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -54,6 +54,9 @@ void skip_to_rbrace (cfile, brace_count)
 	enum dhcp_token token;
 	const char *val;
 
+#if defined (DEBUG_TOKEN)
+	log_error ("skip_to_rbrace: %d\n", brace_count);
+#endif
 	do {
 		token = peek_token (&val, cfile);
 		if (token == RBRACE) {
@@ -1183,25 +1186,27 @@ int parse_cshl (data, cfile)
  *	APPEND option-parameter SEMI
  */
 
-int parse_executable_statements (statements, cfile, lose)
+int parse_executable_statements (statements, cfile, lose, case_context)
 	struct executable_statement **statements;
 	struct parse *cfile;
 	int *lose;
+	enum expression_context case_context;
 {
 	struct executable_statement **next;
 
 	next = statements;
-	while (parse_executable_statement (next, cfile, lose))
+	while (parse_executable_statement (next, cfile, lose, case_context))
 		next = &((*next) -> next);
 	if (!*lose)
 		return 1;
 	return 0;
 }
 
-int parse_executable_statement (result, cfile, lose)
+int parse_executable_statement (result, cfile, lose, case_context)
 	struct executable_statement **result;
 	struct parse *cfile;
 	int *lose;
+	enum expression_context case_context;
 {
 	enum dhcp_token token;
 	const char *val;
@@ -1297,6 +1302,9 @@ int parse_executable_statement (result, cfile, lose)
 
 	      case DEFAULT:
 		token = next_token (&val, cfile);
+		token = peek_token (&val, cfile);
+		if (token == COLON)
+			goto switch_default;
 		known = 0;
 		option = parse_option_name (cfile, 0, &known);
 		if (!option) {
@@ -1330,9 +1338,87 @@ int parse_executable_statement (result, cfile, lose)
 
 	      case ON:
 		token = next_token (&val, cfile);
-
 		return parse_on_statement (result, cfile, lose);
 			
+	      case SWITCH:
+		token = next_token (&val, cfile);
+		return parse_switch_statement (result, cfile, lose);
+
+	      case CASE:
+		token = next_token (&val, cfile);
+		if (case_context == context_any) {
+			parse_warn (cfile,
+				    "case statement in inappropriate scope.");
+			*lose = 1;
+			skip_to_semi (cfile);
+			return 0;
+		}
+		return parse_case_statement (result,
+					     cfile, lose, case_context);
+
+	      switch_default:
+		token = next_token (&val, cfile);
+		if (case_context == context_any) {
+			parse_warn (cfile, "switch default statement in %s",
+				    "inappropriate scope.");
+		
+			*lose = 1;
+			return 0;
+		} else {
+			if (!executable_statement_allocate
+			    (result,
+			     "parse_executable_statement"))
+				log_fatal ("no memory for default statement.");
+			(*result) -> op = default_statement;
+			return 1;
+		}
+			
+	      case TOKEN_SET:
+		token = next_token (&val, cfile);
+		token = next_token (&val, cfile);
+
+		token = next_token (&val, cfile);
+		if (token != NAME && token != NUMBER_OR_NAME) {
+			parse_warn (cfile,
+				    "%s can't be a variable name", val);
+		      badset:
+			skip_to_semi (cfile);
+			*lose = 1;
+			return 0;
+		}
+
+		if (!executable_statement_allocate
+		    (result,
+		     "parse_executable_statement"))
+			log_fatal ("no memory for set statement.");
+		(*result) -> op = default_statement;
+		(*result) -> data.set.name = dmalloc (strlen (val) + 1,
+						      "parse_executable_stmt");
+		if (!(*result)->data.set.name)
+			log_fatal ("can't allocate variable name");
+		strcpy ((*result) -> data.set.name, val);
+		token = next_token (&val, cfile);
+		if (token != EQUAL) {
+			parse_warn (cfile, "expecting '=' in set statement.");
+			goto badset;
+		}
+
+		if (!parse_expression (&(*result) -> data.set.expr,
+				       cfile, lose, context_data, /* XXX */
+				       (struct expression **)0, expr_none)) {
+			if (!*lose)
+				parse_warn (cfile,
+					    "expecting data expression.");
+			else
+				*lose = 1;
+			skip_to_semi (cfile);
+			executable_statement_dereference
+				(result, "parse_executable_statement");
+			return 0;
+		}
+		parse_semi (cfile);
+		break;
+
 	      default:
 		*lose = 0;
 		return 0;
@@ -1342,8 +1428,9 @@ int parse_executable_statement (result, cfile, lose)
 }
 
 /*
- * on-statement :== event-type LBRACE executable-statements RBRACE
- *
+ * on-statement :== event-types LBRACE executable-statements RBRACE
+ * event-types :== event-type OR event-types |
+ *		   event-type
  * event-type :== EXPIRY | COMMIT | RELEASE
  */
 
@@ -1360,30 +1447,36 @@ int parse_on_statement (result, cfile, lose)
 		log_fatal ("no memory for new statement.");
 	(*result) -> op = on_statement;
 
-	token = next_token (&val, cfile);
-	switch (token) {
-	      case EXPIRY:
-		(*result) -> data.on.evtype = expiry;
-		break;
+	do {
+		token = next_token (&val, cfile);
+		switch (token) {
+		      case EXPIRY:
+			(*result) -> data.on.evtypes |= ON_EXPIRY;
+			break;
 		
-	      case COMMIT:
-		(*result) -> data.on.evtype = commit;
-		break;
+		      case COMMIT:
+			(*result) -> data.on.evtypes = ON_COMMIT;
+			break;
+			
+		      case RELEASE:
+			(*result) -> data.on.evtypes = ON_RELEASE;
+			break;
+			
+		      default:
+			parse_warn (cfile, "expecting a lease event type");
+			skip_to_semi (cfile);
+			*lose = 1;
+			executable_statement_dereference
+				(result, "parse_on_statement");
+			break;
+		}
+		token = next_token (&val, cfile);
+	} while (token == OR);
 		
-	      case RELEASE:
-		(*result) -> data.on.evtype = release;
-		break;
-		
-	      default:
-		parse_warn (cfile, "expecting a lease event type");
-		skip_to_semi (cfile);
-		*lose = 1;
-		executable_statement_dereference
-			(result, "parse_on_statement");
-		break;
-	}
-		
-	token = next_token (&val, cfile);
+	/* Semicolon means no statements. */
+	if (token == SEMI)
+		return 1;
+
 	if (token != LBRACE) {
 		parse_warn (cfile, "left brace expected.");
 		skip_to_semi (cfile);
@@ -1393,7 +1486,7 @@ int parse_on_statement (result, cfile, lose)
 		return 0;
 	}
 	if (!parse_executable_statements (&(*result) -> data.on.statements,
-					  cfile, lose)) {
+					  cfile, lose, context_any)) {
 		if (*lose) {
 			/* Try to even things up. */
 			do {
@@ -1412,6 +1505,121 @@ int parse_on_statement (result, cfile, lose)
 		executable_statement_dereference
 			(result, "parse_on_statement");
 		return 0;
+	}
+	return 1;
+}
+
+/*
+ * switch-statement :== LPAREN expr RPAREN LBRACE executable-statements RBRACE
+ *
+ */
+
+int parse_switch_statement (result, cfile, lose)
+	struct executable_statement **result;
+	struct parse *cfile;
+	int *lose;
+{
+	enum dhcp_token token;
+	const char *val;
+
+	if (!executable_statement_allocate (result,
+					    "parse_switch_statement"))
+		log_fatal ("no memory for new statement.");
+	(*result) -> op = switch_statement;
+
+	token = next_token (&val, cfile);
+	if (token != LPAREN) {
+		parse_warn (cfile, "expecting left brace.");
+	      pfui:
+		*lose = 1;
+		skip_to_semi (cfile);
+	      gnorf:
+		executable_statement_dereference (result,
+						  "parse_switch_statement");
+		return 0;
+	}
+
+	if (!parse_expression (&(*result) -> data.s_switch.expr,
+			       cfile, lose, context_data_or_numeric,
+			       (struct expression **)0, expr_none)) {
+		if (!*lose) {
+			parse_warn (cfile,
+				    "expecting data or numeric expression.");
+			goto pfui;
+		}
+		goto gnorf;
+	}
+
+	token = next_token (&val, cfile);
+	if (token != RPAREN) {
+		parse_warn (cfile, "right paren expected.");
+		goto pfui;
+	}
+
+	token = next_token (&val, cfile);
+	if (token != LBRACE) {
+		parse_warn (cfile, "left brace expected.");
+		goto pfui;
+	}
+	if (!(parse_executable_statements
+	      (&(*result) -> data.s_switch.statements, cfile, lose,
+	       (is_data_expression ((*result) -> data.s_switch.expr)
+		? context_data : context_numeric)))) {
+		if (*lose) {
+			skip_to_rbrace (cfile, 1);
+			executable_statement_dereference
+				(result, "parse_switch_statement");
+			return 0;
+		}
+	}
+	token = next_token (&val, cfile);
+	if (token != RBRACE) {
+		parse_warn (cfile, "right brace expected.");
+		goto pfui;
+	}
+	return 1;
+}
+
+/*
+ * case-statement :== CASE expr COLON
+ *
+ */
+
+int parse_case_statement (result, cfile, lose, case_context)
+	struct executable_statement **result;
+	struct parse *cfile;
+	int *lose;
+	enum expression_context case_context;
+{
+	enum dhcp_token token;
+	const char *val;
+
+	if (!executable_statement_allocate (result,
+					    "parse_switch_statement"))
+		log_fatal ("no memory for new statement.");
+	(*result) -> op = case_statement;
+
+	if (!parse_expression (&(*result) -> data.c_case,
+			       cfile, lose, case_context,
+			       (struct expression **)0, expr_none))
+	{
+		if (!*lose) {
+			parse_warn (cfile, "expecting %s expression.",
+				    (case_context == context_data
+				     ? "data" : "numeric"));
+		}
+	      pfui:
+		*lose = 1;
+		skip_to_semi (cfile);
+		executable_statement_dereference (result,
+						  "parse_switch_statement");
+		return 0;
+	}
+
+	token = next_token (&val, cfile);
+	if (token != COLON) {
+		parse_warn (cfile, "colon expected.");
+		goto pfui;
 	}
 	return 1;
 }
@@ -1461,7 +1669,7 @@ int parse_if_statement (result, cfile, lose)
 		return 0;
 	}
 	if (!parse_executable_statements (&(*result) -> data.ie.true,
-					  cfile, lose)) {
+					  cfile, lose, context_any)) {
 		if (*lose) {
 			/* Try to even things up. */
 			do {
@@ -1507,7 +1715,8 @@ int parse_if_statement (result, cfile, lose)
 		} else {
 			token = next_token (&val, cfile);
 			if (!(parse_executable_statements
-			      (&(*result) -> data.ie.false, cfile, lose))) {
+			      (&(*result) -> data.ie.false,
+			       cfile, lose, context_any))) {
 				executable_statement_dereference
 					(result, "parse_if_statement");
 				return 0;
@@ -1674,6 +1883,7 @@ int parse_non_binary (expr, cfile, lose, context)
 	struct expression *nexp;
 	int known;
 	enum expr_op opcode;
+	const char *s;
 
 	token = peek_token (&val, cfile);
 
@@ -2011,7 +2221,7 @@ int parse_non_binary (expr, cfile, lose, context)
 			    "Please rebuild dhcpd with --with-nsupdate.");
 #endif
 		if (token == DNS_UPDATE)
-			opcode = expr_ns_update;
+			opcode = expr_ns_add;
 		else
 			opcode = expr_ns_delete;
 
@@ -2045,27 +2255,27 @@ int parse_non_binary (expr, cfile, lose, context)
 		}
 			
 		if (!strcasecmp (val, "a"))
-			nexp -> data.ns_update.rrtype = T_A;
+			nexp -> data.ns_add.rrtype = T_A;
 		else if (!strcasecmp (val, "ptr"))
-			nexp -> data.ns_update.rrtype = T_PTR;
+			nexp -> data.ns_add.rrtype = T_PTR;
 		else if (!strcasecmp (val, "mx"))
-			nexp -> data.ns_update.rrtype = T_MX;
+			nexp -> data.ns_add.rrtype = T_MX;
 		else if (!strcasecmp (val, "cname"))
-			nexp -> data.ns_update.rrtype = T_CNAME;
+			nexp -> data.ns_add.rrtype = T_CNAME;
 		else if (!strcasecmp (val, "TXT"))
-			nexp -> data.ns_update.rrtype = T_TXT;
+			nexp -> data.ns_add.rrtype = T_TXT;
 		else {
 			parse_warn (cfile, "unexpected rrtype: %s", val);
 			goto badnsupdate;
 		}
-		nexp -> data.ns_update.rrclass = C_IN;
+		nexp -> data.ns_add.rrclass = C_IN;
 
 		token = next_token (&val, cfile);
 		if (token != COMMA)
 			goto nocomma;
 
 		if (!(parse_data_expression
-		      (&nexp -> data.ns_update.rrname, cfile, lose)))
+		      (&nexp -> data.ns_add.rrname, cfile, lose)))
 			goto nodata;
 
 		token = next_token (&val, cfile);
@@ -2073,16 +2283,16 @@ int parse_non_binary (expr, cfile, lose, context)
 			goto nocomma;
 
 		if (!(parse_data_expression
-		      (&nexp -> data.ns_update.rrdata, cfile, lose)))
+		      (&nexp -> data.ns_add.rrdata, cfile, lose)))
 			goto nodata;
 
-		if (opcode == expr_ns_update) {
+		if (opcode == expr_ns_add) {
 			token = next_token (&val, cfile);
 			if (token != COMMA)
 				goto nocomma;
 			
 			if (!(parse_numeric_expression
-			      (&nexp -> data.ns_update.ttl, cfile, lose))) {
+			      (&nexp -> data.ns_add.ttl, cfile, lose))) {
 				parse_warn (cfile,
 					    "expecting data expression.");
 				goto badnsupdate;
@@ -2115,6 +2325,10 @@ int parse_non_binary (expr, cfile, lose, context)
 			      (&nexp -> data.dns_transaction.car,
 			       cfile, lose)))
 			{
+				if (!*lose)
+					parse_warn
+						(cfile,
+						 "expecting dns expression.");
 			      badnstrans:
 				expression_dereference (expr,
 							"parse_expression");
@@ -2143,8 +2357,8 @@ int parse_non_binary (expr, cfile, lose, context)
 		token = next_token (&val, cfile);
 		opcode = expr_ns_not_exists;
 		goto nsupdatecode;
-	      case UPDATE:
-		opcode = expr_ns_update;
+	      case TOKEN_ADD:
+		opcode = expr_ns_add;
 		goto nsupdatecode;
 	      case TOKEN_DELETE:
 		opcode = expr_ns_delete;
@@ -2177,18 +2391,22 @@ int parse_non_binary (expr, cfile, lose, context)
 		}
 			
 		if (token == NUMBER)
-			(*expr) -> data.ns_update.rrclass = atoi (val);
+			(*expr) -> data.ns_add.rrclass = atoi (val);
 		else if (!strcasecmp (val, "in"))
-			(*expr) -> data.ns_update.rrclass = C_IN;
+			(*expr) -> data.ns_add.rrclass = C_IN;
 		else if (!strcasecmp (val, "chaos"))
-			(*expr) -> data.ns_update.rrclass = C_CHAOS;
+			(*expr) -> data.ns_add.rrclass = C_CHAOS;
 		else if (!strcasecmp (val, "hs"))
-			(*expr) -> data.ns_update.rrclass = C_HS;
+			(*expr) -> data.ns_add.rrclass = C_HS;
 		else {
 			parse_warn (cfile, "unexpected rrclass: %s", val);
 			goto badnsop;
 		}
 		
+		token = next_token (&val, cfile);
+		if (token != COMMA)
+			goto nocomma;
+
 		token = next_token (&val, cfile);
 		if (!is_identifier (token) && token != NUMBER) {
 			parse_warn (cfile, "expecting identifier or number.");
@@ -2196,17 +2414,17 @@ int parse_non_binary (expr, cfile, lose, context)
 		}
 			
 		if (token == NUMBER)
-			(*expr) -> data.ns_update.rrtype = atoi (val);
+			(*expr) -> data.ns_add.rrtype = atoi (val);
 		else if (!strcasecmp (val, "a"))
-			nexp -> data.ns_update.rrtype = T_A;
+			(*expr) -> data.ns_add.rrtype = T_A;
 		else if (!strcasecmp (val, "ptr"))
-			nexp -> data.ns_update.rrtype = T_PTR;
+			(*expr) -> data.ns_add.rrtype = T_PTR;
 		else if (!strcasecmp (val, "mx"))
-			nexp -> data.ns_update.rrtype = T_MX;
+			(*expr) -> data.ns_add.rrtype = T_MX;
 		else if (!strcasecmp (val, "cname"))
-			nexp -> data.ns_update.rrtype = T_CNAME;
+			(*expr) -> data.ns_add.rrtype = T_CNAME;
 		else if (!strcasecmp (val, "TXT"))
-			nexp -> data.ns_update.rrtype = T_TXT;
+			(*expr) -> data.ns_add.rrtype = T_TXT;
 		else {
 			parse_warn (cfile, "unexpected rrtype: %s", val);
 			goto badnsop;
@@ -2217,7 +2435,7 @@ int parse_non_binary (expr, cfile, lose, context)
 			goto nocomma;
 
 		if (!(parse_data_expression
-		      (&nexp -> data.ns_update.rrname, cfile, lose)))
+		      (&(*expr) -> data.ns_add.rrname, cfile, lose)))
 			goto nodata;
 
 		token = next_token (&val, cfile);
@@ -2225,16 +2443,17 @@ int parse_non_binary (expr, cfile, lose, context)
 			goto nocomma;
 
 		if (!(parse_data_expression
-		      (&nexp -> data.ns_update.rrdata, cfile, lose)))
+		      (&(*expr) -> data.ns_add.rrdata, cfile, lose)))
 			goto nodata;
 
-		if (opcode == expr_ns_update) {
+		if (opcode == expr_ns_add) {
 			token = next_token (&val, cfile);
 			if (token != COMMA)
 				goto nocomma;
 			
 			if (!(parse_numeric_expression
-			      (&nexp -> data.ns_update.ttl, cfile, lose))) {
+			      (&(*expr) -> data.ns_add.ttl, cfile,
+			       lose))) {
 				parse_warn (cfile,
 					    "expecting data expression.");
 				goto badnsupdate;
@@ -2287,6 +2506,13 @@ int parse_non_binary (expr, cfile, lose, context)
 		(*expr) -> op = expr_lease_time;
 		break;
 
+	      case TOKEN_NULL:
+		token = next_token (&val, cfile);
+		if (!expression_allocate (expr, "parse_expression"))
+			log_fatal ("can't allocate expression");
+		(*expr) -> op = expr_null;
+		break;
+
 	      case HOST_DECL_NAME:
 		token = next_token (&val, cfile);
 		if (!expression_allocate (expr,
@@ -2297,22 +2523,39 @@ int parse_non_binary (expr, cfile, lose, context)
 
 	      case UPDATED_DNS_RR:
 		token = next_token (&val, cfile);
-		if (!expression_allocate (expr,
-					  "parse_expression: UPDATED_DNS_RR"))
-			log_fatal ("can't allocate expression");
-		(*expr) -> op = expr_updated_dns_rr;
 
 		token = next_token (&val, cfile);
 		if (token != LPAREN)
 			goto nolparen;
-		if (!parse_data_expression (&(*expr) -> data.updated_dns_rr,
-					    cfile, lose))
-			goto nodata;
+
+		token = next_token (&val, cfile);
+		if (token != STRING) {
+			parse_warn (cfile, "expecting string.");
+		      bad_rrtype:
+			*lose = 1;
+			return 0;
+		}
+		if (!strcasecmp (val, "a"))
+			s = "ddns-fwd-name";
+		else if (!strcasecmp (val, "ptr"))
+			s = "ddns-rev-name";
+		else {
+			parse_warn (cfile, "invalid DNS rrtype: %s", val);
+			goto bad_rrtype;
+		}
 
 		token = next_token (&val, cfile);
 		if (token != RPAREN)
 			goto norparen;
 
+		if (!expression_allocate (expr, "parse_expression"))
+			log_fatal ("can't allocate expression");
+		(*expr) -> op = expr_variable_reference;
+		(*expr) -> data.variable =
+			dmalloc (strlen (s) + 1, "parse_expression");
+		if (!(*expr) -> data.variable)
+			log_fatal ("can't allocate variable name.");
+		strcpy ((*expr) -> data.variable, s);
 		break;
 
 	      case PACKET:
@@ -2498,7 +2741,8 @@ int parse_non_binary (expr, cfile, lose, context)
 	      case NUMBER:
 		/* If we're in a numeric context, this should just be a
 		   number, by itself. */
-		if (context == context_numeric) {
+		if (context == context_numeric ||
+		    context == context_data_or_numeric) {
 			next_token (&val, cfile);	/* Eat the number. */
 			if (!expression_allocate (expr,
 						  "parse_expression: NUMBER"))
@@ -2521,9 +2765,98 @@ int parse_non_binary (expr, cfile, lose, context)
 		}
 		break;
 
+	      case NS_FORMERR:
+		known = FORMERR;
+	      ns_const:
+		token = next_token (&val, cfile);
+		if (!expression_allocate (expr, "parse_expression"))
+			log_fatal ("can't allocate expression");
+		(*expr) -> op = expr_const_int;
+		(*expr) -> data.const_int = known;
+		break;
+		
+	      case NS_NOERROR:
+		known = NOERROR;
+		goto ns_const;
+
+	      case NS_NOTAUTH:
+		known = NOTAUTH;
+		goto ns_const;
+
+	      case NS_NOTIMP:
+		known = NOTIMP;
+		goto ns_const;
+
+	      case NS_NOTZONE:
+		known = NOTZONE;
+		goto ns_const;
+
+	      case NS_NXDOMAIN:
+		known = NXDOMAIN;
+		goto ns_const;
+
+	      case NS_NXRRSET:
+		known = NXRRSET;
+		goto ns_const;
+
+	      case NS_REFUSED:
+		known = REFUSED;
+		goto ns_const;
+
+	      case NS_SERVFAIL:
+		known = SERVFAIL;
+		goto ns_const;
+
+	      case NS_YXDOMAIN:
+		known = YXDOMAIN;
+		goto ns_const;
+
+	      case NS_YXRRSET:
+		known = YXRRSET;
+		goto ns_const;
+
+	      case DEFINED:
+		token = next_token (&val, cfile);
+		token = next_token (&val, cfile);
+		if (token != LPAREN)
+			goto nolparen;
+
+		token = next_token (&val, cfile);
+		if (token != NAME && token != NUMBER_OR_NAME) {
+			parse_warn (cfile, "%s can't be a variable name", val);
+			skip_to_semi (cfile);
+			*lose = 1;
+			return 0;
+		}
+
+		if (!expression_allocate (expr, "parse_expression"))
+			log_fatal ("can't allocate expression");
+		(*expr) -> op = expr_variable_exists;
+		(*expr) -> data.variable = dmalloc (strlen (val) + 1,
+						    "parse_expression");
+		if (!(*expr)->data.variable)
+			log_fatal ("can't allocate variable name");
+		strcpy ((*expr) -> data.variable, val);
+		token = next_token (&val, cfile);
+		if (token != RPAREN)
+			goto norparen;
+		break;
+
 		/* Not a valid start to an expression... */
 	      default:
-		return 0;
+		if (token != NAME && token != NUMBER_OR_NAME)
+			return 0;
+
+		token = next_token (&val, cfile);
+		if (!expression_allocate (expr, "parse_expression"))
+			log_fatal ("can't allocate expression");
+		(*expr) -> op = expr_variable_reference;
+		(*expr) -> data.variable = dmalloc (strlen (val) + 1,
+						    "parse_expression");
+		if (!(*expr)->data.variable)
+			log_fatal ("can't allocate variable name");
+		strcpy ((*expr) -> data.variable, val);
+		break;
 	}
 	return 1;
 }
