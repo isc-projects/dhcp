@@ -90,10 +90,13 @@ enum expr_op {
 	expr_host_decl_name,
 	expr_pick_first_value,
  	expr_lease_time,
- 	expr_dns_update,
+ 	expr_dns_transaction,
 	expr_static,
 	expr_updated_dns_rr,
- 	expr_dns_delete,
+	expr_ns_update,
+ 	expr_ns_delete,
+ 	expr_ns_exists,
+ 	expr_ns_not_exists,
 	expr_not_equal
 };
 
@@ -143,12 +146,23 @@ struct expression {
 			struct expression *car;
 			struct expression *cdr;
 		} pick_first_value;
+		struct {
+			struct expression *car;
+			struct expression *cdr;
+		} dns_transaction;
  		struct {
- 			struct expression *type;
+			unsigned rrclass;
+			unsigned rrtype;
  			struct expression *rrname;
  			struct expression *rrdata;
  			struct expression *ttl;
- 		} dns_update;
+ 		} ns_update;
+ 		struct {
+			unsigned rrclass;
+			unsigned rrtype;
+ 			struct expression *rrname;
+ 			struct expression *rrdata;
+ 		} ns_delete, ns_exists, ns_not_exists;
 		struct expression *updated_dns_rr;
 	} data;
 	int flags;
@@ -209,5 +223,6 @@ enum expression_context {
 	context_any,
 	context_boolean,
 	context_data,
-	context_numeric
+	context_numeric,
+	context_dns
 };
