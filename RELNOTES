@@ -1,7 +1,7 @@
 		     Internet Software Consortium
 	   Dynamic Host Configuration Protocol Distribution
 		      Version 3, Alpha Snapshot
-			    April 8, 1999
+			    April 12, 1999
 
 			    Release Notes
 
@@ -54,6 +54,30 @@ system and does all the stuff that I have thought to test, there's a
 pretty decent chance it will do something other than what you expect
 when you try to use it.  Pointing out inconsistencies between the
 documentation and the source code will always be appreciated.
+
+		     Changes since April 8, 1999
+
+- Support DHCPINFORM.
+
+- Fix up some references to error() which I didn't notice earlier
+  because I don't do compilation testing on Linux.
+
+- Add a boolean expression, "known", which returns true if the client
+  whose request is currently being processed has a host declaration.
+
+- Do path keyword substitution on unformatted manual pages before
+  installing them.
+
+- Use length from UDP header to compute UDP checksum, because some
+  buggy relay agents send UDP header lengths that disagree with IP
+  header length and actual bytes sent.
+
+- Make error logging when packets with bad checksums or lengths are
+  received work more correctly.
+
+- Fix a null pointer dereference that would occur when processing
+  bootp packets from networks to which the server was not directly
+  connected.
 
 		     Changes since March 30, 1999
 
