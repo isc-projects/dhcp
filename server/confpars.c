@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.113 2000/06/02 21:27:11 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.114 2000/06/03 02:36:03 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2767,7 +2767,7 @@ void parse_address_range (cfile, group, type, inpool)
 	}
 
 	if (!inpool) {
-		struct pool *last;
+		struct pool *last = (struct pool *)0;
 
 		/* If we're permitting dynamic bootp for this range,
 		   then look for a pool with an empty prohibit list and
@@ -2819,7 +2819,10 @@ void parse_address_range (cfile, group, type, inpool)
 				log_fatal ("no memory for anon pool group.");
 		} else {
 			pool = (struct pool *)0;
-			pool_reference (&pool, last, MDL);
+			if (last)
+				pool_reference (&pool, last, MDL);
+			else
+				pool_reference (&pool, share -> pools, MDL);
 		}
 	} else {
 		pool = (struct pool *)0;
