@@ -191,46 +191,34 @@ int main (argc, argv, envp)
 				      &outgoing, &decl, bufs);
 
 			if (decl.ciaddr) {
-				if (tree_evaluate (decl.ciaddr) != 4)
-					warn ("ciaddr is more"
-					      " than one address");
-				else
-					memcpy (&raw.ciaddr,
-						decl.ciaddr -> value,
-						decl.ciaddr -> len);
+				tree_evaluate (decl.ciaddr);
+				memcpy (&raw.ciaddr,
+					decl.ciaddr -> value,
+					decl.ciaddr -> len);
 			} else
 				memset (&raw.ciaddr, 0, sizeof raw.ciaddr);
 
 			if (decl.yiaddr) {
-				if (tree_evaluate (decl.yiaddr) != 4)
-					warn ("yiaddr is more"
-					      " than one address");
-				else
-					memcpy (&raw.yiaddr,
-						decl.yiaddr -> value,
-						decl.yiaddr -> len);
+				tree_evaluate (decl.yiaddr);
+				memcpy (&raw.yiaddr,
+					decl.yiaddr -> value,
+					decl.yiaddr -> len);
 			} else
 				memset (&raw.yiaddr, 0, sizeof raw.yiaddr);
 
 			if (decl.siaddr) {
-				if (tree_evaluate (decl.siaddr) != 4)
-					warn ("siaddr is more"
-					      " than one address");
-				else
-					memcpy (&raw.siaddr,
-						decl.siaddr -> value,
-						decl.siaddr -> len);
+				tree_evaluate (decl.siaddr);
+				memcpy (&raw.siaddr,
+					decl.siaddr -> value,
+					decl.siaddr -> len);
 			} else
 				memset (&raw.siaddr, 0, sizeof raw.siaddr);
 
 			if (decl.giaddr) {
-				if (tree_evaluate (decl.giaddr) != 4)
-					warn ("giaddr is more"
-					      " than one address");
-				else
-					memcpy (&raw.giaddr,
-						decl.giaddr -> value,
-						decl.giaddr -> len);
+				tree_evaluate (decl.giaddr);
+				memcpy (&raw.giaddr,
+					decl.giaddr -> value,
+					decl.giaddr -> len);
 			} else
 				memset (&raw.giaddr, 0, sizeof raw.giaddr);
 
