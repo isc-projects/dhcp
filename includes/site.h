@@ -32,7 +32,7 @@
 
 /* Define this if you want to see dumps of find_lease() in action. */
 
-#define DEBUG_FIND_LEASE
+/* #define DEBUG_FIND_LEASE */
 
 /* Define this if you want to see dumps of parsed expressions. */
 
