@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: alloc.c,v 1.42 2000/02/05 18:08:55 mellon Exp $ Copyright (c) 1995, 1996, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: alloc.c,v 1.43 2000/02/07 05:13:57 mellon Exp $ Copyright (c) 1995, 1996, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -499,8 +499,7 @@ int binding_value_allocate (cptr, file, line)
 
 	if (free_binding_values) {
 		rval = free_binding_values;
-		free_binding_values =
-			(struct binding_value *)rval -> value.fundef;
+		free_binding_values = rval -> value.bv;
 	} else {
 		rval = dmalloc (sizeof (struct binding_value), file, line);
 		if (!rval)
@@ -544,7 +543,7 @@ void free_binding_value (bv, file, line)
 	const char *file;
 	int line;
 {
-	bv -> value.fundef = (struct fundef *)free_binding_values;
+	bv -> value.bv = free_binding_values;
 	free_binding_values = bv;
 	dmalloc_reuse (free_binding_values, (char *)0, 0, 0);
 }

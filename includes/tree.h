@@ -85,6 +85,7 @@ struct binding_value {
 		int boolean;
 		ns_updrec *dns;
 		struct fundef fundef;
+		struct binding_value *bv;
 	} value;
 };
 
