@@ -82,6 +82,11 @@
  * to sleep.
  */
 
+#ifndef lint
+static char copyright[] =
+"$Id: dlpi.c,v 1.2.2.7 1999/04/24 16:48:10 mellon Exp $ Copyright (c) 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+#endif /* not lint */
+
 #include "dhcpd.h"
 
 #if defined (USE_DLPI_SEND) || defined (USE_DLPI_RECEIVE)
