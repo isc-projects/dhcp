@@ -83,7 +83,9 @@ extern int h_errno;
 #define _PATH_DHCRELAY_PID "/etc/dhcrelay.pid"
 #endif
 
+#if !defined (INADDR_LOOPBACK)
 #define INADDR_LOOPBACK	((u_int32_t)0x7f000001)
+#endif
 
 /* Varargs stuff: use stdarg.h instead ... */
 #include <stdarg.h>
