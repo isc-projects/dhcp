@@ -56,7 +56,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhclient.c,v 1.52 1998/11/09 02:43:23 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.53 1998/11/11 07:48:20 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -129,6 +129,18 @@ int main (argc, argv, envp)
 			no_daemon = 1;
 		} else if (!strcmp (argv [i], "-D")) {
 			save_scripts = 1;
+                } else if (!strcmp (argv [i], "-pf")) {
+                        if (++i == argc)
+                                usage ();
+                        path_dhclient_pid = argv [i];
+                } else if (!strcmp (argv [i], "-cf")) {
+                        if (++i == argc)
+                                usage ();
+                        path_dhclient_conf = argv [i];
+                } else if (!strcmp (argv [i], "-lf")) {
+                        if (++i == argc)
+                                usage ();
+                        path_dhclient_db = argv [i];
  		} else if (argv [i][0] == '-') {
  		    usage ();
  		} else {
@@ -280,6 +292,13 @@ void classify (packet, class)
 	struct packet *packet;
 	struct class *class;
 {
+}
+
+int unbill_class (lease, class)
+	struct lease *lease;
+	struct class *class;
+{
+	return 0;
 }
 
 /* Individual States:
@@ -767,7 +786,7 @@ void dhcpoffer (packet)
 	/* If we're not receptive to an offer right now, or if the offer
 	   has an unrecognizable transaction id, then just drop it. */
 	if (!client ||
-	    ip -> client -> state != S_SELECTING ||
+	    client -> state != S_SELECTING ||
 	    (packet -> interface -> hw_address.hlen !=
 	     packet -> raw -> hlen) ||
 	    (memcmp (packet -> interface -> hw_address.haddr,
@@ -1400,7 +1419,7 @@ void send_release (cpp)
 		warn ("send_packet: %m");
 }
 
-void make_client_options (client, lease, type, sid, rip, prl, statements,
+void make_client_options (client, lease, type, sid, rip, prl,
 			  options)
 	struct client_state *client;
 	struct client_lease *lease;
@@ -1408,7 +1427,6 @@ void make_client_options (client, lease, type, sid, rip, prl, statements,
 	struct option_cache *sid;
 	struct iaddr *rip;
 	u_int32_t *prl;
-	struct executable_statement *statements;
 	struct option_state *options;
 {
 	int i;
@@ -1496,9 +1514,11 @@ void make_client_options (client, lease, type, sid, rip, prl, statements,
 	   				   going to use oc again */
 
 	/* Run statements that need to be run on transmission. */
-	if (statements)
-		execute_statements ((struct packet *)0,
-				    &lease -> options, options, statements);
+	if (client -> config -> on_transmission)
+		execute_statements_in_scope
+			((struct packet *)0, &lease -> options, options,
+			 client -> config -> on_transmission,
+			 (struct group *)0);
 }
 
 void make_discover (client, lease)
@@ -1516,7 +1536,6 @@ void make_discover (client, lease)
 			     lease, &discover, (struct option_cache *)0,
 			     lease ? &lease -> address : (struct iaddr *)0,
 			     client -> config -> requested_options,
-			     client -> config -> on_transmission,
 			     &options);
 
 	/* Set up the option buffer... */
@@ -1576,7 +1595,6 @@ void make_request (client, lease)
 			      ? &lease -> address
 			      : (struct iaddr *)0),
 			     client -> config -> requested_options,
-			     client -> config -> on_transmission,
 			     &options);
 
 	/* Set up the option buffer... */
@@ -1637,7 +1655,7 @@ void make_decline (client, lease)
 			    DHO_DHCP_SERVER_IDENTIFIER);
 	make_client_options (client, lease, &decline, oc,
 			     &lease -> address, (u_int32_t *)0,
-			     (struct executable_statement *)0, &options);
+			     &options);
 
 	/* Set up the option buffer... */
 	client -> packet_length =
@@ -1689,7 +1707,7 @@ void make_release (client, lease)
 			    DHO_DHCP_SERVER_IDENTIFIER);
 	make_client_options (client, lease, &request, oc,
 			     &lease -> address, (u_int32_t *)0,
-			     (struct executable_statement *)0, &options);
+			     &options);
 
 	/* Set up the option buffer... */
 	client -> packet_length =
@@ -1997,9 +2015,10 @@ void script_write_params (client, prefix, lease)
 		fprintf (scriptFile, "export %sserver_name\n", prefix);
 	}
 
-	execute_statements ((struct packet *)0, &lease -> options,
-			    &lease -> options,
-			    client -> config -> on_receipt);
+	execute_statements_in_scope ((struct packet *)0, &lease -> options,
+				     &lease -> options,
+				     client -> config -> on_receipt,
+				     (struct group *)0);
 
 	for (i = 0; i < OPTION_HASH_SIZE; i++) {
 		pair hp;

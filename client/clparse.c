@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: clparse.c,v 1.20 1998/11/09 02:42:58 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: clparse.c,v 1.21 1998/11/11 07:48:23 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -97,6 +97,14 @@ int read_client_conf ()
 	top_level_config.script_name = "/etc/dhclient-script";
 	top_level_config.requested_options = default_requested_options;
 	top_level_config.requested_lease = 7200;
+
+	top_level_config.on_receipt = new_group ("read_client_conf");
+	if (!top_level_config.on_receipt)
+		error ("no memory for top-level on_receipt group");
+
+	top_level_config.on_transmission = new_group ("read_client_conf");
+	if (!top_level_config.on_transmission)
+		error ("no memory for top-level on_transmission group");
 
 	if ((cfile = fopen (path_dhclient_conf, "r")) != NULL) {
 		do {
@@ -202,7 +210,7 @@ void parse_client_statement (cfile, ip, config)
 
 	switch (peek_token (&val, cfile)) {
 	      case SEND:
-		p = &config -> on_transmission;
+		p = &config -> on_transmission -> statements;
 		op = supersede_option_statement;
 	      do_option:
 		token = next_token (&val, cfile);
@@ -217,22 +225,22 @@ void parse_client_statement (cfile, ip, config)
 		return;
 
 	      case DEFAULT:
-		p = &config -> on_receipt;
+		p = &config -> on_receipt -> statements;
 		op = default_option_statement;
 		goto do_option;
 
 	      case SUPERSEDE:
-		p = &config -> on_receipt;
+		p = &config -> on_receipt -> statements;
 		op = supersede_option_statement;
 		goto do_option;
 
 	      case APPEND:
-		p = &config -> on_receipt;
+		p = &config -> on_receipt -> statements;
 		op = append_option_statement;
 		goto do_option;
 
 	      case PREPEND:
-		p = &config -> on_receipt;
+		p = &config -> on_receipt -> statements;
 		op = prepend_option_statement;
 		goto do_option;
 
@@ -338,11 +346,11 @@ void parse_client_statement (cfile, ip, config)
 				skip_to_semi (cfile);
 			}
 		} else {
-			if (!config -> on_receipt) {
-				config -> on_receipt = stmt;
+			if (!config -> on_receipt -> statements) {
+				config -> on_receipt -> statements = stmt;
 			} else {
 				struct executable_statement *s;
-				for (s = config -> on_receipt;
+				for (s = config -> on_receipt -> statements;
 				     s -> next; s = s -> next)
 					;
 				s -> next = stmt;
@@ -584,9 +592,11 @@ void make_client_config (client, config)
 				      "make_client_config")));
 	if (!client -> config)
 		error ("no memory for client config\n");
-	memset (client -> config, 0,
-		sizeof *(client -> config));
 	memcpy (client -> config, config, sizeof *config);
+	client -> config -> on_receipt =
+		clone_group (config -> on_receipt, "make_client_config");
+	client -> config -> on_transmission =
+		clone_group (config -> on_transmission, "make_client_config");
 }
 
 /* client-lease-statement :==
@@ -758,7 +768,7 @@ void parse_client_lease_declaration (cfile, lease, ipp, clientp)
 			break;
 		}
 		for (client = ip -> client; client; client = client -> next)
-			if (!strcmp (client -> name, val))
+			if (client -> name && !strcmp (client -> name, val))
 				break;
 		if (!client)
 			parse_warn ("lease specified for unknown pseudo.");
