@@ -257,7 +257,7 @@ OMAPI_OBJECT_ALLOC_DECL (omapi_message,
 isc_result_t omapi_connection_sign_data (int mode,
 					 DST_KEY *key,
 					 void **context,
-					 const u_char *data,
+					 const unsigned char *data,
 					 const unsigned len,
 					 omapi_typed_data_t **result);
 
