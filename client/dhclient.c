@@ -56,7 +56,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhclient.c,v 1.40 1997/09/16 18:09:41 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.41 1997/10/20 21:35:34 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -91,6 +91,7 @@ u_int16_t local_port;
 u_int16_t remote_port;
 int log_priority;
 int no_daemon;
+int save_scripts;
 
 static void usage PROTO ((void));
 
@@ -123,6 +124,8 @@ int main (argc, argv, envp)
 			       ntohs (local_port));
 		} else if (!strcmp (argv [i], "-d")) {
 			no_daemon = 1;
+		} else if (!strcmp (argv [i], "-D")) {
+			save_scripts = 1;
  		} else if (argv [i][0] == '-') {
  		    usage ();
  		} else {
@@ -1936,7 +1939,8 @@ int script_go (ip)
 	fclose (scriptFile);
 	chmod (scriptName, 0700);
 	rval = system (scriptName);	
-	/* unlink (scriptName); */
+	if (!save_scripts)
+		unlink (scriptName);
 	return rval;
 }
 
