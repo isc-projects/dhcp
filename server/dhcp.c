@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.181 2001/02/12 21:00:02 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.182 2001/02/15 21:34:08 neild Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2058,9 +2058,8 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 		   and we can't write the lease, don't ACK it (or BOOTREPLY
 		   it) either. */
 
-		if (!(supersede_lease (lease, lt, !offer || offer == DHCPACK,
-				       offer == DHCPACK, offer == DHCPACK)
-		      || (offer && offer != DHCPACK))) {
+		if (!supersede_lease (lease, lt, !offer || offer == DHCPACK,
+				      offer == DHCPACK, offer == DHCPACK)) {
 			log_info ("%s: database update failed", msg);
 			free_lease_state (state, MDL);
 			static_lease_dereference (lease, MDL);

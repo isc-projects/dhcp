@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.52 2001/02/12 21:09:21 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.53 2001/02/15 21:34:07 neild Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -775,6 +775,14 @@ int supersede_lease (comp, lease, commit, propogate, pimmediate)
 	struct lease *lp, **lq, *prev;
 	TIME lp_next_state;
 
+#if defined (FAILOVER_PROTOCOL)
+	/* We must commit leases before sending updates regarding them
+	   to failover peers.  It is, therefore, an error to set pimmediate
+	   and not commit. */
+	if (pimmediate && !commit)
+		return 0;
+#endif
+
 	/* If there is no sample lease, just do the move. */
 	if (!lease)
 		goto just_move_it;
@@ -1047,14 +1055,21 @@ int supersede_lease (comp, lease, commit, propogate, pimmediate)
 			     (tvunref_t)pool_dereference);
 	}
 
-	/* Return zero if we didn't commit the lease to permanent storage;
-	   nonzero if we did. */
-	return commit && write_lease (comp) && commit_leases ()
+	if (commit) {
+		if (!write_lease (comp))
+			return 0;
+		if (!commit_leases ())
+			return 0;
+	}
+
 #if defined (FAILOVER_PROTOCOL)
-		&& (!propogate ||
-		    dhcp_failover_queue_update (comp, pimmediate))
+	if (propogate) {
+		if (!dhcp_failover_queue_update (comp, pimmediate))
+			return 0;
+	}
 #endif
-		;
+
+	return 1;
 }
 
 void process_state_transition (struct lease *lease)
