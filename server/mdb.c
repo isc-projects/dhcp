@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.51 2001/01/25 08:36:36 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.52 2001/02/12 21:09:21 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -851,19 +851,21 @@ int supersede_lease (comp, lease, commit, propogate, pimmediate)
 				lease -> uid, lease -> uid_len);
 			comp -> uid = &comp -> uid_buf [0];
 			comp -> uid_max = sizeof comp -> uid_buf;
+			comp -> uid_len = lease -> uid_len;
 		} else if (lease -> uid != &lease -> uid_buf [0]) {
 			comp -> uid = lease -> uid;
 			comp -> uid_max = lease -> uid_max;
 			lease -> uid = (unsigned char *)0;
 			lease -> uid_max = 0;
+			comp -> uid_len = lease -> uid_len;
+			lease -> uid_len = 0;
 		} else {
 			log_fatal ("corrupt lease uid."); /* XXX */
 		}
 	} else {
 		comp -> uid = (unsigned char *)0;
-		comp -> uid_max = 0;
+		comp -> uid_len = comp -> uid_max = 0;
 	}
-	comp -> uid_len = lease -> uid_len;
 	if (comp -> host)
 		host_dereference (&comp -> host, MDL);
 	host_reference (&comp -> host, lease -> host, MDL);
@@ -893,10 +895,6 @@ int supersede_lease (comp, lease, commit, propogate, pimmediate)
 	}
 
 	/* Record the hostname information in the lease. */
-	if (comp -> hostname)
-		dfree (comp -> hostname, MDL);
-	comp -> hostname = lease -> hostname;
-	lease -> hostname = (char *)0;
 	if (comp -> client_hostname)
 		dfree (comp -> client_hostname, MDL);
 	comp -> client_hostname = lease -> client_hostname;
@@ -1185,14 +1183,6 @@ int lease_copy (struct lease **lp,
 			return 0;
 		}
 		memcpy (lt -> uid, lease -> uid, lease -> uid_max);
-	}
-	if (lease -> hostname) {
-		lt -> hostname = dmalloc (strlen (lease -> hostname) + 1, MDL);
-		if (!lt -> hostname) {
-			lease_dereference (&lt, MDL);
-			return 0;
-		}
-		strcpy (lt -> hostname, lease -> hostname);
 	}
 	if (lease -> client_hostname) {
 		lt -> client_hostname =
