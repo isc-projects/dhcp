@@ -104,6 +104,18 @@ isc_result_t omapi_message_set_value (omapi_object_t *h,
 					"omapi_message_set_value");
 		return ISC_R_SUCCESS;
 
+	} else if (!omapi_ds_strcmp (name, "notify-object")) {
+		if (value -> type != omapi_datatype_object)
+			return ISC_R_INVALIDARG;
+		if (m -> notify_object)
+			omapi_object_dereference
+				(&m -> notify_object,
+				 "omapi_message_set_value");
+		omapi_object_reference (&m -> notify_object,
+					value -> u.object,
+					"omapi_message_set_value");
+		return ISC_R_SUCCESS;
+
 	/* Can set authid, but it has to be an integer. */
 	} else if (!omapi_ds_strcmp (name, "authid")) {
 		if (value -> type != omapi_datatype_int)
@@ -229,9 +241,14 @@ isc_result_t omapi_message_signal_handler (omapi_object_t *h,
 		return ISC_R_INVALIDARG;
 	m = (omapi_message_object_t *)h;
 	
-	if (!strcmp (name, "status") && m -> object) {
-		return ((m -> object -> type -> signal_handler)) (m -> object,
-								  name, ap);
+	if (!strcmp (name, "status") && 
+	    (m -> object || m -> notify_object)) {
+		if (m -> object)
+			return ((m -> object -> type -> signal_handler))
+				(m -> object, name, ap);
+		else
+			return ((m -> notify_object -> type -> signal_handler))
+				(m -> notify_object, name, ap);
 	}
 	if (h -> inner && h -> inner -> type -> signal_handler)
 		return (*(h -> inner -> type -> signal_handler)) (h -> inner,
@@ -515,7 +532,8 @@ isc_result_t omapi_message_process (omapi_object_t *mo, omapi_object_t *po)
 		if (create || update) {
 			status = omapi_object_update (object,
 						      (omapi_object_t *)0,
-						      message -> object);
+						      message -> object,
+						      message -> handle);
 			if (status != ISC_R_SUCCESS) {
 				omapi_object_dereference
 					(&object, "omapi_message_process");
@@ -564,7 +582,8 @@ isc_result_t omapi_message_process (omapi_object_t *mo, omapi_object_t *po)
 		}
 
 		status = omapi_object_update (object, (omapi_object_t *)0,
-					      message -> object);
+					      message -> object,
+					      message -> handle);
 		if (status != ISC_R_SUCCESS) {
 			omapi_object_dereference
 				(&object, "omapi_message_process");
@@ -620,6 +639,31 @@ isc_result_t omapi_message_process (omapi_object_t *mo, omapi_object_t *po)
 		if (status == ISC_R_SUCCESS)
 			omapi_value_dereference (&tv, "omapi_message_process");
 		return ISC_R_SUCCESS;
+
+	      case OMAPI_OP_DELETE:
+		status = omapi_handle_lookup (&object,
+					      message -> handle);
+		if (status != ISC_R_SUCCESS) {
+			return omapi_protocol_send_status
+				(po, (omapi_object_t *)0,
+				 status, message -> id,
+				 "no matching handle");
+		}
+
+		if (!object -> type -> delete)
+			return omapi_protocol_send_status
+				(po, (omapi_object_t *)0,
+				 ISC_R_NOTIMPLEMENTED, message -> id,
+				 "no delete method for object");
+
+		status = (*(object -> type -> delete)) (object,
+							(omapi_object_t *)0);
+		omapi_object_dereference (&object,
+					  "omapi_message_process");
+
+		return omapi_protocol_send_status (po, (omapi_object_t *)0,
+						   status, message -> id,
+						   (char *)0);
 	}
 	return ISC_R_NOTIMPLEMENTED;
 }

@@ -135,6 +135,7 @@ typedef struct __omapi_object_type_t {
 	isc_result_t (*lookup) (omapi_object_t **, omapi_object_t *,
 				omapi_object_t *);
 	isc_result_t (*create) (omapi_object_t **, omapi_object_t *);
+	isc_result_t (*delete) (omapi_object_t *, omapi_object_t *);
 } omapi_object_type_t;
 
 #define OMAPI_OBJECT_PREAMBLE \
@@ -156,6 +157,7 @@ struct __omapi_object {
 #define	OMAPI_OP_UPDATE		3
 #define OMAPI_OP_NOTIFY		4
 #define OMAPI_OP_STATUS		5
+#define OMAPI_OP_DELETE		6
 
 #include <omapip/buffer.h>
 
@@ -181,6 +183,7 @@ typedef struct __omapi_message_object {
 	OMAPI_OBJECT_PREAMBLE;
 	struct __omapi_message_object *next, *prev;
 	omapi_object_t *object;
+	omapi_object_t *notify_object;
 	int authlen;
 	omapi_typed_data_t *authenticator;
 	int authid;
@@ -437,6 +440,8 @@ isc_result_t omapi_object_type_register (omapi_object_type_t **,
 							   omapi_object_t *,
 							   omapi_object_t *),
 					 isc_result_t (*) (omapi_object_t **,
+							   omapi_object_t *),
+					 isc_result_t (*) (omapi_object_t *,
 							   omapi_object_t *));
 isc_result_t omapi_signal (omapi_object_t *, char *, ...);
 isc_result_t omapi_signal_in (omapi_object_t *, char *, ...);
@@ -464,7 +469,7 @@ isc_result_t omapi_stuff_values (omapi_object_t *,
 isc_result_t omapi_object_create (omapi_object_t **, omapi_object_t *,
 				  omapi_object_type_t *);
 isc_result_t omapi_object_update (omapi_object_t *, omapi_object_t *,
-				  omapi_object_t *);
+				  omapi_object_t *, omapi_handle_t);
 int omapi_data_string_cmp (omapi_data_string_t *, omapi_data_string_t *);
 int omapi_ds_strcmp (omapi_data_string_t *, char *);
 int omapi_td_strcmp (omapi_typed_data_t *, char *);
