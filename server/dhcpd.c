@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.45.2.30 1999/06/22 13:43:18 mellon Exp $ Copyright 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.45.2.31 1999/10/27 20:43:55 mellon Exp $ Copyright 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.";
 #endif
 
 static char copyright[] =
@@ -186,7 +186,8 @@ int main (argc, argv, envp)
 		note (contrib);
 		note (url);
 		note ("");
-	}
+	} else
+		log_perror = 0;
 
 	/* Default to the DHCP/BOOTP port. */
 	if (!local_port)
