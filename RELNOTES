@@ -50,7 +50,11 @@ and for prodding me into improving it.
 
 - A patch from Florian Lohoff was applied with some modifications to
   dhcrelay.  It now discards packets whose hop count exceeds 10 by default,
-  and a command-line option (-c) can be used to set this value.
+  and a command-line option (-c) can be used to set this threshold.
+
+- A manpage typo was fixed.
+
+- The -nw command line option to dhclient now works.
 
 			Changes since 3.0.1rc10
 
