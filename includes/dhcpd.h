@@ -727,6 +727,28 @@ struct dmalloc_preamble {
 #define DMDSIZE 0
 #endif
 
+#if defined (DEBUG_RC_HISTORY)
+#if !defined (RC_HISTORY_MAX)
+# define RC_HISTORY_MAX 256
+#endif
+
+struct rc_history_entry {
+	char *name;
+	VOIDPTR addr;
+	int refcnt;
+};
+
+#define rc_register(x, y, z) do { \
+	rc_history [rc_history_index].name = (x); \
+	rc_history [rc_history_index].addr = (y); \
+	rc_history [rc_history_index].refcnt = (z); \
+	if (++rc_history_index == RC_HISTORY_MAX) \
+		rc_history_index = 0;\
+	} while (0)
+#else
+#define rc_register(name, addr, refcnt)
+#endif
+
 /* Bitmask of dhcp option codes. */
 typedef unsigned char option_mask [16];
 
@@ -1066,15 +1088,20 @@ extern unsigned long dmalloc_generation;
 extern unsigned long dmalloc_cutoff_generation;
 #endif
 
+#if defined (DEBUG_RC_HISTORY)
+extern struct rc_history_entry rc_history [RC_HISTORY_MAX];
+extern int rc_history_index;
+#endif
 VOIDPTR dmalloc PROTO ((int, char *));
 void dfree PROTO ((VOIDPTR, char *));
 #if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL)
 void dmalloc_reuse PROTO ((VOIDPTR, char *, int));
+void dmalloc_dump_outstanding PROTO ((void));
 #else
 #define dmalloc_reuse(x,y,z)
 #endif
-#if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL)
-void dmalloc_dump_outstanding PROTO ((void));
+#if defined (DEBUG_RC_HISTORY)
+void dump_rc_history PROTO ((void));
 #endif
 struct packet *new_packet PROTO ((char *));
 struct dhcp_packet *new_dhcp_packet PROTO ((char *));

@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.31.2.8 1999/12/22 20:42:55 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.31.2.9 1999/12/22 21:44:01 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1383,10 +1383,16 @@ void expression_dereference (eptr, name)
 
 	/* Decrement the reference count.   If it's nonzero, we're
 	   done. */
-	if (--(expr -> refcnt) > 0)
+	--expr -> refcnt;
+	rc_register (name, expr, expr -> refcnt);
+
+	if (expr -> refcnt > 0)
 		return;
 	if (expr -> refcnt < 0) {
 		log_error ("expression_dereference: negative refcnt!");
+#if defined (DEBUG_RC_HISTORY)
+		dump_rc_history ();
+#endif
 #if defined (POINTER_DEBUG)
 		abort ();
 #else

@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.44.2.5 1999/12/22 20:31:44 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.44.2.6 1999/12/22 21:43:18 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -1174,6 +1174,7 @@ int option_cache_dereference (ptr, name)
 	}
 
 	(*ptr) -> refcnt--;
+	rc_register (name, *ptr, (*ptr) -> refcnt);
 	if (!(*ptr) -> refcnt) {
 		if ((*ptr) -> data.buffer)
 			data_string_forget (&(*ptr) -> data, name);
@@ -1183,6 +1184,17 @@ int option_cache_dereference (ptr, name)
 		(*ptr) -> expression = (struct expression *)free_option_caches;
 		free_option_caches = *ptr;
 		dmalloc_reuse (free_option_caches, (char *)0, 0);
+	}
+	if ((*ptr) -> refcnt < 0) {
+		log_error ("option_cache_dereference: negative refcnt!");
+#if defined (DEBUG_RC_HISTORY)
+		dump_rc_history ();
+#endif
+#if defined (POINTER_DEBUG)
+		abort ();
+#else
+		return 0;
+#endif
 	}
 	*ptr = (struct option_cache *)0;
 	return 1;
