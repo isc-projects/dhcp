@@ -34,11 +34,13 @@ You particularly need to read these notes if you intend to support
 Windows 95 clients.  If you are running a version of FreeBSD prior to
 2.2, please read the note on FreeBSD.  If you are running HP-UX or
 Ultrix, please read the notes for those operating systems below.
+If you are running NeXTSTEP, please see the notes on NeXTSTEP below.
 
 If you start dhcpd and get a message, "no free bpf", that means you
 need to configure the Berkeley Packet Filter into your operating
 system kernel.   On NetBSD, FreeBSD and BSD/os, type ``man bpf'' for
 information.   On Digital Unix, type ``man pfilt''.
+
 
 		    BUILDING THE DHCP DISTRIBUTION
 
@@ -160,6 +162,12 @@ downstream from BPF, which corrupts the output packet.   If you are
 running a version of FreeBSD prior to 2.2, and you find that dhcpd
 can't communicate with its clients, you should #define BROKEN_FREEBSD_BPF 
 in site.h and recompile.
+
+                              NeXTSTEP
+
+The NeXTSTEP support uses the NeXTSTEP Berkeley Packet Filter
+extension, which is not included in the base system.   You must
+install this extension in order to get dhcpd or dhclient to work.
 
 			       SUPPORT
 
