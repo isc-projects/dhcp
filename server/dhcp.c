@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.57.2.28 1999/05/20 20:03:27 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.57.2.29 1999/06/22 13:42:15 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -358,7 +358,8 @@ void dhcprequest (packet)
 	   rights to send a DHCPNAK.   We can also send a DHCPACK.
 	   The thing we probably should not do is to remain silent.
 	   For now, we'll just assign the lease to the client anyway. */
-	ack_lease (packet, lease, DHCPACK, 0);
+	if (lease)
+		ack_lease (packet, lease, DHCPACK, 0);
 }
 
 void dhcprelease (packet)
