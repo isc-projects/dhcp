@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.107 1999/09/22 17:30:33 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.108 1999/09/28 23:58:17 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2571,3 +2571,26 @@ int permitted (packet, permit_list)
 	return 0;
 }
 
+int locate_network (packet)
+	struct packet *packet;
+{
+	struct iaddr ia;
+
+	/* If this came through a gateway, find the corresponding subnet... */
+	if (packet -> raw -> giaddr.s_addr) {
+		struct subnet *subnet;
+		ia.len = 4;
+		memcpy (ia.iabuf, &packet -> raw -> giaddr, 4);
+		subnet = find_subnet (ia);
+		if (subnet)
+			packet -> shared_network = subnet -> shared_network;
+		else
+			packet -> shared_network = (struct shared_network *)0;
+	} else {
+		packet -> shared_network =
+			packet -> interface -> shared_network;
+	}
+	if (packet -> shared_network)
+		return 1;
+	return 0;
+}
