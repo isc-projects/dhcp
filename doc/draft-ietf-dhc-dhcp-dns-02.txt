@@ -2,11 +2,11 @@
 
 Network Working Group                                      Yakov Rekhter
 Internet Draft                                             Cisco Systems
-Expiration Date: January 1997                                  July 1996
+Expiration Date: April 1997                                 October 1996
 
 
                     Interaction between DHCP and DNS
-                     draft-ietf-dhc-dhcp-dns-01.txt
+                     draft-ietf-dhc-dhcp-dns-02.txt
 
 
 1. Status of this Memo
@@ -57,7 +57,7 @@ Yakov Rekhter                                                   [Page 1]
 
 
 
-Internet Draft       draft-ietf-dhc-dhcp-dns-01.txt            July 1996
+Internet Draft       draft-ietf-dhc-dhcp-dns-02.txt         October 1996
 
 
 3. Interaction between DHCP and DNS
@@ -117,7 +117,7 @@ Yakov Rekhter                                                   [Page 2]
 
 
 
-Internet Draft       draft-ietf-dhc-dhcp-dns-01.txt            July 1996
+Internet Draft       draft-ietf-dhc-dhcp-dns-02.txt         October 1996
 
 
          (2) DHCP server updates both the A and the PTR RRs
@@ -135,7 +135,7 @@ Internet Draft       draft-ietf-dhc-dhcp-dns-01.txt            July 1996
    the client to convey its FQDN to the server this document defines a
    new option, called "Client FQDN".
 
-   The code for this option is TBD. Its minimum length is 2.
+   The code for this option is 81. Its minimum length is 4.
 
 
 
@@ -177,7 +177,7 @@ Yakov Rekhter                                                   [Page 3]
 
 
 
-Internet Draft       draft-ietf-dhc-dhcp-dns-01.txt            July 1996
+Internet Draft       draft-ietf-dhc-dhcp-dns-02.txt         October 1996
 
 
    The update shall be originated following the procedures described in
@@ -190,6 +190,9 @@ Internet Draft       draft-ietf-dhc-dhcp-dns-01.txt            July 1996
    DHCPREQUEST message originated by the client. The Flags field in the
    option shall be set to 1.
 
+
+   A client should set the RCODE1 and RCODE2 fields in the Client FQDN
+   option to 0 when sending the option.
 
    Whether the client wants to be responsible for updating the FQDN to
    IP address mapping, or whether the client wants to delegate this
@@ -225,9 +228,6 @@ Internet Draft       draft-ietf-dhc-dhcp-dns-01.txt            July 1996
    option).  The server shall originate the update before the server
    sends the DHCPACK message to the client.  The update shall be
    originated following the procedures described in [DynDNS].  The RCODE
-   from the update [DynDNS] should be carried to the client in the
-   RCODE2 field of the Client FQDN option in the DHCPACK message.
-
 
 
 
@@ -237,12 +237,20 @@ Yakov Rekhter                                                   [Page 4]
 
 
 
-Internet Draft       draft-ietf-dhc-dhcp-dns-01.txt            July 1996
+Internet Draft       draft-ietf-dhc-dhcp-dns-02.txt         October 1996
 
+
+   from the update [DynDNS] should be carried to the client in the
+   RCODE2 field of the Client FQDN option in the DHCPACK message.
 
    When a server receives a DHCPREQUEST message from a client, and the
    message contains the Client FQDN option, the server shall ignore the
-   value carried in the RCODE field of the option.
+   value carried in the RCODE1 and RCODE2 fields of the option.
+
+   When a DHCP server sends the Client FQDN option to a client in the
+   DHCPACK message, the server should copy the Flags and the Domain Name
+   fields from the Client FQDN option that the client sent to the server
+   in the DHCPREQUEST message.
 
 
    If a server originates updates for both the A and PTR RRs, then the
@@ -271,6 +279,27 @@ Internet Draft       draft-ietf-dhc-dhcp-dns-01.txt            July 1996
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+Yakov Rekhter                                                   [Page 5]
+
+
+
+
+
+Internet Draft       draft-ietf-dhc-dhcp-dns-02.txt         October 1996
+
+
 6. Security Considerations
 
    Security issues are not discussed in this document.
@@ -288,18 +317,6 @@ Internet Draft       draft-ietf-dhc-dhcp-dns-01.txt            July 1996
    10/27/1993
 
    [RFC1594] A. Marine, J. Reynolds, G. Malkin, "FYI on Questions and
-
-
-
-Yakov Rekhter                                                   [Page 5]
-
-
-
-
-
-Internet Draft       draft-ietf-dhc-dhcp-dns-01.txt            July 1996
-
-
    Answer Answers to Commonly asked ``New Internet User'' Questions",
    RFC1594, 03/11/1994
 
@@ -325,23 +342,6 @@ Internet Draft       draft-ietf-dhc-dhcp-dns-01.txt            July 1996
    San Jose, CA 95134
    Phone: (914) 528-0090
    email: yakov@cisco.com
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

@@ -1,14 +1,15 @@
 
+
 Network Working Group                                       S. Alexander
 INTERNET DRAFT                                    Silicon Graphics, Inc.
-Obsoletes: draft-ietf-dhc-options-1533update-03.txt             R. Droms
+Obsoletes: draft-ietf-dhc-options-1533update-05.txt             R. Droms
                                                      Bucknell University
-                                                                May 1996
-                                                   Expires November 1996
+                                                           December 1996
+                                                       Expires June 1997
 
 
                DHCP Options and BOOTP Vendor Extensions
-               <draft-ietf-dhc-options-1533update-04.txt>
+               <draft-ietf-dhc-options-1533update-06.txt>
 
 Status of this memo
 
@@ -39,8 +40,8 @@ Abstract
 
    This document specifies the current set of DHCP options.  Future
    options will be specified in separate RFCs.  The current list of
-   valid options is also available in ftp://ftp.isi.edu/in-
-   notes/iana/assignments [22].
+   valid options is also available in
+   ftp://ftp.isi.edu/in-notes/iana/assignments [22].
 
    All of the vendor information extensions defined in RFC 1497 [2] may
    be used as DHCP options.  The definitions given in RFC 1497 are
@@ -52,7 +53,7 @@ Abstract
 
 Alexander & Droms                                               [Page 1]
 
-DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
+DRAFT           DHCP Options and BOOTP Vendor Extensions   December 1996
 
 
    extensions.
@@ -68,11 +69,11 @@ Table of Contents
     7.  TCP Parameters ............................................ 20
     8.  Application and Service Parameters ........................ 21
     9.  DHCP Extensions ........................................... 29
-   10.  Defining new extensions ................................... 36
-   11.  Acknowledgements .......................................... 36
-   12.  References ................................................ 37
-   13.  Security Considerations ................................... 38
-   14.  Authors' Addresses ........................................ 38
+   10.  Defining new extensions ................................... 35
+   11.  Acknowledgements .......................................... 35
+   12.  References ................................................ 36
+   13.  Security Considerations ................................... 37
+   14.  Authors' Addresses ........................................ 37
 
 1. Introduction
 
@@ -108,18 +109,17 @@ Table of Contents
 
 Alexander & Droms                                               [Page 2]
 
-DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
+DRAFT           DHCP Options and BOOTP Vendor Extensions   December 1996
 
 
    appears in RFC1533.  The classing mechanism has been extended to
-   include vendor classes and user classes as described in section 8.4,
-   9.13 and 9.15.  The new procedure for defining new DHCP/BOOTP options
-   in described in section 10.  Several new options, including NIS+
-   domain and servers, Mobile IP home agent, SMTP server, TFTP server
-   and Bootfile server, have been added.  Text giving definitions used
-   throughout the document has been added in section 1.1.  Text
-   emphasizing the need for uniqueness of client-identifiers has been
-   added to section 9.14.
+   include vendor classes as described in section 8.4 and 9.13.  The new
+   procedure for defining new DHCP/BOOTP options in described in section
+   10.  Several new options, including NIS+ domain and servers, Mobile
+   IP home agent, SMTP server, TFTP server and Bootfile server, have
+   been added.  Text giving definitions used throughout the document has
+   been added in section 1.1.  Text emphasizing the need for uniqueness
+   of client-identifiers has been added to section 9.14.
 
 1.1 Requirements
 
@@ -162,12 +162,13 @@ DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
 
 
 
+
 Alexander & Droms                                               [Page 3]
 
-DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
+DRAFT           DHCP Options and BOOTP Vendor Extensions   December 1996
 
 
-1. Terminology
+1.2 Terminology
 
    This document uses the following terms:
 
@@ -220,7 +221,7 @@ DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
 
 Alexander & Droms                                               [Page 4]
 
-DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
+DRAFT           DHCP Options and BOOTP Vendor Extensions   December 1996
 
 
       dotted decimal 99.130.83.99 (or hexadecimal number 63.82.53.63) in
@@ -276,7 +277,7 @@ DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
 
 Alexander & Droms                                               [Page 5]
 
-DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
+DRAFT           DHCP Options and BOOTP Vendor Extensions   December 1996
 
 
 3.2. End Option
@@ -310,8 +311,11 @@ DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
 
    The time offset field specifies the offset of the client's subnet in
    seconds from Coordinated Universal Time (UTC).  The offset is
-   expressed as a two's complement 32-bit integer. The code for the time
-   offset option is 2, and its length is 4 octets.
+   expressed as a two's complement 32-bit integer.  A positive offset
+   indicates a location east of the zero meridian and a negative offset
+   indicates a location west of the zero meridian.
+
+   The code for the time offset option is 2, and its length is 4 octets.
 
     Code   Len        Time Offset
    +-----+-----+-----+-----+-----+-----+
@@ -327,12 +331,9 @@ DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
 
 
 
-
-
-
 Alexander & Droms                                               [Page 6]
 
-DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
+DRAFT           DHCP Options and BOOTP Vendor Extensions   December 1996
 
 
 3.5. Router Option
@@ -388,7 +389,7 @@ DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
 
 Alexander & Droms                                               [Page 7]
 
-DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
+DRAFT           DHCP Options and BOOTP Vendor Extensions   December 1996
 
 
 3.8. Domain Name Server Option
@@ -444,7 +445,7 @@ DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
 
 Alexander & Droms                                               [Page 8]
 
-DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
+DRAFT           DHCP Options and BOOTP Vendor Extensions   December 1996
 
 
 3.11. LPR Server Option
@@ -500,7 +501,7 @@ DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
 
 Alexander & Droms                                               [Page 9]
 
-DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
+DRAFT           DHCP Options and BOOTP Vendor Extensions   December 1996
 
 
 3.14. Host Name Option
@@ -556,7 +557,7 @@ DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
 
 Alexander & Droms                                              [Page 10]
 
-DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
+DRAFT           DHCP Options and BOOTP Vendor Extensions   December 1996
 
 
 3.17. Domain Name
@@ -612,7 +613,7 @@ DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
 
 Alexander & Droms                                              [Page 11]
 
-DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
+DRAFT           DHCP Options and BOOTP Vendor Extensions   December 1996
 
 
 3.20. Extensions Path
@@ -668,7 +669,7 @@ DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
 
 Alexander & Droms                                              [Page 12]
 
-DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
+DRAFT           DHCP Options and BOOTP Vendor Extensions   December 1996
 
 
 4.2. Non-Local Source Routing Enable/Disable Option
@@ -724,7 +725,7 @@ DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
 
 Alexander & Droms                                              [Page 13]
 
-DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
+DRAFT           DHCP Options and BOOTP Vendor Extensions   December 1996
 
 
 4.4. Maximum Datagram Reassembly Size
@@ -780,7 +781,7 @@ DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
 
 Alexander & Droms                                              [Page 14]
 
-DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
+DRAFT           DHCP Options and BOOTP Vendor Extensions   December 1996
 
 
 4.7. Path MTU Plateau Table Option
@@ -836,7 +837,7 @@ DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
 
 Alexander & Droms                                              [Page 15]
 
-DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
+DRAFT           DHCP Options and BOOTP Vendor Extensions   December 1996
 
 
 5.2. All Subnets are Local Option
@@ -892,7 +893,7 @@ DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
 
 Alexander & Droms                                              [Page 16]
 
-DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
+DRAFT           DHCP Options and BOOTP Vendor Extensions   December 1996
 
 
 5.5. Mask Supplier Option
@@ -948,7 +949,7 @@ DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
 
 Alexander & Droms                                              [Page 17]
 
-DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
+DRAFT           DHCP Options and BOOTP Vendor Extensions   December 1996
 
 
 5.8. Static Route Option
@@ -1004,7 +1005,7 @@ DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
 
 Alexander & Droms                                              [Page 18]
 
-DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
+DRAFT           DHCP Options and BOOTP Vendor Extensions   December 1996
 
 
 6. Link Layer Parameters per Interface
@@ -1060,7 +1061,7 @@ DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
 
 Alexander & Droms                                              [Page 19]
 
-DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
+DRAFT           DHCP Options and BOOTP Vendor Extensions   December 1996
 
 
 7. TCP Parameters
@@ -1116,7 +1117,7 @@ DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
 
 Alexander & Droms                                              [Page 20]
 
-DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
+DRAFT           DHCP Options and BOOTP Vendor Extensions   December 1996
 
 
 8. Application and Service Parameters
@@ -1172,7 +1173,7 @@ DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
 
 Alexander & Droms                                              [Page 21]
 
-DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
+DRAFT           DHCP Options and BOOTP Vendor Extensions   December 1996
 
 
 8.4. Vendor Specific Information
@@ -1228,7 +1229,7 @@ DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
 
 Alexander & Droms                                              [Page 22]
 
-DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
+DRAFT           DHCP Options and BOOTP Vendor Extensions   December 1996
 
 
 8.5. NetBIOS over TCP/IP Name Server Option
@@ -1284,7 +1285,7 @@ DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
 
 Alexander & Droms                                              [Page 23]
 
-DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
+DRAFT           DHCP Options and BOOTP Vendor Extensions   December 1996
 
 
    The code for this option is 46.  The length of this option is always
@@ -1340,7 +1341,7 @@ DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
 
 Alexander & Droms                                              [Page 24]
 
-DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
+DRAFT           DHCP Options and BOOTP Vendor Extensions   December 1996
 
 
 8.10. X Window System Display Manager Option
@@ -1396,7 +1397,7 @@ DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
 
 Alexander & Droms                                              [Page 25]
 
-DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
+DRAFT           DHCP Options and BOOTP Vendor Extensions   December 1996
 
 
 8.13. Mobile IP Home Agent option
@@ -1452,7 +1453,7 @@ DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
 
 Alexander & Droms                                              [Page 26]
 
-DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
+DRAFT           DHCP Options and BOOTP Vendor Extensions   December 1996
 
 
 8.16. Network News Transport Protocol (NNTP) Server Option
@@ -1508,7 +1509,7 @@ DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
 
 Alexander & Droms                                              [Page 27]
 
-DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
+DRAFT           DHCP Options and BOOTP Vendor Extensions   December 1996
 
 
 8.19. Default Internet Relay Chat (IRC) Server Option
@@ -1564,7 +1565,7 @@ DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
 
 Alexander & Droms                                              [Page 28]
 
-DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
+DRAFT           DHCP Options and BOOTP Vendor Extensions   December 1996
 
 
 9. DHCP Extensions
@@ -1620,7 +1621,7 @@ DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
 
 Alexander & Droms                                              [Page 29]
 
-DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
+DRAFT           DHCP Options and BOOTP Vendor Extensions   December 1996
 
 
    The code for this option is 52, and its length is 1.  Legal values
@@ -1676,7 +1677,7 @@ DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
 
 Alexander & Droms                                              [Page 30]
 
-DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
+DRAFT           DHCP Options and BOOTP Vendor Extensions   December 1996
 
 
 9.6. DHCP Message Type
@@ -1706,9 +1707,11 @@ DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
    This option is used in DHCPOFFER and DHCPREQUEST messages, and may
    optionally be included in the DHCPACK and DHCPNAK messages.  DHCP
    servers include this option in the DHCPOFFER in order to allow the
-   client to distinguish between lease offers.  DHCP clients indicate
-   which of several lease offers is being accepted by including this
-   option in a DHCPREQUEST message.
+   client to distinguish between lease offers.  DHCP clients use the
+   contents of the 'server identifier' field as the destination address
+   for any DHCP messages unicast to the DHCP server.  DHCP clients also
+   indicate which of several lease offers is being accepted by including
+   this option in a DHCPREQUEST message.
 
    The identifier is the IP address of the selected server.
 
@@ -1728,11 +1731,9 @@ DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
 
 
 
-
-
 Alexander & Droms                                              [Page 31]
 
-DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
+DRAFT           DHCP Options and BOOTP Vendor Extensions   December 1996
 
 
 9.8. Parameter Request List
@@ -1788,7 +1789,7 @@ DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
 
 Alexander & Droms                                              [Page 32]
 
-DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
+DRAFT           DHCP Options and BOOTP Vendor Extensions   December 1996
 
 
 9.10. Maximum DHCP Message Size
@@ -1844,7 +1845,7 @@ DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
 
 Alexander & Droms                                              [Page 33]
 
-DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
+DRAFT           DHCP Options and BOOTP Vendor Extensions   December 1996
 
 
 9.13. Vendor class identifier
@@ -1900,7 +1901,7 @@ DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
 
 Alexander & Droms                                              [Page 34]
 
-DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
+DRAFT           DHCP Options and BOOTP Vendor Extensions   December 1996
 
 
    The code for this option is 61, and its minimum length is 2.
@@ -1909,54 +1910,6 @@ DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
    +-----+-----+-----+-----+-----+---
    |  61 |  n  |  t1 |  i1 |  i2 | ...
    +-----+-----+-----+-----+-----+---
-
-9.15. User Class Information
-
-   This option is used by a DHCP client to optionally identify the type
-   or category of user or applications it represents.  The information
-   contained in this option is an NVT ASCII text object that represents
-   the user class of which the client is a member.
-
-   DHCP administrators may define specific user class identifiers to
-   convey information about a client's software configuration or about
-   its user's preferences.  For example, an identifier may specify that
-   a particular DHCP client is a member of the class "accounting
-   auditors", which have special service needs such as a particular
-   database server.
-
-   Servers not equipped to interpret any of user classes specified by a
-   client MUST ignore it (although it may be reported).  Otherwise,
-   servers SHOULD respond with the set of options corresponding to the
-   user class specified by the client.  Further, if the server responds,
-   it MUST return this option to the client.
-
-   Clients which do not receive information for the user class requested
-   SHOULD make an attempt to operate without it, although they may do so
-   (and may announce they are doing so) in a degraded mode.
-
-   The code for this option is 77.  The minimum length for this option
-   is two.
-
-   Code   Len     text1
-  +-----+-----+-----+-----+-----
-  | 77  |  N  |  c1 |  c2 | ...
-  +-----+-----+-----+-----+-----
-
-
-
-
-
-
-
-
-
-
-
-
-
-Alexander & Droms                                              [Page 35]
-
-DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
 
 
 10. Defining new extensions
@@ -1998,21 +1951,26 @@ DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
 
 11. Acknowledgements
 
-        The authors would like to thank Philip Almquist for his feedback
-        on this document.  The comments of the DHCP Working Group are
-        also gratefully acknowledged.  In particular, Mike Carney and
-        Jon Dreyer from SunSelect suggested the current format of the
-        Vendor-specific Information option.
-
-        RFC 1497 is based on earlier work by Philip Prindeville, with
-        help from Drew Perkins, Bill Croft, and Steve Deering.
+        The author thanks the many (and too numerous to mention!)
 
 
 
-
-Alexander & Droms                                              [Page 36]
+Alexander & Droms                                              [Page 35]
 
-DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
+DRAFT           DHCP Options and BOOTP Vendor Extensions   December 1996
+
+
+        members of the DHC WG for their tireless and ongoing efforts in
+        the development of DHCP and this document.
+
+
+        The efforts of J Allard, Mike Carney, Dave Lapp, Fred Lien and
+        John Mendonca in organizing DHCP interoperability testing
+        sessions are gratefully acknowledged.
+
+        The development of this document was supported in part by grants
+        from the Corporation for National Research Initiatives (CNRI),
+        Bucknell University and Sun Microsystems.
 
 
 12. References
@@ -2050,6 +2008,14 @@ DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
         [10] McLaughlin, L., "Line Printer Daemon Protocol", RFC 1179, The
              Wollongong Group, August 1990.
 
+
+
+
+Alexander & Droms                                              [Page 36]
+
+DRAFT           DHCP Options and BOOTP Vendor Extensions   December 1996
+
+
         [11] Accetta, M., "Resource Location Protocol", RFC 887, CMU,
              December 1983.
 
@@ -2063,14 +2029,6 @@ DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
              U. C. Berkeley, April 1984.
 
         [15] Hornig, C., "Standard for the Transmission of IP Datagrams over
-
-
-
-Alexander & Droms                                              [Page 37]
-
-DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
-
-
              Ethernet Networks", RFC 894, Symbolics, April 1984.
 
         [16] Postel, J. and J. Reynolds, "Standard for the Transmission of
@@ -2106,6 +2064,14 @@ DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
    Steve Alexander
    Silicon Graphics, Inc.
    2011 N. Shoreline Boulevard
+
+
+
+Alexander & Droms                                              [Page 37]
+
+DRAFT           DHCP Options and BOOTP Vendor Extensions   December 1996
+
+
    Mailstop 510
    Mountain View, CA 94043-1389
 
@@ -2122,5 +2088,40 @@ DRAFT           DHCP Options and BOOTP Vendor Extensions        May 1996
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 Alexander & Droms                                              [Page 38]
-
+
