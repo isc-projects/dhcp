@@ -16,6 +16,8 @@
   address and the lease corresponding to that address is available to
   that client.
 
+- Make it a warning rather than an error if resolv.conf is missing.
+
 970605
 
 - Add client-hostname token to lexer so that the parser can use it.

@@ -98,6 +98,16 @@ dhcpd(8)                                                 dhcpd(8)
        database, dhcpd does not automatically restart itself when
        it sees a change to the dhcpd.conf file.
 
+       Note:  We get a lot of complaints about this.   We realize
+       that it would be nice if one could send a  SIGHUP  to  the
+       server  and  have  it  reload  the database.   This is not
+       technically impossible, but it would require a great  deal
+       of work, our resources are extremely limited, and they can
+       be better spent  elsewhere.    So  please  don't  complain
+       about  this  on the mailing list unless you're prepared to
+       fund a project to implement this feature, or  prepared  to
+       do it yourself.
+
 CCOOMMMMAANNDD LLIINNEE
        The  names of the network interfaces on which dhcpd should
        listen for broadcasts may  be  specified  on  the  command
@@ -114,16 +124,6 @@ CCOOMMMMAANNDD LLIINNEE
        the udp port number on which dhcpd should listen.  This is
        mostly useful for debugging purposes.
 
-       To run dhcpd as a foreground process, rather than allowing
-       it  to  run  as  a  daemon  in the background, the --ff flag
-       should be specified.  This is useful  when  running  dhcpd
-       under  a  debugger,  or  when running it out of inittab on
-       System V systems.
-
-       To have dhcpd log to the standard error descriptor,  spec-
-       ify  the  --dd  flag.  This can be useful for debugging, and
-       also at sites where a complete log of  all  dhcp  activity
-       must  be  kept  but  syslogd  is not reliable or otherwise
 
 
 
@@ -136,8 +136,18 @@ CCOOMMMMAANNDD LLIINNEE
 dhcpd(8)                                                 dhcpd(8)
 
 
-       cannot be used.   Normally,  dhcpd  will  log  all  output
-       using  the syslog(3) function with the log facility set to
+       To run dhcpd as a foreground process, rather than allowing
+       it  to  run  as  a  daemon  in the background, the --ff flag
+       should be specified.  This is useful  when  running  dhcpd
+       under  a  debugger,  or  when running it out of inittab on
+       System V systems.
+
+       To have dhcpd log to the standard error descriptor,  spec-
+       ify  the  --dd  flag.  This can be useful for debugging, and
+       also at sites where a complete log of  all  dhcp  activity
+       must be kept but syslogd is not reliable or otherwise can-
+       not be used.   Normally, dhcpd will log all  output  using
+       the  syslog(3)  function  with  the  log  facility  set to
        LOG_DAEMON.
 
        Dhcpd can be made to use an alternate  configuration  file
@@ -179,17 +189,7 @@ SSuubbnneettss
        left out entirely, but the subnet statement must appear.
 
 
-LLeeaassee LLeennggtthhss
-       DHCP leases can be assigned almost any  length  from  zero
-       seconds  to  infinity.   What lease length makes sense for
-       any given subnet, or for any given installation, will vary
-       depending on the kinds of hosts being served.
 
-       For  example,  in  an office environment where systems are
-       added from time to time and removed from time to time, but
-       move relatively infrequently, it might make sense to allow
-       lease times of a month of more.   In a final test environ-
-       ment  on  a manufacturing floor, it may make more sense to
 
 
 
@@ -202,6 +202,17 @@ LLeeaassee LLeennggtthhss
 dhcpd(8)                                                 dhcpd(8)
 
 
+LLeeaassee LLeennggtthhss
+       DHCP leases can be assigned almost any  length  from  zero
+       seconds  to  infinity.   What lease length makes sense for
+       any given subnet, or for any given installation, will vary
+       depending on the kinds of hosts being served.
+
+       For  example,  in  an office environment where systems are
+       added from time to time and removed from time to time, but
+       move relatively infrequently, it might make sense to allow
+       lease times of a month of more.   In a final test environ-
+       ment  on  a manufacturing floor, it may make more sense to
        assign a maximum lease length of 30 minutes - enough  time
        to  go through a simple test procedure on a network appli-
        ance before packaging it up for delivery.
@@ -244,18 +255,7 @@ BBOOOOTTPP SSuuppppoorrtt
               filename "/tftpboot/haagen.boot";
             }
 
-OOppttiioonnss
-       DHCP  (and  also  BOOTP  with Vendor Extensions) provide a
-       mechanism whereby the server can provide the  client  with
-       information  about  how to configure its network interface
-       (e.g., subnet mask), and also how the  client  can  access
-       various  network  services  (e.g., DNS, IP routers, and so
-       on).
 
-       These options can be specified on a per-subnet basis, and,
-       for  BOOTP  clients,  also on a per-client basis.   In the
-       event that a BOOTP client  declaration  specifies  options
-       that  are  also  specified  in its subnet declaration, the
 
 
 
@@ -268,6 +268,18 @@ OOppttiioonnss
 dhcpd(8)                                                 dhcpd(8)
 
 
+OOppttiioonnss
+       DHCP  (and  also  BOOTP  with Vendor Extensions) provide a
+       mechanism whereby the server can provide the  client  with
+       information  about  how to configure its network interface
+       (e.g., subnet mask), and also how the  client  can  access
+       various  network  services  (e.g., DNS, IP routers, and so
+       on).
+
+       These options can be specified on a per-subnet basis, and,
+       for  BOOTP  clients,  also on a per-client basis.   In the
+       event that a BOOTP client  declaration  specifies  options
+       that  are  also  specified  in its subnet declaration, the
        options specified in the client  declaration  take  prece-
        dence.    An  reasonably complete DHCP configuration might
        look something like this:
@@ -310,18 +322,6 @@ AAUUTTHHOORR
        provided by the Internet Software  Corporation.   Informa-
        tion  about  the Internet Software Consortium can be found
        at hhttttpp::////wwwwww..iisscc..oorrgg//iisscc..
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
