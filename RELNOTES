@@ -1,6 +1,6 @@
 	    Internet Software Consortium DHCP Distribution
-		    Version 3, Release Candidate 11
-			   August 14, 2001
+		    Version 3, Release Candidate 12
+			   August 23, 2001
 
 			    Release Notes
 
@@ -55,6 +55,24 @@ Measurement Systems, Igor Sharfmesser at Kazakh Telecom, and Brian
 Murrell at BC Tel Advanced Communications.  I'd like to express my
 thanks to all of these good people here, both for working on the code
 and for prodding me into improving it.
+
+		Changes since 3.0 Release Candidate 11
+
+- Always return a subnet selection option if one is sent.
+
+- Fix a warning that was being printed because an automatic data
+  structure wasn't zeroed.
+
+- Fix some failover state transitions that were being handled
+  incorrectly.
+
+- When supersede_lease is called on a lease whose end time has already
+  expired, but for which a state transition has not yet been done, do
+  a state transition.   This fixes the case where if the secondary
+  allocated a lease to a client and the lease "expired" while the
+  secondary was in partner-down, no expiry event would actually
+  happen, so the lease would remain active until the primary was
+  restarted.
 
 		Changes since 3.0 Release Candidate 10
 
