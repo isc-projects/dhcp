@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: clparse.c,v 1.15 1998/03/16 20:00:00 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: clparse.c,v 1.16 1998/04/20 18:05:44 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -737,76 +737,16 @@ struct option *parse_option_decl (cfile, options)
 	u_int8_t buf [4];
 	u_int8_t hunkbuf [1024];
 	int hunkix = 0;
-	char *vendor;
 	char *fmt;
-	struct universe *universe;
 	struct option *option;
 	struct iaddr ip_addr;
 	u_int8_t *dp;
 	int len;
 	int nul_term = 0;
 
-	token = next_token (&val, cfile);
-	if (!is_identifier (token)) {
-		parse_warn ("expecting identifier after option keyword.");
-		if (token != SEMI)
-			skip_to_semi (cfile);
-		return (struct option *)0;
-	}
-	vendor = malloc (strlen (val) + 1);
-	if (!vendor)
-		error ("no memory for vendor information.");
-	strcpy (vendor, val);
-	token = peek_token (&val, cfile);
-	if (token == DOT) {
-		/* Go ahead and take the DOT token... */
-		token = next_token (&val, cfile);
-
-		/* The next token should be an identifier... */
-		token = next_token (&val, cfile);
-		if (!is_identifier (token)) {
-			parse_warn ("expecting identifier after '.'");
-			if (token != SEMI)
-				skip_to_semi (cfile);
-			return (struct option *)0;
-		}
-
-		/* Look up the option name hash table for the specified
-		   vendor. */
-		universe = ((struct universe *)
-			    hash_lookup (&universe_hash,
-					 (unsigned char *)vendor, 0));
-		/* If it's not there, we can't parse the rest of the
-		   declaration. */
-		if (!universe) {
-			parse_warn ("no vendor named %s.", vendor);
-			skip_to_semi (cfile);
-			return (struct option *)0;
-		}
-	} else {
-		/* Use the default hash table, which contains all the
-		   standard dhcp option names. */
-		val = vendor;
-		universe = &dhcp_universe;
-	}
-
-	/* Look up the actual option info... */
-	option = (struct option *)hash_lookup (universe -> hash,
-					       (unsigned char *)val, 0);
-
-	/* If we didn't get an option structure, it's an undefined option. */
-	if (!option) {
-		if (val == vendor)
-			parse_warn ("no option named %s", val);
-		else
-			parse_warn ("no option named %s for vendor %s",
-				    val, vendor);
-		skip_to_semi (cfile);
-		return (struct option *)0;
-	}
-
-	/* Free the initial identifier token. */
-	free (vendor);
+	option = parse_option_name (cfile);
+	if (!option)
+		return;
 
 	/* Parse the option data... */
 	do {
