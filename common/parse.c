@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.94 2000/12/29 06:45:49 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.95 2001/01/03 23:33:18 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -4121,7 +4121,7 @@ int parse_option_statement (result, cfile, lookups, option, op)
 				continue;
 			tmp = expr;
 			expr = (struct expression *)0;
-			if (!parse_option_token (&expr, cfile, fmt,
+			if (!parse_option_token (&expr, cfile, &fmt,
 						 tmp, uniform, lookups)) {
 				if (fmt [1] != 'o') {
 					if (tmp)
@@ -4169,7 +4169,7 @@ int parse_option_statement (result, cfile, lookups, option, op)
 int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 	struct expression **rv;
 	struct parse *cfile;
-	const char *fmt;
+	const char **fmt;
 	struct expression *expr;
 	int uniform;
 	int lookups;
@@ -4185,11 +4185,11 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 	const char *f;
 	struct enumeration_value *e;
 
-	switch (*fmt) {
+	switch (**fmt) {
 	      case 'U':
 		token = peek_token (&val, cfile);
 		if (!is_identifier (token)) {
-			if (fmt [1] != 'o') {
+			if ((*fmt) [1] != 'o') {
 				parse_warn (cfile, "expecting identifier.");
 				skip_to_semi (cfile);
 			}
@@ -4202,8 +4202,8 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 		break;
 
 	      case 'E':
-		fmt = strchr (fmt, '.');
-		if (!fmt) {
+		*fmt = strchr (*fmt, '.');
+		if (!*fmt) {
 			parse_warn (cfile,
 				    "malformed encapsulation format (bug!)");
 			skip_to_semi (cfile);
@@ -4225,7 +4225,7 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 					      strlen (val), 1, 1))
 				log_fatal ("No memory for \"%s\"", val);
 		} else {
-			if (fmt [1] != 'o') {
+			if ((*fmt) [1] != 'o') {
 				parse_warn (cfile, "expecting string %s.",
 					    "or hexadecimal data");
 				skip_to_semi (cfile);
@@ -4237,7 +4237,7 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 	      case 't': /* Text string... */
 		token = peek_token (&val, cfile);
 		if (token != STRING && !is_identifier (token)) {
-			if (fmt [1] != 'o') {
+			if ((*fmt) [1] != 'o') {
 				parse_warn (cfile, "expecting string.");
 				if (token != SEMI)
 					skip_to_semi (cfile);
@@ -4251,8 +4251,8 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 		break;
 		
 	      case 'N':
-		f = fmt;
-		fmt = strchr (fmt, '.');
+		f = (*fmt) + 1;
+		*fmt = strchr (*fmt, '.');
 		if (!fmt) {
 			parse_warn (cfile, "malformed %s (bug!)",
 				    "enumeration format");
@@ -4266,7 +4266,7 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 				    "identifier expected");
 			goto foo;
 		}
-		e = find_enumeration_value (f, fmt - f, val);
+		e = find_enumeration_value (f, (*fmt) - f, val);
 		if (!e) {
 			parse_warn (cfile, "unknown value");
 			goto foo;
@@ -4303,7 +4303,7 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 	      check_number:
 		if (token != NUMBER) {
 		      need_number:
-			if (fmt [1] != 'o') {
+			if ((*fmt) [1] != 'o') {
 				parse_warn (cfile, "expecting number.");
 				if (token != SEMI)
 					skip_to_semi (cfile);
@@ -4341,10 +4341,10 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 	      case 'f': /* Boolean flag. */
 		token = peek_token (&val, cfile);
 		if (!is_identifier (token)) {
-			if (fmt [1] != 'o')
+			if ((*fmt) [1] != 'o')
 				parse_warn (cfile, "expecting identifier.");
 		      bad_flag:
-			if (fmt [1] != 'o') {
+			if ((*fmt) [1] != 'o') {
 				if (token != SEMI)
 					skip_to_semi (cfile);
 			}
@@ -4359,7 +4359,7 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 		else if (!strcasecmp (val, "ignore"))
 			buf [0] = 2;
 		else {
-			if (fmt [1] != 'o')
+			if ((*fmt) [1] != 'o')
 				parse_warn (cfile, "expecting boolean.");
 			goto bad_flag;
 		}
@@ -4370,7 +4370,7 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 
 	      default:
 		parse_warn (cfile, "Bad format %c in parse_option_token.",
-			    *fmt);
+			    **fmt);
 		skip_to_semi (cfile);
 		return 0;
 	}
