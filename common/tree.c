@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.49 1999/09/22 01:45:49 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.50 1999/09/22 17:27:01 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1872,7 +1872,7 @@ int write_expression (file, expr, col, indent)
 					expr -> data.equal [0], col, indent);
 		col = token_print_indent (file, col, indent, " ", " ", s);
 		col = write_expression (file,
-					expr -> data.equal [0], col, indent);
+					expr -> data.equal [1], col, indent);
 		break;
 
 	      case expr_substring:
