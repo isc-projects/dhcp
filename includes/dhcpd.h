@@ -580,6 +580,7 @@ extern struct subnet *find_grouped_subnet PROTO ((struct shared_network *,
 						  struct iaddr));
 extern struct subnet *find_subnet PROTO ((struct iaddr));
 void enter_shared_network PROTO ((struct shared_network *));
+int subnet_inner_than PROTO ((struct subnet *, struct subnet *, int));
 void enter_subnet PROTO ((struct subnet *));
 void enter_lease PROTO ((struct lease *));
 int supersede_lease PROTO ((struct lease *, struct lease *, int));
@@ -746,9 +747,6 @@ void reinitialize_interfaces PROTO ((void));
 void dispatch PROTO ((void));
 int locate_network PROTO ((struct packet *));
 void add_timeout PROTO ((TIME, void (*) PROTO ((void *)), void *));
-#if 0
-void add_fast_timeout PROTO ((UTIME, void (*) PROTO ((void *)), void *));
-#endif
 void cancel_timeout PROTO ((void (*) PROTO ((void *)), void *));
 void add_protocol PROTO ((char *, int,
 			  void (*) PROTO ((struct protocol *)), void *));
