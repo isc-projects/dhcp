@@ -4,7 +4,8 @@
    can't be assumed to be aligned. */
 
 /*
- * Copyright (c) 1995 The Internet Software Consortium.  All rights reserved.
+ * Copyright (c) 1995, 1996 The Internet Software Consortium.
+ * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,76 +43,76 @@
 
 #ifndef lint
 static char copyright[] =
-"@(#) Copyright (c) 1995 The Internet Software Consortium.  All rights reserved.\n";
+"@(#) Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
 
-unsigned long getULong (buf)
+u_int32_t getULong (buf)
 	unsigned char *buf;
 {
 	unsigned long ibuf;
 
-	memcpy (&ibuf, buf, sizeof (unsigned long));
+	memcpy (&ibuf, buf, sizeof (u_int32_t));
 	return ntohl (ibuf);
 }
 
-long getLong (buf)
+int32_t getLong (buf)
 	unsigned char *buf;
 {
 	long ibuf;
 
-	memcpy (&ibuf, buf, sizeof (long));
+	memcpy (&ibuf, buf, sizeof (int32_t));
 	return ntohl (ibuf);
 }
 
-unsigned short getUShort (buf)
+u_int16_t getUShort (buf)
 	unsigned char *buf;
 {
 	unsigned short ibuf;
 
-	memcpy (&ibuf, buf, sizeof (unsigned short));
+	memcpy (&ibuf, buf, sizeof (u_int16_t));
 	return ntohs (ibuf);
 }
 
-short getShort (buf)
+int16_t getShort (buf)
 	unsigned char *buf;
 {
 	short ibuf;
 
-	memcpy (&ibuf, buf, sizeof (short));
+	memcpy (&ibuf, buf, sizeof (int16_t));
 	return ntohs (ibuf);
 }
 
 void putULong (obuf, val)
 	unsigned char *obuf;
-	unsigned long val;
+	u_int32_t val;
 {
-	unsigned long tmp = htonl (val);
+	u_int32_t tmp = htonl (val);
 	memcpy (obuf, &tmp, sizeof tmp);
 }
 
 void putLong (obuf, val)
 	unsigned char *obuf;
-	long val;
+	int32_t val;
 {
-	long tmp = htonl (val);
+	int32_t tmp = htonl (val);
 	memcpy (obuf, &tmp, sizeof tmp);
 }
 
 void putUShort (obuf, val)
 	unsigned char *obuf;
-	unsigned short val;
+	u_int16_t val;
 {
-	unsigned short tmp = htonl (val);
+	u_int16_t tmp = htonl (val);
 	memcpy (obuf, &tmp, sizeof tmp);
 }
 
 void putShort (obuf, val)
 	unsigned char *obuf;
-	short val;
+	int16_t val;
 {
-	short tmp = htonl (val);
+	int16_t tmp = htonl (val);
 	memcpy (obuf, &tmp, sizeof tmp);
 }
 
