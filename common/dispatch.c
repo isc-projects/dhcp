@@ -49,7 +49,6 @@ static char copyright[] =
 #include <sys/ioctl.h>
 
 struct interface_info *interfaces;
-static struct hardware_link *interface_links;
 
 static void got_one PROTO ((struct interface_info *));
 
@@ -67,8 +66,6 @@ void discover_interfaces ()
 	int i;
 	int sock;
 	int address_count = 0;
-	int ifix = 0;
-	struct hardware_link *lp;
 	struct subnet *subnet;
 	struct shared_network *share;
 	struct sockaddr_in *foo;
@@ -323,17 +320,10 @@ void dispatch ()
 
 void dispatch ()
 {
-	struct sockaddr_in from;
-	struct hardware hfrom;
-	struct iaddr ifrom;
 	fd_set r, w, x;
 	struct interface_info *l;
 	int max = 0;
 	int count;
-	int result;
-	static unsigned char packbuf [4095]; /* Packet input buffer.
-						Must be as large as largest
-						possible MTU. */
 
 	FD_ZERO (&r);
 	FD_ZERO (&w);

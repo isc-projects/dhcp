@@ -134,7 +134,6 @@ struct host_decl *find_hosts_by_haddr (htype, haddr, hlen)
 	int hlen;
 {
 	struct host_decl *foo;
-	int i;
 
 	foo = (struct host_decl *)hash_lookup (host_hw_addr_hash,
 					       haddr, hlen);
@@ -146,7 +145,6 @@ struct host_decl *find_hosts_by_uid (data, len)
 	int len;
 {
 	struct host_decl *foo;
-	int i;
 
 	foo = (struct host_decl *)hash_lookup (host_uid_hash, data, len);
 	return foo;
@@ -645,7 +643,6 @@ void write_leases ()
 {
 	struct lease *l;
 	struct shared_network *s;
-	int i;
 
 	for (s = shared_networks; s; s = s -> next) {
 		for (l = s -> leases; l; l = l -> next) {
@@ -661,7 +658,6 @@ void dump_subnets ()
 	struct lease *l;
 	struct shared_network *s;
 	struct subnet *n;
-	int i;
 
 	for (s = shared_networks; s; s = s -> next) {
 		for (n = subnets; n; n = n -> next_sibling) {

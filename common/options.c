@@ -165,8 +165,6 @@ void cons_options (inpacket, outpacket, options, overload)
 	int main_buffer_size;
 	int mainbufix, bufix;
 	int option_size;
-	int result;
-	int i;
 
 	/* If the client has provided a maximum DHCP message size,
 	   use that.   Otherwise, we use the default MTU size (576 bytes). */
@@ -297,10 +295,6 @@ int store_options (buffer, buflen, options, priority_list, priority_len,
 {
 	int bufix = 0;
 	int option_stored [256];
-	int missed = 0;
-	int missed_code = 0;
-	int missed_length = 0;
-	int result;
 	int i;
 	int ix;
 

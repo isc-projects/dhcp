@@ -61,7 +61,6 @@ int if_register_socket (info, interface)
 {
 	struct sockaddr_in name;
 	int sock;
-	struct socklist *tmp;
 	int flag;
 	static int once = 0;
 
