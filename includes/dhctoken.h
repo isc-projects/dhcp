@@ -201,7 +201,20 @@ enum dhcp_token {
 	UPDATED_DNS_RR = 418,
 	DNS_DELETE = 419,
 	DUPLICATES = 420,
-	DECLINES = 421
+	DECLINES = 421,
+	TSTP = 422,
+	TSFP = 423,
+	OWNER = 424,
+	IS = 425,
+	HBA = 426,
+	MAX_UNACKED_UPDATES = 427,
+	MCLT = 428,
+	SPLIT = 429,
+	AT = 430,
+	NO = 431,
+	TOKEN_DELETE,
+	NS_UPDATE,
+	UPDATE
 };
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\
