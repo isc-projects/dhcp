@@ -60,8 +60,8 @@ int main (argc, argv)
 		exit (1);
 	}
 
-	status = dhcpctl_set_string_value (group_handle, "
-option domain-name \"foo.org\";
+	status = dhcpctl_set_string_value (group_handle, "\n\
+option domain-name \"foo.org\";\n\
 option domain-name-servers 10.0.0.1, 10.0.0.2;",
 					   "statements");
 	if (status != ISC_R_SUCCESS) {
@@ -168,8 +168,8 @@ option domain-name-servers 10.0.0.1, 10.0.0.2;",
 		exit (1);
 	}
 
-       status = dhcpctl_set_string_value (host_handle, "
-option host-name \"bar\";
+       status = dhcpctl_set_string_value (host_handle, "\n\
+option host-name \"bar\";\n\
 option smtp-server 10.0.0.1;",
                                           "statements");
        if (status != ISC_R_SUCCESS) {
