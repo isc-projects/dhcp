@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: db.c,v 1.19 1998/08/05 19:32:20 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: db.c,v 1.20 1998/11/11 08:00:11 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -95,6 +95,12 @@ int write_lease (lease)
 	if (errno) {
 		++errors;
 	}
+
+	/* If this lease is billed to a class and is still valid,
+	   write it out. */
+	if (lease -> billing_class && lease -> ends > cur_time)
+		if (!write_billing_class (lease -> billing_class))
+			++errors;
 
 	if (lease -> hardware_addr.hlen) {
 		errno = 0;
@@ -172,6 +178,60 @@ int write_lease (lease)
 	if (errors)
 		note ("write_lease: unable to write lease %s",
 		      piaddr (lease -> ip_addr));
+	return !errors;
+}
+
+/* Write a spawned class to the database file. */
+
+int write_billing_class (class)
+	struct class *class;
+{
+	int errors = 0;
+	int i;
+
+	if (!class -> superclass) {
+		errno = 0;
+		fprintf (db_file, "\n\tbilling class \"%s\";", class -> name);
+		return !errno;
+	}
+
+	errno = 0;
+	fprintf (db_file, "\n\tbilling subclass \"%s\"",
+		 class -> superclass -> name);
+	if (errno)
+		++errors;
+
+	for (i = 0; i < class -> hash_string.len; i++)
+		if (!isascii (class -> hash_string.data [i]) ||
+		    !isprint (class -> hash_string.data [i]))
+			break;
+	if (i == class -> hash_string.len) {
+		errno = 0;
+		fprintf (db_file, " \"%*.*s\";",
+			 class -> hash_string.len,
+			 class -> hash_string.len,
+			 class -> hash_string.data);
+		if (errno)
+			++errors;
+	} else {
+		errno = 0;
+		fprintf (db_file, " %2.2x", class -> hash_string.data [0]);
+		if (errno)
+			++errors;
+		for (i = 1; i < class -> hash_string.len; i++) {
+			errno = 0;
+			fprintf (db_file, ":%2.2x",
+				 class -> hash_string.data [i]);
+			if (errno)
+				++errors;
+		}
+		errno = 0;
+		fprintf (db_file, ";");
+		if (errno)
+			++errors;
+	}
+
+	class -> dirty = 0;
 	return !errors;
 }
 
