@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.118 1999/10/15 15:14:31 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.119 1999/10/20 16:52:25 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1027,48 +1027,36 @@ void ack_lease (packet, lease, offer, when, msg)
 			lease -> host = (struct host_decl *)0;
 	}
 
-	/* Drop the request if it's not allowed for this client. */
+	/* Drop the request if it's not allowed for this client.   By
+	   default, unknown clients are allowed. */
 	if (!lease -> host &&
 	    (oc = lookup_option (&server_universe, state -> options,
-				 SV_BOOT_UNKNOWN_CLIENTS))) {
-		if (evaluate_option_cache (&d1, packet, lease,
-					   packet -> options, state -> options,
-					   oc)) {
-			if (d1.len && !d1.data [0]) {
-				log_info ("%s: unknown", msg);
-				data_string_forget (&d1, "ack_lease");
-				free_lease_state (state, "ack_lease");
-				static_lease_dereference (lease, "ack_lease");
-				return;
-			}
-			data_string_forget (&d1, "ack_lease"); /* mmm, C... */
-		}
+				 SV_BOOT_UNKNOWN_CLIENTS)) &&
+	    !evaluate_boolean_option_cache (packet, lease, packet -> options,
+					    state -> options, oc)) {
+		free_lease_state (state, "ack_lease");
+		static_lease_dereference (lease, "ack_lease");
+		return;
 	} 
 
 	/* Drop the request if it's not allowed for this client. */
 	if (!offer &&
 	    (oc = lookup_option (&server_universe, state -> options,
-				 SV_ALLOW_BOOTP))) {
-		if (evaluate_option_cache (&d1, packet, lease,
-					   packet -> options, state -> options,
-					   oc)) {
-			if (d1.len && !d1.data [0]) {
-				data_string_forget (&d1, "ack_lease");
-				log_info ("%s: bootp disallowed", msg);
-				free_lease_state (state, "ack_lease");
-				static_lease_dereference (lease, "ack_lease");
-				return;
-			}
-			data_string_forget (&d1, "ack_lease");
-		}
+				   SV_ALLOW_BOOTP)) &&
+	    !evaluate_boolean_option_cache (packet, lease, packet -> options,
+					    state -> options, oc)) {
+		log_info ("%s: bootp disallowed", msg);
+		free_lease_state (state, "ack_lease");
+		static_lease_dereference (lease, "ack_lease");
+		return;
 	} 
 
 	/* Drop the request if booting is specifically denied. */
 	oc = lookup_option (&server_universe, state -> options,
 			    SV_ALLOW_BOOTING);
 	if (oc &&
-	    evaluate_option_cache (&d1, packet, lease,
-				   packet -> options, state -> options, oc)) {
+	    !evaluate_boolean_option_cache (packet, lease, packet -> options,
+					    state -> options, oc)) {
 		if (d1.len && !d1.data [0]) {
 			log_info ("%s: booting disallowed", msg);
 			data_string_forget (&d1, "ack_lease");
