@@ -149,7 +149,7 @@ typedef struct {
 
 typedef struct {
 	OMAPI_OBJECT_PREAMBLE;
-	char *peer_name;
+	struct option_cache *peer_address;
 	unsigned peer_port;
 	int options_present;
 	enum dhcp_flink_state {
@@ -170,19 +170,62 @@ typedef struct {
 typedef struct {
 	OMAPI_OBJECT_PREAMBLE;
 	unsigned local_port;
-	char *peer_name;
 } dhcp_failover_listener_t;
+
+/* A failover peer. */
+enum failover_state {
+	invalid_state,
+	partner_down,
+	normal,
+	communications_interrupted,
+	potential_conflict,
+	recover
+};
 
 typedef struct _dhcp_failover_state {
 	OMAPI_OBJECT_PREAMBLE;
 	struct _dhcp_failover_state *next;
-	char *remote_peer;
+	char *name;			/* Name of this failover instance. */
+	struct option_cache *address;	/* Partner's IP address or hostname. */
 	int listen_port;
+	int port;			/* Partner's TCP port. */
 	struct iaddr server_addr;
-	unsigned max_flying_updates;
-	unsigned partner_timeout;
-	unsigned mclt;
+	u_int32_t max_flying_updates;
+	u_int32_t mclt;
 	u_int8_t *hba;
+
+	enum failover_state partner_state;
+	TIME partner_stos;
+	enum failover_state my_state;
+	TIME my_stos;
+
+	enum {
+		primary, secondary
+	} i_am;		/* We are primary or secondary in this relationship. */
+
+	TIME last_packet_sent;		/* Timestamp on last packet we sent. */
+	TIME last_timestamp_received;	/* The last timestamp we sent that
+					   has been returned by our partner. */
+	TIME skew;	/* The skew between our clock and our partner's. */
+	u_int32_t max_transmit_idle; /* Always send a poll if we haven't sent
+					some other packet more recently than
+					this. */
+	u_int32_t max_response_delay;	/* If the returned timestamp on the
+					   last packet we received is older
+					   than this, communications have been
+					   interrupted. */
+	/* The ack queue and update queue are circular lists, so you can
+	   tell whether or not a lease is on one of the lists by looking
+	   at its next pointer.   Or maybe we should just flag it as
+	   UPDATE_PENDING or ACK_PENDING.    But anyway, two seperate
+	   queues.   Hm. Maybe these should be hash tables, with no pointer
+	   from the peer to the lease. */
+	struct lease *update_queue;	/* List of leases we haven't sent
+					   to peer. */
+	struct lease *ack_queue;	/* List of lease updates the peer
+					   hasn't yet acked. */
+	int cur_unacked_updates;	/* Number of updates we've sent
+					   that have not yet been acked. */
 } dhcp_failover_state_t;
 
 #define DHCP_FAILOVER_VERSION		1
