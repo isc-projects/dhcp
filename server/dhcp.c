@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.100.2.19 2000/06/26 23:15:10 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.100.2.20 2000/07/01 04:46:06 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2389,6 +2389,7 @@ struct lease *mockup_lease (packet, share, hp)
 {
 	static struct lease mock;
 	
+	memset (&mock, 0, sizeof mock);
 	mock.subnet = find_host_for_network (&hp, &mock.ip_addr, share);
 	if (!mock.subnet)
 		return (struct lease *)0;
