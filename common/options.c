@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.53 2000/01/26 17:22:26 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.54 2000/01/27 22:16:08 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -884,7 +884,7 @@ struct option_cache *lookup_hashed_option (universe, options, code)
 
 	hash = options -> universes [universe -> index];
 
-	hashix = ((code & 31) + ((code >> 5) & 31)) % 17;
+	hashix = compute_option_hash (code);
 	for (bptr = hash [hashix]; bptr; bptr = bptr -> cdr) {
 		if (((struct option_cache *)(bptr -> car)) -> option -> code ==
 		    code)
@@ -915,8 +915,7 @@ void save_hashed_option (universe, options, oc)
 	pair *hash = options -> universes [universe -> index];
 
 	/* Compute the hash. */
-	hashix = ((oc -> option -> code & 31) +
-		  ((oc -> option -> code >> 5) & 31)) % 17;
+	hashix = compute_option_hash (oc -> option -> code);
 
 	/* If there's no hash table, make one. */
 	if (!hash) {
@@ -987,8 +986,7 @@ void delete_hashed_option (universe, options, code)
 		return;
 
 	/* Try to find an existing option matching the new one. */
-	hashix = ((code & 31) +
-		  ((code >> 5) & 31)) % 17;
+	hashix = compute_option_hash (code);
 	for (bptr = hash [hashix]; bptr; bptr = bptr -> cdr) {
 		if (((struct option_cache *)(bptr -> car)) -> option -> code
 		    == code)
@@ -1053,9 +1051,11 @@ int option_cache_dereference (ptr, file, line)
 
 }
 
-int hashed_option_state_dereference (universe, state)
+int hashed_option_state_dereference (universe, state, file, line)
 	struct universe *universe;
 	struct option_state *state;
+	const char *file;
+	int line;
 {
 	pair *heads;
 	pair cp, next;
@@ -1072,19 +1072,21 @@ int hashed_option_state_dereference (universe, state)
 		for (cp = heads [i]; cp; cp = next) {
 			next = cp -> cdr;
 			option_cache_dereference
-				((struct option_cache **)&cp -> car, MDL);
-			free_pair (cp, MDL);
+				((struct option_cache **)&cp -> car, file, line);
+			free_pair (cp, file, line);
 		}
 	}
 
-	dfree (heads, MDL);
+	dfree (heads, file, line);
 	state -> universes [universe -> index] = (void *)0;
 	return 1;
 }
 
-int agent_option_state_dereference (universe, state)
+int agent_option_state_dereference (universe, state, file, line)
 	struct universe *universe;
 	struct option_state *state;
+	const char *file;
+	int line;
 {
 	struct agent_options *a, *na;
 	struct option_tag *ot, *not;
@@ -1099,11 +1101,11 @@ int agent_option_state_dereference (universe, state)
 		na = a -> next;
 		for (ot = a -> first; ot; ot = not) {
 			not = ot -> next;
-			dfree (ot, MDL);
+			dfree (ot, file, line);
 		}
 	}
 
-	dfree (state -> universes [universe -> index], MDL);
+	dfree (state -> universes [universe -> index], file, line);
 	state -> universes [universe -> index] = (void *)0;
 	return 1;
 }
@@ -1363,6 +1365,9 @@ void do_packet (interface, packet, len, from_port, from, hfrom)
 #endif
 #if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL)
 	dmalloc_dump_outstanding ();
+#endif
+#if defined (DEBUG_RC_HISTORY)
+	dump_rc_history ();
 #endif
 }
 
