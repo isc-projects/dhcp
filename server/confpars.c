@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.73.2.3 1999/11/03 19:50:18 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.73.2.4 1999/11/13 04:02:40 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -387,7 +387,6 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 				parse_warn ("option space definitions %s",
 					    "may not be scoped.");
 				skip_to_semi (cfile);
-				free_option (option, "parse_statement");
 				break;
 			}
 			parse_option_space_decl (cfile);
