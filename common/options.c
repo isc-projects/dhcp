@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.21 1997/02/19 10:52:14 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.22 1997/02/22 08:32:04 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -398,10 +398,11 @@ int store_options (buffer, buflen, options, priority_list, priority_len,
 
 /* Format the specified option so that a human can easily read it. */
 
-char *pretty_print_option (code, data, len)
+char *pretty_print_option (code, data, len, emit_commas)
 	unsigned char code;
 	unsigned char *data;
 	int len;
+	int emit_commas;
 {
 	static char optbuf [32768]; /* XXX */
 	int hunksize = 0;
@@ -489,7 +490,11 @@ char *pretty_print_option (code, data, len)
 		for (j = 0; j < numelem; j++) {
 			switch (fmtbuf [j]) {
 			      case 't':
+				*op++ = '"';
 				strcpy (op, dp);
+				op += strlen (dp);
+				*op++ = '"';
+				*op = 0;
 				break;
 			      case 'I':
 				foo.s_addr = htonl (getULong (dp));
@@ -530,7 +535,8 @@ char *pretty_print_option (code, data, len)
 				*op++ = ' ';
 		}
 		if (i + 1 < numhunk) {
-			*op++ = ',';
+			if (emit_commas)
+				*op++ = ',';
 			*op++ = ' ';
 		}
 		
