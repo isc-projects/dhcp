@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.30 1998/04/09 04:31:59 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.31 1998/04/19 23:19:14 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -721,5 +721,42 @@ void do_packet (interface, packbuf, len, from_port, from, hfrom)
 		bootp (&tp);
 
 	/* XXX what about freeing the options ?!? */
+}
+
+struct data_string dhcp_option_lookup (packet, code)
+	struct packet *packet;
+	int code;
+{
+	struct data_string result;
+
+	result.len = packet -> options [code].len;
+	result.data = packet -> options [code].data;
+	result.terminated = 1;
+	result.buffer = (unsigned char *)0;
+	return result;
+}
+
+struct data_string agent_suboption_lookup (packet, code)
+	struct packet *packet;
+	int code;
+{
+	struct agent_options *ao;
+	struct option_tag *t;
+	struct data_string result;
+
+	memset (&result, 0, sizeof result);
+
+	/* Find the last set of agent options and consider it definitive. */
+	if (ao) {
+		for (ao = packet -> agent_options; ao -> next; ao = ao -> next)
+			;
+		for (t = ao -> first; t; t = t -> next)
+			if (t -> data [0] == code) {
+				result.len = t -> data [1];
+				result.data = &t -> data [2];
+				break;
+			}
+	}
+	return result;
 }
 
