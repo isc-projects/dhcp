@@ -3,7 +3,7 @@
    Server-specific in-memory database support. */
 
 /*
- * Copyright (c) 1996-2001 Internet Software Consortium.
+ * Copyright (c) 1996-2002 Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.67.2.15 2002/02/19 21:00:44 mellon Exp $ Copyright (c) 1996-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.67.2.16 2002/02/20 05:46:46 mellon Exp $ Copyright (c) 1996-2002 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -571,8 +571,10 @@ void new_address_range (low, high, subnet, pool, lpchain)
 					lp -> ip_addr.len, lp, MDL);
 		/* Put the lease on the chain for the caller. */
 		if (lpchain) {
-			lease_reference (&lp -> next, *lpchain, MDL);
-			lease_dereference (lpchain, MDL);
+			if (*lpchain) {
+				lease_reference (&lp -> next, *lpchain, MDL);
+				lease_dereference (lpchain, MDL);
+			}
 			lease_reference (lpchain, lp, MDL);
 		}
 		lease_dereference (&lp, MDL);
@@ -1816,9 +1818,12 @@ int write_leases ()
 
 		for (i = FREE_LEASES; i <= BACKUP_LEASES; i++) {
 		    for (l = *(lptr [i]); l; l = l -> next) {
+#if !defined (DEBUG_DUMP_ALL_LEASES)
 			if (l -> hardware_addr.hlen ||
 			    l -> uid_len ||
-			    (l -> binding_state != FTS_FREE)) {
+			    (l -> binding_state != FTS_FREE))
+#endif
+			{
 			    if (!write_lease (l))
 				    return 0;
 			    num_written++;
