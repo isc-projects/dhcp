@@ -66,6 +66,15 @@ and for prodding me into improving it.
 - contrib/ms2isc was updated by Shu-Min Chang of the Intel Corporation.
   see contrib/ms2isc/readme.txt for revision notes.
 
+- Dhclient no longer uses shell commands to kill another instance of
+  itself, it sends the signal directly.  Thanks to a patch from Martin
+  Blapp.
+
+- The FreeBSD dhclient-script was changed so that a failure to write to
+  /etc/resolv.conf does not prematurely end the script.  This keeps dhclient
+  from looping infinitely when this is the case.  Thanks to a patch from
+  Martin Blapp.
+
 			Changes since 3.0.1rc10
 
 - Potential buffer overflows in minires repaired.
