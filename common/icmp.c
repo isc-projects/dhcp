@@ -23,15 +23,21 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: icmp.c,v 1.13 1999/03/16 05:50:34 mellon Exp $ Copyright (c) 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: icmp.c,v 1.14 1999/09/09 21:02:10 mellon Exp $ Copyright (c) 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
 #include "netinet/ip.h"
 #include "netinet/ip_icmp.h"
 
-static int icmp_protocol_initialized;
-static int icmp_protocol_fd;
+struct icmp_state {
+	OMAPI_OBJECT_PREAMBLE;
+	int socket;
+	void (*icmp_handler) PROTO ((struct iaddr, u_int8_t *, int));
+};
+
+static struct icmp_state *icmp_state;
+static omapi_object_type_t *dhcp_type_icmp;
 
 /* Initialize the ICMP protocol. */
 
@@ -44,11 +50,28 @@ void icmp_startup (routep, handler)
 	struct sockaddr_in from;
 	int fd;
 	int state;
+	struct icmp_state *new;
+	omapi_object_t *h;
+	isc_result_t result;
 
 	/* Only initialize icmp once. */
-	if (icmp_protocol_initialized)
+	if (dhcp_type_icmp)
 		log_fatal ("attempted to reinitialize icmp protocol");
-	icmp_protocol_initialized = 1;
+
+	result = omapi_object_type_register (&dhcp_type_icmp,
+					     "icmp", 0, 0, 0, 0, 0, 0, 0);
+
+	if (result != ISC_R_SUCCESS)
+		log_fatal ("Can't register icmp object type: %s",
+			   isc_result_totext (result));
+
+	new = (struct icmp_state *)dmalloc (sizeof *new, "icmp_startup");
+	if (!new)
+		log_fatal ("Unable to allocate state for icmp protocol");
+	memset (new, 0, sizeof *new);
+	new -> refcnt = 1;
+	new -> type = dhcp_type_icmp;
+	new -> icmp_handler = handler;
 
 	/* Get the protocol number (should be 1). */
 	proto = getprotobyname ("icmp");
@@ -56,18 +79,32 @@ void icmp_startup (routep, handler)
 		protocol = proto -> p_proto;
 
 	/* Get a raw socket for the ICMP protocol. */
-	icmp_protocol_fd = socket (AF_INET, SOCK_RAW, protocol);
-	if (icmp_protocol_fd < 0)
+	new -> socket = socket (AF_INET, SOCK_RAW, protocol);
+	if (new -> socket < 0)
 		log_fatal ("unable to create icmp socket: %m");
 
 	/* Make sure it does routing... */
 	state = 0;
-	if (setsockopt (icmp_protocol_fd, SOL_SOCKET, SO_DONTROUTE,
+	if (setsockopt (new -> socket, SOL_SOCKET, SO_DONTROUTE,
 			(char *)&state, sizeof state) < 0)
-		log_fatal ("Unable to disable SO_DONTROUTE on ICMP socket: %m");
+		log_fatal ("Can't disable SO_DONTROUTE on ICMP socket: %m");
 
-	add_protocol ("icmp", icmp_protocol_fd,
-		      icmp_echoreply, (void *)handler);
+	result = omapi_register_io_object ((omapi_object_t *)new,
+					   icmp_readsocket, 0,
+					   icmp_echoreply, 0, 0);
+	if (result != ISC_R_SUCCESS)
+		log_fatal ("Can't register icmp handle: %s",
+			   isc_result_totext (result));
+	icmp_state = new;
+}
+
+int icmp_readsocket (h)
+	omapi_object_t *h;
+{
+	struct icmp_state *state;
+
+	state = (struct icmp_state *)h;
+	return state -> socket;
 }
 
 int icmp_echorequest (addr)
@@ -77,8 +114,8 @@ int icmp_echorequest (addr)
 	struct icmp icmp;
 	int status;
 
-	if (!icmp_protocol_initialized)
-		log_fatal ("attempt to use ICMP protocol before initialization.");
+	if (!icmp_state)
+		log_fatal ("ICMP protocol used before initialization.");
 
 #ifdef HAVE_SA_LEN
 	to.sin_len = sizeof to;
@@ -103,7 +140,7 @@ int icmp_echorequest (addr)
 					     sizeof icmp, 0));
 
 	/* Send the ICMP packet... */
-	status = sendto (icmp_protocol_fd, (char *)&icmp, sizeof icmp, 0,
+	status = sendto (icmp_state -> socket, (char *)&icmp, sizeof icmp, 0,
 			 (struct sockaddr *)&to, sizeof to);
 	if (status < 0)
 		log_error ("icmp_echorequest %s: %m", inet_ntoa(to.sin_addr));
@@ -113,8 +150,8 @@ int icmp_echorequest (addr)
 	return 1;
 }
 
-void icmp_echoreply (protocol)
-	struct protocol *protocol;
+isc_result_t icmp_echoreply (h)
+	omapi_object_t *h;
 {
 	struct icmp *icfrom;
 	struct ip *ip;
@@ -123,14 +160,16 @@ void icmp_echoreply (protocol)
 	int status;
 	int len, hlen;
 	struct iaddr ia;
-	void (*handler) PROTO ((struct iaddr, u_int8_t *, int));
+	struct icmp_state *state;
+
+	state = (struct icmp_state *)h;
 
 	len = sizeof from;
-	status = recvfrom (protocol -> fd, (char *)icbuf, sizeof icbuf, 0,
+	status = recvfrom (state -> socket, (char *)icbuf, sizeof icbuf, 0,
 			  (struct sockaddr *)&from, &len);
 	if (status < 0) {
 		log_error ("icmp_echoreply: %m");
-		return;
+		return ISC_R_UNEXPECTED;
 	}
 
 	/* Find the IP header length... */
@@ -139,7 +178,7 @@ void icmp_echoreply (protocol)
 
 	/* Short packet? */
 	if (status < hlen + (sizeof *icfrom)) {
-		return;
+		return ISC_R_SUCCESS;
 	}
 
 	len = status - hlen;
@@ -147,16 +186,15 @@ void icmp_echoreply (protocol)
 
 	/* Silently discard ICMP packets that aren't echoreplies. */
 	if (icfrom -> icmp_type != ICMP_ECHOREPLY) {
-		return;
+		return ISC_R_SUCCESS;
 	}
 
 	/* If we were given a second-stage handler, call it. */
-	if (protocol -> local) {
-		handler = ((void (*) PROTO ((struct iaddr, u_int8_t *, int)))
-			   protocol -> local);
+	if (state -> icmp_handler) {
 		memcpy (ia.iabuf, &from.sin_addr, sizeof from.sin_addr);
 		ia.len = sizeof from.sin_addr;
 
-		(*handler) (ia, icbuf, len);
+		(*state -> icmp_handler) (ia, icbuf, len);
 	}
+	return ISC_R_SUCCESS;
 }
