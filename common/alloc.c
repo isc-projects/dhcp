@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: alloc.c,v 1.18 1998/11/06 02:40:04 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: alloc.c,v 1.19 1998/11/09 02:43:42 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -301,6 +301,42 @@ void free_client_lease (lease, name)
 	char *name;
 {
 	dfree (lease, name);
+}
+
+struct pool *new_pool (name)
+	char *name;
+{
+	struct pool *pool = ((struct pool *)
+			     dmalloc (sizeof (struct pool), name));
+	if (!pool)
+		return pool;
+	memset (pool, 0, sizeof *pool);
+	return pool;
+}
+
+void free_pool (pool, name)
+	struct pool *pool;
+	char *name;
+{
+	dfree (pool, name);
+}
+
+struct permit *new_permit (name)
+	char *name;
+{
+	struct permit *permit = ((struct permit *)
+				 dmalloc (sizeof (struct permit), name));
+	if (!permit)
+		return permit;
+	memset (permit, 0, sizeof *permit);
+	return permit;
+}
+
+void free_permit (permit, name)
+	struct permit *permit;
+	char *name;
+{
+	dfree (permit, name);
 }
 
 pair free_pairs;
