@@ -3,21 +3,6 @@
    System dependencies for Ultrix 4.2 (tested on 4.2a+multicast)... */
 
 /*
- * Copyright 1996 The Board of Trustees of The Leland Stanford
- * Junior University. All Rights Reserved.
- *
- * Permission to use, copy, modify, and distribute this
- * software and its documentation for any purpose and without
- * fee is hereby granted, provided that the above copyright
- * notice appear in all copies.  Stanford University
- * makes no representations about the suitability of this
- * software for any purpose.  It is provided "as is" without
- * express or implied warranty.
- *
- * This file was contributed by Jonathan Stone.
- */
-
-/*
  * Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,15 +14,15 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of RadioMail Corporation nor the names of its
+ * 3. Neither the name of The Internet Software Consortium nor the names of its
  *    contributors may be used to endorse or promote products derived
  *    from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY RADIOMAIL CORPORATION AND CONTRIBUTORS
- * ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * THIS SOFTWARE IS PROVIDED BY THE INTERNET SOFTWARE CONSORTIUM AND
+ * CONTRIBUTORS ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING,
+ * BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
  * FOR A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL
- * RADIOMAIL CORPORATION OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+ * THE INTERNET SOFTWARE CONSORTIUM OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
  * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
  * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
@@ -46,10 +31,14 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * This file was contributed by Jonathan Stone.
+ * This software was written for the Internet Software Consortium by Ted Lemon
+ * under a contract with Vixie Laboratories.
  */
 
+/* Ultrix uses the old 4.2BSD-style syslog(). */
 #include <sys/syslog.h>
+#define SYSLOG_4_2
+
 #include <sys/types.h>
 #include <string.h>
 #include <errno.h>
@@ -74,6 +63,10 @@ extern int h_errno;
 #define _PATH_DHCPD_PID	"/etc/dhcpd.pid"
 #endif
 
+typedef char int8_t;
+typedef short int16_t;
+typedef long int32_t;
+
 #define u_int8_t	unsigned char		/* Not quite POSIX... */
 #define u_int16_t	unsigned short 
 #define u_int32_t	unsigned long 
@@ -95,7 +88,7 @@ extern int h_errno;
 #define vsnprintf(buf, size, fmt, list) vsprintf (buf, fmt, list)
 #define NO_SNPRINTF
 
-#define INADDR_LOOPBACK	((u_int) htonl((u_int)0x7f000001))
+#define INADDR_LOOPBACK	((u_int32_t)0x7f000001)
 #define EOL	'\n'
 #define VOIDPTR	void *
 
@@ -108,11 +101,6 @@ extern int h_errno;
 
 #define TIME time_t
 #define GET_TIME(x)	time ((x))
-#define TIME_DIFF(high, low)	 	(*(high) - *(low))
-#define SET_TIME(x, y)	(*(x) = (y))
-#define ADD_TIME(d, s1, s2) (*(d) = *(s1) + *(s2))
-#define SET_MAX_TIME(x)	(*(x) = INT_MAX)
-
 
 #if defined (USE_DEFAULT_NETWORK)
 #  define USE_SOCKETS
