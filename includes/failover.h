@@ -23,8 +23,9 @@
 struct failover_option_info {
 	int code;
 	char *name;
-	enum { FT_UINT8, FT_IPADDR, FT_UINT32, FT_BYTES, FT_DDNS, FT_DDNS1,
-	       FT_UINT16, FT_TEXT, FT_UNDEF, FT_DIGEST } type;
+	enum { FT_UINT8, FT_IPADDR, FT_UINT32, FT_BYTES, FT_TEXT_OR_BYTES,
+	       FT_DDNS, FT_DDNS1, FT_UINT16, FT_TEXT,
+	       FT_UNDEF, FT_DIGEST } type;
 	int num_present;
 	int offset;
 	u_int32_t bit;
