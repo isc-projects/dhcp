@@ -142,8 +142,8 @@ void discover_interfaces ()
 				if (!strcmp (iface -> name, lp -> name)) {
 					note ("%s: %s", lp -> name,
 					      print_hw_addr
-					      (lp -> address.hlen,
-					       lp -> address.htype,
+					      (lp -> address.htype,
+					       lp -> address.hlen,
 					       lp -> address.haddr));
 					iface -> hw_address = lp -> address;
 				}
@@ -278,9 +278,7 @@ static void got_one (l)
 	}
 	if (result == 0)
 		return;
-	note ("request from %s, port %d",
-	      inet_ntoa (from.sin_addr),
-	      htons (from.sin_port));
+
 	ifrom.len = 4;
 	memcpy (ifrom.iabuf, &from.sin_addr, ifrom.len);
 	
