@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: clparse.c,v 1.2 1997/02/19 10:53:16 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: clparse.c,v 1.3 1997/02/22 08:38:32 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -142,9 +142,9 @@ void read_client_leases ()
 }
 
 /* client-declaration :== 
-	HOSTNAME string |
+	SEND option-decl |
+	DEFAULT option-decl |
 	hardware-declaration |
-	client-identifier-declaration |
 	REQUEST option-list |
 	REQUIRE option-list |
 	TIMEOUT number |
@@ -161,24 +161,19 @@ void parse_client_statement (cfile, ip, config)
 {
 	int token;
 	char *val;
-	char *t, *n;
-	u_int8_t buf [1024];
 
 	switch (next_token (&val, cfile)) {
-	      case HOSTNAME:
-		config -> dns_hostname = parse_string (cfile);
+	      case SEND:
+		parse_option_decl (cfile, &config -> send_options [0]);
 		return;
 
-	      case CLIENT_IDENTIFIER:
-		config -> cid_len = parse_X (cfile, buf, sizeof buf);
-		if (config -> cid_len == 0)
-			break;
-		config -> client_identifier = malloc (config -> cid_len + 1);
-		if (!config -> client_identifier)
-			error ("no memory for client identifier.");
-		memcpy (config -> client_identifier, buf, config -> cid_len);
-		config -> client_identifier [config -> cid_len] = 0;
-		break;
+	      case DEFAULT:
+		parse_option_decl (cfile, &config -> defaults [0]);
+		return;
+
+	      case MEDIA:
+		parse_string_list (cfile, &config -> media, 1);
+		return;
 
 	      case HARDWARE:
 		if (ip) {
@@ -547,7 +542,7 @@ void parse_client_lease_statement (cfile, is_static)
 	FIXED_ADDR ip_address |
 	FILENAME string |
 	SERVER_NAME string |
-	option-decl |
+	OPTION option-decl |
 	RENEW time-decl |
 	REBIND time-decl |
 	EXPIRE time-decl */
@@ -577,6 +572,10 @@ void parse_client_lease_declaration (cfile, lease, ipp)
 	      case FIXED_ADDR:
 		parse_ip_addr (cfile, &lease -> address);
 		break;
+
+	      case MEDIUM:
+		parse_string_list (cfile, &lease -> medium, 0);
+		return;
 
 	      case FILENAME:
 		lease -> filename = parse_string (cfile);
@@ -835,4 +834,54 @@ void parse_option_decl (cfile, options)
 		error ("out of memory allocating option data.");
 	memcpy (options [option -> code].data, hunkbuf, hunkix + nul_term);
 	options [option -> code].len = hunkix;
+}
+
+void parse_string_list (cfile, lp, multiple)
+	FILE *cfile;
+	struct string_list **lp;
+	int multiple;
+{
+	int token;
+	char *val;
+	struct string_list *cur, *tmp;
+
+	/* Find the last medium in the media list. */
+	if (*lp) {
+		for (cur = *lp; cur -> next; cur = cur -> next)
+			;
+	} else {
+		cur = (struct string_list *)0;
+	}
+
+	do {
+		token = next_token (&val, cfile);
+		if (token != STRING) {
+			parse_warn ("Expecting media options.");
+			skip_to_semi (cfile);
+			return;
+		}
+
+		tmp = (struct string_list *)malloc (strlen (val) + 1 +
+						    sizeof
+						    (struct string_list *));
+		if (!tmp)
+			error ("no memory for string list entry.");
+
+		strcpy (tmp -> string, val);
+		tmp -> next = (struct string_list *)0;
+
+		/* Store this medium at the end of the media list. */
+		if (cur)
+			cur -> next = tmp;
+		else
+			*lp = tmp;
+		cur = tmp;
+
+		token = next_token (&val, cfile);
+	} while (multiple && token == COMMA);
+
+	if (token != SEMI) {
+		parse_warn ("expecting semicolon.");
+		skip_to_semi (cfile);
+	}
 }
