@@ -67,9 +67,15 @@ After all processing has completed,
 .B ETCDIR/dhclient-script
 checks for the presence of an executable
 .B ETCDIR/dhclient-exit-hooks
-script, which if present is invoked using the '.' command.   The exit status
-is passed in the exit_status shell variable, and will always be zero if the
-script succeeded at the task for which it was invoked.
+script, which if present is invoked using the '.' command.  The exit
+status of dhclient-script will be passed to dhclient-exit-hooks in the
+exit_status shell variable, and will always be zero if the script
+succeeded at the task for which it was invoked.   The rest of the
+environment as described previously for dhclient-enter-hooks is also
+present.   The
+.B ETCDIR/dhclient-exit-hooks
+script can modify the valid of exit_status to change the exit status
+of dhclient-script.
 .SH OPERATION
 When dhclient needs to invoke the client configuration script, it
 writes a shell script into /tmp which defines a variety of variables.
