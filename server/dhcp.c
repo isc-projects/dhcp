@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.48 1997/06/08 03:55:58 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.49 1997/06/08 03:58:47 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -296,6 +296,7 @@ void dhcprelease (packet)
 	struct packet *packet;
 {
 	struct lease *lease;
+	struct iaddr cip;
 
 	/* DHCPRELEASEmust specify address. */
 	if (!packet -> options [DHO_DHCP_REQUESTED_ADDRESS].len) {
