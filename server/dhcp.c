@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.171 2000/11/30 14:04:06 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.172 2000/12/05 07:21:31 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1975,6 +1975,8 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 		}
 		data_string_forget (&d1, MDL);
 	}
+
+	lt -> flags = lease -> flags & ~PERSISTENT_FLAGS;
 
 	/* If there are statements to execute when the lease is
 	   committed, execute them. */
