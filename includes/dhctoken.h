@@ -165,6 +165,15 @@ enum dhcp_token {
 	ACCEPT = 385,
 	PREFER = 386,
 	DONT = 387,
+	CODE = 388,
+	ARRAY = 389,
+	BOOLEAN = 390,
+	INTEGER = 391,
+	SIGNED = 392,
+	UNSIGNED = 393,
+	IP_ADDRESS = 394,
+	TEXT = 395,
+	STRING_TOKEN = 396,
 };
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\
