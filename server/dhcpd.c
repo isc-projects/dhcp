@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.42 1997/06/02 23:26:29 mellon Exp $ Copyright 1995, 1996 The Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.43 1997/06/03 01:41:31 mellon Exp $ Copyright 1995, 1996 The Internet Software Consortium.";
 #endif
 
 static char copyright[] =
@@ -85,7 +85,7 @@ int main (argc, argv, envp)
 	int i, status;
 	struct servent *ent;
 	char *s;
-	int cftest;
+	int cftest = 0;
 #ifndef DEBUG
 	int pidfilewritten = 0;
 	int pid;
