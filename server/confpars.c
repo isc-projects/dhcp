@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.143 2001/05/02 07:05:52 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.143.2.1 2001/06/05 17:57:36 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1672,7 +1672,8 @@ int parse_class_declaration (cp, cfile, group, type)
 	int declaration = 0;
 	int lose = 0;
 	struct data_string data;
-	const char *name;
+	char *name;
+	const char *tname;
 	struct executable_statement *stmt = (struct executable_statement *)0;
 	struct expression *expr;
 	int new = 1;
@@ -1718,20 +1719,20 @@ int parse_class_declaration (cp, cfile, group, type)
 		data.data = &data.buffer -> data [0];
 		data.terminated = 1;
 
-		name = type ? "implicit-vendor-class" : "implicit-user-class";
+		tname = type ? "implicit-vendor-class" : "implicit-user-class";
 	} else if (type == 2) {
-		name = val;
+		tname = val;
 	} else {
-		name = (char *)0;
+		tname = (const char *)0;
 	}
 
-	if (name) {
-		char *tname;
-		if (!(tname = dmalloc (strlen (val) + 1, MDL)))
-			log_fatal ("No memory for class name %s.", val);
-		strcpy (tname, val);
-		name = tname;
-	}
+	if (tname) {
+		name = dmalloc (strlen (tname) + 1, MDL);
+		if (!name)
+			log_fatal ("No memory for class name %s.", tname);
+		strcpy (name, val);
+	} else
+		name = (char *)0;
 
 	/* If this is a straight subclass, parse the hash string. */
 	if (type == 3) {
