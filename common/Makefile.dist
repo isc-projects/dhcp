@@ -38,7 +38,7 @@ all:	libdhcp.a $(CATMANPAGES)
 libdhcp.a:	$(OBJ)
 	rm -f libdhcp.a
 	ar cruv libdhcp.a $(OBJ)
-	ranlib libdhcp.a
+	$(RANLIB) libdhcp.a
 
 install: all
 	for dir in $(FFMANDIR); do \
