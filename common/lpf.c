@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: lpf.c,v 1.1.2.2 1999/02/03 19:46:04 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: lpf.c,v 1.1.2.3 1999/02/05 20:20:51 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -89,12 +89,12 @@ int if_register_lpf (info)
 	struct sockaddr sa;
 
 	/* Make an LPF socket. */
-	if ((sock = socket(PF_INET, SOCK_PACKET, htons(ETH_P_ALL))) < 0)
+	if ((sock = socket(PF_SOCKET, SOCK_PACKET, htons(ETH_P_ALL))) < 0)
 		error("Open a socket for LPF: %m");
 
 	/* Bind to the interface name */
 	memset (&sa, 0, sizeof sa);
-	sa.sa_family = AF_INET;
+	sa.sa_family = AF_PACKET;
 	strncpy (sa.sa_data, (const char *)info -> ifp, sizeof sa.sa_data);
 	if (bind (sock, &sa, sizeof sa))
 		error("Bind socket to interface: %m");
@@ -175,6 +175,7 @@ ssize_t send_packet (interface, packet, raw, len, from, to, hto)
 {
 	int bufp = 0;
 	unsigned char buf [1500];
+	struct sockaddr sa;
 
 	if (!strcmp (interface -> name, "fallback"))
 		return send_fallback (interface, packet, raw,
@@ -186,7 +187,15 @@ ssize_t send_packet (interface, packet, raw, len, from, to, hto)
 				to -> sin_addr.s_addr, to -> sin_port,
 				(unsigned char *)raw, len);
 	memcpy (buf + bufp, raw, len);
-	return send (interface -> wfdesc, buf, bufp + len, 0);
+
+	/* For some reason, SOCK_PACKET sockets can't be connected,
+	   so we have to do a sentdo every time. */
+	memset (&sa, 0, sizeof sa);
+	sa.sa_family = AF_PACKET;
+	strncpy (sa.sa_data, (const char *)info -> ifp, sizeof sa.sa_data);
+
+	return sendto (interface -> wfdesc, buf, bufp + len, 0,
+		       &sa, sizeof sa);
 }
 #endif /* USE_LPF_SEND */
 
