@@ -110,7 +110,7 @@ CHMOD = chmod
 #ADMMANEXT = .8
 #FFMANDIR = /usr/man/man5
 #FFMANEXT = .5
-##--bsdos--
+##--ultrix--
 
 ## Linux
 ##++linux++
