@@ -75,6 +75,7 @@ CHMOD = chmod
 
 ## DEC Alpha/OSF1
 ##++alphaosf1++
+#INSTALL=/usr/ucb/install
 #LIBS=
 #CF = cf/alphaosf.h
 #ADMMANEXT = .8
