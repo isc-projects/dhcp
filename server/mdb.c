@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.67.2.9 2001/08/23 16:30:58 mellon Exp $ Copyright (c) 1996-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.67.2.10 2001/10/11 20:43:43 mellon Exp $ Copyright (c) 1996-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -114,8 +114,10 @@ isc_result_t enter_host (hd, dynamicp, commit)
 					  strlen (hd -> name), MDL);
 			/* If the old entry wasn't dynamic, then we
 			   always have to keep the deletion. */
-			if (!hp -> flags & HOST_DECL_DYNAMIC)
+			if (hp -> flags & HOST_DECL_STATIC) {
 				hd -> flags |= HOST_DECL_STATIC;
+			}
+			host_dereference (&hp, MDL);
 		}
 
 		/* If we are updating an existing host declaration, we
@@ -282,6 +284,8 @@ isc_result_t delete_host (hd, commit)
 			while (foo) {
 			    if (foo == hd)
 				    break;
+			    if (np)
+				    host_dereference (&np, MDL);
 			    host_reference (&np, foo, MDL);
 			    host_dereference (&foo, MDL);
 			    if (np -> n_ipaddr)
@@ -322,6 +326,8 @@ isc_result_t delete_host (hd, commit)
 			while (foo) {
 			    if (foo == hd)
 				    break;
+			    if (np)
+				host_dereference (&np, MDL);
 			    host_reference (&np, foo, MDL);
 			    host_dereference (&foo, MDL);
 			    if (np -> n_ipaddr)
@@ -2056,7 +2062,9 @@ extern struct hash_table *auth_key_hash;
 struct hash_table *universe_hash;
 struct universe **universes;
 int universe_count, universe_max;
+#if 0
 extern int end;
+#endif
 
 #if defined (COMPACT_LEASES)
 extern struct lease *lease_hunks;
@@ -2290,12 +2298,14 @@ void free_everything ()
 		if (universes [i]) {
 			if (universes [i] -> hash)
 				free_hash_table (universes [i] -> hash, MDL);
+#if 0
 			if (universes [i] -> name > (char *)&end) {
 				foo.c = universes [i] -> name;
 				dfree (foo.s, MDL);
 			}
 			if (universes [i] > (struct universe *)&end)
 				dfree (universes [i], MDL);
+#endif
 		}
 	}
 	dfree (universes, MDL);
