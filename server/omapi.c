@@ -29,7 +29,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: omapi.c,v 1.9 1999/10/01 03:27:37 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: omapi.c,v 1.10 1999/10/04 23:53:57 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -654,7 +654,7 @@ isc_result_t dhcp_group_set_value  (omapi_object_t *h,
 		if (value -> type == omapi_datatype_data ||
 		    value -> type == omapi_datatype_string) {
 			struct parse *parse;
-			int *lose;
+			int lose = 0;
 			parse = (struct parse *)0;
 			status = new_parse (&parse, -1,
 					    (char *)value -> u.buffer.value,
@@ -663,7 +663,7 @@ isc_result_t dhcp_group_set_value  (omapi_object_t *h,
 			if (status != ISC_R_SUCCESS)
 				return status;
 			if (!(parse_executable_statements
-			      (&group -> group -> statements, parse, lose))) {
+			      (&group -> group -> statements, parse, &lose))) {
 				end_parse (&parse);
 				return ISC_R_BADPARSE;
 			}
@@ -1061,6 +1061,43 @@ isc_result_t dhcp_host_set_value  (omapi_object_t *h,
 		return ISC_R_SUCCESS;
 	}
 
+	if (!omapi_ds_strcmp (name, "statements")) {
+		if (host -> group && host -> group -> statements &&
+		    (!host -> named_group ||
+		     host -> group != host -> named_group -> group))
+			return ISC_R_EXISTS;
+		if (!host -> group)
+			host -> group = clone_group (&root_group,
+						     "dhcp_host_set_value");
+		if (host -> named_group &&
+		    host -> group == host -> named_group -> group) {
+			host -> group = clone_group (host -> group,
+						     "dhcp_host_set_value");
+		}
+		if (!host -> group)
+			return ISC_R_NOMEMORY;
+		if (value -> type == omapi_datatype_data ||
+		    value -> type == omapi_datatype_string) {
+			struct parse *parse;
+			int lose = 0;
+			parse = (struct parse *)0;
+			status = new_parse (&parse, -1,
+					    (char *)value -> u.buffer.value,
+					    value -> u.buffer.len,
+					    "network client");
+			if (status != ISC_R_SUCCESS)
+				return status;
+			if (!(parse_executable_statements
+			      (&host -> group -> statements, parse, &lose))) {
+				end_parse (&parse);
+				return ISC_R_BADPARSE;
+			}
+			end_parse (&parse);
+		} else
+			return ISC_R_INVALIDARG;
+		return ISC_R_SUCCESS;
+	}
+
 	/* The "known" flag isn't supported in the database yet, but it's
 	   legitimate. */
 	if (!omapi_ds_strcmp (name, "known")) {
@@ -1403,12 +1440,34 @@ isc_result_t dhcp_host_lookup (omapi_object_t **lp,
 			} else if (!host) {
 			    if (!*lp)
 				    return ISC_R_NOTFOUND;
-			} else if (!*lp) {
-			    /* XXX fix so that hash lookup itself creates
-			       XXX the reference. */
-			    omapi_object_reference (lp, (omapi_object_t *)host,
-						    "dhcp_host_lookup");
 			}
+		} else if (!*lp) {
+			/* XXX fix so that hash lookup itself creates
+			   XXX the reference. */
+			omapi_object_reference (lp, (omapi_object_t *)host,
+						"dhcp_host_lookup");
+		}
+	}
+
+	/* Now look for a name. */
+	status = omapi_get_value_str (ref, id, "name", &tv);
+	if (status == ISC_R_SUCCESS) {
+		host = ((struct host_decl *)
+			 hash_lookup (host_name_hash,
+				      tv -> value -> u.buffer.value,
+				      tv -> value -> u.buffer.len));
+		omapi_value_dereference (&tv, "dhcp_host_lookup");
+			
+		if (*lp && *lp != (omapi_object_t *)host) {
+			omapi_object_dereference (lp, "dhcp_host_lookup");
+			return ISC_R_KEYCONFLICT;
+		} else if (!host) {
+			return ISC_R_NOTFOUND;	
+		} else if (!*lp) {
+			/* XXX fix so that hash lookup itself creates
+			   XXX the reference. */
+			omapi_object_reference (lp, (omapi_object_t *)host,
+						"dhcp_host_lookup");
 		}
 	}
 
