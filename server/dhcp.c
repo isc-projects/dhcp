@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.99 1999/07/06 17:09:03 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.100 1999/07/06 20:35:54 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1122,26 +1122,29 @@ void ack_lease (packet, lease, offer, when, msg)
 		if (s1 && d1.len == sizeof (u_int32_t)) {
 			lease_time = getULong (d1.data);
 			data_string_forget (&d1, "ack_lease");
-			max_lease_time = DEFAULT_MAX_LEASE_TIME;
-			if ((oc = lookup_option (&server_universe,
-						 state -> options,
-						 SV_MAX_LEASE_TIME))) {
-				if (evaluate_option_cache (&d1, packet,
-							   packet -> options,
-							   lease, oc)) {
-					if (d1.len == sizeof (u_int32_t))
-						max_lease_time =
-							getULong (d1.data);
-					data_string_forget (&d1, "ack_lease");
-				}
-			}
 		} else {
+			if (s1)
+				data_string_forget (&d1, "ack_lease");
 			lease_time = default_lease_time;
 		}
 		
+		/* See if there's a maximum lease time. */
+		max_lease_time = DEFAULT_MAX_LEASE_TIME;
+		if ((oc = lookup_option (&server_universe, state -> options,
+					 SV_MAX_LEASE_TIME))) {
+			if (evaluate_option_cache (&d1, packet,
+						   packet -> options,
+						   lease, oc)) {
+				if (d1.len == sizeof (u_int32_t))
+					max_lease_time =
+						getULong (d1.data);
+				data_string_forget (&d1, "ack_lease");
+			}
+		}
+
 		/* Enforce the maximum lease length. */
-		if (lease_time < 0 || /* XXX */
-		    lease_time > max_lease_time)
+		if (lease_time < 0 /* XXX */
+		    || lease_time > max_lease_time)
 			lease_time = max_lease_time;
 			
 		min_lease_time = DEFAULT_MIN_LEASE_TIME;
