@@ -68,11 +68,6 @@
 #include "inet.h"
 #include "sysconf.h"
 
-struct option_data {
-	int len;
-	u_int8_t *data;
-};
-
 struct string_list {
 	struct string_list *next;
 	char string [1];
@@ -92,6 +87,32 @@ struct domain_search_list {
 	TIME rcdate;
 };
 
+/* Option tag structures are used to build chains of option tags, for
+   when we're sure we're not going to have enough of them to justify
+   maintaining an array. */
+
+struct option_tag {
+	struct option_tag *next;
+	u_int8_t data [1];
+};
+
+/* An agent option structure.   We need a special structure for the
+   Relay Agent Information option because if more than one appears in
+   a message, we have to keep them seperate. */
+
+struct agent_options {
+	struct agent_options *next;
+	int length;
+	struct option_tag *first;
+};
+
+/* The data associated with a given option in an array of options. */
+
+struct option_data {
+	int len;
+	u_int8_t *data;
+};
+
 /* A dhcp packet and the pointers to its option values. */
 struct packet {
 	struct dhcp_packet *raw;
@@ -106,7 +127,10 @@ struct packet {
 					   of local sender (maybe gateway). */
 	struct shared_network *shared_network;
 	struct option_data options [256];
+	struct agent_options *agent_options;	/* Received agent options. */
 };
+
+/* A network interface's MAC address. */
 
 struct hardware {
 	u_int8_t htype;
@@ -154,6 +178,8 @@ struct lease_state {
 	TIME offered_expiry;
 
 	struct tree_cache *options [256];
+	struct agent_options *agent_options;
+	int max_message_size;
 	u_int32_t expiry, renewal, rebind;
 	char *filename, *server_name;
 
@@ -392,19 +418,32 @@ struct dns_wakeup {
 	void (*func) PROTO ((struct dns_query *));
 };
 
+struct dns_question {
+	u_int16_t type;			/* Type of query. */
+	u_int16_t class;		/* Class of query. */
+	unsigned char data [1];		/* Query data. */
+};
+
+struct dns_answer {
+	u_int16_t type;			/* Type of answer. */
+	u_int16_t class;		/* Class of answer. */
+	int count;			/* Number of answers. */
+	unsigned char *answers[1];	/* Pointers to answers. */
+};
+
 struct dns_query {
 	struct dns_query *next;		/* Next query in hash bucket. */
+	u_int32_t hash;			/* Hash bucket index. */
 	TIME expiry;			/* Query expiry time (zero if not yet
 					   answered. */
 	u_int16_t id;			/* Query ID (also hash table index) */
 	caddr_t waiters;		/* Pointer to list of things waiting
 					   on this query. */
-	unsigned char buf [512];	/* Query buffer. */
-	unsigned char *question;	/* Pointer to question being asked,
-					   within query buffer. */
-	int question_len;		/* Length of name (we hash on name) */
-	unsigned char *answer;		/* Pointer to answer to question. */
-	int answer_len;			/* Length of answer. */
+
+	struct dns_question *question;	/* Question, internal format. */
+	struct dns_answer *answer;	/* Answer, internal format. */
+
+	unsigned char *query;		/* Query formatted for DNS server. */
 	int len;			/* Length of entire query. */
 	int sent;			/* The query has been sent. */
 	struct dns_wakeup *wakeups;	/* Wakeups to call if this query is
@@ -480,8 +519,10 @@ typedef unsigned char option_mask [16];
 
 void parse_options PROTO ((struct packet *));
 void parse_option_buffer PROTO ((struct packet *, unsigned char *, int));
-int cons_options PROTO ((struct packet *, struct dhcp_packet *,
-			  struct tree_cache **, int, int, int));
+int parse_agent_information_option PROTO ((struct packet *, int, u_int8_t *));
+int cons_options PROTO ((struct packet *, struct dhcp_packet *, int,
+			  struct tree_cache **, struct agent_options *,
+			 int, int, int));
 int store_options PROTO ((unsigned char *, int, struct tree_cache **,
 			   unsigned char *, int, int, int, int));
 char *pretty_print_option PROTO ((unsigned int,
@@ -514,6 +555,8 @@ extern struct interface_info fallback_interface;
 extern char *path_dhcpd_conf;
 extern char *path_dhcpd_db;
 extern char *path_dhcpd_pid;
+
+extern int dhcp_max_agent_option_packet_length;
 
 int main PROTO ((int, char **, char **));
 void cleanup PROTO ((void));
@@ -747,22 +790,26 @@ ssize_t receive_packet PROTO ((struct interface_info *,
 void if_enable PROTO ((struct interface_info *));
 #endif
 
-
 /* dlpi.c */
+#if defined (USE_DLPI_SEND) || defined (USE_DLPI_RECEIVE)
+int if_register_dlpi PROTO ( (struct interface_info *));
+#endif
+
 #ifdef USE_DLPI_SEND
-void if_register_send PROTO ((struct interface_info *, struct ifreq *));
-size_t send_packet PROTO ((struct interface_info *,
-			   struct packet *, struct dhcp_packet *, size_t,
-			   struct in_addr,
-			   struct sockaddr_in *, struct hardware *));
+void if_reinitialize_send PROTO ((struct interface_info *));
+void if_register_send PROTO ((struct interface_info *));
+ssize_t send_packet PROTO ((struct interface_info *,
+			    struct packet *, struct dhcp_packet *, size_t,
+			    struct in_addr,
+			    struct sockaddr_in *, struct hardware *));
 #endif
 #ifdef USE_DLPI_RECEIVE
-void if_register_receive PROTO ((struct interface_info *, struct ifreq *));
-size_t receive_packet PROTO ((struct interface_info *,
-			     unsigned char *, size_t,
-			     struct sockaddr_in *, struct hardware *));
+void if_reinitialize_receive PROTO ((struct interface_info *));
+void if_register_receive PROTO ((struct interface_info *));
+ssize_t receive_packet PROTO ((struct interface_info *,
+			       unsigned char *, size_t,
+			       struct sockaddr_in *, struct hardware *));
 #endif
-
 
 
 /* raw.c */
@@ -864,7 +911,7 @@ void make_release PROTO ((struct interface_info *, struct client_lease *));
 void free_client_lease PROTO ((struct client_lease *));
 void rewrite_client_leases PROTO ((void));
 void write_client_lease PROTO ((struct interface_info *,
-				 struct client_lease *));
+				 struct client_lease *, int));
 char *dhcp_option_ev_name PROTO ((struct option *));
 
 void script_init PROTO ((struct interface_info *, char *,
@@ -969,9 +1016,11 @@ void icmp_echoreply PROTO ((struct protocol *));
 
 /* dns.c */
 void dns_startup PROTO ((void));
+struct dns_query *find_dns_query PROTO ((struct dns_question *, int));
+void destroy_dns_query PROTO ((struct dns_query *));
 struct dns_query *ns_inaddr_lookup PROTO ((struct iaddr, struct dns_wakeup *));
-struct dns_query *ns_query PROTO ((unsigned char *, int, struct dns_wakeup *));
-struct dns_query *find_dns_query PROTO ((unsigned char *, int, int));
+struct dns_query *ns_query PROTO ((struct dns_question *,
+				   unsigned char *, int, struct dns_wakeup *));
 void dns_timeout PROTO ((void *));
 void dns_packet PROTO ((struct protocol *));
 
