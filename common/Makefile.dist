@@ -48,7 +48,7 @@ clean:
 	-rm -f $(OBJ)
 
 realclean: clean
-	-rm -f libdhcp.a *~ $(CATMANPAGES) $(SEDMANPAGES)
+	-rm -f libdhcp.a $(CATMANPAGES) $(SEDMANPAGES) *~ #*
 
 distclean: realclean
 	-rm -f Makefile
