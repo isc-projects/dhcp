@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.56 1999/10/06 01:01:13 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.57 1999/10/06 01:35:44 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -626,7 +626,7 @@ int evaluate_boolean_expression (result, packet, lease, in_options,
 				log_debug("calling deleteA(%s, %s, lease)",
 					  expr1.data , expr2.data);
 #endif
-				deleteA(expr1, expr2, lease);
+				deleteA(&expr1, &expr2, lease);
 			} else if (rrtype.len == 3 &&
 				   strncmp((const char *)rrtype.data,
 					    "ptr", 3) == 0) {
@@ -635,7 +635,7 @@ int evaluate_boolean_expression (result, packet, lease, in_options,
 					   "calling", expr1.data,
 					   expr2.data);
 #endif
-				deletePTR(expr1, expr2, lease);
+				deletePTR(&expr1, &expr2, lease);
 			}
 			*result = 1;
 		} else {
