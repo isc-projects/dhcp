@@ -38,7 +38,8 @@ FFMANEXT = .0
 INSTALL = install
 MANINSTALL = install
 CHMOD = chmod
-CATMANPAGES = dhcpd.cat8 dhcpd.conf.cat5
+CATMANPAGES = dhcpd.cat8 dhclient.cat8 dhcrelay.cat8 \
+		dhcpd.conf.cat5 dhclient.conf.cat5
 ETC = /etc
 VARRUN = /var/run
 VARDB = /var/db
@@ -193,7 +194,7 @@ XOBJ   = dhcpxlt.o xconflex.o
 SRCS   = dhcpd.c dhcp.c bootp.c confpars.c db.c
 OBJS   = dhcpd.o dhcp.o bootp.o confpars.o db.o
 PROGS  = dhcpd dhclient dhcrelay
-MAN    = dhcpd.8 dhcpd.conf.5
+MAN    = dhcpd.8 dhcpd.conf.5 dhclient.8 dhcrelay.8 dhclient.conf.5
 
 DEBUG  = -g
 CFLAGS = $(DEBUG) $(PREDEFINES) $(INCLUDES) $(COPTS)
@@ -218,8 +219,14 @@ install: $(PROGS) $(CATMANPAGES)
 	fi
 	$(MANINSTALL) $(MANFROM) dhcpd.cat8 $(MANTO) \
 				$(ADMMANDIR)/dhcpd$(ADMMANEXT)
+	$(MANINSTALL) $(MANFROM) dhclient.cat8 $(MANTO) \
+				$(ADMMANDIR)/dhclient$(ADMMANEXT)
+	$(MANINSTALL) $(MANFROM) dhcrelay.cat8 $(MANTO) \
+				$(ADMMANDIR)/dhcrelay$(ADMMANEXT)
 	$(MANINSTALL) $(MANFROM) dhcpd.conf.cat5 $(MANTO) \
 				$(FFMANDIR)/dhcpd.conf$(FFMANEXT)
+	$(MANINSTALL) $(MANFROM) dhclient.conf.cat5 $(MANTO) \
+				$(FFMANDIR)/dhclient.conf$(FFMANEXT)
 
 clean:
 	-rm -f $(OBJS) $(COBJ) $(XOBJ) dhclient.o
@@ -239,8 +246,21 @@ dhcpd.cat8:	dhcpd.8
 		-e "s#RUNDIR#$(VARRUN)#" < dhcpd.8 \
 			| nroff -man >dhcpd.cat8
 
+dhclient.cat8:	dhclient.8
+	sed -e "s#ETCDIR#$(ETC)#" -e "s#DBDIR#$(VARDB)#" \
+		-e "s#RUNDIR#$(VARRUN)#" < dhclient.8 \
+			| nroff -man >dhclient.cat8
+
+dhcrelay.cat8:	dhcrelay.8
+	sed -e "s#ETCDIR#$(ETC)#" -e "s#DBDIR#$(VARDB)#" \
+		-e "s#RUNDIR#$(VARRUN)#" < dhcrelay.8 \
+			| nroff -man >dhcrelay.cat8
+
 dhcpd.conf.cat5:	dhcpd.conf.5
 	nroff -man dhcpd.conf.5 >dhcpd.conf.cat5
+
+dhclient.conf.cat5:	dhclient.conf.5
+	nroff -man dhclient.conf.5 >dhclient.conf.cat5
 
 dhcpd:	$(OBJS) $(COBJ)
 	$(CC) $(LFLAGS) -o dhcpd $(OBJS) $(COBJ) $(LIBS)
