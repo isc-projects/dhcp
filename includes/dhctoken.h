@@ -148,6 +148,17 @@ enum dhcp_token {
 	SPAWN = 348,
 	WITH = 349,
 	EXISTS = 350,
+	POOL = 351,
+	UNKNOWN = 352,
+	CLIENTS = 353,
+	KNOWN = 354,
+	AUTHENTICATED = 355,
+	UNAUTHENTICATED = 356,
+	ALL = 357,
+	DYNAMIC = 358,
+	MEMBERS = 359,
+	OF = 360,
+	PSEUDO = 361,
 };
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\

@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: conflex.c,v 1.34 1998/10/17 13:34:31 mellon Exp $ Copyright (c) 1995, 1996, 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: conflex.c,v 1.35 1998/11/09 02:44:14 mellon Exp $ Copyright (c) 1995, 1996, 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -366,6 +366,10 @@ static int intern (atom, dfv)
 			return ABANDONED;
 		if (!strcasecmp (atom + 1, "dd"))
 			return ADD;
+		if (!strcasecmp (atom + 1, "uthenticated"))
+			return AUTHENTICATED;
+		if (!strcasecmp (atom + 1, "ll"))
+			return ALL;
 		break;
 	      case 'b':
 		if (!strcasecmp (atom + 1, "ackoff-cutoff"))
@@ -403,14 +407,18 @@ static int intern (atom, dfv)
 				return DEFAULT_LEASE_TIME;
 			break;
 		}
-		if (!strncasecmp (atom + 1, "ynamic-bootp", 12)) {
-			if (!atom [13])
-				return DYNAMIC_BOOTP;
-			if (!strcasecmp (atom + 13, "-lease-cutoff"))
-				return DYNAMIC_BOOTP_LEASE_CUTOFF;
-			if (!strcasecmp (atom + 13, "-lease-length"))
-				return DYNAMIC_BOOTP_LEASE_LENGTH;
-			break;
+		if (!strncasecmp (atom + 1, "ynamic", 6)) {
+			if (!atom [7])
+				return DYNAMIC;
+			if (!strncasecmp (atom + 7, "-bootp", 6)) {
+				if (!atom [13])
+					return DYNAMIC_BOOTP;
+				if (!strcasecmp (atom + 13, "-lease-cutoff"))
+					return DYNAMIC_BOOTP_LEASE_CUTOFF;
+				if (!strcasecmp (atom + 13, "-lease-length"))
+					return DYNAMIC_BOOTP_LEASE_LENGTH;
+				break;
+			}
 		}
 		break;
 	      case 'e':
@@ -464,6 +472,10 @@ static int intern (atom, dfv)
 		if (!strcasecmp (atom + 1, "f"))
 			return IF;
 		break;
+	      case 'k':
+		if (!strcasecmp (atom + 1, "nown"))
+			return KNOWN;
+		break;
 	      case 'l':
 		if (!strcasecmp (atom + 1, "ease"))
 			return LEASE;
@@ -487,6 +499,8 @@ static int intern (atom, dfv)
 		}
 		if (!strcasecmp (atom + 1, "atch"))
 			return MATCH;
+		if (!strcasecmp (atom + 1, "embers"))
+			return MEMBERS;
 		break;
 	      case 'n':
 		if (!strcasecmp (atom + 1, "ot"))
@@ -505,12 +519,18 @@ static int intern (atom, dfv)
 			return OPTION;
 		if (!strcasecmp (atom + 1, "ne-lease-per-client"))
 			return ONE_LEASE_PER_CLIENT;
+		if (!strcasecmp (atom + 1, "f"))
+			return OF;
 		break;
 	      case 'p':
 		if (!strcasecmp (atom + 1, "repend"))
 			return PREPEND;
 		if (!strcasecmp (atom + 1, "acket"))
 			return PACKET;
+		if (!strcasecmp (atom + 1, "ool"))
+			return POOL;
+		if (!strcasecmp (atom + 1, "seudo"))
+			return PSEUDO;
 		break;
 	      case 'r':
 		if (!strcasecmp (atom + 1, "ange"))
@@ -582,8 +602,15 @@ static int intern (atom, dfv)
 			return USE_HOST_DECL_NAMES;
 		if (!strcasecmp (atom + 1, "se-lease-addr-for-default-route"))
 			return USE_HOST_DECL_NAMES;
-		if (!strcasecmp (atom + 1, "nknown-clients"))
-			return UNKNOWN_CLIENTS;
+		if (!strncasecmp (atom + 1, "nknown", 6)) {
+			if (!strcasecmp (atom + 7, "-clients"))
+				return UNKNOWN_CLIENTS;
+			if (!atom [7])
+				return UNKNOWN;
+			break;
+		}
+		if (!strcasecmp (atom + 1, "nauthenticated"))
+			return AUTHENTICATED;
 		break;
 	      case 'v':
 		if (!strcasecmp (atom + 1, "endor-class"))
