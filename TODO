@@ -1,0 +1,29 @@
+Things to do, not in any particular order...
+
+- Use GNU autoconf instead of per-system config files?
+
+- Perl scripts to convert from other DHCP and BOOTP servers' config
+  files to the ISC DHCPD format.
+
+- Low level networking interfaces; e.g., 
+  - Berkeley Packet Filter interface
+  - Sun NIT interface
+
+- Ethernet support for low-level interfaces
+
+- Token ring support for low-level interfaces
+
+- FDDI support for low-level interfaces
+
+- Other network hardware support for low-level interfaces?
+
+- Raw socket support for single-interface machines
+
+- IPv6/DHCPv6 support
+
+- MacOS Open Transport support
+
+- Windows/NT support
+
+- Windows95 support
+
