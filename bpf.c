@@ -42,10 +42,11 @@
 
 #ifndef lint
 static char copyright[] =
-"@(#) Copyright (c) 1995 The Internet Software Consortium.  All rights reserved.\n";
+"@(#) Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
+#if defined (USE_BPF_SEND) || defined (USE_BPF_RECEIVE)
 #include <sys/ioctl.h>
 #include <sys/uio.h>
 
@@ -56,7 +57,6 @@ static char copyright[] =
 #include <netinet/udp.h>
 #include <netinet/if_ether.h>
 
-#if defined (USE_BPF_SEND) || defined (USE_BPF_RECEIVE)
 /* Called by get_interface_list for each interface that's discovered.
    Opens a packet filter for each interface and adds it to the select
    mask. */
@@ -71,7 +71,11 @@ int if_register_bpf (info, ifp)
 
 	/* Open a BPF device */
 	for (b = 0; 1; b++) {
+#ifndef NO_SNPRINTF
 		snprintf(filename, sizeof(filename), "/dev/bpf%d", b);
+#else
+		sprintf(filename, "/dev/bpf%d", b);
+#endif
 		sock = open (filename, O_RDWR, 0);
 		if (sock < 0) {
 			if (errno == EBUSY) {
@@ -104,7 +108,11 @@ void if_register_send (info, interface)
 #else
 	info -> wfdesc = info -> rfdesc;
 #endif
-	note ("Sending on %s", piaddr (info -> address));
+	note ("Sending on   BPF/%s/%s",
+	      print_hw_addr (info -> hw_address.htype,
+			     info -> hw_address.hlen,
+			     info -> hw_address.haddr),
+	      piaddr (info -> address));
 }
 #endif /* USE_BPF_SEND */
 
@@ -197,7 +205,11 @@ void if_register_receive (info, interface)
 
 	if (ioctl (info -> rfdesc, BIOCSETF, &p) < 0)
 		error ("Can't install packet filter program: %m");
-	note ("Listening on %s", piaddr (info -> address));
+	note ("Listening on BPF/%s/%s",
+	      print_hw_addr (info -> hw_address.htype,
+			     info -> hw_address.hlen,
+			     info -> hw_address.haddr),
+	      piaddr (info -> address));
 }
 #endif /* USE_BPF_RECEIVE */
 
