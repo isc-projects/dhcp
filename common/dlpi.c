@@ -84,7 +84,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dlpi.c,v 1.24 2001/01/25 21:54:25 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dlpi.c,v 1.25 2001/01/31 19:00:34 tamino Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -404,6 +404,8 @@ void if_register_receive (info)
 {
 #ifdef USE_DLPI_PFMOD
 	struct packetfilt pf;
+	struct ip iphdr;
+	u_short offset;
 #endif
 
 	/* Open a DLPI device and hang it on this interface... */
@@ -417,19 +419,19 @@ void if_register_receive (info)
 	pf.Pf_Priority = 0;
 	pf.Pf_FilterLen = 0;
 
-#ifdef USE_DLPI_RAW
-	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_PUSHWORD + 6;
-	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_PUSHLIT + ENF_CAND;
+#if defined (USE_DLPI_RAW)
+# define ETHER_H_PREFIX (14) /* sizeof (ethernet_header) */
+	/*
+	 * ethertype == ETHERTYPE_IP
+	 */
+	offset = 12;
+	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_PUSHWORD + (offset / 2);
+	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_PUSHLIT | ENF_EQ;
 	pf.Pf_Filter [pf.Pf_FilterLen++] = htons (ETHERTYPE_IP);
-	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_PUSHLIT;
-	pf.Pf_Filter [pf.Pf_FilterLen++] = htons (IPPROTO_UDP);
-	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_PUSHWORD + 11;
-	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_PUSH00FF + ENF_AND;
-	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_CAND;
-	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_PUSHWORD + 18;
-	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_PUSHLIT + ENF_CAND;
-	pf.Pf_Filter [pf.Pf_FilterLen++] = htons (local_port);
-#else
+# else
+# define ETHER_H_PREFIX (0)
+# endif / * USE_DLPI_RAW */
+
 	/*
 	 * The packets that will be received on this file descriptor
 	 * will be IP packets (due to the SAP that was specified in
@@ -439,22 +441,39 @@ void if_register_receive (info)
 	 * to the local port.  All offsets are relative to the start
 	 * of an IP packet.
 	 */
-	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_PUSHLIT;
-	pf.Pf_Filter [pf.Pf_FilterLen++] = htons (IPPROTO_UDP);
-	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_PUSHWORD + 4;
-	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_PUSH00FF + ENF_AND;
-	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_CAND;
-	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_PUSHWORD + 11;
-	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_PUSHLIT + ENF_CAND;
-	pf.Pf_Filter [pf.Pf_FilterLen++] = htons (local_port);
-#endif
+
+        /*
+         * BOOTPS destination port
+         */
+        offset = ETHER_H_PREFIX + sizeof (iphdr) + sizeof (u_short);
+        pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_PUSHWORD + (offset / 2);
+        pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_PUSHLIT | ENF_EQ;
+        /* local_port is already in network byte order */
+        pf.Pf_Filter [pf.Pf_FilterLen++] = local_port;
+# if defined (USE_DLPI_RAW)
+        /* AND this result with the result of ETHERTYPE_IP */
+        pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_AND;
+# endif
+        /*
+         * protocol should be udp. this is a byte compare, test for
+         * endianess.
+         */
+        offset = ETHER_H_PREFIX + ((u_char *)&(iphdr.ip_p) - (u_char *) &iphdr);
+        pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_PUSHWORD + (offset / 2);
+        pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_PUSHLIT | ENF_AND;
+        pf.Pf_Filter [pf.Pf_FilterLen++] = htons (0x00FF);
+        pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_PUSHLIT | ENF_EQ;
+        pf.Pf_Filter [pf.Pf_FilterLen++] = htons (IPPROTO_UDP);
+        /* AND this result with the result of local_port */
+        pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_AND;
+
 
 	/* Install the filter... */
 	if (strioctl (info -> rfdesc, PFIOCSETF, INFTIM,
 		      sizeof (pf), (char *)&pf) < 0) {
 	    log_fatal ("Can't set PFMOD receive filter on %s: %m", info -> name);
 	}
-#endif
+#endif /* USE_DLPI_PFMOD */
 
         if (!quiet_interface_discovery)
 		log_info ("Listening on DLPI/%s/%s%s%s",
@@ -529,8 +548,8 @@ ssize_t send_packet (interface, packet, raw, len, from, to, hto)
 	/* Assemble the headers... */
 #ifdef USE_DLPI_RAW
 	assemble_hw_header (interface, (unsigned char *)hh, &dbuflen, hto);
-	if (dbuflen > sizeof hh)
-		abort ("hh is too small!");
+	if (dbuflen > sizeof hh) /* hh is too small! */
+		abort ();
 	fudge = dbuflen % 4; /* IP header must be word-aligned. */
 	memcpy (dbuf + fudge, (unsigned char *)hh, dbuflen);
 	dbuflen += fudge;
@@ -548,9 +567,21 @@ ssize_t send_packet (interface, packet, raw, len, from, to, hto)
 #ifdef USE_DLPI_RAW
 	result = write (interface -> wfdesc, dbuf + fudge, dbuflen - fudge);
 #else
-	/* XXX: Assumes ethernet, with two byte SAP */
-	sap [0] = 0x08;		/* ETHERTYPE_IP, high byte */
-	sap [1] = 0x0;		/* ETHERTYPE_IP, low byte */
+	/*
+	 * a bug on intel causes a sap type of 0x0800 to appear on the wire as 0x0000.
+	 * a bug on intel causes a sap type of 0x0000 to appear on the wire as 0x0800.
+	 * .uhhmmm..
+	 *
+	 * at least the elxl (3com) and iprb (intel) drivers `need' this hack on 2.8.
+	 */
+#if defined (SOL_X86_DLPI_SAP_HACK)
+	sap [0] = 0x00;
+	sap [1] = 0x00;
+#else                   /* sparc and others, as it should be. */
+	sap [0] = 0x08;
+	sap [1] = 0x00;
+#endif
+
 	saplen = -2;		/* -2 indicates a two byte SAP at the end
 				   of the address */
 
