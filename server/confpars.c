@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.61 1999/02/25 23:30:39 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.62 1999/03/09 23:43:36 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1795,6 +1795,9 @@ void parse_address_range (cfile, group, type, pool)
 				last -> next = pool;
 			else
 				share -> pools = pool;
+			pool -> shared_network = share;
+			pool -> group = clone_group (share -> group,
+						     "parse_address_range");
 		}
 	}
 
