@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.168 2000/10/10 23:07:24 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.169 2000/10/13 18:58:12 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1091,10 +1091,12 @@ void nak_lease (packet, cip)
 	dump_raw ((unsigned char *)&raw, outgoing.packet_length);
 #endif
 
+#if 0
 	hto.hbuf [0] = packet -> raw -> htype;
 	hto.hlen = packet -> raw -> hlen;
 	memcpy (&hto.hbuf [1], packet -> raw -> chaddr, hto.hlen);
 	hto.hlen++;
+#endif
 
 	/* Set up the common stuff... */
 	to.sin_family = AF_INET;
@@ -2170,7 +2172,7 @@ void dhcp_reply (lease)
 	int result;
 	int i;
 	struct lease_state *state = lease -> state;
-	int nulltp, bootpp;
+	int nulltp, bootpp, unicastp = 1;
 	struct option_tag *ot, *not;
 	struct data_string d1;
 	struct option_cache *oc;
@@ -2354,13 +2356,16 @@ void dhcp_reply (lease)
 	} else {
 		to.sin_addr = limited_broadcast;
 		to.sin_port = remote_port;
+		if (!(lease -> flags & UNICAST_BROADCAST_HACK))
+			unicastp = 0;
 	}
 
 	memcpy (&from, state -> from.iabuf, sizeof from);
 
 	result = send_packet (state -> ip,
 			      (struct packet *)0, &raw, packet_length,
-			      from, &to, &hto);
+			      from, &to,
+			      unicastp ? &hto : (struct hardware *)0);
 
 	/* Free all of the entries in the option_state structure
 	   now that we're done with them. */

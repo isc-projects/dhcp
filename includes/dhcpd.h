@@ -276,7 +276,9 @@ struct lease {
 #	define MS_NULL_TERMINATION	8
 #	define ON_UPDATE_QUEUE		16
 #	define ON_ACK_QUEUE		32
-#	define EPHEMERAL_FLAGS		(MS_NULL_TERMINATION)
+#	define UNICAST_BROADCAST_HACK	64
+#	define EPHEMERAL_FLAGS		(MS_NULL_TERMINATION | \
+					 UNICAST_BROADCAST_HACK)
 
 	binding_state_t binding_state;	/* See failover.h, FTS_*. */
 	binding_state_t next_binding_state;	/* See failover.h, FTS_*. */
