@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.106 2000/12/29 06:49:38 mellon Exp $ Copyright 1995-2000 Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.107 2001/01/04 00:23:39 mellon Exp $ Copyright 1995-2000 Internet Software Consortium.";
 #endif
 
   static char copyright[] =
@@ -69,11 +69,11 @@ int server_identifier_matched;
    ddns variables. */
 
 char std_nsupdate [] = "						    \n\
-option server.ddns-hostname =                                               \n\
-  pick (option fqdn.hostname, option host-name);                            \n\
-option server.ddns-domainname =                                             \n\
-  pick (option fqdn.domainname, option domain-name);                        \n\
-option server.ddns-ttl = encode-int(lease-time / 2, 32);                    \n\
+option server.ddns-hostname =						    \n\
+  pick (option fqdn.hostname, option host-name);			    \n\
+option server.ddns-domainname =						    \n\
+  pick (option fqdn.domainname, config-option domain-name);		    \n\
+option server.ddns-ttl = encode-int(lease-time / 2, 32);		    \n\
 option server.ddns-rev-domainname = \"in-addr.arpa.\";";
 
 /* This is the old-style name service updater that is executed
@@ -550,8 +550,16 @@ int main (argc, argv, envp)
 				log_fatal ("invalid dns update type");
 			data_string_forget (&db, MDL);
 		}
-	} else
-		log_fatal ("Please set ddns-update-type.");
+	} else {
+		log_info ("%s", "");
+		log_error ("** You must set ddns-update-style before %s",
+			   "dhcpd will run. **");
+		log_error ("** To get the same behaviour as in 3.0b2pl11 %s",
+			   "and previous");
+		log_error ("   versions, use \"ddns-update-style ad-hoc;\" **");
+		log_fatal ("ddns-update-style is documented in the %s",
+			   "dhcpd.conf manual page.");
+	}
 
 	/* Don't need the options anymore. */
 	option_state_dereference (&options, MDL);
@@ -560,6 +568,25 @@ int main (argc, argv, envp)
 	/* If old-style ddns updates have been requested, parse the
 	   old-style ddns updater. */
 	if (ddns_update_style == 1) {
+		struct executable_statement **e, *s;
+
+		if (root_group -> statements) {
+			s = (struct executable_statement *)0;
+			if (!executable_statement_allocate (&s, MDL))
+				log_fatal ("no memory for ddns updater");
+			executable_statement_reference
+				(&s -> next, root_group -> statements, MDL);
+			executable_statement_dereference
+				(&root_group -> statements, MDL);
+			executable_statement_reference
+				(&root_group -> statements, s, MDL);
+			s -> op = statements_statement;
+			e = &s -> data.statements;
+			executable_statement_dereference (&s, MDL);
+		} else {
+			e = &root_group -> statements;
+		}
+
 		/* Set up the standard name service updater routine. */
 		parse = (struct parse *)0;
 		status = new_parse (&parse, -1,
@@ -569,8 +596,7 @@ int main (argc, argv, envp)
 			log_fatal ("can't begin parsing old ddns updater!");
 
 		lose = 0;
-		if (!(parse_executable_statements (&root_group -> statements,
-						   parse,
+		if (!(parse_executable_statements (e, parse,
 						   &lose, context_any))) {
 			end_parse (&parse);
 			log_fatal ("can't parse standard ddns updater!");
