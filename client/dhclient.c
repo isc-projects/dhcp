@@ -56,7 +56,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhclient.c,v 1.27 1997/02/26 05:21:55 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.28 1997/02/27 03:38:44 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -76,7 +76,7 @@ int log_perror = 1;
 
 struct iaddr iaddr_broadcast = { 4, { 255, 255, 255, 255 } };
 struct iaddr iaddr_any = { 4, { 0, 0, 0, 0 } };
-struct in_addr inaddr_any = { INADDR_ANY };
+struct in_addr inaddr_any;
 struct sockaddr_in sockaddr_broadcast;
 
 /* ASSERT_STATE() does nothing now; it used to be
@@ -153,12 +153,12 @@ int main (argc, argv, envp)
 	GET_TIME (&cur_time);
 
 	sockaddr_broadcast.sin_family = AF_INET;
-	sockaddr_broadcast.sin_len = sizeof sockaddr_broadcast;
 	sockaddr_broadcast.sin_port = remote_port;
 	sockaddr_broadcast.sin_addr.s_addr = INADDR_BROADCAST;
 #ifdef HAVE_SA_LEN
 	sockaddr_broadcast.sin_len = sizeof sockaddr_broadcast;
 #endif
+	inaddr_any.s_addr = INADDR_ANY;
 
 	/* Discover all the network interfaces. */
 	discover_interfaces (DISCOVER_UNCONFIGURED);
@@ -200,7 +200,7 @@ int main (argc, argv, envp)
 
 	/* Start a configuration state machine for each interface. */
 	for (ip = interfaces; ip; ip = ip -> next) {
-		srandom (cur_time + *(int *)&ip -> hw_address.haddr);
+		srandom (cur_time + *(int *)(&ip -> hw_address.haddr [0]));
 		ip -> client -> state = S_INIT;
 		state_init (ip);
 	}
@@ -666,7 +666,8 @@ struct client_lease *packet_to_lease (packet)
 	for (i = 0; i < 256; i++) {
 		if (packet -> options [i].len) {
 			lease -> options [i].data =
-				malloc (packet -> options [i].len);
+				(unsigned char *)
+					malloc (packet -> options [i].len);
 			if (!lease -> options [i].data) {
 				warn ("dhcpoffer: no memory for option %d\n",
 				      i);
