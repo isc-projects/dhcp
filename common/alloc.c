@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: alloc.c,v 1.43 2000/02/07 05:13:57 mellon Exp $ Copyright (c) 1995, 1996, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: alloc.c,v 1.44 2000/02/15 19:39:21 mellon Exp $ Copyright (c) 1995, 1996, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -546,6 +546,49 @@ void free_binding_value (bv, file, line)
 	bv -> value.bv = free_binding_values;
 	free_binding_values = bv;
 	dmalloc_reuse (free_binding_values, (char *)0, 0, 0);
+}
+
+int fundef_allocate (cptr, file, line)
+	struct fundef **cptr;
+	const char *file;
+	int line;
+{
+	struct fundef *rval;
+
+	rval = dmalloc (sizeof (struct fundef), file, line);
+	if (!rval)
+		return 0;
+	memset (rval, 0, sizeof *rval);
+	return fundef_reference (cptr, rval, file, line);
+}
+
+int fundef_reference (ptr, src, file, line)
+	struct fundef **ptr;
+	struct fundef *src;
+	const char *file;
+	int line;
+{
+	if (!ptr) {
+		log_error ("%s(%d): null pointer", file, line);
+#if defined (POINTER_DEBUG)
+		abort ();
+#else
+		return 0;
+#endif
+	}
+	if (*ptr) {
+		log_error ("%s(%d): non-null pointer", file, line);
+#if defined (POINTER_DEBUG)
+		abort ();
+#else
+		*ptr = (struct fundef *)0;
+#endif
+	}
+	*ptr = src;
+	src -> refcnt++;
+	rc_register (file, line, ptr, src, src -> refcnt);
+	dmalloc_reuse (src, file, line, 1);
+	return 1;
 }
 
 struct option_cache *free_option_caches;
