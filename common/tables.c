@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tables.c,v 1.48 2000/12/28 23:19:15 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tables.c,v 1.49 2000/12/29 06:46:23 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -58,7 +58,6 @@ HASH_FUNCTIONS (option, const char *, struct option)
 
    Format codes:
 
-   e - end of data
    I - IP address
    l - 32-bit signed integer
    L - 32-bit unsigned integer
@@ -85,6 +84,15 @@ HASH_FUNCTIONS (option, const char *, struct option)
        This is done by placing a 'e' at the beginning of the option.   The
        'e' has no other purpose, and is not required if 'E' is the first
        thing in the option.
+   X - either an ASCII string or binary data.   On output, the string is
+       scanned to see if it's printable ASCII and, if so, output as a
+       quoted string.   If not, it's output as colon-seperated hex.   On
+       input, the option can be specified either as a quoted string or as
+       a colon-seperated hex list.
+   N - enumeration.   N is followed by a text string containing
+       the name of the set of enumeration values to parse or emit,
+       followed by a '.'.   The width of the data is specified in the
+       named enumeration.   Named enumerations are tracked in parse.c.
 */
 
 struct universe dhcp_universe;
