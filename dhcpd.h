@@ -112,13 +112,13 @@ struct lease {
 };
 
 #define	ROOT_GROUP	0
-#define HOST_STMT	1
-#define SHARED_NET_STMT	2
-#define SUBNET_STMT	3
-#define CLASS_STMT	4
-#define	GROUP_STMT	5
+#define HOST_DECL	1
+#define SHARED_NET_DECL	2
+#define SUBNET_DECL	3
+#define CLASS_DECL	4
+#define	GROUP_DECL	5
 
-/* Group of statements that share common settings. */
+/* Group of declarations that share common parameters. */
 struct group {
 	struct group *next;
 
@@ -302,25 +302,25 @@ int peek_token PROTO ((char **, FILE *));
 void readconf PROTO ((void));
 void read_leases PROTO ((void));
 int parse_statement PROTO ((FILE *,
-			     struct group *, int, struct host_decl *, int));
+			    struct group *, int, struct host_decl *, int));
 void skip_to_semi PROTO ((FILE *));
 int parse_boolean PROTO ((FILE *));
 int parse_semi PROTO ((FILE *));
 int parse_lbrace PROTO ((FILE *));
-void parse_host_statement PROTO ((FILE *, struct group *));
+void parse_host_declaration PROTO ((FILE *, struct group *));
 char *parse_host_name PROTO ((FILE *));
-void parse_class_statement PROTO ((FILE *, struct group *, int));
+void parse_class_declaration PROTO ((FILE *, struct group *, int));
 void parse_lease_time PROTO ((FILE *, TIME *));
-void parse_shared_net_statement PROTO ((FILE *, struct group *));
-void parse_subnet_statement PROTO ((FILE *, struct shared_network *));
-void parse_group_statement PROTO ((FILE *, struct group *));
-void parse_hardware_decl PROTO ((FILE *, struct hardware *));
+void parse_shared_net_declaration PROTO ((FILE *, struct group *));
+void parse_subnet_declaration PROTO ((FILE *, struct shared_network *));
+void parse_group_declaration PROTO ((FILE *, struct group *));
+void parse_hardware_param PROTO ((FILE *, struct hardware *));
 char *parse_string PROTO ((FILE *));
 struct tree *parse_ip_addr_or_hostname PROTO ((FILE *, int));
-struct tree_cache *parse_fixed_addr_decl PROTO ((FILE *));
-void parse_option_decl PROTO ((FILE *, struct group *));
+struct tree_cache *parse_fixed_addr_param PROTO ((FILE *));
+void parse_option_param PROTO ((FILE *, struct group *));
 TIME parse_timestamp PROTO ((FILE *));
-struct lease *parse_lease_statement PROTO ((FILE *));
+struct lease *parse_lease_declaration PROTO ((FILE *));
 void parse_address_range PROTO ((FILE *, struct subnet *));
 TIME parse_date PROTO ((FILE *));
 unsigned char *parse_numeric_aggregate PROTO ((FILE *,
