@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.25 1999/04/05 19:06:50 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.26 1999/04/12 22:11:12 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -494,10 +494,24 @@ int evaluate_boolean_expression (result, packet, options, expr)
 					    "evaluate_boolean_expression");
 		}
 #if defined (DEBUG_EXPRESSIONS)
-		log_info ("data: exists %s.%s = %s",
+		log_info ("bool: exists %s.%s = %s",
 		      expr -> data.option -> universe -> name,
 		      expr -> data.option -> name, *result ? "true" : "false");
 #endif
+		return 1;
+
+	      case expr_known:
+		if (!packet) {
+#if defined (DEBUG_EXPRESSIONS)
+			log_info ("bool: known = NULL");
+#endif
+			return 0;
+		}
+#if defined (DEBUG_EXPRESSIONS)
+		log_info ("bool: known = %s",
+			  packet -> known ? "true" : "false");
+#endif
+		*result = packet -> known;
 		return 1;
 
 	      case expr_substring:
@@ -522,7 +536,8 @@ int evaluate_boolean_expression (result, packet, options, expr)
 		return 0;
 	}
 
-	log_error ("Bogus opcode in evaluate_boolean_expression: %d", expr -> op);
+	log_error ("Bogus opcode in evaluate_boolean_expression: %d",
+		   expr -> op);
 	return 0;
 }
 
@@ -779,6 +794,7 @@ int evaluate_data_expression (result, packet, options, expr)
 	      case expr_or:
 	      case expr_not:
 	      case expr_match:
+	      case expr_known:
 		log_error ("Boolean opcode in evaluate_data_expression: %d",
 		      expr -> op);
 		return 0;
@@ -812,6 +828,7 @@ int evaluate_numeric_expression (result, packet, options, expr)
 	      case expr_or:
 	      case expr_not:
 	      case expr_match:
+	      case expr_known:
 		log_error ("Boolean opcode in evaluate_numeric_expression: %d",
 		      expr -> op);
 		return 0;
@@ -1052,6 +1069,7 @@ void expression_dereference (eptr, name)
 	      case expr_option:
 	      case expr_hardware:
 	      case expr_exists:
+	      case expr_known:
 		break;
 
 	      default:
@@ -1158,6 +1176,7 @@ static int op_val (op)
 	      case expr_extract_int32:
 	      case expr_const_int:
 	      case expr_exists:
+	      case expr_known:
 		return 100;
 
 	      case expr_equal:
@@ -1202,6 +1221,7 @@ enum expression_context op_context (op)
 	      case expr_extract_int32:
 	      case expr_const_int:
 	      case expr_exists:
+	      case expr_known:
 		return context_any;
 
 	      case expr_equal:
