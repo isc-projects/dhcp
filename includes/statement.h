@@ -40,7 +40,8 @@ struct executable_statement {
 		default_statement,
 		set_statement,
 		unset_statement,
-		let_statement
+		let_statement,
+		define_statement
 	} op;
 	union {
 		struct {
