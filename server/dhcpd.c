@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.41 1997/05/09 08:27:56 mellon Exp $ Copyright 1995, 1996 The Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.42 1997/06/02 23:26:29 mellon Exp $ Copyright 1995, 1996 The Internet Software Consortium.";
 #endif
 
 static char copyright[] =
@@ -85,6 +85,7 @@ int main (argc, argv, envp)
 	int i, status;
 	struct servent *ent;
 	char *s;
+	int cftest;
 #ifndef DEBUG
 	int pidfilewritten = 0;
 	int pid;
@@ -143,6 +144,13 @@ int main (argc, argv, envp)
 			if (++i == argc)
 				usage ();
 			path_dhcpd_db = argv [i];
+                } else if (!strcmp (argv [i], "-t")) {
+			/* test configurations only */
+#ifndef DEBUG
+			daemon = 0;
+#endif
+			cftest = 1;
+			log_perror = -1;
 		} else if (argv [i][0] == '-') {
 			usage ();
 		} else {
@@ -215,6 +223,10 @@ int main (argc, argv, envp)
 	/* Read the dhcpd.conf file... */
 	if (!readconf ())
 		error ("Configuration file errors encountered -- exiting");
+
+        /* test option should cause an early exit */
+ 	if (cftest) 
+ 		exit(0);
 
 	/* Start up the database... */
 	db_startup ();
