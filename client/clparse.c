@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: clparse.c,v 1.52 2000/11/28 22:07:09 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: clparse.c,v 1.53 2001/01/16 22:49:31 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -312,24 +312,6 @@ void parse_client_statement (cfile, ip, config)
 		} 
 		break;
 
-	      case SEND:
-		p = &config -> on_transmission -> statements;
-		op = supersede_option_statement;
-	      do_option:
-		token = next_token (&val, cfile);
-		known = 0;
-		option = parse_option_name (cfile, 0, &known);
-		if (!option)
-			return;
-		stmt = (struct executable_statement *)0;
-		if (!parse_option_statement (&stmt, cfile, 1, option, op))
-			return;
-		for (; *p; p = &((*p) -> next))
-			;
-		executable_statement_reference (p, stmt, MDL);
-		stmt -> next = (struct executable_statement *)0;
-		return;
-
 	      case OPTION:
 		token = next_token (&val, cfile);
 
@@ -368,26 +350,6 @@ void parse_client_statement (cfile, ip, config)
 		if (!parse_option_code_definition (cfile, option))
 			free_option (option, MDL);
 		return;
-
-	      case DEFAULT:
-		p = &config -> on_receipt -> statements;
-		op = default_option_statement;
-		goto do_option;
-
-	      case SUPERSEDE:
-		p = &config -> on_receipt -> statements;
-		op = supersede_option_statement;
-		goto do_option;
-
-	      case APPEND:
-		p = &config -> on_receipt -> statements;
-		op = append_option_statement;
-		goto do_option;
-
-	      case PREPEND:
-		p = &config -> on_receipt -> statements;
-		op = prepend_option_statement;
-		goto do_option;
 
 	      case MEDIA:
 		token = next_token (&val, cfile);
@@ -549,18 +511,15 @@ void parse_client_statement (cfile, ip, config)
 				skip_to_semi (cfile);
 			}
 		} else {
-			if (!config -> on_receipt -> statements) {
-				executable_statement_reference
-					(&config -> on_receipt -> statements,
-					 stmt, MDL);
-			} else {
-				struct executable_statement *s;
-				for (s = config -> on_receipt -> statements;
-				     s -> next; s = s -> next)
-					;
-				executable_statement_reference (&s -> next,
-								stmt, MDL);
-			}
+			struct executable_statement **eptr;
+			if (stmt -> op == send_option_statement)
+			    eptr = &config -> on_transmission -> statements;
+			else
+			    eptr = &config -> on_receipt -> statements;
+
+			for (; *eptr; eptr = &(*eptr) -> next)
+				;
+			executable_statement_reference (eptr, stmt, MDL);
 			return;
 		}
 		break;
