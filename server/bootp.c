@@ -43,10 +43,14 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bootp.c,v 1.68 2000/11/28 23:27:13 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bootp.c,v 1.69 2001/02/12 20:51:26 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
+
+#if defined (TRACING)
+# define send_packet trace_packet_send
+#endif
 
 void bootp (packet)
 	struct packet *packet;
