@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dispatch.c,v 1.24 1996/09/11 05:53:32 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dispatch.c,v 1.25 1996/09/11 06:35:16 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -139,7 +139,6 @@ void discover_interfaces ()
 			if (!tmp)
 				error ("Insufficient memory to %s %s",
 				       "record interface", ifp -> ifr_name);
-			memset (tmp, 0, sizeof *tmp);
 			strcpy (tmp -> name, ifp -> ifr_name);
 			tmp -> next = interfaces;
 			tmp -> flags = ir;
