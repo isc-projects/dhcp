@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: discover.c,v 1.34 2000/10/10 22:31:41 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: discover.c,v 1.35 2000/12/28 23:14:46 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -56,6 +56,7 @@ u_int16_t local_port;
 u_int16_t remote_port;
 int (*dhcp_interface_setup_hook) (struct interface_info *, struct iaddr *);
 int (*dhcp_interface_discovery_hook) (struct interface_info *);
+int (*dhcp_interface_shutdown_hook) (struct interface_info *);
 
 struct in_addr limited_broadcast;
 struct in_addr local_address;
@@ -68,6 +69,28 @@ void (*bootp_packet_handler) PROTO ((struct interface_info *,
 omapi_object_type_t *dhcp_type_interface;
 
 OMAPI_OBJECT_ALLOC (interface, struct interface_info, dhcp_type_interface)
+
+isc_result_t interface_setup ()
+{
+	isc_result_t status;
+	status = omapi_object_type_register (&dhcp_type_interface,
+					     "interface",
+					     dhcp_interface_set_value,
+					     dhcp_interface_get_value,
+					     dhcp_interface_destroy,
+					     dhcp_interface_signal_handler,
+					     dhcp_interface_stuff_values,
+					     dhcp_interface_lookup, 
+					     dhcp_interface_create,
+					     dhcp_interface_remove,
+					     0, 0, 0,
+					     sizeof (struct interface_info),
+					     0);
+	if (status != ISC_R_SUCCESS)
+		log_fatal ("Can't register interface object type: %s",
+			   isc_result_totext (status));
+	return status;
+}
 
 isc_result_t interface_initialize (omapi_object_t *ipo,
 				   const char *file, int line)
@@ -104,19 +127,6 @@ void discover_interfaces (state)
 	isc_result_t status;
 	static int setup_fallback = 0;
 	int wifcount = 0;
-
-	if (!dhcp_type_interface) {
-		status = omapi_object_type_register
-			(&dhcp_type_interface, "interface",
-			 interface_set_value, interface_get_value,
-			 interface_destroy, interface_signal_handler,
-			 interface_stuff_values, 0, 0, 0, 0, 0, 0,
-			 sizeof (struct interface_info),
-			 interface_initialize);
-		if (status != ISC_R_SUCCESS)
-			log_fatal ("Can't create interface object type: %s",
-				   isc_result_totext (status));
-	}
 
 	/* Create an unbound datagram socket to do the SIOCGIFADDR ioctl on. */
 	if ((sock = socket (AF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0)
@@ -673,6 +683,7 @@ isc_result_t got_one (h)
 		return ISC_R_INVALIDARG;
 	ip = (struct interface_info *)h;
 
+      again:
 	if ((result =
 	     receive_packet (ip, u.packbuf, sizeof u, &from, &hfrom)) < 0) {
 		log_error ("receive_packet failed on %s: %m", ip -> name);
@@ -696,72 +707,300 @@ isc_result_t got_one (h)
 		(*bootp_packet_handler) (ip, &u.packet, (unsigned)result,
 					 from.sin_port, ifrom, &hfrom);
 	}
+
+	/* If there is buffered data, read again.    This is for, e.g.,
+	   bpf, which may return two packets at once. */
+	if (ip -> rbuf_offset != ip -> rbuf_len)
+		goto again;
 	return ISC_R_SUCCESS;
 }
 
-isc_result_t interface_set_value (omapi_object_t *h,
-				  omapi_object_t *id,
-				  omapi_data_string_t *name,
-				  omapi_typed_data_t *value)
+isc_result_t dhcp_interface_set_value  (omapi_object_t *h,
+					omapi_object_t *id,
+					omapi_data_string_t *name,
+					omapi_typed_data_t *value)
 {
+	struct interface_info *interface;
+	isc_result_t status;
+	int foo;
+
 	if (h -> type != dhcp_type_interface)
 		return ISC_R_INVALIDARG;
-	
-	if (h -> inner && h -> inner -> type -> set_value)
-		return (*(h -> inner -> type -> set_value))
-			(h -> inner, id, name, value);
+	interface = (struct interface_info *)h;
+
+	if (!omapi_ds_strcmp (name, "name")) {
+		if ((value -> type == omapi_datatype_data ||
+		     value -> type == omapi_datatype_string) &&
+		    value -> u.buffer.len < sizeof interface -> name) {
+			memcpy (interface -> name,
+				value -> u.buffer.value,
+				value -> u.buffer.len);
+			interface -> name [value -> u.buffer.len] = 0;
+		} else
+			return ISC_R_INVALIDARG;
+		return ISC_R_SUCCESS;
+	}
+
+	/* Try to find some inner object that can take the value. */
+	if (h -> inner && h -> inner -> type -> set_value) {
+		status = ((*(h -> inner -> type -> set_value))
+			  (h -> inner, id, name, value));
+		if (status == ISC_R_SUCCESS || status == ISC_R_UNCHANGED)
+			return status;
+	}
+			  
 	return ISC_R_NOTFOUND;
 }
 
-isc_result_t interface_get_value (omapi_object_t *h,
-				  omapi_object_t *id,
-				  omapi_data_string_t *name,
-				  omapi_value_t **value)
+
+isc_result_t dhcp_interface_get_value (omapi_object_t *h,
+				       omapi_object_t *id,
+				       omapi_data_string_t *name,
+				       omapi_value_t **value)
 {
-	if (h -> type != dhcp_type_interface)
-		return ISC_R_INVALIDARG;
-	
-	if (h -> inner && h -> inner -> type -> get_value)
-		return (*(h -> inner -> type -> get_value))
-			(h -> inner, id, name, value);
-	return ISC_R_NOTFOUND;
+	return ISC_R_NOTIMPLEMENTED;
 }
 
-isc_result_t interface_stuff_values (omapi_object_t *c,
-				     omapi_object_t *id,
-				     omapi_object_t *m)
+isc_result_t dhcp_interface_destroy (omapi_object_t *h,
+					 const char *file, int line)
 {
-	if (m -> type != dhcp_type_interface)
-		return ISC_R_INVALIDARG;
-	
-	if (m -> inner && m -> inner -> type -> stuff_values)
-		return (*(m -> inner -> type -> stuff_values)) (c, id,
-								m -> inner);
-	return ISC_R_NOTFOUND;
-}
+	struct interface_info *interface;
+	isc_result_t status;
 
-isc_result_t interface_destroy (omapi_object_t *h, const char *file, int line)
-{
-	int i;
-
-	struct interface_info *p;
 	if (h -> type != dhcp_type_interface)
 		return ISC_R_INVALIDARG;
-	/* Nothing to do yet, AFAIK - interfaces should never be
-	   destroyed.   Revisit this later when we handle interface
-	   detection/deletion on the fly. */
+	interface = (struct interface_info *)h;
+
+	if (interface -> ifp)
+		dfree (interface -> ifp, file, line);
 	return ISC_R_SUCCESS;
 }
 
-isc_result_t interface_signal_handler (omapi_object_t *h,
-				       const char *name, va_list ap)
+isc_result_t dhcp_interface_signal_handler (omapi_object_t *h,
+					    const char *name, va_list ap)
 {
+	struct interface_info *ip, *interface;
+	struct client_config *config;
+	struct client_state *client;
+	isc_result_t status;
+
 	if (h -> type != dhcp_type_interface)
 		return ISC_R_INVALIDARG;
+
+	/* This code needs some rethinking.   It doesn't test against
+	   a signal name, and it just kind of bulls into doing something
+	   that may or may not be appropriate. */
+#if 0
+	interface = (struct interface_info *)h;
+
+	if (interfaces) {
+		interface_reference (&interface -> next, interfaces, MDL);
+		interface_dereference (&interfaces, MDL);
+	}
+	interface_reference (&interfaces, interface, MDL);
+
+	discover_interfaces (DISCOVER_UNCONFIGURED);
+
+	for (ip = interfaces; ip; ip = ip -> next) {
+		/* If interfaces were specified, don't configure
+		   interfaces that weren't specified! */
+		if (ip -> flags & INTERFACE_RUNNING ||
+		   (ip -> flags & (INTERFACE_REQUESTED |
+				     INTERFACE_AUTOMATIC)) !=
+		     INTERFACE_REQUESTED)
+			continue;
+		script_init (ip -> client,
+			     "PREINIT", (struct string_list *)0);
+		if (ip -> client -> alias)
+			script_write_params (ip -> client, "alias_",
+					     ip -> client -> alias);
+		script_go (ip -> client);
+	}
 	
-	if (h -> inner && h -> inner -> type -> signal_handler)
-		return (*(h -> inner -> type -> signal_handler)) (h -> inner,
-								  name, ap);
+	discover_interfaces (interfaces_requested
+			     ? DISCOVER_REQUESTED
+			     : DISCOVER_RUNNING);
+
+	for (ip = interfaces; ip; ip = ip -> next) {
+		if (ip -> flags & INTERFACE_RUNNING)
+			continue;
+		ip -> flags |= INTERFACE_RUNNING;
+		for (client = ip -> client; client; client = client -> next) {
+			client -> state = S_INIT;
+			/* Set up a timeout to start the initialization
+			   process. */
+			add_timeout (cur_time + random () % 5,
+				     state_reboot, client, 0, 0);
+		}
+	}
+	return ISC_R_SUCCESS;
+#endif
+	/* Try to find some inner object that can take the value. */
+	if (h -> inner && h -> inner -> type -> get_value) {
+		status = ((*(h -> inner -> type -> signal_handler))
+			  (h -> inner, name, ap));
+		if (status == ISC_R_SUCCESS)
+			return status;
+	}
 	return ISC_R_NOTFOUND;
 }
 
+isc_result_t dhcp_interface_stuff_values (omapi_object_t *c,
+					  omapi_object_t *id,
+					  omapi_object_t *h)
+{
+	struct interface_info *interface;
+	isc_result_t status;
+
+	if (h -> type != dhcp_type_interface)
+		return ISC_R_INVALIDARG;
+	interface = (struct interface_info *)h;
+
+	/* Write out all the values. */
+
+	status = omapi_connection_put_name (c, "state");
+	if (status != ISC_R_SUCCESS)
+		return status;
+	if (interface -> flags && INTERFACE_REQUESTED)
+	    status = omapi_connection_put_string (c, "up");
+	else
+	    status = omapi_connection_put_string (c, "down");
+	if (status != ISC_R_SUCCESS)
+		return status;
+
+	/* Write out the inner object, if any. */
+	if (h -> inner && h -> inner -> type -> stuff_values) {
+		status = ((*(h -> inner -> type -> stuff_values))
+			  (c, id, h -> inner));
+		if (status == ISC_R_SUCCESS)
+			return status;
+	}
+
+	return ISC_R_SUCCESS;
+}
+
+isc_result_t dhcp_interface_lookup (omapi_object_t **ip,
+				    omapi_object_t *id,
+				    omapi_object_t *ref)
+{
+	omapi_value_t *tv = (omapi_value_t *)0;
+	isc_result_t status;
+	struct interface_info *interface;
+
+	/* First see if we were sent a handle. */
+	status = omapi_get_value_str (ref, id, "handle", &tv);
+	if (status == ISC_R_SUCCESS) {
+		status = omapi_handle_td_lookup (ip, tv -> value);
+
+		omapi_value_dereference (&tv, MDL);
+		if (status != ISC_R_SUCCESS)
+			return status;
+
+		/* Don't return the object if the type is wrong. */
+		if ((*ip) -> type != dhcp_type_interface) {
+			omapi_object_dereference (ip, MDL);
+			return ISC_R_INVALIDARG;
+		}
+	}
+
+	/* Now look for an interface name. */
+	status = omapi_get_value_str (ref, id, "name", &tv);
+	if (status == ISC_R_SUCCESS) {
+		for (interface = interfaces; interface;
+		     interface = interface -> next) {
+		    if (strncmp (interface -> name,
+				 (char *)tv -> value -> u.buffer.value,
+				 tv -> value -> u.buffer.len) == 0)
+			    break;
+		}
+		omapi_value_dereference (&tv, MDL);
+		if (*ip && *ip != (omapi_object_t *)interface) {
+			omapi_object_dereference (ip, MDL);
+			return ISC_R_KEYCONFLICT;
+		} else if (!interface) {
+			if (*ip)
+				omapi_object_dereference (ip, MDL);
+			return ISC_R_NOTFOUND;
+		} else if (!*ip)
+			/* XXX fix so that hash lookup itself creates
+			   XXX the reference. */
+			omapi_object_reference (ip,
+						(omapi_object_t *)interface,
+						MDL);
+	}
+
+	/* If we get to here without finding an interface, no valid key was
+	   specified. */
+	if (!*ip)
+		return ISC_R_NOKEYS;
+	return ISC_R_SUCCESS;
+}
+
+/* actually just go discover the interface */
+isc_result_t dhcp_interface_create (omapi_object_t **lp,
+				    omapi_object_t *id)
+{
+ 	struct interface_info *hp;
+	isc_result_t status;
+	
+	hp = (struct interface_info *)0;
+	status = interface_allocate (&hp, MDL);
+ 	if (status != ISC_R_SUCCESS)
+		return status;
+ 	hp -> flags = INTERFACE_REQUESTED;
+	status = interface_reference ((struct interface_info **)lp, hp, MDL);
+	interface_dereference (&hp, MDL);
+	return status;
+}
+
+isc_result_t dhcp_interface_remove (omapi_object_t *lp,
+				    omapi_object_t *id)
+{
+ 	struct interface_info *interface, *ip, *last;
+
+	interface = (struct interface_info *)lp;
+
+	/* remove from interfaces */
+	last = 0;
+	for (ip = interfaces; ip; ip = ip -> next) {
+		if (ip == interface) {
+			if (last) {
+				interface_dereference (&last -> next, MDL);
+				if (ip -> next)
+					interface_reference (&last -> next,
+							     ip -> next, MDL);
+			} else {
+				interface_dereference (&interfaces, MDL);
+				if (ip -> next)
+					interface_reference (&interfaces,
+							     ip -> next, MDL);
+			}
+			if (ip -> next)
+				interface_dereference (&ip -> next, MDL);
+			break;
+		}
+		last = ip;
+	}
+	if (!ip)
+		return ISC_R_NOTFOUND;
+
+	/* add the interface to the dummy_interface list */
+	if (dummy_interfaces) {
+		interface_reference (&interface -> next,
+				     dummy_interfaces, MDL);
+		interface_dereference (&dummy_interfaces, MDL);
+	}
+	interface_reference (&dummy_interfaces, interface, MDL);
+
+	/* do a DHCPRELEASE */
+	if (dhcp_interface_shutdown_hook)
+		(*dhcp_interface_shutdown_hook) (interface);
+
+	/* remove the io object */
+	omapi_unregister_io_object ((omapi_object_t *)interface);
+
+	if_deregister_send (interface);
+	if_deregister_receive (interface);
+
+	return ISC_R_SUCCESS;
+}
