@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.53.2.24 2002/02/20 05:35:34 mellon Exp $ Copyright (c) 1999-2002 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.53.2.25 2002/03/12 06:46:47 mellon Exp $ Copyright (c) 1999-2002 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -5017,7 +5017,7 @@ normal_binding_state_transition_check (struct lease *lease,
 			   XXX in problems if MCLT is really short or the
 			   XXX max-lease-time is really short (less than the
 			   XXX fudge factor. */
-			if (lease -> ends + 65 > cur_time) {
+			if (lease -> ends - 65 > cur_time) {
 				new_state = lease -> binding_state;
 				goto out;
 			}
