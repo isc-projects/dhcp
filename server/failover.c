@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.36 2001/02/22 07:30:21 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.37 2001/02/27 01:17:34 neild Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2245,9 +2245,61 @@ isc_result_t dhcp_failover_state_set_value (omapi_object_t *h,
 					    omapi_data_string_t *name,
 					    omapi_typed_data_t *value)
 {
+	isc_result_t status;
+
 	if (h -> type != dhcp_type_failover_state)
 		return ISC_R_INVALIDARG;
-	
+
+	/* This list of successful returns is completely wrong, but the
+	   fastest way to make dhcpctl do something vaguely sane when
+	   you try to change the local state. */
+
+	if (!omapi_ds_strcmp (name, "name")) {
+		return ISC_R_SUCCESS;
+	} else if (!omapi_ds_strcmp (name, "peer_name")) {
+		return ISC_R_SUCCESS;
+	} else if (!omapi_ds_strcmp (name, "partner-address")) {
+		return ISC_R_SUCCESS;
+	} else if (!omapi_ds_strcmp (name, "local-address")) {
+		return ISC_R_SUCCESS;
+	} else if (!omapi_ds_strcmp (name, "partner-port")) {
+		return ISC_R_SUCCESS;
+	} else if (!omapi_ds_strcmp (name, "local-port")) {
+		return ISC_R_SUCCESS;
+	} else if (!omapi_ds_strcmp (name, "max-outstanding-updates")) {
+		return ISC_R_SUCCESS;
+	} else if (!omapi_ds_strcmp (name, "mclt")) {
+		return ISC_R_SUCCESS;
+	} else if (!omapi_ds_strcmp (name, "load-balance-max-secs")) {
+		return ISC_R_SUCCESS;
+	} else if (!omapi_ds_strcmp (name, "load-balance-hba")) {
+		return ISC_R_SUCCESS;
+	} else if (!omapi_ds_strcmp (name, "partner-state")) {
+		return ISC_R_SUCCESS;
+	} else if (!omapi_ds_strcmp (name, "local-state")) {
+		long l;
+		status = omapi_get_int_value (&l, value);
+		if (status != ISC_R_SUCCESS)
+			return status;
+		return dhcp_failover_set_state ((dhcp_failover_state_t *)h, l);
+	} else if (!omapi_ds_strcmp (name, "partner-stos")) {
+		return ISC_R_SUCCESS;
+	} else if (!omapi_ds_strcmp (name, "local-stos")) {
+		return ISC_R_SUCCESS;
+	} else if (!omapi_ds_strcmp (name, "hierarchy")) {
+		return ISC_R_SUCCESS;
+	} else if (!omapi_ds_strcmp (name, "last-packet-sent")) {
+		return ISC_R_SUCCESS;
+	} else if (!omapi_ds_strcmp (name, "last-timestamp-received")) {
+		return ISC_R_SUCCESS;
+	} else if (!omapi_ds_strcmp (name, "skew")) {
+		return ISC_R_SUCCESS;
+	} else if (!omapi_ds_strcmp (name, "max-response-delay")) {
+		return ISC_R_SUCCESS;
+	} else if (!omapi_ds_strcmp (name, "cur-unacked-updates")) {
+		return ISC_R_SUCCESS;
+	}
+		
 	if (h -> inner && h -> inner -> type -> set_value)
 		return (*(h -> inner -> type -> set_value))
 			(h -> inner, id, name, value);
