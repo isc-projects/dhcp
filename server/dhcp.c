@@ -801,12 +801,14 @@ struct lease *find_lease (packet, share)
 			host = hp;
 			fixed_lease = mockup_lease (packet, share, hp);
 			uid_lease = (struct lease *)0;
-		} else
+		} else {
 			uid_lease = find_lease_by_uid
 				(packet -> options
 				 [DHO_DHCP_CLIENT_IDENTIFIER].data,
 				 packet -> options
 				 [DHO_DHCP_CLIENT_IDENTIFIER].len);
+			fixed_lease = (struct lease *)0;
+		}
 	} else {
 		uid_lease = (struct lease *)0;
 		fixed_lease = (struct lease *)0;
