@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.47 1999/10/07 06:42:50 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.48 1999/10/08 17:08:34 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -1320,27 +1320,34 @@ void do_packet (interface, packet, len, from_port, from, hfrom)
 		log_info ("Discarding packet with bogus hlen.");
 		return;
 	}
-	if (!parse_options (decoded_packet)) {
-		if (decoded_packet -> options)
-			option_state_dereference (&decoded_packet -> options,
-						  "do_packet");
-		packet_dereference (&decoded_packet, "do_packet");
-		return;
-	}
 
-	if (decoded_packet -> options_valid &&
-	    (op = lookup_option (&dhcp_universe, decoded_packet -> options, 
-				 DHO_DHCP_MESSAGE_TYPE))) {
-		struct data_string dp;
-		memset (&dp, 0, sizeof dp);
-		evaluate_option_cache (&dp, decoded_packet, (struct lease *)0,
-				       decoded_packet -> options,
-				       (struct option_state *)0, op);
-		if (dp.len > 0)
-			decoded_packet -> packet_type = dp.data [0];
-		else
-			decoded_packet -> packet_type = 0;
-		data_string_forget (&dp, "do_packet");
+	/* If there's an option buffer, try to parse it. */
+	if (decoded_packet -> packet_length >= DHCP_FIXED_NON_UDP + 4) {
+		if (!parse_options (decoded_packet)) {
+			if (decoded_packet -> options)
+				option_state_dereference
+					(&decoded_packet -> options,
+					 "do_packet");
+			packet_dereference (&decoded_packet, "do_packet");
+			return;
+		}
+
+		if (decoded_packet -> options_valid &&
+		    (op = lookup_option (&dhcp_universe,
+					 decoded_packet -> options, 
+					 DHO_DHCP_MESSAGE_TYPE))) {
+			struct data_string dp;
+			memset (&dp, 0, sizeof dp);
+			evaluate_option_cache (&dp, decoded_packet,
+					       (struct lease *)0,
+					       decoded_packet -> options,
+					       (struct option_state *)0, op);
+			if (dp.len > 0)
+				decoded_packet -> packet_type = dp.data [0];
+			else
+				decoded_packet -> packet_type = 0;
+			data_string_forget (&dp, "do_packet");
+		}
 	}
 		
 	if (decoded_packet -> packet_type)

@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: discover.c,v 1.15 1999/10/07 06:35:41 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: discover.c,v 1.16 1999/10/08 17:08:33 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -571,6 +571,14 @@ isc_result_t got_one (h)
 		return ISC_R_UNEXPECTED;
 	}
 	if (result == 0)
+		return ISC_R_UNEXPECTED;
+
+	/* If we didn't at least get the fixed portion of the BOOTP
+	   packet, drop the packet.  We're allowing packets with no
+	   sname or filename, because we're aware of at least one
+	   client that sends such packets, but this definitely falls
+	   into the category of being forgiving. */
+	if (result < DHCP_FIXED_NON_UDP - DHCP_SNAME_LEN - DHCP_FILE_LEN)
 		return ISC_R_UNEXPECTED;
 
 	if (bootp_packet_handler) {
