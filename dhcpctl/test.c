@@ -59,20 +59,19 @@ int main (argc, argv)
 	}
 
 	memset (&cid, 0, sizeof cid);
-	status = omapi_data_string_new (&cid, 7, "main");
+	status = omapi_data_string_new (&cid, 6, "main");
 	if (status != ISC_R_SUCCESS) {
 		fprintf (stderr, "omapi_data_string_new: %s\n",
 			 isc_result_totext (status));
 		exit (1);
 	}
 
-	cid -> value [0] = 1; cid -> value [1] = 8;
-	cid -> value [2] = 0; cid -> value [3] = 0x2b;
-	cid -> value [4] = 0x34; cid -> value [5] = 0x1a;
-	cid -> value [6] = 0xc3;
+	cid -> value [0] = 0; cid -> value [1] = 0x10;
+	cid -> value [2] = 0x5a; cid -> value [3] = 0xf8;
+	cid -> value [4] = 0x00; cid -> value [5] = 0xbb;
 
 	status = dhcpctl_set_value (host_handle, cid,
-				    "dhcp-client-identifier");
+				    "hardware-address");
 	if (status != ISC_R_SUCCESS) {
 		fprintf (stderr, "dhcpctl_set_value: %s\n",
 			 isc_result_totext (status));
@@ -98,7 +97,7 @@ int main (argc, argv)
 	status = dhcpctl_wait_for_completion (host_handle, &waitstatus);
 	if (status != ISC_R_SUCCESS) {
 		fprintf (stderr, "dhcpctl_wait_for_completion: %s\n",
-			 isc_result_totext (waitstatus));
+			 isc_result_totext (status));
 		exit (1);
 	}
 
@@ -118,7 +117,7 @@ int main (argc, argv)
 		}
 		if (waitstatus != ISC_R_SUCCESS) {
 			fprintf (stderr, "dhcpctl_wait_for_completion: %s\n",
-				 isc_result_totext (status));
+				 isc_result_totext (waitstatus));
 			exit (1);
 		}
 	}
@@ -134,5 +133,23 @@ int main (argc, argv)
 	printf ("host name = %*.*s\n", result -> len, result -> len,
 		result -> value);
 
+	status = dhcpctl_object_delete (connection, host_handle);
+	if (status != ISC_R_SUCCESS) {
+		fprintf (stderr, "dhcpctl_object_delete: %s\n",
+			 isc_result_totext (status));
+		exit (1);
+	}
+	status = dhcpctl_wait_for_completion (host_handle,
+					      &waitstatus);
+	if (status != ISC_R_SUCCESS) {
+		fprintf (stderr, "delete: dhcpctl_wait_for_completion: %s\n",
+			 isc_result_totext (status));
+		exit (1);
+	}
+	if (waitstatus != ISC_R_SUCCESS) {
+		fprintf (stderr, "delete: dhcpctl_wait_for_completion: %s\n",
+			 isc_result_totext (waitstatus));
+		exit (1);
+	}
 	exit (0);
 }
