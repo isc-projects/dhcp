@@ -40,7 +40,7 @@ libres.a:	$(OBJ)
 	$(RANLIB) libres.a
 
 depend:
-	makedepend $(INCLUDES) $(PREDEFINES) $(SRCS)
+	makedepend $(INCLUDES) $(PREDEFINES) $(SRC)
 
 clean:
 	-rm -f $(OBJ) libres.a
