@@ -215,6 +215,12 @@ isc_result_t name##_array_allocate (omapi_array_t **p,			      \
 		 file, line));						      \
 }									      \
 									      \
+isc_result_t name##_array_free (omapi_array_t **p,			      \
+				const char *file, int line)		      \
+{									      \
+	return omapi_array_free (p, file, line);			      \
+}									      \
+									      \
 isc_result_t name##_array_extend (omapi_array_t *pptr, stype *ptr, int *index,\
 				  const char *file, int line)		      \
 {									      \
@@ -235,6 +241,7 @@ isc_result_t name##_array_lookup (stype **ptr, omapi_array_t *pptr,	      \
 
 #define OMAPI_ARRAY_TYPE_DECL(name, stype) \
 isc_result_t name##_array_allocate (omapi_array_t **, const char *, int);     \
+isc_result_t name##_array_free (omapi_array_t **, const char *, int);	      \
 isc_result_t name##_array_extend (omapi_array_t *, stype *, int *,	      \
 				  const char *, int);			      \
 isc_result_t name##_array_set (omapi_array_t *,				      \
@@ -461,6 +468,7 @@ extern omapi_object_type_t *omapi_type_auth_key;
 
 extern omapi_object_type_t *omapi_object_types;
 
+void omapi_type_relinquish (void);
 isc_result_t omapi_init (void);
 isc_result_t omapi_object_type_register (omapi_object_type_t **,
 					 const char *,
@@ -560,6 +568,7 @@ void dmalloc_dump_outstanding (void);
 #define MDL __FILE__, __LINE__
 #if defined (DEBUG_RC_HISTORY)
 void dump_rc_history (void *);
+void rc_history_next (int);
 #endif
 void omapi_print_dmalloc_usage_by_caller (void);
 isc_result_t omapi_object_allocate (omapi_object_t **,
@@ -599,6 +608,7 @@ isc_result_t omapi_addr_list_dereference (omapi_addr_list_t **,
 
 isc_result_t omapi_array_allocate (omapi_array_t **, omapi_array_ref_t,
 				   omapi_array_deref_t, const char *, int);
+isc_result_t omapi_array_free (omapi_array_t **, const char *, int);
 isc_result_t omapi_array_extend (omapi_array_t *, char *, int *,
 				 const char *, int);
 isc_result_t omapi_array_set (omapi_array_t *, void *, int, const char *, int);
