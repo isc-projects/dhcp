@@ -973,7 +973,7 @@ int cons_options PROTO ((struct packet *, struct dhcp_packet *, struct lease *,
 			 int, int, int, struct data_string *, const char *));
 int fqdn_universe_decode (struct option_state *,
 			  const unsigned char *, unsigned, struct universe *);
-int store_options PROTO ((unsigned char *, unsigned, struct packet *,
+int store_options PROTO ((int *, unsigned char *, unsigned, struct packet *,
 			  struct lease *, struct client_state *,
 			  struct option_state *,
 			  struct option_state *, struct binding_scope **,

@@ -45,6 +45,10 @@ and for prodding me into improving it.
 
 			Changes since 3.0.1
 
+- A bug was fixed in the server's 'option overloading' implementation,
+  where options loaded into the 'file' and 'sname' packet fields were
+  not aligned precisely as rfc2131 dictates.
+
 - The FreeBSD client script was changed to support the case where a domain
   name was not provided by the server.
 

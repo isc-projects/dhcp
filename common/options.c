@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.85.2.13 2004/06/10 17:59:19 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.85.2.14 2004/10/01 18:43:21 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -467,6 +467,8 @@ int cons_options (inpacket, outpacket, lease, client_state,
 	unsigned char buffer [4096];	/* Really big buffer... */
 	unsigned main_buffer_size;
 	unsigned mainbufix, bufix, agentix;
+	int fileix;
+	int snameix;
 	unsigned option_size;
 	unsigned length;
 	int i;
@@ -475,6 +477,8 @@ int cons_options (inpacket, outpacket, lease, client_state,
 	pair pp, *hash;
 	int need_endopt = 0;
 	int have_sso = 0;
+	int ocount = 0;
+	int ofbuf1, ofbuf2;
 
 	memset (&ds, 0, sizeof ds);
 
@@ -626,18 +630,35 @@ int cons_options (inpacket, outpacket, lease, client_state,
 				DHO_VENDOR_ENCAPSULATED_OPTIONS;
 	}
 
+	/* Figure out the overload buffer offset(s). */
+	if (overload) {
+		ofbuf1 = main_buffer_size - 4;
+		if (overload == 3)
+			ofbuf2 = main_buffer_size - 4 + DHCP_FILE_LEN;
+	}
+
 	/* Copy the options into the big buffer... */
-	option_size = store_options (buffer,
-				     (main_buffer_size - 7 +
+	option_size = store_options (&ocount, buffer,
+				     (main_buffer_size - 4 +
 				      ((overload & 1) ? DHCP_FILE_LEN : 0) +
 				      ((overload & 2) ? DHCP_SNAME_LEN : 0)),
 				     inpacket, lease, client_state,
 				     in_options, cfg_options, scope,
 				     priority_list, priority_len,
-				     main_buffer_size,
-				     (main_buffer_size +
-				      ((overload & 1) ? DHCP_FILE_LEN : 0)),
-				     terminate, vuname);
+				     ofbuf1, ofbuf2, terminate, vuname);
+	/* If store_options failed. */
+	if (option_size == 0)
+		return 0;
+	if (overload) {
+		if (ocount == 1 && (overload & 1))
+			overload = 1;
+		else if (ocount == 1 && (overload & 2))
+			overload = 2;
+		else if (ocount == 2)
+			overload = 3;
+		else
+			overload = 0;
+	}
 
 	/* Put the cookie up front... */
 	memcpy (outpacket -> options, DHCP_OPTIONS_COOKIE, 4);
@@ -647,70 +668,44 @@ int cons_options (inpacket, outpacket, lease, client_state,
 	   option at the beginning.  If we can, though, just store the
 	   whole thing in the packet's option buffer and leave it at
 	   that. */
-	if (option_size <= main_buffer_size - mainbufix) {
-		memcpy (&outpacket -> options [mainbufix],
-			buffer, option_size);
-		mainbufix += option_size;
-		agentix = mainbufix;
-		if (mainbufix < main_buffer_size)
-			need_endopt = 1;
-		length = DHCP_FIXED_NON_UDP + mainbufix;
-	} else {
+	memcpy (&outpacket -> options [mainbufix],
+		buffer, option_size);
+	mainbufix += option_size;
+	if (overload) {
 		outpacket -> options [mainbufix++] = DHO_DHCP_OPTION_OVERLOAD;
 		outpacket -> options [mainbufix++] = 1;
-		if (option_size > main_buffer_size - mainbufix + DHCP_FILE_LEN)
-			outpacket -> options [mainbufix++] = 3;
-		else
-			outpacket -> options [mainbufix++] = 1;
+		outpacket -> options [mainbufix++] = overload;
+		outpacket -> options [mainbufix++] = DHO_END;
 
-		memcpy (&outpacket -> options [mainbufix],
-			buffer, main_buffer_size - mainbufix);
-		length = DHCP_FIXED_NON_UDP + main_buffer_size;
-		agentix = main_buffer_size;
-
-		bufix = main_buffer_size - mainbufix;
 		if (overload & 1) {
-			if (option_size - bufix <= DHCP_FILE_LEN) {
-				memcpy (outpacket -> file,
-					&buffer [bufix], option_size - bufix);
-				mainbufix = option_size - bufix;
-				if (mainbufix < DHCP_FILE_LEN)
-					outpacket -> file [mainbufix++]
-						= DHO_END;
-				while (mainbufix < DHCP_FILE_LEN)
-					outpacket -> file [mainbufix++]
-						= DHO_PAD;
+			memcpy (outpacket -> file,
+				&buffer [ofbuf1], DHCP_FILE_LEN);
+		}
+		if (overload & 2) {
+			if (ofbuf2) {
+				memcpy (outpacket -> sname, &buffer [ofbuf2],
+					DHCP_SNAME_LEN);
 			} else {
-				memcpy (outpacket -> file,
-					&buffer [bufix], DHCP_FILE_LEN);
-				bufix += DHCP_FILE_LEN;
+				memcpy (outpacket -> sname, &buffer [ofbuf1],
+					DHCP_SNAME_LEN);
 			}
 		}
-		if ((overload & 2) && option_size < bufix) {
-			memcpy (outpacket -> sname,
-				&buffer [bufix], option_size - bufix);
-
-			mainbufix = option_size - bufix;
-			if (mainbufix < DHCP_SNAME_LEN)
-				outpacket -> file [mainbufix++]
-					= DHO_END;
-			while (mainbufix < DHCP_SNAME_LEN)
-				outpacket -> file [mainbufix++]
-					= DHO_PAD;
-		}
 	}
+	agentix = mainbufix;
+	if (mainbufix < main_buffer_size)
+		need_endopt = 1;
+	length = DHCP_FIXED_NON_UDP + mainbufix;
 
 	/* Now hack in the agent options if there are any. */
 	priority_list [0] = DHO_DHCP_AGENT_OPTIONS;
 	priority_len = 1;
 	agentix +=
-		store_options (&outpacket -> options [agentix],
+		store_options (0, &outpacket -> options [agentix],
 			       1500 - DHCP_FIXED_LEN - agentix,
 			       inpacket, lease, client_state,
 			       in_options, cfg_options, scope,
 			       priority_list, priority_len,
-			       1500 - DHCP_FIXED_LEN - agentix,
-			       1500 - DHCP_FIXED_LEN - agentix, 0, (char *)0);
+			       0, 0, 0, (char *)0);
 
 	/* Tack a DHO_END option onto the packet if we need to. */
 	if (agentix < 1500 - DHCP_FIXED_LEN && need_endopt)
@@ -723,9 +718,10 @@ int cons_options (inpacket, outpacket, lease, client_state,
 
 /* Store all the requested options into the requested buffer. */
 
-int store_options (buffer, buflen, packet, lease, client_state,
+int store_options (ocount, buffer, buflen, packet, lease, client_state,
 		   in_options, cfg_options, scope, priority_list, priority_len,
 		   first_cutoff, second_cutoff, terminate, vuname)
+	int *ocount;
 	unsigned char *buffer;
 	unsigned buflen;
 	struct packet *packet;
@@ -747,7 +743,6 @@ int store_options (buffer, buflen, packet, lease, client_state,
 	struct data_string od;
 	struct option_cache *oc;
 	unsigned code;
-	int optstart;
 
 	memset (&od, 0, sizeof od);
 
@@ -920,16 +915,6 @@ int store_options (buffer, buflen, packet, lease, client_state,
 		    unsigned char incr = length > 255 ? 255 : length;
 		    int consumed = 0;
 		    
-		    /* If this hunk of the buffer will cross a
-		       boundary, only go up to the boundary in this
-		       pass. */
-		    if (bufix < first_cutoff &&
-			bufix + incr > first_cutoff)
-			    incr = first_cutoff - bufix;
-		    else if (bufix < second_cutoff &&
-			     bufix + incr > second_cutoff)
-			    incr = second_cutoff - bufix;
-		    
 		    /* If this option is going to overflow the buffer,
 		       skip it. */
 		    if (bufix + 2 + incr > buflen) {
@@ -955,7 +940,97 @@ int store_options (buffer, buflen, packet, lease, client_state,
 	    data_string_forget (&od, MDL);
 	}
 
-	return bufix;
+	/* Do we need to do overloading? */
+	if (first_cutoff && bufix > first_cutoff) {
+	    int second_bufsize, third_bufsize;
+	    int firstix = 0;
+	    int j;
+	    unsigned len;
+	    unsigned char *ovbuf;
+
+	    if (ocount)
+		    *ocount = 1;
+	    if (second_cutoff) {
+		second_bufsize = second_cutoff - first_cutoff;
+		third_bufsize = buflen - second_cutoff;
+	    } else {
+		second_bufsize = buflen - first_cutoff;
+		third_bufsize = 0;
+	    }
+	    ovbuf = dmalloc (bufix, MDL);
+	    if (!ovbuf)
+		    return 0;
+
+	    /* First move any options that can only fit into the first
+	       buffer into the first buffer. */
+	    for (i = 0; i < bufix; ) {
+		len = buffer [i + 1] + 2;
+		if (i + len > first_cutoff
+		    && buffer [i + 1] > second_bufsize
+		    && buffer [i + 1] > third_bufsize
+		    && buffer [i + 1] < first_cutoff - 4 - firstix) {
+			memcpy (ovbuf, &buffer [i], len);
+			memmove (&buffer [firstix + len],
+				 &buffer [firstix], i - firstix);
+			memcpy (&buffer [firstix], ovbuf, len);
+			firstix += len;
+		}
+		i += len;
+	    }
+
+	    /* Find the first cutoff point. */
+	    for (i = 0; i < bufix; ) {
+		len = buffer [i + 1] + 2;
+		if (i + len + 4 > first_cutoff)
+			break;
+		i += len;
+	    }
+	    /* Copy down any options that can fill out this buffer. */
+	    for (j = i + len; j < bufix; ) {
+		len = buffer [j + 1] + 2;
+		if (i + len + 4 < first_cutoff) {
+			memcpy (ovbuf, &buffer [j], len);
+			memmove (&buffer [i + len], &buffer [i], j - i);
+			memcpy (&buffer [i], ovbuf, len);
+			i += len;
+		}
+		j += len;
+	    }
+
+	    /* Stuff in the overload. */
+	    memcpy (ovbuf, &buffer [i], bufix - i);
+	    memset (&buffer [i], 0, first_cutoff - i);
+	    memcpy (&buffer [first_cutoff], ovbuf, bufix - i);
+	    ix = i;
+	    bufix += (first_cutoff - i);
+	    i += (first_cutoff - i);
+
+	    /* See if there's life after the second cutoff. */
+	    if (second_cutoff) {
+		for (j = i + buffer [i + 1] + 2; j < bufix; ) {
+		    len = buffer [j + 1] + 2;
+		    if (j + len + 1 + (first_cutoff - i) > second_cutoff) {
+			    memcpy (ovbuf, &buffer [j], bufix - j);
+			    buffer [j] = DHO_END;
+			    if (second_cutoff - j > 1)
+				    memset (&buffer [j + 1],
+					    0, second_cutoff - j - 1);
+			    memcpy (&buffer [second_cutoff], ovbuf, bufix - j);
+			    bufix += (second_cutoff - j);
+			    buffer [bufix++] = DHO_END;
+			    if (ocount)
+				    *ocount |= 2;
+			    break;
+		    }
+		    j += len;
+		}
+	    }
+			    
+	    dfree (ovbuf, MDL);
+	} else
+		return bufix;
+
+	return ix;
 }
 
 /* Format the specified option so that a human can easily read it. */
