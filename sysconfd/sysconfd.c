@@ -5,7 +5,7 @@
    !!!Boy, howdy, is this ever not guaranteed not to change!!! */
 
 /*
- * Copyright (c) 1997 The Internet Software Consortium.
+ * Copyright (c) 1997, 1998 The Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -44,7 +44,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: sysconfd.c,v 1.3 1997/11/29 07:49:06 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: sysconfd.c,v 1.4 1998/03/16 06:19:16 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -66,6 +66,7 @@ struct interface_info fallback_interface;
 TIME cur_time;
 u_int16_t local_port;
 
+int dhcp_max_agent_option_packet_length;
 
 int main (argc, argv, envp)
 	int argc;
@@ -143,7 +144,7 @@ void new_connection (proto)
 	int new_fd;
 
 	tmp = (struct sysconf_client *)malloc (sizeof *tmp);
-	if (tmp < 0)
+	if (!tmp)
 		error ("Can't find memory for new client!");
 	memset (tmp, 0, sizeof *tmp);
 
