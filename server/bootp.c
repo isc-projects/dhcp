@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bootp.c,v 1.58 2000/01/05 18:12:09 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bootp.c,v 1.59 2000/01/25 01:32:41 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -115,44 +115,47 @@ void bootp (packet)
 
 	/* Run the executable statements to compute the client and server
 	   options. */
-	option_state_allocate (&options, "bootrequest");
+	option_state_allocate (&options, MDL);
 	
 	/* Execute the subnet statements. */
 	execute_statements_in_scope (packet, lease, packet -> options, options,
-				     lease -> subnet -> group,
+				     &lease -> scope, lease -> subnet -> group,
 				     (struct group *)0);
 	
 	/* Execute statements from class scopes. */
 	for (i = packet -> class_count; i > 0; i--) {
 		execute_statements_in_scope
 			(packet, lease, packet -> options, options,
-			 packet -> classes [i - 1] -> group,
+			 &lease -> scope, packet -> classes [i - 1] -> group,
 			 lease -> subnet -> group);
 	}
 
 	/* Execute the host statements. */
 	execute_statements_in_scope (packet, lease, packet -> options, options,
+				     &lease -> scope,
 				     hp -> group, subnet -> group);
 	
 	/* Drop the request if it's not allowed for this client. */
 	if ((oc = lookup_option (&server_universe, options, SV_ALLOW_BOOTP)) &&
 	    !evaluate_boolean_option_cache (&ignorep, packet, lease,
-					    packet -> options, options, oc)) {
+					    packet -> options, options,
+					    &lease -> scope, oc, MDL)) {
 		if (!ignorep)
 			log_info ("%s: bootp disallowed", msgbuf);
-		option_state_dereference (&options, "bootrequest");
-		static_lease_dereference (lease, "bootrequest");
+		option_state_dereference (&options, MDL);
+		static_lease_dereference (lease, MDL);
 		return;
 	} 
 
 	if ((oc = lookup_option (&server_universe,
 				 options, SV_ALLOW_BOOTING)) &&
 	    !evaluate_boolean_option_cache (&ignorep, packet, lease,
-					    packet -> options, options, oc)) {
+					    packet -> options, options,
+					    &lease -> scope, oc, MDL)) {
 		if (!ignorep)
 			log_info ("%s: booting disallowed", msgbuf);
-		option_state_dereference (&options, "bootrequest");
-		static_lease_dereference (lease, "bootrequest");
+		option_state_dereference (&options, MDL);
+		static_lease_dereference (lease, MDL);
 		return;
 	}
 
@@ -166,8 +169,9 @@ void bootp (packet)
 	if (!packet -> options_valid &&
 	    !(evaluate_boolean_option_cache
 	      (&ignorep, packet, lease, packet -> options, options,
+	       &lease -> scope,
 	       lookup_option (&server_universe, options,
-			      SV_ALWAYS_REPLY_RFC1048)))) {
+			      SV_ALWAYS_REPLY_RFC1048), MDL))) {
 		memcpy (outgoing.raw -> options,
 			packet -> raw -> options, DHCP_OPTION_LEN);
 		outgoing.packet_length = BOOTP_MIN_LEN;
@@ -179,7 +183,7 @@ void bootp (packet)
 		oc = (struct option_cache *)0;
 		i = DHO_SUBNET_MASK;
 		if (!lookup_option (&dhcp_universe, options, i)) {
-			if (option_cache_allocate (&oc, "ack_lease")) {
+			if (option_cache_allocate (&oc, MDL)) {
 				if (make_const_data
 				    (&oc -> expression,
 				     lease -> subnet -> netmask.iabuf,
@@ -189,7 +193,7 @@ void bootp (packet)
 					save_option (&dhcp_universe,
 						     options, oc);
 				}
-				option_cache_dereference (&oc, "ack_lease");
+				option_cache_dereference (&oc, MDL);
 			}
 		}
 
@@ -200,6 +204,7 @@ void bootp (packet)
 		outgoing.packet_length =
 			cons_options (packet, outgoing.raw, lease, 0,
 				      packet -> options, options,
+				      &lease -> scope,
 				      0, 0, 1, (struct data_string *)0);
 		if (outgoing.packet_length < BOOTP_MIN_LEN)
 			outgoing.packet_length = BOOTP_MIN_LEN;
@@ -222,7 +227,8 @@ void bootp (packet)
 	if ((oc = lookup_option (&server_universe,
 				options, SV_ALWAYS_BROADCAST)) &&
 	    evaluate_boolean_option_cache (&ignorep, packet, lease,
-					   packet -> options, options, oc))
+					   packet -> options, options,
+					   &lease -> scope, oc, MDL))
 		raw.flags |= htons (BOOTP_BROADCAST);
 
 	/* Figure out the address of the next server. */
@@ -230,11 +236,12 @@ void bootp (packet)
 	oc = lookup_option (&server_universe, options, SV_NEXT_SERVER);
 	if (oc &&
 	    evaluate_option_cache (&d1, packet, lease,
-				   packet -> options, options, oc)) {
+				   packet -> options, options,
+				   &lease -> scope, oc, MDL)) {
 		/* If there was more than one answer, take the first. */
 		if (d1.len >= 4 && d1.data)
 			memcpy (&raw.siaddr, d1.data, 4);
-		data_string_forget (&d1, "bootrequest");
+		data_string_forget (&d1, MDL);
 	} else {
 		if (lease -> subnet -> shared_network -> interface)
 			raw.siaddr = (lease -> subnet -> shared_network ->
@@ -249,13 +256,14 @@ void bootp (packet)
 	oc = lookup_option (&server_universe, options, SV_FILENAME);
 	if (oc &&
 	    evaluate_option_cache (&d1, packet, lease,
-				   packet -> options, options, oc)) {
+				   packet -> options, options,
+				   &lease -> scope, oc, MDL)) {
 		memcpy (raw.file, d1.data,
 			d1.len > sizeof raw.file ? sizeof raw.file : d1.len);
 		if (sizeof raw.file > d1.len)
 			memset (&raw.file [d1.len],
 				0, (sizeof raw.file) - d1.len);
-		data_string_forget (&d1, "bootrequest");
+		data_string_forget (&d1, MDL);
 	} else
 		memcpy (raw.file, packet -> raw -> file, sizeof raw.file);
 
@@ -263,22 +271,23 @@ void bootp (packet)
 	oc = lookup_option (&server_universe, options, SV_SERVER_NAME);
 	if (oc &&
 	    evaluate_option_cache (&d1, packet, lease,
-				   packet -> options, options, oc)) {
+				   packet -> options, options,
+				   &lease -> scope, oc, MDL)) {
 		memcpy (raw.sname, d1.data,
 			d1.len > sizeof raw.sname ? sizeof raw.sname : d1.len);
 		if (sizeof raw.sname > d1.len)
 			memset (&raw.sname [d1.len],
 				0, (sizeof raw.sname) - d1.len);
-		data_string_forget (&d1, "bootrequest");
+		data_string_forget (&d1, MDL);
 	}
 
 	/* Execute the commit statements, if there are any. */
 	execute_statements (packet, lease, packet -> options,
-			    options, lease -> on_commit);
+			    options, &lease -> scope, lease -> on_commit);
 
 	/* We're done with the option state. */
-	option_state_dereference (&options, "bootrequest");
-	static_lease_dereference (lease, "bootrequest");
+	option_state_dereference (&options, MDL);
+	static_lease_dereference (lease, MDL);
 
 	/* Set up the hardware destination address... */
 	hto.hbuf [0] = packet -> raw -> htype;

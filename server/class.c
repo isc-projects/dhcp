@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: class.c,v 1.15 1999/10/21 03:09:13 mellon Exp $ Copyright (c) 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: class.c,v 1.16 2000/01/25 01:36:29 mellon Exp $ Copyright (c) 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -46,14 +46,12 @@ void classification_setup ()
 
 	/* eval ... */
 	rules = (struct executable_statement *)0;
-	if (!executable_statement_allocate (&rules,
-					    "default collection check rule"))
+	if (!executable_statement_allocate (&rules, MDL))
 		log_fatal ("Can't allocate check of default collection");
 	rules -> op = eval_statement;
 
 	/* check-collection "default" */
-	if (!expression_allocate (&rules -> data.eval,
-				  "default check expression"))
+	if (!expression_allocate (&rules -> data.eval, MDL))
 		log_fatal ("Can't allocate default check expression");
 	rules -> data.eval -> op = expr_check;
 	rules -> data.eval -> data.check = &default_collection;
@@ -65,7 +63,7 @@ void classify_client (packet)
 	struct packet *packet;
 {
 	execute_statements (packet, (struct lease *)0, packet -> options,
-			    (struct option_state *)0,
+			    (struct option_state *)0, &global_scope,
 			    default_classification_rules);
 }
 
@@ -91,7 +89,7 @@ int check_collection (packet, lease, collection)
 			status = (evaluate_data_expression
 				  (&data, packet, lease,
 				   packet -> options, (struct option_state *)0,
-				   class -> submatch));
+				   &lease -> scope, class -> submatch));
 			if (status) {
 				if ((nc = ((struct class *)
 					   hash_lookup (class -> hash,
@@ -102,21 +100,21 @@ int check_collection (packet, lease, collection)
 					      print_hex_1 (data.len,
 							   data.data, 60));
 #endif
-					data_string_forget
-						(&data, "check_collection");
+					data_string_forget (&data, MDL);
 					classify (packet, nc);
 					matched = 1;
 					continue;
 				}
-				if (!class -> spawning)
+				if (!class -> spawning) {
+					data_string_forget (&data, MDL);
 					continue;
+				}
 #if defined (DEBUG_CLASS_MATCHING)
 				log_info ("spawning subclass %s.",
 				      print_hex_1 (data.len, data.data, 60));
 #endif
 				nc = (struct class *)
-					dmalloc (sizeof (struct class),
-						 "class spawn");
+					dmalloc (sizeof (struct class), MDL);
 				memset (nc, 0, sizeof *nc);
 				nc -> group = class -> group;
 				nc -> superclass = class;
@@ -127,14 +125,16 @@ int check_collection (packet, lease, collection)
 						(dmalloc
 						 (nc -> lease_limit *
 						  sizeof (struct lease *),
-						  "check_collection"));
+						  MDL));
 					if (!nc -> billed_leases) {
 						log_error ("no memory for%s",
 							   " billing");
 						data_string_forget
 							(&nc -> hash_string,
-							 "check_collection");
-						dfree (nc, "check_collection");
+							 MDL);
+						dfree (nc, MDL);
+						data_string_forget (&data,
+								    MDL);
 						continue;
 					}
 					memset (nc -> billed_leases, 0,
@@ -142,8 +142,8 @@ int check_collection (packet, lease, collection)
 						 sizeof nc -> billed_leases));
 				}
 				data_string_copy (&nc -> hash_string, &data,
-						  "check_collection");
-				data_string_forget (&data, "check_collection");
+						  MDL);
+				data_string_forget (&data, MDL);
 				if (!class -> hash)
 					class -> hash = new_hash ();
 				add_hash (class -> hash,
@@ -152,13 +152,12 @@ int check_collection (packet, lease, collection)
 					  (unsigned char *)nc);
 				classify (packet, nc);
 			}
-			data_string_forget (&data, "check_collection");
 		}
 
 		status = (evaluate_boolean_expression_result
 			  (&ignorep, packet, lease,
 			   packet -> options, (struct option_state *)0,
-			   class -> expr));
+			   &lease -> scope, class -> expr));
 		if (status) {
 			matched = 1;
 #if defined (DEBUG_CLASS_MATCHING)
