@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.94 2000/06/24 16:13:19 mellon Exp $ Copyright 1995-2000 Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.95 2000/07/06 10:22:50 mellon Exp $ Copyright 1995-2000 Internet Software Consortium.";
 #endif
 
   static char copyright[] =
@@ -72,7 +72,9 @@ int server_identifier_matched;
 #if defined (NSUPDATE)
 char std_nsupdate [] = "						    \n\
 on commit {								    \n\
-  if (not defined (ddns-fwd-name)) {					    \n\
+  if (((config-option server.ddns-updates = null) or			    \n\
+       (config-option server.ddns-updates != 0)) and			    \n\
+      (not defined (ddns-fwd-name))) {					    \n\
     set ddns-fwd-name = concat (pick (config-option server.ddns-hostname,   \n\
 				      option host-name), \".\",		    \n\
 			        pick (config-option server.ddns-domainname, \n\
@@ -325,8 +327,9 @@ int main (argc, argv, envp)
 			    std_nsupdate, (sizeof std_nsupdate) - 1,
 			    "standard name service update routine");
 	if (status != ISC_R_SUCCESS)
-		log_fatal ("can't parse standard name service updater!");
+		log_fatal ("can't begin parsing name service updater!");
 
+	lose = 0;
 	if (!(parse_executable_statements
 	      (&root_group -> statements, parse, &lose, context_any))) {
 		end_parse (&parse);
@@ -617,8 +620,10 @@ void lease_pinged (from, packet, length)
 	}
 
 	if (!lp -> state) {
+#if defined (FAILOVER_PROTOCOL)
 		if (!lp -> pool ||
 		    !lp -> pool -> failover_peer)
+#endif
 			log_debug ("ICMP Echo Reply for %s late or spurious.",
 				   piaddr (from));
 		goto out;
