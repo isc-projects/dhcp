@@ -25,11 +25,17 @@ features that are new since version 2.0:
      - Many bug fixes, performance enhancements, and minor new DHCP
        protocol features. 
 
-This release is running in production at the ISC and at quite a few
-other sites.  At this point, the 3.0 release is reasonably stable, but
-is really only recommended for sites that are in a position to
-experiment, or for sites that need the new features.  Bug reports are
-enthusiastically solicited.
+This beta release is quite new, and is running in production at only a
+few sites.   We strongly recommend that you exercise caution in
+installing it.   The 3.0 Beta 2 lease file is not backwards compatible
+with the 3.0 Beta 1 lease file, so if you have to go back, you will
+have to convert your lease files back to the 3.0 Beta 1 format - if
+you try to run a 3.0 Beta 1 server on a 3.0 Beta 2 lease file, it will
+cheerfully delete all your leases.   Having said that, of course the
+way that new releases of open source software become stable is by
+people using them, finding the bugs, and reporting the bugs.   So
+while we urge you to exercise caution, we would also appreciate any
+testing or production use you can safely do.
 
 For information on how to install, configure and run this software,
 as well as how to find documentation and report bugs, please consult
