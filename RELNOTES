@@ -1,6 +1,6 @@
 	    Internet Software Consortium DHCP Distribution
-		    Version 3, Release Candidate 10
-			    June 29, 2001
+		    Version 3, Release Candidate 11
+			   August 14, 2001
 
 			    Release Notes
 
@@ -55,6 +55,27 @@ Measurement Systems, Igor Sharfmesser at Kazakh Telecom, and Brian
 Murrell at BC Tel Advanced Communications.  I'd like to express my
 thanks to all of these good people here, both for working on the code
 and for prodding me into improving it.
+
+		Changes since 3.0 Release Candidate 10
+
+- Fix a bug that was preventing released leases from changing state
+  in failover-enabled pools.
+
+- Fix a core dump in the client identifier finder code (for host
+  declarations).
+
+- Finish fixing a bug where bogus data would sometimes get logged to
+  the dhclient.leases file because it was opened as descriptor 2.
+
+- Fix the linux dhclient-script according to suggestions made by
+  several people on the dhcp-client mailing list.
+
+- Log successful DNS updates at LOG_INFO, not LOG_ERROR.
+
+- Print an error message and refuse to run if a failover peer is
+  defined but not referenced by any pools.
+
+- Correct a confusing error message in failover.
 
 		Changes since 3.0 Release Candidate 9
 
