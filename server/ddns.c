@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: ddns.c,v 1.15.2.6 2001/10/30 06:04:54 mellon Exp $ Copyright (c) 2000-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: ddns.c,v 1.15.2.7 2002/02/09 03:28:27 mellon Exp $ Copyright (c) 2000-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -121,7 +121,19 @@ static isc_result_t ddns_update_ptr (struct data_string *ddns_fwd_name,
 	 * Attempt to perform the update.
 	 */
 	result = minires_nupdate (&resolver_state, ISC_LIST_HEAD (updqueue));
+#if defined (DEBUG)
 	print_dns_status ((int)result, &updqueue);
+#endif
+	if (result == ISC_R_SUCCESS) {
+		log_info ("added reverse map from %.*s to %.*s",
+			  ddns_rev_name -> len, ddns_rev_name -> data,
+			  ddns_fwd_name -> len, ddns_fwd_name -> data);
+	} else {
+		log_error ("unable to add reverse map from %.*s to %.*s: %s",
+			   ddns_rev_name -> len, ddns_rev_name -> data,
+			   ddns_fwd_name -> len, ddns_fwd_name -> data,
+			   isc_result_totext (result));
+	}
 
 	/* Fall through. */
       error:
@@ -174,7 +186,18 @@ static isc_result_t ddns_remove_ptr (struct data_string *ddns_rev_name)
 	 * Attempt to perform the update.
 	 */
 	result = minires_nupdate (&resolver_state, ISC_LIST_HEAD (updqueue));
+#if defined (DEBUG)
 	print_dns_status ((int)result, &updqueue);
+#endif
+	if (result == ISC_R_SUCCESS) {
+		log_info ("removed reverse map on %.*s",
+			  ddns_rev_name -> len, ddns_rev_name -> data);
+	} else {
+		if (result != ISC_R_NXRRSET && result != ISC_R_NXDOMAIN)
+			log_error ("can't remove reverse map on %.*s: %s",
+				   ddns_rev_name -> len, ddns_rev_name -> data,
+				   isc_result_totext (result));
+	}
 
 	/* Not there is success. */
 	if (result == ISC_R_NXRRSET || result == ISC_R_NXDOMAIN)
@@ -241,7 +264,7 @@ int ddns_updates (struct packet *packet,
 		   nonzero, don't try to use the client-supplied
 		   XXX */
 		if (!(oc = lookup_option (&fqdn_universe, packet -> options,
-					  FQDN_NO_CLIENT_UPDATE)) ||
+					  FQDN_SERVER_UPDATE)) ||
 		    evaluate_boolean_option_cache (&ignorep, packet, lease,
 						   (struct client_state *)0,
 						   packet -> options,
@@ -384,11 +407,20 @@ int ddns_updates (struct packet *packet,
 	   PTR update. */
 	if (find_bound_string (&old_ddns_fwd_name,
 			       lease -> scope, "ddns-client-fqdn")) {
+		/* If the name is not different, no need to update
+		   the PTR record. */
 		if (old_ddns_fwd_name.len == ddns_fwd_name.len &&
 		    !memcmp (old_ddns_fwd_name.data, ddns_fwd_name.data,
-			     old_ddns_fwd_name.len)) {
-			/* If the name is not different, no need to update
-			   the PTR record. */
+			     old_ddns_fwd_name.len) &&
+		    (!(oc = lookup_option (&server_universe,
+					   state -> options,
+					   SV_UPDATE_OPTIMIZATION)) ||
+		     evaluate_boolean_option_cache (&ignorep, packet, lease,
+						    (struct client_state *)0,
+						    packet -> options,
+						    state -> options,
+						    &lease -> scope, oc,
+						    MDL))) {
 			goto noerror;
 		}
 	}
