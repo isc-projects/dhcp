@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.15 1998/11/06 01:06:16 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.16 1998/11/06 02:43:10 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -284,8 +284,6 @@ int do_host_lookup (result, dns)
 	int i, count;
 	int new_len;
 
-	memset (&result, 0, sizeof result);
-
 #ifdef DEBUG_EVAL
 	debug ("time: now = %d  dns = %d %d  diff = %d",
 	       cur_time, dns -> timeout, cur_time - dns -> timeout);
@@ -396,8 +394,8 @@ int evaluate_boolean_expression (result, packet, options, expr)
 
 	switch (expr -> op) {
 	      case expr_check:
-#if defined (DEBUG_EXPRESSIONS)
 		*result = check_collection (packet, expr -> data.check);
+#if defined (DEBUG_EXPRESSIONS)
 		note ("bool: check (%s) returns %s",
 		      expr -> data.check -> name, *result ? "true" : "false");
 #endif
