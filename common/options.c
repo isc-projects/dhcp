@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.29 1998/03/17 06:12:17 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.30 1998/04/09 04:31:59 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -455,6 +455,10 @@ int store_options (buffer, buflen, options, priority_list, priority_len,
 		if (!tree_evaluate (options [code])) {
 			continue;
 		}
+
+		/* If it evaluated to nothing, don't send the option. */
+		if (!options [code] -> len)
+			continue;
 
 		/* We should now have a constant length for the option. */
 		length = options [code] -> len;

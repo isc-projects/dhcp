@@ -3,7 +3,7 @@
    Routines for manipulating parse trees... */
 
 /*
- * Copyright (c) 1995, 1996, 1997 The Internet Software Consortium.
+ * Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.10 1997/05/09 08:14:57 mellon Exp $ Copyright (c) 1995, 1996, 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.11 1998/04/09 04:31:21 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -116,12 +116,17 @@ struct tree *tree_const (data, len)
 	int len;
 {
 	struct tree *nt;
-	if (!(nt = new_tree ("tree_const"))
-	    || !(nt -> data.const_val.data =
-		 (unsigned char *)dmalloc (len, "tree_const")))
+	if (!(nt = new_tree ("tree_const")))
 		error ("No memory for constant data tree node.");
+	if (len) {
+		if (!(nt -> data.const_val.data =
+		      (unsigned char *)dmalloc (len, "tree_const")))
+			error ("No memory for constant data tree data.");
+		memcpy (nt -> data.const_val.data, data, len);
+	} else
+		nt -> data.const_val.data = 0;
+
 	nt -> op = TREE_CONST;
-	memcpy (nt -> data.const_val.data, data, len);
 	nt -> data.const_val.len = len;
 	return nt;
 }
@@ -261,9 +266,10 @@ static TIME tree_evaluate_recurse (bufix, bufp, bufcount, tree)
 				       tree -> data.host_lookup.host);
 
 	      case TREE_CONST:
-		do_data_copy (bufix, bufp, bufcount,
-			      tree -> data.const_val.data,
-			      tree -> data.const_val.len);
+		if (tree -> data.const_val.data)
+			do_data_copy (bufix, bufp, bufcount,
+				      tree -> data.const_val.data,
+				      tree -> data.const_val.len);
 		t1 = MAX_TIME;
 		return t1;
 
