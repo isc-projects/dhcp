@@ -125,7 +125,7 @@ extern int h_errno;
 #   define USE_LPF
 #  endif
 #  if !defined (__sparc__)	/* XXX hopefully this will be fixed someday */
-#   define SIOCGIFCONF_NULL_BUF_GIVES_CORRECT_LEN
+#   define SIOCGIFCONF_ZERO_PROBE
 #  endif
 #  define LINUX_SLASHPROC_DISCOVERY
 #  define PROCDEV_DEVICE "/proc/net/dev"
