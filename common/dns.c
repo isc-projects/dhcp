@@ -42,12 +42,12 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dns.c,v 1.34 2001/01/16 22:54:03 mellon Exp $ Copyright (c) 2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dns.c,v 1.35 2001/02/22 07:37:13 mellon Exp $ Copyright (c) 2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
 #include "arpa/nameser.h"
-#include "../minires/md5.h"
+#include "dst/md5.h"
 
 /* This file is kind of a crutch for the BIND 8 nsupdate code, which has
  * itself been cruelly hacked from its original state.   What this code

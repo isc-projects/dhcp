@@ -43,11 +43,11 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: ddns.c,v 1.13 2001/01/25 21:55:54 mellon Exp $ Copyright (c) 2000-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: ddns.c,v 1.14 2001/02/22 07:37:15 mellon Exp $ Copyright (c) 2000-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
-#include "minires/md5.h"
+#include "dst/md5.h"
 #include "minires/minires.h"
 
 #ifdef NSUPDATE
