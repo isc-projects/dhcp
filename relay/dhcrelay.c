@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcrelay.c,v 1.10 1997/12/09 19:04:04 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcrelay.c,v 1.11 1998/03/15 21:07:11 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -61,6 +61,8 @@ char *path_dhcrelay_pid = _PATH_DHCRELAY_PID;
 #ifdef USE_FALLBACK
 struct interface_info fallback_interface;
 #endif
+
+int dhcp_max_agent_option_packet_length = 0;
 
 u_int16_t local_port;
 u_int16_t remote_port;
