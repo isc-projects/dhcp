@@ -108,6 +108,13 @@ possible for dhcpd to operate on Linux with more than one network
 interface.   You must be running a 2.0.31 or greater kernel, and you must
 have 2.0.31 system headers installed *before* you build dhcpd.
 
+NOTE: People have been having problems finding the 2.0.31 kernel
+because it was only available as a prerelease patch.   As of October
+17, Linux 2.0.31 is the stable Linux kernel, and is available as a
+kernel distribution rather than as a test patch.   With any luck, it
+will be in the latest version of your favourite Linux distribution
+soon.
+
 If you are running a Linux 2.1 kernel, this does not guarantee that you
 have SO_BINDTODEVICE.   Linux 2.0.31 was released quite a while after 2.1
 kernel development began.   I do not know what version of Linux 2.1 has
