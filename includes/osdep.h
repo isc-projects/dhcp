@@ -3,7 +3,8 @@
    Operating system dependencies... */
 
 /*
- * Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.
+ * Copyright (c) 1996, 1997, 1998 The Internet Software Consortium.
+ * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -187,6 +188,12 @@
 		defined (USE_NIT_RECEIVE) || defined (USE_UPF_RECEIVE) || \
 		defined (USE_DLPI_RECEIVE)
 #  define PACKET_DECODING
+#endif
+
+/* If we don't have a DLPI packet filter, we have to filter in userland.
+   Probably not worth doing, actually. */
+#if defined (USE_DLPI_RECEIVE) && !defined (USE_DLPI_PFMOD)
+#  define USERLAND_FILTER
 #endif
 
 /* jmp_buf is assumed to be a struct unless otherwise defined in the
