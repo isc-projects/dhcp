@@ -126,15 +126,23 @@ extern int h_errno;
 
 /* Solaris doesn't provide an endian.h, so we have to do it. */
 
-#define BIG_ENDIAN 1
-#define LITTLE_ENDIAN 2
-#if defined (__i386) || defined (i386)
-# define BYTE_ORDER LITTLE_ENDIAN
-#else
-# if defined (__sparc) || defined (sparc)
-#  define BYTE_ORDER BIG_ENDIAN
+#if !defined (BIG_ENDIAN)
+# define BIG_ENDIAN 1
+#endif
+
+#if !defined (BIG_ENDIAN)
+# define LITTLE_ENDIAN 2
+#endif
+
+#if !defined (BYTE_ORDER)
+# if defined (__i386) || defined (i386)
+#  define BYTE_ORDER LITTLE_ENDIAN
 # else
+#  if defined (__sparc) || defined (sparc)
+#   define BYTE_ORDER BIG_ENDIAN
+#  else
 @@@ ERROR @@@   Unable to determine byte order!
+#  endif
 # endif
 #endif
 
