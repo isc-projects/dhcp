@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dispatch.c,v 1.31 1997/02/22 08:34:16 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dispatch.c,v 1.32 1997/02/22 10:55:40 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -469,7 +469,8 @@ void dispatch (parse)
    addressing information from it, and then call do_packet to try to
    do something with it. */
 
-void dispatch ()
+void dispatch (parse)
+	int parse;
 {
 	fd_set r, w, x;
 	struct interface_info *l;
