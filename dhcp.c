@@ -778,9 +778,11 @@ void ack_lease (packet, lease, offer, when)
 		return;
 #endif
 
-	/* If it comes from a client who already knows its address,
-	   sent it directly to that client. */
-	} else if (raw.ciaddr.s_addr && offer == DHCPACK) {
+	/* If it comes from a client who already knows its address and
+	   is not requesting a broadcast response, sent it directly to
+	   that client. */
+	} else if (raw.ciaddr.s_addr && offer == DHCPACK &&
+		   !(raw.flags & BOOTP_BROADCAST)) {
 		to.sin_addr = packet -> raw -> ciaddr;
 		to.sin_port = htons (ntohs (server_port) + 1); /* XXX */
 
