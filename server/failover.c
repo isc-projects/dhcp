@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.49 2001/04/20 19:05:53 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.50 2001/04/20 19:58:42 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -3436,11 +3436,12 @@ isc_result_t dhcp_failover_put_message (dhcp_failover_link_t *link,
 	va_end (list);
 
 	/* Allocate an option buffer, unless we got an error. */
-	if (!bad_option) {
+	if (!bad_option && size) {
 		opbuf = dmalloc (size, MDL);
 		if (!opbuf)
 			status = ISC_R_NOMEMORY;
-	}
+	} else
+		opbuf = (unsigned char *)0;
 
 	va_start (list, msg_type);
 	while ((option = va_arg (list, failover_option_t *))) {
@@ -3491,10 +3492,12 @@ isc_result_t dhcp_failover_put_message (dhcp_failover_link_t *link,
 
 	
 	/* Payload. */
-	status = omapi_connection_copyin (connection, opbuf, size);
-	if (status != ISC_R_SUCCESS)
-		goto err;
-	dfree (opbuf, MDL);
+	if (opbuf) {
+		status = omapi_connection_copyin (connection, opbuf, size);
+		if (status != ISC_R_SUCCESS)
+			goto err;
+		dfree (opbuf, MDL);
+	}
 	if (link -> state_object &&
 	    link -> state_object -> link_to_peer == link) {
 		add_timeout (cur_time +
@@ -3507,7 +3510,8 @@ isc_result_t dhcp_failover_put_message (dhcp_failover_link_t *link,
 	return status;
 
       err:
-	dfree (opbuf, MDL);
+	if (opbuf)
+		dfree (opbuf, MDL);
 	log_info ("dhcp_failover_put_message: something went wrong.");
 	omapi_disconnect (connection, 1);
 	return status;
