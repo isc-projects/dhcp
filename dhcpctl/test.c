@@ -31,7 +31,7 @@ int main (argc, argv)
 	isc_result_t status, waitstatus;
 	dhcpctl_handle connection;
 	dhcpctl_handle host_handle;
-	dhcpctl_data_string cid;
+	dhcpctl_data_string cid, ip_addr;
 	dhcpctl_data_string result;
 
 	status = dhcpctl_initialize ();
@@ -58,6 +58,7 @@ int main (argc, argv)
 		exit (1);
 	}
 
+#if 0
 	memset (&cid, 0, sizeof cid);
 	status = omapi_data_string_new (&cid, 6, "main");
 	if (status != ISC_R_SUCCESS) {
@@ -69,9 +70,35 @@ int main (argc, argv)
 	cid -> value [0] = 0; cid -> value [1] = 0x10;
 	cid -> value [2] = 0x5a; cid -> value [3] = 0xf8;
 	cid -> value [4] = 0x00; cid -> value [5] = 0xbb;
+#endif
 
-	status = dhcpctl_set_value (host_handle, cid,
-				    "hardware-address");
+	status = dhcpctl_set_string_value (host_handle, "grosse",
+					   "dhcp-client-identifier");
+	if (status != ISC_R_SUCCESS) {
+		fprintf (stderr, "dhcpctl_set_value: %s\n",
+			 isc_result_totext (status));
+		exit (1);
+	}
+
+	status = dhcpctl_set_string_value (host_handle, "test", "group");
+	if (status != ISC_R_SUCCESS) {
+		fprintf (stderr, "dhcpctl_set_value: %s\n",
+			 isc_result_totext (status));
+		exit (1);
+	}
+
+	memset (&ip_addr, 0, sizeof ip_addr);
+	status = omapi_data_string_new (&ip_addr, 4, "main");
+	if (status != ISC_R_SUCCESS) {
+		fprintf (stderr, "omapi_data_string_new: %s\n",
+			 isc_result_totext (status));
+		exit (1);
+	}
+
+	ip_addr -> value [0] = 10; ip_addr -> value [1] = 0;
+	ip_addr -> value [2] = 0; ip_addr -> value [3] = 2;
+
+	status = dhcpctl_set_value (host_handle, ip_addr, "ip-address");
 	if (status != ISC_R_SUCCESS) {
 		fprintf (stderr, "dhcpctl_set_value: %s\n",
 			 isc_result_totext (status));
@@ -133,6 +160,7 @@ int main (argc, argv)
 	printf ("host name = %*.*s\n", result -> len, result -> len,
 		result -> value);
 
+#if 0
 	status = dhcpctl_object_remove (connection, host_handle);
 	if (status != ISC_R_SUCCESS) {
 		fprintf (stderr, "dhcpctl_object_remove: %s\n",
@@ -151,5 +179,6 @@ int main (argc, argv)
 			 isc_result_totext (waitstatus));
 		exit (1);
 	}
+#endif
 	exit (0);
 }
