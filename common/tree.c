@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.69 2000/01/26 14:55:35 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.70 2000/01/26 17:22:58 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1805,10 +1805,6 @@ int evaluate_numeric_expression (result, packet, lease,
 			if (tmp -> r_data) {
 				dfree (tmp -> r_data, MDL);
 				tmp -> r_data = (char *)0;
-			}
-			if (tmp -> r_dname) {
-				dfree (tmp -> r_dname, MDL);
-				tmp -> r_dname = (char *)0;
 			}
 			res_freeupdrec (tmp);
 		}
