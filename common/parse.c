@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.26 1999/07/02 20:57:25 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.27 1999/07/06 16:57:05 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1680,7 +1680,7 @@ int parse_non_binary (expr, cfile, lose, context)
 		token = next_token (&val, cfile);
 		if (!expression_allocate (expr, "parse_expression: B2A"))
 			log_fatal ("can't allocate expression");
-		(*expr) -> op = expr_concat;
+		(*expr) -> op = expr_binary_to_ascii;
 
 		token = next_token (&val, cfile);
 		if (token != LPAREN)
@@ -1723,7 +1723,7 @@ int parse_non_binary (expr, cfile, lose, context)
 		token = next_token (&val, cfile);
 		if (!expression_allocate (expr, "parse_expression: REVERSE"))
 			log_fatal ("can't allocate expression");
-		(*expr) -> op = expr_concat;
+		(*expr) -> op = expr_reverse;
 
 		token = next_token (&val, cfile);
 		if (token != LPAREN)
