@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.40 2001/03/16 01:56:32 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.41 2001/03/28 23:07:10 tamino Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -360,6 +360,7 @@ isc_result_t dhcp_failover_link_signal (omapi_object_t *h,
 			return ISC_R_UNEXPECTED;
 		}
 		memset (link -> imsg, 0, sizeof (failover_message_t));
+		link -> imsg -> refcnt = 1;
 		/* Get the length: */
 		omapi_connection_get_uint16 (c, &link -> imsg_len);
 		link -> imsg_count = 0;	/* Bytes read. */
@@ -2144,7 +2145,8 @@ int dhcp_failover_send_acks (dhcp_failover_state_t *state)
 		failover_message_dereference (&msg, MDL);
 	}
 
-	failover_message_dereference (&state -> toack_queue_tail, MDL);
+	if (state -> toack_queue_tail)
+		failover_message_dereference (&state -> toack_queue_tail, MDL);
 	state -> pending_acks = 0;
 
 	return 1;
@@ -4721,6 +4723,7 @@ static isc_result_t failover_message_dereference (failover_message_t **mp,
 	if ((*mp) -> refcnt == 0) {
 		dfree (*mp, MDL);
 	}
+	*mp = 0;
 	return ISC_R_SUCCESS;
 }
 
