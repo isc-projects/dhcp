@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: ddns.c,v 1.15.2.4 2001/06/28 23:33:20 mellon Exp $ Copyright (c) 2000-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: ddns.c,v 1.15.2.5 2001/10/26 21:26:41 mellon Exp $ Copyright (c) 2000-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -175,6 +175,10 @@ static isc_result_t ddns_remove_ptr (struct data_string *ddns_rev_name)
 	 */
 	result = minires_nupdate (&resolver_state, ISC_LIST_HEAD (updqueue));
 	print_dns_status ((int)result, &updqueue);
+
+	/* Not there is success. */
+	if (result == ISC_R_NXRRSET || result == ISC_R_NXDOMAIN)
+		result = ISC_R_SUCCESS;
 
 	/* Fall through. */
       error:
