@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: print.c,v 1.37 2000/02/03 04:38:08 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: print.c,v 1.38 2000/02/03 04:43:36 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -933,7 +933,7 @@ void print_dns_status (int status, ns_updque *uq)
 				s += strlen (s);
 			}
 		} else {
-			if (s != obuf [0] && s + 1 < end)
+			if (s != &obuf [0] && s + 1 < end)
 				*s++ = ' ';
 			if (s + strlen (predicate) < end) {
 				strcpy (s, predicate);
