@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: clparse.c,v 1.11 1997/06/02 22:34:19 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: clparse.c,v 1.12 1997/09/16 18:08:32 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -443,6 +443,9 @@ void parse_interface_declaration (cfile, outer_config)
 
 	if (!ip -> client -> config)
 		make_client_config (ip, outer_config);
+
+	ip -> flags &= ~INTERFACE_AUTOMATIC;
+	interfaces_requested = 1;
 
 	token = next_token (&val, cfile);
 	if (token != LBRACE) {
