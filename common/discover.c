@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: discover.c,v 1.21 2000/01/28 20:30:31 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: discover.c,v 1.22 2000/01/29 16:15:52 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -336,10 +336,10 @@ void discover_interfaces (state)
 
 			/* Otherwise, allocate one. */
 			tmp = ((struct interface_info *)
-			       dmalloc (sizeof *tmp, "discover_interfaces"));
+			       dmalloc (sizeof *tmp, MDL));
 			if (!tmp)
 				log_fatal ("Insufficient memory to %s %s",
-				       "record interface", name);
+					   "record interface", name);
 			memset (tmp, 0, sizeof *tmp);
 			strcpy (tmp -> name, name);
 
