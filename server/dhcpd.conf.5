@@ -763,6 +763,31 @@ limit of four leases.
 The use of the subclass spawning mechanism is not restricted to relay
 agent options - this particular example is given only because it is a
 fairly straightforward one.
+.SH COMBINING MATCH, MATCH IF AND SPAWN WITH
+.PP
+In some cases, it may be useful to use one expression to assign a
+client to a particular class, and a second expression to put it into a
+subclass of that class.   This can be done by combining the \fBmatch
+if\fR and \fBspawn with\fR statements, or the \fBmatch if\fR and
+\fBmatch\fR statements.   For example:
+.PP
+.nf
+class "jr-cable-modems" {
+  match if option dhcp-vendor-identifier = "jrcm";
+  spawn with option agent.circuit-id;
+  lease limit 4;
+}
+
+class "dv-dsl-modems" {
+  match if opton dhcp-vendor-identifier = "dvdsl";
+  spawn with option agent.circuit-id;
+  lease limit 16;
+}
+.fi
+.PP
+This allows you to have two classes that both have the same \fBspawn
+with\fR expression without getting the clients in the two classes
+confused with each other.
 .SH DYNAMIC DNS UPDATES
 .PP
 The DHCP server has the ability to dynamically update the Domain Name
