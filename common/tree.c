@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.63 1999/10/21 02:35:40 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.64 1999/11/03 16:10:41 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -405,6 +405,7 @@ int evaluate_boolean_expression (result, packet, lease, in_options,
 		return 1;
 
 	      case expr_equal:
+	      case expr_not_equal:
 		memset (&left, 0, sizeof left);
 		sleft = evaluate_data_expression (&left, packet, lease,
 						  in_options, cfg_options,
@@ -416,19 +417,23 @@ int evaluate_boolean_expression (result, packet, lease, in_options,
 		if (sleft && sright) {
 			if (left.len == right.len &&
 			    !memcmp (left.data, right.data, left.len))
-				*result = 1;
+				*result = expr -> op == expr_equal;
 			else
-				*result = 0;
+				*result = expr -> op == expr_not_equal;
 		}
 
 #if defined (DEBUG_EXPRESSIONS)
-		log_debug ("bool: equal (%s, %s) = %s",
-		      sleft ? print_hex_1 (left.len, left.data, 30) : "NULL",
-		      sright ? print_hex_2 (right.len,
-					    right.data, 30) : "NULL",
-		      ((sleft && sright)
-		       ? (*result ? "true" : "false")
-		       : "NULL"));
+		log_debug ("bool: %sequal (%s, %s) = %s",
+			   expr -> op == expr_not_equal ? "not" : "",
+			   (sleft
+			    ? print_hex_1 (left.len, left.data, 30)
+			    : "NULL"),
+			   (sright
+			    ? print_hex_2 (right.len, right.data, 30)
+			    : "NULL"),
+			   ((sleft && sright)
+			    ? (*result ? "true" : "false")
+			    : "NULL"));
 #endif
 		if (sleft)
 			data_string_forget (&left,
@@ -1386,6 +1391,7 @@ int evaluate_data_expression (result, packet, lease,
 
 	      case expr_check:
 	      case expr_equal:
+	      case expr_not_equal:
 	      case expr_and:
 	      case expr_or:
 	      case expr_not:
@@ -1429,6 +1435,7 @@ int evaluate_numeric_expression (result, packet, lease,
 	switch (expr -> op) {
 	      case expr_check:
 	      case expr_equal:
+	      case expr_not_equal:
 	      case expr_and:
 	      case expr_or:
 	      case expr_not:
@@ -1670,6 +1677,7 @@ void expression_dereference (eptr, name)
 	switch (expr -> op) {
 		/* All the binary operators can be handled the same way. */
 	      case expr_equal:
+	      case expr_not_equal:
 	      case expr_concat:
 	      case expr_and:
 	      case expr_or:
@@ -1851,6 +1859,7 @@ int is_boolean_expression (expr)
 	return (expr -> op == expr_check ||
 		expr -> op == expr_exists ||
 		expr -> op == expr_equal ||
+		expr -> op == expr_not_equal ||
 		expr -> op == expr_and ||
 		expr -> op == expr_or ||
 		expr -> op == expr_dns_update ||
@@ -1936,6 +1945,7 @@ static int op_val (op)
 		return 100;
 
 	      case expr_equal:
+	      case expr_not_equal:
 		return 3;
 
 	      case expr_and:
@@ -1996,6 +2006,7 @@ enum expression_context op_context (op)
 		return context_any;
 
 	      case expr_equal:
+	      case expr_not_equal:
 		return context_data;
 
 	      case expr_and:
@@ -2031,6 +2042,10 @@ int write_expression (file, expr, col, indent)
 						 expr -> data.check -> name,
 						 "\"", (char *)0);
 		break;
+
+	      case expr_not_equal:
+		s = "!=";
+		goto binary;
 
 	      case expr_equal:
 		s = "=";

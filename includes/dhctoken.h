@@ -31,6 +31,7 @@ enum dhcp_token {
 	LPAREN = '(',
 	RPAREN = ')',
 	EQUAL = '=',
+	BANG = '!',
 
 	HOST = 256,
 	FIRST_TOKEN = HOST,

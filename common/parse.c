@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.52 1999/10/21 03:08:38 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.53 1999/11/03 16:10:40 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1540,6 +1540,7 @@ int parse_if_statement (result, cfile, lose)
  * boolean_expression :== CHECK STRING |
  *  			  NOT boolean-expression |
  *			  data-expression EQUAL data-expression |
+ *			  data-expression BANG EQUAL data-expression |
  *			  boolean-expression AND boolean-expression |
  *			  boolean-expression OR boolean-expression
  *			  EXISTS OPTION-NAME
@@ -2389,6 +2390,21 @@ int parse_expression (expr, cfile, lose, context, plhs, binop)
 
 	token = peek_token (&val, cfile);
 	switch (token) {
+	      case BANG:
+		token = next_token (&val, cfile);
+		token = peek_token (&val, cfile);
+		if (token != EQUAL) {
+			parse_warn (cfile, "! in boolean context without =");
+			*lose = 1;
+			skip_to_semi (cfile);
+			if (lhs)
+				expression_dereference (&lhs,
+							"parse_expression");
+			return 0;
+		}
+		next_op = expr_not_equal;
+		break;
+
 	      case EQUAL:
 		next_op = expr_equal;
 		break;
