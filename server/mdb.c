@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.67.2.6 2001/06/08 23:16:55 mellon Exp $ Copyright (c) 1996-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.67.2.7 2001/06/20 04:20:25 mellon Exp $ Copyright (c) 1996-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -693,28 +693,43 @@ int subnet_inner_than (subnet, scan, warnp)
 void enter_subnet (subnet)
 	struct subnet *subnet;
 {
-	struct subnet *scan, *prev = (struct subnet *)0;
+	struct subnet *scan = (struct subnet *)0;
+	struct subnet *next = (struct subnet *)0;
+	struct subnet *prev = (struct subnet *)0;
 
 	/* Check for duplicates... */
-	for (scan = subnets; scan; scan = scan -> next_subnet) {
-		/* When we find a conflict, make sure that the
-		   subnet with the narrowest subnet mask comes
-		   first. */
-		if (subnet_inner_than (subnet, scan, 1)) {
-			if (prev) {
-				subnet_reference (&prev -> next_subnet,
-						  subnet, MDL);
-			} else
-				subnet_reference (&subnets, subnet, MDL);
-			subnet_reference (&subnet -> next_subnet, scan, MDL);
-			return;
+	if (subnets)
+	    subnet_reference (&next, subnets, MDL);
+	while (next) {
+	    subnet_reference (&scan, next, MDL);
+	    subnet_dereference (&next, MDL);
+
+	    /* When we find a conflict, make sure that the
+	       subnet with the narrowest subnet mask comes
+	       first. */
+	    if (subnet_inner_than (subnet, scan, 1)) {
+		if (prev) {
+		    if (prev -> next_subnet)
+			subnet_dereference (&prev -> next_subnet, MDL);
+		    subnet_reference (&prev -> next_subnet, subnet, MDL);
+		    subnet_dereference (&prev, MDL);
+		} else {
+		    subnet_dereference (&subnets, MDL);
+		    subnet_reference (&subnets, subnet, MDL);
 		}
-		prev = scan;
+		subnet_reference (&subnet -> next_subnet, scan, MDL);
+		subnet_dereference (&scan, MDL);
+		return;
+	    }
+	    prev = scan;
 	}
 
 	/* XXX use the BSD radix tree code instead of a linked list. */
-	subnet -> next_subnet = subnets;
-	subnets = subnet;
+	if (subnets) {
+		subnet_reference (&subnet -> next_subnet, subnets, MDL);
+		subnet_dereference (&subnets, MDL);
+	}
+	subnet_reference (&subnets, subnet, MDL);
 }
 	
 /* Enter a new shared network into the shared network list. */
@@ -2060,26 +2075,127 @@ HASH_FUNCTIONS (lease, const unsigned char *, struct lease)
 HASH_FUNCTIONS (host, const unsigned char *, struct host_decl)
 HASH_FUNCTIONS (class, const char *, struct class)
 
-#if defined (DEBUG_MEMORY_LEAKAGE)
+#if defined (DEBUG_MEMORY_LEAKAGE) || \
+		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
 void free_everything ()
 {
-	struct subnet **sc, *sn = (struct subnet *)0;
+	struct subnet *sc = (struct subnet *)0, *sn = (struct subnet *)0;
+	struct shared_network *nc = (struct shared_network *)0,
+		*nn = (struct shared_network *)0;
+	struct pool *pc = (struct pool *)0, *pn = (struct pool *)0;
+	struct lease *lc = (struct lease *)0, *ln = (struct lease *)0;
+	struct interface_info *ic = (struct interface_info *)0,
+		*in = (struct interface_info *)0;
+	void *st = shared_networks;
 
-	subnet_dereference (&subnets, MDL);
-	shared_network_dereference (&shared_networks, MDL);
-
-	free_hash_table (host_hw_addr_hash, MDL);
+	/* Get rid of all the hash tables. */
+	if (host_hw_addr_hash)
+		free_hash_table (host_hw_addr_hash, MDL);
 	host_hw_addr_hash = 0;
-	free_hash_table (host_uid_hash, MDL);
+	if (host_uid_hash)
+		free_hash_table (host_uid_hash, MDL);
 	host_uid_hash = 0;
-	free_hash_table (lease_uid_hash, MDL);
+	if (lease_uid_hash)
+		free_hash_table (lease_uid_hash, MDL);
 	lease_uid_hash = 0;
-	free_hash_table (lease_ip_addr_hash, MDL);
+	if (lease_ip_addr_hash)
+		free_hash_table (lease_ip_addr_hash, MDL);
 	lease_ip_addr_hash = 0;
-	free_hash_table (lease_hw_addr_hash, MDL);
+	if (lease_hw_addr_hash)
+		free_hash_table (lease_hw_addr_hash, MDL);
 	lease_hw_addr_hash = 0;
-	free_hash_table (host_name_hash, MDL);
+	if (host_name_hash)
+		free_hash_table (host_name_hash, MDL);
 	host_name_hash = 0;
+
+	/* Subnets are complicated because of the extra links. */
+	if (subnets) {
+	    subnet_reference (&sn, subnets, MDL);
+	    do {
+		if (sn) {
+		    subnet_reference (&sc, sn, MDL);
+		    subnet_dereference (&sn, MDL);
+		}
+		if (sc -> next_subnet) {
+		    subnet_reference (&sn, sc -> next_subnet, MDL);
+		    subnet_dereference (&sc -> next_subnet, MDL);
+		}
+		if (sc -> next_sibling)
+		    subnet_dereference (&sc -> next_sibling, MDL);
+		if (sc -> shared_network)
+		    shared_network_dereference (&sc -> shared_network, MDL);
+		group_dereference (&sc -> group, MDL);
+		subnet_dereference (&sc, MDL);
+	    } while (sn);
+	    subnet_dereference (&subnets, MDL);
+	}
+
+	/* So are shared networks. */
+	if (shared_networks) {
+	    shared_network_reference (&nn, shared_networks, MDL);
+	    do {
+		if (nn) {
+		    shared_network_reference (&nc, nn, MDL);
+		    shared_network_dereference (&nn, MDL);
+		}
+		if (nc -> next) {
+		    shared_network_reference (&nn, nc -> next, MDL);
+		    shared_network_dereference (&nc -> next, MDL);
+		}
+
+		/* As are pools. */
+		if (nc -> pools) {
+		    pool_reference (&pn, nc -> pools, MDL);
+		    do {
+			struct lease **lptr [5];
+			int i;
+			
+			if (pn) {
+			    pool_reference (&pc, pn, MDL);
+			    pool_dereference (&pn, MDL);
+			}
+			if (pc -> next) {
+			    pool_reference (&pn, pc -> next, MDL);
+			    pool_dereference (&pc -> next, MDL);
+			}
+			
+			lptr [FREE_LEASES] = &pc -> free;
+			lptr [ACTIVE_LEASES] = &pc -> active;
+			lptr [EXPIRED_LEASES] = &pc -> expired;
+			lptr [ABANDONED_LEASES] = &pc -> abandoned;
+			lptr [BACKUP_LEASES] = &pc -> backup;
+
+			/* As (sigh) are leases. */
+			for (i = 0; i < 5; i++) {
+			    if (*lptr [i]) {
+				lease_reference (&ln, *lptr [i], MDL);
+				do {
+				    if (ln) {
+					lease_reference (&lc, ln, MDL);
+					lease_dereference (&ln, MDL);
+				    }
+				    if (lc -> next) {
+					lease_reference (&ln, lc -> next, MDL);
+					lease_dereference (&lc -> next, MDL);
+				    }
+				    lease_dereference (&lc, MDL);
+				} while (ln);
+				
+				lease_dereference (lptr [i], MDL);
+			    }
+			}
+			group_dereference (&pc -> group, MDL);
+			pool_dereference (&pc, MDL);
+		    } while (pn);
+		    pool_dereference (&nc -> pools, MDL);
+		}
+		/* Because of a circular reference, we need to nuke this
+		   manually. */
+		group_dereference (&nc -> group, MDL);
+		shared_network_dereference (&nc, MDL);
+	    } while (nn);
+	    shared_network_dereference (&shared_networks, MDL);
+	}
 
 	relinquish_free_lease_states ();
 	relinquish_free_pairs ();
@@ -2087,6 +2203,27 @@ void free_everything ()
 	relinquish_free_binding_values ();
 	relinquish_free_option_caches ();
 	relinquish_free_packets ();
+	trace_free_all ();
+	group_dereference (&root_group, MDL);
 
+	if (interfaces) {
+	    interface_reference (&in, interfaces, MDL);
+	    do {
+		if (in) {
+		    interface_reference (&ic, in, MDL);
+		    interface_dereference (&in, MDL);
+		}
+		if (ic -> next) {
+		    interface_reference (&in, ic -> next, MDL);
+		    interface_dereference (&ic -> next, MDL);
+		}
+		omapi_unregister_io_object ((omapi_object_t *)ic);
+		interface_dereference (&ic, MDL);
+	    } while (in);
+	    interface_dereference (&interfaces, MDL);
+	}
+
+	if (st)
+		dump_rc_history (st);
 }
 #endif /* DEBUG_MEMORY_LEAKAGE */
