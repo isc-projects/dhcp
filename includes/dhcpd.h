@@ -257,13 +257,9 @@ typedef unsigned char option_mask [16];
 void parse_options PROTO ((struct packet *));
 void parse_option_buffer PROTO ((struct packet *, unsigned char *, int));
 void cons_options PROTO ((struct packet *, struct packet *,
-			  struct tree_cache **, int));
-/* void new_cons_options PROTO ((struct packet *, struct packet *,
-			  struct tree_cache **, int)); */
+			  struct tree_cache **, int, int));
 int store_options PROTO ((unsigned char *, int, struct tree_cache **,
-			   unsigned char *, int, int, int));
-/* int store_option PROTO ((struct tree_cache **, unsigned char,
-			 unsigned char *, int, int *)); */
+			   unsigned char *, int, int, int, int));
 char *pretty_print_option PROTO ((unsigned char, unsigned char *, int));
 
 /* errwarn.c */
