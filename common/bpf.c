@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bpf.c,v 1.19.2.5 1999/02/04 22:10:09 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bpf.c,v 1.19.2.6 1999/02/09 04:46:59 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -109,6 +109,11 @@ int if_register_bpf (info)
 			if (errno == EBUSY) {
 				continue;
 			} else {
+				if (!b)
+					error ("No bpf devices.%s%s%s",
+					       "   Please read the README",
+					       " section for your operating",
+					       " system.");
 				error ("Can't find free bpf: %m");
 			}
 		} else {
