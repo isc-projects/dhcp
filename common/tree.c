@@ -105,6 +105,7 @@ struct dns_host_entry *enter_dns_host (name)
 	strcpy (dh -> hostname, name);
 	dh -> data = (unsigned char *)0;
 	dh -> data_len = 0;
+	dh -> buf_len = 0;
 	dh -> timeout = 0;
 	return dh;
 }
@@ -354,9 +355,10 @@ static TIME do_host_lookup (bufix, bufp, bufcount, dns)
 
 	/* Addresses are conveniently stored one to the buffer, so we
 	   have to copy them out one at a time... :'( */
-	for (i = 0; i < new_len / h -> h_length; i++)
+	for (i = 0; i < new_len / h -> h_length; i++) {
 		memcpy (dns -> data + h -> h_length * i,
 			h -> h_addr_list [i], h -> h_length);
+	}
 	debug ("dns -> data: %x  h -> h_addr_list [0]: %x",
 	       *(int *)(dns -> data), h -> h_addr_list [0]);
 	dns -> data_len = new_len;

@@ -233,6 +233,8 @@ void dump_packet (tp)
 	       ((unsigned char *)(tdp -> chaddr)) [3],
 	       ((unsigned char *)(tdp -> chaddr)) [4],
 	       ((unsigned char *)(tdp -> chaddr)) [5]);
+	debug ("filename = %s\n", tdp -> file);
+	debug ("server_name = %s\n", tdp -> sname);
 	if (tp -> options_valid) {
 		int i;
 

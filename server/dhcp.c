@@ -49,4 +49,5 @@ static char copyright[] =
 void dhcp (packet)
 	struct packet *packet;
 {
+	dump_packet (packet);
 }

@@ -43,6 +43,7 @@
 #include "dhctoken.h"
 
 TIME cur_time;
+unsigned char packbuf [65536];	/* Should cover the gnarliest MTU... */
 
 int main (argc, argv, envp)
 	int argc;
@@ -51,7 +52,23 @@ int main (argc, argv, envp)
 {
 	FILE *cfile = stdin;
 	char *val;
+	struct sockaddr_in name;
+	int sock;
+	int flag;
 	int token;
+	struct dhcp_packet incoming, raw;
+	struct packet ip, outgoing;
+	struct sockaddr_in from, to;
+	struct iaddr ifrom;
+	int fromlen = sizeof from;
+	int max = 0;
+	int count;
+	int result;
+	int i;
+	struct host_decl decl;
+	int xid = 1;
+
+	memset (&ip, 0, sizeof ip);
 
 	/* Set up the initial dhcp option universe. */
 	initialize_universes ();
@@ -59,31 +76,164 @@ int main (argc, argv, envp)
 	/* Get the current time... */
 	GET_TIME (&cur_time);
 
+	name.sin_family = AF_INET;
+	name.sin_port = htons (2000);
+	name.sin_addr.s_addr = htonl (INADDR_ANY);
+	memset (name.sin_zero, 0, sizeof (name.sin_zero));
+
+	/* List addresses on which we're listening. */
+	note ("Receiving on %s, port %d",
+	      inet_ntoa (name.sin_addr), htons (name.sin_port));
+	if ((sock = socket (AF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0)
+		error ("Can't create dhcp socket: %m");
+
+	flag = 1;
+	if (setsockopt (sock, SOL_SOCKET, SO_REUSEADDR,
+			&flag, sizeof flag) < 0)
+		error ("Can't set SO_REUSEADDR option on dhcp socket: %m");
+
+	if (setsockopt (sock, SOL_SOCKET, SO_BROADCAST,
+			&flag, sizeof flag) < 0)
+		error ("Can't set SO_BROADCAST option on dhcp socket: %m");
+
+	if (bind (sock, (struct sockaddr *)&name, sizeof name) < 0)
+		error ("Can't bind to dhcp address: %m");
+
 	do {
-		token = peek_token (&val, cfile);
-		if (token == EOF)
-			break;
-		parse_client_statement (cfile);
+		fd_set r, w, x;
+		FD_ZERO (&r);
+		FD_ZERO (&w);
+		FD_ZERO (&x);
+		FD_SET (sock, &r);
+		FD_SET (0, &r); /* stdin */
+
+		if (select (sock + 1, &r, &w, &x, (struct timeval *)0) < 0) {
+			error ("select: %m");
+		}
+		if (FD_ISSET (sock, &r)) {
+			if ((result =
+			     recvfrom (sock, packbuf, sizeof packbuf, 0,
+				       (struct sockaddr *)&from, &fromlen))
+			    < 0) {
+				warn ("recvfrom failed: %m");
+				sleep (5);
+				continue;
+			}
+			note ("request from %s, port %d",
+			      inet_ntoa (from.sin_addr),
+			      htons (from.sin_port));
+			ifrom.len = 4;
+			memcpy (ifrom.iabuf, &from.sin_addr, ifrom.len);
+			memcpy (&incoming, packbuf, result);
+			memset (&ip, 0, sizeof ip);
+			ip.raw = &incoming;
+			ip.packet_length = result;
+			ip.client_port = ntohs (from.sin_port);
+			ip.client_addr = ifrom;
+			ip.client_sock = sock;
+			parse_options (&ip);
+			printf ("\nPacket from %s, port %d\n",
+				piaddr (ip.client_addr), ip.client_port);
+			for (i = 0; i < 256; i++)
+				if (ip.options [i].len)
+					printf ("%s = %s;\n",
+						dhcp_options [i].name,
+						pretty_print_option
+						(i,
+						 ip.options [i].data,
+						 ip.options [i].len));
+		} else if (FD_ISSET (0, &r)) {
+			int bufs = 0;
+
+			/* Parse a packet declaration from stdin, or
+			   exit if we've hit EOF. */
+			token = peek_token (&val, cfile);
+			if (token == EOF)
+				break;
+			memset (&decl, 0, sizeof decl);
+			parse_client_statement (cfile, &decl);
+
+			/* Fill in a packet based on the information
+			   entered by the user. */
+			memset (&outgoing, 0, sizeof outgoing);
+			memset (&raw, 0, sizeof raw);
+			outgoing.raw = &raw;
+
+			/* Copy in the filename if given; otherwise, flag
+			   the filename buffer as available for options. */
+			if (decl.filename)
+				strncpy (raw.file,
+					 decl.filename, sizeof raw.file);
+			else
+				bufs |= 1;
+
+			/* Copy in the server name if given; otherwise, flag
+			   the server_name buffer as available for options. */
+			if (decl.server_name)
+				strncpy (raw.sname,
+					 decl.server_name, sizeof raw.sname);
+			else
+				bufs |= 2;
+
+			if (decl.interface_count) {
+				memcpy (raw.chaddr,
+					decl.interfaces [0].haddr,
+					decl.interfaces [0].hlen);
+				raw.htype = decl.interfaces [0].htype;
+				raw.hlen = decl.interfaces [0].hlen;
+				if (decl.interface_count > 1)
+					note ("Only one interface used.");
+			} else {
+				raw.htype = raw.hlen = 0;
+			}
+
+			cons_options ((struct packet *)0,
+				      &outgoing, &decl, bufs);
+			memset (&raw.ciaddr, 0, sizeof raw.ciaddr);
+			memset (&raw.yiaddr, 0, sizeof raw.ciaddr);
+			memset (&raw.siaddr, 0, sizeof raw.ciaddr);
+			memset (&raw.giaddr, 0, sizeof raw.ciaddr);
+			
+			raw.xid = xid++;
+			raw.xid = htons (raw.xid);
+			raw.secs = 0;
+			raw.flags = 0;
+			raw.hops = 0;
+			raw.op = BOOTREQUEST;
+
+			to.sin_port = htons (2001);
+			inet_aton ("206.119.204.48", &to.sin_addr);
+			to.sin_family = AF_INET;
+			to.sin_len = sizeof to;
+			memset (to.sin_zero, 0, sizeof to.sin_zero);
+
+			note ("Sending dhcp request to %s, port %d",
+			      inet_ntoa (to.sin_addr), htons (to.sin_port));
+
+			errno = 0;
+			result = sendto (sock, &raw,
+					 outgoing.packet_length,
+					 0, (struct sockaddr *)&to, sizeof to);
+			if (result < 0)
+				warn ("sendto: %m");
+		}
 	} while (1);
 	exit (0);
 }
 
 /* statement :== host_statement */
 
-void parse_client_statement (cfile)
+void parse_client_statement (cfile, decl)
 	FILE *cfile;
+	struct host_decl *decl;
 {
 	char *val;
 	jmp_buf bc;
-	struct host_decl decl;
 	int token;
-	struct dhcp_packet raw;
-	struct packet outpacket, inpacket;
-	int i;
 
 	switch (next_token (&val, cfile)) {
 	      case PACKET:
-		memset (&decl, 0, sizeof decl);
+		memset (decl, 0, sizeof decl);
 		if (!setjmp (bc)) {
 			do {
 				token = peek_token (&val, cfile);
@@ -91,31 +241,9 @@ void parse_client_statement (cfile)
 					token = next_token (&val, cfile);
 					break;
 				}
-				parse_host_decl (cfile, &bc, &decl);
+				parse_host_decl (cfile, &bc, decl);
 			} while (1);
 		}
-		for (i = 0; i < 256; i++)
-			if (decl.options [i])
-				printf ("option %s\n", dhcp_options [i].name);
-		memset (&outpacket, 0, sizeof outpacket);
-		memset (&raw, 0, sizeof raw);
-		outpacket.raw = &raw;
-		cons_options ((struct packet *)0, &outpacket, &decl, 3);
-		inpacket.raw = &raw;
-		inpacket.packet_length = outpacket.packet_length;
-		parse_options (&inpacket);
-		for (i = 0; i < 256; i++)
-			if (inpacket.options [i].len)
-				printf ("%s=%s\n",
-					dhcp_options [i].name,
-					pretty_print_option
-					(i,
-					 inpacket.options [i].data,
-					 inpacket.options [i].len));
-		for (i = 0; i < 20; i++)
-			printf ("%s%x", i == 0 ? "" : " ",
-				(unsigned char)raw.options [i]);
-		printf ("\noptions_valid: %d\n", inpacket.options_valid);
 		break;
 	      default:
 		parse_warn ("expecting a declaration.");

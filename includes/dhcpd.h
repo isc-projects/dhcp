@@ -289,5 +289,5 @@ int addr_eq (struct iaddr, struct iaddr);
 char *piaddr (struct iaddr);
 
 /* dhclient.c */
-void parse_client_statement (FILE *);
+void parse_client_statement (FILE *, struct host_decl *);
 

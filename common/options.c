@@ -250,13 +250,6 @@ void cons_options (inpacket, outpacket, hp, overload)
 		if (!tree_evaluate (hp -> options [code]))
 			continue;
 
-printf ("hp -> options [%d] = %x %d %d %d %x\n",
-code, (unsigned long)(hp -> options [code] -> value),
-hp -> options [code] -> len, hp -> options [code] -> buf_size,
-hp -> options [code] -> timeout,
-(unsigned long)(hp -> options [code] -> tree));
-printf ("buffer = %x  buflen = %d  bufix = %d\n",
-(unsigned int)buffer, buflen, bufix);
 		/* We should now have a constant length for the option. */
 		length = (hp -> options [code] -> len - stored_length [code]);
 
