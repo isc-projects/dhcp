@@ -1,7 +1,7 @@
 	    Internet Software Consortium DHCP Distribution
 			     Version 3.0.1
-			  Release Candidate 3
-			   November 1, 2001
+			  Release Candidate 4
+			   November 6, 2001
 
 			    Release Notes
 
@@ -45,6 +45,10 @@ Measurement Systems, Igor Sharfmesser at Kazakh Telecom, and Brian
 Murrell at BC Tel Advanced Communications.  I'd like to express my
 thanks to all of these good people here, both for working on the code
 and for prodding me into improving it.
+
+			Changes since 3.0.1rc3
+
+- A minor bug fix in the arguments to a logging function call.
 
 		        Changes since 3.0.1rc2
 
