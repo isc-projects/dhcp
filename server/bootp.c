@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bootp.c,v 1.28.2.5 1999/04/06 15:15:00 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bootp.c,v 1.28.2.6 1999/04/08 21:39:34 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -240,6 +240,8 @@ void bootp (packet)
 			packet -> raw -> options, DHCP_OPTION_LEN);
 		outgoing.packet_length = BOOTP_MIN_LEN;
 	} else {
+		struct tree_cache netmask_tree;   /*  -- RBF */
+
 		/* Come up with a list of options that we want to send
 		   to this client.  Start with the per-subnet options,
 		   and then override those with client-specific
@@ -250,6 +252,18 @@ void bootp (packet)
 		for (i = 0; i < 256; i++) {
 			if (hp -> group -> options [i])
 				options [i] = hp -> group -> options [i];
+		}
+
+		/* Use the subnet mask from the subnet declaration if no other
+		   mask has been provided. */
+		if (!options [DHO_SUBNET_MASK]) {
+			options [DHO_SUBNET_MASK] = &netmask_tree;
+			netmask_tree.flags = TC_TEMPORARY;
+			netmask_tree.value = lease -> subnet -> netmask.iabuf;
+			netmask_tree.len = lease -> subnet -> netmask.len;
+			netmask_tree.buf_size = lease -> subnet -> netmask.len;
+			netmask_tree.timeout = 0xFFFFFFFF;
+			netmask_tree.tree = (struct tree *)0;
 		}
 
 		/* Pack the options into the buffer.  Unlike DHCP, we
