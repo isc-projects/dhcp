@@ -487,6 +487,8 @@ struct class *add_class (type, name)
 	memset (class, 0, sizeof *class);
 	strcpy (tname, name);
 	class -> name = tname;
+	memset (class -> options, 0, sizeof class -> options);
+	class -> max_lease_time = class -> default_lease_time = 0;
 
 	if (type)
 		add_hash (user_class_hash,
