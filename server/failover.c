@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.35 2001/02/22 00:15:54 neild Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.36 2001/02/22 07:30:21 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2119,7 +2119,8 @@ int dhcp_failover_queue_update (struct lease *lease, int immediate)
 	return 1;
 }
 
-int dhcp_failover_send_acks (dhcp_failover_state_t *state) {
+int dhcp_failover_send_acks (dhcp_failover_state_t *state)
+{
 	failover_message_t *msg = (failover_message_t *)0;
 
 	/* Must commit all leases prior to acking them. */
@@ -2147,7 +2148,8 @@ int dhcp_failover_send_acks (dhcp_failover_state_t *state) {
 	return 1;
 }
 
-void dhcp_failover_toack_queue_timeout (void *vs) {
+void dhcp_failover_toack_queue_timeout (void *vs)
+{
 	dhcp_failover_state_t *state = vs;
 	dhcp_failover_send_acks (state);
 }
@@ -2903,7 +2905,8 @@ const char *dhcp_failover_message_name (unsigned type)
 	}
 }
 
-const char *dhcp_failover_option_name (unsigned type) {
+const char *dhcp_failover_option_name (unsigned type)
+{
 	switch (type) {
 	      case FTO_BINDING_STATUS:
 		return "binding-status";
