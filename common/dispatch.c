@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dispatch.c,v 1.40 1997/03/29 10:36:56 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dispatch.c,v 1.41 1997/05/09 08:00:50 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -140,7 +140,9 @@ void discover_interfaces (state)
 		   except don't skip down interfaces if we're trying to
 		   get a list of configurable interfaces. */
 		if ((ifr.ifr_flags & IFF_LOOPBACK) ||
+#ifdef IFF_POINTOPOINT
 		    (ifr.ifr_flags & IFF_POINTOPOINT) ||
+#endif
 		    (!(ifr.ifr_flags & IFF_UP) &&
 		     state != DISCOVER_UNCONFIGURED))
 			continue;
@@ -247,7 +249,7 @@ void discover_interfaces (state)
 				if (!tif)
 					error ("no space to remember ifp.");
 				memcpy (tif, ifp, len);
-				tmp -> ifp = ifp;
+				tmp -> ifp = tif;
 				tmp -> primary_address = foo.sin_addr;
 			}
 
