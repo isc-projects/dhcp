@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: db.c,v 1.40 2000/01/08 01:46:54 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: db.c,v 1.41 2000/01/25 01:39:57 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -65,7 +65,7 @@ int write_lease (lease)
 	} else
 		strcpy (tbuf, "never;");
 	errno = 0;
-	fprintf (db_file, "\tstarts %s\n", tbuf);
+	fprintf (db_file, "  starts %s\n", tbuf);
 	if (errno) {
 		++errors;
 	}
@@ -79,7 +79,7 @@ int write_lease (lease)
 	} else
 		strcpy (tbuf, "never;");
 	errno = 0;
-	fprintf (db_file, "\tends %s", tbuf);
+	fprintf (db_file, "  ends %s", tbuf);
 	if (errno) {
 		++errors;
 	}
@@ -87,7 +87,7 @@ int write_lease (lease)
 	if (lease -> tstp) {
 		t = gmtime (&lease -> tstp);
 		errno = 0;
-		fprintf (db_file, "\n\ttstp %d %d/%02d/%02d %02d:%02d:%02d;",
+		fprintf (db_file, "\n  tstp %d %d/%02d/%02d %02d:%02d:%02d;",
 			 t -> tm_wday, t -> tm_year + 1900,
 			 t -> tm_mon + 1, t -> tm_mday,
 			 t -> tm_hour, t -> tm_min, t -> tm_sec);
@@ -98,7 +98,7 @@ int write_lease (lease)
 	if (lease -> tsfp) {
 		t = gmtime (&lease -> tsfp);
 		errno = 0;
-		fprintf (db_file, "\n\ttsfp %d %d/%02d/%02d %02d:%02d:%02d;",
+		fprintf (db_file, "\n  tsfp %d %d/%02d/%02d %02d:%02d:%02d;",
 			 t -> tm_wday, t -> tm_year + 1900,
 			 t -> tm_mon + 1, t -> tm_mday,
 			 t -> tm_hour, t -> tm_min, t -> tm_sec);
@@ -109,7 +109,7 @@ int write_lease (lease)
 
 	if (lease -> flags & PEER_IS_OWNER) {
 		errno = 0;
-		fprintf (db_file, "\n\tpeer is owner;");
+		fprintf (db_file, "\n  peer is owner;");
 		if (errno) {
 			++errors;
 		}
@@ -123,7 +123,7 @@ int write_lease (lease)
 
 	if (lease -> hardware_addr.hlen) {
 		errno = 0;
-		fprintf (db_file, "\n\thardware %s %s;",
+		fprintf (db_file, "\n  hardware %s %s;",
 			 hardware_types [lease -> hardware_addr.hbuf [0]],
 			 print_hw_addr (lease -> hardware_addr.hbuf [0],
 					lease -> hardware_addr.hlen - 1,
@@ -136,11 +136,11 @@ int write_lease (lease)
 		int i;
 		if (db_printable_len ((const char *)lease -> uid,
 				      lease -> uid_len)) {
-			fprintf (db_file, "\n\tuid \"%*s\";",
+			fprintf (db_file, "\n  uid \"%*s\";",
 				 lease -> uid_len, lease -> uid);
 		} else {
 			errno = 0;
-			fprintf (db_file, "\n\tuid %2.2x", lease -> uid [0]);
+			fprintf (db_file, "\n  uid %2.2x", lease -> uid [0]);
 			if (errno) {
 				++errors;
 			}
@@ -156,28 +156,29 @@ int write_lease (lease)
 	}
 	if (lease -> flags & BOOTP_LEASE) {
 		errno = 0;
-		fprintf (db_file, "\n\tdynamic-bootp;");
+		fprintf (db_file, "\n  dynamic-bootp;");
 		if (errno) {
 			++errors;
 		}
 	}
 	if (lease -> flags & ABANDONED_LEASE) {
 		errno = 0;
-		fprintf (db_file, "\n\tabandoned;");
+		fprintf (db_file, "\n  abandoned;");
 		if (errno) {
 			++errors;
 		}
 	}
-	for (b = lease -> bindings; b; b = b -> next) {
-	    if (b -> value.data) {
-		    if (b -> value.terminated &&
-			db_printable (b -> value.data)) {
+	for (b = lease -> scope.bindings; b; b = b -> next) {
+		if (b -> value.data) {
+		    if (db_printable_len (b -> value.data,
+					  b -> value.len)) {
 			    errno = 0;
-			    fprintf (db_file, "\n\tset %s = \"%s\";",
-				     b -> name, b -> value.data);
+			    fprintf (db_file, "\n  set %s = \"%.*s\";",
+				     b -> name,
+				     (int)b -> value.len, b -> value.data);
 		    } else {
 			    errno = 0;
-			    fprintf (db_file, "\n\tset %s = ", b -> name);
+			    fprintf (db_file, "\n  set %s = ", b -> name);
 			    if (errno) {
 				    ++errors;
 			    }
@@ -186,19 +187,19 @@ int write_lease (lease)
 				    fprintf (db_file, "%2.2x%s",
 					     b -> value.data [i],
 					     i + 1 == b -> value.len
-					     ? ":" : "");
+					     ? "" : ":");
 				    if (errno) {
 					    ++errors;
 				    }
 			    }
 			    putc (';', db_file);
 		    }
-	    }
+		}
 	}
 	if (lease -> client_hostname &&
 	    db_printable (lease -> client_hostname)) {
 		errno = 0;
-		fprintf (db_file, "\n\tclient-hostname \"%s\";",
+		fprintf (db_file, "\n  client-hostname \"%s\";",
 			 lease -> client_hostname);
 		if (errno) {
 			++errors;
@@ -206,7 +207,7 @@ int write_lease (lease)
 	}
 	if (lease -> hostname && db_printable (lease -> hostname)) {
 		errno = 0;
-		fprintf (db_file, "\n\thostname \"%s\";",
+		fprintf (db_file, "\n  hostname \"%s\";",
 			 lease -> hostname);
 		if (errno) {
 			++errors;
@@ -214,23 +215,23 @@ int write_lease (lease)
 	}
 	if (lease -> on_expiry) {
 		errno = 0;
-		fprintf (db_file, "\n\ton expiry%s {",
+		fprintf (db_file, "\n  on expiry%s {",
 			 lease -> on_expiry == lease -> on_release
-			 ? "or release" : "");
+			 ? " or release" : "");
 		if (errno)
 			++errors;
-		write_statements (db_file, lease -> on_expiry, 10);
+		write_statements (db_file, lease -> on_expiry, 4);
 		/* XXX */
-		fprintf (db_file, "\n\t}");
+		fprintf (db_file, "\n  }");
 	}
 	if (lease -> on_release && lease -> on_release != lease -> on_expiry) {
 		errno = 0;
-		fprintf (db_file, "\n\ton release {");
+		fprintf (db_file, "\n  on release {");
 		if (errno)
 			++errors;
-		write_statements (db_file, lease -> on_release, 10);
+		write_statements (db_file, lease -> on_release, 4);
 		/* XXX */
-		fprintf (db_file, "\n\t}");
+		fprintf (db_file, "\n  }");
 	}
 	errno = 0;
 	fputs ("\n}\n", db_file);
@@ -264,20 +265,20 @@ int write_host (host)
 
 	if (host -> flags & HOST_DECL_DYNAMIC) {
 		errno = 0;
-		fprintf (db_file, "\n\tdynamic;");
+		fprintf (db_file, "\n  dynamic;");
 		if (errno)
 			++errors;
 	}
 
 	if (host -> flags & HOST_DECL_DELETED) {
 		errno = 0;
-		fprintf (db_file, "\n\tdeleted;");
+		fprintf (db_file, "\n  deleted;");
 		if (errno)
 			++errors;
 	} else {
 		if (host -> interface.hlen) {
 			errno = 0;
-			fprintf (db_file, "\n\thardware %s %s;",
+			fprintf (db_file, "\n  hardware %s %s;",
 				 hardware_types [host -> interface.hbuf [0]],
 				 print_hw_addr (host -> interface.hbuf [0],
 						host -> interface.hlen - 1,
@@ -292,12 +293,12 @@ int write_host (host)
 			if (db_printable_len ((const char *)
 					      host -> client_identifier.data,
 					      host -> client_identifier.len)) {
-				fprintf (db_file, "\n\tuid \"%*s\";",
+				fprintf (db_file, "\n  uid \"%*s\";",
 					 host -> client_identifier.len,
 					 host -> client_identifier.data);
 			} else {
 				fprintf (db_file,
-					 "\n\tuid %2.2x",
+					 "\n  uid %2.2x",
 					 host -> client_identifier.data [0]);
 				if (errno) {
 					++errors;
@@ -322,10 +323,11 @@ int write_host (host)
 					   (struct lease *)0,
 					   (struct option_state *)0,
 					   (struct option_state *)0,
+					   &global_scope,
 					   host -> fixed_addr)) {
 		
 			errno = 0;
-			fprintf (db_file, "\n\tfixed-address ");
+			fprintf (db_file, "\n  fixed-address ");
 			if (errno) {
 				++errors;
 			}
@@ -350,7 +352,7 @@ int write_host (host)
 
 		if (host -> named_group) {
 			errno = 0;
-			fprintf (db_file, "\n\tgroup \"%s\";",
+			fprintf (db_file, "\n  group \"%s\";",
 				 host -> named_group -> name);
 			if (errno) {
 				++errors;
@@ -401,21 +403,21 @@ int write_group (group)
 
 	if (group -> flags & GROUP_OBJECT_DYNAMIC) {
 		errno = 0;
-		fprintf (db_file, "\n\tdynamic;");
+		fprintf (db_file, "\n  dynamic;");
 		if (errno)
 			++errors;
 	}
 
 	if (group -> flags & GROUP_OBJECT_STATIC) {
 		errno = 0;
-		fprintf (db_file, "\n\tstatic;");
+		fprintf (db_file, "\n  static;");
 		if (errno)
 			++errors;
 	}
 
 	if (group -> flags & GROUP_OBJECT_DELETED) {
 		errno = 0;
-		fprintf (db_file, "\n\tdeleted;");
+		fprintf (db_file, "\n  deleted;");
 		if (errno)
 			++errors;
 	} else {
@@ -471,12 +473,12 @@ int write_billing_class (class)
 
 	if (!class -> superclass) {
 		errno = 0;
-		fprintf (db_file, "\n\tbilling class \"%s\";", class -> name);
+		fprintf (db_file, "\n  billing class \"%s\";", class -> name);
 		return !errno;
 	}
 
 	errno = 0;
-	fprintf (db_file, "\n\tbilling subclass \"%s\"",
+	fprintf (db_file, "\n  billing subclass \"%s\"",
 		 class -> superclass -> name);
 	if (errno)
 		++errors;
