@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.92 1999/06/10 00:36:27 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.93 1999/06/22 13:28:12 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -234,9 +234,7 @@ void dhcprequest (packet)
 		return;
 	}
 
-	/* If we found a lease, but the client identifier on the lease
-	   exists and is different than the id the client sent, then
-	   we can't send this lease to the client. */
+	/* Otherwise, send the lease to the client if we found one. */
 	if (lease) {
 		ack_lease (packet, lease, DHCPACK, 0, msgbuf);
 	} else
@@ -1211,6 +1209,13 @@ void ack_lease (packet, lease, offer, when, msg)
 	state -> bootp_flags = packet -> raw -> flags;
 	state -> hops = packet -> raw -> hops;
 	state -> offer = offer;
+
+	/* If we're always supposed to broadcast to this client, set
+	   the broadcast bit in the bootp flags field. */
+	if (oc = lookup_option (&server_universe, state -> options,
+				SV_ALWAYS_BROADCAST) &&
+	    evaluate_boolean_option_cache (packet, packet -> options, oc))
+		state -> bootp_flags |= htons (BOOTP_BROADCAST);
 
 	/* Get the Maximum Message Size option from the packet, if one
 	   was sent. */
