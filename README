@@ -90,6 +90,9 @@ the tar utility and the gzip command - type something like:
 
 	zcat dhcp-2.0b1pl23.tar.gz |tar xvf -
 
+On BSD/OS, you have to type gzcat, not zcat, and you may run into
+similar problems on other operating systems.
+
 Now, cd to the dhcp-2.0b1pl23 subdirectory that you've just created and
 configure the source tree by typing:
 
