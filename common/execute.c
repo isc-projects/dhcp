@@ -3,7 +3,7 @@
    Support for executable statements. */
 
 /*
- * Copyright (c) 1998 The Internet Software Consortium.
+ * Copyright (c) 1998, 1999 The Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: execute.c,v 1.6 1999/02/25 23:30:34 mellon Exp $ Copyright (c) 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: execute.c,v 1.7 1999/03/09 23:40:22 mellon Exp $ Copyright (c) 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -167,6 +167,10 @@ void execute_statements_in_scope (packet, in_options, out_options,
 {
 	struct group *scope;
 	struct group *limit;
+
+	/* If we've recursed as far as we can, return. */
+	if (!group)
+		return;
 
 	/* As soon as we get to a scope that is outer than the limiting
 	   scope, we are done.   This is so that if somebody does something
