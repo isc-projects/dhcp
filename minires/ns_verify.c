@@ -16,13 +16,10 @@
  */
 
 #ifndef lint
-static const char rcsid[] = "$Id: ns_verify.c,v 1.4 2001/02/15 14:10:59 mellon Exp $";
+static const char rcsid[] = "$Id: ns_verify.c,v 1.5 2001/02/22 07:28:22 mellon Exp $";
 #endif
 
-#if defined (TRACING)
 #define time(x)		trace_mr_time (x)
-time_t trace_mr_time (time_t *);
-#endif
 
 /* Import. */
 
@@ -44,6 +41,8 @@ time_t trace_mr_time (time_t *);
 #include "minires/minires.h"
 #include "arpa/nameser.h"
 #include <isc/dst.h>
+
+time_t trace_mr_time (time_t *);
 
 /* Private. */
 

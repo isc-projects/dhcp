@@ -70,11 +70,10 @@
 
 #if defined(LIBC_SCCS) && !defined(lint)
 static const char sccsid[] = "@(#)res_send.c	8.1 (Berkeley) 6/4/93";
-static const char rcsid[] = "$Id: res_send.c,v 1.6 2001/02/15 14:11:11 mellon Exp $";
+static const char rcsid[] = "$Id: res_send.c,v 1.7 2001/02/22 07:28:25 mellon Exp $";
 #endif /* LIBC_SCCS and not lint */
 
-/* If we're tracing, rename the I/O functions. */
-#if defined (TRACING)
+/* Rename the I/O functions in case we're tracing. */
 #define send		trace_mr_send
 #define recvfrom	trace_mr_recvfrom
 #define	read		trace_mr_read
@@ -82,7 +81,8 @@ static const char rcsid[] = "$Id: res_send.c,v 1.6 2001/02/15 14:11:11 mellon Ex
 #define socket		trace_mr_socket
 #define bind		trace_mr_bind
 #define close		trace_mr_close
-#endif
+#define select		trace_mr_select
+#define time		trace_mr_time
 
 /*
  * Send query to name server and wait for reply.
