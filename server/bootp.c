@@ -63,9 +63,15 @@ void bootp (packet)
 	struct iaddr ip_address;
 	int i;
 
-	note ("BOOTREQUEST from %s", print_hw_addr (packet -> raw -> htype,
-						    packet -> raw -> hlen,
-						    packet -> raw -> chaddr));
+	note ("BOOTREQUEST from %s via %s",
+	      print_hw_addr (packet -> raw -> htype,
+			     packet -> raw -> hlen,
+			     packet -> raw -> chaddr),
+	      packet -> raw -> giaddr.s_addr
+	      ? inet_ntoa (packet -> raw -> giaddr)
+	      : packet -> interface -> name);
+
+
 
 	locate_network (packet);
 
@@ -214,11 +220,14 @@ void bootp (packet)
 	memcpy (hto.haddr, packet -> raw -> chaddr, hto.hlen);
 
 	/* Report what we're doing... */
-	note ("BOOTREPLY for %s to %s",
+	note ("BOOTREPLY for %s to %s via %s",
 	      inet_ntoa (raw.yiaddr),
 	      print_hw_addr (packet -> raw -> htype,
 			     packet -> raw -> hlen,
-			     packet -> raw -> chaddr));
+			     packet -> raw -> chaddr),
+	      packet -> raw -> giaddr.s_addr
+	      ? inet_ntoa (packet -> raw -> giaddr)
+	      : packet -> interface -> name);
 
 	/* Set up the parts of the address that are in common. */
 	to.sin_family = AF_INET;
