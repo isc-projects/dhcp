@@ -50,7 +50,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: omapi.c,v 1.35 2000/09/08 01:34:30 mellon Exp $ Copyright (c) 1999-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: omapi.c,v 1.36 2000/09/27 23:37:44 mellon Exp $ Copyright (c) 1999-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -973,9 +973,8 @@ isc_result_t dhcp_host_signal_handler (omapi_object_t *h,
 	host = (struct host_decl *)h;
 
 	if (!strcmp (name, "updated")) {
-		if ((host -> interface.hlen == 0 ||
-		     host -> interface.hbuf [0] == 0 ||
-		     host -> interface.hlen > 17) &&
+		/* There must be a client identifier of some sort. */
+		if (host -> interface.hlen == 0 &&
 		    !host -> client_identifier.len)
 			return ISC_R_INVALIDARG;
 
