@@ -94,3 +94,7 @@
    own risk. */
 
 /* #define USE_RAW_SOCKETS */
+
+/* Define this to change the logging facility used by dhcpd. */
+
+/* #define DHCPD_LOG_FACILITY LOG_DAEMON */
