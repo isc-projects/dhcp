@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: ddns.c,v 1.5 2001/01/06 21:37:21 mellon Exp $ Copyright (c) 2000-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: ddns.c,v 1.6 2001/01/08 17:24:45 mellon Exp $ Copyright (c) 2000-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -216,7 +216,7 @@ static int find_bound_string (struct data_string *value,
 			binding -> value -> value.data.data,
 			binding -> value -> value.data.len);
 		value -> data = value -> buffer -> data;
-		value -> len  = binding -> value -> value.data.len;
+		value -> len = binding -> value -> value.data.len;
 	}
 
 	return 1;
@@ -273,12 +273,13 @@ static ns_rcode ddns_update_a (struct data_string *ddns_fwd_name,
 	/*
 	 * A RR does not exist.
 	 */
-	updrec = minires_mkupdrec (S_PREREQ, ddns_fwd_name -> data,
+	updrec = minires_mkupdrec (S_PREREQ,
+				   (const char *)ddns_fwd_name -> data,
 				   C_IN, T_A, 0);
 	if (!updrec) goto error;
 
-	updrec -> r_data   = (unsigned char *)0;
-	updrec -> r_size   = 0;
+	updrec -> r_data = (unsigned char *)0;
+	updrec -> r_size = 0;
 	updrec -> r_opcode = NXDOMAIN;
 
 	ISC_LIST_APPEND (updqueue, updrec, r_link);
@@ -287,11 +288,12 @@ static ns_rcode ddns_update_a (struct data_string *ddns_fwd_name,
 	/*
 	 * Add A RR.
 	 */
-	updrec = minires_mkupdrec (S_UPDATE, ddns_fwd_name -> data,
+	updrec = minires_mkupdrec (S_UPDATE,
+				   (const char *)ddns_fwd_name -> data,
 				   C_IN, T_A, ttl);
 	if (!updrec) goto error;
 
-	updrec -> r_data = ddns_address;
+	updrec -> r_data = (unsigned char *)ddns_address;
 	updrec -> r_size = strlen (ddns_address);
 	updrec -> r_opcode = ADD;
 
@@ -301,7 +303,8 @@ static ns_rcode ddns_update_a (struct data_string *ddns_fwd_name,
 	/*
 	 * Add DHCID RR.
 	 */
-	updrec = minires_mkupdrec (S_UPDATE, ddns_fwd_name -> data,
+	updrec = minires_mkupdrec (S_UPDATE,
+				   (const char *)ddns_fwd_name -> data,
 				   C_IN, T_DHCID, ttl);
 	if (!updrec) goto error;
 
@@ -358,7 +361,8 @@ static ns_rcode ddns_update_a (struct data_string *ddns_fwd_name,
 	/*
 	 * DHCID RR exists, and matches client identity.
 	 */
-	updrec = minires_mkupdrec (S_PREREQ, ddns_fwd_name -> data,
+	updrec = minires_mkupdrec (S_PREREQ,
+				   (const char *)ddns_fwd_name -> data,
 				   C_IN, T_DHCID, 0);
 	if (!updrec) goto error;
 
@@ -372,7 +376,8 @@ static ns_rcode ddns_update_a (struct data_string *ddns_fwd_name,
 	/*
 	 * Delete A RRset.
 	 */
-	updrec = minires_mkupdrec (S_UPDATE, ddns_fwd_name -> data,
+	updrec = minires_mkupdrec (S_UPDATE,
+				   (const char *)ddns_fwd_name -> data,
 				   C_IN, T_A, 0);
 	if (!updrec) goto error;
 
@@ -386,11 +391,12 @@ static ns_rcode ddns_update_a (struct data_string *ddns_fwd_name,
 	/*
 	 * Add A RR.
 	 */
-	updrec = minires_mkupdrec (S_UPDATE, ddns_fwd_name -> data,
+	updrec = minires_mkupdrec (S_UPDATE,
+				   (const char *)ddns_fwd_name -> data,
 				   C_IN, T_A, ttl);
 	if (!updrec) goto error;
 
-	updrec -> r_data = ddns_address;
+	updrec -> r_data = (unsigned char *)ddns_address;
 	updrec -> r_size = strlen (ddns_address);
 	updrec -> r_opcode = ADD;
 
@@ -474,12 +480,13 @@ static ns_rcode ddns_update_ptr (struct data_string *ddns_fwd_name,
 	/*
 	 * Delete all PTR RRs.
 	 */
-	updrec = minires_mkupdrec (S_UPDATE, ddns_rev_name -> data,
+	updrec = minires_mkupdrec (S_UPDATE,
+				   (const char *)ddns_rev_name -> data,
 				   C_IN, T_PTR, 0);
 	if (!updrec) goto error;
 
-	updrec -> r_data   = (unsigned char *)0;
-	updrec -> r_size   = 0;
+	updrec -> r_data = (unsigned char *)0;
+	updrec -> r_size = 0;
 	updrec -> r_opcode = DELETE;
 
 	ISC_LIST_APPEND (updqueue, updrec, r_link);
@@ -487,12 +494,13 @@ static ns_rcode ddns_update_ptr (struct data_string *ddns_fwd_name,
 	/*
 	 * Add PTR RR.
 	 */
-	updrec = minires_mkupdrec (S_UPDATE, ddns_rev_name -> data,
+	updrec = minires_mkupdrec (S_UPDATE,
+				   (const char *)ddns_rev_name -> data,
 				   C_IN, T_PTR, ttl);
 	if (!updrec) goto error;
 
-	updrec -> r_data   = ddns_fwd_name -> buffer -> data;
-	updrec -> r_size   = ddns_fwd_name -> len;
+	updrec -> r_data = (char *)ddns_fwd_name -> buffer -> data;
+	updrec -> r_size = ddns_fwd_name -> len;
 	updrec -> r_opcode = ADD;
 
 	ISC_LIST_APPEND (updqueue, updrec, r_link);
@@ -590,8 +598,8 @@ static ns_rcode ddns_remove_a (struct data_string *ddns_fwd_name,
 				   C_IN, T_A, 0);
 	if (!updrec) goto error;
 
-	updrec -> r_data   = ddns_address;
-	updrec -> r_size   = strlen (ddns_address);
+	updrec -> r_data = ddns_address;
+	updrec -> r_size = strlen (ddns_address);
 	updrec -> r_opcode = DELETE;
 
 	ISC_LIST_APPEND (updqueue, updrec, r_link);
@@ -638,7 +646,7 @@ static ns_rcode ddns_remove_a (struct data_string *ddns_fwd_name,
 				   C_IN, T_A, 0);
 	if (!updrec) goto error;
 
-	updrec -> r_data = (char *)0;
+	updrec -> r_data = (unsigned char *)0;
 	updrec -> r_size = 0;
 	updrec -> r_opcode = NXRRSET;
 
@@ -652,8 +660,8 @@ static ns_rcode ddns_remove_a (struct data_string *ddns_fwd_name,
 	if (!updrec)
 		goto error;
 
-	updrec -> r_data   = ddns_dhcid -> buffer -> data;
-	updrec -> r_size   = ddns_dhcid -> len;
+	updrec -> r_data = ddns_dhcid -> buffer -> data;
+	updrec -> r_size = ddns_dhcid -> len;
 	updrec -> r_opcode = DELETE;
 
 	ISC_LIST_APPEND (updqueue, updrec, r_link);
@@ -698,12 +706,13 @@ static ns_rcode ddns_remove_ptr (struct data_string *ddns_fwd_name,
 	/*
 	 * Delete appropriate PTR RR.
 	 */
-	updrec = minires_mkupdrec (S_UPDATE, ddns_rev_name -> data,
+	updrec = minires_mkupdrec (S_UPDATE,
+				   (const char *)ddns_rev_name -> data,
 				   C_IN, T_PTR, 0);
 	if (!updrec) goto error;
 
-	updrec -> r_data   = ddns_fwd_name -> buffer -> data;
-	updrec -> r_size   = ddns_fwd_name -> len;
+	updrec -> r_data = ddns_fwd_name -> buffer -> data;
+	updrec -> r_size = ddns_fwd_name -> len;
 	updrec -> r_opcode = DELETE;
 
 	ISC_LIST_APPEND (updqueue, updrec, r_link);
@@ -734,6 +743,7 @@ int ddns_updates (struct packet *packet,
 	unsigned long ddns_ttl = DEFAULT_DDNS_TTL;
 	struct data_string ddns_hostname;
 	struct data_string ddns_domainname;
+	struct data_string old_ddns_fwd_name;
 	struct data_string ddns_fwd_name;
 	struct data_string ddns_rev_name;
 	struct data_string ddns_dhcid;
@@ -742,7 +752,10 @@ int ddns_updates (struct packet *packet,
 	struct option_cache *oc;
 	int s1, s2;
 	int result = 0;
-	ns_rcode rcode1, rcode2;
+	ns_rcode rcode1 = NOERROR, rcode2 = NOERROR;
+	int server_updates_a = 1;
+	struct buffer *bp = (struct buffer *)0;
+	int ignorep = 0;
 
 	if (ddns_update_style != 2)
 		return 0;
@@ -751,35 +764,47 @@ int ddns_updates (struct packet *packet,
 	if (lease -> ip_addr . len != 4)
 		return 0;
 
-
 	memset (&ddns_hostname, 0, sizeof (ddns_hostname));
 	memset (&ddns_domainname, 0, sizeof (ddns_domainname));
+	memset (&old_ddns_fwd_name, 0, sizeof (ddns_fwd_name));
 	memset (&ddns_fwd_name, 0, sizeof (ddns_fwd_name));
 	memset (&ddns_rev_name, 0, sizeof (ddns_rev_name));
 	memset (&ddns_dhcid, 0, sizeof (ddns_dhcid));
 
-
-	/*
-	 * Look up the RR TTL.
-	 */
-	ddns_ttl = DEFAULT_DDNS_TTL;
-	memset (&d1, 0, sizeof d1);
-	if ((oc = lookup_option (&server_universe, state -> options,
-				 SV_DDNS_TTL))) {
-		if (evaluate_option_cache (&d1, packet, lease,
+	/* If we are allowed to accept the client's update of its own A
+	   record, see if the client wants to update its own A record. */
+	if (!(oc = lookup_option (&server_universe, state -> options,
+				  SV_ALLOW_CLIENT_UPDATES)) ||
+	    evaluate_boolean_option_cache (&ignorep, packet, lease,
 					   (struct client_state *)0,
 					   packet -> options,
 					   state -> options,
 					   &lease -> scope, oc, MDL)) {
-			if (d1.len == sizeof (u_int32_t))
-				ddns_ttl = getULong (d1.data);
-			data_string_forget (&d1, MDL);
-		}
+		/* If there's no fqdn.no-client-update or if it's
+		   nonzero, don't try to use the client-supplied
+		   XXX */
+		if (!(oc = lookup_option (&fqdn_universe, state -> options,
+					  FQDN_NO_CLIENT_UPDATE)) ||
+		    evaluate_boolean_option_cache (&ignorep, packet, lease,
+						   (struct client_state *)0,
+						   packet -> options,
+						   state -> options,
+						   &lease -> scope, oc, MDL))
+			goto noclient;
+		if (!(oc = lookup_option (&fqdn_universe, state -> options,
+					  FQDN_FQDN)) ||
+		    evaluate_option_cache (&ddns_fwd_name, packet, lease,
+					   (struct client_state *)0,
+					   packet -> options, state -> options,
+					   &lease -> scope, oc, MDL))
+			goto noclient;
+		server_updates_a = 0;
+		goto client_updates;
 	}
-
+      noclient:
 
 	/*
-	 * Look up the lease FQDN.
+	 * Compute the name for the A record.
 	 */
 	s1 = s2 = 0;
 
@@ -815,9 +840,96 @@ int ddns_updates (struct packet *packet,
 			ddns_fwd_name.terminated = 1;
 		}
 	}
+      client_updates:
+
+	/* See if there's a name already stored on the lease. */
+	if (find_bound_string (&old_ddns_fwd_name,
+			       lease -> scope, "ddns-fwd-name")) {
+		/* If there is, see if it's different. */
+		if (old_ddns_fwd_name.len != ddns_fwd_name.len ||
+		    memcmp (old_ddns_fwd_name.data, ddns_fwd_name.data,
+			    old_ddns_fwd_name.len)) {
+			/* If the name is different, try to delete
+			   the old A record. */
+			if (!ddns_removals (lease))
+				goto out;
+			/* If the delete succeeded, go install the new
+			   record. */
+			goto in;
+		}
+
+		/* See if there's a DHCID on the lease. */
+		if (!find_bound_string (&ddns_dhcid,
+					lease -> scope, "ddns-txt")) {
+			/* If there's no DHCID, the update was probably
+			   done with the old-style ad-hoc DDNS updates.
+			   So if the expiry and release events look like
+			   they're the same, run them.   This should delete
+			   the old DDNS data. */
+			if (lease -> on_expiry == lease -> on_release) {
+				execute_statements ((struct binding_value **)0,
+						    (struct packet *)0, lease,
+						    (struct client_state *)0,
+						    (struct option_state *)0,
+						    (struct option_state *)0,
+						    &lease -> scope,
+						    lease -> on_expiry);
+				if (lease -> on_expiry)
+					executable_statement_dereference
+						(&lease -> on_expiry, MDL);
+				if (lease -> on_release)
+					executable_statement_dereference
+						(&lease -> on_release, MDL);
+				/* Now, install the DDNS data the new way. */
+				goto in;
+			}
+		}
+
+		/* Otherwise, we probably don't need to do the update.
+		   This is sufficiently likely that we in fact don't
+		   do it, although technically we should. */
+		result = 1;
+		goto noerror;
+	}
+
+	/* If there's no ddns-fwd-name on the lease, see if there's
+	   a ddns-client-fqdn, indicating a prior client FQDN update.
+	   If there is, and if we're still doing the client update,
+	   see if the name has changed.   If it hasn't, don't do the
+	   PTR update. */
+	if (find_bound_string (&old_ddns_fwd_name,
+			       lease -> scope, "ddns-client-fqdn")) {
+		if (old_ddns_fwd_name.len != ddns_fwd_name.len ||
+		    memcmp (old_ddns_fwd_name.data, ddns_fwd_name.data,
+			    old_ddns_fwd_name.len)) {
+			/* If the name is not different, no need to update
+			   the PTR record. */
+			goto noerror;
+		}
+	}
+      in:
+		
+	/*
+	 * Compute the RR TTL.
+	 */
+	ddns_ttl = DEFAULT_DDNS_TTL;
+	memset (&d1, 0, sizeof d1);
+	if ((oc = lookup_option (&server_universe, state -> options,
+				 SV_DDNS_TTL))) {
+		if (evaluate_option_cache (&d1, packet, lease,
+					   (struct client_state *)0,
+					   packet -> options,
+					   state -> options,
+					   &lease -> scope, oc, MDL)) {
+			if (d1.len == sizeof (u_int32_t))
+				ddns_ttl = getULong (d1.data);
+			data_string_forget (&d1, MDL);
+		}
+	}
+
 
 	/*
-	 * Look up the reverse IP name.
+	 * Compute the reverse IP name.
 	 */
 	oc = lookup_option (&server_universe, state -> options,
 			    SV_DDNS_REV_DOMAIN_NAME);
@@ -850,7 +962,8 @@ int ddns_updates (struct packet *packet,
 				 lease -> ip_addr . iabuf[1],
 				 lease -> ip_addr . iabuf[0]);
 #endif
-			ddns_rev_name.len = strlen (ddns_rev_name.data);
+			ddns_rev_name.len =
+				strlen ((const char *)ddns_rev_name.data);
 			data_string_append (&ddns_rev_name, &d1);
 			ddns_rev_name.buffer -> data [ddns_rev_name.len] ='\0';
 			ddns_rev_name.terminated = 1;
@@ -860,10 +973,12 @@ int ddns_updates (struct packet *packet,
 	}
 
 	/*
-	 * Look up the DHCID value.  (Should this be cached in the lease?)
+	 * If we are updating the A record, compute the DHCID value.
 	 */
-	memset (&ddns_dhcid, 0, sizeof ddns_dhcid);
-	get_dhcid (&ddns_dhcid, lease);
+	if (server_updates_a) {
+		memset (&ddns_dhcid, 0, sizeof ddns_dhcid);
+		get_dhcid (&ddns_dhcid, lease);
+	}
 
 	/*
 	 * Start the resolver, if necessary.
@@ -881,7 +996,7 @@ int ddns_updates (struct packet *packet,
 					&ddns_dhcid, ddns_ttl);
 	
 	if (rcode1 == NOERROR) {
-		if (ddns_fwd_name.len && ddns_rev_name.len && ddns_dhcid.len)
+		if (ddns_fwd_name.len && ddns_rev_name.len)
 			rcode2 = ddns_update_ptr (&ddns_fwd_name,
 						  &ddns_rev_name, ddns_ttl);
 	} else
@@ -894,9 +1009,11 @@ int ddns_updates (struct packet *packet,
 		rcode2 = SERVFAIL;
 
 	if (rcode1 == NOERROR) {
-		bind_ds_value (&lease -> scope, "ddns-fwd-name",
+		bind_ds_value (&lease -> scope, 
+			       (server_updates_a
+				? "ddns-fwd-name" : "ddns-client-fqdn"),
 			       &ddns_fwd_name);
-		bind_ds_value (&lease -> scope, "ddns-dhcid",
+		bind_ds_value (&lease -> scope, "ddns-txt",
 			       &ddns_dhcid);
 	}
 
@@ -905,73 +1022,91 @@ int ddns_updates (struct packet *packet,
 			       &ddns_rev_name);
 	}
 
-
-	/*
-	 * If the client sent us the FQDN option, respond appropriately.
-	 */
-	oc = lookup_option (&fqdn_universe, packet -> options,
-			    FQDN_SERVER_UPDATE);
-	if (oc) {
-		oc -> data.buffer -> data[0] = 1;
+	/* Set up the outgoing FQDN option if there was an incoming
+	   FQDN option. */
+      noerror:
+	if ((oc = lookup_option (&dhcp_universe, packet -> options, DHO_FQDN))
+	    && buffer_allocate (&bp, ddns_fwd_name.len + 5, MDL)) {
+		bp -> data [0] = server_updates_a;
+		if (!save_option_buffer (&fqdn_universe, state -> options,
+					 bp, &bp -> data [0], 1,
+					 &fqdn_options [FQDN_SERVER_UPDATE],
+					 0))
+			goto badfqdn;
+		bp -> data [1] = server_updates_a;
+		if (!save_option_buffer (&fqdn_universe, state -> options,
+					 bp, &bp -> data [1], 1,
+					 &fqdn_options [FQDN_NO_CLIENT_UPDATE],
+					 0))
+			goto badfqdn;
+		/* Do the same encoding the client did. */
+		oc = lookup_option (&fqdn_universe, packet -> options,
+				    FQDN_ENCODED);
+		if (oc &&
+		    evaluate_boolean_option_cache (&ignorep, packet, lease,
+						   (struct client_state *)0,
+						   packet -> options,
+						   state -> options,
+						   &lease -> scope, oc, MDL))
+			bp -> data [2] = 1;
+		else
+			bp -> data [2] = 0;
+		if (!save_option_buffer (&fqdn_universe, state -> options,
+					 bp, &bp -> data [2], 1,
+					 &fqdn_options [FQDN_ENCODED],
+					 0))
+			goto badfqdn;
+		bp -> data [3] = rcode1;
+		if (!save_option_buffer (&fqdn_universe, state -> options,
+					 bp, &bp -> data [3], 1,
+					 &fqdn_options [FQDN_RCODE1],
+					 0))
+			goto badfqdn;
+		bp -> data [4] = rcode2;
+		if (!save_option_buffer (&fqdn_universe, state -> options,
+					 bp, &bp -> data [4], 1,
+					 &fqdn_options [FQDN_RCODE2],
+					 0))
+			goto badfqdn;
+		if (ddns_fwd_name.len) {
+		    memcpy (&bp -> data [5],
+			    ddns_fwd_name.data, ddns_fwd_name.len);
+		    if (!save_option_buffer (&fqdn_universe, state -> options,
+					     bp, &bp -> data [5],
+					     ddns_fwd_name.len,
+					     &fqdn_options [FQDN_FQDN],
+					     0))
+			goto badfqdn;
+		}
 	}
 
-	oc = lookup_option (&fqdn_universe, packet -> options,
-			    FQDN_NO_CLIENT_UPDATE);
-	if (oc) {
-		oc -> data.buffer -> data[0] = 1;
-	}
-
-	oc = lookup_option (&fqdn_universe, packet -> options,
-			    FQDN_RCODE1);
-	if (oc) {
-		oc -> data.buffer -> data[0] = rcode1;
-	}
-
-	oc = lookup_option (&fqdn_universe, packet -> options,
-			    FQDN_RCODE2);
-	if (oc) {
-		oc -> data.buffer -> data[0] = rcode2;
-	}
-
-	oc = lookup_option (&fqdn_universe, packet -> options,
-			    FQDN_HOSTNAME);
-	if (oc && ddns_hostname.buffer) {
-		data_string_forget (&oc -> data, MDL);
-		data_string_copy (&oc -> data, &ddns_hostname, MDL);
-	}
-
-	oc = lookup_option (&fqdn_universe, packet -> options,
-			    FQDN_DOMAINNAME);
-	if (oc && ddns_hostname.buffer) {
-		data_string_forget (&oc -> data, MDL);
-		data_string_copy (&oc -> data, &ddns_domainname, MDL);
-	}
-
-
+      badfqdn:
+      out:
 	/*
 	 * Final cleanup.
 	 */
 	data_string_forget (&ddns_hostname, MDL);
 	data_string_forget (&ddns_domainname, MDL);
+	data_string_forget (&old_ddns_fwd_name, MDL);
 	data_string_forget (&ddns_fwd_name, MDL);
 	data_string_forget (&ddns_rev_name, MDL);
 	data_string_forget (&ddns_dhcid, MDL);
 
-	return rcode1 == NOERROR || rcode2 == NOERROR;
+	return result;
 }
 
-
-int ddns_removals(struct lease *lease)
+int ddns_removals (struct lease *lease)
 {
 	struct data_string ddns_fwd_name;
 	struct data_string ddns_rev_name;
 	struct data_string ddns_dhcid;
 	ns_rcode rcode;
 	struct binding *binding;
+	int result = 0;
 
 	/* No scope implies that DDNS has not been performed for this lease. */
 	if (!lease -> scope)
-		return 1;
+		return 0;
 
 	/*
 	 * Look up stored names.
@@ -979,20 +1114,6 @@ int ddns_removals(struct lease *lease)
 	memset (&ddns_fwd_name, 0, sizeof (ddns_fwd_name));
 	memset (&ddns_rev_name, 0, sizeof (ddns_rev_name));
 	memset (&ddns_dhcid, 0, sizeof (ddns_dhcid));
-
-	/* If all the bindings aren't there (ddns-dhcid being the crucial
-	   one), this isn't an interim or rfc3??? record, so we can't do
-	   the delete using this mechanism. */
-	if (!find_bound_string (&ddns_fwd_name,
-				lease -> scope, "ddns-fwd-name") ||
-	    !find_bound_string (&ddns_rev_name,
-				lease -> scope, "ddns-rev-name") ||
-	    !find_bound_string (&ddns_dhcid, lease -> scope, "ddns-dhcid")) {
-		data_string_forget (&ddns_fwd_name, MDL);
-		data_string_forget (&ddns_rev_name, MDL);
-		data_string_forget (&ddns_dhcid, MDL);
-		return 1;
-	}
 
 	/*
 	 * Start the resolver, if necessary.
@@ -1002,29 +1123,45 @@ int ddns_removals(struct lease *lease)
 		resolver_inited = 1;
 	}
 
+	/* We need the fwd name whether we are deleting both records or just
+	   the PTR record, so if it's not there, we can't proceed. */
+	if (!find_bound_string (&ddns_fwd_name,
+				lease -> scope, "ddns-fwd-name"))
+		return 0;
+
+	/* If the ddns-txt binding isn't there, this isn't an interim
+	   or rfc3??? record, so we can't delete the A record using
+	   this mechanism, but we can delete the PTR record. */
+	if (!find_bound_string (&ddns_dhcid, lease -> scope, "ddns-txt")) {
+		result = 1;
+		goto try_rev;
+	}
+
 	/*
 	 * Perform removals.
 	 */
-	if (ddns_fwd_name.len && ddns_dhcid.len) {
-		rcode = ddns_remove_a (&ddns_fwd_name, lease -> ip_addr,
-				       &ddns_dhcid);
-	}
-	if (rcode != NOERROR &&
-	    ddns_fwd_name.len && ddns_rev_name.len) {
-		rcode = ddns_remove_ptr(&ddns_fwd_name, &ddns_rev_name);
-	}
+	rcode = ddns_remove_a (&ddns_fwd_name, lease -> ip_addr, &ddns_dhcid);
 
-	unset (lease -> scope, "ddns-fwd-name");
-	unset (lease -> scope, "ddns-rev-name");
-	unset (lease -> scope, "ddns-dhcid");
+	if (rcode == NOERROR) {
+		result = 1;
+		unset (lease -> scope, "ddns-fwd-name");
+		unset (lease -> scope, "ddns-txt");
+	      try_rev:
+		if (find_bound_string (&ddns_rev_name,
+				       lease -> scope, "ddns-rev-name")) {
+			if (ddns_remove_ptr(&ddns_fwd_name,
+					    &ddns_rev_name) == NOERROR)
+				unset (lease -> scope, "ddns-rev-name");
+			else
+				result = 0;
+		}
+	}
 
 	data_string_forget (&ddns_fwd_name, MDL);
 	data_string_forget (&ddns_rev_name, MDL);
 	data_string_forget (&ddns_dhcid, MDL);
 
-
-	return 1;
+	return result;
 }
-
 
 #endif /* NSUPDATE */
