@@ -48,6 +48,9 @@ and for prodding me into improving it.
 
 			Changes since 3.0.1rc11
 
+- A patch from Steve Campbell was applied with minor modifications to
+  permit reverse dns PTR record updates with values containing spaces.
+
 - A patch from Florian Lohoff was applied with some modifications to
   dhcrelay.  It now discards packets whose hop count exceeds 10 by default,
   and a command-line option (-c) can be used to set this threshold.
