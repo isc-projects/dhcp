@@ -23,7 +23,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: icmp.c,v 1.18 2000/02/01 03:19:38 mellon Exp $ Copyright (c) 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: icmp.c,v 1.19 2000/02/01 18:19:48 mellon Exp $ Copyright (c) 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -163,16 +163,16 @@ isc_result_t icmp_echoreply (h)
 	struct sockaddr_in from;
 	unsigned char icbuf [1500];
 	int status;
-	socklen_t len;
-	int hlen;
+	socklen_t sl;
+	int hlen, len;
 	struct iaddr ia;
 	struct icmp_state *state;
 
 	state = (struct icmp_state *)h;
 
-	len = sizeof from;
+	sl = sizeof from;
 	status = recvfrom (state -> socket, (char *)icbuf, sizeof icbuf, 0,
-			  (struct sockaddr *)&from, &len);
+			  (struct sockaddr *)&from, &sl);
 	if (status < 0) {
 		log_error ("icmp_echoreply: %m");
 		return ISC_R_UNEXPECTED;
