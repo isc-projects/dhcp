@@ -53,7 +53,7 @@ struct hash_table *new_hash ()
 	struct hash_table *rv = new_hash_table (DEFAULT_HASH_SIZE, "new_hash");
 	if (!rv)
 		return rv;
-	memset (&rv -> buckets, 0,
+	memset (&rv -> buckets [0], 0,
 		DEFAULT_HASH_SIZE * sizeof (struct hash_bucket *));
 	return rv;
 }
