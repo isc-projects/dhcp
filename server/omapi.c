@@ -50,7 +50,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: omapi.c,v 1.34 2000/08/14 21:58:04 neild Exp $ Copyright (c) 1999-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: omapi.c,v 1.35 2000/09/08 01:34:30 mellon Exp $ Copyright (c) 1999-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -729,6 +729,8 @@ isc_result_t dhcp_host_set_value  (omapi_object_t *h,
 					   value -> u.buffer.len, MDL);
 			if (!group || (group -> flags & GROUP_OBJECT_DELETED))
 				return ISC_R_NOTFOUND;
+			if (host -> group)
+				group_dereference (&host -> group, MDL);
 			group_reference (&host -> group, group -> group, MDL);
 			if (host -> named_group)
 				group_object_dereference (&host -> named_group,
