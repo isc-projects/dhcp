@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.30 1996/08/29 23:02:38 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.31 1996/08/30 23:39:37 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -98,7 +98,6 @@ void read_leases ()
 	FILE *cfile;
 	char *val;
 	int token;
-	jmp_buf bc;
 
 	new_parse (_PATH_DHCPD_DB);
 
@@ -170,7 +169,6 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 	int token;
 	char *val;
 	struct shared_network *share;
-	struct subnet *subnet;
 	char *t, *n;
 	struct tree *tree;
 	struct tree_cache *cache;
@@ -672,11 +670,7 @@ void parse_shared_net_declaration (cfile, group)
 	char *val;
 	int token;
 	struct shared_network *share;
-	struct subnet *first_net = (struct subnet *)0;
-	struct subnet *last_net = (struct subnet *)0;
-	struct subnet *next_net;
 	char *name;
-	struct tree_cache *server_next;
 	int declaration = 0;
 
 	share = new_shared_network ("parse_shared_net_declaration");
@@ -754,7 +748,6 @@ void parse_subnet_declaration (cfile, share)
 	subnet = new_subnet ("parse_subnet_declaration");
 	if (!subnet)
 		error ("No memory for new subnet");
-	subnet -> next_subnet = subnet -> next_sibling = (struct subnet *)0;
 	subnet -> shared_network = share;
 	subnet -> group = clone_group (share -> group,
 				       "parse_subnet_declaration");
@@ -808,14 +801,15 @@ void parse_subnet_declaration (cfile, share)
 		share -> group -> dynamic_bootp = 1;
 	if (subnet -> group -> one_lease_per_client)
 		share -> group -> one_lease_per_client = 1;
+
+	/* Add the subnet to the list of subnets in this shared net. */
 	if (!share -> subnets)
 		share -> subnets = subnet;
 	else {
 		for (t = share -> subnets;
-		     t -> next_subnet;
-		     t = t -> next_subnet)
+		     t -> next_sibling; t = t -> next_sibling)
 			;
-		t -> next_subnet = subnet;
+		t -> next_sibling = subnet;
 	}
 }
 
@@ -1236,8 +1230,6 @@ TIME parse_timestamp (cfile)
 	FILE *cfile;
 {
 	TIME rv;
-	char *val;
-	int token;
 
 	rv = parse_date (cfile);
 	return rv;
@@ -1458,7 +1450,7 @@ void parse_address_range (cfile, subnet)
 TIME parse_date (cfile)
 	FILE *cfile;
 {
-	struct tm tm, *ap;
+	struct tm tm;
 	int guess;
 	char *val;
 	int token;
