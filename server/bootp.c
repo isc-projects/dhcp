@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bootp.c,v 1.18 1996/09/11 05:50:54 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bootp.c,v 1.19 1996/09/12 22:22:18 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -104,6 +104,17 @@ void bootp (packet)
 			}
 		}
 
+		/* If we've been told not to boot unknown clients,
+		   and we didn't find any host record for this client,
+		   ignore it. */
+		if (!hp && !(packet -> shared_network ->
+			     group -> boot_unknown_clients)) {
+			note ("Ignoring unknown BOOTP client %s",
+			      print_hw_addr (packet -> raw -> htype,
+					     packet -> raw -> hlen,
+					     packet -> raw -> chaddr));
+		}
+
 		/* If the packet is from a host we don't know and there
 		   are no dynamic bootp addresses on the network it came
 		   in on, drop it on the floor. */
@@ -153,16 +164,6 @@ void bootp (packet)
 			}
 		}
 		goto lose;
-	}
-
-	/* If we don't have a fixed address for it, drop it. */
-	if (!subnet) {
-		note ("No fixed address for BOOTP host %s (%s)",
-		      print_hw_addr (packet -> raw -> htype,
-				     packet -> raw -> hlen,
-				     packet -> raw -> chaddr),
-		      hp -> name);
-		return;
 	}
 
 	/* Set up the outgoing packet... */
