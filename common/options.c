@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.79 2001/01/16 23:00:49 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.80 2001/01/19 10:56:06 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -269,7 +269,7 @@ int fqdn_universe_decode (struct option_state *options,
 	struct buffer *bp = (struct buffer *)0;
 
 	/* FQDN options have to be at least four bytes long. */
-	if (length < 4)
+	if (length < 3)
 		return 0;
 
 	/* Save the contents of the option in a buffer. */
@@ -291,32 +291,14 @@ int fqdn_universe_decode (struct option_state *options,
 		return 0;
 	}
 
-	if (buffer [0] & 2)	/* no-client-update */
-		bp -> data [1] = 1;
-	else
-		bp -> data [1] = 0;
-	if (!save_option_buffer (&fqdn_universe, options, bp,
-				 &bp -> data [1], 1,
-				 &fqdn_options [FQDN_NO_CLIENT_UPDATE], 0))
-	    goto bad;
-
 	if (buffer [0] & 1)	/* server-update */
 		bp -> data [2] = 1;
 	else
 		bp -> data [2] = 0;
-	if (!save_option_buffer (&fqdn_universe, options, bp,
-				 &bp -> data [2], 1,
-				 &fqdn_options [FQDN_SERVER_UPDATE], 0))
-		goto bad;
-
-	if (!save_option_buffer (&fqdn_universe, options, bp,
-				 &bp -> data [3], 1,
-				 &fqdn_options [FQDN_RCODE1], 0))
-		goto bad;
-	if (!save_option_buffer (&fqdn_universe, options, bp,
-				 &bp -> data [4], 1,
-				 &fqdn_options [FQDN_RCODE2], 0))
-		goto bad;
+	if (buffer [0] & 2)	/* no-client-update */
+		bp -> data [1] = 1;
+	else
+		bp -> data [1] = 0;
 
 	/* XXX Ideally we should store the name in DNS format, so if the
 	   XXX label isn't in DNS format, we convert it to DNS format,
@@ -328,6 +310,12 @@ int fqdn_universe_decode (struct option_state *options,
 	if (!bp -> data [0]) {
 		unsigned i;
 
+		/* Some broken clients NUL-terminate this option. */
+		if (buffer [length - 1] == 0) {
+			--length;
+			bp -> data [1] = 1;
+		}
+
 		/* Determine the length of the hostname component of the
 		   name.  If the name contains no '.' character, it
 		   represents a non-qualified label. */
@@ -336,9 +324,11 @@ int fqdn_universe_decode (struct option_state *options,
 
 		/* Note: If the client sends a FQDN, the first '.' will
 		   be used as a NUL terminator for the hostname. */
-		if (!save_option_buffer (&fqdn_universe, options, bp,
-					 &bp -> data[5], i,
-					 &fqdn_options [FQDN_HOSTNAME], 0))
+		if (i)
+			if (!save_option_buffer (&fqdn_universe, options, bp,
+						 &bp -> data[5], i,
+						 &fqdn_options [FQDN_HOSTNAME],
+						 0))
 			goto bad;
 		/* Note: If the client sends a single label, the
 		   FQDN_DOMAINNAME option won't be set. */
@@ -348,10 +338,11 @@ int fqdn_universe_decode (struct option_state *options,
 					 &fqdn_options [FQDN_DOMAINNAME], 1))
 			goto bad;
 		/* Also save the whole name. */
-		if (!save_option_buffer (&fqdn_universe, options, bp,
-					 &bp -> data [5], length - 3,
-					 &fqdn_options [FQDN_FQDN], 1))
-			goto bad;
+		if (length > 3)
+			if (!save_option_buffer (&fqdn_universe, options, bp,
+						 &bp -> data [5], length - 3,
+						 &fqdn_options [FQDN_FQDN], 1))
+				goto bad;
 	} else {
 		unsigned len;
 		unsigned total_len = 0;
@@ -361,7 +352,7 @@ int fqdn_universe_decode (struct option_state *options,
 
 		s = &bp -> data[5];
 
-		do {
+		while (s < &bp -> data[0] + length + 2) {
 			len = *s;
 			if (len > 63) {
 				log_info ("fancy bits in fqdn option");
@@ -383,29 +374,49 @@ int fqdn_universe_decode (struct option_state *options,
 			*s = '.';
 			s += len + 1;
 			total_len += len;
-		} while (s < &bp -> data[0] + length + 3);
+		}
 
 		if (!terminated) {
 			first_len = total_len;
 		}
 
-		if (!save_option_buffer (&fqdn_universe, options, bp,
+		if (first_len > 0 &&
+		    !save_option_buffer (&fqdn_universe, options, bp,
 					 &bp -> data[6], first_len,
 					 &fqdn_options [FQDN_HOSTNAME], 0))
 			goto bad;
-		if (first_len != total_len) {
+		if (total_len > 0 && first_len != total_len) {
 			if (!save_option_buffer
 			    (&fqdn_universe, options, bp,
-			     &bp -> data[6 + first_len],
-			     total_len - first_len,
+			     &bp -> data[6 + first_len], total_len - first_len,
 			     &fqdn_options [FQDN_DOMAINNAME], 1))
-			goto bad;
+				goto bad;
 		}
-		if (!save_option_buffer (&fqdn_universe, options, bp,
-					 &bp -> data [6], total_len,
-					 &fqdn_options [FQDN_FQDN], 1))
-			goto bad;
+		if (total_len > 0)
+			if (!save_option_buffer (&fqdn_universe, options, bp,
+						 &bp -> data [6], total_len,
+						 &fqdn_options [FQDN_FQDN], 1))
+				goto bad;
 	}
+
+	if (!save_option_buffer (&fqdn_universe, options, bp,
+				 &bp -> data [1], 1,
+				 &fqdn_options [FQDN_NO_CLIENT_UPDATE], 0))
+	    goto bad;
+	if (!save_option_buffer (&fqdn_universe, options, bp,
+				 &bp -> data [2], 1,
+				 &fqdn_options [FQDN_SERVER_UPDATE], 0))
+		goto bad;
+
+	if (!save_option_buffer (&fqdn_universe, options, bp,
+				 &bp -> data [3], 1,
+				 &fqdn_options [FQDN_RCODE1], 0))
+		goto bad;
+	if (!save_option_buffer (&fqdn_universe, options, bp,
+				 &bp -> data [4], 1,
+				 &fqdn_options [FQDN_RCODE2], 0))
+		goto bad;
+
 	return 1;
 }
 
