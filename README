@@ -158,15 +158,15 @@ your own.
 An interim implementation of dynamic DNS updates is included in this
 release.   This implementation is not currently supported, and is not
 built by default.   To use this implementation, you must have
-installed the latest version of bind 8.2 (see http://www.isc.org for
+installed BIND 8.2.2 or later (see http://www.isc.org for
 more information about BIND).   The configuration utility assumes that
-the BIND 8.2 distribution libraries and includes are under the
+the BIND 8.2.2 distribution libraries and includes are under the
 /usr/local/bind directory, so if you have installed them elsewhere,
 you should set the BINDLIB and BINDINC variables in site.conf to
 override the values that will be set by the configure script from
 Makefile.conf.
 
-Assuming that you have BIND 8.2 installed, you can build dynamic DNS
+Assuming that you have BIND 8.2.2 installed, you can build dynamic DNS
 update support using:
 
 		     ./configure --with-nsupdate
