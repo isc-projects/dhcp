@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.98 2000/01/26 17:29:35 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.99 2000/01/31 23:41:56 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1982,6 +1982,7 @@ struct lease *parse_lease_declaration (cfile)
 				break;
 				
 			      default: /* for gcc, we'll never get here. */
+				break;
 			}
 			break;
 
