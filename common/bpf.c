@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bpf.c,v 1.15 1997/02/18 14:30:12 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bpf.c,v 1.16 1997/02/19 10:49:20 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -59,13 +59,29 @@ static char copyright[] =
 #include "includes/netinet/udp.h"
 #include "includes/netinet/if_ether.h"
 
+/* Reinitializes the specified interface after an address change.   This
+   is not required for packet-filter APIs. */
+
+#ifdef USE_BPF_SEND
+void if_reinitialize_send (info)
+	struct interface_info *info;
+{
+}
+#endif
+
+#ifdef USE_BPF_RECEIVE
+void if_reinitialize_receive (info)
+	struct interface_info *info;
+{
+}
+#endif
+
 /* Called by get_interface_list for each interface that's discovered.
    Opens a packet filter for each interface and adds it to the select
    mask. */
 
-int if_register_bpf (info, ifp)
+int if_register_bpf (info)
 	struct interface_info *info;
-	struct ifreq *ifp;
 {
 	int sock;
 	char filename[50];
@@ -91,7 +107,7 @@ int if_register_bpf (info, ifp)
 	}
 
 	/* Set the BPF device to point at this interface. */
-	if (ioctl (sock, BIOCSETIF, ifp) < 0)
+	if (ioctl (sock, BIOCSETIF, info -> ifp) < 0)
 		error ("Can't attach interface %s to bpf device %s: %m",
 		       info -> name, filename);
 
@@ -100,9 +116,8 @@ int if_register_bpf (info, ifp)
 #endif /* USE_BPF_SEND || USE_BPF_RECEIVE */
 
 #ifdef USE_BPF_SEND
-void if_register_send (info, interface)
+void if_register_send (info)
 	struct interface_info *info;
-	struct ifreq *interface;
 {
 	/* If we're using the bpf API for sending and receiving,
 	   we don't need to register this interface twice. */
@@ -153,9 +168,8 @@ struct bpf_insn filter [] = {
 	BPF_STMT(BPF_RET+BPF_K, 0),
 };
 
-void if_register_receive (info, interface)
+void if_register_receive (info)
 	struct interface_info *info;
-	struct ifreq *interface;
 {
 	int flag = 1;
 	struct bpf_version v;
@@ -164,7 +178,7 @@ void if_register_receive (info, interface)
 	u_int32_t bits;
 
 	/* Open a BPF device and hang it on this interface... */
-	info -> rfdesc = if_register_bpf (info, interface);
+	info -> rfdesc = if_register_bpf (info);
 
 	/* Make sure the BPF version is in range... */
 	if (ioctl (info -> rfdesc, BIOCVERSION, &v) < 0)

@@ -42,15 +42,16 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dispatch.c,v 1.29 1997/02/18 14:33:43 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dispatch.c,v 1.30 1997/02/19 10:49:19 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
 #include <sys/ioctl.h>
 
-struct interface_info *interfaces;
+struct interface_info *interfaces, *dummy_interfaces;
 struct timeout *timeouts;
 static struct timeout *free_timeouts;
+static int interfaces_invalidated;
 
 static void got_one PROTO ((struct interface_info *));
 
@@ -219,8 +220,20 @@ void discover_interfaces (state)
 			/* If this is the first real IP address we've
 			   found, keep a pointer to ifreq structure in
 			   which we found it. */
-			if (!tmp -> tif)
-				tmp -> tif = ifp;
+			if (!tmp -> ifp) {
+				struct ifreq *tif;
+#ifdef HAVE_SA_LEN
+				int len = ((sizeof ifp -> ifr_name) +
+					   ifp -> ifr_addr.sa_len);
+#else
+				int len = sizeof *ifp;
+#endif
+				tif = (struct ifreq *)malloc (len);
+				if (!tif)
+					error ("no space to remember ifp.");
+				memcpy (tif, ifp, len);
+				tmp -> ifp = ifp;
+			}
 
 			/* Grab the address... */
 			addr.len = 4;
@@ -274,19 +287,24 @@ void discover_interfaces (state)
 	/* Weed out the interfaces that did not have IP addresses. */
 	last = (struct interface_info *)0;
 	for (tmp = interfaces; tmp; tmp = tmp -> next) {
-		if (!tmp -> tif || !(tmp -> flags & INTERFACE_REQUESTED)) {
+		if (!tmp -> ifp || !(tmp -> flags & INTERFACE_REQUESTED)) {
 			if ((tmp -> flags & INTERFACE_REQUESTED) != ir)
 				error ("%s: not found", tmp -> name);
 			if (!last)
 				interfaces = interfaces -> next;
 			else
 				last -> next = tmp -> next;
+
+			/* Remember the interface in case we need to know
+			   about it later. */
+			tmp -> next = dummy_interfaces;
+			dummy_interfaces = tmp;
 			continue;
 		}
 		last = tmp;
 
-		memcpy (&foo, &tmp -> tif -> ifr_addr,
-			sizeof tmp -> tif -> ifr_addr);
+		memcpy (&foo, &tmp -> ifp -> ifr_addr,
+			sizeof tmp -> ifp -> ifr_addr);
 
 		/* We must have a subnet declaration for each interface. */
 		if (!tmp -> shared_network && (state == DISCOVER_SERVER))
@@ -309,10 +327,8 @@ void discover_interfaces (state)
 		}
 
 		/* Register the interface... */
-		if_register_receive (tmp, tmp -> tif);
-		if_register_send (tmp, tmp -> tif);
-
-		tmp -> tif = (struct ifreq *)0; /* Can't keep this. */
+		if_register_receive (tmp);
+		if_register_send (tmp);
 	}
 
 	close (sock);
@@ -321,8 +337,24 @@ void discover_interfaces (state)
 	strcpy (fallback_interface.name, "fallback");	
 	fallback_interface.shared_network = &fallback_network;
 	fallback_network.name = "fallback-net";
-	if_register_fallback (&fallback_interface, (struct ifreq *)0);
+	if_register_fallback (&fallback_interface);
 #endif
+}
+
+void reinitialize_interfaces ()
+{
+	struct interface_info *ip;
+
+	for (ip = interfaces; ip; ip = ip -> next) {
+		if_reinitialize_receive (ip);
+		if_reinitialize_send (ip);
+	}
+
+#ifdef USE_FALLBACK
+	if_reinitialize_fallback (&fallback_interface);
+#endif
+
+	interfaces_invalidated = 1;
 }
 
 #ifdef USE_POLL
@@ -357,23 +389,7 @@ void dispatch ()
 	if (!fds)
 		error ("Can't allocate poll structures.");
 
-	i = 0;
-	for (l = interfaces; l; l = l -> next) {
-		fds [i].fd = l -> rfdesc;
-		fds [i].events = POLLIN;
-		fds [i].revents = 0;
-		++i;
-	}
-
-#ifdef USE_FALLBACK
-	fds [i].fd = fallback_interface.wfdesc;
-	fds [i].events = POLLIN;
-	fds [i].revents = 0;
-	++i;
-#endif
-
 	do {
-
 		/* Call any expired timeouts, and then if there's
 		   still a timeout registered, time out the select
 		   call then. */
@@ -402,6 +418,22 @@ void dispatch ()
 		} else
 			to_msec = -1;
 
+		/* Set up the descriptors to be polled. */
+		i = 0;
+		for (l = interfaces; l; l = l -> next) {
+			fds [i].fd = l -> rfdesc;
+			fds [i].events = POLLIN;
+			fds [i].revents = 0;
+			++i;
+		}
+
+#ifdef USE_FALLBACK
+		fds [i].fd = fallback_interface.wfdesc;
+		fds [i].events = POLLIN;
+		fds [i].revents = 0;
+		++i;
+#endif
+
 		/* Wait for a packet or a timeout... XXX */
 		count = poll (fds, nfds, to_msec);
 
@@ -417,13 +449,16 @@ void dispatch ()
 			if ((fds [i].revents & POLLIN)) {
 				fds [i].revents = 0;
 				got_one (l);
+				if (interfaces_invalidated)
+					break;
 			}
 			++i;
 		}
 #ifdef USE_FALLBACK
-		if (fds [i].revents & POLLIN)
+		if ((fds [i].revents & POLLIN) && !interfaces_invalidated)
 			fallback_discard (&fallback_interface);
 #endif
+		interfaces_invalidated = 0;
 	} while (1);
 }
 #else
@@ -440,24 +475,10 @@ void dispatch ()
 	int count;
 	struct timeval tv, *tvp;
 
-	FD_ZERO (&r);
 	FD_ZERO (&w);
 	FD_ZERO (&x);
 
 	do {
-		/* Set up the read mask. */
-		for (l = interfaces; l; l = l -> next) {
-			FD_SET (l -> rfdesc, &r);
-			FD_SET (l -> rfdesc, &x);
-			if (l -> rfdesc > max)
-				max = l -> rfdesc;
-		}
-#ifdef USE_FALLBACK
-		FD_SET (fallback_interface.wfdesc, &r);
-		if (fallback_interface.wfdesc > max)
-				max = fallback_interface.wfdesc;
-#endif
-
 		/* Call any expired timeouts, and then if there's
 		   still a timeout registered, time out the select
 		   call then. */
@@ -478,6 +499,21 @@ void dispatch ()
 		} else
 			tvp = (struct timeval *)0;
 
+		/* Set up the read mask. */
+		FD_ZERO (&r);
+
+		for (l = interfaces; l; l = l -> next) {
+			FD_SET (l -> rfdesc, &r);
+			FD_SET (l -> rfdesc, &x);
+			if (l -> rfdesc > max)
+				max = l -> rfdesc;
+		}
+#ifdef USE_FALLBACK
+		FD_SET (fallback_interface.wfdesc, &r);
+		if (fallback_interface.wfdesc > max)
+				max = fallback_interface.wfdesc;
+#endif
+
 		/* Wait for a packet or a timeout... XXX */
 		count = select (max + 1, &r, &w, &x, tvp);
 
@@ -492,11 +528,15 @@ void dispatch ()
 			if (!FD_ISSET (l -> rfdesc, &r))
 				continue;
 			got_one (l);
+			if (interfaces_invalidated)
+				break;
 		}
 #ifdef USE_FALLBACK
-		if (FD_ISSET (fallback_interface.wfdesc, &r))
+		if (FD_ISSET (fallback_interface.wfdesc, &r) &&
+		    !interfaces_invalidated)
 			fallback_discard (&fallback_interface);
 #endif
+		interfaces_invalidated = 1;
 	} while (1);
 }
 #endif /* USE_POLL */

@@ -54,7 +54,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: raw.c,v 1.9 1997/02/18 14:32:51 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: raw.c,v 1.10 1997/02/19 10:51:44 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -63,9 +63,8 @@ static char copyright[] =
 #include <sys/uio.h>
 
 /* Generic interface registration routine... */
-void if_register_send (info, interface)
+void if_register_send (info)
 	struct interface_info *info;
-	struct ifreq *interface;
 {
 	struct sockaddr_in name;
 	int sock;

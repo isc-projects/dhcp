@@ -50,7 +50,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: socket.c,v 1.18 1997/02/18 14:30:13 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: socket.c,v 1.19 1997/02/19 10:49:19 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -59,21 +59,50 @@ static char copyright[] =
 #  define USE_SOCKET_SEND
 #  define if_register_send if_register_fallback
 #  define send_packet send_fallback
+#  define if_reinitialize_send if_reinitialize_fallback
+#endif
+
+static int once = 0;
+
+/* Reinitializes the specified interface after an address change.   This
+   is not required for packet-filter APIs. */
+
+#ifdef USE_SOCKET_SEND
+void if_reinitialize_send (info)
+	struct interface_info *info;
+{
+#if 0
+#ifndef USE_SOCKET_RECEIVE
+	once = 0;
+	close (info -> wfdesc);
+#endif
+	if_register_send (info);
+#endif
+}
+#endif
+
+#ifdef USE_SOCKET_RECEIVE
+void if_reinitialize_receive (info)
+	struct interface_info *info;
+{
+#if 0
+	once = 0;
+	close (info -> rfdesc);
+	if_register_receive (info);
+#endif
+}
 #endif
 
 #if defined (USE_SOCKET_SEND) || defined (USE_SOCKET_RECEIVE)
 /* Generic interface registration routine... */
-int if_register_socket (info, interface)
+int if_register_socket (info)
 	struct interface_info *info;
-	struct ifreq *interface;
 {
 	struct sockaddr_in name;
 	int sock;
 	int flag;
 
 #ifndef SO_BINDTODEVICE
-	static int once = 0;
-
 	/* Make sure only one interface is registered. */
 	if (once)
 		error ("The standard socket API can only support %s%s%s%s%s",
@@ -121,8 +150,8 @@ int if_register_socket (info, interface)
 
 #ifdef SO_BINDTODEVICE
 	/* Bind this socket to this interface. */
-	if (setsockopt(sock, SOL_SOCKET, SO_BINDTODEVICE,
-		       (char *)interface, sizeof(*interface)) < 0) {
+	if (setsockopt (sock, SOL_SOCKET, SO_BINDTODEVICE,
+			(char *)(info -> ifp), sizeof *(info -> ifp)) < 0) {
 		error("setting SO_BINDTODEVICE");
 	}
 #endif
@@ -132,13 +161,11 @@ int if_register_socket (info, interface)
 #endif /* USE_SOCKET_SEND || USE_SOCKET_RECEIVE */
 
 #ifdef USE_SOCKET_SEND
-void if_register_send (info, interface)
+void if_register_send (info)
 	struct interface_info *info;
-	struct ifreq *interface;
-
 {
 #ifndef USE_SOCKET_RECEIVE
-	info -> wfdesc = if_register_socket (info, interface);
+	info -> wfdesc = if_register_socket (info);
 #else
 	info -> wfdesc = info -> rfdesc;
 #endif
@@ -151,13 +178,12 @@ void if_register_send (info, interface)
 #endif /* USE_SOCKET_SEND */
 
 #ifdef USE_SOCKET_RECEIVE
-void if_register_receive (info, interface)
+void if_register_receive (info)
 	struct interface_info *info;
-	struct ifreq *interface;
 {
 	/* If we're using the socket API for sending and receiving,
 	   we don't need to register this interface twice. */
-	info -> rfdesc = if_register_socket (info, interface);
+	info -> rfdesc = if_register_socket (info);
 	note ("Listening on Socket/%s/%s",
 	      info -> name,
 	      (info -> shared_network ?

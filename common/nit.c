@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: nit.c,v 1.11 1997/02/18 14:30:12 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: nit.c,v 1.12 1997/02/19 10:49:20 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -63,13 +63,29 @@ static char copyright[] =
 #include "includes/netinet/udp.h"
 #include "includes/netinet/if_ether.h"
 
+/* Reinitializes the specified interface after an address change.   This
+   is not required for packet-filter APIs. */
+
+#ifdef USE_NIT_SEND
+void if_reinitialize_send (info)
+	struct interface_info *info;
+{
+}
+#endif
+
+#ifdef USE_NIT_RECEIVE
+void if_reinitialize_receive (info)
+	struct interface_info *info;
+{
+}
+#endif
+
 /* Called by get_interface_list for each interface that's discovered.
    Opens a packet filter for each interface and adds it to the select
    mask. */
 
-int if_register_nit (info, ifp)
+int if_register_nit (info)
 	struct interface_info *info;
-	struct ifreq *ifp;
 {
 	int sock;
 	char filename[50];
@@ -83,8 +99,8 @@ int if_register_nit (info, ifp)
 
 	/* Set the NIT device to point at this interface. */
 	sio.ic_cmd = NIOCBIND;
-	sio.ic_len = sizeof *ifp;
-	sio.ic_dp = (char *)ifp;
+	sio.ic_len = sizeof *(info -> ifp);
+	sio.ic_dp = (char *)(info -> ifp);
 	sio.ic_timout = INFTIM;
 	if (ioctl (sock, I_STR, &sio) < 0)
 		error ("Can't attach interface %s to nit device: %m",
@@ -113,9 +129,8 @@ int if_register_nit (info, ifp)
 #endif /* USE_NIT_SEND || USE_NIT_RECEIVE */
 
 #ifdef USE_NIT_SEND
-void if_register_send (info, interface)
+void if_register_send (info)
 	struct interface_info *info;
-	struct ifreq *interface;
 {
 	/* If we're using the nit API for sending and receiving,
 	   we don't need to register this interface twice. */
@@ -123,7 +138,7 @@ void if_register_send (info, interface)
 	struct packetfilt pf;
 	struct strioctl sio;
 
-	info -> wfdesc = if_register_nit (info, interface);
+	info -> wfdesc = if_register_nit (info);
 
 	pf.Pf_Priority = 0;
 	pf.Pf_FilterLen = 1;
@@ -153,9 +168,8 @@ void if_register_send (info, interface)
    XXX Changes to the filter program may require changes to the constant
    offsets used in if_register_send to patch the NIT program! XXX */
 
-void if_register_receive (info, interface)
+void if_register_receive (info)
 	struct interface_info *info;
-	struct ifreq *interface;
 {
 	int flag = 1;
 	u_int32_t x;
@@ -165,7 +179,7 @@ void if_register_receive (info, interface)
 	struct timeval t;
 
 	/* Open a NIT device and hang it on this interface... */
-	info -> rfdesc = if_register_nit (info, interface);
+	info -> rfdesc = if_register_nit (info);
 
 	/* Set the snap length to 0, which means always take the whole
 	   packet. */
