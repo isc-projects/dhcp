@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: hash.c,v 1.1.2.2 2001/06/20 03:54:29 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: hash.c,v 1.1.2.3 2001/06/22 01:12:24 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include <omapip/omapip_p.h>
@@ -82,6 +82,9 @@ void free_hash_table (ptr, file, line)
 		hbn = hbc -> next;
 		if (ptr -> dereferencer && hbc -> value)
 		    (*ptr -> dereferencer) (&hbc -> value, MDL);
+	    }
+	    for (hbc = ptr -> buckets [i]; hbc; hbc = hbn) {
+		hbn = hbc -> next;
 		free_hash_bucket (hbc, MDL);
 	    }
 	    ptr -> buckets [i] = (struct hash_bucket *)0;
@@ -93,18 +96,59 @@ void free_hash_table (ptr, file, line)
 
 struct hash_bucket *free_hash_buckets;
 
+#if defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
+struct hash_bucket *hash_bucket_hunks;
+
+void relinquish_hash_bucket_hunks ()
+{
+	struct hash_bucket *c, *n, **p;
+
+	/* Account for all the hash buckets on the free list. */
+	p = &free_hash_buckets;
+	for (c = free_hash_buckets; c; c = c -> next) {
+		for (n = hash_bucket_hunks; n; n = n -> next) {
+			if (c > n && c < n + 127) {
+				*p = c -> next;
+				n -> len++;
+				break;
+			}
+		}
+		/* If we didn't delete the hash bucket from the free list,
+		   advance the pointer. */
+		if (!n)
+			p = &c -> next;
+	}
+		
+	for (c = hash_bucket_hunks; c; c = n) {
+		n = c -> next;
+		if (c -> len != 126) {
+			log_info ("hashbucket %lx hash_buckets %d free %u",
+				  (unsigned long)c, 127, c -> len);
+		}
+		dfree (c, MDL);
+	}
+}
+#endif
+
 struct hash_bucket *new_hash_bucket (file, line)
 	const char *file;
 	int line;
 {
 	struct hash_bucket *rval;
-	int i;
+	int i = 0;
 	if (!free_hash_buckets) {
 		rval = dmalloc (127 * sizeof (struct hash_bucket),
 				file, line);
 		if (!rval)
 			return rval;
-		for (i = 0; i < 127; i++) {
+# if defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
+		rval -> next = hash_bucket_hunks;
+		hash_bucket_hunks = rval;
+		hash_bucket_hunks -> len = 0;
+		i++;
+		rval++;
+#endif
+		for (; i < 127; i++) {
 			rval -> next = free_hash_buckets;
 			free_hash_buckets = rval;
 			rval++;
@@ -120,15 +164,24 @@ void free_hash_bucket (ptr, file, line)
 	const char *file;
 	int line;
 {
+	struct hash_bucket *hp;
+#if defined (DEBUG_MALLOC_POOL)
+	for (hp = free_hash_buckets; hp; hp = hp -> next) {
+		if (hp == ptr) {
+			log_error ("hash bucket freed twice!");
+			abort ();
+		}
+	}
+#endif
 	ptr -> next = free_hash_buckets;
 	free_hash_buckets = ptr;
 }
 
 struct hash_table *new_hash (hash_reference referencer,
 			     hash_dereference dereferencer,
-			     int casep)
+			     int casep, const char *file, int line)
 {
-	struct hash_table *rv = new_hash_table (DEFAULT_HASH_SIZE, MDL);
+	struct hash_table *rv = new_hash_table (DEFAULT_HASH_SIZE, file, line);
 	if (!rv)
 		return rv;
 	memset (&rv -> buckets [0], 0,
@@ -260,7 +313,7 @@ void delete_hash_entry (table, name, len, file, line)
 			} else {
 				table -> buckets [hashno] = bp -> next;
 			}
-			if (table -> dereferencer) {
+			if (bp -> value && table -> dereferencer) {
 				foo = &bp -> value;
 				(*(table -> dereferencer)) (foo, file, line);
 			}
