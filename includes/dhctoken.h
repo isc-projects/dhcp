@@ -75,10 +75,11 @@
 #define MAX_LEASE_TIME	281
 #define VENDOR_CLASS	282
 #define USER_CLASS	283
-
-#define LAST_TOKEN	USER_CLASS
+#define SHARED_NETWORK	284
+#define SERVER_NAME	285
+#define DYNAMIC_BOOTP	286
+#define SERVER_IDENTIFIER 287
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\
-				 (x) <= LAST_TOKEN &&	\
 				 (x) != STRING &&	\
 				 (x) != NUMBER)
