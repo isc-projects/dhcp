@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.57.2.27 1999/05/08 18:22:49 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.57.2.28 1999/05/20 20:03:27 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -119,14 +119,14 @@ void dhcpdiscover (packet)
 		/* If we find an abandoned lease, take it, but print a
 		   warning message, so that if it continues to lose,
 		   the administrator will eventually investigate. */
-		if (lease -> flags & ABANDONED_LEASE) {
+		if ((lease -> flags & ABANDONED_LEASE)) {
 			struct lease *lp;
 
 			/* See if we can find an unabandoned lease first. */
 			for (lp = lease; lp; lp = lp -> prev) {
 				if (lp -> ends > cur_time)
 					break;
-				if (!lp -> flags & ABANDONED_LEASE) {
+				if (!(lp -> flags & ABANDONED_LEASE)) {
 					lease = lp;
 					break;
 				}
@@ -134,7 +134,7 @@ void dhcpdiscover (packet)
 
 			/* If we can't find an unabandoned lease, reclaim the
 			   abandoned lease. */
-			if (lease -> flags & ABANDONED_LEASE) {
+			if ((lease -> flags & ABANDONED_LEASE)) {
 				warn ("Reclaiming abandoned IP address %s.",
 				      piaddr (lease -> ip_addr));
 				lease -> flags &= ~ABANDONED_LEASE;
@@ -350,6 +350,15 @@ void dhcprequest (packet)
 		ack_lease (packet, lease, DHCPACK, 0);
 		return;
 	}
+
+	/* At this point, the client has requested a lease, and it's
+	   available, but it wasn't assigned to the client, which
+	   means that the client probably hasn't gone through the
+	   DHCPDISCOVER part of the protocol.  We are within our
+	   rights to send a DHCPNAK.   We can also send a DHCPACK.
+	   The thing we probably should not do is to remain silent.
+	   For now, we'll just assign the lease to the client anyway. */
+	ack_lease (packet, lease, DHCPACK, 0);
 }
 
 void dhcprelease (packet)
@@ -877,15 +886,15 @@ void ack_lease (packet, lease, offer, when)
 
 	/* Get the Maximum Message Size option from the packet, if one
 	   was sent. */
-	i = DHO_DHCP_MAX_MESSAGE_SIZE
+	i = DHO_DHCP_MAX_MESSAGE_SIZE;
 	if (packet -> options [i].data &&
 	    (packet -> options [i].len == sizeof (u_int16_t)))
 		state -> max_message_size =
 			getUShort (packet -> options [i].data);
 	/* Otherwise, if a maximum message size was specified, use that. */
-	else if (state -> options [i].len)
+	else if (state -> options [i] && state -> options [i] -> value)
 		state -> max_message_size =
-			getUShort (packet -> options [i].data);
+			getUShort (state -> options [i] -> value);
 
 	/* Save the parameter request list if there is one. */
 	i = DHO_DHCP_PARAMETER_REQUEST_LIST;
@@ -1169,10 +1178,12 @@ void dhcp_reply (lease)
 	else
 		bootpp = 1;
 
-	if (state -> options [DHO_DHCP_PARAMETER_REQUEST_LIST].len) {
-		prl = state -> options [DHO_DHCP_PARAMETER_REQUEST_LIST].data;
-		prl_len =
-			state -> options [DHO_DHCP_PARAMETER_REQUEST_LIST].len;
+	if (state -> options [DHO_DHCP_PARAMETER_REQUEST_LIST] &&
+	    state -> options [DHO_DHCP_PARAMETER_REQUEST_LIST] -> value) {
+		prl = state -> options
+			[DHO_DHCP_PARAMETER_REQUEST_LIST] -> value;
+		prl_len = state -> options
+			[DHO_DHCP_PARAMETER_REQUEST_LIST] -> len;
 	} else if (state -> prl) {
 		prl = state -> prl;
 		prl_len = state -> prl_len;
@@ -1282,7 +1293,7 @@ void dhcp_reply (lease)
 	   code. */
 	} else if (raw.ciaddr.s_addr &&
 		   !((state -> got_server_identifier ||
-		      (raw.flags & HTONS (BOOTP_BROADCAST))) &&
+		      (raw.flags & htons (BOOTP_BROADCAST))) &&
 		     /* XXX This won't work if giaddr isn't zero, but it is: */
 		     (state -> shared_network == lease -> shared_network)) &&
 		   state -> offer == DHCPACK) {
@@ -1418,7 +1429,7 @@ struct lease *find_lease (packet, share, ours)
 	   (if any). */
 	for (; hw_lease; hw_lease = hw_lease -> n_hw) {
 		if (hw_lease -> shared_network == share) {
-			if (hw_lease -> flags & ABANDONED_LEASE)
+			if ((hw_lease -> flags & ABANDONED_LEASE))
 				continue;
 			if (packet -> packet_type)
 				break;
@@ -1449,8 +1460,6 @@ struct lease *find_lease (packet, share, ours)
 	   lease to be abandoned.   If so, this request probably came from
 	   that client. */
 	if (ip_lease && (ip_lease -> shared_network != share)) {
-		if (ours)
-			*ours = 1;
 		ip_lease = (struct lease *)0;
 		strcpy (dhcp_message, "requested address on bad subnet");
 	}
