@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.50 1998/04/20 18:05:19 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.51 1998/06/25 03:51:59 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -66,14 +66,6 @@ int readconf ()
 	/* Set up the initial dhcp option universe. */
 	initialize_universes ();
 
-	/* Set up the global defaults... */
-	root_group.default_lease_time = 43200; /* 12 hours. */
-	root_group.max_lease_time = 86400; /* 24 hours. */
-	root_group.bootp_lease_cutoff = MAX_TIME;
-	root_group.boot_unknown_clients = 1;
-	root_group.allow_bootp = 1;
-	root_group.allow_booting = 1;
-
 	if ((cfile = fopen (path_dhcpd_conf, "r")) == NULL)
 		error ("Can't open %s: %m", path_dhcpd_conf);
 	do {
@@ -81,9 +73,9 @@ int readconf ()
 		if (token == EOF)
 			break;
 		declaration = parse_statement (cfile, &root_group,
-						 ROOT_GROUP,
-						 (struct host_decl *)0,
-						 declaration);
+					       ROOT_GROUP,
+					       (struct host_decl *)0,
+					       declaration);
 	} while (1);
 	token = next_token (&val, cfile); /* Clear the peek buffer */
 
@@ -176,13 +168,18 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 	char *val;
 	struct shared_network *share;
 	char *t, *n;
-	struct tree *tree;
-	struct tree_cache *cache;
+	struct expression *expr;
+	struct data_string data;
 	struct hardware hardware;
+	struct executable_statement *et, *ep;
+	struct option *option;
+	struct option_cache *cache;
+	int lose;
 
-	switch (next_token (&val, cfile)) {
+	switch (peek_token (&val, cfile)) {
 	      case HOST:
-		if (type != HOST_DECL)
+		next_token (&val, cfile);
+		if (type != HOST_DECL && type != CLASS_DECL)
 			parse_host_declaration (cfile, group);
 		else {
 			parse_warn ("host declarations not allowed here.");
@@ -191,7 +188,8 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		return 1;
 
 	      case GROUP:
-		if (type != HOST_DECL)
+		next_token (&val, cfile);
+		if (type != HOST_DECL && type != CLASS_DECL)
 			parse_group_declaration (cfile, group);
 		else {
 			parse_warn ("host declarations not allowed here.");
@@ -200,13 +198,16 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		return 1;
 
 	      case TIMESTAMP:
+		next_token (&val, cfile);
 		parsed_time = parse_timestamp (cfile);
 		break;
 
 	      case SHARED_NETWORK:
+		next_token (&val, cfile);
 		if (type == SHARED_NET_DECL ||
 		    type == HOST_DECL ||
-		    type == SUBNET_DECL) {
+		    type == SUBNET_DECL ||
+		    type == CLASS_DECL) {
 			parse_warn ("shared-network parameters not %s.",
 				    "allowed here");
 			skip_to_semi (cfile);
@@ -217,7 +218,9 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		return 1;
 
 	      case SUBNET:
-		if (type == HOST_DECL || type == SUBNET_DECL) {
+		next_token (&val, cfile);
+		if (type == HOST_DECL || type == SUBNET_DECL ||
+		    type == CLASS_DECL) {
 			parse_warn ("subnet declarations not allowed here.");
 			skip_to_semi (cfile);
 			return 1;
@@ -255,117 +258,47 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		return 1;
 
 	      case VENDOR_CLASS:
+		next_token (&val, cfile);
+		if (type == CLASS_DECL) {
+			parse_warn ("class declarations not allowed here.");
+			skip_to_semi (cfile);
+			break;
+		}
 		parse_class_declaration (cfile, group, 0);
 		return 1;
 
 	      case USER_CLASS:
+		next_token (&val, cfile);
+		if (type == CLASS_DECL) {
+			parse_warn ("class declarations not allowed here.");
+			skip_to_semi (cfile);
+			break;
+		}
 		parse_class_declaration (cfile, group, 1);
 		return 1;
 
-	      case DEFAULT_LEASE_TIME:
-		parse_lease_time (cfile, &group -> default_lease_time);
-		break;
-
-	      case MAX_LEASE_TIME:
-		parse_lease_time (cfile, &group -> max_lease_time);
-		break;
-
-	      case MIN_LEASE_TIME:
-		parse_lease_time (cfile, &group -> min_lease_time);
-		break;
-
-	      case MIN_SECS:
-		token = next_token (&val, cfile);
-		if (token != NUMBER) {
-			parse_warn ("Expecting a number of seconds.");
+	      case CLASS:
+		next_token (&val, cfile);
+		if (type == CLASS_DECL) {
+			parse_warn ("class declarations not allowed here.");
 			skip_to_semi (cfile);
-			return declaration;
-		}
-		convert_num ((unsigned char *)&group -> min_secs,
-			     val, 10, 32);
-		group -> min_secs = ntohl (group -> min_secs);
-		break;
-
-	      case DYNAMIC_BOOTP_LEASE_CUTOFF:
-		group -> bootp_lease_cutoff = parse_date (cfile);
-		break;
-
-	      case DYNAMIC_BOOTP_LEASE_LENGTH:
-		parse_lease_time (cfile, &group -> bootp_lease_length);
-		break;
-
-	      case BOOT_UNKNOWN_CLIENTS:
-		if (type == HOST_DECL)
-			parse_warn ("boot-unknown-clients not allowed here.");
-		group -> boot_unknown_clients = parse_boolean (cfile);
-		break;
-
-	      case ONE_LEASE_PER_CLIENT:
-		if (type == HOST_DECL)
-			parse_warn ("one-lease-per-client not allowed here.");
-		group -> one_lease_per_client = parse_boolean (cfile);
-		break;
-
-	      case GET_LEASE_HOSTNAMES:
-		if (type == HOST_DECL)
-			parse_warn ("get-lease-hostnames not allowed here.");
-		group -> get_lease_hostnames = parse_boolean (cfile);
-		break;
-
-	      case USE_HOST_DECL_NAMES:
-		if (type == HOST_DECL)
-			parse_warn ("use-host-decl-names not allowed here.");
-		group -> use_host_decl_names = parse_boolean (cfile);
-		break;
-
-	      case USE_LEASE_ADDR_FOR_DEFAULT_ROUTE:
-		if (type == HOST_DECL)
-			parse_warn ("use-host-decl-names not allowed here.");
-		group -> use_lease_addr_for_default_route =
-			parse_boolean (cfile);
-		break;
-
-	      case NEXT_SERVER:
-		tree = parse_ip_addr_or_hostname (cfile, 0);
-		if (!tree)
 			break;
-		cache = tree_cache (tree);
-		if (!tree_evaluate (cache))
-			error ("next-server is not known");
-		group -> next_server.len = 4;
-		memcpy (group -> next_server.iabuf,
-			cache -> value, group -> next_server.len);
-		parse_semi (cfile);
-		break;
-			
-	      case OPTION:
-		parse_option_param (cfile, group);
-		break;
-
-	      case SERVER_IDENTIFIER:
-		if (type != ROOT_GROUP)
-			parse_warn ("server-identifier only allowed at top %s",
-				    "level.");
-		tree = parse_ip_addr_or_hostname (cfile, 0);
-		if (!tree)
-			return declaration;
-		cache = tree_cache (tree);
-		if (type == ROOT_GROUP) {
-			if (!tree_evaluate (cache))
-				error ("server-identifier is not known");
 		}
-		token = next_token (&val, cfile);
-		break;
-			
-	      case FILENAME:
-		group -> filename = parse_string (cfile);
-		break;
+		parse_class_declaration (cfile, group, 2);
+		return 1;
 
-	      case SERVER_NAME:
-		group -> server_name = parse_string (cfile);
-		break;
+	      case SUBCLASS:
+		next_token (&val, cfile);
+		if (type == CLASS_DECL) {
+			parse_warn ("class declarations not allowed here.");
+			skip_to_semi (cfile);
+			break;
+		}
+		parse_class_declaration (cfile, group, 3);
+		return 1;
 
 	      case HARDWARE:
+		next_token (&val, cfile);
 		parse_hardware_param (cfile, &hardware);
 		if (host_decl)
 			host_decl -> interface = hardware;
@@ -375,6 +308,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		break;
 
 	      case FIXED_ADDR:
+		next_token (&val, cfile);
 		cache = parse_fixed_addr_param (cfile);
 		if (host_decl)
 			host_decl -> fixed_addr = cache;
@@ -384,6 +318,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		break;
 
 	      case RANGE:
+		next_token (&val, cfile);
 		if (type != SUBNET_DECL || !group -> subnet) {
 			parse_warn ("range declaration not allowed here.");
 			skip_to_semi (cfile);
@@ -393,20 +328,62 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		return declaration;
 
 	      case ALLOW:
-		parse_allow_deny (cfile, group, 1);
-		break;
-
 	      case DENY:
-		parse_allow_deny (cfile, group, 0);
-		break;
+		token = next_token (&val, cfile);
+		cache = parse_allow_deny (cfile,
+					  token == ALLOW ? 1 : 0);
+		et = (struct executable_statement *)dmalloc (sizeof *et,
+							     "allow/deny");
+		if (!et)
+			error ("no memory for %s statement",
+			       token == ALLOW ? "allow" : "deny");
+		memset (et, 0, sizeof *et);
+		et -> op = supersede_option_statement;
+		et -> data.option = cache;
+		goto insert_statement;
 
 	      default:
-		if (declaration)
-			parse_warn ("expecting a declaration.");
-		else
-			parse_warn ("expecting a parameter or declaration.");
-		skip_to_semi (cfile);
-		return declaration;
+		et = (struct executable_statement *)0;
+		if (is_identifier (token)) {
+			option = ((struct option *)
+				  hash_lookup (server_universe.hash,
+					       (unsigned char *)val, 0));
+			if (option) {
+				et = parse_option_statement
+					(cfile, 1, option,
+					 supersede_option_statement);
+				if (!et)
+					return declaration;
+			}
+		}
+
+		if (!et) {
+			lose = 0;
+			et = parse_executable_statement (cfile, &lose);
+			if (!et) {
+				if (declaration && !lose)
+					parse_warn ("expecting a %s.",
+						    "declaration");
+				else
+					parse_warn ("expecting a parameter%s.",
+						    " or declaration");
+				skip_to_semi (cfile);
+				return declaration;
+			}
+		}
+		if (!et) {
+			parse_warn ("expecting a %sdeclaration",
+				    declaration ? "" :  "parameter or ");
+			return declaration;
+		}
+	      insert_statement:
+		if (group -> statements) {
+			for (ep = group -> statements; ep -> next;
+			     ep = ep -> next)
+				;
+			ep -> next = et;
+
+		}
 	}
 
 	if (declaration) {
@@ -422,38 +399,44 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 			| DYNAMIC_BOOTP
 			| UNKNOWN_CLIENTS */
 
-void parse_allow_deny (cfile, group, flag)
+struct option_cache *parse_allow_deny (cfile, flag)
 	FILE *cfile;
-	struct group *group;
 	int flag;
 {
 	int token;
 	char *val;
+	char rf = flag;
+	struct option_cache *oc;
 
 	token = next_token (&val, cfile);
 	switch (token) {
 	      case BOOTP:
-		group -> allow_bootp = flag;
+		oc = option_cache (make_const_data (&rf, 1, 0, 1),
+				   &server_options [SV_ALLOW_BOOTP]);
 		break;
 
 	      case BOOTING:
-		group -> allow_booting = flag;
+		oc = option_cache (make_const_data (&rf, 1, 0, 1),
+				   &server_options [SV_ALLOW_BOOTING]);
 		break;
 
 	      case DYNAMIC_BOOTP:
-		group -> dynamic_bootp = flag;
+		oc = option_cache (make_const_data (&rf, 1, 0, 1),
+				   &server_options [SV_DYNAMIC_BOOTP]);
 		break;
 
 	      case UNKNOWN_CLIENTS:
-		group -> boot_unknown_clients = flag;
+		oc = option_cache (make_const_data (&rf, 1, 0, 1),
+				   &server_options [SV_BOOT_UNKNOWN_CLIENTS]);
 		break;
 
 	      default:
 		parse_warn ("expecting allow/deny key");
 		skip_to_semi (cfile);
-		return;
+		return (struct option_cache *)0;
 	}
 	parse_semi (cfile);
+	return oc;
 }
 
 /* boolean :== ON SEMI | OFF SEMI | TRUE SEMI | FALSE SEMI */
@@ -548,24 +531,6 @@ void parse_host_declaration (cfile, group)
 					       declaration);
 	} while (1);
 
-	if (!host -> group -> options [DHO_HOST_NAME] &&
-	    host -> group -> use_host_decl_names) {
-		host -> group -> options [DHO_HOST_NAME] =
-			new_tree_cache ("parse_host_declaration");
-		if (!host -> group -> options [DHO_HOST_NAME])
-			error ("can't allocate a tree cache for hostname.");
-		host -> group -> options [DHO_HOST_NAME] -> len =
-			strlen (name);
-		host -> group -> options [DHO_HOST_NAME] -> value =
-			(unsigned char *)name;
-		host -> group -> options [DHO_HOST_NAME] -> buf_size =
-			host -> group -> options [DHO_HOST_NAME] -> len;
-		host -> group -> options [DHO_HOST_NAME] -> timeout =
-			0xFFFFFFFF;
-		host -> group -> options [DHO_HOST_NAME] -> tree =
-			(struct tree *)0;
-	}
-
 	enter_host (host);
 }
 
@@ -579,8 +544,13 @@ void parse_class_declaration (cfile, group, type)
 {
 	char *val;
 	int token;
-	struct class *class;
+	struct class *class, *pc;
 	int declaration = 0;
+	int lose;
+	struct data_string data;
+	char *name;
+	struct executable_statement *stmt = (struct executable_statement *)0;
+	struct expression *expr;
 
 	token = next_token (&val, cfile);
 	if (token != STRING) {
@@ -589,10 +559,111 @@ void parse_class_declaration (cfile, group, type)
 		return;
 	}
 
-	class = add_class (type, val);
-	if (!class)
-		error ("No memory for class %s.", val);
-	class -> group = clone_group (group, "parse_class_declaration");
+	/* See if there's already a class with the specified name. */
+	pc = (struct class *)find_class (val);
+
+	/* If this isn't a subclass, we're updating an existing class. */
+	if (pc && type != 0 && type != 1 && type != 3) {
+		class = pc;
+		pc = (struct class *)0;
+	}
+
+	/* If this _is_ a subclass, there _must_ be a class with the
+	   same name. */
+	if (!pc && (type == 0 || type == 1 || type == 3)) {
+		parse_warn ("no class named %s", val);
+		skip_to_semi (cfile);
+		return;
+	}
+
+	/* The old vendor-class and user-class declarations had an implicit
+	   match.   We don't do the implicit match anymore.   Instead, for
+	   backward compatibility, we have an implicit-vendor-class and an
+	   implicit-user-class.   vendor-class and user-class declarations
+	   are turned into subclasses of the implicit classes, and the
+	   spawn expression of the implicit classes extracts the contents of
+	   the vendor class or user class. */
+	if (type == 0 || type == 1) {
+		data.len = strlen (val);
+		data.data = dmalloc (data.len + 1, "parse_class_declaration");
+		data.buffer = (char *)0;
+		data.terminated = 1;
+
+		name = type ? "implicit-vendor-class" : "implicit-user-class";
+	} else if (type == 2) {
+		if (!(name = dmalloc (strlen (val) + 1,
+				      "parse_class_declaration")))
+			error ("No memory for class name %s.", val);
+		strcpy (name, val);
+	} else {
+		name = (char *)0;
+	}
+
+	/* If this is a straight subclass, parse the hash string. */
+	if (type == 3) {
+		token = peek_token (&val, cfile);
+		if (token == STRING) {
+			token = next_token (&val, cfile);
+			data.len = strlen (val);
+			data.data = dmalloc (data.len + 1,
+					     "parse_class_declaration");
+			data.buffer = (char *)0;
+			data.terminated = 1;
+		} else if (token == NUMBER_OR_NAME || token == NUMBER) {
+			data.data = parse_cshl (cfile, &data.len);
+			if (!data.data)
+				return;
+			data.terminated = 0;
+			data.buffer = 0;
+		}
+	}
+
+	/* See if there's already a class in the hash table matching the
+	   hash data. */
+	if (type == 0 || type == 1 || type == 3)
+		class = ((struct class *)
+			 hash_lookup (pc -> hash, data.data, data.len));
+
+	/* If we didn't find an existing class, allocate a new one. */
+	if (!class) {
+		/* Allocate the class structure... */
+		class = (struct class *)dmalloc (sizeof (struct class),
+						 "parse_class_declaration");
+		if (!class)
+			error ("No memory for class %s.", val);
+		memset (class, 0, sizeof *class);
+		if (pc) {
+			class -> group =
+				clone_group (pc -> group,
+					     "parse_class_declaration");
+			add_hash (pc -> hash,
+				  data.data, data.len, (unsigned char *)class);
+		} else {
+			class -> group =
+				clone_group (group, "parse_class_declaration");
+		}
+
+		/* If this is an implicit vendor or user class, add a
+		   statement that causes the vendor or user class ID to
+		   be sent back in the reply. */
+		if (type == 0 || type == 1) {
+			stmt = ((struct executable_statement *)
+				dmalloc (sizeof (struct executable_statement),
+					 "implicit user/vendor class"));
+			if (!stmt)
+				error ("no memory for class statement.");
+			memset (stmt, 0, sizeof *stmt);
+			stmt -> op = supersede_option_statement;
+			stmt -> data.option =
+				(option_cache
+				 (make_const_data (data.data, data.len, 0, 1),
+				  dhcp_universe.options
+				  [type
+				   ? DHO_DHCP_CLASS_IDENTIFIER
+				   : DHO_DHCP_USER_CLASS_ID]));
+			class -> statements = stmt;
+		}
+	}
 
 	if (!parse_lbrace (cfile))
 		return;
@@ -606,6 +677,50 @@ void parse_class_declaration (cfile, group, type)
 			token = next_token (&val, cfile);
 			parse_warn ("unexpected end of file");
 			break;
+		} else if (token == MATCH) {
+			if (pc) {
+				parse_warn ("invalid match in subclass.");
+				skip_to_semi (cfile);
+				break;
+			}
+			if (class -> expr) {
+				parse_warn ("can't override match.");
+				skip_to_semi (cfile);
+				break;
+			}
+			token = next_token (&val, cfile);
+			token = next_token (&val, cfile);
+			if (token != IF) {
+				parse_warn ("expecting if after match");
+				skip_to_semi (cfile);
+				break;
+			}
+			class -> expr =
+				parse_boolean_expression (cfile, &lose);
+			if (lose)
+				break;
+		} else if (token == SPAWN) {
+			if (pc) {
+				parse_warn ("invalid spawn in subclass.");
+				skip_to_semi (cfile);
+				break;
+			}
+			if (class -> spawn) {
+				parse_warn ("can't override spawn.");
+				skip_to_semi (cfile);
+				break;
+			}
+			token = next_token (&val, cfile);
+			token = next_token (&val, cfile);
+			if (token != WITH) {
+				parse_warn ("expecting with after spawn");
+				skip_to_semi (cfile);
+				break;
+			}
+			class -> spawn =
+				parse_data_expression (cfile, &lose);
+			if (lose)
+				break;
 		} else {
 			declaration = parse_statement (cfile, class -> group,
 						       CLASS_DECL,
@@ -750,13 +865,6 @@ void parse_subnet_declaration (cfile, share)
 					       declaration);
 	} while (1);
 
-	/* If this subnet supports dynamic bootp, flag it so in the
-	   shared_network containing it. */
-	if (subnet -> group -> dynamic_bootp)
-		share -> group -> dynamic_bootp = 1;
-	if (subnet -> group -> one_lease_per_client)
-		share -> group -> one_lease_per_client = 1;
-
 	/* Add the subnet to the list of subnets in this shared net. */
 	if (!share -> subnets)
 		share -> subnets = subnet;
@@ -800,243 +908,32 @@ void parse_group_declaration (cfile, group)
 	} while (1);
 }
 
-/* ip-addr-or-hostname :== ip-address | hostname
-   ip-address :== NUMBER DOT NUMBER DOT NUMBER DOT NUMBER
-   
-   Parse an ip address or a hostname.   If uniform is zero, put in
-   a TREE_LIMIT node to catch hostnames that evaluate to more than
-   one IP address. */
-
-struct tree *parse_ip_addr_or_hostname (cfile, uniform)
-	FILE *cfile;
-	int uniform;
-{
-	char *val;
-	int token;
-	unsigned char addr [4];
-	int len = sizeof addr;
-	char *name;
-	struct tree *rv;
-
-	token = peek_token (&val, cfile);
-	if (is_identifier (token)) {
-		name = parse_host_name (cfile);
-		if (!name)
-			return (struct tree *)0;
-		rv = tree_host_lookup (name);
-		if (!uniform)
-			rv = tree_limit (rv, 4);
-	} else if (token == NUMBER) {
-		if (!parse_numeric_aggregate (cfile, addr, &len, DOT, 10, 8))
-			return (struct tree *)0;
-		rv = tree_const (addr, len);
-	} else {
-		if (token != RBRACE && token != LBRACE)
-			token = next_token (&val, cfile);
-		parse_warn ("%s (%d): expecting IP address or hostname",
-			    val, token);
-		if (token != SEMI)
-			skip_to_semi (cfile);
-		return (struct tree *)0;
-	}
-
-	return rv;
-}	
-	
-
 /* fixed-addr-parameter :== ip-addrs-or-hostnames SEMI
    ip-addrs-or-hostnames :== ip-addr-or-hostname
 			   | ip-addrs-or-hostnames ip-addr-or-hostname */
 
-struct tree_cache *parse_fixed_addr_param (cfile)
+struct option_cache *parse_fixed_addr_param (cfile)
 	FILE *cfile;
 {
 	char *val;
 	int token;
-	struct tree *tree = (struct tree *)0;
-	struct tree *tmp;
+	struct expression *expr = (struct expression *)0;
+	struct expression *tmp;
 
 	do {
 		tmp = parse_ip_addr_or_hostname (cfile, 0);
-		if (tree)
-			tree = tree_concat (tree, tmp);
+		if (expr)
+			expr = make_concat (expr, tmp);
 		else
-			tree = tmp;
+			expr = tmp;
 		token = peek_token (&val, cfile);
 		if (token == COMMA)
 			token = next_token (&val, cfile);
 	} while (token == COMMA);
 
 	if (!parse_semi (cfile))
-		return (struct tree_cache *)0;
-	return tree_cache (tree);
-}
-
-/* option_parameter :== identifier DOT identifier <syntax> SEMI
-		      | identifier <syntax> SEMI
-
-   Option syntax is handled specially through format strings, so it
-   would be painful to come up with BNF for it.   However, it always
-   starts as above and ends in a SEMI. */
-
-void parse_option_param (cfile, group)
-	FILE *cfile;
-	struct group *group;
-{
-	char *val;
-	int token;
-	unsigned char buf [4];
-	int len;
-	unsigned char *ob;
-	char *fmt;
-	struct option *option;
-	struct tree *tree = (struct tree *)0;
-	struct tree *t;
-
-	option = parse_option_name (cfile);
-	if (!option)
-		return;
-
-	token = peek_token (&val, cfile);
-	if (token == SEMI) {
-		/* Eat the semicolon... */
-		token = next_token (&val, cfile);
-
-		group -> options [option -> code] =
-			tree_cache (tree_const (0, 0));
-		return;
-	}
-
-	/* Parse the option data... */
-	do {
-		/* Set a flag if this is an array of a simple type (i.e.,
-		   not an array of pairs of IP addresses, or something
-		   like that. */
-		int uniform = option -> format [1] == 'A';
-
-		for (fmt = option -> format; *fmt; fmt++) {
-			if (*fmt == 'A')
-				break;
-			switch (*fmt) {
-			      case 'X':
-				token = peek_token (&val, cfile);
-				if (token == NUMBER_OR_NAME ||
-				    token == NUMBER) {
-					ob = parse_cshl (cfile, &len);
-					tree = tree_concat (tree,
-							    tree_const (ob,
-									len));
-				} else if (token == STRING) {
-					token = next_token (&val, cfile);
-					tree = tree_concat
-						(tree,
-						 tree_const ((unsigned char *)
-							     val,
-							     strlen (val)));
-				} else {
-					parse_warn ("expecting string %s.",
-						    "or hexadecimal data");
-					skip_to_semi (cfile);
-					return;
-				}
-				break;
-					
-			      case 't': /* Text string... */
-				token = next_token (&val, cfile);
-				if (token != STRING
-				    && !is_identifier (token)) {
-					parse_warn ("expecting string.");
-					if (token != SEMI)
-						skip_to_semi (cfile);
-					return;
-				}
-				tree = tree_concat (tree,
-						    tree_const
-						    ((unsigned char *) val,
-						    strlen (val)));
-				break;
-
-			      case 'I': /* IP address or hostname. */
-				t = parse_ip_addr_or_hostname (cfile, uniform);
-				if (!t)
-					return;
-				tree = tree_concat (tree, t);
-				break;
-
-			      case 'L': /* Unsigned 32-bit integer... */
-			      case 'l':	/* Signed 32-bit integer... */
-				token = next_token (&val, cfile);
-				if (token != NUMBER) {
-				      need_number:
-					parse_warn ("expecting number.");
-					if (token != SEMI)
-						skip_to_semi (cfile);
-					return;
-				}
-				convert_num (buf, val, 0, 32);
-				tree = tree_concat (tree, tree_const (buf, 4));
-				break;
-			      case 's':	/* Signed 16-bit integer. */
-			      case 'S':	/* Unsigned 16-bit integer. */
-				token = next_token (&val, cfile);
-				if (token != NUMBER)
-					goto need_number;
-				convert_num (buf, val, 0, 16);
-				tree = tree_concat (tree, tree_const (buf, 2));
-				break;
-			      case 'b':	/* Signed 8-bit integer. */
-			      case 'B':	/* Unsigned 8-bit integer. */
-				token = next_token (&val, cfile);
-				if (token != NUMBER)
-					goto need_number;
-				convert_num (buf, val, 0, 8);
-				tree = tree_concat (tree, tree_const (buf, 1));
-				break;
-			      case 'f': /* Boolean flag. */
-				token = next_token (&val, cfile);
-				if (!is_identifier (token)) {
-					parse_warn ("expecting identifier.");
-				      bad_flag:
-					if (token != SEMI)
-						skip_to_semi (cfile);
-					return;
-				}
-				if (!strcasecmp (val, "true")
-				    || !strcasecmp (val, "on"))
-					buf [0] = 1;
-				else if (!strcasecmp (val, "false")
-					 || !strcasecmp (val, "off"))
-					buf [0] = 0;
-				else {
-					parse_warn ("expecting boolean.");
-					goto bad_flag;
-				}
-				tree = tree_concat (tree, tree_const (buf, 1));
-				break;
-			      default:
-				warn ("Bad format %c in parse_option_param.",
-				      *fmt);
-				skip_to_semi (cfile);
-				return;
-			}
-		}
-		if (*fmt == 'A') {
-			token = peek_token (&val, cfile);
-			if (token == COMMA) {
-				token = next_token (&val, cfile);
-				continue;
-			}
-			break;
-		}
-	} while (*fmt == 'A');
-
-	token = next_token (&val, cfile);
-	if (token != SEMI) {
-		parse_warn ("semicolon expected.");
-		skip_to_semi (cfile);
-		return;
-	}
-	group -> options [option -> code] = tree_cache (tree);
+		return (struct option_cache *)0;
+	return option_cache (expr, (struct option *)0);
 }
 
 /* timestamp :== date
@@ -1102,7 +999,7 @@ struct lease *parse_lease_declaration (cfile)
 			parse_warn ("unexpected end of file");
 			break;
 		}
-		strncpy (val, tbuf, sizeof tbuf);
+		strncpy (tbuf, val, sizeof tbuf);
 		tbuf [(sizeof tbuf) - 1] = 0;
 
 		/* Parse any of the times associated with the lease. */
@@ -1260,7 +1157,7 @@ void parse_address_range (cfile, subnet)
 
 	if ((token = peek_token (&val, cfile)) == DYNAMIC_BOOTP) {
 		token = next_token (&val, cfile);
-		subnet -> group -> dynamic_bootp = dynamic = 1;
+		dynamic = 1;
 	}
 
 	/* Get the bottom address in the range... */
@@ -1290,373 +1187,5 @@ void parse_address_range (cfile, subnet)
 
 	/* Create the new address range... */
 	new_address_range (low, high, subnet, dynamic);
-}
-
-struct match_expr *parse_boolean_expression (cfile, lose)
-	FILE *cfile;
-	int *lose;
-{
-	int token;
-	char *val;
-	struct collection *col;
-	struct match_expr buf, *rv;
-	struct match_expr *left, *right;
-
-	token = peek_token (&val, cfile);
-
-	/* Check for unary operators... */
-	switch (token) {
-	      case CHECK:
-		token = next_token (&val, cfile);
-		token = next_token (&val, cfile);
-		if (token != STRING) {
-			parse_warn ("string expected.");
-			skip_to_semi (cfile);
-			*lose = 1;
-			return (struct match_expr *)0;
-		}
-		for (col = collections; col; col = col -> next)
-			if (!strcmp (col -> name, val))
-				break;
-		if (!col) {
-			parse_warn ("unknown collection.");
-			*lose = 1;
-			return (struct match_expr *)0;
-		}
-		buf.op = match_check;
-		buf.data.check = col;
-		goto have_expr;
-
-	      case NOT:
-		token = next_token (&val, cfile);
-		buf.op = match_not;
-		buf.data.not = parse_boolean_expression (cfile, lose);
-		if (!buf.data.not) {
-			if (!*lose) {
-				parse_warn ("match expression expected");
-				skip_to_semi (cfile);
-			}
-			*lose = 1;
-			return (struct match_expr *)0;
-		}
-		goto have_expr;
-	}
-
-	/* If we're going to find an expression at this point, it must
-	   involve a binary operator seperating two subexpressions. */
-	left = parse_data_expression (cfile, lose);
-	if (!left)
-		return left;
-	token = peek_token (&val, cfile);
-	switch (token) {
-	      case EQUAL:
-		buf.op = match_equal;
-		break;
-	      case AND:
-		buf.op = match_and;
-		break;
-	      case OR:
-		buf.op = match_or;
-		break;
-	      default:
-		parse_warn ("Expecting a boolean expression.");
-		skip_to_semi (cfile);
-		*lose = 1;
-		return;
-	}
-	token = next_token (&val, cfile);
-
-	/* Now find the RHS of the expression. */
-	right = parse_data_expression (cfile, lose);
-	if (!right) {
-		if (!*lose) {
-			if (buf.op == match_equal)
-				parse_warn ("Expecting a data expression.");
-			else
-				parse_warn ("Expecting a boolean expression.");
-			skip_to_semi (cfile);
-		}
-		return right;
-	}
-
-	/* Store the LHS and RHS. */
-	buf.data.equal [0] = left;
-	buf.data.equal [1] = right;
-
-      have_expr:
-	rv = (struct match_expr *)dmalloc (sizeof (struct match_expr),
-					   "parse_boolean_expression");
-	if (!rv)
-		error ("No memory for boolean expression.");
-	*rv = buf;
-	return rv;
-}	
-
-struct match_expr *parse_data_expression (cfile, lose)
-	FILE *cfile;
-	int *lose;
-{
-	int token;
-	char *val;
-	struct collection *col;
-	struct match_expr buf, *rv;
-	struct match_expr *left, *right;
-	struct option *option;
-
-	token = peek_token (&val, cfile);
-
-	switch (token) {
-	      case SUBSTRING:
-		token = next_token (&val, cfile);
-		buf.op = match_substring;
-
-		token = next_token (&val, cfile);
-		if (token != LPAREN) {
-		      nolparen:
-			parse_warn ("left parenthesis expected.");
-			*lose = 1;
-			return (struct match_expr *)0;
-		}
-
-		buf.data.substring.expr = parse_data_expression (cfile, lose);
-		if (!buf.data.substring.expr) {
-		      nodata:
-			parse_warn ("expecting data expression.");
-			skip_to_semi (cfile);
-			*lose = 1;
-			return (struct match_expr *)0;
-		}
-
-		token = next_token (&val, cfile);
-		if (token != COMMA) {
-		      nocomma:
-			parse_warn ("comma expected.");
-			*lose = 1;
-			return (struct match_expr *)0;
-		}
-
-		buf.data.substring.offset =
-			parse_numeric_expression (cfile, lose);
-		if (!buf.data.substring.offset) {
-		      nonum:
-			if (!*lose) {
-				parse_warn ("expecting numeric expression.");
-				skip_to_semi (cfile);
-				*lose = 1;
-			}
-			return (struct match_expr *)0;
-		}
-
-		token = next_token (&val, cfile);
-		if (token != COMMA)
-			goto nocomma;
-
-		buf.data.substring.len =
-			parse_numeric_expression (cfile, lose);
-		if (!buf.data.substring.len)
-			goto nonum;
-
-		token = next_token (&val, cfile);
-		if (token != RPAREN) {
-		      norparen:
-			parse_warn ("right parenthesis expected.");
-			*lose = 1;
-			return (struct match_expr *)0;
-		}
-		goto have_expr;
-
-	      case SUFFIX:
-		token = next_token (&val, cfile);
-		buf.op = match_suffix;
-
-		token = next_token (&val, cfile);
-		if (token != LPAREN)
-			goto nolparen;
-
-		buf.data.suffix.expr = parse_data_expression (cfile, lose);
-		if (!buf.data.suffix.expr)
-			goto nodata;
-
-		token = next_token (&val, cfile);
-		if (token != COMMA)
-			goto nocomma;
-
-		buf.data.suffix.len = parse_numeric_expression (cfile, lose);
-		if (!buf.data.suffix.len)
-			goto nonum;
-
-		token = next_token (&val, cfile);
-		if (token != RPAREN)
-			goto norparen;
-		goto have_expr;
-
-	      case OPTION:
-		token = next_token (&val, cfile);
-		buf.op = match_option;
-		buf.data.option = parse_option_name (cfile);
-		if (!buf.data.option) {
-			*lose = 1;
-			return;
-		}
-		goto have_expr;
-
-	      case HARDWARE:
-		token = next_token (&val, cfile);
-		buf.op = match_hardware;
-		goto have_expr;
-
-	      case PACKET:
-		token = next_token (&val, cfile);
-		buf.op = match_packet;
-
-		token = next_token (&val, cfile);
-		if (token != LPAREN)
-			goto nolparen;
-
-		buf.data.packet.offset =
-			parse_numeric_expression (cfile, lose);
-		if (!buf.data.packet.offset)
-			goto nonum;
-
-		token = next_token (&val, cfile);
-		if (token != COMMA)
-			goto nocomma;
-
-		buf.data.packet.len =
-			parse_numeric_expression (cfile, lose);
-		if (!buf.data.substring.len)
-			goto nonum;
-
-		token = next_token (&val, cfile);
-		if (token != RPAREN)
-			goto norparen;
-		goto have_expr;
-		
-	      case STRING:
-		token = next_token (&val, cfile);
-		buf.op = match_const_data;
-		memset (&buf.data, 0, sizeof buf.data);
-		buf.data.const_data.len = strlen (val);
-		buf.data.const_data.data =
-			dmalloc (buf.data.const_data.len + 1,
-				 "string expression");
-		if (!buf.data.const_data.data)
-			error ("no memory for string expression.");
-		buf.data.const_data.terminated = 1;
-		strcpy (buf.data.const_data.data, val);
-		goto have_expr;
-
-	      case NUMBER:
-	      case NUMBER_OR_NAME:
-		buf.op = match_const_data;
-		memset (&buf.data, 0, sizeof buf.data);
-		buf.data.const_data.data =
-			parse_cshl (cfile, &buf.data.const_data.len);
-		goto have_expr;
-
-	      default:
-		return (struct match_expr *)0;
-	}
-
-      have_expr:
-	rv = (struct match_expr *)dmalloc (sizeof (struct match_expr),
-					   "parse_boolean_expression");
-	if (!rv)
-		error ("No memory for boolean expression.");
-	*rv = buf;
-	return rv;
-}
-
-struct match_expr *parse_numeric_expression (cfile, lose)
-	FILE *cfile;
-	int *lose;
-{
-	int token;
-	char *val;
-	struct collection *col;
-	struct match_expr buf, *rv;
-	struct match_expr *left, *right;
-	struct option *option;
-
-	token = peek_token (&val, cfile);
-
-	switch (token) {
-	      case EXTRACT_INT:
-		token = next_token (&val, cfile);	
-
-		token = next_token (&val, cfile);
-		if (token != LPAREN) {
-			parse_warn ("left parenthesis expected.");
-			*lose = 1;
-			return (struct match_expr *)0;
-		}
-
-		buf.data.extract_int.expr =
-			parse_data_expression (cfile, lose);
-		if (!buf.data.extract_int.expr) {
-			parse_warn ("expecting data expression.");
-			skip_to_semi (cfile);
-			*lose = 1;
-			return (struct match_expr *)0;
-		}
-
-		token = next_token (&val, cfile);
-		if (token != COMMA) {
-			parse_warn ("comma expected.");
-			*lose = 1;
-			return (struct match_expr *)0;
-		}
-
-		token = next_token (&val, cfile);
-		if (token != NUMBER) {
-			parse_warn ("number expected.");
-			*lose = 1;
-			return (struct match_expr *)0;
-		}
-		buf.data.extract_int.width = (struct match_expr *)0;
-		switch (atoi (val)) {
-		      case 8:
-			buf.op = match_extract_int8;
-			break;
-
-		      case 16:
-			buf.op = match_extract_int16;
-			break;
-
-		      case 32:
-			buf.op = match_extract_int32;
-			break;
-
-		      default:
-			parse_warn ("unsupported integer size %d", atoi (val));
-			*lose = 1;
-			skip_to_semi (cfile);
-			return (struct match_expr *)0;
-		}
-
-		token = next_token (&val, cfile);
-		if (token != RPAREN) {
-			parse_warn ("right parenthesis expected.");
-			*lose = 1;
-			return (struct match_expr *)0;
-		}
-		goto have_expr;
-	
-	      case NUMBER:
-		buf.op = match_const_int;
-		buf.data.const_int = atoi (val);
-		goto have_expr;
-
-	      default:
-		return (struct match_expr *)0;
-	}
-
-      have_expr:
-	rv = (struct match_expr *)dmalloc (sizeof (struct match_expr),
-					   "parse_boolean_expression");
-	if (!rv)
-		error ("No memory for boolean expression.");
-	*rv = buf;
-	return rv;
 }
 
