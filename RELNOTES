@@ -45,6 +45,22 @@ and for prodding me into improving it.
 
 			Changes since 3.0.1
 
+- log() was logging a work buffer, rather than the value returned by
+  executing the statements configured by the user.  In some cases,
+  the work buffer and the intended results were the same.  In some other
+  cases, they were not.  This was fixed.
+
+- Compiler warnings for some string type conversions was fixed, thanks
+  to Andreas Gustafsson.
+
+- The netbsd build environments were simplified to one, in which
+  -Wconversion is not used, thanks to Andreas Gustafsson.
+
+- How randomness in the backoff-cutoff dhclient configuration variable
+  is implemented was better documented in the manpage, and the behaviour
+  of dhclient in REQUEST timeout handling was changed to match that of
+  DISCOVER timeout handling.
+
 - Omapi was hardened against clients that pass in null values, thanks
   to a patch from Mark Jason Dominus.
 

@@ -32,7 +32,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.129.2.20 2004/09/01 22:26:59 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.129.2.21 2004/09/10 21:02:30 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1398,9 +1398,9 @@ void send_discover (cpp)
 
 	/* If we're supposed to increase the interval, do so.  If it's
 	   currently zero (i.e., we haven't sent any packets yet), set
-	   it to one; otherwise, add to it a random number between
-	   zero and two times itself.  On average, this means that it
-	   will double with every transmission. */
+	   it to initial_interval; otherwise, add to it a random number
+	   between zero and two times itself.  On average, this means
+	   that it will double with every transmission. */
 	if (increase) {
 		if (!client -> interval)
 			client -> interval =
@@ -1644,7 +1644,8 @@ void send_request (cpp)
 	    client -> config -> backoff_cutoff)
 		client -> interval =
 			((client -> config -> backoff_cutoff / 2)
-			 + ((random () >> 2) % client -> interval));
+			 + ((random () >> 2) %
+					client -> config -> backoff_cutoff));
 
 	/* If the backoff would take us to the expiry time, just set the
 	   timeout to the expiry time. */

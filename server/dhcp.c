@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.192.2.36 2004/09/01 17:06:36 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.192.2.37 2004/09/10 21:02:31 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -244,7 +244,7 @@ void dhcpdiscover (packet, ms_nulltp)
 	struct lease *lease = (struct lease *)0;
 	char msgbuf [1024]; /* XXX */
 	TIME when;
-	char *s;
+	const char *s;
 	int allocatedp = 0;
 	int peer_has_leases = 0;
 #if defined (FAILOVER_PROTOCOL)
@@ -400,7 +400,7 @@ void dhcprequest (packet, ms_nulltp, ip_lease)
 	struct data_string data;
 	int status;
 	char msgbuf [1024]; /* XXX */
-	char *s;
+	const char *s;
 	char smbuf [19];
 #if defined (FAILOVER_PROTOCOL)
 	dhcp_failover_state_t *peer;
@@ -679,7 +679,7 @@ void dhcprelease (packet, ms_nulltp)
 	struct iaddr cip;
 	struct option_cache *oc;
 	struct data_string data;
-	char *s;
+	const char *s;
 	char msgbuf [1024], cstr[16]; /* XXX */
 
 
@@ -816,7 +816,7 @@ void dhcpdecline (packet, ms_nulltp)
 	int ignorep = 0;
 	int i;
 	const char *status;
-	char *s;
+	const char *s;
 	char msgbuf [1024]; /* XXX */
 	struct iaddr cip;
 	struct option_cache *oc;
@@ -2700,7 +2700,7 @@ void dhcp_reply (lease)
 	struct option_tag *ot, *not;
 	struct data_string d1;
 	struct option_cache *oc;
-	char *s;
+	const char *s;
 
 	if (!state)
 		log_fatal ("dhcp_reply was supplied lease with no state!");

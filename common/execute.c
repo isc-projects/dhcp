@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: execute.c,v 1.44.2.10 2004/06/10 17:59:17 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: execute.c,v 1.44.2.11 2004/09/10 21:02:31 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -420,19 +420,19 @@ int execute_statements (result, packet, lease, client_state,
 				switch (r -> data.log.priority) {
 				case log_priority_fatal:
 					log_fatal ("%.*s", (int)ds.len,
-						   ds.buffer -> data);
+						ds.data);
 					break;
 				case log_priority_error:
 					log_error ("%.*s", (int)ds.len,
-						   ds.buffer -> data);
+						ds.data);
 					break;
 				case log_priority_debug:
 					log_debug ("%.*s", (int)ds.len,
-						   ds.buffer -> data);
+						ds.data);
 					break;
 				case log_priority_info:
 					log_info ("%.*s", (int)ds.len,
-						  ds.buffer -> data);
+						ds.data);
 					break;
 				}
 				data_string_forget (&ds, MDL);
