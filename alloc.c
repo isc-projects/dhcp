@@ -64,6 +64,10 @@ void dfree (ptr, name)
 	VOIDPTR ptr;
 	char *name;
 {
+	if (!ptr) {
+		warn ("dfree %s: free on null pointer.");
+		return;
+	}
 	free (ptr);
 }
 
