@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.88 2000/08/28 21:22:36 neild Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.89 2000/09/27 19:19:32 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1274,7 +1274,7 @@ int evaluate_data_expression (result, packet, lease,
 		s1 = evaluate_numeric_expression (&len, packet, lease,
 						  in_options, cfg_options,
 						  scope,
-						  expr -> data.substring.len);
+						  expr -> data.suffix.len);
 		if (s0 && s1) {
 			data_string_copy (result, &data, MDL);
 
