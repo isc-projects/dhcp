@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.14 1999/10/25 01:55:40 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.15 1999/10/27 23:05:17 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1014,9 +1014,13 @@ int supersede_lease (comp, lease, commit)
 			execute_statements ((struct packet *)0, lease,
 					    (struct option_state *)0,
 					    (struct option_state *)0, /* XXX */
-					    lease -> on_expiry);
-			executable_statement_dereference (&lease -> on_expiry,
+					    comp -> on_expiry);
+			executable_statement_dereference (&comp -> on_expiry,
 							  "dhcprelease");
+			/* No sense releasing a lease after it's expired. */
+			if (comp -> on_release)
+				executable_statement_dereference
+					(&comp -> on_release);
 		} else {
 			/* If this is the next lease that will timeout on the
 			   pool, zap the old timeout and set the timeout on
@@ -1370,59 +1374,78 @@ void write_leases ()
 	struct group_object *gp;
 	struct hash_bucket *hb;
 	int i;
+	int num_written;
 
 	/* Write all the dynamically-created group declarations. */
 	if (group_name_hash) {
+	    num_written = 0;
 	    for (i = 0; i < group_name_hash -> hash_count; i++) {
 		for (hb = group_name_hash -> buckets [i];
 		     hb; hb = hb -> next) {
 			gp = (struct group_object *)hb -> value;
 			if ((gp -> flags & GROUP_OBJECT_DYNAMIC) ||
 			    ((gp -> flags & GROUP_OBJECT_STATIC) &&
-			     (gp -> flags & GROUP_OBJECT_DELETED)))
+			     (gp -> flags & GROUP_OBJECT_DELETED))) {
 				write_group (gp);
+				++num_written;
+			}
 		}
 	    }
+	    log_info ("Wrote %d group decls to leases file.", num_written);
 	}
 
 	/* Write all the deleted host declarations. */
 	if (host_name_hash) {
+	    num_written = 0;
 	    for (i = 0; i < host_name_hash -> hash_count; i++) {
 		for (hb = host_name_hash -> buckets [i];
 		     hb; hb = hb -> next) {
 			hp = (struct host_decl *)hb -> value;
 			if (((hp -> flags & HOST_DECL_STATIC) &&
-			     (hp -> flags & HOST_DECL_DELETED)))
+			     (hp -> flags & HOST_DECL_DELETED))) {
 				write_host (hp);
+				++num_written;
+			}
 		}
 	    }
+	    log_info ("Wrote %d deleted host decls to leases file.",
+		      num_written);
 	}
 
 	/* Write all the new, dynamic host declarations. */
 	if (host_name_hash) {
+	    num_written = 0;
 	    for (i = 0; i < host_name_hash -> hash_count; i++) {
 		for (hb = host_name_hash -> buckets [i];
 		     hb; hb = hb -> next) {
 			hp = (struct host_decl *)hb -> value;
-			if ((hp -> flags & HOST_DECL_DYNAMIC))
+			if ((hp -> flags & HOST_DECL_DYNAMIC)) {
 				write_host (hp);
+				++num_written;
+			}
 		}
 	    }
+	    log_info ("Wrote %d new dynamic host decls to leases file.",
+		      num_written);
 	}
 
 	/* Write all the leases. */
+	num_written = 0;
 	for (s = shared_networks; s; s = s -> next) {
 		for (p = s -> pools; p; p = p -> next) {
 			for (l = p -> leases; l; l = l -> next) {
 				if (l -> hardware_addr.hlen ||
 				    l -> uid_len ||
-				    (l -> flags & ABANDONED_LEASE))
+				    (l -> flags & ABANDONED_LEASE)) {
 					if (!write_lease (l))
 						log_fatal ("Can't rewrite %s",
 						       "lease database");
+					num_written++;
+				}
 			}
 		}
 	}
+	log_info ("Wrote %d leases to leases file.", num_written);
 	if (!commit_leases ())
 		log_fatal ("Can't commit leases to new database: %m");
 }
