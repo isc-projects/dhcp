@@ -32,7 +32,7 @@ ns_updrec *minires_mkupdrec (int, const char *, unsigned int,
 			     unsigned int, unsigned long);
 void minires_freeupdrec (ns_updrec *);
 int minires_nmkupdate (res_state, ns_updrec *, unsigned char *, unsigned);
-int minires_nupdate (res_state, ns_updrec *, ns_tsig_key *);
+ns_rcode minires_nupdate (res_state, ns_updrec *, ns_tsig_key *);
 int minires_ninit (res_state);
 
 #if defined (MINIRES_LIB)
