@@ -82,6 +82,9 @@ and for prodding me into improving it.
 - A patch from Bill Stephens was applied which resolves a problem with lease
   expiry times in failover configurations.
 
+- A memory leak in configuration parsing was closed thanks to a patch from
+  Steve G.
+
 			Changes since 3.0.1rc10
 
 - Potential buffer overflows in minires repaired.
