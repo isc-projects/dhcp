@@ -86,6 +86,16 @@ and for prodding me into improving it.
   network) with stale references to a host record.  This is probably not
   a memory leak since host records generally never die anyway.
 
+- A bug was repaired where failover servers would let stale client identifiers
+  persist on leases that were reallocated to new clients not sending an id.
+
+- Binding scopes ("set var = value;") are now removed from leases allocated
+  by failover peers if the lease had expired.  This should help reduce the
+  number of stale binding scopes on leases.
+
+- A small memory leak was closed involving client identifiers larger than
+  7 bytes, and failover.
+
 			Changes since 3.0.2rc3
 
 - A previously undocumented configuration directive, 'local-address',
