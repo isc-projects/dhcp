@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.31.2.5 1999/11/12 18:37:27 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.31.2.6 1999/11/13 04:01:59 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1109,8 +1109,7 @@ int evaluate_data_expression (result, packet, options, lease, expr)
 				memchr (packet -> raw -> file, 0,
 					sizeof packet -> raw -> file);
 			if (!fn)
-				fn = ((unsigned char *)
-				      packet -> raw -> file +
+				fn = ((char *)packet -> raw -> file +
 				      sizeof packet -> raw -> file);
 			result -> len = fn - &(packet -> raw -> file [0]);
 			if (buffer_allocate (&result -> buffer,
@@ -1142,8 +1141,7 @@ int evaluate_data_expression (result, packet, options, lease, expr)
 				memchr (packet -> raw -> sname, 0,
 					sizeof packet -> raw -> sname);
 			if (!fn)
-				fn = ((unsigned char *)
-				      packet -> raw -> sname + 
+				fn = ((char *)packet -> raw -> sname + 
 				      sizeof packet -> raw -> sname);
 			result -> len = fn - &packet -> raw -> sname [0];
 			if (buffer_allocate (&result -> buffer,
