@@ -92,6 +92,8 @@ typedef unsigned long u_int64_t;
 
 #define PTRSIZE_64BIT
 
+#define SOCKLEN_T	int
+
 #ifdef NEED_PRAND_CONF
 const char *cmds[] = {
 	"/bin/ps -ef 2>&1",
