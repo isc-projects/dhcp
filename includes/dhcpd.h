@@ -1809,3 +1809,14 @@ void hw_hash_add PROTO ((struct lease *));
 void hw_hash_delete PROTO ((struct lease *));
 void write_leases PROTO ((void));
 void dump_subnets PROTO ((void));
+
+/* nsupdate.c */
+char *ddns_rev_name (struct lease *, struct lease_state *, struct packet *);
+char *ddns_fwd_name (struct lease *, struct lease_state *, struct packet *);
+int nsupdateA (const char *, const unsigned char *, u_int32_t, int);
+int nsupdatePTR (const char *, const unsigned char *, u_int32_t, int);
+void nsupdate (struct lease *, struct lease_state *, struct packet *, int);
+int updateA (const struct data_string *, const struct data_string *,
+	     unsigned int, struct lease *);
+int updatePTR (const struct data_string *, const struct data_string *,
+	       unsigned int, struct lease *);
