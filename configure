@@ -68,6 +68,15 @@ if [ \( $sysname = "bsdos" -o $sysname = "netbsd" -o $sysname = "freebsd" \) \
     echo
 fi
 
+echo
+echo "                          !!!WARNING!!!"
+echo
+echo " The lease database format changed as of Beta 5.   Please read the"
+echo " RELNOTES file for details!"
+echo
+echo "                          !!!WARNING!!!"
+
+
 echo "System Type: $sysname"
 
 sed -e "/^##\+\+${sysname}\+\+/,/^##--${sysname}--/s/^#//" \
