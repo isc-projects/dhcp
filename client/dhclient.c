@@ -41,7 +41,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.100 2000/04/04 06:24:37 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.101 2000/05/01 17:15:23 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -103,6 +103,7 @@ int main (argc, argv, envp)
  	int release_mode = 0;
 	omapi_object_t *listener;
 	isc_result_t result;
+	int persist = 0;
 
 #ifdef SYSLOG_4_2
 	openlog ("dhclient", LOG_NDELAY);
@@ -154,7 +155,10 @@ int main (argc, argv, envp)
 			relay = argv [i];
 		} else if (!strcmp (argv [i], "-n")) {
 			/* do not start up any interfaces */
-		    interfaces_requested = 1;
+			interfaces_requested = 1;
+		} else if (!strcmp (argv [i], "-w")) {
+			/* do not exit if there are no broadcast interfaces. */
+			persist = 1;
  		} else if (argv [i][0] == '-') {
  		    usage ();
  		} else {
@@ -283,14 +287,19 @@ int main (argc, argv, envp)
 	/* If no broadcast interfaces were discovered, call the script
 	   and tell it so. */
 	if (!interfaces) {
+		/* Call dhclient-script with the NBI flag, in case somebody
+		   cares. */
 		script_init ((struct client_state *)0, "NBI",
 			     (struct string_list *)0);
 		script_go ((struct client_state *)0);
 
-		log_info ("No broadcast interfaces found - exiting.");
-
-		/* Nothing more to do. */
-		exit (0);
+		/* If we haven't been asked to persist, waiting for new
+		   interfaces, then just exit. */
+		if (!persist) {
+			/* Nothing more to do. */
+			log_info ("No broadcast interfaces found - exiting.");
+			exit (0);
+		}
 	} else if (!release_mode) {
 		/* Call the script with the list of interfaces. */
 		for (ip = interfaces; ip; ip = ip -> next) {
