@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: discover.c,v 1.18 2000/01/05 18:00:34 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: discover.c,v 1.19 2000/01/25 01:04:21 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -368,50 +368,50 @@ void discover_interfaces (state)
 #endif
 
 		      case ARPHRD_ETHER:
-			tmp -> hw_address.hlen = 6;
-			tmp -> hw_address.htype = ARPHRD_ETHER;
-			memcpy (tmp -> hw_address.haddr, sa.sa_data, 6);
+			tmp -> hw_address.hlen = 7;
+			tmp -> hw_address.hbuf [0] = ARPHRD_ETHER;
+			memcpy (&tmp -> hw_address.hbuf [1], sa.sa_data, 6);
 			break;
 
 #ifndef HAVE_ARPHRD_IEEE802
 # define ARPHRD_IEEE802 HTYPE_IEEE802
 #endif
 		      case ARPHRD_IEEE802:
-			tmp -> hw_address.hlen = 6;
-			tmp -> hw_address.htype = ARPHRD_IEEE802;
-			memcpy (tmp -> hw_address.haddr, sa.sa_data, 6);
+			tmp -> hw_address.hlen = 7;
+			tmp -> hw_address.hbuf [0] = ARPHRD_IEEE802;
+			memcpy (&tmp -> hw_address.hbuf [1], sa.sa_data, 6);
 			break;
 
 #ifndef HAVE_ARPHRD_FDDI
 # define ARPHRD_FDDI HTYPE_FDDI
 #endif
 		      case ARPHRD_FDDI:
-			tmp -> hw_address.hlen = 16;
-			tmp -> hw_address.htype = HTYPE_FDDI; /* XXX */
-			memcpy (tmp -> hw_address.haddr, sa.sa_data, 16);
+			tmp -> hw_address.hlen = 17;
+			tmp -> hw_address.hbuf [0] = HTYPE_FDDI; /* XXX */
+			memcpy (&tmp -> hw_address.hbuf [1], sa.sa_data, 16);
 			break;
 
 #ifdef HAVE_ARPHRD_METRICOM
 		      case ARPHRD_METRICOM:
-			tmp -> hw_address.hlen = 6;
-			tmp -> hw_address.htype = ARPHRD_METRICOM;
-			memcpy (tmp -> hw_address.haddr, sa.sa_data, 6);
+			tmp -> hw_address.hlen = 7;
+			tmp -> hw_address.hbuf [0] = ARPHRD_METRICOM;
+			memcpy (&tmp -> hw_address.hbuf [0], sa.sa_data, 6);
 			break;
 #endif
 
 #ifdef HAVE_ARPHRD_AX25
 		      case ARPHRD_AX25:
-			tmp -> hw_address.hlen = 6;
-			tmp -> hw_address.htype = ARPHRD_AX25;
-			memcpy (tmp -> hw_address.haddr, sa.sa_data, 6);
+			tmp -> hw_address.hlen = 7;
+			tmp -> hw_address.hbuf [0] = ARPHRD_AX25;
+			memcpy (&tmp -> hw_address.hbuf [1], sa.sa_data, 6);
 			break;
 #endif
 
 #ifdef HAVE_ARPHRD_NETROM
 		      case ARPHRD_NETROM:
-			tmp -> hw_address.hlen = 6;
-			tmp -> hw_address.htype = ARPHRD_NETROM;
-			memcpy (tmp -> hw_address.haddr, sa.sa_data, 6);
+			tmp -> hw_address.hlen = 7;
+			tmp -> hw_address.hbuf [0] = ARPHRD_NETROM;
+			memcpy (&tmp -> hw_address.hbuf [1], sa.sa_data, 6);
 			break;
 #endif
 
