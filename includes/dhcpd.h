@@ -1024,6 +1024,7 @@ int evaluate_expression (struct binding_value **, struct packet *,
 			 struct option_state *, struct binding_scope *,
 			 struct expression *);
 int binding_value_dereference (struct binding_value **, const char *, int);
+int fundef_dereference (struct fundef **, const char *, int);
 #if defined (NSUPDATE)
 int evaluate_dns_expression PROTO ((ns_updrec **, struct packet *,
 				    struct lease *, struct option_state *,
@@ -1165,6 +1166,9 @@ int binding_value_reference PROTO ((struct binding_value **,
 				    struct binding_value *,
 				    const char *, int));
 void free_binding_value PROTO ((struct binding_value *, const char *, int));
+int fundef_allocate PROTO ((struct fundef **, const char *, int));
+int fundef_reference PROTO ((struct fundef **,
+			     struct fundef *, const char *, int));
 int option_cache_allocate PROTO ((struct option_cache **, const char *, int));
 int option_cache_reference PROTO ((struct option_cache **,
 				   struct option_cache *, const char *, int));
