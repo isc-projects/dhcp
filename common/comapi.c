@@ -50,7 +50,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: comapi.c,v 1.9.2.3 2001/06/08 23:07:23 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: comapi.c,v 1.9.2.4 2001/06/20 03:14:18 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -688,7 +688,8 @@ isc_result_t dhcp_subnet_destroy (omapi_object_t *h, const char *file, int line)
 		return ISC_R_INVALIDARG;
 	subnet = (struct subnet *)h;
 
-#if defined (DEBUG_MEMORY_LEAKAGE)
+#if defined (DEBUG_MEMORY_LEAKAGE) || \
+		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
 	if (subnet -> next_subnet)
 		subnet_dereference (&subnet -> next_subnet, file, line);
 	if (subnet -> next_sibling)
@@ -844,7 +845,8 @@ isc_result_t dhcp_shared_network_destroy (omapi_object_t *h,
 		return ISC_R_INVALIDARG;
 	shared_network = (struct shared_network *)h;
 
-#if defined (DEBUG_MEMORY_LEAKAGE)
+#if defined (DEBUG_MEMORY_LEAKAGE) || \
+		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
 	if (shared_network -> next)
 		shared_network_dereference (&shared_network -> next,
 					    file, line);
