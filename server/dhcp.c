@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.55 1997/12/02 09:07:03 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.56 1997/12/02 09:28:08 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1190,11 +1190,17 @@ struct lease *find_lease (packet, share, ours)
 					  packet -> raw -> hlen);
 	/* Find the lease that's on the network the packet came from
 	   (if any). */
-	for (; hw_lease; hw_lease = hw_lease -> n_hw)
-		if (hw_lease -> shared_network == share)
-			break;
-	if (hw_lease && (hw_lease -> flags & ABANDONED_LEASE))
-		hw_lease = (struct lease *)0;
+	for (; hw_lease; hw_lease = hw_lease -> n_hw) {
+		if (hw_lease -> shared_network == share) {
+			if (hw_lease -> flags & ABANDONED_LEASE)
+				continue;
+			if (packet -> packet_type)
+				break;
+			if (hw_lease -> flags &
+			    (BOOTP_LEASE | DYNAMIC_BOOTP_OK))
+				break;
+		}
+	}
 
 	/* Try to find a lease that's been allocated to the client's
 	   IP address. */
