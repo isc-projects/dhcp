@@ -36,51 +36,69 @@
  * design by Paul Vixie.
  */
 
+#include "site.h"
+
+#if !defined (USE_SOCKETS) && \
+    !defined (USE_SOCKET_SEND) && \
+    !defined (USE_SOCKET_RECEIVE) && \
+    !defined (USE_RAW_SOCKETS) && \
+    !defined (USE_RAW_SEND) && \
+    !defined (USE_SOCKET_RECEIVE) && \
+    !defined (USE_BPF) && \
+    !defined (USE_BPF_SEND) && \
+    !defined (USE_BPF_RECEIVE) && \
+    !defined (USE_NIT) && \
+    !defined (USE_NIT_SEND) && \
+    !defined (USE_NIT_RECEIVE)
+#  define USE_DEFAULT_NETWORK
+#endif
+
+
 #ifdef sun
-#include "cf/sunos4.h"
+#  include "cf/sunos4.h"
 #endif
 
 #ifdef bsdi
-#include "cf/bsdos.h"
+#  include "cf/bsdos.h"
 #endif
 
 #ifdef __NetBSD__
-#include "cf/netbsd.h"
+#  include "cf/netbsd.h"
 #endif
 
 #ifdef __FreeBSD__
-#include "cf/freebsd.h"
+#  include "cf/freebsd.h"
 #endif
 
 #ifdef sun
-#include "cf/sunos4.h"
+#  include "cf/sunos4.h"
 #endif
 
 
 #ifdef ultrix
-#include "cf/ultrix.h"
+#  include "cf/ultrix.h"
 #endif
 
 #ifdef linux
-#include "cf/linux.h"
+#  include "cf/linux.h"
 #endif
 
 #ifdef USE_SOCKETS
-#define USE_SOCKET_SEND
-#define USE_SOCKET_RECEIVE
+#  define USE_SOCKET_SEND
+#  define USE_SOCKET_RECEIVE
 #endif
 
 #ifdef USE_RAW_SOCKETS
-#define USE_RAW_SEND
-#define USE_SOCKET_RECEIVE
+#  define USE_RAW_SEND
+#  define USE_SOCKET_RECEIVE
 #endif
 
 #ifdef USE_BPF
-#define USE_BPF_SEND
-#define USE_BPF_RECEIVE
+#  define USE_BPF_SEND
+#  define USE_BPF_RECEIVE
 #endif
 
 #ifdef USE_NIT
-#define USE_NIT_SEND
-#define USE_NIT_RECEIVE
+#  define USE_NIT_SEND
+#  define USE_NIT_RECEIVE
 #endif
