@@ -25,7 +25,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: nsupdate.c,v 1.1 1999/07/01 20:17:20 mellon Exp $ Copyright (c) 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: nsupdate.c,v 1.2 1999/07/07 15:28:40 mellon Exp $ Copyright (c) 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -191,15 +191,21 @@ int nsupdateA(hostname, ip_addr, ttl, opcode)
 			 n->r_data);
 		res_freeupdrec(u); 
 		res_freeupdrec(n);
-		if (z != 1) 
-			return;
+/* do we really need to do this?  If so, it needs to be done elsewehere as
+   this function is strictly for manipulating the A record
+		if (z < 1) 
+			return 0;
+*/
+/*
+
 		/* delete all PTR RRs with the same ip address. Wow! */
 		if (!(u = res_mkupdrec(S_UPDATE, revname, C_IN, T_PTR, 0)))
-			return;
+			return 0;
 		u->r_opcode = DELETE; u->r_data = NULL; u->r_size = 0;
 		log_info("cleaning all PTR RRs for %s", revname);
 		res_update(u);
 		res_freeupdrec(u);
+   end */
 		break;
 	case	DELETE:
 		ttl = 0;
@@ -337,6 +343,13 @@ void nsupdate(lease, state, packet, opcode)
 
 		if (!revname)	/* there is nothing more we can do now */
 			return;
+
+	/* This is where a deletion of all PTRs for this addy could
+	   go, but I am reluctant to overburden the DHCP and DNS
+	   servers with requests that should be invalid if this is
+	   really a problem then somebody else is inserting PTRs and
+	   they should stop, rather than this being turned into a
+	   garbage cleanup routine */
 
 		if (!lease -> ddns_rev_name) {
 			/* add a PTR RR */
