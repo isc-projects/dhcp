@@ -3,7 +3,7 @@
    DHCP Client. */
 
 /*
- * Copyright (c) 1995-2000 Internet Software Consortium.
+ * Copyright (c) 1995-2001 Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -41,7 +41,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.119 2001/01/25 08:18:06 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.120 2001/02/12 19:26:35 mellon Exp $ Copyright (c) 1995-2001 Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -69,7 +69,7 @@ struct in_addr giaddr;
    assert (state_is == state_shouldbe). */
 #define ASSERT_STATE(state_is, state_shouldbe) {}
 
-static char copyright[] = "Copyright 1995-2000 Internet Software Consortium.";
+static char copyright[] = "Copyright 1995-2001 Internet Software Consortium.";
 static char arr [] = "All rights reserved.";
 static char message [] = "Internet Software Consortium DHCP Client";
 static char url [] = "For info, please visit http://www.isc.org/products/DHCP";
@@ -78,6 +78,8 @@ u_int16_t local_port;
 u_int16_t remote_port;
 int no_daemon;
 int save_scripts;
+struct string_list *client_env;
+int client_env_count;
 
 static void usage PROTO ((void));
 
@@ -178,6 +180,20 @@ int main (argc, argv, envp)
 			persist = 1;
  		} else if (argv [i][0] == '-') {
  		    usage ();
+		} else if (!strcmp (argv [i], "-e")) {
+			struct string_list *tmp;
+			if (++i == argc)
+				usage ();
+			tmp = dmalloc (strlen (argv [i]) + sizeof *tmp, MDL);
+			if (!tmp)
+				log_fatal ("No memory for %s", argv [i]);
+			strcpy (tmp -> string, argv [i]);
+			tmp -> next = client_env;
+			client_env = tmp;
+			client_env_count++;
+		} else if (!strcmp (argv [i], "--version")) {
+			log_info ("isc-dhclient-%s", DHCP_VERSION);
+			exit (0);
  		} else {
  		    struct interface_info *tmp = (struct interface_info *)0;
 		    status = interface_allocate (&tmp, MDL);
@@ -264,9 +280,10 @@ int main (argc, argv, envp)
 
 	/* If we're faking a relay agent, and we're not using loopback,
 	   use the server port, not the client port. */
-	if (relay && giaddr.s_addr != htonl (INADDR_LOOPBACK))
-		remote_port = htons (67);
-	else
+	if (relay && giaddr.s_addr != htonl (INADDR_LOOPBACK)) {
+		local_port = htons (ntohs (local_port) - 1);
+		remote_port = local_port;
+	} else
 		remote_port = htons (ntohs (local_port) - 1);	/* XXX */
   
 	/* Get the current time... */
@@ -409,6 +426,11 @@ int main (argc, argv, envp)
 	dmalloc_outstanding = 0;
 #endif
 
+	/* If we're not going to daemonize, write the pid file
+	   now. */
+	if (no_daemon)
+		write_client_pid_file ();
+
 	/* Start dispatching packets and timeouts... */
 	dispatch ();
 
@@ -426,7 +448,7 @@ static void usage ()
 	log_error ("Usage: dhclient [-d] [-D] [-q] [-p <port>] %s",
 		   "[-s server]");
 	log_fatal ("                [-lf lease-file] [-pf pid-file]%s",
-		   "[-cf config-file] [interface]");
+		   "[-cf config-file] [interface] [-e VAR=val]");
 }
 
 isc_result_t find_class (struct class **c,
@@ -1281,9 +1303,10 @@ void send_discover (cpp)
 		}
 			
 		log_info ("Trying medium \"%s\" %d",
-		      client -> medium -> string, increase);
+			  client -> medium -> string, increase);
 		script_init (client, "MEDIUM", client -> medium);
 		if (script_go (client)) {
+			fail = 1;
 			goto again;
 		}
 	}
@@ -1297,11 +1320,9 @@ void send_discover (cpp)
 		if (!client -> interval)
 			client -> interval =
 				client -> config -> initial_interval;
-		else {
-			client -> interval +=
-				((random () >> 2) %
-				 (2 * client -> interval));
-		}
+		else
+			client -> interval += ((random () >> 2) %
+					       (2 * client -> interval));
 
 		/* Don't backoff past cutoff. */
 		if (client -> interval >
@@ -2222,6 +2243,7 @@ void script_init (client, reason, medium)
 				       "", "medium", "%s", medium -> string);
 
 		client_envadd (client, "", "reason", "%s", reason);
+		client_envadd (client, "", "pid", "%d", getpid ());
 	}
 }
 
@@ -2357,27 +2379,34 @@ int script_go (client)
 	struct string_list *sp, *next;
 	int pid, wpid, wstatus;
 
-	if (client) {
+	if (client)
 		scriptName = client -> config -> script_name;
-		envp = dmalloc ((client -> envc + 2) * sizeof (char *),
-				MDL);
-		if (!envp) {
-			log_error ("No memory for client script environment.");
-			return 0;
-		}
-		i = 0;
+	else
+		scriptName = top_level_config.script_name;
+
+	envp = dmalloc (((client ? client -> envc : 2) +
+			 client_env_count + 2) * sizeof (char *), MDL);
+	if (!envp) {
+		log_error ("No memory for client script environment.");
+		return 0;
+	}
+	i = 0;
+	/* Copy out the environment specified on the command line,
+	   if any. */
+	for (sp = client_env; sp; sp = sp -> next) {
+		envp [i++] = sp -> string;
+	}
+	/* Copy out the environment specified by dhclient. */
+	if (client) {
 		for (sp = client -> env; sp; sp = sp -> next) {
 			envp [i++] = sp -> string;
 		}
-		envp [i++] = client_path;
-		envp [i] = (char *)0;
 	} else {
-		scriptName = top_level_config.script_name;
-		epp [0] = reason;
-		epp [1] = client_path;
-		epp [2] = (char *)0;
-		envp = epp;
+		envp [i++] = reason;
 	}
+	/* Set $PATH. */
+	envp [i++] = client_path;
+	envp [i] = (char *)0;
 
 	argv [0] = scriptName;
 	argv [1] = (char *)0;
@@ -2407,8 +2436,9 @@ int script_go (client)
 		}
 		client -> env = (struct string_list *)0;
 		client -> envc = 0;
-		dfree (envp, MDL);
 	}
+	dfree (envp, MDL);
+	GET_TIME (&cur_time);
 	return wstatus & 0xff;
 }
 
