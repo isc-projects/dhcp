@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.33 1996/09/09 07:04:28 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.34 1996/09/11 06:36:17 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -325,9 +325,6 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		if (type == ROOT_GROUP) {
 			if (!tree_evaluate (cache))
 				error ("server-identifier is not known");
-			group -> next_server.len = 4;
-			memcpy (server_identifier.iabuf,
-				cache -> value, server_identifier.len);
 		}
 		token = next_token (&val, cfile);
 		break;
