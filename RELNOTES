@@ -1,9 +1,9 @@
 	    Internet Software Consortium DHCP Distribution
 			     Version 3.0.1
-			  Release Candidate 8
-			   February 21, 2002
+			  Release Candidate 9
+			    April 29, 2002
 
-			    Release Notes
+			     Release Notes
 
 			     NEW FEATURES
 
@@ -46,6 +46,19 @@ Murrell at BC Tel Advanced Communications.  I'd like to express my
 thanks to all of these good people here, both for working on the code
 and for prodding me into improving it.
 
+			Changes since 3.0.1rc8
+
+- Fix a format string vulnerability in the server that could lead to a
+  remote root compromise (discovered by NGSEC Research Team, www.ngsec.com).
+
+- Add additional support for NetBSD/sparc64.
+
+- Fix a bug in the command-line parsing of the client.  Also, resolve a memory leak.
+
+- Add better support for shells other than bash in the Linux client script.
+
+- Various build fixes for modern versions of FreeBSD and Linux.
+
 			Changes since 3.0.1rc7
 
 - Fix two compiler warnings that are generated when compiling on Solaris
@@ -74,7 +87,7 @@ and for prodding me into improving it.
 - Fix a bug where the FQDN option would not be returned if the client
   requested it, contrary to the standard.
 
-- On Darwin, use the freebsd DHCP client script.
+- On Darwin, use the FreeBSD DHCP client script.
 
 - On NetBSD/sparc, don't check for casting warnings.
 
