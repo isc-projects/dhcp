@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tables.c,v 1.43 2000/08/01 22:54:50 neild Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tables.c,v 1.44 2000/09/16 20:03:01 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -69,9 +69,12 @@ HASH_FUNCTIONS (option, const char *, struct option)
    t - ASCII text
    f - flag (true or false)
    A - array of whatever precedes (e.g., IA means array of IP addresses)
+   a - array of the preceding character (e.g., IIa means two or more IP
+       addresses)
    U - name of an option space (universe)
    F - implicit flag - the presence of the option indicates that the
        flag is true.
+   o - the preceding value is optional.
 */
 
 struct universe dhcp_universe;
@@ -154,8 +157,8 @@ struct option dhcp_options [256] = {
 	{ "streettalk-server", "IA",			&dhcp_universe, 75 },
 	{ "streettalk-directory-assistance-server", "IA", &dhcp_universe, 76 },
 	{ "user-class", "t",				&dhcp_universe, 77 },
-	{ "option-78", "X",				&dhcp_universe, 78 },
-	{ "option-79", "X",				&dhcp_universe, 79 },
+	{ "slp-directory-agent", "fIa",			&dhcp_universe, 78 },
+	{ "slp-service-scope", "fto",			&dhcp_universe, 79 },
 	{ "option-80", "X",				&dhcp_universe, 80 },
 	{ "option-81", "X",				&dhcp_universe, 81 },
 	{ "option-82", "X",				&dhcp_universe, 82 },
