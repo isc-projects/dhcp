@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.53.2.11 2001/06/28 23:34:58 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.53.2.12 2001/08/08 14:38:45 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -4981,14 +4981,9 @@ normal_binding_state_transition_check (struct lease *lease,
 		switch (binding_state) {
 		      case FTS_FREE:
 		      case FTS_BACKUP:
-			/* Can't set a lease to free or backup until the
-			   peer agrees that it's expired. */
-			if (tsfp > cur_time) {
-				new_state = lease -> binding_state;
-				goto out;
-			}
-			return binding_state;
 
+			/* These are invalid state transitions - should we
+			   prevent them? */
 		      case FTS_RESERVED:
 		      case FTS_BOOTP:
 		      case FTS_EXPIRED:
