@@ -416,14 +416,14 @@ extern struct universe dhcp_universe;
 void initialize_universes PROTO ((void));
 
 /* convert.c */
-unsigned long getULong PROTO ((unsigned char *));
-long getLong PROTO ((unsigned char *));
-unsigned short getUShort PROTO ((unsigned char *));
-short getShort PROTO ((unsigned char *));
-void putULong PROTO ((unsigned char *, unsigned long));
-void putLong PROTO ((unsigned char *, long));
-void putUShort PROTO ((unsigned char *, unsigned short));
-void putShort PROTO ((unsigned char *, short));
+u_int32_t getULong PROTO ((unsigned char *));
+int32_t getLong PROTO ((unsigned char *));
+u_int16_t getUShort PROTO ((unsigned char *));
+int16_t getShort PROTO ((unsigned char *));
+void putULong PROTO ((unsigned char *, u_int32_t));
+void putLong PROTO ((unsigned char *, int32_t));
+void putUShort PROTO ((unsigned char *, u_int16_t));
+void putShort PROTO ((unsigned char *, int16_t));
 
 /* inet.c */
 struct iaddr subnet_number PROTO ((struct iaddr, struct iaddr));
