@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: class.c,v 1.23 2000/09/20 09:03:59 mellon Exp $ Copyright (c) 1998-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: class.c,v 1.24 2000/09/29 00:55:53 mellon Exp $ Copyright (c) 1998-2000 The Internet Software Consortium.  All rights reserved.\n";
 
 #endif /* not lint */
 
@@ -112,7 +112,8 @@ int check_collection (packet, lease, collection)
 			status = (evaluate_data_expression
 				  (&data, packet, lease,
 				   packet -> options, (struct option_state *)0,
-				   &lease -> scope, class -> submatch));
+				   lease ? &lease -> scope : &global_scope,
+				   class -> submatch));
 			if (status && data.len) {
 				nc = (struct class *)0;
 				if (class_hash_lookup (&nc, class -> hash,
@@ -182,7 +183,8 @@ int check_collection (packet, lease, collection)
 		status = (evaluate_boolean_expression_result
 			  (&ignorep, packet, lease,
 			   packet -> options, (struct option_state *)0,
-			   &lease -> scope, class -> expr));
+			   lease ? &lease -> scope : &global_scope,
+			   class -> expr));
 		if (status) {
 			matched = 1;
 #if defined (DEBUG_CLASS_MATCHING)
