@@ -74,13 +74,13 @@ CHMOD = chmod
 ##--sunos5--
 
 ## DEC Alpha/OSF1
-##++alphaosf1++
+##++alphaosf++
 #INSTALL=/usr/ucb/install
 #LIBS=
 #CF = cf/alphaosf.h
 #ADMMANEXT = .8
 #FFMANEXT = .5
-##--alphaosf1--
+##--alphaosf--
 
 ## BSD/OS 2.1
 ##++bsdos++
