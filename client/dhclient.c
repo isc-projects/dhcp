@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhclient.c,v 1.19 1996/08/29 09:15:35 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.20 1996/09/11 05:51:25 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -259,7 +259,7 @@ void send_discover (interface)
 	options [DHO_DHCP_MESSAGE] -> tree = (struct tree *)0;
 
 	/* Set up the option buffer... */
-	cons_options ((struct packet *)0, &outgoing, options, 0);
+	cons_options ((struct packet *)0, &outgoing, options, 0, 0);
 
 	memset (&raw.ciaddr, 0, sizeof raw.ciaddr);
 	memset (&raw.siaddr, 0, sizeof raw.siaddr);
@@ -358,7 +358,7 @@ void send_request (packet)
         options [DHO_DHCP_SERVER_IDENTIFIER] -> tree = (struct tree *)0;
 
 	/* Set up the option buffer... */
-	cons_options ((struct packet *)0, &outgoing, options, 0);
+	cons_options ((struct packet *)0, &outgoing, options, 0, 0);
 
 	memset (&raw.ciaddr, 0, sizeof raw.ciaddr);
 	raw.siaddr = packet -> raw -> siaddr;

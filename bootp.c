@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bootp.c,v 1.17 1996/08/27 09:33:41 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bootp.c,v 1.18 1996/09/11 05:50:54 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -184,7 +184,7 @@ void bootp (packet)
 	/* Pack the options into the buffer.   Unlike DHCP, we can't
 	   pack options into the filename and server name buffers. */
 
-	cons_options (packet, &outgoing, options, 0);
+	cons_options (packet, &outgoing, options, 0, 0);
 	if (outgoing.packet_length < BOOTP_MIN_LEN)
 		outgoing.packet_length = BOOTP_MIN_LEN;
 
