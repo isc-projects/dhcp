@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: memory.c,v 1.58 1999/09/16 01:19:52 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: memory.c,v 1.59 1999/09/16 05:12:33 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -40,7 +40,7 @@ static struct host_decl *dynamic_hosts;
 
 omapi_object_type_t *dhcp_type_host;
 
-void enter_host (hd, dynamicp, commit)
+isc_result_t enter_host (hd, dynamicp, commit)
 	struct host_decl *hd;
 	int dynamicp;
 	int commit;
@@ -48,6 +48,30 @@ void enter_host (hd, dynamicp, commit)
 	struct host_decl *hp = (struct host_decl *)0;
 	struct host_decl *np = (struct host_decl *)0;
 	struct executable_statement *esp;
+
+	if (!host_name_hash) {
+		host_name_hash = new_hash ();
+		if (!host_name_hash)
+			log_fatal ("Can't allocate host name hash");
+	} else {
+		hp = (struct host_decl *)
+			hash_lookup (host_name_hash,
+					     (unsigned char *)hd -> name,
+					     strlen (hd -> name));
+
+		/* If there isn't already a host decl matching this
+		   address, add it to the hash table. */
+		if (!hp) {
+			add_hash (host_name_hash,
+				  (unsigned char *)hd -> name,
+				  strlen (hd -> name),
+				  (unsigned char *)hd);
+			hd -> refcnt++; /* XXX */
+		} else
+			/* XXX actually, we have to delete the old one
+			   XXX carefully and replace it.   Not done yet. */
+			return ISC_R_EXISTS;
+	}
 
 	if (dynamicp) {
 		hd -> flags |= HOST_DECL_DYNAMIC;
@@ -148,32 +172,12 @@ void enter_host (hd, dynamicp, commit)
 		}
 	}
 
-	if (!host_name_hash) {
-		host_name_hash = new_hash ();
-		if (!host_name_hash)
-			log_fatal ("Can't allocate host/hw hash");
-	} else {
-		hp = (struct host_decl *)
-			hash_lookup (host_name_hash,
-					     (unsigned char *)hd -> name,
-					     strlen (hd -> name));
-
-		/* If there isn't already a host decl matching this
-		   address, add it to the hash table. */
-		if (!hp) {
-			add_hash (host_name_hash,
-				  (unsigned char *)hd -> name, strlen (hd -> name),
-				  (unsigned char *)hd);
-			hd -> refcnt++; /* XXX */
-		} else
-			/* XXX actually, we have to delete the old one
-			   XXX carefully and replace it.   Not done yet. */
-			log_fatal ("duplicate hostname: %s!", hd -> name);
-	}
 	if (dynamicp && commit) {
 		write_host (hd);
 		commit_leases ();
 	}
+
+	return ISC_R_SUCCESS;
 }
 
 void delete_host (hd, commit)

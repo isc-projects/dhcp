@@ -29,7 +29,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: omapi.c,v 1.6 1999/09/16 04:53:38 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: omapi.c,v 1.7 1999/09/16 05:12:38 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -298,6 +298,10 @@ isc_result_t dhcp_lease_signal_handler (omapi_object_t *h,
 	lease = (struct lease *)h;
 
 	if (!strcmp (name, "updated")) {
+		if (lease -> hardware_addr.hlen == 0 ||
+		    lease -> hardware_addr.htype == 0 ||
+		    lease -> hardware_addr.hlen > 16)
+			return ISC_R_INVALIDARG;
 		if (!write_lease (lease))
 			return ISC_R_IOERROR;
 	}
@@ -828,6 +832,11 @@ isc_result_t dhcp_host_signal_handler (omapi_object_t *h,
 	host = (struct host_decl *)h;
 
 	if (!strcmp (name, "updated")) {
+		if (host -> interface.hlen == 0 ||
+		    host -> interface.htype == 0 ||
+		    host -> interface.hlen > 16)
+			return ISC_R_INVALIDARG;
+
 		if (!host -> name) {
 			char hnbuf [64];
 			sprintf (hnbuf, "nh%08lx%08lx",
@@ -837,7 +846,10 @@ isc_result_t dhcp_host_signal_handler (omapi_object_t *h,
 				return ISC_R_NOMEMORY;
 			strcpy (host -> name, hnbuf);
 		}
-		enter_host (host, 1, 1);
+
+		status = enter_host (host, 1, 1);
+		if (status != ISC_R_SUCCESS)
+			return status;
 	}
 
 	/* Try to find some inner object that can take the value. */

@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.81 1999/09/16 00:52:50 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.82 1999/09/16 05:12:38 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -901,6 +901,7 @@ void parse_host_declaration (cfile, group)
 	int declaration = 0;
 	int dynamicp = 0;
 	int deleted = 0;
+	isc_result_t status;
 
 	token = peek_token (&val, cfile);
 	if (token != LBRACE) {
@@ -968,7 +969,9 @@ void parse_host_declaration (cfile, group)
 		free_group (host -> group, "parse_host_declaration");
 		dfree (host, "parse_host_declaration");
 	} else {
-		enter_host (host, dynamicp, 0);
+		status = enter_host (host, dynamicp, 0);
+		if (status != ISC_R_SUCCESS)
+			parse_warn ("host %s: %s", isc_result_totext (status));
 	}
 }
 
