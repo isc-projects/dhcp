@@ -56,7 +56,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhclient.c,v 1.36 1997/05/09 07:54:14 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.37 1997/06/02 22:36:25 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -436,10 +436,7 @@ void dhcpack (packet)
 		return;
 	}
 
-	note ("DHCPACK from %s",
-	      print_hw_addr (packet -> raw -> htype,
-			     packet -> raw -> hlen,
-			     packet -> raw -> chaddr));
+	note ("DHCPACK from %s", piaddr (packet -> client_addr));
 
 	lease = packet_to_lease (packet);
 	if (!lease) {
@@ -578,30 +575,64 @@ void db_startup ()
 void bootp (packet)
 	struct packet *packet;
 {
-	if (packet -> raw -> op == BOOTREPLY)
-		dhcpoffer (packet);
+	struct iaddrlist *ap;
+
+	if (packet -> raw -> op != BOOTREPLY)
+		return;
+
+	/* If there's a reject list, make sure this packet's sender isn't
+	   on it. */
+	for (ap = packet -> interface -> client -> config -> reject_list;
+	     ap; ap = ap -> next) {
+		if (addr_eq (packet -> client_addr, ap -> addr)) {
+			note ("BOOTREPLY from %s rejected.",
+			      piaddr (ap -> addr));
+			return;
+		}
+	}
+	
+	dhcpoffer (packet);
 
 }
 
 void dhcp (packet)
 	struct packet *packet;
 {
+	struct iaddrlist *ap;
+	void (*handler) (struct packet *);
+	char *type;
+
 	switch (packet -> packet_type) {
 	      case DHCPOFFER:
-		dhcpoffer (packet);
+		handler = dhcpoffer;
+		type = "DHCPOFFER";
 		break;
 
 	      case DHCPNAK:
-		dhcpnak (packet);
+		handler = dhcpnak;
+		type = "DHCPNACK";
 		break;
 
 	      case DHCPACK:
-		dhcpack (packet);
+		handler = dhcpack;
+		type = "DHCPACK";
 		break;
 
 	      default:
-		break;
+		return;
 	}
+
+	/* If there's a reject list, make sure this packet's sender isn't
+	   on it. */
+	for (ap = packet -> interface -> client -> config -> reject_list;
+	     ap; ap = ap -> next) {
+		if (addr_eq (packet -> client_addr, ap -> addr)) {
+			note ("%s from %s rejected.",
+			      type, piaddr (ap -> addr));
+			return;
+		}
+	}
+	(*handler) (packet);
 }
 
 void dhcpoffer (packet)
@@ -613,6 +644,7 @@ void dhcpoffer (packet)
 	int arp_timeout_needed, stop_selecting;
 	char *name = (packet -> options [DHO_DHCP_MESSAGE_TYPE].len
 		      ? "DHCPOFFER" : "BOOTREPLY");
+	struct iaddrlist *ap;
 	
 #ifdef DEBUG_PACKET
 	dump_packet (packet);
@@ -626,10 +658,7 @@ void dhcpoffer (packet)
 		return;
 	}
 
-	note ("%s from %s", name,
-	      print_hw_addr (packet -> raw -> htype,
-			     packet -> raw -> hlen,
-			     packet -> raw -> chaddr));
+	note ("%s from %s", name, piaddr (packet -> client_addr));
 
 	/* If this lease doesn't supply the minimum required parameters,
 	   blow it off. */
@@ -833,10 +862,7 @@ void dhcpnak (packet)
 		return;
 	}
 
-	note ("DHCPNAK from %s",
-	      print_hw_addr (packet -> raw -> htype,
-			     packet -> raw -> hlen,
-			     packet -> raw -> chaddr));
+	note ("DHCPNAK from %s", piaddr (packet -> client_addr));
 
 	if (!ip -> client -> active) {
 		note ("DHCPNAK with no active lease.\n");
@@ -1693,7 +1719,7 @@ void write_client_lease (ip, lease)
 				 dhcp_options [i].name,
 				 pretty_print_option
 				 (i, lease -> options [i].data,
-				  lease -> options [i].len, 1));
+				  lease -> options [i].len, 1, 1));
 		}
 	}
 	t = gmtime (&lease -> renewal);
@@ -1846,7 +1872,7 @@ void script_write_params (ip, prefix, lease)
 			char *s = dhcp_option_ev_name (&dhcp_options [i]);
 				
 			fprintf (scriptFile, "%s%s=\"%s\"\n", prefix, s,
-				 pretty_print_option (i, dp, len, 0));
+				 pretty_print_option (i, dp, len, 0, 0));
 			fprintf (scriptFile, "export %s%s\n", prefix, s);
 		}
 	}
