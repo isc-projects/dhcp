@@ -236,14 +236,15 @@ statement.
 .PP
  \fBprepend [ \fIoption declaration\fR ] \fB;\fR
 .PP
-If for some option the client should use both a value it
-supplies, and then any values supplied by
-the server, these values can be defined in the
+If for some set of options the client should use a value you
+supply, and then use the values supplied by
+the server, if any, these values can be defined in the
 .B prepend
 statement.   The
 .B prepend
 statement can only be used for options which
-allow more than one value to be given.
+allow more than one value to be given.   This restriction is not
+enforced - if you ignore it, the behaviour will be unpredictable.
 .PP
 .I The
 .B append
@@ -251,14 +252,15 @@ allow more than one value to be given.
 .PP
  \fBappend [ \fIoption declaration\fR ] \fB;\fR
 .PP
-If for some option the client should first any values supplied
-to it by the server, and then some values it supplies, those values
-should be defined in the 
+If for some set of options the client should first use the values
+supplied by the server, if any, and then use values you supply, these
+values can be defined in the
 .B append
 statement.   The
 .B append
 statement can only be used for options which
-allow more than one value to be given.
+allow more than one value to be given.   This restriction is not
+enforced - if you ignore it, the behaviour will be unpredictable.
 .SH LEASE DECLARATIONS
 .PP
 .I The
