@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.105 2000/03/18 02:15:52 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.106 2000/04/06 22:20:55 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -183,7 +183,6 @@ isc_result_t read_leases ()
 	       | USE_LEASE_ADDR_FOR_DEFAULT_ROUTE boolean
 	       | AUTHORITATIVE
 	       | NOT AUTHORITATIVE
-	       | AUTH_KEY key-id key-value
 
    declaration :== host-declaration
 		 | group-declaration
@@ -217,15 +216,6 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 	token = peek_token (&val, cfile);
 
 	switch (token) {
-	      case AUTH_KEY:
-		memset (&key_id, 0, sizeof key_id);
-		if (parse_auth_key (&key_id, cfile)) {
-			if (type == HOST_DECL)
-				data_string_copy (&host_decl -> auth_key_id,
-						  &key_id, MDL);
-			data_string_forget (&key_id, MDL);
-		}
-		break;
 	      case HOST:
 		next_token (&val, cfile);
 		if (type != HOST_DECL && type != CLASS_DECL)
@@ -527,6 +517,8 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 			}
 			return declaration;
 		}
+		if (!et)
+			return declaration;
 	      insert_statement:
 		if (group -> statements) {
 			int multi = 0;
@@ -2283,7 +2275,6 @@ struct lease *parse_lease_declaration (cfile)
 			}
 			parse_semi (cfile);
 			break;
-
 
 		      default:
 			if (!strcasecmp (val, "ddns-fwd-name")) {
