@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.59 1999/03/16 05:50:44 mellon Exp $ Copyright 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.60 1999/03/16 05:55:40 mellon Exp $ Copyright 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.";
 #endif
 
   static char copyright[] =
@@ -183,9 +183,6 @@ int main (argc, argv, envp)
 #if 0
 	dns_startup (); 
 #endif
-
-	/* Start the interactive client listener. */
-	interact_startup ();
 
 	/* Set up the client classification system. */
 	classification_setup ();

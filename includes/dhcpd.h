@@ -47,7 +47,6 @@
 #include "tree.h"
 #include "hash.h"
 #include "inet.h"
-#include "sysconf.h"
 #include "auth.h"
 
 #if !defined (OPTION_HASH_SIZE)
@@ -683,36 +682,6 @@ struct dns_query {
 	int backoff;			/* Current backoff, in seconds. */
 };
 
-struct interact_client; /* forward */
-
-/* Actions that can be taken by an interactive connection to the dhcp server
-   or client. */
-
-struct interact_actions {
-	void (*ls) PROTO ((struct interact_client *));
-	void (*print) PROTO ((struct interact_client *, char *));
-	void (*set) PROTO ((struct interact_client *, char *));
-	void (*rm) PROTO ((struct interact_client *, char *));
-	void (*cd) PROTO ((struct interact_client *, char *));
-	void (*cdup) PROTO ((struct interact_client *));
-	void * (*next) PROTO ((struct interact_client *, void *));
-};
-
-/* Interactive connection state. */
-
-struct interact_client {
-	struct interact_client *next;
-	int fd;
-	struct interact_actions cur_node_actions;
-	void *cur_node;
-	int cur_node_classp;
-	int last_input;
-	struct protocol *proto;
-
-	char ibuf [1024];
-	int ibuflen;
-};
-
 /* Bitmask of dhcp option codes. */
 typedef unsigned char option_mask [16];
 
@@ -1335,7 +1304,6 @@ int script_go PROTO ((struct client_state *));
 struct client_lease *packet_to_lease PROTO ((struct packet *));
 void go_daemon PROTO ((void));
 void write_client_pid_file PROTO ((void));
-void status_message PROTO ((struct sysconf_header *, void *));
 void client_location_changed PROTO ((void));
 
 /* db.c */
@@ -1460,20 +1428,6 @@ struct name_server *first_name_server PROTO ((void));
 #ifdef NEED_INET_ATON
 int inet_aton PROTO ((const char *, struct in_addr *));
 #endif
-
-/* sysconf.c */
-void sysconf_startup PROTO ((void (*) (struct sysconf_header *, void *)));
-void sysconf_restart PROTO ((void *));
-void sysconf_message PROTO ((struct protocol *proto));
-
-/* interact.c */
-void interact_startup PROTO ((void));
-void new_interact_connection PROTO ((struct protocol *));
-void interact_client_input PROTO ((struct protocol *));
-int interact_client_write PROTO ((struct interact_client *, char *, int));
-
-/* dhcpdi.c */
-extern struct interact_actions top_level_actions;
 
 /* class.c */
 extern int have_billing_classes;
