@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: errwarn.c,v 1.11 1996/09/02 21:15:27 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: errwarn.c,v 1.12 1996/11/08 20:07:31 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -76,8 +76,8 @@ void error (ANSI_DECL(char *) fmt, VA_DOTDOTDOT)
 
   /* Also log it to stderr? */
   if (log_perror) {
-	  write (1, mbuf, strlen (mbuf));
-	  write (1, "\n", 1);
+	  write (2, mbuf, strlen (mbuf));
+	  write (2, "\n", 1);
   }
 
   cleanup ();
@@ -103,8 +103,8 @@ int warn (ANSI_DECL (char *) fmt, VA_DOTDOTDOT)
 #endif
 
   if (log_perror) {
-	  write (1, mbuf, strlen (mbuf));
-	  write (1, "\n", 1);
+	  write (2, mbuf, strlen (mbuf));
+	  write (2, "\n", 1);
   }
 
   return 0;
@@ -129,8 +129,8 @@ int note (ANSI_DECL (char *) fmt, VA_DOTDOTDOT)
 #endif
 
   if (log_perror) {
-	  write (1, mbuf, strlen (mbuf));
-	  write (1, "\n", 1);
+	  write (2, mbuf, strlen (mbuf));
+	  write (2, "\n", 1);
   }
 
   return 0;
@@ -155,8 +155,8 @@ int debug (ANSI_DECL (char *) fmt, VA_DOTDOTDOT)
 #endif
 
   if (log_perror) {
-	  write (1, mbuf, strlen (mbuf));
-	  write (1, "\n", 1);
+	  write (2, mbuf, strlen (mbuf));
+	  write (2, "\n", 1);
   }
 
   return 0;
@@ -226,12 +226,12 @@ int parse_warn (ANSI_DECL (char *) fmt, VA_DOTDOTDOT)
 #endif
 
 	if (log_perror) {
-		write (1, mbuf, strlen (mbuf));
-		write (1, "\n", 1);
-		write (1, token_line, strlen (token_line));
-		write (1, "\n", 1);
-		write (1, spaces, lexchar - 1);
-		write (1, "^\n", 2);
+		write (2, mbuf, strlen (mbuf));
+		write (2, "\n", 1);
+		write (2, token_line, strlen (token_line));
+		write (2, "\n", 1);
+		write (2, spaces, lexchar - 1);
+		write (2, "^\n", 2);
 	}
 
 	warnings_occurred = 1;
