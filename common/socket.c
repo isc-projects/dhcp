@@ -30,7 +30,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: socket.c,v 1.38 1999/09/08 01:43:52 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: socket.c,v 1.39 1999/09/09 23:53:14 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -228,7 +228,7 @@ ssize_t receive_packet (interface, buf, len, from, hfrom)
 /* This just reads in a packet and silently discards it. */
 
 isc_result_t fallback_discard (object)
-	omapi_object_t object;
+	omapi_object_t *object;
 {
 	char buf [1540];
 	struct sockaddr_in from;

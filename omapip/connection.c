@@ -74,8 +74,10 @@ isc_result_t omapi_connect (omapi_object_t *c,
 	} else
 		he = (struct hostent *)0;
 
+#if defined (HAVE_SA_LEN)
 	obj -> remote_addr.sin_len =
 		sizeof (struct sockaddr_in);
+#endif
 	obj -> remote_addr.sin_family = AF_INET;
 	memset (&(obj -> remote_addr.sin_zero), 0,
 		sizeof obj -> remote_addr.sin_zero);

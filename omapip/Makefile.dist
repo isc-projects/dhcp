@@ -32,7 +32,7 @@ CFLAGS = $(DEBUG) $(PREDEFINES) $(INCLUDES) $(COPTS)
 all:	libomapi.a test $(CATMANPAGES)
 
 test:	test.o libomapi.a
-	$(CC) $(DEBUG) -o test test.o libomapi.a
+	$(CC) $(DEBUG) -o test test.o libomapi.a $(LIBS)
 
 libomapi.a:	$(OBJ)
 	rm -f libomapi.a

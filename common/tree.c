@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.46 1999/08/01 14:26:48 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.47 1999/09/09 23:53:14 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -551,9 +551,6 @@ int evaluate_boolean_expression (result, packet, lease, in_options,
 		/* we only want to do this on a DHCPREQUEST */
 		if (!packet || packet -> packet_type != DHCPREQUEST)
 			return 0;
-		/* no update for static leases */
-		if (lease && (lease -> flags & STATIC_LEASE))
-			return 0;
 		memset (&rrtype, 0, sizeof expr1);
 		s0 = evaluate_data_expression (&rrtype, packet, lease,
 					       in_options, cfg_options,
@@ -574,11 +571,18 @@ int evaluate_boolean_expression (result, packet, lease, in_options,
 		if (s0 && s1 && s2 && s3) {
 			if (rrtype.len == 1 &&
 			    strncmp(rrtype.data, "a", 1) == 0) {
-log_info("calling updateA(%s, %s, %d, lease)", expr1.data , expr2.data, ttl);
+#if defined (DEBUG_EXPRESSIONS)
+				log_debug("calling updateA(%s, %s, %d, lease)",
+					  expr1.data , expr2.data, ttl);
+#endif
 				updateA(expr1, expr2, ttl, lease);
 			} else if (rrtype.len == 3 &&
 				   strncmp(rrtype.data, "ptr", 3) == 0) {
-log_info("calling updatePTR(%s, %s, %d, lease)", expr1.data , expr2.data, ttl);
+#if defined (DEBUG_EXPRESSIONS)
+				log_debug ("%s updatePTR(%s, %s, %d, lease)",
+					   "calling", expr1.data,
+					   expr2.data, ttl);
+#endif
 				updatePTR(expr1, expr2, ttl, lease);
 			}
 			*result = 1;
@@ -588,7 +592,7 @@ log_info("calling updatePTR(%s, %s, %d, lease)", expr1.data , expr2.data, ttl);
 			return 0;
 		}
 #if defined (DEBUG_EXPRESSIONS)
-		log_info ("dns-update(%s, %s, %s):", 
+		log_debug ("dns-update (%s, %s, %s):", 
 			  print_hex_1(rrtype.len, rrtype.data, 60),
 			  print_hex_2(expr1.len, expr1.data, 60),
 			  print_hex_3(expr2.len, expr2.data, 60));

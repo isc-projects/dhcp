@@ -29,7 +29,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: omapi.c,v 1.3 1999/09/09 23:33:43 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: omapi.c,v 1.4 1999/09/09 23:53:29 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -830,8 +830,8 @@ isc_result_t dhcp_host_signal_handler (omapi_object_t *h,
 	if (!strcmp (name, "updated")) {
 		if (!host -> name) {
 			char hnbuf [64];
-			sprintf (hnbuf, "nh%08lx%08x",
-				 cur_time, (u_int32_t)host);
+			sprintf (hnbuf, "nh%08lx%08lx",
+				 cur_time, (unsigned long)host);
 			host -> name = malloc (strlen (hnbuf) + 1);
 			if (!host -> name)
 				return ISC_R_NOMEMORY;

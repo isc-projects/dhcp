@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bpf.c,v 1.28 1999/09/08 01:43:38 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bpf.c,v 1.29 1999/09/09 23:53:13 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -426,7 +426,7 @@ void maybe_setup_fallback ()
 		if_register_fallback (fbi);
 		fbi -> refcnt = 1;
 		fbi -> type = dhcp_type_interface;
-		status = omapi_register_io_object ((omapi_object_t)fbi,
+		status = omapi_register_io_object ((omapi_object_t *)fbi,
 						   if_readsocket, 0,
 						   fallback_discard, 0, 0);
 		if (status != ISC_R_SUCCESS)

@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: execute.c,v 1.16 1999/07/31 17:56:09 mellon Exp $ Copyright (c) 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: execute.c,v 1.17 1999/09/09 23:53:14 mellon Exp $ Copyright (c) 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -45,13 +45,13 @@ int execute_statements (packet, lease, in_options, out_options, statements)
 		switch (r -> op) {
 		      case statements_statement:
 #if defined (DEBUG_EXPRESSIONS)
-			log_info ("exec: statements");
+			log_debug ("exec: statements");
 #endif
 			status = execute_statements (packet, lease,
 						     in_options, out_options,
 						     r -> data.statements);
 #if defined (DEBUG_EXPRESSIONS)
-			log_info ("exec: statements returns %d", status);
+			log_debug ("exec: statements returns %d", status);
 #endif
 			if (!status)
 				return 0;

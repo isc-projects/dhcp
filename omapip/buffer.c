@@ -171,9 +171,9 @@ isc_result_t omapi_connection_copyin (omapi_object_t *h,
 /* Copy some bytes from the input buffer, and advance the input buffer
    pointer beyond the bytes copied out. */
 
-u_int32_t omapi_connection_copyout (unsigned char *buf,
-				    omapi_object_t *h,
-				    int size)
+isc_result_t omapi_connection_copyout (unsigned char *buf,
+				       omapi_object_t *h,
+				       int size)
 {
 	int bytes_remaining;
 	int bytes_this_copy;
@@ -244,7 +244,7 @@ u_int32_t omapi_connection_copyout (unsigned char *buf,
 	return ISC_R_SUCCESS;
 }
 
-u_int32_t omapi_connection_writer (omapi_object_t *h)
+isc_result_t omapi_connection_writer (omapi_object_t *h)
 {
 	int bytes_this_write;
 	int bytes_written;

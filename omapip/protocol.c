@@ -257,8 +257,10 @@ isc_result_t omapi_protocol_signal_handler (omapi_object_t *h,
 	      case omapi_protocol_intro_wait:
 		/* Get protocol version and header size in network
 		   byte order. */
-		omapi_connection_get_uint32 (c, &p -> protocol_version);
-		omapi_connection_get_uint32 (c, &p -> header_size);
+		omapi_connection_get_uint32
+			(c, (u_int32_t *)&p -> protocol_version);
+		omapi_connection_get_uint32
+			(c, (u_int32_t *)&p -> header_size);
 	
 		/* We currently only support the current protocol version. */
 		if (p -> protocol_version != OMAPI_PROTOCOL_VERSION) {
@@ -294,14 +296,20 @@ isc_result_t omapi_protocol_signal_handler (omapi_object_t *h,
 		}
 
 		/* Swap in the header... */
-		omapi_connection_get_uint32 (c, &p -> message -> authid);
+		omapi_connection_get_uint32
+			(c, (u_int32_t *)&p -> message -> authid);
 
 		/* XXX bind the authenticator here! */
-		omapi_connection_get_uint32 (c, &p -> message -> authlen);
-		omapi_connection_get_uint32 (c, &p -> message -> op);
-		omapi_connection_get_uint32 (c, &p -> message -> handle);
-		omapi_connection_get_uint32 (c, &p -> message -> id);
-		omapi_connection_get_uint32 (c, &p -> message -> rid);
+		omapi_connection_get_uint32
+			(c, (u_int32_t *)&p -> message -> authlen);
+		omapi_connection_get_uint32
+			(c, (u_int32_t *)&p -> message -> op);
+		omapi_connection_get_uint32
+			(c, (u_int32_t *)&p -> message -> handle);
+		omapi_connection_get_uint32
+			(c, (u_int32_t *)&p -> message -> id);
+		omapi_connection_get_uint32
+			(c, (u_int32_t *)&p -> message -> rid);
 
 		/* If there was any extra header data, skip over it. */
 		if (p -> header_size > sizeof (omapi_protocol_header_t)) {

@@ -22,6 +22,21 @@
 #include <isc/boolean.h>
 #include <isc/list.h>
 
+/* This is a bit of an ugly: if you are using NSUPDATE, you are also
+ * including (by means of -I...) the include files that are installed
+ * by BIND.  The problem is that the BIND includes also have an
+ * isc/list.h, which gets included above rather than the isc/list.h
+ * that is packaged with the DHCP server.  That include does not
+ * prepend the macros with "ISC_", the one ith the DHCP's isc/list.h
+ * does.  Sigh.
+ *
+ * Fixed in BIND 9.  Double sigh.  This is a temporary fix - we'll
+ * come up with something more correct later.
+ */
+#ifdef NSUPDATE
+#define ISC_LIST LIST
+#endif
+
 /***
  *** Core Types.
  ***/
