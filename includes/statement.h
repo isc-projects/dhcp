@@ -51,6 +51,7 @@ struct executable_statement {
 		supersede_option_statement,
 		append_option_statement,
 		prepend_option_statement,
+		send_option_statement,
 	} op;
 	union {
 		struct {
