@@ -312,7 +312,8 @@ enum dhcp_token {
 	END_OF_FILE = 607,
 	RECOVER_WAIT = 608,
 	SERVER = 609,
-	CONNECT = 610
+	CONNECT = 610,
+	REMOVE = 611
 };
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\
