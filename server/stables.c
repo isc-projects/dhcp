@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: stables.c,v 1.25.2.9 2003/01/14 23:15:24 dhankins Exp $ Copyright (c) 1995-2003 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: stables.c,v 1.25.2.10 2003/01/14 23:20:35 dhankins Exp $ Copyright (c) 1995-2003 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -440,7 +440,7 @@ struct option agent_options [256] = {
 	{ "unknown-252", "X",				&agent_universe, 252 },
 	{ "unknown-253", "X",				&agent_universe, 253 },
 	{ "unknown-254", "X",				&agent_universe, 254 },
-	{ "unknown-end", "e",				&agent_universe, 255 },
+	{ "option-end", "e",				&agent_universe, 255 },
 };
 
 struct universe server_universe;
