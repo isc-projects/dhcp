@@ -12,6 +12,10 @@
   one it's asking for, and we recognize the one it's asking for as
   ours, NAK it.
 
+- Only accept a DHCPRELEASE or DHCPNAK if the client supplies an IP
+  address and the lease corresponding to that address is available to
+  that client.
+
 970605
 
 - Add client-hostname token to lexer so that the parser can use it.
