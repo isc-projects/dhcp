@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bootp.c,v 1.41 1999/03/16 05:50:42 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bootp.c,v 1.42 1999/03/30 18:12:34 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -180,6 +180,7 @@ void bootp (packet)
 	/* Figure out the address of the next server. */
 	raw.siaddr = (lease -> subnet -> shared_network ->
 		      interface -> primary_address);
+	memset (&d1, 0, sizeof d1);
 	oc = lookup_option (options.dhcp_hash, SV_NEXT_SERVER);
 	if (oc &&
 	    evaluate_option_cache (&d1, packet, &options, oc)) {
