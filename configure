@@ -64,9 +64,10 @@ fi
 
 echo "System Type: $sysname"
 
-for foo in . client server common; do
-	(cd $foo; sed -e "/^##--${sysname}--/,/^##--${sysname}--/s/^#//" \
-		<Makefile.dist >Makefile)
+for foo in . client server relay common; do
+	 (sed -e "/^##--${sysname}--/,/^##--${sysname}--/s/^#//" \
+		<Makefile.conf; cat $foo/Makefile.dist)	\
+				>$foo/Makefile
 done
 
 exit 0
