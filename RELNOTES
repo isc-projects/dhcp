@@ -1,6 +1,6 @@
 	    Internet Software Consortium DHCP Distribution
-		   Version 3, Beta 2, Patchlevel 13
-			  November 30, 2000
+		   Version 3, Beta 2, Patchlevel 14
+			   January 19, 2000
 
 			    Release Notes
 
@@ -48,6 +48,33 @@ Measurement Systems, and Brian Murrell at BC Tel Advanced
 Communications.  I'd like to express my thanks to all of these good
 people here, both for working on the code and for prodding me into
 improving it.
+
+	        Changes since 3.0 Beta 2 Patchlevel 13
+
+- Fixed a problem where the fqdn decoder would sometimes try to store
+  an option with an (unsigned) negative length, resulting in a core
+  dump on some systems.
+
+- Work around the Win98 DHCP client, which NUL-terminates the FQDN
+  option.
+
+- Work around Win98 and Win2k clients that will claim they want to do
+  the update even when they don't have any way to do it.
+
+- Fix some log messages that can be printed when failover is operating
+  that were not printing enough information.
+
+- It was possible for a DHCPDISCOVER to get an allocation even when
+  the state machine said the server shouldn't be responding.
+
+- Don't load balance DHCPREQUESTs from clients in RENEWING and
+  REBINDING, since in RENEWING, if we heard it, it's for us, and in
+  REBINDING, the client wouldn't have got to REBINDING if its primary
+  were answering.
+
+- When we get a bogus state lease binding state transition, don't do
+  the transition.
+  
 
 	        Changes since 3.0 Beta 2 Patchlevel 12
 
