@@ -391,11 +391,10 @@ void dfree (void *, const char *, int);
 #if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL)
 void dmalloc_reuse (void *, const char *, int, int);
 void dmalloc_dump_outstanding (void);
-#define MDL __FILE__, __LINE__
 #else
 #define dmalloc_reuse(x,y,l,z)
-#define MDL (char *)0, __LINE__
 #endif
+#define MDL __FILE__, __LINE__
 #if defined (DEBUG_RC_HISTORY)
 void dump_rc_history (void);
 #endif
