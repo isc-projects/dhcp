@@ -104,6 +104,8 @@ struct option_cache {
 struct option_state {
 	int refcnt;
 	int universe_count;
+	int site_universe;
+	int site_code_min;
 	VOIDPTR universes [1];
 };
 
@@ -246,6 +248,7 @@ struct lease_state {
 #define SV_AUTHORITATIVE		18
 #define SV_VENDOR_OPTION_SPACE		19
 #define SV_ALWAYS_REPLY_RFC1048		20
+#define SV_SITE_OPTION_SPACE		21
 
 #if !defined (DEFAULT_DEFAULT_LEASE_TIME)
 # define DEFAULT_DEFAULT_LEASE_TIME 43200
