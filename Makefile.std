@@ -1,0 +1,17 @@
+CSRC = options.c errwarn.c convert.c conflex.c confpars.c \
+       tree.c memory.c alloc.c print.c hash.c tables.c inet.c db.c
+COBJ = options.o errwarn.o convert.o conflex.o confpars.o \
+       tree.o memory.o alloc.o print.o hash.o tables.o inet.o db.o
+SRCS = dhcpd.c socket.c dhcp.c bootp.c
+OBJS = dhcpd.o socket.o dhcp.o bootp.o
+
+all:	dhcpd dhclient
+
+DEBUG=-g
+CFLAGS=$(DEBUG)
+
+dhcpd:	$(OBJS) $(COBJ)
+	cc -o dhcpd $(OBJS) $(COBJ)
+
+dhclient:	dhclient.o $(COBJ)
+	cc -o dhclient dhclient.o $(COBJ)
