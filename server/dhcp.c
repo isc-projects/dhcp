@@ -3,7 +3,7 @@
    DHCP Protocol engine. */
 
 /*
- * Copyright (c) 1995-2000 Internet Software Consortium.
+ * Copyright (c) 1995-2001 Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.189 2001/03/22 21:36:49 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.190 2001/04/18 18:58:39 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -3321,33 +3321,38 @@ int mockup_lease (struct lease **lp, struct packet *packet,
 	struct lease *lease = (struct lease *)0;
 	const unsigned char **s;
 	isc_result_t status;
+	struct host_decl *rhp = (struct host_decl *)0;
 	
 	status = lease_allocate (&lease, MDL);
 	if (status != ISC_R_SUCCESS)
 		return 0;
+	if (host_reference (&rhp, hp, MDL) != ISC_R_SUCCESS)
+		return 0;
 	if (!find_host_for_network (&lease -> subnet,
-				    &hp, &lease -> ip_addr, share)) {
+				    &rhp, &lease -> ip_addr, share)) {
 		lease_dereference (&lease, MDL);
 		return 0;
 	}
-	host_reference (&lease -> host, hp, MDL);
-	if (hp -> client_identifier.len > sizeof lease -> uid_buf)
-		lease -> uid = dmalloc (hp -> client_identifier.len, MDL);
+	host_reference (&lease -> host, rhp, MDL);
+	if (rhp -> client_identifier.len > sizeof lease -> uid_buf)
+		lease -> uid = dmalloc (rhp -> client_identifier.len, MDL);
 	else
 		lease -> uid = lease -> uid_buf;
 	if (!lease -> uid) {
 		lease_dereference (&lease, MDL);
+		host_dereference (&rhp, MDL);
 		return 0;
 	}
-	memcpy (lease -> uid, hp -> client_identifier.data,
-		hp -> client_identifier.len);
-	lease -> uid_len = hp -> client_identifier.len;
-	lease -> hardware_addr = hp -> interface;
+	memcpy (lease -> uid, rhp -> client_identifier.data,
+		rhp -> client_identifier.len);
+	lease -> uid_len = rhp -> client_identifier.len;
+	lease -> hardware_addr = rhp -> interface;
 	lease -> starts = lease -> timestamp = lease -> ends = MIN_TIME;
 	lease -> flags = STATIC_LEASE;
 	lease -> binding_state = FTS_FREE;
 	lease_reference (lp, lease, MDL);
 	lease_dereference (&lease, MDL);
+	host_dereference (&rhp, MDL);
 	return 1;
 }
 
