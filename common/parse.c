@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.23 1999/05/07 17:38:42 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.24 1999/05/27 14:15:09 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1786,6 +1786,72 @@ int parse_non_binary (expr, cfile, lose, context)
 			skip_to_semi (cfile);
 			expression_dereference
 				(expr, "parse_expression: EXTRACT_INT");
+			return 0;
+		}
+
+		token = next_token (&val, cfile);
+		if (token != RPAREN) {
+			parse_warn ("right parenthesis expected.");
+			*lose = 1;
+			return 0;
+		}
+		break;
+	
+	      case ENCODE_INT:
+		token = next_token (&val, cfile);	
+		token = next_token (&val, cfile);
+		if (token != LPAREN) {
+			parse_warn ("left parenthesis expected.");
+			*lose = 1;
+			return 0;
+		}
+
+		if (!expression_allocate (expr,
+					  "parse_expression: ENCODE_INT"))
+			log_fatal ("can't allocate expression");
+
+		if (!parse_numeric_expression (&(*expr) -> data.encode_int,
+					       cfile, lose)) {
+			parse_warn ("expecting numeric expression.");
+			skip_to_semi (cfile);
+			*lose = 1;
+			expression_dereference
+				(expr, "parse_expression: ENCODE_INT");
+			return 0;
+		}
+
+		token = next_token (&val, cfile);
+		if (token != COMMA) {
+			parse_warn ("comma expected.");
+			*lose = 1;
+			return 0;
+		}
+
+		token = next_token (&val, cfile);
+		if (token != NUMBER) {
+			parse_warn ("number expected.");
+			*lose = 1;
+			return 0;
+		}
+		switch (atoi (val)) {
+		      case 8:
+			(*expr) -> op = expr_encode_int8;
+			break;
+
+		      case 16:
+			(*expr) -> op = expr_encode_int16;
+			break;
+
+		      case 32:
+			(*expr) -> op = expr_encode_int32;
+			break;
+
+		      default:
+			parse_warn ("unsupported integer size %d", atoi (val));
+			*lose = 1;
+			skip_to_semi (cfile);
+			expression_dereference
+				(expr, "parse_expression: ENCODE_INT");
 			return 0;
 		}
 
