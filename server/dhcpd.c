@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.73 1999/09/09 21:11:27 mellon Exp $ Copyright 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.74 1999/10/01 03:26:01 mellon Exp $ Copyright 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.";
 #endif
 
   static char copyright[] =
@@ -69,6 +69,7 @@ int main (argc, argv, envp)
 	struct servent *ent;
 	char *s;
 	int cftest = 0;
+	int lftest = 0;
 #ifndef DEBUG
 	int pidfilewritten = 0;
 	int pid;
@@ -144,6 +145,14 @@ int main (argc, argv, envp)
 			daemon = 0;
 #endif
 			cftest = 1;
+			log_perror = -1;
+                } else if (!strcmp (argv [i], "-T")) {
+			/* test configurations and lease file only */
+#ifndef DEBUG
+			daemon = 0;
+#endif
+			cftest = 1;
+			lftest = 1;
 			log_perror = -1;
 		} else if (!strcmp (argv [i], "-q")) {
 			quiet = 1;
@@ -225,15 +234,18 @@ int main (argc, argv, envp)
 	dhcp_db_objects_setup ();
 
 	/* Read the dhcpd.conf file... */
-	if (!readconf ())
+	if (readconf () != ISC_R_SUCCESS)
 		log_fatal ("Configuration file errors encountered -- exiting");
 
         /* test option should cause an early exit */
- 	if (cftest) 
+ 	if (cftest && !lftest) 
  		exit(0);
 
 	/* Start up the database... */
-	db_startup ();
+	db_startup (lftest);
+
+	if (lftest)
+		exit (0);
 
 	/* Discover all the network interfaces and initialize them. */
 	discover_interfaces (DISCOVER_SERVER);
