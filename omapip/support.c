@@ -608,16 +608,22 @@ isc_result_t omapi_make_int_value (omapi_value_t **vp,
 		omapi_value_dereference (vp, file, line);
 		return status;
 	}
-	if (value) {
-		status = omapi_typed_data_new (file, line, &(*vp) -> value,
-					       omapi_datatype_int);
-		if (status != ISC_R_SUCCESS) {
-			omapi_value_dereference (vp, file, line);
-			return status;
-		}
-		(*vp) -> value -> u.integer = value;
+	status = omapi_typed_data_new (file, line, &(*vp) -> value,
+				       omapi_datatype_int);
+	if (status != ISC_R_SUCCESS) {
+		omapi_value_dereference (vp, file, line);
+		return status;
 	}
+	(*vp) -> value -> u.integer = value;
 	return ISC_R_SUCCESS;
+}
+
+isc_result_t omapi_make_uint_value (omapi_value_t **vp,
+				    omapi_data_string_t *name,
+				    unsigned int value,
+				    const char *file, int line)
+{
+	return omapi_make_int_value (vp, name, (int)value, file, line);
 }
 
 isc_result_t omapi_make_handle_value (omapi_value_t **vp,
