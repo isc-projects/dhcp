@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: class.c,v 1.1 1998/04/19 23:24:48 mellon Exp $ Copyright (c) 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: class.c,v 1.2 1998/04/20 18:03:33 mellon Exp $ Copyright (c) 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -167,6 +167,7 @@ struct collection default_collection = {
 	(struct class *)0,
 };
 
+struct collection *collections = &default_collection;
 struct classification_rule *default_classification_rules;
 struct named_hash *named_hashes;
 struct named_hash *known_hardware_hash;
@@ -175,70 +176,8 @@ struct named_hash *known_hardware_hash;
 
 void classification_setup ()
 {
-	struct classification_rule *top, *now;
-	struct match_expr *me, *ome;
-
-	/* Allocate the hash table of known hardware addresses. */
-	known_hardware_hash = (struct named_hash *)
-		dmalloc (sizeof (struct named_hash),
-			 "known-hardware named hash");
-	if (!known_hardware_hash)
-		error ("Can't allocate known-hardware named hash.");
-	memset (known_hardware_hash, 0, sizeof *known_hardware_hash);
-	known_hardware_hash -> name = "known-hardware";
-	known_hardware_hash -> hash = new_hash ();
-	known_hardware_hash -> next = named_hashes;
-	named_hashes = known_hardware_hash;
-
-	/* if ... */
-	top = (struct classification_rule *)
-		dmalloc (sizeof (struct classification_rule),
-			 "default classification test");
-	if (!top)
-		error ("Can't allocate default classification test");
-	memset (top, 0, sizeof *top);
-	top -> op = classify_if;
-
-	/* hardware */
-	ome = (struct match_expr *)dmalloc (sizeof (struct match_expr),
-					    "default hardware expression");
-	if (!ome)
-		error ("Can't allocate default hardware expression");
-	memset (ome, 0, sizeof *ome);
-	ome -> op = match_hardware;
-	
-	/* if <expr> in known-hardware */
-	me = (struct match_expr *)dmalloc (sizeof (struct match_expr),
-					   "default match expression");
-	if (!me)
-		error ("Can't allocate default match expression");
-	memset (me, 0, sizeof *me);
-	me -> op = match_in;
-	me -> data.in.hash = known_hardware_hash;
-	me -> data.in.expr = ome;
-	top -> data.ie.expr = me;
-
-	/* add-class "unknown" */
-	now = (struct classification_rule *)
-		dmalloc (sizeof (struct classification_rule),
-			 "add unknown classification rule");
-	if (!now)
-		error ("Can't allocate add of unknown class");
-	memset (now, 0, sizeof *now);
-	now -> op = classify_add;
-	now -> data.add = &unknown_class;
-	top -> data.ie.false = now;
-
-	/* add-class "known" */
-	now = (struct classification_rule *)
-		dmalloc (sizeof (struct classification_rule),
-			 "add known classification rule");
-	if (!now)
-		error ("Can't allocate add of known class");
-	memset (now, 0, sizeof *now);
-	now -> op = classify_add;
-	now -> data.add = &known_class;
-	top -> data.ie.true = now;
+	struct classification_rule *rules;
+	struct match_expr *me;
 
 	/* check-collection "default" */
 	me = (struct match_expr *)dmalloc (sizeof (struct match_expr),
@@ -250,17 +189,16 @@ void classification_setup ()
 	me -> data.check = &default_collection;
 	
 	/* eval ... */
-	now = (struct classification_rule *)
+	rules = (struct classification_rule *)
 		dmalloc (sizeof (struct classification_rule),
 			 "add default collection check rule");
-	if (!now)
+	if (!rules)
 		error ("Can't allocate check of default collection");
-	memset (now, 0, sizeof *now);
-	now -> op = classify_eval;
-	now -> data.eval = me;
-	top -> next = now;
+	memset (rules, 0, sizeof *rules);
+	rules -> op = classify_eval;
+	rules -> data.eval = me;
 
-	default_classification_rules = top;
+	default_classification_rules = rules;
 }
 
 void classify_client (packet)
@@ -318,9 +256,9 @@ int evaluate_match_expression (packet, expr)
 
 	      case match_equal:
 		left = evaluate_data_expression (packet,
-						 expr -> data.equal.left);
+						 expr -> data.equal [0]);
 		right = evaluate_data_expression (packet,
-						  expr -> data.equal.right);
+						  expr -> data.equal [1]);
 		if (left.len == right.len && !memcmp (left.data,
 						      right.data, left.len))
 			result = 1;
@@ -336,21 +274,23 @@ int evaluate_match_expression (packet, expr)
 		return (evaluate_match_expression (packet,
 						   expr -> data.and [0]) &&
 			evaluate_match_expression (packet,
-						   expr -> data.and [0]));
+						   expr -> data.and [1]));
 
 	      case match_or:
 		return (evaluate_match_expression (packet,
 						   expr -> data.or [0]) ||
 			evaluate_match_expression (packet,
-						   expr -> data.or [0]));
+						   expr -> data.or [1]));
 
 	      case match_not:
 		return (!evaluate_match_expression (packet, expr -> data.not));
 
+#if 0
 	      case match_in:
 		left = evaluate_data_expression (packet, expr -> data.in.expr);
 		return (int)hash_lookup (expr -> data.in.hash -> hash,
 					 left.data, left.len);
+#endif
 
 	      case match_substring:
 	      case match_suffix:
@@ -431,8 +371,8 @@ struct data_string evaluate_data_expression (packet, expr)
 
 		/* Extract an option. */
 	      case match_option:
-		return ((*expr -> data.option.universe -> lookup_func)
-			(packet, expr -> data.option.code));
+		return ((*expr -> data.option -> universe -> lookup_func)
+			(packet, expr -> data.option -> code));
 
 		/* Combine the hardware type and address. */
 	      case match_hardware:
@@ -484,7 +424,6 @@ struct data_string evaluate_data_expression (packet, expr)
 	      case match_and:
 	      case match_or:
 	      case match_not:
-	      case match_in:
 		warn ("Boolean opcode in evaluate_data_expression: %d",
 		      expr -> op);
 		goto null_return;
@@ -517,7 +456,6 @@ unsigned long evaluate_numeric_expression (packet, expr)
 	      case match_and:
 	      case match_or:
 	      case match_not:
-	      case match_in:
 		warn ("Boolean opcode in evaluate_numeric_expression: %d",
 		      expr -> op);
 		return 0;
@@ -534,21 +472,24 @@ unsigned long evaluate_numeric_expression (packet, expr)
 
 	      case match_extract_int8:
 		data = evaluate_data_expression (packet,
-						 expr -> data.extract_int8);
+						 expr ->
+						 data.extract_int.expr);
 		if (data.len < 1)
 			return 0;
 		return data.data [0];
 
 	      case match_extract_int16:
 		data = evaluate_data_expression (packet,
-						 expr -> data.extract_int16);
+						 expr ->
+						 data.extract_int.expr);
 		if (data.len < 2)
 			return 0;
 		return getUShort (data.data);
 
 	      case match_extract_int32:
 		data = evaluate_data_expression (packet,
-						 expr -> data.extract_int32);
+						 expr ->
+						 data.extract_int.expr);
 		if (data.len < 4)
 			return 0;
 		return getULong (data.data);
