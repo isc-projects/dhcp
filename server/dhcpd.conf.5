@@ -77,12 +77,13 @@ related strictly on a per-subnet basis, the \fIgroup\fR declaration
 can be used.
 .PP
 Each dhcpd.conf file must have one (and only one)
-\fIserver-identifier\fR declaration, which tells dhcpd the identifier
-to use when issuing leases.   For every subnet which will be served,
-there must be one \fIsubnet\fR declaration, which tells dhcpd how to
-recognize that an address is on that subnet.   A \fIsubnet\fR
-declaration is required for each subnet even if no addresses will be
-dynamically allocated on that subnet.
+.I server-identifier
+declaration, which tells dhcpd the identifier to use when issuing
+leases.  For every subnet which will be served, and for every subnet
+to which the dhcp server is connected, there must be one \fIsubnet\fR
+declaration, which tells dhcpd how to recognize that an address is on
+that subnet.  A \fIsubnet\fR declaration is required for each subnet
+even if no addresses will be dynamically allocated on that subnet.
 .PP
 Some installations have physical networks on which more than one IP
 subnet operates.   For example, if there is a site-wide requirement
@@ -352,6 +353,12 @@ should be an IP address or domain name which resolves to the subnet mask
 of the subnet being described.   The subnet number, together with the
 netmask, are sufficient to determine whether any given IP address is
 on the specified subnet.
+.PP
+Although a netmask must be given with every subnet declaration, it is
+recommended that if there is any variance in subnet masks at a site, a
+subnet-mask option statement be used in each subnet declaration to set
+the desired subnet mask, since any subnet-mask option statement will
+override the subnet mask declared in the subnet statement.
 .PP
 .B The
 .I range
@@ -688,7 +695,13 @@ The standard options are:
  \fBoption subnet-mask\fR \fIip-address\fR\fB;\fR
 .PP
 The subnet mask option specifies the client's subnet mask as per RFC
-950.
+950.  If no subnet mask option is provided anywhere in scope, as a
+last resort dhcpd will use the subnet mask from the subnet declaration
+for the network on which an address is being assigned.  However,
+.I any
+subnet-mask option declaration that is in scope for the address being
+assigned will override the subnet mask specified in the subnet
+declaration.
 .PP
  \fBoption time-offset\fR \fIint32\fR\fB;\fR
 .PP
