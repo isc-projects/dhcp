@@ -44,7 +44,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: sysconfd.c,v 1.5 1998/04/09 04:22:30 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: sysconfd.c,v 1.6 1998/11/05 18:36:34 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -65,6 +65,12 @@ int log_perror;
 struct interface_info fallback_interface;
 TIME cur_time;
 u_int16_t local_port;
+
+/* Needed to prevent linking against conflex.c. */
+int lexline;
+int lexchar;
+char *token_line;
+char *tlname;
 
 int dhcp_max_agent_option_packet_length;
 
@@ -265,3 +271,8 @@ void dhcp (packet)
 }
 
 
+struct subnet *find_subnet (addr)
+	struct iaddr addr;
+{
+	return (struct subnet *)0;
+}
