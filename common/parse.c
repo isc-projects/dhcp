@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.38 1999/09/09 23:27:10 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.39 1999/09/28 22:54:56 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -355,7 +355,8 @@ unsigned char *parse_numeric_aggregate (cfile, buf,
 	if (!bufp && *max) {
 		bufp = (unsigned char *)malloc (*max * size / 8);
 		if (!bufp)
-			log_fatal ("can't allocate space for numeric aggregate");
+			log_fatal ("no space for numeric aggregate");
+		s = 0;
 	} else
 		s = bufp;
 
@@ -406,7 +407,7 @@ unsigned char *parse_numeric_aggregate (cfile, buf,
 	if (c) {
 		bufp = (unsigned char *)malloc (count * size / 8);
 		if (!bufp)
-			log_fatal ("can't allocate space for numeric aggregate.");
+			log_fatal ("no space for numeric aggregate.");
 		s = bufp + count - size / 8;
 		*max = count;
 	}
