@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.143.2.17 2003/01/10 06:53:32 dhankins Exp $ Copyright (c) 1995-2002 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.143.2.18 2003/01/10 07:11:18 dhankins Exp $ Copyright (c) 1995-2002 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -978,8 +978,9 @@ void parse_failover_peer (cfile, group, type)
 		}
 	} while (token != RBRACE);
 
-	if (!peer -> me.address)
-		parse_warn (cfile, "local address may not be omitted");
+	/* me.address can be null; the failover link initiate code tries to
+	 * derive a reasonable address to use.
+	 */
 	if (!peer -> partner.address)
 		parse_warn (cfile, "peer address may not be omitted");
 
