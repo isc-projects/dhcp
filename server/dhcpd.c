@@ -43,14 +43,14 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.100 2000/08/28 19:36:12 neild Exp $ Copyright 1995-2000 Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.101 2000/09/01 23:06:31 mellon Exp $ Copyright 1995-2000 Internet Software Consortium.";
 #endif
 
   static char copyright[] =
 "Copyright 1995-2000 Internet Software Consortium.";
 static char arr [] = "All rights reserved.";
 static char message [] = "Internet Software Consortium DHCP Server";
-static char url [] = "For info, please visit http://www.isc.org/dhcp-contrib.html";
+static char url [] = "For info, please visit http://www.isc.org/products/DHCP";
 
 #include "dhcpd.h"
 #include "version.h"
