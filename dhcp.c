@@ -149,7 +149,6 @@ void dhcprequest (packet)
 	struct lease *lease;
 	struct iaddr cip;
 	struct subnet *subnet;
-	struct lease *ip_lease;
 
 	if (packet -> options [DHO_DHCP_REQUESTED_ADDRESS].len) {
 		cip.len = 4;

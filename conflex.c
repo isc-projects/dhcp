@@ -87,7 +87,6 @@ static int get_token (cfile)
 	FILE *cfile;
 {
 	int c;
-	int i;
 	int ttok;
 #ifdef DEBUG_TOKENS
 	static char tb [2];

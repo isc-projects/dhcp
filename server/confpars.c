@@ -683,7 +683,6 @@ void parse_hardware_decl (cfile, bc, decl)
 	jbp_decl (bc);
 	struct host_decl *decl;
 {
-	char *val;
 	int token;
 	struct hardware hw;
 
@@ -1266,7 +1265,6 @@ TIME parse_date (cfile, bc)
 	FILE *cfile;
 	jbp_decl (bc);
 {
-	TIME t;
 	struct tm tm;
 	char *val;
 	int token;

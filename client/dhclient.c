@@ -72,17 +72,8 @@ int main (argc, argv, envp)
 	char **argv, **envp;
 {
 	struct in_addr addr;
-	int port = 0;
 	int i;
-	struct sockaddr_in name;
-	u_int32_t *addrlist = (u_int32_t *)0;
-	int addrcount = 0;
-	struct tree *addrtree = (struct tree *)0;
 	struct servent *ent;
-	int sock;
-	int pid;
-	int result;
-	int flag;
 	struct interface_info *interface;
 
 #ifdef SYSLOG_4_2
