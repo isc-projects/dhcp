@@ -65,7 +65,7 @@ void parse_options (packet)
 	/* Go through the options field, up to the end of the packet
 	   or the End field. */
 	parse_option_buffer (packet, &packet -> raw -> options [4],
-			     packet -> packet_length - DHCP_FIXED_NON_UDP + 4);
+			     packet -> packet_length - DHCP_FIXED_NON_UDP - 4);
 	/* If we parsed a DHCP Option Overload option, parse more
 	   options out of the buffer(s) containing them. */
 	if (packet -> options_valid
