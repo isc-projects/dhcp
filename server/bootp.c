@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bootp.c,v 1.28.2.8 1999/06/22 13:40:31 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bootp.c,v 1.28.2.9 1999/10/19 17:32:49 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -352,6 +352,16 @@ void bootp (packet)
 					      from, &to, &hto);
 			return;
 		}
+
+	/* If it comes from a client that already knows its address
+	   and is not requesting a broadcast response, and we can
+	   unicast to a client without using the ARP protocol, sent it
+	   directly to that client. */
+	} else if (!(raw.flags & htons (BOOTP_BROADCAST)) &&
+		   can_unicast_without_arp ()) {
+		to.sin_addr = raw.yiaddr;
+		to.sin_port = remote_port;
+
 	/* Otherwise, broadcast it on the local network. */
 	} else {
 		to.sin_addr.s_addr = INADDR_BROADCAST;
