@@ -25,7 +25,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: nsupdate.c,v 1.3.2.11 1999/11/03 22:24:57 mellon Exp $ Copyright (c) 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: nsupdate.c,v 1.3.2.12 1999/11/12 18:54:44 mellon Exp $ Copyright (c) 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -104,6 +104,7 @@ char *ddns_fwd_name (lease, state, packet)
 	struct data_string hostname;
 	struct data_string domain;
 	char *rv;
+	int i;
 
 	/* Figure out the domain name of a lease.
 	   First take the scoped "ddns-domainname" option if present
@@ -173,10 +174,16 @@ char *ddns_fwd_name (lease, state, packet)
 	data_string_forget (&domain, "ddns-fwd-name");
 	data_string_forget (&hostname, "ddns-fwd-name");
 	
-	if (!res_hnok (rv) ) {
-		log_error("nsupdate: Bad hostname \"%s\"", rv);
-		dfree (rv, "ddns-fwd-name");
-		return NULL;
+	/* Replace all non-printable characters with dashes, and all
+	   space characters with underscores.   This just duplicates
+	   what res_hnok does, but in a somewhat more destructive
+	   manner - I know it seems gross, and I'm more than willing
+	   to consider alternatives - just send me a proposed patch! */
+	for (i = 0; rv [i]; i++) {
+		if (rv [i] < 0x20 || rv [i] >= 0x7f)
+			rv [i] = '-';
+		if (rv [i] == 0x20)
+			rv [i] = ' ';
 	}
 	return rv;
 }
