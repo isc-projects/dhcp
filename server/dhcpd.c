@@ -43,8 +43,8 @@
 #ifndef lint
 static char copyright[] =
 "Copyright 1995, 1996 The Internet Software Consortium.";
-static char arr [] = "All rights reserved.\n";
-static char message [] = "Internet Software Consortium DHCPD version $Name:  $";
+static char arr [] = "All rights reserved.";
+static char message [] = "Internet Software Consortium DHCPD $Name:  $";
 #endif /* not lint */
 
 #include "dhcpd.h"
