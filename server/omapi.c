@@ -50,7 +50,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: omapi.c,v 1.46.2.9 2001/10/17 03:31:50 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: omapi.c,v 1.46.2.10 2001/10/18 20:31:40 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -88,7 +88,8 @@ void dhcp_db_objects_setup ()
 					     0, 0,
 #endif
 					     0,
-					     sizeof (struct lease), 0);
+					     sizeof (struct lease),
+					     0, RC_LEASE);
 	if (status != ISC_R_SUCCESS)
 		log_fatal ("Can't register lease object type: %s",
 			   isc_result_totext (status));
@@ -103,7 +104,8 @@ void dhcp_db_objects_setup ()
 					     dhcp_class_lookup, 
 					     dhcp_class_create,
 					     dhcp_class_remove, 0, 0, 0,
-					     sizeof (struct class), 0);
+					     sizeof (struct class), 0,
+					     RC_MISC);
 	if (status != ISC_R_SUCCESS)
 		log_fatal ("Can't register class object type: %s",
 			   isc_result_totext (status));
@@ -118,7 +120,7 @@ void dhcp_db_objects_setup ()
 					     dhcp_subclass_lookup, 
 					     dhcp_subclass_create,
 					     dhcp_subclass_remove, 0, 0, 0,
-					     sizeof (struct class), 0);
+					     sizeof (struct class), 0, RC_MISC);
 	if (status != ISC_R_SUCCESS)
 		log_fatal ("Can't register subclass object type: %s",
 			   isc_result_totext (status));
@@ -133,7 +135,7 @@ void dhcp_db_objects_setup ()
 					     dhcp_pool_lookup, 
 					     dhcp_pool_create,
 					     dhcp_pool_remove, 0, 0, 0,
-					     sizeof (struct pool), 0);
+					     sizeof (struct pool), 0, RC_MISC);
 
 	if (status != ISC_R_SUCCESS)
 		log_fatal ("Can't register pool object type: %s",
@@ -149,7 +151,8 @@ void dhcp_db_objects_setup ()
 					     dhcp_host_lookup, 
 					     dhcp_host_create,
 					     dhcp_host_remove, 0, 0, 0,
-					     sizeof (struct host_decl), 0);
+					     sizeof (struct host_decl),
+					     0, RC_MISC);
 
 	if (status != ISC_R_SUCCESS)
 		log_fatal ("Can't register host object type: %s",
@@ -168,7 +171,7 @@ void dhcp_db_objects_setup ()
 					     dhcp_failover_state_remove,
 					     0, 0, 0,
 					     sizeof (dhcp_failover_state_t),
-					     0);
+					     0, RC_MISC);
 
 	if (status != ISC_R_SUCCESS)
 		log_fatal ("Can't register failover state object type: %s",
@@ -182,7 +185,8 @@ void dhcp_db_objects_setup ()
 					     dhcp_failover_link_signal,
 					     dhcp_failover_link_stuff_values,
 					     0, 0, 0, 0, 0, 0,
-					     sizeof (dhcp_failover_link_t), 0);
+					     sizeof (dhcp_failover_link_t), 0,
+					     RC_MISC);
 
 	if (status != ISC_R_SUCCESS)
 		log_fatal ("Can't register failover link object type: %s",
@@ -197,7 +201,8 @@ void dhcp_db_objects_setup ()
 					     dhcp_failover_listener_stuff,
 					     0, 0, 0, 0, 0, 0,
 					     sizeof
-					     (dhcp_failover_listener_t), 0);
+					     (dhcp_failover_listener_t), 0,
+					     RC_MISC);
 
 	if (status != ISC_R_SUCCESS)
 		log_fatal ("Can't register failover listener object type: %s",
