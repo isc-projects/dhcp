@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.90 2000/10/10 22:51:58 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.91 2000/11/24 04:08:31 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1719,9 +1719,9 @@ int evaluate_data_expression (result, packet, lease,
 
 			/* The buffer must be a multiple of the number's
 			   width. */
-			if (other.len % len) {
+			if (data.len % len) {
 				log_info ("reverse: %s %d %s %ld!",
-					  "length of buffer", other.len,
+					  "length of buffer", data.len,
 					  "not a multiple of width", len);
 				status = 0;
 				goto reverse_out;
