@@ -1131,6 +1131,28 @@ fully-qualified domain name, or a single label.   If there is no trailing
 generally update that name in some locally-defined domain.
 .RE
 .PP
+.B option fqdn.hostname \fI--never set--\fB;
+.RS 0.25i
+.PP
+This option should never be set, but it can be read back using the \fBoption\fR
+and \fBconfig-option\fR operators in an expression, in which case it returns
+the first label in the \fBfqdn.fqdn\fR suboption - for example, if
+the value of \fBfqdn.fqdn\fR is "foo.example.com.", then \fBfqdn.hostname\fR
+will be "foo".
+.RE
+.PP
+.B option fqdn.domainname \fI--never set--\fB;
+.RS 0.25i
+.PP
+This option should never be set, but it can be read back using the \fBoption\fR
+and \fBconfig-option\fR operators in an expression, in which case it returns
+all labels after the first label in the \fBfqdn.fqdn\fR suboption - for
+example, if the value of \fBfqdn.fqdn\fR is "foo.example.com.",
+then \fBfqdn.hostname\fR will be "example.com.".   If this suboption value
+is not set, it means that an unqualified name was sent in the fqdn option,
+or that no fqdn option was sent at all.
+.RE
+.PP
 If you wish to use any of these suboptions, we strongly recommend that you
 refer to the Client FQDN option draft (or standard, when it becomes a
 standard) - the documentation here is sketchy and incomplete in comparison,
