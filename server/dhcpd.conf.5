@@ -854,6 +854,25 @@ specify that the server is authoritative for some host declarations
 and not others.
 .PP
 .B The
+.I always-reply-rfc1048
+.B statement
+.PP
+ \fBalways-reply-rfc1048\fR \fIflag\fR\fB;\fR
+.PP
+Some BOOTP clients expect RFC1048-style responses, but do not follow
+RFC1048 when sending their requests.   You can tell that a client is
+having this problem if it is not getting the options you have
+configured for it and if you see in the server log the message
+"(non-rfc1048)" printed with each BOOTREQUEST that is logged.
+.PP
+If you want to send rfc1048 options to such a client, you can set the
+.B always-reply-rfc1048
+option in that client's host declaration, and the DHCP server will
+respond with an RFC-1048-style vendor options field.   This flag can
+be set in any scope, and will affect all clients covered by that
+scope.
+.PP
+.B The
 .I use-lease-addr-for-default-route
 .B statement
 .PP
@@ -898,6 +917,80 @@ to using the server-identifier statement.
 DHCP option statements are documented in the
 .B dhcp-options(5)
 manual page.
+.SH VENDOR ENCAPSULATED OPTIONS
+The DHCP protocol defines the \fB vendor-encapsulated-options\fR
+option, which allows vendors to define their own options that will be
+sent encapsulated in a standard DHCP option.   The format of the
+.B vendor-encapsulated-options
+option is either a hunk of opaque data, or an actual option buffer
+just like a standard DHCP option buffer.   
+.PP
+You can send this option to clients in one of two ways - either define
+the data directly, using a text string or a colon-seperated list of
+hexadecimal values, or define an option space, define some options in
+that option space, provide values for them, and specify that that
+option space should be used to generate the
+.B vendor-encapsulated-options
+option in some scope.
+.PP
+To send a simple clump of data, simply provide a value for the option
+in the right scope, as in the example shown earlier in the \fBCLIENT
+CLASSING\fR section.
+.PP
+To define a new option space in which vendor options can be stored,
+use the \fRoption space\fP statement:
+.PP
+.B option
+.B space
+.I name
+.B ;
+.PP
+The name can then be used in option definitions, as described in
+the
+.B dhcp-options(5)
+manual page.   For example:
+.nf
+
+	option space SUNW;
+	option SUNW.server-address code 2 = ip-address;
+	option SUNW.server-name code 3 = text;
+	option SUNW.root-path code 4 = text;
+
+.fi
+Once you have defined an option space and some options, you can set up
+scopes that define values for those options, and you can say when to
+use them.   For example, suppose you want to handle two different
+classes of clients, as in the example in the \fBCLIENT CLASSING\fR
+section.   Using the option space definition we just did, the
+.B CLIENT
+.B CLASSING
+example can be implemented more legibly as follows:
+.nf
+class vendor-classes {
+  match option vendor-class-identifier;
+}
+
+option SUNW.server-address = 172.17.65.1;
+option SUNW.server-name = "sundhcp-server17-1";
+
+subclass vendor-classes "SUNW.Ultra-5_10" {
+  vendor-option-space SUNW;
+  option SUNW.root-path "/export/root/sparc";
+}
+
+subclass vendor-classes "SUNW.i86pc" {
+  vendor-option-space SUNW;
+  option SUNW.root-path "/export/root/i86pc";
+}
+
+.fi
+As you can see in the preceding example, regular scoping rules apply,
+so you can define values that are global in the global scope, and only
+define values that are specific to a particular class in the local
+scope.   The \fBvendor-option-space\fR declaration indicates that in
+that scope, the \fBvendor-encapsulated-options\fR option should be
+constructed using the values of all the options in the SUNW option
+space.
 .SH SEE ALSO
 dhcpd.conf(5), dhcpd.leases(5), RFC2132, RFC2131.
 .SH AUTHOR
