@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.144 2000/04/08 01:15:50 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.145 2000/05/02 00:00:08 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -152,6 +152,28 @@ void dhcpdiscover (packet, ms_nulltp)
 			return;
 		}
 	}
+
+#if defined (FAILOVER_PROTOCOL)
+	log_info ("lease -> pool = %lx\n", (unsigned long)lease -> pool);
+	if (lease -> pool) {
+		log_info ("lease -> pool -> failover_peer = %lx\n",
+			  (unsigned long)(lease -> pool -> failover_peer));
+
+		if (lease -> pool -> failover_peer)
+			log_info ("lease -> pool -> failover_peer -> hba =%lx",
+				  (unsigned long)(lease -> pool
+						  -> failover_peer -> hba));
+	}
+
+	/* Do load balancing if configured. */
+	if (lease -> pool &&
+	    lease -> pool -> failover_peer &&
+	    lease -> pool -> failover_peer -> hba) {
+		if (!load_balance_mine (packet,
+					lease -> pool -> failover_peer))
+			return;
+	}
+#endif
 
 	/* If it's an expired lease, get rid of any bindings. */
 	if (lease -> ends < cur_time && lease -> scope.bindings)
