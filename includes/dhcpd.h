@@ -1826,6 +1826,9 @@ extern struct subnet *find_grouped_subnet PROTO ((struct shared_network *,
 						  struct iaddr));
 extern struct subnet *find_subnet PROTO ((struct iaddr));
 void enter_shared_network PROTO ((struct shared_network *));
+void new_shared_network_interface PROTO ((struct parse *,
+					  struct shared_network *,
+					  const char *));
 int subnet_inner_than PROTO ((struct subnet *, struct subnet *, int));
 void enter_subnet PROTO ((struct subnet *));
 void enter_lease PROTO ((struct lease *));
