@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.67.2.17 2002/03/12 06:47:58 mellon Exp $ Copyright (c) 1996-2002 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.67.2.18 2002/04/27 05:18:05 murray Exp $ Copyright (c) 1996-2002 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1030,8 +1030,8 @@ int supersede_lease (comp, lease, commit, propogate, pimmediate)
 
 	if (!lp) {
 		log_error ("Lease with binding state %s not on its queue.",
-			   (comp -> binding_state < 1 &&
-			    comp -> binding_state < FTS_LAST)
+			   (comp -> binding_state < 1 ||
+			    comp -> binding_state > FTS_LAST)
 			   ? "unknown"
 			   : binding_state_names [comp -> binding_state - 1]);
 		return 0;
