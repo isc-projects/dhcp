@@ -25,7 +25,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: nsupdate.c,v 1.3.2.1 1999/07/13 00:00:13 mellon Exp $ Copyright (c) 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: nsupdate.c,v 1.3.2.2 1999/10/07 21:36:03 mellon Exp $ Copyright (c) 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -297,9 +297,8 @@ void nsupdate(lease, state, packet, opcode)
 			return;
 		revname = ddns_rev_name(lease, state, packet);
 		
-		if (state -> offered_expiry > lease -> timestamp)
-			ttl = state -> offered_expiry -
-			lease->timestamp;
+		if (state -> offered_expiry > cur_time)
+			ttl = state -> offered_expiry - cur_time;
 		else
 			log_error("nsupdate: ttl < 0");
 
