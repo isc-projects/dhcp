@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.36 2000/07/05 07:38:09 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.37 2000/07/06 06:26:42 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1015,8 +1015,9 @@ void process_state_transition (struct lease *lease)
 					    (struct option_state *)0, /* XXX */
 					    &lease -> scope,
 					    lease -> on_expiry);
-			executable_statement_dereference (&lease -> on_expiry,
-							  MDL);
+			if (lease -> on_expiry)
+				executable_statement_dereference
+					(&lease -> on_expiry, MDL);
 		}
 		
 		/* No sense releasing a lease after it's expired. */
