@@ -1,6 +1,7 @@
 # Makefile.dist
 #
-# Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.
+# Copyright (c) 1996, 1997 The Internet Software Consortium.
+# All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -184,174 +185,35 @@ VARDB = /var/db
 #BINDIR = /etc
 ##--qnx--
 
-CSRC   = options.c errwarn.c convert.c conflex.c parse.c \
-	 tree.c memory.c alloc.c print.c hash.c tables.c inet.c \
-	 dispatch.c bpf.c packet.c raw.c nit.c socket.c route.c
-COBJ   = options.o errwarn.o convert.o conflex.o parse.o \
-	 tree.o memory.o alloc.o print.o hash.o tables.o inet.o \
-	 dispatch.o bpf.o packet.o raw.o nit.o socket.o route.o
-XOBJ   = dhcpxlt.o xconflex.o
-SRCS   = dhcpd.c dhcp.c bootp.c confpars.c db.c
-OBJS   = dhcpd.o dhcp.o bootp.o confpars.o db.o
-PROGS  = dhcpd dhclient dhcrelay
-MAN    = dhcpd.8 dhcpd.conf.5 dhclient.8 dhcrelay.8 dhclient.conf.5
+SUBDIRS=	client server relay
 
-DEBUG  = -g
-CFLAGS = $(DEBUG) $(PREDEFINES) $(INCLUDES) $(COPTS)
+all:
+	for dir in ${SUBDIRS}; do
+		(cd $$dir; make all)
+	done
 
-all:	$(PROGS) dhcpxlt $(CATMANPAGES)
+install:
+	for dir in ${SUBDIRS}; do
+		(cd $$dir; make install)
+	done
 
-install: $(PROGS) $(CATMANPAGES)
-	$(INSTALL) dhcpd $(BINDIR); $(CHMOD) 755 $(BINDIR)/dhcpd
-	$(INSTALL) dhclient $(BINDIR); $(CHMOD) 755 $(BINDIR)/dhclient
-	$(INSTALL) dhcrelay $(BINDIR); $(CHMOD) 755 $(BINDIR)/dhcrelay
-	if [ ! -d $(ADMMANDIR) ]; then \
-	  mkdir $(ADMMANDIR); \
-	  chmod 755 $(ADMMANDIR); \
-        fi
-	if [ ! -d $(FFMANDIR) ]; then \
-	  mkdir $(FFMANDIR); \
-	  chmod 755 $(FFMANDIR); \
-        fi
-	if [ ! -d $(VARDB) ]; then \
-	  mkdir $(VARDB); \
-	  chmod 755 $(VARDB); \
-	fi
-	$(MANINSTALL) $(MANFROM) dhcpd.cat8 $(MANTO) \
-				$(ADMMANDIR)/dhcpd$(ADMMANEXT)
-	$(MANINSTALL) $(MANFROM) dhclient.cat8 $(MANTO) \
-				$(ADMMANDIR)/dhclient$(ADMMANEXT)
-	$(MANINSTALL) $(MANFROM) dhcrelay.cat8 $(MANTO) \
-				$(ADMMANDIR)/dhcrelay$(ADMMANEXT)
-	$(MANINSTALL) $(MANFROM) dhcpd.conf.cat5 $(MANTO) \
-				$(FFMANDIR)/dhcpd.conf$(FFMANEXT)
-	$(MANINSTALL) $(MANFROM) dhclient.conf.cat5 $(MANTO) \
-				$(FFMANDIR)/dhclient.conf$(FFMANEXT)
+all:
+	for dir in ${SUBDIRS}; do
+		(cd $$dir; make all)
+	done
 
 clean:
-	-rm -f $(OBJS) $(COBJ) $(XOBJ) dhclient.o
-	
-realclean: clean
-	-rm -f $(PROGS) dhcpxlt $(CATMANPAGES) *~ #*
+	for dir in ${SUBDIRS}; do
+		(cd $$dir; make clean)
+	done
 
-distclean: clean
-	-rm -f $(PROGS) dhcpxlt $(CATMANPAGES) Makefile
+realclean:
+	for dir in ${SUBDIRS}; do
+		(cd $$dir; make realclean)
+	done
 
-# These should only be done on 4.4 BSD-based systems, since the mandoc
-# macros aren't available on older unices.   Catted man pages are
-# provided in the distribution so that this doesn't become a problem.
-
-dhcpd.cat8:	dhcpd.8
-	sed -e "s#ETCDIR#$(ETC)#" -e "s#DBDIR#$(VARDB)#" \
-		-e "s#RUNDIR#$(VARRUN)#" < dhcpd.8 \
-			| nroff -man >dhcpd.cat8
-
-dhclient.cat8:	dhclient.8
-	sed -e "s#ETCDIR#$(ETC)#" -e "s#DBDIR#$(VARDB)#" \
-		-e "s#RUNDIR#$(VARRUN)#" < dhclient.8 \
-			| nroff -man >dhclient.cat8
-
-dhcrelay.cat8:	dhcrelay.8
-	sed -e "s#ETCDIR#$(ETC)#" -e "s#DBDIR#$(VARDB)#" \
-		-e "s#RUNDIR#$(VARRUN)#" < dhcrelay.8 \
-			| nroff -man >dhcrelay.cat8
-
-dhcpd.conf.cat5:	dhcpd.conf.5
-	nroff -man dhcpd.conf.5 >dhcpd.conf.cat5
-
-dhclient.conf.cat5:	dhclient.conf.5
-	nroff -man dhclient.conf.5 >dhclient.conf.cat5
-
-dhcpd:	$(OBJS) $(COBJ)
-	$(CC) $(LFLAGS) -o dhcpd $(OBJS) $(COBJ) $(LIBS)
-
-dhclient:	dhclient.o clparse.o $(COBJ)
-	$(CC) $(LFLAGS) -o dhclient dhclient.o clparse.o $(COBJ) $(LIBS)
-
-dhcrelay:	dhcrelay.o $(COBJ)
-	$(CC) $(LFLAGS) -o dhcrelay dhcrelay.o $(COBJ) $(LIBS)
-
-dhcpxlt:	dhcpxlt.o errwarn.o convert.o tables.o inet.o xconflex.o \
-		hash.o alloc.o
-	$(CC) $(LFLAGS) -o dhcpxlt \
-		dhcpxlt.o errwarn.o convert.o tables.o inet.o xconflex.o \
-		hash.o alloc.o \
-		$(LIBS)
-
-xconflex.o:	dhcpd.h cdefs.h osdep.h site.h $(CF) dhcp.h tree.h \
-		hash.h inet.h dhctoken.h conflex.c
-		@cp conflex.c xconflex.c
-		$(CC) $(CFLAGS) -c xconflex.c -DOLD_LEXER
-		@-rm -f xconflex.c
-
-# Dependencies (semi-automatically-generated)
-
-options.o:	dhcpd.h cdefs.h osdep.h site.h $(CF) dhcp.h tree.h \
-		hash.h inet.h 
-
-errwarn.o:	dhcpd.h cdefs.h osdep.h site.h $(CF) dhcp.h tree.h \
-		hash.h inet.h 
-
-convert.o:	dhcpd.h cdefs.h osdep.h site.h $(CF) dhcp.h tree.h \
-		hash.h inet.h 
-
-conflex.o:	dhcpd.h cdefs.h osdep.h site.h $(CF) dhcp.h tree.h \
-		hash.h inet.h dhctoken.h 
-
-confpars.o:	dhcpd.h cdefs.h osdep.h site.h $(CF) dhcp.h tree.h \
-		hash.h inet.h dhctoken.h 
-
-tree.o:		dhcpd.h cdefs.h osdep.h site.h $(CF) dhcp.h \
-		tree.h hash.h inet.h 
-
-memory.o:	dhcpd.h cdefs.h osdep.h site.h $(CF) dhcp.h tree.h hash.h \
-		inet.h 
-
-alloc.o:	dhcpd.h cdefs.h osdep.h site.h $(CF) dhcp.h tree.h \
-		hash.h  inet.h 
-
-print.o:	dhcpd.h cdefs.h osdep.h site.h $(CF) dhcp.h tree.h hash.h \
-		inet.h 
-
-hash.o:		dhcpd.h cdefs.h osdep.h site.h $(CF) dhcp.h tree.h hash.h \
-		inet.h 
-
-tables.o:	dhcpd.h cdefs.h osdep.h site.h $(CF) dhcp.h tree.h hash.h \
-		inet.h 
-
-inet.o:		dhcpd.h cdefs.h osdep.h site.h $(CF) dhcp.h tree.h hash.h \
-		inet.h 
-
-db.o:		dhcpd.h cdefs.h osdep.h site.h $(CF) dhcp.h tree.h hash.h \
-		inet.h
-
-dispatch.o:	dhcpd.h cdefs.h osdep.h site.h $(CF) dhcp.h tree.h \
-		hash.h inet.h 
-
-bpf.o:		dhcpd.h cdefs.h osdep.h site.h $(CF) dhcp.h tree.h hash.h \
-		inet.h includes/netinet/ip.h includes/netinet/udp.h \
-		includes/netinet/if_ether.h 
-
-packet.o:	dhcpd.h cdefs.h osdep.h site.h $(CF) dhcp.h tree.h hash.h \
-		inet.h includes/netinet/ip.h includes/netinet/udp.h \
-		includes/netinet/if_ether.h 
-
-raw.o:		dhcpd.h cdefs.h osdep.h site.h $(CF) dhcp.h tree.h hash.h \
-		inet.h 
-
-nit.o:		dhcpd.h cdefs.h osdep.h site.h $(CF) dhcp.h tree.h hash.h \
-		inet.h 
-
-dhcpd.o:	dhcpd.h cdefs.h osdep.h site.h $(CF) dhcp.h tree.h hash.h \
-		inet.h 
-
-socket.o:	dhcpd.h cdefs.h osdep.h site.h $(CF) dhcp.h tree.h hash.h \
-		inet.h 
-
-dhcp.o:		dhcpd.h cdefs.h osdep.h site.h $(CF) dhcp.h tree.h hash.h \
-		inet.h 
-bootp.o:	dhcpd.h cdefs.h osdep.h site.h $(CF) dhcp.h tree.h hash.h \
-		inet.h 
-
-dhclient.o:	dhcpd.h cdefs.h osdep.h site.h $(CF) dhcp.h tree.h hash.h \
-		inet.h dhctoken.h 
+distclean:
+	for dir in ${SUBDIRS}; do
+		(cd $$dir; make distclean)
+	done
+	rm -f Makefile
