@@ -45,3 +45,52 @@ all:
 	else \
 	   (cd $$sysname; make all); \
 	fi
+
+install:
+	@sysname=`./configure --print-sysname`; \
+	 if [ ! -d $$sysname ]; then \
+	   echo No build directory for $$sysname - please run ./configure.; \
+	else \
+	   (cd $$sysname; make install); \
+	fi
+
+depend:
+	@sysname=`./configure --print-sysname`; \
+	 if [ ! -d $$sysname ]; then \
+	   echo No build directory for $$sysname - please run ./configure.; \
+	else \
+	   (cd $$sysname; make depend); \
+	fi
+
+clean:
+	@sysname=`./configure --print-sysname`; \
+	 if [ ! -d $$sysname ]; then \
+	   echo No build directory for $$sysname - please run ./configure.; \
+	else \
+	   (cd $$sysname; make clean); \
+	fi
+
+realclean:
+	@sysname=`./configure --print-sysname`; \
+	 if [ ! -d $$sysname ]; then \
+	   echo No build directory for $$sysname - please run ./configure.; \
+	else \
+	   (cd $$sysname; make realclean); \
+	fi
+
+distclean:
+	@sysname=`./configure --print-sysname`; \
+	 if [ ! -d $$sysname ]; then \
+	   echo No build directory for $$sysname - please run ./configure.; \
+	else \
+	   (cd $$sysname; make distclean); \
+	fi
+
+links:
+	@sysname=`./configure --print-sysname`; \
+	 if [ ! -d $$sysname ]; then \
+	   echo No build directory for $$sysname - please run ./configure.; \
+	else \
+	   (cd $$sysname; make links); \
+	fi
+
