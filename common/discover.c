@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: discover.c,v 1.17 1999/10/24 17:17:22 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: discover.c,v 1.18 2000/01/05 18:00:34 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -172,9 +172,10 @@ void discover_interfaces (state)
 #else
 			tmp -> hw_address.hlen = 6; /* XXX!!! */
 #endif
-			tmp -> hw_address.htype = HTYPE_ETHER; /* XXX */
-			memcpy (tmp -> hw_address.haddr,
+			tmp -> hw_address.hbuf [0] = HTYPE_ETHER; /* XXX */
+			memcpy (&tmp -> hw_address.hbuf [1],
 				LLADDR (foo), tmp -> hw_address.hlen);
+			tmp -> hw_address.hlen++;	/* for type. */
 		} else
 #endif /* AF_LINK */
 
@@ -482,6 +483,16 @@ void discover_interfaces (state)
 		/* Register the interface... */
 		if_register_receive (tmp);
 		if_register_send (tmp);
+#if defined (HAVE_SETFD)
+		if (fcntl (tmp -> rfdesc, F_SETFD, 1) < 0)
+			log_error ("Can't set close-on-exec on %s: %m",
+				   tmp -> name);
+		if (tmp -> rfdesc != tmp -> wfdesc) {
+			if (fcntl (tmp -> wfdesc, F_SETFD, 1) < 0)
+				log_error ("Can't set close-on-exec on %s: %m",
+					   tmp -> name);
+		}
+#endif
 	}
 
 	/* Now register all the remaining interfaces as protocols. */
@@ -499,6 +510,16 @@ void discover_interfaces (state)
 	close (sock);
 
 	maybe_setup_fallback ();
+#if defined (HAVE_SETFD)
+	if (fallback_interface) {
+	    if (fcntl (fallback_interface -> rfdesc, F_SETFD, 1) < 0)
+		log_error ("Can't set close-on-exec on fallback: %m");
+	    if (fallback_interface -> rfdesc != fallback_interface -> wfdesc) {
+		if (fcntl (fallback_interface -> wfdesc, F_SETFD, 1) < 0)
+		    log_error ("Can't set close-on-exec on fallback: %m");
+	    }
+	}
+#endif
 }
 
 int if_readsocket (h)
