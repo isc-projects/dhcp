@@ -33,38 +33,32 @@
 SUBDIRS=	common server client relay
 
 all:
-	for dir in ${SUBDIRS}; do \
-		echo "Making in $$dir"; \
-		(cd $$dir; make all); \
-	done
+	@for dir in ${SUBDIRS}; do \
+		echo "Making all in $$dir"; \
+		(cd $$dir; $(MAKE) all); \
+	 done
 
 install:
-	for dir in ${SUBDIRS}; do \
-		echo "Making in $$dir"; \
-		(cd $$dir; make install); \
-	done
-
-all:
-	for dir in ${SUBDIRS}; do \
-		echo "Making in $$dir"; \
-		(cd $$dir; make all); \
-	done
+	@for dir in ${SUBDIRS}; do \
+		echo "Installing in $$dir"; \
+		(cd $$dir; $(MAKE) install); \
+	 done
 
 clean:
-	for dir in ${SUBDIRS}; do \
-		echo "Making in $$dir"; \
-		(cd $$dir; make clean); \
-	done
+	@for dir in ${SUBDIRS}; do \
+		echo "Cleaning in $$dir"; \
+		(cd $$dir; $(MAKE) clean); \
+	 done
 
 realclean:
-	for dir in ${SUBDIRS}; do \
-		echo "Making in $$dir"; \
-		(cd $$dir; make realclean); \
-	done
+	@for dir in ${SUBDIRS}; do \
+		echo "Really cleaning in $$dir"; \
+		(cd $$dir; $(MAKE) realclean); \
+	 done
 
 distclean:
-	for dir in ${SUBDIRS}; do \
-		echo "Making in $$dir"; \
-		(cd $$dir; make distclean); \
-	done
-	rm -f Makefile
+	@for dir in ${SUBDIRS}; do \
+		echo "Really, really cleaning in $$dir"; \
+		(cd $$dir; $(MAKE) distclean); \
+	 done
+	@rm -f Makefile
