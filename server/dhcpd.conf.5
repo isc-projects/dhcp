@@ -64,9 +64,9 @@ group of declarations.   In any group of parameters and declarations,
 all parameters must be specified before any declarations which depend
 on those parameters may be specified.
 .PP
-Declarations about network topology include the
- \fIshared-network\fR and the \fIsubnet\fR
-declarations.   If clients on a subnet are to be assigned addresses
+Declarations about network topology include the \fIshared-network\fR
+and the \fIsubnet\fR declarations.   If clients on a subnet are to be
+assigned addresses
 dynamically, a \fIrange\fR declaration must appear within the
 \fIsubnet\fR declaration.   For clients with statically assigned
 addresses, or for installations where only known clients will be
@@ -223,7 +223,7 @@ DHCP protocol (for example, server-name and filename).
 .PP
 In Figure 1, each host had \fIhost-specific parameters\fR.   These
 could include such things as the \fIhostname\fR option, the name of a
-file to upload (the \fIfilename parameter) and the address of the
+file to upload (the \fIfilename\fR parameter) and the address of the
 server from which to upload the file (the \fInext-server\fR
 parameter).   In general, any parameter can appear anywhere that
 parameters are allowed, and will be applied according to the scope in
@@ -338,7 +338,7 @@ There may be a host declaration matching the client's identification,
 and that host declaration contains a fixed-address declaration that is
 valid for the network segment to which the client is connected.  In
 this case, the DHCP server will never do dynamic address allocation.
-In this case, the client is \fIrequired\fB to take the address
+In this case, the client is \fIrequired\fR to take the address
 specified in the host declaration.   If the client is requesting some
 other address, the server will respond with a DHCPNAK.
 .PP
@@ -373,6 +373,15 @@ immediately allocated to the client.   If the address is available for
 allocation but has been previously assigned to a different client, the
 server will keep looking in hopes of finding an address that has never
 before been assigned to a client.
+.PP
+The DHCP server generates the list of available IP addresses from a
+hash table.   This means that the addresses are not sorted in any
+particular order, and so it is not possible to predict the order in
+which the DHCP server will allocate IP addresses.   Users of previous
+versions of the ISC DHCP server may have become accustomed to the DHCP
+server allocating IP addresses in ascending order, but this is no
+longer possible, and there is no way to configure this behavior with
+version 3 of the ISC DHCP server.
 .SH IP ADDRESS CONFLICT PREVENTION
 The DHCP server checks IP addresses to see if they are in use before
 allocating them to clients.   It does this by sending an ICMP Echo
@@ -515,7 +524,7 @@ The  server currently  does very  little  sanity checking,  so if  you
 configure it wrong, it will just  fail in odd ways.  I would recommend
 therefore that you either do  failover or don't do failover, but don't
 do any mixed pools.  Also,  use the same master configuration file for
-both  servers,  and  have  a  seperate file  that  contains  the  peer
+both  servers,  and  have  a  separate file  that  contains  the  peer
 declaration and includes the master file.  This will help you to avoid
 configuration  mismatches.  As our  implementation evolves,  this will
 become  less of  a  problem.  A  basic  sample dhcpd.conf  file for  a
@@ -677,7 +686,7 @@ The
 statement
 .RS 0.25i
 .PP
-.B hba \fIcolon-seperated-hex-list\fB;\fR
+.B hba \fIcolon-separated-hex-list\fB;\fR
 .PP
 The hba statement specifies the split between the primary and
 secondary as a bitmap rather than a cutoff, which theoretically allows
@@ -714,8 +723,8 @@ failover peer will take over its client load automatically as the
 clients retry.
 .RE
 .SH CLIENT CLASSING
-Clients can be seperated into classes, and treated differently
-depending on what class they are in.   This seperation can be done
+Clients can be separated into classes, and treated differently
+depending on what class they are in.   This separation can be done
 either with a conditional statement, or with a match statement within
 the class declaration.   It is possible to specify a limit on the
 total number of clients within a particular class or subclass that may
@@ -730,11 +739,13 @@ class "ras-clients" {
   match if substring (option dhcp-client-identifier, 1, 3) = "RAS";
 }
 .fi
+.PP
 Note that whether you use matching expressions or add statements (or
 both) to classify clients, you must always write a class declaration
 for any class that you use.   If there will be no match statement and
 no in-scope statements for a class, the declaration should look like
 this:
+.PP
 .nf
 class "ras-clients" {
 }
@@ -1149,10 +1160,13 @@ zone 17.127.10.in-addr.arpa. {
 }
 .fi
 .PP
+The \fIprimary\fR statement specifies the IP address of the name
+server whose zone information is to be updated.
+.PP
 Note that the zone declarations have to correspond to authority
 records in your name server - in the above example, there must be an
 SOA record for "example.org." and for "17.10.10.in-addr.arpa.".   For
-example, if there were a subdoman "foo.example.org" with no seperate
+example, if there were a subdoman "foo.example.org" with no separate
 SOA, you could not write a zone declaration for "foo.example.org."  
 Also keep in mind that zone names in your DHCP configuration should end in a
 "."; this is the preferred syntax.  If you do not end your zone name in a
@@ -1166,12 +1180,14 @@ dnssec-keygen.  The version that comes with BIND 9 is likely to produce a
 substantially more random key, so we recommend you use that one even
 if you are not using BIND 9 as your DNS server.  If you are using BIND 9's
 dnssec-keygen, the above key would be created as follows:
+.PP
 .nf
 	dnssec-keygen -a HMAC-MD5 -b 128 -n USER DHCP_UPDATER
 .fi
 .PP
 If you are using the BIND 8 dnskeygen program, the following command will
 generate a key as seen above:
+.PP
 .nf
 	dnskeygen -H 128 -u -c -n DHCP_UPDATER
 .fi
@@ -1454,6 +1470,7 @@ to queries from a particular client.  This keyword only has meaning
 when it appears in a host declaration.   By default, booting is
 \fBallow\fRed, but if it is disabled for a particular client, then
 that client will not be able to get and address from the DHCP server.
+.PP
 .B The
 .I duplicates
 .B keyword
@@ -1476,6 +1493,7 @@ discarded by the server, even if the UID is not the same.   This is a
 violation of the DHCP protocol, but can prevent clients whose client
 identifiers change regularly from holding many leases at the same time.
 By default, duplicates are \fBallow\fRed.
+.PP
 .B The
 .I declines
 .B keyword
@@ -1499,6 +1517,7 @@ The \fBdeclines\fR flag tells the DHCP server whether or not to honor
 DHCPDECLINE messages.   If it is set to \fBdeny\fR or \fBignore\fR in
 a particular scope, the DHCP server will not respond to DHCPDECLINE
 messages.
+.PP
 .B The
 .I client-updates
 .B keyword
@@ -1885,7 +1904,7 @@ hardware type (and others) would also be desirable.
 The
 .I hardware-address
 should be a set of hexadecimal octets (numbers from 0 through ff)
-seperated by colons.   The \fIhardware\fR statement may also be used
+separated by colons.   The \fIhardware\fR statement may also be used
 for DHCP clients.
 .RE
 .PP
@@ -2151,7 +2170,7 @@ on an ad hoc basis, it is quite possible that one vendor's DHCP client
 might use the same option code that another vendor's client uses, for
 different purposes.   The \fIsite-option-space\fR option can be used
 to assign a different set of site-specific options for each such
-vendor, using conditional evaluation (see \fIdhcp-eval.5\fR for
+vendor, using conditional evaluation (see \fBdhcp-eval (5)\fR for
 details).
 .RE
 .PP
@@ -2229,16 +2248,16 @@ hostname.   So, for example,
       use-host-decl-names on;
 
       host joe {
-	hardware ethernet 08:00:2b:4c:29:32;
-	fixed-address joe.fugue.com;
+        hardware ethernet 08:00:2b:4c:29:32;
+        fixed-address joe.fugue.com;
       }
     }
 
 is equivalent to
 
       host joe {
-	hardware ethernet 08:00:2b:4c:29:32;
-	fixed-address joe.fugue.com;
+        hardware ethernet 08:00:2b:4c:29:32;
+        fixed-address joe.fugue.com;
         option host-name "joe";
       }
 .fi
@@ -2280,7 +2299,7 @@ statement
 .PP
 The \fIvendor-option-space\fR parameter determines from what option
 space vendor options are taken.   The use of this configuration
-parameter is illustrated in the \fIdhcp-options(5)\fR manual page, in
+parameter is illustrated in the \fBdhcp-options(5)\fR manual page, in
 the \fIVENDOR ENCAPSULATED OPTIONS\fR section.
 .RE
 .SH SETTING PARAMETER VALUES USING EXPRESSIONS
