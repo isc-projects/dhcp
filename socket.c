@@ -85,12 +85,12 @@ int if_register_socket (info, interface)
 	   we're being restarted. */
 	flag = 1;
 	if (setsockopt (sock, SOL_SOCKET, SO_REUSEADDR,
-			&flag, sizeof flag) < 0)
+			(char *)&flag, sizeof flag) < 0)
 		error ("Can't set SO_REUSEADDR option on dhcp socket: %m");
 
 	/* Set the BROADCAST option so that we can broadcast DHCP responses. */
 	if (setsockopt (sock, SOL_SOCKET, SO_BROADCAST,
-			&flag, sizeof flag) < 0)
+			(char *)&flag, sizeof flag) < 0)
 		error ("Can't set SO_BROADCAST option on dhcp socket: %m");
 
 	/* Bind the socket to this interface's IP address. */
@@ -137,7 +137,7 @@ size_t send_packet (interface, packet, raw, len, to, hto)
 	struct sockaddr_in *to;
 	struct hardware *hto;
 {
-	return sendto (interface -> wfdesc, raw, len, 0,
+	return sendto (interface -> wfdesc, (char *)raw, len, 0,
 		       (struct sockaddr *)to, sizeof *to);
 }
 #endif /* USE_SOCKET_SEND */
