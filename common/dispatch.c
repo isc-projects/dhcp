@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dispatch.c,v 1.47.2.4 1998/12/20 18:26:22 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dispatch.c,v 1.47.2.5 1998/12/22 22:41:06 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -106,9 +106,7 @@ void discover_interfaces (state)
 	else
 		ir = INTERFACE_REQUESTED;
 
-	/* Cycle through the list of interfaces looking for IP addresses.
-	   Go through twice; once to count the number of addresses, and a
-	   second time to copy them into an array of addresses. */
+	/* Cycle through the list of interfaces looking for IP addresses. */
 	for (i = 0; i < ic.ifc_len;) {
 		struct ifreq *ifp = (struct ifreq *)((caddr_t)ic.ifc_req + i);
 #ifdef HAVE_SA_LEN
@@ -183,69 +181,6 @@ void discover_interfaces (state)
 		if (ifp -> ifr_addr.sa_family == AF_INET) {
 			struct iaddr addr;
 
-#if defined (SIOCGIFHWADDR) && !defined (AF_LINK)
-			struct ifreq ifr;
-			struct sockaddr sa;
-			int b, sk;
-			
-			/* Read the hardware address from this interface. */
-			ifr = *ifp;
-			if (ioctl (sock, SIOCGIFHWADDR, &ifr) < 0)
-				error ("Can't get hardware address for %s: %m",
-				       ifr.ifr_name);
-
-			sa = *(struct sockaddr *)&ifr.ifr_hwaddr;
-					
-			switch (sa.sa_family) {
-#ifdef ARPHRD_LOOPBACK
-			      case ARPHRD_LOOPBACK:
-				/* ignore loopback interface */
-				break;
-#endif
-
-			      case ARPHRD_ETHER:
-				tmp -> hw_address.hlen = 6;
-				tmp -> hw_address.htype = ARPHRD_ETHER;
-				memcpy (tmp -> hw_address.haddr,
-					sa.sa_data, 6);
-				break;
-
-#ifndef ARPHRD_IEEE802
-# define ARPHRD_IEEE802 HTYPE_IEEE802
-#endif
-			      case ARPHRD_IEEE802:
-				tmp -> hw_address.hlen = 6;
-				tmp -> hw_address.htype = ARPHRD_IEEE802;
-				memcpy (tmp -> hw_address.haddr,
-					sa.sa_data, 6);
-				break;
-
-#ifdef ARPHRD_FDDI
-			      case ARPHRD_FDDI:
-				tmp -> hw_address.hlen = 16;
-				tmp -> hw_address.htype = ARPHRD_FDDI;
-				memcpy (tmp -> hw_address.haddr,
-					sa.sa_data, 16);
-
-				break;
-#endif
-
-#ifdef ARPHRD_METRICOM
-			      case ARPHRD_METRICOM:
-				tmp -> hw_address.hlen = 6;
-				tmp -> hw_address.htype = ARPHRD_METRICOM;
-				memcpy (tmp -> hw_address.haddr,
-					sa.sa_data, 6);
-
-				break;
-#endif
-
-			      default:
-				error ("%s: unknown hardware address type %d",
-				       ifr.ifr_name, sa.sa_family);
-			}
-#endif /* defined (SIOCGIFHWADDR) && !defined (AF_LINK) */
-
 			/* Get a pointer to the address... */
 			memcpy (&foo, &ifp -> ifr_addr,
 				sizeof ifp -> ifr_addr);
@@ -317,6 +252,142 @@ void discover_interfaces (state)
 			}
 		}
 	}
+
+#if defined (LINUX_SLASHPROC_DISCOVERY)
+	/* On Linux, interfaces that don't have IP addresses don't show up
+	   in the SIOCGIFCONF syscall.   We got away with this prior to
+	   Linux 2.1 because we would give each interface an IP address of
+	   0.0.0.0 before trying to boot, but that doesn't work after 2.1
+	   because we're using LPF, because we can't configure interfaces
+	   with IP addresses of 0.0.0.0 anymore (grumble).   This only
+	   matters for the DHCP client, of course - the relay agent and
+	   server should only care about interfaces that are configured
+	   with IP addresses anyway. */
+
+	if (state == DISCOVER_UNCONFIGURED) {
+		int proc_dev;
+		char buffer [256];
+		struct ifreq *tif;
+		int skip = 2;
+
+		proc_dev = open (PROCDEV_DEVICE, O_RDONLY);
+		if (proc_dev < 0)
+			error ("%s: %m", PROCDEV_DEVICE);
+
+		while (read (proc_dev, buffer, 256) == 256) {
+			char *name = buffer;
+			char *sep;
+
+			/* Skip the first two blocks, which are apparently
+			   some kind of header. */
+			if (skip) {
+				--skip;
+				continue;
+			}
+
+			/* XXX What if there is no ':'?   Does the device put
+			   a NUL at the end of the name, I hope? XXX */
+			sep = strrchr (buffer, ':');
+			if (sep)
+				*sep = '\0';
+			while (*name == ' ')
+				name++;
+
+			/* See if we've seen an interface that matches
+			   this one. */
+			for (tmp = interfaces; tmp; tmp = tmp -> next)
+				if (!strcmp (tmp -> name, name))
+					break;
+
+			/* If we already found the interface with SIOCGIFCONF,
+			   go on to the next. */
+			if (tmp)
+				continue;
+
+			/* Otherwise, allocate one. */
+			tmp = ((struct interface_info *)
+			       dmalloc (sizeof *tmp, "discover_interfaces"));
+			if (!tmp)
+				error ("Insufficient memory to %s %s",
+				       "record interface", name);
+			memset (tmp, 0, sizeof *tmp);
+			strcpy (tmp -> name, name);
+
+			/* Mock up an ifreq structure. */
+			tif = (struct ifreq *)malloc (sizeof (struct ifreq));
+			if (!tif)
+				error ("no space to remember ifp.");
+			memset (tif, 0, sizeof (struct ifreq));
+			strcpy (tif -> ifr_name, name);
+			tmp -> ifp = tif;
+			tmp -> flags = ir;
+			tmp -> next = interfaces;
+			interfaces = tmp;
+		}
+		close (proc_dev);
+	}
+#endif
+
+	/* Now cycle through all the interfaces we found, looking for
+	   hardware addresses. */
+#if defined (SIOCGIFHWADDR) && !defined (AF_LINK)
+	for (tmp = interfaces; tmp; tmp = tmp -> next) {
+		struct ifreq ifr;
+		struct sockaddr sa;
+		int b, sk;
+		
+		/* Read the hardware address from this interface. */
+		ifr = *ifp;
+		if (ioctl (sock, SIOCGIFHWADDR, &ifr) < 0)
+			continue;
+		
+		sa = *(struct sockaddr *)&ifr.ifr_hwaddr;
+		
+		switch (sa.sa_family) {
+#ifdef ARPHRD_LOOPBACK
+		      case ARPHRD_LOOPBACK:
+			/* ignore loopback interface */
+			break;
+#endif
+
+		      case ARPHRD_ETHER:
+			tmp -> hw_address.hlen = 6;
+			tmp -> hw_address.htype = ARPHRD_ETHER;
+			memcpy (tmp -> hw_address.haddr, sa.sa_data, 6);
+			break;
+
+#ifndef ARPHRD_IEEE802
+# define ARPHRD_IEEE802 HTYPE_IEEE802
+#endif
+		      case ARPHRD_IEEE802:
+			tmp -> hw_address.hlen = 6;
+			tmp -> hw_address.htype = ARPHRD_IEEE802;
+			memcpy (tmp -> hw_address.haddr, sa.sa_data, 6);
+			break;
+
+#ifndef ARPHRD_FDDI
+# define ARPHRD_FDDI HTYPE_FDDI
+#endif
+		      case ARPHRD_FDDI:
+			tmp -> hw_address.hlen = 16;
+			tmp -> hw_address.htype = ARPHRD_FDDI;
+			memcpy (tmp -> hw_address.haddr, sa.sa_data, 16);
+			break;
+
+#ifdef ARPHRD_METRICOM
+		      case ARPHRD_METRICOM:
+			tmp -> hw_address.hlen = 6;
+			tmp -> hw_address.htype = ARPHRD_METRICOM;
+			memcpy (tmp -> hw_address.haddr, sa.sa_data, 6);
+			break;
+#endif
+
+		      default:
+			error ("%s: unknown hardware address type %d",
+			       ifr.ifr_name, sa.sa_family);
+		}
+	}
+#endif /* defined (SIOCGIFHWADDR) && !defined (AF_LINK) */
 
 	/* If we're just trying to get a list of interfaces that we might
 	   be able to configure, we can quit now. */
