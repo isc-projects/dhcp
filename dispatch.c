@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"@(#) Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dispatch.c,v 1.19 1996/08/27 09:48:40 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -70,6 +70,7 @@ void discover_interfaces ()
 	struct shared_network *share;
 	struct sockaddr_in *foo;
 	int ir;
+	char *s;
 #ifdef USE_FALLBACK
 	static struct shared_network fallback_network;
 #endif
@@ -101,6 +102,13 @@ void discover_interfaces ()
 #else
 		i += sizeof *ifp;
 #endif
+
+#ifdef ALIAS_NAMES_PERMUTED
+		if ((s = strrchr (ifp -> ifr_name, ':'))) {
+			*s = 0;
+		}
+#endif
+
 
 		/* See if we've seen an interface that matches this one. */
 		for (tmp = interfaces; tmp; tmp = tmp -> next)
@@ -324,10 +332,11 @@ void dispatch ()
 
 		i = 0;
 		for (l = interfaces; l; l = l -> next) {
-			if (!(fds [i].revents & POLLIN))
-				continue;
-			fds [i].revents = 0;
-			got_one (l);
+			if ((fds [i].revents & POLLIN)) {
+				fds [i].revents = 0;
+				got_one (l);
+			}
+			++i;
 		}
 #ifdef USE_FALLBACK
 		if (fds [i].revents & POLLIN)
@@ -442,7 +451,7 @@ void do_packet (interface, packbuf, len, from_port, from, hfrom)
 			tp.options [DHO_DHCP_MESSAGE_TYPE].data [0];
 	if (tp.packet_type)
 		dhcp (&tp);
-	else
+	else if (tdp.op == BOOTREQUEST)
 		bootp (&tp);
 }
 
@@ -465,5 +474,7 @@ int locate_network (packet)
 		packet -> shared_network =
 			packet -> interface -> shared_network;
 	}
-	return 1;
+	if (packet -> shared_network)
+		return 1;
+	return 0;
 }
