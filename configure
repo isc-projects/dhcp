@@ -68,6 +68,21 @@ if [ \( $sysname = "bsdos" -o $sysname = "netbsd" -o $sysname = "freebsd" \) \
     echo
 fi
 
+if [ \( $sysname = "linux" \) \
+	-a \( ! -f /var/dhcpd/dhcpd.leases \) -a \( -f /etc/dhcpd.leases \) ];
+  then
+    echo
+    echo "                   !!!WARNING!!!"
+    echo
+    echo DHCPD is now storing the DHCP lease database in /var/dhcpd
+    echo instead of /etc.   Before you start using this new version
+    echo of dhcpd, you must move your dhcpd.leases file from /etc
+    echo to /var/dhcpd!
+    echo
+    echo "                   !!!WARNING!!!"
+    echo
+fi
+
 echo
 echo "                          !!!WARNING!!!"
 echo
