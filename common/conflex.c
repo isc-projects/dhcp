@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: conflex.c,v 1.66 2000/01/26 14:55:33 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: conflex.c,v 1.67 2000/02/15 19:40:34 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -453,6 +453,11 @@ static enum dhcp_token intern (atom, dfv)
 		return dfv;
 
 	switch (tolower (atom [0])) {
+	      case '-':
+		if (atom [1] == 0)
+			return MINUS;
+		break;
+
 	      case 'a':
 		if (!strncasecmp (atom + 1, "uth", 3)) {
 			if (!strncasecmp (atom + 3, "uthenticat", 10)) {
@@ -570,8 +575,12 @@ static enum dhcp_token intern (atom, dfv)
 			return DUPLICATES;
 		if (!strcasecmp (atom + 1, "eclines"))
 			return DECLINES;
-		if (!strcasecmp (atom + 1, "efined"))
-			return DEFINED;
+		if (!strncasecmp (atom + 1, "efine", 5)) {
+			if (!strcasecmp (atom + 6, "d"))
+				return DEFINED;
+			if (!atom [6])
+				return DEFINE;
+		}
 		break;
 	      case 'e':
 		if (isascii (atom [1]) && tolower (atom [1]) == 'x') {
@@ -609,6 +618,8 @@ static enum dhcp_token intern (atom, dfv)
 			return FDDI;
 		if (!strcasecmp (atom + 1, "ormerr"))
 			return NS_FORMERR;
+		if (!strcasecmp (atom + 1, "unction"))
+			return FUNCTION;
 		break;
 	      case 'g':
 		if (!strcasecmp (atom + 1, "iaddr"))
@@ -855,6 +866,8 @@ static enum dhcp_token intern (atom, dfv)
 			return TOKEN_SET;
 		break;
 	      case 't':
+		if (!strcasecmp (atom + 1, "sig-key"))
+			return TSIG_KEY;
 		if (!strcasecmp (atom + 1, "imestamp"))
 			return TIMESTAMP;
 		if (!strcasecmp (atom + 1, "imeout"))
