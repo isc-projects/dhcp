@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: icmp.c,v 1.2 1997/03/06 07:27:32 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: icmp.c,v 1.3 1997/03/08 00:22:01 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -146,16 +146,18 @@ void icmp_echoreply (protocol)
 		warn ("icmp_echoreply: %m");
 		return;
 	}
-	if (status < sizeof *icfrom) {
+	if (status < (sizeof (struct ip)) + (sizeof *icfrom)) {
 		warn ("icmp_echoreply: short packet");
 		return;
 	}
 
-	icfrom = (struct icmp *)icbuf;
+	len = status - sizeof (struct ip);
+	icfrom = (struct icmp *)(icbuf + sizeof (struct ip));
 
 	/* Silently discard ICMP packets that aren't echoreplies. */
-	if (icfrom -> icmp_type != ICMP_ECHOREPLY)
+	if (icfrom -> icmp_type != ICMP_ECHOREPLY) {
 		return;
+	}
 
 	/* If we were given a second-stage handler, call it. */
 	if (protocol -> local) {
@@ -163,6 +165,6 @@ void icmp_echoreply (protocol)
 		memcpy (ia.iabuf, &from.sin_addr, sizeof from.sin_addr);
 		ia.len = sizeof from.sin_addr;
 
-		(*handler) (ia, icbuf, status);
+		(*handler) (ia, icbuf, len);
 	}
 }
