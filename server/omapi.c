@@ -50,7 +50,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: omapi.c,v 1.41 2000/11/28 23:27:22 mellon Exp $ Copyright (c) 1999-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: omapi.c,v 1.42 2001/02/12 21:10:10 mellon Exp $ Copyright (c) 1999-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -279,11 +279,6 @@ isc_result_t dhcp_lease_get_value (omapi_object_t *h, omapi_object_t *id,
 		return omapi_make_const_value (value, name,
 					       lease -> uid,
 					       lease -> uid_len, MDL);
-	} else if (!omapi_ds_strcmp (name, "hostname")) {
-		if (lease -> hostname)
-			return omapi_make_string_value
-				(value, name, lease -> hostname, MDL);
-		return ISC_R_NOTFOUND;
 	} else if (!omapi_ds_strcmp (name, "client-hostname")) {
 		if (lease -> client_hostname)
 			return omapi_make_string_value
@@ -353,13 +348,9 @@ isc_result_t dhcp_lease_destroy (omapi_object_t *h, const char *file, int line)
 		lease -> uid = &lease -> uid_buf [0];
 		lease -> uid_len = 0;
 	}
-	if (lease -> hostname) {
-		dfree (lease -> hostname, MDL);
-		lease -> hostname = (char *)0;
-	}
 	if (lease -> client_hostname) {
 		dfree (lease -> client_hostname, MDL);
-		lease -> hostname = (char *)0;
+		lease -> client_hostname = (char *)0;
 	}
 	if (lease -> host)
 		host_dereference (&lease -> host, file, line);
@@ -471,15 +462,6 @@ isc_result_t dhcp_lease_stuff_values (omapi_object_t *c,
 			if (status != ISC_R_SUCCESS)
 				return status;
 		}
-	}
-
-	if (lease -> hostname) {
-		status = omapi_connection_put_name (c, "hostname");
-		if (status != ISC_R_SUCCESS)
-			return status;
-		status = omapi_connection_put_string (c, lease -> hostname);
-		if (status != ISC_R_SUCCESS)
-			return status;
 	}
 
 	if (lease -> client_hostname) {
