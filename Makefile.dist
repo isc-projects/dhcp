@@ -62,6 +62,8 @@ CHMOD = chmod
 
 ## Solaris 2.5 (with gcc)
 ##++sunos5++
+#INSTALL=/usr/ucb/install
+#MANINSTALL=/usr/ucb/install
 #LIBS = -lresolv -lsocket -lnsl -lgen
 #CC=gcc
 #COPTS = -Wall -Wstrict-prototypes -Wno-unused -Wno-implicit -Wno-comment \
