@@ -839,13 +839,16 @@ struct lease *parse_lease_statement (cfile, bc)
 	int token;
 	unsigned char addr [4];
 	int len = sizeof addr;
-	char *name;
+	char *s;
 	unsigned char *uid;
 	int seenmask = 0;
 	int seenbit;
 	char tbuf [32];
 	char ubuf [1024];
 	static struct lease lease;
+
+	/* Zap the lease structure... */
+	memset (&lease, 0, sizeof lease);
 
 	/* Get the address for which the lease has been issued. */
 	parse_numeric_aggregate (cfile, bc, addr, &len, DOT, 10, 8);
@@ -885,15 +888,28 @@ struct lease *parse_lease_statement (cfile, bc)
 			      case UID:
 				seenbit = 8;
 				lease.uid_len = 0;
-				parse_numeric_aggregate (cfile, bc, ubuf,
-							 &lease.uid_len,
-							 ':', 16, 8);
+				token = peek_token (&val, cfile);
+				if (token == STRING) {
+					token = NEXT_TOKEN (&val, cfile);
+					lease.uid_len = strlen (val) + 1;
+					s = val;
+				} else {
+					parse_numeric_aggregate
+						(cfile, bc, ubuf,
+						 &lease.uid_len, ':', 16, 8);
+					s = ubuf;
+					if (lease.uid_len == 0) {
+						parse_warn ("zero-length uid");
+						seen_bit = 0;
+						break;
+					}
+				}
 				lease.uid = (unsigned char *)
 					malloc (lease.uid_len);
 				if (!lease.uid) {
 					error ("No memory for lease uid");
 				}
-				memcpy (lease.uid, ubuf, lease.uid_len);
+				memcpy (lease.uid, s, lease.uid_len);
 				break;
 
 			      case HOST:
