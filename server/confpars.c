@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.85 1999/10/01 03:37:29 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.86 1999/10/07 02:14:09 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1015,7 +1015,8 @@ void parse_host_declaration (cfile, group)
 			}
 			go = ((struct group_object *)
 			      hash_lookup (group_name_hash,
-					   val, strlen (val)));
+					   (unsigned char *)val,
+					   strlen (val)));
 			if (!go) {
 			    parse_warn (cfile, "unknown group %s in host %s",
 					val, host -> name);
@@ -1636,7 +1637,8 @@ void parse_group_declaration (cfile, group)
 			if (group_name_hash) {
 				t = ((struct group_object *)
 				     hash_lookup (group_name_hash,
-						  name, strlen (name)));
+						  (unsigned char *)name,
+						  strlen (name)));
 				if (t) {
 					delete_group (t, 0);
 				}

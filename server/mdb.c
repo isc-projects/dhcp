@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.6 1999/10/05 18:44:27 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.7 1999/10/07 02:14:10 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -409,7 +409,8 @@ isc_result_t delete_group (struct group_object *group, int writep)
 	if (group_name_hash)
 		d = ((struct group_object *)
 		     hash_lookup (group_name_hash,
-				  group -> name, strlen (group -> name)));
+				  (unsigned char *)group -> name,
+				  strlen (group -> name)));
 	else
 		return ISC_R_INVALIDARG;
 	if (!d)
@@ -424,7 +425,8 @@ isc_result_t delete_group (struct group_object *group, int writep)
 	   hash table entry. */
 	if ((group -> flags & GROUP_OBJECT_DYNAMIC) &&
 	    !(group -> flags & GROUP_OBJECT_STATIC)) {
-		delete_hash_entry (group_name_hash, group -> name,
+		delete_hash_entry (group_name_hash,
+				   (unsigned char *)group -> name,
 				   strlen (group -> name));
 			--group -> refcnt;
 	} else {
@@ -455,7 +457,7 @@ isc_result_t supersede_group (struct group_object *group, int writep)
 	if (group_name_hash) {
 		t = ((struct group_object *)
 		     hash_lookup (group_name_hash,
-				  group -> name,
+				  (unsigned char *)group -> name,
 				  strlen (group -> name)));
 		if (t && t != group) {
 			/* If this isn't a dynamic entry, then we need to flag
@@ -474,9 +476,10 @@ isc_result_t supersede_group (struct group_object *group, int writep)
 			if (!(t -> flags & GROUP_OBJECT_DELETED))
 				delete_group (t, 0);
 			else {
-				delete_hash_entry (group_name_hash,
-						   group -> name,
-						   strlen (group -> name));
+				delete_hash_entry
+					(group_name_hash,
+					 (unsigned char *)group -> name,
+					 strlen (group -> name));
 				omapi_object_dereference
 					((omapi_object_t **)&t,
 					 "supersede_group");
@@ -492,7 +495,8 @@ isc_result_t supersede_group (struct group_object *group, int writep)
 	   dynamic groups if appropriate. */
 	if (!t) {
 		add_hash (group_name_hash,
-			  group -> name, strlen (group -> name),
+			  (unsigned char *)group -> name,
+			  strlen (group -> name),
 			  (unsigned char *)group);
 	}
 

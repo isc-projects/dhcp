@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.57 1999/10/06 01:35:44 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.58 1999/10/07 02:14:06 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1338,10 +1338,10 @@ int evaluate_data_expression (result, packet, lease,
 			return 0;
 		}
 		if (data.len == 1 &&
-		    !strncasecmp (data.data, "a", 1)) {
+		    !strncasecmp ((char *)data.data, "a", 1)) {
 			s = lease -> ddns_fwd_name;
 		} else if (data.len == 3 &&
-			   !strncasecmp (data.data, "ptr", 3)) {
+			   !strncasecmp ((char *)data.data, "ptr", 3)) {
 			s = lease -> ddns_rev_name;
 		} else {
 #if defined (DEBUG_EXPRESSIONS)

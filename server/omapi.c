@@ -29,7 +29,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: omapi.c,v 1.13 1999/10/06 19:17:44 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: omapi.c,v 1.14 1999/10/07 02:14:10 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -724,10 +724,11 @@ isc_result_t dhcp_group_destroy (omapi_object_t *h, char *name)
 		if (group_name_hash) {
 			t = ((struct group_object *)
 			     hash_lookup (group_name_hash,
-					  group -> name,
+					  (unsigned char *)group -> name,
 					  strlen (group -> name)));
 			if (t) {
 				delete_hash_entry (group_name_hash,
+						   (unsigned char *)
 						   group -> name,
 						   strlen (group -> name));
 				--group -> refcnt;
