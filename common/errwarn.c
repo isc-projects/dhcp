@@ -29,7 +29,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: errwarn.c,v 1.18 1999/03/29 18:51:19 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: errwarn.c,v 1.19 1999/10/01 03:16:24 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -39,8 +39,6 @@ static void do_percentm PROTO ((char *obuf, char *ibuf));
 
 static char mbuf [1024];
 static char fbuf [1024];
-
-int warnings_occurred;
 
 /* Log an error message, then exit... */
 
@@ -197,7 +195,9 @@ static void do_percentm (obuf, ibuf)
 }
 
 
-int parse_warn (ANSI_DECL (char *) fmt, VA_DOTDOTDOT)
+int parse_warn (ANSI_DECL (struct parse *)cfile,
+		ANSI_DECL (char *) fmt, VA_DOTDOTDOT)
+	KandR (struct parse *cfile;)
 	KandR (char *fmt;)
 	va_dcl
 {
@@ -209,10 +209,10 @@ int parse_warn (ANSI_DECL (char *) fmt, VA_DOTDOTDOT)
 	do_percentm (mbuf, fmt);
 #ifndef NO_SNPRINTF
 	snprintf (fbuf, sizeof fbuf, "%s line %d: %s",
-		  tlname, lexline, mbuf);
+		  cfile -> tlname, cfile -> lexline, mbuf);
 #else
 	sprintf (fbuf, "%s line %d: %s",
-		 tlname, lexline, mbuf);
+		 cfile -> tlname, cfile -> lexline, mbuf);
 #endif
 	
 	VA_start (list, fmt);
@@ -220,10 +220,11 @@ int parse_warn (ANSI_DECL (char *) fmt, VA_DOTDOTDOT)
 	va_end (list);
 
 	lix = 0;
-	for (i = 0; token_line [i] && i < (lexchar - 1); i++) {
+	for (i = 0;
+	     cfile -> token_line [i] && i < (cfile -> lexchar - 1); i++) {
 		if (lix < (sizeof lexbuf) - 1)
 			lexbuf [lix++] = ' ';
-		if (token_line [i] == '\t') {
+		if (cfile -> token_line [i] == '\t') {
 			for (lix;
 			     lix < (sizeof lexbuf) - 1 && (lix & 7); lix++)
 				lexbuf [lix] = ' ';
@@ -233,22 +234,22 @@ int parse_warn (ANSI_DECL (char *) fmt, VA_DOTDOTDOT)
 
 #ifndef DEBUG
 	syslog (log_priority | LOG_ERR, mbuf);
-	syslog (log_priority | LOG_ERR, token_line);
-	if (lexchar < 81)
+	syslog (log_priority | LOG_ERR, cfile -> token_line);
+	if (cfile -> lexchar < 81)
 		syslog (log_priority | LOG_ERR, "%s^", lexbuf);
 #endif
 
 	if (log_perror) {
 		write (2, mbuf, strlen (mbuf));
 		write (2, "\n", 1);
-		write (2, token_line, strlen (token_line));
+		write (2, cfile -> token_line, strlen (cfile -> token_line));
 		write (2, "\n", 1);
-		if (lexchar < 81)
+		if (cfile -> lexchar < 81)
 			write (2, lexbuf, lix);
 		write (2, "^\n", 2);
 	}
 
-	warnings_occurred = 1;
+	cfile -> warnings_occurred = 1;
 
 	return 0;
 }
