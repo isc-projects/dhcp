@@ -124,6 +124,9 @@
 #define HOSTNAME	328
 #define CLIENT_HOSTNAME	329
 #define REJECT		330
+#define USE_LEASE_ADDR_FOR_DEFAULT_ROUTE 331
+#define MIN_LEASE_TIME	332
+#define MIN_SECS	333
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\
 				 (x) != STRING &&	\
