@@ -15,6 +15,7 @@ the ISC DHCP Distribution.
 	 3.1	 UNPACKING IT
 	 3.2	 CONFIGURING IT
 	  3.2.1	  DYNAMIC DNS UPDATES
+	  3.2.2   LOCALLY DEFINED OPTIONS
 	 3.3	 BUILDING IT
 	4	INSTALLING THE DHCP DISTRIBUTION
 	5	USING THE DHCP DISTRIBUTION
@@ -168,6 +169,16 @@ this release.   There are no build dependencies with any BIND version
 There is documentation for the DDNS support in the dhcpd.conf manual
 page - see the beginning of this document for information on finding
 manual pages.
+
+		       LOCALLY DEFINED OPTIONS
+
+In previous versions of the DHCP server there was a mechanism whereby
+options that were not known by the server could be configured using
+a name made up of the option code number and an identifier:
+"option-nnn"   This is no longer supported, because it is not future-
+proof.   Instead, if you want to use an option that the server doesn't
+know about, you must explicitly define it using the method described
+in the dhcp-options man page under the DEFINING NEW OPTIONS heading.
 
 			     BUILDING IT
 
