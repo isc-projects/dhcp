@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.14 1999/02/25 23:30:35 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.15 1999/03/16 00:42:03 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -902,6 +902,7 @@ struct executable_statement *parse_executable_statement (cfile, lose)
 
 	switch (peek_token (&val, cfile)) {
 	      case IF:
+		next_token (&val, cfile);
 		stmt = parse_if_statement (cfile, lose);
 		return stmt;
 	      case ADD:
@@ -1020,7 +1021,6 @@ struct executable_statement *parse_if_statement (cfile, lose)
 	struct expression *if_condition;
 	struct executable_statement *true, *false;
 
-	token = next_token (&val, cfile);
 	if_condition = (struct expression *)0;
 	if (!parse_boolean_expression (&if_condition, cfile, lose)) {
 		if (!*lose)
