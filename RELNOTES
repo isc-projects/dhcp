@@ -1,6 +1,6 @@
 	    Internet Software Consortium DHCP Distribution
-		    Version 3, Release Candidate 7
-			    May 17, 2001
+		    Version 3, Release Candidate 8
+			     June 4, 2001
 
 			    Release Notes
 
@@ -55,6 +55,66 @@ Measurement Systems, Igor Sharfmesser at Kazakh Telecom, and Brian
 Murrell at BC Tel Advanced Communications.  I'd like to express my
 thanks to all of these good people here, both for working on the code
 and for prodding me into improving it.
+
+		Changes since 3.0 Release Candidate 7
+
+- Fix a bug in failover where we weren't sending updates after a
+  transition from communications-interrupted to normal.
+
+- Handle expired/released/reset -> free transition according to the
+  protocol specification (this works - the other way not only wasn't
+  conformant, but also didn't work).
+
+- Add a control object in both client and server that allows either
+  daemon to be shut down cleanly.
+
+- When writing a lease, if we run out of disk space, shut down the
+  output file and insist on writing a new one before proceeding.
+
+- In the server, if the OMAPI listener port is occupied, keep trying
+  to get it, rather than simply giving up and exiting.
+
+- Support fetching variables from leases and also updating and adding
+  variables to leases via OMAPI.
+
+- If two failover peers have wildly different clocks, refuse to start
+  doing failover.
+
+- Fix a bug in the DNS update code that could cause core dumps when
+  running on alpha processors.
+
+- Fixed a bug in ddns updates for static lease entries, thanks to a
+  patch from Andrey M Linkevitch.
+
+- Add support for Darwin/MacOS X
+
+- Install omshell (including new documentation).
+
+- Support DNS updates in the client (this is a very obscure feature
+  that most DHCP client users probably will not be able to use).
+
+- Somewhat cleaner status logging in the client.
+
+- Make OMAPI key naming syntax compatible with the way keys are
+  actually named (key names are domain names).
+
+- Fix a bug in the lease file writer.
+
+- Install DHCP ISC headers in a different place than BIND 9 ISC
+  headers, to avoid causing trouble in BIND 9 builds.
+
+- Don't send updates for attributes on an object when the attributes
+  haven't changed.   Support deleting attributes on remote objects.
+
+- Fix a number of bugs in omshell, and add the unset and refresh
+  statements.
+
+- Handle disconnects in OMAPI a little bit more intelligently (so that
+  the caller gets ECONNRESET instead of EINVAL).
+
+- Fix a bunch of bugs in the handling of clients that have existing
+  leases when the try to renew their leases while failover is
+  operating.
 
 		Changes since 3.0 Release Candidate 6
 
