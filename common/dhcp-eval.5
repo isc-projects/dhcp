@@ -164,6 +164,13 @@ The \fBknown\fR expression returns true if the client whose request is
 currently being processed is known - that is, if there's a host
 declaration for it.
 .RE
+.B static
+.PP
+.RS 0.25i
+The \fBstatic\fR expression returns true if the lease assigned to the
+client whose request is currently being processed is derived from a static
+address assignment.
+.RE
 .SH DATA EXPRESSIONS
 Several of the boolean expressions above depend on the results of
 evaluating data expressions.   A list of these expressions is provided

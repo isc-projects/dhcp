@@ -193,6 +193,7 @@ enum dhcp_token {
 	COMMIT = 411,
 	DNS_UPDATE = 412,
 	LEASE_TIME = 413,
+	STATIC = 414,
 };
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\

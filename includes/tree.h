@@ -91,6 +91,7 @@ enum expr_op {
 	expr_pick_first_value,
  	expr_lease_time,
  	expr_dns_update,
+	expr_static,
 };
 
 struct expression {

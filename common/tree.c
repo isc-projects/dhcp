@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.45 1999/07/31 23:24:32 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.46 1999/08/01 14:26:48 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -530,12 +530,29 @@ int evaluate_boolean_expression (result, packet, lease, in_options,
 		*result = packet -> known;
 		return 1;
 
+	      case expr_static:
+		if (!lease || !(lease -> flags & STATIC_LEASE)) {
+#if defined (DEBUG_EXPRESSIONS)
+			log_debug ("bool: static = false");
+#endif
+			*result = 0;
+			return 1;
+		}
+#if defined (DEBUG_EXPRESSIONS)
+		log_debug ("bool: static = true");
+#endif
+		*result = 1;
+		return 1;
+
 	      case expr_dns_update:
 #if !defined (NSUPDATE)
 		return 0;
 #else
 		/* we only want to do this on a DHCPREQUEST */
-		if (packet -> packet_type != DHCPREQUEST)
+		if (!packet || packet -> packet_type != DHCPREQUEST)
+			return 0;
+		/* no update for static leases */
+		if (lease && (lease -> flags & STATIC_LEASE))
 			return 0;
 		memset (&rrtype, 0, sizeof expr1);
 		s0 = evaluate_data_expression (&rrtype, packet, lease,
@@ -1248,6 +1265,7 @@ int evaluate_data_expression (result, packet, lease,
 	      case expr_or:
 	      case expr_not:
 	      case expr_match:
+	      case expr_static:
 	      case expr_known:
 		log_error ("Boolean opcode in evaluate_data_expression: %d",
 		      expr -> op);
@@ -1286,6 +1304,7 @@ int evaluate_numeric_expression (result, packet, lease,
 	      case expr_or:
 	      case expr_not:
 	      case expr_match:
+	      case expr_static:
 	      case expr_known:
 		log_error ("Boolean opcode in evaluate_numeric_expression: %d",
 		      expr -> op);
@@ -1673,7 +1692,8 @@ int is_boolean_expression (expr)
 		expr -> op == expr_or ||
 		expr -> op == expr_dns_update ||
 		expr -> op == expr_not ||
-		expr -> op == expr_known);
+		expr -> op == expr_known ||
+		expr -> op == expr_static);
 }
 
 int is_data_expression (expr)
@@ -1717,6 +1737,7 @@ static int op_val (op)
 	switch (op) {
 	      case expr_none:
 	      case expr_match:
+	      case expr_static:
 	      case expr_check:
 	      case expr_substring:
 	      case expr_suffix:
@@ -1773,6 +1794,7 @@ enum expression_context op_context (op)
 /* XXX Why aren't these specific? */
 	      case expr_none:
 	      case expr_match:
+	      case expr_static:
 	      case expr_check:
 	      case expr_substring:
 	      case expr_suffix:
