@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dns.c,v 1.35.2.3 2001/06/04 18:56:13 mellon Exp $ Copyright (c) 2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dns.c,v 1.35.2.4 2001/06/08 23:09:32 mellon Exp $ Copyright (c) 2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -151,7 +151,9 @@ isc_result_t find_tsig_key (ns_tsig_key **key, const char *zname,
 	     strlen (zone -> key -> name) > NS_MAXDNAME) ||
 	    (!zone -> key -> algorithm ||
 	     strlen (zone -> key -> algorithm) > NS_MAXDNAME) ||
-	    (!zone -> key)) {
+	    (!zone -> key) ||
+	    (!zone -> key -> key) ||
+	    (zone -> key -> key -> len == 0)) {
 		return ISC_R_INVALIDKEY;
 	}
 	tkey = dmalloc (sizeof *tkey, MDL);
