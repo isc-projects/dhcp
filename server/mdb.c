@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.53 2001/02/15 21:34:07 neild Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.54 2001/03/14 15:45:41 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -933,7 +933,7 @@ int supersede_lease (comp, lease, commit, propogate, pimmediate)
 	}
 	
 	/* Record the lease in the uid hash if necessary. */
-	if (enter_uid && lease -> uid) {
+	if (enter_uid && comp -> uid) {
 		uid_hash_add (comp);
 	}
 	
