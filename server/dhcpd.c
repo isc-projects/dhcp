@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.71.2.3 1999/10/27 20:45:19 mellon Exp $ Copyright 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.71.2.4 1999/12/22 02:59:04 mellon Exp $ Copyright 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.";
 #endif
 
   static char copyright[] =
@@ -304,6 +304,12 @@ int main (argc, argv, envp)
 
 	/* Set up the bootp packet handler... */
 	bootp_packet_handler = do_packet;
+
+#if defined (DEBUG_MEMORY_LEAKAGE)
+	dmalloc_cutoff_generation = dmalloc_generation;
+	dmalloc_longterm = dmalloc_outstanding;
+	dmalloc_outstanding = 0;
+#endif
 
 	/* Receive packets and dispatch them... */
 	dispatch ();
