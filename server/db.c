@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: db.c,v 1.35 1999/10/08 22:29:52 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: db.c,v 1.36 1999/10/28 13:02:24 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -62,7 +62,7 @@ int write_lease (lease)
 			 t -> tm_mon + 1, t -> tm_mday,
 			 t -> tm_hour, t -> tm_min, t -> tm_sec);
 	} else
-		strcpy (tbuf, "infinite");
+		strcpy (tbuf, "never;");
 	errno = 0;
 	fprintf (db_file, "\tstarts %s\n", tbuf);
 	if (errno) {
@@ -76,7 +76,7 @@ int write_lease (lease)
 			 t -> tm_mon + 1, t -> tm_mday,
 			 t -> tm_hour, t -> tm_min, t -> tm_sec);
 	} else
-		strcpy (tbuf, "infinite");
+		strcpy (tbuf, "never;");
 	errno = 0;
 	fprintf (db_file, "\tends %s", tbuf);
 	if (errno) {
