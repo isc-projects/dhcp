@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bootp.c,v 1.56 1999/10/20 16:47:04 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bootp.c,v 1.57 1999/10/21 02:38:06 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -46,6 +46,7 @@ void bootp (packet)
 	struct data_string d1;
 	struct option_cache *oc;
 	char msgbuf [1024];
+	int ignorep;
 
 	if (packet -> raw -> op != BOOTREQUEST)
 		return;
@@ -135,9 +136,10 @@ void bootp (packet)
 	
 	/* Drop the request if it's not allowed for this client. */
 	if ((oc = lookup_option (&server_universe, options, SV_ALLOW_BOOTP)) &&
-	    !evaluate_boolean_option_cache (packet, lease,
+	    !evaluate_boolean_option_cache (&ignorep, packet, lease,
 					    packet -> options, options, oc)) {
-		log_info ("%s: bootp disallowed", msgbuf);
+		if (!ignorep)
+			log_info ("%s: bootp disallowed", msgbuf);
 		option_state_dereference (&options, "bootrequest");
 		static_lease_dereference (lease, "bootrequest");
 		return;
@@ -145,9 +147,10 @@ void bootp (packet)
 
 	if ((oc = lookup_option (&server_universe,
 				 options, SV_ALLOW_BOOTING)) &&
-	    !evaluate_boolean_option_cache (packet, lease,
+	    !evaluate_boolean_option_cache (&ignorep, packet, lease,
 					    packet -> options, options, oc)) {
-		log_info ("%s: booting disallowed", msgbuf);
+		if (!ignorep)
+			log_info ("%s: booting disallowed", msgbuf);
 		option_state_dereference (&options, "bootrequest");
 		static_lease_dereference (lease, "bootrequest");
 		return;
@@ -162,7 +165,7 @@ void bootp (packet)
 	   just copy the input options to the output. */
 	if (!packet -> options_valid &&
 	    !(evaluate_boolean_option_cache
-	      (packet, lease, packet -> options, options,
+	      (&ignorep, packet, lease, packet -> options, options,
 	       lookup_option (&server_universe, options,
 			      SV_ALWAYS_REPLY_RFC1048)))) {
 		memcpy (outgoing.raw -> options,
@@ -218,7 +221,7 @@ void bootp (packet)
 	   the broadcast bit in the bootp flags field. */
 	if ((oc = lookup_option (&server_universe,
 				options, SV_ALWAYS_BROADCAST)) &&
-	    evaluate_boolean_option_cache (packet, lease,
+	    evaluate_boolean_option_cache (&ignorep, packet, lease,
 					   packet -> options, options, oc))
 		raw.flags |= htons (BOOTP_BROADCAST);
 
