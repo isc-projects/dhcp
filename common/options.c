@@ -94,8 +94,6 @@ void parse_option_buffer (packet, buffer, length)
 	int len;
 	int code;
 
-printf ("parse_option_buffer (%x, %x, %d)\n",
-(unsigned long)packet, (unsigned long)buffer, length);
 	for (s = buffer; *s != DHO_END && s < end; ) {
 		code = s [0];
 		/* Pad options don't have a length - just skip them. */
@@ -126,8 +124,6 @@ printf ("parse_option_buffer (%x, %x, %d)\n",
 			t [len] = 0;
 			packet -> options [code].len = len;
 			packet -> options [code].data = t;
-printf ("%s=%s\n", dhcp_options [code].name,
-pretty_print_option (code, t, len));
 		} else {
 			/* If it's a repeat, concatenate it to whatever
 			   we last saw.   This is really only required

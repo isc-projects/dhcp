@@ -64,7 +64,11 @@
 #define LEASE		271
 #define RANGE		272
 #define PACKET		273
-#define LAST_TOKEN	PACKET
+#define CIADDR		274
+#define YIADDR		275
+#define SIADDR		276
+#define GIADDR		277
+#define LAST_TOKEN	GIADDR
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\
 				 (x) <= LAST_TOKEN &&	\

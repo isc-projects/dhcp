@@ -274,6 +274,8 @@ static int intern (atom, dfv)
 	      case 'c':
 		if (!strcasecmp (atom + 1, "lass"))
 			return CLASS;
+		if (!strcasecmp (atom + 1, "iaddr"))
+			return CIADDR;
 		break;
 	      case 'e':
 		if (!strcasecmp (atom + 1, "thernet"))
@@ -286,6 +288,10 @@ static int intern (atom, dfv)
 			return FILENAME;
 		if (!strcasecmp (atom + 1, "ixed-address"))
 			return FIXED_ADDR;
+		break;
+	      case 'g':
+		if (!strcasecmp (atom + 1, "iaddr"))
+			return GIADDR;
 		break;
 	      case 'h':
 		if (!strcasecmp (atom + 1, "ost"))
@@ -312,6 +318,8 @@ static int intern (atom, dfv)
 	      case 's':
 		if (!strcasecmp (atom + 1, "tarts"))
 			return STARTS;
+		if (!strcasecmp (atom + 1, "iaddr"))
+			return SIADDR;
 		break;
 	      case 't':
 		if (!strcasecmp (atom + 1, "timestamp"))
@@ -320,6 +328,10 @@ static int intern (atom, dfv)
 	      case 'u':
 		if (!strcasecmp (atom + 1, "id"))
 			return UID;
+		break;
+	      case 'y':
+		if (!strcasecmp (atom + 1, "iaddr"))
+			return YIADDR;
 		break;
 	}
 	return dfv;

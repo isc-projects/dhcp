@@ -48,7 +48,7 @@ static char copyright[] =
 #include "dhcpd.h"
 
 static struct host_decl *hosts;
-static struct hash_table *subnet_hash;
+static struct subnet *subnets;
 static struct hash_table *lease_uid_hash;
 static struct hash_table *lease_ip_addr_hash;
 static struct hash_table *lease_hw_addr_hash;
@@ -98,12 +98,10 @@ void new_address_range (low, high, netmask)
 	struct lease *address_range, *lp, *plp;
 	struct subnet *subnet;
 	struct iaddr net;
-	int i, max;
+	int min, max, i;
 	char lowbuf [16], highbuf [16], netbuf [16];
 
 	/* Initialize the hash table if it hasn't been done yet. */
-	if (!subnet_hash)
-		subnet_hash = new_hash ();
 	if (!lease_uid_hash)
 		lease_uid_hash = new_hash ();
 	if (!lease_ip_addr_hash)
@@ -130,32 +128,40 @@ void new_address_range (low, high, netmask)
 		subnet -> net = net;
 		subnet -> netmask = netmask;
 		subnet -> leases = (struct lease *)0;
+		subnet -> last_lease = (struct lease *)0;
+		subnet -> next = (struct subnet *)0;
+		subnet -> default_lease_time = default_lease_time;
+		subnet -> max_lease_time = max_lease_time;
 		enter_subnet (subnet);
 	}
 
 	/* Get the high and low host addresses... */
 	max = host_addr (high, netmask);
-	i = host_addr (low, netmask);
+	min = host_addr (low, netmask);
 
 	/* Allow range to be specified high-to-low as well as low-to-high. */
-	if (i > max) {
-		max = i;
-		i = host_addr (high, netmask);
+	if (min > max) {
+		max = min;
+		min = host_addr (high, netmask);
 	}
 
 	/* Get a lease structure for each address in the range. */
-	address_range = new_leases (max - i + 1, "new_address_range");
+	address_range = new_leases (max - min + 1, "new_address_range");
 	if (!address_range) {
 		strcpy (lowbuf, piaddr (low));
 		strcpy (highbuf, piaddr (high));
 		error ("No memory for address range %s-%s.", lowbuf, highbuf);
 	}
-	memset (address_range, 0, (sizeof *address_range) * (max - i + 1));
+	memset (address_range, 0, (sizeof *address_range) * (max - min + 1));
+
+	/* Fill in the last lease if it hasn't been already... */
+	if (!subnet -> last_lease)
+		subnet -> last_lease = &address_range [0];
 
 	/* Fill out the lease structures with some minimal information. */
-	for (; i <= max; i++) {
+	for (i = 0; i < max - min + 1; i++) {
 		address_range [i].ip_addr =
-			ip_addr (subnet -> net, subnet -> netmask, i);
+			ip_addr (subnet -> net, subnet -> netmask, i + min);
 		address_range [i].starts =
 			address_range [i].timestamp = MIN_TIME;
 		address_range [i].ends = MIN_TIME;
@@ -200,13 +206,16 @@ void new_address_range (low, high, netmask)
 	}
 }
 
-struct subnet *find_subnet (subnet)
-	struct iaddr subnet;
+struct subnet *find_subnet (addr)
+	struct iaddr addr;
 {
 	struct subnet *rv;
 
-	return (struct subnet *)hash_lookup (subnet_hash,
-					     (char *)subnet.iabuf, subnet.len);
+	for (rv = subnets; rv; rv = rv -> next) {
+		if (addr_eq (subnet_number (addr, rv -> netmask), rv -> net))
+			return rv;
+	}
+	return (struct subnet *)0;
 }
 
 /* Enter a new subnet into the subnet hash. */
@@ -214,8 +223,9 @@ struct subnet *find_subnet (subnet)
 void enter_subnet (subnet)
 	struct subnet *subnet;
 {
-	add_hash (subnet_hash, (char *)subnet -> net.iabuf,
-		  subnet -> net.len, (unsigned char *)subnet);
+	/* XXX Sort the nets into a balanced tree to make searching quicker. */
+	subnet -> next = subnets;
+	subnets = subnet;
 }
 	
 /* Enter a lease into the system.   This is called by the parser each
@@ -259,6 +269,11 @@ void supersede_lease (comp, lease)
 	struct subnet *parent;
 	struct lease *lp;
 
+printf ("Supersede_lease:\n");
+print_lease (comp);
+print_lease (lease);
+printf ("\n");
+
 	/* If the existing lease hasn't expired and has a different
 	   unique identifier or, if it doesn't have a unique
 	   identifier, a different hardware address, then the two
@@ -290,7 +305,9 @@ void supersede_lease (comp, lease)
 				enter_uid = 1;
 			}
 			free (comp -> uid);
-		}
+		} else
+			enter_uid = 1;
+
 		if (comp -> hardware_addr.htype &&
 		    ((comp -> hardware_addr.hlen !=
 		      lease -> hardware_addr.hlen) ||
@@ -303,7 +320,8 @@ void supersede_lease (comp, lease)
 					   comp -> hardware_addr.haddr,
 					   comp -> hardware_addr.hlen);
 			enter_hwaddr = 1;
-		}
+		} else if (!comp -> hardware_addr.htype)
+			enter_hwaddr = 1;
 
 		/* Copy the data files, but not the linkages. */
 		comp -> starts = lease -> starts;
@@ -317,16 +335,16 @@ void supersede_lease (comp, lease)
 
 		/* Record the lease in the uid hash if necessary. */
 		if (enter_uid && lease -> uid) {
-			add_hash (lease_uid_hash, lease -> uid,
-				  lease -> uid_len, (unsigned char *)lease);
+			add_hash (lease_uid_hash, comp -> uid,
+				  comp -> uid_len, (unsigned char *)comp);
 		}
 
 		/* Record it in the hardware address hash if necessary. */
 		if (enter_hwaddr && lease -> hardware_addr.htype) {
 			add_hash (lease_hw_addr_hash,
-				  lease -> hardware_addr.haddr,
-				  lease -> hardware_addr.hlen,
-				  (unsigned char *)lease);
+				  comp -> hardware_addr.haddr,
+				  comp -> hardware_addr.hlen,
+				  (unsigned char *)comp);
 		}
 
 		/* Remove the lease from its current place in the list. */
@@ -337,6 +355,9 @@ void supersede_lease (comp, lease)
 		}
 		if (comp -> next) {
 			comp -> next -> prev = comp -> prev;
+		}
+		if (comp -> contain -> last_lease == comp) {
+			comp -> contain -> last_lease = comp -> prev;
 		}
 
 		/* Find the last insertion point... */
@@ -351,18 +372,20 @@ void supersede_lease (comp, lease)
 			/* Nothing on the list yet?    Just make comp the
 			   head of the list. */
 			comp -> contain -> leases = comp;
-		} else if (lp -> ends <= comp -> ends) {
+			comp -> contain -> last_lease = comp;
+		} else if (lp -> ends > comp -> ends) {
 			/* Skip down the list until we run out of list
 			   or find a place for comp. */
-			while (lp -> next && lp -> ends < comp -> ends) {
+			while (lp -> next && lp -> ends > comp -> ends) {
 				lp = lp -> next;
 			}
-			if (lp -> ends < comp -> ends) {
+			if (lp -> ends > comp -> ends) {
 				/* If we ran out of list, put comp
 				   at the end. */
 				lp -> next = comp;
 				comp -> prev = lp;
 				comp -> next = (struct lease *)0;
+				comp -> contain -> last_lease = comp;
 			} else {
 				/* If we didn't, put it between lp and
 				   the previous item on the list. */
@@ -372,12 +395,12 @@ void supersede_lease (comp, lease)
 				lp -> prev = comp;
 			}
 		} else {
-			/* Skip ip the list until we run out of list
+			/* Skip up the list until we run out of list
 			   or find a place for comp. */
-			while (lp -> prev && lp -> ends > comp -> ends) {
+			while (lp -> prev && lp -> ends < comp -> ends) {
 				lp = lp -> prev;
 			}
-			if (lp -> ends > comp -> ends) {
+			if (lp -> ends < comp -> ends) {
 				/* If we ran out of list, put comp
 				   at the beginning. */
 				lp -> prev = comp;
@@ -395,6 +418,18 @@ void supersede_lease (comp, lease)
 		}
 		comp -> contain -> insertion_point = comp;
 	}
+}
+
+/* Release the specified lease and re-hash it as appropriate. */
+
+void release_lease (lease)
+	struct lease *lease;
+{
+	struct lease lt;
+
+	lease -> ends = 0;
+	lt = *lease;
+	supersede_lease (lease, &lt);
 }
 
 /* Locate the lease associated with a given IP address... */
@@ -417,3 +452,29 @@ struct lease *find_lease_by_uid (uid, len)
 	return lease;
 }
 
+struct lease *find_lease_by_hw_addr (hwaddr, hwlen)
+	unsigned char *hwaddr;
+	int hwlen;
+{
+	struct lease *lease = (struct lease *)hash_lookup (lease_hw_addr_hash,
+							   hwaddr, hwlen);
+	return lease;
+}
+
+void dump_subnets ()
+{
+	struct lease *l;
+	struct subnet *s;
+	int i;
+
+	for (s = subnets; s; s = s -> next) {
+		printf ("Subnet %s", piaddr (s -> net));
+		printf (" netmask %s\n",
+			piaddr (s -> netmask));
+		for (l = s -> leases; l; l = l -> next) {
+			print_lease (l);
+		}
+		printf ("Last Lease:\n");
+		print_lease (s -> last_lease);
+	}
+}

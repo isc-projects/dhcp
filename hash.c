@@ -103,6 +103,7 @@ void add_hash (table, name, len, pointer)
 	bp -> name = name;
 	bp -> value = pointer;
 	bp -> next = table -> buckets [hashno];
+	bp -> len = len;
 	table -> buckets [hashno] = bp;
 }
 
@@ -140,10 +141,11 @@ unsigned char *hash_lookup (table, name, len)
 	struct hash_bucket *bp;
 
 	if (len) {
-		for (bp = table -> buckets [hashno]; bp; bp = bp -> next)
+		for (bp = table -> buckets [hashno]; bp; bp = bp -> next) {
 			if (len == bp -> len
 			    && !memcmp (bp -> name, name, len))
 				return bp -> value;
+		}
 	} else {
 		for (bp = table -> buckets [hashno]; bp; bp = bp -> next)
 			if (!strcmp (bp -> name, name))

@@ -53,6 +53,7 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <ctype.h>
+#include <time.h>
 
 #include "dhcp.h"
 #include "cdefs.h"
@@ -70,6 +71,7 @@ struct packet {
 	int client_port;
 	struct iaddr client_addr;
 	int client_sock;
+	struct subnet *subnet;
 	struct {
 		int len;
 		unsigned char *data;
@@ -91,6 +93,10 @@ struct host_decl {
 	char *filename;
 	char *server_name;	
 	struct tree_cache *fixed_addr;
+	struct tree_cache *ciaddr;
+	struct tree_cache *yiaddr;
+	struct tree_cache *siaddr;
+	struct tree_cache *giaddr;
 	struct tree_cache *options [256];
 };
 
@@ -106,13 +112,18 @@ struct lease {
 	struct subnet *contain;
 	struct hardware hardware_addr;
 	int state;
+	int xid;
 };
 
 struct subnet {
+	struct subnet *next;
 	struct iaddr net;
 	struct iaddr netmask;
+	TIME default_lease_time;
+	TIME max_lease_time;
 	struct lease *leases;
 	struct lease *insertion_point;
+	struct lease *last_lease;
 };
 
 /* Bitmask of dhcp option codes. */
@@ -162,6 +173,8 @@ int parse_warn PROTO ((char *, ...));
 
 /* dhcpd.c */
 TIME cur_time;
+TIME default_lease_time;
+TIME max_lease_time;
 extern u_int32_t *server_addrlist;
 extern int server_addrcount;
 extern u_int16_t server_port;
@@ -225,8 +238,11 @@ extern struct subnet *find_subnet (struct iaddr);
 void enter_subnet (struct subnet *);
 void enter_lease PROTO ((struct lease *));
 void supersede_lease PROTO ((struct lease *, struct lease *));
+void release_lease PROTO ((struct lease *));
 struct lease *find_lease_by_uid PROTO ((unsigned char *, int));
+struct lease *find_lease_by_hw_addr PROTO ((unsigned char *, int));
 struct lease *find_lease_by_ip_addr PROTO ((struct iaddr));
+void dump_subnets PROTO ((void));
 
 /* alloc.c */
 VOIDPTR dmalloc PROTO ((int, char *));
@@ -251,6 +267,7 @@ void free_tree PROTO ((struct tree *, char *));
 
 /* print.c */
 char *print_hw_addr PROTO ((int, int, unsigned char *));
+void print_lease PROTO ((struct lease *));
 
 /* socket.c */
 u_int32_t *get_interface_list PROTO ((int *));

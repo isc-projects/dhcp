@@ -184,6 +184,9 @@ void dispatch ()
 		/* Wait for a packet or a timeout... XXX */
 		count = select (max + 1, &r, &w, &x, (struct timeval *)0);
 
+		/* Get the current time... */
+		GET_TIME (&cur_time);
+
 		/* Not likely to be transitory... */
 		if (count < 0)
 			error ("select: %m");

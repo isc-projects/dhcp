@@ -234,6 +234,22 @@ void parse_host_decl (cfile, bc, decl)
 	      case OPTION:
 		parse_option_decl (cfile, bc, decl);
 		break;
+	      case CIADDR:
+		decl -> ciaddr =
+			tree_cache (parse_ip_addr_or_hostname (cfile, bc, 0));
+		break;
+	      case YIADDR:
+		decl -> yiaddr =
+			tree_cache (parse_ip_addr_or_hostname (cfile, bc, 0));
+		break;
+	      case SIADDR:
+		decl -> siaddr =
+			tree_cache (parse_ip_addr_or_hostname (cfile, bc, 0));
+		break;
+	      case GIADDR:
+		decl -> giaddr =
+			tree_cache (parse_ip_addr_or_hostname (cfile, bc, 0));
+		break;
 	      default:
 		parse_warn ("expecting a dhcp option declaration.");
 		skip_to_semi (cfile);

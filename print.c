@@ -55,13 +55,46 @@ char *print_hw_addr (htype, hlen, data)
 	char *s;
 	int i;
 
-	s = habuf;
-	for (i = 0; i < hlen; i++) {
-		sprintf (s, "%x", data [i]);
-		s += strlen (s);
-		*s++ = ':';
+	if (htype == 0 || hlen == 0) {
+		strcpy (habuf, "<null>");
+	} else {
+		s = habuf;
+		for (i = 0; i < hlen; i++) {
+			sprintf (s, "%x", data [i]);
+			s += strlen (s);
+			*s++ = ':';
+		}
+		*--s = 0;
 	}
-	*--s = 0;
 	return habuf;
 }
 
+void print_lease (lease)
+	struct lease *lease;
+{
+	struct tm *t;
+	char tbuf [32];
+
+	printf ("  Lease %s",
+		piaddr (lease -> ip_addr));
+	
+	t = gmtime (&lease -> starts);
+	strftime (tbuf, sizeof tbuf, "%D %H:%M:%S", t);
+	printf ("  start %s", tbuf);
+	
+	t = gmtime (&lease -> ends);
+	strftime (tbuf, sizeof tbuf, "%D %H:%M:%S", t);
+	printf ("  end %s", tbuf);
+	
+	t = gmtime (&lease -> timestamp);
+	strftime (tbuf, sizeof tbuf, "%D %H:%M:%S", t);
+	printf ("  stamp %s\n", tbuf);
+	
+	printf ("    hardware addr = %s",
+		print_hw_addr (lease -> hardware_addr.htype,
+			       lease -> hardware_addr.hlen,
+			       lease -> hardware_addr.haddr));
+	printf ("  host %s  state %x\n",
+		lease -> host ? lease -> host -> name : "<none>",
+		lease -> state);
+}	

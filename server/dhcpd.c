@@ -50,7 +50,10 @@ static char copyright[] =
 static void usage PROTO ((void));
 
 TIME cur_time;
+TIME default_lease_time = 43200; /* 12 hours... */
+TIME max_lease_time = 86400; /* 24 hours... */
 
+struct subnet *local_subnet;
 u_int32_t *server_addrlist;
 int server_addrcount;
 u_int16_t server_port;
@@ -63,6 +66,7 @@ int main (argc, argv, envp)
 	int port = 0;
 	int i;
 	struct sockaddr_in name;
+	struct iaddr taddr;
 	u_int32_t *addrlist = (u_int32_t *)0;
 	int addrcount = 0;
 	struct tree *addrtree = (struct tree *)0;
@@ -148,7 +152,23 @@ int main (argc, argv, envp)
 	}
 #endif
 
+	taddr.len = 0;
 	server_addrlist = get_interface_list (&server_addrcount);
+	for (i = 0; i < server_addrcount; i++) {
+		struct sockaddr_in foo;
+		foo.sin_addr.s_addr = server_addrlist [i];
+		printf ("Address %d: %s\n", i, inet_ntoa (foo.sin_addr));
+
+		if (server_addrlist [i] != htonl (INADDR_LOOPBACK)) {
+			if (taddr.len) {
+				error ("dhcpd currently does not support "
+				       "multiple interfaces");
+			}
+			taddr.len = 4;
+			memcpy (taddr.iabuf, &server_addrlist [i], 4);
+			local_subnet = find_subnet (taddr);
+		}
+	}
 
 	/* Listen on the specified (or default) port on each specified
 	   (or default) IP address. */
@@ -163,6 +183,8 @@ int main (argc, argv, envp)
 		write (i, obuf, strlen (obuf));
 		close (i);
 	}
+
+	dump_subnets ();
 
 	/* Receive packets and dispatch them... */
 	dispatch ();
@@ -191,6 +213,7 @@ void do_packet (packbuf, len, from_port, from, sock)
 {
 	struct packet *tp;
 	struct dhcp_packet *tdp;
+	struct iaddr ia;
 
 	if (!(tp = new_packet ("do_packet")))
 		return;
@@ -205,12 +228,29 @@ void do_packet (packbuf, len, from_port, from, sock)
 	tp -> client_port = from_port;
 	tp -> client_addr = from;
 	tp -> client_sock = sock;
-	parse_options (tp);
-	if (tp -> options_valid &&
-	    tp -> options [DHO_DHCP_MESSAGE_TYPE].data)
-		dhcp (tp);
-	else
-		bootp (tp);
+	
+	/* If this came through a gateway, find the corresponding subnet... */
+	if (tp -> raw -> giaddr.s_addr) {
+		ia.len = 4;
+		memcpy (ia.iabuf, &tp -> raw -> giaddr, 4);
+		tp -> subnet = find_subnet (ia);
+	} else {
+		tp -> subnet = local_subnet;
+	}
+
+	/* If the subnet from whence this packet came is unknown to us,
+	   drop it on the floor... */
+	if (!tp -> subnet)
+		note ("Packet from unknown subnet: %s",
+		      inet_ntoa (tp -> raw -> giaddr));
+	else {
+		parse_options (tp);
+		if (tp -> options_valid &&
+		    tp -> options [DHO_DHCP_MESSAGE_TYPE].data)
+			dhcp (tp);
+		else
+			bootp (tp);
+	}
 }
 
 void dump_packet (tp)

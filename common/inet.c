@@ -87,7 +87,7 @@ struct iaddr ip_addr (subnet, mask, host_address)
 	j = rv.len - sizeof habuf;
 	for (i = sizeof habuf - 1; i >= 0; i--) {
 		if (mask.iabuf [i + j]) {
-			if (habuf [i] > ~mask.iabuf [i + j]) {
+			if (habuf [i] > (mask.iabuf [i + j] ^ 0xFF)) {
 				rv.len = 0;
 				return rv;
 			}
@@ -97,10 +97,10 @@ struct iaddr ip_addr (subnet, mask, host_address)
 					return rv;
 				}
 			}
-			rv.iabuf [i + j] &= habuf [i];
+			rv.iabuf [i + j] |= habuf [i];
 			break;
-		}
-		rv.iabuf [i + j] = habuf [i];
+		} else
+			rv.iabuf [i + j] = habuf [i];
 	}
 		
 	return rv;

@@ -11,6 +11,8 @@ CFLAGS += -DDEBUG -g -Wall -Wstrict-prototypes -Wno-unused \
 	  -Wno-uninitialized -Werror
 
 dhclient:	dhclient.o confpars.o alloc.o memory.o options.o \
-		hash.o tables.o inet.o convert.o conflex.o errwarn.o tree.o
+		hash.o tables.o inet.o convert.o conflex.o errwarn.o \
+		tree.o print.o
 	cc -o dhclient dhclient.o confpars.o alloc.o memory.o options.o \
-		hash.o tables.o inet.o convert.o conflex.o errwarn.o tree.o
+		hash.o tables.o inet.o convert.o conflex.o errwarn.o \
+		print.o tree.o
