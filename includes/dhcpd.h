@@ -206,9 +206,8 @@ struct packet {
 /* A network interface's MAC address. */
 
 struct hardware {
-	u_int8_t htype;
 	u_int8_t hlen;
-	u_int8_t haddr [16];
+	u_int8_t hbuf [17];
 };
 
 /* A dhcp lease declaration structure. */
@@ -219,10 +218,6 @@ struct lease {
 	struct lease *n_uid, *n_hw;
 	struct lease *waitq_next;
 
-#if defined (FAILOVER)
-	TIME tstp;	/* Time sent to partner. */
-	TIME trfp;	/* Time sent from partner. */
-#endif
 	struct iaddr ip_addr;
 	TIME starts, ends, timestamp;
 	unsigned char *uid;
@@ -249,10 +244,17 @@ struct lease {
 #	define PERSISTENT_FLAGS		(0)
 #	define MS_NULL_TERMINATION	8
 #	define ABANDONED_LEASE		16
+#	define PEER_IS_OWNER		32
 #	define EPHEMERAL_FLAGS		(BOOTP_LEASE | MS_NULL_TERMINATION | \
 					 ABANDONED_LEASE)
 
 	struct lease_state *state;
+
+#if defined (FAILOVER_PROTOCOL)
+	TIME tstp;	/* Time sent to partner. */
+	TIME tsfp;	/* Time sent from partner. */
+	TIME cltt;	/* Client last transaction time. */
+#endif
 };
 
 struct lease_state {
@@ -470,56 +472,13 @@ struct pool {
 	struct lease *insertion_point;
 	struct lease *last_lease;
 	struct lease *next_expiry;
-};
-
-/* A failover peer. */
-enum failover_state {
-	invalid_state,
-	partner_down,
-	normal,
-	communications_interrupted,
-	potential_conflict,
-	recover
-};
-
 #if defined (FAILOVER_PROTOCOL)
-struct failover_peer {
-	OMAPI_OBJECT_PREAMBLE;
-	char *name;			/* Name of this failover instance. */
-	struct expression *address;	/* Partner's IP address or hostname. */
-	int port;			/* Partner's TCP port. */
-	enum failover_state partner_state;
-	enum failover_state my_state;
-	enum {
-		primary, secondary
-	} i_am;		/* We are primary or secondary in this relationship. */
-
-	TIME last_packet_sent;		/* Timestamp on last packet we sent. */
-	TIME last_timestamp_received;	/* The last timestamp we sent that
-					   has been returned by our partner. */
-	TIME skew;	/* The skew between our clock and our partner's. */
-	TIME max_transmit_idle;	/* Always send a poll if we haven't sent
-				   some other packet more recently than
-				   this. */
-	TIME max_response_delay;	/* If the returned timestamp on the
-					   last packet we received is older
-					   than this, communications have been
-					   interrupted. */
-	struct lease *update_queue;	/* List of leases we haven't sent
-					   to peer. */
-	struct lease *ack_queue;	/* List of lease updates the peer
-					   hasn't yet acked. */
-	/* XXX Is ack_queue just a pointer to earlier in the same list?
-	   XXX Make sure that if we send an update before an ack has
-	   XXX been received on a previous update, that we don't either
-	   XXX take the previous ack as an ack for the subsequent update
-	   XXX or, when putting the lease back on the update list,
-	   XXX accidentally set the ack queue pointer forward, which would
-	   XXX happen if the ack queue and update queue are the same list
-	   XXX and the ack queue pointer is pointing at the lease that
-	   XXX gets put back on the update queue. */
+	int lease_count;
+	int local_leases;
+	int peer_leases;
+	dhcp_failover_state_t *failover_peer;
+#endif
 };
-#endif /* defined (FAILOVER_PROTOCOL) */
 
 struct shared_network {
 	OMAPI_OBJECT_PREAMBLE;
@@ -528,10 +487,10 @@ struct shared_network {
 	struct subnet *subnets;
 	struct interface_info *interface;
 	struct pool *pools;
-#if defined (FAILOVER_PROTOCOL)
-	struct failover_peer *failover_peer;
-#endif
 	struct group *group;
+#if defined (FAILOVER_PROTOCOL)
+	dhcp_failover_state_t *failover_peer;
+#endif
 };
 
 struct subnet {
@@ -963,7 +922,8 @@ isc_result_t read_leases PROTO ((void));
 int parse_statement PROTO ((struct parse *,
 			    struct group *, int, struct host_decl *, int));
 void parse_failover_peer PROTO ((struct parse *, struct group *, int));
-enum failover_state parse_failover_state PROTO ((struct parse *));
+void parse_failover_state PROTO ((struct parse *,
+				  enum failover_state *, TIME *));
 void parse_pool_statement PROTO ((struct parse *, struct group *, int));
 int parse_boolean PROTO ((struct parse *));
 int parse_lbrace PROTO ((struct parse *));
@@ -1014,6 +974,7 @@ int parse_data_expression PROTO ((struct expression **,
 				  struct parse *, int *));
 int parse_numeric_expression PROTO ((struct expression **,
 				     struct parse *, int *));
+int parse_dns_expression PROTO ((struct expression **, struct parse *, int *));
 int parse_non_binary PROTO ((struct expression **, struct parse *, int *,
 			     enum expression_context));
 int parse_expression PROTO ((struct expression **, struct parse *, int *,
@@ -1044,6 +1005,10 @@ int make_substring PROTO ((struct expression **, struct expression *,
 int make_limit PROTO ((struct expression **, struct expression *, int));
 int option_cache PROTO ((struct option_cache **, struct data_string *,
 			 struct expression *, struct option *));
+int evaluate_dns_expression PROTO ((ns_updrec **, struct packet *,
+				    struct lease *, struct option_state *,
+				    struct option_state *,
+				    struct expression *));
 int evaluate_boolean_expression PROTO ((int *,
 					struct packet *,  struct lease *,
 					struct option_state *,
@@ -1076,6 +1041,7 @@ void data_string_copy PROTO ((struct data_string *,
 			      struct data_string *, const char *));
 void data_string_forget PROTO ((struct data_string *, const char *));
 void data_string_truncate PROTO ((struct data_string *, int));
+int is_dns_expression PROTO ((struct expression *));
 int is_boolean_expression PROTO ((struct expression *));
 int is_data_expression PROTO ((struct expression *));
 int is_numeric_expression PROTO ((struct expression *));
@@ -1154,8 +1120,6 @@ struct client_lease *new_client_lease PROTO ((const char *));
 void free_client_lease PROTO ((struct client_lease *, const char *));
 struct pool *new_pool PROTO ((const char *));
 void free_pool PROTO ((struct pool *, const char *));
-struct failover_peer *new_failover_peer PROTO ((const char *));
-void free_failover_peer PROTO ((struct failover_peer *, const char *));
 struct auth_key *new_auth_key PROTO ((unsigned, const char *));
 void free_auth_key PROTO ((struct auth_key *, const char *));
 struct permit *new_permit PROTO ((const char *));
@@ -1427,6 +1391,7 @@ void initialize_common_option_spaces PROTO ((void));
 /* stables.c */
 #if defined (FAILOVER_PROTOCOL)
 failover_option_t null_failover_option;
+failover_option_t skip_failover_option;
 struct failover_option_info ft_options [0];
 u_int32_t fto_allowed [0];
 int ft_sizes [0];
@@ -1689,10 +1654,6 @@ void execute_statements_in_scope PROTO ((struct packet *,
 void enter_auth_key PROTO ((struct data_string *, struct auth_key *));
 const struct auth_key *auth_key_lookup PROTO ((struct data_string *));
 
-/* failover.c */
-void enter_failover_peer PROTO ((struct failover_peer *));
-struct failover_peer *find_failover_peer PROTO ((char *));
-
 /* omapi.c */
 extern omapi_object_type_t *dhcp_type_lease;
 extern omapi_object_type_t *dhcp_type_group;
@@ -1898,8 +1859,8 @@ int deletePTR (const struct data_string *, const struct data_string *,
 
 /* failover.c */
 #if defined (FAILOVER_PROTOCOL)
-void enter_failover_peer PROTO ((struct failover_peer *));
-struct failover_peer *find_failover_peer PROTO ((char *));
+void enter_failover_peer PROTO ((dhcp_failover_state_t *));
+isc_result_t find_failover_peer PROTO ((dhcp_failover_state_t **, char *));
 isc_result_t dhcp_failover_link_initiate PROTO ((omapi_object_t *));
 isc_result_t dhcp_failover_link_signal PROTO ((omapi_object_t *,
 					       const char *, va_list));
@@ -1964,5 +1925,7 @@ isc_result_t dhcp_failover_put_message PROTO ((dhcp_failover_link_t *,
 					       omapi_object_t *,
 					       int, ...));
 isc_result_t dhcp_failover_send_connect PROTO ((omapi_object_t *));
+isc_result_t dhcp_failover_update_peer (struct lease *, int);
 void failover_print PROTO ((char *, unsigned *, unsigned, const char *));
+void update_partner PROTO ((struct lease *));
 #endif /* FAILOVER_PROTOCOL */
