@@ -390,6 +390,7 @@ be affected by pool permits related to that class - when the pool permit list
 is computed, the client will not yet be a member of the pool.   This is an
 inconsistency that will probably be addressed in later versions of the DHCP
 server, but it important to be aware of it at lease for the time being.
+.SH SUBCLASSES
 .PP
 In addition to classes, it is possible to declare subclasses.   A
 subclass is a class with the same name as a regular class, but with a
@@ -400,28 +401,64 @@ that it will be quicker to find the subclasses.   Subclasses work as
 follows:
 .PP
 .nf
-class "vendor-classes" {
-  match option vendor-class-identifier;
+class "allocation-class-1" {
+  match pick-first-value (option dhcp-client-identifier, hardware);
 }
 
-subclass "vendor-classes" "SUNW.Ultra-5_10" {
-  option vendor-encapsulated-options 
-	   2:AC:11:41:1:
-	   3:12:73:75:6e:64:68:63:70:2d:73:65:72:76:65:72:31:37:2d:31:
-	   4:12:2f:65:78:70:6f:72:74:2f:72:6f:6f:74:2f:73:70:61:72:63;
+class "allocation-class-2" {
+  match pick-first-value (option dhcp-client-identifier, hardware);
 }
 
-subclass "vendor-classes" "SUNW.i86pc" {
-  option vendor-encapsulated-options
-	   2:4:AC:11:41:1:
-	   3:12:73:75:6e:64:68:63:70:2d:73:65:72:76:65:72:31:37:2d:31:
-	   4:12:2f:65:78:70:6f:72:74:2f:72:6f:6f:74:2f:69:38:36:70:63;
+subclass "allocation-class-1" 1:8:0:2b:4c:39:ad;
+subclass "allocation-class-2" 1:8:0:2b:a9:cc:e3;
+subclass "allocation-class-1" 1:0:0:c4:aa:29:44;
+
+subnet 10.0.0.0 netmask 255.255.255.0 {
+  pool {
+    permit members of "allocation-class-1";
+    range 10.0.0.11 10.0.0.50;
+  }
+  pool {
+    permit members of "allocation-class-2";
+    range 10.0.0.51 10.0.0.100;
+  }
 }
 .fi
 .PP
-The string following the class name for the subclasses specifies the
-string that is expected to match the expression in the class
-declaration for the vendor-classes class.
+The data following the class name in the subclass declaration is a
+constant value to use in matching the match expression for the class.
+When class matching is done, the server will evaluate the match
+expression and then look the result up in the hash table.   If it
+finds a match, the client is considered a member of both the class and
+the subclass.
+.PP
+Subclasses can be declared with or without scope.   In the above
+example, the sole purpose of the subclass is to allow some clients
+access to one address pool, while other clients are given access to
+the other pool, so these subclasses are declared without scopes.   If
+part of the purpose of the subclass were to define different parameter
+values for some clients, you might want to declare some subclasses
+with scopes.
+.PP
+In the above example, if you had a single client that needed some
+configuration parameters, while most didn't, you might write the
+following subclass declaration for that client:
+.PP
+.nf
+subclass "allocation-class-2" 08:00:2b:a1:11:31 {
+  option root-path "samsara:/var/diskless/alphapc";
+  filename "/tftpboot/netbsd.alphapc-diskless";
+}
+.fi
+.PP
+In this example, we've used subclassing as a way to control address
+allocation on a per-client basis.  However, it's also possible to use
+subclassing in ways that are not specific to clients - for example, to
+use the value of the vendor-class-identifier option to determine what
+values to send in the vendor-encapsulated-options option.  An example
+of this is shown under the VENDOR ENCAPSULATED OPTIONS head later on
+in this document.
+.SH PER-CLASS ADDRESS ASSIGNMENT LIMITS
 .PP
 You may specify a limit to the number of clients in a class that can
 be assigned leases.   The effect of this will be to make it difficult
@@ -439,6 +476,7 @@ class "limited-1" {
 .PP
 This will produce a class in which a maximum of four members may hold
 a lease at one time.
+.SH SPAWNING CLASSES
 .PP
 It is possible to declare a
 .I spawning class\fR.
@@ -456,6 +494,7 @@ Agent Information option to DHCP packets when relaying them to the
 DHCP server.   These systems typically add a circuit ID or remote ID
 option that uniquely identifies the customer site.   To take advantage
 of this, you can write a class declaration as follows:
+.PP
 .nf
 class "customer" {
   match if exists agent.circuit-id;
@@ -499,7 +538,7 @@ The expiry event is not currently supported at all.   This will also
 be fixed in the reasonably near future.
 .PP
 To declare a set of statements to execute when an event happens, you
-must use the \fBon\fB statement, followed by the name of the event,
+must use the \fBon\fR statement, followed by the name of the event,
 followed by a series of statements to execute when the event happens,
 enclosed in braces.   For example:
 .PP
@@ -519,10 +558,6 @@ enclosed in braces.   For example:
 		}
 	}
 .fi
-.PP
-Note: the example above uses the dns-update function, which is not yet
-implemented, but which is the primary intended purpose for this
-feature.
 .SH REFERENCE: DECLARATIONS
 .PP
 .B The 
@@ -1170,8 +1205,14 @@ option space should be used to generate the
 option in some scope.
 .PP
 To send a simple clump of data, simply provide a value for the option
-in the right scope, as in the example shown earlier in the \fBCLIENT
-CLASSING\fR section.
+in the right scope - for example:
+.PP
+.nf
+  option vendor-encapsulated-options
+	   2:4:AC:11:41:1:
+	   3:12:73:75:6e:64:68:63:70:2d:73:65:72:76:65:72:31:37:2d:31:
+	   4:12:2f:65:78:70:6f:72:74:2f:72:6f:6f:74:2f:69:38:36:70:63;
+.fi
 .PP
 To define a new option space in which vendor options can be stored,
 use the \fRoption space\fP statement:
@@ -1197,10 +1238,10 @@ Once you have defined an option space and some options, you can set up
 scopes that define values for those options, and you can say when to
 use them.   For example, suppose you want to handle two different
 classes of clients, as in the example in the \fBCLIENT CLASSING\fR
-section.   Using the option space definition we just did, the
-.B CLIENT
-.B CLASSING
-example can be implemented more legibly as follows:
+section.   Using the option space definition shown in the previous
+example, something very similar to the vendor-encapsulated-options
+definition shown earlier can be done as follows:
+.PP
 .nf
 class "vendor-classes" {
   match option vendor-class-identifier;
@@ -1218,8 +1259,8 @@ subclass "vendor-classes" "SUNW.i86pc" {
   vendor-option-space SUNW;
   option SUNW.root-path "/export/root/i86pc";
 }
-
 .fi
+.PP
 As you can see in the preceding example, regular scoping rules apply,
 so you can define values that are global in the global scope, and only
 define values that are specific to a particular class in the local
