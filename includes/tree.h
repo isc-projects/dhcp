@@ -47,6 +47,17 @@ typedef struct _pair {
 	struct _pair *cdr;
 } *pair;
 
+struct enumeration_value {
+	const char *name;
+	u_int8_t value;
+};
+
+struct enumeration {
+	struct enumeration *next;
+	const char *name;
+	struct enumeration_value *values;
+};	
+
 /* Tree node types... */
 #define TREE_CONCAT		1
 #define TREE_HOST_LOOKUP	2
