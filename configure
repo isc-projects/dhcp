@@ -157,7 +157,14 @@ if [ "$sysname" = "" ]; then
 	  sysname_print=hpux
 	fi;;
     QNX)
-      sysname=qnx;;
+      release=`uname -r`
+      major=`echo $release |sed -e 's/\([0-9][0-9]*\)\..*$/\1/'`
+      case $major in
+        6)
+          sysname=qnxnto;;
+        *)
+          sysname=qnx;;
+      esac;;      
     NEXTSTEP)
       sysname=nextstep;;
     UnixWare)

@@ -54,11 +54,17 @@
 #include <sys/wait.h>
 #include <signal.h>
 
+#ifdef __QNXNTO__
+#include <sys/param.h>
+#endif
+
 #include <netdb.h>
 extern int h_errno;
 
 #include <net/if.h>
-#define INADDR_LOOPBACK ((u_long)0x7f000001)
+#ifndef __QNXNTO__
+# define INADDR_LOOPBACK ((u_long)0x7f000001)
+#endif
 
 /* Varargs stuff... */
 #include <stdarg.h>
@@ -88,22 +94,35 @@ extern int h_errno;
 #define ADD_TIME(d, s1, s2) (*(d) = *(s1) + *(s2))
 #define SET_MAX_TIME(x)	(*(x) = INT_MAX)
 
+#ifndef __QNXNTO__
 typedef unsigned char	u_int8_t;
 typedef unsigned short	u_int16_t;
 typedef unsigned long	u_int32_t;
 typedef signed short	int16_t;
 typedef signed long	int32_t;
+#endif
+
+#ifdef __QNXNTO__
+typedef int socklen_t;
+#endif
 
 #define strcasecmp( s1, s2 )			stricmp( s1, s2 )
 #define strncasecmp( s1, s2, n )		strnicmp( s1, s2, n )
-#define vsnprintf( buf, size, fmt, list )	vsprintf( buf, fbuf, list )
 #define random()				rand()
 
 #define HAVE_SA_LEN
 #define BROKEN_TM_GMT
 #define USE_SOCKETS
-#define NO_SNPRINTF
 #undef AF_LINK
+
+#ifndef __QNXNTO__
+# define NO_SNPRINTF
+# define vsnprintf( buf, size, fmt, list )	vsprintf( buf, fbuf, list )
+#endif
+
+#ifdef __QNXNTO__
+# define GET_HOST_ID_MISSING
+#endif
 
 /*
     NOTE: to get the routing of the 255.255.255.255 broadcasts to work
@@ -116,9 +135,48 @@ typedef signed long	int32_t;
     machine that dhcpd is running on.
 */
 
-#if defined (NSUPDATE)
-#error NSUPDATE is not supported on QNX at this time!!
+#ifndef __QNXNTO__
+# if defined (NSUPDATE)
+# error NSUPDATE is not supported on QNX at this time!!
+# endif
 #endif
+
+
 #ifdef NEED_PRAND_CONF
-UHOH...   (this isn't present in the BIND distribution either)
+#ifndef HAVE_DEV_RANDOM
+/* You should find and install the /dev/random driver */
+ # define HAVE_DEV_RANDOM 1
+ #endif /* HAVE_DEV_RANDOM */
+
+const char *cmds[] = {
+        "/bin/ps -a 2>&1",
+	"/bin/sin 2>&1",
+        "/sbin/arp -an 2>&1",
+        "/bin/netstat -an 2>&1",
+        "/bin/df  2>&1",
+	"/bin/sin fds 2>&1",
+        "/bin/netstat -s 2>&1",
+	"/bin/sin memory 2>&1",
+        NULL
+};
+
+const char *dirs[] = {
+        "/tmp",
+        ".",
+        "/",
+        "/var/spool",
+        "/dev",
+        "/var/spool/mail",
+        "/home",
+        NULL
+};
+
+const char *files[] = {
+        "/proc/ipstats",
+        "/proc/dumper",
+        "/proc/self/as",
+        "/var/log/messages",
+        NULL
+};
 #endif /* NEED_PRAND_CONF */
+
