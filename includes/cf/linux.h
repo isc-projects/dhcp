@@ -96,9 +96,6 @@ extern int h_errno;
 #define VA_start(list, last) va_start (list, last)
 #define va_dcl
 
-#define vsnprintf(buf, size, fmt, list) vsprintf (buf, fmt, list)
-#define NO_SNPRINTF
-
 #define VOIDPTR	void *
 
 #define EOL	'\n'
