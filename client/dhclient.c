@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhclient.c,v 1.17 1996/08/27 09:43:01 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.18 1996/08/28 01:28:53 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -54,6 +54,7 @@ struct tree_cache *global_options [256];
 
 struct iaddr server_identifier;
 int server_identifier_matched;
+int log_perror = 1;
 
 #ifdef USE_FALLBACK
 struct interface_info fallback_interface;
@@ -63,7 +64,7 @@ u_int16_t server_port;
 int log_priority;
 
 int lexline, lexchar;
-char *tlname;
+char *tlname, *token_line;
 
 static void usage PROTO ((void));
 
