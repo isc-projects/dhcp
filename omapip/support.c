@@ -48,7 +48,8 @@ isc_result_t omapi_init (void)
 					     omapi_connection_get_value,
 					     omapi_connection_destroy,
 					     omapi_connection_signal_handler,
-					     omapi_connection_stuff_values);
+					     omapi_connection_stuff_values,
+					     0, 0);
 	if (status != ISC_R_SUCCESS)
 		return status;
 
@@ -58,7 +59,8 @@ isc_result_t omapi_init (void)
 					     omapi_listener_get_value,
 					     omapi_listener_destroy,
 					     omapi_listener_signal_handler,
-					     omapi_listener_stuff_values);
+					     omapi_listener_stuff_values,
+					     0, 0);
 	if (status != ISC_R_SUCCESS)
 		return status;
 
@@ -68,7 +70,8 @@ isc_result_t omapi_init (void)
 					     omapi_io_get_value,
 					     omapi_io_destroy,
 					     omapi_io_signal_handler,
-					     omapi_io_stuff_values);
+					     omapi_io_stuff_values,
+					     0, 0);
 	if (status != ISC_R_SUCCESS)
 		return status;
 
@@ -78,7 +81,8 @@ isc_result_t omapi_init (void)
 					     omapi_generic_get_value,
 					     omapi_generic_destroy,
 					     omapi_generic_signal_handler,
-					     omapi_generic_stuff_values);
+					     omapi_generic_stuff_values,
+					     0, 0);
 	if (status != ISC_R_SUCCESS)
 		return status;
 
@@ -88,7 +92,8 @@ isc_result_t omapi_init (void)
 					     omapi_protocol_get_value,
 					     omapi_protocol_destroy,
 					     omapi_protocol_signal_handler,
-					     omapi_protocol_stuff_values);
+					     omapi_protocol_stuff_values,
+					     0, 0);
 	if (status != ISC_R_SUCCESS)
 		return status;
 
@@ -98,7 +103,8 @@ isc_result_t omapi_init (void)
 					     omapi_protocol_listener_get_value,
 					     omapi_protocol_listener_destroy,
 					     omapi_protocol_listener_signal,
-					     omapi_protocol_listener_stuff);
+					     omapi_protocol_listener_stuff,
+					     0, 0);
 	if (status != ISC_R_SUCCESS)
 		return status;
 
@@ -108,7 +114,8 @@ isc_result_t omapi_init (void)
 					     omapi_message_get_value,
 					     omapi_message_destroy,
 					     omapi_message_signal_handler,
-					     omapi_message_stuff_values);
+					     omapi_message_stuff_values,
+					     0, 0);
 	if (status != ISC_R_SUCCESS)
 		return status;
 
@@ -117,7 +124,8 @@ isc_result_t omapi_init (void)
 					     0,
 					     0,
 					     0,
-					     omapi_waiter_signal_handler, 0);
+					     omapi_waiter_signal_handler, 0,
+					     0, 0);
 	if (status != ISC_R_SUCCESS)
 		return status;
 
@@ -145,6 +153,13 @@ isc_result_t omapi_object_type_register (omapi_object_type_t **type,
 					 isc_result_t (*stuff_values)
 						(omapi_object_t *,
 						 omapi_object_t *,
+						 omapi_object_t *),
+					 isc_result_t (*lookup)
+						(omapi_object_t **,
+						 omapi_object_t *,
+						 omapi_object_t *),
+					 isc_result_t (*create)
+						(omapi_object_t **,
 						 omapi_object_t *))
 {
 	omapi_object_type_t *t;
@@ -174,6 +189,8 @@ isc_result_t omapi_object_type_register (omapi_object_type_t **type,
 		signal_handler;
 	omapi_object_types [omapi_object_type_count].stuff_values =
 		stuff_values;
+	omapi_object_types [omapi_object_type_count].lookup = lookup;
+	omapi_object_types [omapi_object_type_count].create = create;
 	if (type)
 		*type = &omapi_object_types [omapi_object_type_count];
 	omapi_object_type_count++;
@@ -232,6 +249,90 @@ isc_result_t omapi_set_value (omapi_object_t *h,
 	return ISC_R_NOTFOUND;
 }
 
+isc_result_t omapi_set_boolean_value (omapi_object_t *h, omapi_object_t *id,
+				      char *name, int value)
+{
+	isc_result_t status;
+	omapi_typed_data_t *tv = (omapi_typed_data_t *)0;
+	omapi_data_string_t *n = (omapi_data_string_t *)0;
+	int len;
+	int ip;
+
+	status = omapi_data_string_new (&n, strlen (name),
+					"omapi_set_boolean_value");
+	if (status != ISC_R_SUCCESS)
+		return status;
+	memcpy (n -> value, name, strlen (name));
+
+	status = omapi_typed_data_new (&tv, omapi_datatype_int, value);
+	if (status != ISC_R_SUCCESS) {
+		omapi_data_string_dereference (&n,
+					       "omapi_set_boolean_value");
+		return status;
+	}
+
+	status = omapi_set_value (h, id, n, tv);
+	omapi_data_string_dereference (&n, "omapi_set_boolean_value");
+	omapi_typed_data_dereference (&tv, "omapi_set_boolean_value");
+	return status;
+}
+
+isc_result_t omapi_set_int_value (omapi_object_t *h, omapi_object_t *id,
+				  char *name, int value)
+{
+	isc_result_t status;
+	omapi_typed_data_t *tv = (omapi_typed_data_t *)0;
+	omapi_data_string_t *n = (omapi_data_string_t *)0;
+	int len;
+	int ip;
+
+	status = omapi_data_string_new (&n, strlen (name),
+					"omapi_set_int_value");
+	if (status != ISC_R_SUCCESS)
+		return status;
+	memcpy (n -> value, name, strlen (name));
+
+	status = omapi_typed_data_new (&tv, omapi_datatype_int, value);
+	if (status != ISC_R_SUCCESS) {
+		omapi_data_string_dereference (&n,
+					       "omapi_set_int_value");
+		return status;
+	}
+
+	status = omapi_set_value (h, id, n, tv);
+	omapi_data_string_dereference (&n, "omapi_set_int_value");
+	omapi_typed_data_dereference (&tv, "omapi_set_int_value");
+	return status;
+}
+
+isc_result_t omapi_set_object_value (omapi_object_t *h, omapi_object_t *id,
+				     char *name, omapi_object_t *value)
+{
+	isc_result_t status;
+	omapi_typed_data_t *tv = (omapi_typed_data_t *)0;
+	omapi_data_string_t *n = (omapi_data_string_t *)0;
+	int len;
+	int ip;
+
+	status = omapi_data_string_new (&n, strlen (name),
+					"omapi_set_object_value");
+	if (status != ISC_R_SUCCESS)
+		return status;
+	memcpy (n -> value, name, strlen (name));
+
+	status = omapi_typed_data_new (&tv, omapi_datatype_object, value);
+	if (status != ISC_R_SUCCESS) {
+		omapi_data_string_dereference (&n,
+					       "omapi_set_object_value");
+		return status;
+	}
+
+	status = omapi_set_value (h, id, n, tv);
+	omapi_data_string_dereference (&n, "omapi_set_int_value");
+	omapi_typed_data_dereference (&tv, "omapi_set_int_value");
+	return status;
+}
+
 isc_result_t omapi_get_value (omapi_object_t *h,
 			      omapi_object_t *id,
 			      omapi_data_string_t *name,
@@ -244,6 +345,29 @@ isc_result_t omapi_get_value (omapi_object_t *h,
 	if (outer -> type -> get_value)
 		return (*(outer -> type -> get_value)) (outer,
 							id, name, value);
+	return ISC_R_NOTFOUND;
+}
+
+isc_result_t omapi_get_value_str (omapi_object_t *h,
+				  omapi_object_t *id,
+				  char *name,
+				  omapi_value_t **value)
+{
+	omapi_object_t *outer;
+	omapi_data_string_t *nds;
+	isc_result_t status;
+
+	status = omapi_data_string_new (&nds, strlen (name),
+					"omapi_get_value_str");
+	if (status != ISC_R_SUCCESS)
+		return status;
+	memcpy (nds -> value, name, strlen (name));
+
+	for (outer = h; outer -> outer; outer = outer -> outer)
+		;
+	if (outer -> type -> get_value)
+		return (*(outer -> type -> get_value)) (outer,
+							id, nds, value);
 	return ISC_R_NOTFOUND;
 }
 
@@ -295,6 +419,31 @@ int omapi_ds_strcmp (omapi_data_string_t *s1, char *s2)
 	if (s1 -> len > slen)
 		return 1;
 	else if (s1 -> len < slen)
+		return -1;
+	return 0;
+}
+
+int omapi_td_strcmp (omapi_typed_data_t *s1, char *s2)
+{
+	int len, slen;
+	int rv;
+
+	/* If the data type is not compatible, never equal. */
+	if (s1 -> type != omapi_datatype_data &&
+	    s1 -> type != omapi_datatype_string)
+		return -1;
+
+	slen = strlen (s2);
+	if (slen > s1 -> u.buffer.len)
+		len = s1 -> u.buffer.len;
+	else
+		len = slen;
+	rv = memcmp (s1 -> u.buffer.value, s2, len);
+	if (rv)
+		return rv;
+	if (s1 -> u.buffer.len > slen)
+		return 1;
+	else if (s1 -> u.buffer.len < slen)
 		return -1;
 	return 0;
 }
@@ -378,3 +527,79 @@ isc_result_t omapi_make_int_value (omapi_value_t **vp,
 	return ISC_R_SUCCESS;
 }
 
+isc_result_t omapi_make_handle_value (omapi_value_t **vp,
+				      omapi_data_string_t *name,
+				      omapi_object_t *value, char *caller)
+{
+	isc_result_t status;
+
+	status = omapi_value_new (vp, caller);
+	if (status != ISC_R_SUCCESS)
+		return status;
+
+	status = omapi_data_string_reference (&(*vp) -> name, name, caller);
+	if (status != ISC_R_SUCCESS) {
+		omapi_value_dereference (vp, caller);
+		return status;
+	}
+	if (value) {
+		status = omapi_typed_data_new (&(*vp) -> value,
+					       omapi_datatype_int);
+		if (status != ISC_R_SUCCESS) {
+			omapi_value_dereference (vp, caller);
+			return status;
+		}
+		status = (omapi_object_handle
+			  ((omapi_handle_t *)&(*vp) -> value -> u.integer,
+			   value));
+		if (status != ISC_R_SUCCESS) {
+			omapi_value_dereference (vp, caller);
+			return status;
+		}
+	}
+	return ISC_R_SUCCESS;
+}
+
+isc_result_t omapi_make_string_value (omapi_value_t **vp,
+				      omapi_data_string_t *name,
+				      char *value, char *caller)
+{
+	isc_result_t status;
+
+	status = omapi_value_new (vp, caller);
+	if (status != ISC_R_SUCCESS)
+		return status;
+
+	status = omapi_data_string_reference (&(*vp) -> name, name, caller);
+	if (status != ISC_R_SUCCESS) {
+		omapi_value_dereference (vp, caller);
+		return status;
+	}
+	if (value) {
+		status = omapi_typed_data_new (&(*vp) -> value,
+					       omapi_datatype_string, value);
+		if (status != ISC_R_SUCCESS) {
+			omapi_value_dereference (vp, caller);
+			return status;
+		}
+	}
+	return ISC_R_SUCCESS;
+}
+
+isc_result_t omapi_get_int_value (u_int32_t *v, omapi_typed_data_t *t)
+{
+	u_int32_t rv;
+
+	if (t -> type == omapi_datatype_int) {
+		*v = t -> u.integer;
+		return ISC_R_SUCCESS;
+	} else if (t -> type == omapi_datatype_string ||
+		 t -> type == omapi_datatype_data) {
+		if (t -> u.buffer.len != sizeof (rv))
+			return ISC_R_INVALIDARG;
+		memcpy (&rv, t -> u.buffer.value, sizeof rv);
+		*v = ntohl (rv);
+		return ISC_R_SUCCESS;
+	}
+	return ISC_R_INVALIDARG;
+}

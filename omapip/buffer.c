@@ -101,7 +101,7 @@ isc_result_t omapi_connection_reader (omapi_object_t *h)
 		bytes_to_read -= read_status;
 	}
 
-	if (c -> bytes_needed >= c -> in_bytes) {
+	if (c -> bytes_needed <= c -> in_bytes) {
 		omapi_signal (h, "ready", c);
 	}
 	return ISC_R_SUCCESS;
@@ -394,3 +394,75 @@ isc_result_t omapi_connection_put_uint16 (omapi_object_t *c,
 					sizeof inbuf);
 }
 
+isc_result_t omapi_connection_write_typed_data (omapi_object_t *c,
+						omapi_typed_data_t *data)
+{
+	isc_result_t status;
+	omapi_handle_t handle;
+
+	switch (data -> type) {
+	      case omapi_datatype_int:
+		status = omapi_connection_put_uint32 (c, sizeof (u_int32_t));
+		if (status != ISC_R_SUCCESS)
+			return status;
+		return omapi_connection_put_uint32 (c, data -> u.integer);
+
+	      case omapi_datatype_string:
+	      case omapi_datatype_data:
+		status = omapi_connection_put_uint32 (c, data -> u.buffer.len);
+		if (status != ISC_R_SUCCESS)
+			return status;
+		return omapi_connection_copyin (c, data -> u.buffer.value,
+						data -> u.buffer.len);
+
+	      case omapi_datatype_object:
+		status = omapi_object_handle (&handle,
+					      data -> u.object);
+		if (status != ISC_R_SUCCESS)
+			return status;
+		status = omapi_connection_put_uint32 (c, sizeof handle);
+		if (status != ISC_R_SUCCESS)
+			return status;
+		return omapi_connection_put_uint32 (c, handle);
+
+	}
+	return ISC_R_INVALIDARG;
+}
+
+isc_result_t omapi_connection_put_name (omapi_object_t *c, char *name)
+{
+	isc_result_t status;
+	int len = strlen (name);
+
+	status = omapi_connection_put_uint16 (c, len);
+	if (status != ISC_R_SUCCESS)
+		return status;
+	return omapi_connection_copyin (c, name, len);
+}
+
+isc_result_t omapi_connection_put_string (omapi_object_t *c, char *string)
+{
+	isc_result_t status;
+	int len;
+
+	len = strlen (string);
+
+	status = omapi_connection_put_uint32 (c, len);
+	if (status != ISC_R_SUCCESS)
+		return status;
+	return omapi_connection_copyin (c, string, len);
+}
+
+isc_result_t omapi_connection_put_handle (omapi_object_t *c, omapi_object_t *h)
+{
+	isc_result_t status;
+	omapi_handle_t handle;
+
+	status = omapi_object_handle (&handle, h);
+	if (status != ISC_R_SUCCESS)
+		return status;
+	status = omapi_connection_put_uint32 (c, sizeof handle);
+	if (status != ISC_R_SUCCESS)
+		return status;
+	return omapi_connection_put_uint32 (c, handle);
+}

@@ -181,16 +181,35 @@ isc_result_t omapi_protocol_send_message (omapi_object_t *po,
 		return status;
 	}
 
-	/* Now stuff out all the published name/value pairs associated
-	   with the message. */
-	status = omapi_stuff_values (c, id, m -> object);
+	/* Stuff out the name/value pairs specific to this message. */
+	if (m -> object) {
+		status = omapi_stuff_values (c, id, (omapi_object_t *)m);
+		if (status != ISC_R_SUCCESS) {
+			omapi_disconnect (c, 1);
+			return status;
+		}
+	}
+
+	/* Write the zero-length name that terminates the list of name/value
+	   pairs specific to the message. */
+	status = omapi_connection_put_uint16 (c, 0);
 	if (status != ISC_R_SUCCESS) {
 		omapi_disconnect (c, 1);
 		return status;
 	}
 
+	/* Stuff out all the published name/value pairs in the object that's
+	   being sent in the message, if there is one. */
+	if (m -> object) {
+		status = omapi_stuff_values (c, id, m -> object);
+		if (status != ISC_R_SUCCESS) {
+			omapi_disconnect (c, 1);
+			return status;
+		}
+	}
+
 	/* Write the zero-length name that terminates the list of name/value
-	   pairs. */
+	   pairs for the associated object. */
 	status = omapi_connection_put_uint16 (c, 0);
 	if (status != ISC_R_SUCCESS) {
 		omapi_disconnect (c, 1);
@@ -274,15 +293,6 @@ isc_result_t omapi_protocol_signal_handler (omapi_object_t *h,
 			return status;
 		}
 
-		/* We need a generic object to hang off of the
-                   incoming message. */
-		status = omapi_generic_new (&p -> message -> object,
-					    "omapi_protocol_signal_handler");
-		if (status != ISC_R_SUCCESS) {
-			omapi_disconnect (c, 1);
-			return status;
-		}
-
 		/* Swap in the header... */
 		omapi_connection_get_uint32 (c, &p -> message -> authid);
 
@@ -305,6 +315,10 @@ isc_result_t omapi_protocol_signal_handler (omapi_object_t *h,
 		   specifies encryption as well as signing, we may
 		   have to decrypt the data on the way in. */
 
+		/* First we read in message-specific values, then object
+		   values. */
+		p -> reading_message_values = 1;
+
 	      need_name_length:
 		/* The next thing we're expecting is length of the
 		   first name. */
@@ -320,6 +334,16 @@ isc_result_t omapi_protocol_signal_handler (omapi_object_t *h,
 		/* A zero-length name means that we're done reading name+value
 		   pairs. */
 		if (nlen == 0) {
+			/* If we've already read in the object, we are
+			   done reading the message, but if we've just
+			   finished reading in the values associated
+			   with the message, we need to read the
+			   object. */
+			if (p -> reading_message_values) {
+				p -> reading_message_values = 0;
+				goto need_name_length;
+			}
+
 			/* If the authenticator length is zero, there's no
 			   signature to read in, so go straight to processing
 			   the message. */
@@ -346,6 +370,7 @@ isc_result_t omapi_protocol_signal_handler (omapi_object_t *h,
 			omapi_disconnect (c, 1);
 			return ISC_R_NOMEMORY;
 		}
+		p -> state = omapi_protocol_name_wait;
 		if (omapi_connection_require (c, nlen) != ISC_R_SUCCESS)
 			break;
 		/* If it's already here, fall through. */
@@ -354,6 +379,7 @@ isc_result_t omapi_protocol_signal_handler (omapi_object_t *h,
 		omapi_connection_copyout (p -> name -> value, c,
 					  p -> name -> len);
 		/* Wait for a 32-bit length. */
+		p -> state = omapi_protocol_value_length_wait;
 		if ((omapi_connection_require (c, 4)) != ISC_R_SUCCESS)
 			break;
 		/* If it's already here, fall through. */
@@ -368,13 +394,14 @@ isc_result_t omapi_protocol_signal_handler (omapi_object_t *h,
 			goto insert_new_value;
 
 		status = (omapi_typed_data_new
-			  (&p -> value, omapi_datatype_data, nlen,
+			  (&p -> value, omapi_datatype_data, vlen,
 			   "omapi_protocol_signal_handler"));
 		if (status != ISC_R_SUCCESS) {
 			omapi_disconnect (c, 1);
 			return ISC_R_NOMEMORY;
 		}
 
+		p -> state = omapi_protocol_value_wait;
 		if (omapi_connection_require (c, vlen) != ISC_R_SUCCESS)
 			break;
 		/* If it's already here, fall through. */
@@ -384,9 +411,28 @@ isc_result_t omapi_protocol_signal_handler (omapi_object_t *h,
 					  p -> value -> u.buffer.len);
 
 	      insert_new_value:
-		status = (omapi_set_value
-			  ((omapi_object_t *)p -> message -> object,
-			   p -> message -> id_object, p -> name, p -> value));
+		if (p -> reading_message_values) {
+			status = (omapi_set_value
+				  ((omapi_object_t *)p -> message,
+				   p -> message -> id_object,
+				   p -> name, p -> value));
+		} else {
+			if (!p -> message -> object) {
+				/* We need a generic object to hang off of the
+				   incoming message. */
+				status = (omapi_generic_new
+					  (&p -> message -> object,
+					   "omapi_protocol_signal_handler"));
+				if (status != ISC_R_SUCCESS) {
+					omapi_disconnect (c, 1);
+					return status;
+				}
+			}
+			status = (omapi_set_value
+				  ((omapi_object_t *)p -> message -> object,
+				   p -> message -> id_object,
+				   p -> name, p -> value));
+		}
 		if (status != ISC_R_SUCCESS) {
 			omapi_disconnect (c, 1);
 			return status;
@@ -412,9 +458,18 @@ isc_result_t omapi_protocol_signal_handler (omapi_object_t *h,
 			 p -> message -> authlen);
 		/* XXX now do something to verify the signature. */
 
+		/* Process the message. */
 	      message_done:
-		/* XXX process the message. */
+		status = omapi_message_process (p -> message);
+		if (status != ISC_R_SUCCESS) {
+			omapi_disconnect (c, 1);
+			return ISC_R_NOMEMORY;
+		}
+
 		/* XXX unbind the authenticator. */
+	      auth_unbind:
+		omapi_object_dereference ((omapi_object_t **)&p -> message,
+					  "omapi_protocol_signal_handler");
 
 		/* Now wait for the next message. */
 		goto to_header_wait;		

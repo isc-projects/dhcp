@@ -96,11 +96,12 @@ isc_result_t omapi_generic_set_value (omapi_object_t *h,
 
 	/* If the name isn't already attached to this object, see if an
 	   inner object has it. */
-	if (h -> inner && h -> inner -> type -> set_value)
+	if (h -> inner && h -> inner -> type -> set_value) {
 		status = ((*(h -> inner -> type -> set_value))
 			  (h -> inner, id, name, value));
-	if (status != ISC_R_NOTFOUND)
-		return status;
+		if (status != ISC_R_NOTFOUND)
+			return status;
+	}
 
 	/* Okay, so it's a value that no inner object knows about, and
 	   (implicitly, since the outer object set_value method would
@@ -228,8 +229,8 @@ isc_result_t omapi_generic_stuff_values (omapi_object_t *c,
 				  (c, src -> values [i] -> name -> len));
 			if (status != ISC_R_SUCCESS)
 				return status;
-			status = (omapi_connection_copyout
-				  (src -> values [i] -> name -> value, c,
+			status = (omapi_connection_copyin
+				  (c, src -> values [i] -> name -> value,
 				   src -> values [i] -> name -> len));
 			if (status != ISC_R_SUCCESS)
 				return status;

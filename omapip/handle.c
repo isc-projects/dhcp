@@ -263,3 +263,21 @@ static isc_result_t omapi_handle_lookup_in (omapi_object_t **o,
 
 	return omapi_handle_lookup_in (o, h, table -> children [index].table);
 }
+
+/* For looking up objects based on handles that have been sent on the wire. */
+isc_result_t omapi_handle_td_lookup (omapi_object_t **obj,
+				     omapi_typed_data_t *handle)
+{
+	isc_result_t status;
+	omapi_handle_t h;
+
+	if (handle -> type == omapi_datatype_int)
+		h = handle -> u.integer;
+	else if (handle -> type == omapi_datatype_data &&
+		 handle -> u.buffer.len == sizeof h) {
+		memcpy (&h, handle -> u.buffer.value, sizeof h);
+		h = ntohl (h);
+	} else
+		return ISC_R_INVALIDARG;
+	return omapi_handle_lookup (obj, h);
+}

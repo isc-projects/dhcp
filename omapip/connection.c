@@ -322,39 +322,3 @@ isc_result_t omapi_connection_stuff_values (omapi_object_t *c,
 								m -> inner);
 	return ISC_R_SUCCESS;
 }
-
-isc_result_t omapi_connection_write_typed_data (omapi_object_t *c,
-						omapi_typed_data_t *data)
-{
-	isc_result_t status;
-	omapi_handle_t handle;
-
-	switch (data -> type) {
-	      case omapi_datatype_int:
-		status = omapi_connection_put_uint32 (c, sizeof (u_int32_t));
-		if (status != ISC_R_SUCCESS)
-			return status;
-		return omapi_connection_put_uint32 (c, data -> u.integer);
-
-	      case omapi_datatype_string:
-	      case omapi_datatype_data:
-		status = omapi_connection_put_uint32 (c, data -> u.buffer.len);
-		if (status != ISC_R_SUCCESS)
-			return status;
-		return omapi_connection_copyin (c, data -> u.buffer.value,
-						data -> u.buffer.len);
-
-	      case omapi_datatype_object:
-		status = omapi_object_handle (&handle,
-					      data -> u.object);
-		if (status != ISC_R_SUCCESS)
-			return status;
-		status = omapi_connection_put_uint32 (c, sizeof handle);
-		if (status != ISC_R_SUCCESS)
-			return status;
-		return omapi_connection_put_uint32 (c, handle);
-
-	}
-	return ISC_R_INVALIDARG;
-}
-

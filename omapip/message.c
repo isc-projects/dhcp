@@ -27,6 +27,7 @@ omapi_message_object_t *omapi_registered_messages;
 isc_result_t omapi_message_new (omapi_object_t **o, char *name)
 {
 	omapi_message_object_t *m;
+	omapi_object_t *g;
 	isc_result_t status;
 
 	m = malloc (sizeof *m);
@@ -36,8 +37,33 @@ isc_result_t omapi_message_new (omapi_object_t **o, char *name)
 	m -> type = omapi_type_message;
 	m -> refcnt = 1;
 
+	g = (omapi_object_t *)0;
+	status = omapi_generic_new (&g, name);
+	if (status != ISC_R_SUCCESS) {
+		free (m);
+		return status;
+	}
+	status = omapi_object_reference (&m -> inner, g, name);
+	if (status != ISC_R_SUCCESS) {
+		omapi_object_dereference ((omapi_object_t **)&m, name);
+		omapi_object_dereference (&g, name);
+		return status;
+	}
+	status = omapi_object_reference (&g -> outer,
+					 (omapi_object_t *)m, name);
+
+	if (status != ISC_R_SUCCESS) {
+		omapi_object_dereference ((omapi_object_t **)&m, name);
+		omapi_object_dereference (&g, name);
+		return status;
+	}
+
 	status = omapi_object_reference (o, (omapi_object_t *)m, name);
 	omapi_object_dereference ((omapi_object_t **)&m, name);
+	omapi_object_dereference (&g, name);
+	if (status != ISC_R_SUCCESS)
+		return status;
+
 	return status;
 }
 
@@ -66,35 +92,52 @@ isc_result_t omapi_message_set_value (omapi_object_t *h,
 					    "omapi_message_set_value");
 		return ISC_R_SUCCESS;
 
+	} else if (!omapi_ds_strcmp (name, "object")) {
+		if (value -> type != omapi_datatype_object)
+			return ISC_R_INVALIDARG;
+		if (m -> object)
+			omapi_object_dereference
+				(&m -> object,
+				 "omapi_message_set_value");
+		omapi_object_reference (&m -> object,
+					value -> u.object,
+					"omapi_message_set_value");
+		return ISC_R_SUCCESS;
+
 	/* Can set authid, but it has to be an integer. */
 	} else if (!omapi_ds_strcmp (name, "authid")) {
 		if (value -> type != omapi_datatype_int)
 			return ISC_R_INVALIDARG;
 		m -> authid = value -> u.integer;
+		return ISC_R_SUCCESS;
 
 	/* Can set op, but it has to be an integer. */
 	} else if (!omapi_ds_strcmp (name, "op")) {
 		if (value -> type != omapi_datatype_int)
 			return ISC_R_INVALIDARG;
 		m -> op = value -> u.integer;
+		return ISC_R_SUCCESS;
 
 	/* Handle also has to be an integer. */
 	} else if (!omapi_ds_strcmp (name, "handle")) {
 		if (value -> type != omapi_datatype_int)
 			return ISC_R_INVALIDARG;
 		m -> h = value -> u.integer;
+		return ISC_R_SUCCESS;
 
 	/* Transaction ID has to be an integer. */
 	} else if (!omapi_ds_strcmp (name, "id")) {
 		if (value -> type != omapi_datatype_int)
 			return ISC_R_INVALIDARG;
 		m -> id = value -> u.integer;
+		return ISC_R_SUCCESS;
 
 	/* Remote transaction ID has to be an integer. */
 	} else if (!omapi_ds_strcmp (name, "rid")) {
 		if (value -> type != omapi_datatype_int)
 			return ISC_R_INVALIDARG;
 		m -> rid = value -> u.integer;
+		return ISC_R_SUCCESS;
 	}
 
 	/* Try to find some inner object that can take the value. */
@@ -291,4 +334,278 @@ isc_result_t omapi_message_unregister (omapi_object_t *mo)
 		omapi_object_dereference ((omapi_object_t **)&n,
 					  "omapi_message_unregister");
 	return ISC_R_SUCCESS;
+}
+
+isc_result_t omapi_message_process (omapi_object_t *mo, omapi_object_t *po)
+{
+	omapi_message_object_t *message, *m;
+	omapi_object_t *object = (omapi_object_t *)0;
+	omapi_value_t *tv;
+	int create, update, exclusive;
+	isc_result_t status, waitstatus;
+	omapi_object_type_t *type;
+
+	if (mo -> type != omapi_type_message)
+		return ISC_R_INVALIDARG;
+	message = (omapi_message_object_t *)mo;
+
+	if (message -> rid) {
+		for (m = omapi_registered_messages; m; m = m -> next)
+			if (m -> id == message -> rid)
+				break;
+		/* If we don't have a real message corresponding to
+		   the message ID to which this message claims it is a
+		   response, something's fishy. */
+		if (!m)
+			return ISC_R_NOTFOUND;
+	}
+
+	switch (message -> op) {
+	      case OMAPI_OP_OPEN:
+		if (m) {
+			omapi_protocol_send_error (po, ISC_R_INVALIDARG,
+						   message -> id,
+						   "OPEN can't be a response");
+			return ISC_R_SUCCESS;
+		}
+
+		/* Get the type of the requested object, if one was
+		   specified. */
+		tv = (omapi_value_t *)0;
+		status = omapi_get_value_str (message -> object,
+					      (omapi_object_t *)0,
+					      "type", &tv);
+		if (status == ISC_R_SUCCESS &&
+		    (tv -> value -> type == omapi_datatype_data ||
+		     tv -> value -> type == omapi_datatype_string)) {
+			for (type = omapi_object_types;
+			     type; type = type -> next)
+				if (!omapi_td_strcmp (tv -> value,
+						      type -> name))
+					break;
+		} else
+			type = (omapi_object_type_t *)0;
+		if (tv)
+			omapi_value_dereference (&tv,
+						 "omapi_message_process");
+
+		/* Get the create flag. */
+		status = omapi_get_value_str (message -> object,
+					      (omapi_object_t *)0,
+					      "create", &tv);
+		if (status == ISC_R_SUCCESS) {
+			status = omapi_get_int_value (&create, tv);
+			omapi_value_dereference (&tv,
+						      "omapi_message_process");
+			if (status != ISC_R_SUCCESS) {
+				omapi_protocol_send_error
+					(po, status, message -> id,
+					 "invalid create flag value");
+				return ISC_R_SUCCESS;
+			}
+		} else
+			create = 0;
+
+		/* Get the update flag. */
+		status = omapi_get_value_str (message -> object,
+					      (omapi_object_t *)0,
+					      "update", &tv);
+		if (status == ISC_R_SUCCESS) {
+			status = omapi_get_int_value (&update, tv);
+			omapi_value_dereference (&tv,
+						      "omapi_message_process");
+			if (status != ISC_R_SUCCESS) {
+				omapi_protocol_send_error
+					(po, status, message -> id,
+					 "invalid update flag value");
+				return ISC_R_SUCCESS;
+			}
+		} else
+			update = 0;
+
+		/* Get the exclusive flag. */
+		status = omapi_get_value_str (message -> object,
+					      (omapi_object_t *)0,
+					      "exclusive", &tv);
+		if (status == ISC_R_SUCCESS) {
+			status = omapi_get_int_value (&exclusive, tv);
+			omapi_value_dereference (&tv,
+						 "omapi_message_process");
+			if (status != ISC_R_SUCCESS) {
+				omapi_protocol_send_error
+					(po, status, message -> id,
+					 "invalid exclusive flag value");
+				return ISC_R_SUCCESS;
+			}
+		} else
+			exclusive = 0;
+
+		/* If we weren't given a type, look the object up with
+                   the handle. */
+		if (!type) {
+			if (create) {
+				omapi_protocol_send_error
+					(po, ISC_R_INVALIDARG, message -> id,
+					 "type required on create");
+				return ISC_R_SUCCESS;
+			}
+			goto refresh;
+		}
+
+		/* If the type doesn't provide a lookup method, we can't
+		   look up the object. */
+		if (!type -> lookup) {
+			omapi_protocol_send_error
+				(po, ISC_R_NOTIMPLEMENTED, message -> id,
+				 "unsearchable object type");
+			return ISC_R_SUCCESS;
+		}
+		status = (*(type -> lookup)) (&object, (omapi_object_t *)0,
+					      message -> object);
+
+		if (status != ISC_R_SUCCESS && status != ISC_R_NOTFOUND) {
+			omapi_protocol_send_error
+				(po, status, message -> id,
+				 "object lookup failed");
+			return ISC_R_SUCCESS;
+		}
+
+		/* If we didn't find the object and we aren't supposed to
+		   create it, return an error. */
+		if (status == ISC_R_NOTFOUND && !create) {
+			omapi_protocol_send_error
+				(po, ISC_R_NOTFOUND, message -> id,
+				 "no object matches specification");
+			return ISC_R_SUCCESS;
+		}			
+
+		/* If we found an object, we're supposed to be creating an
+		   object, and we're not supposed to have found an object,
+		   return an error. */
+		if (status == ISC_R_SUCCESS && create && exclusive) {
+			omapi_object_dereference
+				(&object, "omapi_message_process");
+			omapi_protocol_send_error
+				(po, ISC_R_EXISTS, message -> id,
+				 "specified object already exists");
+			return ISC_R_SUCCESS;
+		}
+
+		/* If we're creating the object, do it now. */
+		if (!object) {
+			status = omapi_object_create (&object, type);
+			if (status != ISC_R_SUCCESS) {
+				omapi_protocol_send_error
+					(po, status, message -> id,
+					 "can't create new object");
+				return ISC_R_SUCCESS;
+			}
+		}
+
+		/* If we're updating it, do so now. */
+		if (create || update) {
+			status = omapi_object_update (object,
+						      message -> object);
+			if (status != ISC_R_SUCCESS) {
+				omapi_object_dereference
+					(&object, "omapi_message_process");
+				omapi_protocol_send_error
+					(po, status, message -> id,
+					 "can't update object");
+				return ISC_R_SUCCESS;
+			}
+		}
+		
+		/* Now send the new contents of the object back in
+		   response. */
+		goto send;
+
+	      case OMAPI_OP_REFRESH:
+	      refresh:
+		status = omapi_handle_lookup (&object,
+					      message -> handle);
+		if (status != ISC_R_SUCCESS) {
+			omapi_protocol_send_error
+				(po, status, message -> id,
+				 "no matching handle");
+			return ISC_R_SUCCESS;
+		}
+	      send:		
+		omapi_protocol_send_update (po, message -> id, object);
+		omapi_object_dereference (&object,
+					  "omapi_message_process");
+		return ISC_R_SUCCESS;
+
+	      case OMAPI_OP_UPDATE:
+		if (m) {
+			omapi_object_reference (&object, m -> object,
+						"omapi_message_process");
+		} else {
+			status = omapi_handle_lookup (&object,
+						      message -> handle);
+			if (status != ISC_R_SUCCESS) {
+				omapi_protocol_send_error
+					(po, status, message -> id,
+					 "no matching handle");
+				return ISC_R_SUCCESS;
+			}
+		}
+
+		status = omapi_object_update (object, message -> object);
+		if (status != ISC_R_SUCCESS) {
+			omapi_object_dereference
+				(&object, "omapi_message_process");
+			if (!message -> rid)
+				omapi_protocol_send_error
+					(po, status, message -> id,
+					 "can't update object");
+			if (m)
+				omapi_signal ((omapi_object_t *)m,
+					      "status", status);
+			return ISC_R_SUCCESS;
+		}
+		if (!message -> rid)
+			omapi_protocol_send_success (po, message -> id);
+		if (m)
+			omapi_signal ((omapi_object_t *)m,
+				      "status", ISC_R_SUCCESS);
+		return ISC_R_SUCCESS;
+
+	      case OMAPI_OP_NOTIFY:
+		omapi_protocol_send_error (po, ISC_R_NOTIMPLEMENTED,
+					   message -> id,
+					   "notify not implemented yet");
+		return ISC_R_SUCCESS;
+
+	      case OMAPI_OP_ERROR:
+		/* An error message that's not in response to another
+		   message is invalid. */
+		if (!m)
+			return ISC_R_UNEXPECTED;
+
+		/* Get the wait status. */
+		status = omapi_get_value_str (message -> object,
+					      (omapi_object_t *)0,
+					      "result", &tv);
+		if (status == ISC_R_SUCCESS) {
+			status = omapi_get_int_value (&waitstatus, tv);
+			omapi_value_dereference (&tv,
+						 "omapi_message_process");
+			if (status != ISC_R_SUCCESS)
+				waitstatus = ISC_R_UNEXPECTED;
+		} else
+			waitstatus = ISC_R_UNEXPECTED;
+		omapi_signal ((omapi_object_t *)m, "status", waitstatus);
+		return ISC_R_SUCCESS;
+
+	      case OMAPI_OP_REQUEST_OK:
+		/* An error message that's not in response to another
+		   message is invalid. */
+		if (!m)
+			return ISC_R_UNEXPECTED;
+
+		omapi_signal ((omapi_object_t *)m, "status", ISC_R_SUCCESS);
+		return ISC_R_SUCCESS;
+	}
+	return ISC_R_NOTIMPLEMENTED;
 }

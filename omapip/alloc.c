@@ -208,6 +208,7 @@ isc_result_t omapi_typed_data_new (omapi_typed_data_t **t,
 	int len;
 	int val;
 	char *s;
+	isc_result_t status;
 
 	va_start (l, type);
 
@@ -219,7 +220,7 @@ isc_result_t omapi_typed_data_new (omapi_typed_data_t **t,
 	      case omapi_datatype_string:
 		s = va_arg (l, char *);
 		val = strlen (s);
-		len = OMAPI_TYPED_DATA_NOBUFFER_LEN + val + 1;
+		len = OMAPI_TYPED_DATA_NOBUFFER_LEN + val;
 		break;
 	      case omapi_datatype_data:
 		val = va_arg (l, int);
@@ -242,18 +243,23 @@ isc_result_t omapi_typed_data_new (omapi_typed_data_t **t,
 		new -> u.integer = val;
 		break;
 	      case omapi_datatype_string:
-		strcpy (new -> u.buffer.value, s);
+		memcpy (new -> u.buffer.value, s, val);
 		new -> u.buffer.len = val;
 		break;
 	      case omapi_datatype_data:
 		new -> u.buffer.len = val;
 		break;
 	      case omapi_datatype_object:
-		return omapi_object_reference (&new -> u.object,
-					       va_arg (l, omapi_object_t *),
-					       "omapi_datatype_new");
+		status = omapi_object_reference (&new -> u.object,
+						 va_arg (l, omapi_object_t *),
+						 "omapi_datatype_new");
+		if (status != ISC_R_SUCCESS) {
+			free (new);
+			return status;
+		}
 		break;
 	}
+	new -> type = type;
 	return omapi_typed_data_reference (t, new, "omapi_typed_data_new");
 }
 

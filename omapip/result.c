@@ -66,6 +66,8 @@ static char *text[ISC_R_NRESULTS] = {
 	"invalid argument",			/* 39 */
 	"not connected",			/* 40 */
 	"data not yet available",		/* 41 */
+	"object unchanged",			/* 42 */
+	"more than one object matches key",	/* 43 */
 };
 
 char *isc_result_totext (isc_result_t result)
