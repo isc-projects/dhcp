@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.68 2000/10/13 18:47:21 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.69 2000/11/24 04:00:04 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -117,12 +117,12 @@ int parse_options (packet)
 
 int parse_option_buffer (options, buffer, length, universe)
 	struct option_state *options;
-	unsigned char *buffer;
+	const unsigned char *buffer;
 	unsigned length;
 	struct universe *universe;
 {
 	unsigned char *t;
-	unsigned char *end = buffer + length;
+	const unsigned char *end = buffer + length;
 	unsigned len, offset;
 	int code;
 	struct option_cache *op = (struct option_cache *)0;
@@ -163,7 +163,7 @@ int parse_option_buffer (options, buffer, length, universe)
 		      (parse_encapsulated_suboptions
 		       (options, universe -> options [code],
 			buffer + offset + 2, len,
-			universe, (struct universe *)0)))) {
+			universe, (const char *)0)))) {
 		    save_option_buffer (universe, options, bp,
 					&bp -> data [offset + 2], len,
 					universe -> options [code], 1);
@@ -174,20 +174,11 @@ int parse_option_buffer (options, buffer, length, universe)
 	return 1;
 }
 
-/* If an option in an option buffer turns out to be an encapsulation,
-   figure out what to do.   If we don't know how to de-encapsulate it,
-   or it's not well-formed, return zero; otherwise, return 1, indicating
-   that we succeeded in de-encapsulating it. */
-
-int parse_encapsulated_suboptions (struct option_state *options,
-				   struct option *eopt,
-				   unsigned char *buffer,
-				   unsigned len, struct universe *eu,
-				   struct universe *vu)
+struct universe *find_option_universe (struct option *eopt, const char *uname)
 {
-	struct universe *universe;
 	int i;
 	char *s, *t;
+	struct universe *universe = (struct universe *)0;
 
 	/* Look for the E option in the option format. */
 	s = strchr (eopt -> format, 'E');
@@ -203,10 +194,14 @@ int parse_encapsulated_suboptions (struct option_state *options,
 		log_error ("internal encapsulation format error 2.");
 		return 0;
 	}
-	if (t == s) {
-		/* It's the vendor universe. */
-		universe = vu;
-	} else {
+	if (t == s && uname) {
+		for (i = 0; i < universe_count; i++) {
+			if (!strcmp (universes [i] -> name, uname)) {
+				universe = universes [i];
+				break;
+			}
+		}
+	} else if (t != s) {
 		for (i = 0; i < universe_count; i++) {
 			if (strlen (universes [i] -> name) == t - s &&
 			    !memcmp (universes [i] -> name,
@@ -216,6 +211,23 @@ int parse_encapsulated_suboptions (struct option_state *options,
 			}
 		}
 	}
+	return universe;
+}
+
+/* If an option in an option buffer turns out to be an encapsulation,
+   figure out what to do.   If we don't know how to de-encapsulate it,
+   or it's not well-formed, return zero; otherwise, return 1, indicating
+   that we succeeded in de-encapsulating it. */
+
+int parse_encapsulated_suboptions (struct option_state *options,
+				   struct option *eopt,
+				   const unsigned char *buffer,
+				   unsigned len, struct universe *eu,
+				   const char *uname)
+{
+	int i;
+	char *s;
+	struct universe *universe = find_option_universe (eopt, uname);
 
 	/* If we didn't find the universe, we can't do anything with it
 	   right now (e.g., we can't decode vendor options until we've
@@ -238,7 +250,7 @@ int parse_encapsulated_suboptions (struct option_state *options,
 }
 
 int fqdn_universe_decode (struct option_state *options,
-			  unsigned char *buffer,
+			  const unsigned char *buffer,
 			  unsigned length, struct universe *u)
 {
 	char *name;
@@ -826,8 +838,8 @@ int store_options (buffer, buflen, packet, lease,
 
 /* Format the specified option so that a human can easily read it. */
 
-const char *pretty_print_option (code, data, len, emit_commas, emit_quotes)
-	unsigned int code;
+const char *pretty_print_option (option, data, len, emit_commas, emit_quotes)
+	struct option *option;
 	const unsigned char *data;
 	unsigned len;
 	int emit_commas;
@@ -838,15 +850,11 @@ const char *pretty_print_option (code, data, len, emit_commas, emit_quotes)
 	int numhunk = -1;
 	int numelem = 0;
 	char fmtbuf [32];
-	int i, j, k;
+	int i, j, k, l;
 	char *op = optbuf;
 	const unsigned char *dp = data;
 	struct in_addr foo;
 	char comma;
-
-	/* Code should be between 0 and 255. */
-	if (code > 255)
-		log_fatal ("pretty_print_option: bad code %d\n", code);
 
 	if (emit_commas)
 		comma = ',';
@@ -854,26 +862,31 @@ const char *pretty_print_option (code, data, len, emit_commas, emit_quotes)
 		comma = ' ';
 	
 	/* Figure out the size of the data. */
-	for (i = 0; dhcp_options [code].format [i]; i++) {
+	for (l = i = 0; option -> format [i]; i++, l++) {
 		if (!numhunk) {
-			log_error ("%s: Extra codes in format string: %s\n",
-				   dhcp_options [code].name,
-				   &(dhcp_options [code].format [i]));
+			log_error ("%s: Extra codes in format string: %s",
+				   option -> name,
+				   &(option -> format [i]));
 			break;
 		}
 		numelem++;
-		fmtbuf [i] = dhcp_options [code].format [i];
-		switch (dhcp_options [code].format [i]) {
+		fmtbuf [l] = option -> format [i];
+		switch (option -> format [i]) {
 		      case 'a':
 			--numelem;
-			fmtbuf [i] = 0;
+			fmtbuf [l] = 0;
 			numhunk = 0;
 			break;
 		      case 'A':
 			--numelem;
-			fmtbuf [i] = 0;
+			fmtbuf [l] = 0;
 			numhunk = 0;
 			break;
+		      case 'E':
+			/* Skip the universe name. */
+			while (option -> format [i] &&
+			       option -> format [i] != '.')
+				i++;
 		      case 'X':
 			for (k = 0; k < len; k++) {
 				if (!isascii (data [k]) ||
@@ -884,19 +897,19 @@ const char *pretty_print_option (code, data, len, emit_commas, emit_quotes)
 			   character we found is a trailing NUL, it's
 			   okay to print this option as text. */
 			if (k == len || (k + 1 == len && data [k] == 0)) {
-				fmtbuf [i] = 't';
+				fmtbuf [l] = 't';
 				numhunk = -2;
 			} else {
-				fmtbuf [i] = 'x';
+				fmtbuf [l] = 'x';
 				hunksize++;
 				comma = ':';
 				numhunk = 0;
 			}
-			fmtbuf [i + 1] = 0;
+			fmtbuf [l + 1] = 0;
 			break;
 		      case 't':
-			fmtbuf [i] = 't';
-			fmtbuf [i + 1] = 0;
+			fmtbuf [l] = 't';
+			fmtbuf [l + 1] = 0;
 			numhunk = -2;
 			break;
 		      case 'I':
@@ -916,9 +929,9 @@ const char *pretty_print_option (code, data, len, emit_commas, emit_quotes)
 		      case 'e':
 			break;
 		      default:
-			log_error ("%s: garbage in format string: %s\n",
-			      dhcp_options [code].name,
-			      &(dhcp_options [code].format [i]));
+			log_error ("%s: garbage in format string: %s",
+			      option -> name,
+			      &(option -> format [i]));
 			break;
 		} 
 	}
@@ -926,14 +939,14 @@ const char *pretty_print_option (code, data, len, emit_commas, emit_quotes)
 	/* Check for too few bytes... */
 	if (hunksize > len) {
 		log_error ("%s: expecting at least %d bytes; got %d",
-		      dhcp_options [code].name,
+		      option -> name,
 		      hunksize, len);
 		return "<error>";
 	}
 	/* Check for too many bytes... */
 	if (numhunk == -1 && hunksize < len)
 		log_error ("%s: %d extra bytes",
-		      dhcp_options [code].name,
+		      option -> name,
 		      len - hunksize);
 
 	/* If this is an array, compute its size. */
@@ -942,7 +955,7 @@ const char *pretty_print_option (code, data, len, emit_commas, emit_quotes)
 	/* See if we got an exact number of hunks. */
 	if (numhunk > 0 && numhunk * hunksize < len)
 		log_error ("%s: %d extra bytes at end of array\n",
-		      dhcp_options [code].name,
+		      option -> name,
 		      len - numhunk * hunksize);
 
 	/* A one-hunk array prints the same as a single hunk. */
@@ -1708,6 +1721,29 @@ void option_space_foreach (struct packet *packet, struct lease *lease,
 	if (u -> foreach)
 		(*u -> foreach) (packet, lease, in_options, cfg_options,
 				 scope, u, stuff, func);
+}
+
+void suboption_foreach (struct packet *packet, struct lease *lease,
+			struct option_state *in_options,
+			struct option_state *cfg_options,
+			struct binding_scope **scope,
+			struct universe *u, void *stuff,
+			void (*func) (struct option_cache *,
+				      struct packet *,
+				      struct lease *, struct option_state *,
+				      struct option_state *,
+				      struct binding_scope **,
+				      struct universe *, void *),
+			struct option_cache *oc,
+			const char *vsname)
+{
+	struct universe *universe = find_option_universe (oc -> option,
+							  vsname);
+	int i;
+
+	if (universe -> foreach)
+		(*universe -> foreach) (packet, lease, in_options, cfg_options,
+					scope, universe, stuff, func);
 }
 
 void hashed_option_space_foreach (struct packet *packet, struct lease *lease,
