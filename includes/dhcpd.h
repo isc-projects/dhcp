@@ -1843,13 +1843,11 @@ void execute_statements_in_scope PROTO ((struct packet *,
 int executable_statement_dereference PROTO ((struct executable_statement **,
 					     const char *, int));
 void write_statements (FILE *, struct executable_statement *, int);
-struct executable_statement *find_matching_case PROTO ((struct packet *,
-							struct lease *,
-							struct option_state *,
-							struct option_state *,
-							struct binding_scope *,
-							struct expression *,
-					      struct executable_statement *));
+int find_matching_case (struct executable_statement **,
+			struct packet *, struct lease *,
+			struct option_state *, struct option_state *,
+			struct binding_scope *,
+			struct expression *, struct executable_statement *);
 
 /* auth.c */
 void enter_auth_key PROTO ((struct data_string *, struct auth_key *));
@@ -2125,6 +2123,7 @@ int find_host_for_network PROTO ((struct subnet **, struct host_decl **,
 void new_address_range PROTO ((struct iaddr, struct iaddr,
 			       struct subnet *, struct pool *));
 isc_result_t dhcp_lease_free (omapi_object_t *, const char *, int);
+isc_result_t dhcp_lease_get (omapi_object_t **, const char *, int);
 int find_grouped_subnet PROTO ((struct subnet **, struct shared_network *,
 				struct iaddr, const char *, int));
 int find_subnet (struct subnet **, struct iaddr, const char *, int);
