@@ -41,7 +41,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.127 2001/04/05 22:37:35 mellon Exp $ Copyright (c) 1995-2001 Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.128 2001/04/09 00:34:06 mellon Exp $ Copyright (c) 1995-2001 Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1805,7 +1805,6 @@ void make_discover (client, lease)
 	struct client_state *client;
 	struct client_lease *lease;
 {
-	struct dhcp_packet *raw;
 	unsigned char discover = DHCPDISCOVER;
 	int i;
 	struct option_state *options = (struct option_state *)0;
@@ -1853,9 +1852,7 @@ void make_discover (client, lease)
 		    (unsigned)(client -> interface -> hw_address.hlen - 1));
 
 #ifdef DEBUG_PACKET
-	dump_packet (sendpkt);
-	dump_raw ((unsigned char *)client -> packet,
-		  sendpkt->packet_length);
+	dump_raw ((unsigned char *)&client -> packet, client -> packet_length);
 #endif
 }
 
@@ -1937,8 +1934,7 @@ void make_request (client, lease)
 		    (unsigned)(client -> interface -> hw_address.hlen - 1));
 
 #ifdef DEBUG_PACKET
-	dump_packet (sendpkt);
-	dump_raw ((unsigned char *)client -> packet, sendpkt->packet_length);
+	dump_raw ((unsigned char *)&client -> packet, client -> packet_length);
 #endif
 }
 
@@ -1993,8 +1989,7 @@ void make_decline (client, lease)
 		client -> interface -> hw_address.hlen);
 
 #ifdef DEBUG_PACKET
-	dump_packet (sendpkt);
-	dump_raw ((unsigned char *)client -> packet, sendpkt->packet_length);
+	dump_raw ((unsigned char *)&client -> packet, client -> packet_length);
 #endif
 }
 
@@ -2046,9 +2041,7 @@ void make_release (client, lease)
 		client -> interface -> hw_address.hlen);
 
 #ifdef DEBUG_PACKET
-	dump_packet (sendpkt);
-	dump_raw ((unsigned char *)client -> packet,
-		  client -> packet_length);
+	dump_raw ((unsigned char *)&client -> packet, client -> packet_length);
 #endif
 }
 
