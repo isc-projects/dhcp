@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"@(#) Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: memory.c,v 1.18 1996/08/27 09:51:24 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -76,14 +76,16 @@ void enter_host (hd)
 					     hd -> interface.haddr,
 					     hd -> interface.hlen);
 
+		/* If there isn't already a host decl matching this
+		   address, add it to the hash table. */
 		if (!hp)
 			add_hash (host_hw_addr_hash,
 				  hd -> interface.haddr, hd -> interface.hlen,
 				  (unsigned char *)hd);
 	}
-	/* If there's already a host declaration for this hardware
-	   address, add this one to the end of the list.  Otherwise,
-	   add it to the hash table. */
+
+	/* If there was already a host declaration for this hardware
+	   address, add this one to the end of the list. */
 
 	if (hp) {
 		for (np = hp; np -> n_ipaddr; np = np -> n_ipaddr)
@@ -91,19 +93,22 @@ void enter_host (hd)
 		np -> n_ipaddr = hd;
 	}
 
-	if (hd -> options [DHO_DHCP_CLIENT_IDENTIFIER]) {
-		if (!tree_evaluate (hd -> options
+	if (hd -> group -> options [DHO_DHCP_CLIENT_IDENTIFIER]) {
+		if (!tree_evaluate (hd -> group -> options
 				    [DHO_DHCP_CLIENT_IDENTIFIER]))
 			return;
 			
-		if (!host_uid_hash)
+		/* If there's no uid hash, make one; otherwise, see if
+		   there's already an entry in the hash for this host. */
+		if (!host_uid_hash) {
 			host_uid_hash = new_hash ();
-		else
+			hp = (struct host_decl *)0;
+		} else
 			hp = (struct host_decl *) hash_lookup
 				(host_uid_hash,
-				 hd -> options
+				 hd -> group -> options
 				 [DHO_DHCP_CLIENT_IDENTIFIER] -> value,
-				 hd -> options
+				 hd -> group -> options
 				 [DHO_DHCP_CLIENT_IDENTIFIER] -> len);
 
 		/* If there's already a host declaration for this
@@ -119,9 +124,9 @@ void enter_host (hd)
 			}
 		} else {
 			add_hash (host_uid_hash,
-				  hd -> options
+				  hd -> group -> options
 				  [DHO_DHCP_CLIENT_IDENTIFIER] -> value,
-				  hd -> options
+				  hd -> group -> options
 				  [DHO_DHCP_CLIENT_IDENTIFIER] -> len,
 				  (unsigned char *)hd);
 		}
@@ -412,15 +417,10 @@ int supersede_lease (comp, lease, commit)
 		   table if necessary, and always free it. */
 		if (comp -> uid) {
 			if (comp -> uid != lease -> uid) {
-				if (comp -> uid_len != lease -> uid_len ||
-				    memcmp (comp -> uid, lease -> uid,
-					    comp -> uid_len)) {
-					delete_hash_entry (lease_uid_hash,
-							   comp -> uid,
-							   comp -> uid_len);
-					enter_uid = 1;
-				}
+				uid_hash_delete (comp);
+				enter_uid = 1;
 				free (comp -> uid);
+				comp -> uid = (unsigned char *)0;
 			}
 		} else
 			enter_uid = 1;
@@ -433,9 +433,7 @@ int supersede_lease (comp, lease, commit)
 		     memcmp (comp -> hardware_addr.haddr,
 			     lease -> hardware_addr.haddr,
 			     comp -> hardware_addr.hlen))) {
-			delete_hash_entry (lease_hw_addr_hash,
-					   comp -> hardware_addr.haddr,
-					   comp -> hardware_addr.hlen);
+			hw_hash_delete (comp);
 			enter_hwaddr = 1;
 		} else if (!comp -> hardware_addr.htype)
 			enter_hwaddr = 1;
@@ -454,19 +452,16 @@ int supersede_lease (comp, lease, commit)
 
 		/* Record the lease in the uid hash if necessary. */
 		if (enter_uid && lease -> uid) {
-			add_hash (lease_uid_hash, comp -> uid,
-				  comp -> uid_len, (unsigned char *)comp);
+			uid_hash_add (comp);
 		}
 
 		/* Record it in the hardware address hash if necessary. */
 		if (enter_hwaddr && lease -> hardware_addr.htype) {
-			add_hash (lease_hw_addr_hash,
-				  comp -> hardware_addr.haddr,
-				  comp -> hardware_addr.hlen,
-				  (unsigned char *)comp);
+			hw_hash_add (comp);
 		}
 
-		/* Remove the lease from its current place in the list. */
+		/* Remove the lease from its current place in the 
+		   timeout sequence. */
 		if (comp -> prev) {
 			comp -> prev -> next = comp -> next;
 		} else {
@@ -604,6 +599,134 @@ struct lease *find_lease_by_hw_addr (hwaddr, hwlen)
 	return lease;
 }
 
+/* Add the specified lease to the uid hash. */
+
+void uid_hash_add (lease)
+	struct lease *lease;
+{
+	struct lease *head =
+		find_lease_by_uid (lease -> uid, lease -> uid_len);
+	struct lease *scan;
+
+	/* If it's not in the hash, just add it. */
+	if (!head)
+		add_hash (lease_uid_hash, lease -> uid,
+			  lease -> uid_len, (unsigned char *)lease);
+	else {
+		/* Otherwise, attach it to the end of the list. */
+		for (scan = head; scan -> n_uid; scan = scan -> n_uid)
+			;
+		scan -> n_uid = lease;
+	}
+}
+
+/* Delete the specified lease from the uid hash. */
+
+void uid_hash_delete (lease)
+	struct lease *lease;
+{
+	struct lease *head =
+		find_lease_by_uid (lease -> uid, lease -> uid_len);
+	struct lease *scan;
+
+	/* If it's not in the hash, we have no work to do. */
+	if (!head) {
+		lease -> n_uid = (struct lease *)0;
+		return;
+	}
+
+	/* If the lease we're freeing is at the head of the list,
+	   remove the hash table entry and add a new one with the
+	   next lease on the list (if there is one). */
+	if (head == lease) {
+		delete_hash_entry (lease_uid_hash,
+				   lease -> uid, lease -> uid_len);
+		if (lease -> n_uid)
+			add_hash (lease_uid_hash,
+				  lease -> n_uid -> uid,
+				  lease -> n_uid -> uid_len,
+				  (unsigned char *)(lease -> n_uid));
+	} else {
+		/* Otherwise, look for the lease in the list of leases
+		   attached to the hash table entry, and remove it if
+		   we find it. */
+		for (scan = head; scan -> n_uid; scan = scan -> n_uid) {
+			if (scan -> n_uid == lease) {
+				scan -> n_uid = scan -> n_uid -> n_uid;
+				break;
+			}
+		}
+	}
+	lease -> n_uid = (struct lease *)0;
+}
+
+/* Add the specified lease to the hardware address hash. */
+
+void hw_hash_add (lease)
+	struct lease *lease;
+{
+	struct lease *head =
+		find_lease_by_hw_addr (lease -> hardware_addr.haddr,
+				       lease -> hardware_addr.hlen);
+	struct lease *scan;
+
+	/* If it's not in the hash, just add it. */
+	if (!head)
+		add_hash (lease_hw_addr_hash,
+			  lease -> hardware_addr.haddr,
+			  lease -> hardware_addr.hlen,
+			  (unsigned char *)lease);
+	else {
+		/* Otherwise, attach it to the end of the list. */
+		for (scan = head; scan -> n_uid; scan = scan -> n_uid)
+			;
+		scan -> n_uid = lease;
+	}
+}
+
+/* Delete the specified lease from the hardware address hash. */
+
+void hw_hash_delete (lease)
+	struct lease *lease;
+{
+	struct lease *head =
+		find_lease_by_hw_addr (lease -> hardware_addr.haddr,
+				       lease -> hardware_addr.hlen);
+	struct lease *scan;
+
+	/* If it's not in the hash, we have no work to do. */
+	if (!head) {
+		lease -> n_hw = (struct lease *)0;
+		return;
+	}
+
+	/* If the lease we're freeing is at the head of the list,
+	   remove the hash table entry and add a new one with the
+	   next lease on the list (if there is one). */
+	if (head == lease) {
+		delete_hash_entry (lease_hw_addr_hash,
+				   lease -> hardware_addr.haddr,
+				   lease -> hardware_addr.hlen);
+		if (lease -> n_hw)
+			add_hash (lease_hw_addr_hash,
+				  lease -> n_hw -> hardware_addr.haddr,
+				  lease -> n_hw -> hardware_addr.hlen,
+				  (unsigned char *)(lease -> n_hw));
+	} else {
+		/* Otherwise, look for the lease in the list of leases
+		   attached to the hash table entry, and remove it if
+		   we find it. */
+		for (scan = head; scan -> n_hw; scan = scan -> n_hw) {
+			if (scan -> n_hw == lease) {
+				scan -> n_hw = scan -> n_hw -> n_hw;
+				break;
+			}
+		}
+	}
+	lease -> n_hw = (struct lease *)0;
+}
+
+
 struct class *add_class (type, name)
 	int type;
 	char *name;
@@ -622,8 +745,6 @@ struct class *add_class (type, name)
 	memset (class, 0, sizeof *class);
 	strcpy (tname, name);
 	class -> name = tname;
-	memset (class -> options, 0, sizeof class -> options);
-	class -> max_lease_time = class -> default_lease_time = 0;
 
 	if (type)
 		add_hash (user_class_hash,
@@ -646,6 +767,17 @@ struct class *find_class (type, name, len)
 	return class;
 }	
 
+struct group *clone_group (group, caller)
+	struct group *group;
+	char *caller;
+{
+	struct group *g = new_group (caller);
+	if (!g)
+		error ("%s: can't allocate new group", caller);
+	*g = *group;
+	return g;
+}
+
 /* Write all interesting leases to permanent storage. */
 
 void write_leases ()
@@ -656,7 +788,8 @@ void write_leases ()
 	for (s = shared_networks; s; s = s -> next) {
 		for (l = s -> leases; l; l = l -> next) {
 			if (l -> hardware_addr.hlen || l -> uid_len)
-				write_lease (l);
+				if (!write_lease (l))
+					error ("Can't rewrite lease database");
 		}
 	}
 	if (!commit_leases ())
