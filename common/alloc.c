@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: alloc.c,v 1.53 2001/01/25 08:18:37 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: alloc.c,v 1.53.2.1 2001/05/31 19:25:26 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -56,6 +56,7 @@ OMAPI_OBJECT_ALLOC (subnet, struct subnet, dhcp_type_subnet)
 OMAPI_OBJECT_ALLOC (shared_network, struct shared_network,
 		    dhcp_type_shared_network)
 OMAPI_OBJECT_ALLOC (group_object, struct group_object, dhcp_type_group)
+OMAPI_OBJECT_ALLOC (dhcp_control, dhcp_control_object_t, dhcp_type_control)
 
 int option_chain_head_allocate (ptr, file, line)
 	struct option_chain_head **ptr;
