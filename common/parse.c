@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.89 2000/10/10 22:45:25 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.90 2000/11/24 04:04:04 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -129,7 +129,7 @@ char *parse_string (cfile)
 
 	token = next_token (&val, cfile);
 	if (token != STRING) {
-		parse_warn (cfile, "filename must be a string");
+		parse_warn (cfile, "expecting a string");
 		skip_to_semi (cfile);
 		return (char *)0;
 	}
@@ -893,6 +893,7 @@ void parse_option_space_decl (cfile)
 	nu -> lookup_func = lookup_hashed_option;
 	nu -> option_state_dereference =
 		hashed_option_state_dereference;
+	nu -> foreach = hashed_option_space_foreach;
 	nu -> save_func = save_hashed_option;
 	nu -> delete_func = delete_hashed_option;
 	nu -> encapsulate = hashed_option_space_encapsulate;
@@ -4266,7 +4267,7 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 		break;
 
 	      default:
-		parse_warn (cfile, "Bad format %c in parse_option_param.",
+		parse_warn (cfile, "Bad format %c in parse_option_token.",
 			    *fmt);
 		skip_to_semi (cfile);
 		return 0;
