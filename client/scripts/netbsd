@@ -51,11 +51,11 @@ if [ x$reason = xBOUND ] || [ x$reason = xRENEW ] || \
     for router in $old_routers; do
       route delete default $router >/dev/null 2>&1
     done
-    arp -a | sed -n -e 's/^.*(\(.*\)) at .*$/arp -d \1/p' |sh
+    arp -n -a | sed -n -e 's/^.*(\(.*\)) at .*$/arp -n -d \1/p' |sh
   fi
   if [ x$old_ip_address = x ] || [ x$old_ip_address != x$new_ip_address ] || \
      [ x$reason = xBOUND ] || [ x$reason = xREBOOT ]; then
-    ifconfig $interface inet $new_ip_address $new_subnet_arg \
+    ifconfig $interface inet $new_ip_address $new_netmask_arg \
 					$new_broadcast_arg $medium
     route add $new_ip_address 127.1 >/dev/null 2>&1
     for router in $new_routers; do
@@ -85,7 +85,8 @@ if [ x$reason = xEXPIRE ] || [ x$reason = xFAIL ]; then
     for router in $old_routers; do
       route delete default $router >/dev/null 2>&1
     done
-    arp -a | sed -n -e 's/^.*(\(.*\)) at .*$/arp -d \1/p' |sh >/dev/null 2>&1
+    arp -n -a | sed -n -e 's/^.*(\(.*\)) at .*$/arp -n -d \1/p'i \
+						|sh >/dev/null 2>&1
   fi
   if [ x$alias_ip_address != x ]; then
     ifconfig $interface inet alias $alias_ip_address $alias_subnet_arg
@@ -101,6 +102,7 @@ if [ x$reason = xTIMEOUT ]; then
   fi
   ifconfig $interface inet $new_ip_address $new_netmask_arg \
 					$new_broadcast_arg $medium
+  sleep 1
   set $new_routers
   if ping -q -c 1 -w 1 $1; then
     if [ x$new_ip_address != x$alias_ip_address ] && \
@@ -126,7 +128,8 @@ if [ x$reason = xTIMEOUT ]; then
   for router in $old_routers; do
     route delete default $router >/dev/null 2>&1
   done
-  arp -a | sed -n -e 's/^.*(\(.*\)) at .*$/arp -d \1/p' |sh >/dev/null 2>&1
+  arp -n -a | sed -n -e 's/^.*(\(.*\)) at .*$/arp -n -d \1/p' \
+							|sh >/dev/null 2>&1
   exit 1
 fi
 
