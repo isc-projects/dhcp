@@ -29,7 +29,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.95 2000/02/02 20:01:39 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.96 2000/02/02 20:47:55 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -166,10 +166,9 @@ int main (argc, argv, envp)
 		char command[1024];
 
 #if !defined (NO_SNPRINTF)
-		snprintf (command, "kill `cat %s`", path_dhclient_pid);
+		snprintf (command, 1024, "kill `cat %s`", path_dhclient_pid);
 #else
-		snprintf (command, 1024, "kill `cat %s`",
-			  path_dhclient_pid);
+		sprintf (command, "kill `cat %s`", path_dhclient_pid);
 #endif
 		system (command);
 	}
