@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.50 2001/01/19 11:10:32 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.51 2001/01/25 08:36:36 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -878,18 +878,18 @@ int supersede_lease (comp, lease, commit, propogate, pimmediate)
 	}
 
 	if (comp -> agent_options)
-		option_cache_dereference (&comp -> agent_options, MDL);
+		option_chain_head_dereference (&comp -> agent_options, MDL);
 	if (lease -> agent_options) {
 		/* Only retain the agent options if the lease is still
 		   affirmatively associated with a client. */
-		if (lease -> binding_state == FTS_ACTIVE ||
-		    lease -> binding_state == FTS_EXPIRED ||
-		    lease -> binding_state == FTS_ABANDONED ||
-		    lease -> binding_state == FTS_RESERVED ||
-		    lease -> binding_state == FTS_BOOTP)
-			option_cache_reference (&comp -> agent_options,
-						lease -> agent_options, MDL);
-		option_cache_dereference (&lease -> agent_options, MDL);
+		if (lease -> next_binding_state == FTS_ACTIVE ||
+		    lease -> next_binding_state == FTS_EXPIRED ||
+		    lease -> next_binding_state == FTS_RESERVED ||
+		    lease -> next_binding_state == FTS_BOOTP)
+			option_chain_head_reference (&comp -> agent_options,
+						     lease -> agent_options,
+						     MDL);
+		option_chain_head_dereference (&lease -> agent_options, MDL);
 	}
 
 	/* Record the hostname information in the lease. */
@@ -947,7 +947,7 @@ int supersede_lease (comp, lease, commit, propogate, pimmediate)
       just_move_it:
 	if (!comp -> pool) {
 		log_error ("Supersede_lease: lease %s with no pool.",
-			   piaddr (lease -> ip_addr));
+			   piaddr (comp -> ip_addr));
 		return 0;
 	}
 
@@ -1206,8 +1206,8 @@ int lease_copy (struct lease **lp,
 	if (lease -> scope)
 		binding_scope_reference (&lt -> scope, lease -> scope, MDL);
 	if (lease -> agent_options)
-		option_cache_reference (&lt -> agent_options,
-					lease -> agent_options, MDL);
+		option_chain_head_reference (&lt -> agent_options,
+					     lease -> agent_options, MDL);
 	host_reference (&lt -> host, lease -> host, file, line);
 	subnet_reference (&lt -> subnet, lease -> subnet, file, line);
 	pool_reference (&lt -> pool, lease -> pool, file, line);
