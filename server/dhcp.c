@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.57.2.13 1999/02/03 19:46:05 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.57.2.14 1999/02/04 22:13:04 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -549,6 +549,7 @@ void ack_lease (packet, lease, offer, when)
 	struct lease_state *state;
 	TIME lease_time;
 	TIME offered_lease_time;
+	int ulafdr;
 
 	struct class *vendor_class, *user_class;
 	int i;
@@ -998,6 +999,40 @@ void ack_lease (packet, lease, offer, when)
 		state -> options [i] -> len = lease -> subnet -> netmask.len;
 		state -> options [i] -> buf_size =
 			lease -> subnet -> netmask.len;
+		state -> options [i] -> timeout = 0xFFFFFFFF;
+		state -> options [i] -> tree = (struct tree *)0;
+	}
+
+	/* If so directed, use the leased IP address as the router address.
+	   This supposedly makes Win95 machines ARP for all IP addresses,
+	   so if the local router does proxy arp, you win. */
+
+	ulafdr = 0;
+	if (lease -> host) {
+		if (lease -> host -> group -> use_lease_addr_for_default_route)
+			ulafdr = 1;
+	} else if (user_class) {
+		if (user_class -> group -> use_lease_addr_for_default_route)
+			ulafdr = 1;
+	} else if (vendor_class) {
+		if (vendor_class -> group -> use_lease_addr_for_default_route)
+			ulafdr = 1;
+	} else if (lease -> subnet -> group ->
+		   use_lease_addr_for_default_route)
+		ulafdr = 1;
+	else
+		ulafdr = 0;
+
+	i = DHO_ROUTERS;
+	if (ulafdr && !state -> options [i]) {
+		state -> options [i] = new_tree_cache ("routers");
+		state -> options [i] -> flags = TC_TEMPORARY;
+		state -> options [i] -> value =
+			lease -> ip_addr.iabuf;
+		state -> options [i] -> len =
+			lease -> ip_addr.len;
+		state -> options [i] -> buf_size =
+			lease -> ip_addr.len;
 		state -> options [i] -> timeout = 0xFFFFFFFF;
 		state -> options [i] -> tree = (struct tree *)0;
 	}

@@ -207,6 +207,7 @@ struct group {
 	int one_lease_per_client;
 	int get_lease_hostnames;
 	int use_host_decl_names;
+	int use_lease_addr_for_default_route;
 
 	struct tree_cache *options [256];
 };

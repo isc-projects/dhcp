@@ -125,6 +125,7 @@
 #define CLIENT_HOSTNAME	329
 #define REJECT		330
 #define FDDI		331
+#define USE_LEASE_ADDR_FOR_DEFAULT_ROUTE 332
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\
 				 (x) != STRING &&	\

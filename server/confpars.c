@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.45.2.4 1998/11/24 23:02:54 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.45.2.5 1999/02/04 22:13:02 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -155,6 +155,7 @@ void read_leases ()
 	       | fixed-address-parameter
 	       | ALLOW allow-deny-keyword
 	       | DENY allow-deny-keyword
+	       | USE_LEASE_ADDR_FOR_DEFAULT_ROUTE boolean
 
    declaration :== host-declaration
 		 | group-declaration
@@ -299,6 +300,11 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		if (type == HOST_DECL)
 			parse_warn ("use-host-decl-names not allowed here.");
 		group -> use_host_decl_names = parse_boolean (cfile);
+		break;
+
+	      case USE_LEASE_ADDR_FOR_DEFAULT_ROUTE:
+		group -> use_lease_addr_for_default_route =
+			parse_boolean (cfile);
 		break;
 
 	      case NEXT_SERVER:
