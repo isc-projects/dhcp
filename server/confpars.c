@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.143.2.16 2002/11/04 00:46:50 dhankins Exp $ Copyright (c) 1995-2002 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.143.2.17 2003/01/10 06:53:32 dhankins Exp $ Copyright (c) 1995-2002 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -977,7 +977,18 @@ void parse_failover_peer (cfile, group, type)
 			return;
 		}
 	} while (token != RBRACE);
-		
+
+	if (!peer -> me.address)
+		parse_warn (cfile, "local address may not be omitted");
+	if (!peer -> partner.address)
+		parse_warn (cfile, "peer address may not be omitted");
+
+	/* XXX - when/if we get a port number assigned, just set as default */
+	if (!peer -> me.port)
+		parse_warn (cfile, "local port may not be omitted");
+	if (!peer -> partner.port)
+		parse_warn (cfile, "peer port may not be omitted");
+
 	if (peer -> i_am == primary) {
 	    if (!peer -> hba) {
 		parse_warn (cfile,
