@@ -38,7 +38,7 @@ libdhcpctl.a:	$(OBJ)
 	$(RANLIB) libdhcpctl.a
 
 install: all
-	for dir in $(LIBMANDIR); do \
+	for dir in $(LIBDIR) $(LIBMANDIR) $(INCDIR); do \
 	  foo=""; \
 	  for bar in `echo $(DESTDIR)$${dir} |tr / ' '`; do \
 	    foo=$${foo}/$$bar; \
@@ -48,11 +48,15 @@ install: all
 	    fi; \
 	  done; \
 	done
+	$(INSTALL) libdhcpctl.a $(DESTDIR)$(LIBDIR)
+	$(CHMOD) 644 $(DESTDIR)$(LIBDIR)/libdhcpctl.a
+	$(INSTALL) dhcpctl.h $(DESTDIR)$(INCDIR)
+	$(CHMOD) 644 $(DESTDIR)$(INCDIR)/dhcpctl.h
 	for man in $(MAN); do \
 	  prefix=`echo $$man |sed -e 's/\.[0-9]$$//'`; \
 	  suffix=`echo $$man |sed -e 's/.*\.\([0-9]\)$$/\1/'`; \
 	  $(MANINSTALL) $(MANFROM) $${prefix}.$(MANCAT)$${suffix} $(MANTO) \
-			$(DESTDIR)$(LIBMANDIR)/$(prefix)$(LIBMANEXT); \
+			$(DESTDIR)$(LIBMANDIR)/$${prefix}$(LIBMANEXT); \
 	done
 
 depend:
