@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: upf.c,v 1.11 1999/03/26 19:19:44 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: upf.c,v 1.12 1999/09/08 01:43:39 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -300,12 +300,19 @@ int can_receive_unicast_unconfigured (ip)
 
 void maybe_setup_fallback ()
 {
+	isc_result_t status;
 	struct interface_info *fbi;
 	fbi = setup_fallback ();
 	if (fbi) {
 		if_register_fallback (fbi);
-		add_protocol ("fallback", fallback_interface -> wfdesc,
-			      fallback_discard, fallback_interface);
+		fbi -> refcnt = 1;
+		fbi -> type = dhcp_type_interface;
+		status = omapi_register_io_object ((omapi_object_t)fbi,
+						   if_readsocket, 0,
+						   fallback_discard, 0, 0);
+		if (status != ISC_R_SUCCESS)
+			log_fatal ("Can't register I/O handle for %s: %s",
+				   fbi -> name, isc_result_totext (status));
 	}
 }
 #endif

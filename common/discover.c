@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: discover.c,v 1.10 1999/07/13 12:58:03 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: discover.c,v 1.11 1999/09/08 01:44:08 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -35,6 +35,8 @@ int quiet_interface_discovery;
 void (*bootp_packet_handler) PROTO ((struct interface_info *,
 				     struct dhcp_packet *, int, unsigned int,
 				     struct iaddr, struct hardware *));
+
+omapi_object_type_t *dhcp_type_interface;
 
 /* Use the SIOCGIFCONF ioctl to get a list of all the attached interfaces.
    For each interface that's of type INET and not the loopback interface,
@@ -60,6 +62,22 @@ void discover_interfaces (state)
 #ifdef ALIAS_NAMES_PERMUTED
 	char *s;
 #endif
+	isc_result_t status;
+
+	if (!dhcp_type_interface) {
+		status = omapi_init ();
+		if (status != ISC_R_SUCCESS)
+			log_fatal ("Can't initialize OMAPI: %s",
+				   isc_result_totext (status));
+		status = omapi_object_type_register
+			(&dhcp_type_interface, "interface",
+			 interface_set_value, interface_get_value,
+			 interface_destroy, interface_signal_handler,
+			 interface_stuff_values, 0, 0);
+		if (status != ISC_R_SUCCESS)
+			log_fatal ("Can't create interface object type: %s",
+				   isc_result_totext (status));
+	}
 
 	/* Create an unbound datagram socket to do the SIOCGIFADDR ioctl on. */
 	if ((sock = socket (AF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0)
@@ -170,8 +188,10 @@ void discover_interfaces (state)
 				sizeof ifp -> ifr_addr);
 
 			/* We don't want the loopback interface. */
-			if (foo.sin_addr.s_addr == htonl (INADDR_LOOPBACK))
-				continue;
+			if (foo.sin_addr.s_addr == htonl (INADDR_LOOPBACK) &&
+			    ((tmp -> flags & INTERFACE_AUTOMATIC) &&
+			     state == DISCOVER_SERVER))
+			    continue;
 
 
 			/* If this is the first real IP address we've
@@ -186,7 +206,7 @@ void discover_interfaces (state)
 #endif
 				tif = (struct ifreq *)malloc (len);
 				if (!tif)
-					log_fatal ("no space to remember ifp.");
+					log_fatal ("no space for ifp.");
 				memcpy (tif, ifp, len);
 				tmp -> ifp = tif;
 				tmp -> primary_address = foo.sin_addr;
@@ -467,12 +487,31 @@ void discover_interfaces (state)
 	}
 
 	/* Now register all the remaining interfaces as protocols. */
-	for (tmp = interfaces; tmp; tmp = tmp -> next)
-		add_protocol (tmp -> name, tmp -> rfdesc, got_one, tmp);
+	for (tmp = interfaces; tmp; tmp = tmp -> next) {
+		tmp -> refcnt = 1;
+		tmp -> type = dhcp_type_interface;
+		status = omapi_register_io_object ((omapi_object_t *)tmp,
+						   if_readsocket, 0,
+						   got_one, 0, 0);
+		if (status != ISC_R_SUCCESS)
+			log_fatal ("Can't register I/O handle for %s: %s",
+				   tmp -> name, isc_result_totext (status));
+	}
 
 	close (sock);
 
 	maybe_setup_fallback ();
+}
+
+int if_readsocket (h)
+	omapi_object_t *h;
+{
+	struct interface_info *ip;
+
+	if (h -> type != dhcp_type_interface)
+		return ISC_R_INVALIDARG;
+	ip = (struct interface_info *)h;
+	return ip -> rfdesc;
 }
 
 struct interface_info *setup_fallback ()
@@ -481,7 +520,7 @@ struct interface_info *setup_fallback ()
 		((struct interface_info *)
 		 dmalloc (sizeof *fallback_interface, "discover_interfaces"));
 	if (!fallback_interface)
-		log_fatal ("Insufficient memory to record fallback interface.");
+		log_fatal ("No memory to record fallback interface.");
 	memset (fallback_interface, 0, sizeof *fallback_interface);
 	strcpy (fallback_interface -> name, "fallback");
 	fallback_interface -> shared_network =
@@ -509,8 +548,8 @@ void reinitialize_interfaces ()
 	interfaces_invalidated = 1;
 }
 
-void got_one (l)
-	struct protocol *l;
+isc_result_t got_one (h)
+	omapi_object_t *h;
 {
 	struct sockaddr_in from;
 	struct hardware hfrom;
@@ -522,15 +561,19 @@ void got_one (l)
 						 possible MTU. */
 		struct dhcp_packet packet;
 	} u;
-	struct interface_info *ip = l -> local;
+	struct interface_info *ip;
+
+	if (h -> type != dhcp_type_interface)
+		return ISC_R_INVALIDARG;
+	ip = (struct interface_info *)h;
 
 	if ((result =
 	     receive_packet (ip, u.packbuf, sizeof u, &from, &hfrom)) < 0) {
 		log_error ("receive_packet failed on %s: %m", ip -> name);
-		return;
+		return ISC_R_UNEXPECTED;
 	}
 	if (result == 0)
-		return;
+		return ISC_R_UNEXPECTED;
 
 	if (bootp_packet_handler) {
 		ifrom.len = 4;
@@ -539,5 +582,72 @@ void got_one (l)
 		(*bootp_packet_handler) (ip, &u.packet, result,
 					 from.sin_port, ifrom, &hfrom);
 	}
+	return ISC_R_SUCCESS;
+}
+
+isc_result_t interface_set_value (omapi_object_t *h,
+				  omapi_object_t *id,
+				  omapi_data_string_t *name,
+				  omapi_typed_data_t *value)
+{
+	if (h -> type != dhcp_type_interface)
+		return ISC_R_INVALIDARG;
+	
+	if (h -> inner && h -> inner -> type -> set_value)
+		return (*(h -> inner -> type -> set_value))
+			(h -> inner, id, name, value);
+	return ISC_R_NOTFOUND;
+}
+
+isc_result_t interface_get_value (omapi_object_t *h,
+				  omapi_object_t *id,
+				  omapi_data_string_t *name,
+				  omapi_value_t **value)
+{
+	if (h -> type != dhcp_type_interface)
+		return ISC_R_INVALIDARG;
+	
+	if (h -> inner && h -> inner -> type -> get_value)
+		return (*(h -> inner -> type -> get_value))
+			(h -> inner, id, name, value);
+	return ISC_R_NOTFOUND;
+}
+
+isc_result_t interface_stuff_values (omapi_object_t *c,
+				     omapi_object_t *id,
+				     omapi_object_t *m)
+{
+	if (m -> type != dhcp_type_interface)
+		return ISC_R_INVALIDARG;
+	
+	if (m -> inner && m -> inner -> type -> stuff_values)
+		return (*(m -> inner -> type -> stuff_values)) (c, id,
+								m -> inner);
+	return ISC_R_NOTFOUND;
+}
+
+isc_result_t interface_destroy (omapi_object_t *h, char *name)
+{
+	int i;
+
+	struct interface_info *p;
+	if (h -> type != dhcp_type_interface)
+		return ISC_R_INVALIDARG;
+	/* Nothing to do yet, AFAIK - interfaces should never be
+	   destroyed.   Revisit this later when we handle interface
+	   detection/deletion on the fly. */
+	return ISC_R_SUCCESS;
+}
+
+isc_result_t interface_signal_handler (omapi_object_t *h,
+				       char *name, va_list ap)
+{
+	if (h -> type != dhcp_type_interface)
+		return ISC_R_INVALIDARG;
+	
+	if (h -> inner && h -> inner -> type -> signal_handler)
+		return (*(h -> inner -> type -> signal_handler)) (h -> inner,
+								  name, ap);
+	return ISC_R_NOTFOUND;
 }
 

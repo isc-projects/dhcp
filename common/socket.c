@@ -30,7 +30,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: socket.c,v 1.37 1999/05/27 14:18:27 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: socket.c,v 1.38 1999/09/08 01:43:52 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -227,19 +227,26 @@ ssize_t receive_packet (interface, buf, len, from, hfrom)
 #if defined (USE_SOCKET_FALLBACK)
 /* This just reads in a packet and silently discards it. */
 
-void fallback_discard (protocol)
-	struct protocol *protocol;
+isc_result_t fallback_discard (object)
+	omapi_object_t object;
 {
 	char buf [1540];
 	struct sockaddr_in from;
 	int flen = sizeof from;
 	int status;
-	struct interface_info *interface = protocol -> local;
+	struct interface_info *interface;
+
+	if (object -> type != dhcp_type_interface)
+		return ISC_R_INVALIDARG;
+	interface = (struct interface_info *)object;
 
 	status = recvfrom (interface -> wfdesc, buf, sizeof buf, 0,
 			   (struct sockaddr *)&from, &flen);
-	if (status < 0)
+	if (status < 0) {
 		log_error ("fallback_discard: %m");
+		return ISC_R_UNEXPECTED;
+	}
+	return ISC_R_SUCCESS;
 }
 #endif /* USE_SOCKET_SEND */
 
@@ -263,12 +270,19 @@ int can_receive_unicast_unconfigured (ip)
 void maybe_setup_fallback ()
 {
 #if defined (SO_BINDTODEVICE)
+	isc_result_t status;
 	struct interface_info *fbi;
 	fbi = setup_fallback ();
 	if (fbi) {
 		fbi -> wfdesc = if_register_socket (fbi);
-		add_protocol ("fallback",
-			      fbi -> wfdesc, fallback_discard, fbi);
+		fbi -> refcnt = 1;
+		fbi -> type = dhcp_type_interface;
+		status = omapi_register_io_object ((omapi_object_t)fbi,
+						   if_readsocket, 0,
+						   fallback_discard, 0, 0);
+		if (status != ISC_R_SUCCESS)
+			log_fatal ("Can't register I/O handle for %s: %s",
+				   fbi -> name, isc_result_totext (status));
 	}
 #endif
 }
