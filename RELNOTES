@@ -83,6 +83,9 @@ and for prodding me into improving it.
   wrong subnets (in particular, 'option routers') was applied, thanks to
   Ted Lemon for the patch.
 
+- Omshell's handling of dotted octets as values was changed such that dots
+  one after the other produce zero values in the integer string.
+
 			Changes since 3.0.1rc8
 
 - Fix a format string vulnerability in the server that could lead to a
