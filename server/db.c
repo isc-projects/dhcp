@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: db.c,v 1.60 2001/01/25 08:28:51 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: db.c,v 1.61 2001/02/12 20:53:56 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -288,14 +288,6 @@ int write_lease (lease)
 		errno = 0;
 		fprintf (db_file, "\n  client-hostname \"%s\";",
 			 lease -> client_hostname);
-		if (errno) {
-			++errors;
-		}
-	}
-	if (lease -> hostname && db_printable (lease -> hostname)) {
-		errno = 0;
-		fprintf (db_file, "\n  hostname \"%s\";",
-			 lease -> hostname);
 		if (errno) {
 			++errors;
 		}
@@ -706,15 +698,38 @@ int commit_leases ()
 void db_startup (testp)
 	int testp;
 {
-	/* Read in the existing lease file... */
-	read_leases ();
+	isc_result_t status;
 
+#if defined (TRACING)
+	if (!trace_playback ()) {
+#endif
+		/* Read in the existing lease file... */
+		status = read_conf_file (path_dhcpd_db,
+					 (struct group *)0, 0, 1);
+		/* XXX ignore status? */
+#if defined (TRACING)
+	}
+#endif
+
+#if defined (TRACING)
+	/* If we're playing back, there is no lease file, so we can't
+	   append it, so we create one immediately (maybe this isn't
+	   the best solution... */
+	if (trace_playback ()) {
+		new_lease_file ();
+	}
+#endif
 	if (!testp) {
 		db_file = fopen (path_dhcpd_db, "a");
 		if (!db_file)
 			log_fatal ("Can't open %s for append.", path_dhcpd_db);
 		expire_all_pools ();
-		GET_TIME (&write_time);
+#if defined (TRACING)
+		if (trace_playback ())
+			write_time = cur_time;
+		else
+#endif
+			GET_TIME (&write_time);
 		new_lease_file ();
 	}
 }
@@ -760,14 +775,20 @@ void new_lease_file ()
 	counting = 0;
 	write_leases ();
 
-	/* Get the old database out of the way... */
-	sprintf (backfname, "%s~", path_dhcpd_db);
-	if (unlink (backfname) < 0 && errno != ENOENT)
+#if defined (TRACING)
+	if (!trace_playback ()) {
+#endif
+	    /* Get the old database out of the way... */
+	    sprintf (backfname, "%s~", path_dhcpd_db);
+	    if (unlink (backfname) < 0 && errno != ENOENT)
 		log_fatal ("Can't remove old lease database backup %s: %m",
-		       backfname);
-	if (link (path_dhcpd_db, backfname) < 0)
+			   backfname);
+	    if (link (path_dhcpd_db, backfname) < 0)
 		log_fatal ("Can't backup lease database %s to %s: %m",
-		       path_dhcpd_db, backfname);
+			   path_dhcpd_db, backfname);
+#if defined (TRACING)
+	}
+#endif
 	
 	/* Move in the new file... */
 	if (rename (newfname, path_dhcpd_db) < 0)
