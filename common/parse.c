@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.56 1999/11/20 18:36:09 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.57 2000/01/05 18:03:49 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -261,13 +261,13 @@ void parse_hardware_param (cfile, hardware)
 	token = next_token (&val, cfile);
 	switch (token) {
 	      case ETHERNET:
-		hardware -> htype = HTYPE_ETHER;
+		hardware -> hbuf [0] = HTYPE_ETHER;
 		break;
 	      case TOKEN_RING:
-		hardware -> htype = HTYPE_IEEE802;
+		hardware -> hbuf [0] = HTYPE_IEEE802;
 		break;
 	      case FDDI:
-		hardware -> htype = HTYPE_FDDI;
+		hardware -> hbuf [0] = HTYPE_FDDI;
 		break;
 	      default:
 		parse_warn (cfile, "expecting a network hardware type");
@@ -287,16 +287,15 @@ void parse_hardware_param (cfile, hardware)
 				     COLON, 16, 8);
 	if (!t)
 		return;
-	if (hlen > sizeof hardware -> haddr) {
+	if (hlen + 1 > sizeof hardware -> hbuf) {
 		free (t);
 		parse_warn (cfile, "hardware address too long");
 	} else {
-		hardware -> hlen = hlen;
-		memcpy ((unsigned char *)&hardware -> haddr [0],
-			t, hardware -> hlen);
-		if (hlen < sizeof hardware -> haddr)
-			memset (&hardware -> haddr [hlen], 0,
-				(sizeof hardware -> haddr) - hlen);
+		hardware -> hlen = hlen + 1;
+		memcpy ((unsigned char *)&hardware -> hbuf [1], t, hlen);
+		if (hlen + 1 < sizeof hardware -> hbuf)
+			memset (&hardware -> hbuf [hlen + 1], 0,
+				(sizeof hardware -> hbuf) - hlen - 1);
 		free (t);
 	}
 	
@@ -1628,6 +1627,38 @@ int parse_numeric_expression (expr, cfile, lose)
 	return 1;
 }
 
+/*
+ * dns-expression :==
+ *	UPDATE LPAREN ns-class COMMA ns-type COMMA data-expression COMMA
+ *				data-expression COMMA numeric-expression RPAREN
+ *	DELETE LPAREN ns-class COMMA ns-type COMMA data-expression COMMA
+ *				data-expression RPAREN
+ *	EXISTS LPAREN ns-class COMMA ns-type COMMA data-expression COMMA
+ *				data-expression RPAREN
+ *	NOT EXISTS LPAREN ns-class COMMA ns-type COMMA data-expression COMMA
+ *				data-expression RPAREN
+ * ns-class :== IN | CHAOS | HS | NUMBER
+ * ns-type :== A | PTR | MX | TXT | NUMBER
+ */
+
+int parse_dns_expression (expr, cfile, lose)
+	struct expression **expr;
+	struct parse *cfile;
+	int *lose;
+{
+	/* Parse an expression... */
+	if (!parse_expression (expr, cfile, lose, context_dns,
+			       (struct expression **)0, expr_none))
+		return 0;
+
+	if (!is_dns_expression (*expr)) {
+		parse_warn (cfile, "Expecting a dns update subexpression.");
+		*lose = 1;
+		return 0;
+	}
+	return 1;
+}
+
 /* Parse a subexpression that does not contain a binary operator. */
 
 int parse_non_binary (expr, cfile, lose, context)
@@ -1642,6 +1673,7 @@ int parse_non_binary (expr, cfile, lose, context)
 	struct option *option;
 	struct expression *nexp;
 	int known;
+	enum expr_op opcode;
 
 	token = peek_token (&val, cfile);
 
@@ -1672,6 +1704,10 @@ int parse_non_binary (expr, cfile, lose, context)
 
 	      case TOKEN_NOT:
 		token = next_token (&val, cfile);
+		if (context == context_dns) {
+			token = peek_token (&val, cfile);
+			goto not_exists;
+		}
 		if (!expression_allocate (expr, "parse_expression: NOT"))
 			log_fatal ("can't allocate expression");
 		(*expr) -> op = expr_not;
@@ -1688,6 +1724,8 @@ int parse_non_binary (expr, cfile, lose, context)
 		break;
 
 	      case EXISTS:
+		if (context == context_dns)
+			goto ns_exists;
 		token = next_token (&val, cfile);
 		if (!expression_allocate (expr, "parse_expression: EXISTS"))
 			log_fatal ("can't allocate expression");
@@ -1962,37 +2000,72 @@ int parse_non_binary (expr, cfile, lose, context)
 			goto norparen;
 		break;
 
+		/* dns-update and dns-delete are present for historical
+		   purposes, but are deprecated in favor of ns-update
+		   in combination with update, delete, exists and not
+		   exists. */
 	      case DNS_UPDATE:
+	      case DNS_DELETE:
 #if !defined (NSUPDATE)
 		parse_warn (cfile,
 			    "Please rebuild dhcpd with --with-nsupdate.");
 #endif
+		if (token == DNS_UPDATE)
+			opcode = expr_ns_update;
+		else
+			opcode = expr_ns_delete;
+
 		token = next_token (&val, cfile);
 		if (!expression_allocate (expr,
 					  "parse_expression: DNS_UPDATE"))
 			log_fatal ("can't allocate expression");
-		(*expr) -> op = expr_dns_update;
+		(*expr) -> op = expr_dns_transaction;
 
 		token = next_token (&val, cfile);
 		if (token != LPAREN)
 			goto nolparen;
 
-		if (!(parse_data_expression
-		      (&(*expr) -> data.dns_update.type, cfile, lose))) {
-			expression_dereference (expr,
-						"parse_expression: noRRtype");
-			parse_warn (cfile, "expecting DNS RR type.");
+		nexp = (struct expression *)0;
+		if (!expression_allocate (&nexp,
+					  "parse_expression: DNS_UPDATE1"))
+			log_fatal ("can't allocate expression");
+		nexp -> op = opcode;
+		(*expr) -> data.dns_transaction.car = nexp;
+
+		token = next_token (&val, cfile);
+		if (token != STRING) {
+			parse_warn (cfile,
+				    "parse_expression: expecting string.");
+		      badnsupdate:
+			expression_dereference
+				(expr, "parse_expression");
 			skip_to_semi (cfile);
 			*lose = 1;
 			return 0;
 		}
+			
+		if (!strcasecmp (val, "a"))
+			nexp -> data.ns_update.rrtype = T_A;
+		else if (!strcasecmp (val, "ptr"))
+			nexp -> data.ns_update.rrtype = T_PTR;
+		else if (!strcasecmp (val, "mx"))
+			nexp -> data.ns_update.rrtype = T_MX;
+		else if (!strcasecmp (val, "cname"))
+			nexp -> data.ns_update.rrtype = T_CNAME;
+		else if (!strcasecmp (val, "TXT"))
+			nexp -> data.ns_update.rrtype = T_TXT;
+		else {
+			parse_warn (cfile, "unexpected rrtype: %s", val);
+			goto badnsupdate;
+		}
+		nexp -> data.ns_update.rrclass = C_IN;
 
 		token = next_token (&val, cfile);
 		if (token != COMMA)
 			goto nocomma;
 
 		if (!(parse_data_expression
-		      (&(*expr) -> data.dns_update.rrname, cfile, lose)))
+		      (&nexp -> data.ns_update.rrname, cfile, lose)))
 			goto nodata;
 
 		token = next_token (&val, cfile);
@@ -2000,21 +2073,20 @@ int parse_non_binary (expr, cfile, lose, context)
 			goto nocomma;
 
 		if (!(parse_data_expression
-		      (&(*expr) -> data.dns_update.rrdata, cfile, lose)))
+		      (&nexp -> data.ns_update.rrdata, cfile, lose)))
 			goto nodata;
 
-		token = next_token (&val, cfile);
-		if (token != COMMA)
-			goto nocomma;
-
-		if (!(parse_numeric_expression
-		      (&(*expr) -> data.dns_update.ttl, cfile, lose))) {
-			expression_dereference (expr,
-						"parse_expression: nottl");
-			parse_warn (cfile, "expecting data expression.");
-			skip_to_semi (cfile);
-			*lose = 1;
-			return 0;
+		if (opcode == expr_ns_update) {
+			token = next_token (&val, cfile);
+			if (token != COMMA)
+				goto nocomma;
+			
+			if (!(parse_numeric_expression
+			      (&nexp -> data.ns_update.ttl, cfile, lose))) {
+				parse_warn (cfile,
+					    "expecting data expression.");
+				goto badnsupdate;
+			}
 		}
 
 		token = next_token (&val, cfile);
@@ -2022,29 +2094,122 @@ int parse_non_binary (expr, cfile, lose, context)
 			goto norparen;
 		break;
 
-	      case DNS_DELETE:
+	      case NS_UPDATE:
 #if !defined (NSUPDATE)
 		parse_warn (cfile,
 			    "Please rebuild dhcpd with --with-nsupdate.");
 #endif
 		token = next_token (&val, cfile);
 		if (!expression_allocate (expr,
-					  "parse_expression: DNS_DELETE"))
+					  "parse_expression: NS_UPDATE"))
 			log_fatal ("can't allocate expression");
-		(*expr) -> op = expr_dns_delete;
 
 		token = next_token (&val, cfile);
 		if (token != LPAREN)
 			goto nolparen;
 
-		if (!(parse_data_expression
-		      (&(*expr) -> data.dns_update.type, cfile, lose))) {
-			expression_dereference (expr,
-						"parse_expression: noRRtype");
-			parse_warn (cfile, "expecting DNS RR type.");
+		nexp = *expr;
+		do {
+			nexp -> op = expr_dns_transaction;
+			if (!(parse_dns_expression
+			      (&nexp -> data.dns_transaction.car,
+			       cfile, lose)))
+			{
+			      badnstrans:
+				expression_dereference (expr,
+							"parse_expression");
+				*lose = 1;
+				return 0;
+			}
+
+			token = next_token (&val, cfile);
+			
+			if (token == COMMA) {
+				if (!(expression_allocate
+				      (&nexp -> data.dns_transaction.cdr,
+				       "parse_expression")))
+					log_fatal
+						("can't allocate expression");
+				nexp = nexp -> data.dns_transaction.cdr;
+			}
+		} while (token == COMMA);
+
+		if (token != RPAREN)
+			goto norparen;
+		break;
+
+		/* NOT EXISTS is special cased above... */
+	      not_exists:
+		token = next_token (&val, cfile);
+		opcode = expr_ns_not_exists;
+		goto nsupdatecode;
+	      case UPDATE:
+		opcode = expr_ns_update;
+		goto nsupdatecode;
+	      case TOKEN_DELETE:
+		opcode = expr_ns_delete;
+		goto nsupdatecode;
+	      ns_exists:
+		opcode = expr_ns_exists;
+	      nsupdatecode:
+		token = next_token (&val, cfile);
+
+#if !defined (NSUPDATE)
+		parse_warn (cfile,
+			    "Please rebuild dhcpd with --with-nsupdate.");
+#endif
+		if (!expression_allocate (expr, "parse_expression"))
+			log_fatal ("can't allocate expression");
+		(*expr) -> op = opcode;
+
+		token = next_token (&val, cfile);
+		if (token != LPAREN)
+			goto nolparen;
+
+		token = next_token (&val, cfile);
+		if (!is_identifier (token) && token != NUMBER) {
+			parse_warn (cfile, "expecting identifier or number.");
+		      badnsop:
+			expression_dereference (expr, "parse_expression");
 			skip_to_semi (cfile);
 			*lose = 1;
 			return 0;
+		}
+			
+		if (token == NUMBER)
+			(*expr) -> data.ns_update.rrclass = atoi (val);
+		else if (!strcasecmp (val, "in"))
+			(*expr) -> data.ns_update.rrclass = C_IN;
+		else if (!strcasecmp (val, "chaos"))
+			(*expr) -> data.ns_update.rrclass = C_CHAOS;
+		else if (!strcasecmp (val, "hs"))
+			(*expr) -> data.ns_update.rrclass = C_HS;
+		else {
+			parse_warn (cfile, "unexpected rrclass: %s", val);
+			goto badnsop;
+		}
+		
+		token = next_token (&val, cfile);
+		if (!is_identifier (token) && token != NUMBER) {
+			parse_warn (cfile, "expecting identifier or number.");
+			goto badnsop;
+		}
+			
+		if (token == NUMBER)
+			(*expr) -> data.ns_update.rrtype = atoi (val);
+		else if (!strcasecmp (val, "a"))
+			nexp -> data.ns_update.rrtype = T_A;
+		else if (!strcasecmp (val, "ptr"))
+			nexp -> data.ns_update.rrtype = T_PTR;
+		else if (!strcasecmp (val, "mx"))
+			nexp -> data.ns_update.rrtype = T_MX;
+		else if (!strcasecmp (val, "cname"))
+			nexp -> data.ns_update.rrtype = T_CNAME;
+		else if (!strcasecmp (val, "TXT"))
+			nexp -> data.ns_update.rrtype = T_TXT;
+		else {
+			parse_warn (cfile, "unexpected rrtype: %s", val);
+			goto badnsop;
 		}
 
 		token = next_token (&val, cfile);
@@ -2052,7 +2217,7 @@ int parse_non_binary (expr, cfile, lose, context)
 			goto nocomma;
 
 		if (!(parse_data_expression
-		      (&(*expr) -> data.dns_update.rrname, cfile, lose)))
+		      (&nexp -> data.ns_update.rrname, cfile, lose)))
 			goto nodata;
 
 		token = next_token (&val, cfile);
@@ -2060,8 +2225,21 @@ int parse_non_binary (expr, cfile, lose, context)
 			goto nocomma;
 
 		if (!(parse_data_expression
-		      (&(*expr) -> data.dns_update.rrdata, cfile, lose)))
+		      (&nexp -> data.ns_update.rrdata, cfile, lose)))
 			goto nodata;
+
+		if (opcode == expr_ns_update) {
+			token = next_token (&val, cfile);
+			if (token != COMMA)
+				goto nocomma;
+			
+			if (!(parse_numeric_expression
+			      (&nexp -> data.ns_update.ttl, cfile, lose))) {
+				parse_warn (cfile,
+					    "expecting data expression.");
+				goto badnsupdate;
+			}
+		}
 
 		token = next_token (&val, cfile);
 		if (token != RPAREN)
