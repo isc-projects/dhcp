@@ -42,11 +42,15 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.31 1998/04/19 23:19:14 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.32 1998/06/25 03:02:50 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
 #include "dhcpd.h"
+
+static void do_option_set PROTO ((struct  option_cache **,
+				  struct option_cache *,
+				  enum statement_op));
 
 /* Parse all available options out of the specified packet. */
 
@@ -214,13 +218,12 @@ int parse_agent_information_option (packet, len, data)
    three seperate buffers if needed.  This allows us to cons up a set
    of vendor options using the same routine. */
 
-int cons_options (inpacket, outpacket, mms, options, agent_options,
+int cons_options (inpacket, outpacket, mms, options,
 		  overload, terminate, bootpp)
 	struct packet *inpacket;
 	struct dhcp_packet *outpacket;
 	int mms;
-	struct tree_cache **options;
-	struct agent_options *agent_options;
+	struct option_state *options;
 	int overload;	/* Overload flags that may be set. */
 	int terminate;
 	int bootpp;
@@ -283,14 +286,15 @@ int cons_options (inpacket, outpacket, mms, options, agent_options,
 
 	if (inpacket &&
 	    inpacket -> options [DHO_DHCP_PARAMETER_REQUEST_LIST].data) {
+		int prlen = (inpacket ->
+			     options [DHO_DHCP_PARAMETER_REQUEST_LIST].len);
+		if (prlen + priority_len > sizeof priority_list)
+			prlen = (sizeof priority_list) - priority_len;
+
 		memcpy (&priority_list [priority_len],
 			inpacket -> options
-				[DHO_DHCP_PARAMETER_REQUEST_LIST].data,
-			inpacket -> options
-				[DHO_DHCP_PARAMETER_REQUEST_LIST].len);
-		priority_len +=
-			inpacket -> options
-				[DHO_DHCP_PARAMETER_REQUEST_LIST].len;
+				[DHO_DHCP_PARAMETER_REQUEST_LIST].data, prlen);
+		priority_len += prlen;
 	} else {
 		memcpy (&priority_list [priority_len],
 			dhcp_option_default_priority_list,
@@ -303,7 +307,8 @@ int cons_options (inpacket, outpacket, mms, options, agent_options,
 				     (main_buffer_size - 7 +
 				      ((overload & 1) ? DHCP_FILE_LEN : 0) +
 				      ((overload & 2) ? DHCP_SNAME_LEN : 0)),
-				     options, priority_list, priority_len,
+				     options -> dhcp_options,
+				     priority_list, priority_len,
 				     main_buffer_size,
 				     (main_buffer_size +
 				      ((overload & 1) ? DHCP_FILE_LEN : 0)),
@@ -383,7 +388,7 @@ int cons_options (inpacket, outpacket, mms, options, agent_options,
 
 	    /* Cycle through the options, appending them to the
 	       buffer. */
-	    for (a = agent_options; a; a = a -> next) {
+	    for (a = options -> agent_options; a; a = a -> next) {
 		if (agentix + a -> length + 3 + DHCP_FIXED_LEN <=
 		    dhcp_max_agent_option_packet_length) {
 			outpacket ->
@@ -414,7 +419,7 @@ int store_options (buffer, buflen, options, priority_list, priority_len,
 		   first_cutoff, second_cutoff, terminate)
 	unsigned char *buffer;
 	int buflen;
-	struct tree_cache **options;
+	struct option_cache **options;
 	unsigned char *priority_list;
 	int priority_len;
 	int first_cutoff, second_cutoff;
@@ -425,6 +430,7 @@ int store_options (buffer, buflen, options, priority_list, priority_len,
 	int i;
 	int ix;
 	int tto;
+	struct data_string od;
 
 	/* Zero out the stored-lengths array. */
 	memset (option_stored, 0, sizeof option_stored);
@@ -452,16 +458,13 @@ int store_options (buffer, buflen, options, priority_list, priority_len,
 		option_stored [code] = 1;
 
 		/* Find the value of the option... */
-		if (!tree_evaluate (options [code])) {
-			continue;
-		}
-
-		/* If it evaluated to nothing, don't send the option. */
-		if (!options [code] -> len)
+		od = evaluate_data_expression ((struct packet *)0,
+					       options [code] -> expression);
+		if (!od.len)
 			continue;
 
 		/* We should now have a constant length for the option. */
-		length = options [code] -> len;
+		length = od.len;
 
 		/* Do we add a NUL? */
 		if (terminate && dhcp_options [code].format [0] == 't') {
@@ -506,17 +509,18 @@ int store_options (buffer, buflen, options, priority_list, priority_len,
 			buffer [bufix + 1] = incr;
 			if (tto && incr == length) {
 				memcpy (buffer + bufix + 2,
-					options [code] -> value + ix,
-					incr - 1);
+					od.data + ix, incr - 1);
 				buffer [bufix + 2 + incr - 1] = 0;
 			} else {
 				memcpy (buffer + bufix + 2,
-					options [code] -> value + ix, incr);
+					od.data + ix, incr);
 			}
 			length -= incr;
 			ix += incr;
 			bufix += 2 + incr;
 		}
+		if (od.buffer)
+			dfree (od.buffer, "store_options");
 	}
 	return bufix;
 }
@@ -690,26 +694,28 @@ char *pretty_print_option (code, data, len, emit_commas, emit_quotes)
 	return optbuf;
 }
 
-void do_packet (interface, packbuf, len, from_port, from, hfrom)
+void do_packet (interface, packet, len, from_port, from, hfrom)
 	struct interface_info *interface;
-	unsigned char *packbuf;
+	struct dhcp_packet *packet;
 	int len;
 	unsigned int from_port;
 	struct iaddr from;
 	struct hardware *hfrom;
 {
 	struct packet tp;
-	struct dhcp_packet tdp; /* XXX This < 1500 bytes! */
 
-	memcpy (&tdp, packbuf, len);
 	memset (&tp, 0, sizeof tp);
-	tp.raw = &tdp;
+	tp.raw = packet;
 	tp.packet_length = len;
 	tp.client_port = from_port;
 	tp.client_addr = from;
 	tp.interface = interface;
 	tp.haddr = hfrom;
 	
+	if (packet -> hlen > sizeof packet -> chaddr) {
+		note ("Discarding packet with bogus hardware address length.");
+		return;
+	}
 	parse_options (&tp);
 	if (tp.options_valid &&
 	    tp.options [DHO_DHCP_MESSAGE_TYPE].data)
@@ -760,3 +766,96 @@ struct data_string agent_suboption_lookup (packet, code)
 	return result;
 }
 
+struct data_string server_option_lookup (packet, code)
+	struct packet *packet;
+	int code;
+{
+	struct data_string result;
+
+	result.len = 0;
+	result.data = (unsigned char *)0;
+	result.terminated = 0;
+	result.buffer = (unsigned char *)0;
+	return result;
+}
+
+void dhcp_option_set (options, option, op)
+	struct option_state *options;
+	struct option_cache *option;
+	enum statement_op op;
+{
+	struct option_cache *thecache;
+
+	do_option_set (&options -> server_options
+		       [option -> option -> code], option, op);
+}
+
+void server_option_set (options, option, op)
+	struct option_state *options;
+	struct option_cache *option;
+	enum statement_op op;
+{
+	do_option_set (&options -> server_options
+		       [option -> option -> code], option, op);
+}
+
+static void do_option_set (thecache, option, op)
+	struct option_cache **thecache;
+	struct option_cache *option;
+	enum statement_op op;
+{
+	struct option_cache *oc;
+
+	switch (op) {
+	      case if_statement:
+	      case add_statement:
+	      case eval_statement:
+	      case break_statement:
+	      default:
+		warn ("bogus statement type in do_option_set.");
+		break;
+
+	      case default_option_statement:
+		if (*thecache)
+			break;
+		*thecache = option;
+		break;
+
+	      case supersede_option_statement:
+		/* Free any ephemeral state associated with the
+		   current value. */
+		if (*thecache)
+			free_oc_ephemeral_state (*thecache);
+		*thecache = option;
+		break;
+
+	      case append_option_statement:
+	      case prepend_option_statement:
+		if (!*thecache) {
+			*thecache = option;
+			break;
+		}
+		if (((*thecache) -> expression -> flags) & EXPR_EPHEMERAL)
+			oc = *thecache;
+		else {
+			oc = new_option_cache ("do_option_set");
+			if (!oc) {
+				warn ("can't allocate option cache!");
+				break;
+			}
+			*oc = **thecache;
+		}
+		if (op == append_option_statement)
+			oc -> expression =
+				make_concat ((*thecache) -> expression,
+					     option -> expression);
+		else
+			oc -> expression =
+				make_concat (option -> expression,
+					     (*thecache) -> expression);
+
+		oc -> expression -> flags |= EXPR_EPHEMERAL;
+		*thecache = oc;
+		break;
+	}
+}
