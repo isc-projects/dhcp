@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.67.2.1 2001/05/04 23:28:38 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.67.2.2 2001/05/05 04:22:13 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1066,7 +1066,7 @@ int supersede_lease (comp, lease, commit, propogate, pimmediate)
 	   and the expiry code sets the timer if there's anything left
 	   to expire after it's run any outstanding expiry events on
 	   the pool. */
-	if (commit &&
+	if ((commit || !pimmediate) &&
 	    comp -> sort_time != MIN_TIME &&
 	    comp -> sort_time > cur_time &&
 	    (comp -> sort_time < comp -> pool -> next_event_time ||
@@ -1215,6 +1215,15 @@ void make_binding_state_transition (struct lease *lease)
 	      case FTS_ABANDONED:
 	      case FTS_RESET:
 		lease -> next_binding_state = FTS_FREE;
+		/* If we are not in partner_down, leases don't go from
+		   EXPIRED to FREE on a timeout - only on an update.
+		   If we're in partner_down, they expire at mclt past
+		   the time we entered partner_down. */
+		if (lease -> pool -> failover_peer &&
+		    lease -> pool -> failover_peer -> me.state == partner_down)
+			lease -> tsfp =
+			    (lease -> pool -> failover_peer -> me.stos +
+			     lease -> pool -> failover_peer -> mclt);
 		break;
 
 	      case FTS_FREE:
@@ -1446,13 +1455,20 @@ void pool_timer (vpool)
 		if (!*(lptr [i]))
 			continue;
 
-#if defined (FAILOVER)
-		/* The secondary can't remove a lease from the active state
-		   except in partner_down. */
-		if (i == ACTIVE_LEASES &&
-		    pool -> peer && pool -> peer -> i_am == secondary &&
-		    pool -> peer -> me.state != partner_down)
-			continue;
+#if defined (FAILOVER_PROTOCOL)
+		if (pool -> failover_peer &&
+		    pool -> failover_peer -> me.state != partner_down) {
+			/* The secondary can't remove a lease from the
+			   active state except in partner_down. */
+			if (i == ACTIVE_LEASES &&
+			    pool -> failover_peer -> i_am == secondary)
+				continue;
+			/* Leases in an expired state don't move to
+			   free because of a timeout unless we're in
+			   partner_down. */
+			if (i == EXPIRED_LEASES)
+				continue;
+		}
 #endif		
 		lease_reference (&lease, *(lptr [i]), MDL);
 
