@@ -20,7 +20,7 @@ if [ "$sysname" = "" ]; then
     SunOS)
       case `uname -r` in
         4*) sysname=sunos4;;
-        5*) sysname=sunos5-5;;
+        5*) sysname=sunos5;;
       esac;;
     NetBSD)
       sysname=netbsd;;
@@ -41,11 +41,13 @@ if [ "$sysname" = "" ]; then
   echo "   alphaosf	DEC Alpha OSF/1"
   echo "   linux	Linux"
   echo "   sunos4	Sunos 4.1.4 (earlier releases may work)"
-  echo "   sunos5-5	SunOS 5.5 (Solaris 2.5) (earlier 2.x releases may work)"
+  echo "   sunos5	SunOS 5.5 (Solaris 2.5) (earlier 2.x releases may work)"
   echo "   netbsd	NetBSD 1.1 or higher"
   echo "   freebsd	FreeBSD"
   exit 1;
 fi
+
+echo "System Type: $sysname"
 
 sed -e "/^##\+\+${sysname}\+\+/,/^##--${sysname}--/s/^#//" \
 		<Makefile.dist >Makefile
