@@ -142,6 +142,23 @@ isc_result_t omapi_wait_for_completion (omapi_object_t *object,
 			return status;
 	} while (!waiter || !waiter -> ready);
 
+	if (waiter -> outer) {
+		if (waiter -> outer -> inner) {
+			omapi_object_dereference (&waiter -> outer -> inner,
+						  "omapi_wait_for_completion");
+			if (waiter -> inner)
+				omapi_object_reference
+					(&waiter -> outer -> inner,
+					 waiter -> inner,
+					 "omapi_wait_for_completion");
+		}
+		omapi_object_dereference (&waiter -> outer,
+					  "omapi_wait_for_completion");
+	}
+	if (waiter -> inner)
+		omapi_object_dereference (&waiter -> inner,
+					  "omapi_wait_for_completion");
+	
 	omapi_object_dereference ((omapi_object_t **)&waiter,
 				  "omapi_wait_for_completion");
 	return ISC_R_SUCCESS;
