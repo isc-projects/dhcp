@@ -70,10 +70,10 @@ struct iaddr subnet_number (addr, mask)
 struct iaddr ip_addr (subnet, mask, host_address)
 	struct iaddr subnet;
 	struct iaddr mask;
-	unsigned long host_address;
+	u_int32_t host_address;
 {
 	int i, j, k;
-	unsigned long swaddr;
+	u_int32_t swaddr;
 	struct iaddr rv;
 	unsigned char habuf [sizeof swaddr];
 
@@ -106,12 +106,12 @@ struct iaddr ip_addr (subnet, mask, host_address)
 	return rv;
 }
 
-unsigned long host_addr (addr, mask)
+u_int32_t host_addr (addr, mask)
 	struct iaddr addr;
 	struct iaddr mask;
 {
 	int i;
-	unsigned long swaddr;
+	u_int32_t swaddr;
 	struct iaddr rv;
 
 	rv.len = 0;
