@@ -271,7 +271,7 @@ typedef enum {
 	FTS_RELEASED = 4,
 	FTS_ABANDONED = 5,
 	FTS_RESET = 6,
-	FTS_BACKUP = 7,
+	FTS_BACKUP = 7
 } binding_state_t;
 
 /* FTS_LAST is the highest value that is valid for a lease binding state. */
@@ -903,6 +903,8 @@ typedef unsigned char option_mask [16];
 #define _PATH_DHCPD_CONF	"dhcpd.conf"
 #undef _PATH_DHCPD_DB
 #define _PATH_DHCPD_DB		"dhcpd.leases"
+#undef _PATH_DHCPD_PID
+#define _PATH_DHCPD_PID		"dhcpd.pid"
 #else
 #ifndef _PATH_DHCPD_CONF
 #define _PATH_DHCPD_CONF	"/etc/dhcpd.conf"
