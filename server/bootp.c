@@ -67,8 +67,7 @@ void bootp (packet)
 						    packet -> raw -> hlen,
 						    packet -> raw -> chaddr));
 
-	if (!locate_network (packet))
-		return;
+	locate_network (packet);
 
 	hp = find_hosts_by_haddr (packet -> raw -> htype,
 				  packet -> raw -> chaddr,
@@ -78,7 +77,7 @@ void bootp (packet)
 
 	/* Find an IP address in the host_decl that matches the
 	   specified network. */
-	if (hp)
+	if (hp && packet -> shared_network)
 		subnet = find_host_for_network (&hp, &ip_address,
 						packet -> shared_network);
 	else
@@ -100,7 +99,8 @@ void bootp (packet)
 		/* If the packet is from a host we don't know and there
 		   are no dynamic bootp addresses on the network it came
 		   in on, drop it on the floor. */
-		if (!packet -> shared_network -> dynamic_bootp) {
+		if (!(packet -> shared_network &&
+		      packet -> shared_network -> dynamic_bootp)) {
 		      lose:
 			note ("No applicable record for BOOTP host %s",
 			      print_hw_addr (packet -> raw -> htype,
@@ -124,6 +124,11 @@ void bootp (packet)
 			   this lease, set it free. */
 			release_lease (lease);
 		}
+
+		/* At this point, if we don't know the network from which
+		   the packet came, lose it. */
+		if (!packet -> shared_network)
+			goto lose;
 
 		/* If there are dynamic bootp addresses that might be
 		   available, try to snag one. */
