@@ -111,6 +111,7 @@
 #define MEDIA		315
 #define MEDIUM		316
 #define ALIAS		317
+#define REBOOT		318
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\
 				 (x) != STRING &&	\
