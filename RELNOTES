@@ -1,6 +1,6 @@
 	    Internet Software Consortium DHCP Distribution
-		   Version 3, Beta 2, Patchlevel 6
-			  September 29, 2000
+		   Version 3, Beta 2, Patchlevel 7
+			   October 13, 2000
 
 			    Release Notes
 
@@ -48,6 +48,36 @@ Measurement Systems, and Brian Murrell at BC Tel Advanced
 Communications.  I'd like to express my thanks to all of these good
 people here, both for working on the code and for prodding me into
 improving it.
+
+		Changes since 3.0 Beta 2 Patchlevel 5
+
+- Fix a possible DoS attack where a client could cause the checksummer
+  to dump core.   This was a read, not a write, so it shouldn't be
+  possible to exploit it any further than that.
+
+- Implement client- and server-side support for using the Client FQDN
+  option.
+
+- Support for other option spaces in the client has been added.   This
+  means that it is now possible to define a vendor option space on the
+  client, request options in that space from the server (which must
+  define the same option space), and then use those options in the
+  client.   This also allows NWIP and Client FQDN options to be used
+  meaningfully.
+
+- Add object initializer support.   This means that objects can now be
+  initialized to something other than all-zeros when allocated, which
+  makes, e.g., the interface object support code a little more robust.
+
+- Fix an off-by-one bug in the host stuffer.   This was causing host
+  deletes not the work, and may also have been causing OMAPI
+  connections to get dropped.   Thanks to James Brister for tracking
+  this one down!
+
+- Fixed a core dump in the interface discovery code that is triggered
+  when there is no subnet declaration for an interface, but the server
+  decides to continue running.   Thanks to Shane Kerr for tracking
+  down and fixing this problem.
 
 		Changes since 3.0 Beta 2 Patchlevel 5
 
