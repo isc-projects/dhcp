@@ -445,7 +445,7 @@ configuration parameters, while most didn't, you might write the
 following subclass declaration for that client:
 .PP
 .nf
-subclass "allocation-class-2" 08:00:2b:a1:11:31 {
+subclass "allocation-class-2" 1:08:00:2b:a1:11:31 {
   option root-path "samsara:/var/diskless/alphapc";
   filename "/tftpboot/netbsd.alphapc-diskless";
 }
@@ -712,14 +712,19 @@ The
 .I allow
 and
 .I deny
-statements can be used to control the behaviour of dhcpd to various
-sorts of requests.   The allow and deny keywords actually have
-different meanings depending on the context.   In a pool context,
-these keywords can be used to set up access lists for address
-allocation pools.   In other contexts, the keywords simply control
-general server behaviour with respect to clients based on scope.
+statements can be used to control the response of the DHCP server to
+various sorts of requests.  The allow and deny keywords actually have
+different meanings depending on the context.  In a pool context, these
+keywords can be used to set up access lists for address allocation
+pools.  In other contexts, the keywords simply control general server
+behaviour with respect to clients based on scope.   In a non-pool
+context, the
+.I ignore
+keyword can be used in place of the
+.I deny
+keyword to prevent logging of denied requests.
 .PP
-.SH ALLOW AND DENY IN SCOPE
+.SH ALLOW DENY AND IGNORE IN SCOPE
 The following usages of allow and deny will work in any scope,
 although it is not recommended that they be used in pool
 declarations.
@@ -730,6 +735,7 @@ declarations.
 .PP
  \fBallow unknown-clients;\fR
  \fBdeny unknown-clients;\fR
+ \fBignore unknown-clients;\fR
 .PP
 The \fBunknown-clients\fR flag is used to tell dhcpd whether
 or not to dynamically assign addresses to unknown clients.   Dynamic
@@ -741,6 +747,7 @@ address assignment to unknown clients is \fBallow\fRed by default.
 .PP
  \fBallow bootp;\fR
  \fBdeny bootp;\fR
+ \fBignore bootp;\fR
 .PP
 The \fBbootp\fR flag is used to tell dhcpd whether
 or not to respond to bootp queries.  Bootp queries are \fBallow\fRed
@@ -752,12 +759,58 @@ by default.
 .PP
  \fBallow booting;\fR
  \fBdeny booting;\fR
+ \fBignore booting;\fR
 .PP
 The \fBbooting\fR flag is used to tell dhcpd whether or not to respond
 to queries from a particular client.  This keyword only has meaning
 when it appears in a host declaration.   By default, booting is
 \fBallow\fRed, but if it is disabled for a particular client, then
 that client will not be able to get and address from the DHCP server.
+.B The
+.I duplicates
+.B keyword
+.PP
+ \fBallow duplicates;\fR
+ \fBdeny duplicates;\fR
+.PP
+Host declarations can match client messages based on the DHCP Client
+Identifer option or based on the client's network hardware type and
+MAC address.   If the MAC address is used, the host declaration will
+match any client with that MAC address - even clients with different
+client identifiers.   This doesn't normally happen, but is possible
+when one computer has more than one operating system installed on it -
+for example, Microsoft Windows and NetBSD or Linux.
+.PP
+The \fBduplicates\fR flag tells the DHCP server that if a request is
+received from a client that matches the MAC address of a host
+declaration, any other leases matching that MAC address should be
+discarded by the server, even if the UID is not the same.   This is a
+violation of the DHCP protocol, but can prevent clients whose client
+identifiers change regularly from holding many leases at the same time.
+By default, duplicates are \fBallow\fRed.
+.B The
+.I declines
+.B keyword
+.PP
+ \fBallow declines;\fR
+ \fBdeny declines;\fR
+ \fBignore declines;\fR
+.PP
+The DHCPDECLINE message is used by DHCP clients to indicate that the
+lease the server has offered is not valid.   When the server receives
+a DHCPDECLINE for a particular address, it normally abandons that
+address, assuming that some unauthorized system is using it.
+Unfortunately, a malicious or buggy client can, using DHCPDECLINE
+messages, completely exhaust the DHCP server's allocation pool.   The
+server will reclaim these leases, but while the client is running
+through the pool, it may cause serious thrashing in the DNS, and it
+will also cause the DHCP server to forget old DHCP client address
+allocations.
+.PP
+The \fBdeclines\fR flag tells the DHCP server whether or not to honor
+DHCPDECLINE messages.   If it is set to \fBdeny\fR or \fBignore\fR in
+a particular scope, the DHCP server will not respond to DHCPDECLINE
+messages.
 .SH ALLOW AND DENY WITHIN POOL DECLARATIONS
 .PP
 The uses of the allow and deny keyword shown in the previous section
@@ -1264,10 +1317,11 @@ manual page.   For example:
 Once you have defined an option space and some options, you can set up
 scopes that define values for those options, and you can say when to
 use them.   For example, suppose you want to handle two different
-classes of clients, as in the example in the \fBCLIENT CLASSING\fR
-section.   Using the option space definition shown in the previous
-example, something very similar to the vendor-encapsulated-options
-definition shown earlier can be done as follows:
+classes of clients, as in the example in the \fBVENDOR ENCAPSULATED
+OPTIONS\fR section.   Using the option space definition shown in the
+previous example, something very similar to the
+vendor-encapsulated-options definition shown earlier can be done as
+follows:
 .PP
 .nf
 class "vendor-classes" {
