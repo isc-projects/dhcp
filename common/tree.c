@@ -356,7 +356,8 @@ static TIME do_host_lookup (bufix, bufp, bufcount, dns)
 				return dns -> timeout;
 			}
 		} else {
-			dfree (dns -> data, "do_host_lookup");
+			if (dns -> data)
+				dfree (dns -> data, "do_host_lookup");
 			dns -> data = buf;
 			dns -> buf_len = new_len;
 		}
