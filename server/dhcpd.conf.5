@@ -447,10 +447,10 @@ described earlier under DHCP FAILOVER.
 .B address
 .I address
 .PP
-The \fBaddress\fR statement declares the IP address on which the server
-should listen for connections from its failover peer.   This statement
-can be omitted, in which case the server will accept connections to
-any of its configured IP addresses.
+The \fBaddress\fR statement declares the IP address on which the
+server should listen for connections from its failover peer, and also
+the value to use for the DHCP Failover Protocol server identifier.
+Because this value is used as an identifier, it may not be omitted.
 .PP
 .B The 
 .I peer address
