@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.67 1999/03/26 19:19:45 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.68 1999/03/29 18:59:54 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -698,7 +698,8 @@ void parse_pool_statement (cfile, group, type)
 	if (!parse_lbrace (cfile))
 		return;
 	do {
-		switch (peek_token (&val, cfile)) {
+		token = peek_token (&val, cfile);
+		switch (token) {
 		      case RANGE:
 			next_token (&val, cfile);
 			parse_address_range (cfile, group, type, pool);
@@ -772,6 +773,8 @@ void parse_pool_statement (cfile, group, type)
 				permit -> class = find_class (val);
 				if (!permit -> class)
 					parse_warn ("no such class: %s", val);
+				break;
+
 			      default:
 				parse_warn ("expecting permit type.");
 				skip_to_semi (cfile);
@@ -970,7 +973,7 @@ struct class *parse_class_declaration (cfile, group, type)
 	enum dhcp_token token;
 	struct class *class = (struct class *)0, *pc;
 	int declaration = 0;
-	int lose;
+	int lose = 0;
 	struct data_string data;
 	char *name;
 	struct executable_statement *stmt = (struct executable_statement *)0;
@@ -1772,12 +1775,14 @@ void parse_address_range (cfile, group, type, pool)
 		for (subnet = share -> subnets;
 		     subnet; subnet = subnet -> next_sibling) {
 			net = subnet_number (low, subnet -> netmask);
-			if (addr_eq (low, subnet -> net))
+			if (addr_eq (net, subnet -> net))
 				break;
 		}
 		if (!subnet) {
 			parse_warn ("address range not on network %s",
 				    group -> shared_network -> name);
+			log_error ("Be sure to place pool statement after %s",
+				   "related subnet declarations.");
 			return;
 		}
 	}
@@ -1811,7 +1816,8 @@ void parse_address_range (cfile, group, type, pool)
 				pool -> permit_list =
 					new_permit ("parse_address_range");
 				if (!pool -> permit_list)
-					log_fatal ("no memory for ad-hoc permit.");
+					log_fatal ("no memory for ad-hoc %s.",
+						   "permit");
 				pool -> permit_list -> type =
 					permit_dynamic_bootp_clients;
 			}
