@@ -69,7 +69,7 @@ static int intern PROTO ((char *, int));
 static int get_char (cfile)
 	FILE *cfile;
 {
-	char c = getc (cfile);
+	int c = getc (cfile);
 	if (!ugflag) {
 		if (c == EOL) {
 			line++;
