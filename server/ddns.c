@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: ddns.c,v 1.15.2.2 2001/06/01 17:38:52 mellon Exp $ Copyright (c) 2000-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: ddns.c,v 1.15.2.3 2001/06/26 18:39:17 mellon Exp $ Copyright (c) 2000-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -390,6 +390,11 @@ int ddns_updates (struct packet *packet,
 	}
       in:
 		
+	/* If we don't have a name that the client has been assigned, we
+	   can just skip all this. */
+	if (!ddns_fwd_name.len)
+		goto out;
+
 	/*
 	 * Compute the RR TTL.
 	 */
@@ -625,7 +630,7 @@ int ddns_removals (struct lease *lease)
 		   in case the client did the update. */
 		if (!find_bound_string (&ddns_fwd_name,
 					lease -> scope, "ddns-client-fqdn"))
-			return 0;
+			goto try_rev;
 		client_updated = 1;
 		goto try_rev;
 	}
@@ -641,7 +646,11 @@ int ddns_removals (struct lease *lease)
 	/*
 	 * Perform removals.
 	 */
-	rcode = ddns_remove_a (&ddns_fwd_name, lease -> ip_addr, &ddns_dhcid);
+	if (ddns_fwd_name.len)
+		rcode = ddns_remove_a (&ddns_fwd_name,
+				       lease -> ip_addr, &ddns_dhcid);
+	else
+		rcode = ISC_R_SUCCESS;
 
 	if (rcode == ISC_R_SUCCESS) {
 		result = 1;
@@ -655,6 +664,11 @@ int ddns_removals (struct lease *lease)
 				if (client_updated)
 					unset (lease -> scope,
 					       "ddns-client-fqdn");
+				/* XXX this is to compensate for a bug in
+				   XXX 3.0rc8, and should be removed before
+				   XXX 3.0pl1. */
+				else if (!ddns_fwd_name.len)
+					unset (lease -> scope, "ddns-text");
 			} else
 				result = 0;
 		}
