@@ -30,6 +30,9 @@
 #if defined (NSUPDATE)
 # include <arpa/nameser.h>
 # include <resolv.h>
+# if  __RES  >= 19991006
+#  include <res_update.h>
+# endif
 #endif
 
 #include <netdb.h>
