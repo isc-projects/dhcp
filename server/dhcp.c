@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.44 1997/03/06 18:40:22 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.45 1997/03/06 19:30:52 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1041,6 +1041,8 @@ struct lease *find_lease (packet, share)
 				if (uid_lease -> shared_network == share)
 					break;
 			fixed_lease = (struct lease *)0;
+			if (uid_lease && uid_lease -> flags & ABANDONED_LEASE)
+				uid_lease = (struct lease *)0;
 		}
 	} else {
 		uid_lease = (struct lease *)0;
@@ -1068,6 +1070,8 @@ struct lease *find_lease (packet, share)
 	for (; hw_lease; hw_lease = hw_lease -> n_hw)
 		if (hw_lease -> shared_network == share)
 			break;
+	if (hw_lease && hw_lease -> flags & ABANDONED_LEASE)
+		hw_lease = (struct lease *)0;
 
 	/* Try to find a lease that's been allocated to the client's
 	   IP address. */
@@ -1086,9 +1090,9 @@ struct lease *find_lease (packet, share)
 		ip_lease = (struct lease *)0;
 
 	/* If the requested IP address isn't on the network the packet
-	   came from, don't use it (this is probably taken care of at
-	   a higher level, but it's cheap to make sure here too). */
-	if (ip_lease && ip_lease -> shared_network != share)
+	   came from, or if it's been abandoned, don't use it. */
+	if (ip_lease && (ip_lease -> shared_network != share ||
+			 (ip_lease -> flags & ABANDONED_LEASE)))
 		ip_lease = (struct lease *)0;
 
 	/* Toss ip_lease if it hasn't yet expired and the uid doesn't
