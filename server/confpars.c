@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.49 1998/04/09 04:38:24 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.50 1998/04/20 18:05:19 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -886,74 +886,16 @@ void parse_option_param (cfile, group)
 	char *val;
 	int token;
 	unsigned char buf [4];
-	char *vendor;
+	int len;
+	unsigned char *ob;
 	char *fmt;
-	struct universe *universe;
 	struct option *option;
 	struct tree *tree = (struct tree *)0;
 	struct tree *t;
 
-	token = next_token (&val, cfile);
-	if (!is_identifier (token)) {
-		parse_warn ("expecting identifier after option keyword.");
-		if (token != SEMI)
-			skip_to_semi (cfile);
+	option = parse_option_name (cfile);
+	if (!option)
 		return;
-	}
-	vendor = malloc (strlen (val) + 1);
-	if (!vendor)
-		error ("no memory for vendor token.");
-	strcpy (vendor, val);
-	token = peek_token (&val, cfile);
-	if (token == DOT) {
-		/* Go ahead and take the DOT token... */
-		token = next_token (&val, cfile);
-
-		/* The next token should be an identifier... */
-		token = next_token (&val, cfile);
-		if (!is_identifier (token)) {
-			parse_warn ("expecting identifier after '.'");
-			if (token != SEMI)
-				skip_to_semi (cfile);
-			return;
-		}
-
-		/* Look up the option name hash table for the specified
-		   vendor. */
-		universe = ((struct universe *)
-			    hash_lookup (&universe_hash,
-					 (unsigned char *)vendor, 0));
-		/* If it's not there, we can't parse the rest of the
-		   declaration. */
-		if (!universe) {
-			parse_warn ("no vendor named %s.", vendor);
-			skip_to_semi (cfile);
-			return;
-		}
-	} else {
-		/* Use the default hash table, which contains all the
-		   standard dhcp option names. */
-		val = vendor;
-		universe = &dhcp_universe;
-	}
-
-	/* Look up the actual option info... */
-	option = ((struct option *)
-		  hash_lookup (universe -> hash, (unsigned char *)val, 0));
-
-	/* If we didn't get an option structure, it's an undefined option. */
-	if (!option) {
-		if (val == vendor)
-			parse_warn ("no option named %s", val);
-		else
-			parse_warn ("no option named %s for vendor %s",
-				    val, vendor);
-		skip_to_semi (cfile);
-		return;
-	}
-
-	/* Free the initial identifier token. */
-	free (vendor);
 
 	token = peek_token (&val, cfile);
 	if (token == SEMI) {
@@ -980,22 +922,10 @@ void parse_option_param (cfile, group)
 				token = peek_token (&val, cfile);
 				if (token == NUMBER_OR_NAME ||
 				    token == NUMBER) {
-					do {
-						token = next_token
-							(&val, cfile);
-						if (token != NUMBER
-						    && token != NUMBER_OR_NAME)
-							goto need_number;
-						convert_num (buf, val, 16, 8);
-						tree = tree_concat
-							(tree,
-							 tree_const (buf, 1));
-						token = peek_token
-							(&val, cfile);
-						if (token == COLON)
-							token = next_token
-								(&val, cfile);
-					} while (token == COLON);
+					ob = parse_cshl (cfile, &len);
+					tree = tree_concat (tree,
+							    tree_const (ob,
+									len));
 				} else if (token == STRING) {
 					token = next_token (&val, cfile);
 					tree = tree_concat
@@ -1362,4 +1292,371 @@ void parse_address_range (cfile, subnet)
 	new_address_range (low, high, subnet, dynamic);
 }
 
+struct match_expr *parse_boolean_expression (cfile, lose)
+	FILE *cfile;
+	int *lose;
+{
+	int token;
+	char *val;
+	struct collection *col;
+	struct match_expr buf, *rv;
+	struct match_expr *left, *right;
+
+	token = peek_token (&val, cfile);
+
+	/* Check for unary operators... */
+	switch (token) {
+	      case CHECK:
+		token = next_token (&val, cfile);
+		token = next_token (&val, cfile);
+		if (token != STRING) {
+			parse_warn ("string expected.");
+			skip_to_semi (cfile);
+			*lose = 1;
+			return (struct match_expr *)0;
+		}
+		for (col = collections; col; col = col -> next)
+			if (!strcmp (col -> name, val))
+				break;
+		if (!col) {
+			parse_warn ("unknown collection.");
+			*lose = 1;
+			return (struct match_expr *)0;
+		}
+		buf.op = match_check;
+		buf.data.check = col;
+		goto have_expr;
+
+	      case NOT:
+		token = next_token (&val, cfile);
+		buf.op = match_not;
+		buf.data.not = parse_boolean_expression (cfile, lose);
+		if (!buf.data.not) {
+			if (!*lose) {
+				parse_warn ("match expression expected");
+				skip_to_semi (cfile);
+			}
+			*lose = 1;
+			return (struct match_expr *)0;
+		}
+		goto have_expr;
+	}
+
+	/* If we're going to find an expression at this point, it must
+	   involve a binary operator seperating two subexpressions. */
+	left = parse_data_expression (cfile, lose);
+	if (!left)
+		return left;
+	token = peek_token (&val, cfile);
+	switch (token) {
+	      case EQUAL:
+		buf.op = match_equal;
+		break;
+	      case AND:
+		buf.op = match_and;
+		break;
+	      case OR:
+		buf.op = match_or;
+		break;
+	      default:
+		parse_warn ("Expecting a boolean expression.");
+		skip_to_semi (cfile);
+		*lose = 1;
+		return;
+	}
+	token = next_token (&val, cfile);
+
+	/* Now find the RHS of the expression. */
+	right = parse_data_expression (cfile, lose);
+	if (!right) {
+		if (!*lose) {
+			if (buf.op == match_equal)
+				parse_warn ("Expecting a data expression.");
+			else
+				parse_warn ("Expecting a boolean expression.");
+			skip_to_semi (cfile);
+		}
+		return right;
+	}
+
+	/* Store the LHS and RHS. */
+	buf.data.equal [0] = left;
+	buf.data.equal [1] = right;
+
+      have_expr:
+	rv = (struct match_expr *)dmalloc (sizeof (struct match_expr),
+					   "parse_boolean_expression");
+	if (!rv)
+		error ("No memory for boolean expression.");
+	*rv = buf;
+	return rv;
+}	
+
+struct match_expr *parse_data_expression (cfile, lose)
+	FILE *cfile;
+	int *lose;
+{
+	int token;
+	char *val;
+	struct collection *col;
+	struct match_expr buf, *rv;
+	struct match_expr *left, *right;
+	struct option *option;
+
+	token = peek_token (&val, cfile);
+
+	switch (token) {
+	      case SUBSTRING:
+		token = next_token (&val, cfile);
+		buf.op = match_substring;
+
+		token = next_token (&val, cfile);
+		if (token != LPAREN) {
+		      nolparen:
+			parse_warn ("left parenthesis expected.");
+			*lose = 1;
+			return (struct match_expr *)0;
+		}
+
+		buf.data.substring.expr = parse_data_expression (cfile, lose);
+		if (!buf.data.substring.expr) {
+		      nodata:
+			parse_warn ("expecting data expression.");
+			skip_to_semi (cfile);
+			*lose = 1;
+			return (struct match_expr *)0;
+		}
+
+		token = next_token (&val, cfile);
+		if (token != COMMA) {
+		      nocomma:
+			parse_warn ("comma expected.");
+			*lose = 1;
+			return (struct match_expr *)0;
+		}
+
+		buf.data.substring.offset =
+			parse_numeric_expression (cfile, lose);
+		if (!buf.data.substring.offset) {
+		      nonum:
+			if (!*lose) {
+				parse_warn ("expecting numeric expression.");
+				skip_to_semi (cfile);
+				*lose = 1;
+			}
+			return (struct match_expr *)0;
+		}
+
+		token = next_token (&val, cfile);
+		if (token != COMMA)
+			goto nocomma;
+
+		buf.data.substring.len =
+			parse_numeric_expression (cfile, lose);
+		if (!buf.data.substring.len)
+			goto nonum;
+
+		token = next_token (&val, cfile);
+		if (token != RPAREN) {
+		      norparen:
+			parse_warn ("right parenthesis expected.");
+			*lose = 1;
+			return (struct match_expr *)0;
+		}
+		goto have_expr;
+
+	      case SUFFIX:
+		token = next_token (&val, cfile);
+		buf.op = match_suffix;
+
+		token = next_token (&val, cfile);
+		if (token != LPAREN)
+			goto nolparen;
+
+		buf.data.suffix.expr = parse_data_expression (cfile, lose);
+		if (!buf.data.suffix.expr)
+			goto nodata;
+
+		token = next_token (&val, cfile);
+		if (token != COMMA)
+			goto nocomma;
+
+		buf.data.suffix.len = parse_numeric_expression (cfile, lose);
+		if (!buf.data.suffix.len)
+			goto nonum;
+
+		token = next_token (&val, cfile);
+		if (token != RPAREN)
+			goto norparen;
+		goto have_expr;
+
+	      case OPTION:
+		token = next_token (&val, cfile);
+		buf.op = match_option;
+		buf.data.option = parse_option_name (cfile);
+		if (!buf.data.option) {
+			*lose = 1;
+			return;
+		}
+		goto have_expr;
+
+	      case HARDWARE:
+		token = next_token (&val, cfile);
+		buf.op = match_hardware;
+		goto have_expr;
+
+	      case PACKET:
+		token = next_token (&val, cfile);
+		buf.op = match_packet;
+
+		token = next_token (&val, cfile);
+		if (token != LPAREN)
+			goto nolparen;
+
+		buf.data.packet.offset =
+			parse_numeric_expression (cfile, lose);
+		if (!buf.data.packet.offset)
+			goto nonum;
+
+		token = next_token (&val, cfile);
+		if (token != COMMA)
+			goto nocomma;
+
+		buf.data.packet.len =
+			parse_numeric_expression (cfile, lose);
+		if (!buf.data.substring.len)
+			goto nonum;
+
+		token = next_token (&val, cfile);
+		if (token != RPAREN)
+			goto norparen;
+		goto have_expr;
+		
+	      case STRING:
+		token = next_token (&val, cfile);
+		buf.op = match_const_data;
+		memset (&buf.data, 0, sizeof buf.data);
+		buf.data.const_data.len = strlen (val);
+		buf.data.const_data.data =
+			dmalloc (buf.data.const_data.len + 1,
+				 "string expression");
+		if (!buf.data.const_data.data)
+			error ("no memory for string expression.");
+		buf.data.const_data.terminated = 1;
+		strcpy (buf.data.const_data.data, val);
+		goto have_expr;
+
+	      case NUMBER:
+	      case NUMBER_OR_NAME:
+		buf.op = match_const_data;
+		memset (&buf.data, 0, sizeof buf.data);
+		buf.data.const_data.data =
+			parse_cshl (cfile, &buf.data.const_data.len);
+		goto have_expr;
+
+	      default:
+		return (struct match_expr *)0;
+	}
+
+      have_expr:
+	rv = (struct match_expr *)dmalloc (sizeof (struct match_expr),
+					   "parse_boolean_expression");
+	if (!rv)
+		error ("No memory for boolean expression.");
+	*rv = buf;
+	return rv;
+}
+
+struct match_expr *parse_numeric_expression (cfile, lose)
+	FILE *cfile;
+	int *lose;
+{
+	int token;
+	char *val;
+	struct collection *col;
+	struct match_expr buf, *rv;
+	struct match_expr *left, *right;
+	struct option *option;
+
+	token = peek_token (&val, cfile);
+
+	switch (token) {
+	      case EXTRACT_INT:
+		token = next_token (&val, cfile);	
+
+		token = next_token (&val, cfile);
+		if (token != LPAREN) {
+			parse_warn ("left parenthesis expected.");
+			*lose = 1;
+			return (struct match_expr *)0;
+		}
+
+		buf.data.extract_int.expr =
+			parse_data_expression (cfile, lose);
+		if (!buf.data.extract_int.expr) {
+			parse_warn ("expecting data expression.");
+			skip_to_semi (cfile);
+			*lose = 1;
+			return (struct match_expr *)0;
+		}
+
+		token = next_token (&val, cfile);
+		if (token != COMMA) {
+			parse_warn ("comma expected.");
+			*lose = 1;
+			return (struct match_expr *)0;
+		}
+
+		token = next_token (&val, cfile);
+		if (token != NUMBER) {
+			parse_warn ("number expected.");
+			*lose = 1;
+			return (struct match_expr *)0;
+		}
+		buf.data.extract_int.width = (struct match_expr *)0;
+		switch (atoi (val)) {
+		      case 8:
+			buf.op = match_extract_int8;
+			break;
+
+		      case 16:
+			buf.op = match_extract_int16;
+			break;
+
+		      case 32:
+			buf.op = match_extract_int32;
+			break;
+
+		      default:
+			parse_warn ("unsupported integer size %d", atoi (val));
+			*lose = 1;
+			skip_to_semi (cfile);
+			return (struct match_expr *)0;
+		}
+
+		token = next_token (&val, cfile);
+		if (token != RPAREN) {
+			parse_warn ("right parenthesis expected.");
+			*lose = 1;
+			return (struct match_expr *)0;
+		}
+		goto have_expr;
+	
+	      case NUMBER:
+		buf.op = match_const_int;
+		buf.data.const_int = atoi (val);
+		goto have_expr;
+
+	      default:
+		return (struct match_expr *)0;
+	}
+
+      have_expr:
+	rv = (struct match_expr *)dmalloc (sizeof (struct match_expr),
+					   "parse_boolean_expression");
+	if (!rv)
+		error ("No memory for boolean expression.");
+	*rv = buf;
+	return rv;
+}
 
