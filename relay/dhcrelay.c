@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcrelay.c,v 1.52.2.3 2002/11/07 23:26:42 dhankins Exp $ Copyright (c) 1997-2002 Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcrelay.c,v 1.52.2.4 2003/02/05 06:52:31 dhankins Exp $ Copyright (c) 1997-2002 Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -88,6 +88,8 @@ int bad_circuit_id = 0;		/* Circuit ID option in matching RAI option
 				   did not match any known circuit ID. */
 int missing_circuit_id = 0;	/* Circuit ID option in matching RAI option
 				   was missing. */
+int max_hop_count = 10;		/* Maximum hop count */
+
 
 	/* Maximum size of a packet with agent options added. */
 int dhcp_max_agent_option_packet_length = 576;
@@ -182,6 +184,15 @@ int main (argc, argv, envp)
 			quiet_interface_discovery = 1;
 		} else if (!strcmp (argv [i], "-a")) {
 			add_agent_options = 1;
+		} else if (!strcmp (argv [i], "-c")) {
+			int hcount;
+			if (++i == argc)
+				usage ();
+			hcount = atoi(argv[i]);
+			if (hcount <= 255)
+				max_hop_count= hcount;
+			else
+				usage ();
 		} else if (!strcmp (argv [i], "-A")) {
 			if (++i == argc)
 				usage ();
@@ -423,8 +434,10 @@ void relay (ip, packet, length, from_port, from, hfrom)
 	   that set giaddr, so we won't see it. */
 	if (!packet -> giaddr.s_addr)
 		packet -> giaddr = ip -> primary_address;
-	if (packet -> hops != 255)
+	if (packet -> hops < max_hop_count)
 		packet -> hops = packet -> hops + 1;
+	else
+		return;
 
 	/* Otherwise, it's a BOOTREQUEST, so forward it to all the
 	   servers. */
@@ -448,10 +461,11 @@ void relay (ip, packet, length, from_port, from, hfrom)
 
 static void usage ()
 {
-	log_fatal ("Usage: dhcrelay [-p <port>] [-d] [-D] [-i %s%s%s",
-	       "interface]\n                ",
-	       "[-q] [-a] [-A length] [-m append|replace|forward|discard]\n",
-	       "                [server1 [... serverN]]");
+	log_fatal ("Usage: dhcrelay [-p <port>] [-d] [-D] [-i %s%s%s%s",
+		"interface] [-q] [-a]\n                ",
+		"[-c count] [-A length] ",
+		"[-m append|replace|forward|discard]\n",
+		"                [server1 [... serverN]]");
 }
 
 int write_lease (lease)
