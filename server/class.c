@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: class.c,v 1.5 1998/11/06 03:25:45 mellon Exp $ Copyright (c) 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: class.c,v 1.6 1998/11/09 02:46:19 mellon Exp $ Copyright (c) 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -140,6 +140,8 @@ static char copyright[] =
 struct class unknown_class = {
 	(struct class *)0,
 	"unknown",
+	0,
+	(struct lease *)0,
 	(struct hash_table *)0,
 	(struct expression *)0,
 	(struct expression *)0,
@@ -149,6 +151,8 @@ struct class unknown_class = {
 struct class known_class = {
 	(struct class *)0,
 	"unknown",
+	0,
+	(struct lease *)0,
 	(struct hash_table *)0,
 	(struct expression *)0,
 	(struct expression *)0,
@@ -225,7 +229,7 @@ int check_collection (packet, collection)
 							       data.len))) {
 #if defined (DEBUG_CLASS_MATCHING)
 				note ("matches subclass %s.",
-				      data.len, data.data);
+				      print_hex_1 (data.len, data.data, 60));
 #endif
 				classify (packet, class);
 				matched = 1;
@@ -235,11 +239,12 @@ int check_collection (packet, collection)
 		memset (&data, 0, sizeof data);
 		status = (evaluate_boolean_expression_result
 			  (packet, &packet -> options, class -> expr));
-		if (status)
+		if (status) {
 			matched = 1;
 #if defined (DEBUG_CLASS_MATCHING)
-				note ("matches class.");
+			note ("matches class.");
 #endif
+		}
 		if (status &&
 		    class -> spawn &&
 		    evaluate_data_expression (&data, packet,
@@ -247,7 +252,7 @@ int check_collection (packet, collection)
 					      class -> spawn)) {
 #if defined (DEBUG_CLASS_MATCHING)
 				note ("spawning subclass %s.",
-				      print_hex_1 (data.len, data.data));
+				      print_hex_1 (data.len, data.data, 60));
 #endif
 			nc = (struct class *)
 				dmalloc (sizeof (struct class), "class spawn");
