@@ -125,6 +125,19 @@
 
 /* Porting::
 
+   If you add support for sending packets directly out an interface,
+   and your support does not do ARP or routing, you must use a fallback
+   mechanism to deal with packets that need to be sent to routers.
+   Currently, all low-level packet interfaces use BSD sockets as a
+   fallback. */
+
+#if defined (USE_BPF_SEND) || defined (USE_NIT_SEND)
+#  define USE_SOCKET_FALLBACK
+#  define USE_FALLBACK
+#endif
+
+/* Porting::
+
    If you add support for sending packets directly out an interface
    and need to be able to assemble packets, add the USE_XXX_SEND
    definition for your interface to the list tested below. */
