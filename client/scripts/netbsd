@@ -85,7 +85,7 @@ if [ x$reason = xEXPIRE ] || [ x$reason = xFAIL ]; then
     for router in $old_routers; do
       route delete default $router >/dev/null 2>&1
     done
-    arp -n -a | sed -n -e 's/^.*(\(.*\)) at .*$/arp -n -d \1/p'i \
+    arp -n -a | sed -n -e 's/^.*(\(.*\)) at .*$/arp -n -d \1/p' \
 						|sh >/dev/null 2>&1
   fi
   if [ x$alias_ip_address != x ]; then
