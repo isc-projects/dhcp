@@ -30,7 +30,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: socket.c,v 1.36 1999/05/06 20:21:39 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: socket.c,v 1.37 1999/05/27 14:18:27 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -224,7 +224,7 @@ ssize_t receive_packet (interface, buf, len, from, hfrom)
 }
 #endif /* USE_SOCKET_RECEIVE */
 
-#ifdef USE_SOCKET_SEND
+#if defined (USE_SOCKET_FALLBACK)
 /* This just reads in a packet and silently discards it. */
 
 void fallback_discard (protocol)
