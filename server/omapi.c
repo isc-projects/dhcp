@@ -29,7 +29,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: omapi.c,v 1.10 1999/10/04 23:53:57 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: omapi.c,v 1.11 1999/10/05 02:48:09 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1064,7 +1064,8 @@ isc_result_t dhcp_host_set_value  (omapi_object_t *h,
 	if (!omapi_ds_strcmp (name, "statements")) {
 		if (host -> group && host -> group -> statements &&
 		    (!host -> named_group ||
-		     host -> group != host -> named_group -> group))
+		     host -> group != host -> named_group -> group) &&
+		    host -> group != &root_group)
 			return ISC_R_EXISTS;
 		if (!host -> group)
 			host -> group = clone_group (&root_group,
