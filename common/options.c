@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.85.2.4 2001/06/21 23:40:38 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.85.2.5 2001/08/23 16:11:34 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -455,6 +455,7 @@ int cons_options (inpacket, outpacket, lease, client_state,
 	struct data_string ds;
 	pair pp, *hash;
 	int need_endopt = 0;
+	int have_sso = 0;
 
 	memset (&ds, 0, sizeof ds);
 
@@ -509,6 +510,13 @@ int cons_options (inpacket, outpacket, lease, client_state,
 	priority_list [priority_len++] = DHO_DHCP_REQUESTED_ADDRESS;
 
 	if (prl && prl -> len > 0) {
+		if ((op = lookup_option (&dhcp_universe, cfg_options,
+					 DHO_SUBNET_SELECTION))) {
+			if (priority_len < PRIORITY_COUNT)
+				priority_list [priority_len++] =
+					DHO_SUBNET_SELECTION;
+		}
+			    
 		data_string_truncate (prl, (PRIORITY_COUNT - priority_len));
 
 		for (i = 0; i < prl -> len; i++) {
@@ -1747,6 +1755,8 @@ int nwip_option_space_encapsulate (result, packet, lease, client_state,
 				status = 1;
 		}
 	} else {
+		memset (&ds, 0, sizeof ds);
+
 		/* If we have nwip options, the first one has to be the
 		   nwip-exists-in-option-area option. */
 		if (!buffer_allocate (&ds.buffer, result -> len + 2, MDL)) {
