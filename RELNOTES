@@ -49,6 +49,7 @@ and for prodding me into improving it.
 			Changes since 3.0.1rc3
 
 - A minor bug fix in the arguments to a logging function call.
+- Documentation update for dhcpd.conf.
 
 		        Changes since 3.0.1rc2
 
