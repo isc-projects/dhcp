@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: alloc.c,v 1.30.2.4 1999/12/22 20:42:55 mellon Exp $ Copyright (c) 1995, 1996, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: alloc.c,v 1.30.2.5 1999/12/22 21:42:38 mellon Exp $ Copyright (c) 1995, 1996, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -36,6 +36,11 @@ unsigned long dmalloc_outstanding;
 unsigned long dmalloc_longterm;
 unsigned long dmalloc_generation;
 unsigned long dmalloc_cutoff_generation;
+#endif
+
+#if defined (DEBUG_RC_HISTORY)
+struct rc_history_entry rc_history [RC_HISTORY_MAX];
+int rc_history_index;
 #endif
 
 VOIDPTR dmalloc (size, name)
@@ -266,6 +271,24 @@ void dmalloc_dump_outstanding ()
 		dmalloc_cutoff_point = dmalloc_list -> generation;
 }
 #endif /* DEBUG_MEMORY_LEAKAGE || DEBUG_MALLOC_POOL */
+
+#if defined (DEBUG_RC_HISTORY)
+void dump_rc_history ()
+{
+	int i;
+
+	i = rc_history_index;
+	do {
+		log_info ("   name = %s  addr = %lx  refcnt = %x\n",
+			  rc_history [i].name,
+			  (unsigned long)rc_history [i].addr,
+			  rc_history [i].refcnt);
+		++i;
+		if (i == RC_HISTORY_MAX)
+			i = 0;
+	} while (i != rc_history_index && rc_history [i].name);
+}
+#endif
 
 struct packet *new_packet (name)
 	char *name;
@@ -715,6 +738,7 @@ int expression_reference (ptr, src, name)
 	}
 	*ptr = src;
 	src -> refcnt++;
+	rc_register (name, src, src -> refcnt);
 	dmalloc_reuse (src, name, 1);
 	return 1;
 }
@@ -765,6 +789,7 @@ int option_cache_reference (ptr, src, name)
 	}
 	*ptr = src;
 	src -> refcnt++;
+	rc_register (name, src, src -> refcnt);
 	dmalloc_reuse (src, name, 1);
 	return 1;
 }
@@ -808,6 +833,7 @@ int buffer_reference (ptr, bp, name)
 	}
 	*ptr = bp;
 	bp -> refcnt++;
+	rc_register (name, bp, bp -> refcnt);
 	dmalloc_reuse (bp, name, 1);
 	return 1;
 }
@@ -838,8 +864,20 @@ int buffer_dereference (ptr, name)
 	}
 
 	(*ptr) -> refcnt--;
+	rc_register (name, *ptr, (*ptr) -> refcnt);
 	if (!(*ptr) -> refcnt)
 		dfree ((*ptr), name);
+	if ((*ptr) -> refcnt < 0) {
+		log_error ("buffer_dereference: negative refcnt!");
+#if defined (DEBUG_RC_HISTORY)
+		dump_rc_history ();
+#endif
+#if defined (POINTER_DEBUG)
+		abort ();
+#else
+		return 0;
+#endif
+	}
 	*ptr = (struct buffer *)0;
 	return 1;
 }
@@ -885,6 +923,7 @@ int dns_host_entry_reference (ptr, bp, name)
 	}
 	*ptr = bp;
 	bp -> refcnt++;
+	rc_register (name, bp, bp -> refcnt);
 	dmalloc_reuse (bp, name, 1);
 	return 1;
 }
@@ -906,8 +945,20 @@ int dns_host_entry_dereference (ptr, name)
 	}
 
 	(*ptr) -> refcnt--;
+	rc_register (name, bp, bp -> refcnt);
 	if (!(*ptr) -> refcnt)
 		dfree ((*ptr), name);
+	if ((*ptr) -> refcnt < 0) {
+		log_error ("dns_host_entry_dereference: negative refcnt!");
+#if defined (DEBUG_RC_HISTORY)
+		dump_rc_history ();
+#endif
+#if defined (POINTER_DEBUG)
+		abort ();
+#else
+		return 0;
+#endif
+	}
 	*ptr = (struct dns_host_entry *)0;
 	return 1;
 }
@@ -943,6 +994,7 @@ int option_state_allocate (ptr, name)
 		memset (*ptr, 0, size);
 		(*ptr) -> universe_count = universe_count;
 		(*ptr) -> refcnt = 1;
+		rc_register (name, *ptr, (*ptr) -> refcnt);
 		return 1;
 	}
 	return 0;
@@ -973,6 +1025,7 @@ int option_state_reference (ptr, bp, name)
 	}
 	*ptr = bp;
 	bp -> refcnt++;
+	rc_register (name, bp, bp -> refcnt);
 	dmalloc_reuse (bp, name, 1);
 	return 1;
 }
@@ -997,8 +1050,21 @@ int option_state_dereference (ptr, name)
 	options = *ptr;
 	*ptr = (struct option_state *)0;
 	--options -> refcnt;
-	if (options -> refcnt)
+	rc_register (name, options, options -> refcnt);
+	if (options -> refcnt > 0)
 		return 1;
+
+	if (options -> refcnt < 0) {
+		log_error ("option_state_dereference: negative refcnt!");
+#if defined (DEBUG_RC_HISTORY)
+		dump_rc_history ();
+#endif
+#if defined (POINTER_DEBUG)
+		abort ();
+#else
+		return 0;
+#endif
+	}
 
 	/* Loop through the per-universe state. */
 	for (i = 0; i < options -> universe_count; i++)
