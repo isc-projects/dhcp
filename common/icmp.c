@@ -44,7 +44,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: icmp.c,v 1.30.2.1 2001/06/21 16:57:00 mellon Exp $ Copyright (c) 1996-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: icmp.c,v 1.30.2.2 2001/06/22 02:35:47 mellon Exp $ Copyright (c) 1996-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -306,17 +306,18 @@ void trace_icmp_input_stop (trace_type_t *ttype) { }
 void trace_icmp_output_input (trace_type_t *ttype, unsigned length, char *buf)
 {
 	struct icmp *icmp;
-	struct iaddr *ia;
+	struct iaddr ia;
 
-	if (length != (sizeof (*icmp) + (sizeof *ia))) {
+	if (length != (sizeof (*icmp) + (sizeof ia))) {
 		log_error ("trace_icmp_output_input: data size mismatch %d:%d",
-			   length, (int)((sizeof (*icmp)) + (sizeof *ia)));
+			   length, (int)((sizeof (*icmp)) + (sizeof ia)));
 		return;
 	}
-	ia = (struct iaddr *)buf;
-	icmp = (struct icmp *)(ia + 1);
+	ia.len = 4;
+	memcpy (ia.iabuf, buf, 4);
+	icmp = (struct icmp *)(buf + 1);
 
-	log_error ("trace_icmp_output_input: unsent ping to %s", piaddr (*ia));
+	log_error ("trace_icmp_output_input: unsent ping to %s", piaddr (ia));
 }
 
 void trace_icmp_output_stop (trace_type_t *ttype) { }
