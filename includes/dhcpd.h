@@ -1834,7 +1834,7 @@ void do_release PROTO ((struct client_state *));
 int dhclient_interface_shutdown_hook (struct interface_info *);
 int dhclient_interface_discovery_hook (struct interface_info *);
 isc_result_t dhclient_interface_startup_hook (struct interface_info *);
-void client_dns_update (struct client_state *client);
+void client_dns_update (struct client_state *client, int);
 
 /* db.c */
 int write_lease PROTO ((struct lease *));
