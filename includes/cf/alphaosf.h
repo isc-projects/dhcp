@@ -109,6 +109,8 @@ typedef unsigned long u_int64_t;
 
 #if defined (USE_DEFAULT_NETWORK)
 #  define USE_BPF
+#  define DEC_FDDI
+#  define FDDI_HEADER_SIZE 14
 #endif
 
 #define PTRSIZE_64BIT
