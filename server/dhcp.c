@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.186 2001/03/17 00:48:34 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.187 2001/03/20 07:29:35 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1504,15 +1504,17 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 					    seek -> ends > cur_time)
 						break;
 					lease_dereference (&seek, MDL);
-					if (next)
+					if (next) {
 					    lease_reference (&seek, next, MDL);
-				}
-				if (seek) {
-					release_lease (seek, packet);
-					lease_dereference (&seek, MDL);
+					}
 				}
 				if (next)
 					lease_dereference (&next, MDL);
+				if (seek) {
+					release_lease (seek, packet);
+					lease_dereference (&seek, MDL);
+				} else
+					break;
 			} while (1);
 		}
 		if (!lease -> uid_len ||
@@ -1542,13 +1544,18 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 					    seek -> ends > cur_time)
 						break;
 					lease_dereference (&seek, MDL);
-					if (next)
+					if (next) {
 					    lease_reference (&seek, next, MDL);
+					    lease_dereference (&next, MDL);
+					}
 				}
+				if (next)
+					lease_dereference (&next, MDL);
 				if (seek) {
 					release_lease (seek, packet);
 					lease_dereference (&seek, MDL);
-				}
+				} else
+					break;
 			} while (1);
 		}
 	}
