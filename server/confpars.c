@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.115 2000/06/06 23:49:05 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.116 2000/06/08 21:20:00 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2156,7 +2156,7 @@ int parse_fixed_addr_param (oc, cfile)
 				status = make_concat (&new, expr, tmp);
 				expression_dereference (&expr, MDL);
 				expression_dereference (&tmp, MDL);
-				if (status)
+				if (!status)
 					return 0;
 				expr = new;
 			} else
