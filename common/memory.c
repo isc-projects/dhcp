@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: memory.c,v 1.46 1999/02/24 17:56:46 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: memory.c,v 1.47 1999/02/25 23:30:35 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -66,9 +66,11 @@ void enter_host (hd)
 	hd -> n_ipaddr = (struct host_decl *)0;
 
 	if (hd -> interface.hlen) {
-		if (!host_hw_addr_hash)
+		if (!host_hw_addr_hash) {
 			host_hw_addr_hash = new_hash ();
-		else
+			if (!host_hw_addr_hash)
+				log_fatal ("Can't allocate host/hw hash");
+		} else
 			hp = (struct host_decl *)
 				hash_lookup (host_hw_addr_hash,
 					     hd -> interface.haddr,
@@ -117,6 +119,8 @@ void enter_host (hd)
 		   there's already an entry in the hash for this host. */
 		if (!host_uid_hash) {
 			host_uid_hash = new_hash ();
+			if (!host_uid_hash)
+				log_fatal ("Can't allocate host/uid hash");
 			hp = (struct host_decl *)0;
 		} else
 			hp = ((struct host_decl *)
@@ -185,6 +189,8 @@ struct subnet *find_host_for_network (host, addr, share)
 	struct host_decl *hp;
 	struct data_string fixed_addr;
 
+	memset (&fixed_addr, 0, sizeof fixed_addr);
+
 	for (hp = *host; hp; hp = hp -> n_ipaddr) {
 		if (!hp -> fixed_addr)
 			continue;
@@ -229,12 +235,21 @@ void new_address_range (low, high, subnet, pool)
 	}
 
 	/* Initialize the hash table if it hasn't been done yet. */
-	if (!lease_uid_hash)
+	if (!lease_uid_hash) {
 		lease_uid_hash = new_hash ();
-	if (!lease_ip_addr_hash)
+		if (!lease_uid_hash)
+			log_fatal ("Can't allocate lease/uid hash");
+	}
+	if (!lease_ip_addr_hash) {
 		lease_ip_addr_hash = new_hash ();
-	if (!lease_hw_addr_hash)
+		if (!lease_uid_hash)
+			log_fatal ("Can't allocate lease/ip hash");
+	}
+	if (!lease_hw_addr_hash) {
 		lease_hw_addr_hash = new_hash ();
+		if (!lease_uid_hash)
+			log_fatal ("Can't allocate lease/hw hash");
+	}
 
 	/* Make sure that high and low addresses are in same subnet. */
 	net = subnet_number (low, subnet -> netmask);

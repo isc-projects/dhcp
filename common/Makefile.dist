@@ -34,11 +34,11 @@ CATMANPAGES = dhcp-options.cat5
 SRC    = raw.c parse.c nit.c icmp.c dispatch.c conflex.c upf.c bpf.c socket.c \
 	 lpf.c dlpi.c packet.c memory.c print.c options.c inet.c convert.c \
 	 tree.c tables.c hash.c alloc.c errwarn.c inet_addr.c dns.c \
-	 resolv.c sysconf.c interact.c execute.c discover.c
+	 resolv.c sysconf.c interact.c execute.c discover.c auth.c
 OBJ    = raw.o parse.o nit.o icmp.o dispatch.o conflex.o upf.o bpf.o socket.o \
 	 lpf.o dlpi.o packet.o memory.o print.o options.o inet.o convert.o \
 	 tree.o tables.o hash.o alloc.o errwarn.o inet_addr.o dns.o \
-	 resolv.o sysconf.o interact.o execute.o discover.o
+	 resolv.o sysconf.o interact.o execute.o discover.o auth.o
 MAN    = dhcp-options.5
 
 DEBUG  = -g
@@ -52,25 +52,19 @@ libdhcp.a:	$(OBJ)
 	ar cruv libdhcp.a $(OBJ)
 	ranlib libdhcp.a
 
-install: $(CATMANPAGES)
-	@for dir in $(FFMANDIR); do \
-	  case $$dir in \
-	    /*) base=/ ;; \
-	    *) base="" ;; \
-	  esac; \
-	  slash=""; \
-	  for elt in `echo $$dir |sed -e 's/\// /g'`; do \
-	    if [ ! -d $$base/$$elt ]; then \
-	      echo Making $$base/$$elt; \
-	      mkdir $$base/$$elt; \
-	      chmod 755 $$base/$$elt; \
+install: all
+	for dir in $(FFMANDIR); do \
+	  foo=""; \
+	  for bar in `echo $(DESTDIR)$${dir} |tr / ' '`; do \
+	    foo=$${foo}/$$bar; \
+	    if [ ! -d $$foo ]; then \
+	      mkdir $$foo; \
+	      chmod 755 $$foo; \
 	    fi; \
-	    base=$$base$$slash$$elt; \
-	    slash=/; \
 	  done; \
 	done
 	$(MANINSTALL) $(MANFROM) dhcp-options.cat5 $(MANTO) \
-				$(FFMANDIR)/dhcp-options$(FFMANEXT)
+				$(DESTDIR)$(FFMANDIR)/dhcp-options$(FFMANEXT)
 
 depend:
 	makedepend $(INCLUDES) $(PREDEFINES) $(SRCS)

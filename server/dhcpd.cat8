@@ -20,6 +20,11 @@ DDEESSCCRRIIPPTTIIOONN
        work  to  which they are attached.  BOOTP provides similar
        functionality, with certain restrictions.
 
+CCOONNTTRRIIBBUUTTIIOONNSS
+       Development of this software is funded  through  contribu­
+       tions  and support contracts.   Please see ddhhccpp--ccoonnttrriibb((55))
+       for information on how you can contribute.
+
 OOPPEERRAATTIIOONN
        The DHCP protocol allows a host which is  unknown  to  the
        network  administrator  to be automatically assigned a new
@@ -52,12 +57,7 @@ OOPPEERRAATTIIOONN
        refresh its memory about what leases have been assigned.
 
        New leases are appended to the  end  of  the  dhcpd.leases
-       file.    In  order to prevent the file from becoming arbi­
-       trarily large, from time  to  time  dhcpd  creates  a  new
-       dhcpd.leases  file  from its in-core lease database.  Once
-       this file has been  written  to  disk,  the  old  file  is
-       renamed   _d_h_c_p_d_._l_e_a_s_e_s_~,  and  the  new  file  is  renamed
-       dhcpd.leases.   If the system crashes  in  the  middle  of
+       file.    In  order  to  prevent  the  file  from  becoming
 
 
 
@@ -70,6 +70,11 @@ OOPPEERRAATTIIOONN
 dhcpd(8)                                                 dhcpd(8)
 
 
+       arbitrarily large, from time to time dhcpd creates  a  new
+       dhcpd.leases  file  from its in-core lease database.  Once
+       this file has been  written  to  disk,  the  old  file  is
+       renamed   _d_h_c_p_d_._l_e_a_s_e_s_~,  and  the  new  file  is  renamed
+       dhcpd.leases.   If the system crashes  in  the  middle  of
        this  process,  whichever  dhcpd.leases  file remains will
        contain all the lease information, so there is no need for
        a special crash recovery process.
@@ -119,11 +124,6 @@ CCOOMMMMAANNDD LLIINNEE
        cast interfaces if possible, and listen  for  DHCP  broad­
        casts on each interface.
 
-       If  dhcpd  should listen on a port other than the standard
-       (port 67), the --pp flag may used.  It should be followed by
-       the udp port number on which dhcpd should listen.  This is
-       mostly useful for debugging purposes.
-
 
 
 
@@ -135,6 +135,11 @@ CCOOMMMMAANNDD LLIINNEE
 
 dhcpd(8)                                                 dhcpd(8)
 
+
+       If  dhcpd  should listen on a port other than the standard
+       (port 67), the --pp flag may used.  It should be followed by
+       the udp port number on which dhcpd should listen.  This is
+       mostly useful for debugging purposes.
 
        To run dhcpd as a foreground process, rather than allowing
        it  to  run  as  a  daemon  in the background, the --ff flag
@@ -185,11 +190,6 @@ SSuubbnneettss
        Multiple address ranges may be specified like this:
 
             subnet 239.252.197.0 netmask 255.255.255.0 {
-              range 239.252.197.10 239.252.197.107;
-              range 239.252.197.113 239.252.197.250;
-            }
-
-       If  a  subnet will only be provided with BOOTP service and
 
 
 
@@ -202,6 +202,11 @@ SSuubbnneettss
 dhcpd(8)                                                 dhcpd(8)
 
 
+              range 239.252.197.10 239.252.197.107;
+              range 239.252.197.113 239.252.197.250;
+            }
+
+       If  a  subnet will only be provided with BOOTP service and
        no dynamic address assignment, the  range  clause  can  be
        left out entirely, but the subnet statement must appear.
 
@@ -251,11 +256,6 @@ BBOOOOTTPP SSuuppppoorrtt
        and  the  IP  address  to  assign to that client.   If the
        client needs to be able to  load  a  boot  file  from  the
        server,  that  file's  name  must be specified.   A simple
-       bootp client declaration might look like this:
-
-            host haagen {
-              hardware ethernet 08:00:2b:4c:59:23;
-              fixed-address 239.252.197.9;
 
 
 
@@ -268,6 +268,11 @@ BBOOOOTTPP SSuuppppoorrtt
 dhcpd(8)                                                 dhcpd(8)
 
 
+       bootp client declaration might look like this:
+
+            host haagen {
+              hardware ethernet 08:00:2b:4c:59:23;
+              fixed-address 239.252.197.9;
               filename "/tftpboot/haagen.boot";
             }
 
@@ -316,12 +321,7 @@ FFIILLEESS
        //eettcc//ddhhccppdd..ccoonnff,, //vvaarr//ddbb//ddhhccppdd..lleeaasseess,, //vvaarr//rruunn//ddhhccppdd..ppiidd,,
        //vvaarr//ddbb//ddhhccppdd..lleeaasseess~~..
 
-SSEEEE AALLSSOO
-       dhclient(8), dhcrelay(8), dhcpd.conf(5), dhcpd.leases(5)
 
-AAUUTTHHOORR
-       ddhhccppdd((88)) was written by Ted Lemon <mellon@vix.com> under a
-       contract with Vixie Labs.   Funding for this  project  was
 
 
 
@@ -334,15 +334,15 @@ AAUUTTHHOORR
 dhcpd(8)                                                 dhcpd(8)
 
 
+SSEEEE AALLSSOO
+       dhclient(8), dhcrelay(8), dhcpd.conf(5), dhcpd.leases(5)
+
+AAUUTTHHOORR
+       ddhhccppdd((88)) was written by Ted Lemon <mellon@vix.com> under a
+       contract with Vixie Labs.   Funding for this  project  was
        provided  by  the Internet Software Corporation.  Informa­
        tion about the Internet Software Consortium can  be  found
        at hhttttpp::////wwwwww..iisscc..oorrgg//iisscc..
-
-
-
-
-
-
 
 
 

@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.60 1999/02/24 17:56:51 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.61 1999/02/25 23:30:39 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -152,6 +152,7 @@ void read_leases ()
 	       | USE_LEASE_ADDR_FOR_DEFAULT_ROUTE boolean
 	       | AUTHORITATIVE
 	       | NOT AUTHORITATIVE
+	       | AUTH_KEY key-id key-value
 
    declaration :== host-declaration
 		 | group-declaration
@@ -179,8 +180,18 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 	struct option *option;
 	struct option_cache *cache;
 	int lose;
+	struct data_string key_id;
 
 	switch (peek_token (&val, cfile)) {
+	      case AUTH_KEY:
+		memset (&key_id, 0, sizeof key_id);
+		if (parse_auth_key (&key_id, cfile)) {
+			if (type == HOST_DECL)
+				data_string_copy (&host_decl -> auth_key_id,
+						  &key_id, "parse_statement");
+			data_string_forget (&key_id, "parse_statement");
+		}
+		break;
 	      case HOST:
 		next_token (&val, cfile);
 		if (type != HOST_DECL && type != CLASS_DECL)
@@ -336,6 +347,9 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		next_token (&val, cfile);
 		if (type != SUBNET_DECL && type != SHARED_NET_DECL) {
 			parse_warn ("pool declared outside of network");
+		}
+		if (type == POOL_DECL) {
+			parse_warn ("pool declared within pool.");
 		}
 		parse_pool_statement (cfile, group, type);
 		return declaration;
@@ -651,10 +665,13 @@ void parse_pool_statement (cfile, group, type)
 	struct pool *pool, **p;
 	struct permit *permit;
 	struct permit **permit_head;
+	int declaration = 0;
 
 	pool = new_pool ("parse_pool_statement");
 	if (!pool)
 		log_fatal ("no memory for pool.");
+
+	pool -> group = clone_group (group, "parse_pool_statement");
 
 	if (!parse_lbrace (cfile))
 		return;
@@ -677,7 +694,7 @@ void parse_pool_statement (cfile, group, type)
 				permit -> type = permit_unknown_clients;
 			      get_clients:
 				if (next_token (&val, cfile) != CLIENTS) {
-					parse_warn ("expecting \"hosts\"");
+					parse_warn ("expecting \"clients\"");
 					skip_to_semi (cfile);
 					free_permit (permit,
 						     "parse_pool_statement");
@@ -741,6 +758,7 @@ void parse_pool_statement (cfile, group, type)
 			while (*permit_head)
 				permit_head = &((*permit_head) -> next);
 			*permit_head = permit;
+			parse_semi (cfile);
 			break;
 
 		      case DENY:
@@ -753,8 +771,10 @@ void parse_pool_statement (cfile, group, type)
 			break;
 
 		      default:
-			parse_warn ("expecting address range or permit list.");
-			skip_to_semi (cfile);
+			declaration = parse_statement (cfile, pool -> group,
+						       POOL_DECL,
+						       (struct host_decl *)0,
+						       declaration);
 			break;
 		}
 	} while (!done);

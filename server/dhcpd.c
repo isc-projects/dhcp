@@ -94,13 +94,13 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.55 1999/02/24 17:56:52 mellon Exp $ Copyright 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.56 1999/02/25 23:30:40 mellon Exp $ Copyright 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.";
 #endif
 
   static char copyright[] =
 "Copyright 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.";
 static char arr [] = "All rights reserved.";
-static char message [] = "Internet Software Consortium DHCP Server V3.0-alpha 980214";
+static char message [] = "Internet Software Consortium DHCP Server V3.0-alpha 980225";
 static char contrib [] = "\nPlease contribute if you find this software useful.";
 static char url [] = "For info, please visit http://www.isc.org/dhcp-contrib.html\n";
 
@@ -274,7 +274,7 @@ int main (argc, argv, envp)
 	db_startup ();
 
 	/* Discover all the network interfaces and initialize them. */
-	discover_interfaces (1);
+	discover_interfaces (DISCOVER_SERVER);
 
 	/* Initialize icmp support... */
 	icmp_startup (1, lease_pinged);
@@ -297,7 +297,7 @@ int main (argc, argv, envp)
 
 		/* If the previous server process is not still running,
 		   write a new pid file immediately. */
-		if (pid && kill (pid, 0) < 0) {
+		if (pid && (pid == getpid() || kill (pid, 0) < 0)) {
 			unlink (path_dhcpd_pid);
 			if ((i = open (path_dhcpd_pid,
 				       O_WRONLY | O_CREAT, 0640)) >= 0) {

@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: clparse.c,v 1.22 1999/02/24 17:56:42 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: clparse.c,v 1.23 1999/02/25 23:30:31 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -193,7 +193,8 @@ void read_client_leases ()
 	SCRIPT string |
 	interface-declaration |
 	LEASE client-lease-statement |
-	ALIAS client-lease-statement */
+	ALIAS client-lease-statement |
+	AUTH_KEY key_id key_data */
 
 void parse_client_statement (cfile, ip, config)
 	FILE *cfile;
@@ -207,8 +208,14 @@ void parse_client_statement (cfile, ip, config)
 	enum statement_op op;
 	int lose;
 	char *name;
+	struct data_string key_id;
 
 	switch (peek_token (&val, cfile)) {
+	      case AUTH_KEY:
+		memset (&key_id, 0, sizeof key_id);
+		if (parse_auth_key (&key_id, cfile))
+			data_string_forget (&key_id, "parse_client_statement");
+		break;
 	      case SEND:
 		p = &config -> on_transmission -> statements;
 		op = supersede_option_statement;

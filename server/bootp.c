@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bootp.c,v 1.38 1999/02/24 17:56:50 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bootp.c,v 1.39 1999/02/25 23:30:39 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -271,8 +271,6 @@ void bootp (packet)
 					      (struct packet *)0,
 					      &raw, outgoing.packet_length,
 					      from, &to, &hto);
-			if (result < 0)
-				log_error ("send_packet: %m");
 			return;
 		}
 	/* Otherwise, broadcast it on the local network. */
@@ -285,6 +283,4 @@ void bootp (packet)
 	result = send_packet (packet -> interface,
 			      packet, &raw, outgoing.packet_length,
 			      from, &to, &hto);
-	if (result < 0)
-		log_error ("send_packet: %m");
 }

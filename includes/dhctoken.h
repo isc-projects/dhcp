@@ -179,6 +179,7 @@ enum dhcp_token {
 	FDDI = 379,
 	AUTHORITATIVE = 380,
 	TOKEN_NOT = 381,
+	AUTH_KEY = 382,
 };
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\

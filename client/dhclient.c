@@ -56,7 +56,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.56 1999/02/24 17:56:42 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.57 1999/02/25 23:30:31 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -88,7 +88,7 @@ struct sockaddr_in sockaddr_broadcast;
 static char copyright[] =
 "Copyright 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.";
 static char arr [] = "All rights reserved.";
-static char message [] = "Internet Software Consortium DHCP Client V3.0-alpha-990213";
+static char message [] = "Internet Software Consortium DHCP Client V3.0-alpha-990225";
 static char contrib [] = "\nPlease contribute if you find this software useful.";
 static char url [] = "For info, please visit http://www.isc.org/dhcp-contrib.html\n";
 
@@ -109,7 +109,7 @@ int main (argc, argv, envp)
 	struct interface_info *ip;
 	struct client_state *client;
 	int seed;
-	int quiet;
+	int quiet = 0;
 
 #ifdef SYSLOG_4_2
 	openlog ("dhclient", LOG_NDELAY);
@@ -1155,8 +1155,6 @@ void send_discover (cpp)
 			      client -> packet_length,
 			      inaddr_any, &sockaddr_broadcast,
 			      (struct hardware *)0);
-	if (result < 0)
-		log_error ("send_packet: %m");
 
 	add_timeout (cur_time + client -> interval, send_discover, client);
 }
@@ -1406,9 +1404,6 @@ void send_request (cpp)
 				      from, &destination,
 				      (struct hardware *)0);
 
-	if (result < 0)
-		log_error ("send_packet: %m");
-
 	add_timeout (cur_time + client -> interval,
 		     send_request, client);
 }
@@ -1431,8 +1426,6 @@ void send_decline (cpp)
 			      client -> packet_length,
 			      inaddr_any, &sockaddr_broadcast,
 			      (struct hardware *)0);
-	if (result < 0)
-		log_error ("send_packet: %m");
 }
 
 void send_release (cpp)
@@ -1453,8 +1446,6 @@ void send_release (cpp)
 			      client -> packet_length,
 			      inaddr_any, &sockaddr_broadcast,
 			      (struct hardware *)0);
-	if (result < 0)
-		log_error ("send_packet: %m");
 }
 
 void make_client_options (client, lease, type, sid, rip, prl,
@@ -1760,7 +1751,7 @@ void make_release (client, lease)
 	client -> packet.htype = client -> interface -> hw_address.htype;
 	client -> packet.hlen = client -> interface -> hw_address.hlen;
 	client -> packet.hops = 0;
-	client -> packet.xid = client -> xid;
+	client -> packet.xid = random ();
 	client -> packet.secs = 0;
 	client -> packet.flags = 0;
 	memcpy (&client -> packet.ciaddr,

@@ -73,6 +73,12 @@
 # define OPTION_HASH_SIZE 17
 #endif
 
+/* Variable-length array of data. */
+struct auth_key {
+	int length;
+	u_int8_t data [1];
+};
+
 struct string_list {
 	struct string_list *next;
 	char string [1];
@@ -233,6 +239,7 @@ struct lease_state {
 #define SUBNET_DECL	3
 #define CLASS_DECL	4
 #define	GROUP_DECL	5
+#define POOL_DECL	6
 
 /* Possible modes in which discover_interfaces can run. */
 
@@ -268,7 +275,7 @@ struct lease_state {
 #endif
 
 #if !defined (DEFAULT_MIN_LEASE_TIME)
-# define DEFAULT_MIN_LEASE_TIME 43200
+# define DEFAULT_MIN_LEASE_TIME 0
 #endif
 
 #if !defined (DEFAULT_MAX_LEASE_TIME)
@@ -352,8 +359,7 @@ struct host_decl {
 	struct data_string client_identifier;
 	struct option_cache *fixed_addr;
 	struct group *group;
-	int client_key_length;
-	u_int8_t *client_key;
+	struct data_string auth_key_id;
 };
 
 struct permit {
@@ -372,6 +378,7 @@ struct permit {
 
 struct pool {
 	struct pool *next;
+	struct group *group;
 	struct shared_network *shared_network;
 	struct permit *permit_list;
 	struct permit *prohibit_list;
@@ -904,6 +911,7 @@ struct executable_statement *parse_option_statement PROTO ((FILE *, int,
 							   );
 int parse_option_token PROTO ((struct expression **, FILE *, char *,
 			       struct expression *, int, int));
+int parse_auth_key PROTO ((struct data_string *, FILE *));
 
 /* tree.c */
 pair cons PROTO ((caddr_t, pair));
@@ -1043,6 +1051,8 @@ struct pool *new_pool PROTO ((char *));
 void free_pool PROTO ((struct pool *, char *));
 struct failover_peer *new_failover_peer PROTO ((char *));
 void free_failover_peer PROTO ((struct failover_peer *, char *));
+struct auth_key *new_auth_key PROTO ((int, char *));
+void free_auth_key PROTO ((struct auth_key *, char *));
 struct permit *new_permit PROTO ((char *));
 void free_permit PROTO ((struct permit *, char *));
 pair new_pair PROTO ((char *));
@@ -1495,6 +1505,12 @@ void execute_statements_in_scope PROTO ((struct packet *,
 					 struct option_state *,
 					 struct option_state *,
 					 struct group *, struct group *));
+
+/* auth.c */
+void enter_auth_key PROTO ((struct data_string *, struct auth_key *));
+struct auth_key *auth_key_lookup PROTO ((struct data_string *));
+
 /* failover.c */
 void enter_failover_peer PROTO ((struct failover_peer *));
 struct failover_peer *find_failover_peer PROTO ((char *));
+

@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tables.c,v 1.19 1999/02/24 17:56:48 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tables.c,v 1.20 1999/02/25 23:30:36 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -276,7 +276,7 @@ struct option dhcp_options [256] = {
 	{ "option-207", "X",				&dhcp_universe, 207 },
 	{ "option-208", "X",				&dhcp_universe, 208 },
 	{ "option-209", "X",				&dhcp_universe, 209 },
-	{ "option-210", "X",				&dhcp_universe, 210 },
+	{ "authenticate", "X",				&dhcp_universe, 210 },
 	{ "option-211", "X",				&dhcp_universe, 211 },
 	{ "option-212", "X",				&dhcp_universe, 212 },
 	{ "option-213", "X",				&dhcp_universe, 213 },

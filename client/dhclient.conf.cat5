@@ -220,42 +220,42 @@ OOPPTTIIOONN MMOODDIIFFIIEERRSS
 
        _T_h_e ddeeffaauulltt _s_t_a_t_e_m_e_n_t
 
-        ddeeffaauulltt {{ [[ _o_p_t_i_o_n _d_e_c_l_a_r_a_t_i_o_n ] [,, _._._.  _o_p_t_i_o_n  _d_e_c_l_a_r_a_­
-       _t_i_o_n ]}}
+        ddeeffaauulltt [[ _o_p_t_i_o_n _d_e_c_l_a_r_a_t_i_o_n ] ;;
 
-       If for some set of options the client should use the value
-       supplied by the server, but  needs  to  use  some  default
-       value if no value was supplied by the server, these values
-       can be defined in the ddeeffaauulltt statement.
+       If for some option the client should use  the  value  sup­
+       plied  by  the server, but needs to use some default value
+       if no value was supplied by the server, these  values  can
+       be defined in the ddeeffaauulltt statement.
 
        _T_h_e ssuuppeerrsseeddee _s_t_a_t_e_m_e_n_t
 
-        ssuuppeerrsseeddee {{ [[ _o_p_t_i_o_n _d_e_c_l_a_r_a_t_i_o_n ] [,, _._._. _o_p_t_i_o_n _d_e_c_l_a_r_a_­
-       _t_i_o_n ]}}
+        ssuuppeerrsseeddee [[ _o_p_t_i_o_n _d_e_c_l_a_r_a_t_i_o_n ] ;;
 
-       If  for  some  set of options the client should always use
-       its own value  rather  than  any  value  supplied  by  the
-       server,  these  values  can  be  defined  in the ssuuppeerrsseeddee
-       statement.
+       If for some option the client should always use a locally-
+       configured value or values rather than  whatever  is  sup­
+       plied  by  the  server, these values can be defined in the
+       ssuuppeerrsseeddee statement.
 
        _T_h_e pprreeppeenndd _s_t_a_t_e_m_e_n_t
 
-        pprreeppeenndd {{ [[ _o_p_t_i_o_n _d_e_c_l_a_r_a_t_i_o_n ] [,, _._._.  _o_p_t_i_o_n  _d_e_c_l_a_r_a_­
-       _t_i_o_n ]}}
+        pprreeppeenndd [[ _o_p_t_i_o_n _d_e_c_l_a_r_a_t_i_o_n ] ;;
 
-       If for some set of options the client should first a value
-       it supplies, and then  use  the  values  supplied  by  the
-       server, if any, these values can be defined in the pprreeppeenndd
-       statement.   The pprreeppeenndd statement can only  be  used  for
-       options which allow more than one value to be given.
+       If for some option the client should use both a  value  it
+       supplies,  and  then  any  values  supplied by the server,
+       these values can be  defined  in  the  pprreeppeenndd  statement.
+       The  pprreeppeenndd  statement can only be used for options which
+       allow more than one value to be given.
 
        _T_h_e aappppeenndd _s_t_a_t_e_m_e_n_t
 
-        aappppeenndd {{ [[ _o_p_t_i_o_n _d_e_c_l_a_r_a_t_i_o_n ] [,, _._._. _o_p_t_i_o_n _d_e_c_l_a_r_a_t_i_o_n
-       ]}}
+        aappppeenndd [[ _o_p_t_i_o_n _d_e_c_l_a_r_a_t_i_o_n ] ;;
 
-       If for some set of options the client should first a value
-       it  supplies,  and  then  use  the  values supplied by the
+       If for some option the client should first any values sup­
+       plied  to  it  by the server, and then some values it sup­
+       plies, those values should be defined in the aappppeenndd state­
+       ment.    The aappppeenndd statement can only be used for options
+       which allow more than one value to be given.
+
 
 
 
@@ -267,10 +267,6 @@ OOPPTTIIOONN MMOODDIIFFIIEERRSS
 
 dhclient.conf(5)                                 dhclient.conf(5)
 
-
-       server, if any, these values can be defined in the  aappppeenndd
-       statement.    The  aappppeenndd  statement  can only be used for
-       options which allow more than one value to be given.
 
 LLEEAASSEE DDEECCLLAARRAATTIIOONNSS
        _T_h_e lleeaassee _d_e_c_l_a_r_a_t_i_o_n
@@ -322,6 +318,10 @@ LLEEAASSEE DDEECCLLAARRAATTIIOONNSS
         ffiixxeedd--aaddddrreessss _i_p_-_a_d_d_r_e_s_s;;
 
        The ffiixxeedd--aaddddrreessss statement is used to set the ip  address
+       of  a  particular  lease.   This is required for all lease
+       statements.   The IP address must be specified as a dotted
+       quad (e.g., 12.34.56.78).
+
 
 
 
@@ -333,10 +333,6 @@ LLEEAASSEE DDEECCLLAARRAATTIIOONNSS
 
 dhclient.conf(5)                                 dhclient.conf(5)
 
-
-       of  a  particular  lease.   This is required for all lease
-       statements.   The IP address must be specified as a dotted
-       quad (e.g., 12.34.56.78).
 
         ffiilleennaammee ""_s_t_r_i_n_g"";;
 
@@ -388,6 +384,10 @@ dhclient.conf(5)                                 dhclient.conf(5)
        statement should be used in predefined leases only if  the
        network interface requires media type configuration.
 
+        rreenneeww _d_a_t_e;;
+
+        rreebbiinndd _d_a_t_e;;
+
 
 
 
@@ -399,10 +399,6 @@ dhclient.conf(5)                                 dhclient.conf(5)
 
 dhclient.conf(5)                                 dhclient.conf(5)
 
-
-        rreenneeww _d_a_t_e;;
-
-        rreebbiinndd _d_a_t_e;;
 
         eexxppiirree _d_a_t_e;;
 
@@ -433,8 +429,8 @@ dhclient.conf(5)                                 dhclient.conf(5)
        is specified as a number starting with 1 for January.  The
        day of the month is likewise specified  starting  with  1.
        The hour is a number between 0 and 23, the minute a number
-       between 0 and 69, and the second also a number  between  0
-       and 69.
+       between 0 and 59, and the second also a number  between  0
+       and 59.
 
 AALLIIAASS DDEECCLLAARRAATTIIOONNSS
         aalliiaass {{  _d_e_c_l_a_r_a_t_i_o_n_s _._._. }}
@@ -453,7 +449,11 @@ AALLIIAASS DDEECCLLAARRAATTIIOONNSS
        except that options other than the subnet-mask option  are
        ignored  by  the standard client configuration script, and
        expiry times are ignored.   A  typical  alias  declaration
-       includes   an   interface   declaration,  a  fixed-address
+       includes  an interface declaration, a fixed-address decla­
+       ration for the IP alias address, and a subnet-mask  option
+       declaration.   A medium statement should never be included
+       in an alias declaration.
+
 
 
 
@@ -465,10 +465,6 @@ AALLIIAASS DDEECCLLAARRAATTIIOONNSS
 
 dhclient.conf(5)                                 dhclient.conf(5)
 
-
-       declaration for the IP alias address,  and  a  subnet-mask
-       option  declaration.    A medium statement should never be
-       included in an alias declaration.
 
 OOTTHHEERR DDEECCLLAARRAATTIIOONNSS
         rreejjeecctt _i_p_-_a_d_d_r_e_s_s;;
@@ -520,6 +516,10 @@ SSAAMMPPLLEE
        192.5.5.213,  and  has one interface, ep0 (a 3com 3C589C).
        Booting intervals have been shortened  somewhat  from  the
        default,  because the client is known to spend most of its
+       time on networks with little DHCP activity.    The  laptop
+       does roam to multiple networks.
+
+
 
 
 
@@ -530,10 +530,6 @@ SSAAMMPPLLEE
 
 
 dhclient.conf(5)                                 dhclient.conf(5)
-
-
-       time on networks with little DHCP activity.    The  laptop
-       does roam to multiple networks.
 
 
        timeout 60;
@@ -576,6 +572,10 @@ AAUUTTHHOORR
        ject  was  provided  by the Internet Software Corporation.
        Information about the Internet Software Consortium can  be
        found at hhttttpp::////wwwwww..iisscc..oorrgg//iisscc..
+
+
+
+
 
 
 

@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: execute.c,v 1.5 1999/02/24 17:56:45 mellon Exp $ Copyright (c) 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: execute.c,v 1.6 1999/02/25 23:30:34 mellon Exp $ Copyright (c) 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -166,9 +166,36 @@ void execute_statements_in_scope (packet, in_options, out_options,
 	struct group *limiting_group;
 {
 	struct group *scope;
+	struct group *limit;
 
-	if (group == limiting_group)
-		return;
+	/* As soon as we get to a scope that is outer than the limiting
+	   scope, we are done.   This is so that if somebody does something
+	   like this, it does the expected thing:
+
+	        domain-name "fugue.com";
+		shared-network FOO {
+			host bar {
+				domain-name "othello.fugue.com";
+				fixed-address 10.20.30.40;
+			}
+			subnet 10.20.30.0 netmask 255.255.255.0 {
+				domain-name "manhattan.fugue.com";
+			}
+		}
+
+	   The problem with the above arrangement is that the host's
+	   group nesting will be host -> shared-network -> top-level,
+	   and the limiting scope when we evaluate the host's scope
+	   will be the subnet -> shared-network -> top-level, so we need
+	   to know when we evaluate the host's scope to stop before we
+	   evaluate the shared-networks scope, because it's outer than
+	   the limiting scope, which means we've already evaluated it. */
+
+	for (limit = limiting_group; limit; limit = limit -> next) {
+		if (group == limit)
+			return;
+	}
+
 	if (group -> next)
 		execute_statements_in_scope (packet, in_options, out_options,
 					     group -> next, limiting_group);

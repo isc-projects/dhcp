@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcrelay.c,v 1.19 1999/02/24 17:56:50 mellon Exp $ Copyright (c) 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcrelay.c,v 1.20 1999/02/25 23:30:38 mellon Exp $ Copyright (c) 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -111,7 +111,7 @@ struct server_list {
 static char copyright [] =
 "Copyright 1997, 1998, 1999 The Internet Software Consortium.";
 static char arr [] = "All rights reserved.";
-static char message [] = "Internet Software Consortium DHCP Relay Agent V3.0-alpha 19990213";
+static char message [] = "Internet Software Consortium DHCP Relay Agent V3.0-alpha 19990225";
 static char contrib [] = "\nPlease contribute if you find this software useful.";
 static char url [] = "For info, please visit http://www.isc.org/dhcp-contrib.html\n";
 
@@ -372,7 +372,6 @@ void relay (ip, packet, length, from_port, from, hfrom)
 				 (struct packet *)0,
 				 packet, length, out -> primary_address,
 				 &to, &hto) < 0) {
-			log_debug ("sendpkt: %m");
 			++server_packet_errors;
 		} else {
 			log_debug ("forwarded BOOTREPLY for %s to %s",
@@ -412,7 +411,6 @@ void relay (ip, packet, length, from_port, from, hfrom)
 				 (struct packet *)0,
 				 packet, length, ip -> primary_address,
 				 &sp -> to, (struct hardware *)0) < 0) {
-			log_debug ("send_packet: %m");
 			++client_packet_errors;
 		} else {
 			log_debug ("forwarded BOOTREQUEST for %s to %s",
@@ -427,8 +425,8 @@ void relay (ip, packet, length, from_port, from, hfrom)
 
 static void usage ()
 {
-	log_fatal ("Usage: dhcrelay [-p <port>] [-d] [-D] [-i interface]\n%s%s%s",
-	       "                ",
+	log_fatal ("Usage: dhcrelay [-p <port>] [-d] [-D] [-i %s%s%s",
+	       "interface]\n                ",
 	       "[-q] [-a] [-A length] [-m append|replace|forward|discard]\n",
 	       "                [server1 [... serverN]]");
 }

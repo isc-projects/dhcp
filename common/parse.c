@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.13 1999/02/24 17:56:47 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.14 1999/02/25 23:30:35 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1865,4 +1865,54 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 	} else
 		*rv = t;
 	return 1;
+}
+
+int parse_auth_key (key_id, cfile)
+	struct data_string *key_id;
+	FILE *cfile;
+{
+	struct data_string key_data;
+	char *val;
+	enum dhcp_token token;
+	struct auth_key *key, *old_key = (struct auth_key *)0;
+
+	memset (&key_data, 0, sizeof key_data);
+
+	if (!parse_cshl (key_id, cfile))
+		return 0;
+
+	key = auth_key_lookup (key_id);
+
+	token = peek_token (&val, cfile);
+	if (token == SEMI) {
+		if (!key)
+			parse_warn ("reference to undefined key %s",
+				    print_hex_1 (key_id -> len,
+						 key_id -> data,
+						 key_id -> len));
+		data_string_forget (key_id, "parse_auth_key");
+	} else {
+		if (!parse_cshl (&key_data, cfile))
+			return 0;
+		if (key) {
+			parse_warn ("redefinition of key %s",
+				    print_hex_1 (key_id -> len,
+						 key_id -> data,
+						 key_id -> len));
+			old_key = key;
+		}
+		key = new_auth_key (key_data.len, "parse_auth_key");
+		if (!key)
+			log_fatal ("No memory for key %s",
+				   print_hex_1 (key_id -> len,
+						key_id -> data,
+						key_id -> len));
+		key -> length = key_data.len;
+		memcpy (key -> data, key_data.data, key_data.len);
+		enter_auth_key (key_id, key);
+		data_string_forget (&key_data, "parse_auth_key");
+	}
+
+	parse_semi (cfile);
+	return key_id -> len ? 1 : 0;
 }

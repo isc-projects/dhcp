@@ -156,6 +156,12 @@ struct dhcp_packet {
 #define DHO_DHCP_CLIENT_IDENTIFIER	61
 #define DHO_DHCP_USER_CLASS_ID		77
 #define DHO_DHCP_AGENT_OPTIONS		82
+/* The DHO_AUTHENTICATE option is not a standard yet, so I've
+   allocated an option out of the "local" option space for it on a
+   temporary basis.  Once an option code number is assigned, I will
+   immediately and shamelessly break this, so don't count on it
+   continuing to work. */
+#define DHO_AUTHENTICATE		210
 #define DHO_END				255
 
 /* DHCP message types. */

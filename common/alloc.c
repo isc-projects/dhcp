@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: alloc.c,v 1.23 1999/02/24 17:56:43 mellon Exp $ Copyright (c) 1995, 1996, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: alloc.c,v 1.24 1999/02/25 23:30:33 mellon Exp $ Copyright (c) 1995, 1996, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -343,6 +343,27 @@ void free_failover_peer (peer, name)
 	dfree (peer, name);
 }
 #endif /* defined (FAILOVER_PROTOCOL) */
+
+struct auth_key *new_auth_key (len, name)
+	int len;
+	char *name;
+{
+	struct auth_key *peer;
+	int size = len - 1 + sizeof (struct auth_key);
+
+	peer = (struct auth_key *)dmalloc (size, name);
+	if (!peer)
+		return peer;
+	memset (peer, 0, size);
+	return peer;
+}
+
+void free_auth_key (peer, name)
+	struct auth_key *peer;
+	char *name;
+{
+	dfree (peer, name);
+}
 
 struct permit *new_permit (name)
 	char *name;

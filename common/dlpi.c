@@ -122,7 +122,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dlpi.c,v 1.4 1999/02/24 17:56:44 mellon Exp $ Copyright (c) 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dlpi.c,v 1.5 1999/02/25 23:30:34 mellon Exp $ Copyright (c) 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 static int strioctl PROTO ((int fd, int cmd, int timeout, int len, char *dp));
@@ -349,13 +349,14 @@ void if_register_send (info)
 #endif
 
         if (!quiet_interface_discovery)
-		log_info ("Sending on   DLPI/%s/%s/%s",
+		log_info ("Sending on   DLPI/%s/%s%s%s",
 		      info -> name,
 		      print_hw_addr (info -> hw_address.htype,
 				     info -> hw_address.hlen,
 				     info -> hw_address.haddr),
+		      (info -> shared_network ? "/" : ""),
 		      (info -> shared_network ?
-		       info -> shared_network -> name : "unattached"));
+		       info -> shared_network -> name : ""));
 
 #ifdef DLPI_FIRST_SEND_WAIT
 /* See the implementation notes at the beginning of this file */
@@ -402,7 +403,7 @@ void if_register_receive (info)
 	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_CAND;
 	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_PUSHWORD + 18;
 	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_PUSHLIT + ENF_CAND;
-	pf.Pf_Filter [pf.Pf_FilterLen++] = local_port;
+	pf.Pf_Filter [pf.Pf_FilterLen++] = htons (local_port);
 #else
 	/*
 	 * The packets that will be received on this file descriptor
@@ -420,7 +421,7 @@ void if_register_receive (info)
 	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_CAND;
 	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_PUSHWORD + 11;
 	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_PUSHLIT + ENF_CAND;
-	pf.Pf_Filter [pf.Pf_FilterLen++] = local_port;
+	pf.Pf_Filter [pf.Pf_FilterLen++] = htons (local_port);
 #endif
 
 	/* Install the filter... */
@@ -431,13 +432,14 @@ void if_register_receive (info)
 #endif
 
         if (!quiet_interface_discovery)
-		log_info ("Listening on DLPI/%s/%s/%s",
+		log_info ("Listening on DLPI/%s/%s%s%s",
 		      info -> name,
 		      print_hw_addr (info -> hw_address.htype,
 				     info -> hw_address.hlen,
 				     info -> hw_address.haddr),
+		      (info -> shared_network ? "/" : ""),
 		      (info -> shared_network ?
-		       info -> shared_network -> name : "unattached"));
+		       info -> shared_network -> name : ""));
 
 #ifdef DLPI_FIRST_SEND_WAIT
 /* See the implementation notes at the beginning of this file */
@@ -466,7 +468,7 @@ ssize_t send_packet (interface, packet, raw, len, from, to, hto)
 	unsigned char dstaddr [DLPI_MAXDLADDR];
 	unsigned addrlen;
 	int saplen;
-	int rslt;
+	int result;
 
 	if (!strcmp (interface -> name, "fallback"))
 		return send_fallback (interface, packet, raw,
@@ -487,7 +489,7 @@ ssize_t send_packet (interface, packet, raw, len, from, to, hto)
 	dbuflen += len;
 
 #ifdef USE_DLPI_RAW
-	rslt = write (interface -> wfdesc, dbuf, dbuflen);
+	result = write (interface -> wfdesc, dbuf, dbuflen);
 #else
 	/* XXX: Assumes ethernet, with two byte SAP */
 	sap [0] = 0x08;		/* ETHERTYPE_IP, high byte */
@@ -512,10 +514,12 @@ ssize_t send_packet (interface, packet, raw, len, from, to, hto)
 	addrlen = interface -> hw_address.hlen + ABS (saplen);
 
 	/* Send the packet down the wire... */
-	rslt = dlpiunitdatareq (interface -> wfdesc, dstaddr, addrlen,
-				0, 0, dbuf, dbuflen);
+	result = dlpiunitdatareq (interface -> wfdesc, dstaddr, addrlen,
+				  0, 0, dbuf, dbuflen);
 #endif
-	return rslt;
+	if (result < 0)
+		warn ("send_packet: %m");
+	return result;
 }
 #endif /* USE_DLPI_SEND */
 
@@ -535,8 +539,8 @@ ssize_t receive_packet (interface, buf, len, from, hfrom)
 	int flags = 0;
 	int length = 0;
 	int offset = 0;
-	int bufix = 0;
 	int rslt;
+	int bufix = 0;
 	
 #ifdef USE_DLPI_RAW
 	length = read (interface -> rfdesc, dbuf, sizeof (dbuf));
@@ -1057,7 +1061,7 @@ static int dlpiunitdataind (fd, daddr, daddrlen,
 	union DL_primitives *dlp;
 	struct strbuf ctl, data;
 	int flags = 0;
-	int rslt;
+	int result;
 
 	/* Set up the msg_buf structure... */
 	dlp = (union DL_primitives *)buf;
@@ -1071,9 +1075,9 @@ static int dlpiunitdataind (fd, daddr, daddrlen,
 	data.len = 0;
 	data.buf = (char *)dbuf;
 	
-	rslt = getmsg (fd, &ctl, &data, &flags);
+	result = getmsg (fd, &ctl, &data, &flags);
 	
-	if (rslt != 0) {
+	if (result != 0) {
 		return -1;
 	}
 	
@@ -1141,7 +1145,7 @@ static int strgetmsg (fd, ctlp, datap, flagsp, caller)
 	int *flagsp;
 	int fd;
 {
-	int rslt;
+	int result;
 #ifdef USE_POLL
 	struct pollfd pfd;
 	int count;
@@ -1195,8 +1199,8 @@ static int strgetmsg (fd, ctlp, datap, flagsp, caller)
 	 * Set flags argument and issue getmsg ().
 	 */
 	*flagsp = 0;
-	if ((rslt = getmsg (fd, ctlp, datap, flagsp)) < 0) {
-		return rslt;
+	if ((result = getmsg (fd, ctlp, datap, flagsp)) < 0) {
+		return result;
 	}
 
 #ifndef USE_POLL
@@ -1212,7 +1216,7 @@ static int strgetmsg (fd, ctlp, datap, flagsp, caller)
 	/*
 	 * Check for MOREDATA and/or MORECTL.
 	 */
-	if (rslt & (MORECTL|MOREDATA)) {
+	if (result & (MORECTL|MOREDATA)) {
 		return -1;
 	}
 

@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: discover.c,v 1.4 1999/02/24 17:56:44 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: discover.c,v 1.5 1999/02/25 23:30:34 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -142,7 +142,7 @@ void discover_interfaces (state)
 		   except don't skip down interfaces if we're trying to
 		   get a list of configurable interfaces. */
 		if ((((ifr.ifr_flags & IFF_LOOPBACK) ||
-#ifdef IFF_POINTOPOINT
+#ifdef HAVE_IFF_POINTOPOINT
 		      (ifr.ifr_flags & IFF_POINTOPOINT))
 		     && !tmp) ||
 #endif
@@ -170,7 +170,7 @@ void discover_interfaces (state)
 
 		/* If we have the capability, extract link information
 		   and record it in a linked list. */
-#ifdef AF_LINK
+#ifdef HAVE_AF_LINK
 		if (ifp -> ifr_addr.sa_family == AF_LINK) {
 			struct sockaddr_dl *foo = ((struct sockaddr_dl *)
 						   (&ifp -> ifr_addr));
@@ -334,7 +334,7 @@ void discover_interfaces (state)
 
 	/* Now cycle through all the interfaces we found, looking for
 	   hardware addresses. */
-#if defined (SIOCGIFHWADDR) && !defined (AF_LINK)
+#if defined (HAVE_SIOCGIFHWADDR) && !defined (HAVE_AF_LINK)
 	for (tmp = interfaces; tmp; tmp = tmp -> next) {
 		struct ifreq ifr;
 		struct sockaddr sa;
@@ -358,7 +358,11 @@ void discover_interfaces (state)
 		sa = *(struct sockaddr *)&ifr.ifr_hwaddr;
 		
 		switch (sa.sa_family) {
-#ifdef ARPHRD_LOOPBACK
+#ifdef HAVE_ARPHRD_TUNNEL
+		      case ARPHRD_TUNNEL:
+			/* ignore tunnel interfaces. */
+#endif
+#ifdef HAVE_ARPHRD_LOOPBACK
 		      case ARPHRD_LOOPBACK:
 			/* ignore loopback interface */
 			break;
@@ -388,7 +392,7 @@ void discover_interfaces (state)
 			memcpy (tmp -> hw_address.haddr, sa.sa_data, 16);
 			break;
 
-#ifdef ARPHRD_METRICOM
+#ifdef HAVE_ARPHRD_METRICOM
 		      case ARPHRD_METRICOM:
 			tmp -> hw_address.hlen = 6;
 			tmp -> hw_address.htype = ARPHRD_METRICOM;
@@ -401,7 +405,7 @@ void discover_interfaces (state)
 			       ifr.ifr_name, sa.sa_family);
 		}
 	}
-#endif /* defined (SIOCGIFHWADDR) && !defined (AF_LINK) */
+#endif /* defined (HAVE_SIOCGIFHWADDR) && !defined (HAVE_AF_LINK) */
 
 	/* If we're just trying to get a list of interfaces that we might
 	   be able to configure, we can quit now. */
@@ -436,9 +440,14 @@ void discover_interfaces (state)
 			sizeof tmp -> ifp -> ifr_addr);
 
 		/* We must have a subnet declaration for each interface. */
-		if (!tmp -> shared_network && (state == DISCOVER_SERVER))
-			log_fatal ("No subnet declaration for %s (%s).",
-			       tmp -> name, inet_ntoa (foo.sin_addr));
+		if (!tmp -> shared_network && (state == DISCOVER_SERVER)) {
+			log_error ("No subnet declaration for %s (%s).",
+				   tmp -> name, inet_ntoa (foo.sin_addr));
+			log_error ("Please write a subnet declaration for %s",
+				   "the network segment to");
+			log_fatal ("which interface %s is attached.",
+				   tmp -> name);
+		}
 
 		/* Find subnets that don't have valid interface
 		   addresses... */

@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: conflex.c,v 1.37 1999/02/14 18:42:06 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: conflex.c,v 1.38 1999/02/25 23:30:33 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -370,6 +370,8 @@ static int intern (atom, dfv)
 			return ADD;
 		if (!strcasecmp (atom + 1, "uthenticated"))
 			return AUTHENTICATED;
+		if (!strcasecmp (atom + 1, "uth-key"))
+			return AUTH_KEY;
 		if (!strcasecmp (atom + 1, "ll"))
 			return ALL;
 		break;
@@ -394,10 +396,14 @@ static int intern (atom, dfv)
 			return CLASS;
 		if (!strcasecmp (atom + 1, "iaddr"))
 			return CIADDR;
-		if (!strcasecmp (atom + 1, "lient-identifier"))
-			return CLIENT_IDENTIFIER;
-		if (!strcasecmp (atom + 1, "lient-hostname"))
-			return CLIENT_HOSTNAME;
+		if (!strncasecmp (atom + 1, "lient", 5)) {
+			if (!strcasecmp (atom + 6, "-identifier"))
+				return CLIENT_IDENTIFIER;
+			if (!strcasecmp (atom + 6, "-hostname"))
+				return CLIENT_HOSTNAME;
+			if (!strcasecmp (atom + 6, "s"))
+				return CLIENTS;
+		}
 		if (!strcasecmp (atom + 1, "ommunications-interrupted"))
 			return COMMUNICATIONS_INTERRUPTED;
 		break;
