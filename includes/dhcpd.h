@@ -1084,14 +1084,14 @@ int binding_scope_dereference PROTO ((struct binding_scope **,
 extern int outstanding_pings;
 
 void dhcp PROTO ((struct packet *));
-void dhcpdiscover PROTO ((struct packet *));
-void dhcprequest PROTO ((struct packet *));
-void dhcprelease PROTO ((struct packet *));
-void dhcpdecline PROTO ((struct packet *));
-void dhcpinform PROTO ((struct packet *));
+void dhcpdiscover PROTO ((struct packet *, int));
+void dhcprequest PROTO ((struct packet *, int));
+void dhcprelease PROTO ((struct packet *, int));
+void dhcpdecline PROTO ((struct packet *, int));
+void dhcpinform PROTO ((struct packet *, int));
 void nak_lease PROTO ((struct packet *, struct iaddr *cip));
 void ack_lease PROTO ((struct packet *, struct lease *,
-		       unsigned int, TIME, char *));
+		       unsigned int, TIME, char *, int));
 void dhcp_reply PROTO ((struct lease *));
 struct lease *find_lease PROTO ((struct packet *,
 				 struct shared_network *, int *));

@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.137 2000/02/02 20:38:47 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.138 2000/02/07 05:12:03 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -34,31 +34,43 @@ static char dhcp_message [256];
 void dhcp (packet)
 	struct packet *packet;
 {
+	int ms_nulltp = 0;
+
 	if (!locate_network (packet) && packet -> packet_type != DHCPREQUEST)
 		return;
 
 	/* Classify the client. */
+	if ((oc = lookup_option (&dhcp_universe, packet -> options,
+				 DHO_HOST_NAME))) {
+		if (!oc -> expression)
+			if (oc -> data.len &&
+			    oc -> data.data [oc -> data.len - 1] == 0) {
+				ms_nulltp = 1;
+				oc -> data.len--;
+			}
+	}
+
 	classify_client (packet);
 
 	switch (packet -> packet_type) {
 	      case DHCPDISCOVER:
-		dhcpdiscover (packet);
+		dhcpdiscover (packet, ms_nulltp);
 		break;
 
 	      case DHCPREQUEST:
-		dhcprequest (packet);
+		dhcprequest (packet, ms_nulltp);
 		break;
 
 	      case DHCPRELEASE:
-		dhcprelease (packet);
+		dhcprelease (packet, ms_nulltp);
 		break;
 
 	      case DHCPDECLINE:
-		dhcpdecline (packet);
+		dhcpdecline (packet, ms_nulltp);
 		break;
 
 	      case DHCPINFORM:
-		dhcpinform (packet);
+		dhcpinform (packet, ms_nulltp);
 		break;
 
 	      default:
@@ -66,8 +78,9 @@ void dhcp (packet)
 	}
 }
 
-void dhcpdiscover (packet)
+void dhcpdiscover (packet, ms_nulltp)
 	struct packet *packet;
+	int ms_nulltp;
 {
 	struct lease *lease;
 	char msgbuf [1024]; /* XXX */
@@ -128,11 +141,12 @@ void dhcpdiscover (packet)
 	if (when < lease -> ends)
 		when = lease -> ends;
 
-	ack_lease (packet, lease, DHCPOFFER, when, msgbuf);
+	ack_lease (packet, lease, DHCPOFFER, when, msgbuf, ms_nulltp);
 }
 
-void dhcprequest (packet)
+void dhcprequest (packet, ms_nulltp)
 	struct packet *packet;
+	int ms_nulltp;
 {
 	struct lease *lease;
 	struct iaddr cip;
@@ -277,13 +291,14 @@ void dhcprequest (packet)
 
 	/* Otherwise, send the lease to the client if we found one. */
 	if (lease) {
-		ack_lease (packet, lease, DHCPACK, 0, msgbuf);
+		ack_lease (packet, lease, DHCPACK, 0, msgbuf, ms_nulltp);
 	} else
 		log_info ("%s: unknown lease %s.", msgbuf, piaddr (cip));
 }
 
-void dhcprelease (packet)
+void dhcprelease (packet, ms_nulltp)
 	struct packet *packet;
+	int ms_nulltp;
 {
 	struct lease *lease;
 	struct iaddr cip;
@@ -361,8 +376,9 @@ void dhcprelease (packet)
 		release_lease (lease, packet);
 }
 
-void dhcpdecline (packet)
+void dhcpdecline (packet, ms_nulltp)
 	struct packet *packet;
+	int ms_nulltp;
 {
 	struct lease *lease;
 	struct iaddr cip;
@@ -451,8 +467,9 @@ void dhcpdecline (packet)
 	option_state_dereference (&options, MDL);
 }
 
-void dhcpinform (packet)
+void dhcpinform (packet, ms_nulltp)
 	struct packet *packet;
+	int ms_nulltp;
 {
 	char msgbuf [1024];
 	struct data_string d1, prl;
@@ -934,12 +951,13 @@ void nak_lease (packet, cip)
 			      from, &to, (struct hardware *)0);
 }
 
-void ack_lease (packet, lease, offer, when, msg)
+void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 	struct packet *packet;
 	struct lease *lease;
 	unsigned int offer;
 	TIME when;
 	char *msg;
+	int ms_nulltp;
 {
 	struct lease lt;
 	struct lease_state *state;
@@ -1487,16 +1505,10 @@ void ack_lease (packet, lease, offer, when, msg)
 
 	/* Set a flag if this client is a broken client that NUL
 	   terminates string options and expects us to do likewise. */
-	lease -> flags &= ~MS_NULL_TERMINATION;
-	if ((oc = lookup_option (&dhcp_universe, packet -> options,
-				 DHO_HOST_NAME))) {
-		if (!oc -> expression)
-			if (oc -> data.len &&
-			    oc -> data.data [oc -> data.len - 1] == 0) {
-				lease -> flags |= MS_NULL_TERMINATION;
-				oc -> data.len--;
-			}
-	}
+	if (ms_nulltp)
+		lease -> flags |= MS_NULL_TERMINATION;
+	else
+		lease -> flags &= MS_NULL_TERMINATION;
 
 	/* If there are statements to execute when the lease is
 	   committed, execute them. */
