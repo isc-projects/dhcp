@@ -496,7 +496,7 @@ size_t send_packet PROTO ((struct interface_info *,
 
 /* dispatch.c */
 extern struct interface_info *interfaces;
-void discover_interfaces PROTO ((void));
+void discover_interfaces PROTO ((int));
 void dispatch PROTO ((void));
 void do_packet PROTO ((struct interface_info *,
 		       unsigned char *, int,
