@@ -1081,7 +1081,7 @@ int dhcpd_interface_setup_hook (struct interface_info *ip, struct iaddr *ia);
 
 /* conflex.c */
 isc_result_t new_parse PROTO ((struct parse **, int,
-			       char *, unsigned, const char *));
+			       char *, unsigned, const char *, int));
 isc_result_t end_parse PROTO ((struct parse **));
 enum dhcp_token next_token PROTO ((const char **, unsigned *, struct parse *));
 enum dhcp_token peek_token PROTO ((const char **, unsigned *, struct parse *));
