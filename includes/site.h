@@ -75,7 +75,7 @@
 /* Define this if you want debugging output for DHCP failover protocol
    messages. */
 
-#define DEBUG_FAILOVER_MESSAGES
+/* #define DEBUG_FAILOVER_MESSAGES */
 
 /* Define this if you want debugging output for DHCP failover protocol
    lease assignment timing. */
