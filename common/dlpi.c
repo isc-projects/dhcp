@@ -222,6 +222,9 @@ int if_register_dlpi (info)
 	      case DL_ETHER:
 		info -> hw_address.htype = HTYPE_ETHER;
 		break;
+	      case DL_FDDI:
+		info -> hw_address.htype = HTYPE_FDDI;
+		break;
 	      default:
 		error ("%s: unknown DLPI MAC type %d",
 		       info -> name,
@@ -482,8 +485,8 @@ ssize_t send_packet (interface, packet, raw, len, from, to, hto)
 	rslt = write (interface -> wfdesc, dbuf, dbuflen);
 #else
 	/* XXX: Assumes ethernet, with two byte SAP */
-	sap [0] = 0;		/* ETHERTYPE_IP, high byte */
-	sap [1] = 0x80;		/* ETHERTYPE_IP, low byte */
+	sap [0] = 0x08;		/* ETHERTYPE_IP, high byte */
+	sap [1] = 0x0;		/* ETHERTYPE_IP, low byte */
 	saplen = -2;		/* -2 indicates a two byte SAP at the end
 				   of the address */
 
