@@ -21,7 +21,7 @@
  */
 
 #if !defined(lint) && !defined(SABER)
-static const char rcsid[] = "$Id: res_mkupdate.c,v 1.5 2000/07/17 20:51:14 mellon Exp $";
+static const char rcsid[] = "$Id: res_mkupdate.c,v 1.6 2000/12/02 00:10:20 neild Exp $";
 #endif /* not lint */
 
 #include <sys/types.h>
@@ -89,8 +89,7 @@ res_nmkupdate(res_state statp,
 	ns_updrec *rrecp_start = rrecp_in;
 	HEADER *hp;
 	u_char *cp, *sp1, *sp2, *startp, *endp;
-	int i, soanum, multiline;
-	unsigned n;
+	int n, i, soanum, multiline;
 	ns_updrec *rrecp;
 	struct in_addr ina;
         char buf2[MAXDNAME];
@@ -387,7 +386,7 @@ res_nmkupdate(res_state statp,
 					return (-1);
 				ShrinkBuffer(n+1);
 				*cp++ = n;
-				memcpy(cp, buf2, n);
+				memcpy(cp, buf2, (unsigned)n);
 				cp += n;
 			}
 			break;
@@ -403,7 +402,7 @@ res_nmkupdate(res_state statp,
 					return (-1);
 				ShrinkBuffer(n+1);
 				*cp++ = n;
-				memcpy(cp, buf2, n);
+				memcpy(cp, buf2, (unsigned)n);
 				cp += n;
 			}
 			break;
@@ -416,7 +415,7 @@ res_nmkupdate(res_state statp,
 				return (-1);
 			ShrinkBuffer(n+1);
 			*cp++ = n;
-			memcpy(cp, buf2, n);
+			memcpy(cp, buf2, (unsigned)n);
 			cp += n;
 			break;
 		case T_ISDN:
@@ -428,7 +427,7 @@ res_nmkupdate(res_state statp,
 				return (-1);
 			ShrinkBuffer(n+1);
 			*cp++ = n;
-			memcpy(cp, buf2, n);
+			memcpy(cp, buf2, (unsigned)n);
 			cp += n;
 			if ((n = getstr_str(buf2, sizeof buf2, &startp,
 					 endp)) < 0)
@@ -437,7 +436,7 @@ res_nmkupdate(res_state statp,
 				return (-1);
 			ShrinkBuffer(n+1);
 			*cp++ = n;
-			memcpy(cp, buf2, n);
+			memcpy(cp, buf2, (unsigned)n);
 			cp += n;
 			break;
 #if 0
