@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.93 2000/01/05 18:12:24 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.94 2000/01/05 18:42:57 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -484,7 +484,6 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 
 		break;
 
-#if defined (FAILOVER_PROTOCOL)
 	      case FAILOVER:
 		if (type != ROOT_GROUP && type != SHARED_NETWORK) {
 			parse_warn (cfile, "failover peers may only be %s",
@@ -494,9 +493,13 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 			break;
 		}
 		token = next_token (&val, cfile);
+#if defined (FAILOVER_PROTOCOL)
 		parse_failover_peer (cfile, group, type);
-		break;
+#else
+		parse_warn (cfile, "No failover support.");
+		skip_to_semi (cfile);
 #endif
+		break;
 
 	      default:
 		et = (struct executable_statement *)0;
@@ -869,6 +872,7 @@ void parse_pool_statement (cfile, group, type)
 	else
 		pool -> shared_network = group -> shared_network;
 
+#if defined (FAILOVER_PROTOCOL)
 	/* Inherit the failover peer from the shared network. */
 	if (pool -> shared_network -> failover_peer)
 	    omapi_object_reference ((omapi_object_t **)
@@ -876,6 +880,7 @@ void parse_pool_statement (cfile, group, type)
 				    (omapi_object_t *)
 				    pool -> shared_network -> failover_peer,
 				    "parse_pool_statement");
+#endif
 
 	if (!parse_lbrace (cfile))
 		return;
@@ -892,12 +897,14 @@ void parse_pool_statement (cfile, group, type)
 				skip_to_semi (cfile);
 				continue;
 			}
+#if defined (FAILOVER_PROTOCOL)
 			if (pool -> failover_peer)
 				omapi_object_dereference
 					((omapi_object_t **)
 					 &pool -> failover_peer,
 					 "parse_pool_statement");
 			/* XXX Flag error if there's no failover peer? */
+#endif
 			break;
 				
 		      case RANGE:
