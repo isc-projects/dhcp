@@ -246,7 +246,6 @@ expression.   If both expressions evaluate to null, then the result is
 null.
 .RE
 .PP
-.PP
 .B reverse (\fInumeric-expr1\fB, \fIdata-expr2\fB)\fR
 .RS 0.25i
 The two expressions are evaluated, and then the result of evaluating
@@ -295,7 +294,23 @@ Numeric-expr is evaluated and encoded as a data string of the
 specified width, in network byte order (most significant byte first).
 If the numeric expression evaluates to the null value, the result is
 also null.
-
+.PP
+.B pick-first-value (\fIdata-expr1\fR [ ... \fIexpr\fRn ] \fB)\fR
+.RS 0.25i
+The pick-first-value function takes any number of data expressions as
+its arguments.   Each expression is evaluated, starting with the first
+in the list, until an expression is found that does not evaluate to a
+null value.   That expression is returned, and none of the subsequent
+expressions are evaluated.   If all expressions evaluate to a null
+value, the null value is returned.
+.RE
+.PP
+.B host-decl-name
+.RS 0.25i
+The host-decl-name function returns the name of the host declaration
+that matched the client whose request is currently being processed, if
+any.   If no host declaration matched, the result is the null value.
+.RE
 .SH NUMERIC EXPRESSIONS
 Numeric expressions are expressions that evaluate to an integer.   In
 general, the maximum size of such an integer should not be assumed to
@@ -311,6 +326,13 @@ expression.   Width is the width in bits of the integer to extract.
 Currently, the only supported widths are 8, 16 and 32.   If the
 evaluation of the data expression doesn't provide sufficient bits to
 extract an integer of the specified size, the null value is returned.
+.RE
+.PP
+.B lease-time
+.PP
+.RS 0.25i
+The duration of the current lease - that is, the difference between
+the current time and the time that the lease expires.
 .RE
 .PP
 .I number
