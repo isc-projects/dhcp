@@ -55,6 +55,8 @@
 
 #define SOCKLEN_T	int
 
+#define fpos_t		long
+
 /* No endian.h either. */
 /*
  * Definitions for byte order, according to byte significance from low
