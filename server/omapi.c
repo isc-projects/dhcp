@@ -29,7 +29,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: omapi.c,v 1.18 1999/10/15 12:34:18 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: omapi.c,v 1.19 1999/10/25 01:56:38 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1404,6 +1404,9 @@ isc_result_t dhcp_host_lookup (omapi_object_t **lp,
 			omapi_object_dereference (lp, "dhcp_host_lookup");
 			return ISC_R_INVALIDARG;
 		}
+		if (((struct host_decl *)(*lp)) -> flags & HOST_DECL_DELETED) {
+			omapi_object_dereference (lp, "dhcp_host_lookup");
+		}
 	}
 
 	/* Now look for a client identifier. */
@@ -1418,7 +1421,7 @@ isc_result_t dhcp_host_lookup (omapi_object_t **lp,
 		if (*lp && *lp != (omapi_object_t *)host) {
 			omapi_object_dereference (lp, "dhcp_host_lookup");
 			return ISC_R_KEYCONFLICT;
-		} else if (!host) {
+		} else if (!host || (host -> flags & HOST_DECL_DELETED)) {
 			if (*lp)
 			    omapi_object_dereference (lp, "dhcp_host_lookup");
 			return ISC_R_NOTFOUND;
@@ -1442,7 +1445,7 @@ isc_result_t dhcp_host_lookup (omapi_object_t **lp,
 		if (*lp && *lp != (omapi_object_t *)host) {
 			omapi_object_dereference (lp, "dhcp_host_lookup");
 			return ISC_R_KEYCONFLICT;
-		} else if (!host) {
+		} else if (!host || (host -> flags & HOST_DECL_DELETED)) {
 			if (*lp)
 			    omapi_object_dereference (lp, "dhcp_host_lookup");
 			return ISC_R_NOTFOUND;
@@ -1479,7 +1482,8 @@ isc_result_t dhcp_host_lookup (omapi_object_t **lp,
 			if (host && *lp && *lp != (omapi_object_t *)host) {
 			    omapi_object_dereference (lp, "dhcp_host_lookup");
 			    return ISC_R_KEYCONFLICT;
-			} else if (!host) {
+			} else if (!host || (host -> flags &
+					     HOST_DECL_DELETED)) {
 			    if (!*lp)
 				    return ISC_R_NOTFOUND;
 			} else if (!*lp) {
@@ -1504,7 +1508,7 @@ isc_result_t dhcp_host_lookup (omapi_object_t **lp,
 		if (*lp && *lp != (omapi_object_t *)host) {
 			omapi_object_dereference (lp, "dhcp_host_lookup");
 			return ISC_R_KEYCONFLICT;
-		} else if (!host) {
+		} else if (!host || (host -> flags & HOST_DECL_DELETED)) {
 			return ISC_R_NOTFOUND;	
 		} else if (!*lp) {
 			/* XXX fix so that hash lookup itself creates
@@ -1533,6 +1537,7 @@ isc_result_t dhcp_host_create (omapi_object_t **lp,
 	hp -> refcnt = 0;
 	hp -> type = dhcp_type_host;
 	hp -> group = &root_group;	/* XXX */
+	hp -> flags = HOST_DECL_DYNAMIC;
 	return omapi_object_reference (lp, (omapi_object_t *)hp,
 				       "dhcp_host_create");
 }
