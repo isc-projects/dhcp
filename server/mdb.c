@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.4 1999/10/05 00:03:24 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.5 1999/10/05 02:47:12 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -988,8 +988,9 @@ int supersede_lease (comp, lease, commit)
 
 /* Release the specified lease and re-hash it as appropriate. */
 
-void release_lease (lease)
+void release_lease (lease, packet)
 	struct lease *lease;
+	struct packet *packet;
 {
 	struct lease lt;
 
