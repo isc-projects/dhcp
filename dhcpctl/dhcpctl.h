@@ -42,6 +42,7 @@ typedef struct {
 	omapi_typed_data_t *rtype;
 	isc_result_t waitstatus;
 	omapi_typed_data_t *message;
+	omapi_handle_t remote_handle;
 } dhcpctl_remote_object_t;
 
 omapi_object_type_t *dhcpctl_callback_type;
@@ -59,6 +60,7 @@ dhcpctl_status dhcpctl_set_string_value (dhcpctl_handle, char *, char *);
 dhcpctl_status dhcpctl_set_boolean_value (dhcpctl_handle, int, char *);
 dhcpctl_status dhcpctl_object_update (dhcpctl_handle, dhcpctl_handle);
 dhcpctl_status dhcpctl_object_refresh (dhcpctl_handle, dhcpctl_handle);
+dhcpctl_status dhcpctl_object_delete (dhcpctl_handle, dhcpctl_handle);
 
 dhcpctl_status dhcpctl_set_callback (dhcpctl_handle, void *,
 				     void (*) (dhcpctl_handle,

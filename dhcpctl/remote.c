@@ -184,8 +184,15 @@ isc_result_t dhcpctl_remote_set_value (omapi_object_t *h,
 				       omapi_data_string_t *name,
 				       omapi_typed_data_t *value)
 {
+	dhcpctl_remote_object_t *ro;
 	if (h -> type != dhcpctl_remote_type)
 		return ISC_R_INVALIDARG;
+	ro = (dhcpctl_remote_object_t *)h;
+
+	if (!omapi_ds_strcmp (name, "remote-handle")) {
+		return omapi_get_int_value (&ro -> remote_handle,
+					    value);
+	}
 
 	if (h -> inner && h -> inner -> type -> set_value)
 		return (*(h -> inner -> type -> set_value))
