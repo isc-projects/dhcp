@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.104.2.3 2001/06/11 05:58:25 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.104.2.4 2001/06/14 20:43:15 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2557,7 +2557,7 @@ int parse_if_statement (result, cfile, lose)
 		executable_statement_dereference (result, MDL);
 		return 0;
 	}
-	if (!parse_executable_statements (&(*result) -> data.ie.true,
+	if (!parse_executable_statements (&(*result) -> data.ie.tc,
 					  cfile, lose, context_any)) {
 		if (*lose) {
 			/* Try to even things up. */
@@ -2583,7 +2583,7 @@ int parse_if_statement (result, cfile, lose)
 		token = peek_token (&val, (unsigned *)0, cfile);
 		if (token == IF) {
 			token = next_token (&val, (unsigned *)0, cfile);
-			if (!parse_if_statement (&(*result) -> data.ie.false,
+			if (!parse_if_statement (&(*result) -> data.ie.fc,
 						 cfile, lose)) {
 				if (!*lose)
 					parse_warn (cfile,
@@ -2601,7 +2601,7 @@ int parse_if_statement (result, cfile, lose)
 		} else {
 			token = next_token (&val, (unsigned *)0, cfile);
 			if (!(parse_executable_statements
-			      (&(*result) -> data.ie.false,
+			      (&(*result) -> data.ie.fc,
 			       cfile, lose, context_any))) {
 				executable_statement_dereference (result, MDL);
 				return 0;
@@ -2617,7 +2617,7 @@ int parse_if_statement (result, cfile, lose)
 		}
 	} else if (token == ELSIF) {
 		token = next_token (&val, (unsigned *)0, cfile);
-		if (!parse_if_statement (&(*result) -> data.ie.false,
+		if (!parse_if_statement (&(*result) -> data.ie.fc,
 					 cfile, lose)) {
 			if (!*lose)
 				parse_warn (cfile,
@@ -2627,7 +2627,7 @@ int parse_if_statement (result, cfile, lose)
 			return 0;
 		}
 	} else
-		(*result) -> data.ie.false = (struct executable_statement *)0;
+		(*result) -> data.ie.fc = (struct executable_statement *)0;
 	
 	return 1;
 }

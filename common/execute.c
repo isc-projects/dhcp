@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: execute.c,v 1.44.2.1 2001/06/08 23:10:23 mellon Exp $ Copyright (c) 1998-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: execute.c,v 1.44.2.2 2001/06/14 20:43:17 mellon Exp $ Copyright (c) 1998-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -182,7 +182,7 @@ int execute_statements (result, packet, lease, client_state,
 			if (!execute_statements
 			    (result, packet, lease, client_state,
 			     in_options, out_options, scope,
-			     rc ? r -> data.ie.true : r -> data.ie.false))
+			     rc ? r -> data.ie.tc : r -> data.ie.fc))
 				return 0;
 			break;
 
@@ -596,12 +596,12 @@ int executable_statement_dereference (ptr, file, line)
 		if ((*ptr) -> data.ie.expr)
 			expression_dereference (&(*ptr) -> data.ie.expr,
 						file, line);
-		if ((*ptr) -> data.ie.true)
+		if ((*ptr) -> data.ie.tc)
 			executable_statement_dereference
-				(&(*ptr) -> data.ie.true, file, line);
-		if ((*ptr) -> data.ie.false)
+				(&(*ptr) -> data.ie.tc, file, line);
+		if ((*ptr) -> data.ie.fc)
 			executable_statement_dereference
-				(&(*ptr) -> data.ie.false, file, line);
+				(&(*ptr) -> data.ie.fc, file, line);
 		break;
 
 	      case eval_statement:
@@ -737,23 +737,23 @@ void write_statements (file, statements, indent)
 						indent + 3, indent + 3, 1);
 		      else_if:
 			token_print_indent (file, col, indent, " ", "", "{");
-			write_statements (file, x -> data.ie.true, indent + 2);
-			if (x -> data.ie.false &&
-			    x -> data.ie.false -> op == if_statement &&
-			    !x -> data.ie.false -> next) {
+			write_statements (file, x -> data.ie.tc, indent + 2);
+			if (x -> data.ie.fc &&
+			    x -> data.ie.fc -> op == if_statement &&
+			    !x -> data.ie.fc -> next) {
 				indent_spaces (file, indent);
 				fprintf (file, "} elsif ");
-				x = x -> data.ie.false;
+				x = x -> data.ie.fc;
 				col = write_expression (file,
 							x -> data.ie.expr,
 							indent + 6,
 							indent + 6, 1);
 				goto else_if;
 			}
-			if (x -> data.ie.false) {
+			if (x -> data.ie.fc) {
 				indent_spaces (file, indent);
 				fprintf (file, "} else {");
-				write_statements (file, x -> data.ie.false,
+				write_statements (file, x -> data.ie.fc,
 						  indent + 2);
 			}
 			indent_spaces (file, indent);
@@ -996,10 +996,10 @@ int executable_statement_foreach (struct executable_statement *stmt,
 	      case null_statement:
 		break;
 	      case if_statement:
-		if (executable_statement_foreach (stmt -> data.ie.true,
+		if (executable_statement_foreach (stmt -> data.ie.tc,
 						  callback, vp, 1))
 			ok = 1;
-		if (executable_statement_foreach (stmt -> data.ie.false,
+		if (executable_statement_foreach (stmt -> data.ie.fc,
 						  callback, vp, 1))
 			ok = 1;
 		break;
