@@ -393,6 +393,11 @@ dhcpctl_status dhcpctl_object_update (dhcpctl_handle connection,
 {
 	isc_result_t status;
 	omapi_object_t *message = (omapi_object_t *)0;
+	dhcpctl_remote_object_t *ro;
+
+	if (h -> type != dhcpctl_remote_type)
+		return ISC_R_INVALIDARG;
+	ro = (dhcpctl_remote_object_t *)h;
 
 	status = omapi_message_new (&message, MDL);
 	if (status != ISC_R_SUCCESS) {
@@ -405,8 +410,16 @@ dhcpctl_status dhcpctl_object_update (dhcpctl_handle connection,
 		omapi_object_dereference (&message, MDL);
 		return status;
 	}
+
 	status = omapi_set_object_value (message, (omapi_object_t *)0,
 					 "object", h);
+	if (status != ISC_R_SUCCESS) {
+		omapi_object_dereference (&message, MDL);
+		return status;
+	}
+
+	status = omapi_set_int_value (message, (omapi_object_t *)0, "handle",
+				      (int)(ro -> remote_handle));
 	if (status != ISC_R_SUCCESS) {
 		omapi_object_dereference (&message, MDL);
 		return status;
@@ -429,6 +442,11 @@ dhcpctl_status dhcpctl_object_refresh (dhcpctl_handle connection,
 {
 	isc_result_t status;
 	omapi_object_t *message = (omapi_object_t *)0;
+	dhcpctl_remote_object_t *ro;
+
+	if (h -> type != dhcpctl_remote_type)
+		return ISC_R_INVALIDARG;
+	ro = (dhcpctl_remote_object_t *)h;
 
 	status = omapi_message_new (&message, MDL);
 	if (status != ISC_R_SUCCESS) {
@@ -442,7 +460,7 @@ dhcpctl_status dhcpctl_object_refresh (dhcpctl_handle connection,
 		return status;
 	}
 	status = omapi_set_int_value (message, (omapi_object_t *)0,
-				      "handle", (int)(h -> handle));
+				      "handle", (int)(ro -> remote_handle));
 	if (status != ISC_R_SUCCESS) {
 		omapi_object_dereference (&message, MDL);
 		return status;
