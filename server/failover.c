@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.53.2.6 2001/05/31 20:04:14 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.53.2.7 2001/06/02 05:53:21 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -469,6 +469,15 @@ isc_result_t dhcp_failover_link_signal (omapi_object_t *h,
 			    omapi_disconnect (c, 0);
 			    link -> state = dhcp_flink_disconnected;
 			    return ISC_R_SUCCESS;
+		    }
+
+		    if ((cur_time > link -> imsg -> time &&
+			 cur_time - link -> imsg -> time > 60) ||
+			(cur_time < link -> imsg -> time &&
+			 link -> imsg -> time - cur_time > 60)) {
+			    errmsg = "time offset too large";
+			    reason = FTR_TIMEMISMATCH;
+			    goto badconnect;
 		    }
 
 		    if (!(link -> imsg -> options_present & FTB_HBA) ||
@@ -1251,6 +1260,15 @@ isc_result_t dhcp_failover_state_signal (omapi_object_t *o,
 			errmsg = "already connected";
 			reason = FTR_DUP_CONNECTION;
 			goto badconnectack;
+		    }
+
+		    if ((cur_time > link -> imsg -> time &&
+			 cur_time - link -> imsg -> time > 60) ||
+			(cur_time < link -> imsg -> time &&
+			 link -> imsg -> time - cur_time > 60)) {
+			    errmsg = "time offset too large";
+			    reason = FTR_TIMEMISMATCH;
+			    goto badconnectack;
 		    }
 
 		    dhcp_failover_link_reference (&state -> link_to_peer,
@@ -4278,7 +4296,7 @@ isc_result_t dhcp_failover_process_bind_update (dhcp_failover_state_t *state,
 		log_info ("processing state transition for %s: %s to %s",
 			  piaddr (lease -> ip_addr),
 			  binding_state_print (lease -> binding_state),
-			  binding_state_print (lease -> next_binding_state));
+			  binding_state_print (msg -> binding_status));
 
 		/* If we're in normal state, make sure the state transition
 		   we got is valid. */
@@ -4316,7 +4334,13 @@ isc_result_t dhcp_failover_process_bind_update (dhcp_failover_state_t *state,
 						     outbuf);
 			goto out;
 		}
-		lt -> next_binding_state = new_binding_state;
+		if (new_binding_state == FTS_EXPIRED ||
+		    new_binding_state == FTS_RELEASED ||
+		    new_binding_state == FTS_RESET)
+			lt -> next_binding_state = FTS_FREE;
+		else
+			lt -> next_binding_state = new_binding_state;
+		msg -> binding_status = lt -> next_binding_state;
 	}
 
 	/* Try to install the new information. */
@@ -4325,8 +4349,10 @@ isc_result_t dhcp_failover_process_bind_update (dhcp_failover_state_t *state,
 		message = "database update failed";
 	      bad:
 		dhcp_failover_send_bind_ack (state, msg, reason, message);
-	} else
+	} else {
+
 		dhcp_failover_queue_ack (state, msg);
+	}
 
       out:
 	if (lt)
@@ -4372,20 +4398,24 @@ isc_result_t dhcp_failover_process_bind_ack (dhcp_failover_state_t *state,
 	if (msg -> options_present & FTB_POTENTIAL_EXPIRY) {
 		/* XXX it could be a problem to do this directly if the
 		   XXX lease is sorted by tsfp. */
-		if (lease -> binding_state == FTS_EXPIRED ||
-		    lease -> binding_state == FTS_RESET ||
-		    lease -> binding_state == FTS_RELEASED) {
+		if ((lease -> binding_state == FTS_EXPIRED ||
+		     lease -> binding_state == FTS_RESET ||
+		     lease -> binding_state == FTS_RELEASED) &&
+		    (msg -> options_present & FTB_BINDING_STATUS) &&
+		    msg -> binding_status == FTS_FREE)
+		{
+			lease -> tsfp = msg -> potential_expiry;
 			lease -> next_binding_state = FTS_FREE;
-		    supersede_lease (lease, (struct lease *)0, 0, 1, 0);
-		    write_lease (lease);
-		    if (state -> me.state == normal)
-			commit_leases ();
+			supersede_lease (lease, (struct lease *)0, 0, 0, 0);
+			write_lease (lease);
+			if (state -> me.state == normal)
+				commit_leases ();
 		} else {
-		    lease -> tsfp = msg -> potential_expiry;
-		    write_lease (lease);
+			lease -> tsfp = msg -> potential_expiry;
+			write_lease (lease);
 #if 0 /* XXX This might be needed. */
-		    if (state -> me.state == normal)
-			commit_leases ();
+			if (state -> me.state == normal)
+				commit_leases ();
 #endif
 		}
 	}
@@ -4787,10 +4817,11 @@ normal_binding_state_transition_check (struct lease *lease,
 			return binding_state;
 
 		}
+		break;
 	      case FTS_EXPIRED:
 		switch (binding_state) {
-		      case FTS_FREE:
 		      case FTS_BACKUP:
+		      case FTS_FREE:
 			/* Can't set a lease to free or backup until the
 			   peer agrees that it's expired. */
 			if (tsfp > cur_time) {
