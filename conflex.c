@@ -42,17 +42,19 @@
 
 #ifndef lint
 static char copyright[] =
-"@(#) Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: conflex.c,v 1.13 1996/08/27 09:39:17 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
 #include "dhctoken.h"
 #include <ctype.h>
 
-static int line;
+int lexline;
+int lexchar;
 static int lpos;
-int tlpos;
-int tline;
+static int line;
+static int tlpos;
+static int tline;
 char *tlname;
 static int token;
 static int ugflag;
@@ -66,6 +68,13 @@ static int read_string PROTO ((FILE *));
 static int read_number PROTO ((int, FILE *));
 static int read_num_or_atom PROTO ((int, FILE *));
 static int intern PROTO ((char *, int));
+
+void new_parse (name)
+	char *name;
+{
+	tlname = name;
+	lpos = line = 1;
+}
 
 static int get_char (cfile)
 	FILE *cfile;
@@ -89,8 +98,12 @@ static int get_token (cfile)
 	int c;
 	int ttok;
 	static char tb [2];
+	int l, p;
 
 	do {
+		l = line;
+		p = lpos;
+
 		c = get_char (cfile);
 		if (isascii (c) && isspace (c))
 			continue;
@@ -98,19 +111,25 @@ static int get_token (cfile)
 			skip_to_eol (cfile);
 			continue;
 		}
-		tlpos = lpos;
-		tline = line;
 		if (c == '"') {
+			lexline = l;
+			lexchar = p;
 			ttok = read_string (cfile);
 			break;
 		}
 		if ((isascii (c) && isdigit (c)) || c == '-') {
+			lexline = l;
+			lexchar = p;
 			ttok = read_number (c, cfile);
 			break;
 		} else if (isascii (c) && isalpha (c)) {
+			lexline = l;
+			lexchar = p;
 			ttok = read_num_or_atom (c, cfile);
 			break;
 		} else {
+			lexline = l;
+			lexchar = p;
 			tb [0] = c;
 			tb [1] = 0;
 			tval = tb;
@@ -128,6 +147,8 @@ int next_token (rval, cfile)
 	int rv;
 
 	if (token) {
+		lexchar = tlpos;
+		lexline = tline;
 		rv = token;
 		token = 0;
 	} else {
@@ -145,8 +166,15 @@ int peek_token (rval, cfile)
 	char **rval;
 	FILE *cfile;
 {
-	if (!token)
+	int x;
+
+	if (!token) {
+		tlpos = lexchar;
+		tline = lexline;
 		token = get_token (cfile);
+		x = lexchar; lexchar = tlpos; tlpos = x;
+		x = lexline; lexline = tline; tline = x;
+	}
 	if (rval)
 		*rval = tval;
 #ifdef DEBUG_TOKENS
@@ -268,6 +296,9 @@ static int intern (atom, dfv)
 		return dfv;
 
 	switch (tolower (atom [0])) {
+	      case 'b':
+		if (!strcasecmp (atom + 1, "oot-unknown-clients"))
+			return BOOT_UNKNOWN_CLIENTS;
 	      case 'c':
 		if (!strcasecmp (atom + 1, "lass"))
 			return CLASS;
@@ -277,8 +308,14 @@ static int intern (atom, dfv)
 	      case 'd':
 		if (!strcasecmp (atom + 1, "efault-lease-time"))
 			return DEFAULT_LEASE_TIME;
-		if (!strcasecmp (atom + 1, "ynamic-bootp"))
-			return DYNAMIC_BOOTP;
+		if (!strncasecmp (atom + 1, "ynamic-bootp", 12)) {
+			if (!atom [13])
+				return DYNAMIC_BOOTP;
+			else if (!strcasecmp (atom + 13, "-lease-cutoff"))
+				return DYNAMIC_BOOTP_LEASE_CUTOFF;
+			else if (!strcasecmp (atom + 13, "-lease-length"))
+				return DYNAMIC_BOOTP_LEASE_LENGTH;
+		}
 		break;
 	      case 'e':
 		if (!strcasecmp (atom + 1, "thernet"))
@@ -295,6 +332,8 @@ static int intern (atom, dfv)
 	      case 'g':
 		if (!strcasecmp (atom + 1, "iaddr"))
 			return GIADDR;
+		if (!strcasecmp (atom + 1, "roup"))
+			return GROUP;
 		break;
 	      case 'h':
 		if (!strcasecmp (atom + 1, "ost"))
@@ -313,6 +352,8 @@ static int intern (atom, dfv)
 	      case 'n':
 		if (!strcasecmp (atom + 1, "etmask"))
 			return NETMASK;
+		if (!strcasecmp (atom + 1, "ext-server"))
+			return NEXT_SERVER;
 		break;
 	      case 'p':
 		if (!strcasecmp (atom + 1, "acket"))
@@ -343,6 +384,8 @@ static int intern (atom, dfv)
 	      case 't':
 		if (!strcasecmp (atom + 1, "imestamp"))
 			return TIMESTAMP;
+		if (!strcasecmp (atom + 1, "oken-ring"))
+			return TOKEN_RING;
 		break;
 	      case 'u':
 		if (!strcasecmp (atom + 1, "id"))
