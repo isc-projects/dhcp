@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: print.c,v 1.46 2000/11/28 23:18:40 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: print.c,v 1.47 2001/01/06 21:32:26 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1028,11 +1028,19 @@ void print_dns_status (int status, ns_updque *uq)
 		switch (u -> r_opcode)
 		{
 		      case NXRRSET:
-			op = "doesn't exist";
+			op = "rrset doesn't exist";
 			position = 1;
 			break;
 		      case YXRRSET:
-			op = "exists";
+			op = "rrset exists";
+			position = 1;
+			break;
+		      case NXDOMAIN:
+			op = "domain doesn't exist";
+			position = 1;
+			break;
+		      case YXDOMAIN:
+			op = "domain exists";
 			position = 1;
 			break;
 		      case ADD:
