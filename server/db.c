@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: db.c,v 1.45 2000/03/17 04:00:31 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: db.c,v 1.46 2000/04/04 06:28:52 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -501,7 +501,8 @@ int db_printable (s)
 {
 	int i;
 	for (i = 0; s [i]; i++)
-		if (!isascii (s [i]) || !isprint (s [i]))
+		if (!isascii (s [i]) || !isprint (s [i])
+		    || s [i] == '"' || s [i] == '\\')
 			return 0;
 	return 1;
 }
@@ -512,7 +513,8 @@ int db_printable_len (s, len)
 {
 	int i;
 	for (i = 0; i < len; i++)
-		if (!isascii (s [i]) || !isprint (s [i]))
+		if (!isascii (s [i]) || !isprint (s [i]) ||
+		    s [i] == '"' || s [i] == '\\')
 			return 0;
 	return 1;
 }
