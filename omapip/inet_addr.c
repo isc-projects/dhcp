@@ -43,10 +43,10 @@ static char rcsid[] = "$NetBSD: inet_addr.c,v 1.6 1996/02/02 15:22:23 mrg Exp $"
 
 #ifndef lint
 static char copyright[] =
-"$Id: inet_addr.c,v 1.3 1999/03/16 06:37:49 mellon Exp $ Copyright (c) 1983, 1990, 1993 The Regents of the University of California.  All rights reserved.\n";
+"$Id: inet_addr.c,v 1.1 2000/09/20 00:01:50 mellon Exp $ Copyright (c) 1983, 1990, 1993 The Regents of the University of California.  All rights reserved.\n";
 #endif /* not lint */
 
-#include "dhcpd.h"
+#include "omapip/omapip_p.h"
 
 #ifdef NEED_INET_ATON
 /* 
