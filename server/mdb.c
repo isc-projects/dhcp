@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.48 2001/01/04 00:30:53 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.49 2001/01/06 21:39:30 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -945,6 +945,12 @@ int supersede_lease (comp, lease, commit, propogate, pimmediate)
 	comp -> next_binding_state = lease -> next_binding_state;
 
       just_move_it:
+	if (!comp -> pool) {
+		log_error ("Supersede_lease: lease %s with no pool.",
+			   piaddr (lease -> ip_addr));
+		return 0;
+	}
+
 	/* Figure out which queue it's on. */
 	switch (comp -> binding_state) {
 	      case FTS_FREE:
