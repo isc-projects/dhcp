@@ -70,7 +70,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dlpi.c,v 1.14 1999/09/09 23:53:13 mellon Exp $ Copyright (c) 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dlpi.c,v 1.15 1999/10/07 06:47:50 mellon Exp $ Copyright (c) 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -452,7 +452,7 @@ ssize_t send_packet (interface, packet, raw, len, from, to, hto)
 	struct sockaddr_in *to;
 	struct hardware *hto;
 {
-	int dbuflen;
+	unsigned dbuflen;
 	unsigned char dbuf [1536];
 	unsigned char sap [2];
 	unsigned char dstaddr [DLPI_MAXDLADDR];

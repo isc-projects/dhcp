@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: upf.c,v 1.13 1999/09/09 23:53:15 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: upf.c,v 1.14 1999/10/07 06:47:49 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -210,7 +210,7 @@ ssize_t send_packet (interface, packet, raw, len, from, to, hto)
 	struct sockaddr_in *to;
 	struct hardware *hto;
 {
-	int bufp = 0;
+	unsigned bufp = 0;
 	unsigned char buf [256];
 	struct iovec iov [2];
 	int result;
