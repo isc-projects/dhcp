@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.87 1999/04/23 23:17:52 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.88 1999/04/23 23:47:51 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1322,7 +1322,7 @@ void ack_lease (packet, lease, offer, when, msg)
 			/* If there was more than one answer,
 			   take the first. */
 			if (d1.len >= 4 && d1.data)
-				memcpy (&raw.siaddr, d1.data, 4);
+				memcpy (&state -> siaddr, d1.data, 4);
 			data_string_forget (&d1, "ack_lease");
 		}
 	}
