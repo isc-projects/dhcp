@@ -104,7 +104,7 @@ void discover_interfaces ()
 				error ("Can't allocate link pointer.");
 			strcpy (lp -> name, ifp -> ifr_name);
 			lp -> address.hlen = foo -> sdl_alen;
-			lp -> address.htype = foo -> sdl_type;
+			lp -> address.htype = ARPHRD_ETHER; /* XXX */
 			memcpy (lp -> address.haddr,
 				LLADDR (foo), foo -> sdl_alen);
 			lp -> next = interface_links;
