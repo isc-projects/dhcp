@@ -55,9 +55,9 @@
 #include <ctype.h>
 #include <time.h>
 
+#include "cdefs.h"
 #include "osdep.h"
 #include "dhcp.h"
-#include "cdefs.h"
 #include "tree.h"
 #include "hash.h"
 #include "inet.h"
@@ -295,8 +295,8 @@ struct host_decl *find_host_by_name PROTO ((char *name));
 struct host_decl *find_host_by_addr PROTO ((int, unsigned char *, int));
 void new_address_range PROTO ((struct iaddr, struct iaddr,
 			       struct subnet *));
-extern struct subnet *find_subnet (struct iaddr);
-void enter_subnet (struct subnet *);
+extern struct subnet *find_subnet PROTO ((struct iaddr));
+void enter_subnet PROTO ((struct subnet *));
 void enter_lease PROTO ((struct lease *));
 int supersede_lease PROTO ((struct lease *, struct lease *, int));
 void release_lease PROTO ((struct lease *));
@@ -319,7 +319,7 @@ struct tree_cache *new_tree_cache PROTO ((char *));
 struct hash_table *new_hash_table PROTO ((int, char *));
 struct hash_bucket *new_hash_bucket PROTO ((char *));
 struct lease *new_lease PROTO ((char *));
-struct lease *new_leases (int, char *);
+struct lease *new_leases PROTO ((int, char *));
 struct subnet *new_subnet PROTO ((char *));
 struct class *new_class PROTO ((char *));
 void free_class PROTO ((struct class *, char *));
