@@ -180,6 +180,11 @@ enum dhcp_token {
 	AUTHORITATIVE = 380,
 	TOKEN_NOT = 381,
 	AUTH_KEY = 382,
+	AUTHENTICATION = 383,
+	IGNORE = 384,
+	ACCEPT = 385,
+	PREFER = 386,
+	DONT = 387,
 };
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\
