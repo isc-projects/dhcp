@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: memory.c,v 1.19 1996/08/28 01:40:01 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: memory.c,v 1.20 1996/08/29 23:03:19 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -265,16 +265,20 @@ void new_address_range (low, high, subnet, dynamic)
 		address_range [i].flags = dynamic ? DYNAMIC_BOOTP_OK : 0;
 
 		memcpy (&ia, address_range [i].ip_addr.iabuf, 4);
-		h = gethostbyaddr ((char *)&ia, sizeof ia, AF_INET);
-		if (!h)
-			warn ("No hostname for %s", inet_ntoa (ia));
-		else {
-			address_range [i].hostname =
-				malloc (strlen (h -> h_name) + 1);
-			if (!address_range [i].hostname)
-				error ("no memory to save hostname %s.",
-				       h -> h_name);
-			strcpy (address_range [i].hostname, h -> h_name);
+
+		if (subnet -> group -> get_lease_hostnames) {
+			h = gethostbyaddr ((char *)&ia, sizeof ia, AF_INET);
+			if (!h)
+				warn ("No hostname for %s", inet_ntoa (ia));
+			else {
+				address_range [i].hostname =
+					malloc (strlen (h -> h_name) + 1);
+				if (!address_range [i].hostname)
+					error ("no memory for hostname %s.",
+					       h -> h_name);
+				strcpy (address_range [i].hostname,
+					h -> h_name);
+			}
 		}
 
 		/* Link this entry into the list. */
@@ -623,6 +627,11 @@ void uid_hash_add (lease)
 		find_lease_by_uid (lease -> uid, lease -> uid_len);
 	struct lease *scan;
 
+#ifdef DEBUG
+	if (lease -> n_uid)
+		abort ();
+#endif
+
 	/* If it's not in the hash, just add it. */
 	if (!head)
 		add_hash (lease_uid_hash, lease -> uid,
@@ -630,7 +639,11 @@ void uid_hash_add (lease)
 	else {
 		/* Otherwise, attach it to the end of the list. */
 		for (scan = head; scan -> n_uid; scan = scan -> n_uid)
-			;
+#ifdef DEBUG
+			if (scan == lease)
+				abort ()
+#endif
+					;
 		scan -> n_uid = lease;
 	}
 }
@@ -693,9 +706,9 @@ void hw_hash_add (lease)
 			  (unsigned char *)lease);
 	else {
 		/* Otherwise, attach it to the end of the list. */
-		for (scan = head; scan -> n_uid; scan = scan -> n_uid)
+		for (scan = head; scan -> n_hw; scan = scan -> n_hw)
 			;
-		scan -> n_uid = lease;
+		scan -> n_hw = lease;
 	}
 }
 
