@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dns.c,v 1.33 2001/01/11 02:12:16 mellon Exp $ Copyright (c) 2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dns.c,v 1.34 2001/01/16 22:54:03 mellon Exp $ Copyright (c) 2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -289,10 +289,11 @@ int dns_zone_dereference (ptr, file, line)
 }
 
 #if defined (NSUPDATE)
-ns_rcode find_cached_zone (const char *dname, ns_class class,
-			   char *zname, size_t zsize,
-			   struct in_addr *addrs, int naddrs, int *naddrout,
-			   struct dns_zone **zcookie)
+isc_result_t find_cached_zone (const char *dname, ns_class class,
+			       char *zname, size_t zsize,
+			       struct in_addr *addrs,
+			       int naddrs, int *naddrout,
+			       struct dns_zone **zcookie)
 {
 	isc_result_t status = ISC_R_NOTFOUND;
 	const char *np;
@@ -304,11 +305,11 @@ ns_rcode find_cached_zone (const char *dname, ns_class class,
 	   succeeded previously, but the update itself failed, meaning
 	   that we shouldn't use the cached zone. */
 	if (!zcookie)
-		return ns_r_servfail;
+		return ISC_R_NOTFOUND;
 
 	/* We can't look up a null zone. */
 	if (!dname || !*dname)
-		return ns_r_servfail;
+		return ISC_R_INVALIDARG;
 
 	/* For each subzone, try to find a cached zone. */
 	for (np = dname - 1; np; np = strchr (np, '.')) {
@@ -319,18 +320,18 @@ ns_rcode find_cached_zone (const char *dname, ns_class class,
 	}
 
 	if (status != ISC_R_SUCCESS)
-		return ns_r_servfail;
+		return status;
 
 	/* Make sure the zone is valid. */
 	if (zone -> timeout && zone -> timeout < cur_time) {
 		dns_zone_dereference (&zone, MDL);
-		return ns_r_servfail;
+		return ISC_R_CANCELED;
 	}
 
 	/* Make sure the zone name will fit. */
 	if (strlen (zone -> name) > zsize) {
 		dns_zone_dereference (&zone, MDL);
-		return ns_r_servfail;
+		return ISC_R_NOSPACE;
 	}
 	strcpy (zname, zone -> name);
 
@@ -384,7 +385,7 @@ ns_rcode find_cached_zone (const char *dname, ns_class class,
 	dns_zone_dereference (&zone, MDL);
 	if (naddrout)
 		*naddrout = ix;
-	return ns_r_noerror;
+	return ISC_R_SUCCESS;
 }
 
 void forget_zone (struct dns_zone **zone)
