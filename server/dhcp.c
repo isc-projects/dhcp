@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.139 2000/02/07 18:58:03 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.140 2000/03/06 23:33:52 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1749,6 +1749,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 	   mask has been provided. */
 	i = DHO_SUBNET_MASK;
 	if (!lookup_option (&dhcp_universe, state -> options, i)) {
+		oc = (struct option_cache *)0;
 		if (option_cache_allocate (&oc, MDL)) {
 			if (make_const_data (&oc -> expression,
 					     lease -> subnet -> netmask.iabuf,
@@ -2184,6 +2185,7 @@ struct lease *find_lease (packet, share, ours)
 	int have_client_identifier = 0;
 	struct data_string client_identifier;
 	int status;
+	struct hardware h;
 
 	/* Look up the requested address. */
 	oc = lookup_option (&dhcp_universe, packet -> options,
@@ -2323,8 +2325,10 @@ struct lease *find_lease (packet, share, ours)
 	/* Find a lease whose hardware address matches, whose client
 	   identifier matches, that's permitted, and that's on the
 	   correct subnet. */
-	hw_lease = find_lease_by_hw_addr (packet -> raw -> chaddr,
-					  packet -> raw -> hlen);
+	h.hlen = packet -> raw -> hlen + 1;
+	h.hbuf [0] = packet -> raw -> htype;
+	memcpy (&h.hbuf [1], packet -> raw -> chaddr, packet -> raw -> hlen);
+	hw_lease = find_lease_by_hw_addr (h.hbuf, h.hlen);
 	for (; hw_lease; hw_lease = next) {
 #if defined (DEBUG_FIND_LEASE)
 		log_info ("trying next lease matching hw addr: %s",
@@ -2420,7 +2424,7 @@ struct lease *find_lease (packet, share, ours)
 	     (!ip_lease -> uid &&
 	      (ip_lease -> hardware_addr.hbuf [0] != packet -> raw -> htype ||
 	       ip_lease -> hardware_addr.hlen != packet -> raw -> hlen + 1 ||
-	       memcmp (&ip_lease -> hardware_addr.hbuf,
+	       memcmp (&ip_lease -> hardware_addr.hbuf [1],
 		       packet -> raw -> chaddr,
 		       (unsigned)(ip_lease -> hardware_addr.hlen - 1)))))) {
 #if defined (DEBUG_FIND_LEASE)
