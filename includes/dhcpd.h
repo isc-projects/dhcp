@@ -58,7 +58,7 @@
 #include "dhctoken.h"
 
 #include <isc/result.h>
-#include <omapip/omapip.h>
+#include <omapip/omapip_p.h>
 
 #if !defined (OPTION_HASH_SIZE)
 # define OPTION_HASH_SIZE 17
