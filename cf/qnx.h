@@ -82,7 +82,7 @@ typedef signed short	int16_t;
 typedef signed long	int32_t;
 
 #define strcasecmp( s1, s2 )			stricmp( s1, s2 )
-#define strncasecmp( s1, s2 )			strnicmp( s1, s2 )
+#define strncasecmp( s1, s2, n )		strnicmp( s1, s2, n )
 #define vsnprintf( buf, size, fmt, list )	vsprintf( buf, fbuf, list )
 #define random()				rand()
 
