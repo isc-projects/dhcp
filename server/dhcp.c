@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.165 2000/09/08 01:23:43 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.166 2000/09/12 20:09:14 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1861,6 +1861,18 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 		if (d1.len == sizeof (u_int16_t))
 			state -> max_message_size = getUShort (d1.data);
 		data_string_forget (&d1, MDL);
+	} else {
+		oc = lookup_option (&dhcp_universe, state -> options,
+				    DHO_DHCP_MAX_MESSAGE_SIZE);
+		if (oc &&
+		    evaluate_option_cache (&d1, packet, lease,
+					   packet -> options, state -> options,
+					   &lease -> scope, oc, MDL)) {
+			if (d1.len == sizeof (u_int16_t))
+				state -> max_message_size =
+					getUShort (d1.data);
+			data_string_forget (&d1, MDL);
+		}
 	}
 
 	/* Now, if appropriate, put in DHCP-specific options that
