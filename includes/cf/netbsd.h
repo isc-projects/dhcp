@@ -74,3 +74,7 @@ extern int h_errno;
 #define SET_MAX_TIME(x)	(*(x) = INT_MAX)
 
 #define HAVE_SIN_LEN
+
+#if defined (USE_DEFAULT_NETWORK)
+#  define USE_BPF
+#endif

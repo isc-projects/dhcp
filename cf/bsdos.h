@@ -71,3 +71,7 @@ extern int h_errno;
 #define SET_TIME(x, y)	(*(x) = (y))
 #define ADD_TIME(d, s1, s2) (*(d) = *(s1) + *(s2))
 #define SET_MAX_TIME(x)	(*(x) = INT_MAX)
+
+#if defined (USE_DEFAULT_NETWORK)
+#  define USE_BPF
+#endif

@@ -109,5 +109,6 @@ extern int h_errno;
 #define ADD_TIME(d, s1, s2) (*(d) = *(s1) + *(s2))
 #define SET_MAX_TIME(x)	(*(x) = INT_MAX)
 
-
-
+#if defined (USE_DEFAULT_NETWORK)
+#  define USE_SOCKETS
+#endif
