@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: fddi.c,v 1.1 2000/03/24 00:21:17 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: fddi.c,v 1.2 2000/04/14 16:24:05 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -76,7 +76,7 @@ void assemble_fddi_header (interface, buf, bufix, to)
 	lh.llc_dsap = LLC_SNAP_LSAP;
 	lh.llc_ssap = LLC_SNAP_LSAP;
 	lh.llc_un.type_snap.control = LLC_UI;
-	lh.llc_un.type_snap.ether_type = eh.ether_type;
+	lh.llc_un.type_snap.ether_type = htons (ETHERTYPE_IP);
 	memcpy (&buf [*bufix], &lh, LLC_SNAP_LEN);
 	*bufix += LLC_SNAP_LEN;
 }
