@@ -1,5 +1,5 @@
 #if !defined(lint) && !defined(SABER)
-static const char rcsid[] = "$Id: res_findzonecut.c,v 1.7 2000/07/06 06:22:36 mellon Exp $";
+static const char rcsid[] = "$Id: res_findzonecut.c,v 1.8 2000/07/06 10:10:12 mellon Exp $";
 #endif /* not lint */
 
 /*
@@ -153,8 +153,9 @@ res_findzonecut(res_state statp, const char *dname, ns_class class, int opts,
 	ISC_LIST_INIT(nsrrs);
 
 	DPRINTF (("look for a predefined zone statement"));
-	if (find_cached_zone (dname, class, zname, zsize, addrs, naddrs,
-			      &n, zcookie) == ns_r_noerror)
+	rcode = find_cached_zone (dname, class, zname, zsize, addrs, naddrs,
+				  &n, zcookie);
+	if (rcode == ns_r_noerror)
 		goto done;
 
 	DPRINTF(("get the soa, and see if it has enough glue"));
