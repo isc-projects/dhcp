@@ -25,7 +25,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: nsupdate.c,v 1.9 1999/10/04 23:14:58 mellon Exp $ Copyright (c) 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: nsupdate.c,v 1.10 1999/10/06 00:59:59 mellon Exp $ Copyright (c) 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -577,6 +577,93 @@ int updatePTR (lhs, rhs, ttl, lease)
 	/* remember this in the lease structure for release */
 	lease -> ddns_rev_name = dmalloc (strlen(revname) + 1, "nsupdate");
 	strcpy (lease -> ddns_rev_name, revname);
+
+	return 1;
+}
+/* public function to delete an A record */
+int deleteA (lhs, rhs, lease)
+	const struct data_string *lhs;
+	const struct data_string *rhs;
+	struct lease *lease;
+{
+
+	static char hostname[MAXDNAME];
+	static char ipaddr[MAXDNAME];
+	int y;
+
+	hostname[0] = '\0';
+	strncat(hostname, (const char *)lhs -> data, lhs -> len);
+	hostname[lhs -> len] = '\0';
+	
+	ipaddr[0] = '\0';
+	strncat(ipaddr, (const char *)rhs -> data, rhs -> len);
+	ipaddr[rhs -> len] = '\0';
+
+#if 0	/* Wrong!  This causes zone churn on every DHCPREQUEST!
+	   Besides, it is perfectly legal for a DHCP client to have more
+	   than one lease, if (say) it was being served by two+ DHCP servers
+	   serving the same subnet with different (i.e. disjoint) pools.
+	   The right thing to do is have the A records cleaned by either a
+	   DHCPRELEASE or the lease expiry.  */
+    
+	/* delete all existing A records for this host */
+	nsupdateA (hostname, NULL, 0, DELETE);
+#endif
+
+	y=nsupdateA (hostname, ipaddr, 0, DELETE);
+	if (y < 1)
+		return 0;
+
+#if 0 /* do we really need to do this? */
+	/* clear the forward DNS name pointer */
+	if (lease -> ddns_fwd_name)
+		dfree (lease -> ddns_fwd_name, "nsupdate");
+	lease -> ddns_fwd_name = 0;
+#endif
+
+	return 1;
+}
+
+/* public function to delete a PTR record */
+int deletePTR (lhs, rhs, lease)
+	const struct data_string *lhs;
+	const struct data_string *rhs;
+	struct lease *lease;
+{
+
+	static char hostname[MAXDNAME];
+	static char revname[MAXDNAME];
+	int y;
+
+	revname[0] = '\0';
+	strncat(revname, (const char *)lhs -> data, lhs -> len);
+	revname[lhs -> len] = '\0';
+
+	hostname[0] = '\0';
+	strncat(hostname, (const char *)rhs -> data, rhs -> len);
+	hostname[rhs -> len] = '\0';
+
+#if 0	/* Wrong!  This causes zone churn on every DHCPREQUEST!
+	   Besides, it is perfectly legal for a DHCP client to have more
+	   than one lease, if (say) it was being served by two+ DHCP servers
+	   serving the same subnet with different (i.e. disjoint) pools.
+	   The right thing to do is have the PTR records cleaned by either a
+	   DHCPRELEASE or the lease expiry.  */
+ 	
+	/* delete all existing PTR records */
+	nsupdatePTR (revname, NULL, 0, DELETE);
+#endif
+
+	y=nsupdatePTR (revname, hostname, 0, DELETE);
+	if (y < 1)
+		return 0;
+
+#if 0 /* do we really need to do this? */
+	/* clear the reverse DNS name pointer */
+	if (lease -> ddns_rev_name)
+		dfree (lease -> ddns_rev_name, "nsupdate");
+	lease -> ddns_rev_name = 0;
+#endif
 
 	return 1;
 }

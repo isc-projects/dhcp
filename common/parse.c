@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.42 1999/10/05 19:43:40 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.43 1999/10/06 01:00:00 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1983,6 +1983,52 @@ int parse_non_binary (expr, cfile, lose, context)
 			*lose = 1;
 			return 0;
 		}
+
+		token = next_token (&val, cfile);
+		if (token != RPAREN)
+			goto norparen;
+		break;
+
+	      case DNS_DELETE:
+#if !defined (NSUPDATE)
+		parse_warn (cfile,
+			    "Please rebuild dhcpd with --with-nsupdate.");
+#endif
+		token = next_token (&val, cfile);
+		if (!expression_allocate (expr,
+					  "parse_expression: DNS_DELETE"))
+			log_fatal ("can't allocate expression");
+		(*expr) -> op = expr_dns_delete;
+
+		token = next_token (&val, cfile);
+		if (token != LPAREN)
+			goto nolparen;
+
+		if (!(parse_data_expression
+		      (&(*expr) -> data.dns_update.type, cfile, lose))) {
+			expression_dereference (expr,
+						"parse_expression: noRRtype");
+			parse_warn (cfile, "expecting DNS RR type.");
+			skip_to_semi (cfile);
+			*lose = 1;
+			return 0;
+		}
+
+		token = next_token (&val, cfile);
+		if (token != COMMA)
+			goto nocomma;
+
+		if (!(parse_data_expression
+		      (&(*expr) -> data.dns_update.expr1, cfile, lose)))
+			goto nodata;
+
+		token = next_token (&val, cfile);
+		if (token != COMMA)
+			goto nocomma;
+
+		if (!(parse_data_expression
+		      (&(*expr) -> data.dns_update.expr2, cfile, lose)))
+			goto nodata;
 
 		token = next_token (&val, cfile);
 		if (token != RPAREN)
