@@ -70,7 +70,7 @@
 
 #if defined(LIBC_SCCS) && !defined(lint)
 static const char sccsid[] = "@(#)res_send.c	8.1 (Berkeley) 6/4/93";
-static const char rcsid[] = "$Id: res_send.c,v 1.2 2000/02/02 19:59:16 mellon Exp $";
+static const char rcsid[] = "$Id: res_send.c,v 1.3 2000/02/03 03:43:50 mellon Exp $";
 #endif /* LIBC_SCCS and not lint */
 
 /*
@@ -312,7 +312,7 @@ res_nsend(res_state statp,
 			if (statp->_sock >= 0 &&
 			    (statp->_flags & RES_F_VC) != 0) {
 				struct sockaddr_in peer;
-				socklen_t size = sizeof(peer);
+				SOCKLEN_T size = sizeof(peer);
 
 				if (getpeername(statp->_sock,
 						(struct sockaddr *)&peer,
@@ -478,7 +478,7 @@ res_nsend(res_state statp,
 			int start, timeout, finish;
 			fd_set dsmask;
 			struct sockaddr_in from;
-			socklen_t fromlen;
+			SOCKLEN_T fromlen;
 			int seconds;
 
 			if (statp->_sock < 0 ||
@@ -558,7 +558,7 @@ res_nsend(res_state statp,
 						       sizeof no_addr);
 #else
 					struct sockaddr_in local_addr;
-					socklen_t len;
+					SOCKLEN_T len;
 					int result, s1;
 
 					len = sizeof(local_addr);

@@ -23,7 +23,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: icmp.c,v 1.20 2000/02/01 18:25:07 mellon Exp $ Copyright (c) 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: icmp.c,v 1.21 2000/02/03 03:43:51 mellon Exp $ Copyright (c) 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -163,7 +163,7 @@ isc_result_t icmp_echoreply (h)
 	struct sockaddr_in from;
 	unsigned char icbuf [1500];
 	int status;
-	socklen_t sl;
+	SOCKLEN_T sl;
 	int hlen, len;
 	struct iaddr ia;
 	struct icmp_state *state;

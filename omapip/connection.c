@@ -32,7 +32,7 @@ isc_result_t omapi_connect (omapi_object_t *c,
 	isc_result_t status;
 	omapi_connection_object_t *obj;
 	int flag;
-	socklen_t sl;
+	SOCKLEN_T sl;
 
 	obj = (omapi_connection_object_t *)dmalloc (sizeof *obj, MDL);
 	if (!obj)

@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dns.c,v 1.15 2000/02/01 03:19:38 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dns.c,v 1.16 2000/02/03 03:43:51 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -444,7 +444,7 @@ void dns_packet (protocol)
 	u_int16_t class;
 	TIME ttl;
 	u_int16_t rdlength;
-	socklen_t len;
+	SOCKLEN_T len;
 	int status;
 	int i;
 	struct dns_query *query;
