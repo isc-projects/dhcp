@@ -74,6 +74,10 @@
 #  include "cf/freebsd.h"
 #endif
 
+#if defined (__osf__) && defined (__alpha)
+#  include "cf/alphaosf.h"
+#endif
+
 #ifdef ultrix
 #  include "cf/ultrix.h"
 #endif
@@ -125,4 +129,8 @@
 #endif
 #ifndef ETHER_DEST
 # define ETHER_DEST(x)	((x) -> ether_dhost)
+#endif
+
+#ifndef BPF_FORMAT
+# define BPF_FORMAT "/dev/bpf%d"
 #endif
