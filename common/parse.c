@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.54 1999/11/07 20:27:04 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.55 1999/11/13 23:53:57 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2756,67 +2756,6 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 	} else
 		*rv = t;
 	return 1;
-}
-
-/* allow-deny-keyword :== BOOTP
-   			| BOOTING
-			| DYNAMIC_BOOTP
-			| UNKNOWN_CLIENTS */
-
-int parse_allow_deny (oc, cfile, flag)
-	struct option_cache **oc;
-	struct parse *cfile;
-	int flag;
-{
-	enum dhcp_token token;
-	const char *val;
-	unsigned char rf = flag;
-	struct expression *data = (struct expression *)0;
-	int status;
-
-	if (!make_const_data (&data, &rf, 1, 0, 1))
-		return 0;
-
-	token = next_token (&val, cfile);
-	switch (token) {
-	      case BOOTP:
-		status = option_cache (oc, (struct data_string *)0, data,
-				       &server_options [SV_ALLOW_BOOTP]);
-		break;
-
-	      case BOOTING:
-		status = option_cache (oc, (struct data_string *)0, data,
-				       &server_options [SV_ALLOW_BOOTING]);
-		break;
-
-	      case DYNAMIC_BOOTP:
-		status = option_cache (oc, (struct data_string *)0, data,
-				       &server_options [SV_DYNAMIC_BOOTP]);
-		break;
-
-	      case UNKNOWN_CLIENTS:
-		status = (option_cache
-			  (oc, (struct data_string *)0, data,
-			   &server_options [SV_BOOT_UNKNOWN_CLIENTS]));
-		break;
-
-	      case DUPLICATES:
-		status = option_cache (oc, (struct data_string *)0, data,
-				       &server_options [SV_DUPLICATES]);
-		break;
-
-	      case DECLINES:
-		status = option_cache (oc, (struct data_string *)0, data,
-				       &server_options [SV_DECLINES]);
-		break;
-
-	      default:
-		parse_warn (cfile, "expecting allow/deny key");
-		skip_to_semi (cfile);
-		return 0;
-	}
-	parse_semi (cfile);
-	return status;
 }
 
 int parse_auth_key (key_id, cfile)
