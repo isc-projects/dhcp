@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: memory.c,v 1.36 1998/03/16 06:13:18 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: memory.c,v 1.37 1998/03/17 06:11:25 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -273,9 +273,15 @@ void new_address_range (low, high, subnet, dynamic)
 		address_range [i].shared_network = share;
 		address_range [i].flags = dynamic ? DYNAMIC_BOOTP_OK : 0;
 
-		memcpy (&ia, address_range [i].ip_addr.iabuf, 4);
-
 		if (subnet -> group -> get_lease_hostnames) {
+			/* XXX This is how we want it done. */
+#if 0
+			ns_inaddr_lookup (address_range [i].ip_addr, 0);
+#endif
+			
+			/* XXX This is how it's done now. */
+			memcpy (&ia, address_range [i].ip_addr.iabuf, 4);
+
 			h = gethostbyaddr ((char *)&ia, sizeof ia, AF_INET);
 			if (!h)
 				warn ("No hostname for %s", inet_ntoa (ia));
