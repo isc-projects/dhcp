@@ -664,7 +664,8 @@ isc_result_t omapi_protocol_signal_handler (omapi_object_t *h,
 			return status;
 		}
 		omapi_data_string_dereference (&p -> name, MDL);
-		omapi_typed_data_dereference (&p -> value, MDL);
+		if (p -> value)
+			omapi_typed_data_dereference (&p -> value, MDL);
 		goto need_name_length;
 
 	      signature_wait:
