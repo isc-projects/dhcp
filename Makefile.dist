@@ -67,7 +67,7 @@ VARDB = /var/db
 ##--sunos4--
 
 ## Solaris 2.5 (with gcc)
-##--sunos5--
+##--sunos5-gcc--
 #INSTALL=/usr/ucb/install
 #MANINSTALL=/usr/ucb/install
 #LIBS = -lresolv -lsocket -lnsl -lgen
@@ -81,7 +81,23 @@ VARDB = /var/db
 #FFMANEXT = .4
 #VARRUN = /etc
 #VARDB = /etc
-##--sunos5--
+##--sunos5-gcc--
+
+## Solaris 2.5 (with Sun cc)
+##--sunos5-cc--
+#INSTALL=/usr/ucb/install
+#MANINSTALL=/usr/ucb/install
+#LIBS = -lresolv -lsocket -lnsl -lgen
+#CC=cc
+#COPTS = -D__svr4__
+#CF = cf/sunos5-5.h
+#ADMMANDIR = /usr/share/man/cat1m
+#ADMMANEXT = .1m
+#FFMANDIR = /usr/share/man/cat4
+#FFMANEXT = .4
+#VARRUN = /etc
+#VARDB = /etc
+##--sunos5-cc--
 
 ## DEC Alpha/OSF1
 ##--alphaosf--

@@ -20,13 +20,21 @@ if [ "$sysname" = "" ]; then
     SunOS)
       case `uname -r` in
         4*) sysname=sunos4;;
-        5*) sysname=sunos5;;
+        5*)
+	  path=`which gcc`
+	  set $path
+	  if [ $# = 1 ]; then
+	    sysname=sunos5-gcc
+	  else
+	    sysname=sunos5-cc
+	  fi;;
       esac;;
     NetBSD)
       sysname=netbsd;;
     FreeBSD)
       sysname=freebsd;;
     hpux)
+    HP-UX)
       sysname=hpux;;
     QNX)
       sysname=qnx;;
