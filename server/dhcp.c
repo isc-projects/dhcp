@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.159 2000/08/15 23:43:02 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.160 2000/08/24 18:49:34 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -114,7 +114,8 @@ void dhcpdiscover (packet, ms_nulltp)
 	dhcp_failover_state_t *peer;
 #endif
 
-	find_lease (&lease, packet, packet -> shared_network, 0, MDL);
+	find_lease (&lease, packet, packet -> shared_network,
+		    0, &allocatedp, MDL);
 
 	if (lease && lease -> client_hostname &&
 	    db_printable (lease -> client_hostname))
@@ -138,11 +139,16 @@ void dhcpdiscover (packet, ms_nulltp)
 		  : packet -> interface -> name);
 
 #if defined (FAILOVER_PROTOCOL)
-	if (lease && !lease_mine_to_extend (lease)) {
-		log_info ("%s: letting peer %s answer", msgbuf,
-			  lease -> pool -> failover_peer -> name);
-		goto out;
-	}
+	if (lease && lease -> pool && lease -> pool -> failover_peer) {
+		peer = lease -> pool -> failover_peer;
+		if (peer -> service_state == not_responding ||
+		    peer -> service_state == service_startup) {
+			log_info ("%s: not responding%s",
+				  peer -> name, peer -> nrr);
+			goto out;
+		}
+	} else
+		peer = (dhcp_failover_state_t *)0;
 #endif
 
 	/* Sourceless packets don't make sense here. */
@@ -183,10 +189,8 @@ void dhcpdiscover (packet, ms_nulltp)
 	   XXX be forced to switch servers (and IP addresses) just because
 	   XXX of bad luck, when it's possible for it to get the address it
 	   XXX is requesting.    Not sure this is allowed.  */
-	if (allocatedp && lease && lease -> pool &&
-	    lease -> pool -> failover_peer) {
-		peer = lease -> pool -> failover_peer;
-		if (peer -> my_state == normal) {
+	if (allocatedp && peer) {
+		if (peer -> service_state == cooperating) {
 			if (!load_balance_mine (packet, peer)) {
 				log_debug ("%s: load balance to peer %s",
 					   msgbuf, peer -> name);
@@ -225,6 +229,9 @@ void dhcprequest (packet, ms_nulltp)
 	int status;
 	char msgbuf [1024]; /* XXX */
 	char *s;
+#if defined (FAILOVER_PROTOCOL)
+	dhcp_failover_state_t *peer;
+#endif
 
 	oc = lookup_option (&dhcp_universe, packet -> options,
 			    DHO_DHCP_REQUESTED_ADDRESS);
@@ -249,8 +256,9 @@ void dhcprequest (packet, ms_nulltp)
 	lease = (struct lease *)0;
 	if (find_subnet (&subnet, cip, MDL))
 		find_lease (&lease, packet,
-			    subnet -> shared_network, &ours, MDL);
-
+			    subnet -> shared_network, &ours, 0, MDL);
+	/* XXX consider using allocatedp arg to find_lease to see
+	   XXX that this isn't a compliant DHCPREQUEST. */
 
 	if (lease && lease -> client_hostname &&
 	    db_printable (lease -> client_hostname))
@@ -275,11 +283,33 @@ void dhcprequest (packet, ms_nulltp)
 		  : packet -> interface -> name);
 
 #if defined (FAILOVER_PROTOCOL)
-	if (lease && !lease_mine_to_extend (lease)) {
-		log_info ("%s: letting peer %s answer", msgbuf,
-			  lease -> pool -> failover_peer -> name);
-		goto out;
-	}
+	if (lease && lease -> pool && lease -> pool -> failover_peer) {
+		peer = lease -> pool -> failover_peer;
+		if (peer -> service_state == not_responding ||
+		    peer -> service_state == service_startup) {
+			log_info ("%s: not responding%s",
+				  peer -> name, peer -> nrr);
+			goto out;
+		}
+		if (peer -> service_state == cooperating) {
+			/* XXX */
+			/* We have to ignore load balancing for
+			   clients with giaddr set to zero because
+			   we need to respond to clients in RENEWING
+			   state, that the other server can't hear,
+			   but not to clients in REBINDING state,
+			   which the other server _can_ hear, but
+			   we can't tell which state the client is
+			   in if it's on the local network. */
+			if (packet -> raw -> giaddr.s_addr == 0 ||
+			    !load_balance_mine (packet, peer)) {
+				log_debug ("%s: load balance to peer %s",
+					   msgbuf, peer -> name);
+				goto out;
+			}
+		}
+	} else
+		peer = (dhcp_failover_state_t *)0;
 #endif
 
 	/* If a client on a given network REQUESTs a lease on an
@@ -364,35 +394,6 @@ void dhcprequest (packet, ms_nulltp)
 		}
 	}
 
-#if defined (FAILOVER_PROTOCOL) && 0 /* XXX this isn't the same as above! */
-	/* If we found a lease, but it belongs to a failover peer, and
-	   the client is in the SELECTING state, ignore the request -
-	   it's not ours. */
-	if (lease && (lease -> flags & PEER_IS_OWNER) &&
-	    lookup_option (&dhcp_universe, packet -> options,
-			   DHO_DHCP_SERVER_IDENTIFIER)) {
-		log_info ("%s: ignored (not for me)", msgbuf);
-		goto out;
-	}
-
-	/* If we found a lease, but it belongs to a failover peer, and
-	   we are communicating with that peer, drop it.    This really
-	   shouldn't happen - if the peer is up, it should have renewed
-	   the client while the client was in the RENEWING state.   However,
-	   there are cases where the client won't be able to get unicast
-	   packets to its server, but will be able to get broadcast packets
-	   to its server, so for now I'm taking that possibility into
-	   account, although this should be revisited later.  Oh, also if
-	   the client comes up in the REBINDING state, we'll see it here,
-	   and shouldn't respond until its server has had a chance at it. */
-	if (lease && (lease -> flags & PEER_IS_OWNER) &&
-	    lease -> pool && lease -> pool -> failover_peer &&
-	    lease -> pool -> failover_peer -> my_state == normal) {
-		log_info ("%s: ignored (not for me)", msgbuf);
-		goto out;
-	}
-#endif /* FAILOVER_PROTOCOL */
-
 	/* If the address the client asked for is ours, but it wasn't
            available for the client, NAK it. */
 	if (!lease && ours) {
@@ -425,6 +426,7 @@ void dhcprelease (packet, ms_nulltp)
 	struct data_string data;
 	char *s;
 	char msgbuf [1024]; /* XXX */
+
 
 	/* DHCPRELEASE must not specify address in requested-address
            option, but old protocol specs weren't explicit about this,
@@ -492,15 +494,21 @@ void dhcprelease (packet, ms_nulltp)
 		 lease ? "" : "not ");
 
 #if defined (FAILOVER_PROTOCOL)
-	if (lease && !lease_mine_to_extend (lease)) {
+	if (lease && lease -> pool && lease -> pool -> failover_peer) {
+		dhcp_failover_state_t *peer = lease -> pool -> failover_peer;
+		if (peer -> service_state == not_responding ||
+		    peer -> service_state == service_startup) {
+			log_info ("%s: ignored%s",
+				  peer -> name, peer -> nrr);
+			goto out;
+		}
+
 		/* DHCPRELEASE messages are unicast, so if the client
 		   sent the DHCPRELEASE to us, it's not going to send it
 		   to the peer.   Not sure why this would happen, and
 		   if it does happen I think we still have to change the
-		   lease state.
+		   lease state, so that's what we're doing.
 		   XXX See what it says in the draft about this. */
-		log_info ("%s: peer %s holds lease",
-			  msgbuf, lease -> pool -> failover_peer -> name);
 	}
 #endif
 
@@ -523,7 +531,7 @@ void dhcpdecline (packet, ms_nulltp)
 	struct option_cache *oc;
 	struct data_string data;
 	struct option_state *options = (struct option_state *)0;
-	int ignorep;
+	int ignorep = 0;
 	int i;
 	const char *status;
 	char *s;
@@ -566,15 +574,6 @@ void dhcpdecline (packet, ms_nulltp)
 		 ? inet_ntoa (packet -> raw -> giaddr)
 		 : packet -> interface -> name);
 
-#if defined (FAILOVER_PROTOCOL)
-	if (lease && !lease_mine_to_extend (lease)) {
-		if (!ignorep)
-			log_info ("%s: peer %s holds lease", msgbuf,
-				  lease -> pool -> failover_peer -> name);
-		goto out;
-	}
-#endif
-
 	option_state_allocate (&options, MDL);
 
 	/* Execute statements in scope starting with the subnet scope. */
@@ -599,14 +598,33 @@ void dhcpdecline (packet, ms_nulltp)
 	    evaluate_boolean_option_cache (&ignorep, packet, lease,
 					   packet -> options, options,
 					   &lease -> scope, oc, MDL)) {
-		/* If we found a lease, mark it as unusable and complain. */
-		if (lease) {
-			abandon_lease (lease, "declined.");
-			status = "abandoned";
+	    /* If we found a lease, mark it as unusable and complain. */
+	    if (lease) {
+#if defined (FAILOVER_PROTOCOL)
+		if (lease -> pool && lease -> pool -> failover_peer) {
+		    dhcp_failover_state_t *peer =
+			    lease -> pool -> failover_peer;
+		    if (peer -> service_state == not_responding ||
+			peer -> service_state == service_startup) {
+			if (!ignorep)
+			    log_info ("%s: ignored%s",
+				      peer -> name, peer -> nrr);
+			goto out;
+		    }
+
+		    /* DHCPDECLINE messages are broadcast, so we can safely
+		       ignore the DHCPDECLINE if the peer has the lease.
+		       XXX Of course, at this point that information has been
+		       lost. */
 		}
-		status = "not found";
+#endif
+
+		abandon_lease (lease, "declined.");
+		status = "abandoned";
+	    }
+	    status = "not found";
 	} else
-		status = "ignored";
+	    status = "ignored";
 
 	if (!ignorep)
 		log_info ("%s: %s", msgbuf, status);
@@ -2414,7 +2432,7 @@ void dhcp_reply (lease)
 
 int find_lease (struct lease **lp,
 		struct packet *packet, struct shared_network *share, int *ours,
-		const char *file, int line)
+		int *allocatedp, const char *file, int line)
 {
 	struct lease *uid_lease = (struct lease *)0;
 	struct lease *ip_lease = (struct lease *)0;
@@ -2667,11 +2685,11 @@ int find_lease (struct lease **lp,
 	/* Toss ip_lease if it hasn't yet expired and doesn't belong to the
 	   client. */
 	if (ip_lease &&
-	    ((ip_lease -> uid &&
-	      (!have_client_identifier ||
-	       ip_lease -> uid_len != client_identifier.len ||
-	       memcmp (ip_lease -> uid, client_identifier.data,
-		       ip_lease -> uid_len))) ||
+	    (ip_lease -> uid ?
+	     (!have_client_identifier ||
+	      ip_lease -> uid_len != client_identifier.len ||
+	      memcmp (ip_lease -> uid, client_identifier.data,
+		      ip_lease -> uid_len)) :
 	     (!ip_lease -> uid &&
 	      (ip_lease -> hardware_addr.hbuf [0] != packet -> raw -> htype ||
 	       ip_lease -> hardware_addr.hlen != packet -> raw -> hlen + 1 ||
@@ -2680,20 +2698,13 @@ int find_lease (struct lease **lp,
 		       (unsigned)(ip_lease -> hardware_addr.hlen - 1)))))) {
 		/* If we're not doing failover, the only state in which
 		   we can allocate this lease to the client is FTS_FREE.
-		   If we are doing failover, and this lease is part of a
-		   failover pool, then if we're the primary, state has to be
-		   FTS_FREE; if we're the secondary, state has to be
-		   FTS_BACKUP. */
-		if ((ip_lease -> binding_state != FTS_FREE &&
-		     ip_lease -> binding_state != FTS_BACKUP)
-#if defined (FAILOVER_PROTOCOL)
-		    ||
-		    (ip_lease -> pool -> failover_peer &&
-		     ((ip_lease -> binding_state == FTS_FREE &&
-		       ip_lease -> pool -> failover_peer -> i_am == secondary)
-		      ||
-		      (ip_lease -> binding_state == FTS_BACKUP &&
-		       ip_lease -> pool -> failover_peer -> i_am == primary)))
+		   If we are doing failover, things are more complicated. */
+		if (
+#if !defined (FAILOVER_PROTOCOL)
+			(ip_lease -> binding_state != FTS_FREE &&
+			 ip_lease -> binding_state != FTS_BACKUP)
+#else
+			!lease_mine_to_reallocate (lease)
 #endif
 			) {
 #if defined (DEBUG_FIND_LEASE)
@@ -2704,7 +2715,9 @@ int find_lease (struct lease **lp,
 			if (ours && ip_lease -> binding_state != FTS_ACTIVE)
 				*ours = 0;
 			lease_dereference (&ip_lease, MDL);
-		}
+		} else
+			if (allocatedp)
+				*allocatedp = 1;
 	}
 
 	/* If for some reason the client has more than one lease
@@ -2946,6 +2959,9 @@ int find_lease (struct lease **lp,
 			*ours = 1;
 		lease_dereference (&lease, MDL);
 	}
+
+	if (lease && allocatedp && lease -> ends <= cur_time)
+		*allocatedp = 1;
 
       out:
 	if (have_client_identifier)
