@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dispatch.c,v 1.38 1997/03/29 00:02:45 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dispatch.c,v 1.39 1997/03/29 01:39:38 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -194,9 +194,11 @@ void discover_interfaces (state)
 			sa = *(struct sockaddr *)&ifr.ifr_hwaddr;
 					
 			switch (sa.sa_family) {
+#ifdef ARPHRD_LOOPBACK
 			      case ARPHRD_LOOPBACK:
 				/* ignore loopback interface */
 				break;
+#endif
 
 			      case ARPHRD_ETHER:
 				tmp -> hw_address.hlen = 6;
@@ -205,12 +207,15 @@ void discover_interfaces (state)
 					sa.sa_data, 6);
 				break;
 
+#ifdef ARPHRD_METRICOM
 			      case ARPHRD_METRICOM:
 				tmp -> hw_address.hlen = 6;
 				tmp -> hw_address.htype = ARPHRD_METRICOM;
 				memcpy (tmp -> hw_address.haddr,
 					sa.sa_data, 6);
+
 				break;
+#endif
 
 			      default:
 				error ("%s: unknown hardware address type %d",
