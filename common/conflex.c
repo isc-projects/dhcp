@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: conflex.c,v 1.77 2000/06/24 06:17:52 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: conflex.c,v 1.78 2000/08/22 21:51:27 neild Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -578,6 +578,8 @@ static enum dhcp_token intern (atom, dfv)
 			return DNS_DELETE;
 		if (!strcasecmp (atom + 1, "omain"))
 			return DOMAIN;
+		if (!strcasecmp (atom + 1, "ebug"))
+			return TOKEN_DEBUG;
 		if (!strcasecmp (atom + 1, "eny"))
 			return DENY;
 		if (!strcasecmp (atom + 1, "eleted"))
@@ -641,10 +643,14 @@ static enum dhcp_token intern (atom, dfv)
 				return ELSIF;
 			break;
 		}
+		if (!strcasecmp (atom + 1, "rror"))
+			return ERROR;
 		if (!strcasecmp (atom + 1, "val"))
 			return EVAL;
 		break;
 	      case 'f':
+		if (!strcasecmp (atom + 1, "atal"))
+			return FATAL;
 		if (!strcasecmp (atom + 1, "ilename"))
 			return FILENAME;
 		if (!strcasecmp (atom + 1, "ixed-address"))
@@ -687,6 +693,8 @@ static enum dhcp_token intern (atom, dfv)
 			return INTEGER;
 		if (!strcasecmp (atom + 1, "nfinite"))
 			return INFINITE;
+		if (!strcasecmp (atom + 1, "nfo"))
+			return INFO;
 		if (!strcasecmp (atom + 1, "p-address"))
 			return IP_ADDRESS;
 		if (!strcasecmp (atom + 1, "nitial-interval"))
@@ -721,6 +729,8 @@ static enum dhcp_token intern (atom, dfv)
 			return LET;
 		if (!strcasecmp (atom + 1, "oad"))
 			return LOAD;
+		if (!strcasecmp (atom + 1, "og"))
+			return LOG;
 		break;
 	      case 'm':
 		if (!strncasecmp (atom + 1, "ax", 2)) {

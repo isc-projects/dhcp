@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: execute.c,v 1.36 2000/07/27 09:02:32 mellon Exp $ Copyright (c) 1998-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: execute.c,v 1.37 2000/08/22 21:51:29 neild Exp $ Copyright (c) 1998-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -381,6 +381,40 @@ int execute_statements (packet, lease, in_options, out_options, scope,
 			}
 			if (ns)
 				binding_scope_dereference (&ns, MDL);
+			break;
+
+		      case log_statement:
+			memset (&ds, 0, sizeof ds);
+			status = (evaluate_data_expression
+				  (&ds, packet, lease, in_options,
+				   out_options, scope, r -> data.log.expr));
+			
+#if defined (DEBUG_EXPRESSIONS)
+			log_debug ("exec: log");
+#endif
+
+			if (status) {
+				switch (r -> data.log.priority) {
+				case log_priority_fatal:
+					log_fatal ("%.*s", (int)ds.len,
+						   ds.buffer -> data);
+					break;
+				case log_priority_error:
+					log_error ("%.*s", (int)ds.len,
+						   ds.buffer -> data);
+					break;
+				case log_priority_debug:
+					log_debug ("%.*s", (int)ds.len,
+						   ds.buffer -> data);
+					break;
+				case log_priority_info:
+					log_info ("%.*s", (int)ds.len,
+						  ds.buffer -> data);
+					break;
+				}
+				data_string_forget (&ds, MDL);
+			}
+
 			break;
 
 		      default:

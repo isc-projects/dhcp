@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.78 2000/08/03 20:59:36 neild Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.79 2000/08/22 21:51:30 neild Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1650,6 +1650,71 @@ int parse_executable_statement (result, cfile, lose, case_context)
 		parse_semi (cfile);
 		break;
 
+	      case LOG:
+		      /** XXXDPN: At work. **/
+		token = next_token (&val, cfile);
+
+		if (!executable_statement_allocate (result, MDL))
+			log_fatal ("no memory for log statement.");
+		(*result) -> op = log_statement;
+
+		token = next_token (&val, cfile);
+		if (token != LPAREN) {
+			parse_warn (cfile, "left parenthesis expected.");
+			skip_to_semi (cfile);
+			*lose = 1;
+			return 0;
+		}
+
+		token = peek_token (&val, cfile);
+		i = 1;
+		if (token == FATAL) {
+			(*result) -> data.log.priority = log_priority_fatal;
+		} else if (token == ERROR) {
+			(*result) -> data.log.priority = log_priority_error;
+		} else if (token == TOKEN_DEBUG) {
+			(*result) -> data.log.priority = log_priority_debug;
+		} else if (token == INFO) {
+			(*result) -> data.log.priority = log_priority_info;
+		} else {
+			(*result) -> data.log.priority = log_priority_debug;
+			i = 0;
+		}
+		if (i) {
+			token = next_token (&val, cfile);
+			token = next_token (&val, cfile);
+			if (token != COMMA) {
+				parse_warn (cfile, "comma expected.");
+				skip_to_semi (cfile);
+				*lose = 1;
+				return 0;
+			}
+		}
+
+		if (!(parse_data_expression
+		      (&(*result) -> data.log.expr, cfile, lose))) {
+			skip_to_semi (cfile);
+			*lose = 1;
+			return 0;
+		}
+
+		token = next_token (&val, cfile);
+		if (token != RPAREN) {
+			parse_warn (cfile, "right parenthesis expected.");
+			skip_to_semi (cfile);
+			*lose = 1;
+			return 0;
+		}
+
+		token = next_token (&val, cfile);
+		if (token != SEMI) {
+			parse_warn (cfile, "semicolon expected.");
+			skip_to_semi (cfile);
+			*lose = 1;
+			return 0;
+		}
+		break;
+			
 		/* Not really a statement, but we parse it here anyway
 		   because it's appropriate for all DHCP agents with
 		   parsers. */
@@ -1661,6 +1726,7 @@ int parse_executable_statement (result, cfile, lose, case_context)
 		zone -> name = parse_host_name (cfile);
 		if (!zone -> name) {
 		      badzone:
+			parse_warn (cfile, "expecting hostname.");
 			*lose = 1;
 			skip_to_semi (cfile);
 			dns_zone_dereference (&zone, MDL);
@@ -1693,7 +1759,7 @@ int parse_executable_statement (result, cfile, lose, case_context)
 			return 0;
 		}
 		return 1;
-			
+
 	      default:
 		if (config_universe && is_identifier (token)) {
 			option = (struct option *)0;
