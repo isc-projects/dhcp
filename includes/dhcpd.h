@@ -864,3 +864,8 @@ void icmp_echoreply PROTO ((struct protocol *));
 /* dns.c */
 void dns_startup PROTO ((void));
 int ns_inaddr_lookup PROTO ((struct sockaddr_in *, u_int16_t, struct iaddr));
+
+/* inet_addr.c */
+#ifdef NEED_INET_ATON
+int inet_aton PROTO ((char *, struct in_addr *));
+#endif
