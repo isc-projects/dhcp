@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.29 2000/03/18 02:15:52 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.30 2000/05/03 06:34:13 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -974,7 +974,7 @@ int supersede_lease (comp, lease, commit)
 				break;
 #endif
 		if (lp
-#if defined (FAILOVER_PROTOCOL)
+#if !defined (FAILOVER_PROTOCOL)
 		    && lp -> on_expiry
 #endif
 			) {
@@ -1056,9 +1056,7 @@ int supersede_lease (comp, lease, commit)
 	if (comp -> on_expiry) {
 #endif
 		if (comp -> ends <= cur_time && commit) {
-#if defined (FAILOVER_PROTOCOL)
-			if (comp -> on_expiry) {
-#endif
+		    if (comp -> on_expiry) {
 			execute_statements ((struct packet *)0, lease,
 					    (struct option_state *)0,
 					    (struct option_state *)0, /* XXX */
@@ -1066,13 +1064,12 @@ int supersede_lease (comp, lease, commit)
 					    comp -> on_expiry);
 			executable_statement_dereference (&comp -> on_expiry,
 							  MDL);
-#if defined (FAILOVER_PROTOCOL)
-			}
-#endif
-			/* No sense releasing a lease after it's expired. */
-			if (comp -> on_release)
-				executable_statement_dereference
-					(&comp -> on_release, MDL);
+		    }
+
+		    /* No sense releasing a lease after it's expired. */
+		    if (comp -> on_release)
+			    executable_statement_dereference
+				    (&comp -> on_release, MDL);
 		} else {
 			/* If this is the next lease that will timeout on the
 			   pool, zap the old timeout and set the timeout on
@@ -1108,7 +1105,7 @@ int supersede_lease (comp, lease, commit)
                                     for (foo = comp;
                                          foo -> ends == comp -> ends;
                                          foo = foo -> next) {
-#if defined (FAILOVER_PROTOCOL)
+#if !defined (FAILOVER_PROTOCOL)
                                             if (foo -> on_expiry)
 #endif
                                                     install = foo;
@@ -1123,7 +1120,11 @@ int supersede_lease (comp, lease, commit)
 
 	/* Return zero if we didn't commit the lease to permanent storage;
 	   nonzero if we did. */
-	return commit && write_lease (comp) && commit_leases ();
+	return commit && write_lease (comp) && commit_leases ()
+#if defined (FAILOVER_PROTOCOL)
+		&& dhcp_failover_queue_update (comp)
+#endif
+		;
 }
 
 /* Release the specified lease and re-hash it as appropriate. */
@@ -1522,6 +1523,13 @@ void write_leases ()
 	    log_info ("Wrote %d new dynamic host decls to leases file.",
 		      num_written);
 	}
+
+	/* XXX Write all the billing classes. */
+
+#if defined (FAILOVER_PROTOCOL)
+	/* Write all the failover states. */
+	dhcp_failover_write_all_states ();
+#endif
 
 	/* Write all the leases. */
 	num_written = 0;
