@@ -103,12 +103,12 @@ based on information the client sends.
 .PP
 When a client is to be booted, its boot parameters are determined by
 consulting that client's \fIhost\fR declaration (if any), and then
-consulting the any \fIclass\fR declarations matching the client,
+consulting any \fIclass\fR declarations matching the client,
 followed by the \fIpool\fR, \fIsubnet\fR and \fIshared-network\fR
 declarations for the IP address assigned to the client.   Each of
 these declarations itself appears within a lexical scope, and all
 declarations at less specific lexical scopes are also consulted for
-client option declarations as well.   Scopes are never considered
+client option declarations.   Scopes are never considered
 twice, and if parameters are declared in more than one scope, the
 parameter declared in the most specific scope is the one that is
 used.
@@ -217,7 +217,7 @@ You may have noticed that while some parameters start with the
 \fIoption\fR keyword, some do not.   Parameters starting with the
 \fIoption\fR keyword correspond to actual DHCP options, while
 parameters that do not start with the option keyword either control
-the behaviour of the DHCP server (e.g., how long a lease dhcpd will
+the behavior of the DHCP server (e.g., how long a lease dhcpd will
 give out), or specify client parameters that are not optional in the
 DHCP protocol (for example, server-name and filename).
 .PP
@@ -231,7 +231,7 @@ which the parameter appears.
 .PP
 Imagine that you have a site with a lot of NCD X-Terminals.   These
 terminals come in a variety of models, and you want to specify the
-boot files for each models.   One way to do this would be to have host
+boot files for each model.   One way to do this would be to have host
 declarations for each server and group them by model:
 .nf
 
@@ -310,9 +310,9 @@ aren't.  Each entry in a pool's permit list is introduced with the
 .I allow
 or \fIdeny\fR keyword.   If a pool has a permit list, then only those
 clients that match specific entries on the permit list will be
-elegible to be assigned addresses from the pool.   If a pool has a
+eligible to be assigned addresses from the pool.   If a pool has a
 deny list, then only those clients that do not match any entries on
-the deny list will be elegible.    If both permit and deny lists exist
+the deny list will be eligible.    If both permit and deny lists exist
 for a pool, then only clients that match the permit list and do not
 match the deny list will be allowed access.
 .SH DYNAMIC ADDRESS ALLOCATION
@@ -328,8 +328,8 @@ If the server finds the address the client is requesting, and that
 address is available to the client, the server will send a DHCPACK.
 If the address is no longer available, or the client isn't permitted
 to have it, the server will send a DHCPNAK.  If the server knows
-nothing about the, it will remain silent, unless the address is
-incorrect for the network segment to which the client has been
+nothing about the address, it will remain silent, unless the address
+is incorrect for the network segment to which the client has been
 attached and the server is authoritative for that network segment, in
 which case the server will send a DHCPNAK even though it doesn't know
 about the address.
@@ -576,7 +576,7 @@ statement
 .B max-unacked-updates \fIcount\fR\fB;\fR
 .PP
 The \fBmax-unacked-updates\fR statement tells the DHCP server how
-many many BINDUPD messages it can send before it receives a BNDACK
+many BNDUPD messages it can send before it receives a BNDACK
 from the failover peer.   We don't have enough operational experience
 to say what a good value for this is, but 10 seems to work.   This
 parameter must be specified.
@@ -663,7 +663,7 @@ hold leases at one time, and it is possible to specify automatic
 subclassing based on the contents of the client packet.
 .PP
 To add clients to classes based on conditional evaluation, you would
-write an conditional statement to match the clients you wanted in the
+write a conditional statement to match the clients you wanted in the
 class, and then put an
 .B add
 statement in the conditional's list of statements:
@@ -700,7 +700,7 @@ that a client that's a member of a class due to an add statement will not
 be affected by pool permits related to that class - when the pool permit list
 is computed, the client will not yet be a member of the pool.   This is an
 inconsistency that will probably be addressed in later versions of the DHCP
-server, but it important to be aware of it at least for the time being.
+server, but it is important to be aware of it at least for the time being.
 .SH SUBCLASSES
 .PP
 In addition to classes, it is possible to declare subclasses.   A
@@ -861,19 +861,19 @@ the Domain Name System to be updated.  These updates are RFC 2136
 compliant so any DNS server supporting RFC 2136 should be able to
 accept updates from the DHCP server.
 .PP
-Two DDNS update schemes are currently implemented, and another is
-planned.   The two that are currently available are the ad-hoc DDNS
+Two DNS update schemes are currently implemented, and another is
+planned.   The two that are currently available are the ad-hoc DNS
 update mode and the interim DHCP-DNS interaction draft update mode.
 If and when the DHCP-DNS interaction draft and the DHCID draft make it
 through the IETF standards process, there will be a third mode, which
-will be the standard DDNS update method.   The DHCP server must be
+will be the standard DNS update method.   The DHCP server must be
 configured to use one of the two currently-supported methods, or not
 to do dns updates.   This can be done with the
 .I ddns-update-style
 configuration parameter.
-.SH THE AD HOC DNS UPDATE SCHEME
-The Ad Hoc Dynamic DNS update scheme implemented in this version of
-the ISC DHCP server is an interim implementation, which does not
+.SH THE AD-HOC DNS UPDATE SCHEME
+The ad-hoc Dynamic DNS update scheme implemented in this version of
+the ISC DHCP server is a prototype design, which does not
 have much to do with the standard update method that is being
 standardized in the IETF DHC working group, but rather implements some
 very basic, yet useful, update capabilities.   This mode
@@ -883,26 +883,26 @@ with the
 because it does not account for the possibility of two different DHCP
 servers updating the same set of DNS records.
 .PP
-For the ad hoc DNS update method, the client's FQDN is derived in two
+For the ad-hoc DNS update method, the client's FQDN is derived in two
 parts.   First, the hostname is determined.   Then, the domain name is
 determined, and appended to the hostname.
 .PP
 The DHCP server determines the client's hostname by first looking for
 a \fIddns-hostname\fR configuration option, and using that if it is
-present.  If no such option has is present, the server looks for a
-valid hostname in the FQDN option send by the client.  If one is
+present.  If no such option is present, the server looks for a
+valid hostname in the FQDN option sent by the client.  If one is
 found, it is used; otherwise, if the client sent a host-name option,
 that is used.  Otherwise, if there is a host declaration that applies
 to the client, the name from that declaration will be used.  If none
 of these applies, the server will not have a hostname for the client,
-and will not be able to do a DDNS update.
+and will not be able to do a DNS update.
 .PP
 The domain name is determined based strictly on the server
 configuration, not on what the client sends.   First, if there is a 
 .I ddns-domainname
 configuration option, it is used.   Second, if there is a
 \fIdomain-name\fR option configured, that is used.  Otherwise, the
-server will not do the DDNS update.
+server will not do the DNS update.
 .PP
 The client's fully-qualified domain name, derived as we have
 described, is used as the name on which an "A" record will be stored.
@@ -923,7 +923,7 @@ server, this should be safe.
 .PP
 Please note that the current implementation assumes clients only have
 a single network interface.   A client with two network interfaces
-will see unpredictable behaviour.   This is considered a bug, and will
+will see unpredictable behavior.   This is considered a bug, and will
 be fixed in a later release.   It may be helpful to enable the
 .I one-lease-per-client
 parameter so that roaming clients do not trigger this same behavior.
@@ -958,8 +958,8 @@ draft-ietf-dnsext-dhcid-rr-??.txt
 Because our implementation is slightly different than the standard, we
 will briefly document the operation of this update style here.
 .PP
-The first point to understand about this style of DDNS updates is that
-unlike the \fIad-hoc\fR style, the DHCP server does not necessarily
+The first point to understand about this style of DNS update is that
+unlike the ad-hoc style, the DHCP server does not necessarily
 always update both the A and the PTR records.   The FQDN option
 includes a flag which, when sent by the client, indicates that the
 client wishes to update its own A record.   In that case, the server
@@ -986,16 +986,15 @@ If the server is configured not to allow client updates, or if the
 client doesn't want to do its own update, the server will simply
 choose a name for the client, possibly using the hostname supplied by
 the client ("jschmoe" in the previous example).   It will use its own
-domain name for the client, just as in the \fIad-hoc\fR update scheme.
+domain name for the client, just as in the ad-hoc update scheme.
 It will then update both the A and PTR record, using the name that it
 chose for the client.   If the client sends a fully-qualified domain
 name in the fqdn option, the server uses only the leftmost part of the
 domain name - in the example above, "jschmoe" instead of
 "jschmoe.radish.org".
 .PP
-The other difference between the \fIad-hoc\fR scheme and the
-.I interim
-scheme is that with the \fIinterim\fR scheme, a method is used that
+The other difference between the ad-hoc scheme and the interim
+scheme is that with the interim scheme, a method is used that
 allows more than one DHCP server to update the DNS database without
 accidentally deleting A records that shouldn't be deleted nor failing
 to add A records that should be added.   The scheme works as follows:
@@ -1014,13 +1013,13 @@ TXT record's contents must be equal to hashid.   If this update
 succeeds, then the client has its A record and PTR record.   If it
 fails, then the name the client has been assigned (or requested) is in
 use, and can't be used by the client.   At this point the DHCP server
-gives up trying to do a DDNS update for the client until the client
+gives up trying to do a DNS update for the client until the client
 chooses a new name.
 .PP
-The \fIinterim\fR DNS update scheme is called interim for two reasons.
+The interim DNS update scheme is called interim for two reasons.
 First, it does not quite follow the drafts.   The current versions of
 the drafts call for a new DHCID RRtype, but this is not yet
-available.   The \fIinterim\fR DNS update scheme uses a TXT record
+available.   The interim DNS update scheme uses a TXT record
 instead.   Also, the existing ddns-resolution draft calls for the DHCP
 server to put a DHCID RR on the PTR record, but the \fIinterim\fR
 update method does not do this.   It is our position that this is not
@@ -1029,7 +1028,7 @@ from the next version of the draft, or better understanding why it is
 considered useful.
 .PP
 In addition to these differences, the server also does not update very
-aggressively.  Because each DDNS update involves a round trip to the
+aggressively.  Because each DNS update involves a round trip to the
 DNS server, there is a cost associated with doing updates even if they
 do not actually modify the DNS database.   So the DHCP server tracks
 whether or not it has updated the record in the past (this information
@@ -1118,7 +1117,7 @@ generated with the command:
 	dnskeygen -H 128 -u -c -n DHCP_UPDATER
 .fi
 .PP
-You may wish to enable logging of DNS transactions on your DNS server.
+You may wish to enable logging of DNS updates on your DNS server.
 To do so, you might write a logging statement like the following:
 .PP
 .nf
@@ -1159,11 +1158,11 @@ and the expiry event, when the commitment expires.
 To declare a set of statements to execute when an event happens, you
 must use the \fBon\fR statement, followed by the name of the event,
 followed by a series of statements to execute when the event happens,
-enclosed in braces.   Events are used to implement dynamic DNS
+enclosed in braces.   Events are used to implement DNS
 updates, so you should not define your own event handlers if you are
-using the built-in dynamic DNS update mechanism.
+using the built-in DNS update mechanism.
 .PP
-The built-in version of the dynamic DNS update mechanism is in a text
+The built-in version of the DNS update mechanism is in a text
 string towards the top of server/dhcpd.c.   If you want to use events
 for things other than DNS updates, and you also want DNS updates, you
 will have to start out by copying this code into your dhcpd.conf file
@@ -1327,7 +1326,7 @@ various sorts of requests.  The allow and deny keywords actually have
 different meanings depending on the context.  In a pool context, these
 keywords can be used to set up access lists for address allocation
 pools.  In other contexts, the keywords simply control general server
-behaviour with respect to clients based on scope.   In a non-pool
+behavior with respect to clients based on scope.   In a non-pool
 context, the
 .I ignore
 keyword can be used in place of the
@@ -1431,12 +1430,12 @@ messages.
 .PP
 The \fBclient-updates\fR flag tells the DHCP server whether or not to
 honor the client's intention to do its own update of its A record.
-This is only relevant when doing \fIinterim\fR DDNS updates.   See the
+This is only relevant when doing \fIinterim\fR DNS updates.   See the
 documentation under the heading THE INTERIM DNS UPDATE SCHEME for
 details.
 .SH ALLOW AND DENY WITHIN POOL DECLARATIONS
 .PP
-The uses of the allow and deny keyword shown in the previous section
+The uses of the allow and deny keywords shown in the previous section
 work pretty much the same way whether the client is sending a
 DHCPDISCOVER or a DHCPREQUEST message - an address will be allocated
 to the client (either the old address it's requesting, or a new
@@ -1463,7 +1462,7 @@ allocation process is done as described previously in the ADDRESS
 ALLOCATION section.
 .PP
 When declaring permit lists for address allocation pools, the
-following syntaxes are recognized following the allow or deny keyword:
+following syntaxes are recognized following the allow or deny keywords:
 .PP
  \fBknown clients;\fR
 .PP
@@ -1613,7 +1612,7 @@ The \fIddns-hostname\fR statement
 The \fIname\fR parameter should be the hostname that will be used in
 setting up the client's A and PTR records.   If no ddns-hostname is
 specified in scope, then the server will derive the hostname
-automatically, using an algorithm that varies different for each of the
+automatically, using an algorithm that varies for each of the
 different update methods.
 .RE
 .PP
@@ -1655,7 +1654,7 @@ parameter must be one of \fBad-hoc\fR, \fBinterim\fR or \fBnone\fR.
 The \fIddns-update-style\fR statement is only meaningful in the outer
 scope - it is evaluated once after reading the dhcpd.conf file, rather
 than each time a client is assigned an IP address, so there is no way
-to use different DDNS update styles for different clients.
+to use different DNS update styles for different clients.
 .RE
 .PP
 .B The  
@@ -1666,9 +1665,9 @@ to use different DDNS update styles for different clients.
  \fBddns-updates \fIflag\fR\fB;\fR
 .PP
 The \fIddns-updates\fR parameter controls whether or not the server will
-attempt to do a ddns update when a lease is confirmed.   Set this to \fIoff\fR
+attempt to do a DNS update when a lease is confirmed.   Set this to \fIoff\fR
 if the server should not attempt to do updates within a certain scope.
-The \fIddns-updates\fR parameter is on by default.   To disable DDNS
+The \fIddns-updates\fR parameter is on by default.   To disable DNS
 updates in all scopes, it is preferable to use the
 \fIddns-update-style\fR statement, setting the style to \fInone\fR.
 .RE
@@ -2069,7 +2068,7 @@ Site-local options in DHCP are those options whose numeric codes are
 greater than 128.   These options are intended for site-specific
 uses, but are frequently used by vendors of embedded hardware that
 contains DHCP clients.   Because site-specific options are allocated
-on an ad-hoc basis, it is quite possible that one vendor's DHCP client
+on an ad hoc basis, it is quite possible that one vendor's DHCP client
 might use the same option code that another vendor's client uses, for
 different purposes.   The \fIsite-option-space\fR option can be used
 to assign a different set of site-specific options for each such
@@ -2102,14 +2101,14 @@ statement
 .B update-optimization \fIflag\fB;\fR
 .PP
 If the \fIupdate-optimization\fR parameter is false for a given client,
-the server will attempt a DDNS update for that client each time the
+the server will attempt a DNS update for that client each time the
 client renews its lease, rather than only attempting an update when it
 appears to be necessary.   This will allow the DNS to heal from
 database inconsistencies more easily, but the cost is that the DHCP
-server must do many more DDNS updates.   We do not recommend enabling
+server must do many more DNS updates.   We do not recommend enabling
 this on large networks with the current DHCP server.   This option
-only affects the behaviour of the \fIinterim\fR DDNS update scheme,
-and has no effect on the \fIad-hoc\fI DDNS update scheme.   If this
+only affects the behavior of the interim DNS update scheme,
+and has no effect on the ad-hoc DNS update scheme.   If this
 parameter is not specified, or is false, the DHCP server will only
 update when the client information changes, the client gets a
 different lease, or the client's lease expires.
@@ -2122,10 +2121,10 @@ statement
 .B update-static-leases \fIflag\fB;\fR
 .PP
 The \fIupdate-static-leases\fR flag, if enabled, causes the DHCP
-server to do DDNS updates for clients even if those clients are being
+server to do DNS updates for clients even if those clients are being
 assigned their IP address using a \fIfixed-address\fR statement - that
 is, the client is being given a static assignment.   This can only
-work with the \fIinterim\fR DDNS update scheme.   It is not
+work with the \fIinterim\fR DNS update scheme.   It is not
 recommended because the DHCP server has no way to tell that the update
 has been done, and therefore will not delete the record when it is not
 in use.   Also, the server must attempt the update each time the
@@ -2170,7 +2169,7 @@ It should be noted here that most DHCP clients completely ignore the
 host-name option sent by the DHCP server, and there is no way to
 configure them not to do this.   So you generally have a choice of
 either not having any hostname to client IP address mapping that the
-client will recognize, or doing dynamic DNS updates.   It is beyond
+client will recognize, or doing DNS updates.   It is beyond
 the scope of this document to describe how to make this
 determination.
 .RE
