@@ -69,6 +69,10 @@
 #include "inet.h"
 #include "sysconf.h"
 
+#if !defined (OPTION_HASH_SIZE)
+# define OPTION_HASH_SIZE 17
+#endif
+
 struct string_list {
 	struct string_list *next;
 	char string [1];
@@ -107,11 +111,18 @@ struct agent_options {
 	struct option_tag *first;
 };
 
-/* The data associated with a given option in an array of options. */
+struct option_cache {
+	int refcnt;
+	struct option_cache *next;
+	struct expression *expression;
+	struct option *option;
+	struct data_string data;
+};
 
-struct option_data {
-	int len;
-	u_int8_t *data;
+struct option_state {
+	pair dhcp_hash [OPTION_HASH_SIZE];
+	pair server_hash [OPTION_HASH_SIZE];
+	struct agent_options *agent_options;
 };
 
 /* A dhcp packet and the pointers to its option values. */
@@ -127,8 +138,7 @@ struct packet {
 	struct hardware *haddr;		/* Physical link address
 					   of local sender (maybe gateway). */
 	struct shared_network *shared_network;
-	struct option_data options [256];
-	struct agent_options *agent_options;	/* Received agent options. */
+	struct option_state options;
 
 #if !defined (PACKET_MAX_CLASSES)
 # define PACKET_MAX_CLASSES 5
@@ -170,17 +180,12 @@ struct lease {
 #       define BOOTP_LEASE		2
 #	define DYNAMIC_BOOTP_OK		4
 #	define PERSISTENT_FLAGS		(DYNAMIC_BOOTP_OK)
-#	define EPHEMERAL_FLAGS		(BOOTP_LEASE)
 #	define MS_NULL_TERMINATION	8
 #	define ABANDONED_LEASE		16
+#	define EPHEMERAL_FLAGS		(BOOTP_LEASE | MS_NULL_TERMINATION | \
+					 ABANDONED_LEASE)
 
 	struct lease_state *state;
-};
-
-struct option_state {
-	struct option_cache *dhcp_options [256];
-	struct option_cache *server_options [256];
-	struct agent_options *agent_options;
 };
 
 struct lease_state {
@@ -202,6 +207,7 @@ struct lease_state {
 	struct in_addr giaddr;
 	u_int8_t hops;
 	u_int8_t offer;
+	struct iaddr from;
 };
 
 #define	ROOT_GROUP	0
@@ -249,6 +255,65 @@ struct lease_state {
 
 #if !defined (DEFAULT_MAX_LEASE_TIME)
 # define DEFAULT_MAX_LEASE_TIME 86400
+#endif
+
+/* Client option names */
+
+#define	CL_TIMEOUT		1
+#define	CL_SELECT_INTERVAL	2
+#define CL_REBOOT_TIMEOUT	3
+#define CL_RETRY_INTERVAL	4
+#define CL_BACKOFF_CUTOFF	5
+#define CL_INITIAL_INTERVAL	6
+#define CL_BOOTP_POLICY		7
+#define	CL_SCRIPT_NAME		8
+#define CL_REQUESTED_OPTIONS	9
+#define CL_REQUESTED_LEASE_TIME	10
+#define CL_SEND_OPTIONS		11
+#define CL_MEDIA		12
+#define	CL_REJECT_LIST		13
+
+#ifndef CL_DEFAULT_TIMEOUT
+# define CL_DEFAULT_TIMEOUT	60
+#endif
+
+#ifndef CL_DEFAULT_SELECT_INTERVAL
+# define CL_DEFAULT_SELECT_INTERVAL 0
+#endif
+
+#ifndef CL_DEFAULT_REBOOT_TIMEOUT
+# define CL_DEFAULT_REBOOT_TIMEOUT 10
+#endif
+
+#ifndef CL_DEFAULT_RETRY_INTERVAL
+# define CL_DEFAULT_RETRY_INTERVAL 300
+#endif
+
+#ifndef CL_DEFAULT_BACKOFF_CUTOFF
+# define CL_DEFAULT_BACKOFF_CUTOFF 120
+#endif
+
+#ifndef CL_DEFAULT_INITIAL_INTERVAL
+# define CL_DEFAULT_INITIAL_INTERVAL 10
+#endif
+
+#ifndef CL_DEFAULT_BOOTP_POLICY
+# define CL_DEFAULT_BOOTP_POLICY ACCEPT
+#endif
+
+#ifndef CL_DEFAULT_SCRIPT_NAME
+# define CL_DEFAULT_SCRIPT_NAME "/etc/dhclient-script"
+#endif
+
+#ifndef CL_DEFAULT_REQUESTED_OPTIONS
+# define CL_DEFAULT_REQUESTED_OPTIONS \
+	{ DHO_SUBNET_MASK, \
+	  DHO_BROADCAST_ADDRESS, \
+	  DHO_TIME_OFFSET, \
+	  DHO_ROUTERS, \
+	  DHO_DOMAIN_NAME, \
+	  DHO_DOMAIN_NAME_SERVERS, \
+	  DHO_HOST_NAME }
 #endif
 
 /* Group of declarations that share common parameters. */
@@ -327,7 +392,7 @@ struct client_lease {
 	unsigned int is_static : 1;    /* If set, lease is from config file. */
 	unsigned int is_bootp: 1;   /* If set, lease was aquired with BOOTP. */
 
-	struct option_data options [256];    /* Options supplied with lease. */
+	struct option_state options; /* Options supplied with lease. */
 };
 
 /* Possible states in which the client can be. */
@@ -343,19 +408,20 @@ enum dhcp_state {
 
 /* Configuration information from the config file... */
 struct client_config {
-	struct option_data defaults [256]; /* Default values for options. */
-	enum {
-		ACTION_DEFAULT,		/* Use server value if present,
-					   otherwise default. */
-		ACTION_SUPERSEDE,	/* Always use default. */
-		ACTION_PREPEND,		/* Prepend default to server. */
-		ACTION_APPEND,		/* Append default to server. */
-	} default_actions [256];
+	/*
+	 * When a message has been received, run these statements
+	 * over it.
+	 */
+	struct executable_statement *on_receipt;
 
-	struct option_data send_options [256]; /* Send these to server. */
-	u_int8_t required_options [256]; /* Options server must supply. */
-	u_int8_t requested_options [256]; /* Options to request from server. */
-	int requested_option_count;	/* Number of requested options. */
+	/*
+	 * When a message is sent, run these statements.
+	 */
+	struct executable_statement *on_transmission;
+
+	u_int32_t *required_options; /* Options server must supply. */
+	u_int32_t *requested_options; /* Options to request from server. */
+
 	TIME timeout;			/* Start to panic if we don't get a
 					   lease in this time period when
 					   SELECTING. */
@@ -374,6 +440,8 @@ struct client_config {
 	TIME backoff_cutoff;		/* When doing exponential backoff,
 					   never back off to an interval
 					   longer than this amount. */
+	u_int32_t requested_lease;	/* Requested lease time, if user
+					   doesn't configure one. */
 	struct string_list *media;	/* Possible network media values. */
 	char *script_name;		/* Name of config script. */
 	enum { IGNORE, ACCEPT, PREFER } bootp_policy;
@@ -382,6 +450,8 @@ struct client_config {
 	struct string_list *medium;	/* Current network medium. */
 
 	struct iaddrlist *reject_list;	/* Servers to reject. */
+
+	struct option_state send_options;	/* Options to send. */
 };
 
 /* Per-interface state used in the dhcp client... */
@@ -398,13 +468,12 @@ struct client_state {
 	TIME first_sending;			/* When was first copy sent? */
 	TIME interval;		      /* What's the current resend interval? */
 	struct string_list *medium;		   /* Last media type tried. */
-
 	struct dhcp_packet packet;		    /* Outgoing DHCP packet. */
 	int packet_length;	       /* Actual length of generated packet. */
 
 	struct iaddr requested_address;	    /* Address we would like to get. */
 
-	struct client_config *config;	    /* Information from config file. */
+	struct client_config *config;		    /* Client configuration. */
 };
 
 /* Information about each network interface. */
@@ -589,25 +658,32 @@ typedef unsigned char option_mask [16];
 
 /* options.c */
 
-void parse_options PROTO ((struct packet *));
-void parse_option_buffer PROTO ((struct packet *, unsigned char *, int));
+int parse_options PROTO ((struct packet *));
+int parse_option_buffer PROTO ((struct packet *, unsigned char *, int));
 int parse_agent_information_option PROTO ((struct packet *, int, u_int8_t *));
 int cons_options PROTO ((struct packet *, struct dhcp_packet *, int,
 			  struct option_state *, int, int, int));
-int store_options PROTO ((unsigned char *, int, struct option_cache **,
-			   unsigned char *, int, int, int, int));
+int store_options PROTO ((unsigned char *, int, struct option_state *,
+			   int *, int, int, int, int));
 char *pretty_print_option PROTO ((unsigned int,
 				  unsigned char *, int, int, int));
 void do_packet PROTO ((struct interface_info *,
 		       struct dhcp_packet *, int,
 		       unsigned int, struct iaddr, struct hardware *));
-struct data_string dhcp_option_lookup PROTO ((struct packet *, int));
-struct data_string agent_suboption_lookup PROTO ((struct packet *, int));
-struct data_string server_option_lookup PROTO ((struct packet *, int));
+int dhcp_option_lookup PROTO ((struct data_string *,
+			       struct option_state *, int));
+int agent_suboption_lookup PROTO ((struct data_string *,
+				   struct option_state *, int));
+int server_option_lookup PROTO ((struct data_string *,
+				 struct option_state *, int));
 void dhcp_option_set PROTO ((struct option_state *, struct option_cache *,
 			     enum statement_op));
 void server_option_set PROTO ((struct option_state *, struct option_cache *,
 			       enum statement_op));
+struct option_cache *lookup_option PROTO ((pair *, int));
+void save_option PROTO ((pair *, struct option_cache *));
+void delete_option PROTO ((pair *, int));
+int option_cache_dereference PROTO ((struct option_cache **, char *));
 
 /* errwarn.c */
 extern int warnings_occurred;
@@ -656,7 +732,7 @@ int readconf PROTO ((void));
 void read_leases PROTO ((void));
 int parse_statement PROTO ((FILE *,
 			    struct group *, int, struct host_decl *, int));
-struct option_cache *parse_allow_deny PROTO ((FILE *, int));
+int parse_allow_deny PROTO ((struct option_cache **, FILE *, int));
 int parse_boolean PROTO ((FILE *));
 int parse_lbrace PROTO ((FILE *));
 void parse_host_declaration PROTO ((FILE *, struct group *));
@@ -664,7 +740,7 @@ void parse_class_declaration PROTO ((FILE *, struct group *, int));
 void parse_shared_net_declaration PROTO ((FILE *, struct group *));
 void parse_subnet_declaration PROTO ((FILE *, struct shared_network *));
 void parse_group_declaration PROTO ((FILE *, struct group *));
-struct option_cache *parse_fixed_addr_param PROTO ((FILE *));
+int parse_fixed_addr_param PROTO ((struct option_cache **, FILE *));
 TIME parse_timestamp PROTO ((FILE *));
 struct lease *parse_lease_declaration PROTO ((FILE *));
 void parse_address_range PROTO ((FILE *, struct subnet *));
@@ -674,7 +750,7 @@ void skip_to_semi PROTO ((FILE *));
 int parse_semi PROTO ((FILE *));
 char *parse_string PROTO ((FILE *));
 char *parse_host_name PROTO ((FILE *));
-struct expression *parse_ip_addr_or_hostname PROTO ((FILE *, int));
+int parse_ip_addr_or_hostname PROTO ((struct expression **, FILE *, int));
 void parse_hardware_param PROTO ((FILE *, struct hardware *));
 void parse_lease_time PROTO ((FILE *, TIME *));
 unsigned char *parse_numeric_aggregate PROTO ((FILE *,
@@ -683,40 +759,72 @@ unsigned char *parse_numeric_aggregate PROTO ((FILE *,
 void convert_num PROTO ((unsigned char *, char *, int, int));
 TIME parse_date PROTO ((FILE *));
 struct option *parse_option_name PROTO ((FILE *));
-unsigned char *parse_cshl PROTO ((FILE *, int *));
+int parse_cshl PROTO ((struct data_string *, FILE *));
 struct executable_statement *parse_executable_statement PROTO ((FILE *,
 								int *));
 struct executable_statement *parse_executable_statements PROTO ((FILE *,
 								 int *));
 struct executable_statement *parse_if_statement PROTO ((FILE *, int *));
-struct expression *parse_boolean_expression PROTO ((FILE *, int *));
-struct expression *parse_data_expression PROTO ((FILE *, int *));
-struct expression *parse_numeric_expression PROTO ((FILE *, int *));
+int parse_boolean_expression PROTO ((struct expression **, FILE *, int *));
+int parse_data_expression PROTO ((struct expression **, FILE *, int *));
+int parse_numeric_expression PROTO ((struct expression **, FILE *, int *));
+int parse_non_binary PROTO ((struct expression **, FILE *, int *,
+			     enum expression_context));
+int parse_expression PROTO ((struct expression **, FILE *, int *,
+			     enum expression_context,
+			     struct expression **, enum expr_op));
 struct executable_statement *parse_option_statement PROTO ((FILE *, int,
 							    struct option *,
 							    enum statement_op)
 							   );
-struct expression *parse_option_token PROTO ((FILE *, char *,
-					      struct expression *, int, int));
+int parse_option_token PROTO ((struct expression **, FILE *, char *,
+			       struct expression *, int, int));
 
 /* tree.c */
 pair cons PROTO ((caddr_t, pair));
-struct expression *make_host_lookup PROTO ((char *));
-struct dns_host_entry *enter_dns_host PROTO ((char *));
-struct expression *make_const_data PROTO ((unsigned char *, int, int, int));
-struct expression *make_concat PROTO ((struct expression *,
-				       struct expression *));
-struct expression *make_substring PROTO ((struct expression *,
-					  struct expression *,
-					  struct expression *));
-struct expression *make_limit PROTO ((struct expression *, int));
-struct option_cache *option_cache PROTO ((struct expression *,
-					  struct option *));
-int evaluate_boolean_expression PROTO ((struct packet *, struct expression *));
-struct data_string evaluate_data_expression PROTO ((struct packet *,
-						    struct expression *));
-unsigned long evaluate_numeric_expression PROTO ((struct packet *,
-						  struct expression *));
+int make_const_option_cache PROTO ((struct option_cache **, struct buffer **,
+				    u_int8_t *, int, struct option *, char *));
+int make_host_lookup PROTO ((struct expression **, char *));
+int enter_dns_host PROTO ((struct dns_host_entry **, char *));
+int make_const_data PROTO ((struct expression **,
+			    unsigned char *, int, int, int));
+int make_concat PROTO ((struct expression **,
+			struct expression *, struct expression *));
+int make_substring PROTO ((struct expression **, struct expression *,
+			   struct expression *, struct expression *));
+int make_limit PROTO ((struct expression **, struct expression *, int));
+int option_cache PROTO ((struct option_cache **, struct data_string *,
+			 struct expression *, struct option *));
+int evaluate_boolean_expression PROTO ((int *,
+					struct packet *, struct option_state *,
+					struct expression *));
+int evaluate_data_expression PROTO ((struct data_string *,
+				     struct packet *, struct option_state *,
+				     struct expression *));
+int evaluate_numeric_expression PROTO
+	((unsigned long *, struct packet *,
+	  struct option_state *, struct expression *));
+int evaluate_option_cache PROTO ((struct data_string *,
+				  struct packet *,
+				  struct option_state *,
+				  struct option_cache *));
+int evaluate_boolean_option_cache PROTO ((struct packet *,
+					  struct option_state *,
+					  struct option_cache *));
+int evaluate_boolean_expression_result PROTO ((struct packet *,
+					       struct option_state *,
+					       struct expression *));
+void expression_dereference PROTO ((struct expression **, char *));
+void option_state_dereference PROTO ((struct option_state *));
+void data_string_copy PROTO ((struct data_string *,
+			      struct data_string *, char *));
+void data_string_forget PROTO ((struct data_string *, char *));
+void data_string_truncate PROTO ((struct data_string *, int));
+int is_boolean_expression PROTO ((struct expression *));
+int is_data_expression PROTO ((struct expression *));
+int is_numeric_expression PROTO ((struct expression *));
+int op_precedence PROTO ((enum expr_op, enum expr_op));
+enum expression_context op_context PROTO ((enum expr_op));
 
 /* dhcp.c */
 extern int outstanding_pings;
@@ -774,8 +882,6 @@ VOIDPTR dmalloc PROTO ((int, char *));
 void dfree PROTO ((VOIDPTR, char *));
 struct packet *new_packet PROTO ((char *));
 struct dhcp_packet *new_dhcp_packet PROTO ((char *));
-struct expression *new_expression PROTO ((char *));
-struct option_cache *new_option_cache PROTO ((char *));
 struct hash_table *new_hash_table PROTO ((int, char *));
 struct hash_bucket *new_hash_bucket PROTO ((char *));
 struct lease *new_lease PROTO ((char *));
@@ -799,10 +905,26 @@ void free_subnet PROTO ((struct subnet *, char *));
 void free_lease PROTO ((struct lease *, char *));
 void free_hash_bucket PROTO ((struct hash_bucket *, char *));
 void free_hash_table PROTO ((struct hash_table *, char *));
-void free_expression PROTO ((struct expression *, char *));
 void free_packet PROTO ((struct packet *, char *));
 void free_dhcp_packet PROTO ((struct dhcp_packet *, char *));
-void free_option_cache PROTO ((struct option_cache *, char *));
+struct client_lease *new_client_lease PROTO ((char *));
+void free_client_lease PROTO ((struct client_lease *, char *));
+pair new_pair PROTO ((char *));
+void free_pair PROTO ((pair, char *));
+int expression_allocate PROTO ((struct expression **, char *));
+int expression_reference PROTO ((struct expression **,
+				 struct expression *, char *));
+void free_expression PROTO ((struct expression *, char *));
+int option_cache_allocate PROTO ((struct option_cache **, char *));
+int option_cache_reference PROTO ((struct option_cache **,
+				   struct option_cache *, char *));
+int buffer_allocate PROTO ((struct buffer **, int, char *));
+int buffer_reference PROTO ((struct buffer **, struct buffer *, char *));
+int buffer_dereference PROTO ((struct buffer **, char *));
+int dns_host_entry_allocate PROTO ((struct dns_host_entry **, char *));
+int dns_host_entry_reference PROTO ((struct dns_host_entry **,
+				     struct dns_host_entry *, char *));
+int dns_host_entry_dereference PROTO ((struct dns_host_entry **, char *));
 
 /* print.c */
 char *print_hw_addr PROTO ((int, int, unsigned char *));
@@ -810,6 +932,13 @@ void print_lease PROTO ((struct lease *));
 void dump_raw PROTO ((unsigned char *, int));
 void dump_packet PROTO ((struct packet *));
 void hash_dump PROTO ((struct hash_table *));
+char *print_hex_1 PROTO ((int, u_int8_t *, int));
+char *print_hex_2 PROTO ((int, u_int8_t *, int));
+char *print_hex_3 PROTO ((int, u_int8_t *, int));
+char *print_dotted_quads PROTO ((int, u_int8_t *));
+char *print_dec_1 PROTO ((int));
+char *print_dec_2 PROTO ((int));
+void print_expression PROTO ((char *, struct expression *));
 
 /* socket.c */
 #if defined (USE_SOCKET_SEND) || defined (USE_SOCKET_RECEIVE) \
@@ -963,8 +1092,8 @@ extern struct universe agent_universe;
 extern struct option agent_options [256];
 extern struct universe server_universe;
 extern struct option server_options [256];
-extern unsigned char dhcp_option_default_priority_list [];
-extern int sizeof_dhcp_option_default_priority_list;
+extern int dhcp_option_default_priority_list [];
+extern int dhcp_option_default_priority_list_count;
 extern char *hardware_types [256];
 extern struct hash_table universe_hash;
 void initialize_universes PROTO ((void));
@@ -1013,12 +1142,17 @@ void state_panic PROTO ((void *));
 
 void bind_lease PROTO ((struct interface_info *));
 
+void make_client_options PROTO ((struct interface_info *,
+				 struct client_lease *, u_int8_t *,
+				 struct option_cache *, struct iaddr *,
+				 u_int32_t *, struct executable_statement *,
+				 struct option_state *));
 void make_discover PROTO ((struct interface_info *, struct client_lease *));
 void make_request PROTO ((struct interface_info *, struct client_lease *));
 void make_decline PROTO ((struct interface_info *, struct client_lease *));
 void make_release PROTO ((struct interface_info *, struct client_lease *));
 
-void free_client_lease PROTO ((struct client_lease *));
+void destroy_client_lease PROTO ((struct client_lease *));
 void rewrite_client_leases PROTO ((void));
 void write_client_lease PROTO ((struct interface_info *,
 				 struct client_lease *, int));
@@ -1100,7 +1234,7 @@ void read_client_leases PROTO ((void));
 void parse_client_statement PROTO ((FILE *, struct interface_info *,
 				    struct client_config *));
 int parse_X PROTO ((FILE *, u_int8_t *, int));
-int parse_option_list PROTO ((FILE *, u_int8_t *));
+void parse_option_list PROTO ((FILE *, u_int32_t **));
 void parse_interface_declaration PROTO ((FILE *, struct client_config *));
 struct interface_info *interface_or_dummy PROTO ((char *));
 void make_client_state PROTO ((struct interface_info *));
@@ -1109,7 +1243,7 @@ void make_client_config PROTO ((struct interface_info *,
 void parse_client_lease_statement PROTO ((FILE *, int));
 void parse_client_lease_declaration PROTO ((FILE *, struct client_lease *,
 					    struct interface_info **));
-struct option *parse_option_decl PROTO ((FILE *, struct option_data *));
+int parse_option_decl PROTO ((struct option_cache **, FILE *));
 void parse_string_list PROTO ((FILE *, struct string_list **, int));
 int parse_ip_addr PROTO ((FILE *, struct iaddr *));
 void parse_reject_statement PROTO ((FILE *, struct client_config *));
@@ -1144,7 +1278,7 @@ struct name_server *first_name_server PROTO ((void));
 
 /* inet_addr.c */
 #ifdef NEED_INET_ATON
-int inet_aton PROTO ((char *, struct in_addr *));
+int inet_aton PROTO ((const char *, struct in_addr *));
 #endif
 
 /* sysconf.c */
@@ -1176,6 +1310,7 @@ struct class *find_class PROTO ((char *));
 
 /* execute.c */
 int execute_statements PROTO ((struct packet *, struct option_state *,
+ 			       struct option_state *,
 			       struct executable_statement *));
 void execute_statements_in_scope PROTO ((struct packet *,
 					 struct option_state *,
