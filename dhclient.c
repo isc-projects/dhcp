@@ -42,6 +42,9 @@
 #include "dhcpd.h"
 #include "dhctoken.h"
 
+void do_a_packet (int);
+void do_a_line (int);
+
 TIME cur_time;
 unsigned char packbuf [65536];	/* Should cover the gnarliest MTU... */
 
@@ -77,7 +80,7 @@ int main (argc, argv, envp)
 	GET_TIME (&cur_time);
 
 	name.sin_family = AF_INET;
-	name.sin_port = htons (2000);
+	name.sin_port = htons (2001);
 	name.sin_addr.s_addr = htonl (INADDR_ANY);
 	memset (name.sin_zero, 0, sizeof (name.sin_zero));
 
@@ -99,157 +102,13 @@ int main (argc, argv, envp)
 	if (bind (sock, (struct sockaddr *)&name, sizeof name) < 0)
 		error ("Can't bind to dhcp address: %m");
 
-	do {
-		fd_set r, w, x;
-		FD_ZERO (&r);
-		FD_ZERO (&w);
-		FD_ZERO (&x);
-		FD_SET (sock, &r);
-		FD_SET (sock, &w);
-		FD_SET (sock, &x);
-		FD_SET (0, &r); /* stdin */
-
-		if (select (sock + 1, &r, &w, &x, (struct timeval *)0) < 0) {
-			error ("select: %m");
-		}
-		if (FD_ISSET (sock, &r) || FD_ISSET (sock, &w)
-		    || FD_ISSET (sock, &x)) {
-			if ((result =
-			     recvfrom (sock, packbuf, sizeof packbuf, 0,
-				       (struct sockaddr *)&from, &fromlen))
-			    < 0) {
-				warn ("recvfrom failed: %m");
-				sleep (5);
-				continue;
-			}
-			note ("request from %s, port %d",
-			      inet_ntoa (from.sin_addr),
-			      htons (from.sin_port));
-			ifrom.len = 4;
-			memcpy (ifrom.iabuf, &from.sin_addr, ifrom.len);
-			memcpy (&incoming, packbuf, result);
-			memset (&ip, 0, sizeof ip);
-			ip.raw = &incoming;
-			ip.packet_length = result;
-			ip.client_port = ntohs (from.sin_port);
-			ip.client_addr = ifrom;
-			ip.client_sock = sock;
-			parse_options (&ip);
-			printf ("\nPacket from %s, port %d\n",
-				piaddr (ip.client_addr), ip.client_port);
-			for (i = 0; i < 256; i++)
-				if (ip.options [i].len)
-					printf ("%s = %s;\n",
-						dhcp_options [i].name,
-						pretty_print_option
-						(i,
-						 ip.options [i].data,
-						 ip.options [i].len));
-		} else if (FD_ISSET (0, &r)) {
-			int bufs = 0;
-
-			/* Parse a packet declaration from stdin, or
-			   exit if we've hit EOF. */
-			token = peek_token (&val, cfile);
-			if (token == EOF)
-				break;
-			memset (&decl, 0, sizeof decl);
-			parse_client_statement (cfile, &decl);
-
-			/* Fill in a packet based on the information
-			   entered by the user. */
-			memset (&outgoing, 0, sizeof outgoing);
-			memset (&raw, 0, sizeof raw);
-			outgoing.raw = &raw;
-
-			/* Copy in the filename if given; otherwise, flag
-			   the filename buffer as available for options. */
-			if (decl.filename)
-				strncpy (raw.file,
-					 decl.filename, sizeof raw.file);
-			else
-				bufs |= 1;
-
-			/* Copy in the server name if given; otherwise, flag
-			   the server_name buffer as available for options. */
-			if (decl.server_name)
-				strncpy (raw.sname,
-					 decl.server_name, sizeof raw.sname);
-			else
-				bufs |= 2;
-
-			if (decl.interface_count) {
-				memcpy (raw.chaddr,
-					decl.interfaces [0].haddr,
-					decl.interfaces [0].hlen);
-				raw.htype = decl.interfaces [0].htype;
-				raw.hlen = decl.interfaces [0].hlen;
-				if (decl.interface_count > 1)
-					note ("Only one interface used.");
-			} else {
-				raw.htype = raw.hlen = 0;
-			}
-
-			cons_options ((struct packet *)0,
-				      &outgoing, decl.options, bufs);
-
-			if (decl.ciaddr) {
-				tree_evaluate (decl.ciaddr);
-				memcpy (&raw.ciaddr,
-					decl.ciaddr -> value,
-					decl.ciaddr -> len);
-			} else
-				memset (&raw.ciaddr, 0, sizeof raw.ciaddr);
-
-			if (decl.yiaddr) {
-				tree_evaluate (decl.yiaddr);
-				memcpy (&raw.yiaddr,
-					decl.yiaddr -> value,
-					decl.yiaddr -> len);
-			} else
-				memset (&raw.yiaddr, 0, sizeof raw.yiaddr);
-
-			if (decl.siaddr) {
-				tree_evaluate (decl.siaddr);
-				memcpy (&raw.siaddr,
-					decl.siaddr -> value,
-					decl.siaddr -> len);
-			} else
-				memset (&raw.siaddr, 0, sizeof raw.siaddr);
-
-			if (decl.giaddr) {
-				tree_evaluate (decl.giaddr);
-				memcpy (&raw.giaddr,
-					decl.giaddr -> value,
-					decl.giaddr -> len);
-			} else
-				memset (&raw.giaddr, 0, sizeof raw.giaddr);
-
-			raw.xid = xid++;
-			raw.xid = htons (raw.xid);
-			raw.secs = 0;
-			raw.flags = 0;
-			raw.hops = 0;
-			raw.op = BOOTREQUEST;
-
-			to.sin_port = htons (2001);
-			to.sin_addr.s_addr = INADDR_BROADCAST;
-			to.sin_family = AF_INET;
-			to.sin_len = sizeof to;
-			memset (to.sin_zero, 0, sizeof to.sin_zero);
-
-			note ("Sending dhcp request to %s, port %d",
-			      inet_ntoa (to.sin_addr), htons (to.sin_port));
-
-			errno = 0;
-			result = sendto (sock, &raw,
-					 outgoing.packet_length,
-					 0, (struct sockaddr *)&to, sizeof to);
-			if (result < 0)
-				warn ("sendto: %m");
-		}
-	} while (1);
-	exit (0);
+	if (fork() > 0) {
+		while (1)
+			do_a_packet (sock);
+	} else {
+		while (1)
+			do_a_line (sock);
+	}
 }
 
 /* statement :== host_statement */
@@ -285,4 +144,159 @@ void parse_client_statement (cfile, decl)
 
 void cleanup ()
 {
+}
+
+void do_a_packet (sock)
+	int sock;
+{
+	struct sockaddr_in name;
+	int flag;
+	struct dhcp_packet incoming;
+	struct packet ip;
+	struct sockaddr_in from;
+	struct iaddr ifrom;
+	int fromlen = sizeof from;
+	int max = 0;
+	int count;
+	int result;
+	int i;
+	int xid = 1;
+
+	if ((result = recvfrom (sock, packbuf, sizeof packbuf, 0,
+				(struct sockaddr *)&from, &fromlen)) < 0) {
+		warn ("recvfrom failed: %m");
+		sleep (5);
+		return;
+	}
+	note ("request from %s, port %d",
+	      inet_ntoa (from.sin_addr), htons (from.sin_port));
+	ifrom.len = 4;
+	memcpy (ifrom.iabuf, &from.sin_addr, ifrom.len);
+	memcpy (&incoming, packbuf, result);
+	memset (&ip, 0, sizeof ip);
+	ip.raw = &incoming;
+	ip.packet_length = result;
+	ip.client_port = ntohs (from.sin_port);
+	ip.client_addr = ifrom;
+	ip.client_sock = sock;
+	parse_options (&ip);
+
+	dump_packet (&ip);
+}
+
+void do_a_line (sock)
+	int sock;
+{
+	int bufs = 0;
+	FILE *cfile = stdin;
+	char *val;
+	int flag;
+	int token;
+	struct dhcp_packet raw;
+	struct packet outgoing;
+	struct sockaddr_in to;
+	int max = 0;
+	int count;
+	int result;
+	int i;
+	struct host_decl decl;
+	int xid = 1;
+
+	/* Parse a packet declaration from stdin, or exit if
+	   we've hit EOF. */
+	token = peek_token (&val, cfile);
+	if (token == EOF)
+		return;
+	memset (&decl, 0, sizeof decl);
+	parse_client_statement (cfile, &decl);
+
+	/* Fill in a packet based on the information
+	   entered by the user. */
+	memset (&outgoing, 0, sizeof outgoing);
+	memset (&raw, 0, sizeof raw);
+	outgoing.raw = &raw;
+	
+	/* Copy in the filename if given; otherwise, flag
+	   the filename buffer as available for options. */
+	if (decl.filename)
+		strncpy (raw.file,
+			 decl.filename, sizeof raw.file);
+	else
+		bufs |= 1;
+		
+	/* Copy in the server name if given; otherwise, flag
+	   the server_name buffer as available for options. */
+	if (decl.server_name)
+		strncpy (raw.sname,
+			 decl.server_name, sizeof raw.sname);
+	else
+		bufs |= 2;
+		
+	if (decl.interface_count) {
+		memcpy (raw.chaddr,
+			decl.interfaces [0].haddr,
+			decl.interfaces [0].hlen);
+		raw.htype = decl.interfaces [0].htype;
+		raw.hlen = decl.interfaces [0].hlen;
+		if (decl.interface_count > 1)
+			note ("Only one interface used.");
+	} else {
+		raw.htype = raw.hlen = 0;
+	}
+	
+	cons_options ((struct packet *)0,
+		      &outgoing, decl.options, bufs);
+	
+	if (decl.ciaddr) {
+		tree_evaluate (decl.ciaddr);
+		memcpy (&raw.ciaddr, decl.ciaddr -> value, decl.ciaddr -> len);
+	} else
+		memset (&raw.ciaddr, 0, sizeof raw.ciaddr);
+		
+	if (decl.yiaddr) {
+		tree_evaluate (decl.yiaddr);
+		memcpy (&raw.yiaddr,
+			decl.yiaddr -> value,
+			decl.yiaddr -> len);
+	} else
+		memset (&raw.yiaddr, 0, sizeof raw.yiaddr);
+	
+	if (decl.siaddr) {
+		tree_evaluate (decl.siaddr);
+		memcpy (&raw.siaddr,
+			decl.siaddr -> value,
+			decl.siaddr -> len);
+	} else
+		memset (&raw.siaddr, 0, sizeof raw.siaddr);
+	
+	if (decl.giaddr) {
+		tree_evaluate (decl.giaddr);
+		memcpy (&raw.giaddr,
+			decl.giaddr -> value,
+			decl.giaddr -> len);
+	} else
+		memset (&raw.giaddr, 0, sizeof raw.giaddr);
+	
+	raw.xid = xid++;
+	raw.xid = htons (raw.xid);
+	raw.secs = 0;
+	raw.flags = 0;
+	raw.hops = 0;
+	raw.op = BOOTREQUEST;
+		
+	to.sin_port = htons (2000);
+	to.sin_addr.s_addr = INADDR_BROADCAST;
+	to.sin_family = AF_INET;
+	to.sin_len = sizeof to;
+	memset (to.sin_zero, 0, sizeof to.sin_zero);
+	
+	note ("Sending dhcp request to %s, port %d",
+	      inet_ntoa (to.sin_addr), htons (to.sin_port));
+	
+	errno = 0;
+	result = sendto (sock, &raw,
+			 outgoing.packet_length,
+			 0, (struct sockaddr *)&to, sizeof to);
+	if (result < 0)
+		warn ("sendto: %m");
 }
