@@ -1,6 +1,6 @@
 /* dhclient.c
 
-   DHCP Client (less lame DHCP client). */
+   DHCP Client. */
 
 /*
  * Copyright (c) 1995, 1996, 1997 The Internet Software Consortium.
@@ -56,7 +56,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhclient.c,v 1.24 1997/02/19 10:57:24 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.25 1997/02/22 08:44:15 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -175,7 +175,8 @@ int main (argc, argv, envp)
 	/* If no broadcast interfaces were discovered, call the script
 	   and tell it so. */
 	if (!interfaces) {
-		script_init ((struct interface_info *)0, "NBI");
+		script_init ((struct interface_info *)0, "NBI",
+			     (struct string_list *)0);
 		script_go ((struct interface_info *)0);
 
 		/* Nothing more to do. */
@@ -183,7 +184,7 @@ int main (argc, argv, envp)
 	} else {
 		/* Call the script with the list of interfaces. */
 		for (ip = interfaces; ip; ip = ip -> next) {
-			script_init (ip, "PREINIT");
+			script_init (ip, "PREINIT", (struct string_list *)0);
 			script_go (ip);
 		}
 	}
@@ -202,7 +203,7 @@ int main (argc, argv, envp)
 	}
 
 	/* Start dispatching packets and timeouts... */
-	dispatch ();
+	dispatch (1);
 	/*NOTREACHED*/
 	return 0;
 }
@@ -213,6 +214,13 @@ static void usage ()
 }
 
 void cleanup ()
+{
+}
+
+void relay (ip, packet, length)
+	struct interface_info *ip;
+	struct dhcp_packet *packet;
+	int length;
 {
 }
 
@@ -260,6 +268,7 @@ void state_init (ip)
 	ip -> client -> destination = iaddr_broadcast;
 	ip -> client -> state = S_SELECTING;
 	ip -> client -> first_sending = cur_time;
+	ip -> client -> interval = 0;
 
 	/* Add an immediate timeout to cause the first DHCPDISCOVER packet
 	   to go out. */
@@ -291,7 +300,7 @@ void state_selecting (ip)
 		/* Check to see if we got an ARPREPLY for the address
 		   in this particular lease. */
 		if (!picked) {
-			script_init (ip, "ARPCHECK");
+			script_init (ip, "ARPCHECK", lp -> medium);
 			script_write_params (ip, "check_", lp);
 
 			/* If the ARPCHECK code detects another
@@ -323,6 +332,7 @@ void state_selecting (ip)
 	ip -> client -> destination = iaddr_broadcast;
 	ip -> client -> state = S_REQUESTING;
 	ip -> client -> first_sending = cur_time;
+	ip -> client -> interval = 0;
 
 	/* Make a DHCPREQUEST packet from the lease we picked. */
 	make_request (ip, picked);
@@ -408,12 +418,15 @@ void dhcpack (packet)
 	/* Write out the new lease. */
 	write_client_lease (ip, ip -> client -> new);
 
+	/* Remember the medium. */
+	ip -> client -> new -> medium = ip -> client -> medium;
+
 	/* Run the client script with the new parameters. */
 	script_init (ip, (ip -> client -> state == S_REQUESTING
 			  ? "BOUND"
 			  : (ip -> client -> state == S_RENEWING
 			     ? "RENEW"
-			     : "REBIND")));
+			     : "REBIND")), ip -> client -> new -> medium);
 	if (ip -> client -> active)
 		script_write_params (ip, "old_", ip -> client -> active);
 	script_write_params (ip, "new_", ip -> client -> new);
@@ -460,6 +473,7 @@ void state_bound (ip)
 		ip -> client -> destination = iaddr_broadcast;
 
 	ip -> client -> first_sending = cur_time;
+	ip -> client -> interval = 0;
 	ip -> client -> state = S_RENEWING;
 
 	/* Send the first packet immediately. */
@@ -564,8 +578,11 @@ void dhcpoffer (packet)
 		return;
 	}
 
+	/* Record the medium under which this lease was offered. */
+	lease -> medium = ip -> client -> medium;
+
 	/* Send out an ARP Request for the offered IP address. */
-	script_init (ip, "ARPSEND");
+	script_init (ip, "ARPSEND", lease -> medium);
 	script_write_params (ip, "check_", lease);
 	/* If the script can't send an ARP request without waiting, 
 	   we'll be waiting when we do the ARPCHECK, so don't wait now. */
@@ -728,6 +745,7 @@ void send_discover (ip)
 {
 	int result;
 	int interval;
+	int increase = 1;
 
 	/* Figure out how long it's been since we started transmitting. */
 	interval = cur_time - ip -> client -> first_sending;
@@ -739,26 +757,67 @@ void send_discover (ip)
 		return;
 	}
 
-	/* Exponential backoff with random element. */
-	if (!interval)
-		++interval;
-	else
-		interval += random () % interval;
+	/* If we're selecting media, try the whole list before doing
+	   the exponential backoff, but if we've already received an
+	   offer, stop looping, because we obviously have it right. */
+	if (!ip -> client -> offered_leases &&
+	    ip -> client -> config -> media) {
+		int fail = 0;
+	      again:
+		if (ip -> client -> medium) {
+			ip -> client -> medium =
+				ip -> client -> medium -> next;
+			increase = 0;
+		} 
+		if (!ip -> client -> medium) {
+			if (fail)
+				error ("No valid media types for %s!",
+				       ip -> name);
+			ip -> client -> medium =
+				ip -> client -> config -> media;
+			increase = 1;
+		}
+			
+		note ("Trying medium \"%s\" %d",
+		      ip -> client -> medium -> string, increase);
+		script_init (ip, "MEDIUM", ip -> client -> medium);
+		if (script_go (ip)) {
+			goto again;
+		}
+	}
 
-	/* Don't backoff past 30 seconds. */
-	if (interval > 30)
-		interval = 20 + random () % interval;
+	/* If we're supposed to increase the interval, do so.  If it's
+	   currently zero (i.e., we haven't sent any packets yet), set
+	   it to one; otherwise, add to it a random number between
+	   zero and two times itself.  On average, this means that it
+	   will double with every transmission. */
+	if (increase) {
+		if (!ip -> client -> interval)
+			ip -> client -> interval = 1;
+		else {
+			ip -> client -> interval +=
+				random () % (2 * ip -> client -> interval);
+		}
 
+		/* Don't backoff past 30 seconds. */
+		if (ip -> client -> interval > 30)
+			ip -> client -> interval =
+				15 + random () % ip -> client -> interval;
+	} else if (!ip -> client -> interval)
+		ip -> client -> interval = 1;
+		
 	/* If the backoff would take us to the panic timeout, just use that
 	   as the interval. */
-	if (cur_time + interval >
+	if (cur_time + ip -> client -> interval >
 	    ip -> client -> first_sending + ip -> client -> config -> timeout)
-		interval = (ip -> client -> first_sending +
-			    ip -> client -> config -> timeout) - cur_time + 1;
+		ip -> client -> interval =
+			(ip -> client -> first_sending +
+			 ip -> client -> config -> timeout) - cur_time + 1;
 
-	note ("DHCPDISCOVER on %s to %s port %d", ip -> name,
+	note ("DHCPDISCOVER on %s to %s port %d interval %ld",
+	      ip -> name,
 	      inet_ntoa (sockaddr_broadcast.sin_addr),
-	      ntohs (sockaddr_broadcast.sin_port));
+	      ntohs (sockaddr_broadcast.sin_port), ip -> client -> interval);
 
 	/* Send out a packet. */
 	result = send_packet (ip, (struct packet *)0,
@@ -769,7 +828,7 @@ void send_discover (ip)
 	if (result < 0)
 		warn ("send_packet: %m");
 
-	add_timeout (cur_time + interval, send_discover, ip);
+	add_timeout (cur_time + ip -> client -> interval, send_discover, ip);
 }
 
 /* state_panic gets called if we haven't received any offers in a preset
@@ -788,9 +847,12 @@ void state_panic (ip)
 	/* Run through the list of leases and see if one can be used. */
 	while (ip -> client -> active) {
 		if (ip -> client -> active -> expiry > cur_time) {
+			note ("Trying recorded lease %s",
+			      piaddr (ip -> client -> active -> address));
 			/* Run the client script with the existing
 			   parameters. */
-			script_init (ip, "TIMEOUT");
+			script_init (ip, "TIMEOUT",
+				     ip -> client -> active -> medium);
 			script_write_params (ip, "new_",
 					     ip -> client -> active);
 
@@ -830,6 +892,7 @@ void state_panic (ip)
 		for (lp = ip -> client -> leases; lp -> next; lp = lp -> next)
 			;
 		lp -> next = ip -> client -> active;
+		lp -> next -> next = (struct client_lease *)0;
 		ip -> client -> active = ip -> client -> leases;
 		ip -> client -> leases = ip -> client -> leases -> next;
 
@@ -843,7 +906,8 @@ void state_panic (ip)
 	/* No leases were available, or what was available didn't work, so
 	   tell the shell script that we failed to allocate an address,
 	   and try again later. */
-	script_init (ip, "FAIL");
+	note ("No working leases in persistent database - sleeping.\n");
+	script_init (ip, "FAIL", (struct string_list *)0);
 	script_go (ip);
 	ip -> client -> state = S_INIT;
 	add_timeout (cur_time + ip -> client -> config -> retry_interval,
@@ -866,7 +930,7 @@ void send_request (ip)
 	if (ip -> client -> state != S_REQUESTING &&
 	    cur_time > ip -> client -> active -> expiry) {
 		/* Run the client script with the new parameters. */
-		script_init (ip, "EXPIRE");
+		script_init (ip, "EXPIRE", (struct string_list *)0);
 		script_write_params (ip, "old_", ip -> client -> active);
 		script_go (ip);
 
@@ -876,20 +940,24 @@ void send_request (ip)
 	}
 
 	/* Do the exponential backoff... */
-	if (!interval)
-		++interval;
+	if (!ip -> client -> interval)
+		ip -> client -> interval = 1;
 	else
-		interval += random () % interval;
+		ip -> client -> interval +=
+			random () % (2 * ip -> client -> interval);
 
 	/* Don't backoff past 30 seconds. */
-	if (interval > 30)
-		interval = 20 + random () % interval;
+	if (ip -> client -> interval > 30)
+		ip -> client -> interval =
+			15 + random () % ip -> client -> interval;
 
 	/* If the backoff would take us to the expiry time, just set the
 	   timeout to the expiry time. */
 	if (ip -> client -> state != S_REQUESTING &&
-	    cur_time + interval > ip -> client -> active -> expiry)
-		interval = ip -> client -> active -> expiry - cur_time + 1;
+	    cur_time + ip -> client -> interval >
+	    ip -> client -> active -> expiry)
+		ip -> client -> interval =
+			ip -> client -> active -> expiry - cur_time + 1;
 
 	/* If the lease T2 time has elapsed, or if we're not yet bound,
 	   broadcast the DHCPREQUEST rather than unicasting. */
@@ -936,7 +1004,8 @@ void send_request (ip)
 	if (result < 0)
 		warn ("send_packet: %m");
 
-	add_timeout (cur_time + interval, send_request, ip);
+	add_timeout (cur_time + ip -> client -> interval,
+		     send_request, ip);
 }
 
 void send_decline (ip)
@@ -1367,6 +1436,9 @@ void write_client_lease (ip, lease)
 	if (lease -> server_name)
 		fprintf (leaseFile, "  server-name \"%s\";\n",
 			 lease -> filename);
+	if (lease -> medium)
+		fprintf (leaseFile, "  medium \"%s\";\n",
+			 lease -> medium -> string);
 	for (i = 0; i < 256; i++) {
 		if (lease -> options [i].len) {
 			fprintf (leaseFile,
@@ -1374,7 +1446,7 @@ void write_client_lease (ip, lease)
 				 dhcp_options [i].name,
 				 pretty_print_option
 				 (i, lease -> options [i].data,
-				  lease -> options [i].len));
+				  lease -> options [i].len, 1));
 		}
 	}
 	t = gmtime (&lease -> renewal);
@@ -1405,9 +1477,10 @@ void write_client_lease (ip, lease)
 char scriptName [256];
 FILE *scriptFile;
 
-void script_init (ip, reason)
+void script_init (ip, reason, medium)
 	struct interface_info *ip;
 	char *reason;
+	struct string_list *medium;
 {
 	strcpy (scriptName, "/tmp/dcsXXXXXX");
 	mktemp (scriptName);
@@ -1419,6 +1492,11 @@ void script_init (ip, reason)
 	if (ip) {
 		fprintf (scriptFile, "interface=\"%s\"\n", ip -> name);
 		fprintf (scriptFile, "export interface\n");
+	}
+	if (medium) {
+		fprintf (scriptFile, "medium=\"%s\"\n",
+			 ip -> client -> medium -> string);
+		fprintf (scriptFile, "export medium\n");
 	}
 	fprintf (scriptFile, "reason=\"%s\"\n", reason);
 	fprintf (scriptFile, "export reason\n");
@@ -1451,7 +1529,7 @@ void script_write_params (ip, prefix, lease)
 				 "%s%s=\"%s\"\n", prefix, s,
 				 pretty_print_option
 				 (i, lease -> options [i].data,
-				  lease -> options [i].len));
+				  lease -> options [i].len, 0));
 			fprintf (scriptFile, "export %s%s\n", prefix, s);
 		}
 	}
