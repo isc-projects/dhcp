@@ -58,13 +58,13 @@
 
 /* OMAPI protocol header, version 1.00 */
 typedef struct {
-	unsigned authlen;	/* Length of authenticator. */
-	unsigned authid;	/* Authenticator object ID. */
-	unsigned op;		/* Opcode. */
+	u_int32_t authlen;	/* Length of authenticator. */
+	u_int32_t authid;	/* Authenticator object ID. */
+	u_int32_t op;		/* Opcode. */
 	omapi_handle_t handle;	/* Handle of object being operated on,
                                    or zero. */
-	unsigned id;		/* Transaction ID. */
-	unsigned rid;	/* ID of transaction to which this is a response. */
+	u_int32_t id;		/* Transaction ID. */
+	u_int32_t rid;	/* ID of transaction to which this is a response. */
 } omapi_protocol_header_t;
 
 #define OMAPI_PROTOCOL_VERSION	100
@@ -99,9 +99,9 @@ typedef struct __omapi_message_object {
 	struct __omapi_message_object *next, *prev;
 	omapi_object_t *object;
 	omapi_object_t *notify_object;
-	unsigned authlen;
+	u_int32_t authlen;
 	omapi_typed_data_t *authenticator;
-	unsigned authid;
+	u_int32_t authid;
 	omapi_object_t *id_object;
 	unsigned op;
 	omapi_handle_t h;
@@ -111,8 +111,8 @@ typedef struct __omapi_message_object {
 
 typedef struct {
 	OMAPI_OBJECT_PREAMBLE;
-	unsigned header_size;		
-	unsigned protocol_version;
+	u_int32_t header_size;		
+	u_int32_t protocol_version;
 	u_int32_t next_xid;
 	omapi_object_t *authinfo; /* Default authinfo to use. */
 
