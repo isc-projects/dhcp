@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.49 2001/01/06 21:39:30 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.50 2001/01/19 11:10:32 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1061,13 +1061,30 @@ int supersede_lease (comp, lease, commit, propogate, pimmediate)
 
 void process_state_transition (struct lease *lease)
 {
+#if defined (FAILOVER_PROTOCOL)
+	dhcp_failover_state_t *peer;
+
+	if (lease && lease -> pool && lease -> pool -> failover_peer)
+		peer = lease -> pool -> failover_peer;
+	else
+		peer = (dhcp_failover_state_t *)0;
+#endif
+
 	/* If the lease was active and is now no longer active, but isn't
 	   released, then it just expired, so do the expiry event. */
 	if (lease -> next_binding_state != lease -> binding_state &&
-	    (lease -> binding_state == FTS_ACTIVE ||
-	     lease -> binding_state == FTS_BOOTP ||
-	     lease -> binding_state == FTS_RESERVED) &&
-	    lease -> next_binding_state != FTS_RELEASED) {
+	    ((
+#if defined (FAILOVER_PROTOCOL)
+		    peer &&
+		    lease -> binding_state == FTS_EXPIRED &&
+		    (lease -> next_binding_state == FTS_FREE ||
+		     lease -> next_binding_state == FTS_BACKUP)) ||
+	     (!peer &&
+#endif
+	      (lease -> binding_state == FTS_ACTIVE ||
+	       lease -> binding_state == FTS_BOOTP ||
+	       lease -> binding_state == FTS_RESERVED) &&
+	      lease -> next_binding_state != FTS_RELEASED))) {
 		ddns_removals (lease);
 		if (lease -> on_expiry) {
 			execute_statements ((struct binding_value **)0,
@@ -1092,10 +1109,19 @@ void process_state_transition (struct lease *lease)
 
 	/* If the lease was active and is now released, do the release
 	   event. */
-	if ((lease -> binding_state == FTS_ACTIVE ||
-	     lease -> binding_state == FTS_BOOTP ||
-	     lease -> binding_state == FTS_RESERVED) &&
-	    lease -> next_binding_state == FTS_RELEASED) {
+	if (lease -> next_binding_state != lease -> binding_state &&
+	    ((
+#if defined (FAILOVER_PROTOCOL)
+		    peer &&
+		    lease -> binding_state == FTS_RELEASED &&
+		    (lease -> next_binding_state == FTS_FREE ||
+		     lease -> next_binding_state == FTS_BACKUP)) ||
+	     (!peer &&
+#endif
+	      (lease -> binding_state == FTS_ACTIVE ||
+	       lease -> binding_state == FTS_BOOTP ||
+	       lease -> binding_state == FTS_RESERVED) &&
+	      lease -> next_binding_state == FTS_RELEASED))) {
 		ddns_removals (lease);
 		if (lease -> on_release) {
 			execute_statements ((struct binding_value **)0,
