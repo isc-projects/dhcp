@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.28 1998/03/16 06:19:46 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.29 1998/03/17 06:12:17 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -255,9 +255,15 @@ int cons_options (inpacket, outpacket, mms, options, agent_options,
 		/* Enforce a minimum packet size... */
 		if (main_buffer_size < (576 - DHCP_FIXED_LEN))
 			main_buffer_size = 576 - DHCP_FIXED_LEN;
-	} else if (bootpp)
-		main_buffer_size = 64;
-	else
+	} else if (bootpp) {
+		if (inpacket) {
+			main_buffer_size =
+				inpacket -> packet_length - DHCP_FIXED_LEN;
+			if (main_buffer_size < 64)
+				main_buffer_size = 64;
+		} else
+			main_buffer_size = 64;
+	} else
 		main_buffer_size = 576 - DHCP_FIXED_LEN;
 
 	/* Set a hard limit at the size of the output buffer. */
