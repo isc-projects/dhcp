@@ -66,7 +66,7 @@
 #include "tree.h"
 #include "hash.h"
 #include "inet.h"
-#include "systat.h"
+#include "sysconf.h"
 
 struct option_data {
 	int len;
@@ -825,7 +825,7 @@ int script_go PROTO ((struct interface_info *));
 struct client_lease *packet_to_lease PROTO ((struct packet *));
 void go_daemon PROTO ((void));
 void write_client_pid_file PROTO ((void));
-void status_message PROTO ((struct systat_header *, void *));
+void status_message PROTO ((struct sysconf_header *, void *));
 void client_location_changed PROTO ((void));
 
 /* db.c */
@@ -934,7 +934,7 @@ struct sockaddr_in *pick_name_server PROTO ((void));
 int inet_aton PROTO ((char *, struct in_addr *));
 #endif
 
-/* systat.c */
-void systat_startup PROTO ((void (*) (struct systat_header *, void *)));
-void systat_restart PROTO ((void *));
-void systat_message PROTO ((struct protocol *proto));
+/* sysconf.c */
+void sysconf_startup PROTO ((void (*) (struct sysconf_header *, void *)));
+void sysconf_restart PROTO ((void *));
+void sysconf_message PROTO ((struct protocol *proto));

@@ -1,6 +1,6 @@
 /* main.c
 
-   System status daemon...
+   System configuration status daemon...
 
    !!!Boy, howdy, is this ever not guaranteed not to change!!! */
 
@@ -44,15 +44,15 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: sysconfd.c,v 1.1 1997/09/16 18:21:11 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: sysconfd.c,v 1.2 1997/10/20 22:11:44 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
 
-int systat_fd;
+int sysconf_fd;
 
-struct systat_client {
-	struct systat_client *next;
+struct sysconf_client {
+	struct sysconf_client *next;
 	int fd;
 } *clients;
 
@@ -73,14 +73,14 @@ int main (argc, argv, envp)
 	char **envp;
 {
 	struct sockaddr_un name;
-	int systat_fd;
+	int sysconf_fd;
 	int pid;
 
 #ifdef SYSLOG_4_2
-	openlog ("systatd", LOG_NDELAY);
+	openlog ("sysconfd", LOG_NDELAY);
 	log_priority = LOG_DAEMON;
 #else
-	openlog ("systatd", LOG_NDELAY, LOG_DAEMON);
+	openlog ("sysconfd", LOG_NDELAY, LOG_DAEMON);
 #endif
 
 #if !(defined (DEBUG) || defined (SYSLOG_4_2) || defined (__CYGWIN32__))
@@ -88,24 +88,24 @@ int main (argc, argv, envp)
 #endif	
 
 	/* Make a socket... */
-	systat_fd = socket (AF_UNIX, SOCK_STREAM, 0);
-	if (systat_fd < 0)
-		error ("unable to create systat socket: %m");
+	sysconf_fd = socket (AF_UNIX, SOCK_STREAM, 0);
+	if (sysconf_fd < 0)
+		error ("unable to create sysconf socket: %m");
 
 	/* XXX for now... */
 	name.sun_family = PF_UNIX;
-	strcpy (name.sun_path, "/var/run/systat");
+	strcpy (name.sun_path, "/var/run/sysconf");
 	name.sun_len = ((sizeof name) - (sizeof name.sun_path) +
 			strlen (name.sun_path));
 	unlink (name.sun_path);
 
 	/* Bind to it... */
-	if (bind (systat_fd, (struct sockaddr *)&name, name.sun_len) < 0)
-		error ("can't bind to systat socket: %m");
+	if (bind (sysconf_fd, (struct sockaddr *)&name, name.sun_len) < 0)
+		error ("can't bind to sysconf socket: %m");
 
 	/* Listen for connections... */
-	if (listen (systat_fd, 1) < 0)
-		error ("can't listen on systat socket: %m");
+	if (listen (sysconf_fd, 1) < 0)
+		error ("can't listen on sysconf socket: %m");
 
 	/* Stop logging to stderr... */
 	log_perror = 0;
@@ -120,7 +120,7 @@ int main (argc, argv, envp)
 	(void)setsid ();
 
 	/* Set up a protocol structure for it... */
-	add_protocol ("listener", systat_fd, new_connection, 0);
+	add_protocol ("listener", sysconf_fd, new_connection, 0);
 
 	/* Kernel status stuff goes here... */
 
@@ -135,10 +135,10 @@ void new_connection (proto)
 {
 	struct sockaddr_un name;
 	int namelen;
-	struct systat_client *tmp;
+	struct sysconf_client *tmp;
 	int new_fd;
 
-	tmp = (struct systat_client *)malloc (sizeof *tmp);
+	tmp = (struct sysconf_client *)malloc (sizeof *tmp);
 	if (tmp < 0)
 		error ("Can't find memory for new client!");
 	memset (tmp, 0, sizeof *tmp);
@@ -158,11 +158,11 @@ void new_connection (proto)
 void client_input (proto)
 	struct protocol *proto;
 {
-	struct systat_header hdr;
+	struct sysconf_header hdr;
 	int status;
 	char *buf;
-	void (*handler) PROTO ((struct systat_header *, void *));
-	struct systat_client *client;
+	void (*handler) PROTO ((struct sysconf_header *, void *));
+	struct sysconf_client *client;
 
 	status = read (proto -> fd, &hdr, sizeof hdr);
 	if (status < 0) {

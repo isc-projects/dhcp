@@ -31,9 +31,9 @@
 #
 
 CATMANPAGES =
-SRCS   = systatd.c
-OBJS   = systatd.o
-PROG   = systatd
+SRCS   = sysconfd.c
+OBJS   = sysconfd.o
+PROG   = sysconfd
 MAN    = 
 
 DEBUG  = -g
@@ -44,14 +44,14 @@ CFLAGS = $(DEBUG) $(PREDEFINES) $(INCLUDES) $(COPTS)
 all:	$(PROG) $(CATMANPAGES)
 
 install: $(PROG) $(CATMANPAGES)
-	$(INSTALL) systatd $(BINDIR)
-	$(CHMOD) 755 $(BINDIR)/systatd
+	$(INSTALL) sysconfd $(BINDIR)
+	$(CHMOD) 755 $(BINDIR)/sysconfd
 	if [ ! -d $(ADMMANDIR) ]; then \
 	  mkdir $(ADMMANDIR); \
 	  chmod 755 $(ADMMANDIR); \
         fi
-#	$(MANINSTALL) $(MANFROM) systatd.cat8 $(MANTO) \
-#				$(ADMMANDIR)/systatd$(ADMMANEXT)
+#	$(MANINSTALL) $(MANFROM) sysconfd.cat8 $(MANTO) \
+#				$(ADMMANDIR)/sysconfd$(ADMMANEXT)
 
 clean:
 	-rm -f $(OBJS)
@@ -66,10 +66,10 @@ distclean: realclean
 # macros aren't available on older unices.   Catted man pages are
 # provided in the distribution so that this doesn't become a problem.
 
-systatd.cat8:	systatd.8
+sysconfd.cat8:	sysconfd.8
 	sed -e "s#ETCDIR#$(ETC)#" -e "s#DBDIR#$(VARDB)#" \
-		-e "s#RUNDIR#$(VARRUN)#" < systatd.8 \
-			| nroff -man >systatd.cat8
+		-e "s#RUNDIR#$(VARRUN)#" < sysconfd.8 \
+			| nroff -man >sysconfd.cat8
 
 $(PROG):	$(OBJS) $(DHCPLIB)
 	$(CC) $(LFLAGS) -o $(PROG) $(OBJS) $(DHCPLIB) $(LIBS)
