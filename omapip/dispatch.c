@@ -208,7 +208,7 @@ isc_result_t omapi_wait_for_completion (omapi_object_t *object,
 	
 	status = waiter -> waitstatus;
 	omapi_waiter_dereference (&waiter, MDL);
-	return status;;
+	return status;
 }
 
 isc_result_t omapi_one_dispatch (omapi_object_t *wo,
