@@ -36,6 +36,9 @@ dhclient - Dynamic Host Configuration Protocol Client
 [
 .B -c
 ]
+.B -r
+]
+[
 [
 .B -lf
 .I lease-file
@@ -173,6 +176,13 @@ facility.   The
 .B -q
 flag prevents any messages other than errors from being printed to the
 standard error descriptor.
+.PP
+The client normally doesn't release the current lease as it is not
+required by the DHCP protocol.  Some cable ISPs require their clients
+to notify the server if they wish to release an assigned IP address.
+The
+.B -r
+flag explicitly releases the current lease.
 .PP
 The DHCP client normally gets its configuration information from
 .B ETCDIR/dhclient.conf,
