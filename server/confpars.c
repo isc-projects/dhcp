@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.45.2.11 1999/05/27 17:47:16 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.45.2.12 1999/10/20 02:39:58 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1218,7 +1218,7 @@ struct lease *parse_lease_declaration (cfile)
 				token = peek_token (&val, cfile);
 				if (token == STRING) {
 					token = next_token (&val, cfile);
-					lease.uid_len = strlen (val) + 1;
+					lease.uid_len = strlen (val);
 					lease.uid = (unsigned char *)
 						malloc (lease.uid_len);
 					if (!lease.uid) {
@@ -1226,6 +1226,7 @@ struct lease *parse_lease_declaration (cfile)
 						return (struct lease *)0;
 					}
 					memcpy (lease.uid, val, lease.uid_len);
+					parse_semi (cfile);
 				} else {
 					lease.uid_len = 0;
 					lease.uid = parse_numeric_aggregate
