@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.38 1997/02/22 08:48:15 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.39 1997/02/22 10:22:05 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -52,7 +52,7 @@ static unsigned char dhcp_message [256];
 void dhcp (packet)
 	struct packet *packet;
 {
-	if (!locate_network (packet))
+	if (!locate_network (packet) && packet -> packet_type != DHCPREQUEST)
 		return;
 
 	switch (packet -> packet_type) {
@@ -172,13 +172,14 @@ void dhcprequest (packet)
 		cip.len = 4;
 		memcpy (cip.iabuf, &packet -> raw -> ciaddr.s_addr, 4);
 	}
+	subnet = find_subnet (cip);
 
 	/* Find the lease that matches the address requested by the
 	   client. */
-	subnet = find_subnet (cip);
-	lease = find_lease (packet, (subnet
-				     ? subnet -> shared_network
-				     : (struct shared_network *)0));
+	if (packet -> shared_network)
+		lease = find_lease (packet, packet -> shared_network);
+	else
+		lease = (struct lease *)0;
 
 	note ("DHCPREQUEST for %s from %s via %s",
 	      piaddr (cip),
@@ -189,6 +190,12 @@ void dhcprequest (packet)
 	      ? inet_ntoa (packet -> raw -> giaddr)
 	      : packet -> interface -> name);
 
+	/* If we found a lease for the client but it's not the one the
+	   client asked for, NAK it. */
+	if (lease && !addr_eq (lease -> ip_addr, cip)) {
+		nak_lease (packet, &cip);
+		return;
+	}
 
 	/* If a client on a given network wants to request a lease on
 	   an address on a different network, NAK it.   If the Requested
