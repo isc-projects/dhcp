@@ -137,6 +137,10 @@ extern int h_errno;
 # define HAVE_SETFD
 #endif
 
+#if defined (SIOCGIFHWADDR) && !defined (HAVE_SIOCGIFHWADDR)
+# define HAVE_SIOCGIFHWADDR
+#endif
+
 #if !defined (USE_LPF)
 # if defined (USE_DEFAULT_NETWORK)
 #  define USE_SOCKETS

@@ -296,10 +296,6 @@
 # define HAVE_SO_BINDTODEVICE
 #endif
 
-#if defined (SIOCGIFHWADDR) && !defined (HAVE_SIOCGIFHWADDR)
-# define HAVE_SIOCGIFHWADDR
-#endif
-
 #if defined (AF_LINK) && !defined (HAVE_AF_LINK)
 # define HAVE_AF_LINK
 #endif
