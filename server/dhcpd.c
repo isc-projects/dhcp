@@ -135,6 +135,7 @@ int main (argc, argv, envp)
 	discover_interfaces ();
 
 	/* Write a pid file. */
+	unlink (_PATH_DHCPD_PID);
 	if ((i = open (_PATH_DHCPD_PID, O_WRONLY | O_CREAT, 0640)) >= 0) {
 		char obuf [20];
 		sprintf (obuf, "%d\n", (int)getpid ());
