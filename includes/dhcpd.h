@@ -224,8 +224,7 @@ struct lease {
 	unsigned char uid_buf [32];
 	char *hostname;
 	char *client_hostname;
-	char *ddns_fwd_name;
-	char *ddns_rev_name;
+	struct binding *bindings;
 	struct host_decl *host;
 	struct subnet *subnet;
 	struct pool *pool;
@@ -871,6 +870,11 @@ int hashed_option_space_encapsulate PROTO ((struct data_string *,
 					    struct option_state *,
 					    struct option_state *,
 					    struct universe *));
+int nwip_option_space_encapsulate PROTO ((struct data_string *,
+					  struct packet *, struct lease *,
+					  struct option_state *,
+					  struct option_state *,
+					  struct universe *));
 
 /* errwarn.c */
 void log_fatal PROTO ((const char *, ...))
@@ -957,11 +961,18 @@ void parse_option_space_decl PROTO ((struct parse *));
 int parse_option_code_definition PROTO ((struct parse *, struct option *));
 int parse_cshl PROTO ((struct data_string *, struct parse *));
 int parse_executable_statement PROTO ((struct executable_statement **,
-				       struct parse *, int *));
+				       struct parse *, int *,
+				       enum expression_context));
 int parse_executable_statements PROTO ((struct executable_statement **,
-					struct parse *, int *));
+					struct parse *, int *,
+					enum expression_context));
 int parse_on_statement PROTO ((struct executable_statement **,
 			       struct parse *, int *));
+int parse_switch_statement PROTO ((struct executable_statement **,
+				   struct parse *, int *));
+int parse_case_statement PROTO ((struct executable_statement **,
+				 struct parse *, int *,
+				 enum expression_context));
 int parse_if_statement PROTO ((struct executable_statement **,
 			       struct parse *, int *));
 int parse_boolean_expression PROTO ((struct expression **,
@@ -1041,9 +1052,10 @@ int is_dns_expression PROTO ((struct expression *));
 int is_boolean_expression PROTO ((struct expression *));
 int is_data_expression PROTO ((struct expression *));
 int is_numeric_expression PROTO ((struct expression *));
+int is_compound_expression PROTO ((struct expression *));
 int op_precedence PROTO ((enum expr_op, enum expr_op));
 enum expression_context op_context PROTO ((enum expr_op));
-int write_expression (FILE *, struct expression *, int, int);
+int write_expression (FILE *, struct expression *, int, int, int);
 
 /* dhcp.c */
 extern int outstanding_pings;
@@ -1150,6 +1162,12 @@ int executable_statement_reference PROTO ((struct executable_statement **,
 int executable_statement_dereference PROTO ((struct executable_statement **,
 					     const char *));
 void write_statements (FILE *, struct executable_statement *, int);
+struct executable_statement *find_matching_case PROTO ((struct packet *,
+							struct lease *,
+							struct option_state *,
+							struct option_state *,
+							struct expression *,
+					      struct executable_statement *));
 
 int packet_allocate PROTO ((struct packet **, const char *));
 int packet_reference PROTO ((struct packet **, struct packet *, const char *));
@@ -1175,6 +1193,9 @@ int token_indent_data_string (FILE *, int, int, const char *, const char *,
 int token_print_indent (FILE *, int, int,
 			const char *, const char *, const char *);
 void indent_spaces (FILE *, int);
+#if defined (NSUPDATE)
+void print_dns_status (int, ns_updque *);
+#endif
 
 /* socket.c */
 #if defined (USE_SOCKET_SEND) || defined (USE_SOCKET_RECEIVE) \
