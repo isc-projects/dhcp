@@ -22,11 +22,10 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.84 1999/09/28 23:55:55 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.85 1999/10/01 03:37:29 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
-#include "dhctoken.h"
 
 static TIME parsed_time;
 
@@ -34,22 +33,26 @@ static TIME parsed_time;
    parameters :== <nil> | parameter | parameters parameter
    declarations :== <nil> | declaration | declarations declaration */
 
-int readconf ()
+isc_result_t readconf ()
 {
-	FILE *cfile;
+	int file;
+	struct parse *cfile;
 	char *val;
 	enum dhcp_token token;
 	int declaration = 0;
-
-	new_parse (path_dhcpd_conf);
+	int status;
 
 	/* Set up the initial dhcp option universe. */
 	initialize_universes ();
 
 	root_group.authoritative = 0;
 
-	if ((cfile = fopen (path_dhcpd_conf, "r")) == NULL)
+	if ((file = open (path_dhcpd_conf, O_RDONLY)) < 0)
 		log_fatal ("Can't open %s: %m", path_dhcpd_conf);
+
+	cfile = (struct parse *)0;
+	new_parse (&cfile, file, (char *)0, 0, path_dhcpd_conf);
+
 	do {
 		token = peek_token (&val, cfile);
 		if (token == EOF)
@@ -61,7 +64,11 @@ int readconf ()
 	} while (1);
 	token = next_token (&val, cfile); /* Clear the peek buffer */
 
-	return !warnings_occurred;
+	status = cfile -> warnings_occurred ? ISC_R_BADPARSE : ISC_R_SUCCESS;
+
+	end_parse (&cfile);
+	close (file);
+	return status;
 }
 
 /* lease-file :== lease-declarations EOF
@@ -69,13 +76,13 @@ int readconf ()
    		     | lease-declaration
 		     | lease-declarations lease-declaration */
 
-void read_leases ()
+isc_result_t read_leases ()
 {
-	FILE *cfile;
+	struct parse *cfile;
+	int file;
 	char *val;
 	enum dhcp_token token;
-
-	new_parse (path_dhcpd_db);
+	isc_result_t status;
 
 	/* Open the lease file.   If we can't open it, fail.   The reason
 	   for this is that although on initial startup, the absence of
@@ -86,13 +93,16 @@ void read_leases ()
 	   human has corrected the database problem, then we are left
 	   thinking that no leases have been assigned to anybody, which
 	   could create severe network chaos. */
-	if ((cfile = fopen (path_dhcpd_db, "r")) == NULL) {
+	if ((file = open (path_dhcpd_db, O_RDONLY)) < 0) {
 		log_error ("Can't open lease database %s: %m -- %s",
 			   path_dhcpd_db,
 			   "check for failed database rewrite attempt!");
 		log_error ("Please read the dhcpd.leases manual page if you");
  		log_fatal ("don't know what to do about this.");
 	}
+
+	cfile = (struct parse *)0;
+	new_parse (&cfile, file, (char *)0, 0, path_dhcpd_db);
 
 	do {
 		token = next_token (&val, cfile);
@@ -116,15 +126,25 @@ void read_leases ()
 						(&lease -> on_release,
 						 "read_leases");
 			} else
-				parse_warn ("possibly corrupt lease file");
+				parse_warn (cfile,
+					    "possibly corrupt lease file");
 		} else if (token == HOST) {
 			parse_host_declaration (cfile, &root_group);
+		} else if (token == GROUP) {
+			parse_group_declaration (cfile, &root_group);
 		} else {
 			log_error ("Corrupt lease file - possible data loss!");
 			skip_to_semi (cfile);
 		}
 
 	} while (1);
+
+	status = cfile -> warnings_occurred ? ISC_R_BADPARSE : ISC_R_SUCCESS;
+
+	end_parse (&cfile);
+	close (file);
+
+	return status;
 }
 
 /* statement :== parameter | declaration
@@ -161,7 +181,7 @@ void read_leases ()
 		 | RANGE address-range-declaration */
 
 int parse_statement (cfile, group, type, host_decl, declaration)
-	FILE *cfile;
+	struct parse *cfile;
 	struct group *group;
 	int type;
 	struct host_decl *host_decl;
@@ -197,7 +217,8 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		if (type != HOST_DECL && type != CLASS_DECL)
 			parse_host_declaration (cfile, group);
 		else {
-			parse_warn ("host declarations not allowed here.");
+			parse_warn (cfile,
+				    "host declarations not allowed here.");
 			skip_to_semi (cfile);
 		}
 		return 1;
@@ -207,7 +228,8 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		if (type != HOST_DECL && type != CLASS_DECL)
 			parse_group_declaration (cfile, group);
 		else {
-			parse_warn ("group declarations not allowed here.");
+			parse_warn (cfile,
+				    "group declarations not allowed here.");
 			skip_to_semi (cfile);
 		}
 		return 1;
@@ -223,7 +245,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		    type == HOST_DECL ||
 		    type == SUBNET_DECL ||
 		    type == CLASS_DECL) {
-			parse_warn ("shared-network parameters not %s.",
+			parse_warn (cfile, "shared-network parameters not %s.",
 				    "allowed here");
 			skip_to_semi (cfile);
 			break;
@@ -236,7 +258,8 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		next_token (&val, cfile);
 		if (type == HOST_DECL || type == SUBNET_DECL ||
 		    type == CLASS_DECL) {
-			parse_warn ("subnet declarations not allowed here.");
+			parse_warn (cfile,
+				    "subnet declarations not allowed here.");
 			skip_to_semi (cfile);
 			return 1;
 		}
@@ -283,7 +306,8 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 	      case VENDOR_CLASS:
 		next_token (&val, cfile);
 		if (type == CLASS_DECL) {
-			parse_warn ("class declarations not allowed here.");
+			parse_warn (cfile,
+				    "class declarations not allowed here.");
 			skip_to_semi (cfile);
 			break;
 		}
@@ -293,7 +317,8 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 	      case USER_CLASS:
 		next_token (&val, cfile);
 		if (type == CLASS_DECL) {
-			parse_warn ("class declarations not allowed here.");
+			parse_warn (cfile,
+				    "class declarations not allowed here.");
 			skip_to_semi (cfile);
 			break;
 		}
@@ -303,7 +328,8 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 	      case CLASS:
 		next_token (&val, cfile);
 		if (type == CLASS_DECL) {
-			parse_warn ("class declarations not allowed here.");
+			parse_warn (cfile,
+				    "class declarations not allowed here.");
 			skip_to_semi (cfile);
 			break;
 		}
@@ -313,7 +339,8 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 	      case SUBCLASS:
 		next_token (&val, cfile);
 		if (type == CLASS_DECL) {
-			parse_warn ("class declarations not allowed here.");
+			parse_warn (cfile,
+				    "class declarations not allowed here.");
 			skip_to_semi (cfile);
 			break;
 		}
@@ -326,7 +353,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		if (host_decl)
 			host_decl -> interface = hardware;
 		else
-			parse_warn ("hardware address parameter %s",
+			parse_warn (cfile, "hardware address parameter %s",
 				    "not allowed here.");
 		break;
 
@@ -337,7 +364,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		if (host_decl)
 			host_decl -> fixed_addr = cache;
 		else {
-			parse_warn ("fixed-address parameter not %s",
+			parse_warn (cfile, "fixed-address parameter not %s",
 				    "allowed here.");
 			option_cache_dereference (&cache, "parse_statement");
 		}
@@ -346,10 +373,10 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 	      case POOL:
 		next_token (&val, cfile);
 		if (type != SUBNET_DECL && type != SHARED_NET_DECL) {
-			parse_warn ("pool declared outside of network");
+			parse_warn (cfile, "pool declared outside of network");
 		}
 		if (type == POOL_DECL) {
-			parse_warn ("pool declared within pool.");
+			parse_warn (cfile, "pool declared within pool.");
 		}
 		parse_pool_statement (cfile, group, type);
 		return declaration;
@@ -357,7 +384,8 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 	      case RANGE:
 		next_token (&val, cfile);
 		if (type != SUBNET_DECL || !group -> subnet) {
-			parse_warn ("range declaration not allowed here.");
+			parse_warn (cfile,
+				    "range declaration not allowed here.");
 			skip_to_semi (cfile);
 			return declaration;
 		}
@@ -372,7 +400,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 			group -> authoritative = 0;
 			goto authoritative;
 		      default:
-			parse_warn ("expecting assertion");
+			parse_warn (cfile, "expecting assertion");
 			skip_to_semi (cfile);
 			break;
 		}
@@ -382,7 +410,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		group -> authoritative = 1;
 	      authoritative:
 		if (type == HOST_DECL)
-			parse_warn ("authority makes no sense here."); 
+			parse_warn (cfile, "authority makes no sense here."); 
 		parse_semi (cfile);
 		break;
 
@@ -398,7 +426,8 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		token = peek_token (&val, cfile);
 		if (token == SPACE) {
 			if (type != ROOT_GROUP) {
-				parse_warn ("option space definitions %s",
+				parse_warn (cfile,
+					    "option space definitions %s",
 					    " may not be scoped.");
 				skip_to_semi (cfile);
 				free_option (option, "parse_statement");
@@ -413,7 +442,8 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 			token = peek_token (&val, cfile);
 			if (token == CODE) {
 				if (type != ROOT_GROUP) {
-					parse_warn ("option definitions%s%s",
+					parse_warn (cfile,
+						    "option definitions%s%s",
 						    " may not be scoped.");
 					skip_to_semi (cfile);
 					free_option (option,
@@ -431,7 +461,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 			/* If this wasn't an option code definition, don't
 			   allow an unknown option. */
 			if (option -> code == -1) {
-				parse_warn ("unknown option %s.%s",
+				parse_warn (cfile, "unknown option %s.%s",
 					    option -> universe -> name,
 					    option -> name);
 				skip_to_semi (cfile);
@@ -476,20 +506,20 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 			lose = 0;
 			if (!parse_executable_statement (&et, cfile, &lose)) {
 				if (!lose) {
-					if (declaration)
-						parse_warn ("expecting a %s.",
-							    "declaration");
-					else
-						parse_warn ("expecting a%s%s.",
-							    " parameter",
-							    " or declaration");
+				    if (declaration)
+					parse_warn (cfile,
+						    "expecting a declaration");
+				    else
+					parse_warn (cfile,
+						    "expecting a parameter %s"
+						    "or declaration");
 					skip_to_semi (cfile);
 				}
 				return declaration;
 			}
 		}
 		if (!et) {
-			parse_warn ("expecting a %sdeclaration",
+			parse_warn (cfile, "expecting a %sdeclaration",
 				    declaration ? "" :  "parameter or ");
 			return declaration;
 		}
@@ -534,7 +564,8 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 	}
 
 	if (declaration) {
-		parse_warn ("parameters not allowed after first declaration.");
+		parse_warn (cfile,
+			    "parameters not allowed after first declaration.");
 		return 1;
 	}
 
@@ -543,7 +574,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 
 #if defined (FAILOVER_PROTOCOL)
 void parse_failover_peer (cfile, group, type)
-	FILE *cfile;
+	struct parse *cfile;
 	struct group *group;
 	int type;
 {
@@ -554,7 +585,8 @@ void parse_failover_peer (cfile, group, type)
 	char *name;
 
 	if (type != SHARED_NET_DECL && type != ROOT_GROUP) {
-		parse_warn ("failover peer statements not in shared-network%s"
+		parse_warn (cfile,
+			    "failover peer statements not in shared-network%s"
 			    " declaration or at top level.");
 		skip_to_semi (cfile);
 		return;
@@ -562,7 +594,7 @@ void parse_failover_peer (cfile, group, type)
 
 	token = next_token (&val, cfile);
 	if (token != PEER) {
-		parse_warn ("expecting peer keyword");
+		parse_warn (cfile, "expecting peer keyword");
 		skip_to_semi (cfile);
 		return;
 	}
@@ -573,7 +605,7 @@ void parse_failover_peer (cfile, group, type)
 		if (!peer -> name)
 			log_fatal ("no memory for peer name %s", name);
 	} else {
-		parse_warn ("expecting identifier or left brace");
+		parse_warn (cfile, "expecting identifier or left brace");
 		skip_to_semi (cfile);
 		return;
 	}
@@ -585,11 +617,11 @@ void parse_failover_peer (cfile, group, type)
 	if (token == SEMI) {
 		dfree (name, "peer name");
 		if (type != SHARED_NET_DECL)
-			parse_warn ("failover peer reference not %s",
+			parse_warn (cfile, "failover peer reference not %s",
 				    "in shared-network declaration");
 		else {
 			if (!peer) {
-				parse_warn ("reference to unknown%s%s",
+				parse_warn (cfile, "reference to unknown%s%s",
 					    " failover peer ", name);
 				return;
 			}
@@ -599,7 +631,7 @@ void parse_failover_peer (cfile, group, type)
 		return;
 	} else if (token == MY || token == PARTNER) {
 		if (!peer) {
-			parse_warn ("reference to unknown%s%s",
+			parse_warn (cfile, "reference to unknown%s%s",
 				    " failover peer ", name);
 			return;
 		}
@@ -612,13 +644,13 @@ void parse_failover_peer (cfile, group, type)
 			parse_semi (cfile);
 		return;
 	} else if (token != LBRACE) {
-		parse_warn ("expecting left brace");
+		parse_warn (cfile, "expecting left brace");
 		skip_to_semi (cfile);
 	}
 
 	/* Make sure this isn't a redeclaration. */
 	if (peer) {
-		parse_warn ("redeclaration of failover peer %s", name);
+		parse_warn (cfile, "redeclaration of failover peer %s", name);
 		skip_to_rbrace (cfile, 1);
 		return;
 	}
@@ -652,7 +684,7 @@ void parse_failover_peer (cfile, group, type)
 		      case PORT:
 			token = next_token (&val, cfile);
 			if (token != NUMBER) {
-				parse_warn ("expecting number");
+				parse_warn (cfile, "expecting number");
 				skip_to_rbrace (cfile, 1);
 			}
 			peer -> port = atoi (val);
@@ -669,13 +701,14 @@ void parse_failover_peer (cfile, group, type)
 		      parse_idle:
 			token = next_token (&val, cfile);
 			if (token != NUMBER) {
-				parse_warn ("expecting number.");
+				parse_warn (cfile, "expecting number.");
 				skip_to_rbrace (cfile, 1);
 				return;
 			}
 			*tp = atoi (val);
 		      default:
-			parse_warn ("invalid statement in peer declaration");
+			parse_warn (cfile,
+				    "invalid statement in peer declaration");
 			skip_to_rbrace (cfile, 1);
 			return;
 		}
@@ -688,7 +721,7 @@ void parse_failover_peer (cfile, group, type)
 }
 
 enum failover_state parse_failover_state (cfile)
-	FILE *cfile;
+	struct parse *cfile;
 {
 	enum dhcp_token token;
 	char *val;
@@ -706,7 +739,7 @@ enum failover_state parse_failover_state (cfile)
 	      case RECOVER:
 		return recover;
 	      default:
-		parse_warn ("unknown failover state");
+		parse_warn (cfile, "unknown failover state");
 		break;
 	}
 	return invalid_state;
@@ -714,7 +747,7 @@ enum failover_state parse_failover_state (cfile)
 #endif /* defined (FAILOVER_PROTOCOL) */
 
 void parse_pool_statement (cfile, group, type)
-	FILE *cfile;
+	struct parse *cfile;
 	struct group *group;
 	int type;
 {
@@ -754,7 +787,8 @@ void parse_pool_statement (cfile, group, type)
 				permit -> type = permit_unknown_clients;
 			      get_clients:
 				if (next_token (&val, cfile) != CLIENTS) {
-					parse_warn ("expecting \"clients\"");
+					parse_warn (cfile,
+						    "expecting \"clients\"");
 					skip_to_semi (cfile);
 					free_permit (permit,
 						     "parse_pool_statement");
@@ -787,7 +821,8 @@ void parse_pool_statement (cfile, group, type)
 			      case DYNAMIC:
 				permit -> type = permit_dynamic_bootp_clients;
 				if (next_token (&val, cfile) != BOOTP) {
-					parse_warn ("expecting \"bootp\"");
+					parse_warn (cfile,
+						    "expecting \"bootp\"");
 					skip_to_semi (cfile);
 					free_permit (permit,
 						     "parse_pool_statement");
@@ -797,14 +832,15 @@ void parse_pool_statement (cfile, group, type)
 				
 			      case MEMBERS:
 				if (next_token (&val, cfile) != OF) {
-					parse_warn ("expecting \"of\"");
+					parse_warn (cfile, "expecting \"of\"");
 					skip_to_semi (cfile);
 					free_permit (permit,
 						     "parse_pool_statement");
 					continue;
 				}
 				if (next_token (&val, cfile) != STRING) {
-					parse_warn ("expecting class name.");
+					parse_warn (cfile,
+						    "expecting class name.");
 					skip_to_semi (cfile);
 					free_permit (permit,
 						     "parse_pool_statement");
@@ -813,11 +849,12 @@ void parse_pool_statement (cfile, group, type)
 				permit -> type = permit_class;
 				permit -> class = find_class (val);
 				if (!permit -> class)
-					parse_warn ("no such class: %s", val);
+					parse_warn (cfile,
+						    "no such class: %s", val);
 				break;
 
 			      default:
-				parse_warn ("expecting permit type.");
+				parse_warn (cfile, "expecting permit type.");
 				skip_to_semi (cfile);
 				break;
 			}
@@ -859,7 +896,7 @@ void parse_pool_statement (cfile, group, type)
 /* boolean :== ON SEMI | OFF SEMI | TRUE SEMI | FALSE SEMI */
 
 int parse_boolean (cfile)
-	FILE *cfile;
+	struct parse *cfile;
 {
 	enum dhcp_token token;
 	char *val;
@@ -873,7 +910,8 @@ int parse_boolean (cfile)
 		 || !strcasecmp (val, "off"))
 		rv = 0;
 	else {
-		parse_warn ("boolean value (true/false/on/off) expected");
+		parse_warn (cfile,
+			    "boolean value (true/false/on/off) expected");
 		skip_to_semi (cfile);
 		return 0;
 	}
@@ -885,14 +923,14 @@ int parse_boolean (cfile)
    statement and return zero; otherwise, return 1. */
 
 int parse_lbrace (cfile)
-	FILE *cfile;
+	struct parse *cfile;
 {
 	enum dhcp_token token;
 	char *val;
 
 	token = next_token (&val, cfile);
 	if (token != LBRACE) {
-		parse_warn ("expecting left brace.");
+		parse_warn (cfile, "expecting left brace.");
 		skip_to_semi (cfile);
 		return 0;
 	}
@@ -903,7 +941,7 @@ int parse_lbrace (cfile)
 /* host-declaration :== hostname RBRACE parameters declarations LBRACE */
 
 void parse_host_declaration (cfile, group)
-	FILE *cfile;
+	struct parse *cfile;
 	struct group *group;
 {
 	char *val;
@@ -943,7 +981,7 @@ void parse_host_declaration (cfile, group)
 		}
 		if (token == EOF) {
 			token = next_token (&val, cfile);
-			parse_warn ("unexpected end of file");
+			parse_warn (cfile, "unexpected end of file");
 			break;
 		}
 		/* If the host declaration was created by the server,
@@ -970,7 +1008,8 @@ void parse_host_declaration (cfile, group)
 			token = next_token (&val, cfile);
 			token = next_token (&val, cfile);
 			if (token != STRING && !is_identifier (token)) {
-				parse_warn ("expecting string or identifier.");
+				parse_warn (cfile,
+					    "expecting string or identifier.");
 				skip_to_rbrace (cfile, 1);
 				break;
 			}
@@ -978,9 +1017,8 @@ void parse_host_declaration (cfile, group)
 			      hash_lookup (group_name_hash,
 					   val, strlen (val)));
 			if (!go) {
-				parse_warn
-					("unknown group %s in host %s",
-					 val, host -> name);
+			    parse_warn (cfile, "unknown group %s in host %s",
+					val, host -> name);
 			} else {
 				if (host -> named_group)
 					omapi_object_dereference
@@ -1020,7 +1058,8 @@ void parse_host_declaration (cfile, group)
 					(cfile,
 					 (unsigned char *)0, &len, ':', 16, 8);
 				if (!t) {
-					parse_warn ("expecting hex list.");
+					parse_warn (cfile,
+						    "expecting hex list.");
 					skip_to_semi (cfile);
 				}
 				s = (char *)t;
@@ -1077,7 +1116,8 @@ void parse_host_declaration (cfile, group)
 				
 		status = enter_host (host, dynamicp, 0);
 		if (status != ISC_R_SUCCESS)
-			parse_warn ("host %s: %s", isc_result_totext (status));
+			parse_warn (cfile,
+				    "host %s: %s", isc_result_totext (status));
 	}
 }
 
@@ -1085,7 +1125,7 @@ void parse_host_declaration (cfile, group)
 */
 
 struct class *parse_class_declaration (cfile, group, type)
-	FILE *cfile;
+	struct parse *cfile;
 	struct group *group;
 	int type;
 {
@@ -1102,7 +1142,7 @@ struct class *parse_class_declaration (cfile, group, type)
 
 	token = next_token (&val, cfile);
 	if (token != STRING) {
-		parse_warn ("Expecting class name");
+		parse_warn (cfile, "Expecting class name");
 		skip_to_semi (cfile);
 		return (struct class *)0;
 	}
@@ -1120,7 +1160,7 @@ struct class *parse_class_declaration (cfile, group, type)
 	/* If this _is_ a subclass, there _must_ be a class with the
 	   same name. */
 	if (!pc && (type == 0 || type == 1 || type == 3)) {
-		parse_warn ("no class named %s", val);
+		parse_warn (cfile, "no class named %s", val);
 		skip_to_semi (cfile);
 		return (struct class *)0;
 	}
@@ -1169,7 +1209,7 @@ struct class *parse_class_declaration (cfile, group, type)
 			if (!parse_cshl (&data, cfile))
 				return (struct class *)0;
 		} else {
-			parse_warn ("Expecting string or hex list.");
+			parse_warn (cfile, "Expecting string or hex list.");
 			return (struct class *)0;
 		}
 	}
@@ -1268,16 +1308,17 @@ struct class *parse_class_declaration (cfile, group, type)
 			break;
 		} else if (token == EOF) {
 			token = next_token (&val, cfile);
-			parse_warn ("unexpected end of file");
+			parse_warn (cfile, "unexpected end of file");
 			break;
 		} else if (token == MATCH) {
 			if (pc) {
-				parse_warn ("invalid match in subclass.");
+				parse_warn (cfile,
+					    "invalid match in subclass.");
 				skip_to_semi (cfile);
 				break;
 			}
 			if (class -> expr) {
-				parse_warn ("can't override match.");
+				parse_warn (cfile, "can't override match.");
 				skip_to_semi (cfile);
 				break;
 			}
@@ -1296,21 +1337,24 @@ struct class *parse_class_declaration (cfile, group, type)
 			parse_semi (cfile);
 		} else if (token == SPAWN) {
 			if (pc) {
-				parse_warn ("invalid spawn in subclass.");
+				parse_warn (cfile,
+					    "invalid spawn in subclass.");
 				skip_to_semi (cfile);
 				break;
 			}
 			token = next_token (&val, cfile);
 			token = next_token (&val, cfile);
 			if (token != WITH) {
-				parse_warn ("expecting with after spawn");
+				parse_warn (cfile,
+					    "expecting with after spawn");
 				skip_to_semi (cfile);
 				break;
 			}
 			class -> spawning = 1;
 		      submatch:
 			if (class -> submatch) {
-				parse_warn ("can't override existing %s.",
+				parse_warn (cfile,
+					    "can't override existing %s.",
 					    "submatch/spawn");
 				skip_to_semi (cfile);
 				break;
@@ -1328,14 +1372,14 @@ struct class *parse_class_declaration (cfile, group, type)
 			next_token (&val, cfile);
 			token = next_token (&val, cfile);
 			if (token != LIMIT) {
-				parse_warn ("expecting \"limit\"");
+				parse_warn (cfile, "expecting \"limit\"");
 				if (token != SEMI)
 					skip_to_semi (cfile);
 				break;
 			}
 			token = next_token (&val, cfile);
 			if (token != NUMBER) {
-				parse_warn ("expecting a number");
+				parse_warn (cfile, "expecting a number");
 				if (token != SEMI)
 					skip_to_semi (cfile);
 				break;
@@ -1377,7 +1421,7 @@ struct class *parse_class_declaration (cfile, group, type)
 			hostname LBRACE declarations parameters RBRACE */
 
 void parse_shared_net_declaration (cfile, group)
-	FILE *cfile;
+	struct parse *cfile;
 	struct group *group;
 {
 	char *val;
@@ -1401,7 +1445,7 @@ void parse_shared_net_declaration (cfile, group)
 		token = next_token (&val, cfile);
 
 		if (val [0] == 0) {
-			parse_warn ("zero-length shared network name");
+			parse_warn (cfile, "zero-length shared network name");
 			val = "<no-name-given>";
 		}
 		name = malloc (strlen (val) + 1);
@@ -1423,14 +1467,15 @@ void parse_shared_net_declaration (cfile, group)
 		if (token == RBRACE) {
 			token = next_token (&val, cfile);
 			if (!share -> subnets) {
-				parse_warn ("empty shared-network decl");
+				parse_warn (cfile,
+					    "empty shared-network decl");
 				return;
 			}
 			enter_shared_network (share);
 			return;
 		} else if (token == EOF) {
 			token = next_token (&val, cfile);
-			parse_warn ("unexpected end of file");
+			parse_warn (cfile, "unexpected end of file");
 			break;
 		}
 
@@ -1445,7 +1490,7 @@ void parse_shared_net_declaration (cfile, group)
 	net NETMASK netmask RBRACE parameters declarations LBRACE */
 
 void parse_subnet_declaration (cfile, share)
-	FILE *cfile;
+	struct parse *cfile;
 	struct shared_network *share;
 {
 	char *val;
@@ -1473,7 +1518,7 @@ void parse_subnet_declaration (cfile, share)
 
 	token = next_token (&val, cfile);
 	if (token != NETMASK) {
-		parse_warn ("Expecting netmask");
+		parse_warn (cfile, "Expecting netmask");
 		skip_to_semi (cfile);
 		return;
 	}
@@ -1497,7 +1542,7 @@ void parse_subnet_declaration (cfile, share)
 			break;
 		} else if (token == EOF) {
 			token = next_token (&val, cfile);
-			parse_warn ("unexpected end of file");
+			parse_warn (cfile, "unexpected end of file");
 			break;
 		}
 		declaration = parse_statement (cfile, subnet -> group,
@@ -1530,7 +1575,7 @@ void parse_subnet_declaration (cfile, share)
 /* group-declaration :== RBRACE parameters declarations LBRACE */
 
 void parse_group_declaration (cfile, group)
-	FILE *cfile;
+	struct parse *cfile;
 	struct group *group;
 {
 	char *val;
@@ -1566,7 +1611,7 @@ void parse_group_declaration (cfile, group)
 			break;
 		} else if (token == EOF) {
 			token = next_token (&val, cfile);
-			parse_warn ("unexpected end of file");
+			parse_warn (cfile, "unexpected end of file");
 			break;
 		} else if (token == DELETED) {
 			token = next_token (&val, cfile);
@@ -1618,7 +1663,7 @@ void parse_group_declaration (cfile, group)
 
 int parse_fixed_addr_param (oc, cfile)
 	struct option_cache **oc;
-	FILE *cfile;
+	struct parse *cfile;
 {
 	char *val;
 	enum dhcp_token token;
@@ -1671,7 +1716,7 @@ int parse_fixed_addr_param (oc, cfile)
    they're not even used there yet). */
 
 TIME parse_timestamp (cfile)
-	FILE *cfile;
+	struct parse *cfile;
 {
 	TIME rv;
 
@@ -1698,7 +1743,7 @@ TIME parse_timestamp (cfile)
 		     | DYNAMIC_BOOTP SEMI */
 
 struct lease *parse_lease_declaration (cfile)
-	FILE *cfile;
+	struct parse *cfile;
 {
 	char *val;
 	enum dhcp_token token;
@@ -1728,7 +1773,7 @@ struct lease *parse_lease_declaration (cfile)
 		if (token == RBRACE)
 			break;
 		else if (token == EOF) {
-			parse_warn ("unexpected end of file");
+			parse_warn (cfile, "unexpected end of file");
 			break;
 		}
 		strncpy (tbuf, val, sizeof tbuf);
@@ -1787,7 +1832,8 @@ struct lease *parse_lease_declaration (cfile)
 					}
 					if (lease.uid_len == 0) {
 						lease.uid = (unsigned char *)0;
-						parse_warn ("zero-length uid");
+						parse_warn (cfile,
+							    "zero-length uid");
 						seenbit = 0;
 						break;
 					}
@@ -1855,16 +1901,17 @@ struct lease *parse_lease_declaration (cfile)
 				if (token == CLASS) {
 					token = next_token (&val, cfile);
 					if (token != STRING) {
-						parse_warn
-							("expecting string");
-						if (token != SEMI)
-							skip_to_semi (cfile);
-						token = BILLING;
-						break;
+					    parse_warn (cfile,
+							"expecting string");
+					    if (token != SEMI)
+						    skip_to_semi (cfile);
+					    token = BILLING;
+					    break;
 					}
 					lease.billing_class = find_class (val);
 					if (!lease.billing_class)
-						parse_warn ("unknown class %s",
+						parse_warn (cfile,
+							    "unknown class %s",
 							    val);
 					parse_semi (cfile);
 				} else if (token == SUBCLASS) {
@@ -1872,7 +1919,8 @@ struct lease *parse_lease_declaration (cfile)
 						parse_class_declaration
 						(cfile, (struct group *)0, 3);
 				} else {
-					parse_warn ("expecting \"class\"");
+					parse_warn (cfile,
+						    "expecting \"class\"");
 					if (token != SEMI)
 						skip_to_semi (cfile);
 				}
@@ -1939,14 +1987,16 @@ struct lease *parse_lease_declaration (cfile)
 			    && token != BILLING && token != ON) {
 				token = next_token (&val, cfile);
 				if (token != SEMI) {
-					parse_warn ("semicolon expected.");
+					parse_warn (cfile,
+						    "semicolon expected.");
 					skip_to_semi (cfile);
 					return (struct lease *)0;
 				}
 			}
 		}
 		if (seenmask & seenbit) {
-			parse_warn ("Too many %s parameters in lease %s\n",
+			parse_warn (cfile,
+				    "Too many %s parameters in lease %s\n",
 				    tbuf, piaddr (lease.ip_addr));
 		} else
 			seenmask |= seenbit;
@@ -1959,7 +2009,7 @@ struct lease *parse_lease_declaration (cfile)
 			       | DYNAMIC_BOOTP ip-address ip-address SEMI */
 
 void parse_address_range (cfile, group, type, pool)
-	FILE *cfile;
+	struct parse *cfile;
 	struct group *group;
 	int type;
 	struct pool *pool;
@@ -1999,7 +2049,7 @@ void parse_address_range (cfile, group, type, pool)
 
 	token = next_token (&val, cfile);
 	if (token != SEMI) {
-		parse_warn ("semicolon expected.");
+		parse_warn (cfile, "semicolon expected.");
 		skip_to_semi (cfile);
 		return;
 	}
@@ -2016,7 +2066,7 @@ void parse_address_range (cfile, group, type, pool)
 				break;
 		}
 		if (!subnet) {
-			parse_warn ("address range not on network %s",
+			parse_warn (cfile, "address range not on network %s",
 				    group -> shared_network -> name);
 			log_error ("Be sure to place pool statement after %s",
 				   "related subnet declarations.");
