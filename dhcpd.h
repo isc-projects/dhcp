@@ -501,7 +501,7 @@ extern struct interface_info *interfaces;
 void discover_interfaces PROTO ((int));
 void dispatch PROTO ((void));
 void do_packet PROTO ((struct interface_info *,
-		       unsigned char *, int,
+		       struct dhcp_packet *, int,
 		       unsigned short, struct iaddr, struct hardware *));
 int locate_network PROTO ((struct packet *));
 
