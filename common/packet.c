@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: packet.c,v 1.32 2000/03/17 03:59:01 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: packet.c,v 1.33 2000/03/24 00:22:41 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -124,6 +124,11 @@ void assemble_hw_header (interface, buf, bufix, to)
 		assemble_tr_header (interface, buf, bufix, to);
 	else
 #endif
+#if defined (DEC_FDDI)
+	     if (interface -> hw_address.hbuf [i] == HTYPE_FDDI)
+		     assemble_fddi_header (interface, buf, bufix, to);
+	else
+#endif
 		assemble_ethernet_header (interface, buf, bufix, to);
 
 }
@@ -202,6 +207,11 @@ ssize_t decode_hw_header (interface, buf, bufix, from)
 #if defined (HAVE_TR_SUPPORT)
 	if (interface -> hw_address.hbuf [0] == HTYPE_IEEE802)
 		return decode_tr_header (interface, buf, bufix, from);
+	else
+#endif
+#if defined (DEC_FDDI)
+	     if (interface -> hw_address.hbuf [i] == HTYPE_FDDI)
+		     return decode_tr_header (interface, buf, bufix, from);
 	else
 #endif
 		return decode_ethernet_header (interface, buf, bufix, from);
