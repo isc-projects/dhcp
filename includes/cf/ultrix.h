@@ -52,13 +52,6 @@ extern int h_errno;
 
 #include <net/if.h>
 
-/*#define _PATH_DHCPD_PID	"/var/run/dhcpd.pid"*/
-
-/*
- * Ultrix systems don't have /var/run, but some sites have added it.
- * if yours  is one, edit this file or define _PATH_DHCPD_PID externally.
- */
-
 #ifndef _PATH_DHCPD_PID
 #define _PATH_DHCPD_PID	"/etc/dhcpd.pid"
 #endif
