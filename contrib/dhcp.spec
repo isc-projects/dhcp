@@ -42,7 +42,6 @@ Dhcp devel contains all of the libraries and headers for developing with
 the dhcpctl API.
 
 %prep
-exit 0	# XXX
 %setup -q -n dhcp-%{version}
 # do some file editing
 egrep "VARRUN
@@ -57,7 +56,6 @@ EOF
 ./configure --with-nsupdate
 
 %build
-exit 0	# XXX
 make
 
 %install
@@ -72,16 +70,14 @@ install -m 755 linux.init ${RPM_BUILD_ROOT}/etc/rc.d/init.d/dhcpd
 %else
 %ifos solaris
 mkdir -p ${RPM_BUILD_ROOT}/etc/init.d
-sed -e s'|@PREFIX@|%{_prefix}|g' < solaris.init >
-${RPM_BUILD_ROOT}/etc/init.d/dhcpd
+sed -e s'|@PREFIX@|%{_prefix}|g' < contrib/solaris.init > ${RPM_BUILD_ROOT}/etc/init.d/dhcpd
 chmod 755 ${RPM_BUILD_ROOT}/etc/init.d/dhcpd
 %endif
 %endif
 
 # strip binaries and libraries
 strip $RPM_BUILD_ROOT%{_prefix}/sbin/* || :
-for i in `find $RPM_BUILD_ROOT/ -type 'f' -perm '+a=x' ! -name
-'lib*so*'`; do
+for i in `find $RPM_BUILD_ROOT/ -type 'f' -perm '+a=x' ! -name 'lib*so*'`; do
 	file $i |grep -q "not stripped" && strip $i
 done
 
@@ -118,7 +114,7 @@ if [ $1 = 0 ]; then
 fi
 
 %clean
-#XXX rm -rf $RPM_BUILD_ROOT
+rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(-,root,root)
