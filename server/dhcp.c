@@ -786,6 +786,15 @@ void ack_lease (packet, lease, offer, when)
 		to.sin_addr = packet -> raw -> ciaddr;
 		to.sin_port = htons (ntohs (server_port) + 1); /* XXX */
 
+#ifdef USE_FALLBACK
+		result = send_fallback (&fallback_interface,
+					packet, &raw, outgoing.packet_length,
+					raw.siaddr, &to, &hto);
+		if (result < 0)
+			warn ("send_fallback: %m");
+		return;
+#endif
+
 	/* Otherwise, broadcast it on the local network. */
 	} else {
 		to.sin_addr.s_addr = htonl (INADDR_BROADCAST);
