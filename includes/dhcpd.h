@@ -756,6 +756,22 @@ struct dns_query {
 	int backoff;			/* Current backoff, in seconds. */
 };
 
+struct tsig_key {
+	int refcnt;
+	char *name;
+	char *algorithm;
+	struct data_string key;
+};
+
+struct dns_zone {
+	int refcnt;
+	TIME timeout;
+	char *name;
+	struct option_cache *primary;
+	struct option_cache *secondary;
+	struct tsig_key *key;
+};
+
 /* Bitmask of dhcp option codes. */
 typedef unsigned char option_mask [16];
 
@@ -968,6 +984,7 @@ int parse_executable_statement PROTO ((struct executable_statement **,
 int parse_executable_statements PROTO ((struct executable_statement **,
 					struct parse *, int *,
 					enum expression_context));
+int parse_zone (struct dns_zone *, struct parse *);
 int parse_on_statement PROTO ((struct executable_statement **,
 			       struct parse *, int *));
 int parse_switch_statement PROTO ((struct executable_statement **,
@@ -1203,6 +1220,13 @@ int packet_reference PROTO ((struct packet **,
 int packet_dereference PROTO ((struct packet **, const char *, int));
 int binding_scope_allocate PROTO ((struct binding_scope **,
 				   const char *, int));
+int dns_zone_allocate PROTO ((struct dns_zone **, const char *, int));
+int dns_zone_reference PROTO ((struct dns_zone **,
+			       struct dns_zone *, const char *, int));
+int tsig_key_allocate PROTO ((struct tsig_key **, const char *, int));
+int tsig_key_reference PROTO ((struct tsig_key **,
+			       struct tsig_key *, const char *, int));
+int tsig_key_dereference PROTO ((struct tsig_key **, const char *, int));
 
 /* print.c */
 char *print_hw_addr PROTO ((int, int, unsigned char *));
@@ -1245,8 +1269,9 @@ ssize_t send_fallback PROTO ((struct interface_info *,
 
 #ifdef USE_SOCKET_SEND
 void if_reinitialize_send PROTO ((struct interface_info *));
-void if_register_send PROTO ((struct interface_info *));
-ssize_t send_packet PROTO ((struct interface_info *,
+void if_register_send PROTO ((struct interface_info *));s
+void if_deregister_send PROTO ((struct interface_info *));
+size_t send_packet PROTO ((struct interface_info *,
 			    struct packet *, struct dhcp_packet *, size_t, 
 			    struct in_addr,
 			    struct sockaddr_in *, struct hardware *));
@@ -1254,6 +1279,7 @@ ssize_t send_packet PROTO ((struct interface_info *,
 #ifdef USE_SOCKET_RECEIVE
 void if_reinitialize_receive PROTO ((struct interface_info *));
 void if_register_receive PROTO ((struct interface_info *));
+void if_deregister_receive PROTO ((struct interface_info *));
 ssize_t receive_packet PROTO ((struct interface_info *,
 			       unsigned char *, size_t,
 			       struct sockaddr_in *, struct hardware *));
@@ -1276,6 +1302,7 @@ int if_register_bpf PROTO ( (struct interface_info *));
 #ifdef USE_BPF_SEND
 void if_reinitialize_send PROTO ((struct interface_info *));
 void if_register_send PROTO ((struct interface_info *));
+void if_deregister_send PROTO ((struct interface_info *));
 ssize_t send_packet PROTO ((struct interface_info *,
 			    struct packet *, struct dhcp_packet *, size_t,
 			    struct in_addr,
@@ -1284,6 +1311,7 @@ ssize_t send_packet PROTO ((struct interface_info *,
 #ifdef USE_BPF_RECEIVE
 void if_reinitialize_receive PROTO ((struct interface_info *));
 void if_register_receive PROTO ((struct interface_info *));
+void if_deregister_receive PROTO ((struct interface_info *));
 ssize_t receive_packet PROTO ((struct interface_info *,
 			       unsigned char *, size_t,
 			       struct sockaddr_in *, struct hardware *));
@@ -1301,6 +1329,7 @@ int if_register_lpf PROTO ( (struct interface_info *));
 #ifdef USE_LPF_SEND
 void if_reinitialize_send PROTO ((struct interface_info *));
 void if_register_send PROTO ((struct interface_info *));
+void if_deregister_send PROTO ((struct interface_info *));
 ssize_t send_packet PROTO ((struct interface_info *,
 			    struct packet *, struct dhcp_packet *, size_t,
 			    struct in_addr,
@@ -1309,6 +1338,7 @@ ssize_t send_packet PROTO ((struct interface_info *,
 #ifdef USE_LPF_RECEIVE
 void if_reinitialize_receive PROTO ((struct interface_info *));
 void if_register_receive PROTO ((struct interface_info *));
+void if_deregister_receive PROTO ((struct interface_info *));
 ssize_t receive_packet PROTO ((struct interface_info *,
 			       unsigned char *, size_t,
 			       struct sockaddr_in *, struct hardware *));
@@ -1327,6 +1357,7 @@ int if_register_nit PROTO ( (struct interface_info *));
 #ifdef USE_NIT_SEND
 void if_reinitialize_send PROTO ((struct interface_info *));
 void if_register_send PROTO ((struct interface_info *));
+void if_deregister_send PROTO ((struct interface_info *));
 ssize_t send_packet PROTO ((struct interface_info *,
 			    struct packet *, struct dhcp_packet *, size_t,
 			    struct in_addr,
@@ -1335,6 +1366,7 @@ ssize_t send_packet PROTO ((struct interface_info *,
 #ifdef USE_NIT_RECEIVE
 void if_reinitialize_receive PROTO ((struct interface_info *));
 void if_register_receive PROTO ((struct interface_info *));
+void if_deregister_receive PROTO ((struct interface_info *));
 ssize_t receive_packet PROTO ((struct interface_info *,
 			       unsigned char *, size_t,
 			       struct sockaddr_in *, struct hardware *));
@@ -1353,6 +1385,7 @@ int if_register_dlpi PROTO ( (struct interface_info *));
 #ifdef USE_DLPI_SEND
 void if_reinitialize_send PROTO ((struct interface_info *));
 void if_register_send PROTO ((struct interface_info *));
+void if_deregister_send PROTO ((struct interface_info *));
 ssize_t send_packet PROTO ((struct interface_info *,
 			    struct packet *, struct dhcp_packet *, size_t,
 			    struct in_addr,
@@ -1361,6 +1394,7 @@ ssize_t send_packet PROTO ((struct interface_info *,
 #ifdef USE_DLPI_RECEIVE
 void if_reinitialize_receive PROTO ((struct interface_info *));
 void if_register_receive PROTO ((struct interface_info *));
+void if_deregister_receive PROTO ((struct interface_info *));
 ssize_t receive_packet PROTO ((struct interface_info *,
 			       unsigned char *, size_t,
 			       struct sockaddr_in *, struct hardware *));
@@ -1371,6 +1405,7 @@ ssize_t receive_packet PROTO ((struct interface_info *,
 #ifdef USE_RAW_SEND
 void if_reinitialize_send PROTO ((struct interface_info *));
 void if_register_send PROTO ((struct interface_info *));
+void if_deregister_send PROTO ((struct interface_info *));
 ssize_t send_packet PROTO ((struct interface_info *,
 			    struct packet *, struct dhcp_packet *, size_t,
 			    struct in_addr,
@@ -1417,13 +1452,13 @@ struct protocol *add_protocol PROTO ((const char *, int,
 void remove_protocol PROTO ((struct protocol *));
 
 /* hash.c */
-struct hash_table *new_hash PROTO ((void));
+struct hash_table *new_hash PROTO ((hash_reference, hash_dereference));
 void add_hash PROTO ((struct hash_table *,
-		      const unsigned char *, unsigned, unsigned char *));
+		      const unsigned char *, unsigned, void *));
 void delete_hash_entry PROTO ((struct hash_table *,
 			       const unsigned char *, unsigned));
-unsigned char *hash_lookup PROTO ((struct hash_table *,
-					 const unsigned char *, unsigned));
+void *hash_lookup PROTO ((struct hash_table *,
+			  const unsigned char *, unsigned));
 
 /* tables.c */
 extern struct universe dhcp_universe;
@@ -1528,6 +1563,7 @@ struct client_lease *packet_to_lease PROTO ((struct packet *));
 void go_daemon PROTO ((void));
 void write_client_pid_file PROTO ((void));
 void client_location_changed PROTO ((void));
+void do_release PROTO ((struct client_state *));
 
 /* db.c */
 int write_lease PROTO ((struct lease *));
@@ -1650,14 +1686,11 @@ int icmp_echorequest PROTO ((struct iaddr *));
 isc_result_t icmp_echoreply PROTO ((omapi_object_t *));
 
 /* dns.c */
-void dns_startup PROTO ((void));
-struct dns_query *find_dns_query PROTO ((struct dns_question *, int));
-void destroy_dns_query PROTO ((struct dns_query *));
-struct dns_query *ns_inaddr_lookup PROTO ((struct iaddr, struct dns_wakeup *));
-struct dns_query *ns_query PROTO ((struct dns_question *, unsigned char *,
-				   unsigned, struct dns_wakeup *));
-void dns_timeout PROTO ((void *));
-void dns_packet PROTO ((struct protocol *));
+isc_result_t enter_dns_zone (struct dns_zone *);
+isc_result_t dns_zone_lookup (struct dns_zone **, const char *);
+isc_result_t enter_tsig_key (struct tsig_key *);
+isc_result_t tsig_key_lookup (struct tsig_key **, const char *);
+int dns_zone_dereference PROTO ((struct dns_zone **, const char *, int));
 
 /* resolv.c */
 extern char path_resolv_conf [];
