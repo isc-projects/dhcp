@@ -32,12 +32,11 @@ For information on how to install, configure and run this software,
 as well as how to find documentation and report bugs, please consult
 the README file.
 
-We should be grateful to Irina Goble, Brian Murrell, and all the other
-people who've worked on the interim DNS update implementation - all I
-did was integrate Brian's changes, which were based on Irina's
-changes, which I think were based on a previous set of changes the
-name of whose author I can no longer recall (if you know, please tell
-me so I can update this).
+The interim Dynamic DNS Update support is the result of work by Lans
+Carstensen and Brian Dols at Rose-Hulman Institute of Technology, Jim
+Watt at Perkin-Elmer, Irina Goble at Integrated Measurement Systems,
+and Brian Murrell at BC Tel Advanced Communications.   I'd like to
+express my thanks to all of these good people here.
 
 		      Changes since June 6, 1999
 
