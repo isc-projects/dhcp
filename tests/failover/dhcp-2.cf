@@ -11,7 +11,7 @@ max-lease-time 600;
 
 failover peer "foo" {
   secondary;
-  address 204.152.187.2;
+  address 204.152.187.41;
   port 51000;
   peer address 204.152.187.24;
   peer port 51000;
@@ -80,7 +80,16 @@ subnet 204.152.186.128 netmask 255.255.255.192 {
   not authoritative;
 }
 
-subnet 204.152.187.0 netmask 255.255.255.0 {
+shared-network {
+  subnet 204.152.187.0 netmask 255.255.255.0 {
+  }
+  subnet 10.0.1.0 netmask 255.255.255.0 {
+    pool {
+      deny dynamic bootp clients;
+      failover peer "foo";
+      range 10.0.1.10 10.0.1.200;
+    }
+  }
 }
 
 subnet 10.0.0.0 netmask 255.255.255.0 {
