@@ -301,7 +301,7 @@ isc_result_t omapi_protocol_signal_handler (omapi_object_t *h,
 		omapi_connection_get_uint32 (c, &p -> message -> authlen);
 		omapi_connection_get_uint32 (c, &p -> message -> op);
 		omapi_connection_get_uint32 (c, &th);
-		p -> message -> handle = th;
+		p -> message -> h = th;
 		omapi_connection_get_uint32 (c, &p -> message -> id);
 		omapi_connection_get_uint32 (c, &p -> message -> rid);
 
