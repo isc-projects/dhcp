@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.192.2.39 2004/09/20 17:59:28 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.192.2.40 2004/09/21 19:39:52 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1490,6 +1490,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 	struct lease *lt;
 	struct lease_state *state;
 	struct lease *next;
+	struct host_decl *host;
 	TIME lease_time;
 	TIME offered_lease_time;
 	struct data_string d1;
@@ -1511,6 +1512,12 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 	/* If we're already acking this lease, don't do it again. */
 	if (lease -> state)
 		return;
+
+	/* If the lease carries a host record, remember it. */
+	if (lease -> host)
+		host_reference (&host, lease -> host, MDL);
+	else
+		host = (struct host_decl *) 0;
 
 	/* Allocate a lease state structure... */
 	state = new_lease_state (MDL);
@@ -1653,8 +1660,8 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 		} while (1);
 	    }
 	    if (!lease -> uid_len ||
-		(lease -> host &&
-		 !lease -> host -> client_identifier.len &&
+		(host &&
+		 !host -> client_identifier.len &&
 		 (oc = lookup_option (&server_universe, state -> options,
 				      SV_DUPLICATES)) &&
 		 !evaluate_boolean_option_cache (&ignorep, packet, lease,
@@ -1727,16 +1734,10 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 	}
 
 	/* Try to find a matching host declaration for this lease.
-	 * If this is an offer, then verify our host for the lease is the
-	 * right one for the host we're offering to...by dereffing and
-	 * re-finding.
 	 */
-	if ((offer == DHCPOFFER) || !lease -> host) {
+	if (!host) {
 		struct host_decl *hp = (struct host_decl *)0;
 		struct host_decl *h;
-
-		if (lease -> host)
-			host_dereference (&lease -> host, MDL);
 
 		/* Try to find a host_decl that matches the client
 		   identifier or hardware address on the packet, and
@@ -1753,7 +1754,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 			find_hosts_by_uid (&hp, d1.data, d1.len, MDL);
 			data_string_forget (&d1, MDL);
 			if (hp)
-				host_reference (&lease -> host, hp, MDL);
+				host_reference (&host, hp, MDL);
 		}
 		if (!hp) {
 			find_hosts_by_haddr (&hp,
@@ -1766,7 +1767,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 					break;
 			}
 			if (h)
-				host_reference (&lease -> host, h, MDL);
+				host_reference (&host, h, MDL);
 		}
 		if (hp)
 			host_dereference (&hp, MDL);
@@ -1774,20 +1775,20 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 
 	/* If we have a host_decl structure, run the options associated
 	   with its group.  Wether the host decl struct is old or not. */
-	if (lease -> host)
+	if (host)
 		execute_statements_in_scope ((struct binding_value **)0,
 					     packet, lease,
 					     (struct client_state *)0,
 					     packet -> options,
 					     state -> options, &lease -> scope,
-					     lease -> host -> group,
+					     host -> group,
 					     (lease -> pool
 					      ? lease -> pool -> group
 					      : lease -> subnet -> group));
 
 	/* Drop the request if it's not allowed for this client.   By
 	   default, unknown clients are allowed. */
-	if (!lease -> host &&
+	if (!host &&
 	    (oc = lookup_option (&server_universe, state -> options,
 				 SV_BOOT_UNKNOWN_CLIENTS)) &&
 	    !evaluate_boolean_option_cache (&ignorep,
@@ -2127,8 +2128,10 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 		data_string_forget (&d1, MDL);
 	}
 
-	if (lease -> host)
-		host_reference (&lt -> host, lease -> host, MDL);
+	if (host) {
+		host_reference (&lt -> host, host, MDL);
+		host_dereference (&host, MDL);
+	}
 	if (lease -> subnet)
 		subnet_reference (&lt -> subnet, lease -> subnet, MDL);
 	if (lease -> billing_class)
