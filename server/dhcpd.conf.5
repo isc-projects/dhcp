@@ -1128,14 +1128,24 @@ Note that the zone declarations have to correspond to authority
 records in your name server - in the above example, there must be an
 SOA record for "example.org." and for "17.10.10.in-addr.arpa.".   For
 example, if there were a subdoman "foo.example.org" with no seperate
-SOA, you could not write a zone declaration for "foo.example.org."
+SOA, you could not write a zone declaration for "foo.example.org."  
+Also keep in mind that zone names in your DHCP configuration should end in a
+"."; this is the preferred syntax.  If you do not end your zone name in a
+".", the DHCP server will figure it out.  Also note that in the DHCP
+configuration, zone names are not encapsulated in quotes where there are in
+the DNS configuration.
 .PP
 You should choose your own secret key, of course.  The ISC BIND 8 and
 9 distributions come with a program for generating secret keys called
-dnskeygen.  The version that comes with BIND 9 is likely to produce a
+dnssec-keygen.  The version that comes with BIND 9 is likely to produce a
 substantially more random key, so we recommend you use that one even
-if you are not using BIND 9 as your DNS server.  The key above was
-generated with the command:
+if you are not using BIND 9 as your DNS server.  If you are using BIND 9's
+dnssec-keygen, the above key would be created as follows:
+.nf
+	dnssec-keygen -a HMAC-MD5 -b 128 -n USER DHCP_UPDATER
+
+If you are using the BIND 8 dnskeygen program, the following command will
+generate a key as seen above:
 .nf
 	dnskeygen -H 128 -u -c -n DHCP_UPDATER
 .fi
