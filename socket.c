@@ -50,7 +50,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: socket.c,v 1.17 1997/01/02 12:00:18 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: socket.c,v 1.18 1997/02/18 14:30:13 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -87,7 +87,7 @@ int if_register_socket (info, interface)
 
 	/* Set up the address we're going to bind to. */
 	name.sin_family = AF_INET;
-	name.sin_port = server_port;
+	name.sin_port = local_port;
 	name.sin_addr.s_addr = INADDR_ANY;
 	memset (name.sin_zero, 0, sizeof (name.sin_zero));
 

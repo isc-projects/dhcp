@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.36 1996/09/12 09:28:13 mellon Exp $ Copyright 1995, 1996 The Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.37 1997/02/18 14:30:11 mellon Exp $ Copyright 1995, 1996 The Internet Software Consortium.";
 #endif
 
 static char copyright[] =
@@ -64,7 +64,9 @@ int server_identifier_matched;
 struct interface_info fallback_interface;
 #endif
 
-u_int16_t server_port;
+u_int16_t local_port;
+u_int16_t remote_port;
+
 int log_priority;
 #ifdef DEBUG
 int log_perror = -1;
@@ -119,9 +121,9 @@ int main (argc, argv, envp)
 			if (status < 1 || status > 65535)
 				error ("%s: not a valid UDP port",
 				       argv [i]);
-			server_port = htons (status);
+			local_port = htons (status);
 			debug ("binding to user-specified port %d",
-			       ntohs (server_port));
+			       ntohs (local_port));
 		} else if (!strcmp (argv [i], "-f")) {
 #ifndef DEBUG
 			daemon = 0;
@@ -200,16 +202,18 @@ int main (argc, argv, envp)
 #endif /* !DEBUG */
 
 	/* Default to the DHCP/BOOTP port. */
-	if (!server_port)
+	if (!local_port)
 	{
 		ent = getservbyname ("dhcp", "udp");
 		if (!ent)
-			server_port = htons (67);
+			local_port = htons (67);
 		else
-			server_port = ent -> s_port;
+			local_port = ent -> s_port;
 		endservent ();
 	}
   
+	remote_port = htons (ntohs (local_port) + 1);
+
 	/* Get the current time... */
 	GET_TIME (&cur_time);
 

@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bpf.c,v 1.14 1997/01/02 12:00:14 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bpf.c,v 1.15 1997/02/18 14:30:12 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -211,7 +211,7 @@ void if_register_receive (info, interface)
         /* Patch the server port into the BPF  program...
 	   XXX changes to filter program may require changes
 	   to the insn number(s) used below! XXX */
-	filter [8].k = ntohs (server_port);
+	filter [8].k = ntohs (local_port);
 
 	if (ioctl (info -> rfdesc, BIOCSETF, &p) < 0)
 		error ("Can't install packet filter program: %m");

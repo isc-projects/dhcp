@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: packet.c,v 1.11 1996/08/27 09:53:14 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: packet.c,v 1.12 1997/02/18 14:32:51 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -189,7 +189,7 @@ void assemble_udp_ip_header (interface, buf, bufix,
 	*bufix += sizeof ip;
 
 	/* Fill out the UDP header */
-	udp.uh_sport = server_port;		/* XXX */
+	udp.uh_sport = local_port;		/* XXX */
 	udp.uh_dport = port;			/* XXX */
 	udp.uh_ulen = htons(sizeof(udp) + len);
 	memset (&udp.uh_sum, 0, sizeof udp.uh_sum);
@@ -264,7 +264,7 @@ size_t decode_udp_ip_header (interface, buf, bufix, from, data, len)
 	  return -1;
 
   /* Is it to the port we're serving? */
-  if (udp -> uh_dport != server_port)
+  if (udp -> uh_dport != local_port)
 	  return -1;
 #endif /* USERLAND_FILTER */
 
