@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tables.c,v 1.51 2001/03/14 15:39:32 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tables.c,v 1.51.2.1 2001/06/04 21:23:02 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -93,6 +93,7 @@ HASH_FUNCTIONS (option, const char *, struct option)
        the name of the set of enumeration values to parse or emit,
        followed by a '.'.   The width of the data is specified in the
        named enumeration.   Named enumerations are tracked in parse.c.
+   d - Domain name (i.e., FOO or FOO.BAR).
 */
 
 struct universe dhcp_universe;
