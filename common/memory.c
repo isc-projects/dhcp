@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: memory.c,v 1.20 1996/08/29 23:03:19 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: memory.c,v 1.21 1996/08/30 20:14:03 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -345,17 +345,41 @@ struct subnet *find_grouped_subnet (share, addr)
 	return (struct subnet *)0;
 }
 
-/* Enter a new subnet into the subnet hash. */
+/* Enter a new subnet into the subnet list. */
 
 void enter_subnet (subnet)
 	struct subnet *subnet;
 {
+	struct subnet *scan;
+
+	/* Check for duplicates... */
+	for (scan = subnets; scan; scan = scan -> next_subnet) {
+		if (addr_eq (subnet_number (subnet -> net, scan -> netmask),
+			     scan -> net) ||
+		    addr_eq (subnet_number (scan -> net, subnet -> netmask),
+			     subnet -> net)) {
+			char n1buf [16];
+			int i, j;
+			for (i = 0; i < 32; i++)
+				if (subnet -> netmask.iabuf [3 - (i >> 3)]
+				    & (1 << (i & 7)))
+					break;
+			for (j = 0; j < 32; j++)
+				if (scan -> netmask.iabuf [3 - (j >> 3)]
+				    & (1 << (j & 7)))
+					break;
+			strcpy (n1buf, piaddr (subnet -> net));
+			error ("subnet %s/%d conflicts with subnet %s/%d",
+			       n1buf, i, piaddr (scan -> net), j);
+		}
+	}
+
 	/* XXX Sort the nets into a balanced tree to make searching quicker. */
 	subnet -> next_subnet = subnets;
 	subnets = subnet;
 }
 	
-/* Enter a new subnet into the subnet hash. */
+/* Enter a new shared network into the shared network list. */
 
 void enter_shared_network (share)
 	struct shared_network *share;
