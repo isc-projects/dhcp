@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.34 2000/06/07 00:15:53 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.35 2000/06/30 00:40:19 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -74,6 +74,9 @@ isc_result_t enter_host (hd, dynamicp, commit)
 				  (hash_dereference)host_dereference, 0);
 		if (!host_name_hash)
 			log_fatal ("Can't allocate host name hash");
+		host_hash_add (host_name_hash,
+			       (unsigned char *)hd -> name,
+			       strlen (hd -> name), hd, MDL);
 	} else {
 		host_hash_lookup (&hp, host_name_hash,
 				  (unsigned char *)hd -> name,
@@ -173,6 +176,11 @@ isc_result_t enter_host (hd, dynamicp, commit)
 					  0);
 			if (!host_uid_hash)
 				log_fatal ("Can't allocate host/uid hash");
+
+			host_hash_add (host_uid_hash,
+				       hd -> client_identifier.data,
+				       hd -> client_identifier.len,
+				       hd, MDL);
 		} else {
 			/* If there's already a host declaration for this
 			   client identifier, add this one to the end of the
@@ -184,10 +192,13 @@ isc_result_t enter_host (hd, dynamicp, commit)
 				/* Don't link it in twice... */
 				if (!np) {
 					for (np = hp; np -> n_ipaddr;
-					     np = np -> n_ipaddr)
-						;
-					host_reference (&np -> n_ipaddr,
-							hd, MDL);
+					     np = np -> n_ipaddr) {
+						if (hd == np)
+						    break;
+					}
+					if (hd != np)
+					    host_reference (&np -> n_ipaddr,
+							    hd, MDL);
 				}
 				host_dereference (&hp, MDL);
 			} else {
