@@ -56,7 +56,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.59 1999/03/11 01:46:43 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.60 1999/03/13 18:52:41 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -649,7 +649,7 @@ void bind_lease (client)
 		make_decline (client, client -> new);
 		send_decline (client);
 		destroy_client_lease (client -> new);
-		client -> new = (struct lease *)0;
+		client -> new = (struct client_lease *)0;
 		state_init (client);
 		return;
 	}
@@ -1349,7 +1349,8 @@ void send_request (cpp)
 	destination.sin_len = sizeof destination;
 #endif
 
-	if (client -> state != S_REQUESTING)
+	if (client -> state == S_RENEWING ||
+	    client -> state == S_REBINDING)
 		memcpy (&from, client -> active -> address.iabuf,
 			sizeof from);
 	else
@@ -1620,7 +1621,10 @@ void make_request (client, lease)
 	client -> packet.hops = 0;
 	client -> packet.xid = client -> xid;
 	client -> packet.secs = 0; /* Filled in by send_request. */
-	client -> packet.flags = htons (BOOTP_BROADCAST);
+	if (can_receive_unicast_unconfigured (client -> interface))
+		client -> packet.flags = 0;
+	else
+		client -> packet.flags = htons (BOOTP_BROADCAST);
 
 	/* If we own the address we're requesting, put it in ciaddr;
 	   otherwise set ciaddr to zero. */
@@ -1633,7 +1637,6 @@ void make_request (client, lease)
 	} else {
 		memset (&client -> packet.ciaddr, 0,
 			sizeof client -> packet.ciaddr);
-		client -> packet.flags = htons (BOOTP_BROADCAST);
 	}
 
 	memset (&client -> packet.yiaddr, 0,
@@ -1684,7 +1687,10 @@ void make_decline (client, lease)
 	client -> packet.hops = 0;
 	client -> packet.xid = client -> xid;
 	client -> packet.secs = 0; /* Filled in by send_request. */
-	client -> packet.flags = htons (BOOTP_BROADCAST);
+	if (can_receive_unicast_unconfigured (client -> interface))
+		client -> packet.flags = 0;
+	else
+		client -> packet.flags = htons (BOOTP_BROADCAST);
 
 	/* ciaddr must always be zero. */
 	memset (&client -> packet.ciaddr, 0,
