@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.89 1999/05/06 20:35:48 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.90 1999/05/07 17:40:26 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -539,18 +539,18 @@ void dhcpinform (packet)
 		options -> site_code_min = 0; /* Trust me, it works. */
 	}
 
-	/* If the client has provided a list of options that it wishes
-	   returned, use it to prioritize.  Otherwise, prioritize
-	   based on the default priority list. */
-
 	memset (&prl, 0, sizeof prl);
-	oc = lookup_option (&dhcp_universe, packet -> options,
+
+	/* Use the parameter list from the scope if there is one. */
+	oc = lookup_option (&dhcp_universe, options,
 			    DHO_DHCP_PARAMETER_REQUEST_LIST);
 
-	/* If the client didn't provide a parameter request list, see if
-	   there's one in scope. */
+	/* Otherwise, if the client has provided a list of options
+	   that it wishes returned, use it to prioritize.  Otherwise,
+	   prioritize based on the default priority list. */
+
 	if (!oc)
-		oc = lookup_option (&dhcp_universe, options,
+		oc = lookup_option (&dhcp_universe, packet -> options,
 				    DHO_DHCP_PARAMETER_REQUEST_LIST);
 
 	if (oc)
@@ -1511,15 +1511,15 @@ void ack_lease (packet, lease, offer, when, msg)
 	}
 
 	/* If the client has provided a list of options that it wishes
-	   returned, use it to prioritize.  Otherwise, if there's a
-	   parameter request list in scope, use that.  Otherwise use
-	   the default priority list. */
+	   returned, use it to prioritize.  If there's a parameter
+	   request list in scope, use that in preference.  Otherwise
+	   use the default priority list. */
 
-	oc = lookup_option (&dhcp_universe, packet -> options,
+	oc = lookup_option (&dhcp_universe, state -> options,
 			    DHO_DHCP_PARAMETER_REQUEST_LIST);
 
 	if (!oc)
-		oc = lookup_option (&dhcp_universe, state -> options,
+		oc = lookup_option (&dhcp_universe, packet -> options,
 				    DHO_DHCP_PARAMETER_REQUEST_LIST);
 	if (oc)
 		evaluate_option_cache (&state -> parameter_request_list,
