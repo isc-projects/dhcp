@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.78 1999/09/09 21:11:21 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.79 1999/09/09 23:32:22 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -900,6 +900,7 @@ void parse_host_declaration (cfile, group)
 	char *name;
 	int declaration = 0;
 	int dynamicp = 0;
+	int deleted = 0;
 
 	token = peek_token (&val, cfile);
 	if (token != LBRACE) {
@@ -941,12 +942,34 @@ void parse_host_declaration (cfile, group)
 				break;
 			continue;
 		}
+		/* If the host declaration was created by the server,
+		   remember to save it. */
+		if (token == DELETED) {
+			deleted = 1;
+			token = next_token (&val, cfile);
+			if (!parse_semi (cfile))
+				break;
+			continue;
+		}
 		declaration = parse_statement (cfile, host -> group,
 					       HOST_DECL, host,
 					       declaration);
 	} while (1);
 
-	enter_host (host, dynamicp, 0);
+	if (deleted) {
+		struct host_decl *hp =
+			(struct host_decl *)
+			hash_lookup (host_name_hash,
+				     host -> name, strlen (host -> name));
+		if (hp) {
+			delete_host (hp, 0);
+		}
+		dfree (host -> name, "parse_host_declaration");
+		free_group (host -> group, "parse_host_declaration");
+		dfree (host, "parse_host_declaration");
+	} else {
+		enter_host (host, dynamicp, 0);
+	}
 }
 
 /* class-declaration :== STRING LBRACE parameters declarations RBRACE
