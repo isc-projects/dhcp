@@ -41,7 +41,7 @@
  */
 
 static char objcopyright[] =
-"$Id: dhcpd.c,v 1.28 1996/08/29 09:49:52 mellon Exp $ Copyright 1995, 1996 The Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.29 1996/08/29 09:55:52 mellon Exp $ Copyright 1995, 1996 The Internet Software Consortium.";
 static char copyright[] =
 "Copyright 1995, 1996 The Internet Software Consortium.";
 static char arr [] = "All rights reserved.";
@@ -72,6 +72,7 @@ int main (argc, argv, envp)
 	int i, status;
 	struct servent *ent;
 	int pidfilewritten = 0;
+	char *s;
 #ifndef DEBUG
 	int pid;
 	char pbuf [20];
@@ -95,13 +96,19 @@ int main (argc, argv, envp)
 	note (copyright);
 	note (arr);
 
-	log_perror = 0;
-
 	for (i = 1; i < argc; i++) {
 		if (!strcmp (argv [i], "-p")) {
 			if (++i == argc)
 				usage ();
-			server_port = htons (atoi (argv [i]));
+			for (s = argv [i]; *s; s++)
+				if (!isdigit (*s))
+					error ("%s: not a valid UDP port",
+					       argv [i]);
+			server_port = atoi (argv [i]);
+			if (server_port < 1 || server_port > 65535)
+				error ("%s: not a valid UDP port",
+				       argv [i]);
+			server_port = htons (server_port);
 			debug ("binding to user-specified port %d",
 			       ntohs (server_port));
 		} else if (!strcmp (argv [i], "-f")) {
@@ -129,6 +136,8 @@ int main (argc, argv, envp)
 			interfaces = tmp;
 		}
 	}
+
+	log_perror = 0;
 
 #ifndef DEBUG
 	if (daemon) {
@@ -215,7 +224,7 @@ int main (argc, argv, envp)
 
 static void usage ()
 {
-	error ("Usage: dhcpd [-p <port>] [-d] [-f] [if0 [...ifN]]");
+	error ("Usage: dhcpd [-p <UDP port #>] [-d] [-f] [if0 [...ifN]]");
 }
 
 void cleanup ()
