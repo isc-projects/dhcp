@@ -800,6 +800,7 @@ struct lease *find_lease (packet, share)
 		if (hp) {
 			host = hp;
 			fixed_lease = mockup_lease (packet, share, hp);
+			uid_lease = (struct lease *)0;
 		} else
 			uid_lease = find_lease_by_uid
 				(packet -> options
@@ -837,6 +838,9 @@ struct lease *find_lease (packet, share)
 		memcpy (cip.iabuf,
 			packet -> options [DHO_DHCP_REQUESTED_ADDRESS].data,
 			packet -> options [DHO_DHCP_REQUESTED_ADDRESS].len);
+		ip_lease = find_lease_by_ip_addr (cip);
+	} else if (packet -> raw -> ciaddr.s_addr) {
+		cip.len = packet -> options [DHO_DHCP_REQUESTED_ADDRESS].len;
 		memcpy (cip.iabuf, &packet -> raw -> ciaddr, 4);
 		ip_lease = find_lease_by_ip_addr (cip);
 	} else
