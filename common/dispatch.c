@@ -87,7 +87,7 @@ void discover_interfaces ()
 	   second time to copy them into an array of addresses. */
 	for (i = 0; i < ic.ifc_len;) {
 		struct ifreq *ifp = (struct ifreq *)((caddr_t)ic.ifc_req + i);
-#ifdef HAVE_SIN_LEN
+#ifdef HAVE_SA_LEN
 		i += (sizeof ifp -> ifr_name) + ifp -> ifr_addr.sa_len;
 #else
 		i += sizeof *ifp;
