@@ -25,7 +25,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: nsupdate.c,v 1.3.2.6 1999/10/26 15:12:57 mellon Exp $ Copyright (c) 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: nsupdate.c,v 1.3.2.7 1999/10/27 20:40:25 mellon Exp $ Copyright (c) 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -202,7 +202,6 @@ int nsupdateA (hostname, ip_addr, ttl, opcode)
 		u -> r_opcode = NXRRSET;
 		u -> r_data = NULL;
 		u -> r_size = 0;
-		APPEND (listuprec, u, r_link);
 		if (!(n = res_mkupdrec (S_UPDATE, hostname, C_IN, T_A, ttl))) {
 			res_freeupdrec (u);
 			return 0;
@@ -210,6 +209,7 @@ int nsupdateA (hostname, ip_addr, ttl, opcode)
 		n -> r_opcode = opcode;
 		n -> r_data = (unsigned char *)ip_addr;
 		n -> r_size = strlen (ip_addr);
+		APPEND (listuprec, u, r_link);
 		APPEND (listuprec, n, r_link);
 		z = res_nupdate (&res, HEAD (listuprec), NULL);
 		log_info ("add %s: %s %d IN A %s",
@@ -230,6 +230,9 @@ int nsupdateA (hostname, ip_addr, ttl, opcode)
 			  z == 1 ? "succeeded" : "failed",
 			  hostname, (unsigned long)ttl, u->r_data);
 		break;
+
+	      default:
+		return 0;
 	}
 
 	while (!EMPTY (listuprec)) {
@@ -262,8 +265,11 @@ int nsupdatePTR (hostname, revname, ttl, opcode)
 		n -> r_data = NULL;
 		n -> r_size = 0;
 	}
-	if (!(u = res_mkupdrec (S_UPDATE, revname, C_IN, T_PTR, ttl)))
+	if (!(u = res_mkupdrec (S_UPDATE, revname, C_IN, T_PTR, ttl))) {
+		if (n)
+			res_freeupdrec (n);
 		return 0;
+	}
 	u -> r_opcode = opcode;
 	u -> r_data = (unsigned char *)hostname;
 	u -> r_size = strlen (hostname);
