@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.103 2000/11/29 05:35:02 mellon Exp $ Copyright 1995-2000 Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.104 2000/12/05 07:30:37 mellon Exp $ Copyright 1995-2000 Internet Software Consortium.";
 #endif
 
   static char copyright[] =
@@ -70,7 +70,8 @@ int server_identifier_matched;
 #if defined (NSUPDATE)
 char std_nsupdate [] = "						    \n\
 on commit {								    \n\
-  if (((config-option server.ddns-updates = null) or			    \n\
+  if (not static and							    \n\
+      ((config-option server.ddns-updates = null) or			    \n\
        (config-option server.ddns-updates != 0))) {			    \n\
     set new-ddns-fwd-name =						    \n\
       concat (pick (config-option server.ddns-hostname,			    \n\
