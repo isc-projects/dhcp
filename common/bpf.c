@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bpf.c,v 1.16 1997/02/19 10:49:20 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bpf.c,v 1.17 1997/02/26 05:20:52 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -380,27 +380,5 @@ size_t receive_packet (interface, buf, len, from, hfrom)
 		return hdr.bh_caplen;
 	} while (!length);
 	return 0;
-}
-#endif
-
-#if defined (USE_BPF_SEND)
-void if_enable (interface)
-	struct interface_info *interface;
-{
- 	struct ifreq ifr;
-	int sock;
-
-	if ((sock = socket (AF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0)
-		error ("Can't create addrlist socket");
-
-	/* Bring the interface down and then up again to clear
-	 * all its routes. */
-	strncpy(ifr.ifr_name, interface -> name, IFNAMSIZ);
-	if (ioctl (sock, SIOCGIFFLAGS, &ifr) < 0)
-		error ("SIOCGIFFLAGS %s: %m", interface -> name);
-
-	ifr.ifr_flags |= (IFF_UP|IFF_RUNNING);
-	if (ioctl(sock, SIOCSIFFLAGS, &ifr) == -1)
-		error ("SIOCSIFFLAGS %s: %m", interface -> name);
 }
 #endif

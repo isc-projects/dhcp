@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: nit.c,v 1.12 1997/02/19 10:49:20 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: nit.c,v 1.13 1997/02/26 05:20:53 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -341,23 +341,5 @@ size_t receive_packet (interface, buf, len, from, hfrom)
 	/* Copy out the data in the packet... */
 	memcpy (buf, &ibuf [bufix], length);
 	return length;
-}
-#endif
-
-#if defined (USE_NIT_SEND)
-void if_enable (interface)
-	struct interface_info *interface;
-{
- 	struct ifreq ifr;
-
-	/* Bring the interface down and then up again to clear
-	 * all its routes. */
-	strncpy(ifr.ifr_name, interface -> name, IFNAMSIZ);
-	if (ioctl(interface -> rfdesc, SIOCGIFFLAGS, &ifr) < 0)
-		error ("SIOCGIFFLAGS %s: %m", interface -> name);
-
-	ifr.ifr_flags |= (IFF_UP|IFF_RUNNING);
-	if (ioctl(interface -> rfdesc, SIOCSIFFLAGS, &ifr) == -1)
-		error ("SIOCSIFFLAGS %s: %m", interface -> name);
 }
 #endif
