@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.34 1999/07/19 01:15:11 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.35 1999/07/19 01:17:23 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1200,23 +1200,23 @@ int evaluate_data_expression (result, packet, options, lease, expr)
 			log_error ("data: leased_lease_time: not available");
 			return 0;
 		}
-		i = lease -> ends - lease -> starts;
+		i = lease -> ends - cur_time;
 		if (buffer_allocate (&result -> buffer, 11, "lease-time")) {
 			result -> data = &result -> buffer -> data [0];
 #if defined (NO_SNPRINTF)
-			snprintf(result -> data, 11, "%lu", i);
+			sprintf (result -> data, 11, "%lu", i);
 #else
-			snprintf(result -> data, 11, "%lu", i);
+			snprintf (result -> data, 11, "%lu", i);
 #endif
-			result -> len = strlen(result -> data);
+			result -> len = strlen (result -> data);
 			result -> terminated = 0;
 		} else {
 			log_error ("data: leased-lease-time: no memory.");
 			return 0;
 		}
 #if defined (DEBUG_EXPRESSIONS)
-		log_info ("data: leased-lease-time = %s",
-		      print_hex_1 (result -> len, result -> data, 60));
+		log_info ("data: lease-time = %s",
+			  print_hex_1 (result -> len, result -> data, 60));
 #endif
  		return 1;
  
