@@ -3,8 +3,8 @@
    Lexical scanner for dhcpd config file... */
 
 /*
- * Copyright (c) 1995, 1996, 1997 The Internet Software Consortium.
- * All rights reserved.
+ * Copyright (c) 1995, 1996, 1997, 1998, 1999
+ * The Internet Software Consortium.    All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: conflex.c,v 1.36 1998/11/11 07:50:06 mellon Exp $ Copyright (c) 1995, 1996, 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: conflex.c,v 1.37 1999/02/14 18:42:06 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -364,6 +364,8 @@ static int intern (atom, dfv)
 			return ALIAS;
 		if (!strcasecmp (atom + 1, "bandoned"))
 			return ABANDONED;
+		if (!strcasecmp (atom + 1, "uthoritative"))
+			return AUTHORITATIVE;
 		if (!strcasecmp (atom + 1, "dd"))
 			return ADD;
 		if (!strcasecmp (atom + 1, "uthenticated"))
@@ -396,6 +398,8 @@ static int intern (atom, dfv)
 			return CLIENT_IDENTIFIER;
 		if (!strcasecmp (atom + 1, "lient-hostname"))
 			return CLIENT_HOSTNAME;
+		if (!strcasecmp (atom + 1, "ommunications-interrupted"))
+			return COMMUNICATIONS_INTERRUPTED;
 		break;
 	      case 'd':
 		if (!strcasecmp (atom + 1, "omain"))
@@ -449,6 +453,8 @@ static int intern (atom, dfv)
 			return FILENAME;
 		if (!strcasecmp (atom + 1, "ixed-address"))
 			return FIXED_ADDR;
+		if (!strcasecmp (atom + 1, "ddi"))
+			return FDDI;
 		break;
 	      case 'g':
 		if (!strcasecmp (atom + 1, "iaddr"))
@@ -471,6 +477,8 @@ static int intern (atom, dfv)
 			return INITIAL_INTERVAL;
 		if (!strcasecmp (atom + 1, "nterface"))
 			return INTERFACE;
+		if (!strcasecmp (atom + 1, "dentifier"))
+			return IDENTIFIER;
 		if (!strcasecmp (atom + 1, "f"))
 			return IF;
 		break;
@@ -485,8 +493,14 @@ static int intern (atom, dfv)
 			return LIMIT;
 		break;
 	      case 'm':
-		if (!strcasecmp (atom + 1, "ax-lease-time"))
-			return MAX_LEASE_TIME;
+		if (!strncasecmp (atom + 1, "ax-", 3)) {
+			if (!strcasecmp (atom + 4, "lease-time"))
+				return MAX_LEASE_TIME;
+			if (!strcasecmp (atom + 4, "transmit-idle"))
+				return MAX_TRANSMIT_IDLE;
+			if (!strcasecmp (atom + 4, "response-delay"))
+				return MAX_RESPONSE_DELAY;
+		}
 		if (!strncasecmp (atom + 1, "in-", 3)) {
 			if (!strcasecmp (atom + 4, "lease-time"))
 				return MIN_LEASE_TIME;
@@ -505,16 +519,22 @@ static int intern (atom, dfv)
 			return MATCH;
 		if (!strcasecmp (atom + 1, "embers"))
 			return MEMBERS;
+		if (!strcasecmp (atom + 1, "y"))
+			return MY;
 		break;
 	      case 'n':
 		if (!strcasecmp (atom + 1, "ot"))
 			return NOT;
+		if (!strcasecmp (atom + 1, "ormal"))
+			return NORMAL;
 		if (!strcasecmp (atom + 1, "ameserver"))
 			return NAMESERVER;
 		if (!strcasecmp (atom + 1, "etmask"))
 			return NETMASK;
 		if (!strcasecmp (atom + 1, "ext-server"))
 			return NEXT_SERVER;
+		if (!strcasecmp (atom + 1, "ot"))
+			return TOKEN_NOT;
 		break;
 	      case 'o':
 		if (!strcasecmp (atom + 1, "r"))
@@ -535,12 +555,30 @@ static int intern (atom, dfv)
 			return POOL;
 		if (!strcasecmp (atom + 1, "seudo"))
 			return PSEUDO;
+		if (!strcasecmp (atom + 1, "eer"))
+			return PEER;
+		if (!strcasecmp (atom + 1, "rimary"))
+			return PRIMARY;
+		if (!strncasecmp (atom + 1, "artner", 6)) {
+			if (!atom [7])
+				return PARTNER;
+			if (!strcasecmp (atom + 7, "-down"))
+				return PARTNER_DOWN;
+		}
+		if (!strcasecmp (atom + 1, "ort"))
+			return PORT;
+		if (!strcasecmp (atom + 1, "otential-conflict"))
+			return POTENTIAL_CONFLICT;
 		break;
 	      case 'r':
 		if (!strcasecmp (atom + 1, "ange"))
 			return RANGE;
+		if (!strcasecmp (atom + 1, "ecover"))
+			return RECOVER;
 		if (!strcasecmp (atom + 1, "equest"))
 			return REQUEST;
+		if (!strcasecmp (atom + 1, "equire"))
+			return REQUIRE;
 		if (!strcasecmp (atom + 1, "equire"))
 			return REQUIRE;
 		if (!strcasecmp (atom + 1, "etry"))
@@ -565,6 +603,8 @@ static int intern (atom, dfv)
 			return SIADDR;
 		if (!strcasecmp (atom + 1, "hared-network"))
 			return SHARED_NETWORK;
+		if (!strcasecmp (atom + 1, "econdary"))
+			return SECONDARY;
 		if (!strcasecmp (atom + 1, "erver-name"))
 			return SERVER_NAME;
 		if (!strcasecmp (atom + 1, "erver-identifier"))
@@ -600,12 +640,16 @@ static int intern (atom, dfv)
 	      case 'u':
 		if (!strcasecmp (atom + 1, "id"))
 			return UID;
-		if (!strcasecmp (atom + 1, "ser-class"))
-			return USER_CLASS;
-		if (!strcasecmp (atom + 1, "se-host-decl-names"))
-			return USE_HOST_DECL_NAMES;
-		if (!strcasecmp (atom + 1, "se-lease-addr-for-default-route"))
-			return USE_HOST_DECL_NAMES;
+		if (!strncasecmp (atom + 1, "se", 2)) {
+			if (!strcasecmp (atom + 3, "r-class"))
+				return USER_CLASS;
+			if (!strcasecmp (atom + 3, "-host-decl-names"))
+				return USE_HOST_DECL_NAMES;
+			if (!strcasecmp (atom + 3,
+					 "-lease-addr-for-default-route"))
+				return USE_LEASE_ADDR_FOR_DEFAULT_ROUTE;
+			break;
+		}
 		if (!strncasecmp (atom + 1, "nknown", 6)) {
 			if (!strcasecmp (atom + 7, "-clients"))
 				return UNKNOWN_CLIENTS;
