@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.60 1998/03/17 06:20:51 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.61 1998/03/17 18:14:51 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -114,6 +114,15 @@ void dhcpdiscover (packet)
 			note ("no free leases on subnet %s",
 			      packet -> shared_network -> name);
 			return;
+		}
+
+		/* If we find an abandoned lease, take it, but print a
+		   warning message, so that if it continues to lose,
+		   the administrator will eventually investigate. */
+		if (lease -> flags & ABANDONED_LEASE) {
+			warn ("Reclaiming abandoned IP address %s.\n",
+			      piaddr (lease -> ip_addr));
+			lease -> flags &= ~ABANDONED_LEASE;
 		}
 
 		/* Try to find a host_decl that matches the client
@@ -1290,6 +1299,16 @@ struct lease *find_lease (packet, share, ours)
 						     packet -> raw -> hlen,
 						     packet -> raw -> chaddr),
 				      ip_lease -> shared_network -> name);
+
+			/* If the client is REQUESTing the lease, it shouldn't
+			   still be using the old one, so we can free it for
+			   allocation.   This is only true if the duplicate
+			   lease is on the same network, of course. */
+
+			if (packet -> packet_type == DHCPREQUEST &&
+			    share == uid_lease -> shared_network)
+				dissociate_lease (uid_lease);
+
 			uid_lease = ip_lease;
 		}
 		ip_lease = (struct lease *)0;
