@@ -23,6 +23,7 @@
 #include "dhcpctl.h"
 
 omapi_object_type_t *dhcpctl_callback_type;
+omapi_object_type_t *dhcpctl_remote_type;
 
 /* dhcpctl_initialize ()
 
@@ -37,90 +38,14 @@ dhcpctl_status dhcpctl_initialize ()
 				    dhcpctl_callback_get_value,
 				    dhcpctl_callback_destroy,
 				    dhcpctl_callback_signal_handler,
-				    dhcpctl_callback_stuff_values);
-	return ISC_R_SUCCESS;
-}
-
-/* Callback methods (not meant to be called directly) */
-
-isc_result_t dhcpctl_callback_set_value (omapi_object_t *h,
-					 omapi_object_t *id,
-					 omapi_data_string_t *name,
-					 omapi_typed_data_t *value)
-{
-	if (h -> type != dhcpctl_callback_type)
-		return ISC_R_INVALIDARG;
-
-	if (h -> inner && h -> inner -> type -> set_value)
-		return (*(h -> inner -> type -> set_value))
-			(h -> inner, id, name, value);
-	return ISC_R_NOTFOUND;
-}
-
-isc_result_t dhcpctl_callback_get_value (omapi_object_t *h,
-				       omapi_object_t *id,
-				       omapi_data_string_t *name,
-				       omapi_value_t **value)
-{
-	if (h -> type != dhcpctl_callback_type)
-		return ISC_R_INVALIDARG;
-	
-	if (h -> inner && h -> inner -> type -> get_value)
-		return (*(h -> inner -> type -> get_value))
-			(h -> inner, id, name, value);
-	return ISC_R_NOTFOUND;
-}
-
-isc_result_t dhcpctl_callback_signal_handler (omapi_object_t *o,
-					      char *name, va_list ap)
-{
-	dhcpctl_callback_object_t *p;
-	if (o -> type != dhcpctl_callback_type)
-		return ISC_R_INVALIDARG;
-	p = (dhcpctl_callback_object_t *)o;
-
-	/* Not a signal we recognize? */
-	if (strcmp (name, "ready")) {
-		if (p -> inner && p -> inner -> type -> signal_handler)
-			return (*(p -> inner -> type -> signal_handler))
-				(p -> inner, name, ap);
-		return ISC_R_NOTFOUND;
-	}
-
-	/* Do the callback. */
-	if (p -> callback)
-		(*(p -> callback)) (p -> object, 0, p -> data);
-
-	return ISC_R_SUCCESS;
-}
-
-isc_result_t dhcpctl_callback_destroy (omapi_object_t *h, char *name)
-{
-	dhcpctl_callback_object_t *p;
-	if (h -> type != dhcpctl_callback_type)
-		return ISC_R_INVALIDARG;
-	p = (dhcpctl_callback_object_t *)h;
-	if (p -> handle)
-		omapi_object_dereference ((omapi_object_t **)&p -> handle,
-					  name);
-	return ISC_R_SUCCESS;
-}
-
-/* Write all the published values associated with the object through the
-   specified connection. */
-
-isc_result_t dhcpctl_callback_stuff_values (omapi_object_t *c,
-					  omapi_object_t *id,
-					  omapi_object_t *p)
-{
-	int i;
-
-	if (p -> type != dhcpctl_callback_type)
-		return ISC_R_INVALIDARG;
-
-	if (p -> inner && p -> inner -> type -> stuff_values)
-		return (*(p -> inner -> type -> stuff_values)) (c, id,
-								p -> inner);
+				    dhcpctl_callback_stuff_values, 0, 0);
+	omapi_object_type_register (&dhcpctl_remote_type,
+				    "dhcpctl-remote",
+				    dhcpctl_remote_set_value,
+				    dhcpctl_remote_get_value,
+				    dhcpctl_remote_destroy,
+				    dhcpctl_remote_signal_handler,
+				    dhcpctl_remote_stuff_values, 0, 0);
 	return ISC_R_SUCCESS;
 }
 
@@ -162,142 +87,6 @@ dhcpctl_status dhcpctl_connect (dhcpctl_handle *connection,
 	return status;
 }
 
-/* asynchronous - just queues the request
-   returns nonzero status code if open couldn't be queued
-   returns zero if open was queued
-   h is a handle to an object created by dhcpctl_new_object
-   connection is a connection to a DHCP server
-   flags include:
-     DHCPCTL_CREATE - if the object doesn't exist, create it
-     DHCPCTL_UPDATE - update the object on the server using the
-     		      attached parameters 
-     DHCPCTL_EXCL - error if the object exists and DHCPCTL_CREATE
-     		      was also specified */
-
-dhcpctl_status dhcpctl_open_object (dhcpctl_handle h,
-				    dhcpctl_handle connection,
-				    int flags)
-{
-	isc_result_t status;
-	omapi_object_t *message = (omapi_object_t *)0;
-
-	status = omapi_message_new (&message, "dhcpctl_open_object");
-	if (status != ISC_R_SUCCESS) {
-		omapi_object_dereference (&message, "dhcpctl_open_object");
-		return status;
-	}
-	status = omapi_set_int_value (message, (omapi_object_t *)0,
-				      "op", OMAPI_OP_OPEN);
-	if (status != ISC_R_SUCCESS) {
-		omapi_object_dereference (&message, "dhcpctl_open_object");
-		return status;
-	}
-	status = omapi_set_object_value (message, (omapi_object_t *)0,
-					 "object", h);
-	if (status != ISC_R_SUCCESS) {
-		omapi_object_dereference (&message, "dhcpctl_open_object");
-		return status;
-	}
-	if (flags & DHCPCTL_CREATE) {
-		status = omapi_set_boolean_value (message, (omapi_object_t *)0,
-						  "create", 1);
-		if (status != ISC_R_SUCCESS) {
-			omapi_object_dereference (&message,
-						  "dhcpctl_open_object");
-			return status;
-		}
-	}
-	if (flags & DHCPCTL_UPDATE) {
-		status = omapi_set_boolean_value (message, (omapi_object_t *)0,
-						  "update", 1);
-		if (status != ISC_R_SUCCESS) {
-			omapi_object_dereference (&message,
-						  "dhcpctl_open_object");
-			return status;
-		}
-	}
-	if (flags & DHCPCTL_EXCL) {
-		status = omapi_set_boolean_value (message, (omapi_object_t *)0,
-						  "exclusive", 1);
-		if (status != ISC_R_SUCCESS) {
-			omapi_object_dereference (&message,
-						  "dhcpctl_open_object");
-			return status;
-		}
-	}
-
-	omapi_message_register (message);
-	return omapi_protocol_send_message (connection -> outer,
-					    (omapi_object_t *)0,
-					    message, (omapi_object_t *)0);
-}
-
-/* dhcpctl_new_object
-
-   synchronous - creates a local handle for a host entry.
-   returns nonzero status code if the local host entry couldn't
-   be created
-   stores handle to host through h if successful, and returns zero.
-   object_type is a pointer to a NUL-terminated string containing
-   the ascii name of the type of object being accessed - e.g., "host" */
-
-dhcpctl_status dhcpctl_new_object (dhcpctl_handle *h,
-				   dhcpctl_handle connection,
-				   char *object_type)
-{
-	isc_result_t status;
-
-	status = omapi_generic_new (h, "dhcpctl_new_object");
-	if (status != ISC_R_SUCCESS)
-		return status;
-	status = dhcpctl_set_string_value (*h, object_type, "type");
-	if (status != ISC_R_SUCCESS)
-		omapi_object_dereference (h, "dhcpctl_new_object");
-	return status;
-}
-
-/* dhcpctl_set_callback
-
-   synchronous, with asynchronous aftereffect
-   handle is some object upon which some kind of process has been
-   started - e.g., an open, an update or a refresh.
-   data is an anonymous pointer containing some information that
-   the callback will use to figure out what event completed.
-   return value of 0 means callback was successfully set, a nonzero
-   status code is returned otherwise.
-   Upon completion of whatever task is in process, the callback
-   will be passed the handle to the object, a status code
-   indicating what happened, and the anonymous pointer passed to  */
-
-dhcpctl_status dhcpctl_set_callback (dhcpctl_handle h, void *data,
-				     void (*func) (dhcpctl_handle,
-						   dhcpctl_status, void *))
-{
-	dhcpctl_callback_object_t *callback;
-	omapi_object_t *inner;
-	isc_result_t status;
-
-	callback = malloc (sizeof *callback);
-	if (!callback)
-		return ISC_R_NOMEMORY;
-
-	/* Tie the callback object to the innermost object in the chain. */
-	for (inner = h; inner -> inner; inner = inner -> inner)
-		;
-	omapi_object_reference (&inner -> inner, (omapi_object_t *)callback,
-				"dhcpctl_set_callback");
-	omapi_object_reference ((omapi_object_t **)&callback -> outer, inner,
-				"dhcpctl_set_callback");
-
-	/* Save the actual handle pointer we were passed for the callback. */
-	omapi_object_reference (&callback -> object, h,
-				"dhcpctl_set_callback");
-	callback -> data = data;
-	callback -> callback = func;
-	
-	return ISC_R_SUCCESS;
-}
-
 /* dhcpctl_wait_for_completion
 
    synchronous
@@ -314,8 +103,13 @@ dhcpctl_status dhcpctl_set_callback (dhcpctl_handle h, void *data,
 dhcpctl_status dhcpctl_wait_for_completion (dhcpctl_handle h,
 					    dhcpctl_status *s)
 {
-	*s = 0;
-	return omapi_wait_for_completion (h, 0);
+	isc_result_t status;
+	status = omapi_wait_for_completion (h, 0);
+	if (status != ISC_R_SUCCESS)
+		return status;
+	if (h -> type == dhcpctl_remote_type)
+		*s = ((dhcpctl_remote_object_t *)h) -> waitstatus;
+	return ISC_R_SUCCESS;
 }
 
 /* dhcpctl_get_value
