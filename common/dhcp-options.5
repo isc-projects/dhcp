@@ -1,4 +1,4 @@
-.\"	$Id: dhcp-options.5,v 1.19.2.12 2004/09/15 16:10:20 dhankins Exp $
+.\"	$Id: dhcp-options.5,v 1.19.2.13 2004/09/15 16:24:18 dhankins Exp $
 .\"
 .\" Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 1996-2003 by Internet Software Consortium
@@ -977,7 +977,7 @@ clients are sending, you can write the following in your DHCP server
 configuration file:
 .nf
 .PP
-set vendor-class option vendor-class-identifier;
+set vendor-string = option vendor-class-identifier;
 .fi
 .PP
 This will result in all entries in the DHCP server lease database file
@@ -985,7 +985,7 @@ for clients that sent vendor-class-identifier options having a set
 statement that looks something like this:
 .nf
 .PP
-set vendor-class "SUNW.Ultra-5_10";
+set vendor-string "SUNW.Ultra-5_10";
 .fi
 .PP
 The vendor-class-identifier option is normally used by the DHCP server
