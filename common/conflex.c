@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: conflex.c,v 1.71 2000/04/06 22:38:52 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: conflex.c,v 1.72 2000/05/01 17:25:36 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -512,6 +512,8 @@ static enum dhcp_token intern (atom, dfv)
 			return AT;
 		if (!strcasecmp (atom + 1, "rray"))
 			return ARRAY;
+		if (!strcasecmp (atom + 1, "ddress"))
+			return ADDRESS;
 		break;
 	      case 'b':
 		if (!strcasecmp (atom + 1, "inary-to-ascii"))
@@ -530,6 +532,8 @@ static enum dhcp_token intern (atom, dfv)
 			return BILLING;
 		if (!strcasecmp (atom + 1, "oolean"))
 			return BOOLEAN;
+		if (!strcasecmp (atom + 1, "alance"))
+			return BALANCE;
 		break;
 	      case 'c':
 		if (!strcasecmp (atom + 1, "ase"))
@@ -641,6 +645,8 @@ static enum dhcp_token intern (atom, dfv)
 			return NS_FORMERR;
 		if (!strcasecmp (atom + 1, "unction"))
 			return FUNCTION;
+		if (!strcasecmp (atom + 1, "ailover"))
+			return FAILOVER;
 		break;
 	      case 'g':
 		if (!strcasecmp (atom + 1, "iaddr"))
@@ -699,16 +705,20 @@ static enum dhcp_token intern (atom, dfv)
 			return LIMIT;
 		if (!strcasecmp (atom + 1, "et"))
 			return LET;
+		if (!strcasecmp (atom + 1, "oad"))
+			return LOAD;
 		break;
 	      case 'm':
-		if (!strncasecmp (atom + 1, "ax-", 3)) {
-			if (!strcasecmp (atom + 4, "lease-time"))
+		if (!strncasecmp (atom + 1, "ax", 2)) {
+			if (!atom [3])
+				return TOKEN_MAX;
+			if (!strcasecmp (atom + 3, "-lease-time"))
 				return MAX_LEASE_TIME;
-			if (!strcasecmp (atom + 4, "transmit-idle"))
+			if (!strcasecmp (atom + 3, "-transmit-idle"))
 				return MAX_TRANSMIT_IDLE;
-			if (!strcasecmp (atom + 4, "response-delay"))
+			if (!strcasecmp (atom + 3, "-response-delay"))
 				return MAX_RESPONSE_DELAY;
-			if (!strcasecmp (atom + 5, "unacked-updates"))
+			if (!strcasecmp (atom + 3, "-unacked-updates"))
 				return MAX_UNACKED_UPDATES;
 		}
 		if (!strncasecmp (atom + 1, "in-", 3)) {
@@ -889,6 +899,8 @@ static enum dhcp_token intern (atom, dfv)
 			return SPLIT;
 		if (!strcasecmp (atom + 1, "et"))
 			return TOKEN_SET;
+		if (!strcasecmp (atom + 1, "econds"))
+			return SECONDS;
 		break;
 	      case 't':
 		if (!strcasecmp (atom + 1, "imestamp"))
