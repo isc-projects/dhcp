@@ -84,20 +84,29 @@ These addresses are allocated using the
 clause.
 .PP
 .B range
+[
+.B dynamic-bootp
+]
 .I lowest-address
 .I highest-address
 .PP
 .I lowest-address
-should be the lowest address in the range that may be assigned by
-dhcpd to a DHCP client.
+should be the lowest address in the range that is available to
+dhcpd for dynamic allocation.
 .I highest-address
-should be the highest address in the range that may be assigned by
-dhcpd.   If there is only one address in a range, it must be specified
-as both the lowest and highest addresses.  As many
+should be the highest address in the range that is available to
+dhcpd for dynamic allocation.   If there is only one address in a range,
+it must be specified as both the lowest and highest addresses.  As many
 .B range
 clauses as are needed may be specified in any given
 .B subnet
 statement.
+.PP
+Include the
+.B dynamic-bootp
+keyword if addresses from this range may be allocated to BOOTP clients
+with no applicable fixed address.   BOOTP clients will be assigned a
+permanent lease.
 .PP
 .B default-lease-time
 .I time
@@ -136,18 +145,24 @@ There must be at least one
 statement for every BOOTP client that is to be served.   
 .B host
 statements may also be specified for DHCP clients, although this is
-not required.   If it is desirable to be able to boot a DHCP or BOOTP
+not required.
+.PP
+If it is desirable to be able to boot a DHCP or BOOTP
 client on more than one subnet with fixed addresses, more than one
 address may be specified in the
 .B fixed-address
 clause, or more than one
 .B host
-statement may be specified.   If
+statement may be specified.
+.PP
+If
 client-specific boot parameters must change based on the network
 to which the client is attached, then multiple 
 .B host
 statements should
-be used.   If a client is to be booted using a fixed address if it's
+be used.
+.PP
+If a client is to be booted using a fixed address if it's
 possible, but should be allocated a dynamic address otherwise, then a
 .B host
 statement must be specified without a
@@ -244,18 +259,31 @@ Option data comes in a variety of formats.   In order to avoid having
 to explain the formats along with each option definition below, a
 number of data types have been defined.
 .PP
-The ip-address data type can be entered either as an explicit IP
+The
+.B ip-address
+data type can be entered either as an explicit IP
 address (e.g., 239.254.197.10) or as a domain name (e.g.,
 haagen.isc.org).  When entering a domain name, be sure that that
 domain name resolves to a single IP address.
 .PP
-The int32 data type specifies a signed 32-bit integer.   The uint32
-data type specifies an unsigned 32-bit integer.   The int16 and uint16
-data types specify signed and unsigned 16-bit integers.   The int8 and
-uint8 data types specify signed and unsigned 8-bit integers.
+The
+.B int32
+data type specifies a signed 32-bit integer.   The 
+.B uint32
+data type specifies an unsigned 32-bit integer.   The 
+.B int16
+and
+.B uint16
+data types specify signed and unsigned 16-bit integers.   The 
+.B int8
+and
+.B uint8
+data types specify signed and unsigned 8-bit integers.
 Unsigned 8-bit integers are also sometimes referred to as octets.
 .PP
-The string data type specifies an NVT ASCII string, which must be
+The
+.B string
+data type specifies an NVT ASCII string, which must be
 enclosed in double quotes - for example, to specify a domain-name
 option, the syntax would be
 .nf
@@ -263,9 +291,13 @@ option, the syntax would be
 	option domain-name "isc.org"
 .fi
 .PP
-The flag data type specifies a one-bit (boolean) number.
+The
+.B flag
+data type specifies a one-bit (boolean) number.
 .PP
-The data-string data type specifies either an NVT ASCII string
+The
+.B data-string
+data type specifies either an NVT ASCII string
 enclosed in double quotes, or a series of octets specified in
 hexadecimal, seperated by colons.   For example:
 .nf
