@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.57.2.11 1998/11/24 23:12:39 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.57.2.12 1998/12/20 17:53:02 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -120,9 +120,25 @@ void dhcpdiscover (packet)
 		   warning message, so that if it continues to lose,
 		   the administrator will eventually investigate. */
 		if (lease -> flags & ABANDONED_LEASE) {
-			warn ("Reclaiming abandoned IP address %s.",
-			      piaddr (lease -> ip_addr));
-			lease -> flags &= ~ABANDONED_LEASE;
+			struct lease *lp;
+
+			/* See if we can find an unabandoned lease first. */
+			for (lp = lease; lp; lp = lp -> prev) {
+				if (lp -> ends > cur_time)
+					break;
+				if (!lp -> flags & ABANDONED_LEASE) {
+					lease = lp;
+					break;
+				}
+			}
+
+			/* If we can't find an unabandoned lease, reclaim the
+			   abandoned lease. */
+			if (lease -> flags & ABANDONED_LEASE) {
+				warn ("Reclaiming abandoned IP address %s.",
+				      piaddr (lease -> ip_addr));
+				lease -> flags &= ~ABANDONED_LEASE;
+			}
 		}
 
 		/* Try to find a host_decl that matches the client
@@ -501,14 +517,15 @@ void nak_lease (packet, cip)
 		to.sin_addr = raw.giaddr;
 		to.sin_port = local_port;
 
-#ifdef USE_FALLBACK
-		result = send_fallback (&fallback_interface,
-					packet, &raw, outgoing.packet_length,
-					from, &to, &hto);
-		if (result < 0)
-			warn ("send_fallback: %m");
-		return;
-#endif
+		if (fallback_interface) {
+			result = send_packet (fallback_interface,
+					      packet, &raw,
+					      outgoing.packet_length,
+					      from, &to, &hto);
+			if (result < 0)
+				warn ("send_fallback: %m");
+			return;
+		}
 	} else {
 		to.sin_addr.s_addr = htonl (INADDR_BROADCAST);
 		to.sin_port = remote_port;
@@ -1131,41 +1148,41 @@ void dhcp_reply (lease)
 		to.sin_addr = raw.giaddr;
 		to.sin_port = local_port;
 
-#ifdef USE_FALLBACK
-		result = send_fallback (&fallback_interface,
-					(struct packet *)0,
-					&raw, packet_length,
-					raw.siaddr, &to, &hto);
-		if (result < 0)
-			warn ("send_fallback: %m");
+		if (fallback_interface) {
+			result = send_packet (fallback_interface,
+					      (struct packet *)0,
+					      &raw, packet_length,
+					      raw.siaddr, &to, &hto);
+			if (result < 0)
+				warn ("send_fallback: %m");
 
-		free_lease_state (state, "dhcp_reply fallback 1");
-		lease -> state = (struct lease_state *)0;
-		return;
-#endif
+			free_lease_state (state, "dhcp_reply fallback 1");
+			lease -> state = (struct lease_state *)0;
+			return;
+		}
 
-	/* If it comes from a client who already knows its address and
+	/* If it comes from a client that already knows its address and
 	   is not requesting a broadcast response, sent it directly to
 	   that client. */
 	} else if (raw.ciaddr.s_addr && state -> offer == DHCPACK &&
-		   !(raw.flags & htons (BOOTP_BROADCAST))) {
+		   !(raw.flags & htons (BOOTP_BROADCAST)) &&
+		   can_unicast_without_arp ()) {
 		to.sin_addr = state -> ciaddr;
 		to.sin_port = remote_port; /* XXX */
 
-#ifdef USE_FALLBACK
-		result = send_fallback (&fallback_interface,
-					(struct packet *)0,
-					&raw, packet_length,
-					raw.siaddr, &to, &hto);
-		if (result < 0)
-			warn ("send_fallback: %m");
-		free_lease_state (state, "dhcp_reply fallback 1");
-		lease -> state = (struct lease_state *)0;
-		return;
-#endif
-
-	/* Otherwise, broadcast it on the local network. */
+		if (fallback_interface) {
+			result = send_packet (fallback_interface,
+					      (struct packet *)0,
+					      &raw, packet_length,
+					      raw.siaddr, &to, &hto);
+			if (result < 0)
+				warn ("send_fallback: %m");
+			free_lease_state (state, "dhcp_reply fallback 1");
+			lease -> state = (struct lease_state *)0;
+			return;
+		}
 	} else {
+		/* Otherwise, broadcast it on the local network. */
 		to.sin_addr.s_addr = htonl (INADDR_BROADCAST);
 		to.sin_port = remote_port; /* XXX */
 	}
