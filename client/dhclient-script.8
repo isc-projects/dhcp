@@ -160,9 +160,13 @@ lease must be valid for the network to which the interface is
 currently connected.   It would be more complete to try to ping all of
 the routers listed in $new_routers, as well as those listed in
 $new_static_routes, but current scripts do not do this.
-.SH SEE ALSO
-dhclient(8), dhcpd(8), dhcrelay(8), dhclient.conf(5) and
-dhclient.leases(5).
+.SH FILES
+Each operating system should generally have its own script file,
+although the script files for similar operating systems may be similar
+or even identical.   The script files included in the Internet
+Software Consortium DHCP distribution appear in the distribution tree
+under client/scripts, and bear the names of the operating systems on
+which they are intended to work.
 .SH BUGS
 If more than one interface is being used, there's no obvious way to
 avoid clashes between server-supplied configuration parameters - for
@@ -172,6 +176,9 @@ repeatedly initialized to the values provided by one server, and then
 the other.   Assuming the information provided by both servers is
 valid, this shouldn't cause any real problems, but it could be
 confusing.
+.SH SEE ALSO
+dhclient(8), dhcpd(8), dhcrelay(8), dhclient.conf(5) and
+dhclient.leases(5).
 .SH AUTHOR
 .B dhclient-script(8)
 has been written for the Internet Software Consortium
