@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.88 1999/10/12 16:00:33 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.89 1999/10/24 17:19:14 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1482,6 +1482,13 @@ void parse_shared_net_declaration (cfile, group)
 			token = next_token (&val, cfile);
 			parse_warn (cfile, "unexpected end of file");
 			break;
+		} else if (token == INTERFACE) {
+			token = next_token (&val, cfile);
+			token = next_token (&val, cfile);
+			new_shared_network_interface (cfile, share, val);
+			if (!parse_semi (cfile))
+				break;
+			continue;
 		}
 
 		declaration = parse_statement (cfile, share -> group,
@@ -1505,6 +1512,7 @@ void parse_subnet_declaration (cfile, share)
 	unsigned char addr [4];
 	unsigned len = sizeof addr;
 	int declaration = 0;
+	struct interface_info *ip;
 
 	subnet = new_subnet ("parse_subnet_declaration");
 	if (!subnet)
@@ -1549,6 +1557,13 @@ void parse_subnet_declaration (cfile, share)
 			token = next_token (&val, cfile);
 			parse_warn (cfile, "unexpected end of file");
 			break;
+		} else if (token == INTERFACE) {
+			token = next_token (&val, cfile);
+			token = next_token (&val, cfile);
+			new_shared_network_interface (cfile, share, val);
+			if (!parse_semi (cfile))
+				break;
+			continue;
 		}
 		declaration = parse_statement (cfile, subnet -> group,
 					       SUBNET_DECL,
