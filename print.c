@@ -108,10 +108,10 @@ void dump_packet (tp)
 	       tdp -> op, tdp -> htype, tdp -> hlen, tdp -> hops);
 	debug ("xid = %x  secs = %d  flags = %x",
 	       tdp -> xid, tdp -> secs, tdp -> flags);
-	debug ("ciaddr = %s  yiaddr = %s",
-	       inet_ntoa (tdp -> ciaddr), inet_ntoa (tdp -> yiaddr));
-	debug ("siaddr = %s  giaddr = %s",
-	       inet_ntoa (tdp -> siaddr), inet_ntoa (tdp -> giaddr));
+	debug ("ciaddr = %s  ", inet_ntoa (tdp -> ciaddr));
+	debug ("yiaddr = %s", inet_ntoa (tdp -> yiaddr));
+	debug ("siaddr = %s", inet_ntoa (tdp -> siaddr));
+	debug ("  giaddr = %s", inet_ntoa (tdp -> giaddr));
 	debug ("chaddr = %02.2x:%02.2x:%02.2x:%02.2x:%02.2x:%02.2x",
 	       ((unsigned char *)(tdp -> chaddr)) [0],
 	       ((unsigned char *)(tdp -> chaddr)) [1],
