@@ -67,7 +67,8 @@ int main (argc, argv)
 	dhcpctl_data_string result, groupname, identifier;
 	int i;
 	int mode = undefined;
-	char *name = 0, *pass = 0, *algorithm = "hmac-md5", *interface = 0;
+	const char *name = 0, *pass = 0, *algorithm = "hmac-md5";
+	const char *interface = 0;
 	const char *action;
 	
 	for (i = 1; i < argc; i++) {
