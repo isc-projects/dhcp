@@ -1365,6 +1365,7 @@ void client_location_changed PROTO ((void));
 
 /* db.c */
 int write_lease PROTO ((struct lease *));
+int db_printable PROTO ((char *));
 int write_billing_class PROTO ((struct class *));
 int commit_leases PROTO ((void));
 void db_startup PROTO ((void));
