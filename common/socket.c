@@ -50,7 +50,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: socket.c,v 1.23 1997/03/29 01:26:08 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: socket.c,v 1.24 1997/03/29 03:19:02 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -201,7 +201,7 @@ size_t send_packet (interface, packet, raw, len, from, to, hto)
 		result = sendto (interface -> wfdesc, (char *)raw, len, 0,
 				 (struct sockaddr *)to, sizeof *to);
 #ifdef IGNORE_HOSTUNREACH
-	} while (to.sin_addr.s_addr = htonl (INADDR_BROADCAST) &&
+	} while (to -> sin_addr.s_addr = htonl (INADDR_BROADCAST) &&
 		 result < 0 &&
 		 (errno == EHOSTUNREACH ||
 		  errno == ECONNREFUSED) &&
