@@ -4,7 +4,7 @@ while [ $# != 0 ]; do
   if [ x$1 = x--with-nsupdate ]; then
     nsupdate="-e /^##--nsupdate--/,/^##--nsupdate--/s/^#//"
   else
-   if [ $?sysname = 0 ]; then
+   if [ x$sysname = x ]; then
      sysname=$1
     else
        echo "Unexpected argument: $1"
