@@ -48,7 +48,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dns.c,v 1.7 1998/03/15 20:50:53 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dns.c,v 1.8 1998/03/16 06:11:30 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -150,7 +150,7 @@ static int copy_out_name (base, name, buf)
 
 /* Compute a hash on the question. */
 
-static inline u_int32_t dns_hash_question (struct dns_question *question)
+static INLINE u_int32_t dns_hash_question (struct dns_question *question)
 {
 	u_int32_t sum;
 	u_int32_t remainder;
@@ -212,7 +212,8 @@ struct dns_query *find_dns_query (question, new)
 	for (q = dns_query_hash [hash]; q; q = q -> next) {
 		if (q -> question -> type == question -> type &&
 		    q -> question -> class == question -> class &&
-		    !strcmp (q -> question -> data, question -> data))
+		    !strcmp ((char *)q -> question -> data,
+			     (char *)question -> data))
 			break;
 	}
 	if (q || !new) {
@@ -280,17 +281,17 @@ struct dns_query *ns_inaddr_lookup (inaddr, wakeup)
 	struct dns_question *question;
 
 	/* First format the query in the internal format. */
-	sprintf (query, "%d.%d.%d.%d.in-addr.arpa.",
+	sprintf ((char *)query, "%d.%d.%d.%d.in-addr.arpa.",
 		 inaddr.iabuf [0], inaddr.iabuf [1],
 		 inaddr.iabuf [2], inaddr.iabuf [3]);
 
-	question = (struct dns_question *)malloc (strlen (query) +
+	question = (struct dns_question *)malloc (strlen ((char *)query) +
 						  sizeof *question);
 	if (!question)
 		return (struct dns_query *)-1;
 	question -> type = T_PTR;
 	question -> class = C_IN;
-	strcpy (question -> data, query);
+	strcpy ((char *)question -> data, (char *)query);
 
 	/* Now format the query for the name server. */
 	s = query;
@@ -298,8 +299,8 @@ struct dns_query *ns_inaddr_lookup (inaddr, wakeup)
 	/* Copy out the digits. */
 	for (i = 3; i >= 0; --i) {
 		label = s++;
-		sprintf (s, "%d", inaddr.iabuf [i]);
-		*label = strlen (s);
+		sprintf ((char *)s, "%d", inaddr.iabuf [i]);
+		*label = strlen ((char *)s);
 		s += *label;
 	}
 	s += addlabel (s, "in-addr");
@@ -415,7 +416,7 @@ void dns_timeout (qv)
 	/* Send the query. */
 	if (query -> next_server)
 		status = sendto (dns_protocol_fd,
-				 query -> query, query -> len, 0,
+				 (char *)query -> query, query -> len, 0,
 				 ((struct sockaddr *)&query ->
 				  next_server -> addr),
 				 sizeof query -> next_server -> addr);
@@ -469,7 +470,7 @@ void dns_packet (protocol)
 	struct dns_query *query;
 
 	len = sizeof from;
-	status = recvfrom (protocol -> fd, buf, sizeof buf, 0,
+	status = recvfrom (protocol -> fd, (char *)buf, sizeof buf, 0,
 			  (struct sockaddr *)&from, &len);
 	if (status < 0) {
 		warn ("dns_packet: %m");
@@ -501,7 +502,7 @@ void dns_packet (protocol)
 	name = dptr;
 
 	/* Skip over the name. */
-	dptr += copy_out_name (name, name, qbuf.q.data);
+	dptr += copy_out_name (name, name, (char *)qbuf.q.data);
 
 	/* Skip over the query type and query class. */
 	qbuf.q.type = getUShort (dptr);

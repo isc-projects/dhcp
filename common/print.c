@@ -3,7 +3,7 @@
    Turn data structures into printable text. */
 
 /*
- * Copyright (c) 1995, 1996 The Internet Software Consortium.
+ * Copyright (c) 1995, 1996, 1998 The Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: print.c,v 1.16 1997/11/29 07:52:10 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: print.c,v 1.17 1998/03/16 06:14:21 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -178,7 +178,7 @@ void hash_dump (table)
 			if (bp -> len)
 				dump_raw (bp -> name, bp -> len);
 			else
-				note (bp -> name);
+				note ((char *)bp -> name);
 		}
 	}
 }

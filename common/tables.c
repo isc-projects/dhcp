@@ -3,7 +3,7 @@
    Tables of information... */
 
 /*
- * Copyright (c) 1995, 1996 The Internet Software Consortium.
+ * Copyright (c) 1995, 1996, 1998 The Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tables.c,v 1.13 1997/05/09 08:13:38 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tables.c,v 1.14 1998/03/16 06:15:04 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -681,10 +681,11 @@ void initialize_universes()
 		error ("Can't allocate dhcp option hash table.");
 	for (i = 0; i < 256; i++) {
 		dhcp_universe.options [i] = &dhcp_options [i];
-		add_hash (dhcp_universe.hash, dhcp_options [i].name, 0,
+		add_hash (dhcp_universe.hash,
+			  (unsigned char *)dhcp_options [i].name, 0,
 			  (unsigned char *)&dhcp_options [i]);
 	}
 	universe_hash.hash_count = DEFAULT_HASH_SIZE;
-	add_hash (&universe_hash, dhcp_universe.name, 0,
+	add_hash (&universe_hash, (unsigned char *)dhcp_universe.name, 0,
 		  (unsigned char *)&dhcp_universe);
 }

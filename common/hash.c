@@ -42,12 +42,12 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: hash.c,v 1.9 1996/09/09 07:04:45 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: hash.c,v 1.10 1998/03/16 06:11:51 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
 
-static INLINE int do_hash PROTO ((char *, int, int));
+static INLINE int do_hash PROTO ((unsigned char *, int, int));
 
 struct hash_table *new_hash ()
 {
@@ -60,7 +60,7 @@ struct hash_table *new_hash ()
 }
 
 static INLINE int do_hash (name, len, size)
-	char *name;
+	unsigned char *name;
 	int len;
 	int size;
 {
@@ -92,7 +92,7 @@ static INLINE int do_hash (name, len, size)
 void add_hash (table, name, len, pointer)
 	struct hash_table *table;
 	int len;
-	char *name;
+	unsigned char *name;
 	unsigned char *pointer;
 {
 	int hashno;
@@ -118,7 +118,7 @@ void add_hash (table, name, len, pointer)
 void delete_hash_entry (table, name, len)
 	struct hash_table *table;
 	int len;
-	char *name;
+	unsigned char *name;
 {
 	int hashno;
 	struct hash_bucket *bp, *pbp = (struct hash_bucket *)0;
@@ -131,7 +131,8 @@ void delete_hash_entry (table, name, len)
 	/* Go through the list looking for an entry that matches;
 	   if we find it, delete it. */
 	for (bp = table -> buckets [hashno]; bp; bp = bp -> next) {
-		if ((!bp -> len && !strcmp (bp -> name, name)) ||
+		if ((!bp -> len &&
+		     !strcmp ((char *)bp -> name, (char *)name)) ||
 		    (bp -> len == len &&
 		     !memcmp (bp -> name, name, len))) {
 			if (pbp) {
@@ -148,7 +149,7 @@ void delete_hash_entry (table, name, len)
 
 unsigned char *hash_lookup (table, name, len)
 	struct hash_table *table;
-	char *name;
+	unsigned char *name;
 	int len;
 {
 	int hashno;
@@ -166,7 +167,8 @@ unsigned char *hash_lookup (table, name, len)
 		}
 	} else {
 		for (bp = table -> buckets [hashno]; bp; bp = bp -> next)
-			if (!strcmp (bp -> name, name))
+			if (!strcmp ((char *)bp -> name,
+				     (char *)name))
 				return bp -> value;
 	}
 	return (unsigned char *)0;

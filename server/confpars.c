@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.46 1998/03/15 21:16:39 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.47 1998/03/16 06:17:37 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -890,8 +890,9 @@ void parse_option_param (cfile, group)
 
 		/* Look up the option name hash table for the specified
 		   vendor. */
-		universe = (struct universe *)hash_lookup (&universe_hash,
-							   vendor, 0);
+		universe = ((struct universe *)
+			    hash_lookup (&universe_hash,
+					 (unsigned char *)vendor, 0));
 		/* If it's not there, we can't parse the rest of the
 		   declaration. */
 		if (!universe) {
@@ -907,7 +908,8 @@ void parse_option_param (cfile, group)
 	}
 
 	/* Look up the actual option info... */
-	option = (struct option *)hash_lookup (universe -> hash, val, 0);
+	option = ((struct option *)
+		  hash_lookup (universe -> hash, (unsigned char *)val, 0));
 
 	/* If we didn't get an option structure, it's an undefined option. */
 	if (!option) {

@@ -3,7 +3,7 @@
    Memory-resident database... */
 
 /*
- * Copyright (c) 1995, 1996 The Internet Software Consortium.
+ * Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: memory.c,v 1.35 1997/09/16 18:14:18 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: memory.c,v 1.36 1998/03/16 06:13:18 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -837,11 +837,11 @@ struct class *add_class (type, name)
 	class -> name = tname;
 
 	if (type)
-		add_hash (user_class_hash,
-			  tname, strlen (tname), (unsigned char *)class);
+		add_hash (user_class_hash, (unsigned char *)tname,
+			  strlen (tname), (unsigned char *)class);
 	else
-		add_hash (vendor_class_hash,
-			  tname, strlen (tname), (unsigned char *)class);
+		add_hash (vendor_class_hash, (unsigned char *)tname,
+			  strlen (tname), (unsigned char *)class);
 	return class;
 }
 
@@ -851,9 +851,10 @@ struct class *find_class (type, name, len)
 	int len;
 {
 	struct class *class =
-		(struct class *)hash_lookup (type
-					     ? user_class_hash
-					     : vendor_class_hash, name, len);
+		(struct class *)hash_lookup ((type
+					      ? user_class_hash
+					      : vendor_class_hash),
+					     (unsigned char *)name, len);
 	return class;
 }	
 
