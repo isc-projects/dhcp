@@ -56,7 +56,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhclient.c,v 1.30 1997/03/05 08:38:02 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.31 1997/03/06 06:48:09 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -205,8 +205,12 @@ int main (argc, argv, envp)
 		state_reboot (ip);
 	}
 
+	/* Set up the bootp packet handler... */
+	bootp_packet_handler = do_packet;
+
 	/* Start dispatching packets and timeouts... */
-	dispatch (1);
+	dispatch ();
+
 	/*NOTREACHED*/
 	return 0;
 }
@@ -217,13 +221,6 @@ static void usage ()
 }
 
 void cleanup ()
-{
-}
-
-void relay (ip, packet, length)
-	struct interface_info *ip;
-	struct dhcp_packet *packet;
-	int length;
 {
 }
 
@@ -256,9 +253,11 @@ void relay (ip, packet, length)
  * can no longer legitimately use the lease.
  */
 
-void state_reboot (ip)
-	struct interface_info *ip;
+void state_reboot (ipp)
+	void *ipp;
 {
+	struct interface_info *ip = ipp;
+
 	/* If we don't remember an active lease, go straight to INIT. */
 	if (!ip -> client -> active ||
 	    ip -> client -> active -> rebind < cur_time) {
@@ -285,9 +284,11 @@ void state_reboot (ip)
 /* Called when a lease has completely expired and we've been unable to
    renew it. */
 
-void state_init (ip)
-	struct interface_info *ip;
+void state_init (ipp)
+	void *ipp;
 {
+	struct interface_info *ip = ipp;
+
 	ASSERT_STATE(state, S_INIT);
 
 	/* Make a DHCPDISCOVER packet, and set appropriate per-interface
@@ -307,9 +308,11 @@ void state_init (ip)
 /* state_selecting is called when one or more DHCPOFFER packets have been
    received and a configurable period of time has passed. */
 
-void state_selecting (ip)
-	struct interface_info *ip;
+void state_selecting (ipp)
+	void *ipp;
 {
+	struct interface_info *ip = ipp;
+
 	struct client_lease *lp, *next, *picked;
 
 	ASSERT_STATE(state, S_SELECTING);
@@ -488,9 +491,11 @@ void dhcpack (packet)
    expected to unicast a DHCPREQUEST to the server that gave us our
    original lease. */
 
-void state_bound (ip)
-	struct interface_info *ip;
+void state_bound (ipp)
+	void *ipp;
 {
+	struct interface_info *ip = ipp;
+
 	ASSERT_STATE(state, S_BOUND);
 
 	/* T1 has expired. */
@@ -669,8 +674,10 @@ void dhcpoffer (packet)
 	   state_selecting at the select interval. */
 	if (stop_selecting <= 0)
 		state_selecting (ip);
-	else
+	else {
 		add_timeout (stop_selecting, state_selecting, ip);
+		cancel_timeout (send_discover, ip);
+	}
 }
 
 /* Allocate a client_lease structure and initialize it from the parameters
@@ -806,9 +813,11 @@ void dhcpnak (packet)
    the message; otherwise broadcast it.   If the lease expires, go back to
    the INIT state. */
 
-void send_discover (ip)
-	struct interface_info *ip;
+void send_discover (ipp)
+	void *ipp;
 {
+	struct interface_info *ip = ipp;
+
 	int result;
 	int interval;
 	int increase = 1;
@@ -902,9 +911,11 @@ void send_discover (ip)
    haven't yet expired, and failing that, we call the client script and
    hope it can do something. */
 
-void state_panic (ip)
-	struct interface_info *ip;
+void state_panic (ipp)
+	void *ipp;
 {
+	struct interface_info *ip = ipp;
+
 	struct client_lease *loop = ip -> client -> active;
 	struct client_lease *lp;
 
@@ -993,9 +1004,11 @@ void state_panic (ip)
 		     state_init, ip);
 }
 
-void send_request (ip)
-	struct interface_info *ip;
+void send_request (ipp)
+	void *ipp;
 {
+	struct interface_info *ip = ipp;
+
 	int result;
 	int interval;
 	struct sockaddr_in destination;
@@ -1106,9 +1119,11 @@ void send_request (ip)
 		     send_request, ip);
 }
 
-void send_decline (ip)
-	struct interface_info *ip;
+void send_decline (ipp)
+	void *ipp;
 {
+	struct interface_info *ip = ipp;
+
 	int result;
 
 	note ("DHCPDECLINE on %s to %s port %d", ip -> name,
@@ -1125,9 +1140,11 @@ void send_decline (ip)
 		warn ("send_packet: %m");
 }
 
-void send_release (ip)
-	struct interface_info *ip;
+void send_release (ipp)
+	void *ipp;
 {
+	struct interface_info *ip = ipp;
+
 	int result;
 
 	note ("DHCPRELEASE on %s to %s port %d", ip -> name,
