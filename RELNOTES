@@ -52,7 +52,36 @@ and for prodding me into improving it.
 
 - A number of spelling corrections were made in the man pages.
 
+- The dhclient.conf.5 man page was changed to refer to do-forward-updates
+  rather than a configuration option that doesn't exist.
+
 - A FreeBSD-specific bug in the interface removal handling was fixed.
+
+- A Linux-specific Token Ring detection problem was fixed.
+
+- Hashes removed from as-yet-unknown agent options, having those options
+  appear in reality before we know about them will no longer produce
+  self-corrupting lease databases.
+
+- dhclient will use the proper port numbers now when using the -g option.
+
+- A order-of-operations bug with 2 match clauses in 1 class statement is
+  fixed thanks to a patch from Andrew Matheson.
+
+- Compilation problems on Solaris were fixed.
+
+- Compilation problems when built with DEBUG or DEBUG_PACKET were repaired.
+
+- A fix to the dhcp ack process which makes certain group options will be
+  included in the first DHCPOFFER message was made thanks to a patch from
+  Ling Gou.
+
+- A few memory leaks were repaired thanks to patches from Bill Squier at
+  ReefEdge, Inc.  (groo@reefedge.com).
+
+- A fix for shared-networks that sometimes give clients options for the
+  wrong subnets (in particular, 'option routers') was applied, thanks to
+  Ted Lemon for the patch.
 
 			Changes since 3.0.1rc8
 
