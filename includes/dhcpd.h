@@ -62,7 +62,14 @@
 
 #if !defined (OPTION_HASH_SIZE)
 # define OPTION_HASH_SIZE 17
+# define OPTION_HASH_PTWO 32	/* Next power of two above option hash. */
+# define OPTION_HASH_EXP 5	/* The exponent for that power of two. */
 #endif
+
+#define compute_option_hash(x) \
+	(((x) & (OPTION_HASH_PTWO - 1)) + \
+	 (((x) >> OPTION_HASH_EXP) & \
+	  (OPTION_HASH_PTWO - 1))) % OPTION_HASH_SIZE;
 
 /* Client FQDN option, failover FQDN option, etc. */
 typedef struct {
@@ -856,9 +863,11 @@ void delete_hashed_option PROTO ((struct universe *,
 int option_cache_dereference PROTO ((struct option_cache **,
 				     const char *, int));
 int hashed_option_state_dereference PROTO ((struct universe *,
-					    struct option_state *));
+					    struct option_state *,
+					    const char *, int));
 int agent_option_state_dereference PROTO ((struct universe *,
-					   struct option_state *));
+					   struct option_state *,
+					   const char *, int));
 int store_option PROTO ((struct data_string *,
 			 struct universe *, struct packet *, struct lease *,
 			 struct option_state *, struct option_state *,
