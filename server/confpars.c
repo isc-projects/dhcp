@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.136 2001/03/17 01:24:59 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.137 2001/03/17 02:02:20 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2451,9 +2451,11 @@ int parse_lease_declaration (struct lease **lp, struct parse *cfile)
 			if (token == STRING) {
 				unsigned char *tuid;
 				token = next_token (&val, &buflen, cfile);
-				if (buflen < sizeof lease -> uid_buf)
+				if (buflen < sizeof lease -> uid_buf) {
 					tuid = lease -> uid_buf;
-				else {
+					lease -> uid_max =
+						sizeof lease -> uid_buf;
+				} else {
 					tuid = ((unsigned char *)
 						dmalloc (buflen, MDL));
 					if (!tuid) {
@@ -2462,6 +2464,7 @@ int parse_lease_declaration (struct lease **lp, struct parse *cfile)
 								   MDL);
 						return 0;
 					}
+					lease -> uid_max = buflen;
 				}
 				lease -> uid_len = buflen;
 				memcpy (tuid, val, lease -> uid_len);
@@ -2476,6 +2479,7 @@ int parse_lease_declaration (struct lease **lp, struct parse *cfile)
 					return 0;
 				}
 				lease -> uid_len = buflen;
+				lease -> uid_max = buflen;
 				if (lease -> uid_len == 0) {
 					lease -> uid = (unsigned char *)0;
 					parse_warn (cfile, "zero-length uid");
