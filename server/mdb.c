@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.59 2001/04/16 22:32:58 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.60 2001/04/20 20:39:54 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1121,6 +1121,9 @@ void make_binding_state_transition (struct lease *lease)
 		if (lease -> on_release)
 			executable_statement_dereference (&lease -> on_release,
 							  MDL);
+		if (lease -> billing_class)
+			unbill_class (lease, lease -> billing_class);
+
 		/* Send the expiry time to the peer. */
 		lease -> tstp = lease -> ends;
 	}
@@ -1159,6 +1162,9 @@ void make_binding_state_transition (struct lease *lease)
 		if (lease -> on_expiry)
 			executable_statement_dereference (&lease -> on_expiry,
 							  MDL);
+
+		if (lease -> billing_class)
+			unbill_class (lease, lease -> billing_class);
 
 		/* Send the release time (should be == cur_time) to the
 		   peer. */
