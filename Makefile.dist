@@ -192,17 +192,18 @@ COBJ   = options.o errwarn.o convert.o conflex.o parse.o \
 XOBJ   = dhcpxlt.o xconflex.o
 SRCS   = dhcpd.c dhcp.c bootp.c confpars.c db.c
 OBJS   = dhcpd.o dhcp.o bootp.o confpars.o db.o
-PROGS  = dhcpd dhclient
+PROGS  = dhcpd dhclient dhcrelay
 MAN    = dhcpd.8 dhcpd.conf.5
 
 DEBUG  = -g
 CFLAGS = $(DEBUG) $(PREDEFINES) $(INCLUDES) $(COPTS)
 
-all:	dhcpd dhclient dhcpxlt $(CATMANPAGES)
+all:	$(PROGS) dhcpxlt $(CATMANPAGES)
 
-install: dhcpd dhclient $(CATMANPAGES)
+install: $(PROGS) $(CATMANPAGES)
 	$(INSTALL) dhcpd $(BINDIR); $(CHMOD) 755 $(BINDIR)/dhcpd
 	$(INSTALL) dhclient $(BINDIR); $(CHMOD) 755 $(BINDIR)/dhclient
+	$(INSTALL) dhcrelay $(BINDIR); $(CHMOD) 755 $(BINDIR)/dhcrelay
 	if [ ! -d $(ADMMANDIR) ]; then \
 	  mkdir $(ADMMANDIR); \
 	  chmod 755 $(ADMMANDIR); \
@@ -224,10 +225,10 @@ clean:
 	-rm -f $(OBJS) $(COBJ) $(XOBJ) dhclient.o
 	
 realclean: clean
-	-rm -f dhcpd dhclient dhcpxlt $(CATMANPAGES) *~ #*
+	-rm -f $(PROGS) dhcpxlt $(CATMANPAGES) *~ #*
 
 distclean: clean
-	-rm -f dhcpd dhclient dhcpxlt $(CATMANPAGES) Makefile
+	-rm -f $(PROGS) dhcpxlt $(CATMANPAGES) Makefile
 
 # These should only be done on 4.4 BSD-based systems, since the mandoc
 # macros aren't available on older unices.   Catted man pages are
@@ -246,6 +247,9 @@ dhcpd:	$(OBJS) $(COBJ)
 
 dhclient:	dhclient.o clparse.o $(COBJ)
 	$(CC) $(LFLAGS) -o dhclient dhclient.o clparse.o $(COBJ) $(LIBS)
+
+dhcrelay:	dhcrelay.o $(COBJ)
+	$(CC) $(LFLAGS) -o dhcrelay dhcrelay.o $(COBJ) $(LIBS)
 
 dhcpxlt:	dhcpxlt.o errwarn.o convert.o tables.o inet.o xconflex.o \
 		hash.o alloc.o
