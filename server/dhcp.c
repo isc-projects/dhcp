@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.85 1999/04/05 16:46:13 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.86 1999/04/12 22:18:58 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -337,8 +337,246 @@ void dhcpdecline (packet)
 void dhcpinform (packet)
 	struct packet *packet;
 {
-	log_info ("DHCPINFORM from %s",
-	      inet_ntoa (packet -> raw -> ciaddr));
+	char msgbuf [1024];
+	struct data_string d1, prl;
+	struct option_cache *oc;
+	struct expression *expr;
+	struct option_state *options = (struct option_state *)0;
+	struct dhcp_packet raw;
+	struct packet outgoing;
+	char dhcpack = DHCPACK;
+	struct subnet *subnet;
+	struct iaddr cip;
+	int i, j, nulltp;
+	struct sockaddr_in to;
+	struct in_addr from;
+
+	sprintf (msgbuf, "DHCPINFORM from %s via %s",
+		 inet_ntoa (packet -> raw -> ciaddr),
+		 packet -> interface -> name);
+
+	/* Find the subnet that the client is on. */
+	oc = (struct option_cache *)0;
+	cip.len = 4;
+	memcpy (cip.iabuf, &packet -> raw -> ciaddr.s_addr, 4);
+	subnet = find_subnet (cip);
+
+	/* Sourceless packets don't make sense here. */
+	if (!subnet) {
+		log_info ("%s: unknown subnet %s",
+			  msgbuf, inet_ntoa (packet -> raw -> giaddr));
+		return;
+	}
+
+	memset (&d1, 0, sizeof d1);
+	option_state_allocate (&options, "dhcpinform");
+	memset (&outgoing, 0, sizeof outgoing);
+	memset (&raw, 0, sizeof raw);
+	outgoing.raw = &raw;
+
+	/* Execute statements in scope starting with the subnet scope. */
+	execute_statements_in_scope (packet, packet -> options, options,
+				     subnet -> group, (struct group *)0);
+
+	/* Execute statements in the class scopes. */
+	for (i = packet -> class_count; i > 0; i--) {
+		execute_statements_in_scope
+			(packet, packet -> options,
+			 options, packet -> classes [i - 1] -> group,
+			 subnet -> group);
+	}
+
+	/* Figure out the filename. */
+	oc = lookup_option (&server_universe, options, SV_FILENAME);
+	if (oc && evaluate_option_cache (&d1, packet, packet -> options, oc)) {
+		i = d1.len;
+		if (i > sizeof raw.file)
+			i = sizeof raw.file;
+		else
+			raw.file [i] = 0;
+		memcpy (raw.file, d1.data, i);
+	}
+
+	/* Choose a server name as above. */
+	oc = lookup_option (&server_universe, options,
+			    SV_SERVER_NAME);
+	if (oc && evaluate_option_cache (&d1, packet, packet -> options, oc)) {
+		i = d1.len;
+		if (i > sizeof raw.sname)
+			i = sizeof raw.sname;
+		else
+			raw.sname [i] = 0;
+		memcpy (raw.sname, d1.data, i);
+	}
+
+	/* Set a flag if this client is a lame Microsoft client that NUL
+	   terminates string options and expects us to do likewise. */
+	nulltp = 0;
+	if ((oc = lookup_option (&dhcp_universe, packet -> options,
+				 DHO_HOST_NAME))) {
+		if (evaluate_option_cache (&d1, packet,
+					   packet -> options, oc)) {
+			if (d1.data [d1.len - 1] == '\0')
+				nulltp = 1;
+			data_string_forget (&d1, "dhcpinform");
+		}
+	}
+
+	/* Put in DHCP-specific options. */
+	i = DHO_DHCP_MESSAGE_TYPE;
+	oc = (struct option_cache *)0;
+	if (option_cache_allocate (&oc, "dhcpinform")) {
+		if (make_const_data (&oc -> expression, &dhcpack, 1, 0, 0)) {
+			oc -> option = dhcp_universe.options [i];
+			save_option (&dhcp_universe, options, oc);
+		}
+		option_cache_dereference (&oc, "dhcpinform");
+	}
+
+	i = DHO_DHCP_SERVER_IDENTIFIER;
+	if (!(oc = lookup_option (&dhcp_universe, options, i))) {
+	      use_primary:
+		oc = (struct option_cache *)0;
+		if (option_cache_allocate (&oc, "dhcpinform")) {
+			if (make_const_data
+			    (&oc -> expression,
+			     ((unsigned char *)
+			      &packet -> interface -> primary_address),
+			     sizeof packet -> interface -> primary_address,
+			     0, 0)) {
+				oc -> option =
+					dhcp_universe.options [i];
+				save_option (&dhcp_universe,
+					     options, oc);
+			}
+			option_cache_dereference (&oc, "dhcpinform");
+		}
+		from = packet -> interface -> primary_address;
+	} else {
+		if (evaluate_option_cache (&d1, packet,
+					   packet -> options, oc)) {
+			if (!d1.len || d1.len != sizeof from)
+				goto use_primary;
+			memcpy (&from, d1.data, sizeof from);
+			data_string_forget (&d1, "dhcpinform");
+		} else
+			goto use_primary;
+	}
+
+	/* Use the subnet mask from the subnet declaration if no other
+	   mask has been provided. */
+	i = DHO_SUBNET_MASK;
+	if (!lookup_option (&dhcp_universe, options, i)) {
+		if (option_cache_allocate (&oc, "dhcpinform")) {
+			if (make_const_data (&oc -> expression,
+					     subnet -> netmask.iabuf,
+					     subnet -> netmask.len, 0, 0)) {
+				oc -> option = dhcp_universe.options [i];
+				save_option (&dhcp_universe, options, oc);
+			}
+			option_cache_dereference (&oc, "dhcpinform");
+		}
+	}
+
+	/* If we've been given a vendor option space, and there's something
+	   in it, and we weren't given a vendor-encapsulated-options option,
+	   then cons one up. */
+	i = DHO_VENDOR_ENCAPSULATED_OPTIONS;
+	j = SV_VENDOR_OPTION_SPACE;
+	if (!lookup_option (&dhcp_universe, options, i) &&
+	    (oc = lookup_option (&server_universe, options, j)) &&
+	    evaluate_option_cache (&d1,
+				   packet, options, oc)) {
+		oc = (struct option_cache *)0;
+		if (option_cache_allocate (&oc, "dhcpinform")) {
+			if (make_encapsulation (&oc -> expression, &d1)) {
+				oc -> option = dhcp_universe.options [i];
+				save_option (&dhcp_universe, options, oc);
+			}
+			option_cache_dereference (&oc, "dhcpinform");
+		}
+		data_string_forget (&d1, "dhcpinform");
+	}
+
+	/* If the client has provided a list of options that it wishes
+	   returned, use it to prioritize.  Otherwise, prioritize
+	   based on the default priority list. */
+
+	oc = lookup_option (&dhcp_universe, packet -> options,
+			    DHO_DHCP_PARAMETER_REQUEST_LIST);
+
+	if (oc) {
+		memset (&prl, 0, sizeof prl);
+		evaluate_option_cache (&prl, packet, packet -> options, oc);
+	}
+
+#ifdef DEBUG_PACKET
+	dump_packet (packet);
+	dump_raw ((unsigned char *)packet -> raw, packet -> packet_length);
+#endif
+
+	log_info ("%s", msgbuf);
+
+	/* Set up the option buffer... */
+	outgoing.packet_length =
+		cons_options (packet, outgoing.raw, 0, options,
+			      0, nulltp, 0,
+			      prl.len ? &prl : (struct data_string *)0);
+	option_state_dereference (&options, "dhcpinform");
+
+	/* Make sure that the packet is at least as big as a BOOTP packet. */
+	if (outgoing.packet_length < BOOTP_MIN_LEN)
+		outgoing.packet_length = BOOTP_MIN_LEN;
+
+
+	/* Figure out the address of the next server. */
+	raw.siaddr = from;
+	if ((oc =
+	     lookup_option (&server_universe, options, SV_NEXT_SERVER))) {
+		if (evaluate_option_cache (&d1,
+					   packet, packet -> options, oc)) {
+			/* If there was more than one answer,
+			   take the first. */
+			if (d1.len >= 4 && d1.data)
+				memcpy (&raw.siaddr, d1.data, 4);
+			data_string_forget (&d1, "dhcpinform");
+		}
+	}
+
+	raw.giaddr = packet -> raw -> giaddr;
+	memcpy (raw.chaddr, packet -> raw -> chaddr, sizeof raw.chaddr);
+	raw.hlen = packet -> raw -> hlen;
+	raw.htype = packet -> raw -> htype;
+
+	raw.xid = packet -> raw -> xid;
+	raw.secs = packet -> raw -> secs;
+	raw.flags = packet -> raw -> flags;
+	raw.hops = packet -> raw -> hops;
+	raw.op = BOOTREPLY;
+
+	/* Report what we're sending... */
+	log_info ("DHCPACK to %s", inet_ntoa (raw.ciaddr));
+
+#ifdef DEBUG_PACKET
+	dump_packet (&outgoing);
+	dump_raw ((unsigned char *)&raw, outgoing.packet_length);
+#endif
+
+	/* Set up the common stuff... */
+	to.sin_family = AF_INET;
+#ifdef HAVE_SA_LEN
+	to.sin_len = sizeof to;
+#endif
+	memset (to.sin_zero, 0, sizeof to.sin_zero);
+
+	to.sin_addr = packet -> raw -> ciaddr;
+	to.sin_port = remote_port;
+
+	errno = 0;
+	send_packet ((fallback_interface
+		      ? fallback_interface : packet -> interface),
+		     &outgoing, &raw, outgoing.packet_length,
+		     from, &to, (struct hardware *)0);
 }
 
 void nak_lease (packet, cip)
@@ -499,8 +737,6 @@ void ack_lease (packet, lease, offer, when, msg)
 	struct option_cache *oc;
 	struct expression *expr;
 	int status;
-	int ulafdr;
-	int option_tag_size = 1; /* XXX */
 
 	int i, j, s1, s2;
 	int val;
@@ -941,8 +1177,7 @@ void ack_lease (packet, lease, offer, when, msg)
 		oc = (struct option_cache *)0;
 		if (option_cache_allocate (&oc, "ack_lease")) {
 			if (make_const_data (&oc -> expression,
-					     &state -> offer,
-					     option_tag_size, 0, 0)) {
+					     &state -> offer, 1, 0, 0)) {
 				oc -> option =
 					dhcp_universe.options [i];
 				save_option (&dhcp_universe,
