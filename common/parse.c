@@ -43,10 +43,49 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.93 2000/12/28 23:18:36 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.94 2000/12/29 06:45:49 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
+
+/* Enumerations can be specified in option formats, and are used for
+   parsing, so we define the routines that manage them here. */
+
+struct enumeration *enumerations;
+
+void add_enumeration (struct enumeration *enumeration)
+{
+	enumeration -> next = enumerations;
+	enumerations = enumeration;
+}
+
+struct enumeration *find_enumeration (const char *name, int length)
+{
+	struct enumeration *e;
+
+	for (e = enumerations; e; e = e -> next)
+		if (strlen (e -> name) == length &&
+		    !memcmp (e -> name, name, (unsigned)length))
+			return e;
+	return (struct enumeration *)0;
+}
+
+struct enumeration_value *find_enumeration_value (const char *name,
+						  int length,
+						  const char *value)
+{
+	struct enumeration *e;
+	int i;
+
+	e = find_enumeration (name, length);
+	if (e) {
+		for (i = 0; e -> values [i].name; i++) {
+			if (!strcmp (value, e -> values [i].name))
+				return &e -> values [i];
+		}
+	}
+	return (struct enumeration_value *)0;
+}
 
 /* Skip to the semicolon ending the current statement.   If we encounter
    braces, the matching closing brace terminates the statement.   If we
@@ -4143,6 +4182,8 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 	unsigned char *ob;
 	struct iaddr addr;
 	int num;
+	const char *f;
+	struct enumeration_value *e;
 
 	switch (*fmt) {
 	      case 'U':
@@ -4209,6 +4250,31 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 			log_fatal ("No memory for concatenation");
 		break;
 		
+	      case 'N':
+		f = fmt;
+		fmt = strchr (fmt, '.');
+		if (!fmt) {
+			parse_warn (cfile, "malformed %s (bug!)",
+				    "enumeration format");
+		      foo:
+			skip_to_semi (cfile);
+			return 0;
+		}
+		token = next_token (&val, cfile);
+		if (!is_identifier (token)) {
+			parse_warn (cfile,
+				    "identifier expected");
+			goto foo;
+		}
+		e = find_enumeration_value (f, fmt - f, val);
+		if (!e) {
+			parse_warn (cfile, "unknown value");
+			goto foo;
+		}
+		if (!make_const_data (&t, &e -> value, 1, 0, 1))
+			return 0;
+		break;
+
 	      case 'I': /* IP address or hostname. */
 		if (lookups) {
 			if (!parse_ip_addr_or_hostname (&t, cfile, uniform))
@@ -4326,7 +4392,7 @@ int parse_option_decl (oc, cfile)
 	u_int8_t buf [4];
 	u_int8_t hunkbuf [1024];
 	unsigned hunkix = 0;
-	const char *fmt;
+	const char *fmt, *f;
 	struct option *option;
 	struct iaddr ip_addr;
 	u_int8_t *dp;
@@ -4334,6 +4400,7 @@ int parse_option_decl (oc, cfile)
 	int nul_term = 0;
 	struct buffer *bp;
 	int known = 0;
+	struct enumeration_value *e;
 
 	option = parse_option_name (cfile, 0, &known);
 	if (!option)
@@ -4385,6 +4452,33 @@ int parse_option_decl (oc, cfile)
 				nul_term = 1;
 				hunkix += len;
 				break;
+
+			      case 'N':
+				f = fmt;
+				fmt = strchr (fmt, '.');
+				if (!fmt) {
+					parse_warn (cfile,
+						    "malformed %s (bug!)",
+						    "enumeration format");
+				      foo:
+					skip_to_semi (cfile);
+					return 0;
+				}
+				token = next_token (&val, cfile);
+				if (!is_identifier (token)) {
+					parse_warn (cfile,
+						    "identifier expected");
+					goto foo;
+				}
+				e = find_enumeration_value (f, fmt - f, val);
+				if (!e) {
+					parse_warn (cfile,
+						    "unknown value");
+					goto foo;
+				}
+				len = 1;
+				dp = &e -> value;
+				goto alloc;
 
 			      case 'I': /* IP address. */
 				if (!parse_ip_addr (cfile, &ip_addr))
