@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 1999  Internet Software Consortium.
+ * Copyright (C) 1998, 1999  Internet Software Consortium.
  * 
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -15,26 +15,18 @@
  * SOFTWARE.
  */
 
-#ifndef ISC_TYPES_H
-#define ISC_TYPES_H 1
+#ifndef ISC_BOOLEAN_H
+#define ISC_BOOLEAN_H 1
 
-#include <isc/int.h>
-#include <isc/boolean.h>
-#include <isc/list.h>
+#include <isc-dhcp/lang.h>
 
-/***
- *** Core Types.
- ***/
+ISC_LANG_BEGINDECLS
 
-typedef struct isc_mem			isc_mem_t;
-typedef struct isc_mempool		isc_mempool_t;
-typedef struct isc_msgcat		isc_msgcat_t;
-typedef unsigned int			isc_eventtype_t;
-typedef struct isc_event		isc_event_t;
-typedef struct isc_task			isc_task_t;
-typedef struct isc_taskmgr		isc_taskmgr_t;
-typedef struct isc_rwlock		isc_rwlock_t;
+typedef enum { isc_boolean_false = 0, isc_boolean_true = 1 } isc_boolean_t;
 
-typedef void (*isc_taskaction_t)(isc_task_t *, isc_event_t *);
+#define ISC_FALSE isc_boolean_false
+#define ISC_TRUE isc_boolean_true
 
-#endif /* ISC_TYPES_H */
+ISC_LANG_ENDDECLS
+
+#endif /* ISC_BOOLEAN_H */

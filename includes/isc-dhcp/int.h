@@ -18,7 +18,7 @@
 #ifndef ISC_INT_H
 #define ISC_INT_H 1
 
-#include <isc/lang.h>
+#include <isc-dhcp/lang.h>
 
 ISC_LANG_BEGINDECLS
 

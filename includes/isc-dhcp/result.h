@@ -18,10 +18,10 @@
 #ifndef ISC_RESULT_H
 #define ISC_RESULT_H 1
 
-#include <isc/boolean.h>
-#include <isc/lang.h>
-#include <isc/list.h>
-#include <isc/types.h>
+#include <isc-dhcp/boolean.h>
+#include <isc-dhcp/lang.h>
+#include <isc-dhcp/list.h>
+#include <isc-dhcp/types.h>
 
 ISC_LANG_BEGINDECLS
 
