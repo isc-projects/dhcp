@@ -663,6 +663,27 @@ An \fIoption host-name\fR statement within a host declaration will
 override the use of the name in the host declaration.
 .PP
 .B The
+.I use-lease-addr-for-default-route
+.B statement
+.PP
+ \fBuse-lease-addr-for-default-route\fR \fIflag\fR\fB;\fR
+.PP
+If the \fIuse-lease-addr-for-default-route\fR parameter is true in a
+given scope, then instead of sending the value specified in the
+routers option (or sending no value at all), the IP address of the
+lease being assigned is sent to the client.   This supposedly causes
+Win95 machines to ARP for all IP addresses, which can be helpful if
+your router is configured for proxy ARP.
+.PP
+If use-lease-addr-for-default-route is enabled and an option routers
+statement are both in scope, the routers option will be preferred.
+The rationale for this is that in situations where you want to use
+this feature, you probably want it enabled for a whole bunch of
+Windows 95 machines, and you want to override it for a few other
+machines.   Unfortunately, if the opposite happens to be true for you
+site, you are probably better off not trying to use this flag.
+.PP
+.B The
 .I server-identifier
 .B statement
 .PP
