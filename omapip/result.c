@@ -68,6 +68,7 @@ static char *text[ISC_R_NRESULTS] = {
 	"data not yet available",		/* 41 */
 	"object unchanged",			/* 42 */
 	"more than one object matches key",	/* 43 */
+	"key conflict",				/* 44 */
 };
 
 char *isc_result_totext (isc_result_t result)
