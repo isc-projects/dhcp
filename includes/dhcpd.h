@@ -27,12 +27,6 @@
 #include <sys/un.h>
 #include <arpa/inet.h>
 
-#include "arpa/nameser.h"
-#if defined (NSUPDATE)
-# include <resolv.h>
-# include <res_update.h>
-#endif
-
 #include <netdb.h>
 #else
 #define fd_set cygwin_fd_set
@@ -49,6 +43,13 @@
 
 #include "cdefs.h"
 #include "osdep.h"
+
+#include "arpa/nameser.h"
+#if defined (NSUPDATE)
+# include <resolv.h>
+# include <res_update.h>
+#endif
+
 #include "dhcp.h"
 #include "statement.h"
 #include "tree.h"
