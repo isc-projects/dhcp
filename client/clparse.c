@@ -3,7 +3,7 @@
    Parser for dhclient config and lease files... */
 
 /*
- * Copyright (c) 1997, 1998 The Internet Software Consortium.
+ * Copyright (c) 1997, 1998, 1999 The Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: clparse.c,v 1.24 1999/03/09 19:58:42 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: clparse.c,v 1.25 1999/03/09 23:38:37 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -210,13 +210,92 @@ void parse_client_statement (cfile, ip, config)
 	int lose;
 	char *name;
 	struct data_string key_id;
+	enum policy policy;
 
 	switch (peek_token (&val, cfile)) {
 	      case AUTH_KEY:
+		next_token (&val, cfile);
+		if (ip) {
+			/* This may seem arbitrary, but there's a reason for
+			   doing it: the authentication key database is not
+			   scoped.  If we allow the user to declare a key other
+			   than in the outer scope, the user is very likely to
+			   believe that the key will only be used in that
+			   scope.  If the user only wants the key to be used on
+			   one interface, because it's known that the other
+			   interface may be connected to an insecure net and
+			   the secret key is considered sensitive, we don't
+			   want to lull them into believing they've gotten
+			   their way.   This is a bit contrived, but people
+			   tend not to be entirely rational about security. */
+			parse_warn ("auth-key not allowed here.");
+			skip_to_semi (cfile);
+			break;
+		}
 		memset (&key_id, 0, sizeof key_id);
 		if (parse_auth_key (&key_id, cfile))
 			data_string_forget (&key_id, "parse_client_statement");
+		return;
+
+		/* REQUIRE can either start a policy statement or a
+		   comma-seperated list of names of required options. */
+	      case REQUIRE:
+		next_token (&val, cfile);
+		token = peek_token (&val, cfile);
+		if (token == AUTHENTICATION) {
+			policy = P_REQUIRE;
+			goto do_policy;
+		}
+		parse_option_list (cfile, &config -> required_options);
+		return;
+
+	      case IGNORE:
+		next_token (&val, cfile);
+		policy = P_IGNORE;
+		goto do_policy;
+
+	      case ACCEPT:
+		next_token (&val, cfile);
+		policy = P_ACCEPT;
+		goto do_policy;
+
+	      case PREFER:
+		next_token (&val, cfile);
+		policy = P_PREFER;
+		goto do_policy;
+
+	      case DONT:
+		next_token (&val, cfile);
+		policy = P_DONT;
+		goto do_policy;
+
+	      do_policy:
+		token = next_token (&val, cfile);
+		if (token == AUTHENTICATION) {
+			if (policy != P_PREFER &&
+			    policy != P_REQUIRE &&
+			    policy != P_DONT) {
+				parse_warn ("invalid authentication policy.");
+				skip_to_semi (cfile);
+				return;
+			}
+			config -> auth_policy = policy;
+		} else if (token != BOOTP) {
+			if (policy != P_PREFER &&
+			    policy != P_IGNORE &&
+			    policy != P_ACCEPT) {
+				parse_warn ("invalid bootp policy.");
+				skip_to_semi (cfile);
+				return;
+			}
+			config -> bootp_policy = policy;
+		} else {
+			parse_warn ("expecting a policy type.");
+			skip_to_semi (cfile);
+			return;
+		} 
 		break;
+
 	      case SEND:
 		p = &config -> on_transmission -> statements;
 		op = supersede_option_statement;
@@ -271,11 +350,6 @@ void parse_client_statement (cfile, ip, config)
 	      case REQUEST:
 		token = next_token (&val, cfile);
 		parse_option_list (cfile, &config -> requested_options);
-		return;
-
-	      case REQUIRE:
-		token = next_token (&val, cfile);
-		parse_option_list (cfile, &config -> required_options);
 		return;
 
 	      case TIMEOUT:
@@ -737,7 +811,8 @@ void parse_client_lease_statement (cfile, is_static)
 	OPTION option-decl |
 	RENEW time-decl |
 	REBIND time-decl |
-	EXPIRE time-decl */
+	EXPIRE time-decl |
+	AUTH_KEY id */
 
 void parse_client_lease_declaration (cfile, lease, ipp, clientp)
 	FILE *cfile;
@@ -751,8 +826,19 @@ void parse_client_lease_declaration (cfile, lease, ipp, clientp)
 	struct interface_info *ip;
 	struct option_cache *oc;
 	struct client_state *client = (struct client_state *)0;
+	struct data_string key_id;
 
 	switch (next_token (&val, cfile)) {
+	      case AUTH_KEY:
+		memset (&key_id, 0, sizeof key_id);
+		if (parse_auth_key (&key_id, cfile)) {
+			data_string_copy (&lease -> auth_key_id,
+					  &key_id,
+					  "parse_client_lease_declaration");
+			data_string_forget (&key_id,
+					    "parse_client_lease_declaration");
+		}
+		break;
 	      case BOOTP:
 		lease -> is_bootp = 1;
 		break;
