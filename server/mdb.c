@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.55 2001/03/15 23:22:33 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.56 2001/03/16 01:57:00 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1488,7 +1488,7 @@ void uid_hash_add (lease)
 	struct lease *lease;
 {
 	struct lease *head = (struct lease *)0;
-	struct lease *scan = (struct lease *)0, *next;
+	struct lease *next = (struct lease *)0;
 
 
 	/* If it's not in the hash, just add it. */
@@ -1591,7 +1591,7 @@ void hw_hash_delete (lease)
 	struct lease *lease;
 {
 	struct lease *head = (struct lease *)0;
-	struct lease *next;
+	struct lease *next = (struct lease *)0;
 
 	/* If it's not in the hash, we have no work to do. */
 	if (!find_lease_by_hw_addr (&head, lease -> hardware_addr.hbuf,
