@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: stables.c,v 1.25.2.3 2001/06/22 02:35:08 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: stables.c,v 1.25.2.4 2001/10/17 03:32:03 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -806,7 +806,7 @@ void initialize_server_option_spaces()
 	agent_universe.store_tag = putUChar;
 	agent_universe.store_length = putUChar;
 	universes [agent_universe.index] = &agent_universe;
-	agent_universe.hash = new_hash (0, 0, 1, MDL);
+	option_new_hash (&agent_universe.hash, 1, MDL);
 	if (!agent_universe.hash)
 		log_fatal ("Can't allocate agent option hash table.");
 	for (i = 0; i < 256; i++) {
@@ -833,7 +833,7 @@ void initialize_server_option_spaces()
 	server_universe.store_length = putUChar;
 	server_universe.index = universe_count++;
 	universes [server_universe.index] = &server_universe;
-	server_universe.hash = new_hash (0, 0, 1, MDL);
+	option_new_hash (&server_universe.hash, 1, MDL);
 	if (!server_universe.hash)
 		log_fatal ("Can't allocate server option hash table.");
 	for (i = 0; i < 256; i++) {

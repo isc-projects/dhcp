@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dns.c,v 1.35.2.7 2001/06/21 23:34:54 mellon Exp $ Copyright (c) 2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dns.c,v 1.35.2.8 2001/10/17 03:24:49 mellon Exp $ Copyright (c) 2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -130,8 +130,7 @@ static char copyright[] =
  * supported.
  */
 
-struct hash_table *tsig_key_hash;
-struct hash_table *dns_zone_hash;
+dns_zone_hash_t *dns_zone_hash;
 
 #if defined (NSUPDATE)
 isc_result_t find_tsig_key (ns_tsig_key **key, const char *zname,
@@ -202,11 +201,7 @@ isc_result_t enter_dns_zone (struct dns_zone *zone)
 			dns_zone_dereference (&tz, MDL);
 		}
 	} else {
-		dns_zone_hash =
-			new_hash ((hash_reference)dns_zone_reference,
-				  (hash_dereference)dns_zone_dereference, 1,
-				  MDL);
-		if (!dns_zone_hash)
+		if (!dns_zone_new_hash (&dns_zone_hash, 1, MDL))
 			return ISC_R_NOMEMORY;
 	}
 	dns_zone_hash_add (dns_zone_hash, zone -> name, 0, zone, MDL);
@@ -939,4 +934,5 @@ isc_result_t ddns_remove_a (struct data_string *ddns_fwd_name,
 
 #endif /* NSUPDATE */
 
-HASH_FUNCTIONS (dns_zone, const char *, struct dns_zone)
+HASH_FUNCTIONS (dns_zone, const char *, struct dns_zone, dns_zone_hash_t,
+		dns_zone_reference, dns_zone_dereference)

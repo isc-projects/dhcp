@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.143.2.8 2001/10/04 22:08:35 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.143.2.9 2001/10/17 03:30:33 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1822,17 +1822,13 @@ int parse_class_declaration (cp, cfile, group, type)
 					 sizeof class -> billed_leases));
 			}
 			data_string_copy (&class -> hash_string, &data, MDL);
-			if (!pc -> hash)
-				pc -> hash =
-					new_hash ((hash_reference)
-						  omapi_object_reference,
-						  (hash_dereference)
-						  omapi_object_dereference,
-						  0, MDL);
-			add_hash (pc -> hash,
-				  class -> hash_string.data,
-				  class -> hash_string.len,
-				  (void *)class, MDL);
+			if (!pc -> hash &&
+			    !class_new_hash (&pc -> hash, 0, MDL))
+				log_fatal ("No memory for subclass hash.");
+			class_hash_add (pc -> hash,
+					class -> hash_string.data,
+					class -> hash_string.len,
+					(void *)class, MDL);
 		} else {
 			if (!clone_group (&class -> group, group, MDL))
 				log_fatal ("no memory to clone class group.");

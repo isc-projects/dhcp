@@ -50,7 +50,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: omapi.c,v 1.46.2.8 2001/10/11 20:46:15 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: omapi.c,v 1.46.2.9 2001/10/17 03:31:50 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1740,8 +1740,8 @@ isc_result_t dhcp_class_destroy (omapi_object_t *h, const char *file, int line)
 		class -> billed_leases = (struct lease **)0;
 	}
 	if (class -> hash) {
-		free_hash_table (class -> hash, file, line);
-		class -> hash = (struct hash_table *)0;
+		class_free_hash_table (&class -> hash, file, line);
+		class -> hash = (class_hash_t *)0;
 	}
 	data_string_forget (&class -> hash_string, file, line);
 

@@ -43,19 +43,20 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.67.2.10 2001/10/11 20:43:43 mellon Exp $ Copyright (c) 1996-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.67.2.11 2001/10/17 03:31:38 mellon Exp $ Copyright (c) 1996-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
+#include "omapip/hash.h"
 
 struct subnet *subnets;
 struct shared_network *shared_networks;
-struct hash_table *host_hw_addr_hash;
-struct hash_table *host_uid_hash;
-struct hash_table *lease_uid_hash;
-struct hash_table *lease_ip_addr_hash;
-struct hash_table *lease_hw_addr_hash;
-struct hash_table *host_name_hash;
+host_hash_t *host_hw_addr_hash;
+host_hash_t *host_uid_hash;
+host_hash_t *host_name_hash;
+lease_hash_t *lease_uid_hash;
+lease_hash_t *lease_ip_addr_hash;
+lease_hash_t *lease_hw_addr_hash;
 
 omapi_object_type_t *dhcp_type_host;
 
@@ -94,10 +95,7 @@ isc_result_t enter_host (hd, dynamicp, commit)
 	struct executable_statement *esp;
 
 	if (!host_name_hash) {
-		host_name_hash =
-			new_hash ((hash_reference)host_reference,
-				  (hash_dereference)host_dereference, 0, MDL);
-		if (!host_name_hash)
+		if (!host_new_hash (&host_name_hash, 0, MDL))
 			log_fatal ("Can't allocate host name hash");
 		host_hash_add (host_name_hash,
 			       (unsigned char *)hd -> name,
@@ -152,11 +150,7 @@ isc_result_t enter_host (hd, dynamicp, commit)
 
 	if (hd -> interface.hlen) {
 		if (!host_hw_addr_hash) {
-			host_hw_addr_hash =
-				new_hash ((hash_reference)host_reference,
-					  (hash_dereference)host_dereference,
-					  0, MDL);
-			if (!host_hw_addr_hash)
+			if (!host_new_hash (&host_hw_addr_hash, 0, MDL))
 				log_fatal ("Can't allocate host/hw hash");
 		} else {
 			/* If there isn't already a host decl matching this
@@ -200,11 +194,7 @@ isc_result_t enter_host (hd, dynamicp, commit)
 		/* If there's no uid hash, make one; otherwise, see if
 		   there's already an entry in the hash for this host. */
 		if (!host_uid_hash) {
-			host_uid_hash =
-				new_hash ((hash_reference)host_reference,
-					  (hash_dereference)host_dereference,
-					  0, MDL);
-			if (!host_uid_hash)
+			if (!host_new_hash (&host_uid_hash, 0, MDL))
 				log_fatal ("Can't allocate host/uid hash");
 
 			host_hash_add (host_uid_hash,
@@ -487,24 +477,15 @@ void new_address_range (low, high, subnet, pool)
 
 	/* Initialize the hash table if it hasn't been done yet. */
 	if (!lease_uid_hash) {
-		lease_uid_hash =
-			new_hash ((hash_reference)lease_reference,
-				  (hash_dereference)lease_dereference, 0, MDL);
-		if (!lease_uid_hash)
+		if (!lease_new_hash (&lease_uid_hash, 0, MDL))
 			log_fatal ("Can't allocate lease/uid hash");
 	}
 	if (!lease_ip_addr_hash) {
-		lease_ip_addr_hash =
-			new_hash ((hash_reference)lease_reference,
-				  (hash_dereference)lease_dereference, 0, MDL);
-		if (!lease_uid_hash)
+		if (!lease_new_hash (&lease_ip_addr_hash, 0, MDL))
 			log_fatal ("Can't allocate lease/ip hash");
 	}
 	if (!lease_hw_addr_hash) {
-		lease_hw_addr_hash =
-			new_hash ((hash_reference)lease_reference,
-				  (hash_dereference)lease_dereference, 0, MDL);
-		if (!lease_uid_hash)
+		if (!lease_new_hash (&lease_hw_addr_hash, 0, MDL))
 			log_fatal ("Can't allocate lease/hw hash");
 	}
 
@@ -2048,9 +2029,12 @@ void dump_subnets ()
 	}
 }
 
-HASH_FUNCTIONS (lease, const unsigned char *, struct lease)
-HASH_FUNCTIONS (host, const unsigned char *, struct host_decl)
-HASH_FUNCTIONS (class, const char *, struct class)
+HASH_FUNCTIONS (lease, const unsigned char *, struct lease, lease_hash_t,
+		lease_reference, lease_dereference)
+HASH_FUNCTIONS (host, const unsigned char *, struct host_decl, host_hash_t,
+		host_reference, host_dereference)
+HASH_FUNCTIONS (class, const char *, struct class, class_hash_t,
+		class_reference, class_dereference)
 
 #if defined (DEBUG_MEMORY_LEAKAGE) || \
 		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
@@ -2089,28 +2073,30 @@ void free_everything ()
 
 	/* Get rid of all the hash tables. */
 	if (host_hw_addr_hash)
-		free_hash_table (host_hw_addr_hash, MDL);
+		host_free_hash_table (&host_hw_addr_hash, MDL);
 	host_hw_addr_hash = 0;
 	if (host_uid_hash)
-		free_hash_table (host_uid_hash, MDL);
+		host_free_hash_table (&host_uid_hash, MDL);
 	host_uid_hash = 0;
 	if (lease_uid_hash)
-		free_hash_table (lease_uid_hash, MDL);
+		lease_free_hash_table (&lease_uid_hash, MDL);
 	lease_uid_hash = 0;
 	if (lease_ip_addr_hash)
-		free_hash_table (lease_ip_addr_hash, MDL);
+		lease_free_hash_table (&lease_ip_addr_hash, MDL);
 	lease_ip_addr_hash = 0;
 	if (lease_hw_addr_hash)
-		free_hash_table (lease_hw_addr_hash, MDL);
+		lease_free_hash_table (&lease_hw_addr_hash, MDL);
 	lease_hw_addr_hash = 0;
 	if (host_name_hash)
-		free_hash_table (host_name_hash, MDL);
+		host_free_hash_table (&host_name_hash, MDL);
 	host_name_hash = 0;
 	if (dns_zone_hash)
-		free_hash_table (dns_zone_hash, MDL);
+		dns_zone_free_hash_table (&dns_zone_hash, MDL);
 	dns_zone_hash = 0;
+#if 0
 	if (auth_key_hash)
-		free_hash_table (auth_key_hash, MDL);
+		auth_key_free_hash_table (&auth_key_hash, MDL);
+#endif
 	auth_key_hash = 0;
 
 	omapi_object_dereference ((omapi_object_t **)&dhcp_control_object,
@@ -2130,7 +2116,7 @@ void free_everything ()
 		    }
 		    group_dereference (&cc -> group, MDL);
 		    if (cc -> hash) {
-			    free_hash_table (cc -> hash, MDL);
+			    class_free_hash_table (&cc -> hash, MDL);
 			    cc -> hash = (struct hash_table *)0;
 		    }
 		    class_dereference (&cc, MDL);
@@ -2289,7 +2275,7 @@ void free_everything ()
 
 	omapi_object_dereference ((omapi_object_t **)&icmp_state, MDL);
 
-	free_hash_table (universe_hash, MDL);
+	universe_free_hash_table (&universe_hash, MDL);
 	for (i = 0; i < universe_count; i++) {
 		union {
 			const char *c;
@@ -2297,7 +2283,8 @@ void free_everything ()
 		} foo;
 		if (universes [i]) {
 			if (universes [i] -> hash)
-				free_hash_table (universes [i] -> hash, MDL);
+			    option_free_hash_table (&universes [i] -> hash,
+						    MDL);
 #if 0
 			if (universes [i] -> name > (char *)&end) {
 				foo.c = universes [i] -> name;

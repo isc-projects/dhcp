@@ -3,7 +3,7 @@
    Memory-resident database... */
 
 /*
- * Copyright (c) 1995-2000 Internet Software Consortium.
+ * Copyright (c) 1995-2001 Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -43,13 +43,13 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: memory.c,v 1.66.2.2 2001/06/21 17:00:04 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: memory.c,v 1.66.2.3 2001/10/17 03:25:10 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
 
 struct group *root_group;
-struct hash_table *group_name_hash;
+group_hash_t *group_name_hash;
 int (*group_write_hook) (struct group_object *);
 
 isc_result_t delete_group (struct group_object *group, int writep)
@@ -128,10 +128,7 @@ isc_result_t supersede_group (struct group_object *group, int writep)
 			}
 		}
 	} else {
-		group_name_hash = new_hash ((hash_reference)
-					    group_object_reference,
-					    (hash_dereference)
-					    group_object_dereference, 0, MDL);
+		group_new_hash (&group_name_hash, 0, MDL);
 		t = (struct group_object *)0;
 	}
 

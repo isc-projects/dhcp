@@ -70,6 +70,15 @@
 # include "minires/minires.h"
 #endif
 
+struct hash_table;
+typedef struct hash_table group_hash_t;
+typedef struct hash_table universe_hash_t;
+typedef struct hash_table option_hash_t;
+typedef struct hash_table dns_zone_hash_t;
+typedef struct hash_table lease_hash_t;
+typedef struct hash_table host_hash_t;
+typedef struct hash_table class_hash_t;
+
 #include "dhcp.h"
 #include "statement.h"
 #include "tree.h"
@@ -606,7 +615,7 @@ struct class {
 	int dirty;
 
 	/* Hash table containing subclasses. */
-	struct hash_table *hash;
+	class_hash_t *hash;
 	struct data_string hash_string;
 
 	/* Expression used to match class. */
@@ -931,6 +940,14 @@ typedef unsigned char option_mask [16];
 #define MIN_TIME 0
 
 /* External definitions... */
+
+HASH_FUNCTIONS_DECL (group, const char *, struct group_object, group_hash_t)
+HASH_FUNCTIONS_DECL (universe, const char *, struct universe, universe_hash_t)
+HASH_FUNCTIONS_DECL (option, const char *, struct option, option_hash_t)
+HASH_FUNCTIONS_DECL (dns_zone, const char *, struct dns_zone, dns_zone_hash_t)
+HASH_FUNCTIONS_DECL (lease, const unsigned char *, struct lease, lease_hash_t)
+HASH_FUNCTIONS_DECL (host, const unsigned char *, struct host_decl, host_hash_t)
+HASH_FUNCTIONS_DECL (class, const char *, struct class, class_hash_t)
 
 /* options.c */
 
@@ -1368,7 +1385,7 @@ void bootp PROTO ((struct packet *));
 /* memory.c */
 int (*group_write_hook) (struct group_object *);
 extern struct group *root_group;
-extern struct hash_table *group_name_hash;
+extern group_hash_t *group_name_hash;
 isc_result_t delete_group (struct group_object *, int);
 isc_result_t supersede_group (struct group_object *, int);
 int clone_group (struct group **, struct group *, const char *, int);
@@ -1771,12 +1788,9 @@ extern int dhcp_option_default_priority_list_count;
 extern const char *hardware_types [256];
 int universe_count, universe_max;
 struct universe **universes;
-extern struct hash_table *universe_hash;
+extern universe_hash_t *universe_hash;
 void initialize_common_option_spaces PROTO ((void));
 struct universe *config_universe;
-HASH_FUNCTIONS_DECL (group, const char *, struct group_object)
-HASH_FUNCTIONS_DECL (universe, const char *, struct universe)
-HASH_FUNCTIONS_DECL (option, const char *, struct option)
 
 /* stables.c */
 #if defined (FAILOVER_PROTOCOL)
@@ -2028,7 +2042,6 @@ isc_result_t ddns_update_a (struct data_string *, struct iaddr,
 isc_result_t ddns_remove_a (struct data_string *,
 			    struct iaddr, struct data_string *);
 #endif /* NSUPDATE */
-HASH_FUNCTIONS_DECL (dns_zone, const char *, struct dns_zone)
 
 /* resolv.c */
 extern char path_resolv_conf [];
@@ -2370,12 +2383,12 @@ isc_result_t binding_scope_stuff_values (omapi_object_t *,
 
 extern struct subnet *subnets;
 extern struct shared_network *shared_networks;
-extern struct hash_table *host_hw_addr_hash;
-extern struct hash_table *host_uid_hash;
-extern struct hash_table *host_name_hash;
-extern struct hash_table *lease_uid_hash;
-extern struct hash_table *lease_ip_addr_hash;
-extern struct hash_table *lease_hw_addr_hash;
+extern host_hash_t *host_hw_addr_hash;
+extern host_hash_t *host_uid_hash;
+extern host_hash_t *host_name_hash;
+extern lease_hash_t *lease_uid_hash;
+extern lease_hash_t *lease_ip_addr_hash;
+extern lease_hash_t *lease_hw_addr_hash;
 
 extern omapi_object_type_t *dhcp_type_host;
 
@@ -2428,9 +2441,6 @@ void dump_subnets PROTO ((void));
 		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
 void free_everything (void);
 #endif
-HASH_FUNCTIONS_DECL (lease, const unsigned char *, struct lease)
-HASH_FUNCTIONS_DECL (host, const unsigned char *, struct host_decl)
-HASH_FUNCTIONS_DECL (class, const char *, struct class)
 
 /* nsupdate.c */
 char *ddns_rev_name (struct lease *, struct lease_state *, struct packet *);
