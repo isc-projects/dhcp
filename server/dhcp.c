@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.100.2.8 1999/10/25 18:51:35 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.100.2.9 1999/10/27 20:41:01 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -395,7 +395,7 @@ void dhcpinform (packet)
 	   It would be nice if a per-host value could override this, but
 	   there's overhead involved in checking this, so let's see how people
 	   react first. */
-	if (!subnet -> group -> authoritative) {
+	if (subnet && !subnet -> group -> authoritative) {
 		log_info ("%s: not authoritative for subnet %s",
 			  msgbuf, piaddr (subnet -> net));
 		return;
