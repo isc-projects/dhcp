@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.80 1999/09/15 19:47:38 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.81 1999/09/16 00:52:50 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -960,7 +960,7 @@ void parse_host_declaration (cfile, group)
 		struct host_decl *hp =
 			(struct host_decl *)
 			hash_lookup (host_name_hash,
-				     host -> name, strlen (host -> name));
+				     (unsigned char *)host -> name, strlen (host -> name));
 		if (hp) {
 			delete_host (hp, 0);
 		}
