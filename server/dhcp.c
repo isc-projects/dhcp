@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.35 1996/12/31 02:02:17 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.36 1997/01/03 11:39:27 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -899,7 +899,7 @@ void ack_lease (packet, lease, offer, when)
 	   is not requesting a broadcast response, sent it directly to
 	   that client. */
 	} else if (raw.ciaddr.s_addr && offer == DHCPACK &&
-		   !(raw.flags & BOOTP_BROADCAST)) {
+		   !(raw.flags & htons (BOOTP_BROADCAST))) {
 		to.sin_addr = packet -> raw -> ciaddr;
 		to.sin_port = htons (ntohs (server_port) + 1); /* XXX */
 
