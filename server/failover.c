@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.53.2.7 2001/06/02 05:53:21 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.53.2.8 2001/06/03 04:56:23 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -4292,11 +4292,12 @@ isc_result_t dhcp_failover_process_bind_update (dhcp_failover_state_t *state,
 	}
 
 	if (msg -> options_present & FTB_BINDING_STATUS) {
-
+#if defined (DEBUG_LEASE_STATE_TRANSITIONS)
 		log_info ("processing state transition for %s: %s to %s",
 			  piaddr (lease -> ip_addr),
 			  binding_state_print (lease -> binding_state),
 			  binding_state_print (msg -> binding_status));
+#endif
 
 		/* If we're in normal state, make sure the state transition
 		   we got is valid. */
