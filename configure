@@ -21,8 +21,7 @@ if [ "$sysname" = "" ]; then
       case `uname -r` in
         4*) sysname=sunos4;;
         5*)
-	  path=`which gcc`
-	  set $path
+	  set `which gcc`
 	  if [ $# = 1 ]; then
 	    sysname=sunos5-gcc
 	  else
@@ -34,6 +33,7 @@ if [ "$sysname" = "" ]; then
     FreeBSD)
       sysname=freebsd;;
     hpux)
+      sysname=hpux;;
     HP-UX)
       sysname=hpux;;
     QNX)
@@ -53,7 +53,8 @@ if [ "$sysname" = "" ]; then
   echo "   alphaosf	DEC Alpha OSF/1"
   echo "   linux	Linux"
   echo "   sunos4	Sunos 4.1.4 (earlier releases may work)"
-  echo "   sunos5	SunOS 5.5 (Solaris 2.5) (earlier 2.x releases may work)"
+  echo "   sunos5-cc	Solaris 2.4 or higher with Sun cc"
+  echo "   sunos5-gcc	Solaris 2.4 or higher with gcc"
   echo "   netbsd	NetBSD 1.1 or higher"
   echo "   freebsd	FreeBSD"
   echo "   hpux		HP-UX"
