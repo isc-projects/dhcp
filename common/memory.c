@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: memory.c,v 1.55 1999/09/09 21:03:40 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: memory.c,v 1.56 1999/09/09 23:26:36 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -40,7 +40,6 @@ static struct host_decl *dynamic_hosts;
 
 omapi_object_type_t *dhcp_type_host;
 
-
 void enter_host (hd, dynamicp, commit)
 	struct host_decl *hd;
 	int dynamicp;
@@ -51,6 +50,7 @@ void enter_host (hd, dynamicp, commit)
 	struct executable_statement *esp;
 
 	if (dynamicp) {
+		hd -> flags |= HOST_DECL_DYNAMIC;
 		hd -> n_dynamic = dynamic_hosts;
 		dynamic_hosts = hd;
 	}
@@ -171,6 +171,149 @@ void enter_host (hd, dynamicp, commit)
 			log_fatal ("duplicate hostname: %s!", hd -> name);
 	}
 	if (dynamicp && commit) {
+		write_host (hd);
+		commit_leases ();
+	}
+}
+
+void delete_host (hd, commit)
+	struct host_decl *hd;
+	int commit;
+{
+	struct host_decl *hp = (struct host_decl *)0;
+	struct host_decl *np = (struct host_decl *)0;
+	struct executable_statement *esp;
+	int hw_head = 0, uid_head = 1;
+
+	/* Don't need to do it twice. */
+	if (hd -> flags & HOST_DECL_DELETED)
+		return;
+
+	/* But we do need to do it once!   :') */
+	hd -> flags |= HOST_DECL_DELETED;
+
+	/* If it's a dynamic entry, we write the deletion to the lease
+	   file, but then we can delete the host from the list of dynamic
+	   hosts, and next time the lease file is rewritten, the entry
+	   will simply be left out. */
+	if (hd -> flags & HOST_DECL_DYNAMIC) {
+		for (hp = dynamic_hosts; hp; hp = np) {
+			np = hp -> n_dynamic;
+			if (hd == hp)
+				break;
+		}
+		if (hp) {
+			if (np)
+				np -> n_dynamic = hp -> n_dynamic;
+			else
+				dynamic_hosts = hp -> n_dynamic;
+			hp -> n_dynamic = (struct host_decl *)0;
+		}
+		np = (struct host_decl *)0;
+
+	} else {
+		/* If it's *not* a dynamic entry, then we have to remember
+		   in perpetuity that it's been deleted. */
+		hd -> n_dynamic = dynamic_hosts;
+		dynamic_hosts = hd;
+	}
+
+	if (hd -> interface.hlen) {
+		if (host_hw_addr_hash) {
+			hp = (struct host_decl *)
+				hash_lookup (host_hw_addr_hash,
+					     hd -> interface.haddr,
+					     hd -> interface.hlen);
+
+			if (hp) {
+				if (hp == hd) {
+				    delete_hash_entry (host_hw_addr_hash,
+						       hd -> interface.haddr,
+						       hd -> interface.hlen);
+				    hw_head = 1;
+				    --hd -> refcnt;
+				}
+			} else {
+				for (; hp; hp = hp -> n_ipaddr) {
+					np = hp;
+					if (hp == hd)
+						break;
+				}
+				if (hp) {
+					np -> n_ipaddr = hd -> n_ipaddr;
+					hd -> refcnt--;
+				}
+			}
+		}
+	}
+
+	/* If we got a client identifier, hash this entry by
+	   client identifier. */
+	if (hd -> client_identifier.len) {
+		if (host_uid_hash) {
+			hp = (struct host_decl *)
+				hash_lookup (host_uid_hash,
+					     hd -> client_identifier.data,
+					     hd -> client_identifier.len);
+
+			if (hp) {
+				if (hp == hd) {
+				    delete_hash_entry
+					    (host_uid_hash,
+					     hd -> client_identifier.data,
+					     hd -> client_identifier.len);
+				    uid_head = 1;
+				    --hd -> refcnt;
+				}
+			} else {
+				for (; hp; hp = hp -> n_ipaddr) {
+					np = hp;
+					if (hp == hd)
+						break;
+				}
+				if (hp) {
+					np -> n_ipaddr = hd -> n_ipaddr;
+					hd -> refcnt--;
+				}
+			}
+		}
+	}
+
+	if (hd -> n_ipaddr) {
+		if (uid_head && hd -> n_ipaddr -> client_identifier.len) {
+			add_hash (host_uid_hash,
+				  hd -> n_ipaddr -> client_identifier.data,
+				  hd -> n_ipaddr -> client_identifier.len,
+				  (char *)hd -> n_ipaddr);
+			hd -> n_ipaddr -> refcnt++;
+		}
+		if (hw_head && hd -> n_ipaddr -> interface.hlen) {
+			add_hash (host_hw_addr_hash,
+				  hd -> n_ipaddr -> interface.haddr,
+				  hd -> n_ipaddr -> interface.hlen,
+				  (char *)hd -> n_ipaddr);
+			hd -> n_ipaddr -> refcnt++;
+		}
+		omapi_object_dereference ((omapi_object_t **)&hd -> n_ipaddr,
+					  "delete_host");
+	}
+
+	if (host_name_hash) {
+		hp = (struct host_decl *)
+			hash_lookup (host_name_hash,
+				     hd -> name, strlen (hd -> name));
+		
+		if (hp) {
+			if (hp == hd) {
+				delete_hash_entry (host_name_hash,
+						   hd -> name,
+						   strlen (hd -> name));
+				--hd -> refcnt;
+			}
+		}
+	}
+
+	if (commit) {
 		write_host (hd);
 		commit_leases ();
 	}
