@@ -74,7 +74,11 @@ realclean: clean
 distclean: realclean
 	-rm -f Makefile
 
-dhcp-options.cat5:	dhcp-options.5
-	nroff -man dhcp-options.5 >dhcp-options.cat5
+dhcp-options.cat5:	dhcp-options.man5
+	nroff -man dhcp-options.man5 >dhcp-options.cat5
+
+dhcp-options.man5:	dhcp-options.5
+	sed -e "s#ETCDIR#$(ETC)#g" -e "s#DBDIR#$(VARDB)#g" \
+		-e "s#RUNDIR#$(VARRUN)#g" < dhcp-options.5 >dhcp-options.man5
 
 # Dependencies (semi-automatically-generated)
