@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcrelay.c,v 1.33 1999/05/07 17:32:38 mellon Exp $ Copyright (c) 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcrelay.c,v 1.34 1999/09/09 21:00:13 mellon Exp $ Copyright (c) 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -105,6 +105,7 @@ int main (argc, argv, envp)
 	struct server_list *sp = (struct server_list *)0;
 	int no_daemon = 0;
 	int quiet = 0;
+	isc_result_t status;
 
 #ifdef SYSLOG_4_2
 	openlog ("dhcrelay", LOG_NDELAY);
@@ -228,6 +229,12 @@ int main (argc, argv, envp)
 
 	/* Get the current time... */
 	GET_TIME (&cur_time);
+
+	/* Set up the OMAPI. */
+	status = omapi_init ();
+	if (status != ISC_R_SUCCESS)
+		log_fatal ("Can't initialize OMAPI: %s",
+			   isc_result_totext (status));
 
 	/* Discover all the network interfaces. */
 	discover_interfaces (DISCOVER_RELAY);
@@ -418,6 +425,12 @@ void cleanup ()
 
 int write_lease (lease)
 	struct lease *lease;
+{
+	return 1;
+}
+
+int write_host (host)
+	struct host_decl *host;
 {
 	return 1;
 }

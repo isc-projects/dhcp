@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.80 1999/07/31 17:50:41 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.81 1999/09/09 21:00:05 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -78,6 +78,7 @@ int main (argc, argv, envp)
 	int seed;
 	int quiet = 0;
 	char *server = (char *)0;
+	isc_result_t status;
 
 #ifdef SYSLOG_4_2
 	openlog ("dhclient", LOG_NDELAY);
@@ -183,6 +184,12 @@ int main (argc, argv, envp)
 	sockaddr_broadcast.sin_len = sizeof sockaddr_broadcast;
 #endif
 	inaddr_any.s_addr = INADDR_ANY;
+
+	/* Set up the OMAPI. */
+	status = omapi_init ();
+	if (status != ISC_R_SUCCESS)
+		log_fatal ("Can't initialize OMAPI: %s",
+			   isc_result_totext (status));
 
 	/* Discover all the network interfaces. */
 	discover_interfaces (DISCOVER_UNCONFIGURED);
@@ -718,6 +725,12 @@ int commit_leases ()
 
 int write_lease (lease)
 	struct lease *lease;
+{
+	return 0;
+}
+
+int write_host (host)
+	struct host_decl *host;
 {
 	return 0;
 }
