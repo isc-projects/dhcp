@@ -23,7 +23,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: lpf.c,v 1.9 1999/03/26 19:19:44 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: lpf.c,v 1.10 1999/03/29 18:51:37 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -86,7 +86,7 @@ int if_register_lpf (info)
 	if (bind (sock, &sa, sizeof sa)) {
 		if (errno == ENOPROTOOPT || errno == EPROTONOSUPPORT ||
 		    errno == ESOCKTNOSUPPORT || errno == EPFNOSUPPORT ||
-		    errno == EAFNOSUPPORT || errno = EINVAL)
+		    errno == EAFNOSUPPORT || errno == EINVAL)
 			log_fatal ("socket: %m - make sure %s %s!",
 			       "CONFIG_PACKET and CONFIG_FILTER are defined",
 			       "in your kernel configuration");
