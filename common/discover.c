@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: discover.c,v 1.9.2.4 1999/12/17 17:17:41 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: discover.c,v 1.9.2.5 1999/12/21 19:24:51 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -185,9 +185,10 @@ void discover_interfaces (state)
 #else
 				int len = sizeof *ifp;
 #endif
-				tif = (struct ifreq *)malloc (len);
+				tif = (struct ifreq *)
+					dmalloc (len, "discover_interfaces");
 				if (!tif)
-					log_fatal ("no space to remember ifp.");
+					log_fatal ("no space to remember ifp");
 				memcpy (tif, ifp, len);
 				tmp -> ifp = tif;
 				tmp -> primary_address = foo.sin_addr;
@@ -320,7 +321,9 @@ void discover_interfaces (state)
 		
 		if (!tmp -> ifp) {
 			/* Make up an ifreq structure. */
-			tif = (struct ifreq *)malloc (sizeof (struct ifreq));
+			tif = (struct ifreq *)
+				dmalloc (sizeof (struct ifreq),
+					 "discover_interfaces");
 			if (!tif)
 				log_fatal ("no space to remember ifp.");
 			memset (tif, 0, sizeof (struct ifreq));

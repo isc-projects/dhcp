@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcrelay.c,v 1.33.2.1 1999/10/27 20:44:59 mellon Exp $ Copyright (c) 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcrelay.c,v 1.33.2.2 1999/12/21 19:30:07 mellon Exp $ Copyright (c) 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -175,14 +175,16 @@ int main (argc, argv, envp)
 			} else {
 				he = gethostbyname (argv [i]);
 				if (!he) {
-					log_error ("%s: host unknown", argv [i]);
+					log_error ("%s: host unknown",
+						   argv [i]);
 				} else {
 					iap = ((struct in_addr *)
 					       he -> h_addr_list [0]);
 				}
 			}
 			if (iap) {
-				sp = (struct server_list *)malloc (sizeof *sp);
+				sp = (struct server_list *)
+					dmalloc (sizeof *sp, "main");
 				if (!sp)
 					log_fatal ("no memory for server.\n");
 				sp -> next = servers;

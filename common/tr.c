@@ -271,7 +271,8 @@ static void save_source_routing(trh, interface)
         }
 
         /* no entry found, so create one */
-        rover = malloc(sizeof(struct routing_entry));
+        rover = dmalloc(sizeof(struct routing_entry),
+			"save_source_routing");
         if (rover == NULL) {
                 fprintf(stderr,
 			"%s: unable to save source routing information\n",
