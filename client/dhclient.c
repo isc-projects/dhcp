@@ -56,7 +56,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.44.2.7 1998/12/23 14:18:49 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.44.2.8 1999/01/29 18:33:34 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1523,18 +1523,19 @@ void make_request (ip, lease)
 	ip -> client -> packet.hops = 0;
 	ip -> client -> packet.xid = ip -> client -> xid;
 	ip -> client -> packet.secs = 0; /* Filled in by send_request. */
-	ip -> client -> packet.flags = htons (BOOTP_BROADCAST);
 
 	/* If we own the address we're requesting, put it in ciaddr;
 	   otherwise set ciaddr to zero. */
 	if (ip -> client -> state == S_BOUND ||
 	    ip -> client -> state == S_RENEWING ||
-	    ip -> client -> state == S_REBINDING)
+	    ip -> client -> state == S_REBINDING) {
 		memcpy (&ip -> client -> packet.ciaddr,
 			lease -> address.iabuf, lease -> address.len);
-	else
+	} else {
 		memset (&ip -> client -> packet.ciaddr, 0,
 			sizeof ip -> client -> packet.ciaddr);
+		ip -> client -> packet.flags = htons (BOOTP_BROADCAST);
+	}
 
 	memset (&ip -> client -> packet.yiaddr, 0,
 		sizeof ip -> client -> packet.yiaddr);
@@ -1734,7 +1735,7 @@ void rewrite_client_leases ()
 		fclose (leaseFile);
 	leaseFile = fopen (path_dhclient_db, "w");
 	if (!leaseFile)
-		error ("can't create /var/db/dhclient.leases: %m");
+		error ("can't create %s: %m", path_dhclient_db);
 
 	/* Write out all the leases attached to configured interfaces that
 	   we know about. */
@@ -1782,7 +1783,7 @@ void write_client_lease (ip, lease, rewrite)
 	if (!leaseFile) {	/* XXX */
 		leaseFile = fopen (path_dhclient_db, "w");
 		if (!leaseFile)
-			error ("can't create /var/db/dhclient.leases: %m");
+			error ("can't create %s: %m", path_dhclient_db);
 	}
 
 	fprintf (leaseFile, "lease {\n");
