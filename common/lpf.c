@@ -23,7 +23,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: lpf.c,v 1.19 2000/01/25 01:07:19 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: lpf.c,v 1.20 2000/01/27 23:27:38 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -139,7 +139,7 @@ void if_register_receive (info)
 	/* Open a LPF device and hang it on this interface... */
 	info -> rfdesc = if_register_lpf (info);
 
-	if (info -> hw_address.htype == HTYPE_IEEE802)
+	if (info -> hw_address.hbuf [0] == HTYPE_IEEE802)
 		lpf_tr_filter_setup (info);
 	else
 		lpf_gen_filter_setup (info);
