@@ -776,7 +776,7 @@ isc_result_t omapi_protocol_lookup_auth (omapi_object_t **a,
 		if (r -> remote_handle == handle)
 			return omapi_object_reference (a, r -> a, MDL);
 
-	return ISC_R_NOTFOUND;
+	return ISC_R_KEY_UNKNOWN;
 }
 
 isc_result_t omapi_protocol_set_value (omapi_object_t *h,
