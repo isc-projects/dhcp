@@ -124,6 +124,7 @@
 #define HOSTNAME	328
 #define CLIENT_HOSTNAME	329
 #define REJECT		330
+#define FDDI		331
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\
 				 (x) != STRING &&	\
