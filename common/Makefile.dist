@@ -17,7 +17,7 @@
 # http://www.isc.org for more information.
 #
 
-CATMANPAGES = dhcp-options.cat5
+CATMANPAGES = dhcp-options.cat5 dhcp-contrib.cat5 dhcp-eval.cat5
 SRC    = raw.c parse.c nit.c icmp.c dispatch.c conflex.c upf.c bpf.c socket.c \
 	 lpf.c dlpi.c packet.c memory.c print.c options.c inet.c convert.c \
 	 tree.c tables.c hash.c alloc.c errwarn.c inet_addr.c dns.c \
@@ -26,7 +26,7 @@ OBJ    = raw.o parse.o nit.o icmp.o dispatch.o conflex.o upf.o bpf.o socket.o \
 	 lpf.o dlpi.o packet.o memory.o print.o options.o inet.o convert.o \
 	 tree.o tables.o hash.o alloc.o errwarn.o inet_addr.o dns.o \
 	 resolv.o execute.o discover.o auth.o
-MAN    = dhcp-options.5
+MAN    = dhcp-options.5 dhcp-contrib.5 dhcp-eval.5
 
 DEBUG  = -g
 INCLUDES = -I.. -I../includes
@@ -67,5 +67,11 @@ distclean: realclean
 
 dhcp-options.cat5:	dhcp-options.5
 	nroff -man dhcp-options.5 >dhcp-options.cat5
+
+dhcp-eval.cat5:	dhcp-eval.5
+	nroff -man dhcp-eval.5 >dhcp-eval.cat5
+
+dhcp-contrib.cat5:	dhcp-contrib.5
+	nroff -man dhcp-contrib.5 >dhcp-contrib.cat5
 
 # Dependencies (semi-automatically-generated)
