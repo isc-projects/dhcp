@@ -61,7 +61,6 @@ extern int h_errno;
 
 #include <net/if.h>
 #include <net/route.h>
-#include <linux/netdevice.h>
 #include <linux/if_arp.h>
 
 #include <sys/time.h>		/* gettimeofday()*/
