@@ -1372,6 +1372,20 @@ ssize_t decode_udp_ip_header PROTO ((struct interface_info *, unsigned char *,
 				     int, struct sockaddr_in *,
 				     unsigned char *, int));
 
+/* ethernet.c */
+void assemble_ethernet_header PROTO ((struct interface_info *, unsigned char *,
+				      int *, struct hardware *));
+ssize_t decode_ethernet_header PROTO ((struct interface_info *,
+				       unsigned char *,
+				       int, struct hardware *));
+
+/* tr.c */
+void assemble_tr_header PROTO ((struct interface_info *, unsigned char *,
+				int *, struct hardware *));
+ssize_t decode_tr_header PROTO ((struct interface_info *,
+				 unsigned char *,
+				 int, struct hardware *));
+
 /* dhxpxlt.c */
 void convert_statement PROTO ((FILE *));
 void convert_host_statement PROTO ((FILE *, jrefproto));

@@ -23,7 +23,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: lpf.c,v 1.11 1999/04/12 21:34:37 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: lpf.c,v 1.12 1999/05/27 17:43:27 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -125,14 +125,35 @@ void if_register_send (info)
    in bpf includes... */
 extern struct sock_filter dhcp_bpf_filter [];
 extern int dhcp_bpf_filter_len;
+extern struct sock_filter dhcp_bpf_tr_filter [];
+extern int dhcp_bpf_tr_filter_len;
 
 void if_register_receive (info)
 	struct interface_info *info;
 {
-	struct sock_fprog p;
-
 	/* Open a LPF device and hang it on this interface... */
 	info -> rfdesc = if_register_lpf (info);
+
+	if (info -> hw_address.htype == HTYPE_IEEE802)
+		lpf_tr_filter_setup (info);
+	else
+		lpf_gen_filter_setup (info);
+
+	if (!quiet_interface_discovery)
+		note ("Listening on LPF/%s/%s%s%s",
+		      info -> name,
+		      print_hw_addr (info -> hw_address.htype,
+				     info -> hw_address.hlen,
+				     info -> hw_address.haddr),
+		      (info -> shared_network ? "/" : ""),
+		      (info -> shared_network ?
+		       info -> shared_network -> name : ""));
+}
+
+static void lpf_gen_filter_setup (info)
+	struct interface_info *info;
+{
+	struct sock_fprog p;
 
 	/* Set up the bpf filter program structure.    This is defined in
 	   bpf.c */
@@ -149,20 +170,40 @@ void if_register_receive (info)
 		if (errno == ENOPROTOOPT || errno == EPROTONOSUPPORT ||
 		    errno == ESOCKTNOSUPPORT || errno == EPFNOSUPPORT ||
 		    errno == EAFNOSUPPORT)
-			log_fatal ("socket: %m - make sure %s %s!",
+			error ("socket: %m - make sure %s %s!",
 			       "CONFIG_PACKET and CONFIG_FILTER are defined",
 			       "in your kernel configuration");
-		log_fatal ("Can't install packet filter program: %m");
+		error ("Can't install packet filter program: %m");
 	}
-	if (!quiet_interface_discovery)
-		log_info ("Listening on LPF/%s/%s%s%s",
-		      info -> name,
-		      print_hw_addr (info -> hw_address.htype,
-				     info -> hw_address.hlen,
-				     info -> hw_address.haddr),
-		      (info -> shared_network ? "/" : ""),
-		      (info -> shared_network ?
-		       info -> shared_network -> name : ""));
+}
+
+static void lpf_tr_filter_setup (info)
+	struct interface_info *info;
+{
+	struct sock_fprog p;
+
+	/* Set up the bpf filter program structure.    This is defined in
+	   bpf.c */
+	p.len = dhcp_bpf_tr_filter_len;
+	p.filter = dhcp_bpf_tr_filter;
+
+        /* Patch the server port into the LPF  program...
+	   XXX changes to filter program may require changes
+	   XXX to the insn number(s) used below!
+	   XXX Token ring filter is null - when/if we have a filter 
+	   XXX that's not, we'll need this code.
+	   XXX dhcp_bpf_filter [?].k = ntohs (local_port); */
+
+	if (setsockopt (info -> rfdesc, SOL_SOCKET, SO_ATTACH_FILTER, &p,
+			sizeof p) < 0) {
+		if (errno == ENOPROTOOPT || errno == EPROTONOSUPPORT ||
+		    errno == ESOCKTNOSUPPORT || errno == EPFNOSUPPORT ||
+		    errno == EAFNOSUPPORT)
+			error ("socket: %m - make sure %s %s!",
+			       "CONFIG_PACKET and CONFIG_FILTER are defined",
+			       "in your kernel configuration");
+		error ("Can't install packet filter program: %m");
+	}
 }
 #endif /* USE_LPF_RECEIVE */
 

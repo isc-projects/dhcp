@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: packet.c,v 1.26 1999/04/23 22:15:43 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: packet.c,v 1.27 1999/05/27 17:43:27 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -93,35 +93,19 @@ u_int32_t wrapsum (sum)
 }
 
 #ifdef PACKET_ASSEMBLY
-/* Assemble an hardware header... */
-/* XXX currently only supports ethernet; doesn't check for other types. */
-
 void assemble_hw_header (interface, buf, bufix, to)
 	struct interface_info *interface;
 	unsigned char *buf;
 	int *bufix;
 	struct hardware *to;
 {
-	struct ether_header eh;
-
-	if (to && to -> hlen == 6) /* XXX */
-		memcpy (eh.ether_dhost, to -> haddr, sizeof eh.ether_dhost);
+#if defined (HAVE_TR_SUPPORT)
+	if (info -> hw_address.htype == HTYPE_IEEE802)
+		assemble_tr_header (interface, buf, bufix, to);
 	else
-		memset (eh.ether_dhost, 0xff, sizeof (eh.ether_dhost));
-	if (interface -> hw_address.hlen == sizeof (eh.ether_shost))
-		memcpy (eh.ether_shost, interface -> hw_address.haddr,
-			sizeof (eh.ether_shost));
-	else
-		memset (eh.ether_shost, 0x00, sizeof (eh.ether_shost));
-
-#ifdef BROKEN_FREEBSD_BPF /* Fixed in FreeBSD 2.2 */
-	eh.ether_type = ETHERTYPE_IP;
-#else
-	eh.ether_type = htons (ETHERTYPE_IP);
 #endif
+		assemble_ethernet_header (interface, buf, bufix, to);
 
-	memcpy (&buf [*bufix], &eh, sizeof eh);
-	*bufix += sizeof eh;
 }
 
 /* UDP header and IP header assembled together for convenience. */
@@ -195,19 +179,12 @@ ssize_t decode_hw_header (interface, buf, bufix, from)
      int bufix;
      struct hardware *from;
 {
-  struct ether_header eh;
-
-  memcpy (&eh, buf + bufix, sizeof eh);
-
-#ifdef USERLAND_FILTER
-  if (ntohs (eh.ether_type) != ETHERTYPE_IP)
-	  return -1;
+#if defined (HAVE_TR_SUPPORT)
+	if (info -> hw_address.htype == HTYPE_IEEE802)
+		return decode_tr_header (interface, buf, bufix, from);
+	else
 #endif
-  memcpy (from -> haddr, eh.ether_shost, sizeof (eh.ether_shost));
-  from -> htype = ARPHRD_ETHER;
-  from -> hlen = sizeof eh.ether_shost;
-
-  return sizeof eh;
+		return decode_ethernet_header (interface, buf, bufix, from);
 }
 
 /* UDP header and IP header decoded together for convenience. */
