@@ -46,7 +46,8 @@ libomapi.a:	$(OBJ)
 	$(RANLIB) libomapi.a
 
 install: all
-	for dir in $(LIBDIR) $(LIBMANDIR) $(INCDIR)/omapip $(INCDIR)/isc; do \
+	for dir in $(LIBDIR) $(LIBMANDIR) $(INCDIR)/omapip $(INCDIR)/isc-dhcp;\
+	 do \
 	  foo=""; \
 	  for bar in `echo $(DESTDIR)$${dir} |tr / ' '`; do \
 	    foo=$${foo}/$$bar; \
