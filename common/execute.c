@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: execute.c,v 1.12 1999/07/17 15:52:20 mellon Exp $ Copyright (c) 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: execute.c,v 1.13 1999/07/17 17:59:24 mellon Exp $ Copyright (c) 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -231,4 +231,72 @@ void execute_statements_in_scope (packet, lease, in_options, out_options,
 					     group -> next, limiting_group);
 	execute_statements (packet, lease,
 			    in_options, out_options, group -> statements);
+}
+
+/* Dereference or free any subexpressions of a statement being freed. */
+
+int executable_statement_dereference (ptr, name)
+	struct executable_statement **ptr;
+	char *name;
+{
+	struct executable_statement *bp;
+
+	if (!ptr || !*ptr) {
+		log_error ("Null ptr in executable_statement_dereference: %s",
+			   name);
+#if defined (POINTER_DEBUG)
+		abort ();
+#else
+		return 0;
+#endif
+	}
+
+	(*ptr) -> refcnt--;
+	if ((*ptr) -> refcnt) {
+		*ptr = (struct executable_statement *)0;
+		return 1;
+	}
+
+	if ((*ptr) -> next)
+		executable_statement_dereference
+			(&(*ptr) -> next, name);
+
+	switch ((*ptr) -> op) {
+	      case statements_statement:
+		executable_statement_dereference
+			(&(*ptr) -> data.statements, name);
+		break;
+
+	      case on_statement:
+		executable_statement_dereference
+			(&(*ptr) -> data.on.statements, name);
+		break;
+
+	      case if_statement:
+		expression_dereference (&(*ptr) -> data.ie.expr, name);
+		executable_statement_dereference
+			(&(*ptr) -> data.ie.true, name);
+		if ((*ptr) -> data.ie.false)
+			executable_statement_dereference
+				(&(*ptr) -> data.ie.false, name);
+		break;
+
+	      case eval_statement:
+		expression_dereference (&(*ptr) -> data.eval, name);
+		break;
+
+	      case supersede_option_statement:
+	      case default_option_statement:
+	      case append_option_statement:
+	      case prepend_option_statement:
+		option_cache_dereference (&(*ptr) -> data.option, name);
+		break;
+
+	      default:
+		/* Nothing to do. */
+	}
+
+	dfree ((*ptr), name);
+	*ptr = (struct executable_statement *)0;
+	return 1;
 }

@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: alloc.c,v 1.31 1999/07/16 21:33:57 mellon Exp $ Copyright (c) 1995, 1996, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: alloc.c,v 1.32 1999/07/17 17:59:24 mellon Exp $ Copyright (c) 1995, 1996, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -819,27 +819,3 @@ int executable_statement_reference (ptr, bp, name)
 	bp -> refcnt++;
 	return 1;
 }
-
-int executable_statement_dereference (ptr, name)
-	struct executable_statement **ptr;
-	char *name;
-{
-	struct executable_statement *bp;
-
-	if (!ptr || !*ptr) {
-		log_error ("Null ptr in executable_statement_dereference: %s",
-			   name);
-#if defined (POINTER_DEBUG)
-		abort ();
-#else
-		return 0;
-#endif
-	}
-
-	(*ptr) -> refcnt--;
-	if (!(*ptr) -> refcnt)
-		dfree ((*ptr), name);
-	*ptr = (struct executable_statement *)0;
-	return 1;
-}
-
