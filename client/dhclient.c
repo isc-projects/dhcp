@@ -56,7 +56,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhclient.c,v 1.26 1997/02/22 12:24:28 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.27 1997/02/26 05:21:55 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1507,8 +1507,7 @@ void script_init (ip, reason, medium)
 		fprintf (scriptFile, "export interface\n");
 	}
 	if (medium) {
-		fprintf (scriptFile, "medium=\"%s\"\n",
-			 ip -> client -> medium -> string);
+		fprintf (scriptFile, "medium=\"%s\"\n", medium -> string);
 		fprintf (scriptFile, "export medium\n");
 	}
 	fprintf (scriptFile, "reason=\"%s\"\n", reason);
