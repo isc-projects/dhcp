@@ -31,11 +31,18 @@ if [ "$sysname" = "" ]; then
         sysname=alphaosf
       fi;;
     Linux)
-      case `uname -r` in
-	1*) sysname=linux-1 ;;
-	2.1*) sysname=linux-2.1 ;;
-	2.2*) sysname=linux-2.2 ;;
-	2*) sysname=linux-2.0 ;;
+      release=`uname -r`
+      minor=`echo $release |sed -e 's/[0-9]*\.\([0-9][0-9]*\)\(\..*\)*$/\1/'`
+      major=`echo $release |sed -e 's/\([0-9][0-9]*\)\..*$/\1/'`
+      
+      case $major in
+	1) sysname=linux-1 ;;
+	2) case $minor in
+	     0) sysname=linux-2.0 ;;
+	     1) sysname=linux-2.1 ;;
+	     2) sysname=linux-2.2 ;;
+	     *) sysname=linux-2.2 ;;
+	   esac;;
       esac;;
     SunOS)
       case `uname -r` in
@@ -89,8 +96,14 @@ fi
 
 echo "System Type: $sysname"
 
+if [ x$major != x ] && [ x$minor != x ]; then
+  majversubst="-e /^##--majver--/,/^##--majver--/s/MajorVersion/$major/"
+  minversubst="-e /^##--minver--/,/^##--minver--/s/MinorVersion/$minor/"
+fi
+
 for foo in . client server relay common; do
-	 (sed $nsupdate -e "/^##--${sysname}--/,/^##--${sysname}--/s/^#//" \
+	 (sed $nsupdate $majversubst $minversubst \
+	      -e "/^##--${sysname}--/,/^##--${sysname}--/s/^#//" \
 		<Makefile.conf; cat site.conf; cat $foo/Makefile.dist)	\
 				>$foo/Makefile
 done
