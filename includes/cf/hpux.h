@@ -82,3 +82,6 @@ extern int h_errno;
 #define GET_TIME(x)	time ((x))
 
 #define random	rand
+
+#define BYTE_ORDER BIG_ENDIAN
+#define BIG_ENDIAN 1
