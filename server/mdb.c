@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.60 2001/04/20 20:39:54 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.61 2001/04/24 00:55:31 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1104,6 +1104,7 @@ void make_binding_state_transition (struct lease *lease)
 #if defined (NSUPDATE)
 		ddns_removals (lease);
 #endif
+log_info ("expiry event.");
 		if (lease -> on_expiry) {
 			execute_statements ((struct binding_value **)0,
 					    (struct packet *)0, lease,
@@ -1146,6 +1147,7 @@ void make_binding_state_transition (struct lease *lease)
 #if defined (NSUPDATE)
 		ddns_removals (lease);
 #endif
+log_info ("release event.");
 		if (lease -> on_release) {
 			execute_statements ((struct binding_value **)0,
 					    (struct packet *)0, lease,
@@ -1329,7 +1331,7 @@ void release_lease (lease, packet)
 		lease -> next_binding_state = FTS_FREE;
 #endif
 		if (lease -> billing_class)
-			class_dereference (&lease -> billing_class, MDL);
+			unbill_class (&lease -> billing_class, MDL);
 		supersede_lease (lease, (struct lease *)0, 1, 1, 1);
 	}
 }
@@ -1371,7 +1373,7 @@ void abandon_lease (lease, message)
 	lt -> uid_len = 0;
 	lt -> uid_max = 0;
 	if (lt -> billing_class)
-		class_dereference (&lt -> billing_class, MDL);
+		unbill_class (&lt -> billing_class, MDL);
 	supersede_lease (lease, lt, 1, 1, 1);
 	lease_dereference (&lt, MDL);
 }
@@ -1417,7 +1419,7 @@ void dissociate_lease (lease)
 	lt -> uid_len = 0;
 	lt -> uid_max = 0;
 	if (lt -> billing_class)
-		class_dereference (&lt -> billing_class, MDL);
+		unbill_class (&lt -> billing_class, MDL);
 	supersede_lease (lease, lt, 1, 1, 1);
 	lease_dereference (&lt, MDL);
 }
