@@ -216,6 +216,7 @@ typedef struct __omapi_io_object {
 typedef struct __omapi_generic_object {
 	OMAPI_OBJECT_PREAMBLE;
 	omapi_value_t **values;
+	u_int8_t *changed;
 	int nvalues, va_max;
 } omapi_generic_object_t;
 

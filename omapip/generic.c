@@ -3,7 +3,7 @@
    Subroutines that support the generic object. */
 
 /*
- * Copyright (c) 1999-2000 Internet Software Consortium.
+ * Copyright (c) 1999-2001 Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -62,6 +62,7 @@ isc_result_t omapi_generic_set_value (omapi_object_t *h,
 	omapi_generic_object_t *g;
 	omapi_value_t *new;
 	omapi_value_t **va;
+	u_int8_t *ca;
 	int vm_new;
 	int i;
 	isc_result_t status;
@@ -101,6 +102,7 @@ isc_result_t omapi_generic_set_value (omapi_object_t *h,
 			status = (omapi_value_reference
 				  (&(g -> values [i]), new, MDL));
 			omapi_value_dereference (&new, MDL);
+			g -> changed [i] = 1;
 			return status;
 		}
 	}			
@@ -130,13 +132,25 @@ isc_result_t omapi_generic_set_value (omapi_object_t *h,
 		va = dmalloc (vm_new * sizeof *va, MDL);
 		if (!va)
 			return ISC_R_NOMEMORY;
-		if (g -> va_max)
+		ca = dmalloc (vm_new * sizeof *ca, MDL);
+		if (!ca) {
+			dfree (va, MDL);
+			return ISC_R_NOMEMORY;
+		}
+		if (g -> va_max) {
 			memcpy (va, g -> values, g -> va_max * sizeof *va);
+			memcpy (ca, g -> changed, g -> va_max * sizeof *ca);
+		}
 		memset (va + g -> va_max, 0,
 			(vm_new - g -> va_max) * sizeof *va);
+		memset (ca + g -> va_max, 0,
+			(vm_new - g -> va_max) * sizeof *ca);
 		if (g -> values)
 			dfree (g -> values, MDL);
+		if (g -> changed)
+			dfree (g -> changed, MDL);
 		g -> values = va;
+		g -> changed = ca;
 		g -> va_max = vm_new;
 	}
 	status = omapi_value_new (&g -> values [g -> nvalues], MDL);
@@ -147,6 +161,7 @@ isc_result_t omapi_generic_set_value (omapi_object_t *h,
 	if (value)
 		omapi_typed_data_reference
 			(&g -> values [g -> nvalues] -> value, value, MDL);
+	g -> changed [g -> nvalues] = 1;
 	g -> nvalues++;
 	return ISC_R_SUCCESS;
 }
@@ -200,7 +215,9 @@ isc_result_t omapi_generic_destroy (omapi_object_t *h,
 							 file, line);
 		}
 		dfree (g -> values, file, line);
+		dfree (g -> changed, file, line);
 		g -> values = (omapi_value_t **)0;
+		g -> changed = (u_int8_t *)0;
 		g -> va_max = 0;
 	}
 
@@ -235,7 +252,8 @@ isc_result_t omapi_generic_stuff_values (omapi_object_t *c,
 	src = (omapi_generic_object_t *)g;
 	
 	for (i = 0; i < src -> nvalues; i++) {
-		if (src -> values [i] && src -> values [i] -> name -> len) {
+		if (src -> values [i] && src -> values [i] -> name -> len &&
+		    src -> changed [i]) {
 			status = (omapi_connection_put_uint16
 				  (c, src -> values [i] -> name -> len));
 			if (status != ISC_R_SUCCESS)
@@ -259,3 +277,21 @@ isc_result_t omapi_generic_stuff_values (omapi_object_t *c,
 	return ISC_R_SUCCESS;
 }
 
+/* Clear the changed flags on the object.   This has the effect that if
+   generic_stuff is called, any attributes that still have a cleared changed
+   flag aren't sent to the peer. */
+
+isc_result_t omapi_generic_clear_flags (omapi_object_t *o)
+{
+	int i;
+	isc_result_t status;
+	omapi_generic_object_t *g;
+
+	if (o -> type != omapi_type_generic)
+		return ISC_R_INVALIDARG;
+	g = (omapi_generic_object_t *)o;
+
+	for (i = 0; i < g -> nvalues; i++)
+		g -> changed [i] = 0;
+	return ISC_R_SUCCESS;
+}

@@ -409,6 +409,7 @@ isc_result_t omapi_generic_signal_handler (omapi_object_t *,
 isc_result_t omapi_generic_stuff_values (omapi_object_t *,
 					 omapi_object_t *,
 					 omapi_object_t *);
+isc_result_t omapi_generic_clear_flags (omapi_object_t *);
 
 isc_result_t omapi_message_new (omapi_object_t **, const char *, int);
 isc_result_t omapi_message_set_value  (omapi_object_t *, omapi_object_t *,
