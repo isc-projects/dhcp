@@ -242,7 +242,7 @@ int main (argc, argv, envp)
 			raw.op = BOOTREQUEST;
 
 			to.sin_port = htons (2001);
-			inet_aton ("206.119.204.48", &to.sin_addr);
+			to.sin_addr.s_addr = INADDR_BROADCAST;
 			to.sin_family = AF_INET;
 			to.sin_len = sizeof to;
 			memset (to.sin_zero, 0, sizeof to.sin_zero);
