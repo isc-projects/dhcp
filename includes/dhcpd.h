@@ -102,7 +102,6 @@ struct lease {
 
 	struct iaddr ip_addr;
 	TIME starts, ends, timestamp;
-	TIME offered_expiry;
 	unsigned char *uid;
 	int uid_len;
 	int uid_max;
@@ -111,7 +110,6 @@ struct lease {
 	struct host_decl *host;
 	struct subnet *subnet;
 	struct shared_network *shared_network;
-	struct interface_info *ip;
 	struct hardware hardware_addr;
 
 	int flags;
@@ -121,6 +119,16 @@ struct lease {
 #	define PERSISTENT_FLAGS		(DYNAMIC_BOOTP_OK)
 #	define EPHEMERAL_FLAGS		(BOOTP_LEASE)
 #	define MS_NULL_TERMINATION	8
+
+	struct lease_state *state;
+};
+
+struct lease_state {
+	struct lease_state *next;
+
+	struct interface_info *ip;
+
+	TIME offered_expiry;
 
 	struct tree_cache *options [256];
 	u_int32_t expiry, renewal, rebind;
@@ -325,8 +333,15 @@ struct hardware_link {
 struct timeout {
 	struct timeout *next;
 	TIME when;
-	void (*func) PROTO ((struct interface_info *));
-	struct interface_info *interface;
+	void (*func) PROTO ((void *));
+	void *what;
+};
+
+struct protocol {
+	struct protocol *next;
+	int fd;
+	void (*handler) PROTO ((struct protocol *));
+	void *local;
 };
 
 /* Bitmask of dhcp option codes. */
@@ -394,6 +409,9 @@ int cons_options PROTO ((struct packet *, struct dhcp_packet *,
 int store_options PROTO ((unsigned char *, int, struct tree_cache **,
 			   unsigned char *, int, int, int, int));
 char *pretty_print_option PROTO ((unsigned char, unsigned char *, int, int));
+void do_packet PROTO ((struct interface_info *,
+		       unsigned char *, int,
+		       unsigned short, struct iaddr, struct hardware *));
 
 /* errwarn.c */
 extern int warnings_occurred;
@@ -537,6 +555,10 @@ struct subnet *new_subnet PROTO ((char *));
 struct class *new_class PROTO ((char *));
 struct shared_network *new_shared_network PROTO ((char *));
 struct group *new_group PROTO ((char *));
+struct protocol *new_protocol PROTO ((char *));
+struct lease_state *new_lease_state PROTO ((char *));
+void free_lease_state PROTO ((struct lease_state *, char *));
+void free_protocol PROTO ((struct protocol *, char *));
 void free_group PROTO ((struct group *, char *));
 void free_shared_network PROTO ((struct shared_network *, char *));
 void free_class PROTO ((struct class *, char *));
@@ -569,7 +591,7 @@ size_t send_fallback PROTO ((struct interface_info *,
 			   struct packet *, struct dhcp_packet *, size_t, 
 			   struct in_addr,
 			   struct sockaddr_in *, struct hardware *));
-size_t fallback_discard PROTO ((struct interface_info *));
+void fallback_discard PROTO ((struct protocol *));
 #endif
 
 #ifdef USE_SOCKET_SEND
@@ -650,18 +672,22 @@ size_t send_packet PROTO ((struct interface_info *,
 
 /* dispatch.c */
 extern struct interface_info *interfaces, *dummy_interfaces;
+extern struct protocol *protocols;
+extern void (*bootp_packet_handler) PROTO ((struct interface_info *,
+				     unsigned char *, int, unsigned short,
+				     struct iaddr, struct hardware *));
 extern struct timeout *timeouts;
 void discover_interfaces PROTO ((int));
 void reinitialize_interfaces PROTO ((void));
-void dispatch PROTO ((int));
-void do_packet PROTO ((struct interface_info *,
-		       unsigned char *, int,
-		       unsigned short, struct iaddr, struct hardware *));
+void dispatch PROTO ((void));
 int locate_network PROTO ((struct packet *));
-void add_timeout PROTO ((TIME, void (*) PROTO ((struct interface_info *)),
-			 struct interface_info *));
-void cancel_timeout PROTO ((void (*) PROTO ((struct interface_info *)),
-			    struct interface_info *));
+void add_timeout PROTO ((TIME, void (*) PROTO ((void *)), void *));
+#if 0
+void add_fast_timeout PROTO ((UTIME, void (*) PROTO ((void *)), void *));
+#endif
+void cancel_timeout PROTO ((void (*) PROTO ((void *)), void *));
+void add_protocol PROTO ((char *, int,
+			  void (*) PROTO ((struct protocol *)), void *));
 
 /* hash.c */
 struct hash_table *new_hash PROTO ((void));
@@ -706,17 +732,17 @@ void dhcpoffer PROTO ((struct packet *));
 void dhcpack PROTO ((struct packet *));
 void dhcpnak PROTO ((struct packet *));
 
-void send_discover PROTO ((struct interface_info *));
-void send_request PROTO ((struct interface_info *));
-void send_release PROTO ((struct interface_info *));
-void send_decline PROTO ((struct interface_info *));
+void send_discover PROTO ((void *));
+void send_request PROTO ((void *));
+void send_release PROTO ((void *));
+void send_decline PROTO ((void *));
 
-void state_reboot PROTO ((struct interface_info *));
-void state_init PROTO ((struct interface_info *));
-void state_selecting PROTO ((struct interface_info *));
-void state_requesting PROTO ((struct interface_info *));
-void state_bound PROTO ((struct interface_info *));
-void state_panic PROTO ((struct interface_info *));
+void state_reboot PROTO ((void *));
+void state_init PROTO ((void *));
+void state_selecting PROTO ((void *));
+void state_requesting PROTO ((void *));
+void state_bound PROTO ((void *));
+void state_panic PROTO ((void *));
 
 void make_discover PROTO ((struct interface_info *, struct client_lease *));
 void make_request PROTO ((struct interface_info *, struct client_lease *));
@@ -814,4 +840,11 @@ void parse_option_decl PROTO ((FILE *, struct option_data *));
 void parse_string_list PROTO ((FILE *, struct string_list **, int));
 
 /* dhcrelay.c */
-void relay PROTO ((struct interface_info *, struct dhcp_packet *, int));
+void relay PROTO ((struct interface_info *, u_int8_t *, int,
+		   unsigned short, struct iaddr, struct hardware *));
+
+/* icmp.c */
+void icmp_startup PROTO ((int, void (*) PROTO ((struct iaddr,
+						u_int8_t, int))));
+int icmp_echorequest PROTO ((struct iaddr *));
+void icmp_echoreply PROTO ((struct protocol *));
