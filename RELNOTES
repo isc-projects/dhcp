@@ -69,6 +69,13 @@ and for prodding me into improving it.
 - An incorrect log message was corrected thanks to a patch from
   Dr. Peter Poeml.
 
+- A bug in DDNS was repaired, where if the server's first DDNS action was
+  a DDNS removal rather than a DDNS update, the resolver library's
+  retransmit timer and retry timer was set to the default, implying a
+  15 second timeout interval.  Which is a little excessive in a synchronous,
+  single-threaded system.  In all cases, ISC DHCP should now hold fast to
+  a 1-second timeout, trying only once.
+
 			Changes since 3.0.2rc3
 
 - A previously undocumented configuration directive, 'local-address',
