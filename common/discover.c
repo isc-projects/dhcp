@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: discover.c,v 1.9.2.3 1999/12/09 00:26:18 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: discover.c,v 1.9.2.4 1999/12/17 17:17:41 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -486,9 +486,12 @@ void discover_interfaces (state)
 	maybe_setup_fallback ();
 #if defined (HAVE_SETFD)
 	if (fallback_interface) {
-	    if (fcntl (fallback_interface -> rfdesc, F_SETFD, 1) < 0)
-		log_error ("Can't set close-on-exec on fallback: %m");
-	    if (fallback_interface -> rfdesc != tmp -> wfdesc) {
+	    if (fallback_interface -> rfdesc != 0) {
+		if (fcntl (fallback_interface -> rfdesc, F_SETFD, 1) < 0)
+		    log_error ("Can't set close-on-exec on fallback: %m");
+	    }
+	    if (fallback_interface -> rfdesc != fallback_interface -> wfdesc &&
+		fallback_interface -> wfdesc != 0) {
 		if (fcntl (fallback_interface -> wfdesc, F_SETFD, 1) < 0)
 		    log_error ("Can't set close-on-exec on fallback: %m");
 	    }
