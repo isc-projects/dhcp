@@ -50,7 +50,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: omapi.c,v 1.46.2.6 2001/06/20 04:21:39 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: omapi.c,v 1.46.2.7 2001/06/22 02:28:51 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -430,6 +430,10 @@ isc_result_t dhcp_lease_destroy (omapi_object_t *h, const char *file, int line)
 	   XXX pointer except on exit... */
 	if (lease -> next)
 		lease_dereference (&lease -> next, file, line);
+	if (lease -> n_hw)
+		lease_dereference (&lease -> n_hw, file, line);
+	if (lease -> n_uid)
+		lease_dereference (&lease -> n_uid, file, line);
 	if (lease -> next_pending)
 		lease_dereference (&lease -> next_pending, file, line);
 #endif
@@ -927,7 +931,7 @@ isc_result_t dhcp_host_set_value  (omapi_object_t *h,
 				value -> u.buffer.value, ds.len);
 			if (!option_cache (&host -> fixed_addr,
 					   &ds, (struct expression *)0,
-					   (struct option *)0)) {
+					   (struct option *)0, MDL)) {
 				data_string_forget (&ds, MDL);
 				return ISC_R_NOMEMORY;
 			}
@@ -1564,13 +1568,13 @@ isc_result_t dhcp_pool_destroy (omapi_object_t *h, const char *file, int line)
 #endif
 	for (pc = pool -> permit_list; pc; pc = pn) {
 		pn = pc -> next;
-		dfree (pc, file, line);
+		free_permit (pc, file, line);
 	}
 	pool -> permit_list = (struct permit *)0;
 
 	for (pc = pool -> prohibit_list; pc; pc = pn) {
 		pn = pc -> next;
-		dfree (pc, file, line);
+		free_permit (pc, file, line);
 	}
 	pool -> prohibit_list = (struct permit *)0;
 #endif
@@ -1750,6 +1754,8 @@ isc_result_t dhcp_class_destroy (omapi_object_t *h, const char *file, int line)
 	if (class -> statements)
 		executable_statement_dereference (&class -> statements,
 						  file, line);
+	if (class -> superclass)
+		class_dereference (&class -> superclass, file, line);
 #endif
 
 	return ISC_R_SUCCESS;
