@@ -56,7 +56,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhclient.c,v 1.45 1997/12/09 20:29:00 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.46 1998/02/06 00:58:36 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -69,6 +69,8 @@ struct tree_cache *global_options [256];
 char *path_dhclient_conf = _PATH_DHCLIENT_CONF;
 char *path_dhclient_db = _PATH_DHCLIENT_DB;
 char *path_dhclient_pid = _PATH_DHCLIENT_PID;
+
+int dhcp_max_agent_option_packet_length = 0;
 
 int interfaces_requested = 0;
 
@@ -1358,8 +1360,8 @@ void make_discover (ip, lease)
 
 	/* Set up the option buffer... */
 	ip -> client -> packet_length =
-		cons_options ((struct packet *)0, &ip -> client -> packet,
-			      options, 0, 0, 0);
+		cons_options ((struct packet *)0, &ip -> client -> packet, 0,
+			      options, (struct agent_options *)0, 0, 0, 0);
 	if (ip -> client -> packet_length < BOOTP_MIN_LEN)
 		ip -> client -> packet_length = BOOTP_MIN_LEN;
 
@@ -1465,8 +1467,8 @@ void make_request (ip, lease)
 
 	/* Set up the option buffer... */
 	ip -> client -> packet_length =
-		cons_options ((struct packet *)0, &ip -> client -> packet,
-			      options, 0, 0, 0);
+		cons_options ((struct packet *)0, &ip -> client -> packet, 0,
+			      options, (struct agent_options *)0, 0, 0, 0);
 	if (ip -> client -> packet_length < BOOTP_MIN_LEN)
 		ip -> client -> packet_length = BOOTP_MIN_LEN;
 
@@ -1564,8 +1566,8 @@ void make_decline (ip, lease)
 
 	/* Set up the option buffer... */
 	ip -> client -> packet_length =
-		cons_options ((struct packet *)0, &ip -> client -> packet,
-			      options, 0, 0, 0);
+		cons_options ((struct packet *)0, &ip -> client -> packet, 0,
+			      options, (struct agent_options *)0, 0, 0, 0);
 	if (ip -> client -> packet_length < BOOTP_MIN_LEN)
 		ip -> client -> packet_length = BOOTP_MIN_LEN;
 
@@ -1630,8 +1632,8 @@ void make_release (ip, lease)
 
 	/* Set up the option buffer... */
 	ip -> client -> packet_length =
-		cons_options ((struct packet *)0, &ip -> client -> packet,
-			      options, 0, 0, 0);
+		cons_options ((struct packet *)0, &ip -> client -> packet, 0,
+			      options, (struct agent_options *)0, 0, 0, 0);
 	if (ip -> client -> packet_length < BOOTP_MIN_LEN)
 		ip -> client -> packet_length = BOOTP_MIN_LEN;
 
