@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: discover.c,v 1.6 1999/03/16 05:50:33 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: discover.c,v 1.7 1999/03/25 21:57:30 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -381,8 +381,9 @@ void discover_interfaces (state)
 #endif
 
 		      default:
-			log_fatal ("%s: unknown hardware address type %d",
-			       ifr.ifr_name, sa.sa_family);
+			log_error ("%s: unknown hardware address type %d",
+				   ifr.ifr_name, sa.sa_family);
+			break;
 		}
 	}
 #endif /* defined (HAVE_SIOCGIFHWADDR) && !defined (HAVE_AF_LINK) */
