@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.45.2.4 1998/07/10 23:23:19 mellon Exp $ Copyright 1995, 1996, 1997, 1998 The Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.45.2.5 1998/12/21 04:20:47 mellon Exp $ Copyright 1995, 1996, 1997, 1998 The Internet Software Consortium.";
 #endif
 
 static char copyright[] =
@@ -59,10 +59,6 @@ struct group root_group;
 
 struct iaddr server_identifier;
 int server_identifier_matched;
-
-#ifdef USE_FALLBACK
-struct interface_info fallback_interface;
-#endif
 
 u_int16_t local_port;
 u_int16_t remote_port;
