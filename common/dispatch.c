@@ -211,7 +211,9 @@ void discover_interfaces ()
 
 		/* Find subnets that don't have valid interface
 		   addresses... */
-		for (subnet = tmp -> shared_network -> subnets;
+		for (subnet = (tmp -> shared_network
+			       ? tmp -> shared_network -> subnets
+			       : (struct subnet *)0);
 		     subnet; subnet = subnet -> next_sibling) {
 			if (!subnet -> interface_address.len) {
 				warn ("subnet %s attached to interface %s %s",
