@@ -43,7 +43,12 @@ Murrell at BC Tel Advanced Communications.  I'd like to express my
 thanks to all of these good people here, both for working on the code
 and for prodding me into improving it.
 
+
 			Changes since 3.0.2
+
+- A bug was fixed where a server might load balance a DHCP REQUEST to its
+  peer after already choosing not to load balance the preceeding DISCOVER.
+  The peer cannot allocate the originating server's lease.
 
 - In the case where a secondary server lost its stable storage while the
   primary was still in communications-interrupted, and came back online,

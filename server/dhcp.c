@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.192.2.47 2005/03/02 23:30:37 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.192.2.48 2005/03/02 23:35:19 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -500,27 +500,25 @@ void dhcprequest (packet, ms_nulltp, ip_lease)
 				  msgbuf, peer -> nrr);
 			goto out;
 		}
-		/* Don't load balance if the client is RENEWING or REBINDING.
-		   If it's RENEWING, we are the only server to hear it, so
-		   we have to serve it.   If it's REBINDING, it's out of
-		   communication with the other server, so there's no point
-		   in waiting to serve it.    However, if the lease we're
-		   offering is not a free lease, then we may be the only
-		   server that can offer it, so we can't load balance if
-		   the lease isn't in the free or backup state. */
-		if (peer -> service_state == cooperating &&
-		    !packet -> raw -> ciaddr.s_addr &&
-		    (lease -> binding_state == FTS_FREE ||
-		     lease -> binding_state == FTS_BACKUP)) {
-			if (!load_balance_mine (packet, peer)) {
-				log_debug ("%s: load balance to peer %s",
-					   msgbuf, peer -> name);
-				goto out;
-			}
-		}
 
-		/* Don't let a client allocate a lease using DHCPREQUEST
-		   if the lease isn't ours to allocate. */
+		/* "load balance to peer" - is not done at all for request.
+		 *
+		 * If it's RENEWING, we are the only server to hear it, so
+		 * we have to serve it.   If it's REBINDING, it's out of
+		 * communication with the other server, so there's no point
+		 * in waiting to serve it.    However, if the lease we're
+		 * offering is not a free lease, then we may be the only
+		 * server that can offer it, so we can't load balance if
+		 * the lease isn't in the free or backup state.  If it is
+		 * in the free or backup state, then that state is what
+		 * mandates one server or the other should perform the
+		 * allocation, not the LBA...we know the peer cannot
+		 * allocate a request for an address in our free state.
+		 *
+		 * So our only compass is lease_mine_to_reallocate().  This
+		 * effects both load balancing, and a sanity-check that we
+		 * are not going to try to allocate a lease that isn't ours.
+		 */
 		if ((lease -> binding_state == FTS_FREE ||
 		     lease -> binding_state == FTS_BACKUP) &&
 		    !lease_mine_to_reallocate (lease)) {
