@@ -50,7 +50,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: comapi.c,v 1.9.2.1 2001/05/31 19:26:48 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: comapi.c,v 1.9.2.2 2001/06/05 17:51:20 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -87,21 +87,6 @@ void dhcp_common_objects_setup ()
 		log_fatal ("Can't make initial control object: %s",
 			   isc_result_totext (status));
 	dhcp_control_object -> state = server_startup;
-
-	status = omapi_object_type_register (&dhcp_type_group,
-					     "group",
-					     dhcp_group_set_value,
-					     dhcp_group_get_value,
-					     dhcp_group_destroy,
-					     dhcp_group_signal_handler,
-					     dhcp_group_stuff_values,
-					     dhcp_group_lookup, 
-					     dhcp_group_create,
-					     dhcp_group_remove, 0, 0, 0,
-					     sizeof (struct group_object), 0);
-	if (status != ISC_R_SUCCESS)
-		log_fatal ("Can't register group object type: %s",
-			   isc_result_totext (status));
 
 	status = omapi_object_type_register (&dhcp_type_group,
 					     "group",
@@ -305,7 +290,8 @@ isc_result_t dhcp_group_signal_handler (omapi_object_t *h,
 		if (!group -> name) {
 			char hnbuf [64];
 			sprintf (hnbuf, "ng%08lx%08lx",
-				 (unsigned long)cur_time, (unsigned long)group);
+				 (unsigned long)cur_time,
+				 (unsigned long)group);
 			group -> name = dmalloc (strlen (hnbuf) + 1, MDL);
 			if (!group -> name)
 				return ISC_R_NOMEMORY;
@@ -696,7 +682,19 @@ isc_result_t dhcp_subnet_destroy (omapi_object_t *h, const char *file, int line)
 		return ISC_R_INVALIDARG;
 	subnet = (struct subnet *)h;
 
-	/* Can't destroy subnets yet. */
+#if defined (DEBUG_MEMORY_LEAKAGE)
+	if (subnet -> next_subnet)
+		subnet_dereference (&subnet -> next_subnet, file, line);
+	if (subnet -> next_sibling)
+		subnet_dereference (&subnet -> next_sibling, file, line);
+	if (subnet -> shared_network)
+		shared_network_dereference (&subnet -> shared_network,
+					    file, line);
+	if (subnet -> interface)
+		interface_dereference (&subnet -> interface, file, line);
+	if (subnet -> group)
+		group_dereference (&subnet -> group, file, line);
+#endif
 
 	return ISC_R_SUCCESS;
 }
@@ -840,7 +838,31 @@ isc_result_t dhcp_shared_network_destroy (omapi_object_t *h,
 		return ISC_R_INVALIDARG;
 	shared_network = (struct shared_network *)h;
 
-	/* Can't destroy shared_networks yet. */
+#if defined (DEBUG_MEMORY_LEAKAGE)
+	if (shared_network -> next)
+		shared_network_dereference (&shared_network -> next,
+					    file, line);
+	if (shared_network -> name) {
+		dfree (shared_network -> name, file, line);
+		shared_network -> name = 0;
+	}
+	if (shared_network -> subnets)
+		subnet_dereference (&shared_network -> subnets, file, line);
+	if (shared_network -> interface)
+		interface_dereference (&shared_network -> interface,
+				       file, line);
+	if (shared_network -> pools)
+	    omapi_object_dereference ((omapi_object_t **)
+				      &shared_network -> pools, file, line);
+	if (shared_network -> group)
+		group_dereference (&shared_network -> group, file, line);
+#if defined (FAILOVER_PROTOCOL)
+	if (shared_network -> failover_peer)
+	    omapi_object_dereference ((omapi_object_t **)
+				      &shared_network -> failover_peer,
+				      file, line);
+#endif
+#endif /* DEBUG_MEMORY_LEAKAGE */
 
 	return ISC_R_SUCCESS;
 }
