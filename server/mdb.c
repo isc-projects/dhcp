@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.17 1999/10/28 15:53:05 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.18 1999/11/07 20:38:01 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1091,8 +1091,15 @@ void release_lease (lease, packet)
 		}
 	}
 
-	lt = *lease;
-	if (lt.ends > cur_time) {
+	if (lease -> ends > cur_time) {
+		lt = *lease;
+
+		/* Events are reference-counted, so we can't just randomly
+		   make copies. */
+		lt.on_expiry = 0;
+		lt.on_release = 0;
+		lt.on_commit = 0;
+
 		lt.ends = cur_time;
 		lt.billing_class = (struct class *)0;
 		supersede_lease (lease, &lt, 1);
@@ -1110,6 +1117,13 @@ void abandon_lease (lease, message)
 
 	lease -> flags |= ABANDONED_LEASE;
 	lt = *lease;
+
+	/* Events are reference-counted, so we can't just randomly
+           make copies. */
+	lt.on_expiry = 0;
+	lt.on_release = 0;
+	lt.on_commit = 0;
+
 	lt.ends = cur_time; /* XXX */
 	log_error ("Abandoning IP address %s: %s",
 	      piaddr (lease -> ip_addr), message);
@@ -1130,6 +1144,12 @@ void dissociate_lease (lease)
 	struct lease lt;
 
 	lt = *lease;
+	/* Events are reference-counted, so we can't just randomly
+           make copies. */
+	lt.on_expiry = 0;
+	lt.on_release = 0;
+	lt.on_commit = 0;
+
 	if (lt.ends > cur_time)
 		lt.ends = cur_time;
 	lt.hardware_addr.htype = 0;
