@@ -22,10 +22,11 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.4 1999/11/20 18:36:31 mellon Exp $ Copyright (c) 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.5 1999/11/23 22:25:07 mellon Exp $ Copyright (c) 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
+#include "version.h"
 #include <omapip/omapip_p.h>
 
 #if defined (FAILOVER_PROTOCOL)
@@ -529,7 +530,7 @@ isc_result_t dhcp_failover_link_get_value (omapi_object_t *h,
 				 "dhcp_failover_link_get_value");
 		return omapi_make_string_value
 			(value, name,
-			 dhcp_failover_link_state_names [link -> state],
+			 dhcp_flink_state_names [link -> state],
 			 "dhcp_failover_link_get_value");
 	}
 
@@ -591,7 +592,7 @@ isc_result_t dhcp_failover_link_stuff_values (omapi_object_t *c,
 		status = omapi_connection_put_string (c, "invalid link state");
 	else
 		status = (omapi_connection_put_string
-			  (c, dhcp_failover_link_state_names [link -> state]));
+			  (c, dhcp_flink_state_names [link -> state]));
 	if (status != ISC_R_SUCCESS)
 		return status;
 
@@ -939,8 +940,8 @@ isc_result_t dhcp_failover_state_destroy (omapi_object_t *h,
    specified connection. */
 
 isc_result_t dhcp_failover_state_stuff (omapi_object_t *c,
-					   omapi_object_t *id,
-					   omapi_object_t *p)
+					omapi_object_t *id,
+					omapi_object_t *p)
 {
 	int i;
 
@@ -953,5 +954,464 @@ isc_result_t dhcp_failover_state_stuff (omapi_object_t *c,
 	return ISC_R_SUCCESS;
 }
 
+isc_result_t dhcp_failover_state_lookup (omapi_object_t **sp,
+					 omapi_object_t *id,
+					 omapi_object_t *ref)
+{
+	omapi_value_t *tv = (omapi_value_t *)0;
+	isc_result_t status;
+	dhcp_failover_state_t *s;
+
+	/* First see if we were sent a handle. */
+	status = omapi_get_value_str (ref, id, "handle", &tv);
+	if (status == ISC_R_SUCCESS) {
+		status = omapi_handle_td_lookup (sp, tv -> value);
+
+		omapi_value_dereference (&tv, "dhcp_failover_state_lookup");
+		if (status != ISC_R_SUCCESS)
+			return status;
+
+		/* Don't return the object if the type is wrong. */
+		if ((*sp) -> type != dhcp_type_failover_state) {
+			omapi_object_dereference
+				(sp, "dhcp_failover_state_lookup");
+			return ISC_R_INVALIDARG;
+		}
+	}
+
+	/* Look the lease up by peer name. */
+	status = omapi_get_value_str (ref, id, "peer_name", &tv);
+	if (status == ISC_R_SUCCESS) {
+		for (s = failover_states; s; s = s -> next) {
+			unsigned l = strlen (s -> remote_peer);
+			if (l == tv -> value -> u.buffer.len ||
+			    !memcmp (s -> remote_peer,
+				     tv -> value -> u.buffer.value, l))
+				break;
+		}
+		omapi_value_dereference (&tv, "dhcp_failover_state_lookup");
+
+		/* If we already have a lease, and it's not the same one,
+		   then the query was invalid. */
+		if (*sp && *sp != (omapi_object_t *)s) {
+			omapi_object_dereference
+				(sp, "dhcp_failover_state_lookup");
+			return ISC_R_KEYCONFLICT;
+		} else if (!s) {
+			if (*sp)
+				omapi_object_dereference
+					(sp, "dhcp_failover_state_lookup");
+			return ISC_R_NOTFOUND;
+		} else if (!*sp)
+			/* XXX fix so that hash lookup itself creates
+			   XXX the reference. */
+			omapi_object_reference (sp, (omapi_object_t *)s,
+						"dhcp_failover_state_lookup");
+	}
+
+	/* If we get to here without finding a lease, no valid key was
+	   specified. */
+	if (!*sp)
+		return ISC_R_NOKEYS;
+	return ISC_R_SUCCESS;
+}
+
+isc_result_t dhcp_failover_state_create (omapi_object_t **sp,
+					 omapi_object_t *id)
+{
+	return ISC_R_NOTIMPLEMENTED;
+}
+
+isc_result_t dhcp_failover_state_remove (omapi_object_t *sp,
+					 omapi_object_t *id)
+{
+	return ISC_R_NOTIMPLEMENTED;
+}
+
+failover_option_t *dhcp_failover_make_option (unsigned code,
+					      char *obuf, unsigned *obufix,
+					      unsigned obufmax, ...)
+{
+	va_list va;
+	struct failover_option_info *info;
+	int i;
+	unsigned size, count;
+	unsigned val;
+	struct iaddr *ival;
+	u_int8_t *bval;
+	char *fmt;
+#if defined (DEBUG_FAILOVER_MESSAGES)
+	char tbuf [256];
+#endif
+	/* Note that the failover_option structure is used differently on
+	   input than on output - on input, count is an element count, and
+	   on output it's the number of bytes total in the option, including
+	   the option code and option length. */
+	failover_option_t option, *op;
+
+
+	/* Bogus option code? */
+	if (code < 1 || code > FTO_MAX || ft_options [code].type == FT_UNDEF) {
+		return &null_failover_option;
+	}
+	info = &ft_options [code];
+		
+	va_start (va, obufmax);
+
+	/* Get the number of elements and the size of the buffer we need
+	   to allocate. */
+	if (info -> type == FT_DDNS || info -> type == FT_DDNS1) {
+		count = info -> type == FT_DDNS ? 1 : 2;
+		size = va_arg (va, int) + count;
+	} else {
+		/* Find out how many items in this list. */
+		if (info -> num_present)
+			count = info -> num_present;
+		else
+			count = va_arg (va, int);
+
+		/* Figure out size. */
+		switch (info -> type) {
+		      case FT_UINT8:
+		      case FT_BYTES:
+		      case FT_DIGEST:
+			size = count;
+			break;
+
+		      case FT_TEXT_OR_BYTES:
+		      case FT_TEXT:
+			fmt = va_arg (va, char *);
+#if defined (HAVE_SNPRINTF)
+			/* Presumably if we have snprintf, we also have
+                           vsnprintf. */
+			vsnprintf (tbuf, sizeof tbuf, fmt, va);
+#else
+			vsprintf (tbuf, fmt, va);
+#endif
+			size = strlen (tbuf);
+			count = size;
+			break;
+
+		      case FT_IPADDR:
+		      case FT_UINT32:
+			size = count * 4;
+			break;
+
+		      case FT_UINT16:
+			size = count * 2;
+			break;
+
+		      default:
+			/* shouldn't get here. */
+			log_fatal ("bogus type in failover_make_option: %d",
+				   info -> type);
+			break;
+		}
+	}
+	
+	size += 4;
+
+	/* Allocate a buffer for the option. */
+	option.count = size;
+	option.data = dmalloc (option.count, "dhcp_failover_make_option");
+	if (!option.data)
+		return &null_failover_option;
+
+	/* Put in the option code and option length. */
+	putUShort (option.data, code);
+	putUShort (&option.data [4], size - 4);
+
+#if defined (DEBUG_FAILOVER_MESSAGES)	
+	sprintf (tbuf, " (%s<%d>", info -> name, option.count);
+	failover_print (obuf, obufix, obufmax, tbuf);
+#endif
+
+	/* Now put in the data. */
+	switch (info -> type) {
+	      case FT_UINT8:
+		for (i = 0; i < count; i++) {
+			val = va_arg (va, unsigned);
+#if defined (DEBUG_FAILOVER_MESSAGES)
+			sprintf (tbuf, " %d", val);
+			failover_print (obuf, obufix, obufmax, tbuf);
+#endif
+			option.data [i + 4] = val;
+		}
+		break;
+
+	      case FT_IPADDR:
+		for (i = 0; i < count; i++) {
+			ival = va_arg (va, struct iaddr *);
+			if (ival -> len != 4) {
+				dfree (option.data,
+				       "dhcp_failover_make_option");
+				log_error ("IP addrlen=%d, should be 4.",
+					   ival -> len);
+				return &null_failover_option;
+			}
+				
+#if defined (DEBUG_FAILOVER_MESSAGES)
+			sprintf (tbuf, " %s", piaddr (*ival));
+			failover_print (obuf, obufix, obufmax, tbuf);
+#endif
+			memcpy (&option.data [4 + i * 4], ival -> iabuf, 4);
+		}
+		break;
+
+	      case FT_UINT32:
+		for (i = 0; i < count; i++) {
+			val = va_arg (va, unsigned);
+#if defined (DEBUG_FAILOVER_MESSAGES)
+			sprintf (tbuf, " %d", val);
+			failover_print (obuf, obufix, obufmax, tbuf);
+#endif
+			putULong (&option.data [4 + i * 4], val);
+		}
+		break;
+
+	      case FT_BYTES:
+	      case FT_DIGEST:
+		bval = va_arg (va, u_int8_t *);
+#if defined (DEBUG_FAILOVER_MESSAGES)
+		for (i = 0; i < count; i++) {
+			sprintf (tbuf, " %d", bval [i]);
+			failover_print (obuf, obufix, obufmax, tbuf);
+		}
+#endif
+		memcpy (&option.data [4], bval, count);
+		break;
+
+		/* On output, TEXT_OR_BYTES is _always_ text, and always NUL
+		   terminated.  Note that the caller should be careful not to
+		   provide a format and data that amount to more than 256 bytes
+		   of data, since it will be truncated on platforms that
+		   support snprintf, and will mung the stack on those platforms
+		   that do not support snprintf.  Also, callers should not pass
+		   data acquired from the network without specifically checking
+		   it to make sure it won't bash the stack. */
+	      case FT_TEXT_OR_BYTES:
+	      case FT_TEXT:
+#if defined (DEBUG_FAILOVER_MESSAGES)
+		failover_print (obuf, obufix, obufmax, " \"");
+		failover_print (obuf, obufix, obufmax, tbuf);
+		failover_print (obuf, obufix, obufmax, "\"");
+#endif
+		memcpy (&option.data [4], tbuf, count);
+		break;
+
+	      case FT_DDNS:
+	      case FT_DDNS1:
+		option.data [4] = va_arg (va, unsigned);
+		if (count == 2)
+			option.data [5] = va_arg (va, unsigned);
+		bval = va_arg (va, u_int8_t *);
+		memcpy (&option.data [4 + count], bval, size - count - 4);
+#if defined (DEBUG_FAILOVER_MESSAGES)
+		for (i = 4; i < size; i++) {
+			sprintf (tbuf, " %d", option.data [i]);
+			failover_print (obuf, obufix, obufmax, tbuf);
+		}
+#endif
+		break;
+
+	      case FT_UINT16:
+		for (i = 0; i < count; i++) {
+			val = va_arg (va, u_int32_t);
+#if defined (DEBUG_FAILOVER_MESSAGES)
+			sprintf (tbuf, " %d", val);
+			failover_print (obuf, obufix, obufmax, tbuf);
+#endif
+			putUShort (&option.data [4 + i * 2], val);
+		}
+		break;
+
+	      case FT_UNDEF:
+	      default:
+	}
+
+	failover_print (obuf, obufix, obufmax, ")");
+
+	/* Now allocate a place to store what we just set up. */
+	op = dmalloc (sizeof (failover_option_t),
+		      "dhcp_failover_make_option");
+	if (!op) {
+		dfree (option.data, "dhcp_failover_make_option");
+		return &null_failover_option;
+	}
+
+	*op = option;
+	return op;
+}
+
+/* Send a failover message header. */
+
+isc_result_t dhcp_failover_put_message (dhcp_failover_link_t *link,
+					omapi_object_t *connection,
+					int msg_type, ...)
+{
+	unsigned count = 0;
+	unsigned size = 0;
+	int bad_option = 0;
+	int opix = 0;
+	va_list list;
+	failover_option_t *option;
+	unsigned char *opbuf;
+	isc_result_t status = ISC_R_SUCCESS;
+	unsigned char cbuf;
+
+	/* Run through the argument list once to compute the length of
+	   the option portion of the message. */
+	va_start (list, msg_type);
+	while ((option = va_arg (list, failover_option_t *))) {
+		size += option -> count;
+		if (option == &null_failover_option)
+			bad_option = 1;
+	}
+	va_end (list);
+
+	/* Allocate an option buffer, unless we got an error. */
+	if (!bad_option) {
+		opbuf = dmalloc (size, "dhcp_failover_put_message");
+		if (!opbuf)
+			status = ISC_R_NOMEMORY;
+	}
+
+	va_start (list, msg_type);
+	while ((option = va_arg (list, failover_option_t *))) {
+		if (!bad_option && opbuf)
+			memcpy (&opbuf [opix],
+				option -> data, option -> count);
+		opix += option -> count;
+		dfree (option -> data, "dhcp_failover_put_message");
+		dfree (option, "dhcp_failover_put_message");
+	}
+
+	if (bad_option || !opbuf)
+		return status;
+
+	/* Now send the message header. */
+
+	/* Message length. */
+	status = omapi_connection_put_uint16 (connection, size + 12);
+	if (status != ISC_R_SUCCESS)
+		goto err;
+
+	/* Message type. */
+	cbuf = msg_type;
+	status = omapi_connection_copyin (connection, &cbuf, 1);
+	if (status != ISC_R_SUCCESS)
+		goto err;
+
+	/* Payload offset. */
+	cbuf = 12;
+	status = omapi_connection_copyin (connection, &cbuf, 1);
+	if (status != ISC_R_SUCCESS)
+		goto err;
+
+	/* Current time. */
+	status = omapi_connection_put_uint32 (connection, (u_int32_t)cur_time);
+	if (status != ISC_R_SUCCESS)
+		goto err;
+
+	/* Transaction ID. */
+	status = omapi_connection_put_uint32 (connection, link -> xid++);
+	if (status != ISC_R_SUCCESS)
+		goto err;
+
+	
+	/* Payload. */
+	status = omapi_connection_copyin (connection, opbuf, size);
+	if (status != ISC_R_SUCCESS)
+		goto err;
+	dfree (opbuf, "dhcp_failover_put_message");
+	return status;
+
+      err:
+	dfree (opbuf, "dhcp_failover_put_message");
+	omapi_disconnect (connection, 1);
+	return status;
+}	
+
+/* Send a connect message. */
+
+isc_result_t dhcp_failover_send_connect (omapi_object_t *l)
+{
+	dhcp_failover_link_t *link;
+	dhcp_failover_state_t *state;
+	isc_result_t status;
+#if defined (DEBUG_FAILOVER_MESSAGES)	
+	char obuf [64];
+	unsigned obufix = 0;
+	
+# define FMA obuf, &obufix, sizeof obuf
+	failover_print (FMA, "(connect");
+#else
+# define FMA (unsigned char *)0, (unsigned *)0, 0
+#endif
+
+
+	if (!l || l -> type != dhcp_type_failover_link)
+		return ISC_R_INVALIDARG;
+	link = (dhcp_failover_link_t *)l;
+	state = link -> state_object;
+	if (!l -> outer || l -> outer -> type != omapi_type_connection)
+		return ISC_R_INVALIDARG;
+
+	status = (dhcp_failover_put_message
+		  (link, l -> outer,
+		   FTM_CONNECT,
+		   dhcp_failover_make_option (FTO_SERVER_ADDR, FMA,
+					      &state -> server_addr),
+		   dhcp_failover_make_option (FTO_MAX_UNACKED, FMA,
+					      state -> max_flying_updates),
+		   dhcp_failover_make_option (FTO_RECEIVE_TIMER, FMA,
+					      state -> partner_timeout),
+		   dhcp_failover_make_option (FTO_VENDOR_CLASS, FMA,
+					      "isc-%s", DHCP_VERSION),
+		   dhcp_failover_make_option (FTO_PROTOCOL_VERSION, FMA,
+					      DHCP_FAILOVER_VERSION),
+		   dhcp_failover_make_option (FTO_TLS_REQUEST, FMA,
+					      0, 0),
+		   dhcp_failover_make_option (FTO_MCLT, FMA,
+					      state -> mclt),
+		   dhcp_failover_make_option (FTO_HBA, FMA,
+					      state -> hba),
+		   (failover_option_t *)0));
+
+#if defined (DEBUG_FAILOVER_MESSAGES)
+	if (status != ISC_R_SUCCESS)
+		failover_print (FMA, " (failed)");
+	failover_print (FMA, ")");
+	if (obufix) {
+		log_debug ("%s", obuf);
+	}
+#endif
+	return status;
+}
+
+#if defined (DEBUG_FAILOVER_MESSAGES)
+/* Print hunks of failover messages, doing line breaks as appropriate.
+   Note that this assumes syslog is being used, rather than, e.g., the
+   Windows NT logging facility, where just dumping the whole message in
+   one hunk would be more appropriate. */
+
+void failover_print (char *obuf,
+		     unsigned *obufix, unsigned obufmax, const char *s)
+{
+	int len = strlen (s);
+
+	if (len + *obufix + 1 >= obufmax) {
+		if (!*obufix) {
+			log_debug ("%s", s);
+			return;
+		}
+		log_debug ("%s", obuf);
+		*obufix = 0;
+	} else {
+		strcpy (&obuf [*obufix], s);
+		obufix += len;
+	}
+}	
+#endif /* defined (DEBUG_FAILOVER_MESSAGES) */
 
 #endif /* defined (FAILOVER_PROTOCOL) */
