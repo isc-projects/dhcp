@@ -256,8 +256,8 @@ dhcpctl_status dhcpctl_set_value (dhcpctl_handle h, dhcpctl_data_string value,
    trouble of creating a data_string for a NUL-terminated string.
    Does not update the server - just sets the value on the handle. */
 
-dhcpctl_status dhcpctl_set_string_value (dhcpctl_handle h, char *value,
-					 char *value_name)
+dhcpctl_status dhcpctl_set_string_value (dhcpctl_handle h, const char *value,
+					 const char *value_name)
 {
 	isc_result_t status;
 	omapi_typed_data_t *tv = (omapi_typed_data_t *)0;

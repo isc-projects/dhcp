@@ -20,6 +20,9 @@
  * http://www.isc.org for more information.
  */
 
+#ifndef _DHCPCTL_H_
+#define _DHCPCTL_H_
+
 #include <omapip/omapip.h>
 
 typedef isc_result_t dhcpctl_status;
@@ -45,8 +48,12 @@ typedef struct {
 	omapi_handle_t remote_handle;
 } dhcpctl_remote_object_t;
 
+#ifndef __cplusplus
+// for some reason, these cause problems when included in C++ classes
 omapi_object_type_t *dhcpctl_callback_type;
 omapi_object_type_t *dhcpctl_remote_type;
+#endif
+#endif _DHCPCTL_H_
 
 dhcpctl_status dhcpctl_initialize (void);
 dhcpctl_status dhcpctl_connect (dhcpctl_handle *,
@@ -56,8 +63,10 @@ dhcpctl_status dhcpctl_get_value (dhcpctl_data_string *,
 				  dhcpctl_handle, char *);
 dhcpctl_status dhcpctl_get_boolean (int *, dhcpctl_handle, char *);
 dhcpctl_status dhcpctl_set_value (dhcpctl_handle, dhcpctl_data_string, char *);
-dhcpctl_status dhcpctl_set_string_value (dhcpctl_handle, char *, char *);
+dhcpctl_status dhcpctl_set_string_value (dhcpctl_handle, const char *,
+					 const char *);
 dhcpctl_status dhcpctl_set_boolean_value (dhcpctl_handle, int, char *);
+dhcpctl_status dhcpctl_set_int_value (dhcpctl_handle, int, char *);
 dhcpctl_status dhcpctl_object_update (dhcpctl_handle, dhcpctl_handle);
 dhcpctl_status dhcpctl_object_refresh (dhcpctl_handle, dhcpctl_handle);
 dhcpctl_status dhcpctl_object_remove (dhcpctl_handle, dhcpctl_handle);
