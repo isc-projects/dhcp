@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"@(#) Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: db.c,v 1.7 1996/08/27 09:42:26 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -60,43 +60,99 @@ int write_lease (lease)
 {
 	struct tm *t;
 	char tbuf [64];
+	int errors = 0;
 
 	if (counting)
 		++count;
 	errno = 0;
-	fprintf (db_file, "lease %s\n", piaddr (lease -> ip_addr));
+	fprintf (db_file, "lease %s {\n", piaddr (lease -> ip_addr));
+	if (errno) {
+		++errors;
+	}
 
 	t = gmtime (&lease -> starts);
-	strftime (tbuf, sizeof tbuf, "%w %Y/%m/%d %H:%M:%S", t);
+	sprintf (tbuf, "%d %d/%d/%d %02d:%02d:%02d;",
+		 t -> tm_wday, t -> tm_year + 1900,
+		 t -> tm_mon + 1, t -> tm_mday,
+		 t -> tm_hour, t -> tm_min, t -> tm_sec);
+	errno = 0;
 	fprintf (db_file, "\tstarts %s\n", tbuf);
+	if (errno) {
+		++errors;
+	}
 
 	t = gmtime (&lease -> ends);
-	strftime (tbuf, sizeof tbuf, "%w %Y/%m/%d %H:%M:%S", t);
+	sprintf (tbuf, "%d %d/%d/%d %02d:%02d:%02d;",
+		 t -> tm_wday, t -> tm_year + 1900,
+		 t -> tm_mon + 1, t -> tm_mday,
+		 t -> tm_hour, t -> tm_min, t -> tm_sec);
+	errno = 0;
 	fprintf (db_file, "\tends %s", tbuf);
+	if (errno) {
+		++errors;
+	}
 
 	if (lease -> hardware_addr.hlen) {
-		fprintf (db_file, "\n\thardware %s %s",
+		errno = 0;
+		fprintf (db_file, "\n\thardware %s %s;",
 			 hardware_types [lease -> hardware_addr.htype],
 			 print_hw_addr (lease -> hardware_addr.htype,
 					lease -> hardware_addr.hlen,
 					lease -> hardware_addr.haddr));
+		if (errno) {
+			++errors;
+		}
 	}
 	if (lease -> uid_len) {
 		int i;
+		errno = 0;
 		fprintf (db_file, "\n\tuid %x", lease -> uid [0]);
-		for (i = 1; i < lease -> uid_len; i++)
+		if (errno) {
+			++errors;
+		}
+		for (i = 1; i < lease -> uid_len; i++) {
+			errno = 0;
 			fprintf (db_file, ":%x", lease -> uid [i]);
+			if (errno) {
+				++errors;
+			}
+		}
+		putc (';', db_file);
 	}
-	if (lease -> flags & BOOTP_LEASE)
-		fprintf (db_file, "\n\tdynamic-bootp");
-	fputs (";\n", db_file);
-	return !errno;
+	if (lease -> flags & BOOTP_LEASE) {
+		errno = 0;
+		fprintf (db_file, "\n\tdynamic-bootp;");
+		if (errno) {
+			++errors;
+		}
+	}
+	errno = 0;
+	fputs ("\n}\n", db_file);
+	if (errno) {
+		++errors;
+	}
+	if (errors)
+		note ("write_lease: unable to write lease %s",
+		      piaddr (lease -> ip_addr));
+	return !errors;
 }
 
 /* Commit any leases that have been written out... */
 
 int commit_leases ()
 {
+	/* Commit any outstanding writes to the lease database file.
+	   We need to do this even if we're rewriting the file below,
+	   just in case the rewrite fails. */
+	if (fflush (db_file) == EOF) {
+		note ("commit_leases: unable to commit: %m");
+		return 0;
+	}
+	if (fsync (fileno (db_file)) < 0) {
+		note ("commit_leases: unable to commit: %m");
+		return 0;
+	}
+
 	/* If we've written more than a thousand leases or if
 	   we haven't rewritten the lease database in over an
 	   hour, rewrite it now. */
@@ -104,13 +160,7 @@ int commit_leases ()
 		count = 0;
 		write_time = cur_time;
 		new_lease_file ();
-		return 1;
 	}
-
-	if (fflush (db_file) == EOF)
-		return 0;
-	if (fsync (fileno (db_file)) < 0)
-		return 0;
 	return 1;
 }
 
@@ -146,11 +196,17 @@ void new_lease_file ()
 
 	/* Get the old database out of the way... */
 	sprintf (backfname, "%s~", _PATH_DHCPD_DB);
-	unlink (backfname);
-	link (_PATH_DHCPD_DB, backfname);
+	if (unlink (backfname) < 0 && errno != ENOENT)
+		error ("Can't remove old lease database backup %s: %m",
+		       backfname);
+	if (link (_PATH_DHCPD_DB, backfname) < 0)
+		error ("Can't backup lease database %s to %s: %m",
+		       _PATH_DHCPD_DB, backfname);
 	
 	/* Move in the new file... */
-	rename (newfname, _PATH_DHCPD_DB);
+	if (rename (newfname, _PATH_DHCPD_DB) < 0)
+		error ("Can't install new lease database %s to %s: %m",
+		       newfname, _PATH_DHCPD_DB);
 
 	counting = 1;
 }
