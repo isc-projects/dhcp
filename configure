@@ -127,18 +127,21 @@ if [ x$major != x ] && [ x$minor != x ]; then
 fi
 
 if [ ! -d ${sysname} ]; then
-  mkdir $sysname
+  mkdir work.$sysname
 fi
 
 for foo in . client server relay common omapip dhcpctl minires; do
-	if [ ! -d ${sysname}/$foo ]; then
-	  mkdir ${sysname}/$foo
+	if [ ! -d work.${sysname}/$foo ]; then
+	  mkdir work.${sysname}/$foo
 	fi
 	(sed $majversubst $minversubst \
 	      -e "/^##--${sysname}--/,/^##--${sysname}--/s/^#//" \
 		<Makefile.conf; cat site.conf; \
 		echo "TOP = ../.."; cat $foo/Makefile.dist)	\
-				>${sysname}/$foo/Makefile
+				>work.${sysname}/$foo/Makefile
 done
+
+# Make the link tree in which to actually build.
+make links
 
 exit 0
