@@ -56,7 +56,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.44.2.8 1999/01/29 18:33:34 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.44.2.9 1999/02/03 18:56:15 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1246,6 +1246,7 @@ void send_request (ipp)
 	/* If the lease T2 time has elapsed, or if we're not yet bound,
 	   broadcast the DHCPREQUEST rather than unicasting. */
 	if (ip -> client -> state == S_REQUESTING ||
+	    ip -> client -> state == S_REBOOTING ||
 	    cur_time > ip -> client -> active -> rebind)
 		destination.sin_addr.s_addr = INADDR_BROADCAST;
 	else
@@ -1531,6 +1532,7 @@ void make_request (ip, lease)
 	    ip -> client -> state == S_REBINDING) {
 		memcpy (&ip -> client -> packet.ciaddr,
 			lease -> address.iabuf, lease -> address.len);
+		ip -> client -> packet.flags = 0;
 	} else {
 		memset (&ip -> client -> packet.ciaddr, 0,
 			sizeof ip -> client -> packet.ciaddr);
