@@ -124,7 +124,9 @@ VOIDPTR dmalloc (size, file, line)
 	}
 #endif
 #endif
+#ifdef DEBUG_REFCNT_DMALLOC_FREE
 	rc_register (file, line, 0, foo + DMDOFFSET, 1);
+#endif
 	return bar;
 }
 
@@ -185,7 +187,9 @@ void dfree (ptr, file, line)
 		ptr = bar;
 	}
 #endif
+#ifdef DEBUG_REFCNT_DMALLOC_FREE
 	rc_register (file, line, 0, (unsigned char *)ptr + DMDOFFSET, 0);
+#endif
 	free (ptr);
 }
 
