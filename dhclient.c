@@ -63,6 +63,7 @@ u_int16_t server_port;
 int log_priority;
 
 int tline, tlpos;
+char *tlname;
 
 static void usage PROTO ((void));
 
