@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.67.2.2 2001/05/05 04:22:13 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.67.2.3 2001/05/10 18:31:01 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -821,6 +821,7 @@ int supersede_lease (comp, lease, commit, propogate, pimmediate)
 	   requested *after* a DHCP lease has been assigned. */
 
 	if (lease -> binding_state != FTS_ABANDONED &&
+	    lease -> next_binding_state != FTS_ABANDONED &&
 	    (comp -> binding_state == FTS_ACTIVE ||
 	     comp -> binding_state == FTS_RESERVED ||
 	     comp -> binding_state == FTS_BOOTP) &&
