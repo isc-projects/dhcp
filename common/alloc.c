@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: alloc.c,v 1.30.2.3 1999/12/22 20:30:00 mellon Exp $ Copyright (c) 1995, 1996, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: alloc.c,v 1.30.2.4 1999/12/22 20:42:55 mellon Exp $ Copyright (c) 1995, 1996, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1009,4 +1009,44 @@ int option_state_dereference (ptr, name)
 
 	dfree (options, name);
 	return 1;
+}
+
+/* Make a copy of the data in data_string, upping the buffer reference
+   count if there's a buffer. */
+
+void data_string_copy (dest, src, name)
+	struct data_string *dest;
+	struct data_string *src;
+	char *name;
+{
+	if (src -> buffer)
+		buffer_reference (&dest -> buffer, src -> buffer, name);
+	dest -> data = src -> data;
+	dest -> terminated = src -> terminated;
+	dest -> len = src -> len;
+}
+
+/* Release the reference count to a data string's buffer (if any) and
+   zero out the other information, yielding the null data string. */
+
+void data_string_forget (data, name)
+	struct data_string *data;
+	char *name;
+{
+	if (data -> buffer)
+		buffer_dereference (&data -> buffer, name);
+	memset (data, 0, sizeof *data);
+}
+
+/* Make a copy of the data in data_string, upping the buffer reference
+   count if there's a buffer. */
+
+void data_string_truncate (dp, len)
+	struct data_string *dp;
+	int len;
+{
+	if (len < dp -> len) {
+		dp -> terminated = 0;
+		dp -> len = len;
+	}
 }

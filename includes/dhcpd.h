@@ -993,10 +993,6 @@ int evaluate_boolean_expression_result PROTO ((struct packet *,
 					       struct lease *,
 					       struct expression *));
 void expression_dereference PROTO ((struct expression **, char *));
-void data_string_copy PROTO ((struct data_string *,
-			      struct data_string *, char *));
-void data_string_forget PROTO ((struct data_string *, char *));
-void data_string_truncate PROTO ((struct data_string *, int));
 int is_boolean_expression PROTO ((struct expression *));
 int is_data_expression PROTO ((struct expression *));
 int is_numeric_expression PROTO ((struct expression *));
@@ -1141,6 +1137,10 @@ int option_state_allocate PROTO ((struct option_state **, char *));
 int option_state_reference PROTO ((struct option_state **,
 				   struct option_state *, char *));
 int option_state_dereference PROTO ((struct option_state **, char *));
+void data_string_copy PROTO ((struct data_string *,
+			      struct data_string *, char *));
+void data_string_forget PROTO ((struct data_string *, char *));
+void data_string_truncate PROTO ((struct data_string *, int));
 
 /* print.c */
 char *print_hw_addr PROTO ((int, int, unsigned char *));
