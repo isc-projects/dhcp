@@ -41,7 +41,7 @@
  */
 
 static char objcopyright[] =
-"$Id: dhcpd.c,v 1.26 1996/08/27 09:44:54 mellon Exp $ Copyright 1995, 1996 The Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.27 1996/08/28 01:30:19 mellon Exp $ Copyright 1995, 1996 The Internet Software Consortium.";
 static char copyright[] =
 "Copyright 1995, 1996 The Internet Software Consortium.";
 static char arr [] = "All rights reserved.";
@@ -63,6 +63,7 @@ struct interface_info fallback_interface;
 
 u_int16_t server_port;
 int log_priority;
+int log_perror = 1;
 
 int main (argc, argv, envp)
 	int argc;
@@ -76,15 +77,14 @@ int main (argc, argv, envp)
 	int pid;
 	char pbuf [20];
 	int daemon = 1;
-	int log_perror = 0;
 #endif
 
 	/* Initially, log errors to stderr as well as to syslogd. */
 #ifdef SYSLOG_4_2
-	openlog ("dhcpd", LOG_NDELAY | LOG_PERROR);
+	openlog ("dhcpd", LOG_NDELAY);
 	log_priority = DHCPD_LOG_FACILITY;
 #else
-	openlog ("dhcpd", LOG_NDELAY | LOG_PERROR, DHCPD_LOG_FACILITY);
+	openlog ("dhcpd", LOG_NDELAY, DHCPD_LOG_FACILITY);
 #endif
 
 #ifndef DEBUG
@@ -95,6 +95,8 @@ int main (argc, argv, envp)
 	note (message);
 	note (copyright);
 	note (arr);
+
+	log_perror = 0;
 
 	for (i = 1; i < argc; i++) {
 		if (!strcmp (argv [i], "-p")) {
@@ -129,24 +131,7 @@ int main (argc, argv, envp)
 		}
 	}
 
-	/* If the user didn't ask for debug mode, close the log and
-	   reopen it without the LOG_STDERR flag. */
 #ifndef DEBUG
-	if (!log_perror) {
-		closelog ();
-
-#ifdef SYSLOG_4_2
-		openlog ("dhcpd", LOG_NDELAY);
-		log_priority = DHCPD_LOG_FACILITY;
-#else
-		openlog ("dhcpd", LOG_NDELAY, DHCPD_LOG_FACILITY);
-#endif
-
-#ifndef SYSLOG_4_2
-		setlogmask (LOG_UPTO (LOG_INFO));
-#endif
-	}
-
 	if (daemon) {
 		/* Become a daemon... */
 		if ((pid = fork ()) < 0)
