@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: db.c,v 1.25.2.2 1999/10/26 15:20:25 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: db.c,v 1.25.2.3 1999/11/03 22:25:51 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -273,6 +273,7 @@ void db_startup (testp)
 	read_leases ();
 
 	if (!testp) {
+		db_file = fopen (path_dhcpd_db, "a");
 		expire_all_pools ();
 		GET_TIME (&write_time);
 		new_lease_file ();
