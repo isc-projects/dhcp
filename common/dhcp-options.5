@@ -850,7 +850,7 @@ The WWW server option specifies a list of WWW available to the
 client.  Servers should be listed in order of preference.
 .RE
 .SH RELAY AGENT INFORMATION OPTION
-An IETF draft, draft-ietf-dhc-agent-options-03.txt, defines a series
+An IETF draft, draft-ietf-dhc-agent-options-11.txt, defines a series
 of encapsulated options that a relay agent can add to a DHCP packet
 when relaying it to the DHCP server.   The server can then make
 address allocation decisions (or whatever other decisions it wants)
@@ -861,9 +861,10 @@ purposes.
 .PP
 The current draft defines two options.   To reference
 these options in the dhcp server, specify the option space name,
-"agent", followed by a period, followed by the option name.   It isn't
-useful to specify these options to be sent, nor is it useful to
-reference them at all in the client.
+"agent", followed by a period, followed by the option name.   It is
+not normally useful to define values for these options in the server,
+although it is permissible.   These options are not supported in the
+client.
 .PP
 .B option \fBagent.circuit-id\fR \fIstring\fR\fB;\fR
 .RS 0.25i
