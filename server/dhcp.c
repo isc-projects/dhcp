@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.192.2.8 2001/06/01 19:00:43 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.192.2.9 2001/06/02 06:03:25 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -315,8 +315,14 @@ void dhcpdiscover (packet, ms_nulltp)
 			;
 
 		/* Otherwise, we can't let the client have this lease. */
-		else
-			lease_dereference (&lease, MDL);
+		else {
+#if defined (DEBUG_FIND_LEASE)
+		    log_debug ("discarding %s - %s",
+			       piaddr (lease -> ip_addr),
+			       binding_state_print (lease -> binding_state));
+#endif
+		    lease_dereference (&lease, MDL);
+		}
 	}
 #endif
 
@@ -2887,21 +2893,29 @@ int find_lease (struct lease **lp,
 		log_info ("trying next lease matching client id: %s",
 			  piaddr (uid_lease -> ip_addr));
 #endif
+
+#if defined (FAILOVER_PROTOCOL)
+		/* When failover is active, it's possible that there could
+		   be two "free" leases for the same uid, but only one of
+		   them that's available for this failover peer to allocate. */
+		if (uid_lease -> binding_state != FTS_ACTIVE &&
+		    !lease_mine_to_reallocate (uid_lease)) {
+#if defined (DEBUG_FIND_LEASE)
+			log_info ("not mine to allocate: %s",
+				  piaddr (uid_lease -> ip_addr));
+#endif
+			goto n_uid;
+		}
+#endif
+
 		if (uid_lease -> subnet -> shared_network != share) {
 #if defined (DEBUG_FIND_LEASE)
 			log_info ("wrong network segment: %s",
 				  piaddr (uid_lease -> ip_addr));
 #endif
-			if (uid_lease -> n_uid)
-				lease_reference (&next,
-						 uid_lease -> n_uid, MDL);
-			lease_dereference (&uid_lease, MDL);
-			if (next) {
-				lease_reference (&uid_lease, next, MDL);
-				lease_dereference (&next, MDL);
-			}
-			continue;
+			goto n_uid;
 		}
+
 		if ((uid_lease -> pool -> prohibit_list &&
 		     permitted (packet, uid_lease -> pool -> prohibit_list)) ||
 		    (uid_lease -> pool -> permit_list &&
@@ -2910,6 +2924,7 @@ int find_lease (struct lease **lp,
 			log_info ("not permitted: %s",
 				  piaddr (uid_lease -> ip_addr));
 #endif
+		       n_uid:
 			if (uid_lease -> n_uid)
 				lease_reference (&next,
 						 uid_lease -> n_uid, MDL);
@@ -2942,7 +2957,22 @@ int find_lease (struct lease **lp,
 		log_info ("trying next lease matching hw addr: %s",
 			  piaddr (hw_lease -> ip_addr));
 #endif
-		if (hw_lease -> ends >= cur_time &&
+#if defined (FAILOVER_PROTOCOL)
+		/* When failover is active, it's possible that there could
+		   be two "free" leases for the same uid, but only one of
+		   them that's available for this failover peer to allocate. */
+		if (hw_lease -> binding_state != FTS_ACTIVE &&
+		    !lease_mine_to_reallocate (hw_lease)) {
+#if defined (DEBUG_FIND_LEASE)
+			log_info ("not mine to allocate: %s",
+				  piaddr (hw_lease -> ip_addr));
+#endif
+			goto n_hw;
+		}
+#endif
+
+		if (hw_lease -> binding_state != FTS_FREE &&
+		    hw_lease -> binding_state != FTS_BACKUP &&
 		    hw_lease -> uid &&
 		    (!have_client_identifier ||
 		     hw_lease -> uid_len != client_identifier.len ||
@@ -2952,13 +2982,7 @@ int find_lease (struct lease **lp,
 			log_info ("wrong client identifier: %s",
 				  piaddr (hw_lease -> ip_addr));
 #endif
-			if (hw_lease -> n_hw)
-				lease_reference (&next, hw_lease -> n_hw, MDL);
-			lease_dereference (&hw_lease, MDL);
-			if (next) {
-				lease_reference (&hw_lease, next, MDL);
-				lease_dereference (&next, MDL);
-			}
+			goto n_hw;
 			continue;
 		}
 		if (hw_lease -> subnet -> shared_network != share) {
@@ -2966,13 +2990,7 @@ int find_lease (struct lease **lp,
 			log_info ("wrong network segment: %s",
 				  piaddr (hw_lease -> ip_addr));
 #endif
-			if (hw_lease -> n_hw)
-				lease_reference (&next, hw_lease -> n_hw, MDL);
-			lease_dereference (&hw_lease, MDL);
-			if (next) {
-				lease_reference (&hw_lease, next, MDL);
-				lease_dereference (&next, MDL);
-			}
+			goto n_hw;
 			continue;
 		}
 		if ((hw_lease -> pool -> prohibit_list &&
@@ -2983,10 +3001,11 @@ int find_lease (struct lease **lp,
 			log_info ("not permitted: %s",
 				  piaddr (hw_lease -> ip_addr));
 #endif
-			if (hw_lease -> n_hw)
-				lease_reference (&next, hw_lease -> n_hw, MDL);
 			if (!packet -> raw -> ciaddr.s_addr)
 				release_lease (hw_lease, packet);
+		       n_hw:
+			if (hw_lease -> n_hw)
+				lease_reference (&next, hw_lease -> n_hw, MDL);
 			lease_dereference (&hw_lease, MDL);
 			if (next) {
 				lease_reference (&hw_lease, next, MDL);
@@ -3071,6 +3090,18 @@ int find_lease (struct lease **lp,
 				*allocatedp = 1;
 	}
 
+	/* If we got an ip_lease and a uid_lease or hw_lease, and ip_lease
+	   is not active, and is not ours to reallocate, forget about it. */
+	if (ip_lease && (uid_lease || hw_lease) &&
+	    ip_lease -> binding_state != FTS_ACTIVE &&
+	    !lease_mine_to_reallocate (ip_lease) &&
+	    packet -> packet_type == DHCPDISCOVER) {
+#if defined (DEBUG_FIND_LEASE)
+		log_info ("ip lease not ours to offer.");
+#endif
+		lease_dereference (&ip_lease, MDL);
+	}
+
 	/* If for some reason the client has more than one lease
 	   on the subnet that matches its uid, pick the one that
 	   it asked for and (if we can) free the other. */
@@ -3096,6 +3127,7 @@ int find_lease (struct lease **lp,
 				   it shouldn't still be using the old
 				   one, so we can free it for allocation. */
 				if (uid_lease &&
+				    uid_lease -> binding_state == FTS_ACTIVE &&
 				    !packet -> raw -> ciaddr.s_addr &&
 				    (share ==
 				     uid_lease -> subnet -> shared_network) &&
@@ -3249,7 +3281,8 @@ int find_lease (struct lease **lp,
 	if (uid_lease) {
 		if (lease) {
 			if (!packet -> raw -> ciaddr.s_addr &&
-			    packet -> packet_type == DHCPREQUEST)
+			    packet -> packet_type == DHCPREQUEST &&
+			    uid_lease -> binding_state == FTS_ACTIVE)
 				dissociate_lease (uid_lease);
 #if defined (DEBUG_FIND_LEASE)
 			log_info ("not choosing uid lease.");
