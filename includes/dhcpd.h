@@ -58,6 +58,9 @@
 #include "inet.h"
 #include "auth.h"
 #include "dhctoken.h"
+#if defined (FAILOVER_PROTOCOL)
+# include "failover.h"
+#endif
 
 #include <isc/result.h>
 #include <omapip/omapip.h>
@@ -473,6 +476,7 @@ enum failover_state {
 
 #if defined (FAILOVER_PROTOCOL)
 struct failover_peer {
+	OMAPI_OBJECT_PREAMBLE;
 	char *name;			/* Name of this failover instance. */
 	struct expression *address;	/* Partner's IP address or hostname. */
 	int port;			/* Partner's TCP port. */
@@ -850,7 +854,6 @@ typedef unsigned char option_mask [16];
 
 int parse_options PROTO ((struct packet *));
 int parse_option_buffer PROTO ((struct packet *, unsigned char *, unsigned));
-int parse_agent_information_option PROTO ((struct packet *, int, u_int8_t *));
 int cons_options PROTO ((struct packet *, struct dhcp_packet *, struct lease *,
 			 int, struct option_state *, struct option_state *,
 			 int, int, int, struct data_string *));
@@ -1095,6 +1098,10 @@ void static_lease_dereference PROTO ((struct lease *, const char *));
 struct lease *allocate_lease PROTO ((struct packet *, struct pool *, int));
 int permitted PROTO ((struct packet *, struct permit *));
 int locate_network PROTO ((struct packet *));
+int parse_agent_information_option PROTO ((struct packet *, int, u_int8_t *));
+unsigned cons_agent_information_options PROTO ((struct option_state *,
+						struct dhcp_packet *,
+						unsigned, unsigned));
 
 /* bootp.c */
 void bootp PROTO ((struct packet *));
@@ -1401,17 +1408,20 @@ unsigned char *hash_lookup PROTO ((struct hash_table *,
 /* tables.c */
 extern struct universe dhcp_universe;
 extern struct option dhcp_options [256];
-extern struct universe agent_universe;
-extern struct option agent_options [256];
-extern struct universe server_universe;
-extern struct option server_options [256];
 extern int dhcp_option_default_priority_list [];
 extern int dhcp_option_default_priority_list_count;
 extern const char *hardware_types [256];
 int universe_count, universe_max;
 struct universe **universes;
 extern struct hash_table universe_hash;
-void initialize_universes PROTO ((void));
+void initialize_common_option_spaces PROTO ((void));
+
+/* stables.c */
+extern struct universe agent_universe;
+extern struct option agent_options [256];
+extern struct universe server_universe;
+extern struct option server_options [256];
+void initialize_server_option_spaces PROTO ((void));
 
 /* convert.c */
 u_int32_t getULong PROTO ((const unsigned char *));
