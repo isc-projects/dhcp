@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.187 2001/03/20 07:29:35 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.188 2001/03/20 22:25:30 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1506,6 +1506,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 					lease_dereference (&seek, MDL);
 					if (next) {
 					    lease_reference (&seek, next, MDL);
+					    lease_dereference (&next, MDL);
 					}
 				}
 				if (next)
