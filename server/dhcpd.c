@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.76 1999/10/07 17:00:53 mellon Exp $ Copyright 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.77 1999/10/19 15:39:23 mellon Exp $ Copyright 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.";
 #endif
 
   static char copyright[] =
@@ -82,6 +82,9 @@ int main (argc, argv, envp)
 	omapi_object_t *listener;
 	unsigned seed;
 	struct interface_info *ip;
+	struct data_string fname;
+	struct option_cache *oc;
+	struct option_state *options = (struct option_state *)0;;
 
 	/* Initially, log errors to stderr as well as to syslogd. */
 #ifdef SYSLOG_4_2
@@ -241,6 +244,47 @@ int main (argc, argv, envp)
  	if (cftest && !lftest) 
  		exit(0);
 
+	/* Now try to get the lease file name. */
+	option_state_allocate (&options, "dhcpinform");
+
+	execute_statements_in_scope ((struct packet *)0,
+				     (struct lease *)0,
+				     (struct option_state *)0,
+				     options,
+				     &root_group,
+				     (struct group *)0);
+	memset (&fname, 0, sizeof fname);
+	oc = lookup_option (&server_universe, options, SV_LEASE_FILE_NAME);
+	if (oc &&
+	    evaluate_option_cache (&fname, (struct packet *)0,
+				   (struct lease *)0, options,
+				   (struct option_state *)0, oc)) {
+		s = dmalloc (fname.len + 1, "main");
+		if (!s)
+			log_fatal ("no memory for lease db filename.");
+		memcpy (s, fname.data, fname.len);
+		s [fname.len] = 0;
+		data_string_forget (&fname, "main");
+		path_dhcpd_db = s;
+	}
+	
+	oc = lookup_option (&server_universe, options, SV_PID_FILE_NAME);
+	if (oc &&
+	    evaluate_option_cache (&fname, (struct packet *)0,
+				   (struct lease *)0, options,
+				   (struct option_state *)0, oc)) {
+		s = dmalloc (fname.len + 1, "main");
+		if (!s)
+			log_fatal ("no memory for lease db filename.");
+		memcpy (s, fname.data, fname.len);
+		s [fname.len] = 0;
+		data_string_forget (&fname, "main");
+		path_dhcpd_pid = s;
+	}
+
+	/* Don't need the options anymore. */
+	option_state_dereference (&options, "main");
+	
 	/* Start up the database... */
 	db_startup (lftest);
 
