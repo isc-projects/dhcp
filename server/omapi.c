@@ -29,7 +29,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: omapi.c,v 1.16 1999/10/08 03:43:15 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: omapi.c,v 1.17 1999/10/14 18:30:52 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -179,33 +179,42 @@ isc_result_t dhcp_lease_get_value (omapi_object_t *h, omapi_object_t *id,
 					       lease -> ip_addr.iabuf,
 					       lease -> ip_addr.len,
 					       "dhcp_lease_get_value");
-	else if (!omapi_ds_strcmp (name, "dhcp-client-identifier"))
+	else if (!omapi_ds_strcmp (name, "dhcp-client-identifier")) {
 		return omapi_make_const_value (value, name,
 					       lease -> uid,
 					       lease -> uid_len,
 					       "dhcp_lease_get_value");
-	else if (!omapi_ds_strcmp (name, "hostname"))
-		return omapi_make_string_value (value, name,
-						lease -> hostname,
-						"dhcp_lease_get_value");
-	else if (!omapi_ds_strcmp (name, "client-hostname"))
-		return omapi_make_string_value (value, name,
-						lease -> client_hostname,
-						"dhcp_lease_get_value");
-	else if (!omapi_ds_strcmp (name, "ddns-fwd-name"))
-		return omapi_make_string_value (value, name,
-						lease -> ddns_fwd_name,
-						"dhcp_lease_get_value");
-	else if (!omapi_ds_strcmp (name, "ddns-rev-name"))
-		return omapi_make_string_value (value, name,
-						lease -> ddns_rev_name,
-						"dhcp_lease_get_value");
-	else if (!omapi_ds_strcmp (name, "host"))
-		return omapi_make_handle_value (value, name,
-						((omapi_object_t *)
-						 lease -> host),
-						"dhcp_lease_get_value");
-	else if (!omapi_ds_strcmp (name, "subnet"))
+	} else if (!omapi_ds_strcmp (name, "hostname")) {
+		if (lease -> hostname)
+			return omapi_make_string_value
+				(value, name, lease -> hostname,
+				 "dhcp_lease_get_value");
+		return ISC_R_NOTFOUND;
+	} else if (!omapi_ds_strcmp (name, "client-hostname")) {
+		if (lease -> client_hostname)
+			return omapi_make_string_value
+				(value, name, lease -> client_hostname,
+				 "dhcp_lease_get_value");
+		return ISC_R_NOTFOUND;
+	} else if (!omapi_ds_strcmp (name, "ddns-fwd-name")) {
+		if (lease -> ddns_fwd_name)
+			return omapi_make_string_value
+				(value, name, lease -> ddns_fwd_name,
+				 "dhcp_lease_get_value");
+		return ISC_R_NOTFOUND;
+	} else if (!omapi_ds_strcmp (name, "ddns-rev-name")) {
+		if (lease -> ddns_rev_name)
+			return omapi_make_string_value
+				(value, name, lease -> ddns_rev_name,
+				 "dhcp_lease_get_value");
+		return ISC_R_NOTFOUND;
+	} else if (!omapi_ds_strcmp (name, "host")) {
+		if (lease -> host)
+			return omapi_make_handle_value
+				(value, name,
+				 ((omapi_object_t *)lease -> host),
+				 "dhcp_lease_get_value");
+	} else if (!omapi_ds_strcmp (name, "subnet"))
 		return omapi_make_handle_value (value, name,
 						((omapi_object_t *)
 						 lease -> subnet),
@@ -215,12 +224,14 @@ isc_result_t dhcp_lease_get_value (omapi_object_t *h, omapi_object_t *id,
 						((omapi_object_t *)
 						 lease -> pool),
 						"dhcp_lease_get_value");
-	else if (!omapi_ds_strcmp (name, "billing-class"))
-		return omapi_make_handle_value (value, name,
-						((omapi_object_t *)
-						 lease -> billing_class),
-						"dhcp_lease_get_value");
-	else if (!omapi_ds_strcmp (name, "hardware-address"))
+	else if (!omapi_ds_strcmp (name, "billing-class")) {
+		if (lease -> billing_class)
+			return omapi_make_handle_value
+				(value, name,
+				 ((omapi_object_t *)lease -> billing_class),
+				 "dhcp_lease_get_value");
+		return ISC_R_NOTFOUND;
+	} else if (!omapi_ds_strcmp (name, "hardware-address"))
 		return omapi_make_const_value (value, name,
 					       lease -> hardware_addr.haddr,
 					       lease -> hardware_addr.hlen,
@@ -1232,6 +1243,9 @@ isc_result_t dhcp_host_signal_handler (omapi_object_t *h,
 			strcpy (host -> name, hnbuf);
 		}
 
+#ifdef DEBUG_OMAPI
+		log_debug ("OMAPI added host %s", host -> name);
+#endif
 		status = enter_host (host, 1, 1);
 		if (status != ISC_R_SUCCESS)
 			return status;
@@ -1444,12 +1458,13 @@ isc_result_t dhcp_host_lookup (omapi_object_t **lp,
 			} else if (!host) {
 			    if (!*lp)
 				    return ISC_R_NOTFOUND;
+			} else if (!*lp) {
+				/* XXX fix so that hash lookup itself creates
+				   XXX the reference. */
+				omapi_object_reference (lp,
+							(omapi_object_t *)host,
+							"dhcp_host_lookup");
 			}
-		} else if (!*lp) {
-			/* XXX fix so that hash lookup itself creates
-			   XXX the reference. */
-			omapi_object_reference (lp, (omapi_object_t *)host,
-						"dhcp_host_lookup");
 		}
 	}
 
@@ -1506,6 +1521,9 @@ isc_result_t dhcp_host_remove (omapi_object_t *lp,
 		return ISC_R_INVALIDARG;
 	hp = (struct host_decl *)lp;
 
+#ifdef DEBUG_OMAPI
+	log_debug ("OMAPI delete host %s", hp -> name);
+#endif
 	delete_host (hp, 1);
 	return ISC_R_SUCCESS;
 }
@@ -1651,3 +1669,4 @@ isc_result_t dhcp_pool_remove (omapi_object_t *lp,
 	return ISC_R_NOTIMPLEMENTED;
 }
 
+/* vim: set tabstop=8: */
