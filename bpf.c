@@ -110,8 +110,12 @@ void if_register_send (info, interface)
 #else
 	info -> wfdesc = info -> rfdesc;
 #endif
-	note ("Sending on   BPF/%s/%s",
-	      info -> name, piaddr (info -> address));
+	note ("Sending on   BPF/%s/%s/%s",
+	      info -> name,
+	      print_hw_addr (info -> hw_address.htype,
+			     info -> hw_address.hlen,
+			     info -> hw_address.haddr),
+	      info -> shared_network -> name);
 }
 #endif /* USE_BPF_SEND */
 
@@ -123,31 +127,22 @@ void if_register_send (info, interface)
 struct bpf_insn filter [] = {
 	/* Make sure this is an IP packet... */
 	BPF_STMT (BPF_LD + BPF_H + BPF_ABS, 12),
-	BPF_JUMP (BPF_JMP + BPF_JEQ + BPF_K, ETHERTYPE_IP, 0, 12),
+	BPF_JUMP (BPF_JMP + BPF_JEQ + BPF_K, ETHERTYPE_IP, 0, 8),
 
 	/* Make sure it's a UDP packet... */
 	BPF_STMT (BPF_LD + BPF_B + BPF_ABS, 23),
-	BPF_JUMP (BPF_JMP + BPF_JEQ + BPF_K, IPPROTO_UDP, 0, 10),
+	BPF_JUMP (BPF_JMP + BPF_JEQ + BPF_K, IPPROTO_UDP, 0, 6),
 
 	/* Make sure this isn't a fragment... */
 	BPF_STMT(BPF_LD + BPF_H + BPF_ABS, 20),
-	BPF_JUMP(BPF_JMP + BPF_JSET + BPF_K, 0x1fff, 8, 0),
+	BPF_JUMP(BPF_JMP + BPF_JSET + BPF_K, 0x1fff, 4, 0),
 
 	/* Get the IP header length... */
 	BPF_STMT (BPF_LDX + BPF_B + BPF_MSH, 14),
 
 	/* Make sure it's to the right port... */
 	BPF_STMT (BPF_LD + BPF_H + BPF_IND, 16),
-	BPF_JUMP (BPF_JMP + BPF_JEQ + BPF_K, 67, 0, 5),             /* patch */
-
-	/* Is it to the broadcast address? */
-	BPF_STMT(BPF_LD+BPF_W+BPF_ABS, 30),
-	BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, 0xffffffff, 2, 0),
-
-	/* If not, is it to our address? */
-
-	BPF_STMT(BPF_LD+BPF_W+BPF_ABS, 30),
-	BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, 0xffffffff, 0, 1),          /* patch */
+	BPF_JUMP (BPF_JMP + BPF_JEQ + BPF_K, 67, 0, 1),             /* patch */
 
 	/* If we passed all the tests, ask for the whole packet. */
 	BPF_STMT(BPF_RET+BPF_K, (u_int)-1),
@@ -207,30 +202,28 @@ void if_register_receive (info, interface)
 	info -> rbuf_offset = 0;
 	info -> rbuf_len = 0;
 
-	/* Patch the server port and interface address into the BPF
-	   program...   XXX changes to filter program may require changes
-	   to the insn numbers used below! XXX */
-	filter [8].k = ntohs (server_port);
-	memcpy (&addr, info -> address.iabuf, 4);
-	filter [12].k = ntohl (addr);
-
 	/* Set up the bpf filter program structure. */
 	p.bf_len = sizeof filter / sizeof (struct bpf_insn);
 	p.bf_insns = filter;
 
 	if (ioctl (info -> rfdesc, BIOCSETF, &p) < 0)
 		error ("Can't install packet filter program: %m");
-	note ("Listening on BPF/%s/%s",
-	      info -> name, piaddr (info -> address));
+	note ("Listening on BPF/%s/%s/%s",
+	      info -> name,
+	      print_hw_addr (info -> hw_address.htype,
+			     info -> hw_address.hlen,
+			     info -> hw_address.haddr),
+	      info -> shared_network -> name);
 }
 #endif /* USE_BPF_RECEIVE */
 
 #ifdef USE_BPF_SEND
-size_t send_packet (interface, packet, raw, len, to, hto)
+size_t send_packet (interface, packet, raw, len, from, to, hto)
 	struct interface_info *interface;
 	struct packet *packet;
 	struct dhcp_packet *raw;
 	size_t len;
+	struct in_addr from;
 	struct sockaddr_in *to;
 	struct hardware *hto;
 {
@@ -240,7 +233,7 @@ size_t send_packet (interface, packet, raw, len, to, hto)
 
 	/* Assemble the headers... */
 	assemble_hw_header (interface, buf, &bufp, hto);
-	assemble_udp_ip_header (interface, buf, &bufp,
+	assemble_udp_ip_header (interface, buf, &bufp, from.s_addr,
 				to -> sin_addr.s_addr, to -> sin_port,
 				(unsigned char *)raw, len);
 
