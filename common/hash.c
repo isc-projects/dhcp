@@ -22,20 +22,23 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: hash.c,v 1.16 2000/01/26 14:55:34 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: hash.c,v 1.17 2000/03/06 23:15:16 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
 
 static INLINE int do_hash PROTO ((const unsigned char *, unsigned, unsigned));
 
-struct hash_table *new_hash ()
+struct hash_table *new_hash (hash_reference referencer,
+			     hash_dereference dereferencer)
 {
 	struct hash_table *rv = new_hash_table (DEFAULT_HASH_SIZE, MDL);
 	if (!rv)
 		return rv;
 	memset (&rv -> buckets [0], 0,
 		DEFAULT_HASH_SIZE * sizeof (struct hash_bucket *));
+	rv -> referencer = referencer;
+	rv -> dereferencer = dereferencer;
 	return rv;
 }
 
@@ -62,10 +65,11 @@ void add_hash (table, name, len, pointer)
 	struct hash_table *table;
 	unsigned len;
 	const unsigned char *name;
-	unsigned char *pointer;
+	void *pointer;
 {
 	int hashno;
 	struct hash_bucket *bp;
+	void *foo;
 
 	if (!table)
 		return;
@@ -81,7 +85,11 @@ void add_hash (table, name, len, pointer)
 		return;
 	}
 	bp -> name = name;
-	bp -> value = pointer;
+	if (table -> referencer) {
+		foo = &bp -> value;
+		(*(table -> referencer)) (foo, pointer, MDL);
+	} else
+		bp -> value = pointer;
 	bp -> next = table -> buckets [hashno];
 	bp -> len = len;
 	table -> buckets [hashno] = bp;
@@ -94,6 +102,7 @@ void delete_hash_entry (table, name, len)
 {
 	int hashno;
 	struct hash_bucket *bp, *pbp = (struct hash_bucket *)0;
+	void *foo;
 
 	if (!table)
 		return;
@@ -115,6 +124,10 @@ void delete_hash_entry (table, name, len)
 			} else {
 				table -> buckets [hashno] = bp -> next;
 			}
+			if (table -> dereferencer) {
+				foo = &bp -> value;
+				(*(table -> dereferencer)) (foo, MDL);
+			}
 			free_hash_bucket (bp, MDL);
 			break;
 		}
@@ -122,7 +135,7 @@ void delete_hash_entry (table, name, len)
 	}
 }
 
-unsigned char *hash_lookup (table, name, len)
+void *hash_lookup (table, name, len)
 	struct hash_table *table;
 	const unsigned char *name;
 	unsigned len;
