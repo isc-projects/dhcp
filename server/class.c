@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: class.c,v 1.10 1999/03/16 05:50:42 mellon Exp $ Copyright (c) 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: class.c,v 1.11 1999/04/05 16:34:33 mellon Exp $ Copyright (c) 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -70,7 +70,7 @@ void classification_setup ()
 void classify_client (packet)
 	struct packet *packet;
 {
-	execute_statements (packet, &packet -> options,
+	execute_statements (packet, packet -> options,
 			    (struct option_state *)0,
 			    default_classification_rules);
 }
@@ -93,7 +93,7 @@ int check_collection (packet, collection)
 		   class if we've already billed it to a different class. */
 		if (class -> submatch) {
 			status = evaluate_data_expression (&data, packet,
-							   &packet -> options,
+							   packet -> options,
 							   class -> submatch);
 			if (status) {
 				if ((nc = ((struct class *)
@@ -132,7 +132,8 @@ int check_collection (packet, collection)
 						  sizeof (struct lease *),
 						  "check_collection"));
 					if (!nc -> billed_leases) {
-						log_error ("no memory for billing");
+						log_error ("no memory for%s",
+							   " billing");
 						data_string_forget
 							(&nc -> hash_string,
 							 "check_collection");
@@ -158,7 +159,7 @@ int check_collection (packet, collection)
 		}
 
 		status = (evaluate_boolean_expression_result
-			  (packet, &packet -> options, class -> expr));
+			  (packet, packet -> options, class -> expr));
 		if (status) {
 			matched = 1;
 #if defined (DEBUG_CLASS_MATCHING)
