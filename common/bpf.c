@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bpf.c,v 1.31 1999/10/12 16:00:26 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bpf.c,v 1.32 2000/01/05 17:57:30 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -123,9 +123,9 @@ void if_register_send (info)
 	if (!quiet_interface_discovery)
 		log_info ("Sending on   BPF/%s/%s%s%s",
 		      info -> name,
-		      print_hw_addr (info -> hw_address.htype,
-				     info -> hw_address.hlen,
-				     info -> hw_address.haddr),
+		      print_hw_addr (info -> hw_address.hbuf [0],
+				     info -> hw_address.hlen - 1,
+				     &info -> hw_address.hbuf [1]),
 		      (info -> shared_network ? "/" : ""),
 		      (info -> shared_network ?
 		       info -> shared_network -> name : ""));
@@ -246,9 +246,9 @@ void if_register_receive (info)
 	if (!quiet_interface_discovery)
 		log_info ("Listening on BPF/%s/%s%s%s",
 		      info -> name,
-		      print_hw_addr (info -> hw_address.htype,
-				     info -> hw_address.hlen,
-				     info -> hw_address.haddr),
+		      print_hw_addr (info -> hw_address.hbuf [0],
+				     info -> hw_address.hlen - 1,
+				     &info -> hw_address.hbuf [1]),
 		      (info -> shared_network ? "/" : ""),
 		      (info -> shared_network ?
 		       info -> shared_network -> name : ""));

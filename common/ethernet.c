@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: ethernet.c,v 1.3 1999/11/11 16:10:57 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: ethernet.c,v 1.4 2000/01/05 18:01:15 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -43,12 +43,13 @@ void assemble_ethernet_header (interface, buf, bufix, to)
 {
 	struct ether_header eh;
 
-	if (to && to -> hlen == 6) /* XXX */
-		memcpy (eh.ether_dhost, to -> haddr, sizeof eh.ether_dhost);
+	if (to && to -> hlen == 7) /* XXX */
+		memcpy (eh.ether_dhost, &to -> hbuf [1],
+			sizeof eh.ether_dhost);
 	else
 		memset (eh.ether_dhost, 0xff, sizeof (eh.ether_dhost));
-	if (interface -> hw_address.hlen == sizeof (eh.ether_shost))
-		memcpy (eh.ether_shost, interface -> hw_address.haddr,
+	if (interface -> hw_address.hlen - 1 == sizeof (eh.ether_shost))
+		memcpy (eh.ether_shost, &interface -> hw_address.hbuf [1],
 			sizeof (eh.ether_shost));
 	else
 		memset (eh.ether_shost, 0x00, sizeof (eh.ether_shost));
@@ -81,10 +82,10 @@ ssize_t decode_ethernet_header (interface, buf, bufix, from)
   if (ntohs (eh.ether_type) != ETHERTYPE_IP)
 	  return -1;
 #endif
-  memcpy (from -> haddr, eh.ether_shost, sizeof (eh.ether_shost));
-  from -> htype = ARPHRD_ETHER;
-  from -> hlen = sizeof eh.ether_shost;
+  memcpy (&from -> hbuf [1], eh.ether_shost, sizeof (eh.ether_shost));
+  from -> hbuf [0] = ARPHRD_ETHER;
+  from -> hlen = (sizeof eh.ether_shost) + 1;
 
-  return sizeof eh;
+  return ETHER_HEADER_SIZE;
 }
 #endif /* PACKET_DECODING */

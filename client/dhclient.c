@@ -18,11 +18,18 @@
  *
  * Support and other services are available for ISC products - see
  * http://www.isc.org for more information.
+ *
+ * This code was originally written by Ted Lemon.  Elliot Poger wrote
+ * a state machine to fully implement the client side of the DHCP
+ * protocol.  Ted Lemon then added the configuration file, stuffed the
+ * state machine into its own data structure so there could be more
+ * than one, and added the client scripting code to produce the first
+ * ISC release (2.0b1pl0) of the client.
  */
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.90 1999/11/20 18:36:03 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.91 2000/01/05 17:55:31 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -283,8 +290,8 @@ int main (argc, argv, envp)
 	for (ip = interfaces; ip; ip = ip -> next) {
 		int junk;
 		memcpy (&junk,
-			&ip -> hw_address.haddr [ip -> hw_address.hlen -
-						 sizeof seed], sizeof seed);
+			&ip -> hw_address.hbuf [ip -> hw_address.hlen -
+					       sizeof seed], sizeof seed);
 		seed += junk;
 	}
 	srandom (seed + cur_time);
@@ -540,9 +547,9 @@ void dhcpack (packet)
 			break;
 	}
 	if (!client ||
-	    (packet -> interface -> hw_address.hlen !=
+	    (packet -> interface -> hw_address.hlen - 1 !=
 	     packet -> raw -> hlen) ||
-	    (memcmp (packet -> interface -> hw_address.haddr,
+	    (memcmp (&packet -> interface -> hw_address.hbuf [1],
 		     packet -> raw -> chaddr, packet -> raw -> hlen))) {
 #if defined (DEBUG)
 		log_debug ("DHCPACK in wrong transaction.");
@@ -875,9 +882,9 @@ void dhcpoffer (packet)
 	   has an unrecognizable transaction id, then just drop it. */
 	if (!client ||
 	    client -> state != S_SELECTING ||
-	    (packet -> interface -> hw_address.hlen !=
+	    (packet -> interface -> hw_address.hlen - 1 !=
 	     packet -> raw -> hlen) ||
-	    (memcmp (packet -> interface -> hw_address.haddr,
+	    (memcmp (&packet -> interface -> hw_address.hbuf [1],
 		     packet -> raw -> chaddr, packet -> raw -> hlen))) {
 #if defined (DEBUG)
 		log_debug ("%s in wrong transaction.", name);
@@ -1059,9 +1066,9 @@ void dhcpnak (packet)
 	/* If we're not receptive to an offer right now, or if the offer
 	   has an unrecognizable transaction id, then just drop it. */
 	if (!client ||
-	    (packet -> interface -> hw_address.hlen !=
+	    (packet -> interface -> hw_address.hlen - 1 !=
 	     packet -> raw -> hlen) ||
-	    (memcmp (packet -> interface -> hw_address.haddr,
+	    (memcmp (&packet -> interface -> hw_address.hbuf [1],
 		     packet -> raw -> chaddr, packet -> raw -> hlen))) {
 #if defined (DEBUG)
 		log_debug ("DHCPNAK in wrong transaction.");
@@ -1605,8 +1612,8 @@ void make_discover (client, lease)
 		client -> packet_length = BOOTP_MIN_LEN;
 
 	client -> packet.op = BOOTREQUEST;
-	client -> packet.htype = client -> interface -> hw_address.htype;
-	client -> packet.hlen = client -> interface -> hw_address.hlen;
+	client -> packet.htype = client -> interface -> hw_address.hbuf [0];
+	client -> packet.hlen = client -> interface -> hw_address.hlen - 1;
 	client -> packet.hops = 0;
 	client -> packet.xid = random ();
 	client -> packet.secs = 0; /* filled in by send_discover. */
@@ -1623,9 +1630,10 @@ void make_discover (client, lease)
 	memset (&(client -> packet.siaddr),
 		0, sizeof client -> packet.siaddr);
 	client -> packet.giaddr = giaddr;
-	memcpy (client -> packet.chaddr,
-		client -> interface -> hw_address.haddr,
-		client -> interface -> hw_address.hlen);
+	if (client -> interface -> hw_address.hlen > 0)
+	    memcpy (client -> packet.chaddr,
+		    &client -> interface -> hw_address.hbuf [1],
+		    (unsigned)(client -> interface -> hw_address.hlen - 1));
 
 #ifdef DEBUG_PACKET
 	dump_packet (sendpkt);
@@ -1672,8 +1680,8 @@ void make_request (client, lease)
 		client -> packet_length = BOOTP_MIN_LEN;
 
 	client -> packet.op = BOOTREQUEST;
-	client -> packet.htype = client -> interface -> hw_address.htype;
-	client -> packet.hlen = client -> interface -> hw_address.hlen;
+	client -> packet.htype = client -> interface -> hw_address.hbuf [0];
+	client -> packet.hlen = client -> interface -> hw_address.hlen - 1;
 	client -> packet.hops = 0;
 	client -> packet.xid = client -> xid;
 	client -> packet.secs = 0; /* Filled in by send_request. */
@@ -1700,9 +1708,10 @@ void make_request (client, lease)
 	memset (&client -> packet.siaddr, 0,
 		sizeof client -> packet.siaddr);
 	client -> packet.giaddr = giaddr;
-	memcpy (client -> packet.chaddr,
-		client -> interface -> hw_address.haddr,
-		client -> interface -> hw_address.hlen);
+	if (client -> interface -> hw_address.hlen > 0)
+	    memcpy (client -> packet.chaddr,
+		    &client -> interface -> hw_address.hbuf [1],
+		    (unsigned)(client -> interface -> hw_address.hlen - 1));
 
 #ifdef DEBUG_PACKET
 	dump_packet (sendpkt);
@@ -1737,8 +1746,8 @@ void make_decline (client, lease)
 	option_state_dereference (&options, "make_decline");
 
 	client -> packet.op = BOOTREQUEST;
-	client -> packet.htype = client -> interface -> hw_address.htype;
-	client -> packet.hlen = client -> interface -> hw_address.hlen;
+	client -> packet.htype = client -> interface -> hw_address.hbuf [0];
+	client -> packet.hlen = client -> interface -> hw_address.hlen - 1;
 	client -> packet.hops = 0;
 	client -> packet.xid = client -> xid;
 	client -> packet.secs = 0; /* Filled in by send_request. */
@@ -1756,7 +1765,7 @@ void make_decline (client, lease)
 		sizeof client -> packet.siaddr);
 	client -> packet.giaddr = giaddr;
 	memcpy (client -> packet.chaddr,
-		client -> interface -> hw_address.haddr,
+		&client -> interface -> hw_address.hbuf [1],
 		client -> interface -> hw_address.hlen);
 
 #ifdef DEBUG_PACKET
@@ -1794,8 +1803,8 @@ void make_release (client, lease)
 	option_state_dereference (&options, "make_decline");
 
 	client -> packet.op = BOOTREQUEST;
-	client -> packet.htype = client -> interface -> hw_address.htype;
-	client -> packet.hlen = client -> interface -> hw_address.hlen;
+	client -> packet.htype = client -> interface -> hw_address.hbuf [0];
+	client -> packet.hlen = client -> interface -> hw_address.hlen - 1;
 	client -> packet.hops = 0;
 	client -> packet.xid = random ();
 	client -> packet.secs = 0;
@@ -1808,7 +1817,7 @@ void make_release (client, lease)
 		sizeof client -> packet.siaddr);
 	client -> packet.giaddr = giaddr;
 	memcpy (client -> packet.chaddr,
-		client -> interface -> hw_address.haddr,
+		&client -> interface -> hw_address.hbuf [0],
 		client -> interface -> hw_address.hlen);
 
 #ifdef DEBUG_PACKET
