@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.5 1999/10/05 02:47:12 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.6 1999/10/05 18:44:27 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1226,7 +1226,8 @@ void write_leases ()
 	int i;
 
 	/* Write all the dynamically-created group declarations. */
-	for (i = 0; i < group_name_hash -> hash_count; i++) {
+	if (group_name_hash) {
+	    for (i = 0; i < group_name_hash -> hash_count; i++) {
 		for (hb = group_name_hash -> buckets [i];
 		     hb; hb = hb -> next) {
 			gp = (struct group_object *)hb -> value;
@@ -1235,6 +1236,7 @@ void write_leases ()
 			     (gp -> flags & GROUP_OBJECT_DELETED)))
 				write_group (gp);
 		}
+	    }
 	}
 
 	/* Write all the dynamically-created host declarations. */
