@@ -12,7 +12,7 @@ failover peer "foo" {
   primary;
   address 204.152.187.24;
   port 51000;
-  peer address 204.152.187.2;
+  peer address 204.152.187.41;
   peer port 51000;
   max-response-delay 7;
   max-unacked-updates 10;
@@ -81,7 +81,7 @@ subnet 204.152.186.128 netmask 255.255.255.192 {
   not authoritative;
 }
 
-shared-network {
+shared-network NET-187 {
   subnet 204.152.187.0 netmask 255.255.255.0 {
   }
   subnet 10.0.1.0 netmask 255.255.255.0 {
