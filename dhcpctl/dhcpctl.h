@@ -37,16 +37,19 @@ typedef struct {
 	void (*callback) (dhcpctl_handle, dhcpctl_status, void *);
 } dhcpctl_callback_object_t;
 
-omapi_object_type_t *dhcpctl_type_callback;
+typedef struct {
+	OMAPI_OBJECT_PREAMBLE;
+	omapi_typed_data_t *rtype;
+	isc_result_t waitstatus;
+	omapi_typed_data_t *message;
+} dhcpctl_remote_object_t;
+
+omapi_object_type_t *dhcpctl_callback_type;
+omapi_object_type_t *dhcpctl_remote_type;
 
 dhcpctl_status dhcpctl_initialize (void);
 dhcpctl_status dhcpctl_connect (dhcpctl_handle *,
 				char *, int, dhcpctl_handle);
-dhcpctl_status dhcpctl_open_object (dhcpctl_handle, dhcpctl_handle, int);
-dhcpctl_status dhcpctl_new_object (dhcpctl_handle *, dhcpctl_handle, char *);
-dhcpctl_status dhcpctl_set_callback (dhcpctl_handle, void *,
-				     void (*) (dhcpctl_handle,
-					       dhcpctl_status, void *));
 dhcpctl_status dhcpctl_wait_for_completion (dhcpctl_handle, dhcpctl_status *);
 dhcpctl_status dhcpctl_get_value (dhcpctl_data_string *,
 				  dhcpctl_handle, char *);
@@ -57,6 +60,9 @@ dhcpctl_status dhcpctl_set_boolean_value (dhcpctl_handle, int, char *);
 dhcpctl_status dhcpctl_object_update (dhcpctl_handle, dhcpctl_handle);
 dhcpctl_status dhcpctl_object_refresh (dhcpctl_handle, dhcpctl_handle);
 
+dhcpctl_status dhcpctl_set_callback (dhcpctl_handle, void *,
+				     void (*) (dhcpctl_handle,
+					       dhcpctl_status, void *));
 isc_result_t dhcpctl_callback_set_value  (omapi_object_t *, omapi_object_t *,
 					  omapi_data_string_t *,
 					  omapi_typed_data_t *);
@@ -69,3 +75,18 @@ isc_result_t dhcpctl_callback_signal_handler (omapi_object_t *,
 isc_result_t dhcpctl_callback_stuff_values (omapi_object_t *,
 					    omapi_object_t *,
 					    omapi_object_t *);
+
+dhcpctl_status dhcpctl_open_object (dhcpctl_handle, dhcpctl_handle, int);
+dhcpctl_status dhcpctl_new_object (dhcpctl_handle *, dhcpctl_handle, char *);
+isc_result_t dhcpctl_remote_set_value  (omapi_object_t *, omapi_object_t *,
+					omapi_data_string_t *,
+					omapi_typed_data_t *);
+isc_result_t dhcpctl_remote_get_value (omapi_object_t *, omapi_object_t *,
+				       omapi_data_string_t *,
+				       omapi_value_t **); 
+isc_result_t dhcpctl_remote_destroy (omapi_object_t *, char *);
+isc_result_t dhcpctl_remote_signal_handler (omapi_object_t *,
+					    char *, va_list);
+isc_result_t dhcpctl_remote_stuff_values (omapi_object_t *,
+					  omapi_object_t *,
+					  omapi_object_t *);
