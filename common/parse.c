@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.100 2001/02/12 19:44:54 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.101 2001/03/01 18:17:00 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -139,7 +139,7 @@ void skip_to_rbrace (cfile, brace_count)
 			return;
 		}
 		token = next_token (&val, cfile);
-	} while (token != EOF);
+	} while (token != END_OF_FILE);
 }
 
 int parse_semi (cfile)
@@ -461,7 +461,7 @@ unsigned char *parse_numeric_aggregate (cfile, buf,
 		}
 		token = next_token (&val, cfile);
 
-		if (token == EOF) {
+		if (token == END_OF_FILE) {
 			parse_warn (cfile, "unexpected end of file");
 			break;
 		}
@@ -2333,7 +2333,7 @@ int parse_on_statement (result, cfile, lose)
 			/* Try to even things up. */
 			do {
 				token = next_token (&val, cfile);
-			} while (token != EOF && token != RBRACE);
+			} while (token != END_OF_FILE && token != RBRACE);
 			executable_statement_dereference (result, MDL);
 			return 0;
 		}
@@ -2525,7 +2525,7 @@ int parse_if_statement (result, cfile, lose)
 			/* Try to even things up. */
 			do {
 				token = next_token (&val, cfile);
-			} while (token != EOF && token != RBRACE);
+			} while (token != END_OF_FILE && token != RBRACE);
 			executable_statement_dereference (result, MDL);
 			return 0;
 		}

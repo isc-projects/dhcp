@@ -3,7 +3,7 @@
    Parser for dhcpd config file... */
 
 /*
- * Copyright (c) 1995-2000 Internet Software Consortium.
+ * Copyright (c) 1995-2001 Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.133 2001/02/12 21:59:30 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.134 2001/03/01 18:17:07 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -65,7 +65,7 @@ void parse_trace_setup ()
 }
 #endif
 
-/* conf-file :== parameters declarations EOF
+/* conf-file :== parameters declarations END_OF_FILE
    parameters :== <nil> | parameter | parameters parameter
    declarations :== <nil> | declaration | declarations declaration */
 
@@ -225,7 +225,7 @@ void trace_conf_input (trace_type_t *ttype, unsigned len, char *data)
 void trace_conf_stop (trace_type_t *ttype) { }
 #endif
 
-/* conf-file :== parameters declarations EOF
+/* conf-file :== parameters declarations END_OF_FILE
    parameters :== <nil> | parameter | parameters parameter
    declarations :== <nil> | declaration | declarations declaration */
 
@@ -239,7 +239,7 @@ isc_result_t conf_file_subparse (struct parse *cfile, struct group *group,
 
 	do {
 		token = peek_token (&val, cfile);
-		if (token == EOF)
+		if (token == END_OF_FILE)
 			break;
 		declaration = parse_statement (cfile, group, group_type,
 					       (struct host_decl *)0,
@@ -251,7 +251,7 @@ isc_result_t conf_file_subparse (struct parse *cfile, struct group *group,
 	return status;
 }
 
-/* lease-file :== lease-declarations EOF
+/* lease-file :== lease-declarations END_OF_FILE
    lease-statments :== <nil>
    		     | lease-declaration
 		     | lease-declarations lease-declaration */
@@ -264,7 +264,7 @@ isc_result_t lease_file_subparse (struct parse *cfile)
 
 	do {
 		token = next_token (&val, cfile);
-		if (token == EOF)
+		if (token == END_OF_FILE)
 			break;
 		if (token == LEASE) {
 			struct lease *lease = (struct lease *)0;
@@ -1496,7 +1496,7 @@ void parse_host_declaration (cfile, group)
 			token = next_token (&val, cfile);
 			break;
 		}
-		if (token == EOF) {
+		if (token == END_OF_FILE) {
 			token = next_token (&val, cfile);
 			parse_warn (cfile, "unexpected end of file");
 			break;
@@ -1838,7 +1838,7 @@ int parse_class_declaration (cp, cfile, group, type)
 		if (token == RBRACE) {
 			token = next_token (&val, cfile);
 			break;
-		} else if (token == EOF) {
+		} else if (token == END_OF_FILE) {
 			token = next_token (&val, cfile);
 			parse_warn (cfile, "unexpected end of file");
 			break;
@@ -2028,7 +2028,7 @@ void parse_shared_net_declaration (cfile, group)
 				enter_shared_network (share);
 			shared_network_dereference (&share, MDL);
 			return;
-		} else if (token == EOF) {
+		} else if (token == END_OF_FILE) {
 			token = next_token (&val, cfile);
 			parse_warn (cfile, "unexpected end of file");
 			break;
@@ -2123,7 +2123,7 @@ void parse_subnet_declaration (cfile, share)
 		if (token == RBRACE) {
 			token = next_token (&val, cfile);
 			break;
-		} else if (token == EOF) {
+		} else if (token == END_OF_FILE) {
 			token = next_token (&val, cfile);
 			parse_warn (cfile, "unexpected end of file");
 			break;
@@ -2213,7 +2213,7 @@ void parse_group_declaration (cfile, group)
 		if (token == RBRACE) {
 			token = next_token (&val, cfile);
 			break;
-		} else if (token == EOF) {
+		} else if (token == END_OF_FILE) {
 			token = next_token (&val, cfile);
 			parse_warn (cfile, "unexpected end of file");
 			break;
@@ -2387,7 +2387,7 @@ int parse_lease_declaration (struct lease **lp, struct parse *cfile)
 		token = next_token (&val, cfile);
 		if (token == RBRACE)
 			break;
-		else if (token == EOF) {
+		else if (token == END_OF_FILE) {
 			parse_warn (cfile, "unexpected end of file");
 			break;
 		}

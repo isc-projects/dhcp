@@ -3,7 +3,7 @@
    Parser for dhclient config and lease files... */
 
 /*
- * Copyright (c) 1996-2000 Internet Software Consortium.
+ * Copyright (c) 1996-2001 Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: clparse.c,v 1.56 2001/02/26 22:21:02 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: clparse.c,v 1.57 2001/03/01 18:16:57 mellon Exp $ Copyright (c) 1996-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -65,7 +65,7 @@ u_int32_t default_requested_options [] = {
 	0
 };
 
-/* client-conf-file :== client-declarations EOF
+/* client-conf-file :== client-declarations END_OF_FILE
    client-declarations :== <nil>
 			 | client-declaration
 			 | client-declarations client-declaration */
@@ -114,7 +114,7 @@ isc_result_t read_client_conf ()
 
 		do {
 			token = peek_token (&val, cfile);
-			if (token == EOF)
+			if (token == END_OF_FILE)
 				break;
 			parse_client_statement (cfile,
 						(struct interface_info *)0,
@@ -157,7 +157,7 @@ isc_result_t read_client_conf ()
 	return status;
 }
 
-/* lease-file :== client-lease-statements EOF
+/* lease-file :== client-lease-statements END_OF_FILE
    client-lease-statements :== <nil>
 		     | client-lease-statements LEASE client-lease-statement */
 
@@ -177,7 +177,7 @@ void read_client_leases ()
 
 	do {
 		token = next_token (&val, cfile);
-		if (token == EOF)
+		if (token == END_OF_FILE)
 			break;
 		if (token != LEASE) {
 			log_error ("Corrupt lease file - possible data loss!");
@@ -666,7 +666,7 @@ void parse_interface_declaration (cfile, outer_config, name)
 
 	do {
 		token = peek_token (&val, cfile);
-		if (token == EOF) {
+		if (token == END_OF_FILE) {
 			parse_warn (cfile,
 				    "unterminated interface declaration.");
 			return;
@@ -788,7 +788,7 @@ void parse_client_lease_statement (cfile, is_static)
 
 	do {
 		token = peek_token (&val, cfile);
-		if (token == EOF) {
+		if (token == END_OF_FILE) {
 			parse_warn (cfile, "unterminated lease declaration.");
 			return;
 		}

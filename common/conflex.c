@@ -3,7 +3,7 @@
    Lexical scanner for dhcpd config file... */
 
 /*
- * Copyright (c) 1995-2000 Internet Software Consortium.
+ * Copyright (c) 1995-2001 Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: conflex.c,v 1.88 2001/02/27 01:15:36 neild Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: conflex.c,v 1.89 2001/03/01 18:16:59 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -207,6 +207,9 @@ static enum dhcp_token get_token (cfile)
 			cfile -> lexline = l;
 			cfile -> lexchar = p;
 			ttok = read_num_or_name (c, cfile);
+			break;
+		} else if (c == EOF) {
+			ttok = END_OF_FILE;
 			break;
 		} else {
 			cfile -> lexline = l;

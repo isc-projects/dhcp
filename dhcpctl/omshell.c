@@ -1,4 +1,4 @@
-/* omapictl.c
+/* omshell.c
 
    Examine and modify omapi objects. */
 
@@ -224,7 +224,7 @@ int main (int argc, char **argv, char **envp)
 			parse_warn (cfile, "unknown token: %s", val);
 			break;
 
-		      case EOF:
+		      case END_OF_FILE:
 			break;
 
 		      case TOKEN_HELP:
@@ -239,7 +239,7 @@ int main (int argc, char **argv, char **envp)
 		      case TOKEN_NEW:
 			token = next_token (&val, cfile);
 			if ((!is_identifier (token) && token != STRING) ||
-			    next_token (NULL, cfile) != EOF)
+			    next_token (NULL, cfile) != END_OF_FILE)
 			{
 				printf ("usage: new <object-type>\n");
 				break;
@@ -260,7 +260,7 @@ int main (int argc, char **argv, char **envp)
 			break;
 
 		      case TOKEN_CLOSE:
-			if (next_token (NULL, cfile) != EOF) {
+			if (next_token (NULL, cfile) != END_OF_FILE) {
 				printf ("usage: close\n");
 			}
 
@@ -304,7 +304,7 @@ int main (int argc, char **argv, char **envp)
 
 		      case TOKEN_CREATE:
 		      case TOKEN_OPEN:
-			if (next_token (NULL, cfile) != EOF) {
+			if (next_token (NULL, cfile) != END_OF_FILE) {
 				printf ("usage: %s\n", val);
 			}
 
@@ -327,7 +327,7 @@ int main (int argc, char **argv, char **envp)
 			break;
 
 		      case UPDATE:
-			if (next_token (NULL, cfile) != EOF) {
+			if (next_token (NULL, cfile) != END_OF_FILE) {
 				printf ("usage: %s\n", val);
 			}
 
