@@ -57,6 +57,17 @@ documentation and the source code will always be appreciated.
 
 		     Changes since March 15, 1999
 
+- Only use min-secs parameter on DHCPDISCOVER packets.
+
+- Restore support for server-identifier keyword.
+
+- Fix dhcp-class-identifier name to be vendor-class-identifier.
+
+- Add support for defining new DHCP options, e.g.:
+
+	option new-option-name code 198 = array of ip-address;
+	option new-option-name 10.20.30.1, 10.20.30.2;
+
 - Support added for AIX 4.1.5.0 (and hopefully other versions).
 
 - Use /var/run instead of /etc on Digital Unix.
