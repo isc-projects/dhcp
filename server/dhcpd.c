@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.40 1997/03/06 18:41:36 mellon Exp $ Copyright 1995, 1996 The Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.41 1997/05/09 08:27:56 mellon Exp $ Copyright 1995, 1996 The Internet Software Consortium.";
 #endif
 
 static char copyright[] =
@@ -102,7 +102,9 @@ int main (argc, argv, envp)
 
 #ifndef DEBUG
 #ifndef SYSLOG_4_2
+#ifndef __CYGWIN32__ /* XXX */
 	setlogmask (LOG_UPTO (LOG_INFO));
+#endif
 #endif
 #endif	
 	note (message);
@@ -197,13 +199,18 @@ int main (argc, argv, envp)
 			local_port = htons (67);
 		else
 			local_port = ent -> s_port;
+#ifndef __CYGWIN32__ /* XXX */
 		endservent ();
+#endif
 	}
   
 	remote_port = htons (ntohs (local_port) + 1);
 
 	/* Get the current time... */
 	GET_TIME (&cur_time);
+
+	/* Initialize DNS support... */
+	dns_startup ();
 
 	/* Read the dhcpd.conf file... */
 	if (!readconf ())
