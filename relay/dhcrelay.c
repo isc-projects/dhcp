@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcrelay.c,v 1.20 1999/02/25 23:30:38 mellon Exp $ Copyright (c) 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcrelay.c,v 1.21 1999/03/13 18:57:34 mellon Exp $ Copyright (c) 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -335,7 +335,7 @@ void relay (ip, packet, length, from_port, from, hfrom)
 	/* If it's a bootreply, forward it to the client. */
 	if (packet -> op == BOOTREPLY) {
 		if (!(packet -> flags & htons (BOOTP_BROADCAST)) &&
-			can_unicast_without_arp ()) {
+			can_unicast_without_arp (out)) {
 			to.sin_addr = packet -> yiaddr;
 			to.sin_port = remote_port;
 		} else {
