@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.111 1999/10/05 00:04:43 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.112 1999/10/05 02:46:17 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -296,7 +296,7 @@ void dhcprelease (packet)
 
 	/* If we found a lease, release it. */
 	if (lease)
-		release_lease (lease);
+		release_lease (lease, packet);
 }
 
 void dhcpdecline (packet)
@@ -928,12 +928,13 @@ void ack_lease (packet, lease, offer, when, msg)
 				/* Don't release expired leases, and don't
 				   release the lease we're going to assign. */
 				while (seek) {
-					if (seek != lease)
+					if (seek != lease &&
+					    seek -> ends > cur_time)
 						break;
 					seek = lease -> n_uid;
 				}
 				if (seek) {
-					release_lease (seek);
+					release_lease (seek, packet);
 				}
 			} while (seek);
 		} else {
@@ -942,12 +943,13 @@ void ack_lease (packet, lease, offer, when, msg)
 					(lease -> hardware_addr.haddr,
 					 lease -> hardware_addr.hlen));
 				while (seek) {
-					if (seek != lease)
+					if (seek != lease &&
+					    seek -> ends > cur_time)
 						break;
 					seek = lease -> n_hw;
 				}
 				if (seek) {
-					release_lease (seek);
+					release_lease (seek, packet);
 				}
 			} while (seek);
 		}
@@ -2045,7 +2047,7 @@ struct lease *find_lease (packet, share, ours)
 #endif
 			next = uid_lease -> n_uid;
 			if (!packet -> raw -> ciaddr.s_addr)
-				release_lease (uid_lease);
+				release_lease (uid_lease, packet);
 			continue;
 		}
 		break;
@@ -2097,7 +2099,7 @@ struct lease *find_lease (packet, share, ours)
 #endif
 			next = hw_lease -> n_hw;
 			if (!packet -> raw -> ciaddr.s_addr)
-				release_lease (hw_lease);
+				release_lease (hw_lease, packet);
 			continue;
 		}
 		break;
@@ -2237,7 +2239,7 @@ struct lease *find_lease (packet, share, ours)
 	     (ip_lease -> pool -> permit_list &&
 	      !permitted (packet, ip_lease -> pool -> permit_list)))) {
 		if (!packet -> raw -> ciaddr.s_addr)
-			release_lease (ip_lease);
+			release_lease (ip_lease, packet);
 		ip_lease = (struct lease *)0;
 	}
 
@@ -2293,7 +2295,7 @@ struct lease *find_lease (packet, share, ours)
 	if (ip_lease) {
 		if (lease) {
 			if (!packet -> raw -> ciaddr.s_addr)
-				release_lease (ip_lease);
+				release_lease (ip_lease, packet);
 #if defined (DEBUG_FIND_LEASE)
 			log_info ("not choosing requested address (!).");
 #endif
