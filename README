@@ -96,16 +96,16 @@ system.
 
 			    RELEASE STATUS
 
-This is release version 3.0.2b1 of the ISC DHCP Distribution.  This is
-a beta release of a maintenance release.
+This is the first beta release of a maintenance release which seeks to
+fix bugs found in the production release version 3.0.1 and earlier.
 
 In this release, the server and relay agent are currently fully
 functional on NetBSD, Linux systems with kernel version 2.2 or later,
 FreeBSD, OpenBSD, BSD/OS, Digital Tru64 Unix and Solaris.  The software
-will also run on HP-UX, but only supports a single network interface.
-Ports also exist for QNX, SCO, NeXTStep, and MacOS X, but are not in
-wide use, with all that implies.   We are not aware of an easy way to
-get this software running on HP-UX.
+will also run on AIX and HP-UX, but only supports a single network
+interface.  Ports also exist for QNX, SCO, NeXTStep, and MacOS X, but
+are not in wide use, with all that implies.   We are not aware of an
+easy way to get this software running on HP-UX.
 
 The DHCP client currently only knows how to configure the network on
 NetBSD, FreeBSD, OpenBSD, BSD/os, Linux, Solaris and NextStep.  The
@@ -467,6 +467,18 @@ on Internet Systems Consortium mailing lists - that's why you're
 paying Sun the big bucks.   If you're having a problem with the
 Solaris client interoperating with the ISC dhcp server, that's another
 matter, but please check with Sun first.
+
+				AIX
+
+The AIX support uses the BSD socket API, which cannot differentiate on
+which network interface a broadcast packet was received; thus the DHCP
+server and relay will work only on a single interface.  (They do work
+on multi-interface machines if configured to listen on only one of the
+interfaces.)
+
+The ISC DHCP distribution does not include a dhclient-script for AIX--
+AIX comes with a DHCP client.  Contribution of a working dhclient-script
+for AIX would be welcome.
 
 			       SUPPORT
 
