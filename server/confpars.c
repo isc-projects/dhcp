@@ -1,4 +1,3 @@
-XXX Do tokens for client states!
 /* confpars.c
 
    Parser for dhcpd config file... */
@@ -44,7 +43,7 @@ XXX Do tokens for client states!
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.127 2000/11/28 23:27:15 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.128 2000/11/28 23:50:01 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
