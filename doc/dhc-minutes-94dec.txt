@@ -1,0 +1,188 @@
+
+CURRENT_MEETING_REPORT_
+
+Reported by Walt Wimer/CMU
+
+Minutes of the Dynamic Host Configuration Working Group (DHC)
+
+The DHC Working Group met on 7 December and 9 December at the 31st IETF.
+
+
+Document Status
+
+The most recent Internet-Draft of the DHCP specification includes
+several changes based on the results of the latest interoperability
+testing.  Based on the results of that testing, and a review of the
+Standards process RFC, the working group decided it would be appropriate
+to ask that DHCP be considered for ``Draft Standard'' status.  As soon
+as a revision of the current Internet-Draft is completed, the
+specification for DHCP will be submitted for review.
+
+A few, minor changes have been made to RFC 1541 based on questions
+raised during the latest interoperability testing.  Two new options have
+been defined since RFC 1533:  62, NetWare/IP domain and 63, NetWare/IP
+option.
+
+The working group agreed that the minimum lease requirement (one hour)
+should be made advisory rather than mandatory.
+
+
+Implementations
+
+The following list of implementations was compiled from information
+given by working group attendees.
+
+ _____________________________________________________________________
+ ||                   |                   |               |             ||
+ || Vendor            |Client             |Server         |Relay agent  ||
+ ||___________________|___________________|_______________|_____________||
+ || FTP Software      |DOS/Windows        |Windows        |             ||
+ ||___________________|___________________|NT_(beta)______|_____________||
+ || SunSoft           |DOS/Windows        |Solaris 2.0    |in server    ||
+ ||___________________|Solaris_(beta?)____|_______________|_____________||
+ || Microsoft         |DOS/Windows        |NT             |in server    ||
+ ||                   |NT                 |               |             ||
+ ||___________________|Windows95_beta_____|_______________|_____________||
+ || Competitive       |???                |Solaris        |             ||
+ ||_Automation________|___________________|_______________|_____________||
+ || Apple             |Newton             |               |             ||
+ ||___________________|Mac_(beta)_________|_______________|_____________||
+ || WIDE project      |Unix, BSD386       |Unix, BSD386   |Unix, BSD386 ||
+ ||_(free,_avail_2/95)|News,_SunOS________|News,_SunOS____|News,_SunOS_ ||
+ ||_Silicon_Graphics__|IRIX_(soon)________|IRIX___________|_____________||
+ || Hewlett Packard   |X-terminal         |HP/UX (June 95)|in server    ||
+ ||___________________|___________________|_______________|HP_router____||
+ || IBM               |OS/2 (soon)        |OS/2 (soon)    |             ||
+ ||                   |AIX (soon)         |AIX (soon)     |             ||
+ ||___________________|___________________|AS/400_(soon)__|_____________||
+ || cisco Systems     |Terminal server?   |               |routers      ||
+ ||                   |(proxy for         |               |             ||
+ ||___________________|terminal_clients?)_|_______________|_____________||
+ || Novell            |NetWare/IP         |NetWare/IP     |             ||
+ ||___________________|(spring)___________|(later)________|_____________||
+ || Shiva             |Proxy for          |               |             ||
+ ||___________________|dial-in_clients____|_______________|_____________||
+
+
+Future Interoperability Test
+
+There was some discussion of a future interoperability test.  Suggested
+venues include Bucknell University (summer '95), CMU (no specific time),
+next IETF (March '95) and remote via the Internet (?!?!).  The working
+group will hold a discussion about the next interoperability testing via
+electronic mail.
+
+
+Outstanding Issues
+
+The working group discussed some outstanding issues and generated some
+solutions:
+
+
+   o New options:  TFTP server address, bootfile name, to be registered
+     with IANA.
+
+   o Some clients will already have an IP address, not otherwise
+     registered or managed by DHCP. Those clients will only want local
+     configuration parameters, not an address.  A new DHCP message,
+     DHCPINFORM, will be defined for parameter requests.
+
+   o There was some question about the definition and interpretation of
+     ``client identifiers.''  The working group confirmed that a
+     ``client identifier'' is an opaque, unique identifier.  Text will
+     be added to the protocol specification to clarify this issue and to
+     advise that ``client identifiers'' must be unique.  ``Client
+     identifier'' type 0 will indicate ``an opaque string of
+     characters.''
+
+
+The issue of security was discussed.  The primary concern is to detect
+and avoid spoof/unauthorized servers.  Some sites are also concerned
+about unauthorized clients.  The consensus was that a public key
+identification and authorization mechanism should be developed as an
+optional DHCP service.
+
+Ralph Droms presented a preliminary proposal for a server-server
+protocol to allow automatic management of DHCP bindings by multiple DHCP
+servers at a single site.  The goals are to increase availability and
+reliability through redundancy of address allocation and binding
+servers, and through load sharing.  The basic model, based on a proposal
+by Jeff Mogul, is to assign each allocatable address and allocated
+binding to a specific ``owner'' server.  That owner has modification
+privileges, while all other servers have read-only privileges.  Servers
+use TCP connections and a simple protocol to replicate copies of new
+bindings and transfer ownership of addresses to balance the pool of
+available addresses.
+
+The hard part is bindings that are released early, prior to expiration.
+Those released bindings must be reported to all other servers, so those
+servers do not respond with stale data in the future.  However, servers
+may be inaccessible.  The proposed solution was to add an ``owner''
+option; clients would select responses from the ``owner'' in favor of
+all other responses.
+
+The suggestion was made that multiple DHCP servers might be able to use
+an underlying distributed database like DNS, NIS+ or Oracle.  Questions
+were raised about the scalability of the proposed scheme -- suppose many
+clients send simultaneous update requests, how often should updates be
+replicated, what about combinatoric explosion with the number of
+servers?
+
+
+IPv6 Issues
+
+The second meeting began with a discussion of several IPv6 issues.  IPv6
+address configuration has three basic forms:
+
+
+  1. Intra-link scope address (client forms address all on its own)
+
+  2. ``Stateless'' servers (e.g., in routers using some simple
+     assignment algorithm)
+  3. Stateful servers (`a la IPv4 DHCP)
+
+
+Regardless of how addresses are managed, IPv6 will need some other
+mechanism(s) to obtain other configuration parameters.  Some members of
+the IPv6 design team claim there will be no other parameters.
+
+The following action items were identified:
+
+
+   o Someone to enumerate all IPv6 network layer parameters.
+     Mike Carney volunteered.
+
+   o Extensions/changes to DHCP protocol format for IPv6.
+     Walt Wimer volunteered.
+
+
+Dynamic Addressing
+
+Next, the working group discussed the problem of dynamic updates to DNS
+from DHCP information (dynamic addressing).  For simple registration of
+DNS hostnames for individual DHCP clients, what should we do?  Should
+client be responsible for contacting DNS server directly, or should DHCP
+server contact DNS on behalf of client?  It will be necessary to clarify
+DNS configuration/update mechanism with DNS Working Group.  One solution
+to the question of who does the update would be to define a DHCP option
+for client to say whether it will do the registration with DNS directly
+or whether client wants DHCP server to take care of it.  DHCP server may
+need a way to veto the client's preference.  This permits a simple
+client (such as an embedded hub, probe, etc.)  to let the DHCP server do
+everything (DHCP server probably has necessary credentials to update DNS
+while client probably does not).  Or, a more sophisticated client can
+update its ``home'' DNS directly (for example, a mobile notebook
+computer belonging to XYZ, Inc.  can be taken to an IETF get a local IP
+address from the IETF DHCP server, but then directly update XYZ.COM's
+DNS server in order to maintain an XYZ.COM name).  The problem of name
+collisions was unresolved - should the client or the server be
+responsible?  Masataka Ohta volunteered to do a DHCP-to-DNS interaction
+proposal
+
+
+DHCP and SNMP
+
+Finally, the working group considered DHCP and SNMP. The working group
+chair asked if there were any MIB writers in the audience.  The scribe
+thought there was a volunteer but did not catch the name.
+

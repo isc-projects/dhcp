@@ -1,0 +1,1254 @@
+
+
+
+
+
+
+DNSIND Working Group                         Susan Thomson (Bellcore)
+INTERNET-DRAFT                                    Yakov Rekhter (IBM)
+<draft-ietf-dnsind-dynDNS-00.txt>                     Jim Bound (DEC)
+                                                     January 31, 1995
+
+
+   Extending the Domain Name System (DNS) to Perform Dynamic Updates
+
+
+Status of this Memo
+
+   This document is an Internet Draft.  Internet Drafts are working
+   documents of the Internet Engineering Task Force (IETF), its Areas,
+   and its Working Groups. Note that other groups may also distribute
+   working documents as Internet Drafts.
+
+   Internet Drafts are draft documents valid for a maximum of six
+   months. Internet Drafts may be updated, replaced, or obsoleted by
+   other documents at any time.  It is not appropriate to use Internet
+   Drafts as reference material or to cite them other than as a "working
+   draft" or "work in progress."
+
+   To learn the current status of any Internet Draft.  please check the
+   1id-abstracts.txt listing contained in the Internet Drafts Shadow
+   Directories on ds.internic.net, nic.nordu.net, ftp.nisc.sri.com or
+   munnari.oz.au.
+
+
+Abstract
+
+   The Domain Name System currently only supports queries on a
+   statically configured database. This document describes extensions to
+   the Domain Name System to enable name servers to accept requests to
+   update the database dynamically. Extensions include support for
+   adding and deleting a set of names and associated resource records
+   within a zone atomically and the definition of a new resource record
+   that enables update requests  to be serialized.
+
+
+
+
+
+
+
+
+
+
+
+Expires July 31, 1995                                           [Page 1]
+
+
+
+
+
+INTERNET-DRAFT           Dynamic DNS Updates               January 1995
+
+
+1.  INTRODUCTION
+
+
+   The Domain Name System currently only supports queries on a stati-
+   cally configured database. This document describes extensions to the
+   Domain Name System to enable name servers to accept requests to
+   update the database dynamically.
+
+   Section 2 provides an overview of the update function. Section 3
+   describes the update message format and Sections 4 and 5 describe
+   name server and resolver behavior when processing dynamic updates in
+   more detail. Examples of usage are described in Section 6. A new
+   resource record useful for serializing update requests is defined in
+   Section 7 and security considerations are discussed in Section 8.
+
+
+
+2.  OVERVIEW
+
+   A domain name identifies a node within the domain name space tree
+   structure. Each node has a set of Resource Records (RRs).
+
+   The extensions to the DNS protocol enable name servers to accept
+   requests to update the names space and RRs associated with nodes in
+   the name space dynamically. An update request is an atomic transac-
+   tion consisting of a set of operations on names and RRs in a zone.
+   The operations may be one of four types:
+
+   1.   Add new name and associated with it a set of records to zone
+        (ADDNEW)
+
+        This operation is only successful if the name of the records
+        does not already exist in the zone. The effect of the operation
+        is to create a new node in the name space and add records to
+        this node.
+
+   2.   Add records associated with an existing name to zone (ADDEXIST)
+
+        This operation is only successful if the name the records are
+        associated with exists in the zone. The effect of the operation
+        is to update records that belong to an existing node in the name
+        space.
+
+   3.   Add name and associated with it a set of records to zone,
+        whether name exists or not (ADD)
+
+
+
+Expires July 31, 1995                                           [Page 2]
+
+
+
+
+
+INTERNET-DRAFT           Dynamic DNS Updates               January 1995
+
+
+        If the name already exists, then the semantics of this operation
+        is the same as ADDEXIST. If the name doesn't exist, then the
+        semantics of this operation is the same as ADDNEW.
+
+   4.   Delete records from zone (DELETE)
+
+        This operation is only successful if the specified records
+        exist. However, it is possible to specify that all resource
+        records associated with a name, class and type must be deleted
+        without explicitly deleting each and every one of them. This is
+        done using a wildcard data field in the resource record.
+
+
+   The update protocol allows several operations to be performed on sets
+   of records with different owner names and record types, provided all
+   names are contained within a single zone.  The effect of an update
+   transaction is to perform all of the operations in the transaction,
+   if all can be performed successfully, or none at all. If the zone
+   serial number in the SOA RR is not explicitly updated in an update
+   request, a side-effect of a successful update transaction may be to
+   update the zone serial number.  A successful update is applied syn-
+   chronously to the database by the primary name server for the zone,
+   and the updates are transferred to secondary name servers asynchro-
+   nously.
+
+   Some of the operations depend on comparing an existing record with a
+   record specified in an update.  Two records are considered to be the
+   same if their name, class, type, data length and value are the same.
+   The time-to-live field is specifically excluded from comparison. The
+   effect of wildcard names and data fields are discussed in Section 3.
+
+   The message format used to implement an atomic transaction has a
+   similar structure to that of a query, but the contents of some of the
+   fields differ. An entity that initiates an update indicates in an
+   update message the update operations to  be performed along with the
+   records to be updated.  A name server responds to an update request
+   by (a) indicating that the update has been successfully applied to
+   the database at the primary name server, (b) indicating that the name
+   server is not authoritative for the records specified, or (c) indi-
+   cating an error.
+
+   An update may be carried in a UDP datagram or a TCP connection.
+
+
+
+
+
+
+Expires July 31, 1995                                           [Page 3]
+
+
+
+
+
+INTERNET-DRAFT           Dynamic DNS Updates               January 1995
+
+
+3.  UPDATE MESSAGE FORMAT
+
+
+   The message format has the following structure: the message header,
+   which is similar to that of the query, and the message body, which
+   consists of four sections, one per operation type. The four sections
+   are in the order listed: the delete section, the add new record sec-
+   tion, the add existing record section and the plain add secion.  Each
+   section contains the records that need to have the associated opera-
+   tion applied.
+
+
+
+3.1.  Header Section
+
+
+
+
+          0  1  2  3  4  5  6  7  8  9  0  1  2  3  4  5
+       +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+       |                      ID                       |
+       +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+       |QR|   Opcode  |AA|TC|RD|RA|   Z    |   RCODE   |
+       +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+       |                    DELCOUNT                   |
+       +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+       |                    ANCOUNT                    |
+       +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+       |                    AECOUNT                    |
+       +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+       |                    ACOUNT                     |
+       +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+
+
+
+   The differences between the query header and the update header are in
+   the values that certain fields can assume, and in the semantics of
+   certain fields.
+
+   There is a new operation code (value to be defined) to specify an
+   update request in the Opcode field.
+
+
+       UPDATE          TBD
+
+
+
+
+Expires July 31, 1995                                           [Page 4]
+
+
+
+
+
+INTERNET-DRAFT           Dynamic DNS Updates               January 1995
+
+
+   This Opcode distinguishes the update header from the query header.
+   This document specifies the semantics of the fields in the update
+   header only.
+
+   Besides a new operation code, there are also new return codes.  The
+   four count fields have different semantics: they contain the number
+   of records in the DELETE section, the number of records in the ADDNEW
+   section, the number of records in the ADDEXIST section and the number
+   of records in the ADD section, respectively.
+
+   The other fields remain the same, except that they apply to update
+   requests rather than queries. Note the AA bit is set in a response if
+   and only if a server is authoritative for ALL nodes specified in the
+   request. Also, the TC bit is not applicable to updates.
+
+   The fields are set as follows in update requests and responses:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Expires July 31, 1995                                           [Page 5]
+
+
+
+
+
+INTERNET-DRAFT           Dynamic DNS Updates               January 1995
+
+
+   ID        A 16 bit identifier assigned by the entity that
+             generates any kind of request.  This identifier is
+             copied in the corresponding reply and can be used by the
+             requestor to match up replies to outstanding requests.
+
+   QR        A one bit field that specifies whether this message is a
+             request (0), or a response (1).
+
+   OPCODE    A four bit field that specifies the kind of request in
+             this message.  This value is set by the originator of a
+             request and copied into the response.  In addition to
+             the values defined in RFC1034, this document defines the
+             following value:
+
+                   TBD             an update request (UPDATE)
+
+
+   AA        Authoritative Answer - this bit is valid in responses,
+             and specifies that the responding name server is an
+             authority for all domain names in the message body.
+
+   TC        Bit is set to zero in an update request and copied into
+             the response. The TC bit is ignored on receipt of a
+             request or response.
+
+
+   RD        Recursion Desired - this bit may be set in a request and
+             is copied into the response.  If RD is set, it directs
+             the name server to pursue the request recursively.
+             Recursive update support is optional.
+
+   RA        Recursion Available - this be is set or cleared in a
+             response, and denotes whether recursive update support is
+             available in the name server.
+
+   Z         Reserved for future use.  Must be zero in all requests
+             and responses.
+
+   RCODE     Response code - this 4 bit field is set as part of
+             responses.  The values and semantics of update responses
+             are as follows:
+
+             0               No error condition
+
+             1               Format error - The name server was
+
+
+
+Expires July 31, 1995                                           [Page 6]
+
+
+
+
+
+INTERNET-DRAFT           Dynamic DNS Updates               January 1995
+
+
+                             unable to interpret the request.
+
+             2               Server failure - The name server was
+                             unable to process this request due to a
+                             problem with the name server.
+
+             3               Name Error - Meaningful only for
+                             responses from an authoritative name
+                             server, this code signifies that one or
+                             more of the domain names referenced in
+                             the update request does not exist.
+
+             4               Not Implemented - The name server does
+                             not support the specified operation.
+
+             5               Refused - The name server refuses to
+                             perform the specified operation for
+                             policy reasons.
+
+             6               Alias Error - This code indicates that the
+                             domain name specified in an update is an
+                             alias.
+
+             7               Name Exists Error - This code indicates
+                             the name already exists. This return code
+                             is only meaningful from a server
+                             in response to an ADDNEW operation.
+
+             8               Record Not Exist Error - This code
+                             indicates that the resource record does
+                             not exist.
+                             This return code is only meaningful from a
+                             server in response to a DELETE operation.
+
+             9               Too many Zones Error - This code
+                             indicates that the records to be
+                             updated exist in more than one zone.
+
+             10              SERIAL RR Error - This code
+                             indicates that an operation on the
+                             SERIAL record is in error.
+
+             11              Permission Denied - This code indicates
+                             that the client has insufficient authority
+                             to perform the update.
+
+
+
+Expires July 31, 1995                                           [Page 7]
+
+
+
+
+
+INTERNET-DRAFT           Dynamic DNS Updates               January 1995
+
+
+   DELCOUNT  an unsigned 16 bit integer specifying the number of
+             resource records in the DELETE section. Always zero in a
+             response.
+
+   ANCOUNT   an unsigned 16 bit integer specifying the number of
+             resource records in the ADDNEW section. Always zero
+             in a response.
+
+   AECOUNT   an unsigned 16 bit integer specifying the number of
+             resource records in the ADDEXIST section.
+             Always zero in a response.
+
+   ACOUNT    an unsigned 16 bit integer specifying the number of
+             resource records in the ADD section.
+             Always zero in a response.
+
+
+
+3.2.  Testing for Resource Record Equality
+
+
+   The update operations require that records be compared. In  particu-
+   lar, the DELETE operation requires that the records to be deleted
+   must exist. It has already been stated that records are tested for
+   equality by comparing their name, class, type, data length and data
+   values. The time-to-live value is excluded from the comparison.
+
+   The comparison of character strings in names and in data fields is
+   case-insensitive. For two names to match, they must match label by
+   label. A non-wildcard label never matches the '*' label, i.e. names
+   must exist explicitly in a zone to be matched by a record specified
+   in an update; the use of a wildcard name in a zone does not imply
+   existence for updates.
+
+   In a DELETE operation, it is sometimes convenient to specify that all
+   records associated with a certain name that are of a given class and
+   type be deleted without specifying all existing records explicitly. A
+   record with a data field containing the '*' character and a data
+   length field of one is defined to match data in any other record.
+
+   DISCUSSION: I believe the '*' data value does not match existing
+   legal data values, expect for the NULL record, which is experimental
+   and not supported by BIND.
+
+
+
+
+
+Expires July 31, 1995                                           [Page 8]
+
+
+
+
+
+INTERNET-DRAFT           Dynamic DNS Updates               January 1995
+
+
+4.  NAME SERVER BEHAVIOR
+
+
+   From a client's perspective, any authoritative server can process an
+   update request. Non-authoritative name servers forward the request to
+   an authoritative name server if recursive service is specified or
+   indicate to the client that the server is not authoritative for the
+   records to be updated.
+
+   From a server's perspective, only the primary authoritative name
+   server actually performs the update request. A secondary name server
+   is responsible for forwarding the request to the primary name server
+   for the zone. As mentioned above, a non-authoritative name server is
+   also responsible for forwarding the update request to the primary, if
+   recursive service is desired by the client and it is available.
+   Unlike a secondary, however, a non-authoritative name server will
+   need to determine the name servers authoritative for the domain names
+   to be updated by asking other names servers for referrals if the
+   information is not cached locally. A secondary name server will have
+   this information preconfigured. Note that the forwarding of an update
+   message is done synchronously on an update request, whether it is
+   performed by a secondary name server or a non-authoritative server
+   that provides recursive service.  That is, a name server will wait
+   for a response to a forwarded update request before returning the
+   response to the client.
+
+
+
+4.1.  Maintaining Internal Consistency
+
+
+   Zone consistency between primary and secondaries is achieved through
+   asynchronous zone transfer. Either full zone transfer as currently
+   defined can be used, or incremental zone transfer when it becomes
+   available[IXFR]. The proposed Notify mechanism[NOTIFY] may also be
+   used to  cause zone transfers to happen earlier than would otherwise
+   be determined by the zone refresh time.
+
+
+
+4.2.  Algorithm
+
+
+   On receiving an update request, the server's behavior will depend on
+   whether recursive service is requested and available. If recursive
+
+
+
+Expires July 31, 1995                                           [Page 9]
+
+
+
+
+
+INTERNET-DRAFT           Dynamic DNS Updates               January 1995
+
+
+   service is requested and available, the server determines the set of
+   authoritative name servers for the nodes specified in the transac-
+   tion.  The server sends the update to the set of name servers, waits
+   for the response, and returns the response to the resolver.
+
+   If recursive service is not requested or is not available, then the
+   name server checks to see whether the update is in a zone for which
+   it is authoritative. If so, the server attempts to perform the update
+   if the name server is primary for the zone.  If the name server is
+   secondary for the zone, the server forwards the update to  the pri-
+   mary name server, waits for the response and returns the response to
+   the resolver.  Otherwise, if the name server is not authoritative for
+   the zone to be updated, an error is returned.
+
+   The algorithm for name server behavior is explained in more detail
+   below (adapted from [RFC1034]):
+
+   1.   Indicate in the response whether update recursion is available
+        or not. If recursive service is available and requested, then
+        the server uses the local resolver or a copy of its algorithm
+        (Section 4) to perform the update operation. Otherwise, go to
+        step 2.
+
+   2    Determine the names (RRNAMEs) associated with all records to be
+        updated in the transaction.  For each RRNAME, search the avail-
+        able zones for the zone which is the nearest to RRNAME.
+
+        a)   If no zone is found, return a non-authoritative response
+             indicating no error. Exit.
+
+        b)   If more than one zone is found, return a response indicat-
+             ing that the update request is not restricted to a single
+             zone. Exit.
+
+        Otherwise, go to step 3.
+
+   3.   If this is a secondary name server for the zone, forward the
+        request to the primary and wait for the response. Send the
+        response to the resolver.  Exit. (A secondary may do further
+        checking of the update request before sending to the primary for
+        processing, if desired.) Otherwise, go to step 4.
+
+   4.   Start the transaction
+
+   5.   For each RRNAME in the update request, start matching down,
+
+
+
+Expires July 31, 1995                                          [Page 10]
+
+
+
+
+
+INTERNET-DRAFT           Dynamic DNS Updates               January 1995
+
+
+        label by label, in the zone (found in step 2). For each label,
+        test for the following cases:
+
+        a)   If the whole RRNAME is matched, we have found the node to
+             be updated.
+
+             If the record at the node is a CNAME, and RRTYPE does not
+             match CNAME, abort the transaction and return an authorita-
+             tive response indicating an alias error.
+
+             If the operation is ADDNEW, abort the transaction and
+             return an authoritative response indicating that the name
+             already exists.
+
+             If the operation is ADDEXIST or ADD, check if the specified
+             record already exists. If so, ignore.
+
+             If the operation is DELETE, check if the specified record
+             exists in the zone. If not, abort the transaction and
+             return an authoritative response indicating that the record
+             does not exist.
+
+             Otherwise, perform the update operation tentatively.
+
+        b)   If we have a referral, abort the transaction. Return a
+             non-authoritative response indicating no error. Exit.
+
+        c)   If at some label, a match is impossible (i.e. the label
+             does not exist), and the operation is ADDEXIST or DELETE,
+             abort the transaction and return an authoritative response
+             indicating that the name does not exist.
+
+             Otherwise, perform the update operation tentatively.
+
+   6    Commit the transaction. If the zone serial number has not been
+        explicitly updated as part of  the transaction, the zone serial
+        number may or may not be incremented at this time.  Indicate in
+        the response that the server is authoritative and return a suc-
+        cessful response. Exit.
+
+   At the start of a transaction, the zone must be locked to prevent
+   concurrent interleaving of concurrent update requests. The zone is
+   unlocked at the end of a (successful or unsuccessful) transaction.
+   Aborting a transaction requires that any changes made so far must be
+   rolled back.  Committing a transaction means that the changes are
+
+
+
+Expires July 31, 1995                                          [Page 11]
+
+
+
+
+
+INTERNET-DRAFT           Dynamic DNS Updates               January 1995
+
+
+   applied to the zone and are visible to subsequent queries to the pri-
+   mary. (It is an implementation matter whether the master file is
+   updated at this time or later. The point is that the changes are made
+   persistent, e.g. in a log on stable storage, and are added to the
+   cached copy of the zone.) If the zone serial number is not explicitly
+   updated in a request, a primary name server may update the zone
+   serial number when committing each transaction, or periodically,
+   after some number of transactions or time has passed, depending on
+   policy. The effect of incrementing the serial number periodically
+   rather than on each transaction means that a secondary may not detect
+   that a zone has been updated as quickly as it otherwise would do. On
+   the other hand, updating the serial number periodically makes it pos-
+   sible to slow incrementing of the serial number in situations where
+   many updates occur close together in time.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Expires July 31, 1995                                          [Page 12]
+
+
+
+
+
+INTERNET-DRAFT           Dynamic DNS Updates               January 1995
+
+
+5.  RESOLVER BEHAVIOR
+
+
+   A resolver provides the application interface to name servers. A
+   resolver must enable applications to perform both standard queries
+   and updates.
+
+   A stub resolver performs no resolution function itself, but must
+   either be configured with a list of name servers that provide recur-
+   sive service, i.e. name servers that can perform requests on the
+   resolver's behalf, or be configured with the names of authoritative
+   servers of zones that this resolver is known to be responsible for
+   updating.
+
+   A full-service resolver traverses the domain name space itself, pos-
+   sibly querying several name servers to find the name servers authori-
+   tative for the zone to be updated.  A full-service resolver performs
+   an update operation as follows (adapted from [RFC1034]):
+
+   1.   If a resolver has direct access to a name server's authoritative
+        data, determine the names (RRNAMEs) associated with all records
+        to be updated in the transaction.  For each RRNAME, search the
+        available zones for the zone which is authoritative for RRNAME.
+
+        a)   If more than one zone is found, return a response indicat-
+             ing that the update request is not restricted to a single
+             zone. Exit.
+
+        b)   If a single authoritative zone is found, perform the update
+             transaction in the relevant zone as outlined in Section
+             4.2. Exit.
+
+   2.   If the zone is non-local, find the best servers to ask for any
+        or all RRNAMEs. If the resolver finds that the RRNAMEs cannot be
+        in the same zone, it returns a response indicating that the
+        update is not constrained to a single zone and exits.
+
+   3.   Send a query to one of the servers for any RRNAME, RRCLASS and
+        RRTYPE to be updated in the zone.
+
+   4.   Analyze the response:
+
+        a)   If the response is authoritative, go to step 5
+
+        b)   If the response contains better delegation information,
+
+
+
+Expires July 31, 1995                                          [Page 13]
+
+
+
+
+
+INTERNET-DRAFT           Dynamic DNS Updates               January 1995
+
+
+             cache the delegation information and go to step 2.
+
+        c)   If the response shows a server failure or other bizarre
+             contents, delete the server from the list of servers and go
+             back to step 3.
+
+   5.   Send an update to an authoritative name server.
+
+   6.   Analyze the response:
+
+        a)   If the response shows a server failure or other bizarre
+             contents, delete the server from the list of servers and go
+             back to step 5.
+
+        b)   Otherwise, return the response to the client.
+
+   The data structures used to represent the state of a query in pro-
+   gress in the resolver are the same as that specified in RFC1034,
+   except that the list that represents the resolver's best guess about
+   which name servers to ask may include additional information per-
+   tinent to updates, e.g.  which in a set of authoritative name servers
+   accept update requests for a given zone (some name servers may refuse
+   to accept update requests) and the relative performance of the name
+   servers (primary may provide better performance than secondaries).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Expires July 31, 1995                                          [Page 14]
+
+
+
+
+
+INTERNET-DRAFT           Dynamic DNS Updates               January 1995
+
+
+6.  EXAMPLES
+
+   A wide range of update functions can be achieved using a combination
+   of the four update operations. To illustrate this, we use a simple
+   zone consisting of the following records:
+
+
+             xyz.com.          SOA     ns.xyz.com sysadm.xyz.com
+                                      ( ... )
+                               NS      ns.xyz.com.
+
+             ns.xyz.com.       A       128.96.33.22
+
+             foo.xyz.com.      A       128.96.33.33
+                               A       128.96.34.34
+
+
+   For example, one of the A records belonging to foo.xyz.com can be
+   modified by first deleting it and adding the new.
+
+
+   DELETE    foo.xyz.com      A       128.96.33.33
+
+   ADD       foo.xyz.com      A       128.96.44.44
+
+
+   Both ADD or ADDEXIST would work in the above example to add the
+   replacement record.
+
+   The canonical name of a host can be changed from "foo" to "bar" and
+   the old name "foo" made an alias, by sending an update  transaction
+   consisting of the following three operations:
+
+
+   DELETE    foo.xyz.com      A       128.96.33.33
+             foo.xyz.com      A       128.96.34.34
+
+   ADDEXIST  foo.xyz.com      CNAME   bar.xyz.com
+
+   ADDNEW    bar.xyz.com      A       128.61.44.33
+
+
+
+   Alternatively, the A records belonging to "foo" need not be individu-
+   ally deleted. The wildcard data field can be used to delete all
+
+
+
+Expires July 31, 1995                                          [Page 15]
+
+
+
+
+
+INTERNET-DRAFT           Dynamic DNS Updates               January 1995
+
+
+   records associated with "foo" as follows:
+
+
+   DELETE    foo.xyz.com      A       *
+
+
+   Also, both of the above add operations could be replaced by ADD.
+   However, the existence checks would not then be applied.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Expires July 31, 1995                                          [Page 16]
+
+
+
+
+
+INTERNET-DRAFT           Dynamic DNS Updates               January 1995
+
+
+7.  SERIAL RESOURCE RECORD
+
+
+   A new resource record is defined that can be used to serialize update
+   requests. Serialization is needed if updates can be concurrent or the
+   update is dependent on the database being in a certain state.  In
+   particular, serialisation may be necessary to protect against dupli-
+   cate messages. Duplicate messages arise when the transport protocol
+   used does not guarantee otherwise, or when resolvers retransmit mes-
+   sages because the transport protocol is unreliable. Also, malicious
+   clients may deliberately replay old update requests.
+
+   In general, to serialize requests, a token needs to be associated
+   with the set of records to be updated. This token must be set to a
+   different value on each update. The SERIAL resource record is defined
+   to hold this token and to indicate the set of records associated with
+   the token.  The SERIAL record has the same name, class, and TTL
+   values as the records to be protected. The name may contain the wild-
+   card label in which case the SERIAL record covers all records in the
+   zone (of the type specified in the data field), and can be used to
+   serialize updates at the granularity of a zone.  The data field of
+   the record contains the type of the records protected and the token
+   itself. The type may be any valid record type, or it may contain type
+   ANY which means that the token covers all records associated with the
+   name specified. The token is a 64-bit number (the exact definition of
+   which is to be discussed below).
+
+   The data field of the record is as follows:
+
+
+
+             0  1  2  3  4  5  6  7  8  9  0  1  2  3  4  5
+          +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+          |                RR type covered                |
+          +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+          |                                               |
+          |                   token                       |
+          |                                               |
+          |                                               |
+          +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+
+
+
+   To update the SERIAL record, a client MUST delete the current record
+   explicitly and then add the new record with the new token value. The
+
+
+
+Expires July 31, 1995                                          [Page 17]
+
+
+
+
+
+INTERNET-DRAFT           Dynamic DNS Updates               January 1995
+
+
+   SERIAL record is the only record where the use of the wildcard data
+   field when deleting records is invalid. This restriction  ensures
+   that the update of the token is itself serialized, by making sure
+   that the change from the current token value to the new token value
+   is done in a mutually exclusive manner.
+
+   For example, given a zone containing a SERIAL RR as follows:
+
+
+             xyz.com.          SOA     ns.xyz.com sysadm.xyz.com
+                                      ( ... )
+                               NS      ns.xyz.com.
+
+             ns.xyz.com.       A       128.96.33.22
+
+             foo.xyz.com.      SERIAL  A  2157449756503
+                               A       128.96.33.33
+                               A       128.96.34.34
+
+
+   Updates to the A records would be serialized by using the following
+   operations:
+
+
+   DELETE    foo.xyz.com      SERIAL   A  2157449756503
+             foo.xyz.com      A        *
+
+   ADD       foo.xyz.com      SERIAL   A  7575470909833451
+             foo.xyz.com      A        128.96.44.44
+             foo.xyz.com      A        128.96.55.55
+
+
+   FOR DISCUSSION: One approach would be to define the token as a random
+   number.  However, update serialization is only as good as the random
+   numbers generated.  If clients cannot be trusted to generate unique
+   random numbers or it is too expensive to do so, an alternative
+   approach is to define the token as a sequence number. This approach
+   is cheap to implement, but does require that the name server inter-
+   pret the value of the data field of the SERIAL RR added to determine
+   that it is appropriately set.  Another approach is to have the server
+   responsible for generating the next token (in any way it liked). This
+   also requires the server to interpret the data field of the SERIAL
+   RR.
+
+
+
+
+
+Expires July 31, 1995                                          [Page 18]
+
+
+
+
+
+INTERNET-DRAFT           Dynamic DNS Updates               January 1995
+
+
+8.  SECURITY CONSIDERATIONS
+
+
+   DNS updates must be able to be made secure. The security mechanism
+   must provide data origin authentication, data integrity and protec-
+   tion against replay. Data confidentiality is not required.
+
+   The signature records defined in [DNSSEC] can be used to ensure that
+   each set of records of a particular name, type and class are updated
+   by an entity that has the appropriate authority.  The signature
+   record is updated along with the associated records in an update
+   transaction. The SIG RR must sign all records associated with a name,
+   class and type, not only those updated in the request.  The "time
+   signed" timestamp in the SIG record may be used to protect against
+   replay if it is defined that, when updated, it must have a value
+   greater than the current value and be set to a time not too far in
+   the future.
+
+   Note that a signature record only covers records of a particular
+   name, class and type. Thus, while the integrity of each set of
+   records of the same name, class and type updated in a transaction can
+   be assured, the integrity of a set of updates records with different
+   names or types is not.  To ensure integrity of the entire message, a
+   network layer security protocol should be used if available. Alterna-
+   tively, a SIG RR signing the entire message can be placed at the end
+   of the last section of a message as explained in [DNSSEC]. If SIG
+   records are not used to authenticate individual updates, the SERIAL
+   record will need to be used to ensure against replay.
+
+   Note that a SIG RR is not only used to authenticate an update
+   request, but is stored along with the authenticated data in DNS to
+   authenticate subsequent queries for the data.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Expires July 31, 1995                                          [Page 19]
+
+
+
+
+
+INTERNET-DRAFT           Dynamic DNS Updates               January 1995
+
+
+9.  OPEN ISSUES
+
+
+
+   1.   Should non-recursive updates perform referrals when an update is
+        sent to a non-authoritative server?
+
+
+        This is a bit less clean for updates than for queries, since
+        multiple nodes can be specified in an atomic transaction. (A
+        referral need only be to one of the nodes specified - any one
+        will do.
+
+        On the other hand, using queries to locate authoritative servers
+        before sending an update is likely to be less efficient than
+        using updates only. However, caching of queries should alleviate
+        this.
+
+        The usefulness of having updates perform referrals is not clear:
+
+        a)   While updates need to be reliable and hence might be car-
+             ried using TCP, the recommended approach to get referrals
+             is UDP.
+
+        b)   As a practical matter, it cannot be required that all name
+             servers in DNS support dynamic updates.  Thus, queries will
+             always have to be used as the fallback mechanism for locat-
+             ing the authoritative name servers for a dynamic zone.
+
+        This document as it stands does not specify referrals.
+
+
+
+10.  ACKNOWLEDGEMENTS
+
+
+   We would like to thank the DNSIND working group for their valuable
+   input, in particular, Donald Eastlake.
+
+
+
+11.  REFERENCES
+
+
+
+
+
+
+Expires July 31, 1995                                          [Page 20]
+
+
+
+
+
+INTERNET-DRAFT           Dynamic DNS Updates               January 1995
+
+
+   [RFC1034]
+        P. Mockapetris, "Domain Names - Concepts and Facilities", RFC
+        1034, USC/Information Sciences Institute, November 1987.
+
+   [RFC1035]
+        P. Mockapetris, "Domain Names - Implementation and Specifica-
+        tion", RFC 1035, USC/Information Sciences Institute, November
+        1987.
+
+   [DNSSEC]
+        Donald E. Eastlake and Charles W. Kaufman, "Domain Name System
+        Protocol Security Extensions", Internet Draft, March 1994,
+        <draft-ietf-dnssec-secext-03.txt>.
+
+   [IXFR]M. Ohta, "Incremental Zone Transfer", Internet Draft, November
+        1994.
+
+   [NOTIFY]
+        P. Vixie, "Notify: a mechanism for prompt notification of
+        authority zone changes", Internet Draft, November 1994, <draft-
+        ietf-dnsind-notify-00.txt>.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Expires July 31, 1995                                          [Page 21]
+
+
+
+
+
+INTERNET-DRAFT           Dynamic DNS Updates               January 1995
+
+
+Authors' Addresses
+
+
+   Susan Thomson
+   Bellcore
+   445 South Street
+   Morristown, NJ 07960
+   Phone: (201) 829-4514
+   email: set@thumper.bellcore.com
+
+   Yakov Rekhter
+   T.J. Watson Research Center IBM Corporation
+   P.O. Box 740, H3-D40,
+   Yorktown Heights, NY 10598
+   Phone:  (914) 784-7361
+   email:  yakov@watson.ibm.com
+
+   Jim Bound
+   Digital Equipment Corporation
+   110 Spitbrook Road ZK3-3/U14
+   Nashua, NH 03062-2698
+   Phone: (603) 881-0400
+   email: bound@zk3.dec.com
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Expires July 31, 1995                                          [Page 22]
+
+

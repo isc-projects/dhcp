@@ -1,0 +1,1048 @@
+/* confpars.c
+
+   Parser for dhcpd config file... */
+
+/*
+ * Copyright (c) 1995 The Internet Software Consortium.  All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. Neither the name of The Internet Software Consortium nor the names
+ *    of its contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE INTERNET SOFTWARE CONSORTIUM AND
+ * CONTRIBUTORS ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES,
+ * INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED.  IN NO EVENT SHALL THE INTERNET SOFTWARE CONSORTIUM OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF
+ * USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
+ * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
+ *
+ * This software has been written for the Internet Software Consortium
+ * by Ted Lemon <mellon@fugue.com> in cooperation with Vixie
+ * Enterprises.  To learn more about the Internet Software Consortium,
+ * see ``http://www.vix.com/isc''.  To learn more about Vixie
+ * Enterprises, see ``http://www.vix.com''.
+ */
+
+#ifndef lint
+static char copyright[] =
+"@(#) Copyright (c) 1995 The Internet Software Consortium.  All rights reserved.\n";
+#endif /* not lint */
+
+#include "dhcpd.h"
+#include "dhctoken.h"
+
+static TIME parsed_time;
+
+/* conf-file :== statements
+   declarations :== <nil> | declaration | declarations declaration */
+
+void readconf (void)
+{
+	FILE *cfile;
+	char *val;
+	int token;
+
+	/* Set up the initial dhcp option universe. */
+	initialize_universes ();
+
+	if ((cfile = fopen (_PATH_DHCPD_CONF, "r")) == NULL)
+		error ("Can't open %s: %m", _PATH_DHCPD_CONF);
+	do {
+		token = peek_token (&val, cfile);
+		if (token == EOF)
+			break;
+		parse_statement (cfile);
+	} while (1);
+}
+
+/* statement :== host_statement */
+
+void parse_statement (cfile)
+	FILE *cfile;
+{
+	char *val;
+	jmp_buf bc;
+
+	switch (next_token (&val, cfile)) {
+	      case HOST:
+		if (!setjmp (bc)) {
+			struct host_decl *hd =
+				parse_host_statement (cfile, &bc);
+			if (hd) {
+				enter_host (hd);
+			}
+		}
+		break;
+	      case LEASE:
+		if (!setjmp (bc)) {
+			struct lease *lease =
+				parse_lease_statement (cfile, &bc);
+			enter_lease (lease);
+		}
+		break;
+	      case TIMESTAMP:
+		if (!setjmp (bc)) {
+			parsed_time = parse_timestamp (cfile, &bc);
+		}
+		break;
+	      case RANGE:
+		if (!setjmp (bc)) {
+			parse_address_range (cfile, &bc);
+		}
+		break;
+	      default:
+		parse_warn ("expecting a declaration.");
+		skip_to_semi (cfile);
+		break;
+	}
+}
+
+void skip_to_semi (cfile)
+	FILE *cfile;
+{
+	int token;
+	char *val;
+
+	do {
+		token = next_token (&val, cfile);
+	} while (token != SEMI && token != EOF);
+}
+
+/* host_statement :== HOST hostname declarations SEMI
+   host_declarations :== <nil> | host_declaration
+			       | host_declarations host_declaration */
+
+struct host_decl *parse_host_statement (cfile, bc)
+	FILE *cfile;
+	jmp_buf *bc;
+{
+	char *val;
+	int token;
+	struct host_decl tmp, *perm;
+
+	memset (&tmp, 0, sizeof tmp);
+	tmp.name = parse_host_name (cfile, bc);
+	do {
+		token = peek_token (&val, cfile);
+		if (token == SEMI) {
+			token = next_token (&val, cfile);
+			break;
+		}
+		parse_host_decl (cfile, bc, &tmp);
+	} while (1);
+	perm = (struct host_decl *)malloc (sizeof (struct host_decl));
+	if (!perm)
+		error ("can't allocate host decl struct for %s.", tmp.name);
+	*perm = tmp;
+	return perm;
+}
+
+/* host_name :== identifier | host_name DOT identifier */
+
+char *parse_host_name (cfile, bc)
+	FILE *cfile;
+	jmp_buf *bc;
+{
+	char *val;
+	int token;
+	int len = 0;
+	char *s;
+	char *t;
+	pair c = (pair)0;
+	
+	/* Read a dotted hostname... */
+	do {
+		/* Read a token, which should be an identifier. */
+		token = next_token (&val, cfile);
+		if (!is_identifier (token)) {
+			parse_warn ("expecting an identified in hostname");
+			skip_to_semi (cfile);
+			longjmp (*bc, 1);
+		}
+		/* Store this identifier... */
+		if (!(s = (char *)malloc (strlen (val) + 1)))
+			error ("can't allocate temp space for hostname.");
+		strcpy (s, val);
+		c = cons ((caddr_t)s, c);
+		len += strlen (s) + 1;
+		/* Look for a dot; if it's there, keep going, otherwise
+		   we're done. */
+		token = peek_token (&val, cfile);
+		if (token == DOT)
+			token = next_token (&val, cfile);
+	} while (token == DOT);
+
+	/* Assemble the hostname together into a string. */
+	if (!(s = (char *)malloc (len)))
+		error ("can't allocate space for hostname.");
+	t = s + len;
+	*--t = 0;
+	while (c) {
+		pair cdr = c -> cdr;
+		int l = strlen ((char *)(c -> car));
+		t -= l;
+		memcpy (t, (char *)(c -> car), l);
+		/* Free up temp space. */
+		free (c -> car);
+		free (c);
+		c = cdr;
+		if (t != s)
+			*--t = '.';
+	}
+	return s;
+}
+
+/* host_declaration :== hardware_declaration | filename_declaration
+		      | fixed_addr_declaration | option_declaration */
+
+void parse_host_decl (cfile, bc, decl)
+	FILE *cfile;
+	jmp_buf *bc;
+	struct host_decl *decl;
+{
+	char *val;
+	int token;
+
+	token = next_token (&val, cfile);
+	switch (token) {
+	      case HARDWARE:
+		parse_hardware_decl (cfile, bc, decl);
+		break;
+	      case FILENAME:
+		parse_filename_decl (cfile, bc, decl);
+		break;
+	      case FIXED_ADDR:
+		parse_fixed_addr_decl (cfile, bc, decl);
+		break;
+	      case OPTION:
+		parse_option_decl (cfile, bc, decl);
+		break;
+	      default:
+		parse_warn ("expecting a dhcp option declaration.");
+		skip_to_semi (cfile);
+		longjmp (*bc, 1);
+		break;
+	}
+}
+
+/* hardware_decl :== HARDWARE ETHERNET NUMBER COLON NUMBER COLON NUMBER COLON
+   				       NUMBER COLON NUMBER COLON NUMBER */
+
+void parse_hardware_decl (cfile, bc, decl)
+	FILE *cfile;
+	jmp_buf *bc;
+	struct host_decl *decl;
+{
+	char *val;
+	int token;
+	struct hardware hw;
+
+	hw = parse_hardware_addr (cfile, bc);
+
+	/* Find space for the new interface... */
+	if (decl -> interfaces) {
+		decl -> interfaces =
+			(struct hardware *)realloc (decl -> interfaces,
+						    ++decl -> interface_count *
+						    sizeof (struct hardware));
+	} else {
+		decl -> interfaces =
+			(struct hardware *)malloc (sizeof (struct hardware));
+		decl -> interface_count = 1;
+	}
+	if (!decl -> interfaces)
+		error ("no memory for hardware interface info.");
+
+	/* Copy out the information... */
+	decl -> interfaces [decl -> interface_count - 1].htype = hw.htype;
+	decl -> interfaces [decl -> interface_count - 1].hlen = hw.hlen;
+	memcpy (decl -> interfaces [decl -> interface_count - 1].haddr,
+		&hw.haddr, hw.hlen);
+}
+
+struct hardware parse_hardware_addr (cfile, bc)
+	FILE *cfile;
+	jmp_buf *bc;
+{
+	char *val;
+	int token;
+	int hlen;
+	struct hardware rv;
+
+	token = next_token (&val, cfile);
+	switch (token) {
+	      case ETHERNET:
+		rv.htype = ARPHRD_ETHER;
+		hlen = 6;
+		parse_numeric_aggregate (cfile, bc,
+					 (unsigned char *)&rv.haddr, &hlen,
+					 COLON, 16, 8);
+		rv.hlen = hlen;
+		break;
+	      default:
+		parse_warn ("expecting a network hardware type");
+		skip_to_semi (cfile);
+		longjmp (*bc, 1);
+	}
+	return rv;
+}
+
+/* filename_decl :== FILENAME STRING */
+
+void parse_filename_decl (cfile, bc, decl)
+	FILE *cfile;
+	jmp_buf *bc;
+	struct host_decl *decl;
+{
+	char *val;
+	int token;
+	char *s;
+
+	token = next_token (&val, cfile);
+	if (token != STRING) {
+		parse_warn ("filename must be a string");
+		skip_to_semi (cfile);
+		longjmp (*bc, 1);
+	}
+	s = (char *)malloc (strlen (val));
+	if (!s)
+		error ("no memory for filename.");
+	strcpy (s, val);
+	decl -> filename = s;
+}
+
+/* ip_addr_or_hostname :== ip_address | hostname
+   ip_address :== NUMBER DOT NUMBER DOT NUMBER DOT NUMBER
+   
+   Parse an ip address or a hostname.   If uniform is zero, put in
+   a TREE_LIMIT node to catch hostnames that evaluate to more than
+   one IP address. */
+
+struct tree *parse_ip_addr_or_hostname (cfile, bc, uniform)
+	FILE *cfile;
+	jmp_buf *bc;
+	int uniform;
+{
+	char *val;
+	int token;
+	unsigned char addr [4];
+	int len = sizeof addr;
+	char *name;
+	struct tree *rv;
+
+	token = peek_token (&val, cfile);
+	if (is_identifier (token)) {
+		name = parse_host_name (cfile, bc);
+		rv = tree_host_lookup (name);
+		if (!uniform)
+			rv = tree_limit (rv, 4);
+	} else if (token == NUMBER) {
+		parse_numeric_aggregate (cfile, bc, addr, &len, DOT, 10, 8);
+		rv = tree_const (addr, len);
+	} else {
+		parse_warn ("%s (%d): expecting IP address or hostname",
+			    val, token);
+		skip_to_semi (cfile);
+		longjmp (*bc, 1);
+	}
+	return rv;
+}	
+	
+
+/* fixed_addr_declaration :== FIXED_ADDR ip_addr_or_hostname */
+
+void parse_fixed_addr_decl (cfile, bc, decl)
+	FILE *cfile;
+	jmp_buf *bc;
+	struct host_decl *decl;
+{
+	decl -> fixed_addr =
+		tree_cache (parse_ip_addr_or_hostname (cfile, bc, 0));
+}
+
+/* option_declaration :== OPTION identifier DOT identifier <syntax> |
+			  OPTION identifier <syntax>
+
+   Option syntax is handled specially through format strings, so it
+   would be painful to come up with BNF for it.   However, it always
+   starts as above. */
+
+void parse_option_decl (cfile, bc, decl)
+	FILE *cfile;
+	jmp_buf *bc;
+	struct host_decl *decl;
+{
+	char *val;
+	int token;
+	unsigned char buf [4];
+	char *vendor;
+	char *fmt;
+	struct universe *universe;
+	struct option *option;
+	struct tree *tree = (struct tree *)0;
+
+	token = next_token (&val, cfile);
+	if (!is_identifier (token)) {
+		parse_warn ("expecting identifier after option keyword.");
+		if (token != SEMI)
+			skip_to_semi (cfile);
+		longjmp (*bc, 1);
+	}
+	vendor = dmalloc (strlen (val) + 1, "parse_option_decl");
+	strcpy (vendor, val);
+	token = peek_token (&val, cfile);
+	if (token == DOT) {
+		/* Go ahead and take the DOT token... */
+		token = next_token (&val, cfile);
+
+		/* The next token should be an identifier... */
+		token = next_token (&val, cfile);
+		if (!is_identifier (token)) {
+			parse_warn ("expecting identifier after '.'");
+			if (token != SEMI)
+				skip_to_semi (cfile);
+			longjmp (*bc, 1);
+		}
+
+		/* Look up the option name hash table for the specified
+		   vendor. */
+		universe = (struct universe *)hash_lookup (&universe_hash,
+							   vendor, 0);
+		/* If it's not there, we can't parse the rest of the
+		   statement. */
+		if (!universe) {
+			parse_warn ("no vendor named %s.", vendor);
+			skip_to_semi (cfile);
+			longjmp (*bc, 1);
+		}
+	} else {
+		/* Use the default hash table, which contains all the
+		   standard dhcp option names. */
+		val = vendor;
+		universe = &dhcp_universe;
+	}
+
+	/* Look up the actual option info... */
+	option = (struct option *)hash_lookup (universe -> hash, val, 0);
+
+	/* If we didn't get an option structure, it's an undefined option. */
+	if (!option) {
+		if (val == vendor)
+			parse_warn ("no option named %s", val);
+		else
+			parse_warn ("no option named %s for vendor %s",
+				    val, vendor);
+		skip_to_semi (cfile);
+		longjmp (*bc, 1);
+	}
+
+	/* Free the initial identifier token. */
+	free (vendor);
+
+	/* Parse the option data... */
+	do {
+		/* Set a flag if this is an array of a simple type (i.e.,
+		   not an array of pairs of IP addresses, or something
+		   like that. */
+		int uniform = option -> format [1] == 'A';
+
+		for (fmt = option -> format; *fmt; fmt++) {
+			if (*fmt == 'A')
+				break;
+			switch (*fmt) {
+			      case 't': /* Text string... */
+				token = next_token (&val, cfile);
+				if (token != STRING
+				    && !is_identifier (token)) {
+					parse_warn ("expecting string.");
+					if (token != SEMI)
+						skip_to_semi (cfile);
+					longjmp (*bc, 1);
+				}
+				tree = tree_concat (tree,
+						    tree_const (val,
+								strlen (val)));
+				break;
+
+			      case 'I': /* IP address or hostname. */
+				tree = tree_concat (tree,
+						    parse_ip_addr_or_hostname
+						    (cfile, bc, uniform));
+				break;
+
+			      case 'L': /* Unsigned 32-bit integer... */
+			      case 'l':	/* Signed 32-bit integer... */
+				token = next_token (&val, cfile);
+				if (token != NUMBER) {
+				      need_number:
+					parse_warn ("expecting number.");
+					if (token != SEMI)
+						skip_to_semi (cfile);
+					longjmp (*bc, 1);
+				}
+				convert_num (buf, val, 0, 32);
+				tree = tree_concat (tree, tree_const (buf, 4));
+				break;
+			      case 's':	/* Signed 16-bit integer. */
+			      case 'S':	/* Unsigned 16-bit integer. */
+				token = next_token (&val, cfile);
+				if (token != NUMBER)
+					goto need_number;
+				convert_num (buf, val, 0, 16);
+				tree = tree_concat (tree, tree_const (buf, 2));
+				break;
+			      case 'b':	/* Signed 8-bit integer. */
+			      case 'B':	/* Unsigned 8-bit integer. */
+				token = next_token (&val, cfile);
+				if (token != NUMBER)
+					goto need_number;
+				convert_num (buf, val, 0, 8);
+				tree = tree_concat (tree, tree_const (buf, 1));
+				break;
+			      case 'f': /* Boolean flag. */
+				token = next_token (&val, cfile);
+				if (!is_identifier (token)) {
+					parse_warn ("expecting identifier.");
+				      bad_flag:
+					if (token != SEMI)
+						skip_to_semi (cfile);
+					longjmp (*bc, 1);
+				}
+				if (!strcasecmp (val, "true")
+				    || !strcasecmp (val, "on"))
+					buf [0] = 1;
+				else if (!strcasecmp (val, "false")
+					 || !strcasecmp (val, "off"))
+					buf [0] = 0;
+				else {
+					parse_warn ("expecting boolean.");
+					goto bad_flag;
+				}
+				tree = tree_concat (tree, tree_const (buf, 1));
+				break;
+			      default:
+				warn ("Bad format %c in parse_option_decl.",
+				      *fmt);
+				skip_to_semi (cfile);
+				longjmp (*bc, 1);
+			}
+		}
+		if (*fmt == 'A') {
+			token = peek_token (&val, cfile);
+			if (token == COMMA) {
+				token = next_token (&val, cfile);
+				continue;
+			}
+			break;
+		}
+	} while (*fmt == 'A');
+
+	if (decl -> options [option -> code]) {
+		parse_warn ("duplicate option code %d (%s).",
+			    option -> code, option -> name);
+	}
+	decl -> options [option -> code] = tree_cache (tree);
+}
+
+/* timestamp :== TIMESTAMP date
+
+   Timestamps are actually not used in dhcpd.conf, which is a static file,
+   but rather in the database file and the journal file. */
+
+TIME parse_timestamp (cfile, bc)
+	FILE *cfile;
+	jmp_buf *bc;
+{
+	return parse_date (cfile, bc);
+}
+		
+/* lease_decl :== LEASE ip_address lease_modifiers
+   lease_modifiers :== <nil>
+   		|	lease_modifier
+		|	lease_modifier lease_modifiers
+   lease_modifier :==	STARTS date
+   		|	ENDS date
+		|	UID hex_numbers
+		|	HOST identifier
+		|	CLASS identifier
+		|	TIMESTAMP number */
+
+struct lease *parse_lease_statement (cfile, bc)
+	FILE *cfile;
+	jmp_buf *bc;
+{
+	char *val;
+	int token;
+	unsigned char addr [4];
+	int len = sizeof addr;
+	char *name;
+	unsigned char *uid;
+	int seenmask = 0;
+	int seenbit;
+	char tbuf [32];
+	char ubuf [1024];
+	static struct lease lease;
+
+	/* Get the address for which the lease has been issued. */
+	parse_numeric_aggregate (cfile, bc, addr, &len, DOT, 10, 8);
+	memcpy (&lease.ip_addr, addr, len);
+
+	do {
+		token = next_token (&val, cfile);
+		if (token == SEMI)
+			break;
+		strncpy (val, tbuf, sizeof tbuf);
+		tbuf [(sizeof tbuf) - 1] = 0;
+
+		/* Parse any of the times associated with the lease. */
+		if (token == STARTS || token == ENDS || token == TIMESTAMP) {
+			TIME t;
+			t = parse_date (cfile, bc);
+			switch (token) {
+			      case STARTS:
+				seenbit = 1;
+				lease.starts = t;
+				break;
+			
+			      case ENDS:
+				seenbit = 2;
+				lease.ends = t;
+				break;
+				
+			      case TIMESTAMP:
+				seenbit = 4;
+				lease.timestamp = t;
+				break;
+			}
+		} else {
+			switch (token) {
+				/* Colon-seperated hexadecimal octets... */
+			      case UID:
+				seenbit = 8;
+				lease.uid_len = 0;
+				parse_numeric_aggregate (cfile, bc, ubuf,
+							 &lease.uid_len,
+							 ':', 16, 8);
+				lease.uid = (unsigned char *)
+					malloc (lease.uid_len);
+				if (!lease.uid) {
+					error ("No memory for lease uid");
+				}
+				memcpy (lease.uid, ubuf, lease.uid_len);
+				break;
+
+			      case HOST:
+				seenbit = 16;
+				token = next_token (&val, cfile);
+				if (!is_identifier (token)) {
+					if (token != SEMI)
+						skip_to_semi (cfile);
+					longjmp (*bc, 1);
+				}
+				lease.host =
+					find_host_by_name (val);
+				if (!lease.host)
+					parse_warn ("lease host ``%s'' is %s",
+						    lease.host,
+						    "no longer known.");
+				break;
+					
+			      case CLASS:
+				seenbit = 32;
+				token = next_token (&val, cfile);
+				if (!is_identifier (token)) {
+					if (token != SEMI)
+						skip_to_semi (cfile);
+					longjmp (*bc, 1);
+				}
+				/* for now, we aren't using this. */
+				break;
+
+			      case HARDWARE:
+				seenbit = 64;
+				lease.hardware_addr
+					= parse_hardware_addr (cfile, bc);
+				break;
+
+			      default:
+				if (token != SEMI)
+					skip_to_semi (cfile);
+				longjmp (*bc, 1);
+			}
+		}
+		if (seenmask & seenbit) {
+			parse_warn ("Too many %s declarations in lease %s\n",
+				    tbuf, inet_ntoa (lease.ip_addr));
+		} else
+			seenmask |= seenbit;
+	} while (1);
+	return &lease;
+}
+
+/* address_range :== RANGE ip_address ip_address ip_address */
+
+void parse_address_range (cfile, bc)
+	FILE *cfile;
+	jmp_buf *bc;
+{
+	struct in_addr low, high, mask;
+	unsigned char addr [4];
+	int len = sizeof addr;
+
+	/* Get the bottom address in the range... */
+	parse_numeric_aggregate (cfile, bc, addr, &len, DOT, 10, 8);
+	memcpy (&low, addr, len);
+
+	/* Get the top address in the range... */
+	parse_numeric_aggregate (cfile, bc, addr, &len, DOT, 10, 8);
+	memcpy (&high, addr, len);
+
+	/* Get the netmask of the subnet containing the range... */
+	parse_numeric_aggregate (cfile, bc, addr, &len, DOT, 10, 8);
+	memcpy (&mask, addr, len);
+
+	/* Create the new address range... */
+	new_address_range (low, high, mask);
+}
+
+/* date :== NUMBER NUMBER/NUMBER/NUMBER NUMBER:NUMBER:NUMBER
+
+   Dates are always in GMT; first number is day of week; next is
+   year/month/day; next is hours:minutes:seconds on a 24-hour
+   clock. */
+
+TIME parse_date (cfile, bc)
+	FILE *cfile;
+	jmp_buf *bc;
+{
+	TIME t;
+	struct tm tm;
+	char *val;
+	int token;
+
+	/* Day of week... */
+	token = next_token (&val, cfile);
+	if (token != NUMBER) {
+		parse_warn ("numeric day of week expected.");
+		if (token != SEMI)
+			skip_to_semi (cfile);
+		longjmp (*bc, 1);
+	}
+	tm.tm_wday = atoi (token);
+
+	/* Year... */
+	token = next_token (&val, cfile);
+	if (token != NUMBER) {
+		parse_warn ("numeric year expected.");
+		if (token != SEMI)
+			skip_to_semi (cfile);
+		longjmp (*bc, 1);
+	}
+	tm.tm_year = atoi (token);
+	if (tm.tm_year > 1900)
+		tm.tm_year -= 1900;
+
+	/* Slash seperating year from month... */
+	token = next_token (&val, cfile);
+	if (token != SLASH) {
+		parse_warn ("expected slash seperating year from month.");
+		if (token != SEMI)
+			skip_to_semi (cfile);
+		longjmp (*bc, 1);
+	}
+
+	/* Month... */
+	token = next_token (&val, cfile);
+	if (token != NUMBER) {
+		parse_warn ("numeric month expected.");
+		if (token != SEMI)
+			skip_to_semi (cfile);
+		longjmp (*bc, 1);
+	}
+	tm.tm_mon = atoi (token);
+
+	/* Slash seperating month from day... */
+	token = next_token (&val, cfile);
+	if (token != SLASH) {
+		parse_warn ("expected slash seperating month from day.");
+		if (token != SEMI)
+			skip_to_semi (cfile);
+		longjmp (*bc, 1);
+	}
+
+	/* Month... */
+	token = next_token (&val, cfile);
+	if (token != NUMBER) {
+		parse_warn ("numeric day of month expected.");
+		if (token != SEMI)
+			skip_to_semi (cfile);
+		longjmp (*bc, 1);
+	}
+	tm.tm_mday = atoi (token);
+
+	/* Hour... */
+	token = next_token (&val, cfile);
+	if (token != NUMBER) {
+		parse_warn ("numeric hour expected.");
+		if (token != SEMI)
+			skip_to_semi (cfile);
+		longjmp (*bc, 1);
+	}
+	tm.tm_hour = atoi (token);
+
+	/* Colon seperating hour from minute... */
+	token = next_token (&val, cfile);
+	if (token != COLON) {
+		parse_warn ("expected colon seperating hour from minute.");
+		if (token != SEMI)
+			skip_to_semi (cfile);
+		longjmp (*bc, 1);
+	}
+
+	/* Minute... */
+	token = next_token (&val, cfile);
+	if (token != NUMBER) {
+		parse_warn ("numeric minute expected.");
+		if (token != SEMI)
+			skip_to_semi (cfile);
+		longjmp (*bc, 1);
+	}
+	tm.tm_min = atoi (token);
+
+	/* Colon seperating minute from second... */
+	token = next_token (&val, cfile);
+	if (token != COLON) {
+		parse_warn ("expected colon seperating hour from minute.");
+		if (token != SEMI)
+			skip_to_semi (cfile);
+		longjmp (*bc, 1);
+	}
+
+	/* Minute... */
+	token = next_token (&val, cfile);
+	if (token != NUMBER) {
+		parse_warn ("numeric minute expected.");
+		if (token != SEMI)
+			skip_to_semi (cfile);
+		longjmp (*bc, 1);
+	}
+	tm.tm_sec = atoi (token);
+
+	tm.tm_zone = "GMT";
+	tm.tm_isdst = 0;
+	tm.tm_gmtoff = 0;
+
+	/* XXX */ /* We assume that mktime does not use tm_yday. */
+	tm.tm_yday = 0;
+
+	return mktime (&tm);
+}
+
+/* No BNF for numeric aggregates - that's defined by the caller.  What
+   this function does is to parse a sequence of numbers seperated by
+   the token specified in seperator.  If max is zero, any number of
+   numbers will be parsed; otherwise, exactly max numbers are
+   expected.  Base and size tell us how to internalize the numbers
+   once they've been tokenized. */
+
+unsigned char *parse_numeric_aggregate (cfile, bc, buf,
+					max, seperator, base, size)
+	FILE *cfile;
+	jmp_buf *bc;
+	unsigned char *buf;
+	int *max;
+	int seperator;
+	int base;
+	int size;
+{
+	char *val;
+	int token;
+	unsigned char *bufp = buf, *s, *t;
+	int count = 0;
+	pair c = (pair)0;
+
+	if (!bufp && *max) {
+		bufp = (unsigned char *)malloc (*max * size / 8);
+		if (!bufp)
+			error ("can't allocate space for numeric aggregate");
+	} else
+		s = bufp;
+
+	do {
+		if (count) {
+			token = peek_token (&val, cfile);
+			if (token != seperator) {
+				if (!*max)
+					break;
+				parse_warn ("too few numbers.");
+				skip_to_semi (cfile);
+				longjmp (*bc, 1);
+			}
+			token = next_token (&val, cfile);
+		}
+		token = next_token (&val, cfile);
+		/* Allow NUMBER_OR_ATOM if base is 16. */
+		if (token != NUMBER &&
+		    (base != 16 || token != NUMBER_OR_ATOM)) {
+			parse_warn ("expecting numeric value.");
+			skip_to_semi (cfile);
+			longjmp (*bc, 1);
+		}
+		/* If we can, convert the number now; otherwise, build
+		   a linked list of all the numbers. */
+		if (s) {
+			convert_num (s, val, base, size);
+			s += size / 8;
+		} else {
+			t = (char *)malloc (strlen (val) + 1);
+			if (!t)
+				error ("no temp space for number.");
+			strcpy (t, val);
+			c = cons (t, c);
+		}
+	} while (++count != *max);
+
+	/* If we had to cons up a list, convert it now. */
+	if (c) {
+		bufp = (unsigned char *)malloc (count * size / 8);
+		if (!bufp)
+			error ("can't allocate space for numeric aggregate.");
+		s = bufp;
+		*max = count;
+	}
+	while (c) {
+		pair cdr = c -> cdr;
+		convert_num (s, (char *)(c -> car), base, size);
+		s += size / 8;
+		/* Free up temp space. */
+		free (c -> car);
+		free (c);
+		c = cdr;
+	}
+	return bufp;
+}
+
+void convert_num (buf, str, base, size)
+	unsigned char *buf;
+	char *str;
+	int base;
+	int size;
+{
+	char *ptr = str;
+	int negative = 0;
+	u_int32_t val = 0;
+	int tval;
+	int max;
+
+	if (*ptr == '-') {
+		negative = 1;
+		++ptr;
+	}
+
+	/* If base wasn't specified, figure it out from the data. */
+	if (!base) {
+		if (ptr [0] == '0') {
+			if (ptr [1] == 'x') {
+				base = 16;
+				ptr += 2;
+			} else if (isascii (ptr [1]) && isdigit (ptr [1])) {
+				base = 8;
+				ptr += 1;
+			} else {
+				base = 10;
+			}
+		} else {
+			base = 10;
+		}
+	}
+
+	do {
+		tval = *ptr++;
+		/* XXX assumes ASCII... */
+		if (tval >= 'a')
+			tval = tval - 'a' + 10;
+		else if (tval >= 'A')
+			tval = tval - 'A' + 10;
+		else if (tval >= '0')
+			tval -= '0';
+		else {
+			warn ("Bogus number: %s.", str);
+			break;
+		}
+		if (tval >= base) {
+			warn ("Bogus number: %s: digit %d not in base %d\n",
+			      str, tval, base);
+			break;
+		}
+		val = val * base + tval;
+	} while (*ptr);
+
+	if (negative)
+		max = (1 << (size - 1));
+	else
+		max = (1 << size) - 1;
+	if (val > max) {
+		switch (base) {
+		      case 8:
+			warn ("value %s%lo exceeds max (%d) for precision.",
+			      negative ? "-" : "", val, max);
+			break;
+		      case 16:
+			warn ("value %s%lx exceeds max (%d) for precision.",
+			      negative ? "-" : "", val, max);
+			break;
+		      default:
+			warn ("value %s%ld exceeds max (%d) for precision.",
+			      negative ? "-" : "", val, max);
+			break;
+		}
+	}
+
+	if (negative) {
+		switch (size) {
+		      case 8:
+			*buf = -(unsigned long)val;
+			break;
+		      case 16:
+			putShort (buf, -(unsigned long)val);
+			break;
+		      case 32:
+			putLong (buf, -(unsigned long)val);
+			break;
+		      default:
+			warn ("Unexpected integer size: %d\n");
+			break;
+		}
+	} else {
+		switch (size) {
+		      case 8:
+			*buf = (u_int8_t)val;
+			break;
+		      case 16:
+			putUShort (buf, (u_int16_t)val);
+			break;
+		      case 32:
+			putULong (buf, val);
+			break;
+		      default:
+			warn ("Unexpected integer size: %d\n");
+			break;
+		}
+	}
+}
