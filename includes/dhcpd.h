@@ -265,7 +265,7 @@ struct lease {
 	struct pool *pool;
 	struct class *billing_class;
 	struct hardware hardware_addr;
-	struct option_cache *agent_options;
+	struct option_chain_head *agent_options;
 
 	struct executable_statement *on_expiry;
 	struct executable_statement *on_commit;
@@ -383,6 +383,7 @@ struct lease_state {
 #define SV_UPDATE_OPTIMIZATION		41
 #define SV_PING_CHECKS			42
 #define SV_UPDATE_STATIC_LEASES		43
+#define SV_LOG_FACILITY			44
 
 #if !defined (DEFAULT_DEFAULT_LEASE_TIME)
 # define DEFAULT_DEFAULT_LEASE_TIME 43200
@@ -1332,6 +1333,13 @@ OMAPI_OBJECT_ALLOC_DECL (shared_network, struct shared_network,
 			 dhcp_type_shared_network)
 OMAPI_OBJECT_ALLOC_DECL (group_object, struct group_object, dhcp_type_group)
 
+int option_chain_head_allocate (struct option_chain_head **,
+				const char *, int);
+int option_chain_head_reference (struct option_chain_head **,
+				 struct option_chain_head *,
+				 const char *, int);
+int option_chain_head_dereference (struct option_chain_head **,
+				   const char *, int);
 int group_allocate (struct group **, const char *, int);
 int group_reference (struct group **, struct group *, const char *, int);
 int group_dereference (struct group **, const char *, int);
@@ -1696,6 +1704,7 @@ extern struct universe server_universe;
 extern struct option server_options [256];
 
 extern struct enumeration ddns_styles;
+extern struct enumeration syslog_enum;
 void initialize_server_option_spaces PROTO ((void));
 
 /* inet.c */
