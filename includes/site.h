@@ -60,7 +60,7 @@
 
 /* This is the number of history entries to maintain - by default, 256. */
 
-/* #define RC_HISTORY_MAX xxx */
+/* #define RC_HISTORY_MAX 1024 */
 
 /* Define this if you want dhcpd to dump core when a non-fatal memory
    allocation error is detected (i.e., something that would cause a
@@ -71,17 +71,17 @@
 /* Define this if you want debugging output for DHCP failover protocol
    messages. */
 
-#define DEBUG_FAILOVER_MESSAGES
+/* #define DEBUG_FAILOVER_MESSAGES */
 
 /* Define this if you want debugging output for DHCP failover protocol
    lease assignment timing. */
 
-#define DEBUG_FAILOVER_TIMING
+/* #define DEBUG_FAILOVER_TIMING */
 
 /* Define this if you want DHCP failover protocol support in the DHCP
    server. */
 
-#define FAILOVER_PROTOCOL
+/* #define FAILOVER_PROTOCOL */
 
 /* Define this if you want the dhcpd.pid file to go somewhere other than
    the default (which varies from system to system, but is usually either
