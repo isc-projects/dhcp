@@ -305,6 +305,7 @@ void supersede_lease (comp, lease)
 
 		/* Copy the data files, but not the linkages. */
 		comp -> starts = lease -> starts;
+		comp -> offered_expiry = lease -> offered_expiry;
 		comp -> timestamp = lease -> timestamp;
 		comp -> uid = lease -> uid;
 		comp -> uid_len = lease -> uid_len;
