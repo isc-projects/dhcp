@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.115 2001/05/02 07:08:15 mellon Exp $ Copyright 1995-2001 Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.115.2.1 2001/05/17 20:48:35 mellon Exp $ Copyright 1995-2001 Internet Software Consortium.";
 #endif
 
   static char copyright[] =
@@ -469,11 +469,11 @@ int main (argc, argv, envp)
 	if (readconf () != ISC_R_SUCCESS)
 		log_fatal ("Configuration file errors encountered -- exiting");
 
+	postconf_initialization (quiet);
+
         /* test option should cause an early exit */
  	if (cftest && !lftest) 
  		exit(0);
-
-	postconf_initialization (quiet);
 
 	group_write_hook = group_writer;
 
