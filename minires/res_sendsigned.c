@@ -32,7 +32,7 @@ res_nsendsigned(res_state statp,
 	u_char sig[64];
 	HEADER *hp;
 	time_t tsig_time;
-	int ret;
+	unsigned ret;
 	isc_result_t rcode;
 
 	dst_init();
