@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: ddns.c,v 1.2 2000/12/28 23:23:46 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: ddns.c,v 1.3 2000/12/29 06:48:14 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -707,6 +707,9 @@ int ddns_updates (struct packet *packet,
 	int result = 0;
 	ns_rcode rcode1, rcode2;
 
+	if (ddns_update_style != 2)
+		return 0;
+
 	/* Can only cope with IPv4 addrs at the moment. */
 	if (lease -> ip_addr . len != 4)
 		return 0;
@@ -959,10 +962,12 @@ int ddns_removals(struct lease *lease) {
 	struct data_string ddns_dhcid;
 	ns_rcode rcode;
 
+	if (ddns_update_style != 2)
+		return 1;
+
 	/* No scope implies that DDNS has not been performed for this lease. */
 	if (!lease -> scope)
 		return 1;
-
 
 	/*
 	 * Look up stored names.
