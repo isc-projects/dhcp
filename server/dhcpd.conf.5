@@ -78,17 +78,21 @@ clients from other departments on the same subnet.   For clients which
 will be declared explicitly with \fIhost\fR declarations, these
 declarations can be enclosed in a \fIgroup\fR declaration along with
 the parameters which are common to that department.   For clients
-whose addresses will be dynamically assigned, there is currently no
-way to group parameter assignments other than by network topology.
+whose addresses will be dynamically assigned, class declarations and
+conditional declarations may be used to group parameter assignments
+based on information the client sends.
 .PP
 When a client is to be booted, its boot parameters are determined by
-first consulting that client's \fIhost\fR declaration (if any), then
-consulting the \fIgroup\fR declaration (if any) which enclosed that
-\fIhost\fR declaration, then consulting the \fIsubnet\fR declaration
-for the subnet on which the client is booting, then consulting the
-\fIshared-network\fR declaration (if any) containing that subnet, and
-finally consulting the top-level parameters which may be specified
-outside of any declaration.
+consulting that client's \fIhost\fR declaration (if any), and then
+consulting the any \fIclass\fR declarations matching the client,
+followed by the \fIpool\fR, \fIsubnet\fR and \fIshared-network\fR
+declarations for the IP address assigned to the client.   Each of
+these declarations itself appears within a lexical scope, and all
+declarations at less specific lexical scopes are also consulted for
+client option declarations as well.   Scopes are never considered
+twice, and if parameters are declared in more than one scope, the
+parameter declared in the most specific scope is the one that is
+used.
 .PP
 When dhcpd tries to find a \fIhost\fR declaration for a client, it
 first looks for a \fIhost\fR declaration which has a
