@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: clparse.c,v 1.38 1999/11/13 23:46:46 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: clparse.c,v 1.39 2000/01/08 01:26:40 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -458,7 +458,8 @@ void parse_client_statement (cfile, ip, config)
 	      default:
 		lose = 0;
 		stmt = (struct executable_statement *)0;
-		if (!parse_executable_statement (&stmt, cfile, &lose)) {
+		if (!parse_executable_statement (&stmt,
+						 cfile, &lose, context_any)) {
 			if (!lose) {
 				parse_warn (cfile, "expecting a statement.");
 				skip_to_semi (cfile);
