@@ -1126,7 +1126,8 @@ ssize_t receive_packet PROTO ((struct interface_info *,
 			       struct sockaddr_in *, struct hardware *));
 #endif
 #if defined (USE_SOCKET_SEND) && !defined (USE_SOCKET_FALLBACK)
-int can_unicast_without_arp PROTO ((void));
+int can_unicast_without_arp PROTO ((struct interface_info *));
+int can_receive_unicast_unconfigured PROTO ((struct interface_info *));
 void maybe_setup_fallback PROTO ((void));
 #endif
 
@@ -1150,7 +1151,8 @@ ssize_t receive_packet PROTO ((struct interface_info *,
 			       struct sockaddr_in *, struct hardware *));
 #endif
 #if defined (USE_BPF_SEND)
-int can_unicast_without_arp PROTO ((void));
+int can_unicast_without_arp PROTO ((struct interface_info *));
+int can_receive_unicast_unconfigured PROTO ((struct interface_info *));
 void maybe_setup_fallback PROTO ((void));
 #endif
 
@@ -1174,7 +1176,8 @@ ssize_t receive_packet PROTO ((struct interface_info *,
 			       struct sockaddr_in *, struct hardware *));
 #endif
 #if defined (USE_LPF_SEND)
-int can_unicast_without_arp PROTO ((void));
+int can_unicast_without_arp PROTO ((struct interface_info *));
+int can_receive_unicast_unconfigured PROTO ((struct interface_info *));
 void maybe_setup_fallback PROTO ((void));
 #endif
 
@@ -1199,7 +1202,8 @@ ssize_t receive_packet PROTO ((struct interface_info *,
 			       struct sockaddr_in *, struct hardware *));
 #endif
 #if defined (USE_NIT_SEND)
-int can_unicast_without_arp PROTO ((void));
+int can_unicast_without_arp PROTO ((struct interface_info *));
+int can_receive_unicast_unconfigured PROTO ((struct interface_info *));
 void maybe_setup_fallback PROTO ((void));
 #endif
 
@@ -1233,7 +1237,8 @@ ssize_t send_packet PROTO ((struct interface_info *,
 			    struct packet *, struct dhcp_packet *, size_t,
 			    struct in_addr,
 			    struct sockaddr_in *, struct hardware *));
-int can_unicast_without_arp PROTO ((void));
+int can_unicast_without_arp PROTO ((struct interface_info *));
+int can_receive_unicast_unconfigured PROTO ((struct interface_info *));
 void maybe_setup_fallback PROTO ((void));
 #endif
 
