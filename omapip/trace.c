@@ -1,6 +1,8 @@
 /* trace.c
 
-   Subroutines that support dhcp tracing... */
+   Subroutines that support tracing of OMAPI wire transactions and
+   provide a mechanism for programs using OMAPI to trace their own
+   transactions... */
 
 /*
  * Copyright (c) 2001 Internet Software Consortium.
@@ -53,6 +55,7 @@ static trace_type_t *new_trace_types;
 static FILE *traceinfile;
 static tracefile_header_t tracefile_header;
 static int trace_playback_flag;
+trace_type_t trace_time_marker;
 
 int trace_playback ()
 {
@@ -499,6 +502,8 @@ isc_result_t trace_get_next_packet (trace_type_t **ttp,
 		}
 		return ISC_R_UNEXPECTEDTOKEN;
 	}
+	if (ttp && *ttp == &trace_time_marker)
+		return ISC_R_EXISTS;
 
 	paylen = tpkt -> length;
 	if (paylen % 8)
@@ -556,6 +561,32 @@ isc_result_t trace_get_packet (trace_type_t **ttp,
 
 	dfree (tpkt, MDL);
 	return status;
+}
+
+time_t trace_snoop_time ()
+{
+	tracepacket_t *tpkt;
+	unsigned bufmax = 0;
+	unsigned buflen = 0;
+	char *buf = (char *)0;
+	isc_result_t status;
+	time_t result;
+	trace_type_t *ttp = &trace_time_marker;
+	
+	if (!buf || *buf)
+		return ISC_R_INVALIDARG;
+
+	tpkt = dmalloc ((unsigned)tracefile_header.phlen, MDL);
+	if (!tpkt) {
+		log_error ("can't allocate trace packet header.");
+		return ISC_R_NOMEMORY;
+	}
+
+	trace_get_next_packet (&ttp, tpkt, &buf, &buflen, &bufmax);
+	result = tpkt -> when;
+
+	dfree (tpkt, MDL);
+	return result;
 }
 
 /* Get a packet from the trace input file that contains a file with the
