@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.33 2000/06/02 21:27:19 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.34 2000/06/07 00:15:53 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -56,7 +56,6 @@ struct hash_table *lease_uid_hash;
 struct hash_table *lease_ip_addr_hash;
 struct hash_table *lease_hw_addr_hash;
 struct hash_table *host_name_hash;
-static struct lease *dangling_leases;
 
 omapi_object_type_t *dhcp_type_host;
 
@@ -411,6 +410,7 @@ void new_address_range (low, high, subnet, pool)
 	char lowbuf [16], highbuf [16], netbuf [16];
 	struct shared_network *share = subnet -> shared_network;
 	isc_result_t status;
+	struct lease *lt = (struct lease *)0;
 
 	/* All subnets should have attached shared network structures. */
 	if (!share) {
@@ -509,64 +509,32 @@ void new_address_range (low, high, subnet, pool)
 		lp -> next_binding_state = FTS_FREE;
 		lp -> flags = 0;
 
-		/* Link this entry into the list. */
-		if (pool -> free) {
-			lease_reference (&lp -> next, pool -> free, MDL);
-			lease_dereference (&pool -> free, MDL);
-		}
-		lease_reference (&pool -> free, lp, MDL);
-		lease_hash_add (lease_ip_addr_hash, lp -> ip_addr.iabuf,
-				lp -> ip_addr.len, lp, MDL);
-	}
-
-	/* Find out if any dangling leases are in range... */
-	plp = (struct lease *)0;
-	for (lp = dangling_leases; lp; lp = lp -> next) {
-		struct iaddr lnet;
-		int lhost;
-
-		lnet = subnet_number (lp -> ip_addr, subnet -> netmask);
-		lhost = host_addr (lp -> ip_addr, subnet -> netmask);
-
-		/* If it's in range, fill in the real lease structure with
-		   the dangling lease's values, and remove the lease from
-		   the list of dangling leases. */
-		if (addr_eq (lnet, subnet -> net) &&
-		    lhost >= i && lhost <= max) {
-			struct lease *lt = (struct lease *)0;
-			if (plp) {
-				if (plp -> next)
-					lease_dereference (&plp -> next, MDL);
-				lease_reference (&plp -> next,
-						 lp -> next, MDL);
-			} else {
-				lease_dereference (&dangling_leases, MDL);
-				lease_reference (&dangling_leases,
-						 lp -> next, MDL);
-			}
-			lease_dereference (&lp -> next, MDL);
-			if (find_lease_by_ip_addr (&lt, lp -> ip_addr, MDL)) {
-				lt -> hostname = lp -> hostname;
-				lp -> hostname = (char *)0;
-				lt -> client_hostname = lp -> client_hostname;
-				lp -> client_hostname = (char *)0;
-				supersede_lease (lt, lp, 0, 0, 0);
-				lease_dereference (&lt, MDL);
-			}
-			lease_dereference (&lp, MDL);
+		/* Remember the lease in the IP address hash. */
+		if (find_lease_by_ip_addr (&lt, lp -> ip_addr, MDL)) {
+			if (lt -> pool) {
+				log_error ("duplicate entries for lease %s",
+					   piaddr (lp -> ip_addr));
+			} else
+				pool_reference (&lt -> pool, pool, MDL);
+			lease_dereference (&lt, MDL);
 		} else
-			plp = lp;
+			lease_hash_add (lease_ip_addr_hash,
+					lp -> ip_addr.iabuf,
+					lp -> ip_addr.len, lp, MDL);
 	}
 }
 
-/* There's really no way to free a lease, because of the aggregate way
-   we allocate them. */
+
+#if defined (COMPACT_LEASES)
+/* If we are allocating leases in aggregations, there's really no way
+   to free one, although perhaps we can maintain a free list. */
 
 isc_result_t dhcp_lease_free (omapi_object_t *lease,
 			      const char *file, int line)
 {
 	return ISC_R_SUCCESS;
 }
+#endif
 
 int find_subnet (struct subnet **sp,
 		 struct iaddr addr, const char *file, int line)
@@ -723,17 +691,25 @@ void enter_lease (lease)
 	struct lease *comp = (struct lease *)0;
 	isc_result_t status;
 
-	/* If we don't have a place for this lease yet, save it for
-	   later. */
-	if (!find_lease_by_ip_addr (&comp, lease -> ip_addr, MDL)) {
-		if (lease -> next)
-			lease_dereference (&lease -> next, MDL);
-		if (dangling_leases)
-			lease_reference (&lease -> next, dangling_leases, MDL);
-		lease_reference (&dangling_leases, lease, MDL);
-	} else {
-		supersede_lease (comp, lease, 0, 0, 0);
+	if (find_lease_by_ip_addr (&comp, lease -> ip_addr, MDL)) {
+		if (!comp -> pool) {
+			log_error ("undeclared lease found in database: %s",
+				   piaddr (lease -> ip_addr));
+		} else
+			pool_reference (&lease -> pool, comp -> pool, MDL);
+
+		if (comp -> subnet)
+			subnet_reference (&lease -> subnet,
+					  comp -> subnet, MDL);
+
+		lease_hash_delete (lease_ip_addr_hash,
+				   lease -> ip_addr.iabuf,
+				   lease -> ip_addr.len, MDL);
+		lease_dereference (&comp, MDL);
 	}
+	lease_hash_add (lease_ip_addr_hash,
+			lease -> ip_addr.iabuf,
+			lease -> ip_addr.len, lease, MDL);
 }
 
 /* Replace the data in an existing lease with the data in a new lease;
@@ -972,66 +948,10 @@ int supersede_lease (comp, lease, commit, propogate, pimmediate)
 	if (commit)
 		process_state_transition (comp);
 
-	/* Figure out which queue it's going to. */
-	switch (comp -> binding_state) {
-	      case FTS_FREE:
-		lq = &comp -> pool -> free;
-		comp -> pool -> free_leases++;
-		comp -> sort_time = comp -> ends;
-		break;
-
-	      case FTS_ACTIVE:
-	      case FTS_RESERVED:
-	      case FTS_BOOTP:
-		lq = &comp -> pool -> active;
-		comp -> sort_time = comp -> ends;
-		break;
-
-	      case FTS_EXPIRED:
-	      case FTS_RELEASED:
-	      case FTS_RESET:
-		lq = &comp -> pool -> expired;
-		comp -> sort_time = comp -> ends;
-
-		break;
-
-	      case FTS_ABANDONED:
-		lq = &comp -> pool -> abandoned;
-		comp -> sort_time = comp -> ends;
-		break;
-
-	      case FTS_BACKUP:
-		lq = &comp -> pool -> backup;
-		comp -> pool -> backup_leases++;
-		comp -> sort_time = comp -> ends;
-		break;
-
-	      default:
-		log_error ("Lease with bogus binding state: %d",
-			   comp -> binding_state);
+	/* Put the lease back on the appropriate queue.    If the lease
+	   is corrupt (as detected by lease_enqueue), don't go any farther. */
+	if (!lease_enqueue (comp))
 		return 0;
-	}
-
-	/* Insertion sort the lease onto the appropriate queue. */
-	prev = (struct lease *)0;
-	for (lp = *lq; lp; lp = lp -> next) {
-		if (lp -> sort_time > comp -> sort_time)
-			break;
-		prev = lp;
-	}
-	if (prev) {
-		if (prev -> next) {
-			lease_reference (&comp -> next, prev -> next, MDL);
-			lease_dereference (&prev -> next, MDL);
-		}
-		lease_reference (&prev -> next, comp, MDL);
-	} else {
-		if (*lq) {
-			lease_reference (&comp -> next, *lq, MDL);
-			lease_dereference (lq, MDL);
-		}
-		lease_reference (lq, comp, MDL);
-	}
 
 	/* If this is the next lease that will timeout on the pool,
 	   zap the old timeout and set the timeout on this pool to the
@@ -1673,6 +1593,111 @@ void write_leases ()
 		log_fatal ("Can't commit leases to new database: %m");
 }
 
+int lease_enqueue (struct lease *comp)
+{
+	struct lease **lq, *prev, *lp;
+
+	/* No queue to put it on? */
+	if (!comp -> pool)
+		return 0;
+
+	/* Figure out which queue it's going to. */
+	switch (comp -> binding_state) {
+	      case FTS_FREE:
+		lq = &comp -> pool -> free;
+		comp -> pool -> free_leases++;
+		comp -> sort_time = comp -> ends;
+		break;
+
+	      case FTS_ACTIVE:
+	      case FTS_RESERVED:
+	      case FTS_BOOTP:
+		lq = &comp -> pool -> active;
+		comp -> sort_time = comp -> ends;
+		break;
+
+	      case FTS_EXPIRED:
+	      case FTS_RELEASED:
+	      case FTS_RESET:
+		lq = &comp -> pool -> expired;
+		comp -> sort_time = comp -> ends;
+
+		break;
+
+	      case FTS_ABANDONED:
+		lq = &comp -> pool -> abandoned;
+		comp -> sort_time = comp -> ends;
+		break;
+
+	      case FTS_BACKUP:
+		lq = &comp -> pool -> backup;
+		comp -> pool -> backup_leases++;
+		comp -> sort_time = comp -> ends;
+		break;
+
+	      default:
+		log_error ("Lease with bogus binding state: %d",
+			   comp -> binding_state);
+		return 0;
+	}
+
+	/* Insertion sort the lease onto the appropriate queue. */
+	prev = (struct lease *)0;
+	for (lp = *lq; lp; lp = lp -> next) {
+		if (lp -> sort_time > comp -> sort_time)
+			break;
+		prev = lp;
+	}
+	if (prev) {
+		if (prev -> next) {
+			lease_reference (&comp -> next, prev -> next, MDL);
+			lease_dereference (&prev -> next, MDL);
+		}
+		lease_reference (&prev -> next, comp, MDL);
+	} else {
+		if (*lq) {
+			lease_reference (&comp -> next, *lq, MDL);
+			lease_dereference (lq, MDL);
+		}
+		lease_reference (lq, comp, MDL);
+	}
+	return 1;
+}
+
+/* For a given lease, sort it onto the right list in its pool and put it
+   in each appropriate hash, understanding that it's already by definition
+   in lease_ip_addr_hash. */
+
+void lease_instantiate (const unsigned char *val, unsigned len,
+			struct lease *lease)
+{
+
+	/* XXX If the lease doesn't have a pool at this point, it's an
+	   XXX orphan, which we *should* keep around until it expires,
+	   XXX but which right now we just forget. */
+	if (!lease -> pool) {
+		lease_hash_delete (lease_ip_addr_hash,
+				   lease -> ip_addr.iabuf,
+				   lease -> ip_addr.len, MDL);
+		return;
+	}
+		
+	/* Put the lease on the right queue. */
+	lease_enqueue (lease);
+
+	/* Record the lease in the uid hash if possible. */
+	if (lease -> uid) {
+		uid_hash_add (lease);
+	}
+	
+	/* Record it in the hardware address hash if possible. */
+	if (lease -> hardware_addr.hlen) {
+		hw_hash_add (lease);
+	}
+	
+	return;
+}
+
 /* Run expiry events on every pool.   This is called on startup so that
    any expiry events that occurred after the server stopped and before it
    was restarted can be run.   At the same time, if failover support is
@@ -1686,6 +1711,10 @@ void expire_all_pools ()
 	int i;
 	struct lease *l;
 	struct lease **lptr [5];
+
+	/* First, go over the hash list and actually put all the leases
+	   on the appropriate lists. */
+	lease_hash_foreach (lease_ip_addr_hash, lease_instantiate);
 
 	/* Loop through each pool in each shared network and call the
 	   expiry routine on the pool. */
