@@ -41,7 +41,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.129.2.8 2002/02/09 03:14:47 mellon Exp $ Copyright (c) 1995-2001 Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.129.2.9 2002/02/20 07:16:31 mellon Exp $ Copyright (c) 1995-2001 Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -882,9 +882,11 @@ void bind_lease (client)
 	client -> state = S_BOUND;
 	reinitialize_interfaces ();
 	go_daemon ();
-	if (client -> config -> do_forward_update)
-		client_dns_update (client, 1,
-				   client -> active -> renewal - cur_time);
+	if (client -> config -> do_forward_update) {
+		client -> dns_update_timeout = 1;
+		add_timeout (cur_time + 1, client_dns_update_timeout,
+			     client, 0, 0);
+	}
 }  
 
 /* state_bound is called when we've successfully bound to a particular
@@ -2984,9 +2986,30 @@ isc_result_t dhcp_set_control_state (control_object_state_t oldstate,
 	return ISC_R_SUCCESS;
 }
 
+/* Called after a timeout if the DNS update failed on the previous try.
+   Retries the update, and if it times out, schedules a retry after
+   ten times as long of a wait. */
+
+void client_dns_update_timeout (void *cp)
+{
+	struct client_state *client = cp;
+	isc_result_t status;
+
+	if (client -> active) {
+		status = client_dns_update (client, 1,
+					    (client -> active -> renewal -
+					     cur_time));
+		if (status == ISC_R_TIMEDOUT) {
+			client -> dns_update_timeout *= 10;
+			add_timeout (cur_time + client -> dns_update_timeout,
+				     client_dns_update_timeout, client, 0, 0);
+		}
+	}
+}
+			
 /* See if we should do a DNS update, and if so, do it. */
 
-void client_dns_update (struct client_state *client, int addp, int ttl)
+isc_result_t client_dns_update (struct client_state *client, int addp, int ttl)
 {
 	struct data_string ddns_fqdn, ddns_fwd_name,
 	       ddns_dhcid, client_identifier;
@@ -2998,11 +3021,11 @@ void client_dns_update (struct client_state *client, int addp, int ttl)
 	/* If we didn't send an FQDN option, we certainly aren't going to
 	   be doing an update. */
 	if (!client -> sent_options)
-		return;
+		return ISC_R_SUCCESS;
 
 	/* If we don't have a lease, we can't do an update. */
 	if (!client -> active)
-		return;
+		return ISC_R_SUCCESS;
 
 	/* If we set the no client update flag, don't do the update. */
 	if ((oc = lookup_option (&fqdn_universe, client -> sent_options,
@@ -3012,7 +3035,7 @@ void client_dns_update (struct client_state *client, int addp, int ttl)
 					   client -> sent_options,
 					   (struct option_state *)0,
 					   &global_scope, oc, MDL))
-		return;
+		return ISC_R_SUCCESS;
 	
 	/* If we set the "server, please update" flag, or didn't set it
 	   to false, don't do the update. */
@@ -3023,7 +3046,7 @@ void client_dns_update (struct client_state *client, int addp, int ttl)
 					   client -> sent_options,
 					   (struct option_state *)0,
 					   &global_scope, oc, MDL))
-		return;
+		return ISC_R_SUCCESS;
 	
 	/* If no FQDN option was supplied, don't do the update. */
 	memset (&ddns_fwd_name, 0, sizeof ddns_fwd_name);
@@ -3034,7 +3057,7 @@ void client_dns_update (struct client_state *client, int addp, int ttl)
 				    client -> sent_options,
 				    (struct option_state *)0,
 				    &global_scope, oc, MDL))
-		return;
+		return ISC_R_SUCCESS;
 
 	/* Make a dhcid string out of either the client identifier,
 	   if we are sending one, or the interface's MAC address,
@@ -3060,7 +3083,7 @@ void client_dns_update (struct client_state *client, int addp, int ttl)
 				    client -> interface -> hw_address.hlen);
 	if (!result) {
 		data_string_forget (&ddns_fwd_name, MDL);
-		return;
+		return ISC_R_SUCCESS;
 	}
 
 	/* Start the resolver, if necessary. */
@@ -3088,4 +3111,5 @@ void client_dns_update (struct client_state *client, int addp, int ttl)
 	
 	data_string_forget (&ddns_fwd_name, MDL);
 	data_string_forget (&ddns_dhcid, MDL);
+	return rcode;
 }
