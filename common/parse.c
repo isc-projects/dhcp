@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.62 2000/02/02 17:10:38 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.63 2000/02/05 18:04:47 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1810,7 +1810,9 @@ int parse_boolean_expression (expr, cfile, lose)
 			       (struct expression **)0, expr_none))
 		return 0;
 
-	if (!is_boolean_expression (*expr)) {
+	if (!is_boolean_expression (*expr) &&
+	    (*expr) -> op != expr_variable_reference &&
+	    (*expr) -> op != expr_funcall) {
 		parse_warn (cfile, "Expecting a boolean expression.");
 		*lose = 1;
 		expression_dereference (expr, MDL);
@@ -1845,7 +1847,9 @@ int parse_data_expression (expr, cfile, lose)
 			       (struct expression **)0, expr_none))
 		return 0;
 
-	if (!is_data_expression (*expr)) {
+	if (!is_data_expression (*expr) &&
+	    (*expr) -> op != expr_variable_reference &&
+	    (*expr) -> op != expr_funcall) {
 		parse_warn (cfile, "Expecting a data expression.");
 		*lose = 1;
 		return 0;
@@ -1869,7 +1873,9 @@ int parse_numeric_expression (expr, cfile, lose)
 			       (struct expression **)0, expr_none))
 		return 0;
 
-	if (!is_numeric_expression (*expr)) {
+	if (!is_numeric_expression (*expr) &&
+	    (*expr) -> op != expr_variable_reference &&
+	    (*expr) -> op != expr_funcall) {
 		parse_warn (cfile, "Expecting a numeric expression.");
 		*lose = 1;
 		return 0;
@@ -1901,7 +1907,9 @@ int parse_dns_expression (expr, cfile, lose)
 			       (struct expression **)0, expr_none))
 		return 0;
 
-	if (!is_dns_expression (*expr)) {
+	if (!is_dns_expression (*expr) &&
+	    (*expr) -> op != expr_variable_reference &&
+	    (*expr) -> op != expr_funcall) {
 		parse_warn (cfile, "Expecting a dns update subexpression.");
 		*lose = 1;
 		return 0;
@@ -1921,12 +1929,14 @@ int parse_non_binary (expr, cfile, lose, context)
 	const char *val;
 	struct collection *col;
 	struct option *option;
-	struct expression *nexp;
+	struct expression *nexp, **ep;
 	int known;
 	enum expr_op opcode;
 	const char *s;
+	char *cptr;
 	struct executable_statement *stmt;
 	int i;
+	unsigned long u;
 
 	token = peek_token (&val, cfile);
 
@@ -2274,41 +2284,48 @@ int parse_non_binary (expr, cfile, lose, context)
 		}
 			
 		if (!strcasecmp (val, "a"))
-			i = T_A;
+			u = T_A;
 		else if (!strcasecmp (val, "ptr"))
-			i = T_PTR;
+			u = T_PTR;
 		else if (!strcasecmp (val, "mx"))
-			i = T_MX;
+			u = T_MX;
 		else if (!strcasecmp (val, "cname"))
-			i = T_CNAME;
+			u = T_CNAME;
 		else if (!strcasecmp (val, "TXT"))
-			i = T_TXT;
+			u = T_TXT;
 		else {
 			parse_warn (cfile, "unexpected rrtype: %s", val);
 			goto badnsupdate;
 		}
 
+		s = (opcode == expr_ns_add
+		     ? "old-dns-update"
+		     : "old-dns-delete");
+		cptr = dmalloc (strlen (s) + 1, MDL);
+		if (!cptr)
+			log_fatal ("can't allocate name for %s", s);
+		strcpy (cptr, s);
 		if (!expression_allocate (expr, MDL))
 			log_fatal ("can't allocate expression");
-#if 0
 		(*expr) -> op = expr_funcall;
-		(*expr) -> data.funcall.context = context_boolean;
-		(*expr) -> data.funcall.name = 
+		(*expr) -> data.funcall.name = cptr;
 
-		if (!make_let (&(*expr) -> data.funcall.statements, "rrtype"))
-			log_fatal ("can't allocate rrtype let.");
-		stmt = (*expr) -> data.funcall.statements;
-		if (!make_const_int (stmt -> data.let.value, i))
+		/* Fake up a function call. */
+		ep = &(*expr) -> data.funcall.arglist;
+		if (!expression_allocate (ep, MDL))
+			log_fatal ("can't allocate expression");
+		(*ep) -> op = expr_arg;
+		if (!make_const_int (&(*ep) -> data.arg.val, u))
 			log_fatal ("can't allocate rrtype value.");
 
 		token = next_token (&val, cfile);
 		if (token != COMMA)
 			goto nocomma;
-
-		if (!make_let (&stmt -> data.let.statements, "rrname"))
-			log_fatal ("can't allocate rrname let.");
-		stmt = stmt -> data.let.statements;
-		if (!(parse_data_expression (&stmt -> data.let.expr,
+		ep = &((*ep) -> data.arg.next);
+		if (!expression_allocate (ep, MDL))
+			log_fatal ("can't allocate expression");
+		(*ep) -> op = expr_arg;
+		if (!(parse_data_expression (&(*ep) -> data.arg.val,
 					     cfile, lose)))
 			goto nodata;
 
@@ -2316,10 +2333,11 @@ int parse_non_binary (expr, cfile, lose, context)
 		if (token != COMMA)
 			goto nocomma;
 
-		if (!make_let (&stmt -> data.let.statements, "rrdata"))
-			log_fatal ("can't allocate rrname let.");
-		stmt = stmt -> data.let.statements;
-		if (!(parse_data_expression (&stmt -> data.let.expr,
+		ep = &((*ep) -> data.arg.next);
+		if (!expression_allocate (ep, MDL))
+			log_fatal ("can't allocate expression");
+		(*ep) -> op = expr_arg;
+		if (!(parse_data_expression (&(*ep) -> data.arg.val,
 					     cfile, lose)))
 			goto nodata;
 
@@ -2328,18 +2346,18 @@ int parse_non_binary (expr, cfile, lose, context)
 			if (token != COMMA)
 				goto nocomma;
 			
-			if (!make_let (&stmt -> data.let.statements, "ttl"))
-				log_fatal ("can't allocate rrname let.");
-			stmt = stmt -> data.let.statements;
-
-			if (!(parse_numeric_expression
-			      (&stmt -> data.let.expr, cfile, lose))) {
+			ep = &((*ep) -> data.arg.next);
+			if (!expression_allocate (ep, MDL))
+				log_fatal ("can't allocate expression");
+			(*ep) -> op = expr_arg;
+			if (!(parse_numeric_expression (&(*ep) -> data.arg.val,
+							cfile, lose))) {
 				parse_warn (cfile,
 					    "expecting numeric expression.");
 				goto badnsupdate;
 			}
 		}
-#endif
+
 		token = next_token (&val, cfile);
 		if (token != RPAREN)
 			goto norparen;
@@ -2886,13 +2904,58 @@ int parse_non_binary (expr, cfile, lose, context)
 			return 0;
 
 		token = next_token (&val, cfile);
+
+		/* Save the name of the variable being referenced. */
+		cptr = dmalloc (strlen (val) + 1, MDL);
+		if (!cptr)
+			log_fatal ("can't allocate variable name");
+		strcpy (cptr, val);
+
+		/* Simple variable reference, as far as we can tell. */
+		token = peek_token (&val, cfile);
+		if (token != LPAREN) {
+			if (!expression_allocate (expr, MDL))
+				log_fatal ("can't allocate expression");
+			(*expr) -> op = expr_variable_reference;
+			(*expr) -> data.variable = cptr;
+			break;
+		}
+
+		token = next_token (&val, cfile);
 		if (!expression_allocate (expr, MDL))
 			log_fatal ("can't allocate expression");
-		(*expr) -> op = expr_variable_reference;
-		(*expr) -> data.variable = dmalloc (strlen (val) + 1, MDL);
-		if (!(*expr)->data.variable)
-			log_fatal ("can't allocate variable name");
-		strcpy ((*expr) -> data.variable, val);
+		(*expr) -> op = expr_funcall;
+		(*expr) -> data.funcall.name = cptr;
+
+		/* Now parse the argument list. */
+		ep = &(*expr) -> data.funcall.arglist;
+		do {
+			if (!expression_allocate (ep, MDL))
+				log_fatal ("can't allocate expression");
+			(*ep) -> op = expr_arg;
+			if (!parse_expression (&(*ep) -> data.arg.val,
+					       cfile, lose, context_any,
+					       (struct expression **)0,
+					       expr_none)) {
+				if (!*lose) {
+					parse_warn (cfile,
+						    "expecting expression.");
+					*lose = 1;
+				}
+				skip_to_semi (cfile);
+				expression_dereference (expr, MDL);
+				return 0;
+			}
+			ep = &((*ep) -> data.arg.next);
+			token = next_token (&val, cfile);
+		} while (token == COMMA);
+		if (token != RPAREN) {
+			parse_warn (cfile, "Right parenthesis expected.");
+			skip_to_semi (cfile);
+			*lose = 1;
+			expression_dereference (expr, MDL);
+			return 0;
+		}
 		break;
 	}
 	return 1;

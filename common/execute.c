@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: execute.c,v 1.28 2000/02/02 20:01:41 mellon Exp $ Copyright (c) 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: execute.c,v 1.29 2000/02/05 18:07:17 mellon Exp $ Copyright (c) 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -132,51 +132,10 @@ int execute_statements (packet, lease, in_options, out_options, scope,
 			break;
 
 		      case eval_statement:
-			if (is_boolean_expression (r -> data.eval)) {
-				status = (evaluate_boolean_expression
-					  (&result, packet, lease, in_options,
-					   out_options, scope,
-					   r -> data.eval));
-			} else if (is_numeric_expression (r -> data.eval)) {
-				status = (evaluate_numeric_expression
-					  (&num, packet, lease, in_options,
-					   out_options, scope,
-					   r -> data.eval));
-			} else if (is_data_expression  (r -> data.eval)) {
-				memset (&ds, 0, sizeof ds);
-				status = (evaluate_data_expression
-					  (&ds, packet, lease, in_options,
-					   out_options, scope,
-					   r -> data.eval));
-				if (status && ds.data)
-					data_string_forget (&ds, MDL);
-			} else if (is_dns_expression (r -> data.eval)) {
-#if defined (NSUPDATE)
-				ns_updrec *nut;
-				nut = 0;
-				status = (evaluate_dns_expression
-					  (&nut, packet, lease, in_options,
-					   out_options, scope,
-					   r -> data.eval));
-				if (status) {
-					if (nut -> r_data) {
-						dfree (nut -> r_data, MDL);
-						nut -> r_data =
-							(unsigned char *)0;
-					}
-					if (nut -> r_dname) {
-						dfree (nut -> r_dname, MDL);
-						nut -> r_dname = (char *)0;
-					}
-					minires_freeupdrec (nut);
-				}
-#endif
-			} else {
-				log_error ("%s: invalid expression type: %d",
-					   "execute_statements",
-					   r -> data.eval -> op);
-			}
-
+			status = evaluate_expression
+				((struct binding_value **)0,
+				 packet, lease, in_options,
+				 out_options, scope, r -> data.eval);
 #if defined (DEBUG_EXPRESSIONS)
 			log_debug ("exec: evaluate: %s",
 				   (status "succeeded" : "failed"));
@@ -235,11 +194,6 @@ int execute_statements (packet, lease, in_options, out_options, scope,
 			break;
 
 		      case set_statement:
-			memset (&ds, 0, sizeof ds);
-			status = (evaluate_data_expression
-				  (&ds, packet, lease, in_options, out_options,
-				   scope, r -> data.set.expr));
-
 			binding = find_binding (scope, r -> data.set.name);
 			if (!binding && status) {
 				binding = dmalloc (sizeof *binding, MDL);
@@ -268,47 +222,39 @@ int execute_statements (packet, lease, in_options, out_options, scope,
 				}
 			}
 			if (binding) {
-				if (binding -> value.data)
-				    data_string_forget (&binding -> value,
-							MDL);
-				if (status)
-				    data_string_copy (&binding -> value, &ds,
-						      MDL);
+				if (binding -> value)
+					binding_value_dereference
+						(&binding -> value, MDL);
+				status = (evaluate_expression
+					  (&binding -> value, packet, lease,
+					   in_options, out_options,
+					   scope, r -> data.set.expr));
 			}
-			if (status)
-			    data_string_forget (&ds, MDL);
 #if defined (DEBUG_EXPRESSIONS)
-			log_debug ("exec: set %s = %s", r -> data.set.name,
-				   (status && binding
-				    ? print_hex_1 (binding -> value.len,
-						   binding -> value.data, 50)
-				    : "NULL"));
+			log_debug ("exec: set %s%s", r -> data.set.name,
+				   (binding && status ? "" : " (failed)"));
 #endif
 			break;
 
 		      case unset_statement:
 			binding = find_binding (scope, r -> data.unset);
 			if (binding) {
-				if (binding -> value.data)
-					data_string_forget (&binding -> value,
-							    MDL);
+				if (binding -> value)
+					binding_value_dereference
+						(&binding -> value, MDL);
 				status = 1;
 			} else
 				status = 0;
 #if defined (DEBUG_EXPRESSIONS)
 			log_debug ("exec: unset %s: %s", r -> data.unset,
-				   (status ? "found" : "NULL"));
+				   (status ? "found" : "not found"));
 #endif
 			break;
 
 		      case let_statement:
-			memset (&ds, 0, sizeof ds);
-			status = (evaluate_data_expression
-				  (&ds, packet, lease, in_options, out_options,
-				   scope, r -> data.let.expr));
-
 			ns = (struct binding_scope *)0;
 			binding_scope_allocate (&ns, MDL);
+			e = r;
 
 		      next_let:
 			if (ns) {
@@ -319,11 +265,11 @@ int execute_statements (packet, lease, in_options, out_options, scope,
 				} else {
 				    binding -> name =
 					    dmalloc (strlen
-						     (r -> data.let.name + 1),
+						     (e -> data.let.name + 1),
 						     MDL);
 				    if (binding -> name)
 					strcpy (binding -> name,
-						r -> data.let.name);
+						e -> data.let.name);
 				    else {
 					dfree (binding, MDL);
 					binding = (struct binding *)0;
@@ -331,31 +277,29 @@ int execute_statements (packet, lease, in_options, out_options, scope,
 				    }
 				}
 			}
-			if (ns && binding && status) {
-				data_string_copy (&binding -> value, &ds, MDL);
+			if (ns && binding) {
+				status = (evaluate_expression
+					  (&binding -> value, packet, lease,
+					   in_options, out_options,
+					   scope, e -> data.set.expr));
 				binding -> next = ns -> bindings;
 				ns -> bindings = binding;
 			}
 
-			if (status)
-			    data_string_forget (&ds, MDL);
 #if defined (DEBUG_EXPRESSIONS)
-			log_debug ("exec: let %s = %s", r -> data.let.name,
-				   (status && binding
-				    ? print_hex_1 (binding -> value.len,
-						   binding -> value.data, 50)
-				    : "NULL"));
+			log_debug ("exec: let %s%s", e -> data.let.name,
+				   (binding && status ? "" : "failed"));
 #endif
-			if (!r -> data.let.statements) {
-			} else if (r -> data.let.statements -> op ==
+			if (!e -> data.let.statements) {
+			} else if (e -> data.let.statements -> op ==
 				   let_statement) {
-				r = r -> data.let.statements;
+				e = e -> data.let.statements;
 				goto next_let;
 			} else if (ns) {
 				ns -> outer = scope;
 				execute_statements
 				      (packet, lease, in_options, out_options,
-				       ns, r -> data.let.statements);
+				       ns, e -> data.let.statements);
 			}
 			if (ns)
 				binding_scope_dereference (&ns, MDL);
