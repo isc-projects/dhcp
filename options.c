@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"@(#) Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.17 1996/08/27 09:52:46 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -477,11 +477,11 @@ char *pretty_print_option (code, data, len)
 				dp += 4;
 				break;
 			      case 'l':
-				sprintf (op, "%d", getLong (dp));
+				sprintf (op, "%ld", getLong (dp)); /* XXX */
 				dp += 4;
 				break;
 			      case 'L':
-				sprintf (op, "%d", getULong (dp));
+				sprintf (op, "%ld", getULong (dp)); /* XXX */
 				dp += 4;
 				break;
 			      case 's':
