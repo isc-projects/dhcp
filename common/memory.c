@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: memory.c,v 1.23 1996/12/31 02:02:54 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: memory.c,v 1.24 1997/03/05 06:34:36 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -461,14 +461,16 @@ int supersede_lease (comp, lease, commit)
 		return 0;
 	} else {
 		/* If there's a Unique ID, dissociate it from the hash
-		   table if necessary, and always free it. */
+		   table and free it if necessary. */
 		if (comp -> uid) {
-			if (comp -> uid != lease -> uid) {
-				uid_hash_delete (comp);
-				enter_uid = 1;
+			uid_hash_delete (comp);
+			enter_uid = 1;
+			if (comp -> uid != &comp -> uid_buf [0]) {
 				free (comp -> uid);
-				comp -> uid = (unsigned char *)0;
+				comp -> uid_max = 0;
+				comp -> uid_len = 0;
 			}
+			comp -> uid = (unsigned char *)0;
 		} else
 			enter_uid = 1;
 
@@ -489,11 +491,27 @@ int supersede_lease (comp, lease, commit)
 		comp -> starts = lease -> starts;
 		comp -> offered_expiry = lease -> offered_expiry;
 		comp -> timestamp = lease -> timestamp;
-		comp -> uid = lease -> uid;
+		if (lease -> uid) {
+			if (lease -> uid_len < sizeof (lease -> uid_buf)) {
+				memcpy (comp -> uid_buf,
+					lease -> uid, lease -> uid_len);
+				comp -> uid = &comp -> uid_buf [0];
+				comp -> uid_max = sizeof comp -> uid_buf;
+			} else if (lease -> uid != &lease -> uid_buf [0]) {
+				comp -> uid = lease -> uid;
+				comp -> uid_max = lease -> uid_max;
+				lease -> uid = (unsigned char *)0;
+				lease -> uid_max = 0;
+			} else {
+				error ("corrupt lease uid."); /* XXX */
+			}
+		} else {
+			comp -> uid = (unsigned char *)0;
+			comp -> uid_max = 0;
+		}
 		comp -> uid_len = lease -> uid_len;
 		comp -> host = lease -> host;
 		comp -> hardware_addr = lease -> hardware_addr;
-		comp -> state = lease -> state;
 		comp -> flags = ((lease -> flags & ~PERSISTENT_FLAGS) |
 				 (comp -> flags & ~EPHEMERAL_FLAGS));
 
