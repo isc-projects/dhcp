@@ -23,7 +23,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: convert.c,v 1.9 1999/07/06 16:51:19 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: convert.c,v 1.10 1999/07/31 17:54:06 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -115,9 +115,9 @@ int converted_length (buf, base, width)
 	unsigned int width;
 {
 	u_int32_t number;
-	int column;
+	u_int32_t column;
 	int power = 1;
-	int newcolumn = base;
+	u_int32_t newcolumn = base;
 
 	if (base > 16)
 		return 0;
@@ -137,7 +137,7 @@ int converted_length (buf, base, width)
 		power++;
 		newcolumn = column * base;
 		/* If we wrap around, it must be the next power of two up. */
-	} while (column > newcolumn);
+	} while (newcolumn > column);
 
 	return power;
 }
@@ -150,7 +150,7 @@ int binary_to_ascii (outbuf, inbuf, base, width)
 {
 	u_int32_t number;
 	static char h2a [] = "0123456789abcdef";
-	int power = 0;
+	int power = converted_length (inbuf, base, width);
 	int i, j;
 
 	if (base > 16)
@@ -163,16 +163,10 @@ int binary_to_ascii (outbuf, inbuf, base, width)
 	else if (width == 4)
 		number = getULong (inbuf);
 
-	for (i = 0; number; i++) {
+	for (i = power - 1 ; i >= 0; i--) {
 		outbuf [i] = h2a [number % base];
 		number /= base;
-		power++;
 	}
 
-	for (j = 0; j < i / 2; j++) {
-		unsigned char t = outbuf [j];
-		outbuf [j] = outbuf [i - j - 1];
-		outbuf [i - j - 1] = t;
-	}
 	return power;
 }
