@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: discover.c,v 1.42.2.2 2001/05/11 23:55:46 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: discover.c,v 1.42.2.3 2001/05/31 19:27:24 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -923,6 +923,9 @@ isc_result_t dhcp_interface_lookup (omapi_object_t **ip,
 	omapi_value_t *tv = (omapi_value_t *)0;
 	isc_result_t status;
 	struct interface_info *interface;
+
+	if (!ref)
+		return ISC_R_NOKEYS;
 
 	/* First see if we were sent a handle. */
 	status = omapi_get_value_str (ref, id, "handle", &tv);
