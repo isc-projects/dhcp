@@ -45,6 +45,8 @@ and for prodding me into improving it.
 
 			Changes since 3.0.1
 
+- "allow known-clients;" is now a legal syntax, to avoid confusion.
+
 - If one dhcp server chooses to 'load balance' a request to its failover
   peer, it first checks to see if it believes said peer has a free
   lease to allocate before ignoring the DISCOVER.

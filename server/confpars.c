@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.143.2.21 2004/06/10 17:59:51 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.143.2.22 2004/09/21 19:25:38 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1368,6 +1368,10 @@ void parse_pool_statement (cfile, group, type)
 				}
 				break;
 				
+			      case KNOWN_CLIENTS:
+				permit -> type = permit_known_clients;
+				break;
+
 			      case UNKNOWN_CLIENTS:
 				permit -> type = permit_unknown_clients;
 				break;
