@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bootp.c,v 1.24 1997/02/22 08:36:36 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bootp.c,v 1.25 1997/03/06 07:27:56 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -324,11 +324,4 @@ void bootp (packet)
 			      from, &to, &hto);
 	if (result < 0)
 		warn ("send_packet: %m");
-}
-
-void relay (ip, packet, length)
-	struct interface_info *ip;
-	struct dhcp_packet *packet;
-	int length;
-{
 }
