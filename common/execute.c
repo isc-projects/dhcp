@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: execute.c,v 1.21 1999/10/07 06:35:42 mellon Exp $ Copyright (c) 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: execute.c,v 1.22 2000/01/08 01:30:29 mellon Exp $ Copyright (c) 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -34,9 +34,11 @@ int execute_statements (packet, lease, in_options, out_options, statements)
 	struct option_state *out_options;
 	struct executable_statement *statements;
 {
-	struct executable_statement *r;
+	struct executable_statement *r, *e;
 	int result;
 	int status;
+	struct binding *binding;
+	struct data_string ds;
 
 	if (!statements)
 		return 1;
@@ -59,30 +61,52 @@ int execute_statements (packet, lease, in_options, out_options, statements)
 
 		      case on_statement:
 			if (lease) {
-				struct executable_statement **d;
-				switch (r -> data.on.evtype) {
-				      case expiry:
-					d = &lease -> on_expiry;
-					break;
-				      case commit:
-					d = &lease -> on_commit;
-					break;
-				      case release:
-					d = &lease -> on_release;
-					break;
-				      default:
-					log_fatal ("unknown event type %d %s",
-						   r -> data.on.evtype,
-						   "in on statement.");
-					break;
-				}
-				if (*d)
+			    if (r -> data.on.evtypes & ON_EXPIRY) {
+				if (lease -> on_expiry)
 					executable_statement_dereference
-						(d, "execute_statements");
+						(&lease -> on_expiry,
+						 "execute_statements");
 				executable_statement_reference
-					(d, r -> data.on.statements,
+					(&lease -> on_expiry,
+					 r -> data.on.statements,
 					 "execute_statements");
+			    }
+			    if (r -> data.on.evtypes & ON_RELEASE) {
+				if (lease -> on_release)
+					executable_statement_dereference
+						(&lease -> on_release,
+						 "execute_statements");
+				executable_statement_reference
+					(&lease -> on_release,
+					 r -> data.on.statements,
+					 "execute_statements");
+			    }
+			    if (r -> data.on.evtypes & ON_COMMIT) {
+				if (lease -> on_commit)
+					executable_statement_dereference
+						(&lease -> on_commit,
+						 "execute_statements");
+				executable_statement_reference
+					(&lease -> on_commit,
+					 r -> data.on.statements,
+					 "execute_statements");
+			    }
 			}
+			break;
+
+		      case switch_statement:
+			e = find_matching_case (packet, lease,
+						in_options, out_options,
+						r -> data.s_switch.expr,
+						r -> data.s_switch.statements);
+			if (e && !execute_statements (packet, lease,
+						      in_options, out_options,
+						      e))
+				return 0;
+
+			/* These have no effect when executed. */
+		      case case_statement:
+		      case default_statement:
 			break;
 
 		      case if_statement:
@@ -164,6 +188,65 @@ int execute_statements (packet, lease, in_options, out_options, statements)
 				 (r -> data.option -> option -> universe,
 				  out_options,
 				  r -> data.option, r -> op));
+			break;
+
+		      case set_statement:
+			if (!lease) {
+#if defined (DEBUG_EXPRESSIONS)
+				log_debug ("exec: set %s = NULL",
+					   r -> data.set.name);
+#endif
+				break;
+			}
+
+			memset (&ds, 0, sizeof ds);
+			status = (evaluate_data_expression
+				  (&ds, packet, lease, in_options, out_options,
+				   r -> data.set.expr));
+
+			for (binding = lease -> bindings;
+			     binding; binding = binding -> next) {
+				if (!(strcasecmp
+				      (lease -> bindings -> name,
+				       r -> data.set.name)))
+					break;
+			}
+			if (!binding && status) {
+				binding = dmalloc (sizeof *binding,
+						   "execute_statements");
+				if (binding) {
+				    binding -> name =
+					    dmalloc (strlen
+						     (r -> data.set.name + 1),
+						     "execute_statements");
+				    if (binding -> name)
+					strcpy (binding -> name,
+						r -> data.set.name);
+				    else
+					dfree (binding,
+					       "execute_statements");
+				    binding -> next = lease -> bindings;
+				    lease -> bindings = binding;
+				} else
+				    status = 0;
+			}
+			if (binding) {
+				data_string_forget (&binding -> value,
+						    "execute_statements");
+				if (status)
+					data_string_copy
+						(&binding -> value, &ds,
+						 "execute_statements");
+			}
+			if (status)
+			    data_string_forget (&ds, "execute_statements");
+#if defined (DEBUG_EXPRESSIONS)
+			log_debug ("exec: set %s = %s", r -> data.set.name,
+				   (status
+				    ? print_hex_1 (binding -> value.len,
+						   binding -> value.data, 50)
+				    : "NULL"));
+#endif
 			break;
 
 		      default:
@@ -274,6 +357,21 @@ int executable_statement_dereference (ptr, name)
 				(&(*ptr) -> data.on.statements, name);
 		break;
 
+	      case switch_statement:
+		if ((*ptr) -> data.s_switch.statements)
+			executable_statement_dereference
+				(&(*ptr) -> data.on.statements, name);
+		if ((*ptr) -> data.s_switch.expr)
+			expression_dereference (&(*ptr) -> data.s_switch.expr,
+						name);
+		break;
+
+	      case case_statement:
+		if ((*ptr) -> data.s_switch.expr)
+			expression_dereference (&(*ptr) -> data.c_case,
+						name);
+		break;
+
 	      case if_statement:
 		if ((*ptr) -> data.ie.expr)
 			expression_dereference (&(*ptr) -> data.ie.expr, name);
@@ -288,6 +386,14 @@ int executable_statement_dereference (ptr, name)
 	      case eval_statement:
 		if ((*ptr) -> data.eval)
 			expression_dereference (&(*ptr) -> data.eval, name);
+		break;
+
+	      case set_statement:
+		if ((*ptr)->data.set.name)
+			dfree ((*ptr)->data.set.name, name);
+		if ((*ptr)->data.set.expr)
+			expression_dereference (&(*ptr) -> data.set.expr,
+						name);
 		break;
 
 	      case supersede_option_statement:
@@ -330,27 +436,56 @@ void write_statements (file, statements, indent)
 			break;
 
 		      case on_statement:
-			switch (r -> data.on.evtype) {
-			      case expiry:
-				s = "expiry";
-				break;
-			      case commit:
-				s = "commit";
-				break;
-			      case release:
-				s = "release";
-				break;
-			      default:
-				log_fatal ("unknown event type %d %s",
-					   r -> data.on.evtype,
-					   "in on statement.");
-			}
 			indent_spaces (file, indent);
-			fprintf (file, "on %s {", s);
+			fprintf (file, "on ");
+			s = "";
+			if (r -> data.on.evtypes & ON_EXPIRY) {
+				fprintf (file, "expiry");
+				s = "or";
+			}
+			if (r -> data.on.evtypes & ON_COMMIT) {
+				fprintf (file, "commit");
+				s = "or";
+			}
+			if (r -> data.on.evtypes & ON_RELEASE) {
+				fprintf (file, "release");
+				s = "or";
+			}
 			write_statements (file, r -> data.on.statements,
 					  indent + 2);
 			indent_spaces (file, indent);
 			fprintf (file, "}");
+			break;
+
+		      case switch_statement:
+			indent_spaces (file, indent);
+			fprintf (file, "switch (");
+			col = write_expression (file,
+						r -> data.s_switch.expr,
+						indent + 7, indent + 7, 1);
+			col = token_print_indent (file, col, indent + 7,
+						  "", "", ")");
+			token_print_indent (file,
+					    col, indent, " ", "", "{");
+			write_statements (file, r -> data.s_switch.statements,
+					  indent + 2);
+			indent_spaces (file, indent);
+			fprintf (file, "}");
+			break;
+			
+		      case case_statement:
+			indent_spaces (file, indent - 1);
+			fprintf (file, "case ");
+			col = write_expression (file,
+						r -> data.s_switch.expr,
+						indent + 5, indent + 5, 1);
+			token_print_indent (file, col, indent + 5,
+					    "", "", ":");
+			break;
+			
+		      case default_statement:
+			indent_spaces (file, indent - 1);
+			fprintf (file, "default: ");
 			break;
 
 		      case if_statement:
@@ -359,7 +494,7 @@ void write_statements (file, statements, indent)
 			x = r;
 			col = write_expression (file,
 						x -> data.ie.expr,
-						indent + 3, indent + 3);
+						indent + 3, indent + 3, 1);
 		      else_if:
 			token_print_indent (file, col, indent, " ", "", "{");
 			write_statements (file, x -> data.ie.true, indent + 2);
@@ -372,7 +507,7 @@ void write_statements (file, statements, indent)
 				col = write_expression (file,
 							x -> data.ie.expr,
 							indent + 6,
-							indent + 6);
+							indent + 6, 1);
 				goto else_if;
 			}
 			if (x -> data.ie.false) {
@@ -389,7 +524,7 @@ void write_statements (file, statements, indent)
 			indent_spaces (file, indent);
 			fprintf (file, "eval ");
 			col = write_expression (file, r -> data.eval,
-						indent + 5, indent + 5);
+						indent + 5, indent + 5, 1);
 			fprintf (file, ";");
 			break;
 
@@ -442,7 +577,7 @@ void write_statements (file, statements, indent)
 				write_expression
 					(file,
 					 r -> data.option -> expression,
-					 col, indent + 8);
+					 col, indent + 8, 1);
 			else
 				token_indent_data_string
 					(file, col, indent + 8, "", "",
@@ -451,8 +586,97 @@ void write_statements (file, statements, indent)
 			fprintf (file, ";"); /* XXX */
 			break;
 
+		      case set_statement:
+			indent_spaces (file, indent);
+			fprintf (file, "set ");
+			col = token_print_indent (file, indent + 4, indent + 4,
+						  "", "", r -> data.set.name);
+			col = token_print_indent (file, col, indent + 4,
+						  " ", " ", "=");
+			col = write_expression (file, r -> data.set.expr,
+						indent + 3, indent + 3, 0);
+			col = token_print_indent (file, col, indent + 4,
+						  " ", "", ";");
+			break;
+			
 		      default:
 			log_fatal ("bogus statement type %d\n", r -> op);
 		}
 	}
+}
+
+/* Find a case statement in the sequence of executable statements that
+   matches the expression, and if found, return the following statement.
+   If no case statement matches, try to find a default statement and
+   return that (the default statement can precede all the case statements).
+   Otherwise, return the null statement. */
+
+struct executable_statement *find_matching_case (packet, lease,
+						 in_options, out_options,
+						 expr, stmt)
+	struct packet *packet;
+	struct lease *lease;
+	struct option_state *in_options;
+	struct option_state *out_options;
+	struct expression *expr;
+	struct executable_statement *stmt;
+{
+	int status, sub;
+	struct executable_statement *s;
+	unsigned long foo;
+
+	if (is_data_expression (expr)) {
+		struct executable_statement *e;
+		struct data_string cd, ds;
+		memset (&ds, 0, sizeof ds);
+		memset (&cd, 0, sizeof cd);
+
+		status = (evaluate_data_expression
+			  (&ds, packet, lease, in_options, out_options, expr));
+		if (status) {
+		    for (s = stmt; s; s = s -> next) {
+			if (s -> op == case_statement) {
+				sub = (evaluate_data_expression
+				       (&cd, packet, lease, in_options,
+					out_options, s -> data.c_case));
+				if (sub && cd.len == ds.len &&
+				    !memcmp (cd.data, ds.data, cd.len))
+				{
+					data_string_forget
+						(&cd, "execute_statements");
+					data_string_forget
+						(&ds, "execute_statements");
+					return s -> next;
+				}
+				data_string_forget (&cd, "execute_statements");
+			}
+		    }
+		    data_string_forget (&ds, "execute_statements");
+		}
+	} else {
+		unsigned long n, c;
+		status = (evaluate_numeric_expression
+			  (&n, packet, lease, in_options, out_options, expr));
+
+		if (status) {
+		    for (s = stmt; s; s = s -> next) {
+			if (s -> op == case_statement) {
+				sub = (evaluate_numeric_expression
+				       (&c, packet, lease, in_options,
+					out_options, s -> data.c_case));
+				if (sub && n == c)
+					return s -> next;
+			}
+		    }
+		}
+	}
+
+	/* If we didn't find a matching case statement, look for a default
+	   statement and return the statement following it. */
+	for (s = stmt; s; s = s -> next)
+		if (s -> op == default_statement)
+			break;
+	if (s)
+		return s -> next;
+	return (struct executable_statement *)0;
 }
