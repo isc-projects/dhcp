@@ -180,6 +180,8 @@ isc_result_t omapi_generic_get_value (omapi_object_t *h,
 	
 	/* Look up the specified name in our list of objects. */
 	for (i = 0; i < g -> nvalues; i++) {
+		if (!g -> values[i])
+			continue;
 		if (!omapi_data_string_cmp (name, g -> values [i] -> name)) {
 			/* If this is a name/null value pair, this is the
 			   same as if there were no value that matched

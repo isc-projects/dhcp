@@ -45,6 +45,9 @@ and for prodding me into improving it.
 
 			Changes since 3.0.1
 
+- Omapi was hardened against clients that pass in null values, thanks
+  to a patch from Mark Jason Dominus.
+
 - A bug was fixed in dhclient that kept it from doing client-side
   ddns updates.  Thanks to a patch from Andreas Gustafsson, which
   underwent some modification after review by Jason Vas Dias.
