@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.39 1999/07/19 20:38:59 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.40 1999/07/21 14:28:57 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -528,7 +528,9 @@ int evaluate_boolean_expression (result, packet, options, lease, expr)
 		return 1;
 
 	      case expr_dns_update:
-#if defined (NSUPDATE)
+#if !defined (NSUPDATE)
+		return 0;
+#else
 		/* we only want to do this on a DHCPREQUEST */
 		if (packet -> packet_type != DHCPREQUEST)
 			return 0;
@@ -548,14 +550,18 @@ int evaluate_boolean_expression (result, packet, options, lease, expr)
 		if (s0 && s1 && s2 && s3) {
 			if (rrtype.len == 1 &&
 			    strncmp(rrtype.data, "a", 1) == 0) {
-log_info("calling updateA(expr1, expr2, %d, lease)", ttl);
+log_info("calling updateA(%s, %s, %d, lease)", expr1.data , expr2.data, ttl);
 				updateA(expr1, expr2, ttl, lease);
 			} else if (rrtype.len == 3 &&
 				   strncmp(rrtype.data, "ptr", 3) == 0) {
-log_info("calling updatePTR(expr1, expr2, %d, lease)", ttl);
+log_info("calling updatePTR(%s, %s, %d, lease)", expr1.data , expr2.data, ttl);
 				updatePTR(expr1, expr2, ttl, lease);
 			}
 			*result = 1;
+		} else {
+			log_error("dns-update: one or more subexpressions %s",
+				  "evaluate to NULL.");
+			return 0;
 		}
 #if defined (DEBUG_EXPRESSIONS)
 		log_info ("dns-update(%s, %s, %s):", 
@@ -564,9 +570,7 @@ log_info("calling updatePTR(expr1, expr2, %d, lease)", ttl);
 			  print_hex_3(expr2.len, expr2.data, 60));
 #endif
 		return 1;
-#else
-		return 0;
-#endif
+#endif /* NSUPDATE */
 
 	      case expr_substring:
 	      case expr_suffix:
@@ -1114,7 +1118,7 @@ int evaluate_data_expression (result, packet, options, lease, expr)
 	      reverse_out:
 #if defined (DEBUG_EXPRESSIONS)
 		log_debug ("data: reverse (%s, %s) = %s",
-		      s0 ? print_dec_1 (offset) : "NULL",
+		      s0 ? print_dec_1 (len) : "NULL",
 		      s1 ? print_hex_1 (data.len, data.data, 30) : "NULL",
 		      (status ? print_hex_3 (result -> len, result -> data, 30)
 		          : "NULL"));
@@ -1323,12 +1327,19 @@ int evaluate_numeric_expression (result, packet, options, lease, expr)
 
 	      case expr_lease_time:
 		if (!lease) {
-			log_error ("data: leased_lease_time: not available");
+			log_error ("data: leased_lease: not available");
+			return 0;
+		}
+		if (lease -> ends < cur_time) {
+			log_error ("%s %lu when it is now %lu",
+				   "data: lease_time: lease ends at",
+				   lease -> ends, cur_time);
 			return 0;
 		}
 		*result = lease -> ends - cur_time;
 #if defined (DEBUG_EXPRESSIONS)
-		log_debug ("number: lease-time = %d", *result);
+		log_debug ("number: lease-time = (%d - %d) = %d", lease -> ends,
+			   cur_time, *result);
 #endif
 		return 1;
  
