@@ -391,7 +391,6 @@ isc_result_t omapi_message_process (omapi_object_t *mo, omapi_object_t *po)
 			return omapi_protocol_send_status
 				(po, (omapi_object_t *)0, ISC_R_INVALIDARG,
 				 message -> id, "OPEN can't be a response");
-			return ISC_R_SUCCESS;
 		}
 
 		/* Get the type of the requested object, if one was
@@ -521,7 +520,6 @@ isc_result_t omapi_message_process (omapi_object_t *mo, omapi_object_t *po)
 				(po, (omapi_object_t *)0,
 				 ISC_R_EXISTS, message -> id,
 				 "specified object already exists");
-			return ISC_R_SUCCESS;
 		}
 
 		/* If we're creating the object, do it now. */
@@ -534,7 +532,6 @@ isc_result_t omapi_message_process (omapi_object_t *mo, omapi_object_t *po)
 					(po, (omapi_object_t *)0,
 					 status, message -> id,
 					 "can't create new object");
-				return ISC_R_SUCCESS;
 			}
 		}
 
@@ -567,7 +564,6 @@ isc_result_t omapi_message_process (omapi_object_t *mo, omapi_object_t *po)
 				(po, (omapi_object_t *)0,
 				 status, message -> id,
 				 "no matching handle");
-			return ISC_R_SUCCESS;
 		}
 	      send:		
 		status = omapi_protocol_send_update (po, (omapi_object_t *)0,
