@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.13 1999/10/24 23:27:52 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.14 1999/10/25 01:55:40 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -68,7 +68,7 @@ isc_result_t enter_host (hd, dynamicp, commit)
 			/* If the old entry wasn't dynamic, then we
 			   always have to keep the deletion. */
 			if (!hp -> flags & HOST_DECL_DYNAMIC)
-				hd -> flags &= ~HOST_DECL_DYNAMIC;
+				hd -> flags |= HOST_DECL_STATIC;
 		}
 
 		/* If there isn't already a host decl matching this
@@ -292,7 +292,7 @@ isc_result_t delete_host (hd, commit)
 				     strlen (hd -> name));
 		
 		if (hp) {
-			if (hp == hd && (hp -> flags & HOST_DECL_DYNAMIC)) {
+			if (hp == hd && !(hp -> flags & HOST_DECL_STATIC)) {
 				delete_hash_entry (host_name_hash,
 						   (unsigned char *)hd -> name,
 						   strlen (hd -> name));
@@ -1385,15 +1385,26 @@ void write_leases ()
 	    }
 	}
 
-	/* Write all the dynamically-created group declarations. */
+	/* Write all the deleted host declarations. */
 	if (host_name_hash) {
 	    for (i = 0; i < host_name_hash -> hash_count; i++) {
 		for (hb = host_name_hash -> buckets [i];
 		     hb; hb = hb -> next) {
 			hp = (struct host_decl *)hb -> value;
-			if ((hp -> flags & HOST_DECL_DYNAMIC) ||
-			    (!(hp -> flags & HOST_DECL_DYNAMIC) &&
+			if (((hp -> flags & HOST_DECL_STATIC) &&
 			     (hp -> flags & HOST_DECL_DELETED)))
+				write_host (hp);
+		}
+	    }
+	}
+
+	/* Write all the new, dynamic host declarations. */
+	if (host_name_hash) {
+	    for (i = 0; i < host_name_hash -> hash_count; i++) {
+		for (hb = host_name_hash -> buckets [i];
+		     hb; hb = hb -> next) {
+			hp = (struct host_decl *)hb -> value;
+			if ((hp -> flags & HOST_DECL_DYNAMIC))
 				write_host (hp);
 		}
 	    }
