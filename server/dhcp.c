@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.191 2001/04/27 21:32:48 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.192 2001/05/03 18:22:58 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1991,8 +1991,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 	   not disabled, save the relay agent information options that came
 	   in with the packet, so that we can use them at renewal time when
 	   the packet won't have gone through a relay agent. */
-	if (!packet -> raw -> ciaddr.s_addr &&
-	    packet -> raw -> giaddr.s_addr &&
+	if (packet -> raw -> giaddr.s_addr &&
 	    packet -> options -> universe_count > agent_universe.index &&
 	    packet -> options -> universes [agent_universe.index] &&
 	    (state -> options -> universe_count <= agent_universe.index ||
