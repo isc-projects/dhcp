@@ -122,7 +122,7 @@ void dfree (ptr, file, line)
 				break;
 		if (!dp) {
 			log_error ("%s(%d): freeing unknown memory: %lx",
-				   dp -> file, dp -> line, (unsigned long)cur);
+				   file, line, (unsigned long)cur);
 			abort ();
 		}
 		if (dp -> prev)
