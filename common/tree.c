@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.93 2000/12/28 23:20:28 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.94 2001/01/03 23:43:24 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -53,6 +53,11 @@ struct binding_scope *global_scope;
 
 static int do_host_lookup PROTO ((struct data_string *,
 				  struct dns_host_entry *));
+
+#ifdef NSUPDATE
+struct __res_state resolver_state;
+int                resolver_inited = 0;
+#endif
 
 pair cons (car, cdr)
 	caddr_t car;
@@ -2058,9 +2063,7 @@ int evaluate_numeric_expression (result, packet, lease, client_state,
 	int status, sleft, sright;
 #if defined (NSUPDATE)
 	ns_updrec *nut;
-	static struct __res_state res;
 	ns_updque uq;
-	static int inited;
 #endif
 	struct expression *cur, *next;
 	struct binding *binding;
@@ -2186,9 +2189,9 @@ int evaluate_numeric_expression (result, packet, lease, client_state,
 #if !defined (NSUPDATE)
 		return 0;
 #else
-		if (!inited) {
-			minires_ninit (&res);
-			inited = 1;
+		if (!resolver_inited) {
+			minires_ninit (&resolver_state);
+			resolver_inited = 1;
 		}
 		ISC_LIST_INIT (uq);
 		cur = expr;
@@ -2207,7 +2210,8 @@ int evaluate_numeric_expression (result, packet, lease, client_state,
 
 		/* Do the update and record the error code, if there was
 		   an error; otherwise set it to NOERROR. */
-		*result = minires_nupdate (&res, ISC_LIST_HEAD (uq));
+		*result = minires_nupdate (&resolver_state,
+					   ISC_LIST_HEAD (uq));
 		status = 1;
 
 		print_dns_status ((int)*result, &uq);
