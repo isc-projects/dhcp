@@ -52,9 +52,17 @@ extern int h_errno;
 #define _PATH_DHCRELAY_PID "/etc/dhcrelay.pid"
 #endif
 
+#if !defined (__ANSI__)
+/* Varargs stuff: use stdarg.h instead ... */
+#include <stdarg.h>
+#define VA_DOTDOTDOT ...
+#define VA_start(list, last) va_start (list, last)
+#define va_dcl
+#else
 #include <varargs.h>
 #define VA_DOTDOTDOT va_alist
 #define VA_start(list, last) va_start (list)
+#endif
 
 #define vsnprintf(buf, size, fmt, list) vsprintf (buf, fmt, list)
 #define NO_SNPRINTF

@@ -143,7 +143,6 @@ struct dns_host_entry {
 };
 
 struct option_cache; /* forward */
-struct data_string; /* forward */
 struct packet; /* forward */
 struct option_state; /* forward */
 struct decoded_option_state; /* forward */

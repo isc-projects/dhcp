@@ -94,7 +94,7 @@
 #  include "cf/sco.h"
 #endif
 
-#ifdef hpux
+#if defined (hpux) || defined (__hpux)
 #  include "cf/hpux.h"
 #endif
 
