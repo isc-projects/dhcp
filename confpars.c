@@ -923,6 +923,40 @@ void parse_option_decl (cfile, bc, options)
 			if (*fmt == 'A')
 				break;
 			switch (*fmt) {
+			      case 'X':
+				token = peek_token (&val, cfile);
+				if (token == NUMBER_OR_ATOM ||
+				    token == NUMBER) {
+					do {
+						token = next_token
+							(&val, cfile);
+						if (token != NUMBER
+						    && token != NUMBER_OR_ATOM)
+							goto need_number;
+						convert_num (buf, val, 16, 8);
+						tree = tree_concat
+							(tree,
+							 tree_const (buf, 1));
+						token = peek_token
+							(&val, cfile);
+						if (token == COLON)
+							token = next_token
+								(&val, cfile);
+					} while (token == COLON);
+				} else if (token == STRING) {
+					token = next_token (&val, cfile);
+					tree = tree_concat
+						(tree,
+						 tree_const (val,
+							     strlen (val)));
+				} else {
+					parse_warn ("expecting string %s."
+						    "or hexadecimal data");
+					skip_to_semi (cfile);
+					longjmp (jdref (bc), 1);
+				}
+				break;
+					
 			      case 't': /* Text string... */
 				token = next_token (&val, cfile);
 				if (token != STRING
