@@ -40,6 +40,7 @@
 #include <string.h>
 #include <paths.h>
 #include <errno.h>
+#include <malloc.h>
 #include <unistd.h>
 #include <setjmp.h>
 #include <limits.h>
@@ -71,3 +72,5 @@ extern int h_errno;
 #define SET_TIME(x, y)	(*(x) = (y))
 #define ADD_TIME(d, s1, s2) (*(d) = *(s1) + *(s2))
 #define SET_MAX_TIME(x)	(*(x) = INT_MAX)
+
+#define HAVE_SIN_LEN
