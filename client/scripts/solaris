@@ -24,7 +24,6 @@ fi
 
 if [ x$reason = xMEDIUM ]; then
   ifconfig $interface $medium
-  ifconfig $interface inet -alias 0.0.0.0 $medium >/dev/null 2>&1
   ifconfig $interface
   sleep 1
   exit 0
@@ -32,7 +31,7 @@ fi
 
 if [ x$reason = xPREINIT ]; then
   if [ x$alias_ip_address != x ]; then
-    ifconfig $interface inet -alias $alias_ip_address > /dev/null 2>&1
+    ifconfig ${interface}:1 0 down > /dev/null 2>&1
     route delete $alias_ip_address 127.0.0.1 > /dev/null 2>&1
   fi
   if [ $OS = "5.5.1" ]; then
@@ -54,11 +53,11 @@ if [ x$reason = xBOUND ] || [ x$reason = xRENEW ] || \
    [ x$reason = xREBIND ] || [ x$reason = xREBOOT ]; then
   if [ x$old_ip_address != x ] && [ x$alias_ip_address != x ] && \
 		[ x$alias_ip_address != x$old_ip_address ]; then
-    ifconfig $interface inet -alias $alias_ip_address > /dev/null 2>&1
+    ifconfig ${interface}:1 inet 0 down > /dev/null 2>&1
     route delete $alias_ip_address 127.0.0.1 > /dev/null 2>&1
   fi
   if [ x$old_ip_address != x ] && [ x$old_ip_address != x$new_ip_address ]; then
-    ifconfig $interface inet -alias $old_ip_address $medium
+    ifconfig ${interface} inet 0 down
     route delete $old_ip_address 127.1 >/dev/null 2>&1
     for router in $old_routers; do
       route delete default $router >/dev/null 2>&1
@@ -76,7 +75,7 @@ if [ x$reason = xBOUND ] || [ x$reason = xRENEW ] || \
   fi
   if [ x$new_ip_address != x$alias_ip_address ] && [ x$alias_ip_address != x ];
    then
-    ifconfig $interface inet alias $alias_ip_address $alias_subnet_arg
+    ifconfig ${interface}:1 inet $alias_ip_address $alias_subnet_arg
     route add $alias_ip_address 127.0.0.1 1
   fi
   echo search $new_domain_name >/etc/resolv.conf
@@ -88,11 +87,11 @@ fi
 
 if [ x$reason = xEXPIRE ] || [ x$reason = xFAIL ]; then
   if [ x$alias_ip_address != x ]; then
-    ifconfig $interface inet -alias $alias_ip_address > /dev/null 2>&1
+    ifconfig ${interface}:1 0 down > /dev/null 2>&1
     route delete $alias_ip_address 127.0.0.1 > /dev/null 2>&1
   fi
   if [ x$old_ip_address != x ]; then
-    ifconfig $interface inet -alias $old_ip_address $medium
+    ifconfig $interface inet 0 down
     route delete $old_ip_address 127.1 >/dev/null 2>&1
     for router in $old_routers; do
       route delete default $router >/dev/null 2>&1
@@ -101,7 +100,7 @@ if [ x$reason = xEXPIRE ] || [ x$reason = xFAIL ]; then
 						|sh >/dev/null 2>&1
   fi
   if [ x$alias_ip_address != x ]; then
-    ifconfig $interface inet alias $alias_ip_address $alias_subnet_arg
+    ifconfig ${interface}:1 inet $alias_ip_address $alias_subnet_arg
     route add $alias_ip_address 127.0.0.1 1
   fi
   exit 0
@@ -109,7 +108,7 @@ fi
 
 if [ x$reason = xTIMEOUT ]; then
   if [ x$alias_ip_address != x ]; then
-    ifconfig $interface inet -alias $alias_ip_address > /dev/null 2>&1
+    ifconfig ${interface}:1 0 down > /dev/null 2>&1
     route delete $alias_ip_address 127.0.0.1 > /dev/null 2>&1
   fi
   ifconfig $interface inet $new_ip_address $new_netmask_arg \
@@ -119,7 +118,7 @@ if [ x$reason = xTIMEOUT ]; then
   if ping -c 1 -w 1 $1; then
     if [ x$new_ip_address != x$alias_ip_address ] && \
 			[ x$alias_ip_address != x ]; then
-      ifconfig $interface inet alias $alias_ip_address $alias_subnet_arg
+      ifconfig ${interface}:1 inet $alias_ip_address $alias_subnet_arg
       route add $alias_ip_address 127.0.0.1 1
     fi
     route add $new_ip_address 127.1 1 >/dev/null 2>&1
@@ -136,7 +135,7 @@ if [ x$reason = xTIMEOUT ]; then
     fi
     exit 0
   fi
-  ifconfig $interface inet -alias $new_ip_address $medium
+  ifconfig $interface inet 0 down
   for router in $old_routers; do
     route delete default $router >/dev/null 2>&1
   done
