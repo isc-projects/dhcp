@@ -478,6 +478,51 @@ limit of four leases.
 The use of the subclass spawning mechanism is not restricted to relay
 agent options - this particular example is given only because it is a
 fairly straightforward one.
+.SH REFERENCE: EVENTS
+.PP
+There are three kinds of events that can happen regarding a lease, and
+it is possible to declare statements that occur when any of these
+events happen.   These events are the commit event, when the server
+has made a commitment of a certain lease to a client, the release
+event, when the client has released the server from its commitment,
+and the expiry event, when the commitment expires.
+.PP
+Currently, only the commit event is fully supported.  The commit event
+occurs just before the DHCP server sends a DHCPACK message to a DHCP
+client, or a BOOTREPLY message to a BOOTP client.
+.PP
+The release event is partially supported, but currently will not occur
+if the server is restarted after the lease is assigned.   This will be
+fixed in the near future.
+.PP
+The expiry event is not currently supported at all.   This will also
+be fixed in the reasonably near future.
+.PP
+To declare a set of statements to execute when an event happens, you
+must use the \fBon\fB statement, followed by the name of the event,
+followed by a series of statements to execute when the event happens,
+enclosed in braces.   For example:
+.PP
+.nf
+	on commit {
+		if dns-update ("a",
+			       concat (option host-name, ".ssd.example.net"),
+			       binary-to-ascii (10, 8, ".", leased-address),
+			       lease-time) {
+		    if dns-update ("ptr", concat(binary-to-ascii(10, 8, ".",
+					         reverse(1, leased-address)),
+						 ".ssd.example.net"),
+					  concat (option host-name,
+						  ".ssd.example.net"),
+				   lease-time) {
+		    }
+		}
+	}
+.fi
+.PP
+Note: the example above uses the dns-update function, which is not yet
+implemented, but which is the primary intended purpose for this
+feature.
 .SH REFERENCE: DECLARATIONS
 .PP
 .B The 
