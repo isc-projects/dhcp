@@ -176,9 +176,9 @@ enum dhcp_token {
 	COMMUNICATIONS_INTERRUPTED = 376,
 	POTENTIAL_CONFLICT = 377,
 	RECOVER = 378,
-	FDDI = 331,
-	AUTHORITATIVE = 333,
-	TOKEN_NOT = 334,
+	FDDI = 379,
+	AUTHORITATIVE = 380,
+	TOKEN_NOT = 381,
 };
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\
