@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: discover.c,v 1.42.2.6 2001/06/20 03:19:15 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: discover.c,v 1.42.2.7 2001/06/21 16:46:09 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1114,7 +1114,7 @@ void interface_stash (struct interface_info *tptr)
 		}
 		interface_vector = vec;
 	}
-	interface_vector [tptr -> index] = tptr;
+	interface_reference (&interface_vector [tptr -> index], tptr, MDL);
 	if (tptr -> index >= interface_count)
 		interface_count = tptr -> index + 1;
 #if defined (TRACING)
