@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.68 1999/03/29 18:59:54 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.69 1999/03/30 15:20:09 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -348,6 +348,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		parse_address_range (cfile, group, type, (struct pool *)0);
 		return declaration;
 
+#if 0
 	      case ALLOW:
 	      case DENY:
 		token = next_token (&val, cfile);
@@ -364,6 +365,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		et -> op = supersede_option_statement;
 		et -> data.option = cache;
 		goto insert_statement;
+#endif
 
 	      case TOKEN_NOT:
 		token = next_token (&val, cfile);
@@ -813,57 +815,6 @@ void parse_pool_statement (cfile, group, type)
 	for (; *p; p = &((*p) -> next))
 		;
 	*p = pool;
-}
-
-/* allow-deny-keyword :== BOOTP
-   			| BOOTING
-			| DYNAMIC_BOOTP
-			| UNKNOWN_CLIENTS */
-
-int parse_allow_deny (oc, cfile, flag)
-	struct option_cache **oc;
-	FILE *cfile;
-	int flag;
-{
-	enum dhcp_token token;
-	char *val;
-	unsigned char rf = flag;
-	struct expression *data = (struct expression *)0;
-	int status;
-
-	if (!make_const_data (&data, &rf, 1, 0, 1))
-		return 0;
-
-	token = next_token (&val, cfile);
-	switch (token) {
-	      case BOOTP:
-		status = option_cache (oc, (struct data_string *)0, data,
-				       &server_options [SV_ALLOW_BOOTP]);
-		break;
-
-	      case BOOTING:
-		status = option_cache (oc, (struct data_string *)0, data,
-				       &server_options [SV_ALLOW_BOOTING]);
-		break;
-
-	      case DYNAMIC_BOOTP:
-		status = option_cache (oc, (struct data_string *)0, data,
-				       &server_options [SV_DYNAMIC_BOOTP]);
-		break;
-
-	      case UNKNOWN_CLIENTS:
-		status = (option_cache
-			  (oc, (struct data_string *)0, data,
-			   &server_options [SV_BOOT_UNKNOWN_CLIENTS]));
-		break;
-
-	      default:
-		parse_warn ("expecting allow/deny key");
-		skip_to_semi (cfile);
-		return 0;
-	}
-	parse_semi (cfile);
-	return status;
 }
 
 /* boolean :== ON SEMI | OFF SEMI | TRUE SEMI | FALSE SEMI */

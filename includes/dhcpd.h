@@ -821,7 +821,6 @@ int parse_statement PROTO ((FILE *,
 void parse_failover_peer PROTO ((FILE *, struct group *, int));
 enum failover_state parse_failover_state PROTO ((FILE *));
 void parse_pool_statement PROTO ((FILE *, struct group *, int));
-int parse_allow_deny PROTO ((struct option_cache **, FILE *, int));
 int parse_boolean PROTO ((FILE *));
 int parse_lbrace PROTO ((FILE *));
 void parse_host_declaration PROTO ((FILE *, struct group *));
@@ -870,6 +869,7 @@ struct executable_statement *parse_option_statement PROTO ((FILE *, int,
 							   );
 int parse_option_token PROTO ((struct expression **, FILE *, char *,
 			       struct expression *, int, int));
+int parse_allow_deny PROTO ((struct option_cache **, FILE *, int));
 int parse_auth_key PROTO ((struct data_string *, FILE *));
 
 /* tree.c */

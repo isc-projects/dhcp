@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.18 1999/03/25 21:59:36 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.19 1999/03/30 15:20:09 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1109,8 +1109,10 @@ struct executable_statement *parse_executable_statement (cfile, lose)
 	struct executable_statement *stmt, base;
 	struct class *cta;
 	struct option *option;
+	struct option_cache *cache;
 
-	switch (peek_token (&val, cfile)) {
+	token = peek_token (&val, cfile);
+	switch (token) {
 	      case IF:
 		next_token (&val, cfile);
 		stmt = parse_if_statement (cfile, lose);
@@ -1166,6 +1168,18 @@ struct executable_statement *parse_executable_statement (cfile, lose)
 		}
 		return parse_option_statement (cfile, 1, option,
 					       supersede_option_statement);
+
+	      case ALLOW:
+	      case DENY:
+		token = next_token (&val, cfile);
+		cache = (struct option_cache *)0;
+		if (!parse_allow_deny (&cache, cfile,
+				       token == ALLOW ? 1 : 0))
+			return (struct executable_statement *)0;
+		memset (&base, 0, sizeof base);
+		base.op = supersede_option_statement;
+		base.data.option = cache;
+		break;
 
 	      case DEFAULT:
 		token = next_token (&val, cfile);
@@ -2076,6 +2090,57 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 	} else
 		*rv = t;
 	return 1;
+}
+
+/* allow-deny-keyword :== BOOTP
+   			| BOOTING
+			| DYNAMIC_BOOTP
+			| UNKNOWN_CLIENTS */
+
+int parse_allow_deny (oc, cfile, flag)
+	struct option_cache **oc;
+	FILE *cfile;
+	int flag;
+{
+	enum dhcp_token token;
+	char *val;
+	unsigned char rf = flag;
+	struct expression *data = (struct expression *)0;
+	int status;
+
+	if (!make_const_data (&data, &rf, 1, 0, 1))
+		return 0;
+
+	token = next_token (&val, cfile);
+	switch (token) {
+	      case BOOTP:
+		status = option_cache (oc, (struct data_string *)0, data,
+				       &server_options [SV_ALLOW_BOOTP]);
+		break;
+
+	      case BOOTING:
+		status = option_cache (oc, (struct data_string *)0, data,
+				       &server_options [SV_ALLOW_BOOTING]);
+		break;
+
+	      case DYNAMIC_BOOTP:
+		status = option_cache (oc, (struct data_string *)0, data,
+				       &server_options [SV_DYNAMIC_BOOTP]);
+		break;
+
+	      case UNKNOWN_CLIENTS:
+		status = (option_cache
+			  (oc, (struct data_string *)0, data,
+			   &server_options [SV_BOOT_UNKNOWN_CLIENTS]));
+		break;
+
+	      default:
+		parse_warn ("expecting allow/deny key");
+		skip_to_semi (cfile);
+		return 0;
+	}
+	parse_semi (cfile);
+	return status;
 }
 
 int parse_auth_key (key_id, cfile)
