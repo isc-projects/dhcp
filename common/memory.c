@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: memory.c,v 1.52.2.15 2000/07/01 05:54:22 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: memory.c,v 1.52.2.16 2000/07/04 19:29:09 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -121,7 +121,7 @@ void enter_host (hd)
 					if (hd == np)
 						break;
 				}
-				if (hp != np)
+				if (hd != np)
 					np -> n_ipaddr = hd;
 			}
 		} else {
