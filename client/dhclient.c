@@ -55,8 +55,8 @@
  */
 
 #ifndef lint
-static char copyright[] =
-"$Id: dhclient.c,v 1.44.2.5 1998/12/22 22:23:59 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+static char ocopyright[] =
+"$Id: dhclient.c,v 1.44.2.6 1998/12/22 22:38:15 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
