@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: print.c,v 1.30 2000/01/05 18:04:46 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: print.c,v 1.31 2000/01/08 01:37:32 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -587,6 +587,22 @@ static unsigned print_subexpression (expr, buf, len)
 		}
 		break;
 
+	      case expr_variable_exists:
+		rv = 10 + strlen (expr -> data.variable);
+		if (len > rv) {
+			sprintf (buf, "(defined %s)", expr -> data.variable);
+			return rv;
+		}
+		break;
+
+	      case expr_variable_reference:
+		rv = strlen (expr -> data.variable);
+		if (len > rv) {
+			sprintf (buf, "%s", expr -> data.variable);
+			return rv;
+		}
+		break;
+
 	      case expr_known:
 		s = "known";
 	      astring:
@@ -679,7 +695,7 @@ static unsigned print_subexpression (expr, buf, len)
 		s = "not_exists";
 		left = 4;
 		goto dodnsupd;
-	      case expr_ns_update:
+	      case expr_ns_add:
 		s = "update";
 		left = 5;
 	      dodnsupd:
@@ -689,14 +705,14 @@ static unsigned print_subexpression (expr, buf, len)
 			strcpy (buf + 1, s);
 			rv++;
 			buf [rv++] = ' ';
-			s = print_dec_1 (expr -> data.ns_update.rrclass);
+			s = print_dec_1 (expr -> data.ns_add.rrclass);
 			if (len > rv + strlen (s) + left) {
 				strcpy (&buf [rv], s);
 				rv += strlen (&buf [rv]);
 			}
 			buf [rv++] = ' ';
 			left--;
-			s = print_dec_1 (expr -> data.ns_update.rrtype);
+			s = print_dec_1 (expr -> data.ns_add.rrtype);
 			if (len > rv + strlen (s) + left) {
 				strcpy (&buf [rv], s);
 				rv += strlen (&buf [rv]);
@@ -704,17 +720,17 @@ static unsigned print_subexpression (expr, buf, len)
 			buf [rv++] = ' ';
 			left--;
 			rv += print_subexpression
-				(expr -> data.ns_update.rrname,
+				(expr -> data.ns_add.rrname,
 				 buf + rv, len - rv - left);
 			buf [rv++] = ' ';
 			left--;
 			rv += print_subexpression
-				(expr -> data.ns_update.rrdata,
+				(expr -> data.ns_add.rrdata,
 				 buf + rv, len - rv - left);
 			buf [rv++] = ' ';
 			left--;
 			rv += print_subexpression
-				(expr -> data.ns_update.ttl,
+				(expr -> data.ns_add.ttl,
 				 buf + rv, len - rv - left);
 			buf [rv++] = ')';
 			buf [rv] = 0;
@@ -722,17 +738,13 @@ static unsigned print_subexpression (expr, buf, len)
 		}
 		break;
 
-	      case expr_updated_dns_rr:
-		if (len > 12) {
-			rv = 13;
-			strcpy (buf, "(updated-rr ");
-			rv += print_subexpression (expr -> data.updated_dns_rr,
-						   buf + rv, len - rv - 1);
-			buf [rv++] = ')';
-			buf [rv] = 0;
-			return rv;
+	      case expr_null:
+		if (len > 6) {
+			strcpy (buf, "(null)");
+			return 6;
 		}
 		break;
+		
 	}
 	return 0;
 }
@@ -833,9 +845,14 @@ int token_print_indent (FILE *file, int col, int indent,
 			const char *suffix, const char *buf)
 {
 	int len = strlen (buf) + strlen (prefix);
-	if (col + len > 79 && indent + len < 79) {
-		indent_spaces (file, indent);
-		col = indent;
+	if (col + len > 79) {
+		if (indent + len < 79) {
+			indent_spaces (file, indent);
+			col = indent;
+		} else {
+			indent_spaces (file, col);
+			col = len > 79 ? 0 : 79 - len - 1;
+		}
 	} else if (prefix && *prefix) {
 		fputs (prefix, file);
 		col += strlen (prefix);
@@ -862,3 +879,224 @@ void indent_spaces (FILE *file, int indent)
 		fputc (' ', file);
 }
 
+#if defined (NSUPDATE)
+void print_dns_status (int status, ns_updque *uq)
+{
+	char obuf [1024];
+	char *s = &obuf [0], *end = &obuf [1022];
+	ns_updrec *u;
+	int position;
+	int ttlp;
+	const char *predicate = "if", *en, *op;
+	int errorp;
+
+	for (u = HEAD (*uq); u; u = NEXT (u, r_link)) {
+		ttlp = 0;
+		switch (u -> r_opcode)
+		{
+		      case NXRRSET:
+			op = "doesn't exist";
+			position = 1;
+			break;
+		      case YXRRSET:
+			op = "exists";
+			position = 1;
+			break;
+		      case ADD:
+			op = "add";
+			position = 0;
+			ttlp = 1;
+			break;
+		      case DELETE:
+			op = "delete";
+			position = 0;
+			break;
+		      default:
+			op = "unknown";
+			position = 0;
+			break;
+		}
+		if (!position) {
+			if (s + strlen (op) < end) {
+				strcpy (s, op);
+				s += strlen (s);
+				if (s + 1 < end)
+					*s++ = ' ';
+			}
+		} else {
+			if (s + strlen (predicate) < end) {
+				strcpy (s, predicate);
+				s += strlen (s);
+				if (s + 1 < end)
+					*s++ = ' ';
+			}
+			predicate = "and";
+		}
+		if (ttlp) {
+			/* 27 is as big as a ttl can get. */
+			if (s + 27 < end) {
+				sprintf (s, "%lu",
+					 (unsigned long)(u -> r_ttl));
+				s += strlen (s);
+				if (s + 1 < end)
+					*s++ = ' ';
+			}
+		}
+		switch (u -> r_class) {
+		      case C_IN:
+			en = "IN";
+			break;
+		      case C_CHAOS:
+			en = "CHAOS";
+			break;
+		      case C_HS:
+			en = "HS";
+			break;
+		      default:
+			en = "UNKNOWN";
+			break;
+		}
+		if (s + strlen (en) < end) {
+			strcpy (s, en);
+			s += strlen (en);
+			if (s + 1 < end)
+				*s++ = ' ';
+		}
+		switch (u -> r_type) {
+		      case T_A:
+			en = "A";
+			break;
+		      case T_PTR:
+			en = "PTR";
+			break;
+		      case T_MX:
+			en = "MX";
+			break;
+		      case T_TXT:
+			en = "TXT";
+			break;
+		      case T_CNAME:
+			en = "CNAME";
+			break;
+		      default:
+			en = "UNKNOWN";
+			break;
+		}
+		if (s + strlen (en) < end) {
+			strcpy (s, en);
+			s += strlen (en);
+			if (s + 1 < end)
+				*s++ = ' ';
+		}
+		if (u -> r_dname) {
+			if (s + strlen (u -> r_dname) < end) {
+				strcpy (s, u -> r_dname);
+				s += strlen (s);
+				if (s + 1 < end)
+					*s++ = ' ';
+			}
+		}
+		if (u -> r_data) {
+			if (u -> r_type == T_TXT) {
+				if (s + 1 < end)
+					*s++ = '"';
+			}
+			if (s + strlen (u -> r_data) < end) {
+				strcpy (s, u -> r_data);
+				s += strlen (s);
+				if (u -> r_type == T_TXT) {
+					if (s + 1 < end)
+						*s++ = '"';
+				}
+				if (s + 1 < end)
+					*s++ = ' ';
+			}
+		}
+		if (position) {
+			if (s + strlen (op) < end) {
+				strcpy (s, op);
+				s += strlen (s);
+				if (s + 1 < end)
+					*s++ = ' ';
+			}
+		}
+		if (u == TAIL (*uq))
+			break;
+		if (s + 1 < end)
+			*s++ = ' ';
+	}
+	if (s == &obuf [0]) {
+		strcpy (s, "empty update");
+		s += strlen (s);
+	}
+	errorp = 1;
+	switch (status) {
+	      case FORMERR:
+		en = "format error";
+		break;
+
+	      case NOERROR:
+		en = "succeeded";
+		errorp = 0;
+		break;
+
+	      case NOTAUTH:
+		en = "not authorized";
+		break;
+
+	      case NOTIMP:
+		en = "not implemented";
+		break;
+
+	      case NOTZONE:
+		en = "not a valid zone";
+		break;
+
+	      case NXDOMAIN:
+		en = "no such domain";
+		break;
+
+	      case NXRRSET:
+		en = "no such record";
+		break;
+
+	      case REFUSED:
+		en = "refused";
+		break;
+
+	      case SERVFAIL:
+		en = "server failed";
+		break;
+
+	      case YXDOMAIN:
+		en = "domain exists";
+		break;
+
+	      case YXRRSET:
+		en = "record exists";
+		break;
+
+	      default:
+		en = "unknown error";
+		break;
+	}
+
+	if (s + 2 < end) {
+		*s++ = ':';
+		*s++ = ' ';
+	}
+	if (s + strlen (en) < end) {
+		strcpy (s, en);
+		s += strlen (en);
+		if (s + 1 < end)
+			*s++ = ' ';
+	}
+	if (s + 1 < end)
+		*s++ = '.';
+	*s++ = 0;
+	if (errorp)
+		log_error (obuf);
+	else
+		log_info (obuf);
+}
+#endif /* NSUPDATE */

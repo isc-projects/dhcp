@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.66 2000/01/05 18:05:46 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.67 2000/01/08 01:38:52 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -405,10 +405,10 @@ int evaluate_dns_expression (result, packet, lease, in_options,
 		
 	switch (expr -> op) {
 #if defined (NSUPDATE)
-	      case expr_ns_update:
+	      case expr_ns_add:
 		r0 = evaluate_numeric_expression (&ttl, packet, lease,
 						  in_options, cfg_options,
-						  expr -> data.ns_update.ttl);
+						  expr -> data.ns_add.ttl);
 		goto nsfinish;
 
 	      case expr_ns_exists:
@@ -418,9 +418,10 @@ int evaluate_dns_expression (result, packet, lease, in_options,
 	      case expr_ns_not_exists:
 		r0 = 1;
 	      nsfinish:
+		memset (&name, 0, sizeof name);
 		r1 = evaluate_data_expression (&name, packet, lease,
 					       in_options, cfg_options,
-					       expr -> data.ns_update.rrname);
+					       expr -> data.ns_add.rrname);
 		if (r1) {
 			/* The result of the evaluation may or may not
 			   be NUL-terminated, but we need it
@@ -435,20 +436,20 @@ int evaluate_dns_expression (result, packet, lease, in_options,
 			} else {
 				memcpy (tname, name.data, name.len);
 				tname [name.len] = 0;
+				memset (&data, 0, sizeof data);
 				r2 = evaluate_data_expression
 					(&data, packet, lease, in_options,
 					 cfg_options,
-					 expr -> data.ns_update.rrname);
+					 expr -> data.ns_add.rrdata);
 			}
 		} else
 			r2 = 0;
-		if (r0 && r1 && r2) {
-		    *result = res_mkupdrec (expr -> op == expr_ns_update ||
-					    expr -> op == expr_ns_delete
-					    ? S_UPDATE : S_PREREQ, tname,
-					    expr -> data.ns_update.rrclass,
-					    expr -> data.ns_update.rrtype,
-					    ttl);
+		if (r0 && r1 && (r2 || expr -> op != expr_ns_add)) {
+		    *result = res_mkupdrec (((expr -> op == expr_ns_add ||
+					      expr -> op == expr_ns_delete)
+					     ? S_UPDATE : S_PREREQ),
+					    tname, expr -> data.ns_add.rrclass,
+					    expr -> data.ns_add.rrtype, ttl);
 		    if (!*result) {
 			  ngood:
 			    if (r2) {
@@ -458,21 +459,42 @@ int evaluate_dns_expression (result, packet, lease, in_options,
 			    }
 		    } else {
 			if (data.len) {
-				(*result) -> r_size = data.len;
-				(*result) -> r_data = malloc (data.len);
-				if (!(*result) -> r_data) {
+				/* As a special case, if we get exactly
+				   four bytes of data, it's an IP address
+				   represented as a 32-bit quantity, which
+				   is actually what we *should* be getting
+				   here.   Because res_mkupdrec is currently
+				   broken and expects a dotted quad, convert
+				   it.   This should be fixed when the new
+				   resolver is merged. */
+				if (data.len == 4) {
+				    (*result) -> r_data = malloc (16);
+				    if (!(*result) -> r_data)
+					goto dpngood;
+				    sprintf ((*result) -> r_data,
+					     "%d.%d.%d.%d",
+					     data.data [0], data.data [1],
+					     data.data [2], data.data [3]);
+				    (*result) -> r_size = 
+					    strlen ((*result) -> r_data);
+				} else {
+				    (*result) -> r_size = data.len;
+				    (*result) -> r_data = malloc (data.len);
+				    if (!(*result) -> r_data) {
+				      dpngood: /* double plus ungood. */
 					res_freeupdrec (*result);
 					*result = 0;
 					goto ngood;
+				    }
+				    memcpy ((*result) -> r_data,
+					    data.data, data.len);
 				}
-				memcpy ((*result) -> r_data,
-					data.data, data.len);
 			} else {
 				(*result) -> r_data = 0;
 				(*result) -> r_size = 0;
 			}
 			switch (expr -> op) {
-			      case expr_ns_update:
+			      case expr_ns_add:
 				(*result) -> r_opcode = ADD;
 				break;
 			      case expr_ns_delete:
@@ -505,7 +527,7 @@ int evaluate_dns_expression (result, packet, lease, in_options,
 		return r0 && r1 && r2 && *result;
 
 #else
-	      case expr_ns_update:
+	      case expr_ns_add:
 	      case expr_ns_delete:
 	      case expr_ns_exists:
 	      case expr_ns_not_exists:
@@ -521,8 +543,8 @@ int evaluate_dns_expression (result, packet, lease, in_options,
 	      case expr_static:
 	      case expr_known:
 	      case expr_exists:
-	      case expr_dns_transaction:
-		log_error ("Boolean opcode in evaluate_data_expression: %d",
+	      case expr_variable_exists:
+		log_error ("Boolean opcode in evaluate_dns_expression: %d",
 		      expr -> op);
 		return 0;
 
@@ -545,8 +567,9 @@ int evaluate_dns_expression (result, packet, lease, in_options,
 	      case expr_host_decl_name:
 	      case expr_config_option:
 	      case expr_leased_address:
-	      case expr_updated_dns_rr:
-		log_error ("Data opcode in evaluate_boolean_expression: %d",
+	      case expr_null:
+	      case expr_variable_reference:
+		log_error ("Data opcode in evaluate_dns_expression: %d",
 		      expr -> op);
 		return 0;
 
@@ -555,7 +578,8 @@ int evaluate_dns_expression (result, packet, lease, in_options,
 	      case expr_extract_int32:
 	      case expr_const_int:
 	      case expr_lease_time:
-		log_error ("Numeric opcode in evaluate_boolean_expression: %d",
+	      case expr_dns_transaction:
+		log_error ("Numeric opcode in evaluate_dns_expression: %d",
 		      expr -> op);
 		return 0;
 	}
@@ -580,6 +604,7 @@ int evaluate_boolean_expression (result, packet, lease, in_options,
 	int srrtype, srrname, srrdata, sttl;
 	int bleft, bright;
 	int sleft, sright;
+	struct binding *binding;
 
 	switch (expr -> op) {
 	      case expr_check:
@@ -736,6 +761,27 @@ int evaluate_boolean_expression (result, packet, lease, in_options,
 		*result = 1;
 		return 1;
 
+	      case expr_variable_exists:
+		for (binding = lease -> bindings; binding;
+		     binding = binding -> next) {
+			if (!(strcasecmp
+			      (lease -> bindings -> name,
+			       expr -> data.variable)))
+				break;
+		}
+		if (binding) {
+			if (binding -> value.data)
+				*result = 1;
+			else
+				*result = 0;
+		} else
+			*result = 0;
+#if defined (DEBUG_EXPRESSIONS)
+		log_debug ("boolean: %s? = %s", expr -> variable,
+			   s0 ? "true" : "false";
+#endif
+		return 1;
+
 	      case expr_none:
 	      case expr_match:
 	      case expr_substring:
@@ -756,7 +802,8 @@ int evaluate_boolean_expression (result, packet, lease, in_options,
 	      case expr_host_decl_name:
 	      case expr_config_option:
 	      case expr_leased_address:
-	      case expr_updated_dns_rr:
+	      case expr_null:
+	      case expr_variable_reference:
 		log_error ("Data opcode in evaluate_boolean_expression: %d",
 		      expr -> op);
 		return 0;
@@ -771,7 +818,7 @@ int evaluate_boolean_expression (result, packet, lease, in_options,
 		      expr -> op);
 		return 0;
 
-	      case expr_ns_update:
+	      case expr_ns_add:
 	      case expr_ns_delete:
 	      case expr_ns_exists:
 	      case expr_ns_not_exists:
@@ -798,6 +845,7 @@ int evaluate_data_expression (result, packet, lease,
 	unsigned long offset, len, i;
 	int s0, s1, s2, s3;
 	int status;
+	struct binding *binding;
 	char *s;
 
 	switch (expr -> op) {
@@ -1417,66 +1465,34 @@ int evaluate_data_expression (result, packet, lease,
 #endif
 		return 1;
 
-	      case expr_updated_dns_rr:
-		if (!lease) {
+	      case expr_null:
 #if defined (DEBUG_EXPRESSIONS)
-			log_debug ("data: updated-dns-rr w/no lease = NULL");
+		log_debug ("data: null = NULL");
 #endif
-			return 0;
+		return 0;
+
+	      case expr_variable_reference:
+		for (binding = lease -> bindings; binding;
+		     binding = binding -> next) {
+			if (!(strcasecmp (lease -> bindings -> name,
+					  expr -> data.variable)))
+				break;
 		}
-		memset (&data, 0, sizeof data);
-		s0 = evaluate_data_expression
-			(&data, packet, lease, in_options, cfg_options,
-			 expr -> data.updated_dns_rr);
-		if (!s0) {
+		if (binding) {
+			if (binding -> value.data) {
+				data_string_copy (result, &binding -> value,
+						  "variable-reference");
+				s0 = 1;
+			} else
+				s0 = 0;
+		} else
+			s0 = 0;
 #if defined (DEBUG_EXPRESSIONS)
-			log_debug ("data: updated-dns-rr (NULL) = NULL");
+		log_debug ("data: %s = %s", expr -> variable,
+			   s0 ? print_hex_1 (result -> len,
+					     result -> data, 50);
 #endif
-			return 0;
-		}
-		if (data.len == 1 &&
-		    !strncasecmp ((const char *)data.data, "a", 1)) {
-			s = lease -> ddns_fwd_name;
-		} else if (data.len == 3 &&
-			   !strncasecmp ((const char *)data.data, "ptr", 3)) {
-			s = lease -> ddns_rev_name;
-		} else {
-#if defined (DEBUG_EXPRESSIONS)
-			log_debug ("data: updated-dns-rr (%*s) = NULL",
-				   result -> len > 50 ? 50 : result -> len,
-				   result -> data);
-#endif
-			data_string_forget (&data, "data: updated-dns-rr");
-			return 0;
-		}
-		if (!s) {
-			log_error ("data: updated-dns-rr: %*s value was NULL",
-				   data.len, (const char *)data.data);
-			data_string_forget (&data, "data: updated-dns-rr");
-			return 0;
-		}
-		data_string_forget (&data, "data: updated-dns-rr");
-		result -> len = strlen (s);
-		if (buffer_allocate (&result -> buffer, result -> len + 1,
-				     "updated-dns-rr")) {
-			result -> data = &result -> buffer -> data [0];
-			strcpy ((char *)&result -> buffer -> data [0], s);
-			result -> terminated = 1;
-		} else {
-#if defined (DEBUG_EXPRESSIONS)
-			log_debug ("data: updated-dns-rr (%*s)",
-				   result -> len > 50 ? 50 : result -> len,
-				   result -> data);
-#endif
-			log_error ("data: updated-dns-rr: no memory.");
-			return 0;
-		}
-#if defined (DEBUG_EXPRESSIONS)
-		log_debug ("data: updated-dns-rr (%*s) = %s",
-			  result -> len > 50 ? 50 : result -> len,
-			  result -> data, s);
-#endif
-		return 1;
+		return s0;
 
 	      case expr_check:
 	      case expr_equal:
@@ -1489,6 +1505,7 @@ int evaluate_data_expression (result, packet, lease,
 	      case expr_known:
 	      case expr_none:
 	      case expr_exists:
+	      case expr_variable_exists:
 		log_error ("Boolean opcode in evaluate_data_expression: %d",
 		      expr -> op);
 		return 0;
@@ -1503,7 +1520,7 @@ int evaluate_data_expression (result, packet, lease,
 		      expr -> op);
 		return 0;
 
-	      case expr_ns_update:
+	      case expr_ns_add:
 	      case expr_ns_delete:
 	      case expr_ns_exists:
 	      case expr_ns_not_exists:
@@ -1545,6 +1562,7 @@ int evaluate_numeric_expression (result, packet, lease,
 	      case expr_known:
 	      case expr_none:
 	      case expr_exists:
+	      case expr_variable_exists:
 		log_error ("Boolean opcode in evaluate_numeric_expression: %d",
 		      expr -> op);
 		return 0;
@@ -1567,7 +1585,8 @@ int evaluate_numeric_expression (result, packet, lease,
 	      case expr_host_decl_name:
 	      case expr_config_option:
 	      case expr_leased_address:
-	      case expr_updated_dns_rr:
+	      case expr_null:
+	      case expr_variable_reference:
 		log_error ("Data opcode in evaluate_numeric_expression: %d",
 		      expr -> op);
 		return 0;
@@ -1663,16 +1682,22 @@ int evaluate_numeric_expression (result, packet, lease,
 		    nut = 0;
 		    status = (evaluate_dns_expression
 			      (&nut, packet, lease, in_options, cfg_options,
-			       expr -> data.dns_transaction.car));
+			       cur -> data.dns_transaction.car));
 		    if (!status)
 			    goto dns_bad;
 		    APPEND (uq, nut, r_link);
 		    cur = next;
 		} while (next);
 
-		status = res_nupdate (&res, HEAD (uq), NULL);
-		*result = status;
+		/* Do the update and record the error code, if there was
+		   an error; otherwise set it to NOERROR. */
+		if (res_nupdate (&res, HEAD (uq), NULL))
+			*result = NOERROR;
+		else
+			*result = res.res_h_errno;
 		status = 1;
+
+		print_dns_status ((int)*result, &uq);
 
 	      dns_bad:
 		while (!EMPTY (uq)) {
@@ -1686,7 +1711,7 @@ int evaluate_numeric_expression (result, packet, lease,
 		return status;
 #endif /* NSUPDATE */
 
-	      case expr_ns_update:
+	      case expr_ns_add:
 	      case expr_ns_delete:
 	      case expr_ns_exists:
 	      case expr_ns_not_exists:
@@ -1930,18 +1955,18 @@ void expression_dereference (eptr, name)
 				(&expr -> data.dns_transaction.car, name);
 		if (expr -> data.dns_transaction.cdr)
 			expression_dereference
-				(&expr -> data.dns_transaction.car, name);
+				(&expr -> data.dns_transaction.cdr, name);
 		break;
 
-	      case expr_ns_update:
-		if (expr -> data.ns_update.rrname)
-		    expression_dereference (&expr -> data.ns_update.rrname,
+	      case expr_ns_add:
+		if (expr -> data.ns_add.rrname)
+		    expression_dereference (&expr -> data.ns_add.rrname,
 					    name);
-		if (expr -> data.ns_update.rrdata)
-		    expression_dereference (&expr -> data.ns_update.rrdata,
+		if (expr -> data.ns_add.rrdata)
+		    expression_dereference (&expr -> data.ns_add.rrdata,
 					    name);
-		if (expr -> data.ns_update.ttl)
-		    expression_dereference (&expr -> data.ns_update.ttl,
+		if (expr -> data.ns_add.ttl)
+		    expression_dereference (&expr -> data.ns_add.ttl,
 					    name);
 		break;
 
@@ -1956,6 +1981,12 @@ void expression_dereference (eptr, name)
 					    name);
 		break;
 
+	      case expr_variable_reference:
+	      case expr_variable_exists:
+		if (expr -> data.variable)
+			dfree (expr -> data.variable, name);
+		break;
+
 		/* No subexpressions. */
 	      case expr_leased_address:
 	      case expr_lease_time:
@@ -1965,7 +1996,7 @@ void expression_dereference (eptr, name)
 	      case expr_hardware:
 	      case expr_exists:
 	      case expr_known:
-	      case expr_updated_dns_rr:
+	      case expr_null:
 		break;
 
 	      default:
@@ -2018,7 +2049,7 @@ void data_string_truncate (dp, len)
 int is_dns_expression (expr)
 	struct expression *expr;
 {
-      return (expr -> op == expr_ns_update ||
+      return (expr -> op == expr_ns_add ||
 	      expr -> op == expr_ns_delete ||
 	      expr -> op == expr_ns_exists ||
 	      expr -> op == expr_ns_not_exists);
@@ -2029,6 +2060,7 @@ int is_boolean_expression (expr)
 {
 	return (expr -> op == expr_check ||
 		expr -> op == expr_exists ||
+		expr -> op == expr_variable_exists ||
 		expr -> op == expr_equal ||
 		expr -> op == expr_not_equal ||
 		expr -> op == expr_and ||
@@ -2059,7 +2091,8 @@ int is_data_expression (expr)
 		expr -> op == expr_host_decl_name ||
 		expr -> op == expr_leased_address ||
 		expr -> op == expr_config_option ||
-		expr -> op == expr_updated_dns_rr);
+		expr -> op == expr_null ||
+		expr -> op == expr_variable_reference);
 }
 
 int is_numeric_expression (expr)
@@ -2070,6 +2103,30 @@ int is_numeric_expression (expr)
 		expr -> op == expr_extract_int32 ||
 		expr -> op == expr_const_int ||
 		expr -> op == expr_lease_time ||
+		expr -> op == expr_dns_transaction);
+}
+
+int is_compound_expression (expr)
+	struct expression *expr;
+{
+	return (expr -> op == expr_ns_add ||
+		expr -> op == expr_ns_delete ||
+		expr -> op == expr_ns_exists ||
+		expr -> op == expr_ns_not_exists ||
+		expr -> op == expr_substring ||
+		expr -> op == expr_suffix ||
+		expr -> op == expr_option ||
+		expr -> op == expr_concat ||
+		expr -> op == expr_encode_int8 ||
+		expr -> op == expr_encode_int16 ||
+		expr -> op == expr_encode_int32 ||
+		expr -> op == expr_binary_to_ascii ||
+		expr -> op == expr_reverse ||
+		expr -> op == expr_pick_first_value ||
+		expr -> op == expr_config_option ||
+		expr -> op == expr_extract_int8 ||
+		expr -> op == expr_extract_int16 ||
+		expr -> op == expr_extract_int32 ||
 		expr -> op == expr_dns_transaction);
 }
 
@@ -2101,6 +2158,7 @@ static int op_val (op)
 	      case expr_encode_int32:
 	      case expr_const_int:
 	      case expr_exists:
+	      case expr_variable_exists:
 	      case expr_known:
 	      case expr_binary_to_ascii:
 	      case expr_reverse:
@@ -2110,8 +2168,9 @@ static int op_val (op)
 	      case expr_leased_address:
 	      case expr_lease_time:
 	      case expr_dns_transaction:
-	      case expr_updated_dns_rr:
-	      case expr_ns_update:
+	      case expr_null:
+	      case expr_variable_reference:
+	      case expr_ns_add:
 	      case expr_ns_delete:
 	      case expr_ns_exists:
 	      case expr_ns_not_exists:
@@ -2165,6 +2224,7 @@ enum expression_context op_context (op)
 	      case expr_encode_int32:
 	      case expr_const_int:
 	      case expr_exists:
+	      case expr_variable_exists:
 	      case expr_known:
 	      case expr_binary_to_ascii:
 	      case expr_reverse:
@@ -2173,8 +2233,9 @@ enum expression_context op_context (op)
 	      case expr_config_option:
 	      case expr_leased_address:
 	      case expr_lease_time:
-	      case expr_updated_dns_rr:
-	      case expr_ns_update:
+	      case expr_null:
+	      case expr_variable_reference:
+	      case expr_ns_add:
 	      case expr_ns_delete:
 	      case expr_ns_exists:
 	      case expr_ns_not_exists:
@@ -2194,17 +2255,24 @@ enum expression_context op_context (op)
 	return context_any;
 }
 
-int write_expression (file, expr, col, indent)
+int write_expression (file, expr, col, indent, firstp)
 	FILE *file;
 	struct expression *expr;
 	int col;
 	int indent;
+	int firstp;
 {
 	struct expression *e;
 	const char *s;
 	char obuf [65];
 	int scol;
 	int width;
+
+	/* If this promises to be a fat expression, start a new line. */
+	if (!firstp && is_compound_expression (expr)) {
+		indent_spaces (file, indent);
+		col = indent;
+	}
 
 	switch (expr -> op) {
 	      case expr_none:
@@ -2226,11 +2294,11 @@ int write_expression (file, expr, col, indent)
 	      case expr_equal:
 		s = "=";
 	      binary:
-		col = write_expression (file,
-					expr -> data.equal [0], col, indent);
+		col = write_expression (file, expr -> data.equal [0],
+					col, indent, 1);
 		col = token_print_indent (file, col, indent, " ", " ", s);
-		col = write_expression (file,
-					expr -> data.equal [1], col, indent);
+		col = write_expression (file, expr -> data.equal [1],
+					col, indent + 2, 0);
 		break;
 
 	      case expr_substring:
@@ -2239,13 +2307,13 @@ int write_expression (file, expr, col, indent)
 		col = token_print_indent (file, col, indent, " ", "", "(");
 		scol = col;
 		col = write_expression (file, expr -> data.substring.expr,
-					col, scol);
+					col, scol, 1);
 		col = token_print_indent (file, col, indent, "", " ", ",");
 		col = write_expression (file, expr -> data.substring.offset,
-					col, indent);
+					col, indent, 0);
 		col = token_print_indent (file, col, scol, "", " ", ",");
 		col = write_expression (file, expr -> data.substring.len,
-					col, scol);
+					col, scol, 0);
 		col = token_print_indent (file, col, indent, "", "", ")");
 		break;
 
@@ -2254,10 +2322,10 @@ int write_expression (file, expr, col, indent)
 		col = token_print_indent (file, col, indent, " ", "", "(");
 		scol = col;
 		col = write_expression (file, expr -> data.suffix.expr,
-					col, scol);
+					col, scol, 1);
 		col = token_print_indent (file, col, scol, "", " ", ",");
 		col = write_expression (file, expr -> data.suffix.len,
-					col, scol);
+					col, scol, 0);
 		col = token_print_indent (file, col, indent, "", "", ")");
 		break;
 
@@ -2267,9 +2335,11 @@ int write_expression (file, expr, col, indent)
 					  "concat");
 		col = token_print_indent (file, col, indent, " ", "", "(");
 		scol = col;
+		firstp = 1;
 	      concat_again:
 		col = write_expression (file, e -> data.concat [0],
-					col, scol);
+					col, scol, firstp);
+		firstp = 0;
 		if (!e -> data.concat [1])
 			goto no_concat_cdr;
 		col = token_print_indent (file, col, scol, "", " ", ",");
@@ -2278,7 +2348,7 @@ int write_expression (file, expr, col, indent)
 			goto concat_again;
 		}
 		col = write_expression (file, e -> data.concat [1],
-					col, scol);
+					col, scol, 0);
 	      no_concat_cdr:
 		col = token_print_indent (file, col, indent, "", "", ")");
 		break;
@@ -2305,7 +2375,7 @@ int write_expression (file, expr, col, indent)
 	      case expr_not:
 		col = token_print_indent (file, col, indent, "", " ", "not");
 		col = write_expression (file,
-					expr -> data.not, col, indent);
+					expr -> data.not, col, indent + 2, 1);
 		break;
 
 	      case expr_option:
@@ -2340,10 +2410,10 @@ int write_expression (file, expr, col, indent)
 		col = token_print_indent (file, col, indent, " ", "", "(");
 		scol = col;
 		col = write_expression (file, expr -> data.packet.offset,
-					col, indent);
+					col, indent, 1);
 		col = token_print_indent (file, col, scol, "", " ", ",");
 		col = write_expression (file, expr -> data.packet.len,
-					col, scol);
+					col, scol, 0);
 		col = token_print_indent (file, col, indent, "", "", ")");
 		break;
 
@@ -2360,7 +2430,7 @@ int write_expression (file, expr, col, indent)
 		col = token_print_indent (file, col, indent, " ", "", "(");
 		scol = col;
 		col = write_expression (file, expr -> data.extract_int,
-					col, indent);
+					col, indent, 1);
 		col = token_print_indent (file, col, scol, "", " ", ",");
 		sprintf (obuf, "%d", width);
 		col = token_print_indent (file, col, scol, " ", "", obuf);
@@ -2383,7 +2453,7 @@ int write_expression (file, expr, col, indent)
 		col = token_print_indent (file, col, indent, " ", "", "(");
 		scol = col;
 		col = write_expression (file, expr -> data.extract_int,
-					col, indent);
+					col, indent, 1);
 		col = token_print_indent (file, col, scol, "", " ", ",");
 		sprintf (obuf, "%d", width);
 		col = token_print_indent (file, col, scol, " ", "", obuf);
@@ -2425,10 +2495,10 @@ int write_expression (file, expr, col, indent)
 		col = token_print_indent (file, col, indent, " ", "", "(");
 		scol = col;
 		col = write_expression (file, expr -> data.reverse.width,
-					col, scol);
+					col, scol, 1);
 		col = token_print_indent (file, col, scol, "", " ", ",");
 		col = write_expression (file, expr -> data.reverse.buffer,
-					col, scol);
+					col, scol, 0);
 		col = token_print_indent (file, col, indent, "", "",
 					  ")");
 		break;
@@ -2445,19 +2515,19 @@ int write_expression (file, expr, col, indent)
 					  "(");
 		scol = col;
 		col = write_expression (file, expr -> data.b2a.base,
-					col, scol);
+					col, scol, 1);
 		col = token_print_indent (file, col, scol, "", " ",
 					  ",");
 		col = write_expression (file, expr -> data.b2a.width,
-					col, scol);
+					col, scol, 0);
 		col = token_print_indent (file, col, scol, "", " ",
 					  ",");
 		col = write_expression (file, expr -> data.b2a.seperator,
-					col, scol);
+					col, scol, 0);
 		col = token_print_indent (file, col, scol, "", " ",
 					  ",");
 		col = write_expression (file, expr -> data.b2a.buffer,
-					col, scol);
+					col, scol, 0);
 		col = token_print_indent (file, col, indent, "", "",
 					  ")");
 		break;
@@ -2478,10 +2548,12 @@ int write_expression (file, expr, col, indent)
 		col = token_print_indent (file, col, indent, " ", "",
 					  "(");
 		scol = col;
+		firstp = 1;
 	      pick_again:
 		col = write_expression (file,
 					e -> data.pick_first_value.car,
-					col, scol);
+					col, scol, firstp);
+		firstp = 0;
 		/* We're being very lisp-like right now - instead of
                    representing this expression as (first middle . last) we're
                    representing it as (first middle last), which means that the
@@ -2499,7 +2571,7 @@ int write_expression (file, expr, col, indent)
 		}
 		col = write_expression (file,
 					e -> data.pick_first_value.cdr,
-					col, scol);
+					col, scol, 0);
 	      no_pick_cdr:
 		col = token_print_indent (file, col, indent, "", "",
 					  ")");
@@ -2512,49 +2584,54 @@ int write_expression (file, expr, col, indent)
 
 	      case expr_dns_transaction:
 		col = token_print_indent (file, col, indent, "", "",
-					  "nsupdate");
+					  "ns-update");
 		col = token_print_indent (file, col, indent, " ", "",
 					  "(");
-		scol = col;
+		scol = 0;
 		for (e = expr;
 		     e && e -> op == expr_dns_transaction;
 		     e = e -> data.dns_transaction.cdr) {
+			if (!scol) {
+				scol = col;
+				firstp = 1;
+			} else
+				firstp = 0;
 			col = write_expression (file,
 						e -> data.dns_transaction.car,
-						col, scol);
+						col, scol, firstp);
 			if (e -> data.dns_transaction.cdr)
 				col = token_print_indent (file, col, scol,
 							  "", " ", ",");
 		}
 		if (e)
-			col = write_expression (file, e, col, scol);
+			col = write_expression (file, e, col, scol, 0);
 		col = token_print_indent (file, col, indent, "", "", ")");
 		break;
 
-	      case expr_ns_update:
+	      case expr_ns_add:
 		col = token_print_indent (file, col, indent, "", "",
 					  "update");
 		col = token_print_indent (file, col, indent, " ", "",
 					  "(");
 		scol = col;
-		sprintf (obuf, "%d", expr -> data.ns_update.rrclass);
-		col = token_print_indent (file, col, scol, " ", "", obuf);
+		sprintf (obuf, "%d", expr -> data.ns_add.rrclass);
+		col = token_print_indent (file, col, scol, "", "", obuf);
 		col = token_print_indent (file, col, scol, "", " ",
 					  ",");
-		sprintf (obuf, "%d", expr -> data.ns_update.rrtype);
-		col = token_print_indent (file, col, scol, " ", "", obuf);
+		sprintf (obuf, "%d", expr -> data.ns_add.rrtype);
+		col = token_print_indent (file, col, scol, "", "", obuf);
 		col = token_print_indent (file, col, scol, "", " ",
 					  ",");
-		col = write_expression (file, expr -> data.ns_update.rrname,
-					col, scol);
+		col = write_expression (file, expr -> data.ns_add.rrname,
+					col, scol, 0);
 		col = token_print_indent (file, col, scol, "", " ",
 					  ",");
-		col = write_expression (file, expr -> data.ns_update.rrdata,
-					col, scol);
+		col = write_expression (file, expr -> data.ns_add.rrdata,
+					col, scol, 0);
 		col = token_print_indent (file, col, scol, "", " ",
 					  ",");
-		col = write_expression (file, expr -> data.ns_update.ttl,
-					col, scol);
+		col = write_expression (file, expr -> data.ns_add.ttl,
+					col, scol, 0);
 		col = token_print_indent (file, col, indent, "", "",
 					  ")");
 		break;
@@ -2566,24 +2643,20 @@ int write_expression (file, expr, col, indent)
 					  "(");
 	      finish_ns_small:
 		scol = col;
-		sprintf (obuf, "%d", expr -> data.ns_update.rrclass);
-		col = token_print_indent (file, col, scol, " ", "", obuf);
+		sprintf (obuf, "%d", expr -> data.ns_add.rrclass);
+		col = token_print_indent (file, col, scol, "", "", obuf);
 		col = token_print_indent (file, col, scol, "", " ",
 					  ",");
-		sprintf (obuf, "%d", expr -> data.ns_update.rrtype);
-		col = token_print_indent (file, col, scol, " ", "", obuf);
+		sprintf (obuf, "%d", expr -> data.ns_add.rrtype);
+		col = token_print_indent (file, col, scol, "", "", obuf);
 		col = token_print_indent (file, col, scol, "", " ",
 					  ",");
-		col = write_expression (file, expr -> data.ns_update.rrname,
-					col, scol);
+		col = write_expression (file, expr -> data.ns_add.rrname,
+					col, scol, 0);
 		col = token_print_indent (file, col, scol, "", " ",
 					  ",");
-		col = write_expression (file, expr -> data.ns_update.rrdata,
-					col, scol);
-		col = token_print_indent (file, col, scol, "", " ",
-					  ",");
-		col = write_expression (file, expr -> data.ns_update.ttl,
-					col, scol);
+		col = write_expression (file, expr -> data.ns_add.rrdata,
+					col, scol, 0);
 		col = token_print_indent (file, col, indent, "", "",
 					  ")");
 		break;
@@ -2602,21 +2675,27 @@ int write_expression (file, expr, col, indent)
 					  "(");
 		goto finish_ns_small;
 
-	      case expr_updated_dns_rr:
-		col = token_print_indent (file, col, indent, "", "",
-					  "updated-dns-rr");
-		col = token_print_indent (file, col, indent, " ", "",
-					  "(");
-		scol = col;
-		col = write_expression (file, expr -> data.updated_dns_rr,
-					col, scol);
-		col = token_print_indent (file, col, indent, "", "",
-					  ")");
-		break;
-
 	      case expr_static:
 		col = token_print_indent (file, col, indent, "", "",
 					  "static");
+		break;
+
+	      case expr_null:
+		col = token_print_indent (file, col, indent, "", "", "null");
+		break;
+
+	      case expr_variable_reference:
+		col = token_print_indent (file, indent, indent, "", "",
+					  expr -> data.variable);
+		break;
+
+	      case expr_variable_exists:
+		col = token_print_indent (file, indent, indent, "", "",
+					  "defined");
+		col = token_print_indent (file, col, indent, " ", "", "(");
+		col = token_print_indent (file, col, indent, "", "",
+					  expr -> data.variable);
+		col = token_print_indent (file, col, indent, "", "", ")");
 		break;
 
 	      default:
