@@ -50,7 +50,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: socket.c,v 1.26.2.4 1998/12/22 22:45:05 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: socket.c,v 1.26.2.5 1999/02/03 19:09:49 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -272,7 +272,8 @@ void maybe_setup_fallback ()
 	fbi = setup_fallback ();
 	if (fbi) {
 		fbi -> wfdesc = if_register_socket (fbi);
-		add_protocol ("fallback", fbi -> rfdesc, got_one, fbi);
+		add_protocol ("fallback",
+			      fbi -> wfdesc, fallback_discard, fbi);
 	}
 #endif
 }
