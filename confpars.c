@@ -702,22 +702,38 @@ struct hardware parse_hardware_addr (cfile, bc)
 	int token;
 	int hlen;
 	struct hardware rv;
+	unsigned char *t;
 
 	token = next_token (&val, cfile);
 	switch (token) {
 	      case ETHERNET:
 		rv.htype = ARPHRD_ETHER;
-		hlen = 6;
-		parse_numeric_aggregate (cfile, bc,
-					 (unsigned char *)&rv.haddr [0], &hlen,
-					 COLON, 16, 8);
-		rv.hlen = hlen;
 		break;
 	      default:
 		parse_warn ("expecting a network hardware type");
 		skip_to_semi (cfile);
 		longjmp (jdref (bc), 1);
 	}
+
+	/* Parse the hardware address information.   Technically,
+	   it would make a lot of sense to restrict the length of the
+	   data we'll accept here to the length of a particular hardware
+	   address type.   Unfortunately, there are some broken clients
+	   out there that put bogus data in the chaddr buffer, and we accept
+	   that data in the lease file rather than simply failing on such
+	   clients.   Yuck. */
+	hlen = 0;
+	t = parse_numeric_aggregate (cfile, bc,
+				     (unsigned char *)0, &hlen,
+				     COLON, 16, 8);
+	if (hlen > sizeof rv.haddr) {
+		free (t);
+		parse_warn ("hardware address too long");
+		longjmp (jdref (bc), 1);
+	}
+	rv.hlen = hlen;
+	memcpy ((unsigned char *)&rv.haddr [0], t, rv.hlen);
+	free (t);
 	return rv;
 }
 
