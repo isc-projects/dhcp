@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.173 2000/12/11 18:56:42 neild Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.174 2000/12/28 23:28:17 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -370,6 +370,7 @@ void dhcprequest (packet, ms_nulltp, ip_lease)
 {
 	struct lease *lease;
 	struct iaddr cip;
+	struct iaddr sip;
 	struct subnet *subnet;
 	int ours = 0;
 	struct option_cache *oc;
@@ -377,6 +378,7 @@ void dhcprequest (packet, ms_nulltp, ip_lease)
 	int status;
 	char msgbuf [1024]; /* XXX */
 	char *s;
+	char smbuf [19];
 #if defined (FAILOVER_PROTOCOL)
 	dhcp_failover_state_t *peer;
 #endif
@@ -415,9 +417,24 @@ void dhcprequest (packet, ms_nulltp, ip_lease)
 	else
 		s = (char *)0;
 
+	oc = lookup_option (&dhcp_universe, packet -> options,
+			    DHO_DHCP_SERVER_IDENTIFIER);
+	memset (&data, 0, sizeof data);
+	if (oc &&
+	    evaluate_option_cache (&data, packet, (struct lease *)0,
+				   (struct client_state *)0,
+				   packet -> options, (struct option_state *)0,
+				   &global_scope, oc, MDL)) {
+		sip.len = 4;
+		memcpy (sip.iabuf, data.data, 4);
+		data_string_forget (&data, MDL);
+		sprintf (smbuf, " (%s)", piaddr (sip));
+	} else
+		smbuf [0] = 0;
+
 	/* Say what we're doing... */
-	sprintf (msgbuf, "DHCPREQUEST for %s from %s %s%s%svia %s",
-		 piaddr (cip),
+	sprintf (msgbuf, "DHCPREQUEST for %s%s from %s %s%s%svia %s",
+		 piaddr (cip), smbuf,
 		 (packet -> raw -> htype
 		  ? print_hw_addr (packet -> raw -> htype,
 				   packet -> raw -> hlen,
@@ -1462,7 +1479,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 					s = s -> n_uid;
 				}
 				if (s) {
-					release_lease (seek, packet);
+					release_lease (s, packet);
 				}
 				if (seek)
 					lease_dereference (&seek, MDL);
@@ -1496,7 +1513,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 					release_lease (s, packet);
 				}
 				if (seek)
-					lease_dereference (&s, MDL);
+					lease_dereference (&seek, MDL);
 			} while (s);
 		}
 	}
@@ -2635,7 +2652,7 @@ int find_lease (struct lease **lp,
 	struct host_decl *hp = (struct host_decl *)0;
 	struct host_decl *host = (struct host_decl *)0;
 	struct lease *fixed_lease = (struct lease *)0;
-	struct lease *next;
+	struct lease *next = (struct lease *)0;
 	struct option_cache *oc;
 	struct data_string d1;
 	int have_client_identifier = 0;
@@ -2758,9 +2775,10 @@ int find_lease (struct lease **lp,
 			log_info ("wrong network segment: %s",
 				  piaddr (uid_lease -> ip_addr));
 #endif
-			next = uid_lease -> n_uid;
+			lease_reference (&next, uid_lease -> n_uid, MDL);
 			lease_dereference (&uid_lease, MDL);
 			lease_reference (&uid_lease, next, MDL);
+			lease_dereference (&next, MDL);
 			continue;
 		}
 		if ((uid_lease -> pool -> prohibit_list &&
@@ -2771,11 +2789,12 @@ int find_lease (struct lease **lp,
 			log_info ("not permitted: %s",
 				  piaddr (uid_lease -> ip_addr));
 #endif
-			next = uid_lease -> n_uid;
+			lease_reference (&next, uid_lease -> n_uid, MDL);
 			if (!packet -> raw -> ciaddr.s_addr)
 				release_lease (uid_lease, packet);
 			lease_dereference (&uid_lease, MDL);
 			lease_reference (&uid_lease, next, MDL);
+			lease_dereference (&next, MDL);
 			continue;
 		}
 		break;
@@ -2808,9 +2827,10 @@ int find_lease (struct lease **lp,
 			log_info ("wrong client identifier: %s",
 				  piaddr (hw_lease -> ip_addr));
 #endif
-			next = hw_lease -> n_hw;
+			lease_reference (&next, hw_lease -> n_hw, MDL);
 			lease_dereference (&hw_lease, MDL);
 			lease_reference (&hw_lease, next, MDL);
+			lease_dereference (&next, MDL);
 			continue;
 		}
 		if (hw_lease -> subnet -> shared_network != share) {
@@ -2818,9 +2838,10 @@ int find_lease (struct lease **lp,
 			log_info ("wrong network segment: %s",
 				  piaddr (hw_lease -> ip_addr));
 #endif
-			next = hw_lease -> n_hw;
+			lease_reference (&next, hw_lease -> n_hw, MDL);
 			lease_dereference (&hw_lease, MDL);
 			lease_reference (&hw_lease, next, MDL);
+			lease_dereference (&next, MDL);
 			continue;
 		}
 		if ((hw_lease -> pool -> prohibit_list &&
@@ -2831,11 +2852,12 @@ int find_lease (struct lease **lp,
 			log_info ("not permitted: %s",
 				  piaddr (hw_lease -> ip_addr));
 #endif
-			next = hw_lease -> n_hw;
+			lease_reference (&next, hw_lease -> n_hw, MDL);
 			if (!packet -> raw -> ciaddr.s_addr)
 				release_lease (hw_lease, packet);
 			lease_dereference (&hw_lease, MDL);
 			lease_reference (&hw_lease, next, MDL);
+			lease_dereference (&next, MDL);
 			continue;
 		}
 		break;
@@ -3322,13 +3344,13 @@ int allocate_lease (struct lease **lp, struct packet *packet,
 			lease = pool -> backup;
 		}
 	} else
-		lease = pool -> free;
-#else
-	if (pool -> free)
-		lease = pool -> free;
-	else
-		lease = pool -> abandoned;
 #endif
+	{
+		if (pool -> free)
+			lease = pool -> free;
+		else
+			lease = pool -> abandoned;
+	}
 
 	/* If there are no leases in the pool that have
 	   expired, try the next one. */
