@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.27 2000/09/20 10:13:43 mellon Exp $ Copyright (c) 1999-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.28 2000/09/29 22:04:35 mellon Exp $ Copyright (c) 1999-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -68,17 +68,14 @@ void dhcp_failover_startup ()
 
 		/* In case the peer is already running, immediately try
 		   to establish a connection with it. */
-		status = (dhcp_failover_link_initiate
-			  ((omapi_object_t *)state));
-		if (status != ISC_R_SUCCESS) {
+		status = dhcp_failover_link_initiate ((omapi_object_t *)state);
+		if (status != ISC_R_SUCCESS && status != ISC_R_INCOMPLETE) {
 			add_timeout (cur_time + 90,
 				     dhcp_failover_reconnect, state,
 				     (tvref_t)
 				     dhcp_failover_state_reference,
 				     (tvunref_t)
 				     dhcp_failover_state_dereference);
-		}
-		if (status != ISC_R_SUCCESS) {
 			log_error ("failover peer %s: %s", state -> name,
 				   isc_result_totext (status));
 		}
