@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.107 2001/01/04 00:23:39 mellon Exp $ Copyright 1995-2000 Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.108 2001/01/11 23:16:31 mellon Exp $ Copyright 1995-2000 Internet Software Consortium.";
 #endif
 
   static char copyright[] =
@@ -71,8 +71,7 @@ int server_identifier_matched;
 char std_nsupdate [] = "						    \n\
 option server.ddns-hostname =						    \n\
   pick (option fqdn.hostname, option host-name);			    \n\
-option server.ddns-domainname =						    \n\
-  pick (option fqdn.domainname, config-option domain-name);		    \n\
+option server.ddns-domainname =	config-option domain-name;		    \n\
 option server.ddns-ttl = encode-int(lease-time / 2, 32);		    \n\
 option server.ddns-rev-domainname = \"in-addr.arpa.\";";
 
