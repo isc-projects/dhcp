@@ -241,12 +241,15 @@ void cons_options (inpacket, outpacket, options, overload)
 			continue;
 
 		/* Don't look at options that have already been stored. */
-		if (OPTION_ISSET (options_done, code))
+		if (stored_length [code] ==
+		    options [code] -> len) {
 			continue;
+		}
 
 		/* Find the value of the option... */
-		if (!tree_evaluate (options [code]))
+		if (!tree_evaluate (options [code])) {
 			continue;
+		}
 
 		/* We should now have a constant length for the option. */
 		length = (options [code] -> len - stored_length [code]);
@@ -292,8 +295,15 @@ void cons_options (inpacket, outpacket, options, overload)
 	/* If we didn't miss any options, we're done. */
 	/* XXX Maybe we want to try to encode options the client didn't
 	   request but that we have available? */
-	if (!missed)
+	if (!missed) {
+		/* If there's space, store an End option code. */
+		if (bufix < buflen)
+			buffer [bufix++] = DHO_END;
+		/* If there's still space, pad it. */
+		while (bufix < buflen)
+			buffer [bufix++] = DHO_PAD;
 		return;
+	}
 
 	/* If we did miss one or more options, they must not have fit.
 	   It's possible, though, that there's only one option left to
