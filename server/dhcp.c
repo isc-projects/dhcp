@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.57.2.4 1998/06/25 22:12:05 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.57.2.5 1998/06/26 04:17:12 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -120,7 +120,7 @@ void dhcpdiscover (packet)
 		   warning message, so that if it continues to lose,
 		   the administrator will eventually investigate. */
 		if (lease -> flags & ABANDONED_LEASE) {
-			warn ("Reclaiming abandoned IP address %s.\n",
+			warn ("Reclaiming abandoned IP address %s.",
 			      piaddr (lease -> ip_addr));
 			lease -> flags &= ~ABANDONED_LEASE;
 		}
@@ -1391,8 +1391,8 @@ struct lease *find_lease (packet, share, ours)
 	/* If we find an abandoned lease, take it, but print a
 	   warning message, so that if it continues to lose,
 	   the administrator will eventually investigate. */
-	if (lease -> flags & ABANDONED_LEASE) {
-		warn ("Reclaiming REQUESTed abandoned IP address %s.\n",
+	if (lease && lease -> flags & ABANDONED_LEASE) {
+		warn ("Reclaiming REQUESTed abandoned IP address %s.",
 		      piaddr (lease -> ip_addr));
 		lease -> flags &= ~ABANDONED_LEASE;
 	}
