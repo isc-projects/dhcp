@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.54 1998/11/06 02:58:17 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.55 1998/11/09 02:46:36 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -320,6 +320,14 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		}
 		break;
 
+	      case POOL:
+		next_token (&val, cfile);
+		if (type != SUBNET_DECL && type != SHARED_NET_DECL) {
+			parse_warn ("pool declared outside of network");
+		}
+		parse_pool_statement (cfile, group, type);
+		return declaration;
+
 	      case RANGE:
 		next_token (&val, cfile);
 		if (type != SUBNET_DECL || !group -> subnet) {
@@ -327,7 +335,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 			skip_to_semi (cfile);
 			return declaration;
 		}
-		parse_address_range (cfile, group -> subnet);
+		parse_address_range (cfile, group, type, (struct pool *)0);
 		return declaration;
 
 	      case ALLOW:
@@ -418,6 +426,136 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 	}
 
 	return 0;
+}
+
+void parse_pool_statement (cfile, group, type)
+	FILE *cfile;
+	struct group *group;
+	int type;
+{
+	enum dhcp_token token;
+	char *val;
+	int done = 0;
+	struct pool *pool, **p;
+	struct permit *permit;
+	struct permit **permit_head;
+
+	pool = new_pool ("parse_pool_statement");
+	if (!pool)
+		error ("no memory for pool.");
+
+	if (!parse_lbrace (cfile))
+		return;
+	do {
+		switch (peek_token (&val, cfile)) {
+		      case RANGE:
+			next_token (&val, cfile);
+			parse_address_range (cfile, group, type, pool);
+			break;
+		      case ALLOW:
+			permit_head = &pool -> permit_list;
+		      get_permit:
+			permit = new_permit ("parse_pool_statement");
+			if (!permit)
+				error ("no memory for permit");
+			next_token (&val, cfile);
+			token = next_token (&val, cfile);
+			switch (token) {
+			      case UNKNOWN:
+				permit -> type = permit_unknown_clients;
+			      get_clients:
+				if (next_token (&val, cfile) != CLIENTS) {
+					parse_warn ("expecting \"hosts\"");
+					skip_to_semi (cfile);
+					free_permit (permit,
+						     "parse_pool_statement");
+					continue;
+				}
+				break;
+				
+			      case KNOWN:
+				permit -> type = permit_known_clients;
+				goto get_clients;
+				
+			      case AUTHENTICATED:
+				permit -> type = permit_authenticated_clients;
+				goto get_clients;
+				
+			      case UNAUTHENTICATED:
+				permit -> type =
+					permit_unauthenticated_clients;
+				goto get_clients;
+
+			      case ALL:
+				permit -> type = permit_all_clients;
+				goto get_clients;
+				break;
+				
+			      case DYNAMIC:
+				permit -> type = permit_dynamic_bootp_clients;
+				if (next_token (&val, cfile) != BOOTP) {
+					parse_warn ("expecting \"bootp\"");
+					skip_to_semi (cfile);
+					free_permit (permit,
+						     "parse_pool_statement");
+					continue;
+				}
+				goto get_clients;
+				
+			      case MEMBERS:
+				if (next_token (&val, cfile) != OF) {
+					parse_warn ("expecting \"of\"");
+					skip_to_semi (cfile);
+					free_permit (permit,
+						     "parse_pool_statement");
+					continue;
+				}
+				if (next_token (&val, cfile) != STRING) {
+					parse_warn ("expecting class name.");
+					skip_to_semi (cfile);
+					free_permit (permit,
+						     "parse_pool_statement");
+					continue;
+				}
+				permit -> type = permit_class;
+				permit -> class = find_class (val);
+				if (!permit -> class)
+					parse_warn ("no such class: %s", val);
+			      default:
+				parse_warn ("expecting permit type.");
+				skip_to_semi (cfile);
+				break;
+			}
+			while (*permit_head)
+				permit_head = &((*permit_head) -> next);
+			*permit_head = permit;
+			break;
+
+		      case DENY:
+			permit_head = &pool -> prohibit_list;
+			goto get_permit;
+			
+		      case RBRACE:
+			next_token (&val, cfile);
+			done = 1;
+			break;
+
+		      default:
+			parse_warn ("expecting address range or permit list.");
+			skip_to_semi (cfile);
+			break;
+		}
+	} while (!done);
+
+	if (type == SUBNET_DECL)
+		pool -> shared_network = group -> subnet -> shared_network;
+	else
+		pool -> shared_network = group -> shared_network;
+
+	p = &pool -> shared_network -> pools;
+	for (; *p; p = &((*p) -> next))
+		;
+	*p = pool;
 }
 
 /* allow-deny-keyword :== BOOTP
@@ -807,9 +945,7 @@ void parse_shared_net_declaration (cfile, group)
 	share = new_shared_network ("parse_shared_net_declaration");
 	if (!share)
 		error ("No memory for shared subnet");
-	share -> leases = (struct lease *)0;
-	share -> last_lease = (struct lease *)0;
-	share -> insertion_point = (struct lease *)0;
+	share -> pools = (struct pool *)0;
 	share -> next = (struct shared_network *)0;
 	share -> interface = (struct interface_info *)0;
 	share -> group = clone_group (group, "parse_shared_net_declaration");
@@ -1229,16 +1365,21 @@ struct lease *parse_lease_declaration (cfile)
 /* address-range-declaration :== ip-address ip-address SEMI
 			       | DYNAMIC_BOOTP ip-address ip-address SEMI */
 
-void parse_address_range (cfile, subnet)
+void parse_address_range (cfile, group, type, pool)
 	FILE *cfile;
-	struct subnet *subnet;
+	struct group *group;
+	int type;
+	struct pool *pool;
 {
-	struct iaddr low, high;
+	struct iaddr low, high, net;
 	unsigned char addr [4];
 	int len = sizeof addr;
 	enum dhcp_token token;
 	char *val;
 	int dynamic = 0;
+	struct subnet *subnet;
+	struct shared_network *share;
+	struct pool *p;
 
 	if ((token = peek_token (&val, cfile)) == DYNAMIC_BOOTP) {
 		token = next_token (&val, cfile);
@@ -1270,7 +1411,65 @@ void parse_address_range (cfile, subnet)
 		return;
 	}
 
+	if (type == SUBNET_DECL) {
+		subnet = group -> subnet;
+		share = subnet -> shared_network;
+	} else {
+		share = group -> shared_network;
+		for (subnet = share -> subnets;
+		     subnet; subnet = subnet -> next_sibling) {
+			net = subnet_number (low, subnet -> netmask);
+			if (addr_eq (low, subnet -> net))
+				break;
+		}
+		if (!subnet) {
+			parse_warn ("address range not on network %s",
+				    group -> shared_network -> name);
+			return;
+		}
+	}
+
+	if (!pool) {
+		struct pool *last;
+		/* If we're permitting dynamic bootp for this range,
+		   then look for a pool with an empty prohibit list and
+		   a permit list with one entry which permits dynamic
+		   bootp. */
+		for (pool = share -> pools; pool; pool = pool -> next) {
+			if ((!dynamic &&
+			     !pool -> permit_list && !pool -> prohibit_list) ||
+			    (dynamic &&
+			     !pool -> prohibit_list &&
+			     pool -> permit_list &&
+			     !pool -> permit_list -> next &&
+			     (pool -> permit_list -> type ==
+			      permit_dynamic_bootp_clients))) {
+				break;
+			}
+			last = pool;
+		}
+
+		/* If we didn't get a pool, make one. */
+		if (!pool) {
+			pool = new_pool ("parse_address_range");
+			if (!pool)
+				error ("no memory for ad-hoc pool.");
+			if (dynamic) {
+				pool -> permit_list =
+					new_permit ("parse_address_range");
+				if (!pool -> permit_list)
+					error ("no memory for ad-hoc permit.");
+				pool -> permit_list -> type =
+					permit_dynamic_bootp_clients;
+			}
+			if (share -> pools)
+				last -> next = pool;
+			else
+				share -> pools = pool;
+		}
+	}
+
 	/* Create the new address range... */
-	new_address_range (low, high, subnet, dynamic);
+	new_address_range (low, high, subnet, pool);
 }
 

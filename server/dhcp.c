@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.70 1998/11/06 02:59:11 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.71 1998/11/09 02:46:58 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -110,23 +110,15 @@ void dhcpdiscover (packet)
 
 	/* If we didn't find a lease, try to allocate one... */
 	if (!lease) {
-		lease = packet -> shared_network -> last_lease;
-
-		/* If there are no leases in that subnet that have
-		   expired, we have nothing to offer this client. */
-		if (!lease || lease -> ends > cur_time) {
-			note ("no free leases on subnet %s",
-			      packet -> shared_network -> name);
+		lease = allocate_lease (packet,
+					packet -> shared_network -> pools, 0);
+		if (!lease) {
+			note ("no free leases on network %s match %s",
+			      packet -> shared_network -> name,
+			      print_hw_addr (packet -> raw -> htype,
+					     packet -> raw -> hlen,
+					     packet -> raw -> chaddr));
 			return;
-		}
-
-		/* If we find an abandoned lease, take it, but print a
-		   warning message, so that if it continues to lose,
-		   the administrator will eventually investigate. */
-		if (lease -> flags & ABANDONED_LEASE) {
-			warn ("Reclaiming abandoned IP address %s.",
-			      piaddr (lease -> ip_addr));
-			lease -> flags &= ~ABANDONED_LEASE;
 		}
 	}
 
@@ -596,7 +588,7 @@ void ack_lease (packet, lease, offer, when)
 				     (struct group *)0);
 
 	/* Vendor and user classes are only supported for DHCP clients. */
-	if (state -> offer) {
+	if (offer) {
 		for (i = packet -> class_count; i > 0; i--) {
                         execute_statements_in_scope
 				(packet, &state -> options,
@@ -1376,6 +1368,8 @@ struct lease *find_lease (packet, share, ours)
 		hp = find_hosts_by_uid (client_identifier.data,
 					client_identifier.len);
 		if (hp) {
+			/* Remember if we know of this client. */
+			packet -> known = 1;
 			fixed_lease = mockup_lease (packet, share, hp);
 		} else
 			fixed_lease = (struct lease *)0;
@@ -1422,6 +1416,8 @@ struct lease *find_lease (packet, share, ours)
 					  packet -> raw -> chaddr,
 					  packet -> raw -> hlen);
 		if (hp) {
+			/* Remember if we know of this client. */
+			packet -> known = 1;
 			host = hp; /* Save it for later. */
 			fixed_lease = mockup_lease (packet, share, hp);
 #if defined (DEBUG_FIND_LEASE)
@@ -1443,10 +1439,13 @@ struct lease *find_lease (packet, share, ours)
 		if (hw_lease -> shared_network == share) {
 			if (hw_lease -> flags & ABANDONED_LEASE)
 				continue;
-			if (packet -> packet_type)
-				break;
-			if (hw_lease -> flags &
-			    (BOOTP_LEASE | DYNAMIC_BOOTP_OK))
+			/* If we're allowed to use this lease, do so. */
+			if (!((lease -> pool -> prohibit_list &&
+			       permitted (packet,
+					  lease -> pool -> prohibit_list)) ||
+			      (lease -> pool -> permit_list &&
+			       !permitted (packet,
+					   lease -> pool -> permit_list))))
 				break;
 		}
 	}
@@ -1743,3 +1742,122 @@ struct lease *mockup_lease (packet, share, hp)
 	mock.flags = STATIC_LEASE;
 	return &mock;
 }
+
+/* Look through all the pools in a list starting with the specified pool
+   for a free lease.   We try to find a virgin lease if we can.   If we
+   don't find a virgin lease, we try to find a non-virgin lease that's
+   free.   If we can't find one of those, we try to reclaim an abandoned
+   lease.   If all of these possibilities fail to pan out, we don't return
+   a lease at all. */
+
+struct lease *allocate_lease (packet, pool, ok)
+	struct packet *packet;
+	struct pool *pool;
+	int ok;
+{
+	struct lease *lease, *lp;
+	struct permit *permit;
+
+	if (!pool)
+		return (struct lease *)0;
+
+	/* If we aren't elegible to try this pool, try a subsequent one. */
+	if ((pool -> prohibit_list &&
+	     permitted (packet, pool -> prohibit_list)) ||
+	    (pool -> permit_list && !permitted (packet, pool -> permit_list)))
+		return allocate_lease (packet, pool -> next, ok);
+
+	lease = pool -> last_lease;
+
+	/* If there are no leases in the pool that have
+	   expired, try the next one. */
+	if (!lease || lease -> ends > cur_time)
+		return allocate_lease (packet, pool -> next, ok);
+
+	/* If we find an abandoned lease, and no other lease qualifies
+	   better, take it. */
+	if (lease -> flags & ABANDONED_LEASE) {
+		/* If we already have a non-abandoned lease that we didn't
+		   love, but that's okay, don't reclaim the abandoned lease. */
+		if (ok)
+			return allocate_lease (packet, pool -> next, ok);
+		lp = allocate_lease (packet, pool -> next, 0);
+		if (!lp) {
+			warn ("Reclaiming abandoned IP address %s.",
+			      piaddr (lease -> ip_addr));
+			lease -> flags &= ~ABANDONED_LEASE;
+			return lease;
+		}
+		return lp;
+	}
+
+	/* If there's a lease we could take, but it had previously been
+	   allocated to a different client, try for a virgin lease before
+	   stealing it. */
+	if (lease -> uid_len || lease -> hardware_addr.hlen) {
+		/* If we're already in that boat, no need to consider
+		   allocating this particular lease. */
+		if (ok)
+			return allocate_lease (packet, pool -> next, ok);
+
+		lp = allocate_lease (packet, pool -> next, 1);
+		if (lp)
+			return lp;
+		return lease;
+	}
+
+	return lease;
+}
+
+/* Determine whether or not a permit exists on a particular permit list
+   that matches the specified packet, returning nonzero if so, zero if
+   not. */
+
+int permitted (packet, permit_list)
+	struct packet *packet;
+	struct permit *permit_list;
+{
+	struct permit *p;
+	int i;
+
+	for (p = permit_list; p; p = p -> next) {
+		switch (p -> type) {
+		      case permit_unknown_clients:
+			if (!packet -> known)
+				return 1;
+			break;
+
+		      case permit_known_clients:
+			if (packet -> known)
+				return 1;
+			break;
+
+		      case permit_authenticated_clients:
+			if (packet -> authenticated)
+				return 1;
+			break;
+
+		      case permit_unauthenticated_clients:
+			if (!packet -> authenticated)
+				return 1;
+			break;
+
+		      case permit_all_clients:
+			return 1;
+
+		      case permit_dynamic_bootp_clients:
+			if (!packet -> options_valid ||
+			    !packet -> packet_type)
+				return 1;
+			break;
+			
+		      case permit_class:
+			for (i = 0; i < packet -> class_count; i++)
+				if (p -> class == packet -> classes [i])
+					return 1;
+			break;
+		}
+	}
+	return 0;
+}
+
