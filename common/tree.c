@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.31.2.4 1999/11/03 19:50:15 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.31.2.5 1999/11/12 18:37:27 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -538,6 +538,8 @@ int evaluate_boolean_expression (result, packet, options, lease, expr)
 	      case expr_encode_int32:
 	      case expr_binary_to_ascii:
 	      case expr_reverse:
+	      case expr_filename:
+	      case expr_sname:
 	      case expr_leased_address:
 		log_error ("Data opcode in evaluate_boolean_expression: %d",
 		      expr -> op);
@@ -1100,6 +1102,72 @@ int evaluate_data_expression (result, packet, options, lease, expr)
 		return 1;
 
 		
+		/* Extract the filename. */
+	      case expr_filename:
+		if (packet && packet -> raw -> file [0]) {
+			char *fn =
+				memchr (packet -> raw -> file, 0,
+					sizeof packet -> raw -> file);
+			if (!fn)
+				fn = ((unsigned char *)
+				      packet -> raw -> file +
+				      sizeof packet -> raw -> file);
+			result -> len = fn - &(packet -> raw -> file [0]);
+			if (buffer_allocate (&result -> buffer,
+					     result -> len + 1, "filename")) {
+				result -> data = &result -> buffer -> data [0];
+				memcpy (&result -> buffer -> data [0],
+					packet -> raw -> file,
+					result -> len);
+				result -> buffer -> data [result -> len] = 0;
+				result -> terminated = 1;
+				s0 = 1;
+			} else {
+				log_error ("data: filename: no memory.");
+				s0 = 0;
+			}
+		} else
+			s0 = 0;
+
+#if defined (DEBUG_EXPRESSIONS)
+		log_info ("data: filename = \"%s\"",
+			  s0 ? result -> data : "NULL");
+#endif
+		return s0;
+
+		/* Extract the server name. */
+	      case expr_sname:
+		if (packet && packet -> raw -> sname [0]) {
+			char *fn =
+				memchr (packet -> raw -> sname, 0,
+					sizeof packet -> raw -> sname);
+			if (!fn)
+				fn = ((unsigned char *)
+				      packet -> raw -> sname + 
+				      sizeof packet -> raw -> sname);
+			result -> len = fn - &packet -> raw -> sname [0];
+			if (buffer_allocate (&result -> buffer,
+					     result -> len + 1, "sname")) {
+				result -> data = &result -> buffer -> data [0];
+				memcpy (&result -> buffer -> data [0],
+					packet -> raw -> sname,
+					result -> len);
+				result -> buffer -> data [result -> len] = 0;
+				result -> terminated = 1;
+				s0 = 1;
+			} else {
+				log_error ("data: sname: no memory.");
+				s0 = 0;
+			}
+		} else
+			s0 = 0;
+
+#if defined (DEBUG_EXPRESSIONS)
+		log_info ("data: sname = \"%s\"",
+			  s0 ? result -> data : "NULL");
+#endif
+		return s0;
+
 
 	      case expr_check:
 	      case expr_equal:
@@ -1161,6 +1229,8 @@ int evaluate_numeric_expression (result, packet, options, lease, expr)
 	      case expr_encode_int32:
 	      case expr_binary_to_ascii:
 	      case expr_reverse:
+	      case expr_filename:
+	      case expr_sname:
 	      case expr_leased_address:
 		log_error ("Data opcode in evaluate_numeric_expression: %d",
 		      expr -> op);
@@ -1423,6 +1493,8 @@ void expression_dereference (eptr, name)
 
 		/* No subexpressions. */
 	      case expr_leased_address:
+	      case expr_filename:
+	      case expr_sname:
 	      case expr_const_int:
 	      case expr_check:
 	      case expr_option:
@@ -1506,6 +1578,8 @@ int is_data_expression (expr)
 		expr -> op == expr_host_lookup ||
 		expr -> op == expr_binary_to_ascii ||
 		expr -> op == expr_reverse ||
+		expr -> op == expr_filename ||
+		expr -> op == expr_sname ||
 		expr -> op == expr_leased_address);
 }
 
@@ -1548,6 +1622,8 @@ static int op_val (op)
 	      case expr_known:
 	      case expr_binary_to_ascii:
 	      case expr_reverse:
+	      case expr_filename:
+	      case expr_sname:
 	      case expr_leased_address:
 		return 100;
 
@@ -1600,6 +1676,8 @@ enum expression_context op_context (op)
 	      case expr_known:
 	      case expr_binary_to_ascii:
 	      case expr_reverse:
+	      case expr_filename:
+	      case expr_sname:
 	      case expr_leased_address:
 		return context_any;
 

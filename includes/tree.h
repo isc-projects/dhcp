@@ -86,6 +86,8 @@ enum expr_op {
 	expr_reverse,
 	expr_leased_address,
 	expr_binary_to_ascii,
+	expr_filename,
+	expr_sname
 };
 
 struct expression {
