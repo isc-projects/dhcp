@@ -309,7 +309,8 @@ enum dhcp_token {
 	TOKEN_CREATE = 604,
 	TOKEN_OPEN = 605,
 	TOKEN_HELP = 606,
-	END_OF_FILE = 607
+	END_OF_FILE = 607,
+	RECOVER_WAIT = 608
 };
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\

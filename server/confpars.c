@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.139 2001/04/16 22:25:04 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.140 2001/04/20 18:07:29 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1124,6 +1124,10 @@ void parse_failover_state (cfile, state, stos)
 
 	      case RECOVER:
 		state_in = recover;
+		break;
+		
+	      case RECOVER_WAIT:
+		state_in = recover_wait;
 		break;
 		
 	      case RECOVER_DONE:
