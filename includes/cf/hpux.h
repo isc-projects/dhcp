@@ -42,6 +42,8 @@ extern int h_errno;
 #include <net/if.h>
 #include <net/if_arp.h>
 
+#define htons(x)        (x) /* sigh */
+
 #ifndef _PATH_DHCPD_PID
 #define _PATH_DHCPD_PID	"/etc/dhcpd.pid"
 #endif
@@ -80,6 +82,9 @@ extern int h_errno;
 
 #define BYTE_ORDER BIG_ENDIAN
 #define BIG_ENDIAN 1
+
+#define SOCKLEN_T int
+
 #ifdef NEED_PRAND_CONF
 const char *cmds[] = {
 	"/usr/bin/ps -ef 2>&1",
