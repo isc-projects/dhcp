@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: execute.c,v 1.15 1999/07/19 15:34:33 mellon Exp $ Copyright (c) 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: execute.c,v 1.16 1999/07/31 17:56:09 mellon Exp $ Copyright (c) 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -87,8 +87,8 @@ int execute_statements (packet, lease, in_options, out_options, statements)
 
 		      case if_statement:
 			status = evaluate_boolean_expression
-				(&result, packet,
-				 in_options, lease, r -> data.ie.expr);
+				(&result, packet, lease,
+				 in_options, out_options, r -> data.ie.expr);
 			
 #if defined (DEBUG_EXPRESSIONS)
 			log_debug ("exec: if %s", (status
@@ -106,8 +106,8 @@ int execute_statements (packet, lease, in_options, out_options, statements)
 
 		      case eval_statement:
 			status = evaluate_boolean_expression
-				(&result,
-				 packet, in_options, lease, r -> data.eval);
+				(&result, packet, lease,
+				 in_options, out_options, r -> data.eval);
 #if defined (DEBUG_EXPRESSIONS)
 			log_debug ("exec: evaluate: %s",
 			      (status
