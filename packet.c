@@ -1,180 +1,253 @@
+/* packet.c
 
-static void		IpChecksum(struct ip *ip);
-static void		UdpChecksum(struct ip *ip);
-static u_int32_t	Checksum(u_int16_t *buf, int nwords);
+   Packet assembly code, originally contributed by Archie Cobbs. */
 
-struct raw_packet
+/*
+ * Copyright (c) 1995, 1996 The Internet Software Consortium.
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. Neither the name of The Internet Software Consortium nor the names
+ *    of its contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE INTERNET SOFTWARE CONSORTIUM AND
+ * CONTRIBUTORS ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES,
+ * INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED.  IN NO EVENT SHALL THE INTERNET SOFTWARE CONSORTIUM OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF
+ * USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
+ * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
+ *
+ * This software has been written for the Internet Software Consortium
+ * by Ted Lemon <mellon@fugue.com> in cooperation with Vixie
+ * Enterprises.  To learn more about the Internet Software Consortium,
+ * see ``http://www.vix.com/isc''.  To learn more about Vixie
+ * Enterprises, see ``http://www.vix.com''.
+ */
+
+#ifndef lint
+static char copyright[] =
+"@(#) Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
+#endif /* not lint */
+
+#include "dhcpd.h"
+#include <sys/ioctl.h>
+
+#include <net/if_dl.h>
+#include <netinet/in_systm.h>
+#include <netinet/ip.h>
+#include <netinet/udp.h>
+#include <netinet/if_ether.h>
+
+static u_int32_t checksum PROTO ((unsigned char *, int, u_int32_t));
+static u_int32_t wrapsum PROTO ((u_int32_t));
+
+/* Assemble an hardware header... */
+/* XXX currently only supports ethernet; doesn't check for other types. */
+
+void assemble_hw_header (interface, buf, bufix, to)
+	struct interface_info *interface;
+	unsigned char *buf;
+	int *bufix;
+	struct hardware *to;
 {
-  u_int16_t space;
-  struct ether_header en_hdr;
-  struct ip ip;
-  struct udphdr udp;
-  struct dhcp_packet dhcp;
-};
+	struct ether_header eh;
 
-int sendpkt (in_packet, raw, len, to, tolen)
-  struct packet *in_packet;
-  struct dhcp_packet *raw;
-  size_t len;
-  struct sockaddr *to;
-  int tolen;
+	if (to)
+		memcpy (eh.ether_dhost, to -> haddr, sizeof eh.ether_dhost);
+	else
+		memset (eh.ether_dhost, 0xff, sizeof (eh.ether_shost));
+	if (interface -> hw_address.hlen == sizeof (eh.ether_shost))
+		memcpy (eh.ether_shost, interface -> hw_address.haddr,
+			sizeof (eh.ether_shost));
+	else
+		memset (eh.ether_shost, 0x00, sizeof (eh.ether_shost));
+	eh.ether_type = htons (ETHERTYPE_IP);
+
+	memcpy (&buf [*bufix], &eh, sizeof eh);
+	*bufix += sizeof eh;
+}
+
+/* UDP header and IP header assembled together for convenience. */
+
+void assemble_udp_ip_header (interface, buf, bufix, addr, port, data, len)
+	struct interface_info *interface;
+	unsigned char *buf;
+	int *bufix;
+	u_int32_t addr;
+	u_int16_t port;
+	unsigned char *data;
+	int len;
 {
-  int			i, k;
-  struct iaddr		dest;
-  struct subnet		*subnet;
-  struct raw_packet	out_packet;
-  struct raw_packet	*const pkt = &out_packet;
+	struct ip ip;
+	struct udphdr udp;
 
-/* Find local subnet, or else forward to gateway */
+	/* Fill out the IP header */
+	ip.ip_v = 4;
+	ip.ip_hl = 5;
+	ip.ip_tos = IPTOS_LOWDELAY;
+	ip.ip_len = htons(sizeof(ip) + sizeof(udp) + len);
+	ip.ip_id = 0;
+	ip.ip_off = 0;
+	ip.ip_ttl = 16;
+	ip.ip_p = IPPROTO_UDP;
+	ip.ip_sum = 0;
+	memcpy (&ip.ip_src, interface -> address.iabuf, 4);
+	ip.ip_dst.s_addr = addr;
+	
+	/* Checksum the IP header... */
+	ip.ip_sum = wrapsum (checksum ((unsigned char *)&ip, sizeof ip, 0));
+	
+	/* Copy the ip header into the buffer... */
+	memcpy (&buf [*bufix], &ip, sizeof ip);
+	*bufix += sizeof ip;
 
-  dest.len = 4;
-  memcpy(&dest.iabuf, &((struct sockaddr_in *) to)->sin_addr, dest.len);
-  if ((subnet = find_subnet(dest)) == NULL)
-    return(sendto(in_packet->client_sock, raw, len, 0, to, tolen));
+	/* Fill out the UDP header */
+	udp.uh_sport = htons (67);		/* XXX */
+	udp.uh_dport = port;			/* XXX */
+	udp.uh_ulen = htons(sizeof(udp) + len);
+	memset (&udp.uh_sum, 0, sizeof udp.uh_sum);
 
-/* Find interface corresponding to subnet */
+	/* Compute UDP checksums, including the ``pseudo-header'', the UDP
+	   header and the data. */
 
-  for (i = 0; i < num_ifaces; i++)
-  {
-    for (k = 0; k < subnet->net.len
-      && (dest.iabuf[k] & subnet->netmask.iabuf[k])
-	== (subnet->net.iabuf[k] & subnet->netmask.iabuf[k]);
-    k++);
-    if (k == subnet->net.len)
-      break;
+	udp.uh_sum =
+		wrapsum (checksum ((unsigned char *)&udp, sizeof udp,
+				   checksum (data, len, 
+					     checksum ((unsigned char *)
+						       &ip.ip_src,
+						       sizeof ip.ip_src,
+						       IPPROTO_UDP +
+						       (u_int32_t)
+						       ntohs (udp.uh_ulen)))));
+
+	/* Copy the udp header into the buffer... */
+	memcpy (&buf [*bufix], &udp, sizeof udp);
+	*bufix += sizeof udp;
+}
+
+/* Decode a hardware header... */
+/* XXX currently only supports ethernet; doesn't check for other types. */
+
+size_t decode_hw_header (interface, buf, bufix, from)
+     struct interface_info *interface;
+     unsigned char *buf;
+     int bufix;
+     struct hardware *from;
+{
+  struct ether_header eh;
+
+  memcpy (&eh, buf +bufix, sizeof eh);
+
+  memcpy (from -> haddr, eh.ether_shost, sizeof (eh.ether_shost));
+  from -> htype = ETHERTYPE_IP;
+  from -> hlen = sizeof eh.ether_shost;
+
+  return sizeof eh;
+}
+
+/* UDP header and IP header decoded together for convenience. */
+
+size_t decode_udp_ip_header (interface, buf, bufix, from, data, len)
+	struct interface_info *interface;
+	unsigned char *buf;
+	int bufix;
+	struct sockaddr_in *from;
+	unsigned char *data;
+	int len;
+{
+  struct ip *ip;
+  struct udphdr *udp;
+  u_int32_t ip_len = (buf [bufix] & 0xf) << 2;
+  u_int32_t sum, usum;
+
+  /* Check the IP header checksum - it should be zero. */
+  if (wrapsum (checksum (buf + bufix, ip_len, 0))) {
+	  note ("Bad IP checksum: %x",
+		wrapsum (checksum (buf + bufix, sizeof ip, 0)));
   }
-  if (i == num_ifaces)
-    return(sendto(in_packet->client_sock, raw, len, 0, to, tolen));
 
-/* EtherNet header */
+  /* Copy out the IP source address... */
+  ip = (struct ip *)(buf + bufix);
+  memcpy (&from -> sin_addr, &ip -> ip_src, 4);
 
-  memset(pkt->en_hdr.ether_dhost, 0xff, sizeof(pkt->en_hdr.ether_dhost));
-  memset(pkt->en_hdr.ether_shost, 0x00, sizeof(pkt->en_hdr.ether_shost));
-  pkt->en_hdr.ether_type = ETHERTYPE_IP;
+  /* Compute UDP checksums, including the ``pseudo-header'', the UDP
+     header and the data.   If the UDP checksum field is zero, we're
+     not supposed to do a checksum. */
 
-/* IP header (except for checksum) */
+  udp = (struct udphdr *)(buf + bufix + ip_len);
+  if (!data) {
+	  data = buf + bufix + ip_len + sizeof *udp;
+	  len -= ip_len + sizeof *udp;
+  }
 
-  pkt->ip.ip_v = 4;
-  pkt->ip.ip_hl = 5;
-  pkt->ip.ip_tos = IPTOS_LOWDELAY;
-  pkt->ip.ip_len = htons(sizeof(pkt->ip) + sizeof(pkt->udp) + len);
-  pkt->ip.ip_id = 0;
-  pkt->ip.ip_off = 0;
-  pkt->ip.ip_ttl = 16;
-  pkt->ip.ip_p = IPPROTO_UDP;
-  pkt->ip.ip_sum = 0;
-  pkt->ip.ip_src = if_list[i].address;
-  inet_aton("255.255.255.255", &pkt->ip.ip_dst);
+  usum = udp -> uh_sum;
+  udp -> uh_sum = 0;
+  sum = wrapsum (checksum ((unsigned char *)udp, sizeof *udp,
+			   checksum (data, len,
+				     checksum ((unsigned char *)
+					       &ip -> ip_src,
+					       sizeof ip -> ip_src,
+					       IPPROTO_UDP +
+					       (u_int32_t)
+					       ntohs (udp -> uh_ulen)))));
 
-/* UDP header */
+  if (usum && usum != sum) {
+	  note ("Bad udp checksum: %x %x", usum, sum);
+	  return -1;
+  }
 
-  pkt->udp.uh_sport = htons(67);		/* XXX! */
-  pkt->udp.uh_dport = in_packet->client_port;
-  pkt->udp.uh_ulen = htons(sizeof(pkt->udp) + len);
-  pkt->udp.uh_sum = 0;
+  /* Copy out the port... */
+  memcpy (&from -> sin_port, &udp -> uh_sport, sizeof udp -> uh_sport);
 
-/* DHCP packet */
-
-  pkt->dhcp = *raw;
-
-/* Compute checksums */
-
-  UdpChecksum(&pkt->ip);
-  IpChecksum(&pkt->ip);
-
-/* Fire it off */
-
-  if (write(if_list[i].bpf, &pkt->en_hdr,
-      ntohs(pkt->ip.ip_len) + sizeof(pkt->en_hdr)) < 0)
-    warn ("Can't deliver packet: write: %m");
-  return(0);
+  return ip_len + sizeof *udp;
 }
 
-/*
- * UdpChecksum()
- *
- * Recompute a UDP checksum on a packet
- *
- * UDP pseudo-header (prot = IPPROTO_UDP = 17):
- *
- *  | source IP address	       |
- *  | dest.  IP address	       |
- *  | zero | prot | UDP leng   |
- *
- */
+/* Compute the easy part of the checksum on a range of bytes. */
 
-static void
-UdpChecksum(struct ip *ip)
+static u_int32_t checksum (unsigned char *buf, int nbytes, u_int32_t sum)
 {
-  struct udphdr	*udp = (struct udphdr *) ((long *) ip + ip->ip_hl);
-  u_int32_t	sum;
+	int i;
 
-/* Pad with zero */
-
-  if (ntohs(udp->uh_ulen) & 0x1)
-    *((u_char *) udp + ntohs(udp->uh_ulen)) = 0;
-
-/* Do pseudo-header first */
-
-  sum = Checksum((u_int16_t *) &ip->ip_src, 4);
-  sum += (u_int16_t) IPPROTO_UDP;
-  sum += (u_int16_t) ntohs(udp->uh_ulen);
-
-/* Now do UDP packet itself */
-
-  udp->uh_sum = 0;
-  sum += Checksum((u_int16_t *) udp,
-	  ((u_int16_t) ntohs(udp->uh_ulen) + 1) >> 1);
-
-/* Flip it & stick it */
-
-  sum = (sum >> 16) + (sum & 0xFFFF);
-  sum += (sum >> 16);
-  sum = ~sum;
-
-  udp->uh_sum = htons(sum);
+	/* Checksum all the pairs of bytes first... */
+	for (i = 0; i < (nbytes & ~1); i += 2)
+		sum += (u_int16_t) ntohs(*((u_int16_t *)buf)++);
+	
+	/* If there's a single byte left over, checksum it, too.   Network
+	   byte order is big-endian, so the remaining byte is the high byte. */
+	if (i < nbytes) {
+		sum += (*buf) << 8;
+	}
+	
+	return sum;
 }
 
-/*
- * IpChecksum()
- *
- * Recompute an IP header checksum
- *
- */
+/* Fold the upper sixteen bits of the checksum down into the lower bits,
+   complement the sum, and then put it into network byte order. */
 
-static void
-IpChecksum(struct ip *ip)
+static u_int32_t wrapsum (u_int32_t sum)
 {
-  u_int32_t	sum;
-
-/* Sum up IP header words */
-
-  ip->ip_sum = 0;
-  sum = Checksum((u_int16_t *) ip, ip->ip_hl * 2);
-
-/* Flip it & stick it */
-
-  sum = (sum >> 16) + (sum & 0xFFFF);
-  sum += (sum >> 16);
-  sum = ~sum;
-
-  ip->ip_sum = htons(sum);
-}
-
-/*
- * Checksum()
- *
- * Do the one's complement sum thing over a range of words
- * Ideally, this should get replaced by an assembly version.
- */
-
-static u_int32_t
-Checksum(u_int16_t *buf, int nwords)
-{
-  u_int32_t	sum = 0;
-
-  while (nwords--)
-    sum += (u_int16_t) ntohs(*buf++);
-  return(sum);
+	while (sum > 0x10000) {
+		sum = (sum >> 16) + (sum & 0xFFFF);
+		sum += (sum >> 16);
+	}
+	sum = ~sum;
+	
+	return htons(sum);
 }
 
