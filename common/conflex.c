@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: conflex.c,v 1.89 2001/03/01 18:16:59 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: conflex.c,v 1.90 2001/03/17 00:47:32 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -210,6 +210,7 @@ static enum dhcp_token get_token (cfile)
 			break;
 		} else if (c == EOF) {
 			ttok = END_OF_FILE;
+			cfile -> tlen = 0;
 			break;
 		} else {
 			cfile -> lexline = l;
@@ -217,6 +218,7 @@ static enum dhcp_token get_token (cfile)
 			tb [0] = c;
 			tb [1] = 0;
 			cfile -> tval = tb;
+			cfile -> tlen = 1;
 			ttok = c;
 			break;
 		}
@@ -224,8 +226,9 @@ static enum dhcp_token get_token (cfile)
 	return ttok;
 }
 
-enum dhcp_token next_token (rval, cfile)
+enum dhcp_token next_token (rval, rlen, cfile)
 	const char **rval;
+	unsigned *rlen;
 	struct parse *cfile;
 {
 	int rv;
@@ -243,14 +246,17 @@ enum dhcp_token next_token (rval, cfile)
 	}
 	if (rval)
 		*rval = cfile -> tval;
+	if (rlen)
+		*rlen = cfile -> tlen;
 #ifdef DEBUG_TOKENS
 	fprintf (stderr, "%s:%d ", cfile -> tval, rv);
 #endif
 	return rv;
 }
 
-enum dhcp_token peek_token (rval, cfile)
+enum dhcp_token peek_token (rval, rlen, cfile)
 	const char **rval;
+	unsigned int *rlen;
 	struct parse *cfile;
 {
 	int x;
@@ -272,6 +278,8 @@ enum dhcp_token peek_token (rval, cfile)
 	}
 	if (rval)
 		*rval = cfile -> tval;
+	if (rlen)
+		*rlen = cfile -> tlen;
 #ifdef DEBUG_TOKENS
 	fprintf (stderr, "(%s:%d) ", cfile -> tval, cfile -> token);
 #endif
@@ -400,6 +408,7 @@ static enum dhcp_token read_string (cfile)
 		--i;
 	}
 	cfile -> tokbuf [i] = 0;
+	cfile -> tlen = i;
 	cfile -> tval = cfile -> tokbuf;
 	return STRING;
 }
@@ -437,6 +446,7 @@ static enum dhcp_token read_number (c, cfile)
 		--i;
 	}
 	cfile -> tokbuf [i] = 0;
+	cfile -> tlen = i;
 	cfile -> tval = cfile -> tokbuf;
 	return token;
 }
@@ -465,6 +475,7 @@ static enum dhcp_token read_num_or_name (c, cfile)
 		--i;
 	}
 	cfile -> tokbuf [i] = 0;
+	cfile -> tlen = i;
 	cfile -> tval = cfile -> tokbuf;
 	return intern (cfile -> tval, rv);
 }

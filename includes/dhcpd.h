@@ -119,6 +119,7 @@ struct parse {
 	enum dhcp_token token;
 	int ugflag;
 	char *tval;
+	int tlen;
 	char tokbuf [1500];
 
 #ifdef OLD_LEXER
@@ -1081,8 +1082,8 @@ int dhcpd_interface_setup_hook (struct interface_info *ip, struct iaddr *ia);
 isc_result_t new_parse PROTO ((struct parse **, int,
 			       char *, unsigned, const char *));
 isc_result_t end_parse PROTO ((struct parse **));
-enum dhcp_token next_token PROTO ((const char **, struct parse *));
-enum dhcp_token peek_token PROTO ((const char **, struct parse *));
+enum dhcp_token next_token PROTO ((const char **, unsigned *, struct parse *));
+enum dhcp_token peek_token PROTO ((const char **, unsigned *, struct parse *));
 
 /* confpars.c */
 void parse_trace_setup (void);
@@ -1132,7 +1133,7 @@ struct enumeration_value *find_enumeration_value (const char *, int,
 void skip_to_semi PROTO ((struct parse *));
 void skip_to_rbrace PROTO ((struct parse *, int));
 int parse_semi PROTO ((struct parse *));
-char *parse_string PROTO ((struct parse *));
+int parse_string PROTO ((struct parse *, char **, unsigned *));
 char *parse_host_name PROTO ((struct parse *));
 int parse_ip_addr_or_hostname PROTO ((struct expression **,
 				      struct parse *, int));

@@ -218,7 +218,7 @@ int main (int argc, char **argv, char **envp)
 		status = new_parse (&cfile, 0, buf, strlen(buf), "<STDIN>");
 		check(status, "new_parse()");
 
-		token = next_token (&val, cfile);
+		token = next_token (&val, (unsigned *)0, cfile);
 		switch (token) {
 		      default:
 			parse_warn (cfile, "unknown token: %s", val);
@@ -237,9 +237,10 @@ int main (int argc, char **argv, char **envp)
 			break;
 
 		      case TOKEN_NEW:
-			token = next_token (&val, cfile);
+			token = next_token (&val, (unsigned *)0, cfile);
 			if ((!is_identifier (token) && token != STRING) ||
-			    next_token (NULL, cfile) != END_OF_FILE)
+			    next_token (NULL,
+					(unsigned *)0, cfile) != END_OF_FILE)
 			{
 				printf ("usage: new <object-type>\n");
 				break;
@@ -260,7 +261,8 @@ int main (int argc, char **argv, char **envp)
 			break;
 
 		      case TOKEN_CLOSE:
-			if (next_token (NULL, cfile) != END_OF_FILE) {
+			if (next_token (NULL,
+					(unsigned *)0, cfile) != END_OF_FILE) {
 				printf ("usage: close\n");
 			}
 
@@ -269,10 +271,10 @@ int main (int argc, char **argv, char **envp)
 			break;
 
 		      case TOKEN_SET:
-			token = next_token (&val, cfile);
+			token = next_token (&val, (unsigned *)0, cfile);
 
 			if ((!is_identifier (token) && token != STRING) ||
-			    next_token (NULL, cfile) != '=')
+			    next_token (NULL, (unsigned *)0, cfile) != '=')
 			{
 				printf ("usage: set <name> = <value>\n");
 				break;
@@ -286,7 +288,7 @@ int main (int argc, char **argv, char **envp)
 			s1[0] = '\0';
 			strncat (s1, val, sizeof(s1)-1);
 
-			token = next_token (&val, cfile);
+			token = next_token (&val, (unsigned *)0, cfile);
 			switch (token) {
 			case STRING:
 				dhcpctl_set_string_value (oh, val, s1);
@@ -304,7 +306,8 @@ int main (int argc, char **argv, char **envp)
 
 		      case TOKEN_CREATE:
 		      case TOKEN_OPEN:
-			if (next_token (NULL, cfile) != END_OF_FILE) {
+			if (next_token (NULL,
+					(unsigned *)0, cfile) != END_OF_FILE) {
 				printf ("usage: %s\n", val);
 			}
 
@@ -327,7 +330,8 @@ int main (int argc, char **argv, char **envp)
 			break;
 
 		      case UPDATE:
-			if (next_token (NULL, cfile) != END_OF_FILE) {
+			if (next_token (NULL, (unsigned *)0,
+					cfile) != END_OF_FILE) {
 				printf ("usage: %s\n", val);
 			}
 
