@@ -77,6 +77,10 @@ zone 0.0.10.in-addr.arpa. {
   key FOO;
 }
 
+subnet 204.152.186.128 netmask 255.255.255.192 {
+  not authoritative;
+}
+
 subnet 10.0.0.0 netmask 255.255.255.0 {
   pool {
     deny dynamic bootp clients;
