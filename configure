@@ -79,7 +79,7 @@ echo "                          !!!WARNING!!!"
 
 echo "System Type: $sysname"
 
-sed -e "/^##\+\+${sysname}\+\+/,/^##--${sysname}--/s/^#//" \
+sed -e "/^##--${sysname}--/,/^##--${sysname}--/s/^#//" \
 		<Makefile.dist >Makefile
 
 exit 0

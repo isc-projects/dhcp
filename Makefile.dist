@@ -46,7 +46,7 @@ VARDB = /var/db
 ## Porting::
 #
 # For each supported operating system, there is a block of text below
-# beginning with #++os-name++ and ending with #--os-name--.   Between
+# beginning with #--os-name-- and ending with #--os-name--.   Between
 # these delimiters are assignments, commented out, which define the
 # Makefile variables required for that operating system.
 #
@@ -56,7 +56,7 @@ VARDB = /var/db
 # assignments, and writes the output to Makefile.
 
 ## SunOS 4.1
-##++sunos4++
+##--sunos4--
 #LIBS = -lresolv
 #CF = cf/sunos4.h
 #BINDIR=/usr/etc
@@ -67,7 +67,7 @@ VARDB = /var/db
 ##--sunos4--
 
 ## Solaris 2.5 (with gcc)
-##++sunos5++
+##--sunos5--
 #INSTALL=/usr/ucb/install
 #MANINSTALL=/usr/ucb/install
 #LIBS = -lresolv -lsocket -lnsl -lgen
@@ -84,7 +84,7 @@ VARDB = /var/db
 ##--sunos5--
 
 ## DEC Alpha/OSF1
-##++alphaosf++
+##--alphaosf--
 #INSTALL=/usr/ucb/installbsd
 #MANINSTALL=/usr/ucb/installbsd
 #LIBS=
@@ -96,26 +96,26 @@ VARDB = /var/db
 ##--alphaosf--
 
 ## BSD/OS 2.1
-##++bsdos++
+##--bsdos--
 #LIBS=
 #CC=gcc2
 #CF = cf/bsdos.h
 ##--bsdos--
 
 ## FreeBSD
-##++freebsd++
+##--freebsd--
 #CF = cf/freebsd.h
 ##--freebsd--
 
 ## NetBSD
-##++netbsd++
+##--netbsd--
 #CF = cf/netbsd.h
 #COPTS  = -Wall -Wstrict-prototypes -Wno-unused -Wno-implicit -Wno-comment \
 #	  -Wno-uninitialized -Werror
 ##--netbsd--
 
 ## Ultrix
-##++ultrix++
+##--ultrix--
 #CF = cf/ultrix.h
 #ADMMANDIR = /usr/man/man8
 #ADMMANEXT = .8
@@ -124,7 +124,7 @@ VARDB = /var/db
 ##--ultrix--
 
 ## Linux
-##++linux++
+##--linux--
 #CF = cf/linux.h
 #ADMMANDIR = /usr/man/man8
 #ADMMANEXT = .8
@@ -134,7 +134,7 @@ VARDB = /var/db
 ##--linux--
 
 ## SCO
-##++sco++
+##--sco--
 #CF = cf/sco.h
 #PREDEFINES=-DSCO -DBROKEN_ANSI
 #BINDUR = /usr/etc
@@ -152,7 +152,7 @@ VARDB = /var/db
 ##--sco--
 
 ## QNX
-##++qnx++
+##--qnx--
 #CF = cf/qnx.h
 #ADMMANDIR = /usr/man/man8
 #ADMMANEXT = .8
