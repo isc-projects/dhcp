@@ -51,6 +51,8 @@
 #define DHCP_MTU_MAX		1500
 #define DHCP_OPTION_LEN		(DHCP_MTU_MAX - DHCP_FIXED_LEN)
 
+#define BOOTP_MIN_LEN		300
+
 struct dhcp_packet {
   	u_int8_t  op;		/* Message opcode/type */
 	u_int8_t  htype;	/* Hardware addr type (see net/if_types.h) */
