@@ -33,17 +33,17 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * This software has been written for the Internet Software Consortium
- * by Ted Lemon in cooperation with Vixie Enterprises and Nominum, Inc.
- * To learn more about the Internet Software Consortium, see
- * ``http://www.isc.org/''.  To learn more about Vixie Enterprises,
- * see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
- * ``http://www.nominum.com''.
+ * This software was contributed to the Internet Software Consortium
+ * by Archie Cobbs, and is now maintained by Ted Lemon in cooperation
+ * with Nominum, Inc.  To learn more about the Internet Software
+ * Consortium, see ``http://www.isc.org/''.  To learn more about Vixie
+ * Enterprises, see ``http://www.vix.com''.  To learn more about
+ * Nominum, Inc., see ``http://www.nominum.com''.
  */
 
 #ifndef lint
 static char copyright[] =
-"$Id: bpf.c,v 1.36 2000/03/24 00:21:47 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bpf.c,v 1.37 2000/04/06 23:49:29 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
