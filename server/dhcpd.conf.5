@@ -603,7 +603,7 @@ class, and then put an
 statement in the conditional's list of statements:
 .PP
 .nf
-if substring (option dhcp-client-identifier, 0, 3) = "RAS" {
+if substring (option dhcp-client-identifier, 1, 4) = "RAS " {
   add "ras-clients";
 }
 .fi
@@ -613,7 +613,7 @@ expression as a matching expression in the class statement:
 .PP
 .nf
 class "ras-clients" {
-  match if substring (option dhcp-client-identifier, 0, 3) = "RAS";
+  match if substring (option dhcp-client-identifier, 1, 4) = "RAS";
 }
 .fi
 Note that whether you use matching expressions or add statements (or
