@@ -1,11 +1,8 @@
 	    Internet Software Consortium DHCP Distribution
-		    Version 3, Release Candidate 12
-			   August 23, 2001
+			      Version 3
+			   October 2, 2001
 
 			    Release Notes
-
-This is a development snapshot of Version 3 of the Internet Software
-Consortium DHCP Distribution.
 
 			     NEW FEATURES
 
@@ -55,6 +52,19 @@ Measurement Systems, Igor Sharfmesser at Kazakh Telecom, and Brian
 Murrell at BC Tel Advanced Communications.  I'd like to express my
 thanks to all of these good people here, both for working on the code
 and for prodding me into improving it.
+
+		Changes since 3.0 Release Candidate 12
+
+- Fix a memory leak in the evaluation code.
+
+- Fix an obscure core dump.
+
+- Print a couple of new warnings when parsing the configuration file
+  when crucial information is left out.
+
+- Log "no free leases" as an error.
+
+- Documentation updates.
 
 		Changes since 3.0 Release Candidate 11
 
