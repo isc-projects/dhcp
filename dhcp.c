@@ -155,7 +155,8 @@ void dhcprequest (packet)
 		   we have a lease for this client, let it go. */
 		if (memcmp (packet ->
 			    options [DHO_DHCP_SERVER_IDENTIFIER].data,
-			    siaddr.iabuf, siaddr.len)) {
+			    packet -> interface -> address.iabuf, 
+			    packet -> interface -> address.len)) {
 			if (lease)
 				release_lease (lease);
 			return;
@@ -237,6 +238,7 @@ void nak_lease (packet, cip)
 	struct dhcp_packet raw;
 	unsigned char nak = DHCPNAK;
 	struct packet outgoing;
+	struct hardware hto;
 
 	struct tree_cache *options [256];
 	struct tree_cache dhcpnak_tree;
@@ -272,7 +274,7 @@ void nak_lease (packet, cip)
 	cons_options (packet, &outgoing, options, 0);
 
 /*	memset (&raw.ciaddr, 0, sizeof raw.ciaddr);*/
-	memcpy (&raw.siaddr, siaddr.iabuf, 4);
+	memcpy (&raw.siaddr, packet -> interface -> address.iabuf, 4);
 	raw.giaddr = packet -> raw -> giaddr;
 	memcpy (raw.chaddr, packet -> raw -> chaddr, sizeof raw.chaddr);
 	raw.hlen = packet -> raw -> hlen;
@@ -290,7 +292,7 @@ void nak_lease (packet, cip)
 		to.sin_addr = raw.giaddr;
 		to.sin_port = server_port;
 	} else {
-		memcpy (&to.sin_addr.s_addr, cip->iabuf, 4);
+		to.sin_addr.s_addr = htonl (INADDR_BROADCAST);
 		to.sin_port = packet->client_port;
 	}
 
@@ -306,9 +308,14 @@ void nak_lease (packet, cip)
 			      packet -> raw -> chaddr),
 	      inet_ntoa (to.sin_addr), htons (to.sin_port));
 
+	hto.htype = packet -> raw -> htype;
+	hto.hlen = packet -> raw -> hlen;
+	memcpy (hto.haddr, packet -> raw -> chaddr, hto.hlen);
+
 	errno = 0;
-	result = sendpkt (packet, &raw, outgoing.packet_length,
-				(struct sockaddr *) &to, sizeof(to));
+	result = send_packet (packet -> interface,
+			      packet, &raw, outgoing.packet_length,
+			      &to, (struct hardware *)0);
 	if (result < 0)
 		warn ("sendpkt: %m");
 
@@ -334,6 +341,7 @@ void ack_lease (packet, lease, offer, when)
 	struct dhcp_packet raw;
 	struct tree_cache *options [256];
 	struct sockaddr_in to;
+	struct hardware hto;
 	int result;
 
 	struct tree_cache dhcpoffer_tree;
@@ -486,9 +494,12 @@ void ack_lease (packet, lease, offer, when)
 	options [DHO_DHCP_MESSAGE_TYPE] -> tree = (struct tree *)0;
 
 	options [DHO_DHCP_SERVER_IDENTIFIER] = &server_id_tree;
-	options [DHO_DHCP_SERVER_IDENTIFIER] -> value = siaddr.iabuf;
-	options [DHO_DHCP_SERVER_IDENTIFIER] -> len = siaddr.len;
-	options [DHO_DHCP_SERVER_IDENTIFIER] -> buf_size = siaddr.len;
+	options [DHO_DHCP_SERVER_IDENTIFIER] -> value =
+	  packet -> interface -> address.iabuf;
+	options [DHO_DHCP_SERVER_IDENTIFIER] -> len =
+	  packet -> interface -> address.len;
+	options [DHO_DHCP_SERVER_IDENTIFIER] -> buf_size =
+	  packet -> interface -> address.len;
 	options [DHO_DHCP_SERVER_IDENTIFIER] -> timeout = 0xFFFFFFFF;
 	options [DHO_DHCP_SERVER_IDENTIFIER] -> tree = (struct tree *)0;
 
@@ -541,7 +552,7 @@ void ack_lease (packet, lease, offer, when)
 
 	raw.ciaddr = packet -> raw -> ciaddr;
 	memcpy (&raw.yiaddr, lease -> ip_addr.iabuf, 4);
-	memcpy (&raw.siaddr, siaddr.iabuf, 4);
+	memcpy (&raw.siaddr, packet -> interface -> address.iabuf, 4);
 	raw.giaddr = packet -> raw -> giaddr;
 
 	raw.xid = packet -> raw -> xid;
@@ -566,7 +577,7 @@ void ack_lease (packet, lease, offer, when)
 
 	/* Otherwise, broadcast it on the local network. */
 	} else {
-		memcpy (&to.sin_addr.s_addr, lease -> ip_addr.iabuf, 4);
+		to.sin_addr.s_addr = htonl (INADDR_BROADCAST);
 		to.sin_port = htons (ntohs (server_port) + 1); /* XXX */
 	}
 
@@ -583,9 +594,13 @@ void ack_lease (packet, lease, offer, when)
 			     packet -> raw -> chaddr),
 	      inet_ntoa (to.sin_addr), htons (to.sin_port));
 
-	errno = 0;
-	result = sendpkt (packet, &raw, outgoing.packet_length,
-				(struct sockaddr *) &to, sizeof(to));
+	hto.htype = packet -> raw -> htype;
+	hto.hlen = packet -> raw -> hlen;
+	memcpy (hto.haddr, packet -> raw -> chaddr, hto.hlen);
+
+	result = send_packet (packet -> interface,
+			      packet, &raw, outgoing.packet_length,
+			      &to, &hto);
 	if (result < 0)
 		warn ("sendpkt: %m");
 

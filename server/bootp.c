@@ -57,6 +57,7 @@ void bootp (packet)
 	struct packet outgoing;
 	struct dhcp_packet raw;
 	struct sockaddr_in to;
+	struct hardware hto;
 	struct tree_cache *options [256];
 	int i;
 
@@ -122,7 +123,7 @@ void bootp (packet)
 	       hp -> fixed_addr -> tree);
 	memcpy (&raw.yiaddr, hp -> fixed_addr -> value,
 		sizeof raw.yiaddr);
-	raw.siaddr.s_addr = pick_interface (packet);
+	memcpy (&raw.siaddr, packet -> interface -> address.iabuf, 4);
 	raw.giaddr = packet -> raw -> giaddr;
 	if (hp -> server_name) {
 		strncpy (raw.sname, hp -> server_name,
@@ -157,9 +158,13 @@ void bootp (packet)
 			     packet -> raw -> chaddr),
 	      inet_ntoa (packet -> raw -> yiaddr));
 
+	hto.htype = packet -> raw -> htype;
+	hto.hlen = packet -> raw -> hlen;
+	memcpy (hto.haddr, packet -> raw -> chaddr, hto.hlen);
+
 	errno = 0;
-	result = sendto (packet -> client_sock, &raw, outgoing.packet_length,
-			 0, (struct sockaddr *)&to, sizeof to);
+	result = send_packet (packet -> interface,
+			      packet, &raw, outgoing.packet_length, &to, &hto);
 	if (result < 0)
-		warn ("sendto: %m");
+		warn ("send_packet: %m");
 }
