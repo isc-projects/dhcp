@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: execute.c,v 1.17 1999/09/09 23:53:14 mellon Exp $ Copyright (c) 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: execute.c,v 1.18 1999/09/15 17:22:52 mellon Exp $ Copyright (c) 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -301,6 +301,7 @@ int executable_statement_dereference (ptr, name)
 
 	      default:
 		/* Nothing to do. */
+		break;
 	}
 
 	dfree ((*ptr), name);

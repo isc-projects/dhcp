@@ -485,6 +485,7 @@ isc_result_t omapi_protocol_signal_handler (omapi_object_t *h,
 
 	      default:
 		/* XXX should never get here.   Assertion? */
+		break;
 	}
 	return ISC_R_SUCCESS;
 }
