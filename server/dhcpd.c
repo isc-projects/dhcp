@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.115.2.13 2004/09/02 21:40:05 dhankins Exp $ Copyright 2004 Internet Systems Consortium.";
+"$Id: dhcpd.c,v 1.115.2.14 2004/09/29 16:21:01 dhankins Exp $ Copyright 2004 Internet Systems Consortium.";
 #endif
 
   static char copyright[] =
@@ -377,8 +377,12 @@ int main (argc, argv, envp)
 
 #if defined (TRACING)
 	trace_init (set_time, MDL);
-	if (traceoutfile)
-		trace_begin (traceoutfile, MDL);
+	if (traceoutfile) {
+		result = trace_begin (traceoutfile, MDL);
+		if (result != ISC_R_SUCCESS)
+			log_fatal ("Unable to begin trace: %s",
+				isc_result_totext (result));
+	}
 	interface_trace_setup ();
 	parse_trace_setup ();
 	trace_srandom = trace_type_register ("random-seed", (void *)0,

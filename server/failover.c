@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.53.2.33 2004/09/01 22:03:50 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.53.2.34 2004/09/29 16:21:01 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2239,7 +2239,6 @@ int dhcp_failover_pool_rebalance (dhcp_failover_state_t *state)
 		}
 		if (lts > 1) {
 			log_info ("lease imbalance - lts = %d", lts);
-			leases_queued -= lts;
 		}
 	    }
 	}
@@ -4301,7 +4300,7 @@ isc_result_t dhcp_failover_send_poolresp (dhcp_failover_state_t *state,
 
 	status = (dhcp_failover_put_message
 		  (link, link -> outer,
-		   FTM_POOLREQ,
+		   FTM_POOLRESP,
 		   dhcp_failover_make_option (FTO_ADDRESSES_TRANSFERRED, FMA,
 					      leases),
 		   (failover_option_t *)0));

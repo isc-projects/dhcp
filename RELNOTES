@@ -45,6 +45,19 @@ and for prodding me into improving it.
 
 			Changes since 3.0.1
 
+- Failing to initialize a tracefile for any reason if a tracefile was
+  specified is now a fatal error.  Thanks to a patch from Albert Herranz.
+
+- Corrected a bug in which the number of leases transferred as calculated
+  by the failover primary and sent to peers in POOLRESP responses may be
+  incorrect.  This value is not believed to be used by other failover
+  implementations, excepting perhaps as logged information.
+
+- Corrected a bug in which 'dhcp_failover_send_poolresp()' was in fact
+  sending POOLREQ messages instead of POOLRESP mesasges.  This message
+  was essentially ignored since failover secondaries effectively do not
+  respond to POOLREQ messages.
+
 - Type definitions for various bitwidths of integers in the sunos5-5
   build of ISC DHCP have been fixed.  It should compile and run more
   easily when built in 64-bit for this platform.
