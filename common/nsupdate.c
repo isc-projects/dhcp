@@ -25,7 +25,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: nsupdate.c,v 1.12 1999/10/14 17:47:54 mellon Exp $ Copyright (c) 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: nsupdate.c,v 1.13 1999/10/25 15:14:52 mellon Exp $ Copyright (c) 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -43,7 +43,7 @@ static char copyright[] =
    be done by giving it pre-requisites to the add/delete.
  */
 
-#define NAME(x)	(x) ? (char *)(x) : "(null)"
+#define NAME(x)	(x) ? (const char *)(x) : "(null)"
 
 #if 0
 /* Return the reverse name of a lease. */
@@ -205,7 +205,9 @@ int nsupdateA (hostname, ip_addr, ttl, opcode)
 	if (!(u = res_mkupdrec (S_UPDATE, hostname, C_IN, T_A, ttl)))
 		return 0;
 	u -> r_opcode = opcode;
-	u -> r_data = (char *)ip_addr;
+	/* XXX ns_updrec doesn't have consts in 8.2.2!   This cast is
+	   of course bogus.*/
+	(const char *)(u -> r_data) = ip_addr;
 
 #if 0 /* no PREREQUISITES are needed for adds and deletes, as there is no zone
 	 churn when you add a record that exists or delete a record that
@@ -258,8 +260,8 @@ int nsupdateA (hostname, ip_addr, ttl, opcode)
 	}
 	z = res_update (u);
 	log_info ("%s %s: %s %ld IN A %s", opcode == ADD ? "add" : "delete",
-		  z == 1 ? "succeeded" : "failed", NAME (hostname), ttl,
-		  NAME (u -> r_data));
+		  z == 1 ? "succeeded" : "failed", NAME (hostname),
+		  (unsigned long)ttl, NAME (u -> r_data));
 #if 0
 	res_freeupdrec (p);
 #endif
@@ -280,7 +282,7 @@ int nsupdatePTR (revname, hostname, ttl, opcode)
 	if (!(u = res_mkupdrec (S_UPDATE, revname, C_IN, T_PTR, ttl)))
 		return 0;
 	u -> r_opcode = opcode;
-	u -> r_data = (char *)hostname;
+	(const char *)(u -> r_data) = hostname;
 
 #if 0 /* don't need PREREQUISITES */
 	/* set up the prerequisite section */
@@ -333,7 +335,7 @@ int nsupdatePTR (revname, hostname, ttl, opcode)
 	z = res_update(u);
 	log_info ("%s %s: %s %ld IN PTR %s", opcode == ADD ? "add" : 
 		  "delete", z == 1 ? "succeeded" : "failed",
-		  NAME (revname), ttl, NAME (u -> r_data));
+		  NAME (revname), (unsigned long)ttl, NAME (u -> r_data));
 #if 0
 	res_freeupdrec (p);
 #endif
