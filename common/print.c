@@ -146,6 +146,8 @@ void dump_raw (buf, len)
 	char lbuf [80];
 	int lbix = 0;
 
+	lbuf [0] = 0;
+
 	for (i = 0; i < len; i++) {
 		if ((i & 15) == 0) {
 			if (lbix)
