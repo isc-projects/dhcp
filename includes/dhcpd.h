@@ -186,7 +186,7 @@ struct lease {
 	struct subnet *subnet;
 	struct shared_network *shared_network;
 	struct pool *pool;
-	struct class *class;
+	struct class *billing_class;
 	struct hardware hardware_addr;
 
 	int flags;
@@ -402,16 +402,30 @@ struct collection {
 	struct class *classes;
 };
 
+/* XXX classes must be reference-counted. */
 struct class {
 	struct class *nic;	/* Next in collection. */
-	char *name; /* not set for spawned classes. */
+	struct class *superclass;	/* Set for spawned classes only. */
+	char *name;		/* Not set for spawned classes. */
 
 	/* A class may be configured to permit a limited number of leases. */
 	int lease_limit;
-	struct lease *billed_leases;
+	int leases_consumed;
+	struct lease **billed_leases;
 
+	/* If nonzero, class has not been saved since it was last
+	   modified. */
+	int dirty;
+
+	/* Hash table containing subclasses. */
 	struct hash_table *hash;
+	struct data_string hash_string;
+
+	/* Expression used to match class. */
 	struct expression *expr;
+
+	/* Expression used to compute subclass identifiers for spawning
+	   and subsequent matching. */
 	struct expression *spawn;
 	
 	struct group *group;
@@ -452,12 +466,12 @@ struct client_config {
 	 * When a message has been received, run these statements
 	 * over it.
 	 */
-	struct executable_statement *on_receipt;
+	struct group *on_receipt;
 
 	/*
 	 * When a message is sent, run these statements.
 	 */
-	struct executable_statement *on_transmission;
+	struct group *on_transmission;
 
 	u_int32_t *required_options; /* Options server must supply. */
 	u_int32_t *requested_options; /* Options to request from server. */
@@ -791,7 +805,7 @@ int parse_allow_deny PROTO ((struct option_cache **, FILE *, int));
 int parse_boolean PROTO ((FILE *));
 int parse_lbrace PROTO ((FILE *));
 void parse_host_declaration PROTO ((FILE *, struct group *));
-void parse_class_declaration PROTO ((FILE *, struct group *, int));
+struct class *parse_class_declaration PROTO ((FILE *, struct group *, int));
 void parse_shared_net_declaration PROTO ((FILE *, struct group *));
 void parse_subnet_declaration PROTO ((FILE *, struct shared_network *));
 void parse_group_declaration PROTO ((FILE *, struct group *));
@@ -891,7 +905,8 @@ void dhcprelease PROTO ((struct packet *));
 void dhcpdecline PROTO ((struct packet *));
 void dhcpinform PROTO ((struct packet *));
 void nak_lease PROTO ((struct packet *, struct iaddr *cip));
-void ack_lease PROTO ((struct packet *, struct lease *, unsigned int, TIME));
+void ack_lease PROTO ((struct packet *, struct lease *,
+		       unsigned int, TIME, char *));
 void dhcp_reply PROTO ((struct lease *));
 struct lease *find_lease PROTO ((struct packet *,
 				 struct shared_network *, int *));
@@ -1207,8 +1222,7 @@ void bind_lease PROTO ((struct client_state *));
 void make_client_options PROTO ((struct client_state *,
 				 struct client_lease *, u_int8_t *,
 				 struct option_cache *, struct iaddr *,
-				 u_int32_t *, struct executable_statement *,
-				 struct option_state *));
+				 u_int32_t *, struct option_state *));
 void make_discover PROTO ((struct client_state *, struct client_lease *));
 void make_request PROTO ((struct client_state *, struct client_lease *));
 void make_decline PROTO ((struct client_state *, struct client_lease *));
@@ -1234,6 +1248,7 @@ void client_location_changed PROTO ((void));
 
 /* db.c */
 int write_lease PROTO ((struct lease *));
+int write_billing_class PROTO ((struct class *));
 int commit_leases PROTO ((void));
 void db_startup PROTO ((void));
 void new_lease_file PROTO ((void));
@@ -1369,6 +1384,7 @@ int interact_client_write PROTO ((struct interact_client *, char *, int));
 extern struct interact_actions top_level_actions;
 
 /* class.c */
+extern int have_billing_classes;
 struct class unknown_class;
 struct class known_class;
 struct collection default_collection;
@@ -1380,11 +1396,14 @@ void classify_client PROTO ((struct packet *));
 int check_collection PROTO ((struct packet *, struct collection *));
 void classify PROTO ((struct packet *, struct class *));
 struct class *find_class PROTO ((char *));
+int unbill_class PROTO ((struct lease *, struct class *));
+int bill_class PROTO ((struct lease *, struct class *));
 
 /* execute.c */
 int execute_statements PROTO ((struct packet *, struct option_state *,
  			       struct option_state *,
 			       struct executable_statement *));
 void execute_statements_in_scope PROTO ((struct packet *,
+					 struct option_state *,
 					 struct option_state *,
 					 struct group *, struct group *));
