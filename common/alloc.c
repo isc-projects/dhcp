@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: alloc.c,v 1.34 1999/10/07 06:35:40 mellon Exp $ Copyright (c) 1995, 1996, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: alloc.c,v 1.35 1999/10/14 17:43:02 mellon Exp $ Copyright (c) 1995, 1996, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -472,7 +472,6 @@ int expression_reference (ptr, src, name)
 		abort ();
 #else
 		*ptr = (struct expression *)0;
-		return 0;
 #endif
 	}
 	*ptr = src;
@@ -521,7 +520,6 @@ int option_cache_reference (ptr, src, name)
 		abort ();
 #else
 		*ptr = (struct option_cache *)0;
-		return 0;
 #endif
 	}
 	*ptr = src;
@@ -564,7 +562,6 @@ int buffer_reference (ptr, bp, name)
 		abort ();
 #else
 		*ptr = (struct buffer *)0;
-		return 0;
 #endif
 	}
 	*ptr = bp;
@@ -641,7 +638,6 @@ int dns_host_entry_reference (ptr, bp, name)
 		abort ();
 #else
 		*ptr = (struct dns_host_entry *)0;
-		return 0;
 #endif
 	}
 	*ptr = bp;
@@ -694,7 +690,6 @@ int option_state_allocate (ptr, name)
 		abort ();
 #else
 		*ptr = (struct option_state *)0;
-		return 0;
 #endif
 	}
 
@@ -730,7 +725,6 @@ int option_state_reference (ptr, bp, name)
 		abort ();
 #else
 		*ptr = (struct option_state *)0;
-		return 0;
 #endif
 	}
 	*ptr = bp;
@@ -838,7 +832,6 @@ int packet_allocate (ptr, name)
 		abort ();
 #else
 		*ptr = (struct packet *)0;
-		return 0;
 #endif
 	}
 
