@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: alloc.c,v 1.9 1996/08/28 01:19:42 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: alloc.c,v 1.10 1997/03/05 06:34:27 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -96,10 +96,22 @@ struct tree *new_tree (name)
 	return rval;
 }
 
+struct tree_cache *free_tree_caches;
+
 struct tree_cache *new_tree_cache (name)
 	char *name;
 {
-	struct tree_cache *rval = dmalloc (sizeof (struct tree_cache), name);
+	struct tree_cache *rval;
+
+	if (free_tree_caches) {
+		rval = free_tree_caches;
+		free_tree_caches =
+			(struct tree_cache *)(rval -> value);
+	} else {
+		rval = dmalloc (sizeof (struct tree_cache), name);
+		if (!rval)
+			error ("unable to allocate tree cache for %s.", name);
+	}
 	return rval;
 }
 
@@ -222,7 +234,8 @@ void free_tree_cache (ptr, name)
 	struct tree_cache *ptr;
 	char *name;
 {
-	dfree ((VOIDPTR)ptr, name);
+	ptr -> value = (unsigned char *)free_tree_caches;
+	free_tree_caches = ptr;
 }
 
 void free_packet (ptr, name)
