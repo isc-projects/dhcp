@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: clparse.c,v 1.25 1999/03/09 23:38:37 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: clparse.c,v 1.26 1999/03/10 23:47:39 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -541,7 +541,7 @@ void parse_option_list (cfile, list)
 	}
 	if (*list)
 		dfree (*list, "parse_option_list");
-	*list = dmalloc (ix * sizeof **list, "parse_option_list");
+	*list = dmalloc ((ix + 1) * sizeof **list, "parse_option_list");
 	if (!*list)
 		log_error ("no memory for option list.");
 	else {
