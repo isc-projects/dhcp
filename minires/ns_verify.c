@@ -16,7 +16,7 @@
  */
 
 #ifndef lint
-static const char rcsid[] = "$Id: ns_verify.c,v 1.2 2000/02/02 19:59:16 mellon Exp $";
+static const char rcsid[] = "$Id: ns_verify.c,v 1.3 2001/01/16 22:33:11 mellon Exp $";
 #endif
 
 /* Import. */
@@ -126,7 +126,7 @@ ns_find_tsig(u_char *msg, u_char *eom) {
  *	- TSIG verification succeeds, error set to BADSIG (ns_r_badsig)
  *	- TSIG verification succeeds, error set to BADTIME (ns_r_badtime)
  */
-int
+isc_result_t
 ns_verify(u_char *msg, unsigned *msglen, void *k,
 	  const u_char *querysig, unsigned querysiglen,
 	  u_char *sig, unsigned *siglen, time_t *timesigned, int nostrip)
@@ -144,41 +144,41 @@ ns_verify(u_char *msg, unsigned *msglen, void *k,
 
 	dst_init();
 	if (msg == NULL || msglen == NULL || *msglen < 0)
-		return (-1);
+		return ISC_R_INVALIDARG;
 
 	eom = msg + *msglen;
 
 	recstart = ns_find_tsig(msg, eom);
 	if (recstart == NULL)
-		return (NS_TSIG_ERROR_NO_TSIG);
+		return ISC_R_NO_TSIG;
 
 	cp = recstart;
 
 	/* Read the key name. */
 	n = dn_expand(msg, eom, cp, name, MAXDNAME);
 	if (n < 0)
-		return (NS_TSIG_ERROR_FORMERR);
+		return ISC_R_FORMERR;
 	cp += n;
 
 	/* Read the type. */
 	BOUNDS_CHECK(cp, 2*INT16SZ + INT32SZ + INT16SZ);
 	GETSHORT(type, cp);
 	if (type != ns_t_tsig)
-		return (NS_TSIG_ERROR_NO_TSIG);
+		return ISC_R_NO_TSIG;
 
 	/* Skip the class and TTL, save the length. */
 	cp += INT16SZ + INT32SZ;
 	GETSHORT(length, cp);
 	if (eom - cp != length)
-		return (NS_TSIG_ERROR_FORMERR);
+		return ISC_R_FORMERR;
 
 	/* Read the algorithm name. */
 	rdatastart = cp;
 	n = dn_expand(msg, eom, cp, alg, MAXDNAME);
 	if (n < 0)
-		return (NS_TSIG_ERROR_FORMERR);
+		return ISC_R_FORMERR;
 	if (ns_samename(alg, NS_TSIG_ALG_HMAC_MD5) != 1)
-		return (-ns_r_badkey);
+		return ISC_R_INVALIDKEY;
 	cp += n;
 
 	/* Read the time signed and fudge. */
@@ -207,15 +207,15 @@ ns_verify(u_char *msg, unsigned *msglen, void *k,
 	cp += otherfieldlen;
 
 	if (cp != eom)
-		return (NS_TSIG_ERROR_FORMERR);
+		return ISC_R_FORMERR;
 
 	/* Verify that the key used is OK. */
 	if (key != NULL) {
 		if (key->dk_alg != KEY_HMAC_MD5)
-			return (-ns_r_badkey);
+			return ISC_R_INVALIDKEY;
 		if (error != ns_r_badsig && error != ns_r_badkey) {
 			if (ns_samename(key->dk_key_name, name) != 1)
-				return (-ns_r_badkey);
+				return ISC_R_INVALIDKEY;
 		}
 	}
 
@@ -271,17 +271,17 @@ ns_verify(u_char *msg, unsigned *msglen, void *k,
 				    sigstart, sigfieldlen);
 
 		if (n < 0)
-			return (-ns_r_badsig);
+			return ISC_R_BADSIG;
 
 		if (sig != NULL && siglen != NULL) {
 			if (*siglen < sigfieldlen)
-				return (NS_TSIG_ERROR_NO_SPACE);
+				return ISC_R_NOSPACE;
 			memcpy(sig, sigstart, sigfieldlen);
 			*siglen = sigfieldlen;
 		}
 	} else {
 		if (sigfieldlen > 0)
-			return (NS_TSIG_ERROR_FORMERR);
+			return ISC_R_FORMERR;
 		if (sig != NULL && siglen != NULL)
 			*siglen = 0;
 	}
@@ -291,7 +291,7 @@ ns_verify(u_char *msg, unsigned *msglen, void *k,
 
 	/* Verify the time. */
 	if (abs((*timesigned) - time(NULL)) > fudge)
-		return (-ns_r_badtime);
+		return ISC_R_BADTIME;
 
 	if (nostrip == 0) {
 		*msglen = recstart - msg;
@@ -299,30 +299,31 @@ ns_verify(u_char *msg, unsigned *msglen, void *k,
 	}
 
 	if (error != NOERROR)
-		return (error);
+		return ns_rcode_to_isc (error);
 
-	return (0);
+	return ISC_R_SUCCESS;
 }
 
-int
+#if 0
+isc_result_t
 ns_verify_tcp_init(void *k, const u_char *querysig, unsigned querysiglen,
 		   ns_tcp_tsig_state *state)
 {
 	dst_init();
 	if (state == NULL || k == NULL || querysig == NULL || querysiglen < 0)
-		return (-1);
+		return ISC_R_INVALIDARG;
 	state->counter = -1;
 	state->key = k;
 	if (state->key->dk_alg != KEY_HMAC_MD5)
-		return (-ns_r_badkey);
+		return ISC_R_BADKEY;
 	if (querysiglen > sizeof(state->sig))
-		return (-1);
+		return ISC_R_NOSPACE;
 	memcpy(state->sig, querysig, querysiglen);
 	state->siglen = querysiglen;
-	return (0);
+	return ISC_R_SUCCESS;
 }
 
-int
+isc_result_t
 ns_verify_tcp(u_char *msg, unsigned *msglen, ns_tcp_tsig_state *state,
 	      int required)
 {
@@ -336,7 +337,7 @@ ns_verify_tcp(u_char *msg, unsigned *msglen, ns_tcp_tsig_state *state,
 	time_t timesigned;
 
 	if (msg == NULL || msglen == NULL || state == NULL)
-		return (-1);
+		return ISC_R_INVALIDARG;
 
 	state->counter++;
 	if (state->counter == 0)
@@ -360,10 +361,10 @@ ns_verify_tcp(u_char *msg, unsigned *msglen, ns_tcp_tsig_state *state,
 
 	if (recstart == NULL) {
 		if (required)
-			return (NS_TSIG_ERROR_NO_TSIG);
+			return ISC_R_NO_TSIG;
 		dst_verify_data(SIG_MODE_UPDATE, state->key, &state->ctx,
 				msg, *msglen, NULL, 0);
-		return (0);
+		return ISC_R_SUCCESS;
 	}
 
 	hp->arcount = htons(ntohs(hp->arcount) - 1);
@@ -373,34 +374,34 @@ ns_verify_tcp(u_char *msg, unsigned *msglen, ns_tcp_tsig_state *state,
 	/* Read the key name. */
 	n = dn_expand(msg, eom, cp, name, MAXDNAME);
 	if (n < 0)
-		return (NS_TSIG_ERROR_FORMERR);
+		return ISC_R_FORMERR;
 	cp += n;
 
 	/* Read the type. */
 	BOUNDS_CHECK(cp, 2*INT16SZ + INT32SZ + INT16SZ);
 	GETSHORT(type, cp);
 	if (type != ns_t_tsig)
-		return (NS_TSIG_ERROR_NO_TSIG);
+		return ISC_R_NO_TSIG;
 
 	/* Skip the class and TTL, save the length. */
 	cp += INT16SZ + INT32SZ;
 	GETSHORT(length, cp);
 	if (eom - cp != length)
-		return (NS_TSIG_ERROR_FORMERR);
+		return ISC_R_FORMERR;
 
 	/* Read the algorithm name. */
 	rdatastart = cp;
 	n = dn_expand(msg, eom, cp, alg, MAXDNAME);
 	if (n < 0)
-		return (NS_TSIG_ERROR_FORMERR);
+		return ISC_R_FORMERR;
 	if (ns_samename(alg, NS_TSIG_ALG_HMAC_MD5) != 1)
-		return (-ns_r_badkey);
+		return ISC_R_BADKEY;
 	cp += n;
 
 	/* Verify that the key used is OK. */
 	if ((ns_samename(state->key->dk_key_name, name) != 1 ||
 	     state->key->dk_alg != KEY_HMAC_MD5))
-		return (-ns_r_badkey);
+		return ISC_R_BADKEY;
 
 	/* Read the time signed and fudge. */
 	BOUNDS_CHECK(cp, INT16SZ + INT32SZ + INT16SZ);
@@ -427,7 +428,7 @@ ns_verify_tcp(u_char *msg, unsigned *msglen, ns_tcp_tsig_state *state,
 	cp += otherfieldlen;
 
 	if (cp != eom)
-		return (NS_TSIG_ERROR_FORMERR);
+		return ISC_R_FORMERR;
 
 	/*
 	 * Do the verification.
@@ -445,25 +446,26 @@ ns_verify_tcp(u_char *msg, unsigned *msglen, ns_tcp_tsig_state *state,
 	n = dst_verify_data(SIG_MODE_FINAL, state->key, &state->ctx, NULL, 0,
 			    sigstart, sigfieldlen);
 	if (n < 0)
-		return (-ns_r_badsig);
+		return ISC_R_BADSIG;
 
 	if (sigfieldlen > sizeof(state->sig))
-		return (ns_r_badsig);
+		return ISC_R_BADSIG;
 
 	if (sigfieldlen > sizeof(state->sig))
-		return (NS_TSIG_ERROR_NO_SPACE);
+		return ISC_R_NOSPACE;
 
 	memcpy(state->sig, sigstart, sigfieldlen);
 	state->siglen = sigfieldlen;
 
 	/* Verify the time. */
 	if (abs(timesigned - time(NULL)) > fudge)
-		return (-ns_r_badtime);
+		return ISC_R_BADTIME;
 
 	*msglen = recstart - msg;
 
 	if (error != NOERROR)
-		return (error);
+		return ns_rcode_to_isc (error);
 
-	return (0);
+	return ISC_R_SUCCESS;
 }
+#endif

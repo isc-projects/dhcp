@@ -4,7 +4,7 @@
    until the actual libisc merge. */
 
 /*
- * Copyright (c) 1999-2000 Internet Software Consortium.
+ * Copyright (c) 1999-2001 Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -107,7 +107,12 @@ static const char *text[ISC_R_NRESULTS] = {
 	"not a zone",				/* 59 */
 	"bad DNS signature",			/* 60 */
 	"bad DNS key",				/* 61 */
-	"clock skew too great"			/* 62 */
+	"clock skew too great",			/* 62 */
+	"no root zone",				/* 63 */
+	"destination address required",		/* 64 */
+	"cross-zone update",			/* 65 */
+	"no TSIG signature",			/* 66 */
+	"not equal"				/* 67 */
 };
 
 const char *isc_result_totext (isc_result_t result)

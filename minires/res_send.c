@@ -70,7 +70,7 @@
 
 #if defined(LIBC_SCCS) && !defined(lint)
 static const char sccsid[] = "@(#)res_send.c	8.1 (Berkeley) 6/4/93";
-static const char rcsid[] = "$Id: res_send.c,v 1.4 2000/07/17 20:51:17 mellon Exp $";
+static const char rcsid[] = "$Id: res_send.c,v 1.5 2001/01/16 22:33:16 mellon Exp $";
 #endif /* LIBC_SCCS and not lint */
 
 /*
@@ -216,9 +216,10 @@ res_queriesmatch(const u_char *buf1, const u_char *eom1,
 	return (1);
 }
 
-int
+isc_result_t
 res_nsend(res_state statp,
-	  double *buf, unsigned buflen, double *ans, unsigned anssiz)
+	  double *buf, unsigned buflen,
+	  double *ans, unsigned anssiz, unsigned *ansret)
 {
 	HEADER *hp = (HEADER *) buf;
 	HEADER *anhp = (HEADER *) ans;
@@ -227,8 +228,7 @@ res_nsend(res_state statp,
 	static int highestFD = FD_SETSIZE - 1;
 
 	if (anssiz < HFIXEDSZ) {
-		errno = EINVAL;
-		return (-1);
+		return ISC_R_INVALIDARG;
 	}
 	DprintQ((statp->options & RES_DEBUG) ||
 		(statp->pfcode & RES_PRF_QUERY),
@@ -236,7 +236,7 @@ res_nsend(res_state statp,
 	v_circuit = (statp->options & RES_USEVC) || buflen > PACKETSZ;
 	gotsomewhere = 0;
 	connreset = 0;
-	terrno = ETIMEDOUT;
+	terrno = ISC_R_TIMEDOUT;
 	badns = 0;
 
 	/*
@@ -289,7 +289,7 @@ res_nsend(res_state statp,
 				case res_error:
 					/*FALLTHROUGH*/
 				default:
-					return (-1);
+					return ISC_R_UNEXPECTED;
 				}
 			} while (!done);
 		}
@@ -334,7 +334,7 @@ res_nsend(res_state statp,
 						       SOCK_STREAM, 0);
 				if (statp->_sock < 0 ||
 				    statp->_sock > highestFD) {
-					terrno = errno;
+					terrno = uerr2isc (errno);
 					Perror(statp, stderr,
 					       "socket(vc)", errno);
 					return (-1);
@@ -343,7 +343,7 @@ res_nsend(res_state statp,
 				if (connect(statp->_sock,
 					    (struct sockaddr *)nsap,
 					    sizeof *nsap) < 0) {
-					terrno = errno;
+					terrno = uerr2isc (errno);
 					Aerror(statp, stderr, "connect/vc",
 					       errno, *nsap);
 					badns |= (1 << ns);
@@ -362,7 +362,7 @@ res_nsend(res_state statp,
 			iov[1].iov_len = buflen;
 			if (writev(statp->_sock, iov, 2) !=
 			    (INT16SZ + buflen)) {
-				terrno = errno;
+				terrno = uerr2isc (errno);
 				Perror(statp, stderr, "write failed", errno);
 				badns |= (1 << ns);
 				res_nclose(statp);
@@ -381,7 +381,7 @@ res_nsend(res_state statp,
 					break;
 			}
 			if (n <= 0) {
-				terrno = errno;
+				terrno = uerr2isc (errno);
 				Perror(statp, stderr, "read failed", errno);
 				res_nclose(statp);
 				/*
@@ -393,7 +393,8 @@ res_nsend(res_state statp,
 				 * instead of failing.  We only allow one reset
 				 * per query to prevent looping.
 				 */
-				if (terrno == ECONNRESET && !connreset) {
+				if (terrno == ISC_R_CONNREFUSED &&
+				    !connreset) {
 					connreset = 1;
 					res_nclose(statp);
 					goto same_ns;
@@ -416,7 +417,7 @@ res_nsend(res_state statp,
 				 */
 				Dprint(statp->options & RES_DEBUG,
 				       (stdout, ";; undersized: %d\n", len));
-				terrno = EMSGSIZE;
+				terrno = ISC_R_NOSPACE;
 				badns |= (1 << ns);
 				res_nclose(statp);
 				goto next_ns;
@@ -430,7 +431,7 @@ res_nsend(res_state statp,
 				len -= n;
 			}
 			if (n <= 0) {
-				terrno = errno;
+				terrno = uerr2isc (errno);
 				Perror(statp, stderr, "read(vc)", errno);
 				res_nclose(statp);
 				goto next_ns;
@@ -491,10 +492,10 @@ res_nsend(res_state statp,
 #ifndef CAN_RECONNECT
  bad_dg_sock:
 #endif
-					terrno = errno;
+					terrno = uerr2isc (errno);
 					Perror(statp, stderr,
 					       "socket(dg)", errno);
-					return (-1);
+					return terrno;
 				}
 				statp->_flags &= ~RES_F_CONN;
 			}
@@ -667,7 +668,7 @@ res_nsend(res_state statp,
 				Dprint(statp->options & RES_DEBUG,
 				       (stdout, ";; undersized: %d\n",
 					resplen));
-				terrno = EMSGSIZE;
+				terrno = ISC_R_NOSPACE;
 				badns |= (1 << ns);
 				res_nclose(statp);
 				goto next_ns;
@@ -783,24 +784,24 @@ res_nsend(res_state statp,
 				case res_error:
 					/*FALLTHROUGH*/
 				default:
-					return (-1);
+					return ISC_R_UNEXPECTED;
 				}
 			} while (!done);
 
 		}
-		return (resplen);
+		*ansret = resplen;
+		return ISC_R_SUCCESS;
  next_ns: ;
 	   } /*foreach ns*/
 	} /*foreach retry*/
 	res_nclose(statp);
 	if (!v_circuit) {
 		if (!gotsomewhere)
-			errno = ECONNREFUSED;	/* no nameservers found */
+			terrno = ISC_R_CONNREFUSED;  /* no nameservers found */
 		else
-			errno = ETIMEDOUT;	/* no answer obtained */
-	} else
-		errno = terrno;
-	return (-1);
+			errno = ISC_R_TIMEDOUT;	/* no answer obtained */
+	}
+	return terrno;
 }
 
 /*
