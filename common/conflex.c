@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: conflex.c,v 1.14 1996/08/28 01:26:34 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: conflex.c,v 1.15 1996/08/28 01:41:11 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -54,13 +54,14 @@ int lexchar;
 char *token_line;
 char *prev_line;
 char *cur_line;
+char *tlname;
+
 static char line1 [81];
 static char line2 [81];
 static int lpos;
 static int line;
 static int tlpos;
 static int tline;
-char *tlname;
 static int token;
 static int ugflag;
 static char *tval;
