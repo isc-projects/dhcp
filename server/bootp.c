@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bootp.c,v 1.47 1999/06/10 00:36:18 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bootp.c,v 1.48 1999/06/22 13:25:23 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -208,9 +208,16 @@ void bootp (packet)
 	raw.hops = packet -> raw -> hops;
 	raw.xid = packet -> raw -> xid;
 	raw.secs = packet -> raw -> secs;
-	raw.flags = 0;
+	raw.flags = packet -> raw -> flags;
 	raw.ciaddr = packet -> raw -> ciaddr;
 	memcpy (&raw.yiaddr, ip_address.iabuf, sizeof raw.yiaddr);
+
+	/* If we're always supposed to broadcast to this client, set
+	   the broadcast bit in the bootp flags field. */
+	if (oc = lookup_option (&server_universe,
+				options, SV_ALWAYS_BROADCAST) &&
+	    evaluate_boolean_option_cache (packet, packet -> options, oc))
+		raw.flags |= htons (BOOTP_BROADCAST);
 
 	/* Figure out the address of the next server. */
 	memset (&d1, 0, sizeof d1);
