@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.34.2.4 1997/09/16 23:07:28 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.34.2.5 1997/11/29 08:02:33 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -283,17 +283,46 @@ void dhcprequest (packet)
 void dhcprelease (packet)
 	struct packet *packet;
 {
-	struct lease *lease = find_lease (packet, packet -> shared_network);
+	struct lease *lease;
+	struct iaddr cip;
+	int i;
 
-	note ("DHCPRELEASE of %s from %s via %s",
+	/* DHCPRELEASE must not specify address in requested-address
+           option, but old protocol specs weren't explicit about this,
+           so let it go. */
+	if (packet -> options [DHO_DHCP_REQUESTED_ADDRESS].len) {
+		note ("DHCPRELEASE from %s specified requested-address.",
+		      print_hw_addr (packet -> raw -> htype,
+				     packet -> raw -> hlen,
+				     packet -> raw -> chaddr));
+	}
+
+	i = DHO_DHCP_CLIENT_IDENTIFIER;
+	if (packet -> options [i].len) {
+		lease = find_lease_by_uid (packet -> options [i].data,
+					   packet -> options [i].len);
+	} else
+		lease = (struct lease *)0;
+
+	/* The client is supposed to pass a valid client-identifier,
+	   but the spec on this has changed historically, so try the
+	   IP address in ciaddr if the client-identifier fails. */
+	if (!lease) {
+		cip.len = 4;
+		memcpy (cip.iabuf, &packet -> raw -> ciaddr, 4);
+		lease = find_lease_by_ip_addr (cip);
+	}
+
+
+	note ("DHCPRELEASE of %s from %s via %s (%sfound)",
 	      inet_ntoa (packet -> raw -> ciaddr),
 	      print_hw_addr (packet -> raw -> htype,
 			     packet -> raw -> hlen,
 			     packet -> raw -> chaddr),
 	      packet -> raw -> giaddr.s_addr
 	      ? inet_ntoa (packet -> raw -> giaddr)
-	      : packet -> interface -> name);
-
+	      : packet -> interface -> name,
+	      lease ? "" : "not ");
 
 	/* If we found a lease, release it. */
 	if (lease) {
