@@ -146,14 +146,16 @@ The time-offset option specifies the offset of the client's subnet in
 seconds from Coordinated Universal Time (UTC).
 .RE
 .PP
-.B option routers \fIip-address\fR [\fB,\fR \fIip-address\fR ... ]\fB;\fR
+.B option routers \fIip-address\fR [\fB,\fR \fIip-address\fR...
+]\fB;\fR
 .RS 0.25i
 .PP
 The routers option specifies a list of IP addresses for routers on the
 client's subnet.  Routers should be listed in order of preference.
 .RE
 .PP
-.B option time-servers \fIip-address [, \fIip-address\fR ... ]\fB;\fR
+.B option time-servers \fIip-address\fR [, \fIip-address\fR...
+]\fB;\fR
 .RS 0.25i
 .PP
 The time-server option specifies a list of RFC 868 time servers
@@ -161,7 +163,8 @@ available to the client.  Servers should be listed in order of
 preference.
 .RE
 .PP
-.B option \fBien116-name-servers\fR \fIip-address\fR [\fB,\fR \fIip-address\fR ... ];
+.B option \fBien116-name-servers\fR \fIip-address\fR [\fB,\fR \fIip-address\fR...
+];
 .RS 0.25i
 .PP
 The ien116-name-servers option specifies a list of IEN 116 name servers
@@ -169,7 +172,8 @@ available to the client.  Servers should be listed in order of
 preference.
 .RE
 .PP
-.B option \fBdomain-name-servers\fR \fIip-address\fR [\fB,\fR \fIip-address\fR ... ]\fB;\fR
+.B option \fBdomain-name-servers\fR \fIip-address\fR [\fB,\fR \fIip-address\fR...
+]\fB;\fR
 .RS 0.25i
 .PP
 The domain-name-servers option specifies a list of Domain Name System
@@ -177,7 +181,8 @@ The domain-name-servers option specifies a list of Domain Name System
 should be listed in order of preference.
 .RE
 .PP
-.B option \fBlog-servers\fR \fIip-address\fR [\fB,\fR \fIip-address\fR ... ]\fB;\fR
+.B option \fBlog-servers\fR \fIip-address\fR [\fB,\fR \fIip-address\fR...
+]\fB;\fR
 .RS 0.25i
 .PP
 The log-server option specifies a list of MIT-LCS UDP log servers
@@ -185,7 +190,8 @@ available to the client.  Servers should be listed in order of
 preference.
 .RE
 .PP
-.B option \fBcookie-servers\fR \fIip-address\fR [\fB,\fR \fIip-address\fR ... ]\fB;\fR
+.B option \fBcookie-servers\fR \fIip-address\fR [\fB,\fR \fIip-address\fR...
+]\fB;\fR
 .RS 0.25i
 .PP
 The cookie server option specifies a list of RFC 865 cookie
@@ -193,7 +199,8 @@ servers available to the client.  Servers should be listed in order
 of preference.
 .RE
 .PP
-.B option \fBlpr-servers\fR \fIip-address \fR [\fB,\fR \fIip-address\fR ... ]\fB;\fR
+.B option \fBlpr-servers\fR \fIip-address \fR [\fB,\fR \fIip-address\fR...
+]\fB;\fR
 .RS 0.25i
 .PP
 The LPR server option specifies a list of RFC 1179 line printer
@@ -201,7 +208,8 @@ servers available to the client.  Servers should be listed in order
 of preference.
 .RE
 .PP
-.B option \fBimpress-servers\fR \fIip-address\fR [\fB,\fR \fIip-address\fR ... ]\fB;\fR
+.B option \fBimpress-servers\fR \fIip-address\fR [\fB,\fR \fIip-address\fR...
+]\fB;\fR
 .RS 0.25i
 .PP
 The impress-server option specifies a list of Imagen Impress servers
@@ -209,7 +217,8 @@ available to the client.  Servers should be listed in order of
 preference.
 .RE
 .PP
-.B option \fBresource-location-servers\fR \fIip-address\fR [\fB,\fR \fIip-address\fR ... ]\fB;\fR
+.B option \fBresource-location-servers\fR \fIip-address\fR [\fB,\fR \fIip-address\fR...
+]\fB;\fR
 .RS 0.25i
 .PP
 This option specifies a list of RFC 887 Resource Location
@@ -281,7 +290,8 @@ of 0 means disallow forwarding of such datagrams, and a value of 1
 means allow forwarding.
 .RE
 .PP
-.B option \fBpolicy-filter\fR \fIip-address ip-address\fR [\fB,\fR \fIip-address ip-address\fR ... ]\fB;\fR
+.B option \fBpolicy-filter\fR \fIip-address ip-address\fR [\fB,\fR \fIip-address ip-address\fR...
+]\fB;\fR
 .RS 0.25i
 .PP
 This option specifies policy filters for non-local source routing.
@@ -316,7 +326,8 @@ This option specifies the timeout (in seconds) to use when aging Path
 MTU values discovered by the mechanism defined in RFC 1191.
 .RE
 .PP
-.B option \fBpath-mtu-plateau-table\fR \fIuint16\fR [\fB,\fR \fIuint16\fR ... ]\fB;\fR
+.B option \fBpath-mtu-plateau-table\fR \fIuint16\fR [\fB,\fR \fIuint16\fR...
+]\fB;\fR
 .RS 0.25i
 .PP
 This option specifies a table of MTU sizes to use when performing
@@ -386,7 +397,8 @@ This option specifies the address to which the client should transmit
 router solicitation requests.
 .RE
 .PP
-.B option \fBstatic-routes\fR \fIip-address ip-address\fR [\fB,\fR \fIip-address ip-address\fR ... ]\fB;\fR
+.B option \fBstatic-routes\fR \fIip-address ip-address\fR [\fB,\fR \fIip-address ip-address\fR...
+]\fB;\fR
 .RS 0.25i
 .PP
 This option specifies a list of static routes that the client should
@@ -464,7 +476,8 @@ Information Services) domain.  The domain is formatted as a character
 string consisting of characters from the NVT ASCII character set.
 .RE
 .PP
-.B option \fBnis-servers\fR \fIip-address\fR [\fB,\fR \fIip-address\fR ... ]\fB;\fR
+.B option \fBnis-servers\fR \fIip-address\fR [\fB,\fR \fIip-address\fR...
+]\fB;\fR
 .RS 0.25i
 .PP
 This option specifies a list of IP addresses indicating NIS servers
@@ -472,7 +485,8 @@ available to the client.  Servers should be listed in order of
 preference.
 .RE
 .PP
-.B option \fBntp-servers\fR \fIip-address\fR [\fB,\fR \fIip-address\fR ... ]\fB;\fR
+.B option \fBntp-servers\fR \fIip-address\fR [\fB,\fR \fIip-address\fR...
+]\fB;\fR
 .RS 0.25i
 .PP
 This option specifies a list of IP addresses indicating NTP (RFC 1035)
@@ -480,14 +494,16 @@ servers available to the client.  Servers should be listed in order
 of preference.
 .RE
 .PP
-.B option \fBnetbios-name-servers\fR \fIip-address\fR [\fB,\fR \fIip-address\fR ... ]\fB;\fR
+.B option \fBnetbios-name-servers\fR \fIip-address\fR [\fB,\fR \fIip-address\fR...
+]\fB;\fR
 .RS 0.25i
 .PP
 The NetBIOS name server (NBNS) option specifies a list of RFC
 1001/1002 NBNS name servers listed in order of preference.
 .RE
 .PP
-.B option \fBnetbios-dd-server\fR \fIip-address\fR [\fB,\fR \fIip-address\fR ... ]\fB;\fR
+.B option \fBnetbios-dd-server\fR \fIip-address\fR [\fB,\fR \fIip-address\fR...
+]\fB;\fR
 .RS 0.25i
 .PP
 The NetBIOS datagram distribution server (NBDD) option specifies a
@@ -527,14 +543,16 @@ parameter for the client as specified in RFC 1001/1002. See RFC1001,
 RFC1002, and RFC1035 for character-set restrictions.
 .RE
 .PP
-.B option \fBfont-servers\fR \fIip-address\fR [\fB,\fR \fIip-address\fR ... ]\fB;\fR
+.B option \fBfont-servers\fR \fIip-address\fR [\fB,\fR \fIip-address\fR...
+]\fB;\fR
 .RS 0.25i
 .PP
 This option specifies a list of X Window System Font servers available
 to the client. Servers should be listed in order of preference.
 .RE
 .PP
-.B option \fBx-display-manager\fR \fIip-address\fR [\fB,\fR \fIip-address\fR ... ]\fB;\fR
+.B option \fBx-display-manager\fR \fIip-address\fR [\fB,\fR \fIip-address\fR...
+]\fB;\fR
 .RS 0.25i
 .PP
 This option specifies a list of systems that are running the X Window
