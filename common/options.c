@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.40 1999/04/08 19:17:48 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.41 1999/04/23 22:10:52 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -321,17 +321,41 @@ int cons_options (inpacket, outpacket,
 		priority_list [priority_len++] = DHO_DOMAIN_NAME_SERVERS;
 		priority_list [priority_len++] = DHO_HOST_NAME;
 
-		/* Now just tack on the list of all the options we have,
-		   and any duplicates will be eliminated. */
-		for (i = 0; i < OPTION_HASH_SIZE; i++) {
+		/* Append a list of the standard DHCP options from the
+		   standard DHCP option space.  Actually, if a site
+		   option space hasn't been specified, we wind up
+		   treating the dhcp option space as the site option
+		   space, and the first for loop is skipped, because
+		   it's slightly more general to do it this way,
+		   taking the 1Q99 DHCP futures work into account. */
+		if (options -> site_code_min) {
+		    for (i = 0; i < OPTION_HASH_SIZE; i++) {
 			hash = options -> universes [dhcp_universe.index];
 			for (pp = hash [i]; pp; pp = pp -> cdr) {
 				op = (struct option_cache *)(pp -> car);
-				if (priority_len < PRIORITY_COUNT)
+				if (op -> option -> code <
+				    options -> site_code_min &&
+				    priority_len < PRIORITY_COUNT)
 					priority_list [priority_len++] =
 						op -> option -> code;
 			}
+		    }
 		}
+
+		/* Now cycle through the site option space, or if there
+		   is no site option space, we'll be cycling through the
+		   dhcp option space. */
+		for (i = 0; i < OPTION_HASH_SIZE; i++) {
+			hash = options -> universes [options -> site_universe];
+			for (pp = hash [i]; pp; pp = pp -> cdr) {
+				op = (struct option_cache *)(pp -> car);
+				if (op -> option -> code >=
+				    options -> site_code_min &&
+				    priority_len < PRIORITY_COUNT)
+					priority_list [priority_len++] =
+						op -> option -> code;
+			}
+		    }
 	}
 
 	/* Copy the options into the big buffer... */
@@ -495,8 +519,17 @@ int store_options (buffer, buflen, options, priority_list, priority_len,
 		   have been stored by a previous pass). */
 		int length;
 
+		/* Look up the option in the site option space if the code
+		   is above the cutoff, otherwise in the DHCP option space. */
+		if (code >= options -> site_code_min)
+			oc = lookup_option
+				(universes [options -> site_universe],
+				 options, code);
+		else
+			oc = lookup_option (&dhcp_universe, options, code);
+
 		/* If no data is available for this option, skip it. */
-		if (!(oc = lookup_option (&dhcp_universe, options, code))) {
+		if (!oc) {
 			continue;
 		}
 
