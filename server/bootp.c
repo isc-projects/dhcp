@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bootp.c,v 1.57 1999/10/21 02:38:06 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bootp.c,v 1.58 2000/01/05 18:12:09 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -281,9 +281,9 @@ void bootp (packet)
 	static_lease_dereference (lease, "bootrequest");
 
 	/* Set up the hardware destination address... */
-	hto.htype = packet -> raw -> htype;
-	hto.hlen = packet -> raw -> hlen;
-	memcpy (hto.haddr, packet -> raw -> chaddr, hto.hlen);
+	hto.hbuf [0] = packet -> raw -> htype;
+	hto.hlen = packet -> raw -> hlen + 1;
+	memcpy (hto.hbuf, packet -> raw -> chaddr, packet -> raw -> hlen);
 
 	from = packet -> interface -> primary_address;
 

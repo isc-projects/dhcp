@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.92 1999/11/20 18:36:27 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.93 2000/01/05 18:12:24 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -486,6 +486,14 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 
 #if defined (FAILOVER_PROTOCOL)
 	      case FAILOVER:
+		if (type != ROOT_GROUP && type != SHARED_NETWORK) {
+			parse_warn (cfile, "failover peers may only be %s",
+				    "defined in shared-network");
+			log_error ("declarations and the outer scope.");
+			skip_to_semi (cfile);
+			break;
+		}
+		token = next_token (&val, cfile);
 		parse_failover_peer (cfile, group, type);
 		break;
 #endif
@@ -583,38 +591,37 @@ void parse_failover_peer (cfile, group, type)
 {
 	enum dhcp_token token;
 	const char *val;
-	struct failover_peer *peer;
-	TIME *tp;
+	dhcp_failover_state_t *peer;
+	u_int32_t *tp;
 	char *name;
-
-	if (type != SHARED_NET_DECL && type != ROOT_GROUP) {
-		parse_warn (cfile,
-			    "failover peer statements not in shared-network%s",
-			    " declaration or at top level.");
-		skip_to_semi (cfile);
-		return;
-	}
+	u_int32_t split;
+	u_int8_t hba [32];
+	int hba_len = sizeof hba;
+	int i;
+	struct expression *expr;
 
 	token = next_token (&val, cfile);
 	if (token != PEER) {
-		parse_warn (cfile, "expecting peer keyword");
+		parse_warn (cfile, "expecting \"peer\"");
 		skip_to_semi (cfile);
 		return;
 	}
 
 	token = next_token (&val, cfile);
 	if (is_identifier (token) || token == STRING) {
-		name = dmalloc (strlen (name) + 1, "peer name");
-		if (!peer -> name)
+		name = dmalloc (strlen (val) + 1, "peer name");
+		if (!name)
 			log_fatal ("no memory for peer name %s", name);
+		strcpy (name, val);
 	} else {
-		parse_warn (cfile, "expecting identifier or left brace");
+		parse_warn (cfile, "expecting failover peer name.");
 		skip_to_semi (cfile);
 		return;
 	}
 
 	/* See if there's a peer declaration by this name. */
-	peer = find_failover_peer (name);
+	peer = (dhcp_failover_state_t *)0;
+	find_failover_peer (&peer, name);
 
 	token = next_token (&val, cfile);
 	if (token == SEMI) {
@@ -638,13 +645,12 @@ void parse_failover_peer (cfile, group, type)
 				    " failover peer ", name);
 			return;
 		}
-		if ((token == MY
-		     ? peer -> my_state
-		     : peer -> partner_state) = parse_failover_state (cfile) ==
-		    invalid_state)
-			skip_to_semi (cfile);
+		if (token == MY)
+			parse_failover_state (cfile, &peer -> my_state,
+					      &peer -> my_stos);
 		else
-			parse_semi (cfile);
+			parse_failover_state (cfile, &peer -> partner_state,
+					      &peer -> partner_stos);
 		return;
 	} else if (token != LBRACE) {
 		parse_warn (cfile, "expecting left brace");
@@ -658,10 +664,10 @@ void parse_failover_peer (cfile, group, type)
 		return;
 	}
 
-	peer = new_failover_peer ("parse_failover_peer");
+	peer = dmalloc (sizeof *peer, "parse_failover_peer");
 	if (!peer)
-		log_fatal ("no memory for %sfailover peer%s%s.",
-		       name ? "" : "anonymous", name ? " " : "", name);
+		log_fatal ("no memory for failover peer%s.", name);
+	memset (peer, 0, sizeof *peer);
 
 	/* Save the name. */
 	peer -> name = name;
@@ -671,18 +677,26 @@ void parse_failover_peer (cfile, group, type)
 		switch (token) {
 		      case RBRACE:
 			break;
+
 		      case PRIMARY:
 			peer -> i_am = primary;
 			break;
+
 		      case SECONDARY:
 			peer -> i_am = secondary;
 			break;
+
 		      case IDENTIFIER:
-			if (!parse_ip_addr_or_hostname (&peer -> address,
-							cfile, 0)) {
+			expr = (struct expression *)0;
+			if (!parse_ip_addr_or_hostname (&expr, cfile, 0)) {
 				skip_to_rbrace (cfile, 1);
 				return;
 			}
+			option_cache (&peer -> address,
+				      (struct data_string *)0, expr,
+				      (struct option *)0);
+			expression_dereference (&expr,
+						"parse_failover_peer");
 			break;
 		      case PORT:
 			token = next_token (&val, cfile);
@@ -696,9 +710,11 @@ void parse_failover_peer (cfile, group, type)
 				return;
 			}
 			break;
+
 		      case MAX_TRANSMIT_IDLE:
 			tp = &peer -> max_transmit_idle;
 			goto parse_idle;
+
 		      case MAX_RESPONSE_DELAY:
 			tp = &peer -> max_transmit_idle;
 		      parse_idle:
@@ -709,6 +725,55 @@ void parse_failover_peer (cfile, group, type)
 				return;
 			}
 			*tp = atoi (val);
+			break;
+
+		      case MAX_UNACKED_UPDATES:
+			tp = &peer -> max_flying_updates;
+			goto parse_idle;
+
+		      case MCLT:
+			tp = &peer -> mclt;
+			goto parse_idle;
+
+		      case HBA:
+			if (!parse_numeric_aggregate (cfile, hba, &hba_len,
+						      COLON, 32, 8)) {
+				skip_to_rbrace (cfile, 1);
+				return;
+			}
+			parse_semi (cfile);
+		      make_hba:
+			peer -> hba = dmalloc (32, "parse_failover_peer");
+			if (!peer -> hba) {
+				dfree (peer -> name, "parse_failover_peer");
+				dfree (peer, "parse_failover_peer");
+			}
+			memcpy (peer -> hba, hba, 32);
+			break;
+
+		      case SPLIT:
+			token = next_token (&val, cfile);
+			if (token != NUMBER) {
+				parse_warn (cfile, "expecting number");
+				skip_to_rbrace (cfile, 1);
+			}
+			split = atoi (val);
+			if (!parse_semi (cfile)) {
+				skip_to_rbrace (cfile, 1);
+				return;
+			}
+			if (split > 255) {
+				parse_warn (cfile, "split must be < 256");
+			} else {
+				memset (hba, 0, sizeof hba);
+				for (i = 0; i < split; i++) {
+					if (i < split)
+						hba [i / 8] |= (1 << (i & 7));
+				}
+				goto make_hba;
+			}
+			break;
+			
 		      default:
 			parse_warn (cfile,
 				    "invalid statement in peer declaration");
@@ -723,29 +788,60 @@ void parse_failover_peer (cfile, group, type)
 	enter_failover_peer (peer);
 }
 
-enum failover_state parse_failover_state (cfile)
+void parse_failover_state (cfile, state, stos)
 	struct parse *cfile;
+	enum failover_state *state;
+	TIME *stos;
 {
 	enum dhcp_token token;
 	const char *val;
+	enum failover_state state_in;
+	TIME stos_in;
 
 	token = next_token (&val, cfile);
 	switch (token) {
 	      case PARTNER_DOWN:
-		return partner_down;
+		state_in = partner_down;
+		break;
+
 	      case NORMAL:
-		return normal;
+		state_in = normal;
+		break;
+
 	      case COMMUNICATIONS_INTERRUPTED:
-		return communications_interrupted;
+		state_in = communications_interrupted;
+		break;
+
 	      case POTENTIAL_CONFLICT:
-		return potential_conflict;
+		state_in = potential_conflict;
+		break;
+
 	      case RECOVER:
-		return recover;
+		state_in = recover;
+		break;
+
 	      default:
 		parse_warn (cfile, "unknown failover state");
-		break;
+		skip_to_semi (cfile);
+		return;
 	}
-	return invalid_state;
+
+	token = next_token (&val, cfile);
+	if (token != AT) {
+		parse_warn (cfile, "expecting \"at\"");
+		skip_to_semi (cfile);
+		return;
+	}
+
+	stos_in = parse_date (cfile);
+	if (!stos_in)
+		return;
+
+	/* Now that we've apparently gotten a clean parse, we can trust
+	   that this is a state that was fully committed to disk, so
+	   we can install it. */
+	*stos = stos_in;
+	*state = state_in;
 }
 #endif /* defined (FAILOVER_PROTOCOL) */
 
@@ -768,11 +864,42 @@ void parse_pool_statement (cfile, group, type)
 
 	pool -> group = clone_group (group, "parse_pool_statement");
 
+	if (type == SUBNET_DECL)
+		pool -> shared_network = group -> subnet -> shared_network;
+	else
+		pool -> shared_network = group -> shared_network;
+
+	/* Inherit the failover peer from the shared network. */
+	if (pool -> shared_network -> failover_peer)
+	    omapi_object_reference ((omapi_object_t **)
+				    &pool -> failover_peer, 
+				    (omapi_object_t *)
+				    pool -> shared_network -> failover_peer,
+				    "parse_pool_statement");
+
 	if (!parse_lbrace (cfile))
 		return;
 	do {
 		token = peek_token (&val, cfile);
 		switch (token) {
+		      case NO:
+			next_token (&val, cfile);
+			token = next_token (&val, cfile);
+			if (token != FAILOVER ||
+			    (token = next_token (&val, cfile)) != PEER) {
+				parse_warn (cfile,
+					    "expecting \"failover peer\".");
+				skip_to_semi (cfile);
+				continue;
+			}
+			if (pool -> failover_peer)
+				omapi_object_dereference
+					((omapi_object_t **)
+					 &pool -> failover_peer,
+					 "parse_pool_statement");
+			/* XXX Flag error if there's no failover peer? */
+			break;
+				
 		      case RANGE:
 			next_token (&val, cfile);
 			parse_address_range (cfile, group, type, pool);
@@ -884,6 +1011,46 @@ void parse_pool_statement (cfile, group, type)
 			break;
 		}
 	} while (!done);
+
+#if defined (FAILOVER_PROTOCOL)
+	/* We can't do failover on a pool that supports dynamic bootp,
+	   because BOOTP doesn't support leases, and failover absolutely
+	   depends on lease timing. */
+	if (pool -> failover_peer) {
+		for (permit = pool -> permit_list;
+		     permit; permit = permit -> next) {
+			if (permit -> type == permit_dynamic_bootp_clients ||
+			    permit -> type == permit_all_clients) {
+				  dynamic_bootp_clash:
+				parse_warn (cfile,
+					    "pools with failover peers %s",
+					    "may not permit dynamic bootp.");
+				log_error ("Either write a \"no failover\"%s",
+					   "statement and use disjoint");
+				log_error ("pools, or don't permit dynamic%s",
+					   "bootp.");
+				log_error ("This is a protocol limitation,%s",
+					   "not an ISC DHCP limitation, so");
+				log_error ("please don't request an %s",
+					   "enhancement or ask why this is.");
+				goto clash_testing_done;
+			}
+		}
+		if (!pool -> permit_list) {
+			if (!pool -> prohibit_list)
+				goto dynamic_bootp_clash;
+
+			for (permit = pool -> prohibit_list; permit;
+			     permit = permit -> next) {
+				if (permit -> type ==
+				    permit_dynamic_bootp_clients ||
+				    permit -> type == permit_all_clients)
+					goto clash_testing_done;
+			}
+		}
+	}
+      clash_testing_done:				
+#endif /* FAILOVER_PROTOCOL */
 
 	if (type == SUBNET_DECL)
 		pool -> shared_network = group -> subnet -> shared_network;
@@ -1782,6 +1949,7 @@ struct lease *parse_lease_declaration (cfile)
 	static struct lease lease;
 	struct executable_statement *on;
 	int lose;
+	TIME t;
 
 	/* Zap the lease structure... */
 	memset (&lease, 0, sizeof lease);
@@ -1807,8 +1975,12 @@ struct lease *parse_lease_declaration (cfile)
 		tbuf [(sizeof tbuf) - 1] = 0;
 
 		/* Parse any of the times associated with the lease. */
-		if (token == STARTS || token == ENDS || token == TIMESTAMP) {
-			TIME t;
+		switch (token) {
+		      case STARTS:
+		      case ENDS:
+		      case TIMESTAMP:
+		      case TSTP:
+		      case TSFP:
 			t = parse_date (cfile);
 			switch (token) {
 			      case STARTS:
@@ -1826,203 +1998,217 @@ struct lease *parse_lease_declaration (cfile)
 				lease.timestamp = t;
 				break;
 
-			      default:
-				/*NOTREACHED*/
-				seenbit = 0;
+			      case TSTP:
+				seenbit = 65536;
+				lease.tstp = t;
 				break;
+				
+			      case TSFP:
+				seenbit = 131072;
+				lease.tsfp = t;
+				break;
+				
+			      default: /* for gcc, we'll never get here. */
 			}
-		} else {
-			switch (token) {
-				/* Colon-seperated hexadecimal octets... */
-			      case UID:
-				seenbit = 8;
-				token = peek_token (&val, cfile);
-				if (token == STRING) {
-					unsigned char *tuid;
-					token = next_token (&val, cfile);
-					lease.uid_len = strlen (val);
-					tuid = (unsigned char *)
-						malloc (lease.uid_len);
-					if (!tuid) {
-						log_error ("no space for uid");
-						return (struct lease *)0;
-					}
-					memcpy (tuid, val, lease.uid_len);
-					lease.uid = tuid;
-					parse_semi (cfile);
-				} else {
-					lease.uid_len = 0;
-					lease.uid = parse_numeric_aggregate
-						(cfile, (unsigned char *)0,
-						 &lease.uid_len, ':', 16, 8);
-					if (!lease.uid) {
-						log_error ("no space for uid");
-						return (struct lease *)0;
-					}
-					if (lease.uid_len == 0) {
-						lease.uid = (unsigned char *)0;
-						parse_warn (cfile,
-							    "zero-length uid");
-						seenbit = 0;
-						break;
-					}
+			break;
+
+			/* Colon-seperated hexadecimal octets... */
+		      case UID:
+			seenbit = 8;
+			token = peek_token (&val, cfile);
+			if (token == STRING) {
+				unsigned char *tuid;
+				token = next_token (&val, cfile);
+				lease.uid_len = strlen (val);
+				tuid = (unsigned char *)malloc (lease.uid_len);
+				if (!tuid) {
+					log_error ("no space for uid");
+					return (struct lease *)0;
 				}
+				memcpy (tuid, val, lease.uid_len);
+				lease.uid = tuid;
+				parse_semi (cfile);
+			} else {
+				lease.uid_len = 0;
+				lease.uid = (parse_numeric_aggregate
+					     (cfile, (unsigned char *)0,
+					      &lease.uid_len, ':', 16, 8));
 				if (!lease.uid) {
-					log_fatal ("No memory for lease uid");
-				}
-				break;
-
-			      case CLASS:
-				seenbit = 32;
-				token = next_token (&val, cfile);
-				if (!is_identifier (token)) {
-					if (token != SEMI)
-						skip_to_semi (cfile);
+					log_error ("no space for uid");
 					return (struct lease *)0;
 				}
-				/* for now, we aren't using this. */
-				break;
-
-			      case HARDWARE:
-				seenbit = 64;
-				parse_hardware_param (cfile,
-						     &lease.hardware_addr);
-				break;
-
-			      case DYNAMIC_BOOTP:
-				seenbit = 128;
-				lease.flags |= BOOTP_LEASE;
-				break;
-
-			      case ABANDONED:
-				seenbit = 256;
-				lease.flags |= ABANDONED_LEASE;
-				break;
-
-			      case HOSTNAME:
-				seenbit = 512;
-				token = peek_token (&val, cfile);
-				if (token == STRING)
-					lease.hostname = parse_string (cfile);
-				else
-					lease.hostname =
-						parse_host_name (cfile);
-				if (!lease.hostname) {
+				if (lease.uid_len == 0) {
+					lease.uid = (unsigned char *)0;
+					parse_warn (cfile, "zero-length uid");
 					seenbit = 0;
-					return (struct lease *)0;
+					break;
 				}
-				break;
-
-			      case CLIENT_HOSTNAME:
-				seenbit = 1024;
-				token = peek_token (&val, cfile);
-				if (token == STRING)
-					lease.client_hostname =
-						parse_string (cfile);
-				else
-					lease.client_hostname =
-						parse_host_name (cfile);
-				break;
-
-			      case BILLING:
-				seenbit = 2048;
-				token = next_token (&val, cfile);
-				if (token == CLASS) {
-					token = next_token (&val, cfile);
-					if (token != STRING) {
-					    parse_warn (cfile,
-							"expecting string");
-					    if (token != SEMI)
-						    skip_to_semi (cfile);
-					    token = BILLING;
-					    break;
-					}
-					lease.billing_class = find_class (val);
-					if (!lease.billing_class)
-						parse_warn (cfile,
-							    "unknown class %s",
-							    val);
-					parse_semi (cfile);
-				} else if (token == SUBCLASS) {
-					lease.billing_class =
-						parse_class_declaration
-						(cfile, (struct group *)0, 3);
-				} else {
-					parse_warn (cfile,
-						    "expecting \"class\"");
-					if (token != SEMI)
-						skip_to_semi (cfile);
-				}
-				token = BILLING;
-				break;
-
-			      case DDNS_FWD_NAME:
-				seenbit = 4096;
-				token = peek_token (&val, cfile);
-				if (token == STRING)
-					lease.ddns_fwd_name =
-						parse_string (cfile);
-				else
-					lease.ddns_fwd_name =
-						parse_host_name (cfile);
-				break;
-
-			      case DDNS_REV_NAME:
-				seenbit = 8192;
-				token = peek_token (&val, cfile);
-				if (token == STRING)
-					lease.ddns_rev_name =
-						parse_string (cfile);
-				else
-					lease.ddns_rev_name =
-						parse_host_name (cfile);
-				break;
-
-			      case ON:
-				on = (struct executable_statement *)0;
-				lose = 0;
-				if (!parse_on_statement (&on, cfile, &lose)) {
+			}
+			if (!lease.uid) {
+				log_fatal ("No memory for lease uid");
+			}
+			break;
+			
+		      case CLASS:
+			seenbit = 32;
+			token = next_token (&val, cfile);
+			if (!is_identifier (token)) {
+				if (token != SEMI)
 					skip_to_rbrace (cfile, 1);
-					return (struct lease *)0;
-				}
-				if (on -> data.on.evtype == expiry &&
-				    on -> data.on.statements) {
-					seenbit = 16384;
-					executable_statement_reference
-						(&lease.on_expiry,
-						 on -> data.on.statements,
-						 "parse_lease_declaration");
-				} else if (on -> data.on.evtype == release &&
-					   on -> data.on.statements) {
-					seenbit = 32768;
-					executable_statement_reference
-						(&lease.on_release,
-						 on -> data.on.statements,
-						 "parse_lease_declaration");
-				} else {
-					seenbit  = 0;
-				}
-				executable_statement_dereference
-					(&on, "parse_lease_declaration");
-				break;
+				return (struct lease *)0;
+			}
+			/* for now, we aren't using this. */
+			break;
 
-			      default:
-				skip_to_semi (cfile);
+		      case HARDWARE:
+			seenbit = 64;
+			parse_hardware_param (cfile,
+					      &lease.hardware_addr);
+			break;
+
+		      case DYNAMIC_BOOTP:
+			seenbit = 128;
+			lease.flags |= BOOTP_LEASE;
+			break;
+			
+		      case PEER:
+			token = next_token (&val, cfile);
+			if (token != IS) {
+				parse_warn (cfile, "expecting \"is\".");
+				skip_to_rbrace (cfile, 1);
+				return (struct lease *)0;
+			}
+			if (token != OWNER) {
+				parse_warn (cfile, "expecting \"owner\".");
+				skip_to_rbrace (cfile, 1);
+				return (struct lease *)0;
+			}
+			seenbit = 262144;
+			lease.flags |= PEER_IS_OWNER;
+			break;
+
+		      case ABANDONED:
+			seenbit = 256;
+			lease.flags |= ABANDONED_LEASE;
+			break;
+
+		      case HOSTNAME:
+			seenbit = 512;
+			token = peek_token (&val, cfile);
+			if (token == STRING)
+				lease.hostname = parse_string (cfile);
+			else
+				lease.hostname =
+					parse_host_name (cfile);
+			if (!lease.hostname) {
 				seenbit = 0;
 				return (struct lease *)0;
 			}
-
-			if (token != HARDWARE && token != STRING
-			    && token != BILLING && token != ON) {
+			break;
+			
+		      case CLIENT_HOSTNAME:
+			seenbit = 1024;
+			token = peek_token (&val, cfile);
+			if (token == STRING)
+				lease.client_hostname =
+					parse_string (cfile);
+			else
+				lease.client_hostname =
+					parse_host_name (cfile);
+			break;
+			
+		      case BILLING:
+			seenbit = 2048;
+			token = next_token (&val, cfile);
+			if (token == CLASS) {
 				token = next_token (&val, cfile);
-				if (token != SEMI) {
-					parse_warn (cfile,
-						    "semicolon expected.");
-					skip_to_semi (cfile);
-					return (struct lease *)0;
+				if (token != STRING) {
+					parse_warn (cfile, "expecting string");
+					if (token != SEMI)
+						skip_to_semi (cfile);
+					token = BILLING;
+					break;
 				}
+				lease.billing_class = find_class (val);
+				if (!lease.billing_class)
+					parse_warn (cfile,
+						    "unknown class %s", val);
+				parse_semi (cfile);
+			} else if (token == SUBCLASS) {
+				lease.billing_class =
+					(parse_class_declaration
+					 (cfile, (struct group *)0, 3));
+			} else {
+				parse_warn (cfile, "expecting \"class\"");
+				if (token != SEMI)
+					skip_to_semi (cfile);
+			}
+			token = BILLING;
+			break;
+
+		      case DDNS_FWD_NAME:
+			seenbit = 4096;
+			token = peek_token (&val, cfile);
+			if (token == STRING)
+				lease.ddns_fwd_name = parse_string (cfile);
+			else
+				lease.ddns_fwd_name = parse_host_name (cfile);
+			break;
+
+		      case DDNS_REV_NAME:
+			seenbit = 8192;
+			token = peek_token (&val, cfile);
+			if (token == STRING)
+				lease.ddns_rev_name = parse_string (cfile);
+			else
+				lease.ddns_rev_name = parse_host_name (cfile);
+			break;
+
+		      case ON:
+			on = (struct executable_statement *)0;
+			lose = 0;
+			if (!parse_on_statement (&on, cfile, &lose)) {
+				skip_to_rbrace (cfile, 1);
+				return (struct lease *)0;
+			}
+			if (on -> data.on.evtype == expiry &&
+			    on -> data.on.statements) {
+				seenbit = 16384;
+				executable_statement_reference
+					(&lease.on_expiry,
+					 on -> data.on.statements,
+					 "parse_lease_declaration");
+			} else if (on -> data.on.evtype == release &&
+				   on -> data.on.statements) {
+				seenbit = 32768;
+				executable_statement_reference
+					(&lease.on_release,
+					 on -> data.on.statements,
+					 "parse_lease_declaration");
+			} else {
+				seenbit  = 0;
+			}
+			executable_statement_dereference
+				(&on, "parse_lease_declaration");
+			break;
+			
+		      default:
+			skip_to_semi (cfile);
+			seenbit = 0;
+			return (struct lease *)0;
+		}
+
+		if (token != HARDWARE && token != STRING
+		    && token != BILLING && token != ON) {
+			token = next_token (&val, cfile);
+			if (token != SEMI) {
+				parse_warn (cfile,
+					    "semicolon expected.");
+				skip_to_semi (cfile);
+				return (struct lease *)0;
 			}
 		}
+
 		if (seenmask & seenbit) {
 			parse_warn (cfile,
 				    "Too many %s parameters in lease %s\n",
@@ -2105,6 +2291,41 @@ void parse_address_range (cfile, group, type, pool)
 
 	if (!pool) {
 		struct pool *last;
+
+#if defined (FAILOVER_PROTOCOL)
+		if (pool -> failover_peer && dynamic) {
+			/* Doctor, do you think I'm overly sensitive
+			   about getting bug reports I can't fix? */
+			parse_warn (cfile, "dynamic-bootp flag is %s",
+				    "not permitted for address");
+			log_error ("range declarations where there is %s",
+				   "a failover");
+			log_error ("peer in scope.   If you wish to %s",
+				   "declare an");
+			log_error ("address range from which dynamic %s",
+				   "bootp leases");
+			log_error ("can be allocated, please declare %s",
+				   "it within a");
+			log_error ("pool declaration that also contains %s",
+				   "the \"no");
+			log_error ("failover\" statement.   The %s",
+				   "failover protocol");
+			log_error ("itself does not permit dynamic %s",
+				   "bootp - this");
+			log_error ("is not a limitation specific to %s",
+				   "the ISC DHCP");
+			log_error ("server.   Please don't ask me to %s",
+				   "defend this");
+			log_error ("until you have read and really tried %s",
+				   "to understand");
+			log_error ("the failover protocol specification.");
+
+			/* We don't actually bomb at this point - instead,
+			   we let parse_lease_file notice the error and
+			   bomb at that point - it's easier. */
+		}
+#endif /* FAILOVER_PROTOCOL */
+		
 		/* If we're permitting dynamic bootp for this range,
 		   then look for a pool with an empty prohibit list and
 		   a permit list with one entry which permits dynamic

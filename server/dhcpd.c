@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.79 1999/11/23 19:10:07 mellon Exp $ Copyright 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.80 2000/01/05 18:17:10 mellon Exp $ Copyright 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.";
 #endif
 
   static char copyright[] =
@@ -296,8 +296,8 @@ int main (argc, argv, envp)
 	for (ip = interfaces; ip; ip = ip -> next) {
 		int junk;
 		memcpy (&junk,
-			&ip -> hw_address.haddr [ip -> hw_address.hlen -
-						 sizeof seed], sizeof seed);
+			&ip -> hw_address.hbuf [ip -> hw_address.hlen -
+					       sizeof seed], sizeof seed);
 		seed += junk;
 	}
 	srandom (seed + cur_time);
