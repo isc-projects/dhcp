@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: conflex.c,v 1.29.2.1 1998/12/22 22:39:58 mellon Exp $ Copyright (c) 1995, 1996, 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: conflex.c,v 1.29.2.2 1999/02/04 22:10:50 mellon Exp $ Copyright (c) 1995, 1996, 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -528,12 +528,18 @@ static int intern (atom, dfv)
 			return TOKEN_RING;
 		break;
 	      case 'u':
+		if (!strncasecmp (atom + 1, "se", 2)) {
+			if (!strcasecmp (atom + 3, "r-class"))
+				return USER_CLASS;
+			if (!strcasecmp (atom + 3, "-host-decl-names"))
+				return USE_HOST_DECL_NAMES;
+			if (!strcasecmp (atom + 3,
+					 "-lease-addr-for-default-route"))
+				return USE_LEASE_ADDR_FOR_DEFAULT_ROUTE;
+			break;
+		}
 		if (!strcasecmp (atom + 1, "id"))
 			return UID;
-		if (!strcasecmp (atom + 1, "ser-class"))
-			return USER_CLASS;
-		if (!strcasecmp (atom + 1, "se-host-decl-names"))
-			return USE_HOST_DECL_NAMES;
 		if (!strcasecmp (atom + 1, "nknown-clients"))
 			return UNKNOWN_CLIENTS;
 		break;
