@@ -263,7 +263,10 @@ enum dhcp_token {
 	BALANCE = 461,
 	TOKEN_MAX = 462,
 	SECONDS = 463,
-	ADDRESS = 464
+	ADDRESS = 464,
+	POTENTIAL_CONFLICT_NIC = 465,
+	STATE = 466,
+	UNKNOWN_STATE = 567
 };
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\
