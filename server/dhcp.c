@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.158 2000/08/12 00:45:40 neild Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.159 2000/08/15 23:43:02 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1733,17 +1733,6 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 	else
 		lease -> flags &= ~MS_NULL_TERMINATION;
 
-	/* If there are statements to execute when the lease is
-	   committed, execute them. */
-	if (lease -> on_commit && (!offer || offer == DHCPACK)) {
-		execute_statements (packet, lease, packet -> options,
-				    state -> options, &lease -> scope,
-				    lease -> on_commit);
-		if (lease -> on_commit)
-			executable_statement_dereference (&lease -> on_commit,
-							  MDL);
-	}
-
 	/* Save any bindings. */
 	if (lease -> scope) {
 		binding_scope_reference (&lt -> scope, lease -> scope, MDL);
@@ -1774,6 +1763,17 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 			lt -> client_hostname [d1.len] = 0;
 		}
 		data_string_forget (&d1, MDL);
+	}
+
+	/* If there are statements to execute when the lease is
+	   committed, execute them. */
+	if (lease -> on_commit && (!offer || offer == DHCPACK)) {
+		execute_statements (packet, lt, packet -> options,
+				    state -> options, &lease -> scope,
+				    lease -> on_commit);
+		if (lease -> on_commit)
+			executable_statement_dereference (&lease -> on_commit,
+							  MDL);
 	}
 
 	/* Don't call supersede_lease on a mocked-up lease. */
