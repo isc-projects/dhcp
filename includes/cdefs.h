@@ -27,6 +27,8 @@
  * with Vixie Laboratories.
  */
 
+#if !defined (__ISC_DHCP_CDEFS_H__)
+#define __ISC_DHCP_CDEFS_H__
 #if (defined (__GNUC__) || defined (__STDC__)) && !defined (BROKEN_ANSI)
 #define PROTO(x)	x
 #define KandR(x)
@@ -42,3 +44,4 @@
 #define ANSI_DECL(x)
 #define INLINE
 #endif /* __GNUC__ || __STDC__ */
+#endif /* __ISC_DHCP_CDEFS_H__ */

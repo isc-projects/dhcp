@@ -20,6 +20,9 @@
  * http://www.isc.org for more information.
  */
 
+#if !defined (__ISC_DHCP_OSDEP_H__)
+#define __ISC_DHCP_OSDEP_H__
+
 #include "site.h"
 
 /* Porting::
@@ -274,3 +277,4 @@
 # define HAVE_AF_LINK
 #endif
 
+#endif /* __ISC_DHCP_OSDEP_H__ */
