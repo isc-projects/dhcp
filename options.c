@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.19 1996/09/11 05:52:18 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.19.2.1 1997/12/11 21:08:03 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -155,12 +155,13 @@ void parse_option_buffer (packet, buffer, length)
    three seperate buffers if needed.  This allows us to cons up a set
    of vendor options using the same routine. */
 
-void cons_options (inpacket, outpacket, options, overload, terminate)
+void cons_options (inpacket, outpacket, options, overload, terminate, bootpp)
 	struct packet *inpacket;
 	struct packet *outpacket;
 	struct tree_cache **options;
 	int overload;	/* Overload flags that may be set. */
 	int terminate;
+	int bootpp;
 {
 	unsigned char priority_list [300];
 	int priority_len;
@@ -182,7 +183,9 @@ void cons_options (inpacket, outpacket, options, overload, terminate)
 		/* Enforce a minimum packet size... */
 		if (main_buffer_size < (576 - DHCP_FIXED_LEN))
 			main_buffer_size = 576 - DHCP_FIXED_LEN;
-	} else
+	} else if (bootpp)
+		main_buffer_size = BOOTP_OPTION_LEN;
+	else
 		main_buffer_size = 576 - DHCP_FIXED_LEN;
 
 	/* Preload the option priority list with mandatory options. */
