@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcrelay.c,v 1.13 1998/06/25 03:39:04 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcrelay.c,v 1.14 1998/06/25 18:37:45 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -55,6 +55,12 @@ TIME max_lease_time = 86400; /* 24 hours... */
 struct tree_cache *global_options [256];
 
 int log_perror = 1;
+
+/* Needed to prevent linking against conflex.c. */
+int lexline;
+int lexchar;
+char *token_line;
+char *tlname;
 
 char *path_dhcrelay_pid = _PATH_DHCRELAY_PID;
 
