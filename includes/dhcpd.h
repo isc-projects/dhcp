@@ -86,27 +86,11 @@ struct hardware {
 	u_int8_t haddr [16];
 };
 
-/* A dhcp host declaration structure. */
-struct host_decl {
-	struct host_decl *n_ipaddr;
-	char *name;
-	struct hardware interface;
-	char *filename;
-	char *server_name;	
-	TIME default_lease_time;
-	TIME max_lease_time;
-	struct tree_cache *fixed_addr;
-	struct tree_cache *ciaddr;
-	struct tree_cache *yiaddr;
-	struct tree_cache *siaddr;
-	struct tree_cache *giaddr;
-	struct tree_cache *options [256];
-};
-
 /* A dhcp lease declaration structure. */
 struct lease {
 	struct lease *next;
 	struct lease *prev;
+	struct lease *n_uid, *n_hw;
 	struct iaddr ip_addr;
 	TIME starts, ends, timestamp;
 	TIME offered_expiry;
@@ -126,18 +110,54 @@ struct lease {
 #	define EPHEMERAL_FLAGS		(BOOTP_LEASE)
 };
 
+#define	ROOT_GROUP	0
+#define HOST_STMT	1
+#define SHARED_NET_STMT	2
+#define SUBNET_STMT	3
+#define CLASS_STMT	4
+#define	GROUP_STMT	5
+
+/* Group of statements that share common settings. */
+struct group {
+	struct group *next;
+
+	struct subnet *subnet;
+	struct shared_network *shared_network;
+
+	TIME default_lease_time;
+	TIME max_lease_time;
+	TIME bootp_lease_cutoff;
+	TIME bootp_lease_length;
+
+	char *filename;
+	char *server_name;	
+	struct iaddr next_server;
+
+	int boot_unknown_clients;
+	int dynamic_bootp;
+
+	struct tree_cache *options [256];
+};
+
+/* A dhcp host declaration structure. */
+struct host_decl {
+	struct host_decl *n_ipaddr;
+	char *name;
+	struct hardware interface;
+	struct tree_cache *fixed_addr;
+	struct group *group;
+};
+
 struct shared_network {
 	struct shared_network *next;
+	char *name;
 	struct subnet *subnets;
 	struct interface_info *interface;
 	struct lease *leases;
 	struct lease *insertion_point;
 	struct lease *last_lease;
-	TIME default_lease_time;
-	TIME max_lease_time;
-	struct tree_cache *options [256];
-	int dynamic_bootp;
-	char *name;
+
+	struct group *group;
 };
 
 struct subnet {
@@ -148,19 +168,14 @@ struct subnet {
 	struct iaddr interface_address;
 	struct iaddr net;
 	struct iaddr netmask;
-	TIME default_lease_time;
-	TIME max_lease_time;
-	struct tree_cache *options [256];
-	int dynamic_bootp;
+
+	struct group *group;
 };
 
 struct class {
 	char *name;
-	char *filename;
-	char *server_name;
-	TIME default_lease_time;
-	TIME max_lease_time;
-	struct tree_cache *options [256];
+
+	struct group *group;
 };
 
 /* Information about each network interface. */
@@ -224,6 +239,10 @@ typedef unsigned char option_mask [16];
 #endif
 #endif
 
+#ifndef DHCPD_LOG_FACILITY
+#define DHCPD_LOG_FACILITY	LOG_DAEMON
+#endif
+
 #define MAX_TIME 0x7fffffff
 #define MIN_TIME 0
 
@@ -252,9 +271,7 @@ int parse_warn PROTO ((char *, ...));
 
 /* dhcpd.c */
 extern TIME cur_time;
-extern TIME default_lease_time;
-extern TIME max_lease_time;
-extern struct tree_cache *global_options [256];
+struct group root_group;
 
 extern struct iaddr server_identifier;
 extern int server_identifier_matched;
@@ -270,38 +287,37 @@ int main PROTO ((int, char **, char **));
 void cleanup PROTO ((void));
 
 /* conflex.c */
-extern int tline, tlpos;
+extern int lexline, lexchar;
 extern char *tlname;
+void new_parse PROTO ((char *));
 int next_token PROTO ((char **, FILE *));
 int peek_token PROTO ((char **, FILE *));
 
 /* confpars.c */
 void readconf PROTO ((void));
 void read_leases PROTO ((void));
-void parse_statement PROTO ((FILE *));
+int parse_statement PROTO ((FILE *,
+			     struct group *, int, struct host_decl *, int));
 void skip_to_semi PROTO ((FILE *));
-struct host_decl *parse_host_statement PROTO ((FILE *, jrefproto));
-char *parse_host_name PROTO ((FILE *, jrefproto));
-void parse_class_statement PROTO ((FILE *, jrefproto, int));
-void parse_class_decl PROTO ((FILE *, jrefproto, struct class *));
-void parse_lease_time PROTO ((FILE *, jrefproto, TIME *));
-void parse_shared_net_statement PROTO ((FILE *, jrefproto));
-struct subnet *parse_subnet_statement PROTO ((FILE *, jrefproto,
-					      struct shared_network *));
-void parse_subnet_decl PROTO ((FILE *, jrefproto, struct subnet *));
-void parse_host_decl PROTO ((FILE *, jrefproto, struct host_decl *));
-void parse_hardware_decl PROTO ((FILE *, jrefproto, struct host_decl *));
-struct hardware parse_hardware_addr PROTO ((FILE *, jrefproto));
-char *parse_filename_decl PROTO ((FILE *, jrefproto));
-char *parse_servername_decl PROTO ((FILE *, jrefproto));
-struct tree *parse_ip_addr_or_hostname PROTO ((FILE *, jrefproto, int));
-void parse_fixed_addr_decl PROTO ((FILE *, jrefproto, struct host_decl *));
-void parse_option_decl PROTO ((FILE *, jrefproto, struct tree_cache **));
-TIME parse_timestamp PROTO ((FILE *, jrefproto));
-TIME parse_date PROTO ((FILE *, jrefproto));
-struct lease *parse_lease_statement PROTO ((FILE *, jrefproto));
-void parse_address_range PROTO ((FILE *, jrefproto, struct subnet *));
-unsigned char *parse_numeric_aggregate PROTO ((FILE *, jrefproto,
+int parse_lbrace PROTO ((FILE *));
+void parse_host_statement PROTO ((FILE *, struct group *));
+char *parse_host_name PROTO ((FILE *));
+void parse_class_statement PROTO ((FILE *, struct group *, int));
+void parse_lease_time PROTO ((FILE *, TIME *));
+void parse_shared_net_statement PROTO ((FILE *, struct group *));
+void parse_subnet_statement PROTO ((FILE *, struct shared_network *));
+void parse_group_statement PROTO ((FILE *, struct group *));
+void parse_hardware_decl PROTO ((FILE *, struct hardware *));
+char *parse_filename_decl PROTO ((FILE *));
+char *parse_servername_decl PROTO ((FILE *));
+struct tree *parse_ip_addr_or_hostname PROTO ((FILE *, int));
+struct tree_cache *parse_fixed_addr_decl PROTO ((FILE *));
+void parse_option_decl PROTO ((FILE *, struct group *));
+TIME parse_timestamp PROTO ((FILE *));
+struct lease *parse_lease_statement PROTO ((FILE *));
+void parse_address_range PROTO ((FILE *, struct subnet *));
+TIME parse_date PROTO ((FILE *));
+unsigned char *parse_numeric_aggregate PROTO ((FILE *,
 					       unsigned char *, int *,
 					       int, int, int));
 void convert_num PROTO ((unsigned char *, char *, int, int));
@@ -354,8 +370,13 @@ void abandon_lease PROTO ((struct lease *));
 struct lease *find_lease_by_uid PROTO ((unsigned char *, int));
 struct lease *find_lease_by_hw_addr PROTO ((unsigned char *, int));
 struct lease *find_lease_by_ip_addr PROTO ((struct iaddr));
+void uid_hash_add PROTO ((struct lease *));
+void uid_hash_delete PROTO ((struct lease *));
+void hw_hash_add PROTO ((struct lease *));
+void hw_hash_delete PROTO ((struct lease *));
 struct class *add_class PROTO ((int, char *));
 struct class *find_class PROTO ((int, char *, int));
+struct group *clone_group PROTO ((struct group *, char *));
 void write_leases PROTO ((void));
 void dump_subnets PROTO ((void));
 
@@ -373,6 +394,8 @@ struct lease *new_leases PROTO ((int, char *));
 struct subnet *new_subnet PROTO ((char *));
 struct class *new_class PROTO ((char *));
 struct shared_network *new_shared_network PROTO ((char *));
+struct group *new_group PROTO ((char *));
+void free_group PROTO ((struct group *, char *));
 void free_shared_network PROTO ((struct shared_network *, char *));
 void free_class PROTO ((struct class *, char *));
 void free_subnet PROTO ((struct subnet *, char *));
@@ -527,3 +550,28 @@ size_t decode_hw_header PROTO ((struct interface_info *, unsigned char *,
 size_t decode_udp_ip_header PROTO ((struct interface_info *, unsigned char *,
 				    int, struct sockaddr_in *,
 				    unsigned char *, int));
+
+/* dhxpxlt.c */
+void convert_statement PROTO ((FILE *));
+void convert_host_statement PROTO ((FILE *, jrefproto));
+void convert_host_name PROTO ((FILE *, jrefproto));
+void convert_class_statement PROTO ((FILE *, jrefproto, int));
+void convert_class_decl PROTO ((FILE *, jrefproto));
+void convert_lease_time PROTO ((FILE *, jrefproto, char *));
+void convert_shared_net_statement PROTO ((FILE *, jrefproto));
+void convert_subnet_statement PROTO ((FILE *, jrefproto));
+void convert_subnet_decl PROTO ((FILE *, jrefproto));
+void convert_host_decl PROTO ((FILE *, jrefproto));
+void convert_hardware_decl PROTO ((FILE *, jrefproto));
+void convert_hardware_addr PROTO ((FILE *, jrefproto));
+void convert_filename_decl PROTO ((FILE *, jrefproto));
+void convert_servername_decl PROTO ((FILE *, jrefproto));
+void convert_ip_addr_or_hostname PROTO ((FILE *, jrefproto, int));
+void convert_fixed_addr_decl PROTO ((FILE *, jrefproto));
+void convert_option_decl PROTO ((FILE *, jrefproto));
+void convert_timestamp PROTO ((FILE *, jrefproto));
+void convert_lease_statement PROTO ((FILE *, jrefproto));
+void convert_address_range PROTO ((FILE *, jrefproto));
+void convert_date PROTO ((FILE *, jrefproto, char *));
+void convert_numeric_aggregate PROTO ((FILE *, jrefproto, int, int, int, int));
+void indent PROTO ((int));
