@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.4 1998/03/15 21:16:23 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.5 1998/03/17 06:13:02 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -149,12 +149,11 @@ char *parse_host_name (cfile)
 	/* Read a dotted hostname... */
 	do {
 		/* Read a token, which should be an identifier. */
+		token = peek_token (&val, cfile);
+		if (!is_identifier (token) && token != NUMBER)
+			break;
 		token = next_token (&val, cfile);
-		if (!is_identifier (token) && token != NUMBER) {
-			parse_warn ("expecting an identifier in hostname");
-			skip_to_semi (cfile);
-			return (char *)0;
-		}
+
 		/* Store this identifier... */
 		if (!(s = (char *)malloc (strlen (val) + 1)))
 			error ("can't allocate temp space for hostname.");
