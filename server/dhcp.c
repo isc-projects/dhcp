@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.157 2000/07/27 09:03:04 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.158 2000/08/12 00:45:40 neild Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -3038,7 +3038,7 @@ void static_lease_dereference (lease, file, line)
 	if (lease -> on_commit)
 		executable_statement_dereference (&lease -> on_commit,
 						  file, line);
-	if (&lease -> scope)
+	if (lease -> scope)
 		binding_scope_dereference (&lease -> scope, file, line);
 	if (lease -> uid != lease -> uid_buf) {
 		dfree (lease -> uid, file, line);
