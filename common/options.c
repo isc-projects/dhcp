@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.85.2.3 2001/06/20 03:27:29 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.85.2.4 2001/06/21 23:40:38 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -1181,7 +1181,7 @@ const char *pretty_print_option (option, data, len, emit_commas, emit_quotes)
 }
 
 int get_option (result, universe, packet, lease, client_state,
-		in_options, cfg_options, options, scope, code)
+		in_options, cfg_options, options, scope, code, file, line)
 	struct data_string *result;
 	struct universe *universe;
 	struct packet *packet;
@@ -1192,6 +1192,8 @@ int get_option (result, universe, packet, lease, client_state,
 	struct option_state *options;
 	struct binding_scope **scope;
 	unsigned code;
+	const char *file;
+	int line;
 {
 	struct option_cache *oc;
 
@@ -1201,7 +1203,8 @@ int get_option (result, universe, packet, lease, client_state,
 	if (!oc)
 		return 0;
 	if (!evaluate_option_cache (result, packet, lease, client_state,
-				    in_options, cfg_options, scope, oc, MDL))
+				    in_options, cfg_options, scope, oc,
+				    file, line))
 		return 0;
 	return 1;
 }
@@ -1513,7 +1516,7 @@ int option_cache_dereference (ptr, file, line)
 	}
 
 	(*ptr) -> refcnt--;
-	rc_register (file, line, ptr, *ptr, (*ptr) -> refcnt);
+	rc_register (file, line, ptr, *ptr, (*ptr) -> refcnt, 1);
 	if (!(*ptr) -> refcnt) {
 		if ((*ptr) -> data.buffer)
 			data_string_forget (&(*ptr) -> data, file, line);
