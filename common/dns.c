@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dns.c,v 1.24 2000/05/16 23:02:17 mellon Exp $ Copyright (c) 2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dns.c,v 1.25 2000/06/09 23:07:56 mellon Exp $ Copyright (c) 2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -179,6 +179,7 @@ isc_result_t find_tsig_key (ns_tsig_key **key, const char *zname,
 	memcpy (tkey -> data,
 		zone -> key -> key.data, zone -> key -> key.len);
 	tkey -> len = zone -> key -> key.len;
+	*key = tkey;
 	return ISC_R_SUCCESS;
 }
 
