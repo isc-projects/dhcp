@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.143 2000/03/18 03:34:10 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.144 2000/04/08 01:15:50 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2890,23 +2890,55 @@ int locate_network (packet)
 	struct packet *packet;
 {
 	struct iaddr ia;
+	struct data_string data;
+	struct subnet *subnet;
+	struct option_cache *oc;
 
-	/* If this came through a gateway, find the corresponding subnet... */
-	if (packet -> raw -> giaddr.s_addr) {
-		struct subnet *subnet;
+	/* See if there's a subnet selection option. */
+	oc = lookup_option (&dhcp_universe, packet -> options,
+			    DHO_SUBNET_SELECTION);
+
+	/* If there's no SSO and no giaddr, then use the shared_network
+	   from the interface, if there is one.   If not, fail. */
+	if (!oc && !packet -> raw -> giaddr.s_addr) {
+		if ((packet -> shared_network =
+		     packet -> interface -> shared_network))
+			return 1;
+		return 0;
+	}
+
+	/* If there's an SSO, and it's valid, use it to figure out the
+	   subnet.    If it's not valid, fail. */
+	if (oc) {
+		memset (&data, 0, sizeof data);
+		if (!evaluate_option_cache (&data, packet, (struct lease *)0,
+					    packet -> options,
+					    (struct option_state *)0,
+					    &global_scope, oc, MDL)) {
+			packet -> shared_network = (struct shared_network *)0;
+			return 0;
+		}
+		if (data.len != 4) {
+			packet -> shared_network = (struct shared_network *)0;
+			return 0;
+		}
+		ia.len = 4;
+		memcpy (ia.iabuf, data.data, 4);
+		data_string_forget (&data, MDL);
+	} else {
 		ia.len = 4;
 		memcpy (ia.iabuf, &packet -> raw -> giaddr, 4);
-		subnet = find_subnet (ia);
-		if (subnet)
-			packet -> shared_network = subnet -> shared_network;
-		else
-			packet -> shared_network = (struct shared_network *)0;
-	} else {
-		packet -> shared_network =
-			packet -> interface -> shared_network;
 	}
-	if (packet -> shared_network)
+
+	/* If we know the subnet on which the IP address lives, use it. */
+	subnet = find_subnet (ia);
+	if (subnet) {
+		packet -> shared_network = subnet -> shared_network;
 		return 1;
+	}
+
+	/* Otherwise, fail. */
+	packet -> shared_network = (struct shared_network *)0;
 	return 0;
 }
 

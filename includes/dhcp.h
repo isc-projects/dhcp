@@ -164,6 +164,10 @@ struct dhcp_packet {
    immediately and shamelessly break this, so don't count on it
    continuing to work. */
 #define DHO_AUTHENTICATE		210
+/* The DHO_SUBNET_SELECTION option is also not standard - same deal
+   as above. */
+#define DHO_SUBNET_SELECTION		211
+
 #define DHO_END				255
 
 /* DHCP message types. */
