@@ -40,6 +40,8 @@
  * Enterprises, see ``http://www.vix.com''.
  */
 
+static char objcopyright[] =
+"$Id: dhcpd.c,v 1.26 1996/08/27 09:44:54 mellon Exp $ Copyright 1995, 1996 The Internet Software Consortium.";
 static char copyright[] =
 "Copyright 1995, 1996 The Internet Software Consortium.";
 static char arr [] = "All rights reserved.";
@@ -50,9 +52,7 @@ static char message [] = "Internet Software Consortium DHCPD $Name:  $";
 static void usage PROTO ((void));
 
 TIME cur_time;
-TIME default_lease_time = 43200; /* 12 hours... */
-TIME max_lease_time = 86400; /* 24 hours... */
-struct tree_cache *global_options [256];
+struct group root_group;
 
 struct iaddr server_identifier;
 int server_identifier_matched;
@@ -68,37 +68,29 @@ int main (argc, argv, envp)
 	int argc;
 	char **argv, **envp;
 {
-	int i;
+	int i, status;
 	struct sockaddr_in name;
 	struct servent *ent;
+	int pidfilewritten = 0;
 #ifndef DEBUG
 	int pid;
+	char pbuf [20];
+	int daemon = 1;
+	int log_perror = 0;
 #endif
 
+	/* Initially, log errors to stderr as well as to syslogd. */
 #ifdef SYSLOG_4_2
-	openlog ("dhcpd", LOG_NDELAY);
-	log_priority = LOG_DAEMON;
+	openlog ("dhcpd", LOG_NDELAY | LOG_PERROR);
+	log_priority = DHCPD_LOG_FACILITY;
 #else
-	openlog ("dhcpd", LOG_NDELAY, LOG_DAEMON);
+	openlog ("dhcpd", LOG_NDELAY | LOG_PERROR, DHCPD_LOG_FACILITY);
 #endif
-
-#ifndef	NO_PUTENV
-	/* ensure mktime() calls are processed in UTC */
-	putenv("TZ=GMT0");
-#endif /* !NO_PUTENV */
 
 #ifndef DEBUG
 #ifndef SYSLOG_4_2
 	setlogmask (LOG_UPTO (LOG_INFO));
 #endif
-
-	/* Become a daemon... */
-	if ((pid = fork ()) < 0)
-		error ("Can't fork daemon: %m");
-	else if (pid)
-		exit (0);
-	/* Become session leader and get pid... */
-	pid = setsid ();
 #endif	
 	note (message);
 	note (copyright);
@@ -111,6 +103,15 @@ int main (argc, argv, envp)
 			server_port = htons (atoi (argv [i]));
 			debug ("binding to user-specified port %d",
 			       ntohs (server_port));
+		} else if (!strcmp (argv [i], "-f")) {
+#ifndef DEBUG
+			daemon = 0;
+#endif
+		} else if (!strcmp (argv [i], "-d")) {
+#ifndef DEBUG
+			daemon = 0;
+			log_perror = 1;
+#endif
 		} else if (argv [i][0] == '-') {
 			usage ();
 		} else {
@@ -127,6 +128,56 @@ int main (argc, argv, envp)
 			interfaces = tmp;
 		}
 	}
+
+	/* If the user didn't ask for debug mode, close the log and
+	   reopen it without the LOG_STDERR flag. */
+#ifndef DEBUG
+	if (!log_perror) {
+		closelog ();
+
+#ifdef SYSLOG_4_2
+		openlog ("dhcpd", LOG_NDELAY);
+		log_priority = DHCPD_LOG_FACILITY;
+#else
+		openlog ("dhcpd", LOG_NDELAY, DHCPD_LOG_FACILITY);
+#endif
+
+#ifndef SYSLOG_4_2
+		setlogmask (LOG_UPTO (LOG_INFO));
+#endif
+	}
+
+	if (daemon) {
+		/* Become a daemon... */
+		if ((pid = fork ()) < 0)
+			error ("Can't fork daemon: %m");
+		else if (pid)
+			exit (0);
+		/* Become session leader and get pid... */
+		pid = setsid ();
+	}
+
+	/* Read previous pid file. */
+	if ((i = open (_PATH_DHCPD_PID, O_RDONLY)) >= 0) {
+		status = read (i, pbuf, (sizeof pbuf) - 1);
+		close (i);
+		pbuf [status] = 0;
+		pid = atoi (pbuf);
+
+		/* If the previous server process is not still running,
+		   write a new pid file immediately. */
+		if (pid && kill (pid, 0) < 0) {
+			unlink (_PATH_DHCPD_PID);
+			if ((i = open (_PATH_DHCPD_PID,
+				       O_WRONLY | O_CREAT, 0640)) >= 0) {
+				sprintf (pbuf, "%d\n", (int)getpid ());
+				write (i, pbuf, strlen (pbuf));
+				close (i);
+				pidfilewritten = 1;
+			}
+		}
+	}
+#endif /* !DEBUG */
 
 	/* Default to the DHCP/BOOTP port. */
 	if (!server_port)
@@ -151,14 +202,22 @@ int main (argc, argv, envp)
 	/* Discover all the network interfaces and initialize them. */
 	discover_interfaces ();
 
-	/* Write a pid file. */
-	unlink (_PATH_DHCPD_PID);
-	if ((i = open (_PATH_DHCPD_PID, O_WRONLY | O_CREAT, 0640)) >= 0) {
-		char obuf [20];
-		sprintf (obuf, "%d\n", (int)getpid ());
-		write (i, obuf, strlen (obuf));
-		close (i);
+#ifndef DEBUG
+	/* If we didn't write the pid file earlier because we found a
+	   process running the logged pid, but we made it to here,
+	   meaning nothing is listening on the bootp port, then write
+	   the pid file out - what's in it now is bogus anyway. */
+	if (!pidfilewritten) {
+		unlink (_PATH_DHCPD_PID);
+		if ((i = open (_PATH_DHCPD_PID,
+			       O_WRONLY | O_CREAT, 0640)) >= 0) {
+			sprintf (pbuf, "%d\n", (int)getpid ());
+			write (i, pbuf, strlen (pbuf));
+			close (i);
+			pidfilewritten = 1;
+		}
 	}
+#endif /* !DEBUG */
 
 	/* Receive packets and dispatch them... */
 	dispatch ();
@@ -171,7 +230,7 @@ int main (argc, argv, envp)
 
 static void usage ()
 {
-	error ("Usage: dhcpd [-p <port>] [-a <ip-addr>]");
+	error ("Usage: dhcpd [-p <port>] [-f] [if0 [...ifN]]");
 }
 
 void cleanup ()
