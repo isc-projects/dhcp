@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.52 2000/01/26 14:55:34 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.53 2000/01/26 17:22:26 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -1352,6 +1352,9 @@ void do_packet (interface, packet, len, from_port, from, hfrom)
 	else
 		bootp (decoded_packet);
 
+	/* If the caller kept the packet, they'll have upped the refcnt. */
+	packet_dereference (&decoded_packet, MDL);
+
 #if defined (DEBUG_MEMORY_LEAKAGE)
 	log_info ("generation %ld: %ld new, %ld outstanding, %ld long-term",
 		  dmalloc_generation,
@@ -1361,7 +1364,5 @@ void do_packet (interface, packet, len, from_port, from, hfrom)
 #if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL)
 	dmalloc_dump_outstanding ();
 #endif
-	/* If the caller kept the packet, they'll have upped the refcnt. */
-	packet_dereference (&decoded_packet, MDL);
 }
 
