@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: discover.c,v 1.1 1998/11/06 00:19:56 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: discover.c,v 1.2 1998/11/11 07:50:51 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -139,22 +139,23 @@ void discover_interfaces (state)
 			error ("Can't get interface flags for %s: %m",
 			       ifr.ifr_name);
 
-		/* Skip loopback, point-to-point and down interfaces,
-		   except don't skip down interfaces if we're trying to
-		   get a list of configurable interfaces. */
-		if ((ifr.ifr_flags & IFF_LOOPBACK) ||
-#ifdef IFF_POINTOPOINT
-		    (ifr.ifr_flags & IFF_POINTOPOINT) ||
-#endif
-		    (!(ifr.ifr_flags & IFF_UP) &&
-		     state != DISCOVER_UNCONFIGURED))
-			continue;
-		
 		/* See if we've seen an interface that matches this one. */
 		for (tmp = interfaces; tmp; tmp = tmp -> next)
 			if (!strcmp (tmp -> name, ifp -> ifr_name))
 				break;
 
+		/* Skip loopback, point-to-point and down interfaces,
+		   except don't skip down interfaces if we're trying to
+		   get a list of configurable interfaces. */
+		if ((((ifr.ifr_flags & IFF_LOOPBACK) ||
+#ifdef IFF_POINTOPOINT
+		      (ifr.ifr_flags & IFF_POINTOPOINT))
+		     && !tmp) ||
+#endif
+		    (!(ifr.ifr_flags & IFF_UP) &&
+		     state != DISCOVER_UNCONFIGURED))
+			continue;
+		
 		/* If there isn't already an interface by this name,
 		   allocate one. */
 		if (!tmp) {
