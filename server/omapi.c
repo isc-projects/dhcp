@@ -29,7 +29,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: omapi.c,v 1.4 1999/09/09 23:53:29 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: omapi.c,v 1.5 1999/09/16 00:51:27 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -487,7 +487,7 @@ isc_result_t dhcp_lease_lookup (omapi_object_t **lp,
 	}
 
 	/* Now look for an IP address. */
-	status = omapi_get_value_str (ref, id, "handle", &tv);
+	status = omapi_get_value_str (ref, id, "ip-address", &tv);
 	if (status == ISC_R_SUCCESS) {
 		/* If we already have a value, flag an error - only one
 		   key can be used for lookups at a time. */
@@ -549,7 +549,7 @@ isc_result_t dhcp_lease_lookup (omapi_object_t **lp,
 		}
 
 		lease = ((struct lease *)
-			 hash_lookup (lease_uid_hash,
+			 hash_lookup (lease_hw_addr_hash,
 				      tv -> value -> u.buffer.value,
 				      tv -> value -> u.buffer.len));
 		omapi_value_dereference (&tv, "dhcp_lease_lookup");
@@ -1000,6 +1000,41 @@ isc_result_t dhcp_host_lookup (omapi_object_t **lp,
 				      tv -> value -> u.buffer.value,
 				      tv -> value -> u.buffer.len));
 		omapi_value_dereference (&tv, "dhcp_host_lookup");
+			
+		if (!host)
+			return ISC_R_NOTFOUND;
+
+		/* XXX fix so that hash lookup itself creates
+		   XXX the reference. */
+		omapi_object_reference (lp, (omapi_object_t *)host,
+					"dhcp_host_lookup");
+	}
+
+	/* Now look for an ip address. */
+	status = omapi_get_value_str (ref, id, "ip-address", &tv);
+	if (status == ISC_R_SUCCESS) {
+		struct lease *l;
+		if (*lp) {
+			omapi_object_dereference (lp, "dhcp_host_lookup");
+			omapi_value_dereference (&tv, "dhcp_host_lookup");
+			return ISC_R_INVALIDARG;
+		}
+
+		/* first find the lease for this ip address */
+		l = ((struct lease *)
+			 hash_lookup (lease_ip_addr_hash,
+				      tv -> value -> u.buffer.value,
+				      tv -> value -> u.buffer.len));
+		omapi_value_dereference (&tv, "dhcp_host_lookup");
+
+		if (!l)
+			return ISC_R_NOTFOUND;
+
+		/* now use that to get a host */
+		host = ((struct host_decl *)
+			 hash_lookup (host_hw_addr_hash,
+				      l -> hardware_addr.haddr,
+				      l -> hardware_addr.hlen));
 			
 		if (!host)
 			return ISC_R_NOTFOUND;
