@@ -1,0 +1,66 @@
+
+
+
+dhcpd.leases(5)                                   dhcpd.leases(5)
+
+
+NNAAMMEE
+       dhcpd.leases - DHCP client lease database
+
+DDEESSCCRRIIPPTTIIOONN
+       The  Internet Software Consortium DHCP Server keeps a per­
+       sistent database of leases that  it  has  assigned.   This
+       database  is  a  free-form ASCII file containing one valid
+       declaration per  lease.   If  more  than  one  declaration
+       appears  for  a  given  lease, the last one in the file is
+       used.  The file is written as a log, so  this  is  not  an
+       unusual occurrance.
+
+       When dhcpd is first installed, there is no lease database.
+       However, dhcpd requires that a lease database  be  present
+       before it will start.  To make the initial lease database,
+       just create an empty file called /var/db/dhcpd.leases.
+
+       In order to prevent the lease database from growing  with­
+       out  bound,  the  file  is  rewritten  from  time to time.
+       First, a temporary lease database is created and all known
+       leases are dumped to it.   Then, the old lease database is
+       renamed /var/db/dhcpd.leases~.   Finally, the newly  writ­
+       ten lease database is moved into place.
+
+       There is a window of vulnerability where if the dhcpd pro­
+       cess is killed or the system crashes after the  old  lease
+       database  has been renamed but before the new one has been
+       moved into place, there will be  no  /var/db/dhcpd.leases.
+       In this case, dhcpd will refuse to start, and will require
+       manual intervention.   DDOO NNOOTT simply create  a  new  lease
+       file when this happens - if you do, you will lose all your
+       old bindings, and  chaos  will  ensue.    Instead,  rename
+       /var/db/dhcpd.leases~  to  /var/db/dhcpd.leases, restoring
+       the old, valid lease file, and then  start  dhcpd.    This
+       guarantees that a valid lease file will be restored.
+
+FFOORRMMAATT
+       The format of the lease declarations is not currently doc­
+       umented.
+
+FFIILLEESS
+       //vvaarr//ddbb//ddhhccppdd..lleeaasseess
+
+SSEEEE AALLSSOO
+       dhcpd(8),   dhcp-options(5),    dhcpd.conf(5),    RFC2132,
+       RFC2131.
+
+AAUUTTHHOORR
+       ddhhccppdd((88)) was written by Ted Lemon <mellon@vix.com> under a
+       contract with Vixie Labs.   Funding for this  project  was
+       provided  by  the Internet Software Corporation.  Informa­
+       tion about the Internet Software Consortium can  be  found
+       at hhttttpp::////wwwwww..iisscc..oorrgg//iisscc..
+
+
+
+
+                                                                1
+
+
