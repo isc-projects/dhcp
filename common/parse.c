@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.60 2000/01/26 14:55:34 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.61 2000/02/01 03:19:39 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -3352,11 +3352,7 @@ int parse_auth_key (key_id, cfile)
 	return key_id -> len ? 1 : 0;
 }
 
-int parse_warn (ANSI_DECL (struct parse *)cfile,
-		ANSI_DECL (const char *) fmt, VA_DOTDOTDOT)
-	KandR (struct parse *cfile;)
-	KandR (char *fmt;)
-	va_dcl
+int parse_warn (struct parse *cfile, const char *fmt, ...)
 {
 	va_list list;
 	static char spaces [] = "                                                                                ";
@@ -3374,7 +3370,7 @@ int parse_warn (ANSI_DECL (struct parse *)cfile,
 		 cfile -> tlname, cfile -> lexline, mbuf);
 #endif
 	
-	VA_start (list, fmt);
+	va_start (list, fmt);
 	vsnprintf (mbuf, sizeof mbuf, fbuf, list);
 	va_end (list);
 

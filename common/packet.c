@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: packet.c,v 1.30 2000/01/29 05:47:50 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: packet.c,v 1.31 2000/02/01 03:19:39 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -125,8 +125,8 @@ void assemble_udp_ip_header (interface, buf, bufix,
 	struct udphdr udp;
 
 	/* Fill out the IP header */
-	ip.ip_v = 4;
-	ip.ip_hl = 5;
+	IP_V_SET (&ip, 4);
+	IP_HL_SET (&ip, 20);
 	ip.ip_tos = IPTOS_LOWDELAY;
 	ip.ip_len = htons(sizeof(ip) + sizeof(udp) + len);
 	ip.ip_id = 0;

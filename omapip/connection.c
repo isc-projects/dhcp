@@ -32,6 +32,7 @@ isc_result_t omapi_connect (omapi_object_t *c,
 	isc_result_t status;
 	omapi_connection_object_t *obj;
 	int flag;
+	socklen_t sl;
 
 	obj = (omapi_connection_object_t *)dmalloc (sizeof *obj, MDL);
 	if (!obj)
@@ -131,10 +132,10 @@ isc_result_t omapi_connect (omapi_object_t *c,
 
 	/* I don't know why this would fail, so I'm tempted not to test
 	   the return value. */
-	hix = sizeof (obj -> local_addr);
+	sl = sizeof (obj -> local_addr);
 	if (getsockname (obj -> socket,
 			 ((struct sockaddr *)
-			  &obj -> local_addr), &hix) < 0) {
+			  &obj -> local_addr), &sl) < 0) {
 	}
 
 	if (fcntl (obj -> socket, F_SETFL, O_NONBLOCK) < 0) {

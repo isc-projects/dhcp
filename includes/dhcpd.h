@@ -21,6 +21,7 @@
  */
 
 #ifndef __CYGWIN32__
+#define _POSIX_PII_SOCKET
 #include <sys/types.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
@@ -997,7 +998,7 @@ int parse_option_token PROTO ((struct expression **, struct parse *,
 			       const char *, struct expression *, int, int));
 int parse_allow_deny PROTO ((struct option_cache **, struct parse *, int));
 int parse_auth_key PROTO ((struct data_string *, struct parse *));
-int parse_warn PROTO ((struct parse *, const char *, ...))
+int parse_warn (struct parse *, const char *, ...)
 	__attribute__((__format__(__printf__,2,3)));
 
 /* tree.c */
@@ -1519,7 +1520,7 @@ int write_lease PROTO ((struct lease *));
 int write_host PROTO ((struct host_decl *));
 int write_group PROTO ((struct group_object *));
 int db_printable PROTO ((const char *));
-int db_printable_len PROTO ((const char *, unsigned));
+int db_printable_len PROTO ((const unsigned char *, unsigned));
 int write_billing_class PROTO ((struct class *));
 int commit_leases PROTO ((void));
 void db_startup PROTO ((int));

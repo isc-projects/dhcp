@@ -29,7 +29,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: errwarn.c,v 1.2 2000/01/26 14:56:05 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: errwarn.c,v 1.3 2000/02/01 03:19:52 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include <omapip/omapip_p.h>
@@ -48,15 +48,13 @@ static char fbuf [1024];
 
 /* Log an error message, then exit... */
 
-void log_fatal (ANSI_DECL(const char *) fmt, VA_DOTDOTDOT)
-     KandR (char *fmt;)
-     va_dcl
+void log_fatal (const char * fmt, ... )
 {
   va_list list;
 
   do_percentm (fbuf, fmt);
 
-  VA_start (list, fmt);
+  va_start (list, fmt);
   vsnprintf (mbuf, sizeof mbuf, fbuf, list);
   va_end (list);
 
@@ -82,15 +80,13 @@ void log_fatal (ANSI_DECL(const char *) fmt, VA_DOTDOTDOT)
 
 /* Log an error message... */
 
-int log_error (ANSI_DECL (const char *) fmt, VA_DOTDOTDOT)
-     KandR (char *fmt;)
-     va_dcl
+int log_error (const char * fmt, ...)
 {
   va_list list;
 
   do_percentm (fbuf, fmt);
 
-  VA_start (list, fmt);
+  va_start (list, fmt);
   vsnprintf (mbuf, sizeof mbuf, fbuf, list);
   va_end (list);
 
@@ -108,15 +104,13 @@ int log_error (ANSI_DECL (const char *) fmt, VA_DOTDOTDOT)
 
 /* Log a note... */
 
-int log_info (ANSI_DECL (const char *) fmt, VA_DOTDOTDOT)
-     KandR (char *fmt;)
-     va_dcl
+int log_info (const char *fmt, ...)
 {
   va_list list;
 
   do_percentm (fbuf, fmt);
 
-  VA_start (list, fmt);
+  va_start (list, fmt);
   vsnprintf (mbuf, sizeof mbuf, fbuf, list);
   va_end (list);
 
@@ -134,15 +128,13 @@ int log_info (ANSI_DECL (const char *) fmt, VA_DOTDOTDOT)
 
 /* Log a debug message... */
 
-int log_debug (ANSI_DECL (const char *) fmt, VA_DOTDOTDOT)
-     KandR (char *fmt;)
-     va_dcl
+int log_debug (const char *fmt, ...)
 {
   va_list list;
 
   do_percentm (fbuf, fmt);
 
-  VA_start (list, fmt);
+  va_start (list, fmt);
   vsnprintf (mbuf, sizeof mbuf, fbuf, list);
   va_end (list);
 

@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.99 2000/01/31 23:41:56 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.100 2000/02/01 03:19:56 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -423,7 +423,6 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 					    "option space definitions %s",
 					    "may not be scoped.");
 				skip_to_semi (cfile);
-				free_option (option, MDL);
 				break;
 			}
 			parse_option_space_decl (cfile);
@@ -2208,14 +2207,16 @@ struct lease *parse_lease_declaration (cfile)
 				      (&binding -> value.buffer,
 				       binding -> value.len + 1, MDL)))
 					log_fatal ("No memory for binding.");
-				strcpy (binding -> value.buffer -> data, val);
+				strcpy ((char *)
+					binding -> value.buffer -> data, val);
 				binding -> value.data =
 					binding -> value.buffer -> data;
 				binding -> value.terminated = 1;
 			} else {
-				s = (parse_numeric_aggregate
-				     (cfile, (unsigned char *)0,
-				      &binding -> value.len, ':', 16, 8));
+				s = ((char *)
+				     (parse_numeric_aggregate
+				      (cfile, (unsigned char *)0,
+				       &binding -> value.len, ':', 16, 8)));
 				if (!s)
 					return (struct lease *)0;
 				if (binding -> value.len) {

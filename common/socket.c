@@ -30,7 +30,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: socket.c,v 1.43 2000/01/02 22:21:23 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: socket.c,v 1.44 2000/02/01 03:19:39 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -213,7 +213,7 @@ ssize_t receive_packet (interface, buf, len, from, hfrom)
 	struct sockaddr_in *from;
 	struct hardware *hfrom;
 {
-	int flen = sizeof *from;
+	socklen_t flen = sizeof *from;
 	int result;
 
 #ifdef IGNORE_HOSTUNREACH
@@ -240,7 +240,7 @@ isc_result_t fallback_discard (object)
 {
 	char buf [1540];
 	struct sockaddr_in from;
-	int flen = sizeof from;
+	socklen_t flen = sizeof from;
 	int status;
 	struct interface_info *interface;
 

@@ -24,6 +24,7 @@
 #define __OMAPIP_OMAPIP_P_H__
 
 #ifndef __CYGWIN32__
+#define _POSIX_PII_SOCKET
 #include <sys/types.h>
 #include <netinet/in.h>
 #include <sys/socket.h>

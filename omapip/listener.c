@@ -125,7 +125,7 @@ int omapi_listener_readfd (omapi_object_t *h)
 isc_result_t omapi_accept (omapi_object_t *h)
 {
 	isc_result_t status;
-	int len;
+	socklen_t len;
 	omapi_connection_object_t *obj;
 	omapi_listener_object_t *listener;
 
