@@ -169,6 +169,7 @@ void parse_statement (cfile)
 			subnet = parse_subnet_statement (cfile, jref (bc),
 							 share);
 			share -> subnets = subnet;
+			share -> interface = (struct interface_info *)0;
 			n = piaddr (subnet -> net);
 			t = dmalloc (strlen (n) + 1, "parse_statement");
 			if (!t)
@@ -451,6 +452,7 @@ void parse_shared_net_statement (cfile, bc)
 	share -> next = (struct shared_network *)0;
 	share -> default_lease_time = default_lease_time;
 	share -> max_lease_time = max_lease_time;
+	share -> interface = (struct interface_info *)0;
 	memcpy (share -> options, global_options, sizeof global_options);
 
 	/* Get the name of the shared network... */
