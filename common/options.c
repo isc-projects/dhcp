@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.84 2001/02/12 19:43:32 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.85 2001/03/01 21:44:31 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -332,7 +332,7 @@ int fqdn_universe_decode (struct option_state *options,
 			goto bad;
 		/* Note: If the client sends a single label, the
 		   FQDN_DOMAINNAME option won't be set. */
-		if (length - 4 - i > 0 &&
+		if (length > 4 + i &&
 		    !save_option_buffer (&fqdn_universe, options, bp,
 					 &bp -> data[6 + i], length - 4 - i,
 					 &fqdn_options [FQDN_DOMAINNAME], 1))
