@@ -43,14 +43,12 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: clparse.c,v 1.58 2001/03/17 00:47:30 mellon Exp $ Copyright (c) 1996-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: clparse.c,v 1.59 2001/03/22 06:55:31 mellon Exp $ Copyright (c) 1996-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
 
 static TIME parsed_time;
-
-char client_script_name [] = "/etc/dhclient-script";
 
 struct client_config top_level_config;
 
@@ -96,7 +94,7 @@ isc_result_t read_client_conf ()
 	top_level_config.backoff_cutoff = 15;
 	top_level_config.initial_interval = 3;
 	top_level_config.bootp_policy = P_ACCEPT;
-	top_level_config.script_name = client_script_name;
+	top_level_config.script_name = path_dhclient_script;
 	top_level_config.requested_options = default_requested_options;
 	top_level_config.omapi_port = -1;
 
@@ -120,12 +118,32 @@ isc_result_t read_client_conf ()
 						(struct interface_info *)0,
 						&top_level_config);
 		} while (1);
-		token = next_token (&val, (unsigned *)0, cfile); /* Clear the peek buffer */
+		token = next_token (&val, (unsigned *)0, cfile);
 		status = (cfile -> warnings_occurred
 			  ? ISC_R_BADPARSE
 			  : ISC_R_SUCCESS);
 		close (file);
 		end_parse (&cfile);
+#ifdef LATER
+	} else {
+		/* Set up the standard name service updater routine. */
+		parse = (struct parse *)0;
+		status = new_parse (&parse, -1, default_client_config,
+				    (sizeof default_client_config) - 1,
+				    "default client configuration");
+		if (status != ISC_R_SUCCESS)
+			log_fatal ("can't begin default client config!");
+
+		do {
+			token = peek_token (&val, (unsigned *)0, cfile);
+			if (token == END_OF_FILE)
+				break;
+			parse_client_statement (cfile,
+						(struct interface_info *)0,
+						&top_level_config);
+		} while (1);
+		end_parse (&parse);
+#endif
 	}
 
 	/* Set up state and config structures for clients that don't

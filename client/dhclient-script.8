@@ -79,11 +79,11 @@ is available to this script, which may modify the environment if needed
 to change the behaviour of the script.   If an error occurs during the
 execution of the script, it can set the exit_status variable to a nonzero
 value, and
-.B ETCDIR/dhclient-script
+.B CLIENTBINDIR/dhclient-script
 will exit with that error code immediately after the client script exits.
 .PP
 After all processing has completed,
-.B ETCDIR/dhclient-script
+.B CLIENTBINDIR/dhclient-script
 checks for the presence of an executable
 .B ETCDIR/dhclient-exit-hooks
 script, which if present is invoked using the '.' command.  The exit
