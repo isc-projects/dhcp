@@ -45,6 +45,9 @@ and for prodding me into improving it.
 
 			Changes since 3.0.1
 
+- Log functions writing to stderr were adjusted to use the STDERR_FILENO
+  system definition rather than '2'.  This is a no-op for 90% of platforms.
+
 - One call to trace_write_packet_iov() counted the number of io vectors
   incorrectly, causing inconsistent tracefiles.  This was fixed.
 

@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.104.2.19 2004/09/30 20:23:06 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.104.2.20 2004/09/30 20:38:31 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -4837,13 +4837,14 @@ int parse_warn (struct parse *cfile, const char *fmt, ...)
 #endif
 
 	if (log_perror) {
-		write (2, mbuf, strlen (mbuf));
-		write (2, "\n", 1);
-		write (2, cfile -> token_line, strlen (cfile -> token_line));
-		write (2, "\n", 1);
+		write (STDERR_FILENO, mbuf, strlen (mbuf));
+		write (STDERR_FILENO, "\n", 1);
+		write (STDERR_FILENO, cfile -> token_line,
+		       strlen (cfile -> token_line));
+		write (STDERR_FILENO, "\n", 1);
 		if (cfile -> lexchar < 81)
-			write (2, lexbuf, lix);
-		write (2, "^\n", 2);
+			write (STDERR_FILENO, lexbuf, lix);
+		write (STDERR_FILENO, "^\n", 2);
 	}
 
 	cfile -> warnings_occurred = 1;

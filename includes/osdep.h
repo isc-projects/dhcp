@@ -309,7 +309,11 @@
 #endif
 
 #if !defined (SOCKLEN_T)
-#define SOCKLEN_T socklen_t
+# define SOCKLEN_T socklen_t
+#endif
+
+#if !defined (STDERR_FILENO)
+# define STDERR_FILENO 2
 #endif
 
 #endif /* __ISC_DHCP_OSDEP_H__ */

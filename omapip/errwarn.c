@@ -33,7 +33,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: errwarn.c,v 1.9.2.2 2004/06/17 20:54:39 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: errwarn.c,v 1.9.2.3 2004/09/30 20:38:32 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include <omapip/omapip_p.h>
@@ -72,8 +72,8 @@ void log_fatal (const char * fmt, ... )
 
   /* Also log it to stderr? */
   if (log_perror) {
-	  write (2, mbuf, strlen (mbuf));
-	  write (2, "\n", 1);
+	  write (STDERR_FILENO, mbuf, strlen (mbuf));
+	  write (STDERR_FILENO, "\n", 1);
   }
 
 #if !defined (NOMINUM)
@@ -120,8 +120,8 @@ int log_error (const char * fmt, ...)
 #endif
 
   if (log_perror) {
-	  write (2, mbuf, strlen (mbuf));
-	  write (2, "\n", 1);
+	  write (STDERR_FILENO, mbuf, strlen (mbuf));
+	  write (STDERR_FILENO, "\n", 1);
   }
 
   return 0;
@@ -147,8 +147,8 @@ int log_info (const char *fmt, ...)
 #endif
 
   if (log_perror) {
-	  write (2, mbuf, strlen (mbuf));
-	  write (2, "\n", 1);
+	  write (STDERR_FILENO, mbuf, strlen (mbuf));
+	  write (STDERR_FILENO, "\n", 1);
   }
 
   return 0;
@@ -174,8 +174,8 @@ int log_debug (const char *fmt, ...)
 #endif
 
   if (log_perror) {
-	  write (2, mbuf, strlen (mbuf));
-	  write (2, "\n", 1);
+	  write (STDERR_FILENO, mbuf, strlen (mbuf));
+	  write (STDERR_FILENO, "\n", 1);
   }
 
   return 0;
