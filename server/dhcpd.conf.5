@@ -490,8 +490,9 @@ time.
 .PP
 .I Time
 should be the maximum length in seconds that will be assigned to a
-lease if the client requesting the lease asks for a specific
-expiration time.
+lease.   The only exception to this is that Dynamic BOOTP lease
+lengths, which are not specified by the client, are not limited by
+this maximum.
 .PP
 .B The
 .I min-lease-time
@@ -501,8 +502,7 @@ expiration time.
 .PP
 .I Time
 should be the minimum length in seconds that will be assigned to a
-lease if the client requesting the lease asks for a specific
-expiration time.
+lease.
 .PP
 .B The
 .I min-secs
