@@ -51,7 +51,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: socket.c,v 1.53 2000/09/11 17:39:14 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: socket.c,v 1.54 2000/09/12 20:23:54 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -184,7 +184,7 @@ void if_register_send (info)
 		       info -> shared_network -> name : ""));
 }
 
-#if !defined (USE_SOCKET_FALLBACK)
+#if defined (USE_SOCKET_SEND)
 void if_deregister_send (info)
 	struct interface_info *info;
 {
@@ -200,7 +200,7 @@ void if_deregister_send (info)
 		      (info -> shared_network ?
 		       info -> shared_network -> name : ""));
 }
-#endif /* !USE_SOCKET_FALLBACK */
+#endif /* USE_SOCKET_SEND */
 #endif /* USE_SOCKET_SEND || USE_SOCKET_FALLBACK */
 
 #ifdef USE_SOCKET_RECEIVE
