@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.77 1999/03/09 23:45:04 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.78 1999/03/10 20:44:22 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -420,7 +420,8 @@ void nak_lease (packet, cip)
 	/* Set up the option buffer... */
 	outgoing.packet_length =
 		cons_options (packet, outgoing.raw, 0, &options,
-			      packet -> agent_options, 0, 0, 0);
+			      packet -> agent_options, 0, 0, 0,
+			      (struct data_string *)0);
 
 /*	memset (&raw.ciaddr, 0, sizeof raw.ciaddr);*/
 	raw.siaddr = packet -> interface -> primary_address;
@@ -1158,6 +1159,17 @@ void ack_lease (packet, lease, offer, when, msg)
 			option_cache_dereference (&oc, "ack_lease");
 	}
 
+	/* If the client has provided a list of options that it wishes
+	   returned, use it to prioritize.  Otherwise, prioritize
+	   based on the default priority list. */
+
+	oc = lookup_option (packet -> options.dhcp_hash,
+			    DHO_DHCP_PARAMETER_REQUEST_LIST);
+
+	if (oc)
+		evaluate_option_cache (&state -> parameter_request_list,
+				       packet, &packet -> options, oc);
+
 #ifdef DEBUG_PACKET
 	dump_packet (packet);
 	dump_raw ((unsigned char *)packet -> raw, packet -> packet_length);
@@ -1254,7 +1266,8 @@ void dhcp_reply (lease)
 				      state -> max_message_size,
 				      &state -> options,
 				      state -> agent_options,
-				      bufs, nulltp, bootpp);
+				      bufs, nulltp, bootpp,
+				      &state -> parameter_request_list);
 
 	memcpy (&raw.ciaddr, &state -> ciaddr, sizeof raw.ciaddr);
 	memcpy (&raw.yiaddr, lease -> ip_addr.iabuf, 4);
@@ -1332,6 +1345,8 @@ void dhcp_reply (lease)
 					      &raw, packet_length,
 					      raw.siaddr, &to, &hto);
 
+			data_string_forget (&state -> parameter_request_list,
+					    "dhcp_reply");
 			free_lease_state (state, "dhcp_reply fallback 1");
 			lease -> state = (struct lease_state *)0;
 			return;
@@ -1351,6 +1366,8 @@ void dhcp_reply (lease)
 					      (struct packet *)0,
 					      &raw, packet_length,
 					      raw.siaddr, &to, &hto);
+			data_string_forget (&state -> parameter_request_list,
+					    "dhcp_reply");
 			free_lease_state (state, "dhcp_reply fallback 1");
 			lease -> state = (struct lease_state *)0;
 			return;
@@ -1368,6 +1385,8 @@ void dhcp_reply (lease)
 			      (struct packet *)0, &raw, packet_length,
 			      from, &to, &hto);
 
+	data_string_forget (&state -> parameter_request_list,
+			    "dhcp_reply");
 	free_lease_state (state, "dhcp_reply");
 	lease -> state = (struct lease_state *)0;
 }
