@@ -41,7 +41,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.129.2.11 2002/11/01 23:28:59 dhankins Exp $ Copyright (c) 1995-2001 Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.129.2.12 2002/11/07 23:26:38 dhankins Exp $ Copyright (c) 1995-2002 Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -71,7 +71,7 @@ struct in_addr giaddr;
    assert (state_is == state_shouldbe). */
 #define ASSERT_STATE(state_is, state_shouldbe) {}
 
-static char copyright[] = "Copyright 1995-2001 Internet Software Consortium.";
+static char copyright[] = "Copyright 1995-2002 Internet Software Consortium.";
 static char arr [] = "All rights reserved.";
 static char message [] = "Internet Software Consortium DHCP Client";
 static char url [] = "For info, please visit http://www.isc.org/products/DHCP";
