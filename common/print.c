@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: print.c,v 1.23 1999/07/13 18:00:12 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: print.c,v 1.24 1999/09/22 01:45:49 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -518,5 +518,114 @@ void print_expression (name, expr)
 
 	print_subexpression (expr, buf, sizeof buf);
 	log_info ("%s: %s", name, buf);
+}
+
+int token_print_indent_concat (FILE *file, int col,  int indent, char *prefix, 
+			       char *suffix, ...)
+{
+	va_list list;
+	char *buf;
+	int len;
+	char *s, *t, *u;
+
+	va_start (list, suffix);
+	s = va_arg (list, char *);
+	len = 0;
+	while (s) {
+		len += strlen (s);
+		s = va_arg (list, char *);
+	}
+	va_end (list);
+
+	t = malloc (len + 1);
+	if (!t)
+		log_fatal ("token_print_indent: no memory for copy buffer");
+
+	va_start (list, suffix);
+	s = va_arg (list, char *);
+	u = t;
+	while (s) {
+		len = strlen (s);
+		strcpy (u, s);
+		u += len;
+	}
+	va_end (list);
+	
+	len = token_print_indent (file, col, indent,
+				  prefix, suffix, t);
+	free (t);
+	return col;
+}
+
+int token_indent_data_string (FILE *file, int col, int indent,
+			      char *prefix, char *suffix,
+			      struct data_string *data)
+{
+	int i;
+	char *buf;
+	char obuf [3];
+
+	/* See if this is just ASCII. */
+	for (i = 0; i < data -> len; i++)
+		if (!isascii (data -> data [i]) ||
+		    !isprint (data -> data [i]))
+			break;
+
+	/* If we have a purely ASCII string, output it as text. */
+	if (i == data -> len) {
+		char *buf = malloc (data -> len + 3);
+		if (buf) {
+			buf [0] = '"';
+			memcpy (buf + 1, data -> data, data -> len);
+			buf [data -> len + 1] = '"';
+			buf [data -> len + 2] = 0;
+			i = token_print_indent (file, col, indent,
+						prefix, suffix, buf);
+			free (buf);
+			return i;
+		}
+	}
+
+	for (i = 0; i < data -> len; i++) {
+		sprintf (obuf, "%2.2x", data -> data [i]);
+		col = token_print_indent (file, col, indent,
+					  i == 0 ? prefix : "",
+					  (i + 1 == data -> len
+					   ? suffix
+					   : ""), obuf);
+		if (i + 1 != data -> len)
+			col = token_print_indent (file, col, indent,
+						  prefix, suffix, obuf);
+	}
+	return col;
+}
+
+int token_print_indent (FILE *file, int col, int indent,
+			char *prefix, char *suffix, char *buf)
+{
+	int len = strlen (buf) + strlen (prefix);
+	if (col + len > 79 && indent + len < 79) {
+		fputc ('\n', file);
+		indent_spaces (file, indent);
+		col = indent;
+	} else if (prefix && *prefix) {
+		fputs (prefix, file);
+		col += strlen (prefix);
+	}
+	fputs (buf, file);
+	col += len;
+	if (col + strlen (suffix) > 79) {
+		fputc ('\n', file);
+		indent_spaces (file, indent);
+		col = indent;
+	}
+	return col;
+}
+
+void indent_spaces (FILE *file, int indent)
+{
+	int i;
+	for (i = 0; i < indent; i++)
+		fputc (' ', file);
 }
 

@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: execute.c,v 1.18 1999/09/15 17:22:52 mellon Exp $ Copyright (c) 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: execute.c,v 1.19 1999/09/22 01:45:49 mellon Exp $ Copyright (c) 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -307,4 +307,152 @@ int executable_statement_dereference (ptr, name)
 	dfree ((*ptr), name);
 	*ptr = (struct executable_statement *)0;
 	return 1;
+}
+
+void write_statements (file, statements, indent)
+	FILE *file;
+	struct executable_statement *statements;
+	int indent;
+{
+	struct executable_statement *r, *x;
+	int result;
+	int status;
+	char *s, *t, *dot;
+	int col;
+
+	if (!statements)
+		return;
+
+	for (r = statements; r; r = r -> next) {
+		switch (r -> op) {
+		      case statements_statement:
+			write_statements (file, r -> data.statements, indent);
+			break;
+
+		      case on_statement:
+			switch (r -> data.on.evtype) {
+			      case expiry:
+				s = "expiry";
+				break;
+			      case commit:
+				s = "commit";
+				break;
+			      case release:
+				s = "release";
+				break;
+			      default:
+				log_fatal ("unknown event type %d %s",
+					   r -> data.on.evtype,
+					   "in on statement.");
+			}
+			indent_spaces (file, indent);
+			fprintf (file, "on %s {", s);
+			write_statements (file, r -> data.on.statements,
+					  indent + 2);
+			indent_spaces (file, indent);
+			fprintf (file, "}");
+			break;
+
+		      case if_statement:
+			indent_spaces (file, indent);
+			fprintf (file, "if ");
+			x = r;
+			col = write_expression (file,
+						x -> data.ie.expr,
+						indent + 3, indent + 3);
+		      else_if:
+			token_print_indent (file, col, indent, " ", "", "{");
+			write_statements (file, x -> data.ie.true, indent + 2);
+			if (x -> data.ie.false &&
+			    x -> data.ie.false -> op == if_statement &&
+			    !x -> data.ie.false -> next) {
+				indent_spaces (file, indent);
+				fprintf (file, "} elsif ");
+				x = x -> data.ie.false;
+				col = write_expression (file,
+							x -> data.ie.expr,
+							indent + 6,
+							indent + 6);
+				goto else_if;
+			}
+			if (x -> data.ie.false) {
+				indent_spaces (file, indent);
+				fprintf (file, "} else {");
+				write_statements (file, x -> data.ie.false,
+						  indent + 2);
+			}
+			indent_spaces (file, indent);
+			fprintf (file, "}");
+			break;
+
+		      case eval_statement:
+			indent_spaces (file, indent);
+			fprintf (file, "eval ");
+			col = write_expression (file, r -> data.eval,
+						indent + 5, indent + 5);
+			fprintf (file, ";");
+			break;
+
+		      case add_statement:
+			indent_spaces (file, indent);
+			fprintf (file, "add \"%s\"", r -> data.add -> name);
+			break;
+
+		      case break_statement:
+			indent_spaces (file, indent);
+			fprintf (file, "break;");
+			break;
+
+		      case supersede_option_statement:
+			s = "supersede";
+			goto option_statement;
+
+		      case default_option_statement:
+			s = "default";
+			goto option_statement;
+
+		      case append_option_statement:
+			s = "append";
+			goto option_statement;
+
+		      case prepend_option_statement:
+			s = "prepend";
+		      option_statement:
+			/* Note: the reason we don't try to pretty print
+			   the option here is that the format of the option
+			   may change in dhcpd.conf, and then when this
+			   statement was read back, it would cause a syntax
+			   error. */
+			if (r -> data.option -> option -> universe ==
+			    &dhcp_universe) {
+				t = (char *)0;
+				dot = "";
+			} else {
+				t = (r -> data.option -> option ->
+				     universe -> name);
+				dot = ".";
+			}
+			indent_spaces (file, indent);
+			fprintf (file, "%s %s%s%s = ", s, t, dot,
+				 r -> data.option -> option -> name);
+			col = (indent + strlen (s) + strlen (t) +
+			       strlen (dot) + strlen (r -> data.option ->
+						      option -> name) + 4);
+			if (r -> data.option -> expression)
+				write_expression
+					(file,
+					 r -> data.option -> expression,
+					 col, indent + 8);
+			else
+				token_indent_data_string
+					(file, col, indent + 8, "", "",
+					 &r -> data.option -> data);
+					 
+			fprintf (file, ";"); /* XXX */
+			break;
+
+		      default:
+			log_fatal ("bogus statement type %d\n", r -> op);
+		}
+	}
 }

@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.48 1999/09/16 01:10:19 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.49 1999/09/22 01:45:49 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -313,14 +313,14 @@ static int do_host_lookup (result, dns)
 			break;
 		      case TRY_AGAIN:
 			log_error ("%s: temporary name server failure",
-			      dns -> hostname);
+				   dns -> hostname);
 			break;
 		      case NO_RECOVERY:
 			log_error ("%s: name server failed", dns -> hostname);
 			break;
 		      case NO_DATA:
 			log_error ("%s: no A record associated with address",
-			      dns -> hostname);
+				   dns -> hostname);
 		}
 #endif /* !NO_H_ERRNO */
 
@@ -1838,4 +1838,335 @@ enum expression_context op_context (op)
 		return context_boolean;
 	}
 	return context_any;
+}
+
+int write_expression (file, expr, col, indent)
+	FILE *file;
+	struct expression *expr;
+	int col;
+	int indent;
+{
+	struct expression *e;
+	char *s;
+	char obuf [65];
+	int scol;
+	int width;
+
+	switch (expr -> op) {
+	      case expr_none:
+		col = token_print_indent (file, col, indent, "", "", "null");
+		break;
+		
+	      case expr_check:
+		col = token_print_indent (file, col, indent, "", "", "check");
+		col = token_print_indent_concat (file, col, indent,
+						 " ", "", "\"",
+						 expr -> data.check -> name,
+						 "\"", (char *)0);
+		break;
+
+	      case expr_equal:
+		s = "=";
+	      binary:
+		col = write_expression (file,
+					expr -> data.equal [0], col, indent);
+		col = token_print_indent (file, col, indent, " ", " ", s);
+		col = write_expression (file,
+					expr -> data.equal [0], col, indent);
+		break;
+
+	      case expr_substring:
+		col = token_print_indent (file, col, indent, "", "",
+					  "substring");
+		col = token_print_indent (file, col, indent, " ", "", "(");
+		scol = col;
+		col = write_expression (file, expr -> data.substring.expr,
+					col, scol);
+		col = token_print_indent (file, col, indent, "", " ", ",");
+		col = write_expression (file, expr -> data.substring.offset,
+					col, indent);
+		col = token_print_indent (file, col, scol, "", " ", ",");
+		col = write_expression (file, expr -> data.substring.len,
+					col, scol);
+		col = token_print_indent (file, col, indent, "", "", ")");
+		break;
+
+	      case expr_suffix:
+		col = token_print_indent (file, col, indent, "", "", "suffix");
+		col = token_print_indent (file, col, indent, " ", "", "(");
+		scol = col;
+		col = write_expression (file, expr -> data.suffix.expr,
+					col, scol);
+		col = token_print_indent (file, col, scol, "", " ", ",");
+		col = write_expression (file, expr -> data.suffix.len,
+					col, scol);
+		col = token_print_indent (file, col, indent, "", "", ")");
+		break;
+
+	      case expr_concat:
+		e = expr;
+		col = token_print_indent (file, col, indent, "", "",
+					  "concat");
+		col = token_print_indent (file, col, indent, " ", "", "(");
+		scol = col;
+	      concat_again:
+		col = write_expression (file, e -> data.concat [0],
+					col, scol);
+		col = token_print_indent (file, col, scol, "", " ", ",");
+		if (e -> data.concat [1] -> op == expr_concat) {
+			e = e -> data.concat [1];
+			goto concat_again;
+		}
+		col = write_expression (file, e -> data.concat [1],
+					col, scol);
+		col = token_print_indent (file, col, indent, "", "", ")");
+		break;
+
+	      case expr_host_lookup:
+		col = token_print_indent (file, col, indent, "", "",
+					  "gethostbyname");
+		col = token_print_indent (file, col, indent, " ", "", "(");
+		col = token_print_indent_concat
+			(file, col, indent, "", "",
+			 "\"", expr -> data.host_lookup -> hostname, "\"",
+			 (char *)0);
+		col = token_print_indent (file, col, indent, "", "", ")");
+		break;
+
+	      case expr_and:
+		s = "and";
+		goto binary;
+
+	      case expr_or:
+		s = "or";
+		goto binary;
+
+	      case expr_not:
+		col = token_print_indent (file, col, indent, "", " ", "not");
+		col = write_expression (file,
+					expr -> data.not, col, indent);
+		break;
+
+	      case expr_option:
+		s = "option";
+
+	      print_option_name:
+		col = token_print_indent (file, col, indent, "", "", s);
+
+		if (expr -> data.option -> universe != &dhcp_universe) {
+			col = token_print_indent (file, col, indent,
+						  " ", "",
+						  (expr -> data.option -> 
+						   universe -> name));
+			col = token_print_indent (file, col, indent, "", "",
+						  ".");
+			col = token_print_indent (file, col, indent, "", "",
+						  expr -> data.option -> name);
+		} else {
+			col = token_print_indent (file, col, indent, " ", "",
+						  expr -> data.option -> name);
+		}
+		break;
+
+	      case expr_hardware:	
+		col = token_print_indent (file, col, indent, "", "",
+					  "hardware");
+		break;
+
+	      case expr_packet:
+		col = token_print_indent (file, col, indent, "", "",
+					  "packet");
+		col = token_print_indent (file, col, indent, " ", "", "(");
+		scol = col;
+		col = write_expression (file, expr -> data.packet.offset,
+					col, indent);
+		col = token_print_indent (file, col, scol, "", " ", ",");
+		col = write_expression (file, expr -> data.packet.len,
+					col, scol);
+		col = token_print_indent (file, col, indent, "", "", ")");
+		break;
+
+	      case expr_const_data:
+		col = token_indent_data_string (file, col, indent, "", "",
+						&expr -> data.const_data);
+		break;
+
+	      case expr_extract_int8:
+		width = 8;
+	      extract_int:
+		col = token_print_indent (file, col, indent, "", "",
+					  "extract-int");
+		col = token_print_indent (file, col, indent, " ", "", "(");
+		scol = col;
+		col = write_expression (file, expr -> data.extract_int,
+					col, indent);
+		col = token_print_indent (file, col, scol, "", " ", ",");
+		sprintf (obuf, "%d", width);
+		col = token_print_indent (file, col, scol, " ", "", obuf);
+		col = token_print_indent (file, col, indent, "", "", ")");
+		break;
+
+	      case expr_extract_int16:
+		width = 16;
+		goto extract_int;
+
+	      case expr_extract_int32:
+		width = 32;
+		goto extract_int;
+
+	      case expr_encode_int8:
+		width = 8;
+	      encode_int:
+		col = token_print_indent (file, col, indent, "", "",
+					  "encode-int");
+		col = token_print_indent (file, col, indent, " ", "", "(");
+		scol = col;
+		col = write_expression (file, expr -> data.extract_int,
+					col, indent);
+		col = token_print_indent (file, col, scol, "", " ", ",");
+		sprintf (obuf, "%d", width);
+		col = token_print_indent (file, col, scol, " ", "", obuf);
+		col = token_print_indent (file, col, indent, "", "",
+					  ")");
+		break;
+
+	      case expr_encode_int16:
+		width = 16;
+		goto encode_int;
+
+	      case expr_encode_int32:
+		width = 32;
+		goto encode_int;
+
+	      case expr_const_int:
+		sprintf (obuf, "%lu", expr -> data.const_int);
+		col = token_print_indent (file, col, indent, "", "", obuf);
+		break;
+
+	      case expr_exists:
+		s = "exists";
+		goto print_option_name;
+
+	      case expr_encapsulate:
+		col = token_print_indent (file, col, indent, "", "",
+					  "encapsulate");
+		col = token_indent_data_string (file, col, indent, " ", "",
+						&expr -> data.encapsulate);
+		break;
+
+	      case expr_known:
+		col = token_print_indent (file, col, indent, "", "", "known");
+		break;
+
+	      case expr_reverse:
+		col = token_print_indent (file, col, indent, "", "",
+					  "reverse");
+		col = token_print_indent (file, col, indent, " ", "", "(");
+		scol = col;
+		col = write_expression (file, expr -> data.reverse.width,
+					col, scol);
+		col = token_print_indent (file, col, scol, "", " ", ",");
+		col = write_expression (file, expr -> data.reverse.buffer,
+					col, scol);
+		col = token_print_indent (file, col, indent, "", "",
+					  ")");
+		break;
+
+	      case expr_leased_address:
+		col = token_print_indent (file, col, indent, "", "",
+					  "leased-address");
+		break;
+
+	      case expr_binary_to_ascii:
+		col = token_print_indent (file, col, indent, "", "",
+					  "binary-to-ascii");
+		col = token_print_indent (file, col, indent, " ", "",
+					  "(");
+		scol = col;
+		col = write_expression (file, expr -> data.b2a.base,
+					col, scol);
+		col = token_print_indent (file, col, scol, "", " ",
+					  ",");
+		col = write_expression (file, expr -> data.b2a.width,
+					col, scol);
+		col = token_print_indent (file, col, scol, "", " ",
+					  ",");
+		col = write_expression (file, expr -> data.b2a.seperator,
+					col, scol);
+		col = token_print_indent (file, col, scol, "", " ",
+					  ",");
+		col = write_expression (file, expr -> data.b2a.buffer,
+					col, scol);
+		col = token_print_indent (file, col, indent, "", "",
+					  ")");
+		break;
+
+	      case expr_config_option:
+		s = "exists";
+		goto print_option_name;
+
+	      case expr_host_decl_name:
+		col = token_print_indent (file, col, indent, "", "",
+					  "host-decl-name");
+		break;
+
+	      case expr_pick_first_value:
+		e = expr;
+		col = token_print_indent (file, col, indent, "", "",
+					  "concat");
+		col = token_print_indent (file, col, indent, " ", "",
+					  "(");
+		scol = col;
+	      pick_again:
+		col = write_expression (file,
+					e -> data.pick_first_value.car,
+					col, scol);
+		col = token_print_indent (file, col, scol, "", " ",
+					  ",");
+		if (e -> data.pick_first_value.cdr -> op ==
+		    expr_pick_first_value) {
+			e = e -> data.pick_first_value.cdr;
+			goto pick_again;
+		}
+		col = write_expression (file,
+					e -> data.pick_first_value.cdr,
+					col, scol);
+		col = token_print_indent (file, col, indent, "", "",
+					  ")");
+		break;
+
+	      case expr_lease_time:
+		col = token_print_indent (file, col, indent, "", "",
+					  "lease-time");
+		break;
+
+	      case expr_dns_update:
+		col = token_print_indent (file, col, indent, "", "",
+					  "dns-update");
+		col = token_print_indent (file, col, indent, " ", "",
+					  "(");
+		scol = col;
+		col = write_expression (file, expr -> data.dns_update.type,
+					col, scol);
+		col = token_print_indent (file, col, scol, "", " ",
+					  ",");
+		col = write_expression (file, expr -> data.dns_update.expr1,
+					col, scol);
+		col = token_print_indent (file, col, scol, "", " ",
+					  ",");
+		col = write_expression (file, expr -> data.dns_update.expr2,
+					col, scol);
+		col = token_print_indent (file, col, scol, "", " ",
+					  ",");
+		col = write_expression (file, expr -> data.dns_update.ttl,
+					col, scol);
+		col = token_print_indent (file, col, indent, "", "",
+					  ")");
+		break;
+
+	      default:
+		log_fatal ("invalid expression type in print_expression: %d",
+			   expr -> op);
+	}
+	return col;
 }

@@ -1010,6 +1010,7 @@ int is_data_expression PROTO ((struct expression *));
 int is_numeric_expression PROTO ((struct expression *));
 int op_precedence PROTO ((enum expr_op, enum expr_op));
 enum expression_context op_context PROTO ((enum expr_op));
+int write_expression (FILE *, struct expression *, int, int);
 
 /* dhcp.c */
 extern int outstanding_pings;
@@ -1148,6 +1149,8 @@ int executable_statement_reference PROTO ((struct executable_statement **,
 					   char *));
 int executable_statement_dereference PROTO ((struct executable_statement **,
 					     char *));
+void write_statements (FILE *, struct executable_statement *, int);
+
 int packet_allocate PROTO ((struct packet **, char *));
 int packet_reference PROTO ((struct packet **, struct packet *, char *));
 int packet_dereference PROTO ((struct packet **, char *));
@@ -1165,6 +1168,11 @@ char *print_dotted_quads PROTO ((int, u_int8_t *));
 char *print_dec_1 PROTO ((int));
 char *print_dec_2 PROTO ((int));
 void print_expression PROTO ((char *, struct expression *));
+int token_print_indent_concat (FILE *, int, int, char *, char *, ...);
+int token_indent_data_string (FILE *, int, int, char *, char *,
+			      struct data_string *);
+int token_print_indent (FILE *, int, int, char *, char *, char *);
+void indent_spaces (FILE *, int);
 
 /* socket.c */
 #if defined (USE_SOCKET_SEND) || defined (USE_SOCKET_RECEIVE) \
