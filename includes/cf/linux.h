@@ -112,8 +112,6 @@ extern int h_errno;
 #  define LINUX_SLASHPROC_DISCOVERY
 #  define PROCDEV_DEVICE "/proc/net/dev"
 #  define HAVE_ARPHRD_TUNNEL
-#  define ALIAS_NAMES_PERMUTED
-#  define SKIP_DUMMY_INTERFACES
 #  define HAVE_ARPHRD_METRICOM
 #  define HAVE_ARPHRD_IEEE802
 #  define HAVE_ARPHRD_LOOPBACK
@@ -125,3 +123,5 @@ extern int h_errno;
 # endif
 #endif
 
+#define ALIAS_NAMES_PERMUTED
+#define SKIP_DUMMY_INTERFACES
