@@ -100,6 +100,9 @@ and for prodding me into improving it.
   appear in a lease file.  An option that might have been named "#144" is
   now "unknown-144".
 
+- Another patch from Bill Stephens which allows the ping-check timeout to
+  be configured as 'ping-timeout'.  Defaults to 1.
+
 			Changes since 3.0.1rc10
 
 - Potential buffer overflows in minires repaired.
