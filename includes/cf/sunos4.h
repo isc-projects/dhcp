@@ -39,11 +39,11 @@
 
 #define int8_t		char
 #define int16_t		short
-#define int32_t		long
+#define int32_t		int
 
 #define u_int8_t	unsigned char
 #define u_int16_t	unsigned short 
-#define u_int32_t	unsigned long 
+#define u_int32_t	unsigned int
 
 /* No endian.h either. */
 /*
