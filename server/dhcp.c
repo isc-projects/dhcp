@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.110 1999/10/04 23:51:45 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.111 1999/10/05 00:04:43 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -295,21 +295,8 @@ void dhcprelease (packet)
 	      lease ? "" : "not ");
 
 	/* If we found a lease, release it. */
-	if (lease) {
-#if defined (NSUPDATE) && 0
-		nsupdate (lease, lease -> state, packet, DELETE);
-#endif
-	/* If there are statements to execute when the lease is
-	   committed, execute them. */
-		if (lease -> on_release) {
-			execute_statements (packet, lease, packet -> options,
-					    (struct option_state *)0, /* XXX */
-					    lease -> on_release);
-			executable_statement_dereference (&lease -> on_release,
-							  "dhcprelease");
-		}
+	if (lease)
 		release_lease (lease);
-	}
 }
 
 void dhcpdecline (packet)
@@ -941,8 +928,7 @@ void ack_lease (packet, lease, offer, when, msg)
 				/* Don't release expired leases, and don't
 				   release the lease we're going to assign. */
 				while (seek) {
-					if (seek != lease &&
-					    seek -> ends > cur_time)
+					if (seek != lease)
 						break;
 					seek = lease -> n_uid;
 				}
@@ -956,8 +942,7 @@ void ack_lease (packet, lease, offer, when, msg)
 					(lease -> hardware_addr.haddr,
 					 lease -> hardware_addr.hlen));
 				while (seek) {
-					if (seek != lease &&
-					    seek -> ends > cur_time)
+					if (seek != lease)
 						break;
 					seek = lease -> n_hw;
 				}
