@@ -575,6 +575,154 @@ that the server actually exits.
 .PP
 To shut the server down, open its control object and set the state
 attribute to 2.
+.SH THE FAILOVER-STATE OBJECT
+The failover-state object is the object that tracks the state of the
+failover protocol as it is being managed for a given failover peer.
+The failover object has the following attributes (please see
+.B dhcpd.conf (5)
+for explanations about what these attributes mean):
+.PP
+.B name \fIdata\fR examine
+.RS 0.5i
+Indicates the name of the failover peer relationship, as described in
+the server's \fBdhcpd.conf\fR file.
+.RE
+.PP
+.B partner-address \fIdata\fR examine
+.RS 0.5i
+Indicates the failover partner's IP address.
+.RE
+.PP
+.B local-address \fIdata\fR examine
+.RS 0.5i
+Indicates the IP address that is being used by the DHCP server for
+this failover pair.
+.RE
+.PP
+.B partner-port \fIdata\fR examine
+.RS 0.5i
+Indicates the TCP port on which the failover partner is listening for
+failover protocol connections.
+.RE
+.PP
+.B local-port \fIdata\fR examine
+.RS 0.5i
+Indicates the TCP port on which the DHCP server is listening for
+failover protocol connections for this failover pair.
+.RE
+.PP
+.B max-outstanding-updates \fIinteger\fR examine
+.RS 0.5i
+Indicates the number of updates that can be outstanding and
+unacknowledged at any given time, in this failover relationship.
+.RE
+.PP
+.B mclt \fIinteger\fR examine
+.RS 0.5i
+Indicates the maximum client lead time in this failover relationship.
+.RE
+.PP
+.B load-balance-max-secs \fIinteger\fR examine
+.RS 0.5i
+Indicates the maximum value for the secs field in a client request
+before load balancing is bypassed.
+.RE
+.PP
+.B load-balance-hba \fIdata\fR examine
+.RS 0.5i
+Indicates the load balancing hash bucket array for this failover
+relationship.
+.RE
+.PP
+.B local-state \fIinteger\fR examine, modify
+.RS 0.5i
+Indicates the present state of the DHCP server in this failover
+relationship.   Possible values for state are:
+.RE
+.RS 1i
+.PP
+.nf
+1  - partner down
+2  - normal
+3  - communications interrupted
+4  - resolution interrupted
+5  - potential conflict
+6  - recover
+7  - recover done
+8  - shutdown
+9  - paused
+10 - startup
+11 - recover wait
+.fi
+.RE
+.PP
+.RS 0.5i
+In general it is not a good idea to make changes to this state.
+However, in the case that the failover partner is known to be down, it
+can be useful to set the DHCP server's failover state to partner
+down.   At this point the DHCP server will take over service of the
+failover partner's leases as soon as possible, and will give out
+normal leases, not leases that are restricted by MCLT.   If you do put
+the DHCP server into the partner-down when the other DHCP server is
+not in the partner-down state, but is not reachable, IP address
+assignment conflicts are possible, even likely.   Once a server has
+been put into partner-down mode, its failover partner must not be
+brought back online until communication is possible between the two
+servers.
+.RE
+.PP
+.B partner-state \fIinteger\fR examine
+.RS 0.5i
+Indicates the present state of the failover partner.
+.RE
+.PP
+.B local-stos \fIinteger\fR examine
+.RS 0.5i
+Indicates the time at which the DHCP server entered its present state
+in this failover relationship.
+.RE
+.PP
+.B partner-stos \fIinteger\fR examine
+.RS 0.5i
+Indicates the time at which the failover partner entered its present state.
+.RE
+.PP
+.B hierarchy \fIinteger\fR examine
+.RS 0.5i
+Indicates whether the DHCP server is primary (0) or secondary (1) in
+this failover relationship.
+.RE
+.PP
+.B last-packet-sent \fIinteger\fR examine
+.RS 0.5i
+Indicates the time at which the most recent failover packet was sent
+by this DHCP server to its failover partner.
+.RE
+.PP
+.B last-timestamp-received \fIinteger\fR examine
+.RS 0.5i
+Indicates the timestamp that was on the failover message most recently
+received from the failover partner.
+.RE
+.PP
+.B skew \fIinteger\fR examine
+.RS 0.5i
+Indicates the skew between the failover partner's clock and this DHCP
+server's clock
+.RE
+.PP
+.B max-response-delay \fIinteger\fR examine
+.RS 0.5i
+Indicates the time in seconds after which, if no message is received
+from the failover partner, the partner is assumed to be out of
+communication.
+.RE
+.PP
+.B cur-unacked-updates \fIinteger\fR examine
+.RS 0.5i
+Indicates the number of update messages that have been received from
+the failover partner but not yet processed.
+.RE
 .SH FILES
 .B ETCDIR/dhcpd.conf, DBDIR/dhcpd.leases, RUNDIR/dhcpd.pid,
 .B DBDIR/dhcpd.leases~.
