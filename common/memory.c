@@ -3,7 +3,7 @@
    Memory-resident database... */
 
 /*
- * Copyright (c) 1995, 1996 The Internet Software Consortium.
+ * Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: memory.c,v 1.35 1997/09/16 18:14:18 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: memory.c,v 1.35.2.1 1998/06/25 05:47:29 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -421,9 +421,9 @@ void enter_lease (lease)
 			       piaddr (lease -> ip_addr));
 		}
 		*comp = *lease;
-		lease -> next = dangling_leases;
-		lease -> prev = (struct lease *)0;
-		dangling_leases = lease;
+		comp -> next = dangling_leases;
+		comp -> prev = (struct lease *)0;
+		dangling_leases = comp;
 	} else {
 		/* Record the hostname information in the lease. */
 		comp -> hostname = lease -> hostname;
@@ -641,7 +641,7 @@ void abandon_lease (lease, message)
 
 	lease -> flags |= ABANDONED_LEASE;
 	lt = *lease;
-	lt.ends = MAX_TIME;
+	lt.ends = cur_time;
 	warn ("Abandoning IP address %s: %s",
 	      piaddr (lease -> ip_addr), message);
 	lt.hardware_addr.htype = 0;
