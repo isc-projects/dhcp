@@ -76,6 +76,7 @@ enum expr_op {
 	expr_extract_int32,
 	expr_const_int,
 	expr_exists,
+	expr_encapsulate,
 };
 
 struct expression {
@@ -107,6 +108,7 @@ struct expression {
 		struct expression *concat [2];
 		struct dns_host_entry *host_lookup;
 		struct option *exists;
+		struct data_string encapsulate;
 	} data;
 	int flags;
 #	define EXPR_EPHEMERAL	1
@@ -128,14 +130,28 @@ struct decoded_option_state; /* forward */
 
 struct universe {
 	char *name;
-	int (*lookup_func)
-		PROTO ((struct data_string *,
-			struct option_state *, int));
-	void (*set_func) PROTO ((struct option_state *,
-				 struct option_cache *,
-				 enum statement_op));
+	struct option_cache *(*lookup_func) PROTO ((struct universe *,
+						    struct option_state *,
+						    int));
+	void (*save_func) PROTO ((struct universe *, struct option_state *,
+				  struct option_cache *));
+	int (*get_func) PROTO ((struct data_string *, struct universe *,
+				struct option_state *, int));
+	void (*set_func) PROTO ((struct universe *, struct option_state *,
+				 struct option_cache *, enum statement_op));
+		
+	void (*delete_func) PROTO ((struct universe *universe,
+				    struct option_state *, int));
+	int (*option_state_dereference) PROTO ((struct universe *,
+						struct option_state *));
+	int (*encapsulate) PROTO ((struct data_string *, struct option_state *,
+				   struct universe *));
+	void (*store_tag) PROTO ((unsigned char *, u_int32_t));
+	void (*store_length) PROTO ((unsigned char *, u_int32_t));
+	int tag_size, length_size;
 	struct hash_table *hash;
 	struct option *options [256];
+	int index;
 };
 
 struct option {
