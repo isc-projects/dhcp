@@ -1,4 +1,4 @@
-/* confpars.c
+/* dhcpxlt.c
 
    Translate old (Beta 4 and previous) dhcpd config files... */
 
@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcpxlt.c,v 1.1 1996/08/27 09:40:53 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcpxlt.c,v 1.2 1996/08/28 01:34:55 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -50,6 +50,7 @@ static char copyright[] =
 
 static TIME parsed_time;
 int log_priority;
+int log_perror = 1;
 
 int main (argc, argv, envp)
 	int argc;
@@ -1277,6 +1278,10 @@ void indent (i)
 	int k;
 
 	if (!i) {
+		if (comment_index) {
+			fwrite (comments, comment_index, 1, stdout);
+			comment_index = 0;
+		}
 		for (k = 0; k < indent / 8; k++)
 			putchar ('\t');
 		for (k = 0; k < indent % 8; k++)
