@@ -29,7 +29,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: omapi.c,v 1.2 1999/09/09 21:12:12 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: omapi.c,v 1.3 1999/09/09 23:33:43 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -53,7 +53,8 @@ void dhcp_db_objects_setup ()
 					     dhcp_lease_signal_handler,
 					     dhcp_lease_stuff_values,
 					     dhcp_lease_lookup, 
-					     dhcp_lease_create);
+					     dhcp_lease_create,
+					     dhcp_lease_delete);
 	if (status != ISC_R_SUCCESS)
 		log_fatal ("Can't register lease object type: %s",
 			   isc_result_totext (status));
@@ -66,8 +67,9 @@ void dhcp_db_objects_setup ()
 					     dhcp_host_signal_handler,
 					     dhcp_host_stuff_values,
 					     dhcp_host_lookup, 
-					     dhcp_host_create);
-	if (status != ISC_R_SUCCESS)
+					     dhcp_host_create,
+					     dhcp_host_delete);
+if (status != ISC_R_SUCCESS)
 		log_fatal ("Can't register host object type: %s",
 			   isc_result_totext (status));
 
@@ -79,7 +81,8 @@ void dhcp_db_objects_setup ()
 					     dhcp_pool_signal_handler,
 					     dhcp_pool_stuff_values,
 					     dhcp_pool_lookup, 
-					     dhcp_pool_create);
+					     dhcp_pool_create,
+					     dhcp_pool_delete);
 	if (status != ISC_R_SUCCESS)
 		log_fatal ("Can't register pool object type: %s",
 			   isc_result_totext (status));
@@ -575,6 +578,12 @@ isc_result_t dhcp_lease_create (omapi_object_t **lp,
 	return ISC_R_NOTIMPLEMENTED;
 }
 
+isc_result_t dhcp_lease_delete (omapi_object_t *lp,
+				omapi_object_t *id)
+{
+	return ISC_R_NOTIMPLEMENTED;
+}
+
 #if 0
 isc_result_t dhcp_group_set_value  (omapi_object_t *, omapi_object_t *,
 				    omapi_data_string_t *,
@@ -1024,6 +1033,18 @@ isc_result_t dhcp_host_create (omapi_object_t **lp,
 				       "dhcp_host_create");
 }
 
+isc_result_t dhcp_host_delete (omapi_object_t *lp,
+			       omapi_object_t *id)
+{
+	struct host_decl *hp;
+	if (lp -> type != dhcp_type_host)
+		return ISC_R_INVALIDARG;
+	hp = (struct host_decl *)lp;
+
+	delete_host (hp, 1);
+	return ISC_R_SUCCESS;
+}
+
 isc_result_t dhcp_pool_set_value  (omapi_object_t *h,
 				    omapi_object_t *id,
 				    omapi_data_string_t *name,
@@ -1152,6 +1173,12 @@ isc_result_t dhcp_pool_lookup (omapi_object_t **lp,
 
 isc_result_t dhcp_pool_create (omapi_object_t **lp,
 				omapi_object_t *id)
+{
+	return ISC_R_NOTIMPLEMENTED;
+}
+
+isc_result_t dhcp_pool_delete (omapi_object_t *lp,
+			       omapi_object_t *id)
 {
 	return ISC_R_NOTIMPLEMENTED;
 }
