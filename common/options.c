@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.26 1997/09/16 18:15:25 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.27 1998/02/06 01:18:33 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -114,9 +114,18 @@ void parse_option_buffer (packet, buffer, length)
 			packet -> options_valid = 0;
 			return;
 		}
+
+		/* If this is a Relay Agent Information option, we must
+		   handle it specially. */
+		if (code == DHO_DHCP_AGENT_OPTIONS) {
+			if (!parse_agent_information_option (packet,
+							     len, &s [2])) {
+				warn ("malformed agent information option.");
+			}
+
 		/* If we haven't seen this option before, just make
 		   space for it and copy it there. */
-		if (!packet -> options [code].data) {
+		} else if (!packet -> options [code].data) {
 			if (!(t = (unsigned char *)malloc (len + 1)))
 				error ("Can't allocate storage for option %s.",
 				       dhcp_options [code].name);
@@ -151,14 +160,65 @@ void parse_option_buffer (packet, buffer, length)
 	packet -> options_valid = 1;
 }
 
+/* Parse a Relay Agent Information option and put it at the end of the
+   list of such options on the specified packet. */
+
+int parse_agent_information_option (packet, len, data)
+	struct packet *packet;
+	int len;
+	u_int8_t *data;
+{
+	struct agent_options *a, **tail;
+	struct option_tag *t, *oth = 0, **ott = &oth;
+	u_int8_t *op = data, *max = data + len;
+
+	/* Parse the agent information option suboptions. */
+	while (op < max) {
+		/* Check for overflow. */
+		if (op + 1 == max || op + op [1] + 2 > max)
+			return 0;
+		/* Make space for this suboption. */
+ 		t = (struct option_tag *)malloc (op [1] + 1 + sizeof *t);
+		if (!t)
+			error ("can't allocate space for option tag data.");
+
+		/* Link it in at the tail of the list. */
+		t -> next = (struct option_tag *)0;
+		*ott = t;
+		ott = &t -> next;
+		
+		/* Copy the option data in in its raw form. */
+		memcpy (t -> data, op, op [1] + 2);
+		op += op [1] + 2;
+	}
+
+	/* Make an agent options structure to put on the list. */
+	a = (struct agent_options *)malloc (sizeof *a);
+	if (!a)
+		error ("can't allocate space for agent option structure.");
+
+	/* Find the tail of the list. */
+	for (tail = &packet -> agent_options; *tail; tail = &((*tail) -> next))
+		;
+	*tail = a;
+	a -> next = (struct agent_options *)0;
+	a -> first = oth;
+	a -> length = len;
+
+	return 1;
+}
+
 /* cons options into a big buffer, and then split them out into the
    three seperate buffers if needed.  This allows us to cons up a set
    of vendor options using the same routine. */
 
-int cons_options (inpacket, outpacket, options, overload, terminate, bootpp)
+int cons_options (inpacket, outpacket, mms, options, agent_options,
+		  overload, terminate, bootpp)
 	struct packet *inpacket;
 	struct dhcp_packet *outpacket;
+	int mms;
 	struct tree_cache **options;
+	struct agent_options *agent_options;
 	int overload;	/* Overload flags that may be set. */
 	int terminate;
 	int bootpp;
@@ -167,20 +227,29 @@ int cons_options (inpacket, outpacket, options, overload, terminate, bootpp)
 	int priority_len;
 	unsigned char buffer [4096];	/* Really big buffer... */
 	int main_buffer_size;
-	int mainbufix, bufix;
+	int mainbufix, bufix, agentix;
 	int option_size;
 	int length;
+
+	/* If there's a Maximum Message Size option in the incoming packet
+	   and no alternate maximum message size has been specified, take the
+	   one in the packet. */
+
+	if (!mms &&
+	    inpacket && inpacket -> options [DHO_DHCP_MAX_MESSAGE_SIZE].data) {
+		mms = getUShort (inpacket ->
+				 options [DHO_DHCP_MAX_MESSAGE_SIZE].data);
+	}
 
 	/* If the client has provided a maximum DHCP message size,
 	   use that; otherwise, if it's BOOTP, only 64 bytes; otherwise
 	   use up to the minimum IP MTU size (576 bytes). */
 	/* XXX if a BOOTP client specifies a max message size, we will
 	   honor it. */
-	if (inpacket && inpacket -> options [DHO_DHCP_MAX_MESSAGE_SIZE].data) {
-		main_buffer_size =
-			(getUShort (inpacket -> options
-				    [DHO_DHCP_MAX_MESSAGE_SIZE].data)
-			 - DHCP_FIXED_LEN);
+
+	if (mms) {
+		main_buffer_size = mms - DHCP_FIXED_LEN;
+
 		/* Enforce a minimum packet size... */
 		if (main_buffer_size < (576 - DHCP_FIXED_LEN))
 			main_buffer_size = 576 - DHCP_FIXED_LEN;
@@ -188,6 +257,10 @@ int cons_options (inpacket, outpacket, options, overload, terminate, bootpp)
 		main_buffer_size = 64;
 	else
 		main_buffer_size = 576 - DHCP_FIXED_LEN;
+
+	/* Set a hard limit at the size of the output buffer. */
+	if (main_buffer_size > sizeof buffer)
+		main_buffer_size = sizeof buffer;
 
 	/* Preload the option priority list with mandatory options. */
 	priority_len = 0;
@@ -240,9 +313,12 @@ int cons_options (inpacket, outpacket, options, overload, terminate, bootpp)
 		memcpy (&outpacket -> options [mainbufix],
 			buffer, option_size);
 		mainbufix += option_size;
-		if (mainbufix < main_buffer_size)
+		if (mainbufix < main_buffer_size) {
+			agentix = mainbufix;
 			outpacket -> options [mainbufix++]
 				= DHO_END;
+		} else
+			agentix = mainbufix;
 		length = DHCP_FIXED_NON_UDP + mainbufix;
 	} else {
 		outpacket -> options [mainbufix++] =
@@ -255,8 +331,10 @@ int cons_options (inpacket, outpacket, options, overload, terminate, bootpp)
 
 		memcpy (&outpacket -> options [mainbufix],
 			buffer, main_buffer_size - mainbufix);
+		length = DHCP_FIXED_NON_UDP + main_buffer_size;
+		agentix = main_buffer_size;
+
 		bufix = main_buffer_size - mainbufix;
-		length = DHCP_FIXED_NON_UDP + mainbufix;
 		if (overload & 1) {
 			if (option_size - bufix <= DHCP_FILE_LEN) {
 				memcpy (outpacket -> file,
@@ -287,6 +365,38 @@ int cons_options (inpacket, outpacket, options, overload, terminate, bootpp)
 					= DHO_PAD;
 		}
 	}
+
+	/* We tack any agent options onto the end of the packet after
+	   we've put it together. */
+	if (agent_options) {
+	    int len = 0;
+	    struct agent_options *a;
+	    struct option_tag *o;
+
+	    /* Cycle through the options, appending them to the
+	       buffer. */
+	    for (a = agent_options; a; a = a -> next) {
+		if (agentix + a -> length + 3 + DHCP_FIXED_LEN <=
+		    dhcp_max_agent_option_packet_length) {
+			outpacket ->
+				options [agentix++] = DHO_DHCP_AGENT_OPTIONS;
+			outpacket -> options [agentix++] = a -> length;
+			for (o = a -> first; o; o = o -> next) {
+			    memcpy (&outpacket -> options [agentix],
+				    o -> data, o -> data [1] + 2);
+			    agentix += o -> data [1] + 2;
+		    }
+		}
+	    }
+
+	    /* Reterminate the packet. */
+	    outpacket -> options [agentix++] = DHO_END;
+
+	    /* Recompute the length, which may now be higher than the
+	       client can accept but should be okay for the relay agent. */
+	    length = agentix + DHCP_FIXED_NON_UDP;
+	}
+		
 	return length;
 }
 
@@ -577,7 +687,7 @@ void do_packet (interface, packbuf, len, from_port, from, hfrom)
 	struct hardware *hfrom;
 {
 	struct packet tp;
-	struct dhcp_packet tdp;
+	struct dhcp_packet tdp; /* XXX This < 1500 bytes! */
 
 	memcpy (&tdp, packbuf, len);
 	memset (&tp, 0, sizeof tp);
@@ -597,5 +707,7 @@ void do_packet (interface, packbuf, len, from_port, from, hfrom)
 		dhcp (&tp);
 	else
 		bootp (&tp);
+
+	/* XXX what about freeing the options ?!? */
 }
 
