@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.48 2001/04/20 18:48:25 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.49 2001/04/20 19:05:53 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -3520,8 +3520,6 @@ void dhcp_failover_timeout (void *vstate)
 	isc_result_t status;
 
 	if (!state || state -> type != dhcp_type_failover_state)
-		return;
-	if (state -> me.state != normal)
 		return;
 	link = state -> link_to_peer;
 	if (!link ||
