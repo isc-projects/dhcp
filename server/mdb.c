@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.61 2001/04/24 00:55:31 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.62 2001/04/24 01:02:24 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1234,6 +1234,8 @@ int lease_copy (struct lease **lp,
 	if (lease -> uid == lease -> uid_buf) {
 		lt -> uid = lt -> uid_buf;
 		memcpy (lt -> uid_buf, lease -> uid_buf, sizeof lt -> uid_buf);
+	} else if (!lease -> uid_max) {
+		lt -> uid = (unsigned char *)0;
 	} else {
 		lt -> uid = dmalloc (lt -> uid_max, MDL);
 		if (!lt -> uid) {
