@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: clparse.c,v 1.31.2.3 1999/11/13 04:01:09 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: clparse.c,v 1.31.2.4 1999/12/21 19:22:27 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -104,7 +104,8 @@ int read_client_conf ()
 	for (ip = interfaces; ip; ip = ip -> next) {
 		if (!ip -> client) {
 			ip -> client = (struct client_state *)
-				malloc (sizeof (struct client_state));
+				dmalloc (sizeof (struct client_state),
+					 "read_client_conf");
 			if (!ip -> client)
 				log_fatal ("no memory for client state.");
 			memset (ip -> client, 0, sizeof *(ip -> client));
@@ -114,7 +115,8 @@ int read_client_conf ()
 		if (!ip -> client -> config) {
 			if (!config) {
 				config = (struct client_config *)
-					malloc (sizeof (struct client_config));
+					dmalloc (sizeof (struct client_config),
+						 "read_client_conf");
 				if (!config)
 				    log_fatal ("no memory for client config.");
 				memcpy (config, &top_level_config,
@@ -284,6 +286,8 @@ void parse_client_statement (cfile, ip, config)
 		if (!option)
 			return;
 		stmt = parse_option_statement (cfile, 1, option, op);
+		if (!stmt)
+			return;
 		for (; *p; p = &((*p) -> next))
 			;
 		*p = stmt;
@@ -661,9 +665,10 @@ struct interface_info *interface_or_dummy (name)
 	/* If we didn't find an interface, make a dummy interface as
 	   a placeholder. */
 	if (!ip) {
-		ip = ((struct interface_info *)malloc (sizeof *ip));
+		ip = ((struct interface_info *)dmalloc (sizeof *ip,
+							"interface_or_dummy"));
 		if (!ip)
-			log_fatal ("Insufficient memory to record interface %s",
+			log_fatal ("No memory to record interface %s",
 			       name);
 		memset (ip, 0, sizeof *ip);
 		strcpy (ip -> name, name);
@@ -725,7 +730,9 @@ void parse_client_lease_statement (cfile, is_static)
 		return;
 	}
 
-	lease = (struct client_lease *)malloc (sizeof (struct client_lease));
+	lease = ((struct client_lease *)
+		 dmalloc (sizeof (struct client_lease),
+			  "parse_client_lease_statement"));
 	if (!lease)
 		log_fatal ("no memory for lease.\n");
 	memset (lease, 0, sizeof *lease);
@@ -1132,9 +1139,10 @@ void parse_string_list (cfile, lp, multiple)
 			return;
 		}
 
-		tmp = (struct string_list *)malloc (strlen (val) + 1 +
-						    sizeof
-						    (struct string_list *));
+		tmp = (struct string_list *)
+			dmalloc ((strlen (val) + 1 +
+				  sizeof (struct string_list *)),
+				 "parse_string_list");
 		if (!tmp)
 			log_fatal ("no memory for string list entry.");
 
@@ -1173,7 +1181,8 @@ void parse_reject_statement (cfile, config)
 			return;
 		}
 
-		list = (struct iaddrlist *)malloc (sizeof (struct iaddrlist));
+		list = (struct iaddrlist *)dmalloc (sizeof (struct iaddrlist),
+						    "parse_reject_statement");
 		if (!list)
 			log_fatal ("no memory for reject list!");
 
