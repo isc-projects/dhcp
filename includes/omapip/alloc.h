@@ -56,19 +56,20 @@ struct rc_history_entry {
 	int refcnt;
 };
 
-#define rc_register(x, l, y, z) do { \
+#define rc_register(x, l, r, y, z) do { \
 	rc_history [rc_history_index].file = (x); \
 	rc_history [rc_history_index].line = (l); \
+	rc_history [rc_history_index].reference = (r); \
 	rc_history [rc_history_index].addr = (y); \
 	rc_history [rc_history_index].refcnt = (z); \
 	if (++rc_history_index == RC_HISTORY_MAX) \
 		rc_history_index = 0;\
 	} while (0)
-#define rc_register_mdl(y, z) \
-	rc_register (__FILE__, __LINE__, y, z)
+#define rc_register_mdl(r, y, z) \
+	rc_register (__FILE__, __LINE__, r, y, z)
 #else
-#define rc_register(file, line, addr, refcnt)
-#define rc_register_mdl(addr, refcnt)
+#define rc_register(file, line, reference, addr, refcnt)
+#define rc_register_mdl(reference, addr, refcnt)
 #endif
 
 #if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL)
