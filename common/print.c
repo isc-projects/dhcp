@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: print.c,v 1.25 1999/09/22 17:25:27 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: print.c,v 1.26 1999/10/01 03:18:33 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -595,7 +595,7 @@ int token_indent_data_string (FILE *file, int col, int indent,
 					   : ""), obuf);
 		if (i + 1 != data -> len)
 			col = token_print_indent (file, col, indent,
-						  prefix, suffix, obuf);
+						  prefix, suffix, ":");
 	}
 	return col;
 }
