@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dispatch.c,v 1.21 1996/08/30 23:41:07 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dispatch.c,v 1.22 1996/09/02 21:15:17 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -120,12 +120,12 @@ void discover_interfaces ()
 			error ("Can't get interface flags for %s: %m",
 			       ifr.ifr_name);
 
-		/* Skip loopback and point-to-point interfaces. */
+		/* Skip loopback, point-to-point and down interfaces. */
 		if ((ifr.ifr_flags & IFF_LOOPBACK) ||
-		    (ifr.ifr_flags & IFF_POINTOPOINT))
+		    (ifr.ifr_flags & IFF_POINTOPOINT) ||
+		    !(ifr.ifr_flags & IFF_UP))
 			continue;
 		
-
 		/* See if we've seen an interface that matches this one. */
 		for (tmp = interfaces; tmp; tmp = tmp -> next)
 			if (!strcmp (tmp -> name, ifp -> ifr_name))
