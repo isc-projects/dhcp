@@ -42,20 +42,24 @@
 
 #ifndef lint
 static char copyright[] =
-"@(#) Copyright (c) 1995 The Internet Software Consortium.  All rights reserved.\n";
+"@(#) Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
 #include <sys/ioctl.h>
+#ifdef AF_LINK
+#include <net/if_dl.h>
+#endif
 
 struct interface_info *interfaces;
+static struct hardware_link *interface_links;
 
 /* Use the SIOCGIFCONF ioctl to get a list of all the attached interfaces.
    For each interface that's of type INET and not the loopback interface,
    register that interface with the network I/O software, figure out what
    subnet it's on, and add it to the list of interfaces. */
 
-void get_interface_list ()
+void discover_interfaces ()
 {
 	struct interface_info *tmp;
 	static char buf [8192];
@@ -64,6 +68,8 @@ void get_interface_list ()
 	int sock;
 	int ifcount = 0;
 	int ifix = 0;
+	struct hardware_link *lp;
+	struct interface_info *iface;
 
 	/* Create an unbound datagram socket to do the SIOCGIFADDR ioctl on. */
 	if ((sock = socket (AF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0)
@@ -87,11 +93,31 @@ void get_interface_list ()
 #else
 		i += sizeof *ifp;
 #endif
+
+		/* If we have the capability, extract link information
+		   and record it in a linked list. */
+#ifdef AF_LINK
+		if (ifp -> ifr_addr.sa_family == AF_LINK) {
+			struct sockaddr_dl *foo = ((struct sockaddr_dl *)
+						   (&ifp -> ifr_addr));
+			lp = malloc (sizeof *lp);
+			if (!lp)
+				error ("Can't allocate link pointer.");
+			strcpy (lp -> name, ifp -> ifr_name);
+			lp -> address.hlen = foo -> sdl_alen;
+			lp -> address.htype = foo -> sdl_type;
+			memcpy (lp -> address.haddr,
+				LLADDR (foo), foo -> sdl_alen);
+			lp -> next = interface_links;
+			interface_links = lp;
+		}
+#endif /* AF_LINK */
+
 		if (ifp -> ifr_addr.sa_family == AF_INET) {
 			struct sockaddr_in *foo =
 				(struct sockaddr_in *)(&ifp -> ifr_addr);
 			/* We don't want the loopback interface. */
-			if (foo -> sin_addr.s_addr == INADDR_LOOPBACK)
+			if (foo -> sin_addr.s_addr == htonl (INADDR_LOOPBACK))
 				continue;
 			tmp = ((struct interface_info *)
 			       dmalloc (sizeof *tmp, "get_interface_list"));
@@ -100,11 +126,29 @@ void get_interface_list ()
 				       "record interface");
 			memset (tmp, 0, sizeof *tmp);
 			tmp -> address.len = 4;
-			memcpy (tmp -> address.iabuf, &foo -> sin_addr.s_addr);
+			memcpy (tmp -> address.iabuf, &foo -> sin_addr.s_addr,
+				tmp -> address.len);
 			tmp -> local_subnet = find_subnet (tmp -> address);
-			if_register_send (tmp, ifp);
+			strcpy (tmp -> name, ifp -> ifr_name);
 			if_register_receive (tmp, ifp);
+			if_register_send (tmp, ifp);
+			tmp -> next = interfaces;
+			interfaces = tmp;
 		}
+	}
+
+	/* Connect interface link addresses to interfaces. */
+	for (lp = interface_links; lp; lp = lp -> next) {
+		for (iface = interfaces; iface; iface = iface -> next) {
+				if (!strcmp (iface -> name, lp -> name)) {
+					note ("%s: %s", lp -> name,
+					      print_hw_addr
+					      (lp -> address.hlen,
+					       lp -> address.htype,
+					       lp -> address.haddr));
+					iface -> hw_address = lp -> address;
+				}
+			}
 	}
 }
 
@@ -116,7 +160,7 @@ void get_interface_list ()
 void dispatch ()
 {
 	struct sockaddr_in from;
-	struct hardware_addr hfrom;
+	struct hardware hfrom;
 	struct iaddr ifrom;
 	fd_set r, w, x;
 	struct interface_info *l;
@@ -133,11 +177,11 @@ void dispatch ()
 
 	do {
 		/* Set up the read mask. */
-		for (l = sockets; l; l = l -> next) {
-			FD_SET (l -> sock, &r);
-			FD_SET (l -> sock, &x);
-			if (l -> sock > max)
-				max = l -> sock;
+		for (l = interfaces; l; l = l -> next) {
+			FD_SET (l -> rfdesc, &r);
+			FD_SET (l -> rfdesc, &x);
+			if (l -> rfdesc > max)
+				max = l -> rfdesc;
 		}
 
 		/* Wait for a packet or a timeout... XXX */
@@ -157,9 +201,11 @@ void dispatch ()
 			     receive_packet (l, packbuf, sizeof packbuf,
 					     &from, &hfrom)) < 0) {
 				warn ("receive_packet failed on %s: %m",
-				      inet_ntoa (l -> addr.sin_addr));
+				      piaddr (l -> address));
 				continue;
 			}
+			if (result == 0)
+				continue;
 			note ("request from %s, port %d",
 			      inet_ntoa (from.sin_addr),
 			      htons (from.sin_port));
@@ -167,7 +213,7 @@ void dispatch ()
 			memcpy (ifrom.iabuf, &from.sin_addr, ifrom.len);
 
 			do_packet (l, packbuf, result,
-				   from.sin_port, ifrom, hfrom);
+				   from.sin_port, ifrom, &hfrom);
 		}
 	} while (1);
 }
