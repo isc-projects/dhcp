@@ -51,7 +51,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: socket.c,v 1.47 2000/03/17 03:59:02 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: socket.c,v 1.48 2000/04/06 23:56:01 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -221,6 +221,7 @@ void if_deregister_receive (info)
 		      (info -> shared_network ? "/" : ""),
 		      (info -> shared_network ?
 		       info -> shared_network -> name : ""));
+}
 #endif /* USE_SOCKET_RECEIVE */
 
 #if defined (USE_SOCKET_SEND) || defined (USE_SOCKET_FALLBACK)
