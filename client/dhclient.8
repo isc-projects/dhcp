@@ -28,6 +28,31 @@ dhclient - Dynamic Host Configuration Protocol Client
 .B -d
 ]
 [
+.B -D
+]
+[
+.B -q
+]
+[
+.B -c
+]
+[
+.B -lf
+.I lease-file
+]
+[
+.B -pf
+.I pid-file
+]
+[
+.B -cf
+.I config-file
+]
+[
+.B -s
+server
+]
+[
 .I if0
 [
 .I ...ifN
@@ -92,23 +117,77 @@ than cycling through the list of old leases.
 .PP
 The names of the network interfaces that dhclient should attempt to
 configure may be specified on the command line.  If no interface names
-are specified on the command line dhclient will identify all network
-interfaces, elimininating non-broadcast interfaces if possible, and
-attempt to configure each interface.
+are specified on the command line dhclient will normally identify all
+network interfaces, elimininating non-broadcast interfaces if
+possible, and attempt to configure each interface.
 .PP
-If dhclient should listen and transmit on a port other than the
+It is also possible to specify interfaces by name in the
+.B dhclient.conf(5)
+file.   If interfaces are specified in this way, then the client will
+only configure interfaces that are either specified in the
+configuration file or on the command line, and will ignore all other
+interfaces.
+.PP
+If the DHCP client should listen and transmit on a port other than the
 standard (port 68), the
 .B -p
 flag may used.  It should be followed by the udp port number that
 dhclient should use.  This is mostly useful for debugging purposes.
+If a different port is specified for the client to listen on and
+transmit on, the client will also use a different destination port -
+one greater than the specified destination port.
 .PP
-Dhclient will normally run in the foreground until it has configured
-an interface, and then will revert to running in the background.
-To run force dhclient to always run as a foreground process, the
+The DHCP client normally transmits any protocol messages it sends
+before acquiring an IP address to, 255.255.255.255, the IP limited
+broadcast address.   For debugging purposes, it may be useful to have
+the server transmit these messages to some other address.   This can
+be specified with the 
+.B -s
+flag, followed by the IP address or domain name of the destination.
+.PP
+The DHCP client will normally run in the foreground until it has
+configured an interface, and then will revert to running in the
+background.   To run force dhclient to always run as a foreground
+process, the
 .B -d
-flag should be specified.  This is useful when running dhclient under
-a debugger, or when running it out of inittab on System V systems.
+flag should be specified.  This is useful when running the client
+under a debugger, or when running it out of inittab on System V
+systems.
 .PP
+The client writes a temporary shell script whenever it invokes
+dhclient-script.   This script is normally deleted after the client
+runs, but it can be helpful when debugging the client script to see
+what the client wrote.   The client can be configured not to delete
+these scripts by specifying the
+.B -D
+flag.
+.PP
+The client normally prints a startup message and displays the
+protocol sequence to the standard error descriptor until it has
+acquired an address, and then only logs messages using the
+.B syslog (3)
+facility.   The
+.B -q
+flag prevents any messages other than errors from being printed to the
+standard error descriptor.
+.PP
+The DHCP client normally gets its configuration information from
+.B ETCDIR/dhclient.conf,
+its lease database from
+.B DBDIR/dhclient.leases
+and stores its process ID in a file called
+.B RUNDIR/dhclient.pid.
+To specify different names and/or locations for these files, use the
+.B -cf,
+.B -lf
+and
+.B -pf
+flags, respectively, followed by the name of the file.   This can be
+particularly useful if, for example,
+.B DBDIR
+or
+.B RUNDIR
+has not yet been mounted when the DHCP client is started.
 .SH CONFIGURATION
 The syntax of the dhclient.conf(8) file is discussed seperately.
 .SH FILES
