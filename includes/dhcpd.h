@@ -192,15 +192,18 @@ struct class {
 
 /* DHCP client lease structure... */
 struct client_lease {
-	struct client_lease *next;
-	TIME expiry, renewal, rebind;
-	struct iaddr address;
-	char *server_name;
-	char *filename;
+	struct client_lease *next;		      /* Next lease in list. */
+	TIME expiry, renewal, rebind;			  /* Lease timeouts. */
+	struct iaddr address;			    /* Address being leased. */
+	char *server_name;			     /* Name of boot server. */
+	char *filename;		     /* Name of file we're supposed to boot. */
 
-	struct option_data options [256];
+	int is_static;		 /* If nonzero, lease came from config file. */
+
+	struct option_data options [256];    /* Options supplied with lease. */
 };
 
+/* Possible states in which the client can be. */
 enum dhcp_state {
 	S_INIT,
 	S_SELECTING,
@@ -251,6 +254,8 @@ struct client_state {
 	struct dhcp_packet packet;		    /* Outgoing DHCP packet. */
 	int packet_length;	       /* Actual length of generated packet. */
 
+	struct iaddr requested_address;	    /* Address we would like to get. */
+
 	struct client_config *config;	    /* Information from config file. */
 };
 
@@ -270,7 +275,7 @@ struct interface_info {
 	size_t rbuf_offset;		/* Current offset into buffer. */
 	size_t rbuf_len;		/* Length of data in buffer. */
 
-	struct ifreq *tif;		/* Temp. pointer to ifreq struct. */
+	struct ifreq *ifp;		/* Pointer to ifreq struct. */
 	u_int32_t flags;		/* Control flags... */
 #define INTERFACE_REQUESTED 1
 
@@ -522,11 +527,12 @@ void hash_dump PROTO ((struct hash_table *));
 /* socket.c */
 #if defined (USE_SOCKET_SEND) || defined (USE_SOCKET_RECEIVE) \
 	|| defined (USE_SOCKET_FALLBACK)
-int if_register_socket PROTO ((struct interface_info *, struct ifreq *));
+int if_register_socket PROTO ((struct interface_info *));
 #endif
 
 #ifdef USE_SOCKET_FALLBACK
-void if_register_fallback PROTO ((struct interface_info *, struct ifreq *));
+void if_reinitialize_fallback PROTO ((struct interface_info *));
+void if_register_fallback PROTO ((struct interface_info *));
 size_t send_fallback PROTO ((struct interface_info *,
 			   struct packet *, struct dhcp_packet *, size_t, 
 			   struct in_addr,
@@ -535,14 +541,16 @@ size_t fallback_discard PROTO ((struct interface_info *));
 #endif
 
 #ifdef USE_SOCKET_SEND
-void if_register_send PROTO ((struct interface_info *, struct ifreq *));
+void if_reinitialize_send PROTO ((struct interface_info *));
+void if_register_send PROTO ((struct interface_info *));
 size_t send_packet PROTO ((struct interface_info *,
 			   struct packet *, struct dhcp_packet *, size_t, 
 			   struct in_addr,
 			   struct sockaddr_in *, struct hardware *));
 #endif
 #ifdef USE_SOCKET_RECEIVE
-void if_register_receive PROTO ((struct interface_info *, struct ifreq *));
+void if_reinitialize_receive PROTO ((struct interface_info *));
+void if_register_receive PROTO ((struct interface_info *));
 size_t receive_packet PROTO ((struct interface_info *,
 			   unsigned char *, size_t,
 			   struct sockaddr_in *, struct hardware *));
@@ -553,17 +561,19 @@ void if_enable PROTO ((struct interface_info *));
 
 /* bpf.c */
 #if defined (USE_BPF_SEND) || defined (USE_BPF_RECEIVE)
-int if_register_bpf PROTO ( (struct interface_info *, struct ifreq *));
+int if_register_bpf PROTO ( (struct interface_info *));
 #endif
 #ifdef USE_BPF_SEND
-void if_register_send PROTO ((struct interface_info *, struct ifreq *));
+void if_reinitialize_send PROTO ((struct interface_info *));
+void if_register_send PROTO ((struct interface_info *));
 size_t send_packet PROTO ((struct interface_info *,
 			   struct packet *, struct dhcp_packet *, size_t,
 			   struct in_addr,
 			   struct sockaddr_in *, struct hardware *));
 #endif
 #ifdef USE_BPF_RECEIVE
-void if_register_receive PROTO ((struct interface_info *, struct ifreq *));
+void if_reinitialize_receive PROTO ((struct interface_info *));
+void if_register_receive PROTO ((struct interface_info *));
 size_t receive_packet PROTO ((struct interface_info *,
 			   unsigned char *, size_t,
 			   struct sockaddr_in *, struct hardware *));
@@ -573,15 +583,21 @@ void if_enable PROTO ((struct interface_info *));
 #endif
 
 /* nit.c */
+#if defined (USE_NIT_SEND) || defined (USE_NIT_RECEIVE)
+int if_register_nit PROTO ( (struct interface_info *));
+#endif
+
 #ifdef USE_NIT_SEND
-void if_register_send PROTO ((struct interface_info *, struct ifreq *));
+void if_reinitialize_send PROTO ((struct interface_info *));
+void if_register_send PROTO ((struct interface_info *));
 size_t send_packet PROTO ((struct interface_info *,
 			   struct packet *, struct dhcp_packet *, size_t,
 			   struct in_addr,
 			   struct sockaddr_in *, struct hardware *));
 #endif
 #ifdef USE_NIT_RECEIVE
-void if_register_receive PROTO ((struct interface_info *, struct ifreq *));
+void if_reinitialize_receive PROTO ((struct interface_info *));
+void if_register_receive PROTO ((struct interface_info *));
 size_t receive_packet PROTO ((struct interface_info *,
 			   unsigned char *, size_t,
 			   struct sockaddr_in *, struct hardware *));
@@ -592,7 +608,8 @@ void if_enable PROTO ((struct interface_info *));
 
 /* raw.c */
 #ifdef USE_RAW_SEND
-void if_register_send PROTO ((struct interface_info *, struct ifreq *));
+void if_reinitialize_send PROTO ((struct interface_info *));
+void if_register_send PROTO ((struct interface_info *));
 size_t send_packet PROTO ((struct interface_info *,
 			   struct packet *, struct dhcp_packet *, size_t,
 			   struct in_addr,
@@ -600,9 +617,10 @@ size_t send_packet PROTO ((struct interface_info *,
 #endif
 
 /* dispatch.c */
-extern struct interface_info *interfaces;
+extern struct interface_info *interfaces, *dummy_interfaces;
 extern struct timeout *timeouts;
 void discover_interfaces PROTO ((int));
+void reinitialize_interfaces PROTO ((void));
 void dispatch PROTO ((void));
 void do_packet PROTO ((struct interface_info *,
 		       unsigned char *, int,
@@ -659,11 +677,13 @@ void dhcpnak PROTO ((struct packet *));
 void send_discover PROTO ((struct interface_info *));
 void send_request PROTO ((struct interface_info *));
 void send_release PROTO ((struct interface_info *));
+void send_decline PROTO ((struct interface_info *));
 
 void state_init PROTO ((struct interface_info *));
 void state_selecting PROTO ((struct interface_info *));
 void state_requesting PROTO ((struct interface_info *));
 void state_bound PROTO ((struct interface_info *));
+void state_panic PROTO ((struct interface_info *));
 
 void make_discover PROTO ((struct interface_info *, struct client_lease *));
 void make_request PROTO ((struct interface_info *, struct client_lease *));
@@ -682,6 +702,7 @@ void script_write_params PROTO ((struct interface_info *,
 int script_go PROTO ((struct interface_info *));
 
 struct client_lease *packet_to_lease PROTO ((struct packet *));
+void go_daemon PROTO ((void));
 
 /* db.c */
 int write_lease PROTO ((struct lease *));
@@ -744,10 +765,14 @@ int read_client_conf PROTO ((void));
 void read_client_leases PROTO ((void));
 void parse_client_statement PROTO ((FILE *, struct interface_info *,
 				    struct client_config *));
-int parse_X PROTO ((FILE *, u_int8_t **));
+int parse_X PROTO ((FILE *, u_int8_t *, int));
 int parse_option_list PROTO ((FILE *, u_int8_t *));
 void parse_interface_declaration PROTO ((FILE *, struct client_config *));
-void parse_client_lease_statement PROTO ((FILE *));
+struct interface_info *interface_or_dummy PROTO ((char *));
+void make_client_state PROTO ((struct interface_info *));
+void make_client_config PROTO ((struct interface_info *,
+				struct client_config *));
+void parse_client_lease_statement PROTO ((FILE *, int));
 void parse_client_lease_declaration PROTO ((FILE *, struct client_lease *,
 					    struct interface_info **));
 void parse_ip_addr PROTO ((FILE *, struct iaddr *));
