@@ -63,6 +63,11 @@ experiment, or for sites that desperately need the new features.
 - Add test for ARPHRD_TUNNEL so that client and server do not fail on
   versions of Linux running IPsec implementations or the like.
 
+- Move tests for constants defined in O.S. headers into osdep.h - test
+  for HAVE_whatever in .c files.   Define relevant HAVE_whatevers in
+  linux.h, so that versions of linux that define these constants as
+  enums will still work.
+
 	    CHANGES FROM VERSION 2.0 BETA 1 PATCHLEVEL 12
 
 - Initialize the "quiet" variable in dhclient.c to zero (it was used
