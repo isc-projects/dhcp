@@ -50,8 +50,12 @@ install: all
 	    fi; \
 	  done; \
 	done
-	$(MANINSTALL) $(MANFROM) dhcp-options.cat5 $(MANTO) \
+	$(MANINSTALL) $(MANFROM) dhcp-options.$(MANCAT)5 $(MANTO) \
 				$(DESTDIR)$(FFMANDIR)/dhcp-options$(FFMANEXT)
+	$(MANINSTALL) $(MANFROM) dhcp-eval.$(MANCAT)5 $(MANTO) \
+				$(DESTDIR)$(FFMANDIR)/dhcp-eval$(FFMANEXT)
+	$(MANINSTALL) $(MANFROM) dhcp-contrib.$(MANCAT)5 $(MANTO) \
+				$(DESTDIR)$(FFMANDIR)/dhcp-contrib$(FFMANEXT)
 
 depend:
 	makedepend $(INCLUDES) $(PREDEFINES) $(SRCS)
