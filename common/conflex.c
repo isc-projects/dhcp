@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: conflex.c,v 1.55 1999/10/01 03:13:43 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: conflex.c,v 1.56 1999/10/01 03:33:44 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -50,6 +50,7 @@ isc_result_t new_parse (cfile, file, inbuf, buflen, name)
 		return ISC_R_NOMEMORY;
 	memset (tmp, 0, sizeof *tmp);
 
+	tmp -> token = 0;
 	tmp -> tlname = name;
 	tmp -> lpos = tmp -> line = 1;
 	tmp -> cur_line = tmp -> line1;
@@ -490,22 +491,22 @@ static enum dhcp_token intern (atom, dfv)
 		}
 		break;
 	      case 'e':
-		if (!strcasecmp (atom + 1, "xpiry"))
-			return EXPIRY;
 		if (isascii (atom [1]) && tolower (atom [1]) == 'x') {
 			if (!strcasecmp (atom + 2, "tract-int"))
 				return EXTRACT_INT;
-			if (!strcasecmp (atom + 2, "ncode-int"))
-				return ENCODE_INT;
 			if (!strcasecmp (atom + 2, "ists"))
 				return EXISTS;
+			if (!strcasecmp (atom + 2, "piry"))
+				return EXPIRY;
+			if (!strcasecmp (atom + 2, "pire"))
+				return EXPIRE;
 		}
+		if (!strcasecmp (atom + 2, "ncode-int"))
+			return ENCODE_INT;
 		if (!strcasecmp (atom + 1, "thernet"))
 			return ETHERNET;
 		if (!strcasecmp (atom + 1, "nds"))
 			return ENDS;
-		if (!strcasecmp (atom + 1, "xpire"))
-			return EXPIRE;
 		if (!strncasecmp (atom + 1, "ls", 2)) {
 			if (!strcasecmp (atom + 3, "e"))
 				return ELSE;
