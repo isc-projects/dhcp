@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: lpf.c,v 1.1.2.3 1999/02/05 20:20:51 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: lpf.c,v 1.1.2.4 1999/02/09 04:51:05 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -89,15 +89,29 @@ int if_register_lpf (info)
 	struct sockaddr sa;
 
 	/* Make an LPF socket. */
-	if ((sock = socket(PF_SOCKET, SOCK_PACKET, htons(ETH_P_ALL))) < 0)
+	if ((sock = socket(PF_PACKET, SOCK_PACKET, htons(ETH_P_ALL))) < 0) {
+		if (errno == ENOPROTOOPT || errno == EPROTONOSUPPORT ||
+		    errno == ESOCKTNOSUPPORT || errno == EPFNOSUPPORT ||
+		    errno == EAFNOSUPPORT)
+			error ("socket: %m - make sure %s %s!",
+			       "CONFIG_PACKET and CONFIG_FILTER are defined",
+			       "in your kernel configuration");
 		error("Open a socket for LPF: %m");
+	}
 
 	/* Bind to the interface name */
 	memset (&sa, 0, sizeof sa);
 	sa.sa_family = AF_PACKET;
 	strncpy (sa.sa_data, (const char *)info -> ifp, sizeof sa.sa_data);
-	if (bind (sock, &sa, sizeof sa))
+	if (bind (sock, &sa, sizeof sa)) {
+		if (errno == ENOPROTOOPT || errno == EPROTONOSUPPORT ||
+		    errno == ESOCKTNOSUPPORT || errno == EPFNOSUPPORT ||
+		    errno == EAFNOSUPPORT)
+			error ("socket: %m - make sure %s %s!",
+			       "CONFIG_PACKET and CONFIG_FILTER are defined",
+			       "in your kernel configuration");
 		error("Bind socket to interface: %m");
+	}
 
 	return sock;
 }
@@ -150,8 +164,15 @@ void if_register_receive (info)
 	dhcp_bpf_filter [8].k = ntohs (local_port);
 
 	if (setsockopt (info -> rfdesc, SOL_SOCKET, SO_ATTACH_FILTER, &p,
-			sizeof p) < 0)
+			sizeof p) < 0) {
+		if (errno == ENOPROTOOPT || errno == EPROTONOSUPPORT ||
+		    errno == ESOCKTNOSUPPORT || errno == EPFNOSUPPORT ||
+		    errno == EAFNOSUPPORT)
+			error ("socket: %m - make sure %s %s!",
+			       "CONFIG_PACKET and CONFIG_FILTER are defined",
+			       "in your kernel configuration");
 		error ("Can't install packet filter program: %m");
+	}
 	if (!quiet_interface_discovery)
 		note ("Listening on LPF/%s/%s/%s",
 		      info -> name,
@@ -192,7 +213,8 @@ ssize_t send_packet (interface, packet, raw, len, from, to, hto)
 	   so we have to do a sentdo every time. */
 	memset (&sa, 0, sizeof sa);
 	sa.sa_family = AF_PACKET;
-	strncpy (sa.sa_data, (const char *)info -> ifp, sizeof sa.sa_data);
+	strncpy (sa.sa_data,
+		 (const char *)interface -> ifp, sizeof sa.sa_data);
 
 	return sendto (interface -> wfdesc, buf, bufp + len, 0,
 		       &sa, sizeof sa);
