@@ -189,7 +189,7 @@ DDAATTAA EEXXPPRREESSSSIIOONNSS
        hhaarrddwwaarree
 
           The hhaarrddwwaarree operator returns a data string whose first
-          element   is  the  _h_t_y_p_e  field  of  the  packet  being
+          element  is  the type of network interface indicated in
 
 
 
@@ -202,23 +202,28 @@ DDAATTAA EEXXPPRREESSSSIIOONNSS
 dhcpd-options(5)                                 dhcpd-options(5)
 
 
-          considered, and whose  subsequent  elements  are  first
-          _h_l_e_n bytes of the _c_h_a_d_d_r field of the packet, as speci­
-          fied in RRFFCC 22113311 .  If there is no packet,  or  if  the
-          _h_l_e_n field is invalid, then the result is null.
+          packet being considered, and whose subsequent  elements
+          are  client's  link-layer  address.    If  there  is no
+          packet, or if the RFC2131 _h_l_e_n field is  invalid,  then
+          the  result  is null.   Hardware types include ethernet
+          (1), token-ring (6), and fddi (8).   Hardware types are
+          specified by the IETF, and details on how the type num­
+          bers are defined can be found in RFC2131  (in  the  ISC
+          DHCP  distribution, this is included in the doc/ subdi­
+          rectory).
 
        ppaacckkeett ((_o_f_f_s_e_t,, _l_e_n_g_t_h))
 
-          The  ppaacckkeett  operator  returns the specified portion of
-          the packet being considered, or null in contexts  where
-          no  packet is being considered.   _O_f_f_s_e_t and _l_e_n_g_t_h are
-          applied to the contents  packet  as  in  the  ssuubbssttrriinngg
+          The ppaacckkeett operator returns the  specified  portion  of
+          the  packet being considered, or null in contexts where
+          no packet is being considered.   _O_f_f_s_e_t and _l_e_n_g_t_h  are
+          applied  to  the  contents  packet  as in the ssuubbssttrriinngg
           operator.
 
        _s_t_r_i_n_g
 
-          A  string,  enclosed  in  quotes, may be specified as a
-          data expression,  and  returns  the  text  between  the
+          A string, enclosed in quotes, may  be  specified  as  a
+          data  expression,  and  returns  the  text  between the
           quotes, encoded in ASCII.
 
        _c_o_l_o_n_-_s_e_p_e_r_a_t_e_d _h_e_x_a_d_e_c_i_m_a_l _l_i_s_t
@@ -227,35 +232,30 @@ dhcpd-options(5)                                 dhcpd-options(5)
           colons, may be specified as a data expression.
 
        ccoonnccaatt ((_d_a_t_a_-_e_x_p_r_1,, _d_a_t_a_-_e_x_p_r_2))
-          The two expressions are evaluated, and  the  result  of
-          concatenating  the  results  of  the two evaluations is
-          returned.   If either subexpression evaluates to  null,
-          then  the  result is the value of the other expression.
-          If both expressions evaluate to null, then  the  result
+          The  two  expressions  are evaluated, and the result of
+          concatenating the results of  the  two  evaluations  is
+          returned.    If either subexpression evaluates to null,
+          then the result is the value of the  other  expression.
+          If  both  expressions evaluate to null, then the result
           is null.
 
 
        rreevveerrssee ((_n_u_m_e_r_i_c_-_e_x_p_r_1,, _d_a_t_a_-_e_x_p_r_2))
-          The  two expressions are evaluated, and then the result
+          The two expressions are evaluated, and then the  result
           of evaluating the data expression is reversed in place,
-          using  hunks  of  the  size  specified  in  the numeric
-          expression.   For example, if  the  numeric  expression
+          using hunks  of  the  size  specified  in  the  numeric
+          expression.    For  example,  if the numeric expression
           evaluates to four, and the data expression evaluates to
-          twelve bytes of data, then the reverse expression  will
-          evaluate  to  twelve  bytes  of data, consisting of the
-          last four bytes of the the input data, followed by  the
+          twelve  bytes of data, then the reverse expression will
+          evaluate to twelve bytes of  data,  consisting  of  the
+          last  four bytes of the the input data, followed by the
           middle four bytes, followed by the first four bytes.
 
        lleeaasseedd--aaddddrreessss
-          In  any context where the client whose request is being
-          processed has been assigned an IP  address,  this  data
+          In any context where the client whose request is  being
+          processed  has  been  assigned an IP address, this data
           expression returns that IP address.
 
-       bbiinnaarryy--ttoo--aasscciiii ((_n_u_m_e_r_i_c_-_e_x_p_r_1,, _n_u_m_e_r_i_c_-_e_x_p_r_2,, _d_a_t_a_-_e_x_p_r_1,,
-       _d_a_t_a_-_e_x_p_r_2))
-          Converts the result of  evaluating  data-expr2  into  a
-          text  string  containing one number for each element of
-          the result of evaluating data-expr2.   Each  number  is
 
 
 
@@ -268,15 +268,20 @@ dhcpd-options(5)                                 dhcpd-options(5)
 dhcpd-options(5)                                 dhcpd-options(5)
 
 
-          seperated  from  the  other by the result of evaluating
-          data-expr1.   The result  of  evaluating  numeric-expr1
-          specifies  the  base (2 through 16) into which the num­
-          bers should be converted.   The  result  of  evaluating
-          numeric-expr2  specifies the width in bits of each num­
+       bbiinnaarryy--ttoo--aasscciiii ((_n_u_m_e_r_i_c_-_e_x_p_r_1,, _n_u_m_e_r_i_c_-_e_x_p_r_2,, _d_a_t_a_-_e_x_p_r_1,,
+       _d_a_t_a_-_e_x_p_r_2))
+          Converts  the  result  of  evaluating data-expr2 into a
+          text string containing one number for each  element  of
+          the  result  of evaluating data-expr2.   Each number is
+          seperated from the other by the  result  of  evaluating
+          data-expr1.    The  result  of evaluating numeric-expr1
+          specifies the base (2 through 16) into which  the  num­
+          bers  should  be  converted.   The result of evaluating
+          numeric-expr2 specifies the width in bits of each  num­
           ber, which may be either 8, 16 or 32.
 
-          As an example of the preceding three types  of  expres­
-          sions,  to  produce the name of a PTR record for the IP
+          As  an  example of the preceding three types of expres­
+          sions, to produce the name of a PTR record for  the  IP
           address being assigned to a client, one could write the
           following expression:
 
@@ -286,42 +291,37 @@ dhcpd-options(5)                                 dhcpd-options(5)
 
 
        eennccooddee--iinntt ((_n_u_m_e_r_i_c_-_e_x_p_r,, _w_i_d_t_h))
-          Numeric-expr  is evaluated and encoded as a data string
-          of the specified width, in  network  byte  order  (most
-          significant  byte  first).   If  the numeric expression
+          Numeric-expr is evaluated and encoded as a data  string
+          of  the  specified  width,  in network byte order (most
+          significant byte first).   If  the  numeric  expression
           evaluates to the null value, the result is also null.
 
 
 NNUUMMEERRIICC EEXXPPRREESSSSIIOONNSS
-       Numeric expressions are expressions that  evaluate  to  an
+       Numeric  expressions  are  expressions that evaluate to an
        integer.   In general, the maximum size of such an integer
        should not be assumed to be representable in fewer than 32
-       bits,  but the precision of such integers may be more than
+       bits, but the precision of such integers may be more  than
        32 bits.
 
        eexxttrraacctt--iinntt ((_d_a_t_a_-_e_x_p_r,, _w_i_d_t_h))
 
-          The eexxttrraacctt--iinntt operator extracts an integer  value  in
-          network  byte  order  from the result of evaluating the
+          The  eexxttrraacctt--iinntt  operator extracts an integer value in
+          network byte order from the result  of  evaluating  the
           specified data expression.   Width is the width in bits
-          of  the  integer  to extract.  Currently, the only sup­
-          ported widths are 8, 16 and 32.   If the evaluation  of
-          the  data expression doesn't provide sufficient bits to
-          extract an integer of  the  specified  size,  the  null
+          of the integer to extract.  Currently,  the  only  sup­
+          ported  widths are 8, 16 and 32.   If the evaluation of
+          the data expression doesn't provide sufficient bits  to
+          extract  an  integer  of  the  specified size, the null
           value is returned.
 
        _n_u_m_b_e_r
 
-          Any  number  between zero and the maximum representable
+          Any number between zero and the  maximum  representable
           size may be specified as a numeric expression.
 
 SSEEEE AALLSSOO
        dhcpd.conf(5),  dhcpd.leases(5),  dhclient.conf(5),  dhcp-
-       eval(5), dhcpd(8), dhclient(8), RFC2132, RFC2131.
-
-AAUUTTHHOORR
-       The  Internet  Software  Consortium  DHCP Distribution was
-       written by Ted Lemon  <mellon@isc.org>  under  a  contract
 
 
 
@@ -334,15 +334,15 @@ AAUUTTHHOORR
 dhcpd-options(5)                                 dhcpd-options(5)
 
 
-       with  Vixie  Labs.   Funding for this project was provided
-       through the  Internet  Software  Consortium.   Information
-       about  the  Internet  Software  Consortium can be found at
+       eval(5), dhcpd(8), dhclient(8), RFC2132, RFC2131.
+
+AAUUTTHHOORR
+       The Internet Software  Consortium  DHCP  Distribution  was
+       written  by  Ted  Lemon  <mellon@isc.org> under a contract
+       with Vixie Labs.  Funding for this  project  was  provided
+       through  the  Internet  Software  Consortium.  Information
+       about the Internet Software Consortium  can  be  found  at
        hhttttpp::////wwwwww..iisscc..oorrgg//iisscc..
-
-
-
-
-
 
 
 
