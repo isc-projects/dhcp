@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bootp.c,v 1.33 1998/11/06 00:15:51 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bootp.c,v 1.34 1998/11/09 02:45:59 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -110,46 +110,26 @@ void bootp (packet)
 			}
 		}
 
-		/* If a lease has already been assigned to this client
-		   and it's still okay to use dynamic bootp on
-		   that lease, reassign it. */
+		/* If a lease has already been assigned to this client,
+		   use it. */
 		if (lease) {
-			/* If this lease can be used for dynamic bootp,
-			   do so. */
-			if ((lease -> flags & DYNAMIC_BOOTP_OK)) {
-
-				/* If it's not a DYNAMIC_BOOTP lease,
-				   release it before reassigning it
-				   so that we don't get a lease
-				   conflict. */
-				if (!(lease -> flags & BOOTP_LEASE))
-					release_lease (lease);
-
-				lease -> host = host;
-				ack_lease (packet, lease, 0, 0);
-				return;
-			}
-
-			 /* If dynamic BOOTP is no longer allowed for
-			   this lease, set it free. */
-			release_lease (lease);
+			ack_lease (packet, lease, 0, 0);
+			return;
 		}
 
-		/* If there are dynamic bootp addresses that might be
-		   available, try to snag one. */
-		for (lease = packet -> shared_network -> last_lease;
-		     lease && lease -> ends <= cur_time;
-		     lease = lease -> prev) {
-			if ((lease -> flags & DYNAMIC_BOOTP_OK)) {
-				lease -> host = host;
-				ack_lease (packet, lease, 0, 0);
-				return;
-			}
+		/* Otherwise, try to allocate one. */
+		lease = allocate_lease (packet,
+					packet -> shared_network -> pools, 0);
+		if (lease) {
+			lease -> host = host;
+			ack_lease (packet, lease, 0, 0);
+			return;
 		}
-		note ("No dynamic leases for BOOTP client %s",
+		note ("No available leases for BOOTP client %s",
 		      print_hw_addr (packet -> raw -> htype,
 				     packet -> raw -> hlen,
 				     packet -> raw -> chaddr));
+		return;
 	}
 
 	/* Run the executable statements to compute the client and server

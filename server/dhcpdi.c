@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcpdi.c,v 1.1 1998/04/09 05:19:26 mellon Exp $ Copyright (c) 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcpdi.c,v 1.2 1998/11/09 02:47:29 mellon Exp $ Copyright (c) 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -91,6 +91,22 @@ static void shared_network_rm PROTO ((struct interact_client *, char *));
 static void shared_network_cd PROTO ((struct interact_client *, char *));
 static void shared_network_cdup PROTO ((struct interact_client *));
 static void *shared_network_next PROTO ((struct interact_client *, void *));
+
+static void pool_ls PROTO ((struct interact_client *));
+static void pool_class_ls PROTO ((struct interact_client *));
+static void pool_class_print PROTO ((struct interact_client *, char *));
+static void pool_class_set PROTO ((struct interact_client *, char *));
+static void pool_class_rm PROTO ((struct interact_client *, char *));
+static void pool_class_cd PROTO ((struct interact_client *, char *));
+static void pool_class_cdup PROTO ((struct interact_client *));
+static void *pool_class_next PROTO ((struct interact_client *, void *));
+
+static void pool_print PROTO ((struct interact_client *, char *));
+static void pool_set PROTO ((struct interact_client *, char *));
+static void pool_rm PROTO ((struct interact_client *, char *));
+static void pool_cd PROTO ((struct interact_client *, char *));
+static void pool_cdup PROTO ((struct interact_client *));
+static void *pool_next PROTO ((struct interact_client *, void *));
 
 static void subnet_class_ls PROTO ((struct interact_client *));
 static void subnet_class_print PROTO ((struct interact_client *, char *));
@@ -208,6 +224,24 @@ static struct interact_actions shared_network_actions = {
 	shared_network_cd,
 	shared_network_cdup,
 	shared_network_next };
+
+static struct interact_actions pool_class_actions = {
+	pool_class_ls,
+	pool_class_print,
+	pool_class_set,
+	pool_class_rm,
+	pool_class_cd,
+	pool_class_cdup,
+	pool_class_next };
+
+static struct interact_actions pool_actions = {
+	pool_ls,
+	pool_print,
+	pool_set,
+	pool_rm,
+	pool_cd,
+	pool_cdup,
+	pool_next };
 
 static struct interact_actions subnet_class_actions = {
 	subnet_class_ls,
@@ -558,21 +592,9 @@ static void shared_network_class_cd (client, string)
 		client -> cur_node = share -> group;
 		client -> cur_node_actions = group_actions;
 		client -> cur_node_actions.cdup = group_cdup_share;
-	} else if (!strcmp (string, "leases")) {
-		client -> cur_node = share -> leases;
-		client -> cur_node_actions = lease_actions;
-	} else if (!strcmp (string, "active leases")) {
-		client -> cur_node = share -> leases;
-		client -> cur_node_actions = lease_actions;
-		client -> cur_node_actions.next = lease_next_active;
-	} else if (!strcmp (string, "free leases")) {
-		client -> cur_node = share -> leases;
-		client -> cur_node_actions = lease_actions;
-		client -> cur_node_actions.next = lease_next_free;
-	} else if (!strcmp (string, "abandoned leases")) {
-		client -> cur_node = share -> leases;
-		client -> cur_node_actions = lease_actions;
-		client -> cur_node_actions.next = lease_next_abandoned;
+	} else if (!strcmp (string, "pools")) {
+		client -> cur_node = share -> pools;
+		client -> cur_node_actions = pool_actions;
 	} else {
 		interact_client_write (client, "can't cd to that.", 1);
 		return;
@@ -610,10 +632,7 @@ static void shared_network_print (client, string)
 	interact_client_write (client, "name", 0);
 	interact_client_write (client, "subnets", 0);
 	interact_client_write (client, "group", 0);
-	interact_client_write (client, "leases", 0);
-	interact_client_write (client, "active leases", 0);
-	interact_client_write (client, "free leases", 0);
-	interact_client_write (client, "abandoned leases", 1);
+	interact_client_write (client, "pools", 0);
 }
 
 static void shared_network_set (client, string)
@@ -644,21 +663,9 @@ static void shared_network_cd (client, string)
 		client -> cur_node = share -> group;
 		client -> cur_node_actions = group_actions;
 		client -> cur_node_actions.cdup = group_cdup_share;
-	} else if (!strcmp (string, "leases")) {
-		client -> cur_node = share -> leases;
-		client -> cur_node_actions = lease_actions;
-	} else if (!strcmp (string, "active leases")) {
-		client -> cur_node = share -> leases;
-		client -> cur_node_actions = lease_actions;
-		client -> cur_node_actions.next = lease_next_active;
-	} else if (!strcmp (string, "free leases")) {
-		client -> cur_node = share -> leases;
-		client -> cur_node_actions = lease_actions;
-		client -> cur_node_actions.next = lease_next_free;
-	} else if (!strcmp (string, "abandoned leases")) {
-		client -> cur_node = share -> leases;
-		client -> cur_node_actions = lease_actions;
-		client -> cur_node_actions.next = lease_next_abandoned;
+	} else if (!strcmp (string, "pools")) {
+		client -> cur_node = share -> pools;
+		client -> cur_node_actions = pool_actions;
 	} else {
 		interact_client_write (client, "can't cd to that.", 1);
 		return;
@@ -678,6 +685,149 @@ static void shared_network_cdup (client)
 }
 
 static void *shared_network_next (client, ptr)
+	struct interact_client *client;
+	void *ptr;
+{
+	return (void *)0;
+}
+
+static void pool_class_ls (client)
+	struct interact_client *client;
+{
+	interact_client_write (client, "active leases", 0);
+	interact_client_write (client, "free leases", 0);
+	interact_client_write (client, "abandoned leases", 1);
+}
+
+static void pool_class_print (client, string)
+	struct interact_client *client;
+	char *string;
+{
+	interact_client_write (client, "nothing to print.", 1);
+}
+
+static void pool_class_set (client, string)
+	struct interact_client *client;
+	char *string;
+{
+	interact_client_write (client, "can't set that.", 1);
+}
+
+static void pool_class_rm (client, string)
+	struct interact_client *client;
+	char *string;
+{
+	interact_client_write (client, "can't remove that.", 1);
+}
+
+static void pool_class_cd (client, string)
+	struct interact_client *client;
+	char *string;
+{
+	struct pool *pool = client -> cur_node;
+
+	if (!strcmp (string, "active leases")) {
+		client -> cur_node = pool -> leases;
+		client -> cur_node_actions = lease_actions;
+		client -> cur_node_actions.next = lease_next_active;
+	} else if (!strcmp (string, "free leases")) {
+		client -> cur_node = pool -> leases;
+		client -> cur_node_actions = lease_actions;
+		client -> cur_node_actions.next = lease_next_free;
+	} else if (!strcmp (string, "abandoned leases")) {
+		client -> cur_node = pool -> leases;
+		client -> cur_node_actions = lease_actions;
+		client -> cur_node_actions.next = lease_next_abandoned;
+	} else {
+		interact_client_write (client, "can't cd to that.", 1);
+		return;
+	}
+	interact_client_write (client, "done.", 1);
+}
+
+static void pool_class_cdup (client)
+	struct interact_client *client;
+{
+	struct pool *pool = client -> cur_node;
+
+	if (pool -> shared_network)
+		client -> cur_node = pool -> shared_network;
+	else
+		top_level_cdup (client);
+}
+
+static void *pool_class_next (client, ptr)
+	struct interact_client *client;
+	void *ptr;
+{
+	return (void *)0;
+}
+
+static void pool_ls (client)
+	struct interact_client *client;
+{
+}
+
+static void pool_print (client, string)
+	struct interact_client *client;
+	char *string;
+{
+	interact_client_write (client, "active leases", 0);
+	interact_client_write (client, "free leases", 0);
+	interact_client_write (client, "abandoned leases", 1);
+}
+
+static void pool_set (client, string)
+	struct interact_client *client;
+	char *string;
+{
+	interact_client_write (client, "can't set that.", 1);
+}
+
+static void pool_rm (client, string)
+	struct interact_client *client;
+	char *string;
+{
+	interact_client_write (client, "can't remove that.", 1);
+}
+
+static void pool_cd (client, string)
+	struct interact_client *client;
+	char *string;
+{
+	struct pool *pool = client -> cur_node;
+
+	if (!strcmp (string, "active leases")) {
+		client -> cur_node = pool -> leases;
+		client -> cur_node_actions = lease_actions;
+		client -> cur_node_actions.next = lease_next_active;
+	} else if (!strcmp (string, "free leases")) {
+		client -> cur_node = pool -> leases;
+		client -> cur_node_actions = lease_actions;
+		client -> cur_node_actions.next = lease_next_free;
+	} else if (!strcmp (string, "abandoned leases")) {
+		client -> cur_node = pool -> leases;
+		client -> cur_node_actions = lease_actions;
+		client -> cur_node_actions.next = lease_next_abandoned;
+	} else {
+		interact_client_write (client, "can't cd to that.", 1);
+		return;
+	}
+	interact_client_write (client, "done.", 1);
+}
+
+static void pool_cdup (client)
+	struct interact_client *client;
+{
+	struct pool *pool = client -> cur_node;
+
+	if (pool -> shared_network)
+		client -> cur_node = pool -> shared_network;
+	else
+		top_level_cdup (client);
+}
+
+static void *pool_next (client, ptr)
 	struct interact_client *client;
 	void *ptr;
 {
@@ -890,8 +1040,8 @@ static void lease_cdup (client)
 	struct interact_client *client;
 {
 	struct lease *lease = client -> cur_node;
-	client -> cur_node = lease -> shared_network;
-	client -> cur_node_actions = shared_network_actions;
+	client -> cur_node = lease -> pool;
+	client -> cur_node_actions = pool_actions;
 }
 
 static void lease_cdup_host (client)
