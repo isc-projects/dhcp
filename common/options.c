@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.78 2001/01/11 23:13:50 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.79 2001/01/16 23:00:49 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -1195,6 +1195,7 @@ void set_option (universe, options, option, op)
 		break;
 
 	      case supersede_option_statement:
+	      case send_option_statement:
 		/* Install the option, replacing any existing version. */
 		save_option (universe, options, option);
 		break;

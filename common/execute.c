@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: execute.c,v 1.43 2001/01/03 23:15:33 mellon Exp $ Copyright (c) 1998-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: execute.c,v 1.44 2001/01/16 22:56:56 mellon Exp $ Copyright (c) 1998-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -224,8 +224,11 @@ int execute_statements (result, packet, lease, client_state,
 			return 1;
 
 		      case supersede_option_statement:
+		      case send_option_statement:
 #if defined (DEBUG_EXPRESSIONS)
-			log_debug ("exec: supersede option %s.%s",
+			log_debug ("exec: %s option %s.%s",
+			      (r -> op == supersede_option_statement
+			       ? "supersede" : "send"),
 			      r -> data.option -> option -> universe -> name,
 			      r -> data.option -> option -> name);
 			goto option_statement;
@@ -627,6 +630,7 @@ int executable_statement_dereference (ptr, file, line)
 		break;
 
 	      case supersede_option_statement:
+	      case send_option_statement:
 	      case default_option_statement:
 	      case append_option_statement:
 	      case prepend_option_statement:
@@ -780,6 +784,7 @@ void write_statements (file, statements, indent)
 			break;
 
 		      case supersede_option_statement:
+		      case send_option_statement:
 			s = "supersede";
 			goto option_statement;
 
