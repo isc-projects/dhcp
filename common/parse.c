@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.104 2001/05/02 16:59:30 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.104.2.1 2001/06/04 21:22:12 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1152,6 +1152,9 @@ int parse_option_code_definition (cfile, option)
 	      case IP_ADDRESS:
 		type = 'I';
 		break;
+	      case DOMAIN_NAME:
+		type = 'd';
+		goto no_arrays;
 	      case TEXT:
 		type = 't';
 	      no_arrays:
@@ -1522,6 +1525,7 @@ int parse_executable_statement (result, cfile, lose, case_context)
 	int i;
 	struct dns_zone *zone;
 	isc_result_t status;
+	char *s;
 
 	token = peek_token (&val, (unsigned *)0, cfile);
 	switch (token) {
@@ -1954,9 +1958,14 @@ int parse_executable_statement (result, cfile, lose, case_context)
 		}
 		i = strlen (zone -> name);
 		if (zone -> name [i - 1] != '.') {
-			parse_warn (cfile,
-				    "zone name must not be relative %s: %s",
-				    "(must end in '.')", zone -> name);
+			s = dmalloc (i + 2, MDL);
+			if (!s)
+				goto badzone;
+			strcpy (s, zone -> name);
+			s [i] = '.';
+			s [i + 1] = 0;
+			dfree (zone -> name, MDL);
+			zone -> name = s;
 		}
 		if (!parse_zone (zone, cfile))
 			goto badzone;
@@ -4294,6 +4303,16 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 		}
 		break;
 		
+	      case 'd': /* Domain name... */
+		val = parse_host_name (cfile);
+		if (!val) {
+			parse_warn (cfile, "not a valid domain name.");
+			skip_to_semi (cfile);
+			return 0;
+		}
+		len = strlen (val);
+		goto make_string;
+
 	      case 't': /* Text string... */
 		token = peek_token (&val, (unsigned *)0, cfile);
 		if (token != STRING && !is_identifier (token)) {
@@ -4305,6 +4324,7 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 			return 0;
 		}
 		token = next_token (&val, &len, cfile);
+	      make_string:
 		if (!make_const_data (&t, (const unsigned char *)val,
 				      len, 1, 1))
 			log_fatal ("No memory for concatenation");
