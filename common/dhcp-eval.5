@@ -339,6 +339,46 @@ the current time and the time that the lease expires.
 Any number between zero and the maximum representable size may be
 specified as a numeric expression.
 .RE
+.PP
+.B client-state
+.PP
+.RS 0.25i
+The current state of the client instance being processed.   This is
+only useful in DHCP client configuration files.   Possible values are:
+.TP 2
+.I \(bu
+Booting - DHCP client is in the INIT state, and does not yet have an
+IP address.   The next message transmitted will be a DHCPDISCOVER,
+which will be broadcast.
+.TP
+.I \(bu
+Reboot - DHCP client is in the INIT-REBOOT state.   It has an IP
+address, but is not yet using it.   The next message to be transmitted
+will be a DHCPREQUEST, which will be broadcast.   If no response is
+heard, the client will bind to its address and move to the BOUND state.
+.TP
+.I \(bu
+Select - DHCP client is in the SELECTING state - it has received at
+least one DHCPOFFER message, but is waiting to see if it may receive
+other DHCPOFFER messages from other servers.   The next message to be
+transmitted will be a DHCPREQUEST, which will be broadcast.   The
+client does not have an IP address.
+.TP
+.I \(bu
+Bound - DHCP client is in the BOUND state - it has an IP address.   No
+messages are transmitted in this state.
+.TP
+.I \(bu
+Renew - DHCP client is in the RENEWING state - it has an IP address,
+and is trying to contact the server to renew it.   The next message to
+be sent will be a DHCPREQUEST message, which will be unicast directly
+to the server.
+.TP
+.I \(bu
+Rebind - DHCP client is in the REBINDING state - it has an IP address,
+and is trying to contact any server to renew it.   The next message to
+be sent will be a DHCPREQUEST, which will be broadcast.
+.RE
 .SH
 FUNCTIONS
 Functions may be defined with the \fBdefine\fR statement.  A function
