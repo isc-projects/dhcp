@@ -22,27 +22,34 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: memory.c,v 1.53 1999/07/31 17:57:27 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: memory.c,v 1.54 1999/09/08 01:44:57 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
 
 static struct subnet *subnets;
 static struct shared_network *shared_networks;
-static struct hash_table *host_hw_addr_hash;
-static struct hash_table *host_uid_hash;
-static struct hash_table *lease_uid_hash;
-static struct hash_table *lease_ip_addr_hash;
-static struct hash_table *lease_hw_addr_hash;
+struct hash_table *host_hw_addr_hash;
+struct hash_table *host_uid_hash;
+struct hash_table *lease_uid_hash;
+struct hash_table *lease_ip_addr_hash;
+struct hash_table *lease_hw_addr_hash;
+struct hash_table *host_name_hash;
 static struct lease *dangling_leases;
+static struct host_decl *dynamic_hosts;
 
-void enter_host (hd)
+void enter_host (hd, dynamicp)
 	struct host_decl *hd;
+	int dynamicp;
 {
 	struct host_decl *hp = (struct host_decl *)0;
 	struct host_decl *np = (struct host_decl *)0;
 	struct executable_statement *esp;
 
+	if (dynamicp) {
+		hd -> n_dynamic = dynamic_hosts;
+		dynamic_hosts = hd -> n_dynamic;
+	}
 	hd -> n_ipaddr = (struct host_decl *)0;
 
 	if (hd -> interface.hlen) {
@@ -127,6 +134,28 @@ void enter_host (hd)
 				  hd -> client_identifier.len,
 				  (unsigned char *)hd);
 		}
+	}
+
+	if (!host_name_hash) {
+		host_name_hash = new_hash ();
+		if (!host_name_hash)
+			log_fatal ("Can't allocate host/hw hash");
+	} else {
+		hp = (struct host_decl *)
+			hash_lookup (host_name_hash,
+					     hd -> name,
+					     strlen (hd -> name));
+
+		/* If there isn't already a host decl matching this
+		   address, add it to the hash table. */
+		if (!hp)
+			add_hash (host_name_hash,
+				  hd -> name, strlen (hd -> name),
+				  (unsigned char *)hd);
+		else
+			/* XXX actually, we have to delete the old one
+			   XXX carefully and replace it.   Not done yet. */
+			log_fatal ("duplicate hostname: %s!", hd -> name);
 	}
 }
 
@@ -880,7 +909,13 @@ void write_leases ()
 	struct lease *l;
 	struct shared_network *s;
 	struct pool *p;
+	struct host_decl *hp;
 
+	/* Write all the dynamically-created host declarations. */
+	for (hp = dynamic_hosts; hp; hp = hp -> n_dynamic)
+		write_host (hp);
+
+	/* Write all the leases. */
 	for (s = shared_networks; s; s = s -> next) {
 		for (p = s -> pools; p; p = p -> next) {
 			for (l = p -> leases; l; l = l -> next) {
