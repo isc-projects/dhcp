@@ -63,7 +63,7 @@ extern int h_errno;
 #include <net/if.h>
 #include <net/route.h>
 
-#if defined (LINUX_1_X)
+#if LINUX_MAJOR == 1
 # include <linux/if_arp.h>
 # include <linux/time.h>		/* also necessary */
 #else
@@ -103,8 +103,14 @@ extern int h_errno;
 #define GET_TIME(x)	time ((x))
 
 #if defined (USE_DEFAULT_NETWORK)
+# if (LINUX_MAJOR >= 2) && (LINUX_MINOR >= 1)
+#  define USE_LPF
+#  define LINUX_SLASHPROC_DISCOVERY
+#  define PROCDEV_DEVICE "/proc/net/dev"
+# else
 #  define USE_SOCKETS
 #  define IGNORE_HOSTUNREACH
+# endif
 #endif
 
 #define ALIAS_NAMES_PERMUTED
