@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.100.2.5 1999/10/15 16:05:41 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.100.2.6 1999/10/25 15:46:46 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1164,6 +1164,9 @@ void ack_lease (packet, lease, offer, when, msg)
 			lease_time = max_lease_time;
 			
 		min_lease_time = DEFAULT_MIN_LEASE_TIME;
+		if (min_lease_time > max_lease_time)
+			min_lease_time = max_lease_time;
+
 		if ((oc = lookup_option (&server_universe, state -> options,
 					 SV_MIN_LEASE_TIME))) {
 			if (evaluate_option_cache (&d1, packet,
