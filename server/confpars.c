@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.71 1999/04/08 19:39:54 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.72 1999/04/23 23:50:22 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1059,8 +1059,8 @@ struct class *parse_class_declaration (cfile, group, type)
 				stmt -> data.option -> option =
 					dhcp_universe.options
 					[type
-					? DHO_DHCP_CLASS_IDENTIFIER
-					: DHO_DHCP_USER_CLASS_ID];
+					? DHO_VENDOR_CLASS_IDENTIFIER
+					: DHO_USER_CLASS];
 			}
 			class -> statements = stmt;
 		}
