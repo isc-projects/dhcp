@@ -29,7 +29,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: omapi.c,v 1.22 1999/11/23 22:24:31 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: omapi.c,v 1.23 2000/01/05 18:22:58 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -281,13 +281,13 @@ isc_result_t dhcp_lease_get_value (omapi_object_t *h, omapi_object_t *id,
 				 "dhcp_lease_get_value");
 		return ISC_R_NOTFOUND;
 	} else if (!omapi_ds_strcmp (name, "hardware-address"))
-		return omapi_make_const_value (value, name,
-					       lease -> hardware_addr.haddr,
-					       lease -> hardware_addr.hlen,
-					       "dhcp_lease_get_value");
+		return omapi_make_const_value
+			(value, name, &lease -> hardware_addr.hbuf [1],
+			 (unsigned)(lease -> hardware_addr.hlen - 1),
+			 "dhcp_lease_get_value");
 	else if (!omapi_ds_strcmp (name, "hardware-type"))
 		return omapi_make_int_value (value, name,
-					     lease -> hardware_addr.htype,
+					     lease -> hardware_addr.hbuf [0],
 					     "dhcp_lease_get_value");
 
 	/* Try to find some inner object that can take the value. */
@@ -375,8 +375,7 @@ isc_result_t dhcp_lease_signal_handler (omapi_object_t *h,
 
 	if (!strcmp (name, "updated")) {
 		if (lease -> hardware_addr.hlen == 0 ||
-		    lease -> hardware_addr.htype == 0 ||
-		    lease -> hardware_addr.hlen > 16)
+		    lease -> hardware_addr.hlen > 17)
 			return ISC_R_INVALIDARG;
 		if (!write_lease (lease) || !commit_leases ()) {
 			return ISC_R_IOERROR;
@@ -519,11 +518,14 @@ isc_result_t dhcp_lease_stuff_values (omapi_object_t *c,
 	status = omapi_connection_put_name (c, "hardware-address");
 	if (status != ISC_R_SUCCESS)
 		return status;
-	status = omapi_connection_put_uint32 (c, lease -> hardware_addr.hlen);
+	status = (omapi_connection_put_uint32
+		  (c, (unsigned long)(lease -> hardware_addr.hlen - 1)));
 	if (status != ISC_R_SUCCESS)
 		return status;
-	status = omapi_connection_copyin (c, lease -> hardware_addr.haddr,
-					  lease -> hardware_addr.hlen);
+	status = (omapi_connection_copyin
+		  (c, &lease -> hardware_addr.hbuf [1],
+		   (unsigned long)(lease -> hardware_addr.hlen - 1)));
+	
 	if (status != ISC_R_SUCCESS)
 		return status;
 
@@ -533,7 +535,8 @@ isc_result_t dhcp_lease_stuff_values (omapi_object_t *c,
 	status = omapi_connection_put_uint32 (c, sizeof (int));
 	if (status != ISC_R_SUCCESS)
 		return status;
-	status = omapi_connection_put_uint32 (c, lease -> hardware_addr.htype);
+	status = omapi_connection_put_uint32 (c,
+					      lease -> hardware_addr.hbuf [0]);
 	if (status != ISC_R_SUCCESS)
 		return status;
 
@@ -1072,12 +1075,12 @@ isc_result_t dhcp_host_set_value  (omapi_object_t *h,
 		if (value -> type == omapi_datatype_data ||
 		    value -> type == omapi_datatype_string) {
 			if (value -> u.buffer.len >
-			    sizeof host -> interface.haddr)
+			    (sizeof host -> interface.hbuf) - 1)
 				return ISC_R_INVALIDARG;
-			memcpy (host -> interface.haddr,
+			memcpy (&host -> interface.hbuf [1],
 				value -> u.buffer.value,
 				value -> u.buffer.len);
-			host -> interface.hlen = value -> u.buffer.len;
+			host -> interface.hlen = value -> u.buffer.len + 1;
 		} else
 			return ISC_R_INVALIDARG;
 		return ISC_R_SUCCESS;
@@ -1087,8 +1090,7 @@ isc_result_t dhcp_host_set_value  (omapi_object_t *h,
 		int type;
 		if (value -> type == omapi_datatype_data &&
 		    value -> u.buffer.len == sizeof type) {
-			if (value -> u.buffer.len >
-			    sizeof host -> interface.haddr)
+			if (value -> u.buffer.len > sizeof type)
 				return ISC_R_INVALIDARG;
 			memcpy (&type,
 				value -> u.buffer.value,
@@ -1097,7 +1099,7 @@ isc_result_t dhcp_host_set_value  (omapi_object_t *h,
 			type = value -> u.integer;
 		else
 			return ISC_R_INVALIDARG;
-		host -> interface.htype = type;
+		host -> interface.hbuf [0] = type;
 		return ISC_R_SUCCESS;
 	}
 
@@ -1249,17 +1251,17 @@ isc_result_t dhcp_host_get_value (omapi_object_t *h, omapi_object_t *id,
 	if (!omapi_ds_strcmp (name, "hardware-address")) {
 		if (!host -> interface.hlen)
 			return ISC_R_NOTFOUND;
-		return omapi_make_const_value (value, name,
-					       host -> interface.haddr,
-					       host -> interface.hlen,
-					       "dhcp_host_get_value");
+		return (omapi_make_const_value
+			(value, name, &host -> interface.hbuf [1],
+			 (unsigned long)(host -> interface.hlen - 1),
+			 "dhcp_host_get_value"));
 	}
 
 	if (!omapi_ds_strcmp (name, "hardware-type")) {
 		if (!host -> interface.hlen)
 			return ISC_R_NOTFOUND;
 		return omapi_make_int_value (value, name,
-					     host -> interface.htype,
+					     host -> interface.hbuf [0],
 					     "dhcp_host_get_value");
 	}
 
@@ -1301,8 +1303,8 @@ isc_result_t dhcp_host_signal_handler (omapi_object_t *h,
 
 	if (!strcmp (name, "updated")) {
 		if ((host -> interface.hlen == 0 ||
-		     host -> interface.htype == 0 ||
-		     host -> interface.hlen > 16) &&
+		     host -> interface.hbuf [0] == 0 ||
+		     host -> interface.hlen > 17) &&
 		    !host -> client_identifier.len)
 			return ISC_R_INVALIDARG;
 
@@ -1400,12 +1402,13 @@ isc_result_t dhcp_host_stuff_values (omapi_object_t *c,
 		status = omapi_connection_put_name (c, "hardware-address");
 		if (status != ISC_R_SUCCESS)
 			return status;
-		status = omapi_connection_put_uint32 (c,
-						      host -> interface.hlen);
+		status = (omapi_connection_put_uint32
+			  (c, (unsigned long)(host -> interface.hlen - 1)));
 		if (status != ISC_R_SUCCESS)
 			return status;
-		status = omapi_connection_copyin (c, host -> interface.haddr,
-						  host -> interface.hlen);
+		status = (omapi_connection_copyin
+			  (c, &host -> interface.hbuf [1],
+			   (unsigned long)(host -> interface.hlen)));
 		if (status != ISC_R_SUCCESS)
 			return status;
 
@@ -1415,8 +1418,8 @@ isc_result_t dhcp_host_stuff_values (omapi_object_t *c,
 		status = omapi_connection_put_uint32 (c, sizeof (int));
 		if (status != ISC_R_SUCCESS)
 			return status;
-		status = omapi_connection_put_uint32 (c,
-						      host -> interface.htype);
+		status = (omapi_connection_put_uint32
+			  (c, host -> interface.hbuf [0]));
 		if (status != ISC_R_SUCCESS)
 			return status;
 	}
@@ -1525,7 +1528,7 @@ isc_result_t dhcp_host_lookup (omapi_object_t **lp,
 			/* now use that to get a host */
 			host = ((struct host_decl *)
 				hash_lookup (host_hw_addr_hash,
-					     l -> hardware_addr.haddr,
+					     l -> hardware_addr.hbuf,
 					     l -> hardware_addr.hlen));
 			
 			if (host && *lp && *lp != (omapi_object_t *)host) {
