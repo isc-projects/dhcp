@@ -44,7 +44,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: inet.c,v 1.8 2000/03/17 03:59:01 mellon Exp $ Copyright (c) 1995-1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: inet.c,v 1.8.2.1 2001/06/11 05:54:43 mellon Exp $ Copyright (c) 1995-1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -183,3 +183,60 @@ char *piaddr (addr)
 	}
 	return pbuf;
 }
+
+char *piaddr1 (addr)
+	struct iaddr addr;
+{
+	static char pbuf [4 * 16];
+	char *s = pbuf;
+	int i;
+
+	if (addr.len == 0) {
+		strcpy (s, "<null address>");
+	}
+	for (i = 0; i < addr.len; i++) {
+		sprintf (s, "%s%d", i ? "." : "", addr.iabuf [i]);
+		s += strlen (s);
+	}
+	return pbuf;
+}
+
+char *piaddrmask (struct iaddr addr, struct iaddr mask,
+		  const char *file, int line)
+{
+	char *s, *t;
+	int i, mw;
+	unsigned len;
+
+	for (i = 0; i < 32; i++) {
+		if (!mask.iabuf [3 - i / 8])
+			i += 7;
+		else if (mask.iabuf [3 - i / 8] & (1 << (i % 8)))
+			break;
+	}
+	mw = 32 - i;
+	len = mw > 10 ? 2 : 1;
+	len += 4;	/* three dots and a slash. */
+	for (i = 0; i < mw / 8; i++) {
+		if (addr.iabuf [i] > 100)
+			len += 3;
+		else if (addr.iabuf [i] > 10)
+			len += 2;
+		else
+			len++;
+	}
+	s = dmalloc (len + 1, file, line);
+	if (!s)
+		return s;
+	t = s;
+	sprintf (t, "%d", addr.iabuf [0]);
+	t += strlen (t);
+	for (i = 1; i < mw / 8; i++) {
+		sprintf (t, ".%d", addr.iabuf [i]);
+		t += strlen (t);
+	}
+	*t++ = '/';
+	sprintf (t, "%d", mw);
+	return s;
+}
+
