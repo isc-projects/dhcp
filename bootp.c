@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"@(#) Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bootp.c,v 1.17 1996/08/27 09:33:41 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -56,6 +56,7 @@ void bootp (packet)
 	struct packet outgoing;
 	struct dhcp_packet raw;
 	struct sockaddr_in to;
+	struct in_addr from;
 	struct hardware hto;
 	struct tree_cache *options [256];
 	struct subnet *subnet;
@@ -73,7 +74,8 @@ void bootp (packet)
 
 
 
-	locate_network (packet);
+	if (!locate_network (packet))
+		return;
 
 	hp = find_hosts_by_haddr (packet -> raw -> htype,
 				  packet -> raw -> chaddr,
@@ -83,7 +85,7 @@ void bootp (packet)
 
 	/* Find an IP address in the host_decl that matches the
 	   specified network. */
-	if (hp && packet -> shared_network)
+	if (hp)
 		subnet = find_host_for_network (&hp, &ip_address,
 						packet -> shared_network);
 	else
@@ -105,8 +107,7 @@ void bootp (packet)
 		/* If the packet is from a host we don't know and there
 		   are no dynamic bootp addresses on the network it came
 		   in on, drop it on the floor. */
-		if (!(packet -> shared_network &&
-		      packet -> shared_network -> dynamic_bootp)) {
+		if (!(packet -> shared_network -> group -> dynamic_bootp)) {
 		      lose:
 			note ("No applicable record for BOOTP host %s",
 			      print_hw_addr (packet -> raw -> htype,
@@ -140,15 +141,9 @@ void bootp (packet)
 			release_lease (lease);
 		}
 
-		/* At this point, if we don't know the network from which
-		   the packet came, lose it. */
-		if (!packet -> shared_network)
-			goto lose;
-
 		/* If there are dynamic bootp addresses that might be
 		   available, try to snag one. */
-		for (lease =
-		     packet -> shared_network -> last_lease;
+		for (lease = packet -> shared_network -> last_lease;
 		     lease && lease -> ends <= cur_time;
 		     lease = lease -> prev) {
 			if ((lease -> flags & DYNAMIC_BOOTP_OK)) {
@@ -179,11 +174,11 @@ void bootp (packet)
 	   client.   Start with the per-subnet options, and then override
 	   those with client-specific options. */
 
-	memcpy (options, subnet -> options, sizeof options);
+	memcpy (options, subnet -> group -> options, sizeof options);
 
 	for (i = 0; i < 256; i++) {
-		if (hp -> options [i])
-			options [i] = hp -> options [i];
+		if (hp -> group -> options [i])
+			options [i] = hp -> group -> options [i];
 	}
 
 	/* Pack the options into the buffer.   Unlike DHCP, we can't
@@ -207,19 +202,24 @@ void bootp (packet)
 	raw.ciaddr = packet -> raw -> ciaddr;
 	memcpy (&raw.yiaddr, ip_address.iabuf, sizeof raw.yiaddr);
 
-	if (subnet -> interface_address.len)
+	/* Figure out the address of the next server. */
+	if (hp  && hp -> group -> next_server.len)
+		memcpy (&raw.siaddr, hp -> group -> next_server.iabuf, 4);
+	else if (subnet -> group -> next_server.len)
+		memcpy (&raw.siaddr, subnet -> group -> next_server.iabuf, 4);
+	else if (subnet -> interface_address.len)
 		memcpy (&raw.siaddr, subnet -> interface_address.iabuf, 4);
 	else
 		memcpy (&raw.siaddr, server_identifier.iabuf, 4);
 
 	raw.giaddr = packet -> raw -> giaddr;
-	if (hp -> server_name) {
-		strncpy (raw.sname, hp -> server_name,
+	if (hp -> group -> server_name) {
+		strncpy (raw.sname, hp -> group -> server_name,
 			 (sizeof raw.sname) - 1);
 		raw.sname [(sizeof raw.sname) - 1] = 0;
 	}
-	if (hp -> filename) {
-		strncpy (raw.file, hp -> filename,
+	if (hp -> group -> filename) {
+		strncpy (raw.file, hp -> group -> filename,
 			 (sizeof raw.file) - 1);
 		raw.file [(sizeof raw.file) - 1] = 0;
 	}
@@ -228,6 +228,11 @@ void bootp (packet)
 	hto.htype = packet -> raw -> htype;
 	hto.hlen = packet -> raw -> hlen;
 	memcpy (hto.haddr, packet -> raw -> chaddr, hto.hlen);
+
+	if (server_identifier.len)
+		memcpy (&from, server_identifier.iabuf, 4);
+	else
+		memset (&from, 0, 4);
 
 	/* Report what we're doing... */
 	note ("BOOTREPLY for %s to %s (%s) via %s",
@@ -255,7 +260,7 @@ void bootp (packet)
 		result = send_fallback (&fallback_interface,
 					(struct packet *)0,
 					&raw, outgoing.packet_length,
-					raw.siaddr, &to, &hto);
+					from, &to, &hto);
 		if (result < 0)
 			warn ("send_fallback: %m");
 		return;
@@ -269,7 +274,7 @@ void bootp (packet)
 	errno = 0;
 	result = send_packet (packet -> interface,
 			      packet, &raw, outgoing.packet_length,
-			      raw.siaddr, &to, &hto);
+			      from, &to, &hto);
 	if (result < 0)
 		warn ("send_packet: %m");
 }
