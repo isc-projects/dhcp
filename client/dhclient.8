@@ -64,6 +64,9 @@ relay
 .B -n
 ]
 [
+.B -nw
+]
+[
 .B -w
 ]
 [
@@ -233,6 +236,12 @@ using the
 .B -n
 flag.   This is most likely to be useful in combination with the
 .B -w
+flag.
+.PP
+The client can also be instructed to become a daemon immediately, rather
+than waiting until it has acquired an IP address.   This can be done by
+supplying the
+.B -nw
 flag.
 .SH CONFIGURATION
 The syntax of the dhclient.conf(8) file is discussed seperately.
