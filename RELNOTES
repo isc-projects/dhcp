@@ -1,87 +1,57 @@
 		     Internet Software Consortium
 	      Dynamic Host Configuration Protocol Server
 			    Beta Release 5
-			     Patchlevel 15
-			    March 29, 1997
+			     Patchlevel 17
+			   December 2, 1997
 
 			    Release Notes
 
 This patchlevel is on the Internet Software Consortium DHCP Server
 Release 1.0 track.   The previous version was Beta Release 5,
-Patchlevel 14.   This patchlevel is strictly a bug-fix patchlevel.
-The only new feature is Ultrix Packetfilter support, which is sufficiently
-far from the DHCP protocol engine that its inclusion was felt to be very
-low-risk.
+Patchlevel 16.   This patchlevel is strictly a bug-fix patchlevel.
+Unlike Patchlevel 16, this patchlevel has some somewhat risky bug
+fixes, so please do not install it in a production environment.
 
-The following bug fixes have been made in this release:
+The following changes have been made in this release:
 
-- When the server saw a DHCPREQUEST for a client that it knew had a
-  lease on a different network, it would release that lease.   This
-  behaviour is incorrect according to the protocol - there is nothing
-  in the protocol that says that a client can't simultaneously hold a
-  lease on two addresses on two different networks.
+- Added a man page for dhcpd.leases.
 
-- On little-endian machines (e.g., intel machines and DEC machines),
-  if a client requested that responses to it be broadcast rather than
-  unicast, this request would not be honored because of a
-  byte-swapping error.
+- Updated README to answer some frequently asked questions.
 
-- The server would print a banner on startup and then go into a
-  background (daemon) mode.   If there was a parse error in the
-  dhcpd.conf file, this was not detected until the server had gone
-  into the background, and thus there was no immediate notification.
-  This caused service failures for some users which were difficult to
-  diagnose.   Dhcpd now continues to log messages to the console until
-  after it has successfully parsed the config file and lease file.
-  Also, if dhcpd runs into a problem which causes it to exit, it now
-  logs the message ``exited'' at CRITICAL priority, which should show
-  up on the system console.
+- Fixed a compile problem on Solaris 2.6.
 
-- On Linux, spurious Host Unreachable and Connection Refused errors
-  could delay or foil the DHCP protocol by preventing the transmission
-  of some packets.   This is because of a Linux kernel bug whereby
-  bogus ICMP errors can be communicated to the user program.
+- Support interface aliases on Solaris.
 
-- DHCPNAK behaviour wasn't correct.   In some cases, the server would
-  not NAK DHCPREQUEST messages if they were on the wrong network.
-  This has now been fixed.
+- Print day and month with leading zero in lease files if less than
+  ten, for easier parsing by perl/sed/awk scripts.
 
-- DHCPACK behaviour was incorrect.   If a client sent a DHCPREQUEST
-  for an address that the server was not willing to provide, the
-  server could respond with a DHCPACK for a different address, when it
-  should have ignored the DHCPREQUEST.
+- Never make the lease database world writable, even if dhcpd is
+  invoked with a bogus umask.
 
-- DHCPDECLINE processing wasn't being done correctly, with the result
-  that DHCPDECLINEs were effectively being ignored.   DHCPDECLINEs are
-  now processed correctly - leases which have been DECLINEed are
-  abandoned and never again offered to clients, at lease until the
-  administrator intervenes. Warning: this bug fix does open up the
-  DHCP server to a denial of service attack that was formerly not
-  possible - a client can successively request and DECLINE every lease
-  in the server's database. 
+- Fix DHCPRELEASE handling (before, addressed would never be
+  released.)
 
-- The lease file was being rewritten twice whenever it was time to
-  rewrite it.   This no longer happens.
+- If there is more than one lease for a particular client on a
+  particular network, find the lease the client is asking for so as to
+  avoid a cycle of NAKs.
 
-- BOOTP clients for which there was a host entry with no fixed-address
-  would not be allowed to boot if the dynamic-bootp flag and the
-  boot-unknown-clients flags were set.
+- If a BOOTP request is received from a particular client and that
+  client has previously received a DHCP address, make sure that we
+  still find a valid BOOTP lease so that we don't cycle through
+  addresses.
 
-- If an address range specified within a subnet declaration was on the
-  wrong network, dhcpd would silently mask off the erroneous network
-  number and mask in the network number from the subnet declaration,
-  resulting in incorrect and potentially harmful behaviour.   Dhcpd
-  now flags this as an error.
+- Remove server-identifier option from documentation, other than to
+  document that it has been deprecated.
 
-- The vendor-encapsulated-options option was specified as a text
-  string, which was incorrect.   It is now specified as an arbitrary
-  string of hexadecimal values, so that a user may mock up vendor
-  tags.   This behaviour will eventually be superseded by correct
-  vendor option support.
+- Don't give up if we get an EINTR or EAGAIN while polling or
+  selecting - these return statuses can occur spuriously without
+  indicating a fatal problem.
 
-- On Ultrix, the executable was not being installed in the correct
-  directory.
+- Do not select for exceptions, since we don't handle them.   This was
+  causing massive CPU consumption on some systems.
 
-- Got rid of change warnings in the configure script - these warnings
-  were instituted in August of 1996, and probably anybody who would be
-  affected by them is already aware of them.
+- When a DHCP client has been assigned a fixed address but had
+  previously had a lease, it will request the old leased address.   In
+  such an event, send a DHCPNAK so that it will discover its new
+  static binding.
+
