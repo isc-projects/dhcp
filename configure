@@ -223,7 +223,7 @@ if [ ! -d $workname ]; then
   mkdir $workname
 fi
 
-if [ "$dirs" = x"$dirs" ]; then
+if [ x"$dirs" = x ]; then
   dirs=". client server relay common omapip dhcpctl minires dst"
 fi
 
@@ -243,7 +243,7 @@ for foo in $dirs; do
 done
 
 # Make the link tree in which to actually build.
-if [ x$nolinks != x ]; then
+if [ x$nolinks = x ]; then
   make links
 fi
 
