@@ -359,18 +359,37 @@ statement in the conditional's list of statements:
 .PP
 .nf
 if substring (option dhcp-client-identifier, 0, 3) = "RAS" {
-  add ras-clients;
+  add "ras-clients";
 }
 .fi
 .PP
-An equivalent way to do this is to simply specify the conditional
+A nearly equivalent way to do this is to simply specify the conditional
 expression as a matching expression in the class statement:
 .PP
 .nf
-class ras-clients {
+class "ras-clients" {
   match if substring (option dhcp-client-identifier, 0, 3) = "RAS";
 }
 .fi
+Note that whether you use matching expressions or add statements (or
+both) to classify clients, you must always write a class declaration
+for any class that you use.   If there will be no match statement and
+no in-scope statements for a class, the declaration should look like
+this:
+.nf
+class "ras-clients" {
+}
+.fi
+.PP
+Also, the
+.B add
+statement adds the client to the class as the client's scopes are being
+evaluated - after any address assignment decision has been made.   This means
+that a client that's a member of a class due to an add statement will not
+be affected by pool permits related to that class - when the pool permit list
+is computed, the client will not yet be a member of the pool.   This is an
+inconsistency that will probably be addressed in later versions of the DHCP
+server, but it important to be aware of it at lease for the time being.
 .PP
 In addition to classes, it is possible to declare subclasses.   A
 subclass is a class with the same name as a regular class, but with a
@@ -381,18 +400,18 @@ that it will be quicker to find the subclasses.   Subclasses work as
 follows:
 .PP
 .nf
-class vendor-classes {
+class "vendor-classes" {
   match option vendor-class-identifier;
 }
 
-subclass vendor-classes "SUNW.Ultra-5_10" {
+subclass "vendor-classes" "SUNW.Ultra-5_10" {
   option vendor-encapsulated-options 
 	   2:AC:11:41:1:
 	   3:12:73:75:6e:64:68:63:70:2d:73:65:72:76:65:72:31:37:2d:31:
 	   4:12:2f:65:78:70:6f:72:74:2f:72:6f:6f:74:2f:73:70:61:72:63;
 }
 
-subclass vendor-classes "SUNW.i86pc" {
+subclass "vendor-classes" "SUNW.i86pc" {
   option vendor-encapsulated-options
 	   2:4:AC:11:41:1:
 	   3:12:73:75:6e:64:68:63:70:2d:73:65:72:76:65:72:31:37:2d:31:
@@ -413,7 +432,7 @@ lease, either by letting it expire, or by sending a DHCPRELEASE
 packet.   Classes with lease limits are specified as follows:
 .PP
 .nf
-class limited-1 {
+class "limited-1" {
   lease limit 4;
 }
 .fi
@@ -438,7 +457,7 @@ DHCP server.   These systems typically add a circuit ID or remote ID
 option that uniquely identifies the customer site.   To take advantage
 of this, you can write a class declaration as follows:
 .nf
-class customer {
+class "customer" {
   match if exists agent.circuit-id;
   spawn with agent.circuit-id;
   lease limit 4;
@@ -1105,19 +1124,19 @@ section.   Using the option space definition we just did, the
 .B CLASSING
 example can be implemented more legibly as follows:
 .nf
-class vendor-classes {
+class "vendor-classes" {
   match option vendor-class-identifier;
 }
 
-option SUNW.server-address = 172.17.65.1;
-option SUNW.server-name = "sundhcp-server17-1";
+option SUNW.server-address 172.17.65.1;
+option SUNW.server-name "sundhcp-server17-1";
 
-subclass vendor-classes "SUNW.Ultra-5_10" {
+subclass "vendor-classes" "SUNW.Ultra-5_10" {
   vendor-option-space SUNW;
   option SUNW.root-path "/export/root/sparc";
 }
 
-subclass vendor-classes "SUNW.i86pc" {
+subclass "vendor-classes" "SUNW.i86pc" {
   vendor-option-space SUNW;
   option SUNW.root-path "/export/root/i86pc";
 }
