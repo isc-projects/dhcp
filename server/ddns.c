@@ -3,7 +3,7 @@
    Dynamic DNS updates. */
 
 /*
- * Copyright (c) 1995-2000 Internet Software Consortium.
+ * Copyright (c) 2000 Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -33,17 +33,17 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * This software has been written for the Internet Software Consortium
- * by Ted Lemon in cooperation with Vixie Enterprises and Nominum, Inc.
+ * This software has been donated to the Internet Software Consortium
+ * by Damien Neil of Nominum, Inc.
+ *
  * To learn more about the Internet Software Consortium, see
- * ``http://www.isc.org/''.  To learn more about Vixie Enterprises,
- * see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
+ * ``http://www.isc.org/''.   To learn more about Nominum, Inc., see
  * ``http://www.nominum.com''.
  */
 
 #ifndef lint
 static char copyright[] =
-"$Id: ddns.c,v 1.1 2000/12/11 18:56:41 neild Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: ddns.c,v 1.2 2000/12/28 23:23:46 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -54,16 +54,22 @@ static char copyright[] =
 /* Have to use TXT records for now. */
 #define T_DHCID T_TXT
 
-static int get_dhcid (unsigned char *, struct lease *);
+static int get_dhcid (struct data_string *, struct lease *);
 
 static struct __res_state resolver_state;
 static int                resolver_inited = 0;
 
 
-static int get_dhcid (unsigned char *dhcid, struct lease *lease) {
+static int get_dhcid (struct data_string *id, struct lease *lease)
+{
 	unsigned char buf[MD5_DIGEST_LENGTH];
 	MD5_CTX md5;
 	int i;
+
+	if (!buffer_allocate (&id -> buffer,
+			      (MD5_DIGEST_LENGTH * 2) + 3, MDL))
+		return 0;
+	id -> data = id -> buffer -> data;
 
 	/*
 	 * DHCP clients and servers should use the following forms of client
@@ -85,9 +91,15 @@ static int get_dhcid (unsigned char *dhcid, struct lease *lease) {
 	MD5_Init (&md5);
 
 	if (lease -> uid) {
+		id -> buffer -> data [0] =
+			"0123456789abcdef" [DHO_DHCP_CLIENT_IDENTIFIER >> 4];
+		id -> buffer -> data [1] =
+			"0123456789abcdef" [DHO_DHCP_CLIENT_IDENTIFIER % 15];
 		/* Use the DHCP Client Identifier option. */
 		MD5_Update (&md5, lease -> uid, lease -> uid_len);
-	} else if (lease -> hardware_addr . hlen) {
+	} else if (lease -> hardware_addr.hlen) {
+		id -> buffer -> data [0] = '0';
+		id -> buffer -> data [1] = '0';
 		/* Use the link-layer address. */
 		MD5_Update (&md5,
 			    lease -> hardware_addr.hbuf,
@@ -101,17 +113,23 @@ static int get_dhcid (unsigned char *dhcid, struct lease *lease) {
 
 	/* Convert into ASCII. */
 	for (i = 0; i < MD5_DIGEST_LENGTH; i++) {
-		dhcid [i*2]   = "0123456789abcdef"[(buf[i]>>4)&0xf];
-		dhcid [i*2+1] = "0123456789abcdef"[ buf[i]    &0xf];
+		id -> buffer -> data [i * 2 + 2] =
+			"0123456789abcdef" [(buf [i] >> 4) & 0xf];
+		id -> buffer -> data [i * 2 + 3] =
+			"0123456789abcdef" [buf [i] & 0xf];
 	}
-        dhcid [MD5_DIGEST_LENGTH*2] = '\0';
+	id -> len = MD5_DIGEST_LENGTH * 2 + 2;
+	id -> buffer -> data [id -> len] = 0;
+	id -> terminated = 1;
 
 	return 0;
 }
 
 
-/* NB: No way of checking that there is enough space in a data_string's
-   buffer.  Be certain to allocate enough! */
+/* DN: No way of checking that there is enough space in a data_string's
+   buffer.  Be certain to allocate enough!
+   TL: This is why we the expression evaluation code allocates a *new*
+   data_string.   :') */
 static void data_string_append (struct data_string *ds1,
 				struct data_string *ds2)
 {
@@ -832,13 +850,8 @@ int ddns_updates (struct packet *packet,
 	/*
 	 * Look up the DHCID value.  (Should this be cached in the lease?)
 	 */
-	buffer_allocate (&ddns_dhcid.buffer, (MD5_DIGEST_LENGTH*2)+1, MDL);
-	if (ddns_dhcid.buffer) {
-		get_dhcid (ddns_dhcid.buffer -> data, lease);
-		ddns_dhcid.data = ddns_dhcid.buffer -> data;
-		ddns_dhcid.len = MD5_DIGEST_LENGTH * 2;
-		ddns_dhcid.terminated = 1;
-	}
+	memset (&ddns_dhcid, 0, sizeof ddns_dhcid);
+	get_dhcid (&ddns_dhcid, lease);
 
 
 	/*
