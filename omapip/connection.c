@@ -177,14 +177,6 @@ isc_result_t omapi_connect_list (omapi_object_t *c,
 		return ISC_R_UNEXPECTED;
 	}
 	
-	/* Set the SO_USELOOPBACK flag (this should not fail). */
-	flag = 1;
-	if (setsockopt (obj -> socket, SOL_SOCKET, SO_USELOOPBACK,
-			(char *)&flag, sizeof flag) < 0) {
-		omapi_object_dereference ((omapi_object_t **)&obj, MDL);
-		return ISC_R_UNEXPECTED;
-	}
-	
 	/* Set the file to nonblocking mode. */
 	if (fcntl (obj -> socket, F_SETFL, O_NONBLOCK) < 0) {
 		omapi_object_dereference ((omapi_object_t **)&obj, MDL);
@@ -318,7 +310,7 @@ isc_result_t omapi_connection_connect (omapi_object_t *h)
 			omapi_disconnect (h, 1);
 			return ISC_R_SUCCESS;
 		}
-		if (!errno)
+		if (!error)
 			c -> state = omapi_connection_connected;
 	}
 	if (c -> state == omapi_connection_connecting ||
@@ -347,10 +339,12 @@ isc_result_t omapi_connection_connect (omapi_object_t *h)
 			sizeof c -> remote_addr.sin_zero);
 		++c -> cptr;
 
-		if (connect (c -> socket,
-			     (struct sockaddr *)&c -> remote_addr,
-			     sizeof c -> remote_addr) < 0) {
-			if (errno != EINPROGRESS) {
+		error = connect (c -> socket,
+				 (struct sockaddr *)&c -> remote_addr,
+				 sizeof c -> remote_addr);
+		if (error < 0) {
+			error = errno;
+			if (error != EINPROGRESS) {
 				omapi_disconnect (h, 1);
 				return ISC_R_UNEXPECTED;
 			}
@@ -369,7 +363,7 @@ isc_result_t omapi_connection_connect (omapi_object_t *h)
 
 	/* Disconnect from I/O object, if any. */
 	if (h -> outer)
-		omapi_object_dereference (&h -> outer, MDL);
+		omapi_unregister_io_object (h);
 
 	status = omapi_register_io_object (h,
 					   omapi_connection_readfd,
