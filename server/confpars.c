@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.89 1999/10/24 17:19:14 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.90 1999/10/25 01:52:52 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1117,6 +1117,11 @@ void parse_host_declaration (cfile, group)
 			}
 		}
 				
+		if (dynamicp)
+			host -> flags |= HOST_DECL_DYNAMIC;
+		else
+			host -> flags |= HOST_DECL_STATIC;
+
 		status = enter_host (host, dynamicp, 0);
 		if (status != ISC_R_SUCCESS)
 			parse_warn (cfile, "host %s: %s", host -> name,
