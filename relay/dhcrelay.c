@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcrelay.c,v 1.48 2000/12/29 06:47:46 mellon Exp $ Copyright (c) 1997-2000 Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcrelay.c,v 1.49 2001/02/12 20:50:31 mellon Exp $ Copyright (c) 1997-2000 Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -199,6 +199,9 @@ int main (argc, argv, envp)
 			drop_agent_mismatches = 1;
  		} else if (argv [i][0] == '-') {
  		    usage ();
+		} else if (!strcmp (argv [i], "--version")) {
+			log_info ("isc-dhcrelay-%s", DHCP_VERSION);
+			exit (0);
  		} else {
 			struct hostent *he;
 			struct in_addr ia, *iap = (struct in_addr *)0;
