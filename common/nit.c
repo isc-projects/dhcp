@@ -44,7 +44,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: nit.c,v 1.28 2000/03/17 03:59:01 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: nit.c,v 1.29 2000/05/16 23:02:24 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -410,12 +410,9 @@ int can_receive_unicast_unconfigured (ip)
 void maybe_setup_fallback ()
 {
 	isc_result_t status;
-	struct interface_info *fbi;
-	fbi = setup_fallback ();
-	if (fbi) {
+	struct interface_info *fbi = (struct interface_info *)0;
+	if (setup_fallback (&fbi, MDL)) {
 		if_register_fallback (fbi);
-		fbi -> refcnt = 1;
-		fbi -> type = dhcp_type_interface;
 		status = omapi_register_io_object ((omapi_object_t *)fbi,
 						   if_readsocket, 0,
 						   fallback_discard, 0, 0);

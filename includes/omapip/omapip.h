@@ -121,6 +121,9 @@ typedef struct __omapi_object_type_t {
 				omapi_object_t *);
 	isc_result_t (*create) (omapi_object_t **, omapi_object_t *);
 	isc_result_t (*remove) (omapi_object_t *, omapi_object_t *);
+	isc_result_t (*freer) (omapi_object_t *, const char *, int);
+	isc_result_t (*sizer) (size_t);
+	size_t size;
 } omapi_object_type_t;
 
 #define OMAPI_OBJECT_PREAMBLE \
@@ -149,6 +152,31 @@ typedef struct {
 	unsigned count;
 	omapi_addr_t *addresses;
 } omapi_addr_list_t;
+
+#define OMAPI_OBJECT_ALLOC(name, stype, type) \
+isc_result_t name##_allocate (stype **p, const char *file, int line)	      \
+{									      \
+	return omapi_object_allocate ((omapi_object_t **)p,		      \
+				      type, 0, file, line);		      \
+}									      \
+									      \
+isc_result_t name##_reference (stype **pptr, stype *ptr,		      \
+			       const char *file, int line)		      \
+{									      \
+	return omapi_object_reference ((omapi_object_t **)pptr,		      \
+				       (omapi_object_t *)ptr, file, line);    \
+}									      \
+									      \
+isc_result_t name##_dereference (stype **ptr, const char *file, int line)     \
+{									      \
+	return omapi_object_dereference ((omapi_object_t **)ptr, file, line); \
+}
+
+#define OMAPI_OBJECT_ALLOC_DECL(name, stype, type) \
+isc_result_t name##_allocate (stype **p, const char *file, int line); \
+isc_result_t name##_reference (stype **pptr, stype *ptr, \
+			       const char *file, int line); \
+isc_result_t name##_dereference (stype **ptr, const char *file, int line);
 
 isc_result_t omapi_protocol_connect (omapi_object_t *,
 				     const char *, unsigned, omapi_object_t *);
@@ -221,7 +249,6 @@ isc_result_t omapi_connection_put_name (omapi_object_t *, const char *);
 isc_result_t omapi_connection_put_string (omapi_object_t *, const char *);
 isc_result_t omapi_connection_put_handle (omapi_object_t *c,
 					  omapi_object_t *h);
-
 
 isc_result_t omapi_listen (omapi_object_t *, unsigned, int);
 isc_result_t omapi_listen_addr (omapi_object_t *,
@@ -335,7 +362,10 @@ isc_result_t omapi_object_type_register (omapi_object_type_t **,
 					 isc_result_t (*) (omapi_object_t **,
 							   omapi_object_t *),
 					 isc_result_t (*) (omapi_object_t *,
-							   omapi_object_t *));
+							   omapi_object_t *),
+					 isc_result_t (*) (omapi_object_t *,
+							   const char *, int),
+					 isc_result_t (*) (size_t), size_t);
 isc_result_t omapi_signal (omapi_object_t *, const char *, ...);
 isc_result_t omapi_signal_in (omapi_object_t *, const char *, ...);
 isc_result_t omapi_set_value (omapi_object_t *, omapi_object_t *,
@@ -385,6 +415,24 @@ isc_result_t omapi_object_handle (omapi_handle_t *, omapi_object_t *);
 isc_result_t omapi_handle_lookup (omapi_object_t **, omapi_handle_t);
 isc_result_t omapi_handle_td_lookup (omapi_object_t **, omapi_typed_data_t *);
 
+void * dmalloc (unsigned, const char *, int);
+void dfree (void *, const char *, int);
+#if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL)
+void dmalloc_reuse (void *, const char *, int, int);
+void dmalloc_dump_outstanding (void);
+#else
+#define dmalloc_reuse(x,y,l,z)
+#endif
+#define MDL __FILE__, __LINE__
+#if defined (DEBUG_RC_HISTORY)
+void dump_rc_history (void);
+#endif
+isc_result_t omapi_object_allocate (omapi_object_t **,
+				    omapi_object_type_t *,
+				    size_t, const char *, int);
+isc_result_t omapi_object_initialize (omapi_object_t *,
+				      omapi_object_type_t *,
+				      size_t, size_t, const char *, int);
 isc_result_t omapi_object_reference (omapi_object_t **,
 				     omapi_object_t *, const char *, int);
 isc_result_t omapi_object_dereference (omapi_object_t **, const char *, int);
@@ -414,16 +462,4 @@ isc_result_t omapi_addr_list_reference (omapi_addr_list_t **,
 isc_result_t omapi_addr_list_dereference (omapi_addr_list_t **,
 					  const char *, int);
 
-void * dmalloc (unsigned, const char *, int);
-void dfree (void *, const char *, int);
-#if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL)
-void dmalloc_reuse (void *, const char *, int, int);
-void dmalloc_dump_outstanding (void);
-#else
-#define dmalloc_reuse(x,y,l,z)
-#endif
-#define MDL __FILE__, __LINE__
-#if defined (DEBUG_RC_HISTORY)
-void dump_rc_history (void);
-#endif
 #endif /* _OMAPIP_H_ */

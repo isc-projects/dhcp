@@ -44,6 +44,9 @@
 #include <omapip/omapip_p.h>
 #include <arpa/inet.h>
 
+OMAPI_OBJECT_ALLOC (omapi_connection,
+		    omapi_connection_object_t, omapi_type_connection)
+
 isc_result_t omapi_connect (omapi_object_t *c,
 			    const char *server_name,
 			    unsigned port)
@@ -66,8 +69,9 @@ isc_result_t omapi_connect (omapi_object_t *c,
 			return ISC_R_HOSTUNKNOWN;
 		hix = i;
 
-		if (!omapi_addr_list_new (&addrs, hix, MDL))
-			return ISC_R_NOMEMORY;
+		status = omapi_addr_list_new (&addrs, hix, MDL);
+		if (status != ISC_R_SUCCESS)
+			return status;
 		for (i = 0; i < hix; i++) {
 			addrs -> addresses [i].addrtype = he -> h_addrtype;
 			addrs -> addresses [i].addrlen = he -> h_length;
@@ -77,8 +81,9 @@ isc_result_t omapi_connect (omapi_object_t *c,
 			addrs -> addresses [i].port = port;
 		}
 	} else {
-		if (!omapi_addr_list_new (&addrs, 1, MDL))
-			return ISC_R_NOMEMORY;
+		status = omapi_addr_list_new (&addrs, 1, MDL);
+		if (status != ISC_R_SUCCESS)
+			return status;
 		addrs -> addresses [0].addrtype = AF_INET;
 		addrs -> addresses [0].addrlen = sizeof foo;
 		memcpy (addrs -> addresses [0].address, &foo, sizeof foo);
@@ -99,23 +104,20 @@ isc_result_t omapi_connect_list (omapi_object_t *c,
 	int flag;
 	struct sockaddr_in local_sin;
 
-	obj = (omapi_connection_object_t *)dmalloc (sizeof *obj, MDL);
-	if (!obj)
-		return ISC_R_NOMEMORY;
-	memset (obj, 0, sizeof *obj);
-	obj -> refcnt = 1;
-	rc_register_mdl (&obj, obj, obj -> refcnt);
-	obj -> type = omapi_type_connection;
+	obj = (omapi_connection_object_t *)0;
+	status = omapi_connection_allocate (&obj, MDL);
+	if (status != ISC_R_SUCCESS)
+		return status;
 
 	status = omapi_object_reference (&c -> outer, (omapi_object_t *)obj,
 					 MDL);
 	if (status != ISC_R_SUCCESS) {
-		omapi_object_dereference ((omapi_object_t **)&obj, MDL);
+		omapi_connection_dereference (&obj, MDL);
 		return status;
 	}
 	status = omapi_object_reference (&obj -> inner, c, MDL);
 	if (status != ISC_R_SUCCESS) {
-		omapi_object_dereference ((omapi_object_t **)&obj, MDL);
+		omapi_connection_dereference (&obj, MDL);
 		return status;
 	}
 
@@ -123,7 +125,7 @@ isc_result_t omapi_connect_list (omapi_object_t *c,
 	obj -> socket =
 		socket (PF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if (obj -> socket < 0) {
-		omapi_object_dereference ((omapi_object_t **)&obj, MDL);
+		omapi_connection_dereference (&obj, MDL);
 		if (errno == EMFILE || errno == ENFILE || errno == ENOBUFS)
 			return ISC_R_NORESOURCES;
 		return ISC_R_UNEXPECTED;
@@ -133,8 +135,7 @@ isc_result_t omapi_connect_list (omapi_object_t *c,
 	if (local_addr) {
 		/* Only do TCPv4 so far. */
 		if (local_addr -> addrtype != AF_INET) {
-			omapi_object_dereference ((omapi_object_t **)&obj,
-						  MDL);
+			omapi_connection_dereference (&obj, MDL);
 			return ISC_R_INVALIDARG;
 		}
 		local_sin.sin_port = htons (local_addr -> port);
@@ -164,7 +165,7 @@ isc_result_t omapi_connect_list (omapi_object_t *c,
 #if defined (HAVE_SETFD)
 	if (fcntl (obj -> socket, F_SETFD, 1) < 0) {
 		close (obj -> socket);
-		omapi_object_dereference ((omapi_object_t **)&obj, MDL);
+		omapi_connection_dereference (&obj, MDL);
 		return ISC_R_UNEXPECTED;
 	}
 #endif
@@ -173,13 +174,13 @@ isc_result_t omapi_connect_list (omapi_object_t *c,
 	flag = 1;
 	if (setsockopt (obj -> socket, SOL_SOCKET, SO_REUSEADDR,
 			(char *)&flag, sizeof flag) < 0) {
-		omapi_object_dereference ((omapi_object_t **)&obj, MDL);
+		omapi_connection_dereference (&obj, MDL);
 		return ISC_R_UNEXPECTED;
 	}
 	
 	/* Set the file to nonblocking mode. */
 	if (fcntl (obj -> socket, F_SETFL, O_NONBLOCK) < 0) {
-		omapi_object_dereference ((omapi_object_t **)&obj, MDL);
+		omapi_connection_dereference (&obj, MDL);
 		return ISC_R_UNEXPECTED;
 	}
 
@@ -195,7 +196,7 @@ isc_result_t omapi_connect_list (omapi_object_t *c,
 
 	obj -> state = omapi_connection_unconnected;
 	omapi_connection_connect ((omapi_object_t *)obj);
-	omapi_object_dereference ((omapi_object_t **)&obj, MDL);
+	omapi_connection_dereference (&obj, MDL);
 	return status;
 }
 
@@ -441,7 +442,7 @@ isc_result_t omapi_connection_destroy (omapi_object_t *h,
 	if (c -> state == omapi_connection_connected)
 		omapi_disconnect (h, 1);
 	if (c -> listener)
-		omapi_object_dereference (&c -> listener, file, line);
+		omapi_listener_dereference (&c -> listener, file, line);
 	if (c -> connect_list)
 		omapi_addr_list_dereference (&c -> connect_list, file, line);
 	return ISC_R_SUCCESS;

@@ -261,8 +261,8 @@ typedef struct _dhcp_failover_state {
 	enum failover_state my_state;
 	TIME my_stos;
 
-	omapi_object_t *link_to_peer;	/* Currently-established link
-					   to peer. */
+	dhcp_failover_link_t *link_to_peer;	/* Currently-established link
+						   to peer. */
 
 	enum {
 		primary, secondary

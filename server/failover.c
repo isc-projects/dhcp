@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.13 2000/05/04 18:58:15 mellon Exp $ Copyright (c) 1999-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.14 2000/05/16 23:03:45 mellon Exp $ Copyright (c) 1999-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -69,14 +69,21 @@ void dhcp_failover_startup ()
 			if (status != ISC_R_SUCCESS) {
 				add_timeout (cur_time + 90,
 					     dhcp_failover_listener_restart,
-					     state);
+					     state,
+					     (tvref_t)omapi_object_reference,
+					     (tvunref_t)
+					     omapi_object_dereference);
 			}
 		} else {
 			status = (dhcp_failover_link_initiate
 				  ((omapi_object_t *)state));
 			if (status != ISC_R_SUCCESS) {
 				add_timeout (cur_time + 90,
-					     dhcp_failover_reconnect, state);
+					     dhcp_failover_reconnect, state,
+					     (tvref_t)
+					     dhcp_failover_state_reference,
+					     (tvunref_t)
+					     dhcp_failover_state_dereference);
 			}
 		}
 		if (status != ISC_R_SUCCESS) {
@@ -101,28 +108,28 @@ isc_result_t enter_failover_peer (peer)
 	dhcp_failover_state_t *dup = (dhcp_failover_state_t *)0;
 	isc_result_t status;
 
-	status = find_failover_peer (&dup, peer -> name);
+	status = find_failover_peer (&dup, peer -> name, MDL);
 	if (status == ISC_R_NOTFOUND) {
 		if (failover_states) {
-			omapi_object_reference
-				((omapi_object_t **)&peer -> next,
-				 (omapi_object_t *)failover_states, MDL);
-			omapi_object_dereference
-				((omapi_object_t **)&failover_states, MDL);
+			dhcp_failover_state_reference (&peer -> next,
+						      failover_states, MDL);
+			dhcp_failover_state_dereference (&failover_states,
+							 MDL);
 		}
-		omapi_object_reference ((omapi_object_t **)&failover_states,
-					(omapi_object_t *)peer, MDL);
+		dhcp_failover_state_reference (&failover_states, peer, MDL);
 		return ISC_R_SUCCESS;
 	}
+	dhcp_failover_state_dereference (&dup, MDL);
 	if (status == ISC_R_SUCCESS)
 		return ISC_R_EXISTS;
-
 	return status;
 }
 
-isc_result_t find_failover_peer (peer, name)
+isc_result_t find_failover_peer (peer, name, file, line)
 	dhcp_failover_state_t **peer;
 	const char *name;
+	const char *file;
+	int line;
 {
 	dhcp_failover_state_t *p;
 
@@ -130,8 +137,7 @@ isc_result_t find_failover_peer (peer, name)
 		if (!strcmp (name, p -> name))
 			break;
 	if (p)
-		return omapi_object_reference ((omapi_object_t **)peer,
-					       (omapi_object_t *)p, MDL);
+		return dhcp_failover_state_reference (peer, p, file, line);
 	return ISC_R_NOTFOUND;
 }
 
@@ -174,23 +180,20 @@ isc_result_t dhcp_failover_link_initiate (omapi_object_t *h)
 		return ISC_R_INVALIDARG;
 	state = (dhcp_failover_state_t *)o;
 
-	obj = (dhcp_failover_link_t *)dmalloc (sizeof *obj, MDL);
-	if (!obj)
-		return ISC_R_NOMEMORY;
-	memset (obj, 0, sizeof *obj);
-	obj -> refcnt = 1;
-	obj -> type = dhcp_type_failover_link;
+	obj = (dhcp_failover_link_t *)0;
+	status = dhcp_failover_link_allocate (&obj, MDL);
+	if (status != ISC_R_SUCCESS)
+		return status;
 	option_cache_reference (&obj -> peer_address, state -> address, MDL);
 	obj -> peer_port = state -> port;
-	omapi_object_reference ((omapi_object_t **)&obj -> state_object,
-				(omapi_object_t *)state, MDL);
+	dhcp_failover_state_reference (&obj -> state_object, state, MDL);
 
 	memset (&ds, 0, sizeof ds);
 	if (!evaluate_option_cache (&ds, (struct packet *)0, (struct lease *)0,
 				    (struct option_state *)0,
 				    (struct option_state *)0,
 				    &global_scope, obj -> peer_address, MDL)) {
-		omapi_object_dereference ((omapi_object_t **)&obj, MDL);
+		dhcp_failover_link_dereference (&obj, MDL);
 		return ISC_R_UNEXPECTED;
 	}
 
@@ -198,7 +201,7 @@ isc_result_t dhcp_failover_link_initiate (omapi_object_t *h)
 	   IPv4 addresses. */
 	status = omapi_addr_list_new (&addrs, ds.len / 4, MDL);
 	if (status != ISC_R_SUCCESS) {
-		omapi_object_dereference ((omapi_object_t **)&obj, MDL);
+		dhcp_failover_link_dereference (&obj, MDL);
 		return status;
 	}
 
@@ -227,8 +230,7 @@ isc_result_t dhcp_failover_link_initiate (omapi_object_t *h)
 	} else {
 		if (ds.len != sizeof (struct in_addr)) {
 			data_string_forget (&ds, MDL);
-			omapi_object_dereference ((omapi_object_t **)&obj,
-						  MDL);
+			dhcp_failover_link_dereference (&obj, MDL);
 			omapi_addr_list_dereference (&addrs, MDL);
 			return ISC_R_INVALIDARG;
 		}
@@ -246,14 +248,8 @@ isc_result_t dhcp_failover_link_initiate (omapi_object_t *h)
 				     addrs, &local_addr);
 	omapi_addr_list_dereference (&addrs, MDL);
 
-	/* If we didn't succeed in starting to connect, fail. */
-	if (status != ISC_R_SUCCESS) {
-	      loselose:
-		omapi_object_dereference ((omapi_object_t **)&obj, MDL);
-		return status;
-	}
-	omapi_object_dereference ((omapi_object_t **)&obj, MDL);
-	return ISC_R_SUCCESS;
+	dhcp_failover_link_dereference (&obj, MDL);
+	return status;
 }
 
 isc_result_t dhcp_failover_link_signal (omapi_object_t *h,
@@ -284,8 +280,10 @@ isc_result_t dhcp_failover_link_signal (omapi_object_t *h,
 		if (link -> state_object &&
 		    link -> state_object -> i_am == primary) {
 			add_timeout (cur_time + 90, dhcp_failover_reconnect,
-				     link -> state_object);
-			/* XXX this is a reference! */
+				     link -> state_object,
+				     (tvref_t)dhcp_failover_state_reference,
+				     (tvunref_t)
+				     dhcp_failover_state_dereference);
 		}
 		return ISC_R_SUCCESS;
 	}
@@ -419,9 +417,8 @@ isc_result_t dhcp_failover_link_signal (omapi_object_t *h,
 		    }
 
 		    if (!link -> state_object)
-			    omapi_object_reference
-				    ((omapi_object_t **)&link -> state_object,
-				     (omapi_object_t *)state, MDL);
+			    dhcp_failover_state_reference
+				    (&link -> state_object, state, MDL);
 		    option_cache_reference
 			    (&link -> peer_address, state -> address, MDL);
 		}
@@ -732,8 +729,7 @@ isc_result_t dhcp_failover_link_destroy (omapi_object_t *h,
 		link -> imsg = (failover_message_t *)0;
 	}
 	if (link -> state_object)
-		omapi_object_dereference
-			((omapi_object_t **)&link -> state_object, MDL);
+		dhcp_failover_state_dereference (&link -> state_object, MDL);
 	return ISC_R_SUCCESS;
 }
 
@@ -826,12 +822,10 @@ isc_result_t dhcp_failover_listen (omapi_object_t *h)
 
 	omapi_value_dereference (&value, MDL);
 
-	obj = (dhcp_failover_listener_t *)dmalloc (sizeof *obj, MDL);
-	if (!obj)
-		return ISC_R_NOMEMORY;
-	memset (obj, 0, sizeof *obj);
-	obj -> refcnt = 1;
-	obj -> type = dhcp_type_failover_listener;
+	obj = (dhcp_failover_listener_t *)0;
+	status = dhcp_failover_listener_allocate (&obj, MDL);
+	if (status != ISC_R_SUCCESS)
+		return status;
 	obj -> local_port = local_addr.port;
 	
 	status = omapi_listen_addr ((omapi_object_t *)obj, &local_addr, 1);
@@ -841,17 +835,16 @@ isc_result_t dhcp_failover_listen (omapi_object_t *h)
 	status = omapi_object_reference (&h -> outer,
 					 (omapi_object_t *)obj, MDL);
 	if (status != ISC_R_SUCCESS) {
-		omapi_object_dereference ((omapi_object_t **)&obj, MDL);
+		dhcp_failover_listener_dereference (&obj, MDL);
 		return status;
 	}
 	status = omapi_object_reference (&obj -> inner, h, MDL);
 	if (status != ISC_R_SUCCESS) {
-		omapi_object_dereference ((omapi_object_t **)&obj, MDL);
+		dhcp_failover_listener_dereference (&obj, MDL);
 		return status;
 	}
 
-	status = omapi_object_dereference ((omapi_object_t **)&obj, MDL);
-	return status;
+	return dhcp_failover_listener_dereference (&obj, MDL);
 }
 
 /* Signal handler for protocol listener - if we get a connect signal,
@@ -882,19 +875,17 @@ isc_result_t dhcp_failover_listener_signal (omapi_object_t *o,
 	if (!c || c -> type != omapi_type_connection)
 		return ISC_R_INVALIDARG;
 
-	obj = (dhcp_failover_link_t *)dmalloc (sizeof *obj, MDL);
-	if (!obj)
-		return ISC_R_NOMEMORY;
-	memset (obj, 0, sizeof *obj);
-	obj -> refcnt = 1;
-	obj -> type = dhcp_type_failover_link;
+	obj = (dhcp_failover_link_t *)0;
+	status = dhcp_failover_link_allocate (&obj, MDL);
+	if (status != ISC_R_SUCCESS)
+		return status;
 	obj -> peer_port = ntohs (c -> remote_addr.sin_port);
 
 	status = omapi_object_reference (&obj -> outer,
 					 (omapi_object_t *)c, MDL);
 	if (status != ISC_R_SUCCESS) {
 	      lose:
-		omapi_object_dereference ((omapi_object_t **)&obj, MDL);
+		dhcp_failover_link_dereference (&obj, MDL);
 		omapi_disconnect ((omapi_object_t *)c, 1);
 		return status;
 	}
@@ -904,8 +895,7 @@ isc_result_t dhcp_failover_listener_signal (omapi_object_t *o,
 	if (status != ISC_R_SUCCESS)
 		goto lose;
 
-	omapi_object_dereference ((omapi_object_t **)&obj, MDL);
-	return status;
+	return dhcp_failover_link_dereference (&obj, MDL);
 }
 
 isc_result_t dhcp_failover_listener_set_value (omapi_object_t *h,
@@ -985,31 +975,24 @@ isc_result_t dhcp_failover_register (omapi_object_t *h)
 	if (status != ISC_R_SUCCESS)
 		return status;
 
-	obj = (dhcp_failover_state_t *)dmalloc (sizeof *obj, MDL);
-	if (!obj)
-		return ISC_R_NOMEMORY;
-	memset (obj, 0, sizeof *obj);
-	obj -> refcnt = 1;
-	obj -> type = dhcp_type_failover_state;
+	obj = (dhcp_failover_state_t *)0;
+	dhcp_failover_state_allocate (&obj, MDL);
 	obj -> listen_port = port;
 	
 	status = omapi_listen ((omapi_object_t *)obj, port, 1);
-	omapi_object_dereference ((omapi_object_t **)&obj, MDL);
-	if (status != ISC_R_SUCCESS)
+	if (status != ISC_R_SUCCESS) {
+		dhcp_failover_state_dereference (&obj, MDL);
 		return status;
+	}
 
 	status = omapi_object_reference (&h -> outer, (omapi_object_t *)obj,
 					 MDL);
 	if (status != ISC_R_SUCCESS) {
-		omapi_object_dereference ((omapi_object_t **)&obj, MDL);
+		dhcp_failover_state_dereference (&obj, MDL);
 		return status;
 	}
 	status = omapi_object_reference (&obj -> inner, h, MDL);
-	if (status != ISC_R_SUCCESS) {
-		omapi_object_dereference ((omapi_object_t **)&obj, MDL);
-		return status;
-	}
-
+	dhcp_failover_state_dereference (&obj, MDL);
 	return status;
 }
 
@@ -1043,11 +1026,14 @@ isc_result_t dhcp_failover_state_signal (omapi_object_t *o,
 	if (!strcmp (name, "disconnect")) {
 		link = va_arg (ap, dhcp_failover_link_t *);
 
-		omapi_object_dereference (&state -> link_to_peer, MDL);
+		dhcp_failover_link_dereference (&state -> link_to_peer, MDL);
 		dhcp_failover_state_transition (state, "disconnect");
 		if (state -> i_am == primary)
 			add_timeout (cur_time + 90, dhcp_failover_reconnect,
-				     state); /* XXX this is a reference! */
+				     state,
+				     (tvref_t)dhcp_failover_state_reference,
+				     (tvunref_t)
+				     dhcp_failover_state_dereference);
 	} else if (!strcmp (name, "message")) {
 		link = va_arg (ap, dhcp_failover_link_t *);
 
@@ -1058,17 +1044,17 @@ isc_result_t dhcp_failover_state_signal (omapi_object_t *o,
 			if (state -> link_to_peer) {
 				omapi_disconnect ((omapi_object_t *)
 						  state -> link_to_peer, 1);
-				omapi_object_dereference
+				dhcp_failover_link_dereference
 					(&state -> link_to_peer, MDL);
 				dhcp_failover_state_transition (state,
 								"disconnect");
 			}
-			omapi_object_reference (&state -> link_to_peer,
-						(omapi_object_t *)link, MDL);
+			dhcp_failover_link_reference (&state -> link_to_peer,
+						      link, MDL);
 			status = (dhcp_failover_send_connectack
 				  ((omapi_object_t *)link, 0));
 			if (status != ISC_R_SUCCESS) {
-				omapi_object_dereference
+				dhcp_failover_link_dereference
 					(&state -> link_to_peer, MDL);
 				omapi_disconnect (link -> outer, 1);
 				return ISC_R_SUCCESS;
@@ -1126,8 +1112,8 @@ isc_result_t dhcp_failover_state_signal (omapi_object_t *o,
 						       FTR_DUP_CONNECTION, 0);
 			omapi_disconnect (link -> outer, 0);
 		    }
-		    omapi_object_reference (&state -> link_to_peer,
-					    (omapi_object_t *)link, MDL);
+		    dhcp_failover_link_reference (&state -> link_to_peer,
+						  link, MDL);
 		    dhcp_failover_state_transition (state, "connect");
 		} else if (link -> imsg -> type == FTM_DISCONNECT) {
 		    if (link -> imsg -> reject_reason) {
@@ -1274,28 +1260,17 @@ isc_result_t dhcp_failover_set_state (dhcp_failover_state_t *state,
 	    /* Now hook the ack queue to the beginning of the update
 	       queue. */
 	    if (state -> update_queue_head) {
-		    omapi_object_reference
-			    ((omapi_object_t **)
-			     &state -> ack_queue_tail -> next_pending,
-			     (omapi_object_t *)state -> update_queue_head,
-			     MDL);
-		    omapi_object_dereference ((omapi_object_t **)
-					      &state -> update_queue_head,
-					      MDL);
+		    lease_reference (&state -> ack_queue_tail -> next_pending,
+				     state -> update_queue_head, MDL);
+		    lease_dereference (&state -> update_queue_head, MDL);
 	    }
-	    omapi_object_reference ((omapi_object_t **)
-				    &state -> update_queue_head,
-				    (omapi_object_t *)state -> ack_queue_head,
-				    MDL);
+	    lease_reference (&state -> update_queue_head,
+			     state -> ack_queue_head, MDL);
 	    if (!state -> update_queue_tail)
-		    omapi_object_reference
-			    ((omapi_object_t **)
-			     &state -> update_queue_tail,
-			     (omapi_object_t *)state -> ack_queue_tail, MDL);
-	    omapi_object_dereference ((omapi_object_t **)
-				      &state -> ack_queue_tail, MDL);
-	    omapi_object_dereference ((omapi_object_t **)
-				      &state -> ack_queue_head, MDL);
+		    lease_reference (&state -> update_queue_tail,
+				     state -> ack_queue_tail, MDL);
+	    lease_dereference (&state -> ack_queue_tail, MDL);
+	    lease_dereference (&state -> ack_queue_head, MDL);
 	    state -> cur_unacked_updates = 0;
 	}
 	cancel_timeout (dhcp_failover_keepalive, state);
@@ -1458,53 +1433,38 @@ isc_result_t dhcp_failover_send_updates (dhcp_failover_state_t *state)
 	while (state -> max_flying_updates > state -> cur_unacked_updates &&
 	       state -> update_queue_head) {
 		/* Grab the head of the update queue. */
-		omapi_object_reference ((omapi_object_t **)&lp,
-					(omapi_object_t *)
-					state -> update_queue_head, MDL);
+		lease_reference (&lp, state -> update_queue_head, MDL);
 
 		/* Send the update to the peer. */
 		status = dhcp_failover_send_bind_update (state, lp);
 		if (status != ISC_R_SUCCESS) {
-			omapi_object_dereference ((omapi_object_t **)&lp, MDL);
+			lease_dereference (&lp, MDL);
 			return status;
 		}
 		lp -> flags &= ~ON_UPDATE_QUEUE;
 
 		/* Take it off the head of the update queue and put the next
 		   item in the update queue at the head. */
-		omapi_object_dereference ((omapi_object_t **)
-					  &state -> update_queue_head, MDL);
+		lease_dereference (&state -> update_queue_head, MDL);
 		if (lp -> next_pending) {
-			omapi_object_reference ((omapi_object_t **)
-						&state -> update_queue_head,
-						(omapi_object_t *)
-						lp -> next_pending, MDL);
-			omapi_object_dereference ((omapi_object_t **)
-						  &lp -> next_pending, MDL);
+			lease_reference (&state -> update_queue_head,
+					 lp -> next_pending, MDL);
+			lease_dereference (&lp -> next_pending, MDL);
 		} else {
-			omapi_object_dereference ((omapi_object_t **)
-						  &state -> update_queue_tail,
-						  MDL);
+			lease_dereference (&state -> update_queue_tail, MDL);
 		}
 
 		if (state -> ack_queue_head) {
-			omapi_object_reference
-				((omapi_object_t **)
-				 &state -> ack_queue_tail -> next_pending,
-				 (omapi_object_t *)lp, MDL);
-			omapi_object_dereference ((omapi_object_t **)
-						  &state -> ack_queue_tail,
-						  MDL);
+			lease_reference
+				(&state -> ack_queue_tail -> next_pending,
+				 lp, MDL);
+			lease_dereference (&state -> ack_queue_tail, MDL);
 		} else {
-			omapi_object_reference ((omapi_object_t **)
-						&state -> ack_queue_head,
-						(omapi_object_t *)lp, MDL);
+			lease_reference (&state -> ack_queue_head, lp, MDL);
 		}
-		omapi_object_reference ((omapi_object_t **)
-					&state -> ack_queue_tail,
-					(omapi_object_t *)lp, MDL);
+		lease_reference (&state -> ack_queue_tail, lp, MDL);
 		lp -> flags |= ON_ACK_QUEUE;
-		omapi_object_dereference ((omapi_object_t **)&lp, MDL);
+		lease_dereference (&lp, MDL);
 
 		/* Count the object as an unacked update. */
 		state -> cur_unacked_updates++;
@@ -1536,20 +1496,17 @@ int dhcp_failover_queue_update (struct lease *lease)
 		dhcp_failover_ack_queue_remove (state, lease);
 
 	if (state -> update_queue_head) {
-		omapi_object_reference
-			((omapi_object_t **)
-			 &state -> update_queue_tail -> next_pending,
-			 (omapi_object_t *)lease, MDL);
-		omapi_object_dereference ((omapi_object_t **)
-					  &state -> update_queue_tail, MDL);
+		if (state -> update_queue_tail -> next_pending)
+			lease_dereference
+				(&state -> update_queue_tail -> next_pending,
+				 MDL);
+		lease_reference (&state -> update_queue_tail -> next_pending,
+				 lease, MDL);
+		lease_dereference (&state -> update_queue_tail, MDL);
 	} else {
-		omapi_object_reference ((omapi_object_t **)
-					&state -> update_queue_head,
-					(omapi_object_t *)lease, MDL);
+		lease_reference (&state -> update_queue_head, lease, MDL);
 	}
-	omapi_object_reference ((omapi_object_t **)
-				&state -> update_queue_tail,
-				(omapi_object_t *)lease, MDL);
+	lease_reference (&state -> update_queue_tail, lease, MDL);
 	lease -> flags |= ON_UPDATE_QUEUE;
 	dhcp_failover_send_updates (state);
 	return 1;
@@ -1561,17 +1518,12 @@ void dhcp_failover_ack_queue_remove (dhcp_failover_state_t *state,
 	struct lease *lp;
 
 	if (state -> ack_queue_head == lease) {
-		omapi_object_dereference ((omapi_object_t **)
-					  &state -> ack_queue_head, MDL);
+		lease_dereference (&state -> ack_queue_head, MDL);
 		if (lease -> next_pending) {
-			omapi_object_reference ((omapi_object_t **)
-						&state -> ack_queue_head,
-						(omapi_object_t *)
-						lease -> next_pending, MDL);
+			lease_reference (&state -> ack_queue_head,
+					 lease -> next_pending, MDL);
 		} else {
-			omapi_object_dereference ((omapi_object_t **)
-						  &state -> ack_queue_tail,
-						  MDL);
+			lease_dereference (&state -> ack_queue_tail, MDL);
 		}
 		lease -> flags &= ~ON_ACK_QUEUE;
 		return;
@@ -1580,20 +1532,13 @@ void dhcp_failover_ack_queue_remove (dhcp_failover_state_t *state,
 	     lp -> next_pending != lease; lp = lp -> next_pending)
 		;
 	if (lp) {
-		omapi_object_dereference ((omapi_object_t **)
-					  &lp -> next_pending, MDL);
+		lease_dereference (&lp -> next_pending, MDL);
 		if (lease -> next_pending)
-			omapi_object_reference ((omapi_object_t **)
-						&lp -> next_pending,
-						(omapi_object_t *)
-						lease -> next_pending, MDL);
+			lease_reference (&lp -> next_pending,
+					 lease -> next_pending, MDL);
 		else {
-			omapi_object_dereference ((omapi_object_t **)
-						  &state -> ack_queue_tail,
-						  MDL);
-			omapi_object_reference ((omapi_object_t **)
-						&state -> ack_queue_tail,
-						(omapi_object_t *)lp, MDL);
+			lease_dereference (&state -> ack_queue_tail, MDL);
+			lease_reference (&state -> ack_queue_tail, lp, MDL);
 		}
 	}
 	lease -> flags &= ~ON_ACK_QUEUE;
@@ -1628,7 +1573,9 @@ void dhcp_failover_reconnect (void *vs)
 		log_info ("failover peer %s: %s", state -> name,
 			  isc_result_totext (status));
 		add_timeout (cur_time + 90,
-			     dhcp_failover_listener_restart, state);
+			     dhcp_failover_listener_restart, state,
+			     (tvref_t)dhcp_failover_state_reference,
+			     (tvunref_t)dhcp_failover_state_dereference);
 	}
 }
 
@@ -1642,7 +1589,9 @@ void dhcp_failover_listener_restart (void *vs)
 		log_info ("failover peer %s: %s", state -> name,
 			  isc_result_totext (status));
 		add_timeout (cur_time + 90,
-			     dhcp_failover_listener_restart, state);
+			     dhcp_failover_listener_restart, state,
+			     (tvref_t)dhcp_failover_state_reference,
+			     (tvunref_t)dhcp_failover_state_dereference);
 	}
 }
 
@@ -1753,7 +1702,7 @@ isc_result_t dhcp_failover_state_destroy (omapi_object_t *h,
 		return ISC_R_INVALIDARG;
 	s = (dhcp_failover_state_t *)h;
 	if (s -> link_to_peer)
-		omapi_object_dereference (&s -> link_to_peer, MDL);
+		dhcp_failover_link_dereference (&s -> link_to_peer, MDL);
 	if (s -> name)
 		dfree (s -> name, MDL);
 	if (s -> address)
@@ -2947,64 +2896,69 @@ isc_result_t dhcp_failover_send_poolresp (dhcp_failover_state_t *state,
 isc_result_t dhcp_failover_process_bind_update (dhcp_failover_state_t *state,
 					       failover_message_t *msg)
 {
-	struct lease lt, *lease;
+	struct lease *lt, *lease;
 	struct iaddr ia;
+	int reason = FTR_MISC_REJECT;
+	const char *message;
 
 	ia.len = sizeof msg -> assigned_addr;
 	memcpy (ia.iabuf, &msg -> assigned_addr, ia.len);
 
-	lease = find_lease_by_ip_addr (ia);
-	if (!lease) {
-		log_info ("bind update on %s from %s: no such lease.",
-			  piaddr (ia), state -> name);
-		return ISC_R_SUCCESS;
+	lease = (struct lease *)0;
+	if (!find_lease_by_ip_addr (&lease, ia, MDL)) {
+		message = "unknown IP address";
+		reason = FTR_ILLEGAL_IP_ADDR;
+		goto bad;
 	}
 
 	/* XXX check for conflicts. */
 
 	/* Install the new info. */
-	lt = *lease;
-	lt.on_expiry = 0;
-	lt.on_release = 0;
-	lt.on_commit = 0;
+	lt = (struct lease *)0;
+	if (!lease_copy (&lt, lease, MDL)) {
+		message = "no memory";
+		goto bad;
+	}
 
 	if (msg -> options_present & FTB_CHADDR) {
-		if (msg -> chaddr.count > sizeof lt.hardware_addr.hbuf) {
-			log_info ("bind update on %s from %s: chaddr too long",
-				  piaddr (ia), state -> name);
-			return ISC_R_SUCCESS;
+		if (msg -> chaddr.count > sizeof lt -> hardware_addr.hbuf) {
+			message = "chaddr to long";
+			goto bad;
 		}
-		lt.hardware_addr.hlen = msg -> chaddr.count;
-		memcpy (lt.hardware_addr.hbuf, msg -> chaddr.data,
+		lt -> hardware_addr.hlen = msg -> chaddr.count;
+		memcpy (lt -> hardware_addr.hbuf, msg -> chaddr.data,
 			msg -> chaddr.count);
 	}		
 
 	if (msg -> options_present & FTB_CLIENT_IDENTIFIER) {
-		lt.uid_len = msg -> client_identifier.count;
-		if (lt.uid_len > sizeof lt.uid_buf) {
-			lt.uid_max = lt.uid_len;
-			lt.uid = dmalloc (lt.uid_len, MDL);
-			if (!lt.uid)
-				return ISC_R_SUCCESS;
+		lt -> uid_len = msg -> client_identifier.count;
+		if (lt -> uid_len > sizeof lt -> uid_buf) {
+			lt -> uid_max = lt -> uid_len;
+			lt -> uid = dmalloc (lt -> uid_len, MDL);
+			if (!lt -> uid) {
+				message = "no memory";
+				goto bad;
+			}
 		} else {
-			lt.uid_max = sizeof lt.uid_buf;
-			lt.uid = lt.uid_buf;
+			lt -> uid_max = sizeof lt -> uid_buf;
+			lt -> uid = lt -> uid_buf;
 		}
-		memcpy (lt.uid, msg -> client_identifier.data, lt.uid_len);
+		memcpy (lt -> uid,
+			msg -> client_identifier.data, lt -> uid_len);
 	}
 		
 	/* XXX Times may need to be adjusted based on clock skew! */
 	if (msg -> options_present & FTB_STOS) {
-		lt.starts = msg -> stos;
+		lt -> starts = msg -> stos;
 	}
 	if (msg -> options_present & FTB_LEASE_EXPIRY) {
-		lt.ends = msg -> expiry;
+		lt -> ends = msg -> expiry;
 	}
 	if (msg -> options_present & FTB_CLTT) {
-		lt.cltt = msg -> client_ltt;
+		lt -> cltt = msg -> client_ltt;
 	}
 	if (msg -> options_present & FTB_POTENTIAL_EXPIRY) {
-		lt.tsfp = msg -> potential_expiry;
+		lt -> tsfp = msg -> potential_expiry;
 	}
 
 	if (msg -> options_present & FTB_BINDING_STATUS) {
@@ -3022,12 +2976,16 @@ isc_result_t dhcp_failover_process_bind_update (dhcp_failover_state_t *state,
 	}
 
 	/* Try to install the new information. */
-	if (!supersede_lease (lease, &lt, 1, 0)) {
+	if (!supersede_lease (lease, lt, 1, 0)) {
+		message = "database update failed";
+	      bad:
 		dhcp_failover_send_bind_ack (state, lease, msg,
-					     FTR_MISC_REJECT,
-					     "database update failed.");
+					     reason, message);
 	} else
 		dhcp_failover_send_bind_ack (state, lease, msg, 0, 0);
+	if (lt)
+		lease_dereference (&lt, MDL);
+	lease_dereference (&lease, MDL);
 
 	return ISC_R_SUCCESS;
 }
@@ -3035,34 +2993,34 @@ isc_result_t dhcp_failover_process_bind_update (dhcp_failover_state_t *state,
 isc_result_t dhcp_failover_process_bind_ack (dhcp_failover_state_t *state,
 					     failover_message_t *msg)
 {
-	struct lease lt, *lease;
+	struct lease *lt, *lease = (struct lease *)0;
 	struct iaddr ia;
+	const char *message = "no memory";
 
 	ia.len = sizeof msg -> assigned_addr;
 	memcpy (ia.iabuf, &msg -> assigned_addr, ia.len);
 
-	lease = find_lease_by_ip_addr (ia);
-	if (!lease) {
-		log_info ("bind update on %s from %s: no such lease.",
-			  piaddr (ia), state -> name);
-		return ISC_R_SUCCESS;
+	if (!find_lease_by_ip_addr (&lease, ia, MDL)) {
+		message = "no such lease";
+		goto bad;
 	}
 
 	/* XXX check for conflicts. */
 
 	/* Install the new info. */
-	lt = *lease;
-	lt.on_expiry = 0;
-	lt.on_release = 0;
-	lt.on_commit = 0;
+	lt = (struct lease *)0;
+	if (!lease_copy (&lt, lease, MDL)) {
+		lease_dereference (&lease, MDL);
+		goto bad;
+	}
 
 	/* XXX Times may need to be adjusted based on clock skew! */
 	if (msg -> options_present & FTB_POTENTIAL_EXPIRY) {
-		lt.tsfp = msg -> potential_expiry;
+		lt -> tsfp = msg -> potential_expiry;
 	}
 
 	/* Try to install the new information. */
-	supersede_lease (lease, &lt, 1, 0);
+	supersede_lease (lease, lt, 1, 0);
 
 	state -> cur_unacked_updates--;
 	dhcp_failover_ack_queue_remove (state, lease);
@@ -3071,7 +3029,17 @@ isc_result_t dhcp_failover_process_bind_ack (dhcp_failover_state_t *state,
 	   least one. */
 	dhcp_failover_send_updates (state);
 
+      out:
+	lease_dereference (&lease, MDL);
+	if (lt)
+		lease_dereference (&lt, MDL);
+
 	return ISC_R_SUCCESS;
+
+      bad:
+	log_info ("bind update on %s from %s: %s.",
+		  piaddr (ia), state -> name, message);
+	goto out;
 }
 
 #if defined (DEBUG_FAILOVER_MESSAGES)
@@ -3168,4 +3136,11 @@ int load_balance_mine (struct packet *packet, dhcp_failover_state_t *state)
 	else
 		return !hm;
 }
+
+OMAPI_OBJECT_ALLOC (dhcp_failover_state, dhcp_failover_state_t,
+		    dhcp_type_failover_state)
+OMAPI_OBJECT_ALLOC (dhcp_failover_listener, dhcp_failover_listener_t,
+		    dhcp_type_failover_listener)
+OMAPI_OBJECT_ALLOC (dhcp_failover_link, dhcp_failover_link_t,
+		    dhcp_type_failover_link)
 #endif /* defined (FAILOVER_PROTOCOL) */

@@ -15,7 +15,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of The Internet Software Consortium nor the names
+ * 3. Neither the name of Internet Software Consortium nor the names
  *    of its contributors may be used to endorse or promote products derived
  *    from this software without specific prior written permission.
  *
@@ -41,7 +41,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.101 2000/05/01 17:15:23 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.102 2000/05/16 23:01:58 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -71,8 +71,7 @@ struct binding_scope global_scope;
    assert (state_is == state_shouldbe). */
 #define ASSERT_STATE(state_is, state_shouldbe) {}
 
-static char copyright[] =
-"Copyright 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.";
+static char copyright[] = "Copyright 1995-2000 Internet Software Consortium.";
 static char arr [] = "All rights reserved.";
 static char message [] = "Internet Software Consortium DHCP Client";
 static char contrib [] = "\nPlease contribute if you find this software useful.";
@@ -162,17 +161,20 @@ int main (argc, argv, envp)
  		} else if (argv [i][0] == '-') {
  		    usage ();
  		} else {
- 		    struct interface_info *tmp = ((struct interface_info *)
-						  dmalloc (sizeof *tmp, MDL));
- 		    if (!tmp)
- 			log_fatal ("Insufficient memory to %s %s",
- 			       "record interface", argv [i]);
- 		    memset (tmp, 0, sizeof *tmp);
+ 		    struct interface_info *tmp = (struct interface_info *)0;
+		    status = interface_allocate (&tmp, MDL);
+ 		    if (status != ISC_R_SUCCESS)
+ 			log_fatal ("Can't record interface %s:%s",
+				   argv [i], isc_result_totext (status));
  		    strcpy (tmp -> name, argv [i]);
- 		    tmp -> next = interfaces;
+		    if (interfaces) {
+			    interface_reference (&tmp -> next,
+						 interfaces, MDL);
+			    interface_dereference (&interfaces, MDL);
+		    }
+		    interface_reference (&interfaces, tmp, MDL);
  		    tmp -> flags = INTERFACE_REQUESTED;
 		    interfaces_requested = 1;
- 		    interfaces = tmp;
  		}
 	}
 
@@ -267,7 +269,10 @@ int main (argc, argv, envp)
 
 	/* Set up the OMAPI wrappers for various server database internal
 	   objects. */
-	dhclient_db_objects_setup ();
+	dhcp_common_objects_setup ();
+
+	dhcp_interface_discovery_hook = dhclient_interface_discovery_hook;
+	dhcp_interface_shutdown_hook = dhclient_interface_shutdown_hook;
 
 	/* Discover all the network interfaces. */
 	discover_interfaces (DISCOVER_UNCONFIGURED);
@@ -353,7 +358,7 @@ int main (argc, argv, envp)
 				/* Set up a timeout to start the initialization
 				   process. */
 				add_timeout (cur_time + random () % 5,
-					     state_reboot, client);
+					     state_reboot, client, 0, 0);
 			}
 		}
 	}
@@ -391,10 +396,10 @@ static void usage ()
 		   "[-cf config-file] [interface]");
 }
 
-struct class *find_class (s)
-	const char *s;
+isc_result_t find_class (struct class **c,
+		const char *s, const char *file, int line)
 {
-	return (struct class *)0;
+	return 0;
 }
 
 int check_collection (packet, lease, collection)
@@ -418,10 +423,10 @@ int unbill_class (lease, class)
 	return 0;
 }
 
-struct subnet *find_subnet (addr)
-	struct iaddr addr;
+int find_subnet (struct subnet **sp,
+		 struct iaddr addr, const char *file, int line)
 {
-	return (struct subnet *)0;
+	return 0;
 }
 
 /* Individual States:
@@ -781,7 +786,7 @@ void bind_lease (client)
 
 	/* Set up a timeout to start the renewal process. */
 	add_timeout (client -> active -> renewal,
-		     state_bound, client);
+		     state_bound, client, 0, 0);
 
 	log_info ("bound to %s -- renewal in %ld seconds.",
 	      piaddr (client -> active -> address),
@@ -1025,7 +1030,7 @@ void dhcpoffer (packet)
 	if (stop_selecting <= 0)
 		state_selecting (ip);
 	else {
-		add_timeout (stop_selecting, state_selecting, client);
+		add_timeout (stop_selecting, state_selecting, client, 0, 0);
 		cancel_timeout (send_discover, client);
 	}
 }
@@ -1269,7 +1274,8 @@ void send_discover (cpp)
 			      inaddr_any, &sockaddr_broadcast,
 			      (struct hardware *)0);
 
-	add_timeout (cur_time + client -> interval, send_discover, client);
+	add_timeout (cur_time + client -> interval,
+		     send_discover, client, 0, 0);
 }
 
 /* state_panic gets called if we haven't received any offers in a preset
@@ -1317,7 +1323,7 @@ void state_panic (cpp)
 					  (long)(client -> active -> renewal -
 						 cur_time), "seconds");
 				add_timeout (client -> active -> renewal,
-					     state_bound, client);
+					     state_bound, client, 0, 0);
 			    } else {
 				client -> state = S_BOUND;
 				log_info ("bound: immediate renewal.");
@@ -1369,7 +1375,7 @@ void state_panic (cpp)
 	add_timeout (cur_time +
 		     ((client -> config -> retry_interval + 1) / 2 +
 		      (random () % client -> config -> retry_interval)),
-		     state_init, client);
+		     state_init, client, 0, 0);
 	go_daemon ();
 }
 
@@ -1523,7 +1529,7 @@ void send_request (cpp)
 				      (struct hardware *)0);
 
 	add_timeout (cur_time + client -> interval,
-		     send_request, client);
+		     send_request, client, 0, 0);
 }
 
 void send_decline (cpp)
@@ -2383,7 +2389,54 @@ void do_release(client)
 	}
 }
 
+int dhclient_interface_shutdown_hook (struct interface_info *interface)
+{
+	do_release (interface -> client);
+	return 1;
+}
 
+int dhclient_interface_discovery_hook (struct interface_info *tmp)
+{
+	struct interface_info *last, *ip;
+	/* See if we can find the client from dummy_interfaces */
+	last = 0;
+	for (ip = dummy_interfaces; ip; ip = ip -> next) {
+		if (!strcmp (ip -> name, tmp -> name)) {
+			/* Remove from dummy_interfaces */
+			if (last) {
+				ip = (struct interface_info *)0;
+				interface_reference (&ip, last -> next, MDL);
+				interface_dereference (&last -> next, MDL);
+				if (ip -> next) {
+					interface_reference (&last -> next,
+							     ip -> next, MDL);
+					interface_dereference (&ip -> next,
+							       MDL);
+				}
+			} else {
+				ip = (struct interface_info *)0;
+				interface_reference (&ip,
+						     dummy_interfaces, MDL);
+				interface_dereference (&dummy_interfaces, MDL);
+				if (ip -> next) {
+					interface_reference (&dummy_interfaces,
+							     ip -> next, MDL);
+					interface_dereference (&ip -> next,
+							       MDL);
+				}
+			}
+			/* Copy "client" to tmp */
+			if (ip -> client) {
+				tmp -> client = ip -> client;
+				tmp -> client -> interface = tmp;
+			}
+			interface_dereference (&ip, MDL);
+			break;
+		}
+		last = ip;
+	}
+	return 1;
+}
 
 /* The client should never receive a relay agent information option,
    so if it does, log it and discard it. */

@@ -267,7 +267,8 @@ enum dhcp_token {
 	POTENTIAL_CONFLICT_NIC = 465,
 	STATE = 466,
 	UNKNOWN_STATE = 567,
-	CLTT = 568
+	CLTT = 568,
+	INCLUDE = 569
 };
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\

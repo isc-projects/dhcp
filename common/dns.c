@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dns.c,v 1.23 2000/05/03 23:04:43 mellon Exp $ Copyright (c) 2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dns.c,v 1.24 2000/05/16 23:02:17 mellon Exp $ Copyright (c) 2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -179,7 +179,6 @@ isc_result_t find_tsig_key (ns_tsig_key **key, const char *zname,
 	memcpy (tkey -> data,
 		zone -> key -> key.data, zone -> key -> key.len);
 	tkey -> len = zone -> key -> key.len;
-	*key = tkey;
 	return ISC_R_SUCCESS;
 }
 
@@ -194,16 +193,20 @@ void tkey_free (ns_tsig_key **key)
 
 isc_result_t enter_dns_zone (struct dns_zone *zone)
 {
-	struct dns_zone *tz;
+	struct dns_zone *tz = (struct dns_zone *)0;
 
 	if (dns_zone_hash) {
-		tz = hash_lookup (dns_zone_hash,
-				  (unsigned char *)zone -> name, 0);
-		if (tz == zone)
+		dns_zone_hash_lookup (&tz,
+				      dns_zone_hash, zone -> name, 0, MDL);
+		if (tz == zone) {
+			dns_zone_dereference (&tz, MDL);
 			return ISC_R_SUCCESS;
-		if (tz)
-			delete_hash_entry (dns_zone_hash,
-					   (unsigned char *)zone -> name, 0);
+		}
+		if (tz) {
+			dns_zone_hash_delete (dns_zone_hash,
+					      zone -> name, 0, MDL);
+			dns_zone_dereference (&tz, MDL);
+		}
 	} else {
 		dns_zone_hash =
 			new_hash ((hash_reference)dns_zone_reference,
@@ -211,15 +214,16 @@ isc_result_t enter_dns_zone (struct dns_zone *zone)
 		if (!dns_zone_hash)
 			return ISC_R_NOMEMORY;
 	}
-	add_hash (dns_zone_hash, (unsigned char *)zone -> name, 0, zone);
+	dns_zone_hash_add (dns_zone_hash, zone -> name, 0, zone, MDL);
 	return ISC_R_SUCCESS;
 }
 
 isc_result_t dns_zone_lookup (struct dns_zone **zone, const char *name)
 {
-	struct dns_zone *tz;
+	struct dns_zone *tz = (struct dns_zone *)0;
 	unsigned len;
 	char *tname = (char *)0;
+	isc_result_t status;
 
 	if (!dns_zone_hash)
 		return ISC_R_NOTFOUND;
@@ -234,28 +238,32 @@ isc_result_t dns_zone_lookup (struct dns_zone **zone, const char *name)
 		tname [len + 1] = 0;
 		name = tname;
 	}
-	tz = hash_lookup (dns_zone_hash, name, 0);
+	if (!dns_zone_hash_lookup (zone, dns_zone_hash, name, 0, MDL))
+		status = ISC_R_NOTFOUND;
+	else
+		status = ISC_R_SUCCESS;
+
 	if (tname)
 		dfree (tname, MDL);
-	if (!tz)
-		return ISC_R_NOTFOUND;
-	if (!dns_zone_reference (zone, tz, MDL))
-		return ISC_R_UNEXPECTED;
-	return ISC_R_SUCCESS;
+	return status;
 }
 
 isc_result_t enter_tsig_key (struct tsig_key *tkey)
 {
-	struct tsig_key *tk;
+	struct tsig_key *tk = (struct tsig_key *)0;
 
 	if (tsig_key_hash) {
-		tk = hash_lookup (tsig_key_hash,
-				  (unsigned char *)tkey -> name, 0);
-		if (tk == tkey)
+		tsig_key_hash_lookup (&tk, tsig_key_hash,
+				      tkey -> name, 0, MDL);
+		if (tk == tkey) {
+			tsig_key_dereference (&tk, MDL);
 			return ISC_R_SUCCESS;
-		if (tk)
-			delete_hash_entry (tsig_key_hash,
-					   (unsigned char *)tkey -> name, 0);
+		}
+		if (tk) {
+			tsig_key_hash_delete (tsig_key_hash,
+					      tkey -> name, 0, MDL);
+			tsig_key_dereference (&tk, MDL);
+		}
 	} else {
 		tsig_key_hash =
 			new_hash ((hash_reference)tsig_key_reference,
@@ -263,7 +271,7 @@ isc_result_t enter_tsig_key (struct tsig_key *tkey)
 		if (!tsig_key_hash)
 			return ISC_R_NOMEMORY;
 	}
-	add_hash (tsig_key_hash, (unsigned char *)tkey -> name, 0, tkey);
+	tsig_key_hash_add (tsig_key_hash, tkey -> name, 0, tkey, MDL);
 	return ISC_R_SUCCESS;
 	
 }
@@ -273,11 +281,8 @@ isc_result_t tsig_key_lookup (struct tsig_key **tkey, const char *name) {
 
 	if (!tsig_key_hash)
 		return ISC_R_NOTFOUND;
-	tk = hash_lookup (tsig_key_hash, (const unsigned char *)name, 0);
-	if (!tk)
+	if (!tsig_key_hash_lookup (tkey, tsig_key_hash, name, 0, MDL))
 		return ISC_R_NOTFOUND;
-	if (!tsig_key_reference (tkey, tk, MDL))
-		return ISC_R_UNEXPECTED;
 	return ISC_R_SUCCESS;
 }
 
@@ -437,3 +442,6 @@ void repudiate_zone (struct dns_zone **zone)
 	dns_zone_dereference (zone, MDL);
 }
 #endif /* NSUPDATE */
+
+HASH_FUNCTIONS (dns_zone, const char *, struct dns_zone)
+HASH_FUNCTIONS (tsig_key, const char *, struct tsig_key)

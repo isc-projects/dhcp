@@ -309,6 +309,47 @@ void dump_rc_history ()
 }
 #endif
 
+isc_result_t omapi_object_allocate (omapi_object_t **o,
+				    omapi_object_type_t *type,
+				    size_t size,
+				    const char *file, int line)
+{
+	size_t tsize;
+	void *foo;
+	isc_result_t status;
+
+	if (type -> sizer)
+		tsize = (*type -> sizer) (size);
+	else
+		tsize = type -> size;
+
+	/* Sanity check. */
+	if (tsize < sizeof (omapi_object_t))
+		return ISC_R_INVALIDARG;
+
+	foo = dmalloc (tsize, file, line);
+	if (!foo)
+		return ISC_R_NOMEMORY;
+
+	status = omapi_object_initialize ((omapi_object_t *)foo,
+					  type, size, tsize, file, line);
+	if (status != ISC_R_SUCCESS) {
+		dfree (foo, file, line);
+		return status;
+	}
+	return omapi_object_reference (o, (omapi_object_t *)foo, file, line);
+}
+
+isc_result_t omapi_object_initialize (omapi_object_t *o,
+				      omapi_object_type_t *type,
+				      size_t usize, size_t psize,
+				      const char *file, int line)
+{
+	memset (o, 0, psize);
+	o -> type = type;
+	return ISC_R_SUCCESS;
+}
+
 isc_result_t omapi_object_reference (omapi_object_t **r,
 				     omapi_object_t *h,
 				     const char *file, int line)

@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: db.c,v 1.49 2000/05/04 18:58:12 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: db.c,v 1.50 2000/05/16 23:03:39 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -431,7 +431,7 @@ int write_host (host)
 		if (host -> group &&
 		    (!host -> named_group ||
 		     host -> group != host -> named_group -> group) &&
-		    host -> group != &root_group) {
+		    host -> group != root_group) {
 			errno = 0;
 			write_statements (db_file,
 					  host -> group -> statements, 8);
@@ -731,4 +731,13 @@ void new_lease_file ()
 		       newfname, path_dhcpd_db);
 
 	counting = 1;
+}
+
+int group_writer (struct group_object *group)
+{
+	if (!write_group (group))
+		return 0;
+	if (!commit_leases ())
+		return 0;
+	return 1;
 }

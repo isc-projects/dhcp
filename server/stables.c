@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: stables.c,v 1.11 2000/05/02 00:25:10 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: stables.c,v 1.12 2000/05/16 23:03:49 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -716,9 +716,9 @@ void initialize_server_option_spaces()
 		log_fatal ("Can't allocate agent option hash table.");
 	for (i = 0; i < 256; i++) {
 		agent_universe.options [i] = &agent_options [i];
-		add_hash (agent_universe.hash,
-			  (const unsigned char *)agent_options [i].name, 0,
-			  (unsigned char *)&agent_options [i]);
+		option_hash_add (agent_universe.hash,
+				 agent_options [i].name, 0,
+				 &agent_options [i], MDL);
 	}
 
 	/* Set up the server option universe... */
@@ -742,18 +742,16 @@ void initialize_server_option_spaces()
 		log_fatal ("Can't allocate server option hash table.");
 	for (i = 0; i < 256; i++) {
 		server_universe.options [i] = &server_options [i];
-		add_hash (server_universe.hash,
-			  (const unsigned char *)server_options [i].name, 0,
-			  (unsigned char *)&server_options [i]);
+		option_hash_add (server_universe.hash,
+				 server_options [i].name, 0,
+				 &server_options [i], MDL);
 	}
 
 	/* Add the server and agent option spaces to the option space hash. */
-	add_hash (universe_hash,
-		  (const unsigned char *)agent_universe.name, 0,
-		  (unsigned char *)&agent_universe);
-	add_hash (universe_hash,
-		  (const unsigned char *)server_universe.name, 0,
-		  (unsigned char *)&server_universe);
+	universe_hash_add (universe_hash,
+			   agent_universe.name, 0, &agent_universe, MDL);
+	universe_hash_add (universe_hash,
+			   server_universe.name, 0, &server_universe, MDL);
 
 	/* Make the server universe the configuration option universe. */
 	config_universe = &server_universe;

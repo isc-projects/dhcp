@@ -15,7 +15,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of The Internet Software Consortium nor the names
+ * 3. Neither the name of Internet Software Consortium nor the names
  *    of its contributors may be used to endorse or promote products derived
  *    from this software without specific prior written permission.
  *
@@ -43,11 +43,11 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.90 2000/05/03 06:32:09 mellon Exp $ Copyright 1995-2000 The Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.91 2000/05/16 23:03:43 mellon Exp $ Copyright 1995-2000 Internet Software Consortium.";
 #endif
 
   static char copyright[] =
-"Copyright 1995-2000 The Internet Software Consortium.";
+"Copyright 1995-2000 Internet Software Consortium.";
 static char arr [] = "All rights reserved.";
 static char message [] = "Internet Software Consortium DHCP Server";
 static char contrib [] = "\nPlease contribute if you find this software useful.";
@@ -60,7 +60,6 @@ static char url [] = "For info, please visit http://www.isc.org/dhcp-contrib.htm
 static void usage PROTO ((void));
 
 TIME cur_time;
-struct group root_group;
 struct binding_scope global_scope;
 
 struct iaddr server_identifier;
@@ -305,12 +304,15 @@ int main (argc, argv, envp)
 	/* Set up the OMAPI wrappers for various server database internal
 	   objects. */
 	dhcp_db_objects_setup ();
+	dhcp_common_objects_setup ();
 
 	/* Set up the initial dhcp option universe. */
 	initialize_common_option_spaces ();
 	initialize_server_option_spaces ();
 
-	root_group.authoritative = 0;
+	if (!group_allocate (&root_group, MDL))
+		log_fatal ("Can't allocate root group!");
+	root_group -> authoritative = 0;
 
 #if defined (NSUPDATE)
 	/* Set up the standard name service updater routine. */
@@ -322,7 +324,7 @@ int main (argc, argv, envp)
 		log_fatal ("can't parse standard name service updater!");
 
 	if (!(parse_executable_statements
-	      (&root_group.statements, parse, &lose, context_any))) {
+	      (&root_group -> statements, parse, &lose, context_any))) {
 		end_parse (&parse);
 		log_fatal ("can't parse standard name service updater!");
 	}
@@ -344,7 +346,7 @@ int main (argc, argv, envp)
 				     (struct lease *)0,
 				     (struct option_state *)0,
 				     options, &global_scope,
-				     &root_group,
+				     root_group,
 				     (struct group *)0);
 	memset (&db, 0, sizeof db);
 	oc = lookup_option (&server_universe, options, SV_LEASE_FILE_NAME);
@@ -448,11 +450,15 @@ int main (argc, argv, envp)
 	/* Don't need the options anymore. */
 	option_state_dereference (&options, MDL);
 	
+	group_write_hook = group_writer;
+
 	/* Start up the database... */
 	db_startup (lftest);
 
 	if (lftest)
 		exit (0);
+
+	dhcp_interface_setup_hook = dhcpd_interface_setup_hook;
 
 	/* Discover all the network interfaces and initialize them. */
 	discover_interfaces (DISCOVER_SERVER);
@@ -596,21 +602,21 @@ void lease_pinged (from, packet, length)
 	if (!outstanding_pings)
 		return;
 
-	lp = find_lease_by_ip_addr (from);
-
-	if (!lp) {
-		log_info ("unexpected ICMP Echo Reply from %s", piaddr (from));
+	lp = (struct lease *)0;
+	if (!find_lease_by_ip_addr (&lp, from, MDL)) {
+		log_debug ("unexpected ICMP Echo Reply from %s",
+			   piaddr (from));
 		return;
 	}
 
 	if (!lp -> state) {
-		log_error ("ICMP Echo Reply for %s late or spurious.\n",
-		      piaddr (from));
-		return;
+		log_debug ("ICMP Echo Reply for %s late or spurious.\n",
+			   piaddr (from));
+		goto out;
 	}
 
 	if (lp -> ends > cur_time) {
-		log_error ("ICMP Echo reply while lease %s valid\n",
+		log_debug ("ICMP Echo reply while lease %s valid\n",
 			   piaddr (from));
 	}
 
@@ -623,6 +629,8 @@ void lease_pinged (from, packet, length)
 	abandon_lease (lp, "pinged before offer");
 	cancel_timeout (lease_ping_timeout, lp);
 	--outstanding_pings;
+      out:
+	lease_dereference (&lp, MDL);
 }
 
 void lease_ping_timeout (vlp)
@@ -646,4 +654,60 @@ void lease_ping_timeout (vlp)
 #if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL)
 	dmalloc_dump_outstanding ();
 #endif
+}
+
+int dhcpd_interface_setup_hook (struct interface_info *ip, struct iaddr *ia)
+{
+	struct subnet *subnet;
+	struct shared_network *share;
+	isc_result_t status;
+
+	/* Special case for fallback network - not sure why this is
+	   necessary. */
+	if (!ia) {
+		const char *fnn = "fallback-net";
+		char *s;
+		status = shared_network_allocate (&ip -> shared_network, MDL);
+		if (status != ISC_R_SUCCESS)
+			log_fatal ("No memory for shared subnet: %s",
+				   isc_result_totext (status));
+		ip -> shared_network -> name = dmalloc (strlen (fnn) + 1, MDL);
+		strcpy (ip -> shared_network -> name, fnn);
+		return 1;
+	}
+
+	/* If there's a registered subnet for this address,
+	   connect it together... */
+	subnet = (struct subnet *)0;
+	if (find_subnet (&subnet, *ia, MDL)) {
+		/* If this interface has multiple aliases on the same
+		   subnet, ignore all but the first we encounter. */
+		if (!subnet -> interface) {
+			subnet -> interface = ip;
+			subnet -> interface_address = *ia;
+		} else if (subnet -> interface != ip) {
+			log_error ("Multiple interfaces match the %s: %s %s", 
+				   "same subnet",
+				   subnet -> interface -> name, ip -> name);
+		}
+		share = subnet -> shared_network;
+		if (ip -> shared_network &&
+		    ip -> shared_network != share) {
+			log_fatal ("Interface %s matches multiple shared %s",
+				   ip -> name, "networks");
+		} else {
+			if (!ip -> shared_network)
+				shared_network_reference
+					(&ip -> shared_network, share, MDL);
+		}
+		
+		if (!share -> interface) {
+			interface_reference (&share -> interface, ip, MDL);
+		} else if (share -> interface != ip) {
+			log_error ("Multiple interfaces match the %s: %s %s", 
+				   "same shared network",
+				   share -> interface -> name, ip -> name);
+		}
+	}
+	return 1;
 }
