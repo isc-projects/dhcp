@@ -47,7 +47,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bpf.c,v 1.43 2000/10/10 22:00:09 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bpf.c,v 1.44 2000/11/30 18:12:56 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -452,8 +452,9 @@ ssize_t receive_packet (interface, buf, len, from, hfrom)
 		   the packet won't fit in the input buffer, all we
 		   can do is drop it. */
 		if (hdr.bh_caplen != hdr.bh_datalen) {
-			interface -> rbuf_offset +=
-				hdr.bh_hdrlen = hdr.bh_caplen;
+			interface -> rbuf_offset =
+				BPF_WORDALIGN (interface -> rbuf_offset +
+					       hdr.bh_hdrlen + hdr.bh_caplen);
 			continue;
 		}
 
@@ -470,7 +471,9 @@ ssize_t receive_packet (interface, buf, len, from, hfrom)
 		   physical layer that supports this, but WTH), skip this
 		   packet. */
 		if (offset < 0) {
-			interface -> rbuf_offset += hdr.bh_caplen;
+			interface -> rbuf_offset = 
+				BPF_WORDALIGN (interface -> rbuf_offset +
+					       hdr.bh_caplen);
 			continue;
 		}
 		interface -> rbuf_offset += offset;
@@ -486,24 +489,31 @@ ssize_t receive_packet (interface, buf, len, from, hfrom)
 
 		/* If the IP or UDP checksum was bad, skip the packet... */
 		if (offset < 0) {
-			interface -> rbuf_offset += hdr.bh_caplen;
+			interface -> rbuf_offset = 
+				BPF_WORDALIGN (interface -> rbuf_offset +
+					       hdr.bh_caplen);
 			continue;
 		}
-		interface -> rbuf_offset += offset;
+		interface -> rbuf_offset =
+			BPF_WORDALIGN (interface -> rbuf_offset + offset);
 		hdr.bh_caplen -= offset;
 
 		/* If there's not enough room to stash the packet data,
 		   we have to skip it (this shouldn't happen in real
 		   life, though). */
 		if (hdr.bh_caplen > len) {
-			interface -> rbuf_offset += hdr.bh_caplen;
+			interface -> rbuf_offset =
+				BPF_WORDALIGN (interface -> rbuf_offset +
+					       hdr.bh_caplen);
 			continue;
 		}
 
 		/* Copy out the data in the packet... */
 		memcpy (buf, interface -> rbuf + interface -> rbuf_offset,
 			hdr.bh_caplen);
-		interface -> rbuf_offset += hdr.bh_caplen;
+		interface -> rbuf_offset =
+			BPF_WORDALIGN (interface -> rbuf_offset +
+				       hdr.bh_caplen);
 		return hdr.bh_caplen;
 	} while (!length);
 	return 0;
