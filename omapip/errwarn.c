@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: errwarn.c,v 1.6 2000/09/01 23:04:37 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: errwarn.c,v 1.7 2000/09/01 23:17:00 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include <omapip/omapip_p.h>
@@ -90,7 +90,7 @@ void log_fatal (const char * fmt, ... )
   log_error ("If you intend to request help from the dhcp-server@isc.org");
   log_error ("mailing list, please read the section on the README about");
   log_error ("submitting bug reports and requests for help.");
-  log_error ("");
+  log_error ("%s", "");
   log_error ("exiting.");
 #endif
   if (log_cleanup)
