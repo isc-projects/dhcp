@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.43 1997/06/10 05:49:14 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.44 1997/06/10 06:00:23 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1238,7 +1238,6 @@ struct lease *parse_lease_declaration (cfile)
 				else
 					lease.client_hostname =
 						parse_host_name (cfile);
-				token = CLIENT_HOSTNAME;
 				break;
 
 			      default:
@@ -1247,7 +1246,7 @@ struct lease *parse_lease_declaration (cfile)
 				return (struct lease *)0;
 			}
 
-			if (token != HARDWARE) {
+			if (token != HARDWARE && token != STRING) {
 				token = next_token (&val, cfile);
 				if (token != SEMI) {
 					parse_warn ("semicolon expected.");
