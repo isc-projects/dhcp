@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: conflex.c,v 1.80 2000/08/28 19:36:27 neild Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: conflex.c,v 1.81 2000/08/31 04:36:34 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -844,6 +844,8 @@ static enum dhcp_token intern (atom, dfv)
 		if (!strcasecmp (atom + 1, "ick-first-value") ||
 		    !strcasecmp (atom + 1, "ick"))
 			return PICK;
+		if (!strcasecmp (atom + 1, "aused"))
+			return PAUSED;
 		break;
 	      case 'r':
 		if (!strcasecmp (atom + 1, "esolution-interrupted"))
@@ -852,6 +854,8 @@ static enum dhcp_token intern (atom, dfv)
 			return RANGE;
 		if (!strcasecmp (atom + 1, "ecover"))
 			return RECOVER;
+		if (!strcasecmp (atom + 1, "ecover-done"))
+			return RECOVER_DONE;
 		if (!strcasecmp (atom + 1, "equest"))
 			return REQUEST;
 		if (!strcasecmp (atom + 1, "equire"))
@@ -941,6 +945,10 @@ static enum dhcp_token intern (atom, dfv)
 			return TOKEN_SET;
 		if (!strcasecmp (atom + 1, "econds"))
 			return SECONDS;
+		if (!strcasecmp (atom + 1, "hutdown"))
+			return SHUTDOWN;
+		if (!strcasecmp (atom + 1, "tartup"))
+			return STARTUP;
 		break;
 	      case 't':
 		if (!strcasecmp (atom + 1, "imestamp"))
