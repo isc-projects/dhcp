@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.66 2001/04/30 22:38:34 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.67 2001/05/02 07:09:36 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1376,7 +1376,7 @@ void abandon_lease (lease, message)
 	log_error ("Abandoning IP address %s: %s",
 	      piaddr (lease -> ip_addr), message);
 	lt -> hardware_addr.hlen = 0;
-	if (lt -> uid != lt -> uid_buf)
+	if (lt -> uid && lt -> uid != lt -> uid_buf)
 		dfree (lt -> uid, MDL);
 	lt -> uid = (unsigned char *)0;
 	lt -> uid_len = 0;
@@ -1407,7 +1407,7 @@ void dissociate_lease (lease)
 #endif
 	lt -> ends = cur_time; /* XXX */
 	lt -> hardware_addr.hlen = 0;
-	if (lt -> uid != lt -> uid_buf)
+	if (lt -> uid && lt -> uid != lt -> uid_buf)
 		dfree (lt -> uid, MDL);
 	lt -> uid = (unsigned char *)0;
 	lt -> uid_len = 0;
