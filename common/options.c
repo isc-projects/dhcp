@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.39 1999/04/05 19:03:59 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.40 1999/04/08 19:17:48 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -702,11 +702,11 @@ char *pretty_print_option (code, data, len, emit_commas, emit_quotes)
 				dp += 4;
 				break;
 			      case 's':
-				sprintf (op, "%d", getShort (dp));
+				sprintf (op, "%d", (int)getShort (dp));
 				dp += 2;
 				break;
 			      case 'S':
-				sprintf (op, "%d", getUShort (dp));
+				sprintf (op, "%d", (unsigned)getUShort (dp));
 				dp += 2;
 				break;
 			      case 'b':
@@ -798,8 +798,7 @@ int hashed_option_get (result, universe, options, code)
 
 	if (!universe -> lookup_func)
 		return 0;
-	oc = ((*universe -> lookup_func)
-	      (universe, options -> universes [universe -> index], code));
+	oc = ((*universe -> lookup_func) (universe, options, code));
 	if (!oc)
 		return 0;
 	if (!evaluate_option_cache (result, (struct packet *)0, options, oc))
