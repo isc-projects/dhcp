@@ -88,9 +88,7 @@ static int get_token (cfile)
 {
 	int c;
 	int ttok;
-#ifdef DEBUG_TOKENS
 	static char tb [2];
-#endif
 
 	do {
 		c = get_char (cfile);
@@ -113,13 +111,9 @@ static int get_token (cfile)
 			ttok = read_num_or_atom (c, cfile);
 			break;
 		} else {
-#ifdef DEBUG_TOKENS
 			tb [0] = c;
 			tb [1] = 0;
 			tval = tb;
-#else
-			tval = 0;
-#endif
 			ttok = c;
 			break;
 		}
