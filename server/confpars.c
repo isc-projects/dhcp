@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.119 2000/07/06 06:25:07 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.120 2000/07/06 10:14:31 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2376,6 +2376,12 @@ int parse_lease_declaration (struct lease **lp, struct parse *cfile)
 		      case TOKEN_NEXT:
 			seenbit = 128;
 			statep = &lease -> next_binding_state;
+			token = next_token (&val, cfile);
+			if (token != BINDING) {
+				parse_warn (cfile, "expecting 'binding'");
+				skip_to_semi (cfile);
+				break;
+			}
 			goto do_binding_state;
 
 		      case BINDING:
@@ -2687,14 +2693,18 @@ int parse_lease_declaration (struct lease **lp, struct parse *cfile)
 		if (lease -> ends > cur_time ||
 		    lease -> on_expiry || lease -> on_release)
 			lease -> binding_state = FTS_ACTIVE;
+#if defined (FAILOVER_PROTOCOL)
 		else if (lease -> pool && lease -> pool -> failover_peer)
 			lease -> binding_state = FTS_EXPIRED;
+#endif
 		else
 			lease -> binding_state = FTS_FREE;
 		if (lease -> binding_state == FTS_ACTIVE) {
+#if defined (FAILOVER_PROTOCOL)
 			if (lease -> pool && lease -> pool -> failover_peer)
 				lease -> next_binding_state = FTS_EXPIRED;
 			else
+#endif
 				lease -> next_binding_state = FTS_FREE;
 		} else
 			lease -> next_binding_state = lease -> binding_state;
