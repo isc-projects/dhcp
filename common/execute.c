@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: execute.c,v 1.2 1998/11/05 18:40:40 mellon Exp $ Copyright (c) 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: execute.c,v 1.3 1998/11/06 00:11:53 mellon Exp $ Copyright (c) 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -143,7 +143,7 @@ int execute_statements (packet, in_options, out_options, statements)
 			break;
 
 		      default:
-			error ("bogus classification rule type %d\n", r -> op);
+			error ("bogus statement type %d\n", r -> op);
 		}
 	}
 
