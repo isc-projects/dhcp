@@ -105,12 +105,15 @@ int main (argc, argv, envp)
 		FD_ZERO (&w);
 		FD_ZERO (&x);
 		FD_SET (sock, &r);
+		FD_SET (sock, &w);
+		FD_SET (sock, &x);
 		FD_SET (0, &r); /* stdin */
 
 		if (select (sock + 1, &r, &w, &x, (struct timeval *)0) < 0) {
 			error ("select: %m");
 		}
-		if (FD_ISSET (sock, &r)) {
+		if (FD_ISSET (sock, &r) || FD_ISSET (sock, &w)
+		    || FD_ISSET (sock, &x)) {
 			if ((result =
 			     recvfrom (sock, packbuf, sizeof packbuf, 0,
 				       (struct sockaddr *)&from, &fromlen))
@@ -188,7 +191,7 @@ int main (argc, argv, envp)
 			}
 
 			cons_options ((struct packet *)0,
-				      &outgoing, &decl, bufs);
+				      &outgoing, decl.options, bufs);
 
 			if (decl.ciaddr) {
 				tree_evaluate (decl.ciaddr);

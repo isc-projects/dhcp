@@ -102,9 +102,9 @@ void parse_statement (cfile)
 			parsed_time = parse_timestamp (cfile, &bc);
 		}
 		break;
-	      case RANGE:
+	      case SUBNET:
 		if (!setjmp (bc)) {
-			parse_address_range (cfile, &bc);
+			parse_subnet_statement (cfile, &bc);
 		}
 		break;
 	      default:
@@ -209,6 +209,113 @@ char *parse_host_name (cfile, bc)
 	return s;
 }
 
+/* subnet_statement :== SUBNET net NETMASK netmask declarations SEMI
+   host_declarations :== <nil> | host_declaration
+			       | host_declarations host_declaration SEMI */
+
+struct subnet *parse_subnet_statement (cfile, bc)
+	FILE *cfile;
+	jmp_buf *bc;
+{
+	char *val;
+	int token;
+	struct subnet *subnet;
+	struct iaddr net, netmask;
+	unsigned char addr [4];
+	int len = sizeof addr;
+
+	subnet = new_subnet ("parse_subnet_statement");
+	if (!subnet)
+		error ("No memory for new subnet");
+	subnet -> leases = (struct lease *)0;
+	subnet -> last_lease = (struct lease *)0;
+	subnet -> next = (struct subnet *)0;
+	subnet -> default_lease_time = default_lease_time;
+	subnet -> max_lease_time = max_lease_time;
+
+	/* Get the network number... */
+	parse_numeric_aggregate (cfile, bc, addr, &len, DOT, 10, 8);
+	memcpy (net.iabuf, addr, len);
+	net.len = len;
+	subnet -> net = net;
+
+	token = next_token (&val, cfile);
+	if (token != NETMASK) {
+		parse_warn ("Expecting netmask");
+		skip_to_semi (cfile);
+		longjmp (*bc, 1);
+	}
+
+	/* Get the netmask... */
+	parse_numeric_aggregate (cfile, bc, addr, &len, DOT, 10, 8);
+	memcpy (netmask.iabuf, addr, len);
+	netmask.len = len;
+	subnet -> netmask = netmask;
+
+	enter_subnet (subnet);
+
+	do {
+		token = peek_token (&val, cfile);
+		if (token == SEMI) {
+			token = next_token (&val, cfile);
+			break;
+		}
+		parse_subnet_decl (cfile, bc, subnet);
+	} while (1);
+	return subnet;
+}
+
+/* subnet_declaration :== hardware_declaration | filename_declaration
+		        | fixed_addr_declaration | option_declaration */
+
+void parse_subnet_decl (cfile, bc, decl)
+	FILE *cfile;
+	jmp_buf *bc;
+	struct subnet *decl;
+{
+	char *val;
+	int token;
+
+	token = next_token (&val, cfile);
+	switch (token) {
+	      case RANGE:
+		parse_address_range (cfile, bc, decl);
+		break;
+
+	      case OPTION:
+		parse_option_decl (cfile, bc, decl -> options);
+		break;
+
+	      case DEFAULT_LEASE_TIME:
+		token = next_token (&val, cfile);
+		if (token != NUMBER) {
+			parse_warn ("Expecting numeric default lease time");
+			skip_to_semi (cfile);
+			longjmp (*bc, 1);
+		}
+		convert_num ((unsigned char *)&decl -> default_lease_time,
+			     val, 10, 4);
+		break;
+
+	      case MAX_LEASE_TIME:
+		token = next_token (&val, cfile);
+		if (token != NUMBER) {
+			parse_warn ("Expecting numeric max lease time");
+			skip_to_semi (cfile);
+			longjmp (*bc, 1);
+		}
+		convert_num ((unsigned char *)&decl -> max_lease_time,
+			     val, 10, 4);
+		break;
+
+	      default:
+		parse_warn ("expecting a subnet declaration.");
+		skip_to_semi (cfile);
+		longjmp (*bc, 1);
+		break;
+	}
+}
+
 /* host_declaration :== hardware_declaration | filename_declaration
 		      | fixed_addr_declaration | option_declaration */
 
@@ -232,7 +339,7 @@ void parse_host_decl (cfile, bc, decl)
 		parse_fixed_addr_decl (cfile, bc, decl);
 		break;
 	      case OPTION:
-		parse_option_decl (cfile, bc, decl);
+		parse_option_decl (cfile, bc, decl -> options);
 		break;
 	      case CIADDR:
 		decl -> ciaddr =
@@ -400,10 +507,10 @@ void parse_fixed_addr_decl (cfile, bc, decl)
    would be painful to come up with BNF for it.   However, it always
    starts as above. */
 
-void parse_option_decl (cfile, bc, decl)
+void parse_option_decl (cfile, bc, options)
 	FILE *cfile;
 	jmp_buf *bc;
-	struct host_decl *decl;
+	struct tree_cache **options;
 {
 	char *val;
 	int token;
@@ -570,11 +677,11 @@ void parse_option_decl (cfile, bc, decl)
 		}
 	} while (*fmt == 'A');
 
-	if (decl -> options [option -> code]) {
+	if (options [option -> code]) {
 		parse_warn ("duplicate option code %d (%s).",
 			    option -> code, option -> name);
 	}
-	decl -> options [option -> code] = tree_cache (tree);
+	options [option -> code] = tree_cache (tree);
 }
 
 /* timestamp :== TIMESTAMP date SEMI
@@ -724,13 +831,14 @@ struct lease *parse_lease_statement (cfile, bc)
 	return &lease;
 }
 
-/* address_range :== RANGE ip_address ip_address ip_address SEMI */
+/* address_range :== RANGE ip_address ip_address */
 
-void parse_address_range (cfile, bc)
+void parse_address_range (cfile, bc, subnet)
 	FILE *cfile;
 	jmp_buf *bc;
+	struct subnet *subnet;
 {
-	struct iaddr low, high, mask;
+	struct iaddr low, high;
 	unsigned char addr [4];
 	int len = sizeof addr;
 	int token;
@@ -746,21 +854,8 @@ void parse_address_range (cfile, bc)
 	memcpy (high.iabuf, addr, len);
 	high.len = len;
 
-	/* Get the netmask of the subnet containing the range... */
-	parse_numeric_aggregate (cfile, bc, addr, &len, DOT, 10, 8);
-	memcpy (mask.iabuf, addr, len);
-	mask.len = len;
-
-	/* Snarf the semi... */
-	token = next_token (&val, cfile);
-	if (token != SEMI) {
-		parse_warn ("semicolon expected");
-		skip_to_semi (cfile);
-		longjmp (*bc, 1);
-	}
-
 	/* Create the new address range... */
-	new_address_range (low, high, mask);
+	new_address_range (low, high, subnet);
 }
 
 /* date :== NUMBER NUMBER/NUMBER/NUMBER NUMBER:NUMBER:NUMBER

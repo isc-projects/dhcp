@@ -54,6 +54,18 @@ void dhcp (packet)
 	struct lease lt;
 	TIME lease_time;
 
+	int bufs = 0;
+	struct packet outgoing;
+	struct dhcp_packet raw;
+	struct tree_cache *options [256];
+	struct sockaddr_in to;
+	int result;
+
+	unsigned char dhcpoffer = DHCPOFFER;
+	struct tree_cache dhcpoffer_tree;
+	unsigned char lease_time_buf [4];
+	struct tree_cache lease_time_tree;
+
 	dump_packet (packet);
 
 	/* Try to find a lease that's been assigned to the specified
@@ -86,20 +98,6 @@ void dhcp (packet)
 	} else
 		ip_lease = (struct lease *)0;
 
-	printf ("First blush:\n");
-	if (ip_lease) {
-		printf ("ip_lease: ");
-		print_lease (ip_lease);
-	}
-	if (hw_lease) {
-		printf ("hw_lease: ");
-		print_lease (hw_lease);
-	}
-	if (uid_lease) {
-		printf ("uid_lease: ");
-		print_lease (uid_lease);
-	}
-
 	/* Toss extra pointers to the same lease... */
 	if (ip_lease == hw_lease)
 		ip_lease = (struct lease *)0;
@@ -107,20 +105,6 @@ void dhcp (packet)
 		hw_lease = (struct lease *)0;
 	if (ip_lease == uid_lease)
 		ip_lease = (struct lease *)0;
-
-	printf ("Second blush:\n");
-	if (ip_lease) {
-		printf ("ip_lease: ");
-		print_lease (ip_lease);
-	}
-	if (hw_lease) {
-		printf ("hw_lease: ");
-		print_lease (hw_lease);
-	}
-	if (uid_lease) {
-		printf ("uid_lease: ");
-		print_lease (uid_lease);
-	}
 
 	/* If we got an ip address lease, make sure it isn't assigned to
 	   some *other* client!   If it was assigned to this client, we'd
@@ -143,20 +127,6 @@ void dhcp (packet)
 	if (hw_lease && packet -> subnet != hw_lease -> contain) {
 		release_lease (hw_lease);
 		hw_lease = (struct lease *)0;
-	}
-
-	printf ("Third blush:\n");
-	if (ip_lease) {
-		printf ("ip_lease: ");
-		print_lease (ip_lease);
-	}
-	if (hw_lease) {
-		printf ("hw_lease: ");
-		print_lease (hw_lease);
-	}
-	if (uid_lease) {
-		printf ("uid_lease: ");
-		print_lease (uid_lease);
 	}
 
 	/* At this point, if ip_lease is nonzero, we can assign it to
@@ -249,5 +219,68 @@ void dhcp (packet)
 	supersede_lease (lease, &lt);
 
 	/* Send a response to the client... */
-	dump_subnets ();
+
+	memset (&outgoing, 0, sizeof outgoing);
+	memset (&raw, 0, sizeof raw);
+	outgoing.raw = &raw;
+
+	/* Copy in the filename if given; otherwise, flag the filename
+	   buffer as available for options. */
+	bufs |= 1; /* XXX */
+
+	/* Copy in the server name if given; otherwise, flag the
+	   server_name buffer as available for options. */
+	bufs |= 2; /* XXX */
+
+	memcpy (raw.chaddr, packet -> raw -> chaddr, packet -> raw -> hlen);
+	raw.hlen = packet -> raw -> hlen;
+	raw.htype = packet -> raw -> htype;
+
+	/* Start out with the subnet options... */
+	memcpy (options, packet -> subnet -> options, sizeof options);
+
+	/* Now put in options that override those. */
+	options [DHO_DHCP_MESSAGE_TYPE] = &dhcpoffer_tree;
+	options [DHO_DHCP_MESSAGE_TYPE] -> value = &dhcpoffer;
+	options [DHO_DHCP_MESSAGE_TYPE] -> len = sizeof dhcpoffer;
+	options [DHO_DHCP_MESSAGE_TYPE] -> buf_size = sizeof dhcpoffer;
+	options [DHO_DHCP_MESSAGE_TYPE] -> timeout = 0xFFFFFFFF;
+	options [DHO_DHCP_MESSAGE_TYPE] -> tree = (struct tree *)0;
+
+
+	putULong (lease_time_buf, lease -> ends - cur_time);
+	options [DHO_DHCP_LEASE_TIME] = &lease_time_tree;
+	options [DHO_DHCP_LEASE_TIME] -> value = lease_time_buf;
+	options [DHO_DHCP_LEASE_TIME] -> len = sizeof lease_time_buf;
+	options [DHO_DHCP_LEASE_TIME] -> buf_size = sizeof lease_time_buf;
+	options [DHO_DHCP_LEASE_TIME] -> timeout = 0xFFFFFFFF;
+	options [DHO_DHCP_LEASE_TIME] -> tree = (struct tree *)0;
+
+	cons_options (packet, &outgoing, options, bufs);
+
+	raw.ciaddr = packet -> raw -> ciaddr;
+	memcpy (&raw.yiaddr, lease -> ip_addr.iabuf, 4);
+	memcpy (&raw.siaddr, siaddr.iabuf, 4);
+	raw.giaddr = packet -> raw -> giaddr;
+
+	raw.xid = packet -> raw -> xid;
+	raw.secs = packet -> raw -> secs;
+	raw.flags = packet -> raw -> flags;
+	raw.hops = packet -> raw -> hops;
+	raw.op = BOOTREPLY;
+
+	to.sin_port = htons (2000);
+	to.sin_addr.s_addr = INADDR_BROADCAST;
+	to.sin_family = AF_INET;
+	to.sin_len = sizeof to;
+	memset (to.sin_zero, 0, sizeof to.sin_zero);
+
+	note ("Sending dhcp reply to %s, port %d",
+	      inet_ntoa (to.sin_addr), htons (to.sin_port));
+
+	errno = 0;
+	result = sendto (packet -> client_sock, &raw, outgoing.packet_length,
+			 0, (struct sockaddr *)&to, sizeof to);
+	if (result < 0)
+		warn ("sendto: %m");
 }

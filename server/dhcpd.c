@@ -57,6 +57,7 @@ struct subnet *local_subnet;
 u_int32_t *server_addrlist;
 int server_addrcount;
 u_int16_t server_port;
+struct iaddr siaddr;
 
 int main (argc, argv, envp)
 	int argc;
@@ -66,7 +67,6 @@ int main (argc, argv, envp)
 	int port = 0;
 	int i;
 	struct sockaddr_in name;
-	struct iaddr taddr;
 	u_int32_t *addrlist = (u_int32_t *)0;
 	int addrcount = 0;
 	struct tree *addrtree = (struct tree *)0;
@@ -152,7 +152,7 @@ int main (argc, argv, envp)
 	}
 #endif
 
-	taddr.len = 0;
+	siaddr.len = 0;
 	server_addrlist = get_interface_list (&server_addrcount);
 	for (i = 0; i < server_addrcount; i++) {
 		struct sockaddr_in foo;
@@ -160,13 +160,13 @@ int main (argc, argv, envp)
 		printf ("Address %d: %s\n", i, inet_ntoa (foo.sin_addr));
 
 		if (server_addrlist [i] != htonl (INADDR_LOOPBACK)) {
-			if (taddr.len) {
+			if (siaddr.len) {
 				error ("dhcpd currently does not support "
 				       "multiple interfaces");
 			}
-			taddr.len = 4;
-			memcpy (taddr.iabuf, &server_addrlist [i], 4);
-			local_subnet = find_subnet (taddr);
+			siaddr.len = 4;
+			memcpy (siaddr.iabuf, &server_addrlist [i], 4);
+			local_subnet = find_subnet (siaddr);
 		}
 	}
 
@@ -183,8 +183,6 @@ int main (argc, argv, envp)
 		write (i, obuf, strlen (obuf));
 		close (i);
 	}
-
-	dump_subnets ();
 
 	/* Receive packets and dispatch them... */
 	dispatch ();

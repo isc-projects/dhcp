@@ -277,6 +277,10 @@ static int intern (atom, dfv)
 		if (!strcasecmp (atom + 1, "iaddr"))
 			return CIADDR;
 		break;
+	      case 'd':
+		if (!strcasecmp (atom + 1, "efault-lease-time"))
+			return DEFAULT_LEASE_TIME;
+		break;
 	      case 'e':
 		if (!strcasecmp (atom + 1, "thernet"))
 			return ETHERNET;
@@ -303,6 +307,14 @@ static int intern (atom, dfv)
 		if (!strcasecmp (atom + 1, "ease"))
 			return LEASE;
 		break;
+	      case 'm':
+		if (!strcasecmp (atom + 1, "ax-lease-time"))
+			return MAX_LEASE_TIME;
+		break;
+	      case 'n':
+		if (!strcasecmp (atom + 1, "etmask"))
+			return NETMASK;
+		break;
 	      case 'p':
 		if (!strcasecmp (atom + 1, "acket"))
 			return PACKET;
@@ -320,6 +332,8 @@ static int intern (atom, dfv)
 			return STARTS;
 		if (!strcasecmp (atom + 1, "iaddr"))
 			return SIADDR;
+		if (!strcasecmp (atom + 1, "ubnet"))
+			return SUBNET;
 		break;
 	      case 't':
 		if (!strcasecmp (atom + 1, "timestamp"))

@@ -121,6 +121,7 @@ struct subnet {
 	struct iaddr netmask;
 	TIME default_lease_time;
 	TIME max_lease_time;
+	struct tree_cache *options [256];
 	struct lease *leases;
 	struct lease *insertion_point;
 	struct lease *last_lease;
@@ -159,8 +160,8 @@ typedef unsigned char option_mask [16];
 void parse_options PROTO ((struct packet *));
 void parse_option_buffer PROTO ((struct packet *, unsigned char *, int));
 void cons_options PROTO ((struct packet *, struct packet *,
-			  struct host_decl *, int));
-int store_option PROTO ((struct host_decl *, unsigned char,
+			  struct tree_cache **, int));
+int store_option PROTO ((struct tree_cache **, unsigned char,
 			 unsigned char *, int, int *));
 char *pretty_print_option PROTO ((unsigned char, unsigned char *, int));
 
@@ -175,9 +176,12 @@ int parse_warn PROTO ((char *, ...));
 TIME cur_time;
 TIME default_lease_time;
 TIME max_lease_time;
+
 extern u_int32_t *server_addrlist;
 extern int server_addrcount;
 extern u_int16_t server_port;
+struct iaddr siaddr;
+
 int main PROTO ((int, char **, char **));
 void cleanup PROTO ((void));
 void do_packet PROTO ((unsigned char *, int,
@@ -196,17 +200,19 @@ void parse_statement PROTO ((FILE *));
 void skip_to_semi PROTO ((FILE *));
 struct host_decl *parse_host_statement PROTO ((FILE *, jmp_buf *));
 char *parse_host_name PROTO ((FILE *, jmp_buf *));
+struct subnet *parse_subnet_statement PROTO ((FILE *, jmp_buf *));
+void parse_subnet_decl PROTO ((FILE *, jmp_buf *, struct subnet *));
 void parse_host_decl PROTO ((FILE *, jmp_buf *, struct host_decl *));
 void parse_hardware_decl PROTO ((FILE *, jmp_buf *, struct host_decl *));
 struct hardware parse_hardware_addr PROTO ((FILE *, jmp_buf *));
 void parse_filename_decl PROTO ((FILE *, jmp_buf *, struct host_decl *));
 struct tree *parse_ip_addr_or_hostname PROTO ((FILE *, jmp_buf *, int));
 void parse_fixed_addr_decl PROTO ((FILE *, jmp_buf *, struct host_decl *));
-void parse_option_decl PROTO ((FILE *, jmp_buf *, struct host_decl *));
+void parse_option_decl PROTO ((FILE *, jmp_buf *, struct tree_cache **));
 TIME parse_timestamp PROTO ((FILE *, jmp_buf *));
 TIME parse_date PROTO ((FILE *, jmp_buf *));
 struct lease *parse_lease_statement PROTO ((FILE *, jmp_buf *));
-void parse_address_range PROTO ((FILE *, jmp_buf *));
+void parse_address_range PROTO ((FILE *, jmp_buf *, struct subnet *));
 unsigned char *parse_numeric_aggregate PROTO ((FILE *, jmp_buf *,
 					       unsigned char *, int *,
 					       int, int, int));
@@ -233,7 +239,7 @@ void enter_host PROTO ((struct host_decl *));
 struct host_decl *find_host_by_name PROTO ((char *name));
 struct host_decl *find_host_by_addr PROTO ((int, unsigned char *, int));
 void new_address_range PROTO ((struct iaddr, struct iaddr,
-			       struct iaddr));
+			       struct subnet *));
 extern struct subnet *find_subnet (struct iaddr);
 void enter_subnet (struct subnet *);
 void enter_lease PROTO ((struct lease *));

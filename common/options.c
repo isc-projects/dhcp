@@ -150,10 +150,10 @@ void parse_option_buffer (packet, buffer, length)
 /* Cons up options based on client-supplied desired option list (if any)
    and selected server option list. */
 
-void cons_options (inpacket, outpacket, hp, overload)
+void cons_options (inpacket, outpacket, options, overload)
 	struct packet *inpacket;
 	struct packet *outpacket;
-	struct host_decl *hp;
+	struct tree_cache **options;
 	int overload;	/* Overload flags that may be set. */
 {
 	option_mask options_have;	/* Options we can send. */
@@ -217,7 +217,7 @@ void cons_options (inpacket, outpacket, hp, overload)
 	/* Make a bitmask of all the options we have available. */
 	OPTION_ZERO (options_have);
 	for (i = 0; i < 256; i++)
-		if (hp -> options [i])
+		if (options [i])
 			OPTION_SET (options_have, i);
 	
 	/* Put the cookie up front... */
@@ -235,7 +235,7 @@ void cons_options (inpacket, outpacket, hp, overload)
 		int length;
 
 		/* If no data is available for this option, skip it. */
-		if (!hp -> options [code])
+		if (!options [code])
 			continue;
 
 		/* Don't look at options that have already been stored. */
@@ -243,11 +243,11 @@ void cons_options (inpacket, outpacket, hp, overload)
 			continue;
 
 		/* Find the value of the option... */
-		if (!tree_evaluate (hp -> options [code]))
+		if (!tree_evaluate (options [code]))
 			continue;
 
 		/* We should now have a constant length for the option. */
-		length = (hp -> options [code] -> len - stored_length [code]);
+		length = (options [code] -> len - stored_length [code]);
 
 		/* If there's no space for this option, skip it. */
 		if ((bufix + OPTION_SPACE (length) + reserved) > buflen) {
@@ -260,7 +260,7 @@ void cons_options (inpacket, outpacket, hp, overload)
 		}
 		
 		/* Otherwise, store the option. */
-		result = store_option (hp, code,
+		result = store_option (options, code,
 				       buffer + bufix,
 				       buflen - bufix - reserved,
 				       stored_length);
@@ -268,16 +268,16 @@ void cons_options (inpacket, outpacket, hp, overload)
 
 		/* The following test should always succeed because of
 		   preconditioning above. */
-		if (stored_length [code] == hp -> options [code] -> len)
+		if (stored_length [code] == options [code] -> len)
 			OPTION_SET (options_done, code);
 		else {
 			warn ("%s: Only stored %d out of %d bytes.",
 			      dhcp_options [code].name,
 			      stored_length [code],
-			      hp -> options [code] -> len);
+			      options [code] -> len);
 			if (++missed == 1) {
 				missed_code = code;
-				missed_length = hp -> options [code] -> len
+				missed_length = options [code] -> len
 					- stored_length [code];
 			}
 		}
@@ -300,20 +300,20 @@ void cons_options (inpacket, outpacket, hp, overload)
 	   overloading. */
 	if (reserved && missed == 1
 	    && (bufix + OPTION_SPACE (missed_length) <= buflen)) {
-		result = store_option (hp, missed_code,
+		result = store_option (options, missed_code,
 				       buffer + bufix, buflen - bufix,
 				       stored_length);
 		bufix += result;
 		/* This test should always fail -- we'll send bad
 		   data if it doesn't. */
 		if (stored_length [missed_code]
-		    == hp -> options [missed_code] -> len) {
+		    == options [missed_code] -> len) {
 			OPTION_SET (options_done, missed_code);
 		} else {
 			warn ("%s (last): Only stored %d out of %d bytes.",
 			      dhcp_options [missed_code].name,
 			      stored_length [missed_code],
-			      hp -> options [missed_code] -> len);
+			      options [missed_code] -> len);
 		}
 		return;
 	}
@@ -323,7 +323,7 @@ void cons_options (inpacket, outpacket, hp, overload)
 	   option into the current buffer and part into the next. */
 	if (bufix + OPTION_SPACE (missed_length) + reserved
 	    < buflen + (overload & 1 ? 128 : 0) + (overload & 2 ? 64 : 0)) {
-		result = store_option (hp, missed_code,
+		result = store_option (options, missed_code,
 				       buffer + bufix,
 				       buflen - bufix - reserved,
 				       stored_length);
@@ -331,7 +331,7 @@ void cons_options (inpacket, outpacket, hp, overload)
 
 		/* This test should never fail. */
 		if (stored_length [missed_code]
-		    == hp -> options [missed_code] -> len) {
+		    == options [missed_code] -> len) {
 			OPTION_SET (options_done, missed_code);
 			warn ("%s: Unexpected completed store.",
 			      dhcp_options [missed_code].name);
@@ -391,17 +391,17 @@ void cons_options (inpacket, outpacket, hp, overload)
    data that has been stored so far.   Return 1 if all the option data
    has been stored. */
    
-int store_option (hp, code, buffer, buflen, stored_length)
-	struct host_decl *hp;
+int store_option (options, code, buffer, buflen, stored_length)
+	struct tree_cache **options;
 	unsigned char code;
 	unsigned char *buffer;
 	int buflen;
 	int *stored_length;
 {
-	int length = hp -> options [code] -> len - stored_length [code];
+	int length = options [code] -> len - stored_length [code];
 	int bufix = 0;
 printf ("store_option: length = %d  buflen = %d  packet %d  stored %d\n",
-	length, buflen, hp -> options [code] -> len, stored_length [code]);
+	length, buflen, options [code] -> len, stored_length [code]);
 	if (length > buflen) {
 		length = buflen;
 	}
@@ -415,7 +415,7 @@ printf ("store_option: length = %d  buflen = %d  packet %d  stored %d\n",
 		unsigned char incr = length > 255 ? 255 : length;
 		buffer [bufix] = code;
 		buffer [bufix + 1] = incr;
-		memcpy (buffer + bufix + 2, (hp -> options [code] -> value
+		memcpy (buffer + bufix + 2, (options [code] -> value
 					     + stored_length [code]), incr);
 		length -= incr;
 		stored_length [code] += incr;

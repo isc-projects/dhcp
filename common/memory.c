@@ -92,11 +92,11 @@ struct host_decl *find_host_by_addr (htype, haddr, hlen)
 	return (struct host_decl *)0;
 }
 
-void new_address_range (low, high, netmask)
-	struct iaddr low, high, netmask;
+void new_address_range (low, high, subnet)
+	struct iaddr low, high;
+	struct subnet *subnet;
 {
 	struct lease *address_range, *lp, *plp;
-	struct subnet *subnet;
 	struct iaddr net;
 	int min, max, i;
 	char lowbuf [16], highbuf [16], netbuf [16];
@@ -110,39 +110,23 @@ void new_address_range (low, high, netmask)
 		lease_hw_addr_hash = new_hash ();
 
 	/* Make sure that high and low addresses are in same subnet. */
-	net = subnet_number (low, netmask);
-	if (!addr_eq (net, subnet_number (high, netmask))) {
+	net = subnet_number (low, subnet -> netmask);
+	if (!addr_eq (net, subnet_number (high, subnet -> netmask))) {
 		strcpy (lowbuf, piaddr (low));
 		strcpy (highbuf, piaddr (high));
-		strcpy (netbuf, piaddr (netmask));
+		strcpy (netbuf, piaddr (subnet -> netmask));
 		error ("Address range %s to %s, netmask %s spans %s!",
 		       lowbuf, highbuf, netbuf, "multiple subnets");
 	}
 
-	/* See if this subnet is already known - if not, make a new one. */
-	subnet = find_subnet (net);
-	if (!subnet) {
-		subnet = new_subnet ("new_address_range");
-		if (!subnet)
-			error ("No memory for new subnet");
-		subnet -> net = net;
-		subnet -> netmask = netmask;
-		subnet -> leases = (struct lease *)0;
-		subnet -> last_lease = (struct lease *)0;
-		subnet -> next = (struct subnet *)0;
-		subnet -> default_lease_time = default_lease_time;
-		subnet -> max_lease_time = max_lease_time;
-		enter_subnet (subnet);
-	}
-
 	/* Get the high and low host addresses... */
-	max = host_addr (high, netmask);
-	min = host_addr (low, netmask);
+	max = host_addr (high, subnet -> netmask);
+	min = host_addr (low, subnet -> netmask);
 
 	/* Allow range to be specified high-to-low as well as low-to-high. */
 	if (min > max) {
 		max = min;
-		min = host_addr (high, netmask);
+		min = host_addr (high, subnet -> netmask);
 	}
 
 	/* Get a lease structure for each address in the range. */
@@ -155,8 +139,9 @@ void new_address_range (low, high, netmask)
 	memset (address_range, 0, (sizeof *address_range) * (max - min + 1));
 
 	/* Fill in the last lease if it hasn't been already... */
-	if (!subnet -> last_lease)
+	if (!subnet -> last_lease) {
 		subnet -> last_lease = &address_range [0];
+	}
 
 	/* Fill out the lease structures with some minimal information. */
 	for (i = 0; i < max - min + 1; i++) {
@@ -269,11 +254,6 @@ void supersede_lease (comp, lease)
 	struct subnet *parent;
 	struct lease *lp;
 
-printf ("Supersede_lease:\n");
-print_lease (comp);
-print_lease (lease);
-printf ("\n");
-
 	/* If the existing lease hasn't expired and has a different
 	   unique identifier or, if it doesn't have a unique
 	   identifier, a different hardware address, then the two
@@ -325,7 +305,6 @@ printf ("\n");
 
 		/* Copy the data files, but not the linkages. */
 		comp -> starts = lease -> starts;
-		comp -> ends = lease -> ends;
 		comp -> timestamp = lease -> timestamp;
 		comp -> uid = lease -> uid;
 		comp -> uid_len = lease -> uid_len;
@@ -373,13 +352,13 @@ printf ("\n");
 			   head of the list. */
 			comp -> contain -> leases = comp;
 			comp -> contain -> last_lease = comp;
-		} else if (lp -> ends > comp -> ends) {
+		} else if (lp -> ends > lease -> ends) {
 			/* Skip down the list until we run out of list
 			   or find a place for comp. */
-			while (lp -> next && lp -> ends > comp -> ends) {
+			while (lp -> next && lp -> ends > lease -> ends) {
 				lp = lp -> next;
 			}
-			if (lp -> ends > comp -> ends) {
+			if (lp -> ends > lease -> ends) {
 				/* If we ran out of list, put comp
 				   at the end. */
 				lp -> next = comp;
@@ -389,18 +368,18 @@ printf ("\n");
 			} else {
 				/* If we didn't, put it between lp and
 				   the previous item on the list. */
-				comp -> prev = lp -> prev;
-				comp -> prev -> next = comp;
+				if ((comp -> prev = lp -> prev))
+					comp -> prev -> next = comp;
 				comp -> next = lp;
 				lp -> prev = comp;
 			}
 		} else {
 			/* Skip up the list until we run out of list
 			   or find a place for comp. */
-			while (lp -> prev && lp -> ends < comp -> ends) {
+			while (lp -> prev && lp -> ends < lease -> ends) {
 				lp = lp -> prev;
 			}
-			if (lp -> ends < comp -> ends) {
+			if (lp -> ends < lease -> ends) {
 				/* If we ran out of list, put comp
 				   at the beginning. */
 				lp -> prev = comp;
@@ -410,13 +389,14 @@ printf ("\n");
 			} else {
 				/* If we didn't, put it between lp and
 				   the next item on the list. */
-				comp -> next = lp -> next;
-				comp -> next -> prev = comp;
+				if ((comp -> next = lp -> next))
+					comp -> next -> prev = comp;
 				comp -> prev = lp;
 				lp -> next = comp;
 			}
 		}
 		comp -> contain -> insertion_point = comp;
+		comp -> ends = lease -> ends;
 	}
 }
 
@@ -427,8 +407,8 @@ void release_lease (lease)
 {
 	struct lease lt;
 
-	lease -> ends = 0;
 	lt = *lease;
+	lt.ends = cur_time;
 	supersede_lease (lease, &lt);
 }
 
