@@ -29,7 +29,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: omapi.c,v 1.8 1999/09/29 00:00:35 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: omapi.c,v 1.9 1999/10/01 03:27:37 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -317,8 +317,9 @@ isc_result_t dhcp_lease_signal_handler (omapi_object_t *h,
 		    lease -> hardware_addr.htype == 0 ||
 		    lease -> hardware_addr.hlen > 16)
 			return ISC_R_INVALIDARG;
-		if (!write_lease (lease))
+		if (!write_lease (lease) || !commit_leases ()) {
 			return ISC_R_IOERROR;
+		}
 		updatep = 1;
 	}
 
@@ -594,7 +595,7 @@ isc_result_t dhcp_lease_lookup (omapi_object_t **lp,
 	/* If we get to here without finding a lease, no valid key was
 	   specified. */
 	if (!*lp)
-		return ISC_R_INVALIDARG;
+		return ISC_R_NOKEYS;
 	return ISC_R_SUCCESS;
 }
 
@@ -640,6 +641,36 @@ isc_result_t dhcp_group_set_value  (omapi_object_t *h,
 		} else
 			return ISC_R_INVALIDARG;
 		return ISC_R_SUCCESS;
+	}
+
+	if (!omapi_ds_strcmp (name, "statements")) {
+		if (group -> group && group -> group -> statements)
+			return ISC_R_EXISTS;
+		if (!group -> group)
+			group -> group = clone_group (&root_group,
+						      "dhcp_group_set_value");
+		if (!group -> group)
+			return ISC_R_NOMEMORY;
+		if (value -> type == omapi_datatype_data ||
+		    value -> type == omapi_datatype_string) {
+			struct parse *parse;
+			int *lose;
+			parse = (struct parse *)0;
+			status = new_parse (&parse, -1,
+					    (char *)value -> u.buffer.value,
+					    value -> u.buffer.len,
+					    "network client");
+			if (status != ISC_R_SUCCESS)
+				return status;
+			if (!(parse_executable_statements
+			      (&group -> group -> statements, parse, lose))) {
+				end_parse (&parse);
+				return ISC_R_BADPARSE;
+			}
+			end_parse (&parse);
+			return ISC_R_SUCCESS;
+		} else
+			return ISC_R_INVALIDARG;
 	}
 
 	/* Try to find some inner object that can take the value. */
@@ -847,7 +878,7 @@ isc_result_t dhcp_group_lookup (omapi_object_t **lp,
 	/* If we get to here without finding a group, no valid key was
 	   specified. */
 	if (!*lp)
-		return ISC_R_INVALIDARG;
+		return ISC_R_NOKEYS;
 
 	if (((struct group_object *)(*lp)) -> flags & GROUP_OBJECT_DELETED) {
 		omapi_object_dereference (lp, "dhcp_group_lookup");
@@ -867,6 +898,7 @@ isc_result_t dhcp_group_create (omapi_object_t **lp,
 	memset (group, 0, sizeof *group);
 	group -> refcnt = 0;
 	group -> type = dhcp_type_group;
+	group -> flags = GROUP_OBJECT_DYNAMIC;
 	return omapi_object_reference (lp, (omapi_object_t *)group,
 				       "dhcp_group_create");
 }
@@ -881,7 +913,7 @@ isc_result_t dhcp_group_remove (omapi_object_t *lp,
 	group = (struct group_object *)lp;
 
 	group -> flags |= GROUP_OBJECT_DELETED;
-	if (!write_group (group))
+	if (!write_group (group) || !commit_leases ())
 		return ISC_R_IOERROR;
 
 	status = dhcp_group_destroy ((omapi_object_t *)group,
@@ -1383,7 +1415,7 @@ isc_result_t dhcp_host_lookup (omapi_object_t **lp,
 	/* If we get to here without finding a host, no valid key was
 	   specified. */
 	if (!*lp)
-		return ISC_R_INVALIDARG;
+		return ISC_R_NOKEYS;
 	return ISC_R_SUCCESS;
 }
 
@@ -1540,7 +1572,7 @@ isc_result_t dhcp_pool_lookup (omapi_object_t **lp,
 	/* If we get to here without finding a pool, no valid key was
 	   specified. */
 	if (!*lp)
-		return ISC_R_INVALIDARG;
+		return ISC_R_NOKEYS;
 	return ISC_R_SUCCESS;
 }
 
