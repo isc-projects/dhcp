@@ -76,7 +76,7 @@ struct dmalloc_preamble {
 #endif
 
 #if !defined (RC_HISTORY_FLAGS)
-# define RC_HISTORY_FLAG (RC_LEASE | RC_MISC)
+# define RC_HISTORY_FLAGS (RC_LEASE | RC_MISC)
 #endif
 
 struct rc_history_entry {
