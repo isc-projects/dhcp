@@ -38,8 +38,8 @@ if [ x$reason = xARPCHECK ] || [ x$reason = xARPSEND ]; then
   exit 0;
 fi
   
-if [ x$reason = xBOUND ] || [ x$reason = xRENEW ] || [ x$reason = xREBIND ];
- then
+if [ x$reason = xBOUND ] || [ x$reason = xRENEW ] || \
+   [ x$reason = xREBIND ] || [ x$reason = xREBOOT ]; then
   if [ x$old_ip_address != x ] && [ x$alias_ip_address != x ] && \
 		[ x$alias_ip_address != x$old_ip_address ]; then
     ifconfig $interface inet -alias $alias_ip_address > /dev/null 2>&1
@@ -54,7 +54,7 @@ if [ x$reason = xBOUND ] || [ x$reason = xRENEW ] || [ x$reason = xREBIND ];
     arp -a | sed -n -e 's/^.*(\(.*\)) at .*$/arp -d \1/p' |sh
   fi
   if [ x$old_ip_address = x ] || [ x$old_ip_address != x$new_ip_address ] || \
-     [ x$reason = xBOUND ]; then
+     [ x$reason = xBOUND ] || [ x$reason = xREBOOT ]; then
     ifconfig $interface inet $new_ip_address $new_subnet_arg \
 					$new_broadcast_arg $medium
     route add $new_ip_address 127.1 >/dev/null 2>&1

@@ -56,7 +56,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhclient.c,v 1.29 1997/03/05 06:30:08 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.30 1997/03/05 08:38:02 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -456,8 +456,10 @@ void dhcpack (packet)
 			  ? "BOUND"
 			  : (ip -> client -> state == S_RENEWING
 			     ? "RENEW"
-			     : "REBIND")), ip -> client -> new -> medium);
-	if (ip -> client -> active)
+			     : (ip -> client -> state == S_REBOOTING
+				? "REBOOT" : "REBIND"))),
+		     ip -> client -> new -> medium);
+	if (ip -> client -> active && ip -> client -> state != S_REBOOTING)
 		script_write_params (ip, "old_", ip -> client -> active);
 	script_write_params (ip, "new_", ip -> client -> new);
 	if (ip -> client -> alias)
