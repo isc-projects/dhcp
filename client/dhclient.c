@@ -56,7 +56,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.44.2.42 2000/01/24 14:57:25 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.44.2.43 2000/01/24 19:56:32 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1848,7 +1848,7 @@ void write_client_lease (ip, lease, rewrite)
 			 lease -> filename);
 	if (lease -> server_name)
 		fprintf (leaseFile, "  server-name \"%s\";\n",
-			 lease -> server-name);
+			 lease -> server_name);
 	if (lease -> medium)
 		fprintf (leaseFile, "  medium \"%s\";\n",
 			 lease -> medium -> string);
