@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.182 2001/02/15 21:34:08 neild Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.183 2001/03/14 15:44:39 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -682,8 +682,8 @@ void dhcprelease (packet, ms_nulltp)
 	/* If we found a lease, release it. */
 	if (lease && lease -> ends > cur_time) {
 		release_lease (lease, packet);
-		log_info ("%s", msgbuf);
-	}
+	} 
+	log_info ("%s", msgbuf);
       out:
 	if (lease)
 		lease_dereference (&lease, MDL);
@@ -855,6 +855,7 @@ void dhcpinform (packet, ms_nulltp)
 	if (!subnet) {
 		log_info ("%s: unknown subnet %s",
 			  msgbuf, inet_ntoa (packet -> raw -> giaddr));
+		return;
 	}
 
 	/* We don't respond to DHCPINFORM packets if we're not authoritative.
@@ -1539,9 +1540,11 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 					   (struct client_state *)0,
 					   packet -> options, state -> options,
 					   &lease -> scope, oc, MDL)) {
-			if (d1.len && packet -> raw -> secs < d1.data [0]) {
+			if (d1.len &&
+			    ntohs (packet -> raw -> secs) < d1.data [0]) {
 				log_info ("%s: %d secs < %d", msg,
-					  packet -> raw -> secs, d1.data [0]);
+					  ntohs (packet -> raw -> secs),
+					  d1.data [0]);
 				data_string_forget (&d1, MDL);
 				free_lease_state (state, MDL);
 				static_lease_dereference (lease, MDL);
@@ -2964,7 +2967,7 @@ int find_lease (struct lease **lp,
 			(ip_lease -> binding_state != FTS_FREE &&
 			 ip_lease -> binding_state != FTS_BACKUP)
 #else
-			!lease_mine_to_reallocate (lease)
+			!lease_mine_to_reallocate (ip_lease)
 #endif
 			) {
 #if defined (DEBUG_FIND_LEASE)
@@ -3177,9 +3180,6 @@ int find_lease (struct lease **lp,
 	/* The lease that matched the hardware address is treated likewise. */
 	if (hw_lease) {
 		if (lease) {
-			if (!packet -> raw -> ciaddr.s_addr &&
-			    packet -> packet_type == DHCPREQUEST)
-				dissociate_lease (hw_lease);
 #if defined (DEBUG_FIND_LEASE)
 			log_info ("not choosing hardware lease.");
 #endif
