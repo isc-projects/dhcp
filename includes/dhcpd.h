@@ -129,6 +129,9 @@ struct packet {
 	u_int8_t *remote_id;		/* Remote ID of client. */
 	int remote_id_len;
 
+	int got_requested_address;	/* True if client sent the
+					   dhcp-requested-address option. */
+
 	struct shared_network *shared_network;
 	struct option_state *options;
 
@@ -199,6 +202,10 @@ struct lease_state {
 	int max_message_size;
 	u_int32_t expiry, renewal, rebind;
 	struct data_string filename, server_name;
+	int got_requested_address;
+	int got_server_identifier;
+	struct shared_network *shared_network;	/* Shared network of interface
+						   on which request arrived. */
 
 	u_int32_t xid;
 	u_int16_t secs;
