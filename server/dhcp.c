@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.57.2.9 1998/06/29 22:24:34 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.57.2.10 1998/06/29 22:46:44 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -623,8 +623,8 @@ void ack_lease (packet, lease, offer, when)
 	else if (vendor_class  && vendor_class -> group -> filename)
 		strncpy (state -> filename, vendor_class -> group -> filename,
 			 sizeof state -> filename);
-	else if (packet -> raw.file [0])
-		strncpy (state -> filename, packet -> raw.file,
+	else if (packet -> raw -> file [0])
+		strncpy (state -> filename, packet -> raw -> file,
 			 sizeof state -> filename);
 	else
 		strcpy (state -> filename, "");
