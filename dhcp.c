@@ -83,10 +83,10 @@ void dhcpdiscover (packet)
 {
 	struct lease *lease = find_lease (packet);
 
-	debug ("Received DHCPDISCOVER from %s",
-	       print_hw_addr (packet -> raw -> htype,
-			      packet -> raw -> hlen,
-			      packet -> raw -> chaddr));
+	note ("Received DHCPDISCOVER from %s",
+	      print_hw_addr (packet -> raw -> htype,
+			     packet -> raw -> hlen,
+			     packet -> raw -> chaddr));
 
 	/* If we didn't find a lease, try to allocate one... */
 	if (!lease) {
@@ -121,7 +121,7 @@ void dhcprequest (packet)
 		memcpy (cip.iabuf, &packet -> raw -> ciaddr.s_addr, 4);
 	}
 
-	debug ("Received DHCPREQUEST from %s for %s",
+	note ("Received DHCPREQUEST from %s for %s",
 	       print_hw_addr (packet -> raw -> htype,
 			      packet -> raw -> hlen,
 			      packet -> raw -> chaddr),
@@ -179,11 +179,11 @@ void dhcprelease (packet)
 {
 	struct lease *lease = find_lease (packet);
 
-	debug ("Received DHCPRELEASE from %s for %s",
-	       print_hw_addr (packet -> raw -> htype,
-			      packet -> raw -> hlen,
-			      packet -> raw -> chaddr),
-	       inet_ntoa (packet -> raw -> ciaddr));
+	note ("Received DHCPRELEASE from %s for %s",
+	      print_hw_addr (packet -> raw -> htype,
+			     packet -> raw -> hlen,
+			     packet -> raw -> chaddr),
+	      inet_ntoa (packet -> raw -> ciaddr));
 
 	/* If we found a lease, release it. */
 	if (lease) {
@@ -206,11 +206,11 @@ void dhcpdecline (packet)
 		cip.len = 0;
 	}
 
-	debug ("Received DHCPDECLINE from %s for %s",
-	       print_hw_addr (packet -> raw -> htype,
-			      packet -> raw -> hlen,
-			      packet -> raw -> chaddr),
-	       piaddr (cip));
+	note ("Received DHCPDECLINE from %s for %s",
+	      print_hw_addr (packet -> raw -> htype,
+			     packet -> raw -> hlen,
+			     packet -> raw -> chaddr),
+	      piaddr (cip));
 
 	/* If we found a lease, mark it as unusable and complain. */
 	if (lease) {
@@ -221,11 +221,11 @@ void dhcpdecline (packet)
 void dhcpinform (packet)
 	struct packet *packet;
 {
-	debug ("Received DHCPINFORM from %s for %s",
-	       print_hw_addr (packet -> raw -> htype,
-			      packet -> raw -> hlen,
-			      packet -> raw -> chaddr),
-	       inet_ntoa (packet -> raw -> ciaddr));
+	note ("Received DHCPINFORM from %s for %s",
+	      print_hw_addr (packet -> raw -> htype,
+			     packet -> raw -> hlen,
+			     packet -> raw -> chaddr),
+	      inet_ntoa (packet -> raw -> ciaddr));
 
 }
 
