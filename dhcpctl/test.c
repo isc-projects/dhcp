@@ -168,6 +168,16 @@ option domain-name-servers 10.0.0.1, 10.0.0.2;",
 		exit (1);
 	}
 
+       status = dhcpctl_set_string_value (host_handle, "
+option host-name \"bar\";
+option smtp-server 10.0.0.1;",
+                                          "statements");
+       if (status != ISC_R_SUCCESS) {
+               fprintf (stderr, "dhcpctl_set_value: %s\n",
+                        isc_result_totext (status));
+               exit (1);
+       }
+
 	status = dhcpctl_open_object (host_handle, connection,
 				      DHCPCTL_CREATE | DHCPCTL_EXCL);
 	if (status != ISC_R_SUCCESS) {
