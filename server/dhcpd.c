@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.70 1999/05/07 17:32:38 mellon Exp $ Copyright 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.71 1999/07/06 17:17:16 mellon Exp $ Copyright 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.";
 #endif
 
   static char copyright[] =
@@ -45,6 +45,8 @@ int server_identifier_matched;
 
 u_int16_t local_port;
 u_int16_t remote_port;
+
+struct in_addr limited_broadcast;
 
 int log_priority;
 #ifdef DEBUG
@@ -74,6 +76,7 @@ int main (argc, argv, envp)
 	int daemon = 1;
 #endif
 	int quiet = 0;
+	char *server = (char *)0;
 
 	/* Initially, log errors to stderr as well as to syslogd. */
 #ifdef SYSLOG_4_2
@@ -115,6 +118,10 @@ int main (argc, argv, envp)
 			daemon = 0;
 #endif
 			log_perror = -1;
+		} else if (!strcmp (argv [i], "-s")) {
+			if (++i == argc)
+				usage ();
+			server = argv [i];
 		} else if (!strcmp (argv [i], "-cf")) {
 			if (++i == argc)
 				usage ();
@@ -176,6 +183,21 @@ int main (argc, argv, envp)
 	}
   
 	remote_port = htons (ntohs (local_port) + 1);
+
+	if (server) {
+		if (!inet_aton (server, &limited_broadcast)) {
+			struct hostent *he;
+			he = gethostbyname (server);
+			if (he) {
+				memcpy (&limited_broadcast,
+					he -> h_addr_list [0],
+					sizeof limited_broadcast);
+			} else
+				limited_broadcast.s_addr = INADDR_BROADCAST;
+		}
+	} else {
+		limited_broadcast.s_addr = INADDR_BROADCAST;
+	}
 
 	/* Get the current time... */
 	GET_TIME (&cur_time);
