@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.79.2.4 1999/11/13 04:01:31 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.79.2.5 1999/12/09 00:24:20 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1930,7 +1930,7 @@ void script_init (client, reason, medium)
 		if (!mktemp (scriptName))
 			log_fatal ("can't create temporary script %s: %m",
 				   scriptName);
-		fd = creat (scriptName, 0600);
+		fd = open (scriptName, O_EXCL | O_CREAT | O_WRONLY, 0600);
 	} while (fd < 0 && errno == EEXIST);
 #endif
 	if (fd < 0)
