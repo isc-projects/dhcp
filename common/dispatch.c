@@ -353,7 +353,6 @@ void dispatch ()
 		}
 #ifdef USE_FALLBACK
 		FD_SET (fallback_interface.wfdesc, &r);
-		FD_SET (fallback_interface.wfdesc, &w);
 		if (fallback_interface.wfdesc > max)
 				max = fallback_interface.wfdesc;
 #endif
