@@ -30,7 +30,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: socket.c,v 1.39 1999/09/09 23:53:14 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: socket.c,v 1.40 1999/09/23 01:15:25 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -135,6 +135,11 @@ void if_register_send (info)
 {
 #ifndef USE_SOCKET_RECEIVE
 	info -> wfdesc = if_register_socket (info);
+#if defined (USE_SOCKET_FALLBACK)
+	/* Fallback only registers for send, but may need to receive as
+	   well. */
+	info -> rfdesc = info -> wfdesc;
+#endif
 #else
 	info -> wfdesc = info -> rfdesc;
 #endif
