@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bpf.c,v 1.35 2000/03/17 03:59:00 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bpf.c,v 1.36 2000/03/24 00:21:47 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -206,6 +206,8 @@ struct bpf_insn dhcp_bpf_filter [] = {
 	BPF_STMT(BPF_RET+BPF_K, 0),
 };
 
+struct bpf_insn *bpf_fddi_filter;
+
 int dhcp_bpf_filter_len = sizeof dhcp_bpf_filter / sizeof (struct bpf_insn);
 struct bpf_insn dhcp_bpf_tr_filter [] = {
         /* accept all token ring packets due to variable length header */
@@ -231,6 +233,9 @@ void if_register_receive (info)
 	u_int32_t addr;
 	struct bpf_program p;
 	u_int32_t bits;
+#ifdef DEC_FDDI
+	int link_layer;
+#endif /* DEC_FDDI */
 
 	/* Open a BPF device and hang it on this interface... */
 	info -> rfdesc = if_register_bpf (info);
@@ -276,6 +281,32 @@ void if_register_receive (info)
 
 	/* Set up the bpf filter program structure. */
 	p.bf_len = dhcp_bpf_filter_len;
+
+#ifdef DEC_FDDI
+	/* See if this is an FDDI interface, flag it for later. */
+	if (ioctl(info -> rfdesc, BIOCGDLT, &link_layer) >= 0 &&
+	    link_layer == DLT_FDDI) {
+		if (!dhcp_fddi_filter) {
+			dhcp_fddi_filter = dmalloc (sizeof dhcp_bpf_filter,
+						    MDL);
+			if (!dhcp_fddi_filter)
+				log_fatal ("No memory for FDDI filter.");
+			memcpy (dhcp_fddi_filter,
+				dhcp_bpf_filter, sizeof dhcp_bpf_filter);
+			/* Patch the BPF program to account for the difference
+			   in length between ethernet headers (14), FDDI and
+			   802.2 headers (16 +8=24, +10).
+			   XXX changes to filter program may require changes to
+			   XXX the insn number(s) used below! */
+			dhcp_fddi_filter[0].k += 10;
+			dhcp_fddi_filter[2].k += 10;
+			dhcp_fddi_filter[4].k += 10;
+			dhcp_fddi_filter[6].k += 10;
+			dhcp_fddi_filter[7].k += 10;
+		}
+		p.bf_insns = dhcp_fddi_filter;
+	} else
+#endif /* DEC_FDDI */
 	p.bf_insns = dhcp_bpf_filter;
 
         /* Patch the server port into the BPF  program...
