@@ -171,9 +171,9 @@ all times when running dhcpd in production, these options should be
 used \fBonly\fR for testing lease files or database files in a
 non-production environment.
 .SH CONFIGURATION
-The syntax of the dhcpd.conf(8) file is discussed seperately.   This
+The syntax of the dhcpd.conf(5) file is discussed seperately.   This
 section should be used as an overview of the configuration process,
-and the dhcpd.conf(8) documentation should be consulted for detailed
+and the dhcpd.conf(5) documentation should be consulted for detailed
 reference information.
 .PP
 .SH Subnets
@@ -284,7 +284,8 @@ A bootp host on that subnet that needs to be in a different domain and
 use a different name server might be declared as follows:
 .nf
 .sp 1
-	host haagen hardware ethernet 08:00:2b:4c:59:23 {
+	host haagen {
+	  hardware ethernet 08:00:2b:4c:59:23;
 	  fixed-address 239.252.197.9;
 	  filename "/tftpboot/haagen.boot";
 	  option domain-name-servers 192.5.5.1;
