@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dispatch.c,v 1.54.2.2 1999/12/21 19:25:12 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dispatch.c,v 1.54.2.3 2000/01/18 18:36:17 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -52,7 +52,7 @@ void dispatch ()
 	for (l = protocols; l; l = l -> next) {
 		++nfds;
 	}
-	fds = (struct pollfd *)dmalloc ((nfds) * sizeof (struct pollfd)
+	fds = (struct pollfd *)dmalloc ((nfds) * sizeof (struct pollfd),
 					"dispatch");
 	if (!fds)
 		log_fatal ("Can't allocate poll structures.");
