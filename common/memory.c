@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: memory.c,v 1.40 1998/06/25 02:59:15 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: memory.c,v 1.41 1998/11/05 18:42:18 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -101,10 +101,11 @@ void enter_host (hd)
 		     &dhcp_universe) &&
 		    (esp -> data.option -> option -> code ==
 		     DHO_DHCP_CLIENT_IDENTIFIER)) {
-			hd -> client_identifier =
-				evaluate_data_expression
-					((struct packet *)0,
-					 esp -> data.option -> expression);
+			evaluate_data_expression
+				(&hd -> client_identifier,
+				 (struct packet *)0,
+				 (struct option_state *)0,
+				 esp -> data.option -> expression);
 			break;
 		}
 	}
@@ -187,10 +188,9 @@ struct subnet *find_host_for_network (host, addr, share)
 	for (hp = *host; hp; hp = hp -> n_ipaddr) {
 		if (!hp -> fixed_addr)
 			continue;
-		fixed_addr = (evaluate_data_expression
-			      ((struct packet *)0,
-			       hp -> fixed_addr -> expression));
-		if (!fixed_addr.len)
+		if (!evaluate_data_expression (&fixed_addr, (struct packet *)0,
+					       (struct option_state *)0,
+					       hp -> fixed_addr -> expression))
 			continue;
 		for (i = 0; i < fixed_addr.len; i += 4) {
 			ip_address.len = 4;
@@ -200,9 +200,12 @@ struct subnet *find_host_for_network (host, addr, share)
 			if (subnet) {
 				*addr = ip_address;
 				*host = hp;
+				data_string_forget (&fixed_addr,
+						    "find_host_for_network");
 				return subnet;
 			}
 		}
+		data_string_forget (&fixed_addr, "find_host_for_network");
 	}
 	return (struct subnet *)0;
 }
@@ -839,6 +842,8 @@ struct group *clone_group (group, caller)
 	if (!g)
 		error ("%s: can't allocate new group", caller);
 	*g = *group;
+	g -> statements = (struct executable_statement *)0;
+	g -> next = group;
 	return g;
 }
 
