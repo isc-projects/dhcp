@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: conflex.c,v 1.31 1998/04/09 04:28:20 mellon Exp $ Copyright (c) 1995, 1996, 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: conflex.c,v 1.32 1998/04/20 18:01:08 mellon Exp $ Copyright (c) 1995, 1996, 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -354,6 +354,8 @@ static int intern (atom, dfv)
 
 	switch (tolower (atom [0])) {
 	      case 'a':
+		if (!strcasecmp (atom + 1, "nd"))
+			return AND;
 		if (!strcasecmp (atom + 1, "ppend"))
 			return APPEND;
 		if (!strcasecmp (atom + 1, "llow"))
@@ -373,6 +375,8 @@ static int intern (atom, dfv)
 		if (!strcasecmp (atom + 1, "oot-unknown-clients"))
 			return BOOT_UNKNOWN_CLIENTS;
 	      case 'c':
+		if (!strcasecmp (atom + 1, "heck"))
+			return CHECK;
 		if (!strcasecmp (atom + 1, "lass"))
 			return CLASS;
 		if (!strcasecmp (atom + 1, "iaddr"))
@@ -405,6 +409,8 @@ static int intern (atom, dfv)
 		}
 		break;
 	      case 'e':
+		if (!strcasecmp (atom + 1, "xtract-int"))
+			return EXTRACT_INT;
 		if (!strcasecmp (atom + 1, "thernet"))
 			return ETHERNET;
 		if (!strcasecmp (atom + 1, "nds"))
@@ -463,6 +469,8 @@ static int intern (atom, dfv)
 		}
 		break;
 	      case 'n':
+		if (!strcasecmp (atom + 1, "ot"))
+			return NOT;
 		if (!strcasecmp (atom + 1, "ameserver"))
 			return NAMESERVER;
 		if (!strcasecmp (atom + 1, "etmask"))
@@ -471,6 +479,8 @@ static int intern (atom, dfv)
 			return NEXT_SERVER;
 		break;
 	      case 'o':
+		if (!strcasecmp (atom + 1, "r"))
+			return OR;
 		if (!strcasecmp (atom + 1, "ption"))
 			return OPTION;
 		if (!strcasecmp (atom + 1, "ne-lease-per-client"))
@@ -501,6 +511,10 @@ static int intern (atom, dfv)
 			return REJECT;
 		break;
 	      case 's':
+		if (!strcasecmp (atom + 1, "uffix"))
+			return SUFFIX;
+		if (!strcasecmp (atom + 1, "ubstring"))
+			return SUBSTRING;
 		if (!strcasecmp (atom + 1, "earch"))
 			return SEARCH;
 		if (!strcasecmp (atom + 1, "tarts"))

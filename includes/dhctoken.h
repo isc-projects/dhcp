@@ -3,7 +3,7 @@
    Tokens for config file lexer and parser. */
 
 /*
- * Copyright (c) 1995, 1996, 1997 The Internet Software Consortium.
+ * Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -47,6 +47,9 @@
 #define SLASH '/'
 #define LBRACE '{'
 #define RBRACE '}'
+#define LPAREN '('
+#define RPAREN ')'
+#define EQUAL '='
 
 #define FIRST_TOKEN	HOST
 #define HOST		256
@@ -127,6 +130,13 @@
 #define USE_LEASE_ADDR_FOR_DEFAULT_ROUTE 331
 #define MIN_LEASE_TIME	332
 #define MIN_SECS	333
+#define AND		334
+#define OR		335
+#define	NOT		336
+#define SUBSTRING	337
+#define SUFFIX		338
+#define CHECK		339
+#define EXTRACT_INT	340
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\
 				 (x) != STRING &&	\
