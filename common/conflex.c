@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: conflex.c,v 1.78 2000/08/22 21:51:27 neild Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: conflex.c,v 1.79 2000/08/24 18:20:47 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -841,13 +841,13 @@ static enum dhcp_token intern (atom, dfv)
 			return PORT;
 		if (!strcasecmp (atom + 1, "otential-conflict"))
 			return POTENTIAL_CONFLICT;
-		if (!strcasecmp (atom + 1, "otential-conflict-nic"))
-			return POTENTIAL_CONFLICT_NIC;
 		if (!strcasecmp (atom + 1, "ick-first-value") ||
 		    !strcasecmp (atom + 1, "ick"))
 			return PICK;
 		break;
 	      case 'r':
+		if (!strcasecmp (atom + 1, "esolution-interrupted"))
+			return RESOLUTION_INTERRUPTED;
 		if (!strcasecmp (atom + 1, "ange"))
 			return RANGE;
 		if (!strcasecmp (atom + 1, "ecover"))
