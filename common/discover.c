@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: discover.c,v 1.32 2000/09/04 22:27:41 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: discover.c,v 1.33 2000/09/29 18:12:16 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -79,7 +79,7 @@ void discover_interfaces (state)
 {
 	struct interface_info *tmp, *ip;
 	struct interface_info *last, *next;
-	char buf [512];
+	char buf [2048];
 	struct ifconf ic;
 	struct ifreq ifr;
 	int i;
@@ -114,9 +114,9 @@ void discover_interfaces (state)
 		log_fatal ("Can't create addrlist socket");
 
 	/* Get the interface configuration information... */
-      gifconf_again:
 	ic.ifc_len = sizeof buf;
 	ic.ifc_ifcu.ifcu_buf = (caddr_t)buf;
+      gifconf_again:
 	i = ioctl(sock, SIOCGIFCONF, &ic);
 
 	if (i < 0)
