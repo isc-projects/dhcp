@@ -126,7 +126,7 @@ if [ x$major != x ] && [ x$minor != x ]; then
   minversubst="-e /^##--minver--/,/^##--minver--/s/MinorVersion/$minor/"
 fi
 
-if [ ! -d ${sysname} ]; then
+if [ ! -d work.${sysname} ]; then
   mkdir work.$sysname
 fi
 
