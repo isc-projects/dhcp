@@ -14,19 +14,27 @@ The default Makefile is a 4.4BSD-style makefile.   If you do not have
 access to a 4.4BSD-style make, use Makefile.std.   This is an
 old-style makefile and should work on most systems.
 
+If you want to attempt a port, the first thing to do is to make a copy
+of one of the header files in cf/ for your system and hack the
+variables you find there as needed.   Hack osdep.h to conditionally
+include your header file when compiling on your system.   This process
+is by no means self-explanatory at this point - it will get better as
+dhcpd matures.   If you are building on BSD/os or NetBSD, just type
+make - it should build with no problem.
+
 Last week (February 26-28), I brought ISC dhcpd to Connectathon and
 worked out many bugs.  ISC dhcpd was able to boot all of the DHCP
 clients at Connectathon by the time I left.  Many thanks to Audrey Van
 Belleghem for getting me in to Connectathon even though we weren't
 able to budget for it, to Mike Carney for running the DHCP testing in
 general and helping me out in particular, and to all the other DHCP
-participants at Connectathon who tried their clients against ISC dhcpd
-and told me where it was busted, or, later on, that it wasn't busted
-anymore.
+Bakeoff participants at Connectathon who tried their clients against
+dhcpd and told me where it was busted, or, later on, that it wasn't
+busted anymore.
 
 				 BUGS
 
-Currently, dhcpd supports the DHCP protocol strictly the standard
+Currently, ISC dhcpd supports the DHCP protocol strictly the standard
 Berkeley socket interface to UDP/IP.  This makes it very portable, but
 has several drawbacks.  First of all, it is impossible to identify the
 interface on which a DHCP request was received.  As a consequence,
