@@ -56,7 +56,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhclient.c,v 1.28 1997/02/27 03:38:44 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.29 1997/03/05 06:30:08 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -202,7 +202,7 @@ int main (argc, argv, envp)
 	for (ip = interfaces; ip; ip = ip -> next) {
 		srandom (cur_time + *(int *)(&ip -> hw_address.haddr [0]));
 		ip -> client -> state = S_INIT;
-		state_init (ip);
+		state_reboot (ip);
 	}
 
 	/* Start dispatching packets and timeouts... */
@@ -256,8 +256,34 @@ void relay (ip, packet, length)
  * can no longer legitimately use the lease.
  */
 
-/* Called on startup and also when a lease has completely expired and
-   we've been unable to renew it. */
+void state_reboot (ip)
+	struct interface_info *ip;
+{
+	/* If we don't remember an active lease, go straight to INIT. */
+	if (!ip -> client -> active ||
+	    ip -> client -> active -> rebind < cur_time) {
+		state_init (ip);
+		return;
+	}
+
+	/* We are in the rebooting state. */
+	ip -> client -> state = S_REBOOTING;
+
+	/* Make a DHCPREQUEST packet, and set appropriate per-interface
+	   flags. */
+	make_request (ip, ip -> client -> active);
+	ip -> client -> xid = ip -> client -> packet.xid;
+	ip -> client -> destination = iaddr_broadcast;
+	ip -> client -> first_sending = cur_time;
+	ip -> client -> interval = 0;
+
+	/* Add an immediate timeout to cause the first DHCPDISCOVER packet
+	   to go out. */
+	send_request (ip);
+}
+
+/* Called when a lease has completely expired and we've been unable to
+   renew it. */
 
 void state_init (ip)
 	struct interface_info *ip;
@@ -370,7 +396,8 @@ void dhcpack (packet)
 		return;
 	}
 
-	if (ip -> client -> state != S_REQUESTING &&
+	if (ip -> client -> state != S_REBOOTING &&
+	    ip -> client -> state != S_REQUESTING &&
 	    ip -> client -> state != S_RENEWING &&
 	    ip -> client -> state != S_REBINDING) {
 		note ("DHCPACK in wrong state.");
@@ -734,10 +761,41 @@ struct client_lease *packet_to_lease (packet)
 void dhcpnak (packet)
 	struct packet *packet;
 {
+	struct interface_info *ip = packet -> interface;
+
 	note ("DHCPNAK from %s",
 	      print_hw_addr (packet -> raw -> htype,
 			     packet -> raw -> hlen,
 			     packet -> raw -> chaddr));
+
+	/* If we're not receptive to an offer right now, or if the offer
+	   has an unrecognizable transaction id, then just drop it. */
+	if (packet -> interface -> client -> xid != packet -> raw -> xid) {
+		note ("DHCPNAK in wrong transaction.");
+		return;
+	}
+
+	if (ip -> client -> state != S_REBOOTING &&
+	    ip -> client -> state != S_REQUESTING &&
+	    ip -> client -> state != S_RENEWING &&
+	    ip -> client -> state != S_REBINDING) {
+		note ("DHCPNAK in wrong state.");
+		return;
+	}
+
+	if (!ip -> client -> active) {
+		note ("DHCPNAK with no active lease.\n");
+		return;
+	}
+
+	free_client_lease (ip -> client -> active);
+	ip -> client -> active = (struct client_lease *)0;
+
+	/* Stop sending DHCPREQUEST packets... */
+	cancel_timeout (send_request, ip);
+
+	ip -> client -> state = S_INIT;
+	state_init (ip);
 }
 
 /* Send out a DHCPDISCOVER packet, and set a timeout to send out another
@@ -850,6 +908,13 @@ void state_panic (ip)
 
 	note ("No DHCPOFFERS received.");
 
+	/* We may not have an active lease, but we may have some
+	   predefined leases that we can try. */
+	if (!ip -> client -> active && ip -> client -> leases) {
+		loop = ip -> client -> leases;
+		goto activate_next;
+	}
+
 	/* Run through the list of leases and see if one can be used. */
 	while (ip -> client -> active) {
 		if (ip -> client -> active -> expiry > cur_time) {
@@ -896,6 +961,7 @@ void state_panic (ip)
 			break;
 		}
 
+	activate_next:
 		/* Otherwise, put the active lease at the end of the
 		   lease list, and try another lease.. */
 		for (lp = ip -> client -> leases; lp -> next; lp = lp -> next)
@@ -935,6 +1001,22 @@ void send_request (ip)
 
 	/* Figure out how long it's been since we started transmitting. */
 	interval = cur_time - ip -> client -> first_sending;
+
+	/* If we're in INIT-REBOOT and we're past the reboot timeout,
+	   go to INIT and see if we can DISCOVER an address... */
+	/* XXX if we don't get an ACK, it means either that we're on
+	   a network with no DHCP server, or that our server is down.
+	   In the latter case, DHCPDISCOVER will get us a new address,
+	   but we could also have successfully reused our old address.
+	   In the former case, we're hosed anyway.   This is not a win-prone
+	   situation. */
+	if (ip -> client -> state == S_REBOOTING &&
+	    interval > ip -> client -> config -> reboot_timeout) {
+		ip -> client -> state = S_INIT;
+		cancel_timeout (send_request, ip);
+		state_init (ip);
+		return;
+	}
 
 	/* If the lease has expired, relinquish the address and go back
 	   to the INIT state. */
@@ -1066,51 +1148,70 @@ void make_discover (ip, lease)
 {
 	struct dhcp_packet *raw;
 	unsigned char discover = DHCPDISCOVER;
+	int i;
 
 	struct tree_cache *options [256];
-	struct tree_cache message_type_tree;
-	struct tree_cache requested_options_tree;
-	struct tree_cache requested_address_tree;
+	struct tree_cache option_elements [256];
 
+	memset (option_elements, 0, sizeof option_elements);
 	memset (options, 0, sizeof options);
 	memset (&ip -> client -> packet, 0, sizeof (ip -> client -> packet));
 
 	/* Set DHCP_MESSAGE_TYPE to DHCPDISCOVER */
-	options [DHO_DHCP_MESSAGE_TYPE] = &message_type_tree;
-	message_type_tree.value = &discover;
-	message_type_tree.len = sizeof discover;
-	message_type_tree.buf_size = sizeof discover;
-	message_type_tree.timeout = 0xFFFFFFFF;
-	message_type_tree.tree = (struct tree *)0;
+	i = DHO_DHCP_MESSAGE_TYPE;
+	options [i] = &option_elements [i];
+	options [i] -> value = &discover;
+	options [i] -> len = sizeof discover;
+	options [i] -> buf_size = sizeof discover;
+	options [i] -> timeout = 0xFFFFFFFF;
+	options [i] -> tree = (struct tree *)0;
 
 	/* Request the options we want */
-	options [DHO_DHCP_PARAMETER_REQUEST_LIST] = &requested_options_tree;
-	requested_options_tree.value =
-		ip -> client -> config -> requested_options;
-	requested_options_tree.len =
+	i  = DHO_DHCP_PARAMETER_REQUEST_LIST;
+	options [i] = &option_elements [i];
+	options [i] -> value = ip -> client -> config -> requested_options;
+	options [i] -> len = ip -> client -> config -> requested_option_count;
+	options [i] -> buf_size =
 		ip -> client -> config -> requested_option_count;
-	requested_options_tree.buf_size =
-		ip -> client -> config -> requested_option_count;
-	requested_options_tree.timeout = 0xFFFFFFFF;
-	requested_options_tree.tree = (struct tree *)0;
+	options [i] -> timeout = 0xFFFFFFFF;
+	options [i] -> tree = (struct tree *)0;
 
 	/* If we had an address, try to get it again. */
 	if (lease) {
 		ip -> client -> requested_address = lease -> address;
-		options [DHO_DHCP_REQUESTED_ADDRESS] = &requested_address_tree;
-		requested_address_tree.value = lease -> address.iabuf;
-		requested_address_tree.len = lease -> address.len;
-		requested_address_tree.buf_size = lease -> address.len;
-		requested_address_tree.timeout = 0xFFFFFFFF;
-		requested_address_tree.tree = (struct tree *)0;
+		i = DHO_DHCP_REQUESTED_ADDRESS;
+		options [i] = &option_elements [i];
+		options [i] -> value = lease -> address.iabuf;
+		options [i] -> len = lease -> address.len;
+		options [i] -> buf_size = lease -> address.len;
+		options [i] -> timeout = 0xFFFFFFFF;
+		options [i] -> tree = (struct tree *)0;
 	} else {
 		ip -> client -> requested_address.len = 0;
+	}
+
+	/* Send any options requested in the config file. */
+	for (i = 0; i < 256; i++) {
+		if (!options [i] &&
+		    ip -> client -> config -> send_options [i].data) {
+			options [i] = &option_elements [i];
+			options [i] -> value = ip -> client -> config ->
+				send_options [i].data;
+			options [i] -> len = ip -> client -> config ->
+				send_options [i].len;
+			options [i] -> buf_size = ip -> client -> config ->
+				send_options [i].len;
+			options [i] -> timeout = 0xFFFFFFFF;
+			options [i] -> tree = (struct tree *)0;
+		}
 	}
 
 	/* Set up the option buffer... */
 	ip -> client -> packet_length =
 		cons_options ((struct packet *)0, &ip -> client -> packet,
 			      options, 0, 0);
+	if (ip -> client -> packet_length < BOOTP_MIN_LEN)
+		ip -> client -> packet_length = BOOTP_MIN_LEN;
 
 	ip -> client -> packet.op = BOOTREQUEST;
 	ip -> client -> packet.htype = ip -> hw_address.htype;
@@ -1143,64 +1244,81 @@ void make_request (ip, lease)
 	struct client_lease *lease;
 {
 	unsigned char request = DHCPREQUEST;
+	int i;
 
 	struct tree_cache *options [256];
-	struct tree_cache message_type_tree;
-	struct tree_cache requested_options_tree;
-	struct tree_cache requested_address_tree;
-	struct tree_cache server_id_tree;
+	struct tree_cache option_elements [256];
 
 	memset (options, 0, sizeof options);
 	memset (&ip -> client -> packet, 0, sizeof (ip -> client -> packet));
 
 	/* Set DHCP_MESSAGE_TYPE to DHCPREQUEST */
-	options [DHO_DHCP_MESSAGE_TYPE] = &message_type_tree;
-	message_type_tree.value = &request;
-	message_type_tree.len = sizeof request;
-	message_type_tree.buf_size = sizeof request;
-	message_type_tree.timeout = 0xFFFFFFFF;
-	message_type_tree.tree = (struct tree *)0;
+	i = DHO_DHCP_MESSAGE_TYPE;
+	options [i] = &option_elements [i];
+	options [i] -> value = &request;
+	options [i] -> len = sizeof request;
+	options [i] -> buf_size = sizeof request;
+	options [i] -> timeout = 0xFFFFFFFF;
+	options [i] -> tree = (struct tree *)0;
 
 	/* Request the options we want */
-	options [DHO_DHCP_PARAMETER_REQUEST_LIST] = &requested_options_tree;
-	requested_options_tree.value =
-		ip -> client -> config -> requested_options;
-	requested_options_tree.len =
+	i = DHO_DHCP_PARAMETER_REQUEST_LIST;
+	options [i] = &option_elements [i];
+	options [i] -> value = ip -> client -> config -> requested_options;
+	options [i] -> len = ip -> client -> config -> requested_option_count;
+	options [i] -> buf_size =
 		ip -> client -> config -> requested_option_count;
-	requested_options_tree.buf_size =
-		ip -> client -> config -> requested_option_count;
-	requested_options_tree.timeout = 0xFFFFFFFF;
-	requested_options_tree.tree = (struct tree *)0;
-
-	/* Send back the server identifier... */
-        options [DHO_DHCP_SERVER_IDENTIFIER] = &server_id_tree;
-        server_id_tree.value =
-                lease -> options [DHO_DHCP_SERVER_IDENTIFIER].data;
-        server_id_tree.len =
-                lease -> options [DHO_DHCP_SERVER_IDENTIFIER].len;
-        server_id_tree.buf_size =
-                lease -> options [DHO_DHCP_SERVER_IDENTIFIER].len;
-        server_id_tree.timeout = 0xFFFFFFFF;
-        server_id_tree.tree = (struct tree *)0;
+	options [i] -> timeout = 0xFFFFFFFF;
+	options [i] -> tree = (struct tree *)0;
 
 	/* If we are requesting an address that hasn't yet been assigned
 	   to us, use the DHCP Requested Address option. */
 	if (ip -> client -> state == S_REQUESTING) {
+		/* Send back the server identifier... */
+		i = DHO_DHCP_SERVER_IDENTIFIER;
+		options [i] = &option_elements [i];
+		options [i] -> value = lease -> options [i].data;
+		options [i] -> len = lease -> options [i].len;
+		options [i] -> buf_size = lease -> options [i].len;
+		options [i] -> timeout = 0xFFFFFFFF;
+		options [i] -> tree = (struct tree *)0;
+	}
+	if (ip -> client -> state == S_REQUESTING ||
+	    ip -> client -> state == S_REBOOTING) {
 		ip -> client -> requested_address = lease -> address;
-		options [DHO_DHCP_REQUESTED_ADDRESS] = &requested_address_tree;
-		requested_address_tree.value = lease -> address.iabuf;
-		requested_address_tree.len = lease -> address.len;
-		requested_address_tree.buf_size = lease -> address.len;
-		requested_address_tree.timeout = 0xFFFFFFFF;
-		requested_address_tree.tree = (struct tree *)0;
+		i = DHO_DHCP_REQUESTED_ADDRESS;
+		options [i] = &option_elements [i];
+		options [i] -> value = lease -> address.iabuf;
+		options [i] -> len = lease -> address.len;
+		options [i] -> buf_size = lease -> address.len;
+		options [i] -> timeout = 0xFFFFFFFF;
+		options [i] -> tree = (struct tree *)0;
 	} else {
 		ip -> client -> requested_address.len = 0;
+	}
+
+	/* Send any options requested in the config file. */
+	for (i = 0; i < 256; i++) {
+		if (!options [i] &&
+		    ip -> client -> config -> send_options [i].data) {
+			options [i] = &option_elements [i];
+			options [i] -> value = ip -> client -> config ->
+				send_options [i].data;
+			options [i] -> len = ip -> client -> config ->
+				send_options [i].len;
+			options [i] -> buf_size = ip -> client -> config ->
+				send_options [i].len;
+			options [i] -> timeout = 0xFFFFFFFF;
+			options [i] -> tree = (struct tree *)0;
+		}
 	}
 
 	/* Set up the option buffer... */
 	ip -> client -> packet_length =
 		cons_options ((struct packet *)0, &ip -> client -> packet,
 			      options, 0, 0);
+	if (ip -> client -> packet_length < BOOTP_MIN_LEN)
+		ip -> client -> packet_length = BOOTP_MIN_LEN;
 
 	ip -> client -> packet.op = BOOTREQUEST;
 	ip -> client -> packet.htype = ip -> hw_address.htype;
@@ -1241,6 +1359,7 @@ void make_decline (ip, lease)
 	struct client_lease *lease;
 {
 	unsigned char decline = DHCPDECLINE;
+	int i;
 
 	struct tree_cache *options [256];
 	struct tree_cache message_type_tree;
@@ -1251,36 +1370,38 @@ void make_decline (ip, lease)
 	memset (&ip -> client -> packet, 0, sizeof (ip -> client -> packet));
 
 	/* Set DHCP_MESSAGE_TYPE to DHCPDECLINE */
-	options [DHO_DHCP_MESSAGE_TYPE] = &message_type_tree;
-	message_type_tree.value = &decline;
-	message_type_tree.len = sizeof decline;
-	message_type_tree.buf_size = sizeof decline;
-	message_type_tree.timeout = 0xFFFFFFFF;
-	message_type_tree.tree = (struct tree *)0;
+	i = DHO_DHCP_MESSAGE_TYPE;
+	options [i] = &message_type_tree;
+	options [i] -> value = &decline;
+	options [i] -> len = sizeof decline;
+	options [i] -> buf_size = sizeof decline;
+	options [i] -> timeout = 0xFFFFFFFF;
+	options [i] -> tree = (struct tree *)0;
 
 	/* Send back the server identifier... */
-        options [DHO_DHCP_SERVER_IDENTIFIER] = &server_id_tree;
-        server_id_tree.value =
-                lease -> options [DHO_DHCP_SERVER_IDENTIFIER].data;
-        server_id_tree.len =
-                lease -> options [DHO_DHCP_SERVER_IDENTIFIER].len;
-        server_id_tree.buf_size =
-                lease -> options [DHO_DHCP_SERVER_IDENTIFIER].len;
-        server_id_tree.timeout = 0xFFFFFFFF;
-        server_id_tree.tree = (struct tree *)0;
+	i = DHO_DHCP_SERVER_IDENTIFIER;
+        options [i] = &server_id_tree;
+        options [i] -> value = lease -> options [i].data;
+        options [i] -> len = lease -> options [i].len;
+        options [i] -> buf_size = lease -> options [i].len;
+        options [i] -> timeout = 0xFFFFFFFF;
+        options [i] -> tree = (struct tree *)0;
 
 	/* Send back the address we're declining. */
-	options [DHO_DHCP_REQUESTED_ADDRESS] = &requested_address_tree;
-	requested_address_tree.value = lease -> address.iabuf;
-	requested_address_tree.len = lease -> address.len;
-	requested_address_tree.buf_size = lease -> address.len;
-	requested_address_tree.timeout = 0xFFFFFFFF;
-	requested_address_tree.tree = (struct tree *)0;
+	i = DHO_DHCP_REQUESTED_ADDRESS;
+	options [i] = &requested_address_tree;
+	options [i] -> value = lease -> address.iabuf;
+	options [i] -> len = lease -> address.len;
+	options [i] -> buf_size = lease -> address.len;
+	options [i] -> timeout = 0xFFFFFFFF;
+	options [i] -> tree = (struct tree *)0;
 
 	/* Set up the option buffer... */
 	ip -> client -> packet_length =
 		cons_options ((struct packet *)0, &ip -> client -> packet,
 			      options, 0, 0);
+	if (ip -> client -> packet_length < BOOTP_MIN_LEN)
+		ip -> client -> packet_length = BOOTP_MIN_LEN;
 
 	ip -> client -> packet.op = BOOTREQUEST;
 	ip -> client -> packet.htype = ip -> hw_address.htype;
@@ -1313,6 +1434,7 @@ void make_release (ip, lease)
 	struct client_lease *lease;
 {
 	unsigned char request = DHCPRELEASE;
+	int i;
 
 	struct tree_cache *options [256];
 	struct tree_cache message_type_tree;
@@ -1323,28 +1445,29 @@ void make_release (ip, lease)
 	memset (&ip -> client -> packet, 0, sizeof (ip -> client -> packet));
 
 	/* Set DHCP_MESSAGE_TYPE to DHCPRELEASE */
-	options [DHO_DHCP_MESSAGE_TYPE] = &message_type_tree;
-	message_type_tree.value = &request;
-	message_type_tree.len = sizeof request;
-	message_type_tree.buf_size = sizeof request;
-	message_type_tree.timeout = 0xFFFFFFFF;
-	message_type_tree.tree = (struct tree *)0;
+	i = DHO_DHCP_MESSAGE_TYPE;
+	options [i] = &message_type_tree;
+	options [i] -> value = &request;
+	options [i] -> len = sizeof request;
+	options [i] -> buf_size = sizeof request;
+	options [i] -> timeout = 0xFFFFFFFF;
+	options [i] -> tree = (struct tree *)0;
 
 	/* Send back the server identifier... */
-        options [DHO_DHCP_SERVER_IDENTIFIER] = &server_id_tree;
-        server_id_tree.value =
-                lease -> options [DHO_DHCP_SERVER_IDENTIFIER].data;
-        server_id_tree.len =
-                lease -> options [DHO_DHCP_SERVER_IDENTIFIER].len;
-        server_id_tree.buf_size =
-                lease -> options [DHO_DHCP_SERVER_IDENTIFIER].len;
-        server_id_tree.timeout = 0xFFFFFFFF;
-        server_id_tree.tree = (struct tree *)0;
+	i = DHO_DHCP_SERVER_IDENTIFIER;
+        options [i] = &server_id_tree;
+        options [i] -> value = lease -> options [i].data;
+        options [i] -> len = lease -> options [i].len;
+        options [i] -> buf_size = lease -> options [i].len;
+        options [i] -> timeout = 0xFFFFFFFF;
+        options [i] -> tree = (struct tree *)0;
 
 	/* Set up the option buffer... */
 	ip -> client -> packet_length =
 		cons_options ((struct packet *)0, &ip -> client -> packet,
 			      options, 0, 0);
+	if (ip -> client -> packet_length < BOOTP_MIN_LEN)
+		ip -> client -> packet_length = BOOTP_MIN_LEN;
 
 	ip -> client -> packet.op = BOOTREQUEST;
 	ip -> client -> packet.htype = ip -> hw_address.htype;
