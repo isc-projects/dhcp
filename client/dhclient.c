@@ -3,60 +3,26 @@
    DHCP Client. */
 
 /*
- * Copyright (c) 1995, 1996, 1997, 1998, 1999
- * The Internet Software Consortium.   All rights reserved.
+ * Copyright (c) 1996-1999 Internet Software Consortium.
+ * Use is subject to license terms which appear in the file named
+ * ISC-LICENSE that should have accompanied this file when you
+ * received it.   If a file named ISC-LICENSE did not accompany this
+ * file, or you are not sure the one you have is correct, you may
+ * obtain an applicable copy of the license at:
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
+ *             http://www.isc.org/isc-license-1.0.html. 
  *
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of The Internet Software Consortium nor the names
- *    of its contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
+ * This file is part of the ISC DHCP distribution.   The documentation
+ * associated with this file is listed in the file DOCUMENTATION,
+ * included in the top-level directory of this release.
  *
- * THIS SOFTWARE IS PROVIDED BY THE INTERNET SOFTWARE CONSORTIUM AND
- * CONTRIBUTORS ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES,
- * INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED.  IN NO EVENT SHALL THE INTERNET SOFTWARE CONSORTIUM OR
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF
- * USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
- * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
- * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
- * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- * SUCH DAMAGE.
- *
- * This software has been written for the Internet Software Consortium
- * by Ted Lemon <mellon@fugue.com> in cooperation with Vixie
- * Enterprises.  To learn more about the Internet Software Consortium,
- * see ``http://www.vix.com/isc''.  To learn more about Vixie
- * Enterprises, see ``http://www.vix.com''.
- *
- * This client was substantially modified and enhanced by Elliot Poger
- * for use on Linux while he was working on the MosquitoNet project at
- * Stanford.
- *
- * The current version owes much to Elliot's Linux enhancements, but
- * was substantially reorganized and partially rewritten by Ted Lemon
- * so as to use the same networking framework that the Internet Software
- * Consortium DHCP server uses.   Much system-specific configuration code
- * was moved into a shell script so that as support for more operating
- * systems is added, it will not be necessary to port and maintain
- * system-specific configuration code to these operating systems - instead,
- * the shell script can invoke the native tools to accomplish the same
- * purpose.
+ * Support and other services are available for ISC products - see
+ * http://www.isc.org for more information.
  */
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.61 1999/03/16 00:17:20 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.62 1999/03/16 05:50:30 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -276,9 +242,6 @@ int main (argc, argv, envp)
 
 	/* Set up the bootp packet handler... */
 	bootp_packet_handler = do_packet;
-
-	/* Start listening on the sysconf socket... */
-	sysconf_startup (status_message);
 
 	/* Start dispatching packets and timeouts... */
 	dispatch ();
@@ -2165,20 +2128,6 @@ void write_client_pid_file ()
 	else {
 		fprintf (pf, "%ld\n", (long)getpid ());
 		fclose (pf);
-	}
-}
-
-void status_message (header, data)
-	struct sysconf_header *header;
-	void *data;
-{
-	switch (header -> type) {
-	      case NETWORK_LOCATION_CHANGED:
-		client_location_changed ();
-		break;
-
-	      default:
-		break;
 	}
 }
 

@@ -533,16 +533,16 @@ dhcpd-options(5)                                 dhcpd-options(5)
 
 
 SSEEEE AALLSSOO
-       dhcpd.conf(5),     dhcpd.leases(5),      dhclient.conf(5),
-       dhcpd(8), dhclient(8), RFC2132, RFC2131.
+       dhcpd.conf(5),  dhcpd.leases(5),  dhclient.conf(5),  dhcp-
+       eval(5), dhcpd(8), dhclient(8), RFC2132, RFC2131.
 
 AAUUTTHHOORR
-       ddhhccppdd((88)) was written by Ted Lemon <mellon@vix.com> under a
-       contract with Vixie Labs.   Funding for this  project  was
-       provided  by  the Internet Software Corporation.  Informa­
-       tion about the Internet Software Consortium can  be  found
-       at hhttttpp::////wwwwww..iisscc..oorrgg//iisscc..
-
+       The  Internet  Software  Consortium  DHCP Distribution was
+       written by Ted Lemon  <mellon@isc.org>  under  a  contract
+       with  Vixie  Labs.   Funding for this project was provided
+       through the  Internet  Software  Consortium.   Information
+       about  the  Internet  Software  Consortium can be found at
+       hhttttpp::////wwwwww..iisscc..oorrgg//iisscc..
 
 
 
