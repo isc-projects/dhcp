@@ -41,7 +41,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.129.2.6 2001/06/20 03:03:59 mellon Exp $ Copyright (c) 1995-2001 Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.129.2.7 2001/08/08 14:46:14 mellon Exp $ Copyright (c) 1995-2001 Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2654,6 +2654,7 @@ void go_daemon ()
 {
 	static int state = 0;
 	int pid;
+	int i;
 
 	/* Don't become a daemon if the user requested otherwise. */
 	if (no_daemon) {
@@ -2681,6 +2682,16 @@ void go_daemon ()
         close(0);
         close(1);
         close(2);
+
+	/* Reopen them on /dev/null. */
+	i = open ("/dev/null", O_RDWR);
+	if (i == 0)
+		i = open ("/dev/null", O_RDWR);
+	if (i == 1) {
+		i = open ("/dev/null", O_RDWR);
+		log_perror = 0; /* No sense logging to /dev/null. */
+	} else if (i != -1)
+		close (i);
 
 	write_client_pid_file ();
 }
