@@ -296,9 +296,10 @@ isc_result_t omapi_object_reference (omapi_object_t **r,
 		return ISC_R_INVALIDARG;
 
 	if (*r) {
-#if defined (ALLOCATION_DEBUGGING)
-		abort ("%s(%d): reference store into non-null pointer!",
-		       file, line);
+#if defined (POINTER_DEBUG)
+		log_error ("%s(%d): reference store into non-null pointer!",
+			   file, line);
+		abort ();
 #else
 		return ISC_R_INVALIDARG;
 #endif
@@ -323,18 +324,24 @@ isc_result_t omapi_object_dereference (omapi_object_t **h,
 		return ISC_R_INVALIDARG;
 
 	if (!*h) {
-#if defined (ALLOCATION_DEBUGGING)
-		abort ("%s(%d): dereference of null pointer!", file, line);
+#if defined (POINTER_DEBUG)
+		log_error ("%s(%d): dereference of null pointer!", file, line);
+		abort ();
 #else
 		return ISC_R_INVALIDARG;
 #endif
 	}
 	
 	if ((*h) -> refcnt <= 0) {
-#if defined (ALLOCATION_DEBUGGING)
-		abort ("%s(%d): dereference of pointer with refcnt of zero!",
-		       file, line);
+#if defined (POINTER_DEBUG)
+		log_error ("%s(%d): dereference of pointer with refcnt of zero!",
+			   file, line);
+#if defined (DEBUG_RC_HISTORY)
+		dump_rc_history ();
+#endif
+		abort ();
 #else
+		*h = 0;
 		return ISC_R_INVALIDARG;
 #endif
 	}
@@ -436,8 +443,10 @@ isc_result_t omapi_buffer_reference (omapi_buffer_t **r,
 		return ISC_R_INVALIDARG;
 
 	if (*r) {
-#if defined (ALLOCATION_DEBUGGING)
-		abort ("%s: reference store into non-null pointer!", name);
+#if defined (POINTER_DEBUG)
+		log_error ("%s(%d): reference store into non-null pointer!",
+			   file, line);
+		abort ();
 #else
 		return ISC_R_INVALIDARG;
 #endif
@@ -456,21 +465,28 @@ isc_result_t omapi_buffer_dereference (omapi_buffer_t **h,
 		return ISC_R_INVALIDARG;
 
 	if (!*h) {
-#if defined (ALLOCATION_DEBUGGING)
-		abort ("%s(%d): dereference of null pointer!", file, line);
+#if defined (POINTER_DEBUG)
+		log_error ("%s(%d): dereference of null pointer!", file, line);
+		abort ();
 #else
 		return ISC_R_INVALIDARG;
 #endif
 	}
 	
 	if ((*h) -> refcnt <= 0) {
-#if defined (ALLOCATION_DEBUGGING)
-		abort ("%s(%d): dereference of pointer with refcnt of zero!", 
-		       file, line);
+#if defined (POINTER_DEBUG)
+		log_error ("%s(%d): dereference of pointer with refcnt of zero!",
+			   file, line);
+#if defined (DEBUG_RC_HISTORY)
+		dump_rc_history ();
+#endif
+		abort ();
 #else
+		*h = 0;
 		return ISC_R_INVALIDARG;
 #endif
 	}
+
 	--(*h) -> refcnt;
 	rc_register (file, line, h, *h, (*h) -> refcnt);
 	if ((*h) -> refcnt == 0)
@@ -554,8 +570,9 @@ isc_result_t omapi_typed_data_reference (omapi_typed_data_t **r,
 		return ISC_R_INVALIDARG;
 
 	if (*r) {
-#if defined (ALLOCATION_DEBUGGING)
-		abort ("%s: reference store into non-null pointer!", name);
+#if defined (POINTER_DEBUG)
+		log_error ("%s(%d): reference store into non-null pointer!", file, line);
+		abort ();
 #else
 		return ISC_R_INVALIDARG;
 #endif
@@ -574,18 +591,24 @@ isc_result_t omapi_typed_data_dereference (omapi_typed_data_t **h,
 		return ISC_R_INVALIDARG;
 
 	if (!*h) {
-#if defined (ALLOCATION_DEBUGGING)
-		abort ("%s(%d): dereference of null pointer!", file, line);
+#if defined (POINTER_DEBUG)
+		log_error ("%s(%d): dereference of null pointer!", file, line);
+		abort ();
 #else
 		return ISC_R_INVALIDARG;
 #endif
 	}
 	
 	if ((*h) -> refcnt <= 0) {
-#if defined (ALLOCATION_DEBUGGING)
-		abort ("%s(%d): dereference of pointer with refcnt of zero!",
-		       file, line);
+#if defined (POINTER_DEBUG)
+		log_error ("%s(%d): dereference of pointer with refcnt of zero!",
+			   file, line);
+#if defined (DEBUG_RC_HISTORY)
+		dump_rc_history ();
+#endif
+		abort ();
 #else
+		*h = 0;
 		return ISC_R_INVALIDARG;
 #endif
 	}
@@ -631,8 +654,9 @@ isc_result_t omapi_data_string_reference (omapi_data_string_t **r,
 		return ISC_R_INVALIDARG;
 
 	if (*r) {
-#if defined (ALLOCATION_DEBUGGING)
-		abort ("%s: reference store into non-null pointer!", name);
+#if defined (POINTER_DEBUG)
+		log_error ("%s(%d): reference store into non-null pointer!", file, line);
+		abort ();
 #else
 		return ISC_R_INVALIDARG;
 #endif
@@ -651,22 +675,28 @@ isc_result_t omapi_data_string_dereference (omapi_data_string_t **h,
 		return ISC_R_INVALIDARG;
 
 	if (!*h) {
-#if defined (ALLOCATION_DEBUGGING)
-		abort ("%s(%d): dereference of null pointer!", file, line);
+#if defined (POINTER_DEBUG)
+		log_error ("%s(%d): dereference of null pointer!", file, line);
+		abort ();
 #else
 		return ISC_R_INVALIDARG;
 #endif
 	}
 	
 	if ((*h) -> refcnt <= 0) {
-#if defined (ALLOCATION_DEBUGGING)
-		abort ("%s(%d): dereference of pointer with refcnt of zero!",
-		       file, line);
+#if defined (POINTER_DEBUG)
+		log_error ("%s(%d): dereference of pointer with refcnt of zero!",
+			   file, line);
+#if defined (DEBUG_RC_HISTORY)
+		dump_rc_history ();
+#endif
+		abort ();
 #else
+		*h = 0;
 		return ISC_R_INVALIDARG;
 #endif
 	}
-	
+
 	--((*h) -> refcnt);
 	rc_register (file, line, h, *h, (*h) -> refcnt);
 	if ((*h) -> refcnt <= 0 ) {
@@ -696,9 +726,10 @@ isc_result_t omapi_value_reference (omapi_value_t **r,
 		return ISC_R_INVALIDARG;
 
 	if (*r) {
-#if defined (ALLOCATION_DEBUGGING)
-		abort ("%s(%d): reference store into non-null pointer!",
-		       file, line);
+#if defined (POINTER_DEBUG)
+		log_error ("%s(%d): reference store into non-null pointer!",
+			   file, line);
+		abort ();
 #else
 		return ISC_R_INVALIDARG;
 #endif
@@ -717,25 +748,31 @@ isc_result_t omapi_value_dereference (omapi_value_t **h,
 		return ISC_R_INVALIDARG;
 
 	if (!*h) {
-#if defined (ALLOCATION_DEBUGGING)
-		abort ("%s(%d): dereference of null pointer!", file, line);
+#if defined (POINTER_DEBUG)
+		log_error ("%s(%d): dereference of null pointer!", file, line);
+		abort ();
 #else
 		return ISC_R_INVALIDARG;
 #endif
 	}
 	
 	if ((*h) -> refcnt <= 0) {
-#if defined (ALLOCATION_DEBUGGING)
-		abort ("%s(%d): dereference of pointer with refcnt of zero!",
-		       file, line);
+#if defined (POINTER_DEBUG)
+		log_error ("%s(%d): dereference of pointer with refcnt of zero!",
+			   file, line);
+#if defined (DEBUG_RC_HISTORY)
+		dump_rc_history ();
+#endif
+		abort ();
 #else
+		*h = 0;
 		return ISC_R_INVALIDARG;
 #endif
 	}
 	
 	--((*h) -> refcnt);
 	rc_register (file, line, h, *h, (*h) -> refcnt);
-	if ((*h) -> refcnt <= 0 ) {
+	if ((*h) -> refcnt == 0) {
 		if ((*h) -> name)
 			omapi_data_string_dereference (&(*h) -> name,
 						       file, line);
