@@ -56,6 +56,7 @@ typedef unsigned long u_int32_t;
 #include <signal.h>
 #include <setjmp.h>
 #include <limits.h>
+#include <linux/netdevice.h>
 
 extern int h_errno;
 
@@ -64,7 +65,7 @@ extern int h_errno;
 #include <sys/time.h>		/* gettimeofday()*/
 #include <linux/time.h>		/* also necessary */
 
-#define _PATH_DHCPD_PID	"/etc/dhcpd.pid"
+#define _PATH_DHCPD_PID	"/var/run/dhcpd.pid"
 
 /* Varargs stuff... */
 #include <stdarg.h>
