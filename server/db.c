@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: db.c,v 1.17 1997/12/02 07:44:56 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: db.c,v 1.18 1998/03/15 20:46:22 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -70,6 +70,9 @@ int write_lease (lease)
 		++errors;
 	}
 
+	/* Note: the following is not a Y2K bug - it's a Y1.9K bug.   Until
+	   somebody invents a time machine, I think we can safely disregard
+	   it. */
 	t = gmtime (&lease -> starts);
 	sprintf (tbuf, "%d %d/%02d/%02d %02d:%02d:%02d;",
 		 t -> tm_wday, t -> tm_year + 1900,
