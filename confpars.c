@@ -59,6 +59,9 @@ void readconf ()
 	char *val;
 	int token;
 
+	tlname = _PATH_DHCPD_CONF;
+	tlpos = tline = 0;
+
 	/* Set up the initial dhcp option universe. */
 	initialize_universes ();
 
@@ -79,6 +82,9 @@ void read_leases ()
 	char *val;
 	int token;
 	jmp_buf bc;
+
+	tlname = _PATH_DHCPD_DB;
+	tlpos = tline = 0;
 
 	/* Open the lease file... */
 	if ((cfile = fopen (_PATH_DHCPD_DB, "r")) == NULL) {
@@ -1050,12 +1056,9 @@ struct lease *parse_lease_statement (cfile, bc)
 	int token;
 	unsigned char addr [4];
 	int len = sizeof addr;
-	char *s;
-	unsigned char *uid;
 	int seenmask = 0;
 	int seenbit;
 	char tbuf [32];
-	char ubuf [1024];
 	static struct lease lease;
 
 	/* Zap the lease structure... */
@@ -1098,29 +1101,27 @@ struct lease *parse_lease_statement (cfile, bc)
 				/* Colon-seperated hexadecimal octets... */
 			      case UID:
 				seenbit = 8;
-				lease.uid_len = 0;
 				token = peek_token (&val, cfile);
 				if (token == STRING) {
 					token = next_token (&val, cfile);
 					lease.uid_len = strlen (val) + 1;
-					s = val;
+					lease.uid = (unsigned char *)
+						malloc (lease.uid_len);
+					memcpy (lease.uid, val, lease.uid_len);
 				} else {
-					parse_numeric_aggregate
-						(cfile, bc, ubuf,
+					lease.uid_len = 0;
+					lease.uid = parse_numeric_aggregate
+						(cfile, bc, (unsigned char *)0,
 						 &lease.uid_len, ':', 16, 8);
-					s = ubuf;
 					if (lease.uid_len == 0) {
 						parse_warn ("zero-length uid");
 						seenbit = 0;
 						break;
 					}
 				}
-				lease.uid = (unsigned char *)
-					malloc (lease.uid_len);
 				if (!lease.uid) {
 					error ("No memory for lease uid");
 				}
-				memcpy (lease.uid, s, lease.uid_len);
 				break;
 
 #if 0
@@ -1411,13 +1412,13 @@ unsigned char *parse_numeric_aggregate (cfile, bc, buf,
 		bufp = (unsigned char *)malloc (count * size / 8);
 		if (!bufp)
 			error ("can't allocate space for numeric aggregate.");
-		s = bufp;
+		s = bufp + count - size / 8;
 		*max = count;
 	}
 	while (c) {
 		pair cdr = c -> cdr;
 		convert_num (s, (char *)(c -> car), base, size);
-		s += size / 8;
+		s -= size / 8;
 		/* Free up temp space. */
 		free (c -> car);
 		free (c);
