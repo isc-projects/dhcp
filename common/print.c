@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: print.c,v 1.53.2.2 2001/06/11 06:00:22 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: print.c,v 1.53.2.3 2001/06/12 18:47:47 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -143,26 +143,26 @@ char *print_base64 (const unsigned char *buf, unsigned len,
 	s = b;
 	while (i != len) {
 		val = buf [i++];
-		extra = val >> 6;
-		val &= 0x3f;
+		extra = val & 3;
+		val = val >> 2;
 		*s++ = to64 [val];
 		if (i == len) {
-			*s++ = to64 [extra];
+			*s++ = to64 [extra << 4];
 			*s++ = '=';
 			break;
 		}
-		val = (buf [i++] << 2) + extra;
-		extra = val >> 6;
-		val &= 0x3f;
+		val = (extra << 8) + buf [i++];
+		extra = val & 15;
+		val = val >> 4;
 		*s++ = to64 [val];
 		if (i == len) {
-			*s++ = to64 [extra];
+			*s++ = to64 [extra << 2];
 			*s++ = '=';
 			break;
 		}
-		val = (buf [i++] << 4) + extra;
-		extra = val >> 6;
-		val &= 0x3f;
+		val = (extra << 8) + buf [i++];
+		extra = val & 0x3f;
+		val = val >> 6;
 		*s++ = to64 [val];
 		*s++ = to64 [extra];
 	}
