@@ -35,9 +35,10 @@ int main (argc, argv)
 {
 	isc_result_t status, waitstatus;
 	dhcpctl_handle connection;
-	dhcpctl_handle host_handle, group_handle;
+	dhcpctl_handle host_handle, group_handle, lease_handle;
 	dhcpctl_data_string cid, ip_addr;
-	dhcpctl_data_string result, groupname;
+	dhcpctl_data_string result, groupname, identifier;
+	int i;
 
 	status = dhcpctl_initialize ();
 	if (status != ISC_R_SUCCESS) {
@@ -249,5 +250,87 @@ option smtp-server 10.0.0.1;",
 		exit (1);
 	}
 #endif
+
+	/* Create a named group that contains the values we want to assign
+	   to the host. */
+	memset (&lease_handle, 0, sizeof lease_handle);
+	status = dhcpctl_new_object (&lease_handle, connection, "lease");
+	if (status != ISC_R_SUCCESS) {
+		fprintf (stderr, "dhcpctl_new_object: %s\n",
+			 isc_result_totext (status));
+		exit (1);
+	}
+
+	memset (&ip_addr, 0, sizeof ip_addr);
+	status = omapi_data_string_new (&ip_addr, 4, "main");
+	if (status != ISC_R_SUCCESS) {
+		fprintf (stderr, "omapi_data_string_new: %s\n",
+			 isc_result_totext (status));
+		exit (1);
+	}
+
+	ip_addr -> value [0] = 10; ip_addr -> value [1] = 0;
+	ip_addr -> value [2] = 0; ip_addr -> value [3] = 4;
+
+	status = dhcpctl_set_value (lease_handle, ip_addr, "ip-address");
+	if (status != ISC_R_SUCCESS) {
+		fprintf (stderr, "dhcpctl_set_value: %s\n",
+			 isc_result_totext (status));
+		exit (1);
+	}
+
+	status = dhcpctl_open_object (lease_handle, connection, 0);
+	if (status != ISC_R_SUCCESS) {
+		fprintf (stderr, "dhcpctl_open_object: %s\n",
+			 isc_result_totext (status));
+		exit (1);
+	}
+
+	status = dhcpctl_wait_for_completion (lease_handle, &waitstatus);
+	if (status != ISC_R_SUCCESS) {
+		fprintf (stderr, "dhcpctl_wait_for_completion: %s\n",
+			 isc_result_totext (status));
+		exit (1);
+	}
+	if (waitstatus != ISC_R_SUCCESS) {
+		fprintf (stderr, "lease object lookup: %s\n",
+			 isc_result_totext (waitstatus));
+		exit (1);
+	}
+
+	memset (&identifier, 0, sizeof identifier);
+	status = dhcpctl_get_value (&identifier, lease_handle,
+				    "dhcp-client-identifier");
+	if (status == ISC_R_SUCCESS) {
+		printf ("lease client-identifier = %02x",
+			identifier -> value [0]);
+		for (i = 1; i < identifier -> len; i++) {
+			printf (":%02x", identifier -> value [i]);
+		}
+		putchar ('\n');
+	} else {
+		status = dhcpctl_get_value (&identifier, lease_handle,
+					    "hardware-address");
+		if (status == ISC_R_SUCCESS) {
+			printf ("lease hardware address = %02x",
+				identifier -> value [0]);
+			for (i = 1; i < identifier -> len; i++) {
+				printf (":%02x", identifier -> value [i]);
+			}
+			putchar ('\n');
+			dhcpctl_data_string_dereference (&identifier, "main");
+			status = dhcpctl_get_value (&identifier, lease_handle,
+						    "hardware-type");
+			if (status == ISC_R_SUCCESS) {
+				printf ("lease hardware type = %d\n",
+					identifier -> value [0]);
+				dhcpctl_data_string_dereference (&identifier,
+								 "main");
+			}
+		} else {
+			printf ("Unable to find identifier for lease.\n");
+		}
+	}
+
 	exit (0);
 }
