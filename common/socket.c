@@ -50,7 +50,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: socket.c,v 1.22 1997/03/29 00:06:07 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: socket.c,v 1.23 1997/03/29 01:26:08 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -207,6 +207,7 @@ size_t send_packet (interface, packet, raw, len, from, to, hto)
 		  errno == ECONNREFUSED) &&
 		 retry++ < 10);
 #endif
+	return result;
 }
 #endif /* USE_SOCKET_SEND */
 
@@ -233,6 +234,7 @@ size_t receive_packet (interface, buf, len, from, hfrom)
 		  errno == ECONNREFUSED) &&
 		 retry++ < 10);
 #endif
+	return result;
 }
 #endif /* USE_SOCKET_RECEIVE */
 
