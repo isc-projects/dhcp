@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.114 2000/06/03 02:36:03 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.115 2000/06/06 23:49:05 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -765,7 +765,7 @@ void parse_failover_peer (cfile, group, type)
 			goto parse_idle;
 
 		      case MAX_RESPONSE_DELAY:
-			tp = &peer -> max_transmit_idle;
+			tp = &peer -> max_response_delay;
 		      parse_idle:
 			token = next_token (&val, cfile);
 			if (token != NUMBER) {
