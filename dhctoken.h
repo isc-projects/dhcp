@@ -72,8 +72,10 @@
 #define NETMASK		279
 #define DEFAULT_LEASE_TIME 280
 #define MAX_LEASE_TIME	281
+#define VENDOR_CLASS	282
+#define USER_CLASS	283
 
-#define LAST_TOKEN	MAX_LEASE_TIME
+#define LAST_TOKEN	USER_CLASS
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\
 				 (x) <= LAST_TOKEN &&	\
