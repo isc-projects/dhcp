@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.111 2001/02/12 21:59:31 mellon Exp $ Copyright 1995-2001 Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.112 2001/02/22 00:18:54 mellon Exp $ Copyright 1995-2001 Internet Software Consortium.";
 #endif
 
   static char copyright[] =
@@ -536,7 +536,7 @@ int main (argc, argv, envp)
 		if (pid && (pid == getpid() || kill (pid, 0) < 0)) {
 			unlink (path_dhcpd_pid);
 			if ((i = open (path_dhcpd_pid,
-				       O_WRONLY | O_CREAT, 0640)) >= 0) {
+				       O_WRONLY | O_CREAT, 0644)) >= 0) {
 				sprintf (pbuf, "%d\n", (int)getpid ());
 				write (i, pbuf, strlen (pbuf));
 				close (i);
@@ -568,7 +568,7 @@ int main (argc, argv, envp)
 	if (!pidfilewritten) {
 		unlink (path_dhcpd_pid);
 		if ((i = open (path_dhcpd_pid,
-			       O_WRONLY | O_CREAT, 0640)) >= 0) {
+			       O_WRONLY | O_CREAT, 0644)) >= 0) {
 			sprintf (pbuf, "%d\n", (int)getpid ());
 			write (i, pbuf, strlen (pbuf));
 			close (i);
