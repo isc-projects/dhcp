@@ -27,12 +27,12 @@ SEDMANPAGES = omapi.man3
 SRC    = protocol.c buffer.c alloc.c result.c connection.c errwarn.c \
 	 listener.c dispatch.c generic.c support.c handle.c message.c \
 	 convert.c hash.c auth.c inet_addr.c array.c trace.c mrtrace.c \
-	 toisc.c
+	 toisc.c iscprint.c
 
 OBJ    = protocol.o buffer.o alloc.o result.o connection.o errwarn.o \
 	 listener.o dispatch.o generic.o support.o handle.o message.o \
 	 convert.o hash.o auth.o inet_addr.o array.o trace.o mrtrace.o \
-	 toisc.o ../common/iscprint.o
+	 toisc.o iscprint.o
 # XXX: iscprint.o above is a kludge.
 
 MAN    = omapi.3
