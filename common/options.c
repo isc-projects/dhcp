@@ -55,12 +55,6 @@ void parse_options (packet)
 	/* Initially, zero all option pointers. */
 	memset (packet -> options, 0, sizeof (packet -> options));
 
-debug ("cookie: %x %x %x %x",
-packet -> raw -> options [0],
-packet -> raw -> options [1],
-packet -> raw -> options [2],
-packet -> raw -> options [3]);
-
 	/* If we don't see the magic cookie, there's nothing to parse. */
 	if (memcmp (packet -> raw -> options, DHCP_OPTIONS_COOKIE, 4)) {
 		packet -> options_valid = 0;
@@ -154,314 +148,11 @@ void parse_option_buffer (packet, buffer, length)
 	packet -> options_valid = 1;
 }
 
-/* Cons up options based on client-supplied desired option list (if any)
-   and selected server option list. */
-
-void cons_options (inpacket, outpacket, options, overload)
-	struct packet *inpacket;
-	struct packet *outpacket;
-	struct tree_cache **options;
-	int overload;	/* Overload flags that may be set. */
-{
-	option_mask options_have;	/* Options we can send. */
-	option_mask options_want;	/* Options client wants. */
-	option_mask options_done;	/* Options we've already encoded. */
-	option_mask temp;		/* Working option mask. */
-	unsigned char priority_list [300];
-	int priority_len;
-	unsigned char *buffer = outpacket -> raw -> options;
-	int buflen, bufix = 0;
-	int reserved = 3;		/* Reserved space for overload. */
-	unsigned char *overload_ptr = (unsigned char *)0;
-	int stored_length [256];
-	int missed = 0;
-	int missed_code = 0;
-	int missed_length = 0;
-	int result;
-	int i;
-
-	/* If there's no place to overload with options, don't save space
-	   for an overload option. */
-	if (!overload)
-		reserved = 0;
-
-	/* Zero out the stored-lengths array. */
-	memset (stored_length, 0, sizeof stored_length);
-
-	/* If the client has provided a maximum DHCP message size,
-	   use that.   Otherwise, we use the default MTU size (576 bytes). */
-	/* XXX Maybe it would be safe to assume that we can send a packet
-	   to the client that's as big as the one it sent us, even if it
-	   didn't specify a large MTU. */
-	if (inpacket && inpacket -> options [DHO_DHCP_MAX_MESSAGE_SIZE].data)
-		buflen = (getUShort (inpacket -> options
-				     [DHO_DHCP_MAX_MESSAGE_SIZE].data)
-			  - DHCP_FIXED_LEN);
-	else
-		buflen = 576 - DHCP_FIXED_LEN;
-
-	/* If the client has provided a list of options that it wishes
-	   returned, use it to prioritize.   In case the client doesn't
-	   ask for some key items like the DHCP message type, though,
-	   always list those items first. */
-	priority_len = 0;
-	priority_list [priority_len++] = DHO_DHCP_MESSAGE_TYPE;
-	priority_list [priority_len++] = DHO_DHCP_SERVER_IDENTIFIER;
-	priority_list [priority_len++] = DHO_DHCP_LEASE_TIME;
-	priority_list [priority_len++] = DHO_DHCP_MESSAGE;
-
-	if (inpacket &&
-	    inpacket -> options [DHO_DHCP_PARAMETER_REQUEST_LIST].data) {
-		memcpy (&priority_list [priority_len],
-			inpacket -> options
-				[DHO_DHCP_PARAMETER_REQUEST_LIST].data,
-			inpacket -> options
-				[DHO_DHCP_PARAMETER_REQUEST_LIST].len);
-		priority_len +=
-			inpacket -> options
-				[DHO_DHCP_PARAMETER_REQUEST_LIST].len;
-	} else {
-	/* Otherwise, prioritize based on the default priority list. */
-		memcpy (&priority_list [priority_len],
-			dhcp_option_default_priority_list,
-			sizeof_dhcp_option_default_priority_list);
-		priority_len += sizeof_dhcp_option_default_priority_list;
-	}
-
-	/* Make a bitmask of all the options the client wants. */
-	OPTION_ZERO (options_want);
-	for (i = 0; i < priority_len; i++)
-		OPTION_SET (options_want, priority_list [i]);
-
-	/* Make a bitmask of all the options we have available. */
-	OPTION_ZERO (options_have);
-	for (i = 0; i < 256; i++)
-		if (options [i])
-			OPTION_SET (options_have, i);
-	
-	/* Put the cookie up front... */
-	memcpy (buffer, DHCP_OPTIONS_COOKIE, 4);
-	bufix += 4;
-
-      again:
-	/* Try copying out options that fit easily. */
-	for (i = 0; i < priority_len; i++) {
-		/* Code for next option to try to store. */
-		int code = priority_list [i];
-
-		/* Number of bytes left to store (some may already
-		   have been stored by a previous pass). */
-		int length;
-
-		/* If no data is available for this option, skip it. */
-		if (!options [code]) {
-			continue;
-		}
-
-		/* Don't look at options that have already been stored. */
-		if (options [code] -> value &&
-		    stored_length [code] == options [code] -> len) {
-			continue;
-		}
-
-		/* Find the value of the option... */
-		if (!tree_evaluate (options [code])) {
-			continue;
-		}
-
-		/* We should now have a constant length for the option. */
-		length = (options [code] -> len - stored_length [code]);
-
-		/* If there's no space for this option, skip it. */
-		if ((bufix + OPTION_SPACE (length) + reserved) > buflen) {
-			/* If this is the first missed option, remember it. */
-			if (++missed == 1) {
-				missed_code = code;
-				missed_length = length;
-			}
-			continue;
-		}
-		
-		/* Otherwise, store the option. */
-		result = store_option (options, code,
-				       buffer + bufix,
-				       buflen - bufix - reserved,
-				       stored_length);
-		bufix += result;
-
-		/* The following test should always succeed because of
-		   preconditioning above. */
-		if (stored_length [code] == options [code] -> len)
-			OPTION_SET (options_done, code);
-		else {
-			warn ("%s: Only stored %d out of %d bytes.",
-			      dhcp_options [code].name,
-			      stored_length [code],
-			      options [code] -> len);
-			if (++missed == 1) {
-				missed_code = code;
-				missed_length = options [code] -> len
-					- stored_length [code];
-			}
-		}
-	}
-
-	/* If we didn't miss any options, we're done. */
-	/* XXX Maybe we want to try to encode options the client didn't
-	   request but that we have available? */
-	if (!missed) {
-		/* If there's space, store an End option code. */
-		if (bufix < buflen)
-			buffer [bufix++] = DHO_END;
-		/* If there's still space, pad it. */
-		while (bufix < buflen)
-			buffer [bufix++] = DHO_PAD;
-		if (buffer == outpacket -> raw -> options) {
-			outpacket -> packet_length
-				= DHCP_FIXED_NON_UDP + bufix;
-		}
-
-		return;
-	}
-
-	if (buffer == outpacket -> raw -> options) {
-		outpacket -> packet_length = DHCP_FIXED_NON_UDP + bufix;
-	}
-
-	/* If we did miss one or more options, they must not have fit.
-	   It's possible, though, that there's only one option left to
-	   store, and that it would fit if we weren't reserving space
-	   for the overload option.   In that case, we want to avoid
-	   overloading. */
-	if (reserved && missed == 1
-	    && (bufix + OPTION_SPACE (missed_length) <= buflen)) {
-		result = store_option (options, missed_code,
-				       buffer + bufix, buflen - bufix,
-				       stored_length);
-		bufix += result;
-		/* This test should always fail -- we'll send bad
-		   data if it doesn't. */
-		if (stored_length [missed_code]
-		    == options [missed_code] -> len) {
-			OPTION_SET (options_done, missed_code);
-		} else {
-			warn ("%s (last): Only stored %d out of %d bytes.",
-			      dhcp_options [missed_code].name,
-			      stored_length [missed_code],
-			      options [missed_code] -> len);
-		}
-		return;
-	}
-
-	/* We've crammed in all the options that completely fit in
-	   the current buffer, but maybe we can fit part of the next
-	   option into the current buffer and part into the next. */
-	if (bufix + OPTION_SPACE (missed_length) + reserved
-	    < buflen + (overload & 1 ? 128 : 0) + (overload & 2 ? 64 : 0)) {
-		result = store_option (options, missed_code,
-				       buffer + bufix,
-				       buflen - bufix - reserved,
-				       stored_length);
-		bufix += result;
-
-		/* This test should never fail. */
-		if (stored_length [missed_code]
-		    == options [missed_code] -> len) {
-			OPTION_SET (options_done, missed_code);
-			warn ("%s: Unexpected completed store.",
-			      dhcp_options [missed_code].name);
-		}
-	}
-
-	/* Okay, nothing else is going to fit in the current buffer
-	   except possibly the override option.   Store that. */
-	if (reserved) {
-		buffer [bufix++] = DHO_DHCP_OPTION_OVERLOAD;
-		buffer [bufix++] = 1;
-		overload_ptr = buffer + bufix;
-		buffer [bufix++] = 0;
-		/* If there's space, store an End option code. */
-		if (bufix < buflen)
-			buffer [bufix++] = DHO_END;
-		/* If there's still space, pad it. */
-		while (bufix < buflen)
-			buffer [bufix++] = DHO_PAD;
-	}
-	    
-	/* If we've fallen through to here, we still have options to
-	   store, and may be able to overload options into the file
-	   and server name fields of the DHCP packet. */
-
-	/* We should have stored an overload option by now if we're
-	   going to need it, so if this test fails, there's a programming
-	   error somewhere above. */
-	if (overload && !overload_ptr) {
-		warn ("Need to overload, but didn't store overload option!");
-		return;
-	}
-
-	/* Can we use the file buffer? */
-	if (overload & 1) {
-		buffer = outpacket -> raw -> file;
-		buflen = sizeof outpacket -> raw -> file;
-		bufix = 0;
-		overload &= ~1;
-		goto again;
-	}
-	/* Can we use the sname buffer? */
-	if (overload & 2) {
-		buffer = outpacket -> raw -> sname;
-		buflen = sizeof outpacket -> raw -> sname;
-		bufix = 0;
-		overload &= ~2;
-		goto again;
-	}
-
-	warn ("Insufficient packet space for all options.");
-}
-
-/* Copy the option data specified by code from the packet structure's
-   option array into an option buffer specified by buf and buflen,
-   updating stored_length[code] to reflect the amount of code's option
-   data that has been stored so far.   Return 1 if all the option data
-   has been stored. */
-   
-int store_option (options, code, buffer, buflen, stored_length)
-	struct tree_cache **options;
-	unsigned char code;
-	unsigned char *buffer;
-	int buflen;
-	int *stored_length;
-{
-	int length = options [code] -> len - stored_length [code];
-	int bufix = 0;
-	if (length > buflen) {
-		length = buflen;
-	}
-
-	/* If the option's length is more than 255, we must store it
-	   in multiple hunks.   Store 255-byte hunks first. */
-	/* XXX Might a client lose its cookies if options aren't
-	   chunked out so that each chunk is aligned to the size
-	   of the data being represented? */
-	while (length) {
-		unsigned char incr = length > 255 ? 255 : length;
-		buffer [bufix] = code;
-		buffer [bufix + 1] = incr;
-		memcpy (buffer + bufix + 2, (options [code] -> value
-					     + stored_length [code]), incr);
-		length -= incr;
-		stored_length [code] += incr;
-		bufix += 2 + incr;
-	}
-	return bufix;
-}
-
 /* cons options into a big buffer, and then split them out into the
    three seperate buffers if needed.  This allows us to cons up a set
    of vendor options using the same routine. */
 
-void new_cons_options (inpacket, outpacket, options, overload)
+void cons_options (inpacket, outpacket, options, overload)
 	struct packet *inpacket;
 	struct packet *outpacket;
 	struct tree_cache **options;
@@ -471,8 +162,8 @@ void new_cons_options (inpacket, outpacket, options, overload)
 	int priority_len;
 	unsigned char buffer [4096];	/* Really big buffer... */
 	int main_buffer_size;
+	int mainbufix, bufix;
 	int option_size;
-	int remaining_space;
 	int result;
 	int i;
 
@@ -517,37 +208,88 @@ void new_cons_options (inpacket, outpacket, options, overload)
 		priority_len += sizeof_dhcp_option_default_priority_list;
 	}
 
-	/* Put the cookie up front... */
-	memcpy (buffer, DHCP_OPTIONS_COOKIE, 4);
-
 	/* Copy the options into the big buffer... */
-	option_size = store_options (&buffer [4], (sizeof buffer) - 4,
-				     options, priority_list, priority_len);
+	option_size = store_options (buffer,
+				     (main_buffer_size - 7 +
+				      ((overload & 1) ? DHCP_FILE_LEN : 0) +
+				      ((overload & 2) ? DHCP_SNAME_LEN : 0)),
+				     options, priority_list, priority_len,
+				     main_buffer_size,
+				     (main_buffer_size +
+				      ((overload & 1) ? DHCP_FILE_LEN : 0)));
 
-	/* If there's room, just store the whole thing in the packet's
-	   option buffer and leave it at that. */
-	if (option_size <= main_buffer_size) {
-		memcpy (outpacket -> raw -> options, buffer, option_size);
-		if (option_size < main_buffer_size)
-			outpacket -> raw -> options [option_size++] = DHO_END;
-		while (option_size < main_buffer_size)
-			outpacket -> raw -> options [option_size++] = DHO_PAD;
+	/* Put the cookie up front... */
+	memcpy (outpacket -> raw -> options, DHCP_OPTIONS_COOKIE, 4);
+	mainbufix = 4;
+
+	/* If we're going to have to overload, store the overload
+	   option at the beginning.  If we can, though, just store the
+	   whole thing in the packet's option buffer and leave it at
+	   that. */
+	if (option_size <= main_buffer_size - mainbufix) {
+		memcpy (&outpacket -> raw -> options [mainbufix],
+			buffer, option_size);
+		mainbufix += option_size;
+		if (mainbufix < main_buffer_size)
+			outpacket -> raw -> options [mainbufix++]
+				= DHO_END;
+		outpacket -> packet_length = DHCP_FIXED_NON_UDP + mainbufix;
+	} else {
+		outpacket -> raw -> options [mainbufix++] =
+			DHO_DHCP_OPTION_OVERLOAD;
+		outpacket -> raw -> options [mainbufix++] = 1;
+		if (option_size > main_buffer_size - mainbufix + DHCP_FILE_LEN)
+			outpacket -> raw -> options [mainbufix++] = 3;
+		else
+			outpacket -> raw -> options [mainbufix++] = 1;
+
+		memcpy (&outpacket -> raw -> options [mainbufix],
+			buffer, main_buffer_size - mainbufix);
+		bufix = main_buffer_size - mainbufix;
+		outpacket -> packet_length = DHCP_FIXED_NON_UDP + mainbufix;
+		if (overload & 1) {
+			if (option_size - bufix <= DHCP_FILE_LEN) {
+				memcpy (outpacket -> raw -> file,
+					&buffer [bufix], option_size - bufix);
+				mainbufix = option_size - bufix;
+				if (mainbufix < DHCP_FILE_LEN)
+					outpacket -> raw -> file [mainbufix++]
+						= DHO_END;
+				while (mainbufix < DHCP_FILE_LEN)
+					outpacket -> raw -> file [mainbufix++]
+						= DHO_PAD;
+			} else {
+				memcpy (outpacket -> raw -> file,
+					&buffer [bufix], DHCP_FILE_LEN);
+				bufix += DHCP_FILE_LEN;
+			}
+		}
+		if ((overload & 2) && option_size < bufix) {
+			memcpy (outpacket -> raw -> sname,
+				&buffer [bufix], option_size - bufix);
+
+			mainbufix = option_size - bufix;
+			if (mainbufix < DHCP_SNAME_LEN)
+				outpacket -> raw -> file [mainbufix++]
+					= DHO_END;
+			while (mainbufix < DHCP_SNAME_LEN)
+				outpacket -> raw -> file [mainbufix++]
+					= DHO_PAD;
+		}
 	}
-
-	/* Otherwise, we're going to have to split things out. */
-	remaining_space = 0;
-
-	warn ("Insufficient packet space for all options.");
+	return;
 }
 
 /* Store all the requested options into the requested buffer. */
 
-int store_options (buffer, buflen, options, priority_list, priority_len)
+int store_options (buffer, buflen, options, priority_list, priority_len,
+		   first_cutoff, second_cutoff)
 	unsigned char *buffer;
 	int buflen;
 	struct tree_cache **options;
 	unsigned char *priority_list;
 	int priority_len;
+	int first_cutoff, second_cutoff;
 {
 	int bufix = 0;
 	int option_stored [256];
@@ -566,6 +308,7 @@ int store_options (buffer, buflen, options, priority_list, priority_len)
 	for (i = 0; i < priority_len; i++) {
 		/* Code for next option to try to store. */
 		int code = priority_list [i];
+		int optstart;
 
 		/* Number of bytes left to store (some may already
 		   have been stored by a previous pass). */
@@ -590,20 +333,37 @@ int store_options (buffer, buflen, options, priority_list, priority_len)
 		/* We should now have a constant length for the option. */
 		length = options [code] -> len;
 
-		/* If there's no space for this option, skip it. */
-		if ((bufix + OPTION_SPACE (length)) > buflen) {
-			continue;
-		}
-		
-		/* Otherwise, store the option. */
+		/* Try to store the option. */
 
 		/* If the option's length is more than 255, we must store it
-		   in multiple hunks.   Store 255-byte hunks first. */
+		   in multiple hunks.   Store 255-byte hunks first.  However,
+		   in any case, if the option data will cross a buffer
+		   boundary, split it across that boundary. */
 
 		ix = 0;
 
+		optstart = bufix;
 		while (length) {
 			unsigned char incr = length > 255 ? 255 : length;
+
+			/* If this hunk of the buffer will cross a
+			   boundary, only go up to the boundary in this
+			   pass. */
+			if (bufix < first_cutoff &&
+			    bufix + incr > first_cutoff)
+				incr = first_cutoff - bufix;
+			else if (bufix < second_cutoff &&
+				 bufix + incr > second_cutoff)
+				incr = second_cutoff - bufix;
+
+			/* If this option is going to overflow the buffer,
+			   skip it. */
+			if (bufix + 2 + incr > buflen) {
+				bufix = optstart;
+				break;
+			}
+
+			/* Everything looks good - copy it in! */
 			buffer [bufix] = code;
 			buffer [bufix + 1] = incr;
 			memcpy (buffer + bufix + 2,
