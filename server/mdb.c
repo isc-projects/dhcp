@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.3 1999/10/01 03:26:45 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.4 1999/10/05 00:03:24 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -992,6 +992,20 @@ void release_lease (lease)
 	struct lease *lease;
 {
 	struct lease lt;
+
+#if defined (NSUPDATE) && 0
+	nsupdate (lease, lease -> state, packet, DELETE);
+#endif
+
+	/* If there are statements to execute when the lease is
+	   committed, execute them. */
+	if (lease -> on_release) {
+		execute_statements (packet, lease, packet -> options,
+				    (struct option_state *)0, /* XXX */
+				    lease -> on_release);
+		executable_statement_dereference (&lease -> on_release,
+						  "dhcprelease");
+	}
 
 	lt = *lease;
 	if (lt.ends > cur_time) {
