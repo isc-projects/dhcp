@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: alloc.c,v 1.14 1998/03/17 06:08:49 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: alloc.c,v 1.15 1998/06/25 02:53:00 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -90,28 +90,29 @@ struct dhcp_packet *new_dhcp_packet (name)
 	return rval;
 }
 
-struct tree *new_tree (name)
+struct expression *new_expression (name)
 	char *name;
 {
-	struct tree *rval = dmalloc (sizeof (struct tree), name);
+	struct expression *rval = dmalloc (sizeof (struct expression), name);
 	return rval;
 }
 
-struct tree_cache *free_tree_caches;
+struct option_cache *free_option_caches;
 
-struct tree_cache *new_tree_cache (name)
+struct option_cache *new_option_cache (name)
 	char *name;
 {
-	struct tree_cache *rval;
+	struct option_cache *rval;
 
-	if (free_tree_caches) {
-		rval = free_tree_caches;
-		free_tree_caches =
-			(struct tree_cache *)(rval -> value);
+	if (free_option_caches) {
+		rval = free_option_caches;
+		free_option_caches =
+			(struct option_cache *)(rval -> expression);
 	} else {
-		rval = dmalloc (sizeof (struct tree_cache), name);
+		rval = dmalloc (sizeof (struct option_cache), name);
 		if (!rval)
-			error ("unable to allocate tree cache for %s.", name);
+			error ("unable to allocate option cache for %s.",
+			       name);
 	}
 	return rval;
 }
@@ -300,12 +301,19 @@ void free_hash_table (ptr, name)
 	dfree ((VOIDPTR)ptr, name);
 }
 
-void free_tree_cache (ptr, name)
-	struct tree_cache *ptr;
+void free_expression (ptr, name)
+	struct expression *ptr;
 	char *name;
 {
-	ptr -> value = (unsigned char *)free_tree_caches;
-	free_tree_caches = ptr;
+	dfree ((VOIDPTR)ptr, name);
+}
+
+void free_option_cache (ptr, name)
+	struct option_cache *ptr;
+	char *name;
+{
+	ptr -> expression = (struct expression *)free_option_caches;
+	free_option_caches = ptr;
 }
 
 void free_packet (ptr, name)
@@ -317,13 +325,6 @@ void free_packet (ptr, name)
 
 void free_dhcp_packet (ptr, name)
 	struct dhcp_packet *ptr;
-	char *name;
-{
-	dfree ((VOIDPTR)ptr, name);
-}
-
-void free_tree (ptr, name)
-	struct tree *ptr;
 	char *name;
 {
 	dfree ((VOIDPTR)ptr, name);
