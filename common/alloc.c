@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: alloc.c,v 1.53.2.5 2001/06/21 16:43:18 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: alloc.c,v 1.53.2.6 2001/06/21 23:31:13 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -109,7 +109,7 @@ int option_chain_head_reference (ptr, bp, file, line)
 	}
 	*ptr = bp;
 	bp -> refcnt++;
-	rc_register (file, line, ptr, bp, bp -> refcnt);
+	rc_register (file, line, ptr, bp, bp -> refcnt, 0);
 	return 1;
 }
 
@@ -135,7 +135,7 @@ int option_chain_head_dereference (ptr, file, line)
 	*ptr = (struct option_chain_head *)0;
 	--option_chain_head -> refcnt;
 	rc_register (file, line, ptr,
-		     option_chain_head, option_chain_head -> refcnt);
+		     option_chain_head, option_chain_head -> refcnt, 1);
 	if (option_chain_head -> refcnt > 0)
 		return 1;
 
@@ -222,7 +222,7 @@ int group_reference (ptr, bp, file, line)
 	}
 	*ptr = bp;
 	bp -> refcnt++;
-	rc_register (file, line, ptr, bp, bp -> refcnt);
+	rc_register (file, line, ptr, bp, bp -> refcnt, 0);
 	return 1;
 }
 
@@ -246,7 +246,7 @@ int group_dereference (ptr, file, line)
 	group = *ptr;
 	*ptr = (struct group *)0;
 	--group -> refcnt;
-	rc_register (file, line, ptr, group, group -> refcnt);
+	rc_register (file, line, ptr, group, group -> refcnt, 1);
 	if (group -> refcnt > 0)
 		return 1;
 
@@ -496,7 +496,7 @@ int expression_reference (ptr, src, file, line)
 	}
 	*ptr = src;
 	src -> refcnt++;
-	rc_register (file, line, ptr, src, src -> refcnt);
+	rc_register (file, line, ptr, src, src -> refcnt, 0);
 	return 1;
 }
 
@@ -570,7 +570,7 @@ int binding_value_reference (ptr, src, file, line)
 	}
 	*ptr = src;
 	src -> refcnt++;
-	rc_register (file, line, ptr, src, src -> refcnt);
+	rc_register (file, line, ptr, src, src -> refcnt, 0);
 	return 1;
 }
 
@@ -636,7 +636,7 @@ int fundef_reference (ptr, src, file, line)
 	}
 	*ptr = src;
 	src -> refcnt++;
-	rc_register (file, line, ptr, src, src -> refcnt);
+	rc_register (file, line, ptr, src, src -> refcnt, 0);
 	return 1;
 }
 
@@ -701,7 +701,7 @@ int option_cache_reference (ptr, src, file, line)
 	}
 	*ptr = src;
 	src -> refcnt++;
-	rc_register (file, line, ptr, src, src -> refcnt);
+	rc_register (file, line, ptr, src, src -> refcnt, 0);
 	return 1;
 }
 
@@ -745,7 +745,7 @@ int buffer_reference (ptr, bp, file, line)
 	}
 	*ptr = bp;
 	bp -> refcnt++;
-	rc_register (file, line, ptr, bp, bp -> refcnt);
+	rc_register (file, line, ptr, bp, bp -> refcnt, 0);
 	return 1;
 }
 
@@ -775,7 +775,7 @@ int buffer_dereference (ptr, file, line)
 	}
 
 	(*ptr) -> refcnt--;
-	rc_register (file, line, ptr, *ptr, (*ptr) -> refcnt);
+	rc_register (file, line, ptr, *ptr, (*ptr) -> refcnt, 1);
 	if (!(*ptr) -> refcnt) {
 		dfree ((*ptr), file, line);
 	} else if ((*ptr) -> refcnt < 0) {
@@ -834,7 +834,7 @@ int dns_host_entry_reference (ptr, bp, file, line)
 	}
 	*ptr = bp;
 	bp -> refcnt++;
-	rc_register (file, line, ptr, bp, bp -> refcnt);
+	rc_register (file, line, ptr, bp, bp -> refcnt, 0);
 	return 1;
 }
 
@@ -855,7 +855,7 @@ int dns_host_entry_dereference (ptr, file, line)
 	}
 
 	(*ptr) -> refcnt--;
-	rc_register (file, line, ptr, *ptr, (*ptr) -> refcnt);
+	rc_register (file, line, ptr, *ptr, (*ptr) -> refcnt, 1);
 	if (!(*ptr) -> refcnt)
 		dfree ((*ptr), file, line);
 	if ((*ptr) -> refcnt < 0) {
@@ -903,7 +903,7 @@ int option_state_allocate (ptr, file, line)
 		memset (*ptr, 0, size);
 		(*ptr) -> universe_count = universe_count;
 		(*ptr) -> refcnt = 1;
-		rc_register (file, line, ptr, *ptr, (*ptr) -> refcnt);
+		rc_register (file, line, ptr, *ptr, (*ptr) -> refcnt, 0);
 		return 1;
 	}
 	return 0;
@@ -933,7 +933,7 @@ int option_state_reference (ptr, bp, file, line)
 	}
 	*ptr = bp;
 	bp -> refcnt++;
-	rc_register (file, line, ptr, bp, bp -> refcnt);
+	rc_register (file, line, ptr, bp, bp -> refcnt, 0);
 	return 1;
 }
 
@@ -957,7 +957,7 @@ int option_state_dereference (ptr, file, line)
 	options = *ptr;
 	*ptr = (struct option_state *)0;
 	--options -> refcnt;
-	rc_register (file, line, ptr, options, options -> refcnt);
+	rc_register (file, line, ptr, options, options -> refcnt, 1);
 	if (options -> refcnt > 0)
 		return 1;
 
@@ -1021,7 +1021,7 @@ int executable_statement_reference (ptr, bp, file, line)
 	}
 	*ptr = bp;
 	bp -> refcnt++;
-	rc_register (file, line, ptr, bp, bp -> refcnt);
+	rc_register (file, line, ptr, bp, bp -> refcnt, 0);
 	return 1;
 }
 
@@ -1103,7 +1103,7 @@ int packet_reference (ptr, bp, file, line)
 	}
 	*ptr = bp;
 	bp -> refcnt++;
-	rc_register (file, line, ptr, bp, bp -> refcnt);
+	rc_register (file, line, ptr, bp, bp -> refcnt, 0);
 	return 1;
 }
 
@@ -1127,7 +1127,7 @@ int packet_dereference (ptr, file, line)
 	packet = *ptr;
 	*ptr = (struct packet *)0;
 	--packet -> refcnt;
-	rc_register (file, line, ptr, packet, packet -> refcnt);
+	rc_register (file, line, ptr, packet, packet -> refcnt, 1);
 	if (packet -> refcnt > 0)
 		return 1;
 
@@ -1217,7 +1217,7 @@ int dns_zone_reference (ptr, bp, file, line)
 	}
 	*ptr = bp;
 	bp -> refcnt++;
-	rc_register (file, line, ptr, bp, bp -> refcnt);
+	rc_register (file, line, ptr, bp, bp -> refcnt, 0);
 	return 1;
 }
 
@@ -1278,7 +1278,7 @@ int binding_scope_reference (ptr, bp, file, line)
 	}
 	*ptr = bp;
 	bp -> refcnt++;
-	rc_register (file, line, ptr, bp, bp -> refcnt);
+	rc_register (file, line, ptr, bp, bp -> refcnt, 0);
 	return 1;
 }
 
