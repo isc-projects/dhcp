@@ -1,9 +1,9 @@
-/* test.c
+/* omapictl.c
 
-   Example program that uses the dhcpctl library. */
+   Examine and modify omapi objects. */
 
 /*
- * Copyright (c) 1999-2000 Internet Software Consortium.
+ * Copyright (c) 2001 Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -49,8 +49,24 @@
 #include <string.h>
 #include <isc/result.h>
 #include "dhcpctl.h"
+#include "dhcpd.h"
 
-int main (int, char **);
+/* Fixups */
+isc_result_t find_class (struct class **c, const char *n, const char *f, int l)
+{
+	return 0;
+}
+int parse_allow_deny (struct option_cache **oc, struct parse *cfile, int flag)
+{
+	return 0;
+}
+void dhcp (struct packet *packet) { }
+void bootp (struct packet *packet) { }
+int check_collection (struct packet *p, struct lease *l, struct collection *c)
+{
+	return 0;
+}
+void classify (struct packet *packet, struct class *class) { }
 
 static void usage (char *s) {
 	fprintf (stderr,
@@ -59,18 +75,21 @@ static void usage (char *s) {
 	exit (1);
 }
 
-int main (argc, argv)
-	int argc;
-	char **argv;
+int main (int argc, char **argv, char **envp)
 {
 	isc_result_t status, waitstatus;
 	dhcpctl_handle connection;
 	dhcpctl_handle authenticator;
-	dhcpctl_handle host_handle, group_handle, lease_handle;
+	dhcpctl_handle oh;
 	dhcpctl_data_string cid, ip_addr;
 	dhcpctl_data_string result, groupname, identifier;
 	const char *name = 0, *pass = 0, *algorithm = "hmac-md5";
 	int i;
+	int port = 7911;
+	const char *server = "127.0.0.1";
+	struct parse *cfile;
+	enum dhcp_token token;
+	const char *val;
 
 	for (i = 1; i < argc; i++) {
 		if (!strcmp (argv[i], "-n")) {
@@ -85,6 +104,14 @@ int main (argc, argv)
 			if (++i == argc)
 				usage(argv[0]);
 			algorithm = argv[i];
+		} else if (!strcmp (argv[i], "-s")) {
+			if (++i == argc)
+				usage(argv[0]);
+			server = argv[i];
+		} else if (!strcmp (argv[i], "-P")) {
+			if (++i == argc)
+				usage(argv[0]);
+			port = atoi (argv[i]);
 		} else {
 			usage(argv[0]);
 		}
@@ -114,77 +141,52 @@ int main (argc, argv)
 	}
 
 	memset (&connection, 0, sizeof connection);
-	status = dhcpctl_connect (&connection, "127.0.0.1", 7911,
-				  authenticator);
+	status = dhcpctl_connect (&connection, server, port, authenticator);
 	if (status != ISC_R_SUCCESS) {
 		fprintf (stderr, "dhcpctl_connect: %s\n",
 			 isc_result_totext (status));
 		exit (1);
 	}
 
+	memset (&oh, 0, sizeof oh);
+
+	cfile = (struct parse *)0;
+	new_parse (&cfile, 0, (char *)0, 0, "<STDIN>");
+	do {
+		token = next_token (&val, cfile);
+		switch (token) {
+		      default:
+			parse_warn (cfile, "unknown token: %s", val);
+			skip_to_semi (cfile);
+			break;
+
+		      case TOKEN_NEW:
+			if (oh) {
+				parse_warn (cfile,
+					    "an object is already open.");
+				skip_to_semi (cfile);
+				break;
+			}
+			token = next_token (&val, cfile);
+			if (!is_identifier (token) && token != STRING) {
+				parse_warn (cfile,
+					    "expecting an object name.");
+				skip_to_semi (cfile);
+				break;
+			}
+			status = dhcpctl_new_object (&oh, connection, val);
+			if (status != ISC_R_SUCCESS) {
+				fprintf (stderr, "dhcpctl_new_object: %s\n",
+					 isc_result_totext (status));
+				exit (1);
+			}
+			parse_semi (cfile);
+			break;
+
+		}
+	} while (1);
+
 #if 0
-	/* Create a named group that contains the values we want to assign
-	   to the host. */
-	memset (&group_handle, 0, sizeof group_handle);
-	status = dhcpctl_new_object (&group_handle, connection, "group");
-	if (status != ISC_R_SUCCESS) {
-		fprintf (stderr, "dhcpctl_new_object: %s\n",
-			 isc_result_totext (status));
-		exit (1);
-	}
-
-	status = dhcpctl_set_string_value (group_handle, "\n\
-option domain-name \"foo.org\";\n\
-option domain-name-servers 10.0.0.1, 10.0.0.2;",
-					   "statements");
-	if (status != ISC_R_SUCCESS) {
-		fprintf (stderr, "dhcpctl_set_value: %s\n",
-			 isc_result_totext (status));
-		exit (1);
-	}
-
-	status = dhcpctl_open_object (group_handle, connection,
-				      DHCPCTL_CREATE | DHCPCTL_EXCL);
-	if (status != ISC_R_SUCCESS) {
-		fprintf (stderr, "dhcpctl_open_object: %s\n",
-			 isc_result_totext (status));
-		exit (1);
-	}
-
-	status = dhcpctl_wait_for_completion (group_handle, &waitstatus);
-	if (status != ISC_R_SUCCESS) {
-		fprintf (stderr, "dhcpctl_wait_for_completion: %s\n",
-			 isc_result_totext (status));
-		exit (1);
-	}
-	if (waitstatus != ISC_R_SUCCESS) {
-		fprintf (stderr, "group object create: %s\n",
-			 isc_result_totext (waitstatus));
-		exit (1);
-	}
-
-	memset (&groupname, 0, sizeof groupname);
-	status = dhcpctl_get_value (&groupname, group_handle, "name");
-	if (status != ISC_R_SUCCESS) {
-		fprintf (stderr, "dhcpctl_get_value: %s\n",
-			 isc_result_totext (status));
-		exit (1);
-	}
-
-	printf ("group name = %.*s\n",
-		(int)groupname -> len,
-		groupname -> value);
-#endif
-
-	memset (&host_handle, 0, sizeof host_handle);
-	status = dhcpctl_new_object (&host_handle, connection, "host");
-	if (status != ISC_R_SUCCESS) {
-		fprintf (stderr, "dhcpctl_new_object: %s\n",
-			 isc_result_totext (status));
-		exit (1);
-	}
-
-/*#if 0 */
 	memset (&cid, 0, sizeof cid);
 	status = omapi_data_string_new (&cid, 6, MDL);
 	if (status != ISC_R_SUCCESS) {
@@ -372,6 +374,6 @@ option smtp-server 10.0.0.1;",
 			 isc_result_totext (waitstatus));
 		exit (1);
 	}
-
+#endif
 	exit (0);
 }
