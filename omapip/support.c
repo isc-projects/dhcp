@@ -452,7 +452,9 @@ isc_result_t omapi_object_update (omapi_object_t *obj, omapi_object_t *id,
 	}
 	if (handle)
 		omapi_set_int_value (obj, id, "remote-handle", handle);
-	omapi_signal (obj, "updated");
+	status = omapi_signal (obj, "updated");
+	if (status != ISC_R_NOTFOUND)
+		return status;
 	return ISC_R_SUCCESS;
 }
 
