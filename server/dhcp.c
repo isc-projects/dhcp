@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.177 2001/01/16 23:57:23 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.178 2001/01/19 11:03:56 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -285,19 +285,6 @@ void dhcpdiscover (packet, ms_nulltp)
 		  ? inet_ntoa (packet -> raw -> giaddr)
 		  : packet -> interface -> name);
 
-#if defined (FAILOVER_PROTOCOL)
-	if (lease && lease -> pool && lease -> pool -> failover_peer) {
-		peer = lease -> pool -> failover_peer;
-		if (peer -> service_state == not_responding ||
-		    peer -> service_state == service_startup) {
-			log_info ("%s: not responding%s",
-				  peer -> name, peer -> nrr);
-			goto out;
-		}
-	} else
-		peer = (dhcp_failover_state_t *)0;
-#endif
-
 	/* Sourceless packets don't make sense here. */
 	if (!packet -> shared_network) {
 		log_info ("Packet from unknown subnet: %s",
@@ -327,6 +314,17 @@ void dhcpdiscover (packet, ms_nulltp)
 	}
 
 #if defined (FAILOVER_PROTOCOL)
+	if (lease && lease -> pool && lease -> pool -> failover_peer) {
+		peer = lease -> pool -> failover_peer;
+		if (peer -> service_state == not_responding ||
+		    peer -> service_state == service_startup) {
+			log_info ("%s: not responding%s",
+				  msgbuf, peer -> nrr);
+			goto out;
+		}
+	} else
+		peer = (dhcp_failover_state_t *)0;
+
 	/* Do load balancing if configured. */
 	/* If the lease is newly allocated, and we're not the server that
 	   the client would normally get with load balancing, and the
@@ -454,16 +452,16 @@ void dhcprequest (packet, ms_nulltp, ip_lease)
 		if (peer -> service_state == not_responding ||
 		    peer -> service_state == service_startup) {
 			log_info ("%s: not responding%s",
-				  peer -> name, peer -> nrr);
+				  msgbuf, peer -> nrr);
 			goto out;
 		}
-		if (peer -> service_state == cooperating) {
-			/* XXX */
-			/* If the client is in RENEWING state and sends
-			   us a DHCPREQUEST, we're going to ignore it,
-			   so it's going to have to fall back to REBINDING
-			   state before it can get a response from the
-			   other server.   Ick. */
+		/* Don't load balance if the client is RENEWING or REBINDING.
+		   If it's RENEWING, we are the only server to hear it, so
+		   we have to serve it.   If it's REBINDING, it's out of
+		   communication with the other server, so there's no point
+		   in waiting to serve it. */
+		if (peer -> service_state == cooperating &&
+		    !packet -> raw -> ciaddr.s_addr) {
 			if (!load_balance_mine (packet, peer)) {
 				log_debug ("%s: load balance to peer %s",
 					   msgbuf, peer -> name);
