@@ -344,6 +344,33 @@ immediately allocated to the client.   If the address is available for
 allocation but has been previously assigned to a different client, the
 server will keep looking in hopes of finding an address that has never
 before been assigned to a client.
+.PP
+The DHCP server checks IP addresses to see if they are in use before
+allocating them to clients.   It does this by sending an ICMP Echo
+request message to the IP address being allocated.   If no ICMP Echo
+reply is received within a second, the address is assumed to be free.
+This is only done for leases that have been specified in range
+statements, and only when the lease is thought by the DHCP server to
+be free - i.e., the DHCP server or its failover peer has not listed
+the lease as in use.
+.PP
+If a response is received to an ICMP Echo request, the DHCP server
+assumes that there is a configuration error - the IP address is in use
+by some host on the network that is not a DHCP client.   It marks the
+address as abandoned, and will not assign it to clients.
+.PP
+If a DHCP client tries to get an IP address, but none are available,
+but there are abandoned IP addresses, then the DHCP server will
+attempt to reclaim an abandoned IP address.   It marks one IP address
+as free, and then does the same ICMP Echo request check described
+previously.   If there is no answer to the ICMP Echo request, the
+address is assigned to the client.
+.PP
+The DHCP server does not cycle through abandoned IP addresses if the
+first IP address it tries to reclaim is free.   Rather, when the next
+DHCPDISCOVER comes in from the client, it will attempt a new
+allocation using the same method described here, and will typically
+try a new IP address.
 .SH DHCP FAILOVER
 This version of the ISC DHCP server supports the DHCP failover
 protocol as documented in draft-ietf-dhc-failover-07.txt.   This is
