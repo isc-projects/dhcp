@@ -57,7 +57,7 @@
 dhcpctl_status dhcpctl_new_authenticator (dhcpctl_handle *h,
 					  const char *name,
 					  const char *algorithm,
-					  const char *secret,
+					  const unsigned char *secret,
 					  unsigned secret_len)
 {
 	struct auth_key *key = (struct auth_key *)0;

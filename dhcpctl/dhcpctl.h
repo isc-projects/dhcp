@@ -109,7 +109,7 @@ isc_result_t dhcpctl_callback_stuff_values (omapi_object_t *,
 
 dhcpctl_status dhcpctl_new_authenticator (dhcpctl_handle *,
 					  const char *, const char *,
-					  const char *, unsigned);
+					  const unsigned char *, unsigned);
 
 dhcpctl_status dhcpctl_open_object (dhcpctl_handle, dhcpctl_handle, int);
 dhcpctl_status dhcpctl_new_object (dhcpctl_handle *,
