@@ -1,6 +1,6 @@
 	    Internet Software Consortium DHCP Distribution
-		   Version 3, Beta 2, Patchlevel 5
-			  September 19, 2000
+		   Version 3, Beta 2, Patchlevel 6
+			  September 29, 2000
 
 			    Release Notes
 
@@ -48,6 +48,47 @@ Measurement Systems, and Brian Murrell at BC Tel Advanced
 Communications.  I'd like to express my thanks to all of these good
 people here, both for working on the code and for prodding me into
 improving it.
+
+		Changes since 3.0 Beta 2 Patchlevel 5
+
+- Fix a bug in the recent enhancement to the interface discovery code
+  to support arbitrary-length interface lists.
+
+- Support NUL-terminated DHCP options when initializing client-script
+  environment.
+
+- Fix suffix operator.
+
+- Fix NetWare/IP option parsing.
+
+- Better error/status checking in dhcpctl initialization and omapi
+  connection code.
+
+- Fix a potential memory smash in dhcpctl code.
+
+- Fix SunOS4 and (maybe) Ultrix builds.
+
+- Fix a bug where a certain sort of incoming packet could cause a core
+  dump on Solaris (and probably elsewhere).
+
+- Add some more safety checks in error logging code.
+
+- Add support for ISC_R_INCOMPLETE in OMAPI protocol connection code.
+
+- Fix relay agent so that if an interface is specified on the command
+  line, the relay agent does not dump core.
+
+- Fix class matching so that match if can be combined with match or
+  spawn with.
+
+- Do not allow spurious leases in the lease database to introduce
+  potentially bogus leases into the in-memory database.
+
+- Fix a byte-order problem in the client hardware address type code
+  for OMAPI.
+
+- Be slightly less picky about what sort of hardware addresses OMAPI
+  can install in host declarations.
 
 		Changes since 3.0 Beta 2 Patchlevel 4
 
