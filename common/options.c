@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.66 2000/10/10 22:39:47 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.67 2000/10/11 07:57:20 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -693,11 +693,11 @@ int store_options (buffer, buflen, packet, lease,
 						       cfg_options,
 						       scope, tmp, MDL);
 			} else if (vuname) {
-			    name.data = s;
+			    name.data = (unsigned char *)s;
 			    name.len = strlen (s);
 			}
 		    } else {
-			name.data = s;
+			name.data = (unsigned char *)s;
 			name.len = t - s;
 		    }
 			
