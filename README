@@ -409,22 +409,23 @@ must install this extension in order to get dhcpd or dhclient to work.
 One problem which has been observed and is not fixed in this
 patchlevel has to do with using DLPI on Solaris machines.  The symptom
 of this problem is that the DHCP server never receives any requests.
-If you are using Solaris 2.6, and you encounter this symptom, and
-you are running the DHCP server on a machine with a single broadcast
-network interface, you may wish to edit the includes/site.h file and
-uncomment the #define USE_SOCKETS line.  Then type ``make clean;
-make''.
+This has been observed with Solaris 2.6 and Solaris 7 on Intel x86
+systems, although it may occur with other systems as well.  If you
+encounter this symptom, and you are running the DHCP server on a
+machine with a single broadcast network interface, you may wish to
+edit the includes/site.h file and uncomment the #define USE_SOCKETS
+line.  Then type ``make clean; make''.
 
 The DHCP client on Solaris will only work with DLPI.  If you run it
 and it just keeps saying it's sending DHCPREQUEST packets, but never
 gets a response, you may be having DLPI trouble as described above.
-If so, you are SOL.  Also, because Solaris requires you to "plumb" an
-interface before it can be detected by the DHCP client, you must
-either specify the name(s) of the interface(s) you want to configure
-on the command line, or must plumb the interfaces prior to invoking
-the DHCP client.   This can be done with ``ifconfig iface plumb'',
-where iface is the name of the interface (e.g., ``ifconfig hme0
-plumb'').
+If so, we have no solution to offer at this time.  Also, because
+Solaris requires you to "plumb" an interface before it can be detected
+by the DHCP client, you must either specify the name(s) of the
+interface(s) you want to configure on the command line, or must plumb
+the interfaces prior to invoking the DHCP client.  This can be done
+with ``ifconfig iface plumb'', where iface is the name of the
+interface (e.g., ``ifconfig hme0 plumb'').
 
 It should be noted that Solaris versions from 2.6 onward include a
 DHCP client that you can run with ``/sbin/ifconfig iface dhcp start''
