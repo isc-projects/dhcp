@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.188 2001/03/20 22:25:30 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.189 2001/03/22 21:36:49 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -618,7 +618,7 @@ void dhcprelease (packet, ms_nulltp)
 
 		/* See if we can find a lease that matches the IP address
 		   the client is claiming. */
-		for (; lease; lease = lease -> n_uid) {
+		while (lease) {
 			if (lease -> n_uid)
 				lease_reference (&next, lease -> n_uid, MDL);
 			if (!memcmp (&packet -> raw -> ciaddr,
