@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dispatch.c,v 1.30 1997/02/19 10:49:19 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dispatch.c,v 1.31 1997/02/22 08:34:16 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -53,7 +53,7 @@ struct timeout *timeouts;
 static struct timeout *free_timeouts;
 static int interfaces_invalidated;
 
-static void got_one PROTO ((struct interface_info *));
+static void got_one PROTO ((struct interface_info *, int));
 
 /* Use the SIOCGIFCONF ioctl to get a list of all the attached interfaces.
    For each interface that's of type INET and not the loopback interface,
@@ -233,6 +233,7 @@ void discover_interfaces (state)
 					error ("no space to remember ifp.");
 				memcpy (tif, ifp, len);
 				tmp -> ifp = ifp;
+				tmp -> primary_address = foo.sin_addr;
 			}
 
 			/* Grab the address... */
@@ -369,7 +370,8 @@ void reinitialize_interfaces ()
    wouldn't do for SysV to make networking *easy*, would it?  Rant,
    rant... */
 
-void dispatch ()
+void dispatch (parse)
+	int parse;
 {
 	struct interface_info *l;
 	int nfds = 0;
@@ -448,7 +450,7 @@ void dispatch ()
 		for (l = interfaces; l; l = l -> next) {
 			if ((fds [i].revents & POLLIN)) {
 				fds [i].revents = 0;
-				got_one (l);
+				got_one (l, parse);
 				if (interfaces_invalidated)
 					break;
 			}
@@ -527,7 +529,7 @@ void dispatch ()
 		for (l = interfaces; l; l = l -> next) {
 			if (!FD_ISSET (l -> rfdesc, &r))
 				continue;
-			got_one (l);
+			got_one (l, parse);
 			if (interfaces_invalidated)
 				break;
 		}
@@ -541,8 +543,9 @@ void dispatch ()
 }
 #endif /* USE_POLL */
 
-static void got_one (l)
+static void got_one (l, parse)
 	struct interface_info *l;
+	int parse;
 {
 	struct sockaddr_in from;
 	struct hardware hfrom;
@@ -560,11 +563,14 @@ static void got_one (l)
 	if (result == 0)
 		return;
 
-	ifrom.len = 4;
-	memcpy (ifrom.iabuf, &from.sin_addr, ifrom.len);
+	if (parse) {
+		ifrom.len = 4;
+		memcpy (ifrom.iabuf, &from.sin_addr, ifrom.len);
 	
-	do_packet (l, packbuf, result,
-		   from.sin_port, ifrom, &hfrom);
+		do_packet (l, packbuf, result,
+			   from.sin_port, ifrom, &hfrom);
+	} else
+		relay (l, (struct dhcp_packet *)packbuf, result);
 }
 
 void do_packet (interface, packbuf, len, from_port, from, hfrom)
