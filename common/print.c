@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: print.c,v 1.40 2000/02/15 19:41:32 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: print.c,v 1.41 2000/03/06 23:19:47 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -393,9 +393,14 @@ static unsigned print_subexpression (expr, buf, len)
 		break;
 
 	      case expr_and:
-		if (len > 7) {
-			rv = 5;
-			strcpy (buf, "(and ");
+		s = "and";
+	      binop:
+		rv = strlen (s);
+		if (len > rv + 4) {
+			buf [0] = '(';
+			strcpy (&buf [1], s);
+			rv += 1;
+			buf [rv++] = ' ';
 			rv += print_subexpression (expr -> data.and [0],
 						buf + rv, len - rv - 2);
 			buf [rv++] = ' ';
@@ -408,20 +413,29 @@ static unsigned print_subexpression (expr, buf, len)
 		break;
 
 	      case expr_or:
-		if (len > 6) {
-			rv = 4;
-			strcpy (buf, "(or ");
-			rv += print_subexpression (expr -> data.or [0],
-						   buf + rv, len - rv - 2);
-			buf [rv++] = ' ';
-			rv += print_subexpression (expr -> data.or [1],
-						   buf + rv, len - rv - 1);
-			buf [rv++] = ')';
-			buf [rv] = 0;
-			return rv;
-		}
-		break;
+		s = "or";
+		goto binop;
 
+	      case expr_add:
+		s = "+";
+		goto binop;
+
+	      case expr_subtract:
+		s = "-";
+		goto binop;
+
+	      case expr_multiply:
+		s = "*";
+		goto binop;
+
+	      case expr_divide:
+		s = "/";
+		goto binop;
+
+	      case expr_remainder:
+		s = "%";
+		goto binop;
+		
 	      case expr_not:
 		if (len > 6) {
 			rv = 5;
