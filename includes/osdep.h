@@ -227,6 +227,10 @@
 # define BPF_FORMAT "/dev/bpf%d"
 #endif
 
+#if defined (F_SETFD) && !defined (HAVE_SETFD)
+# define HAVE_SETFD
+#endif
+
 #if defined (IFF_POINTOPOINT) && !defined (HAVE_IFF_POINTOPOINT)
 # define HAVE_IFF_POINTOPOINT
 #endif
@@ -277,6 +281,11 @@
 
 #if defined (AF_LINK) && !defined (HAVE_AF_LINK)
 # define HAVE_AF_LINK
+#endif
+
+/* Linux needs to define SHUT_* in /usr/include/sys/socket.h someday... */
+#if !defined (SHUT_RD)
+# define SHUT_RD 0
 #endif
 
 #endif /* __ISC_DHCP_OSDEP_H__ */
