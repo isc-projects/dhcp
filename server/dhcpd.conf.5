@@ -738,8 +738,9 @@ allocation on a per-client basis.  However, it's also possible to use
 subclassing in ways that are not specific to clients - for example, to
 use the value of the vendor-class-identifier option to determine what
 values to send in the vendor-encapsulated-options option.  An example
-of this is shown under the VENDOR ENCAPSULATED OPTIONS head later on
-in this document.
+of this is shown under the VENDOR ENCAPSULATED OPTIONS head in the
+.B dhcp-options(5)
+manual page.
 .SH PER-CLASS LIMITS ON DYNAMIC ADDRESS ALLOCATION
 .PP
 You may specify a limit to the number of clients in a class that can
@@ -1350,98 +1351,139 @@ want to renumber your network quickly, and thus want the server to
 force all clients that have been allocated addresses from this pool to
 obtain new addresses immediately when they next renew.
 .SH REFERENCE: PARAMETERS
-.PP
 The
-.I lease-file-name
+.I always-broadcast
 statement
 .RS 0.25i
 .PP
-.B lease-file-name \fIname\fB;\fR
+.B always-broadcast \fIflag\fR\fB;\fR
 .PP
-.I Name
-should be the name of the DHCP server's lease file.   By default, this
-is DBDIR/dhcpd.leases.   This statement \fBmust\fR appear in the outer
-scope of the configuration file - if it appears in some other scope,
-it will have no effect.
+The DHCP and BOOTP protocols both require DHCP and BOOTP clients to
+set the broadcast bit in the flags field of the BOOTP message header.
+Unfortunately, some DHCP and BOOTP clients do not do this, and
+therefore may not receive responses from the DHCP server.   The DHCP
+server can be made to always broadcast its responses to clients by
+setting this flag to 'on' for the relevant scope.   To avoid creating
+excess broadcast traffic on your network, we recommend that you
+restrict the use of this option to as few clients as possible.   For
+example, the Microsoft DHCP client is known not to have this problem,
+as are the OpenTransport and ISC DHCP clients.
 .RE
 .PP
 The
-.I pid-file-name
+.I always-reply-rfc1048
 statement
 .RS 0.25i
 .PP
-.B pid-file-name
-.I name\fR\fB;\fR
+.B always-reply-rfc1048 \fIflag\fR\fB;\fR
 .PP
-.I Name
-should be the name of the DHCP server's process ID file.   This is the
-file in which the DHCP server's process ID is stored when the server
-starts.   By default, this is RUNDIR/dhcpd.pid.   Like the
-lease-file-name statement, this statement must appear in the outer scope
-of the configuration file.
+Some BOOTP clients expect RFC1048-style responses, but do not follow
+RFC1048 when sending their requests.   You can tell that a client is
+having this problem if it is not getting the options you have
+configured for it and if you see in the server log the message
+"(non-rfc1048)" printed with each BOOTREQUEST that is logged.
+.PP
+If you want to send rfc1048 options to such a client, you can set the
+.B always-reply-rfc1048
+option in that client's host declaration, and the DHCP server will
+respond with an RFC-1048-style vendor options field.   This flag can
+be set in any scope, and will affect all clients covered by that
+scope.
 .RE
 .PP
 The
-.I default-lease-time
+.I authoritative
 statement
 .RS 0.25i
 .PP
-.B default-lease-time \fItime\fR\fB;\fR
+.B authoritative;
 .PP
-.I Time
-should be the length in seconds that will be assigned to a lease if
-the client requesting the lease does not ask for a specific expiration
-time.
+.B not authoritative;
+.PP
+The DHCP server will normally assume that the configuration
+information about a given network segment is not known to be correct
+and is not authoritative.  This is so that if a naive user installs a
+DHCP server not fully understanding how to configure it, it does not
+send spurious DHCPNAK messages to clients that have obtained addresses
+from a legitimate DHCP server on the network.
+.PP
+Network administrators setting up authoritative DHCP servers for their
+networks should always write \fBauthoritative;\fR at the top of their
+configuration file to indicate that the DHCP server \fIshould\fR send
+DHCPNAK messages to misconfigured clients.   If this is not done,
+clients will be unable to get a correct IP address after changing
+subnets until their old lease has expired, which could take quite a
+long time.
+.PP
+Usually, writing \fBauthoritative;\fR at the top level of the file
+should be sufficient.   However, if a DHCP server is to be set up so
+that it is aware of some networks for which it is authoritative and
+some networks for which it is not, it may be more appropriate to
+declare authority on a per-network-segment basis.
+.PP
+Note that the most specific scope for which the concept of authority
+makes any sense is the physical network segment - either a
+shared-network statement or a subnet statement that is not contained
+within a shared-network statement.  It is not meaningful to specify
+that the server is authoritative for some subnets within a shared
+network, but not authoritative for others, nor is it meaningful to
+specify that the server is authoritative for some host declarations
+and not others.
 .RE
 .PP
-The
-.I max-lease-time
-statement
+The \fIboot-unknown-clients\fR statement
 .RS 0.25i
 .PP
-.B max-lease-time \fItime\fR\fB;\fR
+.B boot-unknown-clients \fIname\fB;\fR
 .PP
-.I Time
-should be the maximum length in seconds that will be assigned to a
-lease.   The only exception to this is that Dynamic BOOTP lease
-lengths, which are not specified by the client, are not limited by
-this maximum.
+If the \fIboot-unknown-clients\fR statement is present and has a value
+of \fIfalse\fR or \fIoff\fR, then clients for which there is no
+.I host
+declaration will not be allowed to obtain IP addresses.   If this
+statement is not present or has a value of \fItrue\fR or \fIon\fR,
+then clients without host declarations will be allowed to obtain IP
+addresses, as long as those addresses are not restricted by
+.I allow
+and \fIdeny\fR statements within their \fIpool\fR declarations.
 .RE
 .PP
-The
-.I min-lease-time
-statement
+The \fIddns-hostname\fR statement
 .RS 0.25i
 .PP
-.B min-lease-time \fItime\fR\fB;\fR
+.B ddns-hostname \fIname\fB;\fR
 .PP
-.I Time
-should be the minimum length in seconds that will be assigned to a
-lease.
+The \fIname\fR parameter should be the hostname that will be used in
+setting up the client's A and PTR records.   If no ddns-hostname is
+specified in scope, then the server will derive the hostname
+automatically, using an algorithm that varies different for each of the
+different update methods.
 .RE
 .PP
-The
-.I min-secs
-statement
+The \fIddns-domainname\fR statement
 .RS 0.25i
 .PP
-.B min-secs \fIseconds\fR\fB;\fR
+.B ddns-domainname \fIname\fB;\fR
 .PP
-.I Seconds
-should be the minimum number of seconds since a client began trying to
-acquire a new lease before the DHCP server will respond to its request.
-The number of seconds is based on what the client reports, and the maximum
-value that the client can report is 255 seconds.   Generally, setting this
-to one will result in the DHCP server not responding to the client's first
-request, but always responding to its second request.
+The \fIname\fR parameter should be the domain name that will be
+appended to the client's hostname to form a fully-qualified
+domain-name (FQDN).
+.RE
 .PP
-This can be used
-to set up a secondary DHCP server which never offers an address to a client
-until the primary server has been given a chance to do so.   If the primary
-server is down, the client will bind to the secondary server, but otherwise
-clients should always bind to the primary.   Note that this does not, by
-itself, permit a primary server and a secondary server to share a pool of
-dynamically-allocatable addresses.
+The \fIddns-rev-domainname\fR statement
+.RS 0.25i
+.PP
+.B ddns-rev-domainname \fIname\fB;\fR
+The \fIname\fR parameter should be the domain name that will be
+appended to the client's reversed IP address to produce a name for use
+in the client's PTR record.   By default, this is "in-addr.arpa.", but
+the default can be overridden here.
+.PP
+The reversed IP address to which this domain name is appended is
+always the IP address of the client, in dotted quad notation, reversed
+- for example, if the IP address assigned to the client is
+10.17.92.74, then the reversed IP address is 74.92.17.10.   So a
+client with that IP address would, by default, be given a PTR record
+of 10.17.92.74.in-addr.arpa.
 .RE
 .PP
 The \fIddns-update-style\fR parameter
@@ -1473,130 +1515,17 @@ updates in all scopes, it is preferable to use the
 \fIddns-update-style\fR statement, setting the style to \fInone\fR.
 .RE
 .PP
-The \fIddns-domainname\fR statement
-.RS 0.25i
-.PP
-.B ddns-domainname \fIname\fB;\fR
-.PP
-The \fIname\fR parameter should be the domain name that will be
-appended to the client's hostname to form a fully-qualified
-domain-name (FQDN).
-.RE
-.PP
-The \fIddns-rev-domainname\fR statement
-.RS 0.25i
-.PP
-.B ddns-rev-domainname \fIname\fB;\fR
-The \fIname\fR parameter should be the domain name that will be
-appended to the client's reversed IP address to produce a name for use
-in the client's PTR record.   By default, this is "in-addr.arpa.", but
-the default can be overridden here.
-.PP
-The reversed IP address to which this domain name is appended is
-always the IP address of the client, in dotted quad notation, reversed
-- for example, if the IP address assigned to the client is
-10.17.92.74, then the reversed IP address is 74.92.17.10.   So a
-client with that IP address would, by default, be given a PTR record
-of 10.17.92.74.in-addr.arpa.
-.RE
-.PP
-The \fIddns-hostname\fR statement
-.RS 0.25i
-.PP
-.B ddns-hostname \fIname\fB;\fR
-.PP
-The \fIname\fR parameter should be the hostname that will be used in
-setting up the client's A and PTR records.   If no ddns-hostname is
-specified in scope, then the server will derive the hostname
-automatically, using an algorithm that varies different for each of the
-different update methods.
-.RE
-.PP
-The 
-.I hardware
+The
+.I default-lease-time
 statement
 .RS 0.25i
 .PP
-.B hardware \fIhardware-type hardware-address\fB;\fR
+.B default-lease-time \fItime\fR\fB;\fR
 .PP
-In order for a BOOTP client to be recognized, its network hardware
-address must be declared using a \fIhardware\fR clause in the
-.I host
-statement.
-.I hardware-type
-must be the name of a physical hardware interface type.   Currently,
-only the
-.B ethernet
-and
-.B token-ring
-types are recognized, although support for a
-.B fddi
-hardware type (and others) would also be desirable.
-The
-.I hardware-address
-should be a set of hexadecimal octets (numbers from 0 through ff)
-seperated by colons.   The \fIhardware\fR statement may also be used
-for DHCP clients.
-.RE
-.PP
-The
-.I filename
-statement
-.RS 0.25i
-.PP
-.B filename\fR \fB"\fR\fIfilename\fR\fB";\fR
-.PP
-The \fIfilename\fR statement can be used to specify the name of the
-initial boot file which is to be loaded by a client.  The
-.I filename
-should be a filename recognizable to whatever file transfer protocol
-the client can be expected to use to load the file.
-.RE
-.PP
-The
-.I server-name
-statement
-.RS 0.25i
-.PP
-.B server-name "\fIname\fB";\fR
-.PP
-The \fIserver-name\fR statement can be used to inform the client of
-the name of the server from which it is booting.   \fIName\fR should
-be the name that will be provided to the client.
-.RE
-.PP
-The
-.I next-server
-statement
-.RS 0.25i
-.PP
-.B next-server\fR \fIserver-name\fR\fB;\fR
-.PP
-The \fInext-server\fR statement is used to specify the host address of
-the server from which the initial boot file (specified in the
-\fIfilename\fR statement) is to be loaded.   \fIServer-name\fR should
-be a numeric IP address or a domain name.   If no \fInext-server\fR
-parameter applies to a given client, the DHCP server's IP address is
-used.
-.RE
-.PP
-The
-.I fixed-address
-statement
-.RS 0.25i
-.PP
-.B fixed-address address\fR [\fB,\fR \fIaddress\fR ... ]\fB;\fR
-.PP
-The \fIfixed-address\fR statement is used to assign one or more fixed
-IP addresses to a client.  It should only appear in a \fIhost\fR
-declaration.  If more than one address is supplied, then when the
-client boots, it will be assigned the address which corresponds to the
-network on which it is booting.  If none of the addresses in the
-\fIfixed-address\fR statement are on the network on which the client
-is booting, that client will not match the \fIhost\fR declaration
-containing that \fIfixed-address\fR statement.  Each \fIaddress\fR
-should be either an IP address or a domain name which resolves to one
-or more IP addresses.
+.I Time
+should be the length in seconds that will be assigned to a lease if
+the client requesting the lease does not ask for a specific expiration
+time.
 .RE
 .PP
 The
@@ -1650,6 +1579,39 @@ caution.
 .RE
 .PP
 The
+.I filename
+statement
+.RS 0.25i
+.PP
+.B filename\fR \fB"\fR\fIfilename\fR\fB";\fR
+.PP
+The \fIfilename\fR statement can be used to specify the name of the
+initial boot file which is to be loaded by a client.  The
+.I filename
+should be a filename recognizable to whatever file transfer protocol
+the client can be expected to use to load the file.
+.RE
+.PP
+The
+.I fixed-address
+statement
+.RS 0.25i
+.PP
+.B fixed-address address\fR [\fB,\fR \fIaddress\fR ... ]\fB;\fR
+.PP
+The \fIfixed-address\fR statement is used to assign one or more fixed
+IP addresses to a client.  It should only appear in a \fIhost\fR
+declaration.  If more than one address is supplied, then when the
+client boots, it will be assigned the address which corresponds to the
+network on which it is booting.  If none of the addresses in the
+\fIfixed-address\fR statement are on the network on which the client
+is booting, that client will not match the \fIhost\fR declaration
+containing that \fIfixed-address\fR statement.  Each \fIaddress\fR
+should be either an IP address or a domain name which resolves to one
+or more IP addresses.
+.RE
+.PP
+The
 .I get-lease-hostnames
 statement
 .RS 0.25i
@@ -1662,6 +1624,234 @@ each address in the lease pool and use that address for the DHCP
 \fIhostname\fR option.  If \fIflag\fR is true, then this lookup is
 done for all addresses in the current scope.   By default, or if
 \fIflag\fR is false, no lookups are done.
+.RE
+.PP
+The 
+.I hardware
+statement
+.RS 0.25i
+.PP
+.B hardware \fIhardware-type hardware-address\fB;\fR
+.PP
+In order for a BOOTP client to be recognized, its network hardware
+address must be declared using a \fIhardware\fR clause in the
+.I host
+statement.
+.I hardware-type
+must be the name of a physical hardware interface type.   Currently,
+only the
+.B ethernet
+and
+.B token-ring
+types are recognized, although support for a
+.B fddi
+hardware type (and others) would also be desirable.
+The
+.I hardware-address
+should be a set of hexadecimal octets (numbers from 0 through ff)
+seperated by colons.   The \fIhardware\fR statement may also be used
+for DHCP clients.
+.RE
+.PP
+The
+.I lease-file-name
+statement
+.RS 0.25i
+.PP
+.B lease-file-name \fIname\fB;\fR
+.PP
+.I Name
+should be the name of the DHCP server's lease file.   By default, this
+is DBDIR/dhcpd.leases.   This statement \fBmust\fR appear in the outer
+scope of the configuration file - if it appears in some other scope,
+it will have no effect.
+.RE
+.PP
+The
+.I local-port
+statement
+.RS 0.25i
+.PP
+.B local-port \fIport\fB;\fR
+.PP
+This statement causes the DHCP server to listen for DHCP requests on
+the UDP port specified in \fIport\fR, rather than on port 67.
+.RE
+.PP
+The
+.I max-lease-time
+statement
+.RS 0.25i
+.PP
+.B max-lease-time \fItime\fR\fB;\fR
+.PP
+.I Time
+should be the maximum length in seconds that will be assigned to a
+lease.   The only exception to this is that Dynamic BOOTP lease
+lengths, which are not specified by the client, are not limited by
+this maximum.
+.RE
+.PP
+The
+.I min-lease-time
+statement
+.RS 0.25i
+.PP
+.B min-lease-time \fItime\fR\fB;\fR
+.PP
+.I Time
+should be the minimum length in seconds that will be assigned to a
+lease.
+.RE
+.PP
+The
+.I min-secs
+statement
+.RS 0.25i
+.PP
+.B min-secs \fIseconds\fR\fB;\fR
+.PP
+.I Seconds
+should be the minimum number of seconds since a client began trying to
+acquire a new lease before the DHCP server will respond to its request.
+The number of seconds is based on what the client reports, and the maximum
+value that the client can report is 255 seconds.   Generally, setting this
+to one will result in the DHCP server not responding to the client's first
+request, but always responding to its second request.
+.PP
+This can be used
+to set up a secondary DHCP server which never offers an address to a client
+until the primary server has been given a chance to do so.   If the primary
+server is down, the client will bind to the secondary server, but otherwise
+clients should always bind to the primary.   Note that this does not, by
+itself, permit a primary server and a secondary server to share a pool of
+dynamically-allocatable addresses.
+.RE
+.PP
+The
+.I next-server
+statement
+.RS 0.25i
+.PP
+.B next-server\fR \fIserver-name\fR\fB;\fR
+.PP
+The \fInext-server\fR statement is used to specify the host address of
+the server from which the initial boot file (specified in the
+\fIfilename\fR statement) is to be loaded.   \fIServer-name\fR should
+be a numeric IP address or a domain name.   If no \fInext-server\fR
+parameter applies to a given client, the DHCP server's IP address is
+used.
+.RE
+.PP
+The
+.I omapi-port
+statement
+.RS 0.25i
+.PP
+.B omapi-port\fR \fIport\fR\fB;\fR
+.PP
+The \fIomapi-port\fR statement causes the DHCP server to listen for
+OMAPI connections on the specified port.   This statement is required
+to enable the OMAPI protocol, which is used to examine and modify the
+state of the DHCP server as it is running.
+.RE
+.PP
+The
+.I one-lease-per-client
+statement
+.RS 0.25i
+.PP
+.B one-lease-per-client \fIflag\fR\fB;\fR
+.PP
+If this flag is enabled, whenever a client sends a DHCPREQUEST for a
+particular lease, the server will automatically free any other leases
+the client holds.   This presumes that when the client sends a
+DHCPREQUEST, it has forgotten any lease not mentioned in the
+DHCPREQUEST - i.e., the client has only a single network interface
+.I and
+it does not remember leases it's holding on networks to which it is
+not currently attached.   Neither of these assumptions are guaranteed
+or provable, so we urge caution in the use of this statement.
+.RE
+.PP
+The
+.I pid-file-name
+statement
+.RS 0.25i
+.PP
+.B pid-file-name
+.I name\fR\fB;\fR
+.PP
+.I Name
+should be the name of the DHCP server's process ID file.   This is the
+file in which the DHCP server's process ID is stored when the server
+starts.   By default, this is RUNDIR/dhcpd.pid.   Like the
+lease-file-name statement, this statement must appear in the outer scope
+of the configuration file.
+.RE
+.PP
+The
+.I server-identifier
+statement
+.RS 0.25i
+.PP
+.B server-identifier \fIhostname\fR\fB;\fR
+.PP
+The server-identifier statement can be used to define the value that
+is sent in the DHCP Server Identifier option for a given scope.   The
+value specified \fBmust\fR be an IP address for the DHCP server, and
+must be reachable by all clients served by a particular scope.
+.PP
+The use of the server-identifier statement is not recommended - the only
+reason to use it is to force a value other than the default value to be
+sent on occasions where the default value would be incorrect.   The default
+value is the first IP address associated with the physical network interface
+on which the request arrived.
+.PP
+The usual case where the
+\fIserver-identifier\fR statement needs to be sent is when a physical
+interface has more than one IP address, and the one being sent by default
+isn't appropriate for some or all clients served by that interface.
+Another common case is when an alias is defined for the purpose of
+having a consistent IP address for the DHCP server, and it is desired
+that the clients use this IP address when contacting the server.
+.PP
+Supplying a value for the dhcp-server-identifier option is equivalent
+to using the server-identifier statement.
+.RE
+.PP
+The
+.I server-name
+statement
+.RS 0.25i
+.PP
+.B server-name "\fIname\fB";\fR
+.PP
+The \fIserver-name\fR statement can be used to inform the client of
+the name of the server from which it is booting.   \fIName\fR should
+be the name that will be provided to the client.
+.RE
+.PP
+The
+.I site-option-space
+statement
+.RS 0.25i
+.PP
+.B site-option-space "\fIname\fB";\fR
+.PP
+The \fIsite-option-space\fR statement can be used to determine from
+what option space site-local options will be taken.   This can be used
+in much the same way as the \fIvendor-option-space\fR statement.
+Site-local options in DHCP are those options whose numeric codes are
+greater than 128.   These options are intended for site-specific
+uses, but are frequently used by vendors of embedded hardware that
+contains DHCP clients.   Because site-specific options are allocated
+on an ad-hoc basis, it is quite possible that one vendor's DHCP client
+might use the same option code that another vendor's client uses, for
+different purposes.   The \fIsite-option-space\fR option can be used
+to assign a different set of site-specific options for each such
+vendor, using conditional evaluation (see \fIdhcp-eval.5\fR for
+details).
 .RE
 .PP
 The
@@ -1708,104 +1898,6 @@ determination.
 .RE
 .PP
 The
-.I authoritative
-statement
-.RS 0.25i
-.PP
-.B authoritative;
-.PP
-.B not authoritative;
-.PP
-The DHCP server will normally assume that the configuration
-information about a given network segment is not known to be correct
-and is not authoritative.  This is so that if a naive user installs a
-DHCP server not fully understanding how to configure it, it does not
-send spurious DHCPNAK messages to clients that have obtained addresses
-from a legitimate DHCP server on the network.
-.PP
-Network administrators setting up authoritative DHCP servers for their
-networks should always write \fBauthoritative;\fR at the top of their
-configuration file to indicate that the DHCP server \fIshould\fR send
-DHCPNAK messages to misconfigured clients.   If this is not done,
-clients will be unable to get a correct IP address after changing
-subnets until their old lease has expired, which could take quite a
-long time.
-.PP
-Usually, writing \fBauthoritative;\fR at the top level of the file
-should be sufficient.   However, if a DHCP server is to be set up so
-that it is aware of some networks for which it is authoritative and
-some networks for which it is not, it may be more appropriate to
-declare authority on a per-network-segment basis.
-.PP
-Note that the most specific scope for which the concept of authority
-makes any sense is the physical network segment - either a
-shared-network statement or a subnet statement that is not contained
-within a shared-network statement.  It is not meaningful to specify
-that the server is authoritative for some subnets within a shared
-network, but not authoritative for others, nor is it meaningful to
-specify that the server is authoritative for some host declarations
-and not others.
-.RE
-.PP
-The
-.I always-reply-rfc1048
-statement
-.RS 0.25i
-.PP
-.B always-reply-rfc1048 \fIflag\fR\fB;\fR
-.PP
-Some BOOTP clients expect RFC1048-style responses, but do not follow
-RFC1048 when sending their requests.   You can tell that a client is
-having this problem if it is not getting the options you have
-configured for it and if you see in the server log the message
-"(non-rfc1048)" printed with each BOOTREQUEST that is logged.
-.PP
-If you want to send rfc1048 options to such a client, you can set the
-.B always-reply-rfc1048
-option in that client's host declaration, and the DHCP server will
-respond with an RFC-1048-style vendor options field.   This flag can
-be set in any scope, and will affect all clients covered by that
-scope.
-.RE
-.PP
-The
-.I always-broadcast
-statement
-.RS 0.25i
-.PP
-.B always-broadcast \fIflag\fR\fB;\fR
-.PP
-The DHCP and BOOTP protocols both require DHCP and BOOTP clients to
-set the broadcast bit in the flags field of the BOOTP message header.
-Unfortunately, some DHCP and BOOTP clients do not do this, and
-therefore may not receive responses from the DHCP server.   The DHCP
-server can be made to always broadcast its responses to clients by
-setting this flag to 'on' for the relevant scope.   To avoid creating
-excess broadcast traffic on your network, we recommend that you
-restrict the use of this option to as few clients as possible.   For
-example, the Microsoft DHCP client is known not to have this problem,
-as are the OpenTransport and ISC DHCP clients.
-.RE
-.PP
-The
-.I one-lease-per-client
-statement
-.RS 0.25i
-.PP
-.B one-lease-per-client \fIflag\fR\fB;\fR
-.PP
-If this flag is enabled, whenever a client sends a DHCPREQUEST for a
-particular lease, the server will automatically free any other leases
-the client holds.   This presumes that when the client sends a
-DHCPREQUEST, it has forgotten any lease not mentioned in the
-DHCPREQUEST - i.e., the client has only a single network interface
-.I and
-it does not remember leases it's holding on networks to which it is
-not currently attached.   Neither of these assumptions are guaranteed
-or provable, so we urge caution in the use of this statement.
-.RE
-.PP
-The
 .I use-lease-addr-for-default-route
 statement
 .RS 0.25i
@@ -1822,33 +1914,16 @@ not recommended, because it won't work for many DHCP clients.
 .RE
 .PP
 The
-.I server-identifier
+.I vendor-option-space
 statement
 .RS 0.25i
 .PP
-.B server-identifier \fIhostname\fR\fB;\fR
+.B vendor-option-space \fIstring\fR\fB;\fR
 .PP
-The server-identifier statement can be used to define the value that
-is sent in the DHCP Server Identifier option for a given scope.   The
-value specified \fBmust\fR be an IP address for the DHCP server, and
-must be reachable by all clients served by a particular scope.
-.PP
-The use of the server-identifier statement is not recommended - the only
-reason to use it is to force a value other than the default value to be
-sent on occasions where the default value would be incorrect.   The default
-value is the first IP address associated with the physical network interface
-on which the request arrived.
-.PP
-The usual case where the
-\fIserver-identifier\fR statement needs to be sent is when a physical
-interface has more than one IP address, and the one being sent by default
-isn't appropriate for some or all clients served by that interface.
-Another common case is when an alias is defined for the purpose of
-having a consistent IP address for the DHCP server, and it is desired
-that the clients use this IP address when contacting the server.
-.PP
-Supplying a value for the dhcp-server-identifier option is equivalent
-to using the server-identifier statement.
+The \fIvendor-option-space\fR parameter determines from what option
+space vendor options are taken.   The use of this configuration
+parameter is illustrated in the \fIdhcp-options(5)\fR manual page, in
+the \fIVENDOR ENCAPSULATED OPTIONS\fR section.
 .RE
 .SH SETTING PARAMETER VALUES USING EXPRESSIONS
 Sometimes it's helpful to be able to set the value of a DHCP server
