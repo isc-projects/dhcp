@@ -55,6 +55,17 @@ struct data_string {
 	int terminated;
 };
 
+struct binding {
+	struct binding *next;
+	char *name;
+	struct data_string value;
+};
+
+struct binding_scope {
+	struct binding_scope *outer;
+	struct binding *bindings;
+};
+
 /* Expression tree structure. */
 
 enum expr_op {
@@ -99,7 +110,9 @@ enum expr_op {
 	expr_not_equal,
 	expr_null,
 	expr_variable_exists,
-	expr_variable_reference
+	expr_variable_reference,
+	expr_filename,
+ 	expr_sname
 };
 
 struct expression {
@@ -195,7 +208,8 @@ struct universe {
 	int (*get_func) PROTO ((struct data_string *, struct universe *,
 				struct packet *, struct lease *,
 				struct option_state *, struct option_state *,
-				struct option_state *, unsigned));
+				struct option_state *, struct binding_scope *,
+				unsigned));
 	void (*set_func) PROTO ((struct universe *, struct option_state *,
 				 struct option_cache *, enum statement_op));
 		
@@ -205,7 +219,8 @@ struct universe {
 						struct option_state *));
 	int (*encapsulate) PROTO ((struct data_string *, struct packet *,
 				   struct lease *, struct option_state *,
-				   struct option_state *, struct universe *));
+				   struct option_state *,
+				   struct binding_scope *, struct universe *));
 	void (*store_tag) PROTO ((unsigned char *, u_int32_t));
 	void (*store_length) PROTO ((unsigned char *, u_int32_t));
 	int tag_size, length_size;
@@ -228,10 +243,4 @@ enum expression_context {
 	context_numeric,
 	context_dns,
 	context_data_or_numeric
-};
-
-struct binding {
-	struct binding *next;
-	char *name;
-	struct data_string value;
 };
