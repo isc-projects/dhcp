@@ -115,10 +115,10 @@ used.
 .PP
 When dhcpd tries to find a \fIhost\fR declaration for a client, it
 first looks for a \fIhost\fR declaration which has a
-\fIfixed-address\fR parameter which matches the subnet or shared
-network on which the client is booting.   If it doesn't find any such
-entry, it then tries to find an entry which has no \fIfixed-address\fR
-parameter.
+\fIfixed-address\fR declaration that lists an IP address that is valid
+for the subnet or shared network on which the client is booting.   If
+it doesn't find any such entry, it tries to find an entry which has
+no \fIfixed-address\fR declaration.
 .SH EXAMPLES
 .PP
 A typical dhcpd.conf file will look something like this:
@@ -334,13 +334,14 @@ attached and the server is authoritative for that network segment, in
 which case the server will send a DHCPNAK even though it doesn't know
 about the address.
 .PP
-There may be a host declaration matching the client's identification,
-and that host declaration contains a fixed-address declaration that is
-valid for the network segment to which the client is connected.  In
-this case, the DHCP server will never do dynamic address allocation.
-In this case, the client is \fIrequired\fR to take the address
-specified in the host declaration.   If the client is requesting some
-other address, the server will respond with a DHCPNAK.
+There may be a host declaration matching the client's identification.
+If that host declaration contains a fixed-address declaration that 
+lists an IP address that is valid for the network segment to which the
+client is connected.  In this case, the DHCP server will never do
+dynamic address allocation.  In this case, the client is \fIrequired\fR
+to take the address specified in the host declaration.   If the
+client sends a DHCPREQUEST for some other address, the server will respond
+with a DHCPNAK.
 .PP
 When the DHCP server allocates a new address for a client (remember,
 this only happens if the client has sent a DHCPDISCOVER), it first
@@ -1347,7 +1348,7 @@ If it is desirable to be able to boot a DHCP or BOOTP
 client on more than one subnet with fixed addresses, more than one
 address may be specified in the
 .I fixed-address
-parameter, or more than one
+declaration, or more than one
 .B host
 statement may be specified.
 .PP
@@ -1362,7 +1363,7 @@ possible, but should be allocated a dynamic address otherwise, then a
 .B host
 declaration must be specified without a
 .B fixed-address
-clause.
+declaration.
 .I hostname
 should be a name identifying the host.  If a \fIhostname\fR option is
 not specified for the host, \fIhostname\fR is used.
@@ -1868,21 +1869,21 @@ the client can be expected to use to load the file.
 .PP
 The
 .I fixed-address
-statement
+declaration
 .RS 0.25i
 .PP
 .B fixed-address address\fR [\fB,\fR \fIaddress\fR ... ]\fB;\fR
 .PP
-The \fIfixed-address\fR statement is used to assign one or more fixed
+The \fIfixed-address\fR declaration is used to assign one or more fixed
 IP addresses to a client.  It should only appear in a \fIhost\fR
 declaration.  If more than one address is supplied, then when the
-client boots, it will be assigned the address which corresponds to the
+client boots, it will be assigned the address that corresponds to the
 network on which it is booting.  If none of the addresses in the
-\fIfixed-address\fR statement are on the network on which the client
-is booting, that client will not match the \fIhost\fR declaration
-containing that \fIfixed-address\fR statement.  Each \fIaddress\fR
-should be either an IP address or a domain name which resolves to one
-or more IP addresses.
+\fIfixed-address\fR statement are valid for the network to which the client
+is connected, that client will not match the \fIhost\fR declaration
+containing that \fIfixed-address\fR declaration.  Each \fIaddress\fR
+in the \fIfixed-address\fR declaration should be either an IP address or
+a domain name that resolves to one or more IP addresses.
 .RE
 .PP
 The
