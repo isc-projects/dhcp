@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.82 2000/09/01 23:07:35 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.83 2000/09/16 20:01:09 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -923,21 +923,28 @@ void parse_option_space_decl (cfile)
 
    ocsd :== ocsd_type |
 	    ocsd_type_sequence |
-	    ARRAY OF ocsd_type |
-	    ARRAY OF ocsd_type_sequence
-
-   ocsd_type :== BOOLEAN |
-		 INTEGER NUMBER |
-		 SIGNED INTEGER NUMBER |
-		 UNSIGNED INTEGER NUMBER |
-		 IP-ADDRESS |
-		 TEXT |
-		 STRING
+	    ARRAY OF ocsd_simple_type_sequence
 
    ocsd_type_sequence :== LBRACE ocsd_types RBRACE
 
-   ocsd_type :== ocsd_type |
-		 ocsd_types ocsd_type */
+   ocsd_simple_type_sequence :== LBRACE ocsd_simple_types RBRACE
+
+   ocsd_types :== ocsd_type |
+		  ocsd_types ocsd_type
+
+   ocsd_type :== ocsd_simple_type |
+		 ARRAY OF ocsd_simple_type
+
+   ocsd_simple_types :== ocsd_simple_type |
+			 ocsd_simple_types ocsd_simple_type
+
+   ocsd_simple_type :== BOOLEAN |
+			INTEGER NUMBER |
+			SIGNED INTEGER NUMBER |
+			UNSIGNED INTEGER NUMBER |
+			IP-ADDRESS |
+			TEXT |
+			STRING */
 
 int parse_option_code_definition (cfile, option)
 	struct parse *cfile;
@@ -992,6 +999,30 @@ int parse_option_code_definition (cfile, option)
 	/* At this point we're expecting a data type. */
       next_type:
 	switch (token) {
+	      case ARRAY:
+		if (arrayp) {
+			parse_warn (cfile, "no nested arrays.");
+			skip_to_rbrace (cfile, recordp);
+			if (recordp)
+				skip_to_semi (cfile);
+			return 0;
+		}
+		token = next_token (&val, cfile);
+		if (token != OF) {
+			parse_warn (cfile, "expecting \"of\".");
+			skip_to_semi (cfile);
+			return 0;
+		}
+		arrayp = recordp + 1;
+		token = next_token (&val, cfile);
+		if ((recordp) && (token == LBRACE)) {
+			parse_warn (cfile,
+				    "only uniform array inside record.");
+			skip_to_rbrace (cfile, recordp + 1);
+			skip_to_semi (cfile);
+			return 0;
+		}
+		goto next_type;
 	      case BOOLEAN:
 		type = 'f';
 		break;
@@ -1080,6 +1111,17 @@ int parse_option_code_definition (cfile, option)
 
 	if (recordp) {
 		token = next_token (&val, cfile);
+		if (arrayp > recordp) {
+			if (tokix == sizeof tokbuf) {
+				parse_warn (cfile,
+					    "too many types in record.");
+				skip_to_rbrace (cfile, 1);
+				skip_to_semi (cfile);
+				return 0;
+			}
+			arrayp = 0;
+			tokbuf[tokix++] = 'a';
+		}
 		if (token == COMMA) {
 			if (no_more_in_record) {
 				parse_warn (cfile,
@@ -1108,12 +1150,12 @@ int parse_option_code_definition (cfile, option)
 			skip_to_semi (cfile);
 		return 0;
 	}
-	s = dmalloc (tokix + arrayp + 1, MDL);
+	s = dmalloc (tokix + ((arrayp) ? 1 : 0) + 1, MDL);
 	if (!s)
 		log_fatal ("no memory for option format.");
 	memcpy (s, tokbuf, tokix);
 	if (arrayp)
-		s [tokix++] = 'A';
+		s [tokix++] = (arrayp > recordp) ? 'a' : 'A';
 	s [tokix] = 0;
 	option -> format = s;
 	if (option -> universe -> options [option -> code]) {
@@ -3822,7 +3864,7 @@ int parse_option_statement (result, cfile, lookups, option, op)
 {
 	const char *val;
 	enum dhcp_token token;
-	const char *fmt;
+	const char *fmt = NULL;
 	struct expression *expr = (struct expression *)0;
 	struct expression *tmp;
 	int lose;
@@ -3864,29 +3906,58 @@ int parse_option_statement (result, cfile, lookups, option, op)
 		   like that. */
 		int uniform = option -> format [1] == 'A';
 
-		for (fmt = option -> format; *fmt; fmt++) {
-			if (*fmt == 'A')
+	      and_again:
+		/* Set fmt to start of format for 'A' and one char back
+		   for 'a' */
+                if ((fmt != NULL) &&
+		    (fmt != option -> format) && (*fmt == 'a'))
+			fmt -= 1;
+		else
+			fmt = ((fmt == NULL) ||
+			       (*fmt == 'A')) ? option -> format : fmt;
+
+		/* 'a' means always uniform */
+		uniform |= (fmt [1] == 'a');
+
+		for ( ; *fmt; fmt++) {
+			if ((*fmt == 'A') || (*fmt == 'a'))
 				break;
+			if (*fmt == 'o')
+				continue;
 			tmp = expr;
 			expr = (struct expression *)0;
 			if (!parse_option_token (&expr, cfile, fmt,
 						 tmp, uniform, lookups)) {
-				if (tmp)
-					expression_dereference (&tmp, MDL);
-				return 0;
+				if (fmt [1] != 'o') {
+					if (tmp)
+						expression_dereference (&tmp,
+									MDL);
+					return 0;
+				}
+				expr = tmp;
+				tmp = (struct expression *)0;
 			}
 			if (tmp)
 				expression_dereference (&tmp, MDL);
 		}
-		if (*fmt == 'A') {
+		if ((*fmt == 'A') || (*fmt == 'a')) {
 			token = peek_token (&val, cfile);
+			/* Comma means: continue with next element in array */
 			if (token == COMMA) {
 				token = next_token (&val, cfile);
 				continue;
 			}
-			break;
+			/* no comma: end of array.
+			   'A' or end of string means: leave the loop */
+			if ((*fmt == 'A') || (fmt[1] == '\0'))
+				break;
+			/* 'a' means: go on with next char */
+			if (*fmt == 'a') {
+				fmt++;
+				goto and_again;
+			}
 		}
-	} while (*fmt == 'A');
+	} while ((*fmt == 'A') || (*fmt == 'a'));
 
       done:
 	if (!parse_semi (cfile))
@@ -3919,12 +3990,15 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 
 	switch (*fmt) {
 	      case 'U':
-		token = next_token (&val, cfile);
+		token = peek_token (&val, cfile);
 		if (!is_identifier (token)) {
-			parse_warn (cfile, "expecting identifier.");
-			skip_to_semi (cfile);
+			if (fmt [1] != 'o') {
+				parse_warn (cfile, "expecting identifier.");
+				skip_to_semi (cfile);
+			}
 			return 0;
 		}
+		token = next_token (&val, cfile);
 		if (!make_const_data (&t, (const unsigned char *)val,
 				      strlen (val), 1, 1))
 			log_fatal ("No memory for %s", val);
@@ -3946,21 +4020,26 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 					      strlen (val), 1, 1))
 				log_fatal ("No memory for \"%s\"", val);
 		} else {
-			parse_warn (cfile, "expecting string %s.",
-				    "or hexadecimal data");
-			skip_to_semi (cfile);
+			if (fmt [1] != 'o') {
+				parse_warn (cfile, "expecting string %s.",
+					    "or hexadecimal data");
+				skip_to_semi (cfile);
+			}
 			return 0;
 		}
 		break;
 		
 	      case 't': /* Text string... */
-		token = next_token (&val, cfile);
+		token = peek_token (&val, cfile);
 		if (token != STRING && !is_identifier (token)) {
-			parse_warn (cfile, "expecting string.");
-			if (token != SEMI)
-				skip_to_semi (cfile);
+			if (fmt [1] != 'o') {
+				parse_warn (cfile, "expecting string.");
+				if (token != SEMI)
+					skip_to_semi (cfile);
+			}
 			return 0;
 		}
+		token = next_token (&val, cfile);
 		if (!make_const_data (&t, (const unsigned char *)val,
 				      strlen (val), 1, 1))
 			log_fatal ("No memory for concatenation");
@@ -3979,9 +4058,10 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 		break;
 		
 	      case 'T':	/* Lease interval. */
-		token = next_token (&val, cfile);
+		token = peek_token (&val, cfile);
 		if (token != INFINITE)
 			goto check_number;
+		token = next_token (&val, cfile);
 		putLong (buf, -1);
 		if (!make_const_data (&t, buf, 4, 0, 1))
 			return 0;
@@ -3989,15 +4069,18 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 
 	      case 'L': /* Unsigned 32-bit integer... */
 	      case 'l':	/* Signed 32-bit integer... */
-		token = next_token (&val, cfile);
+		token = peek_token (&val, cfile);
 	      check_number:
 		if (token != NUMBER) {
 		      need_number:
-			parse_warn (cfile, "expecting number.");
-			if (token != SEMI)
-				skip_to_semi (cfile);
+			if (fmt [1] != 'o') {
+				parse_warn (cfile, "expecting number.");
+				if (token != SEMI)
+					skip_to_semi (cfile);
+			}
 			return 0;
 		}
+		token = next_token (&val, cfile);
 		convert_num (cfile, buf, val, 0, 32);
 		if (!make_const_data (&t, buf, 4, 0, 1))
 			return 0;
@@ -4005,9 +4088,10 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 
 	      case 's':	/* Signed 16-bit integer. */
 	      case 'S':	/* Unsigned 16-bit integer. */
-		token = next_token (&val, cfile);
+		token = peek_token (&val, cfile);
 		if (token != NUMBER)
 			goto need_number;
+		token = next_token (&val, cfile);
 		convert_num (cfile, buf, val, 0, 16);
 		if (!make_const_data (&t, buf, 2, 0, 1))
 			return 0;
@@ -4015,21 +4099,25 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 
 	      case 'b':	/* Signed 8-bit integer. */
 	      case 'B':	/* Unsigned 8-bit integer. */
-		token = next_token (&val, cfile);
+		token = peek_token (&val, cfile);
 		if (token != NUMBER)
 			goto need_number;
+		token = next_token (&val, cfile);
 		convert_num (cfile, buf, val, 0, 8);
 		if (!make_const_data (&t, buf, 1, 0, 1))
 			return 0;
 		break;
 
 	      case 'f': /* Boolean flag. */
-		token = next_token (&val, cfile);
+		token = peek_token (&val, cfile);
 		if (!is_identifier (token)) {
-			parse_warn (cfile, "expecting identifier.");
+			if (fmt [1] != 'o')
+				parse_warn (cfile, "expecting identifier.");
 		      bad_flag:
-			if (token != SEMI)
-				skip_to_semi (cfile);
+			if (fmt [1] != 'o') {
+				if (token != SEMI)
+					skip_to_semi (cfile);
+			}
 			return 0;
 		}
 		if (!strcasecmp (val, "true")
@@ -4041,9 +4129,11 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 		else if (!strcasecmp (val, "ignore"))
 			buf [0] = 2;
 		else {
-			parse_warn (cfile, "expecting boolean.");
+			if (fmt [1] != 'o')
+				parse_warn (cfile, "expecting boolean.");
 			goto bad_flag;
 		}
+		token = next_token (&val, cfile);
 		if (!make_const_data (&t, buf, 1, 0, 1))
 			return 0;
 		break;

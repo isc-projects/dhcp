@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.63 2000/07/27 09:02:35 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.64 2000/09/16 20:01:07 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -585,6 +585,11 @@ const char *pretty_print_option (code, data, len, emit_commas, emit_quotes)
 		numelem++;
 		fmtbuf [i] = dhcp_options [code].format [i];
 		switch (dhcp_options [code].format [i]) {
+		      case 'a':
+			--numelem;
+			fmtbuf [i] = 0;
+			numhunk = 0;
+			break;
 		      case 'A':
 			--numelem;
 			fmtbuf [i] = 0;
