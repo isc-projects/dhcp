@@ -1048,7 +1048,7 @@ extern struct hash_table *lease_hw_addr_hash;
 extern omapi_object_type_t *dhcp_type_host;
 
 
-void enter_host PROTO ((struct host_decl *, int, int));
+isc_result_t enter_host PROTO ((struct host_decl *, int, int));
 void delete_host PROTO ((struct host_decl *, int));
 struct host_decl *find_hosts_by_haddr PROTO ((int, unsigned char *, int));
 struct host_decl *find_hosts_by_uid PROTO ((unsigned char *, int));
