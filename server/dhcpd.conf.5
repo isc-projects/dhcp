@@ -520,8 +520,7 @@ failover peer "foo" {
   max-response-delay 60;
   max-unacked-updates 10;
   mclt 3600;
-  hba ff:ff:ff:ff:ff:ff:ff:ff:ff:ff:ff:ff:ff:ff:ff:ff:
-      00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00;
+  split 128;
   load balance max seconds 3;
 }
 
@@ -658,8 +657,8 @@ secondary for the purposes of load balancing.   Whenever a client
 makes a DHCP request, the DHCP server runs a hash on the client
 identification.   If the hash comes out to less than the split value,
 the primary answers.   If it comes out to equal to or more than the
-split, the secondary answers.   This value should generally be set to
-128, and can only be configured on the primary.
+split, the secondary answers.   The only meaningful value is 128, and can
+only be configured on the primary.
 .RE
 .PP
 The 
@@ -678,6 +677,11 @@ for such fine-grained control, however.   An example hba statement:
   hba ff:ff:ff:ff:ff:ff:ff:ff:ff:ff:ff:ff:ff:ff:ff:ff:
       00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00;
 .fi
+.PP
+This is equivalent to a \fBsplit 128;\fR statement.  You must only have
+\fBsplit\fR or \fBhba\fR defined, never both.  For most cases, the
+fine-grained control that \fBhba\fR offers isn't necessary, and \fBsplit\fR
+should be used.
 .RE
 .PP
 The 
@@ -1143,7 +1147,8 @@ if you are not using BIND 9 as your DNS server.  If you are using BIND 9's
 dnssec-keygen, the above key would be created as follows:
 .nf
 	dnssec-keygen -a HMAC-MD5 -b 128 -n USER DHCP_UPDATER
-
+.fi
+.PP
 If you are using the BIND 8 dnskeygen program, the following command will
 generate a key as seen above:
 .nf
@@ -1383,6 +1388,11 @@ The \fBunknown-clients\fR flag is used to tell dhcpd whether
 or not to dynamically assign addresses to unknown clients.   Dynamic
 address assignment to unknown clients is \fBallow\fRed by default.
 An unknown client is simply a client that has no host declaration.
+.PP
+The use of this option is now \fIdeprecated\fR.  If you are trying to
+restrict access on your network to known clients, you should use \fBdeny
+unknown clients;\fR inside of your address pool, as described under the
+heading ALLOW AND DENY WITHIN POOL DECLARAIONS.
 .PP
 .B The
 .I bootp
