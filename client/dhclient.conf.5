@@ -450,6 +450,36 @@ specified name.   Interfaces for which there is no interface
 declaration will use the parameters declared outside of any interface
 declaration, or the default settings.
 .PP
+ \fBpseudo "\fIname\fR" "\fIreal-name\fB" { \fIdeclarations ... \fB }
+.PP
+Under some circumstances it can be useful to declare a pseudo-interface 
+and have the DHCP client acquire a configuration for that interface.
+Each interface that the DHCP client is supporting normally has a DHCP
+client state machine running on it to acquire and maintain its lease.
+A pseudo-interface is just another state machine running on the
+interface named \fIreal-name\fR, with its own lease and its own
+state.   If you use this feature, you must provide a client identifier
+for both the pseudo-interface and the actual interface, and the two
+identifiers must be different.   You must also provide a seperate
+client script for the pseudo-interface to do what you want with the IP
+address.   For example:
+.PP
+.nf
+	interface "ep0" {
+		send dhcp-client-identifier "my-client-ep0";
+	}
+	pseudo "secondary" "ep0" {
+		send dhcp-client-identifier "my-client-ep0-secondary";
+		script "/etc/dhclient-secondary";
+	}
+.fi
+.PP
+The client script for the pseudo-interface should not configure the
+interface up or down - essentially, all it needs to handle are the
+states where a lease has been acquired or renewed, and the states
+where a lease has expired.   See \fBdhclient-script(8)\fR for more
+information.
+.PP
  \fBmedia "\fImedia setup\fB"\fI [ \fB, "\fImedia setup\fB", \fI... ]\fB;\fR
 .PP
 The
