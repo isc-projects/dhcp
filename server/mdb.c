@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.67.2.8 2001/06/22 02:26:14 mellon Exp $ Copyright (c) 1996-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.67.2.9 2001/08/23 16:30:58 mellon Exp $ Copyright (c) 1996-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1105,6 +1105,16 @@ int supersede_lease (comp, lease, commit, propogate, pimmediate)
 			return 0;
 	}
 #endif
+
+	/* If the current binding state has already expired, do an
+	   expiry event right now. */
+	/* XXX At some point we should optimize this so that we don't
+	   XXX write the lease twice, but this is a safe way to fix the
+	   XXX problem for 3.0 (I hope!). */
+	if ((commit || !pimmediate) &&
+	    comp -> sort_time < cur_time &&
+	    comp -> next_binding_state != comp -> binding_state)
+		pool_timer (comp -> pool);
 
 	return 1;
 }
