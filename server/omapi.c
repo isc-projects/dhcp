@@ -3,7 +3,7 @@
    OMAPI object interfaces for the DHCP server. */
 
 /*
- * Copyright (c) 1999-2001 Internet Software Consortium.
+ * Copyright (c) 1999-2002 Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -50,7 +50,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: omapi.c,v 1.46.2.14 2002/08/26 05:34:53 dhankins Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: omapi.c,v 1.46.2.15 2002/11/17 02:29:32 dhankins Exp $ Copyright (c) 1999-2002 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"

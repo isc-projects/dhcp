@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.115.2.8 2002/11/07 23:10:18 dhankins Exp $ Copyright 1995-2001 Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.115.2.9 2002/11/17 02:29:31 dhankins Exp $ Copyright 1995-2002 Internet Software Consortium.";
 #endif
 
   static char copyright[] =

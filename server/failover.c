@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.53.2.25 2002/03/12 06:46:47 mellon Exp $ Copyright (c) 1999-2002 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.53.2.26 2002/11/17 02:29:31 dhankins Exp $ Copyright (c) 1999-2002 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -3505,8 +3505,10 @@ failover_option_t *dhcp_failover_make_option (unsigned code,
 	/* Allocate a buffer for the option. */
 	option.count = size;
 	option.data = dmalloc (option.count, MDL);
-	if (!option.data)
+	if (!option.data) {
+		va_end (va);
 		return &null_failover_option;
+	}
 
 	/* Put in the option code and option length. */
 	putUShort (option.data, code);
@@ -3537,6 +3539,7 @@ failover_option_t *dhcp_failover_make_option (unsigned code,
 				dfree (option.data, MDL);
 				log_error ("IP addrlen=%d, should be 4.",
 					   ilen);
+				va_end (va);
 				return &null_failover_option;
 			}
 				
@@ -3623,6 +3626,7 @@ failover_option_t *dhcp_failover_make_option (unsigned code,
 #if defined DEBUG_FAILOVER_MESSAGES
 	failover_print (obuf, obufix, obufmax, ")");
 #endif
+	va_end (va);
 
 	/* Now allocate a place to store what we just set up. */
 	op = dmalloc (sizeof (failover_option_t), MDL);

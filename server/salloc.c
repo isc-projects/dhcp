@@ -3,7 +3,7 @@
    Memory allocation for the DHCP server... */
 
 /*
- * Copyright (c) 1996-2001 Internet Software Consortium.
+ * Copyright (c) 1996-2002 Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: salloc.c,v 1.2.2.3 2001/06/22 02:31:39 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: salloc.c,v 1.2.2.4 2002/11/17 02:29:32 dhankins Exp $ Copyright (c) 1996-2002 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
