@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: print.c,v 1.53 2001/05/04 01:05:17 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: print.c,v 1.53.2.1 2001/05/31 19:29:39 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -111,7 +111,7 @@ char *quotify_buf (const unsigned char *s, unsigned len,
 			if (s [i] == ' ')
 				*nsp++ = ' ';
 			else if (!isascii (s [i]) || !isprint (s [i])) {
-				sprintf (nsp, "\\%3.3o", s [i]);
+				sprintf (nsp, "\\%03o", s [i]);
 				nsp += 4;
 			} else if (s [i] == '"' || s [i] == '\\') {
 				*nsp++ = '\\';
