@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.69 1999/03/30 15:20:09 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.70 1999/04/05 16:36:25 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -398,14 +398,26 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 
 	      case OPTION:
 		token = next_token (&val, cfile);
+		token = peek_token (&val, cfile);
+		if (token == SPACE) {
+			if (type != ROOT_GROUP) {
+				parse_warn ("option space definitions %s",
+					    " may not be scoped.");
+				skip_to_semi (cfile);
+				free_option (option, "parse_statement");
+				break;
+			}
+			parse_option_space_decl (cfile);
+			return declaration;
+		}
+
 		option = parse_option_name (cfile, 1);
 		if (option) {
 			token = peek_token (&val, cfile);
 			if (token == CODE) {
 				if (type != ROOT_GROUP) {
 					parse_warn ("option definitions%s%s",
-						    " may not currently be",
-						    " scoped.");
+						    " may not be scoped.");
 					skip_to_semi (cfile);
 					free_option (option,
 						     "parse_statement");
