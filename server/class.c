@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: class.c,v 1.25 2000/09/29 18:20:26 mellon Exp $ Copyright (c) 1998-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: class.c,v 1.26 2000/09/30 01:31:09 mellon Exp $ Copyright (c) 1998-2000 The Internet Software Consortium.  All rights reserved.\n";
 
 #endif /* not lint */
 
@@ -117,7 +117,8 @@ int check_collection (packet, lease, collection)
 			status = (evaluate_boolean_expression_result
 				  (&ignorep, packet, lease,
 				   packet -> options, (struct option_state *)0,
-				   &lease -> scope, class -> expr));
+				   lease ? &lease -> scope : &global_scope,
+				   class -> expr));
 			if (status) {
 				if (!class -> submatch) {
 					matched = 1;
