@@ -1,6 +1,6 @@
 		     Internet Software Consortium
 	   Dynamic Host Configuration Protocol Distribution
-		   Version 3, Beta 1, Patchlevel 7
+		   Version 3, Beta 1, Patchlevel 8
 			   October 27, 1999
 
 			    Release Notes
@@ -37,6 +37,11 @@ Carstensen and Brian Dols at Rose-Hulman Institute of Technology, Jim
 Watt at Perkin-Elmer, Irina Goble at Integrated Measurement Systems,
 and Brian Murrell at BC Tel Advanced Communications.   I'd like to
 express my thanks to all of these good people here.
+
+		       Changes on October 27, 1999
+
+- Fix a core dump that happens with clients that send DHCPRELEASE
+  messages with no client identifier.
 
 		     Changes since October 27, 1999
 
