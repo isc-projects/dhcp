@@ -1102,7 +1102,6 @@ void parse_address_range PROTO ((struct parse *,
 				 struct group *, int, struct pool *));
 
 /* ddns.c */
-int unset (struct binding_scope *, const char *);
 int ddns_updates PROTO ((struct packet *, struct lease *,
 			 struct lease_state *));
 int ddns_removals PROTO ((struct lease *));
@@ -1267,6 +1266,12 @@ int binding_scope_dereference PROTO ((struct binding_scope **,
 int fundef_dereference (struct fundef **, const char *, int);
 int data_subexpression_length (int *, struct expression *);
 int expr_valid_for_context (struct expression *, enum expression_context);
+struct binding *create_binding (struct binding_scope **, const char *);
+int bind_ds_value (struct binding_scope **,
+		   const char *, struct data_string *);
+int find_bound_string (struct data_string *,
+		       struct binding_scope *, const char *);
+int unset (struct binding_scope *, const char *);
 
 /* dhcp.c */
 extern int outstanding_pings;
@@ -1903,6 +1908,7 @@ ns_rcode find_cached_zone (const char *, ns_class, char *,
 void forget_zone (struct dns_zone **);
 void repudiate_zone (struct dns_zone **);
 void cache_found_zone (ns_class, char *, struct in_addr *, int);
+int get_dhcid (struct data_string *, struct lease *);
 #endif /* NSUPDATE */
 HASH_FUNCTIONS_DECL (dns_zone, const char *, struct dns_zone)
 
