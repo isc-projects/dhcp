@@ -175,6 +175,7 @@ enum dhcp_token {
 	TEXT = 395,
 	STRING_TOKEN = 396,
 	SPACE = 397,
+	CONCAT = 398,
 };
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\
