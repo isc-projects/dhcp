@@ -123,8 +123,10 @@ extern int h_errno;
 /* Solaris prior to 2.5 didn't have random().   Rather than being clever and
    using random() only on versions >2.5, always use rand() and srand(). */
 
+#if SOLARIS_MAJOR == 5 && SOLARIS_MINOR < 5
 #define random()	rand()
 #define srandom(x)	srand(x)
+#endif
 
 /* Solaris doesn't provide an endian.h, so we have to do it. */
 
@@ -149,6 +151,10 @@ extern int h_errno;
 #endif
 
 #define ALIAS_NAMES_PERMUTED
+
+#if SOLARIS_MAJOR == 5 && SOLARIS_MINOR < 7
+typedef int socklen_t;
+#endif
 
 #ifdef NEED_PRAND_CONF
 const char *cmds[] = {

@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: execute.c,v 1.27 2000/02/02 08:01:45 mellon Exp $ Copyright (c) 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: execute.c,v 1.28 2000/02/02 20:01:41 mellon Exp $ Copyright (c) 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -161,7 +161,8 @@ int execute_statements (packet, lease, in_options, out_options, scope,
 				if (status) {
 					if (nut -> r_data) {
 						dfree (nut -> r_data, MDL);
-						nut -> r_data = (char *)0;
+						nut -> r_data =
+							(unsigned char *)0;
 					}
 					if (nut -> r_dname) {
 						dfree (nut -> r_dname, MDL);

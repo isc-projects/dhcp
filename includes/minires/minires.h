@@ -155,7 +155,7 @@ int res_nsearch(res_state, const char *,
 		ns_class, ns_type, unsigned char *, unsigned);
 const char *res_hostalias (const res_state, const char *, char *, size_t);
 int res_nquerydomain(res_state, const char *, const char *,
-		     ns_class class, ns_class type, unsigned char *, unsigned);
+		     ns_class class, ns_type type, unsigned char *, unsigned);
 
 int ns_skiprr(const unsigned char *, const unsigned char *, ns_sect, int);
 int dn_skipname (const unsigned char *, const unsigned char *);

@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.73 2000/02/02 08:01:45 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.74 2000/02/02 20:01:41 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -498,12 +498,13 @@ int evaluate_dns_expression (result, packet, lease, in_options,
 				    (*result) -> r_data = dmalloc (16, MDL);
 				    if (!(*result) -> r_data)
 					goto dpngood;
-				    sprintf ((*result) -> r_data,
+				    sprintf ((char *)(*result) -> r_data,
 					     "%d.%d.%d.%d",
 					     data.data [0], data.data [1],
 					     data.data [2], data.data [3]);
 				    (*result) -> r_size = 
-					    strlen ((*result) -> r_data);
+					    strlen ((char *)
+						    (*result) -> r_data);
 				} else {
 				    (*result) -> r_size = data.len;
 				    (*result) -> r_data = dmalloc (data.len,
@@ -1806,7 +1807,7 @@ int evaluate_numeric_expression (result, packet, lease,
 			ISC_LIST_UNLINK (uq, tmp, r_link);
 			if (tmp -> r_data) {
 				dfree (tmp -> r_data, MDL);
-				tmp -> r_data = (char *)0;
+				tmp -> r_data = (unsigned char *)0;
 			}
 			minires_freeupdrec (tmp);
 		}

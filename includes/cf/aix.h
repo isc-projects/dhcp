@@ -51,7 +51,9 @@
 #include <setjmp.h>
 #include <limits.h>
 
+#if !defined (h_errno)	/* It's a macro on newer instances of AIX. */
 extern int h_errno;
+#endif
 
 #include <net/if.h>
 #include <net/if_arp.h>
