@@ -75,28 +75,28 @@ void print_lease (lease)
 	struct tm *t;
 	char tbuf [32];
 
-	printf ("  Lease %s",
-		piaddr (lease -> ip_addr));
+	debug ("  Lease %s",
+	       piaddr (lease -> ip_addr));
 	
 	t = gmtime (&lease -> starts);
 	strftime (tbuf, sizeof tbuf, "%D %H:%M:%S", t);
-	printf ("  start %s", tbuf);
+	debug ("  start %s", tbuf);
 	
 	t = gmtime (&lease -> ends);
 	strftime (tbuf, sizeof tbuf, "%D %H:%M:%S", t);
-	printf ("  end %s", tbuf);
+	debug ("  end %s", tbuf);
 	
 	t = gmtime (&lease -> timestamp);
 	strftime (tbuf, sizeof tbuf, "%D %H:%M:%S", t);
-	printf ("  stamp %s\n", tbuf);
+	debug ("  stamp %s", tbuf);
 	
-	printf ("    hardware addr = %s",
-		print_hw_addr (lease -> hardware_addr.htype,
+	debug ("    hardware addr = %s",
+	       print_hw_addr (lease -> hardware_addr.htype,
 			       lease -> hardware_addr.hlen,
 			       lease -> hardware_addr.haddr));
-	printf ("  host %s  state %x\n",
-		lease -> host ? lease -> host -> name : "<none>",
-		lease -> state);
+	debug ("  host %s  state %x",
+	       lease -> host ? lease -> host -> name : "<none>",
+	       lease -> state);
 }	
 
 void dump_packet (tp)
@@ -104,14 +104,15 @@ void dump_packet (tp)
 {
 	struct dhcp_packet *tdp = tp -> raw;
 
+	debug ("packet length %d", tp -> packet_length);
 	debug ("op = %d  htype = %d  hlen = %d  hops = %d",
 	       tdp -> op, tdp -> htype, tdp -> hlen, tdp -> hops);
 	debug ("xid = %x  secs = %d  flags = %x",
 	       tdp -> xid, tdp -> secs, tdp -> flags);
-	debug ("ciaddr = %s  ", inet_ntoa (tdp -> ciaddr));
+	debug ("ciaddr = %s", inet_ntoa (tdp -> ciaddr));
 	debug ("yiaddr = %s", inet_ntoa (tdp -> yiaddr));
 	debug ("siaddr = %s", inet_ntoa (tdp -> siaddr));
-	debug ("  giaddr = %s", inet_ntoa (tdp -> giaddr));
+	debug ("giaddr = %s", inet_ntoa (tdp -> giaddr));
 	debug ("chaddr = %02.2x:%02.2x:%02.2x:%02.2x:%02.2x:%02.2x",
 	       ((unsigned char *)(tdp -> chaddr)) [0],
 	       ((unsigned char *)(tdp -> chaddr)) [1],
@@ -119,19 +120,36 @@ void dump_packet (tp)
 	       ((unsigned char *)(tdp -> chaddr)) [3],
 	       ((unsigned char *)(tdp -> chaddr)) [4],
 	       ((unsigned char *)(tdp -> chaddr)) [5]);
-	debug ("filename = %s\n", tdp -> file);
-	debug ("server_name = %s\n", tdp -> sname);
+	debug ("filename = %s", tdp -> file);
+	debug ("server_name = %s", tdp -> sname);
 	if (tp -> options_valid) {
 		int i;
 
 		for (i = 0; i < 256; i++) {
 			if (tp -> options [i].data)
-				printf ("  %s = %s\n",
+				debug ("  %s = %s",
 					dhcp_options [i].name,
 					pretty_print_option
 					(i, tp -> options [i].data,
 					 tp -> options [i].len));
 		}
 	}
+	debug ("");
+}
+
+void dump_raw (buf, len)
+	unsigned char *buf;
+	int len;
+{
+	int i;
+
+	for (i = 0; i < len; i++) {
+		if ((i & 15) == 0)
+			fprintf (stderr, "\n%03x:", i);
+		else if ((i & 7) == 0)
+			fprintf (stderr, " ");
+		fprintf (stderr, " %02x", buf [i]);
+	}
+	fprintf (stderr, "\n");
 }
 
