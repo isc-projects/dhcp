@@ -38,10 +38,12 @@ Watt at Perkin-Elmer, Irina Goble at Integrated Measurement Systems,
 and Brian Murrell at BC Tel Advanced Communications.   I'd like to
 express my thanks to all of these good people here.
 
-
 		     Changes since June 24, 2000
 
-- Fix an uninitialized pointer that could cause a core dump.
+- Fix a long-standing bug where billing classes would be removed from
+  the lease file by a restart.
+
+- Fix several uninitialized pointers that could cause core dumps.
 
 - Fix BSD/OS 4.1 support.
 
@@ -49,6 +51,9 @@ express my thanks to all of these good people here.
 
 - Really fix the problem with multiple fixed addresses that I thought
   I'd fixed in patchlevel 14.
+
+- Fix a bug in the host entry code that could have resulted in
+  something being listed twice (dunno if this ever happened).
 
 		    Changes since February 2, 2000
 
