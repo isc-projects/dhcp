@@ -1,6 +1,6 @@
 .\"	dhcp-options.5
 .\"
-.\" Copyright (c) 1995, 1996, 1997 The Internet Software Consortium.
+.\" Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.
 .\" All rights reserved.
 .\"
 .\" Redistribution and use in source and binary forms, with or without
@@ -499,7 +499,9 @@ of preference.
 .RS 0.25i
 .PP
 The NetBIOS name server (NBNS) option specifies a list of RFC
-1001/1002 NBNS name servers listed in order of preference.
+1001/1002 NBNS name servers listed in order of preference.   NetBIOS
+Name Service is currently more commonly referred to as WINS.   WINS
+servers can be specified using the netbios-name-servers option.
 .RE
 .PP
 .B option \fBnetbios-dd-server\fR \fIip-address\fR [\fB,\fR \fIip-address\fR...
