@@ -219,8 +219,9 @@ the connection the user must call dhcpctl_new_authenticator.
 					   strlen(secret) + 1);
 .fi
 .PP
-The keyname, algorithm and secret must all match what is specified in
-the server's dhcpd.conf file:
+The keyname, algorithm and must all match what is specified in the server's
+dhcpd.conf file, excepting that the secret should appear in 'raw' form, not
+in base64 as it would in dhcpd.conf:
 .PP
 .nf
 		key "a-key-name" {
