@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.19 2000/06/12 20:19:21 mellon Exp $ Copyright (c) 1999-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.20 2000/06/24 06:30:11 mellon Exp $ Copyright (c) 1999-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2450,7 +2450,9 @@ failover_option_t *dhcp_failover_make_option (unsigned code,
 		break;
 	}
 
+#if defined DEBUG_FAILOVER_MESSAGES
 	failover_print (obuf, obufix, obufmax, ")");
+#endif
 
 	/* Now allocate a place to store what we just set up. */
 	op = dmalloc (sizeof (failover_option_t), MDL);
