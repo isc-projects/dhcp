@@ -29,7 +29,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: omapi.c,v 1.19 1999/10/25 01:56:38 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: omapi.c,v 1.20 1999/11/14 00:39:33 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -41,6 +41,9 @@ omapi_object_type_t *dhcp_type_pool;
 omapi_object_type_t *dhcp_type_shared_network;
 omapi_object_type_t *dhcp_type_subnet;
 omapi_object_type_t *dhcp_type_class;
+omapi_object_type_t *dhcp_type_failover_state;
+omapi_object_type_t *dhcp_type_failover_link;
+omapi_object_type_t *dhcp_type_failover_listener;
 
 void dhcp_db_objects_setup ()
 {
@@ -98,9 +101,53 @@ void dhcp_db_objects_setup ()
 					     dhcp_pool_lookup, 
 					     dhcp_pool_create,
 					     dhcp_pool_remove);
+
 	if (status != ISC_R_SUCCESS)
 		log_fatal ("Can't register pool object type: %s",
 			   isc_result_totext (status));
+
+#if defined (FAILOVER_PROTOCOL)
+	status = omapi_object_type_register (&dhcp_type_failover_state,
+					     "failover-state",
+					     dhcp_failover_state_set_value,
+					     dhcp_failover_state_get_value,
+					     dhcp_failover_state_destroy,
+					     dhcp_failover_state_signal,
+					     dhcp_failover_state_stuff_values,
+					     dhcp_failover_state_lookup, 
+					     dhcp_failover_state_create,
+					     dhcp_failover_state_remove);
+
+	if (status != ISC_R_SUCCESS)
+		log_fatal ("Can't register failover state object type: %s",
+			   isc_result_totext (status));
+
+	status = omapi_object_type_register (&dhcp_type_failover_link,
+					     "failover-link",
+					     dhcp_failover_link_set_value,
+					     dhcp_failover_link_get_value,
+					     dhcp_failover_link_destroy,
+					     dhcp_failover_link_signal,
+					     dhcp_failover_link_stuff,
+					     0, 0, 0);
+
+	if (status != ISC_R_SUCCESS)
+		log_fatal ("Can't register failover link object type: %s",
+			   isc_result_totext (status));
+
+	status = omapi_object_type_register (&dhcp_type_failover_listener,
+					     "failover-listener",
+					     dhcp_failover_listener_set_value,
+					     dhcp_failover_listener_get_value,
+					     dhcp_failover_listener_destroy,
+					     dhcp_failover_listener_signal,
+					     dhcp_failover_listener_stuff,
+					     0, 0, 0);
+
+	if (status != ISC_R_SUCCESS)
+		log_fatal ("Can't register failover listener object type: %s",
+			   isc_result_totext (status));
+#endif /* FAILOVER_PROTOCOL */
 }
 
 isc_result_t dhcp_lease_set_value  (omapi_object_t *h,
