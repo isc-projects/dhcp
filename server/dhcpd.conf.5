@@ -595,6 +595,19 @@ or not to dynamically assign addresses to unknown DHCP clients.  If
 assigned to unknown DHCP clients when available.  If \fIflag\fR is
 false, then addresses are provided only to DHCP clients which match at
 least one host declaration.
+.PP
+.B The
+.I get-lease-hostnames
+.B statement
+.PP
+ \fBget-lease-hostnames\fR \fIflag\fR\fB;\fR
+.PP
+The \fIget-lease-hostnames\fR statement is used to tell dhcpd whether
+or not to look up the domain name corresponding to the IP address of
+each address in the lease pool and use that address for the DHCP
+\fIhostname\fR option.  If \fIflag\fR is true, then this lookup is
+done for all addresses in the current scope.   By default, or if
+\fIflag\fR is false, no lookups are done.
 .SH REFERENCE: OPTION STATEMENTS
 .PP
 DHCP \fIoption\fR statements always start with the \fIoption\fR

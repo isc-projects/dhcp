@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.29 1996/08/29 20:12:37 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.30 1996/08/29 23:02:38 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -143,6 +143,7 @@ void read_leases ()
 	       | DYNAMIC_BOOTP_LEASE_LENGTH lease_time
 	       | BOOT_UNKNOWN_CLIENTS boolean
 	       | ONE_LEASE_PER_CLIENT boolean
+	       | GET_LEASE_HOSTNAMES boolean
 	       | NEXT_SERVER ip-addr-or-hostname SEMI
 	       | option_parameter
 	       | SERVER-IDENTIFIER ip-addr-or-hostname SEMI
@@ -283,6 +284,12 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		if (type == HOST_DECL)
 			parse_warn ("one-lease-per-client not allowed here.");
 		group -> one_lease_per_client = parse_boolean (cfile);
+		break;
+
+	      case GET_LEASE_HOSTNAMES:
+		if (type == HOST_DECL)
+			parse_warn ("get-lease-hostnames not allowed here.");
+		group -> get_lease_hostnames = parse_boolean (cfile);
 		break;
 
 	      case NEXT_SERVER:

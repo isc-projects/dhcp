@@ -137,6 +137,7 @@ struct group {
 	int boot_unknown_clients;
 	int dynamic_bootp;
 	int one_lease_per_client;
+	int get_lease_hostnames;
 
 	struct tree_cache *options [256];
 };
