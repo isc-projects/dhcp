@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: stables.c,v 1.18 2000/10/10 23:09:17 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: stables.c,v 1.19 2000/11/28 23:27:24 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -482,7 +482,7 @@ struct option server_options [256] = {
 	{ "remote-port", "S",			&server_universe, 34 },
 	{ "local-address", "I",			&server_universe, 35 },
 	{ "omapi-key", "t",			&server_universe, 36 },
-	{ "option-37", "X",			&server_universe, 37 },
+	{ "stash-agent-options", "f",		&server_universe, 37 },
 	{ "option-38", "X",			&server_universe, 38 },
 	{ "option-39", "X",			&server_universe, 39 },
 	{ "option-40", "X",			&server_universe, 40 },

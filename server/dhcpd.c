@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.101 2000/09/01 23:06:31 mellon Exp $ Copyright 1995-2000 Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.102 2000/11/28 23:27:19 mellon Exp $ Copyright 1995-2000 Internet Software Consortium.";
 #endif
 
   static char copyright[] =
@@ -71,62 +71,75 @@ int server_identifier_matched;
 char std_nsupdate [] = "						    \n\
 on commit {								    \n\
   if (((config-option server.ddns-updates = null) or			    \n\
-       (config-option server.ddns-updates != 0)) and			    \n\
-      (not defined (ddns-fwd-name))) {					    \n\
-    set ddns-fwd-name = concat (pick (config-option server.ddns-hostname,   \n\
-				      option host-name), \".\",		    \n\
-			        pick (config-option server.ddns-domainname, \n\
-				      config-option domain-name));	    \n\
-    if defined (ddns-fwd-name) {					    \n\
-      switch (ns-update (not exists (IN, A, ddns-fwd-name, null),	    \n\
-		         add (IN, A, ddns-fwd-name, leased-address,	    \n\
-			      lease-time / 2))) {			    \n\
-       default:								    \n\
-        unset ddns-fwd-name;						    \n\
-        break;								    \n\
-									    \n\
-       case NOERROR:							    \n\
-        set ddns-rev-name =						    \n\
-		concat (binary-to-ascii (10, 8, \".\",			    \n\
-					 reverse (1,			    \n\
-						  leased-address)), \".\",  \n\
-			pick (config-option server.ddns-rev-domainname,	    \n\
-			      \"in-addr.arpa.\"));			    \n\
-        switch (ns-update (delete (IN, PTR, ddns-rev-name, null),	    \n\
-			   add (IN, PTR, ddns-rev-name, ddns-fwd-name,	    \n\
-				lease-time / 2)))			    \n\
-	{								    \n\
-         default:							    \n\
-	  unset ddns-rev-name;						    \n\
-	  on release or expiry {					    \n\
-	    switch (ns-update (delete (IN, A, ddns-fwd-name,		    \n\
-				       leased-address))) {		    \n\
-	      case NOERROR:						    \n\
-	        unset ddns-fwd-name;					    \n\
-		break;							    \n\
-	    }								    \n\
-	    on release or expiry;					    \n\
-          }								    \n\
-	  break;							    \n\
-									    \n\
-         case NOERROR:							    \n\
-	  on release or expiry {					    \n\
-	    switch (ns-update (delete (IN, PTR, ddns-rev-name, null))) {    \n\
-	      case NOERROR:						    \n\
-	        unset ddns-rev-name;					    \n\
-		break;							    \n\
-	    }								    \n\
-	    switch (ns-update (delete (IN, A, ddns-fwd-name,		    \n\
-			               leased-address))) {		    \n\
-	      case NOERROR:						    \n\
-	        unset ddns-fwd-name;					    \n\
-		break;							    \n\
-	    }								    \n\
-	    on release or expiry;					    \n\
-	  }								    \n\
-        }								    \n\
+       (config-option server.ddns-updates != 0))) {			    \n\
+    set new-ddns-fwd-name =						    \n\
+      concat (pick (config-option server.ddns-hostname,			    \n\
+		    option host-name), \".\",				    \n\
+	      pick (config-option server.ddns-domainname,		    \n\
+		    config-option domain-name));			    \n\
+    if (defined (ddns-fwd-name) and ddns-fwd-name != new-ddns-fwd-name) {   \n\
+      switch (ns-update (delete (IN, A, ddns-fwd-name, leased-address))) {  \n\
+      case NOERROR:							    \n\
+	unset ddns-fwd-name;						    \n\
+	on expiry or release {						    \n\
+	}
       }									    \n\
     }									    \n\
+									    \n\
+    if (not defined (ddns-fwd-name)) {					    \n\
+      set ddns-fwd-name = new-ddns-fwd-name;				    \n\
+      if defined (ddns-fwd-name) {					    \n\
+	switch (ns-update (not exists (IN, A, ddns-fwd-name, null),	    \n\
+			   add (IN, A, ddns-fwd-name, leased-address,	    \n\
+				lease-time / 2))) {			    \n\
+	default:							    \n\
+	  unset ddns-fwd-name;						    \n\
+	  break;							    \n\
+									    \n\
+	case NOERROR:							    \n\
+	  set ddns-rev-name =						    \n\
+	    concat (binary-to-ascii (10, 8, \".\",			    \n\
+				     reverse (1,			    \n\
+					      leased-address)), \".\",	    \n\
+		    pick (config-option server.ddns-rev-domainname,	    \n\
+			  \"in-addr.arpa.\"));				    \n\
+	  switch (ns-update (delete (IN, PTR, ddns-rev-name, null),	    \n\
+			     add (IN, PTR, ddns-rev-name, ddns-fwd-name,    \n\
+				  lease-time / 2)))			    \n\
+	    {								    \n\
+	    default:							    \n\
+	      unset ddns-rev-name;					    \n\
+	      on release or expiry {					    \n\
+		switch (ns-update (delete (IN, A, ddns-fwd-name,	    \n\
+					   leased-address))) {		    \n\
+		case NOERROR:						    \n\
+		  unset ddns-fwd-name;					    \n\
+		  break;						    \n\
+		}							    \n\
+		on release or expiry;					    \n\
+	      }								    \n\
+	      break;							    \n\
+									    \n\
+	    case NOERROR:						    \n\
+	      on release or expiry {					    \n\
+		switch (ns-update (delete (IN, PTR, ddns-rev-name, null))) {\n\
+		case NOERROR:						    \n\
+		  unset ddns-rev-name;					    \n\
+		  break;						    \n\
+		}							    \n\
+		switch (ns-update (delete (IN, A, ddns-fwd-name,	    \n\
+					   leased-address))) {		    \n\
+		case NOERROR:						    \n\
+		  unset ddns-fwd-name;					    \n\
+		  break;						    \n\
+		}							    \n\
+		on release or expiry;					    \n\
+	      }								    \n\
+	    }								    \n\
+	}								    \n\
+      }									    \n\
+    }									    \n\
+    unset new-ddns-fwd-name;						    \n\
   }									    \n\
 }";
 #endif /* NSUPDATE */
@@ -380,6 +393,7 @@ int main (argc, argv, envp)
 	execute_statements_in_scope ((struct binding_value **)0,
 				     (struct packet *)0,
 				     (struct lease *)0,
+				     (struct client_state *)0,
 				     (struct option_state *)0,
 				     options, &global_scope,
 				     root_group,
@@ -388,8 +402,8 @@ int main (argc, argv, envp)
 	oc = lookup_option (&server_universe, options, SV_LEASE_FILE_NAME);
 	if (oc &&
 	    evaluate_option_cache (&db, (struct packet *)0,
-				   (struct lease *)0, options,
-				   (struct option_state *)0,
+				   (struct lease *)0, (struct client_state *)0,
+				   options, (struct option_state *)0,
 				   &global_scope, oc, MDL)) {
 		s = dmalloc (db.len + 1, MDL);
 		if (!s)
@@ -403,8 +417,8 @@ int main (argc, argv, envp)
 	oc = lookup_option (&server_universe, options, SV_PID_FILE_NAME);
 	if (oc &&
 	    evaluate_option_cache (&db, (struct packet *)0,
-				   (struct lease *)0, options,
-				   (struct option_state *)0,
+				   (struct lease *)0, (struct client_state *)0,
+				   options, (struct option_state *)0,
 				   &global_scope, oc, MDL)) {
 		s = dmalloc (db.len + 1, MDL);
 		if (!s)
@@ -419,8 +433,8 @@ int main (argc, argv, envp)
 	oc = lookup_option (&server_universe, options, SV_OMAPI_PORT);
 	if (oc &&
 	    evaluate_option_cache (&db, (struct packet *)0,
-				   (struct lease *)0, options,
-				   (struct option_state *)0,
+				   (struct lease *)0, (struct client_state *)0,
+				   options, (struct option_state *)0,
 				   &global_scope, oc, MDL)) {
 		if (db.len == 2) {
 			omapi_port = getUShort (db.data);
@@ -432,7 +446,8 @@ int main (argc, argv, envp)
 	oc = lookup_option (&server_universe, options, SV_OMAPI_KEY);
 	if (oc &&
 	    evaluate_option_cache (&db, (struct packet *)0,
-				   (struct lease *)0, options,
+				   (struct lease *)0, (struct client_state *)0,
+				   options,
 				   (struct option_state *)0,
 				   &global_scope, oc, MDL)) {
 		s = dmalloc (db.len + 1, MDL);
@@ -450,7 +465,8 @@ int main (argc, argv, envp)
 	oc = lookup_option (&server_universe, options, SV_LOCAL_PORT);
 	if (oc &&
 	    evaluate_option_cache (&db, (struct packet *)0,
-				   (struct lease *)0, options,
+				   (struct lease *)0, (struct client_state *)0,
+				   options,
 				   (struct option_state *)0,
 				   &global_scope, oc, MDL)) {
 		if (db.len == 2) {
@@ -463,8 +479,8 @@ int main (argc, argv, envp)
 	oc = lookup_option (&server_universe, options, SV_REMOTE_PORT);
 	if (oc &&
 	    evaluate_option_cache (&db, (struct packet *)0,
-				   (struct lease *)0, options,
-				   (struct option_state *)0,
+				   (struct lease *)0, (struct client_state *)0,
+				   options, (struct option_state *)0,
 				   &global_scope, oc, MDL)) {
 		if (db.len == 2) {
 			remote_port = htons (getUShort (db.data));
@@ -477,8 +493,8 @@ int main (argc, argv, envp)
 			    SV_LIMITED_BROADCAST_ADDRESS);
 	if (oc &&
 	    evaluate_option_cache (&db, (struct packet *)0,
-				   (struct lease *)0, options,
-				   (struct option_state *)0,
+				   (struct lease *)0, (struct client_state *)0,
+				   options, (struct option_state *)0,
 				   &global_scope, oc, MDL)) {
 		if (db.len == 4) {
 			memcpy (&limited_broadcast, db.data, 4);
@@ -491,8 +507,8 @@ int main (argc, argv, envp)
 			    SV_LOCAL_ADDRESS);
 	if (oc &&
 	    evaluate_option_cache (&db, (struct packet *)0,
-				   (struct lease *)0, options,
-				   (struct option_state *)0,
+				   (struct lease *)0, (struct client_state *)0,
+				   options, (struct option_state *)0,
 				   &global_scope, oc, MDL)) {
 		if (db.len == 4) {
 			memcpy (&local_address, db.data, 4);

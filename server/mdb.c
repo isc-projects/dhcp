@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.43 2000/09/29 18:21:33 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.44 2000/11/28 23:27:21 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -154,7 +154,8 @@ isc_result_t enter_host (hd, dynamicp, commit)
 		     DHO_DHCP_CLIENT_IDENTIFIER)) {
 			evaluate_option_cache
 				(&hd -> client_identifier, (struct packet *)0,
-				 (struct lease *)0, (struct option_state *)0,
+				 (struct lease *)0, (struct client_state *)0,
+				 (struct option_state *)0,
 				 (struct option_state *)0, &global_scope,
 				 esp -> data.option, MDL);
 			break;
@@ -377,6 +378,7 @@ int find_host_for_network (struct subnet **sp, struct host_decl **host,
 			continue;
 		if (!evaluate_option_cache (&fixed_addr, (struct packet *)0,
 					    (struct lease *)0,
+					    (struct client_state *)0,
 					    (struct option_state *)0,
 					    (struct option_state *)0,
 					    &global_scope,
@@ -875,6 +877,21 @@ int supersede_lease (comp, lease, commit, propogate, pimmediate)
 		binding_scope_dereference (&lease -> scope, MDL);
 	}
 
+	if (comp -> agent_options)
+		option_cache_dereference (&comp -> agent_options, MDL);
+	if (lease -> agent_options) {
+		/* Only retain the agent options if the lease is still
+		   affirmatively associated with a client. */
+		if (lease -> binding_state == FTS_ACTIVE ||
+		    lease -> binding_state == FTS_EXPIRED ||
+		    lease -> binding_state == FTS_ABANDONED ||
+		    lease -> binding_state == FTS_RESERVED ||
+		    lease -> binding_state == FTS_BOOTP)
+			option_cache_reference (&comp -> agent_options,
+						lease -> agent_options, MDL);
+		option_cache_dereference (&lease -> agent_options, MDL);
+	}
+
 	/* Record the hostname information in the lease. */
 	if (comp -> hostname)
 		dfree (comp -> hostname, MDL);
@@ -1048,6 +1065,7 @@ void process_state_transition (struct lease *lease)
 		if (lease -> on_expiry) {
 			execute_statements ((struct binding_value **)0,
 					    (struct packet *)0, lease,
+					    (struct client_state *)0,
 					    (struct option_state *)0,
 					    (struct option_state *)0, /* XXX */
 					    &lease -> scope,
@@ -1074,6 +1092,7 @@ void process_state_transition (struct lease *lease)
 		if (lease -> on_release) {
 			execute_statements ((struct binding_value **)0,
 					    (struct packet *)0, lease,
+					    (struct client_state *)0,
 					    (struct option_state *)0,
 					    (struct option_state *)0, /* XXX */
 					    &lease -> scope,
@@ -1152,6 +1171,9 @@ int lease_copy (struct lease **lp,
 	}
 	if (lease -> scope)
 		binding_scope_reference (&lt -> scope, lease -> scope, MDL);
+	if (lease -> agent_options)
+		option_cache_reference (&lt -> agent_options,
+					lease -> agent_options, MDL);
 	host_reference (&lt -> host, lease -> host, file, line);
 	subnet_reference (&lt -> subnet, lease -> subnet, file, line);
 	pool_reference (&lt -> pool, lease -> pool, file, line);
@@ -1190,7 +1212,8 @@ void release_lease (lease, packet)
 	   released, execute them. */
 	if (lease -> on_release) {
 		execute_statements ((struct binding_value **)0,
-				    packet, lease, packet -> options,
+				    packet, lease, (struct client_state *)0,
+				    packet -> options,
 				    (struct option_state *)0, /* XXX */
 				    &lease -> scope, lease -> on_release);
 		if (lease -> on_release)

@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: db.c,v 1.58 2000/09/04 22:28:38 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: db.c,v 1.59 2000/11/28 23:27:16 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -260,6 +260,25 @@ int write_lease (lease)
 		}
 	    }
 	}
+	if (lease -> agent_options) {
+		struct option_cache *oc;
+		struct data_string ds;
+
+		memset (&ds, 0, sizeof ds);
+		for (oc = lease -> agent_options; oc; oc = oc -> next) {
+			if (oc -> data.len) {
+				errno = 0;
+				fprintf (db_file, "\n  option agent.%s %s;",
+					 oc -> option -> name,
+					 pretty_print_option (oc -> option,
+							      oc -> data.data,
+							      oc -> data.len,
+							      1, 1));
+				if (errno)
+					++errors;
+			}
+		}
+	}
 	if (lease -> client_hostname &&
 	    db_printable (lease -> client_hostname)) {
 		errno = 0;
@@ -384,6 +403,7 @@ int write_host (host)
 		if (host -> fixed_addr &&
 		    evaluate_option_cache (&ip_addrs, (struct packet *)0,
 					   (struct lease *)0,
+					   (struct client_state *)0,
 					   (struct option_state *)0,
 					   (struct option_state *)0,
 					   &global_scope,

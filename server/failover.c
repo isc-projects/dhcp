@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.29 2000/11/24 04:19:05 mellon Exp $ Copyright (c) 1999-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.30 2000/11/28 23:27:20 mellon Exp $ Copyright (c) 1999-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -190,6 +190,7 @@ isc_result_t dhcp_failover_link_initiate (omapi_object_t *h)
 
 	memset (&ds, 0, sizeof ds);
 	if (!evaluate_option_cache (&ds, (struct packet *)0, (struct lease *)0,
+				    (struct client_state *)0,
 				    (struct option_state *)0,
 				    (struct option_state *)0,
 				    &global_scope, obj -> peer_address, MDL)) {
@@ -218,6 +219,7 @@ isc_result_t dhcp_failover_link_initiate (omapi_object_t *h)
 	if (!state -> me.address ||
 	    !evaluate_option_cache (&ds, (struct packet *)0,
 				    (struct lease *)0,
+				    (struct client_state *)0,
 				    (struct option_state *)0,
 				    (struct option_state *)0,
 				    &global_scope, state -> me.address,
@@ -2248,6 +2250,7 @@ isc_result_t dhcp_failover_state_get_value (omapi_object_t *h,
 		memset (&ds, 0, sizeof ds);
 		if (!evaluate_option_cache (&ds, (struct packet *)0,
 					    (struct lease *)0,
+					    (struct client_state *)0,
 					    (struct option_state *)0,
 					    (struct option_state *)0,
 					    &global_scope, oc, MDL)) {
@@ -2645,6 +2648,7 @@ int dhcp_failover_state_match (dhcp_failover_state_t *state,
 	memset (&ds, 0, sizeof ds);
 	if (evaluate_option_cache (&ds, (struct packet *)0,
 				   (struct lease *)0,
+				   (struct client_state *)0,
 				   (struct option_state *)0,
 				   (struct option_state *)0,
 				   &global_scope,
@@ -4293,6 +4297,7 @@ int load_balance_mine (struct packet *packet, dhcp_failover_state_t *state)
 	memset (&ds, 0, sizeof ds);
 	if (oc &&
 	    evaluate_option_cache (&ds, packet, (struct lease *)0,
+				   (struct client_state *)0,
 				   packet -> options, (struct option_state *)0,
 				   &global_scope, oc, MDL)) {
 		hbaix = loadb_p_hash (ds.data, ds.len);

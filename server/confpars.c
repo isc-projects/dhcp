@@ -1,3 +1,4 @@
+XXX Do tokens for client states!
 /* confpars.c
 
    Parser for dhcpd config file... */
@@ -43,7 +44,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.126 2000/09/01 19:35:38 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.127 2000/11/28 23:27:15 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1728,14 +1729,20 @@ int parse_class_declaration (cp, cfile, group, type)
 			if (token != IF)
 				goto submatch;
 			token = next_token (&val, cfile);
-			parse_boolean_expression (&class -> expr, cfile,
-						  &lose);
-			if (lose)
-				break;
+			if (!parse_boolean_expression (&class -> expr, cfile,
+						       &lose)) {
+				if (!lose) {
+					parse_warn (cfile,
+						    "expecting boolean expr.");
+					skip_to_semi (cfile);
+				}
+			} else {
 #if defined (DEBUG_EXPRESSION_PARSE)
-			print_expression ("class match", class -> expr);
+				print_expression ("class match",
+						  class -> expr);
 #endif
-			parse_semi (cfile);
+				parse_semi (cfile);
+			}
 		} else if (token == SPAWN) {
 			if (pc) {
 				parse_warn (cfile,
@@ -1760,15 +1767,20 @@ int parse_class_declaration (cp, cfile, group, type)
 				skip_to_semi (cfile);
 				break;
 			}
-			parse_data_expression (&class -> submatch,
-					       cfile, &lose);
-			if (lose)
-				break;
+			if (!parse_data_expression (&class -> submatch,
+						    cfile, &lose)) {
+				if (!lose) {
+					parse_warn (cfile,
+						    "expecting data expr.");
+					skip_to_semi (cfile);
+				}
+			} else {
 #if defined (DEBUG_EXPRESSION_PARSE)
-			print_expression ("class submatch",
-					  class -> submatch);
+				print_expression ("class submatch",
+						  class -> submatch);
 #endif
-			parse_semi (cfile);
+				parse_semi (cfile);
+			}
 		} else if (token == LEASE) {
 			next_token (&val, cfile);
 			token = next_token (&val, cfile);
@@ -2217,6 +2229,7 @@ int parse_lease_declaration (struct lease **lp, struct parse *cfile)
 	struct binding *binding;
 	isc_result_t status;
 	binding_state_t *statep;
+	struct option_cache *oc, *optr;
 
 	lease = (struct lease *)0;
 	status = lease_allocate (&lease, MDL);
@@ -2524,6 +2537,33 @@ int parse_lease_declaration (struct lease **lp, struct parse *cfile)
 			executable_statement_dereference (&on, MDL);
 			break;
 			
+		      case OPTION:
+			noequal = 0;
+			seenbit = 0;
+			oc = (struct option_cache *)0;
+			if (parse_option_decl (&oc, cfile)) {
+				if (oc -> option -> universe !=
+				    &agent_universe) {
+					parse_warn (cfile,
+						    "agent option expected.");
+					option_cache_dereference (&oc, MDL);
+					break;
+				}
+				if (lease -> agent_options) {
+					for (optr = lease -> agent_options;
+					     optr -> next;
+					     optr = optr -> next)
+						;
+					option_cache_reference (&optr -> next,
+								oc, MDL);
+				} else
+					option_cache_reference
+						(&lease -> agent_options,
+						 oc, MDL);
+				option_cache_dereference (&oc, MDL);
+			}
+			break;
+
 		      case TOKEN_SET:
 			noequal = 0;
 			

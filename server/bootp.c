@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bootp.c,v 1.67 2000/10/10 23:01:05 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bootp.c,v 1.68 2000/11/28 23:27:13 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -93,7 +93,8 @@ void bootp (packet)
 			     packet -> raw -> hlen, MDL);
 
 	lease  = (struct lease *)0;
-	find_lease (&lease, packet, packet -> shared_network, 0, 0, MDL);
+	find_lease (&lease, packet, packet -> shared_network,
+		    0, 0, (struct lease *)0, MDL);
 
 	/* Find an IP address in the host_decl that matches the
 	   specified network. */
@@ -156,7 +157,8 @@ void bootp (packet)
 	
 	/* Execute the subnet statements. */
 	execute_statements_in_scope ((struct binding_value **)0,
-				     packet, lease, packet -> options, options,
+				     packet, lease, (struct client_state *)0,
+				     packet -> options, options,
 				     &lease -> scope, lease -> subnet -> group,
 				     (struct group *)0);
 	
@@ -164,20 +166,23 @@ void bootp (packet)
 	for (i = packet -> class_count; i > 0; i--) {
 		execute_statements_in_scope
 			((struct binding_value **)0,
-			 packet, lease, packet -> options, options,
+			 packet, lease, (struct client_state *)0,
+			 packet -> options, options,
 			 &lease -> scope, packet -> classes [i - 1] -> group,
 			 lease -> subnet -> group);
 	}
 
 	/* Execute the host statements. */
 	execute_statements_in_scope ((struct binding_value **)0,
-				     packet, lease, packet -> options, options,
+				     packet, lease, (struct client_state *)0,
+				     packet -> options, options,
 				     &lease -> scope,
 				     hp -> group, subnet -> group);
 	
 	/* Drop the request if it's not allowed for this client. */
 	if ((oc = lookup_option (&server_universe, options, SV_ALLOW_BOOTP)) &&
 	    !evaluate_boolean_option_cache (&ignorep, packet, lease,
+					    (struct client_state *)0,
 					    packet -> options, options,
 					    &lease -> scope, oc, MDL)) {
 		if (!ignorep)
@@ -188,6 +193,7 @@ void bootp (packet)
 	if ((oc = lookup_option (&server_universe,
 				 options, SV_ALLOW_BOOTING)) &&
 	    !evaluate_boolean_option_cache (&ignorep, packet, lease,
+					    (struct client_state *)0,
 					    packet -> options, options,
 					    &lease -> scope, oc, MDL)) {
 		if (!ignorep)
@@ -204,8 +210,8 @@ void bootp (packet)
 	   just copy the input options to the output. */
 	if (!packet -> options_valid &&
 	    !(evaluate_boolean_option_cache
-	      (&ignorep, packet, lease, packet -> options, options,
-	       &lease -> scope,
+	      (&ignorep, packet, lease, (struct client_state *)0,
+	       packet -> options, options, &lease -> scope,
 	       lookup_option (&server_universe, options,
 			      SV_ALWAYS_REPLY_RFC1048), MDL))) {
 		memcpy (outgoing.raw -> options,
@@ -238,7 +244,8 @@ void bootp (packet)
 		   name buffers. */
 
 		outgoing.packet_length =
-			cons_options (packet, outgoing.raw, lease, 0,
+			cons_options (packet, outgoing.raw, lease,
+				      (struct client_state *)0, 0,
 				      packet -> options, options,
 				      &lease -> scope,
 				      0, 0, 1, (struct data_string *)0,
@@ -264,6 +271,7 @@ void bootp (packet)
 	if ((oc = lookup_option (&server_universe,
 				options, SV_ALWAYS_BROADCAST)) &&
 	    evaluate_boolean_option_cache (&ignorep, packet, lease,
+					   (struct client_state *)0,
 					   packet -> options, options,
 					   &lease -> scope, oc, MDL))
 		raw.flags |= htons (BOOTP_BROADCAST);
@@ -273,6 +281,7 @@ void bootp (packet)
 	oc = lookup_option (&server_universe, options, SV_NEXT_SERVER);
 	if (oc &&
 	    evaluate_option_cache (&d1, packet, lease,
+				   (struct client_state *)0,
 				   packet -> options, options,
 				   &lease -> scope, oc, MDL)) {
 		/* If there was more than one answer, take the first. */
@@ -293,6 +302,7 @@ void bootp (packet)
 	oc = lookup_option (&server_universe, options, SV_FILENAME);
 	if (oc &&
 	    evaluate_option_cache (&d1, packet, lease,
+				   (struct client_state *)0,
 				   packet -> options, options,
 				   &lease -> scope, oc, MDL)) {
 		memcpy (raw.file, d1.data,
@@ -308,6 +318,7 @@ void bootp (packet)
 	oc = lookup_option (&server_universe, options, SV_SERVER_NAME);
 	if (oc &&
 	    evaluate_option_cache (&d1, packet, lease,
+				   (struct client_state *)0,
 				   packet -> options, options,
 				   &lease -> scope, oc, MDL)) {
 		memcpy (raw.sname, d1.data,
@@ -320,7 +331,8 @@ void bootp (packet)
 
 	/* Execute the commit statements, if there are any. */
 	execute_statements ((struct binding_value **)0,
-			    packet, lease, packet -> options,
+			    packet, lease, (struct client_state *)0,
+			    packet -> options,
 			    options, &lease -> scope, lease -> on_commit);
 
 	/* We're done with the option state. */

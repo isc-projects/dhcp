@@ -50,7 +50,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: omapi.c,v 1.40 2000/10/20 01:01:41 neild Exp $ Copyright (c) 1999-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: omapi.c,v 1.41 2000/11/28 23:27:22 mellon Exp $ Copyright (c) 1999-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -934,6 +934,7 @@ isc_result_t dhcp_host_get_value (omapi_object_t *h, omapi_object_t *id,
 	    if (host -> fixed_addr &&
 		evaluate_option_cache (&ip_addrs, (struct packet *)0,
 				       (struct lease *)0,
+				       (struct client_state *)0,
 				       (struct option_state *)0,
 				       (struct option_state *)0,
 				       &global_scope,
@@ -1067,6 +1068,7 @@ isc_result_t dhcp_host_stuff_values (omapi_object_t *c,
 	if (host -> fixed_addr &&
 	    evaluate_option_cache (&ip_addrs, (struct packet *)0,
 				   (struct lease *)0,
+				   (struct client_state *)0,
 				   (struct option_state *)0,
 				   (struct option_state *)0,
 				   &global_scope,
