@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: packet.c,v 1.24 1999/04/12 21:37:03 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: packet.c,v 1.25 1999/04/23 15:38:57 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -52,6 +52,9 @@ u_int32_t checksum (buf, nbytes, sum)
 		log_debug ("sum = %x", sum);
 #endif
 		sum += (u_int16_t) ntohs(*((u_int16_t *)(buf + i)));
+		/* Add carry. */
+		if (sum > 0xFFFF)
+			sum -= 0xFFFF;
 	}	
 
 	/* If there's a single byte left over, checksum it, too.   Network
@@ -61,13 +64,15 @@ u_int32_t checksum (buf, nbytes, sum)
 		log_debug ("sum = %x", sum);
 #endif
 		sum += buf [i] << 8;
+		/* Add carry. */
+		if (sum > 0xFFFF)
+			sum -= 0xFFFF;
 	}
 	
 	return sum;
 }
 
-/* Fold the upper sixteen bits of the checksum down into the lower bits,
-   complement the sum, and then put it into network byte order. */
+/* Finish computing the checksum, and then put it into network byte order. */
 
 u_int32_t wrapsum (sum)
 	u_int32_t sum;
@@ -76,17 +81,7 @@ u_int32_t wrapsum (sum)
 	log_debug ("wrapsum (%x)", sum);
 #endif
 
-	while (sum > 0x10000) {
-		sum = (sum >> 16) + (sum & 0xFFFF);
-#ifdef DEBUG_CHECKSUM_VERBOSE
-		log_debug ("sum = %x", sum);
-#endif
-		sum += (sum >> 16);
-#ifdef DEBUG_CHECKSUM_VERBOSE
-		log_debug ("sum = %x", sum);
-#endif
-	}
-	sum = sum ^ 0xFFFF;
+	sum = ~sum & 0xFFFF;
 #ifdef DEBUG_CHECKSUM_VERBOSE
 	log_debug ("sum = %x", sum);
 #endif
@@ -250,12 +245,12 @@ ssize_t decode_udp_ip_header (interface, buf, bufix, from, data, buflen)
 	  return -1;
 #endif /* USERLAND_FILTER */
 
-  ++ip_packets_seen;
   /* Check the IP header checksum - it should be zero. */
+  ++ip_packets_seen;
   if (wrapsum (checksum (buf + bufix, ip_len, 0))) {
 	  ++ip_packets_bad_checksum;
 	  if (ip_packets_seen > 4 &&
-	      (++ip_packets_seen / ++ip_packets_bad_checksum) < 2) {
+	      (ip_packets_seen / ip_packets_bad_checksum) < 2) {
 		  log_info ("%d bad IP checksums seen in %d packets",
 			    ip_packets_bad_checksum, ip_packets_seen);
 		  ip_packets_seen = ip_packets_bad_checksum = 0;
@@ -279,7 +274,7 @@ ssize_t decode_udp_ip_header (interface, buf, bufix, from, data, buflen)
 	  data = buf + bufix + ip_len + sizeof *udp;
 	  len = ntohs (udp -> uh_ulen) - sizeof *udp;
 	  ++udp_packets_length_checked;
-	  if (len + data > buf + buflen) {
+	  if (len + data > buf + bufix + buflen) {
 		  ++udp_packets_length_overflow;
 		  if (udp_packets_length_checked > 4 &&
 		      (udp_packets_length_checked /
@@ -287,8 +282,8 @@ ssize_t decode_udp_ip_header (interface, buf, bufix, from, data, buflen)
 			  log_info ("%d udp packets in %d too long - dropped",
 				    udp_packets_length_overflow,
 				    udp_packets_length_checked);
-			  udp_packets_length_overflow
-				  = udp_packets_length_checked = 0;
+			  udp_packets_length_overflow =
+				  udp_packets_length_checked = 0;
 		  }
 		  return -1;
 	  }
@@ -310,10 +305,10 @@ ssize_t decode_udp_ip_header (interface, buf, bufix, from, data, buflen)
 
   ++udp_packets_seen;
   if (usum && usum != sum) {
-	  ++udp_packets_bad_checksum;
+	  udp_packets_bad_checksum++;
 	  if (udp_packets_seen > 4 &&
 	      (udp_packets_seen / udp_packets_bad_checksum) < 2) {
-		  log_info ("%d bad udp checksums seen in %d packets",
+		  log_info ("%d bad udp checksums in %d packets",
 			    udp_packets_bad_checksum, udp_packets_seen);
 		  udp_packets_seen = udp_packets_bad_checksum = 0;
 	  }
