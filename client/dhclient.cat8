@@ -96,6 +96,15 @@ CCOOMMMMAANNDD LLIINNEE
        than  the  standard  (port  68), the --pp flag may used.  It
        should be followed by the udp port  number  that  dhclient
        should use.  This is mostly useful for debugging purposes.
+       If the --pp flag is  specified,  the  client  will  transmit
+       responses  to  servers  at  a port number that is one less
+       than the one specified - i.e., if you specify --pp 68,  then
+       the client will listen on port 68 and transmit to port 67.
+       Datagrams that must go through relay agents  are  sent  to
+       the  port  number specified with the --pp flag - if you wish
+       to use alternate port  numbers,  you  must  configure  any
+       relay  agents you are using to use the same alternate port
+       numbers.
 
        Dhclient will normally run in the foreground until it  has
        configured  an  interface, and then will revert to running
@@ -115,15 +124,6 @@ FFIILLEESS
 
 SSEEEE AALLSSOO
        dhcpd(8),          dhcrelay(8),          dhclient.conf(5),
-       dhclient.leases(5)
-
-AAUUTTHHOORR
-       ddhhcclliieenntt((88)) has been written  for  the  Internet  Software
-       Consortium  by Ted Lemon <mellon@fugue.com> in cooperation
-       with Vixie Enterprises.  To learn more about the  Internet
-       Software Consortium, see hhttttpp::////wwwwww..vviixx..ccoomm//iisscc..  To learn
-       more about Vixie Enterprises, see hhttttpp::////wwwwww..vviixx..ccoomm..
-
 
 
 
@@ -135,6 +135,15 @@ AAUUTTHHOORR
 
 dhclient(8)                                           dhclient(8)
 
+
+       dhclient.leases(5)
+
+AAUUTTHHOORR
+       ddhhcclliieenntt((88)) has been written  for  the  Internet  Software
+       Consortium  by Ted Lemon <mellon@fugue.com> in cooperation
+       with Vixie Enterprises.  To learn more about the  Internet
+       Software Consortium, see hhttttpp::////wwwwww..vviixx..ccoomm//iisscc..  To learn
+       more about Vixie Enterprises, see hhttttpp::////wwwwww..vviixx..ccoomm..
 
        This client was substantially  modified  and  enhanced  by
        Elliot  Poger for use on Linux while he was working on the
@@ -150,15 +159,6 @@ dhclient(8)                                           dhclient(8)
        port  and  maintain  system-specific configuration code to
        these operating systems - instead, the  shell  script  can
        invoke the native tools to accomplish the same purpose.
-
-
-
-
-
-
-
-
-
 
 
 

@@ -243,19 +243,19 @@ OOPPTTIIOONN MMOODDIIFFIIEERRSS
         pprreeppeenndd {{ [[ _o_p_t_i_o_n _d_e_c_l_a_r_a_t_i_o_n ] [,, _._._.  _o_p_t_i_o_n  _d_e_c_l_a_r_a_­
        _t_i_o_n ]}}
 
-       If for some set of options the client should first a value
-       it supplies, and then  use  the  values  supplied  by  the
+       If  for  some set of options the client should use a value
+       you supply, and  then  use  the  values  supplied  by  the
        server, if any, these values can be defined in the pprreeppeenndd
        statement.   The pprreeppeenndd statement can only  be  used  for
-       options which allow more than one value to be given.
+       options  which  allow  more  than  one  value to be given.
+       This restriction  is  not  enforced  -  if  violated,  the
+       results are unpredictable.
 
        _T_h_e aappppeenndd _s_t_a_t_e_m_e_n_t
 
         aappppeenndd {{ [[ _o_p_t_i_o_n _d_e_c_l_a_r_a_t_i_o_n ] [,, _._._. _o_p_t_i_o_n _d_e_c_l_a_r_a_t_i_o_n
        ]}}
 
-       If for some set of options the client should first a value
-       it  supplies,  and  then  use  the  values supplied by the
 
 
 
@@ -268,9 +268,13 @@ OOPPTTIIOONN MMOODDIIFFIIEERRSS
 dhclient.conf(5)                                 dhclient.conf(5)
 
 
-       server, if any, these values can be defined in the  aappppeenndd
+       If for some set of options the client should first use the
+       values supplied by the server, if any, and then use values
+       you supply, these values can  be  defined  in  the  aappppeenndd
        statement.    The  aappppeenndd  statement  can only be used for
-       options which allow more than one value to be given.
+       options which allow more  than  one  value  to  be  given.
+       This  restriction  is not enforced - if you ignore it, the
+       behaviour will be unpredictable.
 
 LLEEAASSEE DDEECCLLAARRAATTIIOONNSS
        _T_h_e lleeaassee _d_e_c_l_a_r_a_t_i_o_n
@@ -319,10 +323,6 @@ LLEEAASSEE DDEECCLLAARRAATTIIOONNSS
        dhclient.conf  file,  the  interface should also be speci­
        fied, although this is not required.
 
-        ffiixxeedd--aaddddrreessss _i_p_-_a_d_d_r_e_s_s;;
-
-       The ffiixxeedd--aaddddrreessss statement is used to set the ip  address
-
 
 
                                                                 5
@@ -334,6 +334,9 @@ LLEEAASSEE DDEECCLLAARRAATTIIOONNSS
 dhclient.conf(5)                                 dhclient.conf(5)
 
 
+        ffiixxeedd--aaddddrreessss _i_p_-_a_d_d_r_e_s_s;;
+
+       The ffiixxeedd--aaddddrreessss statement is used to set the ip  address
        of  a  particular  lease.   This is required for all lease
        statements.   The IP address must be specified as a dotted
        quad (e.g., 12.34.56.78).
@@ -385,9 +388,6 @@ dhclient.conf(5)                                 dhclient.conf(5)
        The  dhcp  client automatically declares this parameter if
        it used a media type (see the mmeeddiiaa statement)  when  con­
        figuring  the  interface in order to obtain a lease.  This
-       statement should be used in predefined leases only if  the
-       network interface requires media type configuration.
-
 
 
 
@@ -399,6 +399,9 @@ dhclient.conf(5)                                 dhclient.conf(5)
 
 dhclient.conf(5)                                 dhclient.conf(5)
 
+
+       statement should be used in predefined leases only if  the
+       network interface requires media type configuration.
 
         rreenneeww _d_a_t_e;;
 
@@ -451,9 +454,6 @@ AALLIIAASS DDEECCLLAARRAATTIIOONNSS
 
        The  alias  declaration  resembles  a  lease  declaration,
        except that options other than the subnet-mask option  are
-       ignored  by  the standard client configuration script, and
-       expiry times are ignored.   A  typical  alias  declaration
-       includes   an   interface   declaration,  a  fixed-address
 
 
 
@@ -466,9 +466,12 @@ AALLIIAASS DDEECCLLAARRAATTIIOONNSS
 dhclient.conf(5)                                 dhclient.conf(5)
 
 
-       declaration for the IP alias address,  and  a  subnet-mask
-       option  declaration.    A medium statement should never be
-       included in an alias declaration.
+       ignored  by  the standard client configuration script, and
+       expiry times are ignored.   A  typical  alias  declaration
+       includes  an interface declaration, a fixed-address decla­
+       ration for the IP alias address, and a subnet-mask  option
+       declaration.   A medium statement should never be included
+       in an alias declaration.
 
 OOTTHHEERR DDEECCLLAARRAATTIIOONNSS
         rreejjeecctt _i_p_-_a_d_d_r_e_s_s;;
@@ -517,9 +520,6 @@ OOTTHHEERR DDEECCLLAARRAATTIIOONNSS
 SSAAMMPPLLEE
        The  following configuration file is used on a laptop run­
        ning  NetBSD  1.3.    The  laptop  has  an  IP  alias   of
-       192.5.5.213,  and  has one interface, ep0 (a 3com 3C589C).
-       Booting intervals have been shortened  somewhat  from  the
-       default,  because the client is known to spend most of its
 
 
 
@@ -532,6 +532,9 @@ SSAAMMPPLLEE
 dhclient.conf(5)                                 dhclient.conf(5)
 
 
+       192.5.5.213,  and  has one interface, ep0 (a 3com 3C589C).
+       Booting intervals have been shortened  somewhat  from  the
+       default,  because the client is known to spend most of its
        time on networks with little DHCP activity.    The  laptop
        does roam to multiple networks.
 
@@ -576,9 +579,6 @@ AAUUTTHHOORR
        ject  was  provided  by the Internet Software Corporation.
        Information about the Internet Software Consortium can  be
        found at hhttttpp::////wwwwww..iisscc..oorrgg//iisscc..
-
-
-
 
 
 

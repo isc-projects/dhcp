@@ -532,8 +532,8 @@ RREEFFEERREENNCCEE:: PPAARRAAMMEETTEERRSS
 dhcpd.conf(5)                                       dhcpd.conf(5)
 
 
-       by colons.   The _h_a_r_d_w_a_r_e_f_R _s_t_a_t_e_m_e_n_t _m_a_y _a_l_s_o _b_e _u_s_e_d _f_o_r
-       _D_H_C_P _c_l_i_e_n_t_s_.
+       by  colons.    The _h_a_r_d_w_a_r_e statement may also be used for
+       DHCP clients.
 
        TThhee _f_i_l_e_n_a_m_e ssttaatteemmeenntt
 
@@ -759,6 +759,24 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
        true for you site, you are probably better off not  trying
        to use this flag.
 
+       TThhee _a_l_w_a_y_s_-_r_e_p_l_y_-_r_f_c_1_0_4_8 ssttaatteemmeenntt
+
+        aallwwaayyss--rreeppllyy--rrffcc11004488 _f_l_a_g;;
+
+       Some  BOOTP clients expect RFC1048-style responses, but do
+       not follow RFC1048 when sending their requests.   You  can
+       tell  that  a  client  is having this problem if it is not
+       getting the options you have configured for it and if  you
+       see  in the server log the message "(non-rfc1048)" printed
+       with each BOOTREQUEST that is logged.
+
+       If you want to send rfc1048 options to such a client,  you
+       can  set  the aallwwaayyss--rreeppllyy--rrffcc11004488 option in that client's
+       host declaration, and the DHCP server will respond with an
+       RFC-1048-style  vendor  options  field.   This flag can be
+       set in any scope, and will affect all clients  covered  by
+       that scope.
+
        TThhee _s_e_r_v_e_r_-_i_d_e_n_t_i_f_i_e_r ssttaatteemmeenntt
 
         sseerrvveerr--iiddeennttiiffiieerr _h_o_s_t_n_a_m_e;;
@@ -766,6 +784,18 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
        The  server-identifier statement can be used to define the
        value that is sent in the DHCP  Server  Identifier  option
        for  a  given  scope.    The value specified mmuusstt be an IP
+
+
+
+                                                               12
+
+
+
+
+
+dhcpd.conf(5)                                       dhcpd.conf(5)
+
+
        address for the DHCP server, and must be reachable by  all
        clients served by a particular scope.
 
@@ -785,17 +815,6 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
        server, and it is desired that the  clients  use  this  IP
        address when contacting the server.
 
-
-
-                                                               12
-
-
-
-
-
-dhcpd.conf(5)                                       dhcpd.conf(5)
-
-
        Supplying a value for the dhcp-server-identifier option is
        equivalent to using the server-identifier statement.
 
@@ -812,25 +831,6 @@ AAUUTTHHOORR
        provided  by  the Internet Software Corporation.  Informa­
        tion about the Internet Software Consortium can  be  found
        at hhttttpp::////wwwwww..iisscc..oorrgg//iisscc..
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

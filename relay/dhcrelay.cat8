@@ -14,8 +14,8 @@ SSYYNNOOPPSSIISS
 DDEESSCCRRIIPPTTIIOONN
        The  Internet Software Consortium DHCP Relay Agent, dhcre­
        lay, provides a means for relaying DHCP and BOOTP requests
-       from  a  subnet to which no DHCP server is directly to one
-       or more DHCP servers on other subnets.
+       from  a  subnet  to  which no DHCP server is directly con­
+       nected to one or more DHCP servers on other subnets.
 
 OOPPEERRAATTIIOONN
        The DHCP Relay Agent listens  for  DHCP  requests  on  all
@@ -48,16 +48,16 @@ CCOOMMMMAANNDD LLIINNEE
        than  the  standard  (port  67), the --pp flag may used.  It
        should be followed by the udp port  number  that  dhcrelay
        should use.  This is mostly useful for debugging purposes.
+       If the --pp flag is specified, the relay agent will transmit
+       responses  to clients at a port number that is one greater
+       than the one specified - i.e., if you specify --pp 67,  then
+       the  relay  agent  will  listen on port 67 and transmit to
+       port 68.   Transmissions to servers will be  sent  to  the
+       same port number that it specified in the --pp flag.
 
-       Dhcrelay will normally run in the foreground until it  has
-       configured  an  interface, and then will revert to running
+       Dhcrelay  will normally run in the foreground until it has
+       configured an interface, and then will revert  to  running
        in the background.  To run force dhcrelay to always run as
-       a  foreground  process,  the  --dd flag should be specified.
-       This is useful when running dhcrelay under a debugger,  or
-       when running it out of inittab on System V systems.
-
-       Dhcrelay  will normally print its network configuration on
-       startup.  This can be annoying in a system startup  script
 
 
 
@@ -70,10 +70,16 @@ CCOOMMMMAANNDD LLIINNEE
 dhcrelay(8)                                           dhcrelay(8)
 
 
+       a foreground process, the --dd  flag  should  be  specified.
+       This  is useful when running dhcrelay under a debugger, or
+       when running it out of inittab on System V systems.
+
+       Dhcrelay will normally print its network configuration  on
+       startup.   This can be annoying in a system startup script
        - to disable this behaviour, specify the _-_q flag.
 
-       The  name  of  at  least one DHCP server to which DHCP and
-       BOOTP requests should be relayed must be specified on  the
+       The name of at least one DHCP server  to  which  DHCP  and
+       BOOTP  requests should be relayed must be specified on the
        command line.
 
 
@@ -81,17 +87,11 @@ SSEEEE AALLSSOO
        dhclient(8), dhcpd(8), RFC2132, RFC2131.
 
 AAUUTTHHOORR
-       ddhhccrreellaayy((88))  has  been  written  for the Internet Software
-       Consortium by Ted Lemon <mellon@fugue.com> in  cooperation
-       with  Vixie Enterprises.  To learn more about the Internet
+       ddhhccrreellaayy((88)) has been written  for  the  Internet  Software
+       Consortium  by Ted Lemon <mellon@fugue.com> in cooperation
+       with Vixie Enterprises.  To learn more about the  Internet
        Software Consortium, see hhttttpp::////wwwwww..vviixx..ccoomm//iisscc..  To learn
        more about Vixie Enterprises, see hhttttpp::////wwwwww..vviixx..ccoomm..
-
-
-
-
-
-
 
 
 

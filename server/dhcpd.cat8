@@ -122,8 +122,8 @@ CCOOMMMMAANNDD LLIINNEE
        If  dhcpd  should listen on a port other than the standard
        (port 67), the --pp flag may used.  It should be followed by
        the udp port number on which dhcpd should listen.  This is
-       mostly useful for debugging purposes.
-
+       mostly useful for debugging purposes.  If the --pp  flag  is
+       specified,  the  server will transmit responses to clients
 
 
 
@@ -135,6 +135,14 @@ CCOOMMMMAANNDD LLIINNEE
 
 dhcpd(8)                                                 dhcpd(8)
 
+
+       at a port number that is one greater than the  one  speci­
+       fied  -  i.e.,  if you specify --pp 67, then the server will
+       listen on port 67 and transmit to port 68.  Datagrams that
+       must  go  through relay agents are sent to the port number
+       specified with the --pp flag - if you wish to use  alternate
+       port  numbers, you must configure any relay agents you are
+       using to use the same alternate port numbers.
 
        To run dhcpd as a foreground process, rather than allowing
        it  to  run  as  a  daemon  in the background, the --ff flag
@@ -182,14 +190,6 @@ SSuubbnneettss
               range 239.252.197.10 239.252.197.250;
                }
 
-       Multiple address ranges may be specified like this:
-
-            subnet 239.252.197.0 netmask 255.255.255.0 {
-              range 239.252.197.10 239.252.197.107;
-              range 239.252.197.113 239.252.197.250;
-            }
-
-       If  a  subnet will only be provided with BOOTP service and
 
 
 
@@ -202,6 +202,14 @@ SSuubbnneettss
 dhcpd(8)                                                 dhcpd(8)
 
 
+       Multiple address ranges may be specified like this:
+
+            subnet 239.252.197.0 netmask 255.255.255.0 {
+              range 239.252.197.10 239.252.197.107;
+              range 239.252.197.113 239.252.197.250;
+            }
+
+       If  a  subnet will only be provided with BOOTP service and
        no dynamic address assignment, the  range  clause  can  be
        left out entirely, but the subnet statement must appear.
 
@@ -248,14 +256,6 @@ BBOOOOTTPP SSuuppppoorrtt
        Each BOOTP client  must  be  explicitly  declared  in  the
        dhcpd.conf  file.    A  very basic client declaration will
        specify the client network  interface's  hardware  address
-       and  the  IP  address  to  assign to that client.   If the
-       client needs to be able to  load  a  boot  file  from  the
-       server,  that  file's  name  must be specified.   A simple
-       bootp client declaration might look like this:
-
-            host haagen {
-              hardware ethernet 08:00:2b:4c:59:23;
-              fixed-address 239.252.197.9;
 
 
 
@@ -268,6 +268,14 @@ BBOOOOTTPP SSuuppppoorrtt
 dhcpd(8)                                                 dhcpd(8)
 
 
+       and  the  IP  address  to  assign to that client.   If the
+       client needs to be able to  load  a  boot  file  from  the
+       server,  that  file's  name  must be specified.   A simple
+       bootp client declaration might look like this:
+
+            host haagen {
+              hardware ethernet 08:00:2b:4c:59:23;
+              fixed-address 239.252.197.9;
               filename "/tftpboot/haagen.boot";
             }
 
@@ -314,14 +322,6 @@ OOppttiioonnss
 
 FFIILLEESS
        //eettcc//ddhhccppdd..ccoonnff,, //vvaarr//ddbb//ddhhccppdd..lleeaasseess,, //vvaarr//rruunn//ddhhccppdd..ppiidd,,
-       //vvaarr//ddbb//ddhhccppdd..lleeaasseess~~..
-
-SSEEEE AALLSSOO
-       dhclient(8), dhcrelay(8), dhcpd.conf(5), dhcpd.leases(5)
-
-AAUUTTHHOORR
-       ddhhccppdd((88)) was written by Ted Lemon <mellon@vix.com> under a
-       contract with Vixie Labs.   Funding for this  project  was
 
 
 
@@ -334,17 +334,17 @@ AAUUTTHHOORR
 dhcpd(8)                                                 dhcpd(8)
 
 
+       //vvaarr//ddbb//ddhhccppdd..lleeaasseess~~..
+
+SSEEEE AALLSSOO
+       dhclient(8), dhcrelay(8), dhcpd.conf(5), dhcpd.leases(5)
+
+AAUUTTHHOORR
+       ddhhccppdd((88)) was written by Ted Lemon <mellon@vix.com> under a
+       contract with Vixie Labs.   Funding for this  project  was
        provided  by  the Internet Software Corporation.  Informa­
        tion about the Internet Software Consortium can  be  found
        at hhttttpp::////wwwwww..iisscc..oorrgg//iisscc..
-
-
-
-
-
-
-
-
 
 
 

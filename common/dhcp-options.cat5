@@ -55,9 +55,9 @@ RREEFFEERREENNCCEE:: OOPPTTIIOONN SSTTAATTEEMMEENNTTSS
        specified in hexadecimal, seperated by colons.   For exam­
        ple:
 
-            option client-identifier "CLIENT-FOO";
+            option dhcp-client-identifier "CLIENT-FOO";
        or
-            option client-identifier 43:4c:49:45:54:2d:46:4f:4f;
+            option dhcp-client-identifier 43:4c:49:45:54:2d:46:4f:4f;
 
 
 
@@ -518,7 +518,7 @@ dhcpd-options(5)                                 dhcpd-options(5)
           identifier in a host declaration,  so  that  dhcpd  can
           find  the  host  record  by matching against the client
           identifier.
-
+       ooppttiioonn nniisspplluuss--ddoommaaiinn _s_t_r_i_n_g;;
 
 
 
@@ -532,15 +532,110 @@ dhcpd-options(5)                                 dhcpd-options(5)
 dhcpd-options(5)                                 dhcpd-options(5)
 
 
+          This option specifies the name  of  the  client's  NIS+
+          domain.   The domain is formatted as a character string
+          consisting of characters from the NVT  ASCII  character
+          set.
+       ooppttiioonn nniisspplluuss--sseerrvveerrss _i_p_-_a_d_d_r_e_s_s [,, _i_p_-_a_d_d_r_e_s_s...  ];;
+
+          This option specifies a list of IP addresses indicating
+          NIS+ servers available to the client.   Servers  should
+          be listed in order of preference.
+
+       ooppttiioonn ttffttpp--sseerrvveerr--nnaammee _s_t_r_i_n_g;;
+
+          This  option  is used to identify a TFTP server and, if
+          supported by the client, should have the same effect as
+          the   sseerrvveerr--nnaammee   declaration.    BOOTP  clients  are
+          unlikely to support this  option.   Some  DHCP  clients
+          will support it, and others actually require it.
+
+       ooppttiioonn bboooottffiillee--nnaammee _s_t_r_i_n_g;;
+
+          This  option  is used to identify a bootstrap file.  If
+          supported by the client, it should have the same effect
+          as   the   ffiilleennaammee  declaration.   BOOTP  clients  are
+          unlikely to support this  option.   Some  DHCP  clients
+          will support it, and others actually require it.
+
+       ooppttiioonn mmoobbiillee--iipp--hhoommee--aaggeenntt _i_p_-_a_d_d_r_e_s_s [,, _i_p_-_a_d_d_r_e_s_s... ];;
+
+          This option specifies a list of IP addresses indicating
+          mobile  IP home agents available to the client.  Agents
+          should be listed in order of preference, although  nor­
+          mally there will be only one such agent.
+
+       ooppttiioonn ssmmttpp--sseerrvveerr _i_p_-_a_d_d_r_e_s_s [,, _i_p_-_a_d_d_r_e_s_s... ];;
+
+          The SMTP server option specifies a list of SMTP servers
+          available to the client.  Servers should be  listed  in
+          order of preference.
+
+       ooppttiioonn ppoopp--sseerrvveerr _i_p_-_a_d_d_r_e_s_s [,, _i_p_-_a_d_d_r_e_s_s... ];;
+
+          The  POP3 server option specifies a list of POP3 avail­
+          able to the client.  Servers should be listed in  order
+          of preference.
+
+       ooppttiioonn nnnnttpp--sseerrvveerr _i_p_-_a_d_d_r_e_s_s [,, _i_p_-_a_d_d_r_e_s_s... ];;
+
+          The  NNTP server option specifies a list of NNTP avail­
+          able to the client.  Servers should be listed in  order
+          of preference.
+
+       ooppttiioonn wwwwww--sseerrvveerr _i_p_-_a_d_d_r_e_s_s [,, _i_p_-_a_d_d_r_e_s_s... ];;
+
+          The WWW server option specifies a list of WWW available
+
+
+
+                                                                9
+
+
+
+
+
+dhcpd-options(5)                                 dhcpd-options(5)
+
+
+          to the client.  Servers should be listed  in  order  of
+          preference.
+
+       ooppttiioonn ffiinnggeerr--sseerrvveerr _i_p_-_a_d_d_r_e_s_s [,, _i_p_-_a_d_d_r_e_s_s... ];;
+
+          The  Finger  server  option  specifies a list of Finger
+          available to the client.  Servers should be  listed  in
+          order of preference.
+
+       ooppttiioonn iirrcc--sseerrvveerr _i_p_-_a_d_d_r_e_s_s [,, _i_p_-_a_d_d_r_e_s_s... ];;
+
+          The IRC server option specifies a list of IRC available
+          to the client.  Servers should be listed  in  order  of
+          preference.
+
+       ooppttiioonn ssttrreeeettttaallkk--sseerrvveerr _i_p_-_a_d_d_r_e_s_s [,, _i_p_-_a_d_d_r_e_s_s... ];;
+
+          The  StreetTalk  server  option  specifies  a  list  of
+          StreetTalk servers available to  the  client.   Servers
+          should be listed in order of preference.
+
+       ooppttiioonn ssttrreeeettaallkk--ddiirreeccttoorryy--aassssiissttaannccee--sseerrvveerr _i_p_-_a_d_d_r_e_s_s [,,
+       _i_p_-_a_d_d_r_e_s_s... ];;
+
+          The  StreetTalk  Directory  Assistance  (STDA)   server
+          option  specifies  a  list of STDA servers available to
+          the client.  Servers should be listed in order of pref­
+          erence.
+
 SSEEEE AALLSSOO
-       dhcpd.conf(5),     dhcpd.leases(5),      dhclient.conf(5),
+       dhcpd.conf(5),      dhcpd.leases(5),     dhclient.conf(5),
        dhcpd(8), dhclient(8), RFC2132, RFC2131.
 
 AAUUTTHHOORR
        ddhhccppdd((88)) was written by Ted Lemon <mellon@vix.com> under a
-       contract with Vixie Labs.   Funding for this  project  was
-       provided  by  the Internet Software Corporation.  Informa­
-       tion about the Internet Software Consortium can  be  found
+       contract  with  Vixie Labs.   Funding for this project was
+       provided by the Internet Software  Corporation.   Informa­
+       tion  about  the Internet Software Consortium can be found
        at hhttttpp::////wwwwww..iisscc..oorrgg//iisscc..
 
 
@@ -560,35 +655,6 @@ AAUUTTHHOORR
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                                                                9
+                                                               10
 
 
