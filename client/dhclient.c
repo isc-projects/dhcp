@@ -56,7 +56,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.44.2.12 1999/02/03 23:29:39 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.44.2.13 1999/02/05 20:31:22 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -206,6 +206,7 @@ int main (argc, argv, envp)
 			     (struct string_list *)0);
 		script_go ((struct interface_info *)0);
 
+		note ("No broadcast interfaces found - exiting.");
 		/* Nothing more to do. */
 		exit (0);
 	} else {
