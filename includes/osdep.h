@@ -78,6 +78,10 @@
 #  include "cf/freebsd.h"
 #endif
 
+#ifdef OpenBSD
+#  include "cf/openbsd.h"
+#endif
+
 #if defined (__osf__) && defined (__alpha)
 #  include "cf/alphaosf.h"
 #endif
