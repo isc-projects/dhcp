@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: alloc.c,v 1.35 1999/10/14 17:43:02 mellon Exp $ Copyright (c) 1995, 1996, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: alloc.c,v 1.36 2000/01/05 17:57:03 mellon Exp $ Copyright (c) 1995, 1996, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -334,27 +334,6 @@ void free_pool (pool, name)
 {
 	dfree (pool, name);
 }
-
-#if defined (FAILOVER_PROTOCOL)
-struct failover_peer *new_failover_peer (name)
-	const char *name;
-{
-	struct failover_peer *peer = ((struct failover_peer *)
-				      dmalloc (sizeof (struct failover_peer),
-					       name));
-	if (!peer)
-		return peer;
-	memset (peer, 0, sizeof *peer);
-	return peer;
-}
-
-void free_failover_peer (peer, name)
-	struct failover_peer *peer;
-	const char *name;
-{
-	dfree (peer, name);
-}
-#endif /* defined (FAILOVER_PROTOCOL) */
 
 struct auth_key *new_auth_key (len, name)
 	unsigned len;
