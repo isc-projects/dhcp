@@ -1,7 +1,7 @@
 		     Internet Software Consortium
 	   Dynamic Host Configuration Protocol Distribution
 		   Version 2, Beta 1, Patchlevel 10
-			  February 3, 1998
+			  February 5, 1998
 
 			    Release Notes
 
@@ -13,8 +13,8 @@ stable.
 
 Version 1 of the ISC DHCP Distribution includes just a DHCP Server.
 Version 1 has been in feature freeze since late 1996, and is quite
-stable.  This is the release that we would expect most sites to run in
-production.
+stable.  This is the release that we would expect very conservative
+sites to run in production, but it is no longer recommended.
 
 Version 2 of the ISC DHCP Distribution adds a DHCP Client and a
 DHCP/BOOTP Relay Agent to the DHCP Server that was offered in version
@@ -33,20 +33,62 @@ server:
 	  addresses other than the one the server knows they should be
 	  using are disciplined quickly.
 
-This version is now in Beta testing, and is planned for release in
-mid-1999.  It has a number of new features, and is the release that we
-would expect sites that want some stability but need the new lease
-testing feature, or need a client or relay agent.   Note that it is
-possible to run the Version 1 server with the Version 2 client.
+This version has been in a near feature freeze since January of 1998,
+has been in Beta test since then, and is planned for final release in
+mid-1999.  It has a number of important features, and is the release
+that we would expect most sites to run.  It is possible to run the
+Version 1 server with the Version 2 client at sites that want to be
+really conservative.
 
-Version 3 of the ISC DHCP Distribution will add Dynamic DNS Support,
+Version 3 of the ISC DHCP Distribution will add conditional behaviour,
+client classing, Dynamic DNS Support, DHCPv4 16-bit option codes,
 asynchronous DNS query resolution, DHCP Authentication, and possibly
 support for a DHCP Interserver Protocol and live querying of the DHCP
-database.   This release is not expected to be stable in the near
-future, and is intended for sites that are in a position to
+database.  Currently, only client classing and conditional behaviour
+have been implemented - the DNS code is waiting for an enhanced DNS
+resolver.  The code has gone through a major internal restructuring
+which will help to support wider option codes, and possibly IPv6, as
+well as a more sensible memory allocation strategy.  This release is
+running in producion at the ISC, but is not expected to be stable in
+the near future, and is intended for sites that are in a position to
 experiment, or for sites that desperately need the new features.
 
 	     CHANGES FROM VERSION 2.0 BETA 1 PATCHLEVEL 9
+
+- Correct the hopelessly outdated information about Linux at the top
+  of the README - many apologies to the Linux people who have had to
+  read that nonsense for the past couple of snapshots and have been
+  confused or annoyed by it.   I simply hadn't read it recently, and
+  didn't realize how out-of-date it was.
+
+- Print a message if the client finds no broadcast interfaces to
+  configure.
+
+- Add support for use-lease-addr-for-default-route flag in server, so
+  that Windows machines can be made to ARP for all addresses.
+
+- Update README file to mention new Linux gotchas.
+
+- After finally understanding Brian Murrel's code (my fault, not his)
+  to get interface names from /proc/net/dev on Linux, fix what I broke
+  of his code and document it.
+
+- Use sendto rather than send for SOCK_PACKET sockets, because they
+  can't be connected, only bound.   :'(
+
+- Fix up SOCK_PACKET creation so that the kernel doesn't complain
+  about it.
+
+- Fix incorrect tests in linux client script:
+  [ $relmajor == 2 ] -> [ $relmajor -eq 2 ]
+
+- Make typedefs for u8, u16 and u32 types.   These are Linux kernel
+  internal data types which are unfortunately exposed in the linux
+  packetfilter header file.
+
+- Don't include <net/ethernet.h> in lpf.c - it defines things we're
+  already correctly defining elsewhere, and doesn't define any useful
+  new stuff.
 
 - Finally fix client PREINIT bug that causes interfaces not specified
   on the command line to be preinitialized.   If no interfaces are
