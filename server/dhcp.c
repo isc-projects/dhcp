@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.192.2.21 2002/04/20 21:58:49 murray Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.192.2.22 2002/04/30 05:09:33 murray Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1544,13 +1544,11 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 
 	/* If the lease is from a pool, run the pool scope. */
 	if (lease -> pool)
-		execute_statements_in_scope ((struct binding_value **)0,
-					     packet, lease,
-					     (struct client_state *)0,
-					     packet -> options,
-					     state -> options, &lease -> scope,
-					     lease -> pool -> group,
-					     lease -> subnet -> group);
+		(execute_statements_in_scope
+		 ((struct binding_value **)0, packet, lease,
+		  (struct client_state *)0, packet -> options,
+		  state -> options, &lease -> scope, lease -> pool -> group,
+		  lease -> pool -> shared_network -> group));
 
 	/* Execute statements from class scopes. */
 	for (i = packet -> class_count; i > 0; i--) {
