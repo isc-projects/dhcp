@@ -22,16 +22,21 @@
 
 #define DEFAULT_HASH_SIZE	97
 
+typedef int (*hash_reference) (void *, void *, const char *, int);
+typedef int (*hash_dereference) (void *, const char *, int);
+
 struct hash_bucket {
 	struct hash_bucket *next;
 	const unsigned char *name;
 	unsigned len;
-	unsigned char *value;
+	void *value;
 };
 
 struct hash_table {
 	unsigned hash_count;
 	struct hash_bucket *buckets [DEFAULT_HASH_SIZE];
+	hash_reference referencer;
+	hash_dereference dereferencer;
 };
 
 struct named_hash {
