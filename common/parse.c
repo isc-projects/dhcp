@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.33 1999/07/20 13:24:39 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.34 1999/07/20 17:58:33 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1314,6 +1314,7 @@ int parse_on_statement (result, cfile, lose)
 	if (!executable_statement_allocate (result,
 					    "parse_executable_statement"))
 		log_fatal ("no memory for new statement.");
+	(*result) -> op = on_statement;
 
 	token = next_token (&val, cfile);
 	switch (token) {
@@ -1322,11 +1323,11 @@ int parse_on_statement (result, cfile, lose)
 		break;
 		
 	      case COMMIT:
-		(*result) -> data.on.evtype = expiry;
+		(*result) -> data.on.evtype = commit;
 		break;
 		
 	      case RELEASE:
-		(*result) -> data.on.evtype = expiry;
+		(*result) -> data.on.evtype = release;
 		break;
 		
 	      default:
@@ -1458,8 +1459,8 @@ int parse_if_statement (result, cfile, lose)
 			return 0;
 		} else {
 			token = next_token (&val, cfile);
-			if (!parse_if_statement (&(*result) -> data.ie.false,
-						 cfile, lose)) {
+			if (!(parse_executable_statements
+			      (&(*result) -> data.ie.false, cfile, lose))) {
 				executable_statement_dereference
 					(result, "parse_if_statement");
 				return 0;
