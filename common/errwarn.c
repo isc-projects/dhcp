@@ -51,7 +51,7 @@ static char fbuf [1024];
 
 /* Log an error message, then exit... */
 
-int error (ANSI_DECL(char *) fmt, VA_DOTDOTDOT)
+void error (ANSI_DECL(char *) fmt, VA_DOTDOTDOT)
      KandR (char *fmt;)
      va_dcl
 {
