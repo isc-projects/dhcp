@@ -190,6 +190,7 @@ void bootp (packet)
 void dhcp (packet)
 	struct packet *packet;
 {
+note ("got a dhcp packet: %d", packet -> packet_type);
 	switch (packet -> packet_type) {
 	      case DHCPOFFER:
 		dhcpoffer (packet);
@@ -338,6 +339,7 @@ void send_request (packet)
 	struct tree_cache dhcprequest_tree;
 	struct tree_cache dhcprqo_tree;
 	struct tree_cache dhcprqa_tree;
+	struct tree_cache dhcpsid_tree;
 
 	memset (options, 0, sizeof options);
 	memset (&outgoing, 0, sizeof outgoing);
@@ -360,15 +362,25 @@ void send_request (packet)
 	options [DHO_DHCP_MESSAGE] -> timeout = 0xFFFFFFFF;
 	options [DHO_DHCP_MESSAGE] -> tree = (struct tree *)0;
 
+	/* Request the address we were offered... */
 	options [DHO_DHCP_REQUESTED_ADDRESS] = &dhcprqa_tree;
 	options [DHO_DHCP_REQUESTED_ADDRESS] -> value = 
-		packet -> options [DHO_DHCP_REQUESTED_ADDRESS].data;
-	options [DHO_DHCP_REQUESTED_ADDRESS] -> len =
-		packet -> options [DHO_DHCP_REQUESTED_ADDRESS].len;
-	options [DHO_DHCP_REQUESTED_ADDRESS] -> buf_size =
-		packet -> options [DHO_DHCP_REQUESTED_ADDRESS].len;
+		(unsigned char *)&packet -> raw -> yiaddr;
+	options [DHO_DHCP_REQUESTED_ADDRESS] -> len = 4;
+	options [DHO_DHCP_REQUESTED_ADDRESS] -> buf_size = 4;
 	options [DHO_DHCP_REQUESTED_ADDRESS] -> timeout = 0xFFFFFFFF;
 	options [DHO_DHCP_REQUESTED_ADDRESS] -> tree = (struct tree *)0;
+
+	/* Send back the server identifier... */
+        options [DHO_DHCP_SERVER_IDENTIFIER] = &dhcpsid_tree;
+        options [DHO_DHCP_SERVER_IDENTIFIER] -> value =
+                packet -> options [DHO_DHCP_SERVER_IDENTIFIER].data;
+        options [DHO_DHCP_SERVER_IDENTIFIER] -> len =
+                packet -> options [DHO_DHCP_SERVER_IDENTIFIER].len;
+        options [DHO_DHCP_SERVER_IDENTIFIER] -> buf_size =
+                packet -> options [DHO_DHCP_SERVER_IDENTIFIER].len;
+        options [DHO_DHCP_SERVER_IDENTIFIER] -> timeout = 0xFFFFFFFF;
+        options [DHO_DHCP_SERVER_IDENTIFIER] -> tree = (struct tree *)0;
 
 	/* Set up the option buffer... */
 	cons_options ((struct packet *)0, &outgoing, options, 0);
