@@ -198,10 +198,7 @@ TIME cur_time;
 TIME default_lease_time;
 TIME max_lease_time;
 
-extern u_int32_t *server_addrlist;
-extern int server_addrcount;
 extern u_int16_t server_port;
-struct iaddr siaddr;
 
 int main PROTO ((int, char **, char **));
 void cleanup PROTO ((void));
@@ -315,12 +312,58 @@ void print_lease PROTO ((struct lease *));
 void dump_raw PROTO ((unsigned char *, int));
 
 /* socket.c */
-u_int32_t *get_interface_list PROTO ((int *));
-char *get_interface PROTO ((u_int32_t));
-void listen_on PROTO ((u_int16_t, u_int32_t));
-void dispatch PROTO ((void));
-int sendpkt PROTO ((struct packet *, struct dhcp_packet *,
-			size_t, struct sockaddr *, int));
+#ifdef USE_SOCKET_SEND
+void if_register_send PROTO ((struct interface_info *, struct ifreq *));
+int send_packet PROTO ((struct interface_info *,
+			struct packet *, struct dhcp_packet *,
+			size_t, struct sockaddr *, struct hardware_addr));
+#endif
+#ifdef USE_SOCKET_RECEIVE
+void if_register_receive PROTO ((struct interface_info *, struct ifreq *));
+int receive_packet PROTO ((struct interface_info *,
+			   unsigned char *, size_t,
+			   struct iaddr, struct hardware_addr)
+#endif
+
+/* bpf.c */
+#ifdef USE_BPF_SEND
+void if_register_send PROTO ((struct interface_info *, struct ifreq *));
+int send_packet PROTO ((struct interface_info *,
+			struct packet *, struct dhcp_packet *,
+			size_t, struct sockaddr *, struct hardware_addr));
+#endif
+#ifdef USE_BPF_RECEIVE
+void if_register_receive PROTO ((struct interface_info *, struct ifreq *));
+int receive_packet PROTO ((struct interface_info *,
+			   unsigned char *, size_t,
+			   struct iaddr, struct hardware_addr)
+#endif
+
+/* nit.c */
+#ifdef USE_NIT_SEND
+void if_register_send PROTO ((struct interface_info *, struct ifreq *));
+int send_packet PROTO ((struct interface_info *,
+			struct packet *, struct dhcp_packet *,
+			size_t, struct sockaddr *, struct hardware_addr));
+#endif
+#ifdef USE_NIT_RECEIVE
+void if_register_receive PROTO ((struct interface_info *, struct ifreq *));
+int receive_packet PROTO ((struct interface_info *,
+			   unsigned char *, size_t,
+			   struct iaddr, struct hardware_addr)
+#endif
+
+/* raw.c */
+#ifdef USE_RAW_SEND
+void if_register_send PROTO ((struct interface_info *, struct ifreq *));
+int send_packet PROTO ((struct interface_info *,
+			struct packet *, struct dhcp_packet *,
+			size_t, struct sockaddr *, struct hardware_addr));
+#endif
+
+/* dispatch.c */
+struct interface_info *interfaces;
+void get_interface_list PROTO (void);
 
 /* hash.c */
 struct hash_table *new_hash PROTO ((void));
