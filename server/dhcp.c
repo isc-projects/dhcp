@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.36 1997/01/03 11:39:27 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.37 1997/02/18 14:28:53 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -362,7 +362,8 @@ void nak_lease (packet, cip)
 		(unsigned char *)0;
 
 	/* Set up the option buffer... */
-	cons_options (packet, &outgoing, options, 0, 0);
+	outgoing.packet_length =
+		cons_options (packet, outgoing.raw, options, 0, 0);
 
 /*	memset (&raw.ciaddr, 0, sizeof raw.ciaddr);*/
 	memcpy (&raw.siaddr, server_identifier.iabuf, 4);
@@ -416,7 +417,7 @@ void nak_lease (packet, cip)
 	   Otherwise, broadcast it on the local network. */
 	if (raw.giaddr.s_addr) {
 		to.sin_addr = raw.giaddr;
-		to.sin_port = server_port;
+		to.sin_port = local_port;
 
 		if (outgoing.packet_length < BOOTP_MIN_LEN)
 			outgoing.packet_length = BOOTP_MIN_LEN;
@@ -812,9 +813,11 @@ void ack_lease (packet, lease, offer, when)
 	if (packet -> options [DHO_HOST_NAME].data &&
 	    packet -> options [DHO_HOST_NAME].data
 	    [packet -> options [DHO_HOST_NAME].len - 1] == '\0')
-		cons_options (packet, &outgoing, options, bufs, 1);
+		outgoing.packet_length =
+			cons_options (packet, outgoing.raw, options, bufs, 1);
 	else
-		cons_options (packet, &outgoing, options, bufs, 0);
+		outgoing.packet_length =
+			cons_options (packet, outgoing.raw, options, bufs, 0);
 	if (!offer && outgoing.packet_length < BOOTP_MIN_LEN)
 		outgoing.packet_length = BOOTP_MIN_LEN;
 
@@ -881,7 +884,7 @@ void ack_lease (packet, lease, offer, when)
 	/* If this was gatewayed, send it back to the gateway... */
 	if (raw.giaddr.s_addr) {
 		to.sin_addr = raw.giaddr;
-		to.sin_port = server_port;
+		to.sin_port = local_port;
 
 		if (outgoing.packet_length < BOOTP_MIN_LEN)
 			outgoing.packet_length = BOOTP_MIN_LEN;
@@ -901,7 +904,7 @@ void ack_lease (packet, lease, offer, when)
 	} else if (raw.ciaddr.s_addr && offer == DHCPACK &&
 		   !(raw.flags & htons (BOOTP_BROADCAST))) {
 		to.sin_addr = packet -> raw -> ciaddr;
-		to.sin_port = htons (ntohs (server_port) + 1); /* XXX */
+		to.sin_port = remote_port; /* XXX */
 
 #ifdef USE_FALLBACK
 		result = send_fallback (&fallback_interface,
@@ -915,7 +918,7 @@ void ack_lease (packet, lease, offer, when)
 	/* Otherwise, broadcast it on the local network. */
 	} else {
 		to.sin_addr.s_addr = htonl (INADDR_BROADCAST);
-		to.sin_port = htons (ntohs (server_port) + 1); /* XXX */
+		to.sin_port = remote_port; /* XXX */
 	}
 
 

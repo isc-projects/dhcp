@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.19 1996/09/11 05:52:18 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.20 1997/02/18 14:28:54 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -155,9 +155,9 @@ void parse_option_buffer (packet, buffer, length)
    three seperate buffers if needed.  This allows us to cons up a set
    of vendor options using the same routine. */
 
-void cons_options (inpacket, outpacket, options, overload, terminate)
+int cons_options (inpacket, outpacket, options, overload, terminate)
 	struct packet *inpacket;
-	struct packet *outpacket;
+	struct dhcp_packet *outpacket;
 	struct tree_cache **options;
 	int overload;	/* Overload flags that may be set. */
 	int terminate;
@@ -168,6 +168,7 @@ void cons_options (inpacket, outpacket, options, overload, terminate)
 	int main_buffer_size;
 	int mainbufix, bufix;
 	int option_size;
+	int length;
 
 	/* If the client has provided a maximum DHCP message size,
 	   use that.   Otherwise, we use the default MTU size (576 bytes). */
@@ -225,7 +226,7 @@ void cons_options (inpacket, outpacket, options, overload, terminate)
 				     terminate);
 
 	/* Put the cookie up front... */
-	memcpy (outpacket -> raw -> options, DHCP_OPTIONS_COOKIE, 4);
+	memcpy (outpacket -> options, DHCP_OPTIONS_COOKIE, 4);
 	mainbufix = 4;
 
 	/* If we're going to have to overload, store the overload
@@ -233,57 +234,57 @@ void cons_options (inpacket, outpacket, options, overload, terminate)
 	   whole thing in the packet's option buffer and leave it at
 	   that. */
 	if (option_size <= main_buffer_size - mainbufix) {
-		memcpy (&outpacket -> raw -> options [mainbufix],
+		memcpy (&outpacket -> options [mainbufix],
 			buffer, option_size);
 		mainbufix += option_size;
 		if (mainbufix < main_buffer_size)
-			outpacket -> raw -> options [mainbufix++]
+			outpacket -> options [mainbufix++]
 				= DHO_END;
-		outpacket -> packet_length = DHCP_FIXED_NON_UDP + mainbufix;
+		length = DHCP_FIXED_NON_UDP + mainbufix;
 	} else {
-		outpacket -> raw -> options [mainbufix++] =
+		outpacket -> options [mainbufix++] =
 			DHO_DHCP_OPTION_OVERLOAD;
-		outpacket -> raw -> options [mainbufix++] = 1;
+		outpacket -> options [mainbufix++] = 1;
 		if (option_size > main_buffer_size - mainbufix + DHCP_FILE_LEN)
-			outpacket -> raw -> options [mainbufix++] = 3;
+			outpacket -> options [mainbufix++] = 3;
 		else
-			outpacket -> raw -> options [mainbufix++] = 1;
+			outpacket -> options [mainbufix++] = 1;
 
-		memcpy (&outpacket -> raw -> options [mainbufix],
+		memcpy (&outpacket -> options [mainbufix],
 			buffer, main_buffer_size - mainbufix);
 		bufix = main_buffer_size - mainbufix;
-		outpacket -> packet_length = DHCP_FIXED_NON_UDP + mainbufix;
+		length = DHCP_FIXED_NON_UDP + mainbufix;
 		if (overload & 1) {
 			if (option_size - bufix <= DHCP_FILE_LEN) {
-				memcpy (outpacket -> raw -> file,
+				memcpy (outpacket -> file,
 					&buffer [bufix], option_size - bufix);
 				mainbufix = option_size - bufix;
 				if (mainbufix < DHCP_FILE_LEN)
-					outpacket -> raw -> file [mainbufix++]
+					outpacket -> file [mainbufix++]
 						= DHO_END;
 				while (mainbufix < DHCP_FILE_LEN)
-					outpacket -> raw -> file [mainbufix++]
+					outpacket -> file [mainbufix++]
 						= DHO_PAD;
 			} else {
-				memcpy (outpacket -> raw -> file,
+				memcpy (outpacket -> file,
 					&buffer [bufix], DHCP_FILE_LEN);
 				bufix += DHCP_FILE_LEN;
 			}
 		}
 		if ((overload & 2) && option_size < bufix) {
-			memcpy (outpacket -> raw -> sname,
+			memcpy (outpacket -> sname,
 				&buffer [bufix], option_size - bufix);
 
 			mainbufix = option_size - bufix;
 			if (mainbufix < DHCP_SNAME_LEN)
-				outpacket -> raw -> file [mainbufix++]
+				outpacket -> file [mainbufix++]
 					= DHO_END;
 			while (mainbufix < DHCP_SNAME_LEN)
-				outpacket -> raw -> file [mainbufix++]
+				outpacket -> file [mainbufix++]
 					= DHO_PAD;
 		}
 	}
-	return;
+	return length;
 }
 
 /* Store all the requested options into the requested buffer. */
