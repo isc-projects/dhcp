@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.63 2001/04/24 01:18:08 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.64 2001/04/24 02:31:27 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1104,7 +1104,6 @@ void make_binding_state_transition (struct lease *lease)
 #if defined (NSUPDATE)
 		ddns_removals (lease);
 #endif
-log_info ("expiry event.");
 		if (lease -> on_expiry) {
 			execute_statements ((struct binding_value **)0,
 					    (struct packet *)0, lease,
@@ -1147,7 +1146,6 @@ log_info ("expiry event.");
 #if defined (NSUPDATE)
 		ddns_removals (lease);
 #endif
-log_info ("release event.");
 		if (lease -> on_release) {
 			execute_statements ((struct binding_value **)0,
 					    (struct packet *)0, lease,
