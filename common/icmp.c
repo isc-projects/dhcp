@@ -44,22 +44,18 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: icmp.c,v 1.30 2001/04/23 21:41:36 mellon Exp $ Copyright (c) 1996-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: icmp.c,v 1.30.2.1 2001/06/21 16:57:00 mellon Exp $ Copyright (c) 1996-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
 #include "netinet/ip.h"
 #include "netinet/ip_icmp.h"
 
-struct icmp_state {
-	OMAPI_OBJECT_PREAMBLE;
-	int socket;
-	void (*icmp_handler) PROTO ((struct iaddr, u_int8_t *, int));
-};
-
-static struct icmp_state *icmp_state;
+struct icmp_state *icmp_state;
 static omapi_object_type_t *dhcp_type_icmp;
 static int no_icmp;
+
+OMAPI_OBJECT_ALLOC (icmp_state, struct icmp_state, dhcp_type_icmp)
 
 #if defined (TRACING)
 trace_type_t *trace_icmp_input;
@@ -93,13 +89,8 @@ void icmp_startup (routep, handler)
 		log_fatal ("Can't register icmp object type: %s",
 			   isc_result_totext (result));
 
-	new = (struct icmp_state *)dmalloc (sizeof *new, MDL);
-	if (!new)
-		log_fatal ("Unable to allocate state for icmp protocol");
-	memset (new, 0, sizeof *new);
-	new -> refcnt = 1;
-	new -> type = dhcp_type_icmp;
-	new -> icmp_handler = handler;
+	icmp_state_allocate (&icmp_state, MDL);
+	icmp_state -> icmp_handler = handler;
 
 #if defined (TRACING)
 	trace_icmp_input = trace_type_register ("icmp-input", (void *)0,
@@ -119,34 +110,33 @@ void icmp_startup (routep, handler)
 			protocol = proto -> p_proto;
 		
 		/* Get a raw socket for the ICMP protocol. */
-		new -> socket = socket (AF_INET, SOCK_RAW, protocol);
-		if (new -> socket < 0) {
+		icmp_state -> socket = socket (AF_INET, SOCK_RAW, protocol);
+		if (icmp_state -> socket < 0) {
 			no_icmp = 1;
 			log_error ("unable to create icmp socket: %m");
 			return;
 		}
 
 #if defined (HAVE_SETFD)
-		if (fcntl (new -> socket, F_SETFD, 1) < 0)
+		if (fcntl (icmp_state -> socket, F_SETFD, 1) < 0)
 			log_error ("Can't set close-on-exec on icmp: %m");
 #endif
 
 		/* Make sure it does routing... */
 		state = 0;
-		if (setsockopt (new -> socket, SOL_SOCKET, SO_DONTROUTE,
+		if (setsockopt (icmp_state -> socket, SOL_SOCKET, SO_DONTROUTE,
 				(char *)&state, sizeof state) < 0)
 			log_fatal ("Can't disable SO_DONTROUTE on ICMP: %m");
 
-		result = omapi_register_io_object ((omapi_object_t *)new,
-						   icmp_readsocket, 0,
-						   icmp_echoreply, 0, 0);
+		result = (omapi_register_io_object
+			  ((omapi_object_t *)icmp_state,
+			   icmp_readsocket, 0, icmp_echoreply, 0, 0));
 		if (result != ISC_R_SUCCESS)
 			log_fatal ("Can't register icmp handle: %s",
 				   isc_result_totext (result));
 #if defined (TRACING)
 	}
 #endif
-	icmp_state = new;
 }
 
 int icmp_readsocket (h)
