@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bootp.c,v 1.26 1997/05/09 08:20:12 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bootp.c,v 1.27 1997/06/08 04:10:54 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -84,7 +84,7 @@ void bootp (packet)
 				  packet -> raw -> chaddr,
 				  packet -> raw -> hlen);
 
-	lease = find_lease (packet, packet -> shared_network);
+	lease = find_lease (packet, packet -> shared_network, 0);
 
 	/* Find an IP address in the host_decl that matches the
 	   specified network. */
