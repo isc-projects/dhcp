@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.85.2.15 2004/10/01 21:48:11 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.85.2.16 2004/10/01 22:32:23 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -1027,15 +1027,30 @@ int store_options (ocount, buffer, buflen, packet, lease, client_state,
 	     */
 	    if (i != first_cutoff) {
 		memcpy (ovbuf, &buffer [i], bufix - i);
-		memset (&buffer [i], DHO_PAD, first_cutoff - i);
+
+		/* We only want to pad from 'i' to 'first_cutoff' at the
+		 * moment.  But since there may not be a second_cutoff, we
+		 * actually MUST pad from 'i' to ('first_cutoff' +
+		 * DHCP_FILE_LEN * at least.  Since we're not supposed to
+		 * know about that, we wind up enforcing padding to the end
+		 * of buflen if there is not a second cutoff.
+		 */
+		memset (&buffer [i], DHO_PAD,
+			(second_cutoff ? first_cutoff : buflen) - i);
+
 		memcpy (&buffer [first_cutoff], ovbuf, bufix - i);
 		bufix += (first_cutoff - i);
 	    }
 	    ix = i;
 	    i = first_cutoff;
 
-	    /* See if there's life after the second cutoff. */
-	    if (second_cutoff) {
+	    /* If there is no second field, the first one still MUST be
+	     * terminated with an END option.
+	     */
+	    if (!second_cutoff) {
+		buffer[bufix++] = DHO_END:
+	    }
+	    else {
 		for (j = i + buffer [i + 1] + 2; j < bufix; ) {
 		    len = buffer [j + 1] + 2;
 		    if (j + len + 1 > second_cutoff) {
@@ -1049,15 +1064,11 @@ int store_options (ocount, buffer, buflen, packet, lease, client_state,
 			    buffer [bufix++] = DHO_END;
 
 			    /* We MUST initialize the remainder of the
-			     * sname field to the PAD value (0).  After
-			     * moving everything around, we really do need
-			     * to do this too (calling functions memcpy this
-			     * this buffer totally blindly with SNAME_LEN).
+			     * sname field to the PAD value (0).
 			     */
 			    if (bufix - second_cutoff < DHCP_SNAME_LEN)
 			    	memset (&buffer[bufix], DHO_PAD,
-					DHCP_SNAME_LEN -
-						(bufix - second_cutoff));
+					buflen - bufix);
 
 			    if (ocount)
 				    *ocount |= 2;
