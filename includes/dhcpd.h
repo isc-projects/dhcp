@@ -1345,6 +1345,7 @@ isc_result_t fallback_discard PROTO ((omapi_object_t *));
 #if defined (USE_SOCKET_SEND)
 int can_unicast_without_arp PROTO ((struct interface_info *));
 int can_receive_unicast_unconfigured PROTO ((struct interface_info *));
+int supports_multiple_interfaces (struct interface_info *);
 void maybe_setup_fallback PROTO ((void));
 #endif
 
@@ -1372,6 +1373,7 @@ ssize_t receive_packet PROTO ((struct interface_info *,
 #if defined (USE_BPF_SEND)
 int can_unicast_without_arp PROTO ((struct interface_info *));
 int can_receive_unicast_unconfigured PROTO ((struct interface_info *));
+int supports_multiple_interfaces (struct interface_info *);
 void maybe_setup_fallback PROTO ((void));
 #endif
 
@@ -1399,6 +1401,7 @@ ssize_t receive_packet PROTO ((struct interface_info *,
 #if defined (USE_LPF_SEND)
 int can_unicast_without_arp PROTO ((struct interface_info *));
 int can_receive_unicast_unconfigured PROTO ((struct interface_info *));
+int supports_multiple_interfaces (struct interface_info *);
 void maybe_setup_fallback PROTO ((void));
 #endif
 
@@ -1427,6 +1430,7 @@ ssize_t receive_packet PROTO ((struct interface_info *,
 #if defined (USE_NIT_SEND)
 int can_unicast_without_arp PROTO ((struct interface_info *));
 int can_receive_unicast_unconfigured PROTO ((struct interface_info *));
+int supports_multiple_interfaces (struct interface_info *);
 void maybe_setup_fallback PROTO ((void));
 #endif
 
@@ -1465,6 +1469,7 @@ ssize_t send_packet PROTO ((struct interface_info *,
 			    struct sockaddr_in *, struct hardware *));
 int can_unicast_without_arp PROTO ((struct interface_info *));
 int can_receive_unicast_unconfigured PROTO ((struct interface_info *));
+int supports_multiple_interfaces (struct interface_info *);
 void maybe_setup_fallback PROTO ((void));
 #endif
 
@@ -2222,8 +2227,8 @@ isc_result_t dhcp_failover_state_remove PROTO ((omapi_object_t *,
 int dhcp_failover_state_match (dhcp_failover_state_t *, u_int8_t *, unsigned);
 const char *dhcp_failover_reject_reason_print (int);
 const char *dhcp_failover_state_name_print (enum failover_state);
-const char *dhcp_failover_message_name (u_int8_t);
-const char *dhcp_failover_option_name (u_int16_t);
+const char *dhcp_failover_message_name (unsigned);
+const char *dhcp_failover_option_name (unsigned);
 failover_option_t *dhcp_failover_option_printf (unsigned, char *,
 						unsigned *,
 						unsigned, 
