@@ -247,6 +247,7 @@ isc_result_t name##_array_lookup (stype **,				      \
 		int omapi_array_foreach_index;				      \
 		stype *var = (stype *)0;				      \
 		for (omapi_array_foreach_index = 0;			      \
+			     array &&					      \
 			     omapi_array_foreach_index < (array) -> count;    \
 		     omapi_array_foreach_index++) {			      \
 			if ((array) -> data [omapi_array_foreach_index]) {    \
@@ -549,7 +550,8 @@ isc_result_t omapi_handle_td_lookup (omapi_object_t **, omapi_typed_data_t *);
 
 void * dmalloc (unsigned, const char *, int);
 void dfree (void *, const char *, int);
-#if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL)
+#if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL) || \
+		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
 void dmalloc_reuse (void *, const char *, int, int);
 void dmalloc_dump_outstanding (void);
 #else
@@ -557,8 +559,9 @@ void dmalloc_dump_outstanding (void);
 #endif
 #define MDL __FILE__, __LINE__
 #if defined (DEBUG_RC_HISTORY)
-void dump_rc_history (void);
+void dump_rc_history (void *);
 #endif
+void omapi_print_dmalloc_usage_by_caller (void);
 isc_result_t omapi_object_allocate (omapi_object_t **,
 				    omapi_object_type_t *,
 				    size_t, const char *, int);
