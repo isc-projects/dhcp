@@ -51,6 +51,7 @@
 #define DHCP_MTU_MAX		1500
 #define DHCP_OPTION_LEN		(DHCP_MTU_MAX - DHCP_FIXED_LEN)
 
+#define BOOTP_OPTION_LEN	64
 #define BOOTP_MIN_LEN		300
 
 struct dhcp_packet {
