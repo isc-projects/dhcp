@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.115.2.2 2001/05/31 19:58:32 mellon Exp $ Copyright 1995-2001 Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.115.2.3 2001/06/04 21:32:49 mellon Exp $ Copyright 1995-2001 Internet Software Consortium.";
 #endif
 
   static char copyright[] =
@@ -699,7 +699,8 @@ void postconf_initialization (int quiet)
 		result = omapi_auth_key_lookup_name (&omapi_key, s);
 		dfree (s, MDL);
 		if (result != ISC_R_SUCCESS)
-			log_fatal ("Invalid OMAPI key: %s", s);
+			log_fatal ("OMAPI key %s: %s",
+				   s, isc_result_totext (result));
 	}
 
 	oc = lookup_option (&server_universe, options, SV_LOCAL_PORT);
