@@ -1,6 +1,6 @@
 	    Internet Software Consortium DHCP Distribution
-		    Version 3, Release Candidate 8
-			     June 4, 2001
+	     Version 3, Release Candidate 8 Patchlevel 1
+			    June 22, 2001
 
 			    Release Notes
 
@@ -55,6 +55,45 @@ Measurement Systems, Igor Sharfmesser at Kazakh Telecom, and Brian
 Murrell at BC Tel Advanced Communications.  I'd like to express my
 thanks to all of these good people here, both for working on the code
 and for prodding me into improving it.
+
+		Changes since 3.0 Release Candidate 8
+
+- Fix a bug that could cause the DHCP server to spin if
+  one-lease-per-client was enabled.
+
+- Fix a bug that was causing core dumps on BSD/os in the presence of
+  malformed packets.
+
+- In partner-down state, don't restrict lease lengths to MCLT.
+
+- On the failover secondary, record the MCLT received from the primary
+  so that if we come up without a connection to the primary we don't
+  wind up giving out zero-length leases.
+
+- Fix some compilation problems on BSD/os.
+
+- Fix a bunch of memory leaks.
+
+- Fix a couple of bugs in the option printer.
+
+- Fix an obscure error reporting bug in the dns update code, and also
+  make the message clearer when a key algorithm isn't supported.
+
+- Fix a bug in the tracing code that prevented trace runs that used
+  tcp connections from being played back.
+
+- Add some additional debugging capability for catching memory leaks
+  on exit.
+
+- Make the client release the lease correctly on shutdown.
+
+- Add some configurability to the build system.
+
+- Install omshell manual page in man1, not man8.
+
+- Craig Gwydir sent in a patch that fixes a long-standing bug in the
+  DHCP client that could cause core dumps, but that for some reason
+  hadn't been noticed until now.
 
 		Changes since 3.0 Release Candidate 7
 
