@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.106 1999/08/19 18:59:13 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.107 1999/09/22 17:30:33 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -870,6 +870,19 @@ void ack_lease (packet, lease, offer, when, msg)
 		packet -> options -> universes [agent_universe.index] =
 			(struct agent_options *)0;
 	}
+
+	/* Get rid of any old expiry or release statements - by executing
+	   the statements below, we will be inserting new ones if there are
+	   any to insert. */
+	if (lease -> on_expiry)
+		executable_statement_dereference (&lease -> on_expiry,
+						  "ack_lease");
+	if (lease -> on_commit)
+		executable_statement_dereference (&lease -> on_commit,
+						  "ack_lease");
+	if (lease -> on_release)
+		executable_statement_dereference (&lease -> on_release,
+						  "ack_lease");
 
 	/* Execute statements in scope starting with the subnet scope. */
 	execute_statements_in_scope (packet, lease,
