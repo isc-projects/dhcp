@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.51 1998/04/19 23:35:26 mellon Exp $ Copyright 1995, 1996, 1997, 1998 The Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.52 1998/07/10 04:52:25 mellon Exp $ Copyright 1995, 1996, 1997, 1998 The Internet Software Consortium.";
 #endif
 
 static char copyright[] =
@@ -250,7 +250,8 @@ int main (argc, argv, envp)
 				close (i);
 				pidfilewritten = 1;
 			}
-		}
+		} else
+			error ("There's already a DHCP server running.\n");
 	}
 
 	/* If we were requested to log to stdout on the command line,
