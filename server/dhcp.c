@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.138 2000/02/07 05:12:03 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.139 2000/02/07 18:58:03 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -35,6 +35,7 @@ void dhcp (packet)
 	struct packet *packet;
 {
 	int ms_nulltp = 0;
+	struct option_cache *oc;
 
 	if (!locate_network (packet) && packet -> packet_type != DHCPREQUEST)
 		return;
