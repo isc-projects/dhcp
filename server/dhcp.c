@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.68 1998/11/06 00:17:12 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.69 1998/11/06 01:04:32 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -733,10 +733,12 @@ void ack_lease (packet, lease, offer, when)
 	/* Figure out how long a lease to assign.    If this is a
 	   dynamic BOOTP lease, its duration must be infinite. */
 	if (offer) {
-		oc = lookup_option (packet -> options.dhcp_hash,
-				    DHO_DHCP_LEASE_TIME);
-		s1 = evaluate_option_cache (&d1, packet,
-					    &packet -> options, oc);
+		if ((oc = lookup_option (packet -> options.dhcp_hash,
+					 DHO_DHCP_LEASE_TIME)))
+			s1 = evaluate_option_cache (&d1, packet,
+						    &packet -> options, oc);
+		else
+			s1 = 0;
 		if (s1 && d1.len == sizeof (u_int32_t)) {
 			lease_time = getULong (d1.data);
 			data_string_forget (&d1, "ack_lease");
@@ -1693,6 +1695,7 @@ struct lease *find_lease (packet, share, ours)
 
 	if (have_client_identifier)
 		data_string_forget (&client_identifier, "find_lease");
+
 #if defined (DEBUG_FIND_LEASE)
 	if (lease)
 		note ("Returning lease: %s.",
@@ -1704,7 +1707,7 @@ struct lease *find_lease (packet, share, ours)
 	/* If we find an abandoned lease, take it, but print a
 	   warning message, so that if it continues to lose,
 	   the administrator will eventually investigate. */
-	if (lease -> flags & ABANDONED_LEASE) {
+	if (lease && lease -> flags & ABANDONED_LEASE) {
 		warn ("Reclaiming REQUESTed abandoned IP address %s.\n",
 		      piaddr (lease -> ip_addr));
 		lease -> flags &= ~ABANDONED_LEASE;
