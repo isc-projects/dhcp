@@ -89,3 +89,6 @@ extern int h_errno;
 #if defined (USE_DEFAULT_NETWORK)
 #  define USE_BPF
 #endif
+
+#define USE_POLL
+#include <poll.h>
