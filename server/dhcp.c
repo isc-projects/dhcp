@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.98 1999/07/02 20:58:48 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.99 1999/07/06 17:09:03 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -626,7 +626,7 @@ void dhcpinform (packet)
 #endif
 	memset (to.sin_zero, 0, sizeof to.sin_zero);
 
-	/* Use the IP address we intuited for the client. */
+	/* Use the IP address we derived for the client. */
 	memcpy (&to.sin_addr, cip.iabuf, 4);
 	to.sin_port = remote_port;
 
@@ -767,7 +767,7 @@ void nak_lease (packet, cip)
 			return;
 		}
 	} else {
-		to.sin_addr.s_addr = htonl (INADDR_BROADCAST);
+		to.sin_addr = limited_broadcast;
 		to.sin_port = remote_port;
 	}
 
@@ -1821,7 +1821,7 @@ void dhcp_reply (lease)
 
 	/* Otherwise, broadcast it on the local network. */
 	} else {
-		to.sin_addr.s_addr = htonl (INADDR_BROADCAST);
+		to.sin_addr = limited_broadcast;
 		to.sin_port = remote_port;
 	}
 

@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bootp.c,v 1.50 1999/07/02 20:58:48 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bootp.c,v 1.51 1999/07/06 17:07:12 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -306,7 +306,7 @@ void bootp (packet)
 		}
 	/* Otherwise, broadcast it on the local network. */
 	} else {
-		to.sin_addr.s_addr = INADDR_BROADCAST;
+		to.sin_addr = limited_broadcast;
 		to.sin_port = remote_port; /* XXX */
 	}
 
