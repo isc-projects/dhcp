@@ -3,7 +3,7 @@
    Common parser code for dhcpd and dhclient. */
 
 /*
- * Copyright (c) 1995-2000 Internet Software Consortium.
+ * Copyright (c) 1995-2001 Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.99 2001/01/26 05:56:29 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.100 2001/02/12 19:44:54 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
