@@ -48,7 +48,7 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <unistd.h>
-#include <strings.h>
+#include <string.h>
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <ctype.h>
@@ -213,16 +213,16 @@ int store_options PROTO ((unsigned char *, int, struct tree_cache **,
 char *pretty_print_option PROTO ((unsigned char, unsigned char *, int));
 
 /* errwarn.c */
-int error PROTO ((char *, ...));
+void error PROTO ((char *, ...));
 int warn PROTO ((char *, ...));
 int note PROTO ((char *, ...));
 int debug PROTO ((char *, ...));
 int parse_warn PROTO ((char *, ...));
 
 /* dhcpd.c */
-TIME cur_time;
-TIME default_lease_time;
-TIME max_lease_time;
+extern TIME cur_time;
+extern TIME default_lease_time;
+extern TIME max_lease_time;
 
 extern u_int16_t server_port;
 extern int log_priority;
