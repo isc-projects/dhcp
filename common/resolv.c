@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: resolv.c,v 1.1 1997/06/03 00:25:43 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: resolv.c,v 1.2 1997/06/03 00:44:08 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -101,8 +101,8 @@ void read_resolv_conf (parse_time)
 					dn = (char *)0;
 				}
 				nd -> rcdate = parse_time;
-				token = next_token (&val, cfile);
-			} while (token == COMMA);
+				token = peek_token (&val, cfile);
+			} while (token != COMMA);
 			if (token != EOL) {
 				parse_warn ("junk after domain declaration");
 				skip_to_semi (cfile);
