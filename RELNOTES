@@ -5,24 +5,15 @@
 
 			    Release Notes
 
-This is the final development snapshot before Version 2 of the
-Internet Software Consortium DHCP Distribution goes to beta.
-Development snapshots after this one will be for Version 3 of the ISC
-DHCP Server.
-
-This snapshot is being released in the hopes that a fair number of
-DHCP sites will download it, try it out, and submit bug reports and
-critique the new manual pages.  Please do not hold back - the plan is
-to cut the first Beta release in about two weeks - at the beginning of
-December.
+This is the first development snapshot of Version 3 of the Internet
+Software Consortium DHCP Distribution.
 
 				PLANS
 
-Version 1 of the ISC DHCP Distribution included just a DHCP Server.
-As of this writing, the most recent Version 1 distribution is Beta 5
-Patchlevel 16.  One more patchlevel is planned before Version 1.0 is
-finalized.  This is the release that we would expect most sites to run
-in production.
+Version 1 of the ISC DHCP Distribution includes just a DHCP Server.
+Version 1 has been in feature freeze since late 1996, and is quite
+stable.  This is the release that we would expect most sites to run in
+production.
 
 Version 2 of the ISC DHCP Distribution adds a DHCP Client and a
 DHCP/BOOTP Relay Agent to the DHCP Server that was offered in version
@@ -37,12 +28,16 @@ server:
 	- The server may be configured so that some DHCP clients can
 	  be excluded from booting.
 
-This version is fairly stable at this time, and will soon be
-moved to the "stable" track.   It has a number of new features, and is
-the release that we would expect sites that want some stability but
-need the new pinging feature, or need a client or relay agent (but
-note that you can run the Version 1 server alongside the Version 2
-client and relay agent).
+	- Improved NAKing behaviour, so that clients that are using
+	  addresses other than the one the server knows they should be
+	  using are disciplined quickly.
+
+This version is now in Beta testing, and is planned for release in
+mid-1998.  It has a number of new features, and is the release that we
+would expect sites that want some stability but need the new lease
+testing feature, better NAKing, or need a client or relay agent.  Note
+that it is possible to run the Version 1 server with the Version 2
+client.
 
 Version 3 of the ISC DHCP Distribution will add Dynamic DNS Support,
 asynchronous DNS query resolution, DHCP Authentication, and possibly
@@ -50,6 +45,8 @@ support for a DHCP Interserver Protocol and live querying of the DHCP
 database.   This release is not expected to be stable in the near
 future, and is intended for sites that are in a position to
 experiment, or for sites that desperately need the new features.
+
+			       CHANGES
 
 - Use %ld to print pid_t and cast pid_t values to long to avoid
   inconsistent declarations between different POSIX flavours.
