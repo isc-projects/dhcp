@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcrelay.c,v 1.52.2.2 2002/08/26 02:59:05 dhankins Exp $ Copyright (c) 1997-2000 Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcrelay.c,v 1.52.2.3 2002/11/07 23:26:42 dhankins Exp $ Copyright (c) 1997-2002 Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -107,7 +107,7 @@ struct server_list {
 	struct sockaddr_in to;
 } *servers;
 
-static char copyright [] = "Copyright 1997-2000 Internet Software Consortium.";
+static char copyright [] = "Copyright 1997-2002 Internet Software Consortium.";
 static char arr [] = "All rights reserved.";
 static char message [] = "Internet Software Consortium DHCP Relay Agent";
 static char url [] = "For info, please visit http://www.isc.org/products/DHCP";
