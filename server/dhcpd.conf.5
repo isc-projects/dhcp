@@ -459,7 +459,7 @@ of this, you can write a class declaration as follows:
 .nf
 class "customer" {
   match if exists agent.circuit-id;
-  spawn with agent.circuit-id;
+  spawn with option agent.circuit-id;
   lease limit 4;
 }
 .fi
@@ -1029,6 +1029,23 @@ option in that client's host declaration, and the DHCP server will
 respond with an RFC-1048-style vendor options field.   This flag can
 be set in any scope, and will affect all clients covered by that
 scope.
+.PP
+.B The
+.I always-broadcast
+.B statement
+.PP
+ \fBalways-broadcast\fR \fIflag\fR\fB;\fR
+.PP
+The DHCP and BOOTP protocols both require DHCP and BOOTP clients to
+set the broadcast bit in the flags field of the BOOTP message header.
+Unfortunately, some DHCP and BOOTP clients do not do this, and
+therefore may not receive responses from the DHCP server.   The DHCP
+server can be made to always broadcast its responses to clients by
+setting this flag to 'on' for the relevant scope.   To avoid creating
+excess broadcast traffic on your network, we recommend that you
+restrict the use of this option to as few clients as possible.   For
+example, the Microsoft DHCP client is known not to have this problem,
+as are the OpenTransport and ISC DHCP clients.
 .PP
 .B The
 .I use-lease-addr-for-default-route
