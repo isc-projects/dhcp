@@ -2299,7 +2299,7 @@ int subnet_inner_than PROTO ((struct subnet *, struct subnet *, int));
 void enter_subnet PROTO ((struct subnet *));
 void enter_lease PROTO ((struct lease *));
 int supersede_lease PROTO ((struct lease *, struct lease *, int, int, int));
-void process_state_transition (struct lease *);
+void make_binding_state_transition (struct lease *);
 int lease_copy PROTO ((struct lease **, struct lease *, const char *, int));
 void release_lease PROTO ((struct lease *, struct packet *));
 void abandon_lease PROTO ((struct lease *, const char *));
@@ -2473,9 +2473,13 @@ void dhcp_failover_recover_done (void *);
 void failover_print PROTO ((char *, unsigned *, unsigned, const char *));
 void update_partner PROTO ((struct lease *));
 int load_balance_mine (struct packet *, dhcp_failover_state_t *);
-binding_state_t binding_state_transition_check (struct lease *,
-						dhcp_failover_state_t *,
-						binding_state_t);
+binding_state_t normal_binding_state_transition_check (struct lease *,
+						       dhcp_failover_state_t *,
+						       binding_state_t);
+binding_state_t
+conflict_binding_state_transition_check (struct lease *,
+					 dhcp_failover_state_t *,
+					 binding_state_t);
 int lease_mine_to_reallocate (struct lease *);
 
 OMAPI_OBJECT_ALLOC_DECL (dhcp_failover_state, dhcp_failover_state_t,
@@ -2485,3 +2489,5 @@ OMAPI_OBJECT_ALLOC_DECL (dhcp_failover_listener, dhcp_failover_listener_t,
 OMAPI_OBJECT_ALLOC_DECL (dhcp_failover_link, dhcp_failover_link_t,
 			 dhcp_type_failover_link)
 #endif /* FAILOVER_PROTOCOL */
+
+const char *binding_state_print (enum failover_state);
