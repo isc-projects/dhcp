@@ -37,7 +37,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tr.c,v 1.6 2000/03/17 03:59:02 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tr.c,v 1.7 2001/04/27 22:23:02 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -187,7 +187,7 @@ ssize_t decode_tr_header (interface, buf, bufix, from)
         if (llc->dsap != EXTENDED_SAP
                         || ntohs(llc->ethertype) != ETHERTYPE_IP
                         || ip->ip_p != IPPROTO_UDP
-                        || (ip->ip_off & IP_OFFMASK) != 0
+                        || (ntohs (ip->ip_off) & IP_OFFMASK) != 0
                         || udp->uh_dport != local_port)
                 return -1;
 
