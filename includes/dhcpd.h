@@ -351,29 +351,28 @@ struct lease_state {
 	  DHO_HOST_NAME }
 #endif
 
+struct group_object {
+	OMAPI_OBJECT_PREAMBLE;
+
+	struct group_object *n_dynamic;
+	struct group *group;
+	char *name;
+	int flags;
+#define GROUP_OBJECT_DELETED	1
+#define GROUP_OBJECT_DYNAMIC	2
+#define GROUP_OBJECT_STATIC	4
+};
+
 /* Group of declarations that share common parameters. */
 struct group {
 	struct group *next;
 
+	struct group_object *object;
 	struct subnet *subnet;
 	struct shared_network *shared_network;
 	int authoritative;
 	struct executable_statement *statements;
 };
-
-#if 0
-/* First-class group - visible as an OMAPI object.   Groups attached to other
-   objects are not first-class, because it's too much trouble for too little
-   benefit.   First-class groups have to have down-pointers to the objects
-   in them, so this is actually pretty hard.   Deal with later. */
-struct fc_group {
-	OMAPI_OBJECT_PREAMBLE;
-	struct group *group;
-	omapi_object_t **members;
-	int nmembers;		/* # Objects presently in members. */
-	int max_members;	/* # Spaces in members. */
-}
-#endif
 
 /* A dhcp host declaration structure. */
 struct host_decl {
@@ -385,10 +384,12 @@ struct host_decl {
 	struct data_string client_identifier;
 	struct option_cache *fixed_addr;
 	struct group *group;
+	struct group_object *named_group;
 	struct data_string auth_key_id;
 	int flags;
 #define HOST_DECL_DELETED	1
 #define HOST_DECL_DYNAMIC	2
+#define HOST_DECL_STATIC	4
 };
 
 struct permit {
@@ -1034,51 +1035,13 @@ void static_lease_dereference PROTO ((struct lease *, char *));
 
 struct lease *allocate_lease PROTO ((struct packet *, struct pool *, int));
 int permitted PROTO ((struct packet *, struct permit *));
+int locate_network PROTO ((struct packet *));
 
 /* bootp.c */
 void bootp PROTO ((struct packet *));
 
 /* memory.c */
-extern struct hash_table *host_hw_addr_hash;
-extern struct hash_table *host_uid_hash;
-extern struct hash_table *host_name_hash;
-extern struct hash_table *lease_uid_hash;
-extern struct hash_table *lease_ip_addr_hash;
-extern struct hash_table *lease_hw_addr_hash;
-
-extern omapi_object_type_t *dhcp_type_host;
-
-
-isc_result_t enter_host PROTO ((struct host_decl *, int, int));
-void delete_host PROTO ((struct host_decl *, int));
-struct host_decl *find_hosts_by_haddr PROTO ((int, unsigned char *, int));
-struct host_decl *find_hosts_by_uid PROTO ((unsigned char *, int));
-struct subnet *find_host_for_network PROTO ((struct host_decl **,
-					     struct iaddr *,
-					     struct shared_network *));
-void new_address_range PROTO ((struct iaddr, struct iaddr,
-			       struct subnet *, struct pool *));
-extern struct subnet *find_grouped_subnet PROTO ((struct shared_network *,
-						  struct iaddr));
-extern struct subnet *find_subnet PROTO ((struct iaddr));
-void enter_shared_network PROTO ((struct shared_network *));
-int subnet_inner_than PROTO ((struct subnet *, struct subnet *, int));
-void enter_subnet PROTO ((struct subnet *));
-void enter_lease PROTO ((struct lease *));
-int supersede_lease PROTO ((struct lease *, struct lease *, int));
-void release_lease PROTO ((struct lease *));
-void abandon_lease PROTO ((struct lease *, char *));
-void dissociate_lease PROTO ((struct lease *));
-struct lease *find_lease_by_uid PROTO ((unsigned char *, int));
-struct lease *find_lease_by_hw_addr PROTO ((unsigned char *, int));
-struct lease *find_lease_by_ip_addr PROTO ((struct iaddr));
-void uid_hash_add PROTO ((struct lease *));
-void uid_hash_delete PROTO ((struct lease *));
-void hw_hash_add PROTO ((struct lease *));
-void hw_hash_delete PROTO ((struct lease *));
 struct group *clone_group PROTO ((struct group *, char *));
-void write_leases PROTO ((void));
-void dump_subnets PROTO ((void));
 
 /* alloc.c */
 VOIDPTR dmalloc PROTO ((int, char *));
@@ -1342,7 +1305,6 @@ struct interface_info *setup_fallback PROTO ((void));
 int if_readsocket PROTO ((omapi_object_t *));
 void reinitialize_interfaces PROTO ((void));
 void dispatch PROTO ((void));
-int locate_network PROTO ((struct packet *));
 isc_result_t got_one PROTO ((omapi_object_t *));
 isc_result_t interface_set_value (omapi_object_t *, omapi_object_t *,
 				  omapi_data_string_t *, omapi_typed_data_t *);
@@ -1462,7 +1424,9 @@ void client_location_changed PROTO ((void));
 /* db.c */
 int write_lease PROTO ((struct lease *));
 int write_host PROTO ((struct host_decl *));
+int write_group PROTO ((struct group_object *));
 int db_printable PROTO ((char *));
+int db_printable_len PROTO ((char *, int));
 int write_billing_class PROTO ((struct class *));
 int commit_leases PROTO ((void));
 void db_startup PROTO ((void));
@@ -1637,9 +1601,7 @@ struct failover_peer *find_failover_peer PROTO ((char *));
 
 /* omapi.c */
 extern omapi_object_type_t *dhcp_type_lease;
-#if 0
 extern omapi_object_type_t *dhcp_type_group;
-#endif
 extern omapi_object_type_t *dhcp_type_pool;
 extern omapi_object_type_t *dhcp_type_shared_network;
 extern omapi_object_type_t *dhcp_type_subnet;
@@ -1664,7 +1626,6 @@ isc_result_t dhcp_lease_create (omapi_object_t **,
 				omapi_object_t *);
 isc_result_t dhcp_lease_remove (omapi_object_t *,
 				omapi_object_t *);
-#if 0
 isc_result_t dhcp_group_set_value  (omapi_object_t *, omapi_object_t *,
 				    omapi_data_string_t *,
 				    omapi_typed_data_t *);
@@ -1680,7 +1641,8 @@ isc_result_t dhcp_group_lookup (omapi_object_t **,
 				omapi_object_t *, omapi_object_t *);
 isc_result_t dhcp_group_create (omapi_object_t **,
 				omapi_object_t *);
-#endif
+isc_result_t dhcp_group_remove (omapi_object_t *,
+				omapi_object_t *);
 isc_result_t dhcp_host_set_value  (omapi_object_t *, omapi_object_t *,
 				   omapi_data_string_t *,
 				   omapi_typed_data_t *);
@@ -1763,3 +1725,48 @@ isc_result_t dhcp_class_lookup (omapi_object_t **,
 isc_result_t dhcp_class_create (omapi_object_t **,
 				omapi_object_t *);
 
+/* mdb.c */
+
+extern struct hash_table *host_hw_addr_hash;
+extern struct hash_table *host_uid_hash;
+extern struct hash_table *host_name_hash;
+extern struct hash_table *lease_uid_hash;
+extern struct hash_table *lease_ip_addr_hash;
+extern struct hash_table *lease_hw_addr_hash;
+extern struct hash_table *group_name_hash;
+
+extern omapi_object_type_t *dhcp_type_host;
+
+
+isc_result_t enter_host PROTO ((struct host_decl *, int, int));
+void delete_host PROTO ((struct host_decl *, int));
+struct host_decl *find_hosts_by_haddr PROTO ((int, unsigned char *, int));
+struct host_decl *find_hosts_by_uid PROTO ((unsigned char *, int));
+struct subnet *find_host_for_network PROTO ((struct host_decl **,
+					     struct iaddr *,
+					     struct shared_network *));
+void delete_group PROTO ((struct group_object *, int));
+void delete_group (struct group_object *, int);
+isc_result_t supersede_group (struct group_object *, int);
+void new_address_range PROTO ((struct iaddr, struct iaddr,
+			       struct subnet *, struct pool *));
+extern struct subnet *find_grouped_subnet PROTO ((struct shared_network *,
+						  struct iaddr));
+extern struct subnet *find_subnet PROTO ((struct iaddr));
+void enter_shared_network PROTO ((struct shared_network *));
+int subnet_inner_than PROTO ((struct subnet *, struct subnet *, int));
+void enter_subnet PROTO ((struct subnet *));
+void enter_lease PROTO ((struct lease *));
+int supersede_lease PROTO ((struct lease *, struct lease *, int));
+void release_lease PROTO ((struct lease *));
+void abandon_lease PROTO ((struct lease *, char *));
+void dissociate_lease PROTO ((struct lease *));
+struct lease *find_lease_by_uid PROTO ((unsigned char *, int));
+struct lease *find_lease_by_hw_addr PROTO ((unsigned char *, int));
+struct lease *find_lease_by_ip_addr PROTO ((struct iaddr));
+void uid_hash_add PROTO ((struct lease *));
+void uid_hash_delete PROTO ((struct lease *));
+void hw_hash_add PROTO ((struct lease *));
+void hw_hash_delete PROTO ((struct lease *));
+void write_leases PROTO ((void));
+void dump_subnets PROTO ((void));
