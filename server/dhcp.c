@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.176 2001/01/08 08:23:21 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.177 2001/01/16 23:57:23 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1341,6 +1341,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 	struct expression *expr;
 	int status;
 	isc_result_t result;
+	int did_ping = 0;
 
 	unsigned i, j;
 	int s1, s2;
@@ -2026,7 +2027,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 					    packet -> options,
 					    state -> options,
 					    &lt -> scope, oc, MDL))) {
-		ddns_updates (packet, lt, state);
+		ddns_updates (packet, lt, lease, state);
 	}
 #endif /* NSUPDATE */
 
@@ -2413,7 +2414,14 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 	/* If this is a DHCPOFFER, ping the lease address before actually
 	   sending the offer. */
 	if (offer == DHCPOFFER && !(lease -> flags & STATIC_LEASE) &&
-	    cur_time - lease -> timestamp > 60) {
+	    cur_time - lease -> timestamp > 60 &&
+	    (!(oc = lookup_option (&server_universe, state -> options,
+				   SV_PING_CHECKS)) ||
+	     evaluate_boolean_option_cache (&ignorep, packet, lease,
+					    (struct client_state *)0,
+					    packet -> options,
+					    state -> options,
+					    &lease -> scope, oc, MDL))) {
 		lease -> timestamp = cur_time;
 		icmp_echorequest (&lease -> ip_addr);
 		add_timeout (cur_time + 1, lease_ping_timeout, lease,
