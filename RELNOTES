@@ -1,7 +1,7 @@
 	    Internet Software Consortium DHCP Distribution
 			     Version 3.0.1
-			  Release Candidate 9
-			    April 30, 2002
+			 Release Candidate 10
+			       June, 2002
 
 			     Release Notes
 
@@ -45,6 +45,14 @@ Measurement Systems, Igor Sharfmesser at Kazakh Telecom, and Brian
 Murrell at BC Tel Advanced Communications.  I'd like to express my
 thanks to all of these good people here, both for working on the code
 and for prodding me into improving it.
+
+			Changes since 3.0.1rc9
+
+- A format string was corrected to fix compiler warnings.
+
+- A number of spelling corrections were made in the man pages.
+
+- A FreeBSD-specific bug in the interface removal handling was fixed.
 
 			Changes since 3.0.1rc8
 
