@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.53.2.31 2004/06/17 20:54:40 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.53.2.32 2004/06/22 20:46:23 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -4514,7 +4514,8 @@ isc_result_t dhcp_failover_process_bind_update (dhcp_failover_state_t *state,
 				  binding_state_print (lease -> binding_state),
 				  binding_state_print (msg -> binding_status))
 						>= sizeof outbuf)
-				log_fatal ("%s: impossible outbuf overflow");
+				log_fatal ("%s: impossible outbuf overflow",
+					"dhcp_failover_process_bind_update");
 
 			dhcp_failover_send_bind_ack (state, msg,
 						     FTR_FATAL_CONFLICT,
