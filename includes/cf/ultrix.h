@@ -65,6 +65,7 @@ extern int h_errno;
 #define int8_t		char
 #define int16_t		short 
 #define int32_t		long 
+#define	ssize_t		long
 
 #define u_int8_t	unsigned char		/* Not quite POSIX... */
 #define u_int16_t	unsigned short 
@@ -86,6 +87,7 @@ extern int h_errno;
 #define VA_start(list, last) va_start (list)
 #define vsnprintf(buf, size, fmt, list) vsprintf (buf, fmt, list)
 #define NO_SNPRINTF
+#define NEED_INET_ATON
 
 #define INADDR_LOOPBACK	((u_int32_t)0x7f000001)
 #define EOL	'\n'
