@@ -77,7 +77,7 @@ data type specifies a boolean value.   Booleans can be either true or
 false (or on or off, if that makes more sense to you).
 .PP
 The
-.B data-string
+.B string
 data type specifies either an NVT ASCII string
 enclosed in double quotes, or a series of octets specified in
 hexadecimal, seperated by colons.   For example:
@@ -540,7 +540,7 @@ System Display Manager and are available to the client.  Addresses
 should be listed in order of preference.
 .RE
 .PP
-.B option \fBdhcp-client-identifier\fR \fIdata-string\fR\fB;\fR
+.B option \fBdhcp-client-identifier\fR \fIstring\fR\fB;\fR
 .RS 0.25i
 .PP
 This option can be used to specify the a DHCP client identifier in a
@@ -672,7 +672,7 @@ these options in the dhcp server, specify the option space name,
 useful to specify these options to be sent, nor is it useful to
 reference them at all in the client.
 .PP
-.B option \fBagent.circuit-id\fR \fIdata-string\fR\fB;\fR
+.B option \fBagent.circuit-id\fR \fIstring\fR\fB;\fR
 .RS 0.25i
 .PP
 The circuit-id suboption encodes an agent-local identifier of the
@@ -684,7 +684,7 @@ current draft allows for for the possibility of standardizing the
 format in the future.
 .RE
 .PP
-.B option \fBagent.remote-id\fR \fIdata-string\fR\fB;\fR
+.B option \fBagent.remote-id\fR \fIstring\fR\fB;\fR
 .RS 0.25i
 .PP
 The remote-id suboption encodes information about the remote host end
