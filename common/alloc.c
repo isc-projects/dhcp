@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: alloc.c,v 1.41 2000/01/27 22:40:49 mellon Exp $ Copyright (c) 1995, 1996, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: alloc.c,v 1.42 2000/02/05 18:08:55 mellon Exp $ Copyright (c) 1995, 1996, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -488,7 +488,67 @@ void free_expression (expr, file, line)
 	dmalloc_reuse (free_expressions, (char *)0, 0, 0);
 }
 
+struct binding_value *free_binding_values;
 				
+int binding_value_allocate (cptr, file, line)
+	struct binding_value **cptr;
+	const char *file;
+	int line;
+{
+	struct binding_value *rval;
+
+	if (free_binding_values) {
+		rval = free_binding_values;
+		free_binding_values =
+			(struct binding_value *)rval -> value.fundef;
+	} else {
+		rval = dmalloc (sizeof (struct binding_value), file, line);
+		if (!rval)
+			return 0;
+	}
+	memset (rval, 0, sizeof *rval);
+	return binding_value_reference (cptr, rval, file, line);
+}
+
+int binding_value_reference (ptr, src, file, line)
+	struct binding_value **ptr;
+	struct binding_value *src;
+	const char *file;
+	int line;
+{
+	if (!ptr) {
+		log_error ("%s(%d): null pointer", file, line);
+#if defined (POINTER_DEBUG)
+		abort ();
+#else
+		return 0;
+#endif
+	}
+	if (*ptr) {
+		log_error ("%s(%d): non-null pointer", file, line);
+#if defined (POINTER_DEBUG)
+		abort ();
+#else
+		*ptr = (struct binding_value *)0;
+#endif
+	}
+	*ptr = src;
+	src -> refcnt++;
+	rc_register (file, line, ptr, src, src -> refcnt);
+	dmalloc_reuse (src, file, line, 1);
+	return 1;
+}
+
+void free_binding_value (bv, file, line)
+	struct binding_value *bv;
+	const char *file;
+	int line;
+{
+	bv -> value.fundef = (struct fundef *)free_binding_values;
+	free_binding_values = bv;
+	dmalloc_reuse (free_binding_values, (char *)0, 0, 0);
+}
+
 struct option_cache *free_option_caches;
 
 int option_cache_allocate (cptr, file, line)
