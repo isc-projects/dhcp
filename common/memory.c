@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: memory.c,v 1.29 1997/03/06 20:21:32 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: memory.c,v 1.30 1997/03/06 22:20:17 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -639,7 +639,7 @@ void abandon_lease (lease, message)
 	lt.ends = 0xFFFFFFFF;
 	warn ("Abandoning IP address %s: %s",
 	      piaddr (lease -> ip_addr), message);
-	lt.hardware_addr.htype = -1;
+	lt.hardware_addr.htype = 0;
 	lt.hardware_addr.hlen = 0;
 	lt.uid = (unsigned char *)0;
 	lt.uid_len = 0;
@@ -872,7 +872,9 @@ void write_leases ()
 
 	for (s = shared_networks; s; s = s -> next) {
 		for (l = s -> leases; l; l = l -> next) {
-			if (l -> hardware_addr.hlen || l -> uid_len)
+			if (l -> hardware_addr.hlen ||
+			    l -> uid_len ||
+			    (l -> flags & ABANDONED_LEASE))
 				if (!write_lease (l))
 					error ("Can't rewrite lease database");
 		}
