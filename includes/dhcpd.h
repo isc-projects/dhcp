@@ -1591,6 +1591,7 @@ extern struct interface_info *interfaces,
 	*dummy_interfaces, *fallback_interface;
 extern struct protocol *protocols;
 extern int quiet_interface_discovery;
+isc_result_t interface_setup (void);
 
 extern struct in_addr limited_broadcast;
 extern struct in_addr local_address;
