@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: memory.c,v 1.50 1999/05/27 14:11:58 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: memory.c,v 1.51 1999/07/01 18:45:28 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -321,6 +321,10 @@ void new_address_range (low, high, subnet, pool)
 			address_range [lhost - i].hostname = lp -> hostname;
 			address_range [lhost - i].client_hostname =
 				lp -> client_hostname;
+			address_range [lhost - i].ddns_fwd_name =
+				lp -> ddns_fwd_name;
+			address_range [lhost - i].ddns_rev_name =
+				lp -> ddns_rev_name;
 			supersede_lease (&address_range [lhost - i], lp, 0);
 			free_lease (lp, "new_address_range");
 		} else
@@ -446,6 +450,8 @@ void enter_lease (lease)
 		/* Record the hostname information in the lease. */
 		comp -> hostname = lease -> hostname;
 		comp -> client_hostname = lease -> client_hostname;
+		comp -> ddns_fwd_name = lease -> ddns_fwd_name;
+		comp -> ddns_rev_name = lease -> ddns_rev_name;
 		supersede_lease (comp, lease, 0);
 	}
 }
