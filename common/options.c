@@ -477,11 +477,11 @@ char *pretty_print_option (code, data, len)
 				dp += 4;
 				break;
 			      case 'l':
-				sprintf (op, "%ld", getLong (dp));
+				sprintf (op, "%d", getLong (dp));
 				dp += 4;
 				break;
 			      case 'L':
-				sprintf (op, "%ld", getULong (dp));
+				sprintf (op, "%d", getULong (dp));
 				dp += 4;
 				break;
 			      case 's':
