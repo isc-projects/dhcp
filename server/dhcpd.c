@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.71 1999/07/06 17:17:16 mellon Exp $ Copyright 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.72 1999/09/08 01:50:19 mellon Exp $ Copyright 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.";
 #endif
 
   static char copyright[] =
@@ -77,6 +77,10 @@ int main (argc, argv, envp)
 #endif
 	int quiet = 0;
 	char *server = (char *)0;
+	isc_result_t result;
+	omapi_object_t *listener;
+	int seed;
+	struct interface_info *ip;
 
 	/* Initially, log errors to stderr as well as to syslogd. */
 #ifdef SYSLOG_4_2
@@ -224,8 +228,39 @@ int main (argc, argv, envp)
 	/* Discover all the network interfaces and initialize them. */
 	discover_interfaces (DISCOVER_SERVER);
 
+	/* Make up a seed for the random number generator from current
+	   time plus the sum of the last four bytes of each
+	   interface's hardware address interpreted as an integer.
+	   Not much entropy, but we're booting, so we're not likely to
+	   find anything better. */
+	seed = 0;
+	for (ip = interfaces; ip; ip = ip -> next) {
+		int junk;
+		memcpy (&junk,
+			&ip -> hw_address.haddr [ip -> hw_address.hlen -
+						 sizeof seed], sizeof seed);
+		seed += junk;
+	}
+	srandom (seed + cur_time);
+
 	/* Initialize icmp support... */
 	icmp_startup (1, lease_pinged);
+
+	/* Start up a listener for the object management API protocol. */
+	listener = (omapi_object_t *)0;
+	status = omapi_generic_new (&listener, "main");
+	if (status != ISC_R_SUCCESS)
+		log_fatal ("Can't allocate new generic object: %s\n",
+			   isc_result_totext (status));
+	status = omapi_protocol_listen (listener,
+					OMAPI_PROTOCOL_PORT, 1);
+	if (status != ISC_R_SUCCESS)
+		log_fatal ("Can't start OMAPI protocol: %s",
+			   isc_result_totext (result));
+
+	/* Set up the OMAPI wrappers for various server database internal
+	   objects. */
+	dhcp_db_objects_setup ();
 
 #ifndef DEBUG
 	if (daemon) {
