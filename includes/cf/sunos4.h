@@ -130,6 +130,7 @@ char *strerror PROTO ((int));
 #define VOIDPTR	void *
 
 #include <time.h>
+#include <sys/time.h>
 
 #define TIME time_t
 #define GET_TIME(x)	time ((x))
