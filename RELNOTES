@@ -52,7 +52,8 @@ and for prodding me into improving it.
   when the primary made its state transition to PARTNER-DOWN known.
 
 - The package will now compile cleanly in gcc 3.3 and 3.4.  As a side effect,
-  lease structures will be 9 bytes smaller on all platforms.
+  lease structures will be 9 bytes smaller on all platforms.  Thanks to
+  Jason Vas Dias at Redhat.
 
 - Interface discovery code in DISCOVER_UNCONFIGURED mode is now
   properly restricted to only detecting broadcast interfaces.  Thanks
@@ -97,7 +98,8 @@ and for prodding me into improving it.
   7 bytes, and failover.
 
 - Configuring a subnet in dhcpd.conf with a subnet mask of 32 bits might
-  cause an internal function to overflow heap.
+  cause an internal function to overflow heap.  Thanks to Jason Vas Dias
+  at Redhat.
 
 			Changes since 3.0.2rc3
 
