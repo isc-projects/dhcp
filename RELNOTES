@@ -81,6 +81,11 @@ and for prodding me into improving it.
   meaning the 'next server in the bootstrap process', eg a tftp server.
   The siaddr field is now left zeroed unless next-server is configured.
 
+- mockup_lease() could have returned in an error condition (or in the
+  condition where no fixed-address was found matching the shared
+  network) with stale references to a host record.  This is probably not
+  a memory leak since host records generally never die anyway.
+
 			Changes since 3.0.2rc3
 
 - A previously undocumented configuration directive, 'local-address',

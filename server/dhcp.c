@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.192.2.45 2005/02/22 21:11:51 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.192.2.46 2005/02/22 21:14:19 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -3581,18 +3581,18 @@ int mockup_lease (struct lease **lp, struct packet *packet,
 		  struct shared_network *share, struct host_decl *hp)
 {
 	struct lease *lease = (struct lease *)0;
-	const unsigned char **s;
-	isc_result_t status;
 	struct host_decl *rhp = (struct host_decl *)0;
 	
-	status = lease_allocate (&lease, MDL);
-	if (status != ISC_R_SUCCESS)
+	if (lease_allocate (&lease, MDL) != ISC_R_SUCCESS)
 		return 0;
-	if (host_reference (&rhp, hp, MDL) != ISC_R_SUCCESS)
+	if (host_reference (&rhp, hp, MDL) != ISC_R_SUCCESS) {
+		lease_dereference (&lease, MDL);
 		return 0;
+	}
 	if (!find_host_for_network (&lease -> subnet,
 				    &rhp, &lease -> ip_addr, share)) {
 		lease_dereference (&lease, MDL);
+		host_dereference (&rhp, MDL);
 		return 0;
 	}
 	host_reference (&lease -> host, rhp, MDL);
@@ -3612,7 +3612,9 @@ int mockup_lease (struct lease **lp, struct packet *packet,
 	lease -> starts = lease -> timestamp = lease -> ends = MIN_TIME;
 	lease -> flags = STATIC_LEASE;
 	lease -> binding_state = FTS_FREE;
+
 	lease_reference (lp, lease, MDL);
+
 	lease_dereference (&lease, MDL);
 	host_dereference (&rhp, MDL);
 	return 1;
