@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.102 2000/11/28 23:27:19 mellon Exp $ Copyright 1995-2000 Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.103 2000/11/29 05:35:02 mellon Exp $ Copyright 1995-2000 Internet Software Consortium.";
 #endif
 
   static char copyright[] =
@@ -82,7 +82,7 @@ on commit {								    \n\
       case NOERROR:							    \n\
 	unset ddns-fwd-name;						    \n\
 	on expiry or release {						    \n\
-	}
+	}								    \n\
       }									    \n\
     }									    \n\
 									    \n\
