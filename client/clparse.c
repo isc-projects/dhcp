@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: clparse.c,v 1.62 2001/05/04 00:51:35 mellon Exp $ Copyright (c) 1996-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: clparse.c,v 1.62.2.1 2001/06/01 17:26:44 mellon Exp $ Copyright (c) 1996-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -70,11 +70,6 @@ u_int32_t default_requested_options [] = {
 
 isc_result_t read_client_conf ()
 {
-	int file;
-	struct parse *cfile;
-	const char *val;
-	int token;
-	int declaration = 0;
 	struct client_config *config;
 	struct client_state *state;
 	struct interface_info *ip;
@@ -106,26 +101,12 @@ isc_result_t read_client_conf ()
 	if (!top_level_config.on_transmission)
 		log_fatal ("no memory for top-level on_transmission group");
 
-	if ((file = open (path_dhclient_conf, O_RDONLY)) >= 0) {
-		cfile = (struct parse *)0;
-		new_parse (&cfile, file, (char *)0, 0, path_dhclient_conf, 0);
-
-		do {
-			token = peek_token (&val, (unsigned *)0, cfile);
-			if (token == END_OF_FILE)
-				break;
-			parse_client_statement (cfile,
-						(struct interface_info *)0,
-						&top_level_config);
-		} while (1);
-		token = next_token (&val, (unsigned *)0, cfile);
-		status = (cfile -> warnings_occurred
-			  ? ISC_R_BADPARSE
-			  : ISC_R_SUCCESS);
-		close (file);
-		end_parse (&cfile);
+	status = read_client_conf_file (path_dhclient_conf,
+					(struct interface_info *)0,
+					&top_level_config);
+	if (status != ISC_R_SUCCESS) {
+		;
 #ifdef LATER
-	} else {
 		/* Set up the standard name service updater routine. */
 		parse = (struct parse *)0;
 		status = new_parse (&parse, -1, default_client_config,
@@ -174,6 +155,37 @@ isc_result_t read_client_conf ()
 	}
 	return status;
 }
+
+int read_client_conf_file (const char *name, struct interface_info *ip,
+			   struct client_config *client)
+{
+	int file;
+	struct parse *cfile;
+	const char *val;
+	int token;
+	isc_result_t status;
+	
+	if ((file = open (name, O_RDONLY)) < 0)
+		return uerr2isc (errno);
+
+	cfile = (struct parse *)0;
+	new_parse (&cfile, file, (char *)0, 0, path_dhclient_conf, 0);
+
+	do {
+		token = peek_token (&val, (unsigned *)0, cfile);
+		if (token == END_OF_FILE)
+			break;
+		parse_client_statement (cfile, ip, client);
+	} while (1);
+	token = next_token (&val, (unsigned *)0, cfile);
+	status = (cfile -> warnings_occurred
+		  ? ISC_R_BADPARSE
+		  : ISC_R_SUCCESS);
+	close (file);
+	end_parse (&cfile);
+	return status;
+}
+
 
 /* lease-file :== client-lease-statements END_OF_FILE
    client-lease-statements :== <nil>
@@ -246,8 +258,23 @@ void parse_client_statement (cfile, ip, config)
 	enum policy policy;
 	int known;
 	int tmp, i;
+	isc_result_t status;
 
 	switch (peek_token (&val, (unsigned *)0, cfile)) {
+	      case INCLUDE:
+		next_token (&val, (unsigned *)0, cfile);
+		token = next_token (&val, (unsigned *)0, cfile);
+		if (token != STRING) {
+			parse_warn (cfile, "filename string expected.");
+			skip_to_semi (cfile);
+		} else {
+			status = read_client_conf_file (val, ip, config);
+			if (status != ISC_R_SUCCESS)
+				parse_warn (cfile, "%s: bad parse.", val);
+			parse_semi (cfile);
+		}
+		return;
+		
 	      case KEY:
 		next_token (&val, (unsigned *)0, cfile);
 		if (ip) {
@@ -531,9 +558,10 @@ void parse_client_statement (cfile, ip, config)
 			}
 		} else {
 			struct executable_statement **eptr, *sptr;
-			if (stmt -> op == send_option_statement ||
-			    (stmt -> op == on_statement &&
-			     (stmt -> data.on.evtypes & ON_TRANSMISSION))) {
+			if (stmt &&
+			    (stmt -> op == send_option_statement ||
+			     (stmt -> op == on_statement &&
+			      (stmt -> data.on.evtypes & ON_TRANSMISSION)))) {
 			    eptr = &config -> on_transmission -> statements;
 			    if (stmt -> op == on_statement) {
 				    sptr = (struct executable_statement *)0;
@@ -551,9 +579,12 @@ void parse_client_statement (cfile, ip, config)
 			} else
 			    eptr = &config -> on_receipt -> statements;
 
-			for (; *eptr; eptr = &(*eptr) -> next)
-				;
-			executable_statement_reference (eptr, stmt, MDL);
+			if (stmt) {
+				for (; *eptr; eptr = &(*eptr) -> next)
+					;
+				executable_statement_reference (eptr,
+								stmt, MDL);
+			}
 			return;
 		}
 		break;
