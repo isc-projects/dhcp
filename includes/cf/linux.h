@@ -1,6 +1,6 @@
-/* ultrix.h
+/* linux.h
 
-   System dependencies for Ultrix 4.2 (tested on 4.2a+multicast)... */
+   System dependencies for Linux (compiles on 1.3.57+libc 5.2.18)... */
 
 /*
  * Copyright 1996 The Board of Trustees of The Leland Stanford
@@ -62,17 +62,14 @@
 extern int h_errno;
 
 #include <net/if.h>
+#include <linux/if_arp.h>
+#include <sys/time.h>		/* gettimeofday()*/
+#include <linux/time.h>		/* also necessary */
 
-/*#define _PATH_DHCPD_PID	"/var/run/dhcpd.pid"*/
 
-/*
- * Ultrix systems don't have /var/run, but some sites have added it.
- * if yours  is one, edit this file or define _PATH_DHCPD_PID externally.
- */
 
-#ifndef _PATH_DHCPD_PID
+
 #define _PATH_DHCPD_PID	"/etc/dhcpd.pid"
-#endif
 
 
 /* Varargs stuff... */
@@ -82,11 +79,19 @@ extern int h_errno;
 #define va_dcl
 #define vsnprintf(buf, size, fmt, list) vsprintf (buf, fmt, list)
 #define snprintf(buf, size, fmt, a1, a2, a3) \
-	sprintf(buf, fmt, a1, a2, a3) \
+	sprintf(buf, fmt, a1, a2, a3)
 
-#define INADDR_LOOPBACK	((u_int) htonl((u_int)0x7f000001))
-#define EOL	'\n'
 #define VOIDPTR	void *
+
+#define EOL	'\n'
+
+/*
+ * Linux (1.3.57 with libc 5.3.18) doesn't seem to have tm_zone
+ * or tm_gmtoff
+ */
+#define BROKEN_TM_GMT
+
+/* Time stuff... */
 
 /*
  * Time stuff...
@@ -95,9 +100,14 @@ extern int h_errno;
  * to represent time internally as opposed to, for example,  struct timeval.)
  */
 
+#include <time.h>
+
 #define TIME time_t
 #define GET_TIME(x)	time ((x))
 #define TIME_DIFF(high, low)	 	(*(high) - *(low))
 #define SET_TIME(x, y)	(*(x) = (y))
 #define ADD_TIME(d, s1, s2) (*(d) = *(s1) + *(s2))
 #define SET_MAX_TIME(x)	(*(x) = INT_MAX)
+
+
+

@@ -1,6 +1,7 @@
-/* ultrix.h
+/* sunos4.h
 
-   System dependencies for Ultrix 4.2 (tested on 4.2a+multicast)... */
+   System dependencies for SunOS 4 (tested on 4.1.4)... */
+
 
 /*
  * Copyright 1996 The Board of Trustees of The Leland Stanford
@@ -46,7 +47,6 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * This file was contributed by Jonathan Stone.
  */
 
 #include <sys/types.h>
@@ -62,20 +62,21 @@
 extern int h_errno;
 
 #include <net/if.h>
+#include <net/if_arp.h>
 
 /*#define _PATH_DHCPD_PID	"/var/run/dhcpd.pid"*/
 
 /*
- * Ultrix systems don't have /var/run, but some sites have added it.
+ * SunOS systems don't have /var/run, but some sites have added it.
  * if yours  is one, edit this file or define _PATH_DHCPD_PID externally.
  */
-
+/*#define _PATH_DHCPD_PID	"/var/run/dhcpd.pid"*/
 #ifndef _PATH_DHCPD_PID
 #define _PATH_DHCPD_PID	"/etc/dhcpd.pid"
 #endif
 
-
-/* Varargs stuff... */
+#ifdef __GNUC__
+/* Varargs stuff: use stdarg.h instead ... */
 #include <stdarg.h>
 #define VA_DOTDOTDOT ...
 #define VA_start(list, last) va_start (list, last)
@@ -84,9 +85,28 @@ extern int h_errno;
 #define snprintf(buf, size, fmt, a1, a2, a3) \
 	sprintf(buf, fmt, a1, a2, a3) \
 
-#define INADDR_LOOPBACK	((u_int) htonl((u_int)0x7f000001))
+#else /* !__GNUC__*/
+/* Varargs stuff... */
+#include <varargs.h>
+#define VA_DOTDOTDOT va_alist
+#define VA_start(list, last) va_start (list)
+
+#define vsnprintf(buf, size, fmt, list) vsprintf (buf, fmt, list)
+#endif /* !__GNUC__*/
+
 #define EOL	'\n'
 #define VOIDPTR	void *
+
+
+/*
+ * strerror is used in  errwarn.c.  If your system doesn't have it,
+ * install  one BIND 4.9.3 or sendmail.
+ */
+#ifdef __STDC__
+extern char *strerror(int);
+#else
+extern char *strerror();
+#endif
 
 /*
  * Time stuff...
@@ -94,6 +114,8 @@ extern int h_errno;
  * Definitions for an ISC DHCPD system that uses time_t
  * to represent time internally as opposed to, for example,  struct timeval.)
  */
+
+#include <time.h>
 
 #define TIME time_t
 #define GET_TIME(x)	time ((x))

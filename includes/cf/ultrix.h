@@ -3,6 +3,21 @@
    System dependencies for Ultrix 4.2 (tested on 4.2a+multicast)... */
 
 /*
+ * Copyright 1996 The Board of Trustees of The Leland Stanford
+ * Junior University. All Rights Reserved.
+ *
+ * Permission to use, copy, modify, and distribute this
+ * software and its documentation for any purpose and without
+ * fee is hereby granted, provided that the above copyright
+ * notice appear in all copies.  Stanford University
+ * makes no representations about the suitability of this
+ * software for any purpose.  It is provided "as is" without
+ * express or implied warranty.
+ *
+ * This file was contributed by Jonathan Stone.
+ */
+
+/*
  * Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -48,6 +63,18 @@ extern int h_errno;
 
 #include <net/if.h>
 
+/*#define _PATH_DHCPD_PID	"/var/run/dhcpd.pid"*/
+
+/*
+ * Ultrix systems don't have /var/run, but some sites have added it.
+ * if yours  is one, edit this file or define _PATH_DHCPD_PID externally.
+ */
+
+#ifndef _PATH_DHCPD_PID
+#define _PATH_DHCPD_PID	"/etc/dhcpd.pid"
+#endif
+
+
 /* Varargs stuff... */
 #include <stdarg.h>
 #define VA_DOTDOTDOT ...
@@ -61,26 +88,16 @@ extern int h_errno;
 #define EOL	'\n'
 #define VOIDPTR	void *
 
-/* Time stuff... */
-#include <sys/time.h>
-#define TIME /*struct timeval*/ time_t
-#define GET_TIME(x)	gettimeofday ((x), (struct timezone *)0)
-#define TIME_DIFF(high, low)	 					\
-  (((high) -> tv_sec == (low) -> tv_sec)				\
-   ? ((high) -> tv_usec > (low) -> tv_usec				\
-      ? 1 : (((high) -> tv_usec == (low) -> tv_usec) ? 0 : -1))		\
-   : (high) -> tv_sec - (low) -> tv_sec)
-#define SET_TIME(x, y)	(((x) -> tv_sec = ((y))), ((x) -> tv_usec = 0))
-#define ADD_TIME(d, s1, s2) {						\
-		 (d) -> tv_usec = (s1) -> tv_usec + (s2) -> tv_usec;	\
-		 if ((d) -> tv_usec > 1000000 || (d) -> tv_usec < -1000000) { \
-			 (d) -> tv_sec = (d) -> tv_usec / 1000000;	\
-			 (d) -> tv_usec %= 1000000;			\
-		 } else							\
-			 (d) -> tv_sec = 0;				\
-		 (d) -> tv_sec += (s1) -> tv_sec + (s2) -> tv_sec;	\
-	}
-#define SET_MAX_TIME(x)	(((x) -> tv_sec = INT_MAX),			\
-			 ((x) -> tv_usec = 999999))
+/*
+ * Time stuff...
+ *
+ * Definitions for an ISC DHCPD system that uses time_t
+ * to represent time internally as opposed to, for example,  struct timeval.)
+ */
 
-
+#define TIME time_t
+#define GET_TIME(x)	time ((x))
+#define TIME_DIFF(high, low)	 	(*(high) - *(low))
+#define SET_TIME(x, y)	(*(x) = (y))
+#define ADD_TIME(d, s1, s2) (*(d) = *(s1) + *(s2))
+#define SET_MAX_TIME(x)	(*(x) = INT_MAX)
