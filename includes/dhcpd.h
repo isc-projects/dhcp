@@ -276,6 +276,7 @@ struct lease {
 	TIME tstp;	/* Time sent to partner. */
 	TIME tsfp;	/* Time sent from partner. */
 	TIME cltt;	/* Client last transaction time. */
+	struct lease *next_pending;
 };
 
 struct lease_state {
@@ -356,6 +357,11 @@ struct lease_state {
 #define SV_DUPLICATES			28
 #define SV_DECLINES			29
 #define SV_DDNS_UPDATES			30
+#define SV_OMAPI_PORT			31
+#define SV_LOCAL_PORT			32
+#define SV_LIMITED_BROADCAST_ADDRESS	33
+#define SV_REMOTE_PORT			34
+#define SV_LOCAL_ADDRESS		35
 
 #if !defined (DEFAULT_DEFAULT_LEASE_TIME)
 # define DEFAULT_DEFAULT_LEASE_TIME 43200
@@ -932,10 +938,6 @@ int nwip_option_space_encapsulate PROTO ((struct data_string *,
 /* dhcpd.c */
 extern TIME cur_time;
 extern struct group root_group;
-extern struct in_addr limited_broadcast;
-
-extern u_int16_t local_port;
-extern u_int16_t remote_port;
 
 extern const char *path_dhcpd_conf;
 extern const char *path_dhcpd_db;
@@ -1443,6 +1445,13 @@ extern struct interface_info *interfaces,
 	*dummy_interfaces, *fallback_interface;
 extern struct protocol *protocols;
 extern int quiet_interface_discovery;
+
+extern struct in_addr limited_broadcast;
+extern struct in_addr local_address;
+
+extern u_int16_t local_port;
+extern u_int16_t remote_port;
+
 extern void (*bootp_packet_handler) PROTO ((struct interface_info *,
 					    struct dhcp_packet *, unsigned,
 					    unsigned int,
@@ -1711,7 +1720,7 @@ isc_result_t icmp_echoreply PROTO ((omapi_object_t *));
 
 /* dns.c */
 #if defined (NSUPDATE)
-isc_result_t find_tsig_key (ns_tsig_key **, const char *);
+isc_result_t find_tsig_key (ns_tsig_key **, const char *, struct dns_zone *);
 void tkey_free (ns_tsig_key **);
 #endif
 isc_result_t enter_dns_zone (struct dns_zone *);
@@ -1720,8 +1729,10 @@ isc_result_t enter_tsig_key (struct tsig_key *);
 isc_result_t tsig_key_lookup (struct tsig_key **, const char *);
 int dns_zone_dereference PROTO ((struct dns_zone **, const char *, int));
 #if defined (NSUPDATE)
-int find_cached_zone (const char *, ns_class,
-		      char *, size_t, struct in_addr *, int);
+int find_cached_zone (const char *, ns_class, char *,
+		      size_t, struct in_addr *, int, struct dns_zone **);
+void forget_zone (struct dns_zone **);
+void repudiate_zone (struct dns_zone **);
 #endif /* NSUPDATE */
 
 /* resolv.c */
@@ -1988,8 +1999,10 @@ int deletePTR (const struct data_string *, const struct data_string *,
 
 /* failover.c */
 #if defined (FAILOVER_PROTOCOL)
-void enter_failover_peer PROTO ((dhcp_failover_state_t *));
-isc_result_t find_failover_peer PROTO ((dhcp_failover_state_t **, char *));
+void dhcp_failover_startup PROTO ((void));
+isc_result_t enter_failover_peer PROTO ((dhcp_failover_state_t *));
+isc_result_t find_failover_peer PROTO ((dhcp_failover_state_t **,
+					const char *));
 isc_result_t dhcp_failover_link_initiate PROTO ((omapi_object_t *));
 isc_result_t dhcp_failover_link_signal PROTO ((omapi_object_t *,
 					       const char *, va_list));
@@ -2027,10 +2040,15 @@ isc_result_t dhcp_failover_listener_stuff PROTO ((omapi_object_t *,
 isc_result_t dhcp_failover_register PROTO ((omapi_object_t *));
 isc_result_t dhcp_failover_state_signal PROTO ((omapi_object_t *,
 						const char *, va_list));
+isc_result_t dhcp_failover_state_transition (dhcp_failover_state_t *,
+					     const char *);
+isc_result_t dhcp_failover_set_state (dhcp_failover_state_t *,
+				      enum failover_state);
 isc_result_t dhcp_failover_state_set_value PROTO ((omapi_object_t *,
 						   omapi_object_t *,
 						   omapi_data_string_t *,
 						   omapi_typed_data_t *));
+void dhcp_failover_keepalive (void *);
 isc_result_t dhcp_failover_state_get_value PROTO ((omapi_object_t *,
 						   omapi_object_t *,
 						   omapi_data_string_t *,
@@ -2057,6 +2075,7 @@ isc_result_t dhcp_failover_send_connect PROTO ((omapi_object_t *));
 isc_result_t dhcp_failover_update_peer (struct lease *, int);
 void failover_print PROTO ((char *, unsigned *, unsigned, const char *));
 void update_partner PROTO ((struct lease *));
+int load_balance_mine (struct packet *, dhcp_failover_state_t *);
 #endif /* FAILOVER_PROTOCOL */
 
 /* client/omapi.c */
