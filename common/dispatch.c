@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dispatch.c,v 1.54.2.1 1999/10/14 21:13:41 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dispatch.c,v 1.54.2.2 1999/12/21 19:25:12 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -52,7 +52,8 @@ void dispatch ()
 	for (l = protocols; l; l = l -> next) {
 		++nfds;
 	}
-	fds = (struct pollfd *)malloc ((nfds) * sizeof (struct pollfd));
+	fds = (struct pollfd *)dmalloc ((nfds) * sizeof (struct pollfd)
+					"dispatch");
 	if (!fds)
 		log_fatal ("Can't allocate poll structures.");
 
@@ -245,7 +246,9 @@ void add_timeout (when, where, what)
 			q -> func = where;
 			q -> what = what;
 		} else {
-			q = (struct timeout *)malloc (sizeof (struct timeout));
+			q = (struct timeout *)
+				dmalloc (sizeof (struct timeout),
+					 "add_timeout");
 			if (!q)
 				log_fatal ("add_timeout: no memory!");
 			q -> func = where;
@@ -313,7 +316,7 @@ struct protocol *add_protocol (name, fd, handler, local)
 {
 	struct protocol *p;
 
-	p = (struct protocol *)malloc (sizeof *p);
+	p = (struct protocol *)dmalloc (sizeof *p, "add_protocol");
 	if (!p)
 		log_fatal ("can't allocate protocol struct for %s", name);
 
@@ -339,7 +342,7 @@ void remove_protocol (proto)
 				prev -> next = p -> next;
 			else
 				protocols = p -> next;
-			free (p);
+			dfree (p, "remove_protocol");
 		}
 	}
 }

@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: memory.c,v 1.52.2.10 1999/12/09 00:27:30 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: memory.c,v 1.52.2.11 1999/12/21 19:25:42 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -508,7 +508,7 @@ int supersede_lease (comp, lease, commit)
 		uid_hash_delete (comp);
 		enter_uid = 1;
 		if (comp -> uid != &comp -> uid_buf [0]) {
-			free (comp -> uid);
+			dfree (comp -> uid, "supersede_lease");
 			comp -> uid_max = 0;
 			comp -> uid_len = 0;
 		}

@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.28.2.6 1999/11/12 18:37:25 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.28.2.7 1999/12/21 19:27:50 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -110,7 +110,8 @@ char *parse_string (cfile)
 		skip_to_semi (cfile);
 		return (char *)0;
 	}
-	s = (char *)malloc (strlen (val) + 1);
+	s = (char *)dmalloc (strlen (val) + 1,
+			     "parse_string");
 	if (!s)
 		log_fatal ("no memory for string %s.", val);
 	strcpy (s, val);
@@ -145,7 +146,8 @@ char *parse_host_name (cfile)
 		token = next_token (&val, cfile);
 
 		/* Store this identifier... */
-		if (!(s = (char *)malloc (strlen (val) + 1)))
+		if (!(s = (char *)dmalloc (strlen (val) + 1,
+					   "parse_host_name")))
 			log_fatal ("can't allocate temp space for hostname.");
 		strcpy (s, val);
 		c = cons ((caddr_t)s, c);
@@ -158,7 +160,7 @@ char *parse_host_name (cfile)
 	} while (token == DOT);
 
 	/* Assemble the hostname together into a string. */
-	if (!(s = (char *)malloc (len)))
+	if (!(s = (char *)dmalloc (len, "parse_host_name")))
 		log_fatal ("can't allocate space for hostname.");
 	t = s + len;
 	*--t = 0;
@@ -168,8 +170,8 @@ char *parse_host_name (cfile)
 		t -= l;
 		memcpy (t, (char *)(c -> car), l);
 		/* Free up temp space. */
-		free (c -> car);
-		free (c);
+		dfree (c -> car, "parse_host_name");
+		dfree (c, "parse_host_name");
 		c = cdr;
 		if (t != s)
 			*--t = '.';
@@ -289,7 +291,7 @@ void parse_hardware_param (cfile, hardware)
 	if (!t)
 		return;
 	if (hlen > sizeof hardware -> haddr) {
-		free (t);
+		dfree (t, "parse_hardware_param");
 		parse_warn ("hardware address too long");
 	} else {
 		hardware -> hlen = hlen;
@@ -298,7 +300,7 @@ void parse_hardware_param (cfile, hardware)
 		if (hlen < sizeof hardware -> haddr)
 			memset (&hardware -> haddr [hlen], 0,
 				(sizeof hardware -> haddr) - hlen);
-		free (t);
+		dfree (t, "parse_hardware_param");
 	}
 	
 	token = next_token (&val, cfile);
@@ -353,9 +355,10 @@ unsigned char *parse_numeric_aggregate (cfile, buf,
 	pair c = (pair)0;
 
 	if (!bufp && *max) {
-		bufp = (unsigned char *)malloc (*max * size / 8);
+		bufp = (unsigned char *)dmalloc (*max * size / 8,
+						 "parse_numeric_aggregate");
 		if (!bufp)
-			log_fatal ("can't allocate space for numeric aggregate");
+			log_fatal ("no space for numeric aggregate");
 	} else
 		s = bufp;
 
@@ -394,7 +397,9 @@ unsigned char *parse_numeric_aggregate (cfile, buf,
 			convert_num (s, val, base, size);
 			s += size / 8;
 		} else {
-			t = (unsigned char *)malloc (strlen (val) + 1);
+			t = (unsigned char *)
+				dmalloc (strlen (val) + 1,
+					 "parse_numeric_aggregate");
 			if (!t)
 				log_fatal ("no temp space for number.");
 			strcpy ((char *)t, val);
@@ -404,9 +409,10 @@ unsigned char *parse_numeric_aggregate (cfile, buf,
 
 	/* If we had to cons up a list, convert it now. */
 	if (c) {
-		bufp = (unsigned char *)malloc (count * size / 8);
+		bufp = (unsigned char *)dmalloc (count * size / 8,
+						 "parse_numeric_aggregate");
 		if (!bufp)
-			log_fatal ("can't allocate space for numeric aggregate.");
+			log_fatal ("no space for numeric aggregate.");
 		s = bufp + count - size / 8;
 		*max = count;
 	}
@@ -415,8 +421,8 @@ unsigned char *parse_numeric_aggregate (cfile, buf,
 		convert_num (s, (char *)(c -> car), base, size);
 		s -= size / 8;
 		/* Free up temp space. */
-		free (c -> car);
-		free (c);
+		dfree (c -> car, "parse_numeric_aggregate");
+		dfree (c, "parse_numeric_aggregate");
 		c = cdr;
 	}
 	return bufp;
@@ -734,7 +740,8 @@ struct option *parse_option_name (cfile, allocate)
 			skip_to_semi (cfile);
 		return (struct option *)0;
 	}
-	uname = malloc (strlen (val) + 1);
+	uname = dmalloc (strlen (val) + 1,
+			 "parse_option_name");
 	if (!uname)
 		log_fatal ("no memory for uname information.");
 	strcpy (uname, val);
@@ -785,11 +792,11 @@ struct option *parse_option_name (cfile, allocate)
 			if (val == uname)
 				option -> name = val;
 			else {
-				free (uname);
+				dfree (uname, "parse_option_name");
 				option -> name = dmalloc (strlen (val) + 1,
 							  "parse_option_name");
 				if (!option -> name)
-					log_fatal ("no memory for option %s.%s",
+					log_fatal ("option %s.%s: no memory",
 					           universe -> name, val);
 				strcpy (option -> name, val);
 			}
@@ -807,7 +814,7 @@ struct option *parse_option_name (cfile, allocate)
 	}
 
 	/* Free the initial identifier token. */
-	free (uname);
+	dfree (uname, "parse_option_name");
 	return option;
 }
 
