@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.53.2.28 2004/06/10 17:59:54 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.53.2.29 2004/06/14 21:08:51 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -3399,13 +3399,7 @@ failover_option_t *dhcp_failover_option_printf (unsigned code,
 	char tbuf [256];
 
 	va_start (va, fmt);
-#if defined (HAVE_SNPRINTF)
-	/* Presumably if we have snprintf, we also have
-	   vsnprintf. */
 	vsnprintf (tbuf, sizeof tbuf, fmt, va);
-#else
-	vsprintf (tbuf, fmt, va);
-#endif
 	va_end (va);
 
 	return dhcp_failover_make_option (code, obuf, obufix, obufmax,
@@ -4485,19 +4479,13 @@ isc_result_t dhcp_failover_process_bind_update (dhcp_failover_state_t *state,
 		}
 		if (new_binding_state != msg -> binding_status) {
 			char outbuf [100];
-#if !defined (NO_SNPRINTF)
+
 			snprintf (outbuf, sizeof outbuf,
 				  "%s: invalid state transition: %s to %s",
 				  piaddr (lease -> ip_addr),
 				  binding_state_print (lease -> binding_state),
 				  binding_state_print (msg -> binding_status));
-#else
-			sprintf (outbuf,
-				 "%s: invalid state transition: %s to %s",
-				 piaddr (lease -> ip_addr),
-				 binding_state_print (lease -> binding_state),
-				 binding_state_print (msg -> binding_status));
-#endif
+
 			dhcp_failover_send_bind_ack (state, msg,
 						     FTR_FATAL_CONFLICT,
 						     outbuf);

@@ -171,10 +171,10 @@ extern int h_errno;
    sprintf functions which will deposit a limited number of characters
    into the buffer; that limit is provided in an extra argument.
    If your system doesn't support this functionality, you must include
-   the definitions below: */
+   the definition below for a dhcp-distribution-local version to be
+   built and used: */
 
 #if 0
-#define vsnprintf(buf, size, fmt, list) vsprintf (buf, fmt, list)
 #define NO_SNPRINTF
 #endif
 

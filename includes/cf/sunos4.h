@@ -120,7 +120,6 @@ extern int h_errno;
 #endif /* !__GNUC__*/
 
 /* SunOS doesn't support limited sprintfs. */
-#define vsnprintf(buf, size, fmt, list) vsprintf (buf, fmt, list)
 #define NO_SNPRINTF
 
 /* SunOS doesn't supply strerror... */

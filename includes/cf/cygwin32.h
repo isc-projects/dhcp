@@ -68,7 +68,8 @@
 #define VA_DOTDOTDOT ...
 #define va_dcl
 #define VA_start(list, last) va_start (list, last)
-#define vsnprintf(buf, size, fmt, list) vsprintf (buf, fmt, list)
+
+/* XXX: System is not believed to have vsnprintf.  Someone please verify. */
 #define NO_SNPRINTF
 
 #ifndef _PATH_DHCPD_PID

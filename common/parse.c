@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.104.2.15 2004/06/10 17:59:20 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.104.2.16 2004/06/14 21:08:43 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -4796,13 +4796,8 @@ int parse_warn (struct parse *cfile, const char *fmt, ...)
 	unsigned i, lix;
 	
 	do_percentm (mbuf, fmt);
-#ifndef NO_SNPRINTF
 	snprintf (fbuf, sizeof fbuf, "%s line %d: %s",
 		  cfile -> tlname, cfile -> lexline, mbuf);
-#else
-	sprintf (fbuf, "%s line %d: %s",
-		 cfile -> tlname, cfile -> lexline, mbuf);
-#endif
 	
 	va_start (list, fmt);
 	vsnprintf (mbuf, sizeof mbuf, fbuf, list);

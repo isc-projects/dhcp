@@ -108,7 +108,6 @@ typedef int socklen_t;
 
 #ifndef __QNXNTO__
 # define NO_SNPRINTF
-# define vsnprintf( buf, size, fmt, list )	vsprintf( buf, fbuf, list )
 #endif
 
 #ifdef __QNXNTO__

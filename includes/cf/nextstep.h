@@ -88,9 +88,10 @@ extern int h_errno;
 #define VA_DOTDOTDOT ...
 #define VA_start(list, last) va_start (list, last)
 #define va_dcl
+
 /* NeXT lacks snprintf */
-#define vsnprintf(buf, size, fmt, list) vsprintf (buf, fmt, list)
 #define NO_SNPRINTF
+
 /* Porting::
    You must define the default network API for your port.   This
    will depend on whether one of the existing APIs will work for

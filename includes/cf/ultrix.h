@@ -84,8 +84,10 @@ extern int h_errno;
 #include <varargs.h>
 #define VA_DOTDOTDOT va_alist
 #define VA_start(list, last) va_start (list)
-#define vsnprintf(buf, size, fmt, list) vsprintf (buf, fmt, list)
+
+/* XXX: System is not thought to support snprintf/vsnprintf.  Please verify. */
 #define NO_SNPRINTF
+
 #define NEED_INET_ATON
 
 #define INADDR_LOOPBACK	((u_int32_t)0x7f000001)

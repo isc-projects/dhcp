@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bpf.c,v 1.48.2.4 2004/06/10 17:59:14 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: bpf.c,v 1.48.2.5 2004/06/14 21:08:42 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -90,11 +90,7 @@ int if_register_bpf (info)
 
 	/* Open a BPF device */
 	for (b = 0; 1; b++) {
-#ifndef NO_SNPRINTF
 		snprintf(filename, sizeof(filename), BPF_FORMAT, b);
-#else
-		sprintf(filename, BPF_FORMAT, b);
-#endif
 		sock = open (filename, O_RDWR, 0);
 		if (sock < 0) {
 			if (errno == EBUSY) {

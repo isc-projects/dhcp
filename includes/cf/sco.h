@@ -105,7 +105,6 @@ extern int h_errno;
 #define va_dcl
 
 /* SCO doesn't support limited sprintfs. */
-#define vsnprintf(buf, size, fmt, list) vsprintf (buf, fmt, list)
 #define NO_SNPRINTF
 
 /* By default, use BSD Socket API for receiving and sending packets.

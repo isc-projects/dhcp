@@ -133,6 +133,14 @@
 # endif
 #endif
 
+/* snprintf/vsnprintf hacks.  for systems with no libc versions only. */
+#ifdef NO_SNPRINTF
+  extern int isc_print_snprintf(char *, size_t, const char *, ...);
+  extern int isc_print_vsnprintf(char *, size_t, const char *, va_list ap);
+# define snprintf  isc_print_snprintf
+# define vsnprintf isc_print_vsnprintf
+#endif
+
 /* Porting::
 
    If you add a new network API, and have it set up so that it can be

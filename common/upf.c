@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: upf.c,v 1.21.2.2 2004/06/10 17:59:22 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: upf.c,v 1.21.2.3 2004/06/14 21:08:44 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -79,11 +79,7 @@ int if_register_upf (info)
 
 	/* Open a UPF device */
 	for (b = 0; 1; b++) {
-#ifndef NO_SNPRINTF
 		snprintf(filename, sizeof(filename), "/dev/pf/pfilt%d", b);
-#else
-		sprintf(filename, "/dev/pf/pfilt%d", b);
-#endif
 		sock = open (filename, O_RDWR, 0);
 		if (sock < 0) {
 			if (errno == EBUSY) {

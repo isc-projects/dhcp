@@ -67,7 +67,7 @@ extern int h_errno;
 #define VA_start(list, last) va_start (list, last)
 #define va_dcl
 
-#define vsnprintf(buf, size, fmt, list) vsprintf (buf, fmt, list)
+/* XXX: System is not believed to have snprintf/vsnprintf.  Please verify. */
 #define NO_SNPRINTF
 
 #if defined (USE_DEFAULT_NETWORK)

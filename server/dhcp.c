@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.192.2.32 2004/06/10 17:59:52 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.192.2.33 2004/06/14 21:08:51 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -80,13 +80,8 @@ void dhcp (packet)
 		    packet -> packet_type < dhcp_type_name_max - 1) {
 			s = dhcp_type_names [packet -> packet_type - 1];
 		} else {
-#if defined (HAVE_SNPRINTF)
 			snprintf (typebuf, sizeof typebuf,
 				  "type %d", packet -> packet_type);
-#else
-			sprintf (typebuf, 
-				  "type %d", packet -> packet_type);
-#endif
 			s = typebuf;
 		}
 		
