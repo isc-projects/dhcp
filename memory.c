@@ -405,15 +405,17 @@ int supersede_lease (comp, lease, commit)
 		/* If there's a Unique ID, dissociate it from the hash
 		   table if necessary, and always free it. */
 		if (comp -> uid) {
-			if (comp -> uid_len != lease -> uid_len ||
-			    memcmp (comp -> uid, lease -> uid,
-				    comp -> uid_len)) {
-				delete_hash_entry (lease_uid_hash,
-						   comp -> uid,
-						   comp -> uid_len);
-				enter_uid = 1;
+			if (comp -> uid != lease -> uid) {
+				if (comp -> uid_len != lease -> uid_len ||
+				    memcmp (comp -> uid, lease -> uid,
+					    comp -> uid_len)) {
+					delete_hash_entry (lease_uid_hash,
+							   comp -> uid,
+							   comp -> uid_len);
+					enter_uid = 1;
+				}
+				free (comp -> uid);
 			}
-			free (comp -> uid);
 		} else
 			enter_uid = 1;
 
