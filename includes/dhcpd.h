@@ -1290,9 +1290,9 @@ ssize_t send_fallback PROTO ((struct interface_info *,
 
 #ifdef USE_SOCKET_SEND
 void if_reinitialize_send PROTO ((struct interface_info *));
-void if_register_send PROTO ((struct interface_info *));s
+void if_register_send PROTO ((struct interface_info *));
 void if_deregister_send PROTO ((struct interface_info *));
-size_t send_packet PROTO ((struct interface_info *,
+ssize_t send_packet PROTO ((struct interface_info *,
 			    struct packet *, struct dhcp_packet *, size_t, 
 			    struct in_addr,
 			    struct sockaddr_in *, struct hardware *));
