@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.67.2.3 2001/05/10 18:31:01 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.67.2.4 2001/05/18 01:05:31 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -91,6 +91,16 @@ isc_result_t enter_host (hd, dynamicp, commit)
 			   always have to keep the deletion. */
 			if (!hp -> flags & HOST_DECL_DYNAMIC)
 				hd -> flags |= HOST_DECL_STATIC;
+		}
+
+		/* If we are updating an existing host declaration, we
+		   can just delete it and add it again. */
+		if (hp && hp == hd) {
+			host_dereference (&hp, MDL);
+			delete_host (hd, 0);
+			if (!write_host (hd))
+				return ISC_R_IOERROR;
+			hd -> flags &= ~HOST_DECL_DELETED;
 		}
 
 		/* If there isn't already a host decl matching this
@@ -238,8 +248,8 @@ isc_result_t delete_host (hd, commit)
 	if (hd -> interface.hlen) {
 	    if (host_hw_addr_hash) {
 		if (host_hash_lookup (&hp, host_hw_addr_hash,
-			hd -> interface.hbuf,
-			hd -> interface.hlen, MDL)) {
+				      hd -> interface.hbuf,
+				      hd -> interface.hlen, MDL)) {
 		    if (hp == hd) {
 			host_hash_delete (host_hw_addr_hash,
 					  hd -> interface.hbuf,
