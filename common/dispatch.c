@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dispatch.c,v 1.43 1997/09/16 18:12:32 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dispatch.c,v 1.44 1997/10/20 21:47:54 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -58,6 +58,7 @@ void (*bootp_packet_handler) PROTO ((struct interface_info *,
 				     struct iaddr, struct hardware *));
 
 static void got_one PROTO ((struct protocol *));
+int quiet_interface_discovery;
 
 /* Use the SIOCGIFCONF ioctl to get a list of all the attached interfaces.
    For each interface that's of type INET and not the loopback interface,
@@ -464,8 +465,12 @@ void dispatch ()
 		GET_TIME (&cur_time);
 
 		/* Not likely to be transitory... */
-		if (count < 0)
-			error ("poll: %m");
+		if (count < 0) {
+			if (errno == EAGAIN || ERRNO == EINTR)
+				continue;
+			else
+				error ("poll: %m");
+		}
 
 		i = 0;
 		for (l = protocols; l; l = l -> next) {
