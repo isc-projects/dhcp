@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.109 2001/01/25 08:32:57 mellon Exp $ Copyright 1995-2001 Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.110 2001/02/12 21:04:06 mellon Exp $ Copyright 1995-2001 Internet Software Consortium.";
 #endif
 
   static char copyright[] =
@@ -165,6 +165,11 @@ const char *path_dhcpd_pid = _PATH_DHCPD_PID;
 int dhcp_max_agent_option_packet_length = DHCP_MTU_MAX;
 
 static omapi_auth_key_t *omapi_key = (omapi_auth_key_t *)0;
+int omapi_port;
+
+#if defined (TRACING)
+trace_type_t *trace_srandom;
+#endif
 
 static isc_result_t verify_addr (omapi_object_t *l, omapi_addr_t *addr) {
 	return ISC_R_SUCCESS;
@@ -197,18 +202,16 @@ int main (argc, argv, envp)
 	omapi_object_t *listener;
 	unsigned seed;
 	struct interface_info *ip;
-	struct data_string db;
-	struct option_cache *oc;
-	struct option_state *options = (struct option_state *)0;
 	struct parse *parse;
 	int lose;
-	int omapi_port;
 	omapi_object_t *auth;
 	struct tsig_key *key;
 	omapi_typed_data_t *td;
 	int no_dhcpd_conf = 0;
 	int no_dhcpd_db = 0;
 	int no_dhcpd_pid = 0;
+	char *traceinfile = (char *)0;
+	char *traceoutfile = (char *)0;
 
 	/* Set up the client classification system. */
 	classification_setup ();
@@ -294,6 +297,18 @@ int main (argc, argv, envp)
 		} else if (!strcmp (argv [i], "-q")) {
 			quiet = 1;
 			quiet_interface_discovery = 1;
+		} else if (!strcmp (argv [i], "--version")) {
+			log_info ("isc-dhcpd-%s", DHCP_VERSION);
+			exit (0);
+		} else if (!strcmp (argv [i], "-tf")) {
+			if (++i == argc)
+				usage ();
+			traceoutfile = argv [i];
+		} else if (!strcmp (argv [i], "-play")) {
+			if (++i == argc)
+				usage ();
+			traceinfile = argv [i];
+			trace_replay_init ();
 		} else if (argv [i][0] == '-') {
 			usage ();
 		} else {
@@ -335,17 +350,34 @@ int main (argc, argv, envp)
 		log_perror = 0;
 	}
 
+#if defined (TRACING)
+	trace_init (set_time, MDL);
+	if (traceoutfile)
+		trace_begin (traceoutfile, MDL);
+	interface_trace_setup ();
+	parse_trace_setup ();
+	trace_srandom = trace_type_register ("random-seed", (void *)0,
+					     trace_seed_input,
+					     trace_seed_stop, MDL);
+#endif
+
 	/* Default to the DHCP/BOOTP port. */
 	if (!local_port)
 	{
-		ent = getservbyname ("dhcp", "udp");
-		if (!ent)
-			local_port = htons (67);
-		else
-			local_port = ent -> s_port;
+		if ((s = getenv ("DHCPD_PORT"))) {
+			local_port = htons (atoi (s));
+			log_debug ("binding to environment-specified port %d",
+				   ntohs (local_port));
+		} else {
+			ent = getservbyname ("dhcp", "udp");
+			if (!ent)
+				local_port = htons (67);
+			else
+				local_port = ent -> s_port;
 #ifndef __CYGWIN32__ /* XXX */
-		endservent ();
+			endservent ();
 #endif
+		}
 	}
   
 	remote_port = htons (ntohs (local_port) + 1);
@@ -380,6 +412,10 @@ int main (argc, argv, envp)
 		log_fatal ("Can't allocate root group!");
 	root_group -> authoritative = 0;
 
+	/* Set up various hooks. */
+	dhcp_interface_setup_hook = dhcpd_interface_setup_hook;
+	bootp_packet_handler = do_packet;
+
 #if defined (NSUPDATE)
 	/* Set up the standard name service updater routine. */
 	parse = (struct parse *)0;
@@ -398,6 +434,22 @@ int main (argc, argv, envp)
 	end_parse (&parse);
 #endif
 
+	/* Initialize icmp support... */
+	icmp_startup (1, lease_pinged);
+
+#if defined (TRACING)
+	if (traceinfile) {
+	    if (!no_dhcpd_db) {
+		    log_error ("%s", "");
+		    log_error ("** You must specify a lease file with -lf.");
+		    log_error ("   Dhcpd will not overwrite your default");
+		    log_fatal ("   lease file when playing back a trace. **");
+	    }		
+	    trace_file_replay (traceinfile);
+	    exit (0);
+	}
+#endif
+
 	/* Read the dhcpd.conf file... */
 	if (readconf () != ISC_R_SUCCESS)
 		log_fatal ("Configuration file errors encountered -- exiting");
@@ -405,6 +457,148 @@ int main (argc, argv, envp)
         /* test option should cause an early exit */
  	if (cftest && !lftest) 
  		exit(0);
+
+	postconf_initialization (quiet);
+
+	group_write_hook = group_writer;
+
+	/* Start up the database... */
+	db_startup (lftest);
+
+	if (lftest)
+		exit (0);
+
+	/* Discover all the network interfaces and initialize them. */
+	discover_interfaces (DISCOVER_SERVER);
+
+	/* Make up a seed for the random number generator from current
+	   time plus the sum of the last four bytes of each
+	   interface's hardware address interpreted as an integer.
+	   Not much entropy, but we're booting, so we're not likely to
+	   find anything better. */
+	seed = 0;
+	for (ip = interfaces; ip; ip = ip -> next) {
+		int junk;
+		memcpy (&junk,
+			&ip -> hw_address.hbuf [ip -> hw_address.hlen -
+					       sizeof seed], sizeof seed);
+		seed += junk;
+	}
+	srandom (seed + cur_time);
+#if defined (TRACING)
+	trace_seed_stash (trace_srandom, seed + cur_time);
+#endif
+
+	/* Start up a listener for the object management API protocol. */
+	if (omapi_port != -1) {
+		listener = (omapi_object_t *)0;
+		result = omapi_generic_new (&listener, MDL);
+		if (result != ISC_R_SUCCESS)
+			log_fatal ("Can't allocate new generic object: %s",
+				   isc_result_totext (result));
+		result = omapi_protocol_listen (listener,
+						(unsigned)omapi_port, 1);
+		if (result == ISC_R_SUCCESS && omapi_key)
+			result = omapi_protocol_configure_security
+				(listener, verify_addr, verify_auth);
+		if (result != ISC_R_SUCCESS)
+			log_fatal ("Can't start OMAPI protocol: %s",
+				   isc_result_totext (result));
+	}
+
+#if defined (FAILOVER_PROTOCOL)
+	/* Start the failover protocol. */
+	dhcp_failover_startup ();
+#endif
+
+#ifndef DEBUG
+	if (daemon) {
+		/* First part of becoming a daemon... */
+		if ((pid = fork ()) < 0)
+			log_fatal ("Can't fork daemon: %m");
+		else if (pid)
+			exit (0);
+	}
+
+	/* Read previous pid file. */
+	if ((i = open (path_dhcpd_pid, O_RDONLY)) >= 0) {
+		status = read (i, pbuf, (sizeof pbuf) - 1);
+		close (i);
+		pbuf [status] = 0;
+		pid = atoi (pbuf);
+
+		/* If the previous server process is not still running,
+		   write a new pid file immediately. */
+		if (pid && (pid == getpid() || kill (pid, 0) < 0)) {
+			unlink (path_dhcpd_pid);
+			if ((i = open (path_dhcpd_pid,
+				       O_WRONLY | O_CREAT, 0640)) >= 0) {
+				sprintf (pbuf, "%d\n", (int)getpid ());
+				write (i, pbuf, strlen (pbuf));
+				close (i);
+				pidfilewritten = 1;
+			}
+		} else
+			log_fatal ("There's already a DHCP server running.");
+	}
+
+	/* If we were requested to log to stdout on the command line,
+	   keep doing so; otherwise, stop. */
+	if (log_perror == -1)
+		log_perror = 1;
+	else
+		log_perror = 0;
+
+	if (daemon) {
+		/* Become session leader and get pid... */
+		close (0);
+		close (1);
+		close (2);
+		pid = setsid ();
+	}
+
+	/* If we didn't write the pid file earlier because we found a
+	   process running the logged pid, but we made it to here,
+	   meaning nothing is listening on the bootp port, then write
+	   the pid file out - what's in it now is bogus anyway. */
+	if (!pidfilewritten) {
+		unlink (path_dhcpd_pid);
+		if ((i = open (path_dhcpd_pid,
+			       O_WRONLY | O_CREAT, 0640)) >= 0) {
+			sprintf (pbuf, "%d\n", (int)getpid ());
+			write (i, pbuf, strlen (pbuf));
+			close (i);
+			pidfilewritten = 1;
+		}
+	}
+#endif /* !DEBUG */
+
+#if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL)
+	dmalloc_cutoff_generation = dmalloc_generation;
+	dmalloc_longterm = dmalloc_outstanding;
+	dmalloc_outstanding = 0;
+#endif
+
+#if defined (DEBUG_RC_HISTORY_EXHAUSTIVELY)
+	dump_rc_history ();
+#endif
+
+	/* Receive packets and dispatch them... */
+	dispatch ();
+
+	/* Not reached */
+	return 0;
+}
+
+void postconf_initialization (int quiet)
+{
+	struct option_state *options = (struct option_state *)0;
+	struct data_string db;
+	struct option_cache *oc;
+	char *s;
+	isc_result_t result;
+	struct parse *parse;
+	int tmp;
 
 	/* Now try to get the lease file name. */
 	option_state_allocate (&options, MDL);
@@ -552,13 +746,14 @@ int main (argc, argv, envp)
 		}
 	} else {
 		log_info ("%s", "");
-		log_error ("** You must set ddns-update-style before %s",
-			   "dhcpd will run. **");
-		log_error ("** To get the same behaviour as in 3.0b2pl11 %s",
+		log_error ("** You must add a ddns-update-style %s%s.",
+			   "statement to ", path_dhcpd_conf);
+		log_error ("   To get the same behaviour as in 3.0b2pl11 %s",
 			   "and previous");
-		log_error ("   versions, use \"ddns-update-style ad-hoc;\" **");
-		log_fatal ("ddns-update-style is documented in the %s",
-			   "dhcpd.conf manual page.");
+		log_error ("   versions, add a line that says \"%s\"",
+			   "ddns-update-style ad-hoc;");
+		log_fatal ("   Please read the dhcpd.conf manual page %s",
+			   "for more information. **");
 	}
 
 	oc = lookup_option (&server_universe, options, SV_LOG_FACILITY);
@@ -578,12 +773,18 @@ int main (argc, argv, envp)
 				openlog ("dhcpd",
 					 LOG_NDELAY, db.data [0]);
 #endif
+				/* Log the startup banner into the new
+				   log file. */
 				if (!quiet) {
+					/* Don't log to stderr twice. */
+					tmp = log_perror;
+					log_perror = 0;
 					log_info ("%s %s",
 						  message, DHCP_VERSION);
 					log_info (copyright);
 					log_info (arr);
 					log_info (url);
+					log_perror = tmp;
 				}
 			} else
 				log_fatal ("invalid log facility");
@@ -619,167 +820,35 @@ int main (argc, argv, envp)
 
 		/* Set up the standard name service updater routine. */
 		parse = (struct parse *)0;
-		status = new_parse (&parse, -1,
-				    old_nsupdate, (sizeof old_nsupdate) - 1,
-				    "old name service update routine");
-		if (status != ISC_R_SUCCESS)
+		result = new_parse (&parse, -1,
+				 old_nsupdate, (sizeof old_nsupdate) - 1,
+				 "old name service update routine");
+		if (result != ISC_R_SUCCESS)
 			log_fatal ("can't begin parsing old ddns updater!");
 
-		lose = 0;
+		tmp = 0;
 		if (!(parse_executable_statements (e, parse,
-						   &lose, context_any))) {
+						   &tmp, context_any))) {
 			end_parse (&parse);
 			log_fatal ("can't parse standard ddns updater!");
 		}
 		end_parse (&parse);
 	}
 #endif
-
-	group_write_hook = group_writer;
-
-	/* Start up the database... */
-	db_startup (lftest);
-
-	if (lftest)
-		exit (0);
-
-	dhcp_interface_setup_hook = dhcpd_interface_setup_hook;
-
-	/* Discover all the network interfaces and initialize them. */
-	discover_interfaces (DISCOVER_SERVER);
-
-	/* Make up a seed for the random number generator from current
-	   time plus the sum of the last four bytes of each
-	   interface's hardware address interpreted as an integer.
-	   Not much entropy, but we're booting, so we're not likely to
-	   find anything better. */
-	seed = 0;
-	for (ip = interfaces; ip; ip = ip -> next) {
-		int junk;
-		memcpy (&junk,
-			&ip -> hw_address.hbuf [ip -> hw_address.hlen -
-					       sizeof seed], sizeof seed);
-		seed += junk;
-	}
-	srandom (seed + cur_time);
-
-	/* Initialize icmp support... */
-	icmp_startup (1, lease_pinged);
-
-	/* Start up a listener for the object management API protocol. */
-	if (omapi_port != -1) {
-		listener = (omapi_object_t *)0;
-		result = omapi_generic_new (&listener, MDL);
-		if (result != ISC_R_SUCCESS)
-			log_fatal ("Can't allocate new generic object: %s",
-				   isc_result_totext (result));
-		result = omapi_protocol_listen (listener,
-						(unsigned)omapi_port, 1);
-		if (result == ISC_R_SUCCESS && omapi_key)
-			result = omapi_protocol_configure_security
-				(listener, verify_addr, verify_auth);
-		if (result != ISC_R_SUCCESS)
-			log_fatal ("Can't start OMAPI protocol: %s",
-				   isc_result_totext (result));
-	}
-
-#if defined (FAILOVER_PROTOCOL)
-	/* Start the failover protocol. */
-	dhcp_failover_startup ();
-#endif
-
-#ifndef DEBUG
-	if (daemon) {
-		/* First part of becoming a daemon... */
-		if ((pid = fork ()) < 0)
-			log_fatal ("Can't fork daemon: %m");
-		else if (pid)
-			exit (0);
-	}
-
-	/* Read previous pid file. */
-	if ((i = open (path_dhcpd_pid, O_RDONLY)) >= 0) {
-		status = read (i, pbuf, (sizeof pbuf) - 1);
-		close (i);
-		pbuf [status] = 0;
-		pid = atoi (pbuf);
-
-		/* If the previous server process is not still running,
-		   write a new pid file immediately. */
-		if (pid && (pid == getpid() || kill (pid, 0) < 0)) {
-			unlink (path_dhcpd_pid);
-			if ((i = open (path_dhcpd_pid,
-				       O_WRONLY | O_CREAT, 0640)) >= 0) {
-				sprintf (pbuf, "%d\n", (int)getpid ());
-				write (i, pbuf, strlen (pbuf));
-				close (i);
-				pidfilewritten = 1;
-			}
-		} else
-			log_fatal ("There's already a DHCP server running.");
-	}
-
-	/* If we were requested to log to stdout on the command line,
-	   keep doing so; otherwise, stop. */
-	if (log_perror == -1)
-		log_perror = 1;
-	else
-		log_perror = 0;
-
-	if (daemon) {
-		/* Become session leader and get pid... */
-		close (0);
-		close (1);
-		close (2);
-		pid = setsid ();
-	}
-
-	/* If we didn't write the pid file earlier because we found a
-	   process running the logged pid, but we made it to here,
-	   meaning nothing is listening on the bootp port, then write
-	   the pid file out - what's in it now is bogus anyway. */
-	if (!pidfilewritten) {
-		unlink (path_dhcpd_pid);
-		if ((i = open (path_dhcpd_pid,
-			       O_WRONLY | O_CREAT, 0640)) >= 0) {
-			sprintf (pbuf, "%d\n", (int)getpid ());
-			write (i, pbuf, strlen (pbuf));
-			close (i);
-			pidfilewritten = 1;
-		}
-	}
-#endif /* !DEBUG */
-
-	/* Set up the bootp packet handler... */
-	bootp_packet_handler = do_packet;
-
-#if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL)
-	dmalloc_cutoff_generation = dmalloc_generation;
-	dmalloc_longterm = dmalloc_outstanding;
-	dmalloc_outstanding = 0;
-#endif
-
-#if defined (DEBUG_RC_HISTORY_EXHAUSTIVELY)
-	dump_rc_history ();
-#endif
-
-	/* Receive packets and dispatch them... */
-	dispatch ();
-
-	/* Not reached */
-	return 0;
 }
 
 /* Print usage message. */
 
 static void usage ()
 {
-	log_info (message);
+	log_info ("%s %s", message, DHCP_VERSION);
 	log_info (copyright);
 	log_info (arr);
 
-	log_fatal ("Usage: dhcpd [-p <UDP port #>] [-d] [-f]%s%s",
+	log_fatal ("Usage: dhcpd [-p <UDP port #>] [-d] [-f]%s%s%s%s",
 		   "\n             [-cf config-file] [-lf lease-file]",
+		   "\n		   [-tf trace-output-file]",
+		   "\n		   [-play trace-input-file]",
 		   "\n             [-t] [-T] [-s server] [if0 [...ifN]]");
 }
 
