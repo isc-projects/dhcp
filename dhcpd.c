@@ -245,6 +245,9 @@ void do_packet (packbuf, len, from_port, from, sock)
 		parse_options (tp);
 		if (tp -> options_valid &&
 		    tp -> options [DHO_DHCP_MESSAGE_TYPE].data)
+			tp -> packet_type =
+				tp -> options [DHO_DHCP_MESSAGE_TYPE].data [0];
+		if (tp -> packet_type)
 			dhcp (tp);
 		else
 			bootp (tp);
