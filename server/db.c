@@ -22,10 +22,11 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: db.c,v 1.24 1999/05/06 20:28:29 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: db.c,v 1.25 1999/07/01 19:55:12 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
+#include <ctype.h>
 
 FILE *db_file;
 
@@ -123,11 +124,24 @@ int write_lease (lease)
 			++errors;
 		}
 	}
-	if (lease -> client_hostname) {
-		for (i = 0; lease -> client_hostname [i]; i++)
-			if (lease -> client_hostname [i] < 33 ||
-			    lease -> client_hostname [i] > 126)
-				goto bad_client_hostname;
+	if (lease -> ddns_fwd_name && db_printable (lease -> ddns_fwd_name)) {
+		errno = 0;
+		fprintf (db_file, "\n\tddns-fwd-name \"%s\";",
+			 lease -> ddns_fwd_name);
+		if (errno) {
+			++errors;
+		}
+	}
+	if (lease -> ddns_rev_name && db_printable (lease -> ddns_rev_name)) {
+		errno = 0;
+		fprintf (db_file, "\n\tddns-rev-name \"%s\";",
+			 lease -> ddns_rev_name);
+		if (errno) {
+			++errors;
+		}
+	}
+	if (lease -> client_hostname &&
+	    db_printable (lease -> client_hostname)) {
 		errno = 0;
 		fprintf (db_file, "\n\tclient-hostname \"%s\";",
 			 lease -> client_hostname);
@@ -135,12 +149,7 @@ int write_lease (lease)
 			++errors;
 		}
 	}
-       bad_client_hostname:
-	if (lease -> hostname) {
-		for (i = 0; lease -> hostname [i]; i++)
-			if (lease -> hostname [i] < 33 ||
-			    lease -> hostname [i] > 126)
-				goto bad_hostname;
+	if (lease -> hostname && db_printable (lease -> hostname)) {
 		errno = 0;
 		errno = 0;
 		fprintf (db_file, "\n\thostname \"%s\";",
@@ -149,7 +158,6 @@ int write_lease (lease)
 			++errors;
 		}
 	}
-       bad_hostname:
 	errno = 0;
 	fputs ("\n}\n", db_file);
 	if (errno) {
@@ -159,6 +167,16 @@ int write_lease (lease)
 		log_info ("write_lease: unable to write lease %s",
 		      piaddr (lease -> ip_addr));
 	return !errors;
+}
+
+int db_printable (s)
+	char *s;
+{
+	int i;
+	for (i = 0; s [i]; i++)
+		if (!isascii (s [i]) || !isprint (s [i]))
+			return 0;
+	return 1;
 }
 
 /* Write a spawned class to the database file. */
