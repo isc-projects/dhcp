@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.96 2001/01/11 23:14:11 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.97 2001/01/16 23:06:06 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -361,10 +361,17 @@ void parse_hardware_param (cfile, hardware)
 	   that data in the lease file rather than simply failing on such
 	   clients.   Yuck. */
 	hlen = 0;
+	token = peek_token (&val, cfile);
+	if (token == SEMI) {
+		hardware -> hlen = 1;
+		goto out;
+	}
 	t = parse_numeric_aggregate (cfile, (unsigned char *)0, &hlen,
 				     COLON, 16, 8);
-	if (!t)
+	if (!t) {
+		hardware -> hlen = 1;
 		return;
+	}
 	if (hlen + 1 > sizeof hardware -> hbuf) {
 		dfree (t, MDL);
 		parse_warn (cfile, "hardware address too long");
@@ -377,6 +384,7 @@ void parse_hardware_param (cfile, hardware)
 		dfree (t, MDL);
 	}
 	
+      out:
 	token = next_token (&val, cfile);
 	if (token != SEMI) {
 		parse_warn (cfile, "expecting semicolon.");
@@ -1548,10 +1556,15 @@ int parse_executable_statement (result, cfile, lose, case_context)
 		break;
 
 	      case SEND:
-		*lose = 1;
-		parse_warn (cfile, "send not appropriate here.");
-		skip_to_semi (cfile);
-		return 0;
+		token = next_token (&val, cfile);
+		known = 0;
+		option = parse_option_name (cfile, 0, &known);
+		if (!option) {
+			*lose = 1;
+			return 0;
+		}
+		return parse_option_statement (result, cfile, 1, option,
+					       send_option_statement);
 
 	      case SUPERSEDE:
 	      case OPTION:
@@ -3658,43 +3671,43 @@ int parse_non_binary (expr, cfile, lose, context)
 		break;
 		
 	      case NS_NOERROR:
-		known = NOERROR;
+		known = ISC_R_SUCCESS;
 		goto ns_const;
 
 	      case NS_NOTAUTH:
-		known = NOTAUTH;
+		known = ISC_R_NOTAUTH;
 		goto ns_const;
 
 	      case NS_NOTIMP:
-		known = NOTIMP;
+		known = ISC_R_NOTIMPLEMENTED;
 		goto ns_const;
 
 	      case NS_NOTZONE:
-		known = NOTZONE;
+		known = ISC_R_NOTZONE;
 		goto ns_const;
 
 	      case NS_NXDOMAIN:
-		known = NXDOMAIN;
+		known = ISC_R_NXDOMAIN;
 		goto ns_const;
 
 	      case NS_NXRRSET:
-		known = NXRRSET;
+		known = ISC_R_NXRRSET;
 		goto ns_const;
 
 	      case NS_REFUSED:
-		known = REFUSED;
+		known = ISC_R_REFUSED;
 		goto ns_const;
 
 	      case NS_SERVFAIL:
-		known = SERVFAIL;
+		known = ISC_R_SERVFAIL;
 		goto ns_const;
 
 	      case NS_YXDOMAIN:
-		known = YXDOMAIN;
+		known = ISC_R_YXDOMAIN;
 		goto ns_const;
 
 	      case NS_YXRRSET:
-		known = YXRRSET;
+		known = ISC_R_YXRRSET;
 		goto ns_const;
 
 	      case BOOTING:
@@ -3825,7 +3838,9 @@ int parse_expression (expr, cfile, lose, context, plhs, binop)
 	struct expression *rhs = (struct expression *)0, *tmp;
 	struct expression *lhs = (struct expression *)0;
 	enum expr_op next_op;
-	enum expression_context lhs_context, rhs_context;
+	enum expression_context
+		lhs_context = context_any,
+		rhs_context = context_any;
 
 	/* Consume the left hand side we were passed. */
 	if (plhs) {
@@ -3868,62 +3883,94 @@ int parse_expression (expr, cfile, lose, context, plhs, binop)
 			return 0;
 		}
 		next_op = expr_not_equal;
-		lhs_context = rhs_context = context_any;
+		context = expression_context (rhs);
 		break;
 
 	      case EQUAL:
 		next_op = expr_equal;
-		lhs_context = rhs_context = context_any;
+		context = expression_context (rhs);
 		break;
 
 	      case AND:
 		next_op = expr_and;
-		lhs_context = rhs_context = context_boolean;
+		context = expression_context (rhs);
+		if (context != context_boolean) {
+		      needbool:
+			parse_warn (cfile, "expecting boolean expressions");
+			skip_to_semi (cfile);
+			expression_dereference (&rhs, MDL);
+			*lose = 1;
+			return 0;
+		}
 		break;
 
 	      case OR:
 		next_op = expr_or;
-		lhs_context = rhs_context = context_boolean;
+		context = expression_context (rhs);
+		if (context != context_boolean)
+			goto needbool;
 		break;
 
 	      case PLUS:
 		next_op = expr_add;
-		lhs_context = rhs_context = context_numeric;
+		context = expression_context (rhs);
+		if (context != context_numeric) {
+		      neednum:
+			parse_warn (cfile, "expecting numeric expressions");
+			skip_to_semi (cfile);
+			expression_dereference (&rhs, MDL);
+			*lose = 1;
+			return 0;
+		}
 		break;
 
 	      case MINUS:
 		next_op = expr_subtract;
-		lhs_context = rhs_context = context_numeric;
+		context = expression_context (rhs);
+		if (context != context_numeric)
+			goto neednum;
 		break;
 
 	      case SLASH:
 		next_op = expr_divide;
-		lhs_context = rhs_context = context_numeric;
+		context = expression_context (rhs);
+		if (context != context_numeric)
+			goto neednum;
 		break;
 
 	      case ASTERISK:
 		next_op = expr_multiply;
-		lhs_context = rhs_context = context_numeric;
+		context = expression_context (rhs);
+		if (context != context_numeric)
+			goto neednum;
 		break;
 
 	      case PERCENT:
 		next_op = expr_remainder;
-		lhs_context = rhs_context = context_numeric;
+		context = expression_context (rhs);
+		if (context != context_numeric)
+			goto neednum;
 		break;
 
 	      case AMPERSAND:
 		next_op = expr_binary_and;
-		lhs_context = rhs_context = context_numeric;
+		context = expression_context (rhs);
+		if (context != context_numeric)
+			goto neednum;
 		break;
 
 	      case PIPE:
 		next_op = expr_binary_or;
-		lhs_context = rhs_context = context_numeric;
+		context = expression_context (rhs);
+		if (context != context_numeric)
+			goto neednum;
 		break;
 
 	      case CARET:
 		next_op = expr_binary_xor;
-		lhs_context = rhs_context = context_numeric;
+		context = expression_context (rhs);
+		if (context != context_numeric)
+			goto neednum;
 		break;
 
 	      default:
@@ -3984,62 +4031,6 @@ int parse_expression (expr, cfile, lose, context, plhs, binop)
 		}
 		next_op = expr_none;
 	}
-
-#if defined (NOTYET)		/* Post 3.0 final */
-	/* Make sure rhs and lhs can be combined using binop. */
-	if (!expr_valid_for_context (lhs, lhs_context)) {
-		if (!*lose) {
-			parse_warn (cfile,
-				    "lhs type is not valid for operator.");
-			*lose = 1;
-		}
-	}
-	if (!expr_valid_for_context (rhs, rhs_context) || *lose) {
-		if (!*lose) {
-			parse_warn (cfile,
-				    "lhs type is not valid for operator.");
-			*lose = 1;
-		}
-		return 0;
-	}
-
-	/* Do a little nosing about in comparisons. */
-	if (binop == expr_equal || binop == expr_not_equal) {
-		int lrhs, llhs, crhs, clhs;
-
-		/* If the subexpressions have lengths that are computable
-		   at parse time, see if they're the same, and barf if they
-		   aren't. */
-		clhs = data_subexpression_length (&llhs, lhs);
-		crhs = data_subexpression_length (&lrhs, rhs);
-		if (clhs == 2 || crhs == 2) {
-			if (clhs == crhs &&
-			    (llhs != lrhs ||
-			     (clhs == 2 && llhs > lrhs) ||
-			     (crhs == 2 && lrhs > llhs))) {
-				parse_warn (cfile,
-					    "comparison will always be %s",
-					    (binop == expr_equal ?
-					     "true" : "false"));
-			} else if (llhs != lrhs) {
-				log_error ("warning: %s will normally be %d%s",
-					   (clhs == 1
-					    ? "left-hand side"
-					    : "right-hand side"),
-					   (clhs == 1 ? llhs : lrhs),
-					   " bytes");
-				log_error ("...and %s will always be %d%s",
-					   (clhs == 1
-					    ? "right-hand side"
-					    : "left-hand side"),
-					   (clhs == 1 ? lrhs : llhs),
-					   " bytes");
-				log_error ("so this may not work the way%s",
-					   " you intended");
-			}
-		}
-	}
-#endif /* NOTYET */
 
 	/* Now combine the LHS and the RHS using binop. */
 	tmp = (struct expression *)0;
