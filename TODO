@@ -18,7 +18,7 @@ Things to do, not in any particular order...
 
 - Token ring support for bpf/nit interfaces
 
-- FDDI support for bpf/nit interfaces
+- FDDI support for bpf/nit interfaces (mostly done)
 
 - Other network hardware support for low-level interfaces?
 
