@@ -69,9 +69,7 @@ int check_collection (struct packet *p, struct lease *l, struct collection *c)
 void classify (struct packet *packet, struct class *class) { }
 
 static void usage (char *s) {
-	fprintf (stderr,
-		 "Usage: %s [-n <username>] [-p <password>] "
-		 "[-a <algorithm>] [-P <port>]\n", s);
+	fprintf (stderr, "Usage: %s\n", s);
 	exit (1);
 }
 
@@ -109,10 +107,10 @@ int main (int argc, char **argv, char **envp)
 
 	/* Initially, log errors to stderr as well as to syslogd. */
 #ifdef SYSLOG_4_2
-	openlog ("dhcpd", LOG_NDELAY);
+	openlog ("omshell", LOG_NDELAY);
 	log_priority = DHCPD_LOG_FACILITY;
 #else
-	openlog ("dhcpd", LOG_NDELAY, DHCPD_LOG_FACILITY);
+	openlog ("omshell", LOG_NDELAY, DHCPD_LOG_FACILITY);
 #endif
 	status = dhcpctl_initialize ();
 	if (status != ISC_R_SUCCESS) {
@@ -145,6 +143,9 @@ int main (int argc, char **argv, char **envp)
 		for (i = 0; i < g -> nvalues; i++) {
 		    omapi_value_t *v = g -> values [i];
 			
+		    if (!g -> values [i])
+			    continue;
+
 		    printf ("%.*s = ", (int)v -> name -> len,
 			    v -> name -> value);
 			
@@ -618,6 +619,12 @@ int main (int argc, char **argv, char **envp)
 			    break;
 		    }
 
+		    if (!oh) {
+			    printf ("you haven't opened an object yet!\n");
+			    skip_to_semi (cfile);
+			    break;
+		    }
+
 		    status = dhcpctl_object_update(connection, oh);
 		    if (status == ISC_R_SUCCESS)
 			    status = dhcpctl_wait_for_completion
@@ -699,4 +706,11 @@ int main (int argc, char **argv, char **envp)
 	} while (1);
 
 	exit (0);
+}
+
+/* Sigh */
+isc_result_t dhcp_set_control_state (control_object_state_t oldstate,
+				     control_object_state_t newstate)
+{
+	return ISC_R_SUCCESS;
 }
