@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.43 1999/07/02 20:57:25 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.44 1999/07/06 16:53:30 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -618,7 +618,7 @@ char *pretty_print_option (code, data, len, emit_commas, emit_quotes)
 	int numhunk = -1;
 	int numelem = 0;
 	char fmtbuf [32];
-	int i, j;
+	int i, j, k;
 	char *op = optbuf;
 	unsigned char *dp = data;
 	struct in_addr foo;
@@ -637,8 +637,8 @@ char *pretty_print_option (code, data, len, emit_commas, emit_quotes)
 	for (i = 0; dhcp_options [code].format [i]; i++) {
 		if (!numhunk) {
 			log_error ("%s: Extra codes in format string: %s\n",
-			      dhcp_options [code].name,
-			      &(dhcp_options [code].format [i]));
+				   dhcp_options [code].name,
+				   &(dhcp_options [code].format [i]));
 			break;
 		}
 		numelem++;
@@ -650,11 +650,21 @@ char *pretty_print_option (code, data, len, emit_commas, emit_quotes)
 			numhunk = 0;
 			break;
 		      case 'X':
-			fmtbuf [i] = 'x';
+			for (k = 0; k < len; k++) {
+				if (!isascii (data [k]) ||
+				    !isprint (data [k]))
+					break;
+			}
+			if (k == len) {
+				fmtbuf [i] = 't';
+				numhunk = -2;
+			} else {
+				fmtbuf [i] = 'x';
+				hunksize++;
+				comma = ':';
+				numhunk = 0;
+			}
 			fmtbuf [i + 1] = 0;
-			hunksize++;
-			numhunk = 0;
-			comma = ':';
 			break;
 		      case 't':
 			fmtbuf [i] = 't';
