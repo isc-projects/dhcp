@@ -92,12 +92,14 @@ enum expr_op {
  	expr_lease_time,
  	expr_dns_transaction,
 	expr_static,
-	expr_updated_dns_rr,
-	expr_ns_update,
+	expr_ns_add,
  	expr_ns_delete,
  	expr_ns_exists,
  	expr_ns_not_exists,
-	expr_not_equal
+	expr_not_equal,
+	expr_null,
+	expr_variable_exists,
+	expr_variable_reference
 };
 
 struct expression {
@@ -156,14 +158,14 @@ struct expression {
  			struct expression *rrname;
  			struct expression *rrdata;
  			struct expression *ttl;
- 		} ns_update;
+ 		} ns_add;
  		struct {
 			unsigned rrclass;
 			unsigned rrtype;
  			struct expression *rrname;
  			struct expression *rrdata;
  		} ns_delete, ns_exists, ns_not_exists;
-		struct expression *updated_dns_rr;
+		char *variable;
 	} data;
 	int flags;
 #	define EXPR_EPHEMERAL	1
@@ -224,5 +226,12 @@ enum expression_context {
 	context_boolean,
 	context_data,
 	context_numeric,
-	context_dns
+	context_dns,
+	context_data_or_numeric
+};
+
+struct binding {
+	struct binding *next;
+	char *name;
+	struct data_string value;
 };
