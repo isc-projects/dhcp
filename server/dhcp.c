@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.192.2.16 2001/10/26 21:37:48 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.192.2.17 2001/12/07 21:55:21 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -712,6 +712,14 @@ void dhcprelease (packet, ms_nulltp)
 		find_lease_by_ip_addr (&lease, cip, MDL);
 	}
 
+
+	/* If the hardware address doesn't match, don't do the release. */
+	if (lease &&
+	    (lease -> hardware_addr.hlen != packet -> raw -> hlen + 1 ||
+	     lease -> hardware_addr.hbuf [0] != packet -> raw -> htype ||
+	     memcmp (&lease -> hardware_addr.hbuf [0],
+		     packet -> raw -> chaddr, packet -> raw -> hlen)))
+		lease_dereference (&lease, MDL);
 
 	if (lease && lease -> client_hostname &&
 	    db_printable (lease -> client_hostname))
