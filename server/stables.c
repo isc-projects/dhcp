@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: stables.c,v 1.25.2.10 2003/01/14 23:20:35 dhankins Exp $ Copyright (c) 1995-2003 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: stables.c,v 1.25.2.11 2003/02/10 01:22:54 dhankins Exp $ Copyright (c) 1995-2003 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -491,7 +491,7 @@ struct option server_options [256] = {
 	{ "update-static-leases", "f",			&server_universe, 43 },
 	{ "log-facility", "Nsyslog-facilities.",	&server_universe, 44 },
 	{ "do-forward-updates", "f",			&server_universe, 45 },
-	{ "unknown-46", "X",				&server_universe, 46 },
+	{ "ping-timeout", "T",				&server_universe, 46 },
 	{ "unknown-47", "X",				&server_universe, 47 },
 	{ "unknown-48", "X",				&server_universe, 48 },
 	{ "unknown-49", "X",				&server_universe, 49 },

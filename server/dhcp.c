@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.192.2.24 2002/11/17 02:29:30 dhankins Exp $ Copyright (c) 1995-2002 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.192.2.25 2003/02/10 01:22:54 dhankins Exp $ Copyright (c) 1995-2002 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1472,6 +1472,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 	int status;
 	isc_result_t result;
 	int did_ping = 0;
+	TIME ping_timeout;
 
 	unsigned i, j;
 	int s1, s2;
@@ -2618,7 +2619,28 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 					    &lease -> scope, oc, MDL))) {
 		lease -> timestamp = cur_time;
 		icmp_echorequest (&lease -> ip_addr);
-		add_timeout (cur_time + 1, lease_ping_timeout, lease,
+
+		/* Determine wether to use configured or default ping timeout.
+		 */
+		if ((oc = lookup_option (&server_universe, state -> options,
+						SV_PING_TIMEOUT))) {
+			if (evaluate_option_cache (&d1, packet, lease,
+						(struct client_state *)0,
+						packet -> options,
+						state -> options,
+						&lease -> scope, oc, MDL)) {
+				if (d1.len == sizeof (u_int32_t))
+					ping_timeout =
+						getULong (d1.data);
+				data_string_forget (&d1, MDL);
+			}
+		} else {
+			ping_timeout = DEFAULT_PING_TIMEOUT;
+		}
+
+		log_debug ("Ping timeout: %d", ping_timeout);
+
+		add_timeout (cur_time + ping_timeout, lease_ping_timeout, lease,
 			     (tvref_t)lease_reference,
 			     (tvunref_t)lease_dereference);
 		++outstanding_pings;
