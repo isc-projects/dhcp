@@ -313,7 +313,7 @@ isc_result_t omapi_listener_connect (omapi_connection_object_t **obj,
 }
 
 #if defined (TRACING)
-OMAPI_ARRAY_TYPE(omapi_listener, omapi_listener_object_t);
+OMAPI_ARRAY_TYPE(omapi_listener, omapi_listener_object_t)
 
 void omapi_listener_trace_setup (void) {
 	trace_listener_accept =

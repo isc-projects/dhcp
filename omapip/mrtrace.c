@@ -58,11 +58,11 @@ ssize_t trace_mr_send (int, void *, size_t, int);
 ssize_t trace_mr_read_playback (void *, size_t);
 void trace_mr_read_record (void *, ssize_t);
 ssize_t trace_mr_recvfrom (int s, void *, size_t, int,
-			   struct sockaddr *, socklen_t *);
+			   struct sockaddr *, SOCKLEN_T *);
 ssize_t trace_mr_read (int, void *, size_t);
-int trace_mr_connect (int s, const struct sockaddr *, socklen_t);
+int trace_mr_connect (int s, const struct sockaddr *, SOCKLEN_T);
 int trace_mr_socket (int, int, int);
-int trace_mr_bind (int, const struct sockaddr *, socklen_t);
+int trace_mr_bind (int, const struct sockaddr *, SOCKLEN_T);
 int trace_mr_close (int);
 time_t trace_mr_time (time_t *);
 int trace_mr_select (int, fd_set *, fd_set *, fd_set *, struct timeval *);
@@ -177,7 +177,7 @@ void trace_mr_read_record (void *buf, ssize_t rv)
 }
 
 ssize_t trace_mr_recvfrom (int s, void *buf, size_t len, int flags,
-			   struct sockaddr *from, socklen_t *fromlen)
+			   struct sockaddr *from, SOCKLEN_T *fromlen)
 {
 	ssize_t rv;
 
@@ -207,7 +207,7 @@ ssize_t trace_mr_read (int d, void *buf, size_t nbytes)
 	return rv;
 }
 
-int trace_mr_connect (int s, const struct sockaddr *name, socklen_t namelen)
+int trace_mr_connect (int s, const struct sockaddr *name, SOCKLEN_T namelen)
 {
 	if (!trace_playback ())
 		return connect (s, name, namelen);
@@ -221,7 +221,7 @@ int trace_mr_socket (int domain, int type, int protocol)
 	return 1000;
 }
 
-int trace_mr_bind (int s, const struct sockaddr *name, socklen_t namelen)
+int trace_mr_bind (int s, const struct sockaddr *name, SOCKLEN_T namelen)
 {
 	if (!trace_playback ())
 		return bind (s, name, namelen);

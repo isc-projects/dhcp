@@ -387,7 +387,7 @@ void trace_file_replay (const char *filename)
 	tracepacket_t *tpkt = (tracepacket_t *)0;
 	int status;
 	char *buf = (char *)0;
-	int buflen;
+	unsigned buflen;
 	unsigned bufmax = 0;
 	trace_type_t *ttype = (trace_type_t *)0;
 	isc_result_t result;

@@ -139,7 +139,7 @@ static void trace_connection_output_stop (trace_type_t *ttype) { }
 isc_result_t omapi_connection_reader (omapi_object_t *h)
 {
 #if defined (TRACING)
-	return omapi_connection_reader_trace (h, 0, (char *)0, (int *)0);
+	return omapi_connection_reader_trace (h, 0, (char *)0, (unsigned *)0);
 }
 
 static isc_result_t omapi_connection_reader_trace (omapi_object_t *h,

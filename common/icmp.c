@@ -44,7 +44,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: icmp.c,v 1.26 2001/02/12 19:42:21 mellon Exp $ Copyright (c) 1996-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: icmp.c,v 1.27 2001/02/17 21:34:50 mellon Exp $ Copyright (c) 1996-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -233,7 +233,7 @@ isc_result_t icmp_echoreply (h)
 	struct icmp *icfrom;
 	struct ip *ip;
 	struct sockaddr_in from;
-	unsigned char icbuf [1500];
+	u_int8_t icbuf [1500];
 	int status;
 	SOCKLEN_T sl;
 	int hlen, len;
@@ -279,7 +279,7 @@ isc_result_t icmp_echoreply (h)
 		if (trace_record ()) {
 			iov [0].buf = (char *)&ia;
 			iov [0].len = sizeof ia;
-			iov [1].buf = icbuf;
+			iov [1].buf = (char *)icbuf;
 			iov [1].len = len;
 			trace_write_packet_iov (trace_icmp_input, 2, iov, MDL);
 		}
@@ -294,9 +294,9 @@ void trace_icmp_input_input (trace_type_t *ttype, unsigned length, char *buf)
 {
 	struct iaddr *ia;
 	unsigned len;
-	char *icbuf;
+	u_int8_t *icbuf;
 	ia = (struct iaddr *)buf;
-	icbuf = (char *)(ia + 1);
+	icbuf = (u_int8_t *)(ia + 1);
 	if (icmp_state -> icmp_handler)
 		(*icmp_state -> icmp_handler) (*ia, icbuf,
 					       (int)(length - sizeof ia));

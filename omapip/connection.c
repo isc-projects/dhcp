@@ -237,7 +237,7 @@ isc_result_t omapi_connect_list (omapi_object_t *c,
 #if defined (TRACING)
 omapi_array_t *omapi_connections;
 
-OMAPI_ARRAY_TYPE(omapi_connection, omapi_connection_object_t);
+OMAPI_ARRAY_TYPE(omapi_connection, omapi_connection_object_t)
 
 void omapi_connection_trace_setup (void) {
 	trace_connect = trace_type_register ("connect", (void *)0,
