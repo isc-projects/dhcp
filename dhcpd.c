@@ -41,7 +41,7 @@
  */
 
 static char objcopyright[] =
-"$Id: dhcpd.c,v 1.29 1996/08/29 09:55:52 mellon Exp $ Copyright 1995, 1996 The Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.30 1996/08/29 20:15:32 mellon Exp $ Copyright 1995, 1996 The Internet Software Consortium.";
 static char copyright[] =
 "Copyright 1995, 1996 The Internet Software Consortium.";
 static char arr [] = "All rights reserved.";
@@ -118,7 +118,7 @@ int main (argc, argv, envp)
 		} else if (!strcmp (argv [i], "-d")) {
 #ifndef DEBUG
 			daemon = 0;
-			log_perror = 1;
+			log_perror = -1;
 #endif
 		} else if (argv [i][0] == '-') {
 			usage ();
@@ -137,7 +137,12 @@ int main (argc, argv, envp)
 		}
 	}
 
-	log_perror = 0;
+	/* If we were requested to log to stdout on the command line,
+	   keep doing so; otherwise, stop. */
+	if (log_perror == -1)
+		log_perror = 1;
+	else
+		log_perror = 0;
 
 #ifndef DEBUG
 	if (daemon) {
