@@ -144,11 +144,11 @@ send one.   Client identifiers are normally an ARP type (1 for
 ethernet) followed by the MAC address, just like in the \fBhardware\fI
 statement, but this is not required.
 .PP
-The client identifier is normally recorded as a series of hexadecimal
-octets, seperated by colons.  Some DHCP clients can be configured to
-send a text string as a client identifier, in which case the client
-identifier is stored as a quoted string rather than a list of
-hexadecimal octets.
+The client identifier is recorded as a colon-seperated hexadecimal
+list or as a quoted string.   If it is recorded as a quoted string and
+it contains one or more non-printable characters, those characters are
+represented as octal escapes - a backslash character followed by three
+octal digits.
 .PP
 .B client-hostname "\fIhostname\fB";\fR
 .PP
