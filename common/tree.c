@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.51 1999/09/24 19:04:30 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.52 1999/10/04 23:15:43 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -575,15 +575,16 @@ int evaluate_boolean_expression (result, packet, lease, in_options,
 				log_debug("calling updateA(%s, %s, %d, lease)",
 					  expr1.data , expr2.data, ttl);
 #endif
-				updateA(expr1, expr2, ttl, lease);
+				updateA(&expr1, &expr2, ttl, lease);
 			} else if (rrtype.len == 3 &&
-				   strncmp((const char *)rrtype.data, "ptr", 3) == 0) {
+				   strncmp((const char *)rrtype.data,
+					    "ptr", 3) == 0) {
 #if defined (DEBUG_EXPRESSIONS)
 				log_debug ("%s updatePTR(%s, %s, %d, lease)",
 					   "calling", expr1.data,
 					   expr2.data, ttl);
 #endif
-				updatePTR(expr1, expr2, ttl, lease);
+				updatePTR(&expr1, &expr2, ttl, lease);
 			}
 			*result = 1;
 		} else {
@@ -2182,3 +2183,4 @@ int write_expression (file, expr, col, indent)
 	}
 	return col;
 }
+/* vim: set tabstop=8: */
