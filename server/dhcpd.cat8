@@ -8,7 +8,7 @@ NNAAMMEE
        dhcpd - Dynamic Host Configuration Protocol server
 
 SSYYNNOOPPSSIISS
-       ddhhccppdd [ --pp _p_o_r_t ]
+       ddhhccppdd [ --pp _p_o_r_t ] [ --ff ] [ _i_f_0 [ _._._._i_f_N ] ]
 
 DDEESSCCRRIIPPTTIIOONN
        dhcpd(8)  implements the Dynamic Host Configuration Proto-
@@ -85,8 +85,29 @@ dhcpd(8)                                                 dhcpd(8)
        then re-invoke dhcpd.
 
 
+CCOOMMMMAANNDD LLIINNEE
+       dhcpd  normally  identifies  all  interfaces on the system
+       which are up, and listens on each interface.    If  possi-
+       ble,  point-to-point interfaces and the loopback interface
+       are eliminated, but on some systems this is not  possible.
+       For  this reason, the interfaces on which dhcp should lis-
+       ten may be explicitly specified on the command line.
+
+       dhcpd normally listens on port  67,  which  is  the  BOOTP
+       Server  Port  (the  DHCP and BOOTP protocols both use this
+       port).   If desired, dhcpd may  be  invoked  with  the  --pp
+       flag,  followed  by  a  port number, so as to provide DHCP
+       service on a different port.   This is mostly  useful  for
+       debugging purposes.
+
+       On  some System-V systems, it may be desirable to run dhcp
+       from /etc/inittab.   If so, dhcpd should be  invoked  with
+       the  --ff flag, which causes dhcpd to run in the foreground;
+       otherwise, dhcpd automatically detaches  itself  from  the
+       process  group that started it and runs in the background.
+
 CCOONNFFIIGGUURRAATTIIOONN
-       The  syntax  of the dhcpd.conf(8) file is discussed seper-
+       The syntax of the dhcpd.conf(8) file is  discussed  seper-
        ately.   This section should be used as an overview of the
        configuration process, and the dhcpd.conf(8) documentation
        should be consulted for detailed reference information.
@@ -95,35 +116,14 @@ CCOONNFFIIGGUURRAATTIIOONN
 SSuubbnneettss
        dhcpd needs to know the subnet numbers and netmasks of all
        subnets for which it will be providing service.   In addi-
-       tion, in order to dynamically allocate addresses, it  must
+       tion,  in order to dynamically allocate addresses, it must
        be assigned one or more ranges of addresses on each subnet
-       which it can in turn assign to client hosts as they  boot.
-       Thus,  a  very simple configuration providing DHCP support
+       which  it can in turn assign to client hosts as they boot.
+       Thus, a very simple configuration providing  DHCP  support
        might look like this:
 
             subnet 239.252.197.0 netmask 255.255.255.0
               range 239.252.197.10 239.252.197.250;
-
-       Multiple address ranges may be specified like this:
-
-            subnet 239.252.197.0 netmask 255.255.255.0
-              range 239.252.197.10 239.252.197.107
-              range 239.252.197.113 239.252.197.250;
-
-       If a subnet will only be provided with BOOTP  service  and
-       no  dynamic  address  assignment,  the range clause can be
-       left out entirely, but the subnet statement must appear.
-
-
-LLeeaassee LLeennggtthhss
-       DHCP leases can be assigned almost any  length  from  zero
-       seconds  to  infinity.   What lease length makes sense for
-       any given subnet, or for any given installation, will vary
-       depending on the kinds of hosts being served.
-
-       For  example,  in  an office environment where systems are
-       added from time to time and removed from time to time, but
-       move relatively infrequently, it might make sense to allow
 
 
 
@@ -136,15 +136,35 @@ LLeeaassee LLeennggtthhss
 dhcpd(8)                                                 dhcpd(8)
 
 
+       Multiple address ranges may be specified like this:
+
+            subnet 239.252.197.0 netmask 255.255.255.0
+              range 239.252.197.10 239.252.197.107
+              range 239.252.197.113 239.252.197.250;
+
+       If  a  subnet will only be provided with BOOTP service and
+       no dynamic address assignment, the  range  clause  can  be
+       left out entirely, but the subnet statement must appear.
+
+
+LLeeaassee LLeennggtthhss
+       DHCP  leases  can  be assigned almost any length from zero
+       seconds to infinity.   What lease length makes  sense  for
+       any given subnet, or for any given installation, will vary
+       depending on the kinds of hosts being served.
+
+       For example, in an office environment  where  systems  are
+       added from time to time and removed from time to time, but
+       move relatively infrequently, it might make sense to allow
        lease times of a month of more.   In a final test environ-
-       ment  on  a manufacturing floor, it may make more sense to
-       assign a maximum lease length of 30 minutes - enough  time
-       to  go through a simple test procedure on a network appli-
+       ment on a manufacturing floor, it may make more  sense  to
+       assign  a maximum lease length of 30 minutes - enough time
+       to go through a simple test procedure on a network  appli-
        ance before packaging it up for delivery.
 
-       It is possible to specify two lease lengths:  the  default
-       length  that  will be assigned if a client doesn't ask for
-       any particular lease length, and a maximum  lease  length.
+       It  is  possible to specify two lease lengths: the default
+       length that will be assigned if a client doesn't  ask  for
+       any  particular  lease length, and a maximum lease length.
        These are specified as clauses to the subnet command:
 
             subnet 239.252.197.0 netmask 255.255.255.0
@@ -152,44 +172,24 @@ dhcpd(8)                                                 dhcpd(8)
               default-lease-time 600
               max-lease-time 7200;
 
-       This  particular  subnet  declaration  specifies a default
-       lease time of 600 seconds (ten  minutes),  and  a  maximum
-       lease  time  of  7200  seconds (two hours).   Other common
-       values would be 86400 (one day),  604800  (one  week)  and
+       This particular subnet  declaration  specifies  a  default
+       lease  time  of  600  seconds (ten minutes), and a maximum
+       lease time of 7200 seconds  (two  hours).    Other  common
+       values  would  be  86400  (one day), 604800 (one week) and
        2592000 (30 days).
 
-       Each  subnet  need not have the same lease--in the case of
-       an office  environment  and  a  manufacturing  environment
-       served  by  the  same  DHCP server, it might make sense to
+       Each subnet need not have the same lease--in the  case  of
+       an  office  environment  and  a  manufacturing environment
+       served by the same DHCP server, it  might  make  sense  to
        have widely disparate values for default and maximum lease
        times on each subnet.
 
 BBOOOOTTPP SSuuppppoorrtt
-       Each  BOOTP  client  must  be  explicitly  declared in the
-       dhcpd.conf file.   A very basic  client  declaration  will
-       specify  the  client  network interface's hardware address
-       and the IP address to assign  to  that  client.    If  the
-       client  needs  to  be  able  to  load a boot file from the
-       server, that file's name must  be  specified.    A  simple
-       bootp client declaration might look like this:
-
-            host haagen hardware ethernet 08:00:2b:4c:59:23
-              fixed-address 239.252.197.9
-              filename "/tftpboot/haagen.boot";
-
-OOppttiioonnss
-       DHCP  (and  also  BOOTP  with Vendor Extensions) provide a
-       mechanism whereby the server can provide the  client  with
-       information  about  how to configure its network interface
-       (e.g., subnet mask), and also how the  client  can  access
-       various  network  services  (e.g., DNS, IP routers, and so
-       on).
-
-       These options can be specified on a per-subnet basis, and,
-       for  BOOTP  clients,  also on a per-client basis.   In the
-       event that a BOOTP client  declaration  specifies  options
-       that  are  also  specified  in its subnet declaration, the
-       options  specified  in   the   client   declaration   take
+       Each BOOTP client  must  be  explicitly  declared  in  the
+       dhcpd.conf  file.    A  very basic client declaration will
+       specify the client network  interface's  hardware  address
+       and  the  IP  address  to  assign to that client.   If the
+       client needs to be able to  load  a  boot  file  from  the
 
 
 
@@ -202,8 +202,28 @@ OOppttiioonnss
 dhcpd(8)                                                 dhcpd(8)
 
 
-       precedence.    An  reasonably  complete DHCP configuration
-       might look something like this:
+       server,  that  file's  name  must be specified.   A simple
+       bootp client declaration might look like this:
+
+            host haagen hardware ethernet 08:00:2b:4c:59:23
+              fixed-address 239.252.197.9
+              filename "/tftpboot/haagen.boot";
+
+OOppttiioonnss
+       DHCP (and also BOOTP with  Vendor  Extensions)  provide  a
+       mechanism  whereby  the server can provide the client with
+       information about how to configure its  network  interface
+       (e.g.,  subnet  mask),  and also how the client can access
+       various network services (e.g., DNS, IP  routers,  and  so
+       on).
+
+       These options can be specified on a per-subnet basis, and,
+       for BOOTP clients, also on a per-client  basis.    In  the
+       event  that  a  BOOTP client declaration specifies options
+       that are also specified in  its  subnet  declaration,  the
+       options  specified  in  the client declaration take prece-
+       dence.   An reasonably complete DHCP  configuration  might
+       look something like this:
 
             subnet 239.252.197.0 netmask 255.255.255.0
               range 239.252.197.10 239.252.197.250
@@ -214,8 +234,8 @@ dhcpd(8)                                                 dhcpd(8)
               option domain-name-servers 239.252.197.2, 239.252.197.3
               option domain-name "isc.org";
 
-       A bootp host on that subnet that needs to be in a  differ-
-       ent  domain  and  use  a  different  name  server might be
+       A  bootp host on that subnet that needs to be in a differ-
+       ent domain and  use  a  different  name  server  might  be
        declared as follows:
 
             host haagen hardware ethernet 08:00:2b:4c:59:23
@@ -236,9 +256,21 @@ SSEEEE AALLSSOO
 
 AAUUTTHHOORR
        ddhhccppdd((88)) was written by Ted Lemon <mellon@vix.com> under a
-       contract  with  Vixie Labs.   Funding for this project was
-       provided by the Internet Software  Corporation.   Informa-
-       tion  about  the Internet Software Consortium can be found
+
+
+
+                                                                4
+
+
+
+
+
+dhcpd(8)                                                 dhcpd(8)
+
+
+       contract with Vixie Labs.   Funding for this  project  was
+       provided  by  the Internet Software Corporation.  Informa-
+       tion about the Internet Software Consortium can  be  found
        at hhttttpp::////wwwwww..iisscc..oorrgg//iisscc..
 
 
@@ -259,6 +291,40 @@ AAUUTTHHOORR
 
 
 
-                                                                4
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                5
 
 

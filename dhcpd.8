@@ -44,6 +44,15 @@ dhcpd - Dynamic Host Configuration Protocol server
 .B -p
 .I port
 ]
+[
+.B -f
+]
+[
+.I if0
+[
+.I ...ifN
+]
+]
 .SH DESCRIPTION
 dhcpd(8) implements the Dynamic Host Configuration Protocol (DHCP) and
 the Internet Bootstrap Protocol (BOOTP).  DHCP allows hosts on a
@@ -103,6 +112,28 @@ process ID contained in
 .IR /dhcpd.pid ,
 and then re-invoke dhcpd.
 
+.SH COMMAND LINE
+.PP
+dhcpd normally identifies all interfaces on the system which are up,
+and listens on each interface.   If possible, point-to-point
+interfaces and the loopback interface are eliminated, but on some
+systems this is not possible.   For this reason, the interfaces on
+which dhcp should listen may be explicitly specified on the command
+line.
+.PP
+dhcpd normally listens on port 67, which is the BOOTP Server Port
+(the DHCP and BOOTP protocols both use this port).   If desired, dhcpd
+may be invoked with the
+.B -p
+flag, followed by a port number, so as to provide DHCP service on a
+different port.   This is mostly useful for debugging purposes.
+.PP
+On some System-V systems, it may be desirable to run dhcp from
+/etc/inittab.   If so, dhcpd should be invoked with the
+.B -f
+flag, which causes dhcpd to run in the foreground; otherwise, dhcpd
+automatically detaches itself from the process group that started it
+and runs in the background.
 .SH CONFIGURATION
 The syntax of the dhcpd.conf(8) file is discussed seperately.   This
 section should be used as an overview of the configuration process,
