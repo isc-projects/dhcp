@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.162 2000/08/31 04:40:55 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.163 2000/09/01 16:57:44 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2697,12 +2697,11 @@ int find_lease (struct lease **lp,
 	      ip_lease -> uid_len != client_identifier.len ||
 	      memcmp (ip_lease -> uid, client_identifier.data,
 		      ip_lease -> uid_len)) :
-	     (!ip_lease -> uid &&
-	      (ip_lease -> hardware_addr.hbuf [0] != packet -> raw -> htype ||
-	       ip_lease -> hardware_addr.hlen != packet -> raw -> hlen + 1 ||
-	       memcmp (&ip_lease -> hardware_addr.hbuf [1],
-		       packet -> raw -> chaddr,
-		       (unsigned)(ip_lease -> hardware_addr.hlen - 1)))))) {
+	     (ip_lease -> hardware_addr.hbuf [0] != packet -> raw -> htype ||
+	      ip_lease -> hardware_addr.hlen != packet -> raw -> hlen + 1 ||
+	      memcmp (&ip_lease -> hardware_addr.hbuf [1],
+		      packet -> raw -> chaddr,
+		      (unsigned)(ip_lease -> hardware_addr.hlen - 1))))) {
 		/* If we're not doing failover, the only state in which
 		   we can allocate this lease to the client is FTS_FREE.
 		   If we are doing failover, things are more complicated. */
