@@ -89,3 +89,5 @@ extern int h_errno;
 #if defined (USE_DEFAULT_NETWORK)
 #  define USE_SOCKETS
 #endif
+
+#define ALIAS_NAMES_PERMUTED
