@@ -382,7 +382,7 @@ respond.
 .RS 0.25i
 .PP
 This option specifies the maximum size datagram that the client
-should be prepared to reassemble.  The minimum value legal value is
+should be prepared to reassemble.  The minimum legal value is
 576.
 .RE
 .PP
@@ -420,7 +420,7 @@ The nds-servers option specifies a list of IP addresses of NDS servers.
 .B option \fBnds-tree-name\fR \fIstring\fR\fB;\fR
 .RS 0.25i
 .PP
-The nds-context option specifies NDS tree name that the NDS client
+The nds-tree-name option specifies NDS tree name that the NDS client
 should use.
 .RE
 .PP
@@ -536,7 +536,7 @@ client.  Servers should be listed in order of preference.
 This option specifies whether the client should configure its IP
 layer to allow forwarding of datagrams with non-local source routes
 (see Section 3.3.5 of [4] for a discussion of this topic).  A value
-of 0 means disallow forwarding of such datagrams, and a value of true
+of false means disallow forwarding of such datagrams, and a value of true
 means allow forwarding.
 .RE
 .PP
@@ -801,7 +801,7 @@ preference.
 .PP
 This option specifies whether or not the client should negotiate the
 use of trailers (RFC 893 [14]) when using the ARP protocol.  A value
-of 0 indicates that the client should not attempt to use trailers.  A
+of false indicates that the client should not attempt to use trailers.  A
 value of true means that the client should attempt to use trailers.
 .RE
 .PP
@@ -970,7 +970,7 @@ the format in which the \fIfqdn.name\fR suboption is encoded.
 .PP
 .B option fqdn.rcode1 \fIflag\fB;
 .PP
-.B option fqdn.rcode1 \fIflag\fB;
+.B option fqdn.rcode2 \fIflag\fB;
 .RS 0.25i
 .PP
 These options specify the result of the updates of the A and PTR records,
