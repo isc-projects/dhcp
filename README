@@ -1,6 +1,6 @@
 	       Internet Systems Consortium DHCP Distribution
-			      Version 3.0.2
-			    February 15, 2005
+			     Version 3.0.3b1
+			      March 3, 2005
 
 			      README FILE
 
@@ -96,9 +96,9 @@ system.
 
 			    RELEASE STATUS
 
-This is the second release candidate of ISC DHCP 3.0.2.  This is a
-maintenance release which seeks only to fix bugs present in versions
-3.0.1 and earlier.  No new features have or will be added in subsequent
+This is the first beta release of ISC DHCP 3.0.3.  This is a maintenance
+release which seeks only to fix bugs present in versions 3.0.2 and
+earlier.  No new features have or will be added in subsequent
 release candidates of this release.
 
 In this release, the server and relay agent are currently fully
@@ -142,14 +142,14 @@ information.   On Digital Unix, type ``man pfilt''.
 To build the DHCP Distribution, unpack the compressed tar file using
 the tar utility and the gzip command - type something like:
 
-	zcat dhcp-3.0.2.tar.gz |tar xvf -
+	zcat dhcp-3.0.3b1.tar.gz |tar xvf -
 
 On BSD/OS, you have to type gzcat, not zcat, and you may run into
 similar problems on other operating systems.
 
 			    CONFIGURING IT
 
-Now, cd to the dhcp-3.0.2 subdirectory that you've just created and
+Now, cd to the dhcp-3.0.3b1 subdirectory that you've just created and
 configure the source tree by typing:
 
 	./configure

@@ -1,6 +1,6 @@
 	      Internet Systems Consortium DHCP Distribution
-			      Version 3.0.2
-			    February 15, 2005
+			     Version 3.0.3b1
+			      March 3, 2005
 
 			     Release Notes
 
@@ -104,16 +104,16 @@ and for prodding me into improving it.
   at Redhat.
 
 - Some inconsistencies in treating numbers that the lexer parsed as 'NUMBER'
-  or 'NUMBER_OR_NAME' was repaired.  Hexadecimal and octal parsing are
-  affected, and should work better.
+  or 'NUMBER_OR_NAME' was repaired.  Hexadecimal parsing is affected, and
+  should work better.
 
 - In several cases, parse warnings were being issued before the lexical
   token had been advanced to the token whose value was causing an error...
   causing parse warnings to claim the problem is on the wrong token.
 
 - Host declarations matching on client identifier for dynamic leases will
-  no longer match fixed-address host declarations (this is a dynamic/static
-  mixup, in effect).
+  no longer match fixed-address host declarations (this is now identical
+  to behaviour for host records matching on hardware address).
 
 			Changes since 3.0.2rc3
 
