@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: discover.c,v 1.9.2.2 1999/10/14 21:11:49 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: discover.c,v 1.9.2.3 1999/12/09 00:26:18 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -465,6 +465,16 @@ void discover_interfaces (state)
 		/* Register the interface... */
 		if_register_receive (tmp);
 		if_register_send (tmp);
+#if defined (HAVE_SETFD)
+		if (fcntl (tmp -> rfdesc, F_SETFD, 1) < 0)
+			log_error ("Can't set close-on-exec on %s: %m",
+				   tmp -> name);
+		if (tmp -> rfdesc != tmp -> wfdesc) {
+			if (fcntl (tmp -> wfdesc, F_SETFD, 1) < 0)
+				log_error ("Can't set close-on-exec on %s: %m",
+					   tmp -> name);
+		}
+#endif
 	}
 
 	/* Now register all the remaining interfaces as protocols. */
@@ -474,6 +484,16 @@ void discover_interfaces (state)
 	close (sock);
 
 	maybe_setup_fallback ();
+#if defined (HAVE_SETFD)
+	if (fallback_interface) {
+	    if (fcntl (fallback_interface -> rfdesc, F_SETFD, 1) < 0)
+		log_error ("Can't set close-on-exec on fallback: %m");
+	    if (fallback_interface -> rfdesc != tmp -> wfdesc) {
+		if (fcntl (fallback_interface -> wfdesc, F_SETFD, 1) < 0)
+		    log_error ("Can't set close-on-exec on fallback: %m");
+	    }
+	}
+#endif
 }
 
 struct interface_info *setup_fallback ()
@@ -482,7 +502,7 @@ struct interface_info *setup_fallback ()
 		((struct interface_info *)
 		 dmalloc (sizeof *fallback_interface, "discover_interfaces"));
 	if (!fallback_interface)
-		log_fatal ("Insufficient memory to record fallback interface.");
+		log_fatal ("No memory to record fallback interface.");
 	memset (fallback_interface, 0, sizeof *fallback_interface);
 	strcpy (fallback_interface -> name, "fallback");
 	fallback_interface -> shared_network =
