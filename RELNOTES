@@ -22,6 +22,11 @@ the README file.
 This log describes the changes that have been made in version 2.0
 since June of 1997.
 
+		       CHANGES FROM VERSION 2.0
+
+- Fix a problem in raw.c on Irix.   Thanks to Don Badrak for the
+  patch.
+
 	    CHANGES FROM VERSION 2.0 BETA 1 PATCHLEVEL 29
 
 - Define BYTE_ORDER in includes/cf/hpux.h so that ip.h will compile
