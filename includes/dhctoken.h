@@ -113,7 +113,9 @@ enum dhcp_token {
 	MIN_SECS = 333,
 	AND = 334,
 	OR = 335,
+#if 0
 	NOT = 336,
+#endif
 	SUBSTRING = 337,
 	SUFFIX = 338,
 	CHECK = 339,
