@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.34.2.5 1997/11/29 08:02:33 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.34.2.6 1997/12/02 09:32:12 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1037,11 +1037,17 @@ struct lease *find_lease (packet, share)
 					  packet -> raw -> hlen);
 	/* Find the lease that's on the network the packet came from
 	   (if any). */
-	for (; hw_lease; hw_lease = hw_lease -> n_hw)
-		if (hw_lease -> shared_network == share)
-			break;
-	if (hw_lease && (hw_lease -> flags & ABANDONED_LEASE))
-		hw_lease = (struct lease *)0;
+	for (; hw_lease; hw_lease = hw_lease -> n_hw) {
+		if (hw_lease -> shared_network == share) {
+			if (hw_lease -> flags & ABANDONED_LEASE)
+				continue;
+			if (packet -> packet_type)
+				break;
+			if (hw_lease -> flags &
+			    (BOOTP_LEASE | DYNAMIC_BOOTP_OK))
+				break;
+		}
+	}
 
 	/* Try to find a lease that's been allocated to the client's
 	   IP address. */
@@ -1069,8 +1075,26 @@ struct lease *find_lease (packet, share)
 	   match */
 	if (ip_lease &&
 	    ip_lease -> ends >= cur_time &&
-	    ip_lease -> uid && ip_lease != uid_lease)
+	    ip_lease -> uid && ip_lease != uid_lease) {
+		int i = DHO_DHCP_CLIENT_IDENTIFIER;
+		/* If for some reason the client has more than one lease
+		   on the subnet that matches its uid, pick the one that
+		   it asked for.    It might be nice in some cases to
+		   release the extraneous leases, but better to leave
+		   that to a human. */
+		if (packet -> options [i].data &&
+		    ip_lease -> uid_len ==  packet -> options [i].len &&
+		    !memcmp (packet -> options [i].data,
+			     ip_lease -> uid, ip_lease -> uid_len)) {
+			warn ("client %s has duplicate leases on %s",
+			      print_hw_addr (packet -> raw -> htype,
+					     packet -> raw -> hlen,
+					     packet -> raw -> chaddr),
+			      ip_lease -> shared_network -> name);
+			uid_lease = ip_lease;
+		}
 		ip_lease = (struct lease *)0;
+	}
 
 	/* Toss hw_lease if it hasn't yet expired and the uid doesn't
 	   match, except that if the hardware address matches and the
