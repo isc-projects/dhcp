@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.98 2000/08/03 21:00:39 neild Exp $ Copyright 1995-2000 Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.99 2000/08/07 20:28:13 neild Exp $ Copyright 1995-2000 Internet Software Consortium.";
 #endif
 
   static char copyright[] =
@@ -543,7 +543,7 @@ int main (argc, argv, envp)
 				   isc_result_totext (result));
 		result = omapi_protocol_listen (listener,
 						(unsigned)omapi_port, 1);
-		if (result == ISC_R_SUCCESS)
+		if (result == ISC_R_SUCCESS && omapi_key)
 			result = omapi_protocol_configure_security
 				(listener, verify_addr, verify_auth);
 		if (result != ISC_R_SUCCESS)
