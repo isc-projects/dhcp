@@ -3,8 +3,8 @@
    DHCP Protocol engine. */
 
 /*
- * Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.
- * All rights reserved.
+ * Copyright (c) 1995, 1996, 1997, 1998, 1999
+ * The Internet Software Consortium.   All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.73 1998/11/19 20:56:36 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.74 1999/02/14 19:27:56 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -221,7 +221,7 @@ void dhcprequest (packet)
 		   where it claims to have come from, it didn't come
 		   from there.   Fry it. */
 		if (!packet -> shared_network) {
-			if (subnet) {
+			if (subnet && subnet -> group -> authoritative) {
 				note ("%s: wrong network.", msgbuf);
 				nak_lease (packet, &cip);
 				return;
@@ -234,8 +234,11 @@ void dhcprequest (packet)
 		   address that is not on that shared network, nak it. */
 		subnet = find_grouped_subnet (packet -> shared_network, cip);
 		if (!subnet) {
-			note ("%s: wrong network.", msgbuf);
-			nak_lease (packet, &cip);
+			if (packet -> shared_network -> group -> authoritative)
+			{
+				note ("%s: wrong network.", msgbuf);
+				nak_lease (packet, &cip);
+			}
 			return;
 		}
 	}
@@ -246,12 +249,12 @@ void dhcprequest (packet)
 	if (lease && !addr_eq (lease -> ip_addr, cip)) {
 		/* If we found the address the client asked for, but
                    it wasn't what got picked, the lease belongs to us,
-                   so we can tenuously justify NAKing it. */
+                   so we should NAK it. */
 		if (ours) {
 			note ("%s: wrong lease %s.", msgbuf, piaddr (cip));
 			nak_lease (packet, &cip);
 		} else
-			note ("%s: unknown lease %s", msgbuf, piaddr (cip));
+			note ("%s: wrong lease %s", msgbuf, piaddr (cip));
 		return;
 	}
 
@@ -263,30 +266,28 @@ void dhcprequest (packet)
 		return;
 	}
 
-	/* If we own the lease that the client is asking for,
-	   and it's already been assigned to the client, ack it. */
-	oc = lookup_option (packet -> options.dhcp_hash,
-			    DHO_DHCP_CLIENT_IDENTIFIER);
-	if (oc)
-		status = evaluate_option_cache (&data, packet,
-						&packet -> options, oc);
-	else
-		status = 0;
-	if (status && lease &&
-	    ((lease -> uid_len && lease -> uid_len == data.len &&
-	      !memcmp (data.data,
-		       lease -> uid, lease -> uid_len)) ||
-	     (lease -> hardware_addr.hlen == packet -> raw -> hlen &&
-	      lease -> hardware_addr.htype == packet -> raw -> htype &&
-	      !memcmp (lease -> hardware_addr.haddr,
-		       packet -> raw -> chaddr,
-		       packet -> raw -> hlen)))) {
-		data_string_forget (&data, "dhcprequest");
-		ack_lease (packet, lease, DHCPACK, 0, msgbuf);
+	/* If we found a lease, but the client identifier on the lease
+	   exists and is different than the id the client sent, then
+	   we can't send this lease to the client. */
+	if (lease) {
+		oc = lookup_option (packet -> options.dhcp_hash,
+				    DHO_DHCP_CLIENT_IDENTIFIER);
+		if (oc)
+			status = evaluate_option_cache (&data, packet,
+							&packet -> options, oc);
+		if (lease && oc && status && lease -> uid_len &&
+		    (lease -> uid_len != data.len ||
+		     memcmp (data.data,
+		 		lease -> uid, lease -> uid_len))) {
+			note ("%s: wrong owner %s.", msgbuf, piaddr (cip));
+			nak_lease (packet, &cip);
+		} else
+			ack_lease (packet, lease, DHCPACK, 0, msgbuf);
+		if (oc && status)
+			data_string_forget (&data, "dhcprequest");
 		return;
 	}
 	note ("%s: unknown lease %s.", msgbuf, piaddr (cip));
-	data_string_forget (&data, "dhcprequest");
 }
 
 void dhcprelease (packet)
@@ -502,14 +503,15 @@ void nak_lease (packet, cip)
 		to.sin_addr = raw.giaddr;
 		to.sin_port = local_port;
 
-#ifdef USE_FALLBACK
-		result = send_fallback (&fallback_interface,
-					packet, &raw, outgoing.packet_length,
-					from, &to, &hto);
-		if (result < 0)
-			warn ("send_fallback: %m");
-		return;
-#endif
+		if (fallback_interface) {
+			result = send_packet (fallback_interface,
+					      packet, &raw,
+					      outgoing.packet_length,
+					      from, &to, &hto);
+			if (result < 0)
+				warn ("send_fallback: %m");
+			return;
+		}
 	} else {
 		to.sin_addr.s_addr = htonl (INADDR_BROADCAST);
 		to.sin_port = remote_port;
@@ -539,6 +541,7 @@ void ack_lease (packet, lease, offer, when, msg)
 	struct option_cache *oc;
 	struct expression *expr;
 	int status;
+	int ulafdr;
 	int option_tag_size = 1; /* XXX */
 
 	int i, j, s1, s2;
@@ -572,7 +575,7 @@ void ack_lease (packet, lease, offer, when, msg)
 		lease -> client_hostname =
 			dmalloc (d1.len + 1, "ack_lease");
 		if (!lease -> client_hostname)
-			warn ("no memory for client hostname.\n");
+			warn ("no memory for client hostname.");
 		else {
 			memcpy (lease -> client_hostname, d1.data, d1.len);
 			lease -> client_hostname [d1.len] = 0;
@@ -887,7 +890,6 @@ void ack_lease (packet, lease, offer, when, msg)
 
 	lt.host = lease -> host;
 	lt.subnet = lease -> subnet;
-	lt.shared_network = lease -> shared_network;
 	lt.billing_class = lease -> billing_class;
 
 	/* Don't call supersede_lease on a mocked-up lease. */
@@ -1154,16 +1156,24 @@ void ack_lease (packet, lease, offer, when, msg)
 	     lookup_option (state -> options.server_hash,
 			    SV_USE_LEASE_ADDR_FOR_DEFAULT_ROUTE))) {
 		i = DHO_ROUTERS;
-		oc = (struct option_cache *)0;
-		if (option_cache_allocate (&oc, "ack_lease")) {
-			if (make_const_data (&oc -> expression,
-					     lease -> ip_addr.iabuf,
-					     lease -> ip_addr.len, 0, 0)) {
-				oc -> option = dhcp_universe.options [i];
-				save_option (state -> options.dhcp_hash, oc);
+		oc = lookup_option (state -> options.dhcp_hash, i);
+		if (!oc) {
+			oc = (struct option_cache *)0;
+			if (option_cache_allocate (&oc, "ack_lease")) {
+				if (make_const_data (&oc -> expression,
+						     lease -> ip_addr.iabuf,
+						     lease -> ip_addr.len,
+						     0, 0)) {
+					oc -> option =
+						dhcp_universe.options [i];
+					save_option
+						(state -> options.dhcp_hash,
+						 oc);
+				}
 			}
-			option_cache_dereference (&oc, "ack_lease");
 		}
+		if (oc)
+			option_cache_dereference (&oc, "ack_lease");
 	}
 
 #ifdef DEBUG_PACKET
@@ -1177,11 +1187,14 @@ void ack_lease (packet, lease, offer, when, msg)
 
 	/* If this is a DHCPOFFER, ping the lease address before actually
 	   sending the offer. */
-	if (offer == DHCPOFFER && !(lease -> flags & STATIC_LEASE)) {
+	if (offer == DHCPOFFER && !(lease -> flags & STATIC_LEASE) &&
+	    cur_time - lease -> timestamp > 60) {
+		lease -> timestamp = cur_time;
 		icmp_echorequest (&lease -> ip_addr);
 		add_timeout (cur_time + 1, lease_ping_timeout, lease);
 		++outstanding_pings;
 	} else {
+		lease -> timestamp = cur_time;
 		dhcp_reply (lease);
 	}
 }
@@ -1331,38 +1344,39 @@ void dhcp_reply (lease)
 		to.sin_addr = raw.giaddr;
 		to.sin_port = local_port;
 
-#ifdef USE_FALLBACK
-		result = send_fallback (&fallback_interface,
-					(struct packet *)0,
-					&raw, packet_length,
-					raw.siaddr, &to, &hto);
-		if (result < 0)
-			warn ("send_fallback: %m");
+		if (fallback_interface) {
+			result = send_packet (fallback_interface,
+					      (struct packet *)0,
+					      &raw, packet_length,
+					      raw.siaddr, &to, &hto);
+			if (result < 0)
+				warn ("send_fallback: %m");
 
-		free_lease_state (state, "dhcp_reply fallback 1");
-		lease -> state = (struct lease_state *)0;
-		return;
-#endif
+			free_lease_state (state, "dhcp_reply fallback 1");
+			lease -> state = (struct lease_state *)0;
+			return;
+		}
 
-	/* If it comes from a client who already knows its address and
+	/* If it comes from a client that already knows its address and
 	   is not requesting a broadcast response, sent it directly to
 	   that client. */
 	} else if (raw.ciaddr.s_addr && state -> offer == DHCPACK &&
-		   !(raw.flags & htons (BOOTP_BROADCAST))) {
+		   !(raw.flags & htons (BOOTP_BROADCAST)) &&
+		   can_unicast_without_arp ()) {
 		to.sin_addr = state -> ciaddr;
 		to.sin_port = remote_port; /* XXX */
 
-#ifdef USE_FALLBACK
-		result = send_fallback (&fallback_interface,
-					(struct packet *)0,
-					&raw, packet_length,
-					raw.siaddr, &to, &hto);
-		if (result < 0)
-			warn ("send_fallback: %m");
-		free_lease_state (state, "dhcp_reply fallback 1");
-		lease -> state = (struct lease_state *)0;
-		return;
-#endif
+		if (fallback_interface) {
+			result = send_packet (fallback_interface,
+					      (struct packet *)0,
+					      &raw, packet_length,
+					      raw.siaddr, &to, &hto);
+			if (result < 0)
+				warn ("send_fallback: %m");
+			free_lease_state (state, "dhcp_reply fallback 1");
+			lease -> state = (struct lease_state *)0;
+			return;
+		}
 
 	/* Otherwise, broadcast it on the local network. */
 	} else {
@@ -1435,12 +1449,14 @@ struct lease *find_lease (packet, share, ours)
 			/* Find the lease matching this uid that's on the
 			   network the packet came from (if any). */
 			for (; uid_lease; uid_lease = uid_lease -> n_uid)
-				if (uid_lease -> shared_network == share)
+				if (uid_lease -> subnet -> shared_network ==
+				    share)
 					break;
 			fixed_lease = (struct lease *)0;
 #if defined (DEBUG_FIND_LEASE)
-			note ("Found lease for client identifier: %s.",
-			      piaddr (uid_lease -> ip_addr));
+			if (uid_lease)
+				note ("Found lease for client identifier: %s.",
+				      piaddr (uid_lease -> ip_addr));
 #endif
 			if (uid_lease &&
 			    (uid_lease -> flags & ABANDONED_LEASE)) {
@@ -1482,7 +1498,7 @@ struct lease *find_lease (packet, share, ours)
 	/* Find the lease that's on the network the packet came from
 	   (if any). */
 	for (; hw_lease; hw_lease = hw_lease -> n_hw) {
-		if (hw_lease -> shared_network == share) {
+		if (hw_lease -> subnet -> shared_network == share) {
 			if (hw_lease -> flags & ABANDONED_LEASE)
 				continue;
 			/* If we're allowed to use this lease, do so. */
@@ -1542,7 +1558,7 @@ struct lease *find_lease (packet, share, ours)
 	   that thought it had this lease answered an ARP or PING, causing the
 	   lease to be abandoned.   If so, this request probably came from
 	   that client. */
-	if (ip_lease && (ip_lease -> shared_network != share)) {
+	if (ip_lease && (ip_lease -> subnet -> shared_network != share)) {
 		note ("...but it was on the wrong shared network.");
 		ip_lease = (struct lease *)0;
 	}
@@ -1576,7 +1592,8 @@ struct lease *find_lease (packet, share, ours)
 				      print_hw_addr (packet -> raw -> htype,
 						     packet -> raw -> hlen,
 						     packet -> raw -> chaddr),
-				      ip_lease -> shared_network -> name);
+				      (ip_lease -> subnet ->
+				       shared_network -> name));
 
 			/* If the client is REQUESTing the lease, it shouldn't
 			   still be using the old one, so we can free it for
@@ -1584,7 +1601,7 @@ struct lease *find_lease (packet, share, ours)
 			   lease is on the same network, of course. */
 
 			if (packet -> packet_type == DHCPREQUEST &&
-			    share == uid_lease -> shared_network)
+			    share == uid_lease -> subnet -> shared_network)
 				dissociate_lease (uid_lease);
 
 			uid_lease = ip_lease;
@@ -1596,16 +1613,20 @@ struct lease *find_lease (packet, share, ours)
 	   match, except that if the hardware address matches and the
 	   client is now doing dynamic BOOTP (and thus hasn't provided
 	   a uid) we let the client get away with it. */
-	if (hw_lease &&
-	    hw_lease -> ends >= cur_time &&
-	    hw_lease -> uid &&
-	    (!have_client_identifier ||
-	     hw_lease -> uid_len != client_identifier.len ||
-	     memcmp (hw_lease -> uid, client_identifier.data,
-		     hw_lease -> uid_len))) {
-		hw_lease = (struct lease *)0;
+	while (hw_lease &&
+	       hw_lease -> ends >= cur_time &&
+	       hw_lease -> uid &&
+	       (!have_client_identifier ||
+		hw_lease -> uid_len != client_identifier.len ||
+		memcmp (hw_lease -> uid, client_identifier.data,
+			hw_lease -> uid_len))) {
+		hw_lease = hw_lease -> n_hw;
 #if defined (DEBUG_FIND_LEASE)
-		note ("rejecting lease for hardware address.");
+		if (hw_lease)
+			note ("trying next lease matching hw addr: %s",
+			      piaddr (hw_lease -> ip_addr));
+		else
+			note ("rejecting lease for hardware address.");
 #endif
 	}
 
@@ -1640,7 +1661,7 @@ struct lease *find_lease (packet, share, ours)
 
 	/* Now eliminate leases that are on the wrong network... */
 	if (ip_lease &&
-	    (share != ip_lease -> shared_network)) {
+	    (share != ip_lease -> subnet -> shared_network)) {
 		release_lease (ip_lease);
 		ip_lease = (struct lease *)0;
 #if defined (DEBUG_FIND_LEASE)
@@ -1648,7 +1669,7 @@ struct lease *find_lease (packet, share, ours)
 #endif
 	}
 	if (uid_lease &&
-	    (share != uid_lease -> shared_network)) {
+	    (share != uid_lease -> subnet -> shared_network)) {
 		release_lease (uid_lease);
 		uid_lease = (struct lease *)0;
 #if defined (DEBUG_FIND_LEASE)
@@ -1656,7 +1677,7 @@ struct lease *find_lease (packet, share, ours)
 #endif
 	}
 	if (hw_lease &&
-	    (share != hw_lease -> shared_network)) {
+	    (share != hw_lease -> subnet -> shared_network)) {
 		release_lease (hw_lease);
 		hw_lease = (struct lease *)0;
 #if defined (DEBUG_FIND_LEASE)
@@ -1752,13 +1773,23 @@ struct lease *find_lease (packet, share, ours)
 		note ("Not returning a lease.");
 #endif
 
-	/* If we find an abandoned lease, take it, but print a
-	   warning message, so that if it continues to lose,
-	   the administrator will eventually investigate. */
-	if (lease && lease -> flags & ABANDONED_LEASE) {
-		warn ("Reclaiming REQUESTed abandoned IP address %s.\n",
+	/* If we find an abandoned lease, but it's the one the client
+	   requested, we assume that previous bugginess on the part
+	   of the client, or a server database loss, caused the lease to
+	   be abandoned, so we reclaim it and let the client have it. */
+	if (lease && lease -> flags & ABANDONED_LEASE && lease == ip_lease &&
+	    packet -> packet_type == DHCPREQUEST) {
+		warn ("Reclaiming REQUESTed abandoned IP address %s.",
 		      piaddr (lease -> ip_addr));
 		lease -> flags &= ~ABANDONED_LEASE;
+	} else if (lease && lease -> flags & ABANDONED_LEASE) {
+	/* Otherwise, if it's not the one the client requested, we do not
+	   return it - instead, we claim it's ours, causing a DHCPNAK to be
+	   sent if this lookup is for a DHCPREQUEST, and force the client
+	   to go back through the allocation process. */
+		if (ours)
+			*ours = 1;
+		lease = (struct lease *)0;
 	}
 
 	return lease;
@@ -1779,7 +1810,6 @@ struct lease *mockup_lease (packet, share, hp)
 	if (!mock.subnet)
 		return (struct lease *)0;
 	mock.next = mock.prev = (struct lease *)0;
-	mock.shared_network = mock.subnet -> shared_network;
 	mock.host = hp;
 	mock.uid = hp -> client_identifier.data;
 	mock.uid_len = hp -> client_identifier.len;
