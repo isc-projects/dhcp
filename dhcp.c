@@ -754,7 +754,7 @@ struct lease *find_lease (packet)
 	struct lease *uid_lease, *ip_lease, *hw_lease;
 	struct lease *lease = (struct lease *)0;
 	struct iaddr cip;
-	struct host_decl *hp, *host;
+	struct host_decl *hp, *host = (struct host_decl *)0;
 	struct lease *fixed_lease;
 
 	/* Try to find a host or lease that's been assigned to the
