@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: stables.c,v 1.4 2000/01/05 18:23:44 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: stables.c,v 1.5 2000/01/25 01:45:00 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -418,11 +418,11 @@ struct option agent_options [256] = {
 struct universe server_universe;
 struct option server_options [256] = {
 	{ "pad", "",				&server_universe, 0 },
-	{ "default-lease-time", "L",		&server_universe, 1 },
-	{ "max-lease-time", "L",		&server_universe, 2 },
-	{ "min-lease-time", "L",		&server_universe, 3 },
+	{ "default-lease-time", "T",		&server_universe, 1 },
+	{ "max-lease-time", "T",		&server_universe, 2 },
+	{ "min-lease-time", "T",		&server_universe, 3 },
 	{ "dynamic-bootp-lease-cutoff", "L",	&server_universe, 4 },
-	{ "dynamic-bootp-lease-length", "L",	&server_universe, 5 },
+	{ "dynamic-bootp-lease-length", "T",	&server_universe, 5 },
 	{ "boot-unknown-clients", "f",		&server_universe, 6 },
 	{ "dynamic-bootp", "f",			&server_universe, 7 },
 	{ "allow-bootp", "f",			&server_universe, 8 },
@@ -447,7 +447,7 @@ struct option server_options [256] = {
 	{ "pid-file-name", "t",			&server_universe, 27 },
 	{ "duplicates", "f",			&server_universe, 28 },
 	{ "declines", "f",			&server_universe, 29 },
-	{ "option-30", "X",			&server_universe, 30 },
+	{ "ddns-updates", "f",			&server_universe, 30 },
 	{ "option-31", "X",			&server_universe, 31 },
 	{ "option-32", "X",			&server_universe, 32 },
 	{ "option-33", "X",			&server_universe, 33 },
