@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: class.c,v 1.29 2001/04/20 20:39:26 mellon Exp $ Copyright (c) 1998-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: class.c,v 1.29.2.1 2001/06/22 01:54:50 mellon Exp $ Copyright (c) 1998-2000 The Internet Software Consortium.  All rights reserved.\n";
 
 #endif /* not lint */
 
@@ -64,21 +64,20 @@ int have_billing_classes;
 
 void classification_setup ()
 {
-	struct executable_statement *rules;
-
 	/* eval ... */
-	rules = (struct executable_statement *)0;
-	if (!executable_statement_allocate (&rules, MDL))
+	default_classification_rules = (struct executable_statement *)0;
+	if (!executable_statement_allocate (&default_classification_rules,
+					    MDL))
 		log_fatal ("Can't allocate check of default collection");
-	rules -> op = eval_statement;
+	default_classification_rules -> op = eval_statement;
 
 	/* check-collection "default" */
-	if (!expression_allocate (&rules -> data.eval, MDL))
+	if (!expression_allocate (&default_classification_rules -> data.eval,
+				  MDL))
 		log_fatal ("Can't allocate default check expression");
-	rules -> data.eval -> op = expr_check;
-	rules -> data.eval -> data.check = &default_collection;
-	
-	default_classification_rules = rules;
+	default_classification_rules -> data.eval -> op = expr_check;
+	default_classification_rules -> data.eval -> data.check =
+		&default_collection;
 }
 
 void classify_client (packet)
@@ -142,7 +141,7 @@ int check_collection (packet, lease, collection)
 				   (struct client_state *)0,
 				   packet -> options, (struct option_state *)0,
 				   lease ? &lease -> scope : &global_scope,
-				   class -> submatch));
+				   class -> submatch, MDL));
 			if (status && data.len) {
 				nc = (struct class *)0;
 				if (class_hash_lookup (&nc, class -> hash,
@@ -200,13 +199,14 @@ int check_collection (packet, lease, collection)
 						  MDL);
 				data_string_forget (&data, MDL);
 				if (!class -> hash)
-					class -> hash = new_hash (0, 0, 0);
+				    class -> hash = new_hash (0, 0, 0, MDL);
 				class_hash_add (class -> hash,
 						(const char *)
 						nc -> hash_string.data,
 						nc -> hash_string.len,
 						nc, MDL);
 				classify (packet, nc);
+				class_dereference (&nc, MDL);
 			}
 		}
 	}
@@ -221,7 +221,7 @@ void classify (packet, class)
 		class_reference (&packet -> classes [packet -> class_count++],
 				 class, MDL);
 	else
-		log_error ("too many groups for %s",
+		log_error ("too many classes match %s",
 		      print_hw_addr (packet -> raw -> htype,
 				     packet -> raw -> hlen,
 				     packet -> raw -> chaddr));
