@@ -74,7 +74,8 @@ if [ x$reason = xPREINIT ]; then
     # Bring down alias interface. Its routes will disappear too.
     ifconfig $interface:0- inet 0
   fi
-  if [ $relmajor -lt 2 ] || ( [ $relmajor == 2 ] && [ $relminor == 0 ] ); then
+  if [ $relmajor -lt 2 ] || ( [ $relmajor -eq 2 ] && [ $relminor -eq 0 ] )
+   then
     ifconfig $interface inet 0.0.0.0 netmask 0.0.0.0 \
 		broadcast 255.255.255.255 up
     # Add route to make broadcast work. Do not omit netmask.
@@ -113,7 +114,7 @@ if [ x$reason = xBOUND ] || [ x$reason = xRENEW ] || \
 							$new_broadcast_arg
     # Add a network route to the computed network address.
     if [ $relmajor -lt 2 ] || \
-		( [ $relmajor == 2 ] && [ $relminor == 0 ] ); then
+		( [ $relmajor -eq 2 ] && [ $relminor -eq 0 ] ); then
       route add -net $new_network_number $new_subnet_arg dev $interface
     fi
     for router in $new_routers; do
@@ -164,7 +165,7 @@ if [ x$reason = xTIMEOUT ]; then
       route add -host $alias_ip_address dev $interface:0
     fi
     if [ $relmajor -lt 2 ] || \
-		( [ $relmajor == 2 ] && [ $relminor == 0 ] ); then
+		( [ $relmajor -eq 2 ] && [ $relminor -eq 0 ] ); then
       route add -net $new_network_number
     fi
     for router in $new_routers; do
