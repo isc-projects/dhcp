@@ -206,6 +206,7 @@ void discover_interfaces ()
 				last -> next = tmp -> next;
 			continue;
 		}
+		last = tmp;
 
 		foo = (struct sockaddr_in *)(&tmp -> tif -> ifr_addr);
 
@@ -441,14 +442,6 @@ int locate_network (packet)
 	} else {
 		packet -> shared_network =
 			packet -> interface -> shared_network;
-	}
-
-	/* If the subnet from whence this packet came is unknown to us,
-	   drop it on the floor... */
-	if (!packet -> shared_network) {
-		note ("Packet from unknown subnet: %s",
-		      inet_ntoa (packet -> raw -> giaddr));
-		return 0;
 	}
 	return 1;
 }
