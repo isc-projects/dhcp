@@ -42,15 +42,16 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: packet.c,v 1.15 1997/03/06 18:27:55 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: packet.c,v 1.16 1997/03/29 03:18:28 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
+
 #if defined (PACKET_ASSEMBLY) || defined (PACKET_DECODING)
-#include <netinet/in_systm.h>
 #include "includes/netinet/ip.h"
 #include "includes/netinet/udp.h"
 #include "includes/netinet/if_ether.h"
+#endif /* PACKET_ASSEMBLY || PACKET_DECODING */
 
 /* Compute the easy part of the checksum on a range of bytes. */
 
@@ -115,7 +116,6 @@ u_int32_t wrapsum (sum)
 #endif
 	return htons(sum);
 }
-#endif /* PACKET_ASSEMBLY || PACKET_DECODING */
 
 #ifdef PACKET_ASSEMBLY
 /* Assemble an hardware header... */
