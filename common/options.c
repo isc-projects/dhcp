@@ -55,6 +55,12 @@ void parse_options (packet)
 	/* Initially, zero all option pointers. */
 	memset (packet -> options, 0, sizeof (packet -> options));
 
+debug ("cookie: %x %x %x %x",
+packet -> raw -> options [0],
+packet -> raw -> options [1],
+packet -> raw -> options [2],
+packet -> raw -> options [3]);
+
 	/* If we don't see the magic cookie, there's nothing to parse. */
 	if (memcmp (packet -> raw -> options, DHCP_OPTIONS_COOKIE, 4)) {
 		packet -> options_valid = 0;
@@ -64,7 +70,7 @@ void parse_options (packet)
 	/* Go through the options field, up to the end of the packet
 	   or the End field. */
 	parse_option_buffer (packet, &packet -> raw -> options [4],
-			     packet -> packet_length - DHCP_FIXED_LEN);
+			     packet -> packet_length - DHCP_FIXED_NON_UDP + 4);
 	/* If we parsed a DHCP Option Overload option, parse more
 	   options out of the buffer(s) containing them. */
 	if (packet -> options_valid
@@ -104,6 +110,7 @@ void parse_option_buffer (packet, buffer, length)
 		/* All other fields (except end, see above) have a
 		   one-byte length. */
 		len = s [1];
+
 		/* If the length is outrageous, the options are bad. */
 		if (s + len + 2 > end) {
 			warn ("Option %s length %d overflows input buffer.",
@@ -160,7 +167,7 @@ void cons_options (inpacket, outpacket, options, overload)
 	option_mask options_want;	/* Options client wants. */
 	option_mask options_done;	/* Options we've already encoded. */
 	option_mask temp;		/* Working option mask. */
-	unsigned char *priority_list;
+	unsigned char priority_list [300];
 	int priority_len;
 	unsigned char *buffer = outpacket -> raw -> options;
 	int buflen, bufix = 0;
@@ -194,21 +201,31 @@ void cons_options (inpacket, outpacket, options, overload)
 		buflen = 576 - DHCP_FIXED_LEN;
 
 	/* If the client has provided a list of options that it wishes
-	   returned, use it to prioritize. */
-	/* XXX Some options are *required*, and client may not ask for
-	   them. */
+	   returned, use it to prioritize.   In case the client doesn't
+	   ask for some key items like the DHCP message type, though,
+	   always list those items first. */
+	priority_len = 0;
+	priority_list [priority_len++] = DHO_DHCP_MESSAGE_TYPE;
+	priority_list [priority_len++] = DHO_DHCP_SERVER_IDENTIFIER;
+	priority_list [priority_len++] = DHO_DHCP_LEASE_TIME;
+	priority_list [priority_len++] = DHO_DHCP_MESSAGE;
+
 	if (inpacket &&
 	    inpacket -> options [DHO_DHCP_PARAMETER_REQUEST_LIST].data) {
-		priority_list =
+		memcpy (&priority_list [priority_len],
 			inpacket -> options
-				[DHO_DHCP_PARAMETER_REQUEST_LIST].data;
-		priority_len =
+				[DHO_DHCP_PARAMETER_REQUEST_LIST].data,
+			inpacket -> options
+				[DHO_DHCP_PARAMETER_REQUEST_LIST].len);
+		priority_len +=
 			inpacket -> options
 				[DHO_DHCP_PARAMETER_REQUEST_LIST].len;
 	} else {
 	/* Otherwise, prioritize based on the default priority list. */
-		priority_list = dhcp_option_default_priority_list;
-		priority_len = sizeof_dhcp_option_default_priority_list;
+		memcpy (&priority_list [priority_len],
+			dhcp_option_default_priority_list,
+			sizeof_dhcp_option_default_priority_list);
+		priority_len += sizeof_dhcp_option_default_priority_list;
 	}
 
 	/* Make a bitmask of all the options the client wants. */
@@ -237,12 +254,13 @@ void cons_options (inpacket, outpacket, options, overload)
 		int length;
 
 		/* If no data is available for this option, skip it. */
-		if (!options [code])
+		if (!options [code]) {
 			continue;
+		}
 
 		/* Don't look at options that have already been stored. */
-		if (stored_length [code] ==
-		    options [code] -> len) {
+		if (options [code] -> value &&
+		    stored_length [code] == options [code] -> len) {
 			continue;
 		}
 
@@ -288,10 +306,6 @@ void cons_options (inpacket, outpacket, options, overload)
 		}
 	}
 
-	if (buffer == outpacket -> raw -> options) {
-		outpacket -> packet_length = DHCP_FIXED_LEN + bufix;
-	}
-
 	/* If we didn't miss any options, we're done. */
 	/* XXX Maybe we want to try to encode options the client didn't
 	   request but that we have available? */
@@ -302,7 +316,16 @@ void cons_options (inpacket, outpacket, options, overload)
 		/* If there's still space, pad it. */
 		while (bufix < buflen)
 			buffer [bufix++] = DHO_PAD;
+		if (buffer == outpacket -> raw -> options) {
+			outpacket -> packet_length
+				= DHCP_FIXED_NON_UDP + bufix;
+		}
+
 		return;
+	}
+
+	if (buffer == outpacket -> raw -> options) {
+		outpacket -> packet_length = DHCP_FIXED_NON_UDP + bufix;
 	}
 
 	/* If we did miss one or more options, they must not have fit.
@@ -430,6 +453,165 @@ int store_option (options, code, buffer, buflen, stored_length)
 		length -= incr;
 		stored_length [code] += incr;
 		bufix += 2 + incr;
+	}
+	return bufix;
+}
+
+/* cons options into a big buffer, and then split them out into the
+   three seperate buffers if needed.  This allows us to cons up a set
+   of vendor options using the same routine. */
+
+void new_cons_options (inpacket, outpacket, options, overload)
+	struct packet *inpacket;
+	struct packet *outpacket;
+	struct tree_cache **options;
+	int overload;	/* Overload flags that may be set. */
+{
+	unsigned char priority_list [300];
+	int priority_len;
+	unsigned char buffer [4096];	/* Really big buffer... */
+	int main_buffer_size;
+	int option_size;
+	int remaining_space;
+	int result;
+	int i;
+
+	/* If the client has provided a maximum DHCP message size,
+	   use that.   Otherwise, we use the default MTU size (576 bytes). */
+	/* XXX Maybe it would be safe to assume that we can send a packet
+	   to the client that's as big as the one it sent us, even if it
+	   didn't specify a large MTU. */
+	if (inpacket && inpacket -> options [DHO_DHCP_MAX_MESSAGE_SIZE].data)
+		main_buffer_size =
+			(getUShort (inpacket -> options
+				    [DHO_DHCP_MAX_MESSAGE_SIZE].data)
+			 - DHCP_FIXED_LEN);
+	else
+		main_buffer_size = 576 - DHCP_FIXED_LEN;
+
+	/* Preload the option priority list with mandatory options. */
+	priority_len = 0;
+	priority_list [priority_len++] = DHO_DHCP_MESSAGE_TYPE;
+	priority_list [priority_len++] = DHO_DHCP_SERVER_IDENTIFIER;
+	priority_list [priority_len++] = DHO_DHCP_LEASE_TIME;
+	priority_list [priority_len++] = DHO_DHCP_MESSAGE;
+
+	/* If the client has provided a list of options that it wishes
+	   returned, use it to prioritize.  Otherwise, prioritize
+	   based on the default priority list. */
+
+	if (inpacket &&
+	    inpacket -> options [DHO_DHCP_PARAMETER_REQUEST_LIST].data) {
+		memcpy (&priority_list [priority_len],
+			inpacket -> options
+				[DHO_DHCP_PARAMETER_REQUEST_LIST].data,
+			inpacket -> options
+				[DHO_DHCP_PARAMETER_REQUEST_LIST].len);
+		priority_len +=
+			inpacket -> options
+				[DHO_DHCP_PARAMETER_REQUEST_LIST].len;
+	} else {
+		memcpy (&priority_list [priority_len],
+			dhcp_option_default_priority_list,
+			sizeof_dhcp_option_default_priority_list);
+		priority_len += sizeof_dhcp_option_default_priority_list;
+	}
+
+	/* Put the cookie up front... */
+	memcpy (buffer, DHCP_OPTIONS_COOKIE, 4);
+
+	/* Copy the options into the big buffer... */
+	option_size = store_options (&buffer [4], (sizeof buffer) - 4,
+				     options, priority_list, priority_len);
+
+	/* If there's room, just store the whole thing in the packet's
+	   option buffer and leave it at that. */
+	if (option_size <= main_buffer_size) {
+		memcpy (outpacket -> raw -> options, buffer, option_size);
+		if (option_size < main_buffer_size)
+			outpacket -> raw -> options [option_size++] = DHO_END;
+		while (option_size < main_buffer_size)
+			outpacket -> raw -> options [option_size++] = DHO_PAD;
+	}
+
+	/* Otherwise, we're going to have to split things out. */
+	remaining_space = 0;
+
+	warn ("Insufficient packet space for all options.");
+}
+
+/* Store all the requested options into the requested buffer. */
+
+int store_options (buffer, buflen, options, priority_list, priority_len)
+	unsigned char *buffer;
+	int buflen;
+	struct tree_cache **options;
+	unsigned char *priority_list;
+	int priority_len;
+{
+	int bufix = 0;
+	int option_stored [256];
+	int missed = 0;
+	int missed_code = 0;
+	int missed_length = 0;
+	int result;
+	int i;
+	int ix;
+
+	/* Zero out the stored-lengths array. */
+	memset (option_stored, 0, sizeof option_stored);
+
+	/* Copy out the options in the order that they appear in the
+	   priority list... */
+	for (i = 0; i < priority_len; i++) {
+		/* Code for next option to try to store. */
+		int code = priority_list [i];
+
+		/* Number of bytes left to store (some may already
+		   have been stored by a previous pass). */
+		int length;
+
+		/* If no data is available for this option, skip it. */
+		if (!options [code]) {
+			continue;
+		}
+
+		/* The client could ask for things that are mandatory,
+		   in which case we should avoid storing them twice... */
+		if (option_stored [code])
+			continue;
+		option_stored [code] = 1;
+
+		/* Find the value of the option... */
+		if (!tree_evaluate (options [code])) {
+			continue;
+		}
+
+		/* We should now have a constant length for the option. */
+		length = options [code] -> len;
+
+		/* If there's no space for this option, skip it. */
+		if ((bufix + OPTION_SPACE (length)) > buflen) {
+			continue;
+		}
+		
+		/* Otherwise, store the option. */
+
+		/* If the option's length is more than 255, we must store it
+		   in multiple hunks.   Store 255-byte hunks first. */
+
+		ix = 0;
+
+		while (length) {
+			unsigned char incr = length > 255 ? 255 : length;
+			buffer [bufix] = code;
+			buffer [bufix + 1] = incr;
+			memcpy (buffer + bufix + 2,
+				options [code] -> value + ix, incr);
+			length -= incr;
+			ix += incr;
+			bufix += 2 + incr;
+		}
 	}
 	return bufix;
 }
