@@ -106,6 +106,10 @@ and for prodding me into improving it.
   token had been advanced to the token whose value was causing an error...
   causing parse warnings to claim the problem is on the wrong token.
 
+- Host declarations matching on client identifier for dynamic leases will
+  no longer match fixed-address host declarations (this is a dynamic/static
+  mixup, in effect).
+
 			Changes since 3.0.2rc3
 
 - A previously undocumented configuration directive, 'local-address',
