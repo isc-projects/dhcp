@@ -1,6 +1,6 @@
 	       Internet Systems Consortium DHCP Distribution
 			     Version 3.0.2b1
-			   September 21, 2004
+			     October 5, 2004
 
 			      README FILE
 
@@ -96,8 +96,10 @@ system.
 
 			    RELEASE STATUS
 
-This is the first beta release of a maintenance release which seeks to
-fix bugs found in the production release version 3.0.1 and earlier.
+This is the first beta release of ISC DHCP 3.0 maintenance release 2
+(ISC DHCP 3.0.2).  This release seeks only to fix bugs present in
+versions 3.0.1 and earlier.  No new features have or will be added
+in subsequent beta or release candidates of this release.
 
 In this release, the server and relay agent are currently fully
 functional on NetBSD, Linux systems with kernel version 2.2 or later,
