@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.94 1999/07/01 19:58:12 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.95 1999/07/01 20:02:57 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1227,8 +1227,8 @@ void ack_lease (packet, lease, offer, when, msg)
 
 	/* If we're always supposed to broadcast to this client, set
 	   the broadcast bit in the bootp flags field. */
-	if (oc = lookup_option (&server_universe, state -> options,
-				SV_ALWAYS_BROADCAST) &&
+	if ((oc = lookup_option (&server_universe, state -> options,
+				SV_ALWAYS_BROADCAST)) &&
 	    evaluate_boolean_option_cache (packet, packet -> options, oc))
 		state -> bootp_flags |= htons (BOOTP_BROADCAST);
 

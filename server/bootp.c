@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bootp.c,v 1.48 1999/06/22 13:25:23 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bootp.c,v 1.49 1999/07/01 20:02:58 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -214,8 +214,8 @@ void bootp (packet)
 
 	/* If we're always supposed to broadcast to this client, set
 	   the broadcast bit in the bootp flags field. */
-	if (oc = lookup_option (&server_universe,
-				options, SV_ALWAYS_BROADCAST) &&
+	if ((oc = lookup_option (&server_universe,
+				options, SV_ALWAYS_BROADCAST)) &&
 	    evaluate_boolean_option_cache (packet, packet -> options, oc))
 		raw.flags |= htons (BOOTP_BROADCAST);
 
