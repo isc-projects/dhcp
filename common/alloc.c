@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: alloc.c,v 1.30.2.2 1999/12/21 19:24:00 mellon Exp $ Copyright (c) 1995, 1996, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: alloc.c,v 1.30.2.3 1999/12/22 20:30:00 mellon Exp $ Copyright (c) 1995, 1996, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -42,37 +42,63 @@ VOIDPTR dmalloc (size, name)
 	int size;
 	char *name;
 {
-	char *foo = malloc (size + DMDSIZE);
+	unsigned char *foo = malloc (size + DMDSIZE);
 	int i;
 	VOIDPTR *bar;
+#if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL)
+	struct dmalloc_preamble *dp;
+#endif
 	if (!foo) {
 		log_error ("No memory for %s.", name);
 		return (VOIDPTR)0;
 	}
 	bar = (VOIDPTR)(foo + DMDOFFSET);
 	memset (bar, 0, size);
+
 #if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL)
-	{
-		struct dmalloc_preamble *dp = (struct dmalloc_preamble *)foo;
-		dp -> prev = dmalloc_list;
-		if (dmalloc_list)
-			dmalloc_list -> next = dp;
-		dmalloc_list = dp;
-		dp -> next = (struct dmalloc_preamble *)0;
-		dp -> size = size;
-		dp -> name = name;
-		dp -> generation = dmalloc_generation++;
-		dmalloc_outstanding += size;
-		for (i = 0; i < DMLFSIZE; i++)
-			dp -> low_fence [i] =
+	dp = (struct dmalloc_preamble *)foo;
+	dp -> prev = dmalloc_list;
+	if (dmalloc_list)
+		dmalloc_list -> next = dp;
+	dmalloc_list = dp;
+	dp -> next = (struct dmalloc_preamble *)0;
+	dp -> size = size;
+	dp -> name = name;
+	dp -> generation = dmalloc_generation++;
+	dmalloc_outstanding += size;
+	for (i = 0; i < DMLFSIZE; i++)
+		dp -> low_fence [i] =
+			(((unsigned long)
+			  (&dp -> low_fence [i])) % 143) + 113;
+	for (i = DMDOFFSET; i < DMDSIZE; i++)
+		foo [i + size] =
+			(((unsigned long)
+			  (&foo [i + size])) % 143) + 113;
+#if defined (DEBUG_MALLOC_POOL_EXHAUSTIVELY)
+	/* Check _every_ entry in the pool!   Very expensive. */
+	for (dp = dmalloc_list; dp; dp = dp -> prev) {
+		for (i = 0; i < DMLFSIZE; i++) {
+			if (dp -> low_fence [i] !=
 				(((unsigned long)
-				  (&dp -> low_fence [i])) % 143) + 113;
-		for (i = DMDOFFSET; i < DMDSIZE; i++)
-			foo [i + size] =
+				  (&dp -> low_fence [i])) % 143) + 113)
+			{
+				log_error ("malloc fence modified: %s",
+					   dp -> name);
+				abort ();
+			}
+		}
+		foo = (unsigned char *)dp;
+		for (i = DMDOFFSET; i < DMDSIZE; i++) {
+			if (foo [i + dp -> size] !=
 				(((unsigned long)
-				  (&foo [i + size])) % 143) + 113;
-		dmalloc_outstanding += size;
+				  (&foo [i + dp -> size])) % 143) + 113) {
+				log_error ("malloc fence modified: %s",
+					   dp -> name);
+				abort ();
+			}
+		}
 	}
+#endif
 #endif
 	return bar;
 }
@@ -104,11 +130,14 @@ void dfree (ptr, name)
 			dp -> prev -> next = dp -> next;
 		if (dp -> next)
 			dp -> next -> prev = dp -> prev;
+		if (dp == dmalloc_list)
+			dmalloc_list = dp -> prev;
 		if (dp -> generation >= dmalloc_cutoff_generation)
 			dmalloc_outstanding -= dp -> size;
 		else
 			dmalloc_longterm -= dp -> size;
-		for (i = 0; i < DMLFSIZE; i++)
+
+		for (i = 0; i < DMLFSIZE; i++) {
 			if (dp -> low_fence [i] !=
 				(((unsigned long)
 				  (&dp -> low_fence [i])) % 143) + 113)
@@ -117,6 +146,7 @@ void dfree (ptr, name)
 					   dp -> name);
 				abort ();
 			}
+		}
 		for (i = DMDOFFSET; i < DMDSIZE; i++) {
 			if (bar [i + dp -> size] !=
 				(((unsigned long)
@@ -131,6 +161,111 @@ void dfree (ptr, name)
 #endif
 	free (ptr);
 }
+
+#if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL)
+/* For allocation functions that keep their own free lists, we want to
+   account for the reuse of the memory. */
+
+void dmalloc_reuse (foo, name, justref)
+	VOIDPTR foo;
+	char *name;
+	int justref;
+{
+	struct dmalloc_preamble *dp;
+
+	/* Get the pointer to the dmalloc header. */
+	dp = foo;
+	dp--;
+
+	/* If we just allocated this and are now referencing it, this
+	   function would almost be a no-op, except that it would
+	   increment the generation count needlessly.  So just return
+	   in this case. */
+	if (dp -> generation == dmalloc_generation)
+		return;
+
+	/* If this is longterm data, and we just made reference to it,
+	   don't put it on the short-term list or change its name -
+	   we don't need to know about this. */
+	if (dp -> generation < dmalloc_cutoff_generation && justref)
+		return;
+
+	/* Take it out of the place in the allocated list where it was. */
+	if (dp -> prev)
+		dp -> prev -> next = dp -> next;
+	if (dp -> next)
+		dp -> next -> prev = dp -> prev;
+	if (dp == dmalloc_list)
+		dmalloc_list = dp -> prev;
+
+	/* Account for its removal. */
+	if (dp -> generation >= dmalloc_cutoff_generation)
+		dmalloc_outstanding -= dp -> size;
+	else
+		dmalloc_longterm -= dp -> size;
+
+	/* Now put it at the head of the list. */
+	dp -> prev = dmalloc_list;
+	if (dmalloc_list)
+		dmalloc_list -> next = dp;
+	dmalloc_list = dp;
+	dp -> next = (struct dmalloc_preamble *)0;
+
+	/* Change the name associated with it. */
+	dp -> name = name;
+
+	/* Increment the generation. */
+	dp -> generation = dmalloc_generation++;
+
+	/* Account for it. */
+	dmalloc_outstanding += dp -> size;
+}
+
+void dmalloc_dump_outstanding ()
+{
+	static unsigned long dmalloc_cutoff_point;
+	struct dmalloc_preamble *dp;
+	unsigned char *foo;
+	int i;
+
+	if (!dmalloc_cutoff_point)
+		dmalloc_cutoff_point = dmalloc_cutoff_generation;
+	for (dp = dmalloc_list; dp; dp = dp -> prev) {
+		if (dp -> generation <= dmalloc_cutoff_point)
+			break;
+#if defined (DEBUG_MALLOC_POOL)
+		for (i = 0; i < DMLFSIZE; i++) {
+			if (dp -> low_fence [i] !=
+				(((unsigned long)
+				  (&dp -> low_fence [i])) % 143) + 113)
+			{
+				log_error ("malloc fence modified: %s",
+					   dp -> name);
+				abort ();
+			}
+		}
+		foo = (unsigned char *)dp;
+		for (i = DMDOFFSET; i < DMDSIZE; i++) {
+			if (foo [i + dp -> size] !=
+				(((unsigned long)
+				  (&foo [i + dp -> size])) % 143) + 113) {
+				log_error ("malloc fence modified: %s",
+					   dp -> name);
+				abort ();
+			}
+		}
+#endif
+#if defined (DEBUG_MEMORY_LEAKAGE)
+		/* Don't count data that's actually on a free list
+                   somewhere. */
+		if (dp -> name)
+			log_info ("  %s: %d", dp -> name, dp -> size);
+#endif
+	}
+	if (dmalloc_list)
+		dmalloc_cutoff_point = dmalloc_list -> generation;
+}
+#endif /* DEBUG_MEMORY_LEAKAGE || DEBUG_MALLOC_POOL */
 
 struct packet *new_packet (name)
 	char *name;
@@ -235,6 +370,7 @@ struct lease_state *new_lease_state (name)
 		rval = free_lease_states;
 		free_lease_states =
 			(struct lease_state *)(free_lease_states -> next);
+		dmalloc_reuse (rval, name, 0);
 	} else {
 		rval = dmalloc (sizeof (struct lease_state), name);
 		if (!rval)
@@ -315,14 +451,21 @@ void free_domain_search_list (ptr, name)
 	dfree ((VOIDPTR)ptr, name);
 }
 
-void free_lease_state (ptr, name)
-	struct lease_state *ptr;
+void free_lease_state (state, name)
+	struct lease_state *state;
 	char *name;
 {
-	if (ptr -> options)
-		option_state_dereference (&ptr -> options, name);
-	ptr -> next = free_lease_states;
-	free_lease_states = ptr;
+	if (state -> options)
+		option_state_dereference (&state -> options, name);
+	data_string_forget (&state -> parameter_request_list,
+			    "free_lease_state");
+	data_string_forget (&state -> filename,
+			    "free_lease_state");
+	data_string_forget (&state -> server_name,
+			    "free_lease_state");
+	state -> next = free_lease_states;
+	free_lease_states = state;
+	dmalloc_reuse (free_lease_states, (char *)0, 0);
 }
 
 void free_protocol (ptr, name)
@@ -498,6 +641,7 @@ pair new_pair (name)
 		foo = free_pairs;
 		free_pairs = foo -> cdr;
 		memset (foo, 0, sizeof *foo);
+		dmalloc_reuse (foo, name, 0);
 		return foo;
 	}
 
@@ -514,6 +658,7 @@ void free_pair (foo, name)
 {
 	foo -> cdr = free_pairs;
 	free_pairs = foo;
+	dmalloc_reuse (free_pairs, (char *)0, 0);
 }
 
 struct expression *free_expressions;
@@ -527,6 +672,7 @@ int expression_allocate (cptr, name)
 	if (free_expressions) {
 		rval = free_expressions;
 		free_expressions = rval -> data.not;
+		dmalloc_reuse (rval, name, 0);
 	} else {
 		rval = dmalloc (sizeof (struct expression), name);
 		if (!rval)
@@ -542,6 +688,7 @@ void free_expression (expr, name)
 {
 	expr -> data.not = free_expressions;
 	free_expressions = expr;
+	dmalloc_reuse (free_expressions, (char *)0, 0);
 }
 
 int expression_reference (ptr, src, name)
@@ -568,6 +715,7 @@ int expression_reference (ptr, src, name)
 	}
 	*ptr = src;
 	src -> refcnt++;
+	dmalloc_reuse (src, name, 1);
 	return 1;
 }
 
@@ -583,6 +731,7 @@ int option_cache_allocate (cptr, name)
 		rval = free_option_caches;
 		free_option_caches =
 			(struct option_cache *)(rval -> expression);
+		dmalloc_reuse (rval, name, 0);
 	} else {
 		rval = dmalloc (sizeof (struct option_cache), name);
 		if (!rval)
@@ -616,6 +765,7 @@ int option_cache_reference (ptr, src, name)
 	}
 	*ptr = src;
 	src -> refcnt++;
+	dmalloc_reuse (src, name, 1);
 	return 1;
 }
 
@@ -658,6 +808,7 @@ int buffer_reference (ptr, bp, name)
 	}
 	*ptr = bp;
 	bp -> refcnt++;
+	dmalloc_reuse (bp, name, 1);
 	return 1;
 }
 
@@ -734,6 +885,7 @@ int dns_host_entry_reference (ptr, bp, name)
 	}
 	*ptr = bp;
 	bp -> refcnt++;
+	dmalloc_reuse (bp, name, 1);
 	return 1;
 }
 
@@ -821,6 +973,7 @@ int option_state_reference (ptr, bp, name)
 	}
 	*ptr = bp;
 	bp -> refcnt++;
+	dmalloc_reuse (bp, name, 1);
 	return 1;
 }
 
