@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: execute.c,v 1.13 1999/07/17 17:59:24 mellon Exp $ Copyright (c) 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: execute.c,v 1.14 1999/07/19 13:08:28 mellon Exp $ Copyright (c) 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -91,7 +91,7 @@ int execute_statements (packet, lease, in_options, out_options, statements)
 				 in_options, lease, r -> data.ie.expr);
 			
 #if defined (DEBUG_EXPRESSIONS)
-			log_info ("exec: if %s", (status
+			log_debug ("exec: if %s", (status
 					      ? (result ? "true" : "false")
 					      : "NULL"));
 #endif
@@ -109,7 +109,7 @@ int execute_statements (packet, lease, in_options, out_options, statements)
 				(&result,
 				 packet, in_options, lease, r -> data.eval);
 #if defined (DEBUG_EXPRESSIONS)
-			log_info ("exec: evaluate: %s",
+			log_debug ("exec: evaluate: %s",
 			      (status
 			       ? (result ? "true" : "false") : "NULL"));
 #endif
@@ -117,7 +117,7 @@ int execute_statements (packet, lease, in_options, out_options, statements)
 
 		      case add_statement:
 #if defined (DEBUG_EXPRESSIONS)
-			log_info ("exec: add %s", (r -> data.add -> name
+			log_debug ("exec: add %s", (r -> data.add -> name
 					       ? r -> data.add -> name
 					       : "<unnamed class>"));
 #endif
@@ -126,34 +126,34 @@ int execute_statements (packet, lease, in_options, out_options, statements)
 
 		      case break_statement:
 #if defined (DEBUG_EXPRESSIONS)
-			log_info ("exec: break");
+			log_debug ("exec: break");
 #endif
 			return 0;
 
 		      case supersede_option_statement:
 #if defined (DEBUG_EXPRESSIONS)
-			log_info ("exec: supersede option %s.%s",
+			log_debug ("exec: supersede option %s.%s",
 			      r -> data.option -> option -> universe -> name,
 			      r -> data.option -> option -> name);
 			goto option_statement;
 #endif
 		      case default_option_statement:
 #if defined (DEBUG_EXPRESSIONS)
-			log_info ("exec: default option %s.%s",
+			log_debug ("exec: default option %s.%s",
 			      r -> data.option -> option -> universe -> name,
 			      r -> data.option -> option -> name);
 			goto option_statement;
 #endif
 		      case append_option_statement:
 #if defined (DEBUG_EXPRESSIONS)
-			log_info ("exec: append option %s.%s",
+			log_debug ("exec: append option %s.%s",
 			      r -> data.option -> option -> universe -> name,
 			      r -> data.option -> option -> name);
 			goto option_statement;
 #endif
 		      case prepend_option_statement:
 #if defined (DEBUG_EXPRESSIONS)
-			log_info ("exec: prepend option %s.%s",
+			log_debug ("exec: prepend option %s.%s",
 			      r -> data.option -> option -> universe -> name,
 			      r -> data.option -> option -> name);
 		      option_statement:

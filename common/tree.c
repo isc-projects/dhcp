@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.35 1999/07/19 01:17:23 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.36 1999/07/19 13:08:29 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -396,7 +396,7 @@ int evaluate_boolean_expression (result, packet, options, lease, expr)
 		*result = check_collection (packet, lease,
 					    expr -> data.check);
 #if defined (DEBUG_EXPRESSIONS)
-		log_info ("bool: check (%s) returns %s",
+		log_debug ("bool: check (%s) returns %s",
 		      expr -> data.check -> name, *result ? "true" : "false");
 #endif
 		return 1;
@@ -419,7 +419,7 @@ int evaluate_boolean_expression (result, packet, options, lease, expr)
 		}
 
 #if defined (DEBUG_EXPRESSIONS)
-		log_info ("bool: equal (%s, %s) = %s",
+		log_debug ("bool: equal (%s, %s) = %s",
 		      sleft ? print_hex_1 (left.len, left.data, 30) : "NULL",
 		      sright ? print_hex_2 (right.len,
 					    right.data, 30) : "NULL",
@@ -444,7 +444,7 @@ int evaluate_boolean_expression (result, packet, options, lease, expr)
 						      expr -> data.and [1]);
 
 #if defined (DEBUG_EXPRESSIONS)
-		log_info ("bool: and (%s, %s) = %s",
+		log_debug ("bool: and (%s, %s) = %s",
 		      sleft ? (bleft ? "true" : "false") : "NULL",
 		      sright ? (bright ? "true" : "false") : "NULL",
 		      ((sleft && sright)
@@ -464,7 +464,7 @@ int evaluate_boolean_expression (result, packet, options, lease, expr)
 						      lease,
 						      expr -> data.or [1]);
 #if defined (DEBUG_EXPRESSIONS)
-		log_info ("bool: or (%s, %s) = %s",
+		log_debug ("bool: or (%s, %s) = %s",
 		      sleft ? (bleft ? "true" : "false") : "NULL",
 		      sright ? (bright ? "true" : "false") : "NULL",
 		      ((sleft && sright)
@@ -481,7 +481,7 @@ int evaluate_boolean_expression (result, packet, options, lease, expr)
 						     lease,
 						     expr -> data.not);
 #if defined (DEBUG_EXPRESSIONS)
-		log_info ("bool: not (%s) = %s",
+		log_debug ("bool: not (%s) = %s",
 		      sleft ? (bleft ? "true" : "false") : "NULL",
 		      ((sleft && sright)
 		       ? (!bleft ? "true" : "false") : "NULL"));
@@ -506,7 +506,7 @@ int evaluate_boolean_expression (result, packet, options, lease, expr)
 					    "evaluate_boolean_expression");
 		}
 #if defined (DEBUG_EXPRESSIONS)
-		log_info ("bool: exists %s.%s = %s",
+		log_debug ("bool: exists %s.%s = %s",
 		      expr -> data.option -> universe -> name,
 		      expr -> data.option -> name, *result ? "true" : "false");
 #endif
@@ -515,12 +515,12 @@ int evaluate_boolean_expression (result, packet, options, lease, expr)
 	      case expr_known:
 		if (!packet) {
 #if defined (DEBUG_EXPRESSIONS)
-			log_info ("bool: known = NULL");
+			log_debug ("bool: known = NULL");
 #endif
 			return 0;
 		}
 #if defined (DEBUG_EXPRESSIONS)
-		log_info ("bool: known = %s",
+		log_debug ("bool: known = %s",
 			  packet -> known ? "true" : "false");
 #endif
 		*result = packet -> known;
@@ -651,7 +651,7 @@ int evaluate_data_expression (result, packet, options, lease, expr)
 			s3 = 0;
 
 #if defined (DEBUG_EXPRESSIONS)
-		log_info ("data: substring (%s, %s, %s) = %s",
+		log_debug ("data: substring (%s, %s, %s) = %s",
 		      s0 ? print_hex_1 (data.len, data.data, 30) : "NULL",
 		      s1 ? print_dec_1 (offset) : "NULL",
 		      s2 ? print_dec_2 (len) : "NULL",
@@ -688,7 +688,7 @@ int evaluate_data_expression (result, packet, options, lease, expr)
 		}
 
 #if defined (DEBUG_EXPRESSIONS)
-		log_info ("data: suffix (%s, %d) = %s",
+		log_debug ("data: suffix (%s, %d) = %s",
 		      s0 ? print_hex_1 (data.len, data.data, 30) : "NULL",
 		      s1 ? print_dec_1 (len) : "NULL",
 		      ((s0 && s1)
@@ -709,7 +709,7 @@ int evaluate_data_expression (result, packet, options, lease, expr)
 			s0 = 0;
 
 #if defined (DEBUG_EXPRESSIONS)
-		log_info ("data: option %s.%s = %s",
+		log_debug ("data: option %s.%s = %s",
 		      expr -> data.option -> universe -> name,
 		      expr -> data.option -> name,
 		      s0 ? print_hex_1 (result -> len, result -> data, 60)
@@ -741,7 +741,7 @@ int evaluate_data_expression (result, packet, options, lease, expr)
 			return 0;
 		}
 #if defined (DEBUG_EXPRESSIONS)
-		log_info ("data: hardware = %s",
+		log_debug ("data: hardware = %s",
 		      print_hex_1 (result -> len, result -> data, 60));
 #endif
 		return 1;
@@ -779,7 +779,7 @@ int evaluate_data_expression (result, packet, options, lease, expr)
 		} else
 			s2 = 0;
 #if defined (DEBUG_EXPRESSIONS)
-		log_info ("data: packet (%d, %d) = %s",
+		log_debug ("data: packet (%d, %d) = %s",
 		      offset, len,
 		      s2 ? print_hex_1 (result -> len,
 					result -> data, 60) : NULL);
@@ -797,7 +797,7 @@ int evaluate_data_expression (result, packet, options, lease, expr)
 			s0 = 0;
 
 #if defined (DEBUG_EXPRESSIONS)
-		log_info ("data: encapsulate (%s) = %s",
+		log_debug ("data: encapsulate (%s) = %s",
 			  expr -> data.encapsulate.data,
 			  s0 ? print_hex_1 (result -> len,
 					    result -> data, 60) : "null");
@@ -807,7 +807,7 @@ int evaluate_data_expression (result, packet, options, lease, expr)
 		/* Some constant data... */
 	      case expr_const_data:
 #if defined (DEBUG_EXPRESSIONS)
-		log_info ("data: const = %s",
+		log_debug ("data: const = %s",
 		      print_hex_1 (expr -> data.const_data.len,
 				   expr -> data.const_data.data, 60));
 #endif
@@ -820,7 +820,7 @@ int evaluate_data_expression (result, packet, options, lease, expr)
 	      case expr_host_lookup:
 		s0 = do_host_lookup (result, expr -> data.host_lookup);
 #if defined (DEBUG_EXPRESSIONS)
-		log_info ("data: DNS lookup (%s) = %s",
+		log_debug ("data: DNS lookup (%s) = %s",
 		      expr -> data.host_lookup -> hostname,
 		      (s0
 		       ? print_dotted_quads (result -> len, result -> data)
@@ -858,7 +858,7 @@ int evaluate_data_expression (result, packet, options, lease, expr)
 		else if (s1)
 			data_string_copy (result, &other, "expr_concat");
 #if defined (DEBUG_EXPRESSIONS)
-		log_info ("data: concat (%s, %s) = %s",
+		log_debug ("data: concat (%s, %s) = %s",
 		      s0 ? print_hex_1 (data.len, data.data, 20) : "NULL",
 		      s1 ? print_hex_2 (other.len, other.data, 20) : "NULL",
 		      ((s0 || s1)
@@ -886,9 +886,9 @@ int evaluate_data_expression (result, packet, options, lease, expr)
 
 #if defined (DEBUG_EXPRESSIONS)
 		if (!s0)
-			log_info ("data: encode_int8 (NULL) = NULL");
+			log_debug ("data: encode_int8 (NULL) = NULL");
 		else
-			log_info ("data: encode_int8 (%d) = %s", len,
+			log_debug ("data: encode_int8 (%d) = %s", len,
 				  print_hex_2 (result -> len,
 					       result -> data, 20));
 #endif
@@ -914,9 +914,9 @@ int evaluate_data_expression (result, packet, options, lease, expr)
 
 #if defined (DEBUG_EXPRESSIONS)
 		if (!s0)
-			log_info ("data: encode_int16 (NULL) = NULL");
+			log_debug ("data: encode_int16 (NULL) = NULL");
 		else
-			log_info ("data: encode_int16 (%d) = %s", len,
+			log_debug ("data: encode_int16 (%d) = %s", len,
 				  print_hex_2 (result -> len,
 					       result -> data, 20));
 #endif
@@ -941,9 +941,9 @@ int evaluate_data_expression (result, packet, options, lease, expr)
 
 #if defined (DEBUG_EXPRESSIONS)
 		if (!s0)
-			log_info ("data: encode_int32 (NULL) = NULL");
+			log_debug ("data: encode_int32 (NULL) = NULL");
 		else
-			log_info ("data: encode_int32 (%d) = %s", len,
+			log_debug ("data: encode_int32 (%d) = %s", len,
 				  print_hex_2 (result -> len,
 					       result -> data, 20));
 #endif
@@ -1051,7 +1051,7 @@ int evaluate_data_expression (result, packet, options, lease, expr)
 
 	      b2a_out:
 #if defined (DEBUG_EXPRESSIONS)
-		log_info ("data: binary-to-ascii (%s, %s, %s, %s) = %s",
+		log_debug ("data: binary-to-ascii (%s, %s, %s, %s) = %s",
 		      s0 ? print_dec_1 (offset) : "NULL",
 		      s1 ? print_dec_2 (len) : "NULL",
 		      s2 ? print_hex_1 (data.len, data.data, 30) : "NULL",
@@ -1113,7 +1113,7 @@ int evaluate_data_expression (result, packet, options, lease, expr)
 
 	      reverse_out:
 #if defined (DEBUG_EXPRESSIONS)
-		log_info ("data: reverse (%s, %s) = %s",
+		log_debug ("data: reverse (%s, %s) = %s",
 		      s0 ? print_dec_1 (offset) : "NULL",
 		      s1 ? print_hex_1 (data.len, data.data, 30) : "NULL",
 		      (status ? print_hex_3 (result -> len, result -> data, 30)
@@ -1142,7 +1142,7 @@ int evaluate_data_expression (result, packet, options, lease, expr)
 			return 0;
 		}
 #if defined (DEBUG_EXPRESSIONS)
-		log_info ("data: leased-address = %s",
+		log_debug ("data: leased-address = %s",
 		      print_hex_1 (result -> len, result -> data, 60));
 #endif
 		return 1;
@@ -1204,21 +1204,21 @@ int evaluate_data_expression (result, packet, options, lease, expr)
 		if (buffer_allocate (&result -> buffer, 11, "lease-time")) {
 			result -> data = &result -> buffer -> data [0];
 #if defined (NO_SNPRINTF)
-			sprintf (result -> data, 11, "%lu", i);
+			sprintf (result -> data, "%lu", i);
 #else
 			snprintf (result -> data, 11, "%lu", i);
 #endif
 			result -> len = strlen (result -> data);
 			result -> terminated = 0;
 		} else {
-			log_error ("data: leased-lease-time: no memory.");
+			log_error ("data: lease-time: no memory.");
 			return 0;
 		}
 #if defined (DEBUG_EXPRESSIONS)
-		log_info ("data: lease-time = %s",
-			  print_hex_1 (result -> len, result -> data, 60));
+		log_debug ("data: lease-time = %s",
+			   print_hex_1 (result -> len, result -> data, 60));
 #endif
- 		return 1;
+		return 1;
  
 	      case expr_check:
 	      case expr_equal:
@@ -1296,7 +1296,7 @@ int evaluate_numeric_expression (result, packet, options, lease, expr)
 		if (status)
 			*result = data.data [0];
 #if defined (DEBUG_EXPRESSIONS)
-		log_info ("num: extract_int8 (%s) = %s",
+		log_debug ("num: extract_int8 (%s) = %s",
 		      status ? print_hex_1 (data.len, data.data, 60) : "NULL",
 		      status ? print_dec_1 (*result) : "NULL" );
 #endif
@@ -1312,7 +1312,7 @@ int evaluate_numeric_expression (result, packet, options, lease, expr)
 		if (status && data.len >= 2)
 			*result = getUShort (data.data);
 #if defined (DEBUG_EXPRESSIONS)
-		log_info ("num: extract_int16 (%s) = %ld",
+		log_debug ("num: extract_int16 (%s) = %ld",
 		      ((status && data.len >= 2) ?
 		       print_hex_1 (data.len, data.data, 60) : "NULL"),
 		      *result);
@@ -1329,7 +1329,7 @@ int evaluate_numeric_expression (result, packet, options, lease, expr)
 		if (status && data.len >= 4)
 			*result = getULong (data.data);
 #if defined (DEBUG_EXPRESSIONS)
-		log_info ("num: extract_int32 (%s) = %ld",
+		log_debug ("num: extract_int32 (%s) = %ld",
 		      ((status && data.len >= 4) ?
 		       print_hex_1 (data.len, data.data, 60) : "NULL"),
 		      *result);
