@@ -41,7 +41,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.102 2000/05/16 23:01:58 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.103 2000/05/30 21:17:04 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -114,6 +114,19 @@ int main (argc, argv, envp)
 #if !(defined (DEBUG) || defined (SYSLOG_4_2) || defined (__CYGWIN32__))
 	setlogmask (LOG_UPTO (LOG_INFO));
 #endif	
+
+	/* Set up the OMAPI. */
+	status = omapi_init ();
+	if (status != ISC_R_SUCCESS)
+		log_fatal ("Can't initialize OMAPI: %s",
+			   isc_result_totext (status));
+
+	/* Set up the OMAPI wrappers for various server database internal
+	   objects. */
+	dhcp_common_objects_setup ();
+
+	dhcp_interface_discovery_hook = dhclient_interface_discovery_hook;
+	dhcp_interface_shutdown_hook = dhclient_interface_shutdown_hook;
 
 	for (i = 1; i < argc; i++) {
 		if (!strcmp (argv [i], "-r")) {
@@ -260,19 +273,6 @@ int main (argc, argv, envp)
 	}
 
 	inaddr_any.s_addr = INADDR_ANY;
-
-	/* Set up the OMAPI. */
-	status = omapi_init ();
-	if (status != ISC_R_SUCCESS)
-		log_fatal ("Can't initialize OMAPI: %s",
-			   isc_result_totext (status));
-
-	/* Set up the OMAPI wrappers for various server database internal
-	   objects. */
-	dhcp_common_objects_setup ();
-
-	dhcp_interface_discovery_hook = dhclient_interface_discovery_hook;
-	dhcp_interface_shutdown_hook = dhclient_interface_shutdown_hook;
 
 	/* Discover all the network interfaces. */
 	discover_interfaces (DISCOVER_UNCONFIGURED);
