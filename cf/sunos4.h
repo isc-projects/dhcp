@@ -124,6 +124,12 @@ char *strerror PROTO ((int));
    as usual, SysV can't do networking to save its life. */
 #define USE_POLL
 
+/* By default, use NIT API for receiving and sending packets... */
+#if defined (USE_DEFAULT_NETWORK)
+#  define USE_NIT
+#endif
+
+
 #define EOL	'\n'
 #define VOIDPTR	void *
 
