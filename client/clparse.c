@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: clparse.c,v 1.54 2001/01/25 08:17:17 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: clparse.c,v 1.55 2001/02/12 19:37:03 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -591,8 +591,9 @@ void parse_option_list (cfile, list)
 		skip_to_semi (cfile);
 		return;
 	}
-	if (*list)
-		dfree (*list, MDL);
+	/* XXX we can't free the list here, because we may have copied
+	   XXX it from an outer config state. */
+	*list = (u_int32_t *)0;
 	if (ix) {
 		*list = dmalloc ((ix + 1) * sizeof **list, MDL);
 		if (!*list)
@@ -1020,8 +1021,8 @@ void parse_string_list (cfile, lp, multiple)
 		}
 
 		tmp = ((struct string_list *)
-		       dmalloc (strlen (val) + 1 +
-				sizeof (struct string_list *), MDL));
+		       dmalloc (strlen (val) + sizeof (struct string_list),
+				MDL));
 		if (!tmp)
 			log_fatal ("no memory for string list entry.");
 
