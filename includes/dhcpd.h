@@ -47,8 +47,7 @@
 
 #include "arpa/nameser.h"
 #if defined (NSUPDATE)
-# include <resolv.h>
-# include <res_update.h>
+# include "minires/minires.h"
 #endif
 
 #include "dhcp.h"
