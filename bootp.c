@@ -229,8 +229,8 @@ void bootp (packet)
 	memcpy (hto.haddr, packet -> raw -> chaddr, hto.hlen);
 
 	/* Report what we're doing... */
-	note ("BOOTREPLY for %s to %s via %s",
-	      inet_ntoa (raw.yiaddr),
+	note ("BOOTREPLY for %s to %s (%s) via %s",
+	      piaddr (ip_address), hp -> name,
 	      print_hw_addr (packet -> raw -> htype,
 			     packet -> raw -> hlen,
 			     packet -> raw -> chaddr),
