@@ -16,7 +16,11 @@ if [ "$sysname" = "" ]; then
         sysname=alphaosf
       fi;;
     Linux)
-      sysname=linux;;
+      case `uname -r` in
+	1*) sysname=linux-1 ;;
+	2.1*) sysname=linux-2.1 ;;
+	2*) sysname=linux-2.0 ;;
+      esac;;
     SunOS)
       case `uname -r` in
         4*) sysname=sunos4;;
