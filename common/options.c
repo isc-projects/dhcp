@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.35 1999/02/24 17:56:46 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.36 1999/03/10 20:39:22 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -251,7 +251,7 @@ int parse_agent_information_option (packet, len, data)
    of vendor options using the same routine. */
 
 int cons_options (inpacket, outpacket, mms, options,
-		  agent_options, overload, terminate, bootpp)
+		  agent_options, overload, terminate, bootpp, prl)
 	struct packet *inpacket;
 	struct dhcp_packet *outpacket;
 	int mms;
@@ -260,6 +260,7 @@ int cons_options (inpacket, outpacket, mms, options,
 	int overload;	/* Overload flags that may be set. */
 	int terminate;
 	int bootpp;
+	struct data_string *prl;
 {
 #define PRIORITY_COUNT 300
 	int priority_list [PRIORITY_COUNT];
@@ -325,27 +326,11 @@ int cons_options (inpacket, outpacket, mms, options,
 	priority_list [priority_len++] = DHO_DHCP_MESSAGE;
 	priority_list [priority_len++] = DHO_DHCP_REQUESTED_ADDRESS;
 
-	/* If the client has provided a list of options that it wishes
-	   returned, use it to prioritize.  Otherwise, prioritize
-	   based on the default priority list. */
+	if (prl && prl -> len > 0) {
+		data_string_truncate (prl, (PRIORITY_COUNT - priority_len));
 
-	if (inpacket)
-		op = lookup_option (inpacket -> options.dhcp_hash,
-				    DHO_DHCP_PARAMETER_REQUEST_LIST);
-	else
-		op = (struct option_cache *)0;
-
-	if (op)
-		evaluate_option_cache (&ds, inpacket,
-				       &inpacket -> options, op);
-
-	if (ds.len > 0) {
-		data_string_truncate (&ds,
-				      (PRIORITY_COUNT - priority_len));
-
-		for (i = 0; i < ds.len; i++)
-			priority_list [priority_len++] = ds.data [i];
-		data_string_forget (&ds, "cons_options");
+		for (i = 0; i < prl -> len; i++)
+			priority_list [priority_len++] = prl -> data [i];
 	} else {
 		/* First, hardcode some more options that ought to be
 		   sent first... */

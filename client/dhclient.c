@@ -56,7 +56,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.57 1999/02/25 23:30:31 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.58 1999/03/10 20:39:02 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -209,6 +209,9 @@ int main (argc, argv, envp)
 
 	/* Rewrite the lease database... */
 	rewrite_client_leases ();
+
+	/* XXX */
+/* 	config_counter(&snd_counter, &rcv_counter); */
 
 	/* If no broadcast interfaces were discovered, call the script
 	   and tell it so. */
@@ -1570,7 +1573,8 @@ void make_discover (client, lease)
 	/* Set up the option buffer... */
 	client -> packet_length =
 		cons_options ((struct packet *)0, &client -> packet, 0,
-			      &options, (struct agent_options *)0, 0, 0, 0);
+			      &options, (struct agent_options *)0,
+			      0, 0, 0, (struct data_string *)0);
 	if (client -> packet_length < BOOTP_MIN_LEN)
 		client -> packet_length = BOOTP_MIN_LEN;
 
@@ -1605,7 +1609,9 @@ void make_request (client, lease)
 	struct client_lease *lease;
 {
 	unsigned char request = DHCPREQUEST;
-	int i;
+	int i, j;
+	unsigned char *tmp, *digest;
+	unsigned char *old_digest_loc;
 	struct option_state options;
 	struct option_cache *oc;
 
@@ -1628,7 +1634,8 @@ void make_request (client, lease)
 	/* Set up the option buffer... */
 	client -> packet_length =
 		cons_options ((struct packet *)0, &client -> packet, 0,
-			      &options, (struct agent_options *)0, 0, 0, 0);
+			      &options, (struct agent_options *)0,
+			      0, 0, 0, (struct data_string *)0);
 	if (client -> packet_length < BOOTP_MIN_LEN)
 		client -> packet_length = BOOTP_MIN_LEN;
 
@@ -1691,7 +1698,8 @@ void make_decline (client, lease)
 	/* Set up the option buffer... */
 	client -> packet_length =
 		cons_options ((struct packet *)0, &client -> packet, 0,
-			      &options, (struct agent_options *)0, 0, 0, 0);
+			      &options, (struct agent_options *)0,
+			      0, 0, 0, (struct data_string *)0);
 	if (client -> packet_length < BOOTP_MIN_LEN)
 		client -> packet_length = BOOTP_MIN_LEN;
 
@@ -1743,7 +1751,8 @@ void make_release (client, lease)
 	/* Set up the option buffer... */
 	client -> packet_length =
 		cons_options ((struct packet *)0, &client -> packet, 0,
-			      &options, (struct agent_options *)0, 0, 0, 0);
+			      &options, (struct agent_options *)0,
+			      0, 0, 0, (struct data_string *)0);
 	if (client -> packet_length < BOOTP_MIN_LEN)
 		client -> packet_length = BOOTP_MIN_LEN;
 
