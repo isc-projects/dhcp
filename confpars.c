@@ -53,7 +53,7 @@ static TIME parsed_time;
 /* conf-file :== statements
    declarations :== <nil> | declaration | declarations declaration */
 
-void readconf (void)
+void readconf ()
 {
 	FILE *cfile;
 	char *val;
@@ -73,7 +73,7 @@ void readconf (void)
 	token = next_token (&val, cfile);
 }
 
-void read_leases (void)
+void read_leases ()
 {
 	FILE *cfile;
 	char *val;
@@ -95,7 +95,8 @@ void read_leases (void)
 		} else {
 			if (!setjmp (bc)) {
 				struct lease *lease;
-				lease = parse_lease_statement (cfile, &bc);
+				lease = parse_lease_statement (cfile,
+							       jref (bc));
 				enter_lease (lease);
 			}
 		}
@@ -115,7 +116,7 @@ void parse_statement (cfile)
 	      case HOST:
 		if (!setjmp (bc)) {
 			struct host_decl *hd =
-				parse_host_statement (cfile, &bc);
+				parse_host_statement (cfile, jref (bc));
 			if (hd) {
 				enter_host (hd);
 			}
@@ -124,28 +125,28 @@ void parse_statement (cfile)
 	      case LEASE:
 		if (!setjmp (bc)) {
 			struct lease *lease =
-				parse_lease_statement (cfile, &bc);
+				parse_lease_statement (cfile, jref (bc));
 			enter_lease (lease);
 		}
 		break;
 	      case TIMESTAMP:
 		if (!setjmp (bc)) {
-			parsed_time = parse_timestamp (cfile, &bc);
+			parsed_time = parse_timestamp (cfile, jref (bc));
 		}
 		break;
 	      case SUBNET:
 		if (!setjmp (bc)) {
-			parse_subnet_statement (cfile, &bc);
+			parse_subnet_statement (cfile, jref (bc));
 		}
 		break;
 	      case VENDOR_CLASS:
 		if (!setjmp (bc)) {
-			parse_class_statement (cfile, &bc, 0);
+			parse_class_statement (cfile, jref (bc), 0);
 		}
 		break;
 	      case USER_CLASS:
 		if (!setjmp (bc)) {
-			parse_class_statement (cfile, &bc, 1);
+			parse_class_statement (cfile, jref (bc), 1);
 		}
 		break;
 	      default:
@@ -172,7 +173,7 @@ void skip_to_semi (cfile)
 
 struct host_decl *parse_host_statement (cfile, bc)
 	FILE *cfile;
-	jmp_buf *bc;
+	jbp_decl (bc);
 {
 	char *val;
 	int token;
@@ -199,7 +200,7 @@ struct host_decl *parse_host_statement (cfile, bc)
 
 char *parse_host_name (cfile, bc)
 	FILE *cfile;
-	jmp_buf *bc;
+	jbp_decl (bc);
 {
 	char *val;
 	int token;
@@ -215,7 +216,7 @@ char *parse_host_name (cfile, bc)
 		if (!is_identifier (token)) {
 			parse_warn ("expecting an identifier in hostname");
 			skip_to_semi (cfile);
-			longjmp (*bc, 1);
+			longjmp (jdref (bc), 1);
 		}
 		/* Store this identifier... */
 		if (!(s = (char *)malloc (strlen (val) + 1)))
@@ -258,7 +259,7 @@ char *parse_host_name (cfile, bc)
 
 void parse_class_statement (cfile, bc, type)
 	FILE *cfile;
-	jmp_buf *bc;
+	jbp_decl (bc);
 	int type;
 {
 	char *val;
@@ -269,7 +270,7 @@ void parse_class_statement (cfile, bc, type)
 	if (token != STRING) {
 		parse_warn ("Expecting class name");
 		skip_to_semi (cfile);
-		longjmp (*bc, 1);
+		longjmp (jdref (bc), 1);
 	}
 
 	class = add_class (type, val);
@@ -294,7 +295,7 @@ void parse_class_statement (cfile, bc, type)
 
 void parse_class_decl (cfile, bc, class)
 	FILE *cfile;
-	jmp_buf *bc;
+	jbp_decl (bc);
 	struct class *class;
 {
 	char *val;
@@ -311,7 +312,7 @@ void parse_class_decl (cfile, bc, class)
 	      default:
 		parse_warn ("expecting a dhcp option declaration.");
 		skip_to_semi (cfile);
-		longjmp (*bc, 1);
+		longjmp (jdref (bc), 1);
 		break;
 	}
 }
@@ -322,7 +323,7 @@ void parse_class_decl (cfile, bc, class)
 
 struct subnet *parse_subnet_statement (cfile, bc)
 	FILE *cfile;
-	jmp_buf *bc;
+	jbp_decl (bc);
 {
 	char *val;
 	int token;
@@ -350,7 +351,7 @@ struct subnet *parse_subnet_statement (cfile, bc)
 	if (token != NETMASK) {
 		parse_warn ("Expecting netmask");
 		skip_to_semi (cfile);
-		longjmp (*bc, 1);
+		longjmp (jdref (bc), 1);
 	}
 
 	/* Get the netmask... */
@@ -377,7 +378,7 @@ struct subnet *parse_subnet_statement (cfile, bc)
 
 void parse_subnet_decl (cfile, bc, decl)
 	FILE *cfile;
-	jmp_buf *bc;
+	jbp_decl (bc);
 	struct subnet *decl;
 {
 	char *val;
@@ -398,7 +399,7 @@ void parse_subnet_decl (cfile, bc, decl)
 		if (token != NUMBER) {
 			parse_warn ("Expecting numeric default lease time");
 			skip_to_semi (cfile);
-			longjmp (*bc, 1);
+			longjmp (jdref (bc), 1);
 		}
 		convert_num ((unsigned char *)&decl -> default_lease_time,
 			     val, 10, 32);
@@ -412,7 +413,7 @@ void parse_subnet_decl (cfile, bc, decl)
 		if (token != NUMBER) {
 			parse_warn ("Expecting numeric max lease time");
 			skip_to_semi (cfile);
-			longjmp (*bc, 1);
+			longjmp (jdref (bc), 1);
 		}
 		convert_num ((unsigned char *)&decl -> max_lease_time,
 			     val, 10, 32);
@@ -424,7 +425,7 @@ void parse_subnet_decl (cfile, bc, decl)
 	      default:
 		parse_warn ("expecting a subnet declaration.");
 		skip_to_semi (cfile);
-		longjmp (*bc, 1);
+		longjmp (jdref (bc), 1);
 		break;
 	}
 }
@@ -434,7 +435,7 @@ void parse_subnet_decl (cfile, bc, decl)
 
 void parse_host_decl (cfile, bc, decl)
 	FILE *cfile;
-	jmp_buf *bc;
+	jbp_decl (bc);
 	struct host_decl *decl;
 {
 	char *val;
@@ -473,7 +474,7 @@ void parse_host_decl (cfile, bc, decl)
 	      default:
 		parse_warn ("expecting a dhcp option declaration.");
 		skip_to_semi (cfile);
-		longjmp (*bc, 1);
+		longjmp (jdref (bc), 1);
 		break;
 	}
 }
@@ -483,7 +484,7 @@ void parse_host_decl (cfile, bc, decl)
 
 void parse_hardware_decl (cfile, bc, decl)
 	FILE *cfile;
-	jmp_buf *bc;
+	jbp_decl (bc);
 	struct host_decl *decl;
 {
 	char *val;
@@ -510,12 +511,12 @@ void parse_hardware_decl (cfile, bc, decl)
 	decl -> interfaces [decl -> interface_count - 1].htype = hw.htype;
 	decl -> interfaces [decl -> interface_count - 1].hlen = hw.hlen;
 	memcpy (decl -> interfaces [decl -> interface_count - 1].haddr,
-		&hw.haddr, hw.hlen);
+		&hw.haddr [0], hw.hlen);
 }
 
 struct hardware parse_hardware_addr (cfile, bc)
 	FILE *cfile;
-	jmp_buf *bc;
+	jbp_decl (bc);
 {
 	char *val;
 	int token;
@@ -528,14 +529,14 @@ struct hardware parse_hardware_addr (cfile, bc)
 		rv.htype = ARPHRD_ETHER;
 		hlen = 6;
 		parse_numeric_aggregate (cfile, bc,
-					 (unsigned char *)&rv.haddr, &hlen,
+					 (unsigned char *)&rv.haddr [0], &hlen,
 					 COLON, 16, 8);
 		rv.hlen = hlen;
 		break;
 	      default:
 		parse_warn ("expecting a network hardware type");
 		skip_to_semi (cfile);
-		longjmp (*bc, 1);
+		longjmp (jdref (bc), 1);
 	}
 	return rv;
 }
@@ -544,7 +545,7 @@ struct hardware parse_hardware_addr (cfile, bc)
 
 char *parse_filename_decl (cfile, bc)
 	FILE *cfile;
-	jmp_buf *bc;
+	jbp_decl (bc);
 {
 	char *val;
 	int token;
@@ -554,7 +555,7 @@ char *parse_filename_decl (cfile, bc)
 	if (token != STRING) {
 		parse_warn ("filename must be a string");
 		skip_to_semi (cfile);
-		longjmp (*bc, 1);
+		longjmp (jdref (bc), 1);
 	}
 	s = (char *)malloc (strlen (val));
 	if (!s)
@@ -572,7 +573,7 @@ char *parse_filename_decl (cfile, bc)
 
 struct tree *parse_ip_addr_or_hostname (cfile, bc, uniform)
 	FILE *cfile;
-	jmp_buf *bc;
+	jbp_decl (bc);
 	int uniform;
 {
 	char *val;
@@ -595,7 +596,7 @@ struct tree *parse_ip_addr_or_hostname (cfile, bc, uniform)
 		parse_warn ("%s (%d): expecting IP address or hostname",
 			    val, token);
 		skip_to_semi (cfile);
-		longjmp (*bc, 1);
+		longjmp (jdref (bc), 1);
 	}
 	return rv;
 }	
@@ -605,7 +606,7 @@ struct tree *parse_ip_addr_or_hostname (cfile, bc, uniform)
 
 void parse_fixed_addr_decl (cfile, bc, decl)
 	FILE *cfile;
-	jmp_buf *bc;
+	jbp_decl (bc);
 	struct host_decl *decl;
 {
 	decl -> fixed_addr =
@@ -621,7 +622,7 @@ void parse_fixed_addr_decl (cfile, bc, decl)
 
 void parse_option_decl (cfile, bc, options)
 	FILE *cfile;
-	jmp_buf *bc;
+	jbp_decl (bc);
 	struct tree_cache **options;
 {
 	char *val;
@@ -638,7 +639,7 @@ void parse_option_decl (cfile, bc, options)
 		parse_warn ("expecting identifier after option keyword.");
 		if (token != SEMI)
 			skip_to_semi (cfile);
-		longjmp (*bc, 1);
+		longjmp (jdref (bc), 1);
 	}
 	vendor = dmalloc (strlen (val) + 1, "parse_option_decl");
 	strcpy (vendor, val);
@@ -653,7 +654,7 @@ void parse_option_decl (cfile, bc, options)
 			parse_warn ("expecting identifier after '.'");
 			if (token != SEMI)
 				skip_to_semi (cfile);
-			longjmp (*bc, 1);
+			longjmp (jdref (bc), 1);
 		}
 
 		/* Look up the option name hash table for the specified
@@ -665,7 +666,7 @@ void parse_option_decl (cfile, bc, options)
 		if (!universe) {
 			parse_warn ("no vendor named %s.", vendor);
 			skip_to_semi (cfile);
-			longjmp (*bc, 1);
+			longjmp (jdref (bc), 1);
 		}
 	} else {
 		/* Use the default hash table, which contains all the
@@ -685,7 +686,7 @@ void parse_option_decl (cfile, bc, options)
 			parse_warn ("no option named %s for vendor %s",
 				    val, vendor);
 		skip_to_semi (cfile);
-		longjmp (*bc, 1);
+		longjmp (jdref (bc), 1);
 	}
 
 	/* Free the initial identifier token. */
@@ -709,7 +710,7 @@ void parse_option_decl (cfile, bc, options)
 					parse_warn ("expecting string.");
 					if (token != SEMI)
 						skip_to_semi (cfile);
-					longjmp (*bc, 1);
+					longjmp (jdref (bc), 1);
 				}
 				tree = tree_concat (tree,
 						    tree_const (val,
@@ -730,7 +731,7 @@ void parse_option_decl (cfile, bc, options)
 					parse_warn ("expecting number.");
 					if (token != SEMI)
 						skip_to_semi (cfile);
-					longjmp (*bc, 1);
+					longjmp (jdref (bc), 1);
 				}
 				convert_num (buf, val, 0, 32);
 				tree = tree_concat (tree, tree_const (buf, 4));
@@ -758,7 +759,7 @@ void parse_option_decl (cfile, bc, options)
 				      bad_flag:
 					if (token != SEMI)
 						skip_to_semi (cfile);
-					longjmp (*bc, 1);
+					longjmp (jdref (bc), 1);
 				}
 				if (!strcasecmp (val, "true")
 				    || !strcasecmp (val, "on"))
@@ -776,7 +777,7 @@ void parse_option_decl (cfile, bc, options)
 				warn ("Bad format %c in parse_option_decl.",
 				      *fmt);
 				skip_to_semi (cfile);
-				longjmp (*bc, 1);
+				longjmp (jdref (bc), 1);
 			}
 		}
 		if (*fmt == 'A') {
@@ -803,7 +804,7 @@ void parse_option_decl (cfile, bc, options)
 
 TIME parse_timestamp (cfile, bc)
 	FILE *cfile;
-	jmp_buf *bc;
+	jbp_decl (bc);
 {
 	TIME rv;
 	char *val;
@@ -814,7 +815,7 @@ TIME parse_timestamp (cfile, bc)
 	if (token != SEMI) {
 		parse_warn ("semicolon expected");
 		skip_to_semi (cfile);
-		longjmp (*bc, 1);
+		longjmp (jdref (bc), 1);
 	}
 	return rv;
 }
@@ -832,7 +833,7 @@ TIME parse_timestamp (cfile, bc)
 
 struct lease *parse_lease_statement (cfile, bc)
 	FILE *cfile;
-	jmp_buf *bc;
+	jbp_decl (bc);
 {
 	char *val;
 	int token;
@@ -901,7 +902,7 @@ struct lease *parse_lease_statement (cfile, bc)
 				if (!is_identifier (token)) {
 					if (token != SEMI)
 						skip_to_semi (cfile);
-					longjmp (*bc, 1);
+					longjmp (jdref (bc), 1);
 				}
 				lease.host =
 					find_host_by_name (val);
@@ -917,7 +918,7 @@ struct lease *parse_lease_statement (cfile, bc)
 				if (!is_identifier (token)) {
 					if (token != SEMI)
 						skip_to_semi (cfile);
-					longjmp (*bc, 1);
+					longjmp (jdref (bc), 1);
 				}
 				/* for now, we aren't using this. */
 				break;
@@ -931,7 +932,7 @@ struct lease *parse_lease_statement (cfile, bc)
 			      default:
 				if (token != SEMI)
 					skip_to_semi (cfile);
-				longjmp (*bc, 1);
+				longjmp (jdref (bc), 1);
 			}
 		}
 		if (seenmask & seenbit) {
@@ -947,7 +948,7 @@ struct lease *parse_lease_statement (cfile, bc)
 
 void parse_address_range (cfile, bc, subnet)
 	FILE *cfile;
-	jmp_buf *bc;
+	jbp_decl (bc);
 	struct subnet *subnet;
 {
 	struct iaddr low, high;
@@ -978,7 +979,7 @@ void parse_address_range (cfile, bc, subnet)
 
 TIME parse_date (cfile, bc)
 	FILE *cfile;
-	jmp_buf *bc;
+	jbp_decl (bc);
 {
 	TIME t;
 	struct tm tm;
@@ -991,7 +992,7 @@ TIME parse_date (cfile, bc)
 		parse_warn ("numeric day of week expected.");
 		if (token != SEMI)
 			skip_to_semi (cfile);
-		longjmp (*bc, 1);
+		longjmp (jdref (bc), 1);
 	}
 	tm.tm_wday = atoi (val);
 
@@ -1001,7 +1002,7 @@ TIME parse_date (cfile, bc)
 		parse_warn ("numeric year expected.");
 		if (token != SEMI)
 			skip_to_semi (cfile);
-		longjmp (*bc, 1);
+		longjmp (jdref (bc), 1);
 	}
 	tm.tm_year = atoi (val);
 	if (tm.tm_year > 1900)
@@ -1013,7 +1014,7 @@ TIME parse_date (cfile, bc)
 		parse_warn ("expected slash seperating year from month.");
 		if (token != SEMI)
 			skip_to_semi (cfile);
-		longjmp (*bc, 1);
+		longjmp (jdref (bc), 1);
 	}
 
 	/* Month... */
@@ -1022,7 +1023,7 @@ TIME parse_date (cfile, bc)
 		parse_warn ("numeric month expected.");
 		if (token != SEMI)
 			skip_to_semi (cfile);
-		longjmp (*bc, 1);
+		longjmp (jdref (bc), 1);
 	}
 	tm.tm_mon = atoi (val) - 1;
 
@@ -1032,7 +1033,7 @@ TIME parse_date (cfile, bc)
 		parse_warn ("expected slash seperating month from day.");
 		if (token != SEMI)
 			skip_to_semi (cfile);
-		longjmp (*bc, 1);
+		longjmp (jdref (bc), 1);
 	}
 
 	/* Month... */
@@ -1041,7 +1042,7 @@ TIME parse_date (cfile, bc)
 		parse_warn ("numeric day of month expected.");
 		if (token != SEMI)
 			skip_to_semi (cfile);
-		longjmp (*bc, 1);
+		longjmp (jdref (bc), 1);
 	}
 	tm.tm_mday = atoi (val);
 
@@ -1051,7 +1052,7 @@ TIME parse_date (cfile, bc)
 		parse_warn ("numeric hour expected.");
 		if (token != SEMI)
 			skip_to_semi (cfile);
-		longjmp (*bc, 1);
+		longjmp (jdref (bc), 1);
 	}
 	tm.tm_hour = atoi (val);
 
@@ -1061,7 +1062,7 @@ TIME parse_date (cfile, bc)
 		parse_warn ("expected colon seperating hour from minute.");
 		if (token != SEMI)
 			skip_to_semi (cfile);
-		longjmp (*bc, 1);
+		longjmp (jdref (bc), 1);
 	}
 
 	/* Minute... */
@@ -1070,7 +1071,7 @@ TIME parse_date (cfile, bc)
 		parse_warn ("numeric minute expected.");
 		if (token != SEMI)
 			skip_to_semi (cfile);
-		longjmp (*bc, 1);
+		longjmp (jdref (bc), 1);
 	}
 	tm.tm_min = atoi (val);
 
@@ -1080,7 +1081,7 @@ TIME parse_date (cfile, bc)
 		parse_warn ("expected colon seperating hour from minute.");
 		if (token != SEMI)
 			skip_to_semi (cfile);
-		longjmp (*bc, 1);
+		longjmp (jdref (bc), 1);
 	}
 
 	/* Minute... */
@@ -1089,7 +1090,7 @@ TIME parse_date (cfile, bc)
 		parse_warn ("numeric minute expected.");
 		if (token != SEMI)
 			skip_to_semi (cfile);
-		longjmp (*bc, 1);
+		longjmp (jdref (bc), 1);
 	}
 	tm.tm_sec = atoi (val);
 
@@ -1116,7 +1117,7 @@ TIME parse_date (cfile, bc)
 unsigned char *parse_numeric_aggregate (cfile, bc, buf,
 					max, seperator, base, size)
 	FILE *cfile;
-	jmp_buf *bc;
+	jbp_decl (bc);
 	unsigned char *buf;
 	int *max;
 	int seperator;
@@ -1144,7 +1145,7 @@ unsigned char *parse_numeric_aggregate (cfile, bc, buf,
 					break;
 				parse_warn ("too few numbers.");
 				skip_to_semi (cfile);
-				longjmp (*bc, 1);
+				longjmp (jdref (bc), 1);
 			}
 			token = next_token (&val, cfile);
 		}
@@ -1154,7 +1155,7 @@ unsigned char *parse_numeric_aggregate (cfile, bc, buf,
 		    (base != 16 || token != NUMBER_OR_ATOM)) {
 			parse_warn ("expecting numeric value.");
 			skip_to_semi (cfile);
-			longjmp (*bc, 1);
+			longjmp (jdref (bc), 1);
 		}
 		/* If we can, convert the number now; otherwise, build
 		   a linked list of all the numbers. */
@@ -1162,7 +1163,7 @@ unsigned char *parse_numeric_aggregate (cfile, bc, buf,
 			convert_num (s, val, base, size);
 			s += size / 8;
 		} else {
-			t = (char *)malloc (strlen (val) + 1);
+			t = (unsigned char *)malloc (strlen (val) + 1);
 			if (!t)
 				error ("no temp space for number.");
 			strcpy (t, val);
