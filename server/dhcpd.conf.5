@@ -714,8 +714,19 @@ your router is configured for proxy ARP.
 .PP
  \fBserver-identifier \fIhostname\fR\fB;\fR
 .PP
-The server-identifier statement is now obsolete and is ignored by
-the DHCP server.
+The server-identifier statement can be used to define the value that
+is sent in the DHCP Server Identifier option for a given scope.   The
+value specified \fBmust\fR be an IP address for the DHCP server, and
+must be reachable by all clients served by a particular scope.
+.PP
+The use of the server-identifier statement is not recommended - the only
+reason to use it is to force a value other than the default value to be
+sent on occasions where the default value would be incorrect.   The default
+value is the first IP address associated with the physical network interface
+on which the request arrived.   The usual case where the
+\fIserver-identifier\fR statement needs to be sent is when a physical
+interface has more than one IP address, and the one being sent by default
+isn't appropriate for some or all clients served by that interface.
 .SH REFERENCE: OPTION STATEMENTS
 .PP
 DHCP option statements are documented in the
