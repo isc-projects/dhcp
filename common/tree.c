@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.101.2.1 2001/06/04 21:29:17 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.101.2.2 2001/06/20 03:33:04 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -604,7 +604,7 @@ int binding_value_dereference (struct binding_value **v,
 	if (bv -> refcnt < 0) {
 		log_error ("%s(%d): negative refcnt!", file, line);
 #if defined (DEBUG_RC_HISTORY)
-		dump_rc_history ();
+		dump_rc_history (bv);
 #endif
 #if defined (POINTER_DEBUG)
 		abort ();
@@ -2733,7 +2733,7 @@ void expression_dereference (eptr, file, line)
 	if (expr -> refcnt < 0) {
 		log_error ("%s(%d): negative refcnt!", file, line);
 #if defined (DEBUG_RC_HISTORY)
-		dump_rc_history ();
+		dump_rc_history (expr);
 #endif
 #if defined (POINTER_DEBUG)
 		abort ();
@@ -3749,7 +3749,7 @@ int binding_scope_dereference (ptr, file, line)
 	if (binding_scope -> refcnt < 0) {
 		log_error ("%s(%d): negative refcnt!", file, line);
 #if defined (DEBUG_RC_HISTORY)
-		dump_rc_history ();
+		dump_rc_history (binding_scope);
 #endif
 #if defined (POINTER_DEBUG)
 		abort ();
@@ -3796,7 +3796,7 @@ int fundef_dereference (ptr, file, line)
 	if (bp -> refcnt < 0) {
 		log_error ("%s(%d): negative refcnt!", file, line);
 #if defined (DEBUG_RC_HISTORY)
-		dump_rc_history ();
+		dump_rc_history (bp);
 #endif
 #if defined (POINTER_DEBUG)
 		abort ();
