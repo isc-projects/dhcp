@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.76 1999/07/20 18:00:20 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.77 1999/09/08 01:49:56 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -897,6 +897,7 @@ void parse_host_declaration (cfile, group)
 	struct host_decl *host;
 	char *name;
 	int declaration = 0;
+	int dynamicp = 0;
 
 	token = peek_token (&val, cfile);
 	if (token != LBRACE) {
@@ -929,12 +930,21 @@ void parse_host_declaration (cfile, group)
 			parse_warn ("unexpected end of file");
 			break;
 		}
+		/* If the host declaration was created by the server,
+		   remember to save it. */
+		if (token == DYNAMIC) {
+			dynamicp = 1;
+			token = next_token (&val, cfile);
+			if (!parse_semi (cfile))
+				break;
+			continue;
+		}
 		declaration = parse_statement (cfile, host -> group,
 					       HOST_DECL, host,
 					       declaration);
 	} while (1);
 
-	enter_host (host);
+	enter_host (host, dynamicp);
 }
 
 /* class-declaration :== STRING LBRACE parameters declarations RBRACE

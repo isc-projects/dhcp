@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: db.c,v 1.25 1999/07/01 19:55:12 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: db.c,v 1.26 1999/09/08 01:49:56 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -55,22 +55,28 @@ int write_lease (lease)
 	/* Note: the following is not a Y2K bug - it's a Y1.9K bug.   Until
 	   somebody invents a time machine, I think we can safely disregard
 	   it. */
-	t = gmtime (&lease -> starts);
-	sprintf (tbuf, "%d %d/%02d/%02d %02d:%02d:%02d;",
-		 t -> tm_wday, t -> tm_year + 1900,
-		 t -> tm_mon + 1, t -> tm_mday,
-		 t -> tm_hour, t -> tm_min, t -> tm_sec);
+	if (lease -> starts != MAX_TIME) {
+		t = gmtime (&lease -> starts);
+		sprintf (tbuf, "%d %d/%02d/%02d %02d:%02d:%02d;",
+			 t -> tm_wday, t -> tm_year + 1900,
+			 t -> tm_mon + 1, t -> tm_mday,
+			 t -> tm_hour, t -> tm_min, t -> tm_sec);
+	} else
+		strcpy (tbuf, "infinite");
 	errno = 0;
 	fprintf (db_file, "\tstarts %s\n", tbuf);
 	if (errno) {
 		++errors;
 	}
 
-	t = gmtime (&lease -> ends);
-	sprintf (tbuf, "%d %d/%02d/%02d %02d:%02d:%02d;",
-		 t -> tm_wday, t -> tm_year + 1900,
-		 t -> tm_mon + 1, t -> tm_mday,
-		 t -> tm_hour, t -> tm_min, t -> tm_sec);
+	if (lease -> ends != MAX_TIME) {
+		t = gmtime (&lease -> ends);
+		sprintf (tbuf, "%d %d/%02d/%02d %02d:%02d:%02d;",
+			 t -> tm_wday, t -> tm_year + 1900,
+			 t -> tm_mon + 1, t -> tm_mday,
+			 t -> tm_hour, t -> tm_min, t -> tm_sec);
+	} else
+		strcpy (tbuf, "infinite");
 	errno = 0;
 	fprintf (db_file, "\tends %s", tbuf);
 	if (errno) {
@@ -166,6 +172,93 @@ int write_lease (lease)
 	if (errors)
 		log_info ("write_lease: unable to write lease %s",
 		      piaddr (lease -> ip_addr));
+	return !errors;
+}
+
+int write_host (host)
+	struct host_decl *host;
+{
+	int errors = 0;
+	int i;
+	struct data_string ip_addrs;
+
+	if (!db_printable (host -> name))
+		return 0;
+
+	if (counting)
+		++count;
+	errno = 0;
+
+	fprintf (db_file, "host %s {", host -> name);
+	if (errno) {
+		++errors;
+	}
+
+	errno = 0;
+	fprintf (db_file, "\n\tdynamic;");
+	if (errno)
+		++errors;
+	if (host -> interface.hlen) {
+		errno = 0;
+		fprintf (db_file, "\n\thardware %s %s;",
+			 hardware_types [host -> interface.htype],
+			 print_hw_addr (host -> interface.htype,
+					host -> interface.hlen,
+					host -> interface.haddr));
+		if (errno) {
+			++errors;
+		}
+	}
+	if (host -> client_identifier.len) {
+		int i;
+		errno = 0;
+		fprintf (db_file, "\n\toption dhcp-client-identifier %2.2x",
+			 host -> client_identifier.data [0]);
+		if (errno) {
+			++errors;
+		}
+		for (i = 1; i < host -> client_identifier.len; i++) {
+			errno = 0;
+			fprintf (db_file, ":%2.2x",
+				 host -> client_identifier.data [i]);
+			if (errno) {
+				++errors;
+			}
+		}
+		putc (';', db_file);
+	}
+
+	if (host -> fixed_addr &&
+	    evaluate_option_cache (&ip_addrs, (struct packet *)0,
+				   (struct lease *)0,
+				   (struct option_state *)0,
+				   (struct option_state *)0,
+				   host -> fixed_addr)) {
+		
+		fprintf (db_file, "\n\tfixed-address ");
+		if (errno) {
+			++errors;
+		}
+		for (i = 0; i < ip_addrs.len - 3; i += 4) {
+			fprintf (db_file, "\n\t%d.%d.%d.%d%s",
+				 ip_addrs.data [i], ip_addrs.data [i + 1],
+				 ip_addrs.data [i + 2], ip_addrs.data [i + 3],
+				 i + 7 < ip_addrs.len ? "," : "");
+			
+			if (errno) {
+				++errors;
+			}
+		}
+	}
+
+	errno = 0;
+	fputs ("\n}\n", db_file);
+	if (errno) {
+		++errors;
+	}
+	if (errors)
+		log_info ("write_host: unable to write host %s",
+			  host -> name);
 	return !errors;
 }
 
