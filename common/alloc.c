@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: alloc.c,v 1.29 1999/05/07 17:34:30 mellon Exp $ Copyright (c) 1995, 1996, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: alloc.c,v 1.30 1999/05/27 12:38:05 mellon Exp $ Copyright (c) 1995, 1996, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -483,7 +483,7 @@ int expression_reference (ptr, src, name)
 #if defined (POINTER_DEBUG)
 		abort ();
 #else
-		return 0;
+		*ptr = (struct expression *)0;
 #endif
 	}
 	*ptr = src;
@@ -531,7 +531,7 @@ int option_cache_reference (ptr, src, name)
 #if defined (POINTER_DEBUG)
 		abort ();
 #else
-		return 0;
+		*ptr = (struct option_cache *)0;
 #endif
 	}
 	*ptr = src;
@@ -573,7 +573,7 @@ int buffer_reference (ptr, bp, name)
 #if defined (POINTER_DEBUG)
 		abort ();
 #else
-		return 0;
+		*ptr = (struct buffer *)0;
 #endif
 	}
 	*ptr = bp;
@@ -587,9 +587,18 @@ int buffer_dereference (ptr, name)
 {
 	struct buffer *bp;
 
-	if (!ptr || !*ptr) {
+	if (!ptr) {
 		log_error ("Null pointer passed to buffer_dereference: %s",
 			   name);
+#if defined (POINTER_DEBUG)
+		abort ();
+#else
+		return 0;
+#endif
+	}
+
+	if (!*ptr) {
+		log_error ("Null pointer in buffer_dereference: %s", name);
 #if defined (POINTER_DEBUG)
 		abort ();
 #else
@@ -640,7 +649,7 @@ int dns_host_entry_reference (ptr, bp, name)
 #if defined (POINTER_DEBUG)
 		abort ();
 #else
-		return 0;
+		*ptr = (struct dns_host_entry *)0;
 #endif
 	}
 	*ptr = bp;
@@ -692,7 +701,7 @@ int option_state_allocate (ptr, name)
 #if defined (POINTER_DEBUG)
 		abort ();
 #else
-		return 0;
+		*ptr = (struct option_state *)0;
 #endif
 	}
 
@@ -727,7 +736,7 @@ int option_state_reference (ptr, bp, name)
 #if defined (POINTER_DEBUG)
 		abort ();
 #else
-		return 0;
+		*ptr = (struct option_state *)0;
 #endif
 	}
 	*ptr = bp;
