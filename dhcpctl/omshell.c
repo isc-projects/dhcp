@@ -527,6 +527,7 @@ int main (int argc, char **argv, char **envp)
 		    
 		  case TOKEN_CREATE:
 		  case TOKEN_OPEN:
+		    i = token;
 		    token = next_token (&val, (unsigned *)0, cfile);
 		    if (token != END_OF_FILE && token != EOL) {
 			    printf ("usage: %s\n", val);
@@ -540,9 +541,10 @@ int main (int argc, char **argv, char **envp)
 			    break;
 		    }
 
-		    i = 0;
-		    if (token == TOKEN_CREATE)
+		    if (i == TOKEN_CREATE)
 			    i = DHCPCTL_CREATE | DHCPCTL_EXCL;
+		    else
+			    i = 0;
 		    
 		    status = dhcpctl_open_object (oh, connection, i);
 		    if (status == ISC_R_SUCCESS)
