@@ -27,8 +27,8 @@ struct signature_state {
 	u_int8_t *algorithm_state;
 	u_int8_t *output;
 	int output_len;
-	void (*update) (u_int8_t *, u_int8_t *, u_int8_t *);
-	void (*final) (u_int8_t *, u_int8_t *);
+	void (*update) PROTO ((u_int8_t *, u_int8_t *, u_int8_t *));
+	void (*final) PROTO ((u_int8_t *, u_int8_t *));
 };
 
 struct auth_key {
