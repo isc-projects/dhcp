@@ -22,107 +22,16 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dispatch.c,v 1.54 1999/03/16 05:50:33 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dispatch.c,v 1.55 1999/09/08 01:44:21 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
 
-struct protocol *protocols;
 struct timeout *timeouts;
 static struct timeout *free_timeouts;
 
 int interfaces_invalidated;
 
-#ifdef USE_POLL
-/* Wait for packets to come in using poll().  When a packet comes in,
-   call receive_packet to receive the packet and possibly strip hardware
-   addressing information from it, and then call through the
-   bootp_packet_handler hook to try to do something with it. */
-
-void dispatch ()
-{
-	struct protocol *l;
-	int nfds = 0;
-	struct pollfd *fds;
-	int count;
-	int i;
-	int to_msec;
-
-	nfds = 0;
-	for (l = protocols; l; l = l -> next) {
-		++nfds;
-	}
-	fds = (struct pollfd *)malloc ((nfds) * sizeof (struct pollfd));
-	if (!fds)
-		log_fatal ("Can't allocate poll structures.");
-
-	do {
-		/* Call any expired timeouts, and then if there's
-		   still a timeout registered, time out the select
-		   call then. */
-	      another:
-		if (timeouts) {
-			struct timeout *t;
-			if (timeouts -> when <= cur_time) {
-				t = timeouts;
-				timeouts = timeouts -> next;
-				(*(t -> func)) (t -> what);
-				t -> next = free_timeouts;
-				free_timeouts = t;
-				goto another;
-			}
-			/* Figure timeout in milliseconds, and check for
-			   potential overflow.   We assume that integers
-			   are 32 bits, which is harmless if they're 64
-			   bits - we'll just get extra timeouts in that
-			   case.    Lease times would have to be quite
-			   long in order for a 32-bit integer to overflow,
-			   anyway. */
-			to_msec = timeouts -> when - cur_time;
-			if (to_msec > 2147483)
-				to_msec = 2147483;
-			to_msec *= 1000;
-		} else
-			to_msec = -1;
-
-		/* Set up the descriptors to be polled. */
-		i = 0;
-		for (l = protocols; l; l = l -> next) {
-			fds [i].fd = l -> fd;
-			fds [i].events = POLLIN;
-			fds [i].revents = 0;
-			++i;
-		}
-
-		/* Wait for a packet or a timeout... XXX */
-		count = poll (fds, nfds, to_msec);
-
-		/* Get the current time... */
-		GET_TIME (&cur_time);
-
-		/* Not likely to be transitory... */
-		if (count < 0) {
-			if (errno == EAGAIN || errno == EINTR)
-				continue;
-			else
-				log_fatal ("poll: %m");
-		}
-
-		i = 0;
-		for (l = protocols; l; l = l -> next) {
-			if ((fds [i].revents & POLLIN)) {
-				fds [i].revents = 0;
-				if (l -> handler)
-					(*(l -> handler)) (l);
-				if (interfaces_invalidated)
-					break;
-			}
-			++i;
-		}
-		interfaces_invalidated = 0;
-	} while (1);
-}
-#else
 /* Wait for packets to come in using select().   When one does, call
    receive_packet to receive the packet and possibly strip hardware
    addressing information from it, and then call through the
@@ -135,9 +44,7 @@ void dispatch ()
 	int max = 0;
 	int count;
 	struct timeval tv, *tvp;
-
-	FD_ZERO (&w);
-	FD_ZERO (&x);
+	isc_result_t status;
 
 	do {
 		/* Call any expired timeouts, and then if there's
@@ -154,43 +61,16 @@ void dispatch ()
 				free_timeouts = t;
 				goto another;
 			}
-			tv.tv_sec = timeouts -> when - cur_time;
+			tv.tv_sec = timeouts -> when;
 			tv.tv_usec = 0;
 			tvp = &tv;
 		} else
 			tvp = (struct timeval *)0;
 
-		/* Set up the read mask. */
-		FD_ZERO (&r);
-
-		for (l = protocols; l; l = l -> next) {
-			FD_SET (l -> fd, &r);
-			if (l -> fd > max)
-				max = l -> fd;
-		}
-
 		/* Wait for a packet or a timeout... XXX */
-		count = select (max + 1, &r, &w, &x, tvp);
-
-		/* Get the current time... */
-		GET_TIME (&cur_time);
-
-		/* Not likely to be transitory... */
-		if (count < 0)
-			log_fatal ("select: %m");
-
-		for (l = protocols; l; l = l -> next) {
-			if (!FD_ISSET (l -> fd, &r))
-				continue;
-			if (l -> handler)
-				(*(l -> handler)) (l);
-			if (interfaces_invalidated)
-				break;
-		}
-		interfaces_invalidated = 0;
-	} while (1);
+		status = omapi_one_dispatch (0, tvp);
+	} while (status == ISC_R_TIMEDOUT || status == ISC_R_SUCCESS);
 }
-#endif /* USE_POLL */
 
 int locate_network (packet)
 	struct packet *packet;
@@ -247,7 +127,7 @@ void add_timeout (when, where, what)
 		} else {
 			q = (struct timeout *)malloc (sizeof (struct timeout));
 			if (!q)
-				log_fatal ("Can't allocate timeout structure!");
+				log_fatal ("add_timeout: no memory!");
 			q -> func = where;
 			q -> what = what;
 		}
@@ -301,45 +181,5 @@ void cancel_timeout (where, what)
 	if (q) {
 		q -> next = free_timeouts;
 		free_timeouts = q;
-	}
-}
-
-/* Add a protocol to the list of protocols... */
-struct protocol *add_protocol (name, fd, handler, local)
-	char *name;
-	int fd;
-	void (*handler) PROTO ((struct protocol *));
-	void *local;
-{
-	struct protocol *p;
-
-	p = (struct protocol *)malloc (sizeof *p);
-	if (!p)
-		log_fatal ("can't allocate protocol struct for %s", name);
-
-	p -> fd = fd;
-	p -> handler = handler;
-	p -> local = local;
-
-	p -> next = protocols;
-	protocols = p;
-	return p;
-}
-
-void remove_protocol (proto)
-	struct protocol *proto;
-{
-	struct protocol *p, *next, *prev;
-
-	prev = (struct protocol *)0;
-	for (p = protocols; p; p = next) {
-		next = p -> next;
-		if (p == proto) {
-			if (prev)
-				prev -> next = p -> next;
-			else
-				protocols = p -> next;
-			free (p);
-		}
 	}
 }
