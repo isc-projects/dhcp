@@ -21,7 +21,7 @@
  */
 
 #if !defined(lint) && !defined(SABER)
-static const char rcsid[] = "$Id: res_mkupdate.c,v 1.7.2.1 2003/03/31 03:07:11 dhankins Exp $";
+static const char rcsid[] = "$Id: res_mkupdate.c,v 1.7.2.2 2003/05/19 00:33:22 dhankins Exp $";
 #endif /* not lint */
 
 #include <sys/types.h>
@@ -52,6 +52,7 @@ static int gethexnum_str(const u_char **, const u_char *);
 static int getword_str(char *, int,
 		       const unsigned char **,
 		       const unsigned char *);
+static int getphrase_str(char *, int, const u_char **, const u_char *);
 static int getstr_str(char *, int, const u_char **, const u_char *);
 
 struct valuelist {
@@ -235,7 +236,7 @@ res_nmkupdate(res_state statp,
 		case T_MR:
 		case T_NS:
 		case T_PTR:
-			if (!getword_str(buf2, sizeof buf2, &startp, endp))
+			if (!getphrase_str(buf2, sizeof buf2, &startp, endp))
 				return (-1);
 			n = dn_comp(buf2, cp, buflen, dnptrs, lastdnptr);
 			if (n < 0)
@@ -684,6 +685,35 @@ getword_str(char *buf, int size, const u_char **startpp, const u_char *endp) {
                                 continue;
                         }
                 }
+                (*startpp)++;
+                if (cp >= buf+size-1)
+                        break;
+                *cp++ = (u_char)c;
+        }
+        *cp = '\0';
+        return (cp != buf);
+}
+
+/*
+ * Get a phrase - possibly containing blanks - from a string (not file)
+ * into buf. modify the start pointer to point after the
+ * phrase in the string.
+ */
+static int
+getphrase_str(char *buf, int size, const u_char **startpp, const u_char *endp) {
+        char *cp;
+        int c;
+ 
+        for (cp = buf; *startpp <= endp; ) {
+                c = **startpp;
+                if (isspace(c) && cp == buf ) {
+			/* leading whitespace */
+			(*startpp)++;
+			continue;
+		}
+		else if ( c == '\0' ) {
+			break;
+		}
                 (*startpp)++;
                 if (cp >= buf+size-1)
                         break;
