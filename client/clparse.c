@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: clparse.c,v 1.5 1997/02/27 03:39:11 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: clparse.c,v 1.6 1997/03/05 06:24:21 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -149,6 +149,7 @@ void read_client_leases ()
 	REQUIRE option-list |
 	TIMEOUT number |
 	RETRY number |
+	REBOOT number |
 	SELECT_TIMEOUT number |
 	SCRIPT string |
 	interface-declaration |
@@ -207,6 +208,10 @@ void parse_client_statement (cfile, ip, config)
 
 	      case SELECT_TIMEOUT:
 		parse_lease_time (cfile, &config -> select_interval);
+		return;
+
+	      case REBOOT:
+		parse_lease_time (cfile, &config -> reboot_timeout);
 		return;
 
 	      case SCRIPT:
@@ -500,6 +505,32 @@ void parse_client_lease_statement (cfile, is_static)
 		return;
 	}
 
+	/* The new lease may supersede a lease that's not the
+	   active lease but is still on the lease list, so scan the
+	   lease list looking for a lease with the same address, and
+	   if we find it, toss it. */
+	pl = (struct client_lease *)0;
+	for (lp = ip -> client -> leases; lp; lp = lp -> next) {
+		if (lp -> address.len == lease -> address.len &&
+		    !memcmp (lp -> address.iabuf, lease -> address.iabuf,
+			     lease -> address.len)) {
+			if (pl)
+				pl -> next = lp -> next;
+			else
+				ip -> client -> leases = lp -> next;
+			free_client_lease (lp);
+			break;
+		}
+	}
+
+	/* If this is a preloaded lease, just put it on the list of recorded
+	   leases - don't make it the active lease. */
+	if (is_static) {
+		lease -> next = ip -> client -> leases;
+		ip -> client -> leases = lease;
+		return;
+	}
+		
 	/* The last lease in the lease file on a particular interface is
 	   the active lease for that interface.    Of course, we don't know
 	   what the last lease in the file is until we've parsed the whole
@@ -528,23 +559,6 @@ void parse_client_lease_statement (cfile, is_static)
 	}
 	ip -> client -> active = lease;
 
-	/* The current lease may supersede a lease that's not the
-	   active lease but is still on the lease list, so scan the
-	   lease list looking for a lease with the same address, and
-	   if we find it, toss it. */
-	pl = (struct client_lease *)0;
-	for (lp = ip -> client -> leases; lp; lp = lp -> next) {
-		if (lp -> address.len == lease -> address.len &&
-		    !memcmp (lp -> address.iabuf, lease -> address.iabuf,
-			     lease -> address.len)) {
-			if (pl)
-				pl -> next = lp -> next;
-			else
-				ip -> client -> leases = lp -> next;
-			free_client_lease (lp);
-			break;
-		}
-	}
 	/* phew. */
 }
 
