@@ -88,21 +88,21 @@ distclean: realclean
 # provided in the distribution so that this doesn't become a problem.
 
 dhclient.cat8:	dhclient.8
-	sed -e "s#ETCDIR#$(ETC)#" -e "s#DBDIR#$(VARDB)#" \
-		-e "s#RUNDIR#$(VARRUN)#" < dhclient.8 \
+	sed -e "s#ETCDIR#$(ETC)#g" -e "s#DBDIR#$(VARDB)#g" \
+		-e "s#RUNDIR#$(VARRUN)#g" < dhclient.8 \
 			| nroff -man >dhclient.cat8
 
 dhclient-script.cat8:	dhclient-script.8
-	sed -e "s#ETCDIR#$(ETC)#" -e "s#DBDIR#$(VARDB)#" \
-		-e "s#RUNDIR#$(VARRUN)#" < dhclient-script.8 \
+	sed -e "s#ETCDIR#$(ETC)#g" -e "s#DBDIR#$(VARDB)#g" \
+		-e "s#RUNDIR#$(VARRUN)#g" < dhclient-script.8 \
 			| nroff -man >dhclient-script.cat8
 
 dhclient.conf.cat5:	dhclient.conf.5
 	nroff -man dhclient.conf.5 >dhclient.conf.cat5
 
 dhclient.leases.cat5:	dhclient.leases.5
-	sed -e "s#ETCDIR#$(ETC)#" -e "s#DBDIR#$(VARDB)#" \
-		-e "s#RUNDIR#$(VARRUN)#" < dhclient.leases.5 \
+	sed -e "s#ETCDIR#$(ETC)#g" -e "s#DBDIR#$(VARDB)#g" \
+		-e "s#RUNDIR#$(VARRUN)#g" < dhclient.leases.5 \
 			| nroff -man >dhclient.leases.cat5
 
 
