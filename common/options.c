@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.85.2.14 2004/10/01 18:43:21 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.85.2.15 2004/10/01 21:48:11 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -677,6 +677,16 @@ int cons_options (inpacket, outpacket, lease, client_state,
 		outpacket -> options [mainbufix++] = overload;
 		outpacket -> options [mainbufix++] = DHO_END;
 
+		/* If the option field is not completely filled, then pad
+		 * it and mark it full (note 'agentix' later in this
+		 * function).
+		 */
+		if (mainbufix != main_buffer_size) {
+			memset (&outpacket -> options[mainbufix], DHO_PAD,
+				main_buffer_size - mainbufix);
+			mainbufix = main_buffer_size;
+		}
+
 		if (overload & 1) {
 			memcpy (outpacket -> file,
 				&buffer [ofbuf1], DHCP_FILE_LEN);
@@ -943,7 +953,7 @@ int store_options (ocount, buffer, buflen, packet, lease, client_state,
 	/* Do we need to do overloading? */
 	if (first_cutoff && bufix > first_cutoff) {
 	    int second_bufsize, third_bufsize;
-	    int firstix = 0;
+	    int firstix, loop_count;
 	    int j;
 	    unsigned len;
 	    unsigned char *ovbuf;
@@ -963,32 +973,46 @@ int store_options (ocount, buffer, buflen, packet, lease, client_state,
 
 	    /* First move any options that can only fit into the first
 	       buffer into the first buffer. */
-	    for (i = 0; i < bufix; ) {
-		len = buffer [i + 1] + 2;
-		if (i + len > first_cutoff
-		    && buffer [i + 1] > second_bufsize
-		    && buffer [i + 1] > third_bufsize
-		    && buffer [i + 1] < first_cutoff - 4 - firstix) {
-			memcpy (ovbuf, &buffer [i], len);
-			memmove (&buffer [firstix + len],
-				 &buffer [firstix], i - firstix);
-			memcpy (&buffer [firstix], ovbuf, len);
-			firstix += len;
+	    loop_count = 0;
+	    do {
+		firstix = 0;
+
+		for (i = 0; i < bufix; ) {
+			len = buffer [i + 1] + 2;
+			if (((i + len > first_cutoff) &&
+			     (len > second_bufsize)) ||
+			    ((i + len > second_cutoff) &&
+			     (len > third_bufsize)) &&
+			    len < first_cutoff - firstix) {
+				memcpy (ovbuf, &buffer [i], len);
+				memmove (&buffer [firstix + len],
+					 &buffer [firstix], i - firstix);
+				memcpy (&buffer [firstix], ovbuf, len);
+				firstix += len;
+			}
+			i += len;
 		}
-		i += len;
+
+		loop_count++;
+	    } while (firstix && (loop_count < 10));
+
+	    /* If this ever happens, I want to hear about it. */
+	    if (loop_count == 10) {
+		log_error ("Unable to sort overloaded options after 10 tries.");
+		return 0;
 	    }
 
 	    /* Find the first cutoff point. */
 	    for (i = 0; i < bufix; ) {
 		len = buffer [i + 1] + 2;
-		if (i + len + 4 > first_cutoff)
+		if (i + len > first_cutoff)
 			break;
 		i += len;
 	    }
 	    /* Copy down any options that can fill out this buffer. */
-	    for (j = i + len; j < bufix; ) {
+	    for (j = i + len; (j < bufix) && (i < first_cutoff); ) {
 		len = buffer [j + 1] + 2;
-		if (i + len + 4 < first_cutoff) {
+		if (i + len <= first_cutoff) {
 			memcpy (ovbuf, &buffer [j], len);
 			memmove (&buffer [i + len], &buffer [i], j - i);
 			memcpy (&buffer [i], ovbuf, len);
@@ -997,27 +1021,44 @@ int store_options (ocount, buffer, buflen, packet, lease, client_state,
 		j += len;
 	    }
 
-	    /* Stuff in the overload. */
-	    memcpy (ovbuf, &buffer [i], bufix - i);
-	    memset (&buffer [i], 0, first_cutoff - i);
-	    memcpy (&buffer [first_cutoff], ovbuf, bufix - i);
+	    /* Move any option that overlaps the first_cutoff mark and pad
+	     * the space between the end of options buffer and the start of
+	     * the first overload buffer, if there is any.
+	     */
+	    if (i != first_cutoff) {
+		memcpy (ovbuf, &buffer [i], bufix - i);
+		memset (&buffer [i], DHO_PAD, first_cutoff - i);
+		memcpy (&buffer [first_cutoff], ovbuf, bufix - i);
+		bufix += (first_cutoff - i);
+	    }
 	    ix = i;
-	    bufix += (first_cutoff - i);
-	    i += (first_cutoff - i);
+	    i = first_cutoff;
 
 	    /* See if there's life after the second cutoff. */
 	    if (second_cutoff) {
 		for (j = i + buffer [i + 1] + 2; j < bufix; ) {
 		    len = buffer [j + 1] + 2;
-		    if (j + len + 1 + (first_cutoff - i) > second_cutoff) {
+		    if (j + len + 1 > second_cutoff) {
 			    memcpy (ovbuf, &buffer [j], bufix - j);
 			    buffer [j] = DHO_END;
 			    if (second_cutoff - j > 1)
 				    memset (&buffer [j + 1],
-					    0, second_cutoff - j - 1);
+					    DHO_PAD, second_cutoff - j - 1);
 			    memcpy (&buffer [second_cutoff], ovbuf, bufix - j);
 			    bufix += (second_cutoff - j);
 			    buffer [bufix++] = DHO_END;
+
+			    /* We MUST initialize the remainder of the
+			     * sname field to the PAD value (0).  After
+			     * moving everything around, we really do need
+			     * to do this too (calling functions memcpy this
+			     * this buffer totally blindly with SNAME_LEN).
+			     */
+			    if (bufix - second_cutoff < DHCP_SNAME_LEN)
+			    	memset (&buffer[bufix], DHO_PAD,
+					DHCP_SNAME_LEN -
+						(bufix - second_cutoff));
+
 			    if (ocount)
 				    *ocount |= 2;
 			    break;
