@@ -836,6 +836,7 @@ int parse_warn PROTO ((char *, ...));
 /* dhcpd.c */
 extern TIME cur_time;
 extern struct group root_group;
+extern struct in_addr limited_broadcast;
 
 extern u_int16_t local_port;
 extern u_int16_t remote_port;
