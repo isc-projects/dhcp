@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: packet.c,v 1.21 1999/03/16 05:50:36 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: packet.c,v 1.22 1999/03/25 21:58:13 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -231,6 +231,7 @@ ssize_t decode_udp_ip_header (interface, buf, bufix, from, data, len)
   struct udphdr *udp;
   u_int32_t ip_len = (buf [bufix] & 0xf) << 2;
   u_int32_t sum, usum;
+  static int packets_seen, packets_bad_checksum;
 
   ip = (struct ip *)(buf + bufix);
   udp = (struct udphdr *)(buf + bufix + ip_len);
@@ -247,8 +248,10 @@ ssize_t decode_udp_ip_header (interface, buf, bufix, from, data, len)
 
   /* Check the IP header checksum - it should be zero. */
   if (wrapsum (checksum (buf + bufix, ip_len, 0))) {
-	  log_info ("Bad IP checksum: %x",
-		wrapsum (checksum (buf + bufix, sizeof *ip, 0)));
+	  if (packets_seen &&
+	      (++packets_seen / ++packets_bad_checksum) < 2)
+		  log_info ("Bad IP checksum: %x",
+			    wrapsum (checksum (buf + bufix, sizeof *ip, 0)));
 	  return -1;
   }
 
