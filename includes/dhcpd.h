@@ -378,6 +378,7 @@ struct lease_state {
 #define SV_OMAPI_KEY			36
 #define SV_STASH_AGENT_OPTIONS		37
 #define SV_DDNS_TTL			38
+#define SV_DDNS_UPDATE_STYLE		39
 
 #if !defined (DEFAULT_DEFAULT_LEASE_TIME)
 # define DEFAULT_DEFAULT_LEASE_TIME 43200
@@ -1049,6 +1050,8 @@ void do_packet PROTO ((struct interface_info *,
 /* dhcpd.c */
 extern TIME cur_time;
 
+int ddns_update_style;
+
 extern const char *path_dhcpd_conf;
 extern const char *path_dhcpd_db;
 extern const char *path_dhcpd_pid;
@@ -1103,6 +1106,10 @@ int ddns_updates PROTO ((struct packet *, struct lease *,
 int ddns_removals PROTO ((struct lease *));
 
 /* parse.c */
+void add_enumeration (struct enumeration *);
+struct enumeration *find_enumeration (const char *, int);
+struct enumeration_value *find_enumeration_value (const char *, int,
+						  const char *);
 void skip_to_semi PROTO ((struct parse *));
 void skip_to_rbrace PROTO ((struct parse *, int));
 int parse_semi PROTO ((struct parse *));
@@ -1671,6 +1678,8 @@ extern struct universe agent_universe;
 extern struct option agent_options [256];
 extern struct universe server_universe;
 extern struct option server_options [256];
+
+extern struct enumeration ddns_styles;
 void initialize_server_option_spaces PROTO ((void));
 
 /* inet.c */
