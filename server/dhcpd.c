@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.115.2.4 2001/06/20 04:15:45 mellon Exp $ Copyright 1995-2001 Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.115.2.5 2001/06/20 04:37:05 mellon Exp $ Copyright 1995-2001 Internet Software Consortium.";
 #endif
 
   static char copyright[] =
@@ -866,17 +866,15 @@ void postconf_initialization (int quiet)
 
 void postdb_startup (void)
 {
-	if (trace_playback ()) {
-		/* Initialize the omapi listener state. */
-		if (omapi_port != -1) {
-			omapi_listener_start (0);
-		}
+	/* Initialize the omapi listener state. */
+	if (omapi_port != -1) {
+		omapi_listener_start (0);
+	}
 
 #if defined (FAILOVER_PROTOCOL)
-		/* Initialize the failover listener state. */
-		dhcp_failover_startup ();
+	/* Initialize the failover listener state. */
+	dhcp_failover_startup ();
 #endif
-	}
 }
 
 /* Print usage message. */
