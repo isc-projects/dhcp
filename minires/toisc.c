@@ -237,24 +237,35 @@ isc_result_t uerr2isc (int err)
 	      case EDQUOT:
 		return ISC_R_QUOTA;
 
+#ifdef EBADRPC
 	      case EBADRPC:
 		return ISC_R_NOTIMPLEMENTED;
+#endif
 
+#ifdef ERPCMISMATCH
 	      case ERPCMISMATCH:
 		return ISC_R_VERSIONMISMATCH;
+#endif
 
+#ifdef EPROGMISMATCH
 	      case EPROGMISMATCH:
 		return ISC_R_VERSIONMISMATCH;
+#endif
 
+#ifdef EAUTH
 	      case EAUTH:
 		return ISC_R_NOTAUTH;
+#endif
 
+#ifdef ENEEDAUTH
 	      case ENEEDAUTH:
 		return ISC_R_NOTAUTH;
+#endif
 
+#ifdef EOVERFLOW
 	      case EOVERFLOW:
 		return ISC_R_NOSPACE;
-
+#endif
 	}
 	return ISC_R_UNEXPECTED;
 }

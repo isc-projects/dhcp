@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.96 2001/01/16 23:15:38 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.97 2001/01/17 16:56:42 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -969,12 +969,16 @@ int evaluate_boolean_expression (result, packet, lease, client_state,
 			    break;
 
 			  case binding_dns:
+#if defined (NSUPDATE)
 			    /* XXX This should be a comparison for equal
 			       XXX values, not for identity. */
 			    if (bv -> value.dns == obv -> value.dns)
 				*result = expr -> op == expr_equal;
 			    else
 				*result = expr -> op == expr_not_equal;
+#else
+				*result = expr -> op == expr_not_equal;
+#endif
 			    break;
 
 			  case binding_function:

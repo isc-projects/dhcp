@@ -1,5 +1,5 @@
 #if !defined(lint) && !defined(SABER)
-static const char rcsid[] = "$Id: res_findzonecut.c,v 1.11 2001/01/16 22:33:13 mellon Exp $";
+static const char rcsid[] = "$Id: res_findzonecut.c,v 1.12 2001/01/17 16:56:47 mellon Exp $";
 #endif /* not lint */
 
 /*
@@ -73,8 +73,8 @@ static isc_result_t save_a(res_state, ns_msg *, ns_sect,
 static void	free_nsrrset(rrset_ns *);
 static void	free_nsrr(rrset_ns *, rr_ns *);
 static rr_ns *	find_ns(rrset_ns *, const char *);
-static ns_rcode	do_query(res_state, const char *, ns_class, ns_type,
-			 double *, ns_msg *, int *);
+static isc_result_t do_query(res_state, const char *, ns_class, ns_type,
+			     double *, ns_msg *, int *);
 
 /* Public. */
 
@@ -133,7 +133,7 @@ static ns_rcode	do_query(res_state, const char *, ns_class, ns_type,
  *	keep going.  for the NS and A queries this means we just give up.
  */
 
-ns_rcode
+isc_result_t
 res_findzonecut(res_state statp, const char *dname, ns_class class, int opts,
 		char *zname, size_t zsize, struct in_addr *addrs, int naddrs,
 		int *count, void *zcookie)
