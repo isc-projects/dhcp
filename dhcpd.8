@@ -248,7 +248,8 @@ the server, that file's name must be specified.   A simple bootp
 client declaration might look like this:
 .nf
 .sp 1
-	host haagen hardware ethernet 08:00:2b:4c:59:23 {
+	host haagen {
+	  hardware ethernet 08:00:2b:4c:59:23;
 	  fixed-address 239.252.197.9;
 	  filename "/tftpboot/haagen.boot";
 	}

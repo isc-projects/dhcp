@@ -238,7 +238,8 @@ BBOOOOTTPP SSuuppppoorrtt
        server, that file's name must  be  specified.    A  simple
        bootp client declaration might look like this:
 
-            host haagen hardware ethernet 08:00:2b:4c:59:23 {
+            host haagen {
+              hardware ethernet 08:00:2b:4c:59:23;
               fixed-address 239.252.197.9;
               filename "/tftpboot/haagen.boot";
             }
@@ -255,7 +256,6 @@ OOppttiioonnss
        for  BOOTP  clients,  also on a per-client basis.   In the
        event that a BOOTP client  declaration  specifies  options
        that  are  also  specified  in its subnet declaration, the
-       options  specified  in   the   client   declaration   take
 
 
 
@@ -268,8 +268,9 @@ OOppttiioonnss
 dhcpd(8)                                                 dhcpd(8)
 
 
-       precedence.    An  reasonably  complete DHCP configuration
-       might look something like this:
+       options specified in the client  declaration  take  prece-
+       dence.    An  reasonably complete DHCP configuration might
+       look something like this:
 
             subnet 239.252.197.0 netmask 255.255.255.0 {
               range 239.252.197.10 239.252.197.250;
@@ -308,7 +309,6 @@ AAUUTTHHOORR
        provided by the Internet Software  Corporation.   Informa-
        tion  about  the Internet Software Consortium can be found
        at hhttttpp::////wwwwww..iisscc..oorrgg//iisscc..
-
 
 
 
