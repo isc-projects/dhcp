@@ -437,7 +437,7 @@ isc_result_t omapi_connection_put_name (omapi_object_t *c, char *name)
 	status = omapi_connection_put_uint16 (c, len);
 	if (status != ISC_R_SUCCESS)
 		return status;
-	return omapi_connection_copyin (c, name, len);
+	return omapi_connection_copyin (c, (unsigned char *)name, len);
 }
 
 isc_result_t omapi_connection_put_string (omapi_object_t *c, char *string)
@@ -450,7 +450,7 @@ isc_result_t omapi_connection_put_string (omapi_object_t *c, char *string)
 	status = omapi_connection_put_uint32 (c, len);
 	if (status != ISC_R_SUCCESS)
 		return status;
-	return omapi_connection_copyin (c, string, len);
+	return omapi_connection_copyin (c, (unsigned char *)string, len);
 }
 
 isc_result_t omapi_connection_put_handle (omapi_object_t *c, omapi_object_t *h)
