@@ -1,9 +1,9 @@
 #if !defined(lint) && !defined(SABER)
-static const char rcsid[] = "$Id: res_findzonecut.c,v 1.14.2.1.2.1 2002/12/07 02:19:43 dhankins Exp $";
+static const char rcsid[] = "$Id: res_findzonecut.c,v 1.14.2.1.2.2 2003/01/14 23:02:24 dhankins Exp $";
 #endif /* not lint */
 
 /*
- * Copyright (c) 1999 by Internet Software Consortium.
+ * Copyright (c) 1999-2003 by Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
