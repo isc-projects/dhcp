@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: discover.c,v 1.31 2000/09/01 23:03:33 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: discover.c,v 1.32 2000/09/04 22:27:41 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -79,7 +79,7 @@ void discover_interfaces (state)
 {
 	struct interface_info *tmp, *ip;
 	struct interface_info *last, *next;
-	char buf [8192];
+	char buf [512];
 	struct ifconf ic;
 	struct ifreq ifr;
 	int i;
@@ -95,6 +95,7 @@ void discover_interfaces (state)
 #endif
 	isc_result_t status;
 	static int setup_fallback = 0;
+	int wifcount = 0;
 
 	if (!dhcp_type_interface) {
 		status = omapi_object_type_register
@@ -113,6 +114,7 @@ void discover_interfaces (state)
 		log_fatal ("Can't create addrlist socket");
 
 	/* Get the interface configuration information... */
+      gifconf_again:
 	ic.ifc_len = sizeof buf;
 	ic.ifc_ifcu.ifcu_buf = (caddr_t)buf;
 	i = ioctl(sock, SIOCGIFCONF, &ic);
@@ -120,6 +122,16 @@ void discover_interfaces (state)
 	if (i < 0)
 		log_fatal ("ioctl: SIOCGIFCONF: %m");
 
+	/* If the SIOCGIFCONF resulted in more data than would fit in
+	   a buffer, allocate a bigger buffer. */
+	if (ic.ifc_ifcu.ifcu_buf == buf &&
+	    ic.ifc_len > sizeof buf) {
+		ic.ifc_ifcu.ifcu_buf = dmalloc ((size_t)ic.ifc_len, MDL);
+		if (!ic.ifc_ifcu.ifcu_buf)
+			log_fatal ("Can't allocate SIOCGIFCONF buffer.");
+		goto gifconf_again;
+	}
+		
 	/* If we already have a list of interfaces, and we're running as
 	   a DHCP server, the interfaces were requested. */
 	if (interfaces && (state == DISCOVER_SERVER ||
@@ -260,6 +272,10 @@ void discover_interfaces (state)
 				(*dhcp_interface_setup_hook) (tmp, &addr);
 		}
 	}
+
+	/* If we allocated a buffer, free it. */
+	if (ic.ifc_ifcu.ifcu_buf != buf)
+		dfree (ic.ifc_ifcu.ifcu_buf, MDL);
 
 #if defined (LINUX_SLASHPROC_DISCOVERY)
 	/* On Linux, interfaces that don't have IP addresses don't
@@ -487,6 +503,7 @@ void discover_interfaces (state)
 
 		/* We must have a subnet declaration for each interface. */
 		if (!tmp -> shared_network && (state == DISCOVER_SERVER)) {
+			log_error ("%s", "");
 			log_error ("No subnet declaration for %s (%s).",
 				   tmp -> name, inet_ntoa (foo.sin_addr));
 			if (supports_multiple_interfaces (tmp)) {
@@ -530,6 +547,7 @@ void discover_interfaces (state)
 		/* Register the interface... */
 		if_register_receive (tmp);
 		if_register_send (tmp);
+		wifcount++;
 #if defined (HAVE_SETFD)
 		if (fcntl (tmp -> rfdesc, F_SETFD, 1) < 0)
 			log_error ("Can't set close-on-exec on %s: %m",
@@ -560,6 +578,11 @@ void discover_interfaces (state)
 	}
 
 	close (sock);
+
+	if (state == DISCOVER_SERVER && wifcount == 0) {
+		log_info ("%s", "");
+		log_fatal ("Not configured to listen on any interfaces!");
+	}
 
 	if (!setup_fallback) {
 		setup_fallback = 1;
