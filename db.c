@@ -81,6 +81,8 @@ int write_lease (lease)
 		for (i = 1; i < lease -> uid_len; i++)
 			fprintf (db_file, ":%x", lease -> uid [i]);
 	}
+	if (lease -> flags & BOOTP_LEASE)
+		fprintf (db_file, "\n\tdynamic-bootp");
 	fputs (";\n", db_file);
 	return !errno;
 }
