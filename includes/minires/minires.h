@@ -118,8 +118,8 @@ const char *res_servicename(u_int16_t, const char *);
 u_int32_t ns_datetosecs (const char *cp, int *errp);
 int b64_pton (char const *, unsigned char *, size_t);
 unsigned int res_randomid (void);
-ns_rcode res_findzonecut (res_state, const char *, ns_class, int,
-			  char *, size_t, struct in_addr *, int, void *);
+ns_rcode res_findzonecut (res_state, const char *, ns_class, int, char *,
+			  size_t, struct in_addr *, int, int *, void *);
 int res_nsend (res_state,
 	       unsigned char *, unsigned, unsigned char *, unsigned);
 int res_nsendsigned (res_state, unsigned char *,
