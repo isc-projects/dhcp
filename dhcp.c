@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.34.2.6 1997/12/02 09:32:12 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.34.2.7 1997/12/11 20:57:55 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -411,7 +411,7 @@ void nak_lease (packet, cip)
 		(unsigned char *)0;
 
 	/* Set up the option buffer... */
-	cons_options (packet, &outgoing, options, 0, 0);
+	cons_options (packet, &outgoing, options, 0, 0, 0);
 
 /*	memset (&raw.ciaddr, 0, sizeof raw.ciaddr);*/
 	memcpy (&raw.siaddr, server_identifier.iabuf, 4);
@@ -502,6 +502,7 @@ void ack_lease (packet, lease, offer, when)
 	TIME offered_lease_time;
 
 	int bufs = 0;
+	int nulltp;
 	struct packet outgoing;
 	struct dhcp_packet raw;
 	struct tree_cache *options [256];
@@ -861,9 +862,11 @@ void ack_lease (packet, lease, offer, when)
 	if (packet -> options [DHO_HOST_NAME].data &&
 	    packet -> options [DHO_HOST_NAME].data
 	    [packet -> options [DHO_HOST_NAME].len - 1] == '\0')
-		cons_options (packet, &outgoing, options, bufs, 1);
+		nulltp = 1;
 	else
-		cons_options (packet, &outgoing, options, bufs, 0);
+		nulltp = 0;
+
+	cons_options (packet, &outgoing, options, bufs, nulltp, offer ? 1 : 0);
 	if (!offer && outgoing.packet_length < BOOTP_MIN_LEN)
 		outgoing.packet_length = BOOTP_MIN_LEN;
 
