@@ -137,8 +137,23 @@ struct __omapi_object {
 /* The port on which applications should listen for OMAPI connections. */
 #define OMAPI_PROTOCOL_PORT	7911
 
+typedef struct {
+	unsigned addrtype;
+	unsigned addrlen;
+	unsigned char address [16];
+	unsigned port;
+} omapi_addr_t;
+
+typedef struct {
+	int refcnt;
+	unsigned count;
+	omapi_addr_t *addresses;
+} omapi_addr_list_t;
+
 isc_result_t omapi_protocol_connect (omapi_object_t *,
 				     const char *, unsigned, omapi_object_t *);
+isc_result_t omapi_connect_list (omapi_object_t *, omapi_addr_list_t *,
+				 omapi_addr_t *);
 isc_result_t omapi_protocol_listen (omapi_object_t *, unsigned, int);
 isc_result_t omapi_protocol_accept (omapi_object_t *);
 isc_result_t omapi_protocol_send_intro (omapi_object_t *, unsigned, unsigned);
@@ -184,6 +199,7 @@ isc_result_t omapi_connect (omapi_object_t *, const char *, unsigned);
 isc_result_t omapi_disconnect (omapi_object_t *, int);
 int omapi_connection_readfd (omapi_object_t *);
 int omapi_connection_writefd (omapi_object_t *);
+isc_result_t omapi_connection_connect (omapi_object_t *);
 isc_result_t omapi_connection_reader (omapi_object_t *);
 isc_result_t omapi_connection_writer (omapi_object_t *);
 isc_result_t omapi_connection_reaper (omapi_object_t *);
@@ -208,6 +224,8 @@ isc_result_t omapi_connection_put_handle (omapi_object_t *c,
 
 
 isc_result_t omapi_listen (omapi_object_t *, unsigned, int);
+isc_result_t omapi_listen_addr (omapi_object_t *,
+				omapi_addr_t *, int);
 isc_result_t omapi_listener_accept (omapi_object_t *);
 int omapi_listener_readfd (omapi_object_t *);
 isc_result_t omapi_accept (omapi_object_t *);
@@ -354,6 +372,8 @@ isc_result_t omapi_make_const_value (omapi_value_t **, omapi_data_string_t *,
 				     unsigned, const char *, int);
 isc_result_t omapi_make_int_value (omapi_value_t **, omapi_data_string_t *,
 				   int, const char *, int);
+isc_result_t omapi_make_uint_value (omapi_value_t **, omapi_data_string_t *,
+				    unsigned int, const char *, int);
 isc_result_t omapi_make_handle_value (omapi_value_t **, omapi_data_string_t *,
 				      omapi_object_t *, const char *, int);
 isc_result_t omapi_make_string_value (omapi_value_t **, omapi_data_string_t *,
@@ -385,6 +405,13 @@ isc_result_t omapi_value_new (omapi_value_t **, const char *, int);
 isc_result_t omapi_value_reference (omapi_value_t **,
 				    omapi_value_t *, const char *, int);
 isc_result_t omapi_value_dereference (omapi_value_t **, const char *, int);
+isc_result_t omapi_addr_list_new (omapi_addr_list_t **, unsigned,
+				  const char *, int);
+isc_result_t omapi_addr_list_reference (omapi_addr_list_t **,
+					omapi_addr_list_t *,
+					const char *, int);
+isc_result_t omapi_addr_list_dereference (omapi_addr_list_t **,
+					  const char *, int);
 
 void * dmalloc (unsigned, const char *, int);
 void dfree (void *, const char *, int);
