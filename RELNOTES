@@ -55,7 +55,8 @@ and for prodding me into improving it.
 - A failover bug relating to identifying peers by name length instead of
   by name was fixed.
 
-- A manpage typo was fixed.
+- Delcaring failover configs within shared-network statements should no
+  longer result in error.
 
 - The -nw command line option to dhclient now works.
 
