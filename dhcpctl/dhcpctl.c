@@ -424,11 +424,12 @@ dhcpctl_status dhcpctl_object_refresh (dhcpctl_handle connection,
 	return status;
 }
 
-/* Requests a refresh on the object referenced by the handle (there
+/* Requests the removal of the object referenced by the handle (there
    can't be any other work in progress on the handle).   A
-   refresh means local parameters are updated from the server. */
+   removal means that all searchable references to the object on the
+   server are deleted. */
 
-dhcpctl_status dhcpctl_object_delete (dhcpctl_handle connection,
+dhcpctl_status dhcpctl_object_remove (dhcpctl_handle connection,
 				      dhcpctl_handle h)
 {
 	isc_result_t status;
