@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.76 2000/02/05 17:45:20 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.77 2000/02/15 19:39:48 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -457,7 +457,7 @@ int evaluate_expression (result, packet, lease,
 		}
 
 		arg = expr -> data.funcall.arglist;
-		s = binding -> value -> value.fundef.args;
+		s = binding -> value -> value.fundef -> args;
 		while (arg && s) {
 			nb = dmalloc (sizeof *nb, MDL);
 			if (!nb) {
@@ -499,7 +499,7 @@ int evaluate_expression (result, packet, lease,
 		ns -> outer = scope;
 		if (execute_statements
 		    (packet, lease, in_options, cfg_options, ns,
-		     binding -> value -> value.fundef.statements)) {
+		     binding -> value -> value.fundef -> statements)) {
 			if (ns -> bindings && ns -> bindings -> name) {
 			    binding_value_reference (result,
 						     ns -> bindings -> value,
@@ -511,6 +511,12 @@ int evaluate_expression (result, packet, lease,
 			status = 0;
 		binding_scope_dereference (&ns, MDL);
 		return status;
+	} else if (expr -> op == expr_funcall) {
+		if (!binding_value_allocate (&bv, MDL))
+			return 0;
+		bv -> type = binding_function;
+		fundef_reference (&bv -> value.fundef, expr -> data.func, MDL);
+		return 1;
         } else if (is_boolean_expression (expr)) {
 		if (!binding_value_allocate (&bv, MDL))
 			return 0;
@@ -823,6 +829,11 @@ int evaluate_dns_expression (result, packet, lease, in_options,
 	      case expr_const_int:
 	      case expr_lease_time:
 	      case expr_dns_transaction:
+	      case expr_add:
+	      case expr_subtract:
+	      case expr_multiply:
+	      case expr_divide:
+	      case expr_remainder:
 		log_error ("Numeric opcode in evaluate_dns_expression: %d",
 		      expr -> op);
 		return 0;
@@ -1107,6 +1118,11 @@ int evaluate_boolean_expression (result, packet, lease, in_options,
 	      case expr_const_int:
 	      case expr_lease_time:
 	      case expr_dns_transaction:
+	      case expr_add:
+	      case expr_subtract:
+	      case expr_multiply:
+	      case expr_divide:
+	      case expr_remainder:
 		log_error ("Numeric opcode in evaluate_boolean_expression: %d",
 		      expr -> op);
 		return 0;
@@ -1117,6 +1133,10 @@ int evaluate_boolean_expression (result, packet, lease, in_options,
 	      case expr_ns_not_exists:
 		log_error ("dns opcode in evaluate_boolean_expression: %d",
 		      expr -> op);
+		return 0;
+
+	      case expr_function:
+		log_error ("function definition in evaluate_boolean_expr");
 		return 0;
 
 	      case expr_arg:
@@ -1903,6 +1923,11 @@ int evaluate_data_expression (result, packet, lease,
 	      case expr_const_int:
 	      case expr_lease_time:
 	      case expr_dns_transaction:
+	      case expr_add:
+	      case expr_subtract:
+	      case expr_multiply:
+	      case expr_divide:
+	      case expr_remainder:
 		log_error ("Numeric opcode in evaluate_data_expression: %d",
 		      expr -> op);
 		return 0;
@@ -1914,8 +1939,13 @@ int evaluate_data_expression (result, packet, lease,
 		log_error ("dns update opcode in evaluate_data_expression: %d",
 		      expr -> op);
 		return 0;
-		      case expr_arg:
-			break;
+
+	      case expr_function:
+		log_error ("function definition in evaluate_data_expression");
+		return 0;
+
+	      case expr_arg:
+		break;
 	}
 
 	log_error ("Bogus opcode in evaluate_data_expression: %d", expr -> op);
@@ -1943,6 +1973,7 @@ int evaluate_numeric_expression (result, packet, lease,
 	struct expression *cur, *next;
 	struct binding *binding;
 	struct binding_value *bv;
+	unsigned long ileft, iright;
 
 	switch (expr -> op) {
 	      case expr_check:
@@ -2125,8 +2156,8 @@ int evaluate_numeric_expression (result, packet, lease,
 	      case expr_funcall:
 		bv = (struct binding_value *)0;
 		status = evaluate_expression (&bv, packet, lease,
-					  in_options, cfg_options,
-					  scope, expr);
+					      in_options, cfg_options,
+					      scope, expr);
 		if (status) {
 			if (bv -> type != binding_numeric)
 				log_error ("%s() returned type %d in %s.",
@@ -2143,12 +2174,121 @@ int evaluate_numeric_expression (result, packet, lease,
 #endif
 		break;
 
+	      case expr_add:
+		sleft = evaluate_numeric_expression (&ileft, packet, lease,
+						     in_options, cfg_options,
+						     scope,
+						     expr -> data.and [0]);
+		sright = evaluate_numeric_expression (&iright, packet, lease,
+						      in_options, cfg_options,
+						      scope,
+						      expr -> data.and [1]);
+
+#if defined (DEBUG_EXPRESSIONS)
+		log_debug ("num: %d + %d = %d",
+		      ileft, iright,
+		      ((sleft && sright) ? (ileft + iright) : 0));
+#endif
+		if (sleft && sright) {
+			*result = ileft + iright;
+			return 1;
+		}
+		return 0;
+
+	      case expr_subtract:
+		sleft = evaluate_numeric_expression (&ileft, packet, lease,
+						     in_options, cfg_options,
+						     scope,
+						     expr -> data.and [0]);
+		sright = evaluate_numeric_expression (&iright, packet, lease,
+						      in_options, cfg_options,
+						      scope,
+						      expr -> data.and [1]);
+
+#if defined (DEBUG_EXPRESSIONS)
+		log_debug ("num: %d - %d = %d",
+		      ileft, iright,
+		      ((sleft && sright) ? (ileft - iright) : 0));
+#endif
+		if (sleft && sright) {
+			*result = ileft - iright;
+			return 1;
+		}
+		return 0;
+
+	      case expr_multiply:
+		sleft = evaluate_numeric_expression (&ileft, packet, lease,
+						     in_options, cfg_options,
+						     scope,
+						     expr -> data.and [0]);
+		sright = evaluate_numeric_expression (&iright, packet, lease,
+						      in_options, cfg_options,
+						      scope,
+						      expr -> data.and [1]);
+
+#if defined (DEBUG_EXPRESSIONS)
+		log_debug ("num: %d * %d = %d",
+		      ileft, iright,
+		      ((sleft && sright) ? (ileft * iright) : 0));
+#endif
+		if (sleft && sright) {
+			*result = ileft * iright;
+			return 1;
+		}
+		return 0;
+
+	      case expr_divide:
+		sleft = evaluate_numeric_expression (&ileft, packet, lease,
+						     in_options, cfg_options,
+						     scope,
+						     expr -> data.and [0]);
+		sright = evaluate_numeric_expression (&iright, packet, lease,
+						      in_options, cfg_options,
+						      scope,
+						      expr -> data.and [1]);
+
+#if defined (DEBUG_EXPRESSIONS)
+		log_debug ("num: %d / %d = %d",
+		      ileft, iright,
+		      ((sleft && sright && iright) ? (ileft / iright) : 0));
+#endif
+		if (sleft && sright && iright) {
+			*result = ileft / iright;
+			return 1;
+		}
+		return 0;
+
+	      case expr_remainder:
+		sleft = evaluate_numeric_expression (&ileft, packet, lease,
+						     in_options, cfg_options,
+						     scope,
+						     expr -> data.and [0]);
+		sright = evaluate_numeric_expression (&iright, packet, lease,
+						      in_options, cfg_options,
+						      scope,
+						      expr -> data.and [1]);
+
+#if defined (DEBUG_EXPRESSIONS)
+		log_debug ("num: %d %% %d = %d",
+		      ileft, iright,
+		      ((sleft && sright && iright) ? (ileft % iright) : 0));
+#endif
+		if (sleft && sright && iright) {
+			*result = ileft % iright;
+			return 1;
+		}
+		return 0;
+
 	      case expr_ns_add:
 	      case expr_ns_delete:
 	      case expr_ns_exists:
 	      case expr_ns_not_exists:
 		log_error ("dns opcode in evaluate_numeric_expression: %d",
 		      expr -> op);
+		return 0;
+
+	      case expr_function:
+		log_error ("function definition in evaluate_numeric_expr");
 		return 0;
 
 	      case expr_arg:
@@ -2298,6 +2438,11 @@ void expression_dereference (eptr, file, line)
 	      case expr_concat:
 	      case expr_and:
 	      case expr_or:
+	      case expr_add:
+	      case expr_subtract:
+	      case expr_multiply:
+	      case expr_divide:
+	      case expr_remainder:
 		if (expr -> data.equal [0])
 			expression_dereference (&expr -> data.equal [0],
 						file, line);
@@ -2456,6 +2601,10 @@ void expression_dereference (eptr, file, line)
 						file, line);
 		break;
 
+	      case expr_function:
+		fundef_dereference (&expr -> data.func, file, line);
+		break;
+
 		/* No subexpressions. */
 	      case expr_leased_address:
 	      case expr_lease_time:
@@ -2609,6 +2758,7 @@ static int op_val (op)
 	      case expr_ns_not_exists:
 	      case expr_arg:
 	      case expr_funcall:
+	      case expr_function:
 		return 100;
 
 	      case expr_equal:
@@ -2616,9 +2766,14 @@ static int op_val (op)
 		return 3;
 
 	      case expr_and:
+	      case expr_multiply:
+	      case expr_divide:
+	      case expr_remainder:
 		return 1;
 
 	      case expr_or:
+	      case expr_add:
+	      case expr_subtract:
 		return 2;
 	}
 	return 100;
@@ -2679,6 +2834,7 @@ enum expression_context op_context (op)
 	      case expr_dns_transaction:
 	      case expr_arg:
 	      case expr_funcall:
+	      case expr_function:
 		return context_any;
 
 	      case expr_equal:
@@ -2690,6 +2846,13 @@ enum expression_context op_context (op)
 
 	      case expr_or:
 		return context_boolean;
+
+	      case expr_add:
+	      case expr_subtract:
+	      case expr_multiply:
+	      case expr_divide:
+	      case expr_remainder:
+		return context_numeric;
 	}
 	return context_any;
 }
@@ -2802,6 +2965,26 @@ int write_expression (file, expr, col, indent, firstp)
 			 (char *)0);
 		col = token_print_indent (file, col, indent, "", "", ")");
 		break;
+
+	      case expr_add:
+		s = "+";
+		goto binary;
+
+	      case expr_subtract:
+		s = "-";
+		goto binary;
+
+	      case expr_multiply:
+		s = "*";
+		goto binary;
+
+	      case expr_divide:
+		s = "/";
+		goto binary;
+
+	      case expr_remainder:
+		s = "%";
+		goto binary;
 
 	      case expr_and:
 		s = "and";
@@ -3195,6 +3378,59 @@ int binding_scope_dereference (ptr, file, line)
 		free_bindings (*ptr, file, line);
 	dfree ((*ptr), file, line);
 	*ptr = (struct binding_scope *)0;
+	return 1;
+}
+
+int fundef_dereference (ptr, file, line)
+	struct fundef **ptr;
+	const char *file;
+	int line;
+{
+	struct fundef *bp;
+	struct string_list *sp, *next;
+
+	if (!ptr) {
+		log_error ("%s(%d): null pointer", file, line);
+#if defined (POINTER_DEBUG)
+		abort ();
+#else
+		return 0;
+#endif
+	}
+
+	if (!bp) {
+		log_error ("%s(%d): null pointer", file, line);
+#if defined (POINTER_DEBUG)
+		abort ();
+#else
+		return 0;
+#endif
+	}
+
+	bp -> refcnt--;
+	rc_register (file, line, ptr, bp, bp -> refcnt);
+	if (bp -> refcnt < 0) {
+		log_error ("%s(%d): negative refcnt!", file, line);
+#if defined (DEBUG_RC_HISTORY)
+		dump_rc_history ();
+#endif
+#if defined (POINTER_DEBUG)
+		abort ();
+#else
+		return 0;
+#endif
+	}
+	if (!bp -> refcnt) {
+		for (sp = bp -> args; sp; sp = next) {
+			next = sp -> next;
+			dfree (sp, file, line);
+		}
+		if (bp -> statements)
+			executable_statement_dereference (&bp -> statements,
+							  file, line);
+		dfree (bp, file, line);
+	}
+	*ptr = (struct fundef *)0;
 	return 1;
 }
 
