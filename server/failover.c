@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.53.2.1 2001/05/04 22:32:16 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.53.2.2 2001/05/05 04:19:30 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1526,6 +1526,9 @@ isc_result_t dhcp_failover_set_state (dhcp_failover_state_t *state,
 {
     enum failover_state saved_state;
     TIME saved_stos;
+    struct pool *p;
+    struct shared_network *s;
+    struct lease *l;
 
     /* First make the transition out of the current state. */
     switch (state -> me.state) {
@@ -1650,6 +1653,27 @@ isc_result_t dhcp_failover_set_state (dhcp_failover_state_t *state,
 	    if (state -> link_to_peer)
 		    dhcp_failover_send_update_request_all (state);
 	    break;
+
+	  case partner_down:
+	    /* For every expired lease, set a timeout for it to become free. */
+            for (s = shared_networks; s; s = s -> next) {
+                for (p = s -> pools; p; p = p -> next) {
+		    if (p -> failover_peer == state) {
+			for (l = p -> expired; l; l = l -> next)
+			    l -> tsfp = state -> me.stos + state -> mclt;
+			if (p -> next_event_time >
+			    state -> me.stos + state -> mclt) {
+			    p -> next_event_time =
+					state -> me.stos + state -> mclt;
+		            add_timeout (p -> next_event_time, pool_timer, p,
+		                         (tvref_t)pool_reference,
+               				 (tvunref_t)pool_dereference);
+			}
+		    }
+		}
+	    }
+	    break;
+			 	
 
 	  default:
 	    break;
@@ -2299,7 +2323,6 @@ int dhcp_failover_queue_ack (dhcp_failover_state_t *state,
 			     (tvref_t)dhcp_failover_state_reference,
 			     (tvunref_t)dhcp_failover_state_dereference);
 	}
-
 
 	return 1;
 }
@@ -4227,13 +4250,13 @@ isc_result_t dhcp_failover_process_bind_update (dhcp_failover_state_t *state,
 		if (state -> me.state == normal) {
 			new_binding_state =
 				(normal_binding_state_transition_check
-				 (lease, state,
-				  msg -> binding_status));
+				 (lease, state, msg -> binding_status,
+				  msg -> potential_expiry));
 		} else {
 			new_binding_state =
 				(conflict_binding_state_transition_check
-				 (lease, state,
-				  msg -> binding_status));
+				 (lease, state, msg -> binding_status,
+				  msg -> potential_expiry));
 		}
 		if (new_binding_state != msg -> binding_status) {
 			char outbuf [100];
@@ -4311,8 +4334,20 @@ isc_result_t dhcp_failover_process_bind_ack (dhcp_failover_state_t *state,
 	if (msg -> options_present & FTB_POTENTIAL_EXPIRY) {
 		/* XXX it could be a problem to do this directly if the
 		   XXX lease is sorted by tsfp. */
-		lease -> tsfp = msg -> potential_expiry;
-		write_lease (lease);
+		if (lease -> binding_state == FTS_EXPIRED) {
+			lease -> next_binding_state = FTS_FREE;
+		    supersede_lease (lease, (struct lease *)0, 0, 1, 0);
+		    write_lease (lease);
+		    if (state -> me.state == normal)
+			commit_leases ();
+		} else {
+		    lease -> tsfp = msg -> potential_expiry;
+		    write_lease (lease);
+#if 0 /* XXX This might be needed. */
+		    if (state -> me.state == normal)
+			commit_leases ();
+#endif
+		}
 	}
 
       unqueue:
@@ -4632,7 +4667,8 @@ int load_balance_mine (struct packet *packet, dhcp_failover_state_t *state)
 binding_state_t
 normal_binding_state_transition_check (struct lease *lease,
 				       dhcp_failover_state_t *state,
-				       binding_state_t binding_state)
+				       binding_state_t binding_state,
+				       u_int32_t tsfp)
 {
 	binding_state_t new_state;
 
@@ -4681,8 +4717,7 @@ normal_binding_state_transition_check (struct lease *lease,
 		      case FTS_BACKUP:
 			/* Can't set a lease to free or backup until the
 			   peer agrees that it's expired. */
-			/* XXX but have we updated tsfp yet? */
-			if (lease -> tsfp > cur_time) {
+			if (tsfp > cur_time) {
 				new_state = lease -> binding_state;
 				goto out;
 			}
@@ -4709,8 +4744,7 @@ normal_binding_state_transition_check (struct lease *lease,
 		      case FTS_BACKUP:
 			/* Can't set a lease to free or backup until the
 			   peer agrees that it's expired. */
-			/* XXX but have we updated tsfp yet? */
-			if (lease -> tsfp > cur_time) {
+			if (tsfp > cur_time) {
 				new_state = lease -> binding_state;
 				goto out;
 			}
@@ -4731,8 +4765,7 @@ normal_binding_state_transition_check (struct lease *lease,
 		      case FTS_BACKUP:
 			/* Can't set a lease to free or backup until the
 			   peer agrees that it's expired. */
-			/* XXX but have we updated tsfp yet? */
-			if (lease -> tsfp > cur_time) {
+			if (tsfp > cur_time) {
 				new_state = lease -> binding_state;
 				goto out;
 			}
@@ -4751,10 +4784,9 @@ normal_binding_state_transition_check (struct lease *lease,
 		switch (binding_state) {
 		      case FTS_FREE:
 		      case FTS_BACKUP:
-			/* XXX but have we updated tsfp yet? */
 			/* Can't set a lease to free or backup until the
 			   peer agrees that it's expired. */
-			if (lease -> tsfp > cur_time) {
+			if (tsfp > cur_time) {
 				new_state = lease -> binding_state;
 				goto out;
 			}
@@ -4804,7 +4836,8 @@ normal_binding_state_transition_check (struct lease *lease,
 binding_state_t
 conflict_binding_state_transition_check (struct lease *lease,
 					 dhcp_failover_state_t *state,
-					 binding_state_t binding_state)
+					 binding_state_t binding_state,
+					 u_int32_t tsfp)
 {
 	binding_state_t new_state;
 
