@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"@(#) Copyright (c) 1995 The Internet Software Consortium.  All rights reserved.\n";
+"@(#) Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -890,7 +890,7 @@ struct lease *parse_lease_statement (cfile, bc)
 				lease.uid_len = 0;
 				token = peek_token (&val, cfile);
 				if (token == STRING) {
-					token = NEXT_TOKEN (&val, cfile);
+					token = next_token (&val, cfile);
 					lease.uid_len = strlen (val) + 1;
 					s = val;
 				} else {
@@ -900,7 +900,7 @@ struct lease *parse_lease_statement (cfile, bc)
 					s = ubuf;
 					if (lease.uid_len == 0) {
 						parse_warn ("zero-length uid");
-						seen_bit = 0;
+						seenbit = 0;
 						break;
 					}
 				}
@@ -1109,12 +1109,6 @@ TIME parse_date (cfile, bc)
 		longjmp (jdref (bc), 1);
 	}
 	tm.tm_sec = atoi (val);
-
-#ifndef BROKEN_TM_GMT
-	/* linux does not implement these yet */
-	tm.tm_zone = "GMT";
-	tm.tm_gmtoff = 0;
-#endif
 	tm.tm_isdst = 0;
 
 	/* XXX */ /* We assume that mktime does not use tm_yday. */
