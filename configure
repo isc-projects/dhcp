@@ -4,7 +4,7 @@ while [ $# != 0 ]; do
   if [ x$1 = x--with-nsupdate ]; then
     nsupdate="-e /^##--nsupdate--/,/^##--nsupdate--/s/^#//"
   else
-   if [ $?sysname = 0 ]; then
+   if [ x$sysname = x ]; then
      sysname=$1
     else
        echo "Unexpected argument: $1"
@@ -57,6 +57,8 @@ if [ "$sysname" = "" ]; then
       esac;;
     NetBSD)
       sysname=netbsd;;
+    OpenBSD)
+      sysname=openbsd;;
     FreeBSD)
       sysname=freebsd;;
     hpux)
@@ -67,6 +69,8 @@ if [ "$sysname" = "" ]; then
       sysname=qnx;;
     NEXTSTEP)
       sysname=nextstep;;
+    UnixWare)
+      sysname=uw7;;
   esac
 fi
 
@@ -87,10 +91,12 @@ if [ "$sysname" = "" ]; then
   echo "   sunos5-cc	Solaris 2.4 or higher with Sun cc"
   echo "   sunos5-gcc	Solaris 2.4 or higher with gcc"
   echo "   netbsd	NetBSD 1.1 or higher"
+  echo "   openbsd      OpenBSD (i386/alpha)"
   echo "   freebsd	FreeBSD"
   echo "   hpux		HP-UX"
   echo "   qnx		QNX 4.2 or higher"
   echo "   NEXTSTEP     NeXTSTEP"
+  echo "   UnixWare     SCO UnixWare version 7"
   exit 1;
 fi
 
