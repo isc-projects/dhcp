@@ -1,6 +1,6 @@
 	    Internet Software Consortium DHCP Distribution
-		    Version 3, Release Candidate 5
-			    May 10, 2001
+		    Version 3, Release Candidate 6
+			    May 11, 2001
 
 			    Release Notes
 
@@ -55,6 +55,28 @@ Measurement Systems, Igor Sharfmesser at Kazakh Telecom, and Brian
 Murrell at BC Tel Advanced Communications.  I'd like to express my
 thanks to all of these good people here, both for working on the code
 and for prodding me into improving it.
+
+		Changes since 3.0 Release Candidate 5
+
+- Fix a bug in omapi_object_dereference that prevented objects in
+  chains from having their reference counts decreased on dereference.
+
+- Fix a bug in omapi_object_dereference that would prevent object
+  chains from being freed upon removal of the last reference external
+  to the chain.
+
+- Fix a number of other memory leaks in the OMAPI protocol subsystem.
+
+- Add code in the OMAPI protocol handler to trace memory leakage.
+
+- Clean up the memory allocation/reference history printer.
+
+- Support input of dotted quads and colon-seperated hex lists as
+  attribute values in omshell.
+
+- Fix a typo in the linux interface discovery code.
+
+- Conditionalize a piece of trace code that wasn't conditional.
 
 		Changes since 3.0 Release Candidate 4
 
