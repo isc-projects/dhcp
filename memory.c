@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: memory.c,v 1.22 1996/11/08 20:09:10 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: memory.c,v 1.22.2.1 1997/03/29 08:15:35 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -227,6 +227,15 @@ void new_address_range (low, high, subnet, dynamic)
 		strcpy (netbuf, piaddr (subnet -> netmask));
 		error ("Address range %s to %s, netmask %s spans %s!",
 		       lowbuf, highbuf, netbuf, "multiple subnets");
+	}
+
+	/* Make sure that the addresses are on the correct subnet. */
+	if (!addr_eq (net, subnet -> net)) {
+		strcpy (lowbuf, piaddr (low));
+		strcpy (highbuf, piaddr (high));
+		strcpy (netbuf, piaddr (subnet -> netmask));
+		error ("Address range %s to %s not on net %s/%s!",
+		       lowbuf, highbuf, piaddr (subnet -> net), netbuf);
 	}
 
 	/* Get the high and low host addresses... */
@@ -443,7 +452,8 @@ int supersede_lease (comp, lease, commit)
 	   lease, then we allow that, in case a dynamic BOOTP lease is
 	   requested *after* a DHCP lease has been assigned. */
 
-	if (comp -> ends > cur_time &&
+	if (!(lease -> flags & ABANDONED_LEASE) &&
+	    comp -> ends > cur_time &&
 	    ((comp -> uid && (lease -> uid ||
 			      !(lease -> flags & DYNAMIC_BOOTP_OK)) &&
 	      (comp -> uid_len != lease -> uid_len ||
@@ -601,16 +611,18 @@ void release_lease (lease)
 /* Abandon the specified lease (set its timeout to infinity and its
    particulars to zero, and re-hash it as appropriate. */
 
-void abandon_lease (lease)
+void abandon_lease (lease, message)
 	struct lease *lease;
+	char *message;
 {
 	struct lease lt;
 
+	lease -> flags |= ABANDONED_LEASE;
 	lt = *lease;
-	lt.ends = 0xFFFFFFFF;
-	warn ("Abandoning IP address %s\n",
-	      piaddr (lease -> ip_addr));
-	lt.hardware_addr.htype = -1;
+	lt.ends = MAX_TIME;
+	warn ("Abandoning IP address %s: %s",
+	      piaddr (lease -> ip_addr), message);
+	lt.hardware_addr.htype = 0;
 	lt.hardware_addr.hlen = 0;
 	lt.uid = (unsigned char *)0;
 	lt.uid_len = 0;
@@ -806,7 +818,7 @@ struct class *add_class (type, name)
 		add_hash (user_class_hash,
 			  tname, strlen (tname), (unsigned char *)class);
 	else
-		add_hash (user_class_hash,
+		add_hash (vendor_class_hash,
 			  tname, strlen (tname), (unsigned char *)class);
 	return class;
 }
@@ -843,7 +855,9 @@ void write_leases ()
 
 	for (s = shared_networks; s; s = s -> next) {
 		for (l = s -> leases; l; l = l -> next) {
-			if (l -> hardware_addr.hlen || l -> uid_len)
+			if (l -> hardware_addr.hlen ||
+			    l -> uid_len ||
+			    (l -> flags & ABANDONED_LEASE))
 				if (!write_lease (l))
 					error ("Can't rewrite lease database");
 		}
