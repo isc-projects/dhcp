@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: print.c,v 1.51 2001/03/20 07:26:57 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: print.c,v 1.52 2001/04/09 00:36:45 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -177,6 +177,7 @@ void print_lease (lease)
 void dump_packet_option (struct option_cache *oc,
 			 struct packet *packet,
 			 struct lease *lease,
+			 struct client_state *client,
 			 struct option_state *in_options,
 			 struct option_state *cfg_options,
 			 struct binding_scope **scope,
@@ -193,11 +194,11 @@ void dump_packet_option (struct option_cache *oc,
 		name = "";
 		dot = "";
 	}
-	if (evaluate_option_cache (&ds, packet, lease,
+	if (evaluate_option_cache (&ds, packet, lease, client,
 				   in_options, cfg_options, scope, oc, MDL)) {
 		log_debug ("  option %s%s%s %s;\n",
 			   name, dot, oc -> option -> name,
-			   pretty_print_option (oc -> option -> code,
+			   pretty_print_option (oc -> option,
 						ds.data, ds.len, 1, 1));
 		data_string_forget (&ds, MDL);
 	}
@@ -232,6 +233,7 @@ void dump_packet (tp)
 		for (i = 0; i < tp -> options -> universe_count; i++) {
 			if (tp -> options -> universes [i]) {
 				option_space_foreach (tp, (struct lease *)0,
+						      (struct client_state *)0,
 						      (struct option_state *)0,
 						      tp -> options,
 						      &global_scope,
@@ -954,7 +956,7 @@ static unsigned print_subexpression (expr, buf, len)
 }
 
 void print_expression (name, expr)
-	char *name;
+	const char *name;
 	struct expression *expr;
 {
 	char buf [1024];
