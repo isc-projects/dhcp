@@ -18,6 +18,8 @@
 #include "cdefs.h"
 #include "osdep.h"
 
+#define _ns_flagdata MR_ns_flagdata
+
 #include "minires/resolv.h"
 #include "minires/res_update.h"
 #include "isc-dhcp/result.h"
