@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.32 1996/08/29 20:12:36 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.33 1996/09/05 23:52:10 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -450,6 +450,7 @@ void ack_lease (packet, lease, offer, when)
 {
 	struct lease lt;
 	TIME lease_time;
+	TIME offered_lease_time;
 
 	int bufs = 0;
 	struct packet outgoing;
@@ -461,12 +462,17 @@ void ack_lease (packet, lease, offer, when)
 	int result;
 
 	unsigned char lease_time_buf [4];
+	unsigned char lease_t1_buf [4];
+	unsigned char lease_t2_buf [4];
 	struct tree_cache lease_time_tree;
+	struct tree_cache lease_t1_tree;
+	struct tree_cache lease_t2_tree;
 	struct tree_cache dhcpoffer_tree;
 	struct tree_cache server_id_tree;
 	struct tree_cache vendor_class_tree;
 	struct tree_cache user_class_tree;
 	struct tree_cache hostname_tree;
+	struct tree_cache netmask_tree;
 
 	struct class *vendor_class, *user_class;
 	char *filename;
@@ -713,19 +719,18 @@ void ack_lease (packet, lease, offer, when)
 			tree = (struct tree *)0;
 
 		/* Sanity check the lease time. */
-		if ((lease->offered_expiry - cur_time) < 0)
-			putULong (lease_time_buf,
-				  (lease -> subnet ->
-				   group -> default_lease_time));
+		if ((lease->offered_expiry - cur_time) < 15)
+			offered_lease_time = (lease -> subnet ->
+					      group -> default_lease_time);
 		else if (lease -> offered_expiry - cur_time >
 			 lease -> subnet -> group -> max_lease_time) 
-			putULong (lease_time_buf,
-				  lease -> subnet -> group -> max_lease_time);
+			offered_lease_time = (lease -> subnet ->
+					      group -> max_lease_time);
 		else 
-			putULong (lease_time_buf,
-				  lease -> offered_expiry - cur_time);
+			offered_lease_time =
+				lease -> offered_expiry - cur_time;
 
-		putULong (lease_time_buf, lease -> offered_expiry - cur_time);
+		putULong (lease_time_buf, offered_lease_time);
 		options [DHO_DHCP_LEASE_TIME] = &lease_time_tree;
 		options [DHO_DHCP_LEASE_TIME] -> value = lease_time_buf;
 		options [DHO_DHCP_LEASE_TIME] -> len = sizeof lease_time_buf;
@@ -733,6 +738,29 @@ void ack_lease (packet, lease, offer, when)
 			buf_size = sizeof lease_time_buf;
 		options [DHO_DHCP_LEASE_TIME] -> timeout = 0xFFFFFFFF;
 		options [DHO_DHCP_LEASE_TIME] -> tree = (struct tree *)0;
+
+		/* Renewal time is lease time * 0.5. */
+		offered_lease_time /= 2;
+		putULong (lease_t1_buf, offered_lease_time);
+		options [DHO_DHCP_RENEWAL_TIME] = &lease_t1_tree;
+		options [DHO_DHCP_RENEWAL_TIME] -> value = lease_t1_buf;
+		options [DHO_DHCP_RENEWAL_TIME] -> len = sizeof lease_t1_buf;
+		options [DHO_DHCP_RENEWAL_TIME] ->
+			buf_size = sizeof lease_t1_buf;
+		options [DHO_DHCP_RENEWAL_TIME] -> timeout = 0xFFFFFFFF;
+		options [DHO_DHCP_RENEWAL_TIME] -> tree = (struct tree *)0;
+
+		/* Rebinding time is lease time * 0.875. */
+		offered_lease_time += (offered_lease_time / 2
+				       + offered_lease_time / 4);
+		putULong (lease_t2_buf, offered_lease_time);
+		options [DHO_DHCP_REBINDING_TIME] = &lease_t2_tree;
+		options [DHO_DHCP_REBINDING_TIME] -> value = lease_t2_buf;
+		options [DHO_DHCP_REBINDING_TIME] -> len = sizeof lease_t2_buf;
+		options [DHO_DHCP_REBINDING_TIME] ->
+			buf_size = sizeof lease_t2_buf;
+		options [DHO_DHCP_REBINDING_TIME] -> timeout = 0xFFFFFFFF;
+		options [DHO_DHCP_REBINDING_TIME] -> tree = (struct tree *)0;
 
 		/* If we used the vendor class the client specified, we
 		   have to return it. */
@@ -766,6 +794,17 @@ void ack_lease (packet, lease, offer, when)
 			options [DHO_DHCP_USER_CLASS_ID] ->
 				tree = (struct tree *)0;
 		}
+	}
+
+	/* Use the subnet mask from the subnet declaration if no other
+	   mask has been provided. */
+	if (!options [DHO_SUBNET_MASK]) {
+		options [DHO_SUBNET_MASK] = &netmask_tree;
+		netmask_tree.value = lease -> subnet -> netmask.iabuf;
+		netmask_tree.len = lease -> subnet -> netmask.len;
+		netmask_tree.buf_size = lease -> subnet -> netmask.len;
+		netmask_tree.timeout = 0xFFFFFFFF;
+		netmask_tree.tree = (struct tree *)0;
 	}
 
 	cons_options (packet, &outgoing, options, bufs);
@@ -1098,9 +1137,18 @@ struct lease *mockup_lease (packet, share, hp)
 	mock.next = mock.prev = (struct lease *)0;
 	mock.shared_network = mock.subnet -> shared_network;
 	mock.host = hp;
-	mock.uid_len = 0;
+
+	if (hp -> group -> options [DHO_DHCP_CLIENT_IDENTIFIER]) {
+		mock.uid = hp -> group ->
+			options [DHO_DHCP_CLIENT_IDENTIFIER] -> value;
+		mock.uid_len = hp -> group ->
+			options [DHO_DHCP_CLIENT_IDENTIFIER] -> len;
+	} else {
+		mock.uid = (unsigned char *)0;
+		mock.uid_len = 0;
+	}
+
 	mock.hardware_addr = hp -> interface;
-	mock.uid = (unsigned char *)0;
 	mock.starts = mock.timestamp = mock.ends = MIN_TIME;
 	mock.flags = STATIC_LEASE;
 	return &mock;
