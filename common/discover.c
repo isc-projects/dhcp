@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: discover.c,v 1.12 1999/09/09 21:00:46 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: discover.c,v 1.13 1999/09/09 23:26:11 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -69,7 +69,7 @@ void discover_interfaces (state)
 			(&dhcp_type_interface, "interface",
 			 interface_set_value, interface_get_value,
 			 interface_destroy, interface_signal_handler,
-			 interface_stuff_values, 0, 0);
+			 interface_stuff_values, 0, 0, 0);
 		if (status != ISC_R_SUCCESS)
 			log_fatal ("Can't create interface object type: %s",
 				   isc_result_totext (status));
