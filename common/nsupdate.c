@@ -25,7 +25,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: nsupdate.c,v 1.3.2.5 1999/10/25 20:26:53 mellon Exp $ Copyright (c) 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: nsupdate.c,v 1.3.2.6 1999/10/26 15:12:57 mellon Exp $ Copyright (c) 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -39,7 +39,7 @@ static char copyright[] =
    remove PTR, add PTR */
 
 /* Return the forward name of a lease. */
-char *ddns_rev_name(lease, state, packet)
+char *ddns_rev_name (lease, state, packet)
 	struct lease *lease;
 	struct lease_state *state;
 	struct packet *packet;
@@ -63,7 +63,7 @@ char *ddns_rev_name(lease, state, packet)
 				       packet -> options, lease, oc);
 	if (lease -> ip_addr.len != 4) { /* IPv4 */
 		log_error("unsupported IP address length: %d",
-			  lease->ip_addr.len);
+			  lease -> ip_addr.len);
 		return NULL;
 	}
 	
@@ -95,7 +95,7 @@ char *ddns_rev_name(lease, state, packet)
 }
 
 /* Return the forward name of a lease. */
-char *ddns_fwd_name(lease, state, packet)
+char *ddns_fwd_name (lease, state, packet)
 	struct lease *lease;
 	struct lease_state *state;
 	struct packet *packet;
@@ -173,7 +173,7 @@ char *ddns_fwd_name(lease, state, packet)
 	data_string_forget (&domain, "ddns-fwd-name");
 	data_string_forget (&hostname, "ddns-fwd-name");
 	
-	if (!res_hnok(rv) ) {
+	if (!res_hnok (rv) ) {
 		log_error("nsupdate: Bad hostname \"%s\"", rv);
 		dfree (rv, "ddns-fwd-name");
 		return NULL;
@@ -181,84 +181,74 @@ char *ddns_fwd_name(lease, state, packet)
 	return rv;
 }
 
-int nsupdateA(hostname, ip_addr, ttl, opcode)
+int nsupdateA (hostname, ip_addr, ttl, opcode)
 	char *hostname;
 	char *ip_addr;
 	u_int32_t ttl;
-	int	opcode;
+	int opcode;
 {
-	int 	z;
-	ns_updrec	*u, *n;
+	int z;
+	ns_updrec *u, *n;
 	ns_updque listuprec;
 	static struct __res_state res;
 
+	res_ninit(&res);
+	INIT_LIST(listuprec);
+
 	switch (opcode) {
-	case ADD:
-		if (!(u = res_mkupdrec(S_PREREQ, hostname, C_IN, T_A, 0))) 
+	      case ADD:
+		if (!(u = res_mkupdrec (S_PREREQ, hostname, C_IN, T_A, 0))) 
 			return 0;
-		u->r_opcode = NXRRSET; u->r_data = NULL; u->r_size = 0;
-		INIT_LIST(listuprec);
+		u -> r_opcode = NXRRSET;
+		u -> r_data = NULL;
+		u -> r_size = 0;
 		APPEND (listuprec, u, r_link);
-		if (!(n = res_mkupdrec(S_UPDATE, hostname, C_IN, T_A, ttl))) {
-			res_freeupdrec(u);
+		if (!(n = res_mkupdrec (S_UPDATE, hostname, C_IN, T_A, ttl))) {
+			res_freeupdrec (u);
 			return 0;
 		}
-		n->r_opcode = opcode;
-		n->r_data = (unsigned char *)ip_addr;
-		n->r_size = strlen (ip_addr);
-		APPEND(listuprec, n, r_link);
-		res_ninit(&res);
-		z = res_nupdate(&res, HEAD(listuprec), NULL);
-		log_info("add %s: %s %d IN A %s",
-			 z == 1 ? "succeeded" : "failed", hostname, ttl,
-			 n->r_data);
-
-		while (!EMPTY(listuprec)) {
-			ns_updrec *tmprrecp = HEAD(listuprec);
-			UNLINK(listuprec, tmprrecp, r_link);
-			res_freeupdrec(tmprrecp);
-		}
-
-/* do we really need to do this?  If so, it needs to be done elsewehere as
-   this function is strictly for manipulating the A record
-		if (z < 1) 
-			return 0;
-*/
-		/* delete all PTR RRs with the same ip address. Wow! */
-/*
-		if (!(u = res_mkupdrec(S_UPDATE, revname, C_IN, T_PTR, 0)))
-			return 0;
-		u->r_opcode = DELETE; u->r_data = NULL; u->r_size = 0;
-		log_info("cleaning all PTR RRs for %s", revname);
-		res_update(u);
-		res_freeupdrec(u);
-*/
+		n -> r_opcode = opcode;
+		n -> r_data = (unsigned char *)ip_addr;
+		n -> r_size = strlen (ip_addr);
+		APPEND (listuprec, n, r_link);
+		z = res_nupdate (&res, HEAD (listuprec), NULL);
+		log_info ("add %s: %s %d IN A %s",
+			  z == 1 ? "succeeded" : "failed", hostname, ttl,
+			  n -> r_data);
 		break;
-	case	DELETE:
+
+	      case DELETE:
 		ttl = 0;
-		if (!(u = res_mkupdrec(S_UPDATE, hostname, C_IN, T_A, ttl)))
+		if (!(u = res_mkupdrec (S_UPDATE, hostname, C_IN, T_A, ttl)))
 			return 0;
-		u->r_opcode = opcode;
-		u->r_data = (unsigned char *)ip_addr;
-		u->r_size = strlen (ip_addr);
-		z = res_update(u);
-		log_info("delete %s: %s %d IN A %s",
-			 z == 1 ? "succeeded" : "failed",
-			 hostname, ttl, u->r_data);
-		res_freeupdrec(u);
+		u -> r_opcode = opcode;
+		u -> r_data = (unsigned char *)ip_addr;
+		u -> r_size = strlen (ip_addr);
+		APPEND (listuprec, u, r_link);
+		z = res_nupdate (&res, HEAD (listuprec), NULL);
+		log_info ("delete %s: %s %ld IN A %s",
+			  z == 1 ? "succeeded" : "failed",
+			  hostname, (unsigned long)ttl, u->r_data);
 		break;
 	}
+
+	while (!EMPTY (listuprec)) {
+		ns_updrec *tmprrecp = HEAD (listuprec);
+		UNLINK (listuprec, tmprrecp, r_link);
+		res_freeupdrec (tmprrecp);
+	}
+
 	return z;
 }
 
-int nsupdatePTR(hostname, revname, ttl, opcode)
+int nsupdatePTR (hostname, revname, ttl, opcode)
 	char *hostname;
 	char *revname;
 	u_int32_t ttl;
-	int	opcode;
+	int opcode;
 {
-	int 	z;
-	ns_updrec	*u, *n;
+	int z;
+	ns_updrec *u, *n;
 	ns_updque listuprec;
 	static struct __res_state res;
 
@@ -266,46 +256,48 @@ int nsupdatePTR(hostname, revname, ttl, opcode)
 		ttl = 0;
 		n = 0;
 	} else {
-		if (!(n = res_mkupdrec(S_UPDATE, revname, C_IN, T_PTR, 0)))
+		if (!(n = res_mkupdrec (S_UPDATE, revname, C_IN, T_PTR, 0)))
 			return 0;
-		n->r_opcode = DELETE; n->r_data = NULL; n->r_size = 0;
+		n -> r_opcode = DELETE;
+		n -> r_data = NULL;
+		n -> r_size = 0;
 	}
-	if (!(u = res_mkupdrec(S_UPDATE, revname, C_IN, T_PTR, ttl)))
+	if (!(u = res_mkupdrec (S_UPDATE, revname, C_IN, T_PTR, ttl)))
 		return 0;
-	u->r_opcode = opcode;
-	u->r_data = (unsigned char *)hostname;
-	u->r_size = strlen(hostname);
-	INIT_LIST(listuprec);
+	u -> r_opcode = opcode;
+	u -> r_data = (unsigned char *)hostname;
+	u -> r_size = strlen (hostname);
+	INIT_LIST (listuprec);
 	APPEND (listuprec, u, r_link);
 	if (n) {
 		APPEND(listuprec, n, r_link);
 	}
-	res_ninit(&res);
-	z = res_nupdate(&res, HEAD(listuprec), NULL);
-	log_info("%s %s: %s %d IN PTR %s", 
-		 opcode == ADD ? "add" : 
-				 "delete", z == 1 ? "succeeded" : "failed",
-		 revname, ttl, hostname);
-	while (!EMPTY(listuprec)) {
-		ns_updrec *tmprrecp = HEAD(listuprec);
-		UNLINK(listuprec, tmprrecp, r_link);
-		res_freeupdrec(tmprrecp);
+	res_ninit (&res);
+	z = res_nupdate (&res, HEAD (listuprec), NULL);
+	log_info ("%s %s: %s %ld IN PTR %s", 
+		  opcode == ADD ? "add" : "delete",
+		  z == 1 ? "succeeded" : "failed",
+		 revname, (unsigned long)ttl, hostname);
+	while (!EMPTY (listuprec)) {
+		ns_updrec *tmprrecp = HEAD (listuprec);
+		UNLINK (listuprec, tmprrecp, r_link);
+		res_freeupdrec (tmprrecp);
 	}
 	return z;
 }
 
-void nsupdate(lease, state, packet, opcode)
+void nsupdate (lease, state, packet, opcode)
 	struct lease *lease;
 	struct lease_state *state;
 	struct packet *packet;
-	int	opcode;
+	int opcode;
 {
-	char	*hostname, *revname;
-	u_int32_t	ttl = 0;
+	char *hostname, *revname;
+	u_int32_t ttl = 0;
 
 	if (!(opcode == ADD || opcode == DELETE))
 		return;
-
+	
 	if (!lease){
 		log_info("invalid pointer at %s:%d",
 			 __FILE__, __LINE__-2);
@@ -335,47 +327,48 @@ void nsupdate(lease, state, packet, opcode)
 			return;
 		}
 
-		hostname = ddns_fwd_name(lease, state, packet);
+		hostname = ddns_fwd_name (lease, state, packet);
 		if (!hostname)	/* there is nothing we can do now */
 			return;
-		revname = ddns_rev_name(lease, state, packet);
+		revname = ddns_rev_name (lease, state, packet);
 		
 		if (state -> offered_expiry > cur_time)
 			ttl = state -> offered_expiry - cur_time;
 		else
 			log_error("nsupdate: ttl < 0");
 
-		/* delete an existing A if the one to be added is different */
+		/* Delete the existing A if the one to be added is different */
 		if (lease -> ddns_fwd_name &&
-		    strcmp(hostname, lease -> ddns_fwd_name)) {
+		    strcmp (hostname, lease -> ddns_fwd_name)) {
 			int y;
-			y=nsupdateA(lease -> ddns_fwd_name,
-				    piaddr(lease->ip_addr), ttl, DELETE);
+			y = nsupdateA (lease -> ddns_fwd_name,
+				       piaddr (lease -> ip_addr), ttl, DELETE);
 
 			/* delete an existing PTR if new one is different */
 			if (lease -> ddns_rev_name &&
 			    (strcmp(hostname, lease -> ddns_fwd_name) ||
 			     strcmp(revname, lease -> ddns_rev_name)) &&
-			    nsupdatePTR(lease -> ddns_fwd_name, revname,
-					      ttl, DELETE)) {
+			    nsupdatePTR (lease -> ddns_fwd_name, revname,
+					 ttl, DELETE)) {
 				/* clear the forward DNS name pointer */
 				if (lease -> ddns_rev_name)
-					dfree(lease -> ddns_rev_name,
-					      "nsupdate");
+					dfree (lease -> ddns_rev_name,
+					       "nsupdate");
 				lease -> ddns_rev_name = 0;
 			}
 			if (y) {
 				/* clear the forward DNS name pointer */
 				if (lease -> ddns_fwd_name)
-					dfree(lease -> ddns_fwd_name,
-					      "nsupdate");
+					dfree (lease -> ddns_fwd_name,
+					       "nsupdate");
 				lease -> ddns_fwd_name = 0;
 			}
 		}
 		/* only update if there is no A record there already */
 		if (!lease -> ddns_fwd_name) {
 			int z;
-		    	z=nsupdateA(hostname, piaddr(lease->ip_addr), ttl, ADD);
+		    	z = nsupdateA (hostname, piaddr (lease -> ip_addr),
+				       ttl, ADD);
 			if (z < 1) {
 				dfree (hostname, "nsupdate");
 				if (revname)
@@ -393,13 +386,6 @@ void nsupdate(lease, state, packet, opcode)
 				dfree (hostname, "nsupdate");
 			return;
 		}
-
-	/* This is where a deletion of all PTRs for this addy could
-	   go, but I am reluctant to overburden the DHCP and DNS
-	   servers with requests that should be invalid if this is
-	   really a problem then somebody else is inserting PTRs and
-	   they should stop, rather than this being turned into a
-	   garbage cleanup routine */
 
 		if (!lease -> ddns_rev_name && lease -> ddns_fwd_name) {
 			/* add a PTR RR */
@@ -419,13 +405,14 @@ void nsupdate(lease, state, packet, opcode)
 		ttl = 0;
 		if (lease -> ddns_fwd_name) {
 			int y;
-			y = nsupdateA(lease -> ddns_fwd_name,
-				      piaddr(lease->ip_addr), ttl, DELETE);
+			y = nsupdateA (lease -> ddns_fwd_name,
+				       piaddr (lease -> ip_addr), ttl, DELETE);
 
 
 			if (lease -> ddns_rev_name &&
-			    nsupdatePTR(lease -> ddns_fwd_name,
-					lease -> ddns_rev_name, ttl, opcode)) {
+			    nsupdatePTR (lease -> ddns_fwd_name,
+					 lease -> ddns_rev_name, ttl, opcode))
+			{
 				/* clear the reverse DNS name pointer */
 				if (lease -> ddns_rev_name)
 					dfree(lease -> ddns_rev_name,
