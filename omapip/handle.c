@@ -89,7 +89,7 @@ isc_result_t omapi_object_handle (omapi_handle_t *h, omapi_object_t *o)
 		new = malloc (sizeof *new);
 		if (!new)
 			return ISC_R_NOMEMORY;
-		memset (omapi_handle_table, 0, sizeof *omapi_handle_table);
+		memset (new, 0, sizeof *new);
 		new -> first = 0;
 		new -> limit = (omapi_handle_table -> limit *
 					       OMAPI_HANDLE_TABLE_SIZE);
