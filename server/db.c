@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: db.c,v 1.25.2.4 2000/07/01 05:09:55 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: db.c,v 1.25.2.5 2000/07/01 05:39:54 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -185,26 +185,6 @@ int db_printable (s)
 	return 1;
 }
 
-void write_billing_classes ()
-{
-	struct collection *lp;
-	struct class *cp;
-	struct hash_bucket *bp;
-	int i;
-
-	for (lp = collections; lp; lp = lp -> next) {
-	    for (cp = lp -> classes; cp; cp = cp -> nic) {
-		if (cp -> spawning && cp -> hash) {
-		    for (i = 0; i < cp -> hash -> hash_count; i++) {
-			for (bp = cp -> hash -> buckets [i]; bp;
-			     bp = bp -> next)
-			    write_billing_class ((struct class *)bp -> value);
-		    }
-		}
-	    }
-	}
-}
-
 /* Write a spawned class to the database file. */
 
 int write_billing_class (class)
@@ -339,7 +319,6 @@ void new_lease_file ()
 
 	/* Write out all the leases that we know of... */
 	counting = 0;
-	write_billing_classes ();
 	write_leases ();
 
 	/* Get the old database out of the way... */

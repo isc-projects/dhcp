@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: memory.c,v 1.52.2.13 2000/07/01 04:50:09 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: memory.c,v 1.52.2.14 2000/07/01 05:39:47 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -536,8 +536,11 @@ int supersede_lease (comp, lease, commit)
 	
 	/* If the lease has been billed to a class, remove the billing. */
 	if (comp -> billing_class &&
-	    comp -> billing_class != lease -> billing_class)
+	    comp -> billing_class != lease -> billing_class) {
 		unbill_class (comp, comp -> billing_class);
+		if (lease -> billing_class)
+			bill_class (comp, lease -> billing_class);
+	}
 
 	/* Copy the data files, but not the linkages. */
 	comp -> starts = lease -> starts;
