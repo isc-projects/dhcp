@@ -12,19 +12,19 @@ SSYYNNOOPPSSIISS
        ] ] _s_e_r_v_e_r_0 [ _._._._s_e_r_v_e_r_N ]
 
 DDEESSCCRRIIPPTTIIOONN
-       The  Internet Software Consortium DHCP Relay Agent, dhcre­
+       The  Internet Software Consortium DHCP Relay Agent, dhcre-
        lay, provides a means for relaying DHCP and BOOTP requests
-       from  a  subnet  to  which no DHCP server is directly con­
+       from  a  subnet  to  which no DHCP server is directly con-
        nected to one or more DHCP servers on other subnets.
 
 OOPPEERRAATTIIOONN
        The DHCP Relay Agent listens  for  DHCP  requests  on  all
-       interfaces  attached  to a host, unless one or more inter­
+       interfaces  attached  to a host, unless one or more inter-
        faces are specified on the command line with the _-_i  flag.
 
        When a query is received, dhcrelay forwards it to the list
        of DHCP servers specified on the command  line.    When  a
-       reply  is received, it is broadcast or unicast on the net­
+       reply  is received, it is broadcast or unicast on the net-
        work from whence the original request came.
 
        It is possible to specify a set  of  interfaces  on  which
@@ -33,7 +33,7 @@ OOPPEERRAATTIIOONN
        DHCP  server,  but  is connected on another interface to a
        network on which there is a DHCP server, it will not relay
        DHCP  and  BOOTP  requests  from  the network on which the
-       server exists to that server.   This is an imperfect solu­
+       server exists to that server.   This is an imperfect solu-
        tion.
 
 CCOOMMMMAANNDD LLIINNEE
@@ -41,7 +41,7 @@ CCOOMMMMAANNDD LLIINNEE
        attempt to configure may be specified on the command  line
        using  the _-_i option.  If no interface names are specified
        on the command line dhcrelay  will  identify  all  network
-       interfaces, elimininating non-broadcast interfaces if pos­
+       interfaces, elimininating non-broadcast interfaces if pos-
        sible, and attempt to configure each interface.
 
        If dhcrelay should listen and transmit  on  a  port  other

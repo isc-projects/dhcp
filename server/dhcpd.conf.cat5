@@ -14,9 +14,9 @@ DDEESSCCRRIIPPTTIIOONN
        The dhcpd.conf file is a free-form ASCII text  file.    It
        is  parsed  by  the  recursive-descent  parser  built into
        dhcpd.   The file may contain extra tabs and newlines  for
-       formatting purposes.  Keywords in the file are case-insen­
+       formatting purposes.  Keywords in the file are case-insen-
        sitive.   Comments may be placed anywhere within the  file
-       (except  within quotes).   Comments begin with the # char­
+       (except  within quotes).   Comments begin with the # char-
        acter and end at the end of the line.
 
        The file essentially consists of  a  list  of  statements.
@@ -26,10 +26,10 @@ DDEESSCCRRIIPPTTIIOONN
        Parameter statements either say how to do something (e.g.,
        how long a lease to offer), whether to do something (e.g.,
        should dhcpd provide addresses  to  unknown  clients),  or
-       what  parameters to provide to the client (e.g., use gate­
+       what  parameters to provide to the client (e.g., use gate-
        way 220.177.244.7).
 
-       Declarations are used to describe the topology of the net­
+       Declarations are used to describe the topology of the net-
        work,  to  describe  clients  on  the  network, to provide
        addresses that can be assigned to clients, or to  apply  a
        group  of  parameters to a group of declarations.   In any
@@ -40,15 +40,15 @@ DDEESSCCRRIIPPTTIIOONN
        Declarations about network topology include the
         _s_h_a_r_e_d_-_n_e_t_w_o_r_k and the _s_u_b_n_e_t declarations.   If  clients
        on  a  subnet  are to be assigned addresses dynamically, a
-       _r_a_n_g_e declaration must appear within the  _s_u_b_n_e_t  declara­
+       _r_a_n_g_e declaration must appear within the  _s_u_b_n_e_t  declara-
        tion.   For clients with statically assigned addresses, or
        for installations where only known clients will be served,
-       each such client must have a _h_o_s_t declaration.   If param­
+       each such client must have a _h_o_s_t declaration.   If param-
        eters are to be applied to a group of  declarations  which
        are  not related strictly on a per-subnet basis, the _g_r_o_u_p
        declaration can be used.
 
-       For every subnet which will be served, and for every  sub­
+       For every subnet which will be served, and for every  sub-
        net  to  which the dhcp server is connected, there must be
        one _s_u_b_n_e_t declaration, which tells dhcpd how to recognize
        that  an  address is on that subnet.  A _s_u_b_n_e_t declaration
@@ -72,18 +72,18 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
 
        a department  with  a  single  physical  ethernet  network
        expands  to the point where it has more than 254 nodes, it
-       may be necessary to run two 8-bit subnets on the same eth­
+       may be necessary to run two 8-bit subnets on the same eth-
        ernet  until  such  time  as a new physical network can be
        added.   In this case, the _s_u_b_n_e_t declarations  for  these
-       two  networks may be enclosed in a _s_h_a_r_e_d_-_n_e_t_w_o_r_k declara­
+       two  networks may be enclosed in a _s_h_a_r_e_d_-_n_e_t_w_o_r_k declara-
        tion.
 
        Some sites may have departments which have clients on more
        than  one  subnet,  but it may be desirable to offer those
        clients a uniform set of parameters  which  are  different
-       than  what  would be offered to clients from other depart­
+       than  what  would be offered to clients from other depart-
        ments on the same subnet.    For  clients  which  will  be
-       declared explicitly with _h_o_s_t declarations, these declara­
+       declared explicitly with _h_o_s_t declarations, these declara-
        tions can be enclosed in a _g_r_o_u_p  declaration  along  with
        the  parameters which are common to that department.   For
        clients whose  addresses  will  be  dynamically  assigned,
@@ -91,7 +91,7 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
        other than by network topology.
 
        When a client is to be booted,  its  boot  parameters  are
-       determined by first consulting that client's _h_o_s_t declara­
+       determined by first consulting that client's _h_o_s_t declara-
        tion (if any), then consulting the _g_r_o_u_p  declaration  (if
        any) which enclosed that _h_o_s_t declaration, then consulting
        the _s_u_b_n_e_t declaration for the subnet on which the  client
@@ -102,7 +102,7 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
 
        When dhcpd tries to find a _h_o_s_t declaration for a  client,
        it  first  looks for a _h_o_s_t declaration which has a _f_i_x_e_d_-
-       _a_d_d_r_e_s_s parameter which matches the subnet or shared  net­
+       _a_d_d_r_e_s_s parameter which matches the subnet or shared  net-
        work  on which the client is booting.   If it doesn't find
        any such entry, it then tries to find an entry  which  has
        no  _f_i_x_e_d_-_a_d_d_r_e_s_s  parameter.   If no such entry is found,
@@ -202,8 +202,8 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
 dhcpd.conf(5)                                       dhcpd.conf(5)
 
 
-       The most obvious reason for having subnet-specific parame­
-       ters  as  shown in Figure 1 is that each subnet, of neces­
+       The most obvious reason for having subnet-specific parame-
+       ters  as  shown in Figure 1 is that each subnet, of neces-
        sity, has its own router.   So for the first  subnet,  for
        example, there should be something like:
 
@@ -211,23 +211,23 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
 
        Note  that  the  address  here  is  specified numerically.
        This is not required - if you have a different domain name
-       for  each interface on your router, it's perfectly legiti­
+       for  each interface on your router, it's perfectly legiti-
        mate to use the domain name for that interface instead  of
        the numeric address.   However, in many cases there may be
        only one domain name for all of a router's  IP  addresses,
        and it would not be appropriate to use that name here.
 
-       In  Figure  1  there is also a _g_r_o_u_p statement, which pro­
+       In  Figure  1  there is also a _g_r_o_u_p statement, which pro-
        vides common parameters for a set of three hosts -  zappo,
        beppo  and  harpo.  As you can see, these hosts are all in
        the test.isc.org domain, so it  might  make  sense  for  a
-       group-specific  parameter to override the domain name sup­
+       group-specific  parameter to override the domain name sup-
        plied to these hosts:
 
             option domain-name "test.isc.org";
 
        Also, given the domain they're in, these are probably test
-       machines.   If  we  wanted to test the DHCP leasing mecha­
+       machines.   If  we  wanted to test the DHCP leasing mecha-
        nism, we might set the lease timeout somewhat shorter than
        the default:
 
@@ -252,7 +252,7 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
        be applied according to the scope in which  the  parameter
        appears.
 
-       Imagine  that  you  have a site with a lot of NCD X-Termi­
+       Imagine  that  you  have a site with a lot of NCD X-Termi-
        nals.   These terminals come in a variety of  models,  and
        you  want to specify the boot files for each models.   One
        way to do this would be to have host declarations for each
@@ -305,7 +305,7 @@ RREEFFEERREENNCCEE:: DDEECCLLAARRAATTIIOONNSS
         }}
 
        The  _s_h_a_r_e_d_-_n_e_t_w_o_r_k  statement  is used to inform the DHCP
-       server that some IP subnets actually share the same physi­
+       server that some IP subnets actually share the same physi-
        cal  network.   Any  subnets in a shared network should be
        declared within a  _s_h_a_r_e_d_-_n_e_t_w_o_r_k  statement.   Parameters
        specified  in  the  _s_h_a_r_e_d_-_n_e_t_w_o_r_k  statement will be used
@@ -345,7 +345,7 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
 
        The  _s_u_b_n_e_t statement is used to provide dhcpd with enough
        information to tell whether or not an  IP  address  is  on
-       that  subnet.   It may also be used to provide subnet-spe­
+       that  subnet.   It may also be used to provide subnet-spe-
        cific parameters and to  specify  what  addresses  may  be
        dynamically  allocated  to clients booting on that subnet.
        Such addresses are specified using the _r_a_n_g_e  declaration.
@@ -358,7 +358,7 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
        are sufficient to determine whether any given  IP  address
        is on the specified subnet.
 
-       Although  a netmask must be given with every subnet decla­
+       Although  a netmask must be given with every subnet decla-
        ration, it is recommended that if there is any variance in
        subnet  masks at a site, a subnet-mask option statement be
        used in each subnet declaration to set the desired  subnet
@@ -369,14 +369,14 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
 
         rraannggee [ ddyynnaammiicc--bboooottpp ] _l_o_w_-_a_d_d_r_e_s_s [ _h_i_g_h_-_a_d_d_r_e_s_s];;
 
-       For any subnet on which addresses will be assigned dynami­
+       For any subnet on which addresses will be assigned dynami-
        cally,  there  must be at least one _r_a_n_g_e statement.   The
        range statement gives the lowest and highest IP  addresses
        in  a  range.   All IP addresses in the range should be in
        the subnet in which the _r_a_n_g_e statement is declared.   The
        _d_y_n_a_m_i_c_-_b_o_o_t_p  flag  may  be specified if addresses in the
        specified range  may  be  dynamically  assigned  to  BOOTP
-       clients  as well as DHCP clients.   When specifying a sin­
+       clients  as well as DHCP clients.   When specifying a sin-
        gle address, _h_i_g_h_-_a_d_d_r_e_s_s can be omitted.
 
        TThhee _h_o_s_t ssttaatteemmeenntt
@@ -406,7 +406,7 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
        If  it  is  desirable  to  be able to boot a DHCP or BOOTP
        client on more than one subnet with fixed addresses,  more
        than  one  address  may  be specified in the _f_i_x_e_d_-_a_d_d_r_e_s_s
-       parameter, or more than one hhoosstt statement may  be  speci­
+       parameter, or more than one hhoosstt statement may  be  speci-
        fied.
 
        If  client-specific  boot  parameters must change based on
@@ -414,9 +414,9 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
        hhoosstt statements should be used.
 
        If  a client is to be booted using a fixed address if it's
-       possible, but should be allocated a dynamic address other­
+       possible, but should be allocated a dynamic address other-
        wise,  then  a  hhoosstt statement must be specified without a
-       ffiixxeedd--aaddddrreessss clause.  _h_o_s_t_n_a_m_e should be a name identify­
+       ffiixxeedd--aaddddrreessss clause.  _h_o_s_t_n_a_m_e should be a name identify-
        ing  the  host.  If a _h_o_s_t_n_a_m_e option is not specified for
        the host, _h_o_s_t_n_a_m_e is used.
 
@@ -425,7 +425,7 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
        specified in the _h_o_s_t declaration to the one  supplied  by
        the client, or, if the _h_o_s_t declaration or the client does
        not provide a dhcp-client-identifier option,  by  matching
-       the _h_a_r_d_w_a_r_e parameter in the _h_o_s_t declaration to the net­
+       the _h_a_r_d_w_a_r_e parameter in the _h_o_s_t declaration to the net-
        work hardware address  supplied  by  the  client.    BOOTP
        clients  do not normally provide a _d_h_c_p_-_c_l_i_e_n_t_-_i_d_e_n_t_i_f_i_e_r,
        so the hardware address must be used for all clients  that
@@ -574,8 +574,8 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
        then when the  client  boots,  it  will  be  assigned  the
        address  which  corresponds  to the network on which it is
        booting.  If none of the addresses  in  the  _f_i_x_e_d_-_a_d_d_r_e_s_s
-       statement  are on the network on which the client is boot­
-       ing, that client will not match the _h_o_s_t declaration  con­
+       statement  are on the network on which the client is boot-
+       ing, that client will not match the _h_o_s_t declaration  con-
        taining that _f_i_x_e_d_-_a_d_d_r_e_s_s statement.  Each _a_d_d_r_e_s_s should
        be either an IP address or a domain name which resolves to
        one or more IP addresses.
@@ -628,7 +628,7 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
        clients.    At  some  sites,  it may be possible to assume
        that a lease is no longer in use if  its  holder  has  not
        used  BOOTP  or  DHCP  to get its address within a certain
-       time period.   The period is specified in _l_e_n_g_t_h as a num­
+       time period.   The period is specified in _l_e_n_g_t_h as a num-
        ber  of  seconds.   If a client reboots using BOOTP during
        the timeout period, the lease duration is reset to _l_e_n_g_t_h,
        so  a BOOTP client that boots frequently enough will never
@@ -665,7 +665,7 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
 
 
        scope, then for every host declaration within that  scope,
-       the  name  provided  for the host declaration will be sup­
+       the  name  provided  for the host declaration will be sup-
        plied to the client as its hostname.   So, for example,
 
            group {
@@ -694,12 +694,12 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
 
         nnoott aauutthhoorriittaattiivvee;;
 
-       The DHCP server will normally assume that  the  configura­
+       The DHCP server will normally assume that  the  configura-
        tion information about a given network segment is known to
        be correct and is authoritative.   So if a client requests
        an  IP  address on a given network segment that the server
        knows is not valid  for  that  segment,  the  server  will
-       respond with a DHCPNAK message, causing the client to for­
+       respond with a DHCPNAK message, causing the client to for-
        get its IP address and try to get a new one.
 
        If a DHCP server is being configured by  somebody  who  is
@@ -731,10 +731,10 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
 
 
        that is not contained within a  shared-network  statement.
-       It is not meaningful to specify that the server is author­
+       It is not meaningful to specify that the server is author-
        itative for some subnets within a shared network, but  not
        authoritative  for others, nor is it meaningful to specify
-       that the server is authoritative for  some  host  declara­
+       that the server is authoritative for  some  host  declara-
        tions and not others.
 
        TThhee _u_s_e_-_l_e_a_s_e_-_a_d_d_r_-_f_o_r_-_d_e_f_a_u_l_t_-_r_o_u_t_e ssttaatteemmeenntt
@@ -742,7 +742,7 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
         uussee--lleeaassee--aaddddrr--ffoorr--ddeeffaauulltt--rroouuttee _f_l_a_g;;
 
        If  the _u_s_e_-_l_e_a_s_e_-_a_d_d_r_-_f_o_r_-_d_e_f_a_u_l_t_-_r_o_u_t_e parameter is true
-       in a given scope, then instead of sending the value speci­
+       in a given scope, then instead of sending the value speci-
        fied  in  the routers option (or sending no value at all),
        the IP address of the lease being assigned is sent to  the
        client.   This supposedly causes Win95 machines to ARP for
@@ -799,16 +799,16 @@ dhcpd.conf(5)                                       dhcpd.conf(5)
        address for the DHCP server, and must be reachable by  all
        clients served by a particular scope.
 
-       The  use  of the server-identifier statement is not recom­
+       The  use  of the server-identifier statement is not recom-
        mended - the only reason to use it is  to  force  a  value
        other than the default value to be sent on occasions where
        the default value would be incorrect.   The default  value
-       is  the first IP address associated with the physical net­
+       is  the first IP address associated with the physical net-
        work interface on which the request arrived.
 
        The usual case where the _s_e_r_v_e_r_-_i_d_e_n_t_i_f_i_e_r statement needs
        to  be sent is when a physical interface has more than one
-       IP address, and the one being sent by default isn't appro­
+       IP address, and the one being sent by default isn't appro-
        priate  for  some or all clients served by that interface.
        Another common case is when an alias is  defined  for  the
        purpose  of  having  a  consistent IP address for the DHCP
@@ -828,7 +828,7 @@ SSEEEE AALLSSOO
 AAUUTTHHOORR
        ddhhccppdd((88)) was written by Ted Lemon <mellon@vix.com> under a
        contract with Vixie Labs.   Funding for this  project  was
-       provided  by  the Internet Software Corporation.  Informa­
+       provided  by  the Internet Software Corporation.  Informa-
        tion about the Internet Software Consortium can  be  found
        at hhttttpp::////wwwwww..iisscc..oorrgg//iisscc..
 

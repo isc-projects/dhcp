@@ -21,8 +21,8 @@ DDEESSCCRRIIPPTTIIOONN
        character and end at the end of the line.
 
        The  dhclient.conf  file  can  be  used  to  configure the
-       behaviour of the client in a wide variety of ways:  proto­
-       col  timing, information requested from the server, infor­
+       behaviour of the client in a wide variety of ways:  proto-
+       col  timing, information requested from the server, infor-
        mation required of the server,  defaults  to  use  if  the
        server  does  not provide certain information, values with
        which to override information provided by the  server,  or
@@ -49,7 +49,7 @@ PPRROOTTOOCCOOLL TTIIMMIINNGG
        must  pass  between the time that the client begins to try
        to determine its address and the time that it decides that
        it's  not  going  to  be  able  to  contact a server.   By
-       default, this timeout is sixty seconds.   After the  time­
+       default, this timeout is sixty seconds.   After the  time-
        out  has passed, if there are any static leases defined in
        the configuration file, or any  leases  remaining  in  the
        lease  database that have not yet expired, the client will
@@ -87,7 +87,7 @@ dhclient.conf(5)                                 dhclient.conf(5)
        more than one DHCP server serving any given network.    In
        this  case,  it is possible that a client may be sent more
        than one offer in response to its initial lease  discovery
-       message.    It  may be that one of these offers is prefer­
+       message.    It  may be that one of these offers is prefer-
        able to the other (e.g., one offer may  have  the  address
        the client previously used, and the other may not).
 
@@ -119,7 +119,7 @@ dhclient.conf(5)                                 dhclient.conf(5)
         bbaacckkooffff--ccuuttooffff _t_i_m_e;;
 
        The client uses an exponential backoff algorithm with some
-       randomness, so that if many clients try to configure them­
+       randomness, so that if many clients try to configure them-
        selves at the same time, they will not make their requests
        in lockstep.   The _b_a_c_k_o_f_f_-_c_u_t_o_f_f statement determines the
        maximum  amount of time that the client is allowed to back
@@ -146,13 +146,13 @@ dhclient.conf(5)                                 dhclient.conf(5)
        the  interval between messages is incremented by twice the
        current interval multiplied by  a  random  number  between
        zero  and  one.   If it is greater than the backoff-cutoff
-       amount, it is set to that amount.  It defaults to ten sec­
+       amount, it is set to that amount.  It defaults to ten sec-
        onds.
 
 LLEEAASSEE RREEQQUUIIRREEMMEENNTTSS AANNDD RREEQQUUEESSTTSS
        The  DHCP  protocol  allows the client to request that the
        server send it specific information, and not send it other
-       information  that it is not prepared to accept.   The pro­
+       information  that it is not prepared to accept.   The pro-
        tocol also allows the client to reject offers from servers
        if  they don't contain information the client needs, or if
        the information provided is not satisfactory.
@@ -205,7 +205,7 @@ dhclient.conf(5)                                 dhclient.conf(5)
        protocol should not be specified  here,  except  that  the
        client  can  specify  a  rreeqquueesstteedd--lleeaassee--ttiimmee option other
        than the default requested lease time, which is two hours.
-       The other obvious use for this statement is to send infor­
+       The other obvious use for this statement is to send infor-
        mation to the server that will allow it  to  differentiate
        between this client and other clients or kinds of clients.
 
@@ -213,14 +213,14 @@ OOPPTTIIOONN MMOODDIIFFIIEERRSS
        In some cases, a client may receive option data  from  the
        server which is not really appropriate for that client, or
        may not receive information that it needs, and for which a
-       useful  default value exists.   It may also receive infor­
+       useful  default value exists.   It may also receive infor-
        mation which is useful, but which needs to be supplemented
        with  local  information.   To handle these needs, several
        option modifiers are available.
 
        _T_h_e ddeeffaauulltt _s_t_a_t_e_m_e_n_t
 
-        ddeeffaauulltt {{ [[ _o_p_t_i_o_n _d_e_c_l_a_r_a_t_i_o_n ] [,, _._._.  _o_p_t_i_o_n  _d_e_c_l_a_r_a_­
+        ddeeffaauulltt {{ [[ _o_p_t_i_o_n _d_e_c_l_a_r_a_t_i_o_n ] [,, _._._.  _o_p_t_i_o_n  _d_e_c_l_a_r_a_-
        _t_i_o_n ]}}
 
        If for some set of options the client should use the value
@@ -230,7 +230,7 @@ OOPPTTIIOONN MMOODDIIFFIIEERRSS
 
        _T_h_e ssuuppeerrsseeddee _s_t_a_t_e_m_e_n_t
 
-        ssuuppeerrsseeddee {{ [[ _o_p_t_i_o_n _d_e_c_l_a_r_a_t_i_o_n ] [,, _._._. _o_p_t_i_o_n _d_e_c_l_a_r_a_­
+        ssuuppeerrsseeddee {{ [[ _o_p_t_i_o_n _d_e_c_l_a_r_a_t_i_o_n ] [,, _._._. _o_p_t_i_o_n _d_e_c_l_a_r_a_-
        _t_i_o_n ]}}
 
        If  for  some  set of options the client should always use
@@ -240,7 +240,7 @@ OOPPTTIIOONN MMOODDIIFFIIEERRSS
 
        _T_h_e pprreeppeenndd _s_t_a_t_e_m_e_n_t
 
-        pprreeppeenndd {{ [[ _o_p_t_i_o_n _d_e_c_l_a_r_a_t_i_o_n ] [,, _._._.  _o_p_t_i_o_n  _d_e_c_l_a_r_a_­
+        pprreeppeenndd {{ [[ _o_p_t_i_o_n _d_e_c_l_a_r_a_t_i_o_n ] [,, _._._.  _o_p_t_i_o_n  _d_e_c_l_a_r_a_-
        _t_i_o_n ]}}
 
        If  for  some set of options the client should use a value
@@ -300,7 +300,7 @@ LLEEAASSEE DDEECCLLAARRAATTIIOONNSS
        completeness.
 
        A lease statement consists of the lease keyword,  followed
-       by  a left curly brace, followed by one or more lease dec­
+       by  a left curly brace, followed by one or more lease dec-
        laration statements, followed  by  a  right  curly  brace.
        The following lease declarations are possible:
 
@@ -320,7 +320,7 @@ LLEEAASSEE DDEECCLLAARRAATTIIOONNSS
        the client receives a  lease  from  a  server,  it  always
        records  the  interface  number  on which it received that
        lease.   If  predefined  leases  are  specified   in   the
-       dhclient.conf  file,  the  interface should also be speci­
+       dhclient.conf  file,  the  interface should also be speci-
        fied, although this is not required.
 
 
@@ -350,13 +350,13 @@ dhclient.conf(5)                                 dhclient.conf(5)
         sseerrvveerr--nnaammee ""_s_t_r_i_n_g"";;
 
        The  sseerrvveerr--nnaammee  statement specifies the name of the boot
-       server name to use.   This is also not used by  the  stan­
+       server name to use.   This is also not used by  the  stan-
        dard client configuration script.
 
         ooppttiioonn _o_p_t_i_o_n_-_d_e_c_l_a_r_a_t_i_o_n;;
 
        The  ooppttiioonn  statement  is used to specify the value of an
-       option supplied by the server, or, in the case  of  prede­
+       option supplied by the server, or, in the case  of  prede-
        fined leases declared in dhclient.conf, the value that the
        user wishes the client configuration script to use if  the
        predefined lease is used.
@@ -365,11 +365,11 @@ dhclient.conf(5)                                 dhclient.conf(5)
 
        The  ssccrriipptt  statement  is used to specify the pathname of
        the dhcp client configuration script.  This script is used
-       by the dhcp client to set each interface's initial config­
+       by the dhcp client to set each interface's initial config-
        uration prior  to  requesting  an  address,  to  test  the
-       address  once  it  has been offered, and to set the inter­
+       address  once  it  has been offered, and to set the inter-
        face's final configuration once a lease has been acquired.
-       If no lease is acquired, the script is used to test prede­
+       If no lease is acquired, the script is used to test prede-
        fined leases, if any, and also called  once  if  no  valid
        lease  can  be  identified.    For  more  information, see
        ddhhcclliieenntt--lleeaassee((88))..
@@ -377,7 +377,7 @@ dhclient.conf(5)                                 dhclient.conf(5)
         mmeeddiiuumm ""_m_e_d_i_a _s_e_t_u_p"";;
 
        The mmeeddiiuumm statement can be used on systems where  network
-       interfaces cannot automatically determine the type of net­
+       interfaces cannot automatically determine the type of net-
        work to which they are connected.  The media setup  string
        is  a  system-dependent  parameter  which is passed to the
        dhcp client configuration  script  when  initializing  the
@@ -386,7 +386,7 @@ dhclient.conf(5)                                 dhclient.conf(5)
        interface.
 
        The  dhcp  client automatically declares this parameter if
-       it used a media type (see the mmeeddiiaa statement)  when  con­
+       it used a media type (see the mmeeddiiaa statement)  when  con-
        figuring  the  interface in order to obtain a lease.  This
 
 
@@ -468,7 +468,7 @@ dhclient.conf(5)                                 dhclient.conf(5)
 
        ignored  by  the standard client configuration script, and
        expiry times are ignored.   A  typical  alias  declaration
-       includes  an interface declaration, a fixed-address decla­
+       includes  an interface declaration, a fixed-address decla-
        ration for the IP alias address, and a subnet-mask  option
        declaration.   A medium statement should never be included
        in an alias declaration.
@@ -478,7 +478,7 @@ OOTTHHEERR DDEECCLLAARRAATTIIOONNSS
 
        The reject statement causes  the  DHCP  client  to  reject
        offers  from  servers  who  use the specified address as a
-       server identifier.   This can be used to avoid being  con­
+       server identifier.   This can be used to avoid being  con-
        figured  by  rogue or misconfigured dhcp servers, although
        it should be a last resort - better to track down the  bad
        DHCP server and fix it.
@@ -491,13 +491,13 @@ OOTTHHEERR DDEECCLLAARRAATTIIOONNSS
        than lease and alias declarations can be  enclosed  in  an
        interface  declaration,  and those parameters will then be
        used only for the interface  that  matches  the  specified
-       name.    Interfaces for which there is no interface decla­
+       name.    Interfaces for which there is no interface decla-
        ration will use the parameters  declared  outside  of  any
        interface declaration, or the default settings.
 
         mmeeddiiaa ""_m_e_d_i_a _s_e_t_u_p"" _[ ,, ""_m_e_d_i_a _s_e_t_u_p"",, _._._. _];;
 
-       The  mmeeddiiaa  statement defines one or more media configura­
+       The  mmeeddiiaa  statement defines one or more media configura-
        tion parameters which may be  tried  while  attempting  to
        acquire  an  IP  address.    The  dhcp  client  will cycle
        through each media setup string on the  list,  configuring
@@ -509,7 +509,7 @@ OOTTHHEERR DDEECCLLAARRAATTIIOONNSS
        right (no guarantees).
 
        The media setup is only used  for  the  initial  phase  of
-       address  acquisition (the DHCPDISCOVER and DHCPOFFER pack­
+       address  acquisition (the DHCPDISCOVER and DHCPOFFER pack-
        tes).   Once an address has been acquired, the dhcp client
        will  record  it in its lease database and will record the
        media type used to  acquire  the  address.   Whenever  the
@@ -518,7 +518,7 @@ OOTTHHEERR DDEECCLLAARRAATTIIOONNSS
        go back to cycling through media types.
 
 SSAAMMPPLLEE
-       The  following configuration file is used on a laptop run­
+       The  following configuration file is used on a laptop run-
        ning  NetBSD  1.3.    The  laptop  has  an  IP  alias   of
 
 
@@ -564,7 +564,7 @@ dhclient.conf(5)                                 dhclient.conf(5)
          fixed-address 192.5.5.213;
          option subnet-mask 255.255.255.255;
        }
-       This  is  a  very complicated dhclient.conf file - in gen­
+       This  is  a  very complicated dhclient.conf file - in gen-
        eral, yours should be much simpler.   In many cases,  it's
        sufficient  to  just  create an empty dhclient.conf file -
        the defaults are usually fine.
@@ -575,7 +575,7 @@ SSEEEE AALLSSOO
 
 AAUUTTHHOORR
        ddhhcclliieenntt((88))  was  written  by  Ted  Lemon <mellon@vix.com>
-       under a contract with Vixie Labs.   Funding for this  pro­
+       under a contract with Vixie Labs.   Funding for this  pro-
        ject  was  provided  by the Internet Software Corporation.
        Information about the Internet Software Consortium can  be
        found at hhttttpp::////wwwwww..iisscc..oorrgg//iisscc..
