@@ -76,6 +76,11 @@ and for prodding me into improving it.
   single-threaded system.  In all cases, ISC DHCP should now hold fast to
   a 1-second timeout, trying only once.
 
+- The siaddr field was being improperly set to the server-identifier when
+  responding to DHCP messages.  RFC2131 clarified the siaddr field as
+  meaning the 'next server in the bootstrap process', eg a tftp server.
+  The siaddr field is now left zeroed unless next-server is configured.
+
 			Changes since 3.0.2rc3
 
 - A previously undocumented configuration directive, 'local-address',

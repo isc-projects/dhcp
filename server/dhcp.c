@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.192.2.44 2004/11/24 17:39:19 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.192.2.45 2005/02/22 21:11:51 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1209,7 +1209,6 @@ void dhcpinform (packet, ms_nulltp)
 	log_info ("%s", msgbuf);
 
 	/* Figure out the address of the boot file server. */
-	raw.siaddr = from;
 	if ((oc =
 	     lookup_option (&server_universe, options, SV_NEXT_SERVER))) {
 		if (evaluate_option_cache (&d1, packet, (struct lease *)0,
@@ -2486,7 +2485,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 	}
 
 	/* Figure out the address of the boot file server. */
-	memcpy (&state -> siaddr, state -> from.iabuf, sizeof state -> siaddr);
+	memset (&state -> siaddr, 0, sizeof state -> siaddr);
 	if ((oc =
 	     lookup_option (&server_universe,
 			    state -> options, SV_NEXT_SERVER))) {
