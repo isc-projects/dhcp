@@ -24,7 +24,6 @@ fi
 if [ x$reason = xMEDIUM ]; then
   ifconfig $interface $medium
   ifconfig $interface inet -alias 0.0.0.0 $medium >/dev/null 2>&1
-  ifconfig $interface
   sleep 1
   exit 0
 fi
