@@ -12,7 +12,6 @@ OBJ    = raw.o parse.o nit.o icmp.o dispatch.o conflex.o upf.o bpf.o socket.o \
 	 dns.o resolv.o execute.o discover.o comapi.o
 MAN    = dhcp-options.5 dhcp-contrib.5 dhcp-eval.5
 
-DEBUG  = -g
 INCLUDES = -I$(TOP) $(BINDINC) -I$(TOP)/includes
 CFLAGS = $(DEBUG) $(PREDEFINES) $(INCLUDES) $(COPTS)
 

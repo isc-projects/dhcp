@@ -21,7 +21,6 @@ SRC    = dst_support.c dst_api.c hmac_link.c md5_dgst.c base64.c prandom.c
 OBJ    = dst_support.o dst_api.o hmac_link.o md5_dgst.o base64.o prandom.o
 HDRS   = dst_internal.h md5.h md5_locl.h
 
-DEBUG  = -g
 INCLUDES = $(BINDINC) -I$(TOP)/includes
 CFLAGS = $(DEBUG) $(PREDEFINES) $(INCLUDES) $(COPTS) -DHMAC_MD5 -DMINIRES_LIB
 

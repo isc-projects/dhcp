@@ -27,7 +27,6 @@ OBJ    = protocol.o buffer.o alloc.o result.o connection.o errwarn.o \
 	 convert.o hash.o auth.o inet_addr.o array.o trace.o mrtrace.o
 MAN    = omapi.3
 
-DEBUG  = -g
 INCLUDES = $(BINDINC) -I$(TOP)/includes
 CFLAGS = $(DEBUG) $(PREDEFINES) $(INCLUDES) $(COPTS)
 

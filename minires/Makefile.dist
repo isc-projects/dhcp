@@ -29,7 +29,6 @@ OBJ    = res_mkupdate.o res_init.o res_update.o res_send.o res_comp.o \
 	 ns_date.o ns_parse.o ns_sign.o ns_name.o ns_samedomain.o ns_verify.o \
 	 toisc.o
 
-DEBUG  = -g
 INCLUDES = $(BINDINC) -I$(TOP)/includes
 CFLAGS = $(DEBUG) $(PREDEFINES) $(INCLUDES) $(COPTS) -DHMAC_MD5 -DMINIRES_LIB
 
