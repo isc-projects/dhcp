@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.23 2000/01/05 18:49:47 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.24 2000/01/08 01:48:42 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -624,10 +624,6 @@ void new_address_range (low, high, subnet, pool)
 			address_range [lhost - i].hostname = lp -> hostname;
 			address_range [lhost - i].client_hostname =
 				lp -> client_hostname;
-			address_range [lhost - i].ddns_fwd_name =
-				lp -> ddns_fwd_name;
-			address_range [lhost - i].ddns_rev_name =
-				lp -> ddns_rev_name;
 			supersede_lease (&address_range [lhost - i], lp, 0);
 			free_lease (lp, "new_address_range");
 		} else
@@ -789,8 +785,6 @@ void enter_lease (lease)
 		/* Record the hostname information in the lease. */
 		comp -> hostname = lease -> hostname;
 		comp -> client_hostname = lease -> client_hostname;
-		comp -> ddns_fwd_name = lease -> ddns_fwd_name;
-		comp -> ddns_rev_name = lease -> ddns_rev_name;
 		supersede_lease (comp, lease, 0);
 	}
 }
@@ -1232,17 +1226,6 @@ void pool_timer (vpool)
 		if (lease -> on_release)
 			executable_statement_dereference (&lease -> on_release,
 							  "pool_timer");
-		/* XXX is this appropriate if we haven't run an
-		   XXX expiry event? */
-		if (lease -> ddns_fwd_name) {
-			dfree (lease -> ddns_fwd_name, "pool_timer");
-			lease -> ddns_fwd_name = (char *)0;
-		}
-		if (lease -> ddns_rev_name) {
-			dfree (lease -> ddns_rev_name, "pool_timer");
-			lease -> ddns_rev_name = (char *)0;
-		}
-
 #if defined (FAILOVER_PROTOCOL)
 		lease -> tstp = 0;
 		update_partner (lease);
