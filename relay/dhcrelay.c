@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char ocopyright [] =
-"$Id: dhcrelay.c,v 1.9.2.19 1999/02/27 21:51:37 mellon Exp $ Copyright (c) 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcrelay.c,v 1.9.2.20 1999/03/05 16:06:41 mellon Exp $ Copyright (c) 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -273,10 +273,11 @@ void relay (ip, packet, length, from_port, from, hfrom)
 		to.sin_len = sizeof to;
 #endif
 
-		memcpy (hto.haddr, packet -> chaddr,
-			(packet -> hlen > sizeof hto.haddr
-			 ? sizeof hto.haddr
-			 : packet -> hlen));
+		/* Set up the hardware destination address. */
+		hto.hlen = packet -> hlen;
+		if (hto.hlen > sizeof hto.haddr)
+			hto.hlen = sizeof hto.haddr;
+		memcpy (hto.haddr, packet -> chaddr, hto.hlen);
 		hto.htype = packet -> htype;
 
 		/* Find the interface that corresponds to the giaddr
