@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.56 1997/12/02 09:28:08 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.57 1997/12/06 04:04:50 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -271,6 +271,13 @@ void dhcprequest (packet)
                    so we can tenuously justify NAKing it. */
 		if (ours)
 			nak_lease (packet, &cip);
+		return;
+	}
+
+	/* If the address the client asked for is ours, but it wasn't
+           available for the client, NAK it. */
+	if (!lease && ours) {
+		nak_lease (packet, &cip);
 		return;
 	}
 
