@@ -273,6 +273,7 @@ void omapi_connection_register (omapi_connection_object_t *obj,
 		return;
 	}
 
+#if defined (TRACING)
 	if (trace_record ()) {
 		/* Connection registration packet:
 		   
@@ -305,6 +306,7 @@ void omapi_connection_register (omapi_connection_object_t *obj,
 		status = trace_write_packet_iov (trace_connect,
 						 iov_count, iov, file, line);
 	}
+#endif
 }
 
 static void trace_connect_input (trace_type_t *ttype,

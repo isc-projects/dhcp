@@ -3,7 +3,7 @@
    OMAPI object interfaces for the DHCP server. */
 
 /*
- * Copyright (c) 1999-2000 Internet Software Consortium.
+ * Copyright (c) 1999-2001 Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -50,7 +50,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: omapi.c,v 1.46 2001/05/02 07:11:38 mellon Exp $ Copyright (c) 1999-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: omapi.c,v 1.47 2001/05/17 19:04:09 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -354,35 +354,43 @@ isc_result_t dhcp_lease_destroy (omapi_object_t *h, const char *file, int line)
 		return ISC_R_INVALIDARG;
 	lease = (struct lease *)h;
 
-	uid_hash_delete (lease);
+	if (lease -> uid)
+		uid_hash_delete (lease);
 	hw_hash_delete (lease);
-	if (lease -> billing_class)
-		class_dereference
-			(&lease -> billing_class, file, line);
-	if (lease -> uid && lease -> uid != &lease -> uid_buf [0]) {
-		dfree (lease -> uid, MDL);
-		lease -> uid = &lease -> uid_buf [0];
-		lease -> uid_len = 0;
-	}
-	if (lease -> client_hostname) {
-		dfree (lease -> client_hostname, MDL);
-		lease -> client_hostname = (char *)0;
-	}
-	if (lease -> host)
-		host_dereference (&lease -> host, file, line);
-	if (lease -> subnet)
-		subnet_dereference (&lease -> subnet, file, line);
-	if (lease -> pool)
-		pool_dereference (&lease -> pool, file, line);
+
+	if (lease -> on_release)
+		executable_statement_dereference (&lease -> on_release,
+						  file, line);
 	if (lease -> on_expiry)
 		executable_statement_dereference (&lease -> on_expiry,
 						  file, line);
 	if (lease -> on_commit)
 		executable_statement_dereference (&lease -> on_commit,
 						  file, line);
-	if (lease -> on_release)
-		executable_statement_dereference (&lease -> on_release,
-						  file, line);
+	if (lease -> scope)
+		binding_scope_dereference (&lease -> scope, file, line);
+
+	if (lease -> agent_options)
+		option_chain_head_dereference (&lease -> agent_options,
+					       file, line);
+	if (lease -> uid && lease -> uid != lease -> uid_buf) {
+		dfree (lease -> uid, MDL);
+		lease -> uid = &lease -> uid_buf [0];
+		lease -> uid_len = 0;
+	}
+
+	if (lease -> client_hostname) {
+		dfree (lease -> client_hostname, MDL);
+		lease -> client_hostname = (char *)0;
+	}
+
+	if (lease -> host)
+		host_dereference (&lease -> host, file, line);
+	if (lease -> subnet)
+		subnet_dereference (&lease -> subnet, file, line);
+	if (lease -> pool)
+		pool_dereference (&lease -> pool, file, line);
+
 	if (lease -> state) {
 		free_lease_state (lease -> state, file, line);
 		lease -> state = (struct lease_state *)0;
@@ -390,6 +398,11 @@ isc_result_t dhcp_lease_destroy (omapi_object_t *h, const char *file, int line)
 		cancel_timeout (lease_ping_timeout, lease);
 		--outstanding_pings; /* XXX */
 	}
+
+	if (lease -> billing_class)
+		class_dereference
+			(&lease -> billing_class, file, line);
+
 	return ISC_R_SUCCESS;
 }
 

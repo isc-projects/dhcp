@@ -357,6 +357,10 @@ isc_result_t omapi_protocol_signal_handler (omapi_object_t *h,
 	u_int16_t nlen;
 	u_int32_t vlen;
 	u_int32_t th;
+#if defined (DEBUG_MEMORY_LEAKAGE)
+	unsigned long previous_outstanding = 0xBEADCAFE;
+	unsigned long connect_outstanding = 0xBEADCAFE;
+#endif
 
 	if (h -> type != omapi_type_protocol) {
 		/* XXX shouldn't happen.   Put an assert here? */
@@ -365,6 +369,9 @@ isc_result_t omapi_protocol_signal_handler (omapi_object_t *h,
 	p = (omapi_protocol_object_t *)h;
 
 	if (!strcmp (name, "connect")) {
+#if defined (DEBUG_MEMORY_LEAKAGE)
+		connect_outstanding = dmalloc_outstanding;
+#endif
 		/* Send the introductory message. */
 		status = omapi_protocol_send_intro
 			(h, OMAPI_PROTOCOL_VERSION,
@@ -387,6 +394,26 @@ isc_result_t omapi_protocol_signal_handler (omapi_object_t *h,
 		} else {
 			return omapi_signal_in (h -> inner, "ready");
 		}
+	}
+
+	/* If we get a disconnect, dump memory usage. */
+	if (!strcmp (name, "disconnect")
+#if defined (DEBUG_MEMORY_LEAKAGE)
+	     && connect_outstanding != 0xBEADCAFE
+#endif
+		) {
+#if defined (DEBUG_MEMORY_LEAKAGE)
+		log_info ("generation %ld: %ld new, %ld outstanding, %ld%s",
+			  dmalloc_generation,
+			  dmalloc_outstanding - previous_outstanding,
+			  dmalloc_outstanding, dmalloc_longterm, " long-term");
+#endif
+#if (defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL))
+		dmalloc_dump_outstanding ();
+#endif
+#if defined (DEBUG_RC_HISTORY_EXHAUSTIVELY)
+		dump_rc_history ();
+#endif
 	}
 
 	/* Not a signal we recognize? */
@@ -449,6 +476,24 @@ isc_result_t omapi_protocol_signal_handler (omapi_object_t *h,
 		/* If we already have the data, fall through. */
 
 	      case omapi_protocol_header_wait:
+#if defined (DEBUG_MEMORY_LEAKAGE)
+		if (previous_outstanding != 0xBEADCAFE) {
+			log_info ("%s %ld: %ld new, %ld outstanding, %ld%s",
+				  "generation", dmalloc_generation,
+				  dmalloc_outstanding - previous_outstanding,
+				  dmalloc_outstanding, dmalloc_longterm,
+				  " long-term");
+#endif
+#if (defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL))
+			dmalloc_dump_outstanding ();
+#endif
+#if defined (DEBUG_RC_HISTORY_EXHAUSTIVELY)
+			dump_rc_history ();
+#endif
+#if defined (DEBUG_MEMORY_LEAKAGE)
+		}
+		previous_outstanding = dmalloc_outstanding;
+#endif
 		status = omapi_message_new ((omapi_object_t **)&p -> message,
 					    MDL);
 		if (status != ISC_R_SUCCESS) {
@@ -690,7 +735,21 @@ isc_result_t omapi_protocol_signal_handler (omapi_object_t *h,
 		}
 
 		omapi_message_dereference (&p -> message, MDL);
-
+#if defined (DEBUG_MEMORY_LEAKAGE)
+		log_info ("generation %ld: %ld new, %ld outstanding, %ld%s",
+			  dmalloc_generation,
+			  dmalloc_outstanding - previous_outstanding,
+			  dmalloc_outstanding, dmalloc_longterm, " long-term");
+#endif
+#if (defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL))
+		dmalloc_dump_outstanding ();
+#endif
+#if defined (DEBUG_RC_HISTORY_EXHAUSTIVELY)
+		dump_rc_history ();
+#endif
+#if defined (DEBUG_MEMORY_LEAKAGE)
+		previous_outstanding = 0xBEADCAFE;
+#endif
 		/* Now wait for the next message. */
 		goto to_header_wait;		
 

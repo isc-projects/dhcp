@@ -107,6 +107,13 @@ int main (int argc, char **argv, char **envp)
 		usage(argv[0]);
 	}
 
+	/* Initially, log errors to stderr as well as to syslogd. */
+#ifdef SYSLOG_4_2
+	openlog ("dhcpd", LOG_NDELAY);
+	log_priority = DHCPD_LOG_FACILITY;
+#else
+	openlog ("dhcpd", LOG_NDELAY, DHCPD_LOG_FACILITY);
+#endif
 	status = dhcpctl_initialize ();
 	if (status != ISC_R_SUCCESS) {
 		fprintf (stderr, "dhcpctl_initialize: %s\n",
@@ -208,7 +215,7 @@ int main (int argc, char **argv, char **envp)
 			    if (se)
 				    port = ntohs (se -> s_port);
 			    else {
-				    printf ("unknown service name: %s", val);
+				    printf ("unknown service name: %s\n", val);
 				    break;
 			    }
 		    } else if (token == NUMBER) {
@@ -287,7 +294,7 @@ int main (int argc, char **argv, char **envp)
 
 		    s = dmalloc (strlen (val) + 1, MDL);
 		    if (!server) {
-			    printf ("no memory to store server name.");
+			    printf ("no memory to store server name.\n");
 			    skip_to_semi (cfile);
 			    break;
 		    }
@@ -305,13 +312,13 @@ int main (int argc, char **argv, char **envp)
 		  case KEY:
 		    token = next_token (&val, (unsigned *)0, cfile);
 		    if (!is_identifier (token)) {
-			    printf ("usage: key <name> <value>");
+			    printf ("usage: key <name> <value>\n");
 			    skip_to_semi (cfile);
 			    break;
 		    }
 		    s = dmalloc (strlen (val) + 1, MDL);
 		    if (!s) {
-			    printf ("no memory for key name.");
+			    printf ("no memory for key name.\n");
 			    skip_to_semi (cfile);
 			    break;
 		    }
@@ -379,7 +386,7 @@ int main (int argc, char **argv, char **envp)
 		    }
 		    
 		    if (!connected) {
-			    printf ("not connected.");
+			    printf ("not connected.\n");
 			    skip_to_semi (cfile);
 			    break;
 		    }
@@ -408,7 +415,7 @@ int main (int argc, char **argv, char **envp)
 		    }
 
 		    if (!connected) {
-			    printf ("not connected.");
+			    printf ("not connected.\n");
 			    skip_to_semi (cfile);
 			    break;
 		    }
@@ -434,7 +441,7 @@ int main (int argc, char **argv, char **envp)
 		    }
 		    
 		    if (!connected) {
-			    printf ("not connected.");
+			    printf ("not connected.\n");
 			    skip_to_semi (cfile);
 			    break;
 		    }
@@ -450,23 +457,77 @@ int main (int argc, char **argv, char **envp)
 		    switch (token) {
 			  case STRING:
 			    dhcpctl_set_string_value (oh, val, s1);
+			    token = next_token (&val, (unsigned *)0, cfile);
 			    break;
 			    
 			  case NUMBER:
-			    dhcpctl_set_int_value (oh, atoi (val), s1);
+			    strcpy (buf, val);
+			    token = peek_token (&val, (unsigned *)0, cfile);
+			    /* Colon-seperated hex list? */
+			    if (token == COLON)
+				goto cshl;
+			    else if (token == DOT) {
+				s = buf;
+				val = buf;
+				do {
+				    int intval = atoi (val);
+				    if (intval > 255) {
+					parse_warn (cfile,
+						    "dotted octet > 255: %s",
+						    val);
+					skip_to_semi (cfile);
+					goto badnum;
+				    }
+				    *s++ = intval;
+				    token = next_token (&val,
+							(unsigned *)0, cfile);
+				    if (token != DOT)
+					    break;
+				    token = next_token (&val,
+							(unsigned *)0, cfile);
+				} while (token == NUMBER);
+				dhcpctl_set_data_value (oh, buf,
+							(unsigned)(s - buf),
+							s1);
+				break;
+			    }
+			    dhcpctl_set_int_value (oh, atoi (buf), s1);
+			    token = next_token (&val, (unsigned *)0, cfile);
+			  badnum:
 			    break;
 			    
+			  case NUMBER_OR_NAME:
+			    strcpy (buf, val);
+			  cshl:
+			    s = buf;
+			    val = buf;
+			    do {
+				convert_num (cfile, s, val, 16, 8);
+				++s;
+				token = next_token (&val,
+						    (unsigned *)0, cfile);
+				if (token != COLON)
+				    break;
+				token = next_token (&val,
+						    (unsigned *)0, cfile);
+			    } while (token == NUMBER ||
+				     token == NUMBER_OR_NAME);
+			    dhcpctl_set_data_value (oh, buf,
+						    (unsigned)(s - buf), s1);
+			    break;
+
 			  default:
 			    printf ("invalid value.\n");
+			    skip_to_semi (cfile);
 		    }
 		    
-		    token = next_token (&val, (unsigned *)0, cfile);
 		    if (token != END_OF_FILE && token != EOL)
 			    goto set_usage;
 		    break;
 		    
 		  case TOKEN_CREATE:
 		  case TOKEN_OPEN:
+		    i = token;
 		    token = next_token (&val, (unsigned *)0, cfile);
 		    if (token != END_OF_FILE && token != EOL) {
 			    printf ("usage: %s\n", val);
@@ -475,14 +536,21 @@ int main (int argc, char **argv, char **envp)
 		    }
 		    
 		    if (!connected) {
-			    printf ("not connected.");
+			    printf ("not connected.\n");
 			    skip_to_semi (cfile);
 			    break;
 		    }
 
-		    i = 0;
-		    if (token == TOKEN_CREATE)
+		    if (!oh) {
+			    printf ("you must make a new object first!\n");
+			    skip_to_semi (cfile);
+			    break;
+		    }
+
+		    if (i == TOKEN_CREATE)
 			    i = DHCPCTL_CREATE | DHCPCTL_EXCL;
+		    else
+			    i = 0;
 		    
 		    status = dhcpctl_open_object (oh, connection, i);
 		    if (status == ISC_R_SUCCESS)
@@ -507,7 +575,7 @@ int main (int argc, char **argv, char **envp)
 		    }
 		    
 		    if (!connected) {
-			    printf ("not connected.");
+			    printf ("not connected.\n");
 			    skip_to_semi (cfile);
 			    break;
 		    }
@@ -525,8 +593,36 @@ int main (int argc, char **argv, char **envp)
 		    }
 		    
 		    break;
+
+		  case REMOVE:
+		    token = next_token (&val, (unsigned *)0, cfile);
+		    if (token != END_OF_FILE && token != EOL) {
+			    printf ("usage: %s\n", val);
+			    skip_to_semi (cfile);
+			    break;
+		    }
+		    
+		    if (!connected) {
+			    printf ("not connected.\n");
+			    skip_to_semi (cfile);
+			    break;
+		    }
+
+		    status = dhcpctl_object_remove(connection, oh);
+		    if (status == ISC_R_SUCCESS)
+			    status = dhcpctl_wait_for_completion
+				    (oh, &waitstatus);
+		    if (status == ISC_R_SUCCESS)
+			    status = waitstatus;
+		    if (status != ISC_R_SUCCESS) {
+			    printf ("can't destroy object: %s\n",
+				    isc_result_totext (status));
+			    break;
+		    }
+		    
+		    break;
 	    }
-	} while (token != END_OF_FILE);
+	} while (1);
 
 	exit (0);
 }

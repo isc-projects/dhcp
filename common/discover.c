@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: discover.c,v 1.42 2001/05/02 06:36:54 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: discover.c,v 1.43 2001/05/17 19:03:44 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -184,6 +184,15 @@ void discover_interfaces (state)
 	if (i < 0)
 		log_fatal ("ioctl: SIOCGIFCONF: %m");
 
+#ifdef SIOCGIFCONF_ZERO_PROBE
+	/* Workaround for SIOCGIFCONF bug on some Linux versions. */
+	if (ic.ifc_ifcu.ifcu_buf == 0 && ic.ifc_len == 0) {
+		ic.ifc_len = sizeof buf;
+		ic.ifc_ifcu.ifcu_buf = (caddr_t)buf;
+		goto gifconf_again;
+	}
+#endif
+
 	/* If the SIOCGIFCONF resulted in more data than would fit in
 	   a buffer, allocate a bigger buffer. */
 	if ((ic.ifc_ifcu.ifcu_buf == buf 
@@ -198,7 +207,7 @@ void discover_interfaces (state)
 #ifdef SIOCGIFCONF_ZERO_PROBE
 	} else if (ic.ifc_ifcu.ifcu_buf == 0) {
 		ic.ifc_ifcu.ifcu_buf = (caddr_t)buf;
-		if.ifc_len = sizeof buf;
+		ic.ifc_len = sizeof buf;
 		goto gifconf_again;
 #endif
 	}

@@ -364,7 +364,9 @@ isc_result_t omapi_set_value_str (omapi_object_t *h,
 		return status;
 	memcpy (nds -> value, name, strlen (name));
 
-	return omapi_set_value (h, id, nds, value);
+	status = omapi_set_value (h, id, nds, value);
+	omapi_data_string_dereference (&nds, MDL);
+	return status;
 }
 
 isc_result_t omapi_set_boolean_value (omapi_object_t *h, omapi_object_t *id,
@@ -504,9 +506,12 @@ isc_result_t omapi_get_value_str (omapi_object_t *h,
 	for (outer = h; outer -> outer; outer = outer -> outer)
 		;
 	if (outer -> type -> get_value)
-		return (*(outer -> type -> get_value)) (outer,
-							id, nds, value);
-	return ISC_R_NOTFOUND;
+		status = (*(outer -> type -> get_value)) (outer,
+							  id, nds, value);
+	else
+		status = ISC_R_NOTFOUND;
+	omapi_data_string_dereference (&nds, MDL);
+	return status;
 }
 
 isc_result_t omapi_stuff_values (omapi_object_t *c,
