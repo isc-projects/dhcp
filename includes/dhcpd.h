@@ -446,10 +446,6 @@ struct lease_state {
 # define CL_DEFAULT_BOOTP_POLICY P_ACCEPT
 #endif
 
-#ifndef CL_DEFAULT_SCRIPT_NAME
-# define CL_DEFAULT_SCRIPT_NAME "/etc/dhclient-script"
-#endif
-
 #ifndef CL_DEFAULT_REQUESTED_OPTIONS
 # define CL_DEFAULT_REQUESTED_OPTIONS \
 	{ DHO_SUBNET_MASK, \
@@ -875,6 +871,10 @@ typedef unsigned char option_mask [16];
 
 #ifndef _PATH_DHCLIENT_CONF
 #define _PATH_DHCLIENT_CONF	"/etc/dhclient.conf"
+#endif
+
+#ifndef _PATH_DHCLIENT_SCRIPT
+#define _PATH_DHCLIENT_SCRIPT	"/sbin/dhclient-script"
 #endif
 
 #ifndef _PATH_DHCLIENT_PID
@@ -1749,6 +1749,7 @@ char *piaddr PROTO ((struct iaddr));
 extern const char *path_dhclient_conf;
 extern const char *path_dhclient_db;
 extern const char *path_dhclient_pid;
+extern char *path_dhclient_script;
 extern int interfaces_requested;
 
 extern struct client_config top_level_config;
