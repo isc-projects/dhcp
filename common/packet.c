@@ -3,7 +3,7 @@
    Packet assembly code, originally contributed by Archie Cobbs. */
 
 /*
- * Copyright (c) 1995, 1996 The Internet Software Consortium.
+ * Copyright (c) 1995, 1996, 1999 The Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: packet.c,v 1.18.2.5 1999/05/27 17:44:52 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: packet.c,v 1.18.2.6 1999/06/10 00:58:16 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -122,7 +122,7 @@ void assemble_hw_header (interface, buf, bufix, to)
 	struct hardware *to;
 {
 #if defined (HAVE_TR_SUPPORT)
-	if (info -> hw_address.htype == HTYPE_IEEE802)
+	if (interface -> hw_address.htype == HTYPE_IEEE802)
 		assemble_tr_header (interface, buf, bufix, to);
 	else
 #endif
@@ -201,7 +201,7 @@ ssize_t decode_hw_header (interface, buf, bufix, from)
      struct hardware *from;
 {
 #if defined (HAVE_TR_SUPPORT)
-	if (info -> hw_address.htype == HTYPE_IEEE802)
+	if (interface -> hw_address.htype == HTYPE_IEEE802)
 		return decode_tr_header (interface, buf, bufix, from);
 	else
 #endif
