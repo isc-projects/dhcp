@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.18 1999/11/07 20:38:01 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.19 1999/11/12 17:21:28 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -673,7 +673,7 @@ int subnet_inner_than (subnet, scan, warnp)
 				break;
 		strcpy (n1buf, piaddr (subnet -> net));
 		if (warnp)
-			log_error ("%ssubnet %s/%d conflicts with subnet %s/%d",
+			log_error ("%ssubnet %s/%d overlaps subnet %s/%d",
 			      "Warning: ", n1buf, 32 - i,
 			      piaddr (scan -> net), 32 - j);
 		if (i < j)
@@ -945,6 +945,25 @@ int supersede_lease (comp, lease, commit)
 	if (comp -> pool -> last_lease == comp) {
 		comp -> pool -> last_lease = comp -> prev;
 	}
+
+	/* If there's an expiry event on this lease, get rid of it
+	   (we may wind up putting it back, but we can't count on
+	   that here without too much additional complexity). */
+	if (comp -> pool -> next_expiry == comp) {
+		for (lp = comp -> pool -> next_expiry; lp; lp = lp -> prev)
+			if (lp -> on_expiry)
+				break;
+		if (lp && lp -> on_expiry) {
+			comp -> pool -> next_expiry = comp;
+			    if (commit)
+				    add_timeout (lp -> ends,
+						 pool_timer, lp -> pool);
+		} else {
+			comp -> pool -> next_expiry = (struct lease *)0;
+			if (commit)
+				cancel_timeout (pool_timer, comp -> pool);
+		}
+	}
 	
 	/* Find the last insertion point... */
 	if (comp == comp -> pool -> insertion_point ||
@@ -1044,7 +1063,24 @@ int supersede_lease (comp, lease, commit)
 					    add_timeout (comp -> ends,
 							 pool_timer,
 							 comp -> pool);
-			    }
+                            } else if (comp -> ends ==
+                                       comp -> pool -> next_expiry -> ends) {
+                                    /* If there are other leases that expire at
+                                       the same time as comp, we need to make
+                                       sure that we have the one that appears
+                                       last on the list that needs an expiry
+                                       event - otherwise we'll miss expiry
+                                       events until the server restarts. */
+                                    struct lease *foo;
+                                    struct lease *install = comp;
+                                    for (foo = comp;
+                                         foo -> ends == comp -> ends;
+                                         foo = foo -> next) {
+                                            if (foo -> on_expiry)
+                                                    install = foo;
+                                    }
+                                    comp -> pool -> next_expiry = install;
+                            }
 			}
 		}
 	}
@@ -1075,12 +1111,6 @@ void release_lease (lease, packet)
 		executable_statement_dereference (&lease -> on_release,
 						  "dhcprelease");
 
-		/* We do either the on_release or the on_expiry events, but
-		   not both (it's possible that they could be the same,
-		   in any case). */
-		if (lease -> on_expiry)
-			executable_statement_dereference (&lease -> on_expiry,
-							  "dhcprelease");
 		if (lease -> ddns_fwd_name) {
 			dfree (lease -> ddns_fwd_name, "pool_timer");
 			lease -> ddns_fwd_name = (char *)0;
@@ -1090,6 +1120,13 @@ void release_lease (lease, packet)
 			lease -> ddns_rev_name = (char *)0;
 		}
 	}
+
+	/* We do either the on_release or the on_expiry events, but
+	   not both (it's possible that they could be the same,
+	   in any case). */
+	if (lease -> on_expiry)
+		executable_statement_dereference (&lease -> on_expiry,
+						  "dhcprelease");
 
 	if (lease -> ends > cur_time) {
 		lt = *lease;
