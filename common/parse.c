@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.85 2000/09/21 07:52:19 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.86 2000/09/27 19:13:57 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2798,8 +2798,8 @@ int parse_non_binary (expr, cfile, lose, context)
 		if (token != COMMA)
 			goto nocomma;
 
-		if (!parse_data_expression (&(*expr) -> data.suffix.len,
-					    cfile, lose))
+		if (!parse_numeric_expression (&(*expr) -> data.suffix.len,
+					       cfile, lose))
 			goto nonum;
 
 		token = next_token (&val, cfile);
