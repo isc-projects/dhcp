@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"@(#) Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: nit.c,v 1.7 1996/08/27 09:52:09 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -85,6 +85,7 @@ int if_register_nit (info, ifp)
 	sio.ic_cmd = NIOCBIND;
 	sio.ic_len = sizeof *ifp;
 	sio.ic_dp = (char *)ifp;
+	sio.ic_timout = INFTIM;
 	if (ioctl (sock, I_STR, &sio) < 0)
 		error ("Can't attach interface to nit device: %m");
 
@@ -92,6 +93,7 @@ int if_register_nit (info, ifp)
 	sio.ic_cmd = SIOCGIFADDR;
 	sio.ic_len = sizeof ifr;
 	sio.ic_dp = (char *)&ifr;
+	sio.ic_timout = INFTIM;
 	if (ioctl (sock, I_STR, &sio) < 0)
 		error ("Can't get physical layer address: %m");
 
