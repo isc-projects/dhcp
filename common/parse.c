@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.21 1999/04/12 22:09:24 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.22 1999/05/06 20:20:43 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -533,11 +533,14 @@ void convert_num (buf, str, base, size)
 
 /*
  * date :== NUMBER NUMBER SLASH NUMBER SLASH NUMBER 
- *		NUMBER COLON NUMBER COLON NUMBER SEMI
+ *		NUMBER COLON NUMBER COLON NUMBER SEMI |
+ *          NUMBER NUMBER SLASH NUMBER SLASH NUMBER 
+ *		NUMBER COLON NUMBER COLON NUMBER NUMBER SEMI |
  *
- * Dates are always in GMT; first number is day of week; next is
- * year/month/day; next is hours:minutes:seconds on a 24-hour
- * clock.
+ * Dates are stored in GMT or with a timezone offset; first number is day
+ * of week; next is year/month/day; next is hours:minutes:seconds on a
+ * 24-hour clock, followed by the timezone offset in seconds, which is
+ * optional.
  */
 
 TIME parse_date (cfile)
@@ -545,6 +548,7 @@ TIME parse_date (cfile)
 {
 	struct tm tm;
 	int guess;
+	int tzoff, wday, year, mon, mday, hour, min, sec;
 	char *val;
 	enum dhcp_token token;
 	static int months [11] = { 31, 59, 90, 120, 151, 181,
@@ -558,7 +562,7 @@ TIME parse_date (cfile)
 			skip_to_semi (cfile);
 		return (TIME)0;
 	}
-	tm.tm_wday = atoi (val);
+	wday = atoi (val);
 
 	/* Year... */
 	token = next_token (&val, cfile);
@@ -573,9 +577,9 @@ TIME parse_date (cfile)
 	   somebody invents a time machine, I think we can safely disregard
 	   it.   This actually works around a stupid Y2K bug that was present
 	   in a very early beta release of dhcpd. */
-	tm.tm_year = atoi (val);
-	if (tm.tm_year > 1900)
-		tm.tm_year -= 1900;
+	year = atoi (val);
+	if (year > 1900)
+		year -= 1900;
 
 	/* Slash seperating year from month... */
 	token = next_token (&val, cfile);
@@ -594,7 +598,7 @@ TIME parse_date (cfile)
 			skip_to_semi (cfile);
 		return (TIME)0;
 	}
-	tm.tm_mon = atoi (val) - 1;
+	mon = atoi (val) - 1;
 
 	/* Slash seperating month from day... */
 	token = next_token (&val, cfile);
@@ -613,7 +617,7 @@ TIME parse_date (cfile)
 			skip_to_semi (cfile);
 		return (TIME)0;
 	}
-	tm.tm_mday = atoi (val);
+	mday = atoi (val);
 
 	/* Hour... */
 	token = next_token (&val, cfile);
@@ -623,7 +627,7 @@ TIME parse_date (cfile)
 			skip_to_semi (cfile);
 		return (TIME)0;
 	}
-	tm.tm_hour = atoi (val);
+	hour = atoi (val);
 
 	/* Colon seperating hour from minute... */
 	token = next_token (&val, cfile);
@@ -642,7 +646,7 @@ TIME parse_date (cfile)
 			skip_to_semi (cfile);
 		return (TIME)0;
 	}
-	tm.tm_min = atoi (val);
+	min = atoi (val);
 
 	/* Colon seperating minute from second... */
 	token = next_token (&val, cfile);
@@ -661,27 +665,30 @@ TIME parse_date (cfile)
 			skip_to_semi (cfile);
 		return (TIME)0;
 	}
-	tm.tm_sec = atoi (val);
-	tm.tm_isdst = 0;
+	sec = atoi (val);
 
-	/* XXX */ /* We assume that mktime does not use tm_yday. */
-	tm.tm_yday = 0;
+	token = peek_token (&val, cfile);
+	if (token == NUMBER) {
+		token = next_token (&val, cfile);
+		tzoff = atoi (val);
+	} else
+		tzoff = 0;
 
 	/* Make sure the date ends in a semicolon... */
 	if (!parse_semi (cfile))
 		return 0;
 
 	/* Guess the time value... */
-	guess = ((((((365 * (tm.tm_year - 70) +	/* Days in years since '70 */
-		      (tm.tm_year - 69) / 4 +	/* Leap days since '70 */
-		      (tm.tm_mon		/* Days in months this year */
-		       ? months [tm.tm_mon - 1]
+	guess = ((((((365 * (year - 70) +	/* Days in years since '70 */
+		      (year - 69) / 4 +		/* Leap days since '70 */
+		      (mon			/* Days in months this year */
+		       ? months [mon - 1]
 		       : 0) +
-		      (tm.tm_mon > 1 &&		/* Leap day this year */
-		       !((tm.tm_year - 72) & 3)) +
-		      tm.tm_mday - 1) * 24) +	/* Day of month */
-		    tm.tm_hour) * 60) +
-		  tm.tm_min) * 60) + tm.tm_sec;
+		      (mon > 1 &&		/* Leap day this year */
+		       !((year - 72) & 3)) +
+		      mday - 1) * 24) +		/* Day of month */
+		    hour) * 60) +
+		  min) * 60) + sec + tzoff;
 
 	/* This guess could be wrong because of leap seconds or other
 	   weirdness we don't know about that the system does.   For
@@ -1413,8 +1420,10 @@ int parse_boolean_expression (expr, cfile, lose)
  * data_expression :== SUBSTRING LPAREN data-expression COMMA
  *					numeric-expression COMMA
  *					numeric-expression RPAREN |
+ *		       CONCAT LPAREN data-expression COMMA 
+					data-expression RPAREN
  *		       SUFFIX LPAREN data_expression COMMA
- *		       		     numeric-expression |
+ *		       		     numeric-expression RPAREN |
  *		       OPTION option_name |
  *		       HARDWARE |
  *		       PACKET LPAREN numeric-expression COMMA
@@ -1634,6 +1643,33 @@ int parse_non_binary (expr, cfile, lose, context)
 		if (!parse_data_expression (&(*expr) -> data.suffix.len,
 					    cfile, lose))
 			goto nonum;
+
+		token = next_token (&val, cfile);
+		if (token != RPAREN)
+			goto norparen;
+		break;
+
+	      case CONCAT:
+		token = next_token (&val, cfile);
+		if (!expression_allocate (expr, "parse_expression: CONCAT"))
+			log_fatal ("can't allocate expression");
+		(*expr) -> op = expr_concat;
+
+		token = next_token (&val, cfile);
+		if (token != LPAREN)
+			goto nolparen;
+
+		if (!parse_data_expression (&(*expr) -> data.concat [0],
+					    cfile, lose))
+			goto nodata;
+
+		token = next_token (&val, cfile);
+		if (token != COMMA)
+			goto nocomma;
+
+		if (!parse_data_expression (&(*expr) -> data.concat [1],
+					    cfile, lose))
+			goto nodata;
 
 		token = next_token (&val, cfile);
 		if (token != RPAREN)
@@ -1963,6 +1999,26 @@ struct executable_statement *parse_option_statement (cfile, lookups,
 		goto done;
 	}
 
+	if (token == EQUAL) {
+		/* Eat the equals sign. */
+		token = next_token (&val, cfile);
+
+		/* Parse a data expression and use its value for the data. */
+		if (!parse_data_expression (&expr, cfile, &lose)) {
+			/* In this context, we must have an executable
+			   statement, so if we found something else, it's
+			   still an error. */
+			if (!lose) {
+				parse_warn ("expecting a data expression.");
+				skip_to_semi (cfile);
+			}
+			return (struct executable_statement *)0;
+		}
+
+		/* We got a valid expression, so use it. */
+		goto done;
+	}
+
 	/* Parse the option data... */
 	do {
 		/* Set a flag if this is an array of a simple type (i.e.,
@@ -1995,19 +2051,6 @@ struct executable_statement *parse_option_statement (cfile, lookups,
 		}
 	} while (*fmt == 'A');
 
-#if 0
-	goto done;
-
-      try_expr:
-	/* See if there's a data expression, and if so, use it rather than
-	   the standard format. */
-	expr = parse_data_expression (cfile, &lose);
-
-	/* Found a data expression, but it was bogus? */
-	if (lose)
-		return (struct executable_statement *)0;
-		
-#endif /* 0 */
       done:
 	if (!parse_semi (cfile))
 		return (struct executable_statement *)0;
