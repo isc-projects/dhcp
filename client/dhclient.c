@@ -56,7 +56,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.44.2.20 1999/02/19 18:30:19 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.44.2.21 1999/02/23 17:42:52 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1049,8 +1049,6 @@ void send_discover (ipp)
 			      ip -> client -> packet_length,
 			      inaddr_any, &sockaddr_broadcast,
 			      (struct hardware *)0);
-	if (result < 0)
-		warn ("send_packet: %m");
 
 	add_timeout (cur_time + ip -> client -> interval, send_discover, ip);
 }
@@ -1303,9 +1301,6 @@ void send_request (ipp)
 				      from, &destination,
 				      (struct hardware *)0);
 
-	if (result < 0)
-		warn ("send_packet: %m");
-
 	add_timeout (cur_time + ip -> client -> interval,
 		     send_request, ip);
 }
@@ -1327,8 +1322,6 @@ void send_decline (ipp)
 			      ip -> client -> packet_length,
 			      inaddr_any, &sockaddr_broadcast,
 			      (struct hardware *)0);
-	if (result < 0)
-		warn ("send_packet: %m");
 }
 
 void send_release (ipp)
@@ -1348,8 +1341,6 @@ void send_release (ipp)
 			      ip -> client -> packet_length,
 			      inaddr_any, &sockaddr_broadcast,
 			      (struct hardware *)0);
-	if (result < 0)
-		warn ("send_packet: %m");
 }
 
 void make_discover (ip, lease)

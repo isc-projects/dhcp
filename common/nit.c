@@ -4,7 +4,7 @@
    with one crucial tidbit of help from Stu Grossmen. */
 
 /*
- * Copyright (c) 1996 The Internet Software Consortium.
+ * Copyright (c) 1996, 1998, 1999 The Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: nit.c,v 1.15.2.1 1998/12/20 18:27:44 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: nit.c,v 1.15.2.2 1999/02/23 17:35:46 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -263,6 +263,7 @@ ssize_t send_packet (interface, packet, raw, len, from, to, hto)
 	struct strbuf ctl, data;
 	int hw_end;
 	struct sockaddr_in foo;
+	int result;
 
 	if (!strcmp (interface -> name, "fallback"))
 		return send_fallback (interface, packet, raw,
@@ -298,7 +299,10 @@ ssize_t send_packet (interface, packet, raw, len, from, to, hto)
 	data.buf = (char *)&buf [hw_end];
 	data.maxlen = data.len = bufp + len - hw_end;
 
-	return putmsg (interface -> wfdesc, &ctl, &data, 0);
+	result = putmsg (interface -> wfdesc, &ctl, &data, 0);
+	if (result < 0)
+		warn ("send_packet: %m");
+	return result;
 }
 #endif /* USE_NIT_SEND */
 

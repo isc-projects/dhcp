@@ -3,7 +3,7 @@
    BOOTP Protocol support. */
 
 /*
- * Copyright (c) 1995, 1996 The Internet Software Consortium.
+ * Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bootp.c,v 1.28.2.2 1998/12/21 04:21:30 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bootp.c,v 1.28.2.3 1999/02/23 17:43:38 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -328,8 +328,6 @@ void bootp (packet)
 					      (struct packet *)0,
 					      &raw, outgoing.packet_length,
 					      from, &to, &hto);
-			if (result < 0)
-				warn ("send_packet: %m");
 			return;
 		}
 	/* Otherwise, broadcast it on the local network. */
@@ -342,6 +340,4 @@ void bootp (packet)
 	result = send_packet (packet -> interface,
 			      packet, &raw, outgoing.packet_length,
 			      from, &to, &hto);
-	if (result < 0)
-		warn ("send_packet: %m");
 }

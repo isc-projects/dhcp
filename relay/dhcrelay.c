@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char ocopyright [] =
-"$Id: dhcrelay.c,v 1.9.2.15 1999/02/19 18:32:46 mellon Exp $ Copyright (c) 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcrelay.c,v 1.9.2.16 1999/02/23 17:40:10 mellon Exp $ Copyright (c) 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -293,12 +293,10 @@ void relay (ip, packet, length, from_port, from, hfrom)
 			return;
 		}
 
-		if (send_packet (out,
-				 (struct packet *)0,
-				 packet, length, out -> primary_address,
-				 &to, &hto) < 0)
-			debug ("sendpkt: %m");
-		else
+		if (!send_packet (out,
+				  (struct packet *)0,
+				  packet, length, out -> primary_address,
+				  &to, &hto) < 0)
 			debug ("forwarded BOOTREPLY for %s to %s",
 			       print_hw_addr (packet -> htype, packet -> hlen,
 					      packet -> chaddr),
@@ -323,13 +321,11 @@ void relay (ip, packet, length, from_port, from, hfrom)
 	/* Otherwise, it's a BOOTREQUEST, so forward it to all the
 	   servers. */
 	for (sp = servers; sp; sp = sp -> next) {
-		if (send_packet ((fallback_interface
-				  ? fallback_interface : interfaces),
-				 (struct packet *)0,
-				 packet, length, ip -> primary_address,
-				 &sp -> to, (struct hardware *)0) < 0) {
-			debug ("send_packet: %m");
-		} else {
+		if (!send_packet ((fallback_interface
+				   ? fallback_interface : interfaces),
+				  (struct packet *)0,
+				  packet, length, ip -> primary_address,
+				  &sp -> to, (struct hardware *)0) < 0) {
 			debug ("forwarded BOOTREQUEST for %s to %s",
 			       print_hw_addr (packet -> htype, packet -> hlen,
 					      packet -> chaddr),

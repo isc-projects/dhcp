@@ -3,8 +3,8 @@
    Ultrix PacketFilter interface code.
 
 /*
- * Copyright (c) 1995, 1996, 1997 The Internet Software Consortium.
- * All rights reserved.
+ * Copyright (c) 1995, 1996, 1997, 1998, 1999
+ * The Internet Software Consortium.   All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: upf.c,v 1.3.2.1 1998/12/20 18:29:48 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: upf.c,v 1.3.2.2 1999/02/23 17:35:47 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -231,6 +231,7 @@ ssize_t send_packet (interface, packet, raw, len, from, to, hto)
 	int bufp = 0;
 	unsigned char buf [256];
 	struct iovec iov [2];
+	int result;
 
 	if (!strcmp (interface -> name, "fallback"))
 		return send_fallback (interface, packet, raw,
@@ -248,7 +249,10 @@ ssize_t send_packet (interface, packet, raw, len, from, to, hto)
 	iov [1].iov_base = (char *)raw;
 	iov [1].iov_len = len;
 
-	return writev(interface -> wfdesc, iov, 2);
+	result = writev(interface -> wfdesc, iov, 2);
+	if (result < 0)
+		warn ("send_packet: %m");
+	return result;
 }
 #endif /* USE_UPF_SEND */
 

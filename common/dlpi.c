@@ -3,7 +3,7 @@
    Data Link Provider Interface (DLPI) network interface code. */
 
 /*
- * Copyright (c) 1998 The Internet Software Consortium.
+ * Copyright (c) 1998, 1999 The Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -461,7 +461,7 @@ ssize_t send_packet (interface, packet, raw, len, from, to, hto)
 	unsigned char dstaddr [DLPI_MAXDLADDR];
 	unsigned addrlen;
 	int saplen;
-	int rslt;
+	int result;
 
 	if (!strcmp (interface -> name, "fallback"))
 		return send_fallback (interface, packet, raw,
@@ -482,7 +482,7 @@ ssize_t send_packet (interface, packet, raw, len, from, to, hto)
 	dbuflen += len;
 
 #ifdef USE_DLPI_RAW
-	rslt = write (interface -> wfdesc, dbuf, dbuflen);
+	result = write (interface -> wfdesc, dbuf, dbuflen);
 #else
 	/* XXX: Assumes ethernet, with two byte SAP */
 	sap [0] = 0x08;		/* ETHERTYPE_IP, high byte */
@@ -507,10 +507,12 @@ ssize_t send_packet (interface, packet, raw, len, from, to, hto)
 	addrlen = interface -> hw_address.hlen + ABS (saplen);
 
 	/* Send the packet down the wire... */
-	rslt = dlpiunitdatareq (interface -> wfdesc, dstaddr, addrlen,
-				0, 0, dbuf, dbuflen);
+	result = dlpiunitdatareq (interface -> wfdesc, dstaddr, addrlen,
+				  0, 0, dbuf, dbuflen);
 #endif
-	return rslt;
+	if (result < 0)
+		warn ("send_packet: %m");
+	return result;
 }
 #endif /* USE_DLPI_SEND */
 
@@ -531,7 +533,6 @@ ssize_t receive_packet (interface, buf, len, from, hfrom)
 	int length = 0;
 	int offset = 0;
 	int bufix = 0;
-	int rslt;
 	
 #ifdef USE_DLPI_RAW
 	length = read (interface -> rfdesc, dbuf, sizeof (dbuf));
@@ -1052,7 +1053,7 @@ static int dlpiunitdataind (fd, daddr, daddrlen,
 	union DL_primitives *dlp;
 	struct strbuf ctl, data;
 	int flags = 0;
-	int rslt;
+	int result;
 
 	/* Set up the msg_buf structure... */
 	dlp = (union DL_primitives *)buf;
@@ -1066,9 +1067,9 @@ static int dlpiunitdataind (fd, daddr, daddrlen,
 	data.len = 0;
 	data.buf = (char *)dbuf;
 	
-	rslt = getmsg (fd, &ctl, &data, &flags);
+	result = getmsg (fd, &ctl, &data, &flags);
 	
-	if (rslt != 0) {
+	if (result != 0) {
 		return -1;
 	}
 	
@@ -1136,7 +1137,7 @@ static int strgetmsg (fd, ctlp, datap, flagsp, caller)
 	int *flagsp;
 	int fd;
 {
-	int rslt;
+	int result;
 #ifdef USE_POLL
 	struct pollfd pfd;
 	int count;
@@ -1190,8 +1191,8 @@ static int strgetmsg (fd, ctlp, datap, flagsp, caller)
 	 * Set flags argument and issue getmsg ().
 	 */
 	*flagsp = 0;
-	if ((rslt = getmsg (fd, ctlp, datap, flagsp)) < 0) {
-		return rslt;
+	if ((result = getmsg (fd, ctlp, datap, flagsp)) < 0) {
+		return result;
 	}
 
 #ifndef USE_POLL
@@ -1207,7 +1208,7 @@ static int strgetmsg (fd, ctlp, datap, flagsp, caller)
 	/*
 	 * Check for MOREDATA and/or MORECTL.
 	 */
-	if (rslt & (MORECTL|MOREDATA)) {
+	if (result & (MORECTL|MOREDATA)) {
 		return -1;
 	}
 

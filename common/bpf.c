@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bpf.c,v 1.19.2.6 1999/02/09 04:46:59 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bpf.c,v 1.19.2.7 1999/02/23 17:35:45 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -290,7 +290,10 @@ ssize_t send_packet (interface, packet, raw, len, from, to, hto)
 	iov [1].iov_base = (char *)raw;
 	iov [1].iov_len = len;
 
-	return writev(interface -> wfdesc, iov, 2);
+	result = writev(interface -> wfdesc, iov, 2);
+	if (result < 0)
+		warn ("send_packet: %m");
+	return result;
 }
 #endif /* USE_BPF_SEND */
 
