@@ -1579,22 +1579,6 @@ extern struct universe server_universe;
 extern struct option server_options [256];
 void initialize_server_option_spaces PROTO ((void));
 
-/* convert.c */
-u_int32_t getULong PROTO ((const unsigned char *));
-int32_t getLong PROTO ((const unsigned char *));
-u_int32_t getUShort PROTO ((const unsigned char *));
-int32_t getShort PROTO ((const unsigned char *));
-u_int32_t getUChar PROTO ((const unsigned char *));
-void putULong PROTO ((unsigned char *, u_int32_t));
-void putLong PROTO ((unsigned char *, int32_t));
-void putUShort PROTO ((unsigned char *, u_int32_t));
-void putShort PROTO ((unsigned char *, int32_t));
-void putUChar PROTO ((unsigned char *, u_int32_t));
-int converted_length PROTO ((const unsigned char *,
-			     unsigned int, unsigned int));
-int binary_to_ascii PROTO ((unsigned char *, const unsigned char *,
-			    unsigned int, unsigned int));
-
 /* inet.c */
 struct iaddr subnet_number PROTO ((struct iaddr, struct iaddr));
 struct iaddr ip_addr PROTO ((struct iaddr, struct iaddr, u_int32_t));

@@ -44,10 +44,10 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: convert.c,v 1.12 2000/03/17 03:59:00 mellon Exp $ Copyright (c) 1996-1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: convert.c,v 1.1 2000/08/01 22:34:36 neild Exp $ Copyright (c) 1996-1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
-#include "dhcpd.h"
+#include <omapip/omapip_p.h>
 
 u_int32_t getULong (buf)
 	const unsigned char *buf;
