@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dispatch.c,v 1.27.2.2 1997/11/29 08:04:30 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dispatch.c,v 1.27.2.3 1998/06/25 05:29:24 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -432,12 +432,15 @@ static void got_one (l)
 	struct hardware hfrom;
 	struct iaddr ifrom;
 	int result;
-	static unsigned char packbuf [4095]; /* Packet input buffer.
-						Must be as large as largest
-						possible MTU. */
+	union {
+		unsigned char packbuf [4095]; /* Packet input buffer.
+					 	 Must be as large as largest
+						 possible MTU. */
+		struct dhcp_packet packet;
+	} u;
 
-	if ((result = receive_packet (l, packbuf, sizeof packbuf,
-				      &from, &hfrom)) < 0) {
+	if ((result =
+	     receive_packet (l, u.packbuf, sizeof u, &from, &hfrom)) < 0) {
 		warn ("receive_packet failed on %s: %m", l -> name);
 		return;
 	}
@@ -447,24 +450,26 @@ static void got_one (l)
 	ifrom.len = 4;
 	memcpy (ifrom.iabuf, &from.sin_addr, ifrom.len);
 	
-	do_packet (l, packbuf, result,
-		   from.sin_port, ifrom, &hfrom);
+	do_packet (l, &u.packet, result, from.sin_port, ifrom, &hfrom);
 }
 
-void do_packet (interface, packbuf, len, from_port, from, hfrom)
+void do_packet (interface, packet, len, from_port, from, hfrom)
 	struct interface_info *interface;
-	unsigned char *packbuf;
+	struct dhcp_packet *packet;
 	int len;
 	unsigned short from_port;
 	struct iaddr from;
 	struct hardware *hfrom;
 {
 	struct packet tp;
-	struct dhcp_packet tdp;
 
-	memcpy (&tdp, packbuf, len);
+	if (packet -> hlen > sizeof packet -> chaddr) {
+		note ("Discarding packet with invalid hlen.");
+		return;
+	}
+
 	memset (&tp, 0, sizeof tp);
-	tp.raw = &tdp;
+	tp.raw = packet;
 	tp.packet_length = len;
 	tp.client_port = from_port;
 	tp.client_addr = from;
@@ -478,7 +483,7 @@ void do_packet (interface, packbuf, len, from_port, from, hfrom)
 			tp.options [DHO_DHCP_MESSAGE_TYPE].data [0];
 	if (tp.packet_type)
 		dhcp (&tp);
-	else if (tdp.op == BOOTREQUEST)
+	else if (packet -> op == BOOTREQUEST)
 		bootp (&tp);
 }
 
