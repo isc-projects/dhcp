@@ -213,36 +213,35 @@ void dhcprequest (packet)
 		}
 	}
 
-	/* Look for server identifier... */
-	if (packet -> options [DHO_DHCP_SERVER_IDENTIFIER].len) {
-		/* If we own the lease that the client is asking for,
-		   and it's already been assigned to the client, ack it. */
-		if ((lease -> uid_len && lease -> uid_len == 
-		     packet -> options [DHO_DHCP_CLIENT_IDENTIFIER].len &&
-		     !memcmp (packet -> options
-			      [DHO_DHCP_CLIENT_IDENTIFIER].data,
-			      lease -> uid, lease -> uid_len)) ||
-		    (lease -> hardware_addr.hlen == packet -> raw -> hlen &&
-		     lease -> hardware_addr.htype == packet -> raw -> htype &&
-		     !memcmp (lease -> hardware_addr.haddr,
-			      packet -> raw -> chaddr,
-			      packet -> raw -> hlen))) {
-			ack_lease (packet, lease, DHCPACK, 0);
-			return;
-		}
-		
-		/* Otherwise, if we have a lease for this client,
-		   release it, and in any case don't reply to the
-		   DHCPREQUEST. */
-		if (memcmp (packet ->
-			    options [DHO_DHCP_SERVER_IDENTIFIER].data,
-			    server_identifier.iabuf,  server_identifier.len)) {
-			if (lease)
-				release_lease (lease);
-			return;
-		}
+	/* If we own the lease that the client is asking for,
+	   and it's already been assigned to the client, ack it. */
+	if (lease &&
+	    ((lease -> uid_len && lease -> uid_len == 
+	      packet -> options [DHO_DHCP_CLIENT_IDENTIFIER].len &&
+	      !memcmp (packet -> options
+		       [DHO_DHCP_CLIENT_IDENTIFIER].data,
+		       lease -> uid, lease -> uid_len)) ||
+	     (lease -> hardware_addr.hlen == packet -> raw -> hlen &&
+	      lease -> hardware_addr.htype == packet -> raw -> htype &&
+	      !memcmp (lease -> hardware_addr.haddr,
+		       packet -> raw -> chaddr,
+		       packet -> raw -> hlen)))) {
+		ack_lease (packet, lease, DHCPACK, 0);
+		return;
 	}
-	return;
+		
+	/* Otherwise, if we have a lease for this client,
+	   release it, and in any case don't reply to the
+	   DHCPREQUEST. */
+	if (packet -> options [DHO_DHCP_SERVER_IDENTIFIER].len
+	    && memcmp (packet ->
+		       options [DHO_DHCP_SERVER_IDENTIFIER].data,
+		       server_identifier.iabuf,
+		       server_identifier.len)) {
+		if (lease)
+			release_lease (lease);
+		return;
+	}
 }
 
 void dhcprelease (packet)
@@ -963,7 +962,7 @@ struct lease *mockup_lease (packet, share, hp)
 	mock.shared_network = mock.subnet -> shared_network;
 	mock.host = hp;
 	mock.uid_len = 0;
-	mock.hardware_addr.hlen = 0;
+	mock.hardware_addr = hp -> interface;
 	mock.uid = (unsigned char *)0;
 	mock.starts = mock.timestamp = mock.ends = MIN_TIME;
 	mock.flags = STATIC_LEASE;
