@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.85 2000/07/27 09:02:36 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.86 2000/08/22 21:21:54 neild Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -546,6 +546,7 @@ int evaluate_expression (result, packet, lease,
 		binding_scope_dereference (&ns, MDL);
 		return status;
 	} else if (expr -> op == expr_funcall) {
+		/* XXXDPN: This can never happen.  Huh? */
 		if (!binding_value_allocate (&bv, MDL))
 			return 0;
 		bv -> type = binding_function;
@@ -984,29 +985,26 @@ int evaluate_boolean_expression (result, packet, lease, in_options,
 		return 0;
 
 	      case expr_or:
+		bleft = bright = 0;
 		sleft = evaluate_boolean_expression (&bleft, packet, lease,
 						     in_options, cfg_options,
 						     scope,
 						     expr -> data.or [0]);
-		if (sleft && !bleft)
+		if (!sleft || !bleft)
 			sright = evaluate_boolean_expression
 				(&bright, packet, lease,
 				 in_options, cfg_options,
 				 scope, expr -> data.or [1]);
 		else
-			sright = bright = 0;
+			sright = 0;
 #if defined (DEBUG_EXPRESSIONS)
 		log_debug ("bool: or (%s, %s) = %s",
 		      sleft ? (bleft ? "true" : "false") : "NULL",
 		      sright ? (bright ? "true" : "false") : "NULL",
-		      ((sleft && sright)
+		      ((sleft || sright)
 		       ? (bleft || bright ? "true" : "false") : "NULL"));
 #endif
-		if (sleft && bleft) {
-			*result = 1;
-			return 1;
-		}
-		if (sleft && sright) {
+		if (sleft || sright) {
 			*result = bleft || bright;
 			return 1;
 		}
