@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.86 2000/09/27 19:13:57 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.87 2000/10/03 19:33:37 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -303,9 +303,15 @@ void parse_hardware_param (cfile, hardware)
 		hardware -> hbuf [0] = HTYPE_FDDI;
 		break;
 	      default:
-		parse_warn (cfile, "expecting a network hardware type");
-		skip_to_semi (cfile);
-		return;
+		if (!strncmp (val, "unknown-", 8)) {
+			hardware -> hbuf [i] = atoi (&val [8]);
+		} else {
+			parse_warn (cfile,
+				    "expecting a network hardware type");
+			skip_to_semi (cfile);
+
+			return;
+		}
 	}
 
 	/* Parse the hardware address information.   Technically,
