@@ -1,4 +1,4 @@
-.\"	$Id: dhcp-options.5,v 1.19.2.11 2004/06/10 17:59:15 dhankins Exp $
+.\"	$Id: dhcp-options.5,v 1.19.2.12 2004/09/15 16:10:20 dhankins Exp $
 .\"
 .\" Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 1996-2003 by Internet Software Consortium
@@ -972,7 +972,7 @@ this identifier, usually as a text string.
 This option is used by some DHCP clients to identify the vendor
 type and possibly the configuration of a DHCP client.  The information
 is a string of bytes whose contents are specific to the vendor and are
-not specified in a standard.   To see what vendor class identifier a
+not specified in a standard.   To see what vendor class identifier
 clients are sending, you can write the following in your DHCP server
 configuration file:
 .nf
@@ -991,8 +991,8 @@ set vendor-class "SUNW.Ultra-5_10";
 The vendor-class-identifier option is normally used by the DHCP server
 to determine the options that are returned in the
 .B vendor-encapsulated-options
-option.   Please see the VENDOR ENCAPSULATED OPTIONS section of the
-dhcpd.conf manual page for further information.
+option.   Please see the VENDOR ENCAPSULATED OPTIONS section later in this
+manual page for further information.
 .RE
 .PP
 .B option \fBvendor-encapsulated-options\fR \fIstring\fR\fB;\fR
@@ -1009,8 +1009,7 @@ that basis.
 Some default behaviours for well-known DHCP client vendors (currently,
 the Microsoft Windows 2000 DHCP client) are configured automatically,
 but otherwise this must be configured manually - see the VENDOR
-ENCAPSULATED OPTIONS section of the \fIdhcpd.conf\fI manual page for
-details.
+ENCAPSULATED OPTIONS section later in this manual page for details.
 .RE
 .PP
 .B option \fBwww-server\fR \fIip-address\fR [\fB,\fR
