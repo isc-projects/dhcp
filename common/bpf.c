@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bpf.c,v 1.19.2.1 1998/12/20 18:21:52 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bpf.c,v 1.19.2.2 1998/12/22 22:39:19 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -137,12 +137,12 @@ void if_register_send (info)
 }
 #endif /* USE_BPF_SEND */
 
-#ifdef USE_BPF_RECEIVE
+#if defined (USE_BPF_RECEIVE) || defined (USE_LPF_RECEIVE)
 /* Packet filter program...
    XXX Changes to the filter program may require changes to the constant
    offsets used in if_register_send to patch the BPF program! XXX */
 
-struct bpf_insn filter [] = {
+struct bpf_insn dhcp_bpf_filter [] = {
 	/* Make sure this is an IP packet... */
 	BPF_STMT (BPF_LD + BPF_H + BPF_ABS, 12),
 	BPF_JUMP (BPF_JMP + BPF_JEQ + BPF_K, ETHERTYPE_IP, 0, 8),
@@ -169,6 +169,10 @@ struct bpf_insn filter [] = {
 	BPF_STMT(BPF_RET+BPF_K, 0),
 };
 
+int dhcp_bpf_filter_len = sizeof dhcp_bpf_filter / sizeof (struct bpf_insn);
+#endif
+
+#if defined (USE_BPF_RECEIVE)
 void if_register_receive (info)
 	struct interface_info *info;
 {
@@ -220,13 +224,13 @@ void if_register_receive (info)
 	info -> rbuf_len = 0;
 
 	/* Set up the bpf filter program structure. */
-	p.bf_len = sizeof filter / sizeof (struct bpf_insn);
-	p.bf_insns = filter;
+	p.bf_len = dhcp_bpf_filter_len;
+	p.bf_insns = dhcp_bpf_filter;
 
         /* Patch the server port into the BPF  program...
 	   XXX changes to filter program may require changes
 	   to the insn number(s) used below! XXX */
-	filter [8].k = ntohs (local_port);
+	dhcp_bpf_filter [8].k = ntohs (local_port);
 
 	if (ioctl (info -> rfdesc, BIOCSETF, &p) < 0)
 		error ("Can't install packet filter program: %m");
