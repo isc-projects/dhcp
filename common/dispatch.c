@@ -61,14 +61,20 @@ static void got_one PROTO ((struct interface_info *));
 void discover_interfaces ()
 {
 	struct interface_info *tmp;
+	struct interface_info *last;
 	static char buf [8192];
 	struct ifconf ic;
 	int i;
 	int sock;
-	int ifcount = 0;
+	int address_count = 0;
 	int ifix = 0;
 	struct hardware_link *lp;
-	struct interface_info *iface;
+	struct subnet *subnet;
+	struct shared_network *share;
+	struct sockaddr_in *foo;
+#ifdef USE_FALLBACK
+	static struct shared_network fallback_network;
+#endif
 
 	/* Create an unbound datagram socket to do the SIOCGIFADDR ioctl on. */
 	if ((sock = socket (AF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0)
@@ -93,62 +99,161 @@ void discover_interfaces ()
 		i += sizeof *ifp;
 #endif
 
+		/* See if we've seen an interface that matches this one. */
+		for (tmp = interfaces; tmp; tmp = tmp -> next)
+			if (!strcmp (tmp -> name, ifp -> ifr_name))
+				break;
+
+		/* If there isn't already an interface by this name,
+		   allocate one. */
+		if (!tmp) {
+			tmp = ((struct interface_info *)
+			       dmalloc (sizeof *tmp, "get_interface_list"));
+			if (!tmp)
+				error ("Insufficient memory to %s %s",
+				       "record interface", ifp -> ifr_name);
+			memset (tmp, 0, sizeof *tmp);
+			strcpy (tmp -> name, ifp -> ifr_name);
+			tmp -> next = interfaces;
+			interfaces = tmp;
+		}
+
 		/* If we have the capability, extract link information
 		   and record it in a linked list. */
 #ifdef AF_LINK
 		if (ifp -> ifr_addr.sa_family == AF_LINK) {
 			struct sockaddr_dl *foo = ((struct sockaddr_dl *)
 						   (&ifp -> ifr_addr));
-			lp = malloc (sizeof *lp);
-			if (!lp)
-				error ("Can't allocate link pointer.");
-			strcpy (lp -> name, ifp -> ifr_name);
-			lp -> address.hlen = foo -> sdl_alen;
-			lp -> address.htype = ARPHRD_ETHER; /* XXX */
-			memcpy (lp -> address.haddr,
+			tmp -> hw_address.hlen = foo -> sdl_alen;
+			tmp -> hw_address.htype = ARPHRD_ETHER; /* XXX */
+			memcpy (tmp -> hw_address.haddr,
 				LLADDR (foo), foo -> sdl_alen);
-			lp -> next = interface_links;
-			interface_links = lp;
 		} else
 #endif /* AF_LINK */
 
 		if (ifp -> ifr_addr.sa_family == AF_INET) {
-			struct sockaddr_in *foo =
-				(struct sockaddr_in *)(&ifp -> ifr_addr);
+			struct iaddr addr;
+
+			/* Get a pointer to the address... */
+			foo = (struct sockaddr_in *)(&ifp -> ifr_addr);
+
 			/* We don't want the loopback interface. */
 			if (foo -> sin_addr.s_addr == htonl (INADDR_LOOPBACK))
 				continue;
-			tmp = ((struct interface_info *)
-			       dmalloc (sizeof *tmp, "get_interface_list"));
-			if (!tmp)
-				error ("Insufficient memory to %s",
-				       "record interface");
-			memset (tmp, 0, sizeof *tmp);
-			tmp -> address.len = 4;
-			memcpy (tmp -> address.iabuf, &foo -> sin_addr.s_addr,
-				tmp -> address.len);
-			tmp -> local_subnet = find_subnet (tmp -> address);
-			strcpy (tmp -> name, ifp -> ifr_name);
-			if_register_receive (tmp, ifp);
-			if_register_send (tmp, ifp);
-			tmp -> next = interfaces;
-			interfaces = tmp;
+
+			/* If this is the first real IP address we've
+			   found, keep a pointer to ifreq structure in
+			   which we found it. */
+			if (!tmp -> tif)
+				tmp -> tif = ifp;
+
+			/* Grab the address... */
+			addr.len = 4;
+			memcpy (addr.iabuf, &foo -> sin_addr.s_addr,
+				addr.len);
+
+			/* If this address matches the server identifier,
+			   make a note of it. */
+			if (addr_eq (addr, server_identifier))
+				server_identifier_matched = 1;
+
+			/* If there's a registered subnet for this address,
+			   connect it together... */
+			if ((subnet = find_subnet (addr))) {
+				/* If this interface has multiple aliases
+				   on the same subnet, ignore all but the
+				   first we encounter. */
+				if (!subnet -> interface) {
+					subnet -> interface = tmp;
+					subnet -> interface_address = addr;
+				} else if (subnet -> interface != tmp) {
+					warn ("Multiple %s %s: %s %s", 
+					      "interfaces match the",
+					      "same subnet",
+					      subnet -> interface -> name,
+					      tmp -> name);
+				}
+				share = subnet -> shared_network;
+				if (tmp -> shared_network &&
+				    tmp -> shared_network != share) {
+					warn ("Interface %s matches %s",
+					      tmp -> name,
+					      "multiple shared networks");
+				} else {
+					tmp -> shared_network = share;
+				}
+
+				if (!share -> interface) {
+					share -> interface = tmp;
+				} else if (share -> interface != tmp) {
+					warn ("Multiple %s %s: %s %s", 
+					      "interfaces match the",
+					      "same shared network",
+					      share -> interface -> name,
+					      tmp -> name);
+				}
+			}
 		}
 	}
 
-	/* Connect interface link addresses to interfaces. */
-	for (lp = interface_links; lp; lp = lp -> next) {
-		for (iface = interfaces; iface; iface = iface -> next) {
-				if (!strcmp (iface -> name, lp -> name)) {
-					note ("%s: %s", lp -> name,
-					      print_hw_addr
-					      (lp -> address.htype,
-					       lp -> address.hlen,
-					       lp -> address.haddr));
-					iface -> hw_address = lp -> address;
-				}
+	/* Weed out the interfaces that did not have IP addresses. */
+	last = (struct interface_info *)0;
+	for (tmp = interfaces; tmp; tmp = tmp -> next) {
+		if (!tmp -> tif) {
+			if (!last)
+				interfaces = interfaces -> next;
+			else
+				last -> next = tmp -> next;
+			continue;
+		}
+
+		foo = (struct sockaddr_in *)(&tmp -> tif -> ifr_addr);
+
+		/* Find subnets that don't have valid interface
+		   addresses... */
+		for (subnet = tmp -> shared_network -> subnets;
+		     subnet; subnet = subnet -> next_sibling) {
+			if (!subnet -> interface_address.len) {
+				warn ("subnet %s attached to interface %s %s",
+				      piaddr (subnet -> net), tmp -> name,
+				      "but has no alias on that network.");
+				/* Set the interface address for this subnet
+				   to the first address we found. */
+				subnet -> interface_address.len = 4;
+				memcpy (subnet -> interface_address.iabuf,
+					&foo -> sin_addr.s_addr, 4);
 			}
+		}
+
+		/* If a server identifier wasn't specified, take it
+		   from the first IP address we see... */
+		if (!server_identifier.len) {
+			if (address_count > 1)
+				warn ("no server identifier specified.");
+			server_identifier.len = 4;
+			memcpy (server_identifier.iabuf,
+				&foo -> sin_addr.s_addr, 4);
+			/* Flag the server identifier as having matched,
+			   so we don't generate a spurious warning. */
+			server_identifier_matched = 1;
+		}
+			
+
+		/* Register the interface... */
+		if_register_receive (tmp, tmp -> tif);
+		if_register_send (tmp, tmp -> tif);
+
+		tmp -> tif = (struct ifreq *)0; /* Can't keep this. */
 	}
+	if (!server_identifier_matched)
+		warn ("no interface address matches server identifier");
+
+#ifdef USE_FALLBACK
+	strcpy (fallback_interface.name, "fallback");	
+	fallback_interface.shared_network = &fallback_network;
+	fallback_network.name = "fallback-net";
+	if_register_fallback (&fallback_interface, (struct ifreq *)0);
+#endif
 }
 
 #ifdef USE_POLL
@@ -272,8 +377,7 @@ static void got_one (l)
 
 	if ((result = receive_packet (l, packbuf, sizeof packbuf,
 				      &from, &hfrom)) < 0) {
-		warn ("receive_packet failed on %s: %m",
-		      piaddr (l -> address));
+		warn ("receive_packet failed on %s: %m", l -> name);
 		return;
 	}
 	if (result == 0)
