@@ -113,6 +113,8 @@
 #define ALIAS		317
 #define REBOOT		318
 #define ABANDONED	319
+#define	BACKOFF_CUTOFF	320
+#define	INITIAL_INTERVAL 321
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\
 				 (x) != STRING &&	\

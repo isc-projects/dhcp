@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: conflex.c,v 1.24 1997/03/06 19:27:57 mellon Exp $ Copyright (c) 1995, 1996, 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: conflex.c,v 1.25 1997/03/29 01:24:53 mellon Exp $ Copyright (c) 1995, 1996, 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -361,6 +361,8 @@ static int intern (atom, dfv)
 			return ABANDONED;
 		break;
 	      case 'b':
+		if (!strcasecmp (atom + 1, "ackoff-cutoff"))
+			return BACKOFF_CUTOFF;
 		if (!strcasecmp (atom + 1, "ootp"))
 			return BOOTP;
 		if (!strcasecmp (atom + 1, "ooting"))
@@ -424,6 +426,8 @@ static int intern (atom, dfv)
 			return HARDWARE;
 		break;
 	      case 'i':
+		if (!strcasecmp (atom + 1, "nitial-interval"))
+			return INITIAL_INTERVAL;
 		if (!strcasecmp (atom + 1, "nterface"))
 			return INTERFACE;
 		break;
