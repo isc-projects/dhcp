@@ -137,6 +137,15 @@
 #define SUFFIX		338
 #define CHECK		339
 #define EXTRACT_INT	340
+#define IF		341
+#define ADD		342
+#define BREAK		343
+#define ELSE		344
+#define ELSIF		345
+#define SUBCLASS	346
+#define	MATCH		347
+#define SPAWN		348
+#define WITH		349
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\
 				 (x) != STRING &&	\
