@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: upf.c,v 1.18 2000/05/16 23:02:31 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: upf.c,v 1.19 2000/06/08 21:14:16 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -365,6 +365,7 @@ void maybe_setup_fallback ()
 		if (status != ISC_R_SUCCESS)
 			log_fatal ("Can't register I/O handle for %s: %s",
 				   fbi -> name, isc_result_totext (status));
+		interface_dereference (&fbi, MDL);
 	}
 }
 #endif
