@@ -54,3 +54,8 @@ struct hash_table {
 	struct hash_bucket *buckets [DEFAULT_HASH_SIZE];
 };
 
+struct named_hash {
+	struct named_hash *next;
+	char *name;
+	struct hash_table *hash;
+};
