@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.57.2.8 1998/06/29 22:16:38 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.57.2.9 1998/06/29 22:24:34 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -615,12 +615,19 @@ void ack_lease (packet, lease, offer, when)
 	/* Choose a filename; first from the host_decl, if any, then from
 	   the user class, then from the vendor class. */
 	if (lease -> host && lease -> host -> group -> filename)
-		state -> filename = lease -> host -> group -> filename;
+		strncpy (state -> filename, lease -> host -> group -> filename,
+			 sizeof state -> filename);
 	else if (user_class && user_class -> group -> filename)
-		state -> filename = user_class -> group -> filename;
+		strncpy (state -> filename, user_class -> group -> filename,
+			 sizeof state -> filename);
 	else if (vendor_class  && vendor_class -> group -> filename)
-		state -> filename = vendor_class -> group -> filename;
-	else state -> filename = (char *)0;
+		strncpy (state -> filename, vendor_class -> group -> filename,
+			 sizeof state -> filename);
+	else if (packet -> raw.file [0])
+		strncpy (state -> filename, packet -> raw.file,
+			 sizeof state -> filename);
+	else
+		strcpy (state -> filename, "");
 
 	/* Choose a server name as above. */
 	if (lease -> host && lease -> host -> group -> server_name)
@@ -1013,7 +1020,7 @@ void dhcp_reply (lease)
 
 	/* Copy in the filename if given; otherwise, flag the filename
 	   buffer as available for options. */
-	if (state -> filename)
+	if (state -> filename [0])
 		strncpy (raw.file, state -> filename, sizeof raw.file);
 	else
 		bufs |= 1;
