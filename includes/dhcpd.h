@@ -264,10 +264,6 @@ extern struct interface_info fallback_interface;
 
 int main PROTO ((int, char **, char **));
 void cleanup PROTO ((void));
-void do_packet PROTO ((struct interface_info *,
-		       unsigned char *, int,
-		       unsigned short, struct iaddr, struct hardware *));
-
 
 /* conflex.c */
 int next_token PROTO ((char **, FILE *));
@@ -461,6 +457,10 @@ size_t send_packet PROTO ((struct interface_info *,
 struct interface_info *interfaces;
 void discover_interfaces PROTO ((void));
 void dispatch PROTO ((void));
+void do_packet PROTO ((struct interface_info *,
+		       unsigned char *, int,
+		       unsigned short, struct iaddr, struct hardware *));
+int locate_network PROTO ((struct packet *));
 
 /* hash.c */
 struct hash_table *new_hash PROTO ((void));
@@ -495,7 +495,11 @@ int addr_eq PROTO ((struct iaddr, struct iaddr));
 char *piaddr PROTO ((struct iaddr));
 
 /* dhclient.c */
-void parse_client_statement PROTO ((FILE *, struct host_decl *));
+void dhcpoffer PROTO ((struct packet *));
+void dhcpack PROTO ((struct packet *));
+void dhcpnak PROTO ((struct packet *));
+void send_discover PROTO ((struct interface_info *));
+void send_request PROTO ((struct packet *));
 
 /* db.c */
 int write_lease PROTO ((struct lease *));
