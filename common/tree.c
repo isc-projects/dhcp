@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.100 2001/03/22 07:00:15 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.101 2001/04/18 18:54:47 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1721,7 +1721,7 @@ int evaluate_data_expression (result, packet, lease, client_state,
 							buflen += 2;
 						else
 							buflen += 3;
-					} else if (offset == 10) {
+					} else if (offset == 16) {
 						if (other.data [i] < 16)
 							buflen++;
 						else
