@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: lpf.c,v 1.1 1998/12/22 22:34:54 mellon Exp $ Copyright (c) 1995, 1996, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: lpf.c,v 1.1.2.1 1999/02/03 19:09:05 mellon Exp $ Copyright (c) 1995, 1996, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -51,7 +51,9 @@ static char copyright[] =
 #include <sys/ioctl.h>
 #include <sys/uio.h>
 
-#include <net/bpf.h>
+#include <asm/types.h>
+#include <linux/filter.h>
+#include <linux/if_ether.h>
 #include <netinet/in_systm.h>
 #include "includes/netinet/ip.h"
 #include "includes/netinet/udp.h"
@@ -126,19 +128,21 @@ void if_register_send (info)
 #ifdef USE_LPF_RECEIVE
 /* Defined in bpf.c.   We can't extern these in dhcpd.h without pulling
    in bpf includes... */
-extern struct bpf_insn dhcp_bpf_filter [];
+extern struct sock_filter dhcp_bpf_filter [];
 extern int dhcp_bpf_filter_len;
 
 void if_register_receive (info)
 	struct interface_info *info;
 {
+	struct sock_fprog p;
+
 	/* Open a LPF device and hang it on this interface... */
 	info -> rfdesc = if_register_lpf (info);
 
 	/* Set up the bpf filter program structure.    This is defined in
 	   bpf.c */
-	p.bf_len = dhcp_bpf_filter_len;
-	p.bf_insns = dhcp_bpf_filter;
+	p.len = dhcp_bpf_filter_len;
+	p.filter = dhcp_bpf_filter;
 
         /* Patch the server port into the LPF  program...
 	   XXX changes to filter program may require changes
@@ -197,14 +201,14 @@ ssize_t receive_packet (interface, buf, len, from, hfrom)
 	int nread;
 	int length = 0;
 	int offset = 0;
-	unsigned char ibuf [1500 + sizeof (struct enstamp)];
+	unsigned char ibuf [1500];
 	int bufix = 0;
 
 	length = read (interface -> rfdesc, ibuf, sizeof ibuf);
 	if (length <= 0)
 		return length;
 
-	bufix = sizeof (struct enstamp);
+	bufix = 0;
 	/* Decode the physical header... */
 	offset = decode_hw_header (interface, ibuf, bufix, hfrom);
 
