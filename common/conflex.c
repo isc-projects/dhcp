@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: conflex.c,v 1.50 1999/07/19 01:15:10 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: conflex.c,v 1.51 1999/07/19 15:32:54 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -515,7 +515,7 @@ static enum dhcp_token intern (atom, dfv)
 			return LEASE;
 		if (!strcasecmp (atom + 1, "eased-address"))
 			return LEASED_ADDRESS;
-		if (!strcasecmp (atom + 1, "lease-time"))
+		if (!strcasecmp (atom + 1, "ease-time"))
 			return LEASE_TIME;
 		if (!strcasecmp (atom + 1, "imit"))
 			return LIMIT;
