@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: memory.c,v 1.52.2.9 1999/11/13 13:36:03 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: memory.c,v 1.52.2.10 1999/12/09 00:27:30 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -537,24 +537,33 @@ int supersede_lease (comp, lease, commit)
 	/* Copy the data files, but not the linkages. */
 	comp -> starts = lease -> starts;
 	if (lease -> uid) {
-		if (lease -> uid_len < sizeof (lease -> uid_buf)) {
+		if (lease -> uid_len <= sizeof (lease -> uid_buf)) {
 			memcpy (comp -> uid_buf,
 				lease -> uid, lease -> uid_len);
 			comp -> uid = &comp -> uid_buf [0];
 			comp -> uid_max = sizeof comp -> uid_buf;
+			comp -> uid_len = lease -> uid_len;
 		} else if (lease -> uid != &lease -> uid_buf [0]) {
 			comp -> uid = lease -> uid;
 			comp -> uid_max = lease -> uid_max;
+			comp -> uid_len = lease -> uid_len;
 			lease -> uid = (unsigned char *)0;
 			lease -> uid_max = 0;
+			lease -> uid_len = 0;
 		} else {
+			/* The theory here is that we have a memory
+			   corruption problem, so continuing to run
+			   would be incorrect.  However, what has
+			   probably happened is a relatively harmless
+			   coding error, so maybe this is an extreme
+			   reaction. */
 			log_fatal ("corrupt lease uid."); /* XXX */
 		}
 	} else {
 		comp -> uid = (unsigned char *)0;
 		comp -> uid_max = 0;
+		comp -> uid_len = 0;
 	}
-	comp -> uid_len = lease -> uid_len;
 	comp -> host = lease -> host;
 	comp -> hardware_addr = lease -> hardware_addr;
 	comp -> flags = ((lease -> flags & ~PERSISTENT_FLAGS) |
