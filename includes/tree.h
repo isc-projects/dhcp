@@ -93,8 +93,12 @@ struct tree_cache {
 #define TC_TEMPORARY		2
 };
 
+struct data_string; /* forward */
+struct packet; /* forward */
+
 struct universe {
 	char *name;
+	struct data_string (*lookup_func) PROTO ((struct packet *, int));
 	struct hash_table *hash;
 	struct option *options [256];
 };
