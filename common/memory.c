@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: memory.c,v 1.52.2.5 1999/10/28 15:54:05 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: memory.c,v 1.52.2.6 1999/11/03 22:23:23 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -648,7 +648,7 @@ int supersede_lease (comp, lease, commit)
 	/* If there's an expiry event on this lease, process it or
 	   queue it. */
 	if (comp -> ddns_fwd_name) {
-		if (comp -> ends < cur_time) {
+		if (comp -> ends <= cur_time && commit) {
 #if defined (NSUPDATE)
 			nsupdate (comp, (struct lease_state *)0,
 				  (struct packet *)0, DELETE);
