@@ -50,7 +50,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: omapi.c,v 1.46.2.7 2001/06/22 02:28:51 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: omapi.c,v 1.46.2.8 2001/10/11 20:46:15 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -821,8 +821,8 @@ isc_result_t dhcp_host_set_value  (omapi_object_t *h,
 	if (!omapi_ds_strcmp (name, "name")) {
 		if (host -> name)
 			return ISC_R_EXISTS;
-		if (value -> type == omapi_datatype_data ||
-		    value -> type == omapi_datatype_string) {
+		if (value && (value -> type == omapi_datatype_data ||
+		    	      value -> type == omapi_datatype_string)) {
 			host -> name = dmalloc (value -> u.buffer.len + 1,
 						MDL);
 			if (!host -> name)
@@ -837,8 +837,8 @@ isc_result_t dhcp_host_set_value  (omapi_object_t *h,
 	}
 
 	if (!omapi_ds_strcmp (name, "group")) {
-		if (value -> type == omapi_datatype_data ||
-		    value -> type == omapi_datatype_string) {
+		if (value && (value -> type == omapi_datatype_data ||
+		    	      value -> type == omapi_datatype_string)) {
 			struct group_object *group;
 			group = (struct group_object *)0;
 			group_hash_lookup (&group, group_name_hash,
@@ -863,8 +863,8 @@ isc_result_t dhcp_host_set_value  (omapi_object_t *h,
 	if (!omapi_ds_strcmp (name, "hardware-address")) {
 		if (host -> interface.hlen)
 			return ISC_R_EXISTS;
-		if (value -> type == omapi_datatype_data ||
-		    value -> type == omapi_datatype_string) {
+		if (value && (value -> type == omapi_datatype_data ||
+		    	      value -> type == omapi_datatype_string)) {
 			if (value -> u.buffer.len >
 			    (sizeof host -> interface.hbuf) - 1)
 				return ISC_R_INVALIDARG;
@@ -879,8 +879,8 @@ isc_result_t dhcp_host_set_value  (omapi_object_t *h,
 
 	if (!omapi_ds_strcmp (name, "hardware-type")) {
 		int type;
-		if (value -> type == omapi_datatype_data &&
-		    value -> u.buffer.len == sizeof type) {
+		if (value && (value -> type == omapi_datatype_data &&
+		    	      value -> u.buffer.len == sizeof type)) {
 			if (value -> u.buffer.len > sizeof type)
 				return ISC_R_INVALIDARG;
 			memcpy (&type,
@@ -898,8 +898,8 @@ isc_result_t dhcp_host_set_value  (omapi_object_t *h,
 	if (!omapi_ds_strcmp (name, "dhcp-client-identifier")) {
 		if (host -> client_identifier.data)
 			return ISC_R_EXISTS;
-		if (value -> type == omapi_datatype_data ||
-		    value -> type == omapi_datatype_string) {
+		if (value && (value -> type == omapi_datatype_data ||
+		    	      value -> type == omapi_datatype_string)) {
 		    if (!buffer_allocate (&host -> client_identifier.buffer,
 					  value -> u.buffer.len, MDL))
 			    return ISC_R_NOMEMORY;
@@ -919,8 +919,8 @@ isc_result_t dhcp_host_set_value  (omapi_object_t *h,
 			option_cache_dereference (&host -> fixed_addr, MDL);
 		if (!value)
 			return ISC_R_SUCCESS;
-		if (value -> type == omapi_datatype_data ||
-		    value -> type == omapi_datatype_string) {
+		if (value && (value -> type == omapi_datatype_data ||
+			      value -> type == omapi_datatype_string)) {
 			struct data_string ds;
 			memset (&ds, 0, sizeof ds);
 			ds.len = value -> u.buffer.len;
@@ -956,8 +956,8 @@ isc_result_t dhcp_host_set_value  (omapi_object_t *h,
 		}
 		if (!host -> group)
 			return ISC_R_NOMEMORY;
-		if (value -> type == omapi_datatype_data ||
-		    value -> type == omapi_datatype_string) {
+		if (value && (value -> type == omapi_datatype_data ||
+			      value -> type == omapi_datatype_string)) {
 			struct parse *parse;
 			int lose = 0;
 			parse = (struct parse *)0;
