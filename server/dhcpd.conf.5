@@ -1,6 +1,6 @@
 .\"	dhcpd.conf.5
 .\"
-.\" Copyright (c) 1995, 1996 The Internet Software Consortium.
+.\" Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.
 .\" All rights reserved.
 .\"
 .\" Redistribution and use in source and binary forms, with or without
@@ -493,6 +493,39 @@ should be the maximum length in seconds that will be assigned to a
 lease if the client requesting the lease asks for a specific
 expiration time.
 .PP
+.B The
+.I min-lease-time
+.B statement
+.PP
+ \fBmin-lease-time\fR \fItime\fR\fB;\fR
+.PP
+.I Time
+should be the minimum length in seconds that will be assigned to a
+lease if the client requesting the lease asks for a specific
+expiration time.
+.PP
+.B The
+.I min-secs
+.B statement
+.PP
+ \fBmin-secs\fR \fIseconds\fR\fB;\fR
+.PP
+.I Seconds
+should be the minimum number of seconds since a client began trying to
+acquire a new lease before the DHCP server will respond to its request.
+The number of seconds is based on what the client reports, and the maximum
+value that the client can report is 255 seconds.   Generally, setting this
+to one will result in the DHCP server not responding to the client's first
+request, but always responding to its second request.
+.PP
+This can be used
+to set up a secondary DHCP server which never offers an address to a client
+until the primary server has been given a chance to do so.   If the primary
+server is down, the client will bind to the secondary server, but otherwise
+clients should always bind to the primary.   Note that this does not, by
+itself, permit a primary server and a secondary server to share a pool of
+dynamically-allocatable addresses.
+.PP
 .B The 
 .I hardware
 .B statement
@@ -661,6 +694,19 @@ is equivalent to
 .PP
 An \fIoption host-name\fR statement within a host declaration will
 override the use of the name in the host declaration.
+.PP
+.B The
+.I use-lease-addr-for-default-route
+.B statement
+.PP
+ \fBuse-lease-addr-for-default-route\fR \fIflag\fR\fB;\fR
+.PP
+If the \fIuse-lease-addr-for-default-route\fR parameter is true in a
+given scope, then instead of sending the value specified in the
+routers option (or sending no value at all), the IP address of the
+lease being assigned is sent to the client.   This supposedly causes
+Win95 machines to ARP for all IP addresses, which can be helpful if
+your router is configured for proxy ARP.
 .PP
 .B The
 .I server-identifier
