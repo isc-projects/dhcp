@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.63 2000/02/05 18:04:47 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.64 2000/02/15 19:41:01 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1364,8 +1364,13 @@ int parse_executable_statement (result, cfile, lose, case_context)
 			return 1;
 		}
 			
+	      case DEFINE:
 	      case TOKEN_SET:
 		token = next_token (&val, cfile);
+		if (token == DEFINE)
+			flag = 1;
+		else
+			flag = 0;
 
 		token = next_token (&val, cfile);
 		if (token != NAME && token != NUMBER_OR_NAME) {
@@ -1379,30 +1384,105 @@ int parse_executable_statement (result, cfile, lose, case_context)
 
 		if (!executable_statement_allocate (result, MDL))
 			log_fatal ("no memory for set statement.");
-		(*result) -> op = set_statement;
+		(*result) -> op = flag ? define_statement : set_statement;
 		(*result) -> data.set.name = dmalloc (strlen (val) + 1, MDL);
 		if (!(*result)->data.set.name)
 			log_fatal ("can't allocate variable name");
 		strcpy ((*result) -> data.set.name, val);
 		token = next_token (&val, cfile);
-		if (token != EQUAL) {
-			parse_warn (cfile, "expecting '=' in set statement.");
-			goto badset;
-		}
 
-		if (!parse_expression (&(*result) -> data.set.expr,
-				       cfile, lose, context_data, /* XXX */
-				       (struct expression **)0, expr_none)) {
-			if (!*lose)
-				parse_warn (cfile,
-					    "expecting data expression.");
-			else
+		if (token == LPAREN) {
+			struct string_list *head, *cur, *new;
+			struct expression *expr;
+			head = cur = (struct string_list *)0;
+			do {
+				token = next_token (&val, cfile);
+				if (token == RPAREN)
+					break;
+				if (token != NAME && token != NUMBER_OR_NAME) {
+					parse_warn (cfile,
+						    "expecting argument name");
+					skip_to_rbrace (cfile, 0);
+					*lose = 1;
+					executable_statement_dereference
+						(result, MDL);
+					return 0;
+				}
+				new = ((struct string_list *)
+				       dmalloc (sizeof (struct string_list) +
+						strlen (val), MDL));
+				if (!new)
+					log_fatal ("can't allocate string.");
+				memset (new, 0, sizeof *new);
+				strcpy (new -> string, val);
+				if (cur) {
+					cur -> next = new;
+					cur = new;
+				} else {
+					head = cur = new;
+				}
+				token = next_token (&val, cfile);
+			} while (token == COMMA);
+
+			if (token != RPAREN) {
+				parse_warn (cfile, "expecting right paren.");
+			      badx:
+				skip_to_semi (cfile);
 				*lose = 1;
-			skip_to_semi (cfile);
-			executable_statement_dereference (result, MDL);
-			return 0;
+				executable_statement_dereference (result, MDL);
+				return 0;
+			}
+
+			token = next_token (&val, cfile);
+			if (token != LBRACE) {
+				parse_warn (cfile, "expecting left brace.");
+				goto badx;
+			}
+
+			expr = (struct expression *)0;
+			if (!(expression_allocate (&expr, MDL)))
+				log_fatal ("can't allocate expression.");
+			expr -> op = expr_function;
+			if (!fundef_allocate (&expr -> data.func, MDL))
+				log_fatal ("can't allocate fundef.");
+			expr -> data.func -> args = head;
+			(*result) -> data.set.expr = expr;
+
+			if (!(parse_executable_statements
+			      (&expr -> data.func -> statements, cfile, lose,
+			       case_context))) {
+				if (*lose)
+					goto badx;
+			}
+
+			token = next_token (&val, cfile);
+			if (token != RBRACE) {
+				parse_warn (cfile, "expecting rigt brace.");
+				goto badx;
+			}
+		} else {
+			if (token != EQUAL) {
+				parse_warn (cfile,
+					    "expecting '=' in %s statement.",
+					    flag ? "define" : "set");
+				goto badset;
+			}
+
+			if (!parse_expression (&(*result) -> data.set.expr,
+					       cfile, lose, context_any,
+					       (struct expression **)0,
+					       expr_none)) {
+				if (!*lose)
+					parse_warn (cfile,
+						    "expecting expression.");
+				else
+					*lose = 1;
+				skip_to_semi (cfile);
+				executable_statement_dereference (result, MDL);
+				return 0;
+			}
+			parse_semi (cfile);
 		}
-		parse_semi (cfile);
 		break;
 
 	      case UNSET:
@@ -3031,6 +3111,26 @@ int parse_expression (expr, cfile, lose, context, plhs, binop)
 
 	      case OR:
 		next_op = expr_or;
+		break;
+
+	      case PLUS:
+		next_op = expr_add;
+		break;
+
+	      case MINUS:
+		next_op = expr_subtract;
+		break;
+
+	      case SLASH:
+		next_op = expr_divide;
+		break;
+
+	      case ASTERISK:
+		next_op = expr_multiply;
+		break;
+
+	      case PERCENT:
+		next_op = expr_remainder;
 		break;
 
 	      default:
