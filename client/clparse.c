@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: clparse.c,v 1.19 1998/11/06 00:10:58 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: clparse.c,v 1.20 1998/11/09 02:42:58 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -198,6 +198,7 @@ void parse_client_statement (cfile, ip, config)
 	struct executable_statement *stmt, **p;
 	enum statement_op op;
 	int lose;
+	char *name;
 
 	switch (peek_token (&val, cfile)) {
 	      case SEND:
@@ -300,9 +301,19 @@ void parse_client_statement (cfile, ip, config)
 		token = next_token (&val, cfile);
 		if (ip)
 			parse_warn ("nested interface declaration.");
-		parse_interface_declaration (cfile, config);
+		parse_interface_declaration (cfile, config, (char *)0);
 		return;
 
+	      case PSEUDO:
+		token = next_token (&val, cfile);
+		token = next_token (&val, cfile);
+		name = dmalloc (strlen (val) + 1, "parse_client_statement");
+		if (!name)
+			error ("no memory for pseudo interface name");
+		strcpy (name, val);
+		parse_interface_declaration (cfile, config, name);
+		return;
+		
 	      case LEASE:
 		token = next_token (&val, cfile);
 		parse_client_lease_statement (cfile, 1);
@@ -459,16 +470,15 @@ void parse_option_list (cfile, list)
 /* interface-declaration :==
    	INTERFACE string LBRACE client-declarations RBRACE */
 
-void parse_interface_declaration (cfile, outer_config)
+void parse_interface_declaration (cfile, outer_config, name)
 	FILE *cfile;
 	struct client_config *outer_config;
+	char *name;
 {
 	int token;
 	char *val;
-
-	struct interface_info dummy_interface, *ip;
-	struct client_state dummy_state;
-	struct client_config dummy_config;
+	struct client_state *client, **cp;
+	struct interface_info *ip;
 
 	token = next_token (&val, cfile);
 	if (token != STRING) {
@@ -479,11 +489,24 @@ void parse_interface_declaration (cfile, outer_config)
 
 	ip = interface_or_dummy (val);
 
-	if (!ip -> client)
-		make_client_state (ip);
+	/* If we were given a name, this is a pseudo-interface. */
+	if (name) {
+		make_client_state (&client);
+		client -> name = name;
+		client -> interface = ip;
+		for (cp = &ip -> client; *cp; cp = &((*cp) -> next))
+			;
+		*cp = client;
+	} else {
+		if (!ip -> client) {
+			make_client_state (&ip -> client);
+			ip -> client -> interface = ip;
+		}
+		client = ip -> client;
+	}
 
-	if (!ip -> client -> config)
-		make_client_config (ip, outer_config);
+	if (!client -> config)
+		make_client_config (client, outer_config);
 
 	ip -> flags &= ~INTERFACE_AUTOMATIC;
 	interfaces_requested = 1;
@@ -503,7 +526,7 @@ void parse_interface_declaration (cfile, outer_config)
 		}
 		if (token == RBRACE)
 			break;
-		parse_client_statement (cfile, ip, ip -> client -> config);
+		parse_client_statement (cfile, ip, client -> config);
 	} while (1);
 	token = next_token (&val, cfile);
 }
@@ -542,28 +565,28 @@ struct interface_info *interface_or_dummy (name)
 	return ip;
 }
 
-void make_client_state (ip)
-	struct interface_info *ip;
+void make_client_state (state)
+	struct client_state **state;
 {
-	ip -> client =
-		((struct client_state *)malloc (sizeof *(ip -> client)));
-	if (!ip -> client)
-		error ("no memory for state on %s\n", ip -> name);
-	memset (ip -> client, 0, sizeof *(ip -> client));
+	*state = ((struct client_state *)dmalloc (sizeof **state,
+						  "make_client_state"));
+	if (!*state)
+		error ("no memory for client state\n");
+	memset (*state, 0, sizeof **state);
 }
 
-void make_client_config (ip, config)
-	struct interface_info *ip;
+void make_client_config (client, config)
+	struct client_state *client;
 	struct client_config *config;
 {
-	ip -> client -> config =
-		((struct client_config *)
-		 malloc (sizeof (struct client_config)));
-	if (!ip -> client -> config)
-		error ("no memory for config for %s\n", ip -> name);
-	memset (ip -> client -> config, 0,
-		sizeof *(ip -> client -> config));
-	memcpy (ip -> client -> config, config, sizeof *config);
+	client -> config = (((struct client_config *)
+			     dmalloc (sizeof (struct client_config),
+				      "make_client_config")));
+	if (!client -> config)
+		error ("no memory for client config\n");
+	memset (client -> config, 0,
+		sizeof *(client -> config));
+	memcpy (client -> config, config, sizeof *config);
 }
 
 /* client-lease-statement :==
@@ -580,9 +603,10 @@ void parse_client_lease_statement (cfile, is_static)
 	int is_static;
 {
 	struct client_lease *lease, *lp, *pl;
-	struct interface_info *ip;
+	struct interface_info *ip = (struct interface_info *)0;
 	int token;
 	char *val;
+	struct client_state *client = (struct client_state *)0;
 
 	token = next_token (&val, cfile);
 	if (token != LBRACE) {
@@ -597,8 +621,6 @@ void parse_client_lease_statement (cfile, is_static)
 	memset (lease, 0, sizeof *lease);
 	lease -> is_static = is_static;
 
-	ip = (struct interface_info *)0;
-
 	do {
 		token = peek_token (&val, cfile);
 		if (token == EOF) {
@@ -607,7 +629,7 @@ void parse_client_lease_statement (cfile, is_static)
 		}
 		if (token == RBRACE)
 			break;
-		parse_client_lease_declaration (cfile, lease, &ip);
+		parse_client_lease_declaration (cfile, lease, &ip, &client);
 	} while (1);
 	token = next_token (&val, cfile);
 
@@ -619,8 +641,12 @@ void parse_client_lease_statement (cfile, is_static)
 	}
 
 	/* Make sure there's a client state structure... */
-	if (!ip -> client)
-		make_client_state (ip);
+	if (!ip -> client) {
+		make_client_state (&ip -> client);
+		ip -> client -> interface = ip;
+	}
+	if (!client)
+		client = ip -> client;
 
 	/* If this is an alias lease, it doesn't need to be sorted in. */
 	if (is_static == 2) {
@@ -633,14 +659,14 @@ void parse_client_lease_statement (cfile, is_static)
 	   lease list looking for a lease with the same address, and
 	   if we find it, toss it. */
 	pl = (struct client_lease *)0;
-	for (lp = ip -> client -> leases; lp; lp = lp -> next) {
+	for (lp = client -> leases; lp; lp = lp -> next) {
 		if (lp -> address.len == lease -> address.len &&
 		    !memcmp (lp -> address.iabuf, lease -> address.iabuf,
 			     lease -> address.len)) {
 			if (pl)
 				pl -> next = lp -> next;
 			else
-				ip -> client -> leases = lp -> next;
+				client -> leases = lp -> next;
 			destroy_client_lease (lp);
 			break;
 		}
@@ -649,8 +675,8 @@ void parse_client_lease_statement (cfile, is_static)
 	/* If this is a preloaded lease, just put it on the list of recorded
 	   leases - don't make it the active lease. */
 	if (is_static) {
-		lease -> next = ip -> client -> leases;
-		ip -> client -> leases = lease;
+		lease -> next = client -> leases;
+		client -> leases = lease;
 		return;
 	}
 		
@@ -665,22 +691,21 @@ void parse_client_lease_statement (cfile, is_static)
 	   then if the old active lease has expired, we dump it; if not,
 	   we put it on the list of leases for this interface which are
 	   still valid but no longer active. */
-	if (ip -> client -> active) {
-		if (ip -> client -> active -> expiry < cur_time)
-			destroy_client_lease (ip -> client -> active);
-		else if (ip -> client -> active -> address.len ==
+	if (client -> active) {
+		if (client -> active -> expiry < cur_time)
+			destroy_client_lease (client -> active);
+		else if (client -> active -> address.len ==
 			 lease -> address.len &&
-			 !memcmp (ip -> client -> active -> address.iabuf,
+			 !memcmp (client -> active -> address.iabuf,
 				  lease -> address.iabuf,
 				  lease -> address.len))
-			destroy_client_lease (ip -> client -> active);
+			destroy_client_lease (client -> active);
 		else {
-			ip -> client -> active -> next =
-				ip -> client -> leases;
-			ip -> client -> leases = ip -> client -> active;
+			client -> active -> next = client -> leases;
+			client -> leases = client -> active;
 		}
 	}
-	ip -> client -> active = lease;
+	client -> active = lease;
 
 	/* phew. */
 }
@@ -696,16 +721,18 @@ void parse_client_lease_statement (cfile, is_static)
 	REBIND time-decl |
 	EXPIRE time-decl */
 
-void parse_client_lease_declaration (cfile, lease, ipp)
+void parse_client_lease_declaration (cfile, lease, ipp, clientp)
 	FILE *cfile;
 	struct client_lease *lease;
 	struct interface_info **ipp;
+	struct client_state **clientp;
 {
 	int token;
 	char *val;
 	char *t, *n;
 	struct interface_info *ip;
 	struct option_cache *oc;
+	struct client_state *client = (struct client_state *)0;
 
 	switch (next_token (&val, cfile)) {
 	      case BOOTP:
@@ -721,6 +748,21 @@ void parse_client_lease_declaration (cfile, lease, ipp)
 		}
 		ip = interface_or_dummy (val);
 		*ipp = ip;
+		break;
+
+	      case NAME:
+		token = next_token (&val, cfile);
+		ip = *ipp;
+		if (!ip) {
+			parse_warn ("state name precedes interface.");
+			break;
+		}
+		for (client = ip -> client; client; client = client -> next)
+			if (!strcmp (client -> name, val))
+				break;
+		if (!client)
+			parse_warn ("lease specified for unknown pseudo.");
+		*clientp = client;
 		break;
 
 	      case FIXED_ADDR:
