@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.97 2000/01/26 14:56:18 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.98 2000/01/26 17:29:35 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2336,40 +2336,6 @@ void parse_address_range (cfile, group, type, pool)
 	if (!pool) {
 		struct pool *last;
 
-#if defined (FAILOVER_PROTOCOL)
-		if (pool -> failover_peer && dynamic) {
-			/* Doctor, do you think I'm overly sensitive
-			   about getting bug reports I can't fix? */
-			parse_warn (cfile, "dynamic-bootp flag is %s",
-				    "not permitted for address");
-			log_error ("range declarations where there is %s",
-				   "a failover");
-			log_error ("peer in scope.   If you wish to %s",
-				   "declare an");
-			log_error ("address range from which dynamic %s",
-				   "bootp leases");
-			log_error ("can be allocated, please declare %s",
-				   "it within a");
-			log_error ("pool declaration that also contains %s",
-				   "the \"no");
-			log_error ("failover\" statement.   The %s",
-				   "failover protocol");
-			log_error ("itself does not permit dynamic %s",
-				   "bootp - this");
-			log_error ("is not a limitation specific to %s",
-				   "the ISC DHCP");
-			log_error ("server.   Please don't ask me to %s",
-				   "defend this");
-			log_error ("until you have read and really tried %s",
-				   "to understand");
-			log_error ("the failover protocol specification.");
-
-			/* We don't actually bomb at this point - instead,
-			   we let parse_lease_file notice the error and
-			   bomb at that point - it's easier. */
-		}
-#endif /* FAILOVER_PROTOCOL */
-		
 		/* If we're permitting dynamic bootp for this range,
 		   then look for a pool with an empty prohibit list and
 		   a permit list with one entry that permits all clients. */
@@ -2416,7 +2382,32 @@ void parse_address_range (cfile, group, type, pool)
 			pool -> shared_network = share;
 			pool -> group = clone_group (share -> group, MDL);
 		}
+
 	}
+#if defined (FAILOVER_PROTOCOL)
+	if (pool -> failover_peer && dynamic) {
+		/* Doctor, do you think I'm overly sensitive
+		   about getting bug reports I can't fix? */
+		parse_warn (cfile, "dynamic-bootp flag is %s",
+			    "not permitted for address");
+		log_error ("range declarations where there is a failover");
+		log_error ("peer in scope.   If you wish to declare an");
+		log_error ("address range from which dynamic bootp leases");
+		log_error ("can be allocated, please declare it within a");
+		log_error ("pool declaration that also contains the \"no");
+		log_error ("failover\" statement.   The failover protocol");
+		log_error ("itself does not permit dynamic bootp - this");
+		log_error ("is not a limitation specific to the ISC DHCP");
+		log_error ("server.   Please don't ask me to defend this");
+		log_error ("until you have read and really tried %s",
+			   "to understand");
+		log_error ("the failover protocol specification.");
+
+		/* We don't actually bomb at this point - instead,
+		   we let parse_lease_file notice the error and
+		   bomb at that point - it's easier. */
+	}
+#endif /* FAILOVER_PROTOCOL */
 
 	/* Create the new address range... */
 	new_address_range (low, high, subnet, pool);
