@@ -51,28 +51,92 @@ void bootp (packet)
 	struct packet *packet;
 {
 	int result;
-	struct host_decl *hp = find_host_by_addr (packet -> raw -> htype,
-						  packet -> raw -> chaddr,
-						  packet -> raw -> hlen);
+	struct host_decl *hp = find_hosts_by_haddr (packet -> raw -> htype,
+						    packet -> raw -> chaddr,
+						    packet -> raw -> hlen);
+	struct host_decl *host = (struct host_decl *)0;
 	struct packet outgoing;
 	struct dhcp_packet raw;
 	struct sockaddr_in to;
 	struct hardware hto;
 	struct tree_cache *options [256];
+	struct subnet *subnet;
+	struct lease *lease;
+	struct iaddr ip_address;
 	int i;
 
-	/* If the packet is from a host we don't know, drop it on
-	   the floor. XXX */
-	if (!hp) {
-		note ("Can't find record for BOOTP host %s",
-		      print_hw_addr (packet -> raw -> htype,
-				     packet -> raw -> hlen,
-				     packet -> raw -> chaddr));
-		return;
+	note ("BOOTREQUEST from %s", print_hw_addr (packet -> raw -> htype,
+						    packet -> raw -> hlen,
+						    packet -> raw -> chaddr));
+
+	lease = find_lease (packet);
+
+	/* Find an IP address in the host_decl that matches the
+	   specified network. */
+	if (hp)
+		subnet = find_host_for_network (&hp, &ip_address,
+						packet -> shared_network);
+	else
+		subnet = (struct subnet *)0;
+
+	if (!subnet) {
+		/* We didn't find an applicable host declaration.
+		   Just in case we may be able to dynamically assign
+		   an address, see if there's a host declaration
+		   that doesn't have an ip address associated with it. */
+		if (hp) {
+			for (; hp; hp = hp -> n_ipaddr) {
+				if (!hp -> fixed_addr) {
+					host = hp;
+				}
+			}
+		}
+
+		/* If the packet is from a host we don't know and there
+		   are no dynamic bootp addresses on the network it came
+		   in on, drop it on the floor. */
+		if (!packet -> shared_network -> dynamic_bootp) {
+		      lose:
+			note ("No applicable record for BOOTP host %s",
+			      print_hw_addr (packet -> raw -> htype,
+					     packet -> raw -> hlen,
+					     packet -> raw -> chaddr));
+			return;
+		}
+
+		/* If a lease has already been assigned through dynamic
+		   BOOTP, and it's still okay to use dynamic bootp on
+		   that lease, reassign it. */
+		if (lease) {
+			if ((lease -> flags & BOOTP_LEASE) &&
+			    (lease -> flags & DYNAMIC_BOOTP_OK)) {
+				lease -> host = host;
+				ack_lease (packet, lease, 0, 0);
+				return;
+			}
+			/* If the lease was acquired with DHCP, or
+			   if dynamic BOOTP is no longer allowed for
+			   this lease, set it free. */
+			release_lease (lease);
+		}
+
+		/* If there are dynamic bootp addresses that might be
+		   available, try to snag one. */
+		for (lease =
+		     packet -> shared_network -> last_lease;
+		     lease && lease -> ends <= cur_time;
+		     lease = lease -> prev) {
+			if ((lease -> flags & DYNAMIC_BOOTP_OK)) {
+				lease -> host = host;
+				ack_lease (packet, lease, 0, 0);
+				return;
+			}
+		}
+		goto lose;
 	}
 
 	/* If we don't have a fixed address for it, drop it. */
-	if (!hp -> fixed_addr || !tree_evaluate (hp -> fixed_addr)) {
+	if (!subnet) {
 		note ("No fixed address for BOOTP host %s (%s)",
 		      print_hw_addr (packet -> raw -> htype,
 				     packet -> raw -> hlen,
@@ -90,7 +154,7 @@ void bootp (packet)
 	   client.   Start with the per-subnet options, and then override
 	   those with client-specific options. */
 
-	memcpy (options, packet -> subnet -> options, sizeof options);
+	memcpy (options, subnet -> options, sizeof options);
 
 	for (i = 0; i < 256; i++) {
 		if (hp -> options [i])
@@ -115,15 +179,13 @@ void bootp (packet)
 	raw.secs = packet -> raw -> secs;
 	raw.flags = 0;
 	raw.ciaddr = packet -> raw -> ciaddr;
-	if (!tree_evaluate (hp -> fixed_addr))
-		warn ("tree_evaluate failed.");
-	debug ("fixed_addr: %x %d %d %d %d %x",
-	       *(int *)(hp -> fixed_addr -> value), hp -> fixed_addr -> len,
-	       hp -> fixed_addr -> buf_size, hp -> fixed_addr -> timeout,
-	       hp -> fixed_addr -> tree);
-	memcpy (&raw.yiaddr, hp -> fixed_addr -> value,
-		sizeof raw.yiaddr);
-	memcpy (&raw.siaddr, packet -> interface -> address.iabuf, 4);
+	memcpy (&raw.yiaddr, ip_address.iabuf, sizeof raw.yiaddr);
+
+	if (subnet -> interface_address.len)
+		memcpy (&raw.siaddr, subnet -> interface_address.iabuf, 4);
+	else
+		memcpy (&raw.siaddr, server_identifier.iabuf, 4);
+
 	raw.giaddr = packet -> raw -> giaddr;
 	if (hp -> server_name) {
 		strncpy (raw.sname, hp -> server_name,
@@ -136,35 +198,48 @@ void bootp (packet)
 		raw.file [(sizeof raw.file) - 1] = 0;
 	}
 
-	/* If this was gatewayed, send it back to the gateway... */
-	if (raw.giaddr.s_addr) {
-		to.sin_addr = raw.giaddr;
-		to.sin_port = server_port;
-	/* Otherwise, broadcast it on the local network. */
-	} else {
-		to.sin_addr.s_addr = INADDR_BROADCAST;
-		to.sin_port = htons (ntohs (server_port) + 1); /* XXX */
-	}
+	/* Set up the hardware destination address... */
+	hto.htype = packet -> raw -> htype;
+	hto.hlen = packet -> raw -> hlen;
+	memcpy (hto.haddr, packet -> raw -> chaddr, hto.hlen);
 
+	/* Report what we're doing... */
+	note ("BOOTREPLY for %s to %s",
+	      inet_ntoa (raw.yiaddr),
+	      print_hw_addr (packet -> raw -> htype,
+			     packet -> raw -> hlen,
+			     packet -> raw -> chaddr));
+
+	/* Set up the parts of the address that are in common. */
 	to.sin_family = AF_INET;
 #ifdef HAVE_SA_LEN
 	to.sin_len = sizeof to;
 #endif
 	memset (to.sin_zero, 0, sizeof to.sin_zero);
 
-	note ("Sending BOOTREPLY to %s, address %s",
-	      print_hw_addr (packet -> raw -> htype,
-			     packet -> raw -> hlen,
-			     packet -> raw -> chaddr),
-	      inet_ntoa (packet -> raw -> yiaddr));
+	/* If this was gatewayed, send it back to the gateway... */
+	if (raw.giaddr.s_addr) {
+		to.sin_addr = raw.giaddr;
+		to.sin_port = server_port;
 
-	hto.htype = packet -> raw -> htype;
-	hto.hlen = packet -> raw -> hlen;
-	memcpy (hto.haddr, packet -> raw -> chaddr, hto.hlen);
+#ifdef USE_FALLBACK
+		result = send_fallback (&fallback_interface,
+					packet, &raw, outgoing.packet_length,
+					raw.siaddr, &to, &hto);
+		if (result < 0)
+			warn ("send_fallback: %m");
+		return;
+#endif
+	/* Otherwise, broadcast it on the local network. */
+	} else {
+		to.sin_addr.s_addr = INADDR_BROADCAST;
+		to.sin_port = htons (ntohs (server_port) + 1); /* XXX */
+	}
 
 	errno = 0;
 	result = send_packet (packet -> interface,
-			      packet, &raw, outgoing.packet_length, &to, &hto);
+			      packet, &raw, outgoing.packet_length,
+			      raw.siaddr, &to, &hto);
 	if (result < 0)
 		warn ("send_packet: %m");
 }
