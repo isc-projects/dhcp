@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: execute.c,v 1.19 1999/09/22 01:45:49 mellon Exp $ Copyright (c) 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: execute.c,v 1.20 1999/10/01 03:16:46 mellon Exp $ Copyright (c) 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -425,7 +425,7 @@ void write_statements (file, statements, indent)
 			   error. */
 			if (r -> data.option -> option -> universe ==
 			    &dhcp_universe) {
-				t = (char *)0;
+				t = "";
 				dot = "";
 			} else {
 				t = (r -> data.option -> option ->
