@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: socket.c,v 1.16 1996/08/27 09:54:48 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: socket.c,v 1.16.2.1 1997/03/29 08:16:38 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -163,8 +163,21 @@ size_t send_packet (interface, packet, raw, len, from, to, hto)
 	struct sockaddr_in *to;
 	struct hardware *hto;
 {
-	return sendto (interface -> wfdesc, (char *)raw, len, 0,
-		       (struct sockaddr *)to, sizeof *to);
+	int result;
+#ifdef IGNORE_HOSTUNREACH
+	int retry = 0;
+	do {
+#endif
+		result = sendto (interface -> wfdesc, (char *)raw, len, 0,
+				 (struct sockaddr *)to, sizeof *to);
+#ifdef IGNORE_HOSTUNREACH
+	} while (to -> sin_addr.s_addr = htonl (INADDR_BROADCAST) &&
+		 result < 0 &&
+		 (errno == EHOSTUNREACH ||
+		  errno == ECONNREFUSED) &&
+		 retry++ < 10);
+#endif
+	return result;
 }
 #endif /* USE_SOCKET_SEND */
 
@@ -177,9 +190,21 @@ size_t receive_packet (interface, buf, len, from, hfrom)
 	struct hardware *hfrom;
 {
 	int flen = sizeof *from;
+	int result;
 
-	return recvfrom (interface -> rfdesc, buf, len, 0,
-			 (struct sockaddr *)from, &flen);
+#ifdef IGNORE_HOSTUNREACH
+	int retry = 0;
+	do {
+#endif
+		result = recvfrom (interface -> rfdesc, buf, len, 0,
+				   (struct sockaddr *)from, &flen);
+#ifdef IGNORE_HOSTUNREACH
+	} while (result < 0 &&
+		 (errno == EHOSTUNREACH ||
+		  errno == ECONNREFUSED) &&
+		 retry++ < 10);
+#endif
+	return result;
 }
 #endif /* USE_SOCKET_RECEIVE */
 
