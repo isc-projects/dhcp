@@ -1043,7 +1043,10 @@ extern struct hash_table *lease_uid_hash;
 extern struct hash_table *lease_ip_addr_hash;
 extern struct hash_table *lease_hw_addr_hash;
 
-void enter_host PROTO ((struct host_decl *, int));
+extern omapi_object_type_t *dhcp_type_host;
+
+
+void enter_host PROTO ((struct host_decl *, int, int));
 struct host_decl *find_hosts_by_haddr PROTO ((int, unsigned char *, int));
 struct host_decl *find_hosts_by_uid PROTO ((unsigned char *, int));
 struct subnet *find_host_for_network PROTO ((struct host_decl **,
@@ -1626,7 +1629,6 @@ extern omapi_object_type_t *dhcp_type_lease;
 #if 0
 extern omapi_object_type_t *dhcp_type_group;
 #endif
-extern omapi_object_type_t *dhcp_type_host;
 extern omapi_object_type_t *dhcp_type_pool;
 extern omapi_object_type_t *dhcp_type_shared_network;
 extern omapi_object_type_t *dhcp_type_subnet;
