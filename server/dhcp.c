@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.57.2.5 1998/06/26 04:17:12 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.57.2.6 1998/06/29 20:38:15 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -728,13 +728,13 @@ void ack_lease (packet, lease, offer, when)
 		lease -> hardware_addr.hlen = packet -> raw -> hlen;
 		lease -> hardware_addr.htype = packet -> raw -> htype;
 		memcpy (lease -> hardware_addr.haddr, packet -> raw -> chaddr,
-			packet -> raw -> hlen);
+			sizeof packet -> raw -> chaddr); /* XXX */
 	} else {
 		/* Record the hardware address, if given... */
 		lt.hardware_addr.hlen = packet -> raw -> hlen;
 		lt.hardware_addr.htype = packet -> raw -> htype;
 		memcpy (lt.hardware_addr.haddr, packet -> raw -> chaddr,
-			packet -> raw -> hlen);
+			sizeof packet -> raw -> chaddr);
 
 		/* Install the new information about this lease in the
 		   database.  If this is a DHCPACK or a dynamic BOOTREPLY
@@ -1002,8 +1002,7 @@ void dhcp_reply (lease)
 	else
 		bufs |= 2; /* XXX */
 
-	memcpy (raw.chaddr, lease -> hardware_addr.haddr,
-		lease -> hardware_addr.hlen);
+	memcpy (raw.chaddr, lease -> hardware_addr.haddr, sizeof raw.chaddr);
 	raw.hlen = lease -> hardware_addr.hlen;
 	raw.htype = lease -> hardware_addr.htype;
 
