@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.44 2000/11/28 23:27:21 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.45 2000/12/05 07:32:26 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1263,6 +1263,7 @@ void abandon_lease (lease, message)
 	if (!lease_copy (&lt, lease, MDL))
 		return;
 
+#if 0
 	if (lt -> on_expiry)
 		executable_statement_dereference (&lease -> on_expiry, MDL);
 	if (lt -> on_release)
@@ -1273,6 +1274,8 @@ void abandon_lease (lease, message)
 	/* Blow away any bindings. */
 	if (lt -> scope)
 		binding_scope_dereference (&lt -> scope, MDL);
+#endif
+
 	lt -> ends = cur_time; /* XXX */
 	lt -> next_binding_state = FTS_ABANDONED;
 
@@ -1301,6 +1304,7 @@ void dissociate_lease (lease)
 	if (!lease_copy (&lt, lease, MDL))
 		return;
 
+#if 0
 	if (lt -> on_expiry)
 		executable_statement_dereference (&lease -> on_expiry, MDL);
 	if (lt -> on_release)
@@ -1311,6 +1315,7 @@ void dissociate_lease (lease)
 	/* Blow away any bindings. */
 	if (lt -> scope)
 		binding_scope_dereference (&lt -> scope, MDL);
+#endif
 
 #if defined (FAILOVER_PROTOCOL)
 	if (lease -> pool && lease -> pool -> failover_peer) {
