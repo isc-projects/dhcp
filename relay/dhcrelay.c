@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcrelay.c,v 1.35 1999/10/07 06:36:28 mellon Exp $ Copyright (c) 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcrelay.c,v 1.36 1999/10/28 13:09:35 mellon Exp $ Copyright (c) 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -200,7 +200,8 @@ int main (argc, argv, envp)
 		log_info (arr);
 		log_info (contrib);
 		log_info (url);
-	}
+	} else
+		quiet = 0;
 
 	/* Default to the DHCP/BOOTP port. */
 	if (!local_port) {
