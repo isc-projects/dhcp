@@ -3,7 +3,7 @@
    Dynamic DNS updates. */
 
 /*
- * Copyright (c) 2000 Internet Software Consortium.
+ * Copyright (c) 2000-2001 Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: ddns.c,v 1.3 2000/12/29 06:48:14 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: ddns.c,v 1.4 2001/01/04 00:08:16 mellon Exp $ Copyright (c) 2000-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -55,10 +55,6 @@ static char copyright[] =
 #define T_DHCID T_TXT
 
 static int get_dhcid (struct data_string *, struct lease *);
-
-static struct __res_state resolver_state;
-static int                resolver_inited = 0;
-
 
 static int get_dhcid (struct data_string *id, struct lease *lease)
 {
@@ -128,7 +124,7 @@ static int get_dhcid (struct data_string *id, struct lease *lease)
 
 /* DN: No way of checking that there is enough space in a data_string's
    buffer.  Be certain to allocate enough!
-   TL: This is why we the expression evaluation code allocates a *new*
+   TL: This is why the expression evaluation code allocates a *new*
    data_string.   :') */
 static void data_string_append (struct data_string *ds1,
 				struct data_string *ds2)
@@ -229,13 +225,27 @@ static int find_bound_string (struct data_string *value,
 	return 1;
 }
 
+int unset (struct binding_scope *scope, const char *name)
+{
+	struct binding *binding;
+
+	binding = find_binding (scope, name);
+	if (binding) {
+		if (binding -> value)
+			binding_value_dereference
+				(&binding -> value, MDL);
+		return 1;
+	}
+	return 0;
+}
+
 
 static ns_rcode ddns_update_a (struct data_string *ddns_fwd_name,
 			       struct data_string *ddns_address,
 			       struct data_string *ddns_dhcid,
 			       unsigned long ttl)
 {
-	ns_updque updque;
+	ns_updque updqueue;
 	ns_updrec *updrec;
 	ns_rcode result;
 
@@ -248,7 +258,7 @@ static ns_rcode ddns_update_a (struct data_string *ddns_fwd_name,
 	 *   -- "Interaction between DHCP and DNS"
 	 */
 
-	ISC_LIST_INIT (updque);
+	ISC_LIST_INIT (updqueue);
 
 	/*
 	 * A RR does not exist.
@@ -261,7 +271,7 @@ static ns_rcode ddns_update_a (struct data_string *ddns_fwd_name,
 	updrec -> r_size   = 0;
 	updrec -> r_opcode = NXDOMAIN;
 
-	ISC_LIST_APPEND (updque, updrec, r_link);
+	ISC_LIST_APPEND (updqueue, updrec, r_link);
 
 
 	/*
@@ -275,7 +285,7 @@ static ns_rcode ddns_update_a (struct data_string *ddns_fwd_name,
 	updrec -> r_size = ddns_address -> len;
 	updrec -> r_opcode = ADD;
 
-	ISC_LIST_APPEND (updque, updrec, r_link);
+	ISC_LIST_APPEND (updqueue, updrec, r_link);
 
 
 	/*
@@ -289,17 +299,19 @@ static ns_rcode ddns_update_a (struct data_string *ddns_fwd_name,
 	updrec -> r_size = ddns_dhcid -> len;
 	updrec -> r_opcode = ADD;
 
-	ISC_LIST_APPEND (updque, updrec, r_link);
+	ISC_LIST_APPEND (updqueue, updrec, r_link);
 
 
 	/*
 	 * Attempt to perform the update.
 	 */
-	result = minires_nupdate (&resolver_state, ISC_LIST_HEAD (updque));
+	result = minires_nupdate (&resolver_state, ISC_LIST_HEAD (updqueue));
 
-	while (!ISC_LIST_EMPTY (updque)) {
-		updrec = ISC_LIST_HEAD (updque);
-		ISC_LIST_UNLINK (updque, updrec, r_link);
+	print_dns_status ((int)result, &updqueue);
+
+	while (!ISC_LIST_EMPTY (updqueue)) {
+		updrec = ISC_LIST_HEAD (updqueue);
+		ISC_LIST_UNLINK (updqueue, updrec, r_link);
 		minires_freeupdrec (updrec);
 	}
 
@@ -344,7 +356,7 @@ static ns_rcode ddns_update_a (struct data_string *ddns_fwd_name,
 	updrec -> r_size = ddns_dhcid -> len;
 	updrec -> r_opcode = YXRRSET;
 
-	ISC_LIST_APPEND (updque, updrec, r_link);
+	ISC_LIST_APPEND (updqueue, updrec, r_link);
 
 
 	/*
@@ -358,7 +370,7 @@ static ns_rcode ddns_update_a (struct data_string *ddns_fwd_name,
 	updrec -> r_size = 0;
 	updrec -> r_opcode = DELETE;
 
-	ISC_LIST_APPEND (updque, updrec, r_link);
+	ISC_LIST_APPEND (updqueue, updrec, r_link);
 
 
 	/*
@@ -372,17 +384,19 @@ static ns_rcode ddns_update_a (struct data_string *ddns_fwd_name,
 	updrec -> r_size = ddns_address -> len;
 	updrec -> r_opcode = ADD;
 
-	ISC_LIST_APPEND (updque, updrec, r_link);
+	ISC_LIST_APPEND (updqueue, updrec, r_link);
 
 
 	/*
 	 * Attempt to perform the update.
 	 */
-	result = minires_nupdate (&resolver_state, ISC_LIST_HEAD (updque));
+	result = minires_nupdate (&resolver_state, ISC_LIST_HEAD (updqueue));
 
-	while (!ISC_LIST_EMPTY (updque)) {
-		updrec = ISC_LIST_HEAD (updque);
-		ISC_LIST_UNLINK (updque, updrec, r_link);
+	print_dns_status ((int)result, &updqueue);
+
+	while (!ISC_LIST_EMPTY (updqueue)) {
+		updrec = ISC_LIST_HEAD (updqueue);
+		ISC_LIST_UNLINK (updqueue, updrec, r_link);
 		minires_freeupdrec (updrec);
 	}
 
@@ -419,9 +433,9 @@ static ns_rcode ddns_update_a (struct data_string *ddns_fwd_name,
 
 
   error:
-	while (!ISC_LIST_EMPTY (updque)) {
-		updrec = ISC_LIST_HEAD (updque);
-		ISC_LIST_UNLINK (updque, updrec, r_link);
+	while (!ISC_LIST_EMPTY (updqueue)) {
+		updrec = ISC_LIST_HEAD (updqueue);
+		ISC_LIST_UNLINK (updqueue, updrec, r_link);
 		minires_freeupdrec (updrec);
 	}
 
@@ -434,7 +448,7 @@ static ns_rcode ddns_update_ptr (struct data_string *ddns_fwd_name,
 				 struct data_string *ddns_dhcid,
 				 unsigned long ttl)
 {
-	ns_updque updque;
+	ns_updque updqueue;
 	ns_updrec *updrec;
 	ns_rcode result = SERVFAIL;
 
@@ -446,7 +460,7 @@ static ns_rcode ddns_update_ptr (struct data_string *ddns_fwd_name,
 	 *   -- "Interaction between DHCP and DNS"
 	 */
 
-	ISC_LIST_INIT (updque);
+	ISC_LIST_INIT (updqueue);
 
 	/*
 	 * Delete all PTR RRs.
@@ -459,7 +473,7 @@ static ns_rcode ddns_update_ptr (struct data_string *ddns_fwd_name,
 	updrec -> r_size   = 0;
 	updrec -> r_opcode = DELETE;
 
-	ISC_LIST_APPEND (updque, updrec, r_link);
+	ISC_LIST_APPEND (updqueue, updrec, r_link);
 
 
 	/*
@@ -473,7 +487,7 @@ static ns_rcode ddns_update_ptr (struct data_string *ddns_fwd_name,
 	updrec -> r_size   = ddns_fwd_name -> len;
 	updrec -> r_opcode = ADD;
 
-	ISC_LIST_APPEND (updque, updrec, r_link);
+	ISC_LIST_APPEND (updqueue, updrec, r_link);
 
 
 	/*
@@ -487,21 +501,21 @@ static ns_rcode ddns_update_ptr (struct data_string *ddns_fwd_name,
 	updrec -> r_size = ddns_dhcid -> len;
 	updrec -> r_opcode = ADD;
 
-	ISC_LIST_APPEND (updque, updrec, r_link);
+	ISC_LIST_APPEND (updqueue, updrec, r_link);
 
 
 	/*
 	 * Attempt to perform the update.
 	 */
-	result = minires_nupdate (&resolver_state, ISC_LIST_HEAD (updque));
-
+	result = minires_nupdate (&resolver_state, ISC_LIST_HEAD (updqueue));
+	print_dns_status ((int)result, &updqueue);
 
 	/* Fall through. */
   error:
 
-	while (!ISC_LIST_EMPTY (updque)) {
-		updrec = ISC_LIST_HEAD (updque);
-		ISC_LIST_UNLINK (updque, updrec, r_link);
+	while (!ISC_LIST_EMPTY (updqueue)) {
+		updrec = ISC_LIST_HEAD (updqueue);
+		ISC_LIST_UNLINK (updqueue, updrec, r_link);
 		minires_freeupdrec (updrec);
 	}
 
@@ -513,7 +527,7 @@ static ns_rcode ddns_remove_a (struct data_string *ddns_fwd_name,
 			       struct data_string *ddns_address,
 			       struct data_string *ddns_dhcid)
 {
-	ns_updque updque;
+	ns_updque updqueue;
 	ns_updrec *updrec;
 	ns_rcode result = SERVFAIL;
 
@@ -531,7 +545,7 @@ static ns_rcode ddns_remove_a (struct data_string *ddns_fwd_name,
 	 *   -- "Interaction between DHCP and DNS"
 	 */
 
-	ISC_LIST_INIT (updque);
+	ISC_LIST_INIT (updqueue);
 
 	/*
 	 * DHCID RR exists, and matches client identity.
@@ -544,7 +558,7 @@ static ns_rcode ddns_remove_a (struct data_string *ddns_fwd_name,
 	updrec -> r_size = ddns_dhcid -> len;
 	updrec -> r_opcode = YXRRSET;
 
-	ISC_LIST_APPEND (updque, updrec, r_link);
+	ISC_LIST_APPEND (updqueue, updrec, r_link);
 
 
 	/*
@@ -558,7 +572,7 @@ static ns_rcode ddns_remove_a (struct data_string *ddns_fwd_name,
 	updrec -> r_size = ddns_address -> len;
 	updrec -> r_opcode = YXRRSET;
 
-	ISC_LIST_APPEND (updque, updrec, r_link);
+	ISC_LIST_APPEND (updqueue, updrec, r_link);
 
 
 	/*
@@ -572,7 +586,7 @@ static ns_rcode ddns_remove_a (struct data_string *ddns_fwd_name,
 	updrec -> r_size   = ddns_address -> len;
 	updrec -> r_opcode = DELETE;
 
-	ISC_LIST_APPEND (updque, updrec, r_link);
+	ISC_LIST_APPEND (updqueue, updrec, r_link);
 
 
 	/*
@@ -586,14 +600,14 @@ static ns_rcode ddns_remove_a (struct data_string *ddns_fwd_name,
 	updrec -> r_size   = ddns_dhcid -> len;
 	updrec -> r_opcode = DELETE;
 
-	ISC_LIST_APPEND (updque, updrec, r_link);
+	ISC_LIST_APPEND (updqueue, updrec, r_link);
 
 
 	/*
 	 * Attempt to perform the update.
 	 */
-	result = minires_nupdate (&resolver_state, ISC_LIST_HEAD (updque));
-
+	result = minires_nupdate (&resolver_state, ISC_LIST_HEAD (updqueue));
+	print_dns_status ((int)result, &updqueue);
 
 	/*
 	 * If the query fails, the updater MUST NOT delete the DNS name.  It
@@ -612,9 +626,9 @@ static ns_rcode ddns_remove_a (struct data_string *ddns_fwd_name,
 	/* Fall through. */
   error:
 
-	while (!ISC_LIST_EMPTY (updque)) {
-		updrec = ISC_LIST_HEAD (updque);
-		ISC_LIST_UNLINK (updque, updrec, r_link);
+	while (!ISC_LIST_EMPTY (updqueue)) {
+		updrec = ISC_LIST_HEAD (updqueue);
+		ISC_LIST_UNLINK (updqueue, updrec, r_link);
 		minires_freeupdrec (updrec);
 	}
 
@@ -626,7 +640,7 @@ static ns_rcode ddns_remove_ptr (struct data_string *ddns_fwd_name,
 				 struct data_string *ddns_rev_name,
 				 struct data_string *ddns_dhcid)
 {
-	ns_updque updque;
+	ns_updque updqueue;
 	ns_updrec *updrec;
 	ns_rcode result = SERVFAIL;
 
@@ -639,7 +653,7 @@ static ns_rcode ddns_remove_ptr (struct data_string *ddns_fwd_name,
 	 *   -- "Interaction between DHCP and DNS"
 	 */
 
-	ISC_LIST_INIT (updque);
+	ISC_LIST_INIT (updqueue);
 
 	/*
 	 * Delete appropriate PTR RR.
@@ -652,7 +666,7 @@ static ns_rcode ddns_remove_ptr (struct data_string *ddns_fwd_name,
 	updrec -> r_size   = ddns_fwd_name -> len;
 	updrec -> r_opcode = DELETE;
 
-	ISC_LIST_APPEND (updque, updrec, r_link);
+	ISC_LIST_APPEND (updqueue, updrec, r_link);
 
 
 	/*
@@ -666,21 +680,21 @@ static ns_rcode ddns_remove_ptr (struct data_string *ddns_fwd_name,
 	updrec -> r_size   = ddns_dhcid -> len;
 	updrec -> r_opcode = DELETE;
 
-	ISC_LIST_APPEND (updque, updrec, r_link);
+	ISC_LIST_APPEND (updqueue, updrec, r_link);
 
 
 	/*
 	 * Attempt to perform the update.
 	 */
-	result = minires_nupdate (&resolver_state, ISC_LIST_HEAD (updque));
-
+	result = minires_nupdate (&resolver_state, ISC_LIST_HEAD (updqueue));
+	print_dns_status ((int)result, &updqueue);
 
 	/* Fall through. */
   error:
 
-	while (!ISC_LIST_EMPTY (updque)) {
-		updrec = ISC_LIST_HEAD (updque);
-		ISC_LIST_UNLINK (updque, updrec, r_link);
+	while (!ISC_LIST_EMPTY (updqueue)) {
+		updrec = ISC_LIST_HEAD (updqueue);
+		ISC_LIST_UNLINK (updqueue, updrec, r_link);
 		minires_freeupdrec (updrec);
 	}
 
@@ -727,6 +741,7 @@ int ddns_updates (struct packet *packet,
 	 * Look up the RR TTL.
 	 */
 	ddns_ttl = DEFAULT_DDNS_TTL;
+	memset (&d1, 0, sizeof d1);
 	if ((oc = lookup_option (&server_universe, state -> options,
 				 SV_DDNS_TTL))) {
 		if (evaluate_option_cache (&d1, packet, lease,
@@ -955,12 +970,14 @@ int ddns_updates (struct packet *packet,
 }
 
 
-int ddns_removals(struct lease *lease) {
+int ddns_removals(struct lease *lease)
+{
 	struct data_string ddns_fwd_name;
 	struct data_string ddns_rev_name;
 	struct data_string ddns_address;
 	struct data_string ddns_dhcid;
 	ns_rcode rcode;
+	struct binding *binding;
 
 	if (ddns_update_style != 2)
 		return 1;
@@ -981,7 +998,6 @@ int ddns_removals(struct lease *lease) {
 	find_bound_string (&ddns_rev_name, lease -> scope, "ddns-rev-name");
 	find_bound_string (&ddns_address, lease -> scope, "ddns-address");
 	find_bound_string (&ddns_dhcid, lease -> scope, "ddns-dhcid");
-
 
 	/*
 	 * Start the resolver, if necessary.
@@ -1004,6 +1020,10 @@ int ddns_removals(struct lease *lease) {
 					&ddns_dhcid);
 	}
 
+	unset (lease -> scope, "ddns-fwd-name");
+	unset (lease -> scope, "ddns-rev-name");
+	unset (lease -> scope, "ddns-address");
+	unset (lease -> scope, "ddns-dhcid");
 
 	data_string_forget (&ddns_fwd_name, MDL);
 	data_string_forget (&ddns_rev_name, MDL);
