@@ -275,7 +275,7 @@ int parse_warn PROTO ((char *, ...));
 
 /* dhcpd.c */
 extern TIME cur_time;
-struct group root_group;
+extern struct group root_group;
 
 extern struct iaddr server_identifier;
 extern int server_identifier_matched;
