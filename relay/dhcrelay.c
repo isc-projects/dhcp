@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char ocopyright [] =
-"$Id: dhcrelay.c,v 1.9.2.31 1999/05/09 16:10:16 mellon Exp $ Copyright (c) 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcrelay.c,v 1.9.2.32 1999/06/22 13:38:39 mellon Exp $ Copyright (c) 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -92,7 +92,7 @@ int main (argc, argv, envp)
 	int quiet = 0;
 	char *s;
 
-	s = strchr (argv [0], '/');
+	s = strrchr (argv [0], '/');
 	if (!s)
 		s = argv [0];
 	else

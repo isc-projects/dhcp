@@ -56,7 +56,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.44.2.38 1999/05/09 16:10:14 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.44.2.39 1999/06/22 13:36:46 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -110,7 +110,7 @@ int main (argc, argv, envp)
 	int quiet = 0;
 	char *s;
 
-	s = strchr (argv [0], '/');
+	s = strrchr (argv [0], '/');
 	if (!s)
 		s = argv [0];
 	else

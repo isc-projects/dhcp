@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.45.2.29 1999/05/09 16:10:15 mellon Exp $ Copyright 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.45.2.30 1999/06/22 13:43:18 mellon Exp $ Copyright 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.";
 #endif
 
 static char copyright[] =
@@ -93,7 +93,7 @@ int main (argc, argv, envp)
 #endif
 	int quiet = 0;
 
-	appname = strchr (argv [0], '/');
+	appname = strrchr (argv [0], '/');
 	if (!appname)
 		appname = argv [0];
 	else
