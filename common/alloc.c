@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: alloc.c,v 1.27 1999/04/05 15:23:07 mellon Exp $ Copyright (c) 1995, 1996, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: alloc.c,v 1.28 1999/04/05 19:02:17 mellon Exp $ Copyright (c) 1995, 1996, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -604,7 +604,7 @@ int dns_host_entry_reference (ptr, bp, name)
 	}
 	if (*ptr) {
 		log_error ("Non-null pointer in dns_host_entry_reference (%s)",
-		      name);
+			   name);
 		abort ();
 	}
 	*ptr = bp;
@@ -653,9 +653,30 @@ int option_state_allocate (ptr, name)
 	if (*ptr) {
 		memset (*ptr, 0, size);
 		(*ptr) -> universe_count = universe_count;
+		(*ptr) -> refcnt = 1;
 		return 1;
 	}
 	return 0;
+}
+
+int option_state_reference (ptr, bp, name)
+	struct option_state **ptr;
+	struct option_state *bp;
+	char *name;
+{
+	if (!ptr) {
+		log_error ("Null pointer in option_state_reference: %s",
+			   name);
+		abort ();
+	}
+	if (*ptr) {
+		log_error ("Non-null pointer in option_state_reference (%s)",
+			   name);
+		abort ();
+	}
+	*ptr = bp;
+	bp -> refcnt++;
+	return 1;
 }
 
 int option_state_dereference (ptr, name)
@@ -663,6 +684,7 @@ int option_state_dereference (ptr, name)
 	char *name;
 {
 	int i;
+	struct option_state *options;
 
 	if (!ptr || !*ptr) {
 		log_error ("Null pointer in option_state_dereference: %s",
@@ -670,15 +692,19 @@ int option_state_dereference (ptr, name)
 		abort ();
 	}
 
+	options = *ptr;
+	*ptr = (struct option_state *)0;
+	--options -> refcnt;
+	if (options -> refcnt)
+		return 1;
+
 	/* Loop through the per-universe state. */
-	for (i = 0; i < (*ptr) -> universe_count; i++)
-		if ((*ptr) -> universes [i] &&
+	for (i = 0; i < options -> universe_count; i++)
+		if (options -> universes [i] &&
 		    universes [i] -> option_state_dereference)
 			((*(universes [i] -> option_state_dereference))
-			 (universes [i], *ptr));
+			 (universes [i], options));
 
-	/* No reference count yet. */
-	dfree ((*ptr), name);
-	*ptr = (struct option_state *)0;
+	dfree (options, name);
 	return 1;
 }
