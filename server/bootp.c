@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"@(#) Copyright (c) 1995 The Internet Software Consortium.  All rights reserved.\n";
+"@(#) Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -147,7 +147,7 @@ void bootp (packet)
 	}
 
 	to.sin_family = AF_INET;
-#ifdef HAVE_SIN_LEN
+#ifdef HAVE_SA_LEN
 	to.sin_len = sizeof to;
 #endif
 	memset (to.sin_zero, 0, sizeof to.sin_zero);
