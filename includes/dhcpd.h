@@ -610,10 +610,12 @@ struct client_state {
 	struct iaddr requested_address;	    /* Address we would like to get. */
 
 	struct client_config *config;		    /* Client configuration. */
+
+	struct string_list *env;	       /* Client script environment. */
+	int envc;			/* Number of entries in environment. */
 };
 
 /* Information about each network interface. */
-
 struct interface_info {
 	struct interface_info *next;	/* Next interface in list... */
 	struct shared_network *shared_network;
@@ -1445,7 +1447,7 @@ void destroy_client_lease PROTO ((struct client_lease *));
 void rewrite_client_leases PROTO ((void));
 void write_client_lease PROTO ((struct client_state *,
 				 struct client_lease *, int));
-char *dhcp_option_ev_name PROTO ((struct option *));
+int dhcp_option_ev_name (char *, size_t, struct option *);
 
 void script_init PROTO ((struct client_state *, char *,
 			 struct string_list *));
@@ -1549,6 +1551,9 @@ void parse_client_lease_statement PROTO ((FILE *, int));
 void parse_client_lease_declaration PROTO ((FILE *, struct client_lease *,
 					    struct interface_info **,
 					    struct client_state **));
+void client_envadd (struct client_state *,
+		    const char *, const char *, const char *, ...)
+	__attribute__((__format__(__printf__,4,5)));
 int parse_option_decl PROTO ((struct option_cache **, FILE *));
 void parse_string_list PROTO ((FILE *, struct string_list **, int));
 int parse_ip_addr PROTO ((FILE *, struct iaddr *));

@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: clparse.c,v 1.31.2.4 1999/12/21 19:22:27 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: clparse.c,v 1.31.2.5 2000/07/20 04:13:10 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -42,6 +42,8 @@ u_int32_t default_requested_options [] = {
 	DHO_HOST_NAME,
 	0
 };
+
+char client_script_name [] = "/etc/dhclient-script";
 
 /* client-conf-file :== client-declarations EOF
    client-declarations :== <nil>
@@ -74,7 +76,7 @@ int read_client_conf ()
 	top_level_config.backoff_cutoff = 15;
 	top_level_config.initial_interval = 3;
 	top_level_config.bootp_policy = P_ACCEPT;
-	top_level_config.script_name = "/etc/dhclient-script";
+	top_level_config.script_name = client_script_name;
 	top_level_config.requested_options = default_requested_options;
 
 	top_level_config.on_receipt = new_group ("read_client_conf");
