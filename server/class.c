@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: class.c,v 1.3 1998/06/25 03:42:18 mellon Exp $ Copyright (c) 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: class.c,v 1.4 1998/11/06 00:16:22 mellon Exp $ Copyright (c) 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -196,7 +196,8 @@ void classification_setup ()
 void classify_client (packet)
 	struct packet *packet;
 {
-	execute_statements (packet, (struct option_state *)0,
+	execute_statements (packet, &packet -> options,
+			    (struct option_state *)0,
 			    default_classification_rules);
 }
 
@@ -207,39 +208,45 @@ int check_collection (packet, collection)
 	struct class *class, *nc;
 	struct data_string data;
 	int matched = 0;
+	int status;
 
 	for (class = collection -> classes; class; class = class -> nic) {
 		if (class -> hash) {
-			data = evaluate_data_expression (packet,
-							 class -> spawn);
-			nc = (struct class *)hash_lookup (class -> hash,
-							  data.data, data.len);
-			if (nc) {
+			memset (&data, 0, sizeof data);
+			status = evaluate_data_expression (&data, packet,
+							   &packet -> options,
+							   class -> spawn);
+			if (status &&
+			    (nc = (struct class *)hash_lookup (class -> hash,
+							       data.data,
+							       data.len))) {
 				classify (packet, class);
 				matched = 1;
 				continue;
 			}
 		}
-		if (class -> expr &&
-		    evaluate_boolean_expression (packet, class -> expr)) {
-			if (class -> spawn) {
-				data = evaluate_data_expression
-					(packet, class -> spawn);
-				nc = (struct class *)
-					dmalloc (sizeof (struct class),
-						 "class spawn");
-				memset (nc, 0, sizeof *nc);
-				nc -> group = class -> group;
-				if (!class -> hash)
-					class -> hash = new_hash ();
-				add_hash (class -> hash,
-					  data.data, data.len,
-					  (unsigned char *)nc);
-				classify (packet, nc);
-			} else
-				classify (packet, class);
-			matched = 1;
-		}
+		memset (&data, 0, sizeof data);
+		if ((matched =
+		     evaluate_boolean_expression_result (packet,
+							 &packet -> options,
+							 class -> expr) &&
+		    class -> spawn &&
+		    evaluate_data_expression (&data, packet,
+					      &packet -> options,
+					      class -> spawn))) {
+			nc = (struct class *)
+				dmalloc (sizeof (struct class), "class spawn");
+			memset (nc, 0, sizeof *nc);
+			nc -> group = class -> group;
+			if (!class -> hash)
+				class -> hash = new_hash ();
+			add_hash (class -> hash,
+				  data.data, data.len,
+				  (unsigned char *)nc);
+			classify (packet, nc);
+		} else
+			classify (packet, class);
+		matched = 1;
 	}
 	return matched;
 }
