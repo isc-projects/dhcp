@@ -2,7 +2,7 @@
 .\"
 .\" Project:      DHCP
 .\" File:         dhcpctl.3
-.\" RCSId:        $Id: dhcpctl.3,v 1.3 2001/04/16 17:44:11 tamino Exp $
+.\" RCSId:        $Id: dhcpctl.3,v 1.3.2.1 2001/06/26 18:35:35 mellon Exp $
 .\" 
 .\"     Copyright (C) 2000  Nominum, Inc.
 .\"     
@@ -389,8 +389,8 @@ macro defined in
 .Fn dhcpctl_data_string_dereference
 deallocates a data string created by
 .Fn omapi_data_string_new .
-The memory for the object won't be compelely deallocated until the last
-reference is released.
+The memory for the object won't be freed until the last reference is
+released.
 .Sh EXAMPLES
 .Pp 
 The following program will connect to the DHCP server running on the local
@@ -460,4 +460,11 @@ int main (int argc, char **argv) {
 }
 .Ed
 .Sh SEE ALSO
-omapi-intro(1)
+.SH SEE ALSO
+omapi(3), omshell(3), dhcpd(8), dhclient(8), dhcpd.conf(5), dhclient.conf(5).
+.SH AUTHOR
+.B dhcpctl
+was written by Ted Lemon of Nominum, Inc.  Information about Nominum
+and support contracts for DHCP and BIND can be found at
+.B http://www.nominum.com.   This preliminary documentation was
+written by James Brister of Nominum, Inc.
