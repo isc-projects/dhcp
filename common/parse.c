@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.104.2.17 2004/06/17 20:54:38 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.104.2.18 2004/09/29 19:25:29 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -4033,6 +4033,34 @@ int parse_expression (expr, cfile, lose, context, plhs, binop)
 		goto new_rhs;
 	}
 
+	/* If the next binary operator is of greater precedence than the
+	 * current operator, then rhs we have parsed so far is actually
+	 * the lhs of the next operator.  To get this value, we have to
+	 * recurse.
+	 */
+	if (binop != expr_none && next_op != expr_none &&
+	    op_precedence (binop, next_op) < 0) {
+
+		/* Eat the subexpression operator token, which we pass to
+		 * parse_expression...we only peek()'d earlier.
+		 */
+		token = next_token (&val, (unsigned *)0, cfile);
+
+		/* Continue parsing of the right hand side with that token. */
+		tmp = rhs;
+		rhs = (struct expression *)0;
+		if (!parse_expression (&rhs, cfile, lose, op_context (next_op),
+				       &tmp, next_op)) {
+			if (!*lose) {
+				parse_warn (cfile,
+					    "expecting a subexpression");
+				*lose = 1;
+			}
+			return 0;
+		}
+		next_op = expr_none;
+	}
+
 	if (binop != expr_none) {
 	  rhs_context = expression_context(rhs);
 	  lhs_context = expression_context(lhs);
@@ -4115,27 +4143,6 @@ int parse_expression (expr, cfile, lose, context, plhs, binop)
 
 	/* Eat the operator token - we now know it was a binary operator... */
 	token = next_token (&val, (unsigned *)0, cfile);
-
-	/* If the binary operator we saw previously has a lower precedence
-	   than the next operator, then the rhs we just parsed for that
-	   operator is actually the lhs of the operator with the higher
-	   precedence - to get the real rhs, we need to recurse on the
-	   new operator. */
- 	if (binop != expr_none &&
-	    op_precedence (binop, next_op) < 0) {
-		tmp = rhs;
-		rhs = (struct expression *)0;
-		if (!parse_expression (&rhs, cfile, lose, op_context (next_op),
-				       &tmp, next_op)) {
-			if (!*lose) {
-				parse_warn (cfile,
-					    "expecting a subexpression");
-				*lose = 1;
-			}
-			return 0;
-		}
-		next_op = expr_none;
-	}
 
 	/* Now combine the LHS and the RHS using binop. */
 	tmp = (struct expression *)0;

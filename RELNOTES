@@ -45,6 +45,9 @@ and for prodding me into improving it.
 
 			Changes since 3.0.1
 
+- Bugs in operator precedence in executable statements have been repaired
+  once again.  More legal syntaxes should be parsed legally.
+
 - Failing to initialize a tracefile for any reason if a tracefile was
   specified is now a fatal error.  Thanks to a patch from Albert Herranz.
 

@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.101.2.9 2004/06/17 20:54:39 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.101.2.10 2004/09/29 19:25:29 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -3101,18 +3101,20 @@ static int op_val (op)
 
 	      case expr_equal:
 	      case expr_not_equal:
+		return 4;
+
+	      case expr_or:
+	      case expr_and:
 		return 3;
 
-	      case expr_and:
+	      case expr_add:
+	      case expr_subtract:
+		return 2;
+
 	      case expr_multiply:
 	      case expr_divide:
 	      case expr_remainder:
 		return 1;
-
-	      case expr_or:
-	      case expr_add:
-	      case expr_subtract:
-		return 2;
 	}
 	return 100;
 }
