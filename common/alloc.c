@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: alloc.c,v 1.53.2.3 2001/06/08 23:07:22 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: alloc.c,v 1.53.2.4 2001/06/20 03:07:56 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -143,7 +143,7 @@ int option_chain_head_dereference (ptr, file, line)
 	if (option_chain_head -> refcnt < 0) {
 		log_error ("%s(%d): negative refcnt!", file, line);
 #if defined (DEBUG_RC_HISTORY)
-		dump_rc_history ();
+		dump_rc_history (option_chain_head);
 #endif
 #if defined (POINTER_DEBUG)
 		abort ();
@@ -255,7 +255,7 @@ int group_dereference (ptr, file, line)
 	if (group -> refcnt < 0) {
 		log_error ("%s(%d): negative refcnt!", file, line);
 #if defined (DEBUG_RC_HISTORY)
-		dump_rc_history ();
+		dump_rc_history (group);
 #endif
 #if defined (POINTER_DEBUG)
 		abort ();
@@ -265,13 +265,17 @@ int group_dereference (ptr, file, line)
 	}
 
 	if (group -> object)
-		group_object_dereference (&group -> object, MDL);
+		group_object_dereference (&group -> object, file, line);
 	if (group -> subnet)	
-		subnet_dereference (&group -> subnet, MDL);
+		subnet_dereference (&group -> subnet, file, line);
 	if (group -> shared_network)
-		shared_network_dereference (&group -> shared_network, MDL);
+		shared_network_dereference (&group -> shared_network,
+					    file, line);
 	if (group -> statements)
-		executable_statement_dereference (&group -> statements, MDL);
+		executable_statement_dereference (&group -> statements,
+						  file, line);
+	if (group -> next)
+		group_dereference (&group -> next, file, line);
 	dfree (group, file, line);
 	return 1;
 }
@@ -434,7 +438,8 @@ void free_pair (foo, file, line)
 	dmalloc_reuse (free_pairs, (char *)0, 0, 0);
 }
 
-#if defined (DEBUG_MEMORY_LEAKAGE)
+#if defined (DEBUG_MEMORY_LEAKAGE) || \
+		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
 void relinquish_free_pairs ()
 {
 	pair pf, pc;
@@ -507,7 +512,8 @@ void free_expression (expr, file, line)
 	dmalloc_reuse (free_expressions, (char *)0, 0, 0);
 }
 
-#if defined (DEBUG_MEMORY_LEAKAGE)
+#if defined (DEBUG_MEMORY_LEAKAGE) || \
+		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
 void relinquish_free_expressions ()
 {
 	struct expression *e, *n;
@@ -580,7 +586,8 @@ void free_binding_value (bv, file, line)
 	dmalloc_reuse (free_binding_values, (char *)0, 0, 0);
 }
 
-#if defined (DEBUG_MEMORY_LEAKAGE)
+#if defined (DEBUG_MEMORY_LEAKAGE) || \
+		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
 void relinquish_free_binding_values ()
 {
 	struct binding_value *b, *n;
@@ -638,7 +645,8 @@ int fundef_reference (ptr, src, file, line)
 
 struct option_cache *free_option_caches;
 
-#if defined (DEBUG_MEMORY_LEAKAGE)
+#if defined (DEBUG_MEMORY_LEAKAGE) || \
+		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
 void relinquish_free_option_caches ()
 {
 	struct option_cache *o, *n;
@@ -778,7 +786,7 @@ int buffer_dereference (ptr, file, line)
 	} else if ((*ptr) -> refcnt < 0) {
 		log_error ("%s(%d): negative refcnt!", file, line);
 #if defined (DEBUG_RC_HISTORY)
-		dump_rc_history ();
+		dump_rc_history (*ptr);
 #endif
 #if defined (POINTER_DEBUG)
 		abort ();
@@ -859,7 +867,7 @@ int dns_host_entry_dereference (ptr, file, line)
 	if ((*ptr) -> refcnt < 0) {
 		log_error ("%s(%d): negative refcnt!", file, line);
 #if defined (DEBUG_RC_HISTORY)
-		dump_rc_history ();
+		dump_rc_history (*ptr);
 #endif
 #if defined (POINTER_DEBUG)
 		abort ();
@@ -963,7 +971,7 @@ int option_state_dereference (ptr, file, line)
 	if (options -> refcnt < 0) {
 		log_error ("%s(%d): negative refcnt!", file, line);
 #if defined (DEBUG_RC_HISTORY)
-		dump_rc_history ();
+		dump_rc_history (options);
 #endif
 #if defined (POINTER_DEBUG)
 		abort ();
@@ -1027,7 +1035,8 @@ int executable_statement_reference (ptr, bp, file, line)
 
 static struct packet *free_packets;
 
-#if defined (DEBUG_MEMORY_LEAKAGE)
+#if defined (DEBUG_MEMORY_LEAKAGE) || \
+		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
 void relinquish_free_packets ()
 {
 	struct packet *p, *n;
@@ -1133,7 +1142,7 @@ int packet_dereference (ptr, file, line)
 	if (packet -> refcnt < 0) {
 		log_error ("%s(%d): negative refcnt!", file, line);
 #if defined (DEBUG_RC_HISTORY)
-		dump_rc_history ();
+		dump_rc_history (packet);
 #endif
 #if defined (POINTER_DEBUG)
 		abort ();
