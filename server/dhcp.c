@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.64 1998/06/25 03:56:24 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.65 1998/06/25 21:24:23 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1309,9 +1309,13 @@ struct lease *find_lease (packet, share, ours)
 		*ours = 1;
 
 	/* If the requested IP address isn't on the network the packet
-	   came from, or if it's been abandoned, don't use it. */
-	if (ip_lease && (ip_lease -> shared_network != share ||
-			 (ip_lease -> flags & ABANDONED_LEASE)))
+	   came from, don't use it.  Allow abandoned leases to be matched
+	   here - if the client is requesting it, there's a decent chance
+	   that it's because the lease database got trashed and a client
+	   that thought it had this lease answered an ARP or PING, causing the
+	   lease to be abandoned.   If so, this request probably came from
+	   that client. */
+	if (ip_lease && (ip_lease -> shared_network != share))
 		ip_lease = (struct lease *)0;
 
 	/* Toss ip_lease if it hasn't yet expired and the uid doesn't
@@ -1455,6 +1459,15 @@ struct lease *find_lease (packet, share, ours)
 				break;
 			}
 		}
+	}
+
+	/* If we find an abandoned lease, take it, but print a
+	   warning message, so that if it continues to lose,
+	   the administrator will eventually investigate. */
+	if (lease -> flags & ABANDONED_LEASE) {
+		warn ("Reclaiming REQUESTed abandoned IP address %s.\n",
+		      piaddr (lease -> ip_addr));
+		lease -> flags &= ~ABANDONED_LEASE;
 	}
 
 	return lease;
