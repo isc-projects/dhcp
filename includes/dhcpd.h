@@ -3,7 +3,8 @@
    Definitions for dhcpd... */
 
 /*
- * Copyright (c) 1995 The Internet Software Consortium.  All rights reserved.
+ * Copyright (c) 1995, 1996 The Internet Software Consortium.
+ * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -69,8 +70,11 @@ struct packet {
 	int options_valid;
 	int client_port;
 	struct iaddr client_addr;
-	int client_sock;
-	struct subnet *subnet;
+	struct interface_info *interface;	/* Interface on which packet
+						   was received. */
+	struct hardware *haddr;		/* Physical link address
+					   of local sender (maybe gateway). */
+	struct subnet *subnet;		/* Subnet of client. */
 	struct {
 		int len;
 		unsigned char *data;
@@ -133,6 +137,29 @@ struct class {
 	TIME default_lease_time;
 	TIME max_lease_time;
 	struct tree_cache *options [256];
+};
+
+/* Information about each network interface. */
+
+struct interface_info {
+	struct interface_info *next;	/* Next interface in list... */
+	struct subnet *local_subnet;	/* This interface's subnet. */
+	struct iaddr address;		/* Its IP address. */
+	struct hardware hw_address;	/* Its physical address. */
+	char name [IFNAMSIZ];		/* Its name... */
+	int rfdesc;			/* Its read file descriptor. */
+	int wfdesc;			/* Its write file descriptor, if
+					   different. */
+	unsigned char *rbuf;		/* Read buffer, if required. */
+	size_t rbuf_max;		/* Size of read buffer. */
+	size_t rbuf_offset;		/* Current offset into buffer. */
+	size_t rbuf_len;		/* Length of data in buffer. */
+};
+
+struct hardware_link {
+	struct hardware_link *next;
+	char name [IFNAMSIZ];
+	struct hardware address;
 };
 
 /* Bitmask of dhcp option codes. */
@@ -202,10 +229,9 @@ extern u_int16_t server_port;
 
 int main PROTO ((int, char **, char **));
 void cleanup PROTO ((void));
-void do_packet PROTO ((unsigned char *, int,
-		       unsigned long, struct iaddr, int));
-void dump_packet PROTO ((struct packet *));
-u_int32_t pick_interface PROTO ((struct packet *));
+void do_packet PROTO ((struct interface_info *,
+		       unsigned char *, int,
+		       unsigned short, struct iaddr, struct hardware *));
 
 
 /* conflex.c */
@@ -310,60 +336,69 @@ void free_tree PROTO ((struct tree *, char *));
 char *print_hw_addr PROTO ((int, int, unsigned char *));
 void print_lease PROTO ((struct lease *));
 void dump_raw PROTO ((unsigned char *, int));
+void dump_packet PROTO ((struct packet *));
 
 /* socket.c */
+#if defined (USE_SOCKET_SEND) || defined (USE_SOCKET_RECEIVE)
+int if_register_socket PROTO ((struct interface_info *, struct ifreq *));
+#endif
+
 #ifdef USE_SOCKET_SEND
 void if_register_send PROTO ((struct interface_info *, struct ifreq *));
-int send_packet PROTO ((struct interface_info *,
-			struct packet *, struct dhcp_packet *,
-			size_t, struct sockaddr *, struct hardware_addr));
+size_t send_packet PROTO ((struct interface_info *,
+			   struct packet *, struct dhcp_packet *,
+			   size_t, struct sockaddr_in *, struct hardware *));
 #endif
 #ifdef USE_SOCKET_RECEIVE
 void if_register_receive PROTO ((struct interface_info *, struct ifreq *));
-int receive_packet PROTO ((struct interface_info *,
+size_t receive_packet PROTO ((struct interface_info *,
 			   unsigned char *, size_t,
-			   struct iaddr, struct hardware_addr)
+			   struct sockaddr_in *, struct hardware *));
 #endif
 
 /* bpf.c */
+#if defined (USE_BPF_SEND) || defined (USE_BPF_RECEIVE)
+int if_register_bpf PROTO ( (struct interface_info *, struct ifreq *));
+#endif
 #ifdef USE_BPF_SEND
 void if_register_send PROTO ((struct interface_info *, struct ifreq *));
-int send_packet PROTO ((struct interface_info *,
-			struct packet *, struct dhcp_packet *,
-			size_t, struct sockaddr *, struct hardware_addr));
+size_t send_packet PROTO ((struct interface_info *,
+			   struct packet *, struct dhcp_packet *,
+			   size_t, struct sockaddr_in *, struct hardware *));
 #endif
 #ifdef USE_BPF_RECEIVE
 void if_register_receive PROTO ((struct interface_info *, struct ifreq *));
-int receive_packet PROTO ((struct interface_info *,
+size_t receive_packet PROTO ((struct interface_info *,
 			   unsigned char *, size_t,
-			   struct iaddr, struct hardware_addr)
+			   struct sockaddr_in *, struct hardware *));
 #endif
 
 /* nit.c */
 #ifdef USE_NIT_SEND
 void if_register_send PROTO ((struct interface_info *, struct ifreq *));
-int send_packet PROTO ((struct interface_info *,
-			struct packet *, struct dhcp_packet *,
-			size_t, struct sockaddr *, struct hardware_addr));
+size_t send_packet PROTO ((struct interface_info *,
+			   struct packet *, struct dhcp_packet *,
+			   size_t, struct sockaddr_in *, struct hardware *));
 #endif
 #ifdef USE_NIT_RECEIVE
 void if_register_receive PROTO ((struct interface_info *, struct ifreq *));
-int receive_packet PROTO ((struct interface_info *,
+size_t receive_packet PROTO ((struct interface_info *,
 			   unsigned char *, size_t,
-			   struct iaddr, struct hardware_addr)
+			   struct sockaddr_in *, struct hardware *));
 #endif
 
 /* raw.c */
 #ifdef USE_RAW_SEND
 void if_register_send PROTO ((struct interface_info *, struct ifreq *));
-int send_packet PROTO ((struct interface_info *,
-			struct packet *, struct dhcp_packet *,
-			size_t, struct sockaddr *, struct hardware_addr));
+size_t send_packet PROTO ((struct interface_info *,
+			   struct packet *, struct dhcp_packet *,
+			   size_t, struct sockaddr_in *, struct hardware *));
 #endif
 
 /* dispatch.c */
 struct interface_info *interfaces;
-void get_interface_list PROTO (void);
+void discover_interfaces PROTO ((void));
+void dispatch PROTO ((void));
 
 /* hash.c */
 struct hash_table *new_hash PROTO ((void));
@@ -405,3 +440,15 @@ int write_lease PROTO ((struct lease *));
 int commit_leases PROTO ((void));
 void db_startup PROTO ((void));
 void new_lease_file PROTO ((void));
+
+/* packet.c */
+void assemble_hw_header PROTO ((struct interface_info *, unsigned char *,
+				int *, struct hardware *));
+void assemble_udp_ip_header PROTO ((struct interface_info *, unsigned char *,
+				    int *, u_int32_t, u_int16_t,
+				    unsigned char *, int));
+size_t decode_hw_header PROTO ((struct interface_info *, unsigned char *,
+				int, struct hardware *));
+size_t decode_udp_ip_header PROTO ((struct interface_info *, unsigned char *,
+				    int, struct sockaddr_in *,
+				    unsigned char *, int));
