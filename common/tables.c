@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"@(#) Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tables.c,v 1.8 1996/08/27 09:55:25 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -397,7 +397,7 @@ char *hardware_types [] = {
 	"unknown-3",
 	"unknown-4",
 	"unknown-5",
-	"unknown-6",
+	"token-ring",
 	"unknown-7",
 	"unknown-8",
 	"unknown-9",
