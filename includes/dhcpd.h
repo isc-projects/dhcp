@@ -2262,6 +2262,15 @@ isc_result_t dhcp_interface_remove (omapi_object_t *,
 void interface_stash (struct interface_info *);
 void interface_snorf (struct interface_info *, int);
 
+isc_result_t binding_scope_set_value (struct binding_scope *, int,
+				      omapi_data_string_t *,
+				      omapi_typed_data_t *);
+isc_result_t binding_scope_get_value (omapi_value_t **,
+				      struct binding_scope *,
+				      omapi_data_string_t *);
+isc_result_t binding_scope_stuff_values (omapi_object_t *,
+					 struct binding_scope *);
+
 /* mdb.c */
 
 extern struct subnet *subnets;
