@@ -416,18 +416,18 @@ value is specified as a single octet which identifies the client type.
 .PP
 Possible node types are:
 .PP
-.BL
-.IT 1
+.TP 5
+.I 1
 B-node: Broadcast - no WINS
-.IT 2
+.TP
+.I 2
 P-node: Peer - WINS only.
-.IT 4
+.TP
+.I 4
 M-node: Mixed - broadcast, then WINS
-.IT 8
+.TP
+.I 8
 H-node: Hybrid - WINS, then broadcast
-.EL
-.PP
-option netbios-node-type 2;
 .PP
  \fBoption\fR \fBnetbios-scope\fR \fIstring\fR\fB;\fR
 .PP
