@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.26 2000/01/26 14:56:18 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.27 2000/03/06 23:35:16 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -51,7 +51,7 @@ isc_result_t enter_host (hd, dynamicp, commit)
 	struct executable_statement *esp;
 
 	if (!host_name_hash) {
-		host_name_hash = new_hash ();
+		host_name_hash = new_hash (0, 0);
 		if (!host_name_hash)
 			log_fatal ("Can't allocate host name hash");
 	} else {
@@ -92,7 +92,7 @@ isc_result_t enter_host (hd, dynamicp, commit)
 
 	if (hd -> interface.hlen) {
 		if (!host_hw_addr_hash) {
-			host_hw_addr_hash = new_hash ();
+			host_hw_addr_hash = new_hash (0, 0);
 			if (!host_hw_addr_hash)
 				log_fatal ("Can't allocate host/hw hash");
 		} else
@@ -146,7 +146,7 @@ isc_result_t enter_host (hd, dynamicp, commit)
 		/* If there's no uid hash, make one; otherwise, see if
 		   there's already an entry in the hash for this host. */
 		if (!host_uid_hash) {
-			host_uid_hash = new_hash ();
+			host_uid_hash = new_hash (0, 0);
 			if (!host_uid_hash)
 				log_fatal ("Can't allocate host/uid hash");
 			hp = (struct host_decl *)0;
@@ -315,9 +315,14 @@ struct host_decl *find_hosts_by_haddr (htype, haddr, hlen)
 	unsigned hlen;
 {
 	struct host_decl *foo;
+	struct hardware h;
+
+	h.hlen = hlen + 1;
+	h.hbuf [0] = htype;
+	memcpy (&h.hbuf [1], haddr, hlen);
 
 	foo = (struct host_decl *)hash_lookup (host_hw_addr_hash,
-					       haddr, hlen);
+					       h.hbuf, h.hlen);
 	return foo;
 }
 
@@ -463,7 +468,7 @@ isc_result_t supersede_group (struct group_object *group, int writep)
 			}
 		}
 	} else {
-		group_name_hash = new_hash ();
+		group_name_hash = new_hash (0, 0);
 		t = (struct group_object *)0;
 	}
 
@@ -508,17 +513,17 @@ void new_address_range (low, high, subnet, pool)
 
 	/* Initialize the hash table if it hasn't been done yet. */
 	if (!lease_uid_hash) {
-		lease_uid_hash = new_hash ();
+		lease_uid_hash = new_hash (0, 0);
 		if (!lease_uid_hash)
 			log_fatal ("Can't allocate lease/uid hash");
 	}
 	if (!lease_ip_addr_hash) {
-		lease_ip_addr_hash = new_hash ();
+		lease_ip_addr_hash = new_hash (0, 0);
 		if (!lease_uid_hash)
 			log_fatal ("Can't allocate lease/ip hash");
 	}
 	if (!lease_hw_addr_hash) {
-		lease_hw_addr_hash = new_hash ();
+		lease_hw_addr_hash = new_hash (0, 0);
 		if (!lease_uid_hash)
 			log_fatal ("Can't allocate lease/hw hash");
 	}
@@ -1297,8 +1302,10 @@ struct lease *find_lease_by_hw_addr (hwaddr, hwlen)
 	const unsigned char *hwaddr;
 	unsigned hwlen;
 {
-	struct lease *lease = (struct lease *)hash_lookup (lease_hw_addr_hash,
-							   hwaddr, hwlen);
+	struct lease *lease;
+
+	lease = (struct lease *)hash_lookup (lease_hw_addr_hash,
+					     hwaddr, hwlen);
 	return lease;
 }
 
