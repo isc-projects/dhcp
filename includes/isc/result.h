@@ -89,7 +89,7 @@ ISC_LANG_BEGINDECLS
 #define	ISC_R_BADKEY			61
 #define	ISC_R_BADTIME			62
 
-#define ISC_R_NRESULTS 			62	/* Number of results */
+#define ISC_R_NRESULTS 			63	/* Number of results */
 
 const char *		isc_result_totext(isc_result_t);
 isc_result_t		isc_result_register(unsigned int base,
