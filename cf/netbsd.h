@@ -52,6 +52,7 @@
 extern int h_errno;
 
 #include <net/if.h>
+#include <net/if_dl.h>
 
 /* Varargs stuff... */
 #include <stdarg.h>
