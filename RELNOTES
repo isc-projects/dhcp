@@ -24,6 +24,9 @@ since June of 1997.
 
 	    CHANGES FROM VERSION 2.0 BETA 1 PATCHLEVEL 29
 
+- Define BYTE_ORDER in includes/cf/hpux.h so that ip.h will compile
+  correctly on HP-UX.
+
 - Fix a long-standing but minor bug in the way the program name for
   syslog was derived.
 
