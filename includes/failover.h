@@ -20,6 +20,7 @@
  * http://www.isc.org for more information.
  */
 
+#if defined (FAILOVER_PROTOCOL)
 struct failover_option_info {
 	int code;
 	const char *name;
@@ -171,6 +172,7 @@ typedef struct {
 	OMAPI_OBJECT_PREAMBLE;
 	unsigned local_port;
 } dhcp_failover_listener_t;
+#endif /* FAILOVER_PROTOCOL */
 
 /* A failover peer. */
 enum failover_state {
@@ -182,6 +184,7 @@ enum failover_state {
 	recover
 };
 
+#if defined (FAILOVER_PROTOCOL)
 typedef struct _dhcp_failover_state {
 	OMAPI_OBJECT_PREAMBLE;
 	struct _dhcp_failover_state *next;
@@ -229,3 +232,4 @@ typedef struct _dhcp_failover_state {
 } dhcp_failover_state_t;
 
 #define DHCP_FAILOVER_VERSION		1
+#endif /* FAILOVER_PROTOCOL */
