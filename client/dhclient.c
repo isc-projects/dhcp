@@ -56,7 +56,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhclient.c,v 1.37 1997/06/02 22:36:25 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.38 1997/06/02 22:45:08 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -275,7 +275,6 @@ void state_reboot (ipp)
 
 	/* If we don't remember an active lease, go straight to INIT. */
 	if (!ip -> client -> active ||
-	    ip -> client -> active -> rebind < cur_time ||
 	    ip -> client -> active -> is_bootp) {
 		state_init (ip);
 		return;
@@ -1086,6 +1085,7 @@ void state_panic (ipp)
 	ip -> client -> state = S_INIT;
 	add_timeout (cur_time + ip -> client -> config -> retry_interval,
 		     state_init, ip);
+	go_daemon ();
 }
 
 void send_request (ipp)
