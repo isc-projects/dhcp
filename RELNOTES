@@ -1,6 +1,6 @@
 	    Internet Software Consortium DHCP Distribution
-			      Version 3
-			   October 2, 2001
+		        Version 3 Patch Level 1
+			    April 30, 2002
 
 			    Release Notes
 
@@ -23,12 +23,9 @@ that are new since version 2.0:
        protocol features. 
 
 This release has been beta tested quite thorougly, and we think it is
-substantially more robust at this time than 2.0pl5.  The release
-candidate is expected to be free of serious bugs, but it's called a
-release candidate because we want people to try it and find any last
-real problems before we call it done.  We do not expect to add
-anything other than documentation and any remaining bug fixes to the
-3.0 release.  
+substantially more robust at this time than 2.0pl5.  This patch level
+release includes a fix for a serious security whole.  All DHCP 3.0
+sites are urged to upgrade to 3.0pl1 (or 3.0.1RC9 or later).
 
 The 3.0 Release Candidate 1 lease file is not backwards compatible
 with the 3.0 Beta 1 lease file, so if you have to go back, you will
@@ -52,6 +49,11 @@ Measurement Systems, Igor Sharfmesser at Kazakh Telecom, and Brian
 Murrell at BC Tel Advanced Communications.  I'd like to express my
 thanks to all of these good people here, both for working on the code
 and for prodding me into improving it.
+
+			   Changes since 3.0
+
+- Fix a format string vulnerability in the server that could lead to a
+  remote root compromise (discovered by NGSEC Research Team, www.ngsec.com).
 
 		Changes since 3.0 Release Candidate 12
 
@@ -258,7 +260,7 @@ and for prodding me into improving it.
 
 - Clean up the memory allocation/reference history printer.
 
-- Support input of dotted quads and colon-seperated hex lists as
+- Support input of dotted quads and colon-separated hex lists as
   attribute values in omshell.
 
 - Fix a typo in the linux interface discovery code.
@@ -508,7 +510,7 @@ and for prodding me into improving it.
   given a lease where the hardware address was correct but the client
   identifier was not, resulting in a lease conflict message.
 
-- Fix a problem where the server could write out a colon-seperated
+- Fix a problem where the server could write out a colon-separated
   hex list as a value for a variable, which would then not parse.
   The fix is to always write strings as quoted strings, with any
   non-printable characters quoted as octal escape sequences.   So
