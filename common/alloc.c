@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: alloc.c,v 1.11 1997/03/06 06:49:29 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: alloc.c,v 1.12 1997/03/29 00:01:18 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -200,7 +200,7 @@ struct lease_state *new_lease_state (name)
 		free_lease_states =
 			(struct lease_state *)(free_lease_states -> next);
 	} else {
-		rval = dmalloc (256 * sizeof (struct tree_cache *), name);
+		rval = dmalloc (sizeof (struct lease_state), name);
 	}
 	return rval;
 }
