@@ -56,6 +56,10 @@ and for prodding me into improving it.
 
 - The -nw command line option to dhclient now works.
 
+- Thanks to a patch from Michael Richardson:
+	- Some problems with long option processing have been fixed.
+	- Some fixes to minires so that updates of KEY records will work.
+
 			Changes since 3.0.1rc10
 
 - Potential buffer overflows in minires repaired.
