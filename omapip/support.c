@@ -59,6 +59,19 @@ omapi_object_type_t *omapi_object_types;
 int omapi_object_type_count;
 static int ot_max;
 
+#if defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
+void omapi_type_relinquish ()
+{
+	omapi_object_type_t *t, *n;
+
+	for (t = omapi_object_types; t; t = n) {
+		n = t -> next;
+		dfree (t, MDL);
+	}
+	omapi_object_types = (omapi_object_type_t *)0;
+}
+#endif
+
 isc_result_t omapi_init (void)
 {
 	isc_result_t status;
