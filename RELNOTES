@@ -15,6 +15,12 @@ New in this snapshot:
 	- more manual pages
 	- lots of minor and some major bug fixes.
 
+This snapshot does not fix a number of compile problems that have
+been reported (e.g., on Solaris 2.6), nor does it incorporate some
+new features that have been contributed. Those problems should be
+corrected in the Beta, but please don't hesitate to mention problems
+that you have when building this snapshot.
+
 This snapshot is being released in the hopes that a fair number of
 DHCP sites will download it, try it out, and submit bug reports and
 critique the new manual pages.  Please do not hold back - the plan is
