@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: discover.c,v 1.37 2001/02/12 19:40:05 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: discover.c,v 1.38 2001/02/17 21:16:44 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -671,6 +671,7 @@ int setup_fallback (struct interface_info **fp, const char *file, int line)
 					      (struct iaddr *)0);
 	status = interface_reference (fp, fallback_interface, file, line);
 
+	fallback_interface -> index = -1;
 	interface_stash (fallback_interface);
 	return status == ISC_R_SUCCESS;
 }
