@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.100.2.6 1999/10/25 15:46:46 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.100.2.7 1999/10/25 18:34:21 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -340,7 +340,7 @@ void dhcpdecline (packet)
 
 	/* If we found a lease, mark it as unusable and complain. */
 	if (lease) {
-		abandon_lease (lease, "declined.");
+		abandon_lease (lease, packet, "declined.");
 	}
 }
 
@@ -2155,7 +2155,7 @@ struct lease *find_lease (packet, share, ours)
 				    !packet -> raw -> ciaddr.s_addr &&
 				    (share ==
 				     uid_lease -> subnet -> shared_network))
-					dissociate_lease (uid_lease);
+					dissociate_lease (uid_lease, packet);
 			    }
 			    uid_lease = ip_lease;
 			}
@@ -2273,7 +2273,7 @@ struct lease *find_lease (packet, share, ours)
 	if (uid_lease) {
 		if (lease) {
 			if (!packet -> raw -> ciaddr.s_addr)
-				dissociate_lease (uid_lease);
+				dissociate_lease (uid_lease, packet);
 #if defined (DEBUG_FIND_LEASE)
 			log_info ("not choosing uid lease.");
 #endif
@@ -2290,7 +2290,7 @@ struct lease *find_lease (packet, share, ours)
 	if (hw_lease) {
 		if (lease) {
 			if (!packet -> raw -> ciaddr.s_addr)
-				dissociate_lease (hw_lease);
+				dissociate_lease (hw_lease, packet);
 #if defined (DEBUG_FIND_LEASE)
 			log_info ("not choosing hardware lease.");
 #endif
