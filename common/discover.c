@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: discover.c,v 1.40 2001/04/05 20:50:19 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: discover.c,v 1.41 2001/04/09 01:03:12 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -461,6 +461,9 @@ void discover_interfaces (state)
 
 #ifndef HAVE_ARPHRD_IEEE802
 # define ARPHRD_IEEE802 HTYPE_IEEE802
+#endif
+#if defined (HAVE_ARPHRD_IEEE802_TR)
+		      case ARPHRD_IEEE802_TR:
 #endif
 		      case ARPHRD_IEEE802:
 			tmp -> hw_address.hlen = 7;
