@@ -141,7 +141,12 @@ void assemble_hw_header (interface, buf, bufix, to)
 			sizeof (eh.ether_shost));
 	else
 		memset (eh.ether_shost, 0x00, sizeof (eh.ether_shost));
+
+#ifdef BROKEN_FREEBSD_BPF /* Fixed in FreeBSD 2.2 */
+	eh.ether_type = ETHERTYPE_IP;
+#else
 	eh.ether_type = htons (ETHERTYPE_IP);
+#endif
 
 	memcpy (&buf [*bufix], &eh, sizeof eh);
 	*bufix += sizeof eh;

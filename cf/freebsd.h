@@ -76,4 +76,5 @@ extern int h_errno;
 
 #if defined (USE_DEFAULT_NETWORK)
 #  define USE_BPF
+#  define BROKEN_FREEBSD_BPF /* Fixed in 2.2 */
 #endif
