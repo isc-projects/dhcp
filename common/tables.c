@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tables.c,v 1.23 1999/03/25 22:01:03 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tables.c,v 1.24 1999/04/05 16:24:05 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -42,6 +42,7 @@ static char copyright[] =
    t - ASCII text
    f - flag (true or false)
    A - array of whatever precedes (e.g., IA means array of IP addresses)
+   U - name of an option space (universe)
 */
 
 struct universe dhcp_universe;
@@ -843,7 +844,7 @@ struct option server_options [256] = {
 	{ "server-name", "t",			&server_universe, 16 },
 	{ "next-server", "I",			&server_universe, 17 },
 	{ "authoritative", "f",			&server_universe, 18 },
-	{ "option-19", "X",			&server_universe, 19 },
+	{ "vendor-option-space", "U",		&server_universe, 19 },
 	{ "option-20", "X",			&server_universe, 20 },
 	{ "option-21", "X",			&server_universe, 21 },
 	{ "option-22", "X",			&server_universe, 22 },
@@ -1083,15 +1084,37 @@ struct option server_options [256] = {
 };
 
 struct hash_table universe_hash;
+struct universe **universes;
+int universe_count, universe_max;
 
 void initialize_universes()
 {
 	int i;
 
+	universe_max = 10;
+	universes = ((struct universe **)
+		     dmalloc (universe_max * sizeof (struct universe *),
+			      "initialize_universes"));
+	if (!universes)
+		log_fatal ("Can't allocate option space table.");
+	memset (universes, 0, universe_max * sizeof (struct universe *));
+
 	/* Set up the DHCP option universe... */
 	dhcp_universe.name = "dhcp";
-	dhcp_universe.lookup_func = dhcp_option_lookup;
-	dhcp_universe.set_func = dhcp_option_set;
+	dhcp_universe.lookup_func = lookup_hashed_option;
+	dhcp_universe.option_state_dereference =
+		hashed_option_state_dereference;
+	dhcp_universe.get_func = hashed_option_get;
+	dhcp_universe.set_func = hashed_option_set;
+	dhcp_universe.save_func = save_hashed_option;
+	dhcp_universe.delete_func = delete_hashed_option;
+	dhcp_universe.encapsulate = hashed_option_space_encapsulate;
+	dhcp_universe.length_size = 1;
+	dhcp_universe.tag_size = 1;
+	dhcp_universe.store_tag = putUChar;
+	dhcp_universe.store_length = putUChar;
+	dhcp_universe.index = universe_count++;
+	universes [dhcp_universe.index] = &dhcp_universe;
 	dhcp_universe.hash = new_hash ();
 	if (!dhcp_universe.hash)
 		log_fatal ("Can't allocate dhcp option hash table.");
@@ -1104,7 +1127,15 @@ void initialize_universes()
 
 	/* Set up the Relay Agent Information Option suboption universe... */
 	agent_universe.name = "agent";
-	agent_universe.lookup_func = agent_suboption_lookup;
+	agent_universe.option_state_dereference =
+		agent_option_state_dereference;
+	agent_universe.get_func = agent_option_get;
+	agent_universe.index = universe_count++;
+	agent_universe.length_size = 1;
+	agent_universe.tag_size = 1;
+	agent_universe.store_tag = putUChar;
+	agent_universe.store_length = putUChar;
+	universes [agent_universe.index] = &agent_universe;
 	agent_universe.hash = new_hash ();
 	if (!agent_universe.hash)
 		log_fatal ("Can't allocate agent option hash table.");
@@ -1117,8 +1148,20 @@ void initialize_universes()
 
 	/* Set up the server option universe... */
 	server_universe.name = "server";
-	server_universe.lookup_func = server_option_lookup;
-	server_universe.set_func = server_option_set;
+	server_universe.lookup_func = lookup_hashed_option;
+	server_universe.option_state_dereference =
+		hashed_option_state_dereference;
+	server_universe.get_func = hashed_option_get;
+	server_universe.set_func = hashed_option_set;
+	server_universe.save_func = save_hashed_option;
+	server_universe.delete_func = delete_hashed_option;
+	server_universe.encapsulate = hashed_option_space_encapsulate;
+	server_universe.length_size = 1;
+	server_universe.tag_size = 1;
+	server_universe.store_tag = putUChar;
+	server_universe.store_length = putUChar;
+	server_universe.index = universe_count++;
+	universes [server_universe.index] = &server_universe;
 	server_universe.hash = new_hash ();
 	if (!server_universe.hash)
 		log_fatal ("Can't allocate server option hash table.");
