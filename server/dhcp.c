@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.54 1997/12/02 07:43:56 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.55 1997/12/02 09:07:03 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -701,26 +701,34 @@ void ack_lease (packet, lease, offer, when)
 		}
 	}
 
-	/* Record the hardware address, if given... */
-	lt.hardware_addr.hlen = packet -> raw -> hlen;
-	lt.hardware_addr.htype = packet -> raw -> htype;
-	memcpy (lt.hardware_addr.haddr, packet -> raw -> chaddr,
-		packet -> raw -> hlen);
-
 	lt.host = lease -> host;
 	lt.subnet = lease -> subnet;
 	lt.shared_network = lease -> shared_network;
 
 	/* Don't call supersede_lease on a mocked-up lease. */
-	if (lease -> flags & STATIC_LEASE)
-		;
-	else
-	/* Install the new information about this lease in the database.
-	   If this is a DHCPACK or a dynamic BOOTREPLY and we can't write
-	   the lease, don't ACK it (or BOOTREPLY it) either. */
+	if (lease -> flags & STATIC_LEASE) {
+		/* Copy the hardware address into the static lease
+		   structure. */
+		lease -> hardware_addr.hlen = packet -> raw -> hlen;
+		lease -> hardware_addr.htype = packet -> raw -> htype;
+		memcpy (lease -> hardware_addr.haddr, packet -> raw -> chaddr,
+			packet -> raw -> hlen);
+	} else {
+		/* Record the hardware address, if given... */
+		lt.hardware_addr.hlen = packet -> raw -> hlen;
+		lt.hardware_addr.htype = packet -> raw -> htype;
+		memcpy (lt.hardware_addr.haddr, packet -> raw -> chaddr,
+			packet -> raw -> hlen);
+
+		/* Install the new information about this lease in the
+		   database.  If this is a DHCPACK or a dynamic BOOTREPLY
+		   and we can't write the lease, don't ACK it (or BOOTREPLY
+		   it) either. */
+
 		if (!(supersede_lease (lease, &lt, !offer || offer == DHCPACK)
 		      || (offer && offer != DHCPACK)))
 			return;
+	}
 
 	/* Remember the interface on which the packet arrived. */
 	state -> ip = packet -> interface;
