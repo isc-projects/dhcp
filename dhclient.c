@@ -45,6 +45,9 @@
 void do_a_packet (int);
 void do_a_line (int);
 
+TIME default_lease_time = 43200; /* 12 hours... */
+TIME max_lease_time = 86400; /* 24 hours... */
+
 TIME cur_time;
 unsigned char packbuf [65536];	/* Should cover the gnarliest MTU... */
 
