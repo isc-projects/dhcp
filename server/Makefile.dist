@@ -25,7 +25,7 @@ PROG   = dhcpd
 MAN    = dhcpd.8 dhcpd.conf.5 dhcpd.leases.5
 
 DEBUG  = -g
-INCLUDES = -I.. -I../includes
+INCLUDES = -I.. $(BINDINC) -I../includes
 DHCPLIB = ../common/libdhcp.a
 CFLAGS = $(DEBUG) $(PREDEFINES) $(INCLUDES) $(COPTS)
 
