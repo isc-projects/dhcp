@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dispatch.c,v 1.47 1997/12/06 04:03:37 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dispatch.c,v 1.47.2.1 1998/06/25 05:45:10 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -54,7 +54,7 @@ struct timeout *timeouts;
 static struct timeout *free_timeouts;
 static int interfaces_invalidated;
 void (*bootp_packet_handler) PROTO ((struct interface_info *,
-				     unsigned char *, int, unsigned short,
+				     struct dhcp_packet *, int, unsigned short,
 				     struct iaddr, struct hardware *));
 
 static void got_one PROTO ((struct protocol *));
@@ -573,13 +573,16 @@ static void got_one (l)
 	struct hardware hfrom;
 	struct iaddr ifrom;
 	int result;
-	static unsigned char packbuf [4095]; /* Packet input buffer.
-						Must be as large as largest
-						possible MTU. */
+	union {
+		unsigned char packbuf [4095]; /* Packet input buffer.
+					 	 Must be as large as largest
+						 possible MTU. */
+		struct dhcp_packet packet;
+	} u;
 	struct interface_info *ip = l -> local;
 
-	if ((result = receive_packet (ip, packbuf, sizeof packbuf,
-				      &from, &hfrom)) < 0) {
+	if ((result =
+	     receive_packet (ip, u.packbuf, sizeof u, &from, &hfrom)) < 0) {
 		warn ("receive_packet failed on %s: %m", ip -> name);
 		return;
 	}
@@ -590,7 +593,7 @@ static void got_one (l)
 		ifrom.len = 4;
 		memcpy (ifrom.iabuf, &from.sin_addr, ifrom.len);
 
-		(*bootp_packet_handler) (ip, packbuf, result,
+		(*bootp_packet_handler) (ip, &u.packet, result,
 					 from.sin_port, ifrom, &hfrom);
 	}
 }
