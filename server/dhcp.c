@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.192.2.34 2004/06/15 16:15:58 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.192.2.35 2004/06/17 20:54:40 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -80,8 +80,8 @@ void dhcp (packet)
 		    packet -> packet_type < dhcp_type_name_max - 1) {
 			s = dhcp_type_names [packet -> packet_type - 1];
 		} else {
-			snprintf (typebuf, sizeof typebuf,
-				  "type %d", packet -> packet_type);
+			/* %Audit% Cannot exceed 28 bytes. %2004.06.17,Safe% */
+			sprintf (typebuf, "type %d", packet -> packet_type);
 			s = typebuf;
 		}
 		
@@ -263,7 +263,9 @@ void dhcpdiscover (packet, ms_nulltp)
 	} else
 		s = (char *)0;
 
-	/* Say what we're doing... */
+	/* %Audit% This is log output. %2004.06.17,Safe%
+	 * If we truncate we hope the user can get a hint from the log.
+	 */
 	snprintf (msgbuf, sizeof msgbuf, "DHCPDISCOVER from %s %s%s%svia %s",
 		 (packet -> raw -> htype
 		  ? print_hw_addr (packet -> raw -> htype,
@@ -455,12 +457,17 @@ void dhcprequest (packet, ms_nulltp, ip_lease)
 		sip.len = 4;
 		memcpy (sip.iabuf, data.data, 4);
 		data_string_forget (&data, MDL);
+		/* piaddr() should not return more than a 15 byte string.
+		 * safe.
+		 */
 		sprintf (smbuf, " (%s)", piaddr (sip));
 		have_server_identifier = 1;
 	} else
 		smbuf [0] = 0;
 
-	/* Say what we're doing... */
+	/* %Audit% This is log output. %2004.06.17,Safe%
+	 * If we truncate we hope the user can get a hint from the log.
+	 */
 	snprintf (msgbuf, sizeof msgbuf,
 		 "DHCPREQUEST for %s%s from %s %s%s%svia %s",
 		 piaddr (cip), smbuf,
@@ -744,10 +751,16 @@ void dhcprelease (packet, ms_nulltp)
 	} else
 		s = (char *)0;
 
+	/* %Audit% Cannot exceed 16 bytes. %2004.06.17,Safe%
+	 * We copy this out to stack because we actually want to log two
+	 * inet_ntoa()'s in this message.
+	 */
 	strncpy(cstr, inet_ntoa (packet -> raw -> ciaddr), 15);
 	cstr[15] = '\0';
 
-	/* Say what we're doing... */
+	/* %Audit% This is log output. %2004.06.17,Safe%
+	 * If we truncate we hope the user can get a hint from the log.
+	 */
 	snprintf (msgbuf, sizeof msgbuf,
 		 "DHCPRELEASE of %s from %s %s%s%svia %s (%sfound)",
 		 cstr,
@@ -835,6 +848,9 @@ void dhcpdecline (packet, ms_nulltp)
 	} else
 		s = (char *)0;
 
+	/* %Audit% This is log output. %2004.06.17,Safe%
+	 * If we truncate we hope the user can get a hint from the log.
+	 */
 	snprintf (msgbuf, sizeof msgbuf,
 		 "DHCPDECLINE of %s from %s %s%s%svia %s",
 		 piaddr (cip),
@@ -947,6 +963,9 @@ void dhcpinform (packet, ms_nulltp)
 		memcpy (cip.iabuf, &packet -> raw -> ciaddr, 4);
 	}
 
+	/* %Audit% This is log output. %2004.06.17,Safe%
+	 * If we truncate we hope the user can get a hint from the log.
+	 */
 	snprintf (msgbuf, sizeof msgbuf, "DHCPINFORM from %s via %s",
 		 piaddr (cip), packet -> interface -> name);
 

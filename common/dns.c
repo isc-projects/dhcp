@@ -33,7 +33,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dns.c,v 1.35.2.15 2004/06/14 21:08:42 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dns.c,v 1.35.2.16 2004/06/17 20:54:38 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -531,7 +531,8 @@ isc_result_t ddns_update_a (struct data_string *ddns_fwd_name,
 	if (ddns_addr.len != 4)
 		return ISC_R_INVALIDARG;
 
-	snprintf (ddns_address, 16, "%d.%d.%d.%d",
+	/* %Audit% Cannot exceed 16 bytes. %2004.06.17,Safe% */
+	sprintf (ddns_address, "%u.%u.%u.%u",
 		  ddns_addr.iabuf[0], ddns_addr.iabuf[1],
 		  ddns_addr.iabuf[2], ddns_addr.iabuf[3]);
 
@@ -779,7 +780,8 @@ isc_result_t ddns_remove_a (struct data_string *ddns_fwd_name,
 	if (ddns_addr.len != 4)
 		return ISC_R_INVALIDARG;
 
-	snprintf (ddns_address, 16, "%d.%d.%d.%d",
+	/* %Audit% Cannot exceed 16 bytes. %2004.06.17,Safe% */
+	sprintf (ddns_address, "%u.%u.%u.%u",
 		  ddns_addr.iabuf[0], ddns_addr.iabuf[1],
 		  ddns_addr.iabuf[2], ddns_addr.iabuf[3]);
 

@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.101.2.8 2004/06/10 17:59:22 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.101.2.9 2004/06/17 20:54:39 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -735,10 +735,13 @@ int evaluate_dns_expression (result, packet, lease, client_state, in_options,
 					goto dpngood;
 				    (*result) -> r_data =
 					    (*result) -> r_data_ephem;
+				    /*%Audit% 16 bytes max. %2004.06.17,Safe%*/
 				    sprintf ((char *)(*result) -> r_data_ephem,
-					     "%d.%d.%d.%d",
-					     data.data [0], data.data [1],
-					     data.data [2], data.data [3]);
+					     "%u.%u.%u.%u",
+					     data.data [0] & 0xff,
+					     data.data [1] & 0xff,
+					     data.data [2] & 0xff,
+					     data.data [3] & 0xff);
 				    (*result) -> r_size = 
 					    strlen ((const char *)
 						    (*result) -> r_data);

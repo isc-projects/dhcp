@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: print.c,v 1.53.2.10 2004/06/10 17:59:20 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: print.c,v 1.53.2.11 2004/06/17 20:54:39 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -414,8 +414,13 @@ char *print_dotted_quads (len, data)
 	
 	i = 0;
 
+	/* %Audit% Loop bounds checks to 21 bytes. %2004.06.17,Safe%
+	 * The sprintf can't exceed 18 bytes, and since the loop enforces
+	 * 21 bytes of space per iteration at no time can we exit the
+	 * loop without at least 3 bytes spare.
+	 */
 	do {
-		sprintf (s, "%d.%d.%d.%d, ",
+		sprintf (s, "%u.%u.%u.%u, ",
 			 data [i], data [i + 1], data [i + 2], data [i + 3]);
 		s += strlen (s);
 		i += 4;

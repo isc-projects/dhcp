@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: db.c,v 1.63.2.10 2004/06/15 16:15:58 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: db.c,v 1.63.2.11 2004/06/17 20:54:40 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -80,6 +80,7 @@ int write_lease (lease)
 	if (lease -> starts) {
 		if (lease -> starts != MAX_TIME) {
 			t = gmtime (&lease -> starts);
+			/* %Audit% Cannot exceed 59 bytes. %2004.06.17,Safe% */
 			sprintf (tbuf, "%d %d/%02d/%02d %02d:%02d:%02d;",
 				 t -> tm_wday, t -> tm_year + 1900,
 				 t -> tm_mon + 1, t -> tm_mday,
@@ -96,6 +97,7 @@ int write_lease (lease)
 	if (lease -> ends) {
 		if (lease -> ends != MAX_TIME) {
 			t = gmtime (&lease -> ends);
+			/* %Audit% Cannot exceed 59 bytes. %2004.06.17,Safe% */
 			sprintf (tbuf, "%d %d/%02d/%02d %02d:%02d:%02d;",
 				 t -> tm_wday, t -> tm_year + 1900,
 				 t -> tm_mon + 1, t -> tm_mday,
@@ -401,11 +403,11 @@ int write_host (host)
 			}
 			for (i = 0; i < ip_addrs.len - 3; i += 4) {
 				errno = 0;
-				fprintf (db_file, "%d.%d.%d.%d%s",
-					 ip_addrs.data [i],
-					 ip_addrs.data [i + 1],
-					 ip_addrs.data [i + 2],
-					 ip_addrs.data [i + 3],
+				fprintf (db_file, "%u.%u.%u.%u%s",
+					 ip_addrs.data [i] & 0xff,
+					 ip_addrs.data [i + 1] & 0xff,
+					 ip_addrs.data [i + 2] & 0xff,
+					 ip_addrs.data [i + 3] & 0xff,
 					 i + 7 < ip_addrs.len ? "," : "");
 				if (errno) {
 					++errors;
@@ -773,7 +775,17 @@ int new_lease_file ()
 
 	/* Make a temporary lease file... */
 	GET_TIME (&t);
-	snprintf (newfname, sizeof newfname, "%s.%d", path_dhcpd_db, (int)t);
+
+	/* %Audit% Truncated filename causes panic. %2004.06.17,Safe%
+	 * This should never happen since the path is a configuration
+	 * variable from build-time or command-line.  But if it should,
+	 * either by malice or ignorance, we panic, since the potential
+	 * for havoc is high.
+	 */
+	if (snprintf (newfname, sizeof newfname, "%s.%d",
+		     path_dhcpd_db, (int)t) >= sizeof newfname)
+		log_fatal("new_lease_file: lease file path too long");
+
 	db_fd = open (newfname, O_WRONLY | O_TRUNC | O_CREAT, 0664);
 	if (db_fd < 0) {
 		log_error ("Can't create new lease file: %m");
@@ -823,8 +835,17 @@ int new_lease_file ()
 #if defined (TRACING)
 	if (!trace_playback ()) {
 #endif
+	    /* %Audit% Truncated filename causes panic. %2004.06.17,Safe%
+	     * This should never happen since the path is a configuration
+	     * variable from build-time or command-line.  But if it should,
+	     * either by malice or ignorance, we panic, since the potential
+	     * for havoc is too high.
+	     */
+	    if (snprintf (backfname, sizeof backfname, "%s~", path_dhcpd_db)
+			>= sizeof backfname)
+		log_fatal("new_lease_file: backup lease file path too long");
+
 	    /* Get the old database out of the way... */
-	    snprintf (backfname, sizeof backfname, "%s~", path_dhcpd_db);
 	    if (unlink (backfname) < 0 && errno != ENOENT) {
 		log_error ("Can't remove old lease database backup %s: %m",
 			   backfname);

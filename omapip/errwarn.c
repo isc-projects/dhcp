@@ -33,7 +33,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: errwarn.c,v 1.9.2.1 2004/06/10 17:59:47 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: errwarn.c,v 1.9.2.2 2004/06/17 20:54:39 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include <omapip/omapip_p.h>
@@ -59,6 +59,9 @@ void log_fatal (const char * fmt, ... )
 
   do_percentm (fbuf, fmt);
 
+  /* %Audit% This is log output. %2004.06.17,Safe%
+   * If we truncate we hope the user can get a hint from the log.
+   */
   va_start (list, fmt);
   vsnprintf (mbuf, sizeof mbuf, fbuf, list);
   va_end (list);
@@ -105,6 +108,9 @@ int log_error (const char * fmt, ...)
 
   do_percentm (fbuf, fmt);
 
+  /* %Audit% This is log output. %2004.06.17,Safe%
+   * If we truncate we hope the user can get a hint from the log.
+   */
   va_start (list, fmt);
   vsnprintf (mbuf, sizeof mbuf, fbuf, list);
   va_end (list);
@@ -129,6 +135,9 @@ int log_info (const char *fmt, ...)
 
   do_percentm (fbuf, fmt);
 
+  /* %Audit% This is log output. %2004.06.17,Safe%
+   * If we truncate we hope the user can get a hint from the log.
+   */
   va_start (list, fmt);
   vsnprintf (mbuf, sizeof mbuf, fbuf, list);
   va_end (list);
@@ -153,6 +162,9 @@ int log_debug (const char *fmt, ...)
 
   do_percentm (fbuf, fmt);
 
+  /* %Audit% This is log output. %2004.06.17,Safe%
+   * If we truncate we hope the user can get a hint from the log.
+   */
   va_start (list, fmt);
   vsnprintf (mbuf, sizeof mbuf, fbuf, list);
   va_end (list);

@@ -60,7 +60,8 @@ and for prodding me into improving it.
   snprintf implementation, only in those cases where the architecture is
   not known to provide one (see includes/cf/[arch].h).  If you experience
   linking problems with snprintf/vsnprintf or 'isc_print_' functions, this
-  is where to look.
+  is where to look.  This vulnerability did not exist in any previously
+  published version of ISC DHCP.
 
 - Compilation on hpux 11.11 was repaired.
 

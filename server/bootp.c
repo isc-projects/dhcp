@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bootp.c,v 1.69.2.6 2004/06/15 16:15:58 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: bootp.c,v 1.69.2.7 2004/06/17 20:54:39 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -68,6 +68,9 @@ void bootp (packet)
 	if (packet -> raw -> op != BOOTREQUEST)
 		return;
 
+	/* %Audit% This is log output. %2004.06.17,Safe%
+	 * If we truncate we hope the user can get a hint from the log.
+	 */
 	snprintf (msgbuf, sizeof msgbuf, "BOOTREQUEST from %s via %s",
 		 print_hw_addr (packet -> raw -> htype,
 				packet -> raw -> hlen,

@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: ddns.c,v 1.15.2.13 2004/06/14 21:08:50 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: ddns.c,v 1.15.2.14 2004/06/17 20:54:40 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -496,12 +496,13 @@ int ddns_updates (struct packet *packet,
 		if (ddns_rev_name.buffer) {
 			ddns_rev_name.data = ddns_rev_name.buffer -> data;
 
-			snprintf ((char *)ddns_rev_name.buffer -> data, 17,
-				  "%d.%d.%d.%d.",
-				  lease -> ip_addr . iabuf[3],
-				  lease -> ip_addr . iabuf[2],
-				  lease -> ip_addr . iabuf[1],
-				  lease -> ip_addr . iabuf[0]);
+			/* %Audit% Cannot exceed 17 bytes. %2004.06.17,Safe% */
+			sprintf ((char *)ddns_rev_name.buffer -> data,
+				  "%u.%u.%u.%u.",
+				  lease -> ip_addr . iabuf[3] & 0xff,
+				  lease -> ip_addr . iabuf[2] & 0xff,
+				  lease -> ip_addr . iabuf[1] & 0xff,
+				  lease -> ip_addr . iabuf[0] & 0xff);
 
 			ddns_rev_name.len =
 				strlen ((const char *)ddns_rev_name.data);

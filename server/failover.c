@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.53.2.30 2004/06/15 16:15:59 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.53.2.31 2004/06/17 20:54:40 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -466,7 +466,7 @@ isc_result_t dhcp_failover_link_signal (omapi_object_t *h,
 			  badconnect:
 				/* XXX Send a refusal message first?
 				   XXX Look in protocol spec for guidance. */
-			    log_error ("Failover CONNECT from %d.%d.%d.%d: %s",
+			    log_error ("Failover CONNECT from %u.%u.%u.%u: %s",
 				       ((u_int8_t *)
 					(&link -> imsg -> server_addr)) [0],
 				       ((u_int8_t *)
@@ -1246,7 +1246,7 @@ isc_result_t dhcp_failover_state_signal (omapi_object_t *o,
 				    link);
 
 		    if (link -> imsg -> reject_reason) {
-			log_error ("Failover CONNECT to %d.%d.%d.%d%s%s",
+			log_error ("Failover CONNECT to %u.%u.%u.%u%s%s",
 				   ((u_int8_t *)
 				    (&link -> imsg -> server_addr)) [0],
 				   ((u_int8_t *)
@@ -1270,7 +1270,7 @@ isc_result_t dhcp_failover_state_signal (omapi_object_t *o,
 			errmsg = "unknown server";
 			reason = FTR_INVALID_PARTNER;
 		      badconnectack:
-			log_error ("Failover CONNECTACK from %d.%d.%d.%d: %s",
+			log_error ("Failover CONNECTACK from %u.%u.%u.%u: %s",
 				   ((u_int8_t *)
 				    (&link -> imsg -> server_addr)) [0],
 				   ((u_int8_t *)
@@ -1343,7 +1343,7 @@ isc_result_t dhcp_failover_state_signal (omapi_object_t *o,
 				 (tvunref_t)dhcp_failover_state_dereference);
 		} else if (link -> imsg -> type == FTM_DISCONNECT) {
 		    if (link -> imsg -> reject_reason) {
-			log_error ("Failover DISCONNECT from %d.%d.%d.%d%s%s",
+			log_error ("Failover DISCONNECT from %u.%u.%u.%u%s%s",
 				   ((u_int8_t *)
 				    (&link -> imsg -> server_addr)) [0],
 				   ((u_int8_t *)
@@ -3398,8 +3398,17 @@ failover_option_t *dhcp_failover_option_printf (unsigned code,
 	va_list va;
 	char tbuf [256];
 
+	/* %Audit% Truncation causes panic. %2004.06.17,Revisit%
+	 * It is unclear what the effects of truncation here are, or
+	 * how that condition should be handled.  It seems that this
+	 * function is used for formatting messages in the failover
+	 * command channel.  For now the safest thing is for
+	 * overflow-truncation to cause a fatal log.
+	 */
 	va_start (va, fmt);
-	vsnprintf (tbuf, sizeof tbuf, fmt, va);
+	if (vsnprintf (tbuf, sizeof tbuf, fmt, va) >= sizeof tbuf)
+		log_fatal ("%s: vsnprintf would truncate",
+				"dhcp_failover_make_option");
 	va_end (va);
 
 	return dhcp_failover_make_option (code, obuf, obufix, obufmax,
@@ -3500,7 +3509,16 @@ failover_option_t *dhcp_failover_make_option (unsigned code,
 	putUShort (&option.data [2], size - 4);
 
 #if defined (DEBUG_FAILOVER_MESSAGES)	
-	snprintf (tbuf, sizeof tbuf, " (%s<%d>", info -> name, option.count);
+	/* %Audit% Truncation causes panic. %2004.06.17,Revisit%
+	 * It is unclear what the effects of truncation here are, or
+	 * how that condition should be handled.  It seems that this
+	 * message may be sent over the failover command channel.
+	 * For now the safest thing is for overflow-truncation to cause
+	 * a fatal log.
+	 */
+	if (snprintf (tbuf, sizeof tbuf, " (%s<%d>", info -> name,
+			option.count) >= sizeof tbuf)
+		log_fatal ("dhcp_failover_make_option: tbuf overflow");
 	failover_print (obuf, obufix, obufmax, tbuf);
 #endif
 
@@ -3510,6 +3528,7 @@ failover_option_t *dhcp_failover_make_option (unsigned code,
 		for (i = 0; i < count; i++) {
 			val = va_arg (va, unsigned);
 #if defined (DEBUG_FAILOVER_MESSAGES)
+			/* %Audit% Cannot exceed 24 bytes. %2004.06.17,Safe% */
 			sprintf (tbuf, " %d", val);
 			failover_print (obuf, obufix, obufmax, tbuf);
 #endif
@@ -3529,8 +3548,9 @@ failover_option_t *dhcp_failover_make_option (unsigned code,
 			}
 				
 #if defined (DEBUG_FAILOVER_MESSAGES)
-			sprintf (tbuf, " %u.%u.%u.%u", iaddr [0], iaddr [1],
-				 iaddr [2], iaddr [3]);
+			/*%Audit% Cannot exceed 17 bytes.  %2004.06.17,Safe%*/
+			sprintf (tbuf, " %u.%u.%u.%u",
+				  iaddr [0], iaddr [1], iaddr [2], iaddr [3]);
 			failover_print (obuf, obufix, obufmax, tbuf);
 #endif
 			memcpy (&option.data [4 + i * ilen], iaddr, ilen);
@@ -3541,6 +3561,7 @@ failover_option_t *dhcp_failover_make_option (unsigned code,
 		for (i = 0; i < count; i++) {
 			val = va_arg (va, unsigned);
 #if defined (DEBUG_FAILOVER_MESSAGES)
+			/*%Audit% Cannot exceed 24 bytes.  %2004.06.17,Safe%*/
 			sprintf (tbuf, " %d", val);
 			failover_print (obuf, obufix, obufmax, tbuf);
 #endif
@@ -3553,6 +3574,7 @@ failover_option_t *dhcp_failover_make_option (unsigned code,
 		bval = va_arg (va, u_int8_t *);
 #if defined (DEBUG_FAILOVER_MESSAGES)
 		for (i = 0; i < count; i++) {
+			/* 23 bytes plus nul, safe. */
 			sprintf (tbuf, " %d", bval [i]);
 			failover_print (obuf, obufix, obufmax, tbuf);
 		}
@@ -3561,17 +3583,21 @@ failover_option_t *dhcp_failover_make_option (unsigned code,
 		break;
 
 		/* On output, TEXT_OR_BYTES is _always_ text, and always NUL
-		   terminated.  Note that the caller should be careful not to
-		   provide a format and data that amount to more than 256 bytes
-		   of data, since it will be truncated on platforms that
-		   support snprintf, and will mung the stack on those platforms
-		   that do not support snprintf.  Also, callers should not pass
-		   data acquired from the network without specifically checking
-		   it to make sure it won't bash the stack. */
+		   terminated.  Note that the caller should be careful not
+		   to provide a format and data that amount to more than 256
+		   bytes of data, since it will cause a fatal error. */
 	      case FT_TEXT_OR_BYTES:
 	      case FT_TEXT:
 #if defined (DEBUG_FAILOVER_MESSAGES)
-		snprintf (tbuf, sizeof tbuf, "\"%s\"", txt);
+		/* %Audit% Truncation causes panic. %2004.06.17,Revisit%
+		 * It is unclear what the effects of truncation here are, or
+		 * how that condition should be handled.  It seems that this
+		 * function is used for formatting messages in the failover
+		 * command channel.  For now the safest thing is for
+		 * overflow-truncation to cause a fatal log.
+		 */
+		if (snprintf (tbuf, sizeof tbuf, "\"%s\"", txt) >= sizeof tbuf)
+			log_fatal ("dhcp_failover_make_option: tbuf overflow");
 		failover_print (obuf, obufix, obufmax, tbuf);
 #endif
 		memcpy (&option.data [4], txt, count);
@@ -3586,6 +3612,7 @@ failover_option_t *dhcp_failover_make_option (unsigned code,
 		memcpy (&option.data [4 + count], bval, size - count - 4);
 #if defined (DEBUG_FAILOVER_MESSAGES)
 		for (i = 4; i < size; i++) {
+			/*%Audit% Cannot exceed 24 bytes. %2004.06.17,Safe%*/
 			sprintf (tbuf, " %d", option.data [i]);
 			failover_print (obuf, obufix, obufmax, tbuf);
 		}
@@ -3596,6 +3623,7 @@ failover_option_t *dhcp_failover_make_option (unsigned code,
 		for (i = 0; i < count; i++) {
 			val = va_arg (va, u_int32_t);
 #if defined (DEBUG_FAILOVER_MESSAGES)
+			/*%Audit% Cannot exceed 24 bytes. %2004.06.17,Safe%*/
 			sprintf (tbuf, " %d", val);
 			failover_print (obuf, obufix, obufmax, tbuf);
 #endif
@@ -4480,11 +4508,13 @@ isc_result_t dhcp_failover_process_bind_update (dhcp_failover_state_t *state,
 		if (new_binding_state != msg -> binding_status) {
 			char outbuf [100];
 
-			snprintf (outbuf, sizeof outbuf,
+			if (snprintf (outbuf, sizeof outbuf,
 				  "%s: invalid state transition: %s to %s",
 				  piaddr (lease -> ip_addr),
 				  binding_state_print (lease -> binding_state),
-				  binding_state_print (msg -> binding_status));
+				  binding_state_print (msg -> binding_status))
+						>= sizeof outbuf)
+				log_fatal ("%s: impossible outbuf overflow");
 
 			dhcp_failover_send_bind_ack (state, msg,
 						     FTR_FATAL_CONFLICT,

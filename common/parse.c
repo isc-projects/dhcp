@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.104.2.16 2004/06/14 21:08:43 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.104.2.17 2004/06/17 20:54:38 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -4796,6 +4796,9 @@ int parse_warn (struct parse *cfile, const char *fmt, ...)
 	unsigned i, lix;
 	
 	do_percentm (mbuf, fmt);
+	/* %Audit% This is log output. %2004.06.17,Safe%
+	 * If we truncate we hope the user can get a hint from the log.
+	 */
 	snprintf (fbuf, sizeof fbuf, "%s line %d: %s",
 		  cfile -> tlname, cfile -> lexline, mbuf);
 	
