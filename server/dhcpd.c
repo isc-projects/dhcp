@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.97 2000/07/27 09:03:05 mellon Exp $ Copyright 1995-2000 Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.98 2000/08/03 21:00:39 neild Exp $ Copyright 1995-2000 Internet Software Consortium.";
 #endif
 
   static char copyright[] =
@@ -137,6 +137,18 @@ const char *path_dhcpd_pid = _PATH_DHCPD_PID;
 
 int dhcp_max_agent_option_packet_length = DHCP_MTU_MAX;
 
+static omapi_auth_key_t *omapi_key = (omapi_auth_key_t *)0;
+
+static isc_result_t verify_addr (omapi_object_t *l, omapi_addr_t *addr) {
+	return ISC_R_SUCCESS;
+}
+
+static isc_result_t verify_auth (omapi_object_t *p, omapi_auth_key_t *a) {
+	if (a != omapi_key)
+		return ISC_R_INVALIDKEY;
+	return ISC_R_SUCCESS;
+}
+
 int main (argc, argv, envp)
 	int argc;
 	char **argv, **envp;
@@ -164,6 +176,9 @@ int main (argc, argv, envp)
 	struct parse *parse;
 	int lose;
 	int omapi_port;
+	omapi_object_t *auth;
+	struct tsig_key *key;
+	omapi_typed_data_t *td;
 	int no_dhcpd_conf = 0;
 	int no_dhcpd_db = 0;
 	int no_dhcpd_pid = 0;
@@ -413,6 +428,24 @@ int main (argc, argv, envp)
 		data_string_forget (&db, MDL);
 	}
 
+	oc = lookup_option (&server_universe, options, SV_OMAPI_KEY);
+	if (oc &&
+	    evaluate_option_cache (&db, (struct packet *)0,
+				   (struct lease *)0, options,
+				   (struct option_state *)0,
+				   &global_scope, oc, MDL)) {
+		s = dmalloc (db.len + 1, MDL);
+		if (!s)
+			log_fatal ("no memory for OMAPI key filename.");
+		memcpy (s, db.data, db.len);
+		s [db.len] = 0;
+		data_string_forget (&db, MDL);
+		result = omapi_auth_key_lookup_name (&omapi_key, s);
+		dfree (s, MDL);
+		if (result != ISC_R_SUCCESS)
+			log_fatal ("Invalid OMAPI key: %s", s);
+	}
+
 	oc = lookup_option (&server_universe, options, SV_LOCAL_PORT);
 	if (oc &&
 	    evaluate_option_cache (&db, (struct packet *)0,
@@ -510,6 +543,9 @@ int main (argc, argv, envp)
 				   isc_result_totext (result));
 		result = omapi_protocol_listen (listener,
 						(unsigned)omapi_port, 1);
+		if (result == ISC_R_SUCCESS)
+			result = omapi_protocol_configure_security
+				(listener, verify_addr, verify_auth);
 		if (result != ISC_R_SUCCESS)
 			log_fatal ("Can't start OMAPI protocol: %s",
 				   isc_result_totext (result));

@@ -122,6 +122,17 @@ isc_result_t omapi_listen_addr (omapi_object_t *h,
 	}
 #endif
 
+	/* Set the REUSEADDR option so that we don't fail to start if
+	   we're being restarted. */
+	i = 1;
+	if (setsockopt (obj -> socket, SOL_SOCKET, SO_REUSEADDR,
+			(char *)&i, sizeof i) < 0) {
+		close (obj -> socket);
+		omapi_listener_dereference (&obj, MDL);
+		return ISC_R_UNEXPECTED;
+	}
+		
+
 	/* Try to bind to the wildcard address using the port number
            we were given. */
 	i = bind (obj -> socket,
@@ -173,6 +184,7 @@ isc_result_t omapi_accept (omapi_object_t *h)
 	SOCKLEN_T len;
 	omapi_connection_object_t *obj;
 	omapi_listener_object_t *listener;
+	omapi_addr_t addr;
 	int i;
 
 	if (h -> type != omapi_type_listener)
@@ -200,6 +212,21 @@ isc_result_t omapi_accept (omapi_object_t *h)
 	
 	obj -> state = omapi_connection_connected;
 
+	/* Verify that this host is allowed to connect. */
+	if (listener -> verify_addr) {
+		addr.addrtype = AF_INET;
+		addr.addrlen = sizeof (obj -> remote_addr.sin_addr);
+		memcpy (addr.address, &obj -> remote_addr.sin_addr,
+			sizeof (obj -> remote_addr.sin_addr));
+		addr.port = ntohs(obj -> remote_addr.sin_port);
+
+		status = (listener -> verify_addr) (h, &addr);
+		if (status != ISC_R_SUCCESS) {
+			omapi_disconnect ((omapi_object_t *)obj, 1);
+			return status;
+		}
+	}
+
 	status = omapi_register_io_object ((omapi_object_t *)obj,
 					   omapi_connection_readfd,
 					   omapi_connection_writefd,
@@ -219,6 +246,22 @@ isc_result_t omapi_accept (omapi_object_t *h)
 	   reaped. */
 	omapi_connection_dereference (&obj, MDL);
 	return status;
+}
+
+isc_result_t omapi_listener_configure_security (omapi_object_t *h,
+						isc_result_t (*verify_addr)
+						 (omapi_object_t *,
+						  omapi_addr_t *))
+{
+	omapi_listener_object_t *l;
+
+	if (h -> type != omapi_type_listener)
+		return ISC_R_INVALIDARG;
+	l = (omapi_listener_object_t *)h;
+
+	l -> verify_addr = verify_addr;
+
+	return ISC_R_SUCCESS;
 }
 
 isc_result_t omapi_listener_set_value (omapi_object_t *h,

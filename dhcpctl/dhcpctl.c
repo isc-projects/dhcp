@@ -91,6 +91,7 @@ dhcpctl_status dhcpctl_connect (dhcpctl_handle *connection,
 				dhcpctl_handle authinfo)
 {
 	isc_result_t status;
+	dhcpctl_status waitstatus;
 
 	status = omapi_generic_new (connection, MDL);
 	if (status != ISC_R_SUCCESS) {

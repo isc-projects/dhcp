@@ -21,10 +21,10 @@ CATMANPAGES = omapi.cat3
 SEDMANPAGES = omapi.man3
 SRC    = protocol.c buffer.c alloc.c result.c connection.c errwarn.c \
 	 listener.c dispatch.c generic.c support.c handle.c message.c \
-	 convert.c hash.c
+	 convert.c hash.c auth.c
 OBJ    = protocol.o buffer.o alloc.o result.o connection.o errwarn.o \
 	 listener.o dispatch.o generic.o support.o handle.o message.o \
-	 convert.o hash.o
+	 convert.o hash.o auth.o
 MAN    = omapi.3
 
 DEBUG  = -g
@@ -33,8 +33,8 @@ CFLAGS = $(DEBUG) $(PREDEFINES) $(INCLUDES) $(COPTS)
 
 all:	libomapi.a svtest $(CATMANPAGES)
 
-svtest:	test.o libomapi.a
-	$(CC) $(DEBUG) $(LFLAGS) -o svtest test.o libomapi.a $(LIBS)
+svtest:	test.o libomapi.a $(BINDLIB)
+	$(CC) $(DEBUG) $(LFLAGS) -o svtest test.o libomapi.a $(BINDLIB) $(LIBS)
 
 libomapi.a:	$(OBJ)
 	rm -f libomapi.a

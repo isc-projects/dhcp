@@ -1,5 +1,5 @@
 #ifndef LINT
-static const char rcsid[] = "$Header: /tmp/cvstest/DHCP/minires/Attic/dst_api.c,v 1.2 2000/02/02 19:59:15 mellon Exp $";
+static const char rcsid[] = "$Header: /tmp/cvstest/DHCP/minires/Attic/dst_api.c,v 1.3 2000/08/03 21:00:05 neild Exp $";
 #endif
 
 /*
@@ -722,7 +722,8 @@ dst_key_to_dnskey(const DST_KEY *key, u_char *out_storage,
 	}
 	memset(out_storage, 0, out_len);
 	val = (u_int16_t)(key->dk_flags & 0xffff);
-	putUShort(out_storage, val);
+	out_storage[0] = (val >> 8) & 0xff;
+	out_storage[1] = val        & 0xff;
 	loc += 2;
 
 	out_storage[loc++] = (u_char) key->dk_proto;
@@ -730,7 +731,8 @@ dst_key_to_dnskey(const DST_KEY *key, u_char *out_storage,
 
 	if (key->dk_flags > 0xffff) {	/* Extended flags */
 		val = (u_int16_t)((key->dk_flags >> 16) & 0xffff);
-		putUShort(&out_storage[loc], val);
+		out_storage[loc]   = (val >> 8) & 0xff;
+		out_storage[loc+1] = val        & 0xff;
 		loc += 2;
 	}
 	if (key->dk_KEY_struct == NULL)

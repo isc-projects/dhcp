@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.77 2000/07/06 09:57:23 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.78 2000/08/03 20:59:36 neild Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1806,7 +1806,8 @@ int parse_zone (struct dns_zone *zone, struct parse *cfile)
 			    skip_to_semi (cfile);
 			    return 0;
 		    }
-		    if (tsig_key_lookup (&zone -> key, val) != ISC_R_SUCCESS)
+		    if (omapi_auth_key_lookup_name (&zone -> key, val) !=
+			ISC_R_SUCCESS)
 			    parse_warn (cfile, "unknown key %s", val);
 		    if (!parse_semi (cfile))
 			    return 0;
@@ -1839,7 +1840,8 @@ int parse_key (struct parse *cfile)
 	int token;
 	const char *val;
 	int done = 0;
-	struct tsig_key *key;
+	struct auth_key *key;
+	struct data_string ds;
 	isc_result_t status;
 
 	token = next_token (&val, cfile);
@@ -1848,8 +1850,8 @@ int parse_key (struct parse *cfile)
 		skip_to_semi (cfile);
 		return 0;
 	}
-	key = (struct tsig_key *)0;
-	if (!tsig_key_allocate (&key, MDL))
+	key = (struct auth_key *)0;
+	if (omapi_auth_key_new (&key, MDL) != ISC_R_SUCCESS)
 		log_fatal ("no memory for tsig key");
 	key -> name = dmalloc (strlen (val) + 1, MDL);
 	if (!key -> name)
@@ -1883,13 +1885,23 @@ int parse_key (struct parse *cfile)
 			break;
 
 		      case SECRET:
-			if (key -> key.buffer) {
+			if (key -> key) {
 				parse_warn (cfile, "key %s: too many secrets",
 					    key -> name);
 				goto rbad;
 			}
-			if (!parse_base64 (&key -> key, cfile))
+
+			memset (&ds, 0, sizeof(ds));
+			if (!parse_base64 (&ds, cfile))
 				goto rbad;
+			status = omapi_data_string_new (&key -> key, ds.len,
+							MDL);
+			if (status != ISC_R_SUCCESS)
+				goto rbad;
+			memcpy (key -> key -> value,
+				ds.buffer -> data, ds.len);
+			data_string_forget (&ds, MDL);
+
 			if (!parse_semi (cfile))
 				goto rbad;
 			break;
@@ -1910,7 +1922,7 @@ int parse_key (struct parse *cfile)
 		token = next_token (&val, cfile);
 
 	/* Remember the key. */
-	status = enter_tsig_key (key);
+	status = omapi_auth_key_enter (key);
 	if (status != ISC_R_SUCCESS) {
 		parse_warn (cfile, "tsig key %s: %s",
 			    key -> name, isc_result_totext (status));
@@ -1921,7 +1933,7 @@ int parse_key (struct parse *cfile)
       rbad:
 	skip_to_rbrace (cfile, 1);
       bad:
-	tsig_key_dereference (&key, MDL);
+	omapi_auth_key_dereference (&key, MDL);
 	return 0;
 }
 /*

@@ -74,7 +74,6 @@
 #include "statement.h"
 #include "tree.h"
 #include "inet.h"
-#include "auth.h"
 #include "dhctoken.h"
 
 #include <isc/result.h>
@@ -373,6 +372,7 @@ struct lease_state {
 #define SV_LIMITED_BROADCAST_ADDRESS	33
 #define SV_REMOTE_PORT			34
 #define SV_LOCAL_ADDRESS		35
+#define SV_OMAPI_KEY			36
 
 #if !defined (DEFAULT_DEFAULT_LEASE_TIME)
 # define DEFAULT_DEFAULT_LEASE_TIME 43200
@@ -589,13 +589,6 @@ struct class {
 	struct executable_statement *statements;
 };
 
-struct tsig_key {
-	int refcnt;
-	char *name;
-	char *algorithm;
-	struct data_string key;
-};
-
 /* DHCP client lease structure... */
 struct client_lease {
 	struct client_lease *next;		      /* Next lease in list. */
@@ -604,7 +597,7 @@ struct client_lease {
 	char *server_name;			     /* Name of boot server. */
 	char *filename;		     /* Name of file we're supposed to boot. */
 	struct string_list *medium;			  /* Network medium. */
-	struct tsig_key *key;      /* Key used in basic DHCP authentication. */
+	struct auth_key *key;      /* Key used in basic DHCP authentication. */
 
 	unsigned int is_static : 1;    /* If set, lease is from config file. */
 	unsigned int is_bootp: 1;   /* If set, lease was aquired with BOOTP. */
@@ -819,7 +812,7 @@ struct dns_zone {
 	char *name;
 	struct option_cache *primary;
 	struct option_cache *secondary;
-	struct tsig_key *key;
+	struct auth_key *key;
 };
 
 /* Bitmask of dhcp option codes. */
@@ -1229,8 +1222,6 @@ void free_protocol PROTO ((struct protocol *, const char *, int));
 void free_dhcp_packet PROTO ((struct dhcp_packet *, const char *, int));
 struct client_lease *new_client_lease PROTO ((const char *, int));
 void free_client_lease PROTO ((struct client_lease *, const char *, int));
-struct auth_key *new_auth_key PROTO ((unsigned, const char *, int));
-void free_auth_key PROTO ((struct auth_key *, const char *, int));
 struct permit *new_permit PROTO ((const char *, int));
 void free_permit PROTO ((struct permit *, const char *, int));
 pair new_pair PROTO ((const char *, int));
@@ -1288,10 +1279,6 @@ int binding_scope_reference PROTO ((struct binding_scope **,
 int dns_zone_allocate PROTO ((struct dns_zone **, const char *, int));
 int dns_zone_reference PROTO ((struct dns_zone **,
 			       struct dns_zone *, const char *, int));
-int tsig_key_allocate PROTO ((struct tsig_key **, const char *, int));
-int tsig_key_reference PROTO ((struct tsig_key **,
-			       struct tsig_key *, const char *, int));
-int tsig_key_dereference PROTO ((struct tsig_key **, const char *, int));
 
 /* print.c */
 char *print_hw_addr PROTO ((int, int, unsigned char *));
@@ -1760,8 +1747,6 @@ void tkey_free (ns_tsig_key **);
 #endif
 isc_result_t enter_dns_zone (struct dns_zone *);
 isc_result_t dns_zone_lookup (struct dns_zone **, const char *);
-isc_result_t enter_tsig_key (struct tsig_key *);
-isc_result_t tsig_key_lookup (struct tsig_key **, const char *);
 int dns_zone_dereference PROTO ((struct dns_zone **, const char *, int));
 #if defined (NSUPDATE)
 ns_rcode find_cached_zone (const char *, ns_class, char *,
@@ -1771,7 +1756,6 @@ void forget_zone (struct dns_zone **);
 void repudiate_zone (struct dns_zone **);
 #endif /* NSUPDATE */
 HASH_FUNCTIONS_DECL (dns_zone, const char *, struct dns_zone)
-HASH_FUNCTIONS_DECL (tsig_key, const char *, struct tsig_key)
 
 /* resolv.c */
 extern char path_resolv_conf [];
@@ -1824,10 +1808,6 @@ int find_matching_case (struct executable_statement **,
 			struct option_state *, struct option_state *,
 			struct binding_scope **,
 			struct expression *, struct executable_statement *);
-
-/* auth.c */
-void enter_auth_key PROTO ((struct data_string *, struct auth_key *));
-const struct auth_key *auth_key_lookup PROTO ((struct data_string *));
 
 /* comapi.c */
 extern omapi_object_type_t *dhcp_type_interface;
