@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.44 2001/04/18 19:00:42 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.45 2001/04/20 15:14:40 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2374,7 +2374,7 @@ void dhcp_failover_reconnect (void *vs)
 		return;
 
 	status = dhcp_failover_link_initiate ((omapi_object_t *)state);
-	if (status != ISC_R_SUCCESS) {
+	if (status != ISC_R_SUCCESS && status != ISC_R_INCOMPLETE) {
 		log_info ("failover peer %s: %s", state -> name,
 			  isc_result_totext (status));
 		add_timeout (cur_time + 90,
