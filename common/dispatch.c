@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dispatch.c,v 1.45 1997/11/22 07:51:38 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dispatch.c,v 1.46 1997/11/29 07:51:09 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -129,7 +129,7 @@ void discover_interfaces (state)
 #endif
 
 #ifdef SKIP_DUMMY_INTERFACES
-		if (!strncmp (ifr.ifr_name, "dummy", 5))
+		if (!strncmp (ifp -> ifr_name, "dummy", 5))
 			continue;
 #endif
 
@@ -466,7 +466,7 @@ void dispatch ()
 
 		/* Not likely to be transitory... */
 		if (count < 0) {
-			if (errno == EAGAIN || ERRNO == EINTR)
+			if (errno == EAGAIN || errno == EINTR)
 				continue;
 			else
 				error ("poll: %m");
