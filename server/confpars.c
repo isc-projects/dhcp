@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.74 1999/07/12 22:44:16 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.75 1999/07/16 21:34:14 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -426,10 +426,10 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 			}
 
 		      finish_option:
-			et = parse_option_statement
-				(cfile, 1, option,
-				 supersede_option_statement);
-			if (!et)
+			et = (struct executable_statement *)0;
+			if (!parse_option_statement
+				(&et, cfile, 1, option,
+				 supersede_option_statement))
 				return declaration;
 			goto insert_statement;
 		} else
@@ -451,18 +451,16 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 					       (unsigned char *)val, 0));
 			if (option) {
 				token = next_token (&val, cfile);
-				et = parse_option_statement
-					(cfile, 1, option,
-					 supersede_option_statement);
-				if (!et)
+				if (!parse_option_statement
+					(&et, cfile, 1, option,
+					 supersede_option_statement))
 					return declaration;
 			}
 		}
 
 		if (!et) {
 			lose = 0;
-			et = parse_executable_statement (cfile, &lose);
-			if (!et) {
+			if (!parse_executable_statement (&et, cfile, &lose)) {
 				if (!lose) {
 					if (declaration)
 						parse_warn ("expecting a %s.",
@@ -483,13 +481,41 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		}
 	      insert_statement:
 		if (group -> statements) {
+			int multi = 0;
+
+			/* If this set of statements is only referenced
+			   by this group, just add the current statement
+			   to the end of the chain. */
 			for (ep = group -> statements; ep -> next;
 			     ep = ep -> next)
-				;
-			ep -> next = et;
+				if (ep -> refcnt > 1) /* XXX */
+					multi = 1;
+			if (!multi) {
+				executable_statement_reference
+					(&ep -> next, et, "parse_statement");
+				return declaration;
+			}
 
+			/* Otherwise, make a parent chain, and put the
+			   current group statements first and the new
+			   statement in the next pointer. */
+			ep = (struct executable_statement *)0;
+			if (!executable_statement_allocate
+			    (&ep, "parse_statement"))
+				log_fatal ("No memory for statements.");
+			ep -> op = statements_statement;
+			executable_statement_reference
+				(&ep -> data.statements,
+				 group -> statements, "parse_statement");
+			executable_statement_reference
+				(&ep -> next, et, "parse_statement");
+			executable_statement_dereference
+				(&group -> statements, "parse_statement");
+			executable_statement_reference
+				(&group -> statements, ep, "parse_statements");
 		} else
-			group -> statements = et;
+			executable_statement_reference
+				(&group -> statements, et, "parse_statements");
 		return declaration;
 	}
 

@@ -21,6 +21,7 @@
  */
 
 struct executable_statement {
+	int refcnt;
 	struct executable_statement *next;
 	enum statement_op {
 		if_statement,
@@ -32,6 +33,8 @@ struct executable_statement {
 		append_option_statement,
 		prepend_option_statement,
 		send_option_statement,
+		statements_statement,
+		on_statement,
 	} op;
 	union {
 		struct {
@@ -44,6 +47,11 @@ struct executable_statement {
 		struct option_cache *supersede;
 		struct option_cache *prepend;
 		struct option_cache *append;
+		struct executable_statement *statements;
+		struct {
+			enum { expiry, commit, release } evtype;
+			struct executable_statement *statements;
+		} on;
 	} data;
 };
 

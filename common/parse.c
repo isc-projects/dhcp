@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.28 1999/07/06 20:41:22 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.29 1999/07/16 21:33:59 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1151,27 +1151,29 @@ int parse_cshl (data, cfile)
  *	APPEND option-parameter SEMI
  */
 
-struct executable_statement *parse_executable_statements (cfile, lose)
+int parse_executable_statements (statements, cfile, lose)
+	struct executable_statement **statements;
 	FILE *cfile;
 	int *lose;
 {
-	struct executable_statement *head, **next;
+	struct executable_statement **next;
 
-	next = &head;
-	while ((*next = parse_executable_statement (cfile, lose)))
+	next = statements;
+	while (parse_executable_statement (next, cfile, lose))
 		next = &((*next) -> next);
 	if (!*lose)
-		return head;
-	return (struct executable_statement *)0;
+		return 1;
+	return 0;
 }
 
-struct executable_statement *parse_executable_statement (cfile, lose)
+int parse_executable_statement (result, cfile, lose)
+	struct executable_statement **result;
 	FILE *cfile;
 	int *lose;
 {
 	enum dhcp_token token;
 	char *val;
-	struct executable_statement *stmt, base;
+	struct executable_statement base;
 	struct class *cta;
 	struct option *option;
 	struct option_cache *cache;
@@ -1180,8 +1182,8 @@ struct executable_statement *parse_executable_statement (cfile, lose)
 	switch (token) {
 	      case IF:
 		next_token (&val, cfile);
-		stmt = parse_if_statement (cfile, lose);
-		return stmt;
+		return parse_if_statement (result, cfile, lose);
+
 	      case TOKEN_ADD:
 		token = next_token (&val, cfile);
 		token = next_token (&val, cfile);
@@ -1189,39 +1191,43 @@ struct executable_statement *parse_executable_statement (cfile, lose)
 			parse_warn ("expecting class name.");
 			skip_to_semi (cfile);
 			*lose = 1;
-			return (struct executable_statement *)0;
+			return 0;
 		}
 		cta = find_class (val);
 		if (!cta) {
 			parse_warn ("unknown class %s.", val);
 			skip_to_semi (cfile);
 			*lose = 1;
-			return (struct executable_statement *)0;
+			return 0;
 		}
 		if (!parse_semi (cfile)) {
 			*lose = 1;
-			return (struct executable_statement *)0;
+			return 0;
 		}
-		memset (&base, 0, sizeof base);
-		base.op = add_statement;
-		base.data.add = cta;
+		if (!executable_statement_allocate
+		    (result, "parse_executable_statement"))
+			log_fatal ("no memory for new statement.");
+		(*result) -> op = add_statement;
+		(*result) -> data.add = cta;
 		break;
 
 	      case BREAK:
 		token = next_token (&val, cfile);
 		if (!parse_semi (cfile)) {
 			*lose = 1;
-			return (struct executable_statement *)0;
+			return 0;
 		}
-		memset (&base, 0, sizeof base);
-		base.op = break_statement;
+		if (!executable_statement_allocate
+		    (result, "parse_executable_statement"))
+			log_fatal ("no memory for new statement.");
+		(*result) -> op = break_statement;
 		break;
 
 	      case SEND:
 		*lose = 1;
 		parse_warn ("send not appropriate here.");
 		skip_to_semi (cfile);
-		return (struct executable_statement *)0;
+		return 0;
 
 	      case SUPERSEDE:
 	      case OPTION:
@@ -1229,9 +1235,9 @@ struct executable_statement *parse_executable_statement (cfile, lose)
 		option = parse_option_name (cfile, 0);
 		if (!option) {
 			*lose = 1;
-			return (struct executable_statement *)0;
+			return 0;
 		}
-		return parse_option_statement (cfile, 1, option,
+		return parse_option_statement (result, cfile, 1, option,
 					       supersede_option_statement);
 
 	      case ALLOW:
@@ -1240,10 +1246,12 @@ struct executable_statement *parse_executable_statement (cfile, lose)
 		cache = (struct option_cache *)0;
 		if (!parse_allow_deny (&cache, cfile,
 				       token == ALLOW ? 1 : 0))
-			return (struct executable_statement *)0;
-		memset (&base, 0, sizeof base);
-		base.op = supersede_option_statement;
-		base.data.option = cache;
+			return 0;
+		if (!executable_statement_allocate
+		    (result, "parse_executable_statement"))
+			log_fatal ("no memory for new statement.");
+		(*result) -> op = supersede_option_statement;
+		(*result) -> data.option = cache;
 		break;
 
 	      case DEFAULT:
@@ -1251,9 +1259,9 @@ struct executable_statement *parse_executable_statement (cfile, lose)
 		option = parse_option_name (cfile, 0);
 		if (!option) {
 			*lose = 1;
-			return (struct executable_statement *)0;
+			return 0;
 		}
-		return parse_option_statement (cfile, 1, option,
+		return parse_option_statement (result, cfile, 1, option,
 					       default_option_statement);
 
 	      case PREPEND:
@@ -1261,9 +1269,9 @@ struct executable_statement *parse_executable_statement (cfile, lose)
 		option = parse_option_name (cfile, 0);
 		if (!option) {
 			*lose = 1;
-			return (struct executable_statement *)0;
+			return 0;
 		}
-		return parse_option_statement (cfile, 1, option,
+		return parse_option_statement (result, cfile, 1, option,
 					       prepend_option_statement);
 
 	      case APPEND:
@@ -1271,23 +1279,96 @@ struct executable_statement *parse_executable_statement (cfile, lose)
 		option = parse_option_name (cfile, 0);
 		if (!option) {
 			*lose = 1;
-			return (struct executable_statement *)0;
+			return 0;
 		}
-		return parse_option_statement (cfile, 1, option,
+		return parse_option_statement (result, cfile, 1, option,
 					       append_option_statement);
 
+	      case ON:
+		token = next_token (&val, cfile);
+
+		return parse_on_statement (result, cfile, lose);
+			
 	      default:
 		*lose = 0;
-		return (struct executable_statement *)0;
+		return 0;
 	}
 
-	stmt = ((struct executable_statement *)
-		dmalloc (sizeof (struct executable_statement),
-			 "parse_executable_statement"));
-	if (!stmt)
+	return 1;
+}
+
+/*
+ * on-statement :== event-type LBRACE executable-statements RBRACE
+ *
+ * event-type :== EXPIRY | COMMIT | RELEASE
+ */
+
+int parse_on_statement (result, cfile, lose)
+	struct executable_statement **result;
+	FILE *cfile;
+	int *lose;
+{
+	enum dhcp_token token;
+	char *val;
+
+	if (!executable_statement_allocate (result,
+					    "parse_executable_statement"))
 		log_fatal ("no memory for new statement.");
-	*stmt = base;
-	return stmt;
+
+	token = next_token (&val, cfile);
+	switch (token) {
+	      case EXPIRY:
+		(*result) -> data.on.evtype = expiry;
+		break;
+		
+	      case COMMIT:
+		(*result) -> data.on.evtype = expiry;
+		break;
+		
+	      case RELEASE:
+		(*result) -> data.on.evtype = expiry;
+		break;
+		
+	      default:
+		parse_warn ("expecting a lease event type");
+		skip_to_semi (cfile);
+		*lose = 1;
+		executable_statement_dereference
+			(result, "parse_on_statement");
+		break;
+	}
+		
+	token = next_token (&val, cfile);
+	if (token != LBRACE) {
+		parse_warn ("left brace expected.");
+		skip_to_semi (cfile);
+		*lose = 1;
+		executable_statement_dereference (result,
+						  "parse_on_statement");
+		return 0;
+	}
+	if (!parse_executable_statements (&(*result) -> data.on.statements,
+					  cfile, lose)) {
+		if (*lose) {
+			/* Try to even things up. */
+			do {
+				token = next_token (&val, cfile);
+			} while (token != EOF && token != RBRACE);
+			executable_statement_dereference
+				(result, "parse_on_statement");
+			return 0;
+		}
+	}
+	token = next_token (&val, cfile);
+	if (token != RBRACE) {
+		parse_warn ("right brace expected.");
+		skip_to_semi (cfile);
+		*lose = 1;
+		executable_statement_dereference
+			(result, "parse_on_statement");
+		return 0;
+	}
+	return 1;
 }
 
 /*
@@ -1300,21 +1381,26 @@ struct executable_statement *parse_executable_statement (cfile, lose)
  *		      ELSIF if-statement
  */
 
-struct executable_statement *parse_if_statement (cfile, lose)
+int parse_if_statement (result, cfile, lose)
+	struct executable_statement **result;
 	FILE *cfile;
 	int *lose;
 {
 	enum dhcp_token token;
 	char *val;
-	struct executable_statement *stmt;
-	struct expression *if_condition;
-	struct executable_statement *true, *false;
 
-	if_condition = (struct expression *)0;
-	if (!parse_boolean_expression (&if_condition, cfile, lose)) {
+	if (!executable_statement_allocate (result, "parse_if_statement"))
+		log_fatal ("no memory for if statement.");
+
+	(*result) -> op = if_statement;
+
+	if (!parse_boolean_expression (&(*result) -> data.ie.expr,
+				       cfile, lose)) {
 		if (!*lose)
 			parse_warn ("boolean expression expected.");
-		return (struct executable_statement *)0;
+		executable_statement_dereference (result,
+						  "parse_if_statement");
+		return 0;
 	}
 #if defined (DEBUG_EXPRESSION_PARSE)
 	print_expression ("if condition", if_condition);
@@ -1324,22 +1410,30 @@ struct executable_statement *parse_if_statement (cfile, lose)
 		parse_warn ("left brace expected.");
 		skip_to_semi (cfile);
 		*lose = 1;
-		return (struct executable_statement *)0;
+		executable_statement_dereference (result,
+						  "parse_if_statement");
+		return 0;
 	}
-	true = parse_executable_statements (cfile, lose);
+	if (!parse_executable_statements (&(*result) -> data.ie.true,
+					  cfile, lose)) {
+		if (*lose) {
+			/* Try to even things up. */
+			do {
+				token = next_token (&val, cfile);
+			} while (token != EOF && token != RBRACE);
+			executable_statement_dereference
+				(result, "parse_if_statement");
+			return 0;
+		}
+	}
 	token = next_token (&val, cfile);
-	if (*lose) {
-		/* Try to even things up. */
-		do {
-			token = next_token (&val, cfile);
-		} while (token != EOF && token != RBRACE);
-		return (struct executable_statement *)0;
-	}
 	if (token != RBRACE) {
 		parse_warn ("right brace expected.");
 		skip_to_semi (cfile);
 		*lose = 1;
-		return (struct executable_statement *)0;
+		executable_statement_dereference
+			(result, "parse_if_statement");
+		return 0;
 	}
 	token = peek_token (&val, cfile);
 	if (token == ELSE) {
@@ -1347,46 +1441,53 @@ struct executable_statement *parse_if_statement (cfile, lose)
 		token = peek_token (&val, cfile);
 		if (token == IF) {
 			token = next_token (&val, cfile);
-			false = parse_if_statement (cfile, lose);
-			if (*lose)
-				return (struct executable_statement *)0;
+			if (!parse_if_statement (&(*result) -> data.ie.false,
+						 cfile, lose)) {
+				if (*lose) {
+					return 0;
+					executable_statement_dereference
+						(result, "parse_if_statement");
+				}
+			}
 		} else if (token != LBRACE) {
 			parse_warn ("left brace or if expected.");
 			skip_to_semi (cfile);
 			*lose = 1;
-			return (struct executable_statement *)0;
+			executable_statement_dereference
+				(result, "parse_if_statement");
+			return 0;
 		} else {
 			token = next_token (&val, cfile);
-			false = parse_executable_statements (cfile, lose);
-			if (*lose)
-				return (struct executable_statement *)0;
+			if (!parse_if_statement (&(*result) -> data.ie.false,
+						 cfile, lose)) {
+				executable_statement_dereference
+					(result, "parse_if_statement");
+				return 0;
+			}
 			token = next_token (&val, cfile);
 			if (token != RBRACE) {
 				parse_warn ("right brace expected.");
 				skip_to_semi (cfile);
 				*lose = 1;
-				return (struct executable_statement *)0;
+				executable_statement_dereference
+					(result, "parse_if_statement");
+				return 0;
 			}
 		}
 	} else if (token == ELSIF) {
 		token = next_token (&val, cfile);
-		false = parse_if_statement (cfile, lose);
-		if (*lose)
-			return (struct executable_statement *)0;
+		if (!parse_if_statement (&(*result) -> data.ie.false,
+					 cfile, lose)) {
+			if (*lose) {
+				return 0;
+				executable_statement_dereference
+					(result, "parse_if_statement");
+			}
+		}
 	} else
-		false = (struct executable_statement *)0;
+		(*result) -> data.ie.false = (struct executable_statement *)0;
 	
-	stmt = ((struct executable_statement *)
-		dmalloc (sizeof (struct executable_statement),
-			 "parse_if_statement"));
-	if (!stmt)
-		log_fatal ("no memory for if statement.");
-	memset (stmt, 0, sizeof *stmt);
-	stmt -> op = if_statement;
-	stmt -> data.ie.expr = if_condition;
-	stmt -> data.ie.true = true;
-	stmt -> data.ie.false = false;
-	return stmt;
+	return 1;
 }
 
 /*
@@ -1486,6 +1587,7 @@ int parse_non_binary (expr, cfile, lose, context)
 	char *val;
 	struct collection *col;
 	struct option *option;
+	struct expression *nexp;
 
 	token = peek_token (&val, cfile);
 
@@ -1746,11 +1848,49 @@ int parse_non_binary (expr, cfile, lose, context)
 			goto norparen;
 		break;
 
-	      case OPTION:
+	      case PICK_FIRST_VALUE:
+		/* pick (a, b, c) actually produces an internal representation
+		   that looks like pick (a, pick (b, pick (c, nil))). */
 		token = next_token (&val, cfile);
+		if (!(expression_allocate
+		      (expr, "parse_expression: PICK_FIRST_VALUE")))
+			log_fatal ("can't allocate expression");
+		(*expr) -> op = expr_reverse;
+
+		token = next_token (&val, cfile);
+		if (token != LPAREN)
+			goto nolparen;
+
+		nexp = *expr;
+		do {
+			struct expression *tmp = (struct expression *)0;
+			if (!(parse_data_expression
+			      (&nexp -> data.pick_first_value.car,
+			       cfile, lose)))
+				goto nodata;
+
+			token = next_token (&val, cfile);
+			if (token == COMMA) {
+				if (!(expression_allocate
+				      (&nexp -> data.pick_first_value.cdr,
+				       "parse_expression: PICK_FIRST_VALUE")))
+					log_fatal ("can't allocate expr");
+				nexp = nexp -> data.pick_first_value.cdr;
+			}
+		} while (token == COMMA);
+
+		if (token != RPAREN)
+			goto norparen;
+		break;
+
+	      case OPTION:
+	      case CONFIG_OPTION:
 		if (!expression_allocate (expr, "parse_expression: OPTION"))
 			log_fatal ("can't allocate expression");
-		(*expr) -> op = expr_option;
+		(*expr) -> op = token == (OPTION
+					  ? expr_option
+					  : expr_config_option);
+		token = next_token (&val, cfile);
 		(*expr) -> data.option = parse_option_name (cfile, 0);
 		if (!(*expr) -> data.option) {
 			*lose = 1;
@@ -1773,6 +1913,14 @@ int parse_non_binary (expr, cfile, lose, context)
 					  "parse_expression: LEASED_ADDRESS"))
 			log_fatal ("can't allocate expression");
 		(*expr) -> op = expr_leased_address;
+		break;
+
+	      case HOST_DECL_NAME:
+		token = next_token (&val, cfile);
+		if (!expression_allocate (expr,
+					  "parse_expression: HOST_DECL_NAME"))
+			log_fatal ("can't allocate expression");
+		(*expr) -> op = expr_host_decl_name;
 		break;
 
 	      case PACKET:
@@ -2123,8 +2271,8 @@ int parse_expression (expr, cfile, lose, context, plhs, binop)
    would be painful to come up with BNF for it.   However, it always
    starts as above and ends in a SEMI. */
 
-struct executable_statement *parse_option_statement (cfile, lookups,
-						     option, op)
+int parse_option_statement (result, cfile, lookups, option, op)
+	struct executable_statement **result;
 	FILE *cfile;
 	int lookups;
 	struct option *option;
@@ -2159,7 +2307,7 @@ struct executable_statement *parse_option_statement (cfile, lookups,
 				parse_warn ("expecting a data expression.");
 				skip_to_semi (cfile);
 			}
-			return (struct executable_statement *)0;
+			return 0;
 		}
 
 		/* We got a valid expression, so use it. */
@@ -2182,7 +2330,7 @@ struct executable_statement *parse_option_statement (cfile, lookups,
 						 tmp, uniform, lookups)) {
 				expression_dereference
 					(&tmp, "parse_option_statement");
-				return (struct executable_statement *)0;
+				return 0;
 			}
 			if (tmp)
 				expression_dereference
@@ -2200,15 +2348,14 @@ struct executable_statement *parse_option_statement (cfile, lookups,
 
       done:
 	if (!parse_semi (cfile))
-		return (struct executable_statement *)0;
-	stmt = ((struct executable_statement *)
-		dmalloc (sizeof *stmt, "parse_option_statement"));
-	memset (stmt, 0, sizeof *stmt);
-	stmt -> op = op;
-	if (expr && !option_cache (&stmt -> data.option,
+		return 0;
+	if (!executable_statement_allocate (result, "parse_option_statement"))
+		log_fatal ("no memory for option statement.");
+	(*result) -> op = op;
+	if (expr && !option_cache (&(*result) -> data.option,
 				   (struct data_string *)0, expr, option))
 		log_fatal ("no memory for option cache");
-	return stmt;
+	return 1;
 }
 
 int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)

@@ -86,6 +86,9 @@ enum expr_op {
 	expr_reverse,
 	expr_leased_address,
 	expr_binary_to_ascii,
+	expr_config_option,
+	expr_host_decl_name,
+	expr_pick_first_value,
 };
 
 struct expression {
@@ -107,6 +110,7 @@ struct expression {
 			struct expression *len;
 		} suffix;
 		struct option *option;
+		struct option *config_option;
 		struct {
 			struct expression *offset;
 			struct expression *len;
@@ -129,6 +133,10 @@ struct expression {
 			struct expression *width;
 			struct expression *buffer;
 		} reverse;
+		struct {
+			struct expression *car;
+			struct expression *cdr;
+		} pick_first_value;
 	} data;
 	int flags;
 #	define EXPR_EPHEMERAL	1

@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.32 1999/07/13 18:00:12 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.33 1999/07/16 21:33:59 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -538,6 +538,9 @@ int evaluate_boolean_expression (result, packet, options, lease, expr)
 	      case expr_encode_int32:
 	      case expr_binary_to_ascii:
 	      case expr_reverse:
+	      case expr_pick_first_value:
+	      case expr_host_decl_name:
+	      case expr_config_option:
 	      case expr_leased_address:
 		log_error ("Data opcode in evaluate_boolean_expression: %d",
 		      expr -> op);
@@ -651,6 +654,7 @@ int evaluate_data_expression (result, packet, options, lease, expr)
 
 		/* Extract an option. */
 	      case expr_option:
+	      case expr_config_option:
 		if (options)
 			s0 = ((*expr -> data.option -> universe -> get_func)
 			      (result, expr -> data.option -> universe,
@@ -1098,7 +1102,53 @@ int evaluate_data_expression (result, packet, options, lease, expr)
 #endif
 		return 1;
 
-		
+	      case expr_pick_first_value:
+		memset (&data, 0, sizeof data);
+		if ((evaluate_data_expression
+		     (result, packet, options, lease,
+		      expr -> data.pick_first_value.car))) {
+#if defined (DEBUG_EXPRESSIONS)
+			log_info ("data: pick_first_value (%s, ???)",
+				  print_hex_1 (result -> len,
+					       result -> data, 40));
+#endif
+			return 1;
+		}
+		if ((evaluate_data_expression
+		     (result, packet, options, lease,
+		      expr -> data.pick_first_value.cdr))) {
+#if defined (DEBUG_EXPRESSIONS)
+			log_info ("data: pick_first_value (NULL, %s)",
+				  print_hex_1 (result -> len,
+					       result -> data, 40));
+#endif
+			return 1;
+		}
+
+#if defined (DEBUG_EXPRESSIONS)
+		log_info ("data: pick_first_value (NULL, NULL) = NULL");
+#endif
+		return 0;
+
+	      case expr_host_decl_name:
+		if (!lease || !lease -> host) {
+			log_error ("data: host_decl_name: not available");
+			return 0;
+		}
+		result -> len = strlen (lease -> host -> name) + 1;
+		if (buffer_allocate (&result -> buffer, result -> len,
+				     "host-decl-name")) {
+			result -> data = &result -> buffer -> data [0];
+			strcpy (&result -> data [0], lease -> host -> name);
+			result -> terminated = 1;
+		} else {
+			log_error ("data: host-decl-name: no memory.");
+			return 0;
+		}
+#if defined (DEBUG_EXPRESSIONS)
+		log_info ("data: host-decl-name = %s", lease -> host -> name);
+#endif
+		return 1;
 
 	      case expr_check:
 	      case expr_equal:
@@ -1160,6 +1210,9 @@ int evaluate_numeric_expression (result, packet, options, lease, expr)
 	      case expr_encode_int32:
 	      case expr_binary_to_ascii:
 	      case expr_reverse:
+	      case expr_pick_first_value:
+	      case expr_host_decl_name:
+	      case expr_config_option:
 	      case expr_leased_address:
 		log_error ("Data opcode in evaluate_numeric_expression: %d",
 		      expr -> op);
@@ -1411,6 +1464,15 @@ void expression_dereference (eptr, name)
 						name);
 		break;
 
+	      case expr_pick_first_value:
+		if (expr -> data.pick_first_value.car)
+			expression_dereference
+				(&expr -> data.pick_first_value.car, name);
+		if (expr -> data.pick_first_value.cdr)
+			expression_dereference
+				(&expr -> data.pick_first_value.cdr, name);
+		break;
+
 	      case expr_reverse:
 		if (expr -> data.reverse.width)
 			expression_dereference (&expr -> data.reverse.width,
@@ -1547,6 +1609,9 @@ static int op_val (op)
 	      case expr_known:
 	      case expr_binary_to_ascii:
 	      case expr_reverse:
+	      case expr_pick_first_value:
+	      case expr_host_decl_name:
+	      case expr_config_option:
 	      case expr_leased_address:
 		return 100;
 
@@ -1599,6 +1664,9 @@ enum expression_context op_context (op)
 	      case expr_known:
 	      case expr_binary_to_ascii:
 	      case expr_reverse:
+	      case expr_pick_first_value:
+	      case expr_host_decl_name:
+	      case expr_config_option:
 	      case expr_leased_address:
 		return context_any;
 

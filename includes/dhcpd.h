@@ -186,6 +186,10 @@ struct lease {
 	struct class *billing_class;
 	struct hardware hardware_addr;
 
+	struct executable_statement *on_expiry;
+	struct executable_statement *on_commit;
+	struct executable_statement *on_release;
+
 	int flags;
 #       define STATIC_LEASE		1
 #       define BOOTP_LEASE		2
@@ -902,11 +906,12 @@ struct option *parse_option_name PROTO ((FILE *, int));
 void parse_option_space_decl PROTO ((FILE *));
 int parse_option_code_definition PROTO ((FILE *, struct option *));
 int parse_cshl PROTO ((struct data_string *, FILE *));
-struct executable_statement *parse_executable_statement PROTO ((FILE *,
-								int *));
-struct executable_statement *parse_executable_statements PROTO ((FILE *,
-								 int *));
-struct executable_statement *parse_if_statement PROTO ((FILE *, int *));
+int parse_executable_statement PROTO ((struct executable_statement **,
+				       FILE *, int *));
+int parse_executable_statements PROTO ((struct executable_statement **,
+					FILE *, int *));
+int parse_on_statement PROTO ((struct executable_statement **, FILE *, int *));
+int parse_if_statement PROTO ((struct executable_statement **, FILE *, int *));
 int parse_boolean_expression PROTO ((struct expression **, FILE *, int *));
 int parse_data_expression PROTO ((struct expression **, FILE *, int *));
 int parse_numeric_expression PROTO ((struct expression **, FILE *, int *));
@@ -915,10 +920,8 @@ int parse_non_binary PROTO ((struct expression **, FILE *, int *,
 int parse_expression PROTO ((struct expression **, FILE *, int *,
 			     enum expression_context,
 			     struct expression **, enum expr_op));
-struct executable_statement *parse_option_statement PROTO ((FILE *, int,
-							    struct option *,
-							    enum statement_op)
-							   );
+int parse_option_statement PROTO ((struct executable_statement **, FILE *, int,
+				   struct option *, enum statement_op));
 int parse_option_token PROTO ((struct expression **, FILE *, char *,
 			       struct expression *, int, int));
 int parse_allow_deny PROTO ((struct option_cache **, FILE *, int));
@@ -1095,6 +1098,13 @@ int option_state_allocate PROTO ((struct option_state **, char *));
 int option_state_reference PROTO ((struct option_state **,
 				   struct option_state *, char *));
 int option_state_dereference PROTO ((struct option_state **, char *));
+int executable_statement_allocate PROTO ((struct executable_statement **,
+					  char *));
+int executable_statement_reference PROTO ((struct executable_statement **,
+					   struct executable_statement *,
+					   char *));
+int executable_statement_dereference PROTO ((struct executable_statement **,
+					     char *));
 
 /* print.c */
 char *print_hw_addr PROTO ((int, int, unsigned char *));

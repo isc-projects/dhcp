@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: conflex.c,v 1.48 1999/07/06 20:41:22 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: conflex.c,v 1.49 1999/07/16 21:33:58 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -384,8 +384,12 @@ static enum dhcp_token intern (atom, dfv)
 			return BOOLEAN;
 		break;
 	      case 'c':
+		if (!strcasecmp (atom + 1, "ommit"))
+			return COMMIT;
 		if (!strcasecmp (atom + 1, "ode"))
 			return CODE;
+		if (!strcasecmp (atom + 1, "onfig-option"))
+			return CONFIG_OPTION;
 		if (!strcasecmp (atom + 1, "heck"))
 			return CHECK;
 		if (!strcasecmp (atom + 1, "lass"))
@@ -436,6 +440,8 @@ static enum dhcp_token intern (atom, dfv)
 		}
 		break;
 	      case 'e':
+		if (!strcasecmp (atom + 1, "xpiry"))
+			return EXPIRY;
 		if (isascii (atom [1]) && tolower (atom [1]) == 'x') {
 			if (!strcasecmp (atom + 2, "tract-int"))
 				return EXTRACT_INT;
@@ -477,6 +483,8 @@ static enum dhcp_token intern (atom, dfv)
 	      case 'h':
 		if (!strcasecmp (atom + 1, "ost"))
 			return HOST;
+		if (!strcasecmp (atom + 1, "ost-decl-name"))
+			return HOST_DECL_NAME;
 		if (!strcasecmp (atom + 1, "ardware"))
 			return HARDWARE;
 		if (!strcasecmp (atom + 1, "ostname"))
@@ -553,6 +561,8 @@ static enum dhcp_token intern (atom, dfv)
 	      case 'o':
 		if (!strcasecmp (atom + 1, "r"))
 			return OR;
+		if (!strcasecmp (atom + 1, "n"))
+			return ON;
 		if (!strcasecmp (atom + 1, "ption"))
 			return OPTION;
 		if (!strcasecmp (atom + 1, "ne-lease-per-client"))
@@ -583,6 +593,8 @@ static enum dhcp_token intern (atom, dfv)
 			return PORT;
 		if (!strcasecmp (atom + 1, "otential-conflict"))
 			return POTENTIAL_CONFLICT;
+		if (!strcasecmp (atom + 1, "ick-first-value"))
+			return PICK_FIRST_VALUE;
 		break;
 	      case 'r':
 		if (!strcasecmp (atom + 1, "ange"))
@@ -607,6 +619,8 @@ static enum dhcp_token intern (atom, dfv)
 			return REJECT;
 		if (!strcasecmp (atom + 1, "everse"))
 			return REVERSE;
+		if (!strcasecmp (atom + 1, "elease"))
+			return RELEASE;
 		break;
 	      case 's':
 		if (!strcasecmp (atom + 1, "igned"))

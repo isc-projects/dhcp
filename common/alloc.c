@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: alloc.c,v 1.30 1999/05/27 12:38:05 mellon Exp $ Copyright (c) 1995, 1996, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: alloc.c,v 1.31 1999/07/16 21:33:57 mellon Exp $ Copyright (c) 1995, 1996, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -777,3 +777,69 @@ int option_state_dereference (ptr, name)
 	dfree (options, name);
 	return 1;
 }
+
+int executable_statement_allocate (ptr, name)
+	struct executable_statement **ptr;
+	char *name;
+{
+	struct executable_statement *bp;
+
+	bp = dmalloc (sizeof *bp, name);
+	if (!bp)
+		return 0;
+	memset (bp, 0, sizeof *bp);
+	bp -> refcnt = 0;
+	return executable_statement_reference (ptr, bp, name);
+}
+
+int executable_statement_reference (ptr, bp, name)
+	struct executable_statement **ptr;
+	struct executable_statement *bp;
+	char *name;
+{
+	if (!ptr) {
+		log_error ("Null ptr in executable_statement_reference: %s",
+			   name);
+#if defined (POINTER_DEBUG)
+		abort ();
+#else
+		return 0;
+#endif
+	}
+	if (*ptr) {
+		log_error ("Nonnull ptr in executable_statement_reference: %s",
+			   name);
+#if defined (POINTER_DEBUG)
+		abort ();
+#else
+		*ptr = (struct executable_statement *)0;
+#endif
+	}
+	*ptr = bp;
+	bp -> refcnt++;
+	return 1;
+}
+
+int executable_statement_dereference (ptr, name)
+	struct executable_statement **ptr;
+	char *name;
+{
+	struct executable_statement *bp;
+
+	if (!ptr || !*ptr) {
+		log_error ("Null ptr in executable_statement_dereference: %s",
+			   name);
+#if defined (POINTER_DEBUG)
+		abort ();
+#else
+		return 0;
+#endif
+	}
+
+	(*ptr) -> refcnt--;
+	if (!(*ptr) -> refcnt)
+		dfree ((*ptr), name);
+	*ptr = (struct executable_statement *)0;
+	return 1;
+}
+

@@ -184,6 +184,13 @@ enum dhcp_token {
 	REVERSE = 402,
 	LEASED_ADDRESS = 403,
 	BINARY_TO_ASCII = 404,
+	PICK_FIRST_VALUE = 405,
+	CONFIG_OPTION = 406,
+	HOST_DECL_NAME = 407,
+	ON = 408,
+	EXPIRY = 409,
+	RELEASE = 410,
+	COMMIT = 411,
 };
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\
