@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.75 2001/01/08 17:19:59 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.76 2001/01/09 06:56:11 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -1730,7 +1730,7 @@ int fqdn_option_space_encapsulate (result, packet, lease, client_state,
 	struct binding_scope **scope;
 	struct universe *universe;
 {
-	struct option_cache *oc;
+	pair ocp;
 	struct data_string results [FQDN_SUBOPTION_COUNT + 1];
 	unsigned i;
 	unsigned len;
@@ -1742,9 +1742,9 @@ int fqdn_option_space_encapsulate (result, packet, lease, client_state,
 
 	/* Figure out the values of all the suboptions. */
 	memset (results, 0, sizeof results);
-	for (oc = ((struct option_cache *)
-		   cfg_options -> universes [universe -> index]);
-	     oc; oc = oc -> next) {
+	for (ocp = ((pair)cfg_options -> universes [universe -> index]);
+	     ocp; ocp = ocp -> cdr) {
+		struct option_cache *oc = (struct option_cache *)(ocp -> car);
 		if (oc -> option -> code > FQDN_SUBOPTION_COUNT)
 			continue;
 		evaluate_option_cache (&results [oc -> option -> code],
@@ -1902,23 +1902,28 @@ void save_linked_option (universe, options, oc)
 	struct option_state *options;
 	struct option_cache *oc;
 {
-	struct option_cache **tail;
+	pair *tail;
+	pair np = (pair )0;
 
 	/* Find the tail of the list. */
-	for (tail = ((struct option_cache **)
+	for (tail = ((pair *)
 		     &options -> universes [universe -> index]);
-	     *tail; tail = &((*tail) -> next)) {
-		if ((*tail) -> option == oc -> option) {
-			if ((*tail) -> next) {
-				option_cache_reference (&oc -> next,
-							(*tail) -> next, MDL);
-			}
-			option_cache_dereference (tail, MDL);
-			break;
+	     *tail; tail = &((*tail) -> cdr)) {
+		if (oc -> option ==
+		    ((struct option_cache *)((*tail) -> car)) -> option) {
+			option_cache_dereference ((struct option_cache **)
+						  (&(*tail) -> car), MDL);
+			option_cache_reference ((struct option_cache **)
+						(&(*tail) -> car), oc, MDL);
+			return;
 		}
 	}
 
-	option_cache_reference (tail, oc, MDL);
+	*tail = cons (0, 0);
+	if (*tail) {
+		option_cache_reference ((struct option_cache **)
+					(&(*tail) -> car), oc, MDL);
+	}
 }
 
 int linked_option_space_encapsulate (result, packet, lease, client_state,
@@ -1933,18 +1938,17 @@ int linked_option_space_encapsulate (result, packet, lease, client_state,
 	struct universe *universe;
 {
 	int status;
-	struct option_cache *oc;
+	pair oc;
 
 	if (universe -> index >= cfg_options -> universe_count)
 		return 0;
 
 	status = 0;
-	for (oc = ((struct option_cache *)
-		   cfg_options -> universes [universe -> index]);
-	     oc; oc = oc -> next) {
+	for (oc = ((pair)cfg_options -> universes [universe -> index]);
+	     oc; oc = oc -> cdr) {
 		if (store_option (result, universe, packet,
 				  lease, client_state, in_options, cfg_options,
-				  scope, oc))
+				  scope, (struct option_cache *)(oc -> car)))
 			status = 1;
 	}
 
@@ -1956,22 +1960,18 @@ void delete_linked_option (universe, options, code)
 	struct option_state *options;
 	int code;
 {
-	struct option_cache **tail, *tmp = (struct option_cache *)0;
+	pair *tail, tmp = (pair)0;
 
-	/* Find the tail of the list. */
-	for (tail = ((struct option_cache **)
-		     &options -> universes [universe -> index]);
-	     *tail; tail = &((*tail) -> next)) {
-		if ((*tail) -> option -> code == code) {
-			if ((*tail) -> next) {
-				option_cache_reference (&tmp,
-							(*tail) -> next, MDL);
-				option_cache_dereference (tail, MDL);
-			}
-			if (tmp) {
-				option_cache_reference (tail, tmp, MDL);
-				option_cache_dereference (&tmp, MDL);
-			}
+	for (tail = ((pair *)&options -> universes [universe -> index]);
+	     *tail; tail = &((*tail) -> cdr)) {
+		if (code ==
+		    ((struct option_cache *)(*tail) -> car) -> option -> code)
+		{
+			tmp = (*tail) -> cdr;
+			option_cache_dereference ((struct option_cache **)
+						  (&(*tail) -> car), MDL);
+			dfree (*tail, MDL);
+			(*tail) = tmp;
 			break;
 		}
 	}
@@ -1982,16 +1982,16 @@ struct option_cache *lookup_linked_option (universe, options, code)
 	struct option_state *options;
 	unsigned code;
 {
-	struct option_cache *oc;
+	pair oc;
 
 	if (universe -> index >= options -> universe_count)
 		return 0;
 
-	for (oc = ((struct option_cache *)
-		   options -> universes [universe -> index]);
-	     oc; oc = oc -> next) {
-		if (oc -> option -> code == code) {
-			return oc;
+	for (oc = ((pair)options -> universes [universe -> index]);
+	     oc; oc = oc -> cdr) {
+		if (code ==
+		    ((struct option_cache *)(oc -> car)) -> option -> code) {
+			return (struct option_cache *)(oc -> car);
 		}
 	}
 
@@ -2004,13 +2004,16 @@ int linked_option_state_dereference (universe, state, file, line)
 	const char *file;
 	int line;
 {
-	struct option_cache **tail;
+	pair car, cdr;
 
-	/* Find the tail of the list. */
-	tail = ((struct option_cache **)
-		&state -> universes [universe -> index]);
-	if (*tail)
-		return option_cache_dereference (tail, file, line);
+	for (car = (pair)(state -> universes [universe -> index]);
+	     car; car = cdr) {
+		cdr = car -> cdr;
+		option_cache_dereference ((struct option_cache **)
+					  (&car -> car), MDL);
+		dfree (car, MDL);
+		car = cdr;
+	}
 	return 1;
 }
 
@@ -2029,15 +2032,15 @@ void linked_option_space_foreach (struct packet *packet, struct lease *lease,
 						struct binding_scope **,
 						struct universe *, void *))
 {
-	struct option_cache *oc;
+	pair car;
 
 	if (u -> index >= cfg_options -> universe_count)
 		return;
 
-	for (oc = ((struct option_cache *)
-		   cfg_options -> universes [u -> index]);
-	     oc; oc = oc -> next) {
-		(*func) (oc, packet, lease, client_state,
+	for (car = ((pair)cfg_options -> universes [u -> index]);
+	     car; car = car -> cdr) {
+		(*func) ((struct option_cache *)(car -> car),
+			 packet, lease, client_state,
 			 in_options, cfg_options, scope, u, stuff);
 	}
 }
