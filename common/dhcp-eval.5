@@ -207,11 +207,14 @@ the packet to which the server is responding.
 .PP
 .RS 0.25i
 The \fBhardware\fR operator returns a data string whose first element
-is the \fIhtype\fR field of the packet being considered, and whose
-subsequent elements are first \fIhlen\fR bytes of the \fIchaddr\fR
-field of the packet, as specified in \fBRFC 2131\fR .  If there is no
-packet, or if the \fIhlen\fR field is invalid, then the result is
-null.
+is the type of network interface indicated in packet being considered,
+and whose subsequent elements are client's link-layer address.   If
+there is no packet, or if the RFC2131 \fIhlen\fR field is invalid,
+then the result is null.   Hardware types include ethernet (1),
+token-ring (6), and fddi (8).   Hardware types are specified by the
+IETF, and details on how the type numbers are defined can be found in
+RFC2131 (in the ISC DHCP distribution, this is included in the doc/
+subdirectory).
 .RE
 .PP
 .B packet (\fIoffset\fB, \fIlength\fB)\fR
