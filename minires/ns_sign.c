@@ -1,22 +1,28 @@
 /*
- * Copyright (c) 1999-2001 by Internet Software Consortium, Inc.
+ * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 1999-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
  *
- * THE SOFTWARE IS PROVIDED "AS IS" AND INTERNET SOFTWARE CONSORTIUM DISCLAIMS
- * ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES
- * OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL INTERNET SOFTWARE
- * CONSORTIUM BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL
- * DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
- * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS
- * ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS
- * SOFTWARE.
+ * THE SOFTWARE IS PROVIDED "AS IS" AND ISC DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS.  IN NO EVENT SHALL ISC BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT
+ * OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ *
+ *   Internet Systems Consortium, Inc.
+ *   950 Charter Street
+ *   Redwood City, CA 94063
+ *   <info@isc.org>
+ *   http://www.isc.org/
  */
 
 #ifndef lint
-static const char rcsid[] = "$Id: ns_sign.c,v 1.5 2001/06/27 00:30:32 mellon Exp $";
+static const char rcsid[] = "$Id: ns_sign.c,v 1.6 2005/03/17 20:15:18 dhankins Exp $";
 #endif
 
 #if defined (TRACING)
@@ -87,7 +93,7 @@ ns_sign(u_char *msg, unsigned *msglen, unsigned msgsize, int error, void *k,
 
 	dst_init();
 	if (msg == NULL || msglen == NULL || sig == NULL || siglen == NULL)
-		ISC_R_INVALIDARG;
+		return ISC_R_INVALIDARG;
 
 	/* Name. */
 	if (key != NULL && error != ns_r_badsig && error != ns_r_badkey)
@@ -118,7 +124,7 @@ ns_sign(u_char *msg, unsigned *msglen, unsigned msgsize, int error, void *k,
 	else
 		n = dn_comp("", cp, (unsigned)(eob - cp), NULL, NULL);
 	if (n < 0)
-		ISC_R_NOSPACE;
+		return ISC_R_NOSPACE;
 	alg = cp;
 	cp += n;
 	
@@ -190,7 +196,7 @@ ns_sign(u_char *msg, unsigned *msglen, unsigned msgsize, int error, void *k,
 		n = dst_sign_data(SIG_MODE_FINAL, key, &ctx, NULL, 0,
 				  sig, *siglen);
 		if (n < 0)
-			ISC_R_BADKEY;
+			return ISC_R_BADKEY;
 		*siglen = n;
 	} else
 		*siglen = 0;

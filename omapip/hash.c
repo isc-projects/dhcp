@@ -3,39 +3,30 @@
    Routines for manipulating hash tables... */
 
 /*
- * Copyright (c) 1995-2000 Internet Software Consortium.
- * All rights reserved.
+ * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 1995-2003 by Internet Software Consortium
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
  *
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of The Internet Software Consortium nor the names
- *    of its contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
+ * THE SOFTWARE IS PROVIDED "AS IS" AND ISC DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS.  IN NO EVENT SHALL ISC BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT
+ * OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * THIS SOFTWARE IS PROVIDED BY THE INTERNET SOFTWARE CONSORTIUM AND
- * CONTRIBUTORS ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES,
- * INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED.  IN NO EVENT SHALL THE INTERNET SOFTWARE CONSORTIUM OR
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF
- * USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
- * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
- * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
- * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- * SUCH DAMAGE.
+ *   Internet Systems Consortium, Inc.
+ *   950 Charter Street
+ *   Redwood City, CA 94063
+ *   <info@isc.org>
+ *   http://www.isc.org/
  *
- * This software has been written for the Internet Software Consortium
+ * This software has been written for Internet Systems Consortium
  * by Ted Lemon in cooperation with Vixie Enterprises and Nominum, Inc.
- * To learn more about the Internet Software Consortium, see
+ * To learn more about Internet Systems Consortium, see
  * ``http://www.isc.org/''.  To learn more about Vixie Enterprises,
  * see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
  * ``http://www.nominum.com''.
@@ -43,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: hash.c,v 1.4 2001/08/10 10:50:22 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: hash.c,v 1.5 2005/03/17 20:15:22 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include <omapip/omapip_p.h>
@@ -52,28 +43,47 @@ static char copyright[] =
 static int do_hash (const unsigned char *, unsigned, unsigned);
 static int do_case_hash (const unsigned char *, unsigned, unsigned);
 
-struct hash_table *new_hash_table (count, file, line)
+int new_hash_table (tp, count, file, line)
+	struct hash_table **tp;
 	int count;
 	const char *file;
 	int line;
 {
-	struct hash_table *rval = dmalloc (sizeof (struct hash_table)
-					   - (DEFAULT_HASH_SIZE
-					      * sizeof (struct hash_bucket *))
-					   + (count
-					      * sizeof (struct hash_bucket *)),
-					   file, line);
+	struct hash_table *rval;
+
+	if (!tp) {
+		log_error ("%s(%d): new_hash_table called with null pointer.",
+			   file, line);
+#if defined (POINTER_DEBUG)
+		abort ();
+#endif
+		return 0;
+	}
+	if (*tp) {
+		log_error ("%s(%d): non-null target for new_hash_table.",
+			   file, line);
+#if defined (POINTER_DEBUG)
+		abort ();
+#endif
+	}
+	rval = dmalloc (sizeof (struct hash_table) -
+			(DEFAULT_HASH_SIZE * sizeof (struct hash_bucket *)) +
+			(count * sizeof (struct hash_bucket *)), file, line);
+	if (!rval)
+		return 0;
 	rval -> hash_count = count;
-	return rval;
+	*tp = rval;
+	return 1;
 }
 
-void free_hash_table (ptr, file, line)
-	struct hash_table *ptr;
+void free_hash_table (tp, file, line)
+	struct hash_table **tp;
 	const char *file;
 	int line;
 {
 	int i;
 	struct hash_bucket *hbc, *hbn = (struct hash_bucket *)0;
+	struct hash_table *ptr = *tp;
 
 #if defined (DEBUG_MEMORY_LEAKAGE) || \
 		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
@@ -92,6 +102,7 @@ void free_hash_table (ptr, file, line)
 #endif
 
 	dfree ((VOIDPTR)ptr, MDL);
+	*tp = (struct hash_table *)0;
 }
 
 struct hash_bucket *free_hash_buckets;
@@ -177,25 +188,25 @@ void free_hash_bucket (ptr, file, line)
 	free_hash_buckets = ptr;
 }
 
-struct hash_table *new_hash (hash_reference referencer,
-			     hash_dereference dereferencer,
-			     int casep, const char *file, int line)
+int new_hash (struct hash_table **rp,
+	      hash_reference referencer,
+	      hash_dereference dereferencer,
+	      int casep, const char *file, int line)
 {
-	struct hash_table *rv = new_hash_table (DEFAULT_HASH_SIZE, file, line);
-	if (!rv)
-		return rv;
-	memset (&rv -> buckets [0], 0,
+	if (!new_hash_table (rp, DEFAULT_HASH_SIZE, file, line))
+		return 0;
+	memset (&(*rp) -> buckets [0], 0,
 		DEFAULT_HASH_SIZE * sizeof (struct hash_bucket *));
-	rv -> referencer = referencer;
-	rv -> dereferencer = dereferencer;
+	(*rp) -> referencer = referencer;
+	(*rp) -> dereferencer = dereferencer;
 	if (casep) {
-		rv -> cmp = casecmp;
-		rv -> do_hash = do_case_hash;
+		(*rp) -> cmp = casecmp;
+		(*rp) -> do_hash = do_case_hash;
 	} else {
-		rv -> cmp = (hash_comparator_t)memcmp;
-		rv -> do_hash = do_hash;
+		(*rp) -> cmp = (hash_comparator_t)memcmp;
+		(*rp) -> do_hash = do_hash;
 	}
-	return rv;
+	return 1;
 }
 
 static int do_case_hash (name, len, size)

@@ -4,39 +4,30 @@
    protocol... */
 
 /*
- * Copyright (c) 1999-2001 Internet Software Consortium.
- * All rights reserved.
+ * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 1999-2003 by Internet Software Consortium
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
  *
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of The Internet Software Consortium nor the names
- *    of its contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
+ * THE SOFTWARE IS PROVIDED "AS IS" AND ISC DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS.  IN NO EVENT SHALL ISC BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT
+ * OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * THIS SOFTWARE IS PROVIDED BY THE INTERNET SOFTWARE CONSORTIUM AND
- * CONTRIBUTORS ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES,
- * INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED.  IN NO EVENT SHALL THE INTERNET SOFTWARE CONSORTIUM OR
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF
- * USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
- * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
- * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
- * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- * SUCH DAMAGE.
+ *   Internet Systems Consortium, Inc.
+ *   950 Charter Street
+ *   Redwood City, CA 94063
+ *   <info@isc.org>
+ *   http://www.isc.org/
  *
- * This software has been written for the Internet Software Consortium
+ * This software has been written for Internet Systems Consortium
  * by Ted Lemon in cooperation with Vixie Enterprises and Nominum, Inc.
- * To learn more about the Internet Software Consortium, see
+ * To learn more about Internet Systems Consortium, see
  * ``http://www.isc.org/''.  To learn more about Vixie Enterprises,
  * see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
  * ``http://www.nominum.com''.
@@ -128,7 +119,7 @@ VOIDPTR dmalloc (size, file, line)
 #endif
 #endif
 #ifdef DEBUG_REFCNT_DMALLOC_FREE
-	rc_register (file, line, 0, foo + DMDOFFSET, 1, 0);
+	rc_register (file, line, 0, foo + DMDOFFSET, 1, 0, RC_MALLOC);
 #endif
 	return bar;
 }
@@ -192,7 +183,8 @@ void dfree (ptr, file, line)
 	}
 #endif
 #ifdef DEBUG_REFCNT_DMALLOC_FREE
-	rc_register (file, line, 0, (unsigned char *)ptr + DMDOFFSET, 0, 1);
+	rc_register (file, line,
+		     0, (unsigned char *)ptr + DMDOFFSET, 0, 1, RC_MALLOC);
 #endif
 	free (ptr);
 }
@@ -421,7 +413,7 @@ void rc_history_next (int d)
 		rc_history_index = 0;
 	++rc_history_count;
 }
-#endif
+#endif /* DEBUG_RC_HISTORY */
 
 #if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL) || \
 		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
@@ -520,8 +512,11 @@ isc_result_t omapi_object_allocate (omapi_object_t **o,
 		foo = (omapi_object_t *)0;
 		status = (*type -> allocator) (&foo, file, line);
 		tsize = type -> size;
-	} else
+	} else {
 		status = ISC_R_NOMEMORY;
+		tsize = 0;
+	}
+
 	if (status == ISC_R_NOMEMORY) {
 		if (type -> sizer)
 			tsize = (*type -> sizer) (size);
@@ -578,7 +573,7 @@ isc_result_t omapi_object_reference (omapi_object_t **r,
 	}
 	*r = h;
 	h -> refcnt++;
-	rc_register (file, line, r, h, h -> refcnt, 0);
+	rc_register (file, line, r, h, h -> refcnt, 0, h -> type -> rc_flag);
 	return ISC_R_SUCCESS;
 }
 
@@ -684,7 +679,8 @@ isc_result_t omapi_object_dereference (omapi_object_t **h,
 				omapi_object_dereference
 					(&hp -> outer, file, line);
 /*			if (!hp -> type -> freer) */
-				rc_register (file, line, h, hp, 0, 1);
+				rc_register (file, line, h, hp,
+					     0, 1, hp -> type -> rc_flag);
 			if (hp -> type -> destroy)
 				(*(hp -> type -> destroy)) (hp, file, line);
 			if (hp -> type -> freer)
@@ -695,12 +691,14 @@ isc_result_t omapi_object_dereference (omapi_object_t **h,
 			(*h) -> refcnt--;
 /*			if (!(*h) -> type -> freer) */
 				rc_register (file, line,
-					     h, *h, (*h) -> refcnt, 1);
+					     h, *h, (*h) -> refcnt, 1,
+					     (*h) -> type -> rc_flag);
 		}
 	} else {
 		(*h) -> refcnt--;
 /*		if (!(*h) -> type -> freer) */
-			rc_register (file, line, h, *h, (*h) -> refcnt, 1);
+			rc_register (file, line, h, *h, (*h) -> refcnt, 1,
+				     (*h) -> type -> rc_flag);
 	}
 	*h = 0;
 	return ISC_R_SUCCESS;
@@ -741,7 +739,7 @@ isc_result_t omapi_buffer_reference (omapi_buffer_t **r,
 	}
 	*r = h;
 	h -> refcnt++;
-	rc_register (file, line, r, h, h -> refcnt, 0);
+	rc_register (file, line, r, h, h -> refcnt, 0, RC_MISC);
 	return ISC_R_SUCCESS;
 }
 
@@ -775,7 +773,7 @@ isc_result_t omapi_buffer_dereference (omapi_buffer_t **h,
 	}
 
 	--(*h) -> refcnt;
-	rc_register (file, line, h, *h, (*h) -> refcnt, 1);
+	rc_register (file, line, h, *h, (*h) -> refcnt, 1, RC_MISC);
 	if ((*h) -> refcnt == 0)
 		dfree (*h, file, line);
 	*h = 0;
@@ -789,11 +787,11 @@ isc_result_t omapi_typed_data_new (const char *file, int line,
 	va_list l;
 	omapi_typed_data_t *new;
 	unsigned len;
-	unsigned val;
-	int intval;
-	char *s;
+	unsigned val = 0;
+	int intval = 0;
+	char *s = NULL;
 	isc_result_t status;
-	omapi_object_t *obj;
+	omapi_object_t *obj = NULL;
 
 	va_start (l, type);
 
@@ -816,8 +814,10 @@ isc_result_t omapi_typed_data_new (const char *file, int line,
 		obj = va_arg (l, omapi_object_t *);
 		break;
 	      default:
+		va_end (l);
 		return ISC_R_INVALIDARG;
 	}
+	va_end (l);
 
 	new = dmalloc (len, file, line);
 	if (!new)
@@ -866,7 +866,7 @@ isc_result_t omapi_typed_data_reference (omapi_typed_data_t **r,
 	}
 	*r = h;
 	h -> refcnt++;
-	rc_register (file, line, r, h, h -> refcnt, 0);
+	rc_register (file, line, r, h, h -> refcnt, 0, RC_MISC);
 	return ISC_R_SUCCESS;
 }
 
@@ -900,7 +900,7 @@ isc_result_t omapi_typed_data_dereference (omapi_typed_data_t **h,
 	}
 	
 	--((*h) -> refcnt);
-	rc_register (file, line, h, *h, (*h) -> refcnt, 1);
+	rc_register (file, line, h, *h, (*h) -> refcnt, 1, RC_MISC);
 	if ((*h) -> refcnt <= 0 ) {
 		switch ((*h) -> type) {
 		      case omapi_datatype_int:
@@ -949,7 +949,7 @@ isc_result_t omapi_data_string_reference (omapi_data_string_t **r,
 	}
 	*r = h;
 	h -> refcnt++;
-	rc_register (file, line, r, h, h -> refcnt, 0);
+	rc_register (file, line, r, h, h -> refcnt, 0, RC_MISC);
 	return ISC_R_SUCCESS;
 }
 
@@ -983,7 +983,7 @@ isc_result_t omapi_data_string_dereference (omapi_data_string_t **h,
 	}
 
 	--((*h) -> refcnt);
-	rc_register (file, line, h, *h, (*h) -> refcnt, 1);
+	rc_register (file, line, h, *h, (*h) -> refcnt, 1, RC_MISC);
 	if ((*h) -> refcnt <= 0 ) {
 		dfree (*h, file, line);
 	}
@@ -1021,7 +1021,7 @@ isc_result_t omapi_value_reference (omapi_value_t **r,
 	}
 	*r = h;
 	h -> refcnt++;
-	rc_register (file, line, r, h, h -> refcnt, 0);
+	rc_register (file, line, r, h, h -> refcnt, 0, RC_MISC);
 	return ISC_R_SUCCESS;
 }
 
@@ -1055,7 +1055,7 @@ isc_result_t omapi_value_dereference (omapi_value_t **h,
 	}
 	
 	--((*h) -> refcnt);
-	rc_register (file, line, h, *h, (*h) -> refcnt, 1);
+	rc_register (file, line, h, *h, (*h) -> refcnt, 1, RC_MISC);
 	if ((*h) -> refcnt == 0) {
 		if ((*h) -> name)
 			omapi_data_string_dereference (&(*h) -> name,
@@ -1103,7 +1103,7 @@ isc_result_t omapi_addr_list_reference (omapi_addr_list_t **r,
 	}
 	*r = h;
 	h -> refcnt++;
-	rc_register (file, line, r, h, h -> refcnt, 0);
+	rc_register (file, line, r, h, h -> refcnt, 0, RC_MISC);
 	return ISC_R_SUCCESS;
 }
 
@@ -1137,7 +1137,7 @@ isc_result_t omapi_addr_list_dereference (omapi_addr_list_t **h,
 	}
 
 	--((*h) -> refcnt);
-	rc_register (file, line, h, *h, (*h) -> refcnt, 1);
+	rc_register (file, line, h, *h, (*h) -> refcnt, 1, RC_MISC);
 	if ((*h) -> refcnt <= 0 ) {
 		dfree (*h, file, line);
 	}

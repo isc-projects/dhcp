@@ -3,39 +3,30 @@
    Subroutines having to do with authentication. */
 
 /*
- * Copyright (c) 1998-2000 Internet Software Consortium.
- * All rights reserved.
+ * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 1998-2003 by Internet Software Consortium
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
  *
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of The Internet Software Consortium nor the names
- *    of its contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
+ * THE SOFTWARE IS PROVIDED "AS IS" AND ISC DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS.  IN NO EVENT SHALL ISC BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT
+ * OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * THIS SOFTWARE IS PROVIDED BY THE INTERNET SOFTWARE CONSORTIUM AND
- * CONTRIBUTORS ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES,
- * INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED.  IN NO EVENT SHALL THE INTERNET SOFTWARE CONSORTIUM OR
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF
- * USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
- * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
- * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
- * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- * SUCH DAMAGE.
+ *   Internet Systems Consortium, Inc.
+ *   950 Charter Street
+ *   Redwood City, CA 94063
+ *   <info@isc.org>
+ *   http://www.isc.org/
  *
- * This software has been written for the Internet Software Consortium
+ * This software has been written for Internet Systems Consortium
  * by Ted Lemon in cooperation with Vixie Enterprises and Nominum, Inc.
- * To learn more about the Internet Software Consortium, see
+ * To learn more about Internet Systems Consortium, see
  * ``http://www.isc.org/''.  To learn more about Vixie Enterprises,
  * see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
  * ``http://www.nominum.com''.
@@ -43,15 +34,19 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: auth.c,v 1.4 2001/06/27 00:30:42 mellon Exp $ Copyright 1998-2000 The Internet Software Consortium.";
+"$Id: auth.c,v 1.5 2005/03/17 20:15:20 dhankins Exp $ Copyright 2004 Internet Systems Consortium.";
 #endif
 
 #include <omapip/omapip_p.h>
 
 OMAPI_OBJECT_ALLOC (omapi_auth_key, omapi_auth_key_t, omapi_type_auth_key)
-
-struct hash_table *auth_key_hash = (struct hash_table *)0;
-HASH_FUNCTIONS_DECL (omapi_auth_key, const char *, omapi_auth_key_t)
+typedef struct hash omapi_auth_hash_t;
+HASH_FUNCTIONS_DECL (omapi_auth_key, const char *,
+		     omapi_auth_key_t, omapi_auth_hash_t)
+omapi_auth_hash_t *auth_key_hash;
+HASH_FUNCTIONS (omapi_auth_key, const char *, omapi_auth_key_t,
+		omapi_auth_hash_t,
+		omapi_auth_key_reference, omapi_auth_key_dereference)
 
 isc_result_t omapi_auth_key_new (omapi_auth_key_t **o, const char *file,
 				 int line)
@@ -102,11 +97,7 @@ isc_result_t omapi_auth_key_enter (omapi_auth_key_t *a)
 			omapi_auth_key_dereference (&tk, MDL);
 		}
 	} else {
-		auth_key_hash =
-			new_hash ((hash_reference)omapi_auth_key_reference,
-				  (hash_dereference)omapi_auth_key_dereference,
-				  1, MDL);
-		if (!auth_key_hash)
+		if (!omapi_auth_key_new_hash (&auth_key_hash, 1, MDL))
 			return ISC_R_NOMEMORY;
 	}
 	omapi_auth_key_hash_add (auth_key_hash, a -> name, 0, a, MDL);
@@ -271,5 +262,3 @@ isc_result_t omapi_auth_key_get_value (omapi_object_t *h,
 
 	return ISC_R_SUCCESS;
 }
-
-HASH_FUNCTIONS (omapi_auth_key, const char *, omapi_auth_key_t)

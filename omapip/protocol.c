@@ -3,39 +3,30 @@
    Functions supporting the object management protocol... */
 
 /*
- * Copyright (c) 1999-2000 Internet Software Consortium.
- * All rights reserved.
+ * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 1999-2003 by Internet Software Consortium
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
  *
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of The Internet Software Consortium nor the names
- *    of its contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
+ * THE SOFTWARE IS PROVIDED "AS IS" AND ISC DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS.  IN NO EVENT SHALL ISC BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT
+ * OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * THIS SOFTWARE IS PROVIDED BY THE INTERNET SOFTWARE CONSORTIUM AND
- * CONTRIBUTORS ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES,
- * INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED.  IN NO EVENT SHALL THE INTERNET SOFTWARE CONSORTIUM OR
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF
- * USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
- * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
- * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
- * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- * SUCH DAMAGE.
+ *   Internet Systems Consortium, Inc.
+ *   950 Charter Street
+ *   Redwood City, CA 94063
+ *   <info@isc.org>
+ *   http://www.isc.org/
  *
- * This software has been written for the Internet Software Consortium
+ * This software has been written for Internet Systems Consortium
  * by Ted Lemon in cooperation with Vixie Enterprises and Nominum, Inc.
- * To learn more about the Internet Software Consortium, see
+ * To learn more about Internet Systems Consortium, see
  * ``http://www.isc.org/''.  To learn more about Vixie Enterprises,
  * see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
  * ``http://www.nominum.com''.
@@ -362,8 +353,8 @@ isc_result_t omapi_protocol_signal_handler (omapi_object_t *h,
 	u_int32_t vlen;
 	u_int32_t th;
 #if defined (DEBUG_MEMORY_LEAKAGE)
-	unsigned long previous_outstanding = 0xBEADCAFE;
-	unsigned long connect_outstanding = 0xBEADCAFE;
+	unsigned long previous_outstanding = 0xDEADBEEF;
+	unsigned long connect_outstanding = 0xDEADBEEF;
 #endif
 
 	if (h -> type != omapi_type_protocol) {
@@ -403,7 +394,7 @@ isc_result_t omapi_protocol_signal_handler (omapi_object_t *h,
 	/* If we get a disconnect, dump memory usage. */
 	if (!strcmp (name, "disconnect")) {
 #if defined (DEBUG_MEMORY_LEAKAGE)
-	    if (connect_outstanding != 0xBEADCAFE) {
+	    if (connect_outstanding != 0xDEADBEEF) {
 		log_info ("generation %ld: %ld new, %ld outstanding, %ld%s",
 			  dmalloc_generation,
 			  dmalloc_outstanding - previous_outstanding,
@@ -485,7 +476,7 @@ isc_result_t omapi_protocol_signal_handler (omapi_object_t *h,
 
 	      case omapi_protocol_header_wait:
 #if defined (DEBUG_MEMORY_LEAKAGE)
-		if (previous_outstanding != 0xBEADCAFE) {
+		if (previous_outstanding != 0xDEADBEEF) {
 			log_info ("%s %ld: %ld new, %ld outstanding, %ld%s",
 				  "generation", dmalloc_generation,
 				  dmalloc_outstanding - previous_outstanding,
@@ -757,7 +748,7 @@ isc_result_t omapi_protocol_signal_handler (omapi_object_t *h,
 		dump_rc_history ();
 #endif
 #if defined (DEBUG_MEMORY_LEAKAGE)
-		previous_outstanding = 0xBEADCAFE;
+		previous_outstanding = 0xDEADBEEF;
 #endif
 		/* Now wait for the next message. */
 		goto to_header_wait;		
@@ -928,9 +919,11 @@ isc_result_t omapi_protocol_destroy (omapi_object_t *h,
 
 	while (p -> remote_auth_list) {
 		omapi_remote_auth_t *r = p -> remote_auth_list -> next;
-		omapi_object_dereference (&r -> a, file, line);
-		dfree (r, file, line);
 		p -> remote_auth_list = r;
+		if (r) {
+			omapi_object_dereference (&r -> a, file, line);
+			dfree (r, file, line);
+		}
 	}
 	return ISC_R_SUCCESS;
 }

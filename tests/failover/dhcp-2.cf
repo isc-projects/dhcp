@@ -1,5 +1,16 @@
 authoritative;
 
+class "even" {
+  match if ((extract-int (suffix
+			  (pick-first-value (option dhcp-client-identifier,
+					     hardware), 1), 8) % 2) = 0);
+}
+class "odd" {
+  match if ((extract-int (suffix
+			  (pick-first-value (option dhcp-client-identifier,
+					     hardware), 1), 8) % 2) = 1);
+}
+
 lease-file-name "dhcp-2.leases";
 pid-file-name "dhcp-2.pid";
 local-port 50000;
@@ -17,7 +28,7 @@ failover peer "foo" {
   port 51001;
   peer address 10.0.0.1;
   peer port 51000;
-  max-response-delay 7;
+  max-response-delay 60;
   max-unacked-updates 10;
   mclt 100;
   load balance max seconds 2;
@@ -101,6 +112,8 @@ shared-network LOCAL {
 shared-network 187-NET {
   subnet 204.152.187.0 netmask 255.255.255.0 {
   }
+  subnet 205.140.116.224 netmask 255.255.255.248 {
+  }
   subnet 10.0.1.0 netmask 255.255.255.0 {
     pool {
       deny dynamic bootp clients;
@@ -113,9 +126,19 @@ shared-network 187-NET {
 subnet 10.0.0.0 netmask 255.255.255.0 {
   pool {
     deny dynamic bootp clients;
-    deny members of "sniffer";
+    allow members of "even";
+    option impress-servers 10.0.0.0;
     failover peer "foo";
-    range 10.0.0.10 10.0.0.200;
+    range 10.0.0.10 10.0.0.54;
+    range 10.0.0.100 10.0.0.149;
+  }
+  pool {
+    deny dynamic bootp clients;
+    allow members of "odd";
+    failover peer "foo";
+    option impress-servers 10.0.0.1;
+    range 10.0.0.55 10.0.0.99;
+    range 10.0.0.150 10.0.0.200;
   }
   pool {
     deny dynamic bootp clients;

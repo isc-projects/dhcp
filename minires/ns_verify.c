@@ -1,22 +1,28 @@
 /*
- * Copyright (c) 1999-2001 by Internet Software Consortium, Inc.
+ * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 1999-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
  *
- * THE SOFTWARE IS PROVIDED "AS IS" AND INTERNET SOFTWARE CONSORTIUM DISCLAIMS
- * ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES
- * OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL INTERNET SOFTWARE
- * CONSORTIUM BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL
- * DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
- * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS
- * ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS
- * SOFTWARE.
+ * THE SOFTWARE IS PROVIDED "AS IS" AND ISC DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS.  IN NO EVENT SHALL ISC BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT
+ * OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ *
+ *   Internet Systems Consortium, Inc.
+ *   950 Charter Street
+ *   Redwood City, CA 94063
+ *   <info@isc.org>
+ *   http://www.isc.org/
  */
 
 #ifndef lint
-static const char rcsid[] = "$Id: ns_verify.c,v 1.6 2001/06/27 00:30:33 mellon Exp $";
+static const char rcsid[] = "$Id: ns_verify.c,v 1.7 2005/03/17 20:15:18 dhankins Exp $";
 #endif
 
 #define time(x)		trace_mr_time (x)
@@ -60,6 +66,7 @@ ns_find_tsig(u_char *msg, u_char *eom) {
 	HEADER *hp = (HEADER *)msg;
 	int n, type;
 	u_char *cp = msg, *start;
+	isc_result_t status;
 
 	if (msg == NULL || eom == NULL || msg > eom)
 		return (NULL);
@@ -72,23 +79,23 @@ ns_find_tsig(u_char *msg, u_char *eom) {
 
 	cp += HFIXEDSZ;
 
-	n = ns_skiprr(cp, eom, ns_s_qd, ntohs(hp->qdcount));
-	if (n < 0)
+	status = ns_skiprr(cp, eom, ns_s_qd, ntohs(hp->qdcount), &n);
+	if (status != ISC_R_SUCCESS)
 		return (NULL);
 	cp += n;
 
-	n = ns_skiprr(cp, eom, ns_s_an, ntohs(hp->ancount));
-	if (n < 0)
+	status = ns_skiprr(cp, eom, ns_s_an, ntohs(hp->ancount), &n);
+	if (status != ISC_R_SUCCESS)
 		return (NULL);
 	cp += n;
 
-	n = ns_skiprr(cp, eom, ns_s_ns, ntohs(hp->nscount));
-	if (n < 0)
+	status = ns_skiprr(cp, eom, ns_s_ns, ntohs(hp->nscount), &n);
+	if (status != ISC_R_SUCCESS)
 		return (NULL);
 	cp += n;
 
-	n = ns_skiprr(cp, eom, ns_s_ar, ntohs(hp->arcount) - 1);
-	if (n < 0)
+	status = ns_skiprr(cp, eom, ns_s_ar, ntohs(hp->arcount) - 1, &n);
+	if (status != ISC_R_SUCCESS)
 		return (NULL);
 	cp += n;
 

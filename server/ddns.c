@@ -3,47 +3,38 @@
    Dynamic DNS updates. */
 
 /*
- * Copyright (c) 2000-2001 Internet Software Consortium.
- * All rights reserved.
+ * Copyright (c) 2004-2005 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2000-2003 by Internet Software Consortium
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
  *
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of The Internet Software Consortium nor the names
- *    of its contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
+ * THE SOFTWARE IS PROVIDED "AS IS" AND ISC DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS.  IN NO EVENT SHALL ISC BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT
+ * OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * THIS SOFTWARE IS PROVIDED BY THE INTERNET SOFTWARE CONSORTIUM AND
- * CONTRIBUTORS ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES,
- * INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED.  IN NO EVENT SHALL THE INTERNET SOFTWARE CONSORTIUM OR
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF
- * USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
- * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
- * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
- * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- * SUCH DAMAGE.
+ *   Internet Systems Consortium, Inc.
+ *   950 Charter Street
+ *   Redwood City, CA 94063
+ *   <info@isc.org>
+ *   http://www.isc.org/
  *
- * This software has been donated to the Internet Software Consortium
+ * This software has been donated to Internet Systems Consortium
  * by Damien Neil of Nominum, Inc.
  *
- * To learn more about the Internet Software Consortium, see
+ * To learn more about Internet Systems Consortium, see
  * ``http://www.isc.org/''.   To learn more about Nominum, Inc., see
  * ``http://www.nominum.com''.
  */
 
 #ifndef lint
 static char copyright[] =
-"$Id: ddns.c,v 1.17 2001/06/29 18:34:54 mellon Exp $ Copyright (c) 2000-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: ddns.c,v 1.18 2005/03/17 20:15:26 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -121,7 +112,23 @@ static isc_result_t ddns_update_ptr (struct data_string *ddns_fwd_name,
 	 * Attempt to perform the update.
 	 */
 	result = minires_nupdate (&resolver_state, ISC_LIST_HEAD (updqueue));
+#if defined (DEBUG)
 	print_dns_status ((int)result, &updqueue);
+#endif
+	if (result == ISC_R_SUCCESS) {
+		log_info ("added reverse map from %.*s to %.*s",
+			  (int)ddns_rev_name -> len,
+			  (const char *)ddns_rev_name -> data,
+			  (int)ddns_fwd_name -> len,
+			  (const char *)ddns_fwd_name -> data);
+	} else {
+		log_error ("unable to add reverse map from %.*s to %.*s: %s",
+			   (int)ddns_rev_name -> len,
+			   (const char *)ddns_rev_name -> data,
+			   (int)ddns_fwd_name -> len,
+			   (const char *)ddns_fwd_name -> data,
+			   isc_result_totext (result));
+	}
 
 	/* Fall through. */
       error:
@@ -174,7 +181,24 @@ static isc_result_t ddns_remove_ptr (struct data_string *ddns_rev_name)
 	 * Attempt to perform the update.
 	 */
 	result = minires_nupdate (&resolver_state, ISC_LIST_HEAD (updqueue));
+#if defined (DEBUG)
 	print_dns_status ((int)result, &updqueue);
+#endif
+	if (result == ISC_R_SUCCESS) {
+		log_info ("removed reverse map on %.*s",
+			  (int)ddns_rev_name -> len,
+			  (const char *)ddns_rev_name -> data);
+	} else {
+		if (result != ISC_R_NXRRSET && result != ISC_R_NXDOMAIN)
+			log_error ("can't remove reverse map on %.*s: %s",
+				   (int)ddns_rev_name -> len,
+				   (const char *)ddns_rev_name -> data,
+				   isc_result_totext (result));
+	}
+
+	/* Not there is success. */
+	if (result == ISC_R_NXRRSET || result == ISC_R_NXDOMAIN)
+		result = ISC_R_SUCCESS;
 
 	/* Fall through. */
       error:
@@ -237,7 +261,7 @@ int ddns_updates (struct packet *packet,
 		   nonzero, don't try to use the client-supplied
 		   XXX */
 		if (!(oc = lookup_option (&fqdn_universe, packet -> options,
-					  FQDN_NO_CLIENT_UPDATE)) ||
+					  FQDN_SERVER_UPDATE)) ||
 		    evaluate_boolean_option_cache (&ignorep, packet, lease,
 						   (struct client_state *)0,
 						   packet -> options,
@@ -261,6 +285,18 @@ int ddns_updates (struct packet *packet,
 		goto client_updates;
 	}
       noclient:
+	/* If do-forward-updates is disabled, this basically means don't
+	   do an update unless the client is participating, so if we get
+	   here and do-forward-updates is disabled, we can stop. */
+	if ((oc = lookup_option (&server_universe, state -> options,
+				 SV_DO_FORWARD_UPDATES)) &&
+	    !evaluate_boolean_option_cache (&ignorep, packet, lease,
+					    (struct client_state *)0,
+					    packet -> options,
+					    state -> options,
+					    &lease -> scope, oc, MDL)) {
+		return 0;
+	}
 
 	/* If it's a static lease, then don't do the DNS update unless we're
 	   specifically configured to do so.   If the client asked to do its
@@ -279,8 +315,6 @@ int ddns_updates (struct packet *packet,
 	/*
 	 * Compute the name for the A record.
 	 */
-	s1 = s2 = 0;
-
 	oc = lookup_option (&server_universe, state -> options,
 			    SV_DDNS_HOST_NAME);
 	if (oc)
@@ -289,6 +323,8 @@ int ddns_updates (struct packet *packet,
 					    packet -> options,
 					    state -> options,
 					    &lease -> scope, oc, MDL);
+	else
+		s1 = 0;
 
 	oc = lookup_option (&server_universe, state -> options,
 			    SV_DDNS_DOMAIN_NAME);
@@ -298,8 +334,16 @@ int ddns_updates (struct packet *packet,
 					    packet -> options,
 					    state -> options,
 					    &lease -> scope, oc, MDL);
+	else
+		s2 = 0;
 
 	if (s1 && s2) {
+		if (ddns_hostname.len + ddns_domainname.len > 253) {
+			log_error ("ddns_update: host.domain name too long");
+
+			goto out;
+		}
+
 		buffer_allocate (&ddns_fwd_name.buffer,
 				 ddns_hostname.len + ddns_domainname.len + 2,
 				 MDL);
@@ -380,11 +424,20 @@ int ddns_updates (struct packet *packet,
 	   PTR update. */
 	if (find_bound_string (&old_ddns_fwd_name,
 			       lease -> scope, "ddns-client-fqdn")) {
+		/* If the name is not different, no need to update
+		   the PTR record. */
 		if (old_ddns_fwd_name.len == ddns_fwd_name.len &&
 		    !memcmp (old_ddns_fwd_name.data, ddns_fwd_name.data,
-			     old_ddns_fwd_name.len)) {
-			/* If the name is not different, no need to update
-			   the PTR record. */
+			     old_ddns_fwd_name.len) &&
+		    (!(oc = lookup_option (&server_universe,
+					   state -> options,
+					   SV_UPDATE_OPTIMIZATION)) ||
+		     evaluate_boolean_option_cache (&ignorep, packet, lease,
+						    (struct client_state *)0,
+						    packet -> options,
+						    state -> options,
+						    &lease -> scope, oc,
+						    MDL))) {
 			goto noerror;
 		}
 	}
@@ -394,6 +447,11 @@ int ddns_updates (struct packet *packet,
 	   can just skip all this. */
 	if (!ddns_fwd_name.len)
 		goto out;
+
+	if (ddns_fwd_name.len > 255) {
+		log_error ("client provided fqdn: too long");
+		goto out;
+	}
 
 	/*
 	 * Compute the RR TTL.
@@ -425,7 +483,15 @@ int ddns_updates (struct packet *packet,
 					    packet -> options,
 					    state -> options,
 					    &lease -> scope, oc, MDL);
-	
+	else
+		s1 = 0;
+
+	if (s1 && (d1.len > 238)) {
+		log_error ("ddns_update: Calculated rev domain name too long.");
+		s1 = 0;
+		data_string_forget (&d1, MDL);
+	}
+
 	if (oc && s1) {
 		/* Buffer length:
 		   XXX.XXX.XXX.XXX.<ddns-rev-domain-name>\0 */
@@ -433,21 +499,15 @@ int ddns_updates (struct packet *packet,
 				 d1.len + 17, MDL);
 		if (ddns_rev_name.buffer) {
 			ddns_rev_name.data = ddns_rev_name.buffer -> data;
-#ifndef NO_SNPRINTF
-			snprintf ((char *)ddns_rev_name.buffer -> data, 17,
-				  "%d.%d.%d.%d.",
-				  lease -> ip_addr . iabuf[3],
-				  lease -> ip_addr . iabuf[2],
-				  lease -> ip_addr . iabuf[1],
-				  lease -> ip_addr . iabuf[0]);
-#else
+
+			/* %Audit% Cannot exceed 17 bytes. %2004.06.17,Safe% */
 			sprintf ((char *)ddns_rev_name.buffer -> data,
-				 "%d.%d.%d.%d.",
-				 lease -> ip_addr . iabuf[3],
-				 lease -> ip_addr . iabuf[2],
-				 lease -> ip_addr . iabuf[1],
-				 lease -> ip_addr . iabuf[0]);
-#endif
+				  "%u.%u.%u.%u.",
+				  lease -> ip_addr . iabuf[3] & 0xff,
+				  lease -> ip_addr . iabuf[2] & 0xff,
+				  lease -> ip_addr . iabuf[1] & 0xff,
+				  lease -> ip_addr . iabuf[0] & 0xff);
+
 			ddns_rev_name.len =
 				strlen ((const char *)ddns_rev_name.data);
 			data_string_append (&ddns_rev_name, &d1);
@@ -607,6 +667,9 @@ int ddns_removals (struct lease *lease)
 	if (!lease -> scope)
 		return 0;
 
+	if (ddns_update_style != 2)
+		return 0;
+
 	/*
 	 * Look up stored names.
 	 */
@@ -620,6 +683,8 @@ int ddns_removals (struct lease *lease)
 	if (!resolver_inited) {
 		minires_ninit (&resolver_state);
 		resolver_inited = 1;
+		resolver_state.retrans = 1;
+		resolver_state.retry = 1;
 	}
 
 	/* We need the fwd name whether we are deleting both records or just

@@ -3,39 +3,30 @@
    Memory allocation... */
 
 /*
- * Copyright (c) 1996-2000 Internet Software Consortium.
- * All rights reserved.
+ * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 1996-2003 by Internet Software Consortium
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
  *
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of The Internet Software Consortium nor the names
- *    of its contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
+ * THE SOFTWARE IS PROVIDED "AS IS" AND ISC DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS.  IN NO EVENT SHALL ISC BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT
+ * OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * THIS SOFTWARE IS PROVIDED BY THE INTERNET SOFTWARE CONSORTIUM AND
- * CONTRIBUTORS ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES,
- * INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED.  IN NO EVENT SHALL THE INTERNET SOFTWARE CONSORTIUM OR
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF
- * USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
- * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
- * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
- * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- * SUCH DAMAGE.
+ *   Internet Systems Consortium, Inc.
+ *   950 Charter Street
+ *   Redwood City, CA 94063
+ *   <info@isc.org>
+ *   http://www.isc.org/
  *
- * This software has been written for the Internet Software Consortium
+ * This software has been written for Internet Systems Consortium
  * by Ted Lemon in cooperation with Vixie Enterprises and Nominum, Inc.
- * To learn more about the Internet Software Consortium, see
+ * To learn more about Internet Systems Consortium, see
  * ``http://www.isc.org/''.  To learn more about Vixie Enterprises,
  * see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
  * ``http://www.nominum.com''.
@@ -43,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: alloc.c,v 1.54 2001/06/27 00:29:39 mellon Exp $ Copyright (c) 1996-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: alloc.c,v 1.55 2005/03/17 20:14:56 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -109,7 +100,7 @@ int option_chain_head_reference (ptr, bp, file, line)
 	}
 	*ptr = bp;
 	bp -> refcnt++;
-	rc_register (file, line, ptr, bp, bp -> refcnt, 0);
+	rc_register (file, line, ptr, bp, bp -> refcnt, 0, RC_MISC);
 	return 1;
 }
 
@@ -134,8 +125,8 @@ int option_chain_head_dereference (ptr, file, line)
 	option_chain_head = *ptr;
 	*ptr = (struct option_chain_head *)0;
 	--option_chain_head -> refcnt;
-	rc_register (file, line, ptr,
-		     option_chain_head, option_chain_head -> refcnt, 1);
+	rc_register (file, line, ptr, option_chain_head,
+		     option_chain_head -> refcnt, 1, RC_MISC);
 	if (option_chain_head -> refcnt > 0)
 		return 1;
 
@@ -222,7 +213,7 @@ int group_reference (ptr, bp, file, line)
 	}
 	*ptr = bp;
 	bp -> refcnt++;
-	rc_register (file, line, ptr, bp, bp -> refcnt, 0);
+	rc_register (file, line, ptr, bp, bp -> refcnt, 0, RC_MISC);
 	return 1;
 }
 
@@ -246,7 +237,7 @@ int group_dereference (ptr, file, line)
 	group = *ptr;
 	*ptr = (struct group *)0;
 	--group -> refcnt;
-	rc_register (file, line, ptr, group, group -> refcnt, 1);
+	rc_register (file, line, ptr, group, group -> refcnt, 1, RC_MISC);
 	if (group -> refcnt > 0)
 		return 1;
 
@@ -496,7 +487,7 @@ int expression_reference (ptr, src, file, line)
 	}
 	*ptr = src;
 	src -> refcnt++;
-	rc_register (file, line, ptr, src, src -> refcnt, 0);
+	rc_register (file, line, ptr, src, src -> refcnt, 0, RC_MISC);
 	return 1;
 }
 
@@ -570,7 +561,7 @@ int binding_value_reference (ptr, src, file, line)
 	}
 	*ptr = src;
 	src -> refcnt++;
-	rc_register (file, line, ptr, src, src -> refcnt, 0);
+	rc_register (file, line, ptr, src, src -> refcnt, 0, RC_MISC);
 	return 1;
 }
 
@@ -636,7 +627,7 @@ int fundef_reference (ptr, src, file, line)
 	}
 	*ptr = src;
 	src -> refcnt++;
-	rc_register (file, line, ptr, src, src -> refcnt, 0);
+	rc_register (file, line, ptr, src, src -> refcnt, 0, RC_MISC);
 	return 1;
 }
 
@@ -701,7 +692,7 @@ int option_cache_reference (ptr, src, file, line)
 	}
 	*ptr = src;
 	src -> refcnt++;
-	rc_register (file, line, ptr, src, src -> refcnt, 0);
+	rc_register (file, line, ptr, src, src -> refcnt, 0, RC_MISC);
 	return 1;
 }
 
@@ -745,7 +736,7 @@ int buffer_reference (ptr, bp, file, line)
 	}
 	*ptr = bp;
 	bp -> refcnt++;
-	rc_register (file, line, ptr, bp, bp -> refcnt, 0);
+	rc_register (file, line, ptr, bp, bp -> refcnt, 0, RC_MISC);
 	return 1;
 }
 
@@ -775,7 +766,7 @@ int buffer_dereference (ptr, file, line)
 	}
 
 	(*ptr) -> refcnt--;
-	rc_register (file, line, ptr, *ptr, (*ptr) -> refcnt, 1);
+	rc_register (file, line, ptr, *ptr, (*ptr) -> refcnt, 1, RC_MISC);
 	if (!(*ptr) -> refcnt) {
 		dfree ((*ptr), file, line);
 	} else if ((*ptr) -> refcnt < 0) {
@@ -834,7 +825,7 @@ int dns_host_entry_reference (ptr, bp, file, line)
 	}
 	*ptr = bp;
 	bp -> refcnt++;
-	rc_register (file, line, ptr, bp, bp -> refcnt, 0);
+	rc_register (file, line, ptr, bp, bp -> refcnt, 0, RC_MISC);
 	return 1;
 }
 
@@ -855,7 +846,7 @@ int dns_host_entry_dereference (ptr, file, line)
 	}
 
 	(*ptr) -> refcnt--;
-	rc_register (file, line, ptr, *ptr, (*ptr) -> refcnt, 1);
+	rc_register (file, line, ptr, *ptr, (*ptr) -> refcnt, 1, RC_MISC);
 	if (!(*ptr) -> refcnt)
 		dfree ((*ptr), file, line);
 	if ((*ptr) -> refcnt < 0) {
@@ -903,7 +894,8 @@ int option_state_allocate (ptr, file, line)
 		memset (*ptr, 0, size);
 		(*ptr) -> universe_count = universe_count;
 		(*ptr) -> refcnt = 1;
-		rc_register (file, line, ptr, *ptr, (*ptr) -> refcnt, 0);
+		rc_register (file, line,
+			     ptr, *ptr, (*ptr) -> refcnt, 0, RC_MISC);
 		return 1;
 	}
 	return 0;
@@ -933,7 +925,7 @@ int option_state_reference (ptr, bp, file, line)
 	}
 	*ptr = bp;
 	bp -> refcnt++;
-	rc_register (file, line, ptr, bp, bp -> refcnt, 0);
+	rc_register (file, line, ptr, bp, bp -> refcnt, 0, RC_MISC);
 	return 1;
 }
 
@@ -957,7 +949,7 @@ int option_state_dereference (ptr, file, line)
 	options = *ptr;
 	*ptr = (struct option_state *)0;
 	--options -> refcnt;
-	rc_register (file, line, ptr, options, options -> refcnt, 1);
+	rc_register (file, line, ptr, options, options -> refcnt, 1, RC_MISC);
 	if (options -> refcnt > 0)
 		return 1;
 
@@ -1021,7 +1013,7 @@ int executable_statement_reference (ptr, bp, file, line)
 	}
 	*ptr = bp;
 	bp -> refcnt++;
-	rc_register (file, line, ptr, bp, bp -> refcnt, 0);
+	rc_register (file, line, ptr, bp, bp -> refcnt, 0, RC_MISC);
 	return 1;
 }
 
@@ -1103,7 +1095,7 @@ int packet_reference (ptr, bp, file, line)
 	}
 	*ptr = bp;
 	bp -> refcnt++;
-	rc_register (file, line, ptr, bp, bp -> refcnt, 0);
+	rc_register (file, line, ptr, bp, bp -> refcnt, 0, RC_MISC);
 	return 1;
 }
 
@@ -1127,7 +1119,7 @@ int packet_dereference (ptr, file, line)
 	packet = *ptr;
 	*ptr = (struct packet *)0;
 	--packet -> refcnt;
-	rc_register (file, line, ptr, packet, packet -> refcnt, 1);
+	rc_register (file, line, ptr, packet, packet -> refcnt, 1, RC_MISC);
 	if (packet -> refcnt > 0)
 		return 1;
 
@@ -1217,7 +1209,7 @@ int dns_zone_reference (ptr, bp, file, line)
 	}
 	*ptr = bp;
 	bp -> refcnt++;
-	rc_register (file, line, ptr, bp, bp -> refcnt, 0);
+	rc_register (file, line, ptr, bp, bp -> refcnt, 0, RC_MISC);
 	return 1;
 }
 
@@ -1278,7 +1270,7 @@ int binding_scope_reference (ptr, bp, file, line)
 	}
 	*ptr = bp;
 	bp -> refcnt++;
-	rc_register (file, line, ptr, bp, bp -> refcnt, 0);
+	rc_register (file, line, ptr, bp, bp -> refcnt, 0, RC_MISC);
 	return 1;
 }
 

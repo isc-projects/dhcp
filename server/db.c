@@ -3,39 +3,30 @@
    Persistent database management routines for DHCPD... */
 
 /*
- * Copyright (c) 1995-2001 Internet Software Consortium.
- * All rights reserved.
+ * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 1995-2003 by Internet Software Consortium
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
  *
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of The Internet Software Consortium nor the names
- *    of its contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
+ * THE SOFTWARE IS PROVIDED "AS IS" AND ISC DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS.  IN NO EVENT SHALL ISC BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT
+ * OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * THIS SOFTWARE IS PROVIDED BY THE INTERNET SOFTWARE CONSORTIUM AND
- * CONTRIBUTORS ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES,
- * INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED.  IN NO EVENT SHALL THE INTERNET SOFTWARE CONSORTIUM OR
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF
- * USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
- * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
- * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
- * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- * SUCH DAMAGE.
+ *   Internet Systems Consortium, Inc.
+ *   950 Charter Street
+ *   Redwood City, CA 94063
+ *   <info@isc.org>
+ *   http://www.isc.org/
  *
- * This software has been written for the Internet Software Consortium
+ * This software has been written for Internet Systems Consortium
  * by Ted Lemon in cooperation with Vixie Enterprises and Nominum, Inc.
- * To learn more about the Internet Software Consortium, see
+ * To learn more about Internet Systems Consortium, see
  * ``http://www.isc.org/''.  To learn more about Vixie Enterprises,
  * see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
  * ``http://www.nominum.com''.
@@ -43,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: db.c,v 1.67 2001/07/10 20:36:03 brister Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: db.c,v 1.68 2005/03/17 20:15:26 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -89,6 +80,7 @@ int write_lease (lease)
 	if (lease -> starts) {
 		if (lease -> starts != MAX_TIME) {
 			t = gmtime (&lease -> starts);
+			/* %Audit% Cannot exceed 59 bytes. %2004.06.17,Safe% */
 			sprintf (tbuf, "%d %d/%02d/%02d %02d:%02d:%02d;",
 				 t -> tm_wday, t -> tm_year + 1900,
 				 t -> tm_mon + 1, t -> tm_mday,
@@ -105,6 +97,7 @@ int write_lease (lease)
 	if (lease -> ends) {
 		if (lease -> ends != MAX_TIME) {
 			t = gmtime (&lease -> ends);
+			/* %Audit% Cannot exceed 59 bytes. %2004.06.17,Safe% */
 			sprintf (tbuf, "%d %d/%02d/%02d %02d:%02d:%02d;",
 				 t -> tm_wday, t -> tm_year + 1900,
 				 t -> tm_mon + 1, t -> tm_mday,
@@ -152,25 +145,39 @@ int write_lease (lease)
 		}
 	}
 
-	fprintf (db_file, "\n  binding state %s;",
-		 ((lease -> binding_state > 0 &&
-		   lease -> binding_state <= FTS_BOOTP)
-		  ? binding_state_names [lease -> binding_state - 1]
-		  : "abandoned"));
+	if (lease -> binding_state == FTS_ACTIVE &&
+	    (lease -> flags & BOOTP_LEASE)) {
+		fprintf (db_file, "\n  binding state bootp;\n");
+	} else {
+		fprintf (db_file, "\n  binding state %s;",
+			 ((lease -> binding_state > 0 &&
+			   lease -> binding_state <= FTS_LAST)
+			  ? binding_state_names [lease -> binding_state - 1]
+			  : "abandoned"));
+	}
 
-	if (lease -> binding_state != lease -> next_binding_state)
+	if (lease -> binding_state != lease -> next_binding_state) {
+	    if (lease -> next_binding_state == FTS_ACTIVE &&
+		(lease -> flags & BOOTP_LEASE))
+		fprintf (db_file, "\n  next binding state bootp;\n");
+	    else
 		fprintf (db_file, "\n  next binding state %s;",
 			 ((lease -> next_binding_state > 0 &&
-			   lease -> next_binding_state <= FTS_BOOTP)
+			   lease -> next_binding_state <= FTS_LAST)
 			  ? (binding_state_names
 			     [lease -> next_binding_state - 1])
 		  : "abandoned"));
+	}
 
 	/* If this lease is billed to a class and is still valid,
 	   write it out. */
-	if (lease -> billing_class && lease -> ends > cur_time)
-		if (!write_billing_class (lease -> billing_class))
+	if (lease -> billing_class && lease -> ends > cur_time) {
+		if (!write_billing_class (lease -> billing_class)) {
+			log_error ("unable to write class %s",
+				   lease -> billing_class -> name);
 			++errors;
+		}
+	}
 
 	if (lease -> hardware_addr.hlen) {
 		errno = 0;
@@ -243,21 +250,17 @@ int write_lease (lease)
 	    pair p;
 
 	    memset (&ds, 0, sizeof ds);
-	    if (lease -> agent_options) {
-		for (p = lease -> agent_options -> first; p; p = p -> cdr) {
-		    oc = (struct option_cache *)p -> car;
-		    if (oc -> data.len) {
-			errno = 0;
-			fprintf (db_file, "\n  option agent.%s %s;",
-				 oc -> option -> name,
-				 pretty_print_option (oc -> option,
-						      oc -> data.data,
-						      oc -> data.len,
-						      1, 1));
-			if (errno)
-			    ++errors;
-		    }
-		}
+	    for (p = lease -> agent_options -> first; p; p = p -> cdr) {
+	        oc = (struct option_cache *)p -> car;
+	        if (oc -> data.len) {
+	    	errno = 0;
+	    	fprintf (db_file, "\n  option agent.%s %s;",
+	    		 oc -> option -> name,
+	    		 pretty_print_option (oc -> option, oc -> data.data,
+				      		oc -> data.len, 1, 1));
+	    	if (errno)
+		    ++errors;
+	        }
 	    }
 	}
 	if (lease -> client_hostname &&
@@ -400,11 +403,11 @@ int write_host (host)
 			}
 			for (i = 0; i < ip_addrs.len - 3; i += 4) {
 				errno = 0;
-				fprintf (db_file, "%d.%d.%d.%d%s",
-					 ip_addrs.data [i],
-					 ip_addrs.data [i + 1],
-					 ip_addrs.data [i + 2],
-					 ip_addrs.data [i + 3],
+				fprintf (db_file, "%u.%u.%u.%u%s",
+					 ip_addrs.data [i] & 0xff,
+					 ip_addrs.data [i + 1] & 0xff,
+					 ip_addrs.data [i + 2] & 0xff,
+					 ip_addrs.data [i + 3] & 0xff,
 					 i + 7 < ip_addrs.len ? "," : "");
 				if (errno) {
 					++errors;
@@ -596,6 +599,7 @@ int db_printable_len (s, len)
 	unsigned len;
 {
 	int i;
+
 	for (i = 0; i < len; i++)
 		if (!isascii (s [i]) || !isprint (s [i]) ||
 		    s [i] == '"' || s [i] == '\\')
@@ -606,9 +610,8 @@ int db_printable_len (s, len)
 static int print_hash_string(FILE *fp, struct class *class)
 {
 	int i;
-	int errors;
-	
-	
+	int errors = 0;
+
 	for (i = 0; i < class -> hash_string.len; i++)
 		if (!isascii (class -> hash_string.data [i]) ||
 		    !isprint (class -> hash_string.data [i]))
@@ -785,6 +788,12 @@ int write_billing_class (class)
 	return !errors;
 }
 
+/* Commit leases after a timeout. */
+void commit_leases_timeout (void *foo)
+{
+	commit_leases ();
+}
+
 /* Commit any leases that have been written out... */
 
 int commit_leases ()
@@ -866,7 +875,17 @@ int new_lease_file ()
 
 	/* Make a temporary lease file... */
 	GET_TIME (&t);
-	sprintf (newfname, "%s.%d", path_dhcpd_db, (int)t);
+
+	/* %Audit% Truncated filename causes panic. %2004.06.17,Safe%
+	 * This should never happen since the path is a configuration
+	 * variable from build-time or command-line.  But if it should,
+	 * either by malice or ignorance, we panic, since the potential
+	 * for havoc is high.
+	 */
+	if (snprintf (newfname, sizeof newfname, "%s.%d",
+		     path_dhcpd_db, (int)t) >= sizeof newfname)
+		log_fatal("new_lease_file: lease file path too long");
+
 	db_fd = open (newfname, O_WRONLY | O_TRUNC | O_CREAT, 0664);
 	if (db_fd < 0) {
 		log_error ("Can't create new lease file: %m");
@@ -916,8 +935,17 @@ int new_lease_file ()
 #if defined (TRACING)
 	if (!trace_playback ()) {
 #endif
+	    /* %Audit% Truncated filename causes panic. %2004.06.17,Safe%
+	     * This should never happen since the path is a configuration
+	     * variable from build-time or command-line.  But if it should,
+	     * either by malice or ignorance, we panic, since the potential
+	     * for havoc is too high.
+	     */
+	    if (snprintf (backfname, sizeof backfname, "%s~", path_dhcpd_db)
+			>= sizeof backfname)
+		log_fatal("new_lease_file: backup lease file path too long");
+
 	    /* Get the old database out of the way... */
-	    sprintf (backfname, "%s~", path_dhcpd_db);
 	    if (unlink (backfname) < 0 && errno != ENOENT) {
 		log_error ("Can't remove old lease database backup %s: %m",
 			   backfname);

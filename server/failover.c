@@ -3,39 +3,30 @@
    Failover protocol support code... */
 
 /*
- * Copyright (c) 1999-2001 Internet Software Consortium.
- * All rights reserved.
+ * Copyright (c) 2004-2005 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 1999-2003 by Internet Software Consortium
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
  *
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of The Internet Software Consortium nor the names
- *    of its contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
+ * THE SOFTWARE IS PROVIDED "AS IS" AND ISC DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS.  IN NO EVENT SHALL ISC BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT
+ * OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * THIS SOFTWARE IS PROVIDED BY THE INTERNET SOFTWARE CONSORTIUM AND
- * CONTRIBUTORS ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES,
- * INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED.  IN NO EVENT SHALL THE INTERNET SOFTWARE CONSORTIUM OR
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF
- * USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
- * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
- * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
- * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- * SUCH DAMAGE.
+ *   Internet Systems Consortium, Inc.
+ *   950 Charter Street
+ *   Redwood City, CA 94063
+ *   <info@isc.org>
+ *   http://www.isc.org/
  *
- * This software has been written for the Internet Software Consortium
+ * This software has been written for Internet Systems Consortium
  * by Ted Lemon in cooperation with Vixie Enterprises and Nominum, Inc.
- * To learn more about the Internet Software Consortium, see
+ * To learn more about Internet Systems Consortium, see
  * ``http://www.isc.org/''.  To learn more about Vixie Enterprises,
  * see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
  * ``http://www.nominum.com''.
@@ -43,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.57 2001/08/10 10:50:49 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.58 2005/03/17 20:15:28 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -51,7 +42,6 @@ static char copyright[] =
 #include <omapip/omapip_p.h>
 
 #if defined (FAILOVER_PROTOCOL)
-static struct hash_table *failover_hash;
 dhcp_failover_state_t *failover_states;
 static isc_result_t do_a_failover_option (omapi_object_t *,
 					  dhcp_failover_link_t *);
@@ -346,6 +336,36 @@ isc_result_t dhcp_failover_link_signal (omapi_object_t *h,
 	    return ISC_R_SUCCESS;
 	}
 
+	if (!strcmp (name, "status")) {
+	  if (link -> state_object) {
+	    isc_result_t	status;
+
+	    status = va_arg(ap, isc_result_t);
+
+	    if ((status == ISC_R_HOSTUNREACH) || (status == ISC_R_TIMEDOUT)) {
+	      dhcp_failover_state_reference (&state,
+					     link -> state_object, MDL);
+	      link -> state = dhcp_flink_disconnected;
+
+	      /* Make the transition. */
+	      dhcp_failover_state_transition (link -> state_object,
+					      "disconnect");
+
+	      /* Start trying to reconnect. */
+#if defined (DEBUG_FAILOVER_TIMING)
+	      log_info ("add_timeout +5 %s",
+			"dhcp_failover_reconnect");
+#endif
+	      add_timeout (cur_time + 5, dhcp_failover_reconnect,
+			   state,
+			   (tvref_t)dhcp_failover_state_reference,
+			   (tvunref_t)dhcp_failover_state_dereference);
+	    }
+	    dhcp_failover_state_dereference (&state, MDL);
+	  }
+	  return ISC_R_SUCCESS;
+	}
+
 	/* Not a signal we recognize? */
 	if (strcmp (name, "ready")) {
 		if (h -> inner && h -> inner -> type -> signal_handler)
@@ -476,7 +496,7 @@ isc_result_t dhcp_failover_link_signal (omapi_object_t *h,
 			  badconnect:
 				/* XXX Send a refusal message first?
 				   XXX Look in protocol spec for guidance. */
-			    log_error ("Failover CONNECT from %d.%d.%d.%d: %s",
+			    log_error ("Failover CONNECT from %u.%u.%u.%u: %s",
 				       ((u_int8_t *)
 					(&link -> imsg -> server_addr)) [0],
 				       ((u_int8_t *)
@@ -1256,7 +1276,7 @@ isc_result_t dhcp_failover_state_signal (omapi_object_t *o,
 				    link);
 
 		    if (link -> imsg -> reject_reason) {
-			log_error ("Failover CONNECT to %d.%d.%d.%d%s%s",
+			log_error ("Failover CONNECT to %u.%u.%u.%u%s%s",
 				   ((u_int8_t *)
 				    (&link -> imsg -> server_addr)) [0],
 				   ((u_int8_t *)
@@ -1280,7 +1300,7 @@ isc_result_t dhcp_failover_state_signal (omapi_object_t *o,
 			errmsg = "unknown server";
 			reason = FTR_INVALID_PARTNER;
 		      badconnectack:
-			log_error ("Failover CONNECTACK from %d.%d.%d.%d: %s",
+			log_error ("Failover CONNECTACK from %u.%u.%u.%u: %s",
 				   ((u_int8_t *)
 				    (&link -> imsg -> server_addr)) [0],
 				   ((u_int8_t *)
@@ -1353,7 +1373,7 @@ isc_result_t dhcp_failover_state_signal (omapi_object_t *o,
 				 (tvunref_t)dhcp_failover_state_dereference);
 		} else if (link -> imsg -> type == FTM_DISCONNECT) {
 		    if (link -> imsg -> reject_reason) {
-			log_error ("Failover DISCONNECT from %d.%d.%d.%d%s%s",
+			log_error ("Failover DISCONNECT from %u.%u.%u.%u%s%s",
 				   ((u_int8_t *)
 				    (&link -> imsg -> server_addr)) [0],
 				   ((u_int8_t *)
@@ -1583,7 +1603,6 @@ isc_result_t dhcp_failover_set_service_state (dhcp_failover_state_t *state)
 	if (state -> service_state != not_responding) {
 		switch (state -> partner.state) {
 		      case partner_down:
-		      case recover:
 			state -> service_state = not_responding;
 			state -> nrr = " (recovering)";
 			break;
@@ -1812,7 +1831,6 @@ isc_result_t dhcp_failover_peer_state_changed (dhcp_failover_state_t *state,
 		      case unknown_state:
 		      case normal:
 		      case potential_conflict:
-		      case recover:
 		      case recover_done:
 		      case shut_down:
 		      case paused:
@@ -1824,6 +1842,7 @@ isc_result_t dhcp_failover_peer_state_changed (dhcp_failover_state_t *state,
 		      case partner_down:
 		      case communications_interrupted:
 		      case resolution_interrupted:
+		      case recover:
 			break;
 		}
 	}
@@ -1927,7 +1946,15 @@ isc_result_t dhcp_failover_peer_state_changed (dhcp_failover_state_t *state,
 			   XXX clever detection of when we should send an
 			   XXX UPDREQALL message rather than an UPDREQ
 			   XXX message.   What to do, what to do? */
-			dhcp_failover_send_update_request (state);
+			/* Currently when we enter recover state, no matter
+			 * the reason, we send an UPDREQALL.  So, it makes
+			 * the most sense to stick to that until something
+			 * better is done.
+			 * Furthermore, we only went to send the update
+			 * request if we are not in startup state.
+			 */
+			if (state -> me.state == recover)
+				dhcp_failover_send_update_request_all (state);
 			break;
 
 		      case shut_down:
@@ -2148,6 +2175,7 @@ int dhcp_failover_pool_rebalance (dhcp_failover_state_t *state)
 	binding_state_t peer_lease_state;
 	binding_state_t my_lease_state;
 	struct lease **lq;
+	int tenper;
 
 	if (state -> me.state != normal || state -> i_am == secondary)
 		return 0;
@@ -2175,11 +2203,16 @@ int dhcp_failover_pool_rebalance (dhcp_failover_state_t *state)
 			lq = &p -> backup;
 		}
 
-		log_info ("pool %lx total %d  free %d  backup %d  lts %d",
-			  (unsigned long)p, p -> lease_count,
-			  p -> free_leases, p -> backup_leases, lts);
+		tenper = (p -> backup_leases + p -> free_leases) / 10;
+		if (tenper == 0)
+			tenper = 1;
+		if (lts > tenper) {
+		    log_info ("pool %lx %s  total %d  free %d  %s %d  lts %d",
+			  (unsigned long)p,
+			  (p -> shared_network ?
+			   p -> shared_network -> name : ""), p -> lease_count,
+			  p -> free_leases, "backup", p -> backup_leases, lts);
 
-		if (lts > 1) {
 		    lease_reference (&lp, *lq, MDL);
 
 		    while (lp && lts) {
@@ -2214,7 +2247,6 @@ int dhcp_failover_pool_rebalance (dhcp_failover_state_t *state)
 		}
 		if (lts > 1) {
 			log_info ("lease imbalance - lts = %d", lts);
-			leases_queued -= lts;
 		}
 	    }
 	}
@@ -2228,9 +2260,9 @@ int dhcp_failover_pool_check (struct pool *pool)
 {
 	int lts;
 	struct lease *lp;
+	int tenper;
 
 	if (!pool -> failover_peer ||
-	    pool -> failover_peer -> i_am == primary ||
 	    pool -> failover_peer -> me.state != normal)
 		return 0;
 
@@ -2239,14 +2271,43 @@ int dhcp_failover_pool_check (struct pool *pool)
 	else
 		lts = (pool -> free_leases - pool -> backup_leases) / 2;
 
-	log_info ("pool %lx total %d  free %d  backup %d  lts %d",
-		  (unsigned long)pool, pool -> lease_count,
+	log_info ("pool %lx %s total %d  free %d  backup %d  lts %d",
+		  (unsigned long)pool,
+		  pool -> shared_network ? pool -> shared_network -> name : "",
+		  pool -> lease_count,
 		  pool -> free_leases, pool -> backup_leases, lts);
 
-	if (lts > 1) {
+	tenper = (pool -> backup_leases + pool -> free_leases) / 10;
+	if (tenper == 0)
+		tenper = 1;
+	if (lts > tenper) {
 		/* XXX What about multiple pools? */
-		dhcp_failover_send_poolreq (pool -> failover_peer);
-		return 1;
+		if (pool -> failover_peer -> i_am == secondary) {
+			/* Ask the primary to send us leases. */
+			dhcp_failover_send_poolreq (pool -> failover_peer);
+			return 1;
+		} else {
+			/* Figure out how many leases to skip on the backup
+			   list.   We skip the earliest leases on the list
+			   to reduce the chance of trying to steal a lease
+			   that the secondary is about to allocate. */
+			int i = pool -> backup_leases - lts;
+			log_info ("Taking %d leases from secondary.", lts);
+			for (lp = pool -> backup; lp; lp = lp -> next) {
+				/* Skip to the last leases on the free
+				   list, because they are less likely
+				   to already have been allocated. */
+				if (i)
+					--i;
+				else {
+					lp -> desired_binding_state = FTS_FREE;
+					dhcp_failover_queue_update (lp, 1);
+					--lts;
+				}
+			}
+			if (lts)
+				log_info ("failed to take %d leases.", lts);
+		}
 	}
 	return 0;
 }
@@ -3053,7 +3114,7 @@ isc_result_t dhcp_failover_state_lookup (omapi_object_t **sp,
 	if (status == ISC_R_SUCCESS) {
 		for (s = failover_states; s; s = s -> next) {
 			unsigned l = strlen (s -> name);
-			if (l == tv -> value -> u.buffer.len ||
+			if (l == tv -> value -> u.buffer.len &&
 			    !memcmp (s -> name,
 				     tv -> value -> u.buffer.value, l))
 				break;
@@ -3374,14 +3435,17 @@ failover_option_t *dhcp_failover_option_printf (unsigned code,
 	va_list va;
 	char tbuf [256];
 
+	/* %Audit% Truncation causes panic. %2004.06.17,Revisit%
+	 * It is unclear what the effects of truncation here are, or
+	 * how that condition should be handled.  It seems that this
+	 * function is used for formatting messages in the failover
+	 * command channel.  For now the safest thing is for
+	 * overflow-truncation to cause a fatal log.
+	 */
 	va_start (va, fmt);
-#if defined (HAVE_SNPRINTF)
-	/* Presumably if we have snprintf, we also have
-	   vsnprintf. */
-	vsnprintf (tbuf, sizeof tbuf, fmt, va);
-#else
-	vsprintf (tbuf, fmt, va);
-#endif
+	if (vsnprintf (tbuf, sizeof tbuf, fmt, va) >= sizeof tbuf)
+		log_fatal ("%s: vsnprintf would truncate",
+				"dhcp_failover_make_option");
 	va_end (va);
 
 	return dhcp_failover_make_option (code, obuf, obufix, obufmax,
@@ -3398,9 +3462,9 @@ failover_option_t *dhcp_failover_make_option (unsigned code,
 	unsigned size, count;
 	unsigned val;
 	u_int8_t *iaddr;
-	unsigned ilen;
+	unsigned ilen = 0;
 	u_int8_t *bval;
-	char *txt;
+	char *txt = NULL;
 #if defined (DEBUG_FAILOVER_MESSAGES)
 	char tbuf [256];
 #endif
@@ -3463,7 +3527,7 @@ failover_option_t *dhcp_failover_make_option (unsigned code,
 			/* shouldn't get here. */
 			log_fatal ("bogus type in failover_make_option: %d",
 				   info -> type);
-			break;
+			return &null_failover_option;
 		}
 	}
 	
@@ -3472,15 +3536,26 @@ failover_option_t *dhcp_failover_make_option (unsigned code,
 	/* Allocate a buffer for the option. */
 	option.count = size;
 	option.data = dmalloc (option.count, MDL);
-	if (!option.data)
+	if (!option.data) {
+		va_end (va);
 		return &null_failover_option;
+	}
 
 	/* Put in the option code and option length. */
 	putUShort (option.data, code);
 	putUShort (&option.data [2], size - 4);
 
 #if defined (DEBUG_FAILOVER_MESSAGES)	
-	sprintf (tbuf, " (%s<%d>", info -> name, option.count);
+	/* %Audit% Truncation causes panic. %2004.06.17,Revisit%
+	 * It is unclear what the effects of truncation here are, or
+	 * how that condition should be handled.  It seems that this
+	 * message may be sent over the failover command channel.
+	 * For now the safest thing is for overflow-truncation to cause
+	 * a fatal log.
+	 */
+	if (snprintf (tbuf, sizeof tbuf, " (%s<%d>", info -> name,
+			option.count) >= sizeof tbuf)
+		log_fatal ("dhcp_failover_make_option: tbuf overflow");
 	failover_print (obuf, obufix, obufmax, tbuf);
 #endif
 
@@ -3490,6 +3565,7 @@ failover_option_t *dhcp_failover_make_option (unsigned code,
 		for (i = 0; i < count; i++) {
 			val = va_arg (va, unsigned);
 #if defined (DEBUG_FAILOVER_MESSAGES)
+			/* %Audit% Cannot exceed 24 bytes. %2004.06.17,Safe% */
 			sprintf (tbuf, " %d", val);
 			failover_print (obuf, obufix, obufmax, tbuf);
 #endif
@@ -3504,12 +3580,14 @@ failover_option_t *dhcp_failover_make_option (unsigned code,
 				dfree (option.data, MDL);
 				log_error ("IP addrlen=%d, should be 4.",
 					   ilen);
+				va_end (va);
 				return &null_failover_option;
 			}
 				
 #if defined (DEBUG_FAILOVER_MESSAGES)
-			sprintf (tbuf, " %u.%u.%u.%u", iaddr [0], iaddr [1],
-				 iaddr [2], iaddr [3]);
+			/*%Audit% Cannot exceed 17 bytes.  %2004.06.17,Safe%*/
+			sprintf (tbuf, " %u.%u.%u.%u",
+				  iaddr [0], iaddr [1], iaddr [2], iaddr [3]);
 			failover_print (obuf, obufix, obufmax, tbuf);
 #endif
 			memcpy (&option.data [4 + i * ilen], iaddr, ilen);
@@ -3520,6 +3598,7 @@ failover_option_t *dhcp_failover_make_option (unsigned code,
 		for (i = 0; i < count; i++) {
 			val = va_arg (va, unsigned);
 #if defined (DEBUG_FAILOVER_MESSAGES)
+			/*%Audit% Cannot exceed 24 bytes.  %2004.06.17,Safe%*/
 			sprintf (tbuf, " %d", val);
 			failover_print (obuf, obufix, obufmax, tbuf);
 #endif
@@ -3532,6 +3611,7 @@ failover_option_t *dhcp_failover_make_option (unsigned code,
 		bval = va_arg (va, u_int8_t *);
 #if defined (DEBUG_FAILOVER_MESSAGES)
 		for (i = 0; i < count; i++) {
+			/* 23 bytes plus nul, safe. */
 			sprintf (tbuf, " %d", bval [i]);
 			failover_print (obuf, obufix, obufmax, tbuf);
 		}
@@ -3540,17 +3620,21 @@ failover_option_t *dhcp_failover_make_option (unsigned code,
 		break;
 
 		/* On output, TEXT_OR_BYTES is _always_ text, and always NUL
-		   terminated.  Note that the caller should be careful not to
-		   provide a format and data that amount to more than 256 bytes
-		   of data, since it will be truncated on platforms that
-		   support snprintf, and will mung the stack on those platforms
-		   that do not support snprintf.  Also, callers should not pass
-		   data acquired from the network without specifically checking
-		   it to make sure it won't bash the stack. */
+		   terminated.  Note that the caller should be careful not
+		   to provide a format and data that amount to more than 256
+		   bytes of data, since it will cause a fatal error. */
 	      case FT_TEXT_OR_BYTES:
 	      case FT_TEXT:
 #if defined (DEBUG_FAILOVER_MESSAGES)
-		sprintf (tbuf, "\"%s\"", txt);
+		/* %Audit% Truncation causes panic. %2004.06.17,Revisit%
+		 * It is unclear what the effects of truncation here are, or
+		 * how that condition should be handled.  It seems that this
+		 * function is used for formatting messages in the failover
+		 * command channel.  For now the safest thing is for
+		 * overflow-truncation to cause a fatal log.
+		 */
+		if (snprintf (tbuf, sizeof tbuf, "\"%s\"", txt) >= sizeof tbuf)
+			log_fatal ("dhcp_failover_make_option: tbuf overflow");
 		failover_print (obuf, obufix, obufmax, tbuf);
 #endif
 		memcpy (&option.data [4], txt, count);
@@ -3565,6 +3649,7 @@ failover_option_t *dhcp_failover_make_option (unsigned code,
 		memcpy (&option.data [4 + count], bval, size - count - 4);
 #if defined (DEBUG_FAILOVER_MESSAGES)
 		for (i = 4; i < size; i++) {
+			/*%Audit% Cannot exceed 24 bytes. %2004.06.17,Safe%*/
 			sprintf (tbuf, " %d", option.data [i]);
 			failover_print (obuf, obufix, obufmax, tbuf);
 		}
@@ -3575,6 +3660,7 @@ failover_option_t *dhcp_failover_make_option (unsigned code,
 		for (i = 0; i < count; i++) {
 			val = va_arg (va, u_int32_t);
 #if defined (DEBUG_FAILOVER_MESSAGES)
+			/*%Audit% Cannot exceed 24 bytes. %2004.06.17,Safe%*/
 			sprintf (tbuf, " %d", val);
 			failover_print (obuf, obufix, obufmax, tbuf);
 #endif
@@ -3590,6 +3676,7 @@ failover_option_t *dhcp_failover_make_option (unsigned code,
 #if defined DEBUG_FAILOVER_MESSAGES
 	failover_print (obuf, obufix, obufmax, ")");
 #endif
+	va_end (va);
 
 	/* Now allocate a place to store what we just set up. */
 	op = dmalloc (sizeof (failover_option_t), MDL);
@@ -4043,7 +4130,7 @@ isc_result_t dhcp_failover_send_bind_update (dhcp_failover_state_t *state,
 					      lease -> ip_addr.len,
 					      lease -> ip_addr.iabuf),
 		   dhcp_failover_make_option (FTO_BINDING_STATUS, FMA,
-					      lease -> binding_state),
+					      lease -> desired_binding_state),
 		   lease -> uid_len
 		   ? dhcp_failover_make_option (FTO_CLIENT_IDENTIFIER, FMA,
 						lease -> uid_len,
@@ -4221,7 +4308,7 @@ isc_result_t dhcp_failover_send_poolresp (dhcp_failover_state_t *state,
 
 	status = (dhcp_failover_put_message
 		  (link, link -> outer,
-		   FTM_POOLREQ,
+		   FTM_POOLRESP,
 		   dhcp_failover_make_option (FTO_ADDRESSES_TRANSFERRED, FMA,
 					      leases),
 		   (failover_option_t *)0));
@@ -4259,10 +4346,16 @@ isc_result_t dhcp_failover_send_update_request (dhcp_failover_state_t *state)
 	if (!link -> outer || link -> outer -> type != omapi_type_connection)
 		return ISC_R_INVALIDARG;
 
+	if (state -> curUPD)
+		return ISC_R_ALREADYRUNNING;
+
 	status = (dhcp_failover_put_message
 		  (link, link -> outer,
 		   FTM_UPDREQ,
 		   (failover_option_t *)0));
+
+	if (status == ISC_R_SUCCESS)
+		state -> curUPD = FTM_UPDREQ;
 
 #if defined (DEBUG_FAILOVER_MESSAGES)
 	if (status != ISC_R_SUCCESS)
@@ -4272,6 +4365,7 @@ isc_result_t dhcp_failover_send_update_request (dhcp_failover_state_t *state)
 		log_debug ("%s", obuf);
 	}
 #endif
+	log_info ("Sent update request message to %s", state -> name);
 	return status;
 }
 
@@ -4298,10 +4392,17 @@ isc_result_t dhcp_failover_send_update_request_all (dhcp_failover_state_t
 	if (!link -> outer || link -> outer -> type != omapi_type_connection)
 		return ISC_R_INVALIDARG;
 
+	/* If there is an UPDREQ in progress, then upgrade to UPDREQALL. */
+	if (state -> curUPD && (state -> curUPD != FTM_UPDREQ))
+		return ISC_R_ALREADYRUNNING;
+
 	status = (dhcp_failover_put_message
 		  (link, link -> outer,
 		   FTM_UPDREQALL,
 		   (failover_option_t *)0));
+
+	if (status == ISC_R_SUCCESS)
+		state -> curUPD = FTM_UPDREQALL;
 
 #if defined (DEBUG_FAILOVER_MESSAGES)
 	if (status != ISC_R_SUCCESS)
@@ -4311,6 +4412,7 @@ isc_result_t dhcp_failover_send_update_request_all (dhcp_failover_state_t
 		log_debug ("%s", obuf);
 	}
 #endif
+	log_info ("Sent update request all message to %s", state -> name);
 	return status;
 }
 
@@ -4350,6 +4452,8 @@ isc_result_t dhcp_failover_send_update_done (dhcp_failover_state_t *state)
 	}
 #endif
 
+	log_info ("Sent update done message to %s", state -> name);
+
 	/* There may be uncommitted leases at this point (since
 	   dhcp_failover_process_bind_ack() doesn't commit leases);
 	   commit the lease file. */
@@ -4387,6 +4491,10 @@ isc_result_t dhcp_failover_process_bind_update (dhcp_failover_state_t *state,
 	}
 
 	if (msg -> options_present & FTB_CHADDR) {
+		if (msg->binding_status == FTS_ABANDONED) {
+			message = "BNDUPD to ABANDONED with a CHADDR";
+			goto bad;
+		}
 		if (msg -> chaddr.count > sizeof lt -> hardware_addr.hbuf) {
 			message = "chaddr to long";
 			goto bad;
@@ -4394,25 +4502,65 @@ isc_result_t dhcp_failover_process_bind_update (dhcp_failover_state_t *state,
 		lt -> hardware_addr.hlen = msg -> chaddr.count;
 		memcpy (lt -> hardware_addr.hbuf, msg -> chaddr.data,
 			msg -> chaddr.count);
-	}		
+	} else if (msg->binding_status == FTS_ACTIVE ||
+		   msg->binding_status == FTS_EXPIRED ||
+		   msg->binding_status == FTS_RELEASED) {
+		message = "BNDUPD without CHADDR";
+		goto bad;
+	} else if (msg->binding_status == FTS_ABANDONED) {
+		lt->hardware_addr.hlen = 0;
+		if (lt->scope)
+			binding_scope_dereference(&lt->scope, MDL);
+	}
 
-	if (msg -> options_present & FTB_CLIENT_IDENTIFIER) {
-		lt -> uid_len = msg -> client_identifier.count;
-		if (lt -> uid_len > sizeof lt -> uid_buf) {
-			lt -> uid_max = lt -> uid_len;
-			lt -> uid = dmalloc (lt -> uid_len, MDL);
-			if (!lt -> uid) {
-				message = "no memory";
-				goto bad;
+	/* There is no explicit message content to indicate that the client
+	 * supplied no client-identifier.  So if we don't hear of a value,
+	 * we discard the last one.
+	 */
+	if (msg->options_present & FTB_CLIENT_IDENTIFIER) {
+		if (msg->binding_status == FTS_ABANDONED) {
+			message = "BNDUPD to ABANDONED with client-id";
+			goto bad;
+		}
+
+		lt->uid_len = msg->client_identifier.count;
+
+		/* Allocate the lt->uid buffer if we haven't already, or
+		 * re-allocate the lt-uid buffer if we have one that is not
+		 * large enough.  Otherwise, just use the extant buffer.
+		 */
+		if (!lt->uid || lt->uid == lt->uid_buf ||
+		    lt->uid_len > lt->uid_max) {
+			if (lt->uid && lt->uid != lt->uid_buf)
+				dfree(lt->uid, MDL);
+
+			if (lt->uid_len > sizeof(lt->uid_buf)) {
+				lt->uid_max = lt->uid_len;
+				lt->uid = dmalloc(lt->uid_len, MDL);
+				if (!lt->uid) {
+					message = "no memory";
+					goto bad;
+				}
+			} else {
+				lt->uid_max = sizeof(lt->uid_buf);
+				lt->uid = lt->uid_buf;
 			}
-		} else {
-			lt -> uid_max = sizeof lt -> uid_buf;
-			lt -> uid = lt -> uid_buf;
 		}
 		memcpy (lt -> uid,
 			msg -> client_identifier.data, lt -> uid_len);
+	} else if (lt->uid && msg->binding_status != FTS_RESET &&
+		   msg->binding_status != FTS_FREE &&
+		   msg->binding_status != FTS_BACKUP) {
+		if (lt->uid != lt->uid_buf)
+			dfree (lt->uid, MDL);
+		lt->uid = NULL;
+		lt->uid_max = lt->uid_len = 0;
 	}
-		
+
+	/* If the lease was expired, also remove the stale binding scope. */
+	if (lt->scope && lt->ends < cur_time)
+		binding_scope_dereference(&lt->scope, MDL);
+
 	/* XXX Times may need to be adjusted based on clock skew! */
 	if (msg -> options_present & FTB_STOS) {
 		lt -> starts = msg -> stos;
@@ -4453,19 +4601,16 @@ isc_result_t dhcp_failover_process_bind_update (dhcp_failover_state_t *state,
 		}
 		if (new_binding_state != msg -> binding_status) {
 			char outbuf [100];
-#if !defined (NO_SNPRINTF)
-			snprintf (outbuf, sizeof outbuf,
+
+			if (snprintf (outbuf, sizeof outbuf,
 				  "%s: invalid state transition: %s to %s",
 				  piaddr (lease -> ip_addr),
 				  binding_state_print (lease -> binding_state),
-				  binding_state_print (msg -> binding_status));
-#else
-			sprintf (outbuf,
-				 "%s: invalid state transition: %s to %s",
-				 piaddr (lease -> ip_addr),
-				 binding_state_print (lease -> binding_state),
-				 binding_state_print (msg -> binding_status));
-#endif
+				  binding_state_print (msg -> binding_status))
+						>= sizeof outbuf)
+				log_fatal ("%s: impossible outbuf overflow",
+					"dhcp_failover_process_bind_update");
+
 			dhcp_failover_send_bind_ack (state, msg,
 						     FTR_FATAL_CONFLICT,
 						     outbuf);
@@ -4549,12 +4694,33 @@ isc_result_t dhcp_failover_process_bind_ack (dhcp_failover_state_t *state,
 				commit_leases ();
 		} else {
 			lease -> tsfp = msg -> potential_expiry;
+			if ((lease -> desired_binding_state !=
+			     lease -> binding_state) &&
+			    (msg -> options_present & FTB_BINDING_STATUS) &&
+			    (msg -> binding_status ==
+			     lease -> desired_binding_state)) {
+				lease -> next_binding_state =
+					lease -> desired_binding_state;
+				supersede_lease (lease,
+						 (struct lease *)0, 0, 0, 0);
+			}
 			write_lease (lease);
-#if 0 /* XXX This might be needed. */
-			if (state -> me.state == normal)
-				commit_leases ();
-#endif
+			/* Commit the lease only after a two-second timeout,
+			   so that if we get a bunch of acks in quick 
+			   successtion (e.g., when stealing leases from the
+			   secondary), we do not do an immediate commit for
+			   each one. */
+			add_timeout (cur_time + 2,
+				     commit_leases_timeout, (void *)0, 0, 0);
 		}
+	} else if (lease -> desired_binding_state != lease -> binding_state &&
+		   (msg -> options_present & FTB_BINDING_STATUS) &&
+		   msg -> binding_status == lease -> desired_binding_state) {
+		lease -> next_binding_state = lease -> desired_binding_state;
+		supersede_lease (lease, (struct lease *)0, 0, 0, 0);
+		write_lease (lease);
+		add_timeout (cur_time + 2, commit_leases_timeout,
+			     (void *)0, 0, 0);
 	}
 
       unqueue:
@@ -4639,6 +4805,7 @@ isc_result_t dhcp_failover_generate_update_queue (dhcp_failover_state_t *state,
 	}
 	if (state -> send_update_done)
 		lease_dereference (&state -> send_update_done, MDL);
+	state -> cur_unacked_updates = 0;
 			
 	/* Loop through each pool in each shared network and call the
 	   expiry routine on the pool. */
@@ -4657,6 +4824,7 @@ isc_result_t dhcp_failover_generate_update_queue (dhcp_failover_state_t *state,
 			      (l -> starts != MIN_TIME ||
 			       l -> ends != MIN_TIME)) ||
 			     l -> tstp > l -> tsfp)) {
+				l -> desired_binding_state = l -> binding_state;
 				dhcp_failover_queue_update (l, 0);
 			}
 		    }
@@ -4680,10 +4848,14 @@ dhcp_failover_process_update_request (dhcp_failover_state_t *state,
 		lease_reference (&state -> send_update_done,
 				 state -> update_queue_tail, MDL);
 		dhcp_failover_send_updates (state);
+		log_info ("Update request from %s: sending update",
+			   state -> name);
 	} else {
 		/* Otherwise, there are no updates to send, so we can
 		   just send an UPDDONE message immediately. */
 		dhcp_failover_send_update_done (state);
+		log_info ("Update request from %s: nothing pending",
+			   state -> name);
 	}
 
 	return ISC_R_SUCCESS;
@@ -4700,10 +4872,14 @@ dhcp_failover_process_update_request_all (dhcp_failover_state_t *state,
 		lease_reference (&state -> send_update_done,
 				 state -> update_queue_tail, MDL);
 		dhcp_failover_send_updates (state);
+		log_info ("Update request all from %s: sending update",
+			   state -> name);
 	} else {
 		/* This should really never happen, but it could happen
 		   on a server that currently has no leases configured. */
 		dhcp_failover_send_update_done (state);
+		log_info ("Update request all from %s: nothing pending",
+			   state -> name);
 	}
 
 	return ISC_R_SUCCESS;
@@ -4715,6 +4891,8 @@ dhcp_failover_process_update_done (dhcp_failover_state_t *state,
 {
 	log_info ("failover peer %s: peer update completed.",
 		  state -> name);
+
+	state -> curUPD = 0;
 
 	switch (state -> me.state) {
 	      case unknown_state:
@@ -4900,8 +5078,9 @@ normal_binding_state_transition_check (struct lease *lease,
 		      case FTS_ACTIVE:
 		      case FTS_ABANDONED:
 		      case FTS_BACKUP:
-		      case FTS_RESERVED:
-		      case FTS_BOOTP:
+		      case FTS_EXPIRED:
+		      case FTS_RELEASED:
+		      case FTS_RESET:
 			/* If the lease was free, and our peer is primary,
 			   then it can make it active, or abandoned, or
 			   backup.    Abandoned is treated like free in
@@ -4915,24 +5094,21 @@ normal_binding_state_transition_check (struct lease *lease,
 			   peer to change its state anyway, but log a warning
 			   message in hopes that the error will be fixed. */
 		      case FTS_FREE: /* for compiler */
-		      case FTS_EXPIRED:
-		      case FTS_RELEASED:
-		      case FTS_RESET:
-			log_error ("allowing %s%s: %s to %s",
-				   "invalid peer state transition on ",
-				   piaddr (lease -> ip_addr),
-				   (binding_state_print
-				    (lease -> binding_state)),
-				   binding_state_print (binding_state));
 			new_state = binding_state;
 			goto out;
+
+		      default:
+			log_fatal ("Impossible case at %s:%d.", MDL);
+			return FTS_RESET;
 		}
 	      case FTS_ACTIVE:
-	      case FTS_RESERVED:
-	      case FTS_BOOTP:
 		/* The secondary can't change the state of an active
 		   lease. */
 		if (state -> i_am == primary) {
+			/* Except that the client may send the DHCPRELEASE
+			   to the secondary, and we have to accept that. */
+			if (binding_state == FTS_RELEASED)
+				return binding_state;
 			new_state = lease -> binding_state;
 			goto out;
 		}
@@ -4950,19 +5126,25 @@ normal_binding_state_transition_check (struct lease *lease,
 			return binding_state;
 
 		      case FTS_EXPIRED:
-			if (lease -> ends > cur_time) {
+			/* XXX 65 should be the clock skew between the peers
+			   XXX plus a fudge factor.   This code will result
+			   XXX in problems if MCLT is really short or the
+			   XXX max-lease-time is really short (less than the
+			   XXX fudge factor. */
+			if (lease -> ends - 65 > cur_time) {
 				new_state = lease -> binding_state;
 				goto out;
 			}
 
-		      case FTS_RESERVED:
-		      case FTS_BOOTP:
 		      case FTS_RELEASED:
 		      case FTS_ABANDONED:
 		      case FTS_RESET:
 		      case FTS_ACTIVE:
 			return binding_state;
 
+		      default:
+			log_fatal ("Impossible case at %s:%d.", MDL);
+			return FTS_RESET;
 		}
 		break;
 	      case FTS_EXPIRED:
@@ -4977,14 +5159,16 @@ normal_binding_state_transition_check (struct lease *lease,
 			}
 			return binding_state;
 
-		      case FTS_RESERVED:
-		      case FTS_BOOTP:
 		      case FTS_ACTIVE:
 		      case FTS_RELEASED:
 		      case FTS_ABANDONED:
 		      case FTS_RESET:
 		      case FTS_EXPIRED:
 			return binding_state;
+
+		      default:
+			log_fatal ("Impossible case at %s:%d.", MDL);
+			return FTS_RESET;
 		}
 	      case FTS_RELEASED:
 		switch (binding_state) {
@@ -4993,14 +5177,16 @@ normal_binding_state_transition_check (struct lease *lease,
 
 			/* These are invalid state transitions - should we
 			   prevent them? */
-		      case FTS_RESERVED:
-		      case FTS_BOOTP:
 		      case FTS_EXPIRED:
 		      case FTS_ABANDONED:
 		      case FTS_RESET:
 		      case FTS_ACTIVE:
 		      case FTS_RELEASED:
 			return binding_state;
+
+		      default:
+			log_fatal ("Impossible case at %s:%d.", MDL);
+			return FTS_RESET;
 		}
 	      case FTS_RESET:
 		switch (binding_state) {
@@ -5015,47 +5201,47 @@ normal_binding_state_transition_check (struct lease *lease,
 			return binding_state;
 
 		      case FTS_ACTIVE:
-		      case FTS_RESERVED:
-		      case FTS_BOOTP:
 		      case FTS_EXPIRED:
 		      case FTS_RELEASED:
 		      case FTS_ABANDONED:
 		      case FTS_RESET:
 			return binding_state;
+
+		      default:
+			log_fatal ("Impossible case at %s:%d.", MDL);
+			return FTS_RESET;
 		}
 	      case FTS_BACKUP:
 		switch (binding_state) {
 		      case FTS_ACTIVE:
 		      case FTS_ABANDONED:
-		      case FTS_FREE:
-		      case FTS_RESERVED:
-		      case FTS_BOOTP:
-			/* If the lease was in backup, and our peer is
-			   secondary, then it can make it active, or
-			   abandoned, or free. */
-			if (state -> i_am == primary)
-				return binding_state;
-
-			/* Otherwise, it can't do any sort of state
-			   transition, but because the lease was free
-			   we allow it to do the transition, and just
-			   log the error. */
 		      case FTS_EXPIRED:
 		      case FTS_RELEASED:
 		      case FTS_RESET:
-			log_error ("allowing %s%s: %s to %s",
-				   "invalid peer state transition on ",
-				   piaddr (lease -> ip_addr),
-				   (binding_state_print
-				    (lease -> binding_state)),
-				   binding_state_print (binding_state));
-			new_state = binding_state;
-			goto out;
+			/* If the lease was in backup, and our peer
+			   is secondary, then it can make it active
+			   or abandoned. */
+			if (state -> i_am == primary)
+				return binding_state;
+
+			/* Either the primary or the secondary can
+			   reasonably move a lease from the backup
+			   state to the free state. */
+		      case FTS_FREE:
+			return binding_state;
 
 		      case FTS_BACKUP:
 			new_state = lease -> binding_state;
 			goto out;
+
+		      default:
+			log_fatal ("Impossible case at %s:%d.", MDL);
+			return FTS_RESET;
 		}
+
+	      default:
+		log_fatal ("Impossible case at %s:%d.", MDL);
+		return FTS_RESET;
 	}
       out:
 	return new_state;
@@ -5092,8 +5278,6 @@ conflict_binding_state_transition_check (struct lease *lease,
 			   going to take the partner's change if the partner
 			   thinks it's free. */
 		      case FTS_ACTIVE:
-		      case FTS_RESERVED:
-		      case FTS_BOOTP:
 			switch (binding_state) {
 			      case FTS_FREE:
 			      case FTS_BACKUP:
@@ -5111,13 +5295,19 @@ conflict_binding_state_transition_check (struct lease *lease,
 					new_state = binding_state;
 				break;
 
-			      case FTS_RESERVED:
-			      case FTS_BOOTP:
 			      case FTS_ACTIVE:
 				new_state = binding_state;
 				break;
+
+			      default:
+				log_fatal ("Impossible case at %s:%d.", MDL);
+				return FTS_RESET;
 			}
 			break;
+
+		      default:
+			log_fatal ("Impossible case at %s:%d.", MDL);
+			return FTS_RESET;
 		}
 	}
 	return new_state;
@@ -5164,8 +5354,6 @@ int lease_mine_to_reallocate (struct lease *lease)
 		      case FTS_RESET:
 		      case FTS_RELEASED:
 		      case FTS_EXPIRED:
-		      case FTS_BOOTP:
-		      case FTS_RESERVED:
 			if (peer -> service_state == service_partner_down &&
 			    (lease -> tsfp < peer -> me.stos
 			     ? peer -> me.stos + peer -> mclt < cur_time
@@ -5271,14 +5459,6 @@ const char *binding_state_print (enum failover_state state)
 
 	      case FTS_BACKUP:
 		return "backup";
-		break;
-
-	      case FTS_RESERVED:
-		return "reserved";
-		break;
-
-	      case FTS_BOOTP:
-		return "bootp";
 		break;
 
 	      default:

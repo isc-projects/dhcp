@@ -3,39 +3,30 @@
    DHCP options parsing and reassembly. */
 
 /*
- * Copyright (c) 1995-2001 Internet Software Consortium.
- * All rights reserved.
+ * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 1995-2003 by Internet Software Consortium
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
  *
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of The Internet Software Consortium nor the names
- *    of its contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
+ * THE SOFTWARE IS PROVIDED "AS IS" AND ISC DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS.  IN NO EVENT SHALL ISC BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT
+ * OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * THIS SOFTWARE IS PROVIDED BY THE INTERNET SOFTWARE CONSORTIUM AND
- * CONTRIBUTORS ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES,
- * INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED.  IN NO EVENT SHALL THE INTERNET SOFTWARE CONSORTIUM OR
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF
- * USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
- * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
- * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
- * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- * SUCH DAMAGE.
+ *   Internet Systems Consortium, Inc.
+ *   950 Charter Street
+ *   Redwood City, CA 94063
+ *   <info@isc.org>
+ *   http://www.isc.org/
  *
- * This software has been written for the Internet Software Consortium
+ * This software has been written for Internet Systems Consortium
  * by Ted Lemon in cooperation with Vixie Enterprises and Nominum, Inc.
- * To learn more about the Internet Software Consortium, see
+ * To learn more about Internet Systems Consortium, see
  * ``http://www.isc.org/''.  To learn more about Vixie Enterprises,
  * see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
  * ``http://www.nominum.com''.
@@ -43,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.87 2001/08/10 10:49:00 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.88 2005/03/17 20:14:59 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -187,15 +178,36 @@ int parse_option_buffer (options, buffer, length, universe)
 		   the parse fails, or the option isn't an encapsulation (by
 		   far the most common case), or the option isn't entirely
 		   an encapsulation, keep the raw data as well. */
-		if (!((universe -> options [code] -> format [0] == 'e' ||
+		if (universe -> options [code] &&
+		    !((universe -> options [code] -> format [0] == 'e' ||
 		       universe -> options [code] -> format [0] == 'E') &&
 		      (parse_encapsulated_suboptions
 		       (options, universe -> options [code],
 			buffer + offset + 2, len,
 			universe, (const char *)0)))) {
-		    save_option_buffer (universe, options, bp,
-					&bp -> data [offset + 2], len,
-					universe -> options [code], 1);
+		    op = lookup_option (universe, options, code);
+		    if (op) {
+			struct data_string new;
+			memset (&new, 0, sizeof new);
+			if (!buffer_allocate (&new.buffer, op -> data.len + len,
+					      MDL)) {
+			    log_error ("parse_option_buffer: No memory.");
+			    return 0;
+			}
+			memcpy (new.buffer -> data, op -> data.data,
+				op -> data.len);
+			memcpy (&new.buffer -> data [op -> data.len],
+				&bp -> data [offset + 2], len);
+			new.len = op -> data.len + len;
+			new.data = new.buffer -> data;
+			data_string_forget (&op -> data, MDL);
+			data_string_copy (&op -> data, &new, MDL);
+			data_string_forget (&new, MDL);
+		    } else {
+			save_option_buffer (universe, options, bp,
+					    &bp -> data [offset + 2], len,
+					    universe -> options [code], 1);
+		    }
 		}
 		offset += len + 2;
 	}
@@ -394,8 +406,15 @@ int fqdn_universe_decode (struct option_state *options,
 
 			*s = '.';
 			s += len + 1;
-			total_len += len;
+			total_len += len + 1;
 		}
+
+		/* We wind up with a length that's one too many because
+		   we shouldn't increment for the last label, but there's
+		   no way to tell we're at the last label until we exit
+		   the loop.   :'*/
+		if (total_len > 0)
+			total_len--;
 
 		if (!terminated) {
 			first_len = total_len;
@@ -469,6 +488,8 @@ int cons_options (inpacket, outpacket, lease, client_state,
 	unsigned char buffer [4096];	/* Really big buffer... */
 	unsigned main_buffer_size;
 	unsigned mainbufix, bufix, agentix;
+	int fileix;
+	int snameix;
 	unsigned option_size;
 	unsigned length;
 	int i;
@@ -476,6 +497,9 @@ int cons_options (inpacket, outpacket, lease, client_state,
 	struct data_string ds;
 	pair pp, *hash;
 	int need_endopt = 0;
+	int have_sso = 0;
+	int ocount = 0;
+	int ofbuf1=0, ofbuf2=0;
 
 	memset (&ds, 0, sizeof ds);
 
@@ -483,14 +507,18 @@ int cons_options (inpacket, outpacket, lease, client_state,
 	   and no alternate maximum message size has been specified, take the
 	   one in the packet. */
 
-	if (!mms && inpacket &&
+	if (inpacket &&
 	    (op = lookup_option (&dhcp_universe, inpacket -> options,
 				 DHO_DHCP_MAX_MESSAGE_SIZE))) {
 		evaluate_option_cache (&ds, inpacket,
 				       lease, client_state, in_options,
 				       cfg_options, scope, op, MDL);
-		if (ds.len >= sizeof (u_int16_t))
-			mms = getUShort (ds.data);
+		if (ds.len >= sizeof (u_int16_t)) {
+			i = getUShort (ds.data);
+
+			if(!mms || (i < mms))
+				mms = i;
+		}
 		data_string_forget (&ds, MDL);
 	}
 
@@ -528,8 +556,16 @@ int cons_options (inpacket, outpacket, lease, client_state,
 	priority_list [priority_len++] = DHO_DHCP_LEASE_TIME;
 	priority_list [priority_len++] = DHO_DHCP_MESSAGE;
 	priority_list [priority_len++] = DHO_DHCP_REQUESTED_ADDRESS;
+	priority_list [priority_len++] = DHO_FQDN;
 
 	if (prl && prl -> len > 0) {
+		if ((op = lookup_option (&dhcp_universe, cfg_options,
+					 DHO_SUBNET_SELECTION))) {
+			if (priority_len < PRIORITY_COUNT)
+				priority_list [priority_len++] =
+					DHO_SUBNET_SELECTION;
+		}
+			    
 		data_string_truncate (prl, (PRIORITY_COUNT - priority_len));
 
 		for (i = 0; i < prl -> len; i++) {
@@ -557,7 +593,8 @@ int cons_options (inpacket, outpacket, lease, client_state,
 		if (cfg_options -> site_code_min) {
 		    for (i = 0; i < OPTION_HASH_SIZE; i++) {
 			hash = cfg_options -> universes [dhcp_universe.index];
-			for (pp = hash [i]; pp; pp = pp -> cdr) {
+			if (hash) {
+			    for (pp = hash [i]; pp; pp = pp -> cdr) {
 				op = (struct option_cache *)(pp -> car);
 				if (op -> option -> code <
 				    cfg_options -> site_code_min &&
@@ -566,6 +603,7 @@ int cons_options (inpacket, outpacket, lease, client_state,
 				     DHO_DHCP_AGENT_OPTIONS))
 					priority_list [priority_len++] =
 						op -> option -> code;
+			    }
 			}
 		    }
 		}
@@ -574,8 +612,9 @@ int cons_options (inpacket, outpacket, lease, client_state,
 		   is no site option space, we'll be cycling through the
 		   dhcp option space. */
 		for (i = 0; i < OPTION_HASH_SIZE; i++) {
-			hash = (cfg_options -> universes
-				[cfg_options -> site_universe]);
+		    hash = (cfg_options -> universes
+			    [cfg_options -> site_universe]);
+		    if (hash)
 			for (pp = hash [i]; pp; pp = pp -> cdr) {
 				op = (struct option_cache *)(pp -> car);
 				if (op -> option -> code >=
@@ -612,18 +651,35 @@ int cons_options (inpacket, outpacket, lease, client_state,
 				DHO_VENDOR_ENCAPSULATED_OPTIONS;
 	}
 
+	/* Figure out the overload buffer offset(s). */
+	if (overload) {
+		ofbuf1 = main_buffer_size - 4;
+		if (overload == 3)
+			ofbuf2 = main_buffer_size - 4 + DHCP_FILE_LEN;
+	}
+
 	/* Copy the options into the big buffer... */
-	option_size = store_options (buffer,
-				     (main_buffer_size - 7 +
+	option_size = store_options (&ocount, buffer,
+				     (main_buffer_size - 4 +
 				      ((overload & 1) ? DHCP_FILE_LEN : 0) +
 				      ((overload & 2) ? DHCP_SNAME_LEN : 0)),
 				     inpacket, lease, client_state,
 				     in_options, cfg_options, scope,
 				     priority_list, priority_len,
-				     main_buffer_size,
-				     (main_buffer_size +
-				      ((overload & 1) ? DHCP_FILE_LEN : 0)),
-				     terminate, vuname);
+				     ofbuf1, ofbuf2, terminate, vuname);
+	/* If store_options failed. */
+	if (option_size == 0)
+		return 0;
+	if (overload) {
+		if (ocount == 1 && (overload & 1))
+			overload = 1;
+		else if (ocount == 1 && (overload & 2))
+			overload = 2;
+		else if (ocount == 3)
+			overload = 3;
+		else
+			overload = 0;
+	}
 
 	/* Put the cookie up front... */
 	memcpy (outpacket -> options, DHCP_OPTIONS_COOKIE, 4);
@@ -633,70 +689,43 @@ int cons_options (inpacket, outpacket, lease, client_state,
 	   option at the beginning.  If we can, though, just store the
 	   whole thing in the packet's option buffer and leave it at
 	   that. */
-	if (option_size <= main_buffer_size - mainbufix) {
-		memcpy (&outpacket -> options [mainbufix],
-			buffer, option_size);
-		mainbufix += option_size;
-		agentix = mainbufix;
-		if (mainbufix < main_buffer_size)
-			need_endopt = 1;
-		length = DHCP_FIXED_NON_UDP + mainbufix;
-	} else {
+	memcpy (&outpacket -> options [mainbufix],
+		buffer, option_size);
+	mainbufix += option_size;
+	if (overload) {
 		outpacket -> options [mainbufix++] = DHO_DHCP_OPTION_OVERLOAD;
 		outpacket -> options [mainbufix++] = 1;
-		if (option_size > main_buffer_size - mainbufix + DHCP_FILE_LEN)
-			outpacket -> options [mainbufix++] = 3;
-		else
-			outpacket -> options [mainbufix++] = 1;
+		outpacket -> options [mainbufix++] = overload;
 
-		memcpy (&outpacket -> options [mainbufix],
-			buffer, main_buffer_size - mainbufix);
-		length = DHCP_FIXED_NON_UDP + main_buffer_size;
-		agentix = main_buffer_size;
-
-		bufix = main_buffer_size - mainbufix;
 		if (overload & 1) {
-			if (option_size - bufix <= DHCP_FILE_LEN) {
-				memcpy (outpacket -> file,
-					&buffer [bufix], option_size - bufix);
-				mainbufix = option_size - bufix;
-				if (mainbufix < DHCP_FILE_LEN)
-					outpacket -> file [mainbufix++]
-						= DHO_END;
-				while (mainbufix < DHCP_FILE_LEN)
-					outpacket -> file [mainbufix++]
-						= DHO_PAD;
+			memcpy (outpacket -> file,
+				&buffer [ofbuf1], DHCP_FILE_LEN);
+		}
+		if (overload & 2) {
+			if (ofbuf2) {
+				memcpy (outpacket -> sname, &buffer [ofbuf2],
+					DHCP_SNAME_LEN);
 			} else {
-				memcpy (outpacket -> file,
-					&buffer [bufix], DHCP_FILE_LEN);
-				bufix += DHCP_FILE_LEN;
+				memcpy (outpacket -> sname, &buffer [ofbuf1],
+					DHCP_SNAME_LEN);
 			}
 		}
-		if ((overload & 2) && option_size < bufix) {
-			memcpy (outpacket -> sname,
-				&buffer [bufix], option_size - bufix);
-
-			mainbufix = option_size - bufix;
-			if (mainbufix < DHCP_SNAME_LEN)
-				outpacket -> file [mainbufix++]
-					= DHO_END;
-			while (mainbufix < DHCP_SNAME_LEN)
-				outpacket -> file [mainbufix++]
-					= DHO_PAD;
-		}
 	}
+	agentix = mainbufix;
+	if (mainbufix < main_buffer_size)
+		need_endopt = 1;
+	length = DHCP_FIXED_NON_UDP + mainbufix;
 
 	/* Now hack in the agent options if there are any. */
 	priority_list [0] = DHO_DHCP_AGENT_OPTIONS;
 	priority_len = 1;
 	agentix +=
-		store_options (&outpacket -> options [agentix],
+		store_options (0, &outpacket -> options [agentix],
 			       1500 - DHCP_FIXED_LEN - agentix,
 			       inpacket, lease, client_state,
 			       in_options, cfg_options, scope,
 			       priority_list, priority_len,
-			       1500 - DHCP_FIXED_LEN - agentix,
-			       1500 - DHCP_FIXED_LEN - agentix, 0, (char *)0);
+			       0, 0, 0, (char *)0);
 
 	/* Tack a DHO_END option onto the packet if we need to. */
 	if (agentix < 1500 - DHCP_FIXED_LEN && need_endopt)
@@ -709,9 +738,10 @@ int cons_options (inpacket, outpacket, lease, client_state,
 
 /* Store all the requested options into the requested buffer. */
 
-int store_options (buffer, buflen, packet, lease, client_state,
+int store_options (ocount, buffer, buflen, packet, lease, client_state,
 		   in_options, cfg_options, scope, priority_list, priority_len,
 		   first_cutoff, second_cutoff, terminate, vuname)
+	int *ocount;
 	unsigned char *buffer;
 	unsigned buflen;
 	struct packet *packet;
@@ -726,14 +756,30 @@ int store_options (buffer, buflen, packet, lease, client_state,
 	int terminate;
 	const char *vuname;
 {
-	int bufix = 0;
+	int bufix = 0, six = 0, tix = 0;
 	int i;
 	int ix;
 	int tto;
+	int bufend, sbufend;
 	struct data_string od;
 	struct option_cache *oc;
 	unsigned code;
-	int optstart;
+
+	if (first_cutoff) {
+	    if (first_cutoff >= buflen)
+		log_fatal("%s:%d:store_options: Invalid first cutoff.", MDL);
+
+	    bufend = first_cutoff;
+	} else
+	    bufend = buflen;
+
+	if (second_cutoff) {
+	    if (second_cutoff >= buflen)
+		log_fatal("%s:%d:store_options: Invalid second cutoff.", MDL);
+
+	    sbufend = second_cutoff;
+	} else
+	    sbufend = buflen;
 
 	memset (&od, 0, sizeof od);
 
@@ -760,10 +806,11 @@ int store_options (buffer, buflen, packet, lease, client_state,
 	    /* Number of bytes left to store (some may already
 	       have been stored by a previous pass). */
 	    unsigned length;
-	    int optstart;
+	    int optstart, soptstart, toptstart;
 	    struct universe *u;
 	    int have_encapsulation = 0;
 	    struct data_string encapsulation;
+	    int splitup;
 
 	    memset (&encapsulation, 0, sizeof encapsulation);
 
@@ -783,8 +830,9 @@ int store_options (buffer, buflen, packet, lease, client_state,
 	       to be encapsulated first, except that if it's a straight
 	       encapsulation and the user has provided a value for the
 	       encapsulation option, use the user-provided value. */
-	    if ((u -> options [code] -> format [0] == 'E' && !oc) ||
-		u -> options [code] -> format [0] == 'e') {
+	    if (u -> options [code] &&
+		((u -> options [code] -> format [0] == 'E' && !oc) ||
+		 u -> options [code] -> format [0] == 'e')) {
 		int uix;
 		static char *s, *t;
 		struct option_cache *tmp;
@@ -899,46 +947,118 @@ int store_options (buffer, buflen, packet, lease, client_state,
 	       in any case, if the option data will cross a buffer
 	       boundary, split it across that boundary. */
 
+
+	    if (length > 255)
+		splitup = 1;
+	    else
+		splitup = 0;
+
 	    ix = 0;
 	    optstart = bufix;
+	    soptstart = six;
+	    toptstart = tix;
 	    while (length) {
-		    unsigned char incr = length > 255 ? 255 : length;
+		    unsigned incr = length;
 		    int consumed = 0;
-		    
-		    /* If this hunk of the buffer will cross a
-		       boundary, only go up to the boundary in this
-		       pass. */
-		    if (bufix < first_cutoff &&
-			bufix + incr > first_cutoff)
-			    incr = first_cutoff - bufix;
-		    else if (bufix < second_cutoff &&
-			     bufix + incr > second_cutoff)
-			    incr = second_cutoff - bufix;
-		    
-		    /* If this option is going to overflow the buffer,
-		       skip it. */
-		    if (bufix + 2 + incr > buflen) {
-			    bufix = optstart;
-			    break;
-		    }
-		    
-		    /* Everything looks good - copy it in! */
-		    buffer [bufix] = code;
-		    buffer [bufix + 1] = incr;
-		    if (tto && incr == length) {
-			    memcpy (buffer + bufix + 2,
-				    od.data + ix, (unsigned)(incr - 1));
-			    buffer [bufix + 2 + incr - 1] = 0;
+		    int *pix;
+		    char *base;
+
+		    /* Try to fit it in the options buffer. */
+		    if (!splitup &&
+			((!six && !tix && (i == priority_len - 1) &&
+			  (bufix + 2 + length < bufend)) ||
+			 (bufix + 5 + length < bufend))) {
+			base = buffer;
+			pix = &bufix;
+		    /* Try to fit it in the second buffer. */
+		    } else if (!splitup && first_cutoff &&
+			       (first_cutoff + six + 3 + length < sbufend)) {
+			base = &buffer[first_cutoff];
+			pix = &six;
+		    /* Try to fit it in the third buffer. */
+		    } else if (!splitup && second_cutoff &&
+			       (second_cutoff + tix + 3 + length < buflen)) {
+			base = &buffer[second_cutoff];
+			pix = &tix;
+		    /* Split the option up into the remaining space. */
 		    } else {
-			    memcpy (buffer + bufix + 2,
+			splitup = 1;
+
+			/* Use any remaining options space. */
+			if (bufix + 6 < bufend) {
+			    incr = bufend - bufix - 5;
+			    base = buffer;
+			    pix = &bufix;
+			/* Use any remaining first_cutoff space. */
+			} else if (first_cutoff &&
+				   (first_cutoff + six + 4 < sbufend)) {
+			    incr = sbufend - (first_cutoff + six) - 3;
+			    base = &buffer[first_cutoff];
+			    pix = &six;
+			/* Use any remaining second_cutoff space. */
+			} else if (second_cutoff &&
+				   (second_cutoff + tix + 4 < buflen)) {
+			    incr = buflen - (second_cutoff + tix) - 3;
+			    base = &buffer[second_cutoff];
+			    pix = &tix;
+			/* Give up, roll back this option. */
+			} else {
+			    bufix = optstart;
+			    six = soptstart;
+			    tix = toptstart;
+			    break;
+			}
+		    }
+
+		    if (incr > length)
+			incr = length;
+		    if (incr > 255)
+			incr = 255;
+
+		    /* Everything looks good - copy it in! */
+		    base [*pix] = code;
+		    base [*pix + 1] = (unsigned char)incr;
+		    if (tto && incr == length) {
+			    if (incr > 1)
+				memcpy (base + *pix + 2,
+					od.data + ix, (unsigned)(incr - 1));
+			    base [*pix + 2 + incr - 1] = 0;
+		    } else {
+			    memcpy (base + *pix + 2,
 				    od.data + ix, (unsigned)incr);
 		    }
 		    length -= incr;
 		    ix += incr;
-		    bufix += 2 + incr;
+		    *pix += 2 + incr;
 	    }
 	    data_string_forget (&od, MDL);
 	}
+
+	/* If we can overload, and we have, then PAD and END those spaces. */
+	if (first_cutoff && six) {
+	    if ((first_cutoff + six + 1) < sbufend)
+		memset (&buffer[first_cutoff + six + 1], DHO_PAD,
+			sbufend - (first_cutoff + six + 1));
+	    else if (first_cutoff + six >= sbufend)
+		log_fatal("Second buffer overflow in overloaded options.");
+
+	    buffer[first_cutoff + six] = DHO_END;
+	    *ocount |= 1; /* So that caller knows there's data there. */
+	}
+
+	if (second_cutoff && tix) {
+	    if (second_cutoff + tix + 1 < buflen) {
+		memset (&buffer[second_cutoff + tix + 1], DHO_PAD,
+			buflen - (second_cutoff + tix + 1));
+	    } else if (second_cutoff + tix >= buflen)
+		log_fatal("Third buffer overflow in overloaded options.");
+
+	    buffer[second_cutoff + tix] = DHO_END;
+	    *ocount |= 2; /* So that caller knows there's data there. */
+	}
+
+	if ((six || tix) && (bufix + 3 > bufend))
+	    log_fatal("Not enough space for option overload option.");
 
 	return bufix;
 }
@@ -1537,7 +1657,7 @@ int option_cache_dereference (ptr, file, line)
 	}
 
 	(*ptr) -> refcnt--;
-	rc_register (file, line, ptr, *ptr, (*ptr) -> refcnt, 1);
+	rc_register (file, line, ptr, *ptr, (*ptr) -> refcnt, 1, RC_MISC);
 	if (!(*ptr) -> refcnt) {
 		if ((*ptr) -> data.buffer)
 			data_string_forget (&(*ptr) -> data, file, line);
@@ -1768,6 +1888,8 @@ int nwip_option_space_encapsulate (result, packet, lease, client_state,
 				status = 1;
 		}
 	} else {
+		memset (&ds, 0, sizeof ds);
+
 		/* If we have nwip options, the first one has to be the
 		   nwip-exists-in-option-area option. */
 		if (!buffer_allocate (&ds.buffer, result -> len + 2, MDL)) {

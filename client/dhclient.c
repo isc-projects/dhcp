@@ -3,35 +3,26 @@
    DHCP Client. */
 
 /*
- * Copyright (c) 1995-2001 Internet Software Consortium.
- * All rights reserved.
+ * Copyright (c) 2004-2005 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 1995-2003 by Internet Software Consortium
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
  *
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of Internet Software Consortium nor the names
- *    of its contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
+ * THE SOFTWARE IS PROVIDED "AS IS" AND ISC DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS.  IN NO EVENT SHALL ISC BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT
+ * OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * THIS SOFTWARE IS PROVIDED BY THE INTERNET SOFTWARE CONSORTIUM AND
- * CONTRIBUTORS ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES,
- * INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED.  IN NO EVENT SHALL THE INTERNET SOFTWARE CONSORTIUM OR
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF
- * USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
- * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
- * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
- * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- * SUCH DAMAGE.
+ *   Internet Systems Consortium, Inc.
+ *   950 Charter Street
+ *   Redwood City, CA 94063
+ *   <info@isc.org>
+ *   http://www.isc.org/
  *
  * This code is based on the original client state machine that was
  * written by Elliot Poger.  The code has been extensively hacked on
@@ -41,13 +32,12 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.131 2001/08/10 10:47:33 mellon Exp $ Copyright (c) 1995-2001 Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.132 2005/03/17 20:14:55 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
 #include "version.h"
 
-TIME cur_time;
 TIME default_lease_time = 43200; /* 12 hours... */
 TIME max_lease_time = 86400; /* 24 hours... */
 
@@ -71,19 +61,19 @@ struct in_addr giaddr;
    assert (state_is == state_shouldbe). */
 #define ASSERT_STATE(state_is, state_shouldbe) {}
 
-static char copyright[] = "Copyright 1995-2001 Internet Software Consortium.";
+static char copyright[] = "Copyright 2004-2005 Internet Systems Consortium.";
 static char arr [] = "All rights reserved.";
-static char message [] = "Internet Software Consortium DHCP Client";
+static char message [] = "Internet Systems Consortium DHCP Client";
 static char url [] = "For info, please visit http://www.isc.org/products/DHCP";
 
-u_int16_t local_port;
-u_int16_t remote_port;
-int no_daemon;
-struct string_list *client_env;
-int client_env_count;
-int onetry;
-int quiet;
-int nowait;
+u_int16_t local_port=0;
+u_int16_t remote_port=0;
+int no_daemon=0;
+struct string_list *client_env=NULL;
+int client_env_count=0;
+int onetry=0;
+int quiet=0;
+int nowait=0;
 
 static void usage PROTO ((void));
 
@@ -192,14 +182,14 @@ int main (argc, argv, envp)
 			if (++i == argc)
 				usage ();
 			relay = argv [i];
+		} else if (!strcmp (argv [i], "-nw")) {
+			nowait = 1;
 		} else if (!strcmp (argv [i], "-n")) {
 			/* do not start up any interfaces */
 			interfaces_requested = 1;
 		} else if (!strcmp (argv [i], "-w")) {
 			/* do not exit if there are no broadcast interfaces. */
 			persist = 1;
- 		} else if (argv [i][0] == '-') {
- 		    usage ();
 		} else if (!strcmp (argv [i], "-e")) {
 			struct string_list *tmp;
 			if (++i == argc)
@@ -214,9 +204,9 @@ int main (argc, argv, envp)
 		} else if (!strcmp (argv [i], "--version")) {
 			log_info ("isc-dhclient-%s", DHCP_VERSION);
 			exit (0);
-		} else if (!strcmp (argv [i], "-nw")) {
-			nowait = 1;
- 		} else {
+ 		} else if (argv [i][0] == '-') {
+ 		    usage ();
+		} else {
  		    struct interface_info *tmp = (struct interface_info *)0;
 		    status = interface_allocate (&tmp, MDL);
  		    if (status != ISC_R_SUCCESS)
@@ -252,15 +242,24 @@ int main (argc, argv, envp)
 
 	/* first kill of any currently running client */
 	if (release_mode) {
-	        /* XXX inelegant hack to prove concept */
-		char command[1024];
+		FILE *pidfd;
+		pid_t oldpid;
+		long temp;
+		int e;
 
-#if !defined (NO_SNPRINTF)
-		snprintf (command, 1024, "kill `cat %s`", path_dhclient_pid);
-#else
-		sprintf (command, "kill `cat %s`", path_dhclient_pid);
-#endif
-		system (command);
+		oldpid = 0;
+		if ((pidfd = fopen(path_dhclient_pid, "r")) != NULL) {
+			e = fscanf(pidfd, "%ld\n", &temp);
+			oldpid = (pid_t)temp;
+
+			if (e != 0 && e != EOF) {
+				if (oldpid) {
+					if (kill(oldpid, SIGTERM) == 0)
+						unlink(path_dhclient_pid);
+				}
+			}
+			fclose(pidfd);
+		}
 	}
 
 	if (!quiet) {
@@ -289,8 +288,10 @@ int main (argc, argv, envp)
 
 	/* Default to the DHCP/BOOTP port. */
 	if (!local_port) {
+		/* If we're faking a relay agent, and we're not using loopback,
+		   use the server port, not the client port. */
 		if (relay && giaddr.s_addr != htonl (INADDR_LOOPBACK)) {
-			local_port = htons (67);
+			local_port = htons(67);
 		} else {
 			ent = getservbyname ("dhcpc", "udp");
 			if (!ent)
@@ -304,13 +305,12 @@ int main (argc, argv, envp)
 	}
 
 	/* If we're faking a relay agent, and we're not using loopback,
-	   use the server port, not the client port. */
+	   we're using the server port, not the client port. */
 	if (relay && giaddr.s_addr != htonl (INADDR_LOOPBACK)) {
-		local_port = htons (ntohs (local_port) - 1);
 		remote_port = local_port;
 	} else
 		remote_port = htons (ntohs (local_port) - 1);	/* XXX */
-  
+
 	/* Get the current time... */
 	GET_TIME (&cur_time);
 
@@ -783,11 +783,15 @@ void dhcpack (packet)
 
 	/* If it wasn't specified by the server, calculate it. */
 	if (!client -> new -> renewal)
-		client -> new -> renewal =
-			client -> new -> expiry / 2;
+		client -> new -> renewal = client -> new -> expiry / 2 + 1;
+
+	if (client -> new -> renewal <= 0)
+		client -> new -> renewal = TIME_MAX;
 
 	/* Now introduce some randomness to the renewal time: */
-	client -> new -> renewal = (((client -> new -> renewal + 3) * 3 / 4) +
+	if (client -> new -> renewal <= TIME_MAX / 3 - 3)
+		client -> new -> renewal =
+				(((client -> new -> renewal + 3) * 3 / 4) +
 				    (random () % /* XXX NUMS */
 				     ((client -> new -> renewal + 3) / 4)));
 
@@ -806,14 +810,25 @@ void dhcpack (packet)
 	} else
 			client -> new -> rebind = 0;
 
-	if (!client -> new -> rebind)
-		client -> new -> rebind =
-			(client -> new -> expiry * 7) / 8; /* XXX NUMS */
+	if (client -> new -> rebind <= 0) {
+		if (client -> new -> expiry <= TIME_MAX / 7)
+			client -> new -> rebind =
+					client -> new -> expiry * 7 / 8;
+		else
+			client -> new -> rebind =
+					client -> new -> expiry / 8 * 7;
+	}
 
 	/* Make sure our randomness didn't run the renewal time past the
 	   rebind time. */
-	if (client -> new -> renewal > client -> new -> rebind)
-		client -> new -> renewal = (client -> new -> rebind * 3) / 4;
+	if (client -> new -> renewal > client -> new -> rebind) {
+		if (client -> new -> rebind <= TIME_MAX / 3)
+			client -> new -> renewal =
+					client -> new -> rebind * 3 / 4;
+		else
+			client -> new -> renewal =
+					client -> new -> rebind / 4 * 3;
+	}
 
 	client -> new -> expiry += cur_time;
 	/* Lease lengths can never be negative. */
@@ -882,7 +897,11 @@ void bind_lease (client)
 	client -> state = S_BOUND;
 	reinitialize_interfaces ();
 	go_daemon ();
-	client_dns_update (client, 1);
+	if (client -> config -> do_forward_update) {
+		client -> dns_update_timeout = 1;
+		add_timeout (cur_time + 1, client_dns_update_timeout,
+			     client, 0, 0);
+	}
 }  
 
 /* state_bound is called when we've successfully bound to a particular
@@ -917,6 +936,8 @@ void state_bound (cpp)
 			client -> destination.len = 4;
 		} else
 			client -> destination = iaddr_broadcast;
+
+		data_string_forget (&ds, MDL);
 	} else
 		client -> destination = iaddr_broadcast;
 
@@ -1183,12 +1204,13 @@ struct client_lease *packet_to_lease (packet, client)
 	memcpy (lease -> address.iabuf, &packet -> raw -> yiaddr,
 		lease -> address.len);
 
+	memset (&data, 0, sizeof data);
+
 	if (client -> config -> vendor_space_name) {
 		i = DHO_VENDOR_ENCAPSULATED_OPTIONS;
 
 		/* See if there was a vendor encapsulation option. */
 		oc = lookup_option (&dhcp_universe, lease -> options, i);
-		memset (&data, 0, sizeof data);
 		if (oc &&
 		    client -> config -> vendor_space_name &&
 		    evaluate_option_cache (&data, packet,
@@ -1231,7 +1253,7 @@ struct client_lease *packet_to_lease (packet, client)
 				break;
 		lease -> server_name = dmalloc (len + 1, MDL);
 		if (!lease -> server_name) {
-			log_error ("dhcpoffer: no memory for filename.\n");
+			log_error ("dhcpoffer: no memory for server name.\n");
 			destroy_client_lease (lease);
 			return (struct client_lease *)0;
 		} else {
@@ -1378,9 +1400,9 @@ void send_discover (cpp)
 
 	/* If we're supposed to increase the interval, do so.  If it's
 	   currently zero (i.e., we haven't sent any packets yet), set
-	   it to one; otherwise, add to it a random number between
-	   zero and two times itself.  On average, this means that it
-	   will double with every transmission. */
+	   it to initial_interval; otherwise, add to it a random number
+	   between zero and two times itself.  On average, this means
+	   that it will double with every transmission. */
 	if (increase) {
 		if (!client -> interval)
 			client -> interval =
@@ -1624,7 +1646,8 @@ void send_request (cpp)
 	    client -> config -> backoff_cutoff)
 		client -> interval =
 			((client -> config -> backoff_cutoff / 2)
-			 + ((random () >> 2) % client -> interval));
+			 + ((random () >> 2) %
+					client -> config -> backoff_cutoff));
 
 	/* If the backoff would take us to the expiry time, just set the
 	   timeout to the expiry time. */
@@ -1863,10 +1886,18 @@ void make_discover (client, lease)
 	/* Set up the option buffer... */
 	client -> packet_length =
 		cons_options ((struct packet *)0, &client -> packet,
-			      (struct lease *)0, client, 0,
-			      (struct option_state *)0, options,
-			      &global_scope, 0, 0, 0, (struct data_string *)0,
+			      (struct lease *)0, client,
+			      /* maximum packet size */1500,
+			      (struct option_state *)0,
+			      options,
+			      /* scope */ &global_scope,
+			      /* overload */ 0,
+			      /* terminate */0,
+			      /* bootpp    */0,
+			      (struct data_string *)0,
 			      client -> config -> vendor_space_name);
+
+	option_state_dereference (&options, MDL);
 	if (client -> packet_length < BOOTP_MIN_LEN)
 		client -> packet_length = BOOTP_MIN_LEN;
 
@@ -1918,6 +1949,9 @@ void make_request (client, lease)
 	else
 		oc = (struct option_cache *)0;
 
+	if (client -> sent_options)
+		option_state_dereference (&client -> sent_options, MDL);
+
 	make_client_options (client, lease, &request, oc,
 			     ((client -> state == S_REQUESTING ||
 			       client -> state == S_REBOOTING)
@@ -1929,10 +1963,17 @@ void make_request (client, lease)
 	/* Set up the option buffer... */
 	client -> packet_length =
 		cons_options ((struct packet *)0, &client -> packet,
-			      (struct lease *)0, client, 0,
-			      (struct option_state *)0, client -> sent_options,
-			      &global_scope, 0, 0, 0, (struct data_string *)0,
+			      (struct lease *)0, client,
+			      /* maximum packet size */1500,
+			      (struct option_state *)0,
+			      client -> sent_options, 
+			      /* scope */ &global_scope,
+			      /* overload */ 0,
+			      /* terminate */0,
+			      /* bootpp    */0,
+			      (struct data_string *)0,
 			      client -> config -> vendor_space_name);
+
 	if (client -> packet_length < BOOTP_MIN_LEN)
 		client -> packet_length = BOOTP_MIN_LEN;
 
@@ -2003,6 +2044,7 @@ void make_decline (client, lease)
 			      (struct option_state *)0, options,
 			      &global_scope, 0, 0, 0, (struct data_string *)0,
 			      client -> config -> vendor_space_name);
+	option_state_dereference (&options, MDL);
 	if (client -> packet_length < BOOTP_MIN_LEN)
 		client -> packet_length = BOOTP_MIN_LEN;
 	option_state_dereference (&options, MDL);
@@ -2056,10 +2098,17 @@ void make_release (client, lease)
 	/* Set up the option buffer... */
 	client -> packet_length =
 		cons_options ((struct packet *)0, &client -> packet,
-			      (struct lease *)0, client, 0,
-			      (struct option_state *)0, options,
-			      &global_scope, 0, 0, 0, (struct data_string *)0,
+			      (struct lease *)0, client,
+			      /* maximum packet size */1500,
+			      (struct option_state *)0,
+			      options,
+			      /* scope */ &global_scope,
+			      /* overload */ 0,
+			      /* terminate */0,
+			      /* bootpp    */0,
+			      (struct data_string *)0,
 			      client -> config -> vendor_space_name);
+
 	if (client -> packet_length < BOOTP_MIN_LEN)
 		client -> packet_length = BOOTP_MIN_LEN;
 	option_state_dereference (&options, MDL);
@@ -2781,6 +2830,8 @@ void do_release(client)
 				client -> destination.len = 4;
 			} else
 				client -> destination = iaddr_broadcast;
+
+			data_string_forget (&ds, MDL);
 		} else
 			client -> destination = iaddr_broadcast;
 		client -> first_sending = cur_time;
@@ -2960,7 +3011,8 @@ isc_result_t dhcp_set_control_state (control_object_state_t oldstate,
 		  case server_shutdown:
 		    if (client -> active &&
 			client -> active -> expiry > cur_time) {
-			    client_dns_update (client, 0);
+			    if (client -> config -> do_forward_update)
+				    client_dns_update (client, 0, 0);
 			    do_release (client);
 		    }
 		    break;
@@ -2980,9 +3032,30 @@ isc_result_t dhcp_set_control_state (control_object_state_t oldstate,
 	return ISC_R_SUCCESS;
 }
 
+/* Called after a timeout if the DNS update failed on the previous try.
+   Retries the update, and if it times out, schedules a retry after
+   ten times as long of a wait. */
+
+void client_dns_update_timeout (void *cp)
+{
+	struct client_state *client = cp;
+	isc_result_t status;
+
+	if (client -> active) {
+		status = client_dns_update (client, 1,
+					    (client -> active -> renewal -
+					     cur_time));
+		if (status == ISC_R_TIMEDOUT) {
+			client -> dns_update_timeout *= 10;
+			add_timeout (cur_time + client -> dns_update_timeout,
+				     client_dns_update_timeout, client, 0, 0);
+		}
+	}
+}
+
 /* See if we should do a DNS update, and if so, do it. */
 
-void client_dns_update (struct client_state *client, int addp)
+isc_result_t client_dns_update (struct client_state *client, int addp, int ttl)
 {
 	struct data_string ddns_fqdn, ddns_fwd_name,
 	       ddns_dhcid, client_identifier;
@@ -2994,11 +3067,11 @@ void client_dns_update (struct client_state *client, int addp)
 	/* If we didn't send an FQDN option, we certainly aren't going to
 	   be doing an update. */
 	if (!client -> sent_options)
-		return;
+		return ISC_R_SUCCESS;
 
 	/* If we don't have a lease, we can't do an update. */
 	if (!client -> active)
-		return;
+		return ISC_R_SUCCESS;
 
 	/* If we set the no client update flag, don't do the update. */
 	if ((oc = lookup_option (&fqdn_universe, client -> sent_options,
@@ -3008,7 +3081,7 @@ void client_dns_update (struct client_state *client, int addp)
 					   client -> sent_options,
 					   (struct option_state *)0,
 					   &global_scope, oc, MDL))
-		return;
+		return ISC_R_SUCCESS;
 	
 	/* If we set the "server, please update" flag, or didn't set it
 	   to false, don't do the update. */
@@ -3019,7 +3092,7 @@ void client_dns_update (struct client_state *client, int addp)
 					   client -> sent_options,
 					   (struct option_state *)0,
 					   &global_scope, oc, MDL))
-		return;
+		return ISC_R_SUCCESS;
 	
 	/* If no FQDN option was supplied, don't do the update. */
 	memset (&ddns_fwd_name, 0, sizeof ddns_fwd_name);
@@ -3030,7 +3103,7 @@ void client_dns_update (struct client_state *client, int addp)
 				    client -> sent_options,
 				    (struct option_state *)0,
 				    &global_scope, oc, MDL))
-		return;
+		return ISC_R_SUCCESS;
 
 	/* Make a dhcid string out of either the client identifier,
 	   if we are sending one, or the interface's MAC address,
@@ -3056,7 +3129,7 @@ void client_dns_update (struct client_state *client, int addp)
 				    client -> interface -> hw_address.hlen);
 	if (!result) {
 		data_string_forget (&ddns_fwd_name, MDL);
-		return;
+		return ISC_R_SUCCESS;
 	}
 
 	/* Start the resolver, if necessary. */
@@ -3074,14 +3147,16 @@ void client_dns_update (struct client_state *client, int addp)
 		if (addp)
 			rcode = ddns_update_a (&ddns_fwd_name,
 					       client -> active -> address,
-					       &ddns_dhcid, DEFAULT_DDNS_TTL,
+					       &ddns_dhcid, ttl,
 					       1);
 		else
 			rcode = ddns_remove_a (&ddns_fwd_name,
 					       client -> active -> address,
 					       &ddns_dhcid);
-	}
+	} else
+		rcode = ISC_R_FAILURE;
 	
 	data_string_forget (&ddns_fwd_name, MDL);
 	data_string_forget (&ddns_dhcid, MDL);
+	return rcode;
 }

@@ -3,46 +3,37 @@
    Domain Name Service subroutines. */
 
 /*
- * Copyright (c) 2001 Internet Software Consortium.
- * All rights reserved.
+ * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2001-2003 by Internet Software Consortium
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
  *
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of The Internet Software Consortium nor the names
- *    of its contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
+ * THE SOFTWARE IS PROVIDED "AS IS" AND ISC DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS.  IN NO EVENT SHALL ISC BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT
+ * OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * THIS SOFTWARE IS PROVIDED BY THE INTERNET SOFTWARE CONSORTIUM AND
- * CONTRIBUTORS ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES,
- * INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED.  IN NO EVENT SHALL THE INTERNET SOFTWARE CONSORTIUM OR
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF
- * USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
- * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
- * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
- * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- * SUCH DAMAGE.
+ *   Internet Systems Consortium, Inc.
+ *   950 Charter Street
+ *   Redwood City, CA 94063
+ *   <info@isc.org>
+ *   http://www.isc.org/
  *
- * This software has been written for the Internet Software Consortium
+ * This software has been written for Internet Systems Consortium
  * by Ted Lemon in cooperation with Nominum, Inc.
- * To learn more about the Internet Software Consortium, see
+ * To learn more about Internet Systems Consortium, see
  * ``http://www.isc.org/''.  To learn more about Nominum, Inc., see
  * ``http://www.nominum.com''.
  */
 
 #ifndef lint
 static char copyright[] =
-"$Id: dns.c,v 1.36 2001/06/27 00:29:46 mellon Exp $ Copyright (c) 2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dns.c,v 1.37 2005/03/17 20:14:58 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -130,8 +121,7 @@ static char copyright[] =
  * supported.
  */
 
-struct hash_table *tsig_key_hash;
-struct hash_table *dns_zone_hash;
+dns_zone_hash_t *dns_zone_hash;
 
 #if defined (NSUPDATE)
 isc_result_t find_tsig_key (ns_tsig_key **key, const char *zname,
@@ -202,11 +192,7 @@ isc_result_t enter_dns_zone (struct dns_zone *zone)
 			dns_zone_dereference (&tz, MDL);
 		}
 	} else {
-		dns_zone_hash =
-			new_hash ((hash_reference)dns_zone_reference,
-				  (hash_dereference)dns_zone_dereference, 1,
-				  MDL);
-		if (!dns_zone_hash)
+		if (!dns_zone_new_hash (&dns_zone_hash, 1, MDL))
 			return ISC_R_NOMEMORY;
 	}
 	dns_zone_hash_add (dns_zone_hash, zone -> name, 0, zone, MDL);
@@ -263,7 +249,7 @@ int dns_zone_dereference (ptr, file, line)
 	dns_zone = *ptr;
 	*ptr = (struct dns_zone *)0;
 	--dns_zone -> refcnt;
-	rc_register (file, line, ptr, dns_zone, dns_zone -> refcnt, 1);
+	rc_register (file, line, ptr, dns_zone, dns_zone -> refcnt, 1, RC_MISC);
 	if (dns_zone -> refcnt > 0)
 		return 1;
 
@@ -544,15 +530,11 @@ isc_result_t ddns_update_a (struct data_string *ddns_fwd_name,
 
 	if (ddns_addr.len != 4)
 		return ISC_R_INVALIDARG;
-#ifndef NO_SNPRINTF
-	snprintf (ddns_address, 16, "%d.%d.%d.%d",
+
+	/* %Audit% Cannot exceed 16 bytes. %2004.06.17,Safe% */
+	sprintf (ddns_address, "%u.%u.%u.%u",
 		  ddns_addr.iabuf[0], ddns_addr.iabuf[1],
 		  ddns_addr.iabuf[2], ddns_addr.iabuf[3]);
-#else
-	sprintf (ddns_address, "%d.%d.%d.%d",
-		 ddns_addr.iabuf[0], ddns_addr.iabuf[1],
-		 ddns_addr.iabuf[2], ddns_addr.iabuf[3]);
-#endif
 
 	/*
 	 * When a DHCP client or server intends to update an A RR, it first
@@ -624,14 +606,9 @@ isc_result_t ddns_update_a (struct data_string *ddns_fwd_name,
 	 */
 	result = minires_nupdate (&resolver_state, ISC_LIST_HEAD (updqueue));
 
+#ifdef DEBUG_DNS_UPDATES
 	print_dns_status ((int)result, &updqueue);
-
-	while (!ISC_LIST_EMPTY (updqueue)) {
-		updrec = ISC_LIST_HEAD (updqueue);
-		ISC_LIST_UNLINK (updqueue, updrec, r_link);
-		minires_freeupdrec (updrec);
-	}
-
+#endif
 
 	/*
 	 * If this update operation succeeds, the updater can conclude that it
@@ -641,8 +618,12 @@ isc_result_t ddns_update_a (struct data_string *ddns_fwd_name,
 	 *   -- "Interaction between DHCP and DNS"
 	 */
 
-	if (result == ISC_R_SUCCESS)
-		return result;
+	if (result == ISC_R_SUCCESS) {
+		log_info ("Added new forward map from %.*s to %s",
+			  (int)ddns_fwd_name -> len,
+			  (const char *)ddns_fwd_name -> data, ddns_address);
+		goto error;
+	}
 
 
 	/*
@@ -658,9 +639,19 @@ isc_result_t ddns_update_a (struct data_string *ddns_fwd_name,
 	 *   -- "Interaction between DHCP and DNS"
 	 */
 
-	if (result != (rrsetp ? ISC_R_YXRRSET : ISC_R_YXDOMAIN))
-		return result;
+	if (result != (rrsetp ? ISC_R_YXRRSET : ISC_R_YXDOMAIN)) {
+		log_error ("Unable to add forward map from %.*s to %s: %s",
+			   (int)ddns_fwd_name -> len,
+			   (const char *)ddns_fwd_name -> data, ddns_address,
+			   isc_result_totext (result));
+		goto error;
+	}
 
+	while (!ISC_LIST_EMPTY (updqueue)) {
+		updrec = ISC_LIST_HEAD (updqueue);
+		ISC_LIST_UNLINK (updqueue, updrec, r_link);
+		minires_freeupdrec (updrec);
+	}
 
 	/*
 	 * DHCID RR exists, and matches client identity.
@@ -721,7 +712,27 @@ isc_result_t ddns_update_a (struct data_string *ddns_fwd_name,
 	 */
 	result = minires_nupdate (&resolver_state, ISC_LIST_HEAD (updqueue));
 
+	if (result != ISC_R_SUCCESS) {
+		if (result == YXRRSET || result == YXDOMAIN ||
+		    result == NXRRSET || result == NXDOMAIN)
+			log_error ("Forward map from %.*s to %s already in use",
+				   (int)ddns_fwd_name -> len,
+				   (const char *)ddns_fwd_name -> data,
+				   ddns_address);
+		else
+			log_error ("Can't update forward map %.*s to %s: %s",
+				   (int)ddns_fwd_name -> len,
+				   (const char *)ddns_fwd_name -> data,
+				   ddns_address, isc_result_totext (result));
+
+	} else {
+		log_info ("Added new forward map from %.*s to %s",
+			  (int)ddns_fwd_name -> len,
+			  (const char *)ddns_fwd_name -> data, ddns_address);
+	}
+#if defined (DEBUG_DNS_UPDATES)
 	print_dns_status ((int)result, &updqueue);
+#endif
 
 	/*
 	 * If this query succeeds, the updater can conclude that the current
@@ -769,16 +780,10 @@ isc_result_t ddns_remove_a (struct data_string *ddns_fwd_name,
 	if (ddns_addr.len != 4)
 		return ISC_R_INVALIDARG;
 
-#ifndef NO_SNPRINTF
-	snprintf (ddns_address, 16, "%d.%d.%d.%d",
+	/* %Audit% Cannot exceed 16 bytes. %2004.06.17,Safe% */
+	sprintf (ddns_address, "%u.%u.%u.%u",
 		  ddns_addr.iabuf[0], ddns_addr.iabuf[1],
 		  ddns_addr.iabuf[2], ddns_addr.iabuf[3]);
-#else
-	sprintf (ddns_address, "%d.%d.%d.%d",
-		 ddns_addr.iabuf[0], ddns_addr.iabuf[1],
-		 ddns_addr.iabuf[2], ddns_addr.iabuf[3]);
-#endif
-
 
 	/*
 	 * The entity chosen to handle the A record for this client (either the
@@ -868,8 +873,13 @@ isc_result_t ddns_remove_a (struct data_string *ddns_fwd_name,
 	 *   -- "Interaction between DHCP and DNS"
 	 */
 
-	if (result != ISC_R_SUCCESS)
+	if (result != ISC_R_SUCCESS) {
+		/* If the rrset isn't there, we didn't need to do the
+		   delete, which is success. */
+		if (result == ISC_R_NXRRSET || result == ISC_R_NXDOMAIN)
+			result = ISC_R_SUCCESS;	
 		goto error;
+	}
 
 	while (!ISC_LIST_EMPTY (updqueue)) {
 		updrec = ISC_LIST_HEAD (updqueue);
@@ -939,4 +949,5 @@ isc_result_t ddns_remove_a (struct data_string *ddns_fwd_name,
 
 #endif /* NSUPDATE */
 
-HASH_FUNCTIONS (dns_zone, const char *, struct dns_zone)
+HASH_FUNCTIONS (dns_zone, const char *, struct dns_zone, dns_zone_hash_t,
+		dns_zone_reference, dns_zone_dereference)
