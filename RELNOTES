@@ -41,6 +41,34 @@ only recommended for sites that are in a position to experiment, or
 for sites that need the new features.  Bug reports are
 enthusiastically solicited.
 
+		     Changes since May 7, 1999
+
+- Add LPF token ring support, contributed by Andrew Chittenden.
+
+- Fix a serious bug in some server option evaluations, where it was
+  looking for the values in the DHCP option space instead of the
+  server option space.
+
+- Prevent the server from failing to configure a client that retries
+  its initial DHCPDISCOVER too quickly.
+
+- Tweak semantics of lease limits so that if any class a client is in
+  has a limit, then the client can't get a lease just because it's
+  also in a class with no limits.
+
+- Correct an operator precedence bug in abandoned lease handling.
+
+- Provide more complete documentation for classes and correct errors
+  in existing documentation.
+
+- Fix some pointer non-debug code paths.
+
+- Add support for encode_int() operand
+
+- Fix documentation for concat operator.
+
+- Edit dhcp options manual page for consistency.
+
 		     Changes since May 6, 1999
 
 - Reverse precedence of user-supplied parameter request list so that
