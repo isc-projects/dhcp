@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dns.c,v 1.27 2000/08/03 20:59:34 neild Exp $ Copyright (c) 2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dns.c,v 1.28 2000/09/14 11:29:43 mellon Exp $ Copyright (c) 2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -138,19 +138,11 @@ isc_result_t find_tsig_key (ns_tsig_key **key, const char *zname,
 {
 	isc_result_t status;
 	ns_tsig_key *tkey;
-#if 0
-	struct dns_zone *zone;
 
-	zone = (struct dns_zone *)0;
-	status = dns_zone_lookup (&zone, zname);
-	if (status != ISC_R_SUCCESS)
-		return status;
-#else
 	if (!zone)
 		return ISC_R_NOTFOUND;
-#endif
+
 	if (!zone -> key) {
-		dns_zone_dereference (&zone, MDL);
 		return ISC_R_KEY_UNKNOWN;
 	}
 	
@@ -159,13 +151,11 @@ isc_result_t find_tsig_key (ns_tsig_key **key, const char *zname,
 	    (!zone -> key -> algorithm ||
 	     strlen (zone -> key -> algorithm) > NS_MAXDNAME) ||
 	    (!zone -> key)) {
-		dns_zone_dereference (&zone, MDL);
 		return ISC_R_INVALIDKEY;
 	}
 	tkey = dmalloc (sizeof *tkey, MDL);
 	if (!tkey) {
 	      nomem:
-		dns_zone_dereference (&zone, MDL);
 		return ISC_R_NOMEMORY;
 	}
 	memset (tkey, 0, sizeof *tkey);
