@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: conflex.c,v 1.13 1996/08/27 09:39:17 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: conflex.c,v 1.14 1996/08/28 01:26:34 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -51,6 +51,11 @@ static char copyright[] =
 
 int lexline;
 int lexchar;
+char *token_line;
+char *prev_line;
+char *cur_line;
+static char line1 [81];
+static char line2 [81];
 static int lpos;
 static int line;
 static int tlpos;
@@ -60,6 +65,12 @@ static int token;
 static int ugflag;
 static char *tval;
 static char tokbuf [1500];
+
+#ifdef OLD_LEXER
+char comments [4096];
+int comment_index;
+#endif
+
 
 static int get_char PROTO ((FILE *));
 static int get_token PROTO ((FILE *));
@@ -74,6 +85,10 @@ void new_parse (name)
 {
 	tlname = name;
 	lpos = line = 1;
+	cur_line = line1;
+	prev_line = line2;
+	token_line = cur_line;
+	cur_line [0] = prev_line [0] = 0;
 }
 
 static int get_char (cfile)
@@ -82,9 +97,21 @@ static int get_char (cfile)
 	int c = getc (cfile);
 	if (!ugflag) {
 		if (c == EOL) {
+			if (cur_line == line1) {	
+				cur_line = line2;
+				prev_line = line1;
+			} else {
+				cur_line = line2;
+				prev_line = line1;
+			}
 			line++;
 			lpos = 1;
-		} else {
+			cur_line [0] = 0;
+		} else if (c != EOF) {
+			if (lpos <= 81) {
+				cur_line [lpos - 1] = c;
+				cur_line [lpos] = 0;
+			}
 			lpos++;
 		}
 	} else
@@ -98,16 +125,27 @@ static int get_token (cfile)
 	int c;
 	int ttok;
 	static char tb [2];
-	int l, p;
+	int l, p, u;
 
 	do {
 		l = line;
 		p = lpos;
+		u = ugflag;
 
 		c = get_char (cfile);
+#ifdef OLD_LEXER
+		if (c == '\n' && p == 1 && !u
+		    && comment_index < sizeof comments)
+			comments [comment_index++] = '\n';
+#endif
+
 		if (isascii (c) && isspace (c))
 			continue;
 		if (c == '#') {
+#ifdef OLD_LEXER
+			if (comment_index < sizeof comments)
+				comments [comment_index++] = '#';
+#endif
 			skip_to_eol (cfile);
 			continue;
 		}
@@ -147,12 +185,15 @@ int next_token (rval, cfile)
 	int rv;
 
 	if (token) {
+		if (lexline != tline)
+			token_line = cur_line;
 		lexchar = tlpos;
 		lexline = tline;
 		rv = token;
 		token = 0;
 	} else {
 		rv = get_token (cfile);
+		token_line = cur_line;
 	}
 	if (rval)
 		*rval = tval;
@@ -172,6 +213,8 @@ int peek_token (rval, cfile)
 		tlpos = lexchar;
 		tline = lexline;
 		token = get_token (cfile);
+		if (lexline != tline)
+			token_line = prev_line;
 		x = lexchar; lexchar = tlpos; tlpos = x;
 		x = lexline; lexline = tline; tline = x;
 	}
@@ -191,9 +234,11 @@ static void skip_to_eol (cfile)
 		c = get_char (cfile);
 		if (c == EOF)
 			return;
+#ifdef OLD_LEXER
+		if (comment_index < sizeof (comments))
+			comments [comment_index++] = c;
+#endif
 		if (c == EOL) {
-			ungetc (c, cfile);
-			ugflag = 1;
 			return;
 		}
 	} while (1);
@@ -239,12 +284,21 @@ static int read_number (c, cfile)
 {
 	int seenx = 0;
 	int i = 0;
+	int token = NUMBER;
+
 	tokbuf [i++] = c;
 	for (; i < sizeof tokbuf; i++) {
 		c = get_char (cfile);
-		if (!seenx && c == 'x')
+		if (!seenx && c == 'x') {
 			seenx = 1;
-		else if (!isascii (c) || !isxdigit (c)) {
+#ifndef OLD_LEXER
+		} else if (isascii (c) && !isxdigit (c) &&
+			   (c == '-' || c == '_' || isalpha (c))) {
+			token = ATOM;
+		} else if (isascii (c) && !isdigit (c) && isxdigit (c)) {
+			token = NUMBER_OR_ATOM;
+#endif
+		} else if (!isascii (c) || !isxdigit (c)) {
 			ungetc (c, cfile);
 			ugflag = 1;
 			break;
@@ -257,7 +311,7 @@ static int read_number (c, cfile)
 	}
 	tokbuf [i] = 0;
 	tval = tokbuf;
-	return NUMBER;
+	return token;
 }
 
 static int read_num_or_atom (c, cfile)
@@ -355,13 +409,15 @@ static int intern (atom, dfv)
 		if (!strcasecmp (atom + 1, "ext-server"))
 			return NEXT_SERVER;
 		break;
-	      case 'p':
-		if (!strcasecmp (atom + 1, "acket"))
-			return PACKET;
-		break;
 	      case 'o':
 		if (!strcasecmp (atom + 1, "ption"))
 			return OPTION;
+		if (!strcasecmp (atom + 1, "ne-lease-per-client"))
+			return ONE_LEASE_PER_CLIENT;
+		break;
+	      case 'p':
+		if (!strcasecmp (atom + 1, "acket"))
+			return PACKET;
 		break;
 	      case 'r':
 		if (!strcasecmp (atom + 1, "ange"))
