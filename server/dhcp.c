@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.115 1999/10/07 06:42:53 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.116 1999/10/08 22:21:34 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -209,7 +209,7 @@ void dhcprequest (packet)
 				return;
 			}
 			/* Otherwise, ignore it. */
-			log_info ("%s: ignored.", msgbuf);
+			log_info ("%s: ignored (not authoritative).", msgbuf);
 			return;
 		}
 
@@ -223,7 +223,7 @@ void dhcprequest (packet)
 				nak_lease (packet, &cip);
 				return;
 			}
-			log_info ("%s: ignored.", msgbuf);
+			log_info ("%s: ignored (not authoritative).", msgbuf);
 			return;
 		}
 	}
@@ -372,7 +372,7 @@ void dhcpinform (packet)
 
 	/* If the IP source address is zero, don't respond. */
 	if (!memcmp (cip.iabuf, "\0\0\0", 4)) {
-		log_info ("%s: ignored.", msgbuf);
+		log_info ("%s: ignored (null source address).", msgbuf);
 		return;
 	}
 
@@ -384,6 +384,16 @@ void dhcpinform (packet)
 	if (!subnet) {
 		log_info ("%s: unknown subnet %s",
 			  msgbuf, inet_ntoa (packet -> raw -> giaddr));
+	}
+
+	/* We don't respond to DHCPINFORM packets if we're not authoritative.
+	   It would be nice if a per-host value could override this, but
+	   there's overhead involved in checking this, so let's see how people
+	   react first. */
+	if (!subnet -> group -> authoritative) {
+		log_info ("%s: not authoritative for subnet %s",
+			  msgbuf, piaddr (subnet -> net));
+		return;
 	}
 
 	memset (&d1, 0, sizeof d1);
