@@ -107,6 +107,16 @@ void parse_statement (cfile)
 			parse_subnet_statement (cfile, &bc);
 		}
 		break;
+	      case VENDOR_CLASS:
+		if (!setjmp (bc)) {
+			parse_class_statement (cfile, &bc, 0);
+		}
+		break;
+	      case USER_CLASS:
+		if (!setjmp (bc)) {
+			parse_class_statement (cfile, &bc, 1);
+		}
+		break;
 	      default:
 		parse_warn ("expecting a declaration.");
 		skip_to_semi (cfile);
@@ -209,6 +219,72 @@ char *parse_host_name (cfile, bc)
 	return s;
 }
 
+/* class_statement :== VENDOR_CLASS STRING class_declarations SEMI
+   		     | USER_CLASS class_declarations SEMI
+   class_declarations :== <nil> | option_declaration
+			        | option_declarations option_declaration SEMI
+*/
+
+void parse_class_statement (cfile, bc, type)
+	FILE *cfile;
+	jmp_buf *bc;
+	int type;
+{
+	char *val;
+	int token;
+	struct class *class;
+
+	token = next_token (&val, cfile);
+	if (token != STRING) {
+		parse_warn ("Expecting class name");
+		skip_to_semi (cfile);
+		longjmp (*bc, 1);
+	}
+
+	class = add_class (type, val);
+	if (!class)
+		error ("No memory for new class");
+
+	do {
+		token = peek_token (&val, cfile);
+		if (token == SEMI) {
+			token = next_token (&val, cfile);
+			break;
+		} else {
+			parse_class_decl (cfile, bc, class);
+		}
+	} while (1);
+}
+
+/* class_declaration :== filename_declaration
+   		       | option_declaration
+		       | DEFAULT_LEASE_TIME NUMBER
+		       | MAX_LEASE_TIME NUMBER */
+
+void parse_class_decl (cfile, bc, class)
+	FILE *cfile;
+	jmp_buf *bc;
+	struct class *class;
+{
+	char *val;
+	int token;
+
+	token = next_token (&val, cfile);
+	switch (token) {
+	      case FILENAME:
+		class -> filename = parse_filename_decl (cfile, bc);
+		break;
+	      case OPTION:
+		parse_option_decl (cfile, bc, class -> options);
+		break;
+	      default:
+		parse_warn ("expecting a dhcp option declaration.");
+		skip_to_semi (cfile);
+		longjmp (*bc, 1);
+		break;
+	}
+}
+
 /* subnet_statement :== SUBNET net NETMASK netmask declarations SEMI
    host_declarations :== <nil> | host_declaration
 			       | host_declarations host_declaration SEMI */
@@ -294,7 +370,10 @@ void parse_subnet_decl (cfile, bc, decl)
 			longjmp (*bc, 1);
 		}
 		convert_num ((unsigned char *)&decl -> default_lease_time,
-			     val, 10, 4);
+			     val, 10, 32);
+		/* Unswap the number - convert_num returns stuff in NBO. */
+		decl -> default_lease_time =
+			ntohl (decl -> default_lease_time);
 		break;
 
 	      case MAX_LEASE_TIME:
@@ -305,7 +384,10 @@ void parse_subnet_decl (cfile, bc, decl)
 			longjmp (*bc, 1);
 		}
 		convert_num ((unsigned char *)&decl -> max_lease_time,
-			     val, 10, 4);
+			     val, 10, 32);
+		/* Unswap the number - convert_num returns stuff in NBO. */
+		decl -> max_lease_time =
+			ntohl (decl -> max_lease_time);
 		break;
 
 	      default:
@@ -333,7 +415,7 @@ void parse_host_decl (cfile, bc, decl)
 		parse_hardware_decl (cfile, bc, decl);
 		break;
 	      case FILENAME:
-		parse_filename_decl (cfile, bc, decl);
+		decl -> filename = parse_filename_decl (cfile, bc);
 		break;
 	      case FIXED_ADDR:
 		parse_fixed_addr_decl (cfile, bc, decl);
@@ -429,10 +511,9 @@ struct hardware parse_hardware_addr (cfile, bc)
 
 /* filename_decl :== FILENAME STRING */
 
-void parse_filename_decl (cfile, bc, decl)
+char *parse_filename_decl (cfile, bc)
 	FILE *cfile;
 	jmp_buf *bc;
-	struct host_decl *decl;
 {
 	char *val;
 	int token;
@@ -448,7 +529,7 @@ void parse_filename_decl (cfile, bc, decl)
 	if (!s)
 		error ("no memory for filename.");
 	strcpy (s, val);
-	decl -> filename = s;
+	return s;
 }
 
 /* ip_addr_or_hostname :== ip_address | hostname
@@ -1133,7 +1214,7 @@ void convert_num (buf, str, base, size)
 	if (negative)
 		max = (1 << (size - 1));
 	else
-		max = (1 << size) - 1;
+		max = (1 << (size - 1)) + ((1 << (size - 1)) - 1);
 	if (val > max) {
 		switch (base) {
 		      case 8:
