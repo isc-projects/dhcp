@@ -3,7 +3,7 @@
    Routines for manipulating parse trees... */
 
 /*
- * Copyright (c) 1995, 1996 The Internet Software Consortium.
+ * Copyright (c) 1995, 1996, 1997 The Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.9 1996/08/27 09:55:50 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.10 1997/05/09 08:14:57 mellon Exp $ Copyright (c) 1995, 1996, 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -314,9 +314,12 @@ static TIME do_host_lookup (bufix, bufp, bufcount, dns)
 	/* Otherwise, look it up... */
 	h = gethostbyname (dns -> hostname);
 	if (!h) {
+#ifndef NO_H_ERRNO
 		switch (h_errno) {
 		      case HOST_NOT_FOUND:
+#endif
 			warn ("%s: host unknown.", dns -> hostname);
+#ifndef NO_H_ERRNO
 			break;
 		      case TRY_AGAIN:
 			warn ("%s: temporary name server failure",
@@ -329,6 +332,7 @@ static TIME do_host_lookup (bufix, bufp, bufcount, dns)
 			warn ("%s: no A record associated with address",
 			      dns -> hostname);
 		}
+#endif /* !NO_H_ERRNO */
 
 		/* Okay to try again after a minute. */
 		return cur_time + 60;
