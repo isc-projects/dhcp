@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: conflex.c,v 1.62 1999/10/21 03:08:00 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: conflex.c,v 1.63 2000/01/05 17:59:12 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -278,19 +278,92 @@ static enum dhcp_token read_string (cfile)
 	int i;
 	int bs = 0;
 	int c;
+	int value;
+	int hex;
 
 	for (i = 0; i < sizeof cfile -> tokbuf; i++) {
+	      again:
 		c = get_char (cfile);
 		if (c == EOF) {
 			parse_warn (cfile, "eof in string constant");
 			break;
 		}
-		if (bs) {
+		if (bs == 1) {
+			switch (c) {
+			      case 't':
+				cfile -> tokbuf [i] = '\t';
+				break;
+			      case 'r':
+				cfile -> tokbuf [i] = '\r';
+				break;
+			      case 'n':
+				cfile -> tokbuf [i] = '\n';
+				break;
+			      case 'b':
+				cfile -> tokbuf [i] = '\b';
+				break;
+			      case '0':
+			      case '1':
+			      case '2':
+			      case '3':
+				hex = 0;
+				value = c - '0';
+				++bs;
+				goto again;
+			      case 'x':
+				hex = 1;
+				value = 0;
+				++bs;
+				goto again;
+			      default:
+				cfile -> tokbuf [i] = c;
+				bs = 0;
+				break;
+			}
 			bs = 0;
-			cfile -> tokbuf [i] = c;
-		} else if (c == '\\')
+		} else if (bs > 1) {
+			if (hex) {
+				if (c >= '0' && c <= '9') {
+					value = value * 16 + (c - '0');
+				} else if (c >= 'a' && c <= 'f') {
+					value = value * 16 + (c - 'a' + 10);
+				} else if (c >= 'A' && c <= 'F') {
+					value = value * 16 + (c - 'A' + 10);
+				} else {
+					parse_warn (cfile,
+						    "invalid hex digit: %x",
+						    c);
+					bs = 0;
+					continue;
+				}
+				if (++bs == 4) {
+					cfile -> tokbuf [i] = value;
+					bs = 0;
+				} else
+					goto again;
+			} else {
+				if (c >= '0' && c <= '9') {
+					value = value * 8 + (c - '0');
+				} else {
+				    if (value != 0) {
+					parse_warn (cfile,
+						    "invalid octal digit %x",
+						    c);
+					continue;
+				    } else
+					cfile -> tokbuf [i] = 0;
+				    bs = 0;
+				}
+				if (++bs == 4) {
+					cfile -> tokbuf [i] = value;
+					bs = 0;
+				} else
+					goto again;
+			}
+		} else if (c == '\\') {
 			bs = 1;
-		else if (c == '"')
+			goto again;
+		} else if (c == '"')
 			break;
 		else
 			cfile -> tokbuf [i] = c;
@@ -409,6 +482,8 @@ static enum dhcp_token intern (atom, dfv)
 			return TOKEN_ADD;
 		if (!strcasecmp (atom + 1, "ll"))
 			return ALL;
+		if (!strcasecmp (atom + 1, "t"))
+			return AT;
 		if (!strcasecmp (atom + 1, "rray"))
 			return ARRAY;
 		break;
@@ -471,6 +546,8 @@ static enum dhcp_token intern (atom, dfv)
 			return DENY;
 		if (!strcasecmp (atom + 1, "eleted"))
 			return DELETED;
+		if (!strcasecmp (atom + 1, "elete"))
+			return TOKEN_DELETE;
 		if (!strncasecmp (atom + 1, "efault", 6)) {
 			if (!atom [7])
 				return DEFAULT;
@@ -538,6 +615,8 @@ static enum dhcp_token intern (atom, dfv)
 			return GET_LEASE_HOSTNAMES;
 		break;
 	      case 'h':
+		if (!strcasecmp (atom + 1, "ba"))
+			return HBA;
 		if (!strcasecmp (atom + 1, "ost"))
 			return HOST;
 		if (!strcasecmp (atom + 1, "ost-decl-name"))
@@ -562,6 +641,8 @@ static enum dhcp_token intern (atom, dfv)
 			return IDENTIFIER;
 		if (!strcasecmp (atom + 1, "f"))
 			return IF;
+		if (!strcasecmp (atom + 1, "s"))
+			return IS;
 		if (!strcasecmp (atom + 1, "gnore"))
 			return IGNORE;
 		break;
@@ -587,6 +668,8 @@ static enum dhcp_token intern (atom, dfv)
 				return MAX_TRANSMIT_IDLE;
 			if (!strcasecmp (atom + 4, "response-delay"))
 				return MAX_RESPONSE_DELAY;
+			if (!strcasecmp (atom + 5, "unacked-updates"))
+				return MAX_UNACKED_UPDATES;
 		}
 		if (!strncasecmp (atom + 1, "in-", 3)) {
 			if (!strcasecmp (atom + 4, "lease-time"))
@@ -608,6 +691,8 @@ static enum dhcp_token intern (atom, dfv)
 			return MEMBERS;
 		if (!strcasecmp (atom + 1, "y"))
 			return MY;
+		if (!strcasecmp (atom + 1, "clt"))
+			return MCLT;
 		break;
 	      case 'n':
 		if (!strcasecmp (atom + 1, "ormal"))
@@ -622,6 +707,10 @@ static enum dhcp_token intern (atom, dfv)
 			return NEXT_SERVER;
 		if (!strcasecmp (atom + 1, "ot"))
 			return TOKEN_NOT;
+		if (!strcasecmp (atom + 1, "o"))
+			return NO;
+		if (!strcasecmp (atom + 1, "s-update"))
+			return NS_UPDATE;
 		break;
 	      case 'o':
 		if (!strcasecmp (atom + 1, "r"))
@@ -634,6 +723,8 @@ static enum dhcp_token intern (atom, dfv)
 			return ONE_LEASE_PER_CLIENT;
 		if (!strcasecmp (atom + 1, "f"))
 			return OF;
+		if (!strcasecmp (atom + 1, "wner"))
+			return OWNER;
 		break;
 	      case 'p':
 		if (!strcasecmp (atom + 1, "repend"))
@@ -731,6 +822,8 @@ static enum dhcp_token intern (atom, dfv)
 			return SPACE;
 		if (!strcasecmp (atom + 1, "tatic"))
 			return STATIC;
+		if (!strcasecmp (atom + 1, "plit"))
+		    return SPLIT;
 		break;
 	      case 't':
 		if (!strcasecmp (atom + 1, "imestamp"))
@@ -741,6 +834,10 @@ static enum dhcp_token intern (atom, dfv)
 			return TOKEN_RING;
 		if (!strcasecmp (atom + 1, "ext"))
 			return TEXT;
+		if (!strcasecmp (atom + 1, "stp"))
+			return TSTP;
+		if (!strcasecmp (atom + 1, "sfp"))
+			return TSFP;
 		break;
 	      case 'u':
 		if (!strcasecmp (atom + 1, "nsigned"))
@@ -768,6 +865,8 @@ static enum dhcp_token intern (atom, dfv)
 			return AUTHENTICATED;
 		if (!strcasecmp (atom + 1, "pdated-dns-rr"))
 			return UPDATED_DNS_RR;
+		if (!strcasecmp (atom + 1, "pdate"))
+			return UPDATE;
 		break;
 	      case 'v':
 		if (!strcasecmp (atom + 1, "endor-class"))
