@@ -1,5 +1,5 @@
 	      Internet Systems Consortium DHCP Distribution
-			     Version 3.0.1
+			   Version 3.0.1rc14
 			     June 09, 2004
 
 			     Release Notes
@@ -48,9 +48,9 @@ and for prodding me into improving it.
 ! CAN-2004-0460 - CERT VU#317350: Five stack overflow exploits were closed
   in logging messages with excessively long hostnames provided by the
   clients.  It is highly probable that these could have been used by
-  attackers to gain arbitrary root access on systems using ISC DHCP.
-  Special thanks to Gregory Duchemin for both finding and solving the
-  problem.
+  attackers to gain arbitrary root access on systems using ISC DHCP 3.0.1
+  release candidates 12 or 13.  Special thanks to Gregory Duchemin for
+  both finding and solving the problem.
 
 ! CAN-2004-0461 - CERT VU#654390: Once the above was closed, an opening
   in log_*() functions was evidented, on some specific platforms where
@@ -61,6 +61,8 @@ and for prodding me into improving it.
   not known to provide one (see includes/cf/[arch].h).  If you experience
   linking problems with snprintf/vsnprintf or 'isc_print_' functions, this
   is where to look.
+
+- Compilation on hpux 11.11 was repaired.
 
 - 'The cross-compile bug fix' was backed out.
 

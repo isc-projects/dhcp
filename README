@@ -1,5 +1,5 @@
 	       Internet Systems Consortium DHCP Distribution
-			     Version 3.0.1
+			   Version 3.0.1rc14
 			     June 09, 2004
 
 			      README FILE
@@ -96,9 +96,8 @@ system.
 
 			    RELEASE STATUS
 
-This is version 3.0.1 of the ISC DHCP Distribution.  There are a few
-non-critical bugs remaining which will be addressed in future releases
-of 3.0.2.
+This is fourteenth release candidate of version 3.0.1 of the ISC DHCP
+Distribution.  
 
 In this release, the server and relay agent are currently fully
 functional on NetBSD, Linux systems with kernel version 2.2 or later,
@@ -141,14 +140,14 @@ information.   On Digital Unix, type ``man pfilt''.
 To build the DHCP Distribution, unpack the compressed tar file using
 the tar utility and the gzip command - type something like:
 
-	zcat dhcp-3.0.1.tar.gz |tar xvf -
+	zcat dhcp-3.0.1rc14.tar.gz |tar xvf -
 
 On BSD/OS, you have to type gzcat, not zcat, and you may run into
 similar problems on other operating systems.
 
 			    CONFIGURING IT
 
-Now, cd to the dhcp-3.0.1 subdirectory that you've just
+Now, cd to the dhcp-3.0.1rc14 subdirectory that you've just
 created and configure the source tree by typing:
 
 		./configure
@@ -506,8 +505,8 @@ PLEASE DO NOT REPORT BUGS IN OLD SOFTWARE RELEASES!  Fetch the latest
 release and see if the bug is still in that version of the software,
 and if it's not, _then_ report it.  It's okay to report bugs in the
 latest patchlevel of a major version that's not the most recent major
-version, though - for example, if you're running 3.0.1, you don't have
-to upgrade to a 3.0.2rc (release candidate) before you can report bugs.
+version, though - for example, if you're running 3.0pl2, you don't have
+to upgrade to a 3.0.1rc (release candidate) before you can report bugs.
 
 PLEASE DO NOT REPORT BUGS IF YOU ARE RUNNING A VERSION OF THE ISC
 DHCP DISTRIBUTION THAT YOU DIDN'T GET FROM THE ISC!   Free operating
