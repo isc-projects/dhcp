@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.143.2.14 2002/03/12 06:47:56 mellon Exp $ Copyright (c) 1995-2002 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.143.2.15 2002/11/03 04:38:57 dhankins Exp $ Copyright (c) 1995-2002 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1263,9 +1263,6 @@ void parse_pool_statement (cfile, group, type)
 		log_fatal ("no memory for pool: %s",
 			   isc_result_totext (status));
 
-	if (!clone_group (&pool -> group, group, MDL))
-		log_fatal ("can't clone pool group.");
-
 	if (type == SUBNET_DECL)
 		shared_network_reference (&pool -> shared_network,
 					  group -> subnet -> shared_network,
@@ -1273,6 +1270,9 @@ void parse_pool_statement (cfile, group, type)
 	else
 		shared_network_reference (&pool -> shared_network,
 					  group -> shared_network, MDL);
+
+	if (!clone_group (&pool -> group, pool -> shared_network -> group, MDL))
+		log_fatal ("can't clone pool group.");
 
 #if defined (FAILOVER_PROTOCOL)
 	/* Inherit the failover peer from the shared network. */
@@ -1994,15 +1994,15 @@ int parse_class_declaration (cp, cfile, group, type)
 				skip_to_semi (cfile);
 				break;
 			}
+			token = next_token (&val, (unsigned *)0, cfile);
+			token = peek_token (&val, (unsigned *)0, cfile);
+			if (token != IF)
+				goto submatch;
 			if (class -> expr) {
 				parse_warn (cfile, "can't override match.");
 				skip_to_semi (cfile);
 				break;
 			}
-			token = next_token (&val, (unsigned *)0, cfile);
-			token = peek_token (&val, (unsigned *)0, cfile);
-			if (token != IF)
-				goto submatch;
 			token = next_token (&val, (unsigned *)0, cfile);
 			if (!parse_boolean_expression (&class -> expr, cfile,
 						       &lose)) {
