@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.192.2.15 2001/10/04 22:21:00 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.192.2.16 2001/10/26 21:37:48 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1315,6 +1315,19 @@ void nak_lease (packet, cip)
 			data_string_forget (&data, MDL);
 		} else
 			goto use_primary;
+	}
+
+	/* If there were agent options in the incoming packet, return
+	   them. */
+	if (packet -> raw -> giaddr.s_addr &&
+	    packet -> options -> universe_count > agent_universe.index &&
+	    packet -> options -> universes [agent_universe.index]) {
+		option_chain_head_reference
+		    ((struct option_chain_head **)
+		     &(options -> universes [agent_universe.index]),
+		     (struct option_chain_head *)
+		     packet -> options -> universes [agent_universe.index],
+		     MDL);
 	}
 
 	/* Do not use the client's requested parameter list. */
