@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: stables.c,v 1.25.2.7 2002/11/17 02:29:32 dhankins Exp $ Copyright (c) 1995-2002 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: stables.c,v 1.25.2.8 2002/12/13 04:58:52 dhankins Exp $ Copyright (c) 1995-2002 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -440,7 +440,7 @@ struct option agent_options [256] = {
 	{ "unknown-252", "X",				&agent_universe, 252 },
 	{ "unknown-253", "X",				&agent_universe, 253 },
 	{ "unknown-254", "X",				&agent_universe, 254 },
-	{ "option-end", "e",				&agent_universe, 255 },
+	{ "unknown-end", "e",				&agent_universe, 255 },
 };
 
 struct universe server_universe;
@@ -464,9 +464,9 @@ struct option server_options [256] = {
 	{ "server-name", "t",				&server_universe, 16 },
 	{ "next-server", "I",				&server_universe, 17 },
 	{ "authoritative", "f",				&server_universe, 18 },
-	{ "vendor-unknown-space", "U",			&server_universe, 19 },
+	{ "vendor-option-space", "U",			&server_universe, 19 },
 	{ "always-reply-rfc1048", "f",			&server_universe, 20 },
-	{ "site-unknown-space", "X",			&server_universe, 21 },
+	{ "site-option-space", "X",			&server_universe, 21 },
 	{ "always-broadcast", "f",			&server_universe, 22 },
 	{ "ddns-domainname", "t",			&server_universe, 23 },
 	{ "ddns-hostname", "t",				&server_universe, 24 },
