@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.167 2000/09/14 12:15:33 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.168 2000/10/10 23:07:24 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -832,44 +832,6 @@ void dhcpinform (packet, ms_nulltp)
 		}
 	}
 
-	/* Make an encapsulation for the NWIP suboptions if the client
-	   asked for them. */
-	i = DHO_NWIP_SUBOPTIONS;
-	if (!lookup_option (&dhcp_universe, options, i)) {
-		oc = (struct option_cache *)0;
-		if (option_cache_allocate (&oc, MDL)) {
-			memset (&d1, 0, sizeof d1);
-			d1.data = (const unsigned char *)"nwip";
-			d1.len = 4;
-			if (make_encapsulation (&oc -> expression, &d1)) {
-				oc -> option = dhcp_universe.options [i];
-				save_option (&dhcp_universe, options, oc);
-			}
-			option_cache_dereference (&oc, MDL);
-		}
-	}
-
-	/* If we've been given a vendor option space, and there's something
-	   in it, and we weren't given a vendor-encapsulated-options option,
-	   then cons one up. */
-	i = DHO_VENDOR_ENCAPSULATED_OPTIONS;
-	j = SV_VENDOR_OPTION_SPACE;
-	if (!lookup_option (&dhcp_universe, options, i) &&
-	    (oc = lookup_option (&server_universe, options, j)) &&
-	    evaluate_option_cache (&d1, packet, (struct lease *)0,
-				   packet -> options, options,
-				   &global_scope, oc, MDL)) {
-		oc = (struct option_cache *)0;
-		if (option_cache_allocate (&oc, MDL)) {
-			if (make_encapsulation (&oc -> expression, &d1)) {
-				oc -> option = dhcp_universe.options [i];
-				save_option (&dhcp_universe, options, oc);
-			}
-			option_cache_dereference (&oc, MDL);
-		}
-		data_string_forget (&d1, MDL);
-	}
-
 	/* If a site option space has been specified, use that for
 	   site option codes. */
 	i = SV_SITE_OPTION_SPACE;
@@ -943,7 +905,8 @@ void dhcpinform (packet, ms_nulltp)
 		cons_options (packet, outgoing.raw, (struct lease *)0,
 			      0, packet -> options, options, &global_scope,
 			      0, nulltp, 0,
-			      prl.len ? &prl : (struct data_string *)0);
+			      prl.len ? &prl : (struct data_string *)0,
+			      (char *)0);
 	option_state_dereference (&options, MDL);
 	data_string_forget (&prl, MDL);
 
@@ -1093,7 +1056,7 @@ void nak_lease (packet, cip)
 	outgoing.packet_length =
 		cons_options (packet, outgoing.raw, (struct lease *)0,
 			      0, packet -> options, options, &global_scope,
-			      0, 0, 0, (struct data_string *)0);
+			      0, 0, 0, (struct data_string *)0, (char *)0);
 	option_state_dereference (&options, MDL);
 
 /*	memset (&raw.ciaddr, 0, sizeof raw.ciaddr);*/
@@ -1218,10 +1181,12 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 
 	/* Steal the agent options from the packet. */
 	if (packet -> options -> universes [agent_universe.index]) {
-		state -> options -> universes [agent_universe.index] =
-			packet -> options -> universes [agent_universe.index];
-		packet -> options -> universes [agent_universe.index] =
-			(struct agent_options *)0;
+	    option_state_reference
+		    ((struct option_state **)
+		     &(state -> options -> universes [agent_universe.index]),
+		     (struct option_state *)
+		     packet -> options -> universes [agent_universe.index],
+		     MDL);
 	}
 
 	/* If we are offering a lease that is still currently valid, preserve
@@ -2123,46 +2088,6 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 		}
 	}
 
-	/* Make an encapsulation for the NWIP suboptions if the client
-	   asked for them. */
-	i = DHO_NWIP_SUBOPTIONS;
-	if (!(oc = lookup_option (&dhcp_universe, state -> options, i))) {
-		oc = (struct option_cache *)0;
-		if (option_cache_allocate (&oc, MDL)) {
-			memset (&d1, 0, sizeof d1);
-			d1.data = (const unsigned char *)"nwip";
-			d1.len = 4;
-			if (make_encapsulation (&oc -> expression, &d1)) {
-				oc -> option = dhcp_universe.options [i];
-				save_option (&dhcp_universe,
-					     state -> options, oc);
-			}
-			option_cache_dereference (&oc, MDL);
-		}
-	}
-
-	/* If we've been given a vendor option space, and there's something
-	   in it, and we weren't given a vendor-encapsulated-options option,
-	   then cons one up. */
-	i = DHO_VENDOR_ENCAPSULATED_OPTIONS;
-	j = SV_VENDOR_OPTION_SPACE;
-	if (!lookup_option (&dhcp_universe, state -> options, i) &&
-	    (oc = lookup_option (&server_universe, state -> options, j)) &&
-	    evaluate_option_cache (&d1, packet, lease,
-				   packet -> options, state -> options,
-				   &lease -> scope, oc, MDL)) {
-		oc = (struct option_cache *)0;
-		if (option_cache_allocate (&oc, MDL)) {
-			if (make_encapsulation (&oc -> expression, &d1)) {
-				oc -> option = dhcp_universe.options [i];
-				save_option (&dhcp_universe,
-					     state -> options, oc);
-			}
-			option_cache_dereference (&oc, MDL);
-		}
-		data_string_forget (&d1, MDL);
-	}
-
 	/* If a site option space has been specified, use that for
 	   site option codes. */
 	i = SV_SITE_OPTION_SPACE;
@@ -2246,7 +2171,6 @@ void dhcp_reply (lease)
 	int i;
 	struct lease_state *state = lease -> state;
 	int nulltp, bootpp;
-	struct agent_options *a, *na;
 	struct option_tag *ot, *not;
 	struct data_string d1;
 	struct option_cache *oc;
@@ -2309,7 +2233,8 @@ void dhcp_reply (lease)
 				      state -> packet -> options,
 				      state -> options, &global_scope,
 				      bufs, nulltp, bootpp,
-				      &state -> parameter_request_list);
+				      &state -> parameter_request_list,
+				      (char *)0);
 
 	memcpy (&raw.ciaddr, &state -> ciaddr, sizeof raw.ciaddr);
 	memcpy (&raw.yiaddr, lease -> ip_addr.iabuf, 4);
@@ -3292,100 +3217,4 @@ int locate_network (packet)
 
 	/* Otherwise, fail. */
 	return 0;
-}
-
-/* Parse a Relay Agent Information option and put it at the end of the
-   list of such options on the specified packet. */
-
-int parse_agent_information_option (packet, len, data)
-	struct packet *packet;
-	int len;
-	u_int8_t *data;
-{
-	struct agent_options *a, **tail;
-	struct option_tag *t, *oth = 0, **ott = &oth;
-	u_int8_t *op = data, *max = data + len;
-
-	/* Parse the agent information option suboptions. */
-	while (op < max) {
-		/* Check for overflow. */
-		if (op + 1 == max || op + op [1] + 2 > max)
-			return 0;
-		/* Make space for this suboption. */
- 		t = (struct option_tag *)
-			dmalloc (op [1] + 1 + sizeof *t, MDL);
-		if (!t)
-			log_fatal ("no memory for option tag data.");
-
-		/* Link it in at the tail of the list. */
-		t -> next = (struct option_tag *)0;
-		*ott = t;
-		ott = &t -> next;
-		
-		/* Copy the option data in in its raw form. */
-		memcpy (t -> data, op, (unsigned)(op [1] + 2));
-		op += op [1] + 2;
-	}
-
-	/* Make an agent options structure to put on the list. */
-	a = (struct agent_options *)dmalloc (sizeof *a, MDL);
-	if (!a)
-		log_fatal ("can't allocate space for agent option structure.");
-
-	/* Find the tail of the list. */
-	for (tail = ((struct agent_options **)
-		     &packet -> options -> universes [agent_universe.index]);
-	     *tail; tail = &((*tail) -> next))
-		;
-	*tail = a;
-	a -> next = (struct agent_options *)0;
-	a -> first = oth;
-	a -> length = len;
-
-	return 1;
-}
-
-unsigned cons_agent_information_options (cfg_options, outpacket,
-					 agentix, length)
-	struct option_state *cfg_options;
-	struct dhcp_packet *outpacket;
-	unsigned agentix;
-	unsigned length;
-{
-	/* We tack any agent options onto the end of the packet after
-	   we've put it together. */
-	if (cfg_options -> universe_count > agent_universe.index &&
-	    cfg_options -> universes [agent_universe.index]) {
-	    int len = 0;
-	    struct agent_options *a;
-	    struct option_tag *o;
-
-	    /* Cycle through the options, appending them to the
-	       buffer. */
-	    for (a = ((struct agent_options *)
-		      cfg_options -> universes [agent_universe.index]);
-		 a; a = a -> next) {
-		    if (agentix + a -> length + 3 + DHCP_FIXED_LEN <=
-			dhcp_max_agent_option_packet_length) {
-			    outpacket -> options [agentix++]
-				    = DHO_DHCP_AGENT_OPTIONS;
-			    outpacket -> options [agentix++] = a -> length;
-			    for (o = a -> first; o; o = o -> next) {
-				    memcpy (&outpacket -> options [agentix],
-					    o -> data,
-					    (unsigned)(o -> data [1] + 2));
-				    agentix += o -> data [1] + 2;
-			    }
-		    }
-	    }
-
-	    /* Reterminate the packet. */
-	    outpacket -> options [agentix++] = DHO_END;
-
-	    /* Recompute the length, which may now be higher than the
-	       client can accept but should be okay for the relay agent. */
-	    return agentix + DHCP_FIXED_NON_UDP;
-	}
-
-	return length;
 }
