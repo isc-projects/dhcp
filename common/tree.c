@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.77 2000/02/15 19:39:48 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.78 2000/03/06 23:21:38 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1963,7 +1963,7 @@ int evaluate_numeric_expression (result, packet, lease,
 	struct expression *expr;
 {
 	struct data_string data;
-	int status;
+	int status, sleft, sright;
 #if defined (NSUPDATE)
 	ns_updrec *nut;
 	static struct __res_state res;
