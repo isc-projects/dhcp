@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bootp.c,v 1.34 1998/11/09 02:45:59 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bootp.c,v 1.35 1998/11/11 07:57:21 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -65,22 +65,25 @@ void bootp (packet)
 	int i;
 	struct data_string d1;
 	struct option_cache *oc;
+	char msgbuf [1024];
 
 	if (packet -> raw -> op != BOOTREQUEST)
 		return;
 
-	note ("BOOTREQUEST from %s via %s",
-	      print_hw_addr (packet -> raw -> htype,
-			     packet -> raw -> hlen,
-			     packet -> raw -> chaddr),
-	      packet -> raw -> giaddr.s_addr
-	      ? inet_ntoa (packet -> raw -> giaddr)
-	      : packet -> interface -> name);
+	sprintf (msgbuf, "BOOTREQUEST from %s via %s",
+		 print_hw_addr (packet -> raw -> htype,
+				packet -> raw -> hlen,
+				packet -> raw -> chaddr),
+		 packet -> raw -> giaddr.s_addr
+		 ? inet_ntoa (packet -> raw -> giaddr)
+		 : packet -> interface -> name);
 
 
 
-	if (!locate_network (packet))
+	if (!locate_network (packet)) {
+		note ("%s: network unknown", msgbuf);
 		return;
+	}
 
 	hp = find_hosts_by_haddr (packet -> raw -> htype,
 				  packet -> raw -> chaddr,
@@ -113,7 +116,7 @@ void bootp (packet)
 		/* If a lease has already been assigned to this client,
 		   use it. */
 		if (lease) {
-			ack_lease (packet, lease, 0, 0);
+			ack_lease (packet, lease, 0, 0, msgbuf);
 			return;
 		}
 
@@ -122,13 +125,10 @@ void bootp (packet)
 					packet -> shared_network -> pools, 0);
 		if (lease) {
 			lease -> host = host;
-			ack_lease (packet, lease, 0, 0);
+			ack_lease (packet, lease, 0, 0, msgbuf);
 			return;
 		}
-		note ("No available leases for BOOTP client %s",
-		      print_hw_addr (packet -> raw -> htype,
-				     packet -> raw -> hlen,
-				     packet -> raw -> chaddr));
+		note ("%s: no available leases", msgbuf);
 		return;
 	}
 
@@ -138,34 +138,26 @@ void bootp (packet)
 	memset (&options, 0, sizeof options);
 	
 	/* Execute the subnet statements. */
-	execute_statements_in_scope (packet, &options,
+	execute_statements_in_scope (packet, &options, &options,
 				     lease -> subnet -> group,
 				     (struct group *)0);
 	
 	/* Execute the host statements. */
-	execute_statements_in_scope (packet, &options, hp -> group,
+	execute_statements_in_scope (packet, &options, &options, hp -> group,
 				     lease -> subnet -> group);
 	
 	/* Drop the request if it's not allowed for this client. */
 	if (evaluate_boolean_option_cache (packet, &options,
 					   lookup_option (options.dhcp_hash,
 							  SV_ALLOW_BOOTP))) {
-		note ("Ignoring BOOTP client %s",
-		      print_hw_addr (packet -> raw -> htype,
-				     packet -> raw -> hlen,
-				     packet -> raw -> chaddr));
+		note ("%s: bootp disallowed", msgbuf);
 		return;
 	} 
 
 	if (evaluate_boolean_option_cache (packet, &options,
 					   lookup_option (options.dhcp_hash,
 							  SV_ALLOW_BOOTP))) {
-		note ("Declining to boot client %s",
-		      lease -> host -> name
-		      ? lease -> host -> name
-		      : print_hw_addr (packet -> raw -> htype,
-				       packet -> raw -> hlen,
-				       packet -> raw -> chaddr));
+		note ("%s: booting disallowed", msgbuf);
 		return;
 	}
 
@@ -250,6 +242,7 @@ void bootp (packet)
 	from = packet -> interface -> primary_address;
 
 	/* Report what we're doing... */
+	note ("%s", msgbuf);
 	note ("BOOTREPLY for %s to %s (%s) via %s",
 	      piaddr (ip_address), hp -> name,
 	      print_hw_addr (packet -> raw -> htype,
