@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.85 1999/10/12 16:00:18 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.86 1999/10/14 17:40:05 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1202,25 +1202,21 @@ void state_panic (cpp)
 			   yet need renewal, go into BOUND state and
 			   timeout at the renewal time. */
 			if (!script_go (client)) {
-				if (cur_time <
-				    client -> active -> renewal) {
-					client -> state = S_BOUND;
-					log_info ("bound: renewal in %s %ld.",
-						  "seconds",
-						  (long)
-						  (client -> active -> renewal
-						   - cur_time));
-					add_timeout ((client ->
-						      active -> renewal),
-						     state_bound, client);
-				} else {
-					client -> state = S_BOUND;
-					log_info ("bound: immediate renewal.");
-					state_bound (client);
-				}
-				reinitialize_interfaces ();
-				go_daemon ();
-				return;
+			    if (cur_time < client -> active -> renewal) {
+				client -> state = S_BOUND;
+				log_info ("bound: renewal in %ld %s.",
+					  (long)(client -> active -> renewal -
+						 cur_time), "seconds");
+				add_timeout (client -> active -> renewal,
+					     state_bound, client);
+			    } else {
+				client -> state = S_BOUND;
+				log_info ("bound: immediate renewal.");
+				state_bound (client);
+			    }
+			    reinitialize_interfaces ();
+			    go_daemon ();
+			    return;
 			}
 		}
 
