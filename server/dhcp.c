@@ -249,7 +249,9 @@ void nak_lease (packet)
 	}
 
 	to.sin_family = AF_INET;
+#ifdef HAVE_SIN_LEN
 	to.sin_len = sizeof to;
+#endif
 	memset (to.sin_zero, 0, sizeof to.sin_zero);
 
 	note ("Sending dhcp NAK to %s, port %d",
@@ -261,7 +263,7 @@ void nak_lease (packet)
 	if (result < 0)
 		warn ("sendto: %m");
 
-#if 0
+#ifdef DEBUG
 	dump_packet (packet);
 	dump_raw ((unsigned char *)packet -> raw, packet -> packet_length);
 	dump_packet (&outgoing);
@@ -510,9 +512,10 @@ void ack_lease (packet, lease, offer, when)
 		to.sin_port = htons (ntohs (server_port) + 1); /* XXX */
 	}
 
-	to.sin_port = htons (ntohs (server_port) + 1); /* XXX */
 	to.sin_family = AF_INET;
+#ifdef HAVE_SIN_LEN
 	to.sin_len = sizeof to;
+#endif
 	memset (to.sin_zero, 0, sizeof to.sin_zero);
 
 	note ("Sending dhcp reply to %s, port %d",
@@ -524,7 +527,7 @@ void ack_lease (packet, lease, offer, when)
 	if (result < 0)
 		warn ("sendto: %m");
 
-#if 0
+#ifdef DEBUG
 	dump_packet (packet);
 	dump_raw ((unsigned char *)packet -> raw, packet -> packet_length);
 	dump_packet (&outgoing);
