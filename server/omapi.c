@@ -29,7 +29,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: omapi.c,v 1.23 2000/01/05 18:22:58 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: omapi.c,v 1.24 2000/01/08 01:49:36 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -245,18 +245,6 @@ isc_result_t dhcp_lease_get_value (omapi_object_t *h, omapi_object_t *id,
 				(value, name, lease -> client_hostname,
 				 "dhcp_lease_get_value");
 		return ISC_R_NOTFOUND;
-	} else if (!omapi_ds_strcmp (name, "ddns-fwd-name")) {
-		if (lease -> ddns_fwd_name)
-			return omapi_make_string_value
-				(value, name, lease -> ddns_fwd_name,
-				 "dhcp_lease_get_value");
-		return ISC_R_NOTFOUND;
-	} else if (!omapi_ds_strcmp (name, "ddns-rev-name")) {
-		if (lease -> ddns_rev_name)
-			return omapi_make_string_value
-				(value, name, lease -> ddns_rev_name,
-				 "dhcp_lease_get_value");
-		return ISC_R_NOTFOUND;
 	} else if (!omapi_ds_strcmp (name, "host")) {
 		if (lease -> host)
 			return omapi_make_handle_value
@@ -326,14 +314,6 @@ isc_result_t dhcp_lease_destroy (omapi_object_t *h, const char *name)
 	if (lease -> client_hostname) {
 		free (lease -> client_hostname);
 		lease -> hostname = (char *)0;
-	}
-	if (lease -> ddns_fwd_name) {
-		free (lease -> ddns_fwd_name);
-		lease -> ddns_fwd_name = (char *)0;
-	}
-	if (lease -> ddns_rev_name) {
-		free (lease -> ddns_rev_name);
-		lease -> ddns_rev_name = (char *)0;
 	}
 	if (lease -> host)
 		omapi_object_dereference ((omapi_object_t **)&lease -> host,
@@ -466,20 +446,6 @@ isc_result_t dhcp_lease_stuff_values (omapi_object_t *c,
 	if (status != ISC_R_SUCCESS)
 		return status;
 	status = omapi_connection_put_string (c, lease -> client_hostname);
-	if (status != ISC_R_SUCCESS)
-		return status;
-
-	status = omapi_connection_put_name (c, "ddns-fwd-name");
-	if (status != ISC_R_SUCCESS)
-		return status;
-	status = omapi_connection_put_string (c, lease -> ddns_fwd_name);
-	if (status != ISC_R_SUCCESS)
-		return status;
-
-	status = omapi_connection_put_name (c, "ddns-rev-name");
-	if (status != ISC_R_SUCCESS)
-		return status;
-	status = omapi_connection_put_string (c, lease -> ddns_rev_name);
 	if (status != ISC_R_SUCCESS)
 		return status;
 
@@ -752,7 +718,8 @@ isc_result_t dhcp_group_set_value  (omapi_object_t *h,
 			if (status != ISC_R_SUCCESS)
 				return status;
 			if (!(parse_executable_statements
-			      (&group -> group -> statements, parse, &lose))) {
+			      (&group -> group -> statements, parse, &lose,
+			       context_any))) {
 				end_parse (&parse);
 				return ISC_R_BADPARSE;
 			}
@@ -1178,7 +1145,8 @@ isc_result_t dhcp_host_set_value  (omapi_object_t *h,
 			if (status != ISC_R_SUCCESS)
 				return status;
 			if (!(parse_executable_statements
-			      (&host -> group -> statements, parse, &lose))) {
+			      (&host -> group -> statements, parse, &lose,
+			       context_any))) {
 				end_parse (&parse);
 				return ISC_R_BADPARSE;
 			}
