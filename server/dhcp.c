@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.109 1999/10/01 03:25:24 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.110 1999/10/04 23:51:45 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -928,7 +928,7 @@ void ack_lease (packet, lease, offer, when, msg)
 	   network interface, and will only ever remember one lease.   So
 	   if it sends a DHCPREQUEST, and doesn't get the lease, it's already
 	   forgotten about its old lease, so we can too. */
-	if (offer == DHCPREQUEST &&
+	if (packet -> packet_type == DHCPREQUEST &&
 	    (oc = lookup_option (&server_universe, state -> options,
 				 SV_ONE_LEASE_PER_CLIENT)) &&
 	    evaluate_boolean_option_cache (packet, lease, packet -> options,
