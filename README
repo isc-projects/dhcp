@@ -1,6 +1,6 @@
 	    Internet Software Consortium DHCP Distribution
-			      Version 3
-			   October 2, 2001
+		        Version 3 Patch Level 1
+			    April 30, 2002
 
 			     README FILE
 
@@ -96,10 +96,10 @@ system.
 
 			    RELEASE STATUS
 
-This is the second beta release of version 3.0 of the ISC DHCP
-Distribution.  Development of this release is approaching the point at
-which it will be frozen, and no significant new features will be
-added.
+This is the first patch level of version 3.0 of the ISC DHCP
+Distribution.  Development is continuing rapidly towards the release
+of version 3.0.1.  Future patch levels of version 3.0 will only be
+made in the event of a serious security problem.
 
 In this release, the server and relay agent are currently fully
 functional on NetBSD, Linux systems with kernel version 2.2 or later,
@@ -142,14 +142,14 @@ information.   On Digital Unix, type ``man pfilt''.
 To build the DHCP Distribution, unpack the compressed tar file using
 the tar utility and the gzip command - type something like:
 
-	zcat dhcp-3.0.tar.gz |tar xvf -
+	zcat dhcp-3.0pl1.tar.gz |tar xvf -
 
 On BSD/OS, you have to type gzcat, not zcat, and you may run into
 similar problems on other operating systems.
 
 			    CONFIGURING IT
 
-Now, cd to the dhcp-3.0 subdirectory that you've just
+Now, cd to the dhcp-3.0pl1 subdirectory that you've just
 created and configure the source tree by typing:
 
 		./configure
