@@ -3,7 +3,7 @@
    BOOTP Protocol support. */
 
 /*
- * Copyright (c) 1995, 1996 The Internet Software Consortium.
+ * Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bootp.c,v 1.30 1998/03/17 06:18:06 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bootp.c,v 1.31 1998/06/25 03:41:03 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -58,11 +58,12 @@ void bootp (packet)
 	struct sockaddr_in to;
 	struct in_addr from;
 	struct hardware hto;
-	struct tree_cache *options [256];
+	struct option_state options;
 	struct subnet *subnet;
 	struct lease *lease;
 	struct iaddr ip_address;
 	int i;
+	struct data_string d1;
 
 	if (packet -> raw -> op != BOOTREQUEST)
 		return;
@@ -108,70 +109,6 @@ void bootp (packet)
 			}
 		}
 
-		if (host && (!host -> group -> allow_booting)) {
-			note ("Ignoring excluded BOOTP client %s",
-			      host -> name
-			      ? host -> name
-			      : print_hw_addr (packet -> raw -> htype,
-					       packet -> raw -> hlen,
-					       packet -> raw -> chaddr));
-			return;
-		}
-			
-		if (host && (!host -> group -> allow_bootp)) {
-			note ("Ignoring BOOTP request from client %s",
-			      host -> name
-			      ? host -> name
-			      : print_hw_addr (packet -> raw -> htype,
-					       packet -> raw -> hlen,
-					       packet -> raw -> chaddr));
-			return;
-		}
-			
-		/* If we've been told not to boot unknown clients,
-		   and we didn't find any host record for this client,
-		   ignore it. */
-		if (!host && !(packet -> shared_network ->
-			       group -> boot_unknown_clients)) {
-			note ("Ignoring unknown BOOTP client %s via %s",
-			      print_hw_addr (packet -> raw -> htype,
-					     packet -> raw -> hlen,
-					     packet -> raw -> chaddr),
-			      packet -> raw -> giaddr.s_addr
-			      ? inet_ntoa (packet -> raw -> giaddr)
-			      : packet -> interface -> name);
-			return;
-		}
-
-		/* If we've been told not to boot with bootp on this
-		   network, ignore it. */
-		if (!host &&
-		    !(packet -> shared_network -> group -> allow_bootp)) {
-			note ("Ignoring BOOTP request from client %s via %s",
-			      print_hw_addr (packet -> raw -> htype,
-					     packet -> raw -> hlen,
-					     packet -> raw -> chaddr),
-			      packet -> raw -> giaddr.s_addr
-			      ? inet_ntoa (packet -> raw -> giaddr)
-			      : packet -> interface -> name);
-			return;
-		}
-
-		/* If the packet is from a host we don't know and there
-		   are no dynamic bootp addresses on the network it came
-		   in on, drop it on the floor. */
-		if (!(packet -> shared_network -> group -> dynamic_bootp)) {
-		      lose:
-			note ("No applicable record for BOOTP host %s via %s",
-			      print_hw_addr (packet -> raw -> htype,
-					     packet -> raw -> hlen,
-					     packet -> raw -> chaddr),
-			      packet -> raw -> giaddr.s_addr
-			      ? inet_ntoa (packet -> raw -> giaddr)
-			      : packet -> interface -> name);
-			return;
-		}
-
 		/* If a lease has already been assigned to this client
 		   and it's still okay to use dynamic bootp on
 		   that lease, reassign it. */
@@ -208,23 +145,55 @@ void bootp (packet)
 				return;
 			}
 		}
-		goto lose;
+		note ("No dynamic leases for BOOTP client %s",
+		      print_hw_addr (packet -> raw -> htype,
+				     packet -> raw -> hlen,
+				     packet -> raw -> chaddr));
 	}
 
-	/* Make sure we're allowed to boot this client. */
-	if (hp && (!hp -> group -> allow_booting)) {
-		note ("Ignoring excluded BOOTP client %s",
-		      hp -> name);
-		return;
+	/* Run the executable statements to compute the client and server
+	   options. */
+
+	memset (&options, 0, sizeof options);
+	
+	/* Execute the subnet statements. */
+	execute_statements_in_scope (packet, &options,
+				     lease -> subnet -> group,
+				     (struct group *)0);
+	
+	/* Execute the host statements. */
+	execute_statements_in_scope (packet, &options, hp -> group,
+				     lease -> subnet -> group);
+	
+	/* Drop the request if it's not allowed for this client. */
+	if (options.server_options [SV_ALLOW_BOOTP]) {
+		d1 = evaluate_data_expression
+			(packet, (options.server_options
+				  [SV_ALLOW_BOOTP] -> expression));
+		if (d1.len && !d1.data [0]) {
+			note ("Ignoring BOOTP client %s",
+			      print_hw_addr (packet -> raw -> htype,
+					     packet -> raw -> hlen,
+					     packet -> raw -> chaddr));
+			return;
+		}
+	} 
+
+	if (options.server_options [SV_ALLOW_BOOTING]) {
+		d1 = evaluate_data_expression
+			(packet, (options.server_options
+				  [SV_ALLOW_BOOTING] -> expression));
+		if (d1.len && !d1.data [0]) {
+			note ("Declining to boot client %s",
+			      lease -> host -> name
+			      ? lease -> host -> name
+			      : print_hw_addr (packet -> raw -> htype,
+					       packet -> raw -> hlen,
+					       packet -> raw -> chaddr));
+			return;
+		}
 	}
-			
-	/* Make sure we're allowed to boot this client with bootp. */
-	if (hp && (!hp -> group -> allow_bootp)) {
-		note ("Ignoring BOOTP request from client %s",
-		      hp -> name);
-		return;
-	}
-			
+
 	/* Set up the outgoing packet... */
 	memset (&outgoing, 0, sizeof outgoing);
 	memset (&raw, 0, sizeof raw);
@@ -237,25 +206,13 @@ void bootp (packet)
 			packet -> raw -> options, DHCP_OPTION_LEN);
 		outgoing.packet_length = BOOTP_MIN_LEN;
 	} else {
-		/* Come up with a list of options that we want to send
-		   to this client.  Start with the per-subnet options,
-		   and then override those with client-specific
-		   options. */
-
-		memcpy (options, subnet -> group -> options, sizeof options);
-
-		for (i = 0; i < 256; i++) {
-			if (hp -> group -> options [i])
-				options [i] = hp -> group -> options [i];
-		}
-
 		/* Pack the options into the buffer.  Unlike DHCP, we
 		   can't pack options into the filename and server
 		   name buffers. */
 
 		outgoing.packet_length =
-			cons_options (packet, outgoing.raw, 0, options,
-				      (struct agent_options *)0, 0, 0, 1);
+			cons_options (packet,
+				      outgoing.raw, 0, &options, 0, 0, 1);
 		if (outgoing.packet_length < BOOTP_MIN_LEN)
 			outgoing.packet_length = BOOTP_MIN_LEN;
 	}
@@ -273,25 +230,40 @@ void bootp (packet)
 	memcpy (&raw.yiaddr, ip_address.iabuf, sizeof raw.yiaddr);
 
 	/* Figure out the address of the next server. */
-	if (hp  && hp -> group -> next_server.len)
-		memcpy (&raw.siaddr, hp -> group -> next_server.iabuf, 4);
-	else if (subnet -> group -> next_server.len)
-		memcpy (&raw.siaddr, subnet -> group -> next_server.iabuf, 4);
-	else if (subnet -> interface_address.len)
-		memcpy (&raw.siaddr, subnet -> interface_address.iabuf, 4);
-	else
-		raw.siaddr = packet -> interface -> primary_address;
+	raw.siaddr = lease -> shared_network -> interface -> primary_address;
+	i = SV_NEXT_SERVER;
+	if (options.server_options [i]) {
+		d1 = evaluate_data_expression
+			(packet, options.server_options [i] -> expression);
+		/* If there was more than one answer, take the first. */
+		if (d1.len >= 4 && d1.data)
+			memcpy (&raw.siaddr, d1.data, 4);
+	}
 
 	raw.giaddr = packet -> raw -> giaddr;
-	if (hp -> group -> server_name) {
-		strncpy (raw.sname, hp -> group -> server_name,
-			 (sizeof raw.sname) - 1);
-		raw.sname [(sizeof raw.sname) - 1] = 0;
+
+	/* Figure out the filename. */
+	i = SV_FILENAME;
+	if (options.server_options [i]) {
+		d1 = evaluate_data_expression
+			(packet, options.server_options [i] -> expression);
+		memcpy (raw.file, d1.data,
+			d1.len > sizeof raw.file ? sizeof raw.file : d1.len);
+		if (sizeof raw.file > d1.len)
+			memset (&raw.file [d1.len],
+				0, (sizeof raw.file) - d1.len);
 	}
-	if (hp -> group -> filename) {
-		strncpy (raw.file, hp -> group -> filename,
-			 (sizeof raw.file) - 1);
-		raw.file [(sizeof raw.file) - 1] = 0;
+
+	/* Choose a server name as above. */
+	i = SV_SERVER_NAME;
+	if (options.server_options [i]) {
+		d1 = evaluate_data_expression
+			(packet, options.server_options [i] -> expression);
+		memcpy (raw.sname, d1.data,
+			d1.len > sizeof raw.sname ? sizeof raw.sname : d1.len);
+		if (sizeof raw.sname > d1.len)
+			memset (&raw.sname [d1.len],
+				0, (sizeof raw.sname) - d1.len);
 	}
 
 	/* Set up the hardware destination address... */
