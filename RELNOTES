@@ -45,6 +45,13 @@ and for prodding me into improving it.
 
 			Changes since 3.0.1
 
+- Failover implementations disconnected due to the network between
+  them (rather than one of the two shutting down) will now try to
+  re-establish the failover connection every 5 seconds, rather than
+  to simply try once and give up until one of them is restarted.
+  Thanks to a patch from Ulf Ekberg from Infoblox, and field testing
+  by Greger V. Teigre which led to an enhancement to it.
+
 - A problem that kept DHCP Failover secondaries from tearing down
   ddns records was repaired.  Thanks to a patch from Ulf Ekberg from
   Infoblox.

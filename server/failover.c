@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.53.2.32 2004/06/22 20:46:23 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.53.2.33 2004/09/01 22:03:50 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -334,6 +334,36 @@ isc_result_t dhcp_failover_link_signal (omapi_object_t *h,
 		dhcp_failover_state_dereference (&state, MDL);
 	    }
 	    return ISC_R_SUCCESS;
+	}
+
+	if (!strcmp (name, "status")) {
+	  if (link -> state_object) {
+	    isc_result_t	status;
+
+	    status = va_arg(ap, isc_result_t);
+
+	    if ((status == ISC_R_HOSTUNREACH) || (status == ISC_R_TIMEDOUT)) {
+	      dhcp_failover_state_reference (&state,
+					     link -> state_object, MDL);
+	      link -> state = dhcp_flink_disconnected;
+
+	      /* Make the transition. */
+	      dhcp_failover_state_transition (link -> state_object,
+					      "disconnect");
+
+	      /* Start trying to reconnect. */
+#if defined (DEBUG_FAILOVER_TIMING)
+	      log_info ("add_timeout +5 %s",
+			"dhcp_failover_reconnect");
+#endif
+	      add_timeout (cur_time + 5, dhcp_failover_reconnect,
+			   state,
+			   (tvref_t)dhcp_failover_state_reference,
+			   (tvunref_t)dhcp_failover_state_dereference);
+	    }
+	    dhcp_failover_state_dereference (&state, MDL);
+	  }
+	  return ISC_R_SUCCESS;
 	}
 
 	/* Not a signal we recognize? */
