@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.101.2.2 2001/06/20 03:33:04 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.101.2.3 2001/06/21 23:34:01 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -140,16 +140,13 @@ int enter_dns_host (dh, name)
 	return 1;
 }
 
-int make_const_data (expr, data, len, terminated, allocate)
-	struct expression **expr;
-	const unsigned char *data;
-	unsigned len;
-	int terminated;
-	int allocate;
+int make_const_data (struct expression **expr, const unsigned char *data,
+		     unsigned len, int terminated, int allocate,
+		     const char *file, int line)
 {
 	struct expression *nt;
 
-	if (!expression_allocate (expr, MDL)) {
+	if (!expression_allocate (expr, file, line)) {
 		log_error ("No memory for make_const_data tree node.");
 		return 0;
 	}
@@ -158,9 +155,9 @@ int make_const_data (expr, data, len, terminated, allocate)
 	if (len) {
 		if (allocate) {
 			if (!buffer_allocate (&nt -> data.const_data.buffer,
-					      len + terminated, MDL)) {
+					      len + terminated, file, line)) {
 				log_error ("Can't allocate const_data buffer");
-				expression_dereference (expr, MDL);
+				expression_dereference (expr, file, line);
 				return 0;
 			}
 			nt -> data.const_data.data =
@@ -183,7 +180,7 @@ int make_const_int (expr, val)
 	unsigned long val;
 {
 	if (!expression_allocate (expr, MDL)) {
-		log_error ("No memory for make_const_data tree node.");
+		log_error ("No memory for make_const_int tree node.");
 		return 0;
 	}
 
@@ -289,18 +286,16 @@ int make_limit (new, expr, limit)
 	return 1;
 }
 
-int option_cache (oc, dp, expr, option)
-	struct option_cache **oc;
-	struct data_string *dp;
-	struct expression *expr;
-	struct option *option;
+int option_cache (struct option_cache **oc, struct data_string *dp,
+		  struct expression *expr, struct option *option,
+		  const char *file, int line)
 {
-	if (!option_cache_allocate (oc, MDL))
+	if (!option_cache_allocate (oc, file, line))
 		return 0;
 	if (dp)
-		data_string_copy (&(*oc) -> data, dp, MDL);
+		data_string_copy (&(*oc) -> data, dp, file, line);
 	if (expr)
-		expression_reference (&(*oc) -> expression, expr, MDL);
+		expression_reference (&(*oc) -> expression, expr, file, line);
 	(*oc) -> option = option;
 	return 1;
 }
@@ -429,7 +424,7 @@ static int do_host_lookup (result, dns)
 }
 
 int evaluate_expression (result, packet, lease, client_state,
-			 in_options, cfg_options, scope, expr)
+			 in_options, cfg_options, scope, expr, file, line)
 	struct binding_value **result;
 	struct packet *packet;
 	struct lease *lease;
@@ -438,6 +433,8 @@ int evaluate_expression (result, packet, lease, client_state,
 	struct option_state *cfg_options;
 	struct binding_scope **scope;
 	struct expression *expr;
+	const char *file;
+	int line;
 {
 	struct binding_value *bv;
 	int status;
@@ -455,7 +452,7 @@ int evaluate_expression (result, packet, lease, client_state,
 			if (result)
 				binding_value_reference (result,
 							 binding -> value,
-							 MDL);
+							 file, line);
 			return 1;
 		} else
 			return 0;
@@ -516,7 +513,7 @@ int evaluate_expression (result, packet, lease, client_state,
 			evaluate_expression (&nb -> value, packet, lease,
 					     client_state,
 					     in_options, cfg_options, scope,
-					     arg -> data.arg.val);
+					     arg -> data.arg.val, file, line);
 			nb -> next = ns -> bindings;
 			ns -> bindings = nb;
 			arg = arg -> data.arg.next;
@@ -566,7 +563,7 @@ int evaluate_expression (result, packet, lease, client_state,
 		bv -> type = binding_data;
 		status = (evaluate_data_expression
 			  (&bv -> value.data, packet, lease, client_state,
-			   in_options, cfg_options, scope, expr));
+			   in_options, cfg_options, scope, expr, MDL));
 	} else if (is_dns_expression (expr)) {
 #if defined (NSUPDATE)
 		if (!binding_value_allocate (&bv, MDL))
@@ -582,7 +579,7 @@ int evaluate_expression (result, packet, lease, client_state,
 		return 0;
 	}
 	if (result && status)
-		binding_value_reference (result, bv, MDL);
+		binding_value_reference (result, bv, file, line);
 	binding_value_dereference (&bv, MDL);
 
 	return status;
@@ -598,7 +595,7 @@ int binding_value_dereference (struct binding_value **v,
 	/* Decrement the reference count.   If it's nonzero, we're
 	   done. */
 	--(bv -> refcnt);
-	rc_register (file, line, v, bv, bv -> refcnt);
+	rc_register (file, line, v, bv, bv -> refcnt, 1);
 	if (bv -> refcnt > 0)
 		return 1;
 	if (bv -> refcnt < 0) {
@@ -692,7 +689,8 @@ int evaluate_dns_expression (result, packet, lease, client_state, in_options,
 		r1 = evaluate_data_expression (&name, packet, lease,
 					       client_state,
 					       in_options, cfg_options, scope,
-					       expr -> data.ns_add.rrname);
+					       expr -> data.ns_add.rrname,
+					       MDL);
 		if (r1) {
 			/* The result of the evaluation may or may not
 			   be NUL-terminated, but we need it
@@ -710,7 +708,7 @@ int evaluate_dns_expression (result, packet, lease, client_state, in_options,
 				r2 = evaluate_data_expression
 					(&data, packet, lease, client_state,
 					 in_options, cfg_options, scope,
-					 expr -> data.ns_add.rrdata);
+					 expr -> data.ns_add.rrdata, MDL);
 			}
 		} else
 			r2 = 0;
@@ -933,11 +931,11 @@ int evaluate_boolean_expression (result, packet, lease, client_state,
 		bv = obv = (struct binding_value *)0;
 		sleft = evaluate_expression (&bv, packet, lease, client_state,
 					     in_options, cfg_options, scope,
-					     expr -> data.equal [0]);
+					     expr -> data.equal [0], MDL);
 		sright = evaluate_expression (&obv, packet, lease,
 					      client_state, in_options,
 					      cfg_options, scope,
-					      expr -> data.equal [1]);
+					      expr -> data.equal [1], MDL);
 		if (sleft && sright) {
 		    if (bv -> type != obv -> type)
 			*result = expr -> op == expr_not_equal;
@@ -1087,7 +1085,7 @@ int evaluate_boolean_expression (result, packet, lease, client_state,
 		    !get_option (&left, expr -> data.exists -> universe,
 				 packet, lease, client_state,
 				 in_options, cfg_options, in_options,
-				 scope, expr -> data.exists -> code))
+				 scope, expr -> data.exists -> code, MDL))
 			*result = 0;
 		else {
 			*result = 1;
@@ -1182,7 +1180,7 @@ int evaluate_boolean_expression (result, packet, lease, client_state,
 		bv = (struct binding_value *)0;
 		sleft = evaluate_expression (&bv, packet, lease, client_state,
 					  in_options, cfg_options,
-					  scope, expr);
+					  scope, expr, MDL);
 		if (sleft) {
 			if (bv -> type != binding_boolean)
 				log_error ("%s() returned type %d in %s.",
@@ -1267,7 +1265,7 @@ int evaluate_boolean_expression (result, packet, lease, client_state,
 }
 
 int evaluate_data_expression (result, packet, lease, client_state,
-			      in_options, cfg_options, scope, expr)
+			      in_options, cfg_options, scope, expr, file, line)
 	struct data_string *result;
 	struct packet *packet;
 	struct lease *lease;
@@ -1276,6 +1274,8 @@ int evaluate_data_expression (result, packet, lease, client_state,
 	struct option_state *cfg_options;
 	struct binding_scope **scope;
 	struct expression *expr;
+	const char *file;
+	int line;
 {
 	struct data_string data, other;
 	unsigned long offset, len, i;
@@ -1292,7 +1292,8 @@ int evaluate_data_expression (result, packet, lease, client_state,
 		s0 = evaluate_data_expression (&data, packet, lease,
 					       client_state,
 					       in_options, cfg_options, scope,
-					       expr -> data.substring.expr);
+					       expr -> data.substring.expr,
+					       MDL);
 
 		/* Evaluate the offset and length. */
 		s1 = evaluate_numeric_expression
@@ -1309,7 +1310,7 @@ int evaluate_data_expression (result, packet, lease, client_state,
 			   return an empty string.  Otherwise, do the
 			   adjustments and return what's left. */
 			if (data.len > offset) {
-				data_string_copy (result, &data, MDL);
+				data_string_copy (result, &data, file, line);
 				result -> len -= offset;
 				if (result -> len > len) {
 					result -> len = len;
@@ -1342,7 +1343,7 @@ int evaluate_data_expression (result, packet, lease, client_state,
 		s0 = evaluate_data_expression (&data, packet, lease,
 					       client_state,
 					       in_options, cfg_options, scope,
-					       expr -> data.suffix.expr);
+					       expr -> data.suffix.expr, MDL);
 		/* Evaluate the length. */
 		s1 = evaluate_numeric_expression (&len, packet, lease,
 						  client_state,
@@ -1350,7 +1351,7 @@ int evaluate_data_expression (result, packet, lease, client_state,
 						  scope,
 						  expr -> data.suffix.len);
 		if (s0 && s1) {
-			data_string_copy (result, &data, MDL);
+			data_string_copy (result, &data, file, line);
 
 			/* If we are returning the last N bytes of a
 			   string whose length is <= N, just return
@@ -1361,6 +1362,7 @@ int evaluate_data_expression (result, packet, lease, client_state,
 				result -> data += data.len - len;
 				result -> len = len;
 			}
+			data_string_forget (&data, MDL);
 		}
 
 #if defined (DEBUG_EXPRESSIONS)
@@ -1376,11 +1378,12 @@ int evaluate_data_expression (result, packet, lease, client_state,
 		/* Extract an option. */
 	      case expr_option:
 		if (in_options)
-			s0 = get_option (result,
-					 expr -> data.option -> universe,
-					 packet, lease, client_state,
-					 in_options, cfg_options, in_options,
-					 scope, expr -> data.option -> code);
+		    s0 = get_option (result,
+				     expr -> data.option -> universe,
+				     packet, lease, client_state,
+				     in_options, cfg_options, in_options,
+				     scope, expr -> data.option -> code,
+				     file, line);
 		else
 			s0 = 0;
 
@@ -1395,11 +1398,12 @@ int evaluate_data_expression (result, packet, lease, client_state,
 
 	      case expr_config_option:
 		if (cfg_options)
-			s0 = get_option (result,
-					 expr -> data.option -> universe,
-					 packet, lease, client_state,
-					 in_options, cfg_options, cfg_options,
-					 scope, expr -> data.option -> code);
+		    s0 = get_option (result,
+				     expr -> data.option -> universe,
+				     packet, lease, client_state,
+				     in_options, cfg_options, cfg_options,
+				     scope, expr -> data.option -> code,
+				     file, line);
 		else
 			s0 = 0;
 
@@ -1442,7 +1446,8 @@ int evaluate_data_expression (result, packet, lease, client_state,
 			return 0;
 		}
 		result -> len = packet -> raw -> hlen + 1;
-		if (buffer_allocate (&result -> buffer, result -> len, MDL)) {
+		if (buffer_allocate (&result -> buffer, result -> len,
+				     file, line)) {
 			result -> data = &result -> buffer -> data [0];
 			result -> buffer -> data [0] = packet -> raw -> htype;
 			memcpy (&result -> buffer -> data [1],
@@ -1483,7 +1488,7 @@ int evaluate_data_expression (result, packet, lease, client_state,
 			else
 				result -> len = len;
 			if (buffer_allocate (&result -> buffer,
-					     result -> len, MDL)) {
+					     result -> len, file, line)) {
 				result -> data = &result -> buffer -> data [0];
 				memcpy (result -> buffer -> data,
 					(((unsigned char *)(packet -> raw))
@@ -1531,7 +1536,7 @@ int evaluate_data_expression (result, packet, lease, client_state,
 				   expr -> data.const_data.data, 60));
 #endif
 		data_string_copy (result,
-				  &expr -> data.const_data, MDL);
+				  &expr -> data.const_data, file, line);
 		return 1;
 
 		/* Hostname lookup... */
@@ -1552,18 +1557,18 @@ int evaluate_data_expression (result, packet, lease, client_state,
 		s0 = evaluate_data_expression (&data, packet, lease,
 					       client_state,
 					       in_options, cfg_options, scope,
-					       expr -> data.concat [0]);
+					       expr -> data.concat [0], MDL);
 		memset (&other, 0, sizeof other);
 		s1 = evaluate_data_expression (&other, packet, lease,
 					       client_state,
 					       in_options, cfg_options, scope,
-					       expr -> data.concat [1]);
+					       expr -> data.concat [1], MDL);
 
 		if (s0 && s1) {
-			result -> len = data.len + other.len;
-			if (!buffer_allocate (&result -> buffer,
-					      (result -> len +
-					       other.terminated), MDL)) {
+		    result -> len = data.len + other.len;
+		    if (!buffer_allocate (&result -> buffer,
+					  (result -> len + other.terminated),
+					  file, line)) {
 				log_error ("data: concat: no memory");
 				result -> len = 0;
 				data_string_forget (&data, MDL);
@@ -1574,9 +1579,11 @@ int evaluate_data_expression (result, packet, lease, client_state,
 			memcpy (result -> buffer -> data, data.data, data.len);
 			memcpy (&result -> buffer -> data [data.len],
 				other.data, other.len + other.terminated);
-		} else if (s0)
+		}
+
+		if (s0)
 			data_string_forget (&data, MDL);
-		else if (s1)
+		if (s1)
 			data_string_forget (&other, MDL);
 #if defined (DEBUG_EXPRESSIONS)
 		log_debug ("data: concat (%s, %s) = %s",
@@ -1596,7 +1603,8 @@ int evaluate_data_expression (result, packet, lease, client_state,
 						  expr -> data.encode_int);
 		if (s0) {
 			result -> len = 1;
-			if (!buffer_allocate (&result -> buffer, 1, MDL)) {
+			if (!buffer_allocate (&result -> buffer,
+					      1, file, line)) {
 				log_error ("data: encode_int8: no memory");
 				result -> len = 0;
 				s0 = 0;
@@ -1626,7 +1634,8 @@ int evaluate_data_expression (result, packet, lease, client_state,
 						  expr -> data.encode_int);
 		if (s0) {
 			result -> len = 2;
-			if (!buffer_allocate (&result -> buffer, 2, MDL)) {
+			if (!buffer_allocate (&result -> buffer, 2,
+					      file, line)) {
 				log_error ("data: encode_int16: no memory");
 				result -> len = 0;
 				s0 = 0;
@@ -1655,7 +1664,8 @@ int evaluate_data_expression (result, packet, lease, client_state,
 						  expr -> data.encode_int);
 		if (s0) {
 			result -> len = 4;
-			if (!buffer_allocate (&result -> buffer, 4, MDL)) {
+			if (!buffer_allocate (&result -> buffer, 4,
+					      file, line)) {
 				log_error ("data: encode_int32: no memory");
 				result -> len = 0;
 				s0 = 0;
@@ -1692,14 +1702,15 @@ int evaluate_data_expression (result, packet, lease, client_state,
 		s2 = evaluate_data_expression (&data, packet, lease,
 					       client_state,
 					       in_options, cfg_options, scope,
-					       expr -> data.b2a.seperator);
+					       expr -> data.b2a.seperator,
+					       MDL);
 
 		/* Evaluate the data to be converted. */
 		memset (&other, 0, sizeof other);
 		s3 = evaluate_data_expression (&other, packet, lease,
 					       client_state,
 					       in_options, cfg_options, scope,
-					       expr -> data.b2a.buffer);
+					       expr -> data.b2a.buffer, MDL);
 
 		if (s0 && s1 && s2 && s3) {
 			unsigned buflen, i;
@@ -1757,7 +1768,7 @@ int evaluate_data_expression (result, packet, lease, client_state,
 			}
 
 			if (!buffer_allocate (&result -> buffer,
-					      buflen + 1, MDL)) {
+					      buflen + 1, file, line)) {
 				log_error ("data: binary-to-ascii: no memory");
 				status = 0;
 				goto b2a_out;
@@ -1813,7 +1824,8 @@ int evaluate_data_expression (result, packet, lease, client_state,
 		s1 = evaluate_data_expression (&data, packet, lease,
 					       client_state,
 					       in_options, cfg_options, scope,
-					       expr -> data.reverse.buffer);
+					       expr -> data.reverse.buffer,
+					       MDL);
 
 		if (s0 && s1) {
 			char *upper;
@@ -1831,7 +1843,7 @@ int evaluate_data_expression (result, packet, lease, client_state,
 
 			/* XXX reverse in place?   I don't think we can. */
 			if (!buffer_allocate (&result -> buffer,
-					      data.len, MDL)) {
+					      data.len, file, line)) {
 				log_error ("data: reverse: no memory");
 				status = 0;
 				goto reverse_out;
@@ -1868,7 +1880,8 @@ int evaluate_data_expression (result, packet, lease, client_state,
 			return 0;
 		}
 		result -> len = lease -> ip_addr.len;
-		if (buffer_allocate (&result -> buffer, result -> len, MDL)) {
+		if (buffer_allocate (&result -> buffer, result -> len,
+				     file, line)) {
 			result -> data = &result -> buffer -> data [0];
 			memcpy (&result -> buffer -> data [0],
 				lease -> ip_addr.iabuf, lease -> ip_addr.len);
@@ -1888,7 +1901,7 @@ int evaluate_data_expression (result, packet, lease, client_state,
 		if ((evaluate_data_expression
 		     (result, packet,
 		      lease, client_state, in_options, cfg_options,
-		      scope, expr -> data.pick_first_value.car))) {
+		      scope, expr -> data.pick_first_value.car, MDL))) {
 #if defined (DEBUG_EXPRESSIONS)
 			log_debug ("data: pick_first_value (%s, xxx)",
 				   print_hex_1 (result -> len,
@@ -1901,7 +1914,7 @@ int evaluate_data_expression (result, packet, lease, client_state,
 		    (evaluate_data_expression
 		     (result, packet,
 		      lease, client_state, in_options, cfg_options,
-		      scope, expr -> data.pick_first_value.cdr))) {
+		      scope, expr -> data.pick_first_value.cdr, MDL))) {
 #if defined (DEBUG_EXPRESSIONS)
 			log_debug ("data: pick_first_value (NULL, %s)",
 				   print_hex_1 (result -> len,
@@ -1922,7 +1935,7 @@ int evaluate_data_expression (result, packet, lease, client_state,
 		}
 		result -> len = strlen (lease -> host -> name);
 		if (buffer_allocate (&result -> buffer,
-				     result -> len + 1, MDL)) {
+				     result -> len + 1, file, line)) {
 			result -> data = &result -> buffer -> data [0];
 			strcpy ((char *)&result -> buffer -> data [0],
 				lease -> host -> name);
@@ -1950,7 +1963,7 @@ int evaluate_data_expression (result, packet, lease, client_state,
 			if (binding -> value -> type == binding_data) {
 			    data_string_copy (result,
 					      &binding -> value -> value.data,
-					      MDL);
+					      file, line);
 			    s0 = 1;
 			} else if (binding -> value -> type != binding_data) {
 			    log_error ("binding type %d in %s.",
@@ -1974,7 +1987,7 @@ int evaluate_data_expression (result, packet, lease, client_state,
 		bv = (struct binding_value *)0;
 		s0 = evaluate_expression (&bv, packet, lease, client_state,
 					  in_options, cfg_options,
-					  scope, expr);
+					  scope, expr, MDL);
 		if (s0) {
 			if (bv -> type != binding_data)
 				log_error ("%s() returned type %d in %s.",
@@ -1983,7 +1996,7 @@ int evaluate_data_expression (result, packet, lease, client_state,
 					   "evaluate_data_expression");
 			else
 				data_string_copy (result, &bv -> value.data,
-						  MDL);
+						  file, line);
 			binding_value_dereference (&bv, MDL);
 		}
 #if defined (DEBUG_EXPRESSIONS)
@@ -2004,7 +2017,7 @@ int evaluate_data_expression (result, packet, lease, client_state,
 				      sizeof packet -> raw -> file);
 			result -> len = fn - &(packet -> raw -> file [0]);
 			if (buffer_allocate (&result -> buffer,
-					     result -> len + 1, MDL)) {
+					     result -> len + 1, file, line)) {
 				result -> data = &result -> buffer -> data [0];
 				memcpy (&result -> buffer -> data [0],
 					packet -> raw -> file,
@@ -2036,7 +2049,7 @@ int evaluate_data_expression (result, packet, lease, client_state,
 				      sizeof packet -> raw -> sname);
 			result -> len = fn - &packet -> raw -> sname [0];
 			if (buffer_allocate (&result -> buffer,
-					     result -> len + 1, MDL)) {
+					     result -> len + 1, file, line)) {
 				result -> data = &result -> buffer -> data [0];
 				memcpy (&result -> buffer -> data [0],
 					packet -> raw -> sname,
@@ -2180,7 +2193,7 @@ int evaluate_numeric_expression (result, packet, lease, client_state,
 		memset (&data, 0, sizeof data);
 		status = evaluate_data_expression
 			(&data, packet, lease, client_state, in_options,
-			 cfg_options, scope, expr -> data.extract_int);
+			 cfg_options, scope, expr -> data.extract_int, MDL);
 		if (status)
 			*result = data.data [0];
 #if defined (DEBUG_EXPRESSIONS)
@@ -2195,7 +2208,7 @@ int evaluate_numeric_expression (result, packet, lease, client_state,
 		memset (&data, 0, sizeof data);
 		status = (evaluate_data_expression
 			  (&data, packet, lease, client_state, in_options,
-			   cfg_options, scope, expr -> data.extract_int));
+			   cfg_options, scope, expr -> data.extract_int, MDL));
 		if (status && data.len >= 2)
 			*result = getUShort (data.data);
 #if defined (DEBUG_EXPRESSIONS)
@@ -2211,7 +2224,7 @@ int evaluate_numeric_expression (result, packet, lease, client_state,
 		memset (&data, 0, sizeof data);
 		status = (evaluate_data_expression
 			  (&data, packet, lease, client_state, in_options,
-			   cfg_options, scope, expr -> data.extract_int));
+			   cfg_options, scope, expr -> data.extract_int, MDL));
 		if (status && data.len >= 4)
 			*result = getULong (data.data);
 #if defined (DEBUG_EXPRESSIONS)
@@ -2329,7 +2342,7 @@ int evaluate_numeric_expression (result, packet, lease, client_state,
 		status = evaluate_expression (&bv, packet, lease,
 					      client_state,
 					      in_options, cfg_options,
-					      scope, expr);
+					      scope, expr, MDL);
 		if (status) {
 			if (bv -> type != binding_numeric)
 				log_error ("%s() returned type %d in %s.",
@@ -2631,7 +2644,7 @@ int evaluate_option_cache (result, packet, lease, client_state,
 		return 0;
 	return evaluate_data_expression (result, packet, lease, client_state,
 					 in_options, cfg_options, scope,
-					 oc -> expression);
+					 oc -> expression, file, line);
 }
 
 /* Evaluate an option cache and extract a boolean from the result,
@@ -2727,7 +2740,7 @@ void expression_dereference (eptr, file, line)
 	/* Decrement the reference count.   If it's nonzero, we're
 	   done. */
 	--(expr -> refcnt);
-	rc_register (file, line, eptr, expr, expr -> refcnt);
+	rc_register (file, line, eptr, expr, expr -> refcnt, 1);
 	if (expr -> refcnt > 0)
 		return;
 	if (expr -> refcnt < 0) {
@@ -3742,7 +3755,8 @@ int binding_scope_dereference (ptr, file, line)
 	binding_scope = *ptr;
 	*ptr = (struct binding_scope *)0;
 	--binding_scope -> refcnt;
-	rc_register (file, line, ptr, binding_scope, binding_scope -> refcnt);
+	rc_register (file, line, ptr,
+		     binding_scope, binding_scope -> refcnt, 1);
 	if (binding_scope -> refcnt > 0)
 		return 1;
 
@@ -3792,7 +3806,7 @@ int fundef_dereference (ptr, file, line)
 	}
 
 	bp -> refcnt--;
-	rc_register (file, line, ptr, bp, bp -> refcnt);
+	rc_register (file, line, ptr, bp, bp -> refcnt, 1);
 	if (bp -> refcnt < 0) {
 		log_error ("%s(%d): negative refcnt!", file, line);
 #if defined (DEBUG_RC_HISTORY)
