@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: alloc.c,v 1.15 1998/06/25 02:53:00 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: alloc.c,v 1.16 1998/11/05 18:39:54 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -87,33 +87,6 @@ struct dhcp_packet *new_dhcp_packet (name)
 	struct dhcp_packet *rval;
 	rval = (struct dhcp_packet *)dmalloc (sizeof (struct dhcp_packet),
 					      name);
-	return rval;
-}
-
-struct expression *new_expression (name)
-	char *name;
-{
-	struct expression *rval = dmalloc (sizeof (struct expression), name);
-	return rval;
-}
-
-struct option_cache *free_option_caches;
-
-struct option_cache *new_option_cache (name)
-	char *name;
-{
-	struct option_cache *rval;
-
-	if (free_option_caches) {
-		rval = free_option_caches;
-		free_option_caches =
-			(struct option_cache *)(rval -> expression);
-	} else {
-		rval = dmalloc (sizeof (struct option_cache), name);
-		if (!rval)
-			error ("unable to allocate option cache for %s.",
-			       name);
-	}
 	return rval;
 }
 
@@ -204,6 +177,7 @@ struct lease_state *new_lease_state (name)
 	} else {
 		rval = dmalloc (sizeof (struct lease_state), name);
 	}
+	memset (rval, 0, sizeof *rval);
 	return rval;
 }
 
@@ -301,21 +275,6 @@ void free_hash_table (ptr, name)
 	dfree ((VOIDPTR)ptr, name);
 }
 
-void free_expression (ptr, name)
-	struct expression *ptr;
-	char *name;
-{
-	dfree ((VOIDPTR)ptr, name);
-}
-
-void free_option_cache (ptr, name)
-	struct option_cache *ptr;
-	char *name;
-{
-	ptr -> expression = (struct expression *)free_option_caches;
-	free_option_caches = ptr;
-}
-
 void free_packet (ptr, name)
 	struct packet *ptr;
 	char *name;
@@ -328,4 +287,236 @@ void free_dhcp_packet (ptr, name)
 	char *name;
 {
 	dfree ((VOIDPTR)ptr, name);
+}
+
+struct client_lease *new_client_lease (name)
+	char *name;
+{
+	return (struct client_lease *)dmalloc (sizeof (struct client_lease),
+					       name);
+}
+
+void free_client_lease (lease, name)
+	struct client_lease *lease;
+	char *name;
+{
+	dfree (lease, name);
+}
+
+pair free_pairs;
+
+pair new_pair (name)
+	char *name;
+{
+	pair foo;
+
+	if (free_pairs) {
+		foo = free_pairs;
+		free_pairs = foo -> cdr;
+		memset (foo, 0, sizeof *foo);
+		return foo;
+	}
+
+	foo = dmalloc (sizeof *foo, name);
+	if (!foo)
+		return foo;
+	memset (foo, 0, sizeof *foo);
+	return foo;
+}
+
+void free_pair (foo, name)
+	pair foo;
+	char *name;
+{
+	foo -> cdr = free_pairs;
+	free_pairs = foo;
+}
+
+struct expression *free_expressions;
+
+int expression_allocate (cptr, name)
+	struct expression **cptr;
+	char *name;
+{
+	struct expression *rval;
+
+	if (free_expressions) {
+		rval = free_expressions;
+		free_expressions = rval -> data.not;
+	} else {
+		rval = dmalloc (sizeof (struct expression), name);
+		if (!rval)
+			return 0;
+	}
+	memset (rval, 0, sizeof *rval);
+	return expression_reference (cptr, rval, name);
+}
+
+void free_expression (expr, name)
+	struct expression *expr;
+	char *name;
+{
+	expr -> data.not = free_expressions;
+	free_expressions = expr;
+}
+
+int expression_reference (ptr, src, name)
+	struct expression **ptr;
+	struct expression *src;
+	char *name;
+{
+	if (!ptr) {
+		warn ("Null pointer in expression_reference: %s", name);
+		abort ();
+	}
+	if (*ptr) {
+		warn ("Non-null pointer in expression_reference (%s)",
+		      name);
+		abort ();
+	}
+	*ptr = src;
+	src -> refcnt++;
+	return 1;
+}
+
+struct option_cache *free_option_caches;
+
+int option_cache_allocate (cptr, name)
+	struct option_cache **cptr;
+	char *name;
+{
+	struct option_cache *rval;
+
+	if (free_option_caches) {
+		rval = free_option_caches;
+		free_option_caches =
+			(struct option_cache *)(rval -> expression);
+	} else {
+		rval = dmalloc (sizeof (struct option_cache), name);
+		if (!rval)
+			return 0;
+	}
+	memset (rval, 0, sizeof *rval);
+	return option_cache_reference (cptr, rval, name);
+}
+
+int option_cache_reference (ptr, src, name)
+	struct option_cache **ptr;
+	struct option_cache *src;
+	char *name;
+{
+	if (!ptr) {
+		warn ("Null pointer in option_cache_reference: %s", name);
+		abort ();
+	}
+	if (*ptr) {
+		warn ("Non-null pointer in option_cache_reference (%s)",
+		      name);
+		abort ();
+	}
+	*ptr = src;
+	src -> refcnt++;
+	return 1;
+}
+
+int buffer_allocate (ptr, len, name)
+	struct buffer **ptr;
+	int len;
+	char *name;
+{
+	struct buffer *bp;
+
+	bp = dmalloc (len + sizeof *bp, name);
+	if (!bp)
+		return 0;
+	memset (bp, 0, sizeof *bp);
+	bp -> refcnt = 0;
+	return buffer_reference (ptr, bp, name);
+}
+
+int buffer_reference (ptr, bp, name)
+	struct buffer **ptr;
+	struct buffer *bp;
+	char *name;
+{
+	if (!ptr) {
+		warn ("Null pointer passed to buffer_reference: %s", name);
+		abort ();
+	}
+	if (*ptr) {
+		warn ("Non-null pointer in buffer_reference (%s)", name);
+		abort ();
+	}
+	*ptr = bp;
+	bp -> refcnt++;
+	return 1;
+}
+
+int buffer_dereference (ptr, name)
+	struct buffer **ptr;
+	char *name;
+{
+	struct buffer *bp;
+
+	if (!ptr || !*ptr) {
+		warn ("Null pointer passed to buffer_dereference: %s", name);
+		abort ();
+	}
+
+	(*ptr) -> refcnt--;
+	if (!(*ptr) -> refcnt)
+		dfree ((*ptr), name);
+	*ptr = (struct buffer *)0;
+	return 1;
+}
+
+int dns_host_entry_allocate (ptr, name)
+	struct dns_host_entry **ptr;
+	char *name;
+{
+	struct dns_host_entry *bp;
+
+	bp = dmalloc (sizeof *bp, name);
+	if (!bp)
+		return 0;
+	memset (bp, 0, sizeof *bp);
+	bp -> refcnt = 0;
+	return dns_host_entry_reference (ptr, bp, name);
+}
+
+int dns_host_entry_reference (ptr, bp, name)
+	struct dns_host_entry **ptr;
+	struct dns_host_entry *bp;
+	char *name;
+{
+	if (!ptr) {
+		warn ("Null pointer in dns_host_entry_reference: %s", name);
+		abort ();
+	}
+	if (*ptr) {
+		warn ("Non-null pointer in dns_host_entry_reference (%s)",
+		      name);
+		abort ();
+	}
+	*ptr = bp;
+	bp -> refcnt++;
+	return 1;
+}
+
+int dns_host_entry_dereference (ptr, name)
+	struct dns_host_entry **ptr;
+	char *name;
+{
+	struct dns_host_entry *bp;
+
+	if (!ptr || !*ptr) {
+		warn ("Null pointer in dns_host_entry_dereference: %s", name);
+		abort ();
+	}
+
+	(*ptr) -> refcnt--;
+	if (!(*ptr) -> refcnt)
+		dfree ((*ptr), name);
+	*ptr = (struct dns_host_entry *)0;
+	return 1;
 }
