@@ -133,21 +133,21 @@ int main (argc, argv)
 	printf ("host name = %*.*s\n", result -> len, result -> len,
 		result -> value);
 
-	status = dhcpctl_object_delete (connection, host_handle);
+	status = dhcpctl_object_remove (connection, host_handle);
 	if (status != ISC_R_SUCCESS) {
-		fprintf (stderr, "dhcpctl_object_delete: %s\n",
+		fprintf (stderr, "dhcpctl_object_remove: %s\n",
 			 isc_result_totext (status));
 		exit (1);
 	}
 	status = dhcpctl_wait_for_completion (host_handle,
 					      &waitstatus);
 	if (status != ISC_R_SUCCESS) {
-		fprintf (stderr, "delete: dhcpctl_wait_for_completion: %s\n",
+		fprintf (stderr, "remove: dhcpctl_wait_for_completion: %s\n",
 			 isc_result_totext (status));
 		exit (1);
 	}
 	if (waitstatus != ISC_R_SUCCESS) {
-		fprintf (stderr, "delete: dhcpctl_wait_for_completion: %s\n",
+		fprintf (stderr, "remove: dhcpctl_wait_for_completion: %s\n",
 			 isc_result_totext (waitstatus));
 		exit (1);
 	}
