@@ -41,22 +41,33 @@
  * Enterprises, see ``http://www.vix.com''.
  */
 
-static struct protocol icmp_protocol;
+#ifndef lint
+static char copyright[] =
+"$Id: icmp.c,v 1.2 1997/03/06 07:27:32 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
+#endif /* not lint */
+
+#include "dhcpd.h"
+#include "netinet/ip.h"
+#include "netinet/ip_icmp.h"
+
+static int icmp_protocol_initialized;
+static int icmp_protocol_fd;
 
 /* Initialize the ICMP protocol. */
 
 void icmp_startup (routep, handler)
 	int routep;
-	unsigned void (*handler) PROTO ((struct iaddr, u_int8_t *, int));
+	void (*handler) PROTO ((struct iaddr, u_int8_t *, int));
 {
 	struct protoent *proto;
 	int protocol = 1;
 	struct sockaddr_in from;
+	int fd;
 
 	/* Only initialize icmp once. */
-	if (icmp_protocol.initialized)
+	if (icmp_protocol_initialized)
 		error ("attempted to reinitialize icmp protocol");
-	icmp_protocol.initialized = 1;
+	icmp_protocol_initialized = 1;
 
 	/* Get the protocol number (should be 1). */
 	proto = getprotobyname ("icmp");
@@ -64,17 +75,15 @@ void icmp_startup (routep, handler)
 		protocol = proto -> p_proto;
 
 	/* Get a raw socket for the ICMP protocol. */
-	icmp_protocol.fd = socket (AF_INET, SOCK_RAW, protocol);
-	if (!icmp_protocol.fd)
+	icmp_protocol_fd = socket (AF_INET, SOCK_RAW, protocol);
+	if (!icmp_protocol_fd)
 		error ("unable to create icmp socket: %m");
 
-	if (setsockopt (icmp_protocol.fd, SOL_SOCKET, SO_DONTROUTE,
+	if (setsockopt (icmp_protocol_fd, SOL_SOCKET, SO_DONTROUTE,
 			(char *)&routep, sizeof routep))
 		error ("Can't set SO_DONTROUTE on ICMP socket: %m");
 
-	icmp_protocol.handler = icmp_echoreply;
-	icmp_protocol.local = handler;
-	add_protocol (&icmp_protocol);
+	add_protocol ("icmp", icmp_protocol_fd, icmp_echoreply, handler);
 }
 
 int icmp_echorequest (addr)
@@ -84,7 +93,7 @@ int icmp_echorequest (addr)
 	struct icmp icmp;
 	int status;
 
-	if (!icmp_protocol.initialized)
+	if (!icmp_protocol_initialized)
 		error ("attempt to use ICMP protocol before initialization.");
 
 #ifdef HAVE_SA_LEN
@@ -109,7 +118,7 @@ int icmp_echorequest (addr)
 					     sizeof icmp, 0));
 
 	/* Send the ICMP packet... */
-	status = sendto (icmp_protocol.fd, &icmp, sizeof icmp, 0,
+	status = sendto (icmp_protocol_fd, &icmp, sizeof icmp, 0,
 			 (struct sockaddr *)&to, sizeof to);
 	if (status < 0)
 		warn ("icmp_echorequest: %m");
@@ -128,16 +137,16 @@ void icmp_echoreply (protocol)
 	int status;
 	int len;
 	struct iaddr ia;
-	unsigned void (*handler) PROTO ((struct iaddr, u_int8_t *, int));
+	void (*handler) PROTO ((struct iaddr, u_int8_t *, int));
 
 	len = sizeof from;
-	icbuf = recvfrom (protocol -> fd, icbuf, sizeof icbuf, 0,
+	status = recvfrom (protocol -> fd, icbuf, sizeof icbuf, 0,
 			  (struct sockaddr *)&from, &len);
-	if (icbuf < 0) {
+	if (status < 0) {
 		warn ("icmp_echoreply: %m");
 		return;
 	}
-	if (icbuf < sizeof *icfrom) {
+	if (status < sizeof *icfrom) {
 		warn ("icmp_echoreply: short packet");
 		return;
 	}
@@ -151,9 +160,9 @@ void icmp_echoreply (protocol)
 	/* If we were given a second-stage handler, call it. */
 	if (protocol -> local) {
 		handler = protocol -> local;
-		memcpy (ia.iaddr, &from.sin_addr, sizeof from.sin_addr);
+		memcpy (ia.iabuf, &from.sin_addr, sizeof from.sin_addr);
 		ia.len = sizeof from.sin_addr;
 
-		(*handler) (ia, icbuf, result);
+		(*handler) (ia, icbuf, status);
 	}
 }
