@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.78 1999/07/02 20:57:06 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.79 1999/07/06 16:48:34 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -77,6 +77,7 @@ int main (argc, argv, envp)
 	struct client_state *client;
 	int seed;
 	int quiet = 0;
+	char *server = (char *)0;
 
 #ifdef SYSLOG_4_2
 	openlog ("dhclient", LOG_NDELAY);
@@ -115,6 +116,10 @@ int main (argc, argv, envp)
 		} else if (!strcmp (argv [i], "-q")) {
 			quiet = 1;
 			quiet_interface_discovery = 1;
+		} else if (!strcmp (argv [i], "-s")) {
+			if (++i == argc)
+				usage ();
+			server = argv [i];
  		} else if (argv [i][0] == '-') {
  		    usage ();
  		} else {
@@ -159,7 +164,21 @@ int main (argc, argv, envp)
 
 	sockaddr_broadcast.sin_family = AF_INET;
 	sockaddr_broadcast.sin_port = remote_port;
-	sockaddr_broadcast.sin_addr.s_addr = INADDR_BROADCAST;
+	if (server) {
+		if (!inet_aton (server, &sockaddr_broadcast.sin_addr)) {
+			struct hostent *he;
+			he = gethostbyname (server);
+			if (he) {
+				memcpy (&sockaddr_broadcast.sin_addr,
+					he -> h_addr_list [0],
+					sizeof sockaddr_broadcast.sin_addr);
+			} else
+				sockaddr_broadcast.sin_addr.s_addr =
+					INADDR_BROADCAST;
+		}
+	} else {
+		sockaddr_broadcast.sin_addr.s_addr = INADDR_BROADCAST;
+	}
 #ifdef HAVE_SA_LEN
 	sockaddr_broadcast.sin_len = sizeof sockaddr_broadcast;
 #endif
@@ -253,8 +272,10 @@ int main (argc, argv, envp)
 
 static void usage ()
 {
-	log_fatal ("Usage: dhclient [-d] [-D] [-q] [-c] [-p <port>]\n [-lf %s",
-	       "lease-file] [-pf pid-file] [-cf config-file] [interface]");
+	log_error ("Usage: dhclient [-d] [-D] [-q] [-p <port>] %s",
+		   "[-s server]");
+	log_error ("                [-lf lease-file] [-pf pid-file]%s",
+		   "[-cf config-file] [interface]");
 }
 
 void cleanup ()
@@ -1321,7 +1342,7 @@ void send_request (cpp)
 	if (client -> state == S_REQUESTING ||
 	    client -> state == S_REBOOTING ||
 	    cur_time > client -> active -> rebind)
-		destination.sin_addr.s_addr = INADDR_BROADCAST;
+		destination.sin_addr = sockaddr_broadcast.sin_addr;
 	else
 		memcpy (&destination.sin_addr.s_addr,
 			client -> destination.iabuf,
