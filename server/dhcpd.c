@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.75 1999/10/07 06:36:32 mellon Exp $ Copyright 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.76 1999/10/07 17:00:53 mellon Exp $ Copyright 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.";
 #endif
 
   static char copyright[] =
@@ -225,7 +225,7 @@ int main (argc, argv, envp)
 
 	/* Initialize the omapi system. */
 	result = omapi_init ();
-	if (status != ISC_R_SUCCESS)
+	if (result != ISC_R_SUCCESS)
 		log_fatal ("Can't initialize OMAPI: %s\n",
 			   isc_result_totext (result));
 
