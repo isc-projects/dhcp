@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: class.c,v 1.16 2000/01/25 01:36:29 mellon Exp $ Copyright (c) 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: class.c,v 1.17 2000/03/06 23:27:14 mellon Exp $ Copyright (c) 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -145,7 +145,7 @@ int check_collection (packet, lease, collection)
 						  MDL);
 				data_string_forget (&data, MDL);
 				if (!class -> hash)
-					class -> hash = new_hash ();
+					class -> hash = new_hash (0, 0);
 				add_hash (class -> hash,
 					  nc -> hash_string.data,
 					  nc -> hash_string.len,

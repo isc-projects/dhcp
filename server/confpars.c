@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.102 2000/02/05 17:39:24 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.103 2000/03/06 23:28:27 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1380,7 +1380,7 @@ struct class *parse_class_declaration (cfile, group, type)
 			}
 			data_string_copy (&class -> hash_string, &data, MDL);
 			if (!pc -> hash)
-				pc -> hash = new_hash ();
+				pc -> hash = new_hash (0, 0);
 			add_hash (pc -> hash,
 				  class -> hash_string.data,
 				  class -> hash_string.len,
