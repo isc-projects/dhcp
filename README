@@ -68,7 +68,7 @@ if you can, since I have to handle the -request mailing list manually.
 
 				 BUGS
 
-Currently, ISC dhcpd supports the DHCP protocol strictly the standard
+Currently, ISC dhcpd supports the DHCP protocol with just the standard
 Berkeley socket interface to UDP/IP.  This makes it very portable, but
 has several drawbacks.  First of all, it is impossible to identify the
 interface on which a DHCP request was received.  As a consequence,
