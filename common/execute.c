@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: execute.c,v 1.41 2000/11/28 22:50:38 mellon Exp $ Copyright (c) 1998-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: execute.c,v 1.42 2000/12/02 00:04:22 neild Exp $ Copyright (c) 1998-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -846,6 +846,40 @@ void write_statements (file, statements, indent)
 						  "", "", r -> data.set.name);
 			col = token_print_indent (file, col, indent + 6,
 						  " ", "", ";");
+			break;
+
+		      case log_statement:
+			indent_spaces (file, indent);
+			fprintf (file, "log ");
+			col = token_print_indent (file, col, indent + 4,
+						  "", "", "(");
+			switch (r -> data.log.priority) {
+			case log_priority_fatal:
+				col = token_print_indent
+					(file, col, indent + 4, "",
+					 " ", "fatal,");
+				break;
+			case log_priority_error:
+				col = token_print_indent
+					(file, col, indent + 4, "",
+					 " ", "error,");
+				break;
+			case log_priority_debug:
+				col = token_print_indent
+					(file, col, indent + 4, "",
+					 " ", "debug,");
+				break;
+			case log_priority_info:
+				col = token_print_indent
+					(file, col, indent + 4, "",
+					 " ", "info,");
+				break;
+			}
+			col = write_expression (file, r -> data.log.expr,
+						indent + 4, indent + 4, 0);
+			col = token_print_indent (file, col, indent + 4,
+						  "", "", ");");
+
 			break;
 			
 		      default:
