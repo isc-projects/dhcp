@@ -569,6 +569,13 @@ struct class {
 	struct executable_statement *statements;
 };
 
+struct tsig_key {
+	int refcnt;
+	char *name;
+	char *algorithm;
+	struct data_string key;
+};
+
 /* DHCP client lease structure... */
 struct client_lease {
 	struct client_lease *next;		      /* Next lease in list. */
@@ -577,7 +584,7 @@ struct client_lease {
 	char *server_name;			     /* Name of boot server. */
 	char *filename;		     /* Name of file we're supposed to boot. */
 	struct string_list *medium;			  /* Network medium. */
-	struct data_string auth_key_id;	      /* Authentication key ID used. */
+	struct tsig_key *key;      /* Key used in basic DHCP authentication. */
 
 	unsigned int is_static : 1;    /* If set, lease is from config file. */
 	unsigned int is_bootp: 1;   /* If set, lease was aquired with BOOTP. */
@@ -775,13 +782,6 @@ struct dns_query {
 					   answered. */
 	struct name_server *next_server;	/* Next server to try. */
 	int backoff;			/* Current backoff, in seconds. */
-};
-
-struct tsig_key {
-	int refcnt;
-	char *name;
-	char *algorithm;
-	struct data_string key;
 };
 
 struct dns_zone {
@@ -998,6 +998,7 @@ TIME parse_date PROTO ((struct parse *));
 struct option *parse_option_name PROTO ((struct parse *, int, int *));
 void parse_option_space_decl PROTO ((struct parse *));
 int parse_option_code_definition PROTO ((struct parse *, struct option *));
+int parse_base64 (struct data_string *, struct parse *);
 int parse_cshl PROTO ((struct data_string *, struct parse *));
 int parse_executable_statement PROTO ((struct executable_statement **,
 				       struct parse *, int *,
@@ -1006,6 +1007,7 @@ int parse_executable_statements PROTO ((struct executable_statement **,
 					struct parse *, int *,
 					enum expression_context));
 int parse_zone (struct dns_zone *, struct parse *);
+int parse_key (struct parse *);
 int parse_on_statement PROTO ((struct executable_statement **,
 			       struct parse *, int *));
 int parse_switch_statement PROTO ((struct executable_statement **,
