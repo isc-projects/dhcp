@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.38 2001/03/01 07:25:45 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.39 2001/03/14 17:40:59 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -929,9 +929,11 @@ isc_result_t dhcp_failover_listen (omapi_object_t *h)
 	}
 
 	/* Put this listener on the list. */
-	dhcp_failover_listener_reference (&obj -> next,
-					  failover_listeners, MDL);
-	dhcp_failover_listener_dereference (&failover_listeners, MDL);
+	if (failover_listeners) {
+		dhcp_failover_listener_reference (&obj -> next,
+						  failover_listeners, MDL);
+		dhcp_failover_listener_dereference (&failover_listeners, MDL);
+	}
 	dhcp_failover_listener_reference (&failover_listeners, obj, MDL);
 
 	return dhcp_failover_listener_dereference (&obj, MDL);
