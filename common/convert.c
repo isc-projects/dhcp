@@ -23,7 +23,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: convert.c,v 1.6 1999/03/16 05:50:32 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: convert.c,v 1.7 1999/04/05 15:33:52 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -46,7 +46,7 @@ int32_t getLong (buf)
 	return ntohl (ibuf);
 }
 
-u_int16_t getUShort (buf)
+u_int32_t getUShort (buf)
 	unsigned char *buf;
 {
 	unsigned short ibuf;
@@ -55,7 +55,7 @@ u_int16_t getUShort (buf)
 	return ntohs (ibuf);
 }
 
-int16_t getShort (buf)
+int32_t getShort (buf)
 	unsigned char *buf;
 {
 	short ibuf;
@@ -96,3 +96,15 @@ void putShort (obuf, val)
 	memcpy (obuf, &tmp, sizeof tmp);
 }
 
+void putUChar (obuf, val)
+	unsigned char *obuf;
+	u_int32_t val;
+{
+	*obuf = val;
+}
+
+u_int32_t getUChar (obuf)
+	unsigned char *obuf;
+{
+	return obuf [0];
+}
