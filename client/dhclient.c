@@ -56,7 +56,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.44.2.41 1999/11/12 21:01:16 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.44.2.42 2000/01/24 14:57:25 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1848,7 +1848,7 @@ void write_client_lease (ip, lease, rewrite)
 			 lease -> filename);
 	if (lease -> server_name)
 		fprintf (leaseFile, "  server-name \"%s\";\n",
-			 lease -> filename);
+			 lease -> server-name);
 	if (lease -> medium)
 		fprintf (leaseFile, "  medium \"%s\";\n",
 			 lease -> medium -> string);
@@ -1911,8 +1911,8 @@ void script_init (ip, reason, medium)
 		if (!mktemp (scriptName))
 			error ("can't create temporary client script %s: %m",
 			       scriptName);
-		fd = creat (scriptName, 0600);
-	} while (fd < 0 && errno == EEXISTS);
+		fd = open (scriptName, O_EXCL | O_CREAT | O_WRONLY, 0600);
+	} while (fd < 0 && errno == EEXIST);
 #endif
 	if (fd < 0)
 		log_fatal ("can't create temporary script %s: %m", scriptName);
