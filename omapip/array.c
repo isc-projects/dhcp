@@ -64,6 +64,25 @@ isc_result_t omapi_array_allocate (omapi_array_t **array,
 	return ISC_R_SUCCESS;
 }
 
+isc_result_t omapi_array_free (omapi_array_t **array,
+			       const char *file, int line)
+{
+	isc_result_t status;
+	omapi_array_t *aptr;
+	int i;
+
+	if (!array || !*array)
+		return ISC_R_INVALIDARG;
+	aptr = *array;
+	for (i = 0; i < aptr -> count; i++)
+		if (aptr -> data [i] && aptr -> deref)
+			(*aptr -> deref) (&aptr -> data [i], file, line);
+	dfree (aptr -> data, MDL);
+	dfree (aptr, MDL);
+	*array = (omapi_array_t *)0;
+	return ISC_R_SUCCESS;
+}
+
 /* Extend the size of the array by one entry (we may allocate more than that)
    and store the specified value in the new array element. */
 
