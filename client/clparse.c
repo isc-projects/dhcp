@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: clparse.c,v 1.10 1997/05/09 07:48:34 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: clparse.c,v 1.11 1997/06/02 22:34:19 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -305,6 +305,10 @@ void parse_client_statement (cfile, ip, config)
 
 	      case ALIAS:
 		parse_client_lease_statement (cfile, 2);
+		return;
+
+	      case REJECT:
+		parse_reject_statement (cfile, config);
 		return;
 
 	      default:
@@ -982,3 +986,36 @@ void parse_string_list (cfile, lp, multiple)
 		skip_to_semi (cfile);
 	}
 }
+
+void parse_reject_statement (cfile, config)
+	FILE *cfile;
+	struct client_config *config;
+{
+	int token;
+	char *val;
+	struct iaddr addr;
+	struct iaddrlist *list;
+
+	do {
+		if (!parse_ip_addr (cfile, &addr)) {
+			parse_warn ("expecting IP address.");
+			skip_to_semi (cfile);
+			return;
+		}
+
+		list = (struct iaddrlist *)malloc (sizeof (struct iaddrlist));
+		if (!list)
+			error ("no memory for reject list!");
+
+		list -> addr = addr;
+		list -> next = config -> reject_list;
+		config -> reject_list = list;
+
+		token = next_token (&val, cfile);
+	} while (token == COMMA);
+
+	if (token != SEMI) {
+		parse_warn ("expecting semicolon.");
+		skip_to_semi (cfile);
+	}
+}	
