@@ -204,7 +204,7 @@ void discover_interfaces ()
 	last = (struct interface_info *)0;
 	for (tmp = interfaces; tmp; tmp = tmp -> next) {
 		if (!tmp -> tif || !(tmp -> flags & INTERFACE_REQUESTED)) {
-			if (tmp -> flags & INTERFACE_REQUESTED)
+			if ((tmp -> flags & INTERFACE_REQUESTED) != ir)
 				error ("%s: not found", tmp -> name);
 			if (!last)
 				interfaces = interfaces -> next;
