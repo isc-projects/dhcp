@@ -1,7 +1,7 @@
 		     Internet Software Consortium
 	   Dynamic Host Configuration Protocol Distribution
-		      Version 3, Alpha Snapshot
-			     June 8, 1999
+		   Version 3, Beta 1, Patchlevel 0
+			     July 7, 1999
 
 			    Release Notes
 
@@ -10,36 +10,84 @@ Consortium DHCP Distribution.
 
 				PLANS
 
-Version 1 of the ISC DHCP Distribution includes just a DHCP Server.
-Version 1 has been in feature freeze since late 1996, and is quite
-stable.  This is the release that we would expect very conservative
-sites to run in production, but it is no longer recommended.
-
-Version 2 of the ISC DHCP Distribution adds a DHCP Client and a
-DHCP/BOOTP Relay Agent to the DHCP Server that was offered in version
-1.0, as well as being more compliant with the protocol specification.
-
-This version has been in a near feature freeze since January of 1998,
-has been in Beta test since then, and is planned for final release in
-May of 1999.  It has a number of important features, and is the
-release that we would expect most sites to run.  It is possible to run
-the Version 1 server with the Version 2 client at sites that want to
-be really conservative.
-
 Version 3 of the ISC DHCP Distribution adds conditional behaviour,
-address pools with access control, and client classing.  Features in
-upcoming releases, starting with 3.1, will include Dynamic DNS
-Support, DHCPv4 16-bit option codes, asynchronous DNS query
-resolution, DHCP Authentication, and support for a DHCP Interserver
-Protocol and live querying and update of the DHCP database.  Not all
-of this is done yet (see below).
+address pools with access control, and client classing.  An interim
+implementation of dynamic DNS updates for the server only is included,
+but is not supported.  The README file contains information about how
+to enable this - it is not compiled into the DHCP server by default.
 
-This release is running in producion at the ISC and at some other
-sites.  A beta release of 3.0 will be available in mid-May of 1999.
-At this point, the 3.0 release is reasonably stable, but is really
-only recommended for sites that are in a position to experiment, or
-for sites that need the new features.  Bug reports are
+Features in upcoming releases, starting with 3.1, will include
+Dynamic DNS Support, DHCPv4 16-bit option codes, asynchronous DNS
+query resolution, DHCP Authentication, and support for a DHCP
+Interserver Protocol and live querying and update of the DHCP
+database.  Not all of this is done yet (see below).
+
+This release is running in production at the ISC and at quite a few
+other sites.  At this point, the 3.0 release is reasonably stable, but
+is really only recommended for sites that are in a position to
+experiment, or for sites that need the new features.  Bug reports are
 enthusiastically solicited.
+
+For information on how to install, configure and run this software,
+as well as how to find documentation and report bugs, please consult
+the README file.
+
+We should be grateful to Irina Goble, Brian Murrell, and all the other
+people who've worked on the interim DNS update implementation - all I
+did was integrate Brian's changes, which were based on Irina's
+changes, which I think were based on a previous set of changes the
+name of whose author I can no longer recall (if you know, please tell
+me so I can update this).
+
+		      Changes since June 6, 1999
+
+- Integrated Irina Goble's Dynamic DNS update patches, with some
+  changes, thanks to Brian Murrell of BC Tel.   These changes are only
+  enabled if you explicitly specify it with the configure script, and
+  we currently have no documentation.
+
+- Heavily updated README file.
+
+- Updated dhclient man page to document all current command-line
+  arguments.
+
+- Added a -s flag to both the client and server, for debugging only,
+  so that the client and server can both be run using the socket API
+  on a single machine that has no network interfaces (e.g., with lo0).
+
+- Added support for three new subexpressions that return data:
+  leased-address, reverse and binary-to-ascii.
+
+- Fixed a problem where TOKEN_NOT and NOT were both kinds of tokens,
+  which prevented "not authoritative" from working.
+
+- Updated the pretty-printer for the 'X' type so that it will output
+  ASCII text if the buffer being output contains all printable
+  characters.   This is useful, e.g., for using the host-name option
+  in the client.
+
+- Add support for an always-broadcast flag, which, when enabled,
+  causes the DHCP server to broadcast responses to all clients in the
+  scope in which it is enabled, even if the client didn't request that
+  the response be broadcast.   This is useful for working around
+  clients that have buggy support for the protocol.
+
+- Fix (I hope!) a compilation problem with the declaration of the
+  fallback_discard function on some versions of Linux.
+
+- Fix a bug that caused the offered lease time to be zero (or possibly
+  some random value from the stack) if the client did not request a
+  specific lease duration.
+
+- Add support for a one-lease-per-client flag, which if enabled in the
+  scope in which a client appears, causes any leases the client holds
+  to be freed as soon as a DHCPREQUEST is received from the client for
+  some other IP address.   This will only work if the client has only
+  one network interface, so caution is urged in the use of this
+  feature.
+
+- Fix a mistake in the example in the dhcpd.conf manual page that
+  talks about the "spawn with" statement.
 
 		      Changes since May 27, 1999
 
