@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcrelay.c,v 1.38 2000/01/26 14:56:16 mellon Exp $ Copyright (c) 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcrelay.c,v 1.39 2000/01/26 15:15:31 mellon Exp $ Copyright (c) 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -173,7 +173,8 @@ int main (argc, argv, envp)
 			} else {
 				he = gethostbyname (argv [i]);
 				if (!he) {
-					log_error ("%s: host unknown", argv [i]);
+					log_error ("%s: host unknown",
+						   argv [i]);
 				} else {
 					iap = ((struct in_addr *)
 					       he -> h_addr_list [0]);
@@ -198,8 +199,10 @@ int main (argc, argv, envp)
 		log_info (arr);
 		log_info (contrib);
 		log_info (url);
-	} else
+	} else {
 		quiet = 0;
+		log_perror = 0;
+	}
 
 	/* Default to the DHCP/BOOTP port. */
 	if (!local_port) {
