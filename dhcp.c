@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"@(#) Copyright (c) 1995 The Internet Software Consortium.  All rights reserved.\n";
+"@(#) Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -297,7 +297,7 @@ void nak_lease (packet, cip)
 	}
 
 	to.sin_family = AF_INET;
-#ifdef HAVE_SIN_LEN
+#ifdef HAVE_SA_LEN
 	to.sin_len = sizeof to;
 #endif
 	memset (to.sin_zero, 0, sizeof to.sin_zero);
@@ -533,12 +533,13 @@ void ack_lease (packet, lease, offer, when)
 
 	/* Sanity check the lease time. */
  	if ((lease->offered_expiry - cur_time) < 0)
- 		putULong(lease_time_buf, packet->subnet->default_lease_time);
+ 		putULong (lease_time_buf,
+			  packet -> subnet -> default_lease_time);
  	else if (lease -> offered_expiry - cur_time >
 		 packet -> subnet -> max_lease_time) 
  		putULong (lease_time_buf, packet -> subnet -> max_lease_time);
 	else 
-		putULong(lease_time_buf, lease -> offered_expiry - cur_time);
+		putULong (lease_time_buf, lease -> offered_expiry - cur_time);
 
 	putULong (lease_time_buf, lease -> offered_expiry - cur_time);
 	options [DHO_DHCP_LEASE_TIME] = &lease_time_tree;
@@ -582,7 +583,7 @@ void ack_lease (packet, lease, offer, when)
 	}
 
 	to.sin_family = AF_INET;
-#ifdef HAVE_SIN_LEN
+#ifdef HAVE_SA_LEN
 	to.sin_len = sizeof to;
 #endif
 	memset (to.sin_zero, 0, sizeof to.sin_zero);
