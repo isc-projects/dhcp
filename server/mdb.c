@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.67.2.16 2002/02/20 05:46:46 mellon Exp $ Copyright (c) 1996-2002 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.67.2.17 2002/03/12 06:47:58 mellon Exp $ Copyright (c) 1996-2002 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -455,7 +455,8 @@ int find_host_for_network (struct subnet **sp, struct host_decl **host,
 	return 0;
 }
 
-void new_address_range (low, high, subnet, pool, lpchain)
+void new_address_range (cfile, low, high, subnet, pool, lpchain)
+	struct parse *cfile;
 	struct iaddr low, high;
 	struct subnet *subnet;
 	struct pool *pool;
@@ -560,8 +561,9 @@ void new_address_range (low, high, subnet, pool, lpchain)
 		/* Remember the lease in the IP address hash. */
 		if (find_lease_by_ip_addr (&lt, lp -> ip_addr, MDL)) {
 			if (lt -> pool) {
-				log_error ("duplicate entries for lease %s",
-					   piaddr (lp -> ip_addr));
+				parse_warn (cfile,
+					    "lease %s is declared twice!",
+					    piaddr (lp -> ip_addr));
 			} else
 				pool_reference (&lt -> pool, pool, MDL);
 			lease_dereference (&lt, MDL);

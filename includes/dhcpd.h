@@ -2411,7 +2411,7 @@ int find_hosts_by_uid PROTO ((struct host_decl **, const unsigned char *,
 			      unsigned, const char *, int));
 int find_host_for_network PROTO ((struct subnet **, struct host_decl **,
 				  struct iaddr *, struct shared_network *));
-void new_address_range PROTO ((struct iaddr, struct iaddr,
+void new_address_range PROTO ((struct parse *, struct iaddr, struct iaddr,
 			       struct subnet *, struct pool *,
 			       struct lease **));
 isc_result_t dhcp_lease_free (omapi_object_t *, const char *, int);

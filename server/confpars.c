@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.143.2.13 2002/02/20 05:29:30 mellon Exp $ Copyright (c) 1995-2002 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.143.2.14 2002/03/12 06:47:56 mellon Exp $ Copyright (c) 1995-2002 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -3217,7 +3217,7 @@ void parse_address_range (cfile, group, type, inpool, lpchain)
 #endif /* FAILOVER_PROTOCOL */
 
 	/* Create the new address range... */
-	new_address_range (low, high, subnet, pool, lpchain);
+	new_address_range (cfile, low, high, subnet, pool, lpchain);
 	pool_dereference (&pool, MDL);
 }
 
