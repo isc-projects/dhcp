@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.12 1999/10/24 17:19:46 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.13 1999/10/24 23:27:52 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -36,7 +36,6 @@ struct hash_table *lease_ip_addr_hash;
 struct hash_table *lease_hw_addr_hash;
 struct hash_table *host_name_hash;
 static struct lease *dangling_leases;
-static struct host_decl *dynamic_hosts;
 
 struct hash_table *group_name_hash;
 
@@ -58,8 +57,19 @@ isc_result_t enter_host (hd, dynamicp, commit)
 	} else {
 		hp = (struct host_decl *)
 			hash_lookup (host_name_hash,
-					     (unsigned char *)hd -> name,
-					     strlen (hd -> name));
+				     (unsigned char *)hd -> name,
+				     strlen (hd -> name));
+
+		/* If it's deleted, we can supersede it. */
+		if (hp && (hp -> flags & HOST_DECL_DELETED)) {
+			delete_hash_entry (host_name_hash,
+					   (unsigned char *)hd -> name,
+					   strlen (hd -> name));
+			/* If the old entry wasn't dynamic, then we
+			   always have to keep the deletion. */
+			if (!hp -> flags & HOST_DECL_DYNAMIC)
+				hd -> flags &= ~HOST_DECL_DYNAMIC;
+		}
 
 		/* If there isn't already a host decl matching this
 		   address, add it to the hash table. */
@@ -75,11 +85,6 @@ isc_result_t enter_host (hd, dynamicp, commit)
 			return ISC_R_EXISTS;
 	}
 
-	if (dynamicp) {
-		hd -> flags |= HOST_DECL_DYNAMIC;
-		hd -> n_dynamic = dynamic_hosts;
-		dynamic_hosts = hd;
-	}
 	hd -> n_ipaddr = (struct host_decl *)0;
 
 	if (!hd -> type)
@@ -200,32 +205,6 @@ isc_result_t delete_host (hd, commit)
 	/* But we do need to do it once!   :') */
 	hd -> flags |= HOST_DECL_DELETED;
 
-	/* If it's a dynamic entry, we write the deletion to the lease
-	   file, but then we can delete the host from the list of dynamic
-	   hosts, and next time the lease file is rewritten, the entry
-	   will simply be left out. */
-	if (hd -> flags & HOST_DECL_DYNAMIC) {
-		for (hp = dynamic_hosts; hp; hp = np) {
-			np = hp -> n_dynamic;
-			if (hd == hp)
-				break;
-		}
-		if (hp) {
-			if (np)
-				np -> n_dynamic = hp -> n_dynamic;
-			else
-				dynamic_hosts = hp -> n_dynamic;
-			hp -> n_dynamic = (struct host_decl *)0;
-		}
-		np = (struct host_decl *)0;
-
-	} else {
-		/* If it's *not* a dynamic entry, then we have to remember
-		   in perpetuity that it's been deleted. */
-		hd -> n_dynamic = dynamic_hosts;
-		dynamic_hosts = hd;
-	}
-
 	if (hd -> interface.hlen) {
 		if (host_hw_addr_hash) {
 			hp = (struct host_decl *)
@@ -313,7 +292,7 @@ isc_result_t delete_host (hd, commit)
 				     strlen (hd -> name));
 		
 		if (hp) {
-			if (hp == hd) {
+			if (hp == hd && (hp -> flags & HOST_DECL_DYNAMIC)) {
 				delete_hash_entry (host_name_hash,
 						   (unsigned char *)hd -> name,
 						   strlen (hd -> name));
@@ -1406,9 +1385,19 @@ void write_leases ()
 	    }
 	}
 
-	/* Write all the dynamically-created host declarations. */
-	for (hp = dynamic_hosts; hp; hp = hp -> n_dynamic)
-		write_host (hp);
+	/* Write all the dynamically-created group declarations. */
+	if (host_name_hash) {
+	    for (i = 0; i < host_name_hash -> hash_count; i++) {
+		for (hb = host_name_hash -> buckets [i];
+		     hb; hb = hb -> next) {
+			hp = (struct host_decl *)hb -> value;
+			if ((hp -> flags & HOST_DECL_DYNAMIC) ||
+			    (!(hp -> flags & HOST_DECL_DYNAMIC) &&
+			     (hp -> flags & HOST_DECL_DELETED)))
+				write_host (hp);
+		}
+	    }
+	}
 
 	/* Write all the leases. */
 	for (s = shared_networks; s; s = s -> next) {
