@@ -55,6 +55,9 @@ experiment, or for sites that desperately need the new features.
 
 	    CHANGES FROM VERSION 2.0 BETA 1 PATCHLEVEL 11
 
+- Use DLPI only on sparcs running Solaris, since it seems not to work
+  on i386 boxes running Solaris for reasons yet to be determined.
+
 - In the client, close standard I/O descriptors when forking a daemon.
 
 - Don't let large lease lengths wrap lease expiry times - just use
