@@ -101,6 +101,14 @@ and for prodding me into improving it.
   cause an internal function to overflow heap.  Thanks to Jason Vas Dias
   at Redhat.
 
+- Some inconsistencies in treating numbers that the lexer parsed as 'NUMBER'
+  or 'NUMBER_OR_NAME' was repaired.  Hexadecimal and octal parsing are
+  affected, and should work better.
+
+- In several cases, parse warnings were being issued before the lexical
+  token had been advanced to the token whose value was causing an error...
+  causing parse warnings to claim the problem is on the wrong token.
+
 			Changes since 3.0.2rc3
 
 - A previously undocumented configuration directive, 'local-address',

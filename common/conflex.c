@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: conflex.c,v 1.92.2.9 2004/11/24 17:39:15 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: conflex.c,v 1.92.2.10 2005/03/01 16:26:19 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -410,22 +410,60 @@ static enum dhcp_token read_number (c, cfile)
 	int c;
 	struct parse *cfile;
 {
+#ifdef OLD_LEXER
 	int seenx = 0;
+#endif
 	int i = 0;
 	int token = NUMBER;
 
 	cfile -> tokbuf [i++] = c;
 	for (; i < sizeof cfile -> tokbuf; i++) {
 		c = get_char (cfile);
-		if (!seenx && c == 'x') {
-			seenx = 1;
+
 #ifndef OLD_LEXER
-		} else if (isascii (c) && !isxdigit (c) &&
-			   (c == '-' || c == '_' || isalpha (c))) {
-			token = NAME;
-		} else if (isascii (c) && !isdigit (c) && isxdigit (c)) {
+		/* Promote NUMBER -> NUMBER_OR_NAME -> NAME, never demote.
+		 * Except in the case of '0x' syntax hex, which gets called
+		 * a NAME at '0x', and returned to NUMBER_OR_NAME once it's
+		 * verified to be at least 0xf or less.
+		 */
+		switch(token) {
+		    case NUMBER:
+			if(isascii(c) && isdigit(c))
+				break;
 			token = NUMBER_OR_NAME;
-#endif
+			/* FALLTHROUGH */
+		    case NUMBER_OR_NAME:
+			if(isascii(c) && isxdigit(c))
+				break;
+			token = NAME;
+			/* FALLTHROUGH */
+		    case NAME:
+			if((i == 2) && isascii(c) && isxdigit(c) &&
+				(cfile->tokbuf[0] == '0') &&
+				((cfile->tokbuf[1] == 'x') ||
+				 (cfile->tokbuf[1] == 'X'))) {
+				token = NUMBER_OR_NAME;
+				break;
+			} else if((c == '-') || (c == '_') ||
+				  (isascii(c) && isalnum(c)))
+				break;
+
+			/* At this point c is either EOF or part of the next
+			 * token.  If not EOF, rewind the file one byte so
+			 * the next token is read from there.
+			 */
+			if(c != EOF) {
+				cfile->bufix--;
+				cfile->ugflag = 1;
+			}
+			goto end_read;
+
+		    default:
+			log_fatal("read_number():%s:%d: impossible case", MDL);
+		}
+#else /* OLD_LEXER */
+		if (!seenx && (c == 'x') {
+			seenx = 1;
 		} else if (!isascii (c) || !isxdigit (c)) {
 			if (c != EOF) {
 				cfile -> bufix--;
@@ -433,16 +471,28 @@ static enum dhcp_token read_number (c, cfile)
 			}
 			break;
 		}
+#endif /* OLD_LEXER */
+
 		cfile -> tokbuf [i] = c;
 	}
+
 	if (i == sizeof cfile -> tokbuf) {
 		parse_warn (cfile,
 			    "numeric token larger than internal buffer");
 		--i;
 	}
+
+  end_read:
 	cfile -> tokbuf [i] = 0;
 	cfile -> tlen = i;
 	cfile -> tval = cfile -> tokbuf;
+
+	/* Check for octal after the fact - octal cannot be a NUMBER as
+	 * atoi() will not parse it properly.
+	 */
+	if ((token == NUMBER) && (cfile->tokbuf[0] == '0') && (i > 1))
+		token = NUMBER_OR_NAME;
+
 	return token;
 }
 

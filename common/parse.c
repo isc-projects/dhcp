@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.104.2.20 2004/09/30 20:38:31 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.104.2.21 2005/03/01 16:26:20 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -720,7 +720,7 @@ TIME parse_date (cfile)
 		return (TIME)0;
 	}
 
-	/* Month... */
+	/* Day of month... */
 	token = next_token (&val, (unsigned *)0, cfile);
 	if (token != NUMBER) {
 		parse_warn (cfile, "numeric day of month expected.");
@@ -4320,15 +4320,15 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 
 	switch (**fmt) {
 	      case 'U':
-		token = peek_token (&val, (unsigned *)0, cfile);
+		token = next_token (&val, (unsigned *)0, cfile);
 		if (!is_identifier (token)) {
 			if ((*fmt) [1] != 'o') {
 				parse_warn (cfile, "expecting identifier.");
-				skip_to_semi (cfile);
+				if (token != SEMI)
+					skip_to_semi (cfile);
 			}
 			return 0;
 		}
-		token = next_token (&val, &len, cfile);
 		if (!make_const_data (&t, (const unsigned char *)val,
 				      len, 1, 1, MDL))
 			log_fatal ("No memory for %s", val);
@@ -4353,18 +4353,21 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 				return 0;
 			}
 			t -> op = expr_const_data;
-		} else if (token == STRING) {
-			token = next_token (&val, &len, cfile);
-			if (!make_const_data (&t, (const unsigned char *)val,
-					      len, 1, 1, MDL))
-				log_fatal ("No memory for \"%s\"", val);
 		} else {
-			if ((*fmt) [1] != 'o') {
+			token = next_token (&val, &len, cfile);
+
+			if(token == STRING) {
+				if (!make_const_data (&t,
+						(const unsigned char *)val,
+							len, 1, 1, MDL))
+					log_fatal ("No memory for \"%s\"", val);
+			} else if ((*fmt) [1] != 'o') {
 				parse_warn (cfile, "expecting string %s.",
 					    "or hexadecimal data");
 				skip_to_semi (cfile);
+			} else {
+				return 0;
 			}
-			return 0;
 		}
 		break;
 		
@@ -4379,7 +4382,7 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 		goto make_string;
 
 	      case 't': /* Text string... */
-		token = peek_token (&val, (unsigned *)0, cfile);
+		token = next_token (&val, (unsigned *)0, cfile);
 		if (token != STRING && !is_identifier (token)) {
 			if ((*fmt) [1] != 'o') {
 				parse_warn (cfile, "expecting string.");
@@ -4388,7 +4391,6 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 			}
 			return 0;
 		}
-		token = next_token (&val, &len, cfile);
 	      make_string:
 		if (!make_const_data (&t, (const unsigned char *)val,
 				      len, 1, 1, MDL))
@@ -4435,10 +4437,9 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 		break;
 		
 	      case 'T':	/* Lease interval. */
-		token = peek_token (&val, (unsigned *)0, cfile);
+		token = next_token (&val, (unsigned *)0, cfile);
 		if (token != INFINITE)
 			goto check_number;
-		token = next_token (&val, (unsigned *)0, cfile);
 		putLong (buf, -1);
 		if (!make_const_data (&t, buf, 4, 0, 1, MDL))
 			return 0;
@@ -4446,9 +4447,9 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 
 	      case 'L': /* Unsigned 32-bit integer... */
 	      case 'l':	/* Signed 32-bit integer... */
-		token = peek_token (&val, (unsigned *)0, cfile);
+		token = next_token (&val, (unsigned *)0, cfile);
 	      check_number:
-		if (token != NUMBER) {
+		if ((token != NUMBER) && (token != NUMBER_OR_NAME)) {
 		      need_number:
 			if ((*fmt) [1] != 'o') {
 				parse_warn (cfile, "expecting number.");
@@ -4457,7 +4458,6 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 			}
 			return 0;
 		}
-		token = next_token (&val, (unsigned *)0, cfile);
 		convert_num (cfile, buf, val, 0, 32);
 		if (!make_const_data (&t, buf, 4, 0, 1, MDL))
 			return 0;
@@ -4465,10 +4465,9 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 
 	      case 's':	/* Signed 16-bit integer. */
 	      case 'S':	/* Unsigned 16-bit integer. */
-		token = peek_token (&val, (unsigned *)0, cfile);
-		if (token != NUMBER)
-			goto need_number;
 		token = next_token (&val, (unsigned *)0, cfile);
+		if ((token != NUMBER) && (token != NUMBER_OR_NAME))
+			goto need_number;
 		convert_num (cfile, buf, val, 0, 16);
 		if (!make_const_data (&t, buf, 2, 0, 1, MDL))
 			return 0;
@@ -4476,17 +4475,16 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 
 	      case 'b':	/* Signed 8-bit integer. */
 	      case 'B':	/* Unsigned 8-bit integer. */
-		token = peek_token (&val, (unsigned *)0, cfile);
-		if (token != NUMBER)
-			goto need_number;
 		token = next_token (&val, (unsigned *)0, cfile);
+		if ((token != NUMBER) && (token != NUMBER_OR_NAME))
+			goto need_number;
 		convert_num (cfile, buf, val, 0, 8);
 		if (!make_const_data (&t, buf, 1, 0, 1, MDL))
 			return 0;
 		break;
 
 	      case 'f': /* Boolean flag. */
-		token = peek_token (&val, (unsigned *)0, cfile);
+		token = next_token (&val, (unsigned *)0, cfile);
 		if (!is_identifier (token)) {
 			if ((*fmt) [1] != 'o')
 				parse_warn (cfile, "expecting identifier.");
@@ -4510,7 +4508,6 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 				parse_warn (cfile, "expecting boolean.");
 			goto bad_flag;
 		}
-		token = next_token (&val, (unsigned *)0, cfile);
 		if (!make_const_data (&t, buf, 1, 0, 1, MDL))
 			return 0;
 		break;
@@ -4650,7 +4647,8 @@ int parse_option_decl (oc, cfile)
 			      case 'l':	/* Signed 32-bit integer... */
 				token = next_token (&val,
 						    (unsigned *)0, cfile);
-				if (token != NUMBER) {
+				if ((token != NUMBER) &&
+				    (token != NUMBER_OR_NAME)) {
 				      need_number:
 					parse_warn (cfile,
 						    "expecting number.");
@@ -4667,7 +4665,8 @@ int parse_option_decl (oc, cfile)
 			      case 'S':	/* Unsigned 16-bit integer. */
 				token = next_token (&val,
 						    (unsigned *)0, cfile);
-				if (token != NUMBER)
+				if ((token != NUMBER) &&
+				    (token != NUMBER_OR_NAME))
 					goto need_number;
 				convert_num (cfile, buf, val, 0, 16);
 				len = 2;
@@ -4678,7 +4677,8 @@ int parse_option_decl (oc, cfile)
 			      case 'B':	/* Unsigned 8-bit integer. */
 				token = next_token (&val,
 						    (unsigned *)0, cfile);
-				if (token != NUMBER)
+				if ((token != NUMBER) &&
+				    (token != NUMBER_OR_NAME))
 					goto need_number;
 				convert_num (cfile, buf, val, 0, 8);
 				len = 1;
