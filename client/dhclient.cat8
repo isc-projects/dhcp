@@ -5,7 +5,7 @@ dhclient(8)                                           dhclient(8)
 
 
 NNAAMMEE
-       dhcpd - Dynamic Host Configuration Protocol Client
+       dhclient - Dynamic Host Configuration Protocol Client
 
 SSYYNNOOPPSSIISS
        ddhhcclliieenntt [ --pp _p_o_r_t ] [ --dd ] [ _i_f_0 [ _._._._i_f_N ] ]
@@ -28,8 +28,8 @@ OOPPEERRAATTIIOONN
        attached, such as the location of a  default  router,  the
        location of a name server, and so on.
 
-       On  startup, dhclient reads the _d_h_c_l_i_e_n_t_._c_o_n_f for configu-
-       ration instructions.   It then gets a list of all the net-
+       On  startup, dhclient reads the _d_h_c_l_i_e_n_t_._c_o_n_f for configu­
+       ration instructions.   It then gets a list of all the net­
        work interfaces that are configured in the current system.
        For each interface, it attempts to configure the interface
        using the DHCP protocol.
@@ -51,7 +51,7 @@ OOPPEERRAATTIIOONN
        database.
 
        Old  leases  are  kept  around  in case the DHCP server is
-       unavailable when dhclient is first invoked (generally dur-
+       unavailable when dhclient is first invoked (generally dur­
        ing the initial system boot process).   In that event, old
        leases from the dhclient.leases file which  have  not  yet
        expired  are  tested,  and  if  they  are determined to be
@@ -88,7 +88,7 @@ CCOOMMMMAANNDD LLIINNEE
        The  names  of the network interfaces that dhclient should
        attempt to configure may be specified on the command line.
        If  no  interface  names are specified on the command line
-       dhclient will identify all network interfaces, elimininat-
+       dhclient will identify all network interfaces, elimininat­
        ing  non-broadcast  interfaces if possible, and attempt to
        configure each interface.
 
@@ -140,7 +140,7 @@ dhclient(8)                                           dhclient(8)
        Elliot  Poger for use on Linux while he was working on the
        MosquitoNet project at Stanford.
 
-       The current version owes much to Elliot's  Linux  enhance-
+       The current version owes much to Elliot's  Linux  enhance­
        ments,  but  was  substantially  reorganized and partially
        rewritten by Ted Lemon so as to use  the  same  networking
        framework  that  the  Internet  Software  Consortium  DHCP
