@@ -823,7 +823,7 @@ void make_release PROTO ((struct interface_info *, struct client_lease *));
 void free_client_lease PROTO ((struct client_lease *));
 void rewrite_client_leases PROTO ((void));
 void write_client_lease PROTO ((struct interface_info *,
-				 struct client_lease *));
+				 struct client_lease *, int));
 char *dhcp_option_ev_name PROTO ((struct option *));
 
 void script_init PROTO ((struct interface_info *, char *,
