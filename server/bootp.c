@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bootp.c,v 1.59 2000/01/25 01:32:41 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bootp.c,v 1.60 2000/02/07 05:15:44 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -97,7 +97,7 @@ void bootp (packet)
 		/* If a lease has already been assigned to this client,
 		   use it. */
 		if (lease) {
-			ack_lease (packet, lease, 0, 0, msgbuf);
+			ack_lease (packet, lease, 0, 0, msgbuf, 0);
 			return;
 		}
 
@@ -106,7 +106,7 @@ void bootp (packet)
 					packet -> shared_network -> pools, 0);
 		if (lease) {
 			lease -> host = host;
-			ack_lease (packet, lease, 0, 0, msgbuf);
+			ack_lease (packet, lease, 0, 0, msgbuf, 0);
 			return;
 		}
 		log_info ("%s: no available leases", msgbuf);
