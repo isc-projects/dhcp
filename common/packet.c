@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: packet.c,v 1.18.2.3 1999/04/11 20:31:18 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: packet.c,v 1.18.2.4 1999/04/24 15:31:47 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -72,6 +72,9 @@ u_int32_t checksum (buf, nbytes, sum)
 		debug ("sum = %x", sum);
 #endif
 		sum += (u_int16_t) ntohs(*((u_int16_t *)(buf + i)));
+		/* Add carry. */
+		if (sum > 0xFFFF)
+			sum -= 0xFFFF;
 	}	
 
 	/* If there's a single byte left over, checksum it, too.   Network
@@ -81,13 +84,15 @@ u_int32_t checksum (buf, nbytes, sum)
 		debug ("sum = %x", sum);
 #endif
 		sum += buf [i] << 8;
+		/* Add carry. */
+		if (sum > 0xFFFF)
+			sum -= 0xFFFF;
 	}
 	
 	return sum;
 }
 
-/* Fold the upper sixteen bits of the checksum down into the lower bits,
-   complement the sum, and then put it into network byte order. */
+/* Finish computing the sum, and then put it into network byte order. */
 
 u_int32_t wrapsum (sum)
 	u_int32_t sum;
@@ -96,17 +101,7 @@ u_int32_t wrapsum (sum)
 	debug ("wrapsum (%x)", sum);
 #endif
 
-	while (sum > 0x10000) {
-		sum = (sum >> 16) + (sum & 0xFFFF);
-#ifdef DEBUG_CHECKSUM_VERBOSE
-		debug ("sum = %x", sum);
-#endif
-		sum += (sum >> 16);
-#ifdef DEBUG_CHECKSUM_VERBOSE
-		debug ("sum = %x", sum);
-#endif
-	}
-	sum = sum ^ 0xFFFF;
+	sum = ~sum & 0xFFFF;
 #ifdef DEBUG_CHECKSUM_VERBOSE
 	debug ("sum = %x", sum);
 #endif
@@ -312,7 +307,7 @@ ssize_t decode_udp_ip_header (interface, buf, bufix, from, data, buflen)
 		  }
 		  return -1;
 	  }
-	  if (len + data != buf + buflen)
+	  if (len + data != buf + bufix + buflen)
 		  debug ("accepting packet with data after udp payload.");
   }
 
@@ -333,7 +328,7 @@ ssize_t decode_udp_ip_header (interface, buf, bufix, from, data, buflen)
 	  udp_packets_bad_checksum++;
 	  if (udp_packets_seen > 4 &&
 	      (udp_packets_seen / udp_packets_bad_checksum) < 2) {
-		  note ("%d bad udp checksums in $d packets",
+		  note ("%d bad udp checksums in %d packets",
 			udp_packets_bad_checksum, udp_packets_seen);
 		  udp_packets_seen = udp_packets_bad_checksum = 0;
 	  }
