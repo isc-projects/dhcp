@@ -108,7 +108,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dlpi.c,v 1.8 1999/03/16 05:50:33 mellon Exp $ Copyright (c) 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dlpi.c,v 1.9 1999/03/16 06:37:48 mellon Exp $ Copyright (c) 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 static int strioctl PROTO ((int fd, int cmd, int timeout, int len, char *dp));
@@ -504,7 +504,7 @@ ssize_t send_packet (interface, packet, raw, len, from, to, hto)
 				  0, 0, dbuf, dbuflen);
 #endif
 	if (result < 0)
-		warn ("send_packet: %m");
+		log_error ("send_packet: %m");
 	return result;
 }
 #endif /* USE_DLPI_SEND */

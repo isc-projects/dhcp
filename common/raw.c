@@ -35,7 +35,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: raw.c,v 1.14 1999/03/16 05:50:36 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: raw.c,v 1.15 1999/03/16 06:37:50 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -112,7 +112,7 @@ size_t send_packet (interface, packet, raw, len, from, to, hto)
 
 	result = writev(interface -> wfdesc, iov, 2);
 	if (result < 0)
-		warn ("send_packet: %m");
+		log_error ("send_packet: %m");
 	return result;
 }
 #endif /* USE_SOCKET_SEND */

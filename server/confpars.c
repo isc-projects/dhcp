@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.64 1999/03/16 05:50:42 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.65 1999/03/16 06:37:51 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -782,7 +782,7 @@ int parse_allow_deny (oc, cfile, flag)
 {
 	enum dhcp_token token;
 	char *val;
-	char rf = flag;
+	unsigned char rf = flag;
 	struct expression *data = (struct expression *)0;
 	int status;
 
@@ -998,7 +998,7 @@ struct class *parse_class_declaration (cfile, group, type)
 				return (struct class *)0;
 			data.terminated = 1;
 			data.data = &data.buffer -> data [0];
-			strcpy (data.data, val);
+			strcpy ((char *)data.data, val);
 		} else if (token == NUMBER_OR_NAME || token == NUMBER) {
 			memset (&data, 0, sizeof data);
 			if (!parse_cshl (&data, cfile))

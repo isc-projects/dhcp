@@ -23,7 +23,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: nit.c,v 1.21 1999/03/16 05:50:35 mellon Exp $ Copyright (c) 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: nit.c,v 1.22 1999/03/16 06:37:49 mellon Exp $ Copyright (c) 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -284,7 +284,7 @@ ssize_t send_packet (interface, packet, raw, len, from, to, hto)
 
 	result = putmsg (interface -> wfdesc, &ctl, &data, 0);
 	if (result < 0)
-		warn ("send_packet: %m");
+		log_error ("send_packet: %m");
 	return result;
 }
 #endif /* USE_NIT_SEND */

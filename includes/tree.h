@@ -36,7 +36,7 @@ typedef struct _pair {
 /* A data buffer with a reference count. */
 struct buffer {
 	int refcnt;
-	char data [1];
+	unsigned char data [1];
 };
 
 /* XXX The mechanism by which data strings are returned is currently
@@ -125,7 +125,6 @@ struct data_string; /* forward */
 struct packet; /* forward */
 struct option_state; /* forward */
 struct decoded_option_state; /* forward */
-enum statement_op; /* forward */
 
 struct universe {
 	char *name;

@@ -23,7 +23,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: lpf.c,v 1.7 1999/03/16 05:50:34 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: lpf.c,v 1.8 1999/03/16 06:37:49 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -202,7 +202,7 @@ ssize_t send_packet (interface, packet, raw, len, from, to, hto)
 	result = sendto (interface -> wfdesc, buf, bufp + len, 0,
 			 &sa, sizeof sa);
 	if (result < 0)
-		warn ("send_packet: %m");
+		log_error ("send_packet: %m");
 	return result;
 }
 #endif /* USE_LPF_SEND */

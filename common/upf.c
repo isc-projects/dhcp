@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: upf.c,v 1.9 1999/03/16 05:50:38 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: upf.c,v 1.10 1999/03/16 06:37:50 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -233,7 +233,7 @@ ssize_t send_packet (interface, packet, raw, len, from, to, hto)
 
 	result = writev(interface -> wfdesc, iov, 2);
 	if (result < 0)
-		warn ("send_packet: %m");
+		log_error ("send_packet: %m");
 	return result;
 }
 #endif /* USE_UPF_SEND */

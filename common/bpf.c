@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bpf.c,v 1.25 1999/03/16 05:50:31 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bpf.c,v 1.26 1999/03/16 06:37:48 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -274,7 +274,7 @@ ssize_t send_packet (interface, packet, raw, len, from, to, hto)
 
 	result = writev(interface -> wfdesc, iov, 2);
 	if (result < 0)
-		warn ("send_packet: %m");
+		log_error ("send_packet: %m");
 	return result;
 }
 #endif /* USE_BPF_SEND */

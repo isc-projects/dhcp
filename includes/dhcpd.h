@@ -300,7 +300,7 @@ struct lease_state {
 #endif
 
 #ifndef CL_DEFAULT_BOOTP_POLICY
-# define CL_DEFAULT_BOOTP_POLICY ACCEPT
+# define CL_DEFAULT_BOOTP_POLICY P_ACCEPT
 #endif
 
 #ifndef CL_DEFAULT_SCRIPT_NAME

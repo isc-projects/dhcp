@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.16 1999/03/16 05:50:36 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.17 1999/03/16 06:37:49 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -782,7 +782,7 @@ int parse_cshl (data, cfile)
 	struct data_string *data;
 	FILE *cfile;
 {
-	char ibuf [128];
+	u_int8_t ibuf [128];
 	int ilen = 0;
 	int tlen = 0;
 	struct option_tag *sl = (struct option_tag *)0;
@@ -1381,7 +1381,8 @@ int parse_non_binary (expr, cfile, lose, context)
 		
 	      case STRING:
 		token = next_token (&val, cfile);
-		if (!make_const_data (expr, val, strlen (val), 1, 1))
+		if (!make_const_data (expr, (unsigned char *)val,
+				      strlen (val), 1, 1))
 			log_fatal ("can't make constant string expression.");
 		break;
 

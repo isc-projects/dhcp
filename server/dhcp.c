@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.82 1999/03/16 05:50:43 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.83 1999/03/16 06:37:52 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -384,7 +384,8 @@ void nak_lease (packet, cip)
 		return;
 	}
 	if (!make_const_data (&oc -> expression,
-			      dhcp_message, strlen (dhcp_message), 1, 0)) {
+			      (unsigned char *)dhcp_message,
+			      strlen (dhcp_message), 1, 0)) {
 		log_error ("No memory for expr_const expression.");
 		option_cache_dereference (&oc, "nak_lease");
 		return;
@@ -1072,7 +1073,8 @@ void ack_lease (packet, lease, offer, when, msg)
 		oc = (struct option_cache *)0;
 		if (option_cache_allocate (&oc, "ack_lease")) {
 			if (make_const_data (&oc -> expression,
-					     lease -> host -> name,
+					     ((unsigned char *)
+					      lease -> host -> name),
 					     strlen (lease -> host -> name),
 					     1, 0)) {
 				oc -> option = dhcp_universe.options [i];
@@ -1101,7 +1103,8 @@ void ack_lease (packet, lease, offer, when, msg)
 			oc = (struct option_cache *)0;
 			if (option_cache_allocate (&oc, "ack_lease")) {
 				if (make_const_data (&oc -> expression,
-						     h -> h_name,
+						     ((unsigned char *)
+						      h -> h_name),
 						     strlen (h -> h_name) + 1,
 						     1, 1)) {
 					oc -> option =
@@ -1680,16 +1683,18 @@ struct lease *find_lease (packet, share, ours)
 		if (packet -> packet_type == DHCPREQUEST && fixed_lease) {
 			fixed_lease = (struct lease *)0;
 		      db_conflict:
-			warn ("Both dynamic and static leases present for %s.",
-			      piaddr (cip));
-			warn ("Either remove host declaration %s or remove %s",
-			      (fixed_lease && fixed_lease -> host
-			       ? (fixed_lease -> host -> name
-				  ? fixed_lease -> host -> name : piaddr (cip))
-			       : piaddr (cip)),
-			      piaddr (cip));
-			warn ("from the dynamic address pool for %s",
-			      ip_lease -> subnet -> shared_network -> name);
+			log_error ("Dynamic and static leases present for %s.",
+				   piaddr (cip));
+			log_error ("Remove host declaration %s or remove %s",
+				   (fixed_lease && fixed_lease -> host
+				    ? (fixed_lease -> host -> name
+				       ? fixed_lease -> host -> name
+				       : piaddr (cip))
+				    : piaddr (cip)),
+				    piaddr (cip));
+			log_error ("from the dynamic address pool for %s",
+				   ip_lease -> subnet -> shared_network -> name
+				  );
 			if (fixed_lease)
 				ip_lease = (struct lease *)0;
 			strcpy (dhcp_message,
