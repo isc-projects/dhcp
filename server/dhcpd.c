@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.33 1996/09/02 21:37:57 mellon Exp $ Copyright 1995, 1996 The Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.34 1996/09/09 07:05:49 mellon Exp $ Copyright 1995, 1996 The Internet Software Consortium.";
 #endif
 
 static char copyright[] =
@@ -249,7 +249,7 @@ int main (argc, argv, envp)
 static void usage ()
 {
 	error ("Usage: dhcpd [-p <UDP port #>] [-d] [-f] [-cf config-file]%s",
-	       "\n            [-l lease-file] [if0 [...ifN]]");
+	       "\n            [-lf lease-file] [if0 [...ifN]]");
 }
 
 void cleanup ()
