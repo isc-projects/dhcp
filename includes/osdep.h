@@ -52,7 +52,9 @@
     !defined (USE_BPF_RECEIVE) && \
     !defined (USE_NIT) && \
     !defined (USE_NIT_SEND) && \
-    !defined (USE_NIT_RECEIVE)
+    !defined (USE_NIT_RECEIVE) && \
+    !defined (USR_DLPI_SEND) && \
+    !defined (USE_DLPI_RECEIVE)
 #  define USE_DEFAULT_NETWORK
 #endif
 
@@ -139,6 +141,11 @@
 #  define USE_NIT_RECEIVE
 #endif
 
+#ifdef USE_DLPI
+#  define USE_DLPI_SEND
+#  define USE_DLPI_RECEIVE
+#endif
+
 #ifdef USE_UPF
 #  define USE_UPF_SEND
 #  define USE_UPF_RECEIVE
@@ -152,7 +159,8 @@
    Currently, all low-level packet interfaces use BSD sockets as a
    fallback. */
 
-#if defined (USE_BPF_SEND) || defined (USE_NIT_SEND) || defined (USE_UPF_SEND)
+#if defined (USE_BPF_SEND) || defined (USE_NIT_SEND) || \
+    defined (USE_DLPI_SEND) || defined (USE_UPF_SEND)
 #  define USE_SOCKET_FALLBACK
 #  define USE_FALLBACK
 #endif
@@ -164,7 +172,8 @@
    definition for your interface to the list tested below. */
 
 #if defined (USE_RAW_SEND) || defined (USE_BPF_SEND) || \
-		defined (USE_NIT_SEND) || defined (USE_UPF_SEND)
+		defined (USE_NIT_SEND) || defined (USE_UPF_SEND) || \
+		defined (USE_DLPI_SEND)
 #  define PACKET_ASSEMBLY
 #endif
 
@@ -175,7 +184,8 @@
    definition for your interface to the list tested below. */
 
 #if defined (USE_RAW_RECEIVE) || defined (USE_BPF_SEND) || \
-		defined (USE_NIT_RECEIVE) || defined (USE_UPF_SEND)
+		defined (USE_NIT_RECEIVE) || defined (USE_UPF_RECEIVE) || \
+		defined (USE_DLPI_RECEIVE)
 #  define PACKET_DECODING
 #endif
 
