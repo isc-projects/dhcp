@@ -30,6 +30,7 @@ isc_result_t omapi_connect (omapi_object_t *c,
 	int hix;
 	isc_result_t status;
 	omapi_connection_object_t *obj;
+	int flag;
 
 	obj = (omapi_connection_object_t *)malloc (sizeof *obj);
 	if (!obj)
@@ -87,6 +88,15 @@ isc_result_t omapi_connect (omapi_object_t *c,
 					  "omapi_connect");
 		if (errno == EMFILE || errno == ENFILE || errno == ENOBUFS)
 			return ISC_R_NORESOURCES;
+		return ISC_R_UNEXPECTED;
+	}
+
+	/* Set the SO_REUSEADDR flag (this should not fail). */
+	flag = 1;
+	if (setsockopt (obj -> socket, SOL_SOCKET, SO_REUSEADDR,
+			(char *)&flag, sizeof flag) < 0) {
+		omapi_object_dereference ((omapi_object_t **)&obj,
+					  "omapi_connect");
 		return ISC_R_UNEXPECTED;
 	}
 	
@@ -225,6 +235,7 @@ int omapi_connection_writefd (omapi_object_t *h)
 	omapi_connection_object_t *c;
 	if (h -> type != omapi_type_connection)
 		return -1;
+	c = (omapi_connection_object_t *)h;
 	if (c -> out_bytes)
 		return c -> socket;
 	else
