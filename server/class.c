@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: class.c,v 1.28 2001/04/06 05:45:45 mellon Exp $ Copyright (c) 1998-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: class.c,v 1.29 2001/04/20 20:39:26 mellon Exp $ Copyright (c) 1998-2000 The Internet Software Consortium.  All rights reserved.\n";
 
 #endif /* not lint */
 
@@ -267,6 +267,11 @@ int bill_class (lease, class)
 	struct class *class;
 {
 	int i;
+
+	if (lease -> billing_class) {
+		log_error ("lease billed with existing billing arrangement.");
+		unbill_class (lease, lease -> billing_class);
+	}
 
 	if (class -> leases_consumed == class -> lease_limit)
 		return 0;
