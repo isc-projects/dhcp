@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.100 2000/02/01 03:19:56 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.101 2000/02/02 17:10:43 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -491,39 +491,19 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 
 	      default:
 		et = (struct executable_statement *)0;
-		if (is_identifier (token)) {
-			option = ((struct option *)
-				  hash_lookup (server_universe.hash,
-					       (const unsigned char *)val, 0));
-			if (option) {
-				token = next_token (&val, cfile);
-				if (!parse_option_statement
-					(&et, cfile, 1, option,
-					 supersede_option_statement))
-					return declaration;
-			}
-		}
-
-		if (!et) {
-			lose = 0;
-			if (!parse_executable_statement (&et, cfile, &lose,
-							 context_any)) {
-				if (!lose) {
-				    if (declaration)
+		lose = 0;
+		if (!parse_executable_statement (&et, cfile, &lose,
+						 context_any)) {
+			if (!lose) {
+				if (declaration)
 					parse_warn (cfile,
 						    "expecting a declaration");
-				    else
+				else
 					parse_warn (cfile,
 						    "expecting a parameter %s",
 						    "or declaration");
-					skip_to_semi (cfile);
-				}
-				return declaration;
+				skip_to_semi (cfile);
 			}
-		}
-		if (!et) {
-			parse_warn (cfile, "expecting a %sdeclaration",
-				    declaration ? "" :  "parameter or ");
 			return declaration;
 		}
 	      insert_statement:

@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tables.c,v 1.35 2000/01/26 14:55:34 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tables.c,v 1.36 2000/02/02 17:10:39 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -828,6 +828,12 @@ const char *hardware_types [] = {
 struct hash_table universe_hash;
 struct universe **universes;
 int universe_count, universe_max;
+
+/* Universe containing names of configuration options, which, rather than
+   writing "option universe-name.option-name ...;", can be set by writing
+   "option-name ...;". */
+
+struct universe *config_universe;
 
 void initialize_common_option_spaces()
 {

@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: stables.c,v 1.5 2000/01/25 01:45:00 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: stables.c,v 1.6 2000/02/02 17:10:43 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -733,4 +733,7 @@ void initialize_server_option_spaces()
 	add_hash (&universe_hash,
 		  (const unsigned char *)server_universe.name, 0,
 		  (unsigned char *)&server_universe);
+
+	/* Make the server universe the configuration option universe. */
+	config_universe = &server_universe;
 }
