@@ -28,7 +28,7 @@
 .\" see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
 .\" ``http://www.nominum.com''.
 .\"
-.\" $Id: dhcpd.conf.5,v 1.63.2.23 2004/12/15 19:11:42 dhankins Exp $
+.\" $Id: dhcpd.conf.5,v 1.63.2.24 2004/12/15 19:29:48 dhankins Exp $
 .\"
 .TH dhcpd.conf 5
 .SH NAME
@@ -1971,14 +1971,23 @@ statement
 .PP
 This statemet causes the DHCP server to listen for DHCP requests sent
 to the specified \fIaddress\fR, rather than requests sent to all addresses.
+Since serving directly attached DHCP clients implies that the server must
+respond to requests sent to the all-ones IP address, this option cannot be
+used if clients are on directly attached networks...it is only realistically
+useful for a server whose only clients are reached via unicasts, such as via
+DHCP relay agents.
 .PP
 Note:  This statement is only effective if the server was compiled using
 the USE_SOCKETS #define statement, which is default on a small number of
-operating systems, and must be explicitly chosen at compile-time.  You
-can be sure if your server is compiled with USE_SOCKETS if you see lines
-of this format at startup:
+operating systems, and must be explicitly chosen at compile-time for all
+others.  You can be sure if your server is compiled with USE_SOCKETS if
+you see lines of this format at startup:
 .PP
  Listening on Socket/eth0
+.PP
+Note also that since this bind()s all DHCP sockets to the specified
+address, that only one address may be supported in a daemon at a given
+time.
 .RE
 .PP
 The
