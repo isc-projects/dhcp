@@ -23,7 +23,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: lpf.c,v 1.13 1999/06/10 00:10:50 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: lpf.c,v 1.13.2.1 1999/10/04 23:11:35 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -73,9 +73,10 @@ int if_register_lpf (info)
 		if (errno == ENOPROTOOPT || errno == EPROTONOSUPPORT ||
 		    errno == ESOCKTNOSUPPORT || errno == EPFNOSUPPORT ||
 		    errno == EAFNOSUPPORT || errno == EINVAL)
-			log_fatal ("socket: %m - make sure %s %s!",
-				   "CONFIG_PACKET and CONFIG_FILTER are",
-				   "defined in your kernel configuration");
+			log_fatal ("socket: %m - make sure %s %s %s!",
+				   "CONFIG_PACKET (Packet socket)"
+				   "and CONFIG_FILTER (Socket Filtering) are",
+				   "enabled in your kernel configuration");
 		log_fatal ("Open a socket for LPF: %m");
 	}
 
@@ -87,9 +88,10 @@ int if_register_lpf (info)
 		if (errno == ENOPROTOOPT || errno == EPROTONOSUPPORT ||
 		    errno == ESOCKTNOSUPPORT || errno == EPFNOSUPPORT ||
 		    errno == EAFNOSUPPORT || errno == EINVAL)
-			log_fatal ("socket: %m - make sure %s %s!",
-				   "CONFIG_PACKET and CONFIG_FILTER are",
-				   "defined in your kernel configuration");
+			log_fatal ("bind: %m - make sure %s %s %s!",
+				   "CONFIG_PACKET (Packet socket)"
+				   "and CONFIG_FILTER (Socket Filtering) are",
+				   "enabled in your kernel configuration");
 		log_fatal ("Bind socket to interface: %m");
 	}
 
@@ -170,10 +172,11 @@ static void lpf_gen_filter_setup (info)
 		if (errno == ENOPROTOOPT || errno == EPROTONOSUPPORT ||
 		    errno == ESOCKTNOSUPPORT || errno == EPFNOSUPPORT ||
 		    errno == EAFNOSUPPORT)
-			error ("socket: %m - make sure %s %s!",
-			       "CONFIG_PACKET and CONFIG_FILTER are defined",
-			       "in your kernel configuration");
-		error ("Can't install packet filter program: %m");
+			log_fatal ("socket: %m - make sure %s %s %s!",
+				   "CONFIG_PACKET (Packet socket)"
+				   "and CONFIG_FILTER (Socket Filtering) are",
+				   "enabled in your kernel configuration");
+		log_fatal ("Can't install packet filter program: %m");
 	}
 }
 
@@ -199,10 +202,11 @@ static void lpf_tr_filter_setup (info)
 		if (errno == ENOPROTOOPT || errno == EPROTONOSUPPORT ||
 		    errno == ESOCKTNOSUPPORT || errno == EPFNOSUPPORT ||
 		    errno == EAFNOSUPPORT)
-			error ("socket: %m - make sure %s %s!",
-			       "CONFIG_PACKET and CONFIG_FILTER are defined",
-			       "in your kernel configuration");
-		error ("Can't install packet filter program: %m");
+			log_fatal ("socket: %m - make sure %s %s %s!",
+				   "CONFIG_PACKET (Packet socket)"
+				   "and CONFIG_FILTER (Socket Filtering) are",
+				   "enabled in your kernel configuration");
+		log_fatal ("Can't install packet filter program: %m");
 	}
 }
 #endif /* USE_LPF_RECEIVE */
