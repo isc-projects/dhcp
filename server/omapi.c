@@ -50,7 +50,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: omapi.c,v 1.46.2.1 2001/05/17 07:18:45 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: omapi.c,v 1.46.2.2 2001/05/18 01:06:23 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -236,7 +236,7 @@ isc_result_t dhcp_lease_set_value  (omapi_object_t *h,
 		}
 		return ISC_R_UNCHANGED;
 	} else if (!omapi_ds_strcmp (name, "ip-address")) {
-		return ISC_R_UNCHANGED;	/* XXX return error if changed. */
+		return ISC_R_INVALIDARG;
 	} else if (!omapi_ds_strcmp (name, "dhcp-client-identifier")) {
 		return ISC_R_UNCHANGED;	/* XXX take change. */
 	} else if (!omapi_ds_strcmp (name, "hostname")) {
@@ -246,13 +246,13 @@ isc_result_t dhcp_lease_set_value  (omapi_object_t *h,
 	} else if (!omapi_ds_strcmp (name, "host")) {
 		return ISC_R_UNCHANGED;	/* XXX take change. */
 	} else if (!omapi_ds_strcmp (name, "subnet")) {
-		return ISC_R_UNCHANGED;	/* XXX return error if changed. */
+		return ISC_R_INVALIDARG;
 	} else if (!omapi_ds_strcmp (name, "pool")) {
-		return ISC_R_UNCHANGED;	/* XXX return error if changed. */
+		return ISC_R_INVALIDARG;
 	} else if (!omapi_ds_strcmp (name, "starts")) {
-		return ISC_R_UNCHANGED;	/* XXX return error if changed. */
+		return ISC_R_INVALIDARG;
 	} else if (!omapi_ds_strcmp (name, "ends")) {
-		return ISC_R_UNCHANGED;	/* XXX return error if changed. */
+		return ISC_R_INVALIDARG;
 	} else if (!omapi_ds_strcmp (name, "billing-class")) {
 		return ISC_R_UNCHANGED;	/* XXX carefully allow change. */
 	} else if (!omapi_ds_strcmp (name, "hardware-address")) {
@@ -417,19 +417,8 @@ isc_result_t dhcp_lease_signal_handler (omapi_object_t *h,
 		return ISC_R_INVALIDARG;
 	lease = (struct lease *)h;
 
-	if (!strcmp (name, "updated")) {
-		if (lease -> hardware_addr.hlen == 0 ||
-		    lease -> hardware_addr.hlen > 17)
-			return ISC_R_INVALIDARG;
-		if (!write_lease (lease) || !commit_leases ()
-#if defined (FAILOVER_PROTOCOL)
-		    || !dhcp_failover_queue_update (lease, 1)
-#endif
-			) {
-			return ISC_R_IOERROR;
-		}
-		updatep = 1;
-	}
+	if (!strcmp (name, "updated"))
+		return ISC_R_SUCCESS;
 
 	/* Try to find some inner object that can take the value. */
 	if (h -> inner && h -> inner -> type -> signal_handler) {
@@ -438,8 +427,6 @@ isc_result_t dhcp_lease_signal_handler (omapi_object_t *h,
 		if (status == ISC_R_SUCCESS)
 			return status;
 	}
-	if (updatep)
-		return ISC_R_SUCCESS;
 	return ISC_R_NOTFOUND;
 }
 
@@ -777,7 +764,7 @@ isc_result_t dhcp_host_set_value  (omapi_object_t *h,
 				   omapi_data_string_t *name,
 				   omapi_typed_data_t *value)
 {
-	struct host_decl *host;
+	struct host_decl *host, *hp;
 	isc_result_t status;
 	int foo;
 
@@ -885,7 +872,9 @@ isc_result_t dhcp_host_set_value  (omapi_object_t *h,
 
 	if (!omapi_ds_strcmp (name, "ip-address")) {
 		if (host -> fixed_addr)
-			return ISC_R_EXISTS;
+			option_cache_dereference (&host -> fixed_addr, MDL);
+		if (!value)
+			return ISC_R_SUCCESS;
 		if (value -> type == omapi_datatype_data ||
 		    value -> type == omapi_datatype_string) {
 			struct data_string ds;
