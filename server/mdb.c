@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.67.2.11 2001/10/17 03:31:38 mellon Exp $ Copyright (c) 1996-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.67.2.12 2001/10/30 06:42:00 mellon Exp $ Copyright (c) 1996-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -836,7 +836,6 @@ int supersede_lease (comp, lease, commit, propogate, pimmediate)
 		       comp -> hardware_addr.hlen))))) {
 		log_error ("Lease conflict at %s",
 		      piaddr (comp -> ip_addr));
-		return 0;
 	}
 
 	/* If there's a Unique ID, dissociate it from the hash

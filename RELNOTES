@@ -73,6 +73,10 @@ and for prodding me into improving it.
   after the peer lost contact and regained contact about how many updates
   were pending.
 
+- Don't nix a lease update because of a lease conflict.   This test has
+  never (as far as I know) prevented a mistake, and it appears to cause
+  problems with failover.
+
 - Add support in rc history code for keeping a selective history, rather
   than a history of all references and dereferences.   This code is only used
   when extensive additional debugging is enabled.
