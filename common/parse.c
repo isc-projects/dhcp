@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.34 1999/07/20 17:58:33 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.35 1999/07/31 21:35:12 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1770,11 +1770,28 @@ int parse_non_binary (expr, cfile, lose, context)
 		if (token != COMMA)
 			goto nocomma;
 
+	      concat_another:
 		if (!parse_data_expression (&(*expr) -> data.concat [1],
 					    cfile, lose))
 			goto nodata;
 
 		token = next_token (&val, cfile);
+
+		if (token == COMMA) {
+			nexp = (struct expression *)0;
+			if (!expression_allocate (&nexp,
+						  "parse_expression: CONCAT2"))
+				log_fatal ("can't allocate at CONCAT2");
+			nexp -> op = expr_concat;
+			expression_reference (&nexp -> data.concat [0], *expr,
+					      "parse_expression: CONCAT2");
+			expression_dereference (expr,
+						"parse_expression: CONCAT2");
+			expression_reference (expr, nexp,
+					      "parse_expression: CONCAT2");
+			goto concat_another;
+		}
+
 		if (token != RPAREN)
 			goto norparen;
 		break;
