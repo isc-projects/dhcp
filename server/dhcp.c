@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.192.2.5 2001/05/19 18:08:16 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.192.2.6 2001/05/19 19:18:44 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -526,9 +526,8 @@ void dhcprequest (packet, ms_nulltp, ip_lease)
 		    peer -> i_am == secondary &&
 		    peer -> service_state == cooperating) {
 			log_debug ("%s: letting primary respond", msgbuf);
+			goto out;
 		}
-
-
 	} else
 		peer = (dhcp_failover_state_t *)0;
 #endif
