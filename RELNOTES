@@ -51,6 +51,15 @@ database.   This release is not expected to be stable in the near
 future, and is intended for sites that are in a position to
 experiment, or for sites that desperately need the new features.
 
+- Use %ld to print pid_t and cast pid_t values to long to avoid
+  inconsistent declarations between different POSIX flavours.
+
+- Add support for ARPHRD_IEEE802 (token ring) hardware type.
+
+- If we own an address and a client requests it, but we can't assign
+  it to that client, we now NAK it so that the client doesn't try to
+  reuse it.
+
 		    CHANGES FROM THE JUNE SNAPSHOT
 
 - Support for NeXTstep 3.x and 4.x
