@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: execute.c,v 1.44 2001/01/16 22:56:56 mellon Exp $ Copyright (c) 1998-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: execute.c,v 1.44.2.1 2001/06/08 23:10:23 mellon Exp $ Copyright (c) 1998-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -977,4 +977,81 @@ int find_matching_case (struct executable_statement **ep,
 		return 1;
 	}
 	return 0;
+}
+
+int executable_statement_foreach (struct executable_statement *stmt,
+				  int (*callback) (struct
+						   executable_statement *,
+						   void *, int),
+				  void *vp, int condp)
+{
+	struct executable_statement *foo;
+	int ok = 0;
+	int result;
+
+	for (foo = stmt; foo; foo = foo -> next) {
+	    if ((*callback) (foo, vp, condp) != 0)
+		ok = 1;
+	    switch (foo -> op) {
+	      case null_statement:
+		break;
+	      case if_statement:
+		if (executable_statement_foreach (stmt -> data.ie.true,
+						  callback, vp, 1))
+			ok = 1;
+		if (executable_statement_foreach (stmt -> data.ie.false,
+						  callback, vp, 1))
+			ok = 1;
+		break;
+	      case add_statement:
+		break;
+	      case eval_statement:
+		break;
+	      case break_statement:
+		break;
+	      case default_option_statement:
+		break;
+	      case supersede_option_statement:
+		break;
+	      case append_option_statement:
+		break;
+	      case prepend_option_statement:
+		break;
+	      case send_option_statement:
+		break;
+	      case statements_statement:
+		if ((executable_statement_foreach
+		     (stmt -> data.statements, callback, vp, condp)))
+			ok = 1;
+		break;
+	      case on_statement:
+		if ((executable_statement_foreach
+		     (stmt -> data.on.statements, callback, vp, 1)))
+			ok = 1;
+		break;
+	      case switch_statement:
+		if ((executable_statement_foreach
+		     (stmt -> data.s_switch.statements, callback, vp, 1)))
+			ok = 1;
+		break;
+	      case case_statement:
+		break;
+	      case default_statement:
+		break;
+	      case set_statement:
+		break;
+	      case unset_statement:
+		break;
+	      case let_statement:
+		if ((executable_statement_foreach
+		     (stmt -> data.let.statements, callback, vp, 0)))
+			ok = 1;
+		break;
+	      case define_statement:
+		break;
+	      case log_statement:
+	      case return_statement:
+	    }
+	}
+	return ok;
 }
