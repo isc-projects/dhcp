@@ -49,7 +49,7 @@ isc_result_t omapi_init (void)
 					     omapi_connection_destroy,
 					     omapi_connection_signal_handler,
 					     omapi_connection_stuff_values,
-					     0, 0);
+					     0, 0, 0);
 	if (status != ISC_R_SUCCESS)
 		return status;
 
@@ -60,7 +60,7 @@ isc_result_t omapi_init (void)
 					     omapi_listener_destroy,
 					     omapi_listener_signal_handler,
 					     omapi_listener_stuff_values,
-					     0, 0);
+					     0, 0, 0);
 	if (status != ISC_R_SUCCESS)
 		return status;
 
@@ -71,7 +71,7 @@ isc_result_t omapi_init (void)
 					     omapi_io_destroy,
 					     omapi_io_signal_handler,
 					     omapi_io_stuff_values,
-					     0, 0);
+					     0, 0, 0);
 	if (status != ISC_R_SUCCESS)
 		return status;
 
@@ -82,7 +82,7 @@ isc_result_t omapi_init (void)
 					     omapi_generic_destroy,
 					     omapi_generic_signal_handler,
 					     omapi_generic_stuff_values,
-					     0, 0);
+					     0, 0, 0);
 	if (status != ISC_R_SUCCESS)
 		return status;
 
@@ -93,7 +93,7 @@ isc_result_t omapi_init (void)
 					     omapi_protocol_destroy,
 					     omapi_protocol_signal_handler,
 					     omapi_protocol_stuff_values,
-					     0, 0);
+					     0, 0, 0);
 	if (status != ISC_R_SUCCESS)
 		return status;
 
@@ -104,7 +104,7 @@ isc_result_t omapi_init (void)
 					     omapi_protocol_listener_destroy,
 					     omapi_protocol_listener_signal,
 					     omapi_protocol_listener_stuff,
-					     0, 0);
+					     0, 0, 0);
 	if (status != ISC_R_SUCCESS)
 		return status;
 
@@ -115,7 +115,7 @@ isc_result_t omapi_init (void)
 					     omapi_message_destroy,
 					     omapi_message_signal_handler,
 					     omapi_message_stuff_values,
-					     0, 0);
+					     0, 0, 0);
 	if (status != ISC_R_SUCCESS)
 		return status;
 
@@ -125,7 +125,7 @@ isc_result_t omapi_init (void)
 					     0,
 					     0,
 					     omapi_waiter_signal_handler, 0,
-					     0, 0);
+					     0, 0, 0);
 	if (status != ISC_R_SUCCESS)
 		return status;
 
@@ -160,6 +160,9 @@ isc_result_t omapi_object_type_register (omapi_object_type_t **type,
 						 omapi_object_t *),
 					 isc_result_t (*create)
 						(omapi_object_t **,
+						 omapi_object_t *),
+					 isc_result_t (*delete)
+						(omapi_object_t *,
 						 omapi_object_t *))
 {
 	omapi_object_type_t *t;
@@ -177,6 +180,7 @@ isc_result_t omapi_object_type_register (omapi_object_type_t **type,
 	t -> stuff_values = stuff_values;
 	t -> lookup = lookup;
 	t -> create = create;
+	t -> delete = delete;
 	t -> next = omapi_object_types;
 	omapi_object_types = t;
 	if (type)
@@ -334,8 +338,8 @@ isc_result_t omapi_set_object_value (omapi_object_t *h, omapi_object_t *id,
 	}
 
 	status = omapi_set_value (h, id, n, tv);
-	omapi_data_string_dereference (&n, "omapi_set_int_value");
-	omapi_typed_data_dereference (&tv, "omapi_set_int_value");
+	omapi_data_string_dereference (&n, "omapi_set_object_value");
+	omapi_typed_data_dereference (&tv, "omapi_set_object_value");
 	return status;
 }
 
@@ -428,7 +432,7 @@ isc_result_t omapi_object_create (omapi_object_t **obj, omapi_object_t *id,
 }
 
 isc_result_t omapi_object_update (omapi_object_t *obj, omapi_object_t *id,
-				  omapi_object_t *src)
+				  omapi_object_t *src, omapi_handle_t handle)
 {
 	omapi_generic_object_t *gsrc;
 	isc_result_t status;
@@ -446,6 +450,8 @@ isc_result_t omapi_object_update (omapi_object_t *obj, omapi_object_t *id,
 		if (status != ISC_R_SUCCESS)
 			return status;
 	}
+	if (handle)
+		omapi_set_int_value (obj, id, "remote-handle", handle);
 	omapi_signal (obj, "updated");
 	return ISC_R_SUCCESS;
 }
