@@ -40,57 +40,57 @@
 
 all:
 	@sysname=`./configure --print-sysname`; \
-	 if [ ! -d $$sysname ]; then \
+	 if [ ! -d work.$$sysname ]; then \
 	   echo No build directory for $$sysname - please run ./configure.; \
 	else \
-	   (cd $$sysname; make all); \
+	   (cd work.$$sysname; make all); \
 	fi
 
 install:
 	@sysname=`./configure --print-sysname`; \
-	 if [ ! -d $$sysname ]; then \
+	 if [ ! -d work.$$sysname ]; then \
 	   echo No build directory for $$sysname - please run ./configure.; \
 	else \
-	   (cd $$sysname; make install); \
+	   (cd work.$$sysname; make install); \
 	fi
 
 depend:
 	@sysname=`./configure --print-sysname`; \
-	 if [ ! -d $$sysname ]; then \
+	 if [ ! -d work.$$sysname ]; then \
 	   echo No build directory for $$sysname - please run ./configure.; \
 	else \
-	   (cd $$sysname; make depend); \
+	   (cd work.$$sysname; make depend); \
 	fi
 
 clean:
 	@sysname=`./configure --print-sysname`; \
-	 if [ ! -d $$sysname ]; then \
+	 if [ ! -d work.$$sysname ]; then \
 	   echo No build directory for $$sysname - please run ./configure.; \
 	else \
-	   (cd $$sysname; make clean); \
+	   (cd work.$$sysname; make clean); \
 	fi
 
 realclean:
 	@sysname=`./configure --print-sysname`; \
-	 if [ ! -d $$sysname ]; then \
+	 if [ ! -d work.$$sysname ]; then \
 	   echo No build directory for $$sysname - please run ./configure.; \
 	else \
-	   (cd $$sysname; make realclean); \
+	   (cd work.$$sysname; make realclean); \
 	fi
 
 distclean:
 	@sysname=`./configure --print-sysname`; \
-	 if [ ! -d $$sysname ]; then \
+	 if [ ! -d work.$$sysname ]; then \
 	   echo No build directory for $$sysname - please run ./configure.; \
 	else \
-	   (cd $$sysname; make distclean); \
+	   (cd work.$$sysname; make distclean); \
 	fi
 
 links:
 	@sysname=`./configure --print-sysname`; \
-	 if [ ! -d $$sysname ]; then \
+	 if [ ! -d work.$$sysname ]; then \
 	   echo No build directory for $$sysname - please run ./configure.; \
 	else \
-	   (cd $$sysname; make links); \
+	   (cd work.$$sysname; make links); \
 	fi
 
