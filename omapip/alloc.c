@@ -25,20 +25,23 @@
 
 isc_result_t omapi_object_reference (omapi_object_t **r,
 				     omapi_object_t *h,
-				     const char *name)
+				     const char *file, int line)
 {
 	if (!h || !r)
 		return ISC_R_INVALIDARG;
 
 	if (*r) {
 #if defined (ALLOCATION_DEBUGGING)
-		abort ("%s: reference store into non-null pointer!", name);
+		abort ("%s(%d): reference store into non-null pointer!",
+		       file, line);
 #else
 		return ISC_R_INVALIDARG;
 #endif
 	}
 	*r = h;
 	h -> refcnt++;
+	rc_register (file, line, h, h -> refcnt);
+	dmalloc_reuse (h, file, line, 1);
 	return ISC_R_SUCCESS;
 }
 
@@ -125,39 +128,43 @@ isc_result_t omapi_object_dereference (omapi_object_t **h,
 		if (!extra_references) {
 			if (inner_reference)
 				omapi_object_dereference
-					(&(*h) -> inner -> outer, name);
+					(&(*h) -> inner -> outer, file, line);
 			if (outer_reference)
 				omapi_object_dereference
-					(&(*h) -> outer -> inner, name);
+					(&(*h) -> outer -> inner, file, line);
+			rc_register (file, line, *h, 0);
 			if ((*h) -> type -> destroy)
-				(*((*h) -> type -> destroy)) (*h, name);
-			free (*h);
+				(*((*h) -> type -> destroy)) (*h, file, line);
+			dfree (*h, file, line);
 		}
+	} else {
+		(*h) -> refcnt--;
+		rc_register (file, line, *h, (*h) -> refcnt);
 	}
 	*h = 0;
 	return ISC_R_SUCCESS;
 }
 
 isc_result_t omapi_buffer_new (omapi_buffer_t **h,
-			       const char *name)
+			       const char *file, int line)
 {
 	omapi_buffer_t *t;
 	isc_result_t status;
 	
-	t = (omapi_buffer_t *)malloc (sizeof *t);
+	t = (omapi_buffer_t *)dmalloc (sizeof *t, file, line);
 	if (!t)
 		return ISC_R_NOMEMORY;
 	memset (t, 0, sizeof *t);
-	status = omapi_buffer_reference (h, t, name);
+	status = omapi_buffer_reference (h, t, file, line);
 	if (status != ISC_R_SUCCESS)
-		free (t);
+		dfree (t, file, line);
 	(*h) -> head = sizeof ((*h) -> buf) - 1;
 	return status;
 }
 
 isc_result_t omapi_buffer_reference (omapi_buffer_t **r,
 				     omapi_buffer_t *h,
-				     const char *name)
+				     const char *file, int line)
 {
 	if (!h || !r)
 		return ISC_R_INVALIDARG;
@@ -171,6 +178,8 @@ isc_result_t omapi_buffer_reference (omapi_buffer_t **r,
 	}
 	*r = h;
 	h -> refcnt++;
+	rc_register (file, line, h, h -> refcnt);
+	dmalloc_reuse (h, file, line, 1);
 	return ISC_R_SUCCESS;
 }
 
@@ -182,7 +191,7 @@ isc_result_t omapi_buffer_dereference (omapi_buffer_t **h,
 
 	if (!*h) {
 #if defined (ALLOCATION_DEBUGGING)
-		abort ("%s: dereference of null pointer!", name);
+		abort ("%s(%d): dereference of null pointer!", file, line);
 #else
 		return ISC_R_INVALIDARG;
 #endif
@@ -190,13 +199,16 @@ isc_result_t omapi_buffer_dereference (omapi_buffer_t **h,
 	
 	if ((*h) -> refcnt <= 0) {
 #if defined (ALLOCATION_DEBUGGING)
-		abort ("dereference of pointer with refcnt of zero!", name);
+		abort ("%s(%d): dereference of pointer with refcnt of zero!", 
+		       file, line);
 #else
 		return ISC_R_INVALIDARG;
 #endif
 	}
-	if (--(*h) -> refcnt == 0)
-		free (*h);
+	--(*h) -> refcnt;
+	rc_register (file, line, h, (*h) -> refcnt);
+	if ((*h) -> refcnt == 0)
+		dfree (*h, file, line);
 	*h = 0;
 	return ISC_R_SUCCESS;
 }
@@ -211,6 +223,9 @@ isc_result_t omapi_typed_data_new (omapi_typed_data_t **t,
 	int intval;
 	char *s;
 	isc_result_t status;
+	const char *file;
+	int line;
+	omapi_object_t *obj;
 
 	va_start (l, type);
 
@@ -230,12 +245,17 @@ isc_result_t omapi_typed_data_new (omapi_typed_data_t **t,
 		break;
 	      case omapi_datatype_object:
 		len = OMAPI_TYPED_DATA_OBJECT_LEN;
+		obj = va_arg (l, omapi_object_t *);
 		break;
 	      default:
 		return ISC_R_INVALIDARG;
 	}
 
-	new = malloc (len);
+	/* XXX not necessary if not doing malloc debugging. */
+	file = va_arg (l, const char *);
+	line = va_arg (l, int);
+
+	new = dmalloc (len, file, line);
 	if (!new)
 		return ISC_R_NOMEMORY;
 	memset (new, 0, len);
@@ -252,22 +272,22 @@ isc_result_t omapi_typed_data_new (omapi_typed_data_t **t,
 		new -> u.buffer.len = val;
 		break;
 	      case omapi_datatype_object:
-		status = omapi_object_reference (&new -> u.object,
-						 va_arg (l, omapi_object_t *),
-						 "omapi_datatype_new");
+		status = omapi_object_reference (&new -> u.object, obj,
+						 file, line);
 		if (status != ISC_R_SUCCESS) {
-			free (new);
+			dfree (new, file, line);
 			return status;
 		}
 		break;
 	}
 	new -> type = type;
-	return omapi_typed_data_reference (t, new, "omapi_typed_data_new");
+
+	return omapi_typed_data_reference (t, new, file, line);
 }
 
 isc_result_t omapi_typed_data_reference (omapi_typed_data_t **r,
 					 omapi_typed_data_t *h,
-					 const char *name)
+					 const char *file, int line)
 {
 	if (!h || !r)
 		return ISC_R_INVALIDARG;
@@ -281,11 +301,13 @@ isc_result_t omapi_typed_data_reference (omapi_typed_data_t **r,
 	}
 	*r = h;
 	h -> refcnt++;
+	rc_register (file, line, h, h -> refcnt);
+	dmalloc_reuse (h, file, line, 1);
 	return ISC_R_SUCCESS;
 }
 
 isc_result_t omapi_typed_data_dereference (omapi_typed_data_t **h,
-					   const char *name)
+					   const char *file, line)
 {
 	if (!h)
 		return ISC_R_INVALIDARG;
@@ -306,7 +328,9 @@ isc_result_t omapi_typed_data_dereference (omapi_typed_data_t **h,
 #endif
 	}
 	
-	if (--((*h) -> refcnt) <= 0 ) {
+	--((*h) -> refcnt);
+	rc_register (file, line, *h, (*h) -> refcnt);
+	if ((*h) -> refcnt <= 0 ) {
 		switch ((*h) -> type) {
 		      case omapi_datatype_int:
 		      case omapi_datatype_string:
@@ -315,31 +339,31 @@ isc_result_t omapi_typed_data_dereference (omapi_typed_data_t **h,
 			break;
 		      case omapi_datatype_object:
 			omapi_object_dereference (&(*h) -> u.object,
-						  name);
+						  file, line);
 			break;
 		}
-		free (*h);
+		dfree (*h, file, line);
 	}
 	*h = 0;
 	return ISC_R_SUCCESS;
 }
 
-isc_result_t omapi_data_string_new (omapi_data_string_t **d,
-				    unsigned len, const char *name)
+isc_result_t omapi_data_string_new (omapi_data_string_t **d, unsigned len,
+				    const char *file, int line)
 {
 	omapi_data_string_t *new;
 
-	new = malloc (OMAPI_DATA_STRING_EMPTY_SIZE + len);
+	new = dmalloc (OMAPI_DATA_STRING_EMPTY_SIZE + len, file, line);
 	if (!new)
 		return ISC_R_NOMEMORY;
 	memset (new, 0, OMAPI_DATA_STRING_EMPTY_SIZE);
 	new -> len = len;
-	return omapi_data_string_reference (d, new, name);
+	return omapi_data_string_reference (d, new, file, line);
 }
 
 isc_result_t omapi_data_string_reference (omapi_data_string_t **r,
 					  omapi_data_string_t *h,
-					  const char *name)
+					  const char *file, line)
 {
 	if (!h || !r)
 		return ISC_R_INVALIDARG;
@@ -353,18 +377,20 @@ isc_result_t omapi_data_string_reference (omapi_data_string_t **r,
 	}
 	*r = h;
 	h -> refcnt++;
+	rc_register (file, line, h, h -> refcnt);
+	dmalloc_reuse (h, file, line, 1);
 	return ISC_R_SUCCESS;
 }
 
 isc_result_t omapi_data_string_dereference (omapi_data_string_t **h,
-					    const char *name)
+					    const char *file, line)
 {
 	if (!h)
 		return ISC_R_INVALIDARG;
 
 	if (!*h) {
 #if defined (ALLOCATION_DEBUGGING)
-		abort ("%s: dereference of null pointer!", name);
+		abort ("%s(%d): dereference of null pointer!", file, line);
 #else
 		return ISC_R_INVALIDARG;
 #endif
@@ -372,47 +398,53 @@ isc_result_t omapi_data_string_dereference (omapi_data_string_t **h,
 	
 	if ((*h) -> refcnt <= 0) {
 #if defined (ALLOCATION_DEBUGGING)
-		abort ("dereference of pointer with refcnt of zero!");
+		abort ("%s(%d): dereference of pointer with refcnt of zero!",
+		       file, line);
 #else
 		return ISC_R_INVALIDARG;
 #endif
 	}
 	
-	if (--((*h) -> refcnt) <= 0 ) {
-		free (*h);
+	--((*h) -> refcnt);
+	rc_register (file, line, h, h -> refcnt);
+	if ((*h) -> refcnt <= 0 ) {
+		dfree (*h, file, line);
 	}
 	*h = 0;
 	return ISC_R_SUCCESS;
 }
 
 isc_result_t omapi_value_new (omapi_value_t **d,
-			      const char *name)
+			      const char *file, int line)
 {
 	omapi_value_t *new;
 
-	new = malloc (sizeof *new);
+	new = dmalloc (sizeof *new, file, line);
 	if (!new)
 		return ISC_R_NOMEMORY;
 	memset (new, 0, sizeof *new);
-	return omapi_value_reference (d, new, name);
+	return omapi_value_reference (d, new, file, line);
 }
 
 isc_result_t omapi_value_reference (omapi_value_t **r,
 				    omapi_value_t *h,
-				    const char *name)
+				    const char *file, line)
 {
 	if (!h || !r)
 		return ISC_R_INVALIDARG;
 
 	if (*r) {
 #if defined (ALLOCATION_DEBUGGING)
-		abort ("%s: reference store into non-null pointer!", name);
+		abort ("%s(%d): reference store into non-null pointer!",
+		       file, line);
 #else
 		return ISC_R_INVALIDARG;
 #endif
 	}
 	*r = h;
 	h -> refcnt++;
+	rc_register (file, line, h, h -> refcnt);
+	dmalloc_reuse (h, file, line, 1);
 	return ISC_R_SUCCESS;
 }
 
@@ -424,7 +456,7 @@ isc_result_t omapi_value_dereference (omapi_value_t **h,
 
 	if (!*h) {
 #if defined (ALLOCATION_DEBUGGING)
-		abort ("%s: dereference of null pointer!", name);
+		abort ("%s(%d): dereference of null pointer!", file, line);
 #else
 		return ISC_R_INVALIDARG;
 #endif
@@ -432,18 +464,21 @@ isc_result_t omapi_value_dereference (omapi_value_t **h,
 	
 	if ((*h) -> refcnt <= 0) {
 #if defined (ALLOCATION_DEBUGGING)
-		abort ("dereference of pointer with refcnt of zero!");
+		abort ("%s(%d): dereference of pointer with refcnt of zero!",
+		       file, line);
 #else
 		return ISC_R_INVALIDARG;
 #endif
 	}
 	
-	if (--((*h) -> refcnt) <= 0 ) {
+	--((*h) -> refcnt);
+	rc_register (file, line, h, h -> refcnt);
+	if ((*h) -> refcnt <= 0 ) {
 		if ((*h) -> name)
 			omapi_data_string_dereference (&(*h) -> name, name);
 		if ((*h) -> value)
 			omapi_typed_data_dereference (&(*h) -> value, name);
-		free (*h);
+		dfree (*h, file, line);
 	}
 	*h = 0;
 	return ISC_R_SUCCESS;
