@@ -26,7 +26,7 @@ MAN    = dhcrelay.8
 
 DEBUG  = -g
 INCLUDES = -I.. $(BINDINC) -I../includes
-DHCPLIB = ../common/libdhcp.a
+DHCPLIB = ../common/libdhcp.a ../omapip/libomapi.a
 CFLAGS = $(DEBUG) $(PREDEFINES) $(INCLUDES) $(COPTS)
 
 all:	$(PROG) $(CATMANPAGES)
