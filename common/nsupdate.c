@@ -25,7 +25,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: nsupdate.c,v 1.4 1999/07/12 22:43:08 mellon Exp $ Copyright (c) 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: nsupdate.c,v 1.5 1999/07/18 19:37:23 mellon Exp $ Copyright (c) 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -71,10 +71,15 @@ char *ddns_rev_name(lease, state, packet)
 			  lease->ip_addr.len);
 		return NULL;
 	}
+#if defined (NO_SNPRINTF)
+	sprintf(revname, "%d.%d.%d.%d.%s.",
+		 lease->ip_addr.iabuf[3], lease->ip_addr.iabuf[2],
+		 lease->ip_addr.iabuf[1], lease->ip_addr.iabuf[0], revdomain);
+#else
 	snprintf(revname, MAXDNAME, "%d.%d.%d.%d.%s.",
 		 lease->ip_addr.iabuf[3], lease->ip_addr.iabuf[2],
 		 lease->ip_addr.iabuf[1], lease->ip_addr.iabuf[0], revdomain);
-
+#endif
 	return revname;
 }
 
@@ -158,11 +163,17 @@ char *ddns_fwd_name(lease, state, packet)
 		return NULL;
 	}
 
+#if defined (NO_SNPRINTF)
+	if (sprintf(hostname, "%s.%s.", hostname, domain) < 0) {
+		log_error("nsupdate: Build FQDN failed");
+		return NULL;
+	}
+#else
 	if (snprintf(hostname, MAXDNAME, "%s.%s.", hostname, domain) < 0) {
 		log_error("nsupdate: Build FQDN failed");
 		return NULL;
 	}
-
+#endif
 	return hostname;
 }
 
