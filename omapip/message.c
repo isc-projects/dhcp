@@ -364,7 +364,8 @@ isc_result_t omapi_message_process (omapi_object_t *mo, omapi_object_t *po)
 	omapi_message_object_t *message, *m;
 	omapi_object_t *object = (omapi_object_t *)0;
 	omapi_value_t *tv = (omapi_value_t *)0;
-	u_int32_t create, update, exclusive;
+	unsigned long create, update, exclusive;
+	unsigned long wsi;
 	isc_result_t status, waitstatus;
 	omapi_object_type_t *type;
 
@@ -625,8 +626,8 @@ isc_result_t omapi_message_process (omapi_object_t *mo, omapi_object_t *po)
 					      (omapi_object_t *)0,
 					      "result", &tv);
 		if (status == ISC_R_SUCCESS) {
-			status = omapi_get_int_value ((u_int32_t *)&waitstatus,
-						      tv -> value);
+			status = omapi_get_int_value (&wsi, tv -> value);
+			waitstatus = wsi;
 			omapi_value_dereference (&tv,
 						 "omapi_message_process");
 			if (status != ISC_R_SUCCESS)
