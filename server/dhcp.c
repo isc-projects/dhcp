@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.174 2000/12/28 23:28:17 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.175 2001/01/04 00:15:50 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2017,12 +2017,13 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 #ifdef NSUPDATE
 	/* Perform DDNS updates, if configured to. */
 	if ((!offer || offer == DHCPACK) &&
-	    (oc = lookup_option (&server_universe, state -> options,
-				 SV_DDNS_UPDATES)) &&
-	    evaluate_boolean_option_cache (&ignorep, packet, lt,
-					   (struct client_state *)0,
-					   packet -> options, state -> options,
-					   &lt -> scope, oc, MDL)) {
+	    (!(oc = lookup_option (&server_universe, state -> options,
+				   SV_DDNS_UPDATES)) ||
+	     evaluate_boolean_option_cache (&ignorep, packet, lt,
+					    (struct client_state *)0,
+					    packet -> options,
+					    state -> options,
+					    &lt -> scope, oc, MDL))) {
 		ddns_updates (packet, lt, state);
 	}
 #endif /* NSUPDATE */
