@@ -502,7 +502,8 @@ int main (int argc, char **argv, char **envp)
 			    s = buf;
 			    val = buf;
 			    do {
-				convert_num (cfile, s, val, 16, 8);
+				convert_num (cfile, (unsigned char *)s,
+					     val, 16, 8);
 				++s;
 				token = next_token (&val,
 						    (unsigned *)0, cfile);
