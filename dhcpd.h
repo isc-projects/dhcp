@@ -204,7 +204,9 @@ typedef unsigned char option_mask [16];
 
 /* Default path to dhcpd config file. */
 #ifdef DEBUG
+#undef _PATH_DHCPD_CONF
 #define _PATH_DHCPD_CONF	"dhcpd.conf"
+#undef _PATH_DHCPD_DB
 #define _PATH_DHCPD_DB		"dhcpd.leases"
 #else
 #ifndef _PATH_DHCPD_CONF
