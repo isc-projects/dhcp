@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.22 2000/01/05 18:22:07 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.23 2000/01/05 18:49:47 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -580,11 +580,13 @@ void new_address_range (low, high, subnet, pool)
 		address_range [i].subnet = subnet;
 		address_range [i].pool = pool;
 		address_range [i].billing_class = (struct class *)0;
+#if defined (FAILOVER_PROTOCOL)
 		if (pool -> failover_peer &&
 		    pool -> failover_peer -> i_am == secondary)
 			address_range [i].flags = PEER_IS_OWNER;
 		else
 			address_range [i].flags = 0;
+#endif
 		address_range [i].type = dhcp_type_lease;
 
 		/* Link this entry into the list. */
