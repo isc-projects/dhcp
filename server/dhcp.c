@@ -84,13 +84,20 @@ void dhcp (packet)
 void dhcpdiscover (packet)
 	struct packet *packet;
 {
-	struct lease *lease = find_lease (packet);
+	struct lease *lease = find_lease (packet, packet -> shared_network);
 	struct host_decl *hp;
 
 	note ("DHCPDISCOVER from %s",
 	      print_hw_addr (packet -> raw -> htype,
 			     packet -> raw -> hlen,
 			     packet -> raw -> chaddr));
+
+	/* Sourceless packets don't make sense here. */
+	if (!packet -> shared_network) {
+		note ("Packet from unknown subnet: %s",
+		      inet_ntoa (packet -> raw -> giaddr));
+		return;
+	}
 
 	/* If we didn't find a lease, try to allocate one... */
 	if (!lease) {
@@ -136,7 +143,7 @@ void dhcpdiscover (packet)
 void dhcprequest (packet)
 	struct packet *packet;
 {
-	struct lease *lease = find_lease (packet);
+	struct lease *lease;
 	struct iaddr cip;
 	struct subnet *subnet;
 	struct lease *ip_lease;
@@ -151,21 +158,54 @@ void dhcprequest (packet)
 		memcpy (cip.iabuf, &packet -> raw -> ciaddr.s_addr, 4);
 	}
 
+	/* Find the lease that matches the address requested by the
+	   client. */
+	subnet = find_subnet (cip);
+	lease = find_lease (packet, (subnet
+				     ? subnet -> shared_network
+				     : (struct shared_network *)0));
+
 	note ("DHCPREQUEST for %s from %s",
 	      piaddr (cip),
 	      print_hw_addr (packet -> raw -> htype,
 			     packet -> raw -> hlen,
 			     packet -> raw -> chaddr));
 
-	/* If a client on our local network wants to renew a lease on
-	   an address off our local network, NAK it. */
-	if (packet -> options [DHO_DHCP_REQUESTED_ADDRESS].len) {
-		subnet = find_grouped_subnet (packet -> shared_network, cip);
-		if (!subnet) {
-			nak_lease (packet, &cip);
-			return;
+	/* If a client on a given network wants to request a lease on
+	   an address on a different network, NAK it.   If the Requested
+	   Address option was used, the protocol says that it must have
+	   been broadcast, so we can trust the source network information.
+
+	   If ciaddr was specified and Requested Address was not, then
+	   we really only know for sure what network a packet came from
+	   if it came through a BOOTP gateway - if it came through an
+	   IP router, we'll just have to assume that it's cool.
+
+	   This violates the protocol spec in the case that the client
+	   is in the REBINDING state and broadcasts a DHCPREQUEST on
+	   the local wire.  We're supposed to check ciaddr for
+	   validity in that case, but if the packet was unicast
+	   through a router from a client in the RENEWING state, it
+	   would look exactly the same to us and it would be very
+	   bad to send a DHCPNAK.   I think we just have to live with
+	   this. */
+	if ((packet -> raw -> ciaddr.s_addr &&
+	     packet -> raw -> giaddr.s_addr) ||
+	    packet -> options [DHO_DHCP_REQUESTED_ADDRESS].len) {
+		
+		/* If we don't know where it came from but we do know
+		   where it claims to have come from, it didn't come
+		   from there.   Fry it. */
+		if (!packet -> shared_network) {
+			subnet = find_subnet (cip);
+			if (subnet) {
+				nak_lease (packet, &cip);
+				return;
+			}
 		}
-	} else if (packet -> raw -> ciaddr.s_addr) {
+
+		/* If we do know where it came from and we don't know
+		   where it claims to have come from, same deal - fry it. */
 		subnet = find_grouped_subnet (packet -> shared_network, cip);
 		if (!subnet) {
 			nak_lease (packet, &cip);
@@ -176,8 +216,7 @@ void dhcprequest (packet)
 	/* Look for server identifier... */
 	if (packet -> options [DHO_DHCP_SERVER_IDENTIFIER].len) {
 		/* If we own the lease that the client is asking for,
-		   and it's already been assigned to the client,
-		   ack it regardless. */
+		   and it's already been assigned to the client, ack it. */
 		if ((lease -> uid_len && lease -> uid_len == 
 		     packet -> options [DHO_DHCP_CLIENT_IDENTIFIER].len &&
 		     !memcmp (packet -> options
@@ -202,23 +241,14 @@ void dhcprequest (packet)
 				release_lease (lease);
 			return;
 		}
-	} else {
-		return;
 	}
-
-	/* If we didn't find a lease, don't try to allocate one... */
-	if (!lease) {
-		nak_lease (packet, &cip);
-		return;
-	}
-
-	ack_lease (packet, lease, DHCPACK, 0);
+	return;
 }
 
 void dhcprelease (packet)
 	struct packet *packet;
 {
-	struct lease *lease = find_lease (packet);
+	struct lease *lease = find_lease (packet, packet -> shared_network);
 
 	note ("DHCPRELEASE of %s from %s",
 	      inet_ntoa (packet -> raw -> ciaddr),
@@ -235,7 +265,7 @@ void dhcprelease (packet)
 void dhcpdecline (packet)
 	struct packet *packet;
 {
-	struct lease *lease = find_lease (packet);
+	struct lease *lease = find_lease (packet, packet -> shared_network);
 	struct iaddr cip;
 
 	if (packet -> options [DHO_DHCP_REQUESTED_ADDRESS].len) {
@@ -748,8 +778,9 @@ void ack_lease (packet, lease, offer, when)
 		warn ("sendpkt: %m");
 }
 
-struct lease *find_lease (packet)
+struct lease *find_lease (packet, share)
 	struct packet *packet;
+	struct shared_network *share;
 {
 	struct lease *uid_lease, *ip_lease, *hw_lease;
 	struct lease *lease = (struct lease *)0;
@@ -768,7 +799,7 @@ struct lease *find_lease (packet)
 					[DHO_DHCP_CLIENT_IDENTIFIER].len);
 		if (hp) {
 			host = hp;
-			fixed_lease = mockup_lease (packet, hp);
+			fixed_lease = mockup_lease (packet, share, hp);
 		} else
 			uid_lease = find_lease_by_uid
 				(packet -> options
@@ -788,7 +819,7 @@ struct lease *find_lease (packet)
 					  packet -> raw -> hlen);
 		if (hp) {
 			host = hp; /* Save it for later. */
-			fixed_lease = mockup_lease (packet, hp);
+			fixed_lease = mockup_lease (packet, share, hp);
 		}
 	}
 
@@ -839,17 +870,17 @@ struct lease *find_lease (packet)
 
 	/* Now eliminate leases that are on the wrong network... */
 	if (ip_lease &&
-	    (packet -> shared_network != ip_lease -> shared_network)) {
+	    (share != ip_lease -> shared_network)) {
 		release_lease (ip_lease);
 		ip_lease = (struct lease *)0;
 	}
 	if (uid_lease &&
-	    (packet -> shared_network != uid_lease -> shared_network)) {
+	    (share != uid_lease -> shared_network)) {
 		release_lease (uid_lease);
 		uid_lease = (struct lease *)0;
 	}
 	if (hw_lease &&
-	    (packet -> shared_network != hw_lease -> shared_network)) {
+	    (share != hw_lease -> shared_network)) {
 		release_lease (hw_lease);
 		hw_lease = (struct lease *)0;
 	}
@@ -912,14 +943,14 @@ struct lease *find_lease (packet)
    the specified shared network.  If one is found, mock up and return a
    lease structure for it; otherwise return the null pointer. */
 
-struct lease *mockup_lease (packet, hp)
+struct lease *mockup_lease (packet, share, hp)
 	struct packet *packet;
+	struct shared_network *share;
 	struct host_decl *hp;
 {
 	static struct lease mock;
 	
-	mock.subnet = find_host_for_network (&hp, &mock.ip_addr,
-					     packet -> shared_network);
+	mock.subnet = find_host_for_network (&hp, &mock.ip_addr, share);
 	if (!mock.subnet)
 		return (struct lease *)0;
 	mock.next = mock.prev = (struct lease *)0;
