@@ -3,8 +3,8 @@
    Tokens for config file lexer and parser. */
 
 /*
- * Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.
- * All rights reserved.
+ * Copyright (c) 1995, 1996, 1997, 1998, 1999
+ * The Internet Software Consortium.   All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -161,6 +161,24 @@ enum dhcp_token {
 	PSEUDO = 361,
 	LIMIT = 362,
 	BILLING = 363,
+	PEER = 364,
+	FAILOVER = 365,
+	MY = 366,
+	PARTNER = 367,
+	PRIMARY = 368,
+	SECONDARY = 369,
+	IDENTIFIER = 370,
+	PORT = 371,
+	MAX_TRANSMIT_IDLE = 372,
+	MAX_RESPONSE_DELAY = 373,
+	PARTNER_DOWN = 374,
+	NORMAL = 375,
+	COMMUNICATIONS_INTERRUPTED = 376,
+	POTENTIAL_CONFLICT = 377,
+	RECOVER = 378,
+	FDDI = 331,
+	AUTHORITATIVE = 333,
+	TOKEN_NOT = 334,
 };
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\
