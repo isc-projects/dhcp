@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char ocopyright [] =
-"$Id: dhcrelay.c,v 1.9.2.14 1999/02/19 18:30:21 mellon Exp $ Copyright (c) 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcrelay.c,v 1.9.2.15 1999/02/19 18:32:46 mellon Exp $ Copyright (c) 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -341,7 +341,8 @@ void relay (ip, packet, length, from_port, from, hfrom)
 
 static void usage ()
 {
-	error ("Usage: dhcrelay [-c] [-p <port>] [server1 [... serverN]]");
+	warn ("Usage: dhcrelay [-i] [-d] [-i if0] [...-i ifN] [-p <port>]");
+	error ("       [server1 [... serverN]]");
 }
 
 void cleanup ()
