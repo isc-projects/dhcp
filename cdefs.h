@@ -46,6 +46,8 @@
 #define ANSI_DECL(x)	x
 #if defined (__GNUC__)
 #define INLINE		inline
+#else
+#define INLINE
 #endif /* __GNUC__ */
 #else
 #define PROTO(x)	()
