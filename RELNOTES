@@ -1,6 +1,6 @@
 	    Internet Software Consortium DHCP Distribution
-		    Version 3, Release Candidate 9
-			    June 28, 2001
+		    Version 3, Release Candidate 10
+			    June 29, 2001
 
 			    Release Notes
 
@@ -56,6 +56,10 @@ Murrell at BC Tel Advanced Communications.  I'd like to express my
 thanks to all of these good people here, both for working on the code
 and for prodding me into improving it.
 
+		Changes since 3.0 Release Candidate 9
+
+- Fix a bug in lease allocation for Dynamic BOOTP clients.
+
 	  Changes since 3.0 Release Candidate 8 Patchlevel 2
 
 - Fix a bug that prevented update-static-leases from working.
@@ -77,7 +81,6 @@ and for prodding me into improving it.
   string. 
 
 - Clean up the omshell, dhcpctl and omapi man pages a bit.
-
 
 		Changes since 3.0 Release Candidate 8
 
