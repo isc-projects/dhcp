@@ -45,6 +45,7 @@ struct executable_statement {
 	int refcnt;
 	struct executable_statement *next;
 	enum statement_op {
+		null_statement,
 		if_statement,
 		add_statement,
 		eval_statement,
