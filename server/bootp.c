@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bootp.c,v 1.45 1999/04/12 22:15:38 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bootp.c,v 1.46 1999/05/27 14:58:07 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -127,7 +127,7 @@ void bootp (packet)
 	
 	/* Drop the request if it's not allowed for this client. */
 	if (evaluate_boolean_option_cache (packet, options,
-					   lookup_option (&dhcp_universe,
+					   lookup_option (&server_universe,
 							  options,
 							  SV_ALLOW_BOOTP))) {
 		log_info ("%s: bootp disallowed", msgbuf);
@@ -136,7 +136,7 @@ void bootp (packet)
 	} 
 
 	if (evaluate_boolean_option_cache (packet, options,
-					   lookup_option (&dhcp_universe,
+					   lookup_option (&server_universe,
 							  options,
 							  SV_ALLOW_BOOTING))) {
 		log_info ("%s: booting disallowed", msgbuf);
@@ -154,7 +154,7 @@ void bootp (packet)
 	if (!packet -> options_valid &&
 	    !(evaluate_boolean_option_cache
 	      (packet, options,
-	       lookup_option (&dhcp_universe, options,
+	       lookup_option (&server_universe, options,
 			      SV_ALWAYS_REPLY_RFC1048)))) {
 		memcpy (outgoing.raw -> options,
 			packet -> raw -> options, DHCP_OPTION_LEN);
@@ -206,7 +206,7 @@ void bootp (packet)
 
 	/* Figure out the address of the next server. */
 	memset (&d1, 0, sizeof d1);
-	oc = lookup_option (&dhcp_universe, options, SV_NEXT_SERVER);
+	oc = lookup_option (&server_universe, options, SV_NEXT_SERVER);
 	if (oc &&
 	    evaluate_option_cache (&d1, packet, options, oc)) {
 		/* If there was more than one answer, take the first. */
@@ -224,7 +224,7 @@ void bootp (packet)
 	raw.giaddr = packet -> raw -> giaddr;
 
 	/* Figure out the filename. */
-	oc = lookup_option (&dhcp_universe, options, SV_FILENAME);
+	oc = lookup_option (&server_universe, options, SV_FILENAME);
 	if (oc &&
 	    evaluate_option_cache (&d1, packet, options, oc)) {
 		memcpy (raw.file, d1.data,
@@ -237,7 +237,7 @@ void bootp (packet)
 		memcpy (raw.file, packet -> raw -> file, sizeof raw.file);
 
 	/* Choose a server name as above. */
-	oc = lookup_option (&dhcp_universe, options, SV_SERVER_NAME);
+	oc = lookup_option (&server_universe, options, SV_SERVER_NAME);
 	if (oc &&
 	    evaluate_option_cache (&d1, packet, options, oc)) {
 		memcpy (raw.sname, d1.data,
