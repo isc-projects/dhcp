@@ -41,7 +41,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.129.2.16 2003/04/26 21:51:39 dhankins Exp $ Copyright (c) 1995-2002 Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.129.2.17 2004/02/03 21:42:24 dhankins Exp $ Copyright (c) 1995-2002 Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -793,11 +793,15 @@ void dhcpack (packet)
 
 	/* If it wasn't specified by the server, calculate it. */
 	if (!client -> new -> renewal)
-		client -> new -> renewal =
-			client -> new -> expiry / 2;
+		client -> new -> renewal = client -> new -> expiry / 2 + 1;
+
+	if (client -> new -> renewal <= 0)
+		client -> new -> renewal = TIME_MAX;
 
 	/* Now introduce some randomness to the renewal time: */
-	client -> new -> renewal = (((client -> new -> renewal + 3) * 3 / 4) +
+	if (client -> new -> renewal <= TIME_MAX / 3 - 3)
+		client -> new -> renewal =
+				(((client -> new -> renewal + 3) * 3 / 4) +
 				    (random () % /* XXX NUMS */
 				     ((client -> new -> renewal + 3) / 4)));
 
@@ -816,14 +820,25 @@ void dhcpack (packet)
 	} else
 			client -> new -> rebind = 0;
 
-	if (!client -> new -> rebind)
-		client -> new -> rebind =
-			(client -> new -> expiry * 7) / 8; /* XXX NUMS */
+	if (client -> new -> rebind <= 0) {
+		if (client -> new -> expiry <= TIME_MAX / 7)
+			client -> new -> rebind =
+					client -> new -> expiry * 7 / 8;
+		else
+			client -> new -> rebind =
+					client -> new -> expiry / 8 * 7;
+	}
 
 	/* Make sure our randomness didn't run the renewal time past the
 	   rebind time. */
-	if (client -> new -> renewal > client -> new -> rebind)
-		client -> new -> renewal = (client -> new -> rebind * 3) / 4;
+	if (client -> new -> renewal > client -> new -> rebind) {
+		if (client -> new -> rebind <= TIME_MAX / 3)
+			client -> new -> renewal =
+					client -> new -> rebind * 3 / 4;
+		else
+			client -> new -> renewal =
+					client -> new -> rebind / 4 * 3;
+	}
 
 	client -> new -> expiry += cur_time;
 	/* Lease lengths can never be negative. */
