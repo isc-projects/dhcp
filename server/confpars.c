@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.73.2.6 1999/12/21 19:31:38 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.73.2.7 2000/02/02 17:01:19 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -45,6 +45,7 @@ int readconf ()
 
 	/* Set up the initial dhcp option universe. */
 	initialize_universes ();
+	config_universe = &server_universe;
 
 	root_group.authoritative = 0;
 
@@ -445,40 +446,17 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 
 	      default:
 		et = (struct executable_statement *)0;
-		if (is_identifier (token)) {
-			option = ((struct option *)
-				  hash_lookup (server_universe.hash,
-					       (unsigned char *)val, 0));
-			if (option) {
-				token = next_token (&val, cfile);
-				et = parse_option_statement
-					(cfile, 1, option,
-					 supersede_option_statement);
-				if (!et)
-					return declaration;
-			}
-		}
-
+		lose = 0;
+		et = parse_executable_statement (cfile, &lose);
 		if (!et) {
-			lose = 0;
-			et = parse_executable_statement (cfile, &lose);
-			if (!et) {
-				if (!lose) {
-					if (declaration)
-						parse_warn ("expecting a %s.",
-							    "declaration");
-					else
-						parse_warn ("expecting a%s%s.",
-							    " parameter",
-							    " or declaration");
-					skip_to_semi (cfile);
-				}
-				return declaration;
+			if (!lose) {
+				if (declaration)
+					parse_warn ("expecting a declaration");
+				else
+					parse_warn ("expecting a parameter %s",
+						    "or declaration.");
+				skip_to_semi (cfile);
 			}
-		}
-		if (!et) {
-			parse_warn ("expecting a %sdeclaration",
-				    declaration ? "" :  "parameter or ");
 			return declaration;
 		}
 	      insert_statement:

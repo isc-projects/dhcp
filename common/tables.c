@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tables.c,v 1.28.2.2 1999/10/27 21:36:08 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tables.c,v 1.28.2.3 2000/02/02 17:01:11 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1086,6 +1086,12 @@ struct option server_options [256] = {
 struct hash_table universe_hash;
 struct universe **universes;
 int universe_count, universe_max;
+
+/* Universe containing names of configuration options, which, rather than
+   writing "option universe-name.option-name ...;", can be set by writing
+   "option-name ...;". */
+
+struct universe *config_universe;
 
 void initialize_universes()
 {

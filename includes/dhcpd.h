@@ -1379,6 +1379,8 @@ extern char *hardware_types [256];
 int universe_count, universe_max;
 struct universe **universes;
 extern struct hash_table universe_hash;
+extern struct universe *config_universe;
+
 void initialize_universes PROTO ((void));
 
 /* convert.c */
