@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dns.c,v 1.35.2.1 2001/06/01 17:32:35 mellon Exp $ Copyright (c) 2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dns.c,v 1.35.2.2 2001/06/03 04:54:21 mellon Exp $ Copyright (c) 2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -312,7 +312,7 @@ isc_result_t find_cached_zone (const char *dname, ns_class class,
 		return ISC_R_INVALIDARG;
 
 	/* For each subzone, try to find a cached zone. */
-	for (np = dname - 1; np; np = strchr (np, '.')) {
+	for (np = dname; np; np = strchr (np, '.')) {
 		np++;
 		status = dns_zone_lookup (&zone, np);
 		if (status == ISC_R_SUCCESS)
@@ -655,7 +655,7 @@ isc_result_t ddns_update_a (struct data_string *ddns_fwd_name,
 	 *   -- "Interaction between DHCP and DNS"
 	 */
 
-	if (result != ISC_R_YXDOMAIN)
+	if (result != (rrsetp ? ISC_R_YXRRSET : ISC_R_YXDOMAIN))
 		return result;
 
 
