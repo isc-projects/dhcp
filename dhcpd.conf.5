@@ -65,8 +65,8 @@ group of declarations.   In any group of parameters and declarations,
 all parameters must be specified before any declarations which depend
 on those parameters may be specified.
 .PP
-Declarations about network topology include the
-\fIserver-identifier\fR, the \fIshared-network\fR and the \fIsubnet\fR
+Declarations about network topology include the \fIshared-network\fR
+and the \fIsubnet\fR
 declarations.   If clients on a subnet are to be assigned addresses
 dynamically, a \fIrange\fR declaration must appear within the
 \fIsubnet\fR declaration.   For clients with statically assigned
@@ -76,10 +76,7 @@ parameters are to be applied to a group of declarations which are not
 related strictly on a per-subnet basis, the \fIgroup\fR declaration
 can be used.
 .PP
-Each dhcpd.conf file must have one (and only one)
-.I server-identifier
-declaration, which tells dhcpd the identifier to use when issuing
-leases.  For every subnet which will be served, and for every subnet
+For every subnet which will be served, and for every subnet
 to which the dhcp server is connected, there must be one \fIsubnet\fR
 declaration, which tells dhcpd how to recognize that an address is on
 that subnet.  A \fIsubnet\fR declaration is required for each subnet
@@ -126,7 +123,6 @@ entry for that client on a different subnet or shared network.
 A typical dhcpd.conf file will look something like this:
 .nf
 
-server-identifier dhcps.isc.org;
 .I global parameters...
 
 shared-network ISC-BIGGIE {
@@ -164,7 +160,7 @@ Figure 1
 
 .fi
 .PP
-Notice that after the server-identifier declaration, there's a place
+Notice that at the beginning of the file, there's a place
 for global parameters.   These might be things like the organization's
 domain name, the addresses of the name servers (if they are common to
 the entire organization), and so on.   So, for example:
@@ -281,20 +277,6 @@ group {
 }
 .fi
 .SH REFERENCE: DECLARATIONS
-.PP
-.B The
-.I server-identifier
-.B statement
-.PP
- \fBserver-identifier \fIhostname\fR\fB;\fR
-.PP
-The server-identifier declaration must be used exactly once in each
-dhcpd.conf file to tell dhcpd what IP address to use as its server
-identifier, as required by the DHCP protocol.   On a machine with a
-single interface, the server identifier should be the primary address
-of that interface.   On machines with multiple interfaces, the address
-of one such interface must be chosen.   Any address may be chosen, as
-long as it is the address of one of the interfaces of that machine.
 .PP
 .B The 
 .I shared-network
@@ -443,6 +425,15 @@ be used for all clients that may boot using the BOOTP protocol.
 The group statement is used simply to apply one or more parameters to
 a group of declarations.   It can be used to group hosts, shared
 networks, subnets, or even other groups.
+.PP
+.B The
+.I server-identifier
+.B statement
+.PP
+ \fBserver-identifier \fIhostname\fR\fB;\fR
+.PP
+The server-identifier declaration is obsolete and is ignored by the
+DHCP Server.
 .SH REFERENCE: PARAMETERS
 .PP
 .B The
@@ -524,8 +515,8 @@ The \fInext-server\fR statement is used to specify the host address of
 the server from which the initial boot file (specified in the
 \fIfilename\fR statement) is to be loaded.   \fIServer-name\fR should
 be a numeric IP address or a domain name.   If no \fInext-server\fR
-parameter applies to a given client, the address specified in the
-\fIserver-identifier\fR statement is used.
+parameter applies to a given client, the DHCP server's IP address is
+used.
 .PP
 .B The
 .I fixed-address
