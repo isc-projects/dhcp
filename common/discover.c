@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: discover.c,v 1.23 2000/02/15 20:40:30 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: discover.c,v 1.24 2000/03/06 22:52:16 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -586,7 +586,7 @@ int if_readsocket (h)
 	struct interface_info *ip;
 
 	if (h -> type != dhcp_type_interface)
-		return ISC_R_INVALIDARG;
+		return -1;
 	ip = (struct interface_info *)h;
 	return ip -> rfdesc;
 }
