@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.83 2001/01/26 06:17:01 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.84 2001/02/12 19:43:32 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -829,6 +829,7 @@ int store_options (buffer, buflen, packet, lease, client_state,
 				       cfg_options, scope, oc, MDL);
 		if (!od.len) {
 		    data_string_forget (&encapsulation, MDL);
+		    data_string_forget (&od, MDL);
 		    have_encapsulation = 0;
 		    continue;
 		}
@@ -1677,25 +1678,28 @@ int nwip_option_space_encapsulate (result, packet, lease, client_state,
 	struct binding_scope **scope;
 	struct universe *universe;
 {
-	pair p, *hash;
+	pair ocp;
 	int status;
 	int i;
 	static struct option_cache *no_nwip;
 	struct data_string ds;
+	struct option_chain_head *head;
 
 	if (universe -> index >= cfg_options -> universe_count)
 		return 0;
+	head = ((struct option_chain_head *)
+		cfg_options -> universes [fqdn_universe.index]);
+	if (!head)
+		return 0;
 
-	hash = cfg_options -> universes [universe -> index];
 	status = 0;
-	for (i = 0; hash && i < OPTION_HASH_SIZE; i++) {
-		for (p = hash [i]; p; p = p -> cdr) {
-			if (store_option (result, universe, packet,
-					  lease, client_state, in_options,
-					  cfg_options, scope,
-					  (struct option_cache *)p -> car))
-				status = 1;
-		}
+	for (ocp = head -> first; ocp; ocp = ocp -> cdr) {
+		struct option_cache *oc = (struct option_cache *)(ocp -> car);
+		if (store_option (result, universe, packet,
+				  lease, client_state, in_options,
+				  cfg_options, scope,
+				  (struct option_cache *)ocp -> car))
+			status = 1;
 	}
 
 	/* If there's no data, the nwip suboption is supposed to contain
@@ -2101,6 +2105,10 @@ void do_packet (interface, packet, len, from_port, from, hfrom)
 	struct packet *decoded_packet;
 #if defined (DEBUG_MEMORY_LEAKAGE)
 	unsigned long previous_outstanding = dmalloc_outstanding;
+#endif
+
+#if defined (TRACING)
+	trace_inpacket_stash (interface, packet, len, from_port, from, hfrom);
 #endif
 
 	decoded_packet = (struct packet *)0;
