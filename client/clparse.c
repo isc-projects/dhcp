@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: clparse.c,v 1.50 2000/10/10 19:44:39 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: clparse.c,v 1.51 2000/11/24 03:38:18 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -486,7 +486,16 @@ void parse_client_statement (cfile, ip, config)
 			skip_to_semi (cfile);
 			return;
 		}
-		config -> vendor_space_name = parse_string (cfile);
+		token = next_token (&val, cfile);
+		if (!is_identifier (token)) {
+			parse_warn (cfile, "expecting an identifier.");
+			skip_to_semi (cfile);
+			return;
+		}
+		config -> vendor_space_name = dmalloc (strlen (val) + 1, MDL);
+		if (!config -> vendor_space_name)
+			log_fatal ("no memory for vendor option space name.");
+		strcpy (config -> vendor_space_name, val);
 		for (i = 0; i < universe_count; i++)
 			if (!strcmp (universes [i] -> name,
 				     config -> vendor_space_name))
@@ -495,6 +504,7 @@ void parse_client_statement (cfile, ip, config)
 			log_error ("vendor option space %s not found.",
 				   config -> vendor_space_name);
 		}
+		parse_semi (cfile);
 		return;
 
 	      case INTERFACE:
@@ -1093,6 +1103,15 @@ int parse_option_decl (oc, cfile)
 			if (*fmt == 'A')
 				break;
 			switch (*fmt) {
+			      case 'E':
+				fmt = strchr (fmt, '.');
+				if (!fmt) {
+					parse_warn (cfile,
+						    "malformed %s (bug!)",
+						    "encapsulation format");
+					skip_to_semi (cfile);
+					return 0;
+				}
 			      case 'X':
 				len = parse_X (cfile, &hunkbuf [hunkix],
 					       sizeof hunkbuf - hunkix);
