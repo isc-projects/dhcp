@@ -3,7 +3,7 @@
    DHCP Server Daemon. */
 
 /*
- * Copyright (c) 1996-2001 Internet Software Consortium.
+ * Copyright (c) 1996-2003 Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -43,11 +43,11 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.115.2.6 2001/06/22 02:12:58 mellon Exp $ Copyright 1995-2001 Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.115.2.6.2.1 2003/01/14 23:02:33 dhankins Exp $ Copyright 1995-2003 Internet Software Consortium.";
 #endif
 
   static char copyright[] =
-"Copyright 1995-2001 Internet Software Consortium.";
+"Copyright 1995-2003 Internet Software Consortium.";
 static char arr [] = "All rights reserved.";
 static char message [] = "Internet Software Consortium DHCP Server";
 static char url [] = "For info, please visit http://www.isc.org/products/DHCP";
