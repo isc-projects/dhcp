@@ -1820,3 +1820,7 @@ int updateA (const struct data_string *, const struct data_string *,
 	     unsigned int, struct lease *);
 int updatePTR (const struct data_string *, const struct data_string *,
 	       unsigned int, struct lease *);
+int deleteA (const struct data_string *, const struct data_string *,
+	     struct lease *);
+int deletePTR (const struct data_string *, const struct data_string *,
+	       struct lease *);
