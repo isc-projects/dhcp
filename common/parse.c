@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.50 1999/10/20 20:55:44 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.51 1999/10/21 02:34:32 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1211,6 +1211,7 @@ int parse_executable_statement (result, cfile, lose)
 	struct option *option;
 	struct option_cache *cache;
 	int known;
+	int flag;
 
 	token = peek_token (&val, cfile);
 	switch (token) {
@@ -1276,7 +1277,14 @@ int parse_executable_statement (result, cfile, lose)
 					       supersede_option_statement);
 
 	      case ALLOW:
+		flag = 1;
+		goto pad;
 	      case DENY:
+		flag = 0;
+		goto pad;
+	      case IGNORE:
+		flag = 2;
+	      pad:
 		token = next_token (&val, cfile);
 		cache = (struct option_cache *)0;
 		if (!parse_allow_deny (&cache, cfile,
@@ -2704,6 +2712,8 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 		else if (!strcasecmp (val, "false")
 			 || !strcasecmp (val, "off"))
 			buf [0] = 0;
+		else if (!strcasecmp (val, "ignore"))
+			buf [0] = 2;
 		else {
 			parse_warn (cfile, "expecting boolean.");
 			goto bad_flag;
@@ -2774,6 +2784,9 @@ int parse_allow_deny (oc, cfile, flag)
 				       &server_options [SV_DUPLICATES]);
 		break;
 
+	      case DECLINES:
+		status = option_cache (oc, (struct data_string *)0, data,
+				       &server_options [SV_DECLINES]);
 	      default:
 		parse_warn (cfile, "expecting allow/deny key");
 		skip_to_semi (cfile);
