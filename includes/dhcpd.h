@@ -381,6 +381,8 @@ struct lease_state {
 #define SV_DDNS_UPDATE_STYLE		39
 #define SV_CLIENT_UPDATES		40
 #define SV_UPDATE_OPTIMIZATION		41
+#define SV_PING_CHECKS			42
+#define SV_UPDATE_STATIC_LEASES		43
 
 #if !defined (DEFAULT_DEFAULT_LEASE_TIME)
 # define DEFAULT_DEFAULT_LEASE_TIME 43200
@@ -1103,7 +1105,7 @@ void parse_address_range PROTO ((struct parse *,
 				 struct group *, int, struct pool *));
 
 /* ddns.c */
-int ddns_updates PROTO ((struct packet *, struct lease *,
+int ddns_updates PROTO ((struct packet *, struct lease *, struct lease *,
 			 struct lease_state *));
 int ddns_removals PROTO ((struct lease *));
 
@@ -1258,6 +1260,7 @@ int is_data_expression PROTO ((struct expression *));
 int is_numeric_expression PROTO ((struct expression *));
 int is_compound_expression PROTO ((struct expression *));
 int op_precedence PROTO ((enum expr_op, enum expr_op));
+enum expression_context expression_context (struct expression *);
 enum expression_context op_context PROTO ((enum expr_op));
 int write_expression PROTO ((FILE *, struct expression *, int, int, int));
 struct binding *find_binding PROTO ((struct binding_scope *, const char *));
