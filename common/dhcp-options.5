@@ -567,13 +567,49 @@ This option can be used to specify the a DHCP client identifier in a
 host declaration, so that dhcpd can find the host record by matching
 against the client identifier.
 .RE
+.SH RELAY AGENT INFORMATION OPTION
+An IETF draft, draft-ietf-dhc-agent-options-03.txt, defines a series
+of encapsulated options that a relay agent can add to a DHCP packet
+when relaying it to the DHCP server.   The server can then make
+address allocation decisions (or whatever other decisions it wants)
+based on these options.   The server also returns these options in any
+replies it sends through the relay agent, so that the relay agent can
+use the information in these options for delivery or accounting
+purposes.
+.PP
+The current draft defines two options.   To reference
+these options in the dhcp server, specify the option space name,
+"agent", followed by a period, followed by the option name.   It isn't
+useful to specify these options to be sent, nor is it useful to
+reference them at all in the client.
+.B option \fBagent.circuit-id\fR \fIdata-string\fR\fB;\fR
+.RS 0.25i
+.PP
+The circuit-id suboption encodes an agent-local identifier of the
+circuit from which a DHCP client-to-server packet was received.  It is
+intended for use by agents in relaying DHCP responses back to the
+proper circuit.   The format of this option is currently defined to be
+vendor-dependent, and will probably remain that way, although the
+current draft allows for for the possibility of standardizing the
+format in the future.
+.RE
+.PP
+.B option \fBagent.circuit-id\fR \fIdata-string\fR\fB;\fR
+.RS 0.25i
+.PP
+The remote-id suboption encodes information about the remote host end
+of a circuit.   Examples of what it might contain include caller ID
+information, username information, remote ATM address, cable modem ID,
+and similar things.   In principal, the meaning is not well-specified,
+and it should generally be assumed to be an opaque object that is
+administratively guaranteed to be unique to a particular remote end of
+a circuit.
 .SH SEE ALSO
-dhcpd.conf(5), dhcpd.leases(5), dhclient.conf(5), dhcpd(8),
-dhclient(8), RFC2132, RFC2131.
+dhcpd.conf(5), dhcpd.leases(5), dhclient.conf(5), dhcp-eval(5), dhcpd(8),
+dhclient(8), RFC2132, RFC2131, draft-ietf-dhc-agent-options-??.txt.
 .SH AUTHOR
-.B dhcpd(8)
-was written by Ted Lemon <mellon@vix.com>
-under a contract with Vixie Labs.   Funding
-for this project was provided by the Internet Software Corporation.
+The Internet Software Consortium DHCP Distribution was written by Ted
+Lemon <mellon@isc.org> under a contract with Vixie Labs.  Funding for
+this project was provided through the Internet Software Consortium.
 Information about the Internet Software Consortium can be found at
 .B http://www.isc.org/isc.
