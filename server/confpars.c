@@ -3,7 +3,7 @@
    Parser for dhcpd config file... */
 
 /*
- * Copyright (c) 1995, 1996, 1997 The Internet Software Consortium.
+ * Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.48 1998/03/17 06:18:58 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.49 1998/04/09 04:38:24 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -155,6 +155,7 @@ void read_leases ()
 	       | fixed-address-parameter
 	       | ALLOW allow-deny-keyword
 	       | DENY allow-deny-keyword
+	       | USE_LEASE_ADDR_FOR_DEFAULT_ROUTE boolean
 
    declaration :== host-declaration
 		 | group-declaration
@@ -269,6 +270,22 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		parse_lease_time (cfile, &group -> max_lease_time);
 		break;
 
+	      case MIN_LEASE_TIME:
+		parse_lease_time (cfile, &group -> min_lease_time);
+		break;
+
+	      case MIN_SECS:
+		token = next_token (&val, cfile);
+		if (token != NUMBER) {
+			parse_warn ("Expecting a number of seconds.");
+			skip_to_semi (cfile);
+			return declaration;
+		}
+		convert_num ((unsigned char *)&group -> min_secs,
+			     val, 10, 32);
+		group -> min_secs = ntohl (group -> min_secs);
+		break;
+
 	      case DYNAMIC_BOOTP_LEASE_CUTOFF:
 		group -> bootp_lease_cutoff = parse_date (cfile);
 		break;
@@ -299,6 +316,13 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		if (type == HOST_DECL)
 			parse_warn ("use-host-decl-names not allowed here.");
 		group -> use_host_decl_names = parse_boolean (cfile);
+		break;
+
+	      case USE_LEASE_ADDR_FOR_DEFAULT_ROUTE:
+		if (type == HOST_DECL)
+			parse_warn ("use-host-decl-names not allowed here.");
+		group -> use_lease_addr_for_default_route =
+			parse_boolean (cfile);
 		break;
 
 	      case NEXT_SERVER:
@@ -930,6 +954,16 @@ void parse_option_param (cfile, group)
 
 	/* Free the initial identifier token. */
 	free (vendor);
+
+	token = peek_token (&val, cfile);
+	if (token == SEMI) {
+		/* Eat the semicolon... */
+		token = next_token (&val, cfile);
+
+		group -> options [option -> code] =
+			tree_cache (tree_const (0, 0));
+		return;
+	}
 
 	/* Parse the option data... */
 	do {
