@@ -1,6 +1,6 @@
 	    Internet Software Consortium DHCP Distribution
-		    Version 3, Release Candidate 3
-			    April 27, 2001
+		    Version 3, Release Candidate 4
+			    April 30, 2001
 
 			    Release Notes
 
@@ -55,6 +55,14 @@ Measurement Systems, Igor Sharfmesser at Kazakh Telecom, and Brian
 Murrell at BC Tel Advanced Communications.  I'd like to express my
 thanks to all of these good people here, both for working on the code
 and for prodding me into improving it.
+
+		Changes since 3.0 Release Candidate 3
+
+- Do lease billing on startup in a way that I *think* will finally do
+  the billing correctly - the previous method could overbill as a
+  result of duplicate leases.
+
+- Document OMAPI server objects.
 
 	  Changes since 3.0 Release Candidate 2 Patchlevel 1
 
