@@ -845,6 +845,6 @@ void relay PROTO ((struct interface_info *, u_int8_t *, int,
 
 /* icmp.c */
 void icmp_startup PROTO ((int, void (*) PROTO ((struct iaddr,
-						u_int8_t, int))));
+						u_int8_t *, int))));
 int icmp_echorequest PROTO ((struct iaddr *));
 void icmp_echoreply PROTO ((struct protocol *));
