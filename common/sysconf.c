@@ -5,7 +5,7 @@
    !!!Boy, howdy, is this ever not guaranteed not to change!!! */
 
 /*
- * Copyright (c) 1997 The Internet Software Consortium.
+ * Copyright (c) 1997, 1998 The Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -44,7 +44,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: sysconf.c,v 1.3 1997/11/29 07:52:33 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: sysconf.c,v 1.4 1998/03/16 06:14:51 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -83,15 +83,17 @@ void sysconf_startup (handler)
 		once = 1;
 		close (sysconf_fd);
 		sysconf_initialized = 0;
-		add_timeout (cur_time + 60, sysconf_restart, handler);
+		add_timeout (cur_time + 60, sysconf_restart, (void *)handler);
 	} else
-		add_protocol ("sysconf", sysconf_fd, sysconf_message, handler);
+		add_protocol ("sysconf", sysconf_fd, sysconf_message,
+			      (void *)handler);
 }
 
 void sysconf_restart (v)
 	void *v;
 {
-	void (*handler) PROTO ((struct sysconf_header *, void *)) = v;
+	void (*handler) PROTO ((struct sysconf_header *, void *)) =
+	  (void (*) PROTO ((struct sysconf_header *, void *)))v;
 
 	sysconf_startup (handler);
 }
@@ -130,7 +132,8 @@ void sysconf_message (proto)
 		buf = (char *)0;
 
 	/* Call the handler... */
-	if ((handler = proto -> local))
+	if ((handler = ((void (*) PROTO ((struct sysconf_header *, void *)))
+			proto -> local)))
 		(*handler) (&hdr, buf);
 
 	if (buf)
