@@ -1,7 +1,7 @@
 	    Internet Software Consortium DHCP Distribution
 			     Version 3.0.1
-			  Release Candidate 1
-			   October 16, 2001
+			  Release Candidate 2
+			   October 30, 2001
 
 			    Release Notes
 
@@ -45,6 +45,37 @@ Measurement Systems, Igor Sharfmesser at Kazakh Telecom, and Brian
 Murrell at BC Tel Advanced Communications.  I'd like to express my
 thanks to all of these good people here, both for working on the code
 and for prodding me into improving it.
+
+		        Changes since 3.0.1rc1
+
+- Treat NXDOMAIN and NXRRSET as success when we are trying to delete a
+  domain or RRSET.   This allows the DHCP server to forget about a name
+  it added to the DNS once it's been removed, even if the DHCP server
+  wasn't the one that removed it.
+
+- Install defaults for failover maximum outstanding updates and maximum
+  silent time.   This prevents problems that might occur if these values
+  were not configured.
+
+- Don't do DDNS deletes if ddns-update-style is none.
+
+- Return relay agent information options in DHCPNAK.   This prevents DHCPNAK
+  messages from being dropped when the relay agent information option contains
+  routing information.
+
+- Fix a problem where coming up in recover wouldn't result in an update
+  request being sent.
+
+- Add some more chatty messages when we start a recovery update and when it's
+  done.
+
+- Fix a possible problem where some state might have been left around
+  after the peer lost contact and regained contact about how many updates
+  were pending.
+
+- Add support in rc history code for keeping a selective history, rather
+  than a history of all references and dereferences.   This code is only used
+  when extensive additional debugging is enabled.
 
 		           Changes since 3.0
 
