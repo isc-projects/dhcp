@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.192.2.28 2003/09/12 19:25:50 dhankins Exp $ Copyright (c) 1995-2002 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.192.2.29 2003/09/12 19:40:24 dhankins Exp $ Copyright (c) 1995-2002 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2644,7 +2644,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 			ping_timeout = DEFAULT_PING_TIMEOUT;
 		}
 
-		log_debug ("Ping timeout: %d", (int)ping_timeout);
+		log_debug ("Ping timeout: %ld", (long)ping_timeout);
 
 		add_timeout (cur_time + ping_timeout, lease_ping_timeout, lease,
 			     (tvref_t)lease_reference,
