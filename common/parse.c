@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.104.2.7 2001/10/17 03:25:49 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.104.2.8 2002/01/10 19:37:51 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1804,7 +1804,11 @@ int parse_executable_statement (result, cfile, lose, case_context)
 				executable_statement_dereference (result, MDL);
 				return 0;
 			}
-			parse_semi (cfile);
+			if (parse_semi (cfile)) {
+				*lose = 1;
+				executable_statement_dereference (result, MDL);
+				return 0;
+			}
 		}
 		break;
 
@@ -1828,7 +1832,11 @@ int parse_executable_statement (result, cfile, lose, case_context)
 		if (!(*result)->data.unset)
 			log_fatal ("can't allocate variable name");
 		strcpy ((*result) -> data.unset, val);
-		parse_semi (cfile);
+		if (!parse_semi (cfile)) {
+			*lose = 1;
+			executable_statement_dereference (result, MDL);
+			return 0;
+		}
 		break;
 
 	      case EVAL:
@@ -1850,7 +1858,10 @@ int parse_executable_statement (result, cfile, lose, case_context)
 			executable_statement_dereference (result, MDL);
 			return 0;
 		}
-		parse_semi (cfile);
+		if (!parse_semi (cfile)) {
+			*lose = 1;
+			executable_statement_dereference (result, MDL);
+		}
 		break;
 
 	      case RETURN:
@@ -1872,7 +1883,11 @@ int parse_executable_statement (result, cfile, lose, case_context)
 			executable_statement_dereference (result, MDL);
 			return 0;
 		}
-		parse_semi (cfile);
+		if (!parse_semi (cfile)) {
+			*lose = 1;
+			executable_statement_dereference (result, MDL);
+			return 0;
+		}
 		break;
 
 	      case LOG:
@@ -2024,7 +2039,11 @@ int parse_executable_statement (result, cfile, lose, case_context)
 				executable_statement_dereference (result, MDL);
 				return 0;
 			}
-			parse_semi (cfile);
+			if (!parse_semi (cfile)) {
+				*lose = 1;
+				executable_statement_dereference (result, MDL);
+				return 0;
+			}
 			break;
 		}
 
