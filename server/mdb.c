@@ -3,7 +3,7 @@
    Server-specific in-memory database support. */
 
 /*
- * Copyright (c) 1996-2000 Internet Software Consortium.
+ * Copyright (c) 1996-2001 Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.67.2.4 2001/05/18 01:05:31 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.67.2.5 2001/05/31 20:13:34 mellon Exp $ Copyright (c) 1996-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1714,7 +1714,7 @@ void hw_hash_delete (lease)
 
 /* Write all interesting leases to permanent storage. */
 
-void write_leases ()
+int write_leases ()
 {
 	struct lease *l;
 	struct shared_network *s;
@@ -1736,7 +1736,8 @@ void write_leases ()
 			if ((gp -> flags & GROUP_OBJECT_DYNAMIC) ||
 			    ((gp -> flags & GROUP_OBJECT_STATIC) &&
 			     (gp -> flags & GROUP_OBJECT_DELETED))) {
-				write_group (gp);
+				if (!write_group (gp))
+					return 0;
 				++num_written;
 			}
 		}
@@ -1753,7 +1754,8 @@ void write_leases ()
 			hp = (struct host_decl *)hb -> value;
 			if (((hp -> flags & HOST_DECL_STATIC) &&
 			     (hp -> flags & HOST_DECL_DELETED))) {
-				write_host (hp);
+				if (!write_host (hp))
+					return 0;
 				++num_written;
 			}
 		}
@@ -1770,8 +1772,8 @@ void write_leases ()
 		     hb; hb = hb -> next) {
 			hp = (struct host_decl *)hb -> value;
 			if ((hp -> flags & HOST_DECL_DYNAMIC)) {
-				write_host (hp);
-				++num_written;
+				if (!write_host (hp))
+					++num_written;
 			}
 		}
 	    }
@@ -1781,7 +1783,8 @@ void write_leases ()
 
 #if defined (FAILOVER_PROTOCOL)
 	/* Write all the failover states. */
-	dhcp_failover_write_all_states ();
+	if (!dhcp_failover_write_all_states ())
+		return 0;
 #endif
 
 	/* Write all the leases. */
@@ -1800,7 +1803,7 @@ void write_leases ()
 			    l -> uid_len ||
 			    (l -> binding_state != FTS_FREE)) {
 			    if (!write_lease (l))
-				log_fatal ("Can't rewrite lease database");
+				    return 0;
 			    num_written++;
 			}
 		    }
@@ -1809,7 +1812,8 @@ void write_leases ()
 	}
 	log_info ("Wrote %d leases to leases file.", num_written);
 	if (!commit_leases ())
-		log_fatal ("Can't commit leases to new database: %m");
+		return 0;
+	return 1;
 }
 
 int lease_enqueue (struct lease *comp)
