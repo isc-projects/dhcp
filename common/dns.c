@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dns.c,v 1.21 2000/04/20 00:55:51 mellon Exp $ Copyright (c) 2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dns.c,v 1.22 2000/05/01 23:26:38 mellon Exp $ Copyright (c) 2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -133,16 +133,22 @@ struct hash_table *tsig_key_hash;
 struct hash_table *dns_zone_hash;
 
 #if defined (NSUPDATE)
-isc_result_t find_tsig_key (ns_tsig_key **key, const char *zname)
+isc_result_t find_tsig_key (ns_tsig_key **key, const char *zname,
+			    struct dns_zone *zone)
 {
-	struct dns_zone *zone;
 	isc_result_t status;
 	ns_tsig_key *tkey;
+#if 0
+	struct dns_zone *zone;
 
 	zone = (struct dns_zone *)0;
 	status = dns_zone_lookup (&zone, zname);
 	if (status != ISC_R_SUCCESS)
 		return status;
+#else
+	if (!zone)
+		return ISC_R_NOTFOUND;
+#endif
 	if (!zone -> key) {
 		dns_zone_dereference (&zone, MDL);
 		return ISC_R_KEY_UNKNOWN;
@@ -326,13 +332,20 @@ int dns_zone_dereference (ptr, file, line)
 #if defined (NSUPDATE)
 int find_cached_zone (const char *dname, ns_class class,
 		      char *zname, size_t zsize,
-		      struct in_addr *addrs, int naddrs)
+		      struct in_addr *addrs, int naddrs,
+		      struct dns_zone **zcookie)
 {
 	isc_result_t status = ISC_R_NOTFOUND;
 	const char *np;
 	struct dns_zone *zone = (struct dns_zone *)0;
 	struct data_string nsaddrs;
 	int aix;
+
+	/* The absence of the zcookie pointer indicates that we
+	   succeeded previously, but the update itself failed, meaning
+	   that we shouldn't use the cached zone. */
+	if (!zcookie)
+		return 0;
 
 	/* For each subzone, try to find a cached zone. */
 	for (np = dname - 1; np; np = strchr (np, '.')) {
@@ -345,9 +358,17 @@ int find_cached_zone (const char *dname, ns_class class,
 	if (status != ISC_R_SUCCESS)
 		return 0;
 
-	/* Make sure the zone name will fit. */
-	if (strlen (zone -> name) > zsize)
+	/* Make sure the zone is valid. */
+	if (zone -> timeout && zone -> timeout < cur_time) {
+		dns_zone_dereference (&zone, MDL);
 		return 0;
+	}
+
+	/* Make sure the zone name will fit. */
+	if (strlen (zone -> name) > zsize) {
+		dns_zone_dereference (&zone, MDL);
+		return 0;
+	}
 	strcpy (zname, zone -> name);
 
 	memset (&nsaddrs, 0, sizeof nsaddrs);
@@ -389,6 +410,30 @@ int find_cached_zone (const char *dname, ns_class class,
 			data_string_forget (&nsaddrs, MDL);
 		}
 	}
+
+	/* It's not an error for zcookie to have a value here - actually,
+	   it's quite likely, because res_nupdate cycles through all the
+	   names in the update looking for their zones. */
+	if (!*zcookie)
+		dns_zone_reference (zcookie, zone, MDL);
+	dns_zone_dereference (&zone, MDL);
 	return aix;
+}
+
+void forget_zone (struct dns_zone **zone)
+{
+	dns_zone_dereference (zone, MDL);
+}
+
+void repudiate_zone (struct dns_zone **zone)
+{
+	/* XXX Currently we're not differentiating between a cached
+	   XXX zone and a zone that's been repudiated, which means
+	   XXX that if we reap cached zones, we blow away repudiated
+	   XXX zones.   This isn't a big problem since we're not yet
+	   XXX caching zones... :'} */
+
+	(*zone) -> timeout = cur_time - 1;
+	dns_zone_dereference (zone, MDL);
 }
 #endif /* NSUPDATE */
