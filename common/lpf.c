@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: lpf.c,v 1.1.2.5 1999/02/23 17:35:45 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: lpf.c,v 1.1.2.6 1999/02/23 22:09:55 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -129,13 +129,14 @@ void if_register_send (info)
 	info -> wfdesc = info -> rfdesc;
 #endif
 	if (!quiet_interface_discovery)
-		note ("Sending on   LPF/%s/%s/%s",
+		note ("Sending on   LPF/%s/%s%s%s",
 		      info -> name,
 		      print_hw_addr (info -> hw_address.htype,
 				     info -> hw_address.hlen,
 				     info -> hw_address.haddr),
+		      (info -> shared_network ? "/" : ""),
 		      (info -> shared_network ?
-		       info -> shared_network -> name : "unattached"));
+		       info -> shared_network -> name : ""));
 }
 #endif /* USE_LPF_SEND */
 
@@ -174,13 +175,14 @@ void if_register_receive (info)
 		error ("Can't install packet filter program: %m");
 	}
 	if (!quiet_interface_discovery)
-		note ("Listening on LPF/%s/%s/%s",
+		note ("Listening on LPF/%s/%s%s%s",
 		      info -> name,
 		      print_hw_addr (info -> hw_address.htype,
 				     info -> hw_address.hlen,
 				     info -> hw_address.haddr),
+		      (info -> shared_network ? "/" : ""),
 		      (info -> shared_network ?
-		       info -> shared_network -> name : "unattached"));
+		       info -> shared_network -> name : ""));
 }
 #endif /* USE_LPF_RECEIVE */
 

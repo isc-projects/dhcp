@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: nit.c,v 1.15.2.2 1999/02/23 17:35:46 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: nit.c,v 1.15.2.3 1999/02/23 22:09:54 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -155,12 +155,13 @@ void if_register_send (info)
 	info -> wfdesc = info -> rfdesc;
 #endif
         if (!quiet_interface_discovery)
-		note ("Sending on   NIT/%s/%s",
+		note ("Sending on   NIT/%s%s%s",
 		      print_hw_addr (info -> hw_address.htype,
 				     info -> hw_address.hlen,
 				     info -> hw_address.haddr),
+		      (info -> shared_network ? "/" : ""),
 		      (info -> shared_network ?
-		       info -> shared_network -> name : "unattached"));
+		       info -> shared_network -> name : ""));
 }
 #endif /* USE_NIT_SEND */
 
@@ -238,12 +239,13 @@ void if_register_receive (info)
 		error ("Can't set NIT filter on %s: %m", info -> name);
 
         if (!quiet_interface_discovery)
-		note ("Listening on NIT/%s/%s",
+		note ("Listening on NIT/%s%s%s",
 		      print_hw_addr (info -> hw_address.htype,
 				     info -> hw_address.hlen,
 				     info -> hw_address.haddr),
+		      (info -> shared_network ? "/" : ""),
 		      (info -> shared_network ?
-		       info -> shared_network -> name : "unattached"));
+		       info -> shared_network -> name : ""));
 }
 #endif /* USE_NIT_RECEIVE */
 

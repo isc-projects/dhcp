@@ -50,7 +50,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: socket.c,v 1.26.2.9 1999/02/23 17:35:46 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: socket.c,v 1.26.2.10 1999/02/23 22:09:55 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -159,11 +159,11 @@ void if_register_send (info)
 	info -> wfdesc = info -> rfdesc;
 #endif
 	if (!quiet_interface_discovery)
-		note ("Sending on   Socket/%s/%s",
+		note ("Sending on   Socket/%s%s%s",
 		      info -> name,
+		      (info -> shared_network ? "/" : ""),
 		      (info -> shared_network ?
-		       info -> shared_network -> name : "unattached"));
-
+		       info -> shared_network -> name : ""));
 }
 #endif /* USE_SOCKET_SEND */
 
@@ -175,10 +175,11 @@ void if_register_receive (info)
 	   we don't need to register this interface twice. */
 	info -> rfdesc = if_register_socket (info);
 	if (!quiet_interface_discovery)
-		note ("Listening on Socket/%s/%s",
+		note ("Listening on Socket/%s%s%s",
 		      info -> name,
+		      (info -> shared_network ? "/" : ""),
 		      (info -> shared_network ?
-		       info -> shared_network -> name : "unattached"));
+		       info -> shared_network -> name : ""));
 }
 #endif /* USE_SOCKET_RECEIVE */
 

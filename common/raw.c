@@ -54,7 +54,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: raw.c,v 1.11.2.1 1999/02/23 17:35:46 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: raw.c,v 1.11.2.2 1999/02/23 22:09:54 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -97,10 +97,11 @@ void if_register_send (info)
 
 	info -> wfdesc = sock;
         if (!quiet_interface_discovery)
-		note ("Sending on   Raw/%s/%s",
+		note ("Sending on   Raw/%s%s%s",
 		      info -> name,
+		      (info -> shared_network ? "/" : ""),
 		      (info -> shared_network ?
-		       info -> shared_network -> name : "unattached"));
+		       info -> shared_network -> name : ""));
 }
 
 size_t send_packet (interface, packet, raw, len, from, to, hto)

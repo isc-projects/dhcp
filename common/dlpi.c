@@ -344,13 +344,14 @@ void if_register_send (info)
 #endif
 
         if (!quiet_interface_discovery)
-		note ("Sending on   DLPI/%s/%s/%s",
+		note ("Sending on   DLPI/%s/%s%s%s",
 		      info -> name,
 		      print_hw_addr (info -> hw_address.htype,
 				     info -> hw_address.hlen,
 				     info -> hw_address.haddr),
+		      (info -> shared_network ? "/" : ""),
 		      (info -> shared_network ?
-		       info -> shared_network -> name : "unattached"));
+		       info -> shared_network -> name : ""));
 
 #ifdef DLPI_FIRST_SEND_WAIT
 /* See the implementation notes at the beginning of this file */
@@ -397,7 +398,7 @@ void if_register_receive (info)
 	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_CAND;
 	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_PUSHWORD + 18;
 	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_PUSHLIT + ENF_CAND;
-	pf.Pf_Filter [pf.Pf_FilterLen++] = local_port;
+	pf.Pf_Filter [pf.Pf_FilterLen++] = htons (local_port);
 #else
 	/*
 	 * The packets that will be received on this file descriptor
@@ -415,7 +416,7 @@ void if_register_receive (info)
 	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_CAND;
 	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_PUSHWORD + 11;
 	pf.Pf_Filter [pf.Pf_FilterLen++] = ENF_PUSHLIT + ENF_CAND;
-	pf.Pf_Filter [pf.Pf_FilterLen++] = local_port;
+	pf.Pf_Filter [pf.Pf_FilterLen++] = htons (local_port);
 #endif
 
 	/* Install the filter... */
@@ -426,13 +427,14 @@ void if_register_receive (info)
 #endif
 
         if (!quiet_interface_discovery)
-		note ("Listening on DLPI/%s/%s/%s",
+		note ("Listening on DLPI/%s/%s%s%s",
 		      info -> name,
 		      print_hw_addr (info -> hw_address.htype,
 				     info -> hw_address.hlen,
 				     info -> hw_address.haddr),
+		      (info -> shared_network ? "/" : ""),
 		      (info -> shared_network ?
-		       info -> shared_network -> name : "unattached"));
+		       info -> shared_network -> name : ""));
 
 #ifdef DLPI_FIRST_SEND_WAIT
 /* See the implementation notes at the beginning of this file */
