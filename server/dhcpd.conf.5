@@ -462,7 +462,7 @@ use the value of the vendor-class-identifier option to determine what
 values to send in the vendor-encapsulated-options option.  An example
 of this is shown under the VENDOR ENCAPSULATED OPTIONS head later on
 in this document.
-.SH PER-CLASS ADDRESS ASSIGNMENT LIMITS
+.SH PER-CLASS LIMITS ON DYNAMIC ADDRESS ALLOCATION
 .PP
 You may specify a limit to the number of clients in a class that can
 be assigned leases.   The effect of this will be to make it difficult
@@ -520,6 +520,154 @@ limit of four leases.
 The use of the subclass spawning mechanism is not restricted to relay
 agent options - this particular example is given only because it is a
 fairly straightforward one.
+.SH DYNAMIC DNS UPDATES
+.PP
+The DHCP server has the ability to dynamically update the Domain Name
+System.  Within the configuration files, you can define how you want
+the Domain Name System to be updated.  These updates are RFC 2136
+compliant so any DNS server supporting RFC 2136 should be able to
+accept updates from the DHCP server.   The DHCP server will only
+perform DNS updates if it has been built with DNS updates enabled as
+described in the README file that comes with the DHCP distribution.
+.PP
+The Dynamic DNS update scheme implemented in this version of the ISC
+DHCP server is an interim implementation, which does not implement any
+of the standard update methods that have been discussed in the working
+group, but rather implements some very basic, yet useful, update
+capabilities.
+.PP
+There are three parameters, which may vary according to the scope,
+that control how DDNS updates will be done.   The first two are the
+.I ddns-domainname
+and
+.I ddns-rev-domainname
+statements.   The
+.I ddns-domainname
+parameter sets the domain name that will be appended to the client's
+hostname to form a fully-qualified domain-name (FQDN).   For example,
+if the client's hostname is "hutson" and the
+.I ddns-domainname
+is set to "sneedville.edu", then the client's FQDN will be
+"hutson.sneedville.edu".
+.PP
+The
+.I ddns-rev-domainname
+parameter sets the domain name that will be appended to the client's
+reversed IP address to produce a name for use in the client's PTR
+record.   Normally, you would set this to "in-addr.arpa", but this is
+not required.
+.PP
+A third parameter,
+.I ddns-hostname
+can be used to specify the hostname that will be used as the client's
+hostname.   If no ddns-hostname is specified in scope, then the server
+will use a host-name option sent by the client.   If the client did
+not send a host-name option, then if there is a host declaration that
+applies to the client, the name from that declaration will be used.
+If none of these applies, the server will not have a hostname for the
+client, and will not be able to do a DDNS update.
+.SH HOW DNS UPDATES WORK
+.PP
+The client's FQDN, derived as we have described, is used as the name
+on which an "A" record will be stored.   The A record will contain the
+IP address that the client was assigned in its lease.   If there is
+already an A record with the same name in the DNS server, no update of
+either the A or PTR records will occur - this prevents a client from
+claiming that its hostname is the name of some network server.   For
+example, if you have a fileserver called "fs.sneedville.edu", and the
+client claims its hostname is "fs", no DNS update will be done for
+that client, and an error message will be logged.
+.PP
+If the A record update succeeds, a PTR record update for the assigned
+IP address will be done, pointing to the A record.   This update is
+unconditional - it will be done even if another PTR record of the same
+name exists.   Since the IP address has been assigned to the DHCP
+server, this should be safe.
+.PP
+Please note that the current implementation assumes clients only have
+a single network interface.   A client with two network interfaces
+will see unpredictable behaviour.   This is considered a bug, and will
+be fixed in a later release.   It may be helpful to enable the
+.I one-lease-per-client
+parameter so that roaming clients do not trigger this same behavior.
+.PP
+The DHCP protocol normally involves a four-packet exchange - first the
+client sends a DHCPDISCOVER message, then the server sends a
+DHCPOFFER, then the client sends a DHCPREQUEST, then the server sends
+a DHCPACK.   In the current version of the server, the server will do
+a DNS update after it has received the DHCPREQUEST, and before it has
+sent the DHCPOFFER.   It only sends the DNS update if it has not sent
+one for the client's address before, in order to minimize the impact
+on the DHCP server.
+.PP
+When the client's lease expires, the DHCP server (if it is operating
+at the time, or when next it operates) will remove the client's A and
+PTR records from the DNS database.   If the client releases its lease
+by sending a DHCPRELEASE message, the server will likewise remove the
+A and PTR records.
+.SH DYNAMIC DNS UPDATE SECURITY
+.PP
+Support for TSIG and DNSSEC is not yet available.  When you set your
+DNS server up to allow updates from the DHCP server, you may
+be exposing it to unauthorized updates.  To avoid this, the best you
+can do right now is to use IP address-based packet filtering to
+prevent unauthorized hosts from submitting update requests.
+.PP
+The DNS server must be configured to allow updates for any zone that
+the DHCP server will be updating.  For example, let us say that
+clients in the sneedville.edu domain will be assigned addresses on the
+10.10.17.0/24 subnet.  In that case, assuming you are using ISC BIND
+8.2.1 or later, you would need to have the following declarations in
+your /etc/named.conf file:
+.PP
+.nf
+zone "sneedville.edu" {
+	type master;
+	file "sneedville.edu.db";
+	allow-update { localhost; };
+};
+
+zone "17.10.10.in-addr.arpa" {
+	type master;
+	file "10.10.17.db";
+	allow-update { localhost; };
+};
+.fi
+.PP
+This assumes that your DHCP server and your name server will be
+running on the same computer - the "localhost" name is taken in the
+DNS server as an alias for all of that host's IP addresses, and
+updates from any of those addresses will be accepted.
+.PP
+You may wish to enable logging of DNS transactions on your DNS server.
+To do so, you might write a logging statement like the following:
+.PP
+.nf
+logging {
+	channel update_debug {
+		file "/var/log/update-debug.log";
+		severity	debug 3;
+		print-category	yes;
+		print-severity	yes;
+		print-time	yes;
+	};
+	channel security_info	{
+		file	"/var/log/named-auth.info";
+		severity	info;
+		print-category	yes;
+		print-severity	yes;
+		print-time	yes;
+	};
+
+	category update { update_debug; };
+	category security { security_info; };
+};
+.fi
+.PP
+You must create the /var/log/named-auth.info and
+/var/log/update-debug.log files before starting the name server.   For
+more information on configuring ISC BIND, consult the documentation
+that accompanies it.
 .SH REFERENCE: EVENTS
 .PP
 There are three kinds of events that can happen regarding a lease, and
@@ -529,38 +677,12 @@ has made a commitment of a certain lease to a client, the release
 event, when the client has released the server from its commitment,
 and the expiry event, when the commitment expires.
 .PP
-Currently, only the commit event is fully supported.  The commit event
-occurs just before the DHCP server sends a DHCPACK message to a DHCP
-client, or a BOOTREPLY message to a BOOTP client.
-.PP
-The release event is partially supported, but currently will not occur
-if the server is restarted after the lease is assigned.   This will be
-fixed in the near future.
-.PP
-The expiry event is not currently supported at all.   This will also
-be fixed in the reasonably near future.
-.PP
 To declare a set of statements to execute when an event happens, you
 must use the \fBon\fR statement, followed by the name of the event,
 followed by a series of statements to execute when the event happens,
-enclosed in braces.   For example:
-.PP
-.nf
-	on commit {
-		if dns-update ("a",
-			       concat (option host-name, ".ssd.example.net"),
-			       binary-to-ascii (10, 8, ".", leased-address),
-			       lease-time) {
-		    if dns-update ("ptr", concat(binary-to-ascii(10, 8, ".",
-					         reverse(1, leased-address)),
-						 ".in-addr.arpa"),
-					  concat (option host-name,
-						  ".ssd.example.net"),
-				   lease-time) {
-		    }
-		}
-	}
-.fi
+enclosed in braces.   Events are used to implement dynamic DNS
+updates, so you should not define your own event handlers if you are
+using the built-in dynamic DNS update mechanism.
 .SH REFERENCE: DECLARATIONS
 .PP
 .B The 
@@ -849,6 +971,8 @@ following syntaxes are recognized following the allow or deny keyword:
 .PP
 If specified, this statement either allows or prevents allocation from
 this pool to any client that has a host declaration (i.e., is known).
+A client is known if it has a host declaration in \fIany\fR scope, not
+just the current scope.
 .PP
  \fBunknown clients;\fR
 .PP
@@ -1266,6 +1390,17 @@ that the clients use this IP address when contacting the server.
 .PP
 Supplying a value for the dhcp-server-identifier option is equivalent
 to using the server-identifier statement.
+.PP
+.B The  
+.I ddns-updates
+.B statement
+.PP
+ \fBddns-updates \fIflag\fR\fB;\fR
+.PP
+The \fIddns-updates\fR parameter controls whether or not the server will
+attempt to do a ddns update when a lease is confirmed.   Set this to \fIoff\fR
+if the server should not attempt to do updates within a certain scope.
+The \fIddns-updates\fR parameter is on by default.
 .SH REFERENCE: OPTION STATEMENTS
 .PP
 DHCP option statements are documented in the
