@@ -847,7 +847,7 @@ u_int32_t wrapsum PROTO ((u_int32_t));
 void assemble_hw_header PROTO ((struct interface_info *, unsigned char *,
 				int *, struct hardware *));
 void assemble_udp_ip_header PROTO ((struct interface_info *, unsigned char *,
-				    int *, u_int32_t, u_int32_t, u_int16_t,
+				    int *, u_int32_t, u_int32_t, unsigned int,
 				    unsigned char *, int));
 ssize_t decode_hw_header PROTO ((struct interface_info *, unsigned char *,
 				 int, struct hardware *));
