@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.85.2.16 2004/10/01 22:32:23 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.85.2.17 2004/10/01 22:50:29 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -675,17 +675,6 @@ int cons_options (inpacket, outpacket, lease, client_state,
 		outpacket -> options [mainbufix++] = DHO_DHCP_OPTION_OVERLOAD;
 		outpacket -> options [mainbufix++] = 1;
 		outpacket -> options [mainbufix++] = overload;
-		outpacket -> options [mainbufix++] = DHO_END;
-
-		/* If the option field is not completely filled, then pad
-		 * it and mark it full (note 'agentix' later in this
-		 * function).
-		 */
-		if (mainbufix != main_buffer_size) {
-			memset (&outpacket -> options[mainbufix], DHO_PAD,
-				main_buffer_size - mainbufix);
-			mainbufix = main_buffer_size;
-		}
 
 		if (overload & 1) {
 			memcpy (outpacket -> file,
