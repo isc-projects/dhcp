@@ -255,15 +255,14 @@ typedef struct {
 } dhcp_control_object_t;
 
 /* Lease states: */
-typedef enum {
-	FTS_FREE = 1,
-	FTS_ACTIVE = 2,
-	FTS_EXPIRED = 3,
-	FTS_RELEASED = 4,
-	FTS_ABANDONED = 5,
-	FTS_RESET = 6,
-	FTS_BACKUP = 7
-} binding_state_t;
+#define	FTS_FREE	1
+#define	FTS_ACTIVE	2
+#define	FTS_EXPIRED	3
+#define	FTS_RELEASED	4
+#define	FTS_ABANDONED	5
+#define	FTS_RESET	6
+#define	FTS_BACKUP	7
+typedef u_int8_t binding_state_t;
 
 /* FTS_LAST is the highest value that is valid for a lease binding state. */
 #define FTS_LAST FTS_BACKUP
@@ -306,9 +305,9 @@ struct lease {
 #	define EPHEMERAL_FLAGS		(MS_NULL_TERMINATION | \
 					 UNICAST_BROADCAST_HACK)
 
-	binding_state_t __attribute__ ((mode (__byte__))) binding_state;
-	binding_state_t __attribute__ ((mode (__byte__))) next_binding_state;
-	binding_state_t __attribute__ ((mode (__byte__))) desired_binding_state;
+	binding_state_t binding_state;
+	binding_state_t next_binding_state;
+	binding_state_t desired_binding_state;
 	
 	struct lease_state *state;
 

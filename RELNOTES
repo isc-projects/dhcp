@@ -51,6 +51,9 @@ and for prodding me into improving it.
   This was due to the secondary errantly sending an extra UPDREQ message
   when the primary made its state transition to PARTNER-DOWN known.
 
+- The package will now compile cleanly in gcc 3.3 and 3.4.  As a side effect,
+  lease structures will be 9 bytes smaller on all platforms.
+
 			Changes since 3.0.2rc3
 
 - A previously undocumented configuration directive, 'local-address',
