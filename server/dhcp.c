@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.145 2000/05/02 00:00:08 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.146 2000/05/03 06:29:15 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -154,21 +154,11 @@ void dhcpdiscover (packet, ms_nulltp)
 	}
 
 #if defined (FAILOVER_PROTOCOL)
-	log_info ("lease -> pool = %lx\n", (unsigned long)lease -> pool);
-	if (lease -> pool) {
-		log_info ("lease -> pool -> failover_peer = %lx\n",
-			  (unsigned long)(lease -> pool -> failover_peer));
-
-		if (lease -> pool -> failover_peer)
-			log_info ("lease -> pool -> failover_peer -> hba =%lx",
-				  (unsigned long)(lease -> pool
-						  -> failover_peer -> hba));
-	}
-
 	/* Do load balancing if configured. */
 	if (lease -> pool &&
 	    lease -> pool -> failover_peer &&
-	    lease -> pool -> failover_peer -> hba) {
+	    lease -> pool -> failover_peer -> hba &&
+	    lease -> pool -> failover_peer -> my_state == normal) {
 		if (!load_balance_mine (packet,
 					lease -> pool -> failover_peer))
 			return;
@@ -328,6 +318,35 @@ void dhcprequest (packet, ms_nulltp)
 			return;
 		}
 	}
+
+#if defined (FAILOVER_PROTOCOL)
+	/* If we found a lease, but it belongs to a failover peer, and
+	   the client is in the SELECTING state, ignore the request -
+	   it's not ours. */
+	if (lease && (lease -> flags & PEER_IS_OWNER) &&
+	    lookup_option (&dhcp_universe, packet -> options,
+			   DHO_DHCP_SERVER_IDENTIFIER)) {
+		log_info ("%s: ignored (not for me)", msgbuf);
+		return;
+	}
+
+	/* If we found a lease, but it belongs to a failover peer, and
+	   we are communicating with that peer, drop it.    This really
+	   shouldn't happen - if the peer is up, it should have renewed
+	   the client while the client was in the RENEWING state.   However,
+	   there are cases where the client won't be able to get unicast
+	   packets to its server, but will be able to get broadcast packets
+	   to its server, so for now I'm taking that possibility into
+	   account, although this should be revisited later.  Oh, also if
+	   the client comes up in the REBINDING state, we'll see it here,
+	   and shouldn't respond until its server has had a chance at it. */
+	if (lease && (lease -> flags & PEER_IS_OWNER) &&
+	    lease -> pool && lease -> pool -> failover_peer &&
+	    lease -> pool -> failover_peer -> my_state == normal) {
+		log_info ("%s: ignored (not for me)", msgbuf);
+		return;
+	}
+#endif /* FAILOVER_PROTOCOL */
 
 	/* If the address the client asked for is ours, but it wasn't
            available for the client, NAK it. */
