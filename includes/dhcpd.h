@@ -268,6 +268,8 @@ struct lease {
 #	define MS_NULL_TERMINATION	8
 #	define ABANDONED_LEASE		16
 #	define PEER_IS_OWNER		32
+#	define ON_UPDATE_QUEUE		64
+#	define ON_ACK_QUEUE		128
 #	define EPHEMERAL_FLAGS		(BOOTP_LEASE | MS_NULL_TERMINATION | \
 					 ABANDONED_LEASE | PEER_IS_OWNER)
 
@@ -1147,7 +1149,8 @@ struct lease *mockup_lease PROTO ((struct packet *,
 				   struct host_decl *));
 void static_lease_dereference PROTO ((struct lease *, const char *, int));
 
-struct lease *allocate_lease PROTO ((struct packet *, struct pool *, int));
+struct lease *allocate_lease PROTO ((struct packet *,
+				     struct pool *, int, int *));
 int permitted PROTO ((struct packet *, struct permit *));
 int locate_network PROTO ((struct packet *));
 int parse_agent_information_option PROTO ((struct packet *, int, u_int8_t *));
@@ -2054,6 +2057,7 @@ isc_result_t dhcp_failover_set_state (dhcp_failover_state_t *,
 				      enum failover_state);
 isc_result_t dhcp_failover_send_updates (dhcp_failover_state_t *);
 int dhcp_failover_queue_update (struct lease *);
+void dhcp_failover_ack_queue_remove (dhcp_failover_state_t *, struct lease *);
 isc_result_t dhcp_failover_state_set_value PROTO ((omapi_object_t *,
 						   omapi_object_t *,
 						   omapi_data_string_t *,
