@@ -34,6 +34,11 @@ dhcpd - Dynamic Host Configuration Protocol Server
 .B -q
 ]
 [
+.B -t
+|
+.B -T
+]
+[
 .B -cf
 .I config-file
 ]
@@ -173,6 +178,18 @@ it may not be desirable to print out the entire copyright message on
 startup.   To avoid printing this message, the
 .B -q
 flag may be specified.
+.PP
+The DHCP server reads two files on startup: a configuration file, and
+a lease database.   If the
+.B -t
+flag is specified, the server will simply test the configuration file
+for correct syntax, but will not attempt to perform any network
+operations.   This can be used to test the a new configuration file
+automatically before installing it.
+.PP
+The
+.B -T
+flag can be used to test the lease database file in a similar way.
 .SH CONFIGURATION
 The syntax of the dhcpd.conf(5) file is discussed seperately.   This
 section should be used as an overview of the configuration process,
