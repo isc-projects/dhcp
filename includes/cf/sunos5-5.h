@@ -105,6 +105,8 @@ extern int h_errno;
 #define vsnprintf(buf, size, fmt, list) vsprintf (buf, fmt, list)
 #define NO_SNPRINTF
 
+#define NEED_INET_ATON
+
 /* By default, use BSD Socket API for receiving and sending packets.
    This actually works pretty well on Solaris, which doesn't censor
    the all-ones broadcast address. */
@@ -125,3 +127,17 @@ extern int h_errno;
 #define GET_TIME(x)	time ((x))
 
 #define random()	rand()
+
+/* Solaris doesn't provide an endian.h, so we have to do it. */
+
+#define BIG_ENDIAN 1
+#define LITTLE_ENDIAN 2
+#if defined (__i386) || defined (i386)
+# define BYTE_ORDER LITTLE_ENDIAN
+#else
+# if defined (__sparc) || defined (sparc)
+#  define BYTE_ORDER BIG_ENDIAN
+# else
+@@@ ERROR @@@   Unable to determine byte order!
+# endif
+#endif
