@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: db.c,v 1.63.2.2 2001/05/31 19:52:19 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: db.c,v 1.63.2.3 2001/06/14 19:16:32 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -557,6 +557,13 @@ int write_failover_state (dhcp_failover_state_t *state)
 		 t -> tm_hour, t -> tm_min, t -> tm_sec);
 	if (errno)
 		++errors;
+
+	if (state -> i_am == secondary) {
+		errno = 0;
+		fprintf (db_file, "\n  mclt %d;", state -> mclt);
+		if (errno)
+			++errors;
+	}
 	fprintf (db_file, "\n}\n");
 	if (errno)
 		++errors;

@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.143.2.2 2001/06/11 06:03:00 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.143.2.3 2001/06/14 19:16:33 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1072,9 +1072,24 @@ void parse_failover_state_declaration (struct parse *cfile,
 			cp = &state -> partner;
 			goto do_state;
 
+		      case MCLT:
+			if (state -> i_am == primary) {
+				parse_warn (cfile,
+					    "mclt not valid for primary");
+				goto bogus;
+			}
+			token = next_token (&val, (unsigned *)0, cfile);
+			if (token != NUMBER) {
+				parse_warn (cfile, "expecting a number.");
+				goto bogus;
+			}
+			state -> mclt = atoi (val);
+			parse_semi (cfile);
+			break;
+			
 		      default:
-		      bogus:
 			parse_warn (cfile, "expecting state setting.");
+		      bogus:
 			skip_to_rbrace (cfile, 1);	
 			dhcp_failover_state_dereference (&state, MDL);
 			return;
