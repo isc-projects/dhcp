@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: stables.c,v 1.10 2000/03/18 03:34:11 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: stables.c,v 1.11 2000/05/02 00:25:10 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -469,11 +469,11 @@ struct option server_options [256] = {
 	{ "duplicates", "f",			&server_universe, 28 },
 	{ "declines", "f",			&server_universe, 29 },
 	{ "ddns-updates", "f",			&server_universe, 30 },
-	{ "option-31", "X",			&server_universe, 31 },
-	{ "option-32", "X",			&server_universe, 32 },
-	{ "option-33", "X",			&server_universe, 33 },
-	{ "option-34", "X",			&server_universe, 34 },
-	{ "option-35", "X",			&server_universe, 35 },
+	{ "omapi-port", "S",			&server_universe, 31 },
+	{ "local-port", "S",			&server_universe, 32 },
+	{ "limited-broadcast-address", "I",	&server_universe, 33 },
+	{ "remote-port", "S",			&server_universe, 34 },
+	{ "local-address", "I",			&server_universe, 35 },
 	{ "option-36", "X",			&server_universe, 36 },
 	{ "option-37", "X",			&server_universe, 37 },
 	{ "option-38", "X",			&server_universe, 38 },
