@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.143.2.11 2002/01/17 18:46:00 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.143.2.12 2002/02/19 20:41:59 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2642,8 +2642,7 @@ int parse_lease_declaration (struct lease **lp, struct parse *cfile)
 
 		      case DYNAMIC_BOOTP:
 			seenbit = 256;
-			lease -> binding_state = FTS_BOOTP;
-			lease -> next_binding_state = FTS_BOOTP;
+			lease -> flags |= BOOTP_LEASE;
 			parse_semi (cfile);
 			break;
 			
@@ -2698,10 +2697,11 @@ int parse_lease_declaration (struct lease **lp, struct parse *cfile)
 				new_state = FTS_BACKUP;
 				break;
 			      case TOKEN_RESERVED:
-				new_state = FTS_RESERVED;
+				new_state = FTS_ACTIVE;
 				break;
 			      case TOKEN_BOOTP:
-				new_state = FTS_BOOTP;
+				new_state = FTS_ACTIVE;
+				lease -> flags |= BOOTP_LEASE;
 				break;
 			      default:
 				parse_warn (cfile,
