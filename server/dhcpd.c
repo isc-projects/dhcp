@@ -3,7 +3,7 @@
    DHCP Server Daemon. */
 
 /*
- * Copyright (c) 1996-2000 Internet Software Consortium.
+ * Copyright (c) 1996-2001 Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -43,11 +43,11 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.108 2001/01/11 23:16:31 mellon Exp $ Copyright 1995-2000 Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.109 2001/01/25 08:32:57 mellon Exp $ Copyright 1995-2001 Internet Software Consortium.";
 #endif
 
   static char copyright[] =
-"Copyright 1995-2000 Internet Software Consortium.";
+"Copyright 1995-2001 Internet Software Consortium.";
 static char arr [] = "All rights reserved.";
 static char message [] = "Internet Software Consortium DHCP Server";
 static char url [] = "For info, please visit http://www.isc.org/products/DHCP";
@@ -374,6 +374,7 @@ int main (argc, argv, envp)
 
 	/* Add the ddns update style enumeration prior to parsing. */
 	add_enumeration (&ddns_styles);
+	add_enumeration (&syslog_enum);
 
 	if (!group_allocate (&root_group, MDL))
 		log_fatal ("Can't allocate root group!");
@@ -560,6 +561,36 @@ int main (argc, argv, envp)
 			   "dhcpd.conf manual page.");
 	}
 
+	oc = lookup_option (&server_universe, options, SV_LOG_FACILITY);
+	if (oc) {
+		if (evaluate_option_cache (&db, (struct packet *)0,
+					   (struct lease *)0,
+					   (struct client_state *)0,
+					   options,
+					   (struct option_state *)0,
+					   &global_scope, oc, MDL)) {
+			if (db.len == 1) {
+				closelog ();
+#ifdef SYSLOG_4_2
+				openlog ("dhcpd", LOG_NDELAY);
+				log_priority = db.data [0];
+#else
+				openlog ("dhcpd",
+					 LOG_NDELAY, db.data [0]);
+#endif
+				if (!quiet) {
+					log_info ("%s %s",
+						  message, DHCP_VERSION);
+					log_info (copyright);
+					log_info (arr);
+					log_info (url);
+				}
+			} else
+				log_fatal ("invalid log facility");
+			data_string_forget (&db, MDL);
+		}
+	}
+
 	/* Don't need the options anymore. */
 	option_state_dereference (&options, MDL);
 	
@@ -726,6 +757,10 @@ int main (argc, argv, envp)
 	dmalloc_cutoff_generation = dmalloc_generation;
 	dmalloc_longterm = dmalloc_outstanding;
 	dmalloc_outstanding = 0;
+#endif
+
+#if defined (DEBUG_RC_HISTORY_EXHAUSTIVELY)
+	dump_rc_history ();
 #endif
 
 	/* Receive packets and dispatch them... */
