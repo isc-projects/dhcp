@@ -56,7 +56,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhclient.c,v 1.44.2.3 1998/11/24 22:15:06 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.44.2.4 1998/12/20 18:20:39 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -82,10 +82,6 @@ struct sockaddr_in sockaddr_broadcast;
 /* ASSERT_STATE() does nothing now; it used to be
    assert (state_is == state_shouldbe). */
 #define ASSERT_STATE(state_is, state_shouldbe) {}
-
-#ifdef USE_FALLBACK
-struct interface_info fallback_interface;
-#endif
 
 u_int16_t local_port;
 u_int16_t remote_port;
@@ -1188,6 +1184,14 @@ void send_request (ipp)
 					     ip -> client -> alias);
 		script_go (ip);
 
+		/* Now do a preinit on the interface so that we can
+		   discover a new address. */
+		script_init (ip, "PREINIT", (struct string_list *)0);
+		if (ip -> client -> alias)
+			script_write_params (ip, "alias_",
+					     ip -> client -> alias);
+		script_go (ip);
+
 		ip -> client -> state = S_INIT;
 		state_init (ip);
 		return;
@@ -1250,16 +1254,15 @@ void send_request (ipp)
 	      inet_ntoa (destination.sin_addr),
 	      ntohs (destination.sin_port));
 
-#ifdef USE_FALLBACK
-	if (destination.sin_addr.s_addr != INADDR_BROADCAST)
-		result = send_fallback (&fallback_interface,
-					(struct packet *)0,
-					&ip -> client -> packet,
-					ip -> client -> packet_length,
-					from, &destination,
-					(struct hardware *)0);
+	if (destination.sin_addr.s_addr != INADDR_BROADCAST &&
+	    fallback_interface)
+		result = send_packet (fallback_interface,
+				      (struct packet *)0,
+				      &ip -> client -> packet,
+				      ip -> client -> packet_length,
+				      from, &destination,
+				      (struct hardware *)0);
 	else
-#endif /* USE_FALLBACK */
 		/* Send out a packet. */
 		result = send_packet (ip, (struct packet *)0,
 				      &ip -> client -> packet,
