@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: ddns.c,v 1.8 2001/01/11 02:18:11 mellon Exp $ Copyright (c) 2000-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: ddns.c,v 1.9 2001/01/11 23:16:07 mellon Exp $ Copyright (c) 2000-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -608,7 +608,7 @@ int ddns_updates (struct packet *packet,
 	/* If we are allowed to accept the client's update of its own A
 	   record, see if the client wants to update its own A record. */
 	if (!(oc = lookup_option (&server_universe, state -> options,
-				  SV_ALLOW_CLIENT_UPDATES)) ||
+				  SV_CLIENT_UPDATES)) ||
 	    evaluate_boolean_option_cache (&ignorep, packet, lease,
 					   (struct client_state *)0,
 					   packet -> options,
@@ -720,11 +720,19 @@ int ddns_updates (struct packet *packet,
 			}
 		}
 
-		/* Otherwise, we probably don't need to do the update.
-		   This is sufficiently likely that we in fact don't
-		   do it, although technically we should. */
-		result = 1;
-		goto noerror;
+		/* See if the administrator wants to do updates even
+		   in cases where the update already appears to have been
+		   done. */
+		if (!(oc = lookup_option (&server_universe, state -> options,
+					  SV_UPDATE_OPTIMIZATION)) ||
+		    evaluate_boolean_option_cache (&ignorep, packet, lease,
+						   (struct client_state *)0,
+						   packet -> options,
+						   state -> options,
+						   &lease -> scope, oc, MDL)) {
+			result = 1;
+			goto noerror;
+		}
 	}
 
 	/* If there's no ddns-fwd-name on the lease, see if there's
