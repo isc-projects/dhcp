@@ -391,3 +391,64 @@ static void got_one (l)
 	do_packet (l, packbuf, result,
 		   from.sin_port, ifrom, &hfrom);
 }
+
+void do_packet (interface, packbuf, len, from_port, from, hfrom)
+	struct interface_info *interface;
+	unsigned char *packbuf;
+	int len;
+	unsigned short from_port;
+	struct iaddr from;
+	struct hardware *hfrom;
+{
+	struct packet tp;
+	struct dhcp_packet tdp;
+
+	memcpy (&tdp, packbuf, len);
+	memset (&tp, 0, sizeof tp);
+	tp.raw = &tdp;
+	tp.packet_length = len;
+	tp.client_port = from_port;
+	tp.client_addr = from;
+	tp.interface = interface;
+	tp.haddr = hfrom;
+	
+	parse_options (&tp);
+	if (tp.options_valid &&
+	    tp.options [DHO_DHCP_MESSAGE_TYPE].data)
+		tp.packet_type =
+			tp.options [DHO_DHCP_MESSAGE_TYPE].data [0];
+	if (tp.packet_type)
+		dhcp (&tp);
+	else
+		bootp (&tp);
+}
+
+int locate_network (packet)
+	struct packet *packet;
+{
+	struct iaddr ia;
+
+	/* If this came through a gateway, find the corresponding subnet... */
+	if (packet -> raw -> giaddr.s_addr) {
+		struct subnet *subnet;
+		ia.len = 4;
+		memcpy (ia.iabuf, &packet -> raw -> giaddr, 4);
+		subnet = find_subnet (ia);
+		if (subnet)
+			packet -> shared_network = subnet -> shared_network;
+		else
+			packet -> shared_network = (struct shared_network *)0;
+	} else {
+		packet -> shared_network =
+			packet -> interface -> shared_network;
+	}
+
+	/* If the subnet from whence this packet came is unknown to us,
+	   drop it on the floor... */
+	if (!packet -> shared_network) {
+		note ("Packet from unknown subnet: %s",
+		      inet_ntoa (packet -> raw -> giaddr));
+		return 0;
+	}
+	return 1;
+}
