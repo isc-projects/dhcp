@@ -59,9 +59,9 @@ static char copyright[] =
 #include <net/packetfilt.h>
 
 #include <netinet/in_systm.h>
-#include <netinet/ip.h>
-#include <netinet/udp.h>
-#include <netinet/if_ether.h>
+#include "includes/netinet/ip.h"
+#include "includes/netinet/udp.h"
+#include "includes/netinet/if_ether.h"
 
 /* Called by get_interface_list for each interface that's discovered.
    Opens a packet filter for each interface and adds it to the select
