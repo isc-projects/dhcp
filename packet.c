@@ -123,11 +123,13 @@ void assemble_hw_header (interface, buf, bufix, to)
 
 /* UDP header and IP header assembled together for convenience. */
 
-void assemble_udp_ip_header (interface, buf, bufix, addr, port, data, len)
+void assemble_udp_ip_header (interface, buf, bufix,
+			     from, to, port, data, len)
 	struct interface_info *interface;
 	unsigned char *buf;
 	int *bufix;
-	u_int32_t addr;
+	u_int32_t from;
+	u_int32_t to;
 	u_int16_t port;
 	unsigned char *data;
 	int len;
@@ -145,8 +147,8 @@ void assemble_udp_ip_header (interface, buf, bufix, addr, port, data, len)
 	ip.ip_ttl = 16;
 	ip.ip_p = IPPROTO_UDP;
 	ip.ip_sum = 0;
-	memcpy (&ip.ip_src, interface -> address.iabuf, 4);
-	ip.ip_dst.s_addr = addr;
+	ip.ip_src.s_addr = from;
+	ip.ip_dst.s_addr = to;
 	
 	/* Checksum the IP header... */
 	ip.ip_sum = wrapsum (checksum ((unsigned char *)&ip, sizeof ip, 0));
@@ -219,9 +221,6 @@ size_t decode_udp_ip_header (interface, buf, bufix, from, data, len)
   struct udphdr *udp;
   u_int32_t ip_len = (buf [bufix] & 0xf) << 2;
   u_int32_t sum, usum;
-#ifdef USERLAND_FILTER
-  u_int32_t ibcst = INADDR_BROADCAST;
-#endif
 
   ip = (struct ip *)(buf + bufix);
   udp = (struct udphdr *)(buf + bufix + ip_len);
@@ -233,11 +232,6 @@ size_t decode_udp_ip_header (interface, buf, bufix, from, data, len)
 
   /* Is it to the port we're serving? */
   if (udp -> uh_dport != server_port)
-	  return -1;
-
-  /* Is it to this IP address? */
-  if (memcmp (&ip -> ip_dst, &ibcst, sizeof ibcst) &&
-      memcmp (&ip -> ip_dst, interface -> address.iabuf, 4))
 	  return -1;
 #endif /* USERLAND_FILTER */
 
