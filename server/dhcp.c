@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.66 1998/11/05 18:54:55 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.67 1998/11/05 18:56:15 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1685,7 +1685,6 @@ struct lease *find_lease (packet, share, ours)
 		}
 	}
 
-<<<<<<< dhcp.c
 	if (have_client_identifier)
 		data_string_forget (&client_identifier, "find_lease");
 #if defined (DEBUG_FIND_LEASE)
@@ -1695,7 +1694,7 @@ struct lease *find_lease (packet, share, ours)
 	else
 		note ("Not returning a lease.");
 #endif
-=======
+
 	/* If we find an abandoned lease, take it, but print a
 	   warning message, so that if it continues to lose,
 	   the administrator will eventually investigate. */
@@ -1705,7 +1704,6 @@ struct lease *find_lease (packet, share, ours)
 		lease -> flags &= ~ABANDONED_LEASE;
 	}
 
->>>>>>> 1.65
 	return lease;
 }
 
