@@ -67,6 +67,7 @@ op = 32-bit opcode, one of:
 	update = 3
 	notify = 4
 	error = 5
+	delete = 6
 handle = 32-bit object handle
 	A handle on the object being opened, created, refreshed or
 	updated.   If no handle is yet available (e.g., with open and
@@ -195,18 +196,7 @@ Message types:
    response to a message sent by the other side.  There should never
    be a response to this message.
 
-6: notify-cancel
-
-   Like notify, but requests that an existing notification be cancelled.
-
-7: notify-cancelled
-
-   Indicates that because of a local change, a notification that had
-   been registered can no longer be performed.   This could be as a
-   result of the permissions on a object changing, or an object being
-   deleted.   There should never be a response to this message.
-
-8: delete
+6: delete
 
    Deletes the specified object.   Response will be either request-ok,
    or error.   Possible errors include:
@@ -218,6 +208,17 @@ Message types:
 	not confirmed - the deletion could not be committed due to
 			some kind of resource problem, for example
 			insufficient memory or a disk failure.
+
+7: notify-cancel
+
+   Like notify, but requests that an existing notification be cancelled.
+
+8: notify-cancelled
+
+   Indicates that because of a local change, a notification that had
+   been registered can no longer be performed.   This could be as a
+   result of the permissions on a object changing, or an object being
+   deleted.   There should never be a response to this message.
 
 internals:
 
@@ -346,6 +347,13 @@ dhcpctl_status dhcpctl_object_refresh (dhcpctl_handle h)
 	Queues an update on the object referenced by the handle (there
 	can't be any other work in progress on the handle).   An
 	update means local parameters will be sent to the server.
+
+dhcpctl_status dhcpctl_object_delete (dhcpctl_handle h)
+	Queues a delete of the object referenced by the handle (there
+	can't be any other work in progress on the handle).   A
+	delete means that the object will be permanently deleted on
+	the remote end, assuming the remote end supports object
+	persistence.
 
 So a sample program that would update a host declaration would look
 something like this:
