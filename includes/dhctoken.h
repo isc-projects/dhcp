@@ -302,7 +302,8 @@ enum dhcp_token {
 	RENEWING = 598,
 	REBINDING = 599,
 	RECONTACT_INTERVAL = 600,
-	CLIENT_UPDATES = 601
+	CLIENT_UPDATES = 601,
+	TOKEN_NEW
 };
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\
