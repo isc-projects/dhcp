@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.84 2000/02/08 04:49:06 mellon Exp $ Copyright 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.85 2000/02/15 19:43:38 mellon Exp $ Copyright 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.";
 #endif
 
   static char copyright[] =
@@ -64,7 +64,8 @@ on commit {								      \
 				      config-option domain-name));	      \
     if defined (ddns-fwd-name) {					      \
       switch (ns-update (not exists (IN, A, ddns-fwd-name, null),	      \
-		         add (IN, A, ddns-fwd-name, leased-address, 300))) {  \
+		         add (IN, A, ddns-fwd-name, leased-address,	      \
+			      lease-time / 2))) {			      \
        default:								      \
         unset ddns-fwd-name;						      \
         break;								      \
@@ -76,7 +77,8 @@ on commit {								      \
 			pick (config-option server.ddns-rev-domainname,	      \
 			      \".in-addr.arpa.\"));			      \
         switch (ns-update (delete (IN, PTR, ddns-rev-name, null),	      \
-			   add (IN, PTR, ddns-rev-name, ddns-fwd-name, 300))) \
+			   add (IN, PTR, ddns-rev-name, ddns-fwd-name,	      \
+				lease-time / 2)))			      \
 	{								      \
          default:							      \
 	  unset ddns-rev-name;						      \
@@ -261,11 +263,6 @@ int main (argc, argv, envp)
 
 	/* Get the current time... */
 	GET_TIME (&cur_time);
-
-	/* Initialize DNS support... */
-#if 0
-	dns_startup (); 
-#endif
 
 	/* Set up the client classification system. */
 	classification_setup ();
