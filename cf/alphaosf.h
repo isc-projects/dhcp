@@ -70,6 +70,9 @@ extern int h_errno;
 #ifndef _PATH_DHCPD_PID
 #define _PATH_DHCPD_PID	"/var/run/dhcpd.pid"
 #endif
+#ifndef _PATH_DHCLIENT_PID
+#define _PATH_DHCLIENT_PID "/var/run/dhclient.pid"
+#endif
 
 #define EOL	'\n'
 #define VOIDPTR void *

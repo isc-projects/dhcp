@@ -126,6 +126,9 @@ extern int h_errno;
 #ifndef _PATH_DHCPD_PID
 #define _PATH_DHCPD_PID	"/etc/dhcpd.pid"
 #endif
+#ifndef _PATH_DHCLIENT_PID
+#define _PATH_DHCLIENT_PID "/etc/dhclient.pid"
+#endif
 
 /* Porting::
 

@@ -55,6 +55,9 @@ extern int h_errno;
 #ifndef _PATH_DHCPD_PID
 #define _PATH_DHCPD_PID	"/etc/dhcpd.pid"
 #endif
+#ifndef _PATH_DHCLIENT_PID
+#define _PATH_DHCLIENT_PID "/etc/dhclient.pid"
+#endif
 
 #define int8_t		char
 #define int16_t		short 
