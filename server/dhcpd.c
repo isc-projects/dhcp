@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.78 1999/10/28 13:09:33 mellon Exp $ Copyright 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.79 1999/11/23 19:10:07 mellon Exp $ Copyright 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.";
 #endif
 
   static char copyright[] =
@@ -93,14 +93,6 @@ int main (argc, argv, envp)
 #else
 	openlog ("dhcpd", LOG_NDELAY, DHCPD_LOG_FACILITY);
 #endif
-
-#ifndef DEBUG
-#ifndef SYSLOG_4_2
-#ifndef __CYGWIN32__ /* XXX */
-	setlogmask (LOG_UPTO (LOG_INFO));
-#endif
-#endif
-#endif	
 
 	for (i = 1; i < argc; i++) {
 		if (!strcmp (argv [i], "-p")) {
