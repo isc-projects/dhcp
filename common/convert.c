@@ -23,7 +23,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: convert.c,v 1.7 1999/04/05 15:33:52 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: convert.c,v 1.8 1999/07/02 20:57:24 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -107,4 +107,66 @@ u_int32_t getUChar (obuf)
 	unsigned char *obuf;
 {
 	return obuf [0];
+}
+
+int converted_length (buf, base, width)
+	unsigned char *buf;
+	unsigned int base;
+	unsigned int width;
+{
+	u_int32_t number;
+	int column;
+	int power = 1;
+	int newcolumn = base;
+
+	if (base > 16)
+		return 0;
+
+	if (width == 1)
+		number = getUChar (buf);
+	else if (width == 2)
+		number = getUShort (buf);
+	else if (width == 4)
+		number = getULong (buf);
+
+	do {
+		column = newcolumn;
+
+		if (number < column)
+			return power;
+		power++;
+		newcolumn = column * base;
+		/* If we wrap around, it must be the next power of two up. */
+	} while (column > newcolumn);
+
+	return power;
+}
+
+int binary_to_ascii (outbuf, inbuf, base, width)
+	unsigned char *outbuf;
+	unsigned char *inbuf;
+	unsigned int base;
+	unsigned int width;
+{
+	u_int32_t number;
+	static char h2a [] = "0123456789abcdef";
+	int power = 0;
+	int i, j;
+
+	if (base > 16)
+		return 0;
+
+	if (width == 1)
+		number = getUChar (inbuf);
+	else if (width == 2)
+		number = getUShort (inbuf);
+	else if (width == 4)
+		number = getULong (inbuf);
+
+	for (i = 0; number; i++) {
+		outbuf [i] = h2a [number % base];
+		number /= base;
+		power++;
+	}
+	return power;
 }

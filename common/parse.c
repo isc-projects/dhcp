@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.25 1999/07/01 18:53:46 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.26 1999/07/02 20:57:25 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1676,6 +1676,76 @@ int parse_non_binary (expr, cfile, lose, context)
 			goto norparen;
 		break;
 
+	      case BINARY_TO_ASCII:
+		token = next_token (&val, cfile);
+		if (!expression_allocate (expr, "parse_expression: B2A"))
+			log_fatal ("can't allocate expression");
+		(*expr) -> op = expr_concat;
+
+		token = next_token (&val, cfile);
+		if (token != LPAREN)
+			goto nolparen;
+
+		if (!parse_numeric_expression (&(*expr) -> data.b2a.base,
+					       cfile, lose))
+			goto nodata;
+
+		token = next_token (&val, cfile);
+		if (token != COMMA)
+			goto nocomma;
+
+		if (!parse_numeric_expression (&(*expr) -> data.b2a.width,
+					       cfile, lose))
+			goto nodata;
+
+		token = next_token (&val, cfile);
+		if (token != COMMA)
+			goto nocomma;
+
+		if (!parse_data_expression (&(*expr) -> data.b2a.seperator,
+					    cfile, lose))
+			goto nodata;
+
+		token = next_token (&val, cfile);
+		if (token != COMMA)
+			goto nocomma;
+
+		if (!parse_data_expression (&(*expr) -> data.b2a.buffer,
+					    cfile, lose))
+			goto nodata;
+
+		token = next_token (&val, cfile);
+		if (token != RPAREN)
+			goto norparen;
+		break;
+
+	      case REVERSE:
+		token = next_token (&val, cfile);
+		if (!expression_allocate (expr, "parse_expression: REVERSE"))
+			log_fatal ("can't allocate expression");
+		(*expr) -> op = expr_concat;
+
+		token = next_token (&val, cfile);
+		if (token != LPAREN)
+			goto nolparen;
+
+		if (!(parse_numeric_expression
+		      (&(*expr) -> data.reverse.width, cfile, lose)))
+			goto nodata;
+
+		token = next_token (&val, cfile);
+		if (token != COMMA)
+			goto nocomma;
+
+		if (!(parse_data_expression
+		      (&(*expr) -> data.reverse.buffer, cfile, lose)))
+			goto nodata;
+
+		token = next_token (&val, cfile);
+		if (token != RPAREN)
+			goto norparen;
+		break;
+
 	      case OPTION:
 		token = next_token (&val, cfile);
 		if (!expression_allocate (expr, "parse_expression: OPTION"))
@@ -1695,6 +1765,14 @@ int parse_non_binary (expr, cfile, lose, context)
 		if (!expression_allocate (expr, "parse_expression: HARDWARE"))
 			log_fatal ("can't allocate expression");
 		(*expr) -> op = expr_hardware;
+		break;
+
+	      case LEASED_ADDRESS:
+		token = next_token (&val, cfile);
+		if (!expression_allocate (expr,
+					  "parse_expression: LEASED_ADDRESS"))
+			log_fatal ("can't allocate expression");
+		(*expr) -> op = expr_leased_address;
 		break;
 
 	      case PACKET:

@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: class.c,v 1.11 1999/04/05 16:34:33 mellon Exp $ Copyright (c) 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: class.c,v 1.12 1999/07/02 20:58:48 mellon Exp $ Copyright (c) 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -70,13 +70,14 @@ void classification_setup ()
 void classify_client (packet)
 	struct packet *packet;
 {
-	execute_statements (packet, packet -> options,
+	execute_statements (packet, (struct lease *)0, packet -> options,
 			    (struct option_state *)0,
 			    default_classification_rules);
 }
 
-int check_collection (packet, collection)
+int check_collection (packet, lease, collection)
 	struct packet *packet;
+	struct lease *lease;
 	struct collection *collection;
 {
 	struct class *class, *nc;
@@ -92,8 +93,10 @@ int check_collection (packet, collection)
 		/* If a class is for billing, don't put the client in the
 		   class if we've already billed it to a different class. */
 		if (class -> submatch) {
-			status = evaluate_data_expression (&data, packet,
+			status = evaluate_data_expression (&data,
+							   packet,
 							   packet -> options,
+							   lease,
 							   class -> submatch);
 			if (status) {
 				if ((nc = ((struct class *)
@@ -159,7 +162,7 @@ int check_collection (packet, collection)
 		}
 
 		status = (evaluate_boolean_expression_result
-			  (packet, packet -> options, class -> expr));
+			  (packet, packet -> options, lease, class -> expr));
 		if (status) {
 			matched = 1;
 #if defined (DEBUG_CLASS_MATCHING)

@@ -83,6 +83,9 @@ enum expr_op {
 	expr_exists,
 	expr_encapsulate,
 	expr_known,
+	expr_reverse,
+	expr_leased_address,
+	expr_binary_to_ascii,
 };
 
 struct expression {
@@ -116,6 +119,16 @@ struct expression {
 		struct dns_host_entry *host_lookup;
 		struct option *exists;
 		struct data_string encapsulate;
+		struct {
+			struct expression *base;
+			struct expression *width;
+			struct expression *seperator;
+			struct expression *buffer;
+		} b2a;
+		struct {
+			struct expression *width;
+			struct expression *buffer;
+		} reverse;
 	} data;
 	int flags;
 #	define EXPR_EPHEMERAL	1
@@ -134,6 +147,7 @@ struct data_string; /* forward */
 struct packet; /* forward */
 struct option_state; /* forward */
 struct decoded_option_state; /* forward */
+struct lease; /* forward */
 
 struct universe {
 	char *name;
@@ -143,6 +157,7 @@ struct universe {
 	void (*save_func) PROTO ((struct universe *, struct option_state *,
 				  struct option_cache *));
 	int (*get_func) PROTO ((struct data_string *, struct universe *,
+				struct packet *, struct lease *,
 				struct option_state *, int));
 	void (*set_func) PROTO ((struct universe *, struct option_state *,
 				 struct option_cache *, enum statement_op));
@@ -152,7 +167,7 @@ struct universe {
 	int (*option_state_dereference) PROTO ((struct universe *,
 						struct option_state *));
 	int (*encapsulate) PROTO ((struct data_string *, struct option_state *,
-				   struct universe *));
+				   struct lease *, struct universe *));
 	void (*store_tag) PROTO ((unsigned char *, u_int32_t));
 	void (*store_length) PROTO ((unsigned char *, u_int32_t));
 	int tag_size, length_size;

@@ -773,20 +773,23 @@ typedef unsigned char option_mask [16];
 int parse_options PROTO ((struct packet *));
 int parse_option_buffer PROTO ((struct packet *, unsigned char *, int));
 int parse_agent_information_option PROTO ((struct packet *, int, u_int8_t *));
-int cons_options PROTO ((struct packet *, struct dhcp_packet *, int,
-			 struct option_state *,
+int cons_options PROTO ((struct packet *, struct dhcp_packet *, struct lease *,
+			 int, struct option_state *,
 			 int, int, int, struct data_string *));
-int store_options PROTO ((unsigned char *, int, struct option_state *,
-			   int *, int, int, int, int));
+int store_options PROTO ((unsigned char *, int,
+			  struct lease *, struct option_state *,
+			  int *, int, int, int, int));
 char *pretty_print_option PROTO ((unsigned int,
 				  unsigned char *, int, int, int));
 void do_packet PROTO ((struct interface_info *,
 		       struct dhcp_packet *, int,
 		       unsigned int, struct iaddr, struct hardware *));
-int hashed_option_get PROTO ((struct data_string *,
-			      struct universe *, struct option_state *, int));
+int hashed_option_get PROTO ((struct data_string *, struct universe *,
+			      struct packet *, struct lease *,
+			      struct option_state *, int));
 int agent_option_get PROTO ((struct data_string *, struct universe *,
-				struct option_state *, int));
+			      struct packet *, struct lease *,
+			     struct option_state *, int));
 void hashed_option_set PROTO ((struct universe *, struct option_state *,
 			       struct option_cache *,
 			       enum statement_op));
@@ -807,15 +810,19 @@ int hashed_option_state_dereference PROTO ((struct universe *,
 int agent_option_state_dereference PROTO ((struct universe *,
 					   struct option_state *));
 int store_option PROTO ((struct data_string *,
-		  struct universe *, struct option_cache *));
+			 struct universe *, struct lease *,
+			 struct option_cache *));
 int option_space_encapsulate PROTO ((struct data_string *,
 				     struct option_state *,
+				     struct lease *,
 				     struct data_string *));
 int hashed_option_space_encapsulate PROTO ((struct data_string *,
 					    struct option_state *,
+					    struct lease *,
 					    struct universe *));
 int agent_option_space_encapsulate PROTO ((struct data_string *,
 					   struct option_state *,
+					   struct lease *,
 					   struct universe *));
 
 /* errwarn.c */
@@ -934,22 +941,27 @@ int option_cache PROTO ((struct option_cache **, struct data_string *,
 			 struct expression *, struct option *));
 int evaluate_boolean_expression PROTO ((int *,
 					struct packet *, struct option_state *,
+					struct lease *,
 					struct expression *));
 int evaluate_data_expression PROTO ((struct data_string *,
 				     struct packet *, struct option_state *,
+				     struct lease *,
 				     struct expression *));
 int evaluate_numeric_expression PROTO
 	((unsigned long *, struct packet *,
-	  struct option_state *, struct expression *));
+	  struct option_state *, struct lease *, struct expression *));
 int evaluate_option_cache PROTO ((struct data_string *,
 				  struct packet *,
 				  struct option_state *,
+				  struct lease *,
 				  struct option_cache *));
 int evaluate_boolean_option_cache PROTO ((struct packet *,
 					  struct option_state *,
+					  struct lease *,
 					  struct option_cache *));
 int evaluate_boolean_expression_result PROTO ((struct packet *,
 					       struct option_state *,
+					       struct lease *,
 					       struct expression *));
 void expression_dereference PROTO ((struct expression **, char *));
 void data_string_copy PROTO ((struct data_string *,
@@ -1302,6 +1314,9 @@ void putLong PROTO ((unsigned char *, int32_t));
 void putUShort PROTO ((unsigned char *, u_int32_t));
 void putShort PROTO ((unsigned char *, int32_t));
 void putUChar PROTO ((unsigned char *, u_int32_t));
+int converted_length PROTO ((unsigned char *, unsigned int, unsigned int));
+int binary_to_ascii PROTO ((unsigned char *, unsigned char *,
+			    unsigned int, unsigned int));
 
 /* inet.c */
 struct iaddr subnet_number PROTO ((struct iaddr, struct iaddr));
@@ -1511,7 +1526,8 @@ struct executable_statement *default_classification_rules;
 
 void classification_setup PROTO ((void));
 void classify_client PROTO ((struct packet *));
-int check_collection PROTO ((struct packet *, struct collection *));
+int check_collection PROTO ((struct packet *, struct lease *,
+			     struct collection *));
 void classify PROTO ((struct packet *, struct class *));
 struct class *find_class PROTO ((char *));
 int unbill_class PROTO ((struct lease *, struct class *));
@@ -1519,9 +1535,11 @@ int bill_class PROTO ((struct lease *, struct class *));
 
 /* execute.c */
 int execute_statements PROTO ((struct packet *,
+			       struct lease *,
 			       struct option_state *, struct option_state *,
 			       struct executable_statement *));
 void execute_statements_in_scope PROTO ((struct packet *,
+					 struct lease *,
 					 struct option_state *,
 					 struct option_state *,
 					 struct group *, struct group *));

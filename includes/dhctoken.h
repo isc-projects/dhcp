@@ -179,6 +179,9 @@ enum dhcp_token {
 	ENCODE_INT = 399,
 	DDNS_FWD_NAME = 400,
 	DDNS_REV_NAME = 401,
+	REVERSE = 402,
+	LEASED_ADDRESS = 403,
+	BINARY_TO_ASCII = 404,
 };
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\

@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.29 1999/05/27 14:30:00 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.30 1999/07/02 20:57:26 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -378,10 +378,11 @@ int do_host_lookup (result, dns)
 	return 1;
 }
 
-int evaluate_boolean_expression (result, packet, options, expr)
+int evaluate_boolean_expression (result, packet, options, lease, expr)
 	int *result;
 	struct packet *packet;
 	struct option_state *options;
+	struct lease *lease;
 	struct expression *expr;
 {
 	struct data_string left, right;
@@ -390,7 +391,8 @@ int evaluate_boolean_expression (result, packet, options, expr)
 
 	switch (expr -> op) {
 	      case expr_check:
-		*result = check_collection (packet, expr -> data.check);
+		*result = check_collection (packet, lease,
+					    expr -> data.check);
 #if defined (DEBUG_EXPRESSIONS)
 		log_info ("bool: check (%s) returns %s",
 		      expr -> data.check -> name, *result ? "true" : "false");
@@ -400,9 +402,11 @@ int evaluate_boolean_expression (result, packet, options, expr)
 	      case expr_equal:
 		memset (&left, 0, sizeof left);
 		sleft = evaluate_data_expression (&left, packet, options,
+						  lease,
 						  expr -> data.equal [0]);
 		memset (&right, 0, sizeof right);
 		sright = evaluate_data_expression (&right, packet, options,
+						   lease,
 						   expr -> data.equal [1]);
 		if (sleft && sright) {
 			if (left.len == right.len &&
@@ -431,8 +435,10 @@ int evaluate_boolean_expression (result, packet, options, expr)
 
 	      case expr_and:
 		sleft = evaluate_boolean_expression (&bleft, packet, options,
+						     lease,
 						     expr -> data.and [0]);
 		sright = evaluate_boolean_expression (&bright, packet, options,
+						      lease,
 						      expr -> data.and [1]);
 
 #if defined (DEBUG_EXPRESSIONS)
@@ -450,8 +456,10 @@ int evaluate_boolean_expression (result, packet, options, expr)
 
 	      case expr_or:
 		sleft = evaluate_boolean_expression (&bleft, packet, options,
+						     lease,
 						     expr -> data.or [0]);
 		sright = evaluate_boolean_expression (&bright, packet, options,
+						      lease,
 						      expr -> data.or [1]);
 #if defined (DEBUG_EXPRESSIONS)
 		log_info ("bool: or (%s, %s) = %s",
@@ -468,6 +476,7 @@ int evaluate_boolean_expression (result, packet, options, expr)
 
 	      case expr_not:
 		sleft = evaluate_boolean_expression (&bleft, packet, options,
+						     lease,
 						     expr -> data.not);
 #if defined (DEBUG_EXPRESSIONS)
 		log_info ("bool: not (%s) = %s",
@@ -487,7 +496,7 @@ int evaluate_boolean_expression (result, packet, options, expr)
 		if (!options ||
 		    !((*expr -> data.option -> universe -> get_func)
 		      (&left, expr -> data.exists -> universe,
-		       options, expr -> data.exists -> code)))
+		       packet, lease, options, expr -> data.exists -> code)))
 			*result = 0;
 		else {
 			*result = 1;
@@ -527,6 +536,9 @@ int evaluate_boolean_expression (result, packet, options, expr)
 	      case expr_encode_int8:
 	      case expr_encode_int16:
 	      case expr_encode_int32:
+	      case expr_binary_to_ascii:
+	      case expr_reverse:
+	      case expr_leased_address:
 		log_error ("Data opcode in evaluate_boolean_expression: %d",
 		      expr -> op);
 		return 0;
@@ -545,28 +557,31 @@ int evaluate_boolean_expression (result, packet, options, expr)
 	return 0;
 }
 
-int evaluate_data_expression (result, packet, options, expr)
+int evaluate_data_expression (result, packet, options, lease, expr)
 	struct data_string *result;
 	struct packet *packet;
 	struct option_state *options;
+	struct lease *lease;
 	struct expression *expr;
 {
 	struct data_string data, other;
 	unsigned long offset, len;
 	int s0, s1, s2, s3;
+	int status;
 
 	switch (expr -> op) {
 		/* Extract N bytes starting at byte M of a data string. */
 	      case expr_substring:
 		memset (&data, 0, sizeof data);
 		s0 = evaluate_data_expression (&data, packet, options,
+					       lease,
 					       expr -> data.substring.expr);
 
 		/* Evaluate the offset and length. */
 		s1 = evaluate_numeric_expression
-			(&offset,
-			 packet, options, expr -> data.substring.offset);
-		s2 = evaluate_numeric_expression (&len, packet, options,
+			(&offset, packet, options, lease,
+			 expr -> data.substring.offset);
+		s2 = evaluate_numeric_expression (&len, packet, options, lease,
 						  expr -> data.substring.len);
 
 		if (s0 && s1 && s2) {
@@ -604,10 +619,10 @@ int evaluate_data_expression (result, packet, options, expr)
 		/* Extract the last N bytes of a data string. */
 	      case expr_suffix:
 		memset (&data, 0, sizeof data);
-		s0 = evaluate_data_expression (&data, packet, options,
+		s0 = evaluate_data_expression (&data, packet, options, lease,
 					       expr -> data.suffix.expr);
 		/* Evaluate the length. */
-		s1 = evaluate_numeric_expression (&len, packet, options,
+		s1 = evaluate_numeric_expression (&len, packet, options, lease,
 						  expr -> data.substring.len);
 		if (s0 && s1) {
 			data_string_copy (result, &data,
@@ -639,7 +654,8 @@ int evaluate_data_expression (result, packet, options, expr)
 		if (options)
 			s0 = ((*expr -> data.option -> universe -> get_func)
 			      (result, expr -> data.option -> universe,
-			       options, expr -> data.option -> code));
+			       packet, lease, options,
+			       expr -> data.option -> code));
 		else
 			s0 = 0;
 
@@ -688,9 +704,10 @@ int evaluate_data_expression (result, packet, options, expr)
 			return 0;
 		}
 
-		s0 = evaluate_numeric_expression (&len, packet, options,
+		s0 = evaluate_numeric_expression (&len, packet, options, lease,
 						  expr -> data.packet.len);
-		s1 = evaluate_numeric_expression (&offset, packet, options,
+		s1 = evaluate_numeric_expression (&offset,
+						  packet, options, lease,
 						  expr -> data.packet.len);
 		if (s0 && s1 && offset < packet -> packet_length) {
 			if (offset + len > packet -> packet_length)
@@ -725,7 +742,8 @@ int evaluate_data_expression (result, packet, options, expr)
 	      case expr_encapsulate:
 		if (options)
 			s0 = option_space_encapsulate
-				(result, options, &expr -> data.encapsulate);
+				(result, options, lease,
+				 &expr -> data.encapsulate);
 		else
 			s0 = 0;
 
@@ -764,10 +782,10 @@ int evaluate_data_expression (result, packet, options, expr)
 		/* Concatenation... */
 	      case expr_concat:
 		memset (&data, 0, sizeof data);
-		s0 = evaluate_data_expression (&data, packet, options,
+		s0 = evaluate_data_expression (&data, packet, options, lease,
 					       expr -> data.concat [0]);
 		memset (&other, 0, sizeof other);
-		s1 = evaluate_data_expression (&other, packet, options,
+		s1 = evaluate_data_expression (&other, packet, options, lease,
 					       expr -> data.concat [1]);
 
 		if (s0 && s1) {
@@ -801,7 +819,7 @@ int evaluate_data_expression (result, packet, options, expr)
 		return s0 || s1;
 
 	      case expr_encode_int8:
-		s0 = evaluate_numeric_expression (&len, packet, options,
+		s0 = evaluate_numeric_expression (&len, packet, options, lease,
 						  expr -> data.packet.len);
 		if (s0) {
 			result -> len = 1;
@@ -829,7 +847,7 @@ int evaluate_data_expression (result, packet, options, expr)
 			
 		
 	      case expr_encode_int16:
-		s0 = evaluate_numeric_expression (&len, packet, options,
+		s0 = evaluate_numeric_expression (&len, packet, options, lease,
 						  expr -> data.packet.len);
 		if (s0) {
 			result -> len = 2;
@@ -856,7 +874,7 @@ int evaluate_data_expression (result, packet, options, expr)
 		return s0;
 
 	      case expr_encode_int32:
-		s0 = evaluate_numeric_expression (&len, packet, options,
+		s0 = evaluate_numeric_expression (&len, packet, options, lease,
 						  expr -> data.packet.len);
 		if (s0) {
 			result -> len = 4;
@@ -882,6 +900,212 @@ int evaluate_data_expression (result, packet, options, expr)
 #endif
 		return s0;
 
+	      case expr_binary_to_ascii:
+		/* Evaluate the base (offset) and width (len): */
+		s0 = evaluate_numeric_expression
+			(&offset, packet, options, lease,
+			 expr -> data.substring.offset);
+		s1 = evaluate_numeric_expression (&len, packet, options, lease,
+						  expr -> data.substring.len);
+
+		/* Evaluate the seperator string. */
+		memset (&data, 0, sizeof data);
+		s2 = evaluate_data_expression (&data, packet, options, lease,
+					       expr -> data.b2a.seperator);
+
+		/* Evaluate the data to be converted. */
+		memset (&other, 0, sizeof other);
+		s3 = evaluate_data_expression (&data, packet, options, lease,
+					       expr -> data.b2a.buffer);
+
+		if (s0 && s1 && s2 && s3) {
+			int buflen, i;
+
+			if (len != 8 && len != 16 && len != 32) {
+				log_info ("binary_to_ascii: %s %d!",
+					  "invalid width", len);
+				goto b2a_out;
+			}
+			len /= 8;
+
+			/* The buffer must be a multiple of the number's
+			   width. */
+			if (other.len % len) {
+				log_info ("binary-to-ascii: %s %d %s %d!",
+					  "length of buffer", other.len,
+					  "not a multiple of width", len);
+				status = 0;
+				goto b2a_out;
+			}
+
+			/* Count the width of the output. */
+			buflen = 0;
+			for (i = 0; i < other.len; i += len) {
+				if (len == 1) {
+					if (offset == 8) {
+						if (other.data [i] < 8)
+							buflen++;
+						else if (other.data [i] < 64)
+							buflen += 2;
+						else
+							buflen += 3;
+					} else if (offset == 10) {
+						if (other.data [i] < 10)
+							buflen++;
+						else if (other.data [i] < 100)
+							buflen += 2;
+						else
+							buflen += 3;
+					} else if (offset == 10) {
+						if (other.data [i] < 16)
+							buflen++;
+						else
+							buflen += 2;
+					} else
+						buflen += (converted_length
+							   (&other.data [i],
+							    offset, 1));
+				} else
+					buflen += (converted_length
+						   (&other.data [i],
+						    offset, len));
+				if (i + len != other.len)
+					buflen += data.len;
+			}
+
+			if (!buffer_allocate (&result -> buffer, buflen + 1,
+					      "binary-to-ascii")) {
+				log_error ("data: binary-to-ascii: no memory");
+				status = 0;
+				goto b2a_out;
+			}
+			result -> data = &result -> buffer -> data [0];
+			result -> len = buflen;
+			result -> terminated = 1;
+
+			buflen = 0;
+			for (i = 0; i < other.len; i += len) {
+				buflen += (binary_to_ascii
+					   (&result -> data [buflen],
+					    &other.data [i], offset, len));
+				if (i + len != other.len) {
+					memcpy (&result -> data [buflen],
+						data.data, data.len);
+					buflen += data.len;
+				}
+			}
+			/* NUL terminate. */
+			result -> data [buflen] = 0;
+			status = 1;
+		} else
+			status = 0;
+
+	      b2a_out:
+#if defined (DEBUG_EXPRESSIONS)
+		log_info ("data: binary-to-ascii (%s, %s, %s, %s) = %s",
+		      s0 ? print_dec_1 (offset) : "NULL",
+		      s1 ? print_dec_2 (len) : "NULL",
+		      s2 ? print_hex_1 (data.len, data.data, 30) : "NULL",
+		      s3 ? print_hex_2 (other.len, other.data, 30) : "NULL",
+		      (status ? print_hex_3 (result -> len, result -> data, 30)
+		          : "NULL"));
+#endif
+		if (s2)
+			data_string_forget (&data, "binary-to-ascii");
+		if (s3)
+			data_string_forget (&other, "binary-to-ascii");
+		if (status)
+			return 1;
+		return 0;
+
+	      case expr_reverse:
+		/* Evaluate the width (len): */
+		s0 = evaluate_numeric_expression
+			(&len, packet, options, lease,
+			 expr -> data.substring.offset);
+
+		/* Evaluate the data. */
+		memset (&data, 0, sizeof data);
+		s1 = evaluate_data_expression (&data, packet, options, lease,
+					       expr -> data.b2a.seperator);
+
+		if (len != 8 && len != 16 && len != 32) {
+			log_info ("reverse: invalid width %d!", len);
+			goto b2a_out;
+		}
+		len /= 8;
+
+		if (s0 && s1) {
+			char *upper;
+			int i;
+
+			/* The buffer must be a multiple of the number's
+			   width. */
+			if (other.len % len) {
+				log_info ("binary-to-ascii: %s %d %s %d!",
+					  "length of buffer", other.len,
+					  "not a multiple of width", len);
+				status = 0;
+				goto reverse_out;
+			}
+
+			/* XXX reverse in place?   I don't think we can. */
+			if (!buffer_allocate (&result -> buffer, data.len,
+					      "reverse")) {
+				log_error ("data: reverse: no memory");
+				status = 0;
+				goto reverse_out;
+			}
+			result -> data = &result -> buffer -> data [0];
+			result -> len = data.len;
+			result -> terminated = 0;
+
+			for (i = 0; i < data.len; i += len) {
+				memcpy (&result -> data [i],
+					&data.data [data.len - i - len], len);
+			}
+			status = 1;
+		} else
+			status = 0;
+
+	      reverse_out:
+#if defined (DEBUG_EXPRESSIONS)
+		log_info ("data: reverse (%s, %s) = %s",
+		      s0 ? print_dec_1 (offset) : "NULL",
+		      s1 ? print_hex_1 (data.len, data.data, 30) : "NULL",
+		      (status ? print_hex_3 (result -> len, result -> data, 30)
+		          : "NULL"));
+#endif
+		if (s0)
+			data_string_forget (&data, "evaluate_data_expression");
+		if (status)
+			return 1;
+		return 0;
+
+	      case expr_leased_address:
+		if (!lease) {
+			log_error ("data: leased_address: not available");
+			return 0;
+		}
+		result -> len = lease -> ip_addr.len;
+		if (buffer_allocate (&result -> buffer, result -> len,
+				     "leased-address")) {
+			result -> data = &result -> buffer -> data [0];
+			memcpy (&result -> data [0],
+				lease -> ip_addr.iabuf, lease -> ip_addr.len);
+			result -> terminated = 0;
+		} else {
+			log_error ("data: leased-address: no memory.");
+			return 0;
+		}
+#if defined (DEBUG_EXPRESSIONS)
+		log_info ("data: leased-address = %s",
+		      print_hex_1 (result -> len, result -> data, 60));
+#endif
+		return 1;
+
+		
+
 	      case expr_check:
 	      case expr_equal:
 	      case expr_and:
@@ -906,10 +1130,11 @@ int evaluate_data_expression (result, packet, options, expr)
 	return 0;
 }	
 
-int evaluate_numeric_expression (result, packet, options, expr)
+int evaluate_numeric_expression (result, packet, options, lease, expr)
 	unsigned long *result;
 	struct packet *packet;
 	struct option_state *options;
+	struct lease *lease;
 	struct expression *expr;
 {
 	struct data_string data;
@@ -939,6 +1164,9 @@ int evaluate_numeric_expression (result, packet, options, expr)
 	      case expr_encode_int8:
 	      case expr_encode_int16:
 	      case expr_encode_int32:
+	      case expr_binary_to_ascii:
+	      case expr_reverse:
+	      case expr_leased_address:
 		log_error ("Data opcode in evaluate_numeric_expression: %d",
 		      expr -> op);
 		return 0;
@@ -947,7 +1175,7 @@ int evaluate_numeric_expression (result, packet, options, expr)
 		memset (&data, 0, sizeof data);
 		status = evaluate_data_expression
 			(&data, packet,
-			 options, expr -> data.extract_int);
+			 options, lease, expr -> data.extract_int);
 		if (status)
 			*result = data.data [0];
 #if defined (DEBUG_EXPRESSIONS)
@@ -962,7 +1190,7 @@ int evaluate_numeric_expression (result, packet, options, expr)
 	      case expr_extract_int16:
 		memset (&data, 0, sizeof data);
 		status = (evaluate_data_expression
-			  (&data, packet, options,
+			  (&data, packet, options, lease,
 			   expr -> data.extract_int));
 		if (status && data.len >= 2)
 			*result = getUShort (data.data);
@@ -979,7 +1207,7 @@ int evaluate_numeric_expression (result, packet, options, expr)
 	      case expr_extract_int32:
 		memset (&data, 0, sizeof data);
 		status = (evaluate_data_expression
-			  (&data, packet, options,
+			  (&data, packet, options, lease,
 			   expr -> data.extract_int));
 		if (status && data.len >= 4)
 			*result = getULong (data.data);
@@ -1007,10 +1235,11 @@ int evaluate_numeric_expression (result, packet, options, expr)
    result of that evaluation.   There should never be both an expression
    and a valid data_string. */
 
-int evaluate_option_cache (result, packet, options, oc)
+int evaluate_option_cache (result, packet, options, lease, oc)
 	struct data_string *result;
 	struct packet *packet;
 	struct option_state *options;
+	struct lease *lease;
 	struct option_cache *oc;
 {
 	if (oc -> data.len) {
@@ -1020,16 +1249,17 @@ int evaluate_option_cache (result, packet, options, oc)
 	}
 	if (!oc -> expression)
 		return 0;
-	return evaluate_data_expression (result,
-					 packet, options, oc -> expression);
+	return evaluate_data_expression (result, packet, options, lease,
+					 oc -> expression);
 }
 
 /* Evaluate an option cache and extract a boolean from the result,
    returning the boolean.   Return false if there is no data. */
 
-int evaluate_boolean_option_cache (packet, options, oc)
+int evaluate_boolean_option_cache (packet, options, lease, oc)
 	struct packet *packet;
 	struct option_state *options;
+	struct lease *lease;
 	struct option_cache *oc;
 {
 	struct data_string ds;
@@ -1040,7 +1270,7 @@ int evaluate_boolean_option_cache (packet, options, oc)
 		return 0;
 	
 	memset (&ds, 0, sizeof ds);
-	if (!evaluate_option_cache (&ds, packet, options, oc))
+	if (!evaluate_option_cache (&ds, packet, options, lease, oc))
 		return 0;
 
 	if (ds.len && ds.data [0])
@@ -1055,9 +1285,10 @@ int evaluate_boolean_option_cache (packet, options, oc)
 /* Evaluate a boolean expression and return the result of the evaluation,
    or FALSE if it failed. */
 
-int evaluate_boolean_expression_result (packet, options, expr)
+int evaluate_boolean_expression_result (packet, options, lease, expr)
 	struct packet *packet;
 	struct option_state *options;
+	struct lease *lease;
 	struct expression *expr;
 {
 	int result;
@@ -1066,7 +1297,8 @@ int evaluate_boolean_expression_result (packet, options, expr)
 	if (!expr)
 		return 0;
 	
-	if (!evaluate_boolean_expression (&result, packet, options, expr))
+	if (!evaluate_boolean_expression (&result,
+					  packet, options, lease, expr))
 		return 0;
 
 	return result;
@@ -1172,7 +1404,30 @@ void expression_dereference (eptr, name)
 						    name);
 		break;
 
+	      case expr_binary_to_ascii:
+		if (expr -> data.b2a.base)
+			expression_dereference (&expr -> data.b2a.base, name);
+		if (expr -> data.b2a.width)
+			expression_dereference (&expr -> data.b2a.width, name);
+		if (expr -> data.b2a.seperator)
+			expression_dereference (&expr -> data.b2a.seperator,
+						name);
+		if (expr -> data.b2a.buffer)
+			expression_dereference (&expr -> data.b2a.buffer,
+						name);
+		break;
+
+	      case expr_reverse:
+		if (expr -> data.reverse.width)
+			expression_dereference (&expr -> data.reverse.width,
+						name);
+		if (expr -> data.reverse.buffer)
+			expression_dereference
+				(&expr -> data.reverse.buffer, name);
+		break;
+
 		/* No subexpressions. */
+	      case expr_leased_address:
 	      case expr_const_int:
 	      case expr_check:
 	      case expr_option:
@@ -1253,7 +1508,10 @@ int is_data_expression (expr)
 		expr -> op == expr_encode_int8 ||
 		expr -> op == expr_encode_int16 ||
 		expr -> op == expr_encode_int32 ||
-		expr -> op == expr_host_lookup);
+		expr -> op == expr_host_lookup ||
+		expr -> op == expr_binary_to_ascii ||
+		expr -> op == expr_reverse ||
+		expr -> op == expr_leased_address);
 }
 
 int is_numeric_expression (expr)
@@ -1293,6 +1551,9 @@ static int op_val (op)
 	      case expr_const_int:
 	      case expr_exists:
 	      case expr_known:
+	      case expr_binary_to_ascii:
+	      case expr_reverse:
+	      case expr_leased_address:
 		return 100;
 
 	      case expr_equal:
@@ -1319,6 +1580,7 @@ enum expression_context op_context (op)
 	enum expr_op op;
 {
 	switch (op) {
+/* XXX Why aren't these specific? */
 	      case expr_none:
 	      case expr_match:
 	      case expr_check:
@@ -1341,6 +1603,9 @@ enum expression_context op_context (op)
 	      case expr_const_int:
 	      case expr_exists:
 	      case expr_known:
+	      case expr_binary_to_ascii:
+	      case expr_reverse:
+	      case expr_leased_address:
 		return context_any;
 
 	      case expr_equal:

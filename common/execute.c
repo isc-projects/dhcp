@@ -22,13 +22,14 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: execute.c,v 1.9 1999/04/05 15:35:54 mellon Exp $ Copyright (c) 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: execute.c,v 1.10 1999/07/02 20:57:24 mellon Exp $ Copyright (c) 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
 
-int execute_statements (packet, in_options, out_options, statements)
+int execute_statements (packet, lease, in_options, out_options, statements)
 	struct packet *packet;
+	struct lease *lease;
 	struct option_state *in_options;
 	struct option_state *out_options;
 	struct executable_statement *statements;
@@ -45,7 +46,7 @@ int execute_statements (packet, in_options, out_options, statements)
 		      case if_statement:
 			status = evaluate_boolean_expression
 				(&result, packet,
-				 in_options, r -> data.ie.expr);
+				 in_options, lease, r -> data.ie.expr);
 			
 #if defined (DEBUG_EXPRESSIONS)
 			log_info ("exec: if %s", (status
@@ -56,7 +57,7 @@ int execute_statements (packet, in_options, out_options, statements)
 			if (!status)
 				result = 0;
 			if (!execute_statements
-			    (packet, in_options, out_options,
+			    (packet, lease, in_options, out_options,
 			     result ? r -> data.ie.true : r -> data.ie.false))
 				return 0;
 			break;
@@ -64,7 +65,7 @@ int execute_statements (packet, in_options, out_options, statements)
 		      case eval_statement:
 			status = evaluate_boolean_expression
 				(&result,
-				 packet, in_options, r -> data.eval);
+				 packet, in_options, lease, r -> data.eval);
 #if defined (DEBUG_EXPRESSIONS)
 			log_info ("exec: evaluate: %s",
 			      (status
@@ -138,9 +139,10 @@ int execute_statements (packet, in_options, out_options, statements)
    specific scopes, so we recursively traverse the scope list, executing
    the most outer scope first. */
 
-void execute_statements_in_scope (packet, in_options, out_options,
+void execute_statements_in_scope (packet, lease, in_options, out_options,
 				  group, limiting_group)
 	struct packet *packet;
+	struct lease *lease;
 	struct option_state *in_options;
 	struct option_state *out_options;
 	struct group *group;
@@ -182,8 +184,9 @@ void execute_statements_in_scope (packet, in_options, out_options,
 	}
 
 	if (group -> next)
-		execute_statements_in_scope (packet, in_options, out_options,
+		execute_statements_in_scope (packet, lease,
+					     in_options, out_options,
 					     group -> next, limiting_group);
-	execute_statements (packet,
+	execute_statements (packet, lease,
 			    in_options, out_options, group -> statements);
 }
