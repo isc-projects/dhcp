@@ -738,11 +738,15 @@ struct hardware_link {
 	struct hardware address;
 };
 
+typedef void (*tvref_t)(void *, void *, const char *, int);
+typedef void (*tvunref_t)(void *, const char *, int);
 struct timeout {
 	struct timeout *next;
 	TIME when;
 	void (*func) PROTO ((void *));
 	void *what;
+	tvref_t ref;
+	tvunref_t unref;
 };
 
 struct protocol {
@@ -1483,7 +1487,8 @@ isc_result_t interface_stuff_values (omapi_object_t *,
 				     omapi_object_t *,
 				     omapi_object_t *);
 
-void add_timeout PROTO ((TIME, void (*) PROTO ((void *)), void *));
+void add_timeout PROTO ((TIME, void (*) PROTO ((void *)), void *,
+			 tvref_t, tvunref_t));
 void cancel_timeout PROTO ((void (*) PROTO ((void *)), void *));
 struct protocol *add_protocol PROTO ((const char *, int,
 				      void (*) PROTO ((struct protocol *)),
@@ -1516,12 +1521,12 @@ struct universe *config_universe;
 
 /* stables.c */
 #if defined (FAILOVER_PROTOCOL)
-failover_option_t null_failover_option;
-failover_option_t skip_failover_option;
-struct failover_option_info ft_options [0];
-u_int32_t fto_allowed [0];
-int ft_sizes [0];
-const char *dhcp_flink_state_names [0];
+extern failover_option_t null_failover_option;
+extern failover_option_t skip_failover_option;
+extern struct failover_option_info ft_options [];
+extern u_int32_t fto_allowed [];
+extern int ft_sizes [];
+extern const char *dhcp_flink_state_names [];
 #endif
 extern struct universe agent_universe;
 extern struct option agent_options [256];
