@@ -1089,6 +1089,7 @@ extern int dhcp_max_agent_option_packet_length;
 
 int main PROTO ((int, char **, char **));
 void postconf_initialization (int);
+void postdb_startup (void);
 void cleanup PROTO ((void));
 void lease_pinged PROTO ((struct iaddr, u_int8_t *, int));
 void lease_ping_timeout PROTO ((void *));
@@ -1355,7 +1356,8 @@ int write_group PROTO ((struct group_object *));
 
 /* salloc.c */
 struct lease *new_leases PROTO ((unsigned, const char *, int));
-#if defined (DEBUG_MEMORY_LEAKAGE)
+#if defined (DEBUG_MEMORY_LEAKAGE) || \
+		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
 void relinquish_free_lease_states (void);
 #endif
 OMAPI_OBJECT_ALLOC_DECL (lease, struct lease, dhcp_type_lease)
@@ -1371,7 +1373,8 @@ OMAPI_OBJECT_ALLOC_DECL (group_object, struct group_object, dhcp_type_group)
 OMAPI_OBJECT_ALLOC_DECL (dhcp_control,
 			 dhcp_control_object_t, dhcp_type_control)
 
-#if defined (DEBUG_MEMORY_LEAKAGE)
+#if defined (DEBUG_MEMORY_LEAKAGE) || \
+		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
 void relinquish_free_pairs (void);
 void relinquish_free_expressions (void);
 void relinquish_free_binding_values (void);
@@ -2394,7 +2397,8 @@ int lease_enqueue (struct lease *);
 void lease_instantiate (const unsigned char *, unsigned, struct lease *);
 void expire_all_pools PROTO ((void));
 void dump_subnets PROTO ((void));
-#if defined (DEBUG_MEMORY_LEAKAGE)
+#if defined (DEBUG_MEMORY_LEAKAGE) || \
+		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
 void free_everything (void);
 #endif
 HASH_FUNCTIONS_DECL (lease, const unsigned char *, struct lease)
