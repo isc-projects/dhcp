@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dispatch.c,v 1.37 1997/03/06 07:06:08 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dispatch.c,v 1.38 1997/03/29 00:02:45 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -121,6 +121,11 @@ void discover_interfaces (state)
 		if ((s = strrchr (ifp -> ifr_name, ':'))) {
 			*s = 0;
 		}
+#endif
+
+#ifdef SKIP_DUMMY_INTERFACES
+		if (!strncmp (ifr.ifr_name, "dummy", 5))
+			continue;
 #endif
 
 
@@ -395,9 +400,6 @@ void dispatch ()
 	for (l = protocols; l; l = l -> next) {
 		++nfds;
 	}
-#ifdef USE_FALLBACK
-	++nfds;
-#endif
 	fds = (struct pollfd *)malloc ((nfds) * sizeof (struct pollfd));
 	if (!fds)
 		error ("Can't allocate poll structures.");
@@ -412,7 +414,7 @@ void dispatch ()
 			if (timeouts -> when <= cur_time) {
 				t = timeouts;
 				timeouts = timeouts -> next;
-				(*(t -> func)) (t -> interface);
+				(*(t -> func)) (t -> what);
 				t -> next = free_timeouts;
 				free_timeouts = t;
 				goto another;
