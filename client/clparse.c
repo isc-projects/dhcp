@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: clparse.c,v 1.8 1997/03/29 01:23:17 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: clparse.c,v 1.9 1997/03/29 10:36:24 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -901,7 +901,8 @@ void parse_option_decl (cfile, options)
 		return;
 	}
 
-	options [option -> code].data = malloc (hunkix + nul_term);
+	options [option -> code].data =
+		(unsigned char *)malloc (hunkix + nul_term);
 	if (!options [option -> code].data)
 		error ("out of memory allocating option data.");
 	memcpy (options [option -> code].data, hunkbuf, hunkix + nul_term);
