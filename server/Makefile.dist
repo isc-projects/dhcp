@@ -28,7 +28,7 @@ MAN    = dhcpd.8 dhcpd.conf.5 dhcpd.leases.5
 
 DEBUG  = -g
 INCLUDES = -I.. $(BINDINC) -I../includes
-DHCPLIB = ../common/libdhcp.a ../omapip/libomapi.a ../minires/libres.a
+DHCPLIB = ../common/libdhcp.a ../omapip/libomapi.a $(BINDLIB)
 CFLAGS = $(DEBUG) $(PREDEFINES) $(INCLUDES) $(COPTS)
 
 all:	$(PROG) $(CATMANPAGES)
