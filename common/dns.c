@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dns.c,v 1.31 2000/11/24 03:55:46 mellon Exp $ Copyright (c) 2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dns.c,v 1.32 2000/11/28 22:34:02 mellon Exp $ Copyright (c) 2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -339,6 +339,7 @@ ns_rcode find_cached_zone (const char *dname, ns_class class,
 	if (zone -> primary) {
 		if (evaluate_option_cache (&nsaddrs, (struct packet *)0,
 					   (struct lease *)0,
+					   (struct client_state *)0,
 					   (struct option_state *)0,
 					   (struct option_state *)0,
 					   &global_scope,
@@ -357,6 +358,7 @@ ns_rcode find_cached_zone (const char *dname, ns_class class,
 	if (zone -> secondary) {
 		if (evaluate_option_cache (&nsaddrs, (struct packet *)0,
 					   (struct lease *)0,
+					   (struct client_state *)0,
 					   (struct option_state *)0,
 					   (struct option_state *)0,
 					   &global_scope,
