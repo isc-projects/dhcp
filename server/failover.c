@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.37 2001/02/27 01:17:34 neild Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.38 2001/03/01 07:25:45 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2277,7 +2277,7 @@ isc_result_t dhcp_failover_state_set_value (omapi_object_t *h,
 	} else if (!omapi_ds_strcmp (name, "partner-state")) {
 		return ISC_R_SUCCESS;
 	} else if (!omapi_ds_strcmp (name, "local-state")) {
-		long l;
+		unsigned long l;
 		status = omapi_get_int_value (&l, value);
 		if (status != ISC_R_SUCCESS)
 			return status;

@@ -173,15 +173,15 @@ int main (int argc, char **argv, char **envp)
 				printf ("?\n");
 			} else {
 				printf ("%.*s\n",
-					r -> rtype -> u . buffer . len,
+					(int)(r -> rtype -> u . buffer . len),
 					r -> rtype -> u . buffer . value);
 			}
 
 			for (i = 0; i < g -> nvalues; i++) {
 				omapi_value_t *v = g -> values [i];
 
-				printf ("%.*s = ",
-					v -> name -> len, v -> name -> value);
+				printf ("%.*s = ", (int)v -> name -> len,
+					v -> name -> value);
 
 				switch (v -> value -> type) {
 				case omapi_datatype_int:
@@ -191,7 +191,7 @@ int main (int argc, char **argv, char **envp)
 
 				case omapi_datatype_string:
 					printf ("\"%.*s\"\n",
-						v -> value -> u.buffer.len,
+						(int)v -> value -> u.buffer.len,
 						v -> value -> u.buffer.value);
 					break;
 
