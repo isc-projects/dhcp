@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: memory.c,v 1.41 1998/11/05 18:42:18 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: memory.c,v 1.42 1998/11/06 02:40:40 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -101,11 +101,11 @@ void enter_host (hd)
 		     &dhcp_universe) &&
 		    (esp -> data.option -> option -> code ==
 		     DHO_DHCP_CLIENT_IDENTIFIER)) {
-			evaluate_data_expression
+			evaluate_option_cache
 				(&hd -> client_identifier,
 				 (struct packet *)0,
 				 (struct option_state *)0,
-				 esp -> data.option -> expression);
+				 esp -> data.option);
 			break;
 		}
 	}
