@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.75 2000/06/20 19:59:50 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.76 2000/06/29 20:05:18 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -3886,8 +3886,8 @@ int parse_warn (struct parse *cfile, const char *fmt, ...)
 	lexbuf [lix] = 0;
 
 #ifndef DEBUG
-	syslog (log_priority | LOG_ERR, mbuf);
-	syslog (log_priority | LOG_ERR, cfile -> token_line);
+	syslog (log_priority | LOG_ERR, "%s", mbuf);
+	syslog (log_priority | LOG_ERR, "%s", cfile -> token_line);
 	if (cfile -> lexchar < 81)
 		syslog (log_priority | LOG_ERR, "%s^", lexbuf);
 #endif
