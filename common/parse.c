@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.90 2000/11/24 04:04:04 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.91 2000/11/28 23:16:26 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -825,7 +825,8 @@ struct option *parse_option_name (cfile, allocate, known)
 
 	/* If we didn't get an option structure, it's an undefined option. */
 	if (option) {
-		*known = 1;
+		if (known)
+			*known = 1;
 	} else {
 		/* If we've been told to allocate, that means that this
 		   (might) be an option code definition, so we'll create
@@ -2660,6 +2661,7 @@ int parse_non_binary (expr, cfile, lose, context)
 	struct executable_statement *stmt;
 	int i;
 	unsigned long u;
+	isc_result_t status, code;
 
 	token = peek_token (&val, cfile);
 
@@ -2698,12 +2700,19 @@ int parse_non_binary (expr, cfile, lose, context)
 			log_fatal ("can't allocate expression");
 		(*expr) -> op = expr_not;
 		if (!parse_non_binary (&(*expr) -> data.not,
-				       cfile, lose, context)) {
+				       cfile, lose, context_boolean)) {
 			if (!*lose) {
 				parse_warn (cfile, "expression expected");
 				skip_to_semi (cfile);
 			}
 			*lose = 1;
+			expression_dereference (expr, MDL);
+			return 0;
+		}
+		if (!is_boolean_expression ((*expr) -> data.not)) {
+			*lose = 1;
+			parse_warn (cfile, "boolean expression expected");
+			skip_to_semi (cfile);
 			expression_dereference (expr, MDL);
 			return 0;
 		}
@@ -3305,6 +3314,13 @@ int parse_non_binary (expr, cfile, lose, context)
 		(*expr) -> op = expr_leased_address;
 		break;
 
+	      case CLIENT_STATE:
+		token = next_token (&val, cfile);
+		if (!expression_allocate (expr, MDL))
+			log_fatal ("can't allocate expression");
+		(*expr) -> op = expr_client_state;
+		break;
+
 	      case FILENAME:
 		token = next_token (&val, cfile);
 		if (!expression_allocate (expr, MDL))
@@ -3574,6 +3590,7 @@ int parse_non_binary (expr, cfile, lose, context)
 
 	      case NS_FORMERR:
 		known = FORMERR;
+		goto ns_const;
 	      ns_const:
 		token = next_token (&val, cfile);
 		if (!expression_allocate (expr, MDL))
@@ -4279,6 +4296,240 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 	} else
 		*rv = t;
 	return 1;
+}
+
+int parse_option_decl (oc, cfile)
+	struct option_cache **oc;
+	struct parse *cfile;
+{
+	const char *val;
+	int token;
+	u_int8_t buf [4];
+	u_int8_t hunkbuf [1024];
+	unsigned hunkix = 0;
+	const char *fmt;
+	struct option *option;
+	struct iaddr ip_addr;
+	u_int8_t *dp;
+	unsigned len;
+	int nul_term = 0;
+	struct buffer *bp;
+	int known = 0;
+
+	option = parse_option_name (cfile, 0, &known);
+	if (!option)
+		return 0;
+
+	/* Parse the option data... */
+	do {
+		/* Set a flag if this is an array of a simple type (i.e.,
+		   not an array of pairs of IP addresses, or something
+		   like that. */
+		int uniform = option -> format [1] == 'A';
+
+		for (fmt = option -> format; *fmt; fmt++) {
+			if (*fmt == 'A')
+				break;
+			switch (*fmt) {
+			      case 'E':
+				fmt = strchr (fmt, '.');
+				if (!fmt) {
+					parse_warn (cfile,
+						    "malformed %s (bug!)",
+						    "encapsulation format");
+					skip_to_semi (cfile);
+					return 0;
+				}
+			      case 'X':
+				len = parse_X (cfile, &hunkbuf [hunkix],
+					       sizeof hunkbuf - hunkix);
+				hunkix += len;
+				break;
+					
+			      case 't': /* Text string... */
+				token = next_token (&val, cfile);
+				if (token != STRING) {
+					parse_warn (cfile,
+						    "expecting string.");
+					skip_to_semi (cfile);
+					return 0;
+				}
+				len = strlen (val);
+				if (hunkix + len + 1 > sizeof hunkbuf) {
+					parse_warn (cfile,
+						    "option data buffer %s",
+						    "overflow");
+					skip_to_semi (cfile);
+					return 0;
+				}
+				memcpy (&hunkbuf [hunkix], val, len + 1);
+				nul_term = 1;
+				hunkix += len;
+				break;
+
+			      case 'I': /* IP address. */
+				if (!parse_ip_addr (cfile, &ip_addr))
+					return 0;
+				len = ip_addr.len;
+				dp = ip_addr.iabuf;
+
+			      alloc:
+				if (hunkix + len > sizeof hunkbuf) {
+					parse_warn (cfile,
+						    "option data buffer %s",
+						    "overflow");
+					skip_to_semi (cfile);
+					return 0;
+				}
+				memcpy (&hunkbuf [hunkix], dp, len);
+				hunkix += len;
+				break;
+
+			      case 'L': /* Unsigned 32-bit integer... */
+			      case 'l':	/* Signed 32-bit integer... */
+				token = next_token (&val, cfile);
+				if (token != NUMBER) {
+				      need_number:
+					parse_warn (cfile,
+						    "expecting number.");
+					if (token != SEMI)
+						skip_to_semi (cfile);
+					return 0;
+				}
+				convert_num (cfile, buf, val, 0, 32);
+				len = 4;
+				dp = buf;
+				goto alloc;
+
+			      case 's':	/* Signed 16-bit integer. */
+			      case 'S':	/* Unsigned 16-bit integer. */
+				token = next_token (&val, cfile);
+				if (token != NUMBER)
+					goto need_number;
+				convert_num (cfile, buf, val, 0, 16);
+				len = 2;
+				dp = buf;
+				goto alloc;
+
+			      case 'b':	/* Signed 8-bit integer. */
+			      case 'B':	/* Unsigned 8-bit integer. */
+				token = next_token (&val, cfile);
+				if (token != NUMBER)
+					goto need_number;
+				convert_num (cfile, buf, val, 0, 8);
+				len = 1;
+				dp = buf;
+				goto alloc;
+
+			      case 'f': /* Boolean flag. */
+				token = next_token (&val, cfile);
+				if (!is_identifier (token)) {
+					parse_warn (cfile,
+						    "expecting identifier.");
+				      bad_flag:
+					if (token != SEMI)
+						skip_to_semi (cfile);
+					return 0;
+				}
+				if (!strcasecmp (val, "true")
+				    || !strcasecmp (val, "on"))
+					buf [0] = 1;
+				else if (!strcasecmp (val, "false")
+					 || !strcasecmp (val, "off"))
+					buf [0] = 0;
+				else {
+					parse_warn (cfile,
+						    "expecting boolean.");
+					goto bad_flag;
+				}
+				len = 1;
+				dp = buf;
+				goto alloc;
+
+			      default:
+				log_error ("parse_option_param: Bad format %c",
+				      *fmt);
+				skip_to_semi (cfile);
+				return 0;
+			}
+		}
+		token = next_token (&val, cfile);
+	} while (*fmt == 'A' && token == COMMA);
+
+	if (token != SEMI) {
+		parse_warn (cfile, "semicolon expected.");
+		skip_to_semi (cfile);
+		return 0;
+	}
+
+	bp = (struct buffer *)0;
+	if (!buffer_allocate (&bp, hunkix + nul_term, MDL))
+		log_fatal ("no memory to store option declaration.");
+	if (!bp -> data)
+		log_fatal ("out of memory allocating option data.");
+	memcpy (bp -> data, hunkbuf, hunkix + nul_term);
+	
+	if (!option_cache_allocate (oc, MDL))
+		log_fatal ("out of memory allocating option cache.");
+
+	(*oc) -> data.buffer = bp;
+	(*oc) -> data.data = &bp -> data [0];
+	(*oc) -> data.terminated = nul_term;
+	(*oc) -> data.len = hunkix;
+	(*oc) -> option = option;
+	return 1;
+}
+
+/* Consider merging parse_cshl into this. */
+
+int parse_X (cfile, buf, max)
+	struct parse *cfile;
+	u_int8_t *buf;
+	unsigned max;
+{
+	int token;
+	const char *val;
+	unsigned len;
+	u_int8_t *s;
+
+	token = peek_token (&val, cfile);
+	if (token == NUMBER_OR_NAME || token == NUMBER) {
+		len = 0;
+		do {
+			token = next_token (&val, cfile);
+			if (token != NUMBER && token != NUMBER_OR_NAME) {
+				parse_warn (cfile,
+					    "expecting hexadecimal constant.");
+				skip_to_semi (cfile);
+				return 0;
+			}
+			convert_num (cfile, &buf [len], val, 16, 8);
+			if (len++ > max) {
+				parse_warn (cfile,
+					    "hexadecimal constant too long.");
+				skip_to_semi (cfile);
+				return 0;
+			}
+			token = peek_token (&val, cfile);
+			if (token == COLON)
+				token = next_token (&val, cfile);
+		} while (token == COLON);
+		val = (char *)buf;
+	} else if (token == STRING) {
+		token = next_token (&val, cfile);
+		len = strlen (val);
+		if (len + 1 > max) {
+			parse_warn (cfile, "string constant too long.");
+			skip_to_semi (cfile);
+			return 0;
+		}
+		memcpy (buf, val, len + 1);
+	} else {
+		parse_warn (cfile, "expecting string or hexadecimal data");
+		skip_to_semi (cfile);
+		return 0;
+	}
+	return len;
 }
 
 int parse_warn (struct parse *cfile, const char *fmt, ...)
