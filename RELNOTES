@@ -58,6 +58,9 @@ and for prodding me into improving it.
   properly restricted to only detecting broadcast interfaces.  Thanks
   to a patch from Jason Vas Dias at RedHat.
 
+- A bug was fixed with the 'medium' dhclient.conf statement which caused
+  mediums to be ignored unless the 'media' statement was used.
+
 			Changes since 3.0.2rc3
 
 - A previously undocumented configuration directive, 'local-address',

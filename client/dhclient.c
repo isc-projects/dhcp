@@ -32,7 +32,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.129.2.23 2004/11/24 17:39:14 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.129.2.24 2005/02/22 20:51:34 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1369,17 +1369,26 @@ void send_discover (cpp)
 		return;
 	}
 
-	/* If we're selecting media, try the whole list before doing
-	   the exponential backoff, but if we've already received an
-	   offer, stop looping, because we obviously have it right. */
-	if (!client -> offered_leases &&
-	    client -> config -> media) {
+	/* If we were given a 'medium', use it.
+	 * If we're selecting 'media', try the whole list before doing
+	 * the exponential backoff, but if we've already received an
+	 * offer, stop looping, because we obviously have it right. */
+	if (client->config->medium) {
+		if (!client->medium) {
+			script_init (client, "MEDIUM", client->config->medium);
+			if (script_go (client))
+				log_error ("Configured medium \"%s\" failed.",
+					client->config->medium->string);
+			else
+				client->medium = client->config->medium;
+		}
+	} else if (!client -> offered_leases && client->config->media) {
 		int fail = 0;
 	      again:
 		if (client -> medium) {
 			client -> medium = client -> medium -> next;
 			increase = 0;
-		} 
+		}
 		if (!client -> medium) {
 			if (fail)
 				log_fatal ("No valid media types for %s!",
@@ -1388,7 +1397,7 @@ void send_discover (cpp)
 				client -> config -> media;
 			increase = 1;
 		}
-			
+
 		log_info ("Trying medium \"%s\" %d",
 			  client -> medium -> string, increase);
 		script_init (client, "MEDIUM", client -> medium);
@@ -1569,6 +1578,7 @@ void send_request (cpp)
 	int interval;
 	struct sockaddr_in destination;
 	struct in_addr from;
+	struct string_list *medium;
 
 	/* Figure out how long it's been since we started transmitting. */
 	interval = cur_time - client -> first_sending;
@@ -1594,18 +1604,22 @@ void send_request (cpp)
 	}
 
 	/* If we're in the reboot state, make sure the media is set up
-	   correctly. */
-	if (client -> state == S_REBOOTING &&
-	    !client -> medium &&
-	    client -> active -> medium ) {
-		script_init (client, "MEDIUM", client -> active -> medium);
+	 * correctly.  User-configured medium over-rides the previous
+	 * binding lease's.
+	 */
+	medium = client->config->medium ? client->config->medium :
+					  client->active->medium;
+	if (client->state == S_REBOOTING && !client->medium && medium) {
+		script_init (client, "MEDIUM", medium);
 
 		/* If the medium we chose won't fly, go to INIT state. */
-		if (script_go (client))
-			goto cancel;
-
-		/* Record the medium. */
-		client -> medium = client -> active -> medium;
+		if (script_go (client)) {
+			log_error ("Medium \"%s\" failed to apply.",
+					medium->string);
+			if (medium == client->active->medium)
+				goto cancel;
+		} else
+			client->medium = medium;
 	}
 
 	/* If the lease has expired, relinquish the address and go back
