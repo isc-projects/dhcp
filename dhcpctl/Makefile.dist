@@ -78,7 +78,7 @@ distclean: realclean
 	-rm -f Makefile
 
 links:
-	for foo in $(SRC) $(MAN) test.c cltest.c $(HDRS); do \
+	@for foo in $(SRC) $(MAN) test.c cltest.c $(HDRS); do \
 	  if [ ! -b $$foo ]; then \
 	    rm -f $$foo; \
 	  fi; \

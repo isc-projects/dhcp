@@ -71,7 +71,7 @@ distclean: realclean
 	-rm -f Makefile
 
 links:
-	for foo in $(SRC) $(MAN); do \
+	@for foo in $(SRC) $(MAN); do \
 	  if [ ! -b $$foo ]; then \
 	    rm -f $$foo; \
 	  fi; \
