@@ -50,6 +50,10 @@ Murrell at BC Tel Advanced Communications.  I'd like to express my
 thanks to all of these good people here, both for working on the code
 and for prodding me into improving it.
 
+			  Changes since 3.0p1
+
+- Potential buffer overflows in minires repaired.
+
 			   Changes since 3.0
 
 - Fix a format string vulnerability in the server that could lead to a
