@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: class.c,v 1.24 2000/09/29 00:55:53 mellon Exp $ Copyright (c) 1998-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: class.c,v 1.25 2000/09/29 18:20:26 mellon Exp $ Copyright (c) 1998-2000 The Internet Software Consortium.  All rights reserved.\n";
 
 #endif /* not lint */
 
@@ -106,8 +106,34 @@ int check_collection (packet, lease, collection)
 		log_info ("checking against class %s...", class -> name);
 #endif
 		memset (&data, 0, sizeof data);
-		/* If a class is for billing, don't put the client in the
-		   class if we've already billed it to a different class. */
+
+		/* If there is a "match if" expression, check it.   If
+		   we get a match, and there's no subclass expression,
+		   it's a match.   If we get a match and there is a subclass
+		   expression, then we check the submatch.   If it's not a
+		   match, that's final - we don't check the submatch. */
+
+		if (class -> expr) {
+			status = (evaluate_boolean_expression_result
+				  (&ignorep, packet, lease,
+				   packet -> options, (struct option_state *)0,
+				   &lease -> scope, class -> expr));
+			if (status) {
+				if (!class -> submatch) {
+					matched = 1;
+#if defined (DEBUG_CLASS_MATCHING)
+					log_info ("matches class.");
+#endif
+					classify (packet, class);
+					continue;
+				}
+			} else
+				continue;
+		}
+
+		/* Check to see if the client matches an existing subclass.
+		   If it doesn't, and this is a spawning class, spawn a new
+		   subclass and put the client in it. */
 		if (class -> submatch) {
 			status = (evaluate_data_expression
 				  (&data, packet, lease,
@@ -178,19 +204,6 @@ int check_collection (packet, lease, collection)
 						nc, MDL);
 				classify (packet, nc);
 			}
-		}
-
-		status = (evaluate_boolean_expression_result
-			  (&ignorep, packet, lease,
-			   packet -> options, (struct option_state *)0,
-			   lease ? &lease -> scope : &global_scope,
-			   class -> expr));
-		if (status) {
-			matched = 1;
-#if defined (DEBUG_CLASS_MATCHING)
-			log_info ("matches class.");
-#endif
-			classify (packet, class);
 		}
 	}
 	return matched;
