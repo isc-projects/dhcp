@@ -76,8 +76,13 @@ extern int h_errno;
 #define VA_start(list, last) va_start (list)
 #define va_dcl
 
-/* XXX: We don't believe this system has v/snprintf().  Please verify this. */
+/* The vsnprint function definition in /usr/include/ appears to use this
+ * as a key for wether or not it should be declared.  Seems reasoanble for
+ * us to use the same key.
+ */
+#if (_XOPEN_SOURCE != 500)
 #define NO_SNPRINTF
+#endif
 
 #define EOL '\n'
 #define VOIDPTR void *

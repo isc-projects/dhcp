@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.115.2.11 2004/06/10 17:59:52 dhankins Exp $ Copyright 2004 Internet Systems Consortium.";
+"$Id: dhcpd.c,v 1.115.2.12 2004/07/10 00:11:18 dhankins Exp $ Copyright 2004 Internet Systems Consortium.";
 #endif
 
   static char copyright[] =
@@ -48,8 +48,6 @@ static char url [] = "For info, please visit http://www.isc.org/sw/dhcp/";
 #include <omapip/omapip_p.h>
 
 static void usage PROTO ((void));
-
-TIME cur_time;
 
 struct iaddr server_identifier;
 int server_identifier_matched;
