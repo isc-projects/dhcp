@@ -57,8 +57,8 @@
 #define ETHERNET	261
 #define STRING		262
 #define NUMBER		263
-#define NUMBER_OR_ATOM	264
-#define ATOM		265
+#define NUMBER_OR_NAME	264
+#define NAME		265
 #define TIMESTAMP	266
 #define STARTS		267
 #define ENDS		268

@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcpxlt.c,v 1.2 1996/08/28 01:34:55 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcpxlt.c,v 1.3 1996/08/29 09:17:25 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -866,7 +866,7 @@ void convert_option_decl (cfile, bc)
 			switch (*fmt) {
 			      case 'X':
 				token = peek_token (&val, cfile);
-				if (token == NUMBER_OR_ATOM ||
+				if (token == NUMBER_OR_NAME ||
 				    token == NUMBER) {
 					do {
 						token = next_token
@@ -1260,9 +1260,9 @@ void convert_numeric_aggregate (cfile, bc, max, seperator, base, size)
 			fputs (val, stdout);
 		}
 		token = next_token (&val, cfile);
-		/* Allow NUMBER_OR_ATOM if base is 16. */
+		/* Allow NUMBER_OR_NAME if base is 16. */
 		if (token != NUMBER &&
-		    (base != 16 || token != NUMBER_OR_ATOM)) {
+		    (base != 16 || token != NUMBER_OR_NAME)) {
 			parse_warn ("expecting numeric value.");
 			skip_to_semi (cfile);
 			longjmp (jdref (bc), 1);
