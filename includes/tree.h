@@ -66,6 +66,7 @@ enum expression_context {
 };
 
 struct fundef {
+	int refcnt;
 	struct string_list *args;
 	struct executable_statement *statements;
 };
@@ -86,7 +87,7 @@ struct binding_value {
 #if defined (NSUPDATE)
 		ns_updrec *dns;
 #endif
-		struct fundef fundef;
+		struct fundef *fundef;
 		struct binding_value *bv;
 	} value;
 };
@@ -150,7 +151,13 @@ enum expr_op {
 	expr_filename,
  	expr_sname,
 	expr_arg,
-	expr_funcall
+	expr_funcall,
+	expr_function,
+	expr_add,
+	expr_subtract,
+	expr_multiply,
+	expr_divide,
+	expr_remainder
 };
 
 struct expression {
@@ -166,6 +173,11 @@ struct expression {
 		struct expression *and [2];
 		struct expression *or [2];
 		struct expression *not;
+		struct expression *add;
+		struct expression *subtract;
+		struct expression *multiply;
+		struct expression *divide;
+		struct expression *remainder;
 		struct collection *check;
 		struct {
 			struct expression *expr;
@@ -225,6 +237,7 @@ struct expression {
 			char *name;
 			struct expression *arglist;
 		} funcall;
+		struct fundef *func;
 	} data;
 	int flags;
 #	define EXPR_EPHEMERAL	1
