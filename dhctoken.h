@@ -90,6 +90,7 @@
 #define ONE_LEASE_PER_CLIENT 294
 #define GET_LEASE_HOSTNAMES 295
 #define USE_HOST_DECL_NAMES 296
+#define ABANDONED     319
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\
 				 (x) != STRING &&	\

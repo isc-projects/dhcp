@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: conflex.c,v 1.19 1996/09/09 07:04:28 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: conflex.c,v 1.19.2.1 1997/03/29 08:06:43 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -352,6 +352,10 @@ static int intern (atom, dfv)
 		return dfv;
 
 	switch (tolower (atom [0])) {
+	      case 'a':
+		if (!strcasecmp (atom + 1, "bandoned"))
+			return ABANDONED;
+		break;
 	      case 'b':
 		if (!strcasecmp (atom + 1, "oot-unknown-clients"))
 			return BOOT_UNKNOWN_CLIENTS;

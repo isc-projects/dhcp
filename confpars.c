@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.36 1996/11/08 20:06:28 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.36.2.1 1997/03/29 08:06:44 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -608,7 +608,7 @@ void parse_class_declaration (cfile, group, type)
 	char *val;
 	int token;
 	struct class *class;
-	int declaration;
+	int declaration = 0;
 
 	token = next_token (&val, cfile);
 	if (token != STRING) {
@@ -1370,6 +1370,11 @@ struct lease *parse_lease_declaration (cfile)
 			      case DYNAMIC_BOOTP:
 				seenbit = 128;
 				lease.flags |= BOOTP_LEASE;
+				break;
+
+			      case ABANDONED:
+				seenbit = 256;
+				lease.flags |= ABANDONED_LEASE;
 				break;
 
 			      default:

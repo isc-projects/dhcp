@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: db.c,v 1.8 1996/09/02 21:16:24 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: db.c,v 1.8.2.1 1997/03/29 08:06:45 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -126,6 +126,13 @@ int write_lease (lease)
 			++errors;
 		}
 	}
+	if (lease -> flags & ABANDONED_LEASE) {
+		errno = 0;
+		fprintf (db_file, "\n\tabandoned;");
+		if (errno) {
+			++errors;
+		}
+	}
 	errno = 0;
 	fputs ("\n}\n", db_file);
 	if (errno) {
@@ -169,6 +176,7 @@ void db_startup ()
 	/* Read in the existing lease file... */
 	read_leases ();
 
+	GET_TIME (&write_time);
 	new_lease_file ();
 }
 
@@ -184,8 +192,8 @@ void new_lease_file ()
 	}
 
 	/* Make a temporary lease file... */
-	time (&t);
-	sprintf (newfname, "%s.%d", path_dhcpd_db, (int) (t & 32767));
+	GET_TIME (&t);
+	sprintf (newfname, "%s.%d", path_dhcpd_db, (int)t);
 	if ((db_file = fopen (newfname, "w")) == NULL) {
 		error ("Can't start new lease file: %m");
 	}

@@ -109,6 +109,8 @@ struct lease {
 #	define DYNAMIC_BOOTP_OK		4
 #	define PERSISTENT_FLAGS		(DYNAMIC_BOOTP_OK)
 #	define EPHEMERAL_FLAGS		(BOOTP_LEASE)
+#	define ABANDONED_LEASE		16
+
 };
 
 #define	ROOT_GROUP	0
