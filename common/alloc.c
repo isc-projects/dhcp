@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: alloc.c,v 1.44 2000/02/15 19:39:21 mellon Exp $ Copyright (c) 1995, 1996, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: alloc.c,v 1.45 2000/03/06 19:37:38 mellon Exp $ Copyright (c) 1995, 1996, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1077,6 +1077,176 @@ int packet_dereference (ptr, file, line)
 	packet -> raw = (struct dhcp_packet *)free_packets;
 	free_packets = packet;
 	dmalloc_reuse (free_packets, (char *)0, 0, 0);
+	return 1;
+}
+
+int tsig_key_allocate (ptr, file, line)
+	struct tsig_key **ptr;
+	const char *file;
+	int line;
+{
+	int size;
+
+	if (!ptr) {
+		log_error ("%s(%d): null pointer", file, line);
+#if defined (POINTER_DEBUG)
+		abort ();
+#else
+		return 0;
+#endif
+	}
+	if (*ptr) {
+		log_error ("%s(%d): non-null pointer", file, line);
+#if defined (POINTER_DEBUG)
+		abort ();
+#else
+		*ptr = (struct tsig_key *)0;
+#endif
+	}
+
+	*ptr = dmalloc (sizeof **ptr, file, line);
+	if (*ptr) {
+		memset (*ptr, 0, sizeof **ptr);
+		(*ptr) -> refcnt = 1;
+		return 1;
+	}
+	return 0;
+}
+
+int tsig_key_reference (ptr, bp, file, line)
+	struct tsig_key **ptr;
+	struct tsig_key *bp;
+	const char *file;
+	int line;
+{
+	if (!ptr) {
+		log_error ("%s(%d): null pointer", file, line);
+#if defined (POINTER_DEBUG)
+		abort ();
+#else
+		return 0;
+#endif
+	}
+	if (*ptr) {
+		log_error ("%s(%d): non-null pointer", file, line);
+#if defined (POINTER_DEBUG)
+		abort ();
+#else
+		*ptr = (struct tsig_key *)0;
+#endif
+	}
+	*ptr = bp;
+	bp -> refcnt++;
+	rc_register (file, line, ptr, bp, bp -> refcnt);
+	dmalloc_reuse (bp, file, line, 1);
+	return 1;
+}
+
+int tsig_key_dereference (ptr, file, line)
+	struct tsig_key **ptr;
+	const char *file;
+	int line;
+{
+	int i;
+	struct tsig_key *tsig_key;
+
+	if (!ptr || !*ptr) {
+		log_error ("%s(%d): null pointer", file, line);
+#if defined (POINTER_DEBUG)
+		abort ();
+#else
+		return 0;
+#endif
+	}
+
+	tsig_key = *ptr;
+	*ptr = (struct tsig_key *)0;
+	--tsig_key -> refcnt;
+	rc_register (file, line, ptr, tsig_key, tsig_key -> refcnt);
+	if (tsig_key -> refcnt > 0)
+		return 1;
+
+	if (tsig_key -> refcnt < 0) {
+		log_error ("%s(%d): negative refcnt!", file, line);
+#if defined (DEBUG_RC_HISTORY)
+		dump_rc_history ();
+#endif
+#if defined (POINTER_DEBUG)
+		abort ();
+#else
+		return 0;
+#endif
+	}
+
+	if (tsig_key -> name)
+		dfree (tsig_key -> name, file, line);
+	if (tsig_key -> algorithm)
+		dfree (tsig_key -> algorithm, file, line);
+	if (tsig_key -> key.buffer)
+		data_string_forget (&tsig_key -> key, file, line);
+	dfree (tsig_key, file, line);
+	return 1;
+}
+
+int dns_zone_allocate (ptr, file, line)
+	struct dns_zone **ptr;
+	const char *file;
+	int line;
+{
+	int size;
+
+	if (!ptr) {
+		log_error ("%s(%d): null pointer", file, line);
+#if defined (POINTER_DEBUG)
+		abort ();
+#else
+		return 0;
+#endif
+	}
+	if (*ptr) {
+		log_error ("%s(%d): non-null pointer", file, line);
+#if defined (POINTER_DEBUG)
+		abort ();
+#else
+		*ptr = (struct dns_zone *)0;
+#endif
+	}
+
+	*ptr = dmalloc (sizeof **ptr, file, line);
+	if (*ptr) {
+		memset (*ptr, 0, sizeof **ptr);
+		(*ptr) -> refcnt = 1;
+		return 1;
+	}
+	return 0;
+}
+
+int dns_zone_reference (ptr, bp, file, line)
+	struct dns_zone **ptr;
+	struct dns_zone *bp;
+	const char *file;
+	int line;
+{
+	if (!ptr) {
+		log_error ("%s(%d): null pointer", file, line);
+#if defined (POINTER_DEBUG)
+		abort ();
+#else
+		return 0;
+#endif
+	}
+	if (*ptr) {
+		log_error ("%s(%d): non-null pointer", file, line);
+#if defined (POINTER_DEBUG)
+		abort ();
+#else
+		*ptr = (struct dns_zone *)0;
+#endif
+	}
+	*ptr = bp;
+	bp -> refcnt++;
+	rc_register (file, line, ptr, bp, bp -> refcnt);
+	dmalloc_reuse (bp, file, line, 1);
 	return 1;
 }
 
