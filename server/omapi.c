@@ -29,14 +29,13 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: omapi.c,v 1.1 1999/09/08 01:36:05 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: omapi.c,v 1.2 1999/09/09 21:12:12 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
 
 omapi_object_type_t *dhcp_type_lease;
 omapi_object_type_t *dhcp_type_group;
-omapi_object_type_t *dhcp_type_host;
 omapi_object_type_t *dhcp_type_pool;
 omapi_object_type_t *dhcp_type_shared_network;
 omapi_object_type_t *dhcp_type_subnet;
@@ -95,7 +94,7 @@ isc_result_t dhcp_lease_set_value  (omapi_object_t *h,
 	isc_result_t status;
 	int foo;
 
-	if (h -> type != omapi_type_message)
+	if (h -> type != dhcp_type_lease)
 		return ISC_R_INVALIDARG;
 	lease = (struct lease *)h;
 
@@ -601,7 +600,7 @@ isc_result_t dhcp_host_set_value  (omapi_object_t *h,
 	isc_result_t status;
 	int foo;
 
-	if (h -> type != omapi_type_message)
+	if (h -> type != dhcp_type_host)
 		return ISC_R_INVALIDARG;
 	host = (struct host_decl *)h;
 
@@ -704,6 +703,12 @@ isc_result_t dhcp_host_set_value  (omapi_object_t *h,
 			data_string_forget (&ds, "dhcp_host_set_value");
 		} else
 			return ISC_R_INVALIDARG;
+		return ISC_R_SUCCESS;
+	}
+
+	/* The "known" flag isn't supported in the database yet, but it's
+	   legitimate. */
+	if (!omapi_ds_strcmp (name, "known")) {
 		return ISC_R_SUCCESS;
 	}
 
@@ -823,9 +828,7 @@ isc_result_t dhcp_host_signal_handler (omapi_object_t *h,
 				return ISC_R_NOMEMORY;
 			strcpy (host -> name, hnbuf);
 		}
-		enter_host (host, 1);
-		if (!write_host (host))
-			return ISC_R_IOERROR;
+		enter_host (host, 1, 1);
 	}
 
 	/* Try to find some inner object that can take the value. */
@@ -878,6 +881,12 @@ isc_result_t dhcp_host_stuff_values (omapi_object_t *c,
 			return status;
 		status = (omapi_connection_put_uint32
 			  (c, host -> client_identifier.len));
+		if (status != ISC_R_SUCCESS)
+			return status;
+		status = (omapi_connection_copyin
+			  (c,
+			   host -> client_identifier.data,
+			   host -> client_identifier.len));
 		if (status != ISC_R_SUCCESS)
 			return status;
 	}
@@ -1009,6 +1018,8 @@ isc_result_t dhcp_host_create (omapi_object_t **lp,
 		return ISC_R_NOMEMORY;
 	memset (hp, 0, sizeof *hp);
 	hp -> refcnt = 0;
+	hp -> type = dhcp_type_host;
+	hp -> group = &root_group;	/* XXX */
 	return omapi_object_reference (lp, (omapi_object_t *)hp,
 				       "dhcp_host_create");
 }
@@ -1022,7 +1033,7 @@ isc_result_t dhcp_pool_set_value  (omapi_object_t *h,
 	isc_result_t status;
 	int foo;
 
-	if (h -> type != omapi_type_message)
+	if (h -> type != dhcp_type_pool)
 		return ISC_R_INVALIDARG;
 	pool = (struct pool *)h;
 
