@@ -965,7 +965,7 @@ encoded in DNS wire format, rather than as plain ASCII text.   The client
 normally sets this to false if it doesn't support DNS wire format in the
 FQDN option.   The server should always send back the same value that the
 client sent.   When this value is set on the configuration side, it controls
-the format in which the \fIfqdn.name\fR suboption is encoded.
+the format in which the \fIfqdn.fqdn\fR suboption is encoded.
 .RE
 .PP
 .B option fqdn.rcode1 \fIflag\fB;
@@ -978,7 +978,7 @@ respectively, and are only sent by the DHCP server to the DHCP client.
 The values of these fields are those defined in the DNS protocol specification.
 .RE
 .PP
-.B option fqdn.name \fItext\fB;
+.B option fqdn.fqdn \fItext\fB;
 .RS 0.25i
 .PP
 Specifies the domain name that the client wishes to use.   This can be a
@@ -1351,7 +1351,7 @@ dhcpd.conf(5), dhcpd.leases(5), dhclient.conf(5), dhcp-eval(5), dhcpd(8),
 dhclient(8), RFC2132, RFC2131, draft-ietf-dhc-agent-options-??.txt.
 .SH AUTHOR
 The Internet Software Consortium DHCP Distribution was written by Ted
-Lemon <mellon@isc.org> under a contract with Vixie Labs.  Funding for
+Lemon under a contract with Vixie Labs.  Funding for
 this project was provided through the Internet Software Consortium.
 Information about the Internet Software Consortium can be found at
-.B http://www.isc.org/isc.
+.B http://www.isc.org.
