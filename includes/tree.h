@@ -51,7 +51,7 @@ struct buffer {
 struct data_string {
 	struct buffer *buffer;
 	unsigned char *data;
-	int len;
+	int len;	/* Does not include NUL terminator, if any. */
 	int terminated;
 };
 
