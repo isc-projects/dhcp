@@ -614,6 +614,39 @@ The routers option specifies a list of IP addresses for routers on the
 client's subnet.  Routers should be listed in order of preference.
 .RE
 .PP
+.B option slp-directory-agent \fIboolean ip-address
+[\fB,\fR \fIip-address\fR... ]\fB;\fR
+.RS 0.25i
+.PP
+This option specifies two things: the IP addresses of one or more
+Service Location Protocol Directory Agents, and whether the use of
+these addresses is mandatory.   If the initial boolean value is true,
+the SLP agent should just use the IP addresses given.   If the value
+is false, the SLP agent may additionally do active or passive
+multicast discovery of SLP agents (see RFC2165 for details).
+.PP
+Please note that in this option and the slp-service-scope option, the
+term "SLP Agent" is being used to refer to a Service Location Protocol
+agent running on a machine that is being configured using the DHCP
+protocol.
+.RE
+.PP
+.B option slp-service-scope \fIboolean text\fR\fB;\fR
+.RS 0.25i
+.PP
+The Service Location Protocol Service Scope Option specifies two
+things: a list of service scopes for SLP, and whether the use of this
+list is mandatory.  If the initial boolean value is true, the SLP
+agent should only use the list of scopes provided in this option;
+otherwise, it may use its own static configuration in preference to
+the list provided in this option.
+.PP
+The text string should be a comma-seperated list of scopes that the
+SLP agent should use.   It may be omitted, in which case the SLP Agent
+will use the aggregated list of scopes of all directory agents known
+to the SLP agent.
+.RE
+.PP
 .B option \fBsmtp-server\fR \fIip-address\fR [\fB,\fR
 \fIip-address\fR... ]\fB;\fR
 .RS 0.25i
