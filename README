@@ -19,8 +19,8 @@ later in this document.  If you wish to run on a SCO release, please
 see the SCO-specific notes later in this document.  You particularly
 need to read these notes if you intend to support Windows 95 clients.
 If you are running a version of FreeBSD prior to 2.2, please read the
-note on FreeBSD.   If you are running HP-UX or Ultrix, please read the
-notes for those operating systems below.
+note on FreeBSD.   If you are running HP-UX, Ultrix or Digital UNIX,
+please read the notes for those operating systems below.
 
 			    BUILDING DHCPD
 
@@ -123,6 +123,13 @@ kernel and present in /dev.   If you type ``man packetfilter'', you
 will get some information on how to configure your kernel for the
 packet filter (if it isn't already) and how to make an entry for it in
 /dev.
+
+			      DIGITAL UNIX
+
+Digital Unix has one minor caveat - this version of the Internet
+Software Consortium DHCP server cannot currently coexist with rarpd.
+If you run dhcpd and rarpd together, dhcpd will never see any DHCP
+requests, because the RARP filter has a higher priority.
 
 			       FreeBSD
 
