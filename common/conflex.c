@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: conflex.c,v 1.70 2000/04/04 06:25:51 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: conflex.c,v 1.71 2000/04/06 22:38:52 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -490,8 +490,6 @@ static enum dhcp_token intern (atom, dfv)
 			}
 			if (!strcasecmp (atom + 1, "uthoritative"))
 				return AUTHORITATIVE;
-			if (!strcasecmp (atom + 1, "uth-key"))
-				return AUTH_KEY;
 			break;
 		}
 		if (!strcasecmp (atom + 1, "nd"))
@@ -502,6 +500,8 @@ static enum dhcp_token intern (atom, dfv)
 			return ALLOW;
 		if (!strcasecmp (atom + 1, "lias"))
 			return ALIAS;
+		if (!strcasecmp (atom + 1, "lgorithm"))
+			return ALGORITHM;
 		if (!strcasecmp (atom + 1, "bandoned"))
 			return ABANDONED;
 		if (!strcasecmp (atom + 1, "dd"))
@@ -685,6 +685,8 @@ static enum dhcp_token intern (atom, dfv)
 	      case 'k':
 		if (!strcasecmp (atom + 1, "nown"))
 			return KNOWN;
+		if (!strcasecmp (atom + 1, "ey"))
+			return KEY;
 		break;
 	      case 'l':
 		if (!strcasecmp (atom + 1, "ease"))
@@ -834,6 +836,8 @@ static enum dhcp_token intern (atom, dfv)
 			return NS_REFUSED;
 		break;
 	      case 's':
+		if (!strcasecmp (atom + 1, "ecret"))
+			return SECRET;
 		if (!strcasecmp (atom + 1, "ervfail"))
 			return NS_SERVFAIL;
 		if (!strcasecmp (atom + 1, "witch"))
@@ -887,8 +891,6 @@ static enum dhcp_token intern (atom, dfv)
 			return TOKEN_SET;
 		break;
 	      case 't':
-		if (!strcasecmp (atom + 1, "sig-key"))
-			return TSIG_KEY;
 		if (!strcasecmp (atom + 1, "imestamp"))
 			return TIMESTAMP;
 		if (!strcasecmp (atom + 1, "imeout"))
