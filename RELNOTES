@@ -1,6 +1,6 @@
 	    Internet Software Consortium DHCP Distribution
-		    Version 3, Release Candidate 4
-			    April 30, 2001
+		    Version 3, Release Candidate 5
+			    May 10, 2001
 
 			    Release Notes
 
@@ -55,6 +55,45 @@ Measurement Systems, Igor Sharfmesser at Kazakh Telecom, and Brian
 Murrell at BC Tel Advanced Communications.  I'd like to express my
 thanks to all of these good people here, both for working on the code
 and for prodding me into improving it.
+
+		Changes since 3.0 Release Candidate 4
+
+- Fix a bug that would prevent leases from being abandoned properly on
+  DHCPDECLINE.
+
+- Fix failover peer OMAPI support.
+
+- In failover, correctly handle expiration of leases.   Previously,
+  leases would never be reclaimed because they couldn't make the
+  transition from EXPIRED to FREE.
+
+- Fix some broken failover state transitions.
+
+- Documentation fixes.
+
+- Take out an unnecessary check in DHCP relay agent information option
+  stashing code that was preventing REBINDING clients from rebinding.
+
+- Prevent failover peers from allocating leases in DHCPREQUEST
+  processing if the lease belongs to the other server.
+
+- Record server version in lease file introductory comment.
+
+- Correctly report connection errors in OMAPI and failover.
+
+- Make authentication signature algorithm name comparisons in OMAPI
+  case-insensitive.
+
+- Fix compile problem on SunOS 4.x
+
+- If a signature algorithm is not termined with '.', terminate it so
+  that comparisons between fully-qualified names will work
+  consistently.
+
+- Different SIOCGIFCONF probe code, may "fix" problem on some Linux
+  systems with the probe not working correctly.
+
+- Don't allow user to type omapi key on command line of omshell.
 
 		Changes since 3.0 Release Candidate 3
 
