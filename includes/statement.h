@@ -38,7 +38,9 @@ struct executable_statement {
 		switch_statement,
 		case_statement,
 		default_statement,
-		set_statement
+		set_statement,
+		unset_statement,
+		let_statement
 	} op;
 	union {
 		struct {
@@ -56,7 +58,7 @@ struct executable_statement {
 			int evtypes;
 #			define ON_COMMIT  1
 #			define ON_EXPIRY  2
-#			define ON_RELEASE 3
+#			define ON_RELEASE 4
 			struct executable_statement *statements;
 		} on;
 		struct {
@@ -67,7 +69,9 @@ struct executable_statement {
 		struct {
 			char *name;
 			struct expression *expr;
-		} set;
+			struct executable_statement *statements;
+		} set, let;
+		char *unset;
 	} data;
 };
 
