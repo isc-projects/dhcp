@@ -56,7 +56,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhclient.c,v 1.44 1997/12/06 04:02:35 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.44.2.1 1997/12/06 11:24:31 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -230,9 +230,6 @@ int main (argc, argv, envp)
 
 	/* Set up the bootp packet handler... */
 	bootp_packet_handler = do_packet;
-
-	/* Start listening on the sysconf socket... */
-	sysconf_startup (status_message);
 
 	/* Start dispatching packets and timeouts... */
 	dispatch ();
@@ -2051,48 +2048,5 @@ void write_client_pid_file ()
 	else {
 		fprintf (pf, "%ld\n", (long)getpid ());
 		fclose (pf);
-	}
-}
-
-void status_message (header, data)
-	struct sysconf_header *header;
-	void *data;
-{
-	switch (header -> type) {
-	      case NETWORK_LOCATION_CHANGED:
-		client_location_changed ();
-		break;
-
-	      default:
-		break;
-	}
-}
-
-void client_location_changed ()
-{
-	struct interface_info *ip;
-
-	for (ip = interfaces; ip; ip = ip -> next) {
-		switch (ip -> client -> state) {
-		      case S_SELECTING:
-			cancel_timeout (send_discover, ip);
-			break;
-
-		      case S_BOUND:
-			cancel_timeout (state_bound, ip);
-			break;
-
-		      case S_REBOOTING:
-		      case S_REQUESTING:
-		      case S_RENEWING:
-			cancel_timeout (send_request, ip);
-			break;
-
-		      case S_INIT:
-		      case S_REBINDING:
-			break;
-		}
-		ip -> client -> state = S_INIT;
-		state_reboot (ip);
 	}
 }
