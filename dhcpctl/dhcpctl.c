@@ -61,7 +61,7 @@ dhcpctl_status dhcpctl_initialize ()
    information. */
 
 dhcpctl_status dhcpctl_connect (dhcpctl_handle *connection,
-				char *server_name, int port,
+				const char *server_name, int port,
 				dhcpctl_handle authinfo)
 {
 	isc_result_t status;
@@ -128,12 +128,12 @@ dhcpctl_status dhcpctl_wait_for_completion (dhcpctl_handle h,
    "known" or "client-hostname". */
 
 dhcpctl_status dhcpctl_get_value (dhcpctl_data_string *result,
-				  dhcpctl_handle h, char *value_name)
+				  dhcpctl_handle h, const char *value_name)
 {
 	isc_result_t status;
 	omapi_value_t *tv = (omapi_value_t *)0;
 	omapi_data_string_t *value = (omapi_data_string_t *)0;
-	int len;
+	unsigned len;
 	int ip;
 
 	status = omapi_get_value_str (h, (omapi_object_t *)0, value_name, &tv);
@@ -196,7 +196,7 @@ dhcpctl_status dhcpctl_get_value (dhcpctl_data_string *result,
    values, since no data_string needs to be dealt with. */
 
 dhcpctl_status dhcpctl_get_boolean (int *result,
-				    dhcpctl_handle h, char *value_name)
+				    dhcpctl_handle h, const char *value_name)
 {
 	isc_result_t status;
 	dhcpctl_data_string data = (dhcpctl_data_string)0;
@@ -221,7 +221,7 @@ dhcpctl_status dhcpctl_get_boolean (int *result,
    server - just sets the value on the handle. */
 
 dhcpctl_status dhcpctl_set_value (dhcpctl_handle h, dhcpctl_data_string value,
-				  char *value_name)
+				  const char *value_name)
 {
 	isc_result_t status;
 	omapi_typed_data_t *tv = (omapi_typed_data_t *)0;
@@ -290,7 +290,7 @@ dhcpctl_status dhcpctl_set_string_value (dhcpctl_handle h, const char *value,
    only more convenient for booleans. */
 
 dhcpctl_status dhcpctl_set_boolean_value (dhcpctl_handle h, int value,
-					  char *value_name)
+					  const char *value_name)
 {
 	isc_result_t status;
 	omapi_typed_data_t *tv = (omapi_typed_data_t *)0;
@@ -323,7 +323,7 @@ dhcpctl_status dhcpctl_set_boolean_value (dhcpctl_handle h, int value,
    only more convenient for booleans. */
 
 dhcpctl_status dhcpctl_set_int_value (dhcpctl_handle h, int value,
-				      char *value_name)
+				      const char *value_name)
 {
 	isc_result_t status;
 	omapi_typed_data_t *tv = (omapi_typed_data_t *)0;
@@ -410,7 +410,7 @@ dhcpctl_status dhcpctl_object_refresh (dhcpctl_handle connection,
 		return status;
 	}
 	status = omapi_set_int_value (message, (omapi_object_t *)0,
-				      "handle", h -> handle);
+				      "handle", (int)(h -> handle));
 	if (status != ISC_R_SUCCESS) {
 		omapi_object_dereference (&message, "dhcpctl_object_refresh");
 		return status;
@@ -453,7 +453,7 @@ dhcpctl_status dhcpctl_object_remove (dhcpctl_handle connection,
 	}
 
 	status = omapi_set_int_value (message, (omapi_object_t *)0, "handle",
-				      ro -> remote_handle);
+				      (int)(ro -> remote_handle));
 	if (status != ISC_R_SUCCESS) {
 		omapi_object_dereference (&message,
 					  "dhcpctl_object_delete");

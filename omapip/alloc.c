@@ -25,7 +25,7 @@
 
 isc_result_t omapi_object_reference (omapi_object_t **r,
 				     omapi_object_t *h,
-				     char *name)
+				     const char *name)
 {
 	if (!h || !r)
 		return ISC_R_INVALIDARG;
@@ -43,7 +43,7 @@ isc_result_t omapi_object_reference (omapi_object_t **r,
 }
 
 isc_result_t omapi_object_dereference (omapi_object_t **h,
-				       char *name)
+				       const char *name)
 {
 	int outer_reference = 0;
 	int inner_reference = 0;
@@ -139,7 +139,7 @@ isc_result_t omapi_object_dereference (omapi_object_t **h,
 }
 
 isc_result_t omapi_buffer_new (omapi_buffer_t **h,
-			       char *name)
+			       const char *name)
 {
 	omapi_buffer_t *t;
 	isc_result_t status;
@@ -156,7 +156,7 @@ isc_result_t omapi_buffer_new (omapi_buffer_t **h,
 
 isc_result_t omapi_buffer_reference (omapi_buffer_t **r,
 				     omapi_buffer_t *h,
-				     char *name)
+				     const char *name)
 {
 	if (!h || !r)
 		return ISC_R_INVALIDARG;
@@ -174,7 +174,7 @@ isc_result_t omapi_buffer_reference (omapi_buffer_t **r,
 }
 
 isc_result_t omapi_buffer_dereference (omapi_buffer_t **h,
-				       char *name)
+				       const char *name)
 {
 	if (!h)
 		return ISC_R_INVALIDARG;
@@ -205,8 +205,9 @@ isc_result_t omapi_typed_data_new (omapi_typed_data_t **t,
 {
 	va_list l;
 	omapi_typed_data_t *new;
-	int len;
-	int val;
+	unsigned len;
+	unsigned val;
+	int intval;
 	char *s;
 	isc_result_t status;
 
@@ -215,7 +216,7 @@ isc_result_t omapi_typed_data_new (omapi_typed_data_t **t,
 	switch (type) {
 	      case omapi_datatype_int:
 		len = OMAPI_TYPED_DATA_INT_LEN;
-		val = va_arg (l, int);
+		intval = va_arg (l, int);
 		break;
 	      case omapi_datatype_string:
 		s = va_arg (l, char *);
@@ -223,7 +224,7 @@ isc_result_t omapi_typed_data_new (omapi_typed_data_t **t,
 		len = OMAPI_TYPED_DATA_NOBUFFER_LEN + val;
 		break;
 	      case omapi_datatype_data:
-		val = va_arg (l, int);
+		val = va_arg (l, unsigned);
 		len = OMAPI_TYPED_DATA_NOBUFFER_LEN + val;
 		break;
 	      case omapi_datatype_object:
@@ -240,7 +241,7 @@ isc_result_t omapi_typed_data_new (omapi_typed_data_t **t,
 
 	switch (type) {
 	      case omapi_datatype_int:
-		new -> u.integer = val;
+		new -> u.integer = intval;
 		break;
 	      case omapi_datatype_string:
 		memcpy (new -> u.buffer.value, s, val);
@@ -265,7 +266,7 @@ isc_result_t omapi_typed_data_new (omapi_typed_data_t **t,
 
 isc_result_t omapi_typed_data_reference (omapi_typed_data_t **r,
 					 omapi_typed_data_t *h,
-					 char *name)
+					 const char *name)
 {
 	if (!h || !r)
 		return ISC_R_INVALIDARG;
@@ -283,7 +284,7 @@ isc_result_t omapi_typed_data_reference (omapi_typed_data_t **r,
 }
 
 isc_result_t omapi_typed_data_dereference (omapi_typed_data_t **h,
-					   char *name)
+					   const char *name)
 {
 	if (!h)
 		return ISC_R_INVALIDARG;
@@ -323,7 +324,7 @@ isc_result_t omapi_typed_data_dereference (omapi_typed_data_t **h,
 }
 
 isc_result_t omapi_data_string_new (omapi_data_string_t **d,
-				    int len, char *name)
+				    unsigned len, const char *name)
 {
 	omapi_data_string_t *new;
 
@@ -337,7 +338,7 @@ isc_result_t omapi_data_string_new (omapi_data_string_t **d,
 
 isc_result_t omapi_data_string_reference (omapi_data_string_t **r,
 					  omapi_data_string_t *h,
-					  char *name)
+					  const char *name)
 {
 	if (!h || !r)
 		return ISC_R_INVALIDARG;
@@ -355,7 +356,7 @@ isc_result_t omapi_data_string_reference (omapi_data_string_t **r,
 }
 
 isc_result_t omapi_data_string_dereference (omapi_data_string_t **h,
-					    char *name)
+					    const char *name)
 {
 	if (!h)
 		return ISC_R_INVALIDARG;
@@ -384,7 +385,7 @@ isc_result_t omapi_data_string_dereference (omapi_data_string_t **h,
 }
 
 isc_result_t omapi_value_new (omapi_value_t **d,
-			      char *name)
+			      const char *name)
 {
 	omapi_value_t *new;
 
@@ -397,7 +398,7 @@ isc_result_t omapi_value_new (omapi_value_t **d,
 
 isc_result_t omapi_value_reference (omapi_value_t **r,
 				    omapi_value_t *h,
-				    char *name)
+				    const char *name)
 {
 	if (!h || !r)
 		return ISC_R_INVALIDARG;
@@ -415,7 +416,7 @@ isc_result_t omapi_value_reference (omapi_value_t **r,
 }
 
 isc_result_t omapi_value_dereference (omapi_value_t **h,
-				      char *name)
+				      const char *name)
 {
 	if (!h)
 		return ISC_R_INVALIDARG;

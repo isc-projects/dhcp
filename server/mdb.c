@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.7 1999/10/07 02:14:10 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.8 1999/10/07 06:36:34 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -333,8 +333,8 @@ isc_result_t delete_host (hd, commit)
 
 struct host_decl *find_hosts_by_haddr (htype, haddr, hlen)
 	int htype;
-	unsigned char *haddr;
-	int hlen;
+	const unsigned char *haddr;
+	unsigned hlen;
 {
 	struct host_decl *foo;
 
@@ -344,8 +344,8 @@ struct host_decl *find_hosts_by_haddr (htype, haddr, hlen)
 }
 
 struct host_decl *find_hosts_by_uid (data, len)
-	unsigned char *data;
-	int len;
+	const unsigned char *data;
+	unsigned len;
 {
 	struct host_decl *foo;
 
@@ -518,7 +518,7 @@ void new_address_range (low, high, subnet, pool)
 {
 	struct lease *address_range, *lp, *plp;
 	struct iaddr net;
-	int min, max, i;
+	unsigned min, max, i;
 	char lowbuf [16], highbuf [16], netbuf [16];
 	struct shared_network *share = subnet -> shared_network;
 
@@ -1025,7 +1025,7 @@ void release_lease (lease, packet)
 
 void abandon_lease (lease, message)
 	struct lease *lease;
-	char *message;
+	const char *message;
 {
 	struct lease lt;
 
@@ -1073,8 +1073,8 @@ struct lease *find_lease_by_ip_addr (addr)
 }
 
 struct lease *find_lease_by_uid (uid, len)
-	unsigned char *uid;
-	int len;
+	const unsigned char *uid;
+	unsigned len;
 {
 	struct lease *lease = (struct lease *)hash_lookup (lease_uid_hash,
 							   uid, len);
@@ -1082,8 +1082,8 @@ struct lease *find_lease_by_uid (uid, len)
 }
 
 struct lease *find_lease_by_hw_addr (hwaddr, hwlen)
-	unsigned char *hwaddr;
-	int hwlen;
+	const unsigned char *hwaddr;
+	unsigned hwlen;
 {
 	struct lease *lease = (struct lease *)hash_lookup (lease_hw_addr_hash,
 							   hwaddr, hwlen);

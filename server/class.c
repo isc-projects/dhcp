@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: class.c,v 1.13 1999/07/31 18:09:51 mellon Exp $ Copyright (c) 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: class.c,v 1.14 1999/10/07 06:36:30 mellon Exp $ Copyright (c) 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -183,7 +183,7 @@ void classify (packet, class)
 }
 
 struct class *find_class (name)
-	char *name;
+	const char *name;
 {
 	struct collection *lp;
 	struct class *cp;

@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcrelay.c,v 1.34 1999/09/09 21:00:13 mellon Exp $ Copyright (c) 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcrelay.c,v 1.35 1999/10/07 06:36:28 mellon Exp $ Copyright (c) 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -43,7 +43,7 @@ int lexchar;
 char *token_line;
 char *tlname;
 
-char *path_dhcrelay_pid = _PATH_DHCRELAY_PID;
+const char *path_dhcrelay_pid = _PATH_DHCRELAY_PID;
 
 int bogus_agent_drops = 0;	/* Packets dropped because agent option
 				   field was specified and we're not relaying
@@ -287,7 +287,7 @@ int main (argc, argv, envp)
 void relay (ip, packet, length, from_port, from, hfrom)
 	struct interface_info *ip;
 	struct dhcp_packet *packet;
-	int length;
+	unsigned length;
 	unsigned int from_port;
 	struct iaddr from;
 	struct hardware *hfrom;
@@ -464,7 +464,7 @@ struct subnet *find_subnet (addr)
 int strip_relay_agent_options (in, out, packet, length)
 	struct interface_info *in, **out;
 	struct dhcp_packet *packet;
-	int length;
+	unsigned length;
 {
 	int is_dhcp = 0;
 	u_int8_t *op, *sp, *max;
@@ -527,7 +527,7 @@ int strip_relay_agent_options (in, out, packet, length)
 			/* Skip over other options. */
 		      default:
 			if (sp != op)
-				memcpy (sp, op, op [1] + 2);
+				memcpy (sp, op, (unsigned)(op [1] + 2));
 			sp += op [1] + 2;
 			op += op [1] + 2;
 			break;
@@ -584,7 +584,7 @@ int find_interface_by_agent_option (packet, out, buf, len)
 {
 	int i;
 	u_int8_t *circuit_id = 0;
-	int circuit_id_len;
+	unsigned circuit_id_len;
 	struct interface_info *ip;
 
 	while (i < len) {
@@ -644,6 +644,7 @@ int find_interface_by_agent_option (packet, out, buf, len)
 int add_relay_agent_options (ip, packet, length, giaddr)
 	struct interface_info *ip;
 	struct dhcp_packet *packet;
+	unsigned length;
 	struct in_addr giaddr;
 {
 	int is_dhcp = 0, agent_options_present = 0;
@@ -717,7 +718,7 @@ int add_relay_agent_options (ip, packet, length, giaddr)
 		      default:
 			end_pad = 0;
 			if (sp != op)
-				memcpy (sp, op, op [1] + 2);
+				memcpy (sp, op, (unsigned)(op [1] + 2));
 			sp += op [1] + 2;
 			op += op [1] + 2;
 			break;
@@ -759,7 +760,7 @@ int add_relay_agent_options (ip, packet, length, giaddr)
 	if (ip -> remote_id) {
 		*sp++ = RAI_REMOTE_ID;
 		if (ip -> remote_id_len > 255 || ip -> remote_id_len < 1)
-			log_fatal ("completely bogus remote id length %d on %s\n",
+			log_fatal ("bogus remote id length %d on %s\n",
 			       ip -> circuit_id_len, ip -> name);
 		*sp++ = ip -> remote_id_len;
 		memcpy (sp, ip -> remote_id, ip -> remote_id_len);

@@ -23,7 +23,7 @@
 #include <omapip/omapip.h>
 
 isc_result_t omapi_protocol_connect (omapi_object_t *h,
-				     char *server_name,
+				     const char *server_name,
 				     int port,
 				     omapi_object_t *authinfo)
 {
@@ -78,8 +78,8 @@ isc_result_t omapi_protocol_connect (omapi_object_t *h,
 
 /* Send the protocol introduction message. */
 isc_result_t omapi_protocol_send_intro (omapi_object_t *h,
-					int ver,
-					int hsize)
+					unsigned ver,
+					unsigned hsize)
 {
 	isc_result_t status;
 	omapi_protocol_object_t *p;
@@ -223,7 +223,7 @@ isc_result_t omapi_protocol_send_message (omapi_object_t *po,
 					  
 
 isc_result_t omapi_protocol_signal_handler (omapi_object_t *h,
-					    char *name, va_list ap)
+					    const char *name, va_list ap)
 {
 	isc_result_t status;
 	omapi_protocol_object_t *p;
@@ -518,7 +518,7 @@ isc_result_t omapi_protocol_get_value (omapi_object_t *h,
 	return ISC_R_NOTFOUND;
 }
 
-isc_result_t omapi_protocol_destroy (omapi_object_t *h, char *name)
+isc_result_t omapi_protocol_destroy (omapi_object_t *h, const char *name)
 {
 	omapi_protocol_object_t *p;
 	if (h -> type != omapi_type_protocol)
@@ -592,7 +592,7 @@ isc_result_t omapi_protocol_listen (omapi_object_t *h,
    create a new protocol connection, otherwise pass the signal down. */
 
 isc_result_t omapi_protocol_listener_signal (omapi_object_t *o,
-					     char *name, va_list ap)
+					     const char *name, va_list ap)
 {
 	isc_result_t status;
 	omapi_object_t *c;
@@ -677,7 +677,8 @@ isc_result_t omapi_protocol_listener_get_value (omapi_object_t *h,
 	return ISC_R_NOTFOUND;
 }
 
-isc_result_t omapi_protocol_listener_destroy (omapi_object_t *h, char *name)
+isc_result_t omapi_protocol_listener_destroy (omapi_object_t *h,
+					      const char *name)
 {
 	if (h -> type != omapi_type_protocol_listener)
 		return ISC_R_INVALIDARG;
@@ -705,7 +706,7 @@ isc_result_t omapi_protocol_listener_stuff (omapi_object_t *c,
 isc_result_t omapi_protocol_send_status (omapi_object_t *po,
 					 omapi_object_t *id,
 					 isc_result_t waitstatus,
-					 int rid, char *msg)
+					 unsigned rid, const char *msg)
 {
 	isc_result_t status;
 	omapi_object_t *message = (omapi_object_t *)0;
@@ -726,7 +727,7 @@ isc_result_t omapi_protocol_send_status (omapi_object_t *po,
 	}
 
 	status = omapi_set_int_value (message, (omapi_object_t *)0,
-				      "rid", rid);
+				      "rid", (int)rid);
 	if (status != ISC_R_SUCCESS) {
 		omapi_object_dereference (&message,
 					  "omapi_protocol_send_status");
@@ -734,7 +735,7 @@ isc_result_t omapi_protocol_send_status (omapi_object_t *po,
 	}
 
 	status = omapi_set_int_value (message, (omapi_object_t *)0,
-				      "result", waitstatus);
+				      "result", (int)waitstatus);
 	if (status != ISC_R_SUCCESS) {
 		omapi_object_dereference (&message,
 					  "omapi_protocol_send_status");
@@ -758,7 +759,7 @@ isc_result_t omapi_protocol_send_status (omapi_object_t *po,
 
 isc_result_t omapi_protocol_send_update (omapi_object_t *po,
 					 omapi_object_t *id,
-					 int rid,
+					 unsigned rid,
 					 omapi_object_t *object)
 {
 	isc_result_t status;
@@ -782,7 +783,7 @@ isc_result_t omapi_protocol_send_update (omapi_object_t *po,
 	if (rid) {
 		omapi_handle_t handle;
 		status = omapi_set_int_value (message, (omapi_object_t *)0,
-					      "rid", rid);
+					      "rid", (int)rid);
 		if (status != ISC_R_SUCCESS) {
 			omapi_object_dereference
 				(&message, "omapi_protocol_send_update");
@@ -796,7 +797,7 @@ isc_result_t omapi_protocol_send_update (omapi_object_t *po,
 			return status;
 		}
 		status = omapi_set_int_value (message, (omapi_object_t *)0,
-					      "handle", handle);
+					      "handle", (int)handle);
 		if (status != ISC_R_SUCCESS) {
 			omapi_object_dereference
 				(&message, "omapi_protocol_send_update");

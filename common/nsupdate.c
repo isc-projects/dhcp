@@ -25,7 +25,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: nsupdate.c,v 1.10 1999/10/06 00:59:59 mellon Exp $ Copyright (c) 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: nsupdate.c,v 1.11 1999/10/07 06:35:43 mellon Exp $ Copyright (c) 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -294,7 +294,8 @@ int nsupdatePTR (revname, hostname, ttl, opcode)
 	
 	switch (opcode) {
 	      case ADD:
-		if (!hostname) {	/* can't have NULL ip_addr for an ADD */
+		/* can't have NULL ip_addr for an ADD */
+		if (!hostname) {
 #if 0
 			res_freeupdrec (p);
 #endif
@@ -310,7 +311,7 @@ int nsupdatePTR (revname, hostname, ttl, opcode)
 		
 		break;
 	      case DELETE:
-		ttl = 0;	/* delete updates ALWAYS have a 0 TTL */	
+		ttl = 0;	/* delete updates ALWAYS have a 0 TTL */
 #if 0
 		/* PREQUISITE: delete only if the RR to be deleted is there */
 		p->r_opcode = YXRRSET;
@@ -424,7 +425,8 @@ return;
 		/* only update if there is no A record there already */
 		if (!lease -> ddns_fwd_name) {
 			int z;
-		    	z=nsupdateA(hostname, piaddr(lease->ip_addr), ttl, ADD);
+		    	z = nsupdateA (hostname,
+				       piaddr (lease -> ip_addr), ttl, ADD);
 			if (z < 1)
 				return;
 
@@ -447,9 +449,10 @@ return;
 		if (!lease -> ddns_rev_name) {
 			/* add a PTR RR */
 			if (nsupdatePTR(revname, hostname, ttl, ADD)) {
-				/* remember in the lease struct for a release */
+				/* remember in the lease struct for release */
 				lease -> ddns_rev_name =
-				       dmalloc(strlen(revname) + 1, "nsupdate");
+				       dmalloc (strlen (revname) + 1,
+						"nsupdate");
 				strcpy (lease -> ddns_rev_name, revname);
 			}
 		}
@@ -580,6 +583,7 @@ int updatePTR (lhs, rhs, ttl, lease)
 
 	return 1;
 }
+
 /* public function to delete an A record */
 int deleteA (lhs, rhs, lease)
 	const struct data_string *lhs;

@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dns.c,v 1.11 1999/03/16 05:50:34 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dns.c,v 1.12 1999/10/07 06:35:41 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -31,7 +31,7 @@ static char copyright[] =
 int dns_protocol_initialized;
 int dns_protocol_fd;
 
-static int addlabel PROTO ((u_int8_t *, char *));
+static unsigned addlabel PROTO ((u_int8_t *, const char *));
 static int skipname PROTO ((u_int8_t *));
 static int copy_out_name PROTO ((u_int8_t *, u_int8_t *, char *));
 static int nslookup PROTO ((u_int8_t, char *, int, u_int16_t, u_int16_t));
@@ -77,13 +77,13 @@ void dns_startup ()
    the label in the first character, the contents of the label in subsequent
    characters, and returning the length of the conglomeration. */
 
-static int addlabel (buf, label)
+static unsigned addlabel (buf, label)
 	u_int8_t *buf;
-	char *label;
+	const char *label;
 {
 	*buf = strlen (label);
-	memcpy (buf + 1, label, *buf);
-	return *buf + 1;
+	memcpy (buf + 1, label, (unsigned)*buf);
+	return (unsigned)(*buf + 1);
 }
 
 /* skipname skips over all of the labels in a single domain name,
@@ -289,7 +289,7 @@ struct dns_query *ns_inaddr_lookup (inaddr, wakeup)
 	putUShort (s, C_IN);
 	s += sizeof (u_int16_t);
 
-	return ns_query (question, query, s - query, wakeup);
+	return ns_query (question, query, (unsigned)(s - query), wakeup);
 }
 
 /* Try to satisfy a query out of the local cache.  If no answer has
@@ -303,7 +303,7 @@ struct dns_query *ns_inaddr_lookup (inaddr, wakeup)
 struct dns_query *ns_query (question, formatted_query, len, wakeup)
 	struct dns_question *question;
 	unsigned char *formatted_query;
-	int len;
+	unsigned len;
 	struct dns_wakeup *wakeup;
 {
 	HEADER *hdr;

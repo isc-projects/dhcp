@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.83 1999/10/01 03:42:47 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.84 1999/10/07 06:35:36 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -33,9 +33,9 @@ TIME default_lease_time = 43200; /* 12 hours... */
 TIME max_lease_time = 86400; /* 24 hours... */
 struct tree_cache *global_options [256];
 
-char *path_dhclient_conf = _PATH_DHCLIENT_CONF;
-char *path_dhclient_db = _PATH_DHCLIENT_DB;
-char *path_dhclient_pid = _PATH_DHCLIENT_PID;
+const char *path_dhclient_conf = _PATH_DHCLIENT_CONF;
+const char *path_dhclient_db = _PATH_DHCLIENT_DB;
+const char *path_dhclient_pid = _PATH_DHCLIENT_PID;
 
 int dhcp_max_agent_option_packet_length = 0;
 
@@ -75,7 +75,7 @@ int main (argc, argv, envp)
 	struct servent *ent;
 	struct interface_info *ip;
 	struct client_state *client;
-	int seed;
+	unsigned seed;
 	int quiet = 0;
 	char *server = (char *)0;
 	isc_result_t status;
@@ -290,7 +290,7 @@ void cleanup ()
 }
 
 struct class *find_class (s)
-	char *s;
+	const char *s;
 {
 	return (struct class *)0;
 }
@@ -774,7 +774,7 @@ void dhcp (packet)
 {
 	struct iaddrlist *ap;
 	void (*handler) PROTO ((struct packet *));
-	char *type;
+	const char *type;
 
 	switch (packet -> packet_type) {
 	      case DHCPOFFER:
@@ -817,7 +817,7 @@ void dhcpoffer (packet)
 	struct client_lease *lease, *lp;
 	int i;
 	int stop_selecting;
-	char *name = packet -> packet_type ? "DHCPOFFER" : "BOOTREPLY";
+	const char *name = packet -> packet_type ? "DHCPOFFER" : "BOOTREPLY";
 	struct iaddrlist *ap;
 	struct option_cache *oc;
 	
@@ -966,7 +966,7 @@ struct client_lease *packet_to_lease (packet)
 
 	/* If the server name was filled out, copy it. */
 	if (!(i & 2) && packet -> raw -> sname [0]) {
-		int len;
+		unsigned len;
 		/* Don't count on the NUL terminator. */
 		for (len = 0; len < 64; len++)
 			if (!packet -> raw -> sname [len])
@@ -985,7 +985,7 @@ struct client_lease *packet_to_lease (packet)
 
 	/* Ditto for the filename. */
 	if (!(i & 1) && packet -> raw -> file [0]) {
-		int len;
+		unsigned len;
 		/* Don't count on the NUL terminator. */
 		for (len = 0; len < 64; len++)
 			if (!packet -> raw -> file [len])
@@ -1466,7 +1466,7 @@ void make_client_options (client, lease, type, sid, rip, prl, op)
 	u_int32_t *prl;
 	struct option_state **op;
 {
-	int i;
+	unsigned i;
 	struct option_cache *oc;
 	struct buffer *bp = (struct buffer *)0;
 
@@ -1943,7 +1943,7 @@ FILE *scriptFile;
 
 void script_init (client, reason, medium)
 	struct client_state *client;
-	char *reason;
+	const char *reason;
 	struct string_list *medium;
 {
 	int fd;
@@ -1987,7 +1987,7 @@ void script_init (client, reason, medium)
 
 void script_write_params (client, prefix, lease)
 	struct client_state *client;
-	char *prefix;
+	const char *prefix;
 	struct client_lease *lease;
 {
 	int i;

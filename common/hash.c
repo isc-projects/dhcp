@@ -22,12 +22,12 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: hash.c,v 1.14 1999/04/12 21:33:34 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: hash.c,v 1.15 1999/10/07 06:35:42 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
 
-static INLINE int do_hash PROTO ((unsigned char *, int, int));
+static INLINE int do_hash PROTO ((const unsigned char *, unsigned, unsigned));
 
 struct hash_table *new_hash ()
 {
@@ -40,12 +40,12 @@ struct hash_table *new_hash ()
 }
 
 static INLINE int do_hash (name, len, size)
-	unsigned char *name;
-	int len;
-	int size;
+	const unsigned char *name;
+	unsigned len;
+	unsigned size;
 {
 	register int accum = 0;
-	register unsigned char *s = (unsigned char *)name;
+	register const unsigned char *s = (const unsigned char *)name;
 	int i = len;
 	while (i--) {
 		/* Add the character in... */
@@ -60,8 +60,8 @@ static INLINE int do_hash (name, len, size)
 
 void add_hash (table, name, len, pointer)
 	struct hash_table *table;
-	int len;
-	unsigned char *name;
+	unsigned len;
+	const unsigned char *name;
 	unsigned char *pointer;
 {
 	int hashno;
@@ -71,7 +71,7 @@ void add_hash (table, name, len, pointer)
 		return;
 
 	if (!len)
-		len = strlen ((char *)name);
+		len = strlen ((const char *)name);
 
 	hashno = do_hash (name, len, table -> hash_count);
 	bp = new_hash_bucket ("add_hash");
@@ -89,8 +89,8 @@ void add_hash (table, name, len, pointer)
 
 void delete_hash_entry (table, name, len)
 	struct hash_table *table;
-	int len;
-	unsigned char *name;
+	unsigned len;
+	const unsigned char *name;
 {
 	int hashno;
 	struct hash_bucket *bp, *pbp = (struct hash_bucket *)0;
@@ -99,7 +99,7 @@ void delete_hash_entry (table, name, len)
 		return;
 
 	if (!len)
-		len = strlen ((char *)name);
+		len = strlen ((const char *)name);
 
 	hashno = do_hash (name, len, table -> hash_count);
 
@@ -107,7 +107,7 @@ void delete_hash_entry (table, name, len)
 	   if we find it, delete it. */
 	for (bp = table -> buckets [hashno]; bp; bp = bp -> next) {
 		if ((!bp -> len &&
-		     !strcmp ((char *)bp -> name, (char *)name)) ||
+		     !strcmp ((const char *)bp -> name, (const char *)name)) ||
 		    (bp -> len == len &&
 		     !memcmp (bp -> name, name, len))) {
 			if (pbp) {
@@ -124,8 +124,8 @@ void delete_hash_entry (table, name, len)
 
 unsigned char *hash_lookup (table, name, len)
 	struct hash_table *table;
-	unsigned char *name;
-	int len;
+	const unsigned char *name;
+	unsigned len;
 {
 	int hashno;
 	struct hash_bucket *bp;
@@ -133,7 +133,7 @@ unsigned char *hash_lookup (table, name, len)
 	if (!table)
 		return (unsigned char *)0;
 	if (!len)
-		len = strlen ((char *)name);
+		len = strlen ((const char *)name);
 
 	hashno = do_hash (name, len, table -> hash_count);
 

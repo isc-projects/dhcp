@@ -23,7 +23,7 @@
 #include <omapip/omapip.h>
 
 isc_result_t omapi_connect (omapi_object_t *c,
-			    char *server_name,
+			    const char *server_name,
 			    int port)
 {
 	struct hostent *he;
@@ -196,7 +196,7 @@ isc_result_t omapi_disconnect (omapi_object_t *h,
 	return ISC_R_SUCCESS;
 }
 
-isc_result_t omapi_connection_require (omapi_object_t *h, int bytes)
+isc_result_t omapi_connection_require (omapi_object_t *h, unsigned bytes)
 {
 	omapi_connection_object_t *c;
 
@@ -292,7 +292,7 @@ isc_result_t omapi_connection_get_value (omapi_object_t *h,
 	return ISC_R_NOTFOUND;
 }
 
-isc_result_t omapi_connection_destroy (omapi_object_t *h, char *name)
+isc_result_t omapi_connection_destroy (omapi_object_t *h, const char *name)
 {
 	omapi_connection_object_t *c;
 
@@ -307,7 +307,7 @@ isc_result_t omapi_connection_destroy (omapi_object_t *h, char *name)
 }
 
 isc_result_t omapi_connection_signal_handler (omapi_object_t *h,
-					      char *name, va_list ap)
+					      const char *name, va_list ap)
 {
 	if (h -> type != omapi_type_connection)
 		return ISC_R_INVALIDARG;

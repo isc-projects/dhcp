@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.86 1999/10/07 02:14:09 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.87 1999/10/07 06:36:30 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -37,7 +37,7 @@ isc_result_t readconf ()
 {
 	int file;
 	struct parse *cfile;
-	char *val;
+	const char *val;
 	enum dhcp_token token;
 	int declaration = 0;
 	int status;
@@ -80,7 +80,7 @@ isc_result_t read_leases ()
 {
 	struct parse *cfile;
 	int file;
-	char *val;
+	const char *val;
 	enum dhcp_token token;
 	isc_result_t status;
 
@@ -188,7 +188,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 	int declaration;
 {
 	enum dhcp_token token;
-	char *val;
+	const char *val;
 	struct shared_network *share;
 	char *t, *n;
 	struct expression *expr;
@@ -199,6 +199,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 	struct option_cache *cache;
 	int lose;
 	struct data_string key_id;
+	int known;
 
 	token = peek_token (&val, cfile);
 
@@ -437,7 +438,8 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 			return declaration;
 		}
 
-		option = parse_option_name (cfile, 1);
+		known = 0;
+		option = parse_option_name (cfile, 1, &known);
 		if (option) {
 			token = peek_token (&val, cfile);
 			if (token == CODE) {
@@ -460,7 +462,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 
 			/* If this wasn't an option code definition, don't
 			   allow an unknown option. */
-			if (option -> code == -1) {
+			if (!known) {
 				parse_warn (cfile, "unknown option %s.%s",
 					    option -> universe -> name,
 					    option -> name);
@@ -492,7 +494,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		if (is_identifier (token)) {
 			option = ((struct option *)
 				  hash_lookup (server_universe.hash,
-					       (unsigned char *)val, 0));
+					       (const unsigned char *)val, 0));
 			if (option) {
 				token = next_token (&val, cfile);
 				if (!parse_option_statement
@@ -579,7 +581,7 @@ void parse_failover_peer (cfile, group, type)
 	int type;
 {
 	enum dhcp_token token;
-	char *val;
+	const char *val;
 	struct failover_peer *peer;
 	TIME *tp;
 	char *name;
@@ -724,7 +726,7 @@ enum failover_state parse_failover_state (cfile)
 	struct parse *cfile;
 {
 	enum dhcp_token token;
-	char *val;
+	const char *val;
 
 	token = next_token (&val, cfile);
 	switch (token) {
@@ -752,7 +754,7 @@ void parse_pool_statement (cfile, group, type)
 	int type;
 {
 	enum dhcp_token token;
-	char *val;
+	const char *val;
 	int done = 0;
 	struct pool *pool, **p;
 	struct permit *permit;
@@ -899,7 +901,7 @@ int parse_boolean (cfile)
 	struct parse *cfile;
 {
 	enum dhcp_token token;
-	char *val;
+	const char *val;
 	int rv;
 
 	token = next_token (&val, cfile);
@@ -926,7 +928,7 @@ int parse_lbrace (cfile)
 	struct parse *cfile;
 {
 	enum dhcp_token token;
-	char *val;
+	const char *val;
 
 	token = next_token (&val, cfile);
 	if (token != LBRACE) {
@@ -944,7 +946,7 @@ void parse_host_declaration (cfile, group)
 	struct parse *cfile;
 	struct group *group;
 {
-	char *val;
+	const char *val;
 	enum dhcp_token token;
 	struct host_decl *host;
 	char *name;
@@ -1015,7 +1017,7 @@ void parse_host_declaration (cfile, group)
 			}
 			go = ((struct group_object *)
 			      hash_lookup (group_name_hash,
-					   (unsigned char *)val,
+					   (const unsigned char *)val,
 					   strlen (val)));
 			if (!go) {
 			    parse_warn (cfile, "unknown group %s in host %s",
@@ -1038,9 +1040,9 @@ void parse_host_declaration (cfile, group)
 		}
 
 		if (token == UID) {
-			char *s;
+			const char *s;
 			unsigned char *t = 0;
-			int len;
+			unsigned len;
 
 			token = next_token (&val, cfile);
 			data_string_forget (&host -> client_identifier,
@@ -1063,7 +1065,7 @@ void parse_host_declaration (cfile, group)
 						    "expecting hex list.");
 					skip_to_semi (cfile);
 				}
-				s = (char *)t;
+				s = (const char *)t;
 			}
 			if (!buffer_allocate
 			    (&host -> client_identifier.buffer,
@@ -1074,7 +1076,7 @@ void parse_host_declaration (cfile, group)
 			host -> client_identifier.data =
 				host -> client_identifier.buffer -> data;
 			host -> client_identifier.len = len;
-			memcpy (host -> client_identifier.data, s,
+			memcpy (host -> client_identifier.buffer -> data, s,
 				len + host -> client_identifier.terminated);
 			if (t)
 				dfree (t, "parse_host_declaration");
@@ -1130,13 +1132,13 @@ struct class *parse_class_declaration (cfile, group, type)
 	struct group *group;
 	int type;
 {
-	char *val;
+	const char *val;
 	enum dhcp_token token;
 	struct class *class = (struct class *)0, *pc;
 	int declaration = 0;
 	int lose = 0;
 	struct data_string data;
-	char *name;
+	const char *name;
 	struct executable_statement *stmt = (struct executable_statement *)0;
 	struct expression *expr;
 	int new = 1;
@@ -1184,10 +1186,12 @@ struct class *parse_class_declaration (cfile, group, type)
 
 		name = type ? "implicit-vendor-class" : "implicit-user-class";
 	} else if (type == 2) {
-		if (!(name = dmalloc (strlen (val) + 1,
-				      "parse_class_declaration")))
+		char *tname;
+		if (!(tname = dmalloc (strlen (val) + 1,
+				       "parse_class_declaration")))
 			log_fatal ("No memory for class name %s.", val);
-		strcpy (name, val);
+		strcpy (tname, val);
+		name = tname;
 	} else {
 		name = (char *)0;
 	}
@@ -1204,7 +1208,7 @@ struct class *parse_class_declaration (cfile, group, type)
 				return (struct class *)0;
 			data.terminated = 1;
 			data.data = &data.buffer -> data [0];
-			strcpy ((char *)data.data, val);
+			strcpy ((char *)data.buffer -> data, val);
 		} else if (token == NUMBER_OR_NAME || token == NUMBER) {
 			memset (&data, 0, sizeof data);
 			if (!parse_cshl (&data, cfile))
@@ -1425,7 +1429,7 @@ void parse_shared_net_declaration (cfile, group)
 	struct parse *cfile;
 	struct group *group;
 {
-	char *val;
+	const char *val;
 	enum dhcp_token token;
 	struct shared_network *share;
 	char *name;
@@ -1494,12 +1498,12 @@ void parse_subnet_declaration (cfile, share)
 	struct parse *cfile;
 	struct shared_network *share;
 {
-	char *val;
+	const char *val;
 	enum dhcp_token token;
 	struct subnet *subnet, *t, *u;
 	struct iaddr iaddr;
 	unsigned char addr [4];
-	int len = sizeof addr;
+	unsigned len = sizeof addr;
 	int declaration = 0;
 
 	subnet = new_subnet ("parse_subnet_declaration");
@@ -1579,7 +1583,7 @@ void parse_group_declaration (cfile, group)
 	struct parse *cfile;
 	struct group *group;
 {
-	char *val;
+	const char *val;
 	enum dhcp_token token;
 	struct group *g;
 	int declaration = 0;
@@ -1667,7 +1671,7 @@ int parse_fixed_addr_param (oc, cfile)
 	struct option_cache **oc;
 	struct parse *cfile;
 {
-	char *val;
+	const char *val;
 	enum dhcp_token token;
 	struct expression *expr = (struct expression *)0;
 	struct expression *tmp, *new;
@@ -1747,10 +1751,10 @@ TIME parse_timestamp (cfile)
 struct lease *parse_lease_declaration (cfile)
 	struct parse *cfile;
 {
-	char *val;
+	const char *val;
 	enum dhcp_token token;
 	unsigned char addr [4];
-	int len = sizeof addr;
+	unsigned len = sizeof addr;
 	int seenmask = 0;
 	int seenbit;
 	char tbuf [32];
@@ -1813,15 +1817,17 @@ struct lease *parse_lease_declaration (cfile)
 				seenbit = 8;
 				token = peek_token (&val, cfile);
 				if (token == STRING) {
+					unsigned char *tuid;
 					token = next_token (&val, cfile);
 					lease.uid_len = strlen (val);
-					lease.uid = (unsigned char *)
+					tuid = (unsigned char *)
 						malloc (lease.uid_len);
-					if (!lease.uid) {
+					if (!tuid) {
 						log_error ("no space for uid");
 						return (struct lease *)0;
 					}
-					memcpy (lease.uid, val, lease.uid_len);
+					memcpy (tuid, val, lease.uid_len);
+					lease.uid = tuid;
 					parse_semi (cfile);
 				} else {
 					lease.uid_len = 0;
@@ -2018,9 +2024,9 @@ void parse_address_range (cfile, group, type, pool)
 {
 	struct iaddr low, high, net;
 	unsigned char addr [4];
-	int len = sizeof addr;
+	unsigned len = sizeof addr;
 	enum dhcp_token token;
-	char *val;
+	const char *val;
 	int dynamic = 0;
 	struct subnet *subnet;
 	struct shared_network *share;

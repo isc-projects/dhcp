@@ -123,7 +123,7 @@ isc_result_t omapi_accept (omapi_object_t *h)
 	omapi_listener_object_t *listener;
 
 	if (h -> type != omapi_type_listener)
-		return -1;
+		return ISC_R_INVALIDARG;
 	listener = (omapi_listener_object_t *)h;
 	
 	/* Get the handle. */
@@ -201,7 +201,7 @@ isc_result_t omapi_listener_get_value (omapi_object_t *h,
 	return ISC_R_NOTFOUND;
 }
 
-isc_result_t omapi_listener_destroy (omapi_object_t *h, char *name)
+isc_result_t omapi_listener_destroy (omapi_object_t *h, const char *name)
 {
 	omapi_listener_object_t *l;
 
@@ -217,7 +217,7 @@ isc_result_t omapi_listener_destroy (omapi_object_t *h, char *name)
 }
 
 isc_result_t omapi_listener_signal_handler (omapi_object_t *h,
-					    char *name, va_list ap)
+					    const char *name, va_list ap)
 {
 	if (h -> type != omapi_type_listener)
 		return ISC_R_INVALIDARG;

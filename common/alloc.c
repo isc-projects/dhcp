@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: alloc.c,v 1.33 1999/07/31 17:53:05 mellon Exp $ Copyright (c) 1995, 1996, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: alloc.c,v 1.34 1999/10/07 06:35:40 mellon Exp $ Copyright (c) 1995, 1996, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -31,8 +31,8 @@ struct dhcp_packet *dhcp_free_list;
 struct packet *packet_free_list;
 
 VOIDPTR dmalloc (size, name)
-	int size;
-	char *name;
+	unsigned size;
+	const char *name;
 {
 	VOIDPTR foo = (VOIDPTR)malloc (size);
 	if (!foo)
@@ -44,7 +44,7 @@ VOIDPTR dmalloc (size, name)
 
 void dfree (ptr, name)
 	VOIDPTR ptr;
-	char *name;
+	const char *name;
 {
 	if (!ptr) {
 		log_error ("dfree %s: free on null pointer.", name);
@@ -54,7 +54,7 @@ void dfree (ptr, name)
 }
 
 struct dhcp_packet *new_dhcp_packet (name)
-	char *name;
+	const char *name;
 {
 	struct dhcp_packet *rval;
 	rval = (struct dhcp_packet *)dmalloc (sizeof (struct dhcp_packet),
@@ -64,7 +64,7 @@ struct dhcp_packet *new_dhcp_packet (name)
 
 struct hash_table *new_hash_table (count, name)
 	int count;
-	char *name;
+	const char *name;
 {
 	struct hash_table *rval = dmalloc (sizeof (struct hash_table)
 					   - (DEFAULT_HASH_SIZE
@@ -77,43 +77,43 @@ struct hash_table *new_hash_table (count, name)
 }
 
 struct hash_bucket *new_hash_bucket (name)
-	char *name;
+	const char *name;
 {
 	struct hash_bucket *rval = dmalloc (sizeof (struct hash_bucket), name);
 	return rval;
 }
 
 struct lease *new_leases (n, name)
-	int n;
-	char *name;
+	unsigned n;
+	const char *name;
 {
 	struct lease *rval = dmalloc (n * sizeof (struct lease), name);
 	return rval;
 }
 
 struct lease *new_lease (name)
-	char *name;
+	const char *name;
 {
 	struct lease *rval = dmalloc (sizeof (struct lease), name);
 	return rval;
 }
 
 struct subnet *new_subnet (name)
-	char *name;
+	const char *name;
 {
 	struct subnet *rval = dmalloc (sizeof (struct subnet), name);
 	return rval;
 }
 
 struct class *new_class (name)
-	char *name;
+	const char *name;
 {
 	struct class *rval = dmalloc (sizeof (struct class), name);
 	return rval;
 }
 
 struct shared_network *new_shared_network (name)
-	char *name;
+	const char *name;
 {
 	struct shared_network *rval =
 		dmalloc (sizeof (struct shared_network), name);
@@ -121,7 +121,7 @@ struct shared_network *new_shared_network (name)
 }
 
 struct group *new_group (name)
-	char *name;
+	const char *name;
 {
 	struct group *rval =
 		dmalloc (sizeof (struct group), name);
@@ -131,7 +131,7 @@ struct group *new_group (name)
 }
 
 struct protocol *new_protocol (name)
-	char *name;
+	const char *name;
 {
 	struct protocol *rval = dmalloc (sizeof (struct protocol), name);
 	return rval;
@@ -140,7 +140,7 @@ struct protocol *new_protocol (name)
 struct lease_state *free_lease_states;
 
 struct lease_state *new_lease_state (name)
-	char *name;
+	const char *name;
 {
 	struct lease_state *rval;
 
@@ -162,7 +162,7 @@ struct lease_state *new_lease_state (name)
 }
 
 struct domain_search_list *new_domain_search_list (name)
-	char *name;
+	const char *name;
 {
 	struct domain_search_list *rval =
 		dmalloc (sizeof (struct domain_search_list), name);
@@ -170,7 +170,7 @@ struct domain_search_list *new_domain_search_list (name)
 }
 
 struct name_server *new_name_server (name)
-	char *name;
+	const char *name;
 {
 	struct name_server *rval =
 		dmalloc (sizeof (struct name_server), name);
@@ -179,13 +179,13 @@ struct name_server *new_name_server (name)
 
 void free_name_server (ptr, name)
 	struct name_server *ptr;
-	char *name;
+	const char *name;
 {
 	dfree ((VOIDPTR)ptr, name);
 }
 
 struct option *new_option (name)
-	char *name;
+	const char *name;
 {
 	struct option *rval =
 		dmalloc (sizeof (struct option), name);
@@ -196,7 +196,7 @@ struct option *new_option (name)
 
 void free_option (ptr, name)
 	struct option *ptr;
-	char *name;
+	const char *name;
 {
 /* XXX have to put all options on heap before this is possible. */
 #if 0
@@ -207,7 +207,7 @@ void free_option (ptr, name)
 }
 
 struct universe *new_universe (name)
-	char *name;
+	const char *name;
 {
 	struct universe *rval =
 		dmalloc (sizeof (struct universe), name);
@@ -216,21 +216,21 @@ struct universe *new_universe (name)
 
 void free_universe (ptr, name)
 	struct universe *ptr;
-	char *name;
+	const char *name;
 {
 	dfree ((VOIDPTR)ptr, name);
 }
 
 void free_domain_search_list (ptr, name)
 	struct domain_search_list *ptr;
-	char *name;
+	const char *name;
 {
 	dfree ((VOIDPTR)ptr, name);
 }
 
 void free_lease_state (ptr, name)
 	struct lease_state *ptr;
-	char *name;
+	const char *name;
 {
 	if (ptr -> options)
 		option_state_dereference (&ptr -> options, name);
@@ -242,69 +242,69 @@ void free_lease_state (ptr, name)
 
 void free_protocol (ptr, name)
 	struct protocol *ptr;
-	char *name;
+	const char *name;
 {
 	dfree ((VOIDPTR)ptr, name);
 }
 
 void free_group (ptr, name)
 	struct group *ptr;
-	char *name;
+	const char *name;
 {
 	dfree ((VOIDPTR)ptr, name);
 }
 
 void free_shared_network (ptr, name)
 	struct shared_network *ptr;
-	char *name;
+	const char *name;
 {
 	dfree ((VOIDPTR)ptr, name);
 }
 
 void free_class (ptr, name)
 	struct class *ptr;
-	char *name;
+	const char *name;
 {
 	dfree ((VOIDPTR)ptr, name);
 }
 
 void free_subnet (ptr, name)
 	struct subnet *ptr;
-	char *name;
+	const char *name;
 {
 	dfree ((VOIDPTR)ptr, name);
 }
 
 void free_lease (ptr, name)
 	struct lease *ptr;
-	char *name;
+	const char *name;
 {
 	dfree ((VOIDPTR)ptr, name);
 }
 
 void free_hash_bucket (ptr, name)
 	struct hash_bucket *ptr;
-	char *name;
+	const char *name;
 {
 	dfree ((VOIDPTR)ptr, name);
 }
 
 void free_hash_table (ptr, name)
 	struct hash_table *ptr;
-	char *name;
+	const char *name;
 {
 	dfree ((VOIDPTR)ptr, name);
 }
 
 void free_dhcp_packet (ptr, name)
 	struct dhcp_packet *ptr;
-	char *name;
+	const char *name;
 {
 	dfree ((VOIDPTR)ptr, name);
 }
 
 struct client_lease *new_client_lease (name)
-	char *name;
+	const char *name;
 {
 	return (struct client_lease *)dmalloc (sizeof (struct client_lease),
 					       name);
@@ -312,13 +312,13 @@ struct client_lease *new_client_lease (name)
 
 void free_client_lease (lease, name)
 	struct client_lease *lease;
-	char *name;
+	const char *name;
 {
 	dfree (lease, name);
 }
 
 struct pool *new_pool (name)
-	char *name;
+	const char *name;
 {
 	struct pool *pool = ((struct pool *)
 			     dmalloc (sizeof (struct pool), name));
@@ -330,14 +330,14 @@ struct pool *new_pool (name)
 
 void free_pool (pool, name)
 	struct pool *pool;
-	char *name;
+	const char *name;
 {
 	dfree (pool, name);
 }
 
 #if defined (FAILOVER_PROTOCOL)
 struct failover_peer *new_failover_peer (name)
-	char *name;
+	const char *name;
 {
 	struct failover_peer *peer = ((struct failover_peer *)
 				      dmalloc (sizeof (struct failover_peer),
@@ -350,18 +350,18 @@ struct failover_peer *new_failover_peer (name)
 
 void free_failover_peer (peer, name)
 	struct failover_peer *peer;
-	char *name;
+	const char *name;
 {
 	dfree (peer, name);
 }
 #endif /* defined (FAILOVER_PROTOCOL) */
 
 struct auth_key *new_auth_key (len, name)
-	int len;
-	char *name;
+	unsigned len;
+	const char *name;
 {
 	struct auth_key *peer;
-	int size = len - 1 + sizeof (struct auth_key);
+	unsigned size = len - 1 + sizeof (struct auth_key);
 
 	peer = (struct auth_key *)dmalloc (size, name);
 	if (!peer)
@@ -372,13 +372,13 @@ struct auth_key *new_auth_key (len, name)
 
 void free_auth_key (peer, name)
 	struct auth_key *peer;
-	char *name;
+	const char *name;
 {
 	dfree (peer, name);
 }
 
 struct permit *new_permit (name)
-	char *name;
+	const char *name;
 {
 	struct permit *permit = ((struct permit *)
 				 dmalloc (sizeof (struct permit), name));
@@ -390,7 +390,7 @@ struct permit *new_permit (name)
 
 void free_permit (permit, name)
 	struct permit *permit;
-	char *name;
+	const char *name;
 {
 	dfree (permit, name);
 }
@@ -398,7 +398,7 @@ void free_permit (permit, name)
 pair free_pairs;
 
 pair new_pair (name)
-	char *name;
+	const char *name;
 {
 	pair foo;
 
@@ -418,7 +418,7 @@ pair new_pair (name)
 
 void free_pair (foo, name)
 	pair foo;
-	char *name;
+	const char *name;
 {
 	foo -> cdr = free_pairs;
 	free_pairs = foo;
@@ -428,7 +428,7 @@ struct expression *free_expressions;
 
 int expression_allocate (cptr, name)
 	struct expression **cptr;
-	char *name;
+	const char *name;
 {
 	struct expression *rval;
 
@@ -446,7 +446,7 @@ int expression_allocate (cptr, name)
 
 void free_expression (expr, name)
 	struct expression *expr;
-	char *name;
+	const char *name;
 {
 	expr -> data.not = free_expressions;
 	free_expressions = expr;
@@ -455,7 +455,7 @@ void free_expression (expr, name)
 int expression_reference (ptr, src, name)
 	struct expression **ptr;
 	struct expression *src;
-	char *name;
+	const char *name;
 {
 	if (!ptr) {
 		log_error ("Null pointer in expression_reference: %s", name);
@@ -484,7 +484,7 @@ struct option_cache *free_option_caches;
 
 int option_cache_allocate (cptr, name)
 	struct option_cache **cptr;
-	char *name;
+	const char *name;
 {
 	struct option_cache *rval;
 
@@ -504,7 +504,7 @@ int option_cache_allocate (cptr, name)
 int option_cache_reference (ptr, src, name)
 	struct option_cache **ptr;
 	struct option_cache *src;
-	char *name;
+	const char *name;
 {
 	if (!ptr) {
 		log_error ("Null pointer in option_cache_reference: %s", name);
@@ -531,8 +531,8 @@ int option_cache_reference (ptr, src, name)
 
 int buffer_allocate (ptr, len, name)
 	struct buffer **ptr;
-	int len;
-	char *name;
+	unsigned len;
+	const char *name;
 {
 	struct buffer *bp;
 
@@ -547,7 +547,7 @@ int buffer_allocate (ptr, len, name)
 int buffer_reference (ptr, bp, name)
 	struct buffer **ptr;
 	struct buffer *bp;
-	char *name;
+	const char *name;
 {
 	if (!ptr) {
 		log_error ("Null pointer passed to buffer_reference: %s",
@@ -574,7 +574,7 @@ int buffer_reference (ptr, bp, name)
 
 int buffer_dereference (ptr, name)
 	struct buffer **ptr;
-	char *name;
+	const char *name;
 {
 	struct buffer *bp;
 
@@ -606,8 +606,8 @@ int buffer_dereference (ptr, name)
 
 int dns_host_entry_allocate (ptr, hostname, name)
 	struct dns_host_entry **ptr;
-	char *hostname;
-	char *name;
+	const char *hostname;
+	const char *name;
 {
 	struct dns_host_entry *bp;
 
@@ -623,7 +623,7 @@ int dns_host_entry_allocate (ptr, hostname, name)
 int dns_host_entry_reference (ptr, bp, name)
 	struct dns_host_entry **ptr;
 	struct dns_host_entry *bp;
-	char *name;
+	const char *name;
 {
 	if (!ptr) {
 		log_error ("Null pointer in dns_host_entry_reference: %s",
@@ -651,7 +651,7 @@ int dns_host_entry_reference (ptr, bp, name)
 
 int dns_host_entry_dereference (ptr, name)
 	struct dns_host_entry **ptr;
-	char *name;
+	const char *name;
 {
 	struct dns_host_entry *bp;
 
@@ -674,9 +674,9 @@ int dns_host_entry_dereference (ptr, name)
 
 int option_state_allocate (ptr, name)
 	struct option_state **ptr;
-	char *name;
+	const char *name;
 {
-	int size;
+	unsigned size;
 
 	if (!ptr) {
 		log_error ("Null pointer passed to option_state_allocate: %s",
@@ -712,7 +712,7 @@ int option_state_allocate (ptr, name)
 int option_state_reference (ptr, bp, name)
 	struct option_state **ptr;
 	struct option_state *bp;
-	char *name;
+	const char *name;
 {
 	if (!ptr) {
 		log_error ("Null pointer in option_state_reference: %s",
@@ -740,7 +740,7 @@ int option_state_reference (ptr, bp, name)
 
 int option_state_dereference (ptr, name)
 	struct option_state **ptr;
-	char *name;
+	const char *name;
 {
 	int i;
 	struct option_state *options;
@@ -774,7 +774,7 @@ int option_state_dereference (ptr, name)
 
 int executable_statement_allocate (ptr, name)
 	struct executable_statement **ptr;
-	char *name;
+	const char *name;
 {
 	struct executable_statement *bp;
 
@@ -789,7 +789,7 @@ int executable_statement_allocate (ptr, name)
 int executable_statement_reference (ptr, bp, name)
 	struct executable_statement **ptr;
 	struct executable_statement *bp;
-	char *name;
+	const char *name;
 {
 	if (!ptr) {
 		log_error ("Null ptr in executable_statement_reference: %s",
@@ -818,7 +818,7 @@ static struct packet *free_packets;
 
 int packet_allocate (ptr, name)
 	struct packet **ptr;
-	char *name;
+	const char *name;
 {
 	int size;
 
@@ -854,7 +854,7 @@ int packet_allocate (ptr, name)
 int packet_reference (ptr, bp, name)
 	struct packet **ptr;
 	struct packet *bp;
-	char *name;
+	const char *name;
 {
 	if (!ptr) {
 		log_error ("Null pointer in packet_reference: %s",
@@ -881,7 +881,7 @@ int packet_reference (ptr, bp, name)
 
 int packet_dereference (ptr, name)
 	struct packet **ptr;
-	char *name;
+	const char *name;
 {
 	int i;
 	struct packet *packet;

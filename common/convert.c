@@ -23,13 +23,13 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: convert.c,v 1.10 1999/07/31 17:54:06 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: convert.c,v 1.11 1999/10/07 06:35:41 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
 
 u_int32_t getULong (buf)
-	unsigned char *buf;
+	const unsigned char *buf;
 {
 	unsigned long ibuf;
 
@@ -38,7 +38,7 @@ u_int32_t getULong (buf)
 }
 
 int32_t getLong (buf)
-	unsigned char *buf;
+	const unsigned char *buf;
 {
 	long ibuf;
 
@@ -47,7 +47,7 @@ int32_t getLong (buf)
 }
 
 u_int32_t getUShort (buf)
-	unsigned char *buf;
+	const unsigned char *buf;
 {
 	unsigned short ibuf;
 
@@ -56,7 +56,7 @@ u_int32_t getUShort (buf)
 }
 
 int32_t getShort (buf)
-	unsigned char *buf;
+	const unsigned char *buf;
 {
 	short ibuf;
 
@@ -104,13 +104,13 @@ void putUChar (obuf, val)
 }
 
 u_int32_t getUChar (obuf)
-	unsigned char *obuf;
+	const unsigned char *obuf;
 {
 	return obuf [0];
 }
 
 int converted_length (buf, base, width)
-	unsigned char *buf;
+	const unsigned char *buf;
 	unsigned int base;
 	unsigned int width;
 {
@@ -144,7 +144,7 @@ int converted_length (buf, base, width)
 
 int binary_to_ascii (outbuf, inbuf, base, width)
 	unsigned char *outbuf;
-	unsigned char *inbuf;
+	const unsigned char *inbuf;
 	unsigned int base;
 	unsigned int width;
 {

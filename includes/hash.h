@@ -24,18 +24,18 @@
 
 struct hash_bucket {
 	struct hash_bucket *next;
-	unsigned char *name;
-	int len;
+	const unsigned char *name;
+	unsigned len;
 	unsigned char *value;
 };
 
 struct hash_table {
-	int hash_count;
+	unsigned hash_count;
 	struct hash_bucket *buckets [DEFAULT_HASH_SIZE];
 };
 
 struct named_hash {
 	struct named_hash *next;
-	char *name;
+	const char *name;
 	struct hash_table *hash;
 };

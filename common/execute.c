@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: execute.c,v 1.20 1999/10/01 03:16:46 mellon Exp $ Copyright (c) 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: execute.c,v 1.21 1999/10/07 06:35:42 mellon Exp $ Copyright (c) 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -237,7 +237,7 @@ void execute_statements_in_scope (packet, lease, in_options, out_options,
 
 int executable_statement_dereference (ptr, name)
 	struct executable_statement **ptr;
-	char *name;
+	const char *name;
 {
 	struct executable_statement *bp;
 
@@ -317,7 +317,7 @@ void write_statements (file, statements, indent)
 	struct executable_statement *r, *x;
 	int result;
 	int status;
-	char *s, *t, *dot;
+	const char *s, *t, *dot;
 	int col;
 
 	if (!statements)

@@ -62,7 +62,7 @@ static struct timeval routing_timer;
 void assemble_tr_header (interface, buf, bufix, to)
 	struct interface_info *interface;
 	unsigned char *buf;
-	int *bufix;
+	unsigned *bufix;
 	struct hardware *to;
 {
         struct trh_hdr *trh;
@@ -115,7 +115,7 @@ static unsigned char tr_broadcast[6] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
 ssize_t decode_tr_header (interface, buf, bufix, from)
         struct interface_info *interface;
         unsigned char *buf;
-        int bufix;
+        unsigned bufix;
         struct hardware *from;
 {
         struct trh_hdr *trh = (struct trh_hdr *) buf + bufix;

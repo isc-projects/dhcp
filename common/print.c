@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: print.c,v 1.26 1999/10/01 03:18:33 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: print.c,v 1.27 1999/10/07 06:35:44 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -120,8 +120,8 @@ void dump_packet (tp)
 #endif
 
 void dump_raw (buf, len)
-	unsigned char *buf;
-	int len;
+	const unsigned char *buf;
+	unsigned len;
 {
 	int i;
 	char lbuf [80];
@@ -160,7 +160,7 @@ void hash_dump (table)
 			if (bp -> len)
 				dump_raw (bp -> name, bp -> len);
 			else
-				log_info ((char *)bp -> name);
+				log_info ((const char *)bp -> name);
 		}
 	}
 }
@@ -169,12 +169,13 @@ void hash_dump (table)
 
 #define DECLARE_HEX_PRINTER(x)						      \
 char *print_hex##x (len, data, limit)					      \
-	int len;							      \
-	u_int8_t *data;							      \
+	unsigned len;							      \
+	const u_int8_t *data;						      \
+	unsigned limit;							      \
 {									      \
 									      \
 	static char hex_buf##x [HBLEN + 1];				      \
-	int i;								      \
+	unsigned i;							      \
 									      \
 	if (limit > HBLEN)						      \
 		limit = HBLEN;						      \
@@ -206,8 +207,8 @@ DECLARE_HEX_PRINTER (_3)
 #define DQLEN	80
 
 char *print_dotted_quads (len, data)
-	int len;
-	u_int8_t *data;
+	unsigned len;
+	const u_int8_t *data;
 {
 	static char dq_buf [DQLEN + 1];
 	int i;
@@ -233,30 +234,31 @@ char *print_dotted_quads (len, data)
 }
 
 char *print_dec_1 (val)
-	int val;
+	unsigned long val;
 {
 	static char vbuf [32];
-	sprintf (vbuf, "%d", val);
+	sprintf (vbuf, "%lu", val);
 	return vbuf;
 }
 
 char *print_dec_2 (val)
-	int val;
+	unsigned long val;
 {
 	static char vbuf [32];
-	sprintf (vbuf, "%d", val);
+	sprintf (vbuf, "%lu", val);
 	return vbuf;
 }
 
-static int print_subexpression PROTO ((struct expression *, char *, int));
+static unsigned print_subexpression PROTO ((struct expression *,
+					    char *, unsigned));
 
-static int print_subexpression (expr, buf, len)
+static unsigned print_subexpression (expr, buf, len)
 	struct expression *expr;
 	char *buf;
-	int len;
+	unsigned len;
 {
-	int rv;
-	char *s;
+	unsigned rv;
+	const char *s;
 	
 	switch (expr -> op) {
 	      case expr_none:
@@ -319,13 +321,15 @@ static int print_subexpression (expr, buf, len)
 	      case expr_suffix:
 		if (len > 10) {
 			rv = 8;
-			strcpy (buf, "(substr ");
+			strcpy (buf, "(suffix ");
 			rv += print_subexpression (expr -> data.suffix.expr,
 						   buf + rv, len - rv - 2);
-			buf [rv++] = ' ';
+			if (len > rv)
+				buf [rv++] = ' ';
 			rv += print_subexpression (expr -> data.suffix.len,
 						   buf + rv, len - rv - 1);
-			buf [rv++] = ')';
+			if (len > rv)
+				buf [rv++] = ')';
 			buf [rv] = 0;
 			return rv;
 		}
@@ -340,6 +344,23 @@ static int print_subexpression (expr, buf, len)
 			buf [rv++] = ' ';
 			rv += print_subexpression (expr -> data.concat [1],
 						   buf + rv, len - rv - 1);
+			buf [rv++] = ')';
+			buf [rv] = 0;
+			return rv;
+		}
+		break;
+
+	      case expr_pick_first_value:
+		if (len > 11) {
+			rv = 9;
+			strcpy (buf, "(pick1st ");
+			rv += print_subexpression
+				(expr -> data.pick_first_value.car,
+				 buf + rv, len - rv - 2);
+			buf [rv++] = ' ';
+			rv += print_subexpression
+				(expr -> data.pick_first_value.cdr,
+				 buf + rv, len - rv - 1);
 			buf [rv++] = ')';
 			buf [rv] = 0;
 			return rv;
@@ -397,8 +418,14 @@ static int print_subexpression (expr, buf, len)
 		}
 		break;
 
+	      case expr_config_option:
+		s = "cfg-option";
+		break;
+
 	      case expr_option:
-		rv = 10 + (strlen (expr -> data.option -> name) +
+		s = "option";
+	      dooption:
+		rv = strlen (s) + 2 + (strlen (expr -> data.option -> name) +
 			   strlen (expr -> data.option -> universe -> name));
 		if (len > rv) {
 			sprintf (buf, "(option %s.%s)",
@@ -446,7 +473,8 @@ static int print_subexpression (expr, buf, len)
 		rv += expr -> data.encapsulate.len;
 		if (rv + 2 > len)
 			rv = len - 2;
-		strncpy (buf, (char *)expr -> data.encapsulate.data, rv - 13);
+		strncpy (buf,
+			 (const char *)expr -> data.encapsulate.data, rv - 13);
 		buf [rv++] = ')';
 		buf [rv++] = 0;
 		break;
@@ -487,6 +515,42 @@ static int print_subexpression (expr, buf, len)
 		}
 		break;
 
+	      case expr_encode_int8:
+		if (len > 7) {
+			rv = 6;
+			strcpy (buf, "(to-int8 ");
+			rv += print_subexpression (expr -> data.encode_int,
+						   buf + rv, len - rv - 1);
+			buf [rv++] = ')';
+			buf [rv] = 0;
+			return rv;
+		}
+		break;
+
+	      case expr_encode_int16:
+		if (len > 8) {
+			rv = 7;
+			strcpy (buf, "(to-int16 ");
+			rv += print_subexpression (expr -> data.encode_int,
+						   buf + rv, len - rv - 1);
+			buf [rv++] = ')';
+			buf [rv] = 0;
+			return rv;
+		}
+		break;
+
+	      case expr_encode_int32:
+		if (len > 8) {
+			rv = 7;
+			strcpy (buf, "(to-int32 ");
+			rv += print_subexpression (expr -> data.encode_int,
+						   buf + rv, len - rv - 1);
+			buf [rv++] = ')';
+			buf [rv] = 0;
+			return rv;
+		}
+		break;
+
 	      case expr_const_int:
 		s = print_dec_1 (expr -> data.const_int);
 		rv = strlen (s);
@@ -506,6 +570,111 @@ static int print_subexpression (expr, buf, len)
 			return rv;
 		}
 		break;
+
+	      case expr_known:
+		s = "known";
+	      astring:
+		rv = strlen (s);
+		if (len > rv) {
+			strcpy (buf, s);
+			return rv;
+		}
+		break;
+
+	      case expr_leased_address:
+		s = "leased-address";
+		goto astring;
+
+	      case expr_host_decl_name:
+		s = "host-decl-name";
+		goto astring;
+
+	      case expr_lease_time:
+		s = "lease-time";
+		goto astring;
+
+	      case expr_static:
+		s = "static";
+		goto astring;
+
+	      case expr_reverse:
+		if (len > 11) {
+			rv = 13;
+			strcpy (buf, "(reverse ");
+			rv += print_subexpression (expr -> data.reverse.width,
+						   buf + rv, len - rv - 2);
+			buf [rv++] = ' ';
+			rv += print_subexpression (expr -> data.reverse.buffer,
+						   buf + rv, len - rv - 1);
+			buf [rv++] = ')';
+			buf [rv] = 0;
+			return rv;
+		}
+		break;
+
+	      case expr_binary_to_ascii:
+		if (len > 5) {
+			rv = 9;
+			strcpy (buf, "(b2a ");
+			rv += print_subexpression (expr -> data.b2a.base,
+						   buf + rv, len - rv - 4);
+			buf [rv++] = ' ';
+			rv += print_subexpression (expr -> data.b2a.width,
+						   buf + rv, len - rv - 3);
+			buf [rv++] = ' ';
+			rv += print_subexpression (expr -> data.b2a.seperator,
+						   buf + rv, len - rv - 2);
+			buf [rv++] = ' ';
+			rv += print_subexpression (expr -> data.b2a.buffer,
+						   buf + rv, len - rv - 1);
+			buf [rv++] = ')';
+			buf [rv] = 0;
+			return rv;
+		}
+		break;
+
+	      case expr_dns_delete:
+		s = "dns-delete";
+	      case expr_dns_update:
+		s = "dns-update";
+	      dodnsupd:
+		if (len > 12) {
+			rv = 16;
+			buf [0] = '(';
+			strcpy (buf, s);
+			buf [13] = ' ';
+			rv += print_subexpression
+				(expr -> data.dns_update.type,
+				 buf + rv, len - rv - 4);
+			buf [rv++] = ' ';
+			rv += print_subexpression
+				(expr -> data.dns_update.expr1,
+				 buf + rv, len - rv - 3);
+			buf [rv++] = ' ';
+			rv += print_subexpression
+				(expr -> data.dns_update.expr2,
+				 buf + rv, len - rv - 2);
+			buf [rv++] = ' ';
+			rv += print_subexpression
+				(expr -> data.dns_update.ttl,
+				 buf + rv, len - rv - 1);
+			buf [rv++] = ')';
+			buf [rv] = 0;
+			return rv;
+		}
+		break;
+
+	      case expr_updated_dns_rr:
+		if (len > 12) {
+			rv = 13;
+			strcpy (buf, "(updated-rr ");
+			rv += print_subexpression (expr -> data.updated_dns_rr,
+						   buf + rv, len - rv - 1);
+			buf [rv++] = ')';
+			buf [rv] = 0;
+			return rv;
+		}
+		break;
 	}
 	return 0;
 }
@@ -520,12 +689,13 @@ void print_expression (name, expr)
 	log_info ("%s: %s", name, buf);
 }
 
-int token_print_indent_concat (FILE *file, int col,  int indent, char *prefix, 
-			       char *suffix, ...)
+int token_print_indent_concat (FILE *file, int col,  int indent,
+			       const char *prefix, 
+			       const char *suffix, ...)
 {
 	va_list list;
 	char *buf;
-	int len;
+	unsigned len;
 	char *s, *t, *u;
 
 	va_start (list, suffix);
@@ -558,7 +728,7 @@ int token_print_indent_concat (FILE *file, int col,  int indent, char *prefix,
 }
 
 int token_indent_data_string (FILE *file, int col, int indent,
-			      char *prefix, char *suffix,
+			      const char *prefix, const char *suffix,
 			      struct data_string *data)
 {
 	int i;
@@ -601,7 +771,8 @@ int token_indent_data_string (FILE *file, int col, int indent,
 }
 
 int token_print_indent (FILE *file, int col, int indent,
-			char *prefix, char *suffix, char *buf)
+			const char *prefix,
+			const char *suffix, const char *buf)
 {
 	int len = strlen (buf) + strlen (prefix);
 	if (col + len > 79 && indent + len < 79) {

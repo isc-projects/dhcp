@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: resolv.c,v 1.9 1999/10/01 03:42:12 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: resolv.c,v 1.10 1999/10/07 06:35:44 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -36,7 +36,7 @@ void read_resolv_conf (parse_time)
 {
 	int file;
 	struct parse *cfile;
-	char *val;
+	const char *val;
 	int token;
 	int declaration = 0;
 	struct name_server *sp, *sl, *ns;

@@ -32,7 +32,7 @@ struct signature_state {
 };
 
 struct auth_key {
-	int length;
+	unsigned length;
 	u_int8_t data [1];
 };
 

@@ -24,7 +24,7 @@
 
 omapi_message_object_t *omapi_registered_messages;
 
-isc_result_t omapi_message_new (omapi_object_t **o, char *name)
+isc_result_t omapi_message_new (omapi_object_t **o, const char *name)
 {
 	omapi_message_object_t *m;
 	omapi_object_t *g;
@@ -175,7 +175,7 @@ isc_result_t omapi_message_get_value (omapi_object_t *h,
 
 	/* Look for values that are in the message data structure. */
 	if (!omapi_ds_strcmp (name, "authlen"))
-		return omapi_make_int_value (value, name, m -> authlen,
+		return omapi_make_int_value (value, name, (int)m -> authlen,
 					     "omapi_message_get_value");
 	else if (!omapi_ds_strcmp (name, "authenticator")) {
 		if (m -> authenticator)
@@ -185,19 +185,19 @@ isc_result_t omapi_message_get_value (omapi_object_t *h,
 		else
 			return ISC_R_NOTFOUND;
 	} else if (!omapi_ds_strcmp (name, "authid")) {
-		return omapi_make_int_value (value, name, m -> authid,
+		return omapi_make_int_value (value, name, (int)m -> authid,
 					     "omapi_message_get_value");
 	} else if (!omapi_ds_strcmp (name, "op")) {
-		return omapi_make_int_value (value, name, m -> op,
+		return omapi_make_int_value (value, name, (int)m -> op,
 					     "omapi_message_get_value");
 	} else if (!omapi_ds_strcmp (name, "handle")) {
-		return omapi_make_int_value (value, name, m -> handle,
+		return omapi_make_int_value (value, name, (int)m -> handle,
 					     "omapi_message_get_value");
 	} else if (!omapi_ds_strcmp (name, "id")) {
-		return omapi_make_int_value (value, name, m -> id, 
+		return omapi_make_int_value (value, name, (int)m -> id, 
 					     "omapi_message_get_value");
 	} else if (!omapi_ds_strcmp (name, "rid")) {
-		return omapi_make_int_value (value, name, m -> rid,
+		return omapi_make_int_value (value, name, (int)m -> rid,
 					     "omapi_message_get_value");
 	}
 
@@ -208,7 +208,7 @@ isc_result_t omapi_message_get_value (omapi_object_t *h,
 	return ISC_R_NOTFOUND;
 }
 
-isc_result_t omapi_message_destroy (omapi_object_t *h, char *name)
+isc_result_t omapi_message_destroy (omapi_object_t *h, const char *name)
 {
 	int i;
 
@@ -234,7 +234,7 @@ isc_result_t omapi_message_destroy (omapi_object_t *h, char *name)
 }
 
 isc_result_t omapi_message_signal_handler (omapi_object_t *h,
-					   char *name, va_list ap)
+					   const char *name, va_list ap)
 {
 	omapi_message_object_t *m;
 	if (h -> type != omapi_type_message)

@@ -23,7 +23,7 @@
 
 #include <omapip/omapip.h>
 
-static char *text[ISC_R_NRESULTS] = {
+static const char *text[ISC_R_NRESULTS] = {
 	"success",				/*  0 */
 	"out of memory",			/*  1 */
 	"timed out",				/*  2 */
@@ -73,7 +73,7 @@ static char *text[ISC_R_NRESULTS] = {
 	"no key specified",			/* 46 */
 };
 
-char *isc_result_totext (isc_result_t result)
+const char *isc_result_totext (isc_result_t result)
 {
 	if (result >= ISC_R_SUCCESS && result < ISC_R_NRESULTS)
 		return text [result];

@@ -33,7 +33,7 @@
 
 dhcpctl_status dhcpctl_new_object (dhcpctl_handle *h,
 				   dhcpctl_handle connection,
-				   char *object_type)
+				   const char *object_type)
 {
 	dhcpctl_remote_object_t *m;
 	omapi_object_t *g;
@@ -215,7 +215,7 @@ isc_result_t dhcpctl_remote_get_value (omapi_object_t *h,
 }
 
 isc_result_t dhcpctl_remote_signal_handler (omapi_object_t *o,
-					    char *name, va_list ap)
+					    const char *name, va_list ap)
 {
 	dhcpctl_remote_object_t *p;
 	omapi_typed_data_t *tv;
@@ -249,7 +249,7 @@ isc_result_t dhcpctl_remote_signal_handler (omapi_object_t *o,
 	return ISC_R_SUCCESS;
 }
 
-isc_result_t dhcpctl_remote_destroy (omapi_object_t *h, char *name)
+isc_result_t dhcpctl_remote_destroy (omapi_object_t *h, const char *name)
 {
 	dhcpctl_remote_object_t *p;
 	if (h -> type != dhcpctl_remote_type)

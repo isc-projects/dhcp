@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: clparse.c,v 1.35 1999/10/01 03:42:31 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: clparse.c,v 1.36 1999/10/07 06:35:35 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -51,7 +51,7 @@ isc_result_t read_client_conf ()
 {
 	int file;
 	struct parse *cfile;
-	char *val;
+	const char *val;
 	int token;
 	int declaration = 0;
 	struct client_config *config;
@@ -140,7 +140,7 @@ void read_client_leases ()
 {
 	int file;
 	struct parse *cfile;
-	char *val;
+	const char *val;
 	int token;
 
 	/* Open the lease file.   If we can't open it, just return -
@@ -192,7 +192,7 @@ void parse_client_statement (cfile, ip, config)
 	struct client_config *config;
 {
 	int token;
-	char *val;
+	const char *val;
 	struct option *option;
 	struct executable_statement *stmt, **p;
 	enum statement_op op;
@@ -200,6 +200,7 @@ void parse_client_statement (cfile, ip, config)
 	char *name;
 	struct data_string key_id;
 	enum policy policy;
+	int known;
 
 	switch (peek_token (&val, cfile)) {
 	      case AUTH_KEY:
@@ -291,7 +292,8 @@ void parse_client_statement (cfile, ip, config)
 		op = supersede_option_statement;
 	      do_option:
 		token = next_token (&val, cfile);
-		option = parse_option_name (cfile, 0);
+		known = 0;
+		option = parse_option_name (cfile, 0, &known);
 		if (!option)
 			return;
 		stmt = (struct executable_statement *)0;
@@ -321,7 +323,7 @@ void parse_client_statement (cfile, ip, config)
 			return;
 		}
 
-		option = parse_option_name (cfile, 1);
+		option = parse_option_name (cfile, 1, &known);
 		if (!option)
 			return;
 
@@ -485,11 +487,11 @@ void parse_client_statement (cfile, ip, config)
 int parse_X (cfile, buf, max)
 	struct parse *cfile;
 	u_int8_t *buf;
-	int max;
+	unsigned max;
 {
 	int token;
-	char *val;
-	int len;
+	const char *val;
+	unsigned len;
 	u_int8_t *s;
 
 	token = peek_token (&val, cfile);
@@ -541,7 +543,7 @@ void parse_option_list (cfile, list)
 {
 	int ix, i;
 	int token;
-	char *val;
+	const char *val;
 	pair p = (pair)0, q, r;
 
 	ix = 0;
@@ -606,7 +608,7 @@ void parse_interface_declaration (cfile, outer_config, name)
 	char *name;
 {
 	int token;
-	char *val;
+	const char *val;
 	struct client_state *client, **cp;
 	struct interface_info *ip;
 
@@ -663,7 +665,7 @@ void parse_interface_declaration (cfile, outer_config, name)
 }
 
 struct interface_info *interface_or_dummy (name)
-	char *name;
+	const char *name;
 {
 	struct interface_info *ip;
 
@@ -738,7 +740,7 @@ void parse_client_lease_statement (cfile, is_static)
 	struct client_lease *lease, *lp, *pl;
 	struct interface_info *ip = (struct interface_info *)0;
 	int token;
-	char *val;
+	const char *val;
 	struct client_state *client = (struct client_state *)0;
 
 	token = next_token (&val, cfile);
@@ -865,7 +867,7 @@ void parse_client_lease_declaration (cfile, lease, ipp, clientp)
 	struct client_state **clientp;
 {
 	int token;
-	char *val;
+	const char *val;
 	char *t, *n;
 	struct interface_info *ip;
 	struct option_cache *oc;
@@ -970,20 +972,21 @@ int parse_option_decl (oc, cfile)
 	struct option_cache **oc;
 	struct parse *cfile;
 {
-	char *val;
+	const char *val;
 	int token;
 	u_int8_t buf [4];
 	u_int8_t hunkbuf [1024];
-	int hunkix = 0;
-	char *fmt;
+	unsigned hunkix = 0;
+	const char *fmt;
 	struct option *option;
 	struct iaddr ip_addr;
 	u_int8_t *dp;
-	int len;
+	unsigned len;
 	int nul_term = 0;
 	struct buffer *bp;
+	int known = 0;
 
-	option = parse_option_name (cfile, 0);
+	option = parse_option_name (cfile, 0, &known);
 	if (!option)
 		return 0;
 
@@ -1105,7 +1108,7 @@ int parse_option_decl (oc, cfile)
 				goto alloc;
 
 			      default:
-				log_error ("Bad format %c in parse_option_param.",
+				log_error ("parse_option_param: Bad format %c",
 				      *fmt);
 				skip_to_semi (cfile);
 				return 0;
@@ -1144,7 +1147,7 @@ void parse_string_list (cfile, lp, multiple)
 	int multiple;
 {
 	int token;
-	char *val;
+	const char *val;
 	struct string_list *cur, *tmp;
 
 	/* Find the last medium in the media list. */
@@ -1193,7 +1196,7 @@ void parse_reject_statement (cfile, config)
 	struct client_config *config;
 {
 	int token;
-	char *val;
+	const char *val;
 	struct iaddr addr;
 	struct iaddrlist *list;
 

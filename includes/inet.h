@@ -23,7 +23,7 @@
 /* An internet address of up to 128 bits. */
 
 struct iaddr {
-	int len;
+	unsigned len;
 	unsigned char iabuf [16];
 };
 

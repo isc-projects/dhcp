@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.113 1999/10/05 03:25:38 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.114 1999/10/07 06:36:31 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -351,7 +351,8 @@ void dhcpinform (packet)
 	unsigned char dhcpack = DHCPACK;
 	struct subnet *subnet;
 	struct iaddr cip;
-	int i, j, nulltp;
+	unsigned i, j;
+	int nulltp;
 	struct sockaddr_in to;
 	struct in_addr from;
 
@@ -536,9 +537,9 @@ void dhcpinform (packet)
 	if ((oc = lookup_option (&server_universe, options, i)) &&
 	    evaluate_option_cache (&d1, packet, (struct lease *)0,
 				   packet -> options, options, oc)) {
-		struct universe *u;
+		const struct universe *u;
 		
-		u = ((struct universe *)
+		u = ((const struct universe *)
 		     hash_lookup (&universe_hash, d1.data, d1.len));
 		if (!u) {
 			log_error ("unknown option space %s.", d1.data);
@@ -801,7 +802,8 @@ void ack_lease (packet, lease, offer, when, msg)
 	struct expression *expr;
 	int status;
 
-	int i, j, s1, s2;
+	unsigned i, j;
+	int s1, s2;
 	int val;
 
 	/* If we're already acking this lease, don't do it again. */
@@ -1257,14 +1259,16 @@ void ack_lease (packet, lease, offer, when, msg)
 			lt.uid_max = sizeof lt.uid_buf;
 			lt.uid_len = d1.len;
 		} else {
+			unsigned char *tuid;
 			lt.uid_max = d1.len;
 			lt.uid_len = d1.len;
-			lt.uid = (unsigned char *)dmalloc (lt.uid_max,
-							   "ack_lease");
+			tuid = (unsigned char *)dmalloc (lt.uid_max,
+							 "ack_lease");
 			/* XXX inelegant */
-			if (!lt.uid)
+			if (!tuid)
 				log_fatal ("no memory for large uid.");
-			memcpy (lt.uid, d1.data, lt.uid_len);
+			memcpy (tuid, d1.data, lt.uid_len);
+			lt.uid = tuid;
 		}
 		data_string_forget (&d1, "ack_lease");
 	}
@@ -1430,7 +1434,7 @@ void ack_lease (packet, lease, offer, when, msg)
 			state -> offered_expiry - cur_time;
 
 		putULong ((unsigned char *)&state -> expiry,
-			  offered_lease_time);
+			  (unsigned long)offered_lease_time);
 		i = DHO_DHCP_LEASE_TIME;
 		if (lookup_option (&dhcp_universe, state -> options, i))
 			log_error ("dhcp-lease-time option for %s overridden.",
@@ -1450,7 +1454,7 @@ void ack_lease (packet, lease, offer, when, msg)
 		/* Renewal time is lease time * 0.5. */
 		offered_lease_time /= 2;
 		putULong ((unsigned char *)&state -> renewal,
-			  offered_lease_time);
+			  (unsigned long)offered_lease_time);
 		i = DHO_DHCP_RENEWAL_TIME;
 		if (lookup_option (&dhcp_universe, state -> options, i))
 			log_error ("overriding dhcp-renewal-time for %s.",
@@ -1472,7 +1476,7 @@ void ack_lease (packet, lease, offer, when, msg)
 		offered_lease_time += (offered_lease_time / 2
 				       + offered_lease_time / 4);
 		putULong ((unsigned char *)&state -> rebind,
-			  offered_lease_time);
+			  (unsigned)offered_lease_time);
 		i = DHO_DHCP_REBINDING_TIME;
 		if (lookup_option (&dhcp_universe, state -> options, i))
 			log_error ("overriding dhcp-rebinding-time for %s.",
@@ -1643,9 +1647,9 @@ void ack_lease (packet, lease, offer, when, msg)
 	if ((oc = lookup_option (&server_universe, state -> options, i)) &&
 	    evaluate_option_cache (&d1, packet, lease,
 				   packet -> options, state -> options, oc)) {
-		struct universe *u;
+		const struct universe *u;
 		
-		u = ((struct universe *)
+		u = ((const struct universe *)
 		     hash_lookup (&universe_hash, d1.data, d1.len));
 		if (!u) {
 			log_error ("unknown option space %s.", d1.data);
@@ -1708,7 +1712,7 @@ void dhcp_reply (lease)
 	struct lease *lease;
 {
 	int bufs = 0;
-	int packet_length;
+	unsigned packet_length;
 	struct dhcp_packet raw;
 	struct sockaddr_in to;
 	struct in_addr from;
@@ -2407,7 +2411,7 @@ struct lease *mockup_lease (packet, share, hp)
 		return (struct lease *)0;
 	mock.next = mock.prev = (struct lease *)0;
 	mock.host = hp;
-	mock.uid = hp -> client_identifier.data;
+	(const char *)mock.uid = hp -> client_identifier.data;
 	mock.uid_len = hp -> client_identifier.len;
 	mock.hardware_addr = hp -> interface;
 	mock.starts = mock.timestamp = mock.ends = MIN_TIME;
@@ -2422,7 +2426,7 @@ struct lease *mockup_lease (packet, share, hp)
 
 void static_lease_dereference (lease, name)
 	struct lease *lease;
-	char *name;
+	const char *name;
 {
 	if (!(lease -> flags & STATIC_LEASE))
 		return;

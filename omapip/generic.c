@@ -22,7 +22,7 @@
 
 #include <omapip/omapip.h>
 
-isc_result_t omapi_generic_new (omapi_object_t **gen, char *name)
+isc_result_t omapi_generic_new (omapi_object_t **gen, const char *name)
 {
 	omapi_generic_object_t *obj;
 
@@ -173,7 +173,7 @@ isc_result_t omapi_generic_get_value (omapi_object_t *h,
 	return ISC_R_NOTFOUND;
 }
 
-isc_result_t omapi_generic_destroy (omapi_object_t *h, char *name)
+isc_result_t omapi_generic_destroy (omapi_object_t *h, const char *name)
 {
 	omapi_generic_object_t *g;
 	int i;
@@ -197,7 +197,7 @@ isc_result_t omapi_generic_destroy (omapi_object_t *h, char *name)
 }
 
 isc_result_t omapi_generic_signal_handler (omapi_object_t *h,
-					   char *name, va_list ap)
+					   const char *name, va_list ap)
 {
 	if (h -> type != omapi_type_generic)
 		return ISC_R_INVALIDARG;

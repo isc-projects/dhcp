@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bootp.c,v 1.54 1999/07/31 18:07:16 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bootp.c,v 1.55 1999/10/07 06:36:29 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -42,7 +42,7 @@ void bootp (packet)
 	struct subnet *subnet;
 	struct lease *lease;
 	struct iaddr ip_address;
-	int i;
+	unsigned i;
 	struct data_string d1;
 	struct option_cache *oc;
 	char msgbuf [1024];

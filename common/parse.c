@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.43 1999/10/06 01:00:00 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.44 1999/10/07 06:35:44 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -52,7 +52,7 @@ void skip_to_rbrace (cfile, brace_count)
 	int brace_count;
 {
 	enum dhcp_token token;
-	char *val;
+	const char *val;
 
 	do {
 		token = peek_token (&val, cfile);
@@ -83,7 +83,7 @@ int parse_semi (cfile)
 	struct parse *cfile;
 {
 	enum dhcp_token token;
-	char *val;
+	const char *val;
 
 	token = next_token (&val, cfile);
 	if (token != SEMI) {
@@ -99,7 +99,7 @@ int parse_semi (cfile)
 char *parse_string (cfile)
 	struct parse *cfile;
 {
-	char *val;
+	const char *val;
 	enum dhcp_token token;
 	char *s;
 
@@ -128,9 +128,9 @@ char *parse_string (cfile)
 char *parse_host_name (cfile)
 	struct parse *cfile;
 {
-	char *val;
+	const char *val;
 	enum dhcp_token token;
-	int len = 0;
+	unsigned len = 0;
 	char *s;
 	char *t;
 	pair c = (pair)0;
@@ -163,7 +163,7 @@ char *parse_host_name (cfile)
 	*--t = 0;
 	while (c) {
 		pair cdr = c -> cdr;
-		int l = strlen ((char *)(c -> car));
+		unsigned l = strlen ((char *)(c -> car));
 		t -= l;
 		memcpy (t, (char *)(c -> car), l);
 		/* Free up temp space. */
@@ -188,10 +188,10 @@ int parse_ip_addr_or_hostname (expr, cfile, uniform)
 	struct parse *cfile;
 	int uniform;
 {
-	char *val;
+	const char *val;
 	enum dhcp_token token;
 	unsigned char addr [4];
-	int len = sizeof addr;
+	unsigned len = sizeof addr;
 	char *name;
 	struct expression *x = (struct expression *)0;
 
@@ -234,7 +234,7 @@ int parse_ip_addr (cfile, addr)
 	struct parse *cfile;
 	struct iaddr *addr;
 {
-	char *val;
+	const char *val;
 	enum dhcp_token token;
 
 	addr -> len = 4;
@@ -253,7 +253,7 @@ void parse_hardware_param (cfile, hardware)
 	struct parse *cfile;
 	struct hardware *hardware;
 {
-	char *val;
+	const char *val;
 	enum dhcp_token token;
 	int hlen;
 	unsigned char *t;
@@ -313,7 +313,7 @@ void parse_lease_time (cfile, timep)
 	struct parse *cfile;
 	TIME *timep;
 {
-	char *val;
+	const char *val;
 	enum dhcp_token token;
 
 	token = next_token (&val, cfile);
@@ -340,15 +340,15 @@ unsigned char *parse_numeric_aggregate (cfile, buf,
 					max, seperator, base, size)
 	struct parse *cfile;
 	unsigned char *buf;
-	int *max;
+	unsigned *max;
 	int seperator;
 	int base;
-	int size;
+	unsigned size;
 {
-	char *val;
+	const char *val;
 	enum dhcp_token token;
 	unsigned char *bufp = buf, *s, *t;
-	int count = 0;
+	unsigned count = 0;
 	pair c = (pair)0;
 
 	if (!bufp && *max) {
@@ -425,11 +425,11 @@ unsigned char *parse_numeric_aggregate (cfile, buf,
 void convert_num (cfile, buf, str, base, size)
 	struct parse *cfile;
 	unsigned char *buf;
-	char *str;
+	const char *str;
 	int base;
-	int size;
+	unsigned size;
 {
-	char *ptr = str;
+	const char *ptr = str;
 	int negative = 0;
 	u_int32_t val = 0;
 	int tval;
@@ -509,10 +509,10 @@ void convert_num (cfile, buf, str, base, size)
 			*buf = -(unsigned long)val;
 			break;
 		      case 16:
-			putShort (buf, -(unsigned long)val);
+			putShort (buf, -(long)val);
 			break;
 		      case 32:
-			putLong (buf, -(unsigned long)val);
+			putLong (buf, -(long)val);
 			break;
 		      default:
 			parse_warn (cfile,
@@ -557,7 +557,7 @@ TIME parse_date (cfile)
 	struct tm tm;
 	int guess;
 	int tzoff, wday, year, mon, mday, hour, min, sec;
-	char *val;
+	const char *val;
 	enum dhcp_token token;
 	static int months [11] = { 31, 59, 90, 120, 151, 181,
 					  212, 243, 273, 304, 334 };
@@ -725,11 +725,12 @@ TIME parse_date (cfile)
  		   IDENTIFIER . IDENTIFIER
  */
 
-struct option *parse_option_name (cfile, allocate)
+struct option *parse_option_name (cfile, allocate, known)
 	struct parse *cfile;
 	int allocate;
+	int *known;
 {
-	char *val;
+	const char *val;
 	enum dhcp_token token;
 	char *uname;
 	struct universe *universe;
@@ -782,10 +783,12 @@ struct option *parse_option_name (cfile, allocate)
 
 	/* Look up the actual option info... */
 	option = (struct option *)hash_lookup (universe -> hash,
-					       (unsigned char *)val, 0);
+					       (const unsigned char *)val, 0);
 
 	/* If we didn't get an option structure, it's an undefined option. */
-	if (!option) {
+	if (option) {
+		*known = 1;
+	} else {
 		/* If we've been told to allocate, that means that this
 		   (might) be an option code definition, so we'll create
 		   an option structure just in case. */
@@ -794,16 +797,18 @@ struct option *parse_option_name (cfile, allocate)
 			if (val == uname)
 				option -> name = val;
 			else {
+				char *s;
 				free (uname);
-				option -> name = dmalloc (strlen (val) + 1,
-							  "parse_option_name");
-				if (!option -> name)
+				s = dmalloc (strlen (val) + 1,
+					     "parse_option_name");
+				if (!s)
 				    log_fatal ("no memory for option %s.%s",
 					       universe -> name, val);
-				strcpy (option -> name, val);
+				strcpy (s, val);
+				option -> name = s;
 			}
 			option -> universe = universe;
-			option -> code = -1;
+			option -> code = 0;
 			return option;
 		}
 		if (val == uname)
@@ -826,8 +831,9 @@ void parse_option_space_decl (cfile)
 	struct parse *cfile;
 {
 	int token;
-	char *val;
+	const char *val;
 	struct universe **ua, *nu;
+	char *s;
 
 	next_token (&val, cfile);	/* Discard the SPACE token, which was
 					   checked by the caller. */
@@ -842,10 +848,11 @@ void parse_option_space_decl (cfile)
 		log_fatal ("No memory for new option space.");
 
 	/* Set up the server option universe... */
-	nu -> name = dmalloc (strlen (val) + 1, "parse_option_space_decl");
-	if (!nu -> name)
+	s = dmalloc (strlen (val) + 1, "parse_option_space_decl");
+	if (!s)
 		log_fatal ("No memory for new option space name.");
-	strcpy (nu -> name, val);
+	strcpy (s, val);
+	nu -> name = s;
 	nu -> lookup_func = lookup_hashed_option;
 	nu -> option_state_dereference =
 		hashed_option_state_dereference;
@@ -874,7 +881,7 @@ void parse_option_space_decl (cfile)
 	if (!nu -> hash)
 		log_fatal ("Can't allocate %s option hash table.", nu -> name);
 	add_hash (&universe_hash,
-		  (unsigned char *)nu -> name, 0, (unsigned char *)nu);
+		  (const unsigned char *)nu -> name, 0, (unsigned char *)nu);
 	parse_semi (cfile);
 }
 
@@ -907,16 +914,17 @@ int parse_option_code_definition (cfile, option)
 	struct parse *cfile;
 	struct option *option;
 {
-	char *val;
+	const char *val;
 	enum dhcp_token token;
-	int arrayp = 0;
+	unsigned arrayp = 0;
 	int recordp = 0;
 	int no_more_in_record = 0;
 	char tokbuf [128];
-	int tokix = 0;
+	unsigned tokix = 0;
 	char type;
 	int code;
 	int is_signed;
+	char *s;
 	
 	/* Parse the option code. */
 	token = next_token (&val, cfile);
@@ -1071,21 +1079,22 @@ int parse_option_code_definition (cfile, option)
 			skip_to_semi (cfile);
 		return 0;
 	}
-	option -> format = dmalloc (tokix + arrayp + 1,
-				    "parse_option_code_definition");
-	if (!option -> format)
+	s = dmalloc (tokix + arrayp + 1, "parse_option_code_definition");
+	if (!s)
 		log_fatal ("no memory for option format.");
-	memcpy (option -> format, tokbuf, tokix);
+	memcpy (s, tokbuf, tokix);
 	if (arrayp)
-		option -> format [tokix++] = 'A';
-	option -> format [tokix] = 0;
+		s [tokix++] = 'A';
+	s [tokix] = 0;
+	option -> format = s;
 	if (option -> universe -> options [option -> code]) {
 		/* XXX Free the option, but we can't do that now because they
 		   XXX may start out static. */
 	}
 	option -> universe -> options [option -> code] = option;
 	add_hash (option -> universe -> hash,
-		  (unsigned char *)option -> name, 0, (unsigned char *)option);
+		  (const unsigned char *)option -> name,
+		  0, (unsigned char *)option);
 	return 1;
 }
 
@@ -1099,12 +1108,12 @@ int parse_cshl (data, cfile)
 	struct parse *cfile;
 {
 	u_int8_t ibuf [128];
-	int ilen = 0;
-	int tlen = 0;
+	unsigned ilen = 0;
+	unsigned tlen = 0;
 	struct option_tag *sl = (struct option_tag *)0;
 	struct option_tag *next, **last = &sl;
 	enum dhcp_token token;
-	char *val;
+	const char *val;
 	unsigned char *rvp;
 
 	do {
@@ -1145,7 +1154,7 @@ int parse_cshl (data, cfile)
 	data -> len = tlen + ilen;
 	data -> terminated = 0;
 
-	rvp = &data -> data [0];
+	rvp = &data -> buffer -> data [0];
 	while (sl) {
 		next = sl -> next;
 		memcpy (rvp, sl -> data, sizeof ibuf);
@@ -1193,11 +1202,12 @@ int parse_executable_statement (result, cfile, lose)
 	int *lose;
 {
 	enum dhcp_token token;
-	char *val;
+	const char *val;
 	struct executable_statement base;
 	struct class *cta;
 	struct option *option;
 	struct option_cache *cache;
+	int known;
 
 	token = peek_token (&val, cfile);
 	switch (token) {
@@ -1253,7 +1263,8 @@ int parse_executable_statement (result, cfile, lose)
 	      case SUPERSEDE:
 	      case OPTION:
 		token = next_token (&val, cfile);
-		option = parse_option_name (cfile, 0);
+		known = 0;
+		option = parse_option_name (cfile, 0, &known);
 		if (!option) {
 			*lose = 1;
 			return 0;
@@ -1277,7 +1288,8 @@ int parse_executable_statement (result, cfile, lose)
 
 	      case DEFAULT:
 		token = next_token (&val, cfile);
-		option = parse_option_name (cfile, 0);
+		known = 0;
+		option = parse_option_name (cfile, 0, &known);
 		if (!option) {
 			*lose = 1;
 			return 0;
@@ -1287,7 +1299,8 @@ int parse_executable_statement (result, cfile, lose)
 
 	      case PREPEND:
 		token = next_token (&val, cfile);
-		option = parse_option_name (cfile, 0);
+		known = 0;
+		option = parse_option_name (cfile, 0, &known);
 		if (!option) {
 			*lose = 1;
 			return 0;
@@ -1297,7 +1310,8 @@ int parse_executable_statement (result, cfile, lose)
 
 	      case APPEND:
 		token = next_token (&val, cfile);
-		option = parse_option_name (cfile, 0);
+		known = 0;
+		option = parse_option_name (cfile, 0, &known);
 		if (!option) {
 			*lose = 1;
 			return 0;
@@ -1330,7 +1344,7 @@ int parse_on_statement (result, cfile, lose)
 	int *lose;
 {
 	enum dhcp_token token;
-	char *val;
+	const char *val;
 
 	if (!executable_statement_allocate (result,
 					    "parse_executable_statement"))
@@ -1409,7 +1423,7 @@ int parse_if_statement (result, cfile, lose)
 	int *lose;
 {
 	enum dhcp_token token;
-	char *val;
+	const char *val;
 
 	if (!executable_statement_allocate (result, "parse_if_statement"))
 		log_fatal ("no memory for if statement.");
@@ -1606,10 +1620,11 @@ int parse_non_binary (expr, cfile, lose, context)
 	enum expression_context context;
 {
 	enum dhcp_token token;
-	char *val;
+	const char *val;
 	struct collection *col;
 	struct option *option;
 	struct expression *nexp;
+	int known;
 
 	token = peek_token (&val, cfile);
 
@@ -1660,7 +1675,8 @@ int parse_non_binary (expr, cfile, lose, context)
 		if (!expression_allocate (expr, "parse_expression: EXISTS"))
 			log_fatal ("can't allocate expression");
 		(*expr) -> op = expr_exists;
-		(*expr) -> data.option = parse_option_name (cfile, 0);
+		known = 0;
+		(*expr) -> data.option = parse_option_name (cfile, 0, &known);
 		if (!(*expr) -> data.option) {
 			*lose = 1;
 			expression_dereference (expr,
@@ -2043,7 +2059,8 @@ int parse_non_binary (expr, cfile, lose, context)
 				 ? expr_option
 				 : expr_config_option);
 		token = next_token (&val, cfile);
-		(*expr) -> data.option = parse_option_name (cfile, 0);
+		known = 0;
+		(*expr) -> data.option = parse_option_name (cfile, 0, &known);
 		if (!(*expr) -> data.option) {
 			*lose = 1;
 			expression_dereference (expr,
@@ -2132,7 +2149,7 @@ int parse_non_binary (expr, cfile, lose, context)
 		
 	      case STRING:
 		token = next_token (&val, cfile);
-		if (!make_const_data (expr, (unsigned char *)val,
+		if (!make_const_data (expr, (const unsigned char *)val,
 				      strlen (val), 1, 1))
 			log_fatal ("can't make constant string expression.");
 		break;
@@ -2315,7 +2332,7 @@ int parse_expression (expr, cfile, lose, context, plhs, binop)
 	enum expr_op binop;
 {
 	enum dhcp_token token;
-	char *val;
+	const char *val;
 	struct expression *rhs = (struct expression *)0, *tmp;
 	struct expression *lhs;
 	enum expr_op next_op;
@@ -2462,9 +2479,9 @@ int parse_option_statement (result, cfile, lookups, option, op)
 	struct option *option;
 	enum statement_op op;
 {
-	char *val;
+	const char *val;
 	enum dhcp_token token;
-	char *fmt;
+	const char *fmt;
 	struct expression *expr = (struct expression *)0;
 	struct expression *tmp;
 	int lose;
@@ -2547,12 +2564,12 @@ int parse_option_statement (result, cfile, lookups, option, op)
 int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 	struct expression **rv;
 	struct parse *cfile;
-	char *fmt;
+	const char *fmt;
 	struct expression *expr;
 	int uniform;
 	int lookups;
 {
-	char *val;
+	const char *val;
 	enum dhcp_token token;
 	struct expression *t = (struct expression *)0;
 	unsigned char buf [4];
@@ -2568,7 +2585,7 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 			skip_to_semi (cfile);
 			return 0;
 		}
-		if (!make_const_data (&t, (unsigned char *)val,
+		if (!make_const_data (&t, (const unsigned char *)val,
 				      strlen (val), 1, 1))
 			log_fatal ("No memory for %s", val);
 		break;
@@ -2583,7 +2600,7 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 			t -> op = expr_const_data;
 		} else if (token == STRING) {
 			token = next_token (&val, cfile);
-			if (!make_const_data (&t, (unsigned char *)val,
+			if (!make_const_data (&t, (const unsigned char *)val,
 					      strlen (val), 1, 1))
 				log_fatal ("No memory for \"%s\"", val);
 		} else {
@@ -2602,7 +2619,7 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 				skip_to_semi (cfile);
 			return 0;
 		}
-		if (!make_const_data (&t, (unsigned char *)val,
+		if (!make_const_data (&t, (const unsigned char *)val,
 				      strlen (val), 1, 1))
 			log_fatal ("No memory for concatenation");
 		break;
@@ -2703,7 +2720,7 @@ int parse_allow_deny (oc, cfile, flag)
 	int flag;
 {
 	enum dhcp_token token;
-	char *val;
+	const char *val;
 	unsigned char rf = flag;
 	struct expression *data = (struct expression *)0;
 	int status;
@@ -2748,9 +2765,10 @@ int parse_auth_key (key_id, cfile)
 	struct parse *cfile;
 {
 	struct data_string key_data;
-	char *val;
+	const char *val;
 	enum dhcp_token token;
-	struct auth_key *key, *old_key = (struct auth_key *)0;
+	const struct auth_key *key, *old_key = (struct auth_key *)0;
+	struct auth_key *new_key;
 
 	memset (&key_data, 0, sizeof key_data);
 
@@ -2777,15 +2795,15 @@ int parse_auth_key (key_id, cfile)
 						 key_id -> len));
 			old_key = key;
 		}
-		key = new_auth_key (key_data.len, "parse_auth_key");
-		if (!key)
+		new_key = new_auth_key (key_data.len, "parse_auth_key");
+		if (!new_key)
 			log_fatal ("No memory for key %s",
 				   print_hex_1 (key_id -> len,
 						key_id -> data,
 						key_id -> len));
-		key -> length = key_data.len;
-		memcpy (key -> data, key_data.data, key_data.len);
-		enter_auth_key (key_id, key);
+		new_key -> length = key_data.len;
+		memcpy (new_key -> data, key_data.data, key_data.len);
+		enter_auth_key (key_id, new_key);
 		data_string_forget (&key_data, "parse_auth_key");
 	}
 

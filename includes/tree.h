@@ -50,8 +50,8 @@ struct buffer {
 /* A string of data bytes, possibly accompanied by a larger buffer. */
 struct data_string {
 	struct buffer *buffer;
-	unsigned char *data;
-	int len;	/* Does not include NUL terminator, if any. */
+	const unsigned char *data;
+	unsigned len;	/* Does not include NUL terminator, if any. */
 	int terminated;
 };
 
@@ -169,16 +169,16 @@ struct decoded_option_state; /* forward */
 struct lease; /* forward */
 
 struct universe {
-	char *name;
+	const char *name;
 	struct option_cache *(*lookup_func) PROTO ((struct universe *,
 						    struct option_state *,
-						    int));
+						    unsigned));
 	void (*save_func) PROTO ((struct universe *, struct option_state *,
 				  struct option_cache *));
 	int (*get_func) PROTO ((struct data_string *, struct universe *,
 				struct packet *, struct lease *,
 				struct option_state *, struct option_state *,
-				struct option_state *, int));
+				struct option_state *, unsigned));
 	void (*set_func) PROTO ((struct universe *, struct option_state *,
 				 struct option_cache *, enum statement_op));
 		
@@ -198,10 +198,10 @@ struct universe {
 };
 
 struct option {
-	char *name;
-	char *format;
+	const char *name;
+	const char *format;
 	struct universe *universe;
-	int code;
+	unsigned code;
 };
 
 enum expression_context {

@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: discover.c,v 1.14 1999/09/15 19:47:27 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: discover.c,v 1.15 1999/10/07 06:35:41 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -33,7 +33,8 @@ extern int interfaces_invalidated;
 int quiet_interface_discovery;
 
 void (*bootp_packet_handler) PROTO ((struct interface_info *,
-				     struct dhcp_packet *, int, unsigned int,
+				     struct dhcp_packet *, unsigned,
+				     unsigned int,
 				     struct iaddr, struct hardware *));
 
 omapi_object_type_t *dhcp_type_interface;
@@ -196,10 +197,10 @@ void discover_interfaces (state)
 			   which we found it. */
 			if (!tmp -> ifp) {
 #ifdef HAVE_SA_LEN
-				int len = ((sizeof ifp -> ifr_name) +
-					   ifp -> ifr_addr.sa_len);
+				unsigned len = ((sizeof ifp -> ifr_name) +
+						ifp -> ifr_addr.sa_len);
 #else
-				int len = sizeof *ifp;
+				unsigned len = sizeof *ifp;
 #endif
 				tif = (struct ifreq *)malloc (len);
 				if (!tif)
@@ -576,7 +577,7 @@ isc_result_t got_one (h)
 		ifrom.len = 4;
 		memcpy (ifrom.iabuf, &from.sin_addr, ifrom.len);
 
-		(*bootp_packet_handler) (ip, &u.packet, result,
+		(*bootp_packet_handler) (ip, &u.packet, (unsigned)result,
 					 from.sin_port, ifrom, &hfrom);
 	}
 	return ISC_R_SUCCESS;
@@ -623,7 +624,7 @@ isc_result_t interface_stuff_values (omapi_object_t *c,
 	return ISC_R_NOTFOUND;
 }
 
-isc_result_t interface_destroy (omapi_object_t *h, char *name)
+isc_result_t interface_destroy (omapi_object_t *h, const char *name)
 {
 	int i;
 
@@ -637,7 +638,7 @@ isc_result_t interface_destroy (omapi_object_t *h, char *name)
 }
 
 isc_result_t interface_signal_handler (omapi_object_t *h,
-				       char *name, va_list ap)
+				       const char *name, va_list ap)
 {
 	if (h -> type != dhcp_type_interface)
 		return ISC_R_INVALIDARG;

@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.74 1999/10/01 03:26:01 mellon Exp $ Copyright 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.75 1999/10/07 06:36:32 mellon Exp $ Copyright 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.";
 #endif
 
   static char copyright[] =
@@ -55,9 +55,9 @@ int log_perror = -1;
 int log_perror = 1;
 #endif
 
-char *path_dhcpd_conf = _PATH_DHCPD_CONF;
-char *path_dhcpd_db = _PATH_DHCPD_DB;
-char *path_dhcpd_pid = _PATH_DHCPD_PID;
+const char *path_dhcpd_conf = _PATH_DHCPD_CONF;
+const char *path_dhcpd_db = _PATH_DHCPD_DB;
+const char *path_dhcpd_pid = _PATH_DHCPD_PID;
 
 int dhcp_max_agent_option_packet_length = DHCP_MTU_MAX;
 
@@ -80,7 +80,7 @@ int main (argc, argv, envp)
 	char *server = (char *)0;
 	isc_result_t result;
 	omapi_object_t *listener;
-	int seed;
+	unsigned seed;
 	struct interface_info *ip;
 
 	/* Initially, log errors to stderr as well as to syslogd. */
@@ -224,10 +224,10 @@ int main (argc, argv, envp)
 	classification_setup ();
 
 	/* Initialize the omapi system. */
-	status = omapi_init ();
+	result = omapi_init ();
 	if (status != ISC_R_SUCCESS)
 		log_fatal ("Can't initialize OMAPI: %s\n",
-			   isc_result_totext (status));
+			   isc_result_totext (result));
 
 	/* Set up the OMAPI wrappers for various server database internal
 	   objects. */
@@ -270,15 +270,15 @@ int main (argc, argv, envp)
 
 	/* Start up a listener for the object management API protocol. */
 	listener = (omapi_object_t *)0;
-	status = omapi_generic_new (&listener, "main");
-	if (status != ISC_R_SUCCESS)
+	result = omapi_generic_new (&listener, "main");
+	if (result != ISC_R_SUCCESS)
 		log_fatal ("Can't allocate new generic object: %s\n",
-			   isc_result_totext (status));
-	status = omapi_protocol_listen (listener,
+			   isc_result_totext (result));
+	result = omapi_protocol_listen (listener,
 					OMAPI_PROTOCOL_PORT, 1);
-	if (status != ISC_R_SUCCESS)
+	if (result != ISC_R_SUCCESS)
 		log_fatal ("Can't start OMAPI protocol: %s",
-			   isc_result_totext (status));
+			   isc_result_totext (result));
 
 #ifndef DEBUG
 	if (daemon) {

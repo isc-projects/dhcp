@@ -95,7 +95,7 @@ isc_result_t dhcpctl_callback_get_value (omapi_object_t *h,
 }
 
 isc_result_t dhcpctl_callback_signal_handler (omapi_object_t *o,
-					      char *name, va_list ap)
+					      const char *name, va_list ap)
 {
 	dhcpctl_callback_object_t *p;
 	isc_result_t waitstatus;
@@ -125,7 +125,7 @@ isc_result_t dhcpctl_callback_signal_handler (omapi_object_t *o,
 	return ISC_R_SUCCESS;
 }
 
-isc_result_t dhcpctl_callback_destroy (omapi_object_t *h, char *name)
+isc_result_t dhcpctl_callback_destroy (omapi_object_t *h, const char *name)
 {
 	dhcpctl_callback_object_t *p;
 	if (h -> type != dhcpctl_callback_type)

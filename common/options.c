@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.45 1999/07/31 18:03:54 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.46 1999/10/07 06:35:43 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -88,7 +88,7 @@ int parse_options (packet)
 int parse_option_buffer (packet, buffer, length)
 	struct packet *packet;
 	unsigned char *buffer;
-	int length;
+	unsigned length;
 {
 	unsigned char *t;
 	unsigned char *end = buffer + length;
@@ -206,7 +206,7 @@ int parse_agent_information_option (packet, len, data)
 		ott = &t -> next;
 		
 		/* Copy the option data in in its raw form. */
-		memcpy (t -> data, op, op [1] + 2);
+		memcpy (t -> data, op, (unsigned)(op [1] + 2));
 		op += op [1] + 2;
 	}
 
@@ -250,10 +250,10 @@ int cons_options (inpacket, outpacket, lease, mms, in_options, cfg_options,
 	int priority_list [PRIORITY_COUNT];
 	int priority_len;
 	unsigned char buffer [4096];	/* Really big buffer... */
-	int main_buffer_size;
-	int mainbufix, bufix, agentix;
-	int option_size;
-	int length;
+	unsigned main_buffer_size;
+	unsigned mainbufix, bufix, agentix;
+	unsigned option_size;
+	unsigned length;
 	int i;
 	struct option_cache *op;
 	struct data_string ds;
@@ -458,7 +458,8 @@ int cons_options (inpacket, outpacket, lease, mms, in_options, cfg_options,
 			    outpacket -> options [agentix++] = a -> length;
 			    for (o = a -> first; o; o = o -> next) {
 				    memcpy (&outpacket -> options [agentix],
-					    o -> data, o -> data [1] + 2);
+					    o -> data,
+					    (unsigned)(o -> data [1] + 2));
 				    agentix += o -> data [1] + 2;
 			    }
 		    }
@@ -481,14 +482,14 @@ int store_options (buffer, buflen, packet, lease,
 		   in_options, cfg_options, priority_list,
 		   priority_len, first_cutoff, second_cutoff, terminate)
 	unsigned char *buffer;
-	int buflen;
+	unsigned buflen;
 	struct packet *packet;
 	struct lease *lease;
 	struct option_state *in_options;
 	struct option_state *cfg_options;
-	int *priority_list;
+	unsigned *priority_list;
 	int priority_len;
-	int first_cutoff, second_cutoff;
+	unsigned first_cutoff, second_cutoff;
 	int terminate;
 {
 	int bufix = 0;
@@ -521,7 +522,7 @@ int store_options (buffer, buflen, packet, lease,
 	   priority list... */
 	for (i = 0; i < priority_len; i++) {
 		/* Code for next option to try to store. */
-		int code = priority_list [i];
+		unsigned code = priority_list [i];
 		int optstart;
 
 		/* Number of bytes left to store (some may already
@@ -595,11 +596,11 @@ int store_options (buffer, buflen, packet, lease,
 			buffer [bufix + 1] = incr;
 			if (tto && incr == length) {
 				memcpy (buffer + bufix + 2,
-					od.data + ix, incr - 1);
+					od.data + ix, (unsigned)(incr - 1));
 				buffer [bufix + 2 + incr - 1] = 0;
 			} else {
 				memcpy (buffer + bufix + 2,
-					od.data + ix, incr);
+					od.data + ix, (unsigned)incr);
 			}
 			length -= incr;
 			ix += incr;
@@ -612,10 +613,10 @@ int store_options (buffer, buflen, packet, lease,
 
 /* Format the specified option so that a human can easily read it. */
 
-char *pretty_print_option (code, data, len, emit_commas, emit_quotes)
+const char *pretty_print_option (code, data, len, emit_commas, emit_quotes)
 	unsigned int code;
-	unsigned char *data;
-	int len;
+	const unsigned char *data;
+	unsigned len;
 	int emit_commas;
 	int emit_quotes;
 {
@@ -626,7 +627,7 @@ char *pretty_print_option (code, data, len, emit_commas, emit_quotes)
 	char fmtbuf [32];
 	int i, j, k;
 	char *op = optbuf;
-	unsigned char *dp = data;
+	const unsigned char *dp = data;
 	struct in_addr foo;
 	char comma;
 
@@ -734,8 +735,8 @@ char *pretty_print_option (code, data, len, emit_commas, emit_quotes)
 			      case 't':
 				if (emit_quotes)
 					*op++ = '"';
-				strcpy (op, (char *)dp);
-				op += strlen ((char *)dp);
+				strcpy (op, (const char *)dp);
+				op += strlen ((const char *)dp);
 				if (emit_quotes)
 					*op++ = '"';
 				*op = 0;
@@ -763,7 +764,7 @@ char *pretty_print_option (code, data, len, emit_commas, emit_quotes)
 				dp += 2;
 				break;
 			      case 'b':
-				sprintf (op, "%d", *(char *)dp++);
+				sprintf (op, "%d", *(const char *)dp++);
 				break;
 			      case 'B':
 				sprintf (op, "%d", *dp++);
@@ -799,7 +800,7 @@ int hashed_option_get (result, universe, packet, lease,
 	struct option_state *in_options;
 	struct option_state *cfg_options;
 	struct option_state *options;
-	int code;
+	unsigned code;
 {
 	struct option_cache *oc;
 
@@ -823,7 +824,7 @@ int agent_option_get (result, universe, packet, lease,
 	struct option_state *in_options;
 	struct option_state *cfg_options;
 	struct option_state *options;
-	int code;
+	unsigned code;
 {
 	struct agent_options *ao;
 	struct option_tag *t;
@@ -851,9 +852,9 @@ int agent_option_get (result, universe, packet, lease,
 					return 0;
 				}
 				result -> data = &result -> buffer -> data [0];
-				memcpy (result -> data,
+				memcpy (result -> buffer -> data,
 					&t -> data [2], result -> len);
-				result -> data [result -> len] = 0;
+				result -> buffer -> data [result -> len] = 0;
 				result -> terminated = 1;
 				return 1;
 			}
@@ -943,7 +944,7 @@ void hashed_option_set (universe, options, option, op)
 struct option_cache *lookup_option (universe, options, code)
 	struct universe *universe;
 	struct option_state *options;
-	int code;
+	unsigned code;
 {
 	if (universe -> lookup_func)
 		return (*universe -> lookup_func) (universe, options, code);
@@ -956,7 +957,7 @@ struct option_cache *lookup_option (universe, options, code)
 struct option_cache *lookup_hashed_option (universe, options, code)
 	struct universe *universe;
 	struct option_state *options;
-	int code;
+	unsigned code;
 {
 	int hashix;
 	pair bptr;
@@ -1100,7 +1101,7 @@ extern struct option_cache *free_option_caches; /* XXX */
 
 int option_cache_dereference (ptr, name)
 	struct option_cache **ptr;
-	char *name;
+	const char *name;
 {
 	if (!ptr || !*ptr) {
 		log_error ("Null pointer in option_cache_dereference: %s",
@@ -1211,14 +1212,16 @@ int store_option (result, universe, packet, lease, in_options, cfg_options, oc)
 		}
 		d1.data = &d1.buffer -> data [0];
 		if (result -> len)
-			memcpy (d1.data, result -> data, result -> len);
+			memcpy (d1.buffer -> data,
+				result -> data, result -> len);
 		d1.len = result -> len;
-		(*universe -> store_tag) (&d1.data [d1.len],
+		(*universe -> store_tag) (&d1.buffer -> data [d1.len],
 					  oc -> option -> code);
 		d1.len += universe -> tag_size;
-		(*universe -> store_length) (&d1.data [d1.len], d2.len);
+		(*universe -> store_length) (&d1.buffer -> data [d1.len],
+					     d2.len);
 		d1.len += universe -> length_size;
-		memcpy (&d1.data [d1.len], d2.data, d2.len);
+		memcpy (&d1.buffer -> data [d1.len], d2.data, d2.len);
 		d1.len += d2.len;
 		data_string_forget (&d2, "store_option");
 		data_string_forget (result, "store_option");
@@ -1291,7 +1294,7 @@ int hashed_option_space_encapsulate (result, packet, lease,
 void do_packet (interface, packet, len, from_port, from, hfrom)
 	struct interface_info *interface;
 	struct dhcp_packet *packet;
-	int len;
+	unsigned len;
 	unsigned int from_port;
 	struct iaddr from;
 	struct hardware *hfrom;

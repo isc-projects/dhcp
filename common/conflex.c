@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: conflex.c,v 1.58 1999/10/06 00:59:59 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: conflex.c,v 1.59 1999/10/07 06:35:40 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -40,8 +40,8 @@ isc_result_t new_parse (cfile, file, inbuf, buflen, name)
 	struct parse **cfile;
 	int file;
 	char *inbuf;
-	int buflen;
-	char *name;
+	unsigned buflen;
+	const char *name;
 {
 	struct parse *tmp;
 
@@ -201,7 +201,7 @@ static enum dhcp_token get_token (cfile)
 }
 
 enum dhcp_token next_token (rval, cfile)
-	char **rval;
+	const char **rval;
 	struct parse *cfile;
 {
 	int rv;
@@ -226,7 +226,7 @@ enum dhcp_token next_token (rval, cfile)
 }
 
 enum dhcp_token peek_token (rval, cfile)
-	char **rval;
+	const char **rval;
 	struct parse *cfile;
 {
 	int x;

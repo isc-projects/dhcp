@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tables.c,v 1.28 1999/07/01 19:00:13 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tables.c,v 1.29 1999/10/07 06:35:45 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -305,7 +305,7 @@ struct option dhcp_options [256] = {
 	{ "option-end", "e",				&dhcp_universe, 255 },
 };
 
-char *hardware_types [] = {
+const char *hardware_types [] = {
 	"unknown-0",
 	"ethernet",
 	"unknown-2",
@@ -1121,7 +1121,7 @@ void initialize_universes()
 	for (i = 0; i < 256; i++) {
 		dhcp_universe.options [i] = &dhcp_options [i];
 		add_hash (dhcp_universe.hash,
-			  (unsigned char *)dhcp_options [i].name, 0,
+			  (const unsigned char *)dhcp_options [i].name, 0,
 			  (unsigned char *)&dhcp_options [i]);
 	}
 
@@ -1142,7 +1142,7 @@ void initialize_universes()
 	for (i = 0; i < 256; i++) {
 		agent_universe.options [i] = &agent_options [i];
 		add_hash (agent_universe.hash,
-			  (unsigned char *)agent_options [i].name, 0,
+			  (const unsigned char *)agent_options [i].name, 0,
 			  (unsigned char *)&agent_options [i]);
 	}
 
@@ -1168,16 +1168,19 @@ void initialize_universes()
 	for (i = 0; i < 256; i++) {
 		server_universe.options [i] = &server_options [i];
 		add_hash (server_universe.hash,
-			  (unsigned char *)server_options [i].name, 0,
+			  (const unsigned char *)server_options [i].name, 0,
 			  (unsigned char *)&server_options [i]);
 	}
 
 	/* Set up the hash of universes. */
 	universe_hash.hash_count = DEFAULT_HASH_SIZE;	
-	add_hash (&universe_hash, (unsigned char *)dhcp_universe.name, 0,
+	add_hash (&universe_hash,
+		  (const unsigned char *)dhcp_universe.name, 0,
 		  (unsigned char *)&dhcp_universe);
-	add_hash (&universe_hash, (unsigned char *)agent_universe.name, 0,
+	add_hash (&universe_hash,
+		  (const unsigned char *)agent_universe.name, 0,
 		  (unsigned char *)&agent_universe);
-	add_hash (&universe_hash, (unsigned char *)server_universe.name, 0,
+	add_hash (&universe_hash,
+		  (const unsigned char *)server_universe.name, 0,
 		  (unsigned char *)&server_universe);
 }

@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: packet.c,v 1.28 1999/06/10 00:11:20 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: packet.c,v 1.29 1999/10/07 06:35:43 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -37,17 +37,17 @@ static char copyright[] =
 
 u_int32_t checksum (buf, nbytes, sum)
 	unsigned char *buf;
-	int nbytes;
+	unsigned nbytes;
 	u_int32_t sum;
 {
-	int i;
+	unsigned i;
 
 #ifdef DEBUG_CHECKSUM
 	log_debug ("checksum (%x %d %x)", buf, nbytes, sum);
 #endif
 
 	/* Checksum all the pairs of bytes first... */
-	for (i = 0; i < (nbytes & ~1); i += 2) {
+	for (i = 0; i < (nbytes & ~1U); i += 2) {
 #ifdef DEBUG_CHECKSUM_VERBOSE
 		log_debug ("sum = %x", sum);
 #endif
@@ -96,7 +96,7 @@ u_int32_t wrapsum (sum)
 void assemble_hw_header (interface, buf, bufix, to)
 	struct interface_info *interface;
 	unsigned char *buf;
-	int *bufix;
+	unsigned *bufix;
 	struct hardware *to;
 {
 #if defined (HAVE_TR_SUPPORT)
@@ -114,12 +114,12 @@ void assemble_udp_ip_header (interface, buf, bufix,
 			     from, to, port, data, len)
 	struct interface_info *interface;
 	unsigned char *buf;
-	int *bufix;
+	unsigned *bufix;
 	u_int32_t from;
 	u_int32_t to;
 	u_int32_t port;
 	unsigned char *data;
-	int len;
+	unsigned len;
 {
 	struct ip ip;
 	struct udphdr udp;
@@ -176,7 +176,7 @@ void assemble_udp_ip_header (interface, buf, bufix,
 ssize_t decode_hw_header (interface, buf, bufix, from)
      struct interface_info *interface;
      unsigned char *buf;
-     int bufix;
+     unsigned bufix;
      struct hardware *from;
 {
 #if defined (HAVE_TR_SUPPORT)
@@ -192,10 +192,10 @@ ssize_t decode_hw_header (interface, buf, bufix, from)
 ssize_t decode_udp_ip_header (interface, buf, bufix, from, data, buflen)
 	struct interface_info *interface;
 	unsigned char *buf;
-	int bufix;
+	unsigned bufix;
 	struct sockaddr_in *from;
 	unsigned char *data;
-	int buflen;
+	unsigned buflen;
 {
   struct ip *ip;
   struct udphdr *udp;
@@ -207,7 +207,7 @@ ssize_t decode_udp_ip_header (interface, buf, bufix, from, data, buflen)
   static int udp_packets_bad_checksum;
   static int udp_packets_length_checked;
   static int udp_packets_length_overflow;
-  int len;
+  unsigned len;
 
   ip = (struct ip *)(buf + bufix);
   udp = (struct udphdr *)(buf + bufix + ip_len);

@@ -29,9 +29,10 @@ isc_result_t omapi_connection_reader (omapi_object_t *h)
 {
 	omapi_buffer_t *buffer;
 	isc_result_t status;
-	int read_len, read_status;
+	unsigned read_len;
+	int read_status;
 	omapi_connection_object_t *c;
-	int bytes_to_read;
+	unsigned bytes_to_read;
 
 	if (!h || h -> type != omapi_type_connection)
 		return ISC_R_INVALIDARG;
@@ -110,13 +111,13 @@ isc_result_t omapi_connection_reader (omapi_object_t *h)
 /* Put some bytes into the output buffer for a connection. */
 
 isc_result_t omapi_connection_copyin (omapi_object_t *h,
-				      unsigned char *bufp,
-				      int len)
+				      const unsigned char *bufp,
+				      unsigned len)
 {
 	omapi_buffer_t *buffer;
 	isc_result_t status;
 	int bytes_copied = 0;
-	int copy_len;
+	unsigned copy_len;
 	omapi_connection_object_t *c;
 
 	/* Make sure len is valid. */
@@ -173,10 +174,10 @@ isc_result_t omapi_connection_copyin (omapi_object_t *h,
 
 isc_result_t omapi_connection_copyout (unsigned char *buf,
 				       omapi_object_t *h,
-				       int size)
+				       unsigned size)
 {
-	int bytes_remaining;
-	int bytes_this_copy;
+	unsigned bytes_remaining;
+	unsigned bytes_this_copy;
 	omapi_buffer_t *buffer;
 	unsigned char *bufp;
 	omapi_connection_object_t *c;
@@ -246,8 +247,8 @@ isc_result_t omapi_connection_copyout (unsigned char *buf,
 
 isc_result_t omapi_connection_writer (omapi_object_t *h)
 {
-	int bytes_this_write;
-	int bytes_written;
+	unsigned bytes_this_write;
+	unsigned bytes_written;
 	omapi_buffer_t *buffer;
 	unsigned char *bufp;
 	omapi_connection_object_t *c;
@@ -383,7 +384,7 @@ isc_result_t omapi_connection_get_uint16 (omapi_object_t *c,
 }
 
 isc_result_t omapi_connection_put_uint16 (omapi_object_t *c,
-					  u_int16_t value)
+					  u_int32_t value)
 {
 	u_int16_t inbuf;
 	isc_result_t status;
@@ -405,7 +406,8 @@ isc_result_t omapi_connection_write_typed_data (omapi_object_t *c,
 		status = omapi_connection_put_uint32 (c, sizeof (u_int32_t));
 		if (status != ISC_R_SUCCESS)
 			return status;
-		return omapi_connection_put_uint32 (c, data -> u.integer);
+		return omapi_connection_put_uint32 (c, ((u_int32_t)
+							(data -> u.integer)));
 
 	      case omapi_datatype_string:
 	      case omapi_datatype_data:
@@ -429,28 +431,29 @@ isc_result_t omapi_connection_write_typed_data (omapi_object_t *c,
 	return ISC_R_INVALIDARG;
 }
 
-isc_result_t omapi_connection_put_name (omapi_object_t *c, char *name)
+isc_result_t omapi_connection_put_name (omapi_object_t *c, const char *name)
 {
 	isc_result_t status;
-	int len = strlen (name);
+	unsigned len = strlen (name);
 
 	status = omapi_connection_put_uint16 (c, len);
 	if (status != ISC_R_SUCCESS)
 		return status;
-	return omapi_connection_copyin (c, (unsigned char *)name, len);
+	return omapi_connection_copyin (c, (const unsigned char *)name, len);
 }
 
-isc_result_t omapi_connection_put_string (omapi_object_t *c, char *string)
+isc_result_t omapi_connection_put_string (omapi_object_t *c,
+					  const char *string)
 {
 	isc_result_t status;
-	int len;
+	unsigned len;
 
 	len = strlen (string);
 
 	status = omapi_connection_put_uint32 (c, len);
 	if (status != ISC_R_SUCCESS)
 		return status;
-	return omapi_connection_copyin (c, (unsigned char *)string, len);
+	return omapi_connection_copyin (c, (const unsigned char *)string, len);
 }
 
 isc_result_t omapi_connection_put_handle (omapi_object_t *c, omapi_object_t *h)

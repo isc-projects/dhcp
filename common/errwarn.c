@@ -29,25 +29,24 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: errwarn.c,v 1.19 1999/10/01 03:16:24 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: errwarn.c,v 1.20 1999/10/07 06:35:41 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
 #include <errno.h>
 
-static void do_percentm PROTO ((char *obuf, char *ibuf));
+static void do_percentm PROTO ((char *obuf, const char *ibuf));
 
 static char mbuf [1024];
 static char fbuf [1024];
 
 /* Log an error message, then exit... */
 
-void log_fatal (ANSI_DECL(char *) fmt, VA_DOTDOTDOT)
+void log_fatal (ANSI_DECL(const char *) fmt, VA_DOTDOTDOT)
      KandR (char *fmt;)
      va_dcl
 {
   va_list list;
-  extern int logged_in;
 
   do_percentm (fbuf, fmt);
 
@@ -76,7 +75,7 @@ void log_fatal (ANSI_DECL(char *) fmt, VA_DOTDOTDOT)
 
 /* Log an error message... */
 
-int log_error (ANSI_DECL (char *) fmt, VA_DOTDOTDOT)
+int log_error (ANSI_DECL (const char *) fmt, VA_DOTDOTDOT)
      KandR (char *fmt;)
      va_dcl
 {
@@ -102,7 +101,7 @@ int log_error (ANSI_DECL (char *) fmt, VA_DOTDOTDOT)
 
 /* Log a note... */
 
-int log_info (ANSI_DECL (char *) fmt, VA_DOTDOTDOT)
+int log_info (ANSI_DECL (const char *) fmt, VA_DOTDOTDOT)
      KandR (char *fmt;)
      va_dcl
 {
@@ -128,7 +127,7 @@ int log_info (ANSI_DECL (char *) fmt, VA_DOTDOTDOT)
 
 /* Log a debug message... */
 
-int log_debug (ANSI_DECL (char *) fmt, VA_DOTDOTDOT)
+int log_debug (ANSI_DECL (const char *) fmt, VA_DOTDOTDOT)
      KandR (char *fmt;)
      va_dcl
 {
@@ -156,12 +155,12 @@ int log_debug (ANSI_DECL (char *) fmt, VA_DOTDOTDOT)
 
 static void do_percentm (obuf, ibuf)
      char *obuf;
-     char *ibuf;
+     const char *ibuf;
 {
-	char *s = ibuf;
+	const char *s = ibuf;
 	char *p = obuf;
 	int infmt = 0;
-	char *m;
+	const char *m;
 
 	while (*s)
 	{
@@ -196,7 +195,7 @@ static void do_percentm (obuf, ibuf)
 
 
 int parse_warn (ANSI_DECL (struct parse *)cfile,
-		ANSI_DECL (char *) fmt, VA_DOTDOTDOT)
+		ANSI_DECL (const char *) fmt, VA_DOTDOTDOT)
 	KandR (struct parse *cfile;)
 	KandR (char *fmt;)
 	va_dcl
@@ -204,7 +203,7 @@ int parse_warn (ANSI_DECL (struct parse *)cfile,
 	va_list list;
 	static char spaces [] = "                                                                                ";
 	char lexbuf [256];
-	int i, lix;
+	unsigned i, lix;
 	
 	do_percentm (mbuf, fmt);
 #ifndef NO_SNPRINTF

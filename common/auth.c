@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: auth.c,v 1.2 1999/03/16 05:50:31 mellon Exp $ Copyright 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.";
+"$Id: auth.c,v 1.3 1999/10/07 06:35:40 mellon Exp $ Copyright 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.";
 #endif
 
 #include "dhcpd.h"
@@ -41,10 +41,11 @@ void enter_auth_key (key_id, key)
 		  (unsigned char *)key);
 }
 
-struct auth_key *auth_key_lookup (key_id)
+const struct auth_key *auth_key_lookup (key_id)
 	struct data_string *key_id;
 {
-	return (struct auth_key *)hash_lookup (auth_key_hash,
-					       key_id -> data, key_id -> len);
+	return (const struct auth_key *)hash_lookup (auth_key_hash,
+						     key_id -> data,
+						     key_id -> len);
 }
 

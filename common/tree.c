@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.58 1999/10/07 02:14:06 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.59 1999/10/07 06:35:45 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -46,9 +46,9 @@ int make_const_option_cache (oc, buffer, data, len, option, name)
 	struct option_cache **oc;
 	struct buffer **buffer;
 	u_int8_t *data;
-	int len;
+	unsigned len;
 	struct option *option;
-	char *name;
+	const char *name;
 {
 	struct buffer *bp;
 
@@ -73,14 +73,14 @@ int make_const_option_cache (oc, buffer, data, len, option, name)
 	(*oc) -> data.data = &bp -> data [0];
 	(*oc) -> data.terminated = 0;
 	if (data)
-		memcpy ((*oc) -> data.data, data, len);
+		memcpy (&bp -> data [0], data, len);
 	(*oc) -> option = option;
 	return 1;
 }
 
 int make_host_lookup (expr, name)
 	struct expression **expr;
-	char *name;
+	const char *name;
 {
 	if (!expression_allocate (expr, "make_host_lookup")) {
 		log_error ("No memory for host lookup tree node.");
@@ -96,7 +96,7 @@ int make_host_lookup (expr, name)
 
 int enter_dns_host (dh, name)
 	struct dns_host_entry **dh;
-	char *name;
+	const char *name;
 {
 	/* XXX This should really keep a hash table of hostnames
 	   XXX and just add a new reference to a hostname that
@@ -111,8 +111,8 @@ int enter_dns_host (dh, name)
 
 int make_const_data (expr, data, len, terminated, allocate)
 	struct expression **expr;
-	unsigned char *data;
-	int len;
+	const unsigned char *data;
+	unsigned len;
 	int terminated;
 	int allocate;
 {
@@ -136,7 +136,7 @@ int make_const_data (expr, data, len, terminated, allocate)
 			}
 			nt -> data.const_data.data =
 				&nt -> data.const_data.buffer -> data [0];
-			memcpy (nt -> data.const_data.data,
+			memcpy (nt -> data.const_data.buffer -> data,
 				data, len + terminated);
 		} else 
 			nt -> data.const_data.data = data;
@@ -277,8 +277,8 @@ static int do_host_lookup (result, dns)
 	struct dns_host_entry *dns;
 {
 	struct hostent *h;
-	int i, count;
-	int new_len;
+	unsigned i, count;
+	unsigned new_len;
 
 #ifdef DEBUG_EVAL
 	log_debug ("time: now = %d  dns = %d %d  diff = %d",
@@ -357,12 +357,12 @@ static int do_host_lookup (result, dns)
 	/* Addresses are conveniently stored one to the buffer, so we
 	   have to copy them out one at a time... :'( */
 	for (i = 0; i < count; i++) {
-		memcpy (&dns -> data.data [h -> h_length * i],
-			h -> h_addr_list [i], h -> h_length);
+		memcpy (&dns -> data.buffer -> data [h -> h_length * i],
+			h -> h_addr_list [i], (unsigned)(h -> h_length));
 	}
 #ifdef DEBUG_EVAL
 	log_debug ("dns -> data: %x  h -> h_addr_list [0]: %x",
-	       *(int *)(dns -> buffer), h -> h_addr_list [0]);
+		   *(int *)(dns -> buffer), h -> h_addr_list [0]);
 #endif
 
 	/* XXX Set the timeout for an hour from now.
@@ -652,6 +652,8 @@ int evaluate_boolean_expression (result, packet, lease, in_options,
 		return 1;
 #endif /* NSUPDATE */
 
+	      case expr_none:
+	      case expr_match:
 	      case expr_substring:
 	      case expr_suffix:
 	      case expr_option:
@@ -842,8 +844,9 @@ int evaluate_data_expression (result, packet, lease,
 		if (buffer_allocate (&result -> buffer, result -> len,
 				     "evaluate_data_expression")) {
 			result -> data = &result -> buffer -> data [0];
-			result -> data [0] = packet -> raw -> htype;
-			memcpy (&result -> data [1], packet -> raw -> chaddr,
+			result -> buffer -> data [0] = packet -> raw -> htype;
+			memcpy (&result -> buffer -> data [1],
+				packet -> raw -> chaddr,
 				packet -> raw -> hlen);
 			result -> terminated = 0;
 		} else {
@@ -879,7 +882,7 @@ int evaluate_data_expression (result, packet, lease,
 			if (buffer_allocate (&result -> buffer, result -> len,
 					     "evaluate_data_expression")) {
 				result -> data = &result -> buffer -> data [0];
-				memcpy (result -> data,
+				memcpy (result -> buffer -> data,
 					(((unsigned char *)(packet -> raw))
 					 + offset), result -> len);
 				result -> terminated = 0;
@@ -965,8 +968,8 @@ int evaluate_data_expression (result, packet, lease,
 				return 0;
 			}
 			result -> data = &result -> buffer -> data [0];
-			memcpy (result -> data, data.data, data.len);
-			memcpy (&result -> data [data.len],
+			memcpy (result -> buffer -> data, data.data, data.len);
+			memcpy (&result -> buffer -> data [data.len],
 				other.data, other.len + other.terminated);
 		} else if (s0)
 			data_string_forget (&data, "expr_concat");
@@ -995,7 +998,7 @@ int evaluate_data_expression (result, packet, lease,
 				s0 = 0;
 			} else {
 				result -> data = &result -> buffer -> data [0];
-				result -> data [0] = len;
+				result -> buffer -> data [0] = len;
 			}
 		} else
 			result -> len = 0;
@@ -1024,7 +1027,7 @@ int evaluate_data_expression (result, packet, lease,
 				s0 = 0;
 			} else {
 				result -> data = &result -> buffer -> data [0];
-				putUShort (result -> data, len);
+				putUShort (result -> buffer -> data, len);
 			}
 		} else
 			result -> len = 0;
@@ -1052,7 +1055,7 @@ int evaluate_data_expression (result, packet, lease,
 				s0 = 0;
 			} else {
 				result -> data = &result -> buffer -> data [0];
-				putULong (result -> data, len);
+				putULong (result -> buffer -> data, len);
 			}
 		} else
 			result -> len = 0;
@@ -1089,7 +1092,7 @@ int evaluate_data_expression (result, packet, lease,
 					       expr -> data.b2a.buffer);
 
 		if (s0 && s1 && s2 && s3) {
-			int buflen, i;
+			unsigned buflen, i;
 
 			if (len != 8 && len != 16 && len != 32) {
 				log_info ("binary_to_ascii: %s %d!",
@@ -1156,16 +1159,17 @@ int evaluate_data_expression (result, packet, lease,
 			buflen = 0;
 			for (i = 0; i < other.len; i += len) {
 				buflen += (binary_to_ascii
-					   (&result -> data [buflen],
+					   (&result -> buffer -> data [buflen],
 					    &other.data [i], offset, len));
 				if (i + len != other.len) {
-					memcpy (&result -> data [buflen],
+					memcpy (&result ->
+						buffer -> data [buflen],
 						data.data, data.len);
 					buflen += data.len;
 				}
 			}
 			/* NUL terminate. */
-			result -> data [buflen] = 0;
+			result -> buffer -> data [buflen] = 0;
 			status = 1;
 		} else
 			status = 0;
@@ -1226,7 +1230,7 @@ int evaluate_data_expression (result, packet, lease,
 			result -> terminated = 0;
 
 			for (i = 0; i < data.len; i += len) {
-				memcpy (&result -> data [i],
+				memcpy (&result -> buffer -> data [i],
 					&data.data [data.len - i - len], len);
 			}
 			status = 1;
@@ -1256,7 +1260,7 @@ int evaluate_data_expression (result, packet, lease,
 		if (buffer_allocate (&result -> buffer, result -> len,
 				     "leased-address")) {
 			result -> data = &result -> buffer -> data [0];
-			memcpy (&result -> data [0],
+			memcpy (&result -> buffer -> data [0],
 				lease -> ip_addr.iabuf, lease -> ip_addr.len);
 			result -> terminated = 0;
 		} else {
@@ -1308,7 +1312,7 @@ int evaluate_data_expression (result, packet, lease,
 		if (buffer_allocate (&result -> buffer, result -> len + 1,
 				     "host-decl-name")) {
 			result -> data = &result -> buffer -> data [0];
-			strcpy ((char *)&result -> data [0],
+			strcpy ((char *)&result -> buffer -> data [0],
 				lease -> host -> name);
 			result -> terminated = 1;
 		} else {
@@ -1338,10 +1342,10 @@ int evaluate_data_expression (result, packet, lease,
 			return 0;
 		}
 		if (data.len == 1 &&
-		    !strncasecmp ((char *)data.data, "a", 1)) {
+		    !strncasecmp ((const char *)data.data, "a", 1)) {
 			s = lease -> ddns_fwd_name;
 		} else if (data.len == 3 &&
-			   !strncasecmp ((char *)data.data, "ptr", 3)) {
+			   !strncasecmp ((const char *)data.data, "ptr", 3)) {
 			s = lease -> ddns_rev_name;
 		} else {
 #if defined (DEBUG_EXPRESSIONS)
@@ -1357,7 +1361,7 @@ int evaluate_data_expression (result, packet, lease,
 		if (buffer_allocate (&result -> buffer, result -> len + 1,
 				     "updated-dns-rr")) {
 			result -> data = &result -> buffer -> data [0];
-			strcpy ((char *)&result -> data [0], s);
+			strcpy ((char *)&result -> buffer -> data [0], s);
 			result -> terminated = 1;
 		} else {
 #if defined (DEBUG_EXPRESSIONS)
@@ -1383,6 +1387,10 @@ int evaluate_data_expression (result, packet, lease,
 	      case expr_match:
 	      case expr_static:
 	      case expr_known:
+	      case expr_none:
+	      case expr_exists:
+	      case expr_dns_update:
+	      case expr_dns_delete:
 		log_error ("Boolean opcode in evaluate_data_expression: %d",
 		      expr -> op);
 		return 0;
@@ -1422,6 +1430,10 @@ int evaluate_numeric_expression (result, packet, lease,
 	      case expr_match:
 	      case expr_static:
 	      case expr_known:
+	      case expr_none:
+	      case expr_exists:
+	      case expr_dns_update:
+	      case expr_dns_delete:
 		log_error ("Boolean opcode in evaluate_numeric_expression: %d",
 		      expr -> op);
 		return 0;
@@ -1444,6 +1456,7 @@ int evaluate_numeric_expression (result, packet, lease,
 	      case expr_host_decl_name:
 	      case expr_config_option:
 	      case expr_leased_address:
+	      case expr_updated_dns_rr:
 		log_error ("Data opcode in evaluate_numeric_expression: %d",
 		      expr -> op);
 		return 0;
@@ -1614,7 +1627,7 @@ int evaluate_boolean_expression_result (packet, lease,
    dereference any data it refers to, and then free it. */
 void expression_dereference (eptr, name)
 	struct expression **eptr;
-	char *name;
+	const char *name;
 {
 	struct expression *expr = *eptr;
 
@@ -1779,7 +1792,7 @@ void expression_dereference (eptr, name)
 void data_string_copy (dest, src, name)
 	struct data_string *dest;
 	struct data_string *src;
-	char *name;
+	const char *name;
 {
 	if (src -> buffer)
 		buffer_reference (&dest -> buffer, src -> buffer, name);
@@ -1793,7 +1806,7 @@ void data_string_copy (dest, src, name)
 
 void data_string_forget (data, name)
 	struct data_string *data;
-	char *name;
+	const char *name;
 {
 	if (data -> buffer)
 		buffer_dereference (&data -> buffer, name);
@@ -1982,7 +1995,7 @@ int write_expression (file, expr, col, indent)
 	int indent;
 {
 	struct expression *e;
-	char *s;
+	const char *s;
 	char obuf [65];
 	int scol;
 	int width;

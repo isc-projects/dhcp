@@ -22,14 +22,14 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: memory.c,v 1.62 1999/09/28 22:54:17 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: memory.c,v 1.63 1999/10/07 06:35:42 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
 
 struct group *clone_group (group, caller)
 	struct group *group;
-	char *caller;
+	const char *caller;
 {
 	struct group *g = new_group (caller);
 	if (!g)

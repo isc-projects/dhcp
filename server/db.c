@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: db.c,v 1.33 1999/10/07 02:14:10 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: db.c,v 1.34 1999/10/07 06:36:31 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -102,11 +102,10 @@ int write_lease (lease)
 	}
 	if (lease -> uid_len) {
 		int i;
-		if (db_printable_len ((char *)lease -> uid,
+		if (db_printable_len ((const char *)lease -> uid,
 				      lease -> uid_len)) {
-			fprintf (db_file, "\n\tuid \"%*.*s\";",
-				 lease -> uid_len, lease -> uid_len,
-				 lease -> uid);
+			fprintf (db_file, "\n\tuid \"%*s\";",
+				 lease -> uid_len, lease -> uid);
 		} else {
 			errno = 0;
 			fprintf (db_file, "\n\tuid %2.2x", lease -> uid [0]);
@@ -245,11 +244,10 @@ int write_host (host)
 		if (host -> client_identifier.len) {
 			int i;
 			errno = 0;
-			if (db_printable_len ((char *)
+			if (db_printable_len ((const char *)
 					      host -> client_identifier.data,
 					      host -> client_identifier.len)) {
-				fprintf (db_file, "\n\tuid \"%*.*s\";",
-					 host -> client_identifier.len,
+				fprintf (db_file, "\n\tuid \"%*s\";",
 					 host -> client_identifier.len,
 					 host -> client_identifier.data);
 			} else {
@@ -398,7 +396,7 @@ int write_group (group)
 }
 
 int db_printable (s)
-	char *s;
+	const char *s;
 {
 	int i;
 	for (i = 0; s [i]; i++)
@@ -408,8 +406,8 @@ int db_printable (s)
 }
 
 int db_printable_len (s, len)
-	char *s;
-	int len;
+	const char *s;
+	unsigned len;
 {
 	int i;
 	for (i = 0; i < len; i++)
@@ -444,8 +442,7 @@ int write_billing_class (class)
 			break;
 	if (i == class -> hash_string.len) {
 		errno = 0;
-		fprintf (db_file, " \"%*.*s\";",
-			 class -> hash_string.len,
+		fprintf (db_file, " \"%*s\";",
 			 class -> hash_string.len,
 			 class -> hash_string.data);
 		if (errno)

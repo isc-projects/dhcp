@@ -29,7 +29,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: omapi.c,v 1.14 1999/10/07 02:14:10 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: omapi.c,v 1.15 1999/10/07 06:36:35 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -239,7 +239,7 @@ isc_result_t dhcp_lease_get_value (omapi_object_t *h, omapi_object_t *id,
 	return ISC_R_NOTFOUND;
 }
 
-isc_result_t dhcp_lease_destroy (omapi_object_t *h, char *name)
+isc_result_t dhcp_lease_destroy (omapi_object_t *h, const char *name)
 {
 	struct lease *lease;
 	isc_result_t status;
@@ -302,7 +302,7 @@ isc_result_t dhcp_lease_destroy (omapi_object_t *h, char *name)
 }
 
 isc_result_t dhcp_lease_signal_handler (omapi_object_t *h,
-					char *name, va_list ap)
+					const char *name, va_list ap)
 {
 	struct lease *lease;
 	isc_result_t status;
@@ -355,7 +355,7 @@ isc_result_t dhcp_lease_stuff_values (omapi_object_t *c,
 	if (status != ISC_R_SUCCESS)
 		return status;
 	status = omapi_connection_put_uint32 (c, (lease -> flags &
-						  ABANDONED_LEASE) ? 1 : 0);
+						  ABANDONED_LEASE) ? 1U : 0U);
 	if (status != ISC_R_SUCCESS)
 		return status;
 
@@ -365,8 +365,9 @@ isc_result_t dhcp_lease_stuff_values (omapi_object_t *c,
 	status = omapi_connection_put_uint32 (c, sizeof (int));
 	if (status != ISC_R_SUCCESS)
 		return status;
-	status = omapi_connection_put_uint32 (c, (lease -> flags &
-						  BOOTP_LEASE) ? 1 : 0);
+	status = omapi_connection_put_uint32 (c, ((unsigned) 
+						  ((lease -> flags &
+						    BOOTP_LEASE) ? 1 : 0)));
 	if (status != ISC_R_SUCCESS)
 		return status;
 
@@ -711,7 +712,7 @@ isc_result_t dhcp_group_get_value (omapi_object_t *h, omapi_object_t *id,
 	return ISC_R_NOTFOUND;
 }
 
-isc_result_t dhcp_group_destroy (omapi_object_t *h, char *name)
+isc_result_t dhcp_group_destroy (omapi_object_t *h, const char *name)
 {
 	struct group_object *group, *t;
 	isc_result_t status;
@@ -744,7 +745,7 @@ isc_result_t dhcp_group_destroy (omapi_object_t *h, char *name)
 }
 
 isc_result_t dhcp_group_signal_handler (omapi_object_t *h,
-					char *name, va_list ap)
+					const char *name, va_list ap)
 {
 	struct group_object *group, *t;
 	isc_result_t status;
@@ -1027,7 +1028,7 @@ isc_result_t dhcp_host_set_value  (omapi_object_t *h,
 				return ISC_R_NOMEMORY;
 			host -> client_identifier.data =
 				&host -> client_identifier.buffer -> data [0];
-			memcpy (host -> client_identifier.data,
+			memcpy (host -> client_identifier.buffer -> data,
 				value -> u.buffer.value,
 				value -> u.buffer.len);
 			host -> client_identifier.len = value -> u.buffer.len;
@@ -1048,7 +1049,8 @@ isc_result_t dhcp_host_set_value  (omapi_object_t *h,
 					      "dhcp_host_set_value"))
 				return ISC_R_NOMEMORY;
 			ds.data = (&ds.buffer -> data [0]);
-			memcpy (ds.data, value -> u.buffer.value, ds.len);
+			memcpy (ds.buffer -> data,
+				value -> u.buffer.value, ds.len);
 			if (!option_cache (&host -> fixed_addr,
 					   &ds, (struct expression *)0,
 					   (struct option *)0)) {
@@ -1186,7 +1188,7 @@ isc_result_t dhcp_host_get_value (omapi_object_t *h, omapi_object_t *id,
 	return ISC_R_NOTFOUND;
 }
 
-isc_result_t dhcp_host_destroy (omapi_object_t *h, char *name)
+isc_result_t dhcp_host_destroy (omapi_object_t *h, const char *name)
 {
 	struct host_decl *host;
 	isc_result_t status;
@@ -1202,7 +1204,7 @@ isc_result_t dhcp_host_destroy (omapi_object_t *h, char *name)
 }
 
 isc_result_t dhcp_host_signal_handler (omapi_object_t *h,
-					char *name, va_list ap)
+				       const char *name, va_list ap)
 {
 	struct host_decl *host;
 	isc_result_t status;
@@ -1557,7 +1559,7 @@ isc_result_t dhcp_pool_get_value (omapi_object_t *h, omapi_object_t *id,
 	return ISC_R_NOTFOUND;
 }
 
-isc_result_t dhcp_pool_destroy (omapi_object_t *h, char *name)
+isc_result_t dhcp_pool_destroy (omapi_object_t *h, const char *name)
 {
 	struct pool *pool;
 	isc_result_t status;
@@ -1572,7 +1574,7 @@ isc_result_t dhcp_pool_destroy (omapi_object_t *h, char *name)
 }
 
 isc_result_t dhcp_pool_signal_handler (omapi_object_t *h,
-					char *name, va_list ap)
+				       const char *name, va_list ap)
 {
 	struct pool *pool;
 	isc_result_t status;

@@ -492,6 +492,48 @@ OOTTHHEERR DDEECCLLAARRAATTIIOONNSS
        ration will use the parameters  declared  outside  of  any
        interface declaration, or the default settings.
 
+        ppsseeuuddoo ""_n_a_m_e" "_r_e_a_l_-_n_a_m_e"" {{ _d_e_c_l_a_r_a_t_i_o_n_s _._._.  }}
+
+       Under  some  circumstances  it  can be useful to declare a
+       pseudo-interface and have the DHCP client acquire  a  con­
+       figuration  for  that  interface.  Each interface that the
+       DHCP client is supporting normally has a DHCP client state
+       machine  running  on it to acquire and maintain its lease.
+       A pseudo-interface is just another state  machine  running
+       on  the  interface named _r_e_a_l_-_n_a_m_e, with its own lease and
+       its own state.   If you use this feature, you must provide
+       a  client identifier for both the pseudo-interface and the
+       actual interface, and the two identifiers must be  differ­
+       ent.    You must also provide a seperate client script for
+       the pseudo-interface to do  what  you  want  with  the  IP
+       address.   For example:
+
+            interface "ep0" {
+                 send dhcp-client-identifier "my-client-ep0";
+            }
+            pseudo "secondary" "ep0" {
+                 send dhcp-client-identifier "my-client-ep0-secondary";
+                 script "/etc/dhclient-secondary";
+            }
+
+       The client script for the pseudo-interface should not con­
+       figure the interface up or  down  -  essentially,  all  it
+       needs  to  handle  are  the  states where a lease has been
+       acquired or renewed, and the  states  where  a  lease  has
+
+
+
+                                                                8
+
+
+
+
+
+dhclient.conf(5)                                 dhclient.conf(5)
+
+
+       expired.   See ddhhcclliieenntt--ssccrriipptt((88)) for more information.
+
         mmeeddiiaa ""_m_e_d_i_a _s_e_t_u_p"" _[ ,, ""_m_e_d_i_a _s_e_t_u_p"",, _._._. _];;
 
        The  mmeeddiiaa  statement defines one or more media configura­
@@ -520,18 +562,6 @@ SSAAMMPPLLEE
        192.5.5.213,  and  has one interface, ep0 (a 3com 3C589C).
        Booting intervals have been shortened  somewhat  from  the
        default,  because the client is known to spend most of its
-
-
-
-                                                                8
-
-
-
-
-
-dhclient.conf(5)                                 dhclient.conf(5)
-
-
        time on networks with little DHCP activity.    The  laptop
        does roam to multiple networks.
 
@@ -555,6 +585,18 @@ dhclient.conf(5)                                 dhclient.conf(5)
            script "/etc/dhclient-script";
            media "media 10baseT/UTP", "media 10base2/BNC";
        }
+
+
+
+
+                                                                9
+
+
+
+
+
+dhclient.conf(5)                                 dhclient.conf(5)
+
 
        alias {
          interface "ep0";
@@ -589,6 +631,30 @@ AAUUTTHHOORR
 
 
 
-                                                                9
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                               10
 
 

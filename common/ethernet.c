@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: ethernet.c,v 1.1 1999/05/27 17:34:54 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: ethernet.c,v 1.2 1999/10/07 06:35:42 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -38,7 +38,7 @@ static char copyright[] =
 void assemble_ethernet_header (interface, buf, bufix, to)
 	struct interface_info *interface;
 	unsigned char *buf;
-	int *bufix;
+	unsigned *bufix;
 	struct hardware *to;
 {
 	struct ether_header eh;
@@ -70,7 +70,7 @@ void assemble_ethernet_header (interface, buf, bufix, to)
 ssize_t decode_ethernet_header (interface, buf, bufix, from)
      struct interface_info *interface;
      unsigned char *buf;
-     int bufix;
+     unsigned bufix;
      struct hardware *from;
 {
   struct ether_header eh;

@@ -222,8 +222,7 @@ option smtp-server 10.0.0.1;",
 		exit (1);
 	}
 
-	printf ("host name = %*.*s\n", result -> len, result -> len,
-		result -> value);
+	printf ("host name = %*s\n", result -> len, result -> value);
 
 #if 0
 	status = dhcpctl_object_remove (connection, host_handle);

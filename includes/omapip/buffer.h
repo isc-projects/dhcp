@@ -53,14 +53,14 @@ typedef struct _omapi_buffer {
 	  ? (x) -> tail - (x) -> head \
 	  : sizeof ((x) -> buf) - ((x) -> head - (x) -> tail)) - 1)
 
-isc_result_t omapi_connection_require (omapi_object_t *, int);
+isc_result_t omapi_connection_require (omapi_object_t *, unsigned);
 isc_result_t omapi_connection_copyout (unsigned char *,
-				       omapi_object_t *, int);
+				       omapi_object_t *, unsigned);
 isc_result_t omapi_connection_copyin (omapi_object_t *,
-				      unsigned char *, int);
+				      const unsigned char *, unsigned);
 isc_result_t omapi_connection_flush (omapi_object_t *);
 isc_result_t omapi_connection_get_uint32 (omapi_object_t *, u_int32_t *);
 isc_result_t omapi_connection_put_uint32 (omapi_object_t *, u_int32_t);
 isc_result_t omapi_connection_get_uint16 (omapi_object_t *, u_int16_t *);
-isc_result_t omapi_connection_put_uint16 (omapi_object_t *, u_int16_t);
+isc_result_t omapi_connection_put_uint16 (omapi_object_t *, u_int32_t);
 

@@ -134,7 +134,7 @@ isc_result_t omapi_init (void)
 }
 
 isc_result_t omapi_object_type_register (omapi_object_type_t **type,
-					 char *name,
+					 const char *name,
 					 isc_result_t (*set_value)
 						 (omapi_object_t *,
 						  omapi_object_t *,
@@ -146,10 +146,11 @@ isc_result_t omapi_object_type_register (omapi_object_type_t **type,
 						 omapi_data_string_t *,
 						 omapi_value_t **),
 					 isc_result_t (*destroy)
-						(omapi_object_t *, char *),
+						(omapi_object_t *,
+						 const char *),
 					 isc_result_t (*signal_handler)
 						 (omapi_object_t *,
-						  char *, va_list),
+						  const char *, va_list),
 					 isc_result_t (*stuff_values)
 						(omapi_object_t *,
 						 omapi_object_t *,
@@ -188,7 +189,7 @@ isc_result_t omapi_object_type_register (omapi_object_type_t **type,
 	return ISC_R_SUCCESS;
 }
 
-isc_result_t omapi_signal (omapi_object_t *handle, char *name, ...)
+isc_result_t omapi_signal (omapi_object_t *handle, const char *name, ...)
 {
 	va_list ap;
 	omapi_object_t *outer;
@@ -206,7 +207,7 @@ isc_result_t omapi_signal (omapi_object_t *handle, char *name, ...)
 	return status;
 }
 
-isc_result_t omapi_signal_in (omapi_object_t *handle, char *name, ...)
+isc_result_t omapi_signal_in (omapi_object_t *handle, const char *name, ...)
 {
 	va_list ap;
 	omapi_object_t *outer;
@@ -242,7 +243,7 @@ isc_result_t omapi_set_value (omapi_object_t *h,
 
 isc_result_t omapi_set_value_str (omapi_object_t *h,
 				  omapi_object_t *id,
-				  char *name,
+				  const char *name,
 				  omapi_typed_data_t *value)
 {
 	omapi_object_t *outer;
@@ -260,7 +261,7 @@ isc_result_t omapi_set_value_str (omapi_object_t *h,
 }
 
 isc_result_t omapi_set_boolean_value (omapi_object_t *h, omapi_object_t *id,
-				      char *name, int value)
+				      const char *name, int value)
 {
 	isc_result_t status;
 	omapi_typed_data_t *tv = (omapi_typed_data_t *)0;
@@ -288,7 +289,7 @@ isc_result_t omapi_set_boolean_value (omapi_object_t *h, omapi_object_t *id,
 }
 
 isc_result_t omapi_set_int_value (omapi_object_t *h, omapi_object_t *id,
-				  char *name, int value)
+				  const char *name, int value)
 {
 	isc_result_t status;
 	omapi_typed_data_t *tv = (omapi_typed_data_t *)0;
@@ -316,7 +317,7 @@ isc_result_t omapi_set_int_value (omapi_object_t *h, omapi_object_t *id,
 }
 
 isc_result_t omapi_set_object_value (omapi_object_t *h, omapi_object_t *id,
-				     char *name, omapi_object_t *value)
+				     const char *name, omapi_object_t *value)
 {
 	isc_result_t status;
 	omapi_typed_data_t *tv = (omapi_typed_data_t *)0;
@@ -344,7 +345,7 @@ isc_result_t omapi_set_object_value (omapi_object_t *h, omapi_object_t *id,
 }
 
 isc_result_t omapi_set_string_value (omapi_object_t *h, omapi_object_t *id,
-				     char *name, char *value)
+				     const char *name, const char *value)
 {
 	isc_result_t status;
 	omapi_typed_data_t *tv = (omapi_typed_data_t *)0;
@@ -388,7 +389,7 @@ isc_result_t omapi_get_value (omapi_object_t *h,
 
 isc_result_t omapi_get_value_str (omapi_object_t *h,
 				  omapi_object_t *id,
-				  char *name,
+				  const char *name,
 				  omapi_value_t **value)
 {
 	omapi_object_t *outer;
@@ -451,7 +452,7 @@ isc_result_t omapi_object_update (omapi_object_t *obj, omapi_object_t *id,
 			return status;
 	}
 	if (handle)
-		omapi_set_int_value (obj, id, "remote-handle", handle);
+		omapi_set_int_value (obj, id, "remote-handle", (int)handle);
 	status = omapi_signal (obj, "updated");
 	if (status != ISC_R_NOTFOUND)
 		return status;
@@ -460,7 +461,7 @@ isc_result_t omapi_object_update (omapi_object_t *obj, omapi_object_t *id,
 
 int omapi_data_string_cmp (omapi_data_string_t *s1, omapi_data_string_t *s2)
 {
-	int len;
+	unsigned len;
 	int rv;
 
 	if (s1 -> len > s2 -> len)
@@ -477,9 +478,9 @@ int omapi_data_string_cmp (omapi_data_string_t *s1, omapi_data_string_t *s2)
 	return 0;
 }
 
-int omapi_ds_strcmp (omapi_data_string_t *s1, char *s2)
+int omapi_ds_strcmp (omapi_data_string_t *s1, const char *s2)
 {
-	int len, slen;
+	unsigned len, slen;
 	int rv;
 
 	slen = strlen (s2);
@@ -497,9 +498,9 @@ int omapi_ds_strcmp (omapi_data_string_t *s1, char *s2)
 	return 0;
 }
 
-int omapi_td_strcmp (omapi_typed_data_t *s1, char *s2)
+int omapi_td_strcmp (omapi_typed_data_t *s1, const char *s2)
 {
-	int len, slen;
+	unsigned len, slen;
 	int rv;
 
 	/* If the data type is not compatible, never equal. */
@@ -523,7 +524,7 @@ int omapi_td_strcmp (omapi_typed_data_t *s1, char *s2)
 }
 
 isc_result_t omapi_make_value (omapi_value_t **vp, omapi_data_string_t *name,
-			       omapi_typed_data_t *value, char *caller)
+			       omapi_typed_data_t *value, const char *caller)
 {
 	isc_result_t status;
 
@@ -549,7 +550,8 @@ isc_result_t omapi_make_value (omapi_value_t **vp, omapi_data_string_t *name,
 
 isc_result_t omapi_make_const_value (omapi_value_t **vp,
 				     omapi_data_string_t *name,
-				     u_int8_t *value, int len, char *caller)
+				     const u_int8_t *value,
+				     unsigned len, const char *caller)
 {
 	isc_result_t status;
 
@@ -576,7 +578,7 @@ isc_result_t omapi_make_const_value (omapi_value_t **vp,
 
 isc_result_t omapi_make_int_value (omapi_value_t **vp,
 				   omapi_data_string_t *name,
-				   int value, char *caller)
+				   int value, const char *caller)
 {
 	isc_result_t status;
 
@@ -603,7 +605,8 @@ isc_result_t omapi_make_int_value (omapi_value_t **vp,
 
 isc_result_t omapi_make_handle_value (omapi_value_t **vp,
 				      omapi_data_string_t *name,
-				      omapi_object_t *value, char *caller)
+				      omapi_object_t *value,
+				      const char *caller)
 {
 	isc_result_t status;
 
@@ -636,7 +639,7 @@ isc_result_t omapi_make_handle_value (omapi_value_t **vp,
 
 isc_result_t omapi_make_string_value (omapi_value_t **vp,
 				      omapi_data_string_t *name,
-				      char *value, char *caller)
+				      char *value, const char *caller)
 {
 	isc_result_t status;
 
