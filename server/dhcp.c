@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.127 1999/11/12 17:17:16 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.128 1999/11/14 00:22:29 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2658,4 +2658,102 @@ int locate_network (packet)
 	if (packet -> shared_network)
 		return 1;
 	return 0;
+}
+
+/* Parse a Relay Agent Information option and put it at the end of the
+   list of such options on the specified packet. */
+
+int parse_agent_information_option (packet, len, data)
+	struct packet *packet;
+	int len;
+	u_int8_t *data;
+{
+	struct agent_options *a, **tail;
+	struct option_tag *t, *oth = 0, **ott = &oth;
+	u_int8_t *op = data, *max = data + len;
+
+	/* Parse the agent information option suboptions. */
+	while (op < max) {
+		/* Check for overflow. */
+		if (op + 1 == max || op + op [1] + 2 > max)
+			return 0;
+		/* Make space for this suboption. */
+ 		t = (struct option_tag *)
+			dmalloc (op [1] + 1 + sizeof *t,
+				 "parse_agent_information_option");
+		if (!t)
+			log_fatal ("no memory for option tag data.");
+
+		/* Link it in at the tail of the list. */
+		t -> next = (struct option_tag *)0;
+		*ott = t;
+		ott = &t -> next;
+		
+		/* Copy the option data in in its raw form. */
+		memcpy (t -> data, op, (unsigned)(op [1] + 2));
+		op += op [1] + 2;
+	}
+
+	/* Make an agent options structure to put on the list. */
+	a = (struct agent_options *)dmalloc (sizeof *a,
+					     "parse_agent_information_option");
+	if (!a)
+		log_fatal ("can't allocate space for agent option structure.");
+
+	/* Find the tail of the list. */
+	for (tail = ((struct agent_options **)
+		     &packet -> options -> universes [agent_universe.index]);
+	     *tail; tail = &((*tail) -> next))
+		;
+	*tail = a;
+	a -> next = (struct agent_options *)0;
+	a -> first = oth;
+	a -> length = len;
+
+	return 1;
+}
+
+unsigned cons_agent_information_options (cfg_options, outpacket,
+					 agentix, length)
+	struct option_state *cfg_options;
+	struct dhcp_packet *outpacket;
+	unsigned agentix;
+	unsigned length;
+{
+	/* We tack any agent options onto the end of the packet after
+	   we've put it together. */
+	if (cfg_options -> universe_count > agent_universe.index &&
+	    cfg_options -> universes [agent_universe.index]) {
+	    int len = 0;
+	    struct agent_options *a;
+	    struct option_tag *o;
+
+	    /* Cycle through the options, appending them to the
+	       buffer. */
+	    for (a = ((struct agent_options *)
+		      cfg_options -> universes [agent_universe.index]);
+		 a; a = a -> next) {
+		    if (agentix + a -> length + 3 + DHCP_FIXED_LEN <=
+			dhcp_max_agent_option_packet_length) {
+			    outpacket -> options [agentix++]
+				    = DHO_DHCP_AGENT_OPTIONS;
+			    outpacket -> options [agentix++] = a -> length;
+			    for (o = a -> first; o; o = o -> next) {
+				    memcpy (&outpacket -> options [agentix],
+					    o -> data,
+					    (unsigned)(o -> data [1] + 2));
+				    agentix += o -> data [1] + 2;
+			    }
+		    }
+	    }
+
+	    /* Reterminate the packet. */
+	    outpacket -> options [agentix++] = DHO_END;
+
+	    /* Recompute the length, which may now be higher than the
+	       client can accept but should be okay for the relay agent. */
+	    return agentix + DHCP_FIXED_NON_UDP;
+	}
+
+	return length;
 }
