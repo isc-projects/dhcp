@@ -132,6 +132,9 @@ VARDB = /var/db
 
 ## Ultrix
 ##--ultrix--
+#BINDIR = /usr/etc
+#VARRUN = /etc
+#VARDB = /etc
 #CF = cf/ultrix.h
 #ADMMANDIR = /usr/man/man8
 #ADMMANEXT = .8
@@ -185,10 +188,10 @@ VARDB = /var/db
 
 CSRC   = options.c errwarn.c convert.c \
 	 tree.c memory.c alloc.c print.c hash.c tables.c inet.c \
-	 dispatch.c bpf.c packet.c raw.c nit.c socket.c
+	 dispatch.c bpf.c packet.c raw.c nit.c socket.c upf.c
 COBJ   = options.o errwarn.o convert.o \
 	 tree.o memory.o alloc.o print.o hash.o tables.o inet.o \
-	 dispatch.o bpf.o packet.o raw.o nit.o socket.o
+	 dispatch.o bpf.o packet.o raw.o nit.o socket.o upf.o
 XOBJ   = dhcpxlt.o xconflex.o
 SRCS   = dhcpd.c dhcp.c bootp.c conflex.c confpars.c db.c
 OBJS   = dhcpd.o dhcp.o bootp.o conflex.o confpars.o db.o
