@@ -62,6 +62,7 @@ extern int h_errno;
 #define VA_start(list, last) va_start (list, last)
 
 #define _PATH_DHCPD_PID	"/var/run/dhcpd.pid"
+#define _PATH_DHCPD_DB	"/var/db/dhcpd.leases"
 
 #define EOL	'\n'
 #define VOIDPTR void *
