@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.122 2000/08/15 22:23:33 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.123 2000/08/24 18:46:31 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1007,8 +1007,8 @@ void parse_failover_state (cfile, state, stos)
 		state_in = potential_conflict;
 		break;
 
-	      case POTENTIAL_CONFLICT_NIC:
-		state_in = potential_conflict;
+	      case RESOLUTION_INTERRUPTED:
+		state_in = resolution_interrupted;
 		break;
 
 	      case RECOVER:
