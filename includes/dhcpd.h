@@ -55,6 +55,8 @@
 #include "inet.h"
 #include "auth.h"
 
+#include <omapip/omapip.h>
+
 #if !defined (OPTION_HASH_SIZE)
 # define OPTION_HASH_SIZE 17
 #endif
@@ -162,6 +164,7 @@ struct hardware {
 
 /* A dhcp lease declaration structure. */
 struct lease {
+	OMAPI_OBJECT_PREAMBLE;
 	struct lease *next;
 	struct lease *prev;
 	struct lease *n_uid, *n_hw;
@@ -358,15 +361,32 @@ struct group {
 	struct executable_statement *statements;
 };
 
+#if 0
+/* First-class group - visible as an OMAPI object.   Groups attached to other
+   objects are not first-class, because it's too much trouble for too little
+   benefit.   First-class groups have to have down-pointers to the objects
+   in them, so this is actually pretty hard.   Deal with later. */
+struct fc_group {
+	OMAPI_OBJECT_PREAMBLE;
+	struct group *group;
+	omapi_object_t **members;
+	int nmembers;		/* # Objects presently in members. */
+	int max_members;	/* # Spaces in members. */
+}
+#endif
+
 /* A dhcp host declaration structure. */
 struct host_decl {
+	OMAPI_OBJECT_PREAMBLE;
 	struct host_decl *n_ipaddr;
+	struct host_decl *n_dynamic;
 	char *name;
 	struct hardware interface;
 	struct data_string client_identifier;
 	struct option_cache *fixed_addr;
 	struct group *group;
 	struct data_string auth_key_id;
+	int flags;
 };
 
 struct permit {
@@ -384,6 +404,7 @@ struct permit {
 };
 
 struct pool {
+	OMAPI_OBJECT_PREAMBLE;
 	struct pool *next;
 	struct group *group;
 	struct shared_network *shared_network;
@@ -443,6 +464,7 @@ struct failover_peer {
 #endif /* defined (FAILOVER_PROTOCOL) */
 
 struct shared_network {
+	OMAPI_OBJECT_PREAMBLE;
 	struct shared_network *next;
 	char *name;
 	struct subnet *subnets;
@@ -455,6 +477,7 @@ struct shared_network {
 };
 
 struct subnet {
+	OMAPI_OBJECT_PREAMBLE;
 	struct subnet *next_subnet;
 	struct subnet *next_sibling;
 	struct shared_network *shared_network;
@@ -475,6 +498,7 @@ struct collection {
 
 /* XXX classes must be reference-counted. */
 struct class {
+	OMAPI_OBJECT_PREAMBLE;
 	struct class *nic;	/* Next in collection. */
 	struct class *superclass;	/* Set for spawned classes only. */
 	char *name;		/* Not set for spawned classes. */
@@ -619,6 +643,7 @@ struct client_state {
 /* Information about each network interface. */
 
 struct interface_info {
+	OMAPI_OBJECT_PREAMBLE;
 	struct interface_info *next;	/* Next interface in list... */
 	struct shared_network *shared_network;
 				/* Networks connected to this interface. */
@@ -1011,7 +1036,14 @@ int permitted PROTO ((struct packet *, struct permit *));
 void bootp PROTO ((struct packet *));
 
 /* memory.c */
-void enter_host PROTO ((struct host_decl *));
+extern struct hash_table *host_hw_addr_hash;
+extern struct hash_table *host_uid_hash;
+extern struct hash_table *host_name_hash;
+extern struct hash_table *lease_uid_hash;
+extern struct hash_table *lease_ip_addr_hash;
+extern struct hash_table *lease_hw_addr_hash;
+
+void enter_host PROTO ((struct host_decl *, int));
 struct host_decl *find_hosts_by_haddr PROTO ((int, unsigned char *, int));
 struct host_decl *find_hosts_by_uid PROTO ((unsigned char *, int));
 struct subnet *find_host_for_network PROTO ((struct host_decl **,
@@ -1160,7 +1192,7 @@ ssize_t receive_packet PROTO ((struct interface_info *,
 #endif
 
 #if defined (USE_SOCKET_SEND) || defined (USE_SOCKET_FALLBACK)
-void fallback_discard PROTO ((struct protocol *));
+isc_result_t fallback_discard PROTO ((omapi_object_t *));
 #endif
 
 #if defined (USE_SOCKET_SEND) && !defined (USE_SOCKET_FALLBACK)
@@ -1290,12 +1322,24 @@ extern void (*bootp_packet_handler) PROTO ((struct interface_info *,
 					    unsigned int,
 					    struct iaddr, struct hardware *));
 extern struct timeout *timeouts;
+extern omapi_object_type_t *dhcp_type_interface;
 void discover_interfaces PROTO ((int));
 struct interface_info *setup_fallback PROTO ((void));
+int if_readsocket PROTO ((omapi_object_t *));
 void reinitialize_interfaces PROTO ((void));
 void dispatch PROTO ((void));
 int locate_network PROTO ((struct packet *));
-void got_one PROTO ((struct protocol *));
+isc_result_t got_one PROTO ((omapi_object_t *));
+isc_result_t interface_set_value (omapi_object_t *, omapi_object_t *,
+				  omapi_data_string_t *, omapi_typed_data_t *);
+isc_result_t interface_get_value (omapi_object_t *, omapi_object_t *,
+				  omapi_data_string_t *, omapi_value_t **); 
+isc_result_t interface_destroy (omapi_object_t *, char *);
+isc_result_t interface_signal_handler (omapi_object_t *, char *, va_list);
+isc_result_t interface_stuff_values (omapi_object_t *,
+				     omapi_object_t *,
+				     omapi_object_t *);
+
 void add_timeout PROTO ((TIME, void (*) PROTO ((void *)), void *));
 void cancel_timeout PROTO ((void (*) PROTO ((void *)), void *));
 struct protocol *add_protocol PROTO ((char *, int,
@@ -1403,6 +1447,7 @@ void client_location_changed PROTO ((void));
 
 /* db.c */
 int write_lease PROTO ((struct lease *));
+int write_host PROTO ((struct host_decl *));
 int db_printable PROTO ((char *));
 int write_billing_class PROTO ((struct class *));
 int commit_leases PROTO ((void));
@@ -1513,8 +1558,9 @@ int add_relay_agent_options PROTO ((struct interface_info *ip,
 /* icmp.c */
 void icmp_startup PROTO ((int, void (*) PROTO ((struct iaddr,
 						u_int8_t *, int))));
+int icmp_readsocket PROTO ((omapi_object_t *));
 int icmp_echorequest PROTO ((struct iaddr *));
-void icmp_echoreply PROTO ((struct protocol *));
+isc_result_t icmp_echoreply PROTO ((omapi_object_t *));
 
 /* dns.c */
 void dns_startup PROTO ((void));
@@ -1574,4 +1620,127 @@ struct auth_key *auth_key_lookup PROTO ((struct data_string *));
 /* failover.c */
 void enter_failover_peer PROTO ((struct failover_peer *));
 struct failover_peer *find_failover_peer PROTO ((char *));
+
+/* omapi.c */
+extern omapi_object_type_t *dhcp_type_lease;
+#if 0
+extern omapi_object_type_t *dhcp_type_group;
+#endif
+extern omapi_object_type_t *dhcp_type_host;
+extern omapi_object_type_t *dhcp_type_pool;
+extern omapi_object_type_t *dhcp_type_shared_network;
+extern omapi_object_type_t *dhcp_type_subnet;
+extern omapi_object_type_t *dhcp_type_class;
+
+void dhcp_db_objects_setup (void);
+
+isc_result_t dhcp_lease_set_value  (omapi_object_t *, omapi_object_t *,
+				    omapi_data_string_t *,
+				    omapi_typed_data_t *);
+isc_result_t dhcp_lease_get_value (omapi_object_t *, omapi_object_t *,
+				   omapi_data_string_t *,
+				   omapi_value_t **); 
+isc_result_t dhcp_lease_destroy (omapi_object_t *, char *);
+isc_result_t dhcp_lease_signal_handler (omapi_object_t *, char *, va_list);
+isc_result_t dhcp_lease_stuff_values (omapi_object_t *,
+				      omapi_object_t *,
+				      omapi_object_t *);
+isc_result_t dhcp_lease_lookup (omapi_object_t **,
+				omapi_object_t *, omapi_object_t *);
+isc_result_t dhcp_lease_create (omapi_object_t **,
+				omapi_object_t *);
+#if 0
+isc_result_t dhcp_group_set_value  (omapi_object_t *, omapi_object_t *,
+				    omapi_data_string_t *,
+				    omapi_typed_data_t *);
+isc_result_t dhcp_group_get_value (omapi_object_t *, omapi_object_t *,
+				   omapi_data_string_t *,
+				   omapi_value_t **); 
+isc_result_t dhcp_group_destroy (omapi_object_t *, char *);
+isc_result_t dhcp_group_signal_handler (omapi_object_t *, char *, va_list);
+isc_result_t dhcp_group_stuff_values (omapi_object_t *,
+				      omapi_object_t *,
+				      omapi_object_t *);
+isc_result_t dhcp_group_lookup (omapi_object_t **,
+				omapi_object_t *, omapi_object_t *);
+isc_result_t dhcp_group_create (omapi_object_t **,
+				omapi_object_t *);
+#endif
+isc_result_t dhcp_host_set_value  (omapi_object_t *, omapi_object_t *,
+				   omapi_data_string_t *,
+				   omapi_typed_data_t *);
+isc_result_t dhcp_host_get_value (omapi_object_t *, omapi_object_t *,
+				  omapi_data_string_t *,
+				  omapi_value_t **); 
+isc_result_t dhcp_host_destroy (omapi_object_t *, char *);
+isc_result_t dhcp_host_signal_handler (omapi_object_t *, char *, va_list);
+isc_result_t dhcp_host_stuff_values (omapi_object_t *,
+				     omapi_object_t *,
+				     omapi_object_t *);
+isc_result_t dhcp_host_lookup (omapi_object_t **,
+			       omapi_object_t *, omapi_object_t *);
+isc_result_t dhcp_host_create (omapi_object_t **,
+			       omapi_object_t *);
+isc_result_t dhcp_pool_set_value  (omapi_object_t *, omapi_object_t *,
+				   omapi_data_string_t *,
+				   omapi_typed_data_t *);
+isc_result_t dhcp_pool_get_value (omapi_object_t *, omapi_object_t *,
+				  omapi_data_string_t *,
+				  omapi_value_t **); 
+isc_result_t dhcp_pool_destroy (omapi_object_t *, char *);
+isc_result_t dhcp_pool_signal_handler (omapi_object_t *, char *, va_list);
+isc_result_t dhcp_pool_stuff_values (omapi_object_t *,
+				     omapi_object_t *,
+				     omapi_object_t *);
+isc_result_t dhcp_pool_lookup (omapi_object_t **,
+			       omapi_object_t *, omapi_object_t *);
+isc_result_t dhcp_pool_create (omapi_object_t **,
+			       omapi_object_t *);
+isc_result_t dhcp_shared_network_set_value  (omapi_object_t *,
+					     omapi_object_t *,
+					     omapi_data_string_t *,
+					     omapi_typed_data_t *);
+isc_result_t dhcp_shared_network_get_value (omapi_object_t *, omapi_object_t *,
+					    omapi_data_string_t *,
+					    omapi_value_t **); 
+isc_result_t dhcp_shared_network_destroy (omapi_object_t *, char *);
+isc_result_t dhcp_shared_network_signal_handler (omapi_object_t *,
+						 char *, va_list);
+isc_result_t dhcp_shared_network_stuff_values (omapi_object_t *,
+					       omapi_object_t *,
+					       omapi_object_t *);
+isc_result_t dhcp_shared_network_lookup (omapi_object_t **,
+					 omapi_object_t *, omapi_object_t *);
+isc_result_t dhcp_shared_network_create (omapi_object_t **,
+					 omapi_object_t *);
+isc_result_t dhcp_subnet_set_value  (omapi_object_t *, omapi_object_t *,
+				     omapi_data_string_t *,
+				     omapi_typed_data_t *);
+isc_result_t dhcp_subnet_get_value (omapi_object_t *, omapi_object_t *,
+				    omapi_data_string_t *,
+				    omapi_value_t **); 
+isc_result_t dhcp_subnet_destroy (omapi_object_t *, char *);
+isc_result_t dhcp_subnet_signal_handler (omapi_object_t *, char *, va_list);
+isc_result_t dhcp_subnet_stuff_values (omapi_object_t *,
+				       omapi_object_t *,
+				       omapi_object_t *);
+isc_result_t dhcp_subnet_lookup (omapi_object_t **,
+				 omapi_object_t *, omapi_object_t *);
+isc_result_t dhcp_subnet_create (omapi_object_t **,
+				 omapi_object_t *);
+isc_result_t dhcp_class_set_value  (omapi_object_t *, omapi_object_t *,
+				    omapi_data_string_t *,
+				    omapi_typed_data_t *);
+isc_result_t dhcp_class_get_value (omapi_object_t *, omapi_object_t *,
+				   omapi_data_string_t *,
+				   omapi_value_t **); 
+isc_result_t dhcp_class_destroy (omapi_object_t *, char *);
+isc_result_t dhcp_class_signal_handler (omapi_object_t *, char *, va_list);
+isc_result_t dhcp_class_stuff_values (omapi_object_t *,
+				      omapi_object_t *,
+				      omapi_object_t *);
+isc_result_t dhcp_class_lookup (omapi_object_t **,
+				omapi_object_t *, omapi_object_t *);
+isc_result_t dhcp_class_create (omapi_object_t **,
+				omapi_object_t *);
 
