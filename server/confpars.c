@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.118 2000/07/05 07:32:13 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.119 2000/07/06 06:25:07 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2684,11 +2684,20 @@ int parse_lease_declaration (struct lease **lp, struct parse *cfile)
 
 	/* If no binding state is specified, make one up. */
 	if (!(seenmask & 256)) {
-		if (lease -> ends > cur_time)
+		if (lease -> ends > cur_time ||
+		    lease -> on_expiry || lease -> on_release)
 			lease -> binding_state = FTS_ACTIVE;
+		else if (lease -> pool && lease -> pool -> failover_peer)
+			lease -> binding_state = FTS_EXPIRED;
 		else
 			lease -> binding_state = FTS_FREE;
-		lease -> next_binding_state = lease -> binding_state;
+		if (lease -> binding_state == FTS_ACTIVE) {
+			if (lease -> pool && lease -> pool -> failover_peer)
+				lease -> next_binding_state = FTS_EXPIRED;
+			else
+				lease -> next_binding_state = FTS_FREE;
+		} else
+			lease -> next_binding_state = lease -> binding_state;
 	}
 
 	lease_reference (lp, lease, MDL);
