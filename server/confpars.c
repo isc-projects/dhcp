@@ -1530,15 +1530,15 @@ void convert_num (buf, str, base, size)
 	if (val > max) {
 		switch (base) {
 		      case 8:
-			warn ("value %s%lo exceeds max (%d) for precision.",
+			warn ("value %s%o exceeds max (%d) for precision.",
 			      negative ? "-" : "", val, max);
 			break;
 		      case 16:
-			warn ("value %s%lx exceeds max (%d) for precision.",
+			warn ("value %s%x exceeds max (%d) for precision.",
 			      negative ? "-" : "", val, max);
 			break;
 		      default:
-			warn ("value %s%ld exceeds max (%d) for precision.",
+			warn ("value %s%u exceeds max (%d) for precision.",
 			      negative ? "-" : "", val, max);
 			break;
 		}
@@ -1556,7 +1556,7 @@ void convert_num (buf, str, base, size)
 			putLong (buf, -(unsigned long)val);
 			break;
 		      default:
-			warn ("Unexpected integer size: %d\n");
+			warn ("Unexpected integer size: %d\n", size);
 			break;
 		}
 	} else {
@@ -1571,7 +1571,7 @@ void convert_num (buf, str, base, size)
 			putULong (buf, val);
 			break;
 		      default:
-			warn ("Unexpected integer size: %d\n");
+			warn ("Unexpected integer size: %d\n", size);
 			break;
 		}
 	}
