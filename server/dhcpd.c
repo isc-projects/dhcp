@@ -22,13 +22,13 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.60 1999/03/16 05:55:40 mellon Exp $ Copyright 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.61 1999/03/26 21:27:22 mellon Exp $ Copyright 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.";
 #endif
 
   static char copyright[] =
 "Copyright 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.";
 static char arr [] = "All rights reserved.";
-static char message [] = "Internet Software Consortium DHCP Server V3.0-alpha 980315";
+static char message [] = "Internet Software Consortium DHCP Server V3.0-alpha 980326";
 static char contrib [] = "\nPlease contribute if you find this software useful.";
 static char url [] = "For info, please visit http://www.isc.org/dhcp-contrib.html\n";
 
