@@ -106,7 +106,7 @@ if [ x$major != x ] && [ x$minor != x ]; then
   minversubst="-e /^##--minver--/,/^##--minver--/s/MinorVersion/$minor/"
 fi
 
-for foo in . client server relay common omapip dhcpctl; do
+for foo in . client server relay common omapip dhcpctl minires; do
 	 (sed $nsupdate $majversubst $minversubst \
 	      -e "/^##--${sysname}--/,/^##--${sysname}--/s/^#//" \
 		<Makefile.conf; cat site.conf; cat $foo/Makefile.dist)	\

@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.71 2000/01/27 22:40:49 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.72 2000/02/02 07:22:33 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1771,7 +1771,7 @@ int evaluate_numeric_expression (result, packet, lease,
 			res_ninit (&res);
 			inited = 1;
 		}
-		INIT_LIST (uq);
+		ISC_LIST_INIT (uq);
 		cur = expr;
 		do {
 		    next = cur -> data.dns_transaction.cdr;
@@ -1781,13 +1781,13 @@ int evaluate_numeric_expression (result, packet, lease,
 			       scope, cur -> data.dns_transaction.car));
 		    if (!status)
 			    goto dns_bad;
-		    APPEND (uq, nut, r_link);
+		    ISC_LIST_APPEND (uq, nut, r_link);
 		    cur = next;
 		} while (next);
 
 		/* Do the update and record the error code, if there was
 		   an error; otherwise set it to NOERROR. */
-		if (res_nupdate (&res, HEAD (uq), NULL))
+		if (res_nupdate (&res, ISC_LIST_HEAD (uq), NULL))
 			*result = NOERROR;
 		else
 			/* The resolver doesn't return any actual error
@@ -1799,9 +1799,9 @@ int evaluate_numeric_expression (result, packet, lease,
 		print_dns_status ((int)*result, &uq);
 
 	      dns_bad:
-		while (!EMPTY (uq)) {
-			ns_updrec *tmp = HEAD (uq);
-			UNLINK (uq, tmp, r_link);
+		while (!ISC_LIST_EMPTY (uq)) {
+			ns_updrec *tmp = ISC_LIST_HEAD (uq);
+			ISC_LIST_UNLINK (uq, tmp, r_link);
 			if (tmp -> r_data) {
 				dfree (tmp -> r_data, MDL);
 				tmp -> r_data = (char *)0;
