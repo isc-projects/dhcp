@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: packet.c,v 1.25 1999/04/23 15:38:57 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: packet.c,v 1.26 1999/04/23 22:15:43 mellon Exp $ Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -287,7 +287,7 @@ ssize_t decode_udp_ip_header (interface, buf, bufix, from, data, buflen)
 		  }
 		  return -1;
 	  }
-	  if (len + data != buf + buflen)
+	  if (len + data != buf + bufix + buflen)
 		  log_debug ("accepting packet with data after udp payload.");
   }
 
@@ -303,7 +303,7 @@ ssize_t decode_udp_ip_header (interface, buf, bufix, from, data, buflen)
 					       (u_int32_t)
 					       ntohs (udp -> uh_ulen)))));
 
-  ++udp_packets_seen;
+  udp_packets_seen++;
   if (usum && usum != sum) {
 	  udp_packets_bad_checksum++;
 	  if (udp_packets_seen > 4 &&
