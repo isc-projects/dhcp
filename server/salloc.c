@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: salloc.c,v 1.2 2001/04/27 21:30:15 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: salloc.c,v 1.2.2.1 2001/06/05 18:03:39 mellon Exp $ Copyright (c) 1996-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -138,6 +138,19 @@ void free_lease_state (ptr, file, line)
 	free_lease_states = ptr;
 	dmalloc_reuse (free_lease_states, (char *)0, 0, 0);
 }
+
+#if defined (DEBUG_MEMORY_LEAKAGE)
+void relinquish_free_lease_states ()
+{
+	struct lease_state *cs, *ns;
+
+	for (cs = free_lease_states; cs; cs = ns) {
+		ns = cs -> next;
+		dfree (cs, MDL);
+	}
+	free_lease_states = (struct lease_state *)0;
+}
+#endif
 
 struct permit *new_permit (file, line)
 	const char *file;
