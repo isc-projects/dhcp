@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: clparse.c,v 1.37 1999/10/12 16:00:17 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: clparse.c,v 1.38 1999/11/13 23:46:46 mellon Exp $ Copyright (c) 1997 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -60,7 +60,7 @@ isc_result_t read_client_conf ()
 	isc_result_t status;
 
 	/* Set up the initial dhcp option universe. */
-	initialize_universes ();
+	initialize_common_option_spaces ();
 
 	/* Initialize the top level client configuration. */
 	memset (&top_level_config, 0, sizeof top_level_config);
@@ -549,6 +549,8 @@ void parse_option_list (cfile, list)
 	ix = 0;
 	do {
 		token = next_token (&val, cfile);
+		if (token == SEMI)
+			break;
 		if (!is_identifier (token)) {
 			parse_warn (cfile, "expected option name.");
 			skip_to_semi (cfile);
@@ -583,19 +585,22 @@ void parse_option_list (cfile, list)
 	}
 	if (*list)
 		dfree (*list, "parse_option_list");
-	*list = dmalloc ((ix + 1) * sizeof **list, "parse_option_list");
-	if (!*list)
-		log_error ("no memory for option list.");
-	else {
-		ix = 0;
-		for (q = p; q; q = q -> cdr)
-			(*list) [ix++] = (u_int32_t)q -> car;
-		(*list) [ix] = 0;
-	}
-	while (p) {
-		q = p -> cdr;
-		free_pair (p, "parse_option_list");
-		p = q;
+	if (ix) {
+		*list = dmalloc ((ix + 1) * sizeof **list,
+				 "parse_option_list");
+		if (!*list)
+			log_error ("no memory for option list.");
+		else {
+			ix = 0;
+			for (q = p; q; q = q -> cdr)
+				(*list) [ix++] = (u_int32_t)q -> car;
+			(*list) [ix] = 0;
+		}
+		while (p) {
+			q = p -> cdr;
+			free_pair (p, "parse_option_list");
+			p = q;
+		}
 	}
 }
 
@@ -1223,3 +1228,25 @@ void parse_reject_statement (cfile, config)
 		skip_to_semi (cfile);
 	}
 }	
+
+/* allow-deny-keyword :== BOOTP
+   			| BOOTING
+			| DYNAMIC_BOOTP
+			| UNKNOWN_CLIENTS */
+
+int parse_allow_deny (oc, cfile, flag)
+	struct option_cache **oc;
+	struct parse *cfile;
+	int flag;
+{
+	enum dhcp_token token;
+	const char *val;
+	unsigned char rf = flag;
+	struct expression *data = (struct expression *)0;
+	int status;
+
+	parse_warn (cfile, "allow/deny/ignore not permitted here.");
+	skip_to_semi (cfile);
+	return 0;
+}
+
