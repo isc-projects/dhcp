@@ -140,6 +140,20 @@ struct subnet *new_subnet (name)
 	return rval;
 }
 
+struct class *new_class (name)
+	char *name;
+{
+	struct class *rval = dmalloc (sizeof (struct class), name);
+	return rval;
+}
+
+void free_class (ptr, name)
+	struct class *ptr;
+	char *name;
+{
+	dfree ((VOIDPTR)ptr, name);
+}
+
 void free_subnet (ptr, name)
 	struct subnet *ptr;
 	char *name;
