@@ -41,7 +41,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.116 2000/10/10 21:50:58 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.117 2000/11/24 03:52:37 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1070,7 +1070,7 @@ struct client_lease *packet_to_lease (packet, client)
 	struct client_state *client;
 {
 	struct client_lease *lease;
-	int i;
+	unsigned i;
 	struct option_cache *oc;
 	struct data_string data;
 
@@ -1090,10 +1090,32 @@ struct client_lease *packet_to_lease (packet, client)
 	memcpy (lease -> address.iabuf, &packet -> raw -> yiaddr,
 		lease -> address.len);
 
+	if (client -> config -> vendor_space_name) {
+		i = DHO_VENDOR_ENCAPSULATED_OPTIONS;
+
+		/* See if there was a vendor encapsulation option. */
+		oc = lookup_option (&dhcp_universe, lease -> options, i);
+		memset (&data, 0, sizeof data);
+		if (oc &&
+		    client -> config -> vendor_space_name &&
+		    evaluate_option_cache (&data, packet, (struct lease *)0,
+					   packet -> options, lease -> options,
+					   &global_scope, oc, MDL)) {
+			if (data.len) {
+				parse_encapsulated_suboptions
+					(packet -> options, &dhcp_options [i],
+					 data.data, data.len, &dhcp_universe,
+					 client -> config -> vendor_space_name
+						);
+			}
+			data_string_forget (&data, MDL);
+		}
+	} else
+		i = 0;
+
 	/* Figure out the overload flag. */
 	oc = lookup_option (&dhcp_universe, lease -> options,
 			    DHO_DHCP_OPTION_OVERLOAD);
-	memset (&data, 0, sizeof data);
 	if (oc &&
 	    evaluate_option_cache (&data, packet, (struct lease *)0,
 				   packet -> options, lease -> options,
@@ -2028,6 +2050,9 @@ void write_lease_option (struct option_cache *oc,
 {
 	const char *name, *dot;
 	struct data_string ds;
+	int status;
+	struct client_state *client;
+
 	memset (&ds, 0, sizeof ds);
 
 	if (u != &dhcp_universe) {
@@ -2042,7 +2067,7 @@ void write_lease_option (struct option_cache *oc,
 		fprintf (leaseFile,
 			 "  option %s%s%s %s;\n",
 			 name, dot, oc -> option -> name,
-			 pretty_print_option (oc -> option -> code,
+			 pretty_print_option (oc -> option,
 					      ds.data, ds.len, 1, 1));
 		data_string_forget (&ds, MDL);
 	}
@@ -2110,7 +2135,8 @@ int write_client_lease (client, lease, rewrite, makesure)
 		option_space_foreach ((struct packet *)0, (struct lease *)0,
 				      (struct option_state *)0,
 				      lease -> options, &global_scope,
-				      universes [i], 0, write_lease_option);
+				      universes [i],
+				      client, write_lease_option);
 	}
 
 	/* Note: the following is not a Y2K bug - it's a Y1.9K bug.   Until
@@ -2210,7 +2236,7 @@ void client_option_envadd (struct option_cache *oc,
 				client_envadd (es -> client, es -> prefix,
 					       name, "%s",
 					       (pretty_print_option
-						(oc -> option -> code,
+						(oc -> option,
 						 data.data, data.len,
 						 0, 0)));
 				data_string_forget (&data, MDL);
