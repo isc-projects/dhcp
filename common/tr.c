@@ -259,9 +259,8 @@ static void save_source_routing(trh, interface)
 
         /* found an entry so update it with fresh information */
         if (rover != NULL) {
-                if ((trh->saddr[0] & TR_RII)
-                                && (((ntohs(trh->rcf) & TR_RCF_LEN_MASK) >> 8) > 2)
-                                && !(trh->rcf & htons(TR_RCF_BROADCAST_MASK))) {
+                if ((trh->saddr[0] & TR_RII) &&
+		    ((ntohs(trh->rcf) & TR_RCF_LEN_MASK) >> 8) > 2) {
                         rcf = ntohs(trh->rcf);
                         rcf &= ~TR_RCF_BROADCAST_MASK;
                         memcpy(rover->rseg, trh->rseg, sizeof(rover->rseg));
