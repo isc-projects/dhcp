@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.120 1999/10/20 20:54:42 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.121 1999/10/21 02:42:57 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -314,6 +314,10 @@ void dhcpdecline (packet)
 	struct iaddr cip;
 	struct option_cache *oc;
 	struct data_string data;
+	struct option_state *options = (struct option_state *)0;
+	int ignorep;
+	int i;
+	const char *status;
 
 	/* DHCPDECLINE must specify address. */
 	if (!(oc = lookup_option (&dhcp_universe, packet -> options,
@@ -331,19 +335,49 @@ void dhcpdecline (packet)
 	data_string_forget (&data, "dhcpdecline");
 	lease = find_lease_by_ip_addr (cip);
 
-	log_info ("DHCPDECLINE on %s from %s via %s",
-	      piaddr (cip),
-	      print_hw_addr (packet -> raw -> htype,
-			     packet -> raw -> hlen,
-			     packet -> raw -> chaddr),
-	      packet -> raw -> giaddr.s_addr
-	      ? inet_ntoa (packet -> raw -> giaddr)
-	      : packet -> interface -> name);
+	option_state_allocate (&options, "dhcpdecline");
 
-	/* If we found a lease, mark it as unusable and complain. */
-	if (lease) {
-		abandon_lease (lease, "declined.");
+	/* Execute statements in scope starting with the subnet scope. */
+	if (lease)
+		execute_statements_in_scope (packet, (struct lease *)0,
+					     packet -> options,
+					     options, lease -> subnet -> group,
+					     (struct group *)0);
+
+	/* Execute statements in the class scopes. */
+	for (i = packet -> class_count; i > 0; i--) {
+		execute_statements_in_scope
+			(packet, (struct lease *)0, packet -> options,
+			 options, packet -> classes [i - 1] -> group,
+			 lease ? lease -> subnet -> group : (struct group *)0);
 	}
+
+	/* Drop the request if dhcpdeclines are being ignored. */
+	oc = lookup_option (&server_universe, options, SV_DECLINES);
+	if (!oc ||
+	    evaluate_boolean_option_cache (&ignorep,
+					   packet, lease, packet -> options,
+					   options, oc)) {
+		/* If we found a lease, mark it as unusable and complain. */
+		if (lease) {
+			abandon_lease (lease, "declined.");
+			status = "";
+		}
+		status = " (not found)";
+	} else
+		status = " (ignored)";
+
+	if (!ignorep)
+		log_info ("DHCPDECLINE on %s from %s via %s%s",
+			  piaddr (cip),
+			  print_hw_addr (packet -> raw -> htype,
+					 packet -> raw -> hlen,
+					 packet -> raw -> chaddr),
+			  packet -> raw -> giaddr.s_addr
+			  ? inet_ntoa (packet -> raw -> giaddr)
+			  : packet -> interface -> name, status);
+		
+	option_state_dereference (&options, "dhcpdecline");
 }
 
 void dhcpinform (packet)
@@ -561,6 +595,7 @@ void dhcpinform (packet)
 		     hash_lookup (&universe_hash, d1.data, d1.len));
 		if (!u) {
 			log_error ("unknown option space %s.", d1.data);
+			option_state_dereference (&options, "dhcpinform");
 			return;
 		}
 
@@ -823,6 +858,7 @@ void ack_lease (packet, lease, offer, when, msg)
 	unsigned i, j;
 	int s1, s2;
 	int val;
+	int ignorep;
 
 	/* If we're already acking this lease, don't do it again. */
 	if (lease -> state)
@@ -938,7 +974,8 @@ void ack_lease (packet, lease, offer, when, msg)
 	if (packet -> packet_type == DHCPREQUEST &&
 	    (oc = lookup_option (&server_universe, state -> options,
 				 SV_ONE_LEASE_PER_CLIENT)) &&
-	    evaluate_boolean_option_cache (packet, lease, packet -> options,
+	    evaluate_boolean_option_cache (&ignorep,
+					   packet, lease, packet -> options,
 					   state -> options, oc)) {
 		struct lease *seek;
 		if (lease -> uid_len) {
@@ -963,7 +1000,7 @@ void ack_lease (packet, lease, offer, when, msg)
 		     !lease -> host -> client_identifier.len &&
 		     (oc = lookup_option (&server_universe, state -> options,
 					  SV_DUPLICATES)) &&
-		     !evaluate_boolean_option_cache (packet, lease,
+		     !evaluate_boolean_option_cache (&ignorep, packet, lease,
 						     packet -> options,
 						     state -> options, oc))) {
 			do {
@@ -1040,8 +1077,11 @@ void ack_lease (packet, lease, offer, when, msg)
 	if (!lease -> host &&
 	    (oc = lookup_option (&server_universe, state -> options,
 				 SV_BOOT_UNKNOWN_CLIENTS)) &&
-	    !evaluate_boolean_option_cache (packet, lease, packet -> options,
+	    !evaluate_boolean_option_cache (&ignorep,
+					    packet, lease, packet -> options,
 					    state -> options, oc)) {
+		if (!ignorep)
+			log_info ("%s: unknown client", msg);
 		free_lease_state (state, "ack_lease");
 		static_lease_dereference (lease, "ack_lease");
 		return;
@@ -1051,9 +1091,11 @@ void ack_lease (packet, lease, offer, when, msg)
 	if (!offer &&
 	    (oc = lookup_option (&server_universe, state -> options,
 				   SV_ALLOW_BOOTP)) &&
-	    !evaluate_boolean_option_cache (packet, lease, packet -> options,
+	    !evaluate_boolean_option_cache (&ignorep,
+					    packet, lease, packet -> options,
 					    state -> options, oc)) {
-		log_info ("%s: bootp disallowed", msg);
+		if (!ignorep)
+			log_info ("%s: bootp disallowed", msg);
 		free_lease_state (state, "ack_lease");
 		static_lease_dereference (lease, "ack_lease");
 		return;
@@ -1063,16 +1105,14 @@ void ack_lease (packet, lease, offer, when, msg)
 	oc = lookup_option (&server_universe, state -> options,
 			    SV_ALLOW_BOOTING);
 	if (oc &&
-	    !evaluate_boolean_option_cache (packet, lease, packet -> options,
+	    !evaluate_boolean_option_cache (&ignorep,
+					    packet, lease, packet -> options,
 					    state -> options, oc)) {
-		if (d1.len && !d1.data [0]) {
+		if (!ignorep)
 			log_info ("%s: booting disallowed", msg);
-			data_string_forget (&d1, "ack_lease");
-			free_lease_state (state, "ack_lease");
-			static_lease_dereference (lease, "ack_lease");
-			return;
-		}
-		data_string_forget (&d1, "ack_lease");
+		free_lease_state (state, "ack_lease");
+		static_lease_dereference (lease, "ack_lease");
+		return;
 	}
 
 	/* If we are configured to do per-class billing, do it. */
@@ -1372,7 +1412,7 @@ void ack_lease (packet, lease, offer, when, msg)
 	   the broadcast bit in the bootp flags field. */
 	if ((oc = lookup_option (&server_universe, state -> options,
 				SV_ALWAYS_BROADCAST)) &&
-	    evaluate_boolean_option_cache (packet, lease,
+	    evaluate_boolean_option_cache (&ignorep, packet, lease,
 					   packet -> options, state -> options,
 					   oc))
 		state -> bootp_flags |= htons (BOOTP_BROADCAST);
@@ -1555,7 +1595,7 @@ void ack_lease (packet, lease, offer, when, msg)
 	if (!lookup_option (&dhcp_universe, state -> options, i) &&
 	    lease -> host && lease -> host -> name &&
 	    (evaluate_boolean_option_cache
-	     (packet, lease, packet -> options, state -> options,
+	     (&ignorep, packet, lease, packet -> options, state -> options,
 	      (lookup_option
 	       (&server_universe, state -> options, j))))) {
 		oc = (struct option_cache *)0;
@@ -1578,7 +1618,7 @@ void ack_lease (packet, lease, offer, when, msg)
 	j = SV_GET_LEASE_HOSTNAMES;
 	if (!lookup_option (&server_universe, state -> options, i) &&
 	    (evaluate_boolean_option_cache
-	     (packet, lease, packet -> options, state -> options,
+	     (&ignorep, packet, lease, packet -> options, state -> options,
 	      lookup_option (&server_universe, state -> options, j)))) {
 		struct in_addr ia;
 		struct hostent *h;
@@ -1611,7 +1651,7 @@ void ack_lease (packet, lease, offer, when, msg)
 	   so if the local router does proxy arp, you win. */
 
 	if (evaluate_boolean_option_cache
-	    (packet, lease, packet -> options, state -> options,
+	    (&ignorep, packet, lease, packet -> options, state -> options,
 	     lookup_option (&server_universe, state -> options,
 			    SV_USE_LEASE_ADDR_FOR_DEFAULT_ROUTE))) {
 		i = DHO_ROUTERS;
