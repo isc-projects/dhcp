@@ -52,7 +52,8 @@ struct dmalloc_preamble {
 struct rc_history_entry {
 	const char *file;
 	int line;
-	VOIDPTR addr;
+	void *reference;
+	void *addr;
 	int refcnt;
 };
 
