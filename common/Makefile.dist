@@ -1,6 +1,7 @@
 # Makefile.dist
 #
-# Copyright (c) 1996 The Internet Software Consortium.  All rights reserved.
+# Copyright (c) 1996, 1997, 1998 The Internet Software Consortium.
+# All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -52,13 +53,24 @@ libdhcp.a:	$(OBJ)
 	ranlib libdhcp.a
 
 install: $(CATMANPAGES)
-	if [ ! -d $(FFMANDIR) ]; then \
-	  mkdir $(FFMANDIR); \
-	  chmod 755 $(FFMANDIR); \
-        fi
+	@for dir in $(FFMANDIR); do \
+	  case $$dir in \
+	    /*) base=/ ;; \
+	    *) base="" ;; \
+	  esac; \
+	  slash=""; \
+	  for elt in `echo $$dir |sed -e 's/\// /g'`; do \
+	    if [ ! -d $$base/$$elt ]; then \
+	      echo Making $$base/$$elt; \
+	      mkdir $$base/$$elt; \
+	      chmod 755 $$base/$$elt; \
+	    fi; \
+	    base=$$base$$slash$$elt; \
+	    slash=/; \
+	  done; \
+	done
 	$(MANINSTALL) $(MANFROM) dhcp-options.cat5 $(MANTO) \
 				$(FFMANDIR)/dhcp-options$(FFMANEXT)
-
 
 clean:
 	-rm -f $(OBJ)
