@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: print.c,v 1.17 1998/03/16 06:14:21 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: print.c,v 1.18 1998/11/05 18:44:11 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -99,6 +99,7 @@ void print_lease (lease)
 	       lease -> host ? lease -> host -> name : "<none>");
 }	
 
+#if defined (DEBUG)
 void dump_packet (tp)
 	struct packet *tp;
 {
@@ -136,6 +137,7 @@ void dump_packet (tp)
 	}
 	debug ("");
 }
+#endif
 
 void dump_raw (buf, len)
 	unsigned char *buf;
@@ -182,3 +184,348 @@ void hash_dump (table)
 		}
 	}
 }
+
+#define HBLEN 60
+
+#define DECLARE_HEX_PRINTER(x)						      \
+char *print_hex##x (len, data, limit)					      \
+	int len;							      \
+	u_int8_t *data;							      \
+{									      \
+									      \
+	static char hex_buf##x [HBLEN + 1];				      \
+	int i;								      \
+									      \
+	if (limit > HBLEN)						      \
+		limit = HBLEN;						      \
+									      \
+	for (i = 0; i < (limit - 2) && i < len; i++) {			      \
+		if (!isascii (data [i]) || !isprint (data [i])) {	      \
+			for (i = 0; i < limit / 3 && i < len; i++) {	      \
+				sprintf (&hex_buf##x [i * 3],		      \
+					 "%02x:", data [i]);		      \
+			}						      \
+			hex_buf##x [i * 3 - 1] = 0;			      \
+			return hex_buf##x;				      \
+		}							      \
+	}								      \
+	hex_buf##x [0] = '"';						      \
+	i = len;							      \
+	if (i > limit - 2)						      \
+		i = limit - 2;						      \
+	memcpy (&hex_buf##x [1], data, i);				      \
+	hex_buf##x [i + 1] = '"';					      \
+	hex_buf##x [i + 2] = 0;						      \
+	return hex_buf##x;						      \
+}
+
+DECLARE_HEX_PRINTER (_1)
+DECLARE_HEX_PRINTER (_2)
+DECLARE_HEX_PRINTER (_3)
+
+#define DQLEN	80
+
+char *print_dotted_quads (len, data)
+	int len;
+	u_int8_t *data;
+{
+	static char dq_buf [DQLEN + 1];
+	int i;
+	char *s, *last;
+
+	s = &dq_buf [0];
+	last = s;
+	
+	i = 0;
+
+	do {
+		sprintf (s, "%d.%d.%d.%d, ",
+			 data [i], data [i + 1], data [i + 2], data [i + 3]);
+		s += strlen (s);
+		i += 4;
+	} while ((s - &dq_buf [0] > DQLEN - 21) &&
+		 i + 3 < len);
+	if (i == len)
+		s [-2] = 0;
+	else
+		strcpy (s, "...");
+	return dq_buf;
+}
+
+char *print_dec_1 (val)
+	int val;
+{
+	static char vbuf [32];
+	sprintf (vbuf, "%d", val);
+	return vbuf;
+}
+
+char *print_dec_2 (val)
+	int val;
+{
+	static char vbuf [32];
+	sprintf (vbuf, "%d", val);
+	return vbuf;
+}
+
+static int print_subexpression PROTO ((struct expression *, char *, int));
+
+static int print_subexpression (expr, buf, len)
+	struct expression *expr;
+	char *buf;
+	int len;
+{
+	int rv;
+	char *s;
+	
+	switch (expr -> op) {
+	      case expr_none:
+		if (len > 3) {
+			strcpy (buf, "nil");
+			return 3;
+		}
+		break;
+		  
+	      case expr_match:
+		if (len > 7) {
+			strcpy (buf, "(match)");
+			return 7;
+		}
+		break;
+
+	      case expr_check:
+		rv = 10 + strlen (expr -> data.check -> name);
+		if (len > rv) {
+			sprintf (buf, "(check %s)",
+				 expr -> data.check -> name);
+			return rv;
+		}
+		break;
+
+	      case expr_equal:
+		if (len > 6) {
+			rv = 4;
+			strcpy (buf, "(eq ");
+			rv += print_subexpression (expr -> data.equal [0],
+						   buf + rv, len - rv - 2);
+			buf [rv++] = ' ';
+			rv += print_subexpression (expr -> data.equal [1],
+						   buf + rv, len - rv - 1);
+			buf [rv++] = ')';
+			buf [rv] = 0;
+			return rv;
+		}
+		break;
+
+	      case expr_substring:
+		if (len > 11) {
+			rv = 8;
+			strcpy (buf, "(substr ");
+			rv += print_subexpression (expr -> data.substring.expr,
+						   buf + rv, len - rv - 3);
+			buf [rv++] = ' ';
+			rv += print_subexpression
+				(expr -> data.substring.offset,
+				 buf + rv, len - rv - 2);
+			buf [rv++] = ' ';
+			rv += print_subexpression (expr -> data.substring.len,
+						   buf + rv, len - rv - 1);
+			buf [rv++] = ')';
+			buf [rv] = 0;
+			return rv;
+		}
+		break;
+
+	      case expr_suffix:
+		if (len > 10) {
+			rv = 8;
+			strcpy (buf, "(substr ");
+			rv += print_subexpression (expr -> data.suffix.expr,
+						   buf + rv, len - rv - 2);
+			buf [rv++] = ' ';
+			rv += print_subexpression (expr -> data.suffix.len,
+						   buf + rv, len - rv - 1);
+			buf [rv++] = ')';
+			buf [rv] = 0;
+			return rv;
+		}
+		break;
+
+	      case expr_concat:
+		if (len > 10) {
+			rv = 8;
+			strcpy (buf, "(concat ");
+			rv += print_subexpression (expr -> data.concat [0],
+						   buf + rv, len - rv - 2);
+			buf [rv++] = ' ';
+			rv += print_subexpression (expr -> data.concat [1],
+						   buf + rv, len - rv - 1);
+			buf [rv++] = ')';
+			buf [rv] = 0;
+			return rv;
+		}
+		break;
+
+	      case expr_host_lookup:
+		rv = 15 + strlen (expr -> data.host_lookup -> hostname);
+		if (len > rv) {
+			sprintf (buf, "(dns-lookup %s)",
+				 expr -> data.host_lookup -> hostname);
+			return rv;
+		}
+		break;
+
+	      case expr_and:
+		if (len > 7) {
+			rv = 5;
+			strcpy (buf, "(and ");
+			rv += print_subexpression (expr -> data.and [0],
+						buf + rv, len - rv - 2);
+			buf [rv++] = ' ';
+			rv += print_subexpression (expr -> data.and [1],
+						   buf + rv, len - rv - 1);
+			buf [rv++] = ')';
+			buf [rv] = 0;
+			return rv;
+		}
+		break;
+
+	      case expr_or:
+		if (len > 6) {
+			rv = 4;
+			strcpy (buf, "(or ");
+			rv += print_subexpression (expr -> data.or [0],
+						   buf + rv, len - rv - 2);
+			buf [rv++] = ' ';
+			rv += print_subexpression (expr -> data.or [1],
+						   buf + rv, len - rv - 1);
+			buf [rv++] = ')';
+			buf [rv] = 0;
+			return rv;
+		}
+		break;
+
+	      case expr_not:
+		if (len > 6) {
+			rv = 5;
+			strcpy (buf, "(not ");
+			rv += print_subexpression (expr -> data.not,
+						   buf + rv, len - rv - 1);
+			buf [rv++] = ')';
+			buf [rv] = 0;
+			return rv;
+		}
+		break;
+
+	      case expr_option:
+		rv = 10 + (strlen (expr -> data.option -> name) +
+			   strlen (expr -> data.option -> universe -> name));
+		if (len > rv) {
+			sprintf (buf, "(option %s.%s)",
+				 expr -> data.option -> universe -> name,
+				 expr -> data.option -> name);
+			return rv;
+		}
+		break;
+
+	      case expr_hardware:
+		if (len > 10) {
+			strcpy (buf, "(hardware)");
+			return 10;
+		}
+		break;
+
+	      case expr_packet:
+		if (len > 10) {
+			rv = 8;
+			strcpy (buf, "(substr ");
+			rv += print_subexpression (expr -> data.packet.offset,
+						   buf + rv, len - rv - 2);
+			buf [rv++] = ' ';
+			rv += print_subexpression (expr -> data.packet.len,
+						   buf + rv, len - rv - 1);
+			buf [rv++] = ')';
+			buf [rv] = 0;
+			return rv;
+		}
+		break;
+
+	      case expr_const_data:
+		s = print_hex_1 (expr -> data.const_data.len,
+				 expr -> data.const_data.data, len);
+		rv = strlen (s);
+		if (rv >= len)
+			rv = len - 1;
+		strncpy (buf, s, rv);
+		buf [rv] = 0;
+		return rv;
+
+	      case expr_extract_int8:
+		if (len > 7) {
+			rv = 6;
+			strcpy (buf, "(int8 ");
+			rv += print_subexpression (expr -> data.extract_int,
+						   buf + rv, len - rv - 1);
+			buf [rv++] = ')';
+			buf [rv] = 0;
+			return rv;
+		}
+		break;
+
+	      case expr_extract_int16:
+		if (len > 8) {
+			rv = 7;
+			strcpy (buf, "(int16 ");
+			rv += print_subexpression (expr -> data.extract_int,
+						   buf + rv, len - rv - 1);
+			buf [rv++] = ')';
+			buf [rv] = 0;
+			return rv;
+		}
+		break;
+
+	      case expr_extract_int32:
+		if (len > 8) {
+			rv = 7;
+			strcpy (buf, "(int32 ");
+			rv += print_subexpression (expr -> data.extract_int,
+						   buf + rv, len - rv - 1);
+			buf [rv++] = ')';
+			buf [rv] = 0;
+			return rv;
+		}
+		break;
+
+	      case expr_const_int:
+		s = print_dec_1 (expr -> data.const_int);
+		rv = strlen (s);
+		if (len > rv) {
+			strcpy (buf, s);
+			return rv;
+		}
+		break;
+
+	      case expr_exists:
+		rv = 10 + (strlen (expr -> data.option -> name) +
+			   strlen (expr -> data.option -> universe -> name));
+		if (len > rv) {
+			sprintf (buf, "(exists %s.%s)",
+				 expr -> data.option -> universe -> name,
+				 expr -> data.option -> name);
+			return rv;
+		}
+		break;
+	}
+	return 0;
+}
+
+void print_expression (name, expr)
+	char *name;
+	struct expression *expr;
+{
+	char buf [1024];
+
+	print_subexpression (expr, buf, sizeof buf);
+	note ("%s: %s", name, buf);
+}
+
