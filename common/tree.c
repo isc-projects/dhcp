@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.31.2.1 1999/07/13 18:43:35 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.31.2.2 1999/10/15 12:49:12 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -64,7 +64,7 @@ int make_const_option_cache (oc, buffer, data, len, option, name)
 	}
 
 	if (!option_cache_allocate (oc, name)) {
-		log_error ("%s: can't allocate option cache.");
+		log_error ("%s: can't allocate option cache.", name);
 		buffer_dereference (&bp, name);
 		return 0;
 	}
@@ -922,7 +922,7 @@ int evaluate_data_expression (result, packet, options, lease, expr)
 			int buflen, i;
 
 			if (len != 8 && len != 16 && len != 32) {
-				log_info ("binary_to_ascii: %s %d!",
+				log_info ("binary_to_ascii: %s %ld!",
 					  "invalid width", len);
 				goto b2a_out;
 			}
@@ -931,7 +931,7 @@ int evaluate_data_expression (result, packet, options, lease, expr)
 			/* The buffer must be a multiple of the number's
 			   width. */
 			if (other.len % len) {
-				log_info ("binary-to-ascii: %s %d %s %d!",
+				log_info ("binary-to-ascii: %s %d %s %ld!",
 					  "length of buffer", other.len,
 					  "not a multiple of width", len);
 				status = 0;
@@ -1036,7 +1036,7 @@ int evaluate_data_expression (result, packet, options, lease, expr)
 			/* The buffer must be a multiple of the number's
 			   width. */
 			if (other.len % len) {
-				log_info ("binary-to-ascii: %s %d %s %d!",
+				log_info ("binary-to-ascii: %s %d %s %ld!",
 					  "length of buffer", other.len,
 					  "not a multiple of width", len);
 				status = 0;
