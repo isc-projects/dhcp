@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: hash.c,v 1.12 1999/03/16 05:50:34 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: hash.c,v 1.13 1999/04/05 19:02:42 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -81,6 +81,9 @@ void add_hash (table, name, len, pointer)
 	if (!table)
 		return;
 
+	if (!len)
+		len = strlen (name);
+
 	hashno = do_hash (name, len, table -> hash_count);
 	bp = new_hash_bucket ("add_hash");
 
@@ -105,6 +108,9 @@ void delete_hash_entry (table, name, len)
 
 	if (!table)
 		return;
+
+	if (!len)
+		len = strlen (name);
 
 	hashno = do_hash (name, len, table -> hash_count);
 
@@ -137,19 +143,15 @@ unsigned char *hash_lookup (table, name, len)
 
 	if (!table)
 		return (unsigned char *)0;
+	if (!len)
+		len = strlen (name);
+
 	hashno = do_hash (name, len, table -> hash_count);
 
-	if (len) {
-		for (bp = table -> buckets [hashno]; bp; bp = bp -> next) {
-			if (len == bp -> len
-			    && !memcmp (bp -> name, name, len))
-				return bp -> value;
-		}
-	} else {
-		for (bp = table -> buckets [hashno]; bp; bp = bp -> next)
-			if (!strcmp ((char *)bp -> name,
-				     (char *)name))
-				return bp -> value;
+	for (bp = table -> buckets [hashno]; bp; bp = bp -> next) {
+		if (len == bp -> len
+		    && !memcmp (bp -> name, name, len))
+			return bp -> value;
 	}
 	return (unsigned char *)0;
 }
