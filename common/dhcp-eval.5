@@ -1,4 +1,4 @@
-.\"	$Id: dhcp-eval.5,v 1.17.2.7 2004/06/10 17:59:15 dhankins Exp $
+.\"	$Id: dhcp-eval.5,v 1.17.2.8 2004/10/12 18:45:10 dhankins Exp $
 .\"
 .\" Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 1996-2003 by Internet Software Consortium
@@ -246,12 +246,12 @@ contents packet as in the \fBsubstring\fR operator.
 .RS 0.25i
 A string, enclosed in quotes, may be specified as a data expression,
 and returns the text between the quotes, encoded in ASCII.   The
-backslash ('\\') character is treated specially, as in C programming:
-'\\t' means TAB, '\\r' means carriage return, '\\n' means newline, and
-'\\b' means bell.   Any octal value can be specified with '\\nnn',
-where nnn is any positive octal number less than 0400.  Any
-hexadecimal value can be specified with '\xnn', where nn is any
-positive hexadecimal number less than 0xff.
+backslash ('\\') character is treated specially, as in C programming: '\\t'
+means TAB, '\\r' means carriage return, '\\n' means newline, and '\\b' means
+bell.   Any octal value can be specified with '\\nnn', where nnn is any
+positive octal number less than 0400.  Any hexadecimal value can be
+specified with '\\xnn', where nn is any positive hexadecimal number less
+than 0xff.
 .RE
 .PP
 .I colon-separated hexadecimal list
@@ -317,6 +317,7 @@ Numeric-expr is evaluated and encoded as a data string of the
 specified width, in network byte order (most significant byte first).
 If the numeric expression evaluates to the null value, the result is
 also null.
+.RE
 .PP
 .B pick-first-value (\fIdata-expr1\fR [ ... \fIexpr\fRn ] \fB)\fR
 .RS 0.25i
