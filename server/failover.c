@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.39 2001/03/14 17:40:59 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.40 2001/03/16 01:56:32 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -4698,7 +4698,11 @@ int lease_mine_to_reallocate (struct lease *lease)
 		}
 		return 0;
 	}
-	return 1;
+	if (lease)
+		return !(lease -> binding_state != FTS_FREE &&
+			 lease -> binding_state != FTS_BACKUP);
+	else
+		return 0;
 }
 
 static isc_result_t failover_message_reference (failover_message_t **mp,
