@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.10 1998/11/06 00:30:19 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.11 1998/11/06 02:42:48 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -72,8 +72,8 @@ void skip_to_semi (cfile)
 	do {
 		token = peek_token (&val, cfile);
 		if (token == RBRACE) {
+			token = next_token (&val, cfile);
 			if (brace_count) {
-				token = next_token (&val, cfile);
 				if (!--brace_count)
 					return;
 			} else
@@ -894,6 +894,7 @@ struct executable_statement *parse_executable_statement (cfile, lose)
 		return stmt;
 	      case ADD:
 		token = next_token (&val, cfile);
+		token = next_token (&val, cfile);
 		if (token != STRING) {
 			parse_warn ("expecting class name.");
 			skip_to_semi (cfile);
@@ -1025,9 +1026,14 @@ struct executable_statement *parse_if_statement (cfile, lose)
 		return (struct executable_statement *)0;
 	}
 	true = parse_executable_statements (cfile, lose);
-	if (*lose)
-		return (struct executable_statement *)0;
 	token = next_token (&val, cfile);
+	if (*lose) {
+		/* Try to even things up. */
+		do {
+			token = next_token (&val, cfile);
+		} while (token != EOF && token != RBRACE);
+		return (struct executable_statement *)0;
+	}
 	if (token != RBRACE) {
 		parse_warn ("right brace expected.");
 		skip_to_semi (cfile);
@@ -1737,6 +1743,7 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 				return 0;
 			if (!parse_cshl (&t -> data.const_data, cfile))
 				return 0;
+			t -> op = expr_const_data;
 		} else if (token == STRING) {
 			token = next_token (&val, cfile);
 			if (!make_const_data (&t, (unsigned char *) val,
