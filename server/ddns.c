@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: ddns.c,v 1.10 2001/01/16 23:48:30 mellon Exp $ Copyright (c) 2000-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: ddns.c,v 1.11 2001/01/19 10:59:10 mellon Exp $ Copyright (c) 2000-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -666,6 +666,11 @@ int ddns_updates (struct packet *packet,
 						   packet -> options,
 						   state -> options,
 						   &lease -> scope, oc, MDL))
+			goto noclient;
+		/* Win98 and Win2k will happily claim to be willing to
+		   update an unqualified domain name. */
+		if (!(oc = lookup_option (&fqdn_universe, packet -> options,
+					  FQDN_DOMAINNAME)))
 			goto noclient;
 		if (!(oc = lookup_option (&fqdn_universe, packet -> options,
 					  FQDN_FQDN)) ||
