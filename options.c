@@ -131,7 +131,9 @@ void parse_option_buffer (packet, buffer, length)
 			   we last saw.   This is really only required
 			   for clients, but what the heck... */
 			t = (unsigned char *)
-				malloc (len + packet -> options [code].len);
+				malloc (len
+					+ packet -> options [code].len
+					+ 1);
 			if (!t)
 				error ("Can't expand storage for option %s.",
 				       dhcp_options [code].name);
