@@ -39,11 +39,15 @@
  * Consortium, see ``http://www.isc.org/''.  To learn more about Vixie
  * Enterprises, see ``http://www.vix.com''.  To learn more about
  * Nominum, Inc., see ``http://www.nominum.com''.
+ *
+ * Patches for FDDI support on Digital Unix were written by Bill
+ * Stapleton, and maintained for a while by Mike Meredith before he
+ * managed to get me to integrate them.
  */
 
 #ifndef lint
 static char copyright[] =
-"$Id: bpf.c,v 1.37 2000/04/06 23:49:29 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bpf.c,v 1.38 2000/04/14 16:17:35 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -286,25 +290,25 @@ void if_register_receive (info)
 	/* See if this is an FDDI interface, flag it for later. */
 	if (ioctl(info -> rfdesc, BIOCGDLT, &link_layer) >= 0 &&
 	    link_layer == DLT_FDDI) {
-		if (!dhcp_fddi_filter) {
-			dhcp_fddi_filter = dmalloc (sizeof dhcp_bpf_filter,
+		if (!bpf_fddi_filter) {
+			bpf_fddi_filter = dmalloc (sizeof bpf_fddi_filter,
 						    MDL);
-			if (!dhcp_fddi_filter)
+			if (!bpf_fddi_filter)
 				log_fatal ("No memory for FDDI filter.");
-			memcpy (dhcp_fddi_filter,
+			memcpy (bpf_fddi_filter,
 				dhcp_bpf_filter, sizeof dhcp_bpf_filter);
 			/* Patch the BPF program to account for the difference
 			   in length between ethernet headers (14), FDDI and
 			   802.2 headers (16 +8=24, +10).
 			   XXX changes to filter program may require changes to
 			   XXX the insn number(s) used below! */
-			dhcp_fddi_filter[0].k += 10;
-			dhcp_fddi_filter[2].k += 10;
-			dhcp_fddi_filter[4].k += 10;
-			dhcp_fddi_filter[6].k += 10;
-			dhcp_fddi_filter[7].k += 10;
+			bpf_fddi_filter[0].k += 10;
+			bpf_fddi_filter[2].k += 10;
+			bpf_fddi_filter[4].k += 10;
+			bpf_fddi_filter[6].k += 10;
+			bpf_fddi_filter[7].k += 10;
 		}
-		p.bf_insns = dhcp_fddi_filter;
+		p.bf_insns = bpf_fddi_filter;
 	} else
 #endif /* DEC_FDDI */
 	p.bf_insns = dhcp_bpf_filter;
