@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bootp.c,v 1.51 1999/07/06 17:07:12 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: bootp.c,v 1.51.2.1 1999/10/20 02:18:54 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -134,19 +134,16 @@ void bootp (packet)
 				     hp -> group, subnet -> group);
 	
 	/* Drop the request if it's not allowed for this client. */
-	if (evaluate_boolean_option_cache (packet, options, lease,
-					   lookup_option (&server_universe,
-							  options,
-							  SV_ALLOW_BOOTP))) {
+	if ((oc = lookup_option (&server_universe, options, SV_ALLOW_BOOTP)) &&
+	    !evaluate_boolean_option_cache (packet, options, lease, oc)) {
 		log_info ("%s: bootp disallowed", msgbuf);
 		option_state_dereference (&options, "bootrequest");
 		return;
 	} 
 
-	if (evaluate_boolean_option_cache (packet, options, lease,
-					   lookup_option (&server_universe,
-							  options,
-							  SV_ALLOW_BOOTING))) {
+	if ((oc =
+	     lookup_option (&server_universe, options, SV_ALLOW_BOOTING)) &&
+	    !evaluate_boolean_option_cache (packet, options, lease, oc)) {
 		log_info ("%s: booting disallowed", msgbuf);
 		option_state_dereference (&options, "bootrequest");
 		return;
@@ -304,6 +301,16 @@ void bootp (packet)
 					      from, &to, &hto);
 			return;
 		}
+
+	/* If it comes from a client that already knows its address
+	   and is not requesting a broadcast response, and we can
+	   unicast to a client without using the ARP protocol, sent it
+	   directly to that client. */
+	} else if (!(raw.flags & htons (BOOTP_BROADCAST)) &&
+		   can_unicast_without_arp (packet -> interface)) {
+		to.sin_addr = raw.yiaddr;
+		to.sin_port = remote_port;
+
 	/* Otherwise, broadcast it on the local network. */
 	} else {
 		to.sin_addr = limited_broadcast;
