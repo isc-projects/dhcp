@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: memory.c,v 1.52.2.6 1999/11/03 22:23:23 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: memory.c,v 1.52.2.7 1999/11/12 16:18:36 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -584,6 +584,25 @@ int supersede_lease (comp, lease, commit)
 		comp -> pool -> last_lease = comp -> prev;
 	}
 	
+	/* If there's an expiry event on this lease, get rid of it
+	   (we may wind up putting it back, but we can't count on
+	   that here without too much additional complexity). */
+	if (comp -> pool -> next_expiry == comp) {
+		for (lp = comp -> pool -> next_expiry; lp; lp = lp -> prev)
+			if (lp -> ddns_fwd_name)
+				break;
+		if (lp && lp -> ddns_fwd_name) {
+			comp -> pool -> next_expiry = comp;
+			    if (commit)
+				    add_timeout (lp -> ends,
+						 pool_timer, lp -> pool);
+		} else {
+			comp -> pool -> next_expiry = (struct lease *)0;
+			if (commit)
+				cancel_timeout (pool_timer, lp -> pool);
+		}
+	}
+	
 	/* Find the last insertion point... */
 	if (comp == comp -> pool -> insertion_point ||
 	    !comp -> pool -> insertion_point) {
@@ -675,6 +694,23 @@ int supersede_lease (comp, lease, commit)
 					    add_timeout (comp -> ends,
 							 pool_timer,
 							 comp -> pool);
+			    } else if (comp -> ends ==
+				       comp -> pool -> next_expiry -> ends) {
+				    /* If there are other leases that expire at
+                                       the same time as comp, we need to make
+                                       sure that we have the one that appears
+                                       last on the list that needs an expiry
+                                       event - otherwise we'll miss expiry
+                                       events until the server restarts. */
+				    struct lease *foo;
+				    struct lease *install = comp;
+				    for (foo = comp;
+					 foo -> ends == comp -> ends;
+					 foo = foo -> next) {
+					    if (foo -> ddns_fwd_name)
+						    install = foo;
+				    }
+				    comp -> pool -> next_expiry = install;
 			    }
 			}
 		}
