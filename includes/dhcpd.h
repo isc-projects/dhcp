@@ -1019,6 +1019,11 @@ int make_limit PROTO ((struct expression **, struct expression *, int));
 int make_let PROTO ((struct executable_statement **, const char *));
 int option_cache PROTO ((struct option_cache **, struct data_string *,
 			 struct expression *, struct option *));
+int evaluate_expression (struct binding_value **, struct packet *,
+			 struct lease *, struct option_state *,
+			 struct option_state *, struct binding_scope *,
+			 struct expression *);
+int binding_value_dereference (struct binding_value **, const char *, int);
 #if defined (NSUPDATE)
 int evaluate_dns_expression PROTO ((ns_updrec **, struct packet *,
 				    struct lease *, struct option_state *,
@@ -1154,6 +1159,12 @@ int expression_allocate PROTO ((struct expression **, const char *, int));
 int expression_reference PROTO ((struct expression **,
 				 struct expression *, const char *, int));
 void free_expression PROTO ((struct expression *, const char *, int));
+int binding_value_allocate PROTO ((struct binding_value **,
+				   const char *, int));
+int binding_value_reference PROTO ((struct binding_value **,
+				    struct binding_value *,
+				    const char *, int));
+void free_binding_value PROTO ((struct binding_value *, const char *, int));
 int option_cache_allocate PROTO ((struct option_cache **, const char *, int));
 int option_cache_reference PROTO ((struct option_cache **,
 				   struct option_cache *, const char *, int));
