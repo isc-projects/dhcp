@@ -1,6 +1,6 @@
 	    Internet Software Consortium DHCP Distribution
-		   Version 3, Beta 2, Patchlevel 16
-			   January 26, 2000
+		   Version 3, Beta 2, Patchlevel 18
+			  February 22, 2001
 
 			    Release Notes
 
@@ -51,8 +51,49 @@ improving it.
 
 	        Changes since 3.0 Beta 2 Patchlevel 16
 
+- Add support for transaction tracing.   This allows the state of the
+  DHCP server on startup, and all the subsequent transactions, to be
+  recorded in a file which can then be played back to reproduce the
+  behaviour of the DHCP server.   This can be used to quickly
+  reproduce bugs that cause core dumps or corruption, and also for
+  tracking down memory leaks.
+
+- Incorporate some bug fixes provided by Joost Mulders for the DLPI
+  package which should clear up problems people have been seeing on
+  Solaris.
+
+- Fix bugs in the handling of options stored as linked lists (agent
+  options, fqdn options and nwip options) that could cause memory
+  corruption and core dumps.
+
+- Fix a bug in DHCPREQUEST handling that resulted in DHCPNAK messages
+  not being send in some cases when they were needed.
+
+- Make the lease structure somewhat more compact.
+
+- Make initial failover startup *much* faster.   This was researched
+  and implemented by Damien Neil.
+
+- Add a --version flag to all executables, which prints the program
+  name and version to standard output.
+
+- Don't rewrite the lease file every thousand leases.
+
 - A bug in nit.c for older SunOS machines was fixed by a patch sent in
   by Takeshi Hagiwara.
+
+- Fix a memory corruption bug in the DHCP client.
+
+- Lots of documentation updates.
+
+- Add a feature allowing environment variables to be passed to the
+  DHCP client script on the DHCP client command line.
+
+- Fix client medium support, which had been broken for some time.
+
+- Fix a bug in the DHCP client initial startup backoff interval, which
+  would cause two DHCPDISCOVERS to be sent back-to-back on startup.
+
 
 	        Changes since 3.0 Beta 2 Patchlevel 15
 
