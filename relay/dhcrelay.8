@@ -27,7 +27,7 @@
 .\" see ``http://www.isc.org/isc''.  To learn more about Vixie
 .\" Enterprises, see ``http://www.vix.com''.
 .\"
-.\" $Id: dhcrelay.8,v 1.5.4.5 2004/06/10 17:59:50 dhankins Exp $
+.\" $Id: dhcrelay.8,v 1.5.4.6 2004/10/04 20:40:07 dhankins Exp $
 .\"
 .TH dhcrelay 8
 .SH NAME
@@ -148,16 +148,10 @@ responses sent from servers to clients will be stripped before
 forwarding such responses back to the client.
 .PP
 The agent option field will contain two agent options: the Circuit ID
-suboption and the Agent ID suboption.  Currently, the Circuit ID will
+suboption and the Remote ID suboption.  Currently, the Circuit ID will
 be the printable name of the interface on which the client request was
-received.   The Agent ID will be the value that the relay agent stores
-in the DHCP packet's giaddr field.   The client supports inclusion of
-a Remote ID suboption as well, but this is not used by default.
-.PP
-.I Note:
-The Agent ID suboption is not defined in the current Relay Agent
-Information Option draft (draft-ietf-dhc-agent-options-03.txt), but
-has been proposed for inclusion in the next draft.
+received.  The client supports inclusion of a Remote ID suboption as
+well, but this is not used by default.
 .PP
 When forwarding packets, dhcrelay discards packets which have reached a hop
 count of 10.  If a lower or higher threshold (up to 255) is desired, depending
