@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.121 1999/10/21 02:42:57 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.122 1999/10/21 14:56:05 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1851,16 +1851,22 @@ void dhcp_reply (lease)
 
 	/* Say what we're doing... */
 	log_info ("%s on %s to %s via %s",
-	      (state -> offer
-	       ? (state -> offer == DHCPACK ? "DHCPACK" : "DHCPOFFER")
-	       : "BOOTREPLY"),
-	      piaddr (lease -> ip_addr),
-	      print_hw_addr (lease -> hardware_addr.htype,
-			     lease -> hardware_addr.hlen,
-			     lease -> hardware_addr.haddr),
-	      state -> giaddr.s_addr
-	      ? inet_ntoa (state -> giaddr)
-	      : state -> ip -> name);
+		  (state -> offer
+		   ? (state -> offer == DHCPACK ? "DHCPACK" : "DHCPOFFER")
+		   : "BOOTREPLY"),
+		  piaddr (lease -> ip_addr),
+		  (lease -> client_hostname &&
+		   db_printable (lease -> client_hostname))
+		  ? lease -> client_hostname
+		  : (lease -> hardware_addr.htype
+		     ? print_hw_addr (lease -> hardware_addr.htype,
+				      lease -> hardware_addr.hlen,
+				      lease -> hardware_addr.haddr)
+		     : print_hex_1 (lease -> uid_len, lease -> uid, 
+				    lease -> uid_len)),
+		  state -> giaddr.s_addr
+		  ? inet_ntoa (state -> giaddr)
+		  : state -> ip -> name);
 
 	/* Set up the hardware address... */
 	hto.htype = lease -> hardware_addr.htype;
