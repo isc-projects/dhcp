@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dispatch.c,v 1.33 1997/02/22 12:26:41 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dispatch.c,v 1.34 1997/02/26 18:24:40 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -632,7 +632,7 @@ int locate_network (packet)
 
 void add_timeout (when, where, what)
 	TIME when;
-	void (*where) (struct interface_info *);
+	void (*where) PROTO ((struct interface_info *));
 	struct interface_info *what;
 {
 	struct timeout *t, *q;
@@ -693,7 +693,7 @@ void add_timeout (when, where, what)
 }
 
 void cancel_timeout (where, what)
-	void (*where) (struct interface_info *);
+	void (*where) PROTO ((struct interface_info *));
 	struct interface_info *what;
 {
 	struct timeout *t, *q;

@@ -304,7 +304,7 @@ struct hardware_link {
 struct timeout {
 	struct timeout *next;
 	TIME when;
-	void (*func)(struct interface_info *);
+	void (*func) PROTO ((struct interface_info *));
 	struct interface_info *interface;
 };
 
@@ -636,9 +636,9 @@ void do_packet PROTO ((struct interface_info *,
 		       unsigned char *, int,
 		       unsigned short, struct iaddr, struct hardware *));
 int locate_network PROTO ((struct packet *));
-void add_timeout PROTO ((TIME, void (*) (struct interface_info *),
+void add_timeout PROTO ((TIME, void (*) PROTO ((struct interface_info *)),
 			 struct interface_info *));
-void cancel_timeout PROTO ((void (*) (struct interface_info *),
+void cancel_timeout PROTO ((void (*) PROTO ((struct interface_info *)),
 			    struct interface_info *));
 
 /* hash.c */
