@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: print.c,v 1.39 2000/02/05 18:05:45 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: print.c,v 1.40 2000/02/15 19:41:32 mellon Exp $ Copyright (c) 1995, 1996, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -773,10 +773,28 @@ static unsigned print_subexpression (expr, buf, len)
 			buf [rv++] = ' ';
 			rv += print_subexpression (expr -> data.arg.next,
 						   buf, len);
+			if (rv + 1 < len)
+				buf [rv++] = 0;
+			return rv;
 		}
-		if (rv + 1 < len)
-			buf [rv++] = 0;
 		break;
+	      case expr_function:
+		rv = 9;
+		if (len > rv + 1) {
+			struct string_list *foo;
+			strcpy (buf, "(function");
+			for (foo = expr -> data.func -> args;
+			     foo; foo = foo -> next) {
+				if (len > rv + 2 + strlen (foo -> string)) {
+					buf [rv - 1] = ' ';
+					strcpy (&buf [rv], foo -> string);
+					rv += strlen (foo -> string);
+				}
+			}
+			buf [rv] = ')';
+			buf [rv++] = 0;
+			return rv;
+		}
 	}
 	return 0;
 }
