@@ -70,7 +70,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dlpi.c,v 1.11 1999/04/25 13:17:17 mellon Exp $ Copyright (c) 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dlpi.c,v 1.12 1999/05/27 14:10:22 mellon Exp $ Copyright (c) 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -212,6 +212,10 @@ int if_register_dlpi (info)
 	      case DL_CSMACD: /* IEEE 802.3 */
 	      case DL_ETHER:
 		info -> hw_address.htype = HTYPE_ETHER;
+		break;
+	      /* adding token ring 5/1999 - mayer@ping.at  */ 
+	      case DL_TPR:
+		info -> hw_address.htype = HTYPE_IEEE802;
 		break;
 	      case DL_FDDI:
 		info -> hw_address.htype = HTYPE_FDDI;
