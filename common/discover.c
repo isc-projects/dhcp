@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: discover.c,v 1.25 2000/03/17 03:59:00 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: discover.c,v 1.26 2000/05/01 17:31:19 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -52,6 +52,11 @@ static char copyright[] =
 struct interface_info *interfaces, *dummy_interfaces, *fallback_interface;
 extern int interfaces_invalidated;
 int quiet_interface_discovery;
+u_int16_t local_port;
+u_int16_t remote_port;
+
+struct in_addr limited_broadcast;
+struct in_addr local_address;
 
 void (*bootp_packet_handler) PROTO ((struct interface_info *,
 				     struct dhcp_packet *, unsigned,
