@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.80 1999/03/13 18:26:05 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.81 1999/03/13 18:58:00 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1361,7 +1361,7 @@ void dhcp_reply (lease)
 	/* If the client is RENEWING, unicast to the client using the
 	   regular IP stack. */
 	} else if (raw.ciaddr.s_addr && state -> offer == DHCPACK) {
-		to.sin_addr = packet -> raw -> ciaddr;
+		to.sin_addr = raw.ciaddr;
 		to.sin_port = remote_port;
 
 		if (fallback_interface) {
@@ -1382,8 +1382,8 @@ void dhcp_reply (lease)
 	   unicast to a client without using the ARP protocol, sent it
 	   directly to that client. */
 	} else if (!(raw.flags & htons (BOOTP_BROADCAST)) &&
-		   can_unicast_without_arp ()) {
-		to.sin_addr = state -> yiaddr;
+		   can_unicast_without_arp (state -> ip)) {
+		to.sin_addr = raw.yiaddr;
 		to.sin_port = remote_port;
 
 	/* Otherwise, broadcast it on the local network. */
