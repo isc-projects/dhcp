@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: alloc.c,v 1.39 2000/01/26 17:20:16 mellon Exp $ Copyright (c) 1995, 1996, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: alloc.c,v 1.40 2000/01/27 22:14:36 mellon Exp $ Copyright (c) 1995, 1996, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -817,8 +817,7 @@ int option_state_dereference (ptr, file, line)
 		if (options -> universes [i] &&
 		    universes [i] -> option_state_dereference)
 			((*(universes [i] -> option_state_dereference))
-			 (universes [i], options));
-
+			 (universes [i], options, file, line));
 	dfree (options, file, line);
 	return 1;
 }

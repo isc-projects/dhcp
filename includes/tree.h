@@ -216,7 +216,8 @@ struct universe {
 	void (*delete_func) PROTO ((struct universe *universe,
 				    struct option_state *, int));
 	int (*option_state_dereference) PROTO ((struct universe *,
-						struct option_state *));
+						struct option_state *,
+						const char *, int));
 	int (*encapsulate) PROTO ((struct data_string *, struct packet *,
 				   struct lease *, struct option_state *,
 				   struct option_state *,
