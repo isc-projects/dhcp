@@ -41,7 +41,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.115 2000/10/10 19:44:37 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.116 2000/10/10 21:50:58 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2019,6 +2019,35 @@ void rewrite_client_leases ()
 	fflush (leaseFile);
 }
 
+void write_lease_option (struct option_cache *oc,
+			 struct packet *packet, struct lease *lease,
+			 struct option_state *in_options,
+			 struct option_state *cfg_options,
+			 struct binding_scope **scope,
+			 struct universe *u, void *stuff)
+{
+	const char *name, *dot;
+	struct data_string ds;
+	memset (&ds, 0, sizeof ds);
+
+	if (u != &dhcp_universe) {
+		name = u -> name;
+		dot = ".";
+	} else {
+		name = "";
+		dot = "";
+	}
+	if (evaluate_option_cache (&ds, packet, lease,
+				   in_options, cfg_options, scope, oc, MDL)) {
+		fprintf (leaseFile,
+			 "  option %s%s%s %s;\n",
+			 name, dot, oc -> option -> name,
+			 pretty_print_option (oc -> option -> code,
+					      ds.data, ds.len, 1, 1));
+		data_string_forget (&ds, MDL);
+	}
+}
+
 int write_client_lease (client, lease, rewrite, makesure)
 	struct client_state *client;
 	struct client_lease *lease;
@@ -2077,30 +2106,11 @@ int write_client_lease (client, lease, rewrite, makesure)
 
 	memset (&ds, 0, sizeof ds);
 
-	hash = lease -> options -> universes [dhcp_universe.index];
-	for (i = 0; i < OPTION_HASH_SIZE; i++) {
-		pair p;
-		/* XXX save _all_ options! XXX */
-		for (p = hash [i]; p; p = p -> cdr) {
-			oc = (struct option_cache *)p -> car;
-			if (evaluate_option_cache (&ds, (struct packet *)0,
-						   (struct lease *)0,
-						   (struct option_state *)0,
-						   lease -> options,
-						   &global_scope, oc, MDL)) {
-				fprintf (leaseFile,
-					 "  option %s %s;\n",
-					 oc -> option -> name,
-					 pretty_print_option
-					 (oc -> option -> code,
-					  ds.data, ds.len, 1, 1));
-				data_string_forget (&ds, MDL);
-				if (errno != 0) {
-					errors++;
-					errno = 0;
-				}
-			}
-		}
+	for (i = 0; i < lease -> options -> universe_count; i++) {
+		option_space_foreach ((struct packet *)0, (struct lease *)0,
+				      (struct option_state *)0,
+				      lease -> options, &global_scope,
+				      universes [i], 0, write_lease_option);
 	}
 
 	/* Note: the following is not a Y2K bug - it's a Y1.9K bug.   Until
@@ -2175,6 +2185,40 @@ void script_init (client, reason, medium)
 	}
 }
 
+struct envadd_state {
+	struct client_state *client;
+	const char *prefix;
+};
+
+void client_option_envadd (struct option_cache *oc,
+			   struct packet *packet, struct lease *lease,
+			   struct option_state *in_options,
+			   struct option_state *cfg_options,
+			   struct binding_scope **scope,
+			   struct universe *u, void *stuff)
+{
+	struct envadd_state *es = stuff;
+	struct data_string data;
+	memset (&data, 0, sizeof data);
+
+	if (evaluate_option_cache (&data, packet, lease,
+				   in_options, cfg_options, scope, oc, MDL)) {
+		if (data.len) {
+			char name [256];
+			if (dhcp_option_ev_name (name, sizeof name,
+						 oc -> option)) {
+				client_envadd (es -> client, es -> prefix,
+					       name, "%s",
+					       (pretty_print_option
+						(oc -> option -> code,
+						 data.data, data.len,
+						 0, 0)));
+				data_string_forget (&data, MDL);
+			}
+		}
+	}
+}
+
 void script_write_params (client, prefix, lease)
 	struct client_state *client;
 	const char *prefix;
@@ -2185,6 +2229,10 @@ void script_write_params (client, prefix, lease)
 	struct option_cache *oc;
 	pair *hash;
 	char *s, *t;
+	struct envadd_state es;
+
+	es.client = client;
+	es.prefix = prefix;
 
 	client_envadd (client,
 		       prefix, "ip_address", "%s", piaddr (lease -> address));
@@ -2245,33 +2293,12 @@ void script_write_params (client, prefix, lease)
 		client_envadd (client, prefix, "server_name",
 			       "%s", lease -> server_name);
 
-	hash = lease -> options -> universes [dhcp_universe.index];
-	for (i = 0; i < OPTION_HASH_SIZE; i++) {
-	    pair hp;
-
-	    for (hp = hash [i]; hp; hp = hp -> cdr) {
-		oc = (struct option_cache *)hp -> car;
-
-		if (evaluate_option_cache (&data,
-					   (struct packet *)0,
-					   (struct lease *)0,
-					   (struct option_state *)0,
-					   lease -> options,
-					   &global_scope, oc, MDL)) {
-		    if (data.len) {
-			char name [256];
-			if (dhcp_option_ev_name (name, sizeof name,
-						 oc -> option)) {
-			    client_envadd (client, prefix, name, "%s",
-					   (pretty_print_option
-					    (oc -> option -> code,
-					     data.data, data.len,
-					     0, 0)));
-			    data_string_forget (&data, MDL);
-			}
-		    }
-		}
-	    }
+	for (i = 0; i < lease -> options -> universe_count; i++) {
+		option_space_foreach ((struct packet *)0, (struct lease *)0,
+				      (struct option_state *)0,
+				      lease -> options, &global_scope,
+				      universes [i],
+				      &es, client_option_envadd);
 	}
 	client_envadd (client, prefix, "expiry", "%d", (int)(lease -> expiry));
 }
@@ -2383,18 +2410,38 @@ int dhcp_option_ev_name (buf, buflen, option)
 	size_t buflen;
 	struct option *option;
 {
-	int i;
+	int i, j;
+	const char *s;
 
-	for (i = 0; option -> name [i]; i++) {
-		if (i + 1 == buflen)
-			return 0;
-		if (option -> name [i] == '-')
-			buf [i] = '_';
-		else
-			buf [i] = option -> name [i];
+	j = 0;
+	if (option -> universe != &dhcp_universe) {
+		s = option -> universe -> name;
+		i = 0;
+	} else { 
+		s = option -> name;
+		i = 1;
 	}
 
-	buf [i] = 0;
+	do {
+		while (*s) {
+			if (j + 1 == buflen)
+				return 0;
+			if (*s == '-')
+				buf [j++] = '_';
+			else
+				buf [j++] = *s;
+			++s;
+		}
+		if (!i) {
+			s = option -> name;
+			if (j + 1 == buflen)
+				return 0;
+			buf [j++] = '_';
+		}
+		++i;
+	} while (i != 2);
+
+	buf [j] = 0;
 	return 1;
 }
 
