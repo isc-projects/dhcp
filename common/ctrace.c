@@ -32,7 +32,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: ctrace.c,v 1.3.2.2 2004/06/10 17:59:15 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: ctrace.c,v 1.3.2.3 2004/09/30 20:23:06 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -151,6 +151,7 @@ void trace_inpacket_stash (struct interface_info *interface,
 		return;
 	tip.from_port = from_port;
 	tip.from = from;
+	tip.from.len = htonl (tip.from.len);
 	if (hfrom) {
 		tip.hfrom = *hfrom;
 		tip.havehfrom = 1;
@@ -178,6 +179,7 @@ void trace_inpacket_input (trace_type_t *ttype, unsigned len, char *buf)
 	}
 	tip = (trace_inpacket_t *)buf;
 	index = ntohl (tip -> index);
+	tip -> from.len = ntohl (tip -> from.len);
 	
 	if (index > interface_count ||
 	    index < 0 ||

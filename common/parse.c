@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.104.2.18 2004/09/29 19:25:29 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.104.2.19 2004/09/30 20:23:06 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2707,6 +2707,7 @@ int parse_data_expression (expr, cfile, lose)
 	if (!is_data_expression (*expr) &&
 	    (*expr) -> op != expr_variable_reference &&
 	    (*expr) -> op != expr_funcall) {
+		expression_dereference (expr, MDL);
 		parse_warn (cfile, "Expecting a data expression.");
 		*lose = 1;
 		return 0;
@@ -2733,6 +2734,7 @@ int parse_numeric_expression (expr, cfile, lose)
 	if (!is_numeric_expression (*expr) &&
 	    (*expr) -> op != expr_variable_reference &&
 	    (*expr) -> op != expr_funcall) {
+		expression_dereference (expr, MDL);
 		parse_warn (cfile, "Expecting a numeric expression.");
 		*lose = 1;
 		return 0;
@@ -2767,6 +2769,7 @@ int parse_dns_expression (expr, cfile, lose)
 	if (!is_dns_expression (*expr) &&
 	    (*expr) -> op != expr_variable_reference &&
 	    (*expr) -> op != expr_funcall) {
+		expression_dereference (expr, MDL);
 		parse_warn (cfile, "Expecting a dns update subexpression.");
 		*lose = 1;
 		return 0;

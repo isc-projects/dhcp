@@ -181,7 +181,7 @@ ssize_t trace_mr_send (int fd, void *msg, size_t len, int flags)
 		iov [1].buf = (char *)&flags;
 		iov [2].len = len;
 		iov [2].buf = msg;
-		trace_write_packet_iov (trace_mr_output, 2, iov, MDL);
+		trace_write_packet_iov (trace_mr_output, 3, iov, MDL);
 	}
 #endif
 	return rv;
