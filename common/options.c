@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.22 1997/02/22 08:32:04 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.23 1997/03/06 06:55:06 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -413,7 +413,13 @@ char *pretty_print_option (code, data, len, emit_commas)
 	char *op = optbuf;
 	unsigned char *dp = data;
 	struct in_addr foo;
+	char comma;
 
+	if (emit_commas)
+		comma = ',';
+	else
+		comma = ' ';
+	
 	/* Figure out the size of the data. */
 	for (i = 0; dhcp_options [code].format [i]; i++) {
 		if (!numhunk) {
@@ -429,6 +435,13 @@ char *pretty_print_option (code, data, len, emit_commas)
 			--numelem;
 			fmtbuf [i] = 0;
 			numhunk = 0;
+			break;
+		      case 'X':
+			fmtbuf [i] = 'x';
+			fmtbuf [i + 1] = 0;
+			hunksize++;
+			numhunk = 0;
+			comma = ':';
 			break;
 		      case 't':
 			fmtbuf [i] = 't';
@@ -524,6 +537,9 @@ char *pretty_print_option (code, data, len, emit_commas)
 			      case 'B':
 				sprintf (op, "%d", *dp++);
 				break;
+			      case 'x':
+				sprintf (op, "%x", *dp++);
+				break;
 			      case 'f':
 				strcpy (op, *dp++ ? "true" : "false");
 				break;
@@ -531,15 +547,45 @@ char *pretty_print_option (code, data, len, emit_commas)
 				warn ("Unexpected format code %c", fmtbuf [j]);
 			}
 			op += strlen (op);
-			if (j + 1 < numelem)
+			if (j + 1 < numelem && comma != ':')
 				*op++ = ' ';
 		}
 		if (i + 1 < numhunk) {
-			if (emit_commas)
-				*op++ = ',';
-			*op++ = ' ';
+			*op++ = comma;
 		}
 		
 	}
 	return optbuf;
 }
+
+void do_packet (interface, packbuf, len, from_port, from, hfrom)
+	struct interface_info *interface;
+	unsigned char *packbuf;
+	int len;
+	unsigned short from_port;
+	struct iaddr from;
+	struct hardware *hfrom;
+{
+	struct packet tp;
+	struct dhcp_packet tdp;
+
+	memcpy (&tdp, packbuf, len);
+	memset (&tp, 0, sizeof tp);
+	tp.raw = &tdp;
+	tp.packet_length = len;
+	tp.client_port = from_port;
+	tp.client_addr = from;
+	tp.interface = interface;
+	tp.haddr = hfrom;
+	
+	parse_options (&tp);
+	if (tp.options_valid &&
+	    tp.options [DHO_DHCP_MESSAGE_TYPE].data)
+		tp.packet_type =
+			tp.options [DHO_DHCP_MESSAGE_TYPE].data [0];
+	if (tp.packet_type)
+		dhcp (&tp);
+	else if (tdp.op == BOOTREQUEST)
+		bootp (&tp);
+}
+
