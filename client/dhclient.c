@@ -41,7 +41,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.129 2001/04/16 22:07:33 mellon Exp $ Copyright (c) 1995-2001 Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.129.2.1 2001/05/31 19:23:24 mellon Exp $ Copyright (c) 1995-2001 Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -551,7 +551,8 @@ void state_reboot (cpp)
 
 	/* If we don't remember an active lease, go straight to INIT. */
 	if (!client -> active ||
-	    client -> active -> is_bootp) {
+	    client -> active -> is_bootp ||
+	    client -> active -> expiry <= cur_time) {
 		state_init (client);
 		return;
 	}
@@ -923,6 +924,32 @@ void state_bound (cpp)
 
 	/* Send the first packet immediately. */
 	send_request (client);
+}  
+
+/* state_stop is called when we've been told to shut down.   We unconfigure
+   the interfaces, and then stop operating until told otherwise. */
+
+void state_stop (cpp)
+	void *cpp;
+{
+	struct client_state *client = cpp;
+	int i;
+
+	/* Cancel all timeouts. */
+	cancel_timeout (state_selecting, client);
+	cancel_timeout (send_discover, client);
+	cancel_timeout (send_request, client);
+	cancel_timeout (state_bound, client);
+
+	/* If we have an address, unconfigure it. */
+	if (client -> active) {
+		script_init (client, "STOP", client -> active -> medium);
+		script_write_params (client, "old_", client -> active);
+		if (client -> alias)
+			script_write_params (client, "alias_",
+					     client -> alias);
+		script_go (client);
+	}
 }  
 
 int commit_leases ()
@@ -2750,6 +2777,7 @@ void do_release(client)
 		if (client -> alias)
 			script_write_params (client, "alias_",
 					     client -> alias);
+		script_write_params (client, "old_", client -> active);
 		script_go (client);
 	}
 
@@ -2885,4 +2913,39 @@ unsigned cons_agent_information_options (cfg_options, outpacket,
 	unsigned length;
 {
 	return length;
+}
+
+isc_result_t dhcp_set_control_state (control_object_state_t oldstate,
+				     control_object_state_t newstate)
+{
+	struct interface_info *ip;
+	struct client_state *client;
+
+	/* Do the right thing for each interface. */
+	for (ip = interfaces; ip; ip = ip -> next) {
+	    for (client = ip -> client; client; client = client -> next) {
+		switch (newstate) {
+		  case server_startup:
+		    return ISC_R_SUCCESS;
+
+		  case server_running:
+		    return ISC_R_SUCCESS;
+
+		  case server_shutdown:
+		    do_release (client);
+		    break;
+
+		  case server_hibernate:
+		    state_stop (client);
+		    break;
+
+		  case server_awaken:
+		    state_reboot (client);
+		    break;
+		}
+	    }
+	}
+	if (newstate == server_shutdown)
+		exit (0);
+	return ISC_R_SUCCESS;
 }
