@@ -503,7 +503,7 @@ isc_result_t trace_get_next_packet (trace_type_t **ttp,
 	/* Swap the packet. */
 	tpkt -> type_index = ntohl (tpkt -> type_index);
 	tpkt -> length = ntohl (tpkt -> length);
-	tpkt -> when = ntohl (tpkt -> length);
+	tpkt -> when = ntohl (tpkt -> when);
 	
 	/* See if there's a handler for this packet type. */
 	if (tpkt -> type_index < trace_type_count &&
@@ -513,6 +513,19 @@ isc_result_t trace_get_next_packet (trace_type_t **ttp,
 		log_error ("Trace packet with unknown index %ld",
 			   (long int)tpkt -> type_index);
 		return ISC_R_PROTOCOLERROR;
+	}
+
+	/* If we were just hunting for the time marker, we've found it,
+	   so back up to the beginning of the packet and return its
+	   type. */
+	if (ttp && *ttp == &trace_time_marker) {
+		*ttp = ttype;
+		status = fsetpos (traceinfile, &curpos);
+		if (status < 0) {
+			log_error ("fsetpos in tracefile failed: %m");
+			return ISC_R_PROTOCOLERROR;
+		}
+		return ISC_R_EXISTS;
 	}
 
 	/* If we were supposed to get a particular kind of packet,
@@ -527,8 +540,6 @@ isc_result_t trace_get_next_packet (trace_type_t **ttp,
 		}
 		return ISC_R_UNEXPECTEDTOKEN;
 	}
-	if (ttp && *ttp == &trace_time_marker)
-		return ISC_R_EXISTS;
 
 	paylen = tpkt -> length;
 	if (paylen % 8)
@@ -588,7 +599,7 @@ isc_result_t trace_get_packet (trace_type_t **ttp,
 	return status;
 }
 
-time_t trace_snoop_time ()
+time_t trace_snoop_time (trace_type_t **ptp)
 {
 	tracepacket_t *tpkt;
 	unsigned bufmax = 0;
@@ -596,10 +607,10 @@ time_t trace_snoop_time ()
 	char *buf = (char *)0;
 	isc_result_t status;
 	time_t result;
-	trace_type_t *ttp = &trace_time_marker;
+	trace_type_t *ttp;
 	
-	if (!buf || *buf)
-		return ISC_R_INVALIDARG;
+	if (!ptp)
+		ptp = &ttp;
 
 	tpkt = dmalloc ((unsigned)tracefile_header.phlen, MDL);
 	if (!tpkt) {
@@ -607,7 +618,8 @@ time_t trace_snoop_time ()
 		return ISC_R_NOMEMORY;
 	}
 
-	trace_get_next_packet (&ttp, tpkt, &buf, &buflen, &bufmax);
+	*ptp = &trace_time_marker;
+	trace_get_next_packet (ptp, tpkt, &buf, &buflen, &bufmax);
 	result = tpkt -> when;
 
 	dfree (tpkt, MDL);
