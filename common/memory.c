@@ -400,6 +400,7 @@ int supersede_lease (comp, lease, commit)
 		       comp -> hardware_addr.hlen))))) {
 		warn ("Lease conflict at %s",
 		      piaddr (comp -> ip_addr));
+		return 0;
 	} else {
 		/* If there's a Unique ID, dissociate it from the hash
 		   table if necessary, and always free it. */
@@ -650,7 +651,8 @@ void write_leases ()
 				write_lease (l);
 		}
 	}
-	commit_leases ();
+	if (!commit_leases ())
+		error ("Can't commit leases to new database: %m");
 }
 
 void dump_subnets ()
