@@ -30,16 +30,17 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: socket.c,v 1.37 1999/05/27 14:18:27 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: socket.c,v 1.37.2.1 1999/10/15 12:46:01 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
 
 #ifdef USE_SOCKET_FALLBACK
-#  define USE_SOCKET_SEND
+# if !defined (USE_SOCKET_SEND)
 #  define if_register_send if_register_fallback
 #  define send_packet send_fallback
 #  define if_reinitialize_send if_reinitialize_fallback
+# endif
 #endif
 
 static int once = 0;
@@ -47,7 +48,7 @@ static int once = 0;
 /* Reinitializes the specified interface after an address change.   This
    is not required for packet-filter APIs. */
 
-#ifdef USE_SOCKET_SEND
+#if defined (USE_SOCKET_SEND) || defined (USE_SOCKET_FALLBACK)
 void if_reinitialize_send (info)
 	struct interface_info *info;
 {
@@ -73,7 +74,9 @@ void if_reinitialize_receive (info)
 }
 #endif
 
-#if defined (USE_SOCKET_SEND) || defined (USE_SOCKET_RECEIVE)
+#if defined (USE_SOCKET_SEND) || \
+	defined (USE_SOCKET_RECEIVE) || \
+		defined (USE_SOCKET_FALLBACK)
 /* Generic interface registration routine... */
 int if_register_socket (info)
 	struct interface_info *info;
@@ -127,14 +130,19 @@ int if_register_socket (info)
 
 	return sock;
 }
-#endif /* USE_SOCKET_SEND || USE_SOCKET_RECEIVE */
+#endif /* USE_SOCKET_SEND || USE_SOCKET_RECEIVE || USE_SOCKET_FALLBACK */
 
-#ifdef USE_SOCKET_SEND
+#if defined (USE_SOCKET_SEND) || defined (USE_SOCKET_FALLBACK)
 void if_register_send (info)
 	struct interface_info *info;
 {
 #ifndef USE_SOCKET_RECEIVE
 	info -> wfdesc = if_register_socket (info);
+#if defined (USE_SOCKET_FALLBACK)
+	/* Fallback only registers for send, but may need to receive as
+	   well. */
+	info -> rfdesc = info -> wfdesc;
+#endif
 #else
 	info -> wfdesc = info -> rfdesc;
 #endif
@@ -145,7 +153,7 @@ void if_register_send (info)
 		      (info -> shared_network ?
 		       info -> shared_network -> name : ""));
 }
-#endif /* USE_SOCKET_SEND */
+#endif /* USE_SOCKET_SEND || USE_SOCKET_FALLBACK */
 
 #ifdef USE_SOCKET_RECEIVE
 void if_register_receive (info)
@@ -163,7 +171,7 @@ void if_register_receive (info)
 }
 #endif /* USE_SOCKET_RECEIVE */
 
-#ifdef USE_SOCKET_SEND
+#if defined (USE_SOCKET_SEND) || defined (USE_SOCKET_FALLBACK)
 ssize_t send_packet (interface, packet, raw, len, from, to, hto)
 	struct interface_info *interface;
 	struct packet *packet;
@@ -195,7 +203,7 @@ ssize_t send_packet (interface, packet, raw, len, from, to, hto)
 	}
 	return result;
 }
-#endif /* USE_SOCKET_SEND */
+#endif /* USE_SOCKET_SEND || USE_SOCKET_FALLBACK */
 
 #ifdef USE_SOCKET_RECEIVE
 ssize_t receive_packet (interface, buf, len, from, hfrom)
@@ -241,9 +249,9 @@ void fallback_discard (protocol)
 	if (status < 0)
 		log_error ("fallback_discard: %m");
 }
-#endif /* USE_SOCKET_SEND */
+#endif /* USE_SOCKET_FALLBACK */
 
-#if defined (USE_SOCKET_SEND) && !defined (USE_SOCKET_FALLBACK)
+#if defined (USE_SOCKET_SEND)
 int can_unicast_without_arp (ip)
 	struct interface_info *ip;
 {
@@ -262,7 +270,7 @@ int can_receive_unicast_unconfigured (ip)
 
 void maybe_setup_fallback ()
 {
-#if defined (SO_BINDTODEVICE)
+#if defined (USE_SOCKET_FALLBACK)
 	struct interface_info *fbi;
 	fbi = setup_fallback ();
 	if (fbi) {
@@ -272,4 +280,4 @@ void maybe_setup_fallback ()
 	}
 #endif
 }
-#endif /* USE_SOCKET_SEND && !USE_SOCKET_FALLBACK */
+#endif /* USE_SOCKET_SEND */
