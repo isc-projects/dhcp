@@ -112,6 +112,7 @@
 #define MEDIUM		316
 #define ALIAS		317
 #define REBOOT		318
+#define ABANDONED	319
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\
 				 (x) != STRING &&	\
