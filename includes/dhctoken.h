@@ -258,7 +258,12 @@ enum dhcp_token {
 	ZONE = 456,
 	KEY = 457,
 	SECRET = 458,
-	ALGORITHM = 459
+	ALGORITHM = 459,
+	LOAD = 460,
+	BALANCE = 461,
+	TOKEN_MAX = 462,
+	SECONDS = 463,
+	ADDRESS = 464
 };
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\
