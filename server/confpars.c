@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.94 2000/01/05 18:42:57 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.95 2000/01/08 01:43:52 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -518,7 +518,8 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 
 		if (!et) {
 			lose = 0;
-			if (!parse_executable_statement (&et, cfile, &lose)) {
+			if (!parse_executable_statement (&et, cfile, &lose,
+							 context_any)) {
 				if (!lose) {
 				    if (declaration)
 					parse_warn (cfile,
@@ -2034,7 +2035,6 @@ struct lease *parse_lease_declaration (cfile)
 				}
 				memcpy (tuid, val, lease.uid_len);
 				lease.uid = tuid;
-				parse_semi (cfile);
 			} else {
 				lease.uid_len = 0;
 				lease.uid = (parse_numeric_aggregate
@@ -2048,9 +2048,11 @@ struct lease *parse_lease_declaration (cfile)
 					lease.uid = (unsigned char *)0;
 					parse_warn (cfile, "zero-length uid");
 					seenbit = 0;
+					parse_semi (cfile);
 					break;
 				}
 			}
+			parse_semi (cfile);
 			if (!lease.uid) {
 				log_fatal ("No memory for lease uid");
 			}
@@ -2064,6 +2066,7 @@ struct lease *parse_lease_declaration (cfile)
 					skip_to_rbrace (cfile, 1);
 				return (struct lease *)0;
 			}
+			parse_semi (cfile);
 			/* for now, we aren't using this. */
 			break;
 
@@ -2076,6 +2079,7 @@ struct lease *parse_lease_declaration (cfile)
 		      case DYNAMIC_BOOTP:
 			seenbit = 128;
 			lease.flags |= BOOTP_LEASE;
+			parse_semi (cfile);
 			break;
 			
 		      case PEER:
@@ -2092,11 +2096,13 @@ struct lease *parse_lease_declaration (cfile)
 			}
 			seenbit = 262144;
 			lease.flags |= PEER_IS_OWNER;
+			parse_semi (cfile);
 			break;
 
 		      case ABANDONED:
 			seenbit = 256;
 			lease.flags |= ABANDONED_LEASE;
+			parse_semi (cfile);
 			break;
 
 		      case HOSTNAME:
@@ -2104,9 +2110,11 @@ struct lease *parse_lease_declaration (cfile)
 			token = peek_token (&val, cfile);
 			if (token == STRING)
 				lease.hostname = parse_string (cfile);
-			else
-				lease.hostname =
-					parse_host_name (cfile);
+			else {
+				lease.hostname = parse_host_name (cfile);
+				if (lease.hostname)
+					parse_semi (cfile);
+			}
 			if (!lease.hostname) {
 				seenbit = 0;
 				return (struct lease *)0;
@@ -2117,11 +2125,17 @@ struct lease *parse_lease_declaration (cfile)
 			seenbit = 1024;
 			token = peek_token (&val, cfile);
 			if (token == STRING)
-				lease.client_hostname =
-					parse_string (cfile);
-			else
+				lease.client_hostname = parse_string (cfile);
+			else {
 				lease.client_hostname =
 					parse_host_name (cfile);
+				if (lease.client_hostname)
+					parse_semi (cfile);
+			}
+			if (!lease.client_hostname) {
+				seenbit = 0;
+				return (struct lease *)0;
+			}
 			break;
 			
 		      case BILLING:
@@ -2150,25 +2164,6 @@ struct lease *parse_lease_declaration (cfile)
 				if (token != SEMI)
 					skip_to_semi (cfile);
 			}
-			token = BILLING;
-			break;
-
-		      case DDNS_FWD_NAME:
-			seenbit = 4096;
-			token = peek_token (&val, cfile);
-			if (token == STRING)
-				lease.ddns_fwd_name = parse_string (cfile);
-			else
-				lease.ddns_fwd_name = parse_host_name (cfile);
-			break;
-
-		      case DDNS_REV_NAME:
-			seenbit = 8192;
-			token = peek_token (&val, cfile);
-			if (token == STRING)
-				lease.ddns_rev_name = parse_string (cfile);
-			else
-				lease.ddns_rev_name = parse_host_name (cfile);
 			break;
 
 		      case ON:
@@ -2178,22 +2173,21 @@ struct lease *parse_lease_declaration (cfile)
 				skip_to_rbrace (cfile, 1);
 				return (struct lease *)0;
 			}
-			if (on -> data.on.evtype == expiry &&
+			if ((on -> data.on.evtypes & ON_EXPIRY) &&
 			    on -> data.on.statements) {
 				seenbit = 16384;
 				executable_statement_reference
 					(&lease.on_expiry,
 					 on -> data.on.statements,
 					 "parse_lease_declaration");
-			} else if (on -> data.on.evtype == release &&
-				   on -> data.on.statements) {
+			}
+			if ((on -> data.on.evtypes & ON_RELEASE) &&
+			    on -> data.on.statements) {
 				seenbit = 32768;
 				executable_statement_reference
 					(&lease.on_release,
 					 on -> data.on.statements,
 					 "parse_lease_declaration");
-			} else {
-				seenbit  = 0;
 			}
 			executable_statement_dereference
 				(&on, "parse_lease_declaration");
@@ -2203,17 +2197,6 @@ struct lease *parse_lease_declaration (cfile)
 			skip_to_semi (cfile);
 			seenbit = 0;
 			return (struct lease *)0;
-		}
-
-		if (token != HARDWARE && token != STRING
-		    && token != BILLING && token != ON) {
-			token = next_token (&val, cfile);
-			if (token != SEMI) {
-				parse_warn (cfile,
-					    "semicolon expected.");
-				skip_to_semi (cfile);
-				return (struct lease *)0;
-			}
 		}
 
 		if (seenmask & seenbit) {
