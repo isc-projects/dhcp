@@ -47,10 +47,25 @@ isc_result_t omapi_listen (omapi_object_t *h,
 			   unsigned port,
 			   int max)
 {
+	omapi_addr_t addr;
+	addr.addrtype = AF_INET;
+	addr.addrlen = sizeof (struct in_addr);
+	memset (addr.address, 0, sizeof addr.address); /* INADDR_ANY */
+	addr.port = port;
+
+	return omapi_listen_addr (h, &addr, max);
+}
+
+isc_result_t omapi_listen_addr (omapi_object_t *h,
+				omapi_addr_t *addr,
+				int max)
+{
 	struct hostent *he;
 	int hix;
 	isc_result_t status;
 	omapi_listener_object_t *obj;
+	int i;
+	struct in_addr ia;
 
 	/* Get the handle. */
 	obj = (omapi_listener_object_t *)dmalloc (sizeof *obj, MDL);
@@ -74,9 +89,21 @@ isc_result_t omapi_listen (omapi_object_t *h,
 		return status;
 	}
 
+	/* Currently only support TCPv4 addresses. */
+	if (addr -> addrtype != AF_INET)
+		return ISC_R_INVALIDARG;
+
 	/* Set up the address on which we will listen... */
-	obj -> address.sin_port = htons (port);
-	obj -> address.sin_addr.s_addr = htonl (INADDR_ANY);
+	obj -> address.sin_port = htons (addr -> port);
+	memcpy (&obj -> address.sin_addr,
+		addr -> address, sizeof obj -> address.sin_addr);
+#if defined (HAVE_SA_LEN)
+	obj -> address.sin_len =
+		sizeof (struct sockaddr_in);
+#endif
+	obj -> address.sin_family = AF_INET;
+	memset (&(obj -> address.sin_zero), 0,
+		sizeof obj -> address.sin_zero);
 
 	/* Create a socket on which to listen. */
 	obj -> socket = socket (PF_INET, SOCK_STREAM, IPPROTO_TCP);
@@ -97,8 +124,9 @@ isc_result_t omapi_listen (omapi_object_t *h,
 
 	/* Try to bind to the wildcard address using the port number
            we were given. */
-	if (bind (obj -> socket,
-		  (struct sockaddr *)&obj -> address, sizeof obj -> address)) {
+	i = bind (obj -> socket,
+		  (struct sockaddr *)&obj -> address, sizeof obj -> address);
+	if (i < 0) {
 		omapi_object_dereference ((omapi_object_t **)&obj, MDL);
 		if (errno == EADDRINUSE)
 			return ISC_R_ADDRNOTAVAIL;
@@ -107,6 +135,14 @@ isc_result_t omapi_listen (omapi_object_t *h,
 		return ISC_R_UNEXPECTED;
 	}
 
+	/* Set the SO_USELOOPBACK flag (this should not fail). */
+	i = 1;
+	if (setsockopt (obj -> socket, SOL_SOCKET, SO_USELOOPBACK,
+			(char *)&i, sizeof i) < 0) {
+		omapi_object_dereference ((omapi_object_t **)&obj, MDL);
+		return ISC_R_UNEXPECTED;
+	}
+	
 	/* Now tell the kernel to listen for connections. */
 	if (listen (obj -> socket, max)) {
 		omapi_object_dereference ((omapi_object_t **)&obj, MDL);
@@ -149,6 +185,7 @@ isc_result_t omapi_accept (omapi_object_t *h)
 	SOCKLEN_T len;
 	omapi_connection_object_t *obj;
 	omapi_listener_object_t *listener;
+	int i;
 
 	if (h -> type != omapi_type_listener)
 		return ISC_R_INVALIDARG;
@@ -192,6 +229,14 @@ isc_result_t omapi_accept (omapi_object_t *h)
 	omapi_object_reference (&obj -> listener,
 				(omapi_object_t *)listener, MDL);
 
+	/* Set the SO_USELOOPBACK flag (this should not fail). */
+	i = 1;
+	if (setsockopt (obj -> socket, SOL_SOCKET, SO_USELOOPBACK,
+			(char *)&i, sizeof i) < 0) {
+		omapi_object_dereference ((omapi_object_t **)&obj, MDL);
+		return ISC_R_UNEXPECTED;
+	}
+	
 	status = omapi_signal (h, "connect", obj);
 
 	/* Lose our reference to the connection, so it'll be gc'd when it's
