@@ -3,7 +3,7 @@
    Parser for dhcpd config file... */
 
 /*
- * Copyright (c) 1995-2001 Internet Software Consortium.
+ * Copyright (c) 1995-2002 Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.143.2.12 2002/02/19 20:41:59 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.143.2.13 2002/02/20 05:29:30 mellon Exp $ Copyright (c) 1995-2002 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1212,21 +1212,34 @@ void parse_failover_state (cfile, state, stos)
 }
 #endif /* defined (FAILOVER_PROTOCOL) */
 
+/* Permit_list_match returns 1 if every element of the permit list in lhs
+   also appears in rhs.   Note that this doesn't by itself mean that the
+   two lists are equal - to check for equality, permit_list_match has to
+   return 1 with (list1, list2) and with (list2, list1). */
+
 int permit_list_match (struct permit *lhs, struct permit *rhs)
 {
-	struct permit *plp;
+	struct permit *plp, *prp;
+	int matched;
 
 	if (!lhs)
 		return 1;
 	if (!rhs)
 		return 0;
-	for (plp = rhs; plp; plp = plp -> next) {
-		if (lhs -> type == plp -> type &&
-		    (lhs -> type != permit_class ||
-		     lhs -> class == plp -> class))
-			return 1;
+	for (plp = lhs; plp; plp = plp -> next) {
+		matched = 0;
+		for (prp = rhs; prp; prp = prp -> next) {
+			if (prp -> type == plp -> type &&
+			    (prp -> type != permit_class ||
+			     prp -> class == plp -> class)) {
+				matched = 1;
+				break;
+			}
+		}
+		if (!matched)
+			return 0;
 	}
-	return permit_list_match (lhs -> next, rhs);
+	return 1;
 }
 
 void parse_pool_statement (cfile, group, type)
@@ -1530,9 +1543,11 @@ void parse_pool_statement (cfile, group, type)
 	while (lpchain) {
 		lease_reference (&lp, lpchain, MDL);
 		lease_dereference (&lpchain, MDL);
-		lease_reference (&lpchain, lp -> next, MDL);
-		lease_dereference (&lp -> next, MDL);
-		lease_dereference (&lp, MDL);
+		if (lp -> next) {
+			lease_reference (&lpchain, lp -> next, MDL);
+			lease_dereference (&lp -> next, MDL);
+			lease_dereference (&lp, MDL);
+		}
 	}
 	pool_dereference (&pool, MDL);
 }
