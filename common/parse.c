@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.58 2000/01/08 01:36:39 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.59 2000/01/25 01:13:21 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -112,7 +112,7 @@ char *parse_string (cfile)
 		skip_to_semi (cfile);
 		return (char *)0;
 	}
-	s = (char *)malloc (strlen (val) + 1);
+	s = (char *)dmalloc (strlen (val) + 1, MDL);
 	if (!s)
 		log_fatal ("no memory for string %s.", val);
 	strcpy (s, val);
@@ -147,7 +147,7 @@ char *parse_host_name (cfile)
 		token = next_token (&val, cfile);
 
 		/* Store this identifier... */
-		if (!(s = (char *)malloc (strlen (val) + 1)))
+		if (!(s = (char *)dmalloc (strlen (val) + 1, MDL)))
 			log_fatal ("can't allocate temp space for hostname.");
 		strcpy (s, val);
 		c = cons ((caddr_t)s, c);
@@ -160,7 +160,7 @@ char *parse_host_name (cfile)
 	} while (token == DOT);
 
 	/* Assemble the hostname together into a string. */
-	if (!(s = (char *)malloc (len)))
+	if (!(s = (char *)dmalloc (len, MDL)))
 		log_fatal ("can't allocate space for hostname.");
 	t = s + len;
 	*--t = 0;
@@ -170,8 +170,8 @@ char *parse_host_name (cfile)
 		t -= l;
 		memcpy (t, (char *)(c -> car), l);
 		/* Free up temp space. */
-		free (c -> car);
-		free (c);
+		dfree (c -> car, MDL);
+		dfree (c, MDL);
 		c = cdr;
 		if (t != s)
 			*--t = '.';
@@ -291,7 +291,7 @@ void parse_hardware_param (cfile, hardware)
 	if (!t)
 		return;
 	if (hlen + 1 > sizeof hardware -> hbuf) {
-		free (t);
+		dfree (t, MDL);
 		parse_warn (cfile, "hardware address too long");
 	} else {
 		hardware -> hlen = hlen + 1;
@@ -299,7 +299,7 @@ void parse_hardware_param (cfile, hardware)
 		if (hlen + 1 < sizeof hardware -> hbuf)
 			memset (&hardware -> hbuf [hlen + 1], 0,
 				(sizeof hardware -> hbuf) - hlen - 1);
-		free (t);
+		dfree (t, MDL);
 	}
 	
 	token = next_token (&val, cfile);
@@ -354,7 +354,7 @@ unsigned char *parse_numeric_aggregate (cfile, buf,
 	pair c = (pair)0;
 
 	if (!bufp && *max) {
-		bufp = (unsigned char *)malloc (*max * size / 8);
+		bufp = (unsigned char *)dmalloc (*max * size / 8, MDL);
 		if (!bufp)
 			log_fatal ("no space for numeric aggregate");
 		s = 0;
@@ -396,7 +396,7 @@ unsigned char *parse_numeric_aggregate (cfile, buf,
 			convert_num (cfile, s, val, base, size);
 			s += size / 8;
 		} else {
-			t = (unsigned char *)malloc (strlen (val) + 1);
+			t = (unsigned char *)dmalloc (strlen (val) + 1, MDL);
 			if (!t)
 				log_fatal ("no temp space for number.");
 			strcpy ((char *)t, val);
@@ -406,7 +406,7 @@ unsigned char *parse_numeric_aggregate (cfile, buf,
 
 	/* If we had to cons up a list, convert it now. */
 	if (c) {
-		bufp = (unsigned char *)malloc (count * size / 8);
+		bufp = (unsigned char *)dmalloc (count * size / 8, MDL);
 		if (!bufp)
 			log_fatal ("no space for numeric aggregate.");
 		s = bufp + count - size / 8;
@@ -417,8 +417,8 @@ unsigned char *parse_numeric_aggregate (cfile, buf,
 		convert_num (cfile, s, (char *)(c -> car), base, size);
 		s -= size / 8;
 		/* Free up temp space. */
-		free (c -> car);
-		free (c);
+		dfree (c -> car, MDL);
+		dfree (c, MDL);
 		c = cdr;
 	}
 	return bufp;
@@ -749,7 +749,7 @@ struct option *parse_option_name (cfile, allocate, known)
 			skip_to_semi (cfile);
 		return (struct option *)0;
 	}
-	uname = malloc (strlen (val) + 1);
+	uname = dmalloc (strlen (val) + 1, MDL);
 	if (!uname)
 		log_fatal ("no memory for uname information.");
 	strcpy (uname, val);
@@ -803,9 +803,8 @@ struct option *parse_option_name (cfile, allocate, known)
 				option -> name = val;
 			else {
 				char *s;
-				free (uname);
-				s = dmalloc (strlen (val) + 1,
-					     "parse_option_name");
+				dfree (uname, MDL);
+				s = dmalloc (strlen (val) + 1, MDL);
 				if (!s)
 				    log_fatal ("no memory for option %s.%s",
 					       universe -> name, val);
@@ -826,7 +825,7 @@ struct option *parse_option_name (cfile, allocate, known)
 	}
 
 	/* Free the initial identifier token. */
-	free (uname);
+	dfree (uname, MDL);
 	return option;
 }
 
@@ -853,7 +852,7 @@ void parse_option_space_decl (cfile)
 		log_fatal ("No memory for new option space.");
 
 	/* Set up the server option universe... */
-	s = dmalloc (strlen (val) + 1, "parse_option_space_decl");
+	s = dmalloc (strlen (val) + 1, MDL);
 	if (!s)
 		log_fatal ("No memory for new option space name.");
 	strcpy (s, val);
@@ -872,13 +871,12 @@ void parse_option_space_decl (cfile)
 	nu -> store_length = putUChar;
 	nu -> index = universe_count++;
 	if (nu -> index >= universe_max) {
-		ua = dmalloc (universe_max * 2 * sizeof *ua,
-			      "parse_option_space_decl");
+		ua = dmalloc (universe_max * 2 * sizeof *ua, MDL);
 		if (!ua)
 			log_fatal ("No memory to expand option space array.");
 		memcpy (ua, universes, universe_max * sizeof *ua);
 		universe_max *= 2;
-		dfree (universes, "parse_option_space_decl");
+		dfree (universes, MDL);
 		universes = ua;
 	}
 	universes [nu -> index] = nu;
@@ -1084,7 +1082,7 @@ int parse_option_code_definition (cfile, option)
 			skip_to_semi (cfile);
 		return 0;
 	}
-	s = dmalloc (tokix + arrayp + 1, "parse_option_code_definition");
+	s = dmalloc (tokix + arrayp + 1, MDL);
 	if (!s)
 		log_fatal ("no memory for option format.");
 	memcpy (s, tokbuf, tokix);
@@ -1128,15 +1126,14 @@ int parse_cshl (data, cfile)
 			skip_to_semi (cfile);
 			for (; sl; sl = next) {
 				next = sl -> next;
-				dfree (sl, "parse_cshl");
+				dfree (sl, MDL);
 			}
 			return 0;
 		}
 		if (ilen == sizeof ibuf) {
 			next = (struct option_tag *)
 				dmalloc (ilen - 1 +
-					 sizeof (struct option_tag),
-					 "parse_cshl");
+					 sizeof (struct option_tag), MDL);
 			if (!next)
 				log_fatal ("no memory for string list.");
 			memcpy (next -> data, ibuf, ilen);
@@ -1164,7 +1161,7 @@ int parse_cshl (data, cfile)
 		next = sl -> next;
 		memcpy (rvp, sl -> data, sizeof ibuf);
 		rvp += sizeof ibuf;
-		dfree (sl, "parse_cshl");
+		dfree (sl, MDL);
 		sl = next;
 	}
 	
@@ -1375,7 +1372,6 @@ int parse_executable_statement (result, cfile, lose, case_context)
 			
 	      case TOKEN_SET:
 		token = next_token (&val, cfile);
-		token = next_token (&val, cfile);
 
 		token = next_token (&val, cfile);
 		if (token != NAME && token != NUMBER_OR_NAME) {
@@ -1391,9 +1387,8 @@ int parse_executable_statement (result, cfile, lose, case_context)
 		    (result,
 		     "parse_executable_statement"))
 			log_fatal ("no memory for set statement.");
-		(*result) -> op = default_statement;
-		(*result) -> data.set.name = dmalloc (strlen (val) + 1,
-						      "parse_executable_stmt");
+		(*result) -> op = set_statement;
+		(*result) -> data.set.name = dmalloc (strlen (val) + 1, MDL);
 		if (!(*result)->data.set.name)
 			log_fatal ("can't allocate variable name");
 		strcpy ((*result) -> data.set.name, val);
@@ -1404,6 +1399,56 @@ int parse_executable_statement (result, cfile, lose, case_context)
 		}
 
 		if (!parse_expression (&(*result) -> data.set.expr,
+				       cfile, lose, context_data, /* XXX */
+				       (struct expression **)0, expr_none)) {
+			if (!*lose)
+				parse_warn (cfile,
+					    "expecting data expression.");
+			else
+				*lose = 1;
+			skip_to_semi (cfile);
+			executable_statement_dereference
+				(result, "parse_executable_statement");
+			return 0;
+		}
+		parse_semi (cfile);
+		break;
+
+	      case UNSET:
+		token = next_token (&val, cfile);
+
+		token = next_token (&val, cfile);
+		if (token != NAME && token != NUMBER_OR_NAME) {
+			parse_warn (cfile,
+				    "%s can't be a variable name", val);
+		      badunset:
+			skip_to_semi (cfile);
+			*lose = 1;
+			return 0;
+		}
+
+		if (!executable_statement_allocate
+		    (result,
+		     "parse_executable_statement"))
+			log_fatal ("no memory for set statement.");
+		(*result) -> op = unset_statement;
+		(*result) -> data.unset = dmalloc (strlen (val) + 1, MDL);
+		if (!(*result)->data.unset)
+			log_fatal ("can't allocate variable name");
+		strcpy ((*result) -> data.unset, val);
+		parse_semi (cfile);
+		break;
+
+	      case EVAL:
+		token = next_token (&val, cfile);
+
+		if (!executable_statement_allocate
+		    (result,
+		     "parse_executable_statement"))
+			log_fatal ("no memory for eval statement.");
+		(*result) -> op = eval_statement;
+
+		if (!parse_expression (&(*result) -> data.eval,
 				       cfile, lose, context_data, /* XXX */
 				       (struct expression **)0, expr_none)) {
 			if (!*lose)
@@ -1455,11 +1500,11 @@ int parse_on_statement (result, cfile, lose)
 			break;
 		
 		      case COMMIT:
-			(*result) -> data.on.evtypes = ON_COMMIT;
+			(*result) -> data.on.evtypes |= ON_COMMIT;
 			break;
 			
 		      case RELEASE:
-			(*result) -> data.on.evtypes = ON_RELEASE;
+			(*result) -> data.on.evtypes |= ON_RELEASE;
 			break;
 			
 		      default:
@@ -1468,7 +1513,7 @@ int parse_on_statement (result, cfile, lose)
 			*lose = 1;
 			executable_statement_dereference
 				(result, "parse_on_statement");
-			break;
+			return 0;
 		}
 		token = next_token (&val, cfile);
 	} while (token == OR);
@@ -1641,11 +1686,20 @@ int parse_if_statement (result, cfile, lose)
 {
 	enum dhcp_token token;
 	const char *val;
+	int parenp;
 
 	if (!executable_statement_allocate (result, "parse_if_statement"))
 		log_fatal ("no memory for if statement.");
 
 	(*result) -> op = if_statement;
+
+	token = peek_token (&val, cfile);
+	if (token == LPAREN) {
+		parenp = 1;
+		next_token (&val, cfile);
+	} else
+		parenp = 0;
+
 
 	if (!parse_boolean_expression (&(*result) -> data.ie.expr,
 				       cfile, lose)) {
@@ -1659,6 +1713,16 @@ int parse_if_statement (result, cfile, lose)
 #if defined (DEBUG_EXPRESSION_PARSE)
 	print_expression ("if condition", if_condition);
 #endif
+	if (parenp) {
+		token = next_token (&val, cfile);
+		if (token != RPAREN) {
+			parse_warn (cfile, "expecting right paren.");
+			*lose = 1;
+			executable_statement_dereference
+				(result, "parse_if_statement");
+			return 0;
+		}
+	}
 	token = next_token (&val, cfile);
 	if (token != LBRACE) {
 		parse_warn (cfile, "left brace expected.");
@@ -1884,6 +1948,8 @@ int parse_non_binary (expr, cfile, lose, context)
 	int known;
 	enum expr_op opcode;
 	const char *s;
+	struct executable_statement *stmt;
+	int i;
 
 	token = peek_token (&val, cfile);
 
@@ -2176,7 +2242,7 @@ int parse_non_binary (expr, cfile, lose, context)
 			goto norparen;
 		break;
 
-	      case PICK_FIRST_VALUE:
+	      case PICK:
 		/* pick (a, b, c) actually produces an internal representation
 		   that looks like pick (a, pick (b, pick (c, nil))). */
 		token = next_token (&val, cfile);
@@ -2220,70 +2286,75 @@ int parse_non_binary (expr, cfile, lose, context)
 		parse_warn (cfile,
 			    "Please rebuild dhcpd with --with-nsupdate.");
 #endif
+		token = next_token (&val, cfile);
 		if (token == DNS_UPDATE)
 			opcode = expr_ns_add;
 		else
 			opcode = expr_ns_delete;
 
 		token = next_token (&val, cfile);
-		if (!expression_allocate (expr,
-					  "parse_expression: DNS_UPDATE"))
-			log_fatal ("can't allocate expression");
-		(*expr) -> op = expr_dns_transaction;
-
-		token = next_token (&val, cfile);
 		if (token != LPAREN)
 			goto nolparen;
-
-		nexp = (struct expression *)0;
-		if (!expression_allocate (&nexp,
-					  "parse_expression: DNS_UPDATE1"))
-			log_fatal ("can't allocate expression");
-		nexp -> op = opcode;
-		(*expr) -> data.dns_transaction.car = nexp;
 
 		token = next_token (&val, cfile);
 		if (token != STRING) {
 			parse_warn (cfile,
 				    "parse_expression: expecting string.");
 		      badnsupdate:
-			expression_dereference
-				(expr, "parse_expression");
 			skip_to_semi (cfile);
 			*lose = 1;
 			return 0;
 		}
 			
 		if (!strcasecmp (val, "a"))
-			nexp -> data.ns_add.rrtype = T_A;
+			i = T_A;
 		else if (!strcasecmp (val, "ptr"))
-			nexp -> data.ns_add.rrtype = T_PTR;
+			i = T_PTR;
 		else if (!strcasecmp (val, "mx"))
-			nexp -> data.ns_add.rrtype = T_MX;
+			i = T_MX;
 		else if (!strcasecmp (val, "cname"))
-			nexp -> data.ns_add.rrtype = T_CNAME;
+			i = T_CNAME;
 		else if (!strcasecmp (val, "TXT"))
-			nexp -> data.ns_add.rrtype = T_TXT;
+			i = T_TXT;
 		else {
 			parse_warn (cfile, "unexpected rrtype: %s", val);
 			goto badnsupdate;
 		}
-		nexp -> data.ns_add.rrclass = C_IN;
+
+		if (!expression_allocate (expr,
+					  "parse_expression: DNS_UPDATE"))
+			log_fatal ("can't allocate expression");
+#if 0
+		(*expr) -> op = expr_funcall;
+		(*expr) -> data.funcall.context = context_boolean;
+		(*expr) -> data.funcall.name = 
+
+		if (!make_let (&(*expr) -> data.funcall.statements, "rrtype"))
+			log_fatal ("can't allocate rrtype let.");
+		stmt = (*expr) -> data.funcall.statements;
+		if (!make_const_int (stmt -> data.let.value, i))
+			log_fatal ("can't allocate rrtype value.");
 
 		token = next_token (&val, cfile);
 		if (token != COMMA)
 			goto nocomma;
 
-		if (!(parse_data_expression
-		      (&nexp -> data.ns_add.rrname, cfile, lose)))
+		if (!make_let (&stmt -> data.let.statements, "rrname"))
+			log_fatal ("can't allocate rrname let.");
+		stmt = stmt -> data.let.statements;
+		if (!(parse_data_expression (&stmt -> data.let.expr,
+					     cfile, lose)))
 			goto nodata;
 
 		token = next_token (&val, cfile);
 		if (token != COMMA)
 			goto nocomma;
 
-		if (!(parse_data_expression
-		      (&nexp -> data.ns_add.rrdata, cfile, lose)))
+		if (!make_let (&stmt -> data.let.statements, "rrdata"))
+			log_fatal ("can't allocate rrname let.");
+		stmt = stmt -> data.let.statements;
+		if (!(parse_data_expression (&stmt -> data.let.expr,
+					     cfile, lose)))
 			goto nodata;
 
 		if (opcode == expr_ns_add) {
@@ -2291,14 +2362,18 @@ int parse_non_binary (expr, cfile, lose, context)
 			if (token != COMMA)
 				goto nocomma;
 			
+			if (!make_let (&stmt -> data.let.statements, "ttl"))
+				log_fatal ("can't allocate rrname let.");
+			stmt = stmt -> data.let.statements;
+
 			if (!(parse_numeric_expression
-			      (&nexp -> data.ns_add.ttl, cfile, lose))) {
+			      (&stmt -> data.let.expr, cfile, lose))) {
 				parse_warn (cfile,
-					    "expecting data expression.");
+					    "expecting numeric expression.");
 				goto badnsupdate;
 			}
 		}
-
+#endif
 		token = next_token (&val, cfile);
 		if (token != RPAREN)
 			goto norparen;
@@ -2354,7 +2429,12 @@ int parse_non_binary (expr, cfile, lose, context)
 
 		/* NOT EXISTS is special cased above... */
 	      not_exists:
-		token = next_token (&val, cfile);
+		token = peek_token (&val, cfile);
+		if (token != EXISTS) {
+			parse_warn (cfile, "expecting DNS prerequisite.");
+			*lose = 1;
+			return 0;
+		}
 		opcode = expr_ns_not_exists;
 		goto nsupdatecode;
 	      case TOKEN_ADD:
@@ -2498,6 +2578,22 @@ int parse_non_binary (expr, cfile, lose, context)
 		(*expr) -> op = expr_leased_address;
 		break;
 
+	      case FILENAME:
+		token = next_token (&val, cfile);
+		if (!expression_allocate (expr,
+					  "parse_expression: FILENAME"))
+			log_fatal ("can't allocate expression");
+		(*expr) -> op = expr_filename;
+		break;
+
+	      case SERVER_NAME:
+		token = next_token (&val, cfile);
+		if (!expression_allocate (expr,
+					  "parse_expression: SERVER_NAME"))
+			log_fatal ("can't allocate expression");
+		(*expr) -> op = expr_sname;
+		break;
+
 	      case LEASE_TIME:
 		token = next_token (&val, cfile);
 		if (!expression_allocate (expr,
@@ -2552,7 +2648,7 @@ int parse_non_binary (expr, cfile, lose, context)
 			log_fatal ("can't allocate expression");
 		(*expr) -> op = expr_variable_reference;
 		(*expr) -> data.variable =
-			dmalloc (strlen (s) + 1, "parse_expression");
+			dmalloc (strlen (s) + 1, MDL);
 		if (!(*expr) -> data.variable)
 			log_fatal ("can't allocate variable name.");
 		strcpy ((*expr) -> data.variable, s);
@@ -2832,8 +2928,7 @@ int parse_non_binary (expr, cfile, lose, context)
 		if (!expression_allocate (expr, "parse_expression"))
 			log_fatal ("can't allocate expression");
 		(*expr) -> op = expr_variable_exists;
-		(*expr) -> data.variable = dmalloc (strlen (val) + 1,
-						    "parse_expression");
+		(*expr) -> data.variable = dmalloc (strlen (val) + 1, MDL);
 		if (!(*expr)->data.variable)
 			log_fatal ("can't allocate variable name");
 		strcpy ((*expr) -> data.variable, val);
@@ -2851,8 +2946,7 @@ int parse_non_binary (expr, cfile, lose, context)
 		if (!expression_allocate (expr, "parse_expression"))
 			log_fatal ("can't allocate expression");
 		(*expr) -> op = expr_variable_reference;
-		(*expr) -> data.variable = dmalloc (strlen (val) + 1,
-						    "parse_expression");
+		(*expr) -> data.variable = dmalloc (strlen (val) + 1, MDL);
 		if (!(*expr)->data.variable)
 			log_fatal ("can't allocate variable name");
 		strcpy ((*expr) -> data.variable, val);
@@ -3131,6 +3225,7 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 	int len;
 	unsigned char *ob;
 	struct iaddr addr;
+	int num;
 
 	switch (*fmt) {
 	      case 'U':
@@ -3194,9 +3289,19 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 		}
 		break;
 		
+	      case 'T':	/* Lease interval. */
+		token = next_token (&val, cfile);
+		if (token != INFINITE)
+			goto check_number;
+		putLong (buf, -1);
+		if (!make_const_data (&t, buf, 4, 0, 1))
+			return 0;
+		break;
+
 	      case 'L': /* Unsigned 32-bit integer... */
 	      case 'l':	/* Signed 32-bit integer... */
 		token = next_token (&val, cfile);
+	      check_number:
 		if (token != NUMBER) {
 		      need_number:
 			parse_warn (cfile, "expecting number.");
