@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.37 1999/09/08 01:45:29 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.38 1999/09/09 23:27:10 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -466,12 +466,12 @@ void convert_num (buf, str, base, size)
 		else if (tval >= '0')
 			tval -= '0';
 		else {
-			log_error ("Bogus number: %s.", str);
+			parse_warn ("Bogus number: %s.", str);
 			break;
 		}
 		if (tval >= base) {
-			log_error ("Bogus number: %s: digit %d not in base %d\n",
-			      str, tval, base);
+			parse_warn ("Bogus number %s: digit %d not in base %d",
+				    str, tval, base);
 			break;
 		}
 		val = val * base + tval;
@@ -484,16 +484,16 @@ void convert_num (buf, str, base, size)
 	if (val > max) {
 		switch (base) {
 		      case 8:
-			log_error ("value %s%o exceeds max (%d) for precision.",
+			parse_warn ("%s%o exceeds max (%d) for precision.",
 			      negative ? "-" : "", val, max);
 			break;
 		      case 16:
-			log_error ("value %s%x exceeds max (%d) for precision.",
+			parse_warn ("%s%x exceeds max (%d) for precision.",
 			      negative ? "-" : "", val, max);
 			break;
 		      default:
-			log_error ("value %s%u exceeds max (%d) for precision.",
-			      negative ? "-" : "", val, max);
+			parse_warn ("%s%u exceeds max (%d) for precision.",
+				    negative ? "-" : "", val, max);
 			break;
 		}
 	}
@@ -510,7 +510,7 @@ void convert_num (buf, str, base, size)
 			putLong (buf, -(unsigned long)val);
 			break;
 		      default:
-			log_error ("Unexpected integer size: %d\n", size);
+			parse_warn ("Unexpected integer size: %d\n", size);
 			break;
 		}
 	} else {
@@ -525,7 +525,7 @@ void convert_num (buf, str, base, size)
 			putULong (buf, val);
 			break;
 		      default:
-			log_error ("Unexpected integer size: %d\n", size);
+			parse_warn ("Unexpected integer size: %d\n", size);
 			break;
 		}
 	}
@@ -2590,8 +2590,8 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 		break;
 
 	      default:
-		log_error ("Bad format %c in parse_option_param.",
-		      *fmt);
+		parse_warn ("Bad format %c in parse_option_param.",
+			    *fmt);
 		skip_to_semi (cfile);
 		return 0;
 	}
