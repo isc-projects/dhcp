@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.8 1999/10/07 06:36:34 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.9 1999/10/08 22:17:41 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -849,6 +849,13 @@ int supersede_lease (comp, lease, commit)
 	    comp -> billing_class != lease -> billing_class)
 		unbill_class (comp, comp -> billing_class);
 
+	/* If comp is on the expiry list, get it off! */
+	if (comp -> pool && comp -> pool -> next_expiry &&
+	    comp == comp -> pool -> next_expiry) {
+		comp -> pool -> next_expiry = comp -> prev;
+		/* Let the timer clean things up. */
+	}
+
 	/* Copy the data files, but not the linkages. */
 	comp -> starts = lease -> starts;
 	if (lease -> uid) {
@@ -985,6 +992,45 @@ int supersede_lease (comp, lease, commit)
 	comp -> pool -> insertion_point = comp;
 	comp -> ends = lease -> ends;
 
+	/* If there's an expiry event on this lease, process it or
+	   queue it. */
+	if (comp -> on_expiry) {
+		if (comp -> ends < cur_time) {
+			execute_statements ((struct packet *)0, lease,
+					    (struct option_state *)0,
+					    (struct option_state *)0, /* XXX */
+					    lease -> on_expiry);
+			executable_statement_dereference (&lease -> on_expiry,
+							  "dhcprelease");
+		} else {
+			/* If this is the next lease that will timeout on the
+			   pool, zap the old timeout and set the timeout on
+			   this pool to the time that the lease ends.
+			   
+			   We do not actually set the timeout unless commit is
+			   true - we don't want to thrash the timer queue when
+			   reading the lease database.  Instead, the database
+			   code calls the expiry event on each pool after
+			   reading in the lease file, and the expiry code sets
+			   the timer if there's anything left to expire after
+			   it's run any outstanding expiry events on the
+			   pool. */
+			if (comp -> pool) {
+			    if (!comp -> pool -> next_expiry) {
+				comp -> pool -> next_expiry = comp;
+				if (commit)
+					add_timeout (comp -> ends,
+						     pool_timer, comp -> pool);
+			    } else if (comp -> ends <
+				       comp -> pool -> next_expiry -> ends) {
+				if (commit)
+					add_timeout (comp -> ends,
+						     pool_timer, comp -> pool);
+			    }
+			}
+		}
+	}
+
 	/* Return zero if we didn't commit the lease to permanent storage;
 	   nonzero if we did. */
 	return commit && write_lease (comp) && commit_leases ();
@@ -1010,6 +1056,21 @@ void release_lease (lease, packet)
 				    lease -> on_release);
 		executable_statement_dereference (&lease -> on_release,
 						  "dhcprelease");
+
+		/* We do either the on_release or the on_expiry events, but
+		   not both (it's possible that they could be the same,
+		   in any case). */
+		if (lease -> on_expiry)
+			executable_statement_dereference (&lease -> on_expiry,
+							  "dhcprelease");
+		if (lease -> ddns_fwd_name) {
+			dfree (lease -> ddns_fwd_name, "pool_timer");
+			lease -> ddns_fwd_name = (char *)0;
+		}
+		if (lease -> ddns_rev_name) {
+			dfree (lease -> ddns_rev_name, "pool_timer");
+			lease -> ddns_rev_name = (char *)0;
+		}
 	}
 
 	lt = *lease;
@@ -1059,6 +1120,72 @@ void dissociate_lease (lease)
 	lt.uid_len = 0;
 	lt.billing_class = (struct class *)0;
 	supersede_lease (lease, &lt, 1);
+}
+
+/* Timer called when a lease in a particular pool expires. */
+void pool_timer (vpool)
+	void *vpool;
+{
+	struct pool *pool;
+	struct lease *lease;
+
+	pool = (struct pool *)vpool;
+	for (lease = pool -> next_expiry; lease; lease = lease -> prev) {
+		/* Stop processing when we get to the first lease that has not
+                   yet expired. */
+		if (lease -> ends > cur_time)
+			break;
+		/* Skip entries that aren't set to expire. */
+		if (!lease -> on_expiry)
+			continue;
+
+		/* Okay, the current lease needs to expire, so do it. */
+		execute_statements ((struct packet *)0, lease,
+				    (struct option_state *)0,
+				    (struct option_state *)0, /* XXX */
+				    lease -> on_expiry);
+		executable_statement_dereference (&lease -> on_expiry,
+						  "pool_timer");
+
+		/* If there's an on_release event, blow it away. */
+		if (lease -> on_release)
+			executable_statement_dereference (&lease -> on_release,
+							  "pool_timer");
+		if (lease -> ddns_fwd_name) {
+			dfree (lease -> ddns_fwd_name, "pool_timer");
+			lease -> ddns_fwd_name = (char *)0;
+		}
+		if (lease -> ddns_rev_name) {
+			dfree (lease -> ddns_rev_name, "pool_timer");
+			lease -> ddns_rev_name = (char *)0;
+		}
+		/* There are two problems with writing the lease out here.
+
+		   The first is that we've just done a commit, and the write
+		   may fail, in which case we will redo the operation.  If the
+		   operation is not idempotent, we're in trouble here.  I have
+		   no proposed solution for this problem - make the event
+		   idempotent, or make sure that it at least isn't harmful to
+		   do it twice.
+
+		   The second is that if we just read in the lease file and ran
+		   all the expiry events, we're going to rewrite all expiring
+		   leases twice.  There's no real answer for this - if we
+		   postpone writing until we've expired all leases, we're
+		   increasing the window to lose as described above.  I guess a
+		   dirty bit on the lease would work.  Hm. */
+		if (!write_lease (lease)) {
+			log_error ("Error updating lease %s after expiry",
+				   piaddr (lease -> ip_addr));
+		}
+		if (!commit_leases ()) {
+			log_error ("Error committing after writing lease %s",
+				   piaddr (lease -> ip_addr));
+		}
+	}
+	pool -> next_expiry = lease;
+	if (lease)
+		add_timeout (lease -> ends, pool_timer, pool);
 }
 
 /* Locate the lease associated with a given IP address... */
@@ -1262,6 +1389,22 @@ void write_leases ()
 	}
 	if (!commit_leases ())
 		log_fatal ("Can't commit leases to new database: %m");
+}
+
+/* Write all interesting leases to permanent storage. */
+
+void expire_all_pools ()
+{
+	struct shared_network *s;
+	struct pool *p;
+	struct hash_bucket *hb;
+	int i;
+
+	/* Loop through each pool in each shared network and call the
+	   expiry routine on the pool. */
+	for (s = shared_networks; s; s = s -> next)
+		for (p = s -> pools; p; p = p -> next)
+			pool_timer (p);
 }
 
 void dump_subnets ()
