@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.2 1997/05/09 08:08:53 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.3 1998/03/15 20:53:12 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -515,6 +515,11 @@ TIME parse_date (cfile)
 			skip_to_semi (cfile);
 		return (TIME)0;
 	}
+
+	/* Note: the following is not a Y2K bug - it's a Y1.9K bug.   Until
+	   somebody invents a time machine, I think we can safely disregard
+	   it.   This actually works around a stupid Y2K bug that was present
+	   in a very early beta release of dhcpd. */
 	tm.tm_year = atoi (val);
 	if (tm.tm_year > 1900)
 		tm.tm_year -= 1900;
