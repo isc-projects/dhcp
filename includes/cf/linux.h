@@ -113,6 +113,7 @@ extern int h_errno;
 # define HAVE_ARPHRD_LOOPBACK
 # define HAVE_SO_BINDTODEVICE
 # define HAVE_SIOCGIFHWADDR
+# define HAVE_SETFD
 #endif
 
 #if !defined (USE_LPF)
