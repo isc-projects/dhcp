@@ -128,6 +128,14 @@ struct subnet {
 	struct lease *last_lease;
 };
 
+struct class {
+	char *name;
+	char *filename;
+	TIME default_lease_time;
+	TIME max_lease_time;
+	struct tree_cache *options [256];
+};
+
 /* Bitmask of dhcp option codes. */
 typedef unsigned char option_mask [16];
 
@@ -162,6 +170,10 @@ void parse_options PROTO ((struct packet *));
 void parse_option_buffer PROTO ((struct packet *, unsigned char *, int));
 void cons_options PROTO ((struct packet *, struct packet *,
 			  struct tree_cache **, int));
+void new_cons_options PROTO ((struct packet *, struct packet *,
+			  struct tree_cache **, int));
+int store_options PROTO ((unsigned char *, int, struct tree_cache **,
+			   unsigned char *, int));
 int store_option PROTO ((struct tree_cache **, unsigned char,
 			 unsigned char *, int, int *));
 char *pretty_print_option PROTO ((unsigned char, unsigned char *, int));
@@ -201,12 +213,14 @@ void parse_statement PROTO ((FILE *));
 void skip_to_semi PROTO ((FILE *));
 struct host_decl *parse_host_statement PROTO ((FILE *, jmp_buf *));
 char *parse_host_name PROTO ((FILE *, jmp_buf *));
+void parse_class_statement PROTO ((FILE *, jmp_buf *, int));
+void parse_class_decl PROTO ((FILE *, jmp_buf *, struct class *));
 struct subnet *parse_subnet_statement PROTO ((FILE *, jmp_buf *));
 void parse_subnet_decl PROTO ((FILE *, jmp_buf *, struct subnet *));
 void parse_host_decl PROTO ((FILE *, jmp_buf *, struct host_decl *));
 void parse_hardware_decl PROTO ((FILE *, jmp_buf *, struct host_decl *));
 struct hardware parse_hardware_addr PROTO ((FILE *, jmp_buf *));
-void parse_filename_decl PROTO ((FILE *, jmp_buf *, struct host_decl *));
+char *parse_filename_decl PROTO ((FILE *, jmp_buf *));
 struct tree *parse_ip_addr_or_hostname PROTO ((FILE *, jmp_buf *, int));
 void parse_fixed_addr_decl PROTO ((FILE *, jmp_buf *, struct host_decl *));
 void parse_option_decl PROTO ((FILE *, jmp_buf *, struct tree_cache **));
@@ -234,6 +248,8 @@ void dhcp PROTO ((struct packet *));
 void dhcpdiscover PROTO ((struct packet *));
 void dhcprequest PROTO ((struct packet *));
 void dhcprelease PROTO ((struct packet *));
+void dhcpdecline PROTO ((struct packet *));
+void dhcpinform PROTO ((struct packet *));
 void nak_lease PROTO ((struct packet *));
 void ack_lease PROTO ((struct packet *, struct lease *, unsigned char, TIME));
 struct lease *find_lease PROTO ((struct packet *));
@@ -252,9 +268,12 @@ void enter_subnet (struct subnet *);
 void enter_lease PROTO ((struct lease *));
 void supersede_lease PROTO ((struct lease *, struct lease *));
 void release_lease PROTO ((struct lease *));
+void abandon_lease PROTO ((struct lease *));
 struct lease *find_lease_by_uid PROTO ((unsigned char *, int));
 struct lease *find_lease_by_hw_addr PROTO ((unsigned char *, int));
 struct lease *find_lease_by_ip_addr PROTO ((struct iaddr));
+struct class *add_class PROTO ((int, char *));
+struct class *find_class PROTO ((int, char *, int));
 void dump_subnets PROTO ((void));
 
 /* alloc.c */
@@ -269,6 +288,8 @@ struct hash_bucket *new_hash_bucket PROTO ((char *));
 struct lease *new_lease PROTO ((char *));
 struct lease *new_leases (int, char *);
 struct subnet *new_subnet PROTO ((char *));
+struct class *new_class PROTO ((char *));
+void free_class PROTO ((struct class *, char *));
 void free_subnet PROTO ((struct subnet *, char *));
 void free_lease PROTO ((struct lease *, char *));
 void free_hash_bucket PROTO ((struct hash_bucket *, char *));
@@ -281,6 +302,7 @@ void free_tree PROTO ((struct tree *, char *));
 /* print.c */
 char *print_hw_addr PROTO ((int, int, unsigned char *));
 void print_lease PROTO ((struct lease *));
+void dump_raw PROTO ((unsigned char *, int));
 
 /* socket.c */
 u_int32_t *get_interface_list PROTO ((int *));
