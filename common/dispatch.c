@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dispatch.c,v 1.39 1997/03/29 01:39:38 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dispatch.c,v 1.40 1997/03/29 10:36:56 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -687,7 +687,7 @@ void cancel_timeout (where, what)
 void add_protocol (name, fd, handler, local)
 	char *name;
 	int fd;
-	void (*handler) (struct protocol *);
+	void (*handler) PROTO ((struct protocol *));
 	void *local;
 {
 	struct protocol *p;
