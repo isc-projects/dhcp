@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: ddns.c,v 1.11 2001/01/19 10:59:10 mellon Exp $ Copyright (c) 2000-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: ddns.c,v 1.12 2001/01/25 08:29:12 mellon Exp $ Copyright (c) 2000-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -996,6 +996,8 @@ int ddns_updates (struct packet *packet,
 	data_string_forget (&ddns_fwd_name, MDL);
 	data_string_forget (&ddns_rev_name, MDL);
 	data_string_forget (&ddns_dhcid, MDL);
+	if (bp)
+		buffer_dereference (&bp, MDL);
 
 	return result;
 }
