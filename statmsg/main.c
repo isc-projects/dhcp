@@ -44,13 +44,15 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: main.c,v 1.3 1997/11/29 07:48:37 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: main.c,v 1.4 1998/03/16 06:18:50 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
 
 int log_priority;
 int log_perror = 1;
+
+int dhcp_max_agent_option_packet_length;
 
 int main (argc, argv, envp)
 	int argc;
