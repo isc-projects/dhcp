@@ -179,7 +179,10 @@ enum expr_op {
 	expr_subtract,
 	expr_multiply,
 	expr_divide,
-	expr_remainder
+	expr_remainder,
+	expr_binary_and,
+	expr_binary_or,
+	expr_binary_xor
 };
 
 struct expression {

@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.87 2000/08/28 19:36:32 neild Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.88 2000/08/28 21:22:36 neild Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -856,6 +856,9 @@ int evaluate_dns_expression (result, packet, lease, in_options,
 	      case expr_multiply:
 	      case expr_divide:
 	      case expr_remainder:
+	      case expr_binary_and:
+	      case expr_binary_or:
+	      case expr_binary_xor:
 		log_error ("Numeric opcode in evaluate_dns_expression: %d",
 		      expr -> op);
 		return 0;
@@ -1166,6 +1169,9 @@ int evaluate_boolean_expression (result, packet, lease, in_options,
 	      case expr_multiply:
 	      case expr_divide:
 	      case expr_remainder:
+	      case expr_binary_and:
+	      case expr_binary_or:
+	      case expr_binary_xor:
 		log_error ("Numeric opcode in evaluate_boolean_expression: %d",
 		      expr -> op);
 		return 0;
@@ -1491,7 +1497,7 @@ int evaluate_data_expression (result, packet, lease,
 		s0 = evaluate_numeric_expression (&len, packet, lease,
 						  in_options, cfg_options,
 						  scope,
-						  expr -> data.packet.len);
+						  expr -> data.encode_int);
 		if (s0) {
 			result -> len = 1;
 			if (!buffer_allocate (&result -> buffer, 1, MDL)) {
@@ -1520,7 +1526,7 @@ int evaluate_data_expression (result, packet, lease,
 		s0 = evaluate_numeric_expression (&len, packet, lease,
 						  in_options, cfg_options,
 						  scope,
-						  expr -> data.packet.len);
+						  expr -> data.encode_int);
 		if (s0) {
 			result -> len = 2;
 			if (!buffer_allocate (&result -> buffer, 2, MDL)) {
@@ -1548,7 +1554,7 @@ int evaluate_data_expression (result, packet, lease,
 		s0 = evaluate_numeric_expression (&len, packet, lease,
 						  in_options, cfg_options,
 						  scope,
-						  expr -> data.packet.len);
+						  expr -> data.encode_int);
 		if (s0) {
 			result -> len = 4;
 			if (!buffer_allocate (&result -> buffer, 4, MDL)) {
@@ -1974,6 +1980,9 @@ int evaluate_data_expression (result, packet, lease,
 	      case expr_multiply:
 	      case expr_divide:
 	      case expr_remainder:
+	      case expr_binary_and:
+	      case expr_binary_or:
+	      case expr_binary_xor:
 		log_error ("Numeric opcode in evaluate_data_expression: %d",
 		      expr -> op);
 		return 0;
@@ -2328,6 +2337,69 @@ int evaluate_numeric_expression (result, packet, lease,
 		}
 		return 0;
 
+	      case expr_binary_and:
+		sleft = evaluate_numeric_expression (&ileft, packet, lease,
+						     in_options, cfg_options,
+						     scope,
+						     expr -> data.and [0]);
+		sright = evaluate_numeric_expression (&iright, packet, lease,
+						      in_options, cfg_options,
+						      scope,
+						      expr -> data.and [1]);
+
+#if defined (DEBUG_EXPRESSIONS)
+		log_debug ("num: %d & %d = %d",
+		      ileft, iright,
+		      ((sleft && sright) ? (ileft & iright) : 0));
+#endif
+		if (sleft && sright) {
+			*result = ileft & iright;
+			return 1;
+		}
+		return 0;
+
+	      case expr_binary_or:
+		sleft = evaluate_numeric_expression (&ileft, packet, lease,
+						     in_options, cfg_options,
+						     scope,
+						     expr -> data.and [0]);
+		sright = evaluate_numeric_expression (&iright, packet, lease,
+						      in_options, cfg_options,
+						      scope,
+						      expr -> data.and [1]);
+
+#if defined (DEBUG_EXPRESSIONS)
+		log_debug ("num: %d | %d = %d",
+		      ileft, iright,
+		      ((sleft && sright) ? (ileft | iright) : 0));
+#endif
+		if (sleft && sright) {
+			*result = ileft | iright;
+			return 1;
+		}
+		return 0;
+
+	      case expr_binary_xor:
+		sleft = evaluate_numeric_expression (&ileft, packet, lease,
+						     in_options, cfg_options,
+						     scope,
+						     expr -> data.and [0]);
+		sright = evaluate_numeric_expression (&iright, packet, lease,
+						      in_options, cfg_options,
+						      scope,
+						      expr -> data.and [1]);
+
+#if defined (DEBUG_EXPRESSIONS)
+		log_debug ("num: %d ^ %d = %d",
+		      ileft, iright,
+		      ((sleft && sright) ? (ileft ^ iright) : 0));
+#endif
+		if (sleft && sright) {
+			*result = ileft ^ iright;
+			return 1;
+		}
+		return 0;
+
 	      case expr_ns_add:
 	      case expr_ns_delete:
 	      case expr_ns_exists:
@@ -2492,6 +2564,9 @@ void expression_dereference (eptr, file, line)
 	      case expr_multiply:
 	      case expr_divide:
 	      case expr_remainder:
+	      case expr_binary_and:
+	      case expr_binary_or:
+	      case expr_binary_xor:
 		if (expr -> data.equal [0])
 			expression_dereference (&expr -> data.equal [0],
 						file, line);
@@ -2737,7 +2812,10 @@ int is_numeric_expression (expr)
 		expr -> op == expr_subtract ||
 		expr -> op == expr_multiply ||
 		expr -> op == expr_divide ||
-		expr -> op == expr_remainder);
+		expr -> op == expr_remainder ||
+		expr -> op == expr_binary_and ||
+		expr -> op == expr_binary_or ||
+		expr -> op == expr_binary_xor);
 }
 
 int is_compound_expression (expr)
@@ -2813,6 +2891,10 @@ static int op_val (op)
 	      case expr_arg:
 	      case expr_funcall:
 	      case expr_function:
+		/* XXXDPN: Need to assign sane precedences to these. */
+	      case expr_binary_and:
+	      case expr_binary_or:
+	      case expr_binary_xor:
 		return 100;
 
 	      case expr_equal:
@@ -2906,6 +2988,9 @@ enum expression_context op_context (op)
 	      case expr_multiply:
 	      case expr_divide:
 	      case expr_remainder:
+	      case expr_binary_and:
+	      case expr_binary_or:
+	      case expr_binary_xor:
 		return context_numeric;
 	}
 	return context_any;
@@ -3038,6 +3123,18 @@ int write_expression (file, expr, col, indent, firstp)
 
 	      case expr_remainder:
 		s = "%";
+		goto binary;
+
+	      case expr_binary_and:
+		s = "&";
+		goto binary;
+
+	      case expr_binary_or:
+		s = "|";
+		goto binary;
+
+	      case expr_binary_xor:
+		s = "^";
 		goto binary;
 
 	      case expr_and:

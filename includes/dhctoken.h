@@ -57,6 +57,9 @@ enum dhcp_token {
  	PLUS = '+',
 	MINUS = '-',
 	ASTERISK = '*',
+	AMPERSAND = '&',
+	PIPE = '|',
+	CARET = '^',
 
 	HOST = 256,
 	FIRST_TOKEN = HOST,

@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.80 2000/08/28 19:36:31 neild Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.81 2000/08/28 21:22:34 neild Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -3650,6 +3650,18 @@ int parse_expression (expr, cfile, lose, context, plhs, binop)
 
 	      case PERCENT:
 		next_op = expr_remainder;
+		break;
+
+	      case AMPERSAND:
+		next_op = expr_binary_and;
+		break;
+
+	      case PIPE:
+		next_op = expr_binary_or;
+		break;
+
+	      case CARET:
+		next_op = expr_binary_xor;
 		break;
 
 	      default:
