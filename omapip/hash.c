@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: hash.c,v 1.1.2.1 2001/06/05 17:56:39 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: hash.c,v 1.1.2.2 2001/06/20 03:54:29 mellon Exp $ Copyright (c) 1995-2000 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include <omapip/omapip_p.h>
@@ -75,18 +75,20 @@ void free_hash_table (ptr, file, line)
 	int i;
 	struct hash_bucket *hbc, *hbn = (struct hash_bucket *)0;
 
-#if defined (DEBUG_MEMORY_LEAKAGE)
+#if defined (DEBUG_MEMORY_LEAKAGE) || \
+		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
 	for (i = 0; i < ptr -> hash_count; i++) {
 	    for (hbc = ptr -> buckets [i]; hbc; hbc = hbn) {
 		hbn = hbc -> next;
 		if (ptr -> dereferencer && hbc -> value)
-		    (*ptr -> dereferencer) (&hbc -> value, file, line);
-		dfree (hbc, file, line);
+		    (*ptr -> dereferencer) (&hbc -> value, MDL);
+		free_hash_bucket (hbc, MDL);
 	    }
+	    ptr -> buckets [i] = (struct hash_bucket *)0;
 	}
 #endif
 
-	dfree ((VOIDPTR)ptr, file, line);
+	dfree ((VOIDPTR)ptr, MDL);
 }
 
 struct hash_bucket *free_hash_buckets;
