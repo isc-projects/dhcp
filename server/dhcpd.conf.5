@@ -459,6 +459,37 @@ providing a way for each peer to behave in the opposite way from the
 other.   So one server must be configured as primary, and the other
 must be configured as secondary, and it doesn't matter too much which
 one is which.
+.SH FAILOVER STARTUP
+When a server starts that has not previously communicated with its
+failover peer, it must establish communications with its failover peer
+and synchronize with it before it can serve clients.   This can happen
+either because you have just configured your DHCP servers to perform
+failover for the first time, or because one of your failover servers
+has failed catastrophically and lost its database.
+.PP
+The initial recovery process is designed to ensure that when one
+failover peer loses its database and then resynchronizes, any leases
+that the failed server gave out before it failed will be honored.
+When the failed server starts up, it notices that it has no saved
+failover state, and attempts to contact its peer.
+.PP
+When it has established contact, it asks the peer for a complete copy
+its peer's lease database.  The peer then sends its complete database,
+and sends a message indicating that it is done.  The failed server
+then waits until MCLT has passed, and once MCLT has passed both
+servers make the transition back into normal operation.  This waiting
+period ensures that any leases the failed server may have given out
+while out of contact with its partner will have expired.
+.PP
+While the failed server is recovering, its partner remains in the
+partner-down state, which means that it is serving all clients.  The
+failed server provides no service at all to DHCP clients until it has
+made the transition into normal operation.
+.PP
+In the case where both servers detect that they have never before
+communicated with their partner, they both come up in this recovery
+state and follow the procedure we have just described.   In this case,
+no service will be provided to DHCP clients until MCLT has expired.
 .SH CONFIGURING FAILOVER
 In order to configure failover, you need to write a peer declaration
 that configures the failover protocol, and you need to write peer
@@ -2106,6 +2137,7 @@ works around a problem with relay agent information options, which is
 that they usually not appear in DHCPREQUEST messages sent by the
 client in the RENEWING state, because such messages are unicast
 directly to the server and not sent through a relay agent.
+.RE
 .PP
 The
 .I update-optimization
@@ -2126,6 +2158,7 @@ and has no effect on the ad-hoc DNS update scheme.   If this
 parameter is not specified, or is false, the DHCP server will only
 update when the client information changes, the client gets a
 different lease, or the client's lease expires.
+.RE
 .PP
 The
 .I update-static-leases
@@ -2144,6 +2177,7 @@ has been done, and therefore will not delete the record when it is not
 in use.   Also, the server must attempt the update each time the
 client renews its lease, which could have a significant performance
 impact in environments that place heavy demands on the DHCP server.
+.RE
 .PP
 The
 .I use-host-decl-names
