@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.35 1996/09/11 18:53:32 mellon Exp $ Copyright 1995, 1996 The Internet Software Consortium.";
+"$Id: dhcpd.c,v 1.36 1996/09/12 09:28:13 mellon Exp $ Copyright 1995, 1996 The Internet Software Consortium.";
 #endif
 
 static char copyright[] =
@@ -171,6 +171,9 @@ int main (argc, argv, envp)
 		else if (pid)
 			exit (0);
 		/* Become session leader and get pid... */
+		close (0);
+		close (1);
+		close (2);
 		pid = setsid ();
 	}
 
