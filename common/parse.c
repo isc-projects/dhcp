@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.2.2.2 1998/11/24 22:35:43 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.2.2.3 1998/12/22 22:43:22 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -221,6 +221,9 @@ void parse_hardware_param (cfile, hardware)
 		break;
 	      case TOKEN_RING:
 		hardware -> htype = HTYPE_IEEE802;
+		break;
+	      case FDDI:
+		hardware -> htype = HTYPE_FDDI;
 		break;
 	      default:
 		parse_warn ("expecting a network hardware type");
