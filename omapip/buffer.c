@@ -292,6 +292,12 @@ isc_result_t omapi_connection_copyin (omapi_object_t *h,
 		return ISC_R_INVALIDARG;
 	c = (omapi_connection_object_t *)h;
 
+	/* If the connection is closed, return an error if the caller
+	   tries to copy in. */
+	if (c -> state == omapi_connection_disconnecting ||
+	    c -> state == omapi_connection_closed)
+		return ISC_R_NOTCONNECTED;
+
 	if (c -> outbufs) {
 		for (buffer = c -> outbufs;
 		     buffer -> next; buffer = buffer -> next)
