@@ -3,7 +3,7 @@
    BSD socket interface code... */
 
 /*
- * Copyright (c) 1995, 1996 The Internet Software Consortium.
+ * Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: socket.c,v 1.16.2.1 1997/03/29 08:16:38 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: socket.c,v 1.16.2.2 1998/05/18 05:44:32 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -66,12 +66,8 @@ int if_register_socket (info, interface)
 
 	/* Make sure only one interface is registered. */
 	if (once)
-		error ("The standard socket API can only support %s%s%s%s%s",
-		       "hosts with a single network interface.   If you must ",
-		       "run dhcpd on a host with multiple interfaces, ",
-		       "you must compile in BPF or NIT support.   If neither ",
-		       "option is supported on your system, please let us ",
-		       "know.");
+		error ("The standard socket API can only support %s",
+		       "hosts with a single network interface.");
 
 	/* Technically, we need to know what interface every packet
 	   comes in on, which means that we can only operate on a
@@ -171,7 +167,7 @@ size_t send_packet (interface, packet, raw, len, from, to, hto)
 		result = sendto (interface -> wfdesc, (char *)raw, len, 0,
 				 (struct sockaddr *)to, sizeof *to);
 #ifdef IGNORE_HOSTUNREACH
-	} while (to -> sin_addr.s_addr = htonl (INADDR_BROADCAST) &&
+	} while (to -> sin_addr.s_addr == htonl (INADDR_BROADCAST) &&
 		 result < 0 &&
 		 (errno == EHOSTUNREACH ||
 		  errno == ECONNREFUSED) &&
