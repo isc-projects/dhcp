@@ -58,6 +58,7 @@
 #define jbp_decl(x)	jmp_buf x
 #define jref(x)		(x)
 #define jdref(x)	(x)
+#define jrefproto	jmp_buf
 
 /* struct ether_host source and destination are structs on SunOS. */
 #ifndef ETHER_SRC
@@ -128,7 +129,6 @@ char *strerror PROTO ((int));
 #if defined (USE_DEFAULT_NETWORK)
 #  define USE_NIT
 #endif
-
 
 #define EOL	'\n'
 #define VOIDPTR	void *
