@@ -35,7 +35,7 @@
 .\" see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
 .\" ``http://www.nominum.com''.
 .\"
-.\" $Id: dhcpd.conf.5,v 1.63.2.15 2002/11/17 02:29:31 dhankins Exp $
+.\" $Id: dhcpd.conf.5,v 1.63.2.16 2003/02/23 02:34:14 dhankins Exp $
 .\"
 .TH dhcpd.conf 5
 .SH NAME
@@ -2127,10 +2127,28 @@ ICMP Echo response has been heard, it assigns the address.   If a
 response \fIis\fR heard, the lease is abandoned, and the server does
 not respond to the client.
 .PP
-This \fIping check\fR introduces a one-second delay in responding to
-DHCPDISCOVER messages, which can be a problem for some clients.   The
-ping-check configuration parameter can be used to control checking -
-if its value is false, no ping check is done.
+This \fIping check\fR introduces a default one-second delay in responding
+to DHCPDISCOVER messages, which can be a problem for some clients.   The
+default delay of one second may be configured using the ping-timeout
+parameter.  The ping-check configuration parameter can be used to control
+checking - if its value is false, no ping check is done.
+.RE
+.PP
+The
+.I ping-timeout
+statement
+.RS 0.25i
+.PP
+.B ping-timeout
+.I seconds\fR\fB;\fR
+.PP
+If the DHCP server determined it should send an ICMP echo request (a
+\fIping\fR) because the ping-check statement is true, ping-timeout allows
+you to configure how many seconds the DHCP server should wait for an
+ICMP Echo response to be heard, if no ICMP Echo response has been received
+before the timeout expires, it assigns the address.  If a response \fIis\fR
+heard, the lease is abandoned, and the server does not respond to the client.
+If no value is set, ping-timeout defaults to 1 second.
 .RE
 .PP
 The
