@@ -1,6 +1,6 @@
 /* upf.c
 
-   Ultrix PacketFilter interface code.
+   Ultrix PacketFilter interface code. */
 
 /*
  * Copyright (c) 1996-1999 Internet Software Consortium.
@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: upf.c,v 1.10 1999/03/16 06:37:50 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: upf.c,v 1.11 1999/03/26 19:19:44 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"

@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.66 1999/03/25 22:05:19 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.67 1999/03/26 19:19:45 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -86,10 +86,14 @@ void read_leases ()
 	   human has corrected the database problem, then we are left
 	   thinking that no leases have been assigned to anybody, which
 	   could create severe network chaos. */
-	if ((cfile = fopen (path_dhcpd_db, "r")) == NULL)
-		log_fatal ("Can't open lease database %s: %m -- %s",
-		       path_dhcpd_db,
-		       "check for failed database rewrite attempt!");
+	if ((cfile = fopen (path_dhcpd_db, "r")) == NULL) {
+		log_error ("Can't open lease database %s: %m -- %s",
+			   path_dhcpd_db,
+			   "check for failed database rewrite attempt!");
+		log_error ("Please read the dhcpd.leases manual page if you");
+ 		log_fatal ("don't know what to do about this.");
+	}
+
 	do {
 		token = next_token (&val, cfile);
 		if (token == EOF)
