@@ -56,7 +56,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhclient.c,v 1.50 1998/11/05 18:39:04 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.51 1998/11/06 00:11:24 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -422,7 +422,7 @@ void state_selecting (ipp)
 	}
 
 	/* If it was a BOOTREPLY, we can just take the address right now. */
-	if (!picked -> is_bootp) {
+	if (picked -> is_bootp) {
 		ip -> client -> new = picked;
 
 		/* Make up some lease expiry times
@@ -535,6 +535,7 @@ void dhcpack (packet)
 			ip -> client -> new -> renewal = getULong (ds.data);
 		else
 			ip -> client -> new -> renewal = 0;
+		data_string_forget (&ds, "dhcpack");
 	} else
 			ip -> client -> new -> renewal = 0;
 
@@ -553,6 +554,7 @@ void dhcpack (packet)
 			ip -> client -> new -> rebind = getULong (ds.data);
 		else
 			ip -> client -> new -> rebind = 0;
+		data_string_forget (&ds, "dhcpack");
 	} else
 			ip -> client -> new -> rebind = 0;
 
@@ -1401,6 +1403,8 @@ void make_client_options (ip, lease, type, sid, rip, prl, statements,
 	if (sid)
 		save_option (options -> dhcp_hash, sid);
 
+	oc = (struct option_cache *)0;
+
 	/* Send the requested address if provided. */
 	if (rip) {
 		ip -> client -> requested_address = *rip;
@@ -1470,6 +1474,8 @@ void make_client_options (ip, lease, type, sid, rip, prl, statements,
 			}
 		}
 	}		
+	/* oc = (struct option_cache *)0; (we'd need this if we were
+	   				   going to use oc again */
 
 	/* Run statements that need to be run on transmission. */
 	if (statements)
@@ -1497,7 +1503,7 @@ void make_discover (ip, lease)
 	/* Set up the option buffer... */
 	ip -> client -> packet_length =
 		cons_options ((struct packet *)0, &ip -> client -> packet, 0,
-			      &options, 0, 0, 0);
+			      &options, (struct agent_options *)0, 0, 0, 0);
 	if (ip -> client -> packet_length < BOOTP_MIN_LEN)
 		ip -> client -> packet_length = BOOTP_MIN_LEN;
 
@@ -1556,7 +1562,7 @@ void make_request (ip, lease)
 	/* Set up the option buffer... */
 	ip -> client -> packet_length =
 		cons_options ((struct packet *)0, &ip -> client -> packet, 0,
-			      &options, 0, 0, 0);
+			      &options, (struct agent_options *)0, 0, 0, 0);
 	if (ip -> client -> packet_length < BOOTP_MIN_LEN)
 		ip -> client -> packet_length = BOOTP_MIN_LEN;
 
@@ -1615,7 +1621,7 @@ void make_decline (ip, lease)
 	/* Set up the option buffer... */
 	ip -> client -> packet_length =
 		cons_options ((struct packet *)0, &ip -> client -> packet, 0,
-			      &options, 0, 0, 0);
+			      &options, (struct agent_options *)0, 0, 0, 0);
 	if (ip -> client -> packet_length < BOOTP_MIN_LEN)
 		ip -> client -> packet_length = BOOTP_MIN_LEN;
 
@@ -1666,7 +1672,7 @@ void make_release (ip, lease)
 	/* Set up the option buffer... */
 	ip -> client -> packet_length =
 		cons_options ((struct packet *)0, &ip -> client -> packet, 0,
-			      &options, 0, 0, 0);
+			      &options, (struct agent_options *)0, 0, 0, 0);
 	if (ip -> client -> packet_length < BOOTP_MIN_LEN)
 		ip -> client -> packet_length = BOOTP_MIN_LEN;
 
@@ -1787,18 +1793,20 @@ void write_client_lease (ip, lease, rewrite)
 	if (lease -> medium)
 		fprintf (leaseFile, "  medium \"%s\";\n",
 			 lease -> medium -> string);
+
+	memset (&ds, 0, sizeof ds);
 	for (i = 0; i < OPTION_HASH_SIZE; i++) {
 		pair p;
 		for (p = lease -> options.dhcp_hash [i]; p; p = p -> cdr) {
-			memset (&ds, 0, sizeof ds);
+			oc = (struct option_cache *)p -> car;
 			if (evaluate_option_cache (&ds, (struct packet *)0,
 						   &lease -> options, oc)) {
 				fprintf (leaseFile,
 					 "  option %s %s;\n",
-					 dhcp_options [i].name,
+					 oc -> option -> name,
 					 pretty_print_option
-					 (i, ds.data, ds.len,
-					  1, 1));
+					 (oc -> option -> code,
+					  ds.data, ds.len, 1, 1));
 				data_string_forget (&ds,
 						    "write_client_lease");
 			}
@@ -1935,6 +1943,7 @@ void script_write_params (ip, prefix, lease)
 				}
 			}
 		}
+		data_string_forget (&data, "script_write_params");
 	}
 
 	if (lease -> filename) {
@@ -1950,7 +1959,7 @@ void script_write_params (ip, prefix, lease)
 
 	execute_statements ((struct packet *)0, &lease -> options,
 			    &lease -> options,
-			    ip -> client -> config -> on_transmission);
+			    ip -> client -> config -> on_receipt);
 
 	for (i = 0; i < OPTION_HASH_SIZE; i++) {
 		pair hp;
@@ -1968,11 +1977,14 @@ void script_write_params (ip, prefix, lease)
 					fprintf (scriptFile,
 						 "%s%s=\"%s\"\n", prefix, s,
 						 (pretty_print_option
-						  (i, data.data, data.len,
+						  (oc -> option -> code,
+						   data.data, data.len,
 						   0, 0)));
 					fprintf (scriptFile,
 						 "export %s%s\n", prefix, s);
 				}
+				data_string_forget (&data,
+						    "script_write_params");
 			}
 		}
 	}
