@@ -22,7 +22,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.82 1999/09/16 05:12:38 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.83 1999/09/22 17:32:04 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -101,9 +101,21 @@ void read_leases ()
 		if (token == LEASE) {
 			struct lease *lease;
 			lease = parse_lease_declaration (cfile);
-			if (lease)
+			if (lease) {
 				enter_lease (lease);
-			else
+				if (lease -> on_expiry)
+					executable_statement_dereference
+						(&lease -> on_expiry,
+						 "read_leases");
+				if (lease -> on_commit)
+					executable_statement_dereference
+						(&lease -> on_commit,
+						 "read_leases");
+				if (lease -> on_release)
+					executable_statement_dereference
+						(&lease -> on_release,
+						 "read_leases");
+			} else
 				parse_warn ("possibly corrupt lease file");
 		} else if (token == HOST) {
 			parse_host_declaration (cfile, &root_group);
@@ -1549,6 +1561,8 @@ struct lease *parse_lease_declaration (cfile)
 	int seenbit;
 	char tbuf [32];
 	static struct lease lease;
+	struct executable_statement *on;
+	int lose;
 
 	/* Zap the lease structure... */
 	memset (&lease, 0, sizeof lease);
@@ -1739,6 +1753,34 @@ struct lease *parse_lease_declaration (cfile)
 						parse_host_name (cfile);
 				break;
 
+			      case ON:
+				on = (struct executable_statement *)0;
+				lose = 0;
+				if (!parse_on_statement (&on, cfile, &lose)) {
+					skip_to_rbrace (cfile, 1);
+					return (struct lease *)0;
+				}
+				if (on -> data.on.evtype == expiry &&
+				    on -> data.on.statements) {
+					seenbit = 16384;
+					executable_statement_reference
+						(&lease.on_expiry,
+						 on -> data.on.statements,
+						 "parse_lease_declaration");
+				} else if (on -> data.on.evtype == release &&
+					   on -> data.on.statements) {
+					seenbit = 32768;
+					executable_statement_reference
+						(&lease.on_release,
+						 on -> data.on.statements,
+						 "parse_lease_declaration");
+				} else {
+					seenbit  = 0;
+				}
+				executable_statement_dereference
+					(&on, "parse_lease_declaration");
+				break;
+
 			      default:
 				skip_to_semi (cfile);
 				seenbit = 0;
@@ -1746,7 +1788,7 @@ struct lease *parse_lease_declaration (cfile)
 			}
 
 			if (token != HARDWARE && token != STRING
-			    && token != BILLING) {
+			    && token != BILLING && token != ON) {
 				token = next_token (&val, cfile);
 				if (token != SEMI) {
 					parse_warn ("semicolon expected.");
