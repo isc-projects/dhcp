@@ -476,3 +476,8 @@ dhcpctl_status dhcpctl_object_remove (dhcpctl_handle connection,
 	return status;
 }
 
+isc_result_t dhcpctl_data_string_dereference (dhcpctl_data_string *vp,
+					      const char *name)
+{
+	return omapi_data_string_dereference (vp, name);
+}
