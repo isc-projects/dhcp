@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.3 1998/03/15 20:53:12 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.4 1998/03/15 21:16:23 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -346,8 +346,8 @@ unsigned char *parse_numeric_aggregate (cfile, buf,
 			t = (unsigned char *)malloc (strlen (val) + 1);
 			if (!t)
 				error ("no temp space for number.");
-			strcpy (t, val);
-			c = cons (t, c);
+			strcpy ((char *)t, val);
+			c = cons ((caddr_t)t, c);
 		}
 	} while (++count != *max);
 

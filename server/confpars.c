@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.45 1997/10/27 20:22:40 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.46 1998/03/15 21:16:39 mellon Exp $ Copyright (c) 1995, 1996 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -958,7 +958,8 @@ void parse_option_param (cfile, group)
 					token = next_token (&val, cfile);
 					tree = tree_concat
 						(tree,
-						 tree_const (val,
+						 tree_const ((unsigned char *)
+							     val,
 							     strlen (val)));
 				} else {
 					parse_warn ("expecting string %s.",
@@ -978,8 +979,9 @@ void parse_option_param (cfile, group)
 					return;
 				}
 				tree = tree_concat (tree,
-						    tree_const (val,
-								strlen (val)));
+						    tree_const
+						    ((unsigned char *) val,
+						    strlen (val)));
 				break;
 
 			      case 'I': /* IP address or hostname. */
