@@ -73,7 +73,7 @@ struct packet {
 						   was received. */
 	struct hardware *haddr;		/* Physical link address
 					   of local sender (maybe gateway). */
-	struct subnet *subnet;		/* Subnet of client. */
+	struct shared_network *shared_network;
 	struct {
 		int len;
 		unsigned char *data;
@@ -88,12 +88,13 @@ struct hardware {
 
 /* A dhcp host declaration structure. */
 struct host_decl {
-	struct host_decl *n_name, *n_haddr, *n_cid;
+	struct host_decl *n_ipaddr;
 	char *name;
-	struct hardware *interfaces;
-	int interface_count;
+	struct hardware interface;
 	char *filename;
 	char *server_name;	
+	TIME default_lease_time;
+	TIME max_lease_time;
 	struct tree_cache *fixed_addr;
 	struct tree_cache *ciaddr;
 	struct tree_cache *yiaddr;
@@ -112,27 +113,51 @@ struct lease {
 	unsigned char *uid;
 	int uid_len;
 	struct host_decl *host;
-	struct subnet *contain;
+	struct subnet *subnet;
+	struct shared_network *shared_network;
 	struct hardware hardware_addr;
 	int state;
 	int xid;
+	int flags;
+#       define STATIC_LEASE		1
+#       define BOOTP_LEASE		2
+#	define DYNAMIC_BOOTP_OK		4
+#	define PERSISTENT_FLAGS		(DYNAMIC_BOOTP_OK)
+#	define EPHEMERAL_FLAGS		(BOOTP_LEASE)
+};
+
+struct shared_network {
+	struct shared_network *next;
+	struct subnet *subnets;
+	struct interface_info *interface;
+	struct lease *leases;
+	struct lease *insertion_point;
+	struct lease *last_lease;
+	TIME default_lease_time;
+	TIME max_lease_time;
+	struct tree_cache *options [256];
+	int dynamic_bootp;
+	char *name;
 };
 
 struct subnet {
-	struct subnet *next;
+	struct subnet *next_subnet;
+	struct subnet *next_sibling;
+	struct shared_network *shared_network;
+	struct interface_info *interface;
+	struct iaddr interface_address;
 	struct iaddr net;
 	struct iaddr netmask;
 	TIME default_lease_time;
 	TIME max_lease_time;
 	struct tree_cache *options [256];
-	struct lease *leases;
-	struct lease *insertion_point;
-	struct lease *last_lease;
+	int dynamic_bootp;
 };
 
 struct class {
 	char *name;
 	char *filename;
+	char *server_name;
 	TIME default_lease_time;
 	TIME max_lease_time;
 	struct tree_cache *options [256];
@@ -142,8 +167,8 @@ struct class {
 
 struct interface_info {
 	struct interface_info *next;	/* Next interface in list... */
-	struct subnet *local_subnet;	/* This interface's subnet. */
-	struct iaddr address;		/* Its IP address. */
+	struct shared_network *shared_network;
+				/* Networks connected to this interface. */
 	struct hardware hw_address;	/* Its physical address. */
 	char name [IFNAMSIZ];		/* Its name... */
 	int rfdesc;			/* Its read file descriptor. */
@@ -153,6 +178,8 @@ struct interface_info {
 	size_t rbuf_max;		/* Size of read buffer. */
 	size_t rbuf_offset;		/* Current offset into buffer. */
 	size_t rbuf_len;		/* Length of data in buffer. */
+
+	struct ifreq *tif;		/* Temp. pointer to ifreq struct. */
 };
 
 struct hardware_link {
@@ -223,9 +250,17 @@ int parse_warn PROTO ((char *, ...));
 extern TIME cur_time;
 extern TIME default_lease_time;
 extern TIME max_lease_time;
+extern struct tree_cache *global_options [256];
+
+extern struct iaddr server_identifier;
+extern int server_identifier_matched;
 
 extern u_int16_t server_port;
 extern int log_priority;
+
+#ifdef USE_FALLBACK
+extern struct interface_info fallback_interface;
+#endif
 
 int main PROTO ((int, char **, char **));
 void cleanup PROTO ((void));
@@ -247,12 +282,16 @@ struct host_decl *parse_host_statement PROTO ((FILE *, jrefproto));
 char *parse_host_name PROTO ((FILE *, jrefproto));
 void parse_class_statement PROTO ((FILE *, jrefproto, int));
 void parse_class_decl PROTO ((FILE *, jrefproto, struct class *));
-struct subnet *parse_subnet_statement PROTO ((FILE *, jrefproto));
+void parse_lease_time PROTO ((FILE *, jrefproto, TIME *));
+void parse_shared_net_statement PROTO ((FILE *, jrefproto));
+struct subnet *parse_subnet_statement PROTO ((FILE *, jrefproto,
+					      struct shared_network *));
 void parse_subnet_decl PROTO ((FILE *, jrefproto, struct subnet *));
 void parse_host_decl PROTO ((FILE *, jrefproto, struct host_decl *));
 void parse_hardware_decl PROTO ((FILE *, jrefproto, struct host_decl *));
 struct hardware parse_hardware_addr PROTO ((FILE *, jrefproto));
 char *parse_filename_decl PROTO ((FILE *, jrefproto));
+char *parse_servername_decl PROTO ((FILE *, jrefproto));
 struct tree *parse_ip_addr_or_hostname PROTO ((FILE *, jrefproto, int));
 void parse_fixed_addr_decl PROTO ((FILE *, jrefproto, struct host_decl *));
 void parse_option_decl PROTO ((FILE *, jrefproto, struct tree_cache **));
@@ -285,17 +324,24 @@ void dhcpinform PROTO ((struct packet *));
 void nak_lease PROTO ((struct packet *, struct iaddr *cip));
 void ack_lease PROTO ((struct packet *, struct lease *, unsigned char, TIME));
 struct lease *find_lease PROTO ((struct packet *));
+struct lease *mockup_lease PROTO ((struct packet *, struct host_decl *));
 
 /* bootp.c */
 void bootp PROTO ((struct packet *));
 
 /* memory.c */
 void enter_host PROTO ((struct host_decl *));
-struct host_decl *find_host_by_name PROTO ((char *name));
-struct host_decl *find_host_by_addr PROTO ((int, unsigned char *, int));
+struct host_decl *find_hosts_by_haddr PROTO ((int, unsigned char *, int));
+struct host_decl *find_hosts_by_uid PROTO ((unsigned char *, int));
+struct subnet *find_host_for_network PROTO ((struct host_decl **,
+					     struct iaddr *,
+					     struct shared_network *));
 void new_address_range PROTO ((struct iaddr, struct iaddr,
-			       struct subnet *));
+			       struct subnet *, int));
+extern struct subnet *find_grouped_subnet PROTO ((struct shared_network *,
+						  struct iaddr));
 extern struct subnet *find_subnet PROTO ((struct iaddr));
+void enter_shared_network PROTO ((struct shared_network *));
 void enter_subnet PROTO ((struct subnet *));
 void enter_lease PROTO ((struct lease *));
 int supersede_lease PROTO ((struct lease *, struct lease *, int));
@@ -322,6 +368,8 @@ struct lease *new_lease PROTO ((char *));
 struct lease *new_leases PROTO ((int, char *));
 struct subnet *new_subnet PROTO ((char *));
 struct class *new_class PROTO ((char *));
+struct shared_network *new_shared_network PROTO ((char *));
+void free_shared_network PROTO ((struct shared_network *, char *));
 void free_class PROTO ((struct class *, char *));
 void free_subnet PROTO ((struct subnet *, char *));
 void free_lease PROTO ((struct lease *, char *));
@@ -337,17 +385,28 @@ char *print_hw_addr PROTO ((int, int, unsigned char *));
 void print_lease PROTO ((struct lease *));
 void dump_raw PROTO ((unsigned char *, int));
 void dump_packet PROTO ((struct packet *));
+void hash_dump PROTO ((struct hash_table *));
 
 /* socket.c */
-#if defined (USE_SOCKET_SEND) || defined (USE_SOCKET_RECEIVE)
+#if defined (USE_SOCKET_SEND) || defined (USE_SOCKET_RECEIVE) \
+	|| defined (USE_SOCKET_FALLBACK)
 int if_register_socket PROTO ((struct interface_info *, struct ifreq *));
+#endif
+
+#ifdef USE_SOCKET_FALLBACK
+void if_register_fallback PROTO ((struct interface_info *, struct ifreq *));
+size_t send_fallback PROTO ((struct interface_info *,
+			   struct packet *, struct dhcp_packet *, size_t, 
+			   struct in_addr,
+			   struct sockaddr_in *, struct hardware *));
 #endif
 
 #ifdef USE_SOCKET_SEND
 void if_register_send PROTO ((struct interface_info *, struct ifreq *));
 size_t send_packet PROTO ((struct interface_info *,
-			   struct packet *, struct dhcp_packet *,
-			   size_t, struct sockaddr_in *, struct hardware *));
+			   struct packet *, struct dhcp_packet *, size_t, 
+			   struct in_addr,
+			   struct sockaddr_in *, struct hardware *));
 #endif
 #ifdef USE_SOCKET_RECEIVE
 void if_register_receive PROTO ((struct interface_info *, struct ifreq *));
@@ -363,8 +422,9 @@ int if_register_bpf PROTO ( (struct interface_info *, struct ifreq *));
 #ifdef USE_BPF_SEND
 void if_register_send PROTO ((struct interface_info *, struct ifreq *));
 size_t send_packet PROTO ((struct interface_info *,
-			   struct packet *, struct dhcp_packet *,
-			   size_t, struct sockaddr_in *, struct hardware *));
+			   struct packet *, struct dhcp_packet *, size_t,
+			   struct in_addr,
+			   struct sockaddr_in *, struct hardware *));
 #endif
 #ifdef USE_BPF_RECEIVE
 void if_register_receive PROTO ((struct interface_info *, struct ifreq *));
@@ -377,8 +437,9 @@ size_t receive_packet PROTO ((struct interface_info *,
 #ifdef USE_NIT_SEND
 void if_register_send PROTO ((struct interface_info *, struct ifreq *));
 size_t send_packet PROTO ((struct interface_info *,
-			   struct packet *, struct dhcp_packet *,
-			   size_t, struct sockaddr_in *, struct hardware *));
+			   struct packet *, struct dhcp_packet *, size_t,
+			   struct in_addr,
+			   struct sockaddr_in *, struct hardware *));
 #endif
 #ifdef USE_NIT_RECEIVE
 void if_register_receive PROTO ((struct interface_info *, struct ifreq *));
@@ -391,8 +452,9 @@ size_t receive_packet PROTO ((struct interface_info *,
 #ifdef USE_RAW_SEND
 void if_register_send PROTO ((struct interface_info *, struct ifreq *));
 size_t send_packet PROTO ((struct interface_info *,
-			   struct packet *, struct dhcp_packet *,
-			   size_t, struct sockaddr_in *, struct hardware *));
+			   struct packet *, struct dhcp_packet *, size_t,
+			   struct in_addr,
+			   struct sockaddr_in *, struct hardware *));
 #endif
 
 /* dispatch.c */
@@ -445,7 +507,7 @@ void new_lease_file PROTO ((void));
 void assemble_hw_header PROTO ((struct interface_info *, unsigned char *,
 				int *, struct hardware *));
 void assemble_udp_ip_header PROTO ((struct interface_info *, unsigned char *,
-				    int *, u_int32_t, u_int16_t,
+				    int *, u_int32_t, u_int32_t, u_int16_t,
 				    unsigned char *, int));
 size_t decode_hw_header PROTO ((struct interface_info *, unsigned char *,
 				int, struct hardware *));
