@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.103 2001/04/09 00:41:45 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.104 2001/05/02 16:59:30 mellon Exp $ Copyright (c) 1995-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2214,20 +2214,32 @@ int parse_key (struct parse *cfile)
 				goto rbad;
 			/* If the algorithm name isn't an FQDN, tack on
 			   the .SIG-ALG.REG.NET. domain. */
-			s = strchr (key -> algorithm, '.');
+			s = strrchr (key -> algorithm, '.');
 			if (!s) {
-				static char add [] = ".SIG-ALG.REG.INT.";
-				s = dmalloc (strlen (key -> algorithm) +
-					     sizeof (add), MDL);
-				if (!s) {
-					log_error ("no memory for key %s.",
-						   "algorithm");
-					goto rbad;
-				}
-				strcpy (s, key -> algorithm);
-				strcat (s, add);
-				dfree (key -> algorithm, MDL);
-				key -> algorithm = s;
+			    static char add [] = ".SIG-ALG.REG.INT.";
+			    s = dmalloc (strlen (key -> algorithm) +
+					 sizeof (add), MDL);
+			    if (!s) {
+				log_error ("no memory for key %s.",
+					   "algorithm");
+				goto rbad;
+			    }
+			    strcpy (s, key -> algorithm);
+			    strcat (s, add);
+			    dfree (key -> algorithm, MDL);
+			    key -> algorithm = s;
+			} else if (s [1]) {
+			    /* If there is no trailing '.', hack one in. */
+			    s = dmalloc (strlen (key -> algorithm) + 2, MDL);
+			    if (!s) {
+				    log_error ("no memory for key %s.",
+					       key -> algorithm);
+				    goto rbad;
+			    }
+			    strcpy (s, key -> algorithm);
+			    strcat (s, ".");
+			    dfree (key -> algorithm, MDL);
+			    key -> algorithm = s;
 			}
 			break;
 
