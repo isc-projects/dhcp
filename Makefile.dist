@@ -157,7 +157,7 @@ CSRC   = options.c errwarn.c convert.c \
 COBJ   = options.o errwarn.o convert.o \
 	 tree.o memory.o alloc.o print.o hash.o tables.o inet.o \
 	 dispatch.o bpf.o packet.o raw.o nit.o socket.o
-XOBJ   = dhcpxlt.o xconflex.o xerrwarn.o
+XOBJ   = dhcpxlt.o xconflex.o
 SRCS   = dhcpd.c dhcp.c bootp.c conflex.c confpars.c db.c
 OBJS   = dhcpd.o dhcp.o bootp.o conflex.o confpars.o db.o
 PROGS  = dhcpd dhclient
@@ -207,24 +207,18 @@ dhcpd:	$(OBJS) $(COBJ)
 dhclient:	dhclient.o $(COBJ)
 	$(CC) -o dhclient dhclient.o $(COBJ) $(LIBS)
 
-dhcpxlt:	dhcpxlt.o xerrwarn.o convert.o tables.o inet.o xconflex.o \
+dhcpxlt:	dhcpxlt.o errwarn.o convert.o tables.o inet.o xconflex.o \
 		hash.o alloc.o
 	$(CC) -o dhcpxlt \
-		dhcpxlt.o xerrwarn.o convert.o tables.o inet.o xconflex.o \
+		dhcpxlt.o errwarn.o convert.o tables.o inet.o xconflex.o \
 		hash.o alloc.o \
 		$(LIBS)
 
 xconflex.o:	dhcpd.h cdefs.h osdep.h site.h $(CF) dhcp.h tree.h \
 		hash.h inet.h dhctoken.h conflex.c
 		@cp conflex.c xconflex.c
-		$(CC) $(CFLAGS) -c xconflex.c -DSAVE_COMMENTS
+		$(CC) $(CFLAGS) -c xconflex.c -DOLD_LEXER
 		@-rm -f xconflex.c
-
-xerrwarn.o:	dhcpd.h cdefs.h osdep.h site.h $(CF) dhcp.h tree.h \
-		hash.h inet.h errwarn.c
-		@cp errwarn.c xerrwarn.c
-		$(CC) $(CFLAGS) -c xerrwarn.c -DDEBUG
-		@-rm -f xerrwarn.c
 
 # Dependencies (semi-automatically-generated)
 
