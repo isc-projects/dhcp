@@ -56,7 +56,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.44.2.45 2000/07/20 05:06:41 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.44.2.46 2000/08/03 17:15:40 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998, 1999 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1962,7 +1962,7 @@ void script_write_params (ip, prefix, lease)
 				if (broadcast.len) {
 				    client_envadd (ip -> client,
 						   prefix, "broadcast_address",
-						   "%s", piaddr (subnet));
+						   "%s", piaddr (broadcast));
 				}
 			}
 		}
