@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dns.c,v 1.35.2.5 2001/06/20 03:21:59 mellon Exp $ Copyright (c) 2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dns.c,v 1.35.2.6 2001/06/21 16:48:48 mellon Exp $ Copyright (c) 2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -204,7 +204,8 @@ isc_result_t enter_dns_zone (struct dns_zone *zone)
 	} else {
 		dns_zone_hash =
 			new_hash ((hash_reference)dns_zone_reference,
-				  (hash_dereference)dns_zone_dereference, 1);
+				  (hash_dereference)dns_zone_dereference, 1,
+				  MDL);
 		if (!dns_zone_hash)
 			return ISC_R_NOMEMORY;
 	}
