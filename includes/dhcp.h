@@ -3,7 +3,7 @@
    Protocol structures... */
 
 /*
- * Copyright (c) 1995, 1996, 1999 The Internet Software Consortium.
+ * Copyright (c) 1995-2001 The Internet Software Consortium.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -192,4 +192,5 @@ struct dhcp_packet {
 #define FQDN_RCODE2			5
 #define FQDN_HOSTNAME			6
 #define FQDN_DOMAINNAME			7
-#define FQDN_SUBOPTION_COUNT		7
+#define FQDN_FQDN			8
+#define FQDN_SUBOPTION_COUNT		8
