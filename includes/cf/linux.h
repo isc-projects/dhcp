@@ -76,14 +76,19 @@ extern int h_errno;
 
 #include <sys/time.h>		/* gettimeofday()*/
 
-#ifndef _PATH_DHCPD_PID
-#define _PATH_DHCPD_PID	"/var/run/dhcpd.pid"
+/* Databases go in /var/state/dhcp.   It would also be valid to put them
+   in /var/state/misc - indeed, given that there's only one lease file, it
+   would probably be better.   However, I have some ideas for optimizing
+   the lease database that may result in a _lot_ of smaller files being
+   created, so in that context it makes more sense to have a seperate
+   directory. */
+
+#ifndef _PATH_DHCPD_DB
+#define _PATH_DHCPD_DB		"/var/state/dhcp/dhcpd.leases"
 #endif
-#ifndef _PATH_DHCLIENT_PID
-#define _PATH_DHCLIENT_PID "/var/run/dhclient.pid"
-#endif
+
 #ifndef _PATH_DHCLIENT_DB
-#define _PATH_DHCLIENT_DB "/var/db/dhclient.leases"
+#define _PATH_DHCLIENT_DB	"/var/state/dhcp/dhclient.leases"
 #endif
 
 /* Varargs stuff... */
