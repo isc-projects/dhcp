@@ -17,7 +17,7 @@
 # http://www.isc.org for more information.
 #
 
-SUBDIRS=	common server client relay
+SUBDIRS=	common omapip server client relay dhcpctl
 
 all:
 	@for dir in ${SUBDIRS}; do \

@@ -57,6 +57,8 @@ if [ "$sysname" = "" ]; then
       esac;;
     NetBSD)
       sysname=netbsd;;
+    OpenBSD)
+      sysname=openbsd;;
     FreeBSD)
       sysname=freebsd;;
     hpux)
@@ -67,6 +69,8 @@ if [ "$sysname" = "" ]; then
       sysname=qnx;;
     NEXTSTEP)
       sysname=nextstep;;
+    UnixWare)
+      sysname=uw7;;
   esac
 fi
 
@@ -88,6 +92,7 @@ if [ "$sysname" = "" ]; then
   echo "   sunos5-gcc	Solaris 2.4 or higher with gcc"
   echo "   netbsd	NetBSD 1.1 or higher"
   echo "   freebsd	FreeBSD"
+  echo "   openbsd      OpenBSD (i386/alpha)"
   echo "   hpux		HP-UX"
   echo "   qnx		QNX 4.2 or higher"
   echo "   NEXTSTEP     NeXTSTEP"
@@ -101,7 +106,7 @@ if [ x$major != x ] && [ x$minor != x ]; then
   minversubst="-e /^##--minver--/,/^##--minver--/s/MinorVersion/$minor/"
 fi
 
-for foo in . client server relay common; do
+for foo in . client server relay common omapip dhcpctl; do
 	 (sed $nsupdate $majversubst $minversubst \
 	      -e "/^##--${sysname}--/,/^##--${sysname}--/s/^#//" \
 		<Makefile.conf; cat site.conf; cat $foo/Makefile.dist)	\
