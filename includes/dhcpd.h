@@ -401,6 +401,7 @@ size_t send_fallback PROTO ((struct interface_info *,
 			   struct packet *, struct dhcp_packet *, size_t, 
 			   struct in_addr,
 			   struct sockaddr_in *, struct hardware *));
+size_t fallback_discard PROTO ((struct interface_info *));
 #endif
 
 #ifdef USE_SOCKET_SEND

@@ -280,7 +280,10 @@ void dispatch ()
 	for (l = interfaces; l; l = l -> next) {
 		++nfds;
 	}
-	fds = (struct pollfd *)malloc (nfds * sizeof (struct pollfd));
+#ifdef USE_FALLBACK
+	++nfds;
+#endif
+	fds = (struct pollfd *)malloc ((nfds) * sizeof (struct pollfd));
 	if (!fds)
 		error ("Can't allocate poll structures.");
 
@@ -291,6 +294,13 @@ void dispatch ()
 		fds [i].revents = 0;
 		++i;
 	}
+
+#ifdef USE_FALLBACK
+	fds [i].fd = fallback_interface.wfdesc;
+	fds [i].events = POLLIN;
+	fds [i].revents = 0;
+	++i;
+#endif
 
 	do {
 		/* Wait for a packet or a timeout... XXX */
@@ -310,6 +320,10 @@ void dispatch ()
 			fds [i].revents = 0;
 			got_one (l);
 		}
+#ifdef USE_FALLBACK
+		if (fds [i].revents & POLLIN)
+			fallback_discard (&fallback_interface);
+#endif
 	} while (1);
 }
 #else
@@ -337,6 +351,12 @@ void dispatch ()
 			if (l -> rfdesc > max)
 				max = l -> rfdesc;
 		}
+#ifdef USE_FALLBACK
+		FD_SET (fallback_interface.wfdesc, &r);
+		FD_SET (fallback_interface.wfdesc, &w);
+		if (fallback_interface.wfdesc > max)
+				max = fallback_interface.wfdesc;
+#endif
 
 		/* Wait for a packet or a timeout... XXX */
 		count = select (max + 1, &r, &w, &x, (struct timeval *)0);
@@ -353,6 +373,10 @@ void dispatch ()
 				continue;
 			got_one (l);
 		}
+#ifdef USE_FALLBACK
+		if (FD_ISSET (fallback_interface.wfdesc, &r))
+			fallback_discard (&fallback_interface);
+#endif
 	} while (1);
 }
 #endif /* USE_POLL */

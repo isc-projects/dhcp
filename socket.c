@@ -182,3 +182,18 @@ size_t receive_packet (interface, buf, len, from, hfrom)
 			 (struct sockaddr *)from, &flen);
 }
 #endif /* USE_SOCKET_RECEIVE */
+
+#ifdef USE_SOCKET_FALLBACK
+/* This just reads in a packet and silently discards it. */
+
+size_t fallback_discard (interface)
+	struct interface_info *interface;
+{
+	char buf [1540];
+	struct sockaddr_in from;
+	int flen = sizeof from;
+
+	return recvfrom (interface -> wfdesc, buf, sizeof buf, 0,
+			 (struct sockaddr *)&from, &flen);
+}
+#endif /* USE_SOCKET_RECEIVE */
