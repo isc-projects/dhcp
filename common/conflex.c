@@ -342,6 +342,12 @@ static int intern (atom, dfv)
 	      case 'u':
 		if (!strcasecmp (atom + 1, "id"))
 			return UID;
+		if (!strcasecmp (atom + 1, "ser-class"))
+			return USER_CLASS;
+		break;
+	      case 'v':
+		if (!strcasecmp (atom + 1, "endor-class"))
+			return VENDOR_CLASS;
 		break;
 	      case 'y':
 		if (!strcasecmp (atom + 1, "iaddr"))
