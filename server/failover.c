@@ -43,7 +43,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.53.2.3 2001/05/17 21:31:48 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.53.2.4 2001/05/17 21:36:03 mellon Exp $ Copyright (c) 1999-2001 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1647,6 +1647,8 @@ isc_result_t dhcp_failover_set_state (dhcp_failover_state_t *state,
 				 (tvref_t)omapi_object_reference,
 				 (tvunref_t)
 				 omapi_object_dereference);
+	    else
+		    dhcp_failover_recover_done (state);
 	    break;
 	    
 	  case recover:
