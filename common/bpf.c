@@ -207,6 +207,11 @@ void if_register_receive (info, interface)
 	p.bf_len = sizeof filter / sizeof (struct bpf_insn);
 	p.bf_insns = filter;
 
+        /* Patch the server port into the BPF  program...
+	   XXX changes to filter program may require changes
+	   to the insn number(s) used below! XXX */
+	filter [8].k = ntohs (server_port);
+
 	if (ioctl (info -> rfdesc, BIOCSETF, &p) < 0)
 		error ("Can't install packet filter program: %m");
 	note ("Listening on BPF/%s/%s/%s",
