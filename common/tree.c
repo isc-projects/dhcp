@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.19 1999/02/24 17:56:48 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.20 1999/03/09 20:01:56 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -885,6 +885,8 @@ int evaluate_option_cache (result, packet, options, oc)
 				  &oc -> data, "evaluate_option_cache");
 		return 1;
 	}
+	if (!oc -> expression)
+		return 0;
 	return evaluate_data_expression (result,
 					 packet, options, oc -> expression);
 }
