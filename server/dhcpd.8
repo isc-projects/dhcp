@@ -559,6 +559,22 @@ a list of statements in the format of the dhcpd.conf file that will be
 executed whenever a message from a client whose host declaration
 references this group is processed.
 .RE
+.SH THE CONTROL OBJECT
+The control object allows you to shut the server down.   If the server
+is doing failover with another peer, it will make a clean transition
+into the shutdown state and notify its peer, so that the peer can go
+into partner down, and then record the "recover" state in the lease
+file so that when the server is restarted, it will automatically
+resynchronize with its peer.
+.PP
+On shutdown the server will also attempt to cleanly shut down all
+OMAPI connections.  If these connections do not go down cleanly after
+five seconds, they are shut down pre-emptively.  It can take as much
+as 25 seconds from the beginning of the shutdown process to the time
+that the server actually exits.
+.PP
+To shut the server down, open its control object and set the state
+attribute to 2.
 .SH FILES
 .B ETCDIR/dhcpd.conf, DBDIR/dhcpd.leases, RUNDIR/dhcpd.pid,
 .B DBDIR/dhcpd.leases~.
