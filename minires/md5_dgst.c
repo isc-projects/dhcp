@@ -59,9 +59,10 @@
 #include <stdio.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include "minires/minires.h"
-#ifdef USE_MD5 /* Added by ogud@tis.com 1998/1/26 */
 #include "md5_locl.h"
+#include "minires/minires.h"
+
+#ifdef USE_MD5 /* Added by ogud@tis.com 1998/1/26 */
 
 const char *MD5_version="MD5 part of SSLeay 0.8.1 19-Jul-1997";
 
