@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.57.2.10 1998/06/29 22:46:44 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.57.2.11 1998/11/24 23:12:39 mellon Exp $ Copyright (c) 1995, 1996, 1997, 1998 The Internet Software Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -626,6 +626,10 @@ void ack_lease (packet, lease, offer, when)
 	else if (packet -> raw -> file [0])
 		strncpy (state -> filename, packet -> raw -> file,
 			 sizeof state -> filename);
+	else if (lease -> subnet -> group -> filename)
+		strncpy (state -> filename,
+			 lease -> subnet -> group -> filename,
+			 sizeof state -> filename);
 	else
 		strcpy (state -> filename, "");
 
@@ -636,6 +640,9 @@ void ack_lease (packet, lease, offer, when)
 		state -> server_name = user_class -> group -> server_name;
 	else if (vendor_class  && vendor_class -> group -> server_name)
 		state -> server_name = vendor_class -> group -> server_name;
+	else if (lease -> subnet -> group -> server_name)
+		state -> server_name =
+			lease -> subnet -> group -> server_name;
 	else state -> server_name = (char *)0;
 
 	/* At this point, we have a lease that we can offer the client.
@@ -706,8 +713,6 @@ void ack_lease (packet, lease, offer, when)
 		state -> offered_expiry = lt.ends;
 		lt.flags = BOOTP_LEASE;
 	}
-
-	lt.timestamp = cur_time;
 
 	/* Record the uid, if given... */
 	i = DHO_DHCP_CLIENT_IDENTIFIER;
@@ -989,11 +994,14 @@ void ack_lease (packet, lease, offer, when)
 
 	/* If this is a DHCPOFFER, ping the lease address before actually
 	   sending the offer. */
-	if (offer == DHCPOFFER && !(lease -> flags & STATIC_LEASE)) {
+	if (offer == DHCPOFFER && !(lease -> flags & STATIC_LEASE) &&
+	    cur_time - lease -> timestamp > 60) {
+		lease -> timestamp = cur_time;
 		icmp_echorequest (&lease -> ip_addr);
 		add_timeout (cur_time + 1, lease_ping_timeout, lease);
 		++outstanding_pings;
 	} else {
+		lease -> timestamp = cur_time;
 		dhcp_reply (lease);
 	}
 }
