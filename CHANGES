@@ -1,3 +1,10 @@
+970607
+
+- Change size_t to ssize_t in return values where a negative number
+  is used to indicate an error.
+
+- Always write out two digits for single-byte quantities in arrays.
+
 970605
 
 - Add client-hostname token to lexer so that the parser can use it.
