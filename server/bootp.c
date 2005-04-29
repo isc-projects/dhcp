@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bootp.c,v 1.69.2.8 2004/09/01 17:06:36 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: bootp.c,v 1.69.2.9 2005/04/29 23:10:57 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -55,8 +55,7 @@ void bootp (packet)
 	struct in_addr from;
 	struct hardware hto;
 	struct option_state *options = (struct option_state *)0;
-	struct subnet *subnet;
-	struct lease *lease;
+	struct lease *lease = (struct lease *)0;
 	struct iaddr ip_address;
 	unsigned i;
 	struct data_string d1;
@@ -79,90 +78,70 @@ void bootp (packet)
 		 ? inet_ntoa (packet -> raw -> giaddr)
 		 : packet -> interface -> name);
 
-
-
 	if (!locate_network (packet)) {
 		log_info ("%s: network unknown", msgbuf);
 		return;
 	}
 
-	find_hosts_by_haddr (&hp, packet -> raw -> htype,
-			     packet -> raw -> chaddr,
-			     packet -> raw -> hlen, MDL);
-
-	lease  = (struct lease *)0;
 	find_lease (&lease, packet, packet -> shared_network,
 		    0, 0, (struct lease *)0, MDL);
 
-	/* Find an IP address in the host_decl that matches the
-	   specified network. */
-	subnet = (struct subnet *)0;
-	if (hp)
-		find_host_for_network (&subnet, &hp, &ip_address,
-				       packet -> shared_network);
+	if (lease && lease->host)
+		host_reference(&hp, lease->host, MDL);
 
-	if (!subnet) {
+	if (!lease || ((lease->flags & STATIC_LEASE) == 0)) {
 		struct host_decl *h;
-		/* We didn't find an applicable host declaration.
-		   Just in case we may be able to dynamically assign
-		   an address, see if there's a host declaration
+		/* We didn't find an applicable fixed-address host
+		   declaration.  Just in case we may be able to dynamically
+		   assign an address, see if there's a host declaration
 		   that doesn't have an ip address associated with it. */
+
+		if (!hp)
+			find_hosts_by_haddr(&hp, packet->raw->htype,
+					    packet->raw->chaddr,
+					    packet->raw->hlen, MDL);
+
 		for (h = hp; h; h = h -> n_ipaddr) {
 			if (!h -> fixed_addr) {
-				host_reference (&host, h, MDL);
+				host_reference(&host, h, MDL);
 				break;
 			}
 		}
-		if (hp) {
-			host_dereference (&hp, MDL);
-			if (host)
-				host_reference (&hp, host, MDL);
-		}			
 
-		/* If a lease has already been assigned to this client,
-		   use it. */
-		if (lease) {
-			if (host && host != lease -> host) {
-				if (lease -> host)
-					host_dereference (&lease -> host, MDL);
-				host_reference (&lease -> host, host, MDL);
-			}
-			ack_lease (packet, lease, 0, 0, msgbuf, 0);
-			goto out;
+		if (hp)
+			host_dereference(&hp, MDL);
+
+		if (host) {
+			host_reference(&hp, host, MDL);
+			host_dereference(&host, MDL);
 		}
 
-		/* Otherwise, try to allocate one. */
-		allocate_lease (&lease, packet,
-				packet -> shared_network -> pools,
-				&peer_has_leases);
-		if (lease) {
-			if (host && host != lease -> host) {
-				if (lease -> host)
-					host_dereference (&lease -> host, MDL);
-				host_reference (&lease -> host, host, MDL);
-			} else if (lease -> host)
-				host_dereference (&lease -> host, MDL);
-			ack_lease (packet, lease, 0, 0, msgbuf, 0);
-			goto out;
-		}
+		/* Allocate a lease if we have not yet found one. */
+		if (!lease)
+			allocate_lease (&lease, packet,
+					packet -> shared_network -> pools,
+					&peer_has_leases);
 
-		/* We couldn't find an address to give this bootp client. */
-		log_info ("%s: BOOTP from unknown client and no dynamic leases",
-			msgbuf);
+		if (lease)
+			ack_lease (packet, lease, 0, 0, msgbuf, 0, hp);
+		else
+			log_info ("%s: BOOTP from dynamic client and no "
+				  "dynamic leases", msgbuf);
+
 		goto out;
 	}
 
 	/* Run the executable statements to compute the client and server
 	   options. */
 	option_state_allocate (&options, MDL);
-	
+
 	/* Execute the subnet statements. */
 	execute_statements_in_scope ((struct binding_value **)0,
 				     packet, lease, (struct client_state *)0,
 				     packet -> options, options,
 				     &lease -> scope, lease -> subnet -> group,
 				     (struct group *)0);
-	
+
 	/* Execute statements from class scopes. */
 	for (i = packet -> class_count; i > 0; i--) {
 		execute_statements_in_scope
@@ -178,7 +157,7 @@ void bootp (packet)
 				     packet, lease, (struct client_state *)0,
 				     packet -> options, options,
 				     &lease -> scope,
-				     hp -> group, subnet -> group);
+				     hp -> group, lease -> subnet -> group);
 	
 	/* Drop the request if it's not allowed for this client. */
 	if ((oc = lookup_option (&server_universe, options, SV_ALLOW_BOOTP)) &&
@@ -266,7 +245,10 @@ void bootp (packet)
 	raw.secs = packet -> raw -> secs;
 	raw.flags = packet -> raw -> flags;
 	raw.ciaddr = packet -> raw -> ciaddr;
-	memcpy (&raw.yiaddr, ip_address.iabuf, sizeof raw.yiaddr);
+
+	/* yiaddr is an ipv4 address, it must be 4 octets. */
+	memcpy (&raw.yiaddr, ip_address.iabuf, 4);
+	ip_address.len = 4;
 
 	/* If we're always supposed to broadcast to this client, set
 	   the broadcast bit in the bootp flags field. */
@@ -406,6 +388,4 @@ void bootp (packet)
 		host_dereference (&hp, MDL);
 	if (host)
 		host_dereference (&host, MDL);
-	if (subnet)
-		subnet_dereference (&subnet, MDL);
 }

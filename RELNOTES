@@ -1,6 +1,6 @@
 	      Internet Systems Consortium DHCP Distribution
-			     Version 3.0.3b1
-			      March 3, 2005
+			     Version 3.0.3b2
+			       May 2, 2005
 
 			     Release Notes
 
@@ -43,6 +43,11 @@ Murrell at BC Tel Advanced Communications.  I'd like to express my
 thanks to all of these good people here, both for working on the code
 and for prodding me into improving it.
 
+			Changes since 3.0.3b1
+
+- A bug was fixed in BOOTPREQUEST handling code wherein stale references to
+  host records would be left behind on leases that were not allocated to the
+  client currently booting (eg in the case where the host was denied booting).
 
 			Changes since 3.0.2
 

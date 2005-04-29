@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.192.2.49 2005/03/03 16:55:24 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.192.2.50 2005/04/29 23:10:57 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -387,7 +387,8 @@ void dhcpdiscover (packet, ms_nulltp)
 	if (when < lease -> ends)
 		when = lease -> ends;
 
-	ack_lease (packet, lease, DHCPOFFER, when, msgbuf, ms_nulltp);
+	ack_lease (packet, lease, DHCPOFFER, when, msgbuf, ms_nulltp,
+		   (struct host_decl *)0);
       out:
 	if (lease)
 		lease_dereference (&lease, MDL);
@@ -664,7 +665,8 @@ void dhcprequest (packet, ms_nulltp, ip_lease)
 
 	/* Otherwise, send the lease to the client if we found one. */
 	if (lease) {
-		ack_lease (packet, lease, DHCPACK, 0, msgbuf, ms_nulltp);
+		ack_lease (packet, lease, DHCPACK, 0, msgbuf, ms_nulltp,
+			   (struct host_decl *)0);
 	} else
 		log_info ("%s: unknown lease %s.", msgbuf, piaddr (cip));
 
@@ -1476,13 +1478,14 @@ void nak_lease (packet, cip)
 			      from, &to, (struct hardware *)0);
 }
 
-void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
+void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 	struct packet *packet;
 	struct lease *lease;
 	unsigned int offer;
 	TIME when;
 	char *msg;
 	int ms_nulltp;
+	struct host_decl *hp;
 {
 	struct lease *lt;
 	struct lease_state *state;
@@ -1511,7 +1514,9 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp)
 		return;
 
 	/* If the lease carries a host record, remember it. */
-	if (lease -> host)
+	if (hp)
+		host_reference (&host, hp, MDL);
+	else if (lease -> host)
 		host_reference (&host, lease -> host, MDL);
 
 	/* Allocate a lease state structure... */

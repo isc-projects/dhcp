@@ -1367,7 +1367,7 @@ void dhcpdecline PROTO ((struct packet *, int));
 void dhcpinform PROTO ((struct packet *, int));
 void nak_lease PROTO ((struct packet *, struct iaddr *cip));
 void ack_lease PROTO ((struct packet *, struct lease *,
-		       unsigned int, TIME, char *, int));
+		       unsigned int, TIME, char *, int, struct host_decl *));
 void dhcp_reply PROTO ((struct lease *));
 int find_lease PROTO ((struct lease **, struct packet *,
 		       struct shared_network *, int *, int *, struct lease *,
