@@ -28,7 +28,7 @@
 .\" see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
 .\" ``http://www.nominum.com''.
 .\"
-.\" $Id: dhcpd.conf.5,v 1.63.2.26 2005/01/08 00:15:55 dhankins Exp $
+.\" $Id: dhcpd.conf.5,v 1.63.2.27 2005/05/02 22:43:24 dhankins Exp $
 .\"
 .TH dhcpd.conf 5
 .SH NAME
@@ -1040,14 +1040,22 @@ IP address, it can update its own A record, assuming that the
 .PP
 If the server is configured not to allow client updates, or if the
 client doesn't want to do its own update, the server will simply
-choose a name for the client, possibly using the hostname supplied by
-the client ("jschmoe" in the previous example).   It will use its own
+choose a name for the client from either the fqdn option (if present)
+or the hostname option (if present).  It will use its own
 domain name for the client, just as in the ad-hoc update scheme.
 It will then update both the A and PTR record, using the name that it
 chose for the client.   If the client sends a fully-qualified domain
 name in the fqdn option, the server uses only the leftmost part of the
 domain name - in the example above, "jschmoe" instead of
 "jschmoe.radish.org".
+.PP
+Also, if the
+.I use-host-decl-names
+configuration option is enabled, then the host declaration's
+.I hostname
+will be used in place of the
+.I hostname
+option, and the same rules will apply as described above.
 .PP
 The other difference between the ad-hoc scheme and the interim
 scheme is that with the interim scheme, a method is used that
@@ -1352,26 +1360,32 @@ a specific client, and also provides a way to assign a client a fixed address.
 The host declaration provides a way for the DHCP server to identify a DHCP or
 BOOTP client, and also a way to assign the client a static IP address.
 .PP
-If it is desirable to be able to boot a DHCP or BOOTP
-client on more than one subnet with fixed addresses, more than one
-address may be specified in the
+If it is desirable to be able to boot a DHCP or BOOTP client on more than one
+subnet with fixed addresses, more than one address may be specified in the
 .I fixed-address
 declaration, or more than one
 .B host
-statement may be specified.
+statement may be specified matching the same client.
 .PP
 If client-specific boot parameters must change based on the network
 to which the client is attached, then multiple 
 .B host
-declaration should
-be used.
-.PP
-If a client is to be booted using a fixed address if it's
-possible, but should be allocated a dynamic address otherwise, then a
+declarations should be used.  The
 .B host
-declaration must be specified without a
-.B fixed-address
-declaration.
+declarations will only match a client if one of their
+.I fixed-address
+statements is viable on the subnet (or shared network) where the client is
+attached.  Conversely, for a
+.B host
+declaration to match a client being allocated a dynamic address, it must not
+have any
+.I fixed-address
+statements.  You may therefore need a mixture of
+.B host
+declarations for any given client...some having
+.I fixed-address
+statements, others without.
+.PP
 .I hostname
 should be a name identifying the host.  If a \fIhostname\fR option is
 not specified for the host, \fIhostname\fR is used.
