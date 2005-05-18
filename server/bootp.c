@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bootp.c,v 1.69.2.10 2005/05/02 22:43:24 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: bootp.c,v 1.69.2.11 2005/05/18 19:54:17 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -56,7 +56,6 @@ void bootp (packet)
 	struct hardware hto;
 	struct option_state *options = (struct option_state *)0;
 	struct lease *lease = (struct lease *)0;
-	struct iaddr ip_address;
 	unsigned i;
 	struct data_string d1;
 	struct option_cache *oc;
@@ -247,8 +246,7 @@ void bootp (packet)
 	raw.ciaddr = packet -> raw -> ciaddr;
 
 	/* yiaddr is an ipv4 address, it must be 4 octets. */
-	memcpy (&raw.yiaddr, ip_address.iabuf, 4);
-	ip_address.len = 4;
+	memcpy (&raw.yiaddr, lease->ip_addr.iabuf, 4);
 
 	/* If we're always supposed to broadcast to this client, set
 	   the broadcast bit in the bootp flags field. */
@@ -332,7 +330,7 @@ void bootp (packet)
 	/* Report what we're doing... */
 	log_info ("%s", msgbuf);
 	log_info ("BOOTREPLY for %s to %s (%s) via %s",
-	      piaddr (ip_address), hp -> name,
+	      piaddr (lease->ip_addr), hp -> name,
 	      print_hw_addr (packet -> raw -> htype,
 			     packet -> raw -> hlen,
 			     packet -> raw -> chaddr),
