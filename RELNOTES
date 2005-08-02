@@ -43,6 +43,13 @@ Murrell at BC Tel Advanced Communications.  I'd like to express my
 thanks to all of these good people here, both for working on the code
 and for prodding me into improving it.
 
+
+			Changes since 3.0.3
+
+- A DDNS update handling function was misusing the DNS error codes, rather
+  than the internal generic result enumeration.  The result is a confusing
+  syslog line, logging the wrong condition.
+
 			Changes since 3.0.3b3
 
 - dhclient.conf documentation for interface {} was updated to reflect recent

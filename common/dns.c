@@ -3,7 +3,7 @@
    Domain Name Service subroutines. */
 
 /*
- * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2005 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2001-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -33,7 +33,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dns.c,v 1.35.2.16 2004/06/17 20:54:38 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dns.c,v 1.35.2.17 2005/08/02 09:04:45 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -526,7 +526,7 @@ isc_result_t ddns_update_a (struct data_string *ddns_fwd_name,
 	ns_updque updqueue;
 	ns_updrec *updrec;
 	isc_result_t result;
-	char ddns_address [16];
+	char ddns_address [16], *logstr;
 
 	if (ddns_addr.len != 4)
 		return ISC_R_INVALIDARG;
@@ -712,24 +712,36 @@ isc_result_t ddns_update_a (struct data_string *ddns_fwd_name,
 	 */
 	result = minires_nupdate (&resolver_state, ISC_LIST_HEAD (updqueue));
 
-	if (result != ISC_R_SUCCESS) {
-		if (result == YXRRSET || result == YXDOMAIN ||
-		    result == NXRRSET || result == NXDOMAIN)
-			log_error ("Forward map from %.*s to %s already in use",
-				   (int)ddns_fwd_name -> len,
-				   (const char *)ddns_fwd_name -> data,
-				   ddns_address);
-		else
-			log_error ("Can't update forward map %.*s to %s: %s",
-				   (int)ddns_fwd_name -> len,
-				   (const char *)ddns_fwd_name -> data,
-				   ddns_address, isc_result_totext (result));
+	switch (result) {
+	    case ISC_R_SUCCESS:
+		logstr = NULL;
+		break;
 
-	} else {
-		log_info ("Added new forward map from %.*s to %s",
+	    case ISC_R_YXRRSET:
+	    case ISC_R_YXDOMAIN:
+		logstr = "DHCID mismatch, belongs to another client.";
+		break;
+
+	    case ISC_R_NXRRSET:
+	    case ISC_R_NXDOMAIN:
+		logstr = "Has an A record but no DHCID, not mine.";
+		break;
+
+	    default:
+		logstr = isc_result_totext(result);
+		break;
+	}
+
+	if (logstr != NULL)
+		log_error("Forward map from %.*s to %s FAILED: %s",
+				   (int)ddns_fwd_name -> len,
+				   (const char *)ddns_fwd_name -> data,
+				   ddns_address, logstr);
+	else
+		log_info("Added new forward map from %.*s to %s",
 			  (int)ddns_fwd_name -> len,
 			  (const char *)ddns_fwd_name -> data, ddns_address);
-	}
+
 #if defined (DEBUG_DNS_UPDATES)
 	print_dns_status ((int)result, &updqueue);
 #endif
