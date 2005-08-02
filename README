@@ -367,6 +367,18 @@ Linux 2.1 and later kernels do not use SO_BINDTODEVICE or require the
 broadcast address hack, but do support multiple interfaces, using the
 Linux Packet Filter.
 
+		    LINUX: 802.1q VLAN INTERFACES
+
+If you're using 802.1q vlan interfaces on Linux, it is necessary to
+vconfig the subinterface(s) to rewrite the 802.1q information out of
+packets received by the dhcpd daemon via LPF:
+
+	vconfig set_flag eth1.523 1 1
+
+Note that this may affect the performance of your system, since the
+Linux kernel must rewrite packets received via this interface.  For
+more information, consult the vconfig man pages.
+
 				 SCO
 
 SCO has the same problem as Linux (described earlier).  The thing is,
