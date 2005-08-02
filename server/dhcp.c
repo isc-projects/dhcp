@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.192.2.50 2005/04/29 23:10:57 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.192.2.51 2005/08/02 09:11:40 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -294,17 +294,19 @@ void dhcpdiscover (packet, ms_nulltp)
 
 		/* If the lease is ours to allocate, then allocate it,
 		   but set the allocatedp flag. */
-		if (lease_mine_to_reallocate (lease))
+		if (lease_mine_to_reallocate(lease)) {
 			allocatedp = 1;
+			if (lease->pool && lease->pool->failover_peer)
+				dhcp_failover_pool_check(lease->pool);
 
 		/* If the lease is active, do load balancing to see who
 		   allocates the lease (if it's active, it already belongs
 		   to the client, or we wouldn't have gotten it from
 		   find_lease (). */
-		else if (lease -> binding_state == FTS_ACTIVE &&
-			 (peer -> service_state != cooperating ||
-			  load_balance_mine (packet, peer)))
-			;
+		} else if (lease->binding_state == FTS_ACTIVE &&
+			   (peer->service_state != cooperating ||
+			    load_balance_mine(packet, peer)))
+			; /* This space intentionally left blank. */
 
 		/* Otherwise, we can't let the client have this lease. */
 		else {
