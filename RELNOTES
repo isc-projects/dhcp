@@ -59,6 +59,15 @@ and for prodding me into improving it.
   wether freely-allocated or not, unless the server doubts the peer has
   leases to allocate.
 
+- Fixed a bug in dhcrelay agent addition code that suppressed trailing
+  PAD options - it was suppressing only one trailng PAD option, rather
+  than the entire block of them.
+
+- Fixed some unlikely overlapping-region memcpy() bugs in dhcrelay agent
+  option addition and stripping code.  Added a few sanity checks.
+
+- Added some sanity checks to OMAPI connection/authentication code.
+
 			Changes since 3.0.3b3
 
 - dhclient.conf documentation for interface {} was updated to reflect recent

@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcrelay.c,v 1.52.2.10 2005/03/03 16:55:24 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhcrelay.c,v 1.52.2.11 2005/08/11 23:12:41 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -537,7 +537,7 @@ int strip_relay_agent_options (in, out, packet, length)
 	unsigned length;
 {
 	int is_dhcp = 0;
-	u_int8_t *op, *sp, *max;
+	u_int8_t *op, *nextop, *sp, *max;
 	int good_agent_option = 0;
 	int status;
 
@@ -583,6 +583,13 @@ int strip_relay_agent_options (in, out, packet, length)
 			if (!is_dhcp)
 				goto skip;
 
+			/* Do not process an agent option if it exceeds the
+			 * buffer.  Fail this packet.
+			 */
+			nextop = op + op[1] + 2;
+			if (nextop > max)
+				return 0;
+
 			status = find_interface_by_agent_option (packet,
 								 out, op + 2,
 								 op [1]);
@@ -590,16 +597,26 @@ int strip_relay_agent_options (in, out, packet, length)
 				return 0;
 			if (status)
 				good_agent_option = 1;
-			op += op [1] + 2;
+			op = nextop;
 			break;
 
 		      skip:
 			/* Skip over other options. */
 		      default:
-			if (sp != op)
-				memcpy (sp, op, (unsigned)(op [1] + 2));
-			sp += op [1] + 2;
-			op += op [1] + 2;
+			/* Fail if processing this option will exceed the
+			 * buffer (op[1] is malformed).
+			 */
+			nextop = op + op[1] + 2;
+			if (nextop > max)
+				return 0;
+
+			if (sp != op) {
+				memmove(sp, op, op[1] + 2);
+				sp += op[1] + 2;
+				op = nextop;
+			} else
+				op = sp = nextop;
+
 			break;
 		}
 	}
@@ -627,7 +644,7 @@ int strip_relay_agent_options (in, out, packet, length)
 		/* Make sure the packet isn't short (this is unlikely,
                    but WTH) */
 		if (length < BOOTP_MIN_LEN) {
-			memset (sp, 0, BOOTP_MIN_LEN - length);
+			memset (sp, DHO_PAD, BOOTP_MIN_LEN - length);
 			length = BOOTP_MIN_LEN;
 		}
 	}
@@ -718,7 +735,8 @@ int add_relay_agent_options (ip, packet, length, giaddr)
 	struct in_addr giaddr;
 {
 	int is_dhcp = 0, agent_options_present = 0;
-	u_int8_t *op, *sp, *max, *end_pad = 0;
+	unsigned optlen;
+	u_int8_t *op, *nextop, *sp, *max, *end_pad = NULL;
 
 	/* If we're not adding agent options to packets, we can skip
 	   this. */
@@ -727,21 +745,35 @@ int add_relay_agent_options (ip, packet, length, giaddr)
 
 	/* If there's no cookie, it's a bootp packet, so we should just
 	   forward it unchanged. */
-	if (memcmp (packet -> options, DHCP_OPTIONS_COOKIE, 4))
+	if (memcmp(packet->options, DHCP_OPTIONS_COOKIE, 4))
 		return length;
 
 	max = ((u_int8_t *)packet) + length;
-	sp = op = &packet -> options [4];
+
+	/* Commence processing after the cookie. */
+	sp = op = &packet->options[4];
 
 	while (op < max) {
 		switch (*op) {
 			/* Skip padding... */
 		      case DHO_PAD:
-			end_pad = sp;
+			/* Remember the first pad byte so we can commandeer
+			 * padded space.
+			 *
+			 * XXX: Is this really a good idea?  Sure, we can
+			 * seemingly reduce the packet while we're looking,
+			 * but if the packet was signed by the client then
+			 * this padding is part of the checksum (RFC3118),
+			 * and its nonpresence would break authentication.
+			 */
+			if (end_pad == NULL)
+				end_pad = sp;
+
 			if (sp != op)
-				*sp = *op;
-			++op;
-			++sp;
+				*sp++ = *op++;
+			else
+				sp = ++op;
+
 			continue;
 
 			/* If we see a message type, it's a DHCP packet. */
@@ -760,7 +792,8 @@ int add_relay_agent_options (ip, packet, length, giaddr)
 			   but if we do, we have to leave it alone. */
 			if (!is_dhcp)
 				goto skip;
-			end_pad = 0;
+
+			end_pad = NULL;
 
 			/* There's already a Relay Agent Information option
 			   in this packet.   How embarrassing.   Decide what
@@ -780,17 +813,28 @@ int add_relay_agent_options (ip, packet, length, giaddr)
 
 			/* Skip over the agent option and start copying
 			   if we aren't copying already. */
-			op += op [1] + 2;
+			op += op[1] + 2;
 			break;
 
 		      skip:
 			/* Skip over other options. */
 		      default:
-			end_pad = 0;
-			if (sp != op)
-				memcpy (sp, op, (unsigned)(op [1] + 2));
-			sp += op [1] + 2;
-			op += op [1] + 2;
+			/* Fail if processing this option will exceed the
+			 * buffer (op[1] is malformed).
+			 */
+			nextop = op + op[1] + 2;
+			if (nextop > max)
+				return 0;
+
+			end_pad = NULL;
+
+			if (sp != op) {
+				memmove(sp, op, op[1] + 2);
+				sp += op[1] + 2;
+				op = nextop;
+			} else
+				op = sp = nextop;
+
 			break;
 		}
 	}
@@ -803,50 +847,56 @@ int add_relay_agent_options (ip, packet, length, giaddr)
 	/* If the packet was padded out, we can store the agent option
 	   at the beginning of the padding. */
 
-	if (end_pad)
+	if (end_pad != NULL)
 		sp = end_pad;
 
 	/* Remember where the end of the packet was after parsing
 	   it. */
 	op = sp;
 
-	/* XXX Is there room? */
+	/* Sanity check.  Had better not ever happen. */
+	if ((ip->circuit_id_len > 255) || (ip->circuit_id_len < 1))
+		log_fatal("circuit id length %d out of range [1-255] on "
+			  "%s\n", ip->circuit_id_len, ip->name);
+	optlen = ip->circuit_id_len + 2;            /* RAI_CIRCUIT_ID + len */
+
+	if (ip->remote_id) {
+		if (ip->remote_id_len > 255 || ip->remote_id_len < 1)
+			log_fatal("remote id length %d out of range [1-255] "
+				  "on %s\n", ip->circuit_id_len, ip->name);
+		optlen += ip->remote_id_len + 2;    /* RAI_REMOTE_ID + len */
+	}
+
+	/* We do not support relay option fragmenting (multiple options to
+	 * support an option data exceeding 255 bytes).
+	 */
+	if ((optlen < 3) || (optlen > 255))
+		log_fatal ("total agent option length (%u) out of range "
+			   "[3 - 255] on %s\n", optlen, ip->name);
+
+	/* Is there room for the option, its code+len, and DHO_END? */
+	if ((sp > max) || (max - sp < optlen + 3))
+		return 0;
 
 	/* Okay, cons up *our* Relay Agent Information option. */
 	*sp++ = DHO_DHCP_AGENT_OPTIONS;
-	*sp++ = 0;	/* Dunno... */
+	*sp++ = optlen;
 
 	/* Copy in the circuit id... */
 	*sp++ = RAI_CIRCUIT_ID;
-	/* Sanity check.   Had better not every happen. */
-	if (ip -> circuit_id_len > 255 || ip -> circuit_id_len < 1)
-		log_fatal ("completely bogus circuit id length %d on %s\n",
-		       ip -> circuit_id_len, ip -> name);
-	*sp++ = ip -> circuit_id_len;
-	memcpy (sp, ip -> circuit_id, ip -> circuit_id_len);
-	sp += ip -> circuit_id_len;
+	*sp++ = ip->circuit_id_len;
+	memcpy(sp, ip->circuit_id, ip->circuit_id_len);
+	sp += ip->circuit_id_len;
 
 	/* Copy in remote ID... */
-	if (ip -> remote_id) {
+	if (ip->remote_id) {
 		*sp++ = RAI_REMOTE_ID;
-		if (ip -> remote_id_len > 255 || ip -> remote_id_len < 1)
-			log_fatal ("bogus remote id length %d on %s\n",
-			       ip -> circuit_id_len, ip -> name);
-		*sp++ = ip -> remote_id_len;
-		memcpy (sp, ip -> remote_id, ip -> remote_id_len);
-		sp += ip -> remote_id_len;
+		*sp++ = ip->remote_id_len;
+		memcpy(sp, ip->remote_id, ip->remote_id_len);
+		sp += ip->remote_id_len;
 	}
 
-	/* Relay option's total length shouldn't ever get to be more than
-	   257 bytes. */
-	if (sp - op > 257)
-	    log_fatal ("total agent option length exceeds 257 (%ld) on %s\n",
-		       (long)(sp - op), ip -> name);
-
-	/* Calculate length of RAI option. */
-	op [1] = sp - op - 2;
-
-	/* Deposit an END token. */
+	/* Deposit an END option. */
 	*sp++ = DHO_END;
 
 	/* Recalculate total packet length. */
@@ -854,8 +904,8 @@ int add_relay_agent_options (ip, packet, length, giaddr)
 
 	/* Make sure the packet isn't short (this is unlikely, but WTH) */
 	if (length < BOOTP_MIN_LEN) {
-		memset (sp, 0, BOOTP_MIN_LEN - length);
-		length = BOOTP_MIN_LEN;
+		memset(sp, DHO_PAD, BOOTP_MIN_LEN - length);
+		return BOOTP_MIN_LEN;
 	}
 
 	return length;
