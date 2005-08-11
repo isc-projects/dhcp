@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.192.2.51 2005/08/02 09:11:40 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.192.2.52 2005/08/11 23:08:14 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -245,15 +245,13 @@ void dhcpdiscover (packet, ms_nulltp)
 	char msgbuf [1024]; /* XXX */
 	TIME when;
 	const char *s;
-	int allocatedp = 0;
 	int peer_has_leases = 0;
-	int alloc_lease_called = 0;
 #if defined (FAILOVER_PROTOCOL)
 	dhcp_failover_state_t *peer;
 #endif
 
 	find_lease (&lease, packet, packet -> shared_network,
-		    0, &allocatedp, (struct lease *)0, MDL);
+		    0, &peer_has_leases, (struct lease *)0, MDL);
 
 	if (lease && lease -> client_hostname) {
 		if ((strlen (lease -> client_hostname) <= 64) &&
@@ -292,24 +290,20 @@ void dhcpdiscover (packet, ms_nulltp)
 	if (lease && lease -> pool && lease -> pool -> failover_peer) {
 		peer = lease -> pool -> failover_peer;
 
-		/* If the lease is ours to allocate, then allocate it,
-		   but set the allocatedp flag. */
+		/* If the lease is ours to allocate, then allocate it. */
 		if (lease_mine_to_reallocate(lease)) {
-			allocatedp = 1;
 			if (lease->pool && lease->pool->failover_peer)
 				dhcp_failover_pool_check(lease->pool);
 
-		/* If the lease is active, do load balancing to see who
-		   allocates the lease (if it's active, it already belongs
-		   to the client, or we wouldn't have gotten it from
-		   find_lease (). */
-		} else if (lease->binding_state == FTS_ACTIVE &&
-			   (peer->service_state != cooperating ||
-			    load_balance_mine(packet, peer)))
+		/* If the lease is active, it belongs to the client.  This
+		 * is the right lease, if we are to offer one.  We decide
+		 * wether or not to offer later on.
+		 */
+		} else if (lease->binding_state == FTS_ACTIVE) {
 			; /* This space intentionally left blank. */
 
 		/* Otherwise, we can't let the client have this lease. */
-		else {
+		} else {
 #if defined (DEBUG_FIND_LEASE)
 		    log_debug ("discarding %s - %s",
 			       piaddr (lease -> ip_addr),
@@ -338,8 +332,6 @@ void dhcpdiscover (packet, ms_nulltp)
 		if (lease -> pool && lease -> pool -> failover_peer)
 			dhcp_failover_pool_check (lease -> pool);
 #endif
-		allocatedp = 1;
-		alloc_lease_called = 1;
 	}
 
 #if defined (FAILOVER_PROTOCOL)
@@ -355,26 +347,15 @@ void dhcpdiscover (packet, ms_nulltp)
 		peer = (dhcp_failover_state_t *)0;
 
 	/* Do load balancing if configured. */
-	/* If the lease is newly allocated, and we're not the server that
-	   the client would normally get with load balancing, and the
-	   failover protocol state is normal, let the other server get this.
-	   XXX Check protocol spec to make sure that predicating this on
-	   XXX allocatedp is okay - I'm doing this so that the client won't
-	   XXX be forced to switch servers (and IP addresses) just because
-	   XXX of bad luck, when it's possible for it to get the address it
-	   XXX is requesting.    Not sure this is allowed.  */
-	if (allocatedp && peer && (peer -> service_state == cooperating) &&
+	if (peer && (peer -> service_state == cooperating) &&
 	    !load_balance_mine (packet, peer)) {
-		/* peer_has_leases only has a chance to be set if we called
-		 * allocate_lease() above.
-		 */
-		if (!alloc_lease_called || peer_has_leases) {
+		if (peer_has_leases) {
 			log_debug ("%s: load balance to peer %s",
 				   msgbuf, peer -> name);
 			goto out;
 		} else {
-			log_debug ("cancel load balance to peer %s - %s",
-				   peer -> name, "no free leases");
+			log_debug ("%s: cancel load balance to peer %s - %s",
+				   msgbuf, peer -> name, "no free leases");
 		}
 	}
 #endif
@@ -444,8 +425,6 @@ void dhcprequest (packet, ms_nulltp, ip_lease)
 	if (find_subnet (&subnet, cip, MDL))
 		find_lease (&lease, packet,
 			    subnet -> shared_network, &ours, 0, ip_lease, MDL);
-	/* XXX consider using allocatedp arg to find_lease to see
-	   XXX that this isn't a compliant DHCPREQUEST. */
 
 	if (lease && lease -> client_hostname) {
 		if ((strlen (lease -> client_hostname) <= 64) &&
@@ -2935,7 +2914,7 @@ void dhcp_reply (lease)
 
 int find_lease (struct lease **lp,
 		struct packet *packet, struct shared_network *share, int *ours,
-		int *allocatedp, struct lease *ip_lease_in,
+		int *peer_has_leases, struct lease *ip_lease_in,
 		const char *file, int line)
 {
 	struct lease *uid_lease = (struct lease *)0;
@@ -2953,6 +2932,22 @@ int find_lease (struct lease **lp,
 	struct data_string client_identifier;
 	int status;
 	struct hardware h;
+
+	/* Quick check to see if the peer has leases. */
+	if (peer_has_leases) {
+		struct pool *pool;
+
+		for (pool = share->pools ; pool ; pool = pool->next) {
+			dhcp_failover_state_t *peer = pool->failover_peer;
+
+			if (peer &&
+			    ((peer->i_am == primary && pool->backup_leases) ||
+			     (peer->i_am == secondary && pool->free_leases))) {
+				*peer_has_leases = 1;
+				break;
+			}
+		}
+	}
 
 	if (packet -> raw -> ciaddr.s_addr) {
 		cip.len = 4;
@@ -3257,9 +3252,7 @@ int find_lease (struct lease **lp,
 			if (ours && ip_lease -> binding_state != FTS_ACTIVE)
 				*ours = 0;
 			lease_dereference (&ip_lease, MDL);
-		} else
-			if (allocatedp)
-				*allocatedp = 1;
+		}
 	}
 
 	/* If we got an ip_lease and a uid_lease or hw_lease, and ip_lease
@@ -3548,9 +3541,6 @@ int find_lease (struct lease **lp,
 			*ours = 1;
 		lease_dereference (&lease, MDL);
 	}
-
-	if (lease && allocatedp && lease -> ends <= cur_time)
-		*allocatedp = 1;
 
       out:
 	if (have_client_identifier)

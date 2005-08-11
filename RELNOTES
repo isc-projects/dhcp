@@ -54,6 +54,11 @@ and for prodding me into improving it.
   a non-ACTIVE lease out of storage for a client that was returning to use
   a lease it once had long ago, and had since expired.
 
+- Failover peers no longer bother to look for free leases to allocate when
+  they already found the client's ACTIVE lease.  DISCOVERs are load balanced
+  wether freely-allocated or not, unless the server doubts the peer has
+  leases to allocate.
+
 			Changes since 3.0.3b3
 
 - dhclient.conf documentation for interface {} was updated to reflect recent
