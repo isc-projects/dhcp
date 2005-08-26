@@ -3,7 +3,7 @@
    Subroutines that support the generic object. */
 
 /*
- * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2005 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1999-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -31,6 +31,11 @@
  * see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
  * ``http://www.nominum.com''.
  */
+
+#ifndef lint
+static char ocopyright[] =
+"$Id: generic.c,v 1.9.2.5 2005/08/26 22:45:48 dhankins Exp $ Copyright 2004-2005 Internet Systems Consortium.";
+#endif
 
 #include <omapip/omapip_p.h>
 
@@ -139,10 +144,6 @@ isc_result_t omapi_generic_set_value (omapi_object_t *h,
 				memcpy (ca, g -> changed,
 					g -> va_max * sizeof *ca);
 			}
-			memset (va + g -> va_max, 0,
-				(vm_new - g -> va_max) * sizeof *va);
-			memset (ca + g -> va_max, 0,
-				(vm_new - g -> va_max) * sizeof *ca);
 			if (g -> values)
 				dfree (g -> values, MDL);
 			if (g -> changed)

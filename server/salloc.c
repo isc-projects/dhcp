@@ -3,7 +3,7 @@
    Memory allocation for the DHCP server... */
 
 /*
- * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2005 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: salloc.c,v 1.2.2.5 2004/06/10 17:59:57 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: salloc.c,v 1.2.2.6 2005/08/26 22:45:51 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -97,7 +97,6 @@ struct lease *new_leases (n, file, line)
 	struct lease *rval;
 #if defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
 	rval = dmalloc ((n + 1) * sizeof (struct lease), file, line);
-	memset (rval, 0, sizeof (struct lease));
 	rval -> starts = n;
 	rval -> next = lease_hunks;
 	lease_hunks = rval;
@@ -187,12 +186,13 @@ struct lease_state *new_lease_state (file, line)
 		free_lease_states =
 			(struct lease_state *)(free_lease_states -> next);
  		dmalloc_reuse (rval, file, line, 0);
+		memset(rval, 0, sizeof(struct lease_state));
 	} else {
 		rval = dmalloc (sizeof (struct lease_state), file, line);
 		if (!rval)
 			return rval;
 	}
-	memset (rval, 0, sizeof *rval);
+
 	if (!option_state_allocate (&rval -> options, file, line)) {
 		free_lease_state (rval, file, line);
 		return (struct lease_state *)0;
@@ -243,7 +243,6 @@ struct permit *new_permit (file, line)
 				 dmalloc (sizeof (struct permit), file, line));
 	if (!permit)
 		return permit;
-	memset (permit, 0, sizeof *permit);
 	return permit;
 }
 

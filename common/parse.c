@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.104.2.23 2005/03/03 16:55:23 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.104.2.24 2005/08/26 22:45:46 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1260,7 +1260,6 @@ int parse_option_code_definition (cfile, option)
 	tokix += has_encapsulation;
 	if (arrayp)
 		s [tokix++] = (arrayp > recordp) ? 'a' : 'A';
-	s [tokix] = 0;
 	option -> format = s;
 	if (option -> universe -> options [option -> code]) {
 		/* XXX Free the option, but we can't do that now because they
@@ -1314,7 +1313,6 @@ int parse_base64 (data, cfile)
 		t = dmalloc (l + sizeof *t, MDL);
 		if (!t)
 			log_fatal ("no memory for base64 buffer.");
-		memset (t, 0, (sizeof *t) - 1);
 		memcpy (t -> string, val, l + 1);
 		cc += l;
 		if (last)
@@ -1729,7 +1727,6 @@ int parse_executable_statement (result, cfile, lose, case_context)
 						strlen (val), MDL));
 				if (!new)
 					log_fatal ("can't allocate string.");
-				memset (new, 0, sizeof *new);
 				strcpy (new -> string, val);
 				if (cur) {
 					cur -> next = new;
@@ -1974,7 +1971,6 @@ int parse_executable_statement (result, cfile, lose, case_context)
 			}
 			strcpy (s, zone -> name);
 			s [i] = '.';
-			s [i + 1] = 0;
 			dfree (zone -> name, MDL);
 			zone -> name = s;
 		}

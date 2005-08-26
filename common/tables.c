@@ -3,7 +3,7 @@
    Tables of information... */
 
 /*
- * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2005 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tables.c,v 1.51.2.9 2004/09/01 17:06:35 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: tables.c,v 1.51.2.10 2005/08/26 22:45:46 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1145,7 +1145,6 @@ void initialize_common_option_spaces()
 		     dmalloc (universe_max * sizeof (struct universe *), MDL));
 	if (!universes)
 		log_fatal ("Can't allocate option space table.");
-	memset (universes, 0, universe_max * sizeof (struct universe *));
 
 	/* Set up the DHCP option universe... */
 	dhcp_universe.name = "dhcp";

@@ -3,7 +3,7 @@
    Routines for manipulating hash tables... */
 
 /*
- * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2005 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: hash.c,v 1.1.2.6 2004/06/10 17:59:47 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: hash.c,v 1.1.2.7 2005/08/26 22:45:48 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include <omapip/omapip_p.h>
@@ -155,7 +155,6 @@ struct hash_bucket *new_hash_bucket (file, line)
 # if defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
 		rval -> next = hash_bucket_hunks;
 		hash_bucket_hunks = rval;
-		hash_bucket_hunks -> len = 0;
 		i++;
 		rval++;
 #endif
@@ -195,8 +194,6 @@ int new_hash (struct hash_table **rp,
 {
 	if (!new_hash_table (rp, DEFAULT_HASH_SIZE, file, line))
 		return 0;
-	memset (&(*rp) -> buckets [0], 0,
-		DEFAULT_HASH_SIZE * sizeof (struct hash_bucket *));
 	(*rp) -> referencer = referencer;
 	(*rp) -> dereferencer = dereferencer;
 	if (casep) {

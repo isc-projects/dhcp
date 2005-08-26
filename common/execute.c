@@ -3,7 +3,7 @@
    Support for executable statements. */
 
 /*
- * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2005 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1998-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: execute.c,v 1.44.2.12 2004/11/24 17:39:15 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: execute.c,v 1.44.2.13 2005/08/26 22:45:45 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -272,7 +272,6 @@ int execute_statements (result, packet, lease, client_state,
 			if (!binding) {
 				binding = dmalloc (sizeof *binding, MDL);
 				if (binding) {
-				    memset (binding, 0, sizeof *binding);
 				    binding -> name =
 					    dmalloc (strlen
 						     (r -> data.set.name) + 1,
@@ -352,7 +351,6 @@ int execute_statements (result, packet, lease, client_state,
 		      next_let:
 			if (ns) {
 				binding = dmalloc (sizeof *binding, MDL);
-				memset (binding, 0, sizeof *binding);
 				if (!binding) {
 				   blb:
 				    binding_scope_dereference (&ns, MDL);

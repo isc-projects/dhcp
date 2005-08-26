@@ -3,7 +3,7 @@
    Memory allocation... */
 
 /*
- * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2005 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: alloc.c,v 1.53.2.10 2004/06/10 17:59:14 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: alloc.c,v 1.53.2.11 2005/08/26 22:45:44 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -69,10 +69,8 @@ int option_chain_head_allocate (ptr, file, line)
 	}
 
 	h = dmalloc (sizeof *h, file, line);
-	if (h) {
-		memset (h, 0, sizeof *h);
+	if (h)
 		return option_chain_head_reference (ptr, h, file, line);
-	}
 	return 0;
 }
 
@@ -182,10 +180,8 @@ int group_allocate (ptr, file, line)
 	}
 
 	g = dmalloc (sizeof *g, file, line);
-	if (g) {
-		memset (g, 0, sizeof *g);
+	if (g)
 		return group_reference (ptr, g, file, line);
-	}
 	return 0;
 }
 
@@ -319,8 +315,6 @@ struct option *new_option (file, line)
 {
 	struct option *rval =
 		dmalloc (sizeof (struct option), file, line);
-	if (rval)
-		memset (rval, 0, sizeof *rval);
 	return rval;
 }
 
@@ -413,7 +407,6 @@ pair new_pair (file, line)
 	foo = dmalloc (sizeof *foo, file, line);
 	if (!foo)
 		return foo;
-	memset (foo, 0, sizeof *foo);
 	return foo;
 }
 
@@ -454,12 +447,12 @@ int expression_allocate (cptr, file, line)
 		rval = free_expressions;
 		free_expressions = rval -> data.not;
 		dmalloc_reuse (rval, file, line, 1);
+		memset(rval, 0, sizeof(struct expression));
 	} else {
 		rval = dmalloc (sizeof (struct expression), file, line);
 		if (!rval)
 			return 0;
 	}
-	memset (rval, 0, sizeof *rval);
 	return expression_reference (cptr, rval, file, line);
 }
 
@@ -528,12 +521,12 @@ int binding_value_allocate (cptr, file, line)
 		rval = free_binding_values;
 		free_binding_values = rval -> value.bv;
 		dmalloc_reuse (rval, file, line, 1);
+		memset(rval, 0, sizeof(struct binding_value));
 	} else {
 		rval = dmalloc (sizeof (struct binding_value), file, line);
 		if (!rval)
 			return 0;
 	}
-	memset (rval, 0, sizeof *rval);
 	return binding_value_reference (cptr, rval, file, line);
 }
 
@@ -599,7 +592,6 @@ int fundef_allocate (cptr, file, line)
 	rval = dmalloc (sizeof (struct fundef), file, line);
 	if (!rval)
 		return 0;
-	memset (rval, 0, sizeof *rval);
 	return fundef_reference (cptr, rval, file, line);
 }
 
@@ -659,12 +651,12 @@ int option_cache_allocate (cptr, file, line)
 		free_option_caches =
 			(struct option_cache *)(rval -> expression);
 		dmalloc_reuse (rval, file, line, 0);
+		memset(rval, 0, sizeof(struct option_cache));
 	} else {
 		rval = dmalloc (sizeof (struct option_cache), file, line);
 		if (!rval)
 			return 0;
 	}
-	memset (rval, 0, sizeof *rval);
 	return option_cache_reference (cptr, rval, file, line);
 }
 
@@ -707,8 +699,6 @@ int buffer_allocate (ptr, len, file, line)
 	bp = dmalloc (len + sizeof *bp, file, line);
 	if (!bp)
 		return 0;
-	memset (bp, 0, sizeof *bp);
-	bp -> refcnt = 0;
 	return buffer_reference (ptr, bp, file, line);
 }
 
@@ -795,8 +785,6 @@ int dns_host_entry_allocate (ptr, hostname, file, line)
 	bp = dmalloc (strlen (hostname) + sizeof *bp, file, line);
 	if (!bp)
 		return 0;
-	memset (bp, 0, sizeof *bp);
-	bp -> refcnt = 0;
 	strcpy (bp -> hostname, hostname);
 	return dns_host_entry_reference (ptr, bp, file, line);
 }
@@ -891,7 +879,6 @@ int option_state_allocate (ptr, file, line)
 	size = sizeof **ptr + (universe_count - 1) * sizeof (VOIDPTR);
 	*ptr = dmalloc (size, file, line);
 	if (*ptr) {
-		memset (*ptr, 0, size);
 		(*ptr) -> universe_count = universe_count;
 		(*ptr) -> refcnt = 1;
 		rc_register (file, line,
@@ -985,7 +972,6 @@ int executable_statement_allocate (ptr, file, line)
 	bp = dmalloc (sizeof *bp, file, line);
 	if (!bp)
 		return 0;
-	memset (bp, 0, sizeof *bp);
 	return executable_statement_reference (ptr, bp, file, line);
 }
 
@@ -1061,13 +1047,12 @@ int packet_allocate (ptr, file, line)
 		p = free_packets;
 		free_packets = (struct packet *)(p -> raw);
 		dmalloc_reuse (p, file, line, 1);
+		memset(p, 0, sizeof(struct packet));
 	} else {
-		p = dmalloc (sizeof *p, file, line);
+		p = dmalloc(sizeof(struct packet), file, line);
 	}
-	if (p) {
-		memset (p, 0, sizeof *p);
+	if (p)
 		return packet_reference (ptr, p, file, line);
-	}
 	return 0;
 }
 
@@ -1178,10 +1163,8 @@ int dns_zone_allocate (ptr, file, line)
 	}
 
 	d = dmalloc (sizeof *d, file, line);
-	if (d) {
-		memset (d, 0, sizeof *d);
+	if (d)
 		return dns_zone_reference (ptr, d, file, line);
-	}
 	return 0;
 }
 
@@ -1241,7 +1224,6 @@ int binding_scope_allocate (ptr, file, line)
 	bp = dmalloc (sizeof *bp, file, line);
 	if (!bp)
 		return 0;
-	memset (bp, 0, sizeof *bp);
 	binding_scope_reference (ptr, bp, file, line);
 	return 1;
 }

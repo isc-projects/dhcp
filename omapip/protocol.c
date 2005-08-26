@@ -3,7 +3,7 @@
    Functions supporting the object management protocol... */
 
 /*
- * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2005 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1999-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -31,6 +31,11 @@
  * see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
  * ``http://www.nominum.com''.
  */
+
+#ifndef lint
+static char ocopyright[] =
+"$Id: protocol.c,v 1.25.2.9 2005/08/26 22:45:48 dhankins Exp $ Copyright 2004-2005 Internet Systems Consortium.";
+#endif
 
 #include <omapip/omapip_p.h>
 
@@ -83,7 +88,6 @@ isc_result_t omapi_protocol_connect (omapi_object_t *h,
 			return ISC_R_NOMEMORY;
 		}
 
-		obj -> default_auth -> next = (omapi_remote_auth_t *)0;
 		status = omapi_object_reference (&obj -> default_auth -> a,
 						 a, MDL);
 		if (status != ISC_R_SUCCESS) {

@@ -3,7 +3,7 @@
    Routines for manipulating parse trees... */
 
 /*
- * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2005 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.101.2.11 2004/11/24 17:39:16 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.101.2.12 2005/08/26 22:45:47 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -491,7 +491,6 @@ int evaluate_expression (result, packet, lease, client_state,
 				binding_scope_dereference (&ns, MDL);
 				return 0;
 			} else {
-				memset (nb, 0, sizeof *nb);
 				nb -> name = dmalloc (strlen (s -> string) + 1,
 						      MDL);
 				if (nb -> name)
@@ -695,7 +694,6 @@ int evaluate_dns_expression (result, packet, lease, client_state, in_options,
 				data_string_forget (&name, MDL);
 			} else {
 				memcpy (tname, name.data, name.len);
-				tname [name.len] = 0;
 				memset (&data, 0, sizeof data);
 				r2 = evaluate_data_expression
 					(&data, packet, lease, client_state,
@@ -4013,7 +4011,6 @@ struct binding *create_binding (struct binding_scope **scope, const char *name)
 		if (!binding)
 			return (struct binding *)0;
 
-		memset (binding, 0, sizeof *binding);
 		binding -> name = dmalloc (strlen (name) + 1, MDL);
 		if (!binding -> name) {
 			dfree (binding, MDL);

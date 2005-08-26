@@ -3,7 +3,7 @@
    Subroutines that support the omapi extensible array type. */
 
 /*
- * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2005 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2001-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -31,6 +31,11 @@
  * see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
  * ``http://www.nominum.com''.
  */
+
+#ifndef lint
+static char ocopyright[] =
+"$Id: array.c,v 1.1.2.3 2005/08/26 22:45:47 dhankins Exp $ Copyright 2004-2005 Internet Systems Consortium.";
+#endif
 
 #include <omapip/omapip_p.h>
 
@@ -112,8 +117,6 @@ isc_result_t omapi_array_set (omapi_array_t *array, void *ptr, int index,
 				  file, line);
 		if (!newbuf)
 			return ISC_R_NOMEMORY;
-		/* Zero the new elements. */
-		memset (&newbuf [array -> max], 0, (sizeof (char *)) * delta);
 		array -> max += delta;
 		/* Copy the old array data into the new buffer. */
 		if (array -> data) {

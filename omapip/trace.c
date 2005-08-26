@@ -5,7 +5,7 @@
    transactions... */
 
 /*
- * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2005 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2001-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -31,6 +31,11 @@
  * about Internet Systems Consortium, see http://www.isc.org/.  To
  * learn more about Nominum, Inc., see ``http://www.nominum.com''.
  */
+
+#ifndef lint
+static char ocopyright[] =
+"$Id: trace.c,v 1.9.2.4 2005/08/26 22:45:48 dhankins Exp $ Copyright 2004-2005 Internet Systems Consortium.";
+#endif
 
 #include <omapip/omapip_p.h>
 
@@ -285,8 +290,6 @@ void trace_type_stash (trace_type_t *tptr)
 				sizeof (trace_type_t *)), MDL);
 		if (!vec)
 			return;
-		memset (&vec [trace_type_max], 0,
-			(sizeof (trace_type_t *)) * delta);
 		trace_type_max += delta;
 		if (trace_types) {
 		    memcpy (vec, trace_types,
@@ -338,7 +341,7 @@ trace_type_t *trace_type_register (const char *name,
 
 	return ttmp;
 }
-						   
+
 static isc_result_t trace_type_record (trace_type_t *ttmp, unsigned slen,
 				       const char *file, int line)
 {

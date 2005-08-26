@@ -3,7 +3,7 @@
    OMAPI object interfaces for the DHCP server. */
 
 /*
- * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2005 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1999-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -41,7 +41,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: comapi.c,v 1.9.2.7 2004/06/10 17:59:14 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: comapi.c,v 1.9.2.8 2005/08/26 22:45:44 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -163,7 +163,6 @@ isc_result_t dhcp_group_set_value  (omapi_object_t *h,
 			memcpy (group -> name,
 				value -> u.buffer.value,
 				value -> u.buffer.len);
-			group -> name [value -> u.buffer.len] = 0;
 		} else
 			return ISC_R_INVALIDARG;
 		return ISC_R_SUCCESS;

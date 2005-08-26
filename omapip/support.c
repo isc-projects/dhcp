@@ -3,7 +3,7 @@
    Subroutines providing general support for objects. */
 
 /*
- * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2005 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1999-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -31,6 +31,11 @@
  * see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
  * ``http://www.nominum.com''.
  */
+
+#ifndef lint
+static char ocopyright[] =
+"$Id: support.c,v 1.24.2.5 2005/08/26 22:45:48 dhankins Exp $ Copyright 2004-2005 Internet Systems Consortium.";
+#endif
 
 #include <omapip/omapip_p.h>
 
@@ -248,7 +253,6 @@ isc_result_t omapi_object_type_register (omapi_object_type_t **type,
 	t = dmalloc (sizeof *t, MDL);
 	if (!t)
 		return ISC_R_NOMEMORY;
-	memset (t, 0, sizeof *t);
 
 	t -> name = name;
 	t -> set_value = set_value;

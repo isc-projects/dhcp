@@ -33,7 +33,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dns.c,v 1.35.2.17 2005/08/02 09:04:45 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dns.c,v 1.35.2.18 2005/08/26 22:45:45 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -151,7 +151,6 @@ isc_result_t find_tsig_key (ns_tsig_key **key, const char *zname,
 	      nomem:
 		return ISC_R_NOMEMORY;
 	}
-	memset (tkey, 0, sizeof *tkey);
 	tkey -> data = dmalloc (zone -> key -> key -> len, MDL);
 	if (!tkey -> data) {
 		dfree (tkey, MDL);
@@ -216,7 +215,6 @@ isc_result_t dns_zone_lookup (struct dns_zone **zone, const char *name)
 			return ISC_R_NOMEMORY;;
 		strcpy (tname, name);
 		tname [len] = '.';
-		tname [len + 1] = 0;
 		name = tname;
 	}
 	if (!dns_zone_hash_lookup (zone, dns_zone_hash, name, 0, MDL))
@@ -420,17 +418,15 @@ void cache_found_zone (ns_class class,
 
 	if (!zone -> name) {
 		zone -> name =
-			dmalloc (strlen (zname) + 1 + (ix != 0), MDL);
+			dmalloc (strlen (zname) + 1 + (ix ? 1 : 0), MDL);
 		if (!zone -> name) {
 			dns_zone_dereference (&zone, MDL);
 			return;
 		}
 		strcpy (zone -> name, zname);
 		/* Add a trailing '.' if it was missing. */
-		if (ix) {
+		if (ix)
 			zone -> name [ix] = '.';
-			zone -> name [ix + 1] = 0;
-		}
 	}
 
 	/* XXX Need to get the lower-level code to push the actual zone

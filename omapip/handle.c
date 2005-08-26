@@ -3,7 +3,7 @@
    Functions for maintaining handles on objects. */
 
 /*
- * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2005 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1999-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -31,6 +31,11 @@
  * see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
  * ``http://www.nominum.com''.
  */
+
+#ifndef lint
+static char ocopyright[] =
+"$Id: handle.c,v 1.6.2.2 2005/08/26 22:45:48 dhankins Exp $ Copyright 2004-2005 Internet Systems Consortium.";
+#endif
 
 #include <omapip/omapip_p.h>
 
@@ -83,8 +88,6 @@ isc_result_t omapi_object_handle (omapi_handle_t *h, omapi_object_t *o)
 		omapi_handle_table = dmalloc (sizeof *omapi_handle_table, MDL);
 		if (!omapi_handle_table)
 			return ISC_R_NOMEMORY;
-		memset (omapi_handle_table, 0, sizeof *omapi_handle_table);
-		omapi_handle_table -> first = 0;
 		omapi_handle_table -> limit = OMAPI_HANDLE_TABLE_SIZE;
 		omapi_handle_table -> leafp = 1;
 	}
@@ -101,11 +104,8 @@ isc_result_t omapi_object_handle (omapi_handle_t *h, omapi_object_t *o)
 		new = dmalloc (sizeof *new, MDL);
 		if (!new)
 			return ISC_R_NOMEMORY;
-		memset (new, 0, sizeof *new);
-		new -> first = 0;
 		new -> limit = (omapi_handle_table -> limit *
 					       OMAPI_HANDLE_TABLE_SIZE);
-		new -> leafp = 0;
 		new -> children [0].table = omapi_handle_table;
 		omapi_handle_table = new;
 	}
@@ -176,7 +176,6 @@ static isc_result_t omapi_object_handle_in_table (omapi_handle_t h,
 		inner = dmalloc (sizeof *inner, MDL);
 		if (!inner)
 			return ISC_R_NOMEMORY;
-		memset (inner, 0, sizeof *inner);
 		inner -> first = index * scale + table -> first;
 		inner -> limit = inner -> first + scale;
 		if (scale == OMAPI_HANDLE_TABLE_SIZE)
@@ -226,11 +225,8 @@ static isc_result_t omapi_handle_table_enclose (omapi_handle_table_t **table)
 	new = dmalloc (sizeof *new, MDL);
 	if (!new)
 		return ISC_R_NOMEMORY;
-	memset (new, 0, sizeof *new);
 	new -> first = base;
 	new -> limit = base + scale;
-	if (scale == OMAPI_HANDLE_TABLE_SIZE)
-		new -> leafp = 0;
 	new -> children [index].table = inner;
 	*table = new;
 	return ISC_R_SUCCESS;

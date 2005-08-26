@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: conflex.c,v 1.92.2.13 2005/03/03 16:55:22 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: conflex.c,v 1.92.2.14 2005/08/26 22:45:44 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -61,23 +61,17 @@ isc_result_t new_parse (cfile, file, inbuf, buflen, name, eolp)
 	tmp = dmalloc (sizeof (struct parse), MDL);
 	if (!tmp)
 		return ISC_R_NOMEMORY;
-	memset (tmp, 0, sizeof *tmp);
 
-	tmp -> token = 0;
 	tmp -> tlname = name;
 	tmp -> lpos = tmp -> line = 1;
 	tmp -> cur_line = tmp -> line1;
 	tmp -> prev_line = tmp -> line2;
 	tmp -> token_line = tmp -> cur_line;
-	tmp -> cur_line [0] = tmp -> prev_line [0] = 0;
-	tmp -> warnings_occurred = 0;
 	tmp -> file = file;
 	tmp -> eol_token = eolp;
 
-	tmp -> bufix = 0;
 	tmp -> buflen = buflen;
 	if (inbuf) {
-		tmp -> bufsiz = 0;
 		tmp -> inbuf = inbuf;
 	} else {
 		tmp -> inbuf = dmalloc (8192, MDL);

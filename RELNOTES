@@ -68,6 +68,10 @@ and for prodding me into improving it.
 
 - Added some sanity checks to OMAPI connection/authentication code.
 
+- dmalloc() memset()'s the non-debug (data) portion of the allocated
+  memory to zero.  Code that memset()'s the result returned by dmalloc() to
+  zero is redundant.  These redundancies were removed.
+
 			Changes since 3.0.3b3
 
 - dhclient.conf documentation for interface {} was updated to reflect recent

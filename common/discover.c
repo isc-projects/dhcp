@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: discover.c,v 1.42.2.17 2005/03/03 16:55:22 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: discover.c,v 1.42.2.18 2005/08/26 22:45:45 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -443,7 +443,6 @@ void discover_interfaces (state)
 						       MDL);
 			if (!tif)
 				log_fatal ("no space to remember ifp.");
-			memset (tif, 0, sizeof (struct ifreq));
 			strcpy (tif -> ifr_name, tmp -> name);
 			tmp -> ifp = tif;
 		}
@@ -1115,8 +1114,6 @@ void interface_stash (struct interface_info *tptr)
 			       sizeof (struct interface_info *), MDL);
 		if (!vec)
 			return;
-		memset (&vec [interface_max], 0,
-			(sizeof (struct interface_info *)) * delta);
 		interface_max += delta;
 		if (interface_vector) {
 		    memcpy (vec, interface_vector,

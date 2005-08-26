@@ -3,7 +3,7 @@
    Network input dispatcher... */
 
 /*
- * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2005 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dispatch.c,v 1.63.2.4 2004/06/10 17:59:16 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dispatch.c,v 1.63.2.5 2005/08/26 22:45:45 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -126,13 +126,13 @@ void add_timeout (when, where, what, ref, unref)
 		if (free_timeouts) {
 			q = free_timeouts;
 			free_timeouts = q -> next;
+			memset(q, 0, sizeof(struct timeout));
 		} else {
 			q = ((struct timeout *)
 			     dmalloc (sizeof (struct timeout), MDL));
 			if (!q)
 				log_fatal ("add_timeout: no memory!");
 		}
-		memset (q, 0, sizeof *q);
 		q -> func = where;
 		q -> ref = ref;
 		q -> unref = unref;

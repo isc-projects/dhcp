@@ -3,7 +3,7 @@
    Turn data structures into printable text. */
 
 /*
- * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2005 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: print.c,v 1.53.2.11 2004/06/17 20:54:39 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: print.c,v 1.53.2.12 2005/08/26 22:45:46 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -72,7 +72,6 @@ char *quotify_string (const char *s, const char *file, int line)
 			} else
 				*nsp++ = *sp;
 		}
-		*nsp++ = 0;
 	}
 	return buf;
 }
@@ -110,7 +109,6 @@ char *quotify_buf (const unsigned char *s, unsigned len,
 			} else
 				*nsp++ = s [i];
 		}
-		*nsp++ = 0;
 	}
 	return buf;
 }
@@ -159,7 +157,6 @@ char *print_base64 (const unsigned char *buf, unsigned len,
 	}
 	if (!len)
 		*s++ = '=';
-	*s++ = 0;
 	if (s > b + bl + 1)
 		abort ();
 	return b;
@@ -1097,7 +1094,6 @@ int token_indent_data_string (FILE *file, int col, int indent,
 			buf [0] = '"';
 			memcpy (buf + 1, data -> data, data -> len);
 			buf [data -> len + 1] = '"';
-			buf [data -> len + 2] = 0;
 			i = token_print_indent (file, col, indent,
 						prefix, suffix, buf);
 			dfree (buf, MDL);
