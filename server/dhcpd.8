@@ -1,6 +1,6 @@
 .\"	dhcpd.8
 .\"
-.\" Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
+.\" Copyright (c) 2004-2005 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 1996-2003 by Internet Software Consortium
 .\"
 .\" Permission to use, copy, modify, and distribute this software for any
@@ -28,7 +28,7 @@
 .\" see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
 .\" ``http://www.nominum.com''.
 .\"
-.\" $Id: dhcpd.8,v 1.18.2.10 2004/09/29 23:01:50 dhankins Exp $
+.\" $Id: dhcpd.8,v 1.18.2.11 2005/09/01 22:03:26 dhankins Exp $
 .\"
 .TH dhcpd 8
 .SH NAME
@@ -60,6 +60,10 @@ dhcpd - Dynamic Host Configuration Protocol Server
 [
 .B -lf
 .I lease-file
+]
+[
+.B -pf
+.I pid-file
 ]
 [
 .B -tf
@@ -193,8 +197,10 @@ LOG_DAEMON.
 .PP
 Dhcpd can be made to use an alternate configuration file with the
 .B -cf
-flag, or an alternate lease file with the
+flag, an alternate lease file with the
 .B -lf
+flag, or an alternate pid file with the
+.B -pf
 flag.   Because of the importance of using the same lease database at
 all times when running dhcpd in production, these options should be
 used \fBonly\fR for testing lease files or database files in a
