@@ -33,7 +33,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dns.c,v 1.35.2.18 2005/08/26 22:45:45 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dns.c,v 1.35.2.19 2005/09/07 15:11:00 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -522,7 +522,8 @@ isc_result_t ddns_update_a (struct data_string *ddns_fwd_name,
 	ns_updque updqueue;
 	ns_updrec *updrec;
 	isc_result_t result;
-	char ddns_address [16], *logstr;
+	char ddns_address [16];
+	const char *logstr;
 
 	if (ddns_addr.len != 4)
 		return ISC_R_INVALIDARG;
