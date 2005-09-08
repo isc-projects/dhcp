@@ -4,7 +4,7 @@
    Contributed in May of 1999 by Andrew Chittenden */
 
 /*
- * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2005 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -28,7 +28,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tr.c,v 1.7.2.2 2004/06/10 17:59:21 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: tr.c,v 1.7.2.3 2005/09/08 21:19:21 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -59,8 +59,8 @@ struct routing_entry {
         struct routing_entry *next;
         unsigned char addr[TR_ALEN];
         unsigned char iface[5];
-        __u16 rcf;                      /* route control field */
-        __u16 rseg[8];                  /* routing registers */
+        u_int16_t rcf;                      /* route control field */
+        u_int16_t rseg[8];                  /* routing registers */
         unsigned long access_time;      /* time we last used this entry */
 };
 
@@ -217,7 +217,7 @@ static int insert_source_routing (trh, interface)
 		if (rover != NULL) {
                         /* success: route that frame */
                         if ((rover->rcf & TR_RCF_LEN_MASK) >> 8) {
-                                __u16 rcf = rover->rcf;
+                                u_int16_t rcf = rover->rcf;
 				memcpy(trh->rseg,rover->rseg,sizeof(trh->rseg));
 				rcf ^= TR_RCF_DIR_BIT;	
 				rcf &= ~TR_RCF_BROADCAST_MASK;
@@ -254,7 +254,7 @@ static void save_source_routing(trh, interface)
         struct routing_entry *rover;
         struct timeval now;
         unsigned char saddr[TR_ALEN];
-        __u16 rcf = 0;
+        u_int16_t rcf = 0;
 
         gettimeofday(&now, NULL);
 

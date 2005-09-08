@@ -72,6 +72,9 @@ and for prodding me into improving it.
   memory to zero.  Code that memset()'s the result returned by dmalloc() to
   zero is redundant.  These redundancies were removed.
 
+- Some type declaration corrections to u_int16_t were made in common/tr.c
+  (Token Ring support) thanks to a patch from Jason Vas Dias at RedHat.
+
 			Changes since 3.0.3b3
 
 - dhclient.conf documentation for interface {} was updated to reflect recent
