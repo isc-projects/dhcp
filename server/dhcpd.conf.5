@@ -28,7 +28,7 @@
 .\" see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
 .\" ``http://www.nominum.com''.
 .\"
-.\" $Id: dhcpd.conf.5,v 1.63.2.27 2005/05/02 22:43:24 dhankins Exp $
+.\" $Id: dhcpd.conf.5,v 1.63.2.28 2005/09/12 15:01:47 dhankins Exp $
 .\"
 .TH dhcpd.conf 5
 .SH NAME
@@ -2108,9 +2108,7 @@ statement
 The \fInext-server\fR statement is used to specify the host address of
 the server from which the initial boot file (specified in the
 \fIfilename\fR statement) is to be loaded.   \fIServer-name\fR should
-be a numeric IP address or a domain name.   If no \fInext-server\fR
-parameter applies to a given client, the DHCP server's IP address is
-used.
+be a numeric IP address or a domain name.
 .RE
 .PP
 The
