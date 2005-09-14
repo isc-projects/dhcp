@@ -21,7 +21,7 @@
 .\"   <info@isc.org>
 .\"   http://www.isc.org/
 .\"
-.\" $Id: dhclient.8,v 1.12.2.10 2005/08/03 08:37:22 dhankins Exp $
+.\" $Id: dhclient.8,v 1.12.2.11 2005/09/14 16:03:33 dhankins Exp $
 .\"
 .TH dhclient 8
 .SH NAME
@@ -34,6 +34,10 @@ dhclient - Dynamic Host Configuration Protocol Client
 ]
 [
 .B -d
+]
+[
+.B -e
+.I VAR=value
 ]
 [
 .B -q
@@ -184,6 +188,15 @@ process, the
 flag should be specified.  This is useful when running the client
 under a debugger, or when running it out of inittab on System V
 systems.
+.PP
+The dhclient daemon creates its own environment when executing the
+dhclient-script to do the grunt work of interface configuration.
+To define extra environment variables and their values, use the
+.B -e
+flag, followed by the environment variable name and value assignment,
+just as one would assign a variable in a shell.  Eg:
+.B -e
+.I IF_METRIC=1
 .PP
 The client normally prints a startup message and displays the
 protocol sequence to the standard error descriptor until it has
