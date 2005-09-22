@@ -81,6 +81,10 @@ and for prodding me into improving it.
   databases should be kept more consistent overall, not just for these
   transitional states.
 
+- If the lease db is deleted out from under the daemon, and it moves to rewrite
+  the db, it will go ahead with the operation and move the new db into place
+  once it detects the old db does not exist.
+
 			Changes since 3.0.3b3
 
 - dhclient.conf documentation for interface {} was updated to reflect recent

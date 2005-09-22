@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: db.c,v 1.63.2.12 2005/09/22 16:19:59 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: db.c,v 1.63.2.13 2005/09/22 16:22:31 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -859,10 +859,15 @@ int new_lease_file ()
 			   backfname);
 		goto fail;
 	    }
-	    if (link (path_dhcpd_db, backfname) < 0) {
-		log_error ("Can't backup lease database %s to %s: %m",
-			   path_dhcpd_db, backfname);
-		goto fail;
+	    if (link(path_dhcpd_db, backfname) < 0) {
+		if (errno == ENOENT) {
+			log_error("%s is missing - no lease db to backup.",
+				  path_dhcpd_db);
+		} else {
+			log_error("Can't backup lease database %s to %s: %m",
+				  path_dhcpd_db, backfname);
+			goto fail;
+		}
 	    }
 #if defined (TRACING)
 	}
