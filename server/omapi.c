@@ -41,7 +41,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: omapi.c,v 1.46.2.20 2005/08/26 22:45:50 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: omapi.c,v 1.46.2.21 2005/09/22 16:20:00 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -645,6 +645,17 @@ isc_result_t dhcp_lease_stuff_values (omapi_object_t *c,
 	status = (omapi_connection_copyin
 		  (c,
 		   (const unsigned char *)&(lease -> tsfp), sizeof (TIME)));
+	if (status != ISC_R_SUCCESS)
+		return status;
+
+	status = omapi_connection_put_name(c, "atsfp");
+	if (status != ISC_R_SUCCESS)
+		return status;
+	status = omapi_connection_put_uint32(c, sizeof(TIME));
+	if (status != ISC_R_SUCCESS)
+		return status;
+	status = omapi_connection_copyin(c,
+			(const unsigned char *)&(lease->atsfp), sizeof(TIME));
 	if (status != ISC_R_SUCCESS)
 		return status;
 

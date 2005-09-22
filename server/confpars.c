@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.143.2.25 2005/08/26 22:45:49 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.143.2.26 2005/09/22 16:19:58 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2594,6 +2594,11 @@ int parse_lease_declaration (struct lease **lp, struct parse *cfile)
 			      case TSFP:
 				seenbit = 131072;
 				lease -> tsfp = t;
+				break;
+
+			      case ATSFP:
+				seenbit = 262144;
+				lease->atsfp = t;
 				break;
 				
 			      case CLTT:

@@ -75,6 +75,12 @@ and for prodding me into improving it.
 - Some type declaration corrections to u_int16_t were made in common/tr.c
   (Token Ring support) thanks to a patch from Jason Vas Dias at RedHat.
 
+- A failover bug that was allowing leases that EXPIRED or were RELEASED
+  where tsfp and tstp are identical timestamps to languish in these
+  transitional states has been repaired.  As a side effect, lease
+  databases should be kept more consistent overall, not just for these
+  transitional states.
+
 			Changes since 3.0.3b3
 
 - dhclient.conf documentation for interface {} was updated to reflect recent

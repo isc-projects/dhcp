@@ -28,7 +28,7 @@
 .\" see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
 .\" ``http://www.nominum.com''.
 .\"
-.\" $Id: dhcpd.8,v 1.18.2.11 2005/09/01 22:03:26 dhankins Exp $
+.\" $Id: dhcpd.8,v 1.18.2.12 2005/09/22 16:19:59 dhankins Exp $
 .\"
 .TH dhcpd 8
 .SH NAME
@@ -469,9 +469,16 @@ server.
 .RE
 .B tsfp \fItime\fR examine
 .RS 0.5i
-the time when the lease's current state ends, as understood by the
-failover peer (if there is no failover peer, this value is
-undefined).
+the adjusted time when the lease's current state ends, as understood by
+the failover peer (if there is no failover peer, this value is
+undefined).  Generally this value is only adjusted for expired, released,
+or reset leases while the server is operating in partner-down state, and
+otherwise is simply the value supplied by the peer.
+.RE
+.B atsfp \fItime\fR examine
+.RS 0.5i
+the actual tsfp value sent from the peer.  This value is forgotten when a
+lease binding state change is made, to facillitate retransmission logic.
 .RE
 .PP
 .B cltt \fItime\fR examine

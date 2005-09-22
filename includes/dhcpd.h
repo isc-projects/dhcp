@@ -311,8 +311,15 @@ struct lease {
 	
 	struct lease_state *state;
 
+	/* 'tsfp' is more of an 'effective' tsfp.  It may be calculated from
+	 * stos+mclt for example if it's an expired lease and the server is
+	 * in partner-down state.  'atsfp' is zeroed whenever a lease is
+	 * updated - and only set when the peer acknowledges it.  This
+	 * ensures every state change is transmitted.
+	 */
 	TIME tstp;	/* Time sent to partner. */
 	TIME tsfp;	/* Time sent from partner. */
+	TIME atsfp;	/* Actual time sent from partner. */
 	TIME cltt;	/* Client last transaction time. */
 	struct lease *next_pending;
 };

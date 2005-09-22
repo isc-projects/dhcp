@@ -3,7 +3,7 @@
    Persistent database management routines for DHCPD... */
 
 /*
- * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2005 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: db.c,v 1.63.2.11 2004/06/17 20:54:40 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: db.c,v 1.63.2.12 2005/09/22 16:19:59 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -132,6 +132,14 @@ int write_lease (lease)
 		if (errno) {
 			++errors;
 		}
+	}
+	if (lease->atsfp) {
+		t = gmtime(&lease->atsfp);
+		if (fprintf(db_file,
+			    "\n  atsfp %d %d/%02d/%02d %02d:%02d:%02d;",
+			    t->tm_wday, t->tm_year + 1900, t->tm_mon + 1,
+			    t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec) <= 0)
+			++errors;
 	}
 	if (lease -> cltt) {
 		t = gmtime (&lease -> cltt);

@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.67.2.22 2005/03/03 16:55:25 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.67.2.23 2005/09/22 16:19:59 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -851,7 +851,7 @@ int supersede_lease (comp, lease, commit, propogate, pimmediate)
 		comp -> uid = (unsigned char *)0;
 	} else
 		enter_uid = 1;
-	
+
 	if (comp -> hardware_addr.hlen &&
 	    ((comp -> hardware_addr.hlen !=
 	      lease -> hardware_addr.hlen) ||
@@ -862,7 +862,7 @@ int supersede_lease (comp, lease, commit, propogate, pimmediate)
 		enter_hwaddr = 1;
 	} else if (!comp -> hardware_addr.hlen)
 		enter_hwaddr = 1;
-	
+
 	/* If the lease has been billed to a class, remove the billing. */
 	if (comp -> billing_class != lease -> billing_class) {
 		if (comp -> billing_class)
@@ -949,24 +949,29 @@ int supersede_lease (comp, lease, commit, propogate, pimmediate)
 		executable_statement_reference (&comp -> on_release,
 						lease -> on_release, MDL);
 	}
-	
+
 	/* Record the lease in the uid hash if necessary. */
 	if (enter_uid && comp -> uid) {
 		uid_hash_add (comp);
 	}
-	
+
 	/* Record it in the hardware address hash if necessary. */
 	if (enter_hwaddr && lease -> hardware_addr.hlen) {
 		hw_hash_add (comp);
 	}
-	
+
 #if defined (FAILOVER_PROTOCOL)
-	comp -> cltt = lease -> cltt;
-	comp -> tstp = lease -> tstp;
-	comp -> tsfp = lease -> tsfp;
+	comp->cltt = lease->cltt;
+	comp->tstp = lease->tstp;
+	comp->tsfp = lease->tsfp;
+	/* If this lease update is transmitted, reduce atsfp to zero. */
+	if (propogate)
+		comp->atsfp = 0;
+	else
+		comp->atsfp = lease->atsfp;
 #endif /* FAILOVER_PROTOCOL */
-	comp -> ends = lease -> ends;
-	comp -> next_binding_state = lease -> next_binding_state;
+	comp->ends = lease->ends;
+	comp->next_binding_state = lease->next_binding_state;
 
       just_move_it:
 	if (!comp -> pool) {
@@ -1012,6 +1017,7 @@ int supersede_lease (comp, lease, commit, propogate, pimmediate)
 
 	/* Remove the lease from its current place in its current
 	   timer sequence. */
+	/* XXX this is horrid. */
 	prev = (struct lease *)0;
 	for (lp = *lq; lp; lp = lp -> next) {
 		if (lp == comp)
@@ -1328,14 +1334,15 @@ int lease_copy (struct lease **lp,
 		executable_statement_reference (&lt -> on_release,
 						lease -> on_release,
 						file, line);
-	lt -> flags = lease -> flags;
-	lt -> tstp = lease -> tstp;
-	lt -> tsfp = lease -> tsfp;
-	lt -> cltt = lease -> cltt;
-	lt -> binding_state = lease -> binding_state;
-	lt -> next_binding_state = lease -> next_binding_state;
-	status = lease_reference (lp, lt, file, line);
-	lease_dereference (&lt, MDL);
+	lt->flags = lease->flags;
+	lt->tstp = lease->tstp;
+	lt->tsfp = lease->tsfp;
+	lt->atsfp = lease->atsfp;
+	lt->cltt = lease -> cltt;
+	lt->binding_state = lease->binding_state;
+	lt->next_binding_state = lease->next_binding_state;
+	status = lease_reference(lp, lt, file, line);
+	lease_dereference(&lt, MDL);
 	return status == ISC_R_SUCCESS;
 }
 
@@ -2001,7 +2008,7 @@ void expire_all_pools ()
 			}
 #if defined (FAILOVER_PROTOCOL)
 			if (p -> failover_peer &&
-			    l -> tstp > l -> tsfp &&
+			    l -> tstp > l -> atsfp &&
 			    !(l -> flags & ON_UPDATE_QUEUE)) {
 				l -> desired_binding_state = l -> binding_state;
 				dhcp_failover_queue_update (l, 1);
