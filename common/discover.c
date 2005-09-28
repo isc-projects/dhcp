@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: discover.c,v 1.42.2.18 2005/08/26 22:45:45 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: discover.c,v 1.42.2.19 2005/09/28 18:58:27 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -461,6 +461,18 @@ void discover_interfaces (state)
 #endif
 #ifdef HAVE_ARPHRD_ROSE
 		      case ARPHRD_ROSE:
+#endif
+#ifdef HAVE_ARPHRD_IRDA
+		     case ARPHRD_IRDA:
+			/* ignore infrared interfaces. */
+#endif
+#ifdef HAVE_ARPHRD_SIT
+		     case ARPHRD_SIT:
+			/* ignore IPv6-in-IPv4 interfaces. */
+#endif
+#ifdef HAVE_ARPHRD_IEEE1394
+		     case ARPHRD_IEEE1394:
+			/* ignore IEEE1394 interfaces. */
 #endif
 #ifdef HAVE_ARPHRD_LOOPBACK
 		      case ARPHRD_LOOPBACK:

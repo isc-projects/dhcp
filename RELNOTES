@@ -85,6 +85,10 @@ and for prodding me into improving it.
   the db, it will go ahead with the operation and move the new db into place
   once it detects the old db does not exist.
 
+- dhclient now ignores IRDA, SIT, and IEEE1394 network interfaces, as it
+  is either nonsensical or (in the case of IEEE1394) is not known to support
+  these interfaces.  Thanks to Marius Gedminas and Andrew Pollock of Debian.
+
 			Changes since 3.0.3b3
 
 - dhclient.conf documentation for interface {} was updated to reflect recent
