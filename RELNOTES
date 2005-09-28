@@ -89,6 +89,9 @@ and for prodding me into improving it.
   is either nonsensical or (in the case of IEEE1394) is not known to support
   these interfaces.  Thanks to Marius Gedminas and Andrew Pollock of Debian.
 
+- Some previously undocumented reasons for dhclient-script invoking has
+  been doucmented in the dhclient-script.8 manpage.
+
 			Changes since 3.0.3b3
 
 - dhclient.conf documentation for interface {} was updated to reflect recent
