@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: hash.c,v 1.5 2005/03/17 20:15:22 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: hash.c,v 1.6 2005/09/30 17:57:32 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include <omapip/omapip_p.h>
@@ -380,7 +380,9 @@ int hash_foreach (struct hash_table *table, hash_foreach_func func)
 		bp = table -> buckets [i];
 		while (bp) {
 			next = bp -> next;
-			(*func) (bp -> name, bp -> len, bp -> value);
+			if ((*func)(bp->name, bp->len, bp->value)
+							!= ISC_R_SUCCESS)
+				return count;
 			bp = next;
 			count++;
 		}

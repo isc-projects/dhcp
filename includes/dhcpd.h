@@ -600,6 +600,12 @@ struct collection {
 	struct class *classes;
 };
 
+/* Used as an argument to parse_clasS_decl() */
+#define CLASS_TYPE_VENDOR	0
+#define CLASS_TYPE_USER		1
+#define CLASS_TYPE_CLASS	2
+#define CLASS_TYPE_SUBCLASS	3
+
 /* XXX classes must be reference-counted. */
 struct class {
 	OMAPI_OBJECT_PREAMBLE;
@@ -1917,7 +1923,8 @@ int write_failover_state (dhcp_failover_state_t *);
 #endif
 int db_printable PROTO ((const char *));
 int db_printable_len PROTO ((const unsigned char *, unsigned));
-void write_named_billing_class (const char *, unsigned, struct class *);
+isc_result_t write_named_billing_class(const unsigned char *, unsigned,
+				       void *);
 void write_billing_classes (void);
 int write_billing_class PROTO ((struct class *));
 void commit_leases_timeout PROTO ((void *));
@@ -2460,7 +2467,7 @@ void hw_hash_add PROTO ((struct lease *));
 void hw_hash_delete PROTO ((struct lease *));
 int write_leases PROTO ((void));
 int lease_enqueue (struct lease *);
-void lease_instantiate (const unsigned char *, unsigned, struct lease *);
+isc_result_t lease_instantiate(const unsigned char *, unsigned, void *);
 void expire_all_pools PROTO ((void));
 void dump_subnets PROTO ((void));
 #if defined (DEBUG_MEMORY_LEAKAGE) || \

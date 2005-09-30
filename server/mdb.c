@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.72 2005/03/17 20:15:28 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.73 2005/09/30 17:57:32 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -59,6 +59,10 @@ isc_result_t enter_class(cd, dynamicp, commit)
 	int commit;
 {
 	if (!collections -> classes) {
+		/* A subclass with no parent is invalid. */
+		if (cd->name == NULL)
+			return ISC_R_INVALIDARG;
+
 		class_reference (&collections -> classes, cd, MDL);
 	} else if (cd->name != NULL) {	/* regular class */
 		struct class *c = 0;
@@ -68,6 +72,7 @@ isc_result_t enter_class(cd, dynamicp, commit)
 			return ISC_R_EXISTS;
 		}
 		
+		/* Find the tail. */
 		for (c = collections -> classes;
 		     c -> nic; c = c -> nic)
 			/* nothing */ ;
@@ -1995,9 +2000,10 @@ int lease_enqueue (struct lease *comp)
    in each appropriate hash, understanding that it's already by definition
    in lease_ip_addr_hash. */
 
-void lease_instantiate (const unsigned char *val, unsigned len,
-			struct lease *lease)
+isc_result_t
+lease_instantiate(const unsigned char *val, unsigned len, void *object)
 {
+	struct lease *lease = object;
 	struct class *class;
 	/* XXX If the lease doesn't have a pool at this point, it's an
 	   XXX orphan, which we *should* keep around until it expires,
@@ -2006,22 +2012,28 @@ void lease_instantiate (const unsigned char *val, unsigned len,
 		lease_hash_delete (lease_ip_addr_hash,
 				   lease -> ip_addr.iabuf,
 				   lease -> ip_addr.len, MDL);
-		return;
+		return ISC_R_SUCCESS;
 	}
 		
-	/* Put the lease on the right queue. */
-	lease_enqueue (lease);
+	/* Put the lease on the right queue.  Failure to queue is probably
+	 * due to a bogus binding state.  In such a case, we claim success,
+	 * so that later leases in a hash_foreach are processed, but we
+	 * return early as we really don't want hw address hash entries or
+	 * other cruft to surround such a bogus entry.
+	 */
+	if (!lease_enqueue(lease))
+		return ISC_R_SUCCESS;
 
 	/* Record the lease in the uid hash if possible. */
 	if (lease -> uid) {
 		uid_hash_add (lease);
 	}
-	
+
 	/* Record it in the hardware address hash if possible. */
 	if (lease -> hardware_addr.hlen) {
 		hw_hash_add (lease);
 	}
-	
+
 	/* If the lease has a billing class, set up the billing. */
 	if (lease -> billing_class) {
 		class = (struct class *)0;
@@ -2036,7 +2048,7 @@ void lease_instantiate (const unsigned char *val, unsigned len,
 			bill_class (lease, class);
 		class_dereference (&class, MDL);
 	}
-	return;
+	return ISC_R_SUCCESS;
 }
 
 /* Run expiry events on every pool.   This is called on startup so that

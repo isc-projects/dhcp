@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: db.c,v 1.68 2005/03/17 20:15:26 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: db.c,v 1.69 2005/09/30 17:57:32 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -610,102 +610,115 @@ int db_printable_len (s, len)
 static int print_hash_string(FILE *fp, struct class *class)
 {
 	int i;
-	int errors = 0;
 
-	for (i = 0; i < class -> hash_string.len; i++)
-		if (!isascii (class -> hash_string.data [i]) ||
-		    !isprint (class -> hash_string.data [i]))
+	for (i = 0 ; i < class->hash_string.len ; i++)
+		if (!isascii(class->hash_string.data[i]) ||
+		    !isprint(class->hash_string.data[i]))
 			break;
 
-	if (i == class -> hash_string.len) {
-		errno = 0;
-		fprintf (fp, " \"%.*s\"",
-			 (int)class -> hash_string.len,
-			 class -> hash_string.data);
-		if (errno)
-			++errors;
-	} else {
-		errno = 0;
-		fprintf (fp, " %2.2x", class -> hash_string.data [0]);
-		if (errno)
-			++errors;
-		for (i = 1; i < class -> hash_string.len; i++) {
-			errno = 0;
-			fprintf (fp, ":%2.2x",
-				 class -> hash_string.data [i]);
-			if (errno)
-				++errors;
+	if (i == class->hash_string.len) {
+		if (fprintf(fp, " \"%.*s\"", (int)class->hash_string.len,
+			    class->hash_string.data) <= 0) {
+			log_error("Failure writing hash string: %m");
+			return 0;
 		}
-		errno = 0;
-		if (errno)
-			++errors;
+	} else {
+		if (fprintf(fp, " %2.2x", class->hash_string.data[0]) <= 0) {
+			log_error("Failure writing hash string: %m");
+			return 0;
+		}
+		for (i = 1 ; i < class->hash_string.len ; i++) {
+			if (fprintf(fp, ":%2.2x",
+				    class->hash_string.data[i]) <= 0) {
+				log_error("Failure writing hash string: %m");
+				return 0;
+			}
+		}
 	}
 
-	return !errors;
+	return 1;
 }
 
 
-	
-/* XXXJAB this needs to return non-zero on error. */
-void write_named_billing_class (const char *name, unsigned len,
-				struct class *class)
+isc_result_t
+write_named_billing_class(const unsigned char *name, unsigned len,
+			  void *object)
 {
+	struct class *class = object;
+
 	if (class->flags & CLASS_DECL_DYNAMIC) {
 		numclasseswritten++;
 		if (class->superclass == 0) {
-			fprintf(db_file, "class \"%s\" {\n", name);
+			if (fprintf(db_file, "class \"%s\" {\n", name) <= 0)
+				return ISC_R_IOERROR;
 		} else {
-			fprintf(db_file, "subclass \"%s\"",
-				class->superclass->name);
-			print_hash_string(db_file, class);
-			fprintf(db_file, " {\n");
+			if (fprintf(db_file, "subclass \"%s\"",
+				    class->superclass->name) <= 0)
+				return ISC_R_IOERROR;
+			if (!print_hash_string(db_file, class))
+				return ISC_R_IOERROR;
+			if (fprintf(db_file, " {\n") <= 0)
+				return ISC_R_IOERROR;
 		}
 
 		if ((class->flags & CLASS_DECL_DELETED) != 0) {
-			fprintf(db_file, "  deleted;\n");
+			if (fprintf(db_file, "  deleted;\n") <= 0)
+				return ISC_R_IOERROR;
 		} else {
-			fprintf(db_file, "  dynamic;\n");
+			if (fprintf(db_file, "  dynamic;\n") <= 0)
+				return ISC_R_IOERROR;
 		}
 	
 		if (class->lease_limit > 0) {
-			fprintf(db_file, "  lease limit %d;\n", class->lease_limit);
+			if (fprintf(db_file, "  lease limit %d;\n",
+				    class->lease_limit) <= 0)
+				return ISC_R_IOERROR;
 		}
 
 		if (class->expr != 0) {
-			fprintf(db_file, "  match if ");
+			if (fprintf(db_file, "  match if ") <= 0)
+				return ISC_R_IOERROR;
 			write_expression(db_file, class->expr, 5, 5, 0);
-			fprintf(db_file, ";\n");
+			if (fprintf(db_file, ";\n") <= 0)
+				return ISC_R_IOERROR;
 		}
 
 		if (class->submatch != 0) {
 			if (class->spawning) {
-				fprintf(db_file, "  spawn ");
+				if (fprintf(db_file, "  spawn ") <= 0)
+					return ISC_R_IOERROR;
 			} else {
-				fprintf(db_file, "  match ");
+				if (fprintf(db_file, "  match ") <= 0)
+					return ISC_R_IOERROR;
 			}
 
 			write_expression(db_file, class->submatch, 5, 5, 0);
-			fprintf(db_file, ";\n");
+			if (fprintf(db_file, ";\n") <= 0)
+				return ISC_R_IOERROR;
 		}
 	
 		if (class->statements != 0) {
 			write_statements(db_file, class->statements, 8);
 		}
 
-		/* XXXJAB this isn't right, but classes read in off the leases file
-		   don't get the root group assigned to them (due to clone_group()
-		   call). */
-		if (class->group != 0 && class->group->authoritative != 0) {
-			write_statements (db_file,
-					  class -> group -> statements, 8);
-		}
+		/* XXXJAB this isn't right, but classes read in off the
+		   leases file don't get the root group assigned to them
+		   (due to clone_group() call). */
+		if (class->group != 0 && class->group->authoritative != 0)
+			write_statements(db_file, class->group->statements, 8);
 	
-		fprintf(db_file, "}\n\n");
+		if (fprintf(db_file, "}\n\n") <= 0)
+			return ISC_R_IOERROR;
 	}
 	
-	if (class -> hash != NULL) {	/* yep. recursive. god help us. */
-		class_hash_foreach (class -> hash, write_named_billing_class);
+	if (class->hash != NULL) {	/* yep. recursive. god help us. */
+		/* XXX - cannot check error status of this...
+		 * foo_hash_foreach returns a count of operations completed.
+		 */
+		class_hash_foreach(class->hash, write_named_billing_class);
 	}
+
+	return ISC_R_SUCCESS;
 }
 
 void write_billing_classes ()
@@ -748,39 +761,8 @@ int write_billing_class (class)
 	if (errno)
 		++errors;
 
-#if 0
-	for (i = 0; i < class -> hash_string.len; i++)
-		if (!isascii (class -> hash_string.data [i]) ||
-		    !isprint (class -> hash_string.data [i]))
-			break;
-	if (i == class -> hash_string.len) {
-		errno = 0;
-		fprintf (db_file, " \"%.*s\";",
-			 (int)class -> hash_string.len,
-			 class -> hash_string.data);
-		if (errno)
-			++errors;
-	} else {
-		errno = 0;
-		fprintf (db_file, " %2.2x", class -> hash_string.data [0]);
-		if (errno)
-			++errors;
-		for (i = 1; i < class -> hash_string.len; i++) {
-			errno = 0;
-			fprintf (db_file, ":%2.2x",
-				 class -> hash_string.data [i]);
-			if (errno)
-				++errors;
-		}
-		errno = 0;
-		fprintf (db_file, ";");
-		if (errno)
-			++errors;
-	}
-#else
 	print_hash_string(db_file, class);
 	fprintf(db_file, ";");
-#endif
 
 	class -> dirty = !errors;
 	if (errors)

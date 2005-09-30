@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.148 2005/03/17 20:15:26 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.149 2005/09/30 17:57:32 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -268,9 +268,11 @@ isc_result_t lease_file_subparse (struct parse *cfile)
 				parse_warn (cfile,
 					    "possibly corrupt lease file");
 		} else if (token == CLASS) {
-			parse_class_declaration (0, cfile, root_group, 2);
+			parse_class_declaration(0, cfile, root_group,
+						CLASS_TYPE_CLASS);
 		} else if (token == SUBCLASS) {
-			parse_class_declaration (0, cfile, root_group, 3);
+			parse_class_declaration(0, cfile, root_group,
+						CLASS_TYPE_SUBCLASS);
 		} else if (token == HOST) {
 			parse_host_declaration (cfile, root_group);
 		} else if (token == GROUP) {
@@ -464,7 +466,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 			skip_to_semi (cfile);
 			break;
 		}
-		parse_class_declaration ((struct class **)0, cfile, group, 0);
+		parse_class_declaration(NULL, cfile, group, CLASS_TYPE_VENDOR);
 		return 1;
 
 	      case USER_CLASS:
@@ -475,7 +477,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 			skip_to_semi (cfile);
 			break;
 		}
-		parse_class_declaration ((struct class **)0, cfile, group, 1);
+		parse_class_declaration(NULL, cfile, group, CLASS_TYPE_USER);
 		return 1;
 
 	      case CLASS:
@@ -486,7 +488,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 			skip_to_semi (cfile);
 			break;
 		}
-		parse_class_declaration ((struct class **)0, cfile, group, 2);
+		parse_class_declaration(NULL, cfile, group, CLASS_TYPE_CLASS);
 		return 1;
 
 	      case SUBCLASS:
@@ -497,7 +499,8 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 			skip_to_semi (cfile);
 			break;
 		}
-		parse_class_declaration ((struct class **)0, cfile, group, 3);
+		parse_class_declaration(NULL, cfile, group,
+					CLASS_TYPE_SUBCLASS);
 		return 1;
 
 	      case HARDWARE:
@@ -1828,8 +1831,8 @@ int parse_class_declaration (cp, cfile, group, type)
 	struct expression *expr;
 	int new = 1;
 	isc_result_t status = ISC_R_FAILURE;
-	int deleted = 0;
-	int dynamic = 0;
+	int matchedonce = 0;
+	int submatchedonce = 0;
 
 	token = next_token (&val, (unsigned *)0, cfile);
 	if (token != STRING) {
@@ -1841,18 +1844,17 @@ int parse_class_declaration (cp, cfile, group, type)
 	/* See if there's already a class with the specified name. */
 	find_class (&pc, val, MDL);
 
-	/* If this isn't a subclass, we're updating an existing class. */
-	if (pc && type != 0 && type != 1 && type != 3) {
-		class_reference (&class, pc, MDL);
+	/* If it is a class, we're updating it.  If it's any of the other
+	 * types (subclass, vendor or user class), the named class is a
+	 * reference to the parent class so its mandatory.
+	 */
+	if (pc && (type == CLASS_TYPE_CLASS)) {
+		class_reference(&class, pc, MDL);
 		new = 0;
-		class_dereference (&pc, MDL);
-	}
-
-	/* If this _is_ a subclass, there _must_ be a class with the
-	   same name. */
-	if (!pc && (type == 0 || type == 1 || type == 3)) {
-		parse_warn (cfile, "no class named %s", val);
-		skip_to_semi (cfile);
+		class_dereference(&pc, MDL);
+	} else if (!pc && (type != CLASS_TYPE_CLASS)) {
+		parse_warn(cfile, "no class named %s", val);
+		skip_to_semi(cfile);
 		return 0;
 	}
 
@@ -1863,7 +1865,7 @@ int parse_class_declaration (cp, cfile, group, type)
 	   are turned into subclasses of the implicit classes, and the
 	   submatch expression of the implicit classes extracts the contents of
 	   the vendor class or user class. */
-	if (type == 0 || type == 1) {
+	if ((type == CLASS_TYPE_VENDOR) || (type == CLASS_TYPE_USER)) {
 		data.len = strlen (val);
 		data.buffer = (struct buffer *)0;
 		if (!buffer_allocate (&data.buffer, data.len + 1, MDL))
@@ -1872,7 +1874,7 @@ int parse_class_declaration (cp, cfile, group, type)
 		data.terminated = 1;
 
 		tname = type ? "implicit-vendor-class" : "implicit-user-class";
-	} else if (type == 2) {
+	} else if (type == CLASS_TYPE_CLASS) {
 		tname = val;
 	} else {
 		tname = (const char *)0;
@@ -1887,7 +1889,7 @@ int parse_class_declaration (cp, cfile, group, type)
 		name = (char *)0;
 
 	/* If this is a straight subclass, parse the hash string. */
-	if (type == 3) {
+	if (type == CLASS_TYPE_SUBCLASS) {
 		token = peek_token (&val, (unsigned *)0, cfile);
 		if (token == STRING) {
 			token = next_token (&val, &data.len, cfile);
@@ -1906,7 +1908,8 @@ int parse_class_declaration (cp, cfile, group, type)
 		} else if (token == NUMBER_OR_NAME || token == NUMBER) {
 			memset (&data, 0, sizeof data);
 			if (!parse_cshl (&data, cfile)) {
-				class_dereference (&pc, MDL);
+				if (pc)
+					class_dereference (&pc, MDL);
 				return 0;
 			}
 		} else {
@@ -1919,7 +1922,7 @@ int parse_class_declaration (cp, cfile, group, type)
 
 	/* See if there's already a class in the hash table matching the
 	   hash data. */
-	if (type == 0 || type == 1 || type == 3)
+	if (type != CLASS_TYPE_CLASS)
 		class_hash_lookup (&class, pc -> hash,
 				   (const char *)data.data, data.len, MDL);
 
@@ -1950,6 +1953,8 @@ int parse_class_declaration (cp, cfile, group, type)
 					class -> hash_string.len,
 					(void *)class, MDL);
 		} else {
+			if (class->group)
+				group_dereference(&class->group, MDL);
 			if (!clone_group (&class -> group, group, MDL))
 				log_fatal ("no memory to clone class group.");
 		}
@@ -1957,7 +1962,7 @@ int parse_class_declaration (cp, cfile, group, type)
 		/* If this is an implicit vendor or user class, add a
 		   statement that causes the vendor or user class ID to
 		   be sent back in the reply. */
-		if (type == 0 || type == 1) {
+		if (type == CLASS_TYPE_VENDOR || type == CLASS_TYPE_USER) {
 			stmt = (struct executable_statement *)0;
 			if (!executable_statement_allocate (&stmt, MDL))
 				log_fatal ("no memory for class statement.");
@@ -1967,7 +1972,7 @@ int parse_class_declaration (cp, cfile, group, type)
 				stmt -> data.option -> data = data;
 				stmt -> data.option -> option =
 					dhcp_universe.options
-					[type
+					[(type == CLASS_TYPE_VENDOR)
 					? DHO_VENDOR_CLASS_IDENTIFIER
 					: DHO_USER_CLASS];
 			}
@@ -1975,11 +1980,13 @@ int parse_class_declaration (cp, cfile, group, type)
 		}
 
 		/* Save the name, if there is one. */
-		class -> name = name;
+		if (class->name != NULL)
+			dfree(class->name, MDL);
+		class->name = name;
 	}
 
-	if (type == 0 || type == 1 || type == 3)
-		data_string_forget (&data, MDL);
+	if (type != CLASS_TYPE_CLASS)
+		data_string_forget(&data, MDL);
 
 	/* Spawned classes don't have to have their own settings. */
 	if (class -> superclass) {
@@ -2016,13 +2023,13 @@ int parse_class_declaration (cp, cfile, group, type)
 			parse_warn (cfile, "unexpected end of file");
 			break;
 		} else if (token == DYNAMIC) {
-			dynamic = 1;
+			class->flags |= CLASS_DECL_DYNAMIC;
 			token = next_token (&val, (unsigned *)0, cfile);
 			if (!parse_semi (cfile))
 				break;
 			continue;
 		} else if (token == TOKEN_DELETED) {
-			deleted = 1;
+			class->flags |= CLASS_DECL_DELETED;
 			token = next_token (&val, (unsigned *)0, cfile);
 			if (!parse_semi (cfile))
 				break;
@@ -2038,13 +2045,17 @@ int parse_class_declaration (cp, cfile, group, type)
 			token = peek_token (&val, (unsigned *)0, cfile);
 			if (token != IF)
 				goto submatch;
-			if (class -> expr) {
-				parse_warn (cfile, "can't override match.");
-				skip_to_semi (cfile);
+			token = next_token (&val, (unsigned *)0, cfile);
+			if (matchedonce) {
+				parse_warn(cfile, "A class may only have "
+						  "one 'match if' clause.");
+				skip_to_semi(cfile);
 				break;
 			}
-			token = next_token (&val, (unsigned *)0, cfile);
-			if (!parse_boolean_expression (&class -> expr, cfile,
+			matchedonce = 1;
+			if (class->expr)
+				expression_dereference(&class->expr, MDL);
+			if (!parse_boolean_expression (&class->expr, cfile,
 						       &lose)) {
 				if (!lose) {
 					parse_warn (cfile,
@@ -2059,13 +2070,13 @@ int parse_class_declaration (cp, cfile, group, type)
 				parse_semi (cfile);
 			}
 		} else if (token == SPAWN) {
+			token = next_token (&val, (unsigned *)0, cfile);
 			if (pc) {
 				parse_warn (cfile,
 					    "invalid spawn in subclass.");
 				skip_to_semi (cfile);
 				break;
 			}
-			token = next_token (&val, (unsigned *)0, cfile);
 			class -> spawning = 1;
 			token = next_token (&val, (unsigned *)0, cfile);
 			if (token != WITH) {
@@ -2075,13 +2086,16 @@ int parse_class_declaration (cp, cfile, group, type)
 				break;
 			}
 		      submatch:
-			if (class -> submatch) {
+			if (submatchedonce) {
 				parse_warn (cfile,
 					    "can't override existing %s.",
 					    "submatch/spawn");
 				skip_to_semi (cfile);
 				break;
 			}
+			submatchedonce = 1;
+			if (class->submatch)
+				expression_dereference(&class->submatch, MDL);
 			if (!parse_data_expression (&class -> submatch,
 						    cfile, &lose)) {
 				if (!lose) {
@@ -2113,6 +2127,8 @@ int parse_class_declaration (cp, cfile, group, type)
 				break;
 			}
 			class -> lease_limit = atoi (val);
+			if (class->billed_leases)
+				dfree(class->billed_leases, MDL);
 			class -> billed_leases =
 				dmalloc (class -> lease_limit *
 					 sizeof (struct lease *), MDL);
@@ -2131,19 +2147,21 @@ int parse_class_declaration (cp, cfile, group, type)
 		}
 	} while (1);
 
-	if (deleted) {
-		struct class *theclass = 0;
+	if (class->flags & CLASS_DECL_DELETED) {
+		if (type == CLASS_TYPE_CLASS) {
+			struct class *theclass = NULL;
 		
-		status = find_class(&theclass, class->name, MDL);
-		if (status == ISC_R_SUCCESS) {
-			delete_class(theclass, 0);
-			class_dereference(&theclass, MDL);
+			status = find_class(&theclass, class->name, MDL);
+			if (status == ISC_R_SUCCESS) {
+				delete_class(theclass, 0);
+				class_dereference(&theclass, MDL);
+			}
+		} else {
+			class_hash_delete(pc->hash,
+					  (char *)class->hash_string.data,
+					  class->hash_string.len, MDL);
 		}
-	} else if (type == 2 && new) {
-		if (dynamic) {
-			class->flags |= CLASS_DECL_DYNAMIC;
-		}
-		
+	} else if (type == CLASS_TYPE_CLASS && new) {
 		if (!collections -> classes)
 			class_reference (&collections -> classes, class, MDL);
 		else {
@@ -2153,10 +2171,8 @@ int parse_class_declaration (cp, cfile, group, type)
 				;
 			class_reference (&c -> nic, class, MDL);
 		}
-	} else if (type == 3 && dynamic) {
-		class->flags |= CLASS_DECL_DYNAMIC;
 	}
-		
+
 	if (cp)				/* should always be 0??? */
 		status = class_reference (cp, class, MDL);
 	class_dereference (&class, MDL);
@@ -2851,9 +2867,8 @@ int parse_lease_declaration (struct lease **lp, struct parse *cfile)
 				if (lease -> billing_class)
 				    class_dereference (&lease -> billing_class,
 						       MDL);
-				parse_class_declaration
-					(&class,
-					 cfile, (struct group *)0, 3);
+				parse_class_declaration(&class, cfile, NULL,
+							CLASS_TYPE_SUBCLASS);
 			} else {
 				parse_warn (cfile, "expecting \"class\"");
 				if (token != SEMI)

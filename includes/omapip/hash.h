@@ -42,8 +42,8 @@ typedef struct {
 	int foo;
 } hashed_object_t;
 
-typedef void (*hash_foreach_func) (const unsigned char *,
-				   unsigned, hashed_object_t *);
+typedef isc_result_t (*hash_foreach_func)(const unsigned char *, unsigned,
+					  void *);
 typedef int (*hash_reference) (hashed_object_t **, hashed_object_t *,
 			       const char *, int);
 typedef int (*hash_dereference) (hashed_object_t **, const char *, int);
@@ -79,8 +79,7 @@ void name##_hash_delete (hashtype *, bufarg, unsigned,			      \
 			 const char *, int);				      \
 int name##_hash_lookup (type **, hashtype *, bufarg, unsigned,		      \
 			const char *, int);				      \
-int name##_hash_foreach (hashtype *,					      \
-			 void (*) (bufarg, unsigned, type *));		      \
+int name##_hash_foreach (hashtype *, hash_foreach_func);		      \
 int name##_new_hash (hashtype **, int, const char *, int);		      \
 void name##_free_hash_table (hashtype **, const char *, int);
 
@@ -111,11 +110,10 @@ int name##_hash_lookup (type **ptr, hashtype *table,			      \
 			    (const unsigned char *)buf, len, file, line);     \
 }									      \
 									      \
-int name##_hash_foreach (hashtype *table,				      \
-			 void (*func) (bufarg, unsigned, type *))	      \
+int name##_hash_foreach (hashtype *table, hash_foreach_func func)	      \
 {									      \
 	return hash_foreach ((struct hash_table *)table,		      \
-			     (hash_foreach_func)func);			      \
+			     func);					      \
 }									      \
 									      \
 int name##_new_hash (hashtype **tp, int c, const char *file, int line)	      \

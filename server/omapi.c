@@ -41,7 +41,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: omapi.c,v 1.53 2005/03/17 20:15:28 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: omapi.c,v 1.54 2005/09/30 17:57:32 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1727,88 +1727,83 @@ class_set_value (omapi_object_t *h,
 
 	class = (struct class *)h;
 
-	if (!omapi_ds_strcmp (name, "name")) {
+	if (!omapi_ds_strcmp(name, "name")) {
 		char *tname;
 
-		if (class -> name)
+		if (class->name)
 			return ISC_R_EXISTS;
 
-		if ((tname = dmalloc (value -> u.buffer.len+1, MDL)) == NULL) {
+		if ((tname = dmalloc(value->u.buffer.len + 1, MDL)) == NULL) {
 			return ISC_R_NOMEMORY;
 		}
-		
-		memcpy (tname, value -> u.buffer.value, value -> u.buffer.len);
+
+		/* tname is null terminated from dmalloc() */
+		memcpy(tname, value->u.buffer.value, value->u.buffer.len);
 
 		if (issubclass) {
 			status = find_class(&superclass, tname, MDL);
 			dfree(tname, MDL);
-			
+
 			if (status == ISC_R_NOTFOUND)
 				return status;
-			
-			if (class -> superclass != 0) {
-				class_dereference(&class -> superclass, MDL);
-			}
-		
-			class_reference(&class -> superclass,
-					superclass, MDL);
+
+			if (class->superclass != NULL)
+				class_dereference(&class->superclass, MDL);
+
+			class_reference(&class->superclass, superclass, MDL);
 		} else if (value -> type == omapi_datatype_data ||
 			   value -> type == omapi_datatype_string) {
-			class -> name = dmalloc (value -> u.buffer.len+1,
-						 MDL);
-			if (!class -> name)
+			class->name = dmalloc(value->u.buffer.len + 1, MDL);
+			if (!class->name)
 				return ISC_R_NOMEMORY;
 
-			memcpy (class -> name,
-				value -> u.buffer.value,
-				value -> u.buffer.len);
-			class -> name [value -> u.buffer.len] = 0;
-		} else {
+			/* class->name is null-terminated from dmalloc() */
+			memcpy(class->name, value->u.buffer.value,
+			       value->u.buffer.len);
+		} else
 			return ISC_R_INVALIDARG;
-		}
-		
+
 		return ISC_R_SUCCESS;
 	}
 
 
 	if (issubclass && !omapi_ds_strcmp(name, "hashstring")) {
-		if (class -> hash_string.data)
+		if (class->hash_string.data)
 			return ISC_R_EXISTS;
-		
-		if (value -> type == omapi_datatype_data ||
-		    value -> type == omapi_datatype_string) {
-			if (!buffer_allocate (&class -> hash_string.buffer,
-					      value -> u.buffer.len, MDL))
+
+		if (value->type == omapi_datatype_data ||
+		    value->type == omapi_datatype_string) {
+			if (!buffer_allocate(&class->hash_string.buffer,
+					     value->u.buffer.len, MDL))
 				return ISC_R_NOMEMORY;
 			class->hash_string.data =
-				&class->hash_string.buffer -> data[0];
-			memcpy (class -> hash_string.buffer -> data,
-				value -> u.buffer.value,
-				value -> u.buffer.len);
-			class -> hash_string.len = value -> u.buffer.len;
+					class->hash_string.buffer->data;
+			memcpy(class->hash_string.data, value->u.buffer.value,
+			       value->u.buffer.len);
+			class->hash_string.len = value->u.buffer.len;
 		} else
-		    return ISC_R_INVALIDARG;
+			return ISC_R_INVALIDARG;
+
 		return ISC_R_SUCCESS;
 	}
 
-	
+	if (!omapi_ds_strcmp(name, "group")) {
+		if (value->type == omapi_datatype_data ||
+		    value->type == omapi_datatype_string) {
+			struct group_object *group = NULL;
 
-	if (!omapi_ds_strcmp (name, "group")) {
-		if (value -> type == omapi_datatype_data ||
-		    value -> type == omapi_datatype_string) {
-			struct group_object *group;
-			group = (struct group_object *)0;
-			group_hash_lookup (&group, group_name_hash,
-					   (char *)value -> u.buffer.value,
-					   value -> u.buffer.len, MDL);
-			if (!group || (group -> flags & GROUP_OBJECT_DELETED))
+			group_hash_lookup(&group, group_name_hash,
+					  (char *)value->u.buffer.value,
+					  value->u.buffer.len, MDL);
+			if (!group || (group->flags & GROUP_OBJECT_DELETED))
 				return ISC_R_NOTFOUND;
-			if (class -> group)
-				group_dereference (&class -> group, MDL);
-			group_reference (&class -> group, group -> group, MDL);
-			group_object_dereference (&group, MDL);
+			if (class->group)
+				group_dereference(&class->group, MDL);
+			group_reference(&class->group, group->group, MDL);
+			group_object_dereference(&group, MDL);
 		} else
 			return ISC_R_INVALIDARG;
+
 		return ISC_R_SUCCESS;
 	}
 
@@ -1816,59 +1811,53 @@ class_set_value (omapi_object_t *h,
 	/* note we do not support full expressions via omapi because the
 	   expressions parser needs to be re-done to support parsing from
 	   strings and not just files. */
-	
-	if (!omapi_ds_strcmp (name, "match")) {
-		if (value -> type == omapi_datatype_data ||
-		    value -> type == omapi_datatype_string) {
-			unsigned minlen = (value -> u.buffer.len > 8 ?
-				      8 : value -> u.buffer.len);
-			
+
+	if (!omapi_ds_strcmp(name, "match")) {
+		if (value->type == omapi_datatype_data ||
+		    value->type == omapi_datatype_string) {
+			unsigned minlen = (value->u.buffer.len > 8 ?
+						8 : value->u.buffer.len);
+
 			if (!strncmp("hardware",
-				     (char *)value -> u.buffer.value, minlen))
+				     (char *)value->u.buffer.value, minlen))
 			{
 				if (!expression_allocate(&class->submatch,
-							 MDL)) {
+							 MDL))
 					return ISC_R_NOMEMORY;
-				}
-			
+
 				class->expr->op = expr_hardware;
-			} else {
+			} else
 				return ISC_R_INVALIDARG;
-			}
-		} else {
+		} else
 			return ISC_R_INVALIDARG;
-		}
-		
+
 		return ISC_R_SUCCESS;
 	}
 
 
-	if (!omapi_ds_strcmp (name, "option")) {
-		if (value -> type == omapi_datatype_data ||
-		    value -> type == omapi_datatype_string) {
+	if (!omapi_ds_strcmp(name, "option")) {
+		if (value->type == omapi_datatype_data ||
+		    value->type == omapi_datatype_string) {
 			/* XXXJAB support 'options' here. */
 			/* XXXJAB specifically 'bootfile-name' */
 			return ISC_R_INVALIDARG; /* XXX tmp */
-		} else {
+		} else
 			return ISC_R_INVALIDARG;
-		}
-		
+
 		return ISC_R_SUCCESS;
 	}
 
 
-
 	/* Try to find some inner object that can take the value. */
-	if (h -> inner && h -> inner -> type -> set_value) {
-		status = ((*(h -> inner -> type -> set_value))
-			  (h -> inner, id, name, value));
+	if (h->inner && h->inner->type->set_value) {
+		status = ((*(h->inner->type->set_value))
+			  (h->inner, id, name, value));
 		if (status == ISC_R_SUCCESS || status == ISC_R_UNCHANGED)
 			return status;
 	}
-			  
+
 	return ISC_R_UNKNOWNATTRIBUTE;
 }
-
 
 
 
