@@ -1,4 +1,4 @@
-.\"	$Id: dhcp-options.5,v 1.25 2005/04/01 23:41:26 dhankins Exp $
+.\"	$Id: dhcp-options.5,v 1.26 2005/09/30 19:15:55 dhankins Exp $
 .\"
 .\" Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 1996-2003 by Internet Software Consortium
@@ -1229,13 +1229,16 @@ sure that future options don't take your name.   For example, you
 might define an option, "local-host-name", feeling some confidence
 that no official DHCP option name will ever start with "local".
 .PP
-Once you have chosen a name, you must choose a code.  For site-local
-options, all codes between 128 and 254 are reserved for DHCP options,
-so you can pick any one of these.  In practice, some vendors have
-interpreted the protocol rather loosely and have used option code
-values greater than 128 themselves.   There's no real way to avoid
-this problem, but it's not likely to cause too much trouble in
-practice.
+Once you have chosen a name, you must choose a code.  All codes between
+224 and 254 are reserved as 'site-local' DHCP options, so you can pick
+any one of these for your site (not for your product/application).  In
+RFC3942, site-local space was moved from starting at 128 to starting at
+224.  In practice, some vendors have interpreted the protocol rather
+loosely and have used option code values greater than 128 themselves.
+There's no real way to avoid this problem, and it was thought to be
+unlikely to cause too much trouble in practice.  If you come across
+a vendor-documented option code in either the new or old site-local
+spaces, please contact your vendor and inform them about rfc3942.
 .PP
 The structure of an option is simply the format in which the option
 data appears.   The ISC DHCP server currently supports a few simple

@@ -28,7 +28,7 @@
 .\" see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
 .\" ``http://www.nominum.com''.
 .\"
-.\" $Id: dhcpd.conf.5,v 1.68 2005/07/07 16:39:08 dhankins Exp $
+.\" $Id: dhcpd.conf.5,v 1.69 2005/09/30 19:15:55 dhankins Exp $
 .\"
 .TH dhcpd.conf 5
 .SH NAME
@@ -2252,7 +2252,7 @@ The \fIsite-option-space\fR statement can be used to determine from
 what option space site-local options will be taken.   This can be used
 in much the same way as the \fIvendor-option-space\fR statement.
 Site-local options in DHCP are those options whose numeric codes are
-greater than 128.   These options are intended for site-specific
+greater than 224.   These options are intended for site-specific
 uses, but are frequently used by vendors of embedded hardware that
 contains DHCP clients.   Because site-specific options are allocated
 on an ad hoc basis, it is quite possible that one vendor's DHCP client

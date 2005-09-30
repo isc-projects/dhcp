@@ -60,6 +60,9 @@ and for prodding me into improving it.
 - 'make install' now creates the initial zero-length dhcpd.leases file if
   one does not already exist on the system.
 
+- RFC3942 compliance, site-local option spaces start at 224 now, not 128.
+        ||| THIS NEEDS TO BE SPELLED OUT IN THE NEW FEATURES LIST |||
+
 			Changes since 3.0.3b3
 
 - dhclient.conf documentation for interface {} was updated to reflect recent
