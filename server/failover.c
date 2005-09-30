@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.53.2.40 2005/09/22 16:19:59 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.53.2.41 2005/09/30 17:51:04 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -5283,21 +5283,29 @@ conflict_binding_state_transition_check (struct lease *lease,
 			switch (binding_state) {
 			      case FTS_FREE:
 			      case FTS_BACKUP:
-			      case FTS_ABANDONED:
 				new_state = lease -> binding_state;
 				break;
 
 			      case FTS_EXPIRED:
-			      case FTS_RELEASED:
-			      case FTS_RESET:
-				if (lease -> ends > cur_time)
-					new_state =
-						lease -> binding_state;
+				/* If we don't agree about expiry, it's
+				 * invalid.  65 should allow for max
+				 * clock skew (60) plus some fudge.
+				 * XXX: should we refetch cur_time?
+				 */
+				if ((lease->ends - 65) > cur_time)
+					new_state = lease->binding_state;
 				else
 					new_state = binding_state;
 				break;
 
-			      case FTS_ACTIVE:
+				/* RELEASED, RESET, and ABANDONED indicate
+				 * that our partner has information about
+				 * this lease that we did not witness.  Our
+				 * partner wins.
+				 */
+			      case FTS_RELEASED:
+			      case FTS_RESET:
+			      case FTS_ABANDONED:
 				new_state = binding_state;
 				break;
 
