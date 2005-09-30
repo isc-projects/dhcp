@@ -92,6 +92,9 @@ and for prodding me into improving it.
 - Some previously undocumented reasons for dhclient-script invoking has
   been doucmented in the dhclient-script.8 manpage.
 
+- Failover potential expiry calculations (TSTP) have been corrected.  Results
+  should be substantially more consistent, and proper given the constraints.
+
 			Changes since 3.0.3b3
 
 - dhclient.conf documentation for interface {} was updated to reflect recent
