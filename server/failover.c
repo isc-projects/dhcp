@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.53.2.41 2005/09/30 17:51:04 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.53.2.42 2005/09/30 18:05:35 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -4495,7 +4495,7 @@ isc_result_t dhcp_failover_process_bind_update (dhcp_failover_state_t *state,
 			goto bad;
 		}
 		if (msg -> chaddr.count > sizeof lt -> hardware_addr.hbuf) {
-			message = "chaddr to long";
+			message = "chaddr too long";
 			goto bad;
 		}
 		lt -> hardware_addr.hlen = msg -> chaddr.count;

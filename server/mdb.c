@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.67.2.23 2005/09/22 16:19:59 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.67.2.24 2005/09/30 18:05:35 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -964,16 +964,21 @@ int supersede_lease (comp, lease, commit, propogate, pimmediate)
 	comp->cltt = lease->cltt;
 	comp->tstp = lease->tstp;
 	comp->tsfp = lease->tsfp;
-	/* If this lease update is transmitted, reduce atsfp to zero. */
-	if (propogate)
-		comp->atsfp = 0;
-	else
-		comp->atsfp = lease->atsfp;
+	comp->atsfp = lease->atsfp;
 #endif /* FAILOVER_PROTOCOL */
 	comp->ends = lease->ends;
 	comp->next_binding_state = lease->next_binding_state;
 
       just_move_it:
+#if defined (FAILOVER_PROTOCOL)
+	/* Atsfp should be cleared upon any state change that implies
+	 * propogation wether supersede_lease was given a copy lease
+	 * structure or not (often from the pool_timer()).
+	 */
+	if (propogate)
+		comp->atsfp = 0;
+#endif /* FAILOVER_PROTOCOL */
+
 	if (!comp -> pool) {
 		log_error ("Supersede_lease: lease %s with no pool.",
 			   piaddr (comp -> ip_addr));

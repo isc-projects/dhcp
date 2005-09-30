@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.143.2.26 2005/09/22 16:19:58 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.143.2.27 2005/09/30 18:05:34 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2568,6 +2568,7 @@ int parse_lease_declaration (struct lease **lp, struct parse *cfile)
 		      case TIMESTAMP:
 		      case TSTP:
 		      case TSFP:
+		      case ATSFP:
 		      case CLTT:
 			t = parse_date (cfile);
 			switch (token) {

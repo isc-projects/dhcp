@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.192.2.54 2005/09/30 17:43:49 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.192.2.55 2005/09/30 18:05:34 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1999,6 +1999,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 
 			/* Copy previous lease failover ack-state. */
 			lt->tsfp = lease->tsfp;
+			lt->atsfp = lease->atsfp;
 
 			/* Update Client Last Transaction Time. */
 			lt->cltt = cur_time;
