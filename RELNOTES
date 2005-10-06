@@ -99,6 +99,9 @@ and for prodding me into improving it.
   account for possible clock skew similarly to normal state, and several
   previously illegal transitions were made legal (ex: active->released).
 
+- An impossible sanity check was removed from omapi/buffer.c, thanks to a
+  patch from 'infamous42md'.
+
 			Changes since 3.0.3b3
 
 - dhclient.conf documentation for interface {} was updated to reflect recent
