@@ -41,7 +41,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: omapi.c,v 1.46.2.21 2005/09/22 16:20:00 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: omapi.c,v 1.46.2.22 2005/10/07 15:33:57 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -478,6 +478,7 @@ isc_result_t dhcp_lease_stuff_values (omapi_object_t *c,
 				      omapi_object_t *id,
 				      omapi_object_t *h)
 {
+	u_int32_t bouncer;
 	struct lease *lease;
 	isc_result_t status;
 
@@ -600,74 +601,79 @@ isc_result_t dhcp_lease_stuff_values (omapi_object_t *c,
 			return status;
 	}
 
-
-	status = omapi_connection_put_name (c, "ends");
+	/* TIME values may be 64-bit, depending on system architecture.
+	 * OMAPI must be system independent, both in terms of transmitting
+	 * bytes on the wire in network byte order, and in terms of being
+	 * readable and usable by both systems.
+	 *
+	 * XXX: In a future feature release, a put_int64() should be made
+	 * to exist, and perhaps a put_time() wrapper that selects which
+	 * to use based upon sizeof(TIME).  In the meantime, use existing,
+	 * 32-bit, code.
+	 */
+	bouncer = (u_int32_t)lease->ends;
+	status = omapi_connection_put_name(c, "ends");
 	if (status != ISC_R_SUCCESS)
 		return status;
-	status = omapi_connection_put_uint32 (c, sizeof (TIME));
+	status = omapi_connection_put_uint32(c, sizeof(bouncer));
 	if (status != ISC_R_SUCCESS)
 		return status;
-	status = (omapi_connection_copyin
-		  (c, (const unsigned char *)&(lease -> ends), sizeof(TIME)));
-	if (status != ISC_R_SUCCESS)
-		return status;
-
-	status = omapi_connection_put_name (c, "starts");
-	if (status != ISC_R_SUCCESS)
-		return status;
-	status = omapi_connection_put_uint32 (c, sizeof (TIME));
-	if (status != ISC_R_SUCCESS)
-		return status;
-	status = (omapi_connection_copyin
-		  (c,
-		   (const unsigned char *)&(lease -> starts), sizeof (TIME)));
+	status = omapi_connection_put_uint32(c, bouncer);
 	if (status != ISC_R_SUCCESS)
 		return status;
 
-	status = omapi_connection_put_name (c, "tstp");
+	bouncer = (u_int32_t)lease->starts;
+	status = omapi_connection_put_name(c, "starts");
 	if (status != ISC_R_SUCCESS)
 		return status;
-	status = omapi_connection_put_uint32 (c, sizeof (TIME));
+	status = omapi_connection_put_uint32(c, sizeof(bouncer));
 	if (status != ISC_R_SUCCESS)
 		return status;
-	status = (omapi_connection_copyin
-		  (c,
-		   (const unsigned char *)&(lease -> tstp), sizeof (TIME)));
-	if (status != ISC_R_SUCCESS)
-		return status;
-
-	status = omapi_connection_put_name (c, "tsfp");
-	if (status != ISC_R_SUCCESS)
-		return status;
-	status = omapi_connection_put_uint32 (c, sizeof (TIME));
-	if (status != ISC_R_SUCCESS)
-		return status;
-	status = (omapi_connection_copyin
-		  (c,
-		   (const unsigned char *)&(lease -> tsfp), sizeof (TIME)));
+	status = omapi_connection_put_uint32(c, bouncer);
 	if (status != ISC_R_SUCCESS)
 		return status;
 
+	bouncer = (u_int32_t)lease->tstp;
+	status = omapi_connection_put_name(c, "tstp");
+	if (status != ISC_R_SUCCESS)
+		return status;
+	status = omapi_connection_put_uint32(c, sizeof(bouncer));
+	if (status != ISC_R_SUCCESS)
+		return status;
+	status = omapi_connection_put_uint32(c, bouncer);
+	if (status != ISC_R_SUCCESS)
+		return status;
+
+	bouncer = (u_int32_t)lease->tsfp;
+	status = omapi_connection_put_name(c, "tsfp");
+	if (status != ISC_R_SUCCESS)
+		return status;
+	status = omapi_connection_put_uint32(c, sizeof(bouncer));
+	if (status != ISC_R_SUCCESS)
+		return status;
+	status = omapi_connection_put_uint32(c, bouncer);
+	if (status != ISC_R_SUCCESS)
+		return status;
+
+	bouncer = (u_int32_t)lease->atsfp;
 	status = omapi_connection_put_name(c, "atsfp");
 	if (status != ISC_R_SUCCESS)
 		return status;
-	status = omapi_connection_put_uint32(c, sizeof(TIME));
+	status = omapi_connection_put_uint32(c, sizeof(bouncer));
 	if (status != ISC_R_SUCCESS)
 		return status;
-	status = omapi_connection_copyin(c,
-			(const unsigned char *)&(lease->atsfp), sizeof(TIME));
+	status = omapi_connection_put_uint32(c, bouncer);
 	if (status != ISC_R_SUCCESS)
 		return status;
 
-	status = omapi_connection_put_name (c, "cltt");
+	bouncer = (u_int32_t)lease->cltt;
+	status = omapi_connection_put_name(c, "cltt");
 	if (status != ISC_R_SUCCESS)
 		return status;
-	status = omapi_connection_put_uint32 (c, sizeof (TIME));
+	status = omapi_connection_put_uint32(c, sizeof(bouncer));
 	if (status != ISC_R_SUCCESS)
 		return status;
-	status = (omapi_connection_copyin
-		  (c,
-		   (const unsigned char *)&(lease -> cltt), sizeof (TIME)));
+	status = omapi_connection_put_uint32(c, bouncer);
 	if (status != ISC_R_SUCCESS)
 		return status;
 

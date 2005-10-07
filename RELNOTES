@@ -102,6 +102,9 @@ and for prodding me into improving it.
 - An impossible sanity check was removed from omapi/buffer.c, thanks to a
   patch from 'infamous42md'.
 
+- An OMAPI host/network byte order problem in lease time values has been
+  repaired.
+
 			Changes since 3.0.3b3
 
 - dhclient.conf documentation for interface {} was updated to reflect recent
