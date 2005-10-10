@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.85.2.28 2005/08/26 22:45:46 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.85.2.29 2005/10/10 16:52:13 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -465,7 +465,7 @@ int cons_options (inpacket, outpacket, lease, client_state,
 	unsigned priority_list [PRIORITY_COUNT];
 	int priority_len;
 	unsigned char buffer [4096];	/* Really big buffer... */
-	unsigned main_buffer_size;
+	unsigned main_buffer_size, mb_max;
 	unsigned mainbufix, bufix, agentix;
 	int fileix;
 	int snameix;
@@ -525,8 +525,10 @@ int cons_options (inpacket, outpacket, lease, client_state,
 		main_buffer_size = 576 - DHCP_FIXED_LEN;
 
 	/* Set a hard limit at the size of the output buffer. */
-	if (main_buffer_size > sizeof buffer)
-		main_buffer_size = sizeof buffer;
+	mb_max = sizeof(buffer) - (((overload & 1) ? DHCP_FILE_LEN : 0) +
+				   ((overload & 2) ? DHCP_SNAME_LEN : 0));
+	if (main_buffer_size > mb_max)
+		main_buffer_size = mb_max;
 
 	/* Preload the option priority list with mandatory options. */
 	priority_len = 0;
@@ -700,14 +702,14 @@ int cons_options (inpacket, outpacket, lease, client_state,
 	priority_len = 1;
 	agentix +=
 		store_options (0, &outpacket -> options [agentix],
-			       1500 - DHCP_FIXED_LEN - agentix,
+			       DHCP_OPTION_LEN - agentix,
 			       inpacket, lease, client_state,
 			       in_options, cfg_options, scope,
 			       priority_list, priority_len,
 			       0, 0, 0, (char *)0);
 
 	/* Tack a DHO_END option onto the packet if we need to. */
-	if (agentix < 1500 - DHCP_FIXED_LEN && need_endopt)
+	if (agentix < DHCP_OPTION_LEN && need_endopt)
 		outpacket -> options [agentix++] = DHO_END;
 
 	/* Figure out the length. */

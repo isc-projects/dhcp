@@ -114,6 +114,12 @@ and for prodding me into improving it.
   to help administrators avoid accidentally publicising sensitive config
   data.
 
+- The calculation of the maximum size of DHCP packets no longer includes
+  Ethernet framing overhead.  The result is that the 'Maximum Message
+  Size' option advertised by clients, or the default value 576, is no
+  longer reduced by 14 bytes, and instead directly reflects the IP level
+  MTU (and the default, minimum allowed IP MTU of 576).
+
 			Changes since 3.0.3b3
 
 - dhclient.conf documentation for interface {} was updated to reflect recent

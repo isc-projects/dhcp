@@ -3,7 +3,7 @@
    Protocol structures... */
 
 /*
- * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2005 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -30,8 +30,7 @@
  * To learn more about Vixie Enterprises, see ``http://www.vix.com''.
  */
 
-#define DHCP_UDP_OVERHEAD	(14 + /* Ethernet header */		\
-				 20 + /* IP header */			\
+#define DHCP_UDP_OVERHEAD	(20 + /* IP header */			\
 				 8)   /* UDP header */
 #define DHCP_SNAME_LEN		64
 #define DHCP_FILE_LEN		128
