@@ -105,6 +105,11 @@ and for prodding me into improving it.
 - An OMAPI host/network byte order problem in lease time values has been
   repaired.
 
+- Several minor bugs, largely relating to treating 8-byte time values as
+  4-byte entities, have been repaired after careful review of the FreeBSD
+  ports collection's patch set.  Thanks to the nameless entities who have
+  contributed to the FreeBSD ports.
+
 			Changes since 3.0.3b3
 
 - dhclient.conf documentation for interface {} was updated to reflect recent

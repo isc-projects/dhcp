@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dispatch.c,v 1.63.2.5 2005/08/26 22:45:45 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dispatch.c,v 1.63.2.6 2005/10/10 16:45:39 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -42,7 +42,7 @@ static char copyright[] =
 struct timeout *timeouts;
 static struct timeout *free_timeouts;
 
-void set_time (u_int32_t t)
+void set_time(TIME t)
 {
 	/* Do any outstanding timeouts. */
 	if (cur_time != t) {

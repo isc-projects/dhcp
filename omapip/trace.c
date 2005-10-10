@@ -34,13 +34,13 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: trace.c,v 1.9.2.4 2005/08/26 22:45:48 dhankins Exp $ Copyright 2004-2005 Internet Systems Consortium.";
+"$Id: trace.c,v 1.9.2.5 2005/10/10 16:45:39 dhankins Exp $ Copyright 2004-2005 Internet Systems Consortium.";
 #endif
 
 #include <omapip/omapip_p.h>
 
 #if defined (TRACING)
-void (*trace_set_time_hook) (u_int32_t);
+void (*trace_set_time_hook) (TIME);
 static int tracing_stopped;
 static int traceoutfile;
 static int traceindex;
@@ -102,7 +102,7 @@ int trace_record ()
 	return 0;
 }
 
-isc_result_t trace_init (void (*set_time) (u_int32_t),
+isc_result_t trace_init (void (*set_time) (TIME),
 			 const char *file, int line)
 {
 	trace_type_t *root_type;

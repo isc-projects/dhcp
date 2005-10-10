@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.104.2.24 2005/08/26 22:45:46 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.104.2.25 2005/10/10 16:45:39 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -405,6 +405,7 @@ void parse_lease_time (cfile, timep)
 {
 	const char *val;
 	enum dhcp_token token;
+	u_int32_t num;
 
 	token = next_token (&val, (unsigned *)0, cfile);
 	if (token != NUMBER) {
@@ -412,9 +413,9 @@ void parse_lease_time (cfile, timep)
 		skip_to_semi (cfile);
 		return;
 	}
-	convert_num (cfile, (unsigned char *)timep, val, 10, 32);
+	convert_num(cfile, (unsigned char *)&num, val, 10, 32);
 	/* Unswap the number - convert_num returns stuff in NBO. */
-	*timep = ntohl (*timep); /* XXX */
+	*timep = ntohl(num);
 
 	parse_semi (cfile);
 }

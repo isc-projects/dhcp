@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: clparse.c,v 1.62.2.8 2005/08/26 22:45:43 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: clparse.c,v 1.62.2.9 2005/10/10 16:45:38 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -772,7 +772,13 @@ int interface_or_dummy (struct interface_info **pi, const char *name)
 		if ((status = interface_allocate (&ip, MDL)) != ISC_R_SUCCESS)
 			log_fatal ("Can't record interface %s: %s",
 				   name, isc_result_totext (status));
-		strcpy (ip -> name, name);
+
+		if (strlen(name) >= sizeof(ip->name)) {
+			interface_dereference(&ip, MDL);
+			return 0;
+		}
+		strcpy(ip->name, name);
+
 		if (dummy_interfaces) {
 			interface_reference (&ip -> next,
 					     dummy_interfaces, MDL);
@@ -990,7 +996,8 @@ void parse_client_lease_declaration (cfile, lease, ipp, clientp)
 			skip_to_semi (cfile);
 			break;
 		}
-		interface_or_dummy (ipp, val);
+		if (!interface_or_dummy (ipp, val))
+			log_fatal ("Can't allocate interface %s.", val);
 		break;
 
 	      case NAME:
