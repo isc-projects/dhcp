@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.53.2.42 2005/09/30 18:05:35 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.53.2.43 2005/10/10 16:56:47 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1779,23 +1779,26 @@ isc_result_t dhcp_failover_set_state (dhcp_failover_state_t *state,
 
 	  case partner_down:
 	    /* For every expired lease, set a timeout for it to become free. */
-            for (s = shared_networks; s; s = s -> next) {
-                for (p = s -> pools; p; p = p -> next) {
+	    for (s = shared_networks; s; s = s -> next) {
+		for (p = s -> pools; p; p = p -> next) {
 		    if (p -> failover_peer == state) {
-			for (l = p -> expired; l; l = l -> next)
-			    l -> tsfp = state -> me.stos + state -> mclt;
-			if (p -> next_event_time >
-			    state -> me.stos + state -> mclt) {
-			    p -> next_event_time =
-					state -> me.stos + state -> mclt;
+			for (l = p->expired ; l ; l = l->next) {
+			    l->tsfp = state->me.stos + state->mclt;
+			    l->sort_time = (l->tsfp > l->ends) ?
+					   l->tsfp : l->ends;
+			}
+			if (p->expired &&
+			    (p->expired->sort_time < p->next_event_time)) {
+
+			    p->next_event_time = p->expired->sort_time;
 #if defined (DEBUG_FAILOVER_TIMING)
 			    log_info ("add_timeout +%d %s",
-				      (int)(cur_time - p -> next_event_time),
+				      (int)(cur_time - p->next_event_time),
 				      "pool_timer");
 #endif
-		            add_timeout (p -> next_event_time, pool_timer, p,
-		                         (tvref_t)pool_reference,
-               				 (tvunref_t)pool_dereference);
+			    add_timeout(p->next_event_time, pool_timer, p,
+					(tvref_t)pool_reference,
+					(tvunref_t)pool_dereference);
 			}
 		    }
 		}
@@ -5343,54 +5346,77 @@ int lease_mine_to_reallocate (struct lease *lease)
 {
 	dhcp_failover_state_t *peer;
 
-	if (lease && lease -> pool &&
-	    lease -> pool -> failover_peer) {
-		peer = lease -> pool -> failover_peer;
-		switch (lease -> binding_state) {
+	if (lease && lease->pool &&
+	    (peer = lease->pool->failover_peer)) {
+		switch (lease->binding_state) {
 		      case FTS_ACTIVE:
+			/* ACTIVE leases may not be reallocated. */
 			return 0;
 
 		      case FTS_FREE:
+		      case FTS_ABANDONED:
+			/* FREE leases may only be allocated by the primary,
+			 * unless the secondary is acting in partner_down
+			 * state and stos+mclt or tsfp+mclt has expired,
+			 * whichever is greater.
+			 *
+			 * ABANDONED are treated the same as FREE for all
+			 * purposes here.  Note that servers will only try
+			 * for ABANDONED leases as a last resort anyway.
+			 */
 			if (peer -> i_am == primary)
 				return 1;
-			if (peer -> service_state == service_partner_down &&
-			    (lease -> tsfp < peer -> me.stos
-			     ? peer -> me.stos + peer -> mclt < cur_time
-			     : lease -> tsfp + peer -> mclt < cur_time))
-				return 1;
-			return 0;
 
-		      case FTS_ABANDONED:
+			return(peer->service_state == service_partner_down &&
+			       ((lease->tsfp < peer->me.stos) ?
+				(peer->me.stos + peer->mclt < cur_time) :
+				(lease->tsfp + peer->mclt < cur_time)));
+
 		      case FTS_RESET:
 		      case FTS_RELEASED:
 		      case FTS_EXPIRED:
-			/* XXX - upon entering partner down state, the server
-			 * sets tsfp to stos + mclt.  this checks that tsfp
-			 * + mclt expire before continuing.  pick one?  i
-			 * think abandoned should be treated this way, but
-			 * reset/released/expired should check cur_time only.
+			/* These three lease states go onto the 'expired'
+			 * queue.  Upon entry into partner-down state, this
+			 * queue of leases has their tsfp values modified
+			 * to equal stos+mclt, the point at which the server
+			 * is allowed to remove them from these transitional
+			 * states without an acknowledgement.
+			 *
+			 * Note that although tsfp has been possibly extended
+			 * past the actual tsfp we received from the peer, we
+			 * don't have to take any special action.  Since tsfp
+			 * is now in the past (or now), we can guarantee that
+			 * this server will only allocate a lease time equal
+			 * to MCLT, rather than a TSFP-optimal lease, which is
+			 * the only danger for a lease in one of these states.
 			 */
-			if (peer -> service_state == service_partner_down &&
-			    (lease -> tsfp < peer -> me.stos
-			     ? peer -> me.stos + peer -> mclt < cur_time
-			     : lease -> tsfp + peer -> mclt < cur_time))
-				return 1;
-			return 0;
+			return((peer->service_state == service_partner_down) &&
+			       (lease->tsfp < cur_time));
+
 		      case FTS_BACKUP:
-			if (peer -> i_am == secondary)
+			/* Only the secondary may allocate BACKUP leases,
+			 * unless in partner_down state in which case at
+			 * least TSFP+MCLT or STOS+MCLT must have expired,
+			 * whichever is greater.
+			 */
+			if (peer->i_am == secondary)
 				return 1;
-			if (peer -> service_state == service_partner_down &&
-			    (lease -> tsfp < peer -> me.stos
-			     ? peer -> me.stos + peer -> mclt < cur_time
-			     : lease -> tsfp + peer -> mclt < cur_time))
-				return 1;
-			return 0;
+
+			return((peer->service_state == service_partner_down) &&
+			       ((lease->tsfp < peer->me.stos) ?
+				(peer->me.stos + peer->mclt < cur_time) :
+				(lease->tsfp + peer->mclt < cur_time)));
+
+		      default:
+			/* All lease states appear above. */
+			log_fatal("Impossible case at %s:%d.", MDL);
+			break;
 		}
 		return 0;
 	}
 	if (lease)
-		return !(lease -> binding_state != FTS_FREE &&
-			 lease -> binding_state != FTS_BACKUP);
+		return(lease->binding_state == FTS_FREE ||
+		       lease->binding_state == FTS_BACKUP);
 	else
 		return 0;
 }

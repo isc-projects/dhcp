@@ -120,6 +120,12 @@ and for prodding me into improving it.
   longer reduced by 14 bytes, and instead directly reflects the IP level
   MTU (and the default, minimum allowed IP MTU of 576).
 
+- The special status of RELEASED/EXPIRED/RESET leases when a server
+  is operating in partner-down was fixed.  It no longer requires a
+  lease be twice the MCLT beyond STOS to 'reallocate', and the expiry
+  event to turn these into FREE leases without peer acknowledgement
+  (after STOS+MCLT) has been repaired.
+
 			Changes since 3.0.3b3
 
 - dhclient.conf documentation for interface {} was updated to reflect recent

@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.67.2.24 2005/09/30 18:05:35 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.67.2.25 2005/10/10 16:56:47 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1848,6 +1848,18 @@ int write_leases ()
 	return 1;
 }
 
+/* In addition to placing this lease upon a lease queue depending on its
+ * state, it also keeps track of the number of FREE and BACKUP leases in
+ * existence, and sets the sort_time on the lease.
+ *
+ * Sort_time is used in pool_timer() to determine when the lease will
+ * bubble to the top of the list and be supersede_lease()'d into its next
+ * state (possibly, if all goes well).  Example, ACTIVE leases move to
+ * EXPIRED state when the 'ends' value is reached, so that is its sort
+ * time.  Most queues are sorted by 'ends', since it is generally best
+ * practice to re-use the oldest lease, to reduce address collision
+ * chances.
+ */
 int lease_enqueue (struct lease *comp)
 {
 	struct lease **lq, *prev, *lp;
@@ -1873,7 +1885,26 @@ int lease_enqueue (struct lease *comp)
 	      case FTS_RELEASED:
 	      case FTS_RESET:
 		lq = &comp -> pool -> expired;
-		comp -> sort_time = comp -> ends;
+#if defined(FAILOVER_PROTOCOL)
+		/* In partner_down, tsfp is the time at which the lease
+		 * may be reallocated (stos+mclt).  We can do that with
+		 * lease_mine_to_reallocate() anywhere between tsfp and
+		 * ends.  But we prefer to wait until ends before doing it
+		 * automatically (choose the greater of the two).  Note
+		 * that 'ends' is usually a historic timestamp in the
+		 * case of expired leases, is really only in the future
+		 * on released leases, and if we know a lease to be released
+		 * the peer might still know it to be active...in which case
+		 * it's possible the peer has renewed this lease, so avoid
+		 * doing that.
+		 */
+		if (comp->pool->failover_peer &&
+		    comp->pool->failover_peer->me.state == partner_down)
+			comp->sort_time = (comp->tsfp > comp->ends) ?
+					  comp->tsfp : comp->ends;
+		else
+#endif
+			comp->sort_time = comp->ends;
 
 		break;
 
