@@ -110,6 +110,10 @@ and for prodding me into improving it.
   ports collection's patch set.  Thanks to the nameless entities who have
   contributed to the FreeBSD ports.
 
+- When writing a trace file, the file is now created with permissions 0600,
+  to help administrators avoid accidentally publicising sensitive config
+  data.
+
 			Changes since 3.0.3b3
 
 - dhclient.conf documentation for interface {} was updated to reflect recent

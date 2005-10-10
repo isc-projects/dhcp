@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: trace.c,v 1.9.2.5 2005/10/10 16:45:39 dhankins Exp $ Copyright 2004-2005 Internet Systems Consortium.";
+"$Id: trace.c,v 1.9.2.6 2005/10/10 16:48:03 dhankins Exp $ Copyright 2004-2005 Internet Systems Consortium.";
 #endif
 
 #include <omapip/omapip_p.h>
@@ -141,7 +141,7 @@ isc_result_t trace_begin (const char *filename,
 		return ISC_R_INVALIDARG;
 	}
 
-	traceoutfile = open (filename, O_CREAT | O_WRONLY | O_EXCL, 0644);
+	traceoutfile = open (filename, O_CREAT | O_WRONLY | O_EXCL, 0600);
 	if (traceoutfile < 0) {
 		log_error ("%s(%d): trace_begin: %s: %m",
 			   file, line, filename);
