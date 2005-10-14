@@ -133,6 +133,7 @@ and for prodding me into improving it.
   domain-name field) that had been improperly NULL-terminated by the
   DHCP server will no longer result in a truncated string containing
   only the option from the server, and not the expected appended value.
+  Thanks to a patch from Jason Vas Dias at RedHat.
 
 - File handlers on configuration state (config files and lease dbs) should
   be treated consistently, regardless of wether TRACING is defined or not.
