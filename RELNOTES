@@ -126,6 +126,9 @@ and for prodding me into improving it.
   event to turn these into FREE leases without peer acknowledgement
   (after STOS+MCLT) has been repaired.
 
+- Compilation on older Solaris systems (lacking /usr/include/sys/int_types.h)
+  has been repaired.
+
 			Changes since 3.0.3b3
 
 - dhclient.conf documentation for interface {} was updated to reflect recent
