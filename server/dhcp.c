@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.192.2.55 2005/09/30 18:05:34 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.192.2.56 2005/10/14 15:32:56 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -188,17 +188,16 @@ void dhcp (packet)
 	}
       nolease:
 
-	/* Classify the client. */
+	/* If a client null terminates options it sends, it probably
+	 * expects the server to reciprocate.
+	 */
 	if ((oc = lookup_option (&dhcp_universe, packet -> options,
 				 DHO_HOST_NAME))) {
 		if (!oc -> expression)
-			while (oc -> data.len &&
-			       oc -> data.data [oc -> data.len - 1] == 0) {
-				ms_nulltp = 1;
-				oc -> data.len--;
-			}
+			ms_nulltp = oc->flags & OPTION_HAD_NULLS;
 	}
 
+	/* Classify the client. */
 	classify_client (packet);
 
 	switch (packet -> packet_type) {

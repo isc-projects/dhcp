@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.85.2.29 2005/10/10 16:52:13 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.85.2.30 2005/10/14 15:32:56 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -942,7 +942,7 @@ int store_options (ocount, buffer, buflen, packet, lease, client_state,
 		    unsigned incr = length;
 		    int consumed = 0;
 		    int *pix;
-		    char *base;
+		    unsigned char *base;
 
 		    /* Try to fit it in the options buffer. */
 		    if (!splitup &&
@@ -1455,6 +1455,7 @@ int save_option_buffer (struct universe *universe,
 {
 	struct buffer *lbp = (struct buffer *)0;
 	struct option_cache *op = (struct option_cache *)0;
+	int formlen;
 
 	if (!option_cache_allocate (&op, MDL)) {
 		log_error ("No memory for option %s.%s.",
@@ -1497,6 +1498,18 @@ int save_option_buffer (struct universe *universe,
 		op -> data.terminated = 0;
 	
 	op -> option = option;
+
+	/* If the option format ends in a "t" field, trailing NULLs are
+	 * considered invalid, to be removed (RFC2132 Section 2).
+	 */
+	formlen = strlen(option->format);
+	if ((formlen > 0) && (option->format[formlen-1] == 't')) {
+		while (op->data.len &&
+		       (op->data.data[op->data.len-1] == '\0')) {
+			op->data.len--;
+			op->flags |= OPTION_HAD_NULLS;
+		}
+	}
 
 	/* Now store the option. */
 	save_option (universe, options, op);

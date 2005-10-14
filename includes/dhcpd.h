@@ -187,6 +187,9 @@ struct option_cache {
 	struct expression *expression;
 	struct option *option;
 	struct data_string data;
+
+	#define OPTION_HAD_NULLS	0x00000001
+	u_int32_t flags;
 };
 
 struct option_state {

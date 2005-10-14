@@ -129,6 +129,11 @@ and for prodding me into improving it.
 - Compilation on older Solaris systems (lacking /usr/include/sys/int_types.h)
   has been repaired.
 
+- "append"ing a string onto the end of a "t" type option (such as the
+  domain-name field) that had been improperly NULL-terminated by the
+  DHCP server will no longer result in a truncated string containing
+  only the option from the server, and not the expected appended value.
+
 			Changes since 3.0.3b3
 
 - dhclient.conf documentation for interface {} was updated to reflect recent
