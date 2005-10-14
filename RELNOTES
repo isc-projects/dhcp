@@ -143,6 +143,9 @@ and for prodding me into improving it.
   and corrections to #if operators regarding LINUX_MAJOR should it ever
   move to 3.[01].x.
 
+- The server now tries harder to survive the condition where it is unable
+  to open a new lease file to rewrite the lease state database.
+
 			Changes since 3.0.3b3
 
 - dhclient.conf documentation for interface {} was updated to reflect recent

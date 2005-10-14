@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: db.c,v 1.63.2.13 2005/09/22 16:22:31 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: db.c,v 1.63.2.14 2005/10/14 16:02:55 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -774,12 +774,7 @@ int new_lease_file ()
 	char backfname [512];
 	TIME t;
 	int db_fd;
-
-	/* If we already have an open database, close it. */
-	if (db_file) {
-		fclose (db_file);
-		db_file = (FILE *)0;
-	}
+	FILE *new_db_file;
 
 	/* Make a temporary lease file... */
 	GET_TIME (&t);
@@ -799,10 +794,16 @@ int new_lease_file ()
 		log_error ("Can't create new lease file: %m");
 		return 0;
 	}
-	if ((db_file = fdopen (db_fd, "w")) == NULL) {
-		log_error ("Can't fdopen new lease file!");
-		goto fail;
+	if ((new_db_file = fdopen(db_fd, "w")) == NULL) {
+		log_error("Can't fdopen new lease file: %m");
+		close(db_fd);
+		goto fdfail;
 	}
+
+	/* Close previous database, if any. */
+	if (db_file)
+		fclose(db_file);
+	db_file = new_db_file;
 
 	/* Write an introduction so people don't complain about time
 	   being off. */
@@ -885,8 +886,9 @@ int new_lease_file ()
 	return 1;
 
       fail:
-	unlink (newfname);
 	lease_file_is_corrupt = 1;
+      fdfail:
+	unlink (newfname);
 	return 0;
 }
 
