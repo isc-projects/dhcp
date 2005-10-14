@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: conflex.c,v 1.92.2.16 2005/10/10 16:45:39 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: conflex.c,v 1.92.2.17 2005/10/14 15:34:52 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -89,10 +89,14 @@ isc_result_t new_parse (cfile, file, inbuf, buflen, name, eolp)
 isc_result_t end_parse (cfile)
 	struct parse **cfile;
 {
-	if ((*cfile) -> bufsiz)
-		dfree ((*cfile) -> inbuf, MDL);
-	dfree (*cfile, MDL);
-	*cfile = (struct parse *)0;
+	/* "Memory" config files have no file. */
+	if ((*cfile)->file != -1)
+		close((*cfile)->file);
+
+	if ((*cfile)->bufsiz)
+		dfree((*cfile)->inbuf, MDL);
+	dfree(*cfile, MDL);
+	*cfile = NULL;
 	return ISC_R_SUCCESS;
 }
 

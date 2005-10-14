@@ -134,6 +134,9 @@ and for prodding me into improving it.
   DHCP server will no longer result in a truncated string containing
   only the option from the server, and not the expected appended value.
 
+- File handlers on configuration state (config files and lease dbs) should
+  be treated consistently, regardless of wether TRACING is defined or not.
+
 			Changes since 3.0.3b3
 
 - dhclient.conf documentation for interface {} was updated to reflect recent

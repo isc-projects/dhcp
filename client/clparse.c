@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: clparse.c,v 1.62.2.9 2005/10/10 16:45:38 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: clparse.c,v 1.62.2.10 2005/10/14 15:34:52 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -172,7 +172,6 @@ int read_client_conf_file (const char *name, struct interface_info *ip,
 	status = (cfile -> warnings_occurred
 		  ? ISC_R_BADPARSE
 		  : ISC_R_SUCCESS);
-	close (file);
 	end_parse (&cfile);
 	return status;
 }
@@ -209,7 +208,6 @@ void read_client_leases ()
 
 	} while (1);
 
-	close (file);
 	end_parse (&cfile);
 }
 
