@@ -137,6 +137,11 @@ and for prodding me into improving it.
 - File handlers on configuration state (config files and lease dbs) should
   be treated consistently, regardless of wether TRACING is defined or not.
 
+- The linux build environment has had some minor improvements - better
+  sensing of 64-bit pointer sizes (only used for establishing an icmp_id),
+  and corrections to #if operators regarding LINUX_MAJOR should it ever
+  move to 3.[01].x.
+
 			Changes since 3.0.3b3
 
 - dhclient.conf documentation for interface {} was updated to reflect recent

@@ -5,7 +5,7 @@
    Based on a configuration originally supplied by Jonathan Stone. */
 
 /*
- * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2005 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -98,6 +98,11 @@ extern int h_errno;
 
 #define VOIDPTR	void *
 
+#if defined(__alpha__) || defined(__amd64__) || defined(__ia64__) || \
+	defined(__sparc64__)
+# define PTRSIZE_64BIT
+#endif
+
 #define EOL	'\n'
 
 /* Time stuff... */
@@ -108,7 +113,7 @@ extern int h_errno;
 #define GET_TIME(x)	time ((x))
 
 #if (LINUX_MAJOR >= 2)
-# if (LINUX_MINOR >= 1)
+# if ((LINUX_MAJOR > 2) || (LINUX_MINOR >= 1))
 #  if defined (USE_DEFAULT_NETWORK)
 #   define USE_LPF
 #  endif
