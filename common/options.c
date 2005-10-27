@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.85.2.30 2005/10/14 15:32:56 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.85.2.31 2005/10/27 16:00:18 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -1044,6 +1044,166 @@ int store_options (ocount, buffer, buflen, packet, lease, client_state,
 	return bufix;
 }
 
+/* Return true if the format string has a variable length text option
+ * ("t"), return false otherwise.
+ */
+
+int
+format_has_text(format)
+	const char *format;
+{
+	const char *p;
+	int retval = 0;
+
+	p = format;
+	while (*p != '\0') {
+		switch (*p) {
+		    case 'd':
+		    case 't':
+			return 1;
+
+			/* These symbols are arbitrary, not fixed or
+			 * determinable length...text options with them is
+			 * invalid.
+			 */
+		    case 'A':
+		    case 'a':
+		    case 'X':
+		    case 'x':
+			return 0;
+
+			/* 'E' is variable length, but not arbitrary...you
+			 * can find its length if you can find an END option.
+			 * N is one-byte in length but trails a name of a
+			 * space defining the enumeration values.  So treat
+			 * both the same - valid, fixed-length fields.
+			 */
+		    case 'E':
+		    case 'N':
+			/* Skip to after trailing . after name. */
+			p++;
+			while ((*p != '\0') && (*p++ != '.'))
+				;
+			break;
+
+		    default:
+			break;
+		}
+
+		p++;
+	}
+
+	return 0;
+}
+
+/* Determine the minimum length of a DHCP option prior to any variable
+ * or inconsistent length formats, according to its configured format
+ * variable (and possibly from supplied option cache contents for variable
+ * length format symbols).
+ */
+
+int
+format_min_length(format, oc)
+	const char *format;
+	struct option_cache *oc;
+{
+	const char *p;
+	int min_len = 0;
+	int last_size = 0;
+
+	p = format;
+	while (*p != '\0') {
+		switch (*p) {
+		    case 'I': /* IPv4 Address */
+		    case 'l': /* int32_t */
+		    case 'L': /* uint32_t */
+		    case 'T': /* Time, I think. (undocumented) */
+			min_len += 4;
+			last_size = 4;
+			break;
+
+		    case 's': /* int16_t */
+		    case 'S': /* uint16_t */
+			min_len += 2;
+			last_size = 2;
+			break;
+
+		    case 'N': /* Enumeration in 1-byte values. */
+			/* Skip the enumeration space name. */
+			p++;
+			while ((*p != '\0') && (*p++ != '.'))
+				;
+		    case 'b': /* int8_t */
+		    case 'B': /* uint8_t */
+		    case 'F': /* Flag that is always true. */
+		    case 'f': /* Flag */
+			min_len++;
+			last_size = 1;
+			break;
+
+		    case 'o': /* Last argument is optional. */
+			min_len -= last_size;
+		    case 'e': /* Encapsulation hint (there is an 'E' later). */
+			last_size = 0;
+			break;
+
+		    case 'E': /* Encapsulated options. */
+			/* Skip to after the trailing dot after the
+			 * encapsulation name.
+			 */
+			p++;
+			while ((*p != '\0') && (*p++ != '.'))
+				; /* This space intentionally left blank. */
+
+			/* Find an end option, or find that the encaps options
+			 * go all the way to the end of the data portion of
+			 * the option.
+			 */
+			last_size = 0;
+			while (min_len < oc->data.len) {
+				if (oc->data.data[min_len] == DHO_END) {
+					min_len++;
+					last_size++;
+					break;
+				} else if (oc->data.data[min_len] == DHO_PAD) {
+					min_len++;
+					last_size++;
+				} else if ((min_len + 1) < oc->data.len) {
+					min_len += oc->data.data[min_len + 1];
+					last_size += oc->data.data[min_len + 1];
+				} else {
+					log_error("format_min_length(%s): "
+						  "Encapsulated options "
+						  "exceed supplied buffer.",
+						  format);
+					return INT_MAX;
+				}
+			}
+
+			break;
+
+		    case 'd': /* "Domain name" */
+		    case 't': /* "ASCII Text" */
+		    case 'X': /* "ASCII or Hex Conditional */
+		    case 'x': /* "Hex" */
+		    case 'A': /* Array of all that precedes. */
+		    case 'a': /* Array of preceding symbol. */
+			return min_len;
+
+		    default:
+			/* No safe value is known. */
+			log_error("format_min_length(%s): No safe value "
+				  "for unknown format symbols.", format);
+			return INT_MAX;
+		}
+
+		p++;
+	}
+
+	return min_len;
+}
+
+
 /* Format the specified option so that a human can easily read it. */
 
 const char *pretty_print_option (option, data, len, emit_commas, emit_quotes)
@@ -1455,7 +1615,6 @@ int save_option_buffer (struct universe *universe,
 {
 	struct buffer *lbp = (struct buffer *)0;
 	struct option_cache *op = (struct option_cache *)0;
-	int formlen;
 
 	if (!option_cache_allocate (&op, MDL)) {
 		log_error ("No memory for option %s.%s.",
@@ -1499,12 +1658,15 @@ int save_option_buffer (struct universe *universe,
 	
 	op -> option = option;
 
-	/* If the option format ends in a "t" field, trailing NULLs are
-	 * considered invalid, to be removed (RFC2132 Section 2).
+	/* If this option is ultimately a text option, null determinate to
+	 * comply with RFC2132 section 2.  Mark a flag so this can be sensed
+	 * later to echo NULLs back to clients that supplied them (they
+	 * probably expect them).
 	 */
-	formlen = strlen(option->format);
-	if ((formlen > 0) && (option->format[formlen-1] == 't')) {
-		while (op->data.len &&
+	if (format_has_text(option->format)) {
+		int min_len = format_min_length(option->format, op);
+
+		while ((op->data.len > min_len) &&
 		       (op->data.data[op->data.len-1] == '\0')) {
 			op->data.len--;
 			op->flags |= OPTION_HAD_NULLS;

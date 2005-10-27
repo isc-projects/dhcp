@@ -52,6 +52,10 @@ and for prodding me into improving it.
 - The resolver library no longer closes the /etc/resolv.conf file
   descriptor it opened twice.
 
+- Changes to trailing NULL removal in 't' option-atoms has been rethought,
+  it now includes 'd' (domain name) types, and tries hard not to rewind an
+  option beyond the start of the text field it is un-terminating.
+
 			Changes since 3.0.3
 
 - A DDNS update handling function was misusing the DNS error codes, rather
