@@ -44,6 +44,14 @@ thanks to all of these good people here, both for working on the code
 and for prodding me into improving it.
 
 
+			Changes since 3.0.4b1
+
+- Command line parsing in omshell was repaired - it no longer closes
+  STDIN after reading one line.
+
+- The resolver library no longer closes the /etc/resolv.conf file
+  descriptor it opened twice.
+
 			Changes since 3.0.3
 
 - A DDNS update handling function was misusing the DNS error codes, rather

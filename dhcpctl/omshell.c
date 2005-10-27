@@ -3,7 +3,7 @@
    Examine and modify omapi objects. */
 
 /*
- * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2005 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2001-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: omshell.c,v 1.7.2.17 2004/09/30 23:11:50 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: omshell.c,v 1.7.2.18 2005/10/27 15:56:26 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include <time.h>
@@ -180,7 +180,7 @@ int main (int argc, char **argv, char **envp)
 	    if (fgets (buf, sizeof(buf), stdin) == NULL)
 		break;
 
-	    status = new_parse (&cfile, 0, buf, strlen(buf), "<STDIN>", 1);
+	    status = new_parse (&cfile, -1, buf, strlen(buf), "<STDIN>", 1);
 	    check(status, "new_parse()");
 	    
 	    token = next_token (&val, (unsigned *)0, cfile);
