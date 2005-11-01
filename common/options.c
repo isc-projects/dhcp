@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.85.2.31 2005/10/27 16:00:18 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.85.2.32 2005/11/01 23:19:03 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -1057,7 +1057,7 @@ format_has_text(format)
 
 	p = format;
 	while (*p != '\0') {
-		switch (*p) {
+		switch (*p++) {
 		    case 'd':
 		    case 't':
 			return 1;
@@ -1080,8 +1080,7 @@ format_has_text(format)
 			 */
 		    case 'E':
 		    case 'N':
-			/* Skip to after trailing . after name. */
-			p++;
+			/* Consume the space name. */
 			while ((*p != '\0') && (*p++ != '.'))
 				;
 			break;
@@ -1089,8 +1088,6 @@ format_has_text(format)
 		    default:
 			break;
 		}
-
-		p++;
 	}
 
 	return 0;
@@ -1113,11 +1110,11 @@ format_min_length(format, oc)
 
 	p = format;
 	while (*p != '\0') {
-		switch (*p) {
+		switch (*p++) {
 		    case 'I': /* IPv4 Address */
 		    case 'l': /* int32_t */
 		    case 'L': /* uint32_t */
-		    case 'T': /* Time, I think. (undocumented) */
+		    case 'T': /* Lease Time, uint32_t equivalent */
 			min_len += 4;
 			last_size = 4;
 			break;
@@ -1129,10 +1126,12 @@ format_min_length(format, oc)
 			break;
 
 		    case 'N': /* Enumeration in 1-byte values. */
-			/* Skip the enumeration space name. */
-			p++;
+			/* Consume space name. */
 			while ((*p != '\0') && (*p++ != '.'))
 				;
+
+			/* Fall Through to handle as one-byte field */
+
 		    case 'b': /* int8_t */
 		    case 'B': /* uint8_t */
 		    case 'F': /* Flag that is always true. */
@@ -1148,16 +1147,13 @@ format_min_length(format, oc)
 			break;
 
 		    case 'E': /* Encapsulated options. */
-			/* Skip to after the trailing dot after the
-			 * encapsulation name.
-			 */
-			p++;
+			/* Consume space name. */
 			while ((*p != '\0') && (*p++ != '.'))
-				; /* This space intentionally left blank. */
+				;
 
 			/* Find an end option, or find that the encaps options
-			 * go all the way to the end of the data portion of
-			 * the option.
+			 * go all the way to the end (or beyond) of the data
+			 * portion of the option.
 			 */
 			last_size = 0;
 			while (min_len < oc->data.len) {
@@ -1169,15 +1165,24 @@ format_min_length(format, oc)
 					min_len++;
 					last_size++;
 				} else if ((min_len + 1) < oc->data.len) {
-					min_len += oc->data.data[min_len + 1];
-					last_size += oc->data.data[min_len + 1];
+					min_len += oc->data.data[min_len+1]+2;
+					last_size += oc->data.data[min_len+1]+2;
 				} else {
-					log_error("format_min_length(%s): "
-						  "Encapsulated options "
-						  "exceed supplied buffer.",
-						  format);
-					return INT_MAX;
+					/* Suboption length is out of bounds,
+					 * advance beyond the code/length pair
+					 * to trigger below error conditonal.
+					 */
+					min_len += 2;
+					last_size += 2;
+					break;
 				}
+			}
+
+			if (min_len > oc->data.len) {
+				log_error("format_min_length(%s): "
+					  "Encapsulated options exceed "
+					  "supplied buffer.", format);
+				return INT_MAX;
 			}
 
 			break;
@@ -1196,8 +1201,6 @@ format_min_length(format, oc)
 				  "for unknown format symbols.", format);
 			return INT_MAX;
 		}
-
-		p++;
 	}
 
 	return min_len;

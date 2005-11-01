@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tables.c,v 1.51.2.10 2005/08/26 22:45:46 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: tables.c,v 1.51.2.11 2005/11/01 23:19:03 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -58,6 +58,9 @@ HASH_FUNCTIONS (option, const char *, struct option, option_hash_t, 0, 0)
    b - 8-bit signed integer
    B - 8-bit unsigned integer
    t - ASCII text
+   T - Lease Time, 32-bit unsigned integer implying a number of seconds from
+       some event.  The special all-ones value means 'infinite'.  May either
+       be printed as a decimal, eg, "3600", or as this name, eg, "infinite".
    f - flag (true or false)
    A - array of whatever precedes (e.g., IA means array of IP addresses)
    a - array of the preceding character (e.g., IIa means two or more IP
