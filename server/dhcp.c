@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.192.2.50 2005/04/29 23:10:57 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.192.2.50.16.1 2005/12/13 19:46:46 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2011,57 +2011,56 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 #if defined (FAILOVER_PROTOCOL)
 		/* Okay, we know the lease duration.   Now check the
 		   failover state, if any. */
-		if (lease -> tsfp) {
-			lt ->tsfp = lease ->tsfp;
-		}
 		if (lease -> pool && lease -> pool -> failover_peer) {
+			TIME new_lease_time = lease_time;
 			dhcp_failover_state_t *peer =
 			    lease -> pool -> failover_peer;
 
-			/* If the lease time we arrived at exceeds what
-			   the peer has, we can only issue a lease of
-			   peer -> mclt, but we can tell the peer we
-			   want something longer in the future. */
-			/* XXX This may result in updates that only push
-			   XXX the peer's expiry time for this lease up
-			   XXX by a few seconds - think about this again
-			   XXX later. */
-			if (lease_time > peer -> mclt &&
-			    cur_time + lease_time > lease -> tsfp) {
-				/* Here we're assuming that if we don't have
-				   to update tstp, there's already an update
-				   queued.   May want to revisit this.  */
-				if (peer -> me.state != partner_down &&
-				    cur_time + lease_time > lease -> tstp)
-					lt -> tstp = (cur_time + lease_time +
-						      peer -> mclt / 2);
+			/* Copy previous lease failover ack-state. */
+			lt->tsfp = lease->tsfp;
 
-				/* Now choose a lease time that is either
-				   MCLT, for a lease that's never before been
-				   assigned, or TSFP + MCLT for a lease that
-				   has.
-				   XXX Note that TSFP may be < cur_time.
-				   XXX What do we do in this case?
-				   XXX should the expiry timer on the lease
-				   XXX set tsfp and tstp to zero? */
-				if (lease -> tsfp < cur_time) {
-					lease_time = peer -> mclt;
-				} else {
-					lease_time = (lease -> tsfp  - cur_time
-						      + peer -> mclt);
-				}
-			} else {
-				if (cur_time + lease_time > lease -> tsfp &&
-				    lease_time > peer -> mclt / 2) {
-					lt -> tstp = (cur_time + lease_time +
-						      peer -> mclt / 2);
-				} else { 
-					lt -> tstp = (cur_time + lease_time +
-						      lease_time / 2);
-				}
+			/* Update Client Last Transaction Time. */
+			lt->cltt = cur_time;
+
+			/* Lease times less than MCLT are not a concern. */
+			if (lease_time > peer->mclt) {
+				/* Each server can only offer a lease time
+				 * that is either equal to MCLT (at least),
+				 * or up to TSFP+MCLT.  Only if the desired
+				 * lease time falls within TSFP+MCLT, can
+				 * the server allow it.
+				 */
+				if (lt->tsfp <= cur_time)
+					new_lease_time = peer->mclt;
+				else if ((cur_time + lease_time) >
+					 (lt->tsfp + peer->mclt))
+					new_lease_time = (lt->tsfp - cur_time)
+								+ peer->mclt;
 			}
 
-			lt -> cltt = cur_time;
+			/* Update potential expiry.  Allow for the desired
+			 * lease time plus one half the actual (wether
+			 * modified downward or not) lease time, which is
+			 * actually an estimate of when the client will
+			 * renew.  This way, the client will be able to get
+			 * the desired lease time upon renewal.
+			 */
+			if (offer == DHCPACK) {
+				lt->tstp = cur_time + lease_time +
+						(new_lease_time / 2);
+
+				/* If we reduced the potential expiry time,
+				 * make sure we don't offer an old-expiry-time
+				 * lease for this lease before the change is
+				 * ack'd.
+				 */
+				if (lt->tstp < lt->tsfp)
+					lt->tsfp = lt->tstp;
+			} else
+				lt->tstp = lease->tstp;
+
+			/* Use failover-modified lease time.  */
+			lease_time = new_lease_time;
 		}
 #endif /* FAILOVER_PROTOCOL */
 
