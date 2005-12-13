@@ -1,6 +1,6 @@
 	       Internet Systems Consortium DHCP Distribution
-			      Version 3.0.3
-			      July 22, 2005
+			    Version 3.0.3-pbsg0
+			     December 13, 2005
 
 			      README FILE
 
@@ -96,10 +96,12 @@ system.
 
 			    RELEASE STATUS
 
-This is the first beta release of ISC DHCP 3.0.3.  This is a maintenance
-release which seeks only to fix bugs present in versions 3.0.2 and
-earlier.  No new features have or will be added in subsequent
-release candidates of this release.
+This is a custom release of version 3.0.3 of the ISC DHCP software
+distribution, for PBSG.  It differs from version 3.0.3 in only one
+aspect; the inclusion of [ISC-Bugs #1926], rewrites of the TSTP
+calculation.  3.0.3 is a maintenance release which seeks only to fix
+bugs present in versions 3.0.2 and earlier.  No new features have
+been added.
 
 In this release, the server and relay agent are currently fully
 functional on NetBSD, Linux systems with kernel version 2.2 or later,
@@ -142,14 +144,14 @@ information.   On Digital Unix, type ``man pfilt''.
 To build the DHCP Distribution, unpack the compressed tar file using
 the tar utility and the gzip command - type something like:
 
-	zcat dhcp-3.0.3.tar.gz |tar xvf -
+	zcat dhcp-3.0.3-pbsg0.tar.gz |tar xvf -
 
 On BSD/OS, you have to type gzcat, not zcat, and you may run into
 similar problems on other operating systems.
 
 			    CONFIGURING IT
 
-Now, cd to the dhcp-3.0.3 subdirectory that you've just created and
+Now, cd to the dhcp-3.0.3-pbsg0 subdirectory that you've just created and
 configure the source tree by typing:
 
 	./configure

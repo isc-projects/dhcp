@@ -1,6 +1,6 @@
 	      Internet Systems Consortium DHCP Distribution
-			      Version 3.0.3
-			      July 22, 2005
+			   Version 3.0.3-pbsg0
+			    December 13, 2005
 
 			     Release Notes
 
@@ -42,6 +42,12 @@ Measurement Systems, Igor Sharfmesser at Kazakh Telecom, and Brian
 Murrell at BC Tel Advanced Communications.  I'd like to express my
 thanks to all of these good people here, both for working on the code
 and for prodding me into improving it.
+
+
+			Changes since 3.0.3
+
+- Failover potential expiry calculations (TSTP) have been corrected.  Results
+  should be substantially more consistent, and proper given the constraints.
 
 			Changes since 3.0.3b3
 
