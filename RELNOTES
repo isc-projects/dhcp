@@ -54,6 +54,14 @@ and for prodding me into improving it.
   messages also log the 'effective client ip address' rather than the
   client's supplied ciaddr (since some clients produce null ciaddrs).
 
+- The server was inappropriately sending leases to the RESET state in the
+  event that multiple active leases were found to match a singly-identified
+  client.  This was changed to RELEASED (by accepting a different, ACTIVE
+  binding, the client is implicitly releasing its lease).  This repairs a
+  bug wherein secondary servers in failover pairs detecting this condition
+  move leases to RESET, and primaries refuse to accept that state
+  transition (properly).
+
 			Changes since 3.0.4b1
 
 - Command line parsing in omshell was repaired - it no longer closes

@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.192.2.58 2006/01/06 22:07:11 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.192.2.59 2006/01/06 22:09:23 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -3335,7 +3335,7 @@ int find_lease (struct lease **lp,
 				    (share ==
 				     uid_lease -> subnet -> shared_network) &&
 				    packet -> packet_type == DHCPREQUEST)
-					dissociate_lease (uid_lease);
+					release_lease (uid_lease, packet);
 			    }
 			    lease_dereference (&uid_lease, MDL);
 			    lease_reference (&uid_lease, ip_lease, MDL);
@@ -3405,8 +3405,10 @@ int find_lease (struct lease **lp,
 	      permitted (packet, ip_lease -> pool -> prohibit_list)) ||
 	     (ip_lease -> pool -> permit_list &&
 	      !permitted (packet, ip_lease -> pool -> permit_list)))) {
-		if (!packet -> raw -> ciaddr.s_addr)
+		if (!packet->raw->ciaddr.s_addr &&
+		    (ip_lease->binding_state == FTS_ACTIVE))
 			release_lease (ip_lease, packet);
+
 		lease_dereference (&ip_lease, MDL);
 	}
 
@@ -3483,10 +3485,18 @@ int find_lease (struct lease **lp,
 	   the lease that matched the client identifier. */
 	if (uid_lease) {
 		if (lease) {
+			log_error("uid lease %s for client %s is duplicate "
+				  "on %s",
+				  piaddr(uid_lease->ip_addr),
+				  print_hw_addr(packet->raw->htype,
+						packet->raw->hlen,
+						packet->raw->chaddr),
+				  uid_lease->subnet->shared_network->name);
+
 			if (!packet -> raw -> ciaddr.s_addr &&
 			    packet -> packet_type == DHCPREQUEST &&
 			    uid_lease -> binding_state == FTS_ACTIVE)
-				dissociate_lease (uid_lease);
+				release_lease (uid_lease, packet);
 #if defined (DEBUG_FIND_LEASE)
 			log_info ("not choosing uid lease.");
 #endif
