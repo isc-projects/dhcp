@@ -49,6 +49,11 @@ and for prodding me into improving it.
 - Null-termination sensing for certain clients that unfortunatley require
   it in DHCPINFORM processing was repaired.
 
+- DHCPINFORM processing is a little more careful about return addressing
+  its responses, or if responding via a relay.  The INFORM related
+  messages also log the 'effective client ip address' rather than the
+  client's supplied ciaddr (since some clients produce null ciaddrs).
+
 			Changes since 3.0.4b1
 
 - Command line parsing in omshell was repaired - it no longer closes

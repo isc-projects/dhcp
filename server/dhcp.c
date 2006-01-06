@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.192.2.57 2006/01/06 22:05:03 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.192.2.58 2006/01/06 22:07:11 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -933,7 +933,7 @@ void dhcpinform (packet, ms_nulltp)
 	struct packet outgoing;
 	unsigned char dhcpack = DHCPACK;
 	struct subnet *subnet = (struct subnet *)0;
-	struct iaddr cip;
+	struct iaddr cip, gip;
 	unsigned i, j;
 	int nulltp;
 	struct sockaddr_in to;
@@ -950,11 +950,19 @@ void dhcpinform (packet, ms_nulltp)
 		memcpy (cip.iabuf, &packet -> raw -> ciaddr, 4);
 	}
 
+	if (packet->raw->giaddr.s_addr) {
+		gip.len = 4;
+		memcpy(gip.iabuf, &packet->raw->giaddr, 4);
+	} else
+		gip.len = 0;
+
 	/* %Audit% This is log output. %2004.06.17,Safe%
 	 * If we truncate we hope the user can get a hint from the log.
 	 */
 	snprintf (msgbuf, sizeof msgbuf, "DHCPINFORM from %s via %s",
-		 piaddr (cip), packet -> interface -> name);
+		 piaddr (cip), packet->raw->giaddr.s_addr ?
+				inet_ntoa(packet->raw->giaddr) :
+				packet -> interface -> name);
 
 	/* If the IP source address is zero, don't respond. */
 	if (!memcmp (cip.iabuf, "\0\0\0", 4)) {
@@ -963,13 +971,18 @@ void dhcpinform (packet, ms_nulltp)
 	}
 
 	/* Find the subnet that the client is on. */
-	oc = (struct option_cache *)0;
-	find_subnet (&subnet , cip, MDL);
+	if (gip.len) {
+		/* XXX - do subnet selection relay agent suboption here */
+		find_subnet(&subnet, gip, MDL);
+	} else {
+		/* XXX - do subnet selection (not relay agent) option here */
+		find_subnet(&subnet, cip, MDL);
+	}
 
 	/* Sourceless packets don't make sense here. */
 	if (!subnet) {
-		log_info ("%s: unknown subnet %s",
-			  msgbuf, inet_ntoa (packet -> raw -> giaddr));
+		log_info ("%s: unknown subnet for address %s",
+			  msgbuf, gip.len ? piaddr(gip) : piaddr(cip));
 		return;
 	}
 
@@ -998,7 +1011,6 @@ void dhcpinform (packet, ms_nulltp)
 		return;
 	}
 
-	memset (&d1, 0, sizeof d1);
 	option_state_allocate (&options, MDL);
 	memset (&outgoing, 0, sizeof outgoing);
 	memset (&raw, 0, sizeof raw);
@@ -1224,9 +1236,6 @@ void dhcpinform (packet, ms_nulltp)
 	raw.hops = packet -> raw -> hops;
 	raw.op = BOOTREPLY;
 
-	/* Report what we're sending... */
-	log_info ("DHCPACK to %s", inet_ntoa (raw.ciaddr));
-
 #ifdef DEBUG_PACKET
 	dump_packet (&outgoing);
 	dump_raw ((unsigned char *)&raw, outgoing.packet_length);
@@ -1239,9 +1248,47 @@ void dhcpinform (packet, ms_nulltp)
 #endif
 	memset (to.sin_zero, 0, sizeof to.sin_zero);
 
-	/* Use the IP address we derived for the client. */
-	memcpy (&to.sin_addr, cip.iabuf, 4);
-	to.sin_port = remote_port;
+	/* RFC2131 states the server SHOULD unciast to ciaddr.
+	 * There are two wrinkles - relays, and when ciaddr is zero.
+	 * There's actually no mention of relays at all in rfc2131.
+	 * I think it's best to use relays where present...a relay is
+	 * a bit more trustworthy about getting the message to a client
+	 * than a client might be (it's better to send to a relay than
+	 * to, say, a link-local address the client has selected).
+	 *
+	 * Where ciaddr is zero, which actually does happen quite frequently
+	 * even though rfc2131 is unequivocal on the subject, we try to help
+	 * by using the IP source address.
+	 *
+	 * Where ciaddr is zero AND we got it via a relay, the IP source
+	 * address is the relay - and we're transmitting to the client
+	 * port.  This might cause a loop.
+	 *
+	 * So, overall, this is neater if the relay is selected first,
+	 * treated like a relay, client addressing taken second.  Since
+	 * a relay possibly has no way of knowing how to reach the client
+	 * if chaddr is zero (equally as common as ciaddr being zeroed),
+	 * set the broadcast bit to try and help.
+	 */
+	if (gip.len) {
+		memcpy(&to.sin_addr, gip.iabuf, 4);
+		to.sin_port = local_port;
+
+		if (!raw.hlen)
+			raw.flags |= htons(BOOTP_BROADCAST);
+	} else {
+		memcpy(&to.sin_addr, cip.iabuf, 4);
+		to.sin_port = remote_port;
+	}
+
+	/* Report what we're sending. */
+	snprintf(msgbuf, sizeof msgbuf, "DHCPACK to %s (%s) via", piaddr(cip),
+		 (packet->raw->htype && packet->raw->hlen) ?
+			print_hw_addr(packet->raw->htype, packet->raw->hlen,
+				      packet->raw->chaddr) :
+			"<no client hardware address>");
+	log_info("%s %s", msgbuf, gip.len ? piaddr(gip) :
+					    packet->interface->name);
 
 	errno = 0;
 	send_packet ((fallback_interface
