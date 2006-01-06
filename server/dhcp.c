@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.192.2.56 2005/10/14 15:32:56 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.192.2.57 2006/01/06 22:05:03 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1060,14 +1060,8 @@ void dhcpinform (packet, ms_nulltp)
 	nulltp = 0;
 	if ((oc = lookup_option (&dhcp_universe, packet -> options,
 				 DHO_HOST_NAME))) {
-		if (evaluate_option_cache (&d1, packet, (struct lease *)0,
-					   (struct client_state *)0,
-					   packet -> options, options,
-					   &global_scope, oc, MDL)) {
-			if (d1.data [d1.len - 1] == '\0')
-				nulltp = 1;
-			data_string_forget (&d1, MDL);
-		}
+		if (!oc->expression)
+			nulltp = oc->flags & OPTION_HAD_NULLS;
 	}
 
 	/* Put in DHCP-specific options. */

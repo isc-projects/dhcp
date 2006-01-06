@@ -44,6 +44,11 @@ thanks to all of these good people here, both for working on the code
 and for prodding me into improving it.
 
 
+			Changes since 3.0.4b2
+
+- Null-termination sensing for certain clients that unfortunatley require
+  it in DHCPINFORM processing was repaired.
+
 			Changes since 3.0.4b1
 
 - Command line parsing in omshell was repaired - it no longer closes
