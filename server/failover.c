@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.53.2.43 2005/10/10 16:56:47 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.53.2.44 2006/02/15 23:00:08 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -405,11 +405,12 @@ isc_result_t dhcp_failover_link_signal (omapi_object_t *h,
 			   XXX or will disconnect blow it away? */
 			return ISC_R_UNEXPECTED;
 		}
+		memset (link -> imsg, 0, sizeof (failover_message_t));
 		link -> imsg -> refcnt = 1;
 		/* Get the length: */
 		omapi_connection_get_uint16 (c, &link -> imsg_len);
 		link -> imsg_count = 0;	/* Bytes read. */
-
+		
 		/* Maximum of 2048 bytes in any failover message. */
 		if (link -> imsg_len > DHCP_FAILOVER_MAX_MESSAGE_SIZE) {
 			status = ISC_R_UNEXPECTED;

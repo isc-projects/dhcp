@@ -62,6 +62,8 @@ and for prodding me into improving it.
   move leases to RESET, and primaries refuse to accept that state
   transition (properly).
 
+- The memset-after-dmalloc() changes made in 3.0.4b1 have been backed out.
+
 			Changes since 3.0.4b1
 
 - Command line parsing in omshell was repaired - it no longer closes

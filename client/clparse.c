@@ -3,7 +3,7 @@
    Parser for dhclient config and lease files... */
 
 /*
- * Copyright (c) 2004-2005 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: clparse.c,v 1.62.2.10 2005/10/14 15:34:52 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: clparse.c,v 1.62.2.11 2006/02/15 23:00:08 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -128,6 +128,7 @@ isc_result_t read_client_conf ()
 				dmalloc (sizeof (struct client_state), MDL);
 			if (!ip -> client)
 				log_fatal ("no memory for client state.");
+			memset (ip -> client, 0, sizeof *(ip -> client));
 			ip -> client -> interface = ip;
 		}
 
@@ -665,6 +666,7 @@ void parse_option_list (cfile, list)
 			ix = 0;
 			for (q = p; q; q = q -> cdr)
 				(*list) [ix++] = (u_int32_t)(long)q -> car;
+			(*list) [ix] = 0;
 		}
 		while (p) {
 			q = p -> cdr;
@@ -800,6 +802,7 @@ void make_client_state (state)
 	*state = ((struct client_state *)dmalloc (sizeof **state, MDL));
 	if (!*state)
 		log_fatal ("no memory for client state\n");
+	memset (*state, 0, sizeof **state);
 }
 
 void make_client_config (client, config)
@@ -848,6 +851,7 @@ void parse_client_lease_statement (cfile, is_static)
 		 dmalloc (sizeof (struct client_lease), MDL));
 	if (!lease)
 		log_fatal ("no memory for lease.\n");
+	memset (lease, 0, sizeof *lease);
 	lease -> is_static = is_static;
 	if (!option_state_allocate (&lease -> options, MDL))
 		log_fatal ("no memory for lease options.\n");

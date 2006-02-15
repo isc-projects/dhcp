@@ -3,7 +3,7 @@
    OMAPI object interfaces for the DHCP server. */
 
 /*
- * Copyright (c) 2004-2005 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1999-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -41,7 +41,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: omapi.c,v 1.46.2.22 2005/10/07 15:33:57 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: omapi.c,v 1.46.2.23 2006/02/15 23:00:08 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -898,6 +898,7 @@ isc_result_t dhcp_host_set_value  (omapi_object_t *h,
 			memcpy (host -> name,
 				value -> u.buffer.value,
 				value -> u.buffer.len);
+			host -> name [value -> u.buffer.len] = 0;
 		} else
 			return ISC_R_INVALIDARG;
 		return ISC_R_SUCCESS;
@@ -2043,6 +2044,7 @@ isc_result_t binding_scope_set_value (struct binding_scope *scope, int createp,
 	if (!nname)
 		return ISC_R_NOMEMORY;
 	memcpy (nname, name -> value, name -> len);
+	nname [name -> len] = 0;
 	bp = find_binding (scope, nname);
 	if (!bp && !createp) {
 		dfree (nname, MDL);
@@ -2093,6 +2095,7 @@ isc_result_t binding_scope_set_value (struct binding_scope *scope, int createp,
 			dfree (nname, MDL);
 			return ISC_R_NOMEMORY;
 		}
+		memset (bp, 0, sizeof *bp);
 		bp -> name = nname;
 		nname = (char *)0;
 		bp -> next = scope -> bindings;
@@ -2119,6 +2122,7 @@ isc_result_t binding_scope_get_value (omapi_value_t **value,
 	if (!nname)
 		return ISC_R_NOMEMORY;
 	memcpy (nname, name -> value, name -> len);
+	nname [name -> len] = 0;
 	bp = find_binding (scope, nname);
 	dfree (nname, MDL);
 	if (!bp)

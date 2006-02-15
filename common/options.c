@@ -3,7 +3,7 @@
    DHCP options parsing and reassembly. */
 
 /*
- * Copyright (c) 2004-2005 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.85.2.32 2005/11/01 23:19:03 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.85.2.33 2006/02/15 23:00:08 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -1718,6 +1718,7 @@ void save_hashed_option (universe, options, oc)
 				   universe -> name, oc -> option -> name);
 			return;
 		}
+		memset (hash, 0, OPTION_HASH_SIZE * sizeof *hash);
 		options -> universes [universe -> index] = (VOIDPTR)hash;
 	} else {
 		/* Try to find an existing option matching the new one. */

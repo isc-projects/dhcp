@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.192.2.59 2006/01/06 22:09:23 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.192.2.60 2006/02/15 23:00:08 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2244,8 +2244,10 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 		lt -> client_hostname = dmalloc (d1.len + 1, MDL);
 		if (!lt -> client_hostname)
 			log_error ("no memory for client hostname.");
-		else
+		else {
 			memcpy (lt -> client_hostname, d1.data, d1.len);
+			lt -> client_hostname [d1.len] = 0;
+		}
 		data_string_forget (&d1, MDL);
 	}
 

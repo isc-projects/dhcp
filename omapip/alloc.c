@@ -4,7 +4,7 @@
    protocol... */
 
 /*
- * Copyright (c) 2004-2005 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1999-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -35,7 +35,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: alloc.c,v 1.22.2.11 2005/08/26 22:45:47 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium, Inc.  All rights reserved.\n";
+"$Id: alloc.c,v 1.22.2.12 2006/02/15 23:00:08 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium, Inc.  All rights reserved.\n";
 #endif /* not lint */
 
 #include <omapip/omapip_p.h>
@@ -561,9 +561,6 @@ isc_result_t omapi_object_initialize (omapi_object_t *o,
 				      size_t usize, size_t psize,
 				      const char *file, int line)
 {
-	/* We don't know if we got this buffer from dmalloc() or an allocator
-	 * that might not initialize the buffer.  This memset() is required.
-	 */
 	memset (o, 0, psize);
 	o -> type = type;
 	if (type -> initialize)
@@ -729,6 +726,7 @@ isc_result_t omapi_buffer_new (omapi_buffer_t **h,
 	t = (omapi_buffer_t *)dmalloc (sizeof *t, file, line);
 	if (!t)
 		return ISC_R_NOMEMORY;
+	memset (t, 0, sizeof *t);
 	status = omapi_buffer_reference (h, t, file, line);
 	if (status != ISC_R_SUCCESS)
 		dfree (t, file, line);
@@ -845,6 +843,7 @@ isc_result_t omapi_typed_data_new (const char *file, int line,
 	new = dmalloc (len, file, line);
 	if (!new)
 		return ISC_R_NOMEMORY;
+	memset (new, 0, len);
 
 	switch (type) {
 	      case omapi_datatype_int:
@@ -953,6 +952,7 @@ isc_result_t omapi_data_string_new (omapi_data_string_t **d, unsigned len,
 	new = dmalloc (nlen, file, line);
 	if (!new)
 		return ISC_R_NOMEMORY;
+	memset (new, 0, OMAPI_DATA_STRING_EMPTY_SIZE);
 	new -> len = len;
 	return omapi_data_string_reference (d, new, file, line);
 }
@@ -1024,6 +1024,7 @@ isc_result_t omapi_value_new (omapi_value_t **d,
 	new = dmalloc (sizeof *new, file, line);
 	if (!new)
 		return ISC_R_NOMEMORY;
+	memset (new, 0, sizeof *new);
 	return omapi_value_reference (d, new, file, line);
 }
 
@@ -1102,6 +1103,8 @@ isc_result_t omapi_addr_list_new (omapi_addr_list_t **d, unsigned count,
 		       sizeof (omapi_addr_list_t), file, line);
 	if (!new)
 		return ISC_R_NOMEMORY;
+	memset (new, 0, ((count * sizeof (omapi_addr_t)) +
+			 sizeof (omapi_addr_list_t)));
 	new -> count = count;
 	new -> addresses = (omapi_addr_t *)(new + 1);
 	return omapi_addr_list_reference (d, new, file, line);
