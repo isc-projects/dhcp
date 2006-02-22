@@ -4,7 +4,7 @@
    protocol... */
 
 /*
- * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2006 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1999-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -35,7 +35,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: alloc.c,v 1.22.2.12 2006/02/15 23:00:08 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium, Inc.  All rights reserved.\n";
+"$Id: alloc.c,v 1.22.2.13 2006/02/22 22:43:27 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium, Inc.  All rights reserved.\n";
 #endif /* not lint */
 
 #include <omapip/omapip_p.h>

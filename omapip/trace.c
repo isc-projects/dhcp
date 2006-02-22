@@ -5,7 +5,7 @@
    transactions... */
 
 /*
- * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2006 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2001-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: trace.c,v 1.9.2.7 2006/02/15 23:00:08 dhankins Exp $ Copyright 2004-2005 Internet Systems Consortium.";
+"$Id: trace.c,v 1.9.2.8 2006/02/22 22:43:27 dhankins Exp $ Copyright 2004-2006 Internet Systems Consortium.";
 #endif
 
 #include <omapip/omapip_p.h>

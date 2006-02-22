@@ -3,7 +3,7 @@
    Functions for maintaining handles on objects. */
 
 /*
- * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2006 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1999-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: handle.c,v 1.6.2.3 2006/02/15 23:00:08 dhankins Exp $ Copyright 2004-2005 Internet Systems Consortium.";
+"$Id: handle.c,v 1.6.2.4 2006/02/22 22:43:27 dhankins Exp $ Copyright 2004-2006 Internet Systems Consortium.";
 #endif
 
 #include <omapip/omapip_p.h>
