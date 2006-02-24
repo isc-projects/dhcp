@@ -187,6 +187,9 @@ struct option_cache {
 	struct expression *expression;
 	struct option *option;
 	struct data_string data;
+
+	#define OPTION_HAD_NULLS	0x00000001
+	u_int32_t flags;
 };
 
 struct option_state {
@@ -313,8 +316,15 @@ struct lease {
 	
 	struct lease_state *state;
 
+	/* 'tsfp' is more of an 'effective' tsfp.  It may be calculated from
+	 * stos+mclt for example if it's an expired lease and the server is
+	 * in partner-down state.  'atsfp' is zeroed whenever a lease is
+	 * updated - and only set when the peer acknowledges it.  This
+	 * ensures every state change is transmitted.
+	 */
 	TIME tstp;	/* Time sent to partner. */
 	TIME tsfp;	/* Time sent from partner. */
+	TIME atsfp;	/* Actual time sent from partner. */
 	TIME cltt;	/* Client last transaction time. */
 	struct lease *next_pending;
 };
@@ -331,7 +341,7 @@ struct lease_state {
 	struct option_state *options;
 	struct data_string parameter_request_list;
 	int max_message_size;
-	u_int32_t expiry, renewal, rebind;
+	TIME expiry, renewal, rebind;
 	struct data_string filename, server_name;
 	int got_requested_address;
 	int got_server_identifier;
@@ -993,6 +1003,8 @@ int store_options PROTO ((int *, unsigned char *, unsigned, struct packet *,
 			  struct option_state *, struct binding_scope **,
 			  unsigned *, int, unsigned, unsigned,
 			  int, const char *));
+int format_has_text(const char *);
+int format_min_length(const char *, struct option_cache *);
 const char *pretty_print_option PROTO ((struct option *, const unsigned char *,
 					unsigned, int, int));
 int get_option (struct data_string *, struct universe *,
@@ -1769,7 +1781,7 @@ int if_readsocket PROTO ((omapi_object_t *));
 void reinitialize_interfaces PROTO ((void));
 
 /* dispatch.c */
-void set_time (u_int32_t);
+void set_time(TIME);
 struct timeval *process_outstanding_timeouts (struct timeval *);
 void dispatch PROTO ((void));
 isc_result_t got_one PROTO ((omapi_object_t *));

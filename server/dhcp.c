@@ -3,7 +3,7 @@
    DHCP Protocol engine. */
 
 /*
- * Copyright (c) 2004-2005 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2006 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.199 2005/09/30 19:15:55 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.200 2006/02/24 23:16:30 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -188,17 +188,16 @@ void dhcp (packet)
 	}
       nolease:
 
-	/* Classify the client. */
+	/* If a client null terminates options it sends, it probably
+	 * expects the server to reciprocate.
+	 */
 	if ((oc = lookup_option (&dhcp_universe, packet -> options,
 				 DHO_HOST_NAME))) {
 		if (!oc -> expression)
-			while (oc -> data.len &&
-			       oc -> data.data [oc -> data.len - 1] == 0) {
-				ms_nulltp = 1;
-				oc -> data.len--;
-			}
+			ms_nulltp = oc->flags & OPTION_HAD_NULLS;
 	}
 
+	/* Classify the client. */
 	classify_client (packet);
 
 	switch (packet -> packet_type) {
@@ -245,15 +244,13 @@ void dhcpdiscover (packet, ms_nulltp)
 	char msgbuf [1024]; /* XXX */
 	TIME when;
 	const char *s;
-	int allocatedp = 0;
 	int peer_has_leases = 0;
-	int alloc_lease_called = 0;
 #if defined (FAILOVER_PROTOCOL)
 	dhcp_failover_state_t *peer;
 #endif
 
 	find_lease (&lease, packet, packet -> shared_network,
-		    0, &allocatedp, (struct lease *)0, MDL);
+		    0, &peer_has_leases, (struct lease *)0, MDL);
 
 	if (lease && lease -> client_hostname) {
 		if ((strlen (lease -> client_hostname) <= 64) &&
@@ -292,22 +289,20 @@ void dhcpdiscover (packet, ms_nulltp)
 	if (lease && lease -> pool && lease -> pool -> failover_peer) {
 		peer = lease -> pool -> failover_peer;
 
-		/* If the lease is ours to allocate, then allocate it,
-		   but set the allocatedp flag. */
-		if (lease_mine_to_reallocate (lease))
-			allocatedp = 1;
+		/* If the lease is ours to allocate, then allocate it. */
+		if (lease_mine_to_reallocate(lease)) {
+			if (lease->pool && lease->pool->failover_peer)
+				dhcp_failover_pool_check(lease->pool);
 
-		/* If the lease is active, do load balancing to see who
-		   allocates the lease (if it's active, it already belongs
-		   to the client, or we wouldn't have gotten it from
-		   find_lease (). */
-		else if (lease -> binding_state == FTS_ACTIVE &&
-			 (peer -> service_state != cooperating ||
-			  load_balance_mine (packet, peer)))
-			;
+		/* If the lease is active, it belongs to the client.  This
+		 * is the right lease, if we are to offer one.  We decide
+		 * wether or not to offer later on.
+		 */
+		} else if (lease->binding_state == FTS_ACTIVE) {
+			; /* This space intentionally left blank. */
 
 		/* Otherwise, we can't let the client have this lease. */
-		else {
+		} else {
 #if defined (DEBUG_FIND_LEASE)
 		    log_debug ("discarding %s - %s",
 			       piaddr (lease -> ip_addr),
@@ -336,8 +331,6 @@ void dhcpdiscover (packet, ms_nulltp)
 		if (lease -> pool && lease -> pool -> failover_peer)
 			dhcp_failover_pool_check (lease -> pool);
 #endif
-		allocatedp = 1;
-		alloc_lease_called = 1;
 	}
 
 #if defined (FAILOVER_PROTOCOL)
@@ -353,26 +346,15 @@ void dhcpdiscover (packet, ms_nulltp)
 		peer = (dhcp_failover_state_t *)0;
 
 	/* Do load balancing if configured. */
-	/* If the lease is newly allocated, and we're not the server that
-	   the client would normally get with load balancing, and the
-	   failover protocol state is normal, let the other server get this.
-	   XXX Check protocol spec to make sure that predicating this on
-	   XXX allocatedp is okay - I'm doing this so that the client won't
-	   XXX be forced to switch servers (and IP addresses) just because
-	   XXX of bad luck, when it's possible for it to get the address it
-	   XXX is requesting.    Not sure this is allowed.  */
-	if (allocatedp && peer && (peer -> service_state == cooperating) &&
+	if (peer && (peer -> service_state == cooperating) &&
 	    !load_balance_mine (packet, peer)) {
-		/* peer_has_leases only has a chance to be set if we called
-		 * allocate_lease() above.
-		 */
-		if (!alloc_lease_called || peer_has_leases) {
+		if (peer_has_leases) {
 			log_debug ("%s: load balance to peer %s",
 				   msgbuf, peer -> name);
 			goto out;
 		} else {
-			log_debug ("cancel load balance to peer %s - %s",
-				   peer -> name, "no free leases");
+			log_debug ("%s: cancel load balance to peer %s - %s",
+				   msgbuf, peer -> name, "no free leases");
 		}
 	}
 #endif
@@ -442,8 +424,6 @@ void dhcprequest (packet, ms_nulltp, ip_lease)
 	if (find_subnet (&subnet, cip, MDL))
 		find_lease (&lease, packet,
 			    subnet -> shared_network, &ours, 0, ip_lease, MDL);
-	/* XXX consider using allocatedp arg to find_lease to see
-	   XXX that this isn't a compliant DHCPREQUEST. */
 
 	if (lease && lease -> client_hostname) {
 		if ((strlen (lease -> client_hostname) <= 64) &&
@@ -953,7 +933,7 @@ void dhcpinform (packet, ms_nulltp)
 	struct packet outgoing;
 	unsigned char dhcpack = DHCPACK;
 	struct subnet *subnet = (struct subnet *)0;
-	struct iaddr cip;
+	struct iaddr cip, gip;
 	unsigned i, j;
 	int nulltp;
 	struct sockaddr_in to;
@@ -970,11 +950,19 @@ void dhcpinform (packet, ms_nulltp)
 		memcpy (cip.iabuf, &packet -> raw -> ciaddr, 4);
 	}
 
+	if (packet->raw->giaddr.s_addr) {
+		gip.len = 4;
+		memcpy(gip.iabuf, &packet->raw->giaddr, 4);
+	} else
+		gip.len = 0;
+
 	/* %Audit% This is log output. %2004.06.17,Safe%
 	 * If we truncate we hope the user can get a hint from the log.
 	 */
 	snprintf (msgbuf, sizeof msgbuf, "DHCPINFORM from %s via %s",
-		 piaddr (cip), packet -> interface -> name);
+		 piaddr (cip), packet->raw->giaddr.s_addr ?
+				inet_ntoa(packet->raw->giaddr) :
+				packet -> interface -> name);
 
 	/* If the IP source address is zero, don't respond. */
 	if (!memcmp (cip.iabuf, "\0\0\0", 4)) {
@@ -983,13 +971,18 @@ void dhcpinform (packet, ms_nulltp)
 	}
 
 	/* Find the subnet that the client is on. */
-	oc = (struct option_cache *)0;
-	find_subnet (&subnet , cip, MDL);
+	if (gip.len) {
+		/* XXX - do subnet selection relay agent suboption here */
+		find_subnet(&subnet, gip, MDL);
+	} else {
+		/* XXX - do subnet selection (not relay agent) option here */
+		find_subnet(&subnet, cip, MDL);
+	}
 
 	/* Sourceless packets don't make sense here. */
 	if (!subnet) {
-		log_info ("%s: unknown subnet %s",
-			  msgbuf, inet_ntoa (packet -> raw -> giaddr));
+		log_info ("%s: unknown subnet for address %s",
+			  msgbuf, gip.len ? piaddr(gip) : piaddr(cip));
 		return;
 	}
 
@@ -1018,7 +1011,6 @@ void dhcpinform (packet, ms_nulltp)
 		return;
 	}
 
-	memset (&d1, 0, sizeof d1);
 	option_state_allocate (&options, MDL);
 	memset (&outgoing, 0, sizeof outgoing);
 	memset (&raw, 0, sizeof raw);
@@ -1080,14 +1072,8 @@ void dhcpinform (packet, ms_nulltp)
 	nulltp = 0;
 	if ((oc = lookup_option (&dhcp_universe, packet -> options,
 				 DHO_HOST_NAME))) {
-		if (evaluate_option_cache (&d1, packet, (struct lease *)0,
-					   (struct client_state *)0,
-					   packet -> options, options,
-					   &global_scope, oc, MDL)) {
-			if (d1.data [d1.len - 1] == '\0')
-				nulltp = 1;
-			data_string_forget (&d1, MDL);
-		}
+		if (!oc->expression)
+			nulltp = oc->flags & OPTION_HAD_NULLS;
 	}
 
 	/* Put in DHCP-specific options. */
@@ -1250,9 +1236,6 @@ void dhcpinform (packet, ms_nulltp)
 	raw.hops = packet -> raw -> hops;
 	raw.op = BOOTREPLY;
 
-	/* Report what we're sending... */
-	log_info ("DHCPACK to %s", inet_ntoa (raw.ciaddr));
-
 #ifdef DEBUG_PACKET
 	dump_packet (&outgoing);
 	dump_raw ((unsigned char *)&raw, outgoing.packet_length);
@@ -1265,9 +1248,47 @@ void dhcpinform (packet, ms_nulltp)
 #endif
 	memset (to.sin_zero, 0, sizeof to.sin_zero);
 
-	/* Use the IP address we derived for the client. */
-	memcpy (&to.sin_addr, cip.iabuf, 4);
-	to.sin_port = remote_port;
+	/* RFC2131 states the server SHOULD unciast to ciaddr.
+	 * There are two wrinkles - relays, and when ciaddr is zero.
+	 * There's actually no mention of relays at all in rfc2131.
+	 * I think it's best to use relays where present...a relay is
+	 * a bit more trustworthy about getting the message to a client
+	 * than a client might be (it's better to send to a relay than
+	 * to, say, a link-local address the client has selected).
+	 *
+	 * Where ciaddr is zero, which actually does happen quite frequently
+	 * even though rfc2131 is unequivocal on the subject, we try to help
+	 * by using the IP source address.
+	 *
+	 * Where ciaddr is zero AND we got it via a relay, the IP source
+	 * address is the relay - and we're transmitting to the client
+	 * port.  This might cause a loop.
+	 *
+	 * So, overall, this is neater if the relay is selected first,
+	 * treated like a relay, client addressing taken second.  Since
+	 * a relay possibly has no way of knowing how to reach the client
+	 * if chaddr is zero (equally as common as ciaddr being zeroed),
+	 * set the broadcast bit to try and help.
+	 */
+	if (gip.len) {
+		memcpy(&to.sin_addr, gip.iabuf, 4);
+		to.sin_port = local_port;
+
+		if (!raw.hlen)
+			raw.flags |= htons(BOOTP_BROADCAST);
+	} else {
+		memcpy(&to.sin_addr, cip.iabuf, 4);
+		to.sin_port = remote_port;
+	}
+
+	/* Report what we're sending. */
+	snprintf(msgbuf, sizeof msgbuf, "DHCPACK to %s (%s) via", piaddr(cip),
+		 (packet->raw->htype && packet->raw->hlen) ?
+			print_hw_addr(packet->raw->htype, packet->raw->hlen,
+				      packet->raw->chaddr) :
+			"<no client hardware address>");
+	log_info("%s %s", msgbuf, gip.len ? piaddr(gip) :
+					    packet->interface->name);
 
 	errno = 0;
 	send_packet ((fallback_interface
@@ -2011,57 +2032,57 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 #if defined (FAILOVER_PROTOCOL)
 		/* Okay, we know the lease duration.   Now check the
 		   failover state, if any. */
-		if (lease -> tsfp) {
-			lt ->tsfp = lease ->tsfp;
-		}
 		if (lease -> pool && lease -> pool -> failover_peer) {
+			TIME new_lease_time = lease_time;
 			dhcp_failover_state_t *peer =
 			    lease -> pool -> failover_peer;
 
-			/* If the lease time we arrived at exceeds what
-			   the peer has, we can only issue a lease of
-			   peer -> mclt, but we can tell the peer we
-			   want something longer in the future. */
-			/* XXX This may result in updates that only push
-			   XXX the peer's expiry time for this lease up
-			   XXX by a few seconds - think about this again
-			   XXX later. */
-			if (lease_time > peer -> mclt &&
-			    cur_time + lease_time > lease -> tsfp) {
-				/* Here we're assuming that if we don't have
-				   to update tstp, there's already an update
-				   queued.   May want to revisit this.  */
-				if (peer -> me.state != partner_down &&
-				    cur_time + lease_time > lease -> tstp)
-					lt -> tstp = (cur_time + lease_time +
-						      peer -> mclt / 2);
+			/* Copy previous lease failover ack-state. */
+			lt->tsfp = lease->tsfp;
+			lt->atsfp = lease->atsfp;
 
-				/* Now choose a lease time that is either
-				   MCLT, for a lease that's never before been
-				   assigned, or TSFP + MCLT for a lease that
-				   has.
-				   XXX Note that TSFP may be < cur_time.
-				   XXX What do we do in this case?
-				   XXX should the expiry timer on the lease
-				   XXX set tsfp and tstp to zero? */
-				if (lease -> tsfp < cur_time) {
-					lease_time = peer -> mclt;
-				} else {
-					lease_time = (lease -> tsfp  - cur_time
-						      + peer -> mclt);
-				}
-			} else {
-				if (cur_time + lease_time > lease -> tsfp &&
-				    lease_time > peer -> mclt / 2) {
-					lt -> tstp = (cur_time + lease_time +
-						      peer -> mclt / 2);
-				} else { 
-					lt -> tstp = (cur_time + lease_time +
-						      lease_time / 2);
-				}
+			/* Update Client Last Transaction Time. */
+			lt->cltt = cur_time;
+
+			/* Lease times less than MCLT are not a concern. */
+			if (lease_time > peer->mclt) {
+				/* Each server can only offer a lease time
+				 * that is either equal to MCLT (at least),
+				 * or up to TSFP+MCLT.  Only if the desired
+				 * lease time falls within TSFP+MCLT, can
+				 * the server allow it.
+				 */
+				if (lt->tsfp <= cur_time)
+					new_lease_time = peer->mclt;
+				else if ((cur_time + lease_time) >
+					 (lt->tsfp + peer->mclt))
+					new_lease_time = (lt->tsfp - cur_time)
+								+ peer->mclt;
 			}
 
-			lt -> cltt = cur_time;
+			/* Update potential expiry.  Allow for the desired
+			 * lease time plus one half the actual (wether
+			 * modified downward or not) lease time, which is
+			 * actually an estimate of when the client will
+			 * renew.  This way, the client will be able to get
+			 * the desired lease time upon renewal.
+			 */
+			if (offer == DHCPACK) {
+				lt->tstp = cur_time + lease_time +
+						(new_lease_time / 2);
+
+				/* If we reduced the potential expiry time,
+				 * make sure we don't offer an old-expiry-time
+				 * lease for this lease before the change is
+				 * ack'd.
+				 */
+				if (lt->tstp < lt->tsfp)
+					lt->tsfp = lt->tstp;
+			} else
+				lt->tstp = lease->tstp;
+
+			/* Use failover-modified lease time.  */
+			lease_time = new_lease_time;
 		}
 #endif /* FAILOVER_PROTOCOL */
 
@@ -2933,7 +2954,7 @@ void dhcp_reply (lease)
 
 int find_lease (struct lease **lp,
 		struct packet *packet, struct shared_network *share, int *ours,
-		int *allocatedp, struct lease *ip_lease_in,
+		int *peer_has_leases, struct lease *ip_lease_in,
 		const char *file, int line)
 {
 	struct lease *uid_lease = (struct lease *)0;
@@ -2951,6 +2972,22 @@ int find_lease (struct lease **lp,
 	struct data_string client_identifier;
 	int status;
 	struct hardware h;
+
+	/* Quick check to see if the peer has leases. */
+	if (peer_has_leases) {
+		struct pool *pool;
+
+		for (pool = share->pools ; pool ; pool = pool->next) {
+			dhcp_failover_state_t *peer = pool->failover_peer;
+
+			if (peer &&
+			    ((peer->i_am == primary && pool->backup_leases) ||
+			     (peer->i_am == secondary && pool->free_leases))) {
+				*peer_has_leases = 1;
+				break;
+			}
+		}
+	}
 
 	if (packet -> raw -> ciaddr.s_addr) {
 		cip.len = 4;
@@ -3257,9 +3294,7 @@ int find_lease (struct lease **lp,
 			if (ours && ip_lease -> binding_state != FTS_ACTIVE)
 				*ours = 0;
 			lease_dereference (&ip_lease, MDL);
-		} else
-			if (allocatedp)
-				*allocatedp = 1;
+		}
 	}
 
 	/* If we got an ip_lease and a uid_lease or hw_lease, and ip_lease
@@ -3310,7 +3345,7 @@ int find_lease (struct lease **lp,
 				    (share ==
 				     uid_lease -> subnet -> shared_network) &&
 				    packet -> packet_type == DHCPREQUEST)
-					dissociate_lease (uid_lease);
+					release_lease (uid_lease, packet);
 			    }
 			    lease_dereference (&uid_lease, MDL);
 			    lease_reference (&uid_lease, ip_lease, MDL);
@@ -3380,8 +3415,10 @@ int find_lease (struct lease **lp,
 	      permitted (packet, ip_lease -> pool -> prohibit_list)) ||
 	     (ip_lease -> pool -> permit_list &&
 	      !permitted (packet, ip_lease -> pool -> permit_list)))) {
-		if (!packet -> raw -> ciaddr.s_addr)
+		if (!packet->raw->ciaddr.s_addr &&
+		    (ip_lease->binding_state == FTS_ACTIVE))
 			release_lease (ip_lease, packet);
+
 		lease_dereference (&ip_lease, MDL);
 	}
 
@@ -3458,11 +3495,19 @@ int find_lease (struct lease **lp,
 	   the lease that matched the client identifier. */
 	if (uid_lease) {
 		if (lease) {
+			log_error("uid lease %s for client %s is duplicate "
+				  "on %s",
+				  piaddr(uid_lease->ip_addr),
+				  print_hw_addr(packet->raw->htype,
+						packet->raw->hlen,
+						packet->raw->chaddr),
+				  uid_lease->subnet->shared_network->name);
+
 			if (!packet -> raw -> ciaddr.s_addr &&
 			    packet -> packet_type == DHCPREQUEST &&
 			    (uid_lease -> binding_state == FTS_ACTIVE ||
 			     uid_lease -> binding_state == FTS_BOOTP))
-				dissociate_lease (uid_lease);
+				release_lease(uid_lease, packet);
 #if defined (DEBUG_FIND_LEASE)
 			log_info ("not choosing uid lease.");
 #endif
@@ -3555,9 +3600,6 @@ int find_lease (struct lease **lp,
 			*ours = 1;
 		lease_dereference (&lease, MDL);
 	}
-
-	if (lease && allocatedp && lease -> ends <= cur_time)
-		*allocatedp = 1;
 
       out:
 	if (have_client_identifier)

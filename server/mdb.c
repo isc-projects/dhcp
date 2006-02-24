@@ -3,7 +3,7 @@
    Server-specific in-memory database support. */
 
 /*
- * Copyright (c) 2004-2005 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2006 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.73 2005/09/30 17:57:32 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.74 2006/02/24 23:16:32 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -921,7 +921,7 @@ int supersede_lease (comp, lease, commit, propogate, pimmediate)
 		comp -> uid = (unsigned char *)0;
 	} else
 		enter_uid = 1;
-	
+
 	if (comp -> hardware_addr.hlen &&
 	    ((comp -> hardware_addr.hlen !=
 	      lease -> hardware_addr.hlen) ||
@@ -932,7 +932,7 @@ int supersede_lease (comp, lease, commit, propogate, pimmediate)
 		enter_hwaddr = 1;
 	} else if (!comp -> hardware_addr.hlen)
 		enter_hwaddr = 1;
-	
+
 	/* If the lease has been billed to a class, remove the billing. */
 	if (comp -> billing_class != lease -> billing_class) {
 		if (comp -> billing_class)
@@ -1019,26 +1019,36 @@ int supersede_lease (comp, lease, commit, propogate, pimmediate)
 		executable_statement_reference (&comp -> on_release,
 						lease -> on_release, MDL);
 	}
-	
+
 	/* Record the lease in the uid hash if necessary. */
 	if (enter_uid && comp -> uid) {
 		uid_hash_add (comp);
 	}
-	
+
 	/* Record it in the hardware address hash if necessary. */
 	if (enter_hwaddr && lease -> hardware_addr.hlen) {
 		hw_hash_add (comp);
 	}
-	
+
 #if defined (FAILOVER_PROTOCOL)
-	comp -> cltt = lease -> cltt;
-	comp -> tstp = lease -> tstp;
-	comp -> tsfp = lease -> tsfp;
+	comp->cltt = lease->cltt;
+	comp->tstp = lease->tstp;
+	comp->tsfp = lease->tsfp;
+	comp->atsfp = lease->atsfp;
 #endif /* FAILOVER_PROTOCOL */
-	comp -> ends = lease -> ends;
-	comp -> next_binding_state = lease -> next_binding_state;
+	comp->ends = lease->ends;
+	comp->next_binding_state = lease->next_binding_state;
 
       just_move_it:
+#if defined (FAILOVER_PROTOCOL)
+	/* Atsfp should be cleared upon any state change that implies
+	 * propogation wether supersede_lease was given a copy lease
+	 * structure or not (often from the pool_timer()).
+	 */
+	if (propogate)
+		comp->atsfp = 0;
+#endif /* FAILOVER_PROTOCOL */
+
 	if (!comp -> pool) {
 		log_error ("Supersede_lease: lease %s with no pool.",
 			   piaddr (comp -> ip_addr));
@@ -1082,6 +1092,7 @@ int supersede_lease (comp, lease, commit, propogate, pimmediate)
 
 	/* Remove the lease from its current place in its current
 	   timer sequence. */
+	/* XXX this is horrid. */
 	prev = (struct lease *)0;
 	for (lp = *lq; lp; lp = lp -> next) {
 		if (lp == comp)
@@ -1398,14 +1409,15 @@ int lease_copy (struct lease **lp,
 		executable_statement_reference (&lt -> on_release,
 						lease -> on_release,
 						file, line);
-	lt -> flags = lease -> flags;
-	lt -> tstp = lease -> tstp;
-	lt -> tsfp = lease -> tsfp;
-	lt -> cltt = lease -> cltt;
-	lt -> binding_state = lease -> binding_state;
-	lt -> next_binding_state = lease -> next_binding_state;
-	status = lease_reference (lp, lt, file, line);
-	lease_dereference (&lt, MDL);
+	lt->flags = lease->flags;
+	lt->tstp = lease->tstp;
+	lt->tsfp = lease->tsfp;
+	lt->atsfp = lease->atsfp;
+	lt->cltt = lease -> cltt;
+	lt->binding_state = lease->binding_state;
+	lt->next_binding_state = lease->next_binding_state;
+	status = lease_reference(lp, lt, file, line);
+	lease_dereference(&lt, MDL);
 	return status == ISC_R_SUCCESS;
 }
 
@@ -1924,6 +1936,18 @@ int write_leases ()
 	return 1;
 }
 
+/* In addition to placing this lease upon a lease queue depending on its
+ * state, it also keeps track of the number of FREE and BACKUP leases in
+ * existence, and sets the sort_time on the lease.
+ *
+ * Sort_time is used in pool_timer() to determine when the lease will
+ * bubble to the top of the list and be supersede_lease()'d into its next
+ * state (possibly, if all goes well).  Example, ACTIVE leases move to
+ * EXPIRED state when the 'ends' value is reached, so that is its sort
+ * time.  Most queues are sorted by 'ends', since it is generally best
+ * practice to re-use the oldest lease, to reduce address collision
+ * chances.
+ */
 int lease_enqueue (struct lease *comp)
 {
 	struct lease **lq, *prev, *lp;
@@ -1949,7 +1973,26 @@ int lease_enqueue (struct lease *comp)
 	      case FTS_RELEASED:
 	      case FTS_RESET:
 		lq = &comp -> pool -> expired;
-		comp -> sort_time = comp -> ends;
+#if defined(FAILOVER_PROTOCOL)
+		/* In partner_down, tsfp is the time at which the lease
+		 * may be reallocated (stos+mclt).  We can do that with
+		 * lease_mine_to_reallocate() anywhere between tsfp and
+		 * ends.  But we prefer to wait until ends before doing it
+		 * automatically (choose the greater of the two).  Note
+		 * that 'ends' is usually a historic timestamp in the
+		 * case of expired leases, is really only in the future
+		 * on released leases, and if we know a lease to be released
+		 * the peer might still know it to be active...in which case
+		 * it's possible the peer has renewed this lease, so avoid
+		 * doing that.
+		 */
+		if (comp->pool->failover_peer &&
+		    comp->pool->failover_peer->me.state == partner_down)
+			comp->sort_time = (comp->tsfp > comp->ends) ?
+					  comp->tsfp : comp->ends;
+		else
+#endif
+			comp->sort_time = comp->ends;
 
 		break;
 
@@ -2096,7 +2139,7 @@ void expire_all_pools ()
 			}
 #if defined (FAILOVER_PROTOCOL)
 			if (p -> failover_peer &&
-			    l -> tstp > l -> tsfp &&
+			    l -> tstp > l -> atsfp &&
 			    !(l -> flags & ON_UPDATE_QUEUE)) {
 				l -> desired_binding_state = l -> binding_state;
 				dhcp_failover_queue_update (l, 1);

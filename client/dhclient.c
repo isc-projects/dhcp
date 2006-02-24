@@ -3,7 +3,7 @@
    DHCP Client. */
 
 /*
- * Copyright (c) 2004-2005 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2006 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -32,7 +32,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.132 2005/03/17 20:14:55 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.133 2006/02/24 23:16:27 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -212,10 +212,10 @@ int main (argc, argv, envp)
  		    if (status != ISC_R_SUCCESS)
  			log_fatal ("Can't record interface %s:%s",
 				   argv [i], isc_result_totext (status));
-		    if (strlen (argv [i]) > sizeof tmp -> name)
-			    log_fatal ("%s: interface name too long (max %ld)",
-				       argv [i], (long)strlen (argv [i]));
- 		    strcpy (tmp -> name, argv [i]);
+		    if (strlen(argv[i]) >= sizeof(tmp->name))
+			    log_fatal("%s: interface name too long (is %ld)",
+				       argv [i], (long)strlen(argv[i]));
+		    strcpy(tmp->name, argv[i]);
 		    if (interfaces) {
 			    interface_reference (&tmp -> next,
 						 interfaces, MDL);
@@ -789,11 +789,9 @@ void dhcpack (packet)
 		client -> new -> renewal = TIME_MAX;
 
 	/* Now introduce some randomness to the renewal time: */
-	if (client -> new -> renewal <= TIME_MAX / 3 - 3)
-		client -> new -> renewal =
-				(((client -> new -> renewal + 3) * 3 / 4) +
-				    (random () % /* XXX NUMS */
-				     ((client -> new -> renewal + 3) / 4)));
+	if (client->new->renewal <= ((TIME_MAX / 3) - 3))
+		client->new->renewal = (((client->new->renewal * 3) + 3) / 4) +
+				(((random() % client->new->renewal) + 3) / 4);
 
 	/* Same deal with the rebind time. */
 	oc = lookup_option (&dhcp_universe, client -> new -> options,
@@ -1404,22 +1402,17 @@ void send_discover (cpp)
 	   between zero and two times itself.  On average, this means
 	   that it will double with every transmission. */
 	if (increase) {
-		if (!client -> interval)
-			client -> interval =
-				client -> config -> initial_interval;
+		if (!client->interval)
+			client->interval = client->config->initial_interval;
 		else
-			client -> interval += ((random () >> 2) %
-					       (2 * client -> interval));
+			client->interval += random() % (2 * client->interval);
 
 		/* Don't backoff past cutoff. */
-		if (client -> interval >
-		    client -> config -> backoff_cutoff)
-			client -> interval =
-				((client -> config -> backoff_cutoff / 2)
-				 + ((random () >> 2) %
-				    client -> config -> backoff_cutoff));
-	} else if (!client -> interval)
-		client -> interval = client -> config -> initial_interval;
+		if (client->interval > client->config->backoff_cutoff)
+			client->interval = (client->config->backoff_cutoff / 2)
+				 + (random() % client->config->backoff_cutoff);
+	} else if (!client->interval)
+		client->interval = client->config->initial_interval;
 		
 	/* If the backoff would take us to the panic timeout, just use that
 	   as the interval. */

@@ -3,7 +3,7 @@
    System dependencies for Solaris 2.x (tested on 2.5 with gcc)... */
 
 /*
- * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2005 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -34,9 +34,18 @@
 
 /* SunOS defines uint*_t and int*_t, but not u_int*_t.  */
 
+#if defined(_SYS_INT_TYPES_H)
 typedef uint8_t		u_int8_t;
 typedef uint16_t	u_int16_t;
 typedef uint32_t	u_int32_t;
+#else /* Older SunOS has no idea what these things mean. */
+typedef int8_t char
+typedef int16_t short
+typedef int32_t int	/* If _LP64, long is 64-bit, int is still 32. */
+typedef u_int8_t unsigned char
+typedef u_int16_t unsigned short
+typedef u_int32_t unsigned int
+#endif /* defined(_SYS_INT_TYPES_H) */
 
 /* The jmp_buf type is an array on Solaris, so we can't dereference it
    and must declare it differently. */

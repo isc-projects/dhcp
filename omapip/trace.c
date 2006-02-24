@@ -5,7 +5,7 @@
    transactions... */
 
 /*
- * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2006 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2001-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -32,10 +32,15 @@
  * learn more about Nominum, Inc., see ``http://www.nominum.com''.
  */
 
+#ifndef lint
+static char ocopyright[] =
+"$Id: trace.c,v 1.12 2006/02/24 23:16:30 dhankins Exp $ Copyright 2004-2006 Internet Systems Consortium.";
+#endif
+
 #include <omapip/omapip_p.h>
 
 #if defined (TRACING)
-void (*trace_set_time_hook) (u_int32_t);
+void (*trace_set_time_hook) (TIME);
 static int tracing_stopped;
 static int traceoutfile;
 static int traceindex;
@@ -97,7 +102,7 @@ int trace_record ()
 	return 0;
 }
 
-isc_result_t trace_init (void (*set_time) (u_int32_t),
+isc_result_t trace_init (void (*set_time) (TIME),
 			 const char *file, int line)
 {
 	trace_type_t *root_type;
@@ -136,7 +141,7 @@ isc_result_t trace_begin (const char *filename,
 		return ISC_R_INVALIDARG;
 	}
 
-	traceoutfile = open (filename, O_CREAT | O_WRONLY | O_EXCL, 0644);
+	traceoutfile = open (filename, O_CREAT | O_WRONLY | O_EXCL, 0600);
 	if (traceoutfile < 0) {
 		log_error ("%s(%d): trace_begin: %s: %m",
 			   file, line, filename);

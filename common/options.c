@@ -3,7 +3,7 @@
    DHCP options parsing and reassembly. */
 
 /*
- * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2006 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.88 2005/03/17 20:14:59 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.89 2006/02/24 23:16:28 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -486,7 +486,7 @@ int cons_options (inpacket, outpacket, lease, client_state,
 	unsigned priority_list [PRIORITY_COUNT];
 	int priority_len;
 	unsigned char buffer [4096];	/* Really big buffer... */
-	unsigned main_buffer_size;
+	unsigned main_buffer_size, mb_max;
 	unsigned mainbufix, bufix, agentix;
 	int fileix;
 	int snameix;
@@ -546,8 +546,10 @@ int cons_options (inpacket, outpacket, lease, client_state,
 		main_buffer_size = 576 - DHCP_FIXED_LEN;
 
 	/* Set a hard limit at the size of the output buffer. */
-	if (main_buffer_size > sizeof buffer)
-		main_buffer_size = sizeof buffer;
+	mb_max = sizeof(buffer) - (((overload & 1) ? DHCP_FILE_LEN : 0) +
+				   ((overload & 2) ? DHCP_SNAME_LEN : 0));
+	if (main_buffer_size > mb_max)
+		main_buffer_size = mb_max;
 
 	/* Preload the option priority list with mandatory options. */
 	priority_len = 0;
@@ -721,14 +723,14 @@ int cons_options (inpacket, outpacket, lease, client_state,
 	priority_len = 1;
 	agentix +=
 		store_options (0, &outpacket -> options [agentix],
-			       1500 - DHCP_FIXED_LEN - agentix,
+			       DHCP_OPTION_LEN - agentix,
 			       inpacket, lease, client_state,
 			       in_options, cfg_options, scope,
 			       priority_list, priority_len,
 			       0, 0, 0, (char *)0);
 
 	/* Tack a DHO_END option onto the packet if we need to. */
-	if (agentix < 1500 - DHCP_FIXED_LEN && need_endopt)
+	if (agentix < DHCP_OPTION_LEN && need_endopt)
 		outpacket -> options [agentix++] = DHO_END;
 
 	/* Figure out the length. */
@@ -961,7 +963,7 @@ int store_options (ocount, buffer, buflen, packet, lease, client_state,
 		    unsigned incr = length;
 		    int consumed = 0;
 		    int *pix;
-		    char *base;
+		    unsigned char *base;
 
 		    /* Try to fit it in the options buffer. */
 		    if (!splitup &&
@@ -1062,6 +1064,169 @@ int store_options (ocount, buffer, buflen, packet, lease, client_state,
 
 	return bufix;
 }
+
+/* Return true if the format string has a variable length text option
+ * ("t"), return false otherwise.
+ */
+
+int
+format_has_text(format)
+	const char *format;
+{
+	const char *p;
+	int retval = 0;
+
+	p = format;
+	while (*p != '\0') {
+		switch (*p++) {
+		    case 'd':
+		    case 't':
+			return 1;
+
+			/* These symbols are arbitrary, not fixed or
+			 * determinable length...text options with them is
+			 * invalid.
+			 */
+		    case 'A':
+		    case 'a':
+		    case 'X':
+		    case 'x':
+			return 0;
+
+			/* 'E' is variable length, but not arbitrary...you
+			 * can find its length if you can find an END option.
+			 * N is one-byte in length but trails a name of a
+			 * space defining the enumeration values.  So treat
+			 * both the same - valid, fixed-length fields.
+			 */
+		    case 'E':
+		    case 'N':
+			/* Consume the space name. */
+			while ((*p != '\0') && (*p++ != '.'))
+				;
+			break;
+
+		    default:
+			break;
+		}
+	}
+
+	return 0;
+}
+
+/* Determine the minimum length of a DHCP option prior to any variable
+ * or inconsistent length formats, according to its configured format
+ * variable (and possibly from supplied option cache contents for variable
+ * length format symbols).
+ */
+
+int
+format_min_length(format, oc)
+	const char *format;
+	struct option_cache *oc;
+{
+	const char *p;
+	int min_len = 0;
+	int last_size = 0;
+
+	p = format;
+	while (*p != '\0') {
+		switch (*p++) {
+		    case 'I': /* IPv4 Address */
+		    case 'l': /* int32_t */
+		    case 'L': /* uint32_t */
+		    case 'T': /* Lease Time, uint32_t equivalent */
+			min_len += 4;
+			last_size = 4;
+			break;
+
+		    case 's': /* int16_t */
+		    case 'S': /* uint16_t */
+			min_len += 2;
+			last_size = 2;
+			break;
+
+		    case 'N': /* Enumeration in 1-byte values. */
+			/* Consume space name. */
+			while ((*p != '\0') && (*p++ != '.'))
+				;
+
+			/* Fall Through to handle as one-byte field */
+
+		    case 'b': /* int8_t */
+		    case 'B': /* uint8_t */
+		    case 'F': /* Flag that is always true. */
+		    case 'f': /* Flag */
+			min_len++;
+			last_size = 1;
+			break;
+
+		    case 'o': /* Last argument is optional. */
+			min_len -= last_size;
+		    case 'e': /* Encapsulation hint (there is an 'E' later). */
+			last_size = 0;
+			break;
+
+		    case 'E': /* Encapsulated options. */
+			/* Consume space name. */
+			while ((*p != '\0') && (*p++ != '.'))
+				;
+
+			/* Find an end option, or find that the encaps options
+			 * go all the way to the end (or beyond) of the data
+			 * portion of the option.
+			 */
+			last_size = 0;
+			while (min_len < oc->data.len) {
+				if (oc->data.data[min_len] == DHO_END) {
+					min_len++;
+					last_size++;
+					break;
+				} else if (oc->data.data[min_len] == DHO_PAD) {
+					min_len++;
+					last_size++;
+				} else if ((min_len + 1) < oc->data.len) {
+					min_len += oc->data.data[min_len+1]+2;
+					last_size += oc->data.data[min_len+1]+2;
+				} else {
+					/* Suboption length is out of bounds,
+					 * advance beyond the code/length pair
+					 * to trigger below error conditonal.
+					 */
+					min_len += 2;
+					last_size += 2;
+					break;
+				}
+			}
+
+			if (min_len > oc->data.len) {
+				log_error("format_min_length(%s): "
+					  "Encapsulated options exceed "
+					  "supplied buffer.", format);
+				return INT_MAX;
+			}
+
+			break;
+
+		    case 'd': /* "Domain name" */
+		    case 't': /* "ASCII Text" */
+		    case 'X': /* "ASCII or Hex Conditional */
+		    case 'x': /* "Hex" */
+		    case 'A': /* Array of all that precedes. */
+		    case 'a': /* Array of preceding symbol. */
+			return min_len;
+
+		    default:
+			/* No safe value is known. */
+			log_error("format_min_length(%s): No safe value "
+				  "for unknown format symbols.", format);
+			return INT_MAX;
+		}
+	}
+
+	return min_len;
+}
+
 
 /* Format the specified option so that a human can easily read it. */
 
@@ -1516,6 +1681,21 @@ int save_option_buffer (struct universe *universe,
 		op -> data.terminated = 0;
 	
 	op -> option = option;
+
+	/* If this option is ultimately a text option, null determinate to
+	 * comply with RFC2132 section 2.  Mark a flag so this can be sensed
+	 * later to echo NULLs back to clients that supplied them (they
+	 * probably expect them).
+	 */
+	if (format_has_text(option->format)) {
+		int min_len = format_min_length(option->format, op);
+
+		while ((op->data.len > min_len) &&
+		       (op->data.data[op->data.len-1] == '\0')) {
+			op->data.len--;
+			op->flags |= OPTION_HAD_NULLS;
+		}
+	}
 
 	/* Now store the option. */
 	save_option (universe, options, op);

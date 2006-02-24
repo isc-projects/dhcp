@@ -3,7 +3,7 @@
    Failover protocol support code... */
 
 /*
- * Copyright (c) 2004-2005 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2006 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1999-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.58 2005/03/17 20:15:28 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.59 2006/02/24 23:16:32 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1780,23 +1780,26 @@ isc_result_t dhcp_failover_set_state (dhcp_failover_state_t *state,
 
 	  case partner_down:
 	    /* For every expired lease, set a timeout for it to become free. */
-            for (s = shared_networks; s; s = s -> next) {
-                for (p = s -> pools; p; p = p -> next) {
+	    for (s = shared_networks; s; s = s -> next) {
+		for (p = s -> pools; p; p = p -> next) {
 		    if (p -> failover_peer == state) {
-			for (l = p -> expired; l; l = l -> next)
-			    l -> tsfp = state -> me.stos + state -> mclt;
-			if (p -> next_event_time >
-			    state -> me.stos + state -> mclt) {
-			    p -> next_event_time =
-					state -> me.stos + state -> mclt;
+			for (l = p->expired ; l ; l = l->next) {
+			    l->tsfp = state->me.stos + state->mclt;
+			    l->sort_time = (l->tsfp > l->ends) ?
+					   l->tsfp : l->ends;
+			}
+			if (p->expired &&
+			    (p->expired->sort_time < p->next_event_time)) {
+
+			    p->next_event_time = p->expired->sort_time;
 #if defined (DEBUG_FAILOVER_TIMING)
 			    log_info ("add_timeout +%d %s",
-				      (int)(cur_time - p -> next_event_time),
+				      (int)(cur_time - p->next_event_time),
 				      "pool_timer");
 #endif
-		            add_timeout (p -> next_event_time, pool_timer, p,
-		                         (tvref_t)pool_reference,
-               				 (tvunref_t)pool_dereference);
+			    add_timeout(p->next_event_time, pool_timer, p,
+					(tvref_t)pool_reference,
+					(tvunref_t)pool_dereference);
 			}
 		    }
 		}
@@ -4496,7 +4499,7 @@ isc_result_t dhcp_failover_process_bind_update (dhcp_failover_state_t *state,
 			goto bad;
 		}
 		if (msg -> chaddr.count > sizeof lt -> hardware_addr.hbuf) {
-			message = "chaddr to long";
+			message = "chaddr too long";
 			goto bad;
 		}
 		lt -> hardware_addr.hlen = msg -> chaddr.count;
@@ -4571,8 +4574,8 @@ isc_result_t dhcp_failover_process_bind_update (dhcp_failover_state_t *state,
 	if (msg -> options_present & FTB_CLTT) {
 		lt -> cltt = msg -> client_ltt;
 	}
-	if (msg -> options_present & FTB_POTENTIAL_EXPIRY) {
-		lt -> tsfp = msg -> potential_expiry;
+	if (msg->options_present & FTB_POTENTIAL_EXPIRY) {
+		lt->atsfp = lt->tsfp = msg->potential_expiry;
 	}
 
 	if (msg -> options_present & FTB_BINDING_STATUS) {
@@ -4680,20 +4683,20 @@ isc_result_t dhcp_failover_process_bind_ack (dhcp_failover_state_t *state,
 	if (msg -> options_present & FTB_POTENTIAL_EXPIRY) {
 		/* XXX it could be a problem to do this directly if the
 		   XXX lease is sorted by tsfp. */
+		lease->atsfp = lease->tsfp = msg->potential_expiry;
+
 		if ((lease -> binding_state == FTS_EXPIRED ||
 		     lease -> binding_state == FTS_RESET ||
 		     lease -> binding_state == FTS_RELEASED) &&
 		    (msg -> options_present & FTB_BINDING_STATUS) &&
 		    msg -> binding_status == FTS_FREE)
 		{
-			lease -> tsfp = msg -> potential_expiry;
 			lease -> next_binding_state = FTS_FREE;
 			supersede_lease (lease, (struct lease *)0, 0, 0, 0);
 			write_lease (lease);
 			if (state -> me.state == normal)
 				commit_leases ();
 		} else {
-			lease -> tsfp = msg -> potential_expiry;
 			if ((lease -> desired_binding_state !=
 			     lease -> binding_state) &&
 			    (msg -> options_present & FTB_BINDING_STATUS) &&
@@ -4811,6 +4814,9 @@ isc_result_t dhcp_failover_generate_update_queue (dhcp_failover_state_t *state,
 	   expiry routine on the pool. */
 	for (s = shared_networks; s; s = s -> next) {
 	    for (p = s -> pools; p; p = p -> next) {
+		if (p->failover_peer != state)
+			continue;
+
 		lptr [FREE_LEASES] = &p -> free;
 		lptr [ACTIVE_LEASES] = &p -> active;
 		lptr [EXPIRED_LEASES] = &p -> expired;
@@ -4819,11 +4825,11 @@ isc_result_t dhcp_failover_generate_update_queue (dhcp_failover_state_t *state,
 
 		for (i = FREE_LEASES; i <= BACKUP_LEASES; i++) {
 		    for (l = *(lptr [i]); l; l = l -> next) {
-			if (p -> failover_peer == state &&
-			    ((everythingp &&
-			      (l -> starts != MIN_TIME ||
-			       l -> ends != MIN_TIME)) ||
-			     l -> tstp > l -> tsfp)) {
+			if ((everythingp &&
+			     (l->starts != MIN_TIME ||
+			      l->ends != MIN_TIME)) ||
+			    (l->tstp > l->atsfp) ||
+			    (i == EXPIRED_LEASES)) {
 				l -> desired_binding_state = l -> binding_state;
 				dhcp_failover_queue_update (l, 0);
 			}
@@ -5281,21 +5287,29 @@ conflict_binding_state_transition_check (struct lease *lease,
 			switch (binding_state) {
 			      case FTS_FREE:
 			      case FTS_BACKUP:
-			      case FTS_ABANDONED:
 				new_state = lease -> binding_state;
 				break;
 
 			      case FTS_EXPIRED:
-			      case FTS_RELEASED:
-			      case FTS_RESET:
-				if (lease -> ends > cur_time)
-					new_state =
-						lease -> binding_state;
+				/* If we don't agree about expiry, it's
+				 * invalid.  65 should allow for max
+				 * clock skew (60) plus some fudge.
+				 * XXX: should we refetch cur_time?
+				 */
+				if ((lease->ends - 65) > cur_time)
+					new_state = lease->binding_state;
 				else
 					new_state = binding_state;
 				break;
 
-			      case FTS_ACTIVE:
+				/* RELEASED, RESET, and ABANDONED indicate
+				 * that our partner has information about
+				 * this lease that we did not witness.  Our
+				 * partner wins.
+				 */
+			      case FTS_RELEASED:
+			      case FTS_RESET:
+			      case FTS_ABANDONED:
 				new_state = binding_state;
 				break;
 
@@ -5333,48 +5347,77 @@ int lease_mine_to_reallocate (struct lease *lease)
 {
 	dhcp_failover_state_t *peer;
 
-	if (lease && lease -> pool &&
-	    lease -> pool -> failover_peer) {
-		peer = lease -> pool -> failover_peer;
-		switch (lease -> binding_state) {
+	if (lease && lease->pool &&
+	    (peer = lease->pool->failover_peer)) {
+		switch (lease->binding_state) {
 		      case FTS_ACTIVE:
+			/* ACTIVE leases may not be reallocated. */
 			return 0;
 
 		      case FTS_FREE:
+		      case FTS_ABANDONED:
+			/* FREE leases may only be allocated by the primary,
+			 * unless the secondary is acting in partner_down
+			 * state and stos+mclt or tsfp+mclt has expired,
+			 * whichever is greater.
+			 *
+			 * ABANDONED are treated the same as FREE for all
+			 * purposes here.  Note that servers will only try
+			 * for ABANDONED leases as a last resort anyway.
+			 */
 			if (peer -> i_am == primary)
 				return 1;
-			if (peer -> service_state == service_partner_down &&
-			    (lease -> tsfp < peer -> me.stos
-			     ? peer -> me.stos + peer -> mclt < cur_time
-			     : lease -> tsfp + peer -> mclt < cur_time))
-				return 1;
-			return 0;
 
-		      case FTS_ABANDONED:
+			return(peer->service_state == service_partner_down &&
+			       ((lease->tsfp < peer->me.stos) ?
+				(peer->me.stos + peer->mclt < cur_time) :
+				(lease->tsfp + peer->mclt < cur_time)));
+
 		      case FTS_RESET:
 		      case FTS_RELEASED:
 		      case FTS_EXPIRED:
-			if (peer -> service_state == service_partner_down &&
-			    (lease -> tsfp < peer -> me.stos
-			     ? peer -> me.stos + peer -> mclt < cur_time
-			     : lease -> tsfp + peer -> mclt < cur_time))
-				return 1;
-			return 0;
+			/* These three lease states go onto the 'expired'
+			 * queue.  Upon entry into partner-down state, this
+			 * queue of leases has their tsfp values modified
+			 * to equal stos+mclt, the point at which the server
+			 * is allowed to remove them from these transitional
+			 * states without an acknowledgement.
+			 *
+			 * Note that although tsfp has been possibly extended
+			 * past the actual tsfp we received from the peer, we
+			 * don't have to take any special action.  Since tsfp
+			 * is now in the past (or now), we can guarantee that
+			 * this server will only allocate a lease time equal
+			 * to MCLT, rather than a TSFP-optimal lease, which is
+			 * the only danger for a lease in one of these states.
+			 */
+			return((peer->service_state == service_partner_down) &&
+			       (lease->tsfp < cur_time));
+
 		      case FTS_BACKUP:
-			if (peer -> i_am == secondary)
+			/* Only the secondary may allocate BACKUP leases,
+			 * unless in partner_down state in which case at
+			 * least TSFP+MCLT or STOS+MCLT must have expired,
+			 * whichever is greater.
+			 */
+			if (peer->i_am == secondary)
 				return 1;
-			if (peer -> service_state == service_partner_down &&
-			    (lease -> tsfp < peer -> me.stos
-			     ? peer -> me.stos + peer -> mclt < cur_time
-			     : lease -> tsfp + peer -> mclt < cur_time))
-				return 1;
-			return 0;
+
+			return((peer->service_state == service_partner_down) &&
+			       ((lease->tsfp < peer->me.stos) ?
+				(peer->me.stos + peer->mclt < cur_time) :
+				(lease->tsfp + peer->mclt < cur_time)));
+
+		      default:
+			/* All lease states appear above. */
+			log_fatal("Impossible case at %s:%d.", MDL);
+			break;
 		}
 		return 0;
 	}
 	if (lease)
-		return !(lease -> binding_state != FTS_FREE &&
-			 lease -> binding_state != FTS_BACKUP);
+		return(lease->binding_state == FTS_FREE ||
+		       lease->binding_state == FTS_BACKUP);
 	else
 		return 0;
 }

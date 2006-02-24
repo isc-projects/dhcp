@@ -308,7 +308,8 @@ enum dhcp_token {
 	REFRESH = 612,
 	DOMAIN_NAME = 613,
 	DO_FORWARD_UPDATE = 614,
-	KNOWN_CLIENTS = 615
+	KNOWN_CLIENTS = 615,
+	ATSFP = 616
 };
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\

@@ -1,6 +1,6 @@
 .\"	dhcpd.conf.5
 .\"
-.\" Copyright (c) 2004-2005 by Internet Systems Consortium, Inc. ("ISC")
+.\" Copyright (c) 2004-2006 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 1996-2003 by Internet Software Consortium
 .\"
 .\" Permission to use, copy, modify, and distribute this software for any
@@ -28,7 +28,7 @@
 .\" see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
 .\" ``http://www.nominum.com''.
 .\"
-.\" $Id: dhcpd.conf.5,v 1.69 2005/09/30 19:15:55 dhankins Exp $
+.\" $Id: dhcpd.conf.5,v 1.70 2006/02/24 23:16:31 dhankins Exp $
 .\"
 .TH dhcpd.conf 5
 .SH NAME
@@ -2108,9 +2108,7 @@ statement
 The \fInext-server\fR statement is used to specify the host address of
 the server from which the initial boot file (specified in the
 \fIfilename\fR statement) is to be loaded.   \fIServer-name\fR should
-be a numeric IP address or a domain name.   If no \fInext-server\fR
-parameter applies to a given client, the DHCP server's IP address is
-used.
+be a numeric IP address or a domain name.
 .RE
 .PP
 The

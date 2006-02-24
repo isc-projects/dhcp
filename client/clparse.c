@@ -3,7 +3,7 @@
    Parser for dhclient config and lease files... */
 
 /*
- * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2006 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: clparse.c,v 1.64 2005/03/17 20:14:55 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: clparse.c,v 1.65 2006/02/24 23:16:27 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -173,7 +173,6 @@ int read_client_conf_file (const char *name, struct interface_info *ip,
 	status = (cfile -> warnings_occurred
 		  ? ISC_R_BADPARSE
 		  : ISC_R_SUCCESS);
-	close (file);
 	end_parse (&cfile);
 	return status;
 }
@@ -210,7 +209,6 @@ void read_client_leases ()
 
 	} while (1);
 
-	close (file);
 	end_parse (&cfile);
 }
 
@@ -774,7 +772,13 @@ int interface_or_dummy (struct interface_info **pi, const char *name)
 		if ((status = interface_allocate (&ip, MDL)) != ISC_R_SUCCESS)
 			log_fatal ("Can't record interface %s: %s",
 				   name, isc_result_totext (status));
-		strcpy (ip -> name, name);
+
+		if (strlen(name) >= sizeof(ip->name)) {
+			interface_dereference(&ip, MDL);
+			return 0;
+		}
+		strcpy(ip->name, name);
+
 		if (dummy_interfaces) {
 			interface_reference (&ip -> next,
 					     dummy_interfaces, MDL);
@@ -994,7 +998,8 @@ void parse_client_lease_declaration (cfile, lease, ipp, clientp)
 			skip_to_semi (cfile);
 			break;
 		}
-		interface_or_dummy (ipp, val);
+		if (!interface_or_dummy (ipp, val))
+			log_fatal ("Can't allocate interface %s.", val);
 		break;
 
 	      case NAME:

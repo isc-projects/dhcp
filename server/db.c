@@ -3,7 +3,7 @@
    Persistent database management routines for DHCPD... */
 
 /*
- * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2006 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: db.c,v 1.69 2005/09/30 17:57:32 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: db.c,v 1.70 2006/02/24 23:16:30 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -132,6 +132,14 @@ int write_lease (lease)
 		if (errno) {
 			++errors;
 		}
+	}
+	if (lease->atsfp) {
+		t = gmtime(&lease->atsfp);
+		if (fprintf(db_file,
+			    "\n  atsfp %d %d/%02d/%02d %02d:%02d:%02d;",
+			    t->tm_wday, t->tm_year + 1900, t->tm_mon + 1,
+			    t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec) <= 0)
+			++errors;
 	}
 	if (lease -> cltt) {
 		t = gmtime (&lease -> cltt);
@@ -848,12 +856,7 @@ int new_lease_file ()
 	char backfname [512];
 	TIME t;
 	int db_fd;
-
-	/* If we already have an open database, close it. */
-	if (db_file) {
-		fclose (db_file);
-		db_file = (FILE *)0;
-	}
+	FILE *new_db_file;
 
 	/* Make a temporary lease file... */
 	GET_TIME (&t);
@@ -873,10 +876,16 @@ int new_lease_file ()
 		log_error ("Can't create new lease file: %m");
 		return 0;
 	}
-	if ((db_file = fdopen (db_fd, "w")) == NULL) {
-		log_error ("Can't fdopen new lease file!");
-		goto fail;
+	if ((new_db_file = fdopen(db_fd, "w")) == NULL) {
+		log_error("Can't fdopen new lease file: %m");
+		close(db_fd);
+		goto fdfail;
 	}
+
+	/* Close previous database, if any. */
+	if (db_file)
+		fclose(db_file);
+	db_file = new_db_file;
 
 	/* Write an introduction so people don't complain about time
 	   being off. */
@@ -933,10 +942,15 @@ int new_lease_file ()
 			   backfname);
 		goto fail;
 	    }
-	    if (link (path_dhcpd_db, backfname) < 0) {
-		log_error ("Can't backup lease database %s to %s: %m",
-			   path_dhcpd_db, backfname);
-		goto fail;
+	    if (link(path_dhcpd_db, backfname) < 0) {
+		if (errno == ENOENT) {
+			log_error("%s is missing - no lease db to backup.",
+				  path_dhcpd_db);
+		} else {
+			log_error("Can't backup lease database %s to %s: %m",
+				  path_dhcpd_db, backfname);
+			goto fail;
+		}
 	    }
 #if defined (TRACING)
 	}
@@ -954,8 +968,9 @@ int new_lease_file ()
 	return 1;
 
       fail:
-	unlink (newfname);
 	lease_file_is_corrupt = 1;
+      fdfail:
+	unlink (newfname);
 	return 0;
 }
 

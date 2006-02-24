@@ -3,7 +3,7 @@
    Lexical scanner for dhcpd config file... */
 
 /*
- * Copyright (c) 2004-2005 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2006 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: conflex.c,v 1.95 2005/03/17 20:14:57 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: conflex.c,v 1.96 2006/02/24 23:16:28 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -95,10 +95,14 @@ isc_result_t new_parse (cfile, file, inbuf, buflen, name, eolp)
 isc_result_t end_parse (cfile)
 	struct parse **cfile;
 {
-	if ((*cfile) -> bufsiz)
-		dfree ((*cfile) -> inbuf, MDL);
-	dfree (*cfile, MDL);
-	*cfile = (struct parse *)0;
+	/* "Memory" config files have no file. */
+	if ((*cfile)->file != -1)
+		close((*cfile)->file);
+
+	if ((*cfile)->bufsiz)
+		dfree((*cfile)->inbuf, MDL);
+	dfree(*cfile, MDL);
+	*cfile = NULL;
 	return ISC_R_SUCCESS;
 }
 
@@ -464,7 +468,7 @@ static enum dhcp_token read_number (c, cfile)
 			log_fatal("read_number():%s:%d: impossible case", MDL);
 		}
 #else /* OLD_LEXER */
-		if (!seenx && (c == 'x') {
+		if (!seenx && (c == 'x')) {
 			seenx = 1;
 		} else if (!isascii (c) || !isxdigit (c)) {
 			if (c != EOF) {
@@ -573,6 +577,8 @@ static enum dhcp_token intern (atom, dfv)
 			return ADDRESS;
 		if (!strcasecmp (atom + 1, "ctive"))
 			return TOKEN_ACTIVE;
+		if (!strcasecmp (atom + 1, "tsfp"))
+			return ATSFP;
 		break;
 	      case 'b':
 		if (!strcasecmp (atom + 1, "ackup"))

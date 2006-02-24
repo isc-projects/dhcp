@@ -3,7 +3,7 @@
    Common parser code for dhcpd and dhclient. */
 
 /*
- * Copyright (c) 2004-2005 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2006 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.106 2005/03/17 20:14:59 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.107 2006/02/24 23:16:28 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -405,6 +405,7 @@ void parse_lease_time (cfile, timep)
 {
 	const char *val;
 	enum dhcp_token token;
+	u_int32_t num;
 
 	token = next_token (&val, (unsigned *)0, cfile);
 	if (token != NUMBER) {
@@ -412,9 +413,9 @@ void parse_lease_time (cfile, timep)
 		skip_to_semi (cfile);
 		return;
 	}
-	convert_num (cfile, (unsigned char *)timep, val, 10, 32);
+	convert_num(cfile, (unsigned char *)&num, val, 10, 32);
 	/* Unswap the number - convert_num returns stuff in NBO. */
-	*timep = ntohl (*timep); /* XXX */
+	*timep = ntohl(num);
 
 	parse_semi (cfile);
 }

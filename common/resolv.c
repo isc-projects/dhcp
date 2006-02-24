@@ -3,7 +3,7 @@
    Parser for /etc/resolv.conf file. */
 
 /*
- * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2006 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: resolv.c,v 1.17 2005/03/17 20:15:00 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: resolv.c,v 1.18 2006/02/24 23:16:28 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -172,7 +172,6 @@ void read_resolv_conf (parse_time)
 		} else
 			dl = dp;
 	}
-	close (file);
 	end_parse (&cfile);
 }
 

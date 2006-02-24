@@ -63,6 +63,144 @@ and for prodding me into improving it.
 - RFC3942 compliance, site-local option spaces start at 224 now, not 128.
         ||| THIS NEEDS TO BE SPELLED OUT IN THE NEW FEATURES LIST |||
 
+
+			Changes since 3.0.4b2
+
+- Null-termination sensing for certain clients that unfortunatley require
+  it in DHCPINFORM processing was repaired.
+
+- The host-name option and a few others were moved from "X" format to "t"
+  format to be compatible with new NULL handling functions.
+
+- DHCPINFORM processing is a little more careful about return addressing
+  its responses, or if responding via a relay.  The INFORM related
+  messages also log the 'effective client ip address' rather than the
+  client's supplied ciaddr (since some clients produce null ciaddrs).
+
+- The server was inappropriately sending leases to the RESET state in the
+  event that multiple active leases were found to match a singly-identified
+  client.  This was changed to RELEASED (by accepting a different, ACTIVE
+  binding, the client is implicitly releasing its lease).  This repairs a
+  bug wherein secondary servers in failover pairs detecting this condition
+  move leases to RESET, and primaries refuse to accept that state
+  transition (properly).
+
+- The memset-after-dmalloc() changes made in 3.0.4b1 have been backed out.
+
+			Changes since 3.0.4b1
+
+- Command line parsing in omshell was repaired - it no longer closes
+  STDIN after reading one line.
+
+- The resolver library no longer closes the /etc/resolv.conf file
+  descriptor it opened twice.
+
+- Changes to trailing NULL removal in 't' option-atoms has been rethought,
+  it now includes 'd' (domain name) types, and tries hard not to rewind an
+  option beyond the start of the text field it is un-terminating.
+
+			Changes since 3.0.3
+
+- A DDNS update handling function was misusing the DNS error codes, rather
+  than the internal generic result enumeration.  The result is a confusing
+  syslog line, logging the wrong condition.
+
+- The DHCP Server was not checking pool balance in the case where it brought
+  a non-ACTIVE lease out of storage for a client that was returning to use
+  a lease it once had long ago, and had since expired.
+
+- Failover peers no longer bother to look for free leases to allocate when
+  they already found the client's ACTIVE lease.  DISCOVERs are load balanced
+  wether freely-allocated or not, unless the server doubts the peer has
+  leases to allocate.
+
+- Fixed a bug in dhcrelay agent addition code that suppressed trailing
+  PAD options - it was suppressing only one trailng PAD option, rather
+  than the entire block of them.
+
+- Fixed some unlikely overlapping-region memcpy() bugs in dhcrelay agent
+  option addition and stripping code.  Added a few sanity checks.
+
+- Added some sanity checks to OMAPI connection/authentication code.
+
+- dmalloc() memset()'s the non-debug (data) portion of the allocated
+  memory to zero.  Code that memset()'s the result returned by dmalloc() to
+  zero is redundant.  These redundancies were removed.
+
+- Some type declaration corrections to u_int16_t were made in common/tr.c
+  (Token Ring support) thanks to a patch from Jason Vas Dias at RedHat.
+
+- A failover bug that was allowing leases that EXPIRED or were RELEASED
+  where tsfp and tstp are identical timestamps to languish in these
+  transitional states has been repaired.  As a side effect, lease
+  databases should be kept more consistent overall, not just for these
+  transitional states.
+
+- If the lease db is deleted out from under the daemon, and it moves to rewrite
+  the db, it will go ahead with the operation and move the new db into place
+  once it detects the old db does not exist.
+
+- dhclient now ignores IRDA, SIT, and IEEE1394 network interfaces, as it
+  is either nonsensical or (in the case of IEEE1394) is not known to support
+  these interfaces.  Thanks to Marius Gedminas and Andrew Pollock of Debian.
+
+- Some previously undocumented reasons for dhclient-script invoking has
+  been doucmented in the dhclient-script.8 manpage.
+
+- Failover potential expiry calculations (TSTP) have been corrected.  Results
+  should be substantially more consistent, and proper given the constraints.
+
+- Adjusted lease state validation checks in potential-conflict, to
+  account for possible clock skew similarly to normal state, and several
+  previously illegal transitions were made legal (ex: active->released).
+
+- An impossible sanity check was removed from omapi/buffer.c, thanks to a
+  patch from 'infamous42md'.
+
+- An OMAPI host/network byte order problem in lease time values has been
+  repaired.
+
+- Several minor bugs, largely relating to treating 8-byte time values as
+  4-byte entities, have been repaired after careful review of the FreeBSD
+  ports collection's patch set.  Thanks to the nameless entities who have
+  contributed to the FreeBSD ports.
+
+- When writing a trace file, the file is now created with permissions 0600,
+  to help administrators avoid accidentally publicising sensitive config
+  data.
+
+- The calculation of the maximum size of DHCP packets no longer includes
+  Ethernet framing overhead.  The result is that the 'Maximum Message
+  Size' option advertised by clients, or the default value 576, is no
+  longer reduced by 14 bytes, and instead directly reflects the IP level
+  MTU (and the default, minimum allowed IP MTU of 576).
+
+- The special status of RELEASED/EXPIRED/RESET leases when a server
+  is operating in partner-down was fixed.  It no longer requires a
+  lease be twice the MCLT beyond STOS to 'reallocate', and the expiry
+  event to turn these into FREE leases without peer acknowledgement
+  (after STOS+MCLT) has been repaired.
+
+- Compilation on older Solaris systems (lacking /usr/include/sys/int_types.h)
+  has been repaired.
+
+- "append"ing a string onto the end of a "t" type option (such as the
+  domain-name field) that had been improperly NULL-terminated by the
+  DHCP server will no longer result in a truncated string containing
+  only the option from the server, and not the expected appended value.
+  Thanks to a patch from Jason Vas Dias at RedHat.
+
+- File handlers on configuration state (config files and lease dbs) should
+  be treated consistently, regardless of wether TRACING is defined or not.
+
+- The linux build environment has had some minor improvements - better
+  sensing of 64-bit pointer sizes (only used for establishing an icmp_id),
+  and corrections to #if operators regarding LINUX_MAJOR should it ever
+  move to 3.[01].x.
+
+- The server now tries harder to survive the condition where it is unable
+  to open a new lease file to rewrite the lease state database.
+
 			Changes since 3.0.3b3
 
 - dhclient.conf documentation for interface {} was updated to reflect recent

@@ -1,6 +1,6 @@
 .\"	dhcpd.8
 .\"
-.\" Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
+.\" Copyright (c) 2004-2006 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 1996-2003 by Internet Software Consortium
 .\"
 .\" Permission to use, copy, modify, and distribute this software for any
@@ -28,7 +28,7 @@
 .\" see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
 .\" ``http://www.nominum.com''.
 .\"
-.\" $Id: dhcpd.8,v 1.22 2005/03/17 20:15:27 dhankins Exp $
+.\" $Id: dhcpd.8,v 1.23 2006/02/24 23:16:31 dhankins Exp $
 .\"
 .TH dhcpd 8
 .SH NAME
@@ -60,6 +60,10 @@ dhcpd - Dynamic Host Configuration Protocol Server
 [
 .B -lf
 .I lease-file
+]
+[
+.B -pf
+.I pid-file
 ]
 [
 .B -tf
@@ -193,8 +197,10 @@ LOG_DAEMON.
 .PP
 Dhcpd can be made to use an alternate configuration file with the
 .B -cf
-flag, or an alternate lease file with the
+flag, an alternate lease file with the
 .B -lf
+flag, or an alternate pid file with the
+.B -pf
 flag.   Because of the importance of using the same lease database at
 all times when running dhcpd in production, these options should be
 used \fBonly\fR for testing lease files or database files in a
@@ -463,9 +469,16 @@ server.
 .RE
 .B tsfp \fItime\fR examine
 .RS 0.5i
-the time when the lease's current state ends, as understood by the
-failover peer (if there is no failover peer, this value is
-undefined).
+the adjusted time when the lease's current state ends, as understood by
+the failover peer (if there is no failover peer, this value is
+undefined).  Generally this value is only adjusted for expired, released,
+or reset leases while the server is operating in partner-down state, and
+otherwise is simply the value supplied by the peer.
+.RE
+.B atsfp \fItime\fR examine
+.RS 0.5i
+the actual tsfp value sent from the peer.  This value is forgotten when a
+lease binding state change is made, to facillitate retransmission logic.
 .RE
 .PP
 .B cltt \fItime\fR examine

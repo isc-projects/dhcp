@@ -3,7 +3,7 @@
    Buffer access functions for the object management protocol... */
 
 /*
- * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2005 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1999-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -154,10 +154,6 @@ static isc_result_t omapi_connection_reader_trace (omapi_object_t *h,
 		return ISC_R_INVALIDARG;
 	c = (omapi_connection_object_t *)h;
 
-	/* Make sure c -> bytes_needed is valid. */
-	if (c -> bytes_needed < 0)
-		return ISC_R_INVALIDARG;
-	
 	/* See if there are enough bytes. */
 	if (c -> in_bytes >= OMAPI_BUF_SIZE - 1 &&
 	    c -> in_bytes > c -> bytes_needed)

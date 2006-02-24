@@ -3,7 +3,7 @@
    Operating system dependencies... */
 
 /*
- * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2005 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -269,6 +269,18 @@
 
 #if defined (ARPHRD_ROSE) && !defined (HAVE_ARPHRD_ROSE)
 # define HAVE_ARPHRD_ROSE
+#endif
+
+#if defined (ARPHRD_IRDA) && !defined (HAVE_ARPHRD_IRDA)
+# define HAVE_ARPHRD_IRDA
+#endif
+
+#if defined (ARPHRD_SIT) && !defined (HAVE_ARPHRD_SIT)
+# define HAVE_ARPHRD_SIT
+#endif
+
+#if defined (ARPHRD_IEEE1394) & !defined (HAVE_ARPHRD_IEEE1394)
+# define HAVE_ARPHRD_IEEE1394
 #endif
 
 #if defined (ARPHRD_IEEE802) && !defined (HAVE_ARPHRD_IEEE802)

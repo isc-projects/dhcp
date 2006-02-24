@@ -4,7 +4,7 @@
    protocol... */
 
 /*
- * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2006 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1999-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -33,6 +33,11 @@
  * ``http://www.nominum.com''.
  */
 
+#ifndef lint
+static char copyright[] =
+"$Id: alloc.c,v 1.26 2006/02/24 23:16:30 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium, Inc.  All rights reserved.\n";
+#endif /* not lint */
+
 #include <omapip/omapip_p.h>
 
 #if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL) || \
@@ -59,13 +64,21 @@ VOIDPTR dmalloc (size, file, line)
 	const char *file;
 	int line;
 {
-	unsigned char *foo = malloc (size + DMDSIZE);
+	unsigned char *foo;
+	unsigned len;
 	int i;
 	VOIDPTR *bar;
 #if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL) || \
 		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
 	struct dmalloc_preamble *dp;
 #endif
+
+	len = size + DMDSIZE;
+	if (len < size)
+		return (VOIDPTR)0;
+
+	foo = malloc(len);
+
 	if (!foo)
 		return (VOIDPTR)0;
 	bar = (VOIDPTR)(foo + DMDOFFSET);
@@ -804,10 +817,18 @@ isc_result_t omapi_typed_data_new (const char *file, int line,
 		s = va_arg (l, char *);
 		val = strlen (s);
 		len = OMAPI_TYPED_DATA_NOBUFFER_LEN + val;
+		if (len < val) {
+			va_end(l);
+			return ISC_R_INVALIDARG;
+		}
 		break;
 	      case omapi_datatype_data:
 		val = va_arg (l, unsigned);
 		len = OMAPI_TYPED_DATA_NOBUFFER_LEN + val;
+		if (len < val) {
+			va_end(l);
+			return ISC_R_INVALIDARG;
+		}
 		break;
 	      case omapi_datatype_object:
 		len = OMAPI_TYPED_DATA_OBJECT_LEN;
@@ -923,8 +944,12 @@ isc_result_t omapi_data_string_new (omapi_data_string_t **d, unsigned len,
 				    const char *file, int line)
 {
 	omapi_data_string_t *new;
+	unsigned nlen;
 
-	new = dmalloc (OMAPI_DATA_STRING_EMPTY_SIZE + len, file, line);
+	nlen = OMAPI_DATA_STRING_EMPTY_SIZE + len;
+	if (nlen < len)
+		return ISC_R_INVALIDARG;
+	new = dmalloc (nlen, file, line);
 	if (!new)
 		return ISC_R_NOMEMORY;
 	memset (new, 0, OMAPI_DATA_STRING_EMPTY_SIZE);

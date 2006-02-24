@@ -3,7 +3,7 @@
    Functions for maintaining handles on objects. */
 
 /*
- * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2006 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1999-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -31,6 +31,11 @@
  * see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
  * ``http://www.nominum.com''.
  */
+
+#ifndef lint
+static char ocopyright[] =
+"$Id: handle.c,v 1.8 2006/02/24 23:16:30 dhankins Exp $ Copyright 2004-2006 Internet Systems Consortium.";
+#endif
 
 #include <omapip/omapip_p.h>
 

@@ -3,7 +3,7 @@
    Parser for dhcpd config file... */
 
 /*
- * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2006 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.149 2005/09/30 17:57:32 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.150 2006/02/24 23:16:30 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -162,7 +162,6 @@ isc_result_t read_conf_file (const char *filename, struct group *group,
 	new_parse (&cfile, -1, fbuf, ulen, filename, 0); /* XXX */
 #else
 	new_parse (&cfile, file, (char *)0, 0, filename, 0);
-	close (file);
 #endif
 	if (leasep)
 		status = lease_file_subparse (cfile);
@@ -2624,6 +2623,7 @@ int parse_lease_declaration (struct lease **lp, struct parse *cfile)
 		      case TIMESTAMP:
 		      case TSTP:
 		      case TSFP:
+		      case ATSFP:
 		      case CLTT:
 			t = parse_date (cfile);
 			switch (token) {
@@ -2650,6 +2650,11 @@ int parse_lease_declaration (struct lease **lp, struct parse *cfile)
 			      case TSFP:
 				seenbit = 131072;
 				lease -> tsfp = t;
+				break;
+
+			      case ATSFP:
+				seenbit = 262144;
+				lease->atsfp = t;
 				break;
 				
 			      case CLTT:
