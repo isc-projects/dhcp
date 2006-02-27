@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.200 2006/02/24 23:16:30 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.201 2006/02/27 23:56:13 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1092,21 +1092,21 @@ void dhcpinform (packet, ms_nulltp)
 	if (!(oc = lookup_option (&dhcp_universe, options, i))) {
 	      use_primary:
 		oc = (struct option_cache *)0;
+	    if (packet -> interface -> address_count > 0) {
 		if (option_cache_allocate (&oc, MDL)) {
 			if (make_const_data
 			    (&oc -> expression,
 			     ((unsigned char *)
-			      &packet -> interface -> primary_address),
-			     sizeof packet -> interface -> primary_address,
+			      &packet -> interface -> addresses [0]),
+			     sizeof packet -> interface -> addresses [0],
 			     0, 0, MDL)) {
-				oc -> option =
-					dhcp_universe.options [i];
-				save_option (&dhcp_universe,
-					     options, oc);
+				oc -> option = dhcp_universe.options [i];
+				save_option (&dhcp_universe, options, oc);
 			}
 			option_cache_dereference (&oc, MDL);
 		}
-		from = packet -> interface -> primary_address;
+		from = packet -> interface -> addresses [0];
+	    }
 	} else {
 		if (evaluate_option_cache (&d1, packet, (struct lease *)0,
 					   (struct client_state *)0,
@@ -1358,15 +1358,16 @@ void nak_lease (packet, cip)
 	option_cache_dereference (&oc, MDL);
 		     
 	i = DHO_DHCP_SERVER_IDENTIFIER;
-	if (!(oc = lookup_option (&dhcp_universe, options, i))) {
+	if (packet -> interface -> address_count > 0) {
+	    if (!(oc = lookup_option (&dhcp_universe, options, i))) {
 	      use_primary:
 		oc = (struct option_cache *)0;
 		if (option_cache_allocate (&oc, MDL)) {
 			if (make_const_data
 			    (&oc -> expression,
 			     ((unsigned char *)
-			      &packet -> interface -> primary_address),
-			     sizeof packet -> interface -> primary_address,
+			      &packet -> interface -> addresses [0]),
+			     sizeof packet -> interface -> addresses [0],
 			     0, 0, MDL)) {
 				oc -> option =
 					dhcp_universe.options [i];
@@ -1374,9 +1375,10 @@ void nak_lease (packet, cip)
 			}
 			option_cache_dereference (&oc, MDL);
 		}
-		myfrom.len = sizeof packet -> interface -> primary_address;
+		myfrom.len = sizeof packet -> interface -> addresses [0];
 		memcpy (myfrom.iabuf,
-			&packet -> interface -> primary_address, myfrom.len);
+			&packet -> interface -> addresses [0], myfrom.len);
+	    }
 	} else {
 		memset (&data, 0, sizeof data);
 		if (evaluate_option_cache (&data, packet, (struct lease *)0,
@@ -1421,7 +1423,8 @@ void nak_lease (packet, cip)
 	option_state_dereference (&options, MDL);
 
 /*	memset (&raw.ciaddr, 0, sizeof raw.ciaddr);*/
-	raw.siaddr = packet -> interface -> primary_address;
+	if (packet -> interface -> address_count)
+		raw.siaddr = packet -> interface -> addresses [0];
 	raw.giaddr = packet -> raw -> giaddr;
 	memcpy (raw.chaddr, packet -> raw -> chaddr, sizeof raw.chaddr);
 	raw.hlen = packet -> raw -> hlen;
@@ -2401,13 +2404,14 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 		if (!(oc = lookup_option (&dhcp_universe,
 					  state -> options, i))) {
 		 use_primary:
+		    if (state -> ip -> address_count > 0) {
 			oc = (struct option_cache *)0;
 			if (option_cache_allocate (&oc, MDL)) {
 				if (make_const_data
 				    (&oc -> expression,
 				     ((unsigned char *)
-				      &state -> ip -> primary_address),
-				     sizeof state -> ip -> primary_address,
+				      &state -> ip -> addresses [0]),
+				     sizeof state -> ip -> addresses [0],
 				     0, 0, MDL)) {
 					oc -> option =
 						dhcp_universe.options [i];
@@ -2417,10 +2421,11 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 				option_cache_dereference (&oc, MDL);
 			}
 			state -> from.len =
-				sizeof state -> ip -> primary_address;
+				sizeof state -> ip -> addresses [0];
 			memcpy (state -> from.iabuf,
-				&state -> ip -> primary_address,
+				&state -> ip -> addresses [0],
 				state -> from.len);
+		    }
 		} else {
 			if (evaluate_option_cache (&d1, packet, lease,
 						   (struct client_state *)0,
@@ -2505,11 +2510,13 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 			option_cache_dereference (&oc, MDL);
 		}
 	} else {
-		state -> from.len =
-			sizeof state -> ip -> primary_address;
-		memcpy (state -> from.iabuf,
-			&state -> ip -> primary_address,
-			state -> from.len);
+		if (state -> ip -> address_count) {
+			state -> from.len =
+				sizeof state -> ip -> addresses [0];
+			memcpy (state -> from.iabuf,
+				&state -> ip -> addresses [0],
+				state -> from.len);
+		}
 	}
 
 	/* Figure out the address of the boot file server. */

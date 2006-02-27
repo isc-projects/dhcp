@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bootp.c,v 1.73 2005/07/07 16:39:07 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: bootp.c,v 1.74 2006/02/27 23:56:13 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -271,11 +271,13 @@ void bootp (packet)
 			memcpy (&raw.siaddr, d1.data, 4);
 		data_string_forget (&d1, MDL);
 	} else {
-		if (lease -> subnet -> shared_network -> interface)
+		if (lease -> subnet -> shared_network -> interface &&
+		    lease -> subnet ->
+		    shared_network -> interface -> address_count)
 			raw.siaddr = (lease -> subnet -> shared_network ->
-				      interface -> primary_address);
-		else
-			raw.siaddr = packet -> interface -> primary_address;
+				      interface -> addresses [0]);
+		else if (packet -> interface -> address_count)
+			raw.siaddr = packet -> interface -> addresses [0];
 	}
 
 	raw.giaddr = packet -> raw -> giaddr;
@@ -325,7 +327,8 @@ void bootp (packet)
 	hto.hlen = packet -> raw -> hlen + 1;
 	memcpy (&hto.hbuf [1], packet -> raw -> chaddr, packet -> raw -> hlen);
 
-	from = packet -> interface -> primary_address;
+	if (packet -> interface -> address_count)
+		from = packet -> interface -> addresses [0];
 
 	/* Report what we're doing... */
 	log_info ("%s", msgbuf);

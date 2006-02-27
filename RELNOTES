@@ -63,6 +63,10 @@ and for prodding me into improving it.
 - RFC3942 compliance, site-local option spaces start at 224 now, not 128.
         ||| THIS NEEDS TO BE SPELLED OUT IN THE NEW FEATURES LIST |||
 
+- The IO system now tracks all local IP addresses, so that the DHCP
+  applications (particularly the dhcrelay) can discern between what frames
+  were tranmsitted to it, and what frames are being carried through it which
+  it should not intercept.
 
 			Changes since 3.0.4b2
 

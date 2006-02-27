@@ -779,6 +779,12 @@ struct client_state {
 	struct option_state *sent_options;	/* Options we sent. */
 };
 
+/* Relay agent server list. */
+struct server_list {
+	struct server_list *next;
+	struct sockaddr_in to;
+} *servers;
+
 /* Information about each network interface. */
 
 struct interface_info {
@@ -787,7 +793,12 @@ struct interface_info {
 	struct shared_network *shared_network;
 				/* Networks connected to this interface. */
 	struct hardware hw_address;	/* Its physical address. */
-	struct in_addr primary_address;	/* Primary interface address. */
+	struct in_addr *addresses;	/* Addresses associated with
+					   interface. */
+	int address_count;		/* Number of addresses associated with
+					   interface. */
+	int address_max;		/* Max number of addresses we can
+					   store in current buffer. */
 
 	u_int8_t *circuit_id;		/* Circuit ID associated with this
 					   interface. */
@@ -796,6 +807,8 @@ struct interface_info {
 	u_int8_t *remote_id;		/* Remote ID associated with this
 					   interface (if any). */
 	unsigned remote_id_len;		/* Length of Remote ID. */
+	struct server_list *servers;	/* List of relay servers for this
+					   interface. */
 
 	char name [IFNAMSIZ];		/* Its name... */
 	int index;			/* Its index. */
@@ -808,6 +821,9 @@ struct interface_info {
 	size_t rbuf_len;		/* Length of data in buffer. */
 
 	struct ifreq *ifp;		/* Pointer to ifreq struct. */
+	int configured;			/* If set to 1, interface has at
+					 * least one valid IP address.
+					 */
 	u_int32_t flags;		/* Control flags... */
 #define INTERFACE_REQUESTED 1
 #define INTERFACE_AUTOMATIC 2
@@ -2037,6 +2053,7 @@ int parse_ip_addr PROTO ((struct parse *, struct iaddr *));
 void parse_reject_statement PROTO ((struct parse *, struct client_config *));
 
 /* dhcrelay.c */
+void new_relay_server (char *, struct server_list **);
 void relay PROTO ((struct interface_info *, struct dhcp_packet *, unsigned,
 		   unsigned int, struct iaddr, struct hardware *));
 int strip_relay_agent_options PROTO ((struct interface_info *,

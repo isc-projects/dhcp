@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcrelay.c,v 1.54 2006/02/24 23:16:30 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhcrelay.c,v 1.55 2006/02/27 23:56:13 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -92,11 +92,6 @@ enum { forward_and_append,	/* Forward and append our own relay option. */
 u_int16_t local_port;
 u_int16_t remote_port;
 
-struct server_list {
-	struct server_list *next;
-	struct sockaddr_in to;
-} *servers;
-
 static char copyright [] = "Copyright 2004-2005 Internet Systems Consortium.";
 static char arr [] = "All rights reserved.";
 static char message [] = "Internet Systems Consortium DHCP Relay Agent";
@@ -113,6 +108,7 @@ int main (argc, argv, envp)
 	int quiet = 0;
 	isc_result_t status;
 	char *s;
+	struct interface_info *tmp = (struct interface_info *)0;
 
 	/* Make sure we have stdin, stdout and stderr. */
 	i = open ("/dev/null", O_RDWR);
@@ -154,8 +150,8 @@ int main (argc, argv, envp)
 		} else if (!strcmp (argv [i], "-d")) {
 			no_daemon = 1;
  		} else if (!strcmp (argv [i], "-i")) {
-			struct interface_info *tmp =
-				(struct interface_info *)0;
+			if (tmp)
+				interface_dereference (&tmp, MDL);
 			status = interface_allocate (&tmp, MDL);
 			if (status != ISC_R_SUCCESS)
 				log_fatal ("%s: interface_allocate: %s",
@@ -166,7 +162,14 @@ int main (argc, argv, envp)
 			}
 			strcpy (tmp -> name, argv [i]);
 			interface_snorf (tmp, INTERFACE_REQUESTED);
-			interface_dereference (&tmp, MDL);
+ 		} else if (!strcmp (argv [i], "-is")) {
+			if (++i == argc)
+				usage ();
+			if (!tmp) {
+				log_error ("-is must follow -i.");
+				usage ();
+			}
+			new_relay_server (argv [i], &tmp -> servers);
 		} else if (!strcmp (argv [i], "-q")) {
 			quiet = 1;
 			quiet_interface_discovery = 1;
@@ -206,32 +209,14 @@ int main (argc, argv, envp)
 			log_info ("isc-dhcrelay-%s", DHCP_VERSION);
 			exit (0);
  		} else {
-			struct hostent *he;
-			struct in_addr ia, *iap = (struct in_addr *)0;
-			if (inet_aton (argv [i], &ia)) {
-				iap = &ia;
-			} else {
-				he = gethostbyname (argv [i]);
-				if (!he) {
-					log_error ("%s: host unknown",
-						   argv [i]);
-				} else {
-					iap = ((struct in_addr *)
-					       he -> h_addr_list [0]);
-				}
-			}
-			if (iap) {
-				sp = ((struct server_list *)
-				      dmalloc (sizeof *sp, MDL));
-				if (!sp)
-					log_fatal ("no memory for server.\n");
-				sp -> next = servers;
-				servers = sp;
-				memcpy (&sp -> to.sin_addr,
-					iap, sizeof *iap);
-			}
+			new_relay_server (argv [i], &servers);
  		}
 	}
+
+	limited_broadcast.s_addr = INADDR_BROADCAST;
+
+	if (tmp)
+		interface_dereference (&tmp, MDL);
 
 	if ((s = getenv ("PATH_DHCRELAY_PID"))) {
 		path_dhcrelay_pid = s;
@@ -259,7 +244,7 @@ int main (argc, argv, envp)
 	remote_port = htons (ntohs (local_port) + 1);
   
 	/* We need at least one server. */
-	if (!sp) {
+	if (!servers) {
 		usage ();
 	}
 
@@ -270,6 +255,29 @@ int main (argc, argv, envp)
 #ifdef HAVE_SA_LEN
 		sp -> to.sin_len = sizeof sp -> to;
 #endif
+	}
+
+	if (interfaces) {
+		interface_reference (&tmp, interfaces, MDL);
+		do {
+			struct interface_info *next = NULL;
+			if (tmp -> next)
+				interface_reference (&next, tmp -> next, MDL);
+		
+			for (sp = tmp -> servers; sp; sp = sp -> next) {
+				sp -> to.sin_port = local_port;
+				sp -> to.sin_family = AF_INET;
+#ifdef HAVE_SA_LEN
+				sp -> to.sin_len = sizeof sp -> to;
+#endif
+			}
+
+			interface_dereference (&tmp, MDL);
+			if (next) {
+				interface_reference (&tmp, next, MDL);
+				interface_dereference (&next, MDL);
+			}
+		} while (tmp);
 	}
 
 	/* Get the current time... */
@@ -323,6 +331,36 @@ int main (argc, argv, envp)
 	return 0;
 }
 
+void new_relay_server (char *arg, struct server_list **servers)
+{
+	struct hostent *he;
+	struct in_addr ia, *iap = (struct in_addr *)0;
+	struct server_list *sp;
+
+	if (inet_aton (arg, &ia)) {
+		iap = &ia;
+	} else {
+		he = gethostbyname (arg);
+		if (!he) {
+			log_error ("%s: host unknown", arg);
+		} else {
+			iap = ((struct in_addr *)
+			       he -> h_addr_list [0]);
+		}
+	}
+	if (iap) {
+		sp = ((struct server_list *)
+		      dmalloc (sizeof *sp, MDL));
+		if (!sp)
+			log_fatal ("no memory for server.\n");
+		memset(sp, 0, sizeof *sp);
+		sp -> next = *servers;
+		*servers = sp;
+		memcpy (&sp -> to.sin_addr,
+			iap, sizeof *iap);
+	}
+}
+
 void relay (ip, packet, length, from_port, from, hfrom)
 	struct interface_info *ip;
 	struct dhcp_packet *packet;
@@ -335,6 +373,7 @@ void relay (ip, packet, length, from_port, from, hfrom)
 	struct sockaddr_in to;
 	struct interface_info *out;
 	struct hardware hto, *htop;
+	int i;
 
 	if (packet -> hlen > sizeof packet -> chaddr) {
 		log_info ("Discarding packet with invalid hlen.");
@@ -345,14 +384,16 @@ void relay (ip, packet, length, from_port, from, hfrom)
 	   in the packet. */
 	if (packet -> giaddr.s_addr) {
 		for (out = interfaces; out; out = out -> next) {
-			if (!memcmp (&out -> primary_address,
-				     &packet -> giaddr,
-				     sizeof packet -> giaddr))
-				break;
+			for (i = 0; i < out -> address_count; i++) {
+				if (out -> addresses [i].s_addr ==
+				    packet -> giaddr.s_addr)
+					goto matched;
+			}
 		}
 	} else {
 		out = (struct interface_info *)0;
 	}
+      matched:
 
 	/* If it's a bootreply, forward it to the client. */
 	if (packet -> op == BOOTREPLY) {
@@ -388,15 +429,18 @@ void relay (ip, packet, length, from_port, from, hfrom)
 			return;
 
 		if (!out) {
-			log_error ("packet to bogus giaddr %s.\n",
+			log_error ("packet to bogus giaddr %s.",
 			      inet_ntoa (packet -> giaddr));
 			++bogus_giaddr_drops;
 			return;
 		}
 
+		if (out -> address_count < 1)
+			log_fatal ("no IP address on interface %s!",
+				   out -> name);
 		if (send_packet (out,
 				 (struct packet *)0,
-				 packet, length, out -> primary_address,
+				 packet, length, out -> addresses [0],
 				 &to, htop) < 0) {
 			++server_packet_errors;
 		} else {
@@ -415,10 +459,13 @@ void relay (ip, packet, length, from_port, from, hfrom)
 	if (out)
 		return;
 
+	if (ip -> address_count < 1)
+		log_fatal ("no IP address on interface %s", ip -> name);
+
 	/* Add relay agent options if indicated.   If something goes wrong,
 	   drop the packet. */
 	if (!(length = add_relay_agent_options (ip, packet, length,
-						ip -> primary_address)))
+						ip -> addresses [0])))
 		return;
 
 	/* If giaddr is not already set, Set it so the server can
@@ -427,7 +474,7 @@ void relay (ip, packet, length, from_port, from, hfrom)
 	   set, the response will be sent directly to the relay agent
 	   that set giaddr, so we won't see it. */
 	if (!packet -> giaddr.s_addr)
-		packet -> giaddr = ip -> primary_address;
+		packet -> giaddr = ip -> addresses [0];
 	if (packet -> hops < max_hop_count)
 		packet -> hops = packet -> hops + 1;
 	else
@@ -435,11 +482,12 @@ void relay (ip, packet, length, from_port, from, hfrom)
 
 	/* Otherwise, it's a BOOTREQUEST, so forward it to all the
 	   servers. */
-	for (sp = servers; sp; sp = sp -> next) {
+	for (sp = (ip -> servers
+		   ? ip -> servers : servers); sp; sp = sp -> next) {
 		if (send_packet ((fallback_interface
 				  ? fallback_interface : interfaces),
 				 (struct packet *)0,
-				 packet, length, ip -> primary_address,
+				 packet, length, ip -> addresses [0],
 				 &sp -> to, (struct hardware *)0) < 0) {
 			++client_packet_errors;
 		} else {
@@ -450,13 +498,12 @@ void relay (ip, packet, length, from_port, from, hfrom)
 			++client_packets_relayed;
 		}
 	}
-				 
 }
 
 static void usage ()
 {
 	log_fatal ("Usage: dhcrelay [-p <port>] [-d] [-D] [-i %s%s%s%s",
-		"interface] [-q] [-a]\n                ",
+		"interface [-is server ... ]]\n                ",
 		"[-c count] [-A length] ",
 		"[-m append|replace|forward|discard]\n",
 		"                [server1 [... serverN]]");
