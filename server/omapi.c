@@ -41,7 +41,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: omapi.c,v 1.55 2006/02/24 23:16:32 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: omapi.c,v 1.56 2006/02/27 23:43:30 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1795,8 +1795,8 @@ class_set_value (omapi_object_t *h,
 				return ISC_R_NOMEMORY;
 			class->hash_string.data =
 					class->hash_string.buffer->data;
-			memcpy(class->hash_string.data, value->u.buffer.value,
-			       value->u.buffer.len);
+			memcpy(class->hash_string.buffer->data,
+			       value->u.buffer.value, value->u.buffer.len);
 			class->hash_string.len = value->u.buffer.len;
 		} else
 			return ISC_R_INVALIDARG;
