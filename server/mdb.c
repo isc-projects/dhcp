@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.74 2006/02/24 23:16:32 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.75 2006/03/02 19:02:56 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -86,7 +86,7 @@ isc_result_t enter_class(cd, dynamicp, commit)
 			name = cd->superclass->name;
 		}
 
-		write_named_billing_class (name, 0, cd);
+		write_named_billing_class ((const unsigned char *)name, 0, cd);
 		if (!commit_leases ())
 			return ISC_R_IOERROR;
 	}
@@ -286,7 +286,7 @@ isc_result_t delete_class (cp, commit)
 	   structures, unlike the host objects */
 	
 	if (commit) {
-		write_named_billing_class (cp->name, 0, cp);
+		write_named_billing_class ((unsigned char *)cp->name, 0, cp);
 		if (!commit_leases ())
 			return ISC_R_IOERROR;
 	}
@@ -1832,7 +1832,8 @@ int write_leases ()
 		numclasseswritten = 0;
 		for (colp = collections ; colp ; colp = colp->next) {
 			for (cp = colp->classes ; cp ; cp = cp->nic) {
-				write_named_billing_class(cp->name,
+				write_named_billing_class(
+						(unsigned char *)cp->name,
 							  0, cp);
 			}
 		}
