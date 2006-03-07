@@ -1,6 +1,6 @@
-.\"	$Id: dhcp-options.5,v 1.19.2.14 2004/09/21 22:43:09 dhankins Exp $
+.\"	$Id: dhcp-options.5,v 1.19.2.15 2006/03/07 19:10:41 dhankins Exp $
 .\"
-.\" Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
+.\" Copyright (c) 2004-2006 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 1996-2003 by Internet Software Consortium
 .\"
 .\" Permission to use, copy, modify, and distribute this software for any
@@ -1067,6 +1067,19 @@ and similar things.   In principal, the meaning is not well-specified,
 and it should generally be assumed to be an opaque object that is
 administratively guaranteed to be unique to a particular remote end of
 a circuit.
+.RE
+.PP
+.B option \fBagent.DOCSIS-device-class\fR \fIuint32\fR\fB;\fR
+.RS 0.25i
+.PP
+The DOCSIS-device-class suboption is intended to convey information about
+the host endpoint, hardware, and software, that either the host operating
+system or the DHCP server may not otherwise be aware of (but the relay is
+able to distinguish).  This is implemented as a 32-bit field (4 octets),
+each bit representing a flag describing the host in one of these ways.
+So far, only bit zero (being the least significant bit) is defined in
+RFC3256.  If this bit is set to one, the host is considered a CPE
+Controlled Cable Modem (CCCM).  All other bits are reserved.
 .RE
 .SH THE CLIENT FQDN SUBOPTIONS
 The Client FQDN option, currently defined in the Internet Draft
