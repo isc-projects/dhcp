@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.117 2005/03/17 20:15:27 dhankins Exp $ Copyright 2004-2005 Internet Systems Consortium.";
+"$Id: dhcpd.c,v 1.118 2006/03/27 09:45:47 shane Exp $ Copyright 2004-2005 Internet Systems Consortium.";
 #endif
 
   static char copyright[] =
@@ -197,6 +197,7 @@ int main (argc, argv, envp)
 	int argc;
 	char **argv, **envp;
 {
+	int fd;
 	int i, status;
 	struct servent *ent;
 	char *s;
@@ -226,15 +227,18 @@ int main (argc, argv, envp)
 	char *traceoutfile = (char *)0;
 #endif
 
-	/* Make sure we have stdin, stdout and stderr. */
-	status = open ("/dev/null", O_RDWR);
-	if (status == 0)
-		status = open ("/dev/null", O_RDWR);
-	if (status == 1) {
-		status = open ("/dev/null", O_RDWR);
-		log_perror = 0; /* No sense logging to /dev/null. */
-	} else if (status != -1)
-		close (status);
+        /* Make sure that file descriptors 0 (stdin), 1, (stdout), and
+           2 (stderr) are open. To do this, we assume that when we
+           open a file the lowest available file decriptor is used. */
+        fd = open ("/dev/null", O_RDWR);
+        if (fd == 0)
+                fd = open ("/dev/null", O_RDWR);
+        if (fd == 1)
+                fd = open ("/dev/null", O_RDWR);
+        if (fd == 2)
+                log_perror = 0; /* No sense logging to /dev/null. */
+        else if (fd != -1)
+                close (fd);
 
 	/* Set up the client classification system. */
 	classification_setup ();
@@ -569,10 +573,18 @@ int main (argc, argv, envp)
 
 	if (daemon) {
 		/* Become session leader and get pid... */
-		close (0);
-		close (1);
-		close (2);
 		pid = setsid ();
+
+                /* Close standard I/O descriptors. */
+                close (0);
+                close (1);
+                close (2);
+
+                /* Reopen them on /dev/null. */
+                open ("/dev/null", O_RDWR);
+                open ("/dev/null", O_RDWR);
+                open ("/dev/null", O_RDWR);
+                log_perror = 0; /* No sense logging to /dev/null. */
 	}
 
 	/* If we didn't write the pid file earlier because we found a

@@ -32,7 +32,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.134 2006/02/27 23:56:12 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.135 2006/03/27 09:45:47 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -83,6 +83,7 @@ int main (argc, argv, envp)
 	int argc;
 	char **argv, **envp;
 {
+	int fd;
 	int i;
 	struct servent *ent;
 	struct interface_info *ip;
@@ -102,15 +103,18 @@ int main (argc, argv, envp)
 	int no_dhclient_script = 0;
 	char *s;
 
-	/* Make sure we have stdin, stdout and stderr. */
-	i = open ("/dev/null", O_RDWR);
-	if (i == 0)
-		i = open ("/dev/null", O_RDWR);
-	if (i == 1) {
-		i = open ("/dev/null", O_RDWR);
-		log_perror = 0; /* No sense logging to /dev/null. */
-	} else if (i != -1)
-		close (i);
+        /* Make sure that file descriptors 0 (stdin), 1, (stdout), and
+           2 (stderr) are open. To do this, we assume that when we
+           open a file the lowest available file decriptor is used. */
+        fd = open ("/dev/null", O_RDWR);
+        if (fd == 0)
+                fd = open ("/dev/null", O_RDWR);
+        if (fd == 1)
+                fd = open ("/dev/null", O_RDWR);
+        if (fd == 2)
+                log_perror = 0; /* No sense logging to /dev/null. */
+        else if (fd != -1)
+                close (fd);
 
 #ifdef SYSLOG_4_2
 	openlog ("dhclient", LOG_NDELAY);
@@ -2698,7 +2702,6 @@ void go_daemon ()
 {
 	static int state = 0;
 	int pid;
-	int i;
 
 	/* Don't become a daemon if the user requested otherwise. */
 	if (no_daemon) {
@@ -2728,14 +2731,10 @@ void go_daemon ()
         close(2);
 
 	/* Reopen them on /dev/null. */
-	i = open ("/dev/null", O_RDWR);
-	if (i == 0)
-		i = open ("/dev/null", O_RDWR);
-	if (i == 1) {
-		i = open ("/dev/null", O_RDWR);
-		log_perror = 0; /* No sense logging to /dev/null. */
-	} else if (i != -1)
-		close (i);
+	open ("/dev/null", O_RDWR);
+	open ("/dev/null", O_RDWR);
+	open ("/dev/null", O_RDWR);
+	log_perror = 0; /* No sense logging to /dev/null. */
 
 	write_client_pid_file ();
 }
