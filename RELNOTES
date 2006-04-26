@@ -44,6 +44,11 @@ thanks to all of these good people here, both for working on the code
 and for prodding me into improving it.
 
 
+			Changes since 3.0.4rc1
+
+- The dhcp-options.5 manpage was updated to correct indentation errors
+  thanks to a patch from Jean Delvare.
+
 			Changes since 3.0.4b3
 
 - Some manual pages were clarified pursuant to discussion on the dhcp-server
