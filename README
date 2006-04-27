@@ -96,9 +96,10 @@ system.
 
 			    RELEASE STATUS
 
-This is the second beta release of ISC DHCP 3.0.4.  This is a
-maintenance release which seeks only to fix bugs present in versions
-3.0.3 and earlier.  No new features have been added.
+This is ISC DHCP 3.0.4.  This is a maintenance release which seeks only
+to fix bugs present in versions 3.0.3 and earlier.  No new features
+have been added, although you should take careful note of the RELNOTES
+discussion on the new 'atsfp' failover value.
 
 In this release, the server and relay agent are currently fully
 functional on NetBSD, Linux systems with kernel version 2.2 or later,
@@ -141,14 +142,14 @@ information.   On Digital Unix, type ``man pfilt''.
 To build the DHCP Distribution, unpack the compressed tar file using
 the tar utility and the gzip command - type something like:
 
-	zcat dhcp-3.0.4rc1.tar.gz |tar xvf -
+	zcat dhcp-3.0.4.tar.gz |tar xvf -
 
 On BSD/OS, you have to type gzcat, not zcat, and you may run into
 similar problems on other operating systems.
 
 			    CONFIGURING IT
 
-Now, cd to the dhcp-3.0.4rc1 subdirectory that you've just created and
+Now, cd to the dhcp-3.0.4 subdirectory that you've just created and
 configure the source tree by typing:
 
 	./configure
