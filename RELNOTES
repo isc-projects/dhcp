@@ -1,10 +1,47 @@
 	      Internet Systems Consortium DHCP Distribution
-			    Version 3.0.4rc1
-			     March 9, 2006
+			     Version 3.0.4
+			     April 27, 2006
 
 			     Release Notes
 
 			     NEW FEATURES
+
+FAILOVER:  As of version 3.0.4, ISC has included a fix for an insidious
+bug in the failover implementation which, if left unchecked, could result
+in tying up all leases in transitional states (such as released, reset, or
+expired).  The crux of the problem is the lack of retransmission of leases
+that rest in these states.  The only way to solve this problem is to carry
+additional state on the lease data structures to indicate acknowledgement
+state.
+
+To these ends, 'ATSFP', or Actual Time Sent From Peer, is now included
+on lease state structures found in your dhcpd.leases file.  This value
+is identical to TSFP - the exception is that it is zeroed upon every
+change to a lease that would necessitate a binding update, and it is
+what is used to govern retransmission.
+
+The presence of this new value on lease state structures presents an
+operational dilemma.  Since a zero value is normal, and there is no way
+to version the dhcpd.leases file, if you simply start dhcpd 3.0.4 using
+a dhcpd.leases file written by a pre-3.0.4 daemon, it will cause the
+daemon to retransmit -all- leases upon connecting the failover channel
+(the zero value is sensed to cause a retransmission).
+
+This is harmless, or even beneficial if your lease databases are slightly
+out of sync, but undesirable if you have a very large number of
+failover-controlled leases.  
+
+As a workaround, simply synthesize an 'atsfp' dhcpd.leases entry for each
+lease from the most recent 'tsfp' value.  For example (all on one line):
+
+	awk '/^  tsfp / { printf("%s\n  atsfp %s %s %s\n", $0, $2, $3, $4);
+			next; } // { print $0; }' /var/db/dhcpd.leases
+
+Similarly, in the event it is necessary to downgrade from 3.0.4 to any
+previous version, the atsfp values will need to be removed in order to
+successfully start:
+
+	grep -v '^  atsfp ' /var/db/dhcpd.leases
 
 Version 3 of the ISC DHCP Distribution includes the following features
 that are new since version 2.0:
@@ -108,10 +145,19 @@ and for prodding me into improving it.
   PAD options - it was suppressing only one trailng PAD option, rather
   than the entire block of them.
 
-- Fixed some unlikely overlapping-region memcpy() bugs in dhcrelay agent
-  option addition and stripping code.  Added a few sanity checks.
+! Fixed some unlikely overlapping-region memcpy() bugs in dhcrelay agent
+  option addition and stripping code.  Added a few sanity checks.  Although
+  highly improbable, due to requiring the reception of a DHCP datagram well
+  in excess of all known to be used physical MTU limitations, it is possible
+  this may have been used in a stack overflow security vulnerability.  Thanks
+  to a patch from infamous42md.
 
-- Added some sanity checks to OMAPI connection/authentication code.
+! Added some sanity checks to OMAPI connection/authentication code.
+  Although highly improbable, due to having to deliver in excess of 2^32
+  bytes of data via the OMAPI channel, not to mention requiring dhcpd to
+  be able to malloc() a memory region 2^32 bytes in size, it was possible
+  this might have resulted in a heap overflow security vulnerability.
+  Thanks to a patch from infamous42md.
 
 - dmalloc() memset()'s the non-debug (data) portion of the allocated
   memory to zero.  Code that memset()'s the result returned by dmalloc() to

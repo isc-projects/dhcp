@@ -28,7 +28,7 @@
 .\" see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
 .\" ``http://www.nominum.com''.
 .\"
-.\" $Id: dhcpd.conf.5,v 1.63.2.28 2005/09/12 15:01:47 dhankins Exp $
+.\" $Id: dhcpd.conf.5,v 1.63.2.29 2006/04/27 21:38:30 dhankins Exp $
 .\"
 .TH dhcpd.conf 5
 .SH NAME
@@ -2195,6 +2195,23 @@ ICMP Echo response to be heard, if no ICMP Echo response has been received
 before the timeout expires, it assigns the address.  If a response \fIis\fR
 heard, the lease is abandoned, and the server does not respond to the client.
 If no value is set, ping-timeout defaults to 1 second.
+.RE
+.PP
+The
+.I remote-port
+statement
+.RS 0.25i
+.PP
+.B remote-port \fIport\fB;\fR
+.PP
+This statement causes the DHCP server to transmit DHCP responses to DHCP
+clients upon the UDP port specified in \fIport\fR, rather than on port 68.
+In the event that the UDP response is transmitted to a DHCP Relay, the
+server generally uses the \fBlocal-port\fR configuration value.  Should the
+DHCP Relay happen to be addressed as 127.0.0.1, however, the DHCP Server
+transmits its response to the \fBremote-port\fR configuration value.  This
+is generally only useful for testing purposes, and this configuratoin value
+should generally not be used.
 .RE
 .PP
 The
