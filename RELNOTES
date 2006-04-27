@@ -51,11 +51,14 @@ and for prodding me into improving it.
   server responses, if they contain a valid DHCP_MESSAGE_TYPE (OFFER, ACK,
   or NAK).  The server will continue to not accept corrupt client packets.
 
-- Support for 'reserved' (static) and BOOTP leases via failover was
-  introduced.
+- Support for 'reserved' (psuedo-static) and BOOTP leases via failover
+  was introduced.
 
 - Support for adding, removing, and managing class and subclass statements
   via OMAPI.
+
+- The failover implementation was updated to comply with revision 12 of
+  the protocol draft.
 
 - 'make install' now creates the initial zero-length dhcpd.leases file if
   one does not already exist on the system.

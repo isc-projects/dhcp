@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: db.c,v 1.70 2006/02/24 23:16:30 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: db.c,v 1.71 2006/04/27 17:26:42 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -153,29 +153,24 @@ int write_lease (lease)
 		}
 	}
 
-	if (lease -> binding_state == FTS_ACTIVE &&
-	    (lease -> flags & BOOTP_LEASE)) {
-		fprintf (db_file, "\n  binding state bootp;\n");
-	} else {
-		fprintf (db_file, "\n  binding state %s;",
-			 ((lease -> binding_state > 0 &&
-			   lease -> binding_state <= FTS_LAST)
-			  ? binding_state_names [lease -> binding_state - 1]
-			  : "abandoned"));
-	}
+	fprintf (db_file, "\n  binding state %s;",
+		 ((lease -> binding_state > 0 &&
+		   lease -> binding_state <= FTS_LAST)
+		  ? binding_state_names [lease -> binding_state - 1]
+		  : "abandoned"));
 
-	if (lease -> binding_state != lease -> next_binding_state) {
-	    if (lease -> next_binding_state == FTS_ACTIVE &&
-		(lease -> flags & BOOTP_LEASE))
-		fprintf (db_file, "\n  next binding state bootp;\n");
-	    else
+	if (lease -> binding_state != lease -> next_binding_state)
 		fprintf (db_file, "\n  next binding state %s;",
 			 ((lease -> next_binding_state > 0 &&
 			   lease -> next_binding_state <= FTS_LAST)
 			  ? (binding_state_names
 			     [lease -> next_binding_state - 1])
-		  : "abandoned"));
-	}
+			  : "abandoned"));
+
+	if (lease->flags & RESERVED_LEASE)
+		fprintf(db_file, "\n  reserved;");
+	if (lease->flags & BOOTP_LEASE)
+		fprintf(db_file, "\n  dynamic-bootp;");
 
 	/* If this lease is billed to a class and is still valid,
 	   write it out. */

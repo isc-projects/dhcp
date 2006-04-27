@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.150 2006/02/24 23:16:30 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.151 2006/04/27 17:26:42 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2717,7 +2717,7 @@ int parse_lease_declaration (struct lease **lp, struct parse *cfile)
 				log_fatal ("No memory for lease uid");
 			}
 			break;
-			
+
 		      case CLASS:
 			seenbit = 32;
 			token = next_token (&val, (unsigned *)0, cfile);
@@ -2737,12 +2737,19 @@ int parse_lease_declaration (struct lease **lp, struct parse *cfile)
 					      &lease -> hardware_addr);
 			break;
 
+		      case TOKEN_RESERVED:
+			seenbit = 0;
+			lease->flags |= RESERVED_LEASE;
+			parse_semi(cfile);
+			break;
+
 		      case DYNAMIC_BOOTP:
-			seenbit = 256;
+			seenbit = 0;
 			lease -> flags |= BOOTP_LEASE;
 			parse_semi (cfile);
 			break;
-			
+
+			/* XXX: Reverse compatibility? */
 		      case TOKEN_ABANDONED:
 			seenbit = 256;
 			lease -> binding_state = FTS_ABANDONED;
@@ -2793,13 +2800,19 @@ int parse_lease_declaration (struct lease **lp, struct parse *cfile)
 			      case TOKEN_BACKUP:
 				new_state = FTS_BACKUP;
 				break;
+
+				/* RESERVED and BOOTP states preserved for
+				 * compatiblity with older versions.
+				 */
 			      case TOKEN_RESERVED:
 				new_state = FTS_ACTIVE;
+				lease->flags |= RESERVED_LEASE;
 				break;
 			      case TOKEN_BOOTP:
 				new_state = FTS_ACTIVE;
-				lease -> flags |= BOOTP_LEASE;
+				lease->flags |= BOOTP_LEASE;
 				break;
+
 			      default:
 				parse_warn (cfile,
 					    "%s: expecting a binding state.",
@@ -3307,7 +3320,8 @@ void parse_address_range (cfile, group, type, inpool, lpchain)
 /* allow-deny-keyword :== BOOTP
    			| BOOTING
 			| DYNAMIC_BOOTP
-			| UNKNOWN_CLIENTS */
+			| UNKNOWN_CLIENTS
+			| INFINITE IS RESERVED */
 
 int parse_allow_deny (oc, cfile, flag)
 	struct option_cache **oc;
@@ -3362,6 +3376,22 @@ int parse_allow_deny (oc, cfile, flag)
 		status = option_cache (oc, (struct data_string *)0, data,
 				       &server_options [SV_CLIENT_UPDATES],
 				       MDL);
+		break;
+
+	      case INFINITE:
+		token = next_token(&val, NULL, cfile);
+		if (token != IS) {
+			parse_warn(cfile, "Expecting 'is reserved'.");
+			break;
+		}
+		token = next_token(&val, NULL, cfile);
+		if (token != TOKEN_RESERVED) {
+			parse_warn(cfile, "Expecting 'reserved'.");
+			break;
+		}
+
+		status = option_cache(oc, NULL, data,
+				&server_options[SV_RESERVE_INFINITE], MDL);
 		break;
 
 	      default:

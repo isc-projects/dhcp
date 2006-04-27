@@ -41,7 +41,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: omapi.c,v 1.56 2006/02/27 23:43:30 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: omapi.c,v 1.57 2006/04/27 17:26:42 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -266,6 +266,23 @@ isc_result_t dhcp_lease_set_value  (omapi_object_t *h,
 	    return ISC_R_NOPERM;
 	} else if (!omapi_ds_strcmp (name, "ends")) {
 	    return ISC_R_NOPERM;
+	} else if (!omapi_ds_strcmp(name, "flags")) {
+	    u_int8_t oldflags;
+
+	    if (value->type != omapi_datatype_data)
+		return ISC_R_INVALIDARG;
+
+	    oldflags = lease->flags;
+	    lease->flags = (value->u.buffer.value[0] & EPHEMERAL_FLAGS) |
+			   (lease->flags & ~EPHEMERAL_FLAGS);
+	    if(oldflags == lease->flags)
+		return ISC_R_SUCCESS;
+	    if (!supersede_lease(lease, NULL, 1, 1, 1)) {
+		log_error("Failed to update flags for lease %s.",
+			  piaddr(lease->ip_addr));
+		return ISC_R_IOERROR;
+	    }
+	    return ISC_R_SUCCESS;
 	} else if (!omapi_ds_strcmp (name, "billing-class")) {
 	    return ISC_R_UNCHANGED;	/* XXX carefully allow change. */
 	} else if (!omapi_ds_strcmp (name, "hardware-address")) {
@@ -383,6 +400,7 @@ isc_result_t dhcp_lease_destroy (omapi_object_t *h, const char *file, int line)
 {
 	struct lease *lease;
 	isc_result_t status;
+	u_int8_t flagbuf;
 
 	if (h -> type != dhcp_type_lease)
 		return ISC_R_INVALIDARG;
@@ -485,6 +503,7 @@ isc_result_t dhcp_lease_stuff_values (omapi_object_t *c,
 	u_int32_t bouncer;
 	struct lease *lease;
 	isc_result_t status;
+	u_int8_t flagbuf;
 
 	if (h -> type != dhcp_type_lease)
 		return ISC_R_INVALIDARG;
@@ -678,6 +697,14 @@ isc_result_t dhcp_lease_stuff_values (omapi_object_t *c,
 	if (status != ISC_R_SUCCESS)
 		return status;
 	status = omapi_connection_put_uint32(c, bouncer);
+	if (status != ISC_R_SUCCESS)
+		return status;
+
+	status = omapi_connection_put_name (c, "flags");
+	if (status != ISC_R_SUCCESS)
+		return status;
+	flagbuf = lease->flags & EPHEMERAL_FLAGS;
+	status = omapi_connection_copyin(c, &flagbuf, 1);
 	if (status != ISC_R_SUCCESS)
 		return status;
 

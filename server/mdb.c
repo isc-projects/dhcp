@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.75 2006/03/02 19:02:56 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.76 2006/04/27 17:26:42 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -892,9 +892,7 @@ int supersede_lease (comp, lease, commit, propogate, pimmediate)
 
 	if (lease -> binding_state != FTS_ABANDONED &&
 	    lease -> next_binding_state != FTS_ABANDONED &&
-	    (comp -> binding_state == FTS_ACTIVE ||
-	     comp -> binding_state == FTS_RESERVED ||
-	     comp -> binding_state == FTS_BOOTP) &&
+	    comp -> binding_state == FTS_ACTIVE &&
 	    (((comp -> uid && lease -> uid) &&
 	      (comp -> uid_len != lease -> uid_len ||
 	       memcmp (comp -> uid, lease -> uid, comp -> uid_len))) ||
@@ -1059,7 +1057,8 @@ int supersede_lease (comp, lease, commit, propogate, pimmediate)
 	switch (comp -> binding_state) {
 	      case FTS_FREE:
 		lq = &comp -> pool -> free;
-		comp -> pool -> free_leases--;
+		if (!(comp->flags & RESERVED_LEASE))
+			comp->pool->free_leases--;
 		break;
 
 	      case FTS_ACTIVE:
@@ -1078,7 +1077,8 @@ int supersede_lease (comp, lease, commit, propogate, pimmediate)
 
 	      case FTS_BACKUP:
 		lq = &comp -> pool -> backup;
-		comp -> pool -> backup_leases--;
+		if (!(comp->flags & RESERVED_LEASE))
+			comp->pool->backup_leases--;
 		break;
 
 	      default:
@@ -1559,8 +1559,10 @@ void pool_timer (vpool)
 	lptr [ABANDONED_LEASES] = &pool -> abandoned;
 #define BACKUP_LEASES 4
 	lptr [BACKUP_LEASES] = &pool -> backup;
+#define RESERVED_LEASES 5
+	lptr[RESERVED_LEASES] = &pool->reserved;
 
-	for (i = FREE_LEASES; i <= BACKUP_LEASES; i++) {
+	for (i = FREE_LEASES; i <= RESERVED_LEASES; i++) {
 		/* If there's nothing on the queue, skip it. */
 		if (!*(lptr [i]))
 			continue;
@@ -1914,8 +1916,9 @@ int write_leases ()
 		lptr [EXPIRED_LEASES] = &p -> expired;
 		lptr [ABANDONED_LEASES] = &p -> abandoned;
 		lptr [BACKUP_LEASES] = &p -> backup;
+		lptr [RESERVED_LEASES] = &p->reserved;
 
-		for (i = FREE_LEASES; i <= BACKUP_LEASES; i++) {
+		for (i = FREE_LEASES; i <= RESERVED_LEASES; i++) {
 		    for (l = *(lptr [i]); l; l = l -> next) {
 #if !defined (DEBUG_DUMP_ALL_LEASES)
 			if (l -> hardware_addr.hlen ||
@@ -1960,8 +1963,12 @@ int lease_enqueue (struct lease *comp)
 	/* Figure out which queue it's going to. */
 	switch (comp -> binding_state) {
 	      case FTS_FREE:
-		lq = &comp -> pool -> free;
-		comp -> pool -> free_leases++;
+		if (comp->flags & RESERVED_LEASE) {
+			lq = &comp->pool->reserved;
+		} else {
+			lq = &comp->pool->free;
+			comp->pool->free_leases++;
+		}
 		comp -> sort_time = comp -> ends;
 		break;
 
@@ -2003,8 +2010,12 @@ int lease_enqueue (struct lease *comp)
 		break;
 
 	      case FTS_BACKUP:
-		lq = &comp -> pool -> backup;
-		comp -> pool -> backup_leases++;
+		if (comp->flags & RESERVED_LEASE) {
+			lq = &comp->pool->reserved;
+		} else {
+			lq = &comp->pool->backup;
+			comp->pool->backup_leases++;
+		}
 		comp -> sort_time = comp -> ends;
 		break;
 
@@ -2128,14 +2139,15 @@ void expire_all_pools ()
 		lptr [EXPIRED_LEASES] = &p -> expired;
 		lptr [ABANDONED_LEASES] = &p -> abandoned;
 		lptr [BACKUP_LEASES] = &p -> backup;
+		lptr [RESERVED_LEASES] = &p->reserved;
 
-		for (i = FREE_LEASES; i <= BACKUP_LEASES; i++) {
+		for (i = FREE_LEASES; i <= RESERVED_LEASES; i++) {
 		    for (l = *(lptr [i]); l; l = l -> next) {
 			p -> lease_count++;
 			if (l -> ends <= cur_time) {
-				if (l -> binding_state == FTS_FREE)
+				if (i == FREE_LEASES)
 					p -> free_leases++;
-				else if (l -> binding_state == FTS_BACKUP)
+				else if (i == BACKUP_LEASES)
 					p -> backup_leases++;
 			}
 #if defined (FAILOVER_PROTOCOL)
@@ -2176,8 +2188,9 @@ void dump_subnets ()
 		lptr [EXPIRED_LEASES] = &p -> expired;
 		lptr [ABANDONED_LEASES] = &p -> abandoned;
 		lptr [BACKUP_LEASES] = &p -> backup;
+		lptr [RESERVED_LEASES] = &p->reserved;
 
-		for (i = FREE_LEASES; i <= BACKUP_LEASES; i++) {
+		for (i = FREE_LEASES; i <= RESERVED_LEASES; i++) {
 		    for (l = *(lptr [i]); l; l = l -> next) {
 			    print_lease (l);
 		    }
@@ -2371,9 +2384,10 @@ void free_everything ()
 			lptr [EXPIRED_LEASES] = &pc -> expired;
 			lptr [ABANDONED_LEASES] = &pc -> abandoned;
 			lptr [BACKUP_LEASES] = &pc -> backup;
+			lptr [RESERVED_LEASES] = &pc->reserved;
 
 			/* As (sigh) are leases. */
-			for (i = 0; i < 5; i++) {
+			for (i = FREE_LEASES ; i <= RESERVED_LEASES ; i++) {
 			    if (*lptr [i]) {
 				lease_reference (&ln, *lptr [i], MDL);
 				do {

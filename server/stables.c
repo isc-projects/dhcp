@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: stables.c,v 1.27 2005/03/17 20:15:29 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: stables.c,v 1.28 2006/04/27 17:26:42 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -51,65 +51,62 @@ failover_option_t skip_failover_option = { 0, 0 };
 struct failover_option_info ft_options [] =
 {
 	{ 0, "unused", FT_UNDEF, 0, 0, 0 },
-	{ FTO_BINDING_STATUS, "binding-status",
-	  FT_UINT8, 1, FM_OFFSET (binding_status), FTB_BINDING_STATUS },
-	{ FTO_ASSIGNED_IP_ADDRESS, "assigned-IP-address",
-	  FT_IPADDR, 1, FM_OFFSET (assigned_addr), FTB_ASSIGNED_IP_ADDRESS },
-	{ FTO_SERVER_ADDR, "sending-server-IP-address",
-	  FT_IPADDR, 1, FM_OFFSET (server_addr), FTB_SERVER_ADDR },
-	{ FTO_ADDRESSES_TRANSFERRED, "addresses-transferred",
-	  FT_UINT32, 1, FM_OFFSET (addresses_transferred),
-	  FTB_ADDRESSES_TRANSFERRED },
-	{ FTO_CLIENT_IDENTIFIER, "client-identifier",
-	  FT_BYTES, 0, FM_OFFSET (client_identifier), FTB_CLIENT_IDENTIFIER },
-	{ FTO_CHADDR, "client-hardware-address",
-	  FT_BYTES, 0, FM_OFFSET (chaddr), FTB_CHADDR },
-	{ FTO_DDNS, "DDNS",
-	  FT_DDNS, 1, FM_OFFSET (ddns), FTB_DDNS },
-	{ FTO_REJECT_REASON, "reject-reason",
-	  FT_UINT8, 1, FM_OFFSET (reject_reason), FTB_REJECT_REASON },
-	{ FTO_MESSAGE, "message",
-	  FT_TEXT, 0, FM_OFFSET (message), FTB_MESSAGE },
-	{ FTO_MCLT, "MCLT",
-	  FT_UINT32, 1, FM_OFFSET (mclt), FTB_MCLT },
-	{ FTO_VENDOR_CLASS, "vendor-class-identifier",
-	  FT_TEXT_OR_BYTES, 0, FM_OFFSET (vendor_class), FTB_VENDOR_CLASS },
-	{ 12, "undefined", FT_UNDEF, 0, 0, 0 },
-	{ FTO_LEASE_EXPIRY, "lease-expiration-time",
-	  FT_UINT32, 1, FM_OFFSET (expiry), FTB_LEASE_EXPIRY },
-	{ FTO_POTENTIAL_EXPIRY, "potential-expiration-time",
-	  FT_UINT32, 1, FM_OFFSET (potential_expiry), FTB_POTENTIAL_EXPIRY },
-	{ FTO_GRACE_EXPIRY, "grace-expiration-time",
-	  FT_UINT32, 1, FM_OFFSET (grace_expiry), FTB_GRACE_EXPIRY },
-	{ FTO_CLTT, "client-last-transaction-time",
-	  FT_UINT32, 1, FM_OFFSET (client_ltt), FTB_CLTT },
-	{ FTO_STOS, "start-time-of-state",
-	  FT_UINT32, 1, FM_OFFSET (stos), FTB_STOS },
-	{ FTO_SERVER_STATE, "server-state",
-	  FT_UINT8, 1, FM_OFFSET (server_state), FTB_SERVER_STATE },
-	{ FTO_SERVER_FLAGS, "server-flags",
-	  FT_UINT8, 1, FM_OFFSET (server_flags), FTB_SERVER_FLAGS },
-	{ FTO_VENDOR_OPTIONS, "vendor-specific-options",
-	  FT_BYTES, 0, FM_OFFSET (vendor_options), FTB_VENDOR_OPTIONS },
-	{ FTO_MAX_UNACKED, "max-unacked-bndupd",
-	  FT_UINT32, 1, FM_OFFSET (max_unacked), FTB_MAX_UNACKED },
-	{ 22, "undefined", FT_UNDEF, 0, 0 },
-	{ FTO_RECEIVE_TIMER, "receive-timer",
-	  FT_UINT32, 1, FM_OFFSET (receive_timer), FTB_RECEIVE_TIMER },
-	{ FTO_HBA, "hash-bucket-assignment",
-	  FT_BYTES, 0, FM_OFFSET (hba), FTB_HBA },
-	{ FTO_MESSAGE_DIGEST, "message-digest",
-	  FT_DIGEST, 0, 0, FTB_MESSAGE_DIGEST },
-	{ FTO_PROTOCOL_VERSION, "protocol-version", 
-	  FT_UINT8, 1, FM_OFFSET (protocol_version), FTB_PROTOCOL_VERSION },
-	{ FTO_TLS_REQUEST, "TLS-request",
-	  FT_UINT8, 2, FM_OFFSET (tls_request), FTB_TLS_REQUEST },
-	{ FTO_TLS_REPLY, "TLS-reply",
-	  FT_BYTES, 1, FM_OFFSET (tls_reply ), FTB_TLS_REPLY },
-	{ FTO_REQUEST_OPTIONS, "client-request-options",
-	  FT_BYTES, 0, FM_OFFSET (request_options), FTB_REQUEST_OPTIONS },
-	{ FTO_REPLY_OPTIONS, "client-reply-options",
-	  FT_BYTES, 0, FM_OFFSET (reply_options), FTB_REPLY_OPTIONS }
+	{ FTO_ADDRESSES_TRANSFERRED, "addresses-transferred", FT_UINT32, 1,
+	  FM_OFFSET(addresses_transferred), FTB_ADDRESSES_TRANSFERRED },
+	{ FTO_ASSIGNED_IP_ADDRESS, "assigned-IP-address", FT_IPADDR, 1,
+	  FM_OFFSET(assigned_addr), FTB_ASSIGNED_IP_ADDRESS },
+	{ FTO_BINDING_STATUS, "binding-status", FT_UINT8, 1,
+	  FM_OFFSET(binding_status), FTB_BINDING_STATUS },
+	{ FTO_CLIENT_IDENTIFIER, "client-identifier", FT_BYTES, 0,
+	  FM_OFFSET(client_identifier), FTB_CLIENT_IDENTIFIER },
+	{ FTO_CHADDR, "client-hardware-address", FT_BYTES, 0,
+	  FM_OFFSET(chaddr), FTB_CHADDR },
+	{ FTO_CLTT, "client-last-transaction-time", FT_UINT32, 1,
+	  FM_OFFSET(cltt), FTB_CLTT },
+	{ FTO_REPLY_OPTIONS, "client-reply-options", FT_BYTES, 0,
+	  FM_OFFSET(reply_options), FTB_REPLY_OPTIONS },
+	{ FTO_REQUEST_OPTIONS, "client-request-options", FT_BYTES, 0,
+	  FM_OFFSET(request_options), FTB_REQUEST_OPTIONS },
+	{ FTO_DDNS, "DDNS", FT_DDNS, 1, FM_OFFSET(ddns), FTB_DDNS },
+	{ FTO_DELAYED_SERVICE, "delayed-service", FT_UINT8, 1,
+	  FM_OFFSET(delayed_service), FTB_DELAYED_SERVICE },
+	{ FTO_HBA, "hash-bucket-assignment", FT_BYTES, 0,
+	  FM_OFFSET(hba), FTB_HBA },
+	{ FTO_IP_FLAGS, "IP-flags", FT_UINT16, 1,
+	  FM_OFFSET(ip_flags), FTB_IP_FLAGS },
+	{ FTO_LEASE_EXPIRY, "lease-expiration-time", FT_UINT32, 1,
+	  FM_OFFSET(expiry), FTB_LEASE_EXPIRY },
+	{ FTO_MAX_UNACKED, "max-unacked-bndupd", FT_UINT32, 1, 
+	  FM_OFFSET(max_unacked), FTB_MAX_UNACKED },
+	{ FTO_MCLT, "MCLT", FT_UINT32, 1, FM_OFFSET(mclt), FTB_MCLT },
+	{ FTO_MESSAGE, "message", FT_TEXT, 0,
+	  FM_OFFSET(message), FTB_MESSAGE },
+	{ FTO_MESSAGE_DIGEST, "message-digest", FT_BYTES, 0,
+	  FM_OFFSET(message_digest), FTB_MESSAGE_DIGEST },
+	{ FTO_POTENTIAL_EXPIRY, "potential-expiration-time", FT_UINT32, 1,
+	  FM_OFFSET(potential_expiry), FTB_POTENTIAL_EXPIRY },
+	{ FTO_RECEIVE_TIMER, "receive-timer", FT_UINT32, 1,
+	  FM_OFFSET(receive_timer), FTB_RECEIVE_TIMER },
+	{ FTO_PROTOCOL_VERSION, "protocol-version", FT_UINT8, 1,
+	  FM_OFFSET(protocol_version), FTB_PROTOCOL_VERSION },
+	{ FTO_REJECT_REASON, "reject-reason", FT_UINT8, 1,
+	  FM_OFFSET(reject_reason), FTB_REJECT_REASON },
+	{ FTO_RELATIONSHIP_NAME, "relationship-name", FT_BYTES, 0,
+	  FM_OFFSET(relationship_name), FTB_RELATIONSHIP_NAME },
+	{ FTO_SERVER_FLAGS, "server-flags", FT_UINT8, 1,
+	  FM_OFFSET(server_flags), FTB_SERVER_FLAGS },
+	{ FTO_SERVER_STATE, "server-state", FT_UINT8, 1,
+	  FM_OFFSET(server_state), FTB_SERVER_STATE },
+	{ FTO_STOS, "start-time-of-state", FT_UINT32, 1,
+	  FM_OFFSET(stos), FTB_STOS },
+	{ FTO_TLS_REPLY, "TLS-reply", FT_UINT8, 1,
+	  FM_OFFSET(tls_reply), FTB_TLS_REPLY },
+	{ FTO_TLS_REQUEST, "TLS-request", FT_UINT8, 1,
+	  FM_OFFSET(tls_request), FTB_TLS_REQUEST },
+	{ FTO_VENDOR_CLASS, "vendor-class-identifier", FT_BYTES, 0,
+	  FM_OFFSET(vendor_class), FTB_VENDOR_CLASS },
+	{ FTO_VENDOR_OPTIONS, "vendor-specific-options", FT_BYTES, 0,
+	  FM_OFFSET(vendor_options), FTB_VENDOR_OPTIONS }
 };
 
 /* These are really options that make sense for a particular request - if
@@ -123,21 +120,22 @@ u_int32_t fto_allowed [] = {
 	0,	/* 1 POOLREQ */
 	FTB_ADDRESSES_TRANSFERRED, /* 2 POOLRESP */
 	(FTB_ASSIGNED_IP_ADDRESS | FTB_BINDING_STATUS | FTB_CLIENT_IDENTIFIER |
-	 FTB_CHADDR | FTB_LEASE_EXPIRY | FTB_POTENTIAL_EXPIRY | FTB_STOS |
-	 FTB_CLTT | FTB_REQUEST_OPTIONS | FTB_REPLY_OPTIONS), /* 3 BNDUPD */
+	 FTB_CHADDR | FTB_DDNS | FTB_IP_FLAGS | FTB_LEASE_EXPIRY |
+	 FTB_POTENTIAL_EXPIRY | FTB_STOS | FTB_CLTT | FTB_REQUEST_OPTIONS |
+	 FTB_REPLY_OPTIONS), /* 3 BNDUPD */
 	(FTB_ASSIGNED_IP_ADDRESS | FTB_BINDING_STATUS | FTB_CLIENT_IDENTIFIER |
-	 FTB_CHADDR | FTB_LEASE_EXPIRY | FTB_POTENTIAL_EXPIRY | FTB_STOS |
-	 FTB_CLTT | FTB_REQUEST_OPTIONS | FTB_REPLY_OPTIONS |
-	 FTB_REJECT_REASON | FTB_MESSAGE), /* 4 BNDACK */
-	(FTB_SERVER_ADDR | FTB_MAX_UNACKED | FTB_RECEIVE_TIMER |
+	 FTB_CHADDR | FTB_DDNS | FTB_IP_FLAGS | FTB_LEASE_EXPIRY |
+	 FTB_POTENTIAL_EXPIRY | FTB_STOS | FTB_CLTT | FTB_REQUEST_OPTIONS |
+	 FTB_REPLY_OPTIONS | FTB_REJECT_REASON | FTB_MESSAGE), /* 4 BNDACK */
+	(FTB_RELATIONSHIP_NAME | FTB_MAX_UNACKED | FTB_RECEIVE_TIMER |
 	 FTB_VENDOR_CLASS | FTB_PROTOCOL_VERSION | FTB_TLS_REQUEST |
 	 FTB_MCLT | FTB_HBA), /* 5 CONNECT */
-	(FTB_SERVER_ADDR | FTB_MAX_UNACKED | FTB_RECEIVE_TIMER |
+	(FTB_RELATIONSHIP_NAME | FTB_MAX_UNACKED | FTB_RECEIVE_TIMER |
 	 FTB_VENDOR_CLASS | FTB_PROTOCOL_VERSION | FTB_TLS_REPLY |
 	 FTB_REJECT_REASON | FTB_MESSAGE), /* CONNECTACK */
-	0, /* 7 UPDREQ */
+	0, /* 7 UPDREQALL */
 	0, /* 8 UPDDONE */
-	0, /* 9 UPDREQALL */
+	0, /* 9 UPDREQ */
 	(FTB_SERVER_STATE | FTB_SERVER_FLAGS | FTB_STOS), /* 10 STATE */
 	0,	/* 11 CONTACT */
 	(FTB_REJECT_REASON | FTB_MESSAGE) /* 12 DISCONNECT */
@@ -172,7 +170,7 @@ const char *dhcp_flink_state_names [] = {
    failover protocol support. */
 const char *binding_state_names [] = {
 	"free", "active", "expired", "released", "abandoned",
-	"reset", "backup", "reserved", "bootp" };
+	"reset", "backup" };
 
 struct universe agent_universe;
 struct option agent_options [256] = {

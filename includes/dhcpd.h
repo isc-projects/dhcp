@@ -265,12 +265,10 @@ typedef struct {
 #define FTS_ABANDONED	5
 #define FTS_RESET	6
 #define FTS_BACKUP	7
-#define FTS_RESERVED	8
-#define FTS_BOOTP	9
 typedef u_int8_t binding_state_t;
 
 /* FTS_LAST is the highest value that is valid for a lease binding state. */
-#define FTS_LAST FTS_BOOTP
+#define FTS_LAST FTS_BACKUP
 
 /* A dhcp lease declaration structure. */
 struct lease {
@@ -301,14 +299,20 @@ struct lease {
 	u_int8_t flags;
 #       define STATIC_LEASE		1
 #	define BOOTP_LEASE		2
-#	define PERSISTENT_FLAGS		(ON_ACK_QUEUE | ON_UPDATE_QUEUE)
+#	define RESERVED_LEASE		4
 #	define MS_NULL_TERMINATION	8
 #	define ON_UPDATE_QUEUE		16
 #	define ON_ACK_QUEUE		32
 #	define UNICAST_BROADCAST_HACK	64
 #	define ON_DEFERRED_QUEUE	128
+
+/* Persistent flags are to be preserved on a given lease structure. */
+#       define PERSISTENT_FLAGS		(ON_ACK_QUEUE | ON_UPDATE_QUEUE)
+/* Ephemeral flags are to be preserved on a given lease (copied etc). */
 #	define EPHEMERAL_FLAGS		(MS_NULL_TERMINATION | \
-					 UNICAST_BROADCAST_HACK)
+					 UNICAST_BROADCAST_HACK | \
+					 RESERVED_LEASE | \
+					 BOOTP_LEASE)
 
 	binding_state_t binding_state;
 	binding_state_t next_binding_state;
@@ -326,6 +330,7 @@ struct lease {
 	TIME tsfp;	/* Time sent from partner. */
 	TIME atsfp;	/* Actual time sent from partner. */
 	TIME cltt;	/* Client last transaction time. */
+	u_int32_t last_xid; /* XID we sent in this lease's BNDUPD */
 	struct lease *next_pending;
 };
 
@@ -422,7 +427,8 @@ struct lease_state {
 #define SV_UPDATE_STATIC_LEASES		43
 #define SV_LOG_FACILITY			44
 #define SV_DO_FORWARD_UPDATES		45
-#define SV_PING_TIMEOUT         46
+#define SV_PING_TIMEOUT			46
+#define SV_RESERVE_INFINITE		47
 
 #if !defined (DEFAULT_PING_TIMEOUT)
 # define DEFAULT_PING_TIMEOUT 1
@@ -567,6 +573,7 @@ struct pool {
 	struct lease *free;
 	struct lease *backup;
 	struct lease *abandoned;
+	struct lease *reserved;
 	TIME next_event_time;
 	int lease_count;
 	int free_leases;
@@ -2609,6 +2616,8 @@ isc_result_t dhcp_failover_state_create PROTO ((omapi_object_t **,
 isc_result_t dhcp_failover_state_remove PROTO ((omapi_object_t *,
 					       omapi_object_t *));
 int dhcp_failover_state_match (dhcp_failover_state_t *, u_int8_t *, unsigned);
+int dhcp_failover_state_match_by_name(dhcp_failover_state_t *,
+						failover_option_t *);
 const char *dhcp_failover_reject_reason_print (int);
 const char *dhcp_failover_state_name_print (enum failover_state);
 const char *dhcp_failover_message_name (unsigned);
@@ -2621,7 +2630,7 @@ failover_option_t *dhcp_failover_option_printf (unsigned, char *,
 failover_option_t *dhcp_failover_make_option (unsigned, char *,
 					      unsigned *, unsigned, ...);
 isc_result_t dhcp_failover_put_message (dhcp_failover_link_t *,
-					omapi_object_t *, int, ...);
+					omapi_object_t *, int, u_int32_t, ...);
 isc_result_t dhcp_failover_send_connect PROTO ((omapi_object_t *));
 isc_result_t dhcp_failover_send_connectack PROTO ((omapi_object_t *,
 						   dhcp_failover_state_t *,

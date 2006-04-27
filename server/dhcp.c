@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.201 2006/02/27 23:56:13 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.202 2006/04/27 17:26:42 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1804,7 +1804,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 	}
 
 	/* If we have a host_decl structure, run the options associated
-	   with its group.  Wether the host decl struct is old or not. */
+	   with its group.  Whether the host decl struct is old or not. */
 	if (host)
 		execute_statements_in_scope ((struct binding_value **)0,
 					     packet, lease,
@@ -1953,6 +1953,8 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 	/* Figure out how long a lease to assign.    If this is a
 	   dynamic BOOTP lease, its duration must be infinite. */
 	if (offer) {
+		lt->flags &= ~BOOTP_LEASE;
+
 		default_lease_time = DEFAULT_DEFAULT_LEASE_TIME;
 		if ((oc = lookup_option (&server_universe, state -> options,
 					 SV_DEFAULT_LEASE_TIME))) {
@@ -1978,14 +1980,54 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 		else
 			s1 = 0;
 
-		if (s1 && d1.len == sizeof (u_int32_t)) {
+		if (s1 && (d1.len == 4)) {
+			u_int32_t ones = 0xffffffff;
+
+			/* One potential use of reserved leases is to allow
+			 * clients to signal reservation of their lease.  They
+			 * can kinda sorta do this, if you squint hard enough,
+			 * by supplying an 'infinite' requested-lease-time
+			 * option.  This is generally bad practice...you want
+			 * clients to return to the server on at least some
+			 * period (days, months, years) to get up-to-date
+			 * config state.  So;
+			 *
+			 * 1) A client requests 0xffffffff lease-time.
+			 * 2) The server reserves the lease, and assigns a
+			 *    <= max_lease_time lease-time to the client, which
+			 *    we presume is much smaller than 0xffffffff.
+			 * 3) The client ultimately fails to renew its lease
+			 *    (all clients go offline at some point).
+			 * 4) The server retains the reservation, although
+			 *    the lease expires and passes through those states
+			 *    as normal, it's placed in the 'reserved' queue,
+			 *    and is under no circumstances allocated to any
+			 *    clients.
+			 *
+			 * Whether the client knows its reserving its lease or
+			 * not, this can be a handy tool for a sysadmin.
+			 */
+			if ((memcmp(d1.data, &ones, 4) == 0) &&
+			    (oc = lookup_option(&server_universe,
+						state->options,
+						SV_RESERVE_INFINITE)) &&
+			    evaluate_boolean_option_cache(&ignorep, packet,
+						lease, NULL, packet->options,
+						state->options, &lease->scope,
+						oc, MDL)) {
+				lt->flags |= RESERVED_LEASE;
+				if (!ignorep)
+					log_info("Infinite-leasetime "
+						 "reservation made on %s.",
+						 piaddr(lt->ip_addr));
+			}
+
 			lease_time = getULong (d1.data);
-			data_string_forget (&d1, MDL);
-		} else {
-			if (s1)
-				data_string_forget (&d1, MDL);
+		} else
 			lease_time = default_lease_time;
-		}
+
+		if (s1)
+			data_string_forget(&d1, MDL);
 
 		/* See if there's a maximum lease time. */
 		max_lease_time = DEFAULT_MAX_LEASE_TIME;
@@ -2107,6 +2149,8 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 		else
 			lt -> next_binding_state = lease -> binding_state;
 	} else {
+		lt->flags |= BOOTP_LEASE;
+
 		lease_time = MAX_TIME - cur_time;
 
 		if ((oc = lookup_option (&server_universe, state -> options,
@@ -2710,7 +2754,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 		lease -> timestamp = cur_time;
 		icmp_echorequest (&lease -> ip_addr);
 
-		/* Determine wether to use configured or default ping timeout.
+		/* Determine whether to use configured or default ping timeout.
 		 */
 		if ((oc = lookup_option (&server_universe, state -> options,
 						SV_PING_TIMEOUT)) &&
@@ -3113,7 +3157,6 @@ int find_lease (struct lease **lp,
 		   be two "free" leases for the same uid, but only one of
 		   them that's available for this failover peer to allocate. */
 		if (uid_lease -> binding_state != FTS_ACTIVE &&
-		    uid_lease -> binding_state != FTS_BOOTP &&
 		    !lease_mine_to_reallocate (uid_lease)) {
 #if defined (DEBUG_FIND_LEASE)
 			log_info ("not mine to allocate: %s",
@@ -3177,7 +3220,6 @@ int find_lease (struct lease **lp,
 		   be two "free" leases for the same uid, but only one of
 		   them that's available for this failover peer to allocate. */
 		if (hw_lease -> binding_state != FTS_ACTIVE &&
-		    hw_lease -> binding_state != FTS_BOOTP &&
 		    !lease_mine_to_reallocate (hw_lease)) {
 #if defined (DEBUG_FIND_LEASE)
 			log_info ("not mine to allocate: %s",
@@ -3308,7 +3350,6 @@ int find_lease (struct lease **lp,
 	   is not active, and is not ours to reallocate, forget about it. */
 	if (ip_lease && (uid_lease || hw_lease) &&
 	    ip_lease -> binding_state != FTS_ACTIVE &&
-	    ip_lease -> binding_state != FTS_BOOTP &&
 	    !lease_mine_to_reallocate (ip_lease) &&
 	    packet -> packet_type == DHCPDISCOVER) {
 #if defined (DEBUG_FIND_LEASE)
@@ -3320,17 +3361,14 @@ int find_lease (struct lease **lp,
 	/* If for some reason the client has more than one lease
 	   on the subnet that matches its uid, pick the one that
 	   it asked for and (if we can) free the other. */
-	if (ip_lease &&
-	    (ip_lease -> binding_state == FTS_ACTIVE ||
-	     ip_lease -> binding_state == FTS_BOOTP) &&
-	    ip_lease -> uid && ip_lease != uid_lease) {
+	if (ip_lease && ip_lease->binding_state == FTS_ACTIVE &&
+	    ip_lease->uid && ip_lease != uid_lease) {
 		if (have_client_identifier &&
 		    (ip_lease -> uid_len == client_identifier.len) &&
 		    !memcmp (client_identifier.data,
 			     ip_lease -> uid, ip_lease -> uid_len)) {
 			if (uid_lease) {
-			    if (uid_lease -> binding_state == FTS_ACTIVE ||
-				uid_lease -> binding_state == FTS_BOOTP) {
+			    if (uid_lease->binding_state == FTS_ACTIVE) {
 				log_error ("client %s has duplicate%s on %s",
 					   (print_hw_addr
 					    (packet -> raw -> htype,
@@ -3344,10 +3382,7 @@ int find_lease (struct lease **lp,
 				   it shouldn't still be using the old
 				   one, so we can free it for allocation. */
 				if (uid_lease &&
-				    (uid_lease -> binding_state == FTS_ACTIVE
-				     ||
-				     uid_lease -> binding_state == FTS_BOOTP)
-				    &&
+				    uid_lease->binding_state == FTS_ACTIVE &&
 				    !packet -> raw -> ciaddr.s_addr &&
 				    (share ==
 				     uid_lease -> subnet -> shared_network) &&
@@ -3512,8 +3547,7 @@ int find_lease (struct lease **lp,
 
 			if (!packet -> raw -> ciaddr.s_addr &&
 			    packet -> packet_type == DHCPREQUEST &&
-			    (uid_lease -> binding_state == FTS_ACTIVE ||
-			     uid_lease -> binding_state == FTS_BOOTP))
+			    uid_lease -> binding_state == FTS_ACTIVE)
 				release_lease(uid_lease, packet);
 #if defined (DEBUG_FIND_LEASE)
 			log_info ("not choosing uid lease.");
