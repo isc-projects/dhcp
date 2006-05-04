@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.60 2006/04/27 17:26:42 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.61 2006/05/04 21:14:21 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -5233,7 +5233,9 @@ int load_balance_mine (struct packet *packet, dhcp_failover_state_t *state)
 		hbaix = loadb_p_hash (packet -> raw -> chaddr,
 				      packet -> raw -> hlen);
 	}
-	hm = (state -> hba [hbaix / 8] & (1 << (hbaix & 3)));
+
+	hm = state->hba[(hbaix >> 3) & 0x1F] & (1 << (hbaix & 0x07));
+
 	if (state -> i_am == primary)
 		return hm;
 	else

@@ -71,6 +71,9 @@ and for prodding me into improving it.
   were tranmsitted to it, and what frames are being carried through it which
   it should not intercept.
 
+- The Load Balance Algorithm was misimplemented.  The current implementation
+  matches RFC 3074.
+
 			Changes since 3.0.4b2
 
 - Null-termination sensing for certain clients that unfortunatley require
