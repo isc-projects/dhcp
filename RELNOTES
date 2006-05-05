@@ -85,6 +85,10 @@ and for prodding me into improving it.
 - A warning that host statements declared within subnet or shared-network
   scopes are actually global has been added.
 
+- The default minimum lease time (if min-lease-time was not specified)
+  was raised from 0 to 300.  0 is not thought to be sensible, and is
+  known to be damaging.
+
 			Changes since 3.0.4rc1
 
 - The dhcp-options.5 manpage was updated to correct indentation errors
