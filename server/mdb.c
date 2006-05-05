@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.76 2006/04/27 17:26:42 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.77 2006/05/05 20:32:31 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1101,14 +1101,13 @@ int supersede_lease (comp, lease, commit, propogate, pimmediate)
 	}
 
 	if (!lp) {
-		log_error ("Lease with binding state %s not on its queue.",
-			   (comp -> binding_state < 1 ||
-			    comp -> binding_state > FTS_LAST)
-			   ? "unknown"
-			   : binding_state_names [comp -> binding_state - 1]);
-		return 0;
+		log_fatal("Lease with binding state %s not on its queue.",
+			  (comp->binding_state < 1 ||
+			   comp->binding_state > FTS_LAST)
+			  ? "unknown"
+			  : binding_state_names[comp->binding_state - 1]);
 	}
-	
+
 	if (prev) {
 		lease_dereference (&prev -> next, MDL);
 		if (comp -> next) {
@@ -2145,10 +2144,19 @@ void expire_all_pools ()
 		    for (l = *(lptr [i]); l; l = l -> next) {
 			p -> lease_count++;
 			if (l -> ends <= cur_time) {
-				if (i == FREE_LEASES)
-					p -> free_leases++;
-				else if (i == BACKUP_LEASES)
-					p -> backup_leases++;
+				if (l->binding_state == FTS_FREE) {
+					if (i == FREE_LEASES)
+						p->free_leases++;
+					else
+						log_fatal("Impossible case "
+							  "at %s:%d.", MDL);
+				} else if (l->binding_state == FTS_BACKUP) {
+					if (i == BACKUP_LEASES)
+						p->backup_leases++;
+					else
+						log_fatal("Impossible case "
+							  "at %s:%d.", MDL);
+				}
 			}
 #if defined (FAILOVER_PROTOCOL)
 			if (p -> failover_peer &&

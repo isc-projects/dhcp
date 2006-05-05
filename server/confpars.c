@@ -34,12 +34,13 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.151 2006/04/27 17:26:42 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.152 2006/05/05 20:32:30 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
 
 static TIME parsed_time;
+static unsigned char global_host_once = 1;
 
 #if defined (TRACING)
 trace_type_t *trace_readconf_type;
@@ -365,9 +366,17 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		
 	      case HOST:
 		next_token (&val, (unsigned *)0, cfile);
-		if (type != HOST_DECL && type != CLASS_DECL)
+		if (type != HOST_DECL && type != CLASS_DECL) {
+			if (global_host_once &&
+			    (type == SUBNET_DECL || type == SHARED_NET_DECL)) {
+				global_host_once = 0;
+				log_error("WARNING: Host declarations are "
+					  "global.  They are not limited to "
+					  "the scope you declared them in.");
+			}
+
 			parse_host_declaration (cfile, group);
-		else {
+		} else {
 			parse_warn (cfile,
 				    "host declarations not allowed here.");
 			skip_to_semi (cfile);

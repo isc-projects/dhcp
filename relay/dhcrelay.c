@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcrelay.c,v 1.56 2006/03/27 09:45:47 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhcrelay.c,v 1.57 2006/05/05 20:32:30 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -92,7 +92,7 @@ enum { forward_and_append,	/* Forward and append our own relay option. */
 u_int16_t local_port;
 u_int16_t remote_port;
 
-static char copyright [] = "Copyright 2004-2005 Internet Systems Consortium.";
+static char copyright [] = "Copyright 2004-2006 Internet Systems Consortium.";
 static char arr [] = "All rights reserved.";
 static char message [] = "Internet Systems Consortium DHCP Relay Agent";
 static char url [] = "For info, please visit http://www.isc.org/sw/dhcp/";

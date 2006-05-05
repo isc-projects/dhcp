@@ -439,7 +439,7 @@ struct lease_state {
 #endif
 
 #if !defined (DEFAULT_MIN_LEASE_TIME)
-# define DEFAULT_MIN_LEASE_TIME 0
+# define DEFAULT_MIN_LEASE_TIME 300
 #endif
 
 #if !defined (DEFAULT_MAX_LEASE_TIME)
