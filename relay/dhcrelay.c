@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcrelay.c,v 1.57 2006/05/05 20:32:30 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhcrelay.c,v 1.58 2006/05/11 14:48:59 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -114,15 +114,15 @@ int main (argc, argv, envp)
         /* Make sure that file descriptors 0 (stdin), 1, (stdout), and
            2 (stderr) are open. To do this, we assume that when we
            open a file the lowest available file decriptor is used. */
-        fd = open ("/dev/null", O_RDWR);
+        fd = open("/dev/null", O_RDWR);
         if (fd == 0)
-                fd = open ("/dev/null", O_RDWR);
+                fd = open("/dev/null", O_RDWR);
         if (fd == 1)
-                fd = open ("/dev/null", O_RDWR);
+                fd = open("/dev/null", O_RDWR);
         if (fd == 2)
                 log_perror = 0; /* No sense logging to /dev/null. */
         else if (fd != -1)
-                close (fd);
+                close(fd);
 
 #ifdef SYSLOG_4_2
 	openlog ("dhcrelay", LOG_NDELAY);
