@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.107 2006/02/24 23:16:28 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.108 2006/05/11 16:31:29 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2684,9 +2684,11 @@ int parse_boolean_expression (expr, cfile, lose)
  *					numeric-expression COMMA
  *					numeric-expression RPAREN |
  *		       CONCAT LPAREN data-expression COMMA 
-					data-expression RPAREN
+ *					data-expression RPAREN
  *		       SUFFIX LPAREN data_expression COMMA
  *		       		     numeric-expression RPAREN |
+ *		       LCASE LPAREN data_expression RPAREN |
+ *		       UCASE LPAREN data_expression RPAREN |
  *		       OPTION option_name |
  *		       HARDWARE |
  *		       PACKET LPAREN numeric-expression COMMA
@@ -2998,6 +3000,43 @@ int parse_non_binary (expr, cfile, lose, context)
 			goto nonum;
 
 		token = next_token (&val, (unsigned *)0, cfile);
+		if (token != RPAREN)
+			goto norparen;
+		break;
+
+	      case LCASE:
+		token = next_token(&val, (unsigned *)0, cfile);
+		if (!expression_allocate(expr, MDL))
+			log_fatal ("can't allocate expression");
+		(*expr)->op = expr_lcase;
+
+		token = next_token(&val, (unsigned *)0, cfile);
+		if (token != LPAREN)
+			goto nolparen;
+
+		if (!parse_data_expression(&(*expr)->data.lcase, cfile, lose))
+			goto nodata;
+
+		token = next_token(&val, (unsigned *)0, cfile);
+		if (token != RPAREN)
+			goto norparen;
+		break;
+
+	      case UCASE:
+		token = next_token(&val, (unsigned *)0, cfile);
+		if (!expression_allocate(expr, MDL))
+			log_fatal ("can't allocate expression");
+		(*expr)->op = expr_ucase;
+
+		token = next_token (&val, (unsigned *)0, cfile);
+		if (token != LPAREN)
+			goto nolparen;
+
+		if (!parse_data_expression(&(*expr)->data.ucase,
+					   cfile, lose))
+			goto nodata;
+
+		token = next_token(&val, (unsigned *)0, cfile);
 		if (token != RPAREN)
 			goto norparen;
 		break;

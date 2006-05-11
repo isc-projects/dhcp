@@ -1,4 +1,4 @@
-.\"	$Id: dhcp-eval.5,v 1.20 2006/05/05 20:32:30 dhankins Exp $
+.\"	$Id: dhcp-eval.5,v 1.21 2006/05/11 16:31:29 dhankins Exp $
 .\"
 .\" Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 1996-2003 by Internet Software Consortium
@@ -204,6 +204,22 @@ number greater than the length of the evaluated data, then the
 evaluated data is returned.
 .RE
 .PP
+.B lcase (\fIdata-expr\fB)\fR
+.PP
+.RS 0.25i
+The \fBlcase\fR function returns the result of evaluating
+\fIdata-expr\fR converted to lower case.   If \fIdata-expr\fR evaluates
+to null, then the result is also null.
+.RE
+.PP
+.B ucase (\fIdata-expr\fB)\fR
+.PP
+.RS 0.25i
+The \fBucase\fR function returns the result of evaluating
+\fIdata-expr\fR converted to upper case.   If \fIdata-expr\fR evaluates
+to null, then the result is also null.
+.RE
+.PP
 .B option \fIoption-name\fR
 .PP
 .RS 0.25i
@@ -310,6 +326,7 @@ client, one could write the following expression:
                 ".in-addr.arpa.");
 
 .fi
+.RE
 .PP
 .B encode-int (\fInumeric-expr\fB, \fIwidth\fB)\fR
 .RS 0.25i

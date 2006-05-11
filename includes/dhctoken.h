@@ -309,7 +309,9 @@ enum dhcp_token {
 	DOMAIN_NAME = 613,
 	DO_FORWARD_UPDATE = 614,
 	KNOWN_CLIENTS = 615,
-	ATSFP = 616
+	ATSFP = 616,
+	LCASE = 617,
+	UCASE = 618
 };
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\

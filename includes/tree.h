@@ -190,13 +190,15 @@ enum expr_op {
 	expr_binary_and,
 	expr_binary_or,
 	expr_binary_xor,
-	expr_client_state
+	expr_client_state,
+	expr_ucase,
+	expr_lcase
 };
 
 struct expression {
 	int refcnt;
 	enum expr_op op;
-	union {
+	union expr_union {
 		struct {
 			struct expression *expr;
 			struct expression *offset;
@@ -216,6 +218,8 @@ struct expression {
 			struct expression *expr;
 			struct expression *len;
 		} suffix;
+		struct expression *lcase;
+		struct expression *ucase;
 		struct option *option;
 		struct option *config_option;
 		struct {

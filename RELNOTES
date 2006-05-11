@@ -99,6 +99,9 @@ and for prodding me into improving it.
 - The Load Balance Algorithm was misimplemented.  The current implementation
   matches RFC 3074.
 
+- lcase() and ucase() configuration expressions have been added which adjust
+  their arguments from upper to lower and lower to upper cases respectively.
+
 			Changes since 3.0.4b2
 
 - Null-termination sensing for certain clients that unfortunatley require

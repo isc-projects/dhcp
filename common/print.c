@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: print.c,v 1.58 2006/02/24 23:16:28 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: print.c,v 1.59 2006/05/11 16:31:29 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -546,6 +546,30 @@ static unsigned print_subexpression (expr, buf, len)
 			if (len > rv)
 				buf [rv++] = ')';
 			buf [rv] = 0;
+			return rv;
+		}
+		break;
+
+	      case expr_lcase:
+		if (len > 9) {
+			rv = 7;
+			strcpy(buf, "(lcase ");
+			rv += print_subexpression(expr->data.lcase,
+						  buf + rv, len - rv - 1);
+			buf[rv++] = ')';
+			buf[rv] = 0;
+			return rv;
+		}
+		break;
+
+	      case expr_ucase:
+		if (len > 9) {
+			rv = 7;
+			strcpy(buf, "(ucase ");
+			rv += print_subexpression(expr->data.ucase,
+						  buf + rv, len - rv - 1);
+			buf[rv++] = ')';
+			buf[rv] = 0;
 			return rv;
 		}
 		break;

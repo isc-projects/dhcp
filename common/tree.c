@@ -34,11 +34,12 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.104 2006/02/24 23:16:29 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.105 2006/05/11 16:31:29 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
 #include <omapip/omapip_p.h>
+#include <ctype.h>
 
 struct binding_scope *global_scope;
 
@@ -835,6 +836,8 @@ int evaluate_dns_expression (result, packet, lease, client_state, in_options,
 	      case expr_none:
 	      case expr_substring:
 	      case expr_suffix:
+	      case expr_lcase:
+	      case expr_ucase:
 	      case expr_option:
 	      case expr_hardware:
 	      case expr_const_data:
@@ -1198,6 +1201,8 @@ int evaluate_boolean_expression (result, packet, lease, client_state,
 	      case expr_match:
 	      case expr_substring:
 	      case expr_suffix:
+	      case expr_lcase:
+	      case expr_ucase:
 	      case expr_option:
 	      case expr_hardware:
 	      case expr_const_data:
@@ -1279,7 +1284,7 @@ int evaluate_data_expression (result, packet, lease, client_state,
 	int s0, s1, s2, s3;
 	int status;
 	struct binding *binding;
-	char *s;
+	unsigned char *s;
 	struct binding_value *bv;
 
 	switch (expr -> op) {
@@ -1333,7 +1338,6 @@ int evaluate_data_expression (result, packet, lease, client_state,
 			return 1;
 		return 0;
 
-
 		/* Extract the last N bytes of a data string. */
 	      case expr_suffix:
 		memset (&data, 0, sizeof data);
@@ -1371,6 +1375,78 @@ int evaluate_data_expression (result, packet, lease, client_state,
 		       : "NULL"));
 #endif
 		return s0 && s1;
+
+		/* Convert string to lowercase. */
+	      case expr_lcase:
+		memset(&data, 0, sizeof data);
+		s0 = evaluate_data_expression(&data, packet, lease,
+					      client_state,
+					      in_options, cfg_options, scope,
+					      expr->data.lcase, MDL);
+		s1 = 0;
+		if (s0) {
+			result->len = data.len;
+			if (buffer_allocate(&result->buffer,
+					    result->len + data.terminated,
+					    MDL)) {
+				result->data = &result->buffer->data[0];
+				memcpy(result->buffer->data, data.data,
+				       data.len + data.terminated);
+				result->terminated = data.terminated;
+				s = (unsigned char *)result->data;
+				for (i = 0; i < result->len; i++, s++)
+					*s = tolower(*s);
+				s1 = 1;
+			} else {
+				log_error("data: lcase: no buffer memory.");
+			}
+		}
+
+#if defined (DEBUG_EXPRESSIONS)
+		log_debug("data: lcase (%s) = %s",
+			  s0 ? print_hex_1(data.len, data.data, 30) : "NULL",
+			  s1 ? print_hex_2(result->len, result->data, 30)
+			     : "NULL");
+#endif
+		if (s0)
+			data_string_forget(&data, MDL);
+		return s1;
+
+		/* Convert string to uppercase. */
+	      case expr_ucase:
+		memset(&data, 0, sizeof data);
+		s0 = evaluate_data_expression(&data, packet, lease,
+					      client_state,
+					      in_options, cfg_options, scope,
+					      expr->data.lcase, MDL);
+		s1 = 0;
+		if (s0) {
+			result->len = data.len;
+			if (buffer_allocate(&result->buffer,
+					    result->len + data.terminated,
+					    file, line)) {
+				result->data = &result->buffer->data[0];
+				memcpy(result->buffer->data, data.data,
+				       data.len + data.terminated);
+				result->terminated = data.terminated;
+				s = (unsigned char *)result->data;
+				for (i = 0; i < result->len; i++, s++)
+					*s = toupper(*s);
+				s1 = 1;
+			} else {
+				log_error("data: lcase: no buffer memory.");
+			}
+		}
+
+#if defined (DEBUG_EXPRESSIONS)
+		log_debug("data: ucase (%s) = %s",
+			  s0 ? print_hex_1(data.len, data.data, 30) : "NULL",
+			  s1 ? print_hex_2(result->len, result->data, 30)
+			     : "NULL");
+#endif
+		 if (s0)
+			data_string_forget(&data, MDL);
+		 return s1;
 
 		/* Extract an option. */
 	      case expr_option:
@@ -2164,6 +2240,8 @@ int evaluate_numeric_expression (result, packet, lease, client_state,
 
 	      case expr_substring:
 	      case expr_suffix:
+	      case expr_lcase:
+	      case expr_ucase:
 	      case expr_option:
 	      case expr_hardware:
 	      case expr_const_data:
@@ -2799,6 +2877,16 @@ void expression_dereference (eptr, file, line)
 						file, line);
 		break;
 
+	      case expr_lcase:
+		if (expr->data.lcase)
+			expression_dereference(&expr->data.lcase, MDL);
+		break;
+
+	      case expr_ucase:
+		if (expr->data.ucase)
+			expression_dereference(&expr->data.ucase, MDL);
+		break;
+
 	      case expr_not:
 		if (expr -> data.not)
 			expression_dereference (&expr -> data.not, file, line);
@@ -2979,27 +3067,29 @@ int is_boolean_expression (expr)
 int is_data_expression (expr)
 	struct expression *expr;
 {
-	return (expr -> op == expr_substring ||
-		expr -> op == expr_suffix ||
-		expr -> op == expr_option ||
-		expr -> op == expr_hardware ||
-		expr -> op == expr_const_data ||
-		expr -> op == expr_packet ||
-		expr -> op == expr_concat ||
-		expr -> op == expr_encapsulate ||
-		expr -> op == expr_encode_int8 ||
-		expr -> op == expr_encode_int16 ||
-		expr -> op == expr_encode_int32 ||
-		expr -> op == expr_host_lookup ||
-		expr -> op == expr_binary_to_ascii ||
-		expr -> op == expr_filename ||
-		expr -> op == expr_sname ||
-		expr -> op == expr_reverse ||
-		expr -> op == expr_pick_first_value ||
-		expr -> op == expr_host_decl_name ||
-		expr -> op == expr_leased_address ||
-		expr -> op == expr_config_option ||
-		expr -> op == expr_null);
+	return (expr->op == expr_substring ||
+		expr->op == expr_suffix ||
+		expr->op == expr_lcase ||
+		expr->op == expr_ucase ||
+		expr->op == expr_option ||
+		expr->op == expr_hardware ||
+		expr->op == expr_const_data ||
+		expr->op == expr_packet ||
+		expr->op == expr_concat ||
+		expr->op == expr_encapsulate ||
+		expr->op == expr_encode_int8 ||
+		expr->op == expr_encode_int16 ||
+		expr->op == expr_encode_int32 ||
+		expr->op == expr_host_lookup ||
+		expr->op == expr_binary_to_ascii ||
+		expr->op == expr_filename ||
+		expr->op == expr_sname ||
+		expr->op == expr_reverse ||
+		expr->op == expr_pick_first_value ||
+		expr->op == expr_host_decl_name ||
+		expr->op == expr_leased_address ||
+		expr->op == expr_config_option ||
+		expr->op == expr_null);
 }
 
 int is_numeric_expression (expr)
@@ -3058,6 +3148,8 @@ static int op_val (op)
 	      case expr_check:
 	      case expr_substring:
 	      case expr_suffix:
+	      case expr_lcase:
+	      case expr_ucase:
 	      case expr_concat:
 	      case expr_encapsulate:
 	      case expr_host_lookup:
@@ -3154,6 +3246,8 @@ enum expression_context op_context (op)
 	      case expr_check:
 	      case expr_substring:
 	      case expr_suffix:
+	      case expr_lcase:
+	      case expr_ucase:
 	      case expr_concat:
 	      case expr_encapsulate:
 	      case expr_host_lookup:
@@ -3289,6 +3383,21 @@ int write_expression (file, expr, col, indent, firstp)
 		col = write_expression (file, expr -> data.suffix.len,
 					col, scol, 0);
 		col = token_print_indent (file, col, indent, "", "", ")");
+
+	      case expr_lcase:
+		col = token_print_indent(file, col, indent, "", "", "lcase");
+		col = token_print_indent(file, col, indent, " ", "", "(");
+		scol = col;
+		col = write_expression(file, expr->data.lcase, col, scol, 1);
+		col = token_print_indent(file, col, indent, "", "", ")");
+		break;
+
+	      case expr_ucase:
+		col = token_print_indent(file, col, indent, "", "", "ucase");
+		col = token_print_indent(file, col, indent, " ", "", "(");
+		scol = col;
+		col = write_expression(file, expr->data.ucase, col, scol, 1);
+		col = token_print_indent(file, col, indent, "", "", ")");
 		break;
 
 	      case expr_concat:
@@ -3856,6 +3965,12 @@ int data_subexpression_length (int *rv,
 			return 1;
 		}
 		return 0;
+
+	      case expr_lcase:
+		return data_subexpression_length(rv, expr->data.lcase);
+
+	      case expr_ucase:
+		return data_subexpression_length(rv, expr->data.ucase);
 
 	      case expr_concat:
 		clhs = data_subexpression_length (&llhs,
