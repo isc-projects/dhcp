@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.152 2006/05/05 20:32:30 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.153 2006/05/11 16:35:56 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -3391,11 +3391,13 @@ int parse_allow_deny (oc, cfile, flag)
 		token = next_token(&val, NULL, cfile);
 		if (token != IS) {
 			parse_warn(cfile, "Expecting 'is reserved'.");
+			status = 0;
 			break;
 		}
 		token = next_token(&val, NULL, cfile);
 		if (token != TOKEN_RESERVED) {
 			parse_warn(cfile, "Expecting 'reserved'.");
+			status = 0;
 			break;
 		}
 
