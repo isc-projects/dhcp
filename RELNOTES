@@ -46,28 +46,6 @@ Murrell at BC Tel Advanced Communications.  I'd like to express my
 thanks to all of these good people here, both for working on the code
 and for prodding me into improving it.
 
-			Changes since 3.0.4
-
-- A warning that host statements declared within subnet or shared-network
-  scopes are actually global has been added.
-
-- The default minimum lease time (if min-lease-time was not specified)
-  was raised from 0 to 300.  0 is not thought to be sensible, and is
-  known to be damaging.
-
-- Added additional fatal error sanity checks surrounding lease binding
-  state count calculations (free/active counts used for failover pool
-  balancing).
-
-			Changes since 3.0.4rc1
-
-- The dhcp-options.5 manpage was updated to correct indentation errors
-  thanks to a patch from Jean Delvare.
-
-			Changes since 3.0.4b3
-
-- Some manual pages were clarified pursuant to discussion on the dhcp-server
-  mailing list.
 
 			Changes since 3.0 (New Features)
 
@@ -102,6 +80,29 @@ and for prodding me into improving it.
 - lcase() and ucase() configuration expressions have been added which adjust
   their arguments from upper to lower and lower to upper cases respectively.
   Thanks to a patch from Albert Herranz.
+
+			Changes since 3.0.4
+
+- A warning that host statements declared within subnet or shared-network
+  scopes are actually global has been added.
+
+- The default minimum lease time (if min-lease-time was not specified)
+  was raised from 0 to 300.  0 is not thought to be sensible, and is
+  known to be damaging.
+
+- Added additional fatal error sanity checks surrounding lease binding
+  state count calculations (free/active counts used for failover pool
+  balancing).
+
+			Changes since 3.0.4rc1
+
+- The dhcp-options.5 manpage was updated to correct indentation errors
+  thanks to a patch from Jean Delvare.
+
+			Changes since 3.0.4b3
+
+- Some manual pages were clarified pursuant to discussion on the dhcp-server
+  mailing list.
 
 			Changes since 3.0.4b2
 
