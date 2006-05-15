@@ -1,4 +1,4 @@
-.\"	$Id: dhclient.conf.5,v 1.16 2005/07/07 16:39:07 dhankins Exp $
+.\"	$Id: dhclient.conf.5,v 1.17 2006/05/15 15:07:49 dhankins Exp $
 .\"
 .\" Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 1996-2003 by Internet Software Consortium
@@ -28,7 +28,7 @@
 .\" see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
 .\" ``http://www.nominum.com''.
 .\"
-.\" $Id: dhclient.conf.5,v 1.16 2005/07/07 16:39:07 dhankins Exp $
+.\" $Id: dhclient.conf.5,v 1.17 2006/05/15 15:07:49 dhankins Exp $
 .\"
 .TH dhclient.conf 5
 .SH NAME
@@ -504,15 +504,28 @@ declaration for the IP alias address, and a subnet-mask option
 declaration.   A medium statement should never be included in an alias
 declaration.
 .SH OTHER DECLARATIONS
- \fBreject \fIip-address\fB;\fR
+ \fBreject \fIcidr-ip-address\fR [\fB,\fR \fI...\fB \fIcidr-ip-address\fR ] \fB;\fR
 .PP
 The
 .B reject
 statement causes the DHCP client to reject offers from
-servers who use the specified address as a server identifier.   This
-can be used to avoid being configured by rogue or misconfigured dhcp
-servers, although it should be a last resort - better to track down
-the bad DHCP server and fix it.
+servers whose server identifier matches any of the specified hosts or
+subnets.  This can be used to avoid being configured by rogue or
+misconfigured dhcp servers, although it should be a last resort -
+better to track down the bad DHCP server and fix it.
+.PP
+The \fIcidr-ip-address\fR configuration type is of the
+form \fIip-address\fR[\fB/\fIprefixlen\fR], where \fIip-address\fR is a
+dotted quad IP address, and \fRprefixlen\fR is the CIDR prefix length of
+the subnet, counting the number of significant bits in the netmask starting
+from the leftmost end.  Example configuration syntax:
+.PP
+.I \fIreject\fR 192.168.0.0\fB/\fR16\fB,\fR 10.0.0.5\fB;\fR
+.RE
+.PP
+The above example would cause offers from any server identifier in the
+entire RFC 1918 "Class C" network 192.168.0.0/16, or the specific
+single address 10.0.0.5, to be rejected.
 .PP
  \fBinterface "\fIname\fB" { \fIdeclarations ... \fB }
 .PP

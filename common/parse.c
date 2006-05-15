@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.108 2006/05/11 16:31:29 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.109 2006/05/15 15:07:49 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -320,6 +320,98 @@ int parse_ip_addr (cfile, addr)
 		return 1;
 	return 0;
 }	
+
+/*
+ * ip-address-with-subnet :== ip-address |
+ *                          ip-address "/" NUMBER
+ */
+
+int
+parse_ip_addr_with_subnet(cfile, match)
+	struct parse *cfile;
+	struct iaddrmatch *match;
+{
+	const char *val, *orig;
+	enum dhcp_token token;
+	int prefixlen;
+	int fflen;
+	unsigned char newval, warnmask=0;
+
+	if (parse_ip_addr(cfile, &match->addr)) {
+		/* default to host mask */
+		prefixlen = match->addr.len * 8;
+
+		token = peek_token(&val, NULL, cfile);
+
+		if (token == SLASH) {
+			next_token(&val, NULL, cfile);
+			token = next_token(&val, NULL, cfile);
+
+			if (token != NUMBER) {
+				parse_warn(cfile, "Invalid CIDR prefix length:"
+						  " expecting a number.");
+				return 0;
+			}
+
+			prefixlen = atoi(val);
+
+			if (prefixlen < 0 ||
+			    prefixlen > (match->addr.len * 8)) {
+				parse_warn(cfile, "subnet prefix is out of "
+						  "range [0..%d].",
+						  match->addr.len * 8);
+				return 0;
+			}
+		}
+
+		/* construct a suitable mask field */
+
+		/* copy length */
+		match->mask.len = match->addr.len;
+
+		/* count of 0xff bytes in mask */
+		fflen = prefixlen / 8;
+
+		/* set leading mask */
+		memset(match->mask.iabuf, 0xff, fflen);
+
+		/* set zeroes */
+		if (fflen < match->mask.len) {
+			match->mask.iabuf[fflen] =
+			    "\x00\x80\xc0\xe0\xf0\xf8\xfc\xfe"[prefixlen % 8];
+
+			memset(match->mask.iabuf+fflen+1, 0x00, 
+			       match->mask.len - fflen - 1);
+
+			/* AND-out insignificant bits from supplied netmask. */
+			orig = piaddr(match->addr);
+			do {
+				newval = match->addr.iabuf[fflen] &
+					 match->mask.iabuf[fflen];
+
+				if (newval != match->addr.iabuf[fflen]) {
+					warnmask = 1;
+					match->addr.iabuf[fflen] = newval;
+				}
+			} while (++fflen < match->mask.len);
+
+			if (warnmask) {
+				log_error("Warning: Extraneous bits removed "
+					  "in address component of %s/%d.",
+					  orig, prefixlen);
+				log_error("New value: %s/%d.",
+					  piaddr(match->addr), prefixlen);
+			}
+		}
+
+		return 1;
+	}
+
+	parse_warn(cfile,
+		   "expecting ip-address or ip-address/prefixlen");
+
+	return 0;  /* let caller pick up pieces */ 
+}
 
 /*
  * hardware-parameter :== HARDWARE hardware-type colon-seperated-hex-list SEMI

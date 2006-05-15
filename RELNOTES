@@ -81,6 +81,10 @@ and for prodding me into improving it.
   their arguments from upper to lower and lower to upper cases respectively.
   Thanks to a patch from Albert Herranz.
 
+- The dhclient 'reject ...;' statement, which rejects leases given by named
+  server-identifiers, now permits address ranges to be specified in CIDR
+  notation.
+
 			Changes since 3.0.4
 
 - A warning that host statements declared within subnet or shared-network

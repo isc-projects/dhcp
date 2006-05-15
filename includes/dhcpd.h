@@ -744,7 +744,7 @@ struct client_config {
 					   authenticate. */
 	struct string_list *medium;	/* Current network medium. */
 
-	struct iaddrlist *reject_list;	/* Servers to reject. */
+	struct iaddrmatchlist *reject_list;	/* Servers to reject. */
 
 	int omapi_port;			/* port on which to accept OMAPI
 					   connections, or -1 for no
@@ -1876,6 +1876,7 @@ struct iaddr ip_addr PROTO ((struct iaddr, struct iaddr, u_int32_t));
 struct iaddr broadcast_addr PROTO ((struct iaddr, struct iaddr));
 u_int32_t host_addr PROTO ((struct iaddr, struct iaddr));
 int addr_eq PROTO ((struct iaddr, struct iaddr));
+int addr_match(struct iaddr *, struct iaddrmatch *);
 char *piaddr PROTO ((struct iaddr));
 char *piaddrmask (struct iaddr, struct iaddr, const char *, int);
 

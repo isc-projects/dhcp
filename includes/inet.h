@@ -43,3 +43,27 @@ struct iaddrlist {
 	struct iaddrlist *next;
 	struct iaddr addr;
 };
+
+
+/* struct iaddrmatch - used to compare a host IP against a subnet spec
+ *
+ * There is a space/speed tradeoff here implied by the use of a second
+ * struct iaddr to hold the mask; while using an unsigned (byte!) to
+ * represent the subnet prefix length would be more memory efficient,
+ * it makes run-time mask comparisons more expensive.  Since such
+ * entries are used currently only in restricted circumstances
+ * (wanting to reject a subnet), the decision is in favour of run-time
+ * efficiency.
+ */
+
+struct iaddrmatch {
+	struct iaddr addr;
+	struct iaddr mask;
+};
+
+/* its list ... */
+ 
+struct iaddrmatchlist {
+	struct iaddrmatchlist *next;
+	struct iaddrmatch match;
+};

@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: clparse.c,v 1.65 2006/02/24 23:16:27 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: clparse.c,v 1.66 2006/05/15 15:07:49 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1124,24 +1124,49 @@ void parse_reject_statement (cfile, config)
 {
 	int token;
 	const char *val;
-	struct iaddr addr;
-	struct iaddrlist *list;
+	struct iaddrmatch match;
+	struct iaddrmatchlist *list;
+	int i;
 
 	do {
-		if (!parse_ip_addr (cfile, &addr)) {
-			parse_warn (cfile, "expecting IP address.");
+		if (!parse_ip_addr_with_subnet (cfile, &match)) {
+			/* no warn: parser will have reported what's wrong */
 			skip_to_semi (cfile);
 			return;
 		}
 
-		list = (struct iaddrlist *)dmalloc (sizeof (struct iaddrlist),
-						    MDL);
+		/* check mask is not all zeros (because that would
+		 * reject EVERY address).  This check could be
+		 * simplified if we assume that the mask *always*
+		 * represents a prefix .. but perhaps it might be
+		 * useful to have a mask which is not a proper prefix
+		 * (perhaps for ipv6?).  The following is almost as
+		 * efficient as inspection of match.mask.iabuf[0] when
+		 * it IS a true prefix, and is more general when it is
+		 * not.
+		 */
+
+		for (i=0 ; i < match.mask.len ; i++) {
+		    if (match.mask.iabuf[i]) {
+			break;
+		    }
+		}
+
+		if (i == match.mask.len) {
+		    /* oops we found all zeros */
+		    parse_warn(cfile, "zero-length prefix is not permitted "
+				      "for reject statement");
+		    skip_to_semi(cfile);
+		    return;
+		} 
+
+		list = dmalloc(sizeof(struct iaddrmatchlist), MDL);
 		if (!list)
 			log_fatal ("no memory for reject list!");
 
-		list -> addr = addr;
-		list -> next = config -> reject_list;
-		config -> reject_list = list;
+		list->match = match;
+		list->next = config->reject_list;
+		config->reject_list = list;
 
 		token = next_token (&val, (unsigned *)0, cfile);
 	} while (token == COMMA);

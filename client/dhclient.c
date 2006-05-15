@@ -32,7 +32,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.137 2006/05/11 14:48:58 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.138 2006/05/15 15:07:49 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1004,7 +1004,9 @@ void db_startup (testp)
 void bootp (packet)
 	struct packet *packet;
 {
-	struct iaddrlist *ap;
+	struct iaddrmatchlist *ap;
+	char addrbuf[4*16];
+	char maskbuf[4*16];
 
 	if (packet -> raw -> op != BOOTREPLY)
 		return;
@@ -1013,9 +1015,17 @@ void bootp (packet)
 	   on it. */
 	for (ap = packet -> interface -> client -> config -> reject_list;
 	     ap; ap = ap -> next) {
-		if (addr_eq (packet -> client_addr, ap -> addr)) {
-			log_info ("BOOTREPLY from %s rejected.",
-			      piaddr (ap -> addr));
+		if (addr_match(&packet->client_addr, &ap->match)) {
+
+		        /* piaddr() returns its result in a static
+			   buffer sized 4*16 (see common/inet.c). */
+
+		        strcpy(addrbuf, piaddr(ap->match.addr));
+		        strcpy(maskbuf, piaddr(ap->match.mask));
+
+			log_info("BOOTREPLY from %s rejected by rule %s "
+				 "mask %s.", piaddr(packet->client_addr),
+				 addrbuf, maskbuf);
 			return;
 		}
 	}
@@ -1027,9 +1037,11 @@ void bootp (packet)
 void dhcp (packet)
 	struct packet *packet;
 {
-	struct iaddrlist *ap;
+	struct iaddrmatchlist *ap;
 	void (*handler) PROTO ((struct packet *));
 	const char *type;
+	char addrbuf[4*16];
+	char maskbuf[4*16];
 
 	switch (packet -> packet_type) {
 	      case DHCPOFFER:
@@ -1055,9 +1067,17 @@ void dhcp (packet)
 	   on it. */
 	for (ap = packet -> interface -> client -> config -> reject_list;
 	     ap; ap = ap -> next) {
-		if (addr_eq (packet -> client_addr, ap -> addr)) {
-			log_info ("%s from %s rejected.",
-			      type, piaddr (ap -> addr));
+		if (addr_match(&packet->client_addr, &ap->match)) {
+
+		        /* piaddr() returns its result in a static
+			   buffer sized 4*16 (see common/inet.c). */
+
+		        strcpy(addrbuf, piaddr(ap->match.addr));
+		        strcpy(maskbuf, piaddr(ap->match.mask));
+
+			log_info("%s from %s rejected by rule %s mask %s.",
+				 type, piaddr(packet->client_addr),
+				 addrbuf, maskbuf);
 			return;
 		}
 	}

@@ -35,7 +35,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: inet.c,v 1.10 2005/03/17 20:14:58 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: inet.c,v 1.11 2006/05/15 15:07:49 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -183,6 +183,31 @@ int addr_eq (addr1, addr2)
 	if (addr1.len != addr2.len)
 		return 0;
 	return memcmp (addr1.iabuf, addr2.iabuf, addr1.len) == 0;
+}
+
+/* addr_match 
+ *
+ * compares an IP address against a network/mask combination
+ * by ANDing the IP with the mask and seeing whether the result
+ * matches the masked network value.
+ */
+int
+addr_match(addr, match)
+	struct iaddr *addr;
+	struct iaddrmatch *match;
+{
+        int i;
+
+	if (addr->len != match->addr.len)
+		return 0;
+	
+	i = 0;
+	for (i = 0 ; i < addr->len ; i++) {
+		if ((addr->iabuf[i] & match->mask.iabuf[i]) !=
+							match->addr.iabuf[i])
+			return 0;
+	}
+	return 1;
 }
 
 char *piaddr (addr)
