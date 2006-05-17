@@ -98,6 +98,10 @@ and for prodding me into improving it.
   state count calculations (free/active counts used for failover pool
   balancing).
 
+- Some time value size fixes in 3.0.4 brought on from FreeBSD /usr/ports were
+  misapplied to server values rather than client values.  The server no longer
+  advertises 8-byte lease-time options when on 64-bit platforms.
+
 			Changes since 3.0.4rc1
 
 - The dhcp-options.5 manpage was updated to correct indentation errors
