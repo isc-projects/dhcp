@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.89 2006/02/24 23:16:28 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.90 2006/05/30 19:58:14 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -551,14 +551,15 @@ int cons_options (inpacket, outpacket, lease, client_state,
 	if (main_buffer_size > mb_max)
 		main_buffer_size = mb_max;
 
-	/* Preload the option priority list with mandatory options. */
+	/* Preload the option priority list with protocol-mandatory options.
+	 * This effectively gives these options the highest priority.
+	 */
 	priority_len = 0;
 	priority_list [priority_len++] = DHO_DHCP_MESSAGE_TYPE;
 	priority_list [priority_len++] = DHO_DHCP_SERVER_IDENTIFIER;
 	priority_list [priority_len++] = DHO_DHCP_LEASE_TIME;
 	priority_list [priority_len++] = DHO_DHCP_MESSAGE;
 	priority_list [priority_len++] = DHO_DHCP_REQUESTED_ADDRESS;
-	priority_list [priority_len++] = DHO_FQDN;
 
 	if (prl && prl -> len > 0) {
 		if ((op = lookup_option (&dhcp_universe, cfg_options,
@@ -567,7 +568,7 @@ int cons_options (inpacket, outpacket, lease, client_state,
 				priority_list [priority_len++] =
 					DHO_SUBNET_SELECTION;
 		}
-			    
+
 		data_string_truncate (prl, (PRIORITY_COUNT - priority_len));
 
 		for (i = 0; i < prl -> len; i++) {
@@ -577,13 +578,32 @@ int cons_options (inpacket, outpacket, lease, client_state,
 				priority_list [priority_len++] =
 					prl -> data [i];
 		}
+
+		/* If the client doesn't request this option explicitly,
+		 * to indicate priority, consider it lowest priority.  Fit
+		 * in the packet if there is space.
+		 */
+		if (priority_len < PRIORITY_COUNT)
+			priority_list[priority_len++] = DHO_FQDN;
+
+		/* Some DHCP Servers will give the subnet-mask option if
+		 * it is not on the parameter request list - so some client
+		 * implementations have come to rely on this - so we will
+		 * also make sure we supply this, at lowest priority.
+		 */
+		if (priority_len < PRIORITY_COUNT)
+			priority_list[priority_len++] = DHO_SUBNET_MASK;
+
 	} else {
 		/* First, hardcode some more options that ought to be
-		   sent first... */
-		priority_list [priority_len++] = DHO_SUBNET_MASK;
-		priority_list [priority_len++] = DHO_ROUTERS;
-		priority_list [priority_len++] = DHO_DOMAIN_NAME_SERVERS;
-		priority_list [priority_len++] = DHO_HOST_NAME;
+		 * sent first...these are high priority to have in the
+		 * packet.
+		 */
+		priority_list[priority_len++] = DHO_SUBNET_MASK;
+		priority_list[priority_len++] = DHO_ROUTERS;
+		priority_list[priority_len++] = DHO_DOMAIN_NAME_SERVERS;
+		priority_list[priority_len++] = DHO_HOST_NAME;
+		priority_list[priority_len++] = DHO_FQDN;
 
 		/* Append a list of the standard DHCP options from the
 		   standard DHCP option space.  Actually, if a site

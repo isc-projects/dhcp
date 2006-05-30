@@ -85,6 +85,16 @@ and for prodding me into improving it.
   server-identifiers, now permits address ranges to be specified in CIDR
   notation.  Thanks to a patch from David Boyce.
 
+- The subnet-mask option is now supplied by default, but at lowest
+  priority.  This helps a small minority of clients that provide parameter
+  request lists, but do not list the subnet-mask option because they were
+  designed to interoperate with a server that behaves in this manner.
+
+- The FQDN option is similarly supplied even if it does not appear on the
+  parameter request list, but not to the exclusion of options that do
+  appear at the parameter request list.  Up until now it had ultimate
+  priority over the client's parameter request list.
+
 			Changes since 3.0.4
 
 - A warning that host statements declared within subnet or shared-network
