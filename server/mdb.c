@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.77 2006/05/05 20:32:31 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.78 2006/05/30 19:46:37 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1542,7 +1542,7 @@ void pool_timer (vpool)
 	struct lease *lt = (struct lease *)0;
 	struct lease *next = (struct lease *)0;
 	struct lease *lease = (struct lease *)0;
-	struct lease **lptr [5];
+	struct lease **lptr[6];
 	TIME next_expiry = MAX_TIME;
 	int i;
 
@@ -1826,7 +1826,7 @@ int write_leases ()
 	struct collection *colp;
 	int i;
 	int num_written;
-	struct lease **lptr [5];
+	struct lease **lptr[6];
 
 	/* write all the dynamically-created class declarations. */
 	if (collections->classes) {
@@ -2117,7 +2117,7 @@ void expire_all_pools ()
 	struct hash_bucket *hb;
 	int i;
 	struct lease *l;
-	struct lease **lptr [5];
+	struct lease **lptr[6];
 
 	/* First, go over the hash list and actually put all the leases
 	   on the appropriate lists. */
@@ -2178,7 +2178,7 @@ void dump_subnets ()
 	struct shared_network *s;
 	struct subnet *n;
 	struct pool *p;
-	struct lease **lptr [5];
+	struct lease **lptr[6];
 	int i;
 
 	log_info ("Subnets:");
@@ -2376,7 +2376,7 @@ void free_everything ()
 		if (nc -> pools) {
 		    pool_reference (&pn, nc -> pools, MDL);
 		    do {
-			struct lease **lptr [5];
+			struct lease **lptr[6];
 			
 			if (pn) {
 			    pool_reference (&pc, pn, MDL);
