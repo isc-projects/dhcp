@@ -311,7 +311,7 @@ enum dhcp_token {
 	KNOWN_CLIENTS = 615,
 	ATSFP = 616,
 	LCASE = 617,
-	UCASE = 618
+	UCASE = 618,
 	WIDTH = 619,
 	LENGTH = 620,
 	HASH = 621,
