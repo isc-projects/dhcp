@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.105 2006/05/11 16:31:29 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.106 2006/06/01 20:23:17 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -289,7 +289,7 @@ int option_cache (struct option_cache **oc, struct data_string *dp,
 		data_string_copy (&(*oc) -> data, dp, file, line);
 	if (expr)
 		expression_reference (&(*oc) -> expression, expr, file, line);
-	(*oc) -> option = option;
+	option_reference(&(*oc)->option, option, MDL);
 	return 1;
 }
 

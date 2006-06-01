@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: memory.c,v 1.68 2005/03/17 20:14:59 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: memory.c,v 1.69 2006/06/01 20:23:17 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -119,7 +119,7 @@ isc_result_t supersede_group (struct group_object *group, int writep)
 			}
 		}
 	} else {
-		group_new_hash (&group_name_hash, 0, MDL);
+		group_new_hash(&group_name_hash, GROUP_HASH_SIZE, MDL);
 		t = (struct group_object *)0;
 	}
 

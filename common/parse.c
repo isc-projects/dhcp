@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.109 2006/05/15 15:07:49 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.110 2006/06/01 20:23:17 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -913,10 +913,12 @@ TIME parse_date (cfile)
  		   IDENTIFIER . IDENTIFIER
  */
 
-struct option *parse_option_name (cfile, allocate, known)
+isc_result_t
+parse_option_name (cfile, allocate, known, opt)
 	struct parse *cfile;
 	int allocate;
 	int *known;
+	struct option **opt;
 {
 	const char *val;
 	enum dhcp_token token;
@@ -924,13 +926,16 @@ struct option *parse_option_name (cfile, allocate, known)
 	struct universe *universe;
 	struct option *option;
 
+	if (opt == NULL)
+		return ISC_R_INVALIDARG;
+
 	token = next_token (&val, (unsigned *)0, cfile);
 	if (!is_identifier (token)) {
 		parse_warn (cfile,
 			    "expecting identifier after option keyword.");
 		if (token != SEMI)
 			skip_to_semi (cfile);
-		return (struct option *)0;
+		return ISC_R_BADPARSE;
 	}
 	uname = dmalloc (strlen (val) + 1, MDL);
 	if (!uname)
@@ -947,7 +952,7 @@ struct option *parse_option_name (cfile, allocate, known)
 			parse_warn (cfile, "expecting identifier after '.'");
 			if (token != SEMI)
 				skip_to_semi (cfile);
-			return (struct option *)0;
+			return ISC_R_BADPARSE;
 		}
 
 		/* Look up the option name hash table for the specified
@@ -957,7 +962,7 @@ struct option *parse_option_name (cfile, allocate, known)
 					   uname, 0, MDL)) {
 			parse_warn (cfile, "no option space named %s.", uname);
 			skip_to_semi (cfile);
-			return (struct option *)0;
+			return ISC_R_NOTFOUND;
 		}
 	} else {
 		/* Use the default hash table, which contains all the
@@ -968,7 +973,8 @@ struct option *parse_option_name (cfile, allocate, known)
 
 	/* Look up the actual option info... */
 	option = (struct option *)0;
-	option_hash_lookup (&option, universe -> hash, val, 0, MDL);
+	option_name_hash_lookup(opt, universe->name_hash, val, 0, MDL);
+	option = *opt;
 
 	/* If we didn't get an option structure, it's an undefined option. */
 	if (option) {
@@ -979,22 +985,12 @@ struct option *parse_option_name (cfile, allocate, known)
 		   (might) be an option code definition, so we'll create
 		   an option structure just in case. */
 		if (allocate) {
-			option = new_option (MDL);
-			if (val == uname)
-				option -> name = val;
-			else {
-				char *s;
-				dfree (uname, MDL);
-				s = dmalloc (strlen (val) + 1, MDL);
-				if (!s)
-				    log_fatal ("no memory for option %s.%s",
-					       universe -> name, val);
-				strcpy (s, val);
-				option -> name = s;
-			}
+			option = new_option(val, MDL);
 			option -> universe = universe;
-			option -> code = 0;
-			return option;
+			option_reference(opt, option, MDL);
+
+			dfree(uname, MDL);
+			return ISC_R_SUCCESS;
 		}
 		if (val == uname)
 			parse_warn (cfile, "no option named %s", val);
@@ -1002,15 +998,19 @@ struct option *parse_option_name (cfile, allocate, known)
 			parse_warn (cfile, "no option named %s in space %s",
 				    val, uname);
 		skip_to_semi (cfile);
-		return (struct option *)0;
+		dfree(uname, MDL);
+		return ISC_R_NOTFOUND;
 	}
 
 	/* Free the initial identifier token. */
 	dfree (uname, MDL);
-	return option;
+	return ISC_R_SUCCESS;
 }
 
-/* IDENTIFIER SEMI */
+/* IDENTIFIER [WIDTHS] SEMI
+ *   WIDTHS ~= LENGTH WIDTH NUMBER
+ *             CODE WIDTH NUMBER
+ */
 
 void parse_option_space_decl (cfile)
 	struct parse *cfile;
@@ -1018,7 +1018,8 @@ void parse_option_space_decl (cfile)
 	int token;
 	const char *val;
 	struct universe **ua, *nu;
-	char *s;
+	char *nu_name;
+	int tsize=1, lsize=1, hsize = 0;
 
 	next_token (&val, (unsigned *)0, cfile);  /* Discard the SPACE token,
 						     which was checked by the
@@ -1034,23 +1035,147 @@ void parse_option_space_decl (cfile)
 		log_fatal ("No memory for new option space.");
 
 	/* Set up the server option universe... */
-	s = dmalloc (strlen (val) + 1, MDL);
-	if (!s)
+	nu_name = dmalloc (strlen (val) + 1, MDL);
+	if (!nu_name)
 		log_fatal ("No memory for new option space name.");
-	strcpy (s, val);
-	nu -> name = s;
+	strcpy (nu_name, val);
+	nu -> name = nu_name;
+
+	do {
+		token = next_token(&val, NULL, cfile);
+		switch(token) {
+		      case SEMI:
+			break;
+
+		      case CODE:
+			token = next_token(&val, NULL, cfile);
+			if (token != WIDTH) {
+				parse_warn(cfile, "expecting width token.");
+				goto bad;
+			}
+
+			token = next_token(&val, NULL, cfile);
+			if (token != NUMBER) {
+				parse_warn(cfile, "expecting number 1, 2, 4.");
+				goto bad;
+			}
+
+			tsize = atoi(val);
+
+
+			switch (tsize) {
+			      case 1:
+				if (!hsize)
+					hsize = BYTE_NAME_HASH_SIZE;
+				break;
+			      case 2:
+				if (!hsize)
+					hsize = WORD_NAME_HASH_SIZE;
+				break;
+			      case 4:
+				if (!hsize)
+					hsize = QUAD_NAME_HASH_SIZE;
+				break;
+			      default:
+				parse_warn(cfile, "invalid code width (%d), "
+					          "expecting a 1, 2 or 4.",
+					   val);
+				goto bad;
+			}
+			break;
+
+		      case LENGTH:
+			token = next_token(&val, NULL, cfile);
+			if (token != WIDTH) {
+				parse_warn(cfile, "expecting width token.");
+				goto bad;
+			}
+
+			token = next_token(&val, NULL, cfile);
+			if (token != NUMBER) {
+				parse_warn(cfile, "expecting number 1 or 2.");
+				goto bad;
+			}
+
+			lsize = atoi(val);
+			if (lsize != 1 && lsize != 2) {
+				parse_warn(cfile, "invalid length width (%d) "
+						  "expecting 1 or 2.", val);
+				goto bad;
+			}
+
+			break;
+
+		      case HASH:
+			token = next_token(&val, NULL, cfile);
+			if (token != SIZE) {
+				parse_warn(cfile, "expecting size token.");
+				goto bad;
+			}
+
+			token = next_token(&val, NULL, cfile);
+			if (token != NUMBER) {
+				parse_warn(cfile, "expecting a 10base number");
+				goto bad;
+			}
+
+			/* (2^31)-1 is the highest Mersenne prime we should
+			 * probably allow...
+			 */
+			hsize = atoi(val);
+			if (hsize < 0 || hsize > 0x7FFFFFFF) {
+				parse_warn(cfile, "invalid hash length: %d",
+					   hsize);
+				goto bad;
+			}
+
+			break;
+
+		      default:
+			parse_warn(cfile, "Unexpected token.");
+		}
+	} while (token != SEMI);
+
+	if (!hsize)
+		hsize = DEFAULT_SPACE_HASH_SIZE;
+
 	nu -> lookup_func = lookup_hashed_option;
-	nu -> option_state_dereference =
-		hashed_option_state_dereference;
+	nu -> option_state_dereference = hashed_option_state_dereference;
 	nu -> foreach = hashed_option_space_foreach;
 	nu -> save_func = save_hashed_option;
 	nu -> delete_func = delete_hashed_option;
 	nu -> encapsulate = hashed_option_space_encapsulate;
 	nu -> decode = parse_option_buffer;
-	nu -> length_size = 1;
-	nu -> tag_size = 1;
-	nu -> store_tag = putUChar;
-	nu -> store_length = putUChar;
+	nu -> length_size = lsize;
+	nu -> tag_size = tsize;
+	switch(tsize) {
+	      case 1:
+		nu->get_tag = getUChar;
+		nu->store_tag = putUChar;
+		break;
+	      case 2:
+		nu->get_tag = getUShort;
+		nu->store_tag = putUShort;
+		break;
+	      case 4:
+		nu->get_tag = getULong;
+		nu->store_tag = putULong;
+		break;
+	      default:
+		log_fatal("Impossible condition at %s:%d.", MDL);
+	}
+	switch(lsize) {
+	     case 1:
+		nu->get_length = getUChar;
+		nu->store_length = putUChar;
+		break;
+	     case 2:
+		nu->get_length = getUShort;
+		nu->store_length = putUShort;
+		break;
+	     default:
+		log_fatal("Impossible condition at %s:%d.", MDL);
+	}
 	nu -> index = universe_count++;
 	if (nu -> index >= universe_max) {
 		ua = dmalloc (universe_max * 2 * sizeof *ua, MDL);
@@ -1062,11 +1187,15 @@ void parse_option_space_decl (cfile)
 		universes = ua;
 	}
 	universes [nu -> index] = nu;
-	option_new_hash (&nu -> hash, 1, MDL);
-	if (!nu -> hash)
-		log_fatal ("Can't allocate %s option hash table.", nu -> name);
+	if (!option_name_new_hash(&nu->name_hash, hsize, MDL) ||
+	    !option_code_new_hash(&nu->code_hash, hsize, MDL))
+		log_fatal("Can't allocate %s option hash table.", nu->name);
 	universe_hash_add (universe_hash, nu -> name, 0, nu, MDL);
-	parse_semi (cfile);
+	return;
+
+    bad:
+	dfree(nu_name, MDL);
+	dfree(nu, MDL);
 }
 
 /* This is faked up to look good right now.   Ideally, this should do a
@@ -1108,6 +1237,7 @@ int parse_option_code_definition (cfile, option)
 {
 	const char *val;
 	enum dhcp_token token;
+	struct option *oldopt;
 	unsigned arrayp = 0;
 	int recordp = 0;
 	int no_more_in_record = 0;
@@ -1355,14 +1485,22 @@ int parse_option_code_definition (cfile, option)
 		s [tokix++] = (arrayp > recordp) ? 'a' : 'A';
 	s [tokix] = 0;
 	option -> format = s;
-	if (option -> universe -> options [option -> code]) {
-		/* XXX Free the option, but we can't do that now because they
-		   XXX may start out static. */
+
+	oldopt = NULL;
+	option_code_hash_lookup(&oldopt, option->universe->code_hash,
+				&option->code, 0, MDL);
+	if (oldopt) {
+		option_name_hash_delete(option->universe->name_hash,
+					oldopt->name, 0, MDL);
+		option_code_hash_delete(option->universe->code_hash,
+					&oldopt->code, 0, MDL);
+
+		option_dereference(&oldopt, MDL);
 	}
-	option -> universe -> options [option -> code] = option;
-	option_hash_add (option -> universe -> hash,
-			 (const char *)option -> name,
-			 0, option, MDL);
+	option_code_hash_add(option->universe->code_hash, &option->code, 0,
+			     option, MDL);
+	option_name_hash_add(option->universe->name_hash, option->name, 0,
+			     option, MDL);
 	return 1;
 }
 
@@ -1662,25 +1800,29 @@ int parse_executable_statement (result, cfile, lose, case_context)
 	      case SEND:
 		token = next_token (&val, (unsigned *)0, cfile);
 		known = 0;
-		option = parse_option_name (cfile, 0, &known);
-		if (!option) {
+		status = parse_option_name (cfile, 0, &known, &option);
+		if (status != ISC_R_SUCCESS || option == NULL) {
 			*lose = 1;
 			return 0;
 		}
-		return parse_option_statement (result, cfile, 1, option,
-					       send_option_statement);
+		status = parse_option_statement(result, cfile, 1, option,
+						send_option_statement);
+		option_dereference(&option, MDL);
+		return status;
 
 	      case SUPERSEDE:
 	      case OPTION:
 		token = next_token (&val, (unsigned *)0, cfile);
 		known = 0;
-		option = parse_option_name (cfile, 0, &known);
-		if (!option) {
+		status = parse_option_name (cfile, 0, &known, &option);
+		if (status != ISC_R_SUCCESS || option == NULL) {
 			*lose = 1;
 			return 0;
 		}
-		return parse_option_statement (result, cfile, 1, option,
-					       supersede_option_statement);
+		status = parse_option_statement(result, cfile, 1, option,
+						supersede_option_statement);
+		option_dereference(&option, MDL);
+		return status;
 
 	      case ALLOW:
 		flag = 1;
@@ -1707,35 +1849,41 @@ int parse_executable_statement (result, cfile, lose, case_context)
 		if (token == COLON)
 			goto switch_default;
 		known = 0;
-		option = parse_option_name (cfile, 0, &known);
-		if (!option) {
+		status = parse_option_name (cfile, 0, &known, &option);
+		if (status != ISC_R_SUCCESS || option == NULL) {
 			*lose = 1;
 			return 0;
 		}
-		return parse_option_statement (result, cfile, 1, option,
-					       default_option_statement);
+		status = parse_option_statement(result, cfile, 1, option,
+						default_option_statement);
+		option_dereference(&option, MDL);
+		return status;
 
 	      case PREPEND:
 		token = next_token (&val, (unsigned *)0, cfile);
 		known = 0;
-		option = parse_option_name (cfile, 0, &known);
-		if (!option) {
+		status = parse_option_name (cfile, 0, &known, &option);
+		if (status != ISC_R_SUCCESS || option == NULL) {
 			*lose = 1;
 			return 0;
 		}
-		return parse_option_statement (result, cfile, 1, option,
-					       prepend_option_statement);
+		status = parse_option_statement(result, cfile, 1, option,
+						prepend_option_statement);
+		option_dereference(&option, MDL);
+		return status;
 
 	      case APPEND:
 		token = next_token (&val, (unsigned *)0, cfile);
 		known = 0;
-		option = parse_option_name (cfile, 0, &known);
-		if (!option) {
+		status = parse_option_name (cfile, 0, &known, &option);
+		if (status != ISC_R_SUCCESS || option == NULL) {
 			*lose = 1;
 			return 0;
 		}
-		return parse_option_statement (result, cfile, 1, option,
-					       append_option_statement);
+		status = parse_option_statement(result, cfile, 1, option,
+						append_option_statement);
+		option_dereference(&option, MDL);
+		return status;
 
 	      case ON:
 		token = next_token (&val, (unsigned *)0, cfile);
@@ -2095,14 +2243,17 @@ int parse_executable_statement (result, cfile, lose, case_context)
 	      default:
 		if (config_universe && is_identifier (token)) {
 			option = (struct option *)0;
-			option_hash_lookup (&option, config_universe -> hash,
-					    val, 0, MDL);
+			option_name_hash_lookup(&option,
+						config_universe->name_hash,
+						val, 0, MDL);
 			if (option) {
 				token = next_token (&val,
 						    (unsigned *)0, cfile);
-				return parse_option_statement
-					(result, cfile, 1, option,
-					 supersede_option_statement);
+				status = parse_option_statement
+						(result, cfile, 1, option,
+						 supersede_option_statement);
+				option_dereference(&option, MDL);
+				return status;
 			}
 		}
 
@@ -2978,8 +3129,11 @@ int parse_non_binary (expr, cfile, lose, context)
 			log_fatal ("can't allocate expression");
 		(*expr) -> op = expr_exists;
 		known = 0;
-		(*expr) -> data.option = parse_option_name (cfile, 0, &known);
-		if (!(*expr) -> data.option) {
+		/* Pass reference directly to expression structure. */
+		status = parse_option_name(cfile, 0, &known,
+					   &(*expr)->data.option);
+		if (status != ISC_R_SUCCESS ||
+		    (*expr)->data.option == NULL) {
 			*lose = 1;
 			expression_dereference (expr, MDL);
 			return 0;
@@ -3567,8 +3721,11 @@ int parse_non_binary (expr, cfile, lose, context)
 				 : expr_config_option);
 		token = next_token (&val, (unsigned *)0, cfile);
 		known = 0;
-		(*expr) -> data.option = parse_option_name (cfile, 0, &known);
-		if (!(*expr) -> data.option) {
+		/* Pass reference directly to expression structure. */
+		status = parse_option_name(cfile, 0, &known,
+					   &(*expr)->data.option);
+		if (status != ISC_R_SUCCESS ||
+		    (*expr)->data.option == NULL) {
 			*lose = 1;
 			expression_dereference (expr, MDL);
 			return 0;
@@ -4677,9 +4834,10 @@ int parse_option_decl (oc, cfile)
 	struct buffer *bp;
 	int known = 0;
 	struct enumeration_value *e;
+	isc_result_t status;
 
-	option = parse_option_name (cfile, 0, &known);
-	if (!option)
+	status = parse_option_name (cfile, 0, &known, &option);
+	if (status != ISC_R_SUCCESS || option == NULL)
 		return 0;
 
 	/* Parse the option data... */
@@ -4699,8 +4857,7 @@ int parse_option_decl (oc, cfile)
 					parse_warn (cfile,
 						    "malformed %s (bug!)",
 						    "encapsulation format");
-					skip_to_semi (cfile);
-					return 0;
+					goto parse_exit;
 				}
 			      case 'X':
 				len = parse_X (cfile, &hunkbuf [hunkix],
@@ -4714,15 +4871,13 @@ int parse_option_decl (oc, cfile)
 				if (token != STRING) {
 					parse_warn (cfile,
 						    "expecting string.");
-					skip_to_semi (cfile);
-					return 0;
+					goto parse_exit;
 				}
 				if (hunkix + len + 1 > sizeof hunkbuf) {
 					parse_warn (cfile,
 						    "option data buffer %s",
 						    "overflow");
-					skip_to_semi (cfile);
-					return 0;
+					goto parse_exit;
 				}
 				memcpy (&hunkbuf [hunkix], val, len + 1);
 				nul_term = 1;
@@ -4736,22 +4891,20 @@ int parse_option_decl (oc, cfile)
 					parse_warn (cfile,
 						    "malformed %s (bug!)",
 						    "enumeration format");
-				      foo:
-					skip_to_semi (cfile);
-					return 0;
+					goto parse_exit;
 				}
 				token = next_token (&val,
 						    (unsigned *)0, cfile);
 				if (!is_identifier (token)) {
 					parse_warn (cfile,
 						    "identifier expected");
-					goto foo;
+					goto parse_exit;
 				}
 				e = find_enumeration_value (f, fmt - f, val);
 				if (!e) {
 					parse_warn (cfile,
 						    "unknown value");
-					goto foo;
+					goto parse_exit;
 				}
 				len = 1;
 				dp = &e -> value;
@@ -4759,7 +4912,7 @@ int parse_option_decl (oc, cfile)
 
 			      case 'I': /* IP address. */
 				if (!parse_ip_addr (cfile, &ip_addr))
-					return 0;
+					goto exit;
 				len = ip_addr.len;
 				dp = ip_addr.iabuf;
 
@@ -4768,8 +4921,7 @@ int parse_option_decl (oc, cfile)
 					parse_warn (cfile,
 						    "option data buffer %s",
 						    "overflow");
-					skip_to_semi (cfile);
-					return 0;
+					goto parse_exit;
 				}
 				memcpy (&hunkbuf [hunkix], dp, len);
 				hunkix += len;
@@ -4785,8 +4937,9 @@ int parse_option_decl (oc, cfile)
 					parse_warn (cfile,
 						    "expecting number.");
 					if (token != SEMI)
-						skip_to_semi (cfile);
-					return 0;
+						goto parse_exit;
+					else
+						goto exit;
 				}
 				convert_num (cfile, buf, val, 0, 32);
 				len = 4;
@@ -4825,8 +4978,9 @@ int parse_option_decl (oc, cfile)
 						    "expecting identifier.");
 				      bad_flag:
 					if (token != SEMI)
-						skip_to_semi (cfile);
-					return 0;
+						goto parse_exit;
+					else
+						goto exit;
 				}
 				if (!strcasecmp (val, "true")
 				    || !strcasecmp (val, "on"))
@@ -4846,8 +5000,7 @@ int parse_option_decl (oc, cfile)
 			      default:
 				log_error ("parse_option_param: Bad format %c",
 				      *fmt);
-				skip_to_semi (cfile);
-				return 0;
+				goto parse_exit;
 			}
 		}
 		token = next_token (&val, (unsigned *)0, cfile);
@@ -4855,8 +5008,7 @@ int parse_option_decl (oc, cfile)
 
 	if (token != SEMI) {
 		parse_warn (cfile, "semicolon expected.");
-		skip_to_semi (cfile);
-		return 0;
+		goto parse_exit;
 	}
 
 	bp = (struct buffer *)0;
@@ -4873,8 +5025,16 @@ int parse_option_decl (oc, cfile)
 	(*oc) -> data.data = &bp -> data [0];
 	(*oc) -> data.terminated = nul_term;
 	(*oc) -> data.len = hunkix;
-	(*oc) -> option = option;
+	option_reference(&(*oc)->option, option, MDL);
+	option_dereference(&option, MDL);
 	return 1;
+
+parse_exit:
+	skip_to_semi (cfile);
+exit:
+	option_dereference(&option, MDL);
+
+	return 0;
 }
 
 /* Consider merging parse_cshl into this. */

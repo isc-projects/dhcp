@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.203 2006/05/17 20:15:32 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.204 2006/06/01 20:23:17 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1082,7 +1082,9 @@ void dhcpinform (packet, ms_nulltp)
 	if (option_cache_allocate (&oc, MDL)) {
 		if (make_const_data (&oc -> expression,
 				     &dhcpack, 1, 0, 0, MDL)) {
-			oc -> option = dhcp_universe.options [i];
+			option_code_hash_lookup(&oc->option,
+						dhcp_universe.code_hash,
+						&i, 0, MDL);
 			save_option (&dhcp_universe, options, oc);
 		}
 		option_cache_dereference (&oc, MDL);
@@ -1100,7 +1102,9 @@ void dhcpinform (packet, ms_nulltp)
 			      &packet -> interface -> addresses [0]),
 			     sizeof packet -> interface -> addresses [0],
 			     0, 0, MDL)) {
-				oc -> option = dhcp_universe.options [i];
+				option_code_hash_lookup(&oc->option,
+							dhcp_universe.code_hash,
+							&i, 0, MDL);
 				save_option (&dhcp_universe, options, oc);
 			}
 			option_cache_dereference (&oc, MDL);
@@ -1132,7 +1136,9 @@ void dhcpinform (packet, ms_nulltp)
 					     subnet -> netmask.iabuf,
 					     subnet -> netmask.len,
 					     0, 0, MDL)) {
-				oc -> option = dhcp_universe.options [i];
+				option_code_hash_lookup(&oc->option,
+							dhcp_universe.code_hash,
+							&i, 0, MDL);
 				save_option (&dhcp_universe, options, oc);
 			}
 			option_cache_dereference (&oc, MDL);
@@ -1335,7 +1341,9 @@ void nak_lease (packet, cip)
 		option_state_dereference (&options, MDL);
 		return;
 	}
-	oc -> option = dhcp_universe.options [DHO_DHCP_MESSAGE_TYPE];
+	i = DHO_DHCP_MESSAGE_TYPE;
+	option_code_hash_lookup(&oc->option, dhcp_universe.code_hash,
+				&i, 0, MDL);
 	save_option (&dhcp_universe, options, oc);
 	option_cache_dereference (&oc, MDL);
 		     
@@ -1353,7 +1361,9 @@ void nak_lease (packet, cip)
 		option_state_dereference (&options, MDL);
 		return;
 	}
-	oc -> option = dhcp_universe.options [DHO_DHCP_MESSAGE];
+	i = DHO_DHCP_MESSAGE;
+	option_code_hash_lookup(&oc->option, dhcp_universe.code_hash,
+				&i, 0, MDL);
 	save_option (&dhcp_universe, options, oc);
 	option_cache_dereference (&oc, MDL);
 		     
@@ -1369,8 +1379,9 @@ void nak_lease (packet, cip)
 			      &packet -> interface -> addresses [0]),
 			     sizeof packet -> interface -> addresses [0],
 			     0, 0, MDL)) {
-				oc -> option =
-					dhcp_universe.options [i];
+				option_code_hash_lookup(&oc->option,
+							dhcp_universe.code_hash,
+							&i, 0, MDL);
 				save_option (&dhcp_universe, options, oc);
 			}
 			option_cache_dereference (&oc, MDL);
@@ -2437,8 +2448,9 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 		if (option_cache_allocate (&oc, MDL)) {
 			if (make_const_data (&oc -> expression,
 					     &state -> offer, 1, 0, 0, MDL)) {
-				oc -> option =
-					dhcp_universe.options [i];
+				option_code_hash_lookup(&oc->option,
+							dhcp_universe.code_hash,
+							&i, 0, MDL);
 				save_option (&dhcp_universe,
 					     state -> options, oc);
 			}
@@ -2457,8 +2469,9 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 				      &state -> ip -> addresses [0]),
 				     sizeof state -> ip -> addresses [0],
 				     0, 0, MDL)) {
-					oc -> option =
-						dhcp_universe.options [i];
+					option_code_hash_lookup(&oc->option,
+							dhcp_universe.code_hash,
+							&i, 0, MDL);
 					save_option (&dhcp_universe,
 						     state -> options, oc);
 				}
@@ -2500,7 +2513,9 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 		if (option_cache_allocate (&oc, MDL)) {
 			if (make_const_data(&oc->expression, state->expiry,
 					    4, 0, 0, MDL)) {
-				oc -> option = dhcp_universe.options [i];
+				option_code_hash_lookup(&oc->option,
+							dhcp_universe.code_hash,
+							&i, 0, MDL);
 				save_option (&dhcp_universe,
 					     state -> options, oc);
 			}
@@ -2518,7 +2533,9 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 		if (option_cache_allocate (&oc, MDL)) {
 			if (make_const_data(&oc->expression, state->renewal,
 					    4, 0, 0, MDL)) {
-				oc -> option = dhcp_universe.options [i];
+				option_code_hash_lookup(&oc->option,
+							dhcp_universe.code_hash,
+							&i, 0, MDL);
 				save_option (&dhcp_universe,
 					     state -> options, oc);
 			}
@@ -2537,7 +2554,9 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 		if (option_cache_allocate (&oc, MDL)) {
 			if (make_const_data(&oc->expression, state->rebind,
 					    4, 0, 0, MDL)) {
-				oc -> option = dhcp_universe.options [i];
+				option_code_hash_lookup(&oc->option,
+							dhcp_universe.code_hash,
+							&i, 0, MDL);
 				save_option (&dhcp_universe,
 					     state -> options, oc);
 			}
@@ -2580,7 +2599,9 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 					     lease -> subnet -> netmask.iabuf,
 					     lease -> subnet -> netmask.len,
 					     0, 0, MDL)) {
-				oc -> option = dhcp_universe.options [i];
+				option_code_hash_lookup(&oc->option,
+							dhcp_universe.code_hash,
+							&i, 0, MDL);
 				save_option (&dhcp_universe,
 					     state -> options, oc);
 			}
@@ -2606,7 +2627,9 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 					      lease -> host -> name),
 					     strlen (lease -> host -> name),
 					     1, 0, MDL)) {
-				oc -> option = dhcp_universe.options [i];
+				option_code_hash_lookup(&oc->option,
+							dhcp_universe.code_hash,
+							&i, 0, MDL);
 				save_option (&dhcp_universe,
 					     state -> options, oc);
 			}
@@ -2638,8 +2661,9 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 						      h -> h_name),
 						     strlen (h -> h_name) + 1,
 						     1, 1, MDL)) {
-					oc -> option =
-						dhcp_universe.options [i];
+					option_code_hash_lookup(&oc->option,
+							dhcp_universe.code_hash,
+								&i, 0, MDL);
 					save_option (&dhcp_universe,
 						     state -> options, oc);
 				}
@@ -2666,8 +2690,9 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 						     lease -> ip_addr.iabuf,
 						     lease -> ip_addr.len,
 						     0, 0, MDL)) {
-					oc -> option =
-						dhcp_universe.options [i];
+					option_code_hash_lookup(&oc->option,
+							dhcp_universe.code_hash,
+								&i, 0, MDL);
 					save_option (&dhcp_universe,
 						     state -> options, oc);
 				}

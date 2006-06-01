@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: db.c,v 1.71 2006/04/27 17:26:42 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: db.c,v 1.72 2006/06/01 20:23:17 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -644,9 +644,9 @@ static int print_hash_string(FILE *fp, struct class *class)
 
 
 isc_result_t
-write_named_billing_class(const unsigned char *name, unsigned len,
-			  void *object)
+write_named_billing_class(const void *key, unsigned len, void *object)
 {
+	const unsigned char *name = key;
 	struct class *class = object;
 
 	if (class->flags & CLASS_DECL_DYNAMIC) {

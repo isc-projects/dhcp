@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.90 2006/05/30 19:58:14 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.91 2006/06/01 20:23:17 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -136,40 +136,47 @@ int parse_option_buffer (options, buffer, length, universe)
 	unsigned char *t;
 	const unsigned char *end = buffer + length;
 	unsigned len, offset;
-	int code;
+	unsigned code;
 	struct option_cache *op = (struct option_cache *)0;
 	struct buffer *bp = (struct buffer *)0;
+	struct option *option = NULL;
 
 	if (!buffer_allocate (&bp, length, MDL)) {
 		log_error ("no memory for option buffer.");
 		return 0;
 	}
 	memcpy (bp -> data, buffer, length);
-	
-	for (offset = 0; buffer [offset] != DHO_END && offset < length; ) {
-		code = buffer [offset];
+
+	for (offset = 0;
+	     (offset + universe->tag_size) > length &&
+	     (code = universe->get_tag(bp->data + offset)) != universe->end; ) {
+		offset += universe->tag_size;
+
 		/* Pad options don't have a length - just skip them. */
-		if (code == DHO_PAD) {
-			++offset;
+		if (code == DHO_PAD)
 			continue;
-		}
 
 		/* Don't look for length if the buffer isn't that big. */
-		if (offset + 2 > length) {
+		if (offset + universe->length_size > length) {
 			len = 65536;
 			goto bogus;
 		}
 
 		/* All other fields (except end, see above) have a
 		   one-byte length. */
-		len = buffer [offset + 1];
+		len = universe->get_length(bp->data + offset);
+
+		offset += universe->length_size;
+
+		option_code_hash_lookup(&option, universe->code_hash, &code,
+					0, MDL);
 
 		/* If the length is outrageous, the options are bad. */
-		if (offset + len + 2 > length) {
+		if (offset + len > length) {
 		      bogus:
-			log_error ("parse_option_buffer: option %s (%d) %s.",
-				   dhcp_options [code].name, len,
-				   "larger than buffer");
+			log_error ("parse_option_buffer: option %s (%u:%u) %s.",
+				   option ? option->name : "<unknown>",
+				   code, len, "larger than buffer");
 			buffer_dereference (&bp, MDL);
 			return 0;
 		}
@@ -178,12 +185,12 @@ int parse_option_buffer (options, buffer, length, universe)
 		   the parse fails, or the option isn't an encapsulation (by
 		   far the most common case), or the option isn't entirely
 		   an encapsulation, keep the raw data as well. */
-		if (universe -> options [code] &&
-		    !((universe -> options [code] -> format [0] == 'e' ||
-		       universe -> options [code] -> format [0] == 'E') &&
+		if (!(option &&
+		      (option->format[0] == 'e' ||
+		       option->format[0] == 'E') &&
 		      (parse_encapsulated_suboptions
-		       (options, universe -> options [code],
-			buffer + offset + 2, len,
+		       (options, option,
+			bp->data + offset, len,
 			universe, (const char *)0)))) {
 		    op = lookup_option (universe, options, code);
 		    if (op) {
@@ -194,22 +201,26 @@ int parse_option_buffer (options, buffer, length, universe)
 			    log_error ("parse_option_buffer: No memory.");
 			    return 0;
 			}
-			memcpy (new.buffer -> data, op -> data.data,
+			/* Copy old option to new data object. */
+			memcpy(new.buffer -> data, op -> data.data,
 				op -> data.len);
-			memcpy (&new.buffer -> data [op -> data.len],
-				&bp -> data [offset + 2], len);
+			/* Concat new option behind old. */
+			memcpy(new.buffer->data + op->data.len,
+				bp->data + offset, len);
 			new.len = op -> data.len + len;
 			new.data = new.buffer -> data;
+			/* Save new concat'd object. */
 			data_string_forget (&op -> data, MDL);
 			data_string_copy (&op -> data, &new, MDL);
 			data_string_forget (&new, MDL);
 		    } else {
 			save_option_buffer (universe, options, bp,
-					    &bp -> data [offset + 2], len,
-					    universe -> options [code], 1);
+					    bp->data + offset, len,
+					    code, 1);
 		    }
 		}
-		offset += len + 2;
+		option_dereference(&option, MDL);
+		offset += len;
 	}
 	buffer_dereference (&bp, MDL);
 	return 1;
@@ -316,9 +327,8 @@ int fqdn_universe_decode (struct option_state *options,
 		bp -> data [0] = 1;
 	else
 		bp -> data [0] = 0;
-	if (!save_option_buffer (&fqdn_universe, options, bp,
-				 &bp -> data [0], 1,
-				 &fqdn_options [FQDN_ENCODED], 0)) {
+	if (!save_option_buffer(&fqdn_universe, options, bp,
+				bp->data, 1, FQDN_ENCODED, 0)) {
 	      bad:
 		buffer_dereference (&bp, MDL);
 		return 0;
@@ -357,25 +367,24 @@ int fqdn_universe_decode (struct option_state *options,
 
 		/* Note: If the client sends a FQDN, the first '.' will
 		   be used as a NUL terminator for the hostname. */
-		if (i)
-			if (!save_option_buffer (&fqdn_universe, options, bp,
-						 &bp -> data[5], i,
-						 &fqdn_options [FQDN_HOSTNAME],
-						 0))
+		if (i && (!save_option_buffer(&fqdn_universe, options, bp,
+					      &bp->data[5], i,
+					      FQDN_HOSTNAME, 0)))
 			goto bad;
 		/* Note: If the client sends a single label, the
 		   FQDN_DOMAINNAME option won't be set. */
 		if (length > 4 + i &&
-		    !save_option_buffer (&fqdn_universe, options, bp,
+		    (!save_option_buffer(&fqdn_universe, options, bp,
 					 &bp -> data[6 + i], length - 4 - i,
-					 &fqdn_options [FQDN_DOMAINNAME], 1))
+					 FQDN_DOMAINNAME, 1)))
 			goto bad;
 		/* Also save the whole name. */
-		if (length > 3)
-			if (!save_option_buffer (&fqdn_universe, options, bp,
-						 &bp -> data [5], length - 3,
-						 &fqdn_options [FQDN_FQDN], 1))
+		if (length > 3) {
+			if (!save_option_buffer(&fqdn_universe, options, bp,
+						&bp -> data [5], length - 3,
+						FQDN_FQDN, 1))
 				goto bad;
+		}
 	} else {
 		unsigned len;
 		unsigned total_len = 0;
@@ -421,40 +430,40 @@ int fqdn_universe_decode (struct option_state *options,
 		}
 
 		if (first_len > 0 &&
-		    !save_option_buffer (&fqdn_universe, options, bp,
-					 &bp -> data[6], first_len,
-					 &fqdn_options [FQDN_HOSTNAME], 0))
+		    !save_option_buffer(&fqdn_universe, options, bp,
+					&bp -> data[6], first_len,
+					FQDN_HOSTNAME, 0))
 			goto bad;
 		if (total_len > 0 && first_len != total_len) {
-			if (!save_option_buffer
-			    (&fqdn_universe, options, bp,
-			     &bp -> data[6 + first_len], total_len - first_len,
-			     &fqdn_options [FQDN_DOMAINNAME], 1))
+			if (!save_option_buffer(&fqdn_universe, options, bp,
+						&bp->data[6 + first_len],
+						total_len - first_len,
+						FQDN_DOMAINNAME, 1))
 				goto bad;
 		}
 		if (total_len > 0)
 			if (!save_option_buffer (&fqdn_universe, options, bp,
 						 &bp -> data [6], total_len,
-						 &fqdn_options [FQDN_FQDN], 1))
+						 FQDN_FQDN, 1))
 				goto bad;
 	}
 
 	if (!save_option_buffer (&fqdn_universe, options, bp,
 				 &bp -> data [1], 1,
-				 &fqdn_options [FQDN_NO_CLIENT_UPDATE], 0))
+				 FQDN_NO_CLIENT_UPDATE, 0))
 	    goto bad;
 	if (!save_option_buffer (&fqdn_universe, options, bp,
 				 &bp -> data [2], 1,
-				 &fqdn_options [FQDN_SERVER_UPDATE], 0))
+				 FQDN_SERVER_UPDATE, 0))
 		goto bad;
 
 	if (!save_option_buffer (&fqdn_universe, options, bp,
 				 &bp -> data [3], 1,
-				 &fqdn_options [FQDN_RCODE1], 0))
+				 FQDN_RCODE1, 0))
 		goto bad;
 	if (!save_option_buffer (&fqdn_universe, options, bp,
 				 &bp -> data [4], 1,
-				 &fqdn_options [FQDN_RCODE2], 0))
+				 FQDN_RCODE2, 0))
 		goto bad;
 
 	buffer_dereference (&bp, MDL);
@@ -785,6 +794,7 @@ int store_options (ocount, buffer, buflen, packet, lease, client_state,
 	int bufend, sbufend;
 	struct data_string od;
 	struct option_cache *oc;
+	struct option *option=NULL;
 	unsigned code;
 
 	if (first_cutoff) {
@@ -835,6 +845,10 @@ int store_options (ocount, buffer, buflen, packet, lease, client_state,
 	    int splitup;
 
 	    memset (&encapsulation, 0, sizeof encapsulation);
+	    have_encapsulation = 0;
+
+	    if (option != NULL)
+		option_dereference(&option, MDL);
 
 	    /* Code for next option to try to store. */
 	    code = priority_list [i];
@@ -848,19 +862,24 @@ int store_options (ocount, buffer, buflen, packet, lease, client_state,
 
 	    oc = lookup_option (u, cfg_options, code);
 
+	    if (oc && oc->option)
+		option_reference(&option, oc->option, MDL);
+	    else
+		option_code_hash_lookup(&option, u->code_hash, &code, 0, MDL);
+
 	    /* It's an encapsulation, try to find the universe
 	       to be encapsulated first, except that if it's a straight
 	       encapsulation and the user has provided a value for the
 	       encapsulation option, use the user-provided value. */
-	    if (u -> options [code] &&
-		((u -> options [code] -> format [0] == 'E' && !oc) ||
-		 u -> options [code] -> format [0] == 'e')) {
+	    if ((option != NULL) &&
+		((option->format[0] == 'E' && oc != NULL) ||
+		 (option->format[0] == 'e'))) {
 		int uix;
 		static char *s, *t;
 		struct option_cache *tmp;
 		struct data_string name;
 
-		s = strchr (u -> options [code] -> format, 'E');
+		s = strchr (option->format, 'E');
 		if (s)
 		    t = strchr (++s, '.');
 		if (s && t) {
@@ -914,14 +933,23 @@ int store_options (ocount, buffer, buflen, packet, lease, client_state,
 	    }
 	    
 	    /* Find the value of the option... */
+	    od.len = 0;
 	    if (oc) {
 		evaluate_option_cache (&od, packet,
 				       lease, client_state, in_options,
 				       cfg_options, scope, oc, MDL);
+
+		/* If we have encapsulation for this option, and an oc
+		 * lookup succeeded, but the evaluation failed, it is
+		 * either because this is a complex atom (atoms before
+		 * E on format list) and the top half of the option is
+		 * not configured, or this is a simple encapsulated
+		 * space and the evaluator is giving us a NULL.  Prefer
+		 * the evaluator's opinion over the subspace.
+		 */
 		if (!od.len) {
 		    data_string_forget (&encapsulation, MDL);
 		    data_string_forget (&od, MDL);
-		    have_encapsulation = 0;
 		    continue;
 		}
 	    }
@@ -930,6 +958,11 @@ int store_options (ocount, buffer, buflen, packet, lease, client_state,
 	    length = od.len;
 	    if (have_encapsulation) {
 		    length += encapsulation.len;
+
+		    /* od.len can be nonzero if we got here without an
+		     * oc (cache lookup failed), but did have an enapculated
+		     * simple encapsulation space.
+		     */
 		    if (!od.len) {
 			    data_string_copy (&od, &encapsulation, MDL);
 			    data_string_forget (&encapsulation, MDL);
@@ -955,7 +988,7 @@ int store_options (ocount, buffer, buflen, packet, lease, client_state,
 	    }
 
 	    /* Do we add a NUL? */
-	    if (terminate && dhcp_options [code].format [0] == 't') {
+	    if (terminate && option && format_has_text(option->format)) {
 		    length++;
 		    tto = 1;
 	    } else {
@@ -968,7 +1001,6 @@ int store_options (ocount, buffer, buflen, packet, lease, client_state,
 	       in multiple hunks.   Store 255-byte hunks first.  However,
 	       in any case, if the option data will cross a buffer
 	       boundary, split it across that boundary. */
-
 
 	    if (length > 255)
 		splitup = 1;
@@ -1055,6 +1087,9 @@ int store_options (ocount, buffer, buflen, packet, lease, client_state,
 	    }
 	    data_string_forget (&od, MDL);
 	}
+
+	if (option != NULL)
+	    option_dereference(&option, MDL);
 
 	/* If we can overload, and we have, then PAD and END those spaces. */
 	if (first_cutoff && six) {
@@ -1655,17 +1690,66 @@ int save_option_buffer (struct universe *universe,
 			struct option_state *options,
 			struct buffer *bp,
 			unsigned char *buffer, unsigned length,
-			struct option *option, int tp)
+			unsigned code, int tp)
 {
 	struct buffer *lbp = (struct buffer *)0;
 	struct option_cache *op = (struct option_cache *)0;
+	struct option *option = NULL;
+
+	/* Code sizes of 8, 16, and 32 bits are allowed. */
+	switch(universe->tag_size) {
+	      case 1:
+		if (code > 0xff)
+			return 0;
+		break;
+	      case 2:
+		if (code > 0xffff)
+			return 0;
+		break;
+	      case 4:
+		if (code > 0xffffffff)
+			return 0;
+		break;
+
+	      default:
+		log_fatal("Inconstent universe tag size at %s:%d.", MDL);
+	}
+
+	option_code_hash_lookup(&option, universe->code_hash, &code, 0, MDL);
+
+	/* If we created an option structure for each option a client
+	 * supplied, it's possible we may create > 2^32 option structures.
+	 * That's not feasible.  So by failing to enter these option
+	 * structures into the code and name hash tables, references will
+	 * never be more than 1 - when the option cache is destroyed, this
+	 * will be cleaned up.
+	 */
+	if (!option) {
+		char nbuf[sizeof("unknown-4294967295")];
+
+		sprintf(nbuf, "unknown-%u", code);
+
+		option = new_option(nbuf, MDL);
+
+		if (!option)
+			return 0;
+
+		option->format = default_option_format;
+		option->universe = universe;
+		option->code = code;
+
+		/* new_option() doesn't set references, pretend. */
+		option->refcnt = 1;
+	}
 
 	if (!option_cache_allocate (&op, MDL)) {
-		log_error ("No memory for option %s.%s.",
-			   universe -> name,
-			   option -> name);
+		log_error("No memory for option code %s.%s.",
+			  universe->name, option->name);
+		option_dereference(&option, MDL);
 		return 0;
 	}
+
+	option_reference(&op->option, option, MDL);
 
 	/* If we weren't passed a buffer in which the data are saved and
 	   refcounted, allocate one now. */
@@ -1674,6 +1758,7 @@ int save_option_buffer (struct universe *universe,
 			log_error ("no memory for option buffer.");
 
 			option_cache_dereference (&op, MDL);
+			option_dereference(&option, MDL);
 			return 0;
 		}
 		memcpy (lbp -> data, buffer, length + tp);
@@ -1684,11 +1769,11 @@ int save_option_buffer (struct universe *universe,
 	/* Reference buffer copy to option cache. */
 	op -> data.buffer = (struct buffer *)0;
 	buffer_reference (&op -> data.buffer, bp, MDL);
-		
+
 	/* Point option cache into buffer. */
 	op -> data.data = buffer;
 	op -> data.len = length;
-			
+
 	if (tp) {
 		/* NUL terminate (we can get away with this because we (or
 		   the caller!) allocated one more than the buffer size, and
@@ -1699,8 +1784,6 @@ int save_option_buffer (struct universe *universe,
 		op -> data.terminated = 1;
 	} else
 		op -> data.terminated = 0;
-	
-	op -> option = option;
 
 	/* If this option is ultimately a text option, null determinate to
 	 * comply with RFC2132 section 2.  Mark a flag so this can be sensed
@@ -1720,8 +1803,9 @@ int save_option_buffer (struct universe *universe,
 	/* Now store the option. */
 	save_option (universe, options, op);
 
-	/* And let go of our reference. */
+	/* And let go of our references. */
 	option_cache_dereference (&op, MDL);
+	option_dereference(&option, MDL);
 
 	return 1;
 }
@@ -1861,6 +1945,8 @@ int option_cache_dereference (ptr, file, line)
 	if (!(*ptr) -> refcnt) {
 		if ((*ptr) -> data.buffer)
 			data_string_forget (&(*ptr) -> data, file, line);
+		if ((*ptr)->option)
+			option_dereference(&(*ptr)->option, MDL);
 		if ((*ptr) -> expression)
 			expression_dereference (&(*ptr) -> expression,
 						file, line);
@@ -2073,13 +2159,19 @@ int nwip_option_space_encapsulate (result, packet, lease, client_state,
 	   a suboption saying there's no data. */
 	if (!status) {
 		if (!no_nwip) {
+			unsigned one = 1;
 			static unsigned char nni [] = { 1, 0 };
+
 			memset (&ds, 0, sizeof ds);
 			ds.data = nni;
 			ds.len = 2;
 			if (option_cache_allocate (&no_nwip, MDL))
 				data_string_copy (&no_nwip -> data, &ds, MDL);
-			no_nwip -> option = nwip_universe.options [1];
+			if (!option_code_hash_lookup(&no_nwip->option,
+						     nwip_universe.code_hash,
+						     &one, 0, MDL))
+				log_fatal("Nwip option hash does not contain "
+					  "1 (%s:%d).", MDL);
 		}
 		if (no_nwip) {
 			if (store_option (result, universe, packet, lease,
@@ -2550,4 +2642,3 @@ void do_packet (interface, packet, len, from_port, from, hfrom)
 	dump_rc_history (0);
 #endif
 }
-

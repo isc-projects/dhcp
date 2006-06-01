@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: clparse.c,v 1.66 2006/05/15 15:07:49 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: clparse.c,v 1.67 2006/06/01 20:23:16 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -239,7 +239,7 @@ void parse_client_statement (cfile, ip, config)
 {
 	int token;
 	const char *val;
-	struct option *option;
+	struct option *option = NULL;
 	struct executable_statement *stmt, **p;
 	enum statement_op op;
 	int lose;
@@ -363,15 +363,15 @@ void parse_client_statement (cfile, ip, config)
 			return;
 		}
 
-		option = parse_option_name (cfile, 1, &known);
-		if (!option)
+		status = parse_option_name(cfile, 1, &known, &option);
+		if (status != ISC_R_SUCCESS || option == NULL)
 			return;
 
 		token = next_token (&val, (unsigned *)0, cfile);
 		if (token != CODE) {
 			parse_warn (cfile, "expecting \"code\" keyword.");
 			skip_to_semi (cfile);
-			free_option (option, MDL);
+			option_dereference(&option, MDL);
 			return;
 		}
 		if (ip) {
@@ -379,11 +379,11 @@ void parse_client_statement (cfile, ip, config)
 				    "option definitions may only appear in %s",
 				    "the outermost scope.");
 			skip_to_semi (cfile);
-			free_option (option, MDL);
+			option_dereference(&option, MDL);
 			return;
 		}
-		if (!parse_option_code_definition (cfile, option))
-			free_option (option, MDL);
+		parse_option_code_definition(cfile, option);
+		option_dereference(&option, MDL);
 		return;
 
 	      case MEDIA:
@@ -610,7 +610,8 @@ void parse_option_list (cfile, list)
 	int token;
 	const char *val;
 	pair p = (pair)0, q = (pair)0, r;
-	struct option *option;
+	struct option *option = NULL;
+	isc_result_t status;
 
 	ix = 0;
 	do {
@@ -625,8 +626,8 @@ void parse_option_list (cfile, list)
 			skip_to_semi (cfile);
 			return;
 		}
-		option = parse_option_name (cfile, 0, NULL);
-		if (!option) {
+		status = parse_option_name(cfile, 0, NULL, &option);
+		if (status != ISC_R_SUCCESS || option == NULL) {
 			parse_warn (cfile, "%s: expected option name.", val);
 			return;
 		}
@@ -635,12 +636,14 @@ void parse_option_list (cfile, list)
 				"%s.%s: Only global options allowed.",
 				option -> universe -> name, option->name );
 			skip_to_semi (cfile);
+			option_dereference(&option, MDL);
 			return;
 		}
 		r = new_pair (MDL);
 		if (!r)
 			log_fatal ("can't allocate pair for option code.");
 		r -> car = (caddr_t)(long)option -> code;
+		option_dereference(&option, MDL);
 		r -> cdr = (pair)0;
 		if (p)
 			q -> cdr = r;

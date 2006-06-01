@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: auth.c,v 1.5 2005/03/17 20:15:20 dhankins Exp $ Copyright 2004 Internet Systems Consortium.";
+"$Id: auth.c,v 1.6 2006/06/01 20:23:17 dhankins Exp $ Copyright 2004 Internet Systems Consortium.";
 #endif
 
 #include <omapip/omapip_p.h>
@@ -46,7 +46,8 @@ HASH_FUNCTIONS_DECL (omapi_auth_key, const char *,
 omapi_auth_hash_t *auth_key_hash;
 HASH_FUNCTIONS (omapi_auth_key, const char *, omapi_auth_key_t,
 		omapi_auth_hash_t,
-		omapi_auth_key_reference, omapi_auth_key_dereference)
+		omapi_auth_key_reference, omapi_auth_key_dereference,
+		do_case_hash)
 
 isc_result_t omapi_auth_key_new (omapi_auth_key_t **o, const char *file,
 				 int line)
@@ -97,7 +98,8 @@ isc_result_t omapi_auth_key_enter (omapi_auth_key_t *a)
 			omapi_auth_key_dereference (&tk, MDL);
 		}
 	} else {
-		if (!omapi_auth_key_new_hash (&auth_key_hash, 1, MDL))
+		if (!omapi_auth_key_new_hash(&auth_key_hash,
+					     KEY_HASH_SIZE, MDL))
 			return ISC_R_NOMEMORY;
 	}
 	omapi_auth_key_hash_add (auth_key_hash, a -> name, 0, a, MDL);

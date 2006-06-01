@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: conflex.c,v 1.97 2006/05/11 16:31:29 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: conflex.c,v 1.98 2006/06/01 20:23:17 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -756,6 +756,8 @@ static enum dhcp_token intern (atom, dfv)
 			return GET_LEASE_HOSTNAMES;
 		break;
 	      case 'h':
+		if (!strcasecmp(atom + 1, "ash"))
+			return HASH;
 		if (!strcasecmp (atom + 1, "ba"))
 			return HBA;
 		if (!strcasecmp (atom + 1, "ost"))
@@ -813,6 +815,8 @@ static enum dhcp_token intern (atom, dfv)
 			return LEASED_ADDRESS;
 		if (!strcasecmp (atom + 1, "ease-time"))
 			return LEASE_TIME;
+		if (!strcasecmp(atom + 1, "ength"))
+			return LENGTH;
 		if (!strcasecmp (atom + 1, "imit"))
 			return LIMIT;
 		if (!strcasecmp (atom + 1, "et"))
@@ -990,71 +994,121 @@ static enum dhcp_token intern (atom, dfv)
 			return REFRESH;
 		break;
 	      case 's':
-		if (!strcasecmp (atom + 1, "tate"))
-			return STATE;
-		if (!strcasecmp (atom + 1, "ecret"))
-			return SECRET;
-		if (!strcasecmp (atom + 1, "ervfail"))
-			return NS_SERVFAIL;
-		if (!strcasecmp (atom + 1, "witch"))
-			return SWITCH;
-		if (!strcasecmp (atom + 1, "igned"))
-			return SIGNED;
-		if (!strcasecmp (atom + 1, "tring"))
-			return STRING_TOKEN;
-		if (!strcasecmp (atom + 1, "uffix"))
-			return SUFFIX;
-		if (!strcasecmp (atom + 1, "earch"))
-			return SEARCH;
-		if (!strcasecmp (atom + 1, "tarts"))
-			return STARTS;
-		if (!strcasecmp (atom + 1, "iaddr"))
-			return SIADDR;
-		if (!strcasecmp (atom + 1, "hared-network"))
-			return SHARED_NETWORK;
-		if (!strcasecmp (atom + 1, "econdary"))
-			return SECONDARY;
-		if (!strcasecmp (atom + 1, "erver-name"))
-			return SERVER_NAME;
-		if (!strcasecmp (atom + 1, "erver-identifier"))
-			return SERVER_IDENTIFIER;
-		if (!strcasecmp (atom + 1, "erver"))
-			return SERVER;
-		if (!strcasecmp (atom + 1, "elect-timeout"))
-			return SELECT_TIMEOUT;
-		if (!strcasecmp (atom + 1, "elect"))
-			return SELECT;
-		if (!strcasecmp (atom + 1, "end"))
-			return SEND;
-		if (!strcasecmp (atom + 1, "cript"))
-			return SCRIPT;
-		if (!strcasecmp (atom + 1, "upersede"))
-			return SUPERSEDE;
-		if (!strncasecmp (atom + 1, "ub", 2)) {
-			if (!strcasecmp (atom + 3, "string"))
-				return SUBSTRING;
-			if (!strcasecmp (atom + 3, "net"))
-				return SUBNET;
-			if (!strcasecmp (atom + 3, "class"))
-				return SUBCLASS;
+                if (!strcasecmp(atom + 1, "cript"))
+                        return SCRIPT;
+		if (tolower(atom[1]) == 'e') {
+                        if (!strcasecmp(atom + 2, "arch"))
+                                return SEARCH;
+			if (tolower(atom[2]) == 'c') {
+				if (!strcasecmp(atom + 3, "ond")) {
+                                        if (!strcasecmp(atom + 6, "ary"))
+                                                return SECONDARY;
+                                        if (!strcasecmp(atom + 6, "s"))
+                                                return SECONDS;
+					break;
+				}
+                                if (!strcasecmp(atom + 3, "ret"))
+                                        return SECRET;
+				break;
+			}
+			if (!strncasecmp(atom + 2, "lect", 4)) {
+                                if (atom[6] == '\0')
+                                        return SELECT;
+                                if (!strcasecmp(atom + 6, "-timeout"))
+                                        return SELECT_TIMEOUT;
+				break;
+			}
+                        if (!strcasecmp(atom + 2, "nd"))
+                                return SEND;
+			if (!strncasecmp(atom + 2, "rv", 2)) {
+				if (!strncasecmp(atom + 4, "er", 2)) {
+                                        if (atom[6] == '\0')
+                                                return SERVER;
+					if (atom[6] == '-') {
+                                                if (!strcasecmp(atom + 7,
+								"name"))
+                                                        return SERVER_NAME;
+                                                if (!strcasecmp(atom + 7,
+								"identifier"))
+                                                      return SERVER_IDENTIFIER;
+						break;
+					}
+					break;
+				}
+                                if (!strcasecmp(atom + 4, "fail"))
+                                        return NS_SERVFAIL;
+				break;
+			}
+                        if (!strcasecmp(atom + 2, "t"))
+                                return TOKEN_SET;
 			break;
 		}
-		if (!strcasecmp (atom + 1, "pawn"))
-			return SPAWN;
-		if (!strcasecmp (atom + 1, "pace"))
-			return SPACE;
-		if (!strcasecmp (atom + 1, "tatic"))
-			return STATIC;
-		if (!strcasecmp (atom + 1, "plit"))
-			return SPLIT;
-		if (!strcasecmp (atom + 1, "et"))
-			return TOKEN_SET;
-		if (!strcasecmp (atom + 1, "econds"))
-			return SECONDS;
-		if (!strcasecmp (atom + 1, "hutdown"))
-			return SHUTDOWN;
-		if (!strcasecmp (atom + 1, "tartup"))
-			return STARTUP;
+		if (tolower(atom[1]) == 'h') {
+                        if (!strcasecmp(atom + 2, "ared-network"))
+                                return SHARED_NETWORK;
+                        if (!strcasecmp(atom + 2, "utdown"))
+                                return SHUTDOWN;
+			break;
+		}
+		if (tolower(atom[1]) == 'i') {
+                        if (!strcasecmp(atom + 2, "addr"))
+                                return SIADDR;
+                        if (!strcasecmp(atom + 2, "gned"))
+                                return SIGNED;
+                        if (!strcasecmp(atom + 2, "ze"))
+                                return SIZE;
+			break;
+		}
+		if (tolower(atom[1]) == 'p') {
+			if (tolower(atom[2]) == 'a') {
+                                if (!strcasecmp(atom + 3, "ce"))
+                                        return SPACE;
+                                if (!strcasecmp(atom + 3, "wn"))
+                                        return SPAWN;
+				break;
+			}
+                        if (!strcasecmp(atom + 2, "lit"))
+                                return SPLIT;
+			break;
+		}
+		if (tolower(atom[1]) == 't') {
+			if (tolower(atom[2]) == 'a') {
+				if(strncasecmp(atom + 3, "rt", 2)) {
+                                         if (!strcasecmp(atom + 5, "s"))
+                                                 return STARTS;
+                                         if (!strcasecmp(atom + 5, "up"))
+                                                 return STARTUP;
+					break;
+				}
+				if (tolower(atom[3]) == 't') {
+                                        if (!strcasecmp(atom + 4, "e"))
+                                                return STATE;
+                                        if (!strcasecmp(atom + 4, "ic"))
+                                                return STATIC;
+					break;
+				}
+			}
+                        if (!strcasecmp(atom + 2, "ring"))
+                                return STRING_TOKEN;
+			break;
+		}
+                if (!strncasecmp(atom + 1, "ub", 2)) {
+                        if (!strcasecmp(atom + 3, "class"))
+                                return SUBCLASS;
+                        if (!strcasecmp(atom + 3, "net"))
+                                return SUBNET;
+                        if (!strcasecmp(atom + 3, "string"))
+                                return SUBSTRING;
+                        break;
+                }
+		if (tolower(atom[1]) == 'u') {
+                        if (!strcasecmp(atom + 2, "ffix"))
+                                return SUFFIX;
+                        if (!strcasecmp(atom + 2, "persede"))
+                                return SUPERSEDE;
+		}
+                if (!strcasecmp(atom + 1, "witch"))
+                        return SWITCH;
 		break;
 	      case 't':
 		if (!strcasecmp (atom + 1, "imestamp"))
@@ -1116,6 +1170,8 @@ static enum dhcp_token intern (atom, dfv)
 	      case 'w':
 		if (!strcasecmp (atom + 1, "ith"))
 			return WITH;
+		if (!strcasecmp(atom + 1, "idth"))
+			return WIDTH;
 		break;
 	      case 'y':
 		if (!strcasecmp (atom + 1, "iaddr"))

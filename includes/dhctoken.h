@@ -312,6 +312,10 @@ enum dhcp_token {
 	ATSFP = 616,
 	LCASE = 617,
 	UCASE = 618
+	WIDTH = 619,
+	LENGTH = 620,
+	HASH = 621,
+	SIZE = 622
 };
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\

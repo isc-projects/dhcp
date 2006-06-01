@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: alloc.c,v 1.56 2006/02/24 23:16:28 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: alloc.c,v 1.57 2006/06/01 20:23:17 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -313,28 +313,24 @@ void free_name_server (ptr, file, line)
 	dfree ((VOIDPTR)ptr, file, line);
 }
 
-struct option *new_option (file, line)
+struct option *new_option (name, file, line)
+	const char *name;
 	const char *file;
 	int line;
 {
-	struct option *rval =
-		dmalloc (sizeof (struct option), file, line);
-	if (rval)
-		memset (rval, 0, sizeof *rval);
-	return rval;
-}
+	struct option *rval;
+	int len;
 
-void free_option (ptr, file, line)
-	struct option *ptr;
-	const char *file;
-	int line;
-{
-/* XXX have to put all options on heap before this is possible. */
-#if 0
-	if (ptr -> name)
-		dfree ((VOIDPTR)option -> name, file, line);
-	dfree ((VOIDPTR)ptr, file, line);
-#endif
+	len = strlen(name);
+
+	rval = dmalloc(sizeof(struct option) + len + 1, file, line);
+
+	if(rval) {
+		memcpy(rval + 1, name, len);
+		rval->name = (char *)(rval + 1);
+	}
+
+	return rval;
 }
 
 struct universe *new_universe (file, line)

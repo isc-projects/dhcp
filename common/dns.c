@@ -33,7 +33,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dns.c,v 1.38 2006/02/24 23:16:28 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dns.c,v 1.39 2006/06/01 20:23:17 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -192,7 +192,7 @@ isc_result_t enter_dns_zone (struct dns_zone *zone)
 			dns_zone_dereference (&tz, MDL);
 		}
 	} else {
-		if (!dns_zone_new_hash (&dns_zone_hash, 1, MDL))
+		if (!dns_zone_new_hash(&dns_zone_hash, DNS_HASH_SIZE, MDL))
 			return ISC_R_NOMEMORY;
 	}
 	dns_zone_hash_add (dns_zone_hash, zone -> name, 0, zone, MDL);
@@ -963,4 +963,4 @@ isc_result_t ddns_remove_a (struct data_string *ddns_fwd_name,
 #endif /* NSUPDATE */
 
 HASH_FUNCTIONS (dns_zone, const char *, struct dns_zone, dns_zone_hash_t,
-		dns_zone_reference, dns_zone_dereference)
+		dns_zone_reference, dns_zone_dereference, do_case_hash)

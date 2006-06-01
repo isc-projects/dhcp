@@ -1,4 +1,4 @@
-.\"	$Id: dhcp-options.5,v 1.28 2006/05/05 20:32:30 dhankins Exp $
+.\"	$Id: dhcp-options.5,v 1.29 2006/06/01 20:23:17 dhankins Exp $
 .\"
 .\" Copyright (c) 2004-2006 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 1996-2003 by Internet Software Consortium
@@ -1475,13 +1475,37 @@ use the \fRoption space\fP statement:
 .B option
 .B space
 .I name
-.B ;
+.B [ [ code width
+.I number
+.B ] [ length width
+.I number
+.B ] [ hash size
+.I number
+.B ] ] ;
+.PP
+Where the numbers following \fBcode width\fR, \fBlength width\fR,
+and \fBhash size\fR respectively identify the number of bytes used to
+describe option codes, option lengths, and the size in buckets of the
+hash tables to hold options in this space.
+.PP
+The code and length widths are used in DHCP protocol - you must configure
+these numbers to match the applicable option space you are configuring.
+They each default to 1.  Valid values for code widths are 1, 2 or 4.
+Valid values for length widths are 1 or 2.
+.PP
+The hash size defaults depend upon the \fBcode width\fR selected, and
+may be 254 or 1009.  Valid values range between 1 and 65535.  Note
+that the higher you configure this value, the more memory will be used.  It
+is considered good practice to configure a value that is slightly larger
+than the estimated number of options you plan to configure within the
+space.  Due to limitations in previous versions of ISC DHCP (up to and
+including DHCP 3.0.*), this value was fixed at 9973.
 .PP
 The name can then be used in option definitions, as described earlier in
 this document.   For example:
 .nf
 
-option space SUNW;
+option space SUNW code width 1 length width 1 hash size 3;
 option SUNW.server-address code 2 = ip-address;
 option SUNW.server-name code 3 = text;
 option SUNW.root-path code 4 = text;

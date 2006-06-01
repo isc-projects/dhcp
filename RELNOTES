@@ -95,6 +95,10 @@ and for prodding me into improving it.
   appear at the parameter request list.  Up until now it had ultimate
   priority over the client's parameter request list.
 
+- Varying option space code and length bit widths (8/16/32) are now
+  supported.  This is a milestone in acheiving RFC 3925 "VIVSO" and
+  DHCPv6 support.
+
 			Changes since 3.0.4
 
 - A warning that host statements declared within subnet or shared-network

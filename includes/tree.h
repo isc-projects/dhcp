@@ -324,18 +324,22 @@ struct universe {
 			    struct option_state *, struct option_state *,
 			    struct binding_scope **,
 			    struct universe *);
+	u_int32_t (*get_tag) (const unsigned char *);
 	void (*store_tag) PROTO ((unsigned char *, u_int32_t));
+	u_int32_t (*get_length) (const unsigned char *);
 	void (*store_length) PROTO ((unsigned char *, u_int32_t));
 	int tag_size, length_size;
-	option_hash_t *hash;
-	struct option *options [256];
+	unsigned end;
+	option_name_hash_t *name_hash;
+	option_code_hash_t *code_hash;
 	struct option *enc_opt;
 	int index;
 };
 
 struct option {
-	const char *name;
-	const char *format;
+	char *name;
+	char *format;
 	struct universe *universe;
 	unsigned code;
+	int refcnt;
 };

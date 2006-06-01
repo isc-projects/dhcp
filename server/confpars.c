@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.153 2006/05/11 16:35:56 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.154 2006/06/01 20:23:17 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -340,12 +340,13 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 	struct data_string data;
 	struct hardware hardware;
 	struct executable_statement *et, *ep;
-	struct option *option;
+	struct option *option = NULL;
 	struct option_cache *cache;
 	int lose;
 	struct data_string key_id;
 	int known;
 	isc_result_t status;
+	unsigned code;
 
 	token = peek_token (&val, (unsigned *)0, cfile);
 
@@ -592,7 +593,11 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		/* "server-identifier" is a special hack, equivalent to
 		   "option dhcp-server-identifier". */
 	      case SERVER_IDENTIFIER:
-		option = dhcp_universe.options [DHO_DHCP_SERVER_IDENTIFIER];
+		code = DHO_DHCP_SERVER_IDENTIFIER;
+		if (!option_code_hash_lookup(&option, dhcp_universe.code_hash,
+					     &code, 0, MDL))
+			log_fatal("Server identifier not in hash (%s:%d).",
+				  MDL);
 		token = next_token (&val, (unsigned *)0, cfile);
 		goto finish_option;
 
@@ -612,8 +617,8 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		}
 
 		known = 0;
-		option = parse_option_name (cfile, 1, &known);
-		if (option) {
+		status = parse_option_name(cfile, 1, &known, &option);
+		if (status == ISC_R_SUCCESS) {
 			token = peek_token (&val, (unsigned *)0, cfile);
 			if (token == CODE) {
 				if (type != ROOT_GROUP) {
@@ -621,13 +626,12 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 						    "option definitions%s",
 						    " may not be scoped.");
 					skip_to_semi (cfile);
-					free_option (option, MDL);
+					option_dereference(&option, MDL);
 					break;
 				}
 				next_token (&val, (unsigned *)0, cfile);
-				if (!parse_option_code_definition (cfile,
-								   option))
-					free_option (option, MDL);
+				parse_option_code_definition(cfile, option);
+				option_dereference(&option, MDL);
 				return declaration;
 			}
 
@@ -638,7 +642,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 					    option -> universe -> name,
 					    option -> name);
 				skip_to_semi (cfile);
-				free_option (option, MDL);
+				option_dereference(&option, MDL);
 				return declaration;
 			}
 
@@ -648,6 +652,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 				(&et, cfile, 1, option,
 				 supersede_option_statement))
 				return declaration;
+			option_dereference(&option, MDL);
 			goto insert_statement;
 		} else
 			return declaration;
@@ -1841,6 +1846,7 @@ int parse_class_declaration (cp, cfile, group, type)
 	isc_result_t status = ISC_R_FAILURE;
 	int matchedonce = 0;
 	int submatchedonce = 0;
+	unsigned code;
 
 	token = next_token (&val, (unsigned *)0, cfile);
 	if (token != STRING) {
@@ -1954,7 +1960,7 @@ int parse_class_declaration (cp, cfile, group, type)
 			}
 			data_string_copy (&class -> hash_string, &data, MDL);
 			if (!pc -> hash &&
-			    !class_new_hash (&pc -> hash, 0, MDL))
+			    !class_new_hash (&pc->hash, SCLASS_HASH_SIZE, MDL))
 				log_fatal ("No memory for subclass hash.");
 			class_hash_add (pc -> hash,
 					(const char *)class -> hash_string.data,
@@ -1978,11 +1984,13 @@ int parse_class_declaration (cp, cfile, group, type)
 			if (option_cache_allocate (&stmt -> data.option,
 						   MDL)) {
 				stmt -> data.option -> data = data;
-				stmt -> data.option -> option =
-					dhcp_universe.options
-					[(type == CLASS_TYPE_VENDOR)
+				code = (type == CLASS_TYPE_VENDOR)
 					? DHO_VENDOR_CLASS_IDENTIFIER
-					: DHO_USER_CLASS];
+					: DHO_USER_CLASS;
+				option_code_hash_lookup(
+						&stmt->data.option->option,
+							dhcp_universe.code_hash,
+							&code, 0, MDL);
 			}
 			class -> statements = stmt;
 		}
@@ -3340,6 +3348,8 @@ int parse_allow_deny (oc, cfile, flag)
 	enum dhcp_token token;
 	const char *val;
 	unsigned char rf = flag;
+	unsigned code;
+	struct option *option = NULL;
 	struct expression *data = (struct expression *)0;
 	int status;
 
@@ -3349,42 +3359,31 @@ int parse_allow_deny (oc, cfile, flag)
 	token = next_token (&val, (unsigned *)0, cfile);
 	switch (token) {
 	      case TOKEN_BOOTP:
-		status = option_cache (oc, (struct data_string *)0, data,
-				       &server_options [SV_ALLOW_BOOTP], MDL);
+		code = SV_ALLOW_BOOTP;
 		break;
 
 	      case BOOTING:
-		status = option_cache (oc, (struct data_string *)0, data,
-				       &server_options [SV_ALLOW_BOOTING],
-				       MDL);
+		code = SV_ALLOW_BOOTING;
 		break;
 
 	      case DYNAMIC_BOOTP:
-		status = option_cache (oc, (struct data_string *)0, data,
-				       &server_options [SV_DYNAMIC_BOOTP],
-				       MDL);
+		code = SV_DYNAMIC_BOOTP;
 		break;
 
 	      case UNKNOWN_CLIENTS:
-		status = (option_cache
-			  (oc, (struct data_string *)0, data,
-			   &server_options [SV_BOOT_UNKNOWN_CLIENTS], MDL));
+		code = SV_BOOT_UNKNOWN_CLIENTS;
 		break;
 
 	      case DUPLICATES:
-		status = option_cache (oc, (struct data_string *)0, data,
-				       &server_options [SV_DUPLICATES], MDL);
+		code = SV_DUPLICATES;
 		break;
 
 	      case DECLINES:
-		status = option_cache (oc, (struct data_string *)0, data,
-				       &server_options [SV_DECLINES], MDL);
+		code= SV_DECLINES;
 		break;
 
 	      case CLIENT_UPDATES:
-		status = option_cache (oc, (struct data_string *)0, data,
-				       &server_options [SV_CLIENT_UPDATES],
-				       MDL);
+		code = SV_CLIENT_UPDATES;
 		break;
 
 	      case INFINITE:
@@ -3410,6 +3409,12 @@ int parse_allow_deny (oc, cfile, flag)
 		skip_to_semi (cfile);
 		return 0;
 	}
+	/* Reference on option is passed to option cache. */
+	if (!option_code_hash_lookup(&option, server_universe.code_hash,
+				     &code, 0, MDL))
+		log_fatal("Unable to find server option %u (%s:%d).",
+			  code, MDL);
+	status = option_cache(oc, NULL, data, option, MDL);
 	expression_dereference (&data, MDL);
 	parse_semi (cfile);
 	return status;

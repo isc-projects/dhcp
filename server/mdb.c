@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.78 2006/05/30 19:46:37 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.79 2006/06/01 20:23:17 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -130,7 +130,7 @@ isc_result_t enter_host (hd, dynamicp, commit)
 	struct executable_statement *esp;
 
 	if (!host_name_hash) {
-		if (!host_new_hash (&host_name_hash, 0, MDL))
+		if (!host_new_hash(&host_name_hash, HOST_HASH_SIZE, MDL))
 			log_fatal ("Can't allocate host name hash");
 		host_hash_add (host_name_hash,
 			       (unsigned char *)hd -> name,
@@ -185,7 +185,8 @@ isc_result_t enter_host (hd, dynamicp, commit)
 
 	if (hd -> interface.hlen) {
 		if (!host_hw_addr_hash) {
-			if (!host_new_hash (&host_hw_addr_hash, 0, MDL))
+			if (!host_new_hash(&host_hw_addr_hash,
+					   HOST_HASH_SIZE, MDL))
 				log_fatal ("Can't allocate host/hw hash");
 		} else {
 			/* If there isn't already a host decl matching this
@@ -229,7 +230,8 @@ isc_result_t enter_host (hd, dynamicp, commit)
 		/* If there's no uid hash, make one; otherwise, see if
 		   there's already an entry in the hash for this host. */
 		if (!host_uid_hash) {
-			if (!host_new_hash (&host_uid_hash, 0, MDL))
+			if (!host_new_hash(&host_uid_hash,
+					   HOST_HASH_SIZE, MDL))
 				log_fatal ("Can't allocate host/uid hash");
 
 			host_hash_add (host_uid_hash,
@@ -538,15 +540,15 @@ void new_address_range (cfile, low, high, subnet, pool, lpchain)
 
 	/* Initialize the hash table if it hasn't been done yet. */
 	if (!lease_uid_hash) {
-		if (!lease_new_hash (&lease_uid_hash, 0, MDL))
+		if (!lease_new_hash(&lease_uid_hash, LEASE_HASH_SIZE, MDL))
 			log_fatal ("Can't allocate lease/uid hash");
 	}
 	if (!lease_ip_addr_hash) {
-		if (!lease_new_hash (&lease_ip_addr_hash, 0, MDL))
+		if (!lease_new_hash(&lease_ip_addr_hash, LEASE_HASH_SIZE, MDL))
 			log_fatal ("Can't allocate lease/ip hash");
 	}
 	if (!lease_hw_addr_hash) {
-		if (!lease_new_hash (&lease_hw_addr_hash, 0, MDL))
+		if (!lease_new_hash(&lease_hw_addr_hash, LEASE_HASH_SIZE, MDL))
 			log_fatal ("Can't allocate lease/hw hash");
 	}
 
@@ -2055,7 +2057,7 @@ int lease_enqueue (struct lease *comp)
    in lease_ip_addr_hash. */
 
 isc_result_t
-lease_instantiate(const unsigned char *val, unsigned len, void *object)
+lease_instantiate(const void *key, unsigned len, void *object)
 {
 	struct lease *lease = object;
 	struct class *class;
@@ -2208,11 +2210,11 @@ void dump_subnets ()
 }
 
 HASH_FUNCTIONS (lease, const unsigned char *, struct lease, lease_hash_t,
-		lease_reference, lease_dereference)
+		lease_reference, lease_dereference, do_ip4_hash)
 HASH_FUNCTIONS (host, const unsigned char *, struct host_decl, host_hash_t,
-		host_reference, host_dereference)
+		host_reference, host_dereference, do_string_hash)
 HASH_FUNCTIONS (class, const char *, struct class, class_hash_t,
-		class_reference, class_dereference)
+		class_reference, class_dereference, do_string_hash)
 
 #if defined (DEBUG_MEMORY_LEAKAGE) && \
 		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)

@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: ddns.c,v 1.18 2005/03/17 20:15:26 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: ddns.c,v 1.19 2006/06/01 20:23:17 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -586,14 +586,12 @@ int ddns_updates (struct packet *packet,
 		bp -> data [0] = server_updates_a;
 		if (!save_option_buffer (&fqdn_universe, state -> options,
 					 bp, &bp -> data [0], 1,
-					 &fqdn_options [FQDN_SERVER_UPDATE],
-					 0))
+					 FQDN_SERVER_UPDATE, 0))
 			goto badfqdn;
 		bp -> data [1] = server_updates_a;
 		if (!save_option_buffer (&fqdn_universe, state -> options,
 					 bp, &bp -> data [1], 1,
-					 &fqdn_options [FQDN_NO_CLIENT_UPDATE],
-					 0))
+					 FQDN_NO_CLIENT_UPDATE, 0))
 			goto badfqdn;
 		/* Do the same encoding the client did. */
 		oc = lookup_option (&fqdn_universe, packet -> options,
@@ -609,20 +607,17 @@ int ddns_updates (struct packet *packet,
 			bp -> data [2] = 0;
 		if (!save_option_buffer (&fqdn_universe, state -> options,
 					 bp, &bp -> data [2], 1,
-					 &fqdn_options [FQDN_ENCODED],
-					 0))
+					 FQDN_ENCODED, 0))
 			goto badfqdn;
 		bp -> data [3] = isc_rcode_to_ns (rcode1);
 		if (!save_option_buffer (&fqdn_universe, state -> options,
 					 bp, &bp -> data [3], 1,
-					 &fqdn_options [FQDN_RCODE1],
-					 0))
+					 FQDN_RCODE1, 0))
 			goto badfqdn;
 		bp -> data [4] = isc_rcode_to_ns (rcode2);
 		if (!save_option_buffer (&fqdn_universe, state -> options,
 					 bp, &bp -> data [4], 1,
-					 &fqdn_options [FQDN_RCODE2],
-					 0))
+					 FQDN_RCODE2, 0))
 			goto badfqdn;
 		if (ddns_fwd_name.len) {
 		    memcpy (&bp -> data [5],
@@ -630,8 +625,7 @@ int ddns_updates (struct packet *packet,
 		    if (!save_option_buffer (&fqdn_universe, state -> options,
 					     bp, &bp -> data [5],
 					     ddns_fwd_name.len,
-					     &fqdn_options [FQDN_FQDN],
-					     0))
+					     FQDN_FQDN, 0))
 			goto badfqdn;
 		}
 	}

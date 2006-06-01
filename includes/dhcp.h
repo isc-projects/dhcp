@@ -149,6 +149,8 @@ struct dhcp_packet {
 #define DHO_FQDN			81
 #define DHO_DHCP_AGENT_OPTIONS		82
 #define DHO_SUBNET_SELECTION		118 /* RFC3011! */
+#define DHO_VIVCO_SUBOPTIONS		124
+#define DHO_VIVSO_SUBOPTIONS		125
 /* The DHO_AUTHENTICATE option is not a standard yet, so I've
    allocated an option out of the "local" option space for it on a
    temporary basis.  Once an option code number is assigned, I will
@@ -183,3 +185,6 @@ struct dhcp_packet {
 #define FQDN_DOMAINNAME			7
 #define FQDN_FQDN			8
 #define FQDN_SUBOPTION_COUNT		8
+
+/* Enterprise Suboptions: */
+#define VENDOR_ISC_SUBOPTIONS		2495

@@ -64,7 +64,8 @@
 struct hash_table;
 typedef struct hash_table group_hash_t;
 typedef struct hash_table universe_hash_t;
-typedef struct hash_table option_hash_t;
+typedef struct hash_table option_name_hash_t;
+typedef struct hash_table option_code_hash_t;
 typedef struct hash_table dns_zone_hash_t;
 typedef struct hash_table lease_hash_t;
 typedef struct hash_table host_hash_t;
@@ -78,6 +79,86 @@ typedef struct hash_table class_hash_t;
 
 #include <isc-dhcp/result.h>
 #include <omapip/omapip_p.h>
+
+#if !defined (BYTE_NAME_HASH_SIZE)
+# define BYTE_NAME_HASH_SIZE	401	/* Default would be rediculous. */
+#endif
+#if !defined (BYTE_CODE_HASH_SIZE)
+# define BYTE_CODE_HASH_SIZE	254	/* Default would be rediculous. */
+#endif
+
+#if !defined (WORD_NAME_HASH_SIZE)
+# define WORD_NAME_HASH_SIZE	0	/* Default. */
+#endif
+#if !defined (WORD_CODE_HASH_SIZE)
+# define WORD_CODE_HASH_SIZE	0	/* Default. */
+#endif
+
+#if !defined (QUAD_NAME_HASH_SIZE)
+# define QUAD_NAME_HASH_SIZE	WORD_NAME_HASH_SIZE
+#endif
+#if !defined (QUAD_CODE_HASH_SIZE)
+# define QUAD_CODE_HASH_SIZE	WORD_CODE_HASH_SIZE
+#endif
+
+#if !defined (DNS_HASH_SIZE)
+# define DNS_HASH_SIZE		0	/* Default. */
+#endif
+
+/* Default size to use for name/code hashes on user-defined option spaces. */
+#if !defined (DEFAULT_SPACE_HASH_SIZE)
+# define DEFAULT_SPACE_HASH_SIZE	11
+#endif
+
+#if !defined (NWIP_HASH_SIZE)
+# define NWIP_HASH_SIZE		11	/* A really small table. */
+#endif
+
+#if !defined (FQDN_HASH_SIZE)
+# define FQDN_HASH_SIZE		7	/* A rediculously small table. */
+#endif
+
+#if !defined (VIVCO_HASH_SIZE)
+# define VIVCO_HASH_SIZE	QUAD_CODE_HASH_SIZE
+#endif
+
+#if !defined (VIVSO_HASH_SIZE)
+# define VIVSO_HASH_SIZE	VIVCO_HASH_SIZE
+#endif
+
+#if !defined (VIV_ISC_HASH_SIZE)
+# define VIV_ISC_HASH_SIZE	3	/* An incredulously small table. */
+#endif
+
+#if !defined (UNIVERSE_HASH_SIZE)
+# define UNIVERSE_HASH_SIZE	11	/* A really small table. */
+#endif
+
+#if !defined (GROUP_HASH_SIZE)
+# define GROUP_HASH_SIZE	0	/* Default. */
+#endif
+
+#if !defined (HOST_HASH_SIZE)
+# define HOST_HASH_SIZE		0	/* Default. */
+#endif
+
+#if !defined (LEASE_HASH_SIZE)
+# define LEASE_HASH_SIZE	0	/* Default. */
+#endif
+
+#if !defined (SCLASS_HASH_SIZE)
+# define SCLASS_HASH_SIZE	1009	/* A less than gigantic sized table. */
+#endif
+
+#if !defined (AGENT_HASH_SIZE)
+# define AGENT_HASH_SIZE	11	/* A really small table. */
+#endif
+
+#if !defined (SERVER_HASH_SIZE)
+# define SERVER_HASH_SIZE	(sizeof(server_options) / sizeof(struct option))
+#endif
+
+
 
 #if !defined (OPTION_HASH_SIZE)
 # define OPTION_HASH_SIZE 17
@@ -997,7 +1078,10 @@ typedef unsigned char option_mask [16];
 
 HASH_FUNCTIONS_DECL (group, const char *, struct group_object, group_hash_t)
 HASH_FUNCTIONS_DECL (universe, const char *, struct universe, universe_hash_t)
-HASH_FUNCTIONS_DECL (option, const char *, struct option, option_hash_t)
+HASH_FUNCTIONS_DECL (option_name, const char *, struct option,
+		     option_name_hash_t)
+HASH_FUNCTIONS_DECL (option_code, const unsigned *, struct option,
+		     option_code_hash_t)
 HASH_FUNCTIONS_DECL (dns_zone, const char *, struct dns_zone, dns_zone_hash_t)
 HASH_FUNCTIONS_DECL (lease, const unsigned char *, struct lease, lease_hash_t)
 HASH_FUNCTIONS_DECL (host, const unsigned char *, struct host_decl, host_hash_t)
@@ -1044,7 +1128,7 @@ struct option_cache *lookup_hashed_option PROTO ((struct universe *,
 						  unsigned));
 int save_option_buffer (struct universe *, struct option_state *,
 			struct buffer *, unsigned char *, unsigned,
-			struct option *, int);
+			unsigned, int);
 void save_option PROTO ((struct universe *,
 			 struct option_state *, struct option_cache *));
 void save_hashed_option PROTO ((struct universe *,
@@ -1255,7 +1339,8 @@ unsigned char *parse_numeric_aggregate PROTO ((struct parse *,
 void convert_num PROTO ((struct parse *, unsigned char *, const char *,
 			 int, unsigned));
 TIME parse_date PROTO ((struct parse *));
-struct option *parse_option_name PROTO ((struct parse *, int, int *));
+isc_result_t parse_option_name PROTO ((struct parse *, int, int *,
+				       struct option **));
 void parse_option_space_decl PROTO ((struct parse *));
 int parse_option_code_definition PROTO ((struct parse *, struct option *));
 int parse_base64 (struct data_string *, struct parse *);
@@ -1494,11 +1579,13 @@ struct lease_state *new_lease_state PROTO ((const char *, int));
 struct domain_search_list *new_domain_search_list PROTO ((const char *, int));
 struct name_server *new_name_server PROTO ((const char *, int));
 void free_name_server PROTO ((struct name_server *, const char *, int));
-struct option *new_option PROTO ((const char *, int));
+struct option *new_option PROTO ((const char *, const char *, int));
+int option_reference(struct option **dest, struct option *src,
+		     const char * file, int line);
+int option_dereference(struct option **dest, const char *file, int line);
 int group_allocate (struct group **, const char *, int);
 int group_reference (struct group **, struct group *, const char *, int);
 int group_dereference (struct group **, const char *, int);
-void free_option PROTO ((struct option *, const char *, int));
 struct universe *new_universe PROTO ((const char *, int));
 void free_universe PROTO ((struct universe *, const char *, int));
 void free_domain_search_list PROTO ((struct domain_search_list *,
@@ -1835,12 +1922,10 @@ OMAPI_OBJECT_ALLOC_DECL (interface,
 			 struct interface_info, dhcp_type_interface)
 
 /* tables.c */
+extern char *default_option_format;
 extern struct universe dhcp_universe;
-extern struct option dhcp_options [256];
 extern struct universe nwip_universe;
-extern struct option nwip_options [256];
 extern struct universe fqdn_universe;
-extern struct option fqdn_options [256];
 extern int dhcp_option_default_priority_list [];
 extern int dhcp_option_default_priority_list_count;
 extern const char *hardware_types [256];
@@ -1862,9 +1947,7 @@ extern const char *dhcp_flink_state_names [];
 extern const char *binding_state_names [];
 
 extern struct universe agent_universe;
-extern struct option agent_options [256];
 extern struct universe server_universe;
-extern struct option server_options [256];
 
 extern struct enumeration ddns_styles;
 extern struct enumeration syslog_enum;
@@ -1959,8 +2042,7 @@ int write_failover_state (dhcp_failover_state_t *);
 #endif
 int db_printable PROTO ((const char *));
 int db_printable_len PROTO ((const unsigned char *, unsigned));
-isc_result_t write_named_billing_class(const unsigned char *, unsigned,
-				       void *);
+isc_result_t write_named_billing_class(const void *, unsigned, void *);
 void write_billing_classes (void);
 int write_billing_class PROTO ((struct class *));
 void commit_leases_timeout PROTO ((void *));
@@ -2504,7 +2586,7 @@ void hw_hash_add PROTO ((struct lease *));
 void hw_hash_delete PROTO ((struct lease *));
 int write_leases PROTO ((void));
 int lease_enqueue (struct lease *);
-isc_result_t lease_instantiate(const unsigned char *, unsigned, void *);
+isc_result_t lease_instantiate(const void *, unsigned, void *);
 void expire_all_pools PROTO ((void));
 void dump_subnets PROTO ((void));
 #if defined (DEBUG_MEMORY_LEAKAGE) || \

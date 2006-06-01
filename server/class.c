@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: class.c,v 1.32 2005/03/17 20:15:26 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: class.c,v 1.33 2006/06/01 20:23:17 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 
 #endif /* not lint */
 
@@ -190,7 +190,8 @@ int check_collection (packet, lease, collection)
 						  MDL);
 				data_string_forget (&data, MDL);
 				if (!class -> hash)
-				    class_new_hash (&class -> hash, 0, MDL);
+				    class_new_hash(&class->hash,
+						   SCLASS_HASH_SIZE, MDL);
 				class_hash_add (class -> hash,
 						(const char *)
 						nc -> hash_string.data,

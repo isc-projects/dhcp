@@ -41,7 +41,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: omapi.c,v 1.57 2006/04/27 17:26:42 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: omapi.c,v 1.58 2006/06/01 20:23:17 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2029,7 +2029,7 @@ class_signal_handler(omapi_object_t *h,
 		if (issubclass) {
 			if (!class -> superclass -> hash)
 				class_new_hash(&class->superclass->hash,
-						0, MDL);
+					       SCLASS_HASH_SIZE, MDL);
 
 			add_hash (class -> superclass -> hash,
 				  class -> hash_string.data,

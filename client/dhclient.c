@@ -32,7 +32,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.138 2006/05/15 15:07:49 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.139 2006/06/01 20:23:16 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1130,13 +1130,22 @@ void dhcpoffer (packet)
 		if (!lookup_option
 		    (&dhcp_universe, packet -> options,
 		     client -> config -> required_options [i])) {
-		    log_info ("%s: no %s option.",
-			      obuf, (dhcp_universe.options
-				     [client -> config -> required_options [i]]
-				     -> name));
-				return;
-			}
+		    struct option *option = NULL;
+		    unsigned code = client->config->required_options[i];
+
+		    option_code_hash_lookup(&option, dhcp_universe.code_hash,
+					    &code, 0, MDL);
+
+		    if (option)
+			log_info("%s: no %s option.", obuf, option->name);
+		    else
+			log_info("%s: no unknown-%u option.", obuf, code);
+
+		    option_dereference(&option, MDL);
+
+		    return;
 		}
+	    }
 	}
 
 	/* If we've already seen this lease, don't record it again. */
@@ -1210,6 +1219,7 @@ struct client_lease *packet_to_lease (packet, client)
 	struct client_lease *lease;
 	unsigned i;
 	struct option_cache *oc;
+	struct option *option = NULL;
 	struct data_string data;
 
 	lease = (struct client_lease *)new_client_lease (MDL);
@@ -1242,11 +1252,18 @@ struct client_lease *packet_to_lease (packet, client)
 					   packet -> options, lease -> options,
 					   &global_scope, oc, MDL)) {
 			if (data.len) {
+				if (!option_code_hash_lookup(&option,
+						dhcp_universe.code_hash,
+						&i, 0, MDL))
+					log_fatal("Unable to find VENDOR "
+						  "option (%s:%d).", MDL);
 				parse_encapsulated_suboptions
-					(packet -> options, &dhcp_options [i],
+					(packet -> options, option,
 					 data.data, data.len, &dhcp_universe,
 					 client -> config -> vendor_space_name
 						);
+
+				option_dereference(&option, MDL);
 			}
 			data_string_forget (&data, MDL);
 		}
@@ -1815,6 +1832,7 @@ void make_client_options (client, lease, type, sid, rip, prl, op)
 {
 	unsigned i;
 	struct option_cache *oc;
+	struct option *option = NULL;
 	struct buffer *bp = (struct buffer *)0;
 
 	/* If there are any leftover options, get rid of them. */
@@ -1833,26 +1851,31 @@ void make_client_options (client, lease, type, sid, rip, prl, op)
 	/* Send the requested address if provided. */
 	if (rip) {
 		client -> requested_address = *rip;
-		if (!(make_const_option_cache
-		      (&oc, (struct buffer **)0, rip -> iabuf, rip -> len,
-		       &dhcp_options [DHO_DHCP_REQUESTED_ADDRESS], MDL)))
+		i = DHO_DHCP_REQUESTED_ADDRESS;
+		if (!(option_code_hash_lookup(&option, dhcp_universe.code_hash,
+					      &i, 0, MDL) &&
+		      make_const_option_cache(&oc, NULL, rip->iabuf, rip->len,
+					      option, MDL)))
 			log_error ("can't make requested address cache.");
 		else {
 			save_option (&dhcp_universe, *op, oc);
 			option_cache_dereference (&oc, MDL);
 		}
+		option_dereference(&option, MDL);
 	} else {
 		client -> requested_address.len = 0;
 	}
 
-	if (!(make_const_option_cache
-	      (&oc, (struct buffer **)0,
-	       type, 1, &dhcp_options [DHO_DHCP_MESSAGE_TYPE], MDL)))
+	i = DHO_DHCP_MESSAGE_TYPE;
+	if (!(option_code_hash_lookup(&option, dhcp_universe.code_hash, &i, 0,
+				      MDL) &&
+	      make_const_option_cache(&oc, NULL, type, 1, option, MDL)))
 		log_error ("can't make message type.");
 	else {
 		save_option (&dhcp_universe, *op, oc);
 		option_cache_dereference (&oc, MDL);
 	}
+	option_dereference(&option, MDL);
 
 	if (prl) {
 		/* Figure out how many parameters were requested. */
@@ -1863,15 +1886,18 @@ void make_client_options (client, lease, type, sid, rip, prl, op)
 		else {
 			for (i = 0; prl [i]; i++)
 				bp -> data [i] = prl [i];
-			if (!(make_const_option_cache
-			      (&oc, &bp, (u_int8_t *)0, i,
-			       &dhcp_options [DHO_DHCP_PARAMETER_REQUEST_LIST],
-			       MDL)))
+			i = DHO_DHCP_PARAMETER_REQUEST_LIST;
+			if (!(option_code_hash_lookup(&option,
+						      dhcp_universe.code_hash,
+						      &i, 0, MDL) &&
+			      make_const_option_cache(&oc, &bp, NULL, i,
+						      option, MDL)))
 				log_error ("can't make option cache");
 			else {
 				save_option (&dhcp_universe, *op, oc);
 				option_cache_dereference (&oc, MDL);
 			}
+			option_dereference(&option, MDL);
 		}
 	}
 
