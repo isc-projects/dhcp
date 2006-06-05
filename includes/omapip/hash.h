@@ -60,7 +60,7 @@ struct hash_bucket {
 	hashed_object_t *value;
 };
 
-typedef int (*hash_comparator_t)(const void *, const void *, unsigned long);
+typedef int (*hash_comparator_t)(const void *, const void *, size_t);
 
 struct hash_table {
 	unsigned hash_count;
@@ -152,6 +152,6 @@ void delete_hash_entry (struct hash_table *, const void *,
 int hash_lookup (hashed_object_t **, struct hash_table *,
 			const void *, unsigned, const char *, int);
 int hash_foreach (struct hash_table *, hash_foreach_func);
-int casecmp (const void *s, const void *t, unsigned long len);
+int casecmp (const void *s, const void *t, size_t len);
 
 #endif /* OMAPI_HASH_H */

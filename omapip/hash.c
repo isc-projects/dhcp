@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: hash.c,v 1.8 2006/06/01 20:23:17 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: hash.c,v 1.9 2006/06/05 16:42:59 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include <omapip/omapip_p.h>
@@ -52,6 +52,7 @@ find_length(const void *key,
 		return 4;
 
 	log_fatal("Impossible condition at %s:%d.", MDL);
+	return 0; /* Silence compiler warnings. */
 }
 
 int new_hash_table (tp, count, file, line)
@@ -424,25 +425,25 @@ int hash_foreach (struct hash_table *table, hash_foreach_func func)
 	return count;
 }
 
-int casecmp (const void *v1, const void *v2, unsigned long len)
+int casecmp (const void *v1, const void *v2, size_t len)
 {
-	unsigned i;
+	size_t i;
 	const char *s = v1;
 	const char *t = v2;
 	
 	for (i = 0; i < len; i++)
 	{
 		int c1, c2;
-		if (isascii (s [i]) && isupper (s [i]))
-			c1 = tolower (s [i]);
+		if (isascii(s[i]))
+			c1 = tolower(s[i]);
 		else
-			c1 = s [i];
-		
-		if (isascii (t [i]) && isupper (t [i]))
-			c2 = tolower (t [i]);
+			c1 = s[i];
+
+		if (isascii(t[i]))
+			c2 = tolower(t[i]);
 		else
-			c2 = t [i];
-		
+			c2 = t[i];
+
 		if (c1 < c2)
 			return -1;
 		if (c1 > c2)

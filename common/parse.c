@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.110 2006/06/01 20:23:17 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.111 2006/06/05 16:42:58 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1079,7 +1079,7 @@ void parse_option_space_decl (cfile)
 			      default:
 				parse_warn(cfile, "invalid code width (%d), "
 					          "expecting a 1, 2 or 4.",
-					   val);
+					   tsize);
 				goto bad;
 			}
 			break;
@@ -1100,7 +1100,7 @@ void parse_option_space_decl (cfile)
 			lsize = atoi(val);
 			if (lsize != 1 && lsize != 2) {
 				parse_warn(cfile, "invalid length width (%d) "
-						  "expecting 1 or 2.", val);
+						  "expecting 1 or 2.", lsize);
 				goto bad;
 			}
 

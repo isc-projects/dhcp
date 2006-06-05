@@ -2140,6 +2140,7 @@ void parse_client_lease_declaration PROTO ((struct parse *,
 int parse_option_decl PROTO ((struct option_cache **, struct parse *));
 void parse_string_list PROTO ((struct parse *, struct string_list **, int));
 int parse_ip_addr PROTO ((struct parse *, struct iaddr *));
+int parse_ip_addr_with_subnet(struct parse *, struct iaddrmatch *);
 void parse_reject_statement PROTO ((struct parse *, struct client_config *));
 
 /* dhcrelay.c */
