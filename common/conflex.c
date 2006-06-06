@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: conflex.c,v 1.98 2006/06/01 20:23:17 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: conflex.c,v 1.99 2006/06/06 16:35:18 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -647,6 +647,8 @@ static enum dhcp_token intern (atom, dfv)
 			return CLTT;
 		break;
 	      case 'd':
+		if (!strcasecmp(atom + 1, "b-time-format"))
+			return DB_TIME_FORMAT;
 		if (!strcasecmp (atom + 1, "ns-update"))
 			return DNS_UPDATE;
 		if (!strcasecmp (atom + 1, "ns-delete"))
@@ -711,6 +713,8 @@ static enum dhcp_token intern (atom, dfv)
 		}
 		if (!strcasecmp (atom + 1, "ncode-int"))
 			return ENCODE_INT;
+		if (!strcasecmp(atom + 1, "poch"))
+			return EPOCH;
 		if (!strcasecmp (atom + 1, "thernet"))
 			return ETHERNET;
 		if (!strcasecmp (atom + 1, "nds"))
@@ -823,6 +827,8 @@ static enum dhcp_token intern (atom, dfv)
 			return LET;
 		if (!strcasecmp (atom + 1, "oad"))
 			return LOAD;
+		if (!strcasecmp(atom + 1, "ocal"))
+			return LOCAL;
 		if (!strcasecmp (atom + 1, "og"))
 			return LOG;
 		break;

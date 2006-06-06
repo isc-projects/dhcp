@@ -34,10 +34,12 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: print.c,v 1.59 2006/05/11 16:31:29 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: print.c,v 1.60 2006/06/06 16:35:18 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
+
+int db_time_format = DEFAULT_TIME_FORMAT;
 
 char *quotify_string (const char *s, const char *file, int line)
 {
@@ -1427,3 +1429,48 @@ void print_dns_status (int status, ns_updque *uq)
 		log_info ("%s", obuf);
 }
 #endif /* NSUPDATE */
+
+/* Format the given time as "A; # B", where A is the format
+ * used by the parser, and B is the local time, for humans.
+ */
+const char *
+print_time(TIME t)
+{
+	static char buf[sizeof("epoch 9223372036854775807; "
+			       "# Wed Jun 30 21:49:08 2147483647")];
+	/* The string: 	       "6 2147483647/12/31 23:59:60;"
+	 * is smaller than the other, used to declare the buffer size, so
+	 * we can use one buffer for both.
+	 */
+
+	if (t == MAX_TIME)
+		return "never;";
+
+	if (t < 0)
+		return NULL;
+
+	/* For those lucky enough to have a 128-bit time_t, ensure that
+	 * whatever (corrupt) value we're given doesn't exceed the static
+	 * buffer.
+	 */
+#if (MAX_TIME > 0x7fffffffffffffff)
+	if (t > 0x7fffffffffffffff)
+		return NULL;
+#endif
+
+	if (db_time_format == LOCAL_TIME_FORMAT) {
+		if (strftime(buf, sizeof(buf),
+			     "epoch %s; # %a %b %d %H:%M:%S %Y",
+			     localtime(&t)) == 0)
+			return NULL;
+	} else {
+		/* No bounds check for the year is necessary - in this case,
+		 * strftime() will run out of space and assert an error.
+		 */
+		if (strftime(buf, sizeof(buf), "%w %Y/%m/%d %H:%M:%S;",
+			     gmtime(&t)) == 0)
+			return NULL;
+	}
+
+	return buf;
+}

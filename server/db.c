@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: db.c,v 1.72 2006/06/01 20:23:17 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: db.c,v 1.73 2006/06/06 16:35:18 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -53,12 +53,11 @@ int lease_file_is_corrupt = 0;
 int write_lease (lease)
 	struct lease *lease;
 {
-	struct tm *t;
-	char tbuf [64];
 	int errors = 0;
 	int i;
 	struct binding *b;
 	char *s;
+	const char *tval;
 
 	/* If the lease file is corrupt, don't try to write any more leases
 	   until we've written a good lease file. */
@@ -74,84 +73,35 @@ int write_lease (lease)
 		++errors;
 	}
 
-	/* Note: the following is not a Y2K bug - it's a Y1.9K bug.   Until
-	   somebody invents a time machine, I think we can safely disregard
-	   it. */
-	if (lease -> starts) {
-		if (lease -> starts != MAX_TIME) {
-			t = gmtime (&lease -> starts);
-			/* %Audit% Cannot exceed 59 bytes. %2004.06.17,Safe% */
-			sprintf (tbuf, "%d %d/%02d/%02d %02d:%02d:%02d;",
-				 t -> tm_wday, t -> tm_year + 1900,
-				 t -> tm_mon + 1, t -> tm_mday,
-				 t -> tm_hour, t -> tm_min, t -> tm_sec);
-		} else
-			strcpy (tbuf, "never;");
-		errno = 0;
-		fprintf (db_file, "\n  starts %s", tbuf);
-		if (errno) {
-			++errors;
-		}
-	}
+	if (lease->starts &&
+	    ((tval = print_time(lease->starts)) == NULL ||
+	     fprintf(db_file, "\n  starts %s", tval) < 0))
+		++errors;
 
-	if (lease -> ends) {
-		if (lease -> ends != MAX_TIME) {
-			t = gmtime (&lease -> ends);
-			/* %Audit% Cannot exceed 59 bytes. %2004.06.17,Safe% */
-			sprintf (tbuf, "%d %d/%02d/%02d %02d:%02d:%02d;",
-				 t -> tm_wday, t -> tm_year + 1900,
-				 t -> tm_mon + 1, t -> tm_mday,
-				 t -> tm_hour, t -> tm_min, t -> tm_sec);
-		} else
-			strcpy (tbuf, "never;");
-		errno = 0;
-		fprintf (db_file, "\n  ends %s", tbuf);
-		if (errno) {
-			++errors;
-		}
-	}
+	if (lease->ends &&
+	    ((tval = print_time(lease->ends)) == NULL ||
+	     fprintf(db_file, "\n  ends %s", tval) < 0))
+		++errors;
 
-	if (lease -> tstp) {
-		t = gmtime (&lease -> tstp);
-		errno = 0;
-		fprintf (db_file, "\n  tstp %d %d/%02d/%02d %02d:%02d:%02d;",
-			 t -> tm_wday, t -> tm_year + 1900,
-			 t -> tm_mon + 1, t -> tm_mday,
-			 t -> tm_hour, t -> tm_min, t -> tm_sec);
-		if (errno) {
-			++errors;
-		}
-	}
-	if (lease -> tsfp) {
-		t = gmtime (&lease -> tsfp);
-		errno = 0;
-		fprintf (db_file, "\n  tsfp %d %d/%02d/%02d %02d:%02d:%02d;",
-			 t -> tm_wday, t -> tm_year + 1900,
-			 t -> tm_mon + 1, t -> tm_mday,
-			 t -> tm_hour, t -> tm_min, t -> tm_sec);
-		if (errno) {
-			++errors;
-		}
-	}
-	if (lease->atsfp) {
-		t = gmtime(&lease->atsfp);
-		if (fprintf(db_file,
-			    "\n  atsfp %d %d/%02d/%02d %02d:%02d:%02d;",
-			    t->tm_wday, t->tm_year + 1900, t->tm_mon + 1,
-			    t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec) <= 0)
-			++errors;
-	}
-	if (lease -> cltt) {
-		t = gmtime (&lease -> cltt);
-		errno = 0;
-		fprintf (db_file, "\n  cltt %d %d/%02d/%02d %02d:%02d:%02d;",
-			 t -> tm_wday, t -> tm_year + 1900,
-			 t -> tm_mon + 1, t -> tm_mday,
-			 t -> tm_hour, t -> tm_min, t -> tm_sec);
-		if (errno) {
-			++errors;
-		}
-	}
+	if (lease->tstp &&
+	    ((tval = print_time(lease->tstp)) == NULL ||
+	     fprintf(db_file, "\n  tstp %s", tval) < 0))
+		++errors;
+
+	if (lease->tsfp &&
+	    ((tval = print_time(lease->tsfp)) == NULL ||
+	     fprintf(db_file, "\n  tsfp %s", tval) < 0))
+		++errors;
+
+	if (lease->atsfp &&
+	    ((tval = print_time(lease->atsfp)) == NULL ||
+	     fprintf(db_file, "\n  atsfp %s", tval) < 0))
+		++errors;
+
+	if (lease->cltt &&
+	    ((tval = print_time(lease->cltt)) == NULL ||
+	     fprintf(db_file, "\n  cltt %s", tval) < 0))
+		++errors;
 
 	fprintf (db_file, "\n  binding state %s;",
 		 ((lease -> binding_state > 0 &&
@@ -530,6 +480,7 @@ int write_failover_state (dhcp_failover_state_t *state)
 {
 	struct tm *t;
 	int errors = 0;
+	const char *tval;
 
 	if (lease_file_is_corrupt)
 		if (!new_lease_file ())
@@ -540,28 +491,20 @@ int write_failover_state (dhcp_failover_state_t *state)
 	if (errno)
 		++errors;
 
-	t = gmtime (&state -> me.stos);
-	errno = 0;
-	fprintf (db_file, "\n  my state %s at %d %d/%02d/%02d %02d:%02d:%02d;",
-		 /* Never record our state as "startup"! */
-		 (state -> me.state == startup
-		  ? dhcp_failover_state_name_print (state -> saved_state)
-		  : dhcp_failover_state_name_print (state -> me.state)),
-		 t -> tm_wday, t -> tm_year + 1900,
-		 t -> tm_mon + 1, t -> tm_mday,
-		 t -> tm_hour, t -> tm_min, t -> tm_sec);
-	if (errno)
+	tval = print_time(state->me.stos);
+	if (tval == NULL ||
+	    fprintf(db_file, "\n  my state %s at %s",
+		    (state->me.state == startup) ?
+		    dhcp_failover_state_name_print(state->saved_state) :
+		    dhcp_failover_state_name_print(state->me.state),
+		    tval) < 0)
 		++errors;
 
-	t = gmtime (&state -> partner.stos);
-	errno = 0;
-	fprintf (db_file,
-		 "\n  partner state %s at %d %d/%02d/%02d %02d:%02d:%02d;",
-		 dhcp_failover_state_name_print (state -> partner.state),
-		 t -> tm_wday, t -> tm_year + 1900,
-		 t -> tm_mon + 1, t -> tm_mday,
-		 t -> tm_hour, t -> tm_min, t -> tm_sec);
-	if (errno)
+	tval = print_time(state->partner.stos);
+	if (tval == NULL ||
+	    fprintf(db_file, "\n  partner state %s at %s",
+		    dhcp_failover_state_name_print(state->partner.state),
+		    tval) < 0)
 		++errors;
 
 	if (state -> i_am == secondary) {
@@ -882,28 +825,7 @@ int new_lease_file ()
 		fclose(db_file);
 	db_file = new_db_file;
 
-	/* Write an introduction so people don't complain about time
-	   being off. */
 	errno = 0;
-	fprintf (db_file, "# All times in this file are in UTC (GMT), not %s",
-		 "your local timezone.   This is\n");
-	if (errno != 0)
-		goto fail;
-	fprintf (db_file, "# not a bug, so please don't ask about it.   %s",
-		 "There is no portable way to\n");
-	if (errno != 0)
-		goto fail;
-	fprintf (db_file, "# store leases in the local timezone, so please %s",
-		 "don't request this as a\n");
-	if (errno != 0)
-		goto fail;
-	fprintf (db_file, "# feature.   If this is inconvenient or %s",
-		 "confusing to you, we sincerely\n");
-	if (errno != 0)
-		goto fail;
-	fprintf (db_file, "# apologize.   Seriously, though - don't ask.\n");
-	if (errno != 0)
-		goto fail;
 	fprintf (db_file, "# The format of this file is documented in the %s",
 		 "dhcpd.leases(5) manual page.\n");
 	if (errno != 0)

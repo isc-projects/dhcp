@@ -99,6 +99,10 @@ and for prodding me into improving it.
   supported.  This is a milestone in acheiving RFC 3925 "VIVSO" and
   DHCPv6 support.
 
+- A new common (server or client) option, 'db-time-format local;', has
+  been added which prints the local time in /var/db/dhcpd.leases rather
+  than UTC.  Thanks to a patch from Ken Lalonde.
+
 			Changes since 3.0.4
 
 - A warning that host statements declared within subnet or shared-network

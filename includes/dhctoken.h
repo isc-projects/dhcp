@@ -315,7 +315,10 @@ enum dhcp_token {
 	WIDTH = 619,
 	LENGTH = 620,
 	HASH = 621,
-	SIZE = 622
+	SIZE = 622,
+	EPOCH = 623,
+	DB_TIME_FORMAT = 624,
+	LOCAL = 625
 };
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\

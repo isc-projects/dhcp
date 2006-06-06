@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.111 2006/06/05 16:42:58 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.112 2006/06/06 16:35:18 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -756,6 +756,25 @@ TIME parse_date (cfile)
 		if (!parse_semi (cfile))
 			return 0;
 		return MAX_TIME;
+	}
+
+	/* This indicates 'local' time format. */
+	if (token == EPOCH) {
+		token = next_token(&val, NULL, cfile);
+
+		if (token != NUMBER) {
+			parse_warn(cfile, "Seconds since epoch expected.");
+			if (token != SEMI)
+				skip_to_semi(cfile);
+			return (TIME)0;
+		}
+
+		guess = atoi(val);
+
+		if (!parse_semi(cfile))
+			return (TIME)0;
+
+		return guess;
 	}
 
 	if (token != NUMBER) {
@@ -1754,6 +1773,32 @@ int parse_executable_statement (result, cfile, lose, case_context)
 
 	token = peek_token (&val, (unsigned *)0, cfile);
 	switch (token) {
+	      case DB_TIME_FORMAT:
+		next_token(&val, NULL, cfile);
+
+		token = next_token(&val, NULL, cfile);
+		if (token == DEFAULT) {
+			db_time_format = DEFAULT_TIME_FORMAT;
+		} else if (token == LOCAL) {
+			db_time_format = LOCAL_TIME_FORMAT;
+		} else {
+			parse_warn(cfile, "Expecting 'local' or 'default'.");
+			if (token != SEMI)
+				skip_to_semi(cfile);
+			*lose = 1;
+			return 0;
+		}
+
+		token = next_token(&val, NULL, cfile);
+		if (token != SEMI) {
+			parse_warn(cfile, "Expecting a semicolon.");
+			*lose = 1;
+			return 0;
+		}
+
+		/* We're done here. */
+		return 1;
+
 	      case IF:
 		next_token (&val, (unsigned *)0, cfile);
 		return parse_if_statement (result, cfile, lose);
@@ -2188,7 +2233,7 @@ int parse_executable_statement (result, cfile, lose, case_context)
 			return 0;
 		}
 		break;
-			
+
 		/* Not really a statement, but we parse it here anyway
 		   because it's appropriate for all DHCP agents with
 		   parsers. */

@@ -32,7 +32,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.139 2006/06/01 20:23:16 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.140 2006/06/06 16:35:18 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2285,6 +2285,7 @@ int write_client_lease (client, lease, rewrite, makesure)
 	pair *hash;
 	int errors = 0;
 	char *s;
+	const char *tval;
 
 	if (!rewrite) {
 		if (leases_written++ > 20) {
@@ -2386,49 +2387,27 @@ int write_client_lease (client, lease, rewrite, makesure)
 				      client, write_lease_option);
 	}
 
-	/* Note: the following is not a Y2K bug - it's a Y1.9K bug.   Until
-	   somebody invents a time machine, I think we can safely disregard
-	   it. */
-	t = gmtime (&lease -> renewal);
-	fprintf (leaseFile,
-		 "  renew %d %d/%d/%d %02d:%02d:%02d;\n",
-		 t -> tm_wday, t -> tm_year + 1900,
-		 t -> tm_mon + 1, t -> tm_mday,
-		 t -> tm_hour, t -> tm_min, t -> tm_sec);
-	if (errno != 0) {
+	tval = print_time(lease->renewal);
+	if (tval == NULL ||
+	    fprintf(leaseFile, "  renew %s\n", tval) < 0)
 		errors++;
-		errno = 0;
-	}
-	t = gmtime (&lease -> rebind);
-	fprintf (leaseFile,
-		 "  rebind %d %d/%d/%d %02d:%02d:%02d;\n",
-		 t -> tm_wday, t -> tm_year + 1900,
-		 t -> tm_mon + 1, t -> tm_mday,
-		 t -> tm_hour, t -> tm_min, t -> tm_sec);
-	if (errno != 0) {
+
+	tval = print_time(lease->rebind);
+	if (tval == NULL ||
+	    fprintf(leaseFile, "  rebind %s\n", tval) < 0)
 		errors++;
-		errno = 0;
-	}
-	t = gmtime (&lease -> expiry);
-	fprintf (leaseFile,
-		 "  expire %d %d/%d/%d %02d:%02d:%02d;\n",
-		 t -> tm_wday, t -> tm_year + 1900,
-		 t -> tm_mon + 1, t -> tm_mday,
-		 t -> tm_hour, t -> tm_min, t -> tm_sec);
-	if (errno != 0) {
+
+	tval = print_time(lease->expiry);
+	if (tval == NULL ||
+	    fprintf(leaseFile, "  expire %s\n", tval) < 0)
 		errors++;
-		errno = 0;
-	}
-	fprintf (leaseFile, "}\n");
-	if (errno != 0) {
+
+	if (fprintf(leaseFile, "}\n") < 0)
 		errors++;
-		errno = 0;
-	}
-	fflush (leaseFile);
-	if (errno != 0) {
+
+	if (fflush(leaseFile) != 0)
 		errors++;
-		errno = 0;
-	}
+
 	if (!errors && makesure) {
 		if (fsync (fileno (leaseFile)) < 0) {
 			log_info ("write_client_lease: %m");

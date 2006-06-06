@@ -1654,6 +1654,9 @@ int dns_zone_reference PROTO ((struct dns_zone **,
 			       struct dns_zone *, const char *, int));
 
 /* print.c */
+#define DEFAULT_TIME_FORMAT 0
+#define LOCAL_TIME_FORMAT   1
+extern int db_time_format;
 char *quotify_string (const char *, const char *, int);
 char *quotify_buf (const unsigned char *, unsigned, const char *, int);
 char *print_base64 (const unsigned char *, unsigned, const char *, int);
@@ -1683,6 +1686,7 @@ void indent_spaces (FILE *, int);
 #if defined (NSUPDATE)
 void print_dns_status (int, ns_updque *);
 #endif
+const char *print_time(TIME);
 
 /* socket.c */
 #if defined (USE_SOCKET_SEND) || defined (USE_SOCKET_RECEIVE) \
