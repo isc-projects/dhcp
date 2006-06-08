@@ -34,13 +34,13 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: hash.c,v 1.9 2006/06/05 16:42:59 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: hash.c,v 1.10 2006/06/08 23:51:37 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include <omapip/omapip_p.h>
 #include <ctype.h>
 
-static inline unsigned
+static INLINE unsigned
 find_length(const void *key,
 	    unsigned (*do_hash)(const void *, unsigned, unsigned))
 {
