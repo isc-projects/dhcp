@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.79 2006/06/01 20:23:17 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.80 2006/06/09 15:51:02 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -94,6 +94,15 @@ isc_result_t enter_class(cd, dynamicp, commit)
 	return ISC_R_SUCCESS;
 }
 
+
+/* Variable to check if we're starting the server.  The server will init as
+ * starting - but just to be safe start out as false to avoid triggering new
+ * special-case code
+ * XXX: There is actually a server_startup state...which is never entered...
+ */
+#define SS_NOSYNC	1
+#define SS_QFOLLOW	2
+static int server_starting = 0;
 
 static int find_uid_statement (struct executable_statement *esp,
 			       void *vp, int condp)
@@ -1159,8 +1168,10 @@ int supersede_lease (comp, lease, commit, propogate, pimmediate)
 	if (commit) {
 		if (!write_lease (comp))
 			return 0;
-		if (!commit_leases ())
-			return 0;
+		if ((server_starting & SS_NOSYNC) == 0) {
+			if (!commit_leases ())
+				return 0;
+		}
 	}
 
 #if defined (FAILOVER_PROTOCOL)
@@ -1956,6 +1967,8 @@ int write_leases ()
 int lease_enqueue (struct lease *comp)
 {
 	struct lease **lq, *prev, *lp;
+	static struct lease **last_lq = NULL;
+	static struct lease *last_insert_point = NULL;
 
 	/* No queue to put it on? */
 	if (!comp -> pool)
@@ -2029,13 +2042,28 @@ int lease_enqueue (struct lease *comp)
 		return 0;
 	}
 
+	/* This only works during server startup: during runtime, the last
+	 * lease may be dequeued inbetween calls.  If the queue is the same
+	 * as was used previously, and the lease structure isn't (this is not
+	 * a re-queue), use that as a starting point for the insertion-sort.
+	 */
+	if ((server_starting & SS_QFOLLOW) && (lq == last_lq) &&
+	    (comp != last_insert_point) && 
+	    (last_insert_point->sort_time <= comp->sort_time)) {
+		prev = last_insert_point;
+		lp = prev->next;
+	} else {
+		prev = NULL;
+		lp = *lq;
+	}
+
 	/* Insertion sort the lease onto the appropriate queue. */
-	prev = (struct lease *)0;
-	for (lp = *lq; lp; lp = lp -> next) {
+	for (; lp ; lp = lp->next) {
 		if (lp -> sort_time >= comp -> sort_time)
 			break;
 		prev = lp;
 	}
+
 	if (prev) {
 		if (prev -> next) {
 			lease_reference (&comp -> next, prev -> next, MDL);
@@ -2049,6 +2077,8 @@ int lease_enqueue (struct lease *comp)
 		}
 		lease_reference (lq, comp, MDL);
 	}
+	last_insert_point = comp;
+	last_lq = lq;
 	return 1;
 }
 
@@ -2121,12 +2151,20 @@ void expire_all_pools ()
 	struct lease *l;
 	struct lease **lptr[6];
 
+	/* Indicate that we are in the startup phase */
+	server_starting = SS_NOSYNC | SS_QFOLLOW;
+
 	/* First, go over the hash list and actually put all the leases
 	   on the appropriate lists. */
 	lease_hash_foreach (lease_ip_addr_hash, lease_instantiate);
 
 	/* Loop through each pool in each shared network and call the
-	   expiry routine on the pool. */
+	 * expiry routine on the pool.  It is no longer safe to follow
+	 * the queue insertion point, as expiration of a lease can move
+	 * it between queues (and this may be the lease that function
+	 * points at).
+	 */
+	server_starting &= ~SS_QFOLLOW;
 	for (s = shared_networks; s; s = s -> next) {
 	    for (p = s -> pools; p; p = p -> next) {
 		pool_timer (p);
@@ -2134,7 +2172,7 @@ void expire_all_pools ()
 		p -> lease_count = 0;
 		p -> free_leases = 0;
 		p -> backup_leases = 0;
-		
+
 		lptr [FREE_LEASES] = &p -> free;
 		lptr [ACTIVE_LEASES] = &p -> active;
 		lptr [EXPIRED_LEASES] = &p -> expired;
@@ -2172,6 +2210,9 @@ void expire_all_pools ()
 		}
 	    }
 	}
+
+	/* turn off startup phase */
+	server_starting = 0;
 }
 
 void dump_subnets ()

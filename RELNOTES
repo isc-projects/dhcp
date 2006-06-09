@@ -103,6 +103,9 @@ and for prodding me into improving it.
   been added which prints the local time in /var/db/dhcpd.leases rather
   than UTC.  Thanks to a patch from Ken Lalonde.
 
+- Some patches to improve DHCP Server startup speed from Andrew Matheson
+  have been incorporated.
+
 			Changes since 3.0.4
 
 - A warning that host statements declared within subnet or shared-network
