@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.155 2006/06/02 17:11:49 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.156 2006/06/15 17:49:49 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -3337,8 +3337,7 @@ void parse_address_range (cfile, group, type, inpool, lpchain)
 /* allow-deny-keyword :== BOOTP
    			| BOOTING
 			| DYNAMIC_BOOTP
-			| UNKNOWN_CLIENTS
-			| INFINITE IS RESERVED */
+			| UNKNOWN_CLIENTS */
 
 int parse_allow_deny (oc, cfile, flag)
 	struct option_cache **oc;
@@ -3384,21 +3383,6 @@ int parse_allow_deny (oc, cfile, flag)
 
 	      case CLIENT_UPDATES:
 		code = SV_CLIENT_UPDATES;
-		break;
-
-	      case INFINITE:
-		token = next_token(&val, NULL, cfile);
-		if (token != IS) {
-			parse_warn(cfile, "Expecting 'is reserved'.");
-			return 0;
-		}
-		token = next_token(&val, NULL, cfile);
-		if (token != TOKEN_RESERVED) {
-			parse_warn(cfile, "Expecting 'reserved'.");
-			return 0;
-		}
-
-		code = SV_RESERVE_INFINITE;
 		break;
 
 	      default:

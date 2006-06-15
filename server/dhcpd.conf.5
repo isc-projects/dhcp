@@ -28,7 +28,7 @@
 .\" see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
 .\" ``http://www.nominum.com''.
 .\"
-.\" $Id: dhcpd.conf.5,v 1.71 2006/05/05 20:32:30 dhankins Exp $
+.\" $Id: dhcpd.conf.5,v 1.72 2006/06/15 17:49:49 dhankins Exp $
 .\"
 .TH dhcpd.conf 5
 .SH NAME
@@ -1952,6 +1952,20 @@ for DHCP clients.
 .RE
 .PP
 The
+.I infinite-is-reserved
+statement
+.RS 0.25i
+.PP
+.B infinite-is-reserved \fIflag\fB;\fR
+.PP
+ISC DHCP now supports 'reserved' leases.  See the section on RESERVED LEASES
+below.  If this \fIflag\fR is on, the server will automatically reserve leases
+allocated to clients which requested an infinite (0xffffffff) lease-time.
+.PP
+The default is off.
+.RE
+.PP
+The
 .I lease-file-name
 statement
 .RS 0.25i
@@ -2424,6 +2438,39 @@ For example:
   ddns-hostname = binary-to-ascii (16, 8, "-",
                                    substring (hardware, 1, 6));
 .fi
+.RE
+.SH RESERVED LEASES
+It's often useful to allocate a single address to a single client, in
+approximate perpetuity.  Host statements with \fBfixed-address\fR clauses
+exist to a certain extent to serve this purpose, but because host statements
+are intended to approximate 'static configuration', they suffer from not being
+referenced in a littany of other Server Services, such as dynamic DNS,
+failover, 'on events' and so forth.
+.PP
+If a standard dynamic lease, as from any range statement, is marked 'reserved',
+then the server will only allocate this lease to the client it is identified
+by (be that by client identifier or hardware address).
+.PP
+In practice, this means that the lease follows the normal state engine, enters
+ACTIVE state when the client is bound to it, expires, or is released, and any
+events or services that would normally be supplied during these events are
+processed normally, as with any other dynamic lease.  The only difference
+is that failover servers treat reserved leases as special when they enter
+the FREE or BACKUP states - each server applies the lease into the state it
+may allocate from - and the leases are not placed on the queue for allocation
+to other clients.  Instead they may only be 'found' by client identity.  The
+result is that the lease is only offered to the returning client.
+.PP
+Care should probably be taken to ensure that the client only has one lease
+within a given subnet that it is identified by.
+.PP
+Leases may be set 'reserved' either through OMAPI, or through the
+'infinite-is-reserved' configuration option (if this is applicable to your
+environment and mixture of clients).
+.PP
+It should also be noted that leases marked 'reserved' are effectively treated
+the same as leases marked 'bootp'.
+.RE
 .SH REFERENCE: OPTION STATEMENTS
 DHCP option statements are documented in the
 .B dhcp-options(5)
