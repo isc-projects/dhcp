@@ -123,6 +123,10 @@ and for prodding me into improving it.
   misapplied to server values rather than client values.  The server no longer
   advertises 8-byte lease-time options when on 64-bit platforms.
 
+- A bug where leases not in ACTIVE state would get billed to billed classes
+  (classes with lease limitations) was fixed.  Non-active leases OFFERed
+  to clients are no longer billed (but billing is checked before offering).
+
 			Changes since 3.0.4rc1
 
 - The dhcp-options.5 manpage was updated to correct indentation errors
