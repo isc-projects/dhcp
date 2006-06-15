@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.192.2.62 2006/05/17 20:16:59 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.192.2.63 2006/06/15 17:53:51 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1906,6 +1906,19 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 					return;
 				}
 			}
+
+			/* If this is an offer, undo the billing.  We go
+			 * through all the steps above to bill a class so
+			 * we can hit the 'no available billing' mark and
+			 * abort without offering.  But it just doesn't make
+			 * sense to permanently bill a class for a non-active
+			 * lease.  This means on REQUEST, we will bill this
+			 * lease again (if there is a REQUEST).
+			 */
+			if (offer == DHCPOFFER &&
+			    lease->billing_class != NULL &&
+			    lease->state != FTS_ACTIVE)
+				unbill_class(lease, lease->billing_class);
 		}
 	}
 
