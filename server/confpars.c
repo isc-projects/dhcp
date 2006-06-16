@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.156 2006/06/15 17:49:49 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.157 2006/06/16 19:26:44 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -876,6 +876,22 @@ void parse_failover_peer (cfile, group, type)
 			cp -> port = atoi (val);
 			break;
 
+		      case MAX_LEASE_MISBALANCE:
+			tp = &peer->max_lease_misbalance;
+			goto parse_idle;
+
+		      case MAX_LEASE_OWNERSHIP:
+			tp = &peer->max_lease_ownership;
+			goto parse_idle;
+
+		      case MAX_BALANCE:
+			tp = &peer->max_balance;
+			goto parse_idle;
+
+		      case MIN_BALANCE:
+			tp = &peer->min_balance;
+			goto parse_idle;
+
 		      case MAX_RESPONSE_DELAY:
 			tp = &cp -> max_response_delay;
 		      parse_idle:
@@ -1011,16 +1027,22 @@ void parse_failover_peer (cfile, group, type)
 			    "primary failover server must have mclt.");
 	    }
 	}
-	if (!peer -> me.max_flying_updates) {
-		peer -> me.max_flying_updates = 100;
-	}
-	if (!peer -> me.max_response_delay) {
-		peer -> me.max_response_delay = 60;
-	}
 
-	if (type == SHARED_NET_DECL) {
-		group -> shared_network -> failover_peer = peer;
-	}
+	if (!peer->max_lease_misbalance)
+		peer->max_lease_misbalance = DEFAULT_MAX_LEASE_MISBALANCE;
+	if (!peer->max_lease_ownership)
+		peer->max_lease_ownership = DEFAULT_MAX_LEASE_OWNERSHIP;
+	if (!peer->max_balance)
+		peer->max_balance = DEFAULT_MAX_BALANCE_TIME;
+	if (!peer->min_balance)
+		peer->min_balance = DEFAULT_MIN_BALANCE_TIME;
+	if (!peer->me.max_flying_updates)
+		peer->me.max_flying_updates = DEFAULT_MAX_FLYING_UPDATES;
+	if (!peer->me.max_response_delay)
+		peer->me.max_response_delay = DEFAULT_MAX_RESPONSE_DELAY;
+
+	if (type == SHARED_NET_DECL)
+		group->shared_network->failover_peer = peer;
 
 	/* Set the initial state. */
 	if (peer -> i_am == primary) {

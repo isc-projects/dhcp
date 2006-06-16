@@ -2666,8 +2666,8 @@ isc_result_t dhcp_failover_set_state (dhcp_failover_state_t *,
 				      enum failover_state);
 isc_result_t dhcp_failover_peer_state_changed (dhcp_failover_state_t *,
 					       failover_message_t *);
-int dhcp_failover_pool_rebalance (dhcp_failover_state_t *);
-int dhcp_failover_pool_check (struct pool *);
+void dhcp_failover_pool_rebalance (void *);
+void dhcp_failover_pool_check (struct pool *);
 int dhcp_failover_state_pool_check (dhcp_failover_state_t *);
 void dhcp_failover_timeout (void *);
 void dhcp_failover_send_contact (void *);
@@ -2751,6 +2751,7 @@ void dhcp_failover_recover_done (void *);
 void failover_print PROTO ((char *, unsigned *, unsigned, const char *));
 void update_partner PROTO ((struct lease *));
 int load_balance_mine (struct packet *, dhcp_failover_state_t *);
+int peer_wants_lease (struct lease *);
 binding_state_t normal_binding_state_transition_check (struct lease *,
 						       dhcp_failover_state_t *,
 						       binding_state_t,

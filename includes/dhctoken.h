@@ -318,7 +318,11 @@ enum dhcp_token {
 	SIZE = 622,
 	EPOCH = 623,
 	DB_TIME_FORMAT = 624,
-	LOCAL = 625
+	LOCAL = 625,
+	MAX_LEASE_MISBALANCE = 626,
+	MAX_LEASE_OWNERSHIP = 627,
+	MAX_BALANCE = 628,
+	MIN_BALANCE = 629
 };
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\

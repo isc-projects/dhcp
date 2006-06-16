@@ -28,7 +28,7 @@
 .\" see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
 .\" ``http://www.nominum.com''.
 .\"
-.\" $Id: dhcpd.conf.5,v 1.72 2006/06/15 17:49:49 dhankins Exp $
+.\" $Id: dhcpd.conf.5,v 1.73 2006/06/16 19:26:45 dhankins Exp $
 .\"
 .TH dhcpd.conf 5
 .SH NAME
@@ -613,6 +613,46 @@ the port number declared in the \fBport\fR statement.
 .RE
 .PP
 The 
+.I max-lease-misbalance
+statement
+.RS 0.25i
+.PP
+.B max-lease-misbalance \fIinteger\fR\fB;\fR
+.PP
+The \fBmax-lease-misbalance\fR statement tells the DHCP server what
+percentage of total free leases (as defined as the total number of
+leases in either the FREE or BACKUP states) a peer is allowed to own
+before a rebalance check is made.  Configuring higher values causes
+the server to rebalance less frequently, but permits a larger misbalance
+between the FREE and BACKUP lease pools.  Configuring a lower value
+causes the server to rebalance more frequently, but keeps the pools more
+balanced.  ISC DHCP servers no longer send POOLREQ messages unless the
+misbalance is at least twice this percentage in the peer's favor.  Valid
+values are between 0 and 100.  The default is 15.
+.RE
+.PP
+The
+.I max-lease-ownership
+statement
+.RS 0.25i
+.PP
+.B max-lease-ownership \fIinteger\fR\fB;\fR
+.PP
+The \fBmax-lease-ownership\fR statement tells the DHCP server what
+percentage of total free leases either it or its peer are normally allowed to
+own in excess of balance for the purpose of MAC Address Affinity.  When a
+server undergoes a lease rebalancing operation, it first tries to move as
+many leases as it can to the peer whose previous client was Load-Balanced to
+that peer (as governed by the Load Balance Algorithm, see the \fBsplit\fR
+configuration value).  The \fBmax-lease-ownership\fR value determines the
+maximum percentage of leases either server will hold before giving its
+peer the oldest leases (regardless of the previous client's place in the
+Load Balance algorithm).  Valid values are between 0 and 100, and should
+probably be less than the \fBmax-lease-misbalance\fR value.  Larger values
+will allow servers to retain leases to reallocate to returning clients,
+smaller values promote pool balance.  The default is 10.
+.PP
+The
 .I max-response-delay
 statement
 .RS 0.25i
@@ -629,11 +669,6 @@ constantly making and breaking connections.   This parameter must be
 specified.
 .RE
 .PP
-The 
-.I max-unacked-updates
-statement
-.RS 0.25i
-.PP
 .B max-unacked-updates \fIcount\fR\fB;\fR
 .PP
 The \fBmax-unacked-updates\fR statement tells the DHCP server how
@@ -641,6 +676,33 @@ many BNDUPD messages it can send before it receives a BNDACK
 from the failover peer.   We don't have enough operational experience
 to say what a good value for this is, but 10 seems to work.   This
 parameter must be specified.
+.RE
+.PP
+The
+.I min-balance
+and
+.I max-balance
+statements
+.RS 0.25i
+.PP
+.B min-balance \fIseconds\fR\fB;\fR
+.B max-balance \fIseconds\fR\fB;\fR
+.PP
+The DHCP Server schedules pool rebalance events at a time between these
+two values, estimated to be when the the \fBmax-lease-misbalance\fR percent
+of leases have been allocated by its peer.  This estimate is reached from
+however many seconds have elapsed since the oldest lease in the failover
+peer's pool has been expired.
+.PP
+The \fBmin-balance\fR value defaults to 60, one minute, and the
+\fBmax-balance\fR value defaults to 3600, one hour.
+.PP
+Lease rebalancing events can be CPU intensive, particular on installations
+where failover peers may have large numbers of pools and addresses to
+examine, so these parameters should be used to keep the estimation of
+the need for pool rebalance sane...not so long that you are in danger of
+exhausting your pool, not so short that your server is constantly
+rebalancing.
 .RE
 .PP
 The 
@@ -672,10 +734,14 @@ statement
 The split statement specifies the split between the primary and
 secondary for the purposes of load balancing.   Whenever a client
 makes a DHCP request, the DHCP server runs a hash on the client
-identification.   If the hash comes out to less than the split value,
-the primary answers.   If it comes out to equal to or more than the
-split, the secondary answers.   The only meaningful value is 128, and can
-only be configured on the primary.
+identification, resulting in value from 0 to 255.  This is used as
+an index into a 256 bit field.  If the bit at that index is set,
+the primary is responsible.  If the bit at that index is not set,
+the secondary is responsible.  The \fBsplit\fR value determines
+how many of the leading bits are set to one.  So, in practice, higher
+split values will cause the primary to serve more clients than the
+secondary.  Lower split values, the converse.  Legal values are between
+0 and 255, of which the most reasonable is 128.
 .RE
 .PP
 The 
@@ -695,10 +761,27 @@ for such fine-grained control, however.   An example hba statement:
       00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00;
 .fi
 .PP
-This is equivalent to a \fBsplit 128;\fR statement.  You must only have
-\fBsplit\fR or \fBhba\fR defined, never both.  For most cases, the
-fine-grained control that \fBhba\fR offers isn't necessary, and \fBsplit\fR
-should be used.  As such, the use of \fBhba\fR is deprecated.
+This is equivalent to a \fBsplit 128;\fR statement, and identical.  The
+following two examples are also equivalent to a \fBsplit\fR of 128, but 
+are not identical:
+.PP
+.nf
+  hba aa:aa:aa:aa:aa:aa:aa:aa:aa:aa:aa:aa:aa:aa:aa:aa:
+      aa:aa:aa:aa:aa:aa:aa:aa:aa:aa:aa:aa:aa:aa:aa:aa;
+
+  hba 55:55:55:55:55:55:55:55:55:55:55:55:55:55:55:55:
+      55:55:55:55:55:55:55:55:55:55:55:55:55:55:55:55;
+.fi
+.PP
+They are equivalent, because half the bits are set to 0, half are set to
+1 (0xa and 0x5 are 1010 and 0101 binary respectively) and consequently this
+would roughly divide the clients equally between the servers.  They are not
+identical, because the actual peers this would load balance to each server
+are different for each example.
+.PP
+You must only have \fBsplit\fR or \fBhba\fR defined, never both.  For most
+cases, the fine-grained control that \fBhba\fR offers isn't necessary, and
+\fBsplit\fR should be used.
 .RE
 .PP
 The 

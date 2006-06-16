@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.80 2006/06/09 15:51:02 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.81 2006/06/16 19:26:45 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -875,8 +875,9 @@ int supersede_lease (comp, lease, commit, propogate, pimmediate)
 	int enter_hwaddr = 0;
 	struct lease *lp, **lq, *prev;
 	TIME lp_next_state;
-
 #if defined (FAILOVER_PROTOCOL)
+	int do_pool_check = 0;
+
 	/* We must commit leases before sending updates regarding them
 	   to failover peers.  It is, therefore, an error to set pimmediate
 	   and not commit. */
@@ -1070,6 +1071,10 @@ int supersede_lease (comp, lease, commit, propogate, pimmediate)
 		lq = &comp -> pool -> free;
 		if (!(comp->flags & RESERVED_LEASE))
 			comp->pool->free_leases--;
+
+#if defined(FAILOVER_PROTOCOL)
+		do_pool_check = 1;
+#endif
 		break;
 
 	      case FTS_ACTIVE:
@@ -1090,6 +1095,10 @@ int supersede_lease (comp, lease, commit, propogate, pimmediate)
 		lq = &comp -> pool -> backup;
 		if (!(comp->flags & RESERVED_LEASE))
 			comp->pool->backup_leases--;
+
+#if defined(FAILOVER_PROTOCOL)
+		do_pool_check = 1;
+#endif
 		break;
 
 	      default:
@@ -1180,6 +1189,8 @@ int supersede_lease (comp, lease, commit, propogate, pimmediate)
 		if (!dhcp_failover_queue_update (comp, pimmediate))
 			return 0;
 	}
+	if (do_pool_check && comp->pool->failover_peer)
+		dhcp_failover_pool_check(comp->pool);
 #endif
 
 	/* If the current binding state has already expired, do an

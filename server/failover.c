@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.61 2006/05/04 21:14:21 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.62 2006/06/16 19:26:45 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -52,6 +52,12 @@ static isc_result_t failover_message_reference (failover_message_t **,
 						const char *file, int line);
 static isc_result_t failover_message_dereference (failover_message_t **,
 						  const char *file, int line);
+
+static void dhcp_failover_pool_reqbalance(dhcp_failover_state_t *state);
+static int dhcp_failover_pool_dobalance(dhcp_failover_state_t *state);
+static INLINE int secondary_not_hoarding(dhcp_failover_state_t *state,
+					 struct pool *p);
+
 
 void dhcp_failover_startup ()
 {
@@ -1383,7 +1389,7 @@ isc_result_t dhcp_failover_state_signal (omapi_object_t *o,
 			dhcp_failover_process_update_done (state,
 							   link -> imsg);
 		} else if (link -> imsg -> type == FTM_POOLREQ) {
-			dhcp_failover_pool_rebalance (state);
+			dhcp_failover_pool_reqbalance(state);
 		} else if (link -> imsg -> type == FTM_POOLRESP) {
 			log_info ("pool response: %ld leases",
 				  (unsigned long)
@@ -2211,10 +2217,40 @@ isc_result_t dhcp_failover_peer_state_changed (dhcp_failover_state_t *state,
 	return ISC_R_SUCCESS;
 }
 
-int dhcp_failover_pool_rebalance (dhcp_failover_state_t *state)
+/* Entry from timer. */
+void dhcp_failover_pool_rebalance(void *failover_state)
 {
-	int lts;
+	dhcp_failover_state_t *state;
+
+	state = (dhcp_failover_state_t *)failover_state;
+
+	if (dhcp_failover_pool_dobalance(state))
+		dhcp_failover_send_updates(state);
+}
+
+/* Entry from POOLREQ. */
+static void dhcp_failover_pool_reqbalance(dhcp_failover_state_t *state)
+{
+	int queued;
+
+	queued = dhcp_failover_pool_dobalance(state);
+
+	dhcp_failover_send_poolresp(state, queued);
+
+	if (queued)
+		dhcp_failover_send_updates(state);
+	else
+		log_info("peer %s: Got POOLREQ, answering negatively!  "
+			 "Peer may be out of leases or database inconsistent.",
+			 state->name);
+}
+
+/* Do the meat of the work common to all forms of pool rebalance. */
+static int dhcp_failover_pool_dobalance(dhcp_failover_state_t *state)
+{
+	int lts, total, thresh, hold, pass;
 	int leases_queued = 0;
+	int reqsent = 0;
 	struct lease *lp = (struct lease *)0;
 	struct lease *next = (struct lease *)0;
 	struct shared_network *s;
@@ -2223,14 +2259,17 @@ int dhcp_failover_pool_rebalance (dhcp_failover_state_t *state)
 	binding_state_t peer_lease_state;
 	binding_state_t my_lease_state;
 	struct lease **lq;
-	int tenper;
 
-	if (state -> me.state != normal || state -> i_am == secondary)
+	if (state -> me.state != normal)
 		return 0;
 
-	for (s = shared_networks; s; s = s -> next) {
-	    for (p = s -> pools; p; p = p -> next) {
-		if (p -> failover_peer != state)
+	state->last_balance = cur_time;
+	cancel_timeout(dhcp_failover_pool_rebalance, state);
+	state->sched_balance = 0;
+
+	for (s = shared_networks ; s ; s = s->next) {
+	    for (p = s->pools ; p ; p = p->next) {
+		if (p->failover_peer != state)
 		    continue;
 
 		/* Right now we're giving the peer half of the free leases.
@@ -2239,125 +2278,205 @@ int dhcp_failover_pool_rebalance (dhcp_failover_state_t *state)
 		   of leases the peer has, will be how many more leases we
 		   have than the peer has.   So if we send half that number
 		   to the peer, we should be even. */
-		if (p -> failover_peer -> i_am == primary) {
-			lts = (p -> free_leases - p -> backup_leases) / 2;
+		if (p->failover_peer->i_am == primary) {
+			lts = (p->free_leases - p->backup_leases) / 2;
 			peer_lease_state = FTS_BACKUP;
 			my_lease_state = FTS_FREE;
-			lq = &p -> free;
+			lq = &p->free;
 		} else {
-			lts = (p -> backup_leases - p -> free_leases) / 2;
+			lts = (p->backup_leases - p->free_leases) / 2;
 			peer_lease_state = FTS_FREE;
 			my_lease_state = FTS_BACKUP;
-			lq = &p -> backup;
+			lq = &p->backup;
 		}
 
-		tenper = (p -> backup_leases + p -> free_leases) / 10;
-		if (tenper == 0)
-			tenper = 1;
-		if (lts > tenper) {
-		    log_info ("pool %lx %s  total %d  free %d  %s %d  lts %d",
-			  (unsigned long)p,
-			  (p -> shared_network ?
-			   p -> shared_network -> name : ""), p -> lease_count,
-			  p -> free_leases, "backup", p -> backup_leases, lts);
+		log_info ("pool %lx %s  total %d  free %d  backup %d  lts %d",
+			(unsigned long)p,
+			(p->shared_network ?
+			 p->shared_network->name : ""), p->lease_count,
+			p->free_leases, p->backup_leases, lts);
 
-		    lease_reference (&lp, *lq, MDL);
+		total = p->backup_leases + p->free_leases;
 
-		    while (lp && lts) {
-			/* Remember the next lease in the list. */
+		thresh = ((total * state->max_lease_misbalance) + 50) / 100;
+		hold = ((total * state->max_lease_ownership) + 50) / 100;
+
+		/* If lts is in the negatives (we need leases) more than
+		 * negative double the thresh%, panic and send poolreq to
+		 * hopefully wake up the peer.
+		 */
+		if (!reqsent && (lts < (thresh * -2))) {
+			dhcp_failover_send_poolreq(state);
+			reqsent = 1;
+		}
+
+		/* Do not go through the process unless at least we have
+		 * more than thresh% more leases than the peer.
+		 */
+		if (lts <= thresh) {
+			log_info("pool %lx %s: lts <= max-lease-misbalance "
+				 "(%d), pool rebalance event skipped.",
+				 (unsigned long)p,
+				 (p->shared_network ?
+				  p->shared_network->name : ""), thresh);
+
+			/* Recalculate next rebalance event timer. */
+			dhcp_failover_pool_check(p);
+			continue;
+		}
+
+		/* In the first pass, try to allocate leases to the
+		 * peer which it would normally be responsible for (if
+		 * the lease has a hardware address or client-identifier,
+		 * and the load-balance-algorithm chooses the peer to
+		 * answer that address), up to a hold% excess in the peer's
+		 * favor.  In the second pass, just send the oldest (first
+		 * on the list) leases up to a hold% excess in our favor.
+		 *
+		 * This could make for additional pool rebalance
+		 * events, but preserving MAC possession should be
+		 * worth it.
+		 */
+		pass = 0;
+		lease_reference(&lp, *lq, MDL);
+
+		/* hold may be zero (consider the case where there are 2
+		 * leases, both on one server), therefore use >=.
+		 */
+		while (lp && (lts >= (pass ? hold : -hold))) {
 			if (next)
-			    lease_dereference (&next, MDL);
-			if (lp -> next)
-			    lease_reference (&next, lp -> next, MDL);
+			    lease_dereference(&next, MDL);
+			if (lp->next)
+			    lease_reference(&next, lp->next, MDL);
 
-			--lts;
-			++leases_queued;
-			lp -> next_binding_state = peer_lease_state;
-			lp -> tstp = cur_time;
-			lp -> starts = cur_time;
+			if (pass || peer_wants_lease(lp)) {
+			    --lts;
+			    ++leases_queued;
+			    lp->next_binding_state = peer_lease_state;
+			    lp->tstp = cur_time;
+			    lp->starts = cur_time;
 
-			if (!supersede_lease (lp, (struct lease *)0, 0, 1, 0)
-			    || !write_lease (lp))
-			{
-			    log_info ("can't commit lease %s on giveaway",
-				      piaddr (lp -> ip_addr));
+			    if (!supersede_lease(lp, NULL, 0, 1, 0) ||
+			        !write_lease(lp))
+			    	    log_error("can't commit lease %s on "
+					      "giveaway", piaddr(lp->ip_addr));
 			}
 
-			lease_dereference (&lp, MDL);
+			lease_dereference(&lp, MDL);
 			if (next)
-				lease_reference (&lp, next, MDL);
-		    }
-		    if (next)
-			lease_dereference (&next, MDL);
-		    if (lp)
-			lease_dereference (&lp, MDL);
+				lease_reference(&lp, next, MDL);
+			else if (!pass) {
+				pass = 1;
+				lease_reference(&lp, *lq, MDL);
+			}
+		}
 
-		}
-		if (lts > 1) {
-			log_info ("lease imbalance - lts = %d", lts);
-		}
+		if (next)
+			lease_dereference(&next, MDL);
+		if (lp)
+			lease_dereference(&lp, MDL);
+
+		if (lts > thresh)
+			log_error("lease imbalance persists - lts = %d", lts);
+ 
+		/* Recalculate next rebalance event timer. */
+		dhcp_failover_pool_check(p);
 	    }
 	}
-	commit_leases();
-	dhcp_failover_send_poolresp (state, leases_queued);
-	dhcp_failover_send_updates (state);
+
+	if (leases_queued)
+		commit_leases();
+
 	return leases_queued;
 }
 
-int dhcp_failover_pool_check (struct pool *pool)
+/* dhcp_failover_pool_check: Called whenever FREE or BACKUP leases change
+ * states, on both servers.  Check the scheduled time to rebalance the pool
+ * and lower it if applicable.
+ */
+void
+dhcp_failover_pool_check(struct pool *pool)
 {
-	int lts;
-	struct lease *lp;
-	int tenper;
+	dhcp_failover_state_t *peer;
+	TIME est1, est2;
 
-	if (!pool -> failover_peer ||
-	    pool -> failover_peer -> me.state != normal)
-		return 0;
+	peer = pool->failover_peer;
 
-	if (pool -> failover_peer -> i_am == primary)
-		lts = (pool -> backup_leases - pool -> free_leases) / 2;
+	if(!peer || peer->me.state != normal)
+		return;
+
+	/* Estimate the time left until lease exhaustion.
+	 * The first lease on the backup or free lists is also the oldest
+	 * lease.  It is reasonable to guess that it will take at least
+	 * as much time for a pool to run out of leases, as the present
+	 * age of the oldest lease (seconds since it expired).
+	 *
+	 * Note that this isn't so sane of an assumption if the oldest
+	 * lease is a virgin (ends = 0), we wind up sending this against
+	 * the max_balance bounds check.
+	 */
+	if(pool->free && pool->free->ends < cur_time)
+		est1 = cur_time - pool->free->ends;
 	else
-		lts = (pool -> free_leases - pool -> backup_leases) / 2;
+		est1 = 0;
 
-	log_info ("pool %lx %s total %d  free %d  backup %d  lts %d",
-		  (unsigned long)pool,
-		  pool -> shared_network ? pool -> shared_network -> name : "",
-		  pool -> lease_count,
-		  pool -> free_leases, pool -> backup_leases, lts);
+	if(pool->backup && pool->backup->ends < cur_time)
+		est2 = cur_time - pool->backup->ends;
+	else
+		est2 = 0;
 
-	tenper = (pool -> backup_leases + pool -> free_leases) / 10;
-	if (tenper == 0)
-		tenper = 1;
-	if (lts > tenper) {
-		/* XXX What about multiple pools? */
-		if (pool -> failover_peer -> i_am == secondary) {
-			/* Ask the primary to send us leases. */
-			dhcp_failover_send_poolreq (pool -> failover_peer);
-			return 1;
-		} else {
-			/* Figure out how many leases to skip on the backup
-			   list.   We skip the earliest leases on the list
-			   to reduce the chance of trying to steal a lease
-			   that the secondary is about to allocate. */
-			int i = pool -> backup_leases - lts;
-			log_info ("Taking %d leases from secondary.", lts);
-			for (lp = pool -> backup; lp; lp = lp -> next) {
-				/* Skip to the last leases on the free
-				   list, because they are less likely
-				   to already have been allocated. */
-				if (i)
-					--i;
-				else {
-					lp -> desired_binding_state = FTS_FREE;
-					dhcp_failover_queue_update (lp, 1);
-					--lts;
-				}
-			}
-			if (lts)
-				log_info ("failed to take %d leases.", lts);
-		}
+	/* We don't want to schedule rebalance for when we think we'll run
+	 * out of leases, we want to schedule the rebalance for when we think
+	 * the disparity will be 'large enough' to warrant action.
+	 */
+	est1 = ((est1 * peer->max_lease_misbalance) + 50) / 100;
+	est2 = ((est2 * peer->max_lease_misbalance) + 50) / 100;
+
+	/* Guess when the local system will begin issuing POOLREQ panic
+	 * attacks because "max_lease_misbalance*2" has been exceeded.
+	 */
+	if(peer->i_am == primary)
+		est1 *= 2;
+	else
+		est2 *= 2;
+
+	/* Select the smallest time. */
+	if(est1 > est2)
+		est1 = est2;
+
+	/* Bounded by the maximum configured value. */
+	if(est1 > peer->max_balance)
+		est1 = peer->max_balance;
+
+	/* Project this time into the future. */
+	est1 += cur_time;
+
+	/* Do not move the time down under the minimum. */
+	est2 = peer->last_balance + peer->min_balance;
+	if(peer->last_balance && (est1 < est2))
+		est1 = est2;
+
+	/* Do not move the time forward, or reset to the same time. */
+	if(peer->sched_balance) {
+		if (est1 >= peer->sched_balance)
+			return;
+
+		/* We are about to schedule the time down, cancel the
+		 * current timeout.
+		 */
+		cancel_timeout(dhcp_failover_pool_rebalance, peer);
 	}
-	return 0;
+
+	/* The time is different, and lower, use it. */
+	peer->sched_balance = est1;
+
+#if defined(DEBUG_FAILOVER_TIMING)
+	log_info("add_timeout +%d dhcp_failover_pool_rebalance",
+		 est1 - cur_time);
+#endif
+	add_timeout(est1, dhcp_failover_pool_rebalance, peer,
+			(tvref_t)dhcp_failover_state_reference,
+			(tvunref_t)dhcp_failover_state_dereference);
 }
 
 int dhcp_failover_state_pool_check (dhcp_failover_state_t *state)
@@ -2370,9 +2489,7 @@ int dhcp_failover_state_pool_check (dhcp_failover_state_t *state)
 		for (p = s -> pools; p; p = p -> next) {
 			if (p -> failover_peer != state)
 				continue;
-			/* Only need to request rebalance on one pool. */
-			if (dhcp_failover_pool_check (p))
-				return 1;
+			dhcp_failover_pool_check (p);
 		}
 	}
 	return 0;
@@ -4600,6 +4717,7 @@ isc_result_t dhcp_failover_process_bind_update (dhcp_failover_state_t *state,
 	int reason = FTR_MISC_REJECT;
 	const char *message;
 	int new_binding_state;
+	int send_to_backup = 0;
 
 	ia.len = sizeof msg -> assigned_addr;
 	memcpy (ia.iabuf, &msg -> assigned_addr, ia.len);
@@ -4784,8 +4902,17 @@ isc_result_t dhcp_failover_process_bind_update (dhcp_failover_state_t *state,
 		    new_binding_state == FTS_RELEASED ||
 		    new_binding_state == FTS_RESET) {
 			lt -> next_binding_state = FTS_FREE;
-		} else
+
+			/* Mac address affinity.  Assign the lease to
+			 * BACKUP state if we are the primary and the
+			 * peer is more likely to reallocate this lease
+			 * to a returning client.
+			 */
+			if (state->i_am == primary)
+				send_to_backup = peer_wants_lease(lt);
+		} else {
 			lt -> next_binding_state = new_binding_state;
+		}
 		msg -> binding_status = lt -> next_binding_state;
 	}
 
@@ -4795,8 +4922,25 @@ isc_result_t dhcp_failover_process_bind_update (dhcp_failover_state_t *state,
 		message = "database update failed";
 	      bad:
 		dhcp_failover_send_bind_ack (state, msg, reason, message);
+		goto out;
 	} else {
 		dhcp_failover_queue_ack (state, msg);
+	}
+
+	/* If it is probably wise, assign lease to backup state if the peer
+	 * is not already hoarding leases.
+	 */
+	if (send_to_backup && secondary_not_hoarding(state, lt->pool)) {
+		lt->next_binding_state = FTS_BACKUP;
+		lt->tstp = cur_time;
+		lt->starts = cur_time;
+
+		if (!supersede_lease(lt, NULL, 0, 1, 0) ||
+		    !write_lease(lt))
+			log_error("can't commit lease %s for mac addr "
+				  "affinity", piaddr(lt->ip_addr));
+
+		dhcp_failover_send_updates(state);
 	}
 
       out:
@@ -4806,6 +4950,34 @@ isc_result_t dhcp_failover_process_bind_update (dhcp_failover_state_t *state,
 		lease_dereference (&lease, MDL);
 
 	return ISC_R_SUCCESS;
+}
+
+/* This was hairy enough I didn't want to do it all in an if statement.
+ *
+ * Returns: Truth is the secondary is allowed to get more leases based upon
+ * MAC address affinity.  False otherwise.
+ */
+static INLINE int
+secondary_not_hoarding(dhcp_failover_state_t *state, struct pool *p) {
+	int total;
+	int hold;
+	int lts;
+
+	total = p->free_leases + p->backup_leases;
+
+	/* How many leases is one side or the other allowed to "hold"? */
+	hold = ((total * state->max_lease_ownership) + 50) / 100;
+
+	/* If we were to send leases (or if the secondary were to send us
+	 * leases in the negative direction), how many would that be?
+	 */
+	lts = (p->free_leases - p->backup_leases) / 2;
+
+	/* The peer is not hoarding leases if we would send them more leases
+	 * (or they would take fewer leases) than the maximum they are allowed
+	 * to hold (the negative hold).
+	 */
+	return(lts > -hold);
 }
 
 isc_result_t dhcp_failover_process_bind_ack (dhcp_failover_state_t *state,
@@ -4864,6 +5036,26 @@ isc_result_t dhcp_failover_process_bind_ack (dhcp_failover_state_t *state,
 			lease->next_binding_state = FTS_FREE;
 		supersede_lease(lease, (struct lease *)0, 0, 0, 0);
 		write_lease(lease);
+
+		/* Lease has returned to FREE state from the
+		 * transitional states.  If the lease 'belongs'
+		 * to a client that would be served by the
+		 * peer, process a binding update now to send
+		 * the lease to backup state.
+		 */
+		if (state->i_am == primary &&
+		    peer_wants_lease(lease)) {
+			lease->next_binding_state = FTS_BACKUP;
+			lease->tstp = cur_time;
+			lease->starts = cur_time;
+
+			if (!supersede_lease(lease, NULL, 0, 1, 0) ||
+			    !write_lease(lease))
+				log_error("can't commit lease %s for "
+					  "client affinity",
+					  piaddr(lease->ip_addr));
+		}
+
 		if (state->me.state == normal)
 			commit_leases ();
 	} else {
@@ -5240,6 +5432,40 @@ int load_balance_mine (struct packet *packet, dhcp_failover_state_t *state)
 		return hm;
 	else
 		return !hm;
+}
+
+/* The inverse of load_balance_mine ("load balance theirs").  We can't
+ * use the regular load_balance_mine() and invert it because of the case
+ * where there might not be an HBA, and we want to indicate false here
+ * in this case only.
+ */
+int
+peer_wants_lease(struct lease *lp)
+{
+	dhcp_failover_state_t *state;
+	unsigned char hbaix;
+	int hm;
+
+	if (!lp->pool)
+		return 0;
+
+	state = lp->pool->failover_peer;
+
+	if (!state || !state->hba)
+		return 0;
+
+	if (lp->uid_len)
+		hbaix = loadb_p_hash (lp->uid, lp->uid_len);
+	else
+		hbaix = loadb_p_hash (lp->hardware_addr.hbuf,
+				      lp->hardware_addr.hlen);
+
+	hm = state->hba[(hbaix >> 3) & 0x1F] & (1 << (hbaix & 0x07));
+
+	if (state->i_am == primary)
+		return !hm;
+	else
+		return hm;
 }
 
 /* This deals with what to do with bind updates when

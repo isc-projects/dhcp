@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.205 2006/06/15 17:52:06 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.206 2006/06/16 19:26:45 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -289,16 +289,13 @@ void dhcpdiscover (packet, ms_nulltp)
 	if (lease && lease -> pool && lease -> pool -> failover_peer) {
 		peer = lease -> pool -> failover_peer;
 
-		/* If the lease is ours to allocate, then allocate it. */
-		if (lease_mine_to_reallocate(lease)) {
-			if (lease->pool && lease->pool->failover_peer)
-				dhcp_failover_pool_check(lease->pool);
-
-		/* If the lease is active, it belongs to the client.  This
+		/* If the lease is ours to allocate, then allocate it.
+		 * If the lease is active, it belongs to the client.  This
 		 * is the right lease, if we are to offer one.  We decide
 		 * wether or not to offer later on.
 		 */
-		} else if (lease->binding_state == FTS_ACTIVE) {
+		if (lease->binding_state == FTS_ACTIVE ||
+		    lease_mine_to_reallocate(lease)) {
 			; /* This space intentionally left blank. */
 
 		/* Otherwise, we can't let the client have this lease. */
@@ -327,10 +324,6 @@ void dhcpdiscover (packet, ms_nulltp)
 					   packet -> shared_network -> name);
 			return;
 		}
-#if defined (FAILOVER_PROTOCOL)
-		if (lease -> pool && lease -> pool -> failover_peer)
-			dhcp_failover_pool_check (lease -> pool);
-#endif
 	}
 
 #if defined (FAILOVER_PROTOCOL)

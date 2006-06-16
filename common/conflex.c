@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: conflex.c,v 1.99 2006/06/06 16:35:18 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: conflex.c,v 1.100 2006/06/16 19:26:44 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -836,8 +836,16 @@ static enum dhcp_token intern (atom, dfv)
 		if (!strncasecmp (atom + 1, "ax", 2)) {
 			if (!atom [3])
 				return TOKEN_MAX;
-			if (!strcasecmp (atom + 3, "-lease-time"))
-				return MAX_LEASE_TIME;
+			if (!strcasecmp (atom + 3, "-balance"))
+				return MAX_BALANCE;
+			if (!strcasecmp (atom + 3, "-lease-")) {
+				if (!strcasecmp(atom + 10, "misbalance"))
+					return MAX_LEASE_MISBALANCE;
+				if (!strcasecmp(atom + 10, "ownership"))
+					return MAX_LEASE_OWNERSHIP;
+				if (!strcasecmp(atom + 10, "time"))
+					return MAX_LEASE_TIME;
+			}
 			if (!strcasecmp (atom + 3, "-transmit-idle"))
 				return MAX_TRANSMIT_IDLE;
 			if (!strcasecmp (atom + 3, "-response-delay"))
@@ -846,6 +854,8 @@ static enum dhcp_token intern (atom, dfv)
 				return MAX_UNACKED_UPDATES;
 		}
 		if (!strncasecmp (atom + 1, "in-", 3)) {
+			if (!strcasecmp (atom + 4, "balance"))
+				return MIN_BALANCE;
 			if (!strcasecmp (atom + 4, "lease-time"))
 				return MIN_LEASE_TIME;
 			if (!strcasecmp (atom + 4, "secs"))

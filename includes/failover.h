@@ -49,6 +49,31 @@ typedef struct {
 	u_int8_t *data;
 } failover_option_t;
 
+/* Failover configuration defaults. */
+#ifndef  DEFAULT_MAX_BALANCE_TIME
+# define DEFAULT_MAX_BALANCE_TIME	3600
+#endif
+
+#ifndef  DEFAULT_MIN_BALANCE_TIME
+# define DEFAULT_MIN_BALANCE_TIME	60
+#endif
+
+#ifndef  DEFAULT_MAX_LEASE_MISBALANCE
+# define DEFAULT_MAX_LEASE_MISBALANCE   15
+#endif
+
+#ifndef  DEFAULT_MAX_LEASE_OWNERSHIP
+# define DEFAULT_MAX_LEASE_OWNERSHIP    10
+#endif
+
+#ifndef  DEFAULT_MAX_FLYING_UPDATES
+# define DEFAULT_MAX_FLYING_UPDATES	100
+#endif
+
+#ifndef  DEFAULT_MAX_RESPONSE_DELAY
+# define DEFAULT_MAX_RESPONSE_DELAY	20
+#endif
+
 #define FM_OFFSET(x) (long)(&(((failover_message_t *)0) -> x))
 
 /* All of the below definitions are mandated by draft-ietf-dhc-failover-12.
@@ -312,6 +337,10 @@ typedef struct _dhcp_failover_state {
 
 	u_int8_t *hba;	/* Hash bucket array for load balancing. */
 	int load_balance_max_secs;
+
+	unsigned int max_lease_misbalance, max_lease_ownership;
+	u_int32_t max_balance, min_balance;
+	TIME last_balance, sched_balance;
 
 	enum service_state service_state;
 	const char *nrr;	/* Printable reason why we're in the

@@ -106,6 +106,19 @@ and for prodding me into improving it.
 - Some patches to improve DHCP Server startup speed from Andrew Matheson
   have been incorporated.
 
+- Failover pairs now implement 'MAC Affinity' on leases moving from the
+  active to free states.  Leases that belonged to the failover secondary
+  are moved to BACKUP state rather than FREE upon exiting EXPIRED state.
+  If lease rebalancing must move leases, it tries first to move leases
+  that belong to the peer in need.
+
+- The server no longer sends POOLREQ messages unless the pool is severely
+  misbalanced in the peer's favor (see 'man dhcpd.conf' for more details).
+
+- Pool rebalance events no longer happen upon successfully allocating a
+  lease.  Instead, they happen on a schedule.  See 'man dhcpd.conf' for the
+  min-balance and max-balance statements for more information.
+
 			Changes since 3.0.4
 
 - A warning that host statements declared within subnet or shared-network
