@@ -338,7 +338,7 @@ typedef struct _dhcp_failover_state {
 	u_int8_t *hba;	/* Hash bucket array for load balancing. */
 	int load_balance_max_secs;
 
-	unsigned int max_lease_misbalance, max_lease_ownership;
+	u_int32_t max_lease_misbalance, max_lease_ownership;
 	u_int32_t max_balance, min_balance;
 	TIME last_balance, sched_balance;
 
