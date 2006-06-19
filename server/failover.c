@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.62 2006/06/16 19:26:45 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.63 2006/06/19 15:15:16 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -4908,7 +4908,8 @@ isc_result_t dhcp_failover_process_bind_update (dhcp_failover_state_t *state,
 			 * peer is more likely to reallocate this lease
 			 * to a returning client.
 			 */
-			if (state->i_am == primary)
+			if ((state->i_am == primary) &&
+			    !(lt->flags & (RESERVED_LEASE | BOOTP_LEASE)))
 				send_to_backup = peer_wants_lease(lt);
 		} else {
 			lt -> next_binding_state = new_binding_state;
@@ -5044,6 +5045,7 @@ isc_result_t dhcp_failover_process_bind_ack (dhcp_failover_state_t *state,
 		 * the lease to backup state.
 		 */
 		if (state->i_am == primary &&
+		    !(lease->flags & (RESERVED_LEASE | BOOTP_LEASE)) &&
 		    peer_wants_lease(lease)) {
 			lease->next_binding_state = FTS_BACKUP;
 			lease->tstp = cur_time;
