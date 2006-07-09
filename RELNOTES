@@ -144,6 +144,13 @@ and for prodding me into improving it.
   configuration option - the default configuration and results should be
   more clear now.
 
+- If the dhclient were to receive a DHCPNAK while it was in the RENEW
+  state (and consequently, had an active, 'bound' address and related
+  configuration options), it would fail to 'tear down' this information
+  before proceeding into INIT state.  dhclient now iterates the dhclient-
+  script with the 'EXPIRE' action to cause these teardowns prior to entering
+  INIT state.
+
 			Changes since 3.0.4rc1
 
 - The dhcp-options.5 manpage was updated to correct indentation errors

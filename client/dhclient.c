@@ -32,7 +32,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.140 2006/06/06 16:35:18 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.141 2006/07/09 15:39:48 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1376,6 +1376,17 @@ void dhcpnak (packet)
 #endif
 		return;
 	}
+
+	/* If we get a DHCPNAK, we use the EXPIRE dhclient-script state
+	 * to indicate that we want all old bindings to be removed.  (It
+	 * is possible that we may get a NAK while in the RENEW state,
+	 * so we might have bindings active at that time)
+	 */
+	script_init(client, "EXPIRE", NULL);
+	script_write_params(client, "old_", client->active);
+	if (client->alias)
+		script_write_params(client, "alias_", client->alias);
+	script_go(client);
 
 	destroy_client_lease (client -> active);
 	client -> active = (struct client_lease *)0;
