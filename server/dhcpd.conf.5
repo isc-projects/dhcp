@@ -28,7 +28,7 @@
 .\" see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
 .\" ``http://www.nominum.com''.
 .\"
-.\" $Id: dhcpd.conf.5,v 1.63.2.29 2006/04/27 21:38:30 dhankins Exp $
+.\" $Id: dhcpd.conf.5,v 1.63.2.30 2006/07/09 15:02:24 dhankins Exp $
 .\"
 .TH dhcpd.conf 5
 .SH NAME
@@ -953,12 +953,18 @@ to the client, the name from that declaration will be used.  If none
 of these applies, the server will not have a hostname for the client,
 and will not be able to do a DNS update.
 .PP
-The domain name is determined based strictly on the server
-configuration, not on what the client sends.   First, if there is a 
+The domain name is determined from the
 .I ddns-domainname
-configuration option, it is used.   Second, if there is a
-\fIdomain-name\fR option configured, that is used.  Otherwise, the
-server will not do the DNS update.
+configuration option.  The default configuration for this option is:
+.nf
+.sp 1
+  option server.ddns-domainname = config-option domain-name;
+
+.fi
+So if this configuration option is not configured to a different
+value (over-riding the above default), or if a domain-name option
+has not been configured for the client's scope, then the server will
+not attempt to perform a DNS update.
 .PP
 The client's fully-qualified domain name, derived as we have
 described, is used as the name on which an "A" record will be stored.

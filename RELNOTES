@@ -102,6 +102,10 @@ and for prodding me into improving it.
   (classes with lease limitations) was fixed.  Non-active leases OFFERed
   to clients are no longer billed (but billing is checked before offering).
 
+- The dhcpd.conf.5 manpage was updated in regard to the ddns-domainname
+  configuration option - the default configuration and results should be
+  more clear now.
+
 			Changes since 3.0.4rc1
 
 - The dhcp-options.5 manpage was updated to correct indentation errors
