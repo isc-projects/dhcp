@@ -111,7 +111,7 @@ and for prodding me into improving it.
   configuration options), it would fail to 'tear down' this information
   before proceeding into INIT state.  dhclient now iterates the dhclient-
   script with the 'EXPIRE' action to cause these teardowns prior to entering
-  INIT state.
+  INIT state.  Thanks to a patch from Chris Zimmerman.
 
 			Changes since 3.0.4rc1
 
