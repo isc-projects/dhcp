@@ -28,7 +28,7 @@
 .\" see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
 .\" ``http://www.nominum.com''.
 .\"
-.\" $Id: dhcpd.8,v 1.18.2.12 2005/09/22 16:19:59 dhankins Exp $
+.\" $Id: dhcpd.8,v 1.18.2.13 2006/07/13 17:29:34 dhankins Exp $
 .\"
 .TH dhcpd 8
 .SH NAME
@@ -193,7 +193,8 @@ flag.  This can be useful for debugging, and also at sites where a
 complete log of all dhcp activity must be kept but syslogd is not
 reliable or otherwise cannot be used.   Normally, dhcpd will log all
 output using the syslog(3) function with the log facility set to
-LOG_DAEMON.
+LOG_DAEMON.  Note that -d implies -f (the daemon will not fork
+itself into the background).
 .PP
 Dhcpd can be made to use an alternate configuration file with the
 .B -cf
