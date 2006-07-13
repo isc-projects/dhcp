@@ -1,4 +1,4 @@
-.\"	$Id: omshell.1,v 1.1.2.5 2004/06/10 17:59:24 dhankins Exp $
+.\"	$Id: omshell.1,v 1.1.2.6 2006/07/13 00:53:55 dhankins Exp $
 .\"
 .\" Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 2001-2003 by Internet Software Consortium
@@ -85,7 +85,7 @@ where number is the port that OMAPI listens on.  By default, this is 7911.
 .RS 0.5i
 This specifies the TSIG key to use to authenticate the OMAPI transactions.
 \fIname\fR is the name of a key defined in \fIdhcpd.conf\fR with the
-\fBomapi-key\fR statement.  The \fIsecret\fR is the secret generated from
+\fBomapi-key\fR statement.  The \fIsecret\fR is the secret key generated from
 \fBdnssec-keygen\fR or another key generation program.
 .RE
 .PP
@@ -97,7 +97,7 @@ statement.
 .PP
 Any object defined in OMAPI can be created, queried, and/or modified.  The
 object types available to OMAPI are defined in \fBdhcpd(8)\fR and
-\fBdhclient\fR.  When using omshell, objects are first defined locally,
+\fBdhclient(8)\fR.  When using omshell, objects are first defined locally,
 manipulated as desired, and then associated with an object on the server.
 Only one object can be manipulated at a time.  To create a local object, use
 .PP
@@ -112,7 +112,7 @@ lease's attributes can be set as follows:
 .PP
 .B set \fIattribute-name = value\fR
 .RS 0.5i
-\fBAttribute names are defined in \fBdhcpd(8)\fR and \fBdhclient(8)\fR.
+\fBAttribute\fR names are defined in \fBdhcpd(8)\fR and \fBdhclient(8)\fR.
 Values should be quoted if they are strings.  So, to set a lease's IP address,
 you would do the following:
 \fB set ip-address = 192.168.4.50\fR
@@ -305,7 +305,7 @@ particularly useful for hosts.
 .PP
 Any remote object that can be created can also be destroyed.  This is done by
 creating a new local object, setting attributes, associating the local and
-remote object using \fBopen\fI, and then using the \fBremove\fR command. 
+remote object using \fBopen\fR, and then using the \fBremove\fR command. 
 If the host "some-host" from before was created in error, this could be
 corrected as follows:
 .nf
@@ -328,7 +328,7 @@ dhcpctl(3), omapi(3), dhcpd(8), dhclient(8), dhcpd.conf(5), dhclient.conf(5).
 .SH AUTHOR
 .B omshell
 was written by Ted Lemon of Nominum, Inc.  Information about Nominum
-and support contracts for DHCP and BIND can be found at
-.B http://www.nominum.com.   This preliminary documentation was
-written by Wendy Verschoor of Nominum, Inc., while she was testing
-omshell.
+can be found at
+.B http://www.nominum.com.
+This preliminary documentation was written by Wendy Verschoor of Nominum,
+Inc., while she was testing omshell.
