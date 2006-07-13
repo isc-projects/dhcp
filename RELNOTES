@@ -151,6 +151,9 @@ and for prodding me into improving it.
   script with the 'EXPIRE' action to cause these teardowns prior to entering
   INIT state.  Thanks to a patch from Chris Zimmerman.
 
+- The omapi.1 manpage had some formatting errors repaired thanks to a patch
+  from Yoshihiko Sarumaru.
+
 			Changes since 3.0.4rc1
 
 - The dhcp-options.5 manpage was updated to correct indentation errors
