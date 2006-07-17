@@ -119,6 +119,9 @@ and for prodding me into improving it.
   lease.  Instead, they happen on a schedule.  See 'man dhcpd.conf' for the
   min-balance and max-balance statements for more information.
 
+- The DHCP Relay Agent Information Option / Link Selection Sub-Option
+  is now supported.  (See RFC3527 for details).
+
 			Changes since 3.0.4
 
 - A warning that host statements declared within subnet or shared-network

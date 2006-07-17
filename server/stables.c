@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: stables.c,v 1.30 2006/06/15 17:49:49 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: stables.c,v 1.31 2006/07/17 15:16:43 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -178,6 +178,7 @@ static struct option agent_options[] = {
 	{ "remote-id", "X",			&agent_universe,   2, 1 },
 	{ "agent-id", "I",			&agent_universe,   3, 1 },
 	{ "DOCSIS-device-class", "L",		&agent_universe,   4, 1 },
+	{ "link-selection", "I",		&agent_universe,   5, 1 },
 	{ NULL, NULL, NULL, 0, 0 }
 };
 

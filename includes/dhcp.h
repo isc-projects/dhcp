@@ -174,6 +174,7 @@ struct dhcp_packet {
 #define RAI_CIRCUIT_ID	1
 #define RAI_REMOTE_ID	2
 #define RAI_AGENT_ID	3
+#define RAI_LINK_SELECT	5
 
 /* FQDN suboptions: */
 #define FQDN_NO_CLIENT_UPDATE		1

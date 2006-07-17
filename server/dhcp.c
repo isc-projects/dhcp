@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.207 2006/06/19 20:39:28 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.208 2006/07/17 15:16:43 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -3902,9 +3902,15 @@ int locate_network (packet)
 	struct subnet *subnet = (struct subnet *)0;
 	struct option_cache *oc;
 
-	/* See if there's a subnet selection option. */
-	oc = lookup_option (&dhcp_universe, packet -> options,
-			    DHO_SUBNET_SELECTION);
+	/* See if there's a Relay Agent Link Selection Option, or a
+	 * Subnet Selection Option.  The Link-Select and Subnet-Select
+	 * are formatted and used precisely the same, but we must prefer
+	 * the link-select over the subnet-select.
+	 */
+	if ((oc = lookup_option(&agent_universe, packet->options,
+				RAI_LINK_SELECT)) == NULL)
+		oc = lookup_option(&dhcp_universe, packet->options,
+				   DHO_SUBNET_SELECTION);
 
 	/* If there's no SSO and no giaddr, then use the shared_network
 	   from the interface, if there is one.   If not, fail. */
@@ -3918,8 +3924,9 @@ int locate_network (packet)
 		return 0;
 	}
 
-	/* If there's an SSO, and it's valid, use it to figure out the
-	   subnet.    If it's not valid, fail. */
+	/* If there's an option indicating link connection, and it's valid,
+	 * use it to figure out the subnet.  If it's not valid, fail.
+	 */
 	if (oc) {
 		memset (&data, 0, sizeof data);
 		if (!evaluate_option_cache (&data, packet, (struct lease *)0,
