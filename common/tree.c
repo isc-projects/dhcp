@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.101.2.14 2006/02/22 22:43:27 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.101.2.15 2006/07/17 15:34:44 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1874,7 +1874,9 @@ int evaluate_data_expression (result, packet, lease, client_state,
 
 	      case expr_leased_address:
 		if (!lease) {
-			log_error ("data: leased_address: not available");
+			log_debug("data: \"leased-address\" configuration "
+				  "directive: there is no lease associated "
+				  "with this client.");
 			return 0;
 		}
 		result -> len = lease -> ip_addr.len;

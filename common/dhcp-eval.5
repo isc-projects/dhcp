@@ -1,4 +1,4 @@
-.\"	$Id: dhcp-eval.5,v 1.17.2.11 2006/03/06 16:16:24 dhankins Exp $
+.\"	$Id: dhcp-eval.5,v 1.17.2.12 2006/07/17 15:34:44 dhankins Exp $
 .\"
 .\" Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 1996-2003 by Internet Software Consortium
@@ -285,7 +285,12 @@ four bytes.
 .RS 0.25i
 In any context where the client whose request is being processed has
 been assigned an IP address, this data expression returns that IP
-address.
+address.  In any context where the client whose request is being
+processed has not been assigned an ip address, if this data expression
+is found in executable statements executed on that client's behalf,
+a log message indicating "there is no lease associated with this client"
+is syslogged to the debug level (this is considered dhcpd.conf debugging
+information).
 .RE
 .PP
 .B binary-to-ascii (\fInumeric-expr1\fB, \fInumeric-expr2\fB,
