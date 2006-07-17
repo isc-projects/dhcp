@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.115.2.17 2006/04/27 21:38:30 dhankins Exp $ Copyright 2004-2006 Internet Systems Consortium.";
+"$Id: dhcpd.c,v 1.115.2.18 2006/07/17 15:23:44 dhankins Exp $ Copyright 2004-2006 Internet Systems Consortium.";
 #endif
 
   static char copyright[] =
@@ -1142,7 +1142,10 @@ static isc_result_t dhcp_io_shutdown_countdown (void *vlp)
 	}
 #endif
 	if (shutdown_state == shutdown_dhcp &&
-	    !failover_connection_count) {
+#if defined(FAILOVER_PROTOCOL)
+	    !failover_connection_count &&
+#endif
+	    ISC_TRUE) {
 		shutdown_state = shutdown_done;
 		shutdown_time = cur_time;
 		goto oncemore;

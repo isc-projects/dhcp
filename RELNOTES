@@ -116,6 +116,10 @@ and for prodding me into improving it.
 - The omapi.1 manpage had some formatting errors repaired thanks to a patch
   from Yoshihiko Sarumaru.
 
+- A few lines of code that were failover-specific were moved within
+  #if defined() clauses so that compilation without failover could be
+  made possible.
+
 			Changes since 3.0.4rc1
 
 - The dhcp-options.5 manpage was updated to correct indentation errors
