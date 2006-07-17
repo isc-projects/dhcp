@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.192.2.63 2006/06/15 17:53:51 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.192.2.64 2006/07/17 09:17:19 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1917,7 +1917,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 			 */
 			if (offer == DHCPOFFER &&
 			    lease->billing_class != NULL &&
-			    lease->state != FTS_ACTIVE)
+			    lease->binding_state != FTS_ACTIVE)
 				unbill_class(lease, lease->billing_class);
 		}
 	}
