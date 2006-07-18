@@ -165,6 +165,9 @@ and for prodding me into improving it.
   in dhcpd.conf "executable statements" has been updated to be more helpful.
   Manpage information for this value has also been updated.
 
+- Abandoned or dissociated (err condition) leases now remove any related
+  dynamic dns bindings.  Thanks to a patch from Patrick Schoo.
+
 			Changes since 3.0.4rc1
 
 - The dhcp-options.5 manpage was updated to correct indentation errors
