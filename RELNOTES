@@ -1,10 +1,10 @@
 	      Internet Systems Consortium DHCP Distribution
-			     Version 3.0.4
-			     April 27, 2006
+			    Version 3.0.5b1
+			     July 18, 2006
 
 			     Release Notes
 
-			     NEW FEATURES
+		     IMPORTANT NEWS IN THIS RELEASE
 
 FAILOVER:  As of version 3.0.4, ISC has included a fix for an insidious
 bug in the failover implementation which, if left unchecked, could result
@@ -43,6 +43,8 @@ successfully start:
 
 	grep -v '^  atsfp ' /var/db/dhcpd.leases
 
+			     NEW FEATURES
+
 Version 3 of the ISC DHCP Distribution includes the following features
 that are new since version 2.0:
 
@@ -58,10 +60,6 @@ that are new since version 2.0:
      - Dynamic DNS updates
      - Many bug fixes, performance enhancements, and minor new DHCP
        protocol features. 
-
-The main bug fixed here is a bug in the subclass allocation code that
-could result in a memory smash.   Any users of the ISC DHCP server who
-are using subclasses should seriously consider upgrading to 3.0.1.
 
 If you are running 3.0 beta 1 and are doing dynamic DNS updates, the
 lease file is no longer forward-compatible to 3.0 final.   A script
