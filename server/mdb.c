@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.67.2.26 2006/05/05 20:09:13 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.67.2.27 2006/07/18 18:16:25 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1411,6 +1411,9 @@ void abandon_lease (lease, message)
 	const char *message;
 {
 	struct lease *lt = (struct lease *)0;
+#if defined (NSUPDATE)
+	ddns_removals (lease);
+#endif
 
 	if (!lease_copy (&lt, lease, MDL))
 		return;
@@ -1440,6 +1443,9 @@ void dissociate_lease (lease)
 	struct lease *lease;
 {
 	struct lease *lt = (struct lease *)0;
+#if defined (NSUPDATE)
+	ddns_removals (lease);
+#endif
 
 	if (!lease_copy (&lt, lease, MDL))
 		return;
