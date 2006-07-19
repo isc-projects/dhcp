@@ -168,6 +168,10 @@ and for prodding me into improving it.
 - Abandoned or dissociated (err condition) leases now remove any related
   dynamic dns bindings.  Thanks to a patch from Patrick Schoo.
 
+- Attempting to write a new lease file to replace a corrupt (due to
+  encountering non-retryable errors during writing) lease file should
+  no longer result in an infinite recursion.
+
 			Changes since 3.0.4rc1
 
 - The dhcp-options.5 manpage was updated to correct indentation errors
