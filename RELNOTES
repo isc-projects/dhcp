@@ -128,6 +128,11 @@ and for prodding me into improving it.
   instead trust the assigned name implicitly (removing any other bindings
   on that name).  This option has not been made available in dhclient.
 
+- In those cases where the DHCP software manufactures an IP header (to
+  transmit via bpf, lpf, etc), the IP TTL the software selects has been
+  increased from 16 to 128.  This is intended to match Microsoft Windows
+  DHCP Client behaviour, to increase compatibility.
+
 			Changes since 3.0.4
 
 - A warning that host statements declared within subnet or shared-network
