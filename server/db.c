@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: db.c,v 1.63.2.14 2005/10/14 16:02:55 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: db.c,v 1.63.2.15 2006/07/19 16:45:30 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -774,10 +774,13 @@ int new_lease_file ()
 	char backfname [512];
 	TIME t;
 	int db_fd;
+	int db_validity;
 	FILE *new_db_file;
 
 	/* Make a temporary lease file... */
 	GET_TIME (&t);
+
+	db_validity = lease_file_is_corrupt;
 
 	/* %Audit% Truncated filename causes panic. %2004.06.17,Safe%
 	 * This should never happen since the path is a configuration
@@ -836,6 +839,11 @@ int new_lease_file ()
 	if (errno != 0)
 		goto fail;
 
+	/* At this point we have a new lease file that, so far, could not
+	 * be described as either corrupt nor valid.
+	 */
+	lease_file_is_corrupt = 0;
+
 	/* Write out all the leases that we know of... */
 	counting = 0;
 	if (!write_leases ())
@@ -882,11 +890,10 @@ int new_lease_file ()
 	}
 
 	counting = 1;
-	lease_file_is_corrupt = 0;
 	return 1;
 
       fail:
-	lease_file_is_corrupt = 1;
+	lease_file_is_corrupt = db_validity;
       fdfail:
 	unlink (newfname);
 	return 0;
