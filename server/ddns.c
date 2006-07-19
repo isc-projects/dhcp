@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: ddns.c,v 1.20 2006/07/19 17:14:55 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: ddns.c,v 1.21 2006/07/19 20:13:57 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -232,7 +232,7 @@ int ddns_updates (struct packet *packet,
 	isc_result_t rcode1 = ISC_R_SUCCESS, rcode2 = ISC_R_SUCCESS;
 	int server_updates_a = 1;
 	struct buffer *bp = (struct buffer *)0;
-	int ignorep = 0;
+	int ignorep = 0, client_ignorep = 0;
 
 	if (ddns_update_style != 2)
 		return 0;
@@ -250,13 +250,11 @@ int ddns_updates (struct packet *packet,
 
 	/* If we are allowed to accept the client's update of its own A
 	   record, see if the client wants to update its own A record. */
-	if (!(oc = lookup_option (&server_universe, state -> options,
-				  SV_CLIENT_UPDATES)) ||
-	    evaluate_boolean_option_cache (&ignorep, packet, lease,
-					   (struct client_state *)0,
-					   packet -> options,
-					   state -> options,
-					   &lease -> scope, oc, MDL)) {
+	if (!(oc = lookup_option(&server_universe, state->options,
+				 SV_CLIENT_UPDATES)) ||
+	    evaluate_boolean_option_cache(&client_ignorep, packet, lease, NULL,
+					  packet->options, state->options,
+					  &lease->scope, oc, MDL)) {
 		/* If there's no fqdn.no-client-update or if it's
 		   nonzero, don't try to use the client-supplied
 		   XXX */
@@ -589,14 +587,101 @@ int ddns_updates (struct packet *packet,
 			       &ddns_rev_name);
 	}
 
-	/* Set up the outgoing FQDN option if there was an incoming
-	   FQDN option.  If there's a valid FQDN option, there should
-	   be an FQDN_ENCODED suboption, so we test the latter to
-	   detect the presence of the former. */
       noerror:
-	if ((oc = lookup_option (&fqdn_universe,
-				 packet -> options, FQDN_ENCODED))
-	    && buffer_allocate (&bp, ddns_fwd_name.len + 5, MDL)) {
+	/* If we're ignoring client updates, then we tell a sort of 'white
+	 * lie'.  We've already updated the name the server wants (per the
+	 * config written by the server admin).  Now let the client do as
+	 * it pleases with the name they supplied (if any).
+	 *
+	 * We only form an FQDN option this way if the client supplied an
+	 * FQDN option that had FQDN_SERVER_UPDATE set false.
+	 */
+	if (client_ignorep &&
+	    (oc = lookup_option(&fqdn_universe, packet->options,
+				FQDN_SERVER_UPDATE)) &&
+	    !evaluate_boolean_option_cache(&ignorep, packet, lease, NULL,
+					   packet->options, state->options,
+					   &lease->scope, oc, MDL)) {
+		oc = lookup_option(&fqdn_universe, packet->options, FQDN_FQDN);
+		if (oc && evaluate_option_cache(&d1, packet, lease, NULL,
+						packet->options, state->options,
+						&global_scope, oc, MDL)) {
+			if (d1.len == 0 ||
+			    !buffer_allocate(&bp, d1.len + 5, MDL))
+				goto badfqdn;
+
+			/* Server pretends it is not updating. */
+			bp->data[0] = 0;
+			if (!save_option_buffer(&fqdn_universe, state->options,
+						bp, &bp->data[0], 1,
+					&fqdn_options[FQDN_SERVER_UPDATE],
+						0))
+				goto badfqdn;
+
+			/* Client is encouraged to update. */
+			bp->data[1] = 0;
+			if (!save_option_buffer(&fqdn_universe, state->options,
+						bp, &bp->data[1], 1,
+					&fqdn_options[FQDN_NO_CLIENT_UPDATE],
+					0))
+				goto badfqdn;
+
+			/* Use the encoding of client's FQDN option. */
+			oc = lookup_option(&fqdn_universe, packet->options,
+					   FQDN_ENCODED);
+			if (oc && evaluate_boolean_option_cache(&ignorep,
+							packet, lease, NULL,
+							packet->options,
+							state->options,
+							&lease->scope, oc,
+							MDL))
+				bp->data[2] = 1; /* FQDN is encoded. */
+			else
+				bp->data[2] = 0; /* FQDN is not encoded. */
+
+			if (!save_option_buffer(&fqdn_universe, state->options,
+						bp, &bp->data[2], 1,
+						&fqdn_options[FQDN_ENCODED], 0))
+				goto badfqdn;
+
+			/* Current FQDN drafts indicate 255 is mandatory. */
+			bp->data[3] = 255;
+			if (!save_option_buffer(&fqdn_universe, state->options,
+						bp, &bp->data[3], 1,
+						&fqdn_options[FQDN_RCODE1], 0))
+				goto badfqdn;
+
+			bp->data[4] = 255;
+			if (!save_option_buffer(&fqdn_universe, state->options,
+						bp, &bp->data[4], 1,
+						&fqdn_options[FQDN_RCODE2], 0))
+				goto badfqdn;
+
+			/* Copy in the FQDN supplied by the client.  Note well
+			 * that the format of this option in the cache is going
+			 * to be in text format.  If the fqdn supplied by the
+			 * client is encoded, it is decoded into the option
+			 * cache when parsed out of the packet.  It will be
+			 * re-encoded when the option is assembled to be
+			 * transmitted if the client elects that encoding.
+			 */
+			memcpy(&bp->data[5], d1.data, d1.len);
+			if (!save_option_buffer(&fqdn_universe, state->options,
+						bp, &bp->data[5], 1,
+						&fqdn_options[FQDN_FQDN], 0))
+				goto badfqdn;
+
+			data_string_forget(&d1, MDL);
+		}
+	/* Set up the outgoing FQDN option if there was an incoming
+	 * FQDN option.  If there's a valid FQDN option, there MUST
+	 * be an FQDN_SERVER_UPDATES suboption, it's part of the fixed
+	 * length head of the option contents, so we test the latter
+	 * to detect the presence of the former.
+	 */
+	} else if ((oc = lookup_option(&fqdn_universe, packet->options,
+				       FQDN_ENCODED)) &&
+		   buffer_allocate(&bp, ddns_fwd_name.len + 5, MDL)) {
 		bp -> data [0] = server_updates_a;
 		if (!save_option_buffer (&fqdn_universe, state -> options,
 					 bp, &bp -> data [0], 1,
@@ -607,15 +692,12 @@ int ddns_updates (struct packet *packet,
 					 bp, &bp -> data [1], 1,
 					 FQDN_NO_CLIENT_UPDATE, 0))
 			goto badfqdn;
+
 		/* Do the same encoding the client did. */
-		oc = lookup_option (&fqdn_universe, packet -> options,
-				    FQDN_ENCODED);
-		if (oc &&
-		    evaluate_boolean_option_cache (&ignorep, packet, lease,
-						   (struct client_state *)0,
-						   packet -> options,
-						   state -> options,
-						   &lease -> scope, oc, MDL))
+		if (evaluate_boolean_option_cache(&ignorep, packet, lease,
+						  NULL, packet->options,
+						  state->options,
+						  &lease->scope, oc, MDL))
 			bp -> data [2] = 1;
 		else
 			bp -> data [2] = 0;
@@ -649,14 +731,15 @@ int ddns_updates (struct packet *packet,
 	/*
 	 * Final cleanup.
 	 */
-	data_string_forget (&ddns_hostname, MDL);
-	data_string_forget (&ddns_domainname, MDL);
-	data_string_forget (&old_ddns_fwd_name, MDL);
-	data_string_forget (&ddns_fwd_name, MDL);
-	data_string_forget (&ddns_rev_name, MDL);
-	data_string_forget (&ddns_dhcid, MDL);
+	data_string_forget(&d1, MDL);
+	data_string_forget(&ddns_hostname, MDL);
+	data_string_forget(&ddns_domainname, MDL);
+	data_string_forget(&old_ddns_fwd_name, MDL);
+	data_string_forget(&ddns_fwd_name, MDL);
+	data_string_forget(&ddns_rev_name, MDL);
+	data_string_forget(&ddns_dhcid, MDL);
 	if (bp)
-		buffer_dereference (&bp, MDL);
+		buffer_dereference(&bp, MDL);
 
 	return result;
 }

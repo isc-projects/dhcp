@@ -133,6 +133,16 @@ and for prodding me into improving it.
   increased from 16 to 128.  This is intended to match Microsoft Windows
   DHCP Client behaviour, to increase compatibility.
 
+- 'ignore client-updates;' now has behaviour that is different from
+  'deny client-updates;'.  The client's request is not truly ignored,
+  rather it is encouraged.  Should this value be configured, the server
+  updates DNS as though client-updates were set to 'deny'.  That is, it
+  enters into DNS whatever it is configured to do already, provided it is
+  configured to.  Then it sends a response to the client that lets the
+  client believe it is performing client updates (which it will), probably
+  for a different name.  In essence, this lets the client do as it will,
+  ignoring this aspect of their request.
+
 			Changes since 3.0.4
 
 - A warning that host statements declared within subnet or shared-network

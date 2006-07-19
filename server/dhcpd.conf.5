@@ -28,7 +28,7 @@
 .\" see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
 .\" ``http://www.nominum.com''.
 .\"
-.\" $Id: dhcpd.conf.5,v 1.76 2006/07/19 17:14:55 dhankins Exp $
+.\" $Id: dhcpd.conf.5,v 1.77 2006/07/19 20:13:57 dhankins Exp $
 .\"
 .TH dhcpd.conf 5
 .SH NAME
@@ -1137,6 +1137,12 @@ chose for the client.   If the client sends a fully-qualified domain
 name in the fqdn option, the server uses only the leftmost part of the
 domain name - in the example above, "jschmoe" instead of
 "jschmoe.radish.org".
+.PP
+Further, if the \fIignore client-updates;\fR directive is used, then
+the server will in addition send a response in the DHCP packet, using
+the FQDN Option, that implies to the client that it should perform its
+own updates if it chooses to do so.  With \fIdeny client-updates;\fR, a
+response is sent which indicates the client may not perform updates.
 .PP
 Also, if the
 .I use-host-decl-names
