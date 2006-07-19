@@ -510,6 +510,7 @@ struct lease_state {
 #define SV_DO_FORWARD_UPDATES		45
 #define SV_PING_TIMEOUT			46
 #define SV_RESERVE_INFINITE		47
+#define SV_DDNS_CONFLICT_DETECT		48
 
 #if !defined (DEFAULT_PING_TIMEOUT)
 # define DEFAULT_PING_TIMEOUT 1
@@ -2186,8 +2187,9 @@ void forget_zone (struct dns_zone **);
 void repudiate_zone (struct dns_zone **);
 void cache_found_zone (ns_class, char *, struct in_addr *, int);
 int get_dhcid (struct data_string *, int, const u_int8_t *, unsigned);
-isc_result_t ddns_update_a (struct data_string *, struct iaddr,
-			    struct data_string *, unsigned long, int);
+isc_result_t ddns_update_a(struct data_string *, struct iaddr,
+			   struct data_string *, unsigned long, unsigned,
+			   unsigned);
 isc_result_t ddns_remove_a (struct data_string *,
 			    struct iaddr, struct data_string *);
 #endif /* NSUPDATE */

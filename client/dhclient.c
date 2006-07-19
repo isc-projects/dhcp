@@ -32,7 +32,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.141 2006/07/09 15:39:48 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.142 2006/07/19 17:14:55 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -3178,7 +3178,7 @@ isc_result_t client_dns_update (struct client_state *client, int addp, int ttl)
 			rcode = ddns_update_a (&ddns_fwd_name,
 					       client -> active -> address,
 					       &ddns_dhcid, ttl,
-					       1);
+					       1, 1);
 		else
 			rcode = ddns_remove_a (&ddns_fwd_name,
 					       client -> active -> address,

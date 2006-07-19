@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: ddns.c,v 1.19 2006/06/01 20:23:17 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: ddns.c,v 1.20 2006/07/19 17:14:55 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -548,9 +548,23 @@ int ddns_updates (struct packet *packet,
 	/*
 	 * Perform updates.
 	 */
-	if (ddns_fwd_name.len && ddns_dhcid.len)
+	if (ddns_fwd_name.len && ddns_dhcid.len) {
+		unsigned conflict;
+
+		oc = lookup_option(&server_universe, state->options,
+				   SV_DDNS_CONFLICT_DETECT);
+		if (!oc ||
+		    evaluate_boolean_option_cache(&ignorep, packet, lease,
+						  NULL, packet->options,
+						  state->options,
+						  &lease->scope, oc, MDL))
+			conflict = 1;
+		else
+			conflict = 0;
+
 		rcode1 = ddns_update_a (&ddns_fwd_name, lease -> ip_addr,
-					&ddns_dhcid, ddns_ttl, 0);
+					&ddns_dhcid, ddns_ttl, 0, conflict);
+	}
 	
 	if (rcode1 == ISC_R_SUCCESS) {
 		if (ddns_fwd_name.len && ddns_rev_name.len)

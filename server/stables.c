@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: stables.c,v 1.31 2006/07/17 15:16:43 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: stables.c,v 1.32 2006/07/19 17:14:55 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -233,6 +233,7 @@ static struct option server_options[] = {
 	{ "do-forward-updates", "f",		&server_universe,  45, 1 },
 	{ "ping-timeout", "T",			&server_universe,  46, 1 },
 	{ "infinite-is-reserved", "f",		&server_universe,  47, 1 },
+	{ "update-conflict-detection", "f",	&server_universe,  48, 1 },
 	{ NULL, NULL, NULL, 0, 0 }
 };
 

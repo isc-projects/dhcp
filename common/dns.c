@@ -33,7 +33,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dns.c,v 1.39 2006/06/01 20:23:17 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dns.c,v 1.40 2006/07/19 17:14:55 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -518,10 +518,10 @@ int get_dhcid (struct data_string *id,
 /* Now for the DDNS update code that is shared between client and
    server... */
 
-isc_result_t ddns_update_a (struct data_string *ddns_fwd_name,
-			    struct iaddr ddns_addr,
-			    struct data_string *ddns_dhcid,
-			    unsigned long ttl, int rrsetp)
+isc_result_t
+ddns_update_a(struct data_string *ddns_fwd_name, struct iaddr ddns_addr,
+	      struct data_string *ddns_dhcid, unsigned long ttl,
+	      unsigned rrsetp, unsigned conflict)
 {
 	ns_updque updqueue;
 	ns_updrec *updrec;
@@ -654,22 +654,44 @@ isc_result_t ddns_update_a (struct data_string *ddns_fwd_name,
 		minires_freeupdrec (updrec);
 	}
 
-	/*
-	 * DHCID RR exists, and matches client identity.
+	/* If we're doing conflict resolution, we use a set of prereqs.  If
+	 * not, we delete the DHCID in addition to all A rrsets.
 	 */
-	updrec = minires_mkupdrec (S_PREREQ,
-				   (const char *)ddns_fwd_name -> data,
-				   C_IN, T_DHCID, 0);
-	if (!updrec) {
-		result = ISC_R_NOMEMORY;
-		goto error;
+	if (conflict) {
+		/*
+		 * DHCID RR exists, and matches client identity.
+		 */
+		updrec = minires_mkupdrec (S_PREREQ,
+					   (const char *)ddns_fwd_name -> data,
+					   C_IN, T_DHCID, 0);
+		if (!updrec) {
+			result = ISC_R_NOMEMORY;
+			goto error;
+		}
+	
+		updrec -> r_data = ddns_dhcid -> data;
+		updrec -> r_size = ddns_dhcid -> len;
+		updrec -> r_opcode = YXRRSET;
+
+		ISC_LIST_APPEND (updqueue, updrec, r_link);
+	} else {
+		/*
+		 * Conflict detection override: delete DHCID RRs.
+		 */
+		updrec = minires_mkupdrec(S_UPDATE, ddns_fwd_name->data,
+					  C_IN, T_DHCID, 0);
+
+		if (!updrec) {
+			result = ISC_R_NOMEMORY;
+			goto error;
+		}
+
+		updrec->r_data = NULL;
+		updrec->r_size = 0;
+		updrec->r_opcode = DELETE;
+
+		ISC_LIST_APPEND(updqueue, updrec, r_link);
 	}
-
-	updrec -> r_data = ddns_dhcid -> data;
-	updrec -> r_size = ddns_dhcid -> len;
-	updrec -> r_opcode = YXRRSET;
-
-	ISC_LIST_APPEND (updqueue, updrec, r_link);
 
 
 	/*

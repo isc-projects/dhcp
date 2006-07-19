@@ -122,6 +122,12 @@ and for prodding me into improving it.
 - The DHCP Relay Agent Information Option / Link Selection Sub-Option
   is now supported.  (See RFC3527 for details).
 
+- A new DDNS related server option, update-conflict-detection, has been
+  added.  If this option is enabled, dhcpd will perform normal DHCID
+  conflict resolution (the default).  If this option is disabled, it will
+  instead trust the assigned name implicitly (removing any other bindings
+  on that name).  This option has not been made available in dhclient.
+
 			Changes since 3.0.4
 
 - A warning that host statements declared within subnet or shared-network
