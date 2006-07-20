@@ -193,6 +193,11 @@ and for prodding me into improving it.
   encountering non-retryable errors during writing) lease file should
   no longer result in an infinite recursion.
 
+- Host declaration hardware addresses and client identifiers may only be
+  configured once.  dhcpd will now fail to load config files that specify
+  multiple identifiers (previous versions would silently over-ride the
+  value with the later configured value).
+
 			Changes since 3.0.4rc1
 
 - The dhcp-options.5 manpage was updated to correct indentation errors
