@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: ddns.c,v 1.21 2006/07/19 20:13:57 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: ddns.c,v 1.22 2006/07/20 16:27:45 shane Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -614,16 +614,14 @@ int ddns_updates (struct packet *packet,
 			bp->data[0] = 0;
 			if (!save_option_buffer(&fqdn_universe, state->options,
 						bp, &bp->data[0], 1,
-					&fqdn_options[FQDN_SERVER_UPDATE],
-						0))
+						FQDN_SERVER_UPDATE, 0))
 				goto badfqdn;
 
 			/* Client is encouraged to update. */
 			bp->data[1] = 0;
 			if (!save_option_buffer(&fqdn_universe, state->options,
 						bp, &bp->data[1], 1,
-					&fqdn_options[FQDN_NO_CLIENT_UPDATE],
-					0))
+						FQDN_NO_CLIENT_UPDATE, 0))
 				goto badfqdn;
 
 			/* Use the encoding of client's FQDN option. */
@@ -641,20 +639,20 @@ int ddns_updates (struct packet *packet,
 
 			if (!save_option_buffer(&fqdn_universe, state->options,
 						bp, &bp->data[2], 1,
-						&fqdn_options[FQDN_ENCODED], 0))
+						FQDN_ENCODED, 0))
 				goto badfqdn;
 
 			/* Current FQDN drafts indicate 255 is mandatory. */
 			bp->data[3] = 255;
 			if (!save_option_buffer(&fqdn_universe, state->options,
 						bp, &bp->data[3], 1,
-						&fqdn_options[FQDN_RCODE1], 0))
+						FQDN_RCODE1, 0))
 				goto badfqdn;
 
 			bp->data[4] = 255;
 			if (!save_option_buffer(&fqdn_universe, state->options,
 						bp, &bp->data[4], 1,
-						&fqdn_options[FQDN_RCODE2], 0))
+						FQDN_RCODE2, 0))
 				goto badfqdn;
 
 			/* Copy in the FQDN supplied by the client.  Note well
@@ -668,7 +666,7 @@ int ddns_updates (struct packet *packet,
 			memcpy(&bp->data[5], d1.data, d1.len);
 			if (!save_option_buffer(&fqdn_universe, state->options,
 						bp, &bp->data[5], 1,
-						&fqdn_options[FQDN_FQDN], 0))
+						FQDN_FQDN, 0))
 				goto badfqdn;
 
 			data_string_forget(&d1, MDL);
