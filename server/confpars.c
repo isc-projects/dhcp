@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.143.2.31 2006/05/05 20:03:24 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.143.2.32 2006/07/20 16:02:52 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -507,6 +507,13 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 	      case HARDWARE:
 		next_token (&val, (unsigned *)0, cfile);
 		memset (&hardware, 0, sizeof hardware);
+		if (host_decl && memcmp(&hardware, &(host_decl->interface),
+					sizeof(hardware)) != 0) {
+			parse_warn(cfile, "Host %s hardware address already "
+					  "configured.", host_decl->name);
+			break;
+		}
+
 		parse_hardware_param (cfile, &hardware);
 		if (host_decl)
 			host_decl -> interface = hardware;
@@ -1730,6 +1737,13 @@ void parse_host_declaration (cfile, group)
 
 			token = next_token (&val, (unsigned *)0, cfile);
 			data_string_forget (&host -> client_identifier, MDL);
+
+			if (host->client_identifier.len != 0) {
+				parse_warn(cfile, "Host %s already has a "
+						  "client identifier.",
+					   host->name);
+				break;
+			}
 
 			/* See if it's a string or a cshl. */
 			token = peek_token (&val, (unsigned *)0, cfile);
