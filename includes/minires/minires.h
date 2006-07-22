@@ -45,6 +45,12 @@ isc_result_t minires_nupdate (res_state, ns_updrec *);
 int minires_ninit (res_state);
 ns_rcode isc_rcode_to_ns (isc_result_t);
 
+int MRns_name_compress(const char *, u_char *, size_t, const unsigned char **,
+		       const unsigned char **);
+int MRns_name_unpack(const unsigned char *, const unsigned char *,
+		     const unsigned char *, unsigned char *, size_t);
+int MRns_name_ntop(const unsigned char *, char *, size_t);
+
 #if defined (MINIRES_LIB)
 #define res_update minires_update
 #define res_mkupdate minires_mkupdate
@@ -187,10 +193,7 @@ isc_result_t ns_sign_tcp_init (void *, const unsigned char *,
 			       unsigned, ns_tcp_tsig_state *);
 isc_result_t ns_sign_tcp (unsigned char *,
 			  unsigned *, unsigned, int, ns_tcp_tsig_state *, int);
-int ns_name_ntop (const unsigned char *, char *, size_t);
 int ns_name_pton (const char *, unsigned char *, size_t);
-int ns_name_unpack (const unsigned char *, const unsigned char *,
-		    const unsigned char *, unsigned char *, size_t);
 int ns_name_pack (const unsigned char *, unsigned char *,
 		  unsigned, const unsigned char **, const unsigned char **);
 int ns_name_compress (const char *, unsigned char *,

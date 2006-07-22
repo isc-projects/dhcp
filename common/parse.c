@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.112 2006/06/06 16:35:18 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.113 2006/07/22 02:24:16 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1390,6 +1390,9 @@ int parse_option_code_definition (cfile, option)
 		break;
 	      case DOMAIN_NAME:
 		type = 'd';
+		goto no_arrays;
+	      case DOMAIN_LIST:
+		type = 'D';
 		goto no_arrays;
 	      case TEXT:
 		type = 't';
@@ -4704,7 +4707,18 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 			}
 		}
 		break;
-		
+
+              case 'D': /* Domain list... */
+		t = parse_domain_list(cfile);
+
+		if (!t) {
+			if ((*fmt)[1] != 'o')
+				skip_to_semi(cfile);
+			return 0;
+		}
+
+		break;
+
 	      case 'd': /* Domain name... */
 		val = parse_host_name (cfile);
 		if (!val) {
@@ -5188,3 +5202,54 @@ int parse_warn (struct parse *cfile, const char *fmt, ...)
 
 	return 0;
 }
+
+struct expression *
+parse_domain_list (cfile)
+	struct parse *cfile;
+{
+	const char *val;
+	enum dhcp_token token = SEMI;
+	struct expression *t = NULL;
+	unsigned len, clen = 0;
+	int result;
+	unsigned char compbuf[256 * NS_MAXCDNAME];
+	const unsigned char *dnptrs[256], **lastdnptr;
+
+	memset(compbuf, 0, sizeof(compbuf));
+	memset(dnptrs, 0, sizeof(dnptrs));
+	dnptrs[0] = compbuf;
+	lastdnptr = &dnptrs[255];
+
+	do {
+		/* Consume the COMMA token if peeked. */
+		if (token == COMMA)
+			next_token(&val, NULL, cfile);
+
+		/* Get next (or first) value. */
+		token = next_token(&val, &len, cfile);
+
+		if (token != STRING) {
+			parse_warn(cfile, "Expecting a domain string.");
+			return NULL;
+		}
+
+		result = MRns_name_compress(val, compbuf + clen,
+					    sizeof(compbuf) - clen,
+					    dnptrs, lastdnptr);
+
+		if (result < 0) {
+			parse_warn(cfile, "Error compressing domain list: %m");
+			return NULL;
+		}
+
+		clen += result;
+
+		token = peek_token(&val, NULL, cfile);
+	} while (token == COMMA);
+
+	if (!make_const_data(&t, compbuf, clen, 1, 1, MDL))
+		log_fatal("No memory for domain list object.");
+
+	return t;
+}
+

@@ -31,11 +31,21 @@ if [ x$reason = xBOUND ] || [ x$reason = xRENEW ] || \
       route add default $router 1 >/dev/null 2>&1
     done
   fi
-  if [ "x$new_domain_name" != x ] && [ x"$new_domain_name_servers" != x ]; then
-    echo search $new_domain_name >/etc/resolv.conf
+  if [ x"$new_domain_name_servers" != x ]; then
+    cat /dev/null > /etc/resolv.conf.dhclient
+    if [ "x$new_domain_search != x ]; then
+      echo search $new_domain_search >> /etc/resolv.conf.dhclient
+    elif [ "x$new_domain_name != x ]; then
+      # Note that the DHCP 'Domain Name Option' is really just a domain
+      # name, and that this practice of using the domain name option as
+      # a search path is both nonstandard and deprecated.
+      echo search $new_domain_name >> /etc/resolv.conf.dhclient
+    fi
     for nameserver in $new_domain_name_servers; do
-      echo nameserver $nameserver >>/etc/resolv.conf
+      echo nameserver $nameserver >>/etc/resolv.conf.dhclient
     done
+
+    mv /etc/resolv.conf.dhclient /etc/resolv.conf
   fi
   exit 0
 fi

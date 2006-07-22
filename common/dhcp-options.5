@@ -1,4 +1,4 @@
-.\"	$Id: dhcp-options.5,v 1.29 2006/06/01 20:23:17 dhankins Exp $
+.\"	$Id: dhcp-options.5,v 1.30 2006/07/22 02:24:16 dhankins Exp $
 .\"
 .\" Copyright (c) 2004-2006 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 1996-2003 by Internet Software Consortium
@@ -89,6 +89,13 @@ data type specifies a domain name, which must not
 enclosed in double quotes.   This data type is not used for any
 existing DHCP options.   The domain name is stored just as if it were
 a text option.
+.PP
+The
+.B domain-list
+data type specifies a list of domain names, a space between each name and
+the entire string enclosed in double quotes.  These types of data are used
+for the domain-search option for example, and encodes an RFC1035 compressed
+DNS label list on the wire.
 .PP
 The
 .B flag
@@ -387,6 +394,15 @@ resolving hostnames via the Domain Name System.
 The domain-name-servers option specifies a list of Domain Name System
 (STD 13, RFC 1035) name servers available to the client.  Servers
 should be listed in order of preference.
+.RE
+.PP
+.B option \fBdomain-search\fR \fIstring\fR\fB;\fR
+.RS 0.25i
+.PP
+The domain-search option specifies a 'search list' of Domain Names to be
+used by the client to locate not-fully-qualified domain names.  The difference
+between this option and historic use of the domain-name option for the same
+ends is that this option is encoded in RFC1035 compressed labels on the wire.
 .RE
 .PP
 .B option \fBextensions-path\fR \fItext\fR\fB;\fR

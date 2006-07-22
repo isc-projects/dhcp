@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $Id: freebsd,v 1.16 2005/03/17 20:14:56 dhankins Exp $
+# $Id: freebsd,v 1.17 2006/07/22 02:24:16 dhankins Exp $
 #
 # $FreeBSD$
 
@@ -12,24 +12,38 @@ fi
 
 make_resolv_conf() {
   if [ x"$new_domain_name_servers" != x ]; then
-    if [ "x$new_domain_name" != x ]; then
-      ( echo search $new_domain_name >/etc/resolv.conf )
-      exit_status=$?
+    ( cat /dev/null > /etc/resolv.conf.dhclient )
+    exit_status=$?
+    if [ $exit_status -ne 0 ]; then
+      $LOGGER "Unable to create /etc/resolv.conf.dhclient: Error $exit_status"
     else
-      if [ -e /etc/resolv.conf ] ; then
-	( rm /etc/resolv.conf )
+      if [ "x$new_domain_search" != x ]; then
+	( echo search $new_domain_search >> /etc/resolv.conf.dhclient )
 	exit_status=$?
-      else
-	( touch /etc/resolv.conf )
+      elif [ "x$new_domain_name" != x ]; then
+	# Note that the DHCP 'Domain Name Option' is really just a domain
+	# name, and that this practice of using the domain name option as
+	# a search path is both nonstandard and deprecated.
+	( echo search $new_domain_name >> /etc/resolv.conf.dhclient )
 	exit_status=$?
       fi
-    fi
-    if [ $exit_status -ne 0 ]; then
-      $LOGGER "WARNING: Unable to update resolv.conf: Error $exit_status"
-    else
       for nameserver in $new_domain_name_servers; do
-	( echo nameserver $nameserver >>/etc/resolv.conf )
+	if [ $exit_status -ne 0 ]; then
+	  break
+	fi
+	( echo nameserver $nameserver >>/etc/resolv.conf.dhclient )
+	exit_status=$?
       done
+
+      # If there were no errors, attempt to mv the new file into place.
+      if [ $exit_status -eq 0 ]; then
+	( mv /etc/resolv.conf.dhclient /etc/resolv.conf )
+	exit_status = $?
+      fi
+
+      if [ $exit_status -ne 0 ]; then
+	$LOGGER "Error while writing new /etc/resolv.conf."
+      fi
     fi
   fi
 }

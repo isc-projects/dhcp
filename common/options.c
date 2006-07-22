@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.91 2006/06/01 20:23:17 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.92 2006/07/22 02:24:16 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -46,6 +46,12 @@ struct option *vendor_cfg_option;
 static void do_option_set PROTO ((pair *,
 				  struct option_cache *,
 				  enum statement_op));
+static int pretty_escape(char **, char *, const unsigned char **,
+			 const unsigned char *);
+static int pretty_text(char **, char *, const unsigned char **,
+			 const unsigned char *, int);
+static int pretty_domain(char **, char *, const unsigned char **,
+			 const unsigned char *);
 
 /* Parse all available options out of the specified packet. */
 
@@ -1146,6 +1152,7 @@ format_has_text(format)
 		    case 'a':
 		    case 'X':
 		    case 'x':
+		    case 'D':
 			return 0;
 
 			/* 'E' is variable length, but not arbitrary...you
@@ -1264,6 +1271,7 @@ format_min_length(format, oc)
 			break;
 
 		    case 'd': /* "Domain name" */
+		    case 'D': /* "rfc1035 compressed names" */
 		    case 't': /* "ASCII Text" */
 		    case 'X': /* "ASCII or Hex Conditional */
 		    case 'x': /* "Hex" */
@@ -1293,14 +1301,16 @@ const char *pretty_print_option (option, data, len, emit_commas, emit_quotes)
 	int emit_quotes;
 {
 	static char optbuf [32768]; /* XXX */
+	static char *endbuf = &optbuf[sizeof(optbuf)];
 	int hunksize = 0;
 	int opthunk = 0;
 	int hunkinc = 0;
 	int numhunk = -1;
 	int numelem = 0;
+	int count;
+	int i, j, k, l;
 	char fmtbuf [32];
 	struct enumeration *enumbuf [32];
-	int i, j, k, l;
 	char *op = optbuf;
 	const unsigned char *dp = data;
 	struct in_addr foo;
@@ -1439,31 +1449,72 @@ const char *pretty_print_option (option, data, len, emit_commas, emit_quotes)
 		for (j = 0; j < numelem; j++) {
 			switch (fmtbuf [j]) {
 			      case 't':
-				if (emit_quotes)
-					*op++ = '"';
-				for (; dp < data + len; dp++) {
-					if (!isascii (*dp) ||
-					    !isprint (*dp)) {
-						/* Skip trailing NUL. */
-					    if (dp + 1 != data + len ||
-						*dp != 0) {
-						    sprintf (op, "\\%03o",
-							     *dp);
-						    op += 4;
-					    }
-					} else if (*dp == '"' ||
-						   *dp == '\'' ||
-						   *dp == '$' ||
-						   *dp == '`' ||
-						   *dp == '\\') {
-						*op++ = '\\';
-						*op++ = *dp;
-					} else
-						*op++ = *dp;
+				/* endbuf-1 leaves room for NULL. */
+				k = pretty_text(&op, endbuf - 1, &dp,
+						data + len, emit_quotes);
+				if (k == -1) {
+					log_error("Error printing text.");
+					break;
 				}
-				if (emit_quotes)
-					*op++ = '"';
 				*op = 0;
+				break;
+			      case 'D': /* RFC1035 format name list */
+				for( ; dp < (data + len) ; dp += k) {
+					unsigned char nbuff[NS_MAXCDNAME];
+					const unsigned char *nbp, *nend;
+
+					nend = &nbuff[sizeof(nbuff)];
+
+					/* If this is for ISC DHCP consumption
+					 * (emit_quotes), lay it out as a list
+					 * of STRING tokens.  Otherwise, it is
+					 * a space-separated list of DNS-
+					 * escaped names as /etc/resolv.conf
+					 * might digest.
+					 */
+					if (dp != data) {
+						if (op + 2 > endbuf)
+							break;
+
+						if (emit_quotes)
+							*op++ = ',';
+						*op++ = ' ';
+					}
+
+					k = MRns_name_unpack(data,
+							     data + len,
+							     dp, nbuff,
+							     sizeof(nbuff));
+
+					if (k == -1) {
+						log_error("Invalid domain "
+							  "list.");
+						break;
+					}
+
+					/* If emit_quotes, then use ISC DHCP
+					 * escapes.  Otherwise, rely only on
+					 * ns_name_ntop().
+					 */
+					if (emit_quotes) {
+						nbp = nbuff;
+						pretty_domain(&op, endbuf-1,
+							      &nbp, nend);
+					} else {
+						count = MRns_name_ntop(
+								nbuff, op, 
+								(endbuf-op)-1);
+
+						if (count == -1) {
+							log_error("Invalid "
+								"domain name.");
+							break;
+						}
+
+						op += count;
+					}
+				}
+				*op = '\0';
 				break;
 				/* pretty-printing an array of enums is
 				   going to get ugly. */
@@ -1478,7 +1529,6 @@ const char *pretty_print_option (option, data, len, emit_commas, emit_quotes)
 						break;
 				}
 				strcpy (op, enumbuf [j] -> values [i].name);
-				op += strlen (op);
 				break;
 			      case 'I':
 				foo.s_addr = htonl (getULong (dp));
@@ -2642,3 +2692,142 @@ void do_packet (interface, packet, len, from_port, from, hfrom)
 	dump_rc_history (0);
 #endif
 }
+
+static int
+pretty_escape(char **dst, char *dend, const unsigned char **src,
+	      const unsigned char *send)
+{
+	int count = 0;
+
+	/* If there aren't as many bytes left as there are in the source
+	 * buffer, don't even bother entering the loop.
+	 */
+	if (dst == NULL || src == NULL || (*dst >= dend) || (*src > send) ||
+	    *dst == NULL || *src == NULL ||
+	    ((send - *src) > (dend - *dst)))
+		return -1;
+
+	for ( ; *src < send ; *src++) {
+		if (!isascii (**src) || !isprint (**src)) {
+			/* Skip trailing NUL. */
+			if ((*src + 1) != send || **src != '\0') {
+				if (*dst + 4 > dend)
+					return -1;
+
+				sprintf(*dst, "\\%03o",
+					**src);
+				*dst += 4;
+				count += 4;
+			}
+		} else if (**src == '"' || **src == '\'' || **src == '$' ||
+			   **src == '`' || **src == '\\') {
+			if (*dst + 2 > dend)
+				return -1;
+
+			**dst = '\\';
+			*dst++;
+			**dst = **src;
+			*dst++;
+			count += 2;
+		} else {
+			if (*dst + 1 > dend)
+				return -1;
+
+			**dst = **src;
+			*dst++;
+			count++;
+		}
+	}
+
+	return count;
+}
+
+static int
+pretty_text(char **dst, char *dend, const unsigned char **src,
+	    const unsigned char *send, int emit_quotes)
+{
+	int count;
+
+	if (dst == NULL || dend == NULL || src == NULL || send == NULL ||
+	    *dst == NULL || *src == NULL ||
+	    ((*dst + (emit_quotes ? 2 : 0)) > dend) || (*src > send))
+		return -1;
+
+	if (emit_quotes) {
+		**dst = '"';
+		*dst++;
+	}
+
+	/* dend-1 leaves 1 byte for the closing quote. */
+	count = pretty_escape(dst, dend - (emit_quotes ? 1 : 0), src, send);
+
+	if (count == -1)
+		return -1;
+
+	if (emit_quotes && (*dst < dend)) {
+		**dst = '"';
+		*dst++;
+
+		/* Includes quote prior to pretty_escape(); */
+		count += 2;
+	}
+
+	return count;
+}
+
+static int
+pretty_domain(char **dst, char *dend, const unsigned char **src,
+	      const unsigned char *send)
+{
+	const unsigned char *tend;
+	int count = 2;
+	int tsiz, status;
+
+	if (dst == NULL || dend == NULL || src == NULL || send == NULL ||
+	    *dst == NULL || *src == NULL ||
+	    ((*dst + 2) > dend) || (*src >= send))
+		return -1;
+
+	**dst = '"';
+	*dst++;
+
+	do {
+		/* Continue loop until end of src buffer. */
+		if (*src >= send)
+			break;
+
+		/* Consume tag size. */
+		tsiz = **src;
+		*src++;
+
+		/* At root, finis. */
+		if (tsiz == 0)
+			break;
+
+		tend = *src + tsiz;
+
+		/* If the tag exceeds the source buffer, it's illegal.
+		 * This should also trap compression pointers (which should
+		 * not be in these buffers).
+		 */
+		if (tend > send)
+			return -1;
+
+		/* dend-2 leaves room for a trailing dot and quote. */
+		status = pretty_escape(dst, dend-2, src, tend);
+
+		if ((status == -1) || ((*dst + 2) > dend))
+			return -1;
+
+		**dst = '.';
+		*dst++;
+		count += status + 1;
+	}
+	while(1);
+
+	**dst = '"';
+	*dst++;
+
+	return count;
+}
+

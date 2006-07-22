@@ -143,6 +143,9 @@ and for prodding me into improving it.
   for a different name.  In essence, this lets the client do as it will,
   ignoring this aspect of their request.
 
+- Support for compressed 'domain name list' style DHCP option contents, and
+  in particular the domain search option (#119) was added.
+
 			Changes since 3.0.4
 
 - A warning that host statements declared within subnet or shared-network
@@ -207,6 +210,9 @@ and for prodding me into improving it.
 
 - Some manual pages were clarified pursuant to discussion on the dhcp-server
   mailing list.
+
+- Support for compressed 'domain name list' style DHCP option contents, and
+  in particular the domain search option (#119) was added.
 
 			Changes since 3.0.4b2
 

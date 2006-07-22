@@ -149,6 +149,7 @@ struct dhcp_packet {
 #define DHO_FQDN			81
 #define DHO_DHCP_AGENT_OPTIONS		82
 #define DHO_SUBNET_SELECTION		118 /* RFC3011! */
+#define DHO_DOMAIN_SEARCH		119 /* RFC3397 */
 #define DHO_VIVCO_SUBOPTIONS		124
 #define DHO_VIVSO_SUBOPTIONS		125
 /* The DHO_AUTHENTICATE option is not a standard yet, so I've

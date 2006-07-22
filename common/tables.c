@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tables.c,v 1.55 2006/06/01 20:23:17 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: tables.c,v 1.56 2006/07/22 02:24:16 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -94,6 +94,7 @@ HASH_FUNCTIONS (option_code, const unsigned *, struct option,
        followed by a '.'.   The width of the data is specified in the
        named enumeration.   Named enumerations are tracked in parse.c.
    d - Domain name (i.e., FOO or FOO.BAR).
+   D - Domain list (i.e., example.com eng.example.com)
 */
 
 struct universe dhcp_universe;
@@ -185,6 +186,7 @@ static struct option dhcp_options[] = {
 	{ "nds-context", "t",			&dhcp_universe,  87, 1 },
 	{ "uap-servers", "t",			&dhcp_universe,  98, 1 },
 	{ "subnet-selection", "I",		&dhcp_universe, 118, 1 },
+	{ "domain-search", "D",			&dhcp_universe, 119, 1 },
 	{ "vivco", "Evendor-class.",		&dhcp_universe, 124, 1 },
 	{ "vivso", "Evendor.",			&dhcp_universe, 125, 1 },
 	{ NULL, NULL, NULL, 0, 0 }

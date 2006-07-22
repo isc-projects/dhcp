@@ -1384,6 +1384,8 @@ int parse_allow_deny PROTO ((struct option_cache **, struct parse *, int));
 int parse_auth_key PROTO ((struct data_string *, struct parse *));
 int parse_warn (struct parse *, const char *, ...)
 	__attribute__((__format__(__printf__,2,3)));
+struct expression *parse_domain_list (struct parse *cfile);
+
 
 /* tree.c */
 #if defined (NSUPDATE)
