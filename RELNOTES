@@ -146,6 +146,12 @@ and for prodding me into improving it.
 - Support for compressed 'domain name list' style DHCP option contents, and
   in particular the domain search option (#119) was added.
 
+- The DHCP LEASEQUERY protocol as definied in RFC4388 is now implemented.
+  LEASEQUERY lets you query the DHCP server for information about a lease,
+  using either an IP address, MAC address, or client identifier.  Thanks
+  to a patch from Justin Haddad.
+
+
 			Changes since 3.0.4
 
 - A warning that host statements declared within subnet or shared-network

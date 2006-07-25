@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tables.c,v 1.56 2006/07/22 02:24:16 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: tables.c,v 1.57 2006/07/25 13:25:59 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -184,6 +184,8 @@ static struct option dhcp_options[] = {
 	{ "nds-servers", "IA",			&dhcp_universe,  85, 1 },
 	{ "nds-tree-name", "t",			&dhcp_universe,  86, 1 },
 	{ "nds-context", "t",			&dhcp_universe,  87, 1 },
+	{ "client-last-transaction-time", "L",	&dhcp_universe,  91, 1 },
+	{ "associated-ip", "Ia",		&dhcp_universe,  92, 1 },
 	{ "uap-servers", "t",			&dhcp_universe,  98, 1 },
 	{ "subnet-selection", "I",		&dhcp_universe, 118, 1 },
 	{ "domain-search", "D",			&dhcp_universe, 119, 1 },

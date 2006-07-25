@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.82 2006/07/18 18:15:53 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.83 2006/07/25 13:26:00 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -620,7 +620,7 @@ void new_address_range (cfile, low, high, subnet, pool, lpchain)
 #endif
 		lp -> ip_addr = ip_addr (subnet -> net,
 					 subnet -> netmask, i + min);
-		lp -> starts = lp -> timestamp = MIN_TIME;
+		lp -> starts = MIN_TIME;
 		lp -> ends = MIN_TIME;
 		subnet_reference (&lp -> subnet, subnet, MDL);
 		pool_reference (&lp -> pool, pool, MDL);
@@ -1040,8 +1040,8 @@ int supersede_lease (comp, lease, commit, propogate, pimmediate)
 		hw_hash_add (comp);
 	}
 
-#if defined (FAILOVER_PROTOCOL)
 	comp->cltt = lease->cltt;
+#if defined (FAILOVER_PROTOCOL)
 	comp->tstp = lease->tstp;
 	comp->tsfp = lease->tsfp;
 	comp->atsfp = lease->atsfp;
@@ -1384,7 +1384,6 @@ int lease_copy (struct lease **lp,
 	lt -> ip_addr = lease -> ip_addr;
 	lt -> starts = lease -> starts;
 	lt -> ends = lease -> ends;
-	lt -> timestamp = lease -> timestamp;
 	lt -> uid_len = lease -> uid_len;
 	lt -> uid_max = lease -> uid_max;
 	if (lease -> uid == lease -> uid_buf) {

@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.92 2006/07/22 02:24:16 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.93 2006/07/25 13:25:59 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -1804,7 +1804,7 @@ int save_option_buffer (struct universe *universe,
 	/* If we weren't passed a buffer in which the data are saved and
 	   refcounted, allocate one now. */
 	if (!bp) {
-		if (!buffer_allocate (&lbp, length, MDL)) {
+		if (!buffer_allocate (&lbp, length + tp, MDL)) {
 			log_error ("no memory for option buffer.");
 
 			option_cache_dereference (&op, MDL);
@@ -2830,4 +2830,54 @@ pretty_domain(char **dst, char *dend, const unsigned char **src,
 
 	return count;
 }
+
+/*
+ * Add the option identified with the option number and data to the
+ * options state.
+ */
+int
+add_option(struct option_state *options,
+	   unsigned int option_num,
+	   void *data,
+	   unsigned int data_len)
+{
+	struct option_cache *oc;
+	struct option *option;
+
+	/* INSIST(options != NULL); */
+	/* INSIST(data != NULL); */
+
+	option = NULL;
+	if (!option_code_hash_lookup(&option, dhcp_universe.code_hash, 
+				     &option_num, 0, MDL)) {
+		log_error("Attempting to add unknown option %d.", option_num);
+		return 0;
+	}
+
+	oc = NULL;
+	if (!option_cache_allocate(&oc, MDL)) {
+		log_error("No memory for option cache adding %s (option %d).",
+			  option->name, option_num);
+		return 0;
+	}
+
+	if (!make_const_data(&oc->expression, 
+			     data, 
+			     data_len,
+			     0, 
+			     0, 
+			     MDL)) {
+		log_error("No memory for constant data adding %s (option %d).",
+			  option->name, option_num);
+		option_cache_dereference(&oc, MDL);
+		return 0;
+	}
+
+	oc->option = option;
+	save_option(&dhcp_universe, options, oc);
+	option_cache_dereference(&oc, MDL);
+
+	return 1;
+}
+
 
