@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: socket.c,v 1.58 2005/03/17 20:15:00 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: socket.c,v 1.59 2006/07/25 17:41:18 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -147,6 +147,20 @@ int if_register_socket (info)
 			(char *)(info -> ifp), sizeof *(info -> ifp)) < 0) {
 		log_fatal ("setsockopt: SO_BINDTODEVICE: %m");
 	}
+#endif
+
+	/* IP_BROADCAST_IF instructs the kernel which interface to send
+	 * IP packets whose destination address is 255.255.255.255.  These
+	 * will be treated as subnet broadcasts on the interface identified
+	 * by ip address (info -> primary_address).  This is only known to
+	 * be defined in SCO system headers, and may not be defined in all
+	 * releases.
+	 */
+#if defined(SCO) && defined(IP_BROADCAST_IF)
+        if (setsockopt (sock, IPPROTO_IP, IP_BROADCAST_IF,
+                        &info -> primary_address,
+                        sizeof (info -> primary_address)) < 0)
+                log_fatal ("Can't set IP_BROADCAST_IF on dhcp socket: %m");
 #endif
 
 	return sock;

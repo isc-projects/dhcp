@@ -339,11 +339,14 @@ more information, consult the vconfig man pages.
 
 				 SCO
 
-SCO has the same problem as Linux (described earlier).  The thing is,
-SCO *really* doesn't want to let you add a host route to the all-ones
-broadcast address.
+ISC DHCP will now work correctly on newer versions of SCO out of the
+box (tested on OpenServer 5.05b, assumed to work on UnixWare 7).
 
-On more recent versions of SCO, you can do this:
+Older versions of SCO have the same problem as linux (described earlier).
+The thing is, SCO *really* doesn't want to let you add a host route to
+the all-ones broadcast address.
+
+You can try the following:
 
   ifconfig net0 xxx.xxx.xxx.xxx netmask 0xNNNNNNNN broadcast 255.255.255.255
 
@@ -354,9 +357,7 @@ If this doesn't work, you can also try the following strange hack:
 Apparently this works because of an interaction between SCO's support
 for network classes and the weird netmask.  The 10.* network is just a
 dummy that can generally be assumed to be safe.   Don't ask why this
-works.   Just try it.   If it works for you, great.   SCO has added
-support for doing DHCP in a more sensible way, and it will appear in
-a future feature release.
+works.   Just try it.   If it works for you, great.
 
 				HP-UX
 

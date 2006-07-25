@@ -146,11 +146,15 @@ and for prodding me into improving it.
 - Support for compressed 'domain name list' style DHCP option contents, and
   in particular the domain search option (#119) was added.
 
-- The DHCP LEASEQUERY protocol as definied in RFC4388 is now implemented.
+- The DHCP LEASEQUERY protocol as defined in RFC4388 is now implemented.
   LEASEQUERY lets you query the DHCP server for information about a lease,
   using either an IP address, MAC address, or client identifier.  Thanks
   to a patch from Justin Haddad.
 
+- DHCPD is now RFC2131 section 4.1 compliant (broadcast to all-ones ip and
+  ethernet mac address) on the SCO platform specifically without any strange
+  ifconfig hacks.  Many thanks go to the Kroger Co. for donating the
+  hardware and funding the development.
 
 			Changes since 3.0.4
 
