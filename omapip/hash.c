@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: hash.c,v 1.10 2006/06/08 23:51:37 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: hash.c,v 1.11 2006/07/25 09:59:39 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include <omapip/omapip_p.h>
@@ -62,6 +62,7 @@ int new_hash_table (tp, count, file, line)
 	int line;
 {
 	struct hash_table *rval;
+	unsigned extra;
 
 	if (!tp) {
 		log_error ("%s(%d): new_hash_table called with null pointer.",
@@ -78,9 +79,18 @@ int new_hash_table (tp, count, file, line)
 		abort ();
 #endif
 	}
-	rval = dmalloc (sizeof (struct hash_table) -
-			(DEFAULT_HASH_SIZE * sizeof (struct hash_bucket *)) +
-			(count * sizeof (struct hash_bucket *)), file, line);
+
+	/* There is one hash bucket in the structure.  Allocate extra
+	 * memory beyond the end of the structure to fulfill the requested
+	 * count ("count - 1").  Do not let there be less than one.
+	 */
+	if (count <= 1)
+		extra = 0;
+	else
+		extra = count - 1;
+
+	rval = dmalloc(sizeof(struct hash_table) +
+		       (extra * sizeof(struct hash_bucket *)), file, line);
 	if (!rval)
 		return 0;
 	rval -> hash_count = count;
@@ -385,6 +395,11 @@ int hash_lookup (vp, table, key, len, file, line)
 		return 0;
 	if (!len)
 		len = find_length(key, table->do_hash);
+
+	if (*vp != NULL) {
+		log_fatal("Internal inconsistency: storage value has not been "
+			  "initialized to zero (from %s:%d).", file, line);
+	}
 
 	hashno = (*table->do_hash)(key, len, table->hash_count);
 

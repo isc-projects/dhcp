@@ -64,11 +64,13 @@ typedef int (*hash_comparator_t)(const void *, const void *, size_t);
 
 struct hash_table {
 	unsigned hash_count;
-	struct hash_bucket *buckets [DEFAULT_HASH_SIZE];
 	hash_reference referencer;
 	hash_dereference dereferencer;
 	hash_comparator_t cmp;
 	unsigned (*do_hash)(const void *, unsigned, unsigned);
+
+	/* This must remain the last entry in this table. */
+	struct hash_bucket *buckets [1];
 };
 
 struct named_hash {

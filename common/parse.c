@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.113 2006/07/22 02:24:16 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.114 2006/07/25 09:59:39 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -991,7 +991,6 @@ parse_option_name (cfile, allocate, known, opt)
 	}
 
 	/* Look up the actual option info... */
-	option = (struct option *)0;
 	option_name_hash_lookup(opt, universe->name_hash, val, 0, MDL);
 	option = *opt;
 
@@ -1765,7 +1764,7 @@ int parse_executable_statement (result, cfile, lose, case_context)
 	const char *val;
 	struct executable_statement base;
 	struct class *cta;
-	struct option *option;
+	struct option *option=NULL;
 	struct option_cache *cache;
 	int known;
 	int flag;
