@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.93 2006/07/25 13:25:59 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.94 2006/07/25 13:36:58 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -570,11 +570,12 @@ int cons_options (inpacket, outpacket, lease, client_state,
 	 * This effectively gives these options the highest priority.
 	 */
 	priority_len = 0;
-	priority_list [priority_len++] = DHO_DHCP_MESSAGE_TYPE;
-	priority_list [priority_len++] = DHO_DHCP_SERVER_IDENTIFIER;
-	priority_list [priority_len++] = DHO_DHCP_LEASE_TIME;
-	priority_list [priority_len++] = DHO_DHCP_MESSAGE;
-	priority_list [priority_len++] = DHO_DHCP_REQUESTED_ADDRESS;
+	priority_list[priority_len++] = DHO_DHCP_MESSAGE_TYPE;
+	priority_list[priority_len++] = DHO_DHCP_SERVER_IDENTIFIER;
+	priority_list[priority_len++] = DHO_DHCP_LEASE_TIME;
+	priority_list[priority_len++] = DHO_DHCP_MESSAGE;
+	priority_list[priority_len++] = DHO_DHCP_REQUESTED_ADDRESS;
+	priority_list[priority_len++] = DHO_ASSOCIATED_IP;
 
 	if (prl && prl -> len > 0) {
 		if ((op = lookup_option (&dhcp_universe, cfg_options,
