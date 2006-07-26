@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.114 2006/07/25 09:59:39 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.115 2006/07/26 15:43:52 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -944,6 +944,7 @@ parse_option_name (cfile, allocate, known, opt)
 	char *uname;
 	struct universe *universe;
 	struct option *option;
+	unsigned code;
 
 	if (opt == NULL)
 		return ISC_R_INVALIDARG;
@@ -998,23 +999,66 @@ parse_option_name (cfile, allocate, known, opt)
 	if (option) {
 		if (known)
 			*known = 1;
-	} else {
-		/* If we've been told to allocate, that means that this
-		   (might) be an option code definition, so we'll create
-		   an option structure just in case. */
-		if (allocate) {
-			option = new_option(val, MDL);
-			option -> universe = universe;
-			option_reference(opt, option, MDL);
+	/* If the option name is of the form unknown-[decimal], use
+	 * the trailing decimal value to find the option definition.
+	 * If there is no definition, construct one.  This is to
+	 * support legacy use of unknown options in config files or
+	 * lease databases.
+	 */
+	} else if (strncasecmp(val, "unknown-", 8) == 0) {
+		code = atoi(val+8);
 
+		/* Option code 0 is always illegal for us, thanks
+		 * to the option decoder.
+		 */
+		if (code == 0 || code == universe->end) {
+			parse_warn(cfile, "Option codes 0 and %u are illegal "
+					  "in the %s space.", universe->end,
+					  universe->name);
+			skip_to_semi(cfile);
 			dfree(uname, MDL);
-			return ISC_R_SUCCESS;
+			return ISC_R_FAILURE;
 		}
-		if (val == uname)
-			parse_warn (cfile, "no option named %s", val);
-		else
-			parse_warn (cfile, "no option named %s in space %s",
-				    val, uname);
+
+		/* It's odd to think of unknown option codes as
+		 * being known, but this means we know what the
+		 * parsed name is talking about.
+		 */
+		if (known)
+			*known = 1;
+
+		option_code_hash_lookup(opt, universe->code_hash,
+					&code, 0, MDL);
+		option = *opt;
+
+		/* If we did not find an option of that code,
+		 * manufacture an unknown-xxx option definition.
+		 * Its single reference will ensure that it is
+		 * deleted once the option is recycled out of
+		 * existence (by the parent).
+		 */
+		if (option == NULL) {
+			option = new_option(val, MDL);
+			option->universe = universe;
+			option->code = code;
+			option->format = "X";
+			option_reference(opt, option, MDL);
+		} else
+			log_info("option %s has been redefined as option %s.  "
+				 "Please update your configs if neccessary.",
+				 val, option->name);
+	/* If we've been told to allocate, that means that this
+	 * (might) be an option code definition, so we'll create
+	 * an option structure and return it for the parent to
+	 * decide.
+	 */
+	} else if (allocate) {
+		option = new_option(val, MDL);
+		option -> universe = universe;
+		option_reference(opt, option, MDL);
+	} else {
+		parse_warn(cfile, "no option named %s in space %s",
+			   val, universe->name);
 		skip_to_semi (cfile);
 		dfree(uname, MDL);
 		return ISC_R_NOTFOUND;
@@ -4569,13 +4613,12 @@ int parse_option_statement (result, cfile, lookups, option, op)
 
 	      and_again:
 		/* Set fmt to start of format for 'A' and one char back
-		   for 'a' */
-                if ((fmt != NULL) &&
-		    (fmt != option -> format) && (*fmt == 'a'))
+		 * for 'a'.
+		 */
+		if ((fmt != NULL) && (fmt != option->format) && (*fmt == 'a'))
 			fmt -= 1;
-		else
-			fmt = ((fmt == NULL) ||
-			       (*fmt == 'A')) ? option -> format : fmt;
+		else if ((fmt == NULL) || (*fmt == 'A'))
+			fmt = option->format;
 
 		/* 'a' means always uniform */
 		uniform |= (fmt [1] == 'a');

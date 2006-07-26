@@ -1,4 +1,4 @@
-.\"	$Id: dhcp-options.5,v 1.30 2006/07/22 02:24:16 dhankins Exp $
+.\"	$Id: dhcp-options.5,v 1.31 2006/07/26 15:43:52 shane Exp $
 .\"
 .\" Copyright (c) 2004-2006 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 1996-2003 by Internet Software Consortium
@@ -168,6 +168,14 @@ some subnets of the directly connected network may have smaller MTUs.
 This option specifies the timeout in seconds for ARP cache entries.
 .RE
 .PP
+.B option \fBbcms-controller-address\fR \fIip-address\fR [\fB,\fR
+\fIip-address\fR... ]\fB;\fR
+.RS 0.25i
+.PP
+This option configures a list of IPv4 addresses for use as Broadcast and
+Multicast Controller Servers ("BCMS").
+.RE
+.PP
 .B option \fBbootfile-name\fR \fItext\fR\fB;\fR
 .RS 0.25i
 .PP
@@ -213,6 +221,15 @@ use on outgoing datagrams.
 .PP
 This option specifies the default TTL that the client should use when
 sending TCP segments.  The minimum value is 1.
+.RE
+.PP
+.B option \fBdefault-url\fR \fIstring\fR\fB;\fR
+.RS 0.25i
+.PP
+The format and meaning of this option is not described in any standards
+document, but is claimed to be in use by Apple Computer.  It is not known
+what clients may reasonably do if supplied with this option.  Use at your
+own risk.
 .RE
 .PP
 .B option \fBdhcp-client-identifier\fR \fIstring\fR\fB;\fR
@@ -610,6 +627,27 @@ H-node: Hybrid - WINS, then broadcast
 The NetBIOS scope option specifies the NetBIOS over TCP/IP scope
 parameter for the client as specified in RFC 1001/1002. See RFC1001,
 RFC1002, and RFC1035 for character-set restrictions.
+.RE
+.PP
+.B option \fBnetinfo-server-address\fR \fIip-address\fR [\fB,\fR
+\fIip-address\fR... ]\fB;\fR
+.RS 0.25i
+.PP
+The \fBnetinfo-server-address\fR option has not been described in any
+RFC, but has been allocated (and is claimed to be in use) by Apple
+Computers.  It's hard to say if the above is the correct format, or
+what clients might be expected to do if values were configured.  Use
+at your own risk.
+.RE
+.PP
+.B option \fBnetinfo-server-tag\fR \fItext\fR\fB;\fR
+.RS 0.25i
+.PP
+The \fBnetinfo-server-tag\fR option has not been described in any
+RFC, but has been allocated (and is claimed to be in use) by Apple
+Computers.  It's hard to say if the above is the correct format,
+or what clients might be expected to do if values were configured.  Use
+at your own risk.
 .RE
 .PP
 .B option \fBnis-domain\fR \fItext\fR\fB;\fR

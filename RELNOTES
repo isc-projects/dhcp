@@ -211,6 +211,17 @@ and for prodding me into improving it.
   multiple identifiers (previous versions would silently over-ride the
   value with the later configured value).
 
+- Several option codes that have been allocated since our last release
+  have been named and documented.
+
+- Option names of the form "unknown-123" have been removed from the in-
+  memory hash tables.  In order to support options of these names that
+  may appear in dhclient.leases or similar in previous versions, the
+  parser will now find the new option code definition, or mock up a
+  generic option code definition.  This should result in a smooth
+  transition from one name to the other, as the new name is used to
+  write new output.
+
 			Changes since 3.0.4rc1
 
 - The dhcp-options.5 manpage was updated to correct indentation errors
