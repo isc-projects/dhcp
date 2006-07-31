@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.209 2006/07/25 13:26:00 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.210 2006/07/31 23:17:24 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2019,6 +2019,62 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 					min_lease_time = getULong (d1.data);
 				data_string_forget (&d1, MDL);
 			}
+		}
+
+		/* CC: If there are less than
+		   adaptive-lease-time-threshold % free leases,
+		     hand out only short term leases */
+
+		memset(&d1, 0, sizeof(d1));
+		if (lease->pool &&
+		    (oc = lookup_option(&server_universe, state->options,
+					SV_ADAPTIVE_LEASE_TIME_THRESHOLD)) &&
+		    evaluate_option_cache(&d1, packet, lease, NULL,
+					  packet->options, state->options,
+					  &lease->scope, oc, MDL)) {
+			if (d1.len == 1 && d1.data[0] > 0 &&
+			    d1.data[0] < 100) {
+				TIME adaptive_time;
+				int poolfilled, total, count;
+
+				if (min_lease_time)
+					adaptive_time = min_lease_time;
+				else
+					adaptive_time = DEFAULT_MIN_LEASE_TIME;
+
+				/* Allow the client to keep its lease. */
+				if (lease->ends - cur_time > adaptive_time)
+					adaptive_time = lease->ends - cur_time;
+
+				count = lease->pool->lease_count;
+				total = count - (lease->pool->free_leases +
+						 lease->pool->backup_leases);
+
+				poolfilled = (total > (INT_MAX / 100)) ?
+					     total / (count / 100) :
+					     (total * 100) / count;
+
+				log_debug("Adap-lease: Total: %d, Free: %d, "
+					  "Ends: %d, Adaptive: %d, Fill: %d, "
+					  "Threshold: %d",
+					  lease->pool->lease_count,
+					  lease->pool->free_leases,
+					  (int)(lease->ends - cur_time),
+					  (int)adaptive_time, poolfilled,
+					  d1.data[0]);
+
+				if (poolfilled >= d1.data[0] &&
+				    lease_time > adaptive_time) {
+					log_info("Pool over threshold, time "
+						 "for %s reduced from %d to "
+						 "%d.", piaddr(lease->ip_addr),
+						 (int)lease_time,
+						 (int)adaptive_time);
+
+					lease_time = adaptive_time;
+				}
+			}
+			data_string_forget(&d1, MDL);
 		}
 
 		if (lease_time < min_lease_time) {

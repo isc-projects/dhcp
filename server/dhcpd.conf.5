@@ -28,7 +28,7 @@
 .\" see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
 .\" ``http://www.nominum.com''.
 .\"
-.\" $Id: dhcpd.conf.5,v 1.78 2006/07/25 13:26:00 shane Exp $
+.\" $Id: dhcpd.conf.5,v 1.79 2006/07/31 23:17:24 dhankins Exp $
 .\"
 .TH dhcpd.conf 5
 .SH NAME
@@ -617,7 +617,7 @@ The
 statement
 .RS 0.25i
 .PP
-.B max-lease-misbalance \fIinteger\fR\fB;\fR
+.B max-lease-misbalance \fIpercentage\fR\fB;\fR
 .PP
 The \fBmax-lease-misbalance\fR statement tells the DHCP server what
 percentage of total free leases (as defined as the total number of
@@ -636,7 +636,7 @@ The
 statement
 .RS 0.25i
 .PP
-.B max-lease-ownership \fIinteger\fR\fB;\fR
+.B max-lease-ownership \fIpercentage\fR\fB;\fR
 .PP
 The \fBmax-lease-ownership\fR statement tells the DHCP server what
 percentage of total free leases either it or its peer are normally allowed to
@@ -1736,6 +1736,24 @@ want to renumber your network quickly, and thus want the server to
 force all clients that have been allocated addresses from this pool to
 obtain new addresses immediately when they next renew.
 .SH REFERENCE: PARAMETERS
+The
+.I adaptive-lease-time-threshold
+statement
+.RS 0.25i
+.PP
+.B adaptive-lease-time-threshold \fIpercentage\fR\fB;\fR
+.PP
+When the number of allocated leases within a pool rises above
+the \fIpercentage\fR given in this statement, the DHCP server decreases
+the lease length for new clients within this pool to \fImin-lease-time\fR
+seconds. Clients renewing an already valid (long) leases get at least the
+remaining time from the current lease. Since the leases expire faster,
+the server may either recover more quickly or avoid pool exhaustion
+entirely.  Once the number of allocated leases drop below the threshold,
+the server reverts back to normal lease times.  Valid percentages are
+between 1 and 99.
+.RE
+.PP
 The
 .I always-broadcast
 statement

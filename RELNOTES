@@ -162,6 +162,11 @@ and for prodding me into improving it.
   language.  Thanks to a patch written by Mattias Ronnblom, gotten to us
   via Robin Breathe.
 
+- A new dhcp server option 'adaptive-lease-time-threshold' has been added
+  which causes the server to substantially reduce lease-times if there are
+  few (configured percentage) remaining leases.  Thanks to a patch submitted
+  from Christof Chen.
+
 			Changes since 3.0.4
 
 - A warning that host statements declared within subnet or shared-network
