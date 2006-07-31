@@ -1,4 +1,4 @@
-.\"	$Id: dhcp-eval.5,v 1.22 2006/07/17 15:33:34 dhankins Exp $
+.\"	$Id: dhcp-eval.5,v 1.23 2006/07/31 22:19:51 dhankins Exp $
 .\"
 .\" Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 1996-2003 by Internet Software Consortium
@@ -431,6 +431,48 @@ to the server.
 Rebind - DHCP client is in the REBINDING state - it has an IP address,
 and is trying to contact any server to renew it.   The next message to
 be sent will be a DHCPREQUEST, which will be broadcast.
+.RE
+.PP
+.B execute(\fIcommand-path\fB, \fIdata-expr1\fB ... \fIdata-exprN\fB);\fR
+.RS 0.25i
+.PP
+External command execution is made possible through \fBexecute();\fR
+expressions.  These expressions take a variable number of arguments, where
+the first is the command name (full path or only the name of the executable)
+and is followed by zero or more are data-expressions whose values will be
+evaluated and passed as external arguments (assumed to be text strings
+suitable for use as a command-line argument).  It returns the numeric return
+code of the external command, or one of the following special values:
+.TP 2
+.I \(bu
+125: Invalid arguments.
+.TP
+.I \(bu
+126: fork() failure
+.TP
+.I \(bu
+127: execvp() failure
+.TP
+.I \(bu
+-SIGNAL: Should the child exit due to a signal, rather than exiting normally
+with an exit status, the signal number multiplied by negative 1 will be
+returned.
+.PP
+Execute is synchronous, and the program will block until the external
+command being run has finished. Please note that lengthy program
+execution (for example, in an "on commit" in dhcpd.conf) may result in
+bad performance and timeouts.  Only external applications with very short
+execution times are suitable for use.
+.PP
+Passing user-supplied data to an external application might be dangerous.
+Make sure the external application checks input buffers for validity.
+Non-printable ASCII characters will be converted into dhcpd.conf language
+octal escapes ("\777"), make sure your external command handles them as
+such.
+.PP
+It is possible to use the execute expression in any context, not only
+on events. If you put it in a regular scope in the configuration file
+you will execute that command every time a scope is evaluated.
 .RE
 .SH REFERENCE: LOGGING
 Logging statements may be used to send information to the standard logging

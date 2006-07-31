@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.115 2006/07/26 15:43:52 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.116 2006/07/31 22:19:51 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -3683,6 +3683,71 @@ int parse_non_binary (expr, cfile, lose, context)
 		if (token != RPAREN)
 			goto norparen;
 		break;
+
+#ifdef ENABLE_EXECUTE
+	      case EXECUTE:
+		token = next_token(&val, NULL, cfile);
+
+		if (!expression_allocate(expr, MDL))
+			log_fatal("can't allocate expression.");
+
+		token = next_token(&val, NULL, cfile);
+		if (token != LPAREN) {
+			parse_warn(cfile, "left parenthesis expected.");
+			skip_to_semi(cfile);
+			*lose = 1;
+			return 0;
+		}
+
+		token = next_token(&val, NULL, cfile);
+		if (token != STRING) {
+			parse_warn(cfile, "Expecting a quoted string.");
+			skip_to_semi(cfile);
+			*lose = 1;
+			return 0;
+		}
+
+		(*expr)->data.execute.command = dmalloc(strlen(val) + 1, MDL);
+		if ((*expr)->data.execute.command == NULL)
+			log_fatal("can't allocate command name");
+
+		strcpy((*expr)->data.execute.command, val);
+
+		token = next_token(&val, NULL, cfile);
+		ep = &(*expr)->data.execute.arglist;
+		i = 0;
+		while (token == COMMA) {
+			if (!expression_allocate(ep, MDL))
+				log_fatal ("can't allocate expression");
+
+			if (!parse_data_expression(&(*ep)->data.arg.val,
+						   cfile, lose)) {
+				skip_to_semi(cfile);
+				*lose = 1;
+				return 0;
+			}
+			ep = &(*ep)->data.arg.next;
+			token = next_token(&val, NULL, cfile);
+			i++;
+		}
+		(*expr)->data.execute.argc = i;
+		(*expr)->op = expr_execute;
+		if (token != RPAREN) {
+			parse_warn(cfile, "right parenthesis expected.");
+			skip_to_semi(cfile);
+			*lose = 1;
+			return 0;
+		}
+		break;
+#else
+	      case EXECUTE:
+		parse_warn(cfile, "define ENABLE_EXECUTE in site.h to "
+				  "enable execute(); expressions.");
+		skip_to_semi(cfile);
+		*lose = 1;
+		return 0;
+		break;
+#endif
 
 		/* NOT EXISTS is special cased above... */
 	      not_exists:

@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: print.c,v 1.60 2006/06/06 16:35:18 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: print.c,v 1.61 2006/07/31 22:19:51 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -461,7 +461,8 @@ static unsigned print_subexpression (expr, buf, len)
 {
 	unsigned rv, left;
 	const char *s;
-	
+	struct expression *next_arg;
+
 	switch (expr -> op) {
 	      case expr_none:
 		if (len > 3) {
@@ -1046,10 +1047,46 @@ static unsigned print_subexpression (expr, buf, len)
 					rv += strlen (foo -> string);
 				}
 			}
-			buf [rv] = ')';
-			buf [rv++] = 0;
+			buf [rv++] = ')';
+			buf [rv] = 0;
 			return rv;
 		}
+	      case expr_execute:
+#ifdef ENABLE_EXECUTE
+		rv = 11 + strlen(expr->data.execute.command);
+		if (len > rv + 2) {
+			sprintf(buf, "(execute \"%s\"",
+				expr->data.execute.command);
+			for(next_arg = expr->data.execute.arglist;
+			    next_arg;
+			    next_arg = next_arg->data.arg.next) {
+				if (len <= rv + 3)
+					return 0;
+
+				buf[rv++] = ' ';
+				rv += print_subexpression(next_arg->
+							  data.arg.val,
+							  buf + rv,
+							  len - rv - 2);
+			}
+
+			if (len <= rv + 2)
+				return 0;
+
+			buf[rv++] = ')';
+			buf[rv] = 0;
+			return rv;
+		}
+#else
+		log_fatal("Impossible case at %s:%d (ENABLE_EXECUTE is not "
+			  "defined.", MDL);
+#endif
+		break;
+
+	      default:
+		log_fatal("Impossible case at %s:%d (undefined expression "
+			  "%d).", MDL, expr->op);
+		break;
 	}
 	return 0;
 }

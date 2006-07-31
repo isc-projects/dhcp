@@ -153,6 +153,7 @@ enum expr_op {
 	expr_extract_int8,
 	expr_extract_int16,
 	expr_extract_int32,
+	expr_execute,
 	expr_encode_int8,
 	expr_encode_int16,
 	expr_encode_int32,
@@ -274,6 +275,11 @@ struct expression {
 			char *name;
 			struct expression *arglist;
 		} funcall;
+		struct {
+			char *command;
+			struct expression *arglist;
+			int argc;
+		} execute;
 		struct fundef *func;
 	} data;
 	int flags;

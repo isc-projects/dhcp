@@ -1116,6 +1116,8 @@ int format_has_text(const char *);
 int format_min_length(const char *, struct option_cache *);
 const char *pretty_print_option PROTO ((struct option *, const unsigned char *,
 					unsigned, int, int));
+int pretty_escape(char **, char *, const unsigned char **,
+		  const unsigned char *);
 int get_option (struct data_string *, struct universe *,
 		struct packet *, struct lease *, struct client_state *,
 		struct option_state *, struct option_state *,

@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.94 2006/07/25 13:36:58 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.95 2006/07/31 22:19:51 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -46,8 +46,6 @@ struct option *vendor_cfg_option;
 static void do_option_set PROTO ((pair *,
 				  struct option_cache *,
 				  enum statement_op));
-static int pretty_escape(char **, char *, const unsigned char **,
-			 const unsigned char *);
 static int pretty_text(char **, char *, const unsigned char **,
 			 const unsigned char *, int);
 static int pretty_domain(char **, char *, const unsigned char **,
@@ -2694,7 +2692,7 @@ void do_packet (interface, packet, len, from_port, from, hfrom)
 #endif
 }
 
-static int
+int
 pretty_escape(char **dst, char *dend, const unsigned char **src,
 	      const unsigned char *send)
 {

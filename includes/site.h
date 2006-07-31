@@ -167,6 +167,12 @@
 
 /* #define DHCPD_LOG_FACILITY LOG_DAEMON */
 
+
+/* Define this if you want to be able to execute external commands
+   during conditional evaluation. */
+
+#define ENABLE_EXECUTE
+
 /* Define this if you aren't debugging and you want to save memory
    (potentially a _lot_ of memory) by allocating leases in chunks rather
    than one at a time. */

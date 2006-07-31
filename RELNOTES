@@ -156,6 +156,12 @@ and for prodding me into improving it.
   ifconfig hacks.  Many thanks go to the Kroger Co. for donating the
   hardware and funding the development.
 
+- A new common configuration executable statement, execute(), has been
+  added.  This permits dhcpd or dhclient to execute a named external
+  program with command line arguments specified from other configuration
+  language.  Thanks to a patch written by Mattias Ronnblom, gotten to us
+  via Robin Breathe.
+
 			Changes since 3.0.4
 
 - A warning that host statements declared within subnet or shared-network
