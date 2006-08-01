@@ -1,50 +1,29 @@
 	      Internet Systems Consortium DHCP Distribution
-			   Version 3.1 - HEAD
-			      March 3, 2005
+			   Version 3.1.0a1
+			    August 1, 2006
 
 			     Release Notes
 
 			     NEW FEATURES
 
-XXX: Note need for care of ATSFP values when upgrading from 3.0.4+ to
-3.1.x.
+Version 3.1.x of the ISC DHCP Distribution includes the following major
+new features compared to its 3.0.x derivative:
 
-Version 3 of the ISC DHCP Distribution includes the following features
-that are new since version 2.0:
+	- Failover protocol 'MAC Address Affinity' to reduce pool churn.
+	- Support for the 'reserved' and 'bootp' failover flags, which
+	  means in lay terms that static allocations can be made to
+	  clients in which 'on events' can be supported.
+	- Several other failover optimizations and changes.
+	- Management of class and subclass statements via OMAPI.
+	- Many new configuration statement functions.
+	- Initial formal support for VIVCO/VIVSO options.
 
-     - DHCP Failover Protocol support
-     - OMAPI, an API for accessing and modifying the DHCP server and
-       client state.
-     - Conditional behaviour
-     - Storing arbitrary information on leases
-     - Address pools with access control
-     - Client classing
-     - Address allocation restriction by class
-     - Relay agent information option support 
-     - Dynamic DNS updates
-     - Many bug fixes, performance enhancements, and minor new DHCP
-       protocol features. 
-
-The main bug fixed here is a bug in the subclass allocation code that
-could result in a memory smash.   Any users of the ISC DHCP server who
-are using subclasses should seriously consider upgrading to 3.0.1.
-
-If you are running 3.0 beta 1 and are doing dynamic DNS updates, the
-lease file is no longer forward-compatible to 3.0 final.   A script
-has been provided to convert 3.0b1 lease files.   This is in
-contrib/3.0b1-lease-convert.
+For a full list of new features added in this release, please observe
+the changes list directly following this section.
 
 For information on how to install, configure and run this software,
 as well as how to find documentation and report bugs, please consult
 the README file.
-
-The Dynamic DNS Update support is a descendent of an implementation
-done by Lans Carstensen and Brian Dols at Rose-Hulman Institute of
-Technology, Jim Watt at Applied Biosystems, Irina Goble at Integrated
-Measurement Systems, Igor Sharfmesser at Kazakh Telecom, and Brian
-Murrell at BC Tel Advanced Communications.  I'd like to express my
-thanks to all of these good people here, both for working on the code
-and for prodding me into improving it.
 
 
 			Changes since 3.0 (New Features)
@@ -67,7 +46,6 @@ and for prodding me into improving it.
   one does not already exist on the system.
 
 - RFC3942 compliance, site-local option spaces start at 224 now, not 128.
-        ||| THIS NEEDS TO BE SPELLED OUT IN THE NEW FEATURES LIST |||
 
 - The IO system now tracks all local IP addresses, so that the DHCP
   applications (particularly the dhcrelay) can discern between what frames

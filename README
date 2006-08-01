@@ -1,6 +1,6 @@
 	       Internet Systems Consortium DHCP Distribution
-			    Version 3.1 - HEAD
-			      March 3, 2005
+			     Version 3.1.0a1
+			      August 1, 2006
 
 			      README FILE
 
@@ -92,10 +92,10 @@ directory, it may not have up-to-date information).
 
 			    RELEASE STATUS
 
-This is a snapshot of the ISC DHCP project's CVS HEAD prior to release
-version 3.1.x.  This is highly experimental code which has not been
-publically released, nor properly tested.  It contains a large number of
-new features, and with it most likely many bugs.
+This is the first ALPHA quality release of ISC DHCP 3.1.0, a feature
+release based upon the work present in the 3.0.x development track.
+It contains a large number of new features, and with that most likely
+many new bugs.
 
 In this release, the server and relay agent are currently fully
 functional on NetBSD, Linux systems with kernel version 2.2 or later,
@@ -138,12 +138,12 @@ information.   On Digital Unix, type ``man pfilt''.
 To build the DHCP Distribution, unpack the compressed tar file using
 the tar utility and the gzip command - type something like:
 
-	gunzip dhcp-3.1-HEAD.tar.gz
-	tar xvf dhcp-3.1-HEAD.tar
+	gunzip dhcp-3.1.0a1.tar.gz
+	tar xvf dhcp-3.1.0a1.tar
 
 			    CONFIGURING IT
 
-Now, cd to the dhcp-3.1-HEAD subdirectory that you've just created and
+Now, cd to the dhcp-3.1.0a1 subdirectory that you've just created and
 configure the source tree by typing:
 
 	./configure
