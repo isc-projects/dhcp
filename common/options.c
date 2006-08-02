@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.95 2006/07/31 22:19:51 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.96 2006/08/02 22:36:00 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -152,8 +152,8 @@ int parse_option_buffer (options, buffer, length, universe)
 	memcpy (bp -> data, buffer, length);
 
 	for (offset = 0;
-	     (offset + universe->tag_size) > length &&
-	     (code = universe->get_tag(bp->data + offset)) != universe->end; ) {
+	     (offset + universe->tag_size) <= length &&
+	     (code = universe->get_tag(buffer + offset)) != universe->end; ) {
 		offset += universe->tag_size;
 
 		/* Pad options don't have a length - just skip them. */
@@ -161,14 +161,15 @@ int parse_option_buffer (options, buffer, length, universe)
 			continue;
 
 		/* Don't look for length if the buffer isn't that big. */
-		if (offset + universe->length_size > length) {
+		if ((offset + universe->length_size) > length) {
 			len = 65536;
 			goto bogus;
 		}
 
-		/* All other fields (except end, see above) have a
-		   one-byte length. */
-		len = universe->get_length(bp->data + offset);
+		/* All other fields (except PAD and END handled above)
+		 * have a length field.
+		 */
+		len = universe->get_length(buffer + offset);
 
 		offset += universe->length_size;
 

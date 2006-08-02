@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: conflex.c,v 1.103 2006/07/31 22:19:51 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: conflex.c,v 1.104 2006/08/02 22:36:00 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1020,10 +1020,10 @@ static enum dhcp_token intern (atom, dfv)
 	      case 's':
                 if (!strcasecmp(atom + 1, "cript"))
                         return SCRIPT;
-		if (tolower(atom[1]) == 'e') {
+		if (isascii(atom[1]) && tolower(atom[1]) == 'e') {
                         if (!strcasecmp(atom + 2, "arch"))
                                 return SEARCH;
-			if (tolower(atom[2]) == 'c') {
+			if (isascii(atom[2]) && tolower(atom[2]) == 'c') {
 				if (!strcasecmp(atom + 3, "ond")) {
                                         if (!strcasecmp(atom + 6, "ary"))
                                                 return SECONDARY;
@@ -1067,14 +1067,14 @@ static enum dhcp_token intern (atom, dfv)
                                 return TOKEN_SET;
 			break;
 		}
-		if (tolower(atom[1]) == 'h') {
+		if (isascii(atom[1]) && tolower(atom[1]) == 'h') {
                         if (!strcasecmp(atom + 2, "ared-network"))
                                 return SHARED_NETWORK;
                         if (!strcasecmp(atom + 2, "utdown"))
                                 return SHUTDOWN;
 			break;
 		}
-		if (tolower(atom[1]) == 'i') {
+		if (isascii(atom[1]) && tolower(atom[1]) == 'i') {
                         if (!strcasecmp(atom + 2, "addr"))
                                 return SIADDR;
                         if (!strcasecmp(atom + 2, "gned"))
@@ -1083,8 +1083,8 @@ static enum dhcp_token intern (atom, dfv)
                                 return SIZE;
 			break;
 		}
-		if (tolower(atom[1]) == 'p') {
-			if (tolower(atom[2]) == 'a') {
+		if (isascii(atom[1]) && tolower(atom[1]) == 'p') {
+			if (isascii(atom[2]) && tolower(atom[2]) == 'a') {
                                 if (!strcasecmp(atom + 3, "ce"))
                                         return SPACE;
                                 if (!strcasecmp(atom + 3, "wn"))
@@ -1095,16 +1095,17 @@ static enum dhcp_token intern (atom, dfv)
                                 return SPLIT;
 			break;
 		}
-		if (tolower(atom[1]) == 't') {
-			if (tolower(atom[2]) == 'a') {
-				if(strncasecmp(atom + 3, "rt", 2)) {
+		if (isascii(atom[1]) && tolower(atom[1]) == 't') {
+			if (isascii(atom[2]) && tolower(atom[2]) == 'a') {
+				if(!strncasecmp(atom + 3, "rt", 2)) {
                                          if (!strcasecmp(atom + 5, "s"))
                                                  return STARTS;
                                          if (!strcasecmp(atom + 5, "up"))
                                                  return STARTUP;
 					break;
 				}
-				if (tolower(atom[3]) == 't') {
+				if (isascii(atom[3]) &&
+				    tolower(atom[3]) == 't') {
                                         if (!strcasecmp(atom + 4, "e"))
                                                 return STATE;
                                         if (!strcasecmp(atom + 4, "ic"))
@@ -1125,7 +1126,7 @@ static enum dhcp_token intern (atom, dfv)
                                 return SUBSTRING;
                         break;
                 }
-		if (tolower(atom[1]) == 'u') {
+		if (isascii(atom[1]) && tolower(atom[1]) == 'u') {
                         if (!strcasecmp(atom + 2, "ffix"))
                                 return SUFFIX;
                         if (!strcasecmp(atom + 2, "persede"))

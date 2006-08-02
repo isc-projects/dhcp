@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: ddns.c,v 1.22 2006/07/20 16:27:45 shane Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: ddns.c,v 1.23 2006/08/02 22:36:00 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -241,6 +241,7 @@ int ddns_updates (struct packet *packet,
 	if (lease -> ip_addr . len != 4)
 		return 0;
 
+	memset(&d1, 0, sizeof(d1));
 	memset (&ddns_hostname, 0, sizeof (ddns_hostname));
 	memset (&ddns_domainname, 0, sizeof (ddns_domainname));
 	memset (&old_ddns_fwd_name, 0, sizeof (ddns_fwd_name));
@@ -455,7 +456,6 @@ int ddns_updates (struct packet *packet,
 	 * Compute the RR TTL.
 	 */
 	ddns_ttl = DEFAULT_DDNS_TTL;
-	memset (&d1, 0, sizeof d1);
 	if ((oc = lookup_option (&server_universe, state -> options,
 				 SV_DDNS_TTL))) {
 		if (evaluate_option_cache (&d1, packet, lease,
