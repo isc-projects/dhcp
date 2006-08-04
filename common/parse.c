@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.116 2006/07/31 22:19:51 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.117 2006/08/04 10:59:33 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -4992,7 +4992,7 @@ int parse_option_decl (oc, cfile)
 	u_int8_t hunkbuf [1024];
 	unsigned hunkix = 0;
 	const char *fmt, *f;
-	struct option *option;
+	struct option *option=NULL;
 	struct iaddr ip_addr;
 	u_int8_t *dp;
 	unsigned len;

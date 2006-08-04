@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.96 2006/08/02 22:36:00 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.97 2006/08/04 10:59:32 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -2702,12 +2702,12 @@ pretty_escape(char **dst, char *dend, const unsigned char **src,
 	/* If there aren't as many bytes left as there are in the source
 	 * buffer, don't even bother entering the loop.
 	 */
-	if (dst == NULL || src == NULL || (*dst >= dend) || (*src > send) ||
-	    *dst == NULL || *src == NULL ||
+	if (dst == NULL || dend == NULL || src == NULL || send == NULL ||
+	    *dst == NULL || *src == NULL || (*dst >= dend) || (*src > send) ||
 	    ((send - *src) > (dend - *dst)))
 		return -1;
 
-	for ( ; *src < send ; *src++) {
+	for ( ; *src < send ; (*src)++) {
 		if (!isascii (**src) || !isprint (**src)) {
 			/* Skip trailing NUL. */
 			if ((*src + 1) != send || **src != '\0') {
@@ -2716,7 +2716,7 @@ pretty_escape(char **dst, char *dend, const unsigned char **src,
 
 				sprintf(*dst, "\\%03o",
 					**src);
-				*dst += 4;
+				(*dst) += 4;
 				count += 4;
 			}
 		} else if (**src == '"' || **src == '\'' || **src == '$' ||
@@ -2725,16 +2725,16 @@ pretty_escape(char **dst, char *dend, const unsigned char **src,
 				return -1;
 
 			**dst = '\\';
-			*dst++;
+			(*dst)++;
 			**dst = **src;
-			*dst++;
+			(*dst)++;
 			count += 2;
 		} else {
 			if (*dst + 1 > dend)
 				return -1;
 
 			**dst = **src;
-			*dst++;
+			(*dst)++;
 			count++;
 		}
 	}
@@ -2755,7 +2755,7 @@ pretty_text(char **dst, char *dend, const unsigned char **src,
 
 	if (emit_quotes) {
 		**dst = '"';
-		*dst++;
+		(*dst)++;
 	}
 
 	/* dend-1 leaves 1 byte for the closing quote. */
@@ -2766,7 +2766,7 @@ pretty_text(char **dst, char *dend, const unsigned char **src,
 
 	if (emit_quotes && (*dst < dend)) {
 		**dst = '"';
-		*dst++;
+		(*dst)++;
 
 		/* Includes quote prior to pretty_escape(); */
 		count += 2;
