@@ -28,7 +28,7 @@
 .\" see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
 .\" ``http://www.nominum.com''.
 .\"
-.\" $Id: dhcpd.conf.5,v 1.79 2006/07/31 23:17:24 dhankins Exp $
+.\" $Id: dhcpd.conf.5,v 1.80 2006/08/08 19:45:11 dhankins Exp $
 .\"
 .TH dhcpd.conf 5
 .SH NAME
@@ -651,6 +651,7 @@ Load Balance algorithm).  Valid values are between 0 and 100, and should
 probably be less than the \fBmax-lease-misbalance\fR value.  Larger values
 will allow servers to retain leases to reallocate to returning clients,
 smaller values promote pool balance.  The default is 10.
+.RE
 .PP
 The
 .I max-response-delay
@@ -668,6 +669,11 @@ communication for a long time, but large enough that the server isn't
 constantly making and breaking connections.   This parameter must be
 specified.
 .RE
+.PP
+The
+.I max-unacked-updates
+statement
+.RS 0.25i
 .PP
 .B max-unacked-updates \fIcount\fR\fB;\fR
 .PP
