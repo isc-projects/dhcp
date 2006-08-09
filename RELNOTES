@@ -47,11 +47,6 @@ the README file.
 
 - RFC3942 compliance, site-local option spaces start at 224 now, not 128.
 
-- The IO system now tracks all local IP addresses, so that the DHCP
-  applications (particularly the dhcrelay) can discern between what frames
-  were tranmsitted to it, and what frames are being carried through it which
-  it should not intercept.
-
 - The Load Balance Algorithm was misimplemented.  The current implementation
   matches RFC 3074.
 

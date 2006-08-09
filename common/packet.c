@@ -33,7 +33,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: packet.c,v 1.44 2006/07/19 18:00:36 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: packet.c,v 1.45 2006/08/09 14:57:47 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -231,8 +231,6 @@ ssize_t decode_udp_ip_header (interface, buf, bufix, from, buflen)
   unsigned len;
   unsigned ulen;
   int ignore = 0;
-  struct interface_info *ii;
-  int i;
 
   memcpy(&ip, buf + bufix, sizeof (struct ip));
   udp = (struct udphdr *)(buf + bufix + ip_len);
@@ -247,38 +245,6 @@ ssize_t decode_udp_ip_header (interface, buf, bufix, from, buflen)
 	  return -1;
 #endif /* USERLAND_FILTER */
 
-  /* Eliminate packets that we might have accidentally intercepted because
-     we are doing routing. */
-
-  /* The DHCP client may not have an IP address; in that case, if we
-     got the packet, we need to look at it.   So if address_count is
-     zero on the interface on which we received the packet, accept the
-     packet. */
-  if (!interface -> configured)
-	goto good;
-
-  /* XXX we should handle subnet broadcast addresses here. */
-  /* XXX we should compare against 255.255.255.255, not limited_broadcast,
-     XXX because sometimes we tweak limited_broadcast for debugging.
-     XXX This is only currently a problem on the server. */
-  if (ip.ip_dst.s_addr == limited_broadcast.s_addr)
-	  goto good;
-	  
-  /* Check IP addresses of _all_ interfaces - it's perfectly okay to send
-     a packet to an IP address on one interface that happens to arrive
-     through another interface. */
-  /* XXX if the user excluded some interfaces, we will not accept packets
-     XXX for those interfaces. */
-  for (ii = interfaces; ii; ii = ii -> next) {
-	  for (i = 0; i < ii -> address_count; i++) {
-		  if (ii -> addresses [i].s_addr == ip.ip_dst.s_addr)
-			  goto good;
-	  }
-  }
-  /* The IP destination address didn't match any of our addresses. */
-  return -1;
-
- good:
   ulen = ntohs (udp -> uh_ulen);
   if (ulen < sizeof *udp ||
       ((unsigned char *)udp) + ulen > buf + bufix + buflen) {
