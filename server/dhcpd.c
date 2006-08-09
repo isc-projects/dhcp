@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.121 2006/07/17 15:21:45 dhankins Exp $ Copyright 2004-2006 Internet Systems Consortium.";
+"$Id: dhcpd.c,v 1.121.26.1 2006/08/09 11:26:30 shane Exp $ Copyright 2004-2006 Internet Systems Consortium.";
 #endif
 
   static char copyright[] =
@@ -193,10 +193,8 @@ static void omapi_listener_start (void *foo)
 	omapi_object_dereference (&listener, MDL);
 }
 
-int main (argc, argv, envp)
-	int argc;
-	char **argv, **envp;
-{
+int 
+main(int argc, char **argv) {
 	int fd;
 	int i, status;
 	struct servent *ent;
@@ -222,6 +220,7 @@ int main (argc, argv, envp)
 	int no_dhcpd_conf = 0;
 	int no_dhcpd_db = 0;
 	int no_dhcpd_pid = 0;
+	int local_family_set = 0;
 #if defined (TRACING)
 	char *traceinfile = (char *)0;
 	char *traceoutfile = (char *)0;
@@ -324,6 +323,20 @@ int main (argc, argv, envp)
 		} else if (!strcmp (argv [i], "-q")) {
 			quiet = 1;
 			quiet_interface_discovery = 1;
+		} else if (!strcmp(argv[i], "-4")) {
+			if (local_family_set && (local_family != AF_INET)) {
+				log_fatal("Server cannot run in both IPv4 and "
+					  "IPv6 mode at the same time.");
+			}
+			local_family = AF_INET;
+			local_family_set = 1;
+		} else if (!strcmp(argv[i], "-6")) {
+			if (local_family_set && (local_family != AF_INET6)) {
+				log_fatal("Server cannot run in both IPv4 and "
+					  "IPv6 mode at the same time.");
+			}
+			local_family = AF_INET6;
+			local_family_set = 1;
 		} else if (!strcmp (argv [i], "--version")) {
 			log_info ("isc-dhcpd-%s", DHCP_VERSION);
 			exit (0);

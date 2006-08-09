@@ -688,6 +688,7 @@ struct subnet {
 	struct iaddr interface_address;
 	struct iaddr net;
 	struct iaddr netmask;
+	int prefix_len;			/* XXX: currently for IPv6 only */
 
 	struct group *group;
 };
@@ -888,6 +889,13 @@ struct interface_info {
 					   interface. */
 	int address_max;		/* Max number of addresses we can
 					   store in current buffer. */
+
+	struct in6_addr *v6addresses;	/* IPv6 addresses associated with 
+					   this interface. */
+	int v6address_count;		/* Number of IPv6 addresses associated
+					   with this interface. */
+	int v6address_max;		/* Maximum number of IPv6 addresses
+					   we can store in current buffer. */
 
 	u_int8_t *circuit_id;		/* Circuit ID associated with this
 					   interface. */
@@ -1260,9 +1268,9 @@ extern const char *path_dhcpd_pid;
 
 extern int dhcp_max_agent_option_packet_length;
 
-int main PROTO ((int, char **, char **));
-void postconf_initialization (int);
-void postdb_startup (void);
+int main(int, char **);
+void postconf_initialization(int);
+void postdb_startup(void);
 void cleanup PROTO ((void));
 void lease_pinged PROTO ((struct iaddr, u_int8_t *, int));
 void lease_ping_timeout PROTO ((void *));
@@ -1308,8 +1316,11 @@ int parse_class_declaration PROTO ((struct class **, struct parse *,
 void parse_shared_net_declaration PROTO ((struct parse *, struct group *));
 void parse_subnet_declaration PROTO ((struct parse *,
 				      struct shared_network *));
+void parse_subnet6_declaration PROTO ((struct parse *,
+				       struct shared_network *));
 void parse_group_declaration PROTO ((struct parse *, struct group *));
-int parse_fixed_addr_param PROTO ((struct option_cache **, struct parse *));
+int parse_fixed_addr_param PROTO ((struct option_cache **, 
+				   struct parse *, enum dhcp_token));
 TIME parse_timestamp PROTO ((struct parse *));
 int parse_lease_declaration PROTO ((struct lease **, struct parse *));
 void parse_address_range PROTO ((struct parse *, struct group *, int,
@@ -1704,6 +1715,9 @@ ssize_t send_fallback PROTO ((struct interface_info *,
 			      struct packet *, struct dhcp_packet *, size_t, 
 			      struct in_addr,
 			      struct sockaddr_in *, struct hardware *));
+ssize_t send_fallback6(struct interface_info *, struct packet *, 
+		       struct dhcp_packet *, size_t, struct in6_addr,
+		       struct sockaddr_in6 *, struct hardware *);
 #endif
 
 #ifdef USE_SOCKET_SEND
@@ -1714,6 +1728,9 @@ ssize_t send_packet PROTO ((struct interface_info *,
 			    struct packet *, struct dhcp_packet *, size_t, 
 			    struct in_addr,
 			    struct sockaddr_in *, struct hardware *));
+ssize_t send_packet6(struct interface_info *, struct packet *, 
+		     struct dhcp_packet *, size_t, struct in6_addr,
+		     struct sockaddr_in6 *, struct hardware *);
 #endif
 #ifdef USE_SOCKET_RECEIVE
 void if_reinitialize_receive PROTO ((struct interface_info *));
@@ -1722,6 +1739,8 @@ void if_deregister_receive PROTO ((struct interface_info *));
 ssize_t receive_packet PROTO ((struct interface_info *,
 			       unsigned char *, size_t,
 			       struct sockaddr_in *, struct hardware *));
+ssize_t receive_packet6(struct interface_info *, unsigned char *, size_t,
+			struct sockaddr_in *, struct hardware *);
 #endif
 
 #if defined (USE_SOCKET_FALLBACK)
@@ -1868,7 +1887,9 @@ isc_result_t interface_setup (void);
 void interface_trace_setup (void);
 
 extern struct in_addr limited_broadcast;
+extern int local_family;
 extern struct in_addr local_address;
+extern struct in6_addr local_address6;
 
 extern u_int16_t local_port;
 extern u_int16_t remote_port;
@@ -1967,8 +1988,9 @@ struct iaddr broadcast_addr PROTO ((struct iaddr, struct iaddr));
 u_int32_t host_addr PROTO ((struct iaddr, struct iaddr));
 int addr_eq PROTO ((struct iaddr, struct iaddr));
 int addr_match(struct iaddr *, struct iaddrmatch *);
-char *piaddr PROTO ((struct iaddr));
-char *piaddrmask (struct iaddr, struct iaddr, const char *, int);
+const char *piaddr PROTO ((struct iaddr));
+char *piaddrmask(struct iaddr, struct iaddr, const char *, int);
+char *piaddrcidr(const struct iaddr *, unsigned int, const char *, int);
 
 /* dhclient.c */
 extern const char *path_dhclient_conf;
@@ -2568,12 +2590,12 @@ isc_result_t dhcp_lease_free (omapi_object_t *, const char *, int);
 isc_result_t dhcp_lease_get (omapi_object_t **, const char *, int);
 int find_grouped_subnet PROTO ((struct subnet **, struct shared_network *,
 				struct iaddr, const char *, int));
-int find_subnet (struct subnet **, struct iaddr, const char *, int);
+int find_subnet(struct subnet **, struct iaddr, const char *, int);
 void enter_shared_network PROTO ((struct shared_network *));
 void new_shared_network_interface PROTO ((struct parse *,
 					  struct shared_network *,
 					  const char *));
-int subnet_inner_than PROTO ((struct subnet *, struct subnet *, int));
+int subnet_inner_than(const struct subnet *, const struct subnet *, int);
 void enter_subnet PROTO ((struct subnet *));
 void enter_lease PROTO ((struct lease *));
 int supersede_lease PROTO ((struct lease *, struct lease *, int, int, int));

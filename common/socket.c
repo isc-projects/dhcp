@@ -3,7 +3,7 @@
    BSD socket interface code... */
 
 /*
- * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2006 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -42,7 +42,8 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: socket.c,v 1.58 2005/03/17 20:15:00 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: socket.c,v 1.58.122.1 2006/08/09 11:26:29 shane Exp $ "
+"Copyright (c) 2004-2006 Internet Systems Consortium.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -51,6 +52,7 @@ static char copyright[] =
 # if !defined (USE_SOCKET_SEND)
 #  define if_register_send if_register_fallback
 #  define send_packet send_fallback
+#  define send_packet6 send_fallback6
 #  define if_reinitialize_send if_reinitialize_fallback
 # endif
 #endif
@@ -90,62 +92,89 @@ void if_reinitialize_receive (info)
 	defined (USE_SOCKET_RECEIVE) || \
 		defined (USE_SOCKET_FALLBACK)
 /* Generic interface registration routine... */
-int if_register_socket (info)
-	struct interface_info *info;
-{
-	struct sockaddr_in name;
+int
+if_register_socket(struct interface_info *info) {
+	struct sockaddr_storage name;
+	int name_len;
 	int sock;
 	int flag;
+	int domain;
+
+	/* INSIST((local_family == AF_INET) || (local_family == AF_INET6)); */
 
 #if !defined (HAVE_SO_BINDTODEVICE) && !defined (USE_FALLBACK)
 	/* Make sure only one interface is registered. */
-	if (once)
+	if (once) {
 		log_fatal ("The standard socket API can only support %s",
 		       "hosts with a single network interface.");
+	}
 	once = 1;
 #endif
 
-	memset (&name, 0, sizeof (name));
-	/* Set up the address we're going to bind to. */
-	name.sin_family = AF_INET;
-	name.sin_port = local_port;
-	name.sin_addr = local_address;
+	/* 
+	 * Set up the address we're going to bind to, depending on the
+	 * address family. 
+	 */ 
+	memset(&name, 0, sizeof(name));
+	if (local_family == AF_INET) {
+		struct sockaddr_in *addr = (struct sockaddr_in *)&name; 
+		addr->sin_family = AF_INET;
+		addr->sin_port = local_port;
+		memcpy(&addr->sin_addr,
+		       &local_address,
+		       sizeof(addr->sin_addr));
+		name_len = sizeof(*addr);
+		domain = PF_INET;
+	} else { 
+		struct sockaddr_in6 *addr = (struct sockaddr_in6 *)&name; 
+		addr->sin6_family = AF_INET6;
+		addr->sin6_port = local_port;
+		memcpy(&addr->sin6_addr,
+		       &local_address6, 
+		       sizeof(addr->sin6_addr));
+		name_len = sizeof(*addr);
+		domain = PF_INET6;
+	}
 
 	/* Make a socket... */
-	if ((sock = socket (AF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0)
-		log_fatal ("Can't create dhcp socket: %m");
+	sock = socket(domain, SOCK_DGRAM, IPPROTO_UDP);
+	if (sock < 0) {
+		log_fatal("Can't create dhcp socket: %m");
+	}
 
 	/* Set the REUSEADDR option so that we don't fail to start if
 	   we're being restarted. */
 	flag = 1;
-	if (setsockopt (sock, SOL_SOCKET, SO_REUSEADDR,
-			(char *)&flag, sizeof flag) < 0)
-		log_fatal ("Can't set SO_REUSEADDR option on dhcp socket: %m");
+	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR,
+			(char *)&flag, sizeof(flag)) < 0) {
+		log_fatal("Can't set SO_REUSEADDR option on dhcp socket: %m");
+	}
 
 	/* Set the BROADCAST option so that we can broadcast DHCP responses.
 	   We shouldn't do this for fallback devices, and we can detect that
 	   a device is a fallback because it has no ifp structure. */
-	if (info -> ifp &&
-	    (setsockopt (sock, SOL_SOCKET, SO_BROADCAST,
-			 (char *)&flag, sizeof flag) < 0))
-		log_fatal ("Can't set SO_BROADCAST option on dhcp socket: %m");
+	if (info->ifp &&
+	    (setsockopt(sock, SOL_SOCKET, SO_BROADCAST,
+			 (char *)&flag, sizeof(flag)) < 0)) {
+		log_fatal("Can't set SO_BROADCAST option on dhcp socket: %m");
+	}
 
 	/* Bind the socket to this interface's IP address. */
-	if (bind (sock, (struct sockaddr *)&name, sizeof name) < 0) {
-		log_error ("Can't bind to dhcp address: %m");
-		log_error ("Please make sure there is no other dhcp server");
-		log_error ("running and that there's no entry for dhcp or");
-		log_error ("bootp in /etc/inetd.conf.   Also make sure you");
-		log_error ("are not running HP JetAdmin software, which");
-		log_fatal ("includes a bootp server.");
+	if (bind(sock, (struct sockaddr *)&name, name_len) < 0) {
+		log_error("Can't bind to dhcp address: %m");
+		log_error("Please make sure there is no other dhcp server");
+		log_error("running and that there's no entry for dhcp or");
+		log_error("bootp in /etc/inetd.conf.   Also make sure you");
+		log_error("are not running HP JetAdmin software, which");
+		log_fatal("includes a bootp server.");
 	}
 
 #if defined (HAVE_SO_BINDTODEVICE)
 	/* Bind this socket to this interface. */
-	if (info -> ifp &&
-	    setsockopt (sock, SOL_SOCKET, SO_BINDTODEVICE,
-			(char *)(info -> ifp), sizeof *(info -> ifp)) < 0) {
-		log_fatal ("setsockopt: SO_BINDTODEVICE: %m");
+	if (info->ifp &&
+	    setsockopt(sock, SOL_SOCKET, SO_BINDTODEVICE,
+			(char *)(info -> ifp), sizeof(*(info -> ifp))) < 0) {
+		log_fatal("setsockopt: SO_BINDTODEVICE: %m");
 	}
 #endif
 
@@ -256,6 +285,23 @@ ssize_t send_packet (interface, packet, raw, len, from, to, hto)
 	}
 	return result;
 }
+
+ssize_t send_packet6(struct interface_info *interface,
+		     struct packet *packet,
+		     struct dhcp_packet *raw, 
+		     size_t len, 
+		     struct in6_addr from, 
+		     struct sockaddr_in6 *to, 
+		     struct hardware *hto) {
+	int result;
+
+	result = sendto(interface->wfdesc, (char *)raw, len, 0,
+		        (struct sockaddr *)to, sizeof(*to));
+	if (result < 0) {
+		log_error("send_packet6: %m");
+	}
+	return result;
+}
 #endif /* USE_SOCKET_SEND || USE_SOCKET_FALLBACK */
 
 #ifdef USE_SOCKET_RECEIVE
@@ -281,6 +327,17 @@ ssize_t receive_packet (interface, buf, len, from, hfrom)
 		  errno == ECONNREFUSED) &&
 		 retry++ < 10);
 #endif
+	return result;
+}
+
+ssize_t receive_packet6(struct interface_info *interface, unsigned char *buf,
+			size_t len, struct sockaddr_in6 *from,
+			struct hardware *hfrom) {
+	SOCKLEN_T flen = sizeof(*from);
+	int result;
+
+	result = recvfrom(interface->rfdesc, (char *)buf, len, 0,
+			  (struct sockaddr *)from, &flen);
 	return result;
 }
 #endif /* USE_SOCKET_RECEIVE */

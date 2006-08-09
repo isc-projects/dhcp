@@ -323,7 +323,10 @@ enum dhcp_token {
 	MAX_LEASE_OWNERSHIP = 627,
 	MAX_BALANCE = 628,
 	MIN_BALANCE = 629,
-	DOMAIN_LIST = 630
+	DOMAIN_LIST = 630,
+	IP6_ADDRESS = 631,
+	FIXED_ADDR6 = 632,
+	SUBNET6 = 633
 };
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\

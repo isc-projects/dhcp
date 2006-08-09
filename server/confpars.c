@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.158 2006/07/20 16:04:03 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.158.12.1 2006/08/09 11:26:30 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -416,6 +416,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		return 1;
 
 	      case SUBNET:
+	      case SUBNET6:
 		next_token (&val, (unsigned *)0, cfile);
 		if (type == HOST_DECL || type == SUBNET_DECL ||
 		    type == CLASS_DECL) {
@@ -426,9 +427,14 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		}
 
 		/* If we're in a subnet declaration, just do the parse. */
-		if (group -> shared_network) {
-			parse_subnet_declaration (cfile,
-						  group -> shared_network);
+		if (group->shared_network) {
+			if (token == SUBNET) {
+				parse_subnet_declaration(cfile,
+							 group->shared_network);
+			} else {
+				parse_subnet6_declaration(cfile,
+							 group->shared_network);
+			}
 			break;
 		}
 
@@ -445,26 +451,37 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		shared_network_reference (&share -> group -> shared_network,
 					  share, MDL);
 
-		parse_subnet_declaration (cfile, share);
+		if (token == SUBNET) {
+			parse_subnet_declaration(cfile, share);
+		} else {
+			parse_subnet6_declaration(cfile, share);
+		}
 
 		/* share -> subnets is the subnet we just parsed. */
-		if (share -> subnets) {
-			interface_reference (&share -> interface,
-					     share -> subnets -> interface,
-					     MDL);
+		if (share->subnets) {
+			interface_reference(&share->interface,
+					    share->subnets->interface,
+					    MDL);
 
 			/* Make the shared network name from network number. */
-			n = piaddrmask (share -> subnets -> net,
-					share -> subnets -> netmask, MDL);
-			share -> name = n;
+			if (token == SUBNET) {
+				n = piaddrmask(share->subnets->net,
+					       share->subnets->netmask, MDL);
+			} else {
+				n = piaddrcidr(&share->subnets->net,
+					       share->subnets->prefix_len, MDL);
+			}
+
+			/* XXX: do something if n is NULL */
+			share->name = n;
 
 			/* Copy the authoritative parameter from the subnet,
 			   since there is no opportunity to declare it here. */
-			share -> group -> authoritative =
-				share -> subnets -> group -> authoritative;
-			enter_shared_network (share);
+			share->group->authoritative =
+				share->subnets->group->authoritative;
+			enter_shared_network(share);
 		}
-		shared_network_dereference (&share, MDL);
+		shared_network_dereference(&share, MDL);
 		return 1;
 
 	      case VENDOR_CLASS:
@@ -531,23 +548,24 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		break;
 
 	      case FIXED_ADDR:
-		next_token (&val, (unsigned *)0, cfile);
-		cache = (struct option_cache *)0;
-		if (parse_fixed_addr_param (&cache, cfile)) {
+	      case FIXED_ADDR6:
+		next_token(&val, NULL, cfile);
+		cache = NULL;
+		if (parse_fixed_addr_param(&cache, cfile, token)) {
 			if (host_decl) {
-				if (host_decl -> fixed_addr) {
-					option_cache_dereference (&cache, MDL);
-					parse_warn (cfile,
-						    "Only one fixed address%s",
-						    " declaration per host.");
+				if (host_decl->fixed_addr) {
+					option_cache_dereference(&cache, MDL);
+					parse_warn(cfile,
+						   "Only one fixed address "
+						   "declaration per host.");
 				} else {
-					host_decl -> fixed_addr = cache;
+					host_decl->fixed_addr = cache;
 				}
 			} else {
-				parse_warn (cfile,
-					    "fixed-address parameter not %s",
-					    "allowed here.");
-				option_cache_dereference (&cache, MDL);
+				parse_warn(cfile,
+					   "fixed-address parameter not "
+					   "allowed here.");
+				option_cache_dereference(&cache, MDL);
 			}
 		}
 		break;
@@ -2318,6 +2336,75 @@ void parse_shared_net_declaration (cfile, group)
 	shared_network_dereference (&share, MDL);
 }
 
+
+static void
+common_subnet_parsing(struct parse *cfile, 
+		      struct shared_network *share,
+		      struct subnet *subnet) {
+	enum dhcp_token token;
+	struct subnet *t, *u;
+	const char *val;
+	int declaration = 0;
+
+	enter_subnet(subnet);
+
+	if (!parse_lbrace(cfile)) {
+		subnet_dereference(&subnet, MDL);
+		return;
+	}
+
+	do {
+		token = peek_token(&val, NULL, cfile);
+		if (token == RBRACE) {
+			token = next_token(&val, NULL, cfile);
+			break;
+		} else if (token == END_OF_FILE) {
+			token = next_token(&val, NULL, cfile);
+			parse_warn (cfile, "unexpected end of file");
+			break;
+		} else if (token == INTERFACE) {
+			token = next_token(&val, NULL, cfile);
+			token = next_token(&val, NULL, cfile);
+			new_shared_network_interface(cfile, share, val);
+			if (!parse_semi(cfile))
+				break;
+			continue;
+		}
+		declaration = parse_statement(cfile, subnet->group,
+					      SUBNET_DECL,
+					      NULL,
+					      declaration);
+	} while (1);
+
+	/* Add the subnet to the list of subnets in this shared net. */
+	if (share->subnets == NULL) {
+		subnet_reference(&share->subnets, subnet, MDL);
+	} else {
+		u = NULL;
+		for (t = share->subnets; t->next_sibling; t = t->next_sibling) {
+			if (subnet_inner_than(subnet, t, 0)) {
+				subnet_reference(&subnet->next_sibling, t, MDL);
+				if (u) {
+					subnet_dereference(&u->next_sibling,
+							   MDL);
+					subnet_reference(&u->next_sibling,
+							 subnet, MDL);
+				} else {
+					subnet_dereference(&share->subnets,
+							   MDL);
+					subnet_reference(&share->subnets,
+							 subnet, MDL);
+				}
+				subnet_dereference(&subnet, MDL);
+				return;
+			}
+			u = t;
+		}
+		subnet_reference(&t->next_sibling, subnet, MDL);
+	}
+	subnet_dereference(&subnet, MDL);
+}
+
 /* subnet-declaration :==
 	net NETMASK netmask RBRACE parameters declarations LBRACE */
 
@@ -2331,8 +2418,6 @@ void parse_subnet_declaration (cfile, share)
 	struct iaddr iaddr;
 	unsigned char addr [4];
 	unsigned len = sizeof addr;
-	int declaration = 0;
-	struct interface_info *ip;
 	isc_result_t status;
 
 	subnet = (struct subnet *)0;
@@ -2384,65 +2469,86 @@ void parse_subnet_declaration (cfile, share)
 		return;
 	}
 
-	enter_subnet (subnet);
+	common_subnet_parsing(cfile, share, subnet);
+}
 
-	if (!parse_lbrace (cfile)) {
-		subnet_dereference (&subnet, MDL);
+/* subnet6-declaration :==
+	net / bits RBRACE parameters declarations LBRACE */
+
+void
+parse_subnet6_declaration(struct parse *cfile, struct shared_network *share) {
+	struct subnet *subnet;
+	isc_result_t status;
+	enum dhcp_token token;
+	const char *val;
+	char *endp;
+	int ofs;
+	const static int mask[] = { 0x00, 0x80, 0xC0, 0xE0, 
+				    0xF0, 0xF8, 0xFC, 0xFE };
+	struct iaddr iaddr;
+
+	subnet = NULL;
+	status = subnet_allocate(&subnet, MDL);
+	if (status != ISC_R_SUCCESS) {
+		log_fatal("Allocation of new subnet failed: %s",
+			  isc_result_totext(status));
+	}
+	shared_network_reference(&subnet->shared_network, share, MDL);
+	if (!clone_group(&subnet->group, share->group, MDL)) {
+		log_fatal("Allocation of group for new subnet failed.");
+	}
+	subnet_reference(&subnet->group->subnet, subnet, MDL);
+
+	if (!parse_ip6_addr(cfile, &subnet->net)) {
+		subnet_dereference(&subnet, MDL);
 		return;
 	}
 
-	do {
-		token = peek_token (&val, (unsigned *)0, cfile);
-		if (token == RBRACE) {
-			token = next_token (&val, (unsigned *)0, cfile);
-			break;
-		} else if (token == END_OF_FILE) {
-			token = next_token (&val, (unsigned *)0, cfile);
-			parse_warn (cfile, "unexpected end of file");
-			break;
-		} else if (token == INTERFACE) {
-			token = next_token (&val, (unsigned *)0, cfile);
-			token = next_token (&val, (unsigned *)0, cfile);
-			new_shared_network_interface (cfile, share, val);
-			if (!parse_semi (cfile))
-				break;
-			continue;
-		}
-		declaration = parse_statement (cfile, subnet -> group,
-					       SUBNET_DECL,
-					       (struct host_decl *)0,
-					       declaration);
-	} while (1);
-
-	/* Add the subnet to the list of subnets in this shared net. */
-	if (!share -> subnets)
-		subnet_reference (&share -> subnets, subnet, MDL);
-	else {
-		u = (struct subnet *)0;
-		for (t = share -> subnets;
-		     t -> next_sibling; t = t -> next_sibling) {
-			if (subnet_inner_than (subnet, t, 0)) {
-				subnet_reference (&subnet -> next_sibling,
-						  t, MDL);
-				if (u) {
-					subnet_dereference (&u -> next_sibling,
-							    MDL);
-					subnet_reference (&u -> next_sibling,
-							  subnet, MDL);
-				} else {
-					subnet_dereference (&share -> subnets,
-							    MDL);
-					subnet_reference (&share -> subnets,
-							  subnet, MDL);
-				}
-				subnet_dereference (&subnet, MDL);
-				return;
-			}
-			u = t;
-		}
-		subnet_reference (&t -> next_sibling, subnet, MDL);
+	token = next_token(&val, NULL, cfile);
+	if (token != SLASH) {
+		parse_warn(cfile, "Expecting a '/'.");
+		skip_to_semi(cfile);
+		return;
 	}
-	subnet_dereference (&subnet, MDL);
+
+	token = next_token(&val, NULL, cfile);
+	if (token != NUMBER) {
+		parse_warn(cfile, "Expecting a number.");
+		skip_to_semi(cfile);
+		return;
+	}
+
+	subnet->prefix_len = strtol(val, &endp, 10);
+	if ((subnet->prefix_len < 0) || 
+	    (subnet->prefix_len > 128) || 
+	    (*endp != '\0')) {
+	    	parse_warn(cfile, "Expecting a number between 0 and 128.");
+		skip_to_semi(cfile);
+		return;
+	}
+
+	/* 
+	 * Create a netmask. 
+	 */
+	subnet->netmask.len = 16;
+	ofs = subnet->prefix_len / 8;
+	subnet->netmask.iabuf[ofs--] = mask[subnet->prefix_len % 8];
+	while (ofs >= 0) {
+		subnet->netmask.iabuf[ofs--] = 0xFF;
+	}
+
+	/* Validate the network number/netmask pair. */
+	iaddr = subnet_number(subnet->net, subnet->netmask);
+	if (memcmp(&iaddr, &subnet->net, 16) != 0) {
+		parse_warn(cfile,
+		   "subnet %s/%d: prefix not long enough for address.",
+			    piaddr(subnet->net), subnet->prefix_len);
+		subnet_dereference(&subnet, MDL);
+		skip_to_semi(cfile);
+		return;
+	}
+
+	common_subnet_parsing(cfile, share, subnet);
 }
 
 /* group-declaration :== RBRACE parameters declarations LBRACE */
@@ -2540,47 +2646,59 @@ void parse_group_declaration (cfile, group)
    ip-addrs-or-hostnames :== ip-addr-or-hostname
 			   | ip-addrs-or-hostnames ip-addr-or-hostname */
 
-int parse_fixed_addr_param (oc, cfile)
-	struct option_cache **oc;
-	struct parse *cfile;
-{
+int
+parse_fixed_addr_param(struct option_cache **oc, 
+		       struct parse *cfile, 
+		       enum dhcp_token type) {
+	int parse_ok;
 	const char *val;
 	enum dhcp_token token;
-	struct expression *expr = (struct expression *)0;
+	struct expression *expr = NULL;
 	struct expression *tmp, *new;
 	int status;
 
 	do {
-		tmp = (struct expression *)0;
-		if (parse_ip_addr_or_hostname (&tmp, cfile, 1)) {
-			if (expr) {
-				new = (struct expression *)0;
-				status = make_concat (&new, expr, tmp);
-				expression_dereference (&expr, MDL);
-				expression_dereference (&tmp, MDL);
-				if (!status)
-					return 0;
-				expr = new;
-			} else
-				expr = tmp;
+		tmp = NULL;
+		if (type == FIXED_ADDR) {
+			parse_ok = parse_ip_addr_or_hostname(&tmp, cfile, 1);
 		} else {
-			if (expr)
+			/* INSIST(type == FIXED_ADDR6); */
+			parse_ok = parse_ip6_addr_expr(&tmp, cfile);
+		}
+		if (parse_ok) {
+			if (expr != NULL) {
+				new = NULL;
+				status = make_concat(&new, expr, tmp);
+				expression_dereference(&expr, MDL);
+				expression_dereference(&tmp, MDL);
+				if (!status) {
+					return 0;
+				}
+				expr = new;
+			} else {
+				expr = tmp;
+			}
+		} else {
+			if (expr != NULL) {
 				expression_dereference (&expr, MDL);
+			}
 			return 0;
 		}
-		token = peek_token (&val, (unsigned *)0, cfile);
-		if (token == COMMA)
-			token = next_token (&val, (unsigned *)0, cfile);
+		token = peek_token(&val, NULL, cfile);
+		if (token == COMMA) {
+			token = next_token(&val, NULL, cfile);
+		}
 	} while (token == COMMA);
 
-	if (!parse_semi (cfile)) {
-		if (expr)
+	if (!parse_semi(cfile)) {
+		if (expr) {
 			expression_dereference (&expr, MDL);
+		}
 		return 0;
 	}
-	status = option_cache (oc, (struct data_string *)0, expr,
-			       (struct option *)0, MDL);
-	expression_dereference (&expr, MDL);
+
+	status = option_cache(oc, NULL, expr, NULL, MDL);
+	expression_dereference(&expr, MDL);
 	return status;
 }
 

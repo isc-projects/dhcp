@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tables.c,v 1.56 2006/07/22 02:24:16 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: tables.c,v 1.56.8.1 2006/08/09 11:26:29 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -55,7 +55,8 @@ HASH_FUNCTIONS (option_code, const unsigned *, struct option,
 
    Format codes:
 
-   I - IP address
+   I - IPv4 address
+   6 - IPv6 address
    l - 32-bit signed integer
    L - 32-bit unsigned integer
    s - 16-bit signed integer

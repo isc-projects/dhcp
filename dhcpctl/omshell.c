@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: omshell.c,v 1.11 2006/02/24 23:16:29 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: omshell.c,v 1.11.100.1 2006/08/09 11:26:29 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include <time.h>
@@ -76,8 +76,8 @@ static void check (isc_result_t status, const char *func) {
 	}
 }
 
-int main (int argc, char **argv, char **envp)
-{
+int 
+main(int argc, char **argv) {
 	isc_result_t status, waitstatus;
 	dhcpctl_handle connection;
 	dhcpctl_handle authenticator;
