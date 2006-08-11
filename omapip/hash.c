@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: hash.c,v 1.10.46.1 2006/07/25 10:01:33 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: hash.c,v 1.10.46.2 2006/08/11 22:50:22 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include <omapip/omapip_p.h>
@@ -354,6 +354,11 @@ void delete_hash_entry (table, key, len, file, line)
 
 	if (!len)
 		len = find_length(key, table->do_hash);
+
+	if (*vp != NULL) {
+		log_fatal("Internal inconsistency: storage value has not been "
+			  "initialized to zero (from %s:%d).", file, line);
+	}
 
 	hashno = (*table->do_hash)(key, len, table->hash_count);
 

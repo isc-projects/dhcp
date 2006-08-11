@@ -32,7 +32,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.142 2006/07/19 17:14:55 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.142.8.1 2006/08/11 22:50:21 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -230,8 +230,6 @@ int main (argc, argv, envp)
 		    interfaces_requested = 1;
  		}
 	}
-
-	limited_broadcast.s_addr = INADDR_BROADCAST;
 
 	if (!no_dhclient_conf && (s = getenv ("PATH_DHCLIENT_CONF"))) {
 		path_dhclient_conf = s;

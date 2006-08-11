@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tables.c,v 1.56 2006/07/22 02:24:16 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: tables.c,v 1.56.2.1 2006/08/11 22:50:21 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -184,11 +184,52 @@ static struct option dhcp_options[] = {
 	{ "nds-servers", "IA",			&dhcp_universe,  85, 1 },
 	{ "nds-tree-name", "t",			&dhcp_universe,  86, 1 },
 	{ "nds-context", "t",			&dhcp_universe,  87, 1 },
+	{ "bcms-controller-address", "Ia",	&dhcp_universe,  89, 1 },
+#if 0
+	/* Not defined by RFC yet */
+	{ "pxe-system-type", "S",		&dhcp_universe,  93, 1 },
+	{ "pxe-interface-id", "BBB",		&dhcp_universe,  94, 1 },
+	{ "pxe-client-id", "BX",		&dhcp_universe,  97, 1 },
+#endif
+	{ "client-last-transaction-time", "L",	&dhcp_universe,  91, 1 },
+	{ "associated-ip", "Ia",		&dhcp_universe,  92, 1 },
 	{ "uap-servers", "t",			&dhcp_universe,  98, 1 },
+	{ "netinfo-server-address", "Ia",	&dhcp_universe, 112, 1 },
+	{ "netinfo-server-tag", "t",		&dhcp_universe, 113, 1 },
+	{ "default-url", "t",			&dhcp_universe, 114, 1 },
 	{ "subnet-selection", "I",		&dhcp_universe, 118, 1 },
 	{ "domain-search", "D",			&dhcp_universe, 119, 1 },
 	{ "vivco", "Evendor-class.",		&dhcp_universe, 124, 1 },
 	{ "vivso", "Evendor.",			&dhcp_universe, 125, 1 },
+#if 0
+	/* Not defined by RFC yet.
+	 * DO NOT UNCOMMENT THESE DEFINITIONS: these names are placeholders
+	 * and will not be used in future versions of the software.
+	 */
+	{ "pxe-undefined-1", "X",		&dhcp_universe, 128, 1 },
+	{ "pxe-undefined-2", "X",		&dhcp_universe, 129, 1 },
+	{ "pxe-undefined-3", "X",		&dhcp_universe, 130, 1 },
+	{ "pxe-undefined-4", "X",		&dhcp_universe, 131, 1 },
+	{ "pxe-undefined-5", "X",		&dhcp_universe, 132, 1 },
+	{ "pxe-undefined-6", "X",		&dhcp_universe, 133, 1 },
+	{ "pxe-undefined-7", "X",		&dhcp_universe, 134, 1 },
+	{ "pxe-undefined-8", "X",		&dhcp_universe, 135, 1 },
+#endif
+#if 0
+	/* Not defined by RFC yet */
+	{ "tftp-server-address", "Ia",		&dhcp_universe, 150, 1 },
+#endif
+#if 0
+	/* PXELINUX options: not defined by RFC yet */
+	{ "pxelinux-magic", "BBBB",		&dhcp_universe, 208, 1 },
+	{ "loader-configfile", "t",		&dhcp_universe, 209, 1 },
+	{ "loader-pathprefix", "t",		&dhcp_universe, 210, 1 },
+	{ "loader-reboottime", "L",		&dhcp_universe, 211, 1 },
+#endif
+#if 0
+	/* Not defined by RFC yet */
+	{ "vss-info", "BX",			&dhcp_universe, 221, 1 },
+#endif
 	{ NULL, NULL, NULL, 0, 0 }
 };
 

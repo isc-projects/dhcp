@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.158 2006/07/20 16:04:03 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.158.6.1 2006/08/11 22:50:22 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -295,8 +295,7 @@ isc_result_t lease_file_subparse (struct parse *cfile)
 
 /* statement :== parameter | declaration
 
-   parameter :== timestamp
-   	       | DEFAULT_LEASE_TIME lease_time
+   parameter :== DEFAULT_LEASE_TIME lease_time
 	       | MAX_LEASE_TIME lease_time
 	       | DYNAMIC_BOOTP_LEASE_CUTOFF date
 	       | DYNAMIC_BOOTP_LEASE_LENGTH lease_time
@@ -394,11 +393,6 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 			skip_to_semi (cfile);
 		}
 		return 1;
-
-	      case TIMESTAMP:
-		next_token (&val, (unsigned *)0, cfile);
-		parsed_time = parse_timestamp (cfile);
-		break;
 
 	      case SHARED_NETWORK:
 		next_token (&val, (unsigned *)0, cfile);
@@ -2584,21 +2578,6 @@ int parse_fixed_addr_param (oc, cfile)
 	return status;
 }
 
-/* timestamp :== date
-
-   Timestamps are actually not used in dhcpd.conf, which is a static file,
-   but rather in the database file and the journal file.  (Okay, actually
-   they're not even used there yet). */
-
-TIME parse_timestamp (cfile)
-	struct parse *cfile;
-{
-	TIME rv;
-
-	rv = parse_date (cfile);
-	return rv;
-}
-		
 /* lease_declaration :== LEASE ip_address LBRACE lease_parameters RBRACE
 
    lease_parameters :== <nil>
@@ -2690,11 +2669,6 @@ int parse_lease_declaration (struct lease **lp, struct parse *cfile)
 				lease -> ends = t;
 				break;
 				
-			      case TIMESTAMP:
-				seenbit = 4;
-				lease -> timestamp = t;
-				break;
-
 			      case TSTP:
 				seenbit = 65536;
 				lease -> tstp = t;
@@ -3419,6 +3393,10 @@ int parse_allow_deny (oc, cfile, flag)
 
 	      case CLIENT_UPDATES:
 		code = SV_CLIENT_UPDATES;
+		break;
+
+	      case LEASEQUERY:
+		code = SV_LEASEQUERY;
 		break;
 
 	      default:

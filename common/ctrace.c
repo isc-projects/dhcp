@@ -32,7 +32,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: ctrace.c,v 1.5 2006/02/27 23:56:13 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: ctrace.c,v 1.5.90.1 2006/08/11 22:50:21 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -46,10 +46,8 @@ void trace_interface_register (trace_type_t *ttype, struct interface_info *ip)
 		memset (&tipkt, 0, sizeof tipkt);
 		memcpy (&tipkt.hw_address,
 			&ip -> hw_address, sizeof ip -> hw_address);
-		if (ip -> address_count > 0)
-			memcpy (&tipkt.primary_address,
-				&ip -> addresses [0],
-				sizeof ip -> addresses [0]);
+		memcpy (&tipkt.primary_address,
+			&ip -> primary_address, sizeof ip -> primary_address);
 		memcpy (tipkt.name, ip -> name, sizeof ip -> name);
 		tipkt.index = htonl (ip -> index);
 
@@ -89,12 +87,8 @@ void trace_interface_input (trace_type_t *ttype, unsigned len, char *buf)
 
 	memcpy (&ip -> hw_address, &tipkt -> hw_address,
 		sizeof ip -> hw_address);
-	ip -> address_count = ip -> address_max = 1;
-	ip -> addresses = dmalloc (sizeof (struct in_addr), MDL);
-	if (!ip -> addresses)
-		log_fatal ("Can't allocate address buffer for trace interface");
-	memcpy (&ip -> addresses [0], &tipkt -> primary_address,
-		sizeof ip -> addresses [0]);
+	memcpy (&ip -> primary_address, &tipkt -> primary_address,
+		sizeof ip -> primary_address);
 	memcpy (ip -> name, tipkt -> name, sizeof ip -> name);
 	ip -> index = ntohl (tipkt -> index);
 
@@ -108,7 +102,7 @@ void trace_interface_input (trace_type_t *ttype, unsigned len, char *buf)
 	ip -> ifp -> ifr_addr.sa_len = sizeof (struct sockaddr_in);
 #endif
 	sin = (struct sockaddr_in *)&ip -> ifp -> ifr_addr;
-	sin -> sin_addr = ip -> addresses [0];
+	sin -> sin_addr = ip -> primary_address;
 
 	addr.len = 4;
 	memcpy (addr.iabuf, &sin -> sin_addr.s_addr, addr.len);

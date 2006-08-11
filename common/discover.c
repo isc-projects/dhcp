@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: discover.c,v 1.50 2006/02/27 23:56:13 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: discover.c,v 1.50.90.1 2006/08/11 22:50:21 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -307,38 +307,8 @@ void discover_interfaces (state)
 			if (foo.sin_addr.s_addr == htonl (INADDR_LOOPBACK) &&
 			    ((tmp -> flags & INTERFACE_AUTOMATIC) &&
 			     state == DISCOVER_SERVER))
-				continue;
+			    continue;
 
-			/* If the only address we have is 0.0.0.0, we
-			   shouldn't consider the interface configured. */
-			if (foo.sin_addr.s_addr != htonl(INADDR_ANY))
-				tmp->configured = 1;
-
-			if (!tmp -> addresses) {
-				tmp -> addresses =
-					dmalloc (10 * sizeof (struct in_addr),
-						 MDL);
-				if (!tmp -> addresses)
-					log_fatal ("no memory for ifaddrlist");
-				tmp -> address_count = 0;
-				tmp -> address_max = 10;
-			} else if (tmp -> address_count >= tmp -> address_max) {
-				struct in_addr *ta;
-				int newmax = tmp -> address_max * 2;
-				ta = dmalloc (newmax *
-					      sizeof (struct in_addr), MDL);
-				if (!ta)
-					log_fatal ("no memory for new "
-						   "ifaddrlist");
-				memcpy (ta, tmp -> addresses,
-					tmp -> address_max *
-					sizeof (struct in_addr));
-				dfree (tmp -> addresses, MDL);
-				tmp -> addresses = ta;
-				tmp -> address_max = newmax;
-			}
-			tmp -> addresses [tmp -> address_count++] =
-				foo.sin_addr;
 
 			/* If this is the first real IP address we've
 			   found, keep a pointer to ifreq structure in
@@ -355,6 +325,7 @@ void discover_interfaces (state)
 					log_fatal ("no space for ifp.");
 				memcpy (tif, ifp, len);
 				tmp -> ifp = tif;
+				tmp -> primary_address = foo.sin_addr;
 			}
 
 			/* Grab the address... */
@@ -1166,12 +1137,6 @@ void interface_stash (struct interface_info *tptr)
 		    dfree (interface_vector, MDL);
 		}
 		interface_vector = vec;
-	}
-	if (interface_vector [tptr -> index]) {
-		log_fatal("invalid tracefile - two interfaces with "
-			  "same index - %s and %s",
-			  interface_vector [tptr->index] -> name,
-			  tptr -> name);
 	}
 	interface_reference (&interface_vector [tptr -> index], tptr, MDL);
 	if (tptr -> index >= interface_count)

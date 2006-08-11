@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.107 2006/07/17 15:33:34 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.107.18.1 2006/08/11 22:50:21 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -49,6 +49,150 @@ static int do_host_lookup PROTO ((struct data_string *,
 #ifdef NSUPDATE
 struct __res_state resolver_state;
 int resolver_inited = 0;
+#endif
+
+
+#ifdef ENABLE_EXECUTE
+static unsigned long
+execute(char **args)
+{
+	pid_t p;
+
+	if (args == NULL || args[0] == NULL)
+		return 125;
+
+	p = fork();
+
+	if (p > 0) {
+		int status;
+		waitpid(p, &status, 0);
+
+		if (WIFEXITED(status))
+			return WEXITSTATUS(status);
+		else
+			return -WTERMSIG(status);
+	} else if (p == 0) {
+		execvp(args[0], args);
+		log_error("Unable to execute %s: %m", args[0]);
+		_exit(127);
+	}
+
+	return 126;
+}
+
+static void
+append_to_ary(char **ary_ptr, int *ary_size, int ary_capacity,
+	      char *new_element)
+{
+	/* INSIST(ary_ptr != NULL); */
+	/* INSIST(ary_size != NULL); */
+	/* INSIST(ary_capacity > 1); */
+
+	if (new_element == NULL)
+		return;
+
+	if (*ary_size >= ary_capacity) {
+		log_fatal("Improbable error at %s:%d.", MDL);
+		return;
+	}
+
+	ary_ptr[(*ary_size)++] = new_element;
+}
+
+static char *
+data_string_to_char_string(struct data_string *d)
+{
+	char *str, *start, *end;
+	const unsigned char *pos;
+	int len;
+
+	if (d == NULL);
+		return NULL;
+
+	pos = d->data;
+
+	if (pos == NULL)
+		return NULL;
+
+	/* Per byte could be "\777" at worst, plus null terminator. */
+	len = (d->len * 4) + 1;
+	str = dmalloc(len, MDL);
+	if (!str)
+		return NULL;
+
+	start = str;
+	end = start + len;
+
+	if (pretty_escape(&start, end, &pos, pos + d->len) < 0) {
+		dfree(str, MDL);
+		return NULL;
+	}
+
+	/* dmalloc() sets the buffer to zero - there is no need to null
+	 * terminate.
+	 */
+
+	return str;
+}
+
+static int
+evaluate_execute(unsigned long *result, struct packet *packet,
+		 struct lease *lease, struct client_state *client_state,
+		 struct option_state *in_options,
+		 struct option_state *cfg_options,
+		 struct binding_scope **scope, struct expression *expr)
+{
+	int status;
+	int cmd_status;
+	int i;
+	struct data_string ds;
+	struct expression *next_arg;
+	char **arg_ary = NULL;
+	int arg_ary_size = 0;
+	int arg_ary_capacity = 0;
+
+	/* Need 1 bucket for the command, and 1 for the trailing NULL
+	 * terminator.
+	 */
+	i = expr->data.execute.argc + 2;
+	arg_ary = dmalloc(i * sizeof(char *), MDL);
+	/* Leave one bucket free for the NULL terminator. */
+	arg_ary_capacity = i - 1;
+
+	if (arg_ary == NULL)
+		return 0;
+
+	append_to_ary(arg_ary, &arg_ary_size, arg_ary_capacity,
+		      expr->data.execute.command);
+
+	for(next_arg = expr->data.execute.arglist;
+	    next_arg;
+	    next_arg = next_arg->data.arg.next) {
+		memset(&ds, 0, sizeof ds);
+		status = (evaluate_data_expression
+			  (&ds, packet, lease, client_state, in_options,
+			   cfg_options, scope, next_arg->data.arg.val, MDL));
+		if (!status) {
+			if (arg_ary) {
+				for (i=1; i < arg_ary_size; i++)
+					dfree(arg_ary[i], MDL);
+				dfree(arg_ary, MDL);
+			}
+			return 0;
+		}
+		append_to_ary(arg_ary, &arg_ary_size, arg_ary_capacity,
+			      data_string_to_char_string(&ds));
+		data_string_forget(&ds, MDL);
+	}
+# if defined (DEBUG_EXPRESSIONS)
+	log_debug("exec: execute");
+# endif
+	*result = execute(arg_ary);
+	for (i=1; i < arg_ary_size; i++)
+		dfree(arg_ary[i], MDL);
+	dfree(arg_ary, MDL);
+	return 1;
+}
 #endif
 
 pair cons (car, cdr)
@@ -864,6 +1008,7 @@ int evaluate_dns_expression (result, packet, lease, client_state, in_options,
 	      case expr_extract_int8:
 	      case expr_extract_int16:
 	      case expr_extract_int32:
+	      case expr_execute:
 	      case expr_const_int:
 	      case expr_lease_time:
 	      case expr_dns_transaction:
@@ -1229,6 +1374,7 @@ int evaluate_boolean_expression (result, packet, lease, client_state,
 	      case expr_extract_int8:
 	      case expr_extract_int16:
 	      case expr_extract_int32:
+	      case expr_execute:
 	      case expr_const_int:
 	      case expr_lease_time:
 	      case expr_dns_transaction:
@@ -2165,6 +2311,7 @@ int evaluate_data_expression (result, packet, lease, client_state,
 	      case expr_extract_int8:
 	      case expr_extract_int16:
 	      case expr_extract_int32:
+	      case expr_execute:
 	      case expr_const_int:
 	      case expr_lease_time:
 	      case expr_dns_transaction:
@@ -2676,6 +2823,20 @@ int evaluate_numeric_expression (result, packet, lease, client_state,
 			return 0;
 		}
 
+	      case expr_execute:
+#if defined (ENABLE_EXECUTE)
+			status = evaluate_execute(result, packet, lease,
+						  client_state, in_options,
+						  cfg_options, scope, expr);
+# if defined (DEBUG_EXPRESSIONS)
+			log_debug("num: execute() -> %d", status);
+# endif
+			return status;
+#else
+			log_fatal("Impossible case at %s:%d (ENABLE_EXECUTE "
+				  "is not defined).", MDL);
+#endif
+			break;
 	      case expr_ns_add:
 	      case expr_ns_delete:
 	      case expr_ns_exists:
@@ -2689,6 +2850,11 @@ int evaluate_numeric_expression (result, packet, lease, client_state,
 		return 0;
 
 	      case expr_arg:
+		break;
+
+	      default:
+		log_fatal("Impossible case at %s:%d.  Undefined operator "
+			  "%d.", MDL, expr->op);
 		break;
 	}
 
@@ -3100,6 +3266,7 @@ int is_numeric_expression (expr)
 	return (expr -> op == expr_extract_int8 ||
 		expr -> op == expr_extract_int16 ||
 		expr -> op == expr_extract_int32 ||
+		expr -> op == expr_execute ||
 		expr -> op == expr_const_int ||
 		expr -> op == expr_lease_time ||
 		expr -> op == expr_dns_transaction ||
@@ -3135,6 +3302,7 @@ int is_compound_expression (expr)
 		expr -> op == expr_extract_int8 ||
 		expr -> op == expr_extract_int16 ||
 		expr -> op == expr_extract_int32 ||
+		expr -> op == expr_execute ||
 		expr -> op == expr_dns_transaction);
 }
 
@@ -3163,6 +3331,7 @@ static int op_val (op)
 	      case expr_extract_int8:
 	      case expr_extract_int16:
 	      case expr_extract_int32:
+	      case expr_execute:
 	      case expr_encode_int8:
 	      case expr_encode_int16:
 	      case expr_encode_int32:
@@ -3261,6 +3430,7 @@ enum expression_context op_context (op)
 	      case expr_extract_int8:
 	      case expr_extract_int16:
 	      case expr_extract_int32:
+	      case expr_execute:
 	      case expr_encode_int8:
 	      case expr_encode_int16:
 	      case expr_encode_int32:
@@ -3321,6 +3491,7 @@ int write_expression (file, expr, col, indent, firstp)
 	int firstp;
 {
 	struct expression *e;
+	struct expression *next_arg;
 	const char *s;
 	char obuf [65];
 	int scol;
@@ -3807,6 +3978,30 @@ int write_expression (file, expr, col, indent, firstp)
 					  expr -> data.variable);
 		col = token_print_indent (file, col, indent, "", "", ")");
 		break;
+	      case expr_execute:
+#if defined(ENABLE_EXECUTE)
+		col = token_print_indent(file, col, indent, "", "",
+					 "execute");
+		col = token_print_indent(file, col, indent, " ", "",
+					 "(");
+		scol = col;
+		col = token_print_indent_concat(file, col, scol, "", "", "\"",
+						expr->data.execute.command,
+						"\"", NULL);
+		for(next_arg = expr->data.execute.arglist;
+		    next_arg;
+		    next_arg = next_arg->data.arg.next) {
+			col = token_print_indent(file, col, scol, "", " ",
+						 ",");
+			col = write_expression(file, next_arg->data.arg.val,
+						col, scol, 0);
+		}
+		col = token_print_indent(file, col, indent, "", "", ")");
+#else
+		log_fatal("Impossible case at %s:%d (ENABLE_EXECUTE is not "
+			  "defined.", MDL);
+#endif
+		break;
 
 	      default:
 		log_fatal ("invalid expression type in print_expression: %d",
@@ -4032,6 +4227,7 @@ int data_subexpression_length (int *rv,
 	      case expr_extract_int8:
 	      case expr_extract_int16:
 	      case expr_extract_int32:
+	      case expr_execute:
 	      case expr_encode_int8:
 	      case expr_encode_int16:
 	      case expr_encode_int32:

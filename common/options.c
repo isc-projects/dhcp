@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.92 2006/07/22 02:24:16 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.92.2.1 2006/08/11 22:50:21 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -46,8 +46,6 @@ struct option *vendor_cfg_option;
 static void do_option_set PROTO ((pair *,
 				  struct option_cache *,
 				  enum statement_op));
-static int pretty_escape(char **, char *, const unsigned char **,
-			 const unsigned char *);
 static int pretty_text(char **, char *, const unsigned char **,
 			 const unsigned char *, int);
 static int pretty_domain(char **, char *, const unsigned char **,
@@ -154,8 +152,8 @@ int parse_option_buffer (options, buffer, length, universe)
 	memcpy (bp -> data, buffer, length);
 
 	for (offset = 0;
-	     (offset + universe->tag_size) > length &&
-	     (code = universe->get_tag(bp->data + offset)) != universe->end; ) {
+	     (offset + universe->tag_size) <= length &&
+	     (code = universe->get_tag(buffer + offset)) != universe->end; ) {
 		offset += universe->tag_size;
 
 		/* Pad options don't have a length - just skip them. */
@@ -163,14 +161,15 @@ int parse_option_buffer (options, buffer, length, universe)
 			continue;
 
 		/* Don't look for length if the buffer isn't that big. */
-		if (offset + universe->length_size > length) {
+		if ((offset + universe->length_size) > length) {
 			len = 65536;
 			goto bogus;
 		}
 
-		/* All other fields (except end, see above) have a
-		   one-byte length. */
-		len = universe->get_length(bp->data + offset);
+		/* All other fields (except PAD and END handled above)
+		 * have a length field.
+		 */
+		len = universe->get_length(buffer + offset);
 
 		offset += universe->length_size;
 
@@ -570,11 +569,12 @@ int cons_options (inpacket, outpacket, lease, client_state,
 	 * This effectively gives these options the highest priority.
 	 */
 	priority_len = 0;
-	priority_list [priority_len++] = DHO_DHCP_MESSAGE_TYPE;
-	priority_list [priority_len++] = DHO_DHCP_SERVER_IDENTIFIER;
-	priority_list [priority_len++] = DHO_DHCP_LEASE_TIME;
-	priority_list [priority_len++] = DHO_DHCP_MESSAGE;
-	priority_list [priority_len++] = DHO_DHCP_REQUESTED_ADDRESS;
+	priority_list[priority_len++] = DHO_DHCP_MESSAGE_TYPE;
+	priority_list[priority_len++] = DHO_DHCP_SERVER_IDENTIFIER;
+	priority_list[priority_len++] = DHO_DHCP_LEASE_TIME;
+	priority_list[priority_len++] = DHO_DHCP_MESSAGE;
+	priority_list[priority_len++] = DHO_DHCP_REQUESTED_ADDRESS;
+	priority_list[priority_len++] = DHO_ASSOCIATED_IP;
 
 	if (prl && prl -> len > 0) {
 		if ((op = lookup_option (&dhcp_universe, cfg_options,
@@ -1321,7 +1321,7 @@ const char *pretty_print_option (option, data, len, emit_commas, emit_quotes)
 		comma = ',';
 	else
 		comma = ' ';
-	
+
 	memset (enumbuf, 0, sizeof enumbuf);
 
 	/* Figure out the size of the data. */
@@ -1804,7 +1804,7 @@ int save_option_buffer (struct universe *universe,
 	/* If we weren't passed a buffer in which the data are saved and
 	   refcounted, allocate one now. */
 	if (!bp) {
-		if (!buffer_allocate (&lbp, length, MDL)) {
+		if (!buffer_allocate (&lbp, length + tp, MDL)) {
 			log_error ("no memory for option buffer.");
 
 			option_cache_dereference (&op, MDL);
@@ -2057,55 +2057,132 @@ int hashed_option_state_dereference (universe, state, file, line)
 	return 1;
 }
 
-int store_option (result, universe, packet, lease, client_state,
-		  in_options, cfg_options, scope, oc)
-	struct data_string *result;
-	struct universe *universe;
-	struct packet *packet;
-	struct lease *lease;
-	struct client_state *client_state;
-	struct option_state *in_options;
-	struct option_state *cfg_options;
-	struct binding_scope **scope;
-	struct option_cache *oc;
+int
+store_option(struct data_string *result, struct universe *universe,
+	     struct packet *packet, struct lease *lease,
+	     struct client_state *client_state,
+	     struct option_state *in_options, struct option_state *cfg_options,
+	     struct binding_scope **scope, struct option_cache *oc)
 {
-	struct data_string d1, d2;
+	struct data_string tmp;
+	struct universe *subu=NULL;
+	int status;
+	char *start, *end;
 
-	memset (&d1, 0, sizeof d1);
-	memset (&d2, 0, sizeof d2);
+	memset(&tmp, 0, sizeof(tmp));
 
-	if (evaluate_option_cache (&d2, packet, lease, client_state,
-				   in_options, cfg_options, scope, oc, MDL)) {
-		if (!buffer_allocate (&d1.buffer,
-				      (result -> len +
-				       universe -> length_size +
-				       universe -> tag_size + d2.len), MDL)) {
-			data_string_forget (result, MDL);
-			data_string_forget (&d2, MDL);
-			return 0;
-		}
-		d1.data = &d1.buffer -> data [0];
-		if (result -> len)
-			memcpy (d1.buffer -> data,
-				result -> data, result -> len);
-		d1.len = result -> len;
-		(*universe -> store_tag) (&d1.buffer -> data [d1.len],
-					  oc -> option -> code);
-		d1.len += universe -> tag_size;
-		(*universe -> store_length) (&d1.buffer -> data [d1.len],
-					     d2.len);
-		d1.len += universe -> length_size;
-		memcpy (&d1.buffer -> data [d1.len], d2.data, d2.len);
-		d1.len += d2.len;
-		data_string_forget (&d2, MDL);
-		data_string_forget (result, MDL);
-		data_string_copy (result, &d1, MDL);
-		data_string_forget (&d1, MDL);
-		return 1;
+	if (evaluate_option_cache(&tmp, packet, lease, client_state,
+				  in_options, cfg_options, scope, oc, MDL)) {
+		/* If the option is an extended 'e'ncapsulation (not a
+		 * direct 'E'ncapsulation), append the encapsulated space
+		 * onto the currently prepared value.
+		 */
+		do {
+			if (oc->option->format &&
+			    oc->option->format[0] == 'e') {
+				/* Skip forward to the universe name. */
+				start = strchr(oc->option->format, 'E');
+				if (start == NULL)
+					break;
+
+				/* Locate the name-terminating '.'. */
+				end = strchr(++start, '.');
+
+				/* A zero-length name is not allowed in
+				 * these kinds of encapsulations.
+				 */
+				if (end == NULL || start == end)
+					break;
+
+				universe_hash_lookup(&subu, universe_hash,
+						     start, end - start, MDL);
+
+				if (subu == NULL) {
+					log_error("store_option: option %d "
+						  "refers to unknown "
+						  "option space '%.*s'.",
+						  oc->option->code,
+						  end - start, start);
+					break;
+				}
+
+				/* Append encapsulations, if any.  We
+				 * already have the prepended values, so
+				 * we send those even if there are no
+				 * encapsulated options (and ->encapsulate()
+				 * returns zero).
+				 */
+				subu->encapsulate(&tmp, packet, lease,
+						  client_state, in_options,
+						  cfg_options, scope, subu);
+				subu = NULL;
+			}
+		} while (ISC_FALSE);
+
+		status = append_option(result, universe, oc->option, &tmp);
+		data_string_forget(&tmp, MDL);
+
+		return status;
 	}
+
 	return 0;
 }
-	
+
+/* The 'data_string' primitive doesn't have an appension mechanism.
+ * This function must then append a new option onto an existing buffer
+ * by first duplicating the original buffer and appending the desired
+ * values, followed by coping the new value into place.
+ */
+int
+append_option(struct data_string *dst, struct universe *universe,
+	      struct option *option, struct data_string *src)
+{
+	struct data_string tmp;
+
+	if (src->len == 0)
+		return 0;
+
+	memset(&tmp, 0, sizeof(tmp));
+
+	/* Allocate a buffer to hold existing data, the current option's
+	 * tag and length, and the option's content.
+	 */
+	if (!buffer_allocate(&tmp.buffer,
+			     (dst->len + universe->length_size +
+			      universe->tag_size + src->len), MDL)) {
+		/* XXX: This kills all options presently stored in the
+		 * destination buffer.  This is the way the original code
+		 * worked, and assumes an 'all or nothing' approach to
+		 * eg encapsulated option spaces.  It may or may not be
+		 * desirable.
+		 */
+		data_string_forget(dst, MDL);
+		return 0;
+	}
+	tmp.data = tmp.buffer->data;
+
+	/* Copy the existing data off the destination. */
+	if (dst->len != 0)
+		memcpy(tmp.buffer->data, dst->data, dst->len);
+	tmp.len = dst->len;
+
+	/* Place the new option tag and length. */
+	(*universe->store_tag)(tmp.buffer->data + tmp.len, option->code);
+	tmp.len += universe->tag_size;
+	(*universe->store_length)(tmp.buffer->data + tmp.len, src->len);
+	tmp.len += universe->length_size;
+
+	/* Copy the option contents onto the end. */
+	memcpy(tmp.buffer->data + tmp.len, src->data, src->len);
+	tmp.len += src->len;
+
+	/* Play the shell game. */
+	data_string_forget(dst, MDL);
+	data_string_copy(dst, &tmp, MDL);
+	data_string_forget(&tmp, MDL);
+	return 1;
+}
+
 int option_space_encapsulate (result, packet, lease, client_state,
 			      in_options, cfg_options, scope, name)
 	struct data_string *result;
@@ -2117,21 +2194,61 @@ int option_space_encapsulate (result, packet, lease, client_state,
 	struct binding_scope **scope;
 	struct data_string *name;
 {
-	struct universe *u;
+	struct data_string sub;
+	struct universe *u = NULL, *subu = NULL;
+	int status = 0;
+	int i;
 
-	u = (struct universe *)0;
-	universe_hash_lookup (&u, universe_hash,
-			      (const char *)name -> data, name -> len, MDL);
-	if (!u)
-		return 0;
+	universe_hash_lookup(&u, universe_hash, name->data, name->len, MDL);
+	if (u == NULL) {
+		log_error("option_space_encapsulate: option space %.*s does "
+			  "not exist, but is configured.",
+			  name->len, name->data);
+		return status;
+	}
 
-	if (u -> encapsulate)
-		return (*u -> encapsulate) (result, packet, lease,
-					    client_state,
-					    in_options, cfg_options, scope, u);
-	log_error ("encapsulation requested for %s with no support.",
-		   name -> data);
-	return 0;
+	if (u->encapsulate != NULL) {
+		if (u->encapsulate(result, packet, lease, client_state,
+				   in_options, cfg_options, scope, u))
+			status = 1;
+	} else
+		log_error("encapsulation requested for %s with no support.",
+			  name->data);
+
+	/* Attempt to store any 'E'ncapsulated options that have not yet been
+	 * placed on the option buffer by the above (configuring a value in
+	 * the space over-rides any values in the child universe).
+	 *
+	 * Note that there are far fewer universes than there will every be
+	 * options in any universe.  So it is faster to traverse the
+	 * configured universes, checking if each is encapsulated in the
+	 * current universe, and if so attempting to do so.
+	 *
+	 * For each configured universe for this configuration option space,
+	 * which is encapsulated within the current universe, can not be found
+	 * by the lookup function (the universe-specific encapsulation
+	 * functions would already have stored such a value), and encapsulates
+	 * at least one option, append it.
+	 */
+	memset(&sub, 0, sizeof(sub));
+	for (i = 0 ; i < cfg_options->universe_count ; i++) {
+		subu = cfg_options->universes[i];
+		if (subu != NULL && subu->enc_opt != NULL &&
+		    subu->enc_opt->universe == u &&
+		    subu->enc_opt->format != NULL &&
+		    subu->enc_opt->format[0] == 'E' &&
+		    lookup_option(u, cfg_options,
+				  subu->enc_opt->code) == NULL &&
+		    subu->encapsulate(&sub, packet, lease, client_state,
+				      in_options, cfg_options, scope, subu)) {
+			if (append_option(result, u, subu->enc_opt, &sub))
+				status = 1;
+
+			data_string_forget(&sub, MDL);
+		}
+	}
+
+	return status;
 }
 
 int hashed_option_space_encapsulate (result, packet, lease, client_state,
@@ -2156,13 +2273,16 @@ int hashed_option_space_encapsulate (result, packet, lease, client_state,
 	if (!hash)
 		return 0;
 
+	/* For each hash bucket, and each configured option cache within
+	 * that bucket, append the option onto the buffer in encapsulated
+	 * format appropriate to the universe.
+	 */
 	status = 0;
 	for (i = 0; i < OPTION_HASH_SIZE; i++) {
 		for (p = hash [i]; p; p = p -> cdr) {
-			if (store_option (result, universe, packet,
-					  lease, client_state, in_options,
-					  cfg_options, scope,
-					  (struct option_cache *)p -> car))
+			if (store_option(result, universe, packet, lease,
+					 client_state, in_options, cfg_options,
+					 scope, (struct option_cache *)p->car))
 				status = 1;
 		}
 	}
@@ -2485,18 +2605,17 @@ int linked_option_space_encapsulate (result, packet, lease, client_state,
 	struct binding_scope **scope;
 	struct universe *universe;
 {
-	int status;
+	int status = 0;
 	pair oc;
 	struct option_chain_head *head;
 
 	if (universe -> index >= cfg_options -> universe_count)
-		return 0;
+		return status;
 	head = ((struct option_chain_head *)
 		cfg_options -> universes [universe -> index]);
 	if (!head)
-		return 0;
+		return status;
 
-	status = 0;
 	for (oc = head -> first; oc; oc = oc -> cdr) {
 		if (store_option (result, universe, packet,
 				  lease, client_state, in_options, cfg_options,
@@ -2633,7 +2752,7 @@ void do_packet (interface, packet, len, from_port, from, hfrom)
 	decoded_packet -> client_addr = from;
 	interface_reference (&decoded_packet -> interface, interface, MDL);
 	decoded_packet -> haddr = hfrom;
-	
+
 	if (packet -> hlen > sizeof packet -> chaddr) {
 		packet_dereference (&decoded_packet, MDL);
 		log_info ("Discarding packet with bogus hlen.");
@@ -2693,7 +2812,7 @@ void do_packet (interface, packet, len, from_port, from, hfrom)
 #endif
 }
 
-static int
+int
 pretty_escape(char **dst, char *dend, const unsigned char **src,
 	      const unsigned char *send)
 {
@@ -2702,12 +2821,12 @@ pretty_escape(char **dst, char *dend, const unsigned char **src,
 	/* If there aren't as many bytes left as there are in the source
 	 * buffer, don't even bother entering the loop.
 	 */
-	if (dst == NULL || src == NULL || (*dst >= dend) || (*src > send) ||
-	    *dst == NULL || *src == NULL ||
+	if (dst == NULL || dend == NULL || src == NULL || send == NULL ||
+	    *dst == NULL || *src == NULL || (*dst >= dend) || (*src > send) ||
 	    ((send - *src) > (dend - *dst)))
 		return -1;
 
-	for ( ; *src < send ; *src++) {
+	for ( ; *src < send ; (*src)++) {
 		if (!isascii (**src) || !isprint (**src)) {
 			/* Skip trailing NUL. */
 			if ((*src + 1) != send || **src != '\0') {
@@ -2716,7 +2835,7 @@ pretty_escape(char **dst, char *dend, const unsigned char **src,
 
 				sprintf(*dst, "\\%03o",
 					**src);
-				*dst += 4;
+				(*dst) += 4;
 				count += 4;
 			}
 		} else if (**src == '"' || **src == '\'' || **src == '$' ||
@@ -2725,16 +2844,16 @@ pretty_escape(char **dst, char *dend, const unsigned char **src,
 				return -1;
 
 			**dst = '\\';
-			*dst++;
+			(*dst)++;
 			**dst = **src;
-			*dst++;
+			(*dst)++;
 			count += 2;
 		} else {
 			if (*dst + 1 > dend)
 				return -1;
 
 			**dst = **src;
-			*dst++;
+			(*dst)++;
 			count++;
 		}
 	}
@@ -2755,7 +2874,7 @@ pretty_text(char **dst, char *dend, const unsigned char **src,
 
 	if (emit_quotes) {
 		**dst = '"';
-		*dst++;
+		(*dst)++;
 	}
 
 	/* dend-1 leaves 1 byte for the closing quote. */
@@ -2766,7 +2885,7 @@ pretty_text(char **dst, char *dend, const unsigned char **src,
 
 	if (emit_quotes && (*dst < dend)) {
 		**dst = '"';
-		*dst++;
+		(*dst)++;
 
 		/* Includes quote prior to pretty_escape(); */
 		count += 2;
@@ -2830,4 +2949,54 @@ pretty_domain(char **dst, char *dend, const unsigned char **src,
 
 	return count;
 }
+
+/*
+ * Add the option identified with the option number and data to the
+ * options state.
+ */
+int
+add_option(struct option_state *options,
+	   unsigned int option_num,
+	   void *data,
+	   unsigned int data_len)
+{
+	struct option_cache *oc;
+	struct option *option;
+
+	/* INSIST(options != NULL); */
+	/* INSIST(data != NULL); */
+
+	option = NULL;
+	if (!option_code_hash_lookup(&option, dhcp_universe.code_hash, 
+				     &option_num, 0, MDL)) {
+		log_error("Attempting to add unknown option %d.", option_num);
+		return 0;
+	}
+
+	oc = NULL;
+	if (!option_cache_allocate(&oc, MDL)) {
+		log_error("No memory for option cache adding %s (option %d).",
+			  option->name, option_num);
+		return 0;
+	}
+
+	if (!make_const_data(&oc->expression, 
+			     data, 
+			     data_len,
+			     0, 
+			     0, 
+			     MDL)) {
+		log_error("No memory for constant data adding %s (option %d).",
+			  option->name, option_num);
+		option_cache_dereference(&oc, MDL);
+		return 0;
+	}
+
+	oc->option = option;
+	save_option(&dhcp_universe, options, oc);
+	option_cache_dereference(&oc, MDL);
+
+	return 1;
+}
+
 

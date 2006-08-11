@@ -358,7 +358,7 @@ struct lease {
 	struct lease *n_uid, *n_hw;
 
 	struct iaddr ip_addr;
-	TIME starts, ends, timestamp, sort_time;
+	TIME starts, ends, sort_time;
 	char *client_hostname;
 	struct binding_scope *scope;
 	struct host_decl *host;
@@ -511,6 +511,8 @@ struct lease_state {
 #define SV_PING_TIMEOUT			46
 #define SV_RESERVE_INFINITE		47
 #define SV_DDNS_CONFLICT_DETECT		48
+#define SV_LEASEQUERY			49
+#define SV_ADAPTIVE_LEASE_TIME_THRESHOLD	50
 
 #if !defined (DEFAULT_PING_TIMEOUT)
 # define DEFAULT_PING_TIMEOUT 1
@@ -868,12 +870,6 @@ struct client_state {
 	struct option_state *sent_options;	/* Options we sent. */
 };
 
-/* Relay agent server list. */
-struct server_list {
-	struct server_list *next;
-	struct sockaddr_in to;
-} *servers;
-
 /* Information about each network interface. */
 
 struct interface_info {
@@ -882,12 +878,7 @@ struct interface_info {
 	struct shared_network *shared_network;
 				/* Networks connected to this interface. */
 	struct hardware hw_address;	/* Its physical address. */
-	struct in_addr *addresses;	/* Addresses associated with
-					   interface. */
-	int address_count;		/* Number of addresses associated with
-					   interface. */
-	int address_max;		/* Max number of addresses we can
-					   store in current buffer. */
+	struct in_addr primary_address;	/* Primary interface address. */
 
 	u_int8_t *circuit_id;		/* Circuit ID associated with this
 					   interface. */
@@ -896,8 +887,6 @@ struct interface_info {
 	u_int8_t *remote_id;		/* Remote ID associated with this
 					   interface (if any). */
 	unsigned remote_id_len;		/* Length of Remote ID. */
-	struct server_list *servers;	/* List of relay servers for this
-					   interface. */
 
 	char name [IFNAMSIZ];		/* Its name... */
 	int index;			/* Its index. */
@@ -910,9 +899,6 @@ struct interface_info {
 	size_t rbuf_len;		/* Length of data in buffer. */
 
 	struct ifreq *ifp;		/* Pointer to ifreq struct. */
-	int configured;			/* If set to 1, interface has at
-					 * least one valid IP address.
-					 */
 	u_int32_t flags;		/* Control flags... */
 #define INTERFACE_REQUESTED 1
 #define INTERFACE_AUTOMATIC 2
@@ -1115,6 +1101,8 @@ int format_has_text(const char *);
 int format_min_length(const char *, struct option_cache *);
 const char *pretty_print_option PROTO ((struct option *, const unsigned char *,
 					unsigned, int, int));
+int pretty_escape(char **, char *, const unsigned char **,
+		  const unsigned char *);
 int get_option (struct data_string *, struct universe *,
 		struct packet *, struct lease *, struct client_state *,
 		struct option_state *, struct option_state *,
@@ -1249,6 +1237,11 @@ void do_packet PROTO ((struct interface_info *,
 		       struct dhcp_packet *, unsigned,
 		       unsigned int, struct iaddr, struct hardware *));
 
+int add_option(struct option_state *options,
+	       unsigned int option_num,
+	       void *data,
+	       unsigned int data_len);
+
 /* dhcpd.c */
 extern TIME cur_time;
 
@@ -1310,7 +1303,6 @@ void parse_subnet_declaration PROTO ((struct parse *,
 				      struct shared_network *));
 void parse_group_declaration PROTO ((struct parse *, struct group *));
 int parse_fixed_addr_param PROTO ((struct option_cache **, struct parse *));
-TIME parse_timestamp PROTO ((struct parse *));
 int parse_lease_declaration PROTO ((struct lease **, struct parse *));
 void parse_address_range PROTO ((struct parse *, struct group *, int,
 				 struct pool *, struct lease **));
@@ -1503,6 +1495,7 @@ void dhcprequest PROTO ((struct packet *, int, struct lease *));
 void dhcprelease PROTO ((struct packet *, int));
 void dhcpdecline PROTO ((struct packet *, int));
 void dhcpinform PROTO ((struct packet *, int));
+void dhcpleasequery PROTO ((struct packet *, int));
 void nak_lease PROTO ((struct packet *, struct iaddr *cip));
 void ack_lease PROTO ((struct packet *, struct lease *,
 		       unsigned int, TIME, char *, int, struct host_decl *));
@@ -1523,6 +1516,9 @@ int parse_agent_information_option PROTO ((struct packet *, int, u_int8_t *));
 unsigned cons_agent_information_options PROTO ((struct option_state *,
 						struct dhcp_packet *,
 						unsigned, unsigned));
+void get_server_source_address(struct in_addr *from,
+			       struct option_state *options,
+			       struct packet *packet);
 
 /* bootp.c */
 void bootp PROTO ((struct packet *));
@@ -2104,7 +2100,6 @@ void convert_servername_decl PROTO ((struct parse *, jrefproto));
 void convert_ip_addr_or_hostname PROTO ((struct parse *, jrefproto, int));
 void convert_fixed_addr_decl PROTO ((struct parse *, jrefproto));
 void convert_option_decl PROTO ((struct parse *, jrefproto));
-void convert_timestamp PROTO ((struct parse *, jrefproto));
 void convert_lease_statement PROTO ((struct parse *, jrefproto));
 void convert_address_range PROTO ((struct parse *, jrefproto));
 void convert_date PROTO ((struct parse *, jrefproto, char *));
@@ -2151,7 +2146,6 @@ int parse_ip_addr_with_subnet(struct parse *, struct iaddrmatch *);
 void parse_reject_statement PROTO ((struct parse *, struct client_config *));
 
 /* dhcrelay.c */
-void new_relay_server (char *, struct server_list **);
 void relay PROTO ((struct interface_info *, struct dhcp_packet *, unsigned,
 		   unsigned int, struct iaddr, struct hardware *));
 int strip_relay_agent_options PROTO ((struct interface_info *,

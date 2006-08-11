@@ -28,7 +28,7 @@
 .\" see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
 .\" ``http://www.nominum.com''.
 .\"
-.\" $Id: dhcpd.conf.5,v 1.77 2006/07/19 20:13:57 dhankins Exp $
+.\" $Id: dhcpd.conf.5,v 1.77.8.1 2006/08/11 22:50:22 dhankins Exp $
 .\"
 .TH dhcpd.conf 5
 .SH NAME
@@ -617,7 +617,7 @@ The
 statement
 .RS 0.25i
 .PP
-.B max-lease-misbalance \fIinteger\fR\fB;\fR
+.B max-lease-misbalance \fIpercentage\fR\fB;\fR
 .PP
 The \fBmax-lease-misbalance\fR statement tells the DHCP server what
 percentage of total free leases (as defined as the total number of
@@ -636,7 +636,7 @@ The
 statement
 .RS 0.25i
 .PP
-.B max-lease-ownership \fIinteger\fR\fB;\fR
+.B max-lease-ownership \fIpercentage\fR\fB;\fR
 .PP
 The \fBmax-lease-ownership\fR statement tells the DHCP server what
 percentage of total free leases either it or its peer are normally allowed to
@@ -651,6 +651,7 @@ Load Balance algorithm).  Valid values are between 0 and 100, and should
 probably be less than the \fBmax-lease-misbalance\fR value.  Larger values
 will allow servers to retain leases to reallocate to returning clients,
 smaller values promote pool balance.  The default is 10.
+.RE
 .PP
 The
 .I max-response-delay
@@ -668,6 +669,11 @@ communication for a long time, but large enough that the server isn't
 constantly making and breaking connections.   This parameter must be
 specified.
 .RE
+.PP
+The
+.I max-unacked-updates
+statement
+.RS 0.25i
 .PP
 .B max-unacked-updates \fIcount\fR\fB;\fR
 .PP
@@ -1648,6 +1654,19 @@ honor the client's intention to do its own update of its A record.
 This is only relevant when doing \fIinterim\fR DNS updates.   See the
 documentation under the heading THE INTERIM DNS UPDATE SCHEME for
 details.
+.PP
+.B The
+.I leasequery
+.B keyword
+.PP
+ \fBallow leasequery;\fR
+ \fBdeny leasequery;\fR
+.PP
+The \fBleasequery\fR flag tells the DHCP server whether or not to
+answer DHCPLEASEQUERY packets. The answer to a DHCPLEASEQUERY packet
+includes information about a specific lease, such as when it was 
+issued and when it will expire. By default, the server will not 
+respond to these packets.
 .SH ALLOW AND DENY WITHIN POOL DECLARATIONS
 .PP
 The uses of the allow and deny keywords shown in the previous section
@@ -1723,6 +1742,24 @@ want to renumber your network quickly, and thus want the server to
 force all clients that have been allocated addresses from this pool to
 obtain new addresses immediately when they next renew.
 .SH REFERENCE: PARAMETERS
+The
+.I adaptive-lease-time-threshold
+statement
+.RS 0.25i
+.PP
+.B adaptive-lease-time-threshold \fIpercentage\fR\fB;\fR
+.PP
+When the number of allocated leases within a pool rises above
+the \fIpercentage\fR given in this statement, the DHCP server decreases
+the lease length for new clients within this pool to \fImin-lease-time\fR
+seconds. Clients renewing an already valid (long) leases get at least the
+remaining time from the current lease. Since the leases expire faster,
+the server may either recover more quickly or avoid pool exhaustion
+entirely.  Once the number of allocated leases drop below the threshold,
+the server reverts back to normal lease times.  Valid percentages are
+between 1 and 99.
+.RE
+.PP
 The
 .I always-broadcast
 statement
