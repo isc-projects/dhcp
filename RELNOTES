@@ -140,6 +140,9 @@ the README file.
   few (configured percentage) remaining leases.  Thanks to a patch submitted
   from Christof Chen.
 
+- Encapsulated option spaces within encapsulated option spaces is now
+  formally supported.
+
 			Changes since 3.0.4
 
 - A warning that host statements declared within subnet or shared-network

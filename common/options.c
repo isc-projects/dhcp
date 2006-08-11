@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.97 2006/08/04 10:59:32 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.98 2006/08/11 09:15:17 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -1321,7 +1321,7 @@ const char *pretty_print_option (option, data, len, emit_commas, emit_quotes)
 		comma = ',';
 	else
 		comma = ' ';
-	
+
 	memset (enumbuf, 0, sizeof enumbuf);
 
 	/* Figure out the size of the data. */
@@ -2057,55 +2057,132 @@ int hashed_option_state_dereference (universe, state, file, line)
 	return 1;
 }
 
-int store_option (result, universe, packet, lease, client_state,
-		  in_options, cfg_options, scope, oc)
-	struct data_string *result;
-	struct universe *universe;
-	struct packet *packet;
-	struct lease *lease;
-	struct client_state *client_state;
-	struct option_state *in_options;
-	struct option_state *cfg_options;
-	struct binding_scope **scope;
-	struct option_cache *oc;
+int
+store_option(struct data_string *result, struct universe *universe,
+	     struct packet *packet, struct lease *lease,
+	     struct client_state *client_state,
+	     struct option_state *in_options, struct option_state *cfg_options,
+	     struct binding_scope **scope, struct option_cache *oc)
 {
-	struct data_string d1, d2;
+	struct data_string tmp;
+	struct universe *subu=NULL;
+	int status;
+	char *start, *end;
 
-	memset (&d1, 0, sizeof d1);
-	memset (&d2, 0, sizeof d2);
+	memset(&tmp, 0, sizeof(tmp));
 
-	if (evaluate_option_cache (&d2, packet, lease, client_state,
-				   in_options, cfg_options, scope, oc, MDL)) {
-		if (!buffer_allocate (&d1.buffer,
-				      (result -> len +
-				       universe -> length_size +
-				       universe -> tag_size + d2.len), MDL)) {
-			data_string_forget (result, MDL);
-			data_string_forget (&d2, MDL);
-			return 0;
-		}
-		d1.data = &d1.buffer -> data [0];
-		if (result -> len)
-			memcpy (d1.buffer -> data,
-				result -> data, result -> len);
-		d1.len = result -> len;
-		(*universe -> store_tag) (&d1.buffer -> data [d1.len],
-					  oc -> option -> code);
-		d1.len += universe -> tag_size;
-		(*universe -> store_length) (&d1.buffer -> data [d1.len],
-					     d2.len);
-		d1.len += universe -> length_size;
-		memcpy (&d1.buffer -> data [d1.len], d2.data, d2.len);
-		d1.len += d2.len;
-		data_string_forget (&d2, MDL);
-		data_string_forget (result, MDL);
-		data_string_copy (result, &d1, MDL);
-		data_string_forget (&d1, MDL);
-		return 1;
+	if (evaluate_option_cache(&tmp, packet, lease, client_state,
+				  in_options, cfg_options, scope, oc, MDL)) {
+		/* If the option is an extended 'e'ncapsulation (not a
+		 * direct 'E'ncapsulation), append the encapsulated space
+		 * onto the currently prepared value.
+		 */
+		do {
+			if (oc->option->format &&
+			    oc->option->format[0] == 'e') {
+				/* Skip forward to the universe name. */
+				start = strchr(oc->option->format, 'E');
+				if (start == NULL)
+					break;
+
+				/* Locate the name-terminating '.'. */
+				end = strchr(++start, '.');
+
+				/* A zero-length name is not allowed in
+				 * these kinds of encapsulations.
+				 */
+				if (end == NULL || start == end)
+					break;
+
+				universe_hash_lookup(&subu, universe_hash,
+						     start, end - start, MDL);
+
+				if (subu == NULL) {
+					log_error("store_option: option %d "
+						  "refers to unknown "
+						  "option space '%.*s'.",
+						  oc->option->code,
+						  end - start, start);
+					break;
+				}
+
+				/* Append encapsulations, if any.  We
+				 * already have the prepended values, so
+				 * we send those even if there are no
+				 * encapsulated options (and ->encapsulate()
+				 * returns zero).
+				 */
+				subu->encapsulate(&tmp, packet, lease,
+						  client_state, in_options,
+						  cfg_options, scope, subu);
+				subu = NULL;
+			}
+		} while (ISC_FALSE);
+
+		status = append_option(result, universe, oc->option, &tmp);
+		data_string_forget(&tmp, MDL);
+
+		return status;
 	}
+
 	return 0;
 }
-	
+
+/* The 'data_string' primitive doesn't have an appension mechanism.
+ * This function must then append a new option onto an existing buffer
+ * by first duplicating the original buffer and appending the desired
+ * values, followed by coping the new value into place.
+ */
+int
+append_option(struct data_string *dst, struct universe *universe,
+	      struct option *option, struct data_string *src)
+{
+	struct data_string tmp;
+
+	if (src->len == 0)
+		return 0;
+
+	memset(&tmp, 0, sizeof(tmp));
+
+	/* Allocate a buffer to hold existing data, the current option's
+	 * tag and length, and the option's content.
+	 */
+	if (!buffer_allocate(&tmp.buffer,
+			     (dst->len + universe->length_size +
+			      universe->tag_size + src->len), MDL)) {
+		/* XXX: This kills all options presently stored in the
+		 * destination buffer.  This is the way the original code
+		 * worked, and assumes an 'all or nothing' approach to
+		 * eg encapsulated option spaces.  It may or may not be
+		 * desirable.
+		 */
+		data_string_forget(dst, MDL);
+		return 0;
+	}
+	tmp.data = tmp.buffer->data;
+
+	/* Copy the existing data off the destination. */
+	if (dst->len != 0)
+		memcpy(tmp.buffer->data, dst->data, dst->len);
+	tmp.len = dst->len;
+
+	/* Place the new option tag and length. */
+	(*universe->store_tag)(tmp.buffer->data + tmp.len, option->code);
+	tmp.len += universe->tag_size;
+	(*universe->store_length)(tmp.buffer->data + tmp.len, src->len);
+	tmp.len += universe->length_size;
+
+	/* Copy the option contents onto the end. */
+	memcpy(tmp.buffer->data + tmp.len, src->data, src->len);
+	tmp.len += src->len;
+
+	/* Play the shell game. */
+	data_string_forget(dst, MDL);
+	data_string_copy(dst, &tmp, MDL);
+	data_string_forget(&tmp, MDL);
+	return 1;
+}
+
 int option_space_encapsulate (result, packet, lease, client_state,
 			      in_options, cfg_options, scope, name)
 	struct data_string *result;
@@ -2117,21 +2194,61 @@ int option_space_encapsulate (result, packet, lease, client_state,
 	struct binding_scope **scope;
 	struct data_string *name;
 {
-	struct universe *u;
+	struct data_string sub;
+	struct universe *u = NULL, *subu = NULL;
+	int status = 0;
+	int i;
 
-	u = (struct universe *)0;
-	universe_hash_lookup (&u, universe_hash,
-			      (const char *)name -> data, name -> len, MDL);
-	if (!u)
-		return 0;
+	universe_hash_lookup(&u, universe_hash, name->data, name->len, MDL);
+	if (u == NULL) {
+		log_error("option_space_encapsulate: option space %.*s does "
+			  "not exist, but is configured.",
+			  name->len, name->data);
+		return status;
+	}
 
-	if (u -> encapsulate)
-		return (*u -> encapsulate) (result, packet, lease,
-					    client_state,
-					    in_options, cfg_options, scope, u);
-	log_error ("encapsulation requested for %s with no support.",
-		   name -> data);
-	return 0;
+	if (u->encapsulate != NULL) {
+		if (u->encapsulate(result, packet, lease, client_state,
+				   in_options, cfg_options, scope, u))
+			status = 1;
+	} else
+		log_error("encapsulation requested for %s with no support.",
+			  name->data);
+
+	/* Attempt to store any 'E'ncapsulated options that have not yet been
+	 * placed on the option buffer by the above (configuring a value in
+	 * the space over-rides any values in the child universe).
+	 *
+	 * Note that there are far fewer universes than there will every be
+	 * options in any universe.  So it is faster to traverse the
+	 * configured universes, checking if each is encapsulated in the
+	 * current universe, and if so attempting to do so.
+	 *
+	 * For each configured universe for this configuration option space,
+	 * which is encapsulated within the current universe, can not be found
+	 * by the lookup function (the universe-specific encapsulation
+	 * functions would already have stored such a value), and encapsulates
+	 * at least one option, append it.
+	 */
+	memset(&sub, 0, sizeof(sub));
+	for (i = 0 ; i < cfg_options->universe_count ; i++) {
+		subu = cfg_options->universes[i];
+		if (subu != NULL && subu->enc_opt != NULL &&
+		    subu->enc_opt->universe == u &&
+		    subu->enc_opt->format != NULL &&
+		    subu->enc_opt->format[0] == 'E' &&
+		    lookup_option(u, cfg_options,
+				  subu->enc_opt->code) == NULL &&
+		    subu->encapsulate(&sub, packet, lease, client_state,
+				      in_options, cfg_options, scope, subu)) {
+			if (append_option(result, u, subu->enc_opt, &sub))
+				status = 1;
+
+			data_string_forget(&sub, MDL);
+		}
+	}
+
+	return status;
 }
 
 int hashed_option_space_encapsulate (result, packet, lease, client_state,
@@ -2156,13 +2273,16 @@ int hashed_option_space_encapsulate (result, packet, lease, client_state,
 	if (!hash)
 		return 0;
 
+	/* For each hash bucket, and each configured option cache within
+	 * that bucket, append the option onto the buffer in encapsulated
+	 * format appropriate to the universe.
+	 */
 	status = 0;
 	for (i = 0; i < OPTION_HASH_SIZE; i++) {
 		for (p = hash [i]; p; p = p -> cdr) {
-			if (store_option (result, universe, packet,
-					  lease, client_state, in_options,
-					  cfg_options, scope,
-					  (struct option_cache *)p -> car))
+			if (store_option(result, universe, packet, lease,
+					 client_state, in_options, cfg_options,
+					 scope, (struct option_cache *)p->car))
 				status = 1;
 		}
 	}
@@ -2485,18 +2605,17 @@ int linked_option_space_encapsulate (result, packet, lease, client_state,
 	struct binding_scope **scope;
 	struct universe *universe;
 {
-	int status;
+	int status = 0;
 	pair oc;
 	struct option_chain_head *head;
 
 	if (universe -> index >= cfg_options -> universe_count)
-		return 0;
+		return status;
 	head = ((struct option_chain_head *)
 		cfg_options -> universes [universe -> index]);
 	if (!head)
-		return 0;
+		return status;
 
-	status = 0;
 	for (oc = head -> first; oc; oc = oc -> cdr) {
 		if (store_option (result, universe, packet,
 				  lease, client_state, in_options, cfg_options,
@@ -2633,7 +2752,7 @@ void do_packet (interface, packet, len, from_port, from, hfrom)
 	decoded_packet -> client_addr = from;
 	interface_reference (&decoded_packet -> interface, interface, MDL);
 	decoded_packet -> haddr = hfrom;
-	
+
 	if (packet -> hlen > sizeof packet -> chaddr) {
 		packet_dereference (&decoded_packet, MDL);
 		log_info ("Discarding packet with bogus hlen.");
