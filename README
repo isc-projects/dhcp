@@ -95,7 +95,7 @@ directory, it may not have up-to-date information).
 This is the first Release Candidate of ISC DHCP 3.0.5.
 
 ISC DHCP 3.0.5 is a maintenance release which seeks only to fix bugs
-present in versions 3.0.4 and prior.  No new faetures have been added,
+present in versions 3.0.4 and prior.  No new features have been added,
 although if you run failover and are upgrading from 3.0.3 or prior,
 you should take careful note of the RELNOTES discussion on the new
 'atsfp' failover value.
