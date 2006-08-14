@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.113.2.2 2006/08/11 22:50:21 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.113.2.3 2006/08/14 11:28:11 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -320,6 +320,88 @@ int parse_ip_addr (cfile, addr)
 		return 1;
 	return 0;
 }	
+
+/*
+ * Return true if every character in the string is hexidecimal.
+ */
+static int
+is_hex_string(const char *s) {
+	while (*s != '\0') {
+		if (!isxdigit(*s)) {
+			return 0;
+		}
+		s++;
+	}
+	return 1;
+}
+
+/*
+ * ip-address6 :== (complicated set of rules)
+ *
+ * See section 2.2 of RFC 1884 for details.
+ *
+ * We are lazy for this. We pull numbers, names, colons, and dots 
+ * together and then throw the resulting string at the inet_pton()
+ * function.
+ */
+
+int
+parse_ip6_addr(struct parse *cfile, struct iaddr *addr) {
+	enum dhcp_token token;
+	const char *val;
+	int val_len;
+
+	char v6[sizeof("ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255")];
+	int v6_len;
+
+	v6_len = 0;
+	for (;;) {
+		token = peek_token(&val, NULL, cfile);
+		if ((((token == NAME) || (token == NUMBER_OR_NAME)) && 
+		     is_hex_string(val)) ||
+		    (token == NUMBER) || 
+		    (token == DOT) || 
+		    (token == COLON)) {
+
+			next_token(&val, NULL, cfile);
+			val_len = strlen(val);
+			if ((v6_len + val_len) >= sizeof(v6)) {
+				parse_warn(cfile, "Invalid IPv6 address.");
+				skip_to_semi(cfile);
+				return 0;
+			}
+			memcpy(v6+v6_len, val, val_len);
+			v6_len += val_len;
+
+		} else {
+			break;
+		}
+	}
+	v6[v6_len] = '\0';
+
+	if (inet_pton(AF_INET6, v6, addr->iabuf) <= 0) {
+		parse_warn(cfile, "Invalid IPv6 address.");
+		skip_to_semi(cfile);
+		return 0;
+	}
+	addr->len = 16;
+	return 1;
+}
+
+/*
+ * Same as parse_ip6_addr() above, but returns the value in the 
+ * expression rather than in an address structure.
+ */
+int
+parse_ip6_addr_expr(struct expression **expr, 
+		    struct parse *cfile) {
+	struct iaddr addr;
+
+	if (!parse_ip6_addr(cfile, &addr)) {
+		return 0;
+	}
+	return make_const_data(expr, addr.iabuf, addr.len, 0, 1, MDL);
+}
 
 /*
  * ip-address-with-subnet :== ip-address |
@@ -1430,6 +1512,9 @@ int parse_option_code_definition (cfile, option)
 
 	      case IP_ADDRESS:
 		type = 'I';
+		break;
+	      case IP6_ADDRESS:
+		type = '6';
 		break;
 	      case DOMAIN_NAME:
 		type = 'd';
@@ -4888,6 +4973,15 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 			if (!make_const_data (&t, addr.iabuf, addr.len,
 					      0, 1, MDL))
 				return 0;
+		}
+		break;
+
+	      case '6': /* IPv6 address. */
+		if (!parse_ip6_addr(cfile, &addr)) {
+			return 0;
+		}
+		if (!make_const_data(&t, addr.iabuf, addr.len, 0, 1, MDL)) {
+			return 0;
 		}
 		break;
 		

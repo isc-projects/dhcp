@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: conflex.c,v 1.101.2.1 2006/08/11 22:50:21 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: conflex.c,v 1.101.2.2 2006/08/14 11:28:11 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -746,6 +746,8 @@ static enum dhcp_token intern (atom, dfv)
 			return FILENAME;
 		if (!strcasecmp (atom + 1, "ixed-address"))
 			return FIXED_ADDR;
+		if (!strcasecmp (atom + 1, "ixed-address6"))
+			return FIXED_ADDR6;
 		if (!strcasecmp (atom + 1, "ddi"))
 			return FDDI;
 		if (!strcasecmp (atom + 1, "ormerr"))
@@ -792,6 +794,8 @@ static enum dhcp_token intern (atom, dfv)
 			return INFO;
 		if (!strcasecmp (atom + 1, "p-address"))
 			return IP_ADDRESS;
+		if (!strcasecmp (atom + 1, "p6-address"))
+			return IP6_ADDRESS;
 		if (!strcasecmp (atom + 1, "nitial-interval"))
 			return INITIAL_INTERVAL;
 		if (!strcasecmp (atom + 1, "nterface"))

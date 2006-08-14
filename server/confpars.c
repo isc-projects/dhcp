@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.158.6.1 2006/08/11 22:50:22 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.158.6.2 2006/08/14 11:28:12 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -525,23 +525,24 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		break;
 
 	      case FIXED_ADDR:
-		next_token (&val, (unsigned *)0, cfile);
-		cache = (struct option_cache *)0;
-		if (parse_fixed_addr_param (&cache, cfile)) {
+	      case FIXED_ADDR6:
+		next_token(&val, NULL, cfile);
+		cache = NULL;
+		if (parse_fixed_addr_param(&cache, cfile, token)) {
 			if (host_decl) {
-				if (host_decl -> fixed_addr) {
-					option_cache_dereference (&cache, MDL);
-					parse_warn (cfile,
-						    "Only one fixed address%s",
-						    " declaration per host.");
+				if (host_decl->fixed_addr) {
+					option_cache_dereference(&cache, MDL);
+					parse_warn(cfile,
+						   "Only one fixed address "
+						   "declaration per host.");
 				} else {
-					host_decl -> fixed_addr = cache;
+					host_decl->fixed_addr = cache;
 				}
 			} else {
-				parse_warn (cfile,
-					    "fixed-address parameter not %s",
-					    "allowed here.");
-				option_cache_dereference (&cache, MDL);
+				parse_warn(cfile,
+					   "fixed-address parameter not "
+					   "allowed here.");
+				option_cache_dereference(&cache, MDL);
 			}
 		}
 		break;
@@ -2534,47 +2535,59 @@ void parse_group_declaration (cfile, group)
    ip-addrs-or-hostnames :== ip-addr-or-hostname
 			   | ip-addrs-or-hostnames ip-addr-or-hostname */
 
-int parse_fixed_addr_param (oc, cfile)
-	struct option_cache **oc;
-	struct parse *cfile;
-{
+int
+parse_fixed_addr_param(struct option_cache **oc, 
+		       struct parse *cfile, 
+		       enum dhcp_token type) {
+	int parse_ok;
 	const char *val;
 	enum dhcp_token token;
-	struct expression *expr = (struct expression *)0;
+	struct expression *expr = NULL;
 	struct expression *tmp, *new;
 	int status;
 
 	do {
-		tmp = (struct expression *)0;
-		if (parse_ip_addr_or_hostname (&tmp, cfile, 1)) {
-			if (expr) {
-				new = (struct expression *)0;
-				status = make_concat (&new, expr, tmp);
-				expression_dereference (&expr, MDL);
-				expression_dereference (&tmp, MDL);
-				if (!status)
-					return 0;
-				expr = new;
-			} else
-				expr = tmp;
+		tmp = NULL;
+		if (type == FIXED_ADDR) {
+			parse_ok = parse_ip_addr_or_hostname(&tmp, cfile, 1);
 		} else {
-			if (expr)
+			/* INSIST(type == FIXED_ADDR6); */
+			parse_ok = parse_ip6_addr_expr(&tmp, cfile);
+		}
+		if (parse_ok) {
+			if (expr != NULL) {
+				new = NULL;
+				status = make_concat(&new, expr, tmp);
+				expression_dereference(&expr, MDL);
+				expression_dereference(&tmp, MDL);
+				if (!status) {
+					return 0;
+				}
+				expr = new;
+			} else {
+				expr = tmp;
+			}
+		} else {
+			if (expr != NULL) {
 				expression_dereference (&expr, MDL);
+			}
 			return 0;
 		}
-		token = peek_token (&val, (unsigned *)0, cfile);
-		if (token == COMMA)
-			token = next_token (&val, (unsigned *)0, cfile);
+		token = peek_token(&val, NULL, cfile);
+		if (token == COMMA) {
+			token = next_token(&val, NULL, cfile);
+		}
 	} while (token == COMMA);
 
-	if (!parse_semi (cfile)) {
-		if (expr)
+	if (!parse_semi(cfile)) {
+		if (expr) {
 			expression_dereference (&expr, MDL);
+		}
 		return 0;
 	}
-	status = option_cache (oc, (struct data_string *)0, expr,
-			       (struct option *)0, MDL);
-	expression_dereference (&expr, MDL);
+
+	status = option_cache(oc, NULL, expr, NULL, MDL);
+	expression_dereference(&expr, MDL);
 	return status;
 }
 

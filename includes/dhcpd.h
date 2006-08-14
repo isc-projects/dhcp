@@ -1302,7 +1302,8 @@ void parse_shared_net_declaration PROTO ((struct parse *, struct group *));
 void parse_subnet_declaration PROTO ((struct parse *,
 				      struct shared_network *));
 void parse_group_declaration PROTO ((struct parse *, struct group *));
-int parse_fixed_addr_param PROTO ((struct option_cache **, struct parse *));
+int parse_fixed_addr_param PROTO ((struct option_cache **, 
+				   struct parse *, enum dhcp_token));
 int parse_lease_declaration PROTO ((struct lease **, struct parse *));
 void parse_address_range PROTO ((struct parse *, struct group *, int,
 				 struct pool *, struct lease **));
