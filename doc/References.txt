@@ -6,7 +6,7 @@ Internet-Draft                                                       ISC
 Expires: February 18, 2007                               August 17, 2006
 
 
-                   ISC DHCP Implemented-To References
+                     ISC DHCP References Collection
                                References
 
 Status of this Memo
@@ -54,7 +54,7 @@ Copyright Notice
 
 Hankins                 Expires February 18, 2007               [Page 1]
 
-Internet-Draft                 References                    August 2006
+Internet-Draft       ISC DHCP References Collection          August 2006
 
 
 Abstract
@@ -110,7 +110,7 @@ Table of Contents
 
 Hankins                 Expires February 18, 2007               [Page 2]
 
-Internet-Draft                 References                    August 2006
+Internet-Draft       ISC DHCP References Collection          August 2006
 
 
 1.  Introduction
@@ -166,7 +166,7 @@ Internet-Draft                 References                    August 2006
 
 Hankins                 Expires February 18, 2007               [Page 3]
 
-Internet-Draft                 References                    August 2006
+Internet-Draft       ISC DHCP References Collection          August 2006
 
 
    the reference by which all other software is measured.  Something
@@ -222,7 +222,7 @@ Internet-Draft                 References                    August 2006
 
 Hankins                 Expires February 18, 2007               [Page 4]
 
-Internet-Draft                 References                    August 2006
+Internet-Draft       ISC DHCP References Collection          August 2006
 
 
 3.  Low Layer References
@@ -278,7 +278,7 @@ Internet-Draft                 References                    August 2006
 
 Hankins                 Expires February 18, 2007               [Page 5]
 
-Internet-Draft                 References                    August 2006
+Internet-Draft       ISC DHCP References Collection          August 2006
 
 
    other implementations, the software must create some form of raw
@@ -334,7 +334,7 @@ Internet-Draft                 References                    August 2006
 
 Hankins                 Expires February 18, 2007               [Page 6]
 
-Internet-Draft                 References                    August 2006
+Internet-Draft       ISC DHCP References Collection          August 2006
 
 
 3.5.  Unicast Datagram Protocol References
@@ -390,7 +390,7 @@ Internet-Draft                 References                    August 2006
 
 Hankins                 Expires February 18, 2007               [Page 7]
 
-Internet-Draft                 References                    August 2006
+Internet-Draft       ISC DHCP References Collection          August 2006
 
 
    options.  The document unfortunately waffles to a great extent about
@@ -422,12 +422,12 @@ Internet-Draft                 References                    August 2006
    option in a way that is suitable for the system.
 
    RFC3004 [16] defines the User-Class option.  Note carefully that ISC
-   DHCP currently does not implement to this draft, but has
-   (inexplicably) selected an incompatible format.
+   DHCP currently does not implement to this reference, but has
+   (inexplicably) selected an incompatible format: a plain text string.
 
    RFC3011 [17] defines the Subnet-Selection plain DHCPv4 option.  Do
    not confuse this option with the relay agent "link selection" sub-
-   option.
+   option, although their behaviour is similar.
 
    RFC3396 [21] documents both how long options may be encoded in DHCPv4
    packets, and also how multiple instances of the same option code
@@ -446,7 +446,7 @@ Internet-Draft                 References                    August 2006
 
 Hankins                 Expires February 18, 2007               [Page 8]
 
-Internet-Draft                 References                    August 2006
+Internet-Draft       ISC DHCP References Collection          August 2006
 
 
    RFC3925 [25] documents a pair of Enterprise-ID delimited option
@@ -502,7 +502,7 @@ Internet-Draft                 References                    August 2006
 
 Hankins                 Expires February 18, 2007               [Page 9]
 
-Internet-Draft                 References                    August 2006
+Internet-Draft       ISC DHCP References Collection          August 2006
 
 
    being selected than is defined (or even than was defined in an older
@@ -558,7 +558,7 @@ Internet-Draft                 References                    August 2006
 
 Hankins                 Expires February 18, 2007              [Page 10]
 
-Internet-Draft                 References                    August 2006
+Internet-Draft       ISC DHCP References Collection          August 2006
 
 
 6.  References
@@ -614,7 +614,7 @@ Internet-Draft                 References                    August 2006
 
 Hankins                 Expires February 18, 2007              [Page 11]
 
-Internet-Draft                 References                    August 2006
+Internet-Draft       ISC DHCP References Collection          August 2006
 
 
    [16]  Stump, G., Droms, R., Gu, Y., Vyaghrapuri, R., Demirtjis, A.,
@@ -670,7 +670,7 @@ Internet-Draft                 References                    August 2006
 
 Hankins                 Expires February 18, 2007              [Page 12]
 
-Internet-Draft                 References                    August 2006
+Internet-Draft       ISC DHCP References Collection          August 2006
 
 
    [31]  Stapp, M., "A DNS RR for Encoding DHCP Information",
@@ -726,7 +726,7 @@ Internet-Draft                 References                    August 2006
 
 Hankins                 Expires February 18, 2007              [Page 13]
 
-Internet-Draft                 References                    August 2006
+Internet-Draft       ISC DHCP References Collection          August 2006
 
 
 Author's Address

@@ -1,6 +1,6 @@
 <?xml version='1.0' ?>
 
-<!-- $Id: References.xml,v 1.1.2.2 2006/08/17 21:26:30 dhankins Exp $ -->
+<!-- $Id: References.xml,v 1.1.2.3 2006/08/17 21:36:32 dhankins Exp $ -->
 
 <?rfc toc="yes"?>
 
@@ -67,7 +67,7 @@
 
 <rfc ipr="none">
   <front>
-    <title abbrev="References">ISC DHCP Implemented-To References</title>
+    <title>ISC DHCP References Collection</title>
 
     <author initials="D.H." surname="Hankins" fullname="David W. Hankins">
       <organization abbrev="ISC">Internet Systems Consortium,
@@ -402,12 +402,12 @@
 
 	<t><xref target="RFC3004">RFC3004</xref> defines the User-Class
 	option.  Note carefully that ISC DHCP currently does not implement
-	to this draft, but has (inexplicably) selected an incompatible
-	format.</t>
+	to this reference, but has (inexplicably) selected an incompatible
+	format: a plain text string.</t>
 
 	<t><xref target="RFC3011">RFC3011</xref> defines the Subnet-Selection
 	plain DHCPv4 option.  Do not confuse this option with the relay agent
-	"link selection" sub-option.</t>
+	"link selection" sub-option, although their behaviour is similar.</t>
 
 	<t><xref target="RFC3396">RFC3396</xref> documents both how long
 	options may be encoded in DHCPv4 packets, and also how multiple
