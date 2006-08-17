@@ -1,11 +1,12 @@
 <?xml version='1.0' ?>
 
-<!-- $Id: References.xml,v 1.1.2.1 2006/08/17 21:18:14 dhankins Exp $ -->
+<!-- $Id: References.xml,v 1.1.2.2 2006/08/17 21:26:30 dhankins Exp $ -->
 
 <?rfc toc="yes"?>
-<?rfc sortrefs="yes"?>
 
-<?rfc compact="yes"?> <?rfc subcompact="no"?>
+<?rfc compact="yes"?>
+<?rfc subcompact="no"?>
+<?rfc tocompact="no"?>
 
 <!DOCTYPE rfc SYSTEM 'rfc2629bis.dtd' [
   <!ENTITY rfc760 PUBLIC ''
@@ -104,12 +105,6 @@
 	WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 	ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT
 	OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.</t>
-
-	<t>Internet Systems Consortium, Inc.</t>
-	<t>950 Charter Street</t>
-	<t>Redwood City, CA 94063</t>
-	<t>info@isc.org</t>
-	<t>http://www.isc.org/</t>
     </note>
 
     <keyword>ISC</keyword>

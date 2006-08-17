@@ -57,16 +57,6 @@ Hankins                 Expires February 18, 2007               [Page 1]
 Internet-Draft                 References                    August 2006
 
 
-   Internet Systems Consortium, Inc.
-
-   950 Charter Street
-
-   Redwood City, CA 94063
-
-   info@isc.org
-
-   http://www.isc.org/
-
 Abstract
 
    This document describes a collection of Reference material that ISC
@@ -76,14 +66,18 @@ Abstract
 Table of Contents
 
    1.  Introduction . . . . . . . . . . . . . . . . . . . . . . . . .  3
+
    2.  Definition: Reference Implementation . . . . . . . . . . . . .  3
+
    3.  Low Layer References . . . . . . . . . . . . . . . . . . . . .  5
      3.1.  Ethernet Protocol References . . . . . . . . . . . . . . .  6
      3.2.  Token Ring Protocol References . . . . . . . . . . . . . .  6
      3.3.  FDDI Protocol References . . . . . . . . . . . . . . . . .  6
      3.4.  Internet Protocol Version 4 References . . . . . . . . . .  6
      3.5.  Unicast Datagram Protocol References . . . . . . . . . . .  7
+
    4.  BOOTP Protocol References  . . . . . . . . . . . . . . . . . .  7
+
    5.  DHCP Protocol References . . . . . . . . . . . . . . . . . . .  7
      5.1.  Core Protocol References . . . . . . . . . . . . . . . . .  7
      5.2.  DHCP Option References . . . . . . . . . . . . . . . . . .  8
@@ -91,8 +85,14 @@ Table of Contents
        5.2.2.  Experimental: Dynamic DNS Updates References . . . . .  9
        5.2.3.  Experimental: Failover References  . . . . . . . . . . 10
      5.3.  DHCP Procedures  . . . . . . . . . . . . . . . . . . . . . 10
+
    6.  References . . . . . . . . . . . . . . . . . . . . . . . . . . 11
+
    Author's Address . . . . . . . . . . . . . . . . . . . . . . . . . 14
+
+
+
+
 
 
 
@@ -239,7 +239,7 @@ Internet-Draft                 References                    August 2006
 
    There are a few things that DHCP servers, relays, and clients all
    need to do in order to speak the DHCP protocol in strict compliance
-   with RFC2131 [1].
+   with RFC2131 [8].
 
    1.  Transmit a UDP packet from IP:0.0.0.0 Ethernet:Self, destined to
        IP:255.255.255.255 LinkLayer:Broadcast on an unconfigured (no IP
@@ -263,7 +263,7 @@ Internet-Draft                 References                    August 2006
    unix implementations will transmit broadcasts not to 255.255.255.255,
    but to x.y.z.255 (where x.y.z is the system's local subnet).  Such
    packets are not received by several known DHCP client implementations
-   - and it's not their fault, RFC2131 [1] very explicitly demands that
+   - and it's not their fault, RFC2131 [8] very explicitly demands that
    these packets' IP destination addresses be set to 255.255.255.255.
 
    Receiving packets sent to 255.255.255.255 isn't a problem on most
@@ -309,7 +309,7 @@ Internet-Draft                 References                    August 2006
 
    ISC DHCP Implements Ethernet Version 2 ("DIX"), which is a variant of
    IEEE 802.2.  No good reference of this framing is known to exist at
-   this time, but it is vaguely described in RFC894 [2] (see the section
+   this time, but it is vaguely described in RFC894 [3] (see the section
    titled "Packet format"), and the following URL is also thought to be
    useful.
 
@@ -321,12 +321,12 @@ Internet-Draft                 References                    August 2006
 
 3.3.  FDDI Protocol References
 
-   RFC1188 [3] is the most helpful reference ISC DHCP has used to form
+   RFC1188 [6] is the most helpful reference ISC DHCP has used to form
    FDDI packets.
 
 3.4.  Internet Protocol Version 4 References
 
-   RFC760 [4] fundamentally defines the bare IPv4 protocol which ISC
+   RFC760 [1] fundamentally defines the bare IPv4 protocol which ISC
    DHCP implements.
 
 
@@ -339,7 +339,7 @@ Internet-Draft                 References                    August 2006
 
 3.5.  Unicast Datagram Protocol References
 
-   RFC768 [5] defines the User Datagram Protocol that ultimately carries
+   RFC768 [2] defines the User Datagram Protocol that ultimately carries
    the DHCP or BOOTP protocol.  The destination DHCP server port is 67,
    the client port is 68.  Source ports are irrelevant.
 
@@ -352,7 +352,7 @@ Internet-Draft                 References                    August 2006
    packet formats - DHCP is merely a conventional use of both BOOTP
    header fields and the trailing 'options' space.
 
-   The ISC DHCP server supports BOOTP clients conforming to RFC951 [6]
+   The ISC DHCP server supports BOOTP clients conforming to RFC951 [4]
    and RFC1542 [7].
 
 
@@ -364,7 +364,7 @@ Internet-Draft                 References                    August 2006
 
 5.1.  Core Protocol References
 
-   RFC2131 [1] defines the protocol format and procedures.  ISC DHCP is
+   RFC2131 [8] defines the protocol format and procedures.  ISC DHCP is
    not known to diverge from this document in any way.  There are,
    however, a few points on which different implementations have arisen
    out of vagueries in the document.  DHCP Clients exist which, at one
@@ -383,7 +383,7 @@ Internet-Draft                 References                    August 2006
    or relay, which may not be zero.  It is not known if there is a good
    reason for this that has not been documented.
 
-   RFC2132 [8] defines the initial set of DHCP Options and provides a
+   RFC2132 [9] defines the initial set of DHCP Options and provides a
    great deal of guidance on how to go about formatting and processing
 
 
@@ -404,16 +404,16 @@ Internet-Draft                 References                    August 2006
 
 5.2.  DHCP Option References
 
-   RFC2241 [9] defines options for Novell Directory Services.
+   RFC2241 [10] defines options for Novell Directory Services.
 
-   RFC2242 [10] defines an encapsulated option space for NWIP
+   RFC2242 [11] defines an encapsulated option space for NWIP
    configuration.
 
-   RFC2485 [11] defines the Open Group's UAP option.
+   RFC2485 [12] defines the Open Group's UAP option.
 
-   RFC2610 [12] defines options for the Service Location Protocol (SLP).
+   RFC2610 [13] defines options for the Service Location Protocol (SLP).
 
-   RFC2937 [13] defines the Name Service Search Option (not to be
+   RFC2937 [14] defines the Name Service Search Option (not to be
    confused with the domain-search option).  The Name Service Search
    Option allows eg nsswitch.conf to be reconfigured via dhcp.  The ISC
    DHCP server implements this option, and the ISC DHCP client is
@@ -421,25 +421,25 @@ Internet-Draft                 References                    August 2006
    One would need to make their relevant dhclient-script process this
    option in a way that is suitable for the system.
 
-   RFC3004 [14] defines the User-Class option.  Note carefully that ISC
+   RFC3004 [16] defines the User-Class option.  Note carefully that ISC
    DHCP currently does not implement to this draft, but has
    (inexplicably) selected an incompatible format.
 
-   RFC3011 [15] defines the Subnet-Selection plain DHCPv4 option.  Do
+   RFC3011 [17] defines the Subnet-Selection plain DHCPv4 option.  Do
    not confuse this option with the relay agent "link selection" sub-
    option.
 
-   RFC3396 [16] documents both how long options may be encoded in DHCPv4
+   RFC3396 [21] documents both how long options may be encoded in DHCPv4
    packets, and also how multiple instances of the same option code
    within a DHCPv4 packet will be decoded by receivers.
 
-   RFC3397 [17] documents the Domain-Search Option, which allows the
+   RFC3397 [22] documents the Domain-Search Option, which allows the
    configuration of the /etc/resolv.conf 'search' parameter in a way
-   that is RFC1035 [18] wire format compatible (in fact, it uses the
+   that is RFC1035 [5] wire format compatible (in fact, it uses the
    RFC1035 wire format).  ISC DHCP has both client and server support,
    and supports RFC1035 name compression.
 
-   RFC3679 [19] documents a number of options that were documented
+   RFC3679 [24] documents a number of options that were documented
    earlier in history, but were not made use of.
 
 
@@ -449,26 +449,26 @@ Hankins                 Expires February 18, 2007               [Page 8]
 Internet-Draft                 References                    August 2006
 
 
-   RFC3925 [20] documents a pair of Enterprise-ID delimited option
+   RFC3925 [25] documents a pair of Enterprise-ID delimited option
    spaces for vendors to use in order to inform servers of their "vendor
    class" (sort of like 'uname' or 'who and what am I'), and a means to
    deliver vendor-specific and vendor-documented option codes and
    values.
 
-   RFC3942 [21] redefined the 'site local' option space.
+   RFC3942 [26] redefined the 'site local' option space.
 
-   RFC4388 [22] defined the DHCPv4 LEASEQUERY message type and a number
+   RFC4388 [27] defined the DHCPv4 LEASEQUERY message type and a number
    of suitable response messages, for the purpose of sharing information
    about DHCP served addresses and clients.
 
 5.2.1.  Relay Agent Information Option Options
 
-   RFC3046 [23] defines the Relay Agent Information Option and provides
+   RFC3046 [18] defines the Relay Agent Information Option and provides
    a number of sub-option definitions.
 
-   RFC3256 [24] defines the DOCSIS Device Class sub-option.
+   RFC3256 [20] defines the DOCSIS Device Class sub-option.
 
-   RFC3527 [25] defines the Link Selection sub-option.
+   RFC3527 [23] defines the Link Selection sub-option.
 
 5.2.2.  Experimental: Dynamic DNS Updates References
 
@@ -483,14 +483,14 @@ Internet-Draft                 References                    August 2006
 
    The status of this experiment is fairly sure.
 
-   draft-ietf-dhc-fqdn-option-13.txt [26] defines the FQDN option which
+   draft-ietf-dhc-fqdn-option-13.txt [29] defines the FQDN option which
    is the basis of what ISC DHCP terms "interim style" DDNS updates.
 
-   draft-ietf-dhc-ddns-resolution-12.txt [27] describes a process
+   draft-ietf-dhc-ddns-resolution-12.txt [30] describes a process
    through which multiple DHCP servers and clients may all act upon a
    single DNS resource and insure there are no collisions.
 
-   draft-ietf-dnsext-dhcid-rr-13.txt [28] defines the DHCID DNS RR type,
+   draft-ietf-dnsext-dhcid-rr-13.txt [31] defines the DHCID DNS RR type,
    which is used to match client identities with names in the DNS as
    part of name conflict resolution.  Note that ISC DHCP's
    implementation of DHCIDs vary wildly from this specification.  First,
@@ -527,7 +527,7 @@ Internet-Draft                 References                    August 2006
    of it has proven stable and suitable for use in sizable production
    environments.
 
-   draft-ietf-dhc-failover-12.txt [29] describes the Failover Protocol.
+   draft-ietf-dhc-failover-12.txt [28] describes the Failover Protocol.
    In addition to what is described in this document, ISC DHCP has
    elected to make some experimental changes that may be revoked in a
    future version of ISC DHCP (if the draft authors do not adopt the new
@@ -541,14 +541,14 @@ Internet-Draft                 References                    August 2006
    document a protocol number assignment for this state.  As a
    consequence, ISC DHCP has elected to use the value 254.
 
-   RFC3074 [30] describes the Load Balancing Algorithm (LBA) that ISC
+   RFC3074 [19] describes the Load Balancing Algorithm (LBA) that ISC
    DHCP uses in concert with the Failover protocol.  Note that versions
    3.0.* are known to misimplement the hash algorithm (it will only use
    the low 4 bits of every byte of the hash bucket array).
 
 5.3.  DHCP Procedures
 
-   RFC2939 [31] explains how to go about obtaining a new DHCP Option
+   RFC2939 [15] explains how to go about obtaining a new DHCP Option
    code assignment.
 
 
@@ -563,51 +563,51 @@ Internet-Draft                 References                    August 2006
 
 6.  References
 
-   [1]   Droms, R., "Dynamic Host Configuration Protocol", RFC 2131,
-         March 1997.
-
-   [2]   Hornig, C., "Standard for the transmission of IP datagrams over
-         Ethernet networks", STD 41, RFC 894, April 1984.
-
-   [3]   Katz, D., "Proposed Standard for the Transmission of IP
-         Datagrams over FDDI Networks", RFC 1188, October 1990.
-
-   [4]   Postel, J., "DoD standard Internet Protocol", RFC 760,
+   [1]   Postel, J., "DoD standard Internet Protocol", RFC 760,
          January 1980.
 
-   [5]   Postel, J., "User Datagram Protocol", STD 6, RFC 768,
+   [2]   Postel, J., "User Datagram Protocol", STD 6, RFC 768,
          August 1980.
 
-   [6]   Croft, B. and J. Gilmore, "Bootstrap Protocol", RFC 951,
+   [3]   Hornig, C., "Standard for the transmission of IP datagrams over
+         Ethernet networks", STD 41, RFC 894, April 1984.
+
+   [4]   Croft, B. and J. Gilmore, "Bootstrap Protocol", RFC 951,
          September 1985.
+
+   [5]   Mockapetris, P., "Domain names - implementation and
+         specification", STD 13, RFC 1035, November 1987.
+
+   [6]   Katz, D., "Proposed Standard for the Transmission of IP
+         Datagrams over FDDI Networks", RFC 1188, October 1990.
 
    [7]   Wimer, W., "Clarifications and Extensions for the Bootstrap
          Protocol", RFC 1542, October 1993.
 
-   [8]   Alexander, S. and R. Droms, "DHCP Options and BOOTP Vendor
+   [8]   Droms, R., "Dynamic Host Configuration Protocol", RFC 2131,
+         March 1997.
+
+   [9]   Alexander, S. and R. Droms, "DHCP Options and BOOTP Vendor
          Extensions", RFC 2132, March 1997.
 
-   [9]   Provan, D., "DHCP Options for Novell Directory Services",
+   [10]  Provan, D., "DHCP Options for Novell Directory Services",
          RFC 2241, November 1997.
 
-   [10]  Droms, R. and K. Fong, "NetWare/IP Domain Name and
+   [11]  Droms, R. and K. Fong, "NetWare/IP Domain Name and
          Information", RFC 2242, November 1997.
 
-   [11]  Drach, S., "DHCP Option for The Open Group's User
+   [12]  Drach, S., "DHCP Option for The Open Group's User
          Authentication Protocol", RFC 2485, January 1999.
 
-   [12]  Perkins, C. and E. Guttman, "DHCP Options for Service Location
+   [13]  Perkins, C. and E. Guttman, "DHCP Options for Service Location
          Protocol", RFC 2610, June 1999.
 
-   [13]  Smith, C., "The Name Service Search Option for DHCP", RFC 2937,
+   [14]  Smith, C., "The Name Service Search Option for DHCP", RFC 2937,
          September 2000.
 
-   [14]  Stump, G., Droms, R., Gu, Y., Vyaghrapuri, R., Demirtjis, A.,
-         Beser, B., and J. Privat, "The User Class Option for DHCP",
-         RFC 3004, November 2000.
-
-   [15]  Waters, G., "The IPv4 Subnet Selection Option for DHCP",
-         RFC 3011, November 2000.
+   [15]  Droms, R., "Procedures and IANA Guidelines for Definition of
+         New DHCP Options and Message Types", BCP 43, RFC 2939,
+         September 2000.
 
 
 
@@ -617,54 +617,54 @@ Hankins                 Expires February 18, 2007              [Page 11]
 Internet-Draft                 References                    August 2006
 
 
-   [16]  Lemon, T. and S. Cheshire, "Encoding Long Options in the
-         Dynamic Host Configuration Protocol (DHCPv4)", RFC 3396,
-         November 2002.
+   [16]  Stump, G., Droms, R., Gu, Y., Vyaghrapuri, R., Demirtjis, A.,
+         Beser, B., and J. Privat, "The User Class Option for DHCP",
+         RFC 3004, November 2000.
 
-   [17]  Aboba, B. and S. Cheshire, "Dynamic Host Configuration Protocol
-         (DHCP) Domain Search Option", RFC 3397, November 2002.
+   [17]  Waters, G., "The IPv4 Subnet Selection Option for DHCP",
+         RFC 3011, November 2000.
 
-   [18]  Mockapetris, P., "Domain names - implementation and
-         specification", STD 13, RFC 1035, November 1987.
-
-   [19]  Droms, R., "Unused Dynamic Host Configuration Protocol (DHCP)
-         Option Codes", RFC 3679, January 2004.
-
-   [20]  Littlefield, J., "Vendor-Identifying Vendor Options for Dynamic
-         Host Configuration Protocol version 4 (DHCPv4)", RFC 3925,
-         October 2004.
-
-   [21]  Volz, B., "Reclassifying Dynamic Host Configuration Protocol
-         version 4 (DHCPv4) Options", RFC 3942, November 2004.
-
-   [22]  Woundy, R. and K. Kinnear, "Dynamic Host Configuration Protocol
-         (DHCP) Leasequery", RFC 4388, February 2006.
-
-   [23]  Patrick, M., "DHCP Relay Agent Information Option", RFC 3046,
+   [18]  Patrick, M., "DHCP Relay Agent Information Option", RFC 3046,
          January 2001.
 
-   [24]  Jones, D. and R. Woundy, "The DOCSIS (Data-Over-Cable Service
+   [19]  Volz, B., Gonczi, S., Lemon, T., and R. Stevens, "DHC Load
+         Balancing Algorithm", RFC 3074, February 2001.
+
+   [20]  Jones, D. and R. Woundy, "The DOCSIS (Data-Over-Cable Service
          Interface Specifications) Device Class DHCP (Dynamic Host
          Configuration Protocol) Relay Agent Information Sub-option",
          RFC 3256, April 2002.
 
-   [25]  Kinnear, K., Stapp, M., Johnson, R., and J. Kumarasamy, "Link
+   [21]  Lemon, T. and S. Cheshire, "Encoding Long Options in the
+         Dynamic Host Configuration Protocol (DHCPv4)", RFC 3396,
+         November 2002.
+
+   [22]  Aboba, B. and S. Cheshire, "Dynamic Host Configuration Protocol
+         (DHCP) Domain Search Option", RFC 3397, November 2002.
+
+   [23]  Kinnear, K., Stapp, M., Johnson, R., and J. Kumarasamy, "Link
          Selection sub-option for the Relay Agent Information Option for
          DHCPv4", RFC 3527, April 2003.
 
-   [26]  Stapp, M., "The DHCP Client FQDN Option", September 2006.
+   [24]  Droms, R., "Unused Dynamic Host Configuration Protocol (DHCP)
+         Option Codes", RFC 3679, January 2004.
 
-   [27]  Stapp, M., "Resolution of FQDN Conflicts among DHCP Clients",
+   [25]  Littlefield, J., "Vendor-Identifying Vendor Options for Dynamic
+         Host Configuration Protocol version 4 (DHCPv4)", RFC 3925,
+         October 2004.
+
+   [26]  Volz, B., "Reclassifying Dynamic Host Configuration Protocol
+         version 4 (DHCPv4) Options", RFC 3942, November 2004.
+
+   [27]  Woundy, R. and K. Kinnear, "Dynamic Host Configuration Protocol
+         (DHCP) Leasequery", RFC 4388, February 2006.
+
+   [28]  Droms, R., "DHCP Failover Protocol", March 2003.
+
+   [29]  Stapp, M., "The DHCP Client FQDN Option", September 2006.
+
+   [30]  Stapp, M., "Resolution of FQDN Conflicts among DHCP Clients",
          September 2006.
-
-   [28]  Stapp, M., "A DNS RR for Encoding DHCP Information",
-         September 2006.
-
-   [29]  Droms, R., "DHCP Failover Protocol", March 2003.
-
-   [30]  Volz, B., Gonczi, S., Lemon, T., and R. Stevens, "DHC Load
-         Balancing Algorithm", RFC 3074, February 2001.
-
 
 
 
@@ -673,9 +673,9 @@ Hankins                 Expires February 18, 2007              [Page 12]
 Internet-Draft                 References                    August 2006
 
 
-   [31]  Droms, R., "Procedures and IANA Guidelines for Definition of
-         New DHCP Options and Message Types", BCP 43, RFC 2939,
-         September 2000.
+   [31]  Stapp, M., "A DNS RR for Encoding DHCP Information",
+         September 2006.
+
 
 
 
