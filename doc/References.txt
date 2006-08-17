@@ -1,0 +1,784 @@
+
+
+
+Network Working Group                                         D. Hankins
+Internet-Draft                                                       ISC
+Expires: February 18, 2007                               August 17, 2006
+
+
+                   ISC DHCP Implemented-To References
+                               References
+
+Status of this Memo
+
+   This document is an Internet-Draft and is NOT offered in accordance
+   with Section 10 of RFC 2026, and the author does not provide the IETF
+   with any rights other than to publish as an Internet-Draft.
+
+   Internet-Drafts are working documents of the Internet Engineering
+   Task Force (IETF), its areas, and its working groups.  Note that
+   other groups may also distribute working documents as Internet-
+   Drafts.
+
+   Internet-Drafts are draft documents valid for a maximum of six months
+   and may be updated, replaced, or obsoleted by other documents at any
+   time.  It is inappropriate to use Internet-Drafts as reference
+   material or to cite them other than as "work in progress."
+
+   The list of current Internet-Drafts can be accessed at
+   http://www.ietf.org/ietf/1id-abstracts.txt.
+
+   The list of Internet-Draft Shadow Directories can be accessed at
+   http://www.ietf.org/shadow.html.
+
+   This Internet-Draft will expire on February 18, 2007.
+
+Copyright Notice
+
+   Copyright (c) 2006 by Internet Systems Consortium, Inc. ("ISC")
+
+   Permission to use, copy, modify, and distribute this software for any
+   purpose with or without fee is hereby granted, provided that the
+   above copyright notice and this permission notice appear in all
+   copies.
+
+   THE SOFTWARE IS PROVIDED "AS IS" AND ISC DISCLAIMS ALL WARRANTIES
+   WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+   MERCHANTABILITY AND FITNESS.  IN NO EVENT SHALL ISC BE LIABLE FOR ANY
+   SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+   WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+   ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT
+   OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+
+
+Hankins                 Expires February 18, 2007               [Page 1]
+
+Internet-Draft                 References                    August 2006
+
+
+   Internet Systems Consortium, Inc.
+
+   950 Charter Street
+
+   Redwood City, CA 94063
+
+   info@isc.org
+
+   http://www.isc.org/
+
+Abstract
+
+   This document describes a collection of Reference material that ISC
+   DHCP 3.1.x has been implemented to.
+
+
+Table of Contents
+
+   1.  Introduction . . . . . . . . . . . . . . . . . . . . . . . . .  3
+   2.  Definition: Reference Implementation . . . . . . . . . . . . .  3
+   3.  Low Layer References . . . . . . . . . . . . . . . . . . . . .  5
+     3.1.  Ethernet Protocol References . . . . . . . . . . . . . . .  6
+     3.2.  Token Ring Protocol References . . . . . . . . . . . . . .  6
+     3.3.  FDDI Protocol References . . . . . . . . . . . . . . . . .  6
+     3.4.  Internet Protocol Version 4 References . . . . . . . . . .  6
+     3.5.  Unicast Datagram Protocol References . . . . . . . . . . .  7
+   4.  BOOTP Protocol References  . . . . . . . . . . . . . . . . . .  7
+   5.  DHCP Protocol References . . . . . . . . . . . . . . . . . . .  7
+     5.1.  Core Protocol References . . . . . . . . . . . . . . . . .  7
+     5.2.  DHCP Option References . . . . . . . . . . . . . . . . . .  8
+       5.2.1.  Relay Agent Information Option Options . . . . . . . .  9
+       5.2.2.  Experimental: Dynamic DNS Updates References . . . . .  9
+       5.2.3.  Experimental: Failover References  . . . . . . . . . . 10
+     5.3.  DHCP Procedures  . . . . . . . . . . . . . . . . . . . . . 10
+   6.  References . . . . . . . . . . . . . . . . . . . . . . . . . . 11
+   Author's Address . . . . . . . . . . . . . . . . . . . . . . . . . 14
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Hankins                 Expires February 18, 2007               [Page 2]
+
+Internet-Draft                 References                    August 2006
+
+
+1.  Introduction
+
+   As a little history anecdote, ISC DHCP once packaged all the relevant
+   RFCs and standards documents along with the software package.  Until
+   one day when a voice was heard from one of the many fine institutions
+   that build and distribute this software... they took issue with the
+   IETF's copyright on the RFC's.  It seems the IETF's copyrights don't
+   allow modification of RFC's (except for translation purposes).
+
+   No one is really certain why it's important to carry the right to
+   modify RFC's.  Perhaps someone is under the delusion that IETF
+   protocols are open standards in the sense that anyone can rewrite any
+   pages of the book they choose to.  Perhaps they think the Internet
+   would be better served if all Internet protocols were Wikipedia
+   entries.
+
+   Whatever the case, there were a small number of reasons to package
+   the RFC's with the software:
+
+   1.  To short-cut documenting our software by providing the document
+       that it was written in reference to.
+
+   2.  To distribute the RFC's - once upon a time believe it or not this
+       was something of a problem, IETF RFC's did not have a large
+       number of mirrors spread all over the planet.
+
+   Well, as anyone can plainly see the second requirement has rather
+   evaporated.  The first is still in effect, but the bulk of the RFC's
+   themselves are not required to accomplish that...plainly all that is
+   needed is a document collecting their names and where they might be
+   found.  Such a switch would make at least one person's life easier to
+   cope with, and might even reduce the size of our software
+   distribution package.
+
+   This is the purpose to which this document is bent.
+
+
+2.  Definition: Reference Implementation
+
+   ISC DHCP, much like its other cousins in ISC software, is self-
+   described as a 'Reference Implementation.'  There has been a great
+   deal of confusion about this term.  Some people seem to think that
+   this term applies to any software that once passed a piece of
+   reference material on its way to market (but may do quite a lot of
+   things that aren't described in any reference, or may choose to
+   ignore the reference it saw entirely).  Other folks get confused by
+   the word 'reference' and understand that to mean that there is some
+   special status applied to the software - that the software itself is
+
+
+
+Hankins                 Expires February 18, 2007               [Page 3]
+
+Internet-Draft                 References                    August 2006
+
+
+   the reference by which all other software is measured.  Something
+   along the lines of being "The DHCP Protocol's Reference Clock," it is
+   supposed.
+
+   The truth is actually quite a lot simpler.  Reference implementations
+   are software packages which were written to behave precisely as
+   appears in reference material.  They are written "to match
+   reference."
+
+   If the software has a behaviour that manifests itself externally
+   (wether it be something as simple as the 'wire format' or something
+   higher level, such as a complicated behaviour that arises from
+   multiple message exchanges), that behaviour must be found in a
+   reference document.
+
+   Anything else is a bug, the only question is wether the bug is in
+   reference or software (failing to implement the reference).
+
+   This means:
+
+   o  To produce new externally-visible behaviour, one must first
+      provide a reference.
+
+   o  Before changing externally visible behaviour to work around simple
+      incompatibilities in any other implementation, one must first
+      provide a reference.
+
+   That is the lofty goal, at any rate.  It's well understood that,
+   especially because the ISC DHCP Software package has not always been
+   held to this standard (but not entirely due to it), there are many
+   non-referenced behaviours within ISC DHCP.
+
+   The primary goal of reference implementation is to prove the
+   reference material.  If the reference material is good, then you
+   should be able to sit down and write a program that implements the
+   reference, to the word, and come to an implementation that is
+   distinguishable from others in the details, but not in the facts of
+   operating the protocol.  This means that there is no need for
+   'special knowledge' to work around arcane problems that were left
+   undocumented.  No secret handshakes need to be learned to be imparted
+   with the necessary "real documentation".
+
+   Also, by accepting only reference as the guidebook for ISC DHCP's
+   software implementation, anyone who can make an impact on the color
+   texture or form of that reference has a (somewhat indirect) voice in
+   ISC DHCP's software design.  As the IETF RFC's have been selected as
+   the source of reference, that means everyone on the Internet with the
+   will to participate has a say.
+
+
+
+Hankins                 Expires February 18, 2007               [Page 4]
+
+Internet-Draft                 References                    August 2006
+
+
+3.  Low Layer References
+
+   It may surprise you to realize that ISC DHCP implements 802.1
+   'Ethernet' framing, Token Ring, and FDDI.  In order to bridge the gap
+   there between these physical and DHCP layers, it must also implement
+   IP and UDP framing.
+
+   The reason for this stems from Unix systems' handling of BSD sockets
+   (the general way one might engage in transmission of UDP packets) on
+   unconfigured interfaces, or even the handling of broadcast addressing
+   on configured interfaces.
+
+   There are a few things that DHCP servers, relays, and clients all
+   need to do in order to speak the DHCP protocol in strict compliance
+   with RFC2131 [1].
+
+   1.  Transmit a UDP packet from IP:0.0.0.0 Ethernet:Self, destined to
+       IP:255.255.255.255 LinkLayer:Broadcast on an unconfigured (no IP
+       address yet) interface.
+
+   2.  Receive a UDP packet from IP:remote-system LinkLayer:remote-
+       system, destined to IP:255.255.255.255 LinkLayer:Broadcast, again
+       on an unconfigured interface.
+
+   3.  Transmit a UDP packet from IP:Self, Ethernet:Seelf, destined to
+       IP:remote-system LinkLayer:remote-system, without transmitting a
+       single ARP.
+
+   4.  And of course the simple case, a regular IP unicast that is
+       routed via the usual means (so it may be direct to a local
+       system, with ARP providing the glue, or it may be to a remote
+       system via one or more routers as normal).  In this case, the
+       interfaces are always configured.
+
+   The above isn't as simple as it sounds on a regular BSD socket.  Many
+   unix implementations will transmit broadcasts not to 255.255.255.255,
+   but to x.y.z.255 (where x.y.z is the system's local subnet).  Such
+   packets are not received by several known DHCP client implementations
+   - and it's not their fault, RFC2131 [1] very explicitly demands that
+   these packets' IP destination addresses be set to 255.255.255.255.
+
+   Receiving packets sent to 255.255.255.255 isn't a problem on most
+   modern unixes...so long as the interface is configured.  When there
+   is no IPv4 address on the interface, things become much more murky.
+
+   So, for this convoluted and unfortunate state of affairs in the unix
+   systems of the day ISC DHCP was manufactured, in order to do what it
+   needs not only to implement the reference but to interoperate with
+
+
+
+Hankins                 Expires February 18, 2007               [Page 5]
+
+Internet-Draft                 References                    August 2006
+
+
+   other implementations, the software must create some form of raw
+   socket to operate on.
+
+   What it actually does is create, for each interface detected on the
+   system, a Berkeley Packet Filter socket (or equivalent), and program
+   it with a filter that brings in only DHCP packets.  A "fallback" UDP
+   Berkeley socket is generally also created, a single one no matter how
+   many interfaces.  Should the software need to transmit a contrived
+   packet to the local network the packet is formed piece by piece and
+   transmitted via the BPF socket.  Hence the need to implement many
+   forms of Link Layer framing and above.  The software gets away with
+   not having to implement IP routing tables as well by simply utilizing
+   the aforementioned 'fallback' UDP socket when unicasting between two
+   configured systems is the need.
+
+   Modern unixes have opened up some facilities that diminish how much
+   of this sort of nefarious kludgery is necessary, but have not found
+   the state of affairs absolutely absolved.  In particular, one might
+   now unicast without ARP by inserting an entry into the ARP cache
+   prior to transmitting.  Unconfigured interfaces remain the sticking
+   point, however...on virtually no modern unixes is it possible to
+   receive broadcast packets unless a local IPv4 address has been
+   configured, unless it is done with raw sockets.
+
+3.1.  Ethernet Protocol References
+
+   ISC DHCP Implements Ethernet Version 2 ("DIX"), which is a variant of
+   IEEE 802.2.  No good reference of this framing is known to exist at
+   this time, but it is vaguely described in RFC894 [2] (see the section
+   titled "Packet format"), and the following URL is also thought to be
+   useful.
+
+   http://en.wikipedia.org/wiki/DIX
+
+3.2.  Token Ring Protocol References
+
+   IEEE 802.5 defines the Token Ring framing format used by ISC DHCP.
+
+3.3.  FDDI Protocol References
+
+   RFC1188 [3] is the most helpful reference ISC DHCP has used to form
+   FDDI packets.
+
+3.4.  Internet Protocol Version 4 References
+
+   RFC760 [4] fundamentally defines the bare IPv4 protocol which ISC
+   DHCP implements.
+
+
+
+
+Hankins                 Expires February 18, 2007               [Page 6]
+
+Internet-Draft                 References                    August 2006
+
+
+3.5.  Unicast Datagram Protocol References
+
+   RFC768 [5] defines the User Datagram Protocol that ultimately carries
+   the DHCP or BOOTP protocol.  The destination DHCP server port is 67,
+   the client port is 68.  Source ports are irrelevant.
+
+
+4.  BOOTP Protocol References
+
+   The DHCP Protocol is strange among protocols in that it is grafted
+   over the top of another protocol - BOOTP (but we don't call it "DHCP
+   over BOOTP" like we do, say "TCP over IP").  BOOTP and DHCP share UDP
+   packet formats - DHCP is merely a conventional use of both BOOTP
+   header fields and the trailing 'options' space.
+
+   The ISC DHCP server supports BOOTP clients conforming to RFC951 [6]
+   and RFC1542 [7].
+
+
+5.  DHCP Protocol References
+
+   "The DHCP Protocol" is not defined in a single document.  The
+   following collection of references of what ISC DHCP terms "The DHCP
+   Protocol".
+
+5.1.  Core Protocol References
+
+   RFC2131 [1] defines the protocol format and procedures.  ISC DHCP is
+   not known to diverge from this document in any way.  There are,
+   however, a few points on which different implementations have arisen
+   out of vagueries in the document.  DHCP Clients exist which, at one
+   time, present themselves as using a Client Identifier Option which is
+   equal to the client's hardware address.  Later, the client transmits
+   DHCP packets with no Client Identifier Option present - essentially
+   identifying themselves using the hardware address.  Some DHCP Servers
+   have been developed which identify this client as a single client.
+   ISC has interpreted RFC2131 to indicate that these clients must be
+   treated as two separate entities (and hence two, separate addresses).
+   Client behaviour (Embedded Windows products) has developed that
+   relies on the former implementation, and hence is incompatible with
+   the latter.  Also, RFC2131 demands explicitly that some header fields
+   be zeroed upon certain message types.  The ISC DHCP Server instead
+   copies many of these fields from the packet received from the client
+   or relay, which may not be zero.  It is not known if there is a good
+   reason for this that has not been documented.
+
+   RFC2132 [8] defines the initial set of DHCP Options and provides a
+   great deal of guidance on how to go about formatting and processing
+
+
+
+Hankins                 Expires February 18, 2007               [Page 7]
+
+Internet-Draft                 References                    August 2006
+
+
+   options.  The document unfortunately waffles to a great extent about
+   the NULL termination of DHCP Options, and some DHCP Clients (Windows
+   95) have been implemented that rely upon DHCP Options containing text
+   strings to be NULL-terminated (or else they crash).  So, ISC DHCP
+   detects if clients null-terminate the host-name option and, if so,
+   null terminates any text options it transmits to the client.  It also
+   removes NULL termination from any known text option it receives prior
+   to any other processing.
+
+5.2.  DHCP Option References
+
+   RFC2241 [9] defines options for Novell Directory Services.
+
+   RFC2242 [10] defines an encapsulated option space for NWIP
+   configuration.
+
+   RFC2485 [11] defines the Open Group's UAP option.
+
+   RFC2610 [12] defines options for the Service Location Protocol (SLP).
+
+   RFC2937 [13] defines the Name Service Search Option (not to be
+   confused with the domain-search option).  The Name Service Search
+   Option allows eg nsswitch.conf to be reconfigured via dhcp.  The ISC
+   DHCP server implements this option, and the ISC DHCP client is
+   compatible...but does not by default install this option's value.
+   One would need to make their relevant dhclient-script process this
+   option in a way that is suitable for the system.
+
+   RFC3004 [14] defines the User-Class option.  Note carefully that ISC
+   DHCP currently does not implement to this draft, but has
+   (inexplicably) selected an incompatible format.
+
+   RFC3011 [15] defines the Subnet-Selection plain DHCPv4 option.  Do
+   not confuse this option with the relay agent "link selection" sub-
+   option.
+
+   RFC3396 [16] documents both how long options may be encoded in DHCPv4
+   packets, and also how multiple instances of the same option code
+   within a DHCPv4 packet will be decoded by receivers.
+
+   RFC3397 [17] documents the Domain-Search Option, which allows the
+   configuration of the /etc/resolv.conf 'search' parameter in a way
+   that is RFC1035 [18] wire format compatible (in fact, it uses the
+   RFC1035 wire format).  ISC DHCP has both client and server support,
+   and supports RFC1035 name compression.
+
+   RFC3679 [19] documents a number of options that were documented
+   earlier in history, but were not made use of.
+
+
+
+Hankins                 Expires February 18, 2007               [Page 8]
+
+Internet-Draft                 References                    August 2006
+
+
+   RFC3925 [20] documents a pair of Enterprise-ID delimited option
+   spaces for vendors to use in order to inform servers of their "vendor
+   class" (sort of like 'uname' or 'who and what am I'), and a means to
+   deliver vendor-specific and vendor-documented option codes and
+   values.
+
+   RFC3942 [21] redefined the 'site local' option space.
+
+   RFC4388 [22] defined the DHCPv4 LEASEQUERY message type and a number
+   of suitable response messages, for the purpose of sharing information
+   about DHCP served addresses and clients.
+
+5.2.1.  Relay Agent Information Option Options
+
+   RFC3046 [23] defines the Relay Agent Information Option and provides
+   a number of sub-option definitions.
+
+   RFC3256 [24] defines the DOCSIS Device Class sub-option.
+
+   RFC3527 [25] defines the Link Selection sub-option.
+
+5.2.2.  Experimental: Dynamic DNS Updates References
+
+   The collection of documents that describe the standards-based method
+   to update dns names of DHCP clients is very near to RFC publication,
+   despite the references listed below being drafts.  The sources
+   currently shipped in ISC DHCP could still be called experimental, but
+   the protocol itself could not.  There will be at least one change in
+   ISC DHCP's DDNS updates at some point in the future which may not be
+   backwards compatible, but will be on a feature that probably won't be
+   missed.
+
+   The status of this experiment is fairly sure.
+
+   draft-ietf-dhc-fqdn-option-13.txt [26] defines the FQDN option which
+   is the basis of what ISC DHCP terms "interim style" DDNS updates.
+
+   draft-ietf-dhc-ddns-resolution-12.txt [27] describes a process
+   through which multiple DHCP servers and clients may all act upon a
+   single DNS resource and insure there are no collisions.
+
+   draft-ietf-dnsext-dhcid-rr-13.txt [28] defines the DHCID DNS RR type,
+   which is used to match client identities with names in the DNS as
+   part of name conflict resolution.  Note that ISC DHCP's
+   implementation of DHCIDs vary wildly from this specification.  First,
+   ISC DHCP uses a TXT record in which the contents are stored in
+   hexadecimal.  Second, there is a flaw in the selection of the
+   'Identifier Type', which results in a completely different value
+
+
+
+Hankins                 Expires February 18, 2007               [Page 9]
+
+Internet-Draft                 References                    August 2006
+
+
+   being selected than is defined (or even than was defined in an older
+   revision of this draft)...also this field is one byte prior to
+   hexadecimal encoding rather than two.  Third, ISC DHCP does not use a
+   digest type code.  Rather, all values for such TXT records are
+   reached via an MD5 sum.  In short, nothing is compatbile, but the
+   principle of the TXT record is the same as the standard DHCID record.
+
+5.2.3.  Experimental: Failover References
+
+   The Failover Protocol defines a means by which two DHCP Servers can
+   share all the relevant information about leases granted to DHCP
+   clients on given networks, so that one of the two servers may fail
+   and be survived by a server that can act responsibly.
+
+   Unfortunately it has been quite some years since the last time this
+   document was edited, and the authors no longer show any interest in
+   fielding comments or improving the document.
+
+   The status of this protocol is very unsure, but ISC's implementation
+   of it has proven stable and suitable for use in sizable production
+   environments.
+
+   draft-ietf-dhc-failover-12.txt [29] describes the Failover Protocol.
+   In addition to what is described in this document, ISC DHCP has
+   elected to make some experimental changes that may be revoked in a
+   future version of ISC DHCP (if the draft authors do not adopt the new
+   behaviour).  Specifically, ISC DHCP's POOLREQ behaviour differs
+   substantially from what is documented in the draft, and the server
+   also implements a form of 'MAC Address Affinity' which is not
+   described in the failover document.  The full nature of these changes
+   have been described on the IETF DHC WG mailing list (which has
+   archives), and also in ISC DHCP's manual pages.  Also note that
+   although this document references a RECOVER-WAIT state, it does not
+   document a protocol number assignment for this state.  As a
+   consequence, ISC DHCP has elected to use the value 254.
+
+   RFC3074 [30] describes the Load Balancing Algorithm (LBA) that ISC
+   DHCP uses in concert with the Failover protocol.  Note that versions
+   3.0.* are known to misimplement the hash algorithm (it will only use
+   the low 4 bits of every byte of the hash bucket array).
+
+5.3.  DHCP Procedures
+
+   RFC2939 [31] explains how to go about obtaining a new DHCP Option
+   code assignment.
+
+
+
+
+
+
+Hankins                 Expires February 18, 2007              [Page 10]
+
+Internet-Draft                 References                    August 2006
+
+
+6.  References
+
+   [1]   Droms, R., "Dynamic Host Configuration Protocol", RFC 2131,
+         March 1997.
+
+   [2]   Hornig, C., "Standard for the transmission of IP datagrams over
+         Ethernet networks", STD 41, RFC 894, April 1984.
+
+   [3]   Katz, D., "Proposed Standard for the Transmission of IP
+         Datagrams over FDDI Networks", RFC 1188, October 1990.
+
+   [4]   Postel, J., "DoD standard Internet Protocol", RFC 760,
+         January 1980.
+
+   [5]   Postel, J., "User Datagram Protocol", STD 6, RFC 768,
+         August 1980.
+
+   [6]   Croft, B. and J. Gilmore, "Bootstrap Protocol", RFC 951,
+         September 1985.
+
+   [7]   Wimer, W., "Clarifications and Extensions for the Bootstrap
+         Protocol", RFC 1542, October 1993.
+
+   [8]   Alexander, S. and R. Droms, "DHCP Options and BOOTP Vendor
+         Extensions", RFC 2132, March 1997.
+
+   [9]   Provan, D., "DHCP Options for Novell Directory Services",
+         RFC 2241, November 1997.
+
+   [10]  Droms, R. and K. Fong, "NetWare/IP Domain Name and
+         Information", RFC 2242, November 1997.
+
+   [11]  Drach, S., "DHCP Option for The Open Group's User
+         Authentication Protocol", RFC 2485, January 1999.
+
+   [12]  Perkins, C. and E. Guttman, "DHCP Options for Service Location
+         Protocol", RFC 2610, June 1999.
+
+   [13]  Smith, C., "The Name Service Search Option for DHCP", RFC 2937,
+         September 2000.
+
+   [14]  Stump, G., Droms, R., Gu, Y., Vyaghrapuri, R., Demirtjis, A.,
+         Beser, B., and J. Privat, "The User Class Option for DHCP",
+         RFC 3004, November 2000.
+
+   [15]  Waters, G., "The IPv4 Subnet Selection Option for DHCP",
+         RFC 3011, November 2000.
+
+
+
+
+Hankins                 Expires February 18, 2007              [Page 11]
+
+Internet-Draft                 References                    August 2006
+
+
+   [16]  Lemon, T. and S. Cheshire, "Encoding Long Options in the
+         Dynamic Host Configuration Protocol (DHCPv4)", RFC 3396,
+         November 2002.
+
+   [17]  Aboba, B. and S. Cheshire, "Dynamic Host Configuration Protocol
+         (DHCP) Domain Search Option", RFC 3397, November 2002.
+
+   [18]  Mockapetris, P., "Domain names - implementation and
+         specification", STD 13, RFC 1035, November 1987.
+
+   [19]  Droms, R., "Unused Dynamic Host Configuration Protocol (DHCP)
+         Option Codes", RFC 3679, January 2004.
+
+   [20]  Littlefield, J., "Vendor-Identifying Vendor Options for Dynamic
+         Host Configuration Protocol version 4 (DHCPv4)", RFC 3925,
+         October 2004.
+
+   [21]  Volz, B., "Reclassifying Dynamic Host Configuration Protocol
+         version 4 (DHCPv4) Options", RFC 3942, November 2004.
+
+   [22]  Woundy, R. and K. Kinnear, "Dynamic Host Configuration Protocol
+         (DHCP) Leasequery", RFC 4388, February 2006.
+
+   [23]  Patrick, M., "DHCP Relay Agent Information Option", RFC 3046,
+         January 2001.
+
+   [24]  Jones, D. and R. Woundy, "The DOCSIS (Data-Over-Cable Service
+         Interface Specifications) Device Class DHCP (Dynamic Host
+         Configuration Protocol) Relay Agent Information Sub-option",
+         RFC 3256, April 2002.
+
+   [25]  Kinnear, K., Stapp, M., Johnson, R., and J. Kumarasamy, "Link
+         Selection sub-option for the Relay Agent Information Option for
+         DHCPv4", RFC 3527, April 2003.
+
+   [26]  Stapp, M., "The DHCP Client FQDN Option", September 2006.
+
+   [27]  Stapp, M., "Resolution of FQDN Conflicts among DHCP Clients",
+         September 2006.
+
+   [28]  Stapp, M., "A DNS RR for Encoding DHCP Information",
+         September 2006.
+
+   [29]  Droms, R., "DHCP Failover Protocol", March 2003.
+
+   [30]  Volz, B., Gonczi, S., Lemon, T., and R. Stevens, "DHC Load
+         Balancing Algorithm", RFC 3074, February 2001.
+
+
+
+
+Hankins                 Expires February 18, 2007              [Page 12]
+
+Internet-Draft                 References                    August 2006
+
+
+   [31]  Droms, R., "Procedures and IANA Guidelines for Definition of
+         New DHCP Options and Message Types", BCP 43, RFC 2939,
+         September 2000.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Hankins                 Expires February 18, 2007              [Page 13]
+
+Internet-Draft                 References                    August 2006
+
+
+Author's Address
+
+   David W. Hankins
+   Internet Systems Consortium, Inc.
+   950 Charter Stree
+   Redwood City, CA  94063
+
+   Phone: +1 650 423 1300
+   Email: David_Hankins@isc.org
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Hankins                 Expires February 18, 2007              [Page 14]
+
