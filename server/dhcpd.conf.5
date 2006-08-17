@@ -28,7 +28,7 @@
 .\" see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
 .\" ``http://www.nominum.com''.
 .\"
-.\" $Id: dhcpd.conf.5,v 1.80 2006/08/08 19:45:11 dhankins Exp $
+.\" $Id: dhcpd.conf.5,v 1.80.4.1 2006/08/17 21:50:13 dhankins Exp $
 .\"
 .TH dhcpd.conf 5
 .SH NAME
@@ -677,9 +677,9 @@ statement
 .PP
 .B max-unacked-updates \fIcount\fR\fB;\fR
 .PP
-The \fBmax-unacked-updates\fR statement tells the DHCP server how
+The \fBmax-unacked-updates\fR statement tells the remote DHCP server how
 many BNDUPD messages it can send before it receives a BNDACK
-from the failover peer.   We don't have enough operational experience
+from the local system.   We don't have enough operational experience
 to say what a good value for this is, but 10 seems to work.   This
 parameter must be specified.
 .RE
