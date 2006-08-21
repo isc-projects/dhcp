@@ -1,6 +1,6 @@
 <?xml version='1.0' ?>
 
-<!-- $Id: References.xml,v 1.1.2.3 2006/08/17 21:36:32 dhankins Exp $ -->
+<!-- $Id: References.xml,v 1.1.2.4 2006/08/21 17:45:33 dhankins Exp $ -->
 
 <?rfc toc="yes"?>
 
@@ -119,7 +119,7 @@
 
   <middle>
     <section title="Introduction">
-	<t>As a little history anecdote, ISC DHCP once packaged all the
+	<t>As a little historical anecdote, ISC DHCP once packaged all the
 	relevant RFCs and standards documents along with the software
 	package.  Until one day when a voice was heard from one of the
 	many fine institutions that build and distribute this software...
@@ -177,12 +177,12 @@
 	are written "to match reference."</t>
 
 	<t>If the software has a behaviour that manifests itself
-	externally (wether it be something as simple as the 'wire
+	externally (whether it be something as simple as the 'wire
 	format' or something higher level, such as a complicated
 	behaviour that arises from multiple message exchanges), that
 	behaviour must be found in a reference document.</t>
 
-	<t>Anything else is a bug, the only question is wether the
+	<t>Anything else is a bug, the only question is whether the
 	bug is in reference or software (failing to implement the
 	reference).</t>
 
@@ -485,7 +485,7 @@
 	  revision of this draft)...also this field is one byte prior to
 	  hexadecimal encoding rather than two.  Third, ISC DHCP does not
 	  use a digest type code.  Rather, all values for such TXT records
-	  are reached via an MD5 sum.  In short, nothing is compatbile, but
+	  are reached via an MD5 sum.  In short, nothing is compatible, but
 	  the principle of the TXT record is the same as the standard DHCID
 	  record.</t>
 	</section>
