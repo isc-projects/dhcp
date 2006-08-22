@@ -32,7 +32,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.129.2.33 2006/07/09 15:40:12 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.129.2.34 2006/08/22 15:13:57 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1350,6 +1350,16 @@ void dhcpnak (packet)
 
 	/* Stop sending DHCPREQUEST packets... */
 	cancel_timeout (send_request, client);
+
+	/* On some scripts, 'EXPIRE' causes the interface to be ifconfig'd
+	 * down (this expunges any routes and arp cache).  This makes the
+	 * interface unusable by state_init(), which we call next.  So, we
+	 * need to 'PREINIT' the interface to bring it back up.
+	 */
+	script_init(client, "PREINIT", NULL);
+	if (client->alias)
+		script_write_params(client, "alias_", client->alias);
+	script_go(client);
 
 	client -> state = S_INIT;
 	state_init (client);
