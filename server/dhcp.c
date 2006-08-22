@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.208.18.1 2006/08/11 22:50:22 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.208.18.2 2006/08/22 16:02:51 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1361,7 +1361,8 @@ void nak_lease (packet, cip)
 	option_state_dereference (&options, MDL);
 
 /*	memset (&raw.ciaddr, 0, sizeof raw.ciaddr);*/
-	raw.siaddr = packet -> interface -> primary_address;
+	if (packet -> interface -> address_count)
+		raw.siaddr = packet -> interface -> addresses [0];
 	raw.giaddr = packet -> raw -> giaddr;
 	memcpy (raw.chaddr, packet -> raw -> chaddr, sizeof raw.chaddr);
 	raw.hlen = packet -> raw -> hlen;
@@ -2522,9 +2523,13 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 		}
 	} else {
 		/* XXXSK: should we use get_server_source_address() here? */
-		state -> from.len = sizeof state -> ip -> primary_address;
-		memcpy (state -> from.iabuf, &state -> ip -> primary_address,
-			state -> from.len);
+		if (state -> ip -> address_count) {
+			state -> from.len =
+				sizeof state -> ip -> addresses [0];
+			memcpy (state -> from.iabuf,
+				&state -> ip -> addresses [0],
+				state -> from.len);
+		}
 	}
 
 	/* Figure out the address of the boot file server. */
@@ -3939,18 +3944,22 @@ get_server_source_address(struct in_addr *from,
 		data_string_forget(&d, MDL);
 	}
 
-	if (option_cache_allocate(&oc, MDL)) {
-		a = &packet->interface->primary_address;
-		if (make_const_data(&oc->expression,
-				    (char *)a, sizeof(*a),
-				    0, 0, MDL)) {
-			option_code_hash_lookup(&oc->option, 
-						dhcp_universe.code_hash,
-						&option_num, 0, MDL);
-			save_option(&dhcp_universe, options, oc);
+	if (packet->interface->address_count > 0) {
+		if (option_cache_allocate(&oc, MDL)) {
+			a = &packet->interface->addresses[0];
+			if (make_const_data(&oc->expression,
+					    (char *)a, sizeof(*a),
+					    0, 0, MDL)) {
+				option_code_hash_lookup(&oc->option, 
+							dhcp_universe.code_hash,
+							&option_num, 0, MDL);
+				save_option(&dhcp_universe, options, oc);
+			}
+			option_cache_dereference(&oc, MDL);
 		}
-		option_cache_dereference(&oc, MDL);
+		*from = packet->interface->addresses[0];
+	} else {
+       		memset(from, 0, sizeof(*from));
 	}
-	*from = packet->interface->primary_address;
 }
 

@@ -27,7 +27,7 @@
 .\" see ``http://www.isc.org/isc''.  To learn more about Vixie
 .\" Enterprises, see ``http://www.vix.com''.
 .\"
-.\" $Id: dhcrelay.8,v 1.11.90.1 2006/08/11 22:50:22 dhankins Exp $
+.\" $Id: dhcrelay.8,v 1.11.90.2 2006/08/22 16:02:51 dhankins Exp $
 .\"
 .TH dhcrelay 8
 .SH NAME
@@ -47,6 +47,11 @@ dhcrelay - Dynamic Host Configuration Protocol Relay Agent
 [
 .B -i
 .I if0
+[
+.B -is
+.I server
+...
+]
 [
 .B ...
 .B -i
@@ -113,6 +118,11 @@ network interfaces to which the server (or the router that reaches the
 server) is attached.   However, in some cases it may be necessary to
 exclude some networks; in this case, you must list all those network
 interfaces that should \fInot\fR be excluded using the \fB-i\fR flag.
+.PP
+The
+.B -is
+flag can be used to indicate that for the previous interface specified with
+-i, packets should be forwarded to the specified server.
 .PP
 In some cases it
 .I is
