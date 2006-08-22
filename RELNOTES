@@ -151,6 +151,9 @@ the README file.
   after the EXPIRE state, so that interfaces that might be configured
   'down' can be brought back 'up' and initialized.
 
+- DHCPINFORM handling for clients that properly set ciaddr and come to the
+  server via a relay agent has been repaired.
+
 			Changes since 3.0.4
 
 - A warning that host statements declared within subnet or shared-network
