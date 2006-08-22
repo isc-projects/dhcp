@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.192.2.64 2006/07/17 09:17:19 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.192.2.65 2006/08/22 17:15:56 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1250,33 +1250,28 @@ void dhcpinform (packet, ms_nulltp)
 
 	/* RFC2131 states the server SHOULD unciast to ciaddr.
 	 * There are two wrinkles - relays, and when ciaddr is zero.
-	 * There's actually no mention of relays at all in rfc2131.
-	 * I think it's best to use relays where present...a relay is
-	 * a bit more trustworthy about getting the message to a client
-	 * than a client might be (it's better to send to a relay than
-	 * to, say, a link-local address the client has selected).
+	 * There's actually no mention of relays at all in rfc2131 in
+	 * regard to DHCPINFORM, except to say we might get packets from
+	 * clients via them.  Note: relays unicast to clients to the
+	 * "yiaddr" address, which servers are forbidden to set when
+	 * answering an inform.
 	 *
-	 * Where ciaddr is zero, which actually does happen quite frequently
-	 * even though rfc2131 is unequivocal on the subject, we try to help
-	 * by using the IP source address.
+	 * The solution: If ciaddr is zero, and giaddr is set, go via the
+	 * relay with the broadcast flag set to help the relay (with no
+	 * yiaddr and very likely no chaddr, it will have no idea where to
+	 * send the packet).
 	 *
-	 * Where ciaddr is zero AND we got it via a relay, the IP source
-	 * address is the relay - and we're transmitting to the client
-	 * port.  This might cause a loop.
+	 * If the ciaddr is zero and giaddr is not set, go via the source
+	 * IP address (but you are permitted to barf on their shoes).
 	 *
-	 * So, overall, this is neater if the relay is selected first,
-	 * treated like a relay, client addressing taken second.  Since
-	 * a relay possibly has no way of knowing how to reach the client
-	 * if chaddr is zero (equally as common as ciaddr being zeroed),
-	 * set the broadcast bit to try and help.
+	 * If ciaddr is not zero, send the packet there always.
 	 */
-	if (gip.len) {
+	if (!raw.ciaddr.s_addr && gip.len) {
 		memcpy(&to.sin_addr, gip.iabuf, 4);
 		to.sin_port = local_port;
-
-		if (!raw.hlen)
-			raw.flags |= htons(BOOTP_BROADCAST);
+		raw.flags |= htons(BOOTP_BROADCAST);
 	} else {
+		gip.len = 0;
 		memcpy(&to.sin_addr, cip.iabuf, 4);
 		to.sin_port = remote_port;
 	}

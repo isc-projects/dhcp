@@ -1,6 +1,6 @@
 	      Internet Systems Consortium DHCP Distribution
-			    Version 3.0.5rc1
-			     August 8, 2006
+			    Version 3.0.5rc2
+			     August 22, 2006
 
 			     Release Notes
 
@@ -87,9 +87,8 @@ and for prodding me into improving it.
   after the EXPIRE state, so that interfaces that might be configured
   'down' can be brought back 'up' and initialized.
 
-			Changes since 3.0.5b1
-
-* There have been no changes, cosmetic or otherwise, since 3.0.5b1.
+- DHCPINFORM handling for clients that properly set ciaddr and come to the
+  server via a relay agent has been repaired.
 
 			Changes since 3.0.4
 
