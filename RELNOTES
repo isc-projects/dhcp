@@ -143,6 +143,14 @@ the README file.
 - Encapsulated option spaces within encapsulated option spaces is now
   formally supported.
 
+			Changes since 3.0.5rc1
+
+- A bug was repaired in fixes to the dhclient which saught to run the
+  dhclient-script with the 'EXPIRE' state should it receive a NAK in
+  response to a REQUEST.  The client now iterates the PREINIT state
+  after the EXPIRE state, so that interfaces that might be configured
+  'down' can be brought back 'up' and initialized.
+
 			Changes since 3.0.4
 
 - A warning that host statements declared within subnet or shared-network
