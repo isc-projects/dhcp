@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.98 2006/08/11 09:15:17 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.99 2006/08/24 14:58:55 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -2057,6 +2057,61 @@ int hashed_option_state_dereference (universe, state, file, line)
 	return 1;
 }
 
+/* The 'data_string' primitive doesn't have an appension mechanism.
+ * This function must then append a new option onto an existing buffer
+ * by first duplicating the original buffer and appending the desired
+ * values, followed by coping the new value into place.
+ */
+static int
+append_option(struct data_string *dst, struct universe *universe,
+	      struct option *option, struct data_string *src)
+{
+	struct data_string tmp;
+
+	if (src->len == 0)
+		return 0;
+
+	memset(&tmp, 0, sizeof(tmp));
+
+	/* Allocate a buffer to hold existing data, the current option's
+	 * tag and length, and the option's content.
+	 */
+	if (!buffer_allocate(&tmp.buffer,
+			     (dst->len + universe->length_size +
+			      universe->tag_size + src->len), MDL)) {
+		/* XXX: This kills all options presently stored in the
+		 * destination buffer.  This is the way the original code
+		 * worked, and assumes an 'all or nothing' approach to
+		 * eg encapsulated option spaces.  It may or may not be
+		 * desirable.
+		 */
+		data_string_forget(dst, MDL);
+		return 0;
+	}
+	tmp.data = tmp.buffer->data;
+
+	/* Copy the existing data off the destination. */
+	if (dst->len != 0)
+		memcpy(tmp.buffer->data, dst->data, dst->len);
+	tmp.len = dst->len;
+
+	/* Place the new option tag and length. */
+	(*universe->store_tag)(tmp.buffer->data + tmp.len, option->code);
+	tmp.len += universe->tag_size;
+	(*universe->store_length)(tmp.buffer->data + tmp.len, src->len);
+	tmp.len += universe->length_size;
+
+	/* Copy the option contents onto the end. */
+	memcpy(tmp.buffer->data + tmp.len, src->data, src->len);
+	tmp.len += src->len;
+
+	/* Play the shell game. */
+	data_string_forget(dst, MDL);
+	data_string_copy(dst, &tmp, MDL);
+	data_string_forget(&tmp, MDL);
+	return 1;
+}
+
 int
 store_option(struct data_string *result, struct universe *universe,
 	     struct packet *packet, struct lease *lease,
@@ -2128,61 +2183,6 @@ store_option(struct data_string *result, struct universe *universe,
 	return 0;
 }
 
-/* The 'data_string' primitive doesn't have an appension mechanism.
- * This function must then append a new option onto an existing buffer
- * by first duplicating the original buffer and appending the desired
- * values, followed by coping the new value into place.
- */
-int
-append_option(struct data_string *dst, struct universe *universe,
-	      struct option *option, struct data_string *src)
-{
-	struct data_string tmp;
-
-	if (src->len == 0)
-		return 0;
-
-	memset(&tmp, 0, sizeof(tmp));
-
-	/* Allocate a buffer to hold existing data, the current option's
-	 * tag and length, and the option's content.
-	 */
-	if (!buffer_allocate(&tmp.buffer,
-			     (dst->len + universe->length_size +
-			      universe->tag_size + src->len), MDL)) {
-		/* XXX: This kills all options presently stored in the
-		 * destination buffer.  This is the way the original code
-		 * worked, and assumes an 'all or nothing' approach to
-		 * eg encapsulated option spaces.  It may or may not be
-		 * desirable.
-		 */
-		data_string_forget(dst, MDL);
-		return 0;
-	}
-	tmp.data = tmp.buffer->data;
-
-	/* Copy the existing data off the destination. */
-	if (dst->len != 0)
-		memcpy(tmp.buffer->data, dst->data, dst->len);
-	tmp.len = dst->len;
-
-	/* Place the new option tag and length. */
-	(*universe->store_tag)(tmp.buffer->data + tmp.len, option->code);
-	tmp.len += universe->tag_size;
-	(*universe->store_length)(tmp.buffer->data + tmp.len, src->len);
-	tmp.len += universe->length_size;
-
-	/* Copy the option contents onto the end. */
-	memcpy(tmp.buffer->data + tmp.len, src->data, src->len);
-	tmp.len += src->len;
-
-	/* Play the shell game. */
-	data_string_forget(dst, MDL);
-	data_string_copy(dst, &tmp, MDL);
-	data_string_forget(&tmp, MDL);
-	return 1;
-}
-
 int option_space_encapsulate (result, packet, lease, client_state,
 			      in_options, cfg_options, scope, name)
 	struct data_string *result;
@@ -2203,7 +2203,7 @@ int option_space_encapsulate (result, packet, lease, client_state,
 	if (u == NULL) {
 		log_error("option_space_encapsulate: option space %.*s does "
 			  "not exist, but is configured.",
-			  name->len, name->data);
+			  (int)name->len, name->data);
 		return status;
 	}
 
