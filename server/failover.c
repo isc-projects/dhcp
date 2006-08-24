@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.63 2006/06/19 15:15:16 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.64 2006/08/24 14:55:51 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -5029,7 +5029,7 @@ isc_result_t dhcp_failover_process_bind_ack (dhcp_failover_state_t *state,
 	    lease->binding_state == FTS_RESET ||
 	    lease->binding_state == FTS_RELEASED)
 	{
-		lease->tsfp = pot_expire;
+		lease->atsfp = lease->tsfp = pot_expire;
 		if ((state->i_am == secondary) &&
 		    (lease->flags & RESERVED_LEASE))
 			lease->next_binding_state = FTS_BACKUP;
@@ -5061,7 +5061,7 @@ isc_result_t dhcp_failover_process_bind_ack (dhcp_failover_state_t *state,
 		if (state->me.state == normal)
 			commit_leases ();
 	} else {
-		lease->tsfp = pot_expire;
+		lease->atsfp = lease->tsfp = pot_expire;
 		if (lease->desired_binding_state != lease->binding_state) {
 			lease->next_binding_state =
 				lease->desired_binding_state;
