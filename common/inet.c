@@ -35,7 +35,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: inet.c,v 1.11 2006/05/15 15:07:49 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: inet.c,v 1.11.60.1 2006/08/28 18:16:49 shane Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -210,29 +210,32 @@ addr_match(addr, match)
 	return 1;
 }
 
-char *piaddr (addr)
-	struct iaddr addr;
-{
-	static char pbuf [4 * 16];
-	char *s = pbuf;
-	int i;
+/* XXX: should use a const pointer rather than passing the structure */
+const char *
+piaddr(struct iaddr addr) {
+	static char 
+		pbuf[sizeof("ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255")];
 
-	if (addr.len > sizeof(addr.iabuf))
-		log_fatal("piaddr():%s:%d: Address length too long.", MDL);
+	/* INSIST((addr.len == 0) || (addr.len == 4) || (addr.len == 16)); */
 
 	if (addr.len == 0) {
-		strcpy (s, "<null address>");
+		return "<null address>";
 	}
-	for (i = 0; i < addr.len; i++) {
-		sprintf (s, "%s%d", i ? "." : "", addr.iabuf [i]);
-		s += strlen (s);
+	if (addr.len == 4) {
+		return inet_ntop(AF_INET, addr.iabuf, pbuf, sizeof(pbuf));
+	} 
+	if (addr.len == 16) {
+		return inet_ntop(AF_INET6, addr.iabuf, pbuf, sizeof(pbuf));
 	}
-	return pbuf;
+
+	log_fatal("piaddr():%s:%d: Invalid address length %d.", MDL, addr.len);
+	/* quell compiler warnings */
+	return NULL;
 }
 
-char *piaddrmask (struct iaddr addr, struct iaddr mask,
-		  const char *file, int line)
-{
+/* XXX: should use a const pointer rather than passing the structure */
+char *
+piaddrmask(struct iaddr addr, struct iaddr mask, const char *file, int line) {
 	char *s, tbuf[sizeof("255.255.255.255/32")];
 	int mw;
 	unsigned i, oct, bit;
@@ -268,5 +271,37 @@ char *piaddrmask (struct iaddr addr, struct iaddr mask,
 		return s;
 	strcpy(s, tbuf);
 	return s;
+}
+
+char *
+piaddrcidr(const struct iaddr *addr, unsigned int bits, 
+	   const char *file, int line) {
+	const char *tmp;
+	int tmp_len;
+	char *ret;
+
+	/* INSIST(addr != NULL); */
+	/* INSIST((addr->len == 4) || (addr->len == 16)); */
+	/* INSIST(bits <= (addr->len * 8)); */
+
+	tmp = piaddr(*addr);
+
+	/*
+	 * Figure out how much space we need for the address plus
+	 * the bit count, and the trailing NUL character. 
+	 * "2001::/96", for instance.
+	 */
+	tmp_len = strlen(tmp) + 3;
+	if (bits >= 100) {
+		tmp_len += 2;
+	} else if (bits >= 10) {
+		tmp_len += 1;
+	}
+
+	ret = dmalloc(tmp_len, file, line);
+	if (ret != NULL) {
+		sprintf(ret, "%s/%d", tmp, bits);
+	}
+	return ret;
 }
 

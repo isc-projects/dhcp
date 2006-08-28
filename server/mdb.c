@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.82.10.1 2006/08/11 22:50:22 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.82.10.2 2006/08/28 18:16:50 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -686,29 +686,29 @@ int find_grouped_subnet (struct subnet **sp,
 	return 0;
 }
 
-int subnet_inner_than (subnet, scan, warnp)
-	struct subnet *subnet, *scan;
-	int warnp;
-{
-	if (addr_eq (subnet_number (subnet -> net, scan -> netmask),
-		     scan -> net) ||
-	    addr_eq (subnet_number (scan -> net, subnet -> netmask),
-		     subnet -> net)) {
-		char n1buf [16];
+/* XXX: could speed up if everyone had a prefix length */
+int 
+subnet_inner_than(const struct subnet *subnet, 
+		  const struct subnet *scan,
+		  int warnp) {
+	if (addr_eq(subnet_number(subnet->net, scan->netmask), scan->net) ||
+	    addr_eq(subnet_number(scan->net, subnet->netmask), subnet->net)) {
+		char n1buf[sizeof("ffff:ffff:ffff:ffff:ffff:ffff:255.255.255")];
 		int i, j;
-		for (i = 0; i < 32; i++)
-			if (subnet -> netmask.iabuf [3 - (i >> 3)]
+		for (i = 0; i < 128; i++)
+			if (subnet->netmask.iabuf[3 - (i >> 3)]
 			    & (1 << (i & 7)))
 				break;
-		for (j = 0; j < 32; j++)
-			if (scan -> netmask.iabuf [3 - (j >> 3)] &
+		for (j = 0; j < 128; j++)
+			if (scan->netmask.iabuf[3 - (j >> 3)] &
 			    (1 << (j & 7)))
 				break;
-		strcpy (n1buf, piaddr (subnet -> net));
-		if (warnp)
-			log_error ("%ssubnet %s/%d overlaps subnet %s/%d",
-			      "Warning: ", n1buf, 32 - i,
-			      piaddr (scan -> net), 32 - j);
+		if (warnp) {
+			strcpy(n1buf, piaddr(subnet->net));
+			log_error("Warning: subnet %s/%d overlaps subnet %s/%d",
+			      n1buf, 32 - i,
+			      piaddr(scan->net), 32 - j);
+		}
 		if (i < j)
 			return 1;
 	}

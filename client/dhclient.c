@@ -32,7 +32,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.142.8.2 2006/08/22 16:02:50 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.142.8.3 2006/08/28 18:16:49 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -79,10 +79,8 @@ static void usage PROTO ((void));
 
 void do_release(struct client_state *);
 
-int main (argc, argv, envp)
-	int argc;
-	char **argv, **envp;
-{
+int 
+main(int argc, char **argv) {
 	int fd;
 	int i;
 	struct servent *ent;
@@ -1082,6 +1080,11 @@ void dhcp (packet)
 		}
 	}
 	(*handler) (packet);
+}
+
+void 
+dhcpv6(const struct packet6 *packet) {
+	log_fatal("IPv6 not supported in client");
 }
 
 void dhcpoffer (packet)

@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcrelay.c,v 1.58.64.2 2006/08/22 16:02:51 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhcrelay.c,v 1.58.64.3 2006/08/28 18:16:50 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -97,10 +97,8 @@ static char arr [] = "All rights reserved.";
 static char message [] = "Internet Systems Consortium DHCP Relay Agent";
 static char url [] = "For info, please visit http://www.isc.org/sw/dhcp/";
 
-int main (argc, argv, envp)
-	int argc;
-	char **argv, **envp;
-{
+int 
+main(int argc, char **argv) {
 	int fd;
 	int i;
 	struct servent *ent;
@@ -538,6 +536,11 @@ void bootp (packet)
 void dhcp (packet)
 	struct packet *packet;
 {
+}
+
+void 
+dhcpv6(const struct packet6 *packet) {
+	/* XXX: should we warn or something here? */
 }
 
 int find_subnet (struct subnet **sp,

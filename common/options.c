@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.92.2.2 2006/08/28 16:10:14 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.92.2.3 2006/08/28 18:16:49 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -2903,6 +2903,49 @@ pretty_escape(char **dst, char *dend, const unsigned char **src,
 	}
 
 	return count;
+}
+
+void 
+do_packet6(struct interface_info *interface, 
+	   const struct dhcpv6_packet *packet, 
+	   int len, int from_port, const struct iaddr *from) {
+
+	int i;
+	struct option_cache *op;
+	struct packet6 *decoded_packet;
+
+	decoded_packet = NULL;
+	if (!packet6_allocate(&decoded_packet, MDL)) {
+		log_error("do_packet6: no memory for incoming packet.");
+		return;
+	}
+
+	decoded_packet->msg_type = packet->msg_type;
+	memcpy(decoded_packet->transaction_id, 
+	       packet->transaction_id, sizeof(decoded_packet->transaction_id));
+	decoded_packet->client_port = from_port;
+	decoded_packet->client_addr = *from;
+	interface_reference(&decoded_packet->interface, interface, MDL);
+	
+	if (!option_state_allocate(&decoded_packet->options, MDL)) {
+		log_error("do_packet6: no memory for options.");
+		return;
+	}
+
+	/* 
+	 * XXX: to work, we have to merge in the new different-size
+	 *      options from HEAD
+	 */
+	if (!parse_option_buffer(decoded_packet->options, 
+				 packet->options, len-4, &dhcp_universe)) {
+		/* no logging here, as parse_option_buffer() logs all
+		   cases where it fails */
+		return;
+	}
+
+	dhcpv6(decoded_packet);
+
+	packet6_dereference(&decoded_packet, MDL);
 }
 
 static int

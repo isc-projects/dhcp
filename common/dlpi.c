@@ -77,9 +77,17 @@
  * to sleep.
  */
 
+/*
+ * The Open Group Technical Standard can be found here:
+ * http://www.opengroup.org/onlinepubs/009618899/index.htm
+ *
+ * The HP DLPI Programmer's Guide can be found here:
+ * http://docs.hp.com/en/B2355-90139/index.html
+ */
+
 #ifndef lint
 static char copyright[] =
-"$Id: dlpi.c,v 1.29 2005/03/17 20:14:57 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dlpi.c,v 1.29.116.1 2006/08/28 18:16:49 shane Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"

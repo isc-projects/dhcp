@@ -3,7 +3,7 @@
    Protocol structures... */
 
 /*
- * Copyright (c) 2004-2005 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2006 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -29,6 +29,9 @@
  * about Internet Systems Consortium, see ``http://www.isc.org''.
  * To learn more about Vixie Enterprises, see ``http://www.vix.com''.
  */
+
+#ifndef DHCP_H
+#define DHCP_H
 
 #define DHCP_UDP_OVERHEAD	(20 + /* IP header */			\
 			8)   /* UDP header */
@@ -197,3 +200,32 @@ struct dhcp_packet {
 
 /* Enterprise Suboptions: */
 #define VENDOR_ISC_SUBOPTIONS		2495
+
+/* Defined in section 6 of RFC 3315 */
+struct dhcpv6_packet {
+	unsigned char msg_type;
+	unsigned char transaction_id[3];
+	unsigned char options[0];
+};
+
+/* Defined in section 5.3 of RFC 3315 */
+#define DHCPV6_SOLICT 1
+#define DHCPV6_ADVERTISE 2
+#define DHCPV6_REQUEST 3
+#define DHCPV6_CONFIRM 4
+#define DHCPV6_RENEW 5
+#define DHCPV6_REBIND 6
+#define DHCPV6_REPLY 7
+#define DHCPV6_RELEASE 8
+#define DHCPV6_DECLINE 9
+#define DHCPV6_RECONFIGURE 10
+#define DHCPV6_INFORMATION_REQUEST 11
+#define DHCPV6_RELAY_FORW 12
+#define DHCPV6_RELAY_REPL 13
+
+/* Defined in section 5.1 of RFC 3315 */
+#define All_DHCP_Relay_Agents_and_Servers "FF02::1:2"
+#define All_DHCP_Servers "FF05::1:3"
+
+#endif /* DHCP_H */
+

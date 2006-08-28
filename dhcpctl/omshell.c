@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: omshell.c,v 1.11 2006/02/24 23:16:29 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: omshell.c,v 1.11.92.1 2006/08/28 18:16:50 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include <time.h>
@@ -58,6 +58,10 @@ int parse_allow_deny (struct option_cache **oc, struct parse *cfile, int flag)
 }
 void dhcp (struct packet *packet) { }
 void bootp (struct packet *packet) { }
+
+/* XXX: should we warn or something here? */
+void dhcpv6(const struct packet6 *packet) { }
+
 int check_collection (struct packet *p, struct lease *l, struct collection *c)
 {
 	return 0;
@@ -76,8 +80,8 @@ static void check (isc_result_t status, const char *func) {
 	}
 }
 
-int main (int argc, char **argv, char **envp)
-{
+int 
+main(int argc, char **argv) {
 	isc_result_t status, waitstatus;
 	dhcpctl_handle connection;
 	dhcpctl_handle authenticator;

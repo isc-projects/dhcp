@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: alloc.c,v 1.57 2006/06/01 20:23:17 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: alloc.c,v 1.57.52.1 2006/08/28 18:16:49 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1145,6 +1145,140 @@ int packet_dereference (ptr, file, line)
 	packet -> raw = (struct dhcp_packet *)free_packets;
 	free_packets = packet;
 	dmalloc_reuse (free_packets, (char *)0, 0, 0);
+	return 1;
+}
+
+/*
+ * Allocate memory for a structure to hold an IPv6 packet, and initialize.
+ *
+ * Sample usage:
+ *
+ *	struct packet6 *p;
+ *	p = NULL;
+ *	if (!packet6_allocate(&p, MDL)) {
+ *		log_fatal("Out of memory allocating an IPv6 packet structure.");
+ *	}
+ * 
+ * Note that packet_allocate() uses a free list, but we're not going to 
+ * bother unless there is some issue using dmalloc().
+ */
+int 
+packet6_allocate(struct packet6 **ptr, const char *file, int line) {
+	struct packet6 *p;
+
+	if (ptr == NULL) {
+		log_error("%s(%d): null pointer reference", file, line);
+#if defined (POINTER_DEBUG)
+		abort();
+#else
+		return 0;
+#endif
+	}
+
+	if (*ptr != NULL) {
+		log_error("%s(%d): non-null pointer", file, line);
+#if defined (POINTER_DEBUG)
+		abort();
+#else
+		*ptr = NULL;
+#endif
+	}
+
+	p = dmalloc(sizeof(*p), file, line);
+	if (p != NULL) {
+		return packet6_reference(ptr, p, file, line);
+	}
+	return 0;
+}
+
+/*
+ * Store a reference from an IPv6 packet in the passed pointer reference.
+ */
+int
+packet6_reference(struct packet6 **ptr, struct packet6 *bp, 
+		  const char *file, int line) {
+	if (ptr == NULL) {
+		log_error("%s(%d): null pointer reference", file, line);
+#if defined (POINTER_DEBUG)
+		abort();
+#else
+		return 0;
+#endif
+	}
+	if (*ptr != NULL) {
+		log_error("%s(%d): non-null pointer", file, line);
+#if defined (POINTER_DEBUG)
+		abort();
+#else
+		*ptr = NULL;
+#endif
+	}
+	*ptr = bp;
+	bp->refcnt++;
+	rc_register(file, line, ptr, bp, bp->refcnt, 0, RC_MISC);
+	return 1;
+}
+
+/*
+ * Remove a reference from the given pointer reference to an IPv6 packet.
+ *
+ * If this was the last reference, clean up the object, by
+ * - Dereferencing the interface, if any,
+ * - Dereferencing the options, if any,
+ * - Dereferencing the shared networks, if any, and
+ * - Freeing the memory used.
+ */
+int 
+packet6_dereference(struct packet6 **ptr, const char *file, int line) {
+	struct packet6 *packet;
+
+	if (ptr == NULL) {
+		log_error("%s(%d): null pointer reference", file, line);
+#if defined (POINTER_DEBUG)
+		abort();
+#else
+		return 0;
+#endif
+	}
+	if (*ptr == NULL) {
+		log_error("%s(%d): null pointer", file, line);
+#if defined (POINTER_DEBUG)
+		abort();
+#else
+		return 0;
+#endif
+	}
+
+	packet = *ptr;
+	*ptr = NULL;
+	--packet->refcnt;
+	rc_register(file, line, ptr, packet, packet->refcnt, 1, RC_MISC);
+	if (packet->refcnt > 0) {
+		return 1;
+	}
+
+	if (packet->refcnt < 0) {
+		log_error("%s(%d): negative refcnt!", file, line);
+#if defined (DEBUG_RC_HISTORY)
+		dump_rc_history(packet);
+#endif
+#if defined (POINTER_DEBUG)
+		abort();
+#else
+		return 0;
+#endif
+	}
+
+	if (packet->interface) {
+		interface_dereference(&packet->interface, file, line);
+	}
+	if (packet->shared_network) {
+		shared_network_dereference (&packet -> shared_network, MDL);
+	}
+	if (packet->options) {
+		option_state_dereference(&packet->options, file, line);
+	}
+	dfree(packet, file, line);
 	return 1;
 }
 
