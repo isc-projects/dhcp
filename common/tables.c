@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tables.c,v 1.56.2.2 2006/08/14 11:28:11 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: tables.c,v 1.56.2.3 2006/08/28 16:10:14 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -96,6 +96,7 @@ HASH_FUNCTIONS (option_code, const unsigned *, struct option,
        named enumeration.   Named enumerations are tracked in parse.c.
    d - Domain name (i.e., FOO or FOO.BAR).
    D - Domain list (i.e., example.com eng.example.com)
+   c - When following a 'D' atom, enables compression pointers.
 */
 
 struct universe dhcp_universe;
@@ -185,21 +186,27 @@ static struct option dhcp_options[] = {
 	{ "nds-servers", "IA",			&dhcp_universe,  85, 1 },
 	{ "nds-tree-name", "t",			&dhcp_universe,  86, 1 },
 	{ "nds-context", "t",			&dhcp_universe,  87, 1 },
+
+	/* Note: RFC4280 fails to identify if the DHCPv4 option is to use
+	 * compression pointers or not.  Assume not.
+	 */
+	{ "bcms-controller-names", "D",		&dhcp_universe,  88, 1 },
 	{ "bcms-controller-address", "Ia",	&dhcp_universe,  89, 1 },
+
+	{ "client-last-transaction-time", "L",  &dhcp_universe,  91, 1 },
+	{ "associated-ip", "Ia",                &dhcp_universe,  92, 1 },
 #if 0
 	/* Not defined by RFC yet */
 	{ "pxe-system-type", "S",		&dhcp_universe,  93, 1 },
 	{ "pxe-interface-id", "BBB",		&dhcp_universe,  94, 1 },
 	{ "pxe-client-id", "BX",		&dhcp_universe,  97, 1 },
 #endif
-	{ "client-last-transaction-time", "L",	&dhcp_universe,  91, 1 },
-	{ "associated-ip", "Ia",		&dhcp_universe,  92, 1 },
 	{ "uap-servers", "t",			&dhcp_universe,  98, 1 },
 	{ "netinfo-server-address", "Ia",	&dhcp_universe, 112, 1 },
 	{ "netinfo-server-tag", "t",		&dhcp_universe, 113, 1 },
 	{ "default-url", "t",			&dhcp_universe, 114, 1 },
 	{ "subnet-selection", "I",		&dhcp_universe, 118, 1 },
-	{ "domain-search", "D",			&dhcp_universe, 119, 1 },
+	{ "domain-search", "Dc",		&dhcp_universe, 119, 1 },
 	{ "vivco", "Evendor-class.",		&dhcp_universe, 124, 1 },
 	{ "vivso", "Evendor.",			&dhcp_universe, 125, 1 },
 #if 0
@@ -289,6 +296,183 @@ static struct option isc_options [] = {
 	{ "media", "t",				&isc_universe,   1, 1 },
 	{ "update-assist", "X",			&isc_universe,   2, 1 },
 	{ NULL,	NULL, NULL, 0, 0 }
+};
+
+struct universe dhcpv6_universe;
+static struct option dhcpv6_options[] = {
+
+				/* RFC3315 OPTIONS */
+
+	/* Client and server DUIDs are opaque fields. */
+	{ "client-id", "X",			&dhcpv6_universe,  1, 1 },
+	{ "server-id", "X",			&dhcpv6_universe,  2, 1 },
+
+	/* The option space is actually DHCPv6, but it needs to be in a
+	 * separate space from the root option space (specific to this
+	 * one instance of an ia-*).  So we need to figure out this whole
+	 * "multi parent spaces" thing.
+	 */
+	{ "ia-na", "eLTTEdhcpv6.",		&dhcpv6_universe,  3, 1 },
+	{ "ia-ta", "eLEdhcpv6.",		&dhcpv6_universe,  4, 1 },
+	{ "ia-addr", "e6TTEdhcpv6.",		&dhcpv6_universe,  5, 1 },
+
+	/* "oro" is DHCPv6 speak for "parameter-request-list" */
+	{ "oro", "SA",				&dhcpv6_universe,  6, 1 },
+
+	{ "preference", "B",			&dhcpv6_universe,  7, 1 },
+	{ "elapsed-time", "S",			&dhcpv6_universe,  8, 1 },
+	{ "relay-msg", "X",			&dhcpv6_universe,  9, 1 },
+
+	/* Option code 10 is curiously unassigned. */
+#if 0
+	/* XXX: missing suitable atoms for the auth option.  We may want
+	 * to 'virtually encapsulate' this option a la the fqdn option
+	 * seeing as it is processed explicitly by the server and unlikely
+	 * to be configured by hand by users as such.
+	 */
+	{ "auth", "Nauth-protocol.Nauth-algorithm.Nrdm-type.LLX",
+						&dhcpv6_universe, 11, 1 },
+#endif
+	{ "unicast", "6",			&dhcpv6_universe, 12, 1 },
+	{ "status-code", "Nstatus-codes.t",	&dhcpv6_universe, 13, 1 },
+	{ "rapid-commit", "",			&dhcpv6_universe, 14, 1 },
+#if 0
+	/* XXX: user-class contents are of the form "StA" where the
+	 * integer describes the length of the text field.  We don't have
+	 * an atom for pre-determined-length octet strings yet, so we
+	 * can't quite do these two.
+	 */
+	{ "user-class", "X",			&dhcpv6_universe, 15, 1 },
+	{ "vendor-class", "X",			&dhcpv6_universe, 16, 1 },
+#endif
+	{ "vendor-opts", "Evsio.",		&dhcpv6_universe, 17, 1 },
+	{ "interface-id", "X",			&dhcpv6_universe, 18, 1 },
+	{ "reconf-msg", "Ndhcpv6-messages.",	&dhcpv6_universe, 19, 1 },
+	{ "reconf-accept", "",			&dhcpv6_universe, 20, 1 },
+
+				/* RFC3319 OPTIONS */
+
+	/* Of course: we would HAVE to have a different atom for
+	 * domain names without compression.  Typical.
+	 */
+	{ "sip-servers-names", "D",		&dhcpv6_universe, 21, 1 },
+	{ "sip-servers-addresses", "6A",	&dhcpv6_universe, 22, 1 },
+
+				/* RFC3646 OPTIONS */
+
+	{ "name-servers", "6A",			&dhcpv6_universe, 23, 1 },
+	{ "domain-search", "D",			&dhcpv6_universe, 24, 1 },
+
+				/* RFC3633 OPTIONS */
+
+	{ "ia-pd", "eLTTEdhcpv6.",		&dhcpv6_universe, 25, 1 },
+	{ "ia-prefix", "eTTB6Edhcpv6.",		&dhcpv6_universe, 26, 1 },
+
+				/* RFC3898 OPTIONS */
+
+	{ "nis-servers", "6A", 			&dhcpv6_universe, 27, 1 },
+	{ "nisp-servers", "6A",			&dhcpv6_universe, 28, 1 },
+	{ "nis-domain-name", "D",		&dhcpv6_universe, 29, 1 },
+	{ "nisp-domain-name", "D",		&dhcpv6_universe, 30, 1 },
+
+				/* RFC4075 OPTIONS */
+	{ "sntp-servers", "6A",			&dhcpv6_universe, 31, 1 },
+
+				/* RFC4242 OPTIONS */
+
+	{ "info-refresh-time", "T",		&dhcpv6_universe, 32, 1 },
+
+				/* RFC4280 OPTIONS */
+
+	{ "bcms-server-d", "D",			&dhcpv6_universe, 33, 1 },
+	{ "bcms-server-a", "6A",		&dhcpv6_universe, 34, 1 },
+
+	/* Not yet considering for inclusion. */
+#if 0
+			/* RFC-ietf-geopriv-dhcp-civil-09.txt */
+
+	{ "geoconf-civic", "X",			&dhcpv6_universe, 35, 1 },
+#endif
+
+			/* RFC-ietf-dhc-dhcpv6-remoteid-01.txt */
+
+	/* The remote-id option looks like the VSIO option, but for all
+	 * intents and purposes we only need to treat the entire field
+	 * like a globally unique identifier (and if we create such an
+	 * option, ensure the first 4 bytes are our enterprise-id followed
+	 * by a globlaly unique ID so long as you're within that enterprise
+	 * id).  So we'll use "X" for now unless someone grumbles.
+	 */
+	{ "remote-id", "X",			&dhcpv6_universe, 36, 1 },
+
+				/* RFC4580 OPTIONS */
+
+	{ "subscriber-id", "X",			&dhcpv6_universe, 37, 1 },
+
+			/* RFC-ietf-dhc-dhcpv6-fqdn-05.txt */
+
+	/* BDBDBD, nice FQDN, buck!  Seriously, the 'B' is actually a flags
+	 * field.  It's time we needed a 'flags' atom.
+	 */
+	/* XXX: picking the second part of this field out isn't possible
+	 * in our config language...so how does ddns-hostname = pick() work?
+	 * We're going to need to do a fdqn6 virtual encapsualted space like
+	 * we do for dhcpv4, but we might get away with not doing it today.
+	 */
+	{ "fqdn", "BD",				&dhcpv6_universe, 38, 1 },
+	{ NULL, NULL, NULL, 0, 0 }
+};
+
+struct enumeration_value dhcpv6_status_code_values[] = {
+	{ "success",	  0 }, /* Success				*/
+	{ "UnspecFail",	  1 }, /* Failure, for unspecified reasons.	*/
+	{ "NoAddrsAvail", 2 }, /* Server has no addresses to assign.	*/
+	{ "NoBinding",	  3 }, /* Client record (binding) unavailable.	*/
+	{ "NotOnLink",	  4 }, /* Bad prefix for the link.		*/
+	{ "UseMulticast", 5 }, /* Not just good advice.  It's the law.	*/
+	{ NULL, 0 }
+};
+
+struct enumeration dhcpv6_status_codes = {
+	NULL,
+	"status-codes",
+	dhcpv6_status_code_values
+};
+
+struct enumeration_value dhcpv6_message_values[] = {
+	{ "SOLICIT", 1 },
+	{ "ADVERTISE", 2 },
+	{ "REQUEST", 3 },
+	{ "CONFIRM", 4 },
+	{ "RENEW", 5 },
+	{ "REBIND", 6 },
+	{ "REPLY", 7 },
+	{ "RELEASE", 8 },
+	{ "DECLINE", 9 },
+	{ "RECONFIGURE", 10 },
+	{ "INFORMATION-REQUEST", 11 },
+	{ "RELAY-FORW", 12 },
+	{ "RELY-REPL", 13 },
+	{ NULL, 0 }
+};
+
+struct enumeration dhcpv6_messages = {
+	NULL,
+	"dhcpv6-messages",
+	dhcpv6_message_values
+};
+
+struct universe vsio_universe;
+static struct option vsio_options[] = {
+	{ "isc", "Eisc6.",		&vsio_universe,		     2495, 1 },
+	{ NULL, NULL, NULL, 0, 0 }
+};
+
+struct universe isc6_universe;
+static struct option isc6_options[] = {
+	{ "media", "t",				&isc6_universe,     1, 1 },
+	{ "update-assist", "X",			&isc6_universe,	    2, 1 },
+	{ NULL, NULL, NULL, 0, 0 }
 };
 
 const char *hardware_types [] = {
@@ -639,12 +823,36 @@ void initialize_common_option_spaces()
 	unsigned code;
 	int i;
 
-	universe_max = 10;
-	universes = ((struct universe **)
-		     dmalloc (universe_max * sizeof (struct universe *), MDL));
-	if (!universes)
-		log_fatal ("Can't allocate option space table.");
-	memset (universes, 0, universe_max * sizeof (struct universe *));
+	/* The 'universes' table is dynamically grown to contain
+	 * universe as they're configured - except during startup.
+	 * Since we know how many we put down in .c files, we can
+	 * allocate a more-than-right-sized buffer now, leaving some
+	 * space for user-configged option spaces.
+	 *
+	 * 1: dhcp_universe (dhcpv4 options)
+	 * 2: nwip_universe (dhcpv4 NWIP option)
+	 * 3: fqdn_universe (dhcpv4 fqdn option - reusable for v6?)
+	 * 4: vendor_class_universe (VIVCO)
+	 * 5: vendor_universe (VIVSO)
+	 * 6: isc_universe (dhcpv4 isc config space)
+	 * 7: dhcpv6_universe (dhcpv6 options)
+	 * 8: vsio_universe (DHCPv6 Vendor-Identified space)
+	 * 9: isc6_universe (ISC's Vendor universe in DHCPv6 VSIO)
+	 * 10: agent_universe (dhcpv4 relay agent - see server/stables.c)
+	 * 11: server_universe (server's config, see server/stables.c)
+	 * 12: user-config
+	 * 13: more user-config
+	 * 14: more user-config
+	 * 15: more user-config
+	 */
+	universe_max = 15;
+	i = universe_max * sizeof(struct universe *);
+	if (i <= 0)
+		log_fatal("Ludicrous initial size option space table.");
+	universes = dmalloc(i, MDL);
+	if (universes == NULL)
+		log_fatal("Can't allocate option space table.");
+	memset(universes, 0, i);
 
 	/* Set up the DHCP option universe... */
 	dhcp_universe.name = "dhcp";
@@ -873,7 +1081,116 @@ void initialize_common_option_spaces()
                                      &vendor_options[i], MDL);
         }
 
-	/* Set up the hash of universes. */
+	/* Set up the DHCPv6 root universe. */
+	dhcpv6_universe.name = "dhcp6";
+	dhcpv6_universe.lookup_func = lookup_hashed_option;
+	dhcpv6_universe.option_state_dereference =
+		hashed_option_state_dereference;
+	dhcpv6_universe.save_func = save_hashed_option;
+	dhcpv6_universe.delete_func = delete_hashed_option;
+	dhcpv6_universe.encapsulate = hashed_option_space_encapsulate;
+	dhcpv6_universe.foreach = hashed_option_space_foreach;
+	dhcpv6_universe.decode = parse_option_buffer;
+	dhcpv6_universe.length_size = 2;
+	dhcpv6_universe.tag_size = 2;
+	dhcpv6_universe.get_tag = getUShort;
+	dhcpv6_universe.store_tag = putUShort;
+	dhcpv6_universe.get_length = getUShort;
+	dhcpv6_universe.store_length = putUShort;
+	/* DHCPv6 has no END option. */
+	dhcpv6_universe.end = 0x00;
+	dhcpv6_universe.index = universe_count++;
+	universes[dhcpv6_universe.index] = &dhcpv6_universe;
+	if (!option_name_new_hash(&dhcpv6_universe.name_hash,
+				  WORD_NAME_HASH_SIZE, MDL) ||
+	    !option_code_new_hash(&dhcpv6_universe.code_hash,
+				  WORD_CODE_HASH_SIZE, MDL))
+		log_fatal("Can't allocate dhcpv6 option hash tables.");
+	for (i = 0 ; dhcpv6_options[i].name ; i++) {
+		option_code_hash_add(dhcpv6_universe.code_hash,
+				     &dhcpv6_options[i].code, 0,
+				     &dhcpv6_options[i], MDL);
+		option_name_hash_add(dhcpv6_universe.name_hash,
+				     dhcpv6_options[i].name, 0,
+				     &dhcpv6_options[i], MDL);
+	}
+
+	/* Add DHCPv6 protocol enumeration sets. */
+	add_enumeration(&dhcpv6_status_codes);
+	add_enumeration(&dhcpv6_messages);
+
+	/* Set up DHCPv6 VSIO universe. */
+	vsio_universe.name = "vsio";
+	vsio_universe.lookup_func = lookup_hashed_option;
+	vsio_universe.option_state_dereference =
+		hashed_option_state_dereference;
+	vsio_universe.save_func = save_hashed_option;
+	vsio_universe.delete_func = delete_hashed_option;
+	vsio_universe.encapsulate = hashed_option_space_encapsulate;
+	vsio_universe.foreach = hashed_option_space_foreach;
+	vsio_universe.decode = parse_option_buffer;
+	vsio_universe.length_size = 4;
+	vsio_universe.tag_size = 0;
+	vsio_universe.get_tag = getULong;
+	vsio_universe.store_tag = putULong;
+	vsio_universe.get_length = NULL;
+	vsio_universe.store_length = NULL;
+	/* No END option. */
+	vsio_universe.end = 0x00;
+	vsio_universe.index = universe_count++;
+	universes[vsio_universe.index] = &vsio_universe;
+	if (!option_name_new_hash(&vsio_universe.name_hash,
+				  VSIO_HASH_SIZE, MDL) ||
+	    !option_code_new_hash(&vsio_universe.code_hash,
+				  VSIO_HASH_SIZE, MDL))
+		log_fatal("Can't allocate Vendor Specific Information "
+			  "Options space.");
+	for (i = 0 ; vsio_options[i].name != NULL ; i++) {
+		option_code_hash_add(vsio_universe.code_hash,
+				     &vsio_options[i].code, 0,
+				     &vsio_options[i], MDL);
+		option_name_hash_add(vsio_universe.name_hash,
+				     vsio_options[i].name, 0,
+				     &vsio_options[i], MDL);
+	}
+
+	/* Add ISC VSIO sub-sub-option space. */
+	isc6_universe.name = "isc6";
+	isc6_universe.lookup_func = lookup_hashed_option;
+	isc6_universe.option_state_dereference =
+		hashed_option_state_dereference;
+	isc6_universe.save_func = save_hashed_option;
+	isc6_universe.delete_func = delete_hashed_option;
+	isc6_universe.encapsulate = hashed_option_space_encapsulate;
+	isc6_universe.foreach = hashed_option_space_foreach;
+	isc6_universe.decode = parse_option_buffer;
+	isc6_universe.length_size = 4;
+	isc6_universe.tag_size = 0;
+	isc6_universe.get_tag = getULong;
+	isc6_universe.store_tag = putULong;
+	isc6_universe.get_length = NULL;
+	isc6_universe.store_length = NULL;
+	/* No END option. */
+	isc6_universe.end = 0x00;
+	isc6_universe.index = universe_count++;
+	universes[isc6_universe.index] = &isc6_universe;
+	if (!option_name_new_hash(&isc6_universe.name_hash,
+				  VIV_ISC_HASH_SIZE, MDL) ||
+	    !option_code_new_hash(&isc6_universe.code_hash,
+				  VIV_ISC_HASH_SIZE, MDL))
+		log_fatal("Can't allocate Vendor Specific Information "
+			  "Options space.");
+	for (i = 0 ; isc6_options[i].name != NULL ; i++) {
+		option_code_hash_add(isc6_universe.code_hash,
+				     &isc6_options[i].code, 0,
+				     &isc6_options[i], MDL);
+		option_name_hash_add(isc6_universe.name_hash,
+				     isc6_options[i].name, 0,
+				     &isc6_options[i], MDL);
+	}
+
+
+	/* Set up the hash of DHCPv4 universes. */
 	universe_new_hash(&universe_hash, UNIVERSE_HASH_SIZE, MDL);
 	universe_hash_add(universe_hash, dhcp_universe.name, 0,
 			  &dhcp_universe, MDL);
@@ -887,4 +1204,12 @@ void initialize_common_option_spaces()
 			  &vendor_universe, MDL);
 	universe_hash_add(universe_hash, isc_universe.name, 0,
 			  &isc_universe, MDL);
+
+	/* Set up hashes for DHCPv6 universes. */
+	universe_hash_add(universe_hash, dhcpv6_universe.name, 0,
+			  &dhcpv6_universe, MDL);
+	universe_hash_add(universe_hash, vsio_universe.name, 0,
+			  &vsio_universe, MDL);
+	universe_hash_add(universe_hash, isc6_universe.name, 0,
+			  &isc6_universe, MDL);
 }

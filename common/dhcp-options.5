@@ -1,4 +1,4 @@
-.\"	$Id: dhcp-options.5,v 1.30.2.1 2006/08/11 22:50:21 dhankins Exp $
+.\"	$Id: dhcp-options.5,v 1.30.2.2 2006/08/28 16:10:14 dhankins Exp $
 .\"
 .\" Copyright (c) 2004-2006 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 1996-2003 by Internet Software Consortium
@@ -91,11 +91,11 @@ existing DHCP options.   The domain name is stored just as if it were
 a text option.
 .PP
 The
-.B domain-list
+.B domain-list [compressed]
 data type specifies a list of domain names, a space between each name and
-the entire string enclosed in double quotes.  These types of data are used
-for the domain-search option for example, and encodes an RFC1035 compressed
-DNS label list on the wire.
+the entire string enclosed in double quotes.  On the wire, these names are
+formatted as per RFC1035.  The optional '\fBcompressed\fR' keyword can be
+used to indicate that RFC1035 name compression should be used.
 .PP
 The
 .B flag
@@ -1545,7 +1545,7 @@ hash tables to hold options in this space.
 The code and length widths are used in DHCP protocol - you must configure
 these numbers to match the applicable option space you are configuring.
 They each default to 1.  Valid values for code widths are 1, 2 or 4.
-Valid values for length widths are 1 or 2.
+Valid values for length widths are 0, 1 or 2.
 .PP
 The hash size defaults depend upon the \fBcode width\fR selected, and
 may be 254 or 1009.  Valid values range between 1 and 65535.  Note

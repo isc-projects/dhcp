@@ -72,6 +72,7 @@ typedef struct hash_table host_hash_t;
 typedef struct hash_table class_hash_t;
 
 #include "dhcp.h"
+#include "dhcp6.h"
 #include "statement.h"
 #include "tree.h"
 #include "inet.h"
@@ -126,6 +127,10 @@ typedef struct hash_table class_hash_t;
 # define VIVSO_HASH_SIZE	VIVCO_HASH_SIZE
 #endif
 
+#if !defined (VSIO_HASH_SIZE)
+# define VSIO_HASH_SIZE		VIVCO_HASH_SIZE
+#endif
+
 #if !defined (VIV_ISC_HASH_SIZE)
 # define VIV_ISC_HASH_SIZE	3	/* An incredulously small table. */
 #endif
@@ -157,7 +162,6 @@ typedef struct hash_table class_hash_t;
 #if !defined (SERVER_HASH_SIZE)
 # define SERVER_HASH_SIZE	(sizeof(server_options) / sizeof(struct option))
 #endif
-
 
 
 #if !defined (OPTION_HASH_SIZE)
@@ -1393,7 +1397,7 @@ int parse_allow_deny PROTO ((struct option_cache **, struct parse *, int));
 int parse_auth_key PROTO ((struct data_string *, struct parse *));
 int parse_warn (struct parse *, const char *, ...)
 	__attribute__((__format__(__printf__,2,3)));
-struct expression *parse_domain_list (struct parse *cfile);
+struct expression *parse_domain_list(struct parse *, int);
 
 
 /* tree.c */

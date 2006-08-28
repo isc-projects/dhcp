@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.113.2.3 2006/08/14 11:28:11 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.113.2.4 2006/08/28 16:10:14 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1309,6 +1309,10 @@ void parse_option_space_decl (cfile)
 		log_fatal("Impossible condition at %s:%d.", MDL);
 	}
 	switch(lsize) {
+	     case 0:
+		nu->get_length = NULL;
+		nu->store_length = NULL;
+		break;
 	     case 1:
 		nu->get_length = getUChar;
 		nu->store_length = putUChar;
@@ -1520,7 +1524,14 @@ int parse_option_code_definition (cfile, option)
 		type = 'd';
 		goto no_arrays;
 	      case DOMAIN_LIST:
-		type = 'D';
+		/* Consume optional compression indicator. */
+		token = peek_token(&val, NULL, cfile);
+		if (token == COMPRESSED) {
+			token = next_token(&val, NULL, cfile);
+			tokbuf[tokix++] = 'D';
+			type = 'c';
+		} else
+			type = 'D';
 		goto no_arrays;
 	      case TEXT:
 		type = 't';
@@ -4843,7 +4854,7 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 	unsigned len;
 	unsigned char *ob;
 	struct iaddr addr;
-	int num;
+	int num, compress;
 	const char *f, *g;
 	struct enumeration_value *e;
 
@@ -4901,7 +4912,14 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 		break;
 
               case 'D': /* Domain list... */
-		t = parse_domain_list(cfile);
+		if ((*fmt)[1] == 'c') {
+			compress = 1;
+			/* Skip the compress-flag atom. */
+			(*fmt)++;
+		} else
+			compress = 0;
+
+		t = parse_domain_list(cfile, compress);
 
 		if (!t) {
 			if ((*fmt)[1] != 'o')
@@ -5405,8 +5423,7 @@ int parse_warn (struct parse *cfile, const char *fmt, ...)
 }
 
 struct expression *
-parse_domain_list (cfile)
-	struct parse *cfile;
+parse_domain_list(struct parse *cfile, int compress)
 {
 	const char *val;
 	enum dhcp_token token = SEMI;
@@ -5434,9 +5451,16 @@ parse_domain_list (cfile)
 			return NULL;
 		}
 
-		result = MRns_name_compress(val, compbuf + clen,
-					    sizeof(compbuf) - clen,
-					    dnptrs, lastdnptr);
+		/* If compression pointers are enabled, compress.  If not,
+		 * just pack the names in series into the buffer.
+		 */
+		if (compress)
+			result = MRns_name_compress(val, compbuf + clen,
+						    sizeof(compbuf) - clen,
+						    dnptrs, lastdnptr);
+		else
+			result = ns_name_pton(val, compbuf + clen,
+					      sizeof(compbuf) - clen);
 
 		if (result < 0) {
 			parse_warn(cfile, "Error compressing domain list: %m");
@@ -5444,6 +5468,9 @@ parse_domain_list (cfile)
 		}
 
 		clen += result;
+
+		if (clen > sizeof(compbuf))
+			log_fatal("Impossible error at %s:%d", MDL);
 
 		token = peek_token(&val, NULL, cfile);
 	} while (token == COMMA);

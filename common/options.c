@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.92.2.1 2006/08/11 22:50:21 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.92.2.2 2006/08/28 16:10:14 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -167,9 +167,21 @@ int parse_option_buffer (options, buffer, length, universe)
 		}
 
 		/* All other fields (except PAD and END handled above)
-		 * have a length field.
+		 * have a length field, unless it's a DHCPv6 zero-length
+		 * options space (eg any of the enterprise-id'd options).
+		 *
+		 * Zero-length-size option spaces basicaly consume the
+		 * entire options buffer, so have at it.
 		 */
-		len = universe->get_length(buffer + offset);
+		if (universe->get_length != NULL)
+			len = universe->get_length(buffer + offset);
+		else if (universe->length_size == 0)
+			len = length - universe->tag_size;
+		else
+			log_fatal("Improperly configured option space(%s): "
+				  "may not have a nonzero length size "
+				  "AND a NULL get_length function.",
+				  universe->name);
 
 		offset += universe->length_size;
 
@@ -1146,7 +1158,8 @@ format_has_text(format)
 
 			/* These symbols are arbitrary, not fixed or
 			 * determinable length...text options with them is
-			 * invalid.
+			 * invalid (whatever the case, they are never NULL
+			 * terminated).
 			 */
 		    case 'A':
 		    case 'a':
@@ -1155,9 +1168,19 @@ format_has_text(format)
 		    case 'D':
 			return 0;
 
+		    case 'c':
+			/* 'c' only follows 'D' atoms, and indicates that
+			 * compression may be used.  If there was a 'D'
+			 * atom already, we would have returned.  So this
+			 * is an error, but continue looking for 't' anyway.
+			 */
+			log_error("format_has_text(%s): 'c' atoms are illegal "
+				  "except after 'D' atoms.", format);
+			break;
+
 			/* 'E' is variable length, but not arbitrary...you
 			 * can find its length if you can find an END option.
-			 * N is one-byte in length but trails a name of a
+			 * N is (n)-byte in length but trails a name of a
 			 * space defining the enumeration values.  So treat
 			 * both the same - valid, fixed-length fields.
 			 */
@@ -1240,10 +1263,17 @@ format_min_length(format, oc)
 			 */
 			last_size = 0;
 			while (min_len < oc->data.len) {
-				if (oc->data.data[min_len] == DHO_END) {
+				if (oc->option != NULL &&
+				    oc->option->universe != NULL &&
+				    oc->option->universe->end != 0x00 &&
+				    oc->data.data[min_len] ==
+						oc->option->universe->end) {
 					min_len++;
 					last_size++;
 					break;
+				/* Otherwise, DHO_PAD (0x00) is treated as a
+				 * no-length, no-content option one skips.
+				 */
 				} else if (oc->data.data[min_len] == DHO_PAD) {
 					min_len++;
 					last_size++;
@@ -1271,13 +1301,18 @@ format_min_length(format, oc)
 			break;
 
 		    case 'd': /* "Domain name" */
-		    case 'D': /* "rfc1035 compressed names" */
+		    case 'D': /* "rfc1035 formatted names" */
 		    case 't': /* "ASCII Text" */
 		    case 'X': /* "ASCII or Hex Conditional */
 		    case 'x': /* "Hex" */
 		    case 'A': /* Array of all that precedes. */
 		    case 'a': /* Array of preceding symbol. */
 			return min_len;
+
+		    case 'c': /* Compress flag for D atom. */
+			log_error("format_min_length(%s): 'c' atom is illegal "
+				  "except after 'D' atom.", format);
+			return INT_MAX;
 
 		    default:
 			/* No safe value is known. */
@@ -1481,6 +1516,10 @@ const char *pretty_print_option (option, data, len, emit_commas, emit_quotes)
 						*op++ = ' ';
 					}
 
+					/* XXX: if fmtbuf[j+1] != 'c', we
+					 * should warn if the data was
+					 * compressed anyway.
+					 */
 					k = MRns_name_unpack(data,
 							     data + len,
 							     dp, nbuff,
@@ -2169,8 +2208,13 @@ append_option(struct data_string *dst, struct universe *universe,
 	/* Place the new option tag and length. */
 	(*universe->store_tag)(tmp.buffer->data + tmp.len, option->code);
 	tmp.len += universe->tag_size;
-	(*universe->store_length)(tmp.buffer->data + tmp.len, src->len);
-	tmp.len += universe->length_size;
+
+	/* Place the length descriptor, if applicable for this space. */
+	if (universe->store_length != NULL) {
+		(*universe->store_length)(tmp.buffer->data + tmp.len,
+					  src->len);
+		tmp.len += universe->length_size;
+	}
 
 	/* Copy the option contents onto the end. */
 	memcpy(tmp.buffer->data + tmp.len, src->data, src->len);
