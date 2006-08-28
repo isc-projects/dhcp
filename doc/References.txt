@@ -3,7 +3,7 @@
 
 Network Working Group                                         D. Hankins
 Internet-Draft                                                       ISC
-Expires: February 18, 2007                               August 17, 2006
+Expires: March 1, 2007                                   August 28, 2006
 
 
                      ISC DHCP References Collection
@@ -31,7 +31,7 @@ Status of this Memo
    The list of Internet-Draft Shadow Directories can be accessed at
    http://www.ietf.org/shadow.html.
 
-   This Internet-Draft will expire on February 18, 2007.
+   This Internet-Draft will expire on March 1, 2007.
 
 Copyright Notice
 
@@ -52,7 +52,7 @@ Copyright Notice
 
 
 
-Hankins                 Expires February 18, 2007               [Page 1]
+Hankins                   Expires March 1, 2007                 [Page 1]
 
 Internet-Draft       ISC DHCP References Collection          August 2006
 
@@ -73,7 +73,7 @@ Table of Contents
      3.1.  Ethernet Protocol References . . . . . . . . . . . . . . .  6
      3.2.  Token Ring Protocol References . . . . . . . . . . . . . .  6
      3.3.  FDDI Protocol References . . . . . . . . . . . . . . . . .  6
-     3.4.  Internet Protocol Version 4 References . . . . . . . . . .  6
+     3.4.  Internet Protocol Version 4 References . . . . . . . . . .  7
      3.5.  Unicast Datagram Protocol References . . . . . . . . . . .  7
 
    4.  BOOTP Protocol References  . . . . . . . . . . . . . . . . . .  7
@@ -84,7 +84,7 @@ Table of Contents
        5.2.1.  Relay Agent Information Option Options . . . . . . . .  9
        5.2.2.  Experimental: Dynamic DNS Updates References . . . . .  9
        5.2.3.  Experimental: Failover References  . . . . . . . . . . 10
-     5.3.  DHCP Procedures  . . . . . . . . . . . . . . . . . . . . . 10
+     5.3.  DHCP Procedures  . . . . . . . . . . . . . . . . . . . . . 11
 
    6.  References . . . . . . . . . . . . . . . . . . . . . . . . . . 11
 
@@ -108,19 +108,20 @@ Table of Contents
 
 
 
-Hankins                 Expires February 18, 2007               [Page 2]
+Hankins                   Expires March 1, 2007                 [Page 2]
 
 Internet-Draft       ISC DHCP References Collection          August 2006
 
 
 1.  Introduction
 
-   As a little history anecdote, ISC DHCP once packaged all the relevant
-   RFCs and standards documents along with the software package.  Until
-   one day when a voice was heard from one of the many fine institutions
-   that build and distribute this software... they took issue with the
-   IETF's copyright on the RFC's.  It seems the IETF's copyrights don't
-   allow modification of RFC's (except for translation purposes).
+   As a little historical anecdote, ISC DHCP once packaged all the
+   relevant RFCs and standards documents along with the software
+   package.  Until one day when a voice was heard from one of the many
+   fine institutions that build and distribute this software... they
+   took issue with the IETF's copyright on the RFC's.  It seems the
+   IETF's copyrights don't allow modification of RFC's (except for
+   translation purposes).
 
    No one is really certain why it's important to carry the right to
    modify RFC's.  Perhaps someone is under the delusion that IETF
@@ -160,15 +161,15 @@ Internet-Draft       ISC DHCP References Collection          August 2006
    things that aren't described in any reference, or may choose to
    ignore the reference it saw entirely).  Other folks get confused by
    the word 'reference' and understand that to mean that there is some
-   special status applied to the software - that the software itself is
 
 
 
-Hankins                 Expires February 18, 2007               [Page 3]
+Hankins                   Expires March 1, 2007                 [Page 3]
 
 Internet-Draft       ISC DHCP References Collection          August 2006
 
 
+   special status applied to the software - that the software itself is
    the reference by which all other software is measured.  Something
    along the lines of being "The DHCP Protocol's Reference Clock," it is
    supposed.
@@ -179,12 +180,12 @@ Internet-Draft       ISC DHCP References Collection          August 2006
    reference."
 
    If the software has a behaviour that manifests itself externally
-   (wether it be something as simple as the 'wire format' or something
+   (whether it be something as simple as the 'wire format' or something
    higher level, such as a complicated behaviour that arises from
    multiple message exchanges), that behaviour must be found in a
    reference document.
 
-   Anything else is a bug, the only question is wether the bug is in
+   Anything else is a bug, the only question is whether the bug is in
    reference or software (failing to implement the reference).
 
    This means:
@@ -216,13 +217,15 @@ Internet-Draft       ISC DHCP References Collection          August 2006
    texture or form of that reference has a (somewhat indirect) voice in
    ISC DHCP's software design.  As the IETF RFC's have been selected as
    the source of reference, that means everyone on the Internet with the
-   will to participate has a say.
 
 
 
-Hankins                 Expires February 18, 2007               [Page 4]
+Hankins                   Expires March 1, 2007                 [Page 4]
 
 Internet-Draft       ISC DHCP References Collection          August 2006
+
+
+   will to participate has a say.
 
 
 3.  Low Layer References
@@ -270,17 +273,17 @@ Internet-Draft       ISC DHCP References Collection          August 2006
    modern unixes...so long as the interface is configured.  When there
    is no IPv4 address on the interface, things become much more murky.
 
-   So, for this convoluted and unfortunate state of affairs in the unix
-   systems of the day ISC DHCP was manufactured, in order to do what it
-   needs not only to implement the reference but to interoperate with
 
 
 
-Hankins                 Expires February 18, 2007               [Page 5]
+Hankins                   Expires March 1, 2007                 [Page 5]
 
 Internet-Draft       ISC DHCP References Collection          August 2006
 
 
+   So, for this convoluted and unfortunate state of affairs in the unix
+   systems of the day ISC DHCP was manufactured, in order to do what it
+   needs not only to implement the reference but to interoperate with
    other implementations, the software must create some form of raw
    socket to operate on.
 
@@ -324,18 +327,20 @@ Internet-Draft       ISC DHCP References Collection          August 2006
    RFC1188 [6] is the most helpful reference ISC DHCP has used to form
    FDDI packets.
 
+
+
+
+
+
+Hankins                   Expires March 1, 2007                 [Page 6]
+
+Internet-Draft       ISC DHCP References Collection          August 2006
+
+
 3.4.  Internet Protocol Version 4 References
 
    RFC760 [1] fundamentally defines the bare IPv4 protocol which ISC
    DHCP implements.
-
-
-
-
-Hankins                 Expires February 18, 2007               [Page 6]
-
-Internet-Draft       ISC DHCP References Collection          August 2006
-
 
 3.5.  Unicast Datagram Protocol References
 
@@ -380,19 +385,19 @@ Internet-Draft       ISC DHCP References Collection          August 2006
    the latter.  Also, RFC2131 demands explicitly that some header fields
    be zeroed upon certain message types.  The ISC DHCP Server instead
    copies many of these fields from the packet received from the client
+
+
+
+Hankins                   Expires March 1, 2007                 [Page 7]
+
+Internet-Draft       ISC DHCP References Collection          August 2006
+
+
    or relay, which may not be zero.  It is not known if there is a good
    reason for this that has not been documented.
 
    RFC2132 [9] defines the initial set of DHCP Options and provides a
    great deal of guidance on how to go about formatting and processing
-
-
-
-Hankins                 Expires February 18, 2007               [Page 7]
-
-Internet-Draft       ISC DHCP References Collection          August 2006
-
-
    options.  The document unfortunately waffles to a great extent about
    the NULL termination of DHCP Options, and some DHCP Clients (Windows
    95) have been implemented that rely upon DHCP Options containing text
@@ -436,18 +441,19 @@ Internet-Draft       ISC DHCP References Collection          August 2006
    RFC3397 [22] documents the Domain-Search Option, which allows the
    configuration of the /etc/resolv.conf 'search' parameter in a way
    that is RFC1035 [5] wire format compatible (in fact, it uses the
+
+
+
+Hankins                   Expires March 1, 2007                 [Page 8]
+
+Internet-Draft       ISC DHCP References Collection          August 2006
+
+
    RFC1035 wire format).  ISC DHCP has both client and server support,
    and supports RFC1035 name compression.
 
    RFC3679 [24] documents a number of options that were documented
    earlier in history, but were not made use of.
-
-
-
-Hankins                 Expires February 18, 2007               [Page 8]
-
-Internet-Draft       ISC DHCP References Collection          August 2006
-
 
    RFC3925 [25] documents a pair of Enterprise-ID delimited option
    spaces for vendors to use in order to inform servers of their "vendor
@@ -491,25 +497,25 @@ Internet-Draft       ISC DHCP References Collection          August 2006
    single DNS resource and insure there are no collisions.
 
    draft-ietf-dnsext-dhcid-rr-13.txt [31] defines the DHCID DNS RR type,
+
+
+
+Hankins                   Expires March 1, 2007                 [Page 9]
+
+Internet-Draft       ISC DHCP References Collection          August 2006
+
+
    which is used to match client identities with names in the DNS as
    part of name conflict resolution.  Note that ISC DHCP's
    implementation of DHCIDs vary wildly from this specification.  First,
    ISC DHCP uses a TXT record in which the contents are stored in
    hexadecimal.  Second, there is a flaw in the selection of the
    'Identifier Type', which results in a completely different value
-
-
-
-Hankins                 Expires February 18, 2007               [Page 9]
-
-Internet-Draft       ISC DHCP References Collection          August 2006
-
-
    being selected than is defined (or even than was defined in an older
    revision of this draft)...also this field is one byte prior to
    hexadecimal encoding rather than two.  Third, ISC DHCP does not use a
    digest type code.  Rather, all values for such TXT records are
-   reached via an MD5 sum.  In short, nothing is compatbile, but the
+   reached via an MD5 sum.  In short, nothing is compatible, but the
    principle of the TXT record is the same as the standard DHCID record.
 
 5.2.3.  Experimental: Failover References
@@ -546,20 +552,19 @@ Internet-Draft       ISC DHCP References Collection          August 2006
    3.0.* are known to misimplement the hash algorithm (it will only use
    the low 4 bits of every byte of the hash bucket array).
 
+
+
+
+
+Hankins                   Expires March 1, 2007                [Page 10]
+
+Internet-Draft       ISC DHCP References Collection          August 2006
+
+
 5.3.  DHCP Procedures
 
    RFC2939 [15] explains how to go about obtaining a new DHCP Option
    code assignment.
-
-
-
-
-
-
-Hankins                 Expires February 18, 2007              [Page 10]
-
-Internet-Draft       ISC DHCP References Collection          August 2006
-
 
 6.  References
 
@@ -605,17 +610,16 @@ Internet-Draft       ISC DHCP References Collection          August 2006
    [14]  Smith, C., "The Name Service Search Option for DHCP", RFC 2937,
          September 2000.
 
-   [15]  Droms, R., "Procedures and IANA Guidelines for Definition of
-         New DHCP Options and Message Types", BCP 43, RFC 2939,
-         September 2000.
 
 
-
-
-Hankins                 Expires February 18, 2007              [Page 11]
+Hankins                   Expires March 1, 2007                [Page 11]
 
 Internet-Draft       ISC DHCP References Collection          August 2006
 
+
+   [15]  Droms, R., "Procedures and IANA Guidelines for Definition of
+         New DHCP Options and Message Types", BCP 43, RFC 2939,
+         September 2000.
 
    [16]  Stump, G., Droms, R., Gu, Y., Vyaghrapuri, R., Demirtjis, A.,
          Beser, B., and J. Privat, "The User Class Option for DHCP",
@@ -661,17 +665,18 @@ Internet-Draft       ISC DHCP References Collection          August 2006
 
    [28]  Droms, R., "DHCP Failover Protocol", March 2003.
 
+
+
+
+Hankins                   Expires March 1, 2007                [Page 12]
+
+Internet-Draft       ISC DHCP References Collection          August 2006
+
+
    [29]  Stapp, M., "The DHCP Client FQDN Option", September 2006.
 
    [30]  Stapp, M., "Resolution of FQDN Conflicts among DHCP Clients",
          September 2006.
-
-
-
-Hankins                 Expires February 18, 2007              [Page 12]
-
-Internet-Draft       ISC DHCP References Collection          August 2006
-
 
    [31]  Stapp, M., "A DNS RR for Encoding DHCP Information",
          September 2006.
@@ -719,12 +724,7 @@ Internet-Draft       ISC DHCP References Collection          August 2006
 
 
 
-
-
-
-
-
-Hankins                 Expires February 18, 2007              [Page 13]
+Hankins                   Expires March 1, 2007                [Page 13]
 
 Internet-Draft       ISC DHCP References Collection          August 2006
 
@@ -780,5 +780,5 @@ Author's Address
 
 
 
-Hankins                 Expires February 18, 2007              [Page 14]
+Hankins                   Expires March 1, 2007                [Page 14]
 
