@@ -328,8 +328,7 @@ enum dhcp_token {
 	EXECUTE = 632,
 	IP6_ADDRESS = 633,
 	FIXED_ADDR6 = 634,
-	EXECUTE = 635,
-	COMPRESSED = 636
+	COMPRESSED = 635
 };
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\
