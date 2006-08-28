@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.63.56.1 2006/08/24 14:56:56 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.63.56.2 2006/08/28 21:36:09 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1739,6 +1739,10 @@ isc_result_t dhcp_failover_set_state (dhcp_failover_state_t *state,
 
     switch (new_state) {
 	  case normal:
+	    /* Upon entering normal state, the server is expected to retransmit
+	     * all pending binding updates.
+	     */
+	    dhcp_failover_generate_update_queue(state, 0);
 	    if (state -> partner.state == normal)
 		    dhcp_failover_state_pool_check (state);
 	    break;
@@ -2720,6 +2724,12 @@ void dhcp_failover_ack_queue_remove (dhcp_failover_state_t *state,
 	}
 
 	lease -> flags &= ~ON_ACK_QUEUE;
+	/* Multiple acks on one XID is an error and may cause badness. */
+	lease->last_xid = 0;
+	/* XXX: this violates draft-failover.  We can't send another
+	 * update just because we forgot about an old one that hasn't
+	 * been acked yet.
+	 */
 	state -> cur_unacked_updates--;
 
 	/*
@@ -4931,15 +4941,15 @@ isc_result_t dhcp_failover_process_bind_update (dhcp_failover_state_t *state,
 	/* If it is probably wise, assign lease to backup state if the peer
 	 * is not already hoarding leases.
 	 */
-	if (send_to_backup && secondary_not_hoarding(state, lt->pool)) {
-		lt->next_binding_state = FTS_BACKUP;
-		lt->tstp = cur_time;
-		lt->starts = cur_time;
+	if (send_to_backup && secondary_not_hoarding(state, lease->pool)) {
+		lease->next_binding_state = FTS_BACKUP;
+		lease->tstp = cur_time;
+		lease->starts = cur_time;
 
-		if (!supersede_lease(lt, NULL, 0, 1, 0) ||
-		    !write_lease(lt))
+		if (!supersede_lease(lease, NULL, 0, 1, 0) ||
+		    !write_lease(lease))
 			log_error("can't commit lease %s for mac addr "
-				  "affinity", piaddr(lt->ip_addr));
+				  "affinity", piaddr(lease->ip_addr));
 
 		dhcp_failover_send_updates(state);
 	}
@@ -4989,6 +4999,7 @@ isc_result_t dhcp_failover_process_bind_ack (dhcp_failover_state_t *state,
 	struct iaddr ia;
 	const char *message = "no memory";
 	u_int32_t pot_expire;
+	int send_to_backup = ISC_FALSE;
 
 	ia.len = sizeof msg -> assigned_addr;
 	memcpy (ia.iabuf, &msg -> assigned_addr, ia.len);
@@ -5013,28 +5024,49 @@ isc_result_t dhcp_failover_process_bind_ack (dhcp_failover_state_t *state,
 		goto unqueue;
 	}
 
-	/* XXX Times may need to be adjusted based on clock skew! */
-	if (msg->options_present & FTO_POTENTIAL_EXPIRY)
-		pot_expire = msg->potential_expiry;
-	else if(lease->last_xid && (msg->xid == lease->last_xid))
-		pot_expire = lease->tstp;
-	else {
-		message = "peer sent no potential-expiry and mismatched XID.";
+	/* Silently discard acks for leases we did not update (or multiple
+	 * acks).
+	 */
+	if (!lease->last_xid)
+		goto unqueue;
+
+	if (lease->last_xid != msg->xid) {
+		message = "xid mismatch";
 		goto bad;
 	}
 
-	/* XXX it could be a problem to do this directly if the
-	   XXX lease is sorted by tsfp. */
-	if (lease->binding_state == FTS_EXPIRED ||
-	    lease->binding_state == FTS_RESET ||
-	    lease->binding_state == FTS_RELEASED)
+	/* XXX Times may need to be adjusted based on clock skew! */
+	if (msg->options_present & FTO_POTENTIAL_EXPIRY)
+		pot_expire = msg->potential_expiry;
+	else
+		pot_expire = lease->tstp;
+
+	/* If the lease was desired to enter a binding state, we set
+	 * such a value upon transmitting a bndupd.  We do not clear it
+	 * if we receive a bndupd in the meantime (or change the state
+	 * of the lease again ourselves), but we do set binding_state
+	 * if we get a bndupd.
+	 *
+	 * So desired_binding_state tells us what we sent a bndupd for,
+	 * and binding_state tells us what we have since determined in
+	 * the meantime.
+	 */
+	if (lease->desired_binding_state == FTS_EXPIRED ||
+	    lease->desired_binding_state == FTS_RESET ||
+	    lease->desired_binding_state == FTS_RELEASED)
 	{
+		/* It is not a problem to do this directly as we call
+		 * supersede_lease immediately after: the lease is requeued
+		 * even if its sort order (tsfp) has changed.
+		 */
 		lease->atsfp = lease->tsfp = pot_expire;
 		if ((state->i_am == secondary) &&
 		    (lease->flags & RESERVED_LEASE))
 			lease->next_binding_state = FTS_BACKUP;
 		else
 			lease->next_binding_state = FTS_FREE;
+		/* Clear this condition for the next go-round. */
+		lease->desired_binding_state = lease->next_binding_state;
 		supersede_lease(lease, (struct lease *)0, 0, 0, 0);
 		write_lease(lease);
 
@@ -5042,25 +5074,20 @@ isc_result_t dhcp_failover_process_bind_ack (dhcp_failover_state_t *state,
 		 * transitional states.  If the lease 'belongs'
 		 * to a client that would be served by the
 		 * peer, process a binding update now to send
-		 * the lease to backup state.
+		 * the lease to backup state.  But not if we
+		 * think we already have.
 		 */
 		if (state->i_am == primary &&
 		    !(lease->flags & (RESERVED_LEASE | BOOTP_LEASE)) &&
-		    peer_wants_lease(lease)) {
-			lease->next_binding_state = FTS_BACKUP;
-			lease->tstp = cur_time;
-			lease->starts = cur_time;
+		    peer_wants_lease(lease))
+			send_to_backup = ISC_TRUE;
 
-			if (!supersede_lease(lease, NULL, 0, 1, 0) ||
-			    !write_lease(lease))
-				log_error("can't commit lease %s for "
-					  "client affinity",
-					  piaddr(lease->ip_addr));
-		}
-
-		if (state->me.state == normal)
-			commit_leases ();
+		if (!send_to_backup && state->me.state == normal)
+			commit_leases();
 	} else {
+		/* XXX It could be a problem to do this directly if the lease
+		 * XXX is sorted by tsfp.
+		 */
 		lease->atsfp = lease->tsfp = pot_expire;
 		if (lease->desired_binding_state != lease->binding_state) {
 			lease->next_binding_state =
@@ -5088,6 +5115,22 @@ isc_result_t dhcp_failover_process_bind_ack (dhcp_failover_state_t *state,
 		dhcp_failover_send_update_done (state);
 	}
 
+	/* Now that the least is off the ack queue, consider putting it
+	 * back on the update queue for mac address affinity.
+	 */
+	if (send_to_backup && secondary_not_hoarding(state, lease->pool)) {
+		lease->next_binding_state = FTS_BACKUP;
+		lease->tstp = lease->starts = cur_time;
+
+		if (!supersede_lease(lease, NULL, 0, 1, 0) ||
+		    !write_lease(lease))
+			log_error("can't commit lease %s for "
+				  "client affinity", piaddr(lease->ip_addr));
+
+		if (state->me.state == normal)
+			commit_leases();
+	}
+
 	/* If there are updates pending, we've created space to send at
 	   least one. */
 	dhcp_failover_send_updates (state);
@@ -5100,7 +5143,7 @@ isc_result_t dhcp_failover_process_bind_ack (dhcp_failover_state_t *state,
 	return ISC_R_SUCCESS;
 
       bad:
-	log_info ("bind update on %s from %s: %s.",
+	log_info ("bind update on %s got ack from %s: %s.",
 		  piaddr (ia), state -> name, message);
 	goto out;
 }

@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.83 2006/07/25 13:26:00 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.83.16.1 2006/08/28 21:36:09 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1482,7 +1482,14 @@ void release_lease (lease, packet)
 		/* Blow away any bindings. */
 		if (lease -> scope)
 			binding_scope_dereference (&lease -> scope, MDL);
+
+		/* Set sort times to the present. */
 		lease -> ends = cur_time;
+		/* Lower layers of muckery set tstp to ->ends.  But we send
+		 * protocol messages before this.  So it is best to set
+		 * tstp now anyway.
+		 */
+		lease->tstp = cur_time;
 #if defined (FAILOVER_PROTOCOL)
 		if (lease -> pool && lease -> pool -> failover_peer) {
 			lease -> next_binding_state = FTS_RELEASED;

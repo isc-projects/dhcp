@@ -28,7 +28,7 @@
 .\" see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
 .\" ``http://www.nominum.com''.
 .\"
-.\" $Id: dhcpd.conf.5,v 1.80.4.1 2006/08/17 21:50:13 dhankins Exp $
+.\" $Id: dhcpd.conf.5,v 1.80.4.2 2006/08/28 21:36:09 dhankins Exp $
 .\"
 .TH dhcpd.conf 5
 .SH NAME
@@ -612,47 +612,6 @@ number declared in the \fBpeer port\fR statement may be the same as
 the port number declared in the \fBport\fR statement.
 .RE
 .PP
-The 
-.I max-lease-misbalance
-statement
-.RS 0.25i
-.PP
-.B max-lease-misbalance \fIpercentage\fR\fB;\fR
-.PP
-The \fBmax-lease-misbalance\fR statement tells the DHCP server what
-percentage of total free leases (as defined as the total number of
-leases in either the FREE or BACKUP states) a peer is allowed to own
-before a rebalance check is made.  Configuring higher values causes
-the server to rebalance less frequently, but permits a larger misbalance
-between the FREE and BACKUP lease pools.  Configuring a lower value
-causes the server to rebalance more frequently, but keeps the pools more
-balanced.  ISC DHCP servers no longer send POOLREQ messages unless the
-misbalance is at least twice this percentage in the peer's favor.  Valid
-values are between 0 and 100.  The default is 15.
-.RE
-.PP
-The
-.I max-lease-ownership
-statement
-.RS 0.25i
-.PP
-.B max-lease-ownership \fIpercentage\fR\fB;\fR
-.PP
-The \fBmax-lease-ownership\fR statement tells the DHCP server what
-percentage of total free leases either it or its peer are normally allowed to
-own in excess of balance for the purpose of MAC Address Affinity.  When a
-server undergoes a lease rebalancing operation, it first tries to move as
-many leases as it can to the peer whose previous client was Load-Balanced to
-that peer (as governed by the Load Balance Algorithm, see the \fBsplit\fR
-configuration value).  The \fBmax-lease-ownership\fR value determines the
-maximum percentage of leases either server will hold before giving its
-peer the oldest leases (regardless of the previous client's place in the
-Load Balance algorithm).  Valid values are between 0 and 100, and should
-probably be less than the \fBmax-lease-misbalance\fR value.  Larger values
-will allow servers to retain leases to reallocate to returning clients,
-smaller values promote pool balance.  The default is 10.
-.RE
-.PP
 The
 .I max-response-delay
 statement
@@ -682,33 +641,6 @@ many BNDUPD messages it can send before it receives a BNDACK
 from the local system.   We don't have enough operational experience
 to say what a good value for this is, but 10 seems to work.   This
 parameter must be specified.
-.RE
-.PP
-The
-.I min-balance
-and
-.I max-balance
-statements
-.RS 0.25i
-.PP
-.B min-balance \fIseconds\fR\fB;\fR
-.B max-balance \fIseconds\fR\fB;\fR
-.PP
-The DHCP Server schedules pool rebalance events at a time between these
-two values, estimated to be when the the \fBmax-lease-misbalance\fR percent
-of leases have been allocated by its peer.  This estimate is reached from
-however many seconds have elapsed since the oldest lease in the failover
-peer's pool has been expired.
-.PP
-The \fBmin-balance\fR value defaults to 60, one minute, and the
-\fBmax-balance\fR value defaults to 3600, one hour.
-.PP
-Lease rebalancing events can be CPU intensive, particular on installations
-where failover peers may have large numbers of pools and addresses to
-examine, so these parameters should be used to keep the estimation of
-the need for pool rebalance sane...not so long that you are in danger of
-exhausting your pool, not so short that your server is constantly
-rebalancing.
 .RE
 .PP
 The 
@@ -807,6 +739,122 @@ failover peers gets into a state where it is responding to failover
 messages but not responding to some client requests, the other
 failover peer will take over its client load automatically as the
 clients retry.
+.RE
+.PP
+The Failover pool balance statements.
+.RS 0.25i
+.PP
+ \fBmax-lease-misbalance \fIpercentage\fR\fB;\fR
+ \fBmax-lease-ownership \fIpercentage\fR\fB;\fR
+ \fBmin-balance \fIseconds\fR\fB;\fR
+ \fBmax-balance \fIseconds\fR\fB;\fR
+.PP
+This version of the DHCP Server evaluates pool balance on a schedule,
+rather than on demand as leases are allocated.  The latter approach
+proved to be slightly klunky when pool misbalanced reach total
+saturation...when any server ran out of leases to assign, it also lost
+its ability to notice it had run dry.
+.PP
+In order to understand pool balance, some elements of its operation
+first need to be defined.  First, there are 'free' and 'backup' leases.
+Both of these are referred to as 'free state leases'.  'free' and 'backup'
+are 'the free states' for the purpose of this document.  The difference
+is that only the primary may allocate from 'free' leases unless under
+special circumstances, and only the secondary may allocate 'backup' leases.
+.PP
+When pool balance is performed, the only plausible expectation is to
+provide a 50/50 split of the free state leases between the two servers.
+This is because no one can predict which server will fail, regardless
+of the relative load placed upon the two servers, so giving each server
+half the leases gives both servers the same amount of 'failure endurance'.
+Therefore, there is no way to configure any different behaviour, outside of
+some very small windows we will describe shortly.
+.PP
+The first thing calculated on any pool balance run is a value referred to
+as 'lts', or "Leases To Send".  This, simply, is the difference in the
+count of free and backup leases, divided by two.  For the secondary,
+it is the difference in the backup and free leases, divided by two.
+The resulting value is signed: if it is positive, the local server is
+expected to hand out leases to retain a 50/50 balance.  If it is negative,
+the remote server would need to send leases to balance the pool.  Once
+the lts value reaches zero, the pool is perfectly balanced (give or take
+one lease in the case of an odd number of total free state leases).
+.PP
+The current approach is still something of a hybrid of the old approach,
+marked by the presence of the \fBmax-lease-misbalance\fR statement.  This
+parameter configures what used to be a 10% fixed value in previous versions:
+if lts is less than free+backup * \fBmax-lease-misbalance\fR percent, then
+the server will skip balancing a given pool (it won't bother moving any
+leases, even if some leases "should" be moved).  The meaning of this value
+is also somewhat overloaded, however, in that it also governs the estimation
+of when to attempt to balance the pool (which may then also be skipped over).
+The oldest leases in the free and backup states are examined.  The time
+they have resided in their respective queues is used as an estimate to
+indicate how much time it is probable it would take before the leases at
+the top of the list would be consumed (and thus, how long it would take
+to use all leases in that state).  This percentage is directly multiplied
+by this time, and fit into the schedule if it falls within
+the \fBmin-balance\fR and \fBmax-balance\fR configured values.  The
+scheduled pool check time is only moved in a downwards direction, it is
+never increased.  Lastly, if the lts is more than double this number in
+the negative direction, the local server will 'panic' and transmit a
+Failover protocol POOLREQ message, in the hopes that the remote system
+will be woken up into action.
+.PP
+Once the lts value exceeds the \fBmax-lease-misbalance\fR percentage of
+total free state leases as described above, leases are moved to the remote
+server.  This is done in two passes.
+.PP
+In the first pass, only leases whose most recent bound client would have
+been served by the remote server - according to the Load Balance Algorithm
+(see above \fBsplit\fR and \fBhba\fR configuration statements) - are given
+away to the peer.  This first pass will happily continue to give away leases,
+decrementing the lts value by one for each, until the lts value has reached
+the negative of the total number of leases multiplied by
+the \fBmax-lease-ownership\fR percentage.  So it is through this value that
+you can permit a small misbalance of the lease pools - for the purpose of
+giving the peer more than a 50/50 share of leases in the hopes that their
+clients might some day return and be allocated by the peer (operating
+normally).  This process is referred to as 'MAC Address Affinity', but this
+is somewhat misnamed: it applies equally to DHCP Client Identifier options.
+Note also that affinity is applied to leases when they enter the state
+'free' from 'expired' or 'released'.  In this case also, leases will not
+be moved from free to backup if the secondary already has more than its
+share.
+.PP
+The second pass is only entered into if the first pass fails to reduce
+the lts underneath the total number of free state leases multiplied by
+the \fBmax-lease-ownership\fR percentage.  In this pass, the oldest
+leases are given over to the peer without second thought about the Load
+Balance Algorithm, and this continues until the lts falls under this
+value.  In this way, the local server will also happily keep a small
+percentage of the leases that would normally load balance to itself.
+.PP
+So, the \fBmax-lease-misbalance\fR value acts as a behavioural gate.
+Smaller values will cause more leases to transition states to balance
+the pools over time, higher values will decrease the amount of change
+(but may lead to pool starvation if there's a run on leases).
+.PP
+The \fBmax-lease-ownership\fR value permits a small (percenatge) skew
+in the lease balance of a percentage of the total number of free state
+leases.
+.PP
+Finally, the \fBmin-balance\fR and \fBmax-balance\fR make certain that a
+scheduled rebalance event happens within a reasonable timeframe (not
+to be thrown off by, for example, a 7 year old free lease).
+.PP
+Plausible values for the percentages lie between 0 and 100, inclusive, but
+values over 50 are indistinguishable from one another (once lts exceeds
+50% of the free state leases, one server must therefore have 100% of the
+leases in its respective free state).  It is recommended to select
+a \fBmax-lease-ownership\fR value that is lower than the value selected
+for the \fBmax-lease-misbalance\fR value.  \fBmax-lease-ownership\fR
+defaults to 10, and \fBmax-lease-misbalance\fR defaults to 15.
+.PP
+Plausible values for the \fBmin-balance\fR and \fBmax-balance\fR times also
+range from 0 to (2^32)-1 (or the limit of your local time_t value), but
+default to values 60 and 3600 respectively (to place balance events between
+1 minute and 1 hour).
 .RE
 .SH CLIENT CLASSING
 Clients can be separated into classes, and treated differently
