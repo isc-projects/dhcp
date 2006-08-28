@@ -1,37 +1,13 @@
 
 
 
-Network Working Group                                         D. Hankins
-Internet-Draft                                                       ISC
-Expires: March 1, 2007                                   August 28, 2006
+ISC-DHCP-REFERENCES                                           D. Hankins
+                                                                     ISC
+                                                         August 28, 2006
 
 
                      ISC DHCP References Collection
-                               References
 
-Status of this Memo
-
-   This document is an Internet-Draft and is NOT offered in accordance
-   with Section 10 of RFC 2026, and the author does not provide the IETF
-   with any rights other than to publish as an Internet-Draft.
-
-   Internet-Drafts are working documents of the Internet Engineering
-   Task Force (IETF), its areas, and its working groups.  Note that
-   other groups may also distribute working documents as Internet-
-   Drafts.
-
-   Internet-Drafts are draft documents valid for a maximum of six months
-   and may be updated, replaced, or obsoleted by other documents at any
-   time.  It is inappropriate to use Internet-Drafts as reference
-   material or to cite them other than as "work in progress."
-
-   The list of current Internet-Drafts can be accessed at
-   http://www.ietf.org/ietf/1id-abstracts.txt.
-
-   The list of Internet-Draft Shadow Directories can be accessed at
-   http://www.ietf.org/shadow.html.
-
-   This Internet-Draft will expire on March 1, 2007.
 
 Copyright Notice
 
@@ -50,17 +26,35 @@ Copyright Notice
    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT
    OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-
-
-Hankins                   Expires March 1, 2007                 [Page 1]
-
-Internet-Draft       ISC DHCP References Collection          August 2006
-
-
 Abstract
 
    This document describes a collection of Reference material that ISC
    DHCP 3.1.x has been implemented to.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Hankins                                                         [Page 1]
+
+                     ISC DHCP References Collection          August 2006
 
 
 Table of Contents
@@ -108,9 +102,15 @@ Table of Contents
 
 
 
-Hankins                   Expires March 1, 2007                 [Page 2]
+
+
+
+
+
+
+Hankins                                                         [Page 2]
 
-Internet-Draft       ISC DHCP References Collection          August 2006
+                     ISC DHCP References Collection          August 2006
 
 
 1.  Introduction
@@ -164,9 +164,9 @@ Internet-Draft       ISC DHCP References Collection          August 2006
 
 
 
-Hankins                   Expires March 1, 2007                 [Page 3]
+Hankins                                                         [Page 3]
 
-Internet-Draft       ISC DHCP References Collection          August 2006
+                     ISC DHCP References Collection          August 2006
 
 
    special status applied to the software - that the software itself is
@@ -220,9 +220,9 @@ Internet-Draft       ISC DHCP References Collection          August 2006
 
 
 
-Hankins                   Expires March 1, 2007                 [Page 4]
+Hankins                                                         [Page 4]
 
-Internet-Draft       ISC DHCP References Collection          August 2006
+                     ISC DHCP References Collection          August 2006
 
 
    will to participate has a say.
@@ -276,9 +276,9 @@ Internet-Draft       ISC DHCP References Collection          August 2006
 
 
 
-Hankins                   Expires March 1, 2007                 [Page 5]
+Hankins                                                         [Page 5]
 
-Internet-Draft       ISC DHCP References Collection          August 2006
+                     ISC DHCP References Collection          August 2006
 
 
    So, for this convoluted and unfortunate state of affairs in the unix
@@ -332,9 +332,9 @@ Internet-Draft       ISC DHCP References Collection          August 2006
 
 
 
-Hankins                   Expires March 1, 2007                 [Page 6]
+Hankins                                                         [Page 6]
 
-Internet-Draft       ISC DHCP References Collection          August 2006
+                     ISC DHCP References Collection          August 2006
 
 
 3.4.  Internet Protocol Version 4 References
@@ -388,9 +388,9 @@ Internet-Draft       ISC DHCP References Collection          August 2006
 
 
 
-Hankins                   Expires March 1, 2007                 [Page 7]
+Hankins                                                         [Page 7]
 
-Internet-Draft       ISC DHCP References Collection          August 2006
+                     ISC DHCP References Collection          August 2006
 
 
    or relay, which may not be zero.  It is not known if there is a good
@@ -444,9 +444,9 @@ Internet-Draft       ISC DHCP References Collection          August 2006
 
 
 
-Hankins                   Expires March 1, 2007                 [Page 8]
+Hankins                                                         [Page 8]
 
-Internet-Draft       ISC DHCP References Collection          August 2006
+                     ISC DHCP References Collection          August 2006
 
 
    RFC1035 wire format).  ISC DHCP has both client and server support,
@@ -500,9 +500,9 @@ Internet-Draft       ISC DHCP References Collection          August 2006
 
 
 
-Hankins                   Expires March 1, 2007                 [Page 9]
+Hankins                                                         [Page 9]
 
-Internet-Draft       ISC DHCP References Collection          August 2006
+                     ISC DHCP References Collection          August 2006
 
 
    which is used to match client identities with names in the DNS as
@@ -556,9 +556,9 @@ Internet-Draft       ISC DHCP References Collection          August 2006
 
 
 
-Hankins                   Expires March 1, 2007                [Page 10]
+Hankins                                                        [Page 10]
 
-Internet-Draft       ISC DHCP References Collection          August 2006
+                     ISC DHCP References Collection          August 2006
 
 
 5.3.  DHCP Procedures
@@ -612,9 +612,9 @@ Internet-Draft       ISC DHCP References Collection          August 2006
 
 
 
-Hankins                   Expires March 1, 2007                [Page 11]
+Hankins                                                        [Page 11]
 
-Internet-Draft       ISC DHCP References Collection          August 2006
+                     ISC DHCP References Collection          August 2006
 
 
    [15]  Droms, R., "Procedures and IANA Guidelines for Definition of
@@ -668,9 +668,9 @@ Internet-Draft       ISC DHCP References Collection          August 2006
 
 
 
-Hankins                   Expires March 1, 2007                [Page 12]
+Hankins                                                        [Page 12]
 
-Internet-Draft       ISC DHCP References Collection          August 2006
+                     ISC DHCP References Collection          August 2006
 
 
    [29]  Stapp, M., "The DHCP Client FQDN Option", September 2006.
@@ -724,9 +724,9 @@ Internet-Draft       ISC DHCP References Collection          August 2006
 
 
 
-Hankins                   Expires March 1, 2007                [Page 13]
+Hankins                                                        [Page 13]
 
-Internet-Draft       ISC DHCP References Collection          August 2006
+                     ISC DHCP References Collection          August 2006
 
 
 Author's Address
@@ -780,5 +780,5 @@ Author's Address
 
 
 
-Hankins                   Expires March 1, 2007                [Page 14]
+Hankins                                                        [Page 14]
 
