@@ -1,6 +1,6 @@
 <?xml version='1.0' ?>
 
-<!-- $Id: References.xml,v 1.1.2.5 2006/08/28 21:53:39 dhankins Exp $ -->
+<!-- $Id: References.xml,v 1.1.2.6 2006/08/28 22:06:11 dhankins Exp $ -->
 
 <?rfc private="ISC-DHCP-REFERENCES" ?>
 
@@ -78,7 +78,7 @@
 
       <address>
 	<postal>
-	  <street>950 Charter Stree</street>
+	  <street>950 Charter Street</street>
 	  <city>Redwood City</city>
 	  <region>CA</region>
 	  <code>94063</code>
