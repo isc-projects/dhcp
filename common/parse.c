@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.113.2.4 2006/08/28 16:10:14 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.113.2.5 2006/08/28 16:31:03 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -5459,8 +5459,8 @@ parse_domain_list(struct parse *cfile, int compress)
 						    sizeof(compbuf) - clen,
 						    dnptrs, lastdnptr);
 		else
-			result = ns_name_pton(val, compbuf + clen,
-					      sizeof(compbuf) - clen);
+			result = MRns_name_pton(val, compbuf + clen,
+						sizeof(compbuf) - clen);
 
 		if (result < 0) {
 			parse_warn(cfile, "Error compressing domain list: %m");
