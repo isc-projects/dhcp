@@ -69,7 +69,7 @@ the README file.
   priority over the client's parameter request list.
 
 - Varying option space code and length bit widths (8/16/32) are now
-  supported.  This is a milestone in acheiving RFC 3925 "VIVSO" and
+  supported.  This is a milestone in achieving RFC 3925 "VIVSO" and
   DHCPv6 support.
 
 - A new common (server or client) option, 'db-time-format local;', has
