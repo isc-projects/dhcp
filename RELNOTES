@@ -33,6 +33,11 @@ the README file.
   were tranmsitted to it, and what frames are being carried through it which
   it should not intercept.
 
+			Changes since 3.1.0a1
+
+- A bug in the FQDN universe that added FQDN codes to the NWIP universe's
+  hash table was repaired.
+
 			Changes since 3.0 (New Features)
 
 - A workaround for certain STSN servers that send a mangled domain-name
