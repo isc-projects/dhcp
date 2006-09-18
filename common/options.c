@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.92.2.3 2006/08/28 18:16:49 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.92.2.4 2006/09/18 17:33:44 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -141,7 +141,7 @@ int parse_option_buffer (options, buffer, length, universe)
 	const unsigned char *end = buffer + length;
 	unsigned len, offset;
 	unsigned code;
-	struct option_cache *op = (struct option_cache *)0;
+	struct option_cache *op = NULL, *nop = NULL;
 	struct buffer *bp = (struct buffer *)0;
 	struct option *option = NULL;
 
@@ -205,36 +205,62 @@ int parse_option_buffer (options, buffer, length, universe)
 		if (!(option &&
 		      (option->format[0] == 'e' ||
 		       option->format[0] == 'E') &&
-		      (parse_encapsulated_suboptions
-		       (options, option,
-			bp->data + offset, len,
-			universe, (const char *)0)))) {
-		    op = lookup_option (universe, options, code);
-		    if (op) {
-			struct data_string new;
-			memset (&new, 0, sizeof new);
-			if (!buffer_allocate (&new.buffer, op -> data.len + len,
-					      MDL)) {
-			    log_error ("parse_option_buffer: No memory.");
-			    return 0;
+		      (parse_encapsulated_suboptions(options, option,
+						     bp->data + offset, len,
+						     universe, NULL)))) {
+			op = lookup_option(universe, options, code);
+
+			if (op != NULL && universe->concat_duplicates) {
+				struct data_string new;
+				memset(&new, 0, sizeof new);
+				if (!buffer_allocate(&new.buffer,
+						     op->data.len + len,
+						     MDL)) {
+					log_error("parse_option_buffer: "
+						  "No memory.");
+					buffer_dereference(&bp, MDL);
+					return 0;
+				}
+				/* Copy old option to new data object. */
+				memcpy(new.buffer->data, op->data.data,
+					op->data.len);
+				/* Concat new option behind old. */
+				memcpy(new.buffer->data + op->data.len,
+					bp->data + offset, len);
+				new.len = op->data.len + len;
+				new.data = new.buffer->data;
+				/* Save new concat'd object. */
+				data_string_forget(&op->data, MDL);
+				data_string_copy(&op->data, &new, MDL);
+				data_string_forget(&new, MDL);
+			} else if (op != NULL) {
+				/* We must append this statement onto the
+				 * end of the list.
+				 */
+				while (op->next != NULL)
+					op = op->next;
+
+				if (!option_cache_allocate(&nop, MDL)) {
+					log_error("parse_option_buffer: "
+						  "No memory.");
+					buffer_dereference(&bp, MDL);
+					return 0;
+				}
+
+				option_reference(&nop->option, op->option, MDL);
+
+				nop->data.buffer = NULL;
+				buffer_reference(&nop->data.buffer, bp, MDL);
+				nop->data.data = bp->data;
+				nop->data.len = len;
+
+				option_cache_reference(&op->next, nop, MDL);
+				option_cache_dereference(&nop, MDL);
+			} else {
+				save_option_buffer(universe, options, bp,
+						   bp->data + offset, len,
+						   code, 1);
 			}
-			/* Copy old option to new data object. */
-			memcpy(new.buffer -> data, op -> data.data,
-				op -> data.len);
-			/* Concat new option behind old. */
-			memcpy(new.buffer->data + op->data.len,
-				bp->data + offset, len);
-			new.len = op -> data.len + len;
-			new.data = new.buffer -> data;
-			/* Save new concat'd object. */
-			data_string_forget (&op -> data, MDL);
-			data_string_copy (&op -> data, &new, MDL);
-			data_string_forget (&new, MDL);
-		    } else {
-			save_option_buffer (universe, options, bp,
-					    bp->data + offset, len,
-					    code, 1);
-		    }
 		}
 		option_dereference(&option, MDL);
 		offset += len;
@@ -1210,9 +1236,10 @@ format_min_length(format, oc)
 	const char *format;
 	struct option_cache *oc;
 {
-	const char *p;
+	const char *p, *name;
 	int min_len = 0;
 	int last_size = 0;
+	struct enumeration *espace;
 
 	p = format;
 	while (*p != '\0') {
@@ -1231,12 +1258,25 @@ format_min_length(format, oc)
 			last_size = 2;
 			break;
 
-		    case 'N': /* Enumeration in 1-byte values. */
+		    case 'N': /* Enumeration value. */
 			/* Consume space name. */
-			while ((*p != '\0') && (*p++ != '.'))
-				;
+			name = p;
+			p = strchr(p, '.');
+			if (p == NULL)
+				log_fatal("Corrupt format: %s", format);
 
-			/* Fall Through to handle as one-byte field */
+			espace = find_enumeration(name, p - name);
+			if (espace == NULL) {
+				log_error("Unknown enumeration: %s", format);
+				/* Max is safest value to return. */
+				return INT_MAX;
+			}
+
+			min_len += espace->width;
+			last_size = espace->width;
+			p++;
+
+			break;
 
 		    case 'b': /* int8_t */
 		    case 'B': /* uint8_t */
@@ -1248,57 +1288,14 @@ format_min_length(format, oc)
 
 		    case 'o': /* Last argument is optional. */
 			min_len -= last_size;
+
+		    /* XXX: It MAY be possible to sense the end of an
+		     * encapsulated space, but right now this is too
+		     * hard to support.  Return a safe value.
+		     */
 		    case 'e': /* Encapsulation hint (there is an 'E' later). */
-			last_size = 0;
-			break;
-
 		    case 'E': /* Encapsulated options. */
-			/* Consume space name. */
-			while ((*p != '\0') && (*p++ != '.'))
-				;
-
-			/* Find an end option, or find that the encaps options
-			 * go all the way to the end (or beyond) of the data
-			 * portion of the option.
-			 */
-			last_size = 0;
-			while (min_len < oc->data.len) {
-				if (oc->option != NULL &&
-				    oc->option->universe != NULL &&
-				    oc->option->universe->end != 0x00 &&
-				    oc->data.data[min_len] ==
-						oc->option->universe->end) {
-					min_len++;
-					last_size++;
-					break;
-				/* Otherwise, DHO_PAD (0x00) is treated as a
-				 * no-length, no-content option one skips.
-				 */
-				} else if (oc->data.data[min_len] == DHO_PAD) {
-					min_len++;
-					last_size++;
-				} else if ((min_len + 1) < oc->data.len) {
-					min_len += oc->data.data[min_len+1]+2;
-					last_size += oc->data.data[min_len+1]+2;
-				} else {
-					/* Suboption length is out of bounds,
-					 * advance beyond the code/length pair
-					 * to trigger below error conditonal.
-					 */
-					min_len += 2;
-					last_size += 2;
-					break;
-				}
-			}
-
-			if (min_len > oc->data.len) {
-				log_error("format_min_length(%s): "
-					  "Encapsulated options exceed "
-					  "supplied buffer.", format);
-				return INT_MAX;
-			}
-
-			break;
+			return min_len;
 
 		    case 'd': /* "Domain name" */
 		    case 'D': /* "rfc1035 formatted names" */
@@ -1419,8 +1416,13 @@ const char *pretty_print_option (option, data, len, emit_commas, emit_quotes)
 			enumbuf [l] =
 				find_enumeration (&option -> format [k] + 1,
 						  i - k - 1);
-			hunksize += 1;
-			hunkinc = 1;
+			if (enumbuf[l] == NULL) {
+				hunksize += 1;
+				hunkinc = 1;
+			} else {
+				hunksize += enumbuf[l]->width;
+				hunkinc = enumbuf[l]->width;
+			}
 			break;
 		      case 'I':
 		      case 'l':
@@ -1558,17 +1560,44 @@ const char *pretty_print_option (option, data, len, emit_commas, emit_quotes)
 				/* pretty-printing an array of enums is
 				   going to get ugly. */
 			      case 'N':
-				if (!enumbuf [j])
+				if (!enumbuf [j]) {
+					tval = *dp++;
 					goto enum_as_num;
+				}
+
+				switch (enumbuf[j]->width) {
+				      case 1:
+					tval = getUChar(dp);
+					break;
+
+				     case 2:
+					tval = getUShort(dp);
+					break;
+
+				    case 4:
+					tval = getULong(dp);
+					break;
+
+				    default:
+					log_fatal("Impossible case at %s:%d.",
+						  MDL);
+				}
+
 				for (i = 0; ;i++) {
 					if (!enumbuf [j] -> values [i].name)
 						goto enum_as_num;
 					if (enumbuf [j] -> values [i].value ==
-					    *dp)
+					    tval)
 						break;
 				}
 				strcpy (op, enumbuf [j] -> values [i].name);
+				dp += enumbuf[j]->width;
 				break;
+
+			      enum_as_num:
+				sprintf(op, "%u", tval);
+				break;
+
 			      case 'I':
 				foo.s_addr = htonl (getULong (dp));
 				strcpy (op, inet_ntoa (foo));
@@ -1602,7 +1631,6 @@ const char *pretty_print_option (option, data, len, emit_commas, emit_quotes)
 				sprintf (op, "%d", *(const char *)dp++);
 				break;
 			      case 'B':
-			      enum_as_num:
 				sprintf (op, "%d", *dp++);
 				break;
 			      case 'x':
@@ -1917,6 +1945,7 @@ void save_hashed_option (universe, options, oc)
 	int hashix;
 	pair bptr;
 	pair *hash = options -> universes [universe -> index];
+	struct option_cache **ocloc;
 
 	if (oc -> refcnt == 0)
 		abort ();
@@ -1946,11 +1975,10 @@ void save_hashed_option (universe, options, oc)
 		/* If we find one, dereference it and put the new one
 		   in its place. */
 		if (bptr) {
-			option_cache_dereference
-				((struct option_cache **)&bptr -> car, MDL);
-			option_cache_reference
-				((struct option_cache **)&bptr -> car,
-				 oc, MDL);
+			ocloc = (struct option_cache **)&bptr->car;
+
+			option_cache_dereference(ocloc, MDL);
+			option_cache_reference(ocloc, oc, MDL);
 			return;
 		}
 	}
@@ -1987,6 +2015,7 @@ void delete_hashed_option (universe, options, code)
 	int hashix;
 	pair bptr, prev = (pair)0;
 	pair *hash = options -> universes [universe -> index];
+	struct option_cache *oc;
 
 	/* There may not be any options in this space. */
 	if (!hash)
@@ -2605,6 +2634,7 @@ void save_linked_option (universe, options, oc)
 	pair *tail;
 	pair np = (pair )0;
 	struct option_chain_head *head;
+	struct option_cache **ocloc;
 
 	if (universe -> index >= options -> universe_count)
 		return;
@@ -2621,12 +2651,11 @@ void save_linked_option (universe, options, oc)
 
 	/* Find the tail of the list. */
 	for (tail = &head -> first; *tail; tail = &((*tail) -> cdr)) {
-		if (oc -> option ==
-		    ((struct option_cache *)((*tail) -> car)) -> option) {
-			option_cache_dereference ((struct option_cache **)
-						  (&(*tail) -> car), MDL);
-			option_cache_reference ((struct option_cache **)
-						(&(*tail) -> car), oc, MDL);
+		ocloc = (struct option_cache **)&(*tail)->car;
+
+		if (oc->option->code == (*ocloc)->option->code) {
+			option_cache_dereference(ocloc, MDL);
+			option_cache_reference(ocloc, oc, MDL);
 			return;
 		}
 	}

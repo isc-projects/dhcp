@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tables.c,v 1.56.2.3 2006/08/28 16:10:14 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: tables.c,v 1.56.2.4 2006/09/18 17:33:44 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -307,14 +307,14 @@ static struct option dhcpv6_options[] = {
 	{ "client-id", "X",			&dhcpv6_universe,  1, 1 },
 	{ "server-id", "X",			&dhcpv6_universe,  2, 1 },
 
-	/* The option space is actually DHCPv6, but it needs to be in a
-	 * separate space from the root option space (specific to this
-	 * one instance of an ia-*).  So we need to figure out this whole
-	 * "multi parent spaces" thing.
+	/* ia-* options actually have at their ends a space for options
+	 * that are specific to this instance of the option.  We can not
+	 * handle this yet at this stage of development, so the encoding
+	 * of these options is unspecified ("X").
 	 */
-	{ "ia-na", "eLTTEdhcpv6.",		&dhcpv6_universe,  3, 1 },
-	{ "ia-ta", "eLEdhcpv6.",		&dhcpv6_universe,  4, 1 },
-	{ "ia-addr", "e6TTEdhcpv6.",		&dhcpv6_universe,  5, 1 },
+	{ "ia-na", "X",				&dhcpv6_universe,  3, 1 },
+	{ "ia-ta", "X",				&dhcpv6_universe,  4, 1 },
+	{ "ia-addr", "X",			&dhcpv6_universe,  5, 1 },
 
 	/* "oro" is DHCPv6 speak for "parameter-request-list" */
 	{ "oro", "SA",				&dhcpv6_universe,  6, 1 },
@@ -365,8 +365,8 @@ static struct option dhcpv6_options[] = {
 
 				/* RFC3633 OPTIONS */
 
-	{ "ia-pd", "eLTTEdhcpv6.",		&dhcpv6_universe, 25, 1 },
-	{ "ia-prefix", "eTTB6Edhcpv6.",		&dhcpv6_universe, 26, 1 },
+	{ "ia-pd", "X",				&dhcpv6_universe, 25, 1 },
+	{ "ia-prefix", "X",			&dhcpv6_universe, 26, 1 },
 
 				/* RFC3898 OPTIONS */
 
@@ -435,7 +435,7 @@ struct enumeration_value dhcpv6_status_code_values[] = {
 
 struct enumeration dhcpv6_status_codes = {
 	NULL,
-	"status-codes",
+	"status-codes", 2,
 	dhcpv6_status_code_values
 };
 
@@ -458,7 +458,7 @@ struct enumeration_value dhcpv6_message_values[] = {
 
 struct enumeration dhcpv6_messages = {
 	NULL,
-	"dhcpv6-messages",
+	"dhcpv6-messages", 1,
 	dhcpv6_message_values
 };
 
@@ -856,6 +856,7 @@ void initialize_common_option_spaces()
 
 	/* Set up the DHCP option universe... */
 	dhcp_universe.name = "dhcp";
+	dhcp_universe.concat_duplicates = 1;
 	dhcp_universe.lookup_func = lookup_hashed_option;
 	dhcp_universe.option_state_dereference =
 		hashed_option_state_dereference;
@@ -889,6 +890,7 @@ void initialize_common_option_spaces()
 
 	/* Set up the Novell option universe (for option 63)... */
 	nwip_universe.name = "nwip";
+	nwip_universe.concat_duplicates = 0; /* XXX: reference? */
 	nwip_universe.lookup_func = lookup_linked_option;
 	nwip_universe.option_state_dereference =
 		linked_option_state_dereference;
@@ -927,6 +929,7 @@ void initialize_common_option_spaces()
 
 	/* Set up the FQDN option universe... */
 	fqdn_universe.name = "fqdn";
+	fqdn_universe.concat_duplicates = 0;
 	fqdn_universe.lookup_func = lookup_linked_option;
 	fqdn_universe.option_state_dereference =
 		linked_option_state_dereference;
@@ -967,6 +970,7 @@ void initialize_common_option_spaces()
 	 * 125)...
 	 */
         vendor_class_universe.name = "vendor-class";
+	vendor_class_universe.concat_duplicates = 0; /* XXX: reference? */
         vendor_class_universe.lookup_func = lookup_hashed_option;
         vendor_class_universe.option_state_dereference =
                 hashed_option_state_dereference;
@@ -1006,6 +1010,7 @@ void initialize_common_option_spaces()
 
         /* Set up the Vendor Identified Vendor Sub-options (option 126)... */
         vendor_universe.name = "vendor";
+	vendor_universe.concat_duplicates = 0; /* XXX: reference? */
         vendor_universe.lookup_func = lookup_hashed_option;
         vendor_universe.option_state_dereference =
                 hashed_option_state_dereference;
@@ -1045,6 +1050,7 @@ void initialize_common_option_spaces()
 
         /* Set up the ISC Vendor-option universe (for option 125.2495)... */
         isc_universe.name = "isc";
+	isc_universe.concat_duplicates = 0; /* XXX: check VIVSO ref */
         isc_universe.lookup_func = lookup_linked_option;
         isc_universe.option_state_dereference =
                 linked_option_state_dereference;
@@ -1083,6 +1089,7 @@ void initialize_common_option_spaces()
 
 	/* Set up the DHCPv6 root universe. */
 	dhcpv6_universe.name = "dhcp6";
+	dhcpv6_universe.concat_duplicates = 0;
 	dhcpv6_universe.lookup_func = lookup_hashed_option;
 	dhcpv6_universe.option_state_dereference =
 		hashed_option_state_dereference;
@@ -1121,6 +1128,7 @@ void initialize_common_option_spaces()
 
 	/* Set up DHCPv6 VSIO universe. */
 	vsio_universe.name = "vsio";
+	vsio_universe.concat_duplicates = 0;
 	vsio_universe.lookup_func = lookup_hashed_option;
 	vsio_universe.option_state_dereference =
 		hashed_option_state_dereference;
@@ -1156,6 +1164,7 @@ void initialize_common_option_spaces()
 
 	/* Add ISC VSIO sub-sub-option space. */
 	isc6_universe.name = "isc6";
+	isc6_universe.concat_duplicates = 0;
 	isc6_universe.lookup_func = lookup_hashed_option;
 	isc6_universe.option_state_dereference =
 		hashed_option_state_dereference;

@@ -1159,6 +1159,9 @@ struct option_cache *lookup_option PROTO ((struct universe *,
 struct option_cache *lookup_hashed_option PROTO ((struct universe *,
 						  struct option_state *,
 						  unsigned));
+struct option_cache *next_hashed_option(struct universe *,
+					struct option_state *,
+					struct option_cache *);
 int save_option_buffer (struct universe *, struct option_state *,
 			struct buffer *, unsigned char *, unsigned,
 			unsigned, int);

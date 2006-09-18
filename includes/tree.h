@@ -51,6 +51,7 @@ struct enumeration_value {
 struct enumeration {
 	struct enumeration *next;
 	const char *name;
+	unsigned width;
 	struct enumeration_value *values;
 };	
 
@@ -340,6 +341,9 @@ struct universe {
 	option_code_hash_t *code_hash;
 	struct option *enc_opt;
 	int index;
+
+	/* Flags should probably become condensed. */
+	int concat_duplicates;
 };
 
 struct option {
