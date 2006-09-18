@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tables.c,v 1.58 2006/07/26 15:43:52 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: tables.c,v 1.58.14.1 2006/09/18 17:37:44 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -746,7 +746,7 @@ void initialize_common_option_spaces()
 				  FQDN_HASH_SIZE, MDL))
 		log_fatal ("Can't allocate fqdn option hash table.");
 	for (i = 0 ; fqdn_options[i].name ; i++) {
-		option_code_hash_add(nwip_universe.code_hash,
+		option_code_hash_add(fqdn_universe.code_hash,
 				     &fqdn_options[i].code, 0,
 				     &fqdn_options[i], MDL);
 		option_name_hash_add(fqdn_universe.name_hash,
