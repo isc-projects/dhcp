@@ -1,6 +1,6 @@
 	      Internet Systems Consortium DHCP Distribution
-			     Version 3.0.4
-			     April 27, 2006
+			  Version 3.0.4-PBSG0
+			   September 22, 2006
 
 			     Release Notes
 
@@ -80,6 +80,11 @@ Murrell at BC Tel Advanced Communications.  I'd like to express my
 thanks to all of these good people here, both for working on the code
 and for prodding me into improving it.
 
+
+			Changes since 3.0.4 (Custom Changes)
+
+- Failover servers try harder to retransmit binding updates upon entering
+  NORMAL state.
 
 			Changes since 3.0.4rc1
 
