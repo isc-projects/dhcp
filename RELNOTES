@@ -79,6 +79,11 @@ thanks to all of these good people here, both for working on the code
 and for prodding me into improving it.
 
 
+			Changes since 3.0.5rc2
+
+- Failover servers try harder to retransmit binding updates upon entering
+  NORMAL state.
+
 			Changes since 3.0.5rc1
 
 - A bug was repaired in fixes to the dhclient which sought to run the

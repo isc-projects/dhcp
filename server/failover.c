@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.53.2.45 2006/02/22 22:43:27 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.53.2.46 2006/09/22 16:29:44 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1731,15 +1731,27 @@ isc_result_t dhcp_failover_set_state (dhcp_failover_state_t *state,
 
     switch (new_state) {
 	  case normal:
+	    /* Section 9.6.1 of the failover draft revision 7 indicates
+	     * that servers 'will send to the other server all currently
+	     * unacknowledged binding updates as BNDUPD messages.'.  This
+	     * function call below basically resets our update queue.
+	     */
+	    dhcp_failover_generate_update_queue(state, 0);
+
+	    if (state->update_queue_tail != NULL) {
+		dhcp_failover_send_updates(state);
+		log_info("Sending updates to %s.", state->name);
+	    }
+
 	    if (state -> partner.state == normal)
 		    dhcp_failover_state_pool_check (state);
 	    break;
-	    
+
 	  case potential_conflict:
 	    if (state -> i_am == primary)
 		    dhcp_failover_send_update_request (state);
 	    break;
-	    
+
 	  case startup:
 #if defined (DEBUG_FAILOVER_TIMING)
 	    log_info ("add_timeout +15 %s",
@@ -1752,7 +1764,7 @@ isc_result_t dhcp_failover_set_state (dhcp_failover_state_t *state,
 			 (tvunref_t)
 			 omapi_object_dereference);
 	    break;
-	    
+
 	    /* If we come back in recover_wait and there's still waiting
 	       to do, set a timeout. */
 	  case recover_wait:
@@ -1772,7 +1784,7 @@ isc_result_t dhcp_failover_set_state (dhcp_failover_state_t *state,
 	    } else
 		    dhcp_failover_recover_done (state);
 	    break;
-	    
+
 	  case recover:
 	    if (state -> link_to_peer)
 		    dhcp_failover_send_update_request_all (state);
@@ -1805,7 +1817,6 @@ isc_result_t dhcp_failover_set_state (dhcp_failover_state_t *state,
 		}
 	    }
 	    break;
-			 	
 
 	  default:
 	    break;
