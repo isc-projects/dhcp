@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.65 2006/08/28 21:35:03 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.66 2006/09/27 18:27:27 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1743,6 +1743,12 @@ isc_result_t dhcp_failover_set_state (dhcp_failover_state_t *state,
 	     * all pending binding updates.
 	     */
 	    dhcp_failover_generate_update_queue(state, 0);
+
+	    if (state->update_queue_tail != NULL) {
+		dhcp_failover_send_updates(state);
+		log_info("Sending updates to %s.", state->name);
+	    }
+
 	    if (state -> partner.state == normal)
 		    dhcp_failover_state_pool_check (state);
 	    break;
@@ -5155,56 +5161,14 @@ isc_result_t dhcp_failover_generate_update_queue (dhcp_failover_state_t *state,
 	struct pool *p;
 	struct lease *l, *n;
 	int i;
-	struct lease **lptr [5];
 #define FREE_LEASES 0
 #define ACTIVE_LEASES 1
 #define EXPIRED_LEASES 2
 #define ABANDONED_LEASES 3
 #define BACKUP_LEASES 4
+#define RESERVED_LEASES 5
+	struct lease **lptr[RESERVED_LEASES+1];
 
-	/* First remove everything from the update and ack queues. */
-	l = n = (struct lease *)0;
-	if (state -> update_queue_head) {
-		lease_reference (&l, state -> update_queue_head, MDL);
-		lease_dereference (&state -> update_queue_head, MDL);
-		do {
-			l -> flags &= ~ON_UPDATE_QUEUE;
-			if (l -> next_pending) {
-				lease_reference (&n,
-						 l -> next_pending, MDL);
-				lease_dereference (&l -> next_pending, MDL);
-			}
-			lease_dereference (&l, MDL);
-			if (n) {
-				lease_reference (&l, n, MDL);
-				lease_dereference (&n, MDL);
-			}
-		} while (l);
-		lease_dereference (&state -> update_queue_tail, MDL);
-	}
-
-	if (state -> ack_queue_head) {
-		lease_reference (&l, state -> ack_queue_head, MDL);
-		lease_dereference (&state -> ack_queue_head, MDL);
-		do {
-			l -> flags &= ~ON_ACK_QUEUE;
-			if (l -> next_pending) {
-				lease_reference (&n,
-						 l -> next_pending, MDL);
-				lease_dereference (&l -> next_pending, MDL);
-			}
-			lease_dereference (&l, MDL);
-			if (n) {
-				lease_reference (&l, n, MDL);
-				lease_dereference (&n, MDL);
-			}
-		} while (l);
-		lease_dereference (&state -> ack_queue_tail, MDL);
-	}
-	if (state -> send_update_done)
-		lease_dereference (&state -> send_update_done, MDL);
-	state -> cur_unacked_updates = 0;
-			
 	/* Loop through each pool in each shared network and call the
 	   expiry routine on the pool. */
 	for (s = shared_networks; s; s = s -> next) {
@@ -5212,19 +5176,19 @@ isc_result_t dhcp_failover_generate_update_queue (dhcp_failover_state_t *state,
 		if (p->failover_peer != state)
 			continue;
 
-		lptr [FREE_LEASES] = &p -> free;
-		lptr [ACTIVE_LEASES] = &p -> active;
-		lptr [EXPIRED_LEASES] = &p -> expired;
-		lptr [ABANDONED_LEASES] = &p -> abandoned;
-		lptr [BACKUP_LEASES] = &p -> backup;
+		lptr[FREE_LEASES] = &p->free;
+		lptr[ACTIVE_LEASES] = &p->active;
+		lptr[EXPIRED_LEASES] = &p->expired;
+		lptr[ABANDONED_LEASES] = &p->abandoned;
+		lptr[BACKUP_LEASES] = &p->backup;
+		lptr[RESERVED_LEASES] = &p->reserved;
 
-		for (i = FREE_LEASES; i <= BACKUP_LEASES; i++) {
+		for (i = FREE_LEASES; i <= RESERVED_LEASES; i++) {
 		    for (l = *(lptr [i]); l; l = l -> next) {
-			if ((everythingp &&
-			     (l->starts != MIN_TIME ||
-			      l->ends != MIN_TIME)) ||
-			    (l->tstp > l->atsfp) ||
-			    (i == EXPIRED_LEASES)) {
+			if (l->flags & (ON_UPDATE_QUEUE | ON_ACK_QUEUE) == 0 &&
+			    (everythingp ||
+			     (l->tstp > l->atsfp) ||
+			     (i == EXPIRED_LEASES))) {
 				l -> desired_binding_state = l -> binding_state;
 				dhcp_failover_queue_update (l, 0);
 			}
@@ -5239,6 +5203,12 @@ isc_result_t
 dhcp_failover_process_update_request (dhcp_failover_state_t *state,
 				      failover_message_t *msg)
 {
+	if (state->send_update_done) {
+		log_info("Received update request while old update still "
+			 "flying!  Silently discarding old request.");
+		lease_dereference(&state->send_update_done, MDL);
+	}
+
 	/* Generate a fresh update queue. */
 	dhcp_failover_generate_update_queue (state, 0);
 
@@ -5268,6 +5238,12 @@ isc_result_t
 dhcp_failover_process_update_request_all (dhcp_failover_state_t *state,
 					  failover_message_t *msg)
 {
+	if (state->send_update_done) {
+		log_info("Received update request while old update still "
+			 "flying!  Silently discarding old request.");
+		lease_dereference(&state->send_update_done, MDL);
+	}
+
 	/* Generate a fresh update queue that includes every lease. */
 	dhcp_failover_generate_update_queue (state, 1);
 

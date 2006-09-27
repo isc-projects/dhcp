@@ -31,6 +31,13 @@ the README file.
 - A bug in the FQDN universe that added FQDN codes to the NWIP universe's
   hash table was repaired.
 
+- The servers now try harder to transmit pending binding updates when
+  entering normal state.
+
+- UPDREQ/UPDREQALL handling was optimized - it no longer dequeues and
+  requeues all pending updates.  This should reduce the number of spurious
+  'xid mismatch' log mesasges.
+
 			Changes since 3.0 (New Features)
 
 - A workaround for certain STSN servers that send a mangled domain-name

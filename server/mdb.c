@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.84 2006/08/28 21:35:03 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.85 2006/09/27 18:27:27 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1578,23 +1578,23 @@ void pool_timer (vpool)
 	struct lease *lt = (struct lease *)0;
 	struct lease *next = (struct lease *)0;
 	struct lease *lease = (struct lease *)0;
-	struct lease **lptr[6];
+#define FREE_LEASES 0
+#define ACTIVE_LEASES 1
+#define EXPIRED_LEASES 2
+#define ABANDONED_LEASES 3
+#define BACKUP_LEASES 4
+#define RESERVED_LEASES 5
+	struct lease **lptr[RESERVED_LEASES+1];
 	TIME next_expiry = MAX_TIME;
 	int i;
 
 	pool = (struct pool *)vpool;
 
-#define FREE_LEASES 0
 	lptr [FREE_LEASES] = &pool -> free;
-#define ACTIVE_LEASES 1
 	lptr [ACTIVE_LEASES] = &pool -> active;
-#define EXPIRED_LEASES 2
 	lptr [EXPIRED_LEASES] = &pool -> expired;
-#define ABANDONED_LEASES 3
 	lptr [ABANDONED_LEASES] = &pool -> abandoned;
-#define BACKUP_LEASES 4
 	lptr [BACKUP_LEASES] = &pool -> backup;
-#define RESERVED_LEASES 5
 	lptr[RESERVED_LEASES] = &pool->reserved;
 
 	for (i = FREE_LEASES; i <= RESERVED_LEASES; i++) {
@@ -1862,7 +1862,7 @@ int write_leases ()
 	struct collection *colp;
 	int i;
 	int num_written;
-	struct lease **lptr[6];
+	struct lease **lptr[RESERVED_LEASES+1];
 
 	/* write all the dynamically-created class declarations. */
 	if (collections->classes) {
@@ -2172,7 +2172,7 @@ void expire_all_pools ()
 	struct hash_bucket *hb;
 	int i;
 	struct lease *l;
-	struct lease **lptr[6];
+	struct lease **lptr[RESERVED_LEASES+1];
 
 	/* Indicate that we are in the startup phase */
 	server_starting = SS_NOSYNC | SS_QFOLLOW;
@@ -2244,7 +2244,7 @@ void dump_subnets ()
 	struct shared_network *s;
 	struct subnet *n;
 	struct pool *p;
-	struct lease **lptr[6];
+	struct lease **lptr[RESERVED_LEASES+1];
 	int i;
 
 	log_info ("Subnets:");
@@ -2442,7 +2442,7 @@ void free_everything ()
 		if (nc -> pools) {
 		    pool_reference (&pn, nc -> pools, MDL);
 		    do {
-			struct lease **lptr[6];
+			struct lease **lptr[RESERVED_LEASES+1];
 			
 			if (pn) {
 			    pool_reference (&pc, pn, MDL);
