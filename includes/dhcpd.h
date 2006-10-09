@@ -384,6 +384,7 @@ struct lease {
 #	define MS_NULL_TERMINATION	8
 #	define ON_UPDATE_QUEUE		16
 #	define ON_ACK_QUEUE		32
+#	define ON_QUEUE			(ON_UPDATE_QUEUE | ON_ACK_QUEUE)
 #	define UNICAST_BROADCAST_HACK	64
 #	define ON_DEFERRED_QUEUE	128
 

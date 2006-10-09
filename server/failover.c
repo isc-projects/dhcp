@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.66 2006/09/27 18:27:27 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.67 2006/10/09 17:47:43 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -5185,7 +5185,7 @@ isc_result_t dhcp_failover_generate_update_queue (dhcp_failover_state_t *state,
 
 		for (i = FREE_LEASES; i <= RESERVED_LEASES; i++) {
 		    for (l = *(lptr [i]); l; l = l -> next) {
-			if (l->flags & (ON_UPDATE_QUEUE | ON_ACK_QUEUE) == 0 &&
+			if ((l->flags & ON_QUEUE) == 0 &&
 			    (everythingp ||
 			     (l->tstp > l->atsfp) ||
 			     (i == EXPIRED_LEASES))) {
