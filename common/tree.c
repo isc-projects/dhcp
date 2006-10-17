@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.108 2006/07/31 22:19:51 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.109 2006/10/17 20:45:59 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -242,7 +242,7 @@ int make_const_option_cache (oc, buffer, data, len, option, file, line)
 	(*oc) -> data.terminated = 0;
 	if (data)
 		memcpy (&bp -> data [0], data, len);
-	(*oc) -> option = option;
+	option_reference(&((*oc)->option), option, MDL);
 	return 1;
 }
 

@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.212 2006/08/22 17:13:25 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.213 2006/10/17 20:45:59 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2426,7 +2426,8 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 				expression_reference (&noc -> expression,
 						      oc -> expression, MDL);
 			if (oc -> option)
-				noc -> option = oc -> option;
+				option_reference(&(noc->option), oc->option,
+						 MDL);
 		}
 
 		save_option (&dhcp_universe, state -> options, noc);
