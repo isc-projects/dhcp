@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.98.2.1 2006/08/24 14:59:20 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.98.2.2 2006/10/17 20:48:42 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -1689,7 +1689,7 @@ void set_option (universe, options, option, op)
 				break;
 			}
 		}
-		noc -> option = oc -> option;
+		option_reference(&(noc->option), oc->option, MDL);
 		save_option (universe, options, noc);
 		option_cache_dereference (&noc, MDL);
 		break;
@@ -2992,7 +2992,7 @@ add_option(struct option_state *options,
 		return 0;
 	}
 
-	oc->option = option;
+	option_reference(&(oc->option), option, MDL);
 	save_option(&dhcp_universe, options, oc);
 	option_cache_dereference(&oc, MDL);
 

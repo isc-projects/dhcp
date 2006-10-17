@@ -36,7 +36,10 @@ the README file.
 
 - UPDREQ/UPDREQALL handling was optimized - it no longer dequeues and
   requeues all pending updates.  This should reduce the number of spurious
-  'xid mismatch' log mesasges.
+  'xid mismatch' log messages.
+
+- An option definition referencing leak was fixed, which resulted in early
+  termination of dhclient upon the renewal event.
 
 			Changes since 3.0 (New Features)
 
