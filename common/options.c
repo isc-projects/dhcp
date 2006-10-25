@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.92.2.5 2006/10/24 19:54:00 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.92.2.6 2006/10/25 22:32:41 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -809,6 +809,253 @@ int cons_options (inpacket, outpacket, lease, client_state,
 	/* Figure out the length. */
 	length = DHCP_FIXED_NON_UDP + agentix;
 	return length;
+}
+
+/*
+ * XXX: We currently special case collecting VSIO options.
+ *      We should be able to handle this in a more generic fashion, by
+ *      including any encapsulated options that are present and desired.
+ *      This will look something like the VSIO handling VSIO code.
+ *      We may also consider handling the ORO-like options within
+ *      encapsulated spaces.
+ */
+
+struct vsio_state {
+	char *buf;
+	int buflen;
+	int bufpos;
+};
+
+static void
+vsio_options(struct option_cache *oc,
+	     struct packet *packet,
+	     struct lease *dummy_lease, 
+	     struct client_state *dummy_client_state,
+	     struct option_state *dummy_opt_state,
+	     struct option_state *opt_state,
+	     struct binding_scope **dummy_binding_scope,
+	     struct universe *universe, 
+	     void *void_vsio_state) {
+	struct vsio_state *vs = (struct vsio_state *)void_vsio_state;
+	struct data_string ds;
+	int total_len;
+
+	memset(&ds, 0, sizeof(ds));
+	if (evaluate_option_cache(&ds, packet, NULL,
+				  NULL, opt_state, NULL, 
+				  &global_scope, oc, MDL)) {
+		total_len = ds.len + universe->tag_size + universe->length_size;
+		if (total_len <= (vs->buflen - vs->bufpos)) {
+			if (universe->tag_size == 1) {
+				vs->buf[vs->bufpos++] = oc->option->code;
+			} else if (universe->tag_size == 2) {
+				putUShort(vs->buf+vs->bufpos, oc->option->code);
+				vs->bufpos += 2;
+			} else if (universe->tag_size == 4) {
+				putULong(vs->buf+vs->bufpos, oc->option->code);
+				vs->bufpos += 4;
+			}
+			if (universe->length_size == 1) {
+				vs->buf[vs->bufpos++] = ds.len;
+			} else if (universe->length_size == 2) {
+				putUShort(vs->buf+vs->bufpos, ds.len);
+				vs->bufpos += 2;
+			} else if (universe->length_size == 4) {
+				putULong(vs->buf+vs->bufpos, ds.len);
+				vs->bufpos += 4;
+			}
+			memcpy(vs->buf + vs->bufpos, ds.data, ds.len);
+			vs->bufpos += ds.len;
+		} else {
+			log_debug("No space for option %d in VSIO space %s.",
+		  		oc->option->code, universe->name);
+		}
+		data_string_forget(&ds, MDL);
+	} else {
+		log_error("Error evaluating option %d in VSIO space %s.",
+		  	oc->option->code, universe->name);
+	}
+}
+
+/*
+ * Stores the options from the DHCPv6 universe into the buffer given.
+ *
+ * Required options are given as a 0-terminated list of option codes.
+ * Once those are added, the ORO is consulted.
+ */
+
+int
+store_options6(char *buf, int buflen, 
+	       struct option_state *opt_state, 
+	       struct packet *packet,
+	       const int *required_opts,
+	       struct data_string *oro) {
+	int i, j;
+	struct option_cache *oc;
+	struct option *o;
+	struct data_string ds;
+	int bufpos;
+	int len;
+	int oro_size;
+	u_int16_t code;
+	int in_required_opts;
+	struct universe *u;
+	int vsio_option_code;
+	int vsio_wanted;
+	struct vsio_state vs;
+
+	bufpos = 0;
+	vsio_wanted = 0;
+
+	/*
+	 * Find the option code for the VSIO universe.
+	 */
+	vsio_option_code = 0;
+	o = vsio_universe.enc_opt;
+	while (o != NULL) { 
+		if (o->universe == &dhcpv6_universe) {
+			vsio_option_code = o->code;
+			break;
+		} 
+		o = o->universe->enc_opt;
+	}
+	if (vsio_option_code == 0) {
+		log_fatal("No VSIO option code found.");
+	}
+
+	if (required_opts != NULL) {
+		for (i=0; required_opts[i] != 0; i++) {
+			if (required_opts[i] == vsio_option_code) {
+				vsio_wanted = 1;
+			}
+
+			oc = lookup_option(&dhcpv6_universe, 
+					   opt_state, required_opts[i]);
+			if (oc == NULL) {
+				continue;
+			}
+			memset(&ds, 0, sizeof(ds));
+
+			if (evaluate_option_cache(&ds, packet, NULL,
+						  NULL, opt_state, NULL, 
+						  &global_scope, oc, MDL)) {
+				if ((ds.len + 4) <= (buflen - bufpos)) {
+					/* option tag */
+					putUShort(buf+bufpos, required_opts[i]);
+					/* option length */
+					putUShort(buf+bufpos+2, ds.len);
+					/* option data */
+					memcpy(buf+bufpos+4, ds.data, ds.len);
+					/* update position */
+					bufpos += (4 + ds.len);
+				} else {
+					log_debug("No space for option %d",
+						  required_opts[i]);
+				}
+				data_string_forget(&ds, MDL);
+			} else {
+				log_error("Error evaluating option %d",
+				  	required_opts[i]);
+			}
+		}
+	}
+
+	oro_size = oro->len / 2;
+	for (i=0; i<oro_size; i++) {
+		memcpy(&code, oro->data+(i*2), 2);
+		code = ntohs(code);
+
+		/* 
+		 * See if we've already included this option because
+		 * it is required.
+		 */
+		in_required_opts = 0;
+		if (required_opts != NULL) {
+			for (j=0; required_opts[j] != 0; j++) {
+				if (required_opts[j] == code) {
+					in_required_opts = 1;
+					break;
+				}
+			}
+		}
+		if (in_required_opts) {
+			continue;
+		}
+
+		/*
+		 * See if this is the VSIO option.
+		 */
+		if (code == vsio_option_code) {
+			vsio_wanted = 1;
+		}
+
+		/* 
+		 * Not already added, find this option.
+		 */
+		oc = lookup_option(&dhcpv6_universe, opt_state, code);
+		if (oc == NULL) {
+			continue;
+		}
+		memset(&ds, 0, sizeof(ds));
+		if (evaluate_option_cache(&ds, packet, NULL, NULL, opt_state,
+					  NULL, &global_scope, oc, MDL)) {
+			if ((ds.len + 4) <= (buflen - bufpos)) {
+				/* option tag */
+				putUShort(buf+bufpos, code);
+				/* option length */
+				putUShort(buf+bufpos+2, ds.len);
+				/* option data */
+				memcpy(buf+bufpos+4, ds.data, ds.len);
+				/* update position */
+				bufpos += (4 + ds.len);
+			} else {
+				log_debug("No space for option %d", code);
+			}
+			data_string_forget(&ds, MDL);
+		} else {
+			log_error("Error evaluating option %d", code);
+		}
+	}
+
+	if (vsio_wanted) {
+		for (i=0; i < opt_state->universe_count; i++) {
+			if (opt_state->universes[i] != NULL) {
+		    		o = universes[i]->enc_opt;
+				if ((o != NULL) && 
+				    (o->universe == &vsio_universe)) {
+					/*
+					 * Add the data from this VSIO option.
+					 */
+					vs.buf = buf;
+					vs.buflen = buflen;
+					vs.bufpos = bufpos+8;
+					option_space_foreach(packet, NULL,
+							     NULL, 
+							     NULL, opt_state,
+			     				     NULL, 
+							     universes[i], 
+							     (void *)&vs,
+			     				     vsio_options);
+
+					/* 
+					 * If there was actually data here,
+					 * add the "header".
+					 */
+					if (vs.bufpos > bufpos+8) {
+						putUShort(buf+bufpos,
+							  vsio_option_code);
+						putUShort(buf+bufpos+2,
+							  vs.bufpos-bufpos-4);
+						putULong(buf+bufpos+4, o->code);
+
+						bufpos = vs.bufpos;
+					}
+				}
+			}
+		}
+	}
+
+	return bufpos;
 }
 
 /* Store all the requested options into the requested buffer. */
@@ -1927,6 +2174,100 @@ int save_option_buffer (struct universe *universe,
 	return 1;
 }
 
+static void
+count_options(struct option_cache *dummy_oc,
+	      struct packet *dummy_packet,
+	      struct lease *dummy_lease, 
+	      struct client_state *dummy_client_state,
+	      struct option_state *dummy_opt_state,
+	      struct option_state *opt_state,
+	      struct binding_scope **dummy_binding_scope,
+	      struct universe *dummy_universe, 
+	      void *void_accumulator) {
+	int *accumulator = (int *)void_accumulator;
+
+	*accumulator += 1;
+}
+
+static void
+collect_oro(struct option_cache *oc,
+	    struct packet *dummy_packet,
+	    struct lease *dummy_lease, 
+	    struct client_state *dummy_client_state,
+	    struct option_state *dummy_opt_state,
+	    struct option_state *opt_state,
+	    struct binding_scope **dummy_binding_scope,
+	    struct universe *dummy_universe, 
+	    void *void_oro) {
+	struct data_string *oro = (struct data_string *)void_oro;
+
+	putUShort((char *)(oro->data + oro->len), oc->option->code);
+	oro->len += 2;
+}
+
+void
+build_server_oro(struct data_string *server_oro, 
+		 struct option_state *options,
+		 const char *file, int line) {
+	int num_opts;
+	int i;
+	struct option *o;
+
+	/*
+	 * Count the number of options, so we can allocate enough memory.
+	 * We want to mention sub-options too, so check all universes.
+	 */
+	num_opts = 0;
+	option_space_foreach(NULL, NULL, NULL, NULL, options,
+			     NULL, &dhcpv6_universe, (void *)&num_opts,
+			     count_options);
+	for (i=0; i < options->universe_count; i++) {
+		if (options->universes[i] != NULL) {
+		    	o = universes[i]->enc_opt;
+			while (o != NULL) {
+				if (o->universe == &dhcpv6_universe) {
+					num_opts++;
+					break;
+				}
+				o = o->universe->enc_opt;
+			}
+		}
+	}
+
+	/*
+	 * Allocate space.
+	 */
+	memset(server_oro, 0, sizeof(*server_oro));
+	if (!buffer_allocate(&server_oro->buffer, num_opts * 2, MDL)) {
+		log_fatal("no memory to build server ORO");
+	}
+	server_oro->data = server_oro->buffer->data;
+
+	/*
+	 * Copy the data in.
+	 * We want to mention sub-options too, so check all universes.
+	 */
+	server_oro->len = 0; 	/* gets set in collect_oro */
+	option_space_foreach(NULL, NULL, NULL, NULL, options,
+			     NULL, &dhcpv6_universe, (void *)server_oro,
+			     collect_oro);
+	for (i=0; i < options->universe_count; i++) {
+		if (options->universes[i] != NULL) {
+		    	o = universes[i]->enc_opt;
+			while (o != NULL) {
+				if (o->universe == &dhcpv6_universe) {
+					putUShort((char *)server_oro->data +
+							server_oro->len,
+						  o->code);
+					server_oro->len += 2;
+					break;
+				}
+				o = o->universe->enc_opt;
+			}
+		}
+	}
+}
+
 void save_option (struct universe *universe,
 		  struct option_state *options, struct option_cache *oc)
 {
@@ -2886,6 +3227,110 @@ void do_packet (interface, packet, len, from_port, from, hfrom)
 }
 
 int
+packet6_len_okay(const char *packet, int len) {
+	if (len < 1) {
+		return 0;
+	}
+	if ((packet[0] == DHCPV6_RELAY_FORW) || 
+	    (packet[0] == DHCPV6_RELAY_REPL)) {
+		if (len >= sizeof(struct dhcpv6_relay_packet)) {
+			return 1;
+		} else {
+			return 0;
+		}
+	} else {
+		if (len >= sizeof(struct dhcpv6_packet)) {
+			return 1;
+		} else {
+			return 0;
+		}
+	}
+}
+
+void 
+do_packet6(struct interface_info *interface, const char *packet, 
+	   int len, int from_port, const struct iaddr *from) {
+	unsigned char msg_type;
+	const struct dhcpv6_packet *msg;
+	const struct dhcpv6_relay_packet *relay; 
+	struct packet *decoded_packet;
+
+	if (!packet6_len_okay(packet, len)) {
+		log_info("do_packet6: "
+			 "short packet from %s port %d, len %d, dropped",
+			 piaddr(*from), from_port, len);
+		return;
+	}
+
+	decoded_packet = NULL;
+	if (!packet_allocate(&decoded_packet, MDL)) {
+		log_error("do_packet6: no memory for incoming packet.");
+		return;
+	}
+
+	if (!option_state_allocate(&decoded_packet->options, MDL)) {
+		log_error("do_packet6: no memory for options.");
+		packet_dereference(&decoded_packet, MDL);
+		return;
+	}
+
+	/* IPv4 information, already set to 0 */
+	/* decoded_packet->raw = NULL; */
+	/* decoded_packet->packet_length = 0; */
+	/* decoded_packet->packet_type = 0; */
+	/* memset(&decoded_packet->haddr, 0, sizeof(decoded_packet->haddr)); */
+	/* decoded_packet->circuit_id = NULL; */
+	/* decoded_packet->circuit_id_len = 0; */
+	/* decoded_packet->remote_id = NULL; */
+	/* decoded_packet->remote_id_len = 0; */
+	decoded_packet->client_port = from_port;
+	decoded_packet->client_addr = *from;
+	interface_reference(&decoded_packet->interface, interface, MDL);
+
+	msg_type = packet[0];
+	if ((msg_type == DHCPV6_RELAY_FORW) || 
+	    (msg_type == DHCPV6_RELAY_REPL)) {
+		relay = (struct dhcpv6_relay_packet *)packet;
+		decoded_packet->dhcpv6_msg_type = relay->msg_type;
+
+		/* relay-specific data */
+		decoded_packet->dhcpv6_hop_count = relay->hop_count;
+		decoded_packet->dhcpv6_link_address = relay->link_address;
+		decoded_packet->dhcpv6_peer_address = relay->peer_address;
+
+		if (!parse_option_buffer(decoded_packet->options, 
+					 relay->options, len-sizeof(*relay), 
+					 &dhcpv6_universe)) {
+			/* no logging here, as parse_option_buffer() logs all
+			   cases where it fails */
+			packet_dereference(&decoded_packet, MDL);
+			return;
+		}
+	} else {
+		msg = (struct dhcpv6_packet *)packet;
+		decoded_packet->dhcpv6_msg_type = msg->msg_type;
+
+		/* message-specific data */
+		memcpy(decoded_packet->dhcpv6_transaction_id, 
+		       msg->transaction_id, 
+		       sizeof(decoded_packet->dhcpv6_transaction_id));
+
+		if (!parse_option_buffer(decoded_packet->options, 
+					 msg->options, len-sizeof(*msg), 
+					 &dhcpv6_universe)) {
+			/* no logging here, as parse_option_buffer() logs all
+			   cases where it fails */
+			packet_dereference(&decoded_packet, MDL);
+			return;
+		}
+	}
+
+	dhcpv6(decoded_packet);
+
+	packet_dereference(&decoded_packet, MDL);
+}
+
+int
 pretty_escape(char **dst, char *dend, const unsigned char **src,
 	      const unsigned char *send)
 {
@@ -2932,49 +3377,6 @@ pretty_escape(char **dst, char *dend, const unsigned char **src,
 	}
 
 	return count;
-}
-
-void 
-do_packet6(struct interface_info *interface, 
-	   const struct dhcpv6_packet *packet, 
-	   int len, int from_port, const struct iaddr *from) {
-
-	int i;
-	struct option_cache *op;
-	struct packet6 *decoded_packet;
-
-	decoded_packet = NULL;
-	if (!packet6_allocate(&decoded_packet, MDL)) {
-		log_error("do_packet6: no memory for incoming packet.");
-		return;
-	}
-
-	decoded_packet->msg_type = packet->msg_type;
-	memcpy(decoded_packet->transaction_id, 
-	       packet->transaction_id, sizeof(decoded_packet->transaction_id));
-	decoded_packet->client_port = from_port;
-	decoded_packet->client_addr = *from;
-	interface_reference(&decoded_packet->interface, interface, MDL);
-	
-	if (!option_state_allocate(&decoded_packet->options, MDL)) {
-		log_error("do_packet6: no memory for options.");
-		return;
-	}
-
-	/* 
-	 * XXX: to work, we have to merge in the new different-size
-	 *      options from HEAD
-	 */
-	if (!parse_option_buffer(decoded_packet->options, 
-				 packet->options, len-4, &dhcp_universe)) {
-		/* no logging here, as parse_option_buffer() logs all
-		   cases where it fails */
-		return;
-	}
-
-	dhcpv6(decoded_packet);
-
-	packet6_dereference(&decoded_packet, MDL);
 }
 
 static int

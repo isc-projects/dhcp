@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcrelay.c,v 1.58.64.3 2006/08/28 18:16:50 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhcrelay.c,v 1.58.64.4 2006/10/25 22:32:42 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -539,7 +539,7 @@ void dhcp (packet)
 }
 
 void 
-dhcpv6(const struct packet6 *packet) {
+dhcpv6(struct packet *packet) {
 	/* XXX: should we warn or something here? */
 }
 

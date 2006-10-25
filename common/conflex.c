@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: conflex.c,v 1.101.2.4 2006/08/28 18:16:49 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: conflex.c,v 1.101.2.5 2006/10/25 22:32:41 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -778,6 +778,8 @@ static enum dhcp_token intern (atom, dfv)
 			return HOST;
 		if (!strcasecmp (atom + 1, "ost-decl-name"))
 			return HOST_DECL_NAME;
+		if (!strcasecmp(atom + 1, "ost-identifier"))
+			return HOST_IDENTIFIER;
 		if (!strcasecmp (atom + 1, "ardware"))
 			return HARDWARE;
 		if (!strcasecmp (atom + 1, "ostname"))

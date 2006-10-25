@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tables.c,v 1.56.2.5 2006/09/18 17:36:53 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: tables.c,v 1.56.2.6 2006/10/25 22:32:42 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -808,8 +808,10 @@ option_dereference(struct option **dest, const char *file, int line)
 		/* It's either a user-configured format (allocated), or the
 		 * default static format.
 		 */
-		if ((*dest)->format != default_option_format)
+		if (((*dest)->format != NULL) &&
+		    ((*dest)->format != default_option_format)) {
 			dfree((*dest)->format, file, line);
+		}
 
 	        dfree(*dest, file, line);
 	}
@@ -1137,14 +1139,18 @@ void initialize_common_option_spaces()
 	vsio_universe.encapsulate = hashed_option_space_encapsulate;
 	vsio_universe.foreach = hashed_option_space_foreach;
 	vsio_universe.decode = parse_option_buffer;
-	vsio_universe.length_size = 4;
-	vsio_universe.tag_size = 0;
+	vsio_universe.length_size = 0;
+	vsio_universe.tag_size = 4;
 	vsio_universe.get_tag = getULong;
 	vsio_universe.store_tag = putULong;
 	vsio_universe.get_length = NULL;
 	vsio_universe.store_length = NULL;
 	/* No END option. */
 	vsio_universe.end = 0x00;
+	code = D6O_VENDOR_OPTS;
+	if (!option_code_hash_lookup(&vsio_universe.enc_opt,
+				     dhcpv6_universe.code_hash, &code, 0, MDL))
+		log_fatal("Unable to find VSIO parent option (%s:%d).", MDL);
 	vsio_universe.index = universe_count++;
 	universes[vsio_universe.index] = &vsio_universe;
 	if (!option_name_new_hash(&vsio_universe.name_hash,
@@ -1173,14 +1179,18 @@ void initialize_common_option_spaces()
 	isc6_universe.encapsulate = hashed_option_space_encapsulate;
 	isc6_universe.foreach = hashed_option_space_foreach;
 	isc6_universe.decode = parse_option_buffer;
-	isc6_universe.length_size = 4;
-	isc6_universe.tag_size = 0;
+	isc6_universe.length_size = 0;
+	isc6_universe.tag_size = 4;
 	isc6_universe.get_tag = getULong;
 	isc6_universe.store_tag = putULong;
 	isc6_universe.get_length = NULL;
 	isc6_universe.store_length = NULL;
 	/* No END option. */
 	isc6_universe.end = 0x00;
+	code = 2495;
+	if (!option_code_hash_lookup(&isc6_universe.enc_opt,
+				     vsio_universe.code_hash, &code, 0, MDL))
+		log_fatal("Unable to find ISC parent option (%s:%d).", MDL);
 	isc6_universe.index = universe_count++;
 	universes[isc6_universe.index] = &isc6_universe;
 	if (!option_name_new_hash(&isc6_universe.name_hash,

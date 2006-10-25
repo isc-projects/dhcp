@@ -67,3 +67,56 @@
 #define D6O_SUBSCRIBER_ID			38 /* RFC4580 */
 #define D6O_CLIENT_FQDN				39 /* dhcpv6-fqdn */
 
+/* 
+ * Status Codes, from RFC 3315 section 24.4. 
+ */
+#define STATUS_Success		0
+#define STATUS_UnspecFail	1
+#define STATUS_NoAddrsAvail	2
+#define STATUS_NoBinding	3
+#define STATUS_NotOnLink	4 
+#define STATUS_UseMulticast	5 
+
+/* 
+ * DHCPv6 message types, defined in section 5.3 of RFC 3315 
+ */
+#define DHCPV6_SOLICT 1
+#define DHCPV6_ADVERTISE 2
+#define DHCPV6_REQUEST 3
+#define DHCPV6_CONFIRM 4
+#define DHCPV6_RENEW 5
+#define DHCPV6_REBIND 6
+#define DHCPV6_REPLY 7
+#define DHCPV6_RELEASE 8
+#define DHCPV6_DECLINE 9
+#define DHCPV6_RECONFIGURE 10
+#define DHCPV6_INFORMATION_REQUEST 11
+#define DHCPV6_RELAY_FORW 12
+#define DHCPV6_RELAY_REPL 13
+
+/* 
+ * DHCPv6 well-known multicast addressess, from section 5.1 of RFC 3315 
+ */
+#define All_DHCP_Relay_Agents_and_Servers "FF02::1:2"
+#define All_DHCP_Servers "FF05::1:3"
+
+/* 
+ * Normal packet format, defined in section 6 of RFC 3315 
+ */
+struct dhcpv6_packet {
+	unsigned char msg_type;
+	unsigned char transaction_id[3];
+	unsigned char options[0];
+};
+
+/* 
+ * Relay packet format, defined in section 7 of RFC 3315 
+ */
+struct dhcpv6_relay_packet {
+	unsigned char msg_type;
+	unsigned char hop_count;
+	struct sockaddr_in6 link_address;
+	struct sockaddr_in6 peer_address;
+	unsigned char options[0];
+};
+

@@ -87,7 +87,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dlpi.c,v 1.29.116.1 2006/08/28 18:16:49 shane Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dlpi.c,v 1.29.116.2 2006/10/25 22:32:41 shane Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -134,7 +134,7 @@ static int strioctl PROTO ((int fd, int cmd, int timeout, int len, char *dp));
 #define DLPI_MAXDLADDR		1024	/* Max address size */
 #define DLPI_DEVDIR		"/dev/"	/* Device directory */
 
-static int dlpiopen PROTO ((char *ifname));
+static int dlpiopen(const char *ifname);
 static int dlpiunit PROTO ((char *ifname));
 static int dlpiinforeq PROTO ((int fd));
 static int dlpiphysaddrreq PROTO ((int fd, unsigned long addrtype));
@@ -208,7 +208,7 @@ int if_register_dlpi (info)
 
 
 	/*
-       * Submit a DL_INFO_REQ request, to find the dl_mac_type and 
+	 * Submit a DL_INFO_REQ request, to find the dl_mac_type and 
          * dl_provider_style
 	 */
 	if (dlpiinforeq(sock) < 0 || dlpiinfoack(sock, (char *)buf) < 0) {
@@ -260,7 +260,7 @@ int if_register_dlpi (info)
 	/*
 	 * Bind to the IP service access point (SAP), connectionless (CLDLS).
 	 */
-      if (dlpibindreq (sock, ETHERTYPE_IP, 0, DL_CLDLS, 0, 0) < 0
+	if (dlpibindreq (sock, ETHERTYPE_IP, 0, DL_CLDLS, 0, 0) < 0
 	    || dlpibindack (sock, (char *)buf) < 0) {
 	    log_fatal ("Can't bind DLPI device for %s: %m", info -> name);
 	}
@@ -758,11 +758,11 @@ static int dlpiunit (ifname)
 /*
  * dlpiopen - open the DLPI device for a given interface name
  */
-static int dlpiopen (ifname)
-	char *ifname;
-{
+static int
+dlpiopen(const char *ifname) {
 	char devname [50];
-	char *cp, *dp, *ep;
+	char *dp;
+	const char *cp, *ep;
 	
 	if (!ifname) {
 		return -1;
@@ -1340,5 +1340,74 @@ void maybe_setup_fallback ()
 				   fbi -> name, isc_result_totext (status));
 		interface_dereference (&fbi, MDL);
 	}
+}
+
+void 
+get_hw_addr(const char *name, struct hardware *hw) {
+	int sock;
+	long buf[DLPI_MAXDLBUF];
+        union DL_primitives *dlp;
+
+        dlp = (union DL_primitives *)buf;
+
+	/* 
+	 * Open a DLPI device.
+	 */
+	sock = dlpiopen(name);
+	if (sock < 0) {
+		log_fatal("Can't open DLPI device for %s: %m", name);
+	}
+
+	/*
+	 * Submit a DL_INFO_REQ request, to find the dl_mac_type and 
+         * dl_provider_style
+	 */
+	if (dlpiinforeq(sock) < 0) {
+	    log_fatal("Can't request DLPI MAC type for %s: %m", name);
+	}
+	if (dlpiinfoack(sock, (char *)buf) < 0) {
+	    log_fatal("Can't get DLPI MAC type for %s: %m", name);
+	}
+	switch (dlp->info_ack.dl_mac_type) {
+		case DL_CSMACD: /* IEEE 802.3 */
+		case DL_ETHER:
+			hw->hbuf[0] = HTYPE_ETHER;
+			break;
+		case DL_TPR:
+			hw->hbuf[0] = HTYPE_IEEE802;
+			break;
+		case DL_FDDI:
+			hw->hbuf[0] = HTYPE_FDDI;
+			break;
+		default:
+			log_fatal("%s: unsupported DLPI MAC type %ld",
+				  name, dlp->info_ack.dl_mac_type);
+	}
+
+	/*
+	 * Submit a DL_PHYS_ADDR_REQ request, to find
+	 * the hardware address.
+	 */
+	if (dlpiphysaddrreq(sock, DL_CURR_PHYS_ADDR) < 0) {
+		log_fatal("Can't request DLPI hardware address for %s: %m",
+			  name);
+	}
+	if (dlpiphysaddrack(sock, (char *)buf) < 0) {
+		log_fatal("Can't get DLPI hardware address for %s: %m",
+			  name);
+	}
+	if (dlp->physaddr_ack.dl_addr_length < sizeof(hw->hbuf)) {
+		memcpy(hw->hbuf+1, 
+		       (char *)buf + dlp->physaddr_ack.dl_addr_offset,
+		       dlp->physaddr_ack.dl_addr_length);
+		hw->hlen = dlp->physaddr_ack.dl_addr_length + 1;
+	} else {
+		memcpy(hw->hbuf+1, 
+		       (char *)buf + dlp->physaddr_ack.dl_addr_offset,
+		       sizeof(hw->hbuf)-1);
+		hw->hlen = sizeof(hw->hbuf);
+	}
+
+	close(sock);
 }
 #endif /* USE_DLPI */

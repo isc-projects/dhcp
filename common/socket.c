@@ -42,7 +42,8 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: socket.c,v 1.58.116.2 2006/08/28 18:16:49 shane Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: socket.c,v 1.58.116.3 2006/10/25 22:32:42 shane Exp $ "
+"Copyright (c) 2004-2006 Internet Systems Consortium.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -205,7 +206,7 @@ if_register_socket(struct interface_info *info, int family, int do_multicast) {
 		}
 	}
 
-	/* IP_BROADCAST_IF instructs the kernel which interface to send
+        /* IP_BROADCAST_IF instructs the kernel which interface to send
 	 * IP packets whose destination address is 255.255.255.255.  These
 	 * will be treated as subnet broadcasts on the interface identified
 	 * by ip address (info -> primary_address).  This is only known to
@@ -299,6 +300,7 @@ void
 if_register6(struct interface_info *info, int do_multicast) {
 	info->rfdesc = if_register_socket(info, AF_INET6, do_multicast);
 	info->wfdesc = info->rfdesc;
+	get_hw_addr(info->name, &info->hw_address);
 	if (!quiet_interface_discovery) {
 		if (info->shared_network != NULL) {
 			log_info("Listening on Socket/%s/%s", info->name, 
@@ -372,12 +374,9 @@ ssize_t send_packet (interface, packet, raw, len, from, to, hto)
 #endif /* USE_SOCKET_SEND || USE_SOCKET_FALLBACK */
 
 ssize_t send_packet6(struct interface_info *interface,
-		     struct packet *packet,
 		     struct dhcp_packet *raw, 
 		     size_t len, 
-		     struct in6_addr from, 
-		     struct sockaddr_in6 *to, 
-		     struct hardware *hto) {
+		     struct sockaddr_in6 *to) {
 	int result;
 
 	result = sendto(interface->wfdesc, (char *)raw, len, 0,

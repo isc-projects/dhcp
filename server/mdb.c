@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.82.10.2 2006/08/28 18:16:50 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.82.10.3 2006/10/25 22:32:42 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -45,6 +45,26 @@ struct shared_network *shared_networks;
 host_hash_t *host_hw_addr_hash;
 host_hash_t *host_uid_hash;
 host_hash_t *host_name_hash;
+
+/*
+ * We allow users to specify any option as a host identifier.
+ *
+ * Any host is uniquely identified by the combination of 
+ * option type & option data.
+ *
+ * We expect people will only use a few types of options as host 
+ * identifier. Because of this, we store a list with an entry for
+ * each option type. Each of these has a hash table, which contains 
+ * hash of the option data.
+ */
+typedef struct host_id_info {
+	struct option *option;
+	host_hash_t *values_hash;
+	struct host_id_info *next;
+} host_id_info_t;
+
+static host_id_info_t *host_id_info = NULL;
+
 lease_hash_t *lease_uid_hash;
 lease_hash_t *lease_ip_addr_hash;
 lease_hash_t *lease_hw_addr_hash;
@@ -129,6 +149,79 @@ static int find_uid_statement (struct executable_statement *esp,
 	return 0;
 }
 
+
+static host_id_info_t *
+find_host_id_info(unsigned int option_code) {
+	host_id_info_t *p;
+
+	for (p=host_id_info; p != NULL; p = p->next) {
+		if (p->option->code == option_code) {
+			break;
+		}
+	}
+	return p;
+}
+
+/* Debugging code */
+#if 0
+isc_result_t
+print_host(const void *name, unsigned len, void *value) {
+	struct host_decl *h;
+	printf("--------------\n");
+	printf("name:'%s'\n", print_hex_1(len, name, 60));
+	printf("len:%d\n", len);
+	h = (struct host_decl *)value;
+	printf("host @%p is '%s'\n", h, h->name);
+	return ISC_R_SUCCESS;
+}
+
+void
+hash_print_hosts(struct hash_table *h) {
+	hash_foreach(h, print_host);
+	printf("--------------\n");
+}
+#endif /* 0 */
+
+void
+change_host_uid(struct host_decl *host, const char *uid, int len) {
+	struct host_decl *old_entry;
+
+	/* XXX: should consolidate this type of code throughout */
+	if (host_uid_hash == NULL) {
+		if (!host_new_hash(&host_uid_hash, HOST_HASH_SIZE, MDL)) {
+			log_fatal("Can't allocate host/uid hash");
+		}
+	}
+
+	/* 
+	 * Remove the old entry, if one exists.
+	 */
+	if (host->client_identifier.data != NULL) {
+		host_hash_delete(host_uid_hash,
+				 host->client_identifier.data,
+				 host->client_identifier.len,
+				 MDL);
+		data_string_forget(&host->client_identifier, MDL);
+	}
+
+	/* 
+	 * Set our new value.
+	 */
+	memset(&host->client_identifier, 0, sizeof(host->client_identifier));
+	host->client_identifier.len = len;
+	if (!buffer_allocate(&host->client_identifier.buffer, len, MDL)) {
+		log_fatal("Can't allocate uid buffer");
+	}
+	host->client_identifier.data = host->client_identifier.buffer->data;
+	memcpy((char *)host->client_identifier.data, uid, len);
+
+	/*
+	 * And add to hash.
+	 */
+	host_hash_add(host_uid_hash, host->client_identifier.data, 
+		      host->client_identifier.len, host, MDL);
+}
+
 isc_result_t enter_host (hd, dynamicp, commit)
 	struct host_decl *hd;
 	int dynamicp;
@@ -137,6 +230,7 @@ isc_result_t enter_host (hd, dynamicp, commit)
 	struct host_decl *hp = (struct host_decl *)0;
 	struct host_decl *np = (struct host_decl *)0;
 	struct executable_statement *esp;
+	host_id_info_t *h_id_info;
 
 	if (!host_name_hash) {
 		if (!host_new_hash(&host_name_hash, HOST_HASH_SIZE, MDL))
@@ -276,6 +370,63 @@ isc_result_t enter_host (hd, dynamicp, commit)
 		}
 	}
 
+
+	/*
+	 * If we use an option as our host identifier, record it here.
+	 */
+	if (hd->host_id_option != NULL) {
+		/*
+		 * Look for the host identifier information for this option,
+		 * and create a new entry if there is none.
+		 */
+		h_id_info = find_host_id_info(hd->host_id_option->code);
+		if (h_id_info == NULL) {
+			h_id_info = dmalloc(sizeof(*h_id_info), MDL);
+			if (h_id_info == NULL) {
+				log_fatal("No memory for host-identifier "
+					  "option information.");
+			}
+			option_reference(&h_id_info->option, 
+					 hd->host_id_option, MDL);
+			if (!host_new_hash(&h_id_info->values_hash, 
+					   HOST_HASH_SIZE, MDL)) {
+				log_fatal("No memory for host-identifer "
+					  "option hash.");
+			}
+			h_id_info->next = host_id_info;
+			host_id_info = h_id_info;
+		}
+
+		if (host_hash_lookup(&hp, h_id_info->values_hash, 
+				     hd->host_id.data, hd->host_id.len, MDL)) {
+			/* 
+			 * If this option is already present, then add 
+			 * this host to the list in n_ipaddr, unless
+			 * we have already done so previously.
+			 *
+			 * XXXSK: This seems scary to me, but I don't
+			 *        fully understand how these are used. 
+			 *        Shouldn't there be multiple lists, or 
+			 *        maybe we should just forbid duplicates?
+			 */
+			if (np == NULL) {
+				np = hp;
+				while (np->n_ipaddr != NULL) {
+					np = np->n_ipaddr;
+				}
+				if (hd != np) {
+					host_reference(&np->n_ipaddr, hd, MDL);
+				}
+			}
+			host_dereference(&hp, MDL);
+		} else {
+			host_hash_add(h_id_info->values_hash, 
+				      hd->host_id.data,
+				      hd->host_id.len,
+				      hd, MDL);
+		}
+	}
+
 	if (dynamicp && commit) {
 		if (!write_host (hd))
 			return ISC_R_IOERROR;
@@ -409,6 +560,11 @@ isc_result_t delete_host (hd, commit)
 	    }
 	}
 
+	if (hd->host_id_option != NULL) {
+		option_dereference(&hd->host_id_option, MDL);
+		data_string_forget(&hd->host_id, MDL);
+	}
+
 	if (hd -> n_ipaddr) {
 		if (uid_head && hd -> n_ipaddr -> client_identifier.len) {
 			host_hash_add
@@ -468,6 +624,43 @@ int find_hosts_by_uid (struct host_decl **hp,
 		       const char *file, int line)
 {
 	return host_hash_lookup (hp, host_uid_hash, data, len, file, line);
+}
+
+int
+find_hosts_by_option(struct host_decl **hp, 
+		     struct packet *packet,
+		     struct option_state *opt_state,
+		     const char *file, int line) {
+	host_id_info_t *p;
+	struct option_cache *oc;
+	struct data_string data;
+	int found;
+	
+	for (p = host_id_info; p != NULL; p = p->next) {
+		oc = lookup_option(p->option->universe, 
+				   opt_state, p->option->code);
+		if (oc != NULL) {
+			memset(&data, 0, sizeof(data));
+			if (!evaluate_option_cache(&data, packet, NULL, NULL,
+						   opt_state, NULL,
+						   &global_scope, oc, 
+						   MDL)) {
+				log_error("Error evaluating option cache");
+				return 0;
+			}
+			
+			found = host_hash_lookup(hp, p->values_hash, 
+						 data.data, data.len,
+						 file, line);
+
+			data_string_forget(&data, MDL);
+
+			if (found) {
+				return 1;
+			}
+		}
+	}
+	return 0;
 }
 
 /* More than one host_decl can be returned by find_hosts_by_haddr or
@@ -2330,6 +2523,15 @@ void free_everything ()
 	if (dns_zone_hash)
 		dns_zone_free_hash_table (&dns_zone_hash, MDL);
 	dns_zone_hash = 0;
+
+	while (host_id_info != NULL) {
+		host_id_info_t *tmp;
+		option_dereference(&host_id_info->option, MDL);
+		host_free_hash_table(&host_id_info->values_hash, MDL);
+		tmp = host_id_info->next;
+		dfree(host_id_info, MDL);
+		host_id_info = tmp;
+	}
 #if 0
 	if (auth_key_hash)
 		auth_key_free_hash_table (&auth_key_hash, MDL);

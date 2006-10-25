@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.121.18.1 2006/08/28 18:16:50 shane Exp $ Copyright 2004-2006 Internet Systems Consortium.";
+"$Id: dhcpd.c,v 1.121.18.2 2006/10/25 22:32:42 shane Exp $ Copyright 2004-2006 Internet Systems Consortium.";
 #endif
 
   static char copyright[] =
@@ -423,6 +423,7 @@ main(int argc, char **argv) {
 					local_port = ent->s_port;
 				}
 			} else {
+				/* INSIST(local_family == AF_INET6); */
 				ent = getservbyname("dhcpv6-server", "udp");
 				if (ent == NULL) {
 					local_port = htons(547);
@@ -436,7 +437,17 @@ main(int argc, char **argv) {
 		}
 	}
   
-	remote_port = htons (ntohs (local_port) + 1);
+  	if (local_family == AF_INET) {
+		remote_port = htons(ntohs(local_port) + 1);
+	} else {
+		/* INSIST(local_family == AF_INET6); */
+		ent = getservbyname("dhcpv6-client", "udp");
+		if (ent == NULL) {
+			remote_port = htons(546);
+		} else {
+			remote_port = ent->s_port;
+		}
+	}
 
 	if (server) {
 		if (!inet_aton (server, &limited_broadcast)) {
@@ -554,6 +565,10 @@ main(int argc, char **argv) {
 	trace_seed_stash (trace_srandom, seed + cur_time);
 #endif
 	postdb_startup ();
+
+	if (set_server_duid() != ISC_R_SUCCESS) {
+		log_fatal("Unable to set server identifer.");
+	}
 
 #ifndef DEBUG
 	if (daemon) {

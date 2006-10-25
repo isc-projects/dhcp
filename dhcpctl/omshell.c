@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: omshell.c,v 1.11.92.1 2006/08/28 18:16:50 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: omshell.c,v 1.11.92.2 2006/10/25 22:32:42 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include <time.h>
@@ -60,7 +60,7 @@ void dhcp (struct packet *packet) { }
 void bootp (struct packet *packet) { }
 
 /* XXX: should we warn or something here? */
-void dhcpv6(const struct packet6 *packet) { }
+void dhcpv6(struct packet *packet) { }
 
 int check_collection (struct packet *p, struct lease *l, struct collection *c)
 {

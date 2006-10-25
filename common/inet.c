@@ -35,7 +35,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: inet.c,v 1.11.60.1 2006/08/28 18:16:49 shane Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: inet.c,v 1.11.60.2 2006/10/25 22:32:41 shane Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -212,7 +212,7 @@ addr_match(addr, match)
 
 /* XXX: should use a const pointer rather than passing the structure */
 const char *
-piaddr(struct iaddr addr) {
+piaddr(const struct iaddr addr) {
 	static char 
 		pbuf[sizeof("ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255")];
 

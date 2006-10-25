@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.158.6.3 2006/08/28 18:16:50 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.158.6.4 2006/10/25 22:32:42 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1694,6 +1694,9 @@ void parse_host_declaration (cfile, group)
 	int dynamicp = 0;
 	int deleted = 0;
 	isc_result_t status;
+	int known;
+	struct option *option;
+	struct expression *expr;
 
 	name = parse_host_name (cfile);
 	if (!name) {
@@ -1826,6 +1829,73 @@ void parse_host_declaration (cfile, group)
 				break;
 			continue;
 		}
+		if (token == HOST_IDENTIFIER) {
+			if (host->host_id_option != NULL) {
+				parse_warn(cfile,
+					   "only one host-identifier allowed "
+					   "per host");
+				skip_to_rbrace(cfile, 1);
+				break;
+			}
+	      		next_token(&val, NULL, cfile);
+			token = next_token(&val, NULL, cfile);
+			if (token != OPTION) {
+				parse_warn(cfile, 
+					   "host-identifer must be an option");
+				skip_to_rbrace(cfile, 1);
+				break;
+			}
+			known = 0;
+			option = NULL;
+			status = parse_option_name(cfile, 1, &known, &option);
+			if ((status != ISC_R_SUCCESS) || (option == NULL)) {
+				break;
+			}
+			if (!known) {
+				parse_warn(cfile, "unknown option %s.%s",
+					   option->universe->name, 
+					   option->name);
+				skip_to_rbrace(cfile, 1);
+				break;
+			}
+
+			/* XXX: we're always using "lookups" */
+			expr = NULL;
+			if (!parse_option_token(&expr, cfile, (const char **)
+						&option->format,
+						NULL, 1, 1)) {
+				skip_to_rbrace(cfile, 1);
+				option_dereference(&option, MDL);
+				break;
+			}
+
+			/* I think this is guaranteed, but a check
+			   won't hurt. -Shane */
+			if (expr->op != expr_const_data) {
+				parse_warn(cfile, 
+					   "options for host-identifier "
+				           "must have a constant value");
+				skip_to_rbrace(cfile, 1);
+				expression_dereference(&expr, MDL);
+				option_dereference(&option, MDL);
+				break;
+			}
+
+			if (!parse_semi(cfile)) {
+				skip_to_rbrace(cfile, 1);
+				expression_dereference(&expr, MDL);
+				option_dereference(&option, MDL);
+				break;
+			}
+
+			option_reference(&host->host_id_option, option, MDL);
+			option_dereference(&option, MDL);
+			data_string_copy(&host->host_id, 
+					 &expr->data.const_data, MDL);
+			expression_dereference(&expr, MDL);
+			continue;
+		}
+
 		declaration = parse_statement (cfile, host -> group,
 					       HOST_DECL, host,
 					       declaration);

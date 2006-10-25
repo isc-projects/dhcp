@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: discover.c,v 1.50.90.3 2006/08/28 18:16:49 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: discover.c,v 1.50.90.4 2006/10/25 22:32:41 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -61,7 +61,7 @@ void (*bootp_packet_handler) PROTO ((struct interface_info *,
 				     unsigned int,
 				     struct iaddr, struct hardware *));
 void (*dhcpv6_packet_handler)(struct interface_info *,
-			      const struct dhcpv6_packet *, int,
+			      const char *, int,
 			      int, const struct iaddr *);
 
 
@@ -123,13 +123,10 @@ isc_result_t interface_initialize (omapi_object_t *ipo,
 	return ISC_R_SUCCESS;
 }
 
-/* XXX: needs to be autoconfiscated */
-#define HAVE_SIOCGLIFCONF
-
 /* 
  * Solaris' extended interface is documented in the if_tcp man page.
  */
-#ifdef HAVE_SIOCGLIFCONF
+#if defined(SIOCGLIFNUM)
 struct iface_conf_list {
 	int sock;
 	int num;
@@ -245,6 +242,10 @@ end_iface_scan(struct iface_conf_list *ifaces) {
 void
 add_ipv4_addr_to_interface(struct interface_info *iface, 
 			   const struct in_addr *addr) {
+	/*
+	 * We don't expect a lot of addresses per IPv4 interface, so
+	 * we use 4, as our "chunk size" for collecting addresses.
+	 */
 	if (iface->addresses == NULL) {
 		iface->addresses = dmalloc(4 * sizeof(struct in_addr), MDL);
 		if (iface->addresses == NULL) {
@@ -277,8 +278,13 @@ add_ipv4_addr_to_interface(struct interface_info *iface,
 void
 add_ipv6_addr_to_interface(struct interface_info *iface, 
 			   const struct in6_addr *addr) {
+	/*
+	 * Each IPv6 interface will have at least two IPv6 addresses,
+	 * and likely quite a few more. So we use 8, as our "chunk size" for
+	 * collecting addresses.
+	 */
 	if (iface->v6addresses == NULL) {
-		iface->v6addresses = dmalloc(4 * sizeof(struct in6_addr), MDL);
+		iface->v6addresses = dmalloc(8 * sizeof(struct in6_addr), MDL);
 		if (iface->v6addresses == NULL) {
 			log_fatal("Out of memory saving IPv6 address "
 				  "on interface.");
@@ -1018,19 +1024,11 @@ got_one_v6(omapi_object_t *h) {
 		return ISC_R_UNEXPECTED;
 	}
 
-	/* 
-	 * If we didn't get at least the fixed portion of the DHCPv6
-	 * packet, drop the packet. 
-	 */
-	if (result < 4) {
-		return ISC_R_UNEXPECTED;
-	}
-
 	if (dhcpv6_packet_handler != NULL) {
 		ifrom.len = 16;
 		memcpy(ifrom.iabuf, &from.sin6_addr, ifrom.len);
 
-		(*dhcpv6_packet_handler)(ip, (struct dhcpv6_packet *)buf, 
+		(*dhcpv6_packet_handler)(ip, buf, 
 					 result, from.sin6_port, &ifrom);
 	}
 

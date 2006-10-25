@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.113.2.5 2006/08/28 16:31:03 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.113.2.6 2006/10/25 22:32:41 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1396,6 +1396,7 @@ int parse_option_code_definition (cfile, option)
 	int is_signed;
 	char *s;
 	int has_encapsulation = 0;
+	struct universe *encapsulated;
 	
 	/* Parse the option code. */
 	token = next_token (&val, (unsigned *)0, cfile);
@@ -1558,6 +1559,13 @@ int parse_option_code_definition (cfile, option)
 			skip_to_semi (cfile);
 			return 0;
 		}
+		encapsulated = NULL;
+		if (!universe_hash_lookup(&encapsulated, universe_hash,
+					  val, strlen(val), MDL)) {
+			parse_warn(cfile, "unknown option space %s", s);
+			skip_to_semi (cfile);
+			return 0;
+		}
 		if (strlen (val) + tokix + 2 > sizeof (tokbuf))
 			goto toobig;
 		tokbuf [tokix++] = 'E';
@@ -1631,20 +1639,16 @@ int parse_option_code_definition (cfile, option)
 			    "Arrays of encapsulations don't make sense.");
 		return 0;
 	}
-	if (has_encapsulation && tokbuf [0] == 'E')
-		has_encapsulation = 0;
-	s = dmalloc (tokix +
-		     (arrayp ? 1 : 0) +
-		     (has_encapsulation ? 1 : 0) + 1, MDL);
-	if (!s)
-		log_fatal ("no memory for option format.");
-	if (has_encapsulation)
-		s [0] = 'e';
-	memcpy (s + has_encapsulation, tokbuf, tokix);
-	tokix += has_encapsulation;
-	if (arrayp)
-		s [tokix++] = (arrayp > recordp) ? 'a' : 'A';
-	s [tokix] = 0;
+	s = dmalloc(tokix + (arrayp ? 1 : 0) + 1, MDL);
+	if (s == NULL) {
+		log_fatal("no memory for option format.");
+	}
+	memcpy(s, tokbuf, tokix);
+	if (arrayp) {
+		s[tokix++] = (arrayp > recordp) ? 'a' : 'A';
+	}
+	s[tokix] = '\0';
+
 	option -> format = s;
 
 	oldopt = NULL;
@@ -1662,6 +1666,16 @@ int parse_option_code_definition (cfile, option)
 			     option, MDL);
 	option_name_hash_add(option->universe->name_hash, option->name, 0,
 			     option, MDL);
+	if (has_encapsulation) {
+		/* INSIST(tokbuf[0] == 'E'); */
+		/* INSIST(encapsulated != NULL); */
+		if (!option_code_hash_lookup(&encapsulated->enc_opt,
+					     option->universe->code_hash, 
+					     &option->code, 0, MDL)) {
+			log_fatal("error finding encapsulated option (%s:%d)",
+				  MDL);
+		}
+	}
 	return 1;
 }
 

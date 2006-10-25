@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.208.18.3 2006/10/24 19:54:00 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.208.18.4 2006/10/25 22:32:42 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1133,7 +1133,7 @@ void dhcpinform (packet, ms_nulltp)
 		}
 
 		options -> site_universe = u -> index;
-		options -> site_code_min = 224; /* XXX */
+		options -> site_code_min = 224; /* From RFC3942 */
 		data_string_forget (&d1, MDL);
 	} else {
 		options -> site_universe = dhcp_universe.index;
@@ -2680,7 +2680,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 		}
 
 		state -> options -> site_universe = u -> index;
-		state -> options -> site_code_min = 224; /* XXX */
+		state -> options -> site_code_min = 224; /* From RFC3942 */
 		data_string_forget (&d1, MDL);
 	} else {
 		state -> options -> site_code_min = 0;

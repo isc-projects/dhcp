@@ -128,7 +128,7 @@ typedef struct hash_table class_hash_t;
 #endif
 
 #if !defined (VSIO_HASH_SIZE)
-# define VSIO_HASH_SIZE		VIVCO_HASH_SIZE
+# define VSIO_HASH_SIZE         VIVCO_HASH_SIZE
 #endif
 
 #if !defined (VIV_ISC_HASH_SIZE)
@@ -162,6 +162,7 @@ typedef struct hash_table class_hash_t;
 #if !defined (SERVER_HASH_SIZE)
 # define SERVER_HASH_SIZE	(sizeof(server_options) / sizeof(struct option))
 #endif
+
 
 
 #if !defined (OPTION_HASH_SIZE)
@@ -291,6 +292,17 @@ struct packet {
 	int refcnt;
 	unsigned packet_length;
 	int packet_type;
+
+	unsigned char dhcpv6_msg_type;		/* DHCPv6 message type */
+
+	/* DHCPv6 transaction ID */
+	unsigned char dhcpv6_transaction_id[3];
+
+	/* DHCPv6 relay information */
+	unsigned char dhcpv6_hop_count;
+	struct sockaddr_in6 dhcpv6_link_address;
+	struct sockaddr_in6 dhcpv6_peer_address;
+
 	int options_valid;
 	int client_port;
 	struct iaddr client_addr;
@@ -320,22 +332,6 @@ struct packet {
 
 	int known;
 	int authenticated;
-};
-
-/* A DHCPv6 packet and the pointers to its option values. */
-struct packet6 {
-	int refcnt;
-
-	unsigned char msg_type;
-	unsigned char transaction_id[3];
-
-	int client_port;
-	struct iaddr client_addr;
-	struct interface_info *interface;	/* Interface on which packet
-						   was received. */
-
-	struct shared_network *shared_network;
-	struct option_state *options;
 };
 
 /* A network interface's MAC address. */
@@ -641,6 +637,11 @@ struct host_decl {
 	char *name;
 	struct hardware interface;
 	struct data_string client_identifier;
+	struct option *host_id_option;
+	struct data_string host_id;
+	/* XXXSK: fixed_addr should be an array of iaddr values,
+		  not an option_cache, but it's referenced in a lot of
+		  places, so we'll leave it for now. */
 	struct option_cache *fixed_addr;
 	struct group *group;
 	struct group_object *named_group;
@@ -1141,6 +1142,8 @@ int store_options PROTO ((int *, unsigned char *, unsigned, struct packet *,
 			  struct option_state *, struct binding_scope **,
 			  unsigned *, int, unsigned, unsigned,
 			  int, const char *));
+int store_options6(char *, int, struct option_state *, struct packet *,
+		   const int *, struct data_string *);
 int format_has_text(const char *);
 int format_min_length(const char *, struct option_cache *);
 const char *pretty_print_option PROTO ((struct option *, const unsigned char *,
@@ -1160,7 +1163,7 @@ struct option_cache *lookup_hashed_option PROTO ((struct universe *,
 						  struct option_state *,
 						  unsigned));
 struct option_cache *next_hashed_option(struct universe *,
-					struct option_state *,
+					struct option_state *, 
 					struct option_cache *);
 int save_option_buffer (struct universe *, struct option_state *,
 			struct buffer *, unsigned char *, unsigned,
@@ -1283,13 +1286,14 @@ struct option_cache *lookup_linked_option (struct universe *,
 void do_packet PROTO ((struct interface_info *,
 		       struct dhcp_packet *, unsigned,
 		       unsigned int, struct iaddr, struct hardware *));
-void do_packet6(struct interface_info *, const struct dhcpv6_packet *, 
+void do_packet6(struct interface_info *, const char *, 
 		int, int, const struct iaddr *);
+int packet6_len_okay(const char *, int);
 
 int add_option(struct option_state *options,
 	       unsigned int option_num,
-	       void *data,
-	       unsigned int data_len);
+       	       void *data,
+       	       unsigned int data_len);
 
 /* dhcpd.c */
 extern TIME cur_time;
@@ -1352,7 +1356,6 @@ void parse_subnet_declaration PROTO ((struct parse *,
 				      struct shared_network *));
 void parse_subnet6_declaration PROTO ((struct parse *,
 				       struct shared_network *));
-  void parse_group_declaration PROTO ((struct parse *, struct group *));
 void parse_group_declaration PROTO ((struct parse *, struct group *));
 int parse_fixed_addr_param PROTO ((struct option_cache **, 
 				   struct parse *, enum dhcp_token));
@@ -1429,7 +1432,7 @@ int parse_allow_deny PROTO ((struct option_cache **, struct parse *, int));
 int parse_auth_key PROTO ((struct data_string *, struct parse *));
 int parse_warn (struct parse *, const char *, ...)
 	__attribute__((__format__(__printf__,2,3)));
-struct expression *parse_domain_list(struct parse *, int);
+struct expression *parse_domain_list(struct parse *cfile, int);
 
 
 /* tree.c */
@@ -1569,12 +1572,14 @@ int parse_agent_information_option PROTO ((struct packet *, int, u_int8_t *));
 unsigned cons_agent_information_options PROTO ((struct option_state *,
 						struct dhcp_packet *,
 						unsigned, unsigned));
+
 void get_server_source_address(struct in_addr *from,
 			       struct option_state *options,
-			       struct packet *packet);
+       			       struct packet *packet);
 
 /* dhcpv6.c */
-void dhcpv6(const struct packet6 *);
+isc_result_t set_server_duid(void);
+void dhcpv6(struct packet *);
 
 /* bootp.c */
 void bootp PROTO ((struct packet *));
@@ -1696,7 +1701,6 @@ int executable_statement_reference PROTO ((struct executable_statement **,
 					   struct executable_statement *,
 					   const char *, int));
 int packet_allocate PROTO ((struct packet **, const char *, int));
-int packet6_allocate(struct packet6 **, const char *, int);
 int packet_reference PROTO ((struct packet **,
 			     struct packet *, const char *, int));
 int packet_dereference PROTO ((struct packet **, const char *, int));
@@ -1743,6 +1747,8 @@ void indent_spaces (FILE *, int);
 void print_dns_status (int, ns_updque *);
 #endif
 const char *print_time(TIME);
+
+void get_hw_addr(const char *name, struct hardware *hw);
 
 /* socket.c */
 #if defined (USE_SOCKET_SEND) || defined (USE_SOCKET_RECEIVE) \
@@ -1945,7 +1951,7 @@ extern void (*bootp_packet_handler) PROTO ((struct interface_info *,
 					    unsigned int,
 					    struct iaddr, struct hardware *));
 extern void (*dhcpv6_packet_handler)(struct interface_info *,
-				     const struct dhcpv6_packet *, int,
+				     const char *, int,
 				     int, const struct iaddr *);
 extern struct timeout *timeouts;
 extern omapi_object_type_t *dhcp_type_interface;
@@ -1998,8 +2004,10 @@ OMAPI_OBJECT_ALLOC_DECL (interface,
 /* tables.c */
 extern char *default_option_format;
 extern struct universe dhcp_universe;
+extern struct universe dhcpv6_universe;
 extern struct universe nwip_universe;
 extern struct universe fqdn_universe;
+extern struct universe vsio_universe;
 extern int dhcp_option_default_priority_list [];
 extern int dhcp_option_default_priority_list_count;
 extern const char *hardware_types [256];
@@ -2621,11 +2629,14 @@ isc_result_t enter_class PROTO ((struct class *, int, int));
 isc_result_t delete_class PROTO ((struct class *, int));
 isc_result_t enter_host PROTO ((struct host_decl *, int, int));
 isc_result_t delete_host PROTO ((struct host_decl *, int));
+void change_host_uid(struct host_decl *host, const char *data, int len);
 int find_hosts_by_haddr PROTO ((struct host_decl **, int,
 				const unsigned char *, unsigned,
 				const char *, int));
 int find_hosts_by_uid PROTO ((struct host_decl **, const unsigned char *,
 			      unsigned, const char *, int));
+int find_hosts_by_option(struct host_decl **, struct packet *, 
+			 struct option_state *, const char *, int);
 int find_host_for_network PROTO ((struct subnet **, struct host_decl **,
 				  struct iaddr *, struct shared_network *));
 void new_address_range PROTO ((struct parse *, struct iaddr, struct iaddr,
