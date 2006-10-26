@@ -28,7 +28,7 @@
 .\" see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
 .\" ``http://www.nominum.com''.
 .\"
-.\" $Id: dhcpd.8,v 1.24 2006/07/13 17:28:40 dhankins Exp $
+.\" $Id: dhcpd.8,v 1.24.18.1 2006/10/26 12:58:47 shane Exp $
 .\"
 .TH dhcpd 8
 .SH NAME
@@ -52,6 +52,11 @@ dhcpd - Dynamic Host Configuration Protocol Server
 .B -t
 |
 .B -T
+]
+[
+.B -4
+| 
+.B -6
 ]
 [
 .B -cf
@@ -174,6 +179,13 @@ but should not be required on other systems.  If no interface names
 are specified on the command line dhcpd will identify all network
 interfaces which are up, eliminating non-broadcast interfaces if
 possible, and listen for DHCP broadcasts on each interface.
+.PP
+The server either operates as a DHCPv6 server or a DHCP server, but
+not both at the same time. To run as a DHCPv6 server, use the
+.B -6
+flag. To run as a DHCP server, use the
+.B -4
+flag. If neither is used, the default is to run as a DHCPv6 server.
 .PP
 If dhcpd should listen on a port other than the standard (port 67),
 the

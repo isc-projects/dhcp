@@ -1,0 +1,16 @@
+ **********************************************************************
+ *** This is NOT a public release, and should not be redistributed. ***
+ **********************************************************************
+
+This is a pre-release version of ISC DHCP meant to deliver the DHCPv6 
+functionality to Comcast for their testing. See RELNOTES for details.
+
+Installation can be done with standard Unix ./configure and make. You 
+need to have a C compiler (preferably gcc), and should make sure "ar" 
+in your PATH (it usually lives in /usr/ccs/bin on Solaris systems).
+
+Some changes have been made to the command line options and 
+configuration parameters. See the dhcpd, dhcpd.conf, and dhcp-options 
+man pages for details. The configuration files in tests/DHCPv6 can be
+helpful as examples.
+

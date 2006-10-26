@@ -21,6 +21,10 @@ to do this). In server/dhcpv6.c, look for this comment:
 
 And change the code to use the client_port value.
 
+You will need to modify one of the test configuration files to use one 
+of the physical subnets that your machine uses, in the subnet6 
+statement.
+
 Then run the server as root, in debug mode:
 
 # touch /tmp/test.leases

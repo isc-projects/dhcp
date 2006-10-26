@@ -28,7 +28,7 @@
 .\" see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
 .\" ``http://www.nominum.com''.
 .\"
-.\" $Id: dhcpd.conf.5,v 1.77.8.1 2006/08/11 22:50:22 dhankins Exp $
+.\" $Id: dhcpd.conf.5,v 1.77.8.2 2006/10/26 12:58:47 shane Exp $
 .\"
 .TH dhcpd.conf 5
 .SH NAME
@@ -1426,6 +1426,27 @@ subnet-mask option statement be used in each subnet declaration to set
 the desired subnet mask, since any subnet-mask option statement will
 override the subnet mask declared in the subnet statement.
 .PP
+.B The 
+.I subnet6
+.B statement
+.PP
+.nf
+ \fBsubnet6\fR \fIsubnet6-number\fR \fB{\fR
+   [ \fIparameters\fR ]
+   [ \fIdeclarations\fR ]
+ \fB}\fR
+.fi
+.PP
+The \fIsubnet6\fR statement is used to provide dhcpd with enough
+information to tell whether or not an IPv6 address is on that subnet6.
+It may also be used to provide subnet-specific parameters and to
+specify what addresses may be dynamically allocated to clients booting
+on that subnet. 
+.PP
+The
+.I subnet6-number
+should be an IPv6 network identifer, specified as ip6-address/bits.
+.PP
 .B The
 .I range
 .B statement
@@ -1501,14 +1522,20 @@ address supplied by the client.   BOOTP clients do not normally
 provide a \fIdhcp-client-identifier\fR, so the hardware address must
 be used for all clients that may boot using the BOOTP protocol.
 .PP
+DHCPv6 servers can use the \fIhost-identifier option\fR parameter in
+the \fIhost\fR declaration, and specify any option with a fixed value
+to identify hosts.
+.PP
 Please be aware that
 .B only
 the \fIdhcp-client-identifier\fR option and the hardware address can be
-used to match a host declaration.   For example, it is not possible to match
-a host declaration to a \fIhost-name\fR option.   This is because the
-host-name option cannot be guaranteed to be unique for any given client,
-whereas both the hardware address and \fIdhcp-client-identifier\fR option
-are at least theoretically guaranteed to be unique to a given client.
+used to match a host declaration, or the \fIhost-identifer option\fR
+parameter for DHCPv6 servers.   For example, it is not possible to
+match a host declaration to a \fIhost-name\fR option.   This is
+because the host-name option cannot be guaranteed to be unique for any
+given client, whereas both the hardware address and
+\fIdhcp-client-identifier\fR option are at least theoretically
+guaranteed to be unique to a given client.
 .PP
 .B The
 .I group
@@ -2042,6 +2069,18 @@ a domain name that resolves to one or more IP addresses.
 .RE
 .PP
 The
+.I fixed-address6
+declaration
+.RS 0.25i
+.PP
+.B fixed-address6 ip6-address\fR ;\fR
+.PP
+The \fIfixed-address6\fR declaration is used to assign a fixed
+IPv6 addresses to a client.  It should only appear in a \fIhost\fR
+declaration.
+.RE
+.PP
+The
 .I get-lease-hostnames
 statement
 .RS 0.25i
@@ -2081,6 +2120,24 @@ The
 should be a set of hexadecimal octets (numbers from 0 through ff)
 separated by colons.   The \fIhardware\fR statement may also be used
 for DHCP clients.
+.RE
+.PP
+The 
+.I host-identifier option
+statement
+.RS 0.25i
+.PP
+.B host-identifier option \fIoption-name option-data\fB;\fR
+.PP
+This identifies a DHCPv6 client in a
+.I host
+statement.
+.I option-name
+is any option, and 
+.I option-data
+is the value for the option that the client will send. The 
+.I option-data
+must be a constant value.
 .RE
 .PP
 The

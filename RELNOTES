@@ -1,30 +1,56 @@
 	      Internet Systems Consortium DHCP Distribution
-			   Version 3.1.0a1
-			    August 1, 2006
+		    Version V4.0.0-pre-alpha-comcast-1
+			     October 26, 2006
+
+ **********************************************************************
+ *** This is NOT a public release, and should not be redistributed. ***
+ **********************************************************************
 
 			     Release Notes
 
 			     NEW FEATURES
 
-Version 3.1.x of the ISC DHCP Distribution includes the following major
-new features compared to its 3.0.x derivative:
+The DHCP server in version 4.0.x of the ISC DHCP Distribution supports
+DHCPv6 in addition to DHCP for IPv4.
 
-	- Failover protocol 'MAC Address Affinity' to reduce pool churn.
-	- Support for the 'reserved' and 'bootp' failover flags, which
-	  means in lay terms that static allocations can be made to
-	  clients in which 'on events' can be supported.
-	- Several other failover optimizations and changes.
-	- Management of class and subclass statements via OMAPI.
-	- Many new configuration statement functions.
-	- Initial formal support for VIVCO/VIVSO options.
+Several new options have been added to the dhcpd executable, which are
+documented in the man page. Several changes have been made to the
+configuration file as well, which are also documented in the man
+pages.
 
-For a full list of new features added in this release, please observe
-the changes list directly following this section.
+There are a number of DHCPv6 limitiations and features missing in this
+release, which will be addressed shortly:
+
+- Only Solaris is supported.
+
+- Only fixed addresses are supported.
+
+- Only a single fixed address is supported per IA.
+
+- IA_TA addresses are not supported.
+
+- Only a single IA is supported per request.
+
+- Unicast messages to the server are not discarded.
+
+- The Information-request message is not yet supported.
+
+- The server DUID must either be automatically generated, or specified
+  in the configuration file. An option will be added to use type 1 or
+  type 2 DUID.
+
+- DHCPv6 includes human-readable text in status code messages. These
+  should be configurable, and probably localized via gettext() or the
+  like.
+
+- The server always uses Rapid-Commit if the client requests it. A
+  configuration option will be added to disable this.
+
+- DDNS is not supported.
 
 For information on how to install, configure and run this software,
 as well as how to find documentation and report bugs, please consult
 the README file.
-
 
 			Changes since 3.1 (New Features)
 
