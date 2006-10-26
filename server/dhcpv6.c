@@ -69,7 +69,7 @@ static void build_dhcpv6_reply(struct data_string *, struct packet *);
  * This constant is the number of seconds since 1970-01-01,
  * when the Unix epoch began.
  */
-# define DUID_TIME_EPOCH 946684800
+#define DUID_TIME_EPOCH 946684800
 
 /*
  * This function returns the time since DUID time start for the
@@ -1147,7 +1147,6 @@ lease_to_client(struct data_string *reply_ret,
 	reply_ret->data = reply_ret->buffer->data;
 	memcpy((char *)reply_ret->data, reply, reply_ofs);
 	
-printf("lease given\n");
 exit:
 	if (iaaddr.buffer != NULL) {
 		data_string_forget(&iaaddr, MDL);
@@ -1421,7 +1420,6 @@ dhcpv6_confirm(struct data_string *reply_ret, struct packet *packet) {
 	reply_ret->data = reply_ret->buffer->data;
 	memcpy((char *)reply_ret->data, reply, reply_ofs);
 
-printf("confirm okay\n");
 exit:
 	if (iaaddr.buffer != NULL) {
 		data_string_forget(&iaaddr, MDL);
@@ -1482,7 +1480,6 @@ dhcpv6_rebind(struct data_string *reply, struct packet *packet) {
 
         lease_to_client(reply, packet, &client_id, NULL, DHCPV6_REPLY);
 
-printf("rebind okay\n");
 	data_string_forget(&client_id, MDL);
 }
 
@@ -1542,7 +1539,7 @@ ia_na_nomatch_decline(const struct data_string *client_id,
 	/*
 	 * Put our status code into the reply packet.
 	 */
-	memset(&oro, 0, sizeof(oro));	// empty ORO
+	memset(&oro, 0, sizeof(oro));	/* empty ORO */
 	len = store_options6(reply_data+(*reply_ofs)+16,
 			     reply_len-(*reply_ofs)-16,
 			     host_opt_state, packet,
@@ -1680,7 +1677,7 @@ iterate_over_ia_na(struct data_string *reply_ret,
 	/* 
 	 * Add our options that are not associated with any IA_NA or IA_TA. 
 	 */
-	memset(&d, 0, sizeof(d));	// empty ORO
+	memset(&d, 0, sizeof(d));	/* empty ORO */
 	reply_ofs += store_options6(reply_data+reply_ofs,
 				    sizeof(reply_data)-reply_ofs, 
 				    opt_state, packet,
@@ -1790,7 +1787,6 @@ iterate_over_ia_na(struct data_string *reply_ret,
 	reply_ret->data = reply_ret->buffer->data;
 	memcpy((char *)reply_ret->data, reply, reply_ofs);
 
-printf("%s okay\n", packet_type);
 exit:
 	if (host_opt_state != NULL) {
 		option_state_dereference(&host_opt_state, MDL);
@@ -1901,7 +1897,7 @@ ia_na_nomatch_release(const struct data_string *client_id,
 	/*
 	 * Put our status code into the reply packet.
 	 */
-	memset(&oro, 0, sizeof(oro));	// empty ORO
+	memset(&oro, 0, sizeof(oro));	/* empty ORO */
 	len = store_options6(reply_data+(*reply_ofs)+16,
 			     reply_len-(*reply_ofs)-16,
 			     host_opt_state, packet,
@@ -1967,7 +1963,6 @@ dhcpv6_information_request(struct data_string *reply, struct packet *packet) {
 		return;
 	}
 
-printf("information-request okay\n");
 	data_string_forget(&server_id, MDL);
 }
 
@@ -2086,7 +2081,8 @@ dhcpv6_relay_forw(struct data_string *reply_ret, struct packet *packet) {
         }
 
 	/*
-	 * It's turtles all the way down.
+	 * This is recursive. It is possible to exceed maximum packet size.
+	 * XXX: This will cause the packet send to fail.
 	 */
 	build_dhcpv6_reply(&enc_reply, enc_packet);
 
@@ -2193,6 +2189,20 @@ dhcpv6(struct packet *packet) {
 	struct sockaddr_in6 to_addr;
 	int send_ret;
 
+	/* 
+	 * Log a message that we received this packet.
+	 */
+	if ((packet->dhcpv6_msg_type >= 0) && 
+	    (packet->dhcpv6_msg_type < dhcpv6_type_name_max)) {
+		log_info("%s message from %s",
+			 dhcpv6_type_names[packet->dhcpv6_msg_type],
+			 piaddr(packet->client_addr));
+	} else {
+		log_info("Unknown message type %d from %s",
+			 packet->dhcpv6_msg_type,
+			 piaddr(packet->client_addr));
+	}
+
 	build_dhcpv6_reply(&reply, packet);
 
 	if (reply.data != NULL) {
@@ -2201,10 +2211,16 @@ dhcpv6(struct packet *packet) {
 		 */
 		memset(&to_addr, 0, sizeof(to_addr));
 		to_addr.sin6_family = AF_INET6;
+/* For testing, we reply to the sending port, so we don't need a root client */
+/*		to_addr.sin6_port = remote_port;*/
 		to_addr.sin6_port = packet->client_port;
-//		to_addr.sin6_port = remote_port;
 		memcpy(&to_addr.sin6_addr, packet->client_addr.iabuf, 
 		       sizeof(to_addr.sin6_addr));
+
+		log_info("Sending %s to %s", 
+			 dhcpv6_type_names[reply.data[0]],
+			 piaddr(packet->client_addr));
+
 		send_ret = send_packet6(packet->interface, 
 					reply.data, reply.len, &to_addr);
 		if (send_ret != reply.len) {
