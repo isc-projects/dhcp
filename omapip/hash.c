@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: hash.c,v 1.11 2006/07/25 09:59:39 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: hash.c,v 1.12 2006/10/27 22:54:12 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include <omapip/omapip_p.h>
@@ -282,6 +282,41 @@ do_string_hash(const void *name, unsigned len, unsigned size)
 	return accum % size;
 }
 
+/* Client identifiers are generally 32-bits of ordinary
+ * non-randomness followed by 24-bits of unordinary randomness.
+ * So, end-align in 24-bit chunks, and xor any preceding data
+ * just to mix it up a little.
+ */
+unsigned
+do_id_hash(const void *name, unsigned len, unsigned size)
+{
+	register unsigned accum = 0;
+	register const unsigned char *s = (const unsigned char *)name;
+	const unsigned char *end = s + len;
+
+	if (len == 0)
+		return 0;
+
+	/* The switch indexes our starting position into the do/while loop,
+	 * taking up the remainder after hashing in all the other bytes in
+	 * threes.
+	 */
+	switch (len % 3) {
+		do {
+	      case 0:
+			accum ^= *s++ << 16;
+	      case 2:
+			accum ^= *s++ << 8;
+	      case 1:
+			accum ^= *s++;
+		} while (s < end);
+
+		break;
+	}
+
+	return accum % size;
+}
+
 unsigned
 do_number_hash(const void *key, unsigned len, unsigned size)
 {
@@ -300,6 +335,55 @@ do_ip4_hash(const void *key, unsigned len, unsigned size)
 	number = ntohl(number);
 
 	return number % size;
+}
+
+unsigned char *
+hash_report(struct hash_table *table)
+{
+	static unsigned char retbuf[sizeof("Contents/Size (%): "
+					   "2147483647/2147483647 "
+					   "(2147483647%). "
+					   "Min/max: 2147483647/2147483647")];
+	unsigned curlen, pct, contents=0, minlen=UINT_MAX, maxlen=0;
+	unsigned i;
+	struct hash_bucket *bp;
+
+	if (table->hash_count == 0)
+		return "Invalid hash table.";
+
+	for (i = 0 ; i < table->hash_count ; i++) {
+		curlen = 0;
+
+		bp = table->buckets[i];
+		while (bp != NULL) {
+			curlen++;
+			bp = bp->next;
+		}
+
+		if (curlen < minlen)
+			minlen = curlen;
+		if (curlen > maxlen)
+			maxlen = curlen;
+
+		contents += curlen;
+	}
+
+	if (contents >= (UINT_MAX / 100))
+		pct = contents / ((table->hash_count / 100) + 1);
+	else
+		pct = (contents * 100) / table->hash_count;
+
+	if (contents > 2147483647 ||
+	    table->hash_count > 2147483647 ||
+	    pct > 2147483647 ||
+	    minlen > 2147483647 ||
+	    maxlen > 2147483647)
+		return "Report out of range for display.";
+
+	sprintf(retbuf, "Contents/Size (%%): %u/%u (%u%%). Min/max: %u/%u",
+		contents, table->hash_count, pct, minlen, maxlen);
+
+	return retbuf;
 }
 
 void add_hash (table, key, len, pointer, file, line)

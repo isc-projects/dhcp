@@ -41,7 +41,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: omapi.c,v 1.58 2006/06/01 20:23:17 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: omapi.c,v 1.59 2006/10/27 22:54:13 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -755,9 +755,9 @@ isc_result_t dhcp_lease_lookup (omapi_object_t **lp,
 	status = omapi_get_value_str (ref, id, "ip-address", &tv);
 	if (status == ISC_R_SUCCESS) {
 		lease = (struct lease *)0;
-		lease_hash_lookup (&lease, lease_ip_addr_hash,
-				   tv -> value -> u.buffer.value,
-				   tv -> value -> u.buffer.len, MDL);
+		lease_ip_hash_lookup(&lease, lease_ip_addr_hash,
+				     tv->value->u.buffer.value,
+				     tv->value->u.buffer.len, MDL);
 
 		omapi_value_dereference (&tv, MDL);
 
@@ -784,9 +784,9 @@ isc_result_t dhcp_lease_lookup (omapi_object_t **lp,
 	status = omapi_get_value_str (ref, id, "dhcp-client-identifier", &tv);
 	if (status == ISC_R_SUCCESS) {
 		lease = (struct lease *)0;
-		lease_hash_lookup (&lease, lease_uid_hash,
-				   tv -> value -> u.buffer.value,
-				   tv -> value -> u.buffer.len, MDL);
+		lease_id_hash_lookup(&lease, lease_uid_hash,
+				     tv->value->u.buffer.value,
+				     tv->value->u.buffer.len, MDL);
 		omapi_value_dereference (&tv, MDL);
 			
 		if (*lp && *lp != (omapi_object_t *)lease) {
@@ -858,7 +858,8 @@ isc_result_t dhcp_lease_lookup (omapi_object_t **lp,
 		}
 
 		lease = (struct lease *)0;
-		lease_hash_lookup (&lease, lease_hw_addr_hash, haddr, len, MDL);
+		lease_id_hash_lookup(&lease, lease_hw_addr_hash, haddr, len,
+				     MDL);
 		dfree (haddr, MDL);
 
 		if (*lp && *lp != (omapi_object_t *)lease) {
@@ -1480,9 +1481,9 @@ isc_result_t dhcp_host_lookup (omapi_object_t **lp,
 
 		/* first find the lease for this ip address */
 		l = (struct lease *)0;
-		lease_hash_lookup (&l, lease_ip_addr_hash,
-				   tv -> value -> u.buffer.value,
-				   tv -> value -> u.buffer.len, MDL);
+		lease_ip_hash_lookup(&l, lease_ip_addr_hash,
+				     tv->value->u.buffer.value,
+				     tv->value->u.buffer.len, MDL);
 		omapi_value_dereference (&tv, MDL);
 
 		if (!l && !*lp)

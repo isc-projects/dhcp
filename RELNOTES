@@ -41,6 +41,22 @@ the README file.
 - An option definition referencing leak was fixed, which resulted in early
   termination of dhclient upon the renewal event.
 
+- Some default hash table sizes were tweaked, some upwards, some downwards.
+  3.1.0a1's tables resulted in a reduction in default server memory use.
+  The new selected values provide more of a zero sum (increasing the size
+  of tables likely to be populated, decreasing the size of tables unlikely).
+
+- Lease structures appear in three spearate hashes: by IP address, by UID,
+  and by hardware address.  One type of table was used for all three, and
+  improvements to IP address hashing were applied to all three (so UID and
+  hardware addresses were treated like 4-byte integers).  There are now two
+  types of tables, and the uid/hw hashes use functions more appropriate
+  to their needs.
+
+- The max-lease-misbalance percentage no longer causes scheduled rebalance
+  runs to be skipped: it still governs the schedule, but every scheduled
+  run will attempt balance.
+
 			Changes since 3.0 (New Features)
 
 - A workaround for certain STSN servers that send a mangled domain-name

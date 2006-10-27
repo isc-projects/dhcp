@@ -67,7 +67,8 @@ typedef struct hash_table universe_hash_t;
 typedef struct hash_table option_name_hash_t;
 typedef struct hash_table option_code_hash_t;
 typedef struct hash_table dns_zone_hash_t;
-typedef struct hash_table lease_hash_t;
+typedef struct hash_table lease_ip_hash_t;
+typedef struct hash_table lease_id_hash_t;
 typedef struct hash_table host_hash_t;
 typedef struct hash_table class_hash_t;
 
@@ -87,13 +88,23 @@ typedef struct hash_table class_hash_t;
 # define BYTE_CODE_HASH_SIZE	254	/* Default would be rediculous. */
 #endif
 
+/* Although it is highly improbable that a 16-bit option space might
+ * actually use 2^16 actual defined options, it is the worst case
+ * scenario we must prepare for.  Having 4 options per bucket in this
+ * case is pretty reasonable.
+ */
 #if !defined (WORD_NAME_HASH_SIZE)
-# define WORD_NAME_HASH_SIZE	0	/* Default. */
+# define WORD_NAME_HASH_SIZE	20479
 #endif
 #if !defined (WORD_CODE_HASH_SIZE)
-# define WORD_CODE_HASH_SIZE	0	/* Default. */
+# define WORD_CODE_HASH_SIZE	16384
 #endif
 
+/* Not only is it improbable that the 32-bit spaces might actually use 2^32
+ * defined options, it is infeasable.  It would be best for this kind of
+ * space to be dynamically sized.  Instead we size it at the word hash's
+ * level.
+ */
 #if !defined (QUAD_NAME_HASH_SIZE)
 # define QUAD_NAME_HASH_SIZE	WORD_NAME_HASH_SIZE
 #endif
@@ -111,15 +122,18 @@ typedef struct hash_table class_hash_t;
 #endif
 
 #if !defined (NWIP_HASH_SIZE)
-# define NWIP_HASH_SIZE		11	/* A really small table. */
+# define NWIP_HASH_SIZE		17	/* A really small table. */
 #endif
 
 #if !defined (FQDN_HASH_SIZE)
-# define FQDN_HASH_SIZE		7	/* A rediculously small table. */
+# define FQDN_HASH_SIZE		13	/* A rediculously small table. */
 #endif
 
+/* I really doubt a given installation is going to have more than a few
+ * hundred vendors involved.
+ */
 #if !defined (VIVCO_HASH_SIZE)
-# define VIVCO_HASH_SIZE	QUAD_CODE_HASH_SIZE
+# define VIVCO_HASH_SIZE	127
 #endif
 
 #if !defined (VIVSO_HASH_SIZE)
@@ -131,35 +145,52 @@ typedef struct hash_table class_hash_t;
 #endif
 
 #if !defined (UNIVERSE_HASH_SIZE)
-# define UNIVERSE_HASH_SIZE	11	/* A really small table. */
+# define UNIVERSE_HASH_SIZE	13	/* A really small table. */
 #endif
 
 #if !defined (GROUP_HASH_SIZE)
 # define GROUP_HASH_SIZE	0	/* Default. */
 #endif
 
+/* At least one person has indicated they use ~20k host records.
+ */
 #if !defined (HOST_HASH_SIZE)
-# define HOST_HASH_SIZE		0	/* Default. */
+# define HOST_HASH_SIZE		22501
 #endif
 
+/* We have user reports of use of ISC DHCP numbering leases in the 200k's.
+ *
+ * We also have reports of folks using 10.0/8 as a dynamic range.  The
+ * following is something of a compromise between the two.  At the ~2-3
+ * hundred thousand leases, there's ~2-3 leases to search in each bucket.
+ */
 #if !defined (LEASE_HASH_SIZE)
-# define LEASE_HASH_SIZE	0	/* Default. */
+# define LEASE_HASH_SIZE	100003
 #endif
 
+/* It is not known what the worst case subclass hash size is.  We estimate
+ * high, I think.
+ */
 #if !defined (SCLASS_HASH_SIZE)
-# define SCLASS_HASH_SIZE	1009	/* A less than gigantic sized table. */
+# define SCLASS_HASH_SIZE	12007
 #endif
 
 #if !defined (AGENT_HASH_SIZE)
 # define AGENT_HASH_SIZE	11	/* A really small table. */
 #endif
 
+/* The server hash size is used for both names and codes.  There aren't
+ * many (roughly 50 at the moment), so we use a smaller table.  If we
+ * use a 1:1 table size, then we get name collisions due to poor name
+ * hashing.  So we use double the space we need, which drastically
+ * reduces collisions.
+ */
 #if !defined (SERVER_HASH_SIZE)
-# define SERVER_HASH_SIZE	(sizeof(server_options) / sizeof(struct option))
+# define SERVER_HASH_SIZE (2*(sizeof(server_options) / sizeof(struct option)))
 #endif
 
 
-
+/* How many options are likely to appear in a single packet? */
 #if !defined (OPTION_HASH_SIZE)
 # define OPTION_HASH_SIZE 17
 # define OPTION_HASH_PTWO 32	/* Next power of two above option hash. */
@@ -1071,7 +1102,10 @@ HASH_FUNCTIONS_DECL (option_name, const char *, struct option,
 HASH_FUNCTIONS_DECL (option_code, const unsigned *, struct option,
 		     option_code_hash_t)
 HASH_FUNCTIONS_DECL (dns_zone, const char *, struct dns_zone, dns_zone_hash_t)
-HASH_FUNCTIONS_DECL (lease, const unsigned char *, struct lease, lease_hash_t)
+HASH_FUNCTIONS_DECL(lease_ip, const unsigned char *, struct lease,
+		    lease_ip_hash_t)
+HASH_FUNCTIONS_DECL(lease_id, const unsigned char *, struct lease,
+		    lease_id_hash_t)
 HASH_FUNCTIONS_DECL (host, const unsigned char *, struct host_decl, host_hash_t)
 HASH_FUNCTIONS_DECL (class, const char *, struct class, class_hash_t)
 
@@ -2536,9 +2570,9 @@ extern struct shared_network *shared_networks;
 extern host_hash_t *host_hw_addr_hash;
 extern host_hash_t *host_uid_hash;
 extern host_hash_t *host_name_hash;
-extern lease_hash_t *lease_uid_hash;
-extern lease_hash_t *lease_ip_addr_hash;
-extern lease_hash_t *lease_hw_addr_hash;
+extern lease_id_hash_t *lease_uid_hash;
+extern lease_ip_hash_t *lease_ip_addr_hash;
+extern lease_id_hash_t *lease_hw_addr_hash;
 
 extern omapi_object_type_t *dhcp_type_host;
 

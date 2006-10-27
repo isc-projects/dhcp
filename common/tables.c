@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tables.c,v 1.59 2006/09/18 17:35:44 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: tables.c,v 1.60 2006/10/27 22:54:12 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -677,6 +677,12 @@ void initialize_common_option_spaces()
 				     dhcp_options [i].name, 0,
 				     &dhcp_options [i], MDL);
 	}
+#if defined(REPORT_HASH_PERFORMANCE)
+	log_info("DHCP name hash: %s",
+		 option_name_hash_report(dhcp_universe.name_hash));
+	log_info("DHCP code hash: %s",
+		 option_code_hash_report(dhcp_universe.code_hash));
+#endif
 
 	/* Set up the Novell option universe (for option 63)... */
 	nwip_universe.name = "nwip";
@@ -715,6 +721,12 @@ void initialize_common_option_spaces()
 				     nwip_options[i].name, 0,
 				     &nwip_options[i], MDL);
 	}
+#if defined(REPORT_HASH_PERFORMANCE)
+	log_info("NWIP name hash: %s",
+		 option_name_hash_report(nwip_universe.name_hash));
+	log_info("NWIP code hash: %s",
+		 option_code_hash_report(nwip_universe.code_hash));
+#endif
 
 	/* Set up the FQDN option universe... */
 	fqdn_universe.name = "fqdn";
@@ -753,6 +765,12 @@ void initialize_common_option_spaces()
 				     fqdn_options[i].name, 0,
 				     &fqdn_options[i], MDL);
 	}
+#if defined(REPORT_HASH_PERFORMANCE)
+	log_info("FQDN name hash: %s",
+		 option_name_hash_report(fqdn_universe.name_hash));
+	log_info("FQDN code hash: %s",
+		 option_code_hash_report(fqdn_universe.code_hash));
+#endif
 
         /* Set up the Vendor Identified Vendor Class options (for option
 	 * 125)...
@@ -794,6 +812,12 @@ void initialize_common_option_spaces()
                                      vendor_class_options[i].name, 0,
                                      &vendor_class_options[i], MDL);
         }
+#if defined(REPORT_HASH_PERFORMANCE)
+	log_info("VIVCO name hash: %s",
+		 option_name_hash_report(vendor_class_universe.name_hash));
+	log_info("VIVCO code hash: %s",
+		 option_code_hash_report(vendor_class_universe.code_hash));
+#endif
 
         /* Set up the Vendor Identified Vendor Sub-options (option 126)... */
         vendor_universe.name = "vendor";
@@ -833,6 +857,12 @@ void initialize_common_option_spaces()
 				     vendor_options[i].name, 0,
 				     &vendor_options[i], MDL);
         }
+#if defined(REPORT_HASH_PERFORMANCE)
+	log_info("VIVSO name hash: %s",
+		 option_name_hash_report(vendor_universe.name_hash));
+	log_info("VIVSO code hash: %s",
+		 option_code_hash_report(vendor_universe.code_hash));
+#endif
 
         /* Set up the ISC Vendor-option universe (for option 125.2495)... */
         isc_universe.name = "isc";
@@ -863,14 +893,20 @@ void initialize_common_option_spaces()
 	    !option_code_new_hash(&isc_universe.code_hash,
 				  VIV_ISC_HASH_SIZE, MDL))
                 log_fatal("Can't allocate ISC Vendor options hash table.");
-        for (i = 0 ; vendor_options[i].name ; i++) {
-		option_code_hash_add(vendor_universe.code_hash,
-				     &vendor_options[i].code, 0,
-				     &vendor_options[i], MDL);
-                option_name_hash_add(vendor_universe.name_hash,
-                                     vendor_options[i].name, 0,
-                                     &vendor_options[i], MDL);
+        for (i = 0 ; isc_options[i].name ; i++) {
+		option_code_hash_add(isc_universe.code_hash,
+				     &isc_options[i].code, 0,
+				     &isc_options[i], MDL);
+                option_name_hash_add(isc_universe.name_hash,
+                                     isc_options[i].name, 0,
+                                     &isc_options[i], MDL);
         }
+#if defined(REPORT_HASH_PERFORMANCE)
+	log_info("ISC name hash: %s",
+		 option_name_hash_report(isc_universe.name_hash));
+	log_info("ISC code hash: %s",
+		 option_code_hash_report(isc_universe.code_hash));
+#endif
 
 	/* Set up the hash of universes. */
 	universe_new_hash(&universe_hash, UNIVERSE_HASH_SIZE, MDL);

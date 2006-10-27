@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.67 2006/10/09 17:47:43 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.68 2006/10/27 22:54:12 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2318,21 +2318,6 @@ static int dhcp_failover_pool_dobalance(dhcp_failover_state_t *state)
 		if (!reqsent && (lts < (thresh * -2))) {
 			dhcp_failover_send_poolreq(state);
 			reqsent = 1;
-		}
-
-		/* Do not go through the process unless at least we have
-		 * more than thresh% more leases than the peer.
-		 */
-		if (lts <= thresh) {
-			log_info("pool %lx %s: lts <= max-lease-misbalance "
-				 "(%d), pool rebalance event skipped.",
-				 (unsigned long)p,
-				 (p->shared_network ?
-				  p->shared_network->name : ""), thresh);
-
-			/* Recalculate next rebalance event timer. */
-			dhcp_failover_pool_check(p);
-			continue;
 		}
 
 		/* In the first pass, try to allocate leases to the

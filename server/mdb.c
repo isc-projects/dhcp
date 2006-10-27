@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.85 2006/09/27 18:27:27 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.86 2006/10/27 22:54:13 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -45,9 +45,9 @@ struct shared_network *shared_networks;
 host_hash_t *host_hw_addr_hash;
 host_hash_t *host_uid_hash;
 host_hash_t *host_name_hash;
-lease_hash_t *lease_uid_hash;
-lease_hash_t *lease_ip_addr_hash;
-lease_hash_t *lease_hw_addr_hash;
+lease_id_hash_t *lease_uid_hash;
+lease_ip_hash_t *lease_ip_addr_hash;
+lease_id_hash_t *lease_hw_addr_hash;
 
 int numclasseswritten;
 
@@ -549,15 +549,17 @@ void new_address_range (cfile, low, high, subnet, pool, lpchain)
 
 	/* Initialize the hash table if it hasn't been done yet. */
 	if (!lease_uid_hash) {
-		if (!lease_new_hash(&lease_uid_hash, LEASE_HASH_SIZE, MDL))
+		if (!lease_id_new_hash(&lease_uid_hash, LEASE_HASH_SIZE, MDL))
 			log_fatal ("Can't allocate lease/uid hash");
 	}
 	if (!lease_ip_addr_hash) {
-		if (!lease_new_hash(&lease_ip_addr_hash, LEASE_HASH_SIZE, MDL))
+		if (!lease_ip_new_hash(&lease_ip_addr_hash, LEASE_HASH_SIZE,
+				       MDL))
 			log_fatal ("Can't allocate lease/ip hash");
 	}
 	if (!lease_hw_addr_hash) {
-		if (!lease_new_hash(&lease_hw_addr_hash, LEASE_HASH_SIZE, MDL))
+		if (!lease_id_new_hash(&lease_hw_addr_hash, LEASE_HASH_SIZE,
+				       MDL))
 			log_fatal ("Can't allocate lease/hw hash");
 	}
 
@@ -638,9 +640,9 @@ void new_address_range (cfile, low, high, subnet, pool, lpchain)
 				pool_reference (&lt -> pool, pool, MDL);
 			lease_dereference (&lt, MDL);
 		} else
-			lease_hash_add (lease_ip_addr_hash,
-					lp -> ip_addr.iabuf,
-					lp -> ip_addr.len, lp, MDL);
+			lease_ip_hash_add(lease_ip_addr_hash,
+					  lp->ip_addr.iabuf, lp->ip_addr.len,
+					  lp, MDL);
 		/* Put the lease on the chain for the caller. */
 		if (lpchain) {
 			if (*lpchain) {
@@ -836,9 +838,9 @@ void enter_lease (lease)
 		if (comp -> subnet)
 			subnet_reference (&lease -> subnet,
 					  comp -> subnet, MDL);
-		lease_hash_delete (lease_ip_addr_hash,
-				   lease -> ip_addr.iabuf,
-				   lease -> ip_addr.len, MDL);
+		lease_ip_hash_delete(lease_ip_addr_hash,
+				     lease->ip_addr.iabuf, lease->ip_addr.len,
+				     MDL);
 		lease_dereference (&comp, MDL);
 	}
 
@@ -855,9 +857,8 @@ void enter_lease (lease)
 		log_error ("lease %s: no subnet.", piaddr (lease -> ip_addr));
 		return;
 	}
-	lease_hash_add (lease_ip_addr_hash,
-			lease -> ip_addr.iabuf,
-			lease -> ip_addr.len, lease, MDL);
+	lease_ip_hash_add(lease_ip_addr_hash, lease->ip_addr.iabuf,
+			  lease->ip_addr.len, lease, MDL);
 }
 
 /* Replace the data in an existing lease with the data in a new lease;
@@ -1668,8 +1669,8 @@ void pool_timer (vpool)
 int find_lease_by_ip_addr (struct lease **lp, struct iaddr addr,
 			   const char *file, int line)
 {
-	return lease_hash_lookup (lp, lease_ip_addr_hash,
-				  addr.iabuf, addr.len, file, line);
+	return lease_ip_hash_lookup(lp, lease_ip_addr_hash, addr.iabuf,
+				    addr.len, file, line);
 }
 
 int find_lease_by_uid (struct lease **lp, const unsigned char *uid,
@@ -1677,7 +1678,7 @@ int find_lease_by_uid (struct lease **lp, const unsigned char *uid,
 {
 	if (len == 0)
 		return 0;
-	return lease_hash_lookup (lp, lease_uid_hash, uid, len, file, line);
+	return lease_id_hash_lookup (lp, lease_uid_hash, uid, len, file, line);
 }
 
 int find_lease_by_hw_addr (struct lease **lp,
@@ -1686,8 +1687,8 @@ int find_lease_by_hw_addr (struct lease **lp,
 {
 	if (hwlen == 0)
 		return 0;
-	return lease_hash_lookup (lp, lease_hw_addr_hash,
-				  hwaddr, hwlen, file, line);
+	return lease_id_hash_lookup(lp, lease_hw_addr_hash, hwaddr, hwlen,
+				    file, line);
 }
 
 /* Add the specified lease to the uid hash. */
@@ -1701,8 +1702,8 @@ void uid_hash_add (lease)
 
 	/* If it's not in the hash, just add it. */
 	if (!find_lease_by_uid (&head, lease -> uid, lease -> uid_len, MDL))
-		lease_hash_add (lease_uid_hash, lease -> uid,
-				lease -> uid_len, lease, MDL);
+		lease_id_hash_add(lease_uid_hash, lease->uid, lease->uid_len,
+				  lease, MDL);
 	else {
 		/* Otherwise, attach it to the end of the list. */
 		while (head -> n_uid) {
@@ -1735,13 +1736,12 @@ void uid_hash_delete (lease)
 	   remove the hash table entry and add a new one with the
 	   next lease on the list (if there is one). */
 	if (head == lease) {
-		lease_hash_delete (lease_uid_hash,
-				   lease -> uid, lease -> uid_len, MDL);
+		lease_id_hash_delete(lease_uid_hash, lease->uid,
+				     lease->uid_len, MDL);
 		if (lease -> n_uid) {
-			lease_hash_add (lease_uid_hash,
-					lease -> n_uid -> uid,
-					lease -> n_uid -> uid_len,
-					lease -> n_uid, MDL);
+			lease_id_hash_add(lease_uid_hash, lease->n_uid->uid,
+					  lease->n_uid->uid_len, lease->n_uid,
+					  MDL);
 			lease_dereference (&lease -> n_uid, MDL);
 		}
 	} else {
@@ -1775,10 +1775,9 @@ void hw_hash_add (lease)
 	/* If it's not in the hash, just add it. */
 	if (!find_lease_by_hw_addr (&head, lease -> hardware_addr.hbuf,
 				    lease -> hardware_addr.hlen, MDL))
-		lease_hash_add (lease_hw_addr_hash,
-				lease -> hardware_addr.hbuf,
-				lease -> hardware_addr.hlen,
-				lease, MDL);
+		lease_id_hash_add(lease_hw_addr_hash,
+				  lease->hardware_addr.hbuf,
+				  lease->hardware_addr.hlen, lease, MDL);
 	else {
 		/* Otherwise, attach it to the end of the list. */
 		while (head -> n_hw) {
@@ -1813,15 +1812,15 @@ void hw_hash_delete (lease)
 	   remove the hash table entry and add a new one with the
 	   next lease on the list (if there is one). */
 	if (head == lease) {
-		lease_hash_delete (lease_hw_addr_hash,
-				   lease -> hardware_addr.hbuf,
-				   lease -> hardware_addr.hlen, MDL);
-		if (lease -> n_hw) {
-			lease_hash_add (lease_hw_addr_hash,
-					lease -> n_hw -> hardware_addr.hbuf,
-					lease -> n_hw -> hardware_addr.hlen,
-					lease -> n_hw, MDL);
-			lease_dereference (&lease -> n_hw, MDL);
+		lease_id_hash_delete(lease_hw_addr_hash,
+				     lease->hardware_addr.hbuf,
+				     lease->hardware_addr.hlen, MDL);
+		if (lease->n_hw) {
+			lease_id_hash_add(lease_hw_addr_hash,
+					  lease->n_hw->hardware_addr.hbuf,
+					  lease->n_hw->hardware_addr.hlen,
+					  lease->n_hw, MDL);
+			lease_dereference(&lease->n_hw, MDL);
 		}
 	} else {
 		/* Otherwise, look for the lease in the list of leases
@@ -2118,9 +2117,8 @@ lease_instantiate(const void *key, unsigned len, void *object)
 	   XXX orphan, which we *should* keep around until it expires,
 	   XXX but which right now we just forget. */
 	if (!lease -> pool) {
-		lease_hash_delete (lease_ip_addr_hash,
-				   lease -> ip_addr.iabuf,
-				   lease -> ip_addr.len, MDL);
+		lease_ip_hash_delete(lease_ip_addr_hash, lease->ip_addr.iabuf,
+				     lease->ip_addr.len, MDL);
 		return ISC_R_SUCCESS;
 	}
 		
@@ -2179,7 +2177,7 @@ void expire_all_pools ()
 
 	/* First, go over the hash list and actually put all the leases
 	   on the appropriate lists. */
-	lease_hash_foreach (lease_ip_addr_hash, lease_instantiate);
+	lease_ip_hash_foreach(lease_ip_addr_hash, lease_instantiate);
 
 	/* Loop through each pool in each shared network and call the
 	 * expiry routine on the pool.  It is no longer safe to follow
@@ -2273,8 +2271,10 @@ void dump_subnets ()
 	}
 }
 
-HASH_FUNCTIONS (lease, const unsigned char *, struct lease, lease_hash_t,
-		lease_reference, lease_dereference, do_ip4_hash)
+HASH_FUNCTIONS(lease_ip, const unsigned char *, struct lease, lease_ip_hash_t,
+	       lease_reference, lease_dereference, do_ip4_hash)
+HASH_FUNCTIONS(lease_id, const unsigned char *, struct lease, lease_id_hash_t,
+	       lease_reference, lease_dereference, do_id_hash)
 HASH_FUNCTIONS (host, const unsigned char *, struct host_decl, host_hash_t,
 		host_reference, host_dereference, do_string_hash)
 HASH_FUNCTIONS (class, const char *, struct class, class_hash_t,
