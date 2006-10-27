@@ -86,6 +86,7 @@ void name##_hash_delete (hashtype *, bufarg, unsigned,			      \
 			 const char *, int);				      \
 int name##_hash_lookup (type **, hashtype *, bufarg, unsigned,		      \
 			const char *, int);				      \
+unsigned char * name##_hash_report(hashtype *);				      \
 int name##_hash_foreach (hashtype *, hash_foreach_func);		      \
 int name##_new_hash (hashtype **, unsigned, const char *, int);		      \
 void name##_free_hash_table (hashtype **, const char *, int);
@@ -113,6 +114,11 @@ int name##_hash_lookup (type **ptr, hashtype *table,			      \
 	return hash_lookup ((hashed_object_t **)ptr,			      \
 			    (struct hash_table *)table,			      \
 			    buf, len, file, line);			      \
+}									      \
+									      \
+unsigned char * name##_hash_report(hashtype *table)			      \
+{									      \
+	return hash_report((struct hash_table *)table);			      \
 }									      \
 									      \
 int name##_hash_foreach (hashtype *table, hash_foreach_func func)	      \
@@ -144,8 +150,10 @@ int new_hash(struct hash_table **,
 	     const char *, int);
 unsigned do_string_hash(const void *, unsigned, unsigned);
 unsigned do_case_hash(const void *, unsigned, unsigned);
+unsigned do_id_hash(const void *, unsigned, unsigned);
 unsigned do_number_hash(const void *, unsigned, unsigned);
 unsigned do_ip4_hash(const void *, unsigned, unsigned);
+unsigned char *hash_report(struct hash_table *);
 void add_hash (struct hash_table *,
 		      const void *, unsigned, hashed_object_t *,
 		      const char *, int);

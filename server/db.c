@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: db.c,v 1.74 2006/07/19 16:44:47 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: db.c,v 1.74.32.1 2006/10/27 22:54:50 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -652,11 +652,11 @@ write_named_billing_class(const void *key, unsigned len, void *object)
 		   (due to clone_group() call). */
 		if (class->group != 0 && class->group->authoritative != 0)
 			write_statements(db_file, class->group->statements, 8);
-	
+
 		if (fprintf(db_file, "}\n\n") <= 0)
 			return ISC_R_IOERROR;
 	}
-	
+
 	if (class->hash != NULL) {	/* yep. recursive. god help us. */
 		/* XXX - cannot check error status of this...
 		 * foo_hash_foreach returns a count of operations completed.
@@ -786,6 +786,16 @@ void db_startup (testp)
 			GET_TIME (&write_time);
 		new_lease_file ();
 	}
+
+#if defined(REPORT_HASH_PERFORMANCE)
+	log_info("Host HW hash:   %s", host_hash_report(host_hw_addr_hash));
+	log_info("Host UID hash:  %s", host_hash_report(host_uid_hash));
+	log_info("Lease IP hash:  %s",
+		 lease_ip_hash_report(lease_ip_addr_hash));
+	log_info("Lease UID hash: %s", lease_id_hash_report(lease_uid_hash));
+	log_info("Lease HW hash:  %s",
+		 lease_id_hash_report(lease_hw_addr_hash));
+#endif
 }
 
 int new_lease_file ()

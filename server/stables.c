@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: stables.c,v 1.33 2006/07/31 23:17:24 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: stables.c,v 1.33.12.1 2006/10/27 22:54:50 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -357,6 +357,12 @@ void initialize_server_option_spaces()
 				     agent_options[i].name, 0,
 				     &agent_options[i], MDL);
 	}
+#if defined(REPORT_HASH_PERFORMANCE)
+	log_info("Relay Agent name hash: %s",
+		 option_name_hash_report(agent_universe.name_hash));
+	log_info("Relay Agent code hash: %s",
+		 option_code_hash_report(agent_universe.code_hash));
+#endif
 	code = DHO_DHCP_AGENT_OPTIONS;
 	option_code_hash_lookup(&agent_universe.enc_opt,
 				dhcp_universe.code_hash, &code, 0, MDL);
@@ -389,6 +395,12 @@ void initialize_server_option_spaces()
 				     server_options[i].name, 0,
 				     &server_options[i], MDL);
 	}
+#if defined(REPORT_HASH_PERFORMANCE)
+	log_info("Server-Config Option name hash: %s",
+		 option_name_hash_report(server_universe.name_hash));
+	log_info("Server-Config Option code hash: %s",
+		 option_code_hash_report(server_universe.code_hash));
+#endif
 
 	/* Add the server and agent option spaces to the option space hash. */
 	universe_hash_add (universe_hash,
