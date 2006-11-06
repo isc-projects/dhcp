@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.108.12.1 2006/10/17 20:48:42 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.108.12.2 2006/11/06 18:15:42 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -773,7 +773,7 @@ int binding_value_dereference (struct binding_value **v,
 			   file, line, bv -> type);
 		return 0;
 	}
-	dfree (bv, file, line);
+	free_binding_value(bv, file, line);
 	return 1;
 }
 
