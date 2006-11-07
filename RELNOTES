@@ -79,6 +79,12 @@ thanks to all of these good people here, both for working on the code
 and for prodding me into improving it.
 
 
+			Changes since 3.0.5
+
+- A logic error in omapi interface code was repaired that might result in
+  incorrectly indicating 'up' state when any flags were set, rather than
+  specifically the INTERFACE_REQUESTED flag.
+
 			Changes since 3.0.5rc2
 
 - Failover servers try harder to retransmit binding updates upon entering

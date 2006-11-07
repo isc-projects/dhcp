@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: discover.c,v 1.42.2.21 2006/02/22 22:43:27 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: discover.c,v 1.42.2.22 2006/11/07 23:43:08 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -938,7 +938,7 @@ isc_result_t dhcp_interface_stuff_values (omapi_object_t *c,
 	status = omapi_connection_put_name (c, "state");
 	if (status != ISC_R_SUCCESS)
 		return status;
-	if (interface -> flags && INTERFACE_REQUESTED)
+	if ((interface->flags & INTERFACE_REQUESTED) != 0)
 	    status = omapi_connection_put_string (c, "up");
 	else
 	    status = omapi_connection_put_string (c, "down");
