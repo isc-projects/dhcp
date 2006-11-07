@@ -174,6 +174,12 @@ the README file.
 - Encapsulated option spaces within encapsulated option spaces is now
   formally supported.
 
+			Changes since 3.0.5
+
+- A logic error in omapi interface code was repaired that might result in
+  incorrectly indicating 'up' state when any flags were set, rather than
+  specifically the INTERFACE_REQUESTED flag.
+
                         Changes since 3.0.5rc1
 
 - A bug was repaired in fixes to the dhclient, which sought to run the
