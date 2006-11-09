@@ -57,6 +57,8 @@ the README file.
   runs to be skipped: it still governs the schedule, but every scheduled
   run will attempt balance.
 
+- A segfault bug in recursive encapsulation support has been corrected.
+
 			Changes since 3.0 (New Features)
 
 - A workaround for certain STSN servers that send a mangled domain-name
