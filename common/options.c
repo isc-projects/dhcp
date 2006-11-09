@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.98.2.2 2006/10/17 20:48:42 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.98.2.3 2006/11/09 22:08:56 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -2232,8 +2232,9 @@ int option_space_encapsulate (result, packet, lease, client_state,
 	 */
 	memset(&sub, 0, sizeof(sub));
 	for (i = 0 ; i < cfg_options->universe_count ; i++) {
-		subu = cfg_options->universes[i];
-		if (subu != NULL && subu->enc_opt != NULL &&
+		subu = universes[i];
+		if (cfg_options->universes[i] != NULL &&
+		    subu->enc_opt != NULL &&
 		    subu->enc_opt->universe == u &&
 		    subu->enc_opt->format != NULL &&
 		    subu->enc_opt->format[0] == 'E' &&
