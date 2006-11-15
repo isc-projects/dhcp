@@ -80,7 +80,7 @@
 /* 
  * DHCPv6 message types, defined in section 5.3 of RFC 3315 
  */
-#define DHCPV6_SOLICT 1
+#define DHCPV6_SOLICIT 1
 #define DHCPV6_ADVERTISE 2
 #define DHCPV6_REQUEST 3
 #define DHCPV6_CONFIRM 4
@@ -115,8 +115,8 @@ struct dhcpv6_packet {
 struct dhcpv6_relay_packet {
 	unsigned char msg_type;
 	unsigned char hop_count;
-	struct sockaddr_in6 link_address;
-	struct sockaddr_in6 peer_address;
+	unsigned char link_address[16];
+	unsigned char peer_address[16];
 	unsigned char options[0];
 };
 

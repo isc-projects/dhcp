@@ -529,6 +529,7 @@ struct lease_state {
 #define SV_DDNS_CONFLICT_DETECT		48
 #define SV_LEASEQUERY			49
 #define SV_ADAPTIVE_LEASE_TIME_THRESHOLD	50
+#define SV_PREFER_LIFETIME		51
 
 #if !defined (DEFAULT_PING_TIMEOUT)
 # define DEFAULT_PING_TIMEOUT 1
@@ -1168,6 +1169,8 @@ struct option_cache *next_hashed_option(struct universe *,
 int save_option_buffer (struct universe *, struct option_state *,
 			struct buffer *, unsigned char *, unsigned,
 			unsigned, int);
+void build_server_oro(struct data_string *, struct option_state *, 
+		      const char *, int);
 void save_option PROTO ((struct universe *,
 			 struct option_state *, struct option_cache *));
 void save_hashed_option PROTO ((struct universe *,
@@ -1541,6 +1544,7 @@ int bind_ds_value (struct binding_scope **,
 int find_bound_string (struct data_string *,
 		       struct binding_scope *, const char *);
 int unset (struct binding_scope *, const char *);
+int data_string_sprintfa(struct data_string *ds, const char *fmt, ...);
 
 /* dhcp.c */
 extern int outstanding_pings;

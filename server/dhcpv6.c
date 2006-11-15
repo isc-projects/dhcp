@@ -641,7 +641,7 @@ start_reply(struct packet *packet,
 	/*
 	 * Set the ORO for the main packet.
 	 */
-	build_server_oro(&server_oro, opt_state, MDL);
+	build_server_oro(&server_oro, *opt_state, MDL);
 	if (!save_option_buffer(&dhcpv6_universe, *opt_state,
 				server_oro.buffer, (char *)server_oro.data,
 				server_oro.len, D6O_ORO, 0)) {
@@ -688,6 +688,8 @@ lease_to_client(struct data_string *reply_ret,
 	struct data_string d;
 	u_int16_t len;
 	u_int32_t t1, t2;
+	struct host_decl *save_host;
+	char zeros[24];
 
 	/*
 	 * Initialize to empty values, in case we have to exit early.
@@ -771,6 +773,15 @@ lease_to_client(struct data_string *reply_ret,
 	 */
 	ia = lookup_option(&dhcpv6_universe, packet->options, D6O_IA_NA);
 	while (ia != NULL) {
+		/* 
+		 * T1 and T2, set to 0 means the client can choose.
+		 * 
+		 * We will adjust this based on preferred and valid 
+		 * times if we have an address.
+		 */
+		t1 = 0;
+		t2 = 0;
+
 		if (!get_encapsulated_IA_state(&cli_enc_opt_state,
 					       &cli_enc_opt_data,
 					       packet, ia)) {
@@ -829,6 +840,16 @@ lease_to_client(struct data_string *reply_ret,
 			  		  "error evaluating IAADDR.");
 				goto exit;
 			}
+			/* 
+			 * XXX: Clients *love* to send :: as an address,
+			 *      which is *never* what we want.
+			 */
+			memset(zeros, 0, sizeof(zeros));
+			if ((iaaddr.len == 24) && 
+			    !memcmp(iaaddr.data, zeros, 16)) {
+			    	log_info("Ignoring IAADDR :: from client.");
+				data_string_forget(&iaaddr, MDL);
+			}
 		}
 
 		/* 
@@ -878,6 +899,7 @@ lease_to_client(struct data_string *reply_ret,
 			 * Client wanted a specific IAADDR, so we will
 			 * only accept a host entry that matches. 
 			 */
+			save_host = host;
 			for (; host != NULL; host = host->n_ipaddr) {
 				if (host->fixed_addr == NULL) {
 					continue;
@@ -891,13 +913,25 @@ lease_to_client(struct data_string *reply_ret,
 						  "evaluating host address.");
 					goto exit;
 				}
-				if ((fixed_addr.len == iaaddr.len) &&
-				    !memcmp(fixed_addr.data, 
-				    	    iaaddr.data, iaaddr.len)) {
+				if ((iaaddr.len >= 16) &&
+				    !memcmp(fixed_addr.data, iaaddr.data, 16)) {
 					data_string_forget(&fixed_addr, MDL);
 					break;
 				}
 				data_string_forget(&fixed_addr, MDL);
+			}
+			/* 
+			 * If we got a Solicit and don't have a matching 
+			 * host record, have gotten a bad hint.
+			 * Pick a host record.
+			 */
+			if ((host == NULL) && 
+			    (packet->dhcpv6_msg_type == DHCPV6_SOLICIT)) {
+			    	host = save_host;
+				while ((host != NULL) && 
+				       (host->fixed_addr == NULL)) {
+					host = host->n_ipaddr;
+				}
 			}
 		}
 		if (host != NULL) {
@@ -924,19 +958,129 @@ lease_to_client(struct data_string *reply_ret,
 				if (!evaluate_option_cache(&d, packet, NULL, 
 							   NULL, 
 							   packet->options,
-							   NULL, &global_scope,
+							   opt_state,
+							   &global_scope,
 							   oc, MDL)) {
 					log_error("lease_to_client: error "
 						  "getting lease time, "
 						  "using default.");
 				} else {
 					/* INSIST(d.len == 4); */
-					memcpy(&valid_lifetime, 
-					       d.data, sizeof(valid_lifetime));
+					valid_lifetime = getULong(d.data);
 					data_string_forget(&d, MDL);
 				}
 			}
-			preferred_lifetime = valid_lifetime / 2;
+
+			/*
+			 * T1: RENEW time.
+			 * T2: REBIND time.
+			 * preferred: 'deprecate' address.
+			 * valid: address expires.
+			 *
+			 * Values are required for valid and preferred
+			 * lifetimes.  T1 and T2, if zero, will allow
+			 * the client to select their own behaviour.
+			 */
+			t1 = t2 = 0;
+			/* XXX: This is more than a little weird. */
+			oc = lookup_option(&dhcp_universe, opt_state,
+					   DHO_DHCP_RENEWAL_TIME);
+			if (oc != NULL) {
+				memset(&d, 0, sizeof(d));
+				if (!evaluate_option_cache(&d, packet, NULL,
+							   NULL,
+							   packet->options,
+							   opt_state,
+							   &global_scope,
+							   oc, MDL)) {
+					/* XXX: I think there are already log
+					 * lines by this point.
+					 */
+					log_error("lease_to_client: error "
+						  "evaluating renew time, "
+						  "defaulting to 0");
+				} else {
+					t1 = getULong(d.data);
+					data_string_forget(&d, MDL);
+				}
+			}
+
+			oc = lookup_option(&dhcp_universe, opt_state,
+					   DHO_DHCP_REBINDING_TIME);
+			if (oc != NULL) {
+				memset(&d, 0, sizeof(d));
+				if (!evaluate_option_cache(&d, packet, NULL,
+							   NULL,
+							   packet->options,
+							   opt_state,
+							   &global_scope,
+							   oc, MDL)) {
+					/* XXX: I think there are already log
+					 * lines by this point.
+					 */
+					log_error("lease_to_client: error "
+						  "evaluating rebinding "
+						  "time, defaulting to 0");
+				} else {
+					t2 = getULong(d.data);
+					data_string_forget(&d, MDL);
+				}
+			}
+
+			preferred_lifetime = t1 + t2;
+
+			if (preferred_lifetime == 0 ||
+			    preferred_lifetime >= valid_lifetime)
+				preferred_lifetime = (valid_lifetime / 2) +
+						     (valid_lifetime / 4);
+
+			oc = lookup_option(&server_universe, opt_state,
+					   SV_PREFER_LIFETIME);
+			if (oc != NULL) {
+				memset(&d, 0, sizeof(d));
+				if (!evaluate_option_cache(&d, packet, NULL,
+							   NULL,
+							   packet->options,
+							   opt_state,
+							   &global_scope,
+							   oc, MDL)) {
+					/* XXX: I think there are already log
+					 * lines by this point.
+					 */
+					log_error("lease_to_client: error "
+						  "evaluating preferred "
+						  "lifetime, defaulting to "
+						  "%d", preferred_lifetime);
+				} else {
+					preferred_lifetime = getULong(d.data);
+					data_string_forget(&d, MDL);
+				}
+			}
+
+/* XXX: this was used for early testing */
+#if 0
+			/* 
+			 * Our expiration times, in a reasonable order:
+			 * 
+			 * T1: send a renew, to get our lease again
+			 * T2: send a rebind, because renew didn't work
+			 * preferred: try not to use this address
+			 * valid: address is no longer usable
+			 *
+			 * We use 25%, 50%, 75%, and 100% of the valid 
+			 * lifetime, respectively, for each of these.
+			 * 
+			 * XXX: the handling of this should be configurable
+			 */
+			t1 = valid_lifetime / 4;
+			t2 = valid_lifetime / 2;
+			preferred_lifetime = t1 + t2;
+#endif
+
+			/*
+			 * T1, T2, and valid lifetime are configurable
+			 * values.  In the absence of configuration
+			 */
 
 			/*
 			 * Get the address.
@@ -1016,7 +1160,7 @@ lease_to_client(struct data_string *reply_ret,
 			 * attempting to renew an address it thinks it has.
 			 */
 			if (packet->dhcpv6_msg_type == DHCPV6_REBIND) {
-				if (iaaddr.len == 16) {
+				if (iaaddr.len == 24) {
 					/* 
 				 	 * If the we have a client address, 
 					 * tell the client it is invalid.
@@ -1059,7 +1203,7 @@ lease_to_client(struct data_string *reply_ret,
 					 *      address this case.
 					 */
 					if (!set_status_code(STATUS_UnspecFail, 
-						     "Rebind requested without"
+						     "Rebind requested without "
 						     "including an addresses.", 
 						     host_opt_state)) {
 						goto exit;
@@ -1067,8 +1211,16 @@ lease_to_client(struct data_string *reply_ret,
 				}
 			} else if (packet->dhcpv6_msg_type == DHCPV6_RENEW) {
 				if (!set_status_code(STATUS_NoBinding, 
-						     "Address not bound"
+						     "Address not bound "
 						     "to this interface.", 
+						     host_opt_state)) {
+					goto exit;
+				}
+			} else if ((iaaddr.len == 24) &&
+				   (packet->dhcpv6_msg_type == DHCPV6_REQUEST)){
+				if (!set_status_code(STATUS_NotOnLink, 
+					     	     "Address not for "
+						     "use on this link.", 
 						     host_opt_state)) {
 					goto exit;
 				}
@@ -1111,9 +1263,7 @@ lease_to_client(struct data_string *reply_ret,
 		putUShort(reply_data+reply_ofs+2, len + 12);
 		/* IA_NA, copied from the client */
 		memcpy(reply_data+reply_ofs+4, cli_enc_opt_data.data, 4);
-		/* t1 and t2, set to 0 means the client can choose */
-		t1 = 0;
-		t2 = 0;
+		/* T1 and T2, set previously */
 		putULong(reply_data+reply_ofs+8, t1);
 		putULong(reply_data+reply_ofs+12, t2);
 
@@ -1360,8 +1510,8 @@ dhcpv6_confirm(struct data_string *reply_ret, struct packet *packet) {
 					  "evaluating host address.");
 				goto exit;
 			}
-			if ((fixed_addr.len == iaaddr.len) &&
-			    !memcmp(fixed_addr.data, iaaddr.data, iaaddr.len)) {
+			if ((iaaddr.len >= 16) &&
+			    !memcmp(fixed_addr.data, iaaddr.data, 16)) {
 				data_string_forget(&fixed_addr, MDL);
 				break;
 			}
@@ -1752,9 +1902,8 @@ iterate_over_ia_na(struct data_string *reply_ret,
 						  "evaluating host address.");
 					goto exit;
 				}
-				if ((fixed_addr.len == iaaddr.len) &&
-				    !memcmp(fixed_addr.data, 
-				    	    iaaddr.data, iaaddr.len)) {
+				if ((iaaddr.len >= 16) &&
+				    !memcmp(fixed_addr.data, iaaddr.data, 16)) {
 					data_string_forget(&fixed_addr, MDL);
 					break;
 				}
@@ -1987,6 +2136,7 @@ dhcpv6_relay_forw(struct data_string *reply_ret, struct packet *packet) {
 	struct data_string enc_reply;
 	char link_addr[sizeof("ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255")];
 	char peer_addr[sizeof("ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255")];
+	struct data_string interface_id;
 
 	/* 
 	 * Intialize variables for early exit.
@@ -1994,15 +2144,16 @@ dhcpv6_relay_forw(struct data_string *reply_ret, struct packet *packet) {
 	memset(&enc_opt_data, 0, sizeof(enc_opt_data));
 	enc_packet = NULL;
 	memset(&enc_reply, 0, sizeof(enc_reply));
+	memset(&interface_id, 0, sizeof(interface_id));
 
 	/*
 	 * Get our encapsulated relay message.
 	 */
 	oc = lookup_option(&dhcpv6_universe, packet->options, D6O_RELAY_MSG);
 	if (oc == NULL) {
-		inet_ntop(AF_INET6, &packet->dhcpv6_link_address,
+		inet_ntop(AF_INET6, &packet->dhcpv6_link_address.sin6_addr,
 			  link_addr, sizeof(link_addr));
-		inet_ntop(AF_INET6, &packet->dhcpv6_peer_address,
+		inet_ntop(AF_INET6, &packet->dhcpv6_peer_address.sin6_addr,
 			  peer_addr, sizeof(peer_addr));
 		log_info("Relay-forward from %s with link address=%s and "
 			 "peer address=%s missing Relay Message option.",
@@ -2014,7 +2165,7 @@ dhcpv6_relay_forw(struct data_string *reply_ret, struct packet *packet) {
 	if (!evaluate_option_cache(&enc_opt_data, NULL, NULL, NULL, 
 				   NULL, NULL, &global_scope, oc, MDL)) {
 		log_error("dhcpv6_forw_relay: error evaluating "
-			  "relayed messaged.");
+			  "relayed message.");
 		goto exit;
 	}
 
@@ -2050,8 +2201,16 @@ dhcpv6_relay_forw(struct data_string *reply_ret, struct packet *packet) {
 
                 /* relay-specific data */
                 enc_packet->dhcpv6_hop_count = relay->hop_count;
-                enc_packet->dhcpv6_link_address = relay->link_address;
-                enc_packet->dhcpv6_peer_address = relay->peer_address;
+		memset(&enc_packet->dhcpv6_link_address, 0,
+                       sizeof(enc_packet->dhcpv6_link_address));
+                enc_packet->dhcpv6_link_address.sin6_family = AF_INET6;
+		memcpy(&enc_packet->dhcpv6_link_address.sin6_addr,
+		       relay->link_address, sizeof(relay->link_address));
+                memset(&enc_packet->dhcpv6_peer_address, 0,
+                       sizeof(enc_packet->dhcpv6_peer_address));
+                enc_packet->dhcpv6_peer_address.sin6_family = AF_INET6;
+		memcpy(&enc_packet->dhcpv6_peer_address.sin6_addr,
+		       relay->peer_address, sizeof(relay->peer_address));
 
                 if (!parse_option_buffer(enc_packet->options,
                                          relay->options, 
@@ -2062,7 +2221,7 @@ dhcpv6_relay_forw(struct data_string *reply_ret, struct packet *packet) {
                         goto exit;
                 }
         } else {
-                msg = (struct dhcpv6_packet *)packet;
+                msg = (struct dhcpv6_packet *)enc_opt_data.data;
                 enc_packet->dhcpv6_msg_type = msg->msg_type;
 
                 /* message-specific data */
@@ -2087,17 +2246,54 @@ dhcpv6_relay_forw(struct data_string *reply_ret, struct packet *packet) {
 	build_dhcpv6_reply(&enc_reply, enc_packet);
 
 	/*
+	 * If we got no encapsulated data, then it is discarded, and
+	 * our reply-forw is also discarded.
+	 */
+	if (enc_reply.data == NULL) {
+		goto exit;
+	}
+
+	/*
+	 * Append the interface-id if present
+	 */
+	oc = lookup_option(&dhcpv6_universe, packet->options, D6O_INTERFACE_ID);
+	if (oc != NULL) {
+		memset(&interface_id, 0, sizeof(interface_id));
+		if (!evaluate_option_cache(&interface_id, NULL, NULL, NULL, 
+					   NULL, NULL, &global_scope, 
+					   oc, MDL)) {
+			log_error("dhcpv6_forw_relay: error evaluating "
+				  "Interface ID.");
+			goto exit;
+		}
+	}
+
+	/*
 	 * Packet header stuff all comes from the forward message.
 	 */
 	reply.msg_type = DHCPV6_RELAY_REPL;
 	reply.hop_count = packet->dhcpv6_hop_count;
-	reply.link_address = packet->dhcpv6_link_address;
-	reply.peer_address = packet->dhcpv6_peer_address;
+	memcpy(reply.link_address, &packet->dhcpv6_link_address.sin6_addr,
+	       sizeof(reply.link_address));
+	memcpy(reply.peer_address, &packet->dhcpv6_peer_address.sin6_addr,
+	       sizeof(reply.peer_address));
 
 	/* 
 	 * Copy our encapsulated stuff for caller.
 	 */
 	reply_ret->len = sizeof(reply) + 4 + enc_reply.len;
+	if (interface_id.data != NULL) {
+		reply_ret->len += 4 + interface_id.len;
+	}
+	/* 
+	 * XXX: We should not allow this to happen, perhaps by letting
+	 *      build_dhcp_reply() know our space remaining.
+	 */
+	if (reply_ret->len >= 65536) {
+		log_error("dhcpv6_forw_relay: RELAY-REPL too big (%d bytes)",
+			  reply_ret->len);
+		goto exit;
+	}
 	reply_ret->buffer = NULL;
 	if (!buffer_allocate(&reply_ret->buffer, reply_ret->len, MDL)) {
 		log_fatal("No memory to store reply.");
@@ -2108,8 +2304,19 @@ dhcpv6_relay_forw(struct data_string *reply_ret, struct packet *packet) {
 	putShort((char *)reply_ret->data+sizeof(reply)+2, enc_reply.len);
 	memcpy((char *)reply_ret->data+sizeof(reply)+4, 
 	       enc_reply.data, enc_reply.len);
+	if (interface_id.data != NULL) {
+		putShort((char *)reply_ret->data+sizeof(reply)+4+enc_reply.len,
+			 D6O_INTERFACE_ID);
+		putShort((char *)reply_ret->data+sizeof(reply)+6+enc_reply.len,
+			 interface_id.len);
+		memcpy((char *)reply_ret->data+sizeof(reply)+8+enc_reply.len,
+		       interface_id.data, interface_id.len);
+	}
 
 exit:
+	if (interface_id.data != NULL) {
+		data_string_forget(&interface_id, MDL);
+	}
 	if (enc_reply.data != NULL) {
 		data_string_forget(&enc_reply, MDL);
 	}
@@ -2135,7 +2342,7 @@ static void
 build_dhcpv6_reply(struct data_string *reply, struct packet *packet) {
 	memset(reply, 0, sizeof(*reply));
 	switch (packet->dhcpv6_msg_type) {
-		case DHCPV6_SOLICT:
+		case DHCPV6_SOLICIT:
 			dhcpv6_solicit(reply, packet);
 			break;
 		case DHCPV6_ADVERTISE:
@@ -2183,6 +2390,67 @@ build_dhcpv6_reply(struct data_string *reply, struct packet *packet) {
 	}
 }
 
+static void
+log_packet_in(const struct packet *packet) {
+	struct data_string s;
+	u_int32_t tid;
+	char tmp_addr[INET6_ADDRSTRLEN];
+	const void *addr;
+	struct option_cache *oc;
+	struct data_string tmp_ds;
+
+	memset(&s, 0, sizeof(s));
+
+	if (packet->dhcpv6_msg_type < dhcpv6_type_name_max) {
+		data_string_sprintfa(&s, "%s message from %s port %d",
+				     dhcpv6_type_names[packet->dhcpv6_msg_type],
+				     piaddr(packet->client_addr),
+				     ntohs(packet->client_port));
+	} else {
+		data_string_sprintfa(&s, 
+				     "Unknown message type %d from %s port %d",
+				     packet->dhcpv6_msg_type,
+				     piaddr(packet->client_addr),
+				     ntohs(packet->client_port));
+	}
+	if ((packet->dhcpv6_msg_type == DHCPV6_RELAY_FORW) || 
+	    (packet->dhcpv6_msg_type == DHCPV6_RELAY_REPL)) {
+	    	addr = &packet->dhcpv6_link_address.sin6_addr;
+	    	data_string_sprintfa(&s, ", link address %s", 
+				     inet_ntop(AF_INET6, addr, 
+					       tmp_addr, sizeof(tmp_addr)));
+	    	addr = &packet->dhcpv6_peer_address.sin6_addr;
+	    	data_string_sprintfa(&s, ", peer address %s", 
+				     inet_ntop(AF_INET6, addr, 
+					       tmp_addr, sizeof(tmp_addr)));
+	} else {
+		tid = 0;
+		memcpy(((char *)&tid)+1, packet->dhcpv6_transaction_id, 3);
+		data_string_sprintfa(&s, ", transaction ID 0x%06X", tid);
+
+/*
+		oc = lookup_option(&dhcpv6_universe, packet->options, 
+				   D6O_CLIENTID);
+		if (oc != NULL) {
+			memset(&tmp_ds, 0, sizeof(tmp_ds_));
+			if (!evaluate_option_cache(&tmp_ds, packet, NULL, NULL, 
+						   packet->options, NULL,
+						   &global_scope, oc, MDL)) {
+				log_error("Error evaluating Client Identifier");
+			} else {
+				data_strint_sprintf(&s, ", client ID %s",
+
+				data_string_forget(&tmp_ds, MDL);
+			}
+		}
+*/
+
+	}
+	log_info("%s", s.data);
+
+	data_string_forget(&s, MDL);
+}
+
 void 
 dhcpv6(struct packet *packet) {
 	struct data_string reply;
@@ -2192,17 +2460,11 @@ dhcpv6(struct packet *packet) {
 	/* 
 	 * Log a message that we received this packet.
 	 */
-	if ((packet->dhcpv6_msg_type >= 0) && 
-	    (packet->dhcpv6_msg_type < dhcpv6_type_name_max)) {
-		log_info("%s message from %s",
-			 dhcpv6_type_names[packet->dhcpv6_msg_type],
-			 piaddr(packet->client_addr));
-	} else {
-		log_info("Unknown message type %d from %s",
-			 packet->dhcpv6_msg_type,
-			 piaddr(packet->client_addr));
-	}
+	log_packet_in(packet); 
 
+	/*
+	 * Build our reply packet.
+	 */
 	build_dhcpv6_reply(&reply, packet);
 
 	if (reply.data != NULL) {
@@ -2211,15 +2473,21 @@ dhcpv6(struct packet *packet) {
 		 */
 		memset(&to_addr, 0, sizeof(to_addr));
 		to_addr.sin6_family = AF_INET6;
+		if ((packet->dhcpv6_msg_type == DHCPV6_RELAY_FORW) || 
+		    (packet->dhcpv6_msg_type == DHCPV6_RELAY_REPL)) {
+			to_addr.sin6_port = local_port;
+		} else {
+			to_addr.sin6_port = remote_port;
+		}
 /* For testing, we reply to the sending port, so we don't need a root client */
-/*		to_addr.sin6_port = remote_port;*/
-		to_addr.sin6_port = packet->client_port;
+/*		to_addr.sin6_port = packet->client_port;*/
 		memcpy(&to_addr.sin6_addr, packet->client_addr.iabuf, 
 		       sizeof(to_addr.sin6_addr));
 
-		log_info("Sending %s to %s", 
+		log_info("Sending %s to %s port %d", 
 			 dhcpv6_type_names[reply.data[0]],
-			 piaddr(packet->client_addr));
+			 piaddr(packet->client_addr),
+			 ntohs(to_addr.sin6_port));
 
 		send_ret = send_packet6(packet->interface, 
 					reply.data, reply.len, &to_addr);

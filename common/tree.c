@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.107.18.3 2006/10/25 22:32:42 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.107.18.4 2006/11/15 21:17:12 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -133,6 +133,97 @@ data_string_to_char_string(struct data_string *d)
 	 */
 
 	return str;
+}
+
+#define DS_SPRINTF_SIZE 128
+
+/* 
+ * If we are using a data_string structure to hold a NUL-terminated 
+ * ASCII string, this function can be used to append a printf-formatted 
+ * string to the end of it. The data_string structure will be resized to
+ * be big enough to hold the new string.
+ *
+ * If the append works, then 1 is returned.
+ *
+ * If it is not possible to allocate a buffer big enough to hold the 
+ * new value, then the old data_string is unchanged, and 0 is returned.
+ */
+int
+data_string_sprintfa(struct data_string *ds, const char *fmt, ...) {
+	va_list args;
+	int cur_strlen;
+	int max;
+	int vsnprintf_ret;
+	int new_len;
+	struct buffer *tmp_buffer;
+
+	/*
+	 * If the data_string is empty, then initialize it.
+	 */
+	if (ds->data == NULL) {
+		/* INSIST(ds.buffer == NULL); */
+		if (!buffer_allocate(&ds->buffer, DS_SPRINTF_SIZE, MDL)) {
+			return 0;
+		}
+		ds->data = ds->buffer->data;
+		ds->len = DS_SPRINTF_SIZE;
+		*((char *)ds->data) = '\0';
+	}
+
+	/*
+	 * Get the length of the string, and figure out how much space
+	 * is left.
+	 */
+	cur_strlen = strlen(ds->data);
+	max = ds->len - cur_strlen;
+
+	/* 
+	 * Use vsnprintf(), which won't write past our space, but will
+	 * tell us how much space it wants.
+	 */
+	va_start(args, fmt);
+	vsnprintf_ret = vsnprintf((char *)ds->data+cur_strlen, max, fmt, args);
+	/* INSIST(vsnprintf_ret >= 0); */
+
+	/*
+	 * If our buffer is not big enough, we need a new buffer.
+	 */
+	if (vsnprintf_ret >= max) {
+		/* 
+		 * Figure out a size big enough.
+		 */
+		new_len = ds->len * 2;
+		while (new_len <= cur_strlen + vsnprintf_ret) {
+			new_len *= 2;
+		}
+
+		/* 
+		 * Create a new buffer and fill it.
+		 */
+		tmp_buffer = NULL;
+		if (!buffer_allocate(&tmp_buffer, new_len, MDL)) {
+			/* 
+			 * If we can't create a big enough buffer, 
+			 * we should remove any truncated output that we had.
+			 */
+			*((char *)ds->data+cur_strlen) = '\0';
+			va_end(args);
+			return 0;
+		}
+		memcpy(tmp_buffer->data, ds->data, cur_strlen);
+		vsprintf(tmp_buffer->data + cur_strlen, fmt, args);
+
+		/*
+		 * Replace our old buffer with the new buffer.
+		 */
+		buffer_dereference(&ds->buffer, MDL);
+		buffer_reference(&ds->buffer, tmp_buffer, MDL);
+		buffer_dereference(&tmp_buffer, MDL);
+		ds->data = ds->buffer->data;
+		ds->len = new_len;
+	}
+	va_end(args);
+	return 1;
 }
 
 static int

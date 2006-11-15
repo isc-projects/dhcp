@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: discover.c,v 1.50.90.4 2006/10/25 22:32:41 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: discover.c,v 1.50.90.5 2006/11/15 21:17:12 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -199,7 +199,7 @@ next_iface(struct iface_info *info, int *err, struct iface_conf_list *ifaces) {
 		strcpy(info->name, p->lifr_name);
 		info->addr = p->lifr_addr;
 
-#ifdef ALIAS_NAMED_PERMUTED
+#ifdef ALIAS_NAMES_PERMUTED
 		/* interface aliases look like "eth0:1" or "wlan1:3" */
 		s = strchr(info->name, ':');
 		if (s != NULL) {
@@ -214,7 +214,7 @@ next_iface(struct iface_info *info, int *err, struct iface_conf_list *ifaces) {
 #endif
 	
 	memset(&tmp, 0, sizeof(tmp));
-	strcpy(tmp.lifr_name, p->lifr_name);
+	strcpy(tmp.lifr_name, info->name);
 	if (ioctl(ifaces->sock, SIOCGLIFFLAGS, &tmp) < 0) {
 		log_error("Error getting interfaces flags for %s; %m", 
 			  p->lifr_name);

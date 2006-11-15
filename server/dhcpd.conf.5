@@ -28,7 +28,7 @@
 .\" see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
 .\" ``http://www.nominum.com''.
 .\"
-.\" $Id: dhcpd.conf.5,v 1.77.8.2 2006/10/26 12:58:47 shane Exp $
+.\" $Id: dhcpd.conf.5,v 1.77.8.3 2006/11/15 21:17:13 dhankins Exp $
 .\"
 .TH dhcpd.conf 5
 .SH NAME
@@ -1962,7 +1962,8 @@ statement
 .I Time
 should be the length in seconds that will be assigned to a lease if
 the client requesting the lease does not ask for a specific expiration
-time.
+time.  This is used for both DHCPv4 and DHCPv6 leases (it is also known
+as the "valid lifetime" in DHCPv6).
 .RE
 .PP
 The
@@ -2398,6 +2399,24 @@ ICMP Echo response to be heard, if no ICMP Echo response has been received
 before the timeout expires, it assigns the address.  If a response \fIis\fR
 heard, the lease is abandoned, and the server does not respond to the client.
 If no value is set, ping-timeout defaults to 1 second.
+.RE
+.PP
+The
+.I preferred-lifetime
+statement
+.RS 0.25i
+.PP
+.B preferred-lifetime
+.I seconds\fR\fB;\fR
+.PP
+IPv6 addresses have 'valid' and 'preferred' lifetimes.  The valid lifetime
+determines at what point at lease might be said to have expired, and is no
+longer useable.  A preferred lifetime is an advisory condition to help
+applications move off of the address and onto currently valid addresses
+(should there still be any open TCP sockets or similar).
+.PP
+The preferred lifetime defaults to the renew+rebind timers, or 3/4 the
+default lease time if none were specified.
 .RE
 .PP
 The

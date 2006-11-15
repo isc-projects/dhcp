@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.92.2.6 2006/10/25 22:32:41 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.92.2.7 2006/11/15 21:17:12 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -3295,8 +3295,16 @@ do_packet6(struct interface_info *interface, const char *packet,
 
 		/* relay-specific data */
 		decoded_packet->dhcpv6_hop_count = relay->hop_count;
-		decoded_packet->dhcpv6_link_address = relay->link_address;
-		decoded_packet->dhcpv6_peer_address = relay->peer_address;
+		memset(&decoded_packet->dhcpv6_link_address, 0, 
+		       sizeof(decoded_packet->dhcpv6_link_address));
+		decoded_packet->dhcpv6_link_address.sin6_family = AF_INET6;
+		memcpy(&decoded_packet->dhcpv6_link_address.sin6_addr,
+		       relay->link_address, sizeof(relay->link_address));
+		memset(&decoded_packet->dhcpv6_peer_address, 0, 
+		       sizeof(decoded_packet->dhcpv6_peer_address));
+		decoded_packet->dhcpv6_peer_address.sin6_family = AF_INET6;
+		memcpy(&decoded_packet->dhcpv6_peer_address.sin6_addr,
+		       relay->peer_address, sizeof(relay->peer_address));
 
 		if (!parse_option_buffer(decoded_packet->options, 
 					 relay->options, len-sizeof(*relay), 
