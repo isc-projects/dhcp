@@ -48,6 +48,8 @@ release, which will be addressed shortly:
 
 - DDNS is not supported.
 
+- The "host-identifier" option is limited to a simple token.
+
 For information on how to install, configure and run this software,
 as well as how to find documentation and report bugs, please consult
 the README file.
