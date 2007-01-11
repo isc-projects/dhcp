@@ -31,6 +31,9 @@ the README file.
 - A bug was fixed where attempting to permit leasequeries results in a
   fatal internal error, "Unable to find server option 49".
 
+- A bug was fixed in dhclient rendering the textual output form of the
+  domain-search option syntax.
+
 			Changes since 3.1.0a1
 
 - A bug in the FQDN universe that added FQDN codes to the NWIP universe's
