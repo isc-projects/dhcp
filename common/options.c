@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.101 2006/11/09 22:08:28 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.102 2007/01/11 16:31:51 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -1309,8 +1309,8 @@ const char *pretty_print_option (option, data, len, emit_commas, emit_quotes)
 	int numelem = 0;
 	int count;
 	int i, j, k, l;
-	char fmtbuf [32];
-	struct enumeration *enumbuf [32];
+	char fmtbuf[32] = "";
+	struct enumeration *enumbuf[32]; /* MUST be same as fmtbuf */
 	char *op = optbuf;
 	const unsigned char *dp = data;
 	struct in_addr foo;
@@ -1326,6 +1326,10 @@ const char *pretty_print_option (option, data, len, emit_commas, emit_quotes)
 
 	/* Figure out the size of the data. */
 	for (l = i = 0; option -> format [i]; i++, l++) {
+		if (l >= sizeof(fmtbuf) - 1)
+			log_fatal("Bounds failure on internal buffer at "
+				  "%s:%d.", MDL);
+
 		if (!numhunk) {
 			log_error ("%s: Extra codes in format string: %s",
 				   option -> name,
@@ -1336,10 +1340,6 @@ const char *pretty_print_option (option, data, len, emit_commas, emit_quotes)
 		fmtbuf [l] = option -> format [i];
 		switch (option -> format [i]) {
 		      case 'a':
-			--numelem;
-			fmtbuf [l] = 0;
-			numhunk = 0;
-			break;
 		      case 'A':
 			--numelem;
 			fmtbuf [l] = 0;
@@ -1350,6 +1350,7 @@ const char *pretty_print_option (option, data, len, emit_commas, emit_quotes)
 			while (option -> format [i] &&
 			       option -> format [i] != '.')
 				i++;
+			/* Fall Through! */
 		      case 'X':
 			for (k = 0; k < len; k++) {
 				if (!isascii (data [k]) ||
@@ -1371,8 +1372,10 @@ const char *pretty_print_option (option, data, len, emit_commas, emit_quotes)
 			fmtbuf [l + 1] = 0;
 			break;
 		      case 'd':
+			fmtbuf[l] = 't';
+			/* Fall Through! */
 		      case 't':
-			fmtbuf [l] = 't';
+		      case 'D':
 			fmtbuf [l + 1] = 0;
 			numhunk = -2;
 			break;
