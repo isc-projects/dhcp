@@ -92,10 +92,8 @@ directory, it may not have up-to-date information).
 
 			    RELEASE STATUS
 
-This is the third ALPHA quality release of ISC DHCP 3.1.0, a feature
-release based upon the work present in the 3.0.x development track.
-It contains a large number of new features, and with that most likely
-many new bugs.
+This is the third ALPHA quality release of ISC DHCP 3.1.0.  This
+release contains many new features not found in ISC DHCP 3.0.x.
 
 In this release, the server and relay agent are currently fully
 functional on NetBSD, Linux systems with kernel version 2.2 or later,
