@@ -56,7 +56,8 @@ struct executable_statement {
 		let_statement,
 		define_statement,
 		log_statement,
-		return_statement
+		return_statement,
+		execute_statement
 	} op;
 	union {
 		struct {
@@ -99,6 +100,11 @@ struct executable_statement {
 			} priority;
 			struct expression *expr;
 		} log;
+		struct {
+			char *command;
+			struct expression *arglist;
+			int argc;
+		} execute;
 	} data;
 };
 

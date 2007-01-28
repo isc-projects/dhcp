@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: execute.c,v 1.48 2006/02/24 23:16:28 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: execute.c,v 1.49 2007/01/28 23:00:19 each Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -187,6 +187,86 @@ int execute_statements (result, packet, lease, client_state,
 				   (status ? "succeeded" : "failed"));
 #endif
 			break;
+
+                      case execute_statement: {
+#ifdef ENABLE_EXECUTE
+                        struct expression *expr;
+                        char **argv;
+                        int i, argc = r->data.execute.argc;
+                        pid_t p;
+
+                        /* save room for the command and the NULL terminator */
+                        argv = dmalloc((argc + 2) * sizeof(*argv), MDL);
+                        if (!argv)
+                                break;
+
+                        argv[0] = dmalloc(strlen(r->data.execute.command) + 1,
+                                          MDL);
+                        if (argv[0]) {
+                                strcpy(argv[0], r->data.execute.command);
+                        } else {
+                                goto execute_out;
+                        }
+
+                        log_debug("execute_statement argv[0] = %s", argv[0]);
+ 
+                        for (i = 1, expr = r->data.execute.arglist; expr;
+                             expr = expr->data.arg.next, i++) {
+                                memset (&ds, 0, sizeof(ds));
+                                status = (evaluate_data_expression
+                                          (&ds, packet,
+                                           lease, client_state, in_options,
+                                           out_options, scope,
+                                           expr->data.arg.val, MDL));
+                                if (status) {
+                                        argv[i] = dmalloc(ds.len + 1, MDL);
+                                        if (argv[i]) {
+                                                memcpy(argv[i], ds.data,
+                                                       ds.len);
+                                                argv[i][ds.len] = 0;
+                                                log_debug("execute_statement argv[%d] = %s", i, argv[i]);
+                                        }
+                                        data_string_forget (&ds, MDL);
+                                        if (!argv[i]) {
+                                                log_debug("execute_statement failed argv[%d]", i);
+                                                goto execute_out;
+                                        }
+                                } else {
+                                        log_debug("execute: bad arg %d", i);
+                                        goto execute_out;
+                                }
+                        }
+                        argv[i] = NULL;
+
+	                if ((p = fork()) > 0) {
+		        	int status;
+		        	waitpid(p, &status, 0);
+
+                        	if (status) {
+                                	log_error("execute: %s exit status %d",
+                                          	   argv[0], status);
+                                }
+	                } else if (p == 0) {
+		               execvp(argv[0], argv);
+		               log_error("Unable to execute %s: %m", argv[0]);
+		               _exit(127);
+                        } else {
+                                log_error("execute: fork() failed");
+                        }
+
+                      execute_out:
+                        for (i = 0; i <= argc; i++) {
+                                if(argv[i])
+                                	dfree(argv[i], MDL);
+                        }
+
+                        dfree(argv, MDL);
+#else /* !ENABLE_EXECUTE */
+		        log_fatal("Impossible case at %s:%d (ENABLE_EXECUTE "
+			          "is not defined).", MDL);
+#endif /* ENABLE_EXECUTE */
+                        break;
+                      }
 
 		      case return_statement:
 			status = evaluate_expression
@@ -624,6 +704,14 @@ int executable_statement_dereference (ptr, file, line)
 			dfree ((*ptr)->data.unset, file, line);
 		break;
 
+	      case execute_statement:
+		if ((*ptr)->data.execute.command)
+			dfree ((*ptr)->data.execute.command, file, line);
+		if ((*ptr)->data.execute.arglist)
+			expression_dereference (&(*ptr) -> data.execute.arglist,
+						file, line);
+		break;
+
 	      case supersede_option_statement:
 	      case send_option_statement:
 	      case default_option_statement:
@@ -650,6 +738,7 @@ void write_statements (file, statements, indent)
 	int indent;
 {
 	struct executable_statement *r, *x;
+	struct expression *expr;
 	int result;
 	int status;
 	const char *s, *t, *dot;
@@ -882,6 +971,25 @@ void write_statements (file, statements, indent)
 						  "", "", ");");
 
 			break;
+
+                      case execute_statement:
+#ifdef ENABLE_EXECUTE
+                        indent_spaces (file, indent);
+			col = token_print_indent(file, col, indent + 4, "", "",
+						 "execute");
+			col = token_print_indent(file, col, indent + 4, " ", "",
+						 "(");
+                        col = token_print_indent(file, col, indent + 4, "\"", "\"", r->data.execute.command);
+                        for (expr = r->data.execute.arglist; expr; expr = expr->data.arg.next) {
+                        	col = token_print_indent(file, col, indent + 4, "", " ", ",");
+                                col = write_expression (file, expr->data.arg.val, col, indent + 4, 0);
+                        }
+                        col = token_print_indent(file, col, indent + 4, "", "", ");");
+#else /* !ENABLE_EXECUTE */
+		        log_fatal("Impossible case at %s:%d (ENABLE_EXECUTE "
+                                  "is not defined).", MDL);
+#endif /* ENABLE_EXECUTE */
+                        break;
 			
 		      default:
 			log_fatal ("bogus statement type %d\n", r -> op);
@@ -1047,6 +1155,7 @@ int executable_statement_foreach (struct executable_statement *stmt,
 		break;
 	      case log_statement:
 	      case return_statement:
+              case execute_statement:
 		break;
 	    }
 	}
