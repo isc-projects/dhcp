@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tables.c,v 1.60 2006/10/27 22:54:12 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: tables.c,v 1.61 2007/01/29 10:25:54 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -74,7 +74,7 @@ HASH_FUNCTIONS (option_code, const unsigned *, struct option,
    F - implicit flag - the presence of the option indicates that the
        flag is true.
    o - the preceding value is optional.
-   E - encapsulation, string or colon-seperated hex list (the latter
+   E - encapsulation, string or colon-separated hex list (the latter
        two for parsing).   E is followed by a text string containing
        the name of the option space to encapsulate, followed by a '.'.
        If the E is immediately followed by '.', the applicable vendor
@@ -86,9 +86,9 @@ HASH_FUNCTIONS (option_code, const unsigned *, struct option,
        thing in the option.
    X - either an ASCII string or binary data.   On output, the string is
        scanned to see if it's printable ASCII and, if so, output as a
-       quoted string.   If not, it's output as colon-seperated hex.   On
+       quoted string.   If not, it's output as colon-separated hex.   On
        input, the option can be specified either as a quoted string or as
-       a colon-seperated hex list.
+       a colon-separated hex list.
    N - enumeration.   N is followed by a text string containing
        the name of the set of enumeration values to parse or emit,
        followed by a '.'.   The width of the data is specified in the

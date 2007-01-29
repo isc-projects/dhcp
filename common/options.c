@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.102 2007/01/11 16:31:51 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.103 2007/01/29 10:25:54 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -476,7 +476,7 @@ int fqdn_universe_decode (struct option_state *options,
 }
 
 /* cons options into a big buffer, and then split them out into the
-   three seperate buffers if needed.  This allows us to cons up a set
+   three separate buffers if needed.  This allows us to cons up a set
    of vendor options using the same routine. */
 
 int cons_options (inpacket, outpacket, lease, client_state,
