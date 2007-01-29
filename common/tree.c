@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.108.12.2 2006/11/06 18:15:42 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.108.12.3 2007/01/29 10:30:21 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -941,7 +941,7 @@ int evaluate_dns_expression (result, packet, lease, client_state, in_options,
 		   ASCII string both look like data expressions, but
 		   for A records, we want an ASCII string, not a
 		   binary IP address.  Do I need to turn binary IP
-		   addresses into a seperate type?  */
+		   addresses into a separate type?  */
 		return (r0 && r1 &&
 			(r2 || expr -> op != expr_ns_add) && *result);
 
@@ -1916,12 +1916,12 @@ int evaluate_data_expression (result, packet, lease, client_state,
 						  scope,
 						  expr -> data.b2a.width);
 
-		/* Evaluate the seperator string. */
+		/* Evaluate the separator string. */
 		memset (&data, 0, sizeof data);
 		s2 = evaluate_data_expression (&data, packet, lease,
 					       client_state,
 					       in_options, cfg_options, scope,
-					       expr -> data.b2a.seperator,
+					       expr -> data.b2a.separator,
 					       MDL);
 
 		/* Evaluate the data to be converted. */
@@ -3103,8 +3103,8 @@ void expression_dereference (eptr, file, line)
 		if (expr -> data.b2a.width)
 			expression_dereference (&expr -> data.b2a.width,
 						file, line);
-		if (expr -> data.b2a.seperator)
-			expression_dereference (&expr -> data.b2a.seperator,
+		if (expr -> data.b2a.separator)
+			expression_dereference (&expr -> data.b2a.separator,
 						file, line);
 		if (expr -> data.b2a.buffer)
 			expression_dereference (&expr -> data.b2a.buffer,
@@ -3803,7 +3803,7 @@ int write_expression (file, expr, col, indent, firstp)
 					col, scol, 0);
 		col = token_print_indent (file, col, scol, "", " ",
 					  ",");
-		col = write_expression (file, expr -> data.b2a.seperator,
+		col = write_expression (file, expr -> data.b2a.separator,
 					col, scol, 0);
 		col = token_print_indent (file, col, scol, "", " ",
 					  ",");

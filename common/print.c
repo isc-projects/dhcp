@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: print.c,v 1.61 2006/07/31 22:19:51 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: print.c,v 1.61.12.1 2007/01/29 10:30:21 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -918,7 +918,7 @@ static unsigned print_subexpression (expr, buf, len)
 			rv += print_subexpression (expr -> data.b2a.width,
 						   buf + rv, len - rv - 3);
 			buf [rv++] = ' ';
-			rv += print_subexpression (expr -> data.b2a.seperator,
+			rv += print_subexpression (expr -> data.b2a.separator,
 						   buf + rv, len - rv - 2);
 			buf [rv++] = ' ';
 			rv += print_subexpression (expr -> data.b2a.buffer,
