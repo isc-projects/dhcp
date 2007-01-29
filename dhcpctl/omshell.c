@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: omshell.c,v 1.7.2.18 2005/10/27 15:56:26 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: omshell.c,v 1.7.2.19 2007/01/29 10:41:02 shane Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include <time.h>
@@ -473,7 +473,7 @@ int main (int argc, char **argv, char **envp)
 			  case NUMBER:
 			    strcpy (buf, val);
 			    token = peek_token (&val, (unsigned *)0, cfile);
-			    /* Colon-seperated hex list? */
+			    /* Colon-separated hex list? */
 			    if (token == COLON)
 				goto cshl;
 			    else if (token == DOT) {

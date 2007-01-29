@@ -233,7 +233,7 @@ struct expression {
 		struct {
 			struct expression *base;
 			struct expression *width;
-			struct expression *seperator;
+			struct expression *separator;
 			struct expression *buffer;
 		} b2a;
 		struct {

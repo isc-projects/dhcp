@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: clparse.c,v 1.62.2.12 2006/02/22 22:43:27 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: clparse.c,v 1.62.2.13 2007/01/29 10:41:01 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -288,7 +288,7 @@ void parse_client_statement (cfile, ip, config)
 		return;
 
 		/* REQUIRE can either start a policy statement or a
-		   comma-seperated list of names of required options. */
+		   comma-separated list of names of required options. */
 	      case REQUIRE:
 		next_token (&val, (unsigned *)0, cfile);
 		token = peek_token (&val, (unsigned *)0, cfile);

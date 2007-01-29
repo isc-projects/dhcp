@@ -85,6 +85,8 @@ and for prodding me into improving it.
   incorrectly indicating 'up' state when any flags were set, rather than
   specifically the INTERFACE_REQUESTED flag.
 
+- Spelling fixes.
+
 			Changes since 3.0.5rc2
 
 - Failover servers try harder to retransmit binding updates upon entering
