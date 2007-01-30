@@ -46,13 +46,18 @@ release, which will be addressed shortly:
 - The server always uses Rapid-Commit if the client requests it. A
   configuration option will be added to disable this.
 
-- DDNS is not supported.
-
 - The "host-identifier" option is limited to a simple token.
 
 For information on how to install, configure and run this software,
 as well as how to find documentation and report bugs, please consult
 the README file.
+
+		    Changes since V4.0.0-pre-alpha-comcast-1
+
+- Limited DDNS support. We now update AAAA records in the same place we
+  would update A records, if we have an IPv6 address. We also generate
+  IP6.ARPA style names for PTR records if we're dealing with an IPv6
+  address.
 
 			Changes since 3.1 (New Features)
 

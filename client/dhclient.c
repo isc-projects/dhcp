@@ -32,7 +32,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.142.8.4 2006/10/25 22:32:41 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.142.8.5 2007/01/30 11:17:49 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -3178,14 +3178,13 @@ isc_result_t client_dns_update (struct client_state *client, int addp, int ttl)
 	 */
 	if (ddns_fwd_name.len && ddns_dhcid.len) {
 		if (addp)
-			rcode = ddns_update_a (&ddns_fwd_name,
-					       client -> active -> address,
-					       &ddns_dhcid, ttl,
-					       1, 1);
+			rcode = ddns_update_fwd(&ddns_fwd_name,
+						client->active->address,
+						&ddns_dhcid, ttl, 1, 1);
 		else
-			rcode = ddns_remove_a (&ddns_fwd_name,
-					       client -> active -> address,
-					       &ddns_dhcid);
+			rcode = ddns_remove_fwd(&ddns_fwd_name,
+						client->active->address,
+						&ddns_dhcid);
 	} else
 		rcode = ISC_R_FAILURE;
 	

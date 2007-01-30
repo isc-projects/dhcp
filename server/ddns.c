@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: ddns.c,v 1.22.4.1 2006/08/11 22:50:22 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: ddns.c,v 1.22.4.2 2007/01/30 11:17:50 shane Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -233,6 +233,8 @@ int ddns_updates (struct packet *packet,
 	int server_updates_a = 1;
 	struct buffer *bp = (struct buffer *)0;
 	int ignorep = 0, client_ignorep = 0;
+	int rev_name_len;
+	int i;
 
 	if (ddns_update_style != 2)
 		return 0;
@@ -473,6 +475,28 @@ int ddns_updates (struct packet *packet,
 	/*
 	 * Compute the reverse IP name.
 	 */
+
+	/* 
+	 * Figure out the length of the part of the name that depends 
+	 * on the address.
+	 */
+	if (lease->ip_addr.len == 4) {
+		char buf[1];
+		rev_name_len = snprintf(buf, sizeof(buf), "%u.%u.%u.%u.",
+					lease->ip_addr.iabuf[3] & 0xff,
+					lease->ip_addr.iabuf[2] & 0xff,
+					lease->ip_addr.iabuf[1] & 0xff,
+					lease->ip_addr.iabuf[0] & 0xff);
+	} else if (lease->ip_addr.len == 16) {
+		/* 
+		 * IPv6 reverse names are always the same length, with 
+		 * 32 hex characters separated by dots.
+		 */
+		rev_name_len = 64;
+	} else {
+		log_fatal("invalid address length %d", lease->ip_addr.len);
+	}
+
 	oc = lookup_option (&server_universe, state -> options,
 			    SV_DDNS_REV_DOMAIN_NAME);
 	if (oc)
@@ -484,27 +508,35 @@ int ddns_updates (struct packet *packet,
 	else
 		s1 = 0;
 
-	if (s1 && (d1.len > 238)) {
+	if (s1 && ((d1.len + rev_name_len) > 255)) {
 		log_error ("ddns_update: Calculated rev domain name too long.");
 		s1 = 0;
 		data_string_forget (&d1, MDL);
 	}
 
 	if (oc && s1) {
-		/* Buffer length:
-		   XXX.XXX.XXX.XXX.<ddns-rev-domain-name>\0 */
 		buffer_allocate (&ddns_rev_name.buffer,
-				 d1.len + 17, MDL);
+				 d1.len + rev_name_len + 1, MDL);
 		if (ddns_rev_name.buffer) {
-			ddns_rev_name.data = ddns_rev_name.buffer -> data;
+			ddns_rev_name.data = ddns_rev_name.buffer->data;
 
-			/* %Audit% Cannot exceed 17 bytes. %2004.06.17,Safe% */
-			sprintf ((char *)ddns_rev_name.buffer -> data,
-				  "%u.%u.%u.%u.",
-				  lease -> ip_addr . iabuf[3] & 0xff,
-				  lease -> ip_addr . iabuf[2] & 0xff,
-				  lease -> ip_addr . iabuf[1] & 0xff,
-				  lease -> ip_addr . iabuf[0] & 0xff);
+			if (lease->ip_addr.len == 4) {
+				sprintf((char *)ddns_rev_name.buffer->data,
+					"%u.%u.%u.%u.", 
+					lease->ip_addr.iabuf[3] & 0xff,
+					lease->ip_addr.iabuf[2] & 0xff,
+					lease->ip_addr.iabuf[1] & 0xff,
+					lease->ip_addr.iabuf[0] & 0xff);
+			} else if (lease->ip_addr.len == 16) {
+				char *p = (char *)&ddns_rev_name.buffer->data;
+				unsigned char *a = lease->ip_addr.iabuf + 15;
+				for (i=0; i<16; i++) {
+					sprintf(p, "%x.%x.", 
+						(*a & 0xF), ((*a >> 4) & 0xF));
+					p += 4;
+					a -= 1;
+				}
+			}
 
 			ddns_rev_name.len =
 				strlen ((const char *)ddns_rev_name.data);
@@ -560,8 +592,8 @@ int ddns_updates (struct packet *packet,
 		else
 			conflict = 0;
 
-		rcode1 = ddns_update_a (&ddns_fwd_name, lease -> ip_addr,
-					&ddns_dhcid, ddns_ttl, 0, conflict);
+		rcode1 = ddns_update_fwd(&ddns_fwd_name, lease->ip_addr,
+					 &ddns_dhcid, ddns_ttl, 0, conflict);
 	}
 	
 	if (rcode1 == ISC_R_SUCCESS) {
@@ -801,8 +833,8 @@ int ddns_removals (struct lease *lease)
 	 * Perform removals.
 	 */
 	if (ddns_fwd_name.len)
-		rcode = ddns_remove_a (&ddns_fwd_name,
-				       lease -> ip_addr, &ddns_dhcid);
+		rcode = ddns_remove_fwd(&ddns_fwd_name, 
+					lease->ip_addr, &ddns_dhcid);
 	else
 		rcode = ISC_R_SUCCESS;
 

@@ -33,7 +33,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dns.c,v 1.40 2006/07/19 17:14:55 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dns.c,v 1.40.8.1 2007/01/30 11:17:50 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -519,23 +519,29 @@ int get_dhcid (struct data_string *id,
    server... */
 
 isc_result_t
-ddns_update_a(struct data_string *ddns_fwd_name, struct iaddr ddns_addr,
-	      struct data_string *ddns_dhcid, unsigned long ttl,
-	      unsigned rrsetp, unsigned conflict)
-{
+ddns_update_fwd(struct data_string *ddns_fwd_name, struct iaddr ddns_addr,
+		struct data_string *ddns_dhcid, unsigned long ttl,
+		unsigned rrsetp, unsigned conflict) {
 	ns_updque updqueue;
 	ns_updrec *updrec;
 	isc_result_t result;
-	char ddns_address [16];
 	const char *logstr;
+	char ddns_address[
+		sizeof("ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255")];
+	int ddns_address_type;
 
-	if (ddns_addr.len != 4)
+	/* 
+	 * We want to delete either A or AAAA records, depending on
+	 * whether we have an IPv4 or an IPv6 address.
+	 */
+	if (ddns_addr.len == 4) {
+		ddns_address_type = T_A;
+	} else if (ddns_addr.len == 16) {
+		ddns_address_type = T_AAAA;
+	} else {
 		return ISC_R_INVALIDARG;
-
-	/* %Audit% Cannot exceed 16 bytes. %2004.06.17,Safe% */
-	sprintf (ddns_address, "%u.%u.%u.%u",
-		  ddns_addr.iabuf[0], ddns_addr.iabuf[1],
-		  ddns_addr.iabuf[2], ddns_addr.iabuf[3]);
+	}
+	strcpy(ddns_address, piaddr(ddns_addr));
 
 	/*
 	 * When a DHCP client or server intends to update an A RR, it first
@@ -553,7 +559,7 @@ ddns_update_a(struct data_string *ddns_fwd_name, struct iaddr ddns_addr,
 	 */
 	updrec = minires_mkupdrec (S_PREREQ,
 				   (const char *)ddns_fwd_name -> data,
-				   C_IN, T_A, 0);
+				   C_IN, ddns_address_type, 0);
 	if (!updrec) {
 		result = ISC_R_NOMEMORY;
 		goto error;
@@ -571,7 +577,7 @@ ddns_update_a(struct data_string *ddns_fwd_name, struct iaddr ddns_addr,
 	 */
 	updrec = minires_mkupdrec (S_UPDATE,
 				   (const char *)ddns_fwd_name -> data,
-				   C_IN, T_A, ttl);
+				   C_IN, ddns_address_type, ttl);
 	if (!updrec) {
 		result = ISC_R_NOMEMORY;
 		goto error;
@@ -699,7 +705,7 @@ ddns_update_a(struct data_string *ddns_fwd_name, struct iaddr ddns_addr,
 	 */
 	updrec = minires_mkupdrec (S_UPDATE,
 				   (const char *)ddns_fwd_name -> data,
-				   C_IN, T_A, 0);
+				   C_IN, ddns_address_type, 0);
 	if (!updrec) {
 		result = ISC_R_NOMEMORY;
 		goto error;
@@ -717,7 +723,7 @@ ddns_update_a(struct data_string *ddns_fwd_name, struct iaddr ddns_addr,
 	 */
 	updrec = minires_mkupdrec (S_UPDATE,
 				   (const char *)ddns_fwd_name -> data,
-				   C_IN, T_A, ttl);
+				   C_IN, ddns_address_type, ttl);
 	if (!updrec) {
 		result = ISC_R_NOMEMORY;
 		goto error;
@@ -747,7 +753,7 @@ ddns_update_a(struct data_string *ddns_fwd_name, struct iaddr ddns_addr,
 
 	    case ISC_R_NXRRSET:
 	    case ISC_R_NXDOMAIN:
-		logstr = "Has an A record but no DHCID, not mine.";
+		logstr = "Has an address record but no DHCID, not mine.";
 		break;
 
 	    default:
@@ -803,22 +809,29 @@ ddns_update_a(struct data_string *ddns_fwd_name, struct iaddr ddns_addr,
 	return result;
 }
 
-isc_result_t ddns_remove_a (struct data_string *ddns_fwd_name,
-			    struct iaddr ddns_addr,
-			    struct data_string *ddns_dhcid)
-{
+isc_result_t
+ddns_remove_fwd(struct data_string *ddns_fwd_name,
+		struct iaddr ddns_addr, 
+		struct data_string *ddns_dhcid) {
 	ns_updque updqueue;
 	ns_updrec *updrec;
 	isc_result_t result = SERVFAIL;
-	char ddns_address [16];
+	char ddns_address[
+		sizeof("ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255")];
+	int ddns_address_type;
 
-	if (ddns_addr.len != 4)
+	/* 
+	 * We want to delete either A or AAAA records, depending on
+	 * whether we have an IPv4 or an IPv6 address.
+	 */
+	if (ddns_addr.len == 4) {
+		ddns_address_type = T_A;
+	} else if (ddns_addr.len == 16) {
+		ddns_address_type = T_AAAA;
+	} else {
 		return ISC_R_INVALIDARG;
-
-	/* %Audit% Cannot exceed 16 bytes. %2004.06.17,Safe% */
-	sprintf (ddns_address, "%u.%u.%u.%u",
-		  ddns_addr.iabuf[0], ddns_addr.iabuf[1],
-		  ddns_addr.iabuf[2], ddns_addr.iabuf[3]);
+	}
+	strcpy(ddns_address, piaddr(ddns_addr));
 
 	/*
 	 * The entity chosen to handle the A record for this client (either the
@@ -859,7 +872,7 @@ isc_result_t ddns_remove_a (struct data_string *ddns_fwd_name,
 	 */
 	updrec = minires_mkupdrec (S_PREREQ,
 				   (const char *)ddns_fwd_name -> data,
-				   C_IN, T_A, 0);
+				   C_IN, ddns_address_type, 0);
 	if (!updrec) {
 		result = ISC_R_NOMEMORY;
 		goto error;
@@ -877,7 +890,7 @@ isc_result_t ddns_remove_a (struct data_string *ddns_fwd_name,
 	 */
 	updrec = minires_mkupdrec (S_UPDATE,
 				   (const char *)ddns_fwd_name -> data,
-				   C_IN, T_A, 0);
+				   C_IN, ddns_address_type, 0);
 	if (!updrec) {
 		result = ISC_R_NOMEMORY;
 		goto error;
@@ -934,15 +947,15 @@ isc_result_t ddns_remove_a (struct data_string *ddns_fwd_name,
 	 */
 	updrec = minires_mkupdrec (S_PREREQ,
 				   (const char *)ddns_fwd_name -> data,
-				   C_IN, T_A, 0);
+				   C_IN, ddns_address_type, 0);
 	if (!updrec) {
 		result = ISC_R_NOMEMORY;
 		goto error;
 	}
 
-	updrec -> r_data = (unsigned char *)0;
-	updrec -> r_size = 0;
-	updrec -> r_opcode = NXRRSET;
+	updrec->r_data = NULL;
+	updrec->r_size = 0;
+	updrec->r_opcode = NXRRSET;
 
 	ISC_LIST_APPEND (updqueue, updrec, r_link);
 
