@@ -32,7 +32,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.142.8.6 2007/01/31 20:44:55 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.142.8.7 2007/01/31 20:46:31 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2549,11 +2549,6 @@ void script_init (client, reason, medium)
 		client_envadd (client, "", "pid", "%ld", (long int)getpid ());
 	}
 }
-
-struct envadd_state {
-	struct client_state *client;
-	const char *prefix;
-};
 
 void client_option_envadd (struct option_cache *oc,
 			   struct packet *packet, struct lease *lease,

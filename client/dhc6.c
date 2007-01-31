@@ -24,7 +24,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhc6.c,v 1.1.4.1 2007/01/31 20:44:55 dhankins Exp $ Copyright (c) 2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhc6.c,v 1.1.4.2 2007/01/31 20:46:31 dhankins Exp $ Copyright (c) 2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -53,6 +53,8 @@ void bound_handler(struct packet *packet, struct client_state *client);
 static void make_client6_options(struct client_state *client,
 				 struct option_state **op,
 				 struct dhc6_lease *lease);
+void script_write_params6(struct client_state *client, char *prefix,
+			  struct option_state *options);
 
 /* For now, simply because we do not retain this information statefully,
  * the DUID is simply the first interface's hardware address.
@@ -1194,7 +1196,12 @@ selecting_handler(struct packet *packet, struct client_state *client)
 void
 start_bound(struct client_state *client)
 {
-	if (client->active_lease == NULL) {
+	struct dhc6_ia *ia;
+	struct dhc6_addr *addr;
+	struct dhc6_lease *lease;
+
+	lease = client->active_lease;
+	if (lease == NULL) {
 		log_error("Cannot enter bound state unless an active lease "
 			  "is selected.");
 		return;
@@ -1205,11 +1212,45 @@ start_bound(struct client_state *client)
 	log_debug("PRC: Bound to lease %s.",
 		  print_hex_1(client->active_lease->server_id.len,
 			      client->active_lease->server_id.data, 55));
+
+	for (ia = lease->bindings ; ia != NULL ; ia = ia->next) {
+		for (addr = ia->addrs ; addr != NULL ; addr = addr->next) {
+			script_init(client, "BOUND6", NULL);
+
+			/* Option cache contents, in descending order of
+			 * scope.
+			 */
+			script_write_params6(client, "new_", lease->options);
+			script_write_params6(client, "new_", ia->options);
+			script_write_params6(client, "new_", addr->options);
+
+			/* addr fields. */
+			client_envadd(client, "new_", "ip6_address", "%s",
+				      piaddr(addr->address));
+			client_envadd(client, "new_", "preferred_life", "%d",
+				      (int)(addr->preferred_life));
+			client_envadd(client, "new_", "max_life", "%d",
+				      (int)(addr->max_life));
+
+			/* ia fields. */
+			client_envadd(client, "", "iaid", "%s",
+				      print_hex_1(4, ia->iaid, 12));
+			client_envadd(client, "new_", "starts", "%d",
+				      (int)(ia->starts));
+			client_envadd(client, "new_", "renew", "%d",
+				      (int)(ia->renew));
+			client_envadd(client, "new_", "rebind", "%d",
+				      (int)(ia->rebind));
+
+			script_go(client);
+		}
+	}
 }
 
 void
 bound_handler(struct packet *packet, struct client_state *client)
 {
+	log_debug("RCV: Input packets are ignored once bound.");
 }
 
 void
@@ -1281,5 +1322,25 @@ make_client6_options(struct client_state *client, struct option_state **op,
 	 */
 	if (lookup_option(&dhcpv6_universe, *op, D6O_ORO) == NULL)
 		log_fatal("You must configure a dhcp6.oro!");
+}
+
+void
+script_write_params6(struct client_state *client, char *prefix,
+		     struct option_state *options)
+{
+	struct envadd_state es;
+	int i;
+
+	if (options == NULL)
+		return;
+
+	es.client = client;
+	es.prefix = prefix;
+
+	for (i = 0 ; i < options->universe_count ; i++) {
+		option_space_foreach(NULL, NULL, client, NULL, options,
+				     &global_scope, universes[i], &es,
+				     client_option_envadd);
+	}
 }
 

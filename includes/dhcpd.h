@@ -958,6 +958,11 @@ struct client_state {
 	void (*v6_handler)(struct packet *, struct client_state *);
 };
 
+struct envadd_state {
+	struct client_state *client;
+	const char *prefix;
+};
+
 /* Relay agent server list. */
 struct server_list {
 	struct server_list *next;

@@ -61,7 +61,8 @@ the README file.
   IP6.ARPA style names for PTR records if we're dealing with an IPv6
   address.
 
-- Initial 'dhclient -6' support.
+- Initial 'dhclient -6' support.  Values got in Replies are shelled out
+  to /sbin/dhclient-script.
 
 			Changes since 3.1 (New Features)
 
