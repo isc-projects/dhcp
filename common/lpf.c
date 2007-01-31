@@ -28,7 +28,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: lpf.c,v 1.30 2005/03/17 20:14:59 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: lpf.c,v 1.30.116.1 2007/01/31 16:37:04 shane Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -43,6 +43,7 @@ static char copyright[] =
 #include "includes/netinet/ip.h"
 #include "includes/netinet/udp.h"
 #include "includes/netinet/if_ether.h"
+#include <net/if.h>
 
 /* Reinitializes the specified interface after an address change.   This
    is not required for packet-filter APIs. */
@@ -402,9 +403,59 @@ void maybe_setup_fallback ()
 						   if_readsocket, 0,
 						   fallback_discard, 0, 0);
 		if (status != ISC_R_SUCCESS)
-			log_fatal ("Can't register I/O handle for %s: %s",
+			log_fatal ("Can't register I/O handle for \"%s\": %s",
 				   fbi -> name, isc_result_totext (status));
 		interface_dereference (&fbi, MDL);
 	}
+}
+
+void
+get_hw_addr(const char *name, struct hardware *hw) {
+	int sock;
+	struct ifreq tmp;
+	struct sockaddr *sa;
+
+	if (strlen(name) >= sizeof(tmp.ifr_name)) {
+		log_fatal("Device name too long: \"%s\"", name);
+	}
+
+	sock = socket(AF_INET, SOCK_DGRAM, 0);
+	if (sock < 0) {
+		log_fatal("Can't create socket for \"%s\": %m", name);
+	}
+
+	memset(&tmp, 0, sizeof(tmp));
+	strcpy(tmp.ifr_name, name);
+	if (ioctl(sock, SIOCGIFHWADDR, &tmp) < 0) {
+		log_fatal("Error getting hardware address for \"%s\": %m", 
+			  name);
+	}
+
+	sa = &tmp.ifr_hwaddr;
+	switch (sa->sa_family) {
+		case ARPHRD_ETHER:
+			hw->hlen = 7;
+			hw->hbuf[0] = HTYPE_ETHER;
+			memcpy(&hw->hbuf[1], sa->sa_data, 6);
+			break;
+		case ARPHRD_IEEE802:
+#ifdef ARPHDR_IEEE802_TR
+		case ARPHRD_IEEE802_TR:
+#endif /* ARPHDR_IEEE802_TR */
+			hw->hlen = 7;
+			hw->hbuf[0] = HTYPE_IEEE802;
+			memcpy(&hw->hbuf[1], sa->sa_data, 6);
+			break;
+		case ARPHRD_FDDI:
+			hw->hlen = 17;
+			hw->hbuf[0] = HTYPE_FDDI;
+			memcpy(&hw->hbuf[1], sa->sa_data, 16);
+			break;
+		default:
+			log_fatal("Unsupported device type %ld for \"%s\"",
+				  sa->sa_family, name);
+	}
+
+	close(sock);
 }
 #endif

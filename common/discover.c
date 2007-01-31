@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: discover.c,v 1.50.90.5 2006/11/15 21:17:12 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: discover.c,v 1.50.90.6 2007/01/31 16:37:04 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -123,23 +123,62 @@ isc_result_t interface_initialize (omapi_object_t *ipo,
 	return ISC_R_SUCCESS;
 }
 
+
 /* 
+ * Scanning for Interfaces
+ * -----------------------
+ *
+ * To find interfaces, we create an iterator that abstracts out most 
+ * of the platform specifics. Use is fairly straightforward:
+ *
+ * - begin_iface_scan() starts the process.
+ * - Use next_iface() until it returns 0.
+ * - end_iface_scan() performs any necessary cleanup.
+ *
+ * We check for errors on each call to next_iface(), which returns a
+ * description of the error as a string if any occurs.
+ *
+ * We currently have code for Solaris and Linux. Other systems need
+ * to have code written.
+ *
+ * NOTE: the long-term goal is to use the interface code from BIND 9.
+ */
+
+#if defined(SIOCGLIFNUM)
+/* 
+ * Solaris support
+ * ---------------
+ *
+ * The SIOCGLIFCONF ioctl() are the extension that you need to use
+ * on Solaris to get information about IPv6 addresses.
+ *
  * Solaris' extended interface is documented in the if_tcp man page.
  */
-#if defined(SIOCGLIFNUM)
+
+/* 
+ * Structure holding state about the scan.
+ */
 struct iface_conf_list {
-	int sock;
-	int num;
-	struct lifconf conf;
-	int next;
+	int sock;		/* file descriptor used to get information */
+	int num;		/* total number of interfaces */
+	struct lifconf conf;	/* structure used to get information */
+	int next;		/* next interface to retrieve when iterating */
 };
 
+/* 
+ * Structure used to return information about a specific interface.
+ */
 struct iface_info {
-	char name[LIFNAMSIZ];
-	struct sockaddr_storage addr;
-	isc_uint64_t flags;
+	char name[LIFNAMSIZ];		/* name of the interface, e.g. "bge0" */
+	struct sockaddr_storage addr;	/* address information */
+	isc_uint64_t flags;		/* interface flags, e.g. IFF_LOOPBACK */
 };
 
+/* 
+ * Start a scan of interfaces.
+ *
+ * The iface_conf_list structure maintains state for this process.
+ */
 int 
 begin_iface_scan(struct iface_conf_list *ifaces) {
 	struct lifnum lifnum;
@@ -181,6 +220,12 @@ begin_iface_scan(struct iface_conf_list *ifaces) {
 	return 1;
 }
 
+/*
+ * Retrieve the next interface.
+ *
+ * Returns information in the info structure. 
+ * Sets err to 1 if there is an error, otherwise 1.
+ */
 int
 next_iface(struct iface_info *info, int *err, struct iface_conf_list *ifaces) {
 	struct lifreq *p;
@@ -196,6 +241,11 @@ next_iface(struct iface_info *info, int *err, struct iface_conf_list *ifaces) {
 		p = ifaces->conf.lifc_req;
 		p += ifaces->next;
 
+		if (strlen(p->lifr_name) >= sizeof(info->name)) {
+			*err = 1;
+			log_error("Interface name '%s' too long", p->lifr_name);
+			return 0;
+		}
 		strcpy(info->name, p->lifr_name);
 		info->addr = p->lifr_addr;
 
@@ -216,7 +266,7 @@ next_iface(struct iface_info *info, int *err, struct iface_conf_list *ifaces) {
 	memset(&tmp, 0, sizeof(tmp));
 	strcpy(tmp.lifr_name, info->name);
 	if (ioctl(ifaces->sock, SIOCGLIFFLAGS, &tmp) < 0) {
-		log_error("Error getting interfaces flags for %s; %m", 
+		log_error("Error getting interface flags for '%s'; %m", 
 			  p->lifr_name);
 		*err = 1;
 		return 0;
@@ -228,14 +278,394 @@ next_iface(struct iface_info *info, int *err, struct iface_conf_list *ifaces) {
 	return 1;
 }
 
+/*
+ * End scan of interfaces.
+ */
 void
 end_iface_scan(struct iface_conf_list *ifaces) {
 	dfree(ifaces->conf.lifc_buf, MDL);
 	close(ifaces->sock);
 	ifaces->sock = -1;
 }
+
+#elif __linux /* !HAVE_SIOCGLIFCONF */
+/* 
+ * Linux support
+ * -------------
+ *
+ * In Linux, we use the /proc pseudo-filesystem to get information
+ * about interfaces, along with selected ioctl() calls.
+ *
+ * Linux low level access is documented in the netdevice man page.
+ */
+
+/* 
+ * Structure holding state about the scan.
+ */
+struct iface_conf_list {
+	int sock;	/* file descriptor used to get information */
+	FILE *fp;	/* input from /proc/net/dev */
+#ifdef DHCPv6
+	FILE *fp6;	/* input from /proc/net/if_inet6 */
+#endif
+};
+
+/* 
+ * Structure used to return information about a specific interface.
+ */
+struct iface_info {
+	char name[LIFNAMSIZ];		/* name of the interface, e.g. "eth0" */
+	struct sockaddr_storage addr;	/* address information */
+	isc_uint64_t flags;		/* interface flags, e.g. IFF_LOOPBACK */
+};
+
+/* 
+ * Start a scan of interfaces.
+ *
+ * The iface_conf_list structure maintains state for this process.
+ */
+int 
+begin_iface_scan(struct iface_conf_list *ifaces) {
+	char buf[256];
+	int len;
+	int i;
+
+	ifaces->fp = fopen(PROCDEV_DEVICE, "r");
+	if (ifaces->fp == NULL) {
+		log_error("Error opening '%s' to list interfaces", 
+			  PROCDEV_DEVICE);
+		return 0;
+	}
+
+	/*
+	 * The first 2 lines are header information, so read and ignore them.
+	 */
+	for (i=0; i<2; i++) {
+		if (fgets(buf, sizeof(buf), ifaces->fp) == NULL) {
+			log_error("Error reading headers from '%s'", 
+				  PROCDEV_DEVICE);
+			fclose(ifaces->fp);
+			ifaces->fp = NULL;
+			return 0;
+		}
+		len = strlen(buf);
+		if ((len <= 0) || (buf[len-1] != '\n')) { 
+			log_error("Bad header line in '%s'", PROCDEV_DEVICE);
+			fclose(ifaces->fp);
+			ifaces->fp = NULL;
+			return 0;
+		}
+	}
+
+	ifaces->sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	if (ifaces->sock < 0) {
+		log_error("Error creating socket to list interfaces; %m");
+		fclose(ifaces->fp);
+		ifaces->fp = NULL;
+		return 0;
+	}
+
+#ifdef DHCPv6
+	ifaces->fp6 = fopen("/proc/net/if_inet6", "r");
+	if (ifaces->fp6 == NULL) {
+		log_error("Error opening '/proc/net/if_inet6' to "
+			  "list IPv6 interfaces; %m");
+		close(ifaces->sock);
+		ifaces->sock = -1;
+		fclose(ifaces->fp);
+		ifaces->fp = NULL;
+		return 0;
+	}
+#endif
+
+	return 1;
+}
+
+/*
+ * Read our IPv4 interfaces from /proc/net/dev.
+ *
+ * The file looks something like this:
+ *
+ * Inter-|   Receive ...
+ *  face |bytes    packets errs drop fifo frame ...
+ *     lo: 1580562    4207    0    0    0     0 ...
+ *   eth0:       0       0    0    0    0     0 ...
+ *   eth1:1801552440   37895    0   14    0     ...
+ *
+ * We only care about the interface name, which is at the start of 
+ * each line.
+ *
+ * We use an ioctl() to get the address and flags for each interface.
+ */
+static int
+next_iface4(struct iface_info *info, int *err, struct iface_conf_list *ifaces) {
+	char buf[256];
+	int len;
+	char *p;
+	char *name;
+	struct ifreq tmp;
+
+	/*
+	 * Loop exits when we find an interface that has an address, or 
+	 * when we run out of interfaces.
+	 */
+	for (;;) {
+		do {
+			/*
+	 		 *  Read the next line in the file.
+	 		 */
+			if (fgets(buf, sizeof(buf), ifaces->fp) == NULL) {
+				if (ferror(ifaces->fp)) {
+					*err = 1;
+					log_error("Error reading interface "
+					  	"information");
+				} else {
+					*err = 0;
+				}
+				return 0;
+			}
+
+			/*
+	 		 * Make sure the line is a nice, 
+			 * newline-terminated line.
+	 		 */
+			len = strlen(buf);
+			if ((len <= 0) || (buf[len-1] != '\n')) { 
+				log_error("Bad line reading interface "
+					  "information");
+				*err = 1;
+				return 0;
+			}
+
+			/*
+	 		 * Figure out our name.
+	 		 */
+			p = strrchr(buf, ':');
+			if (p == NULL) {
+				log_error("Bad line reading interface "
+					  "information (no colon)");
+				*err = 1;
+				return 0;
+			}
+			*p = '\0';
+			name = buf;
+			while (isspace(*name)) {
+				name++;
+			}
+
+			/* 
+		 	 * Copy our name into our interface structure.
+		 	 */
+			len = p - name;
+			if (len >= sizeof(info->name)) {
+				*err = 1;
+				log_error("Interface name '%s' too long", name);
+				return 0;
+			}
+			strcpy(info->name, name);
+
+#ifdef ALIAS_NAMED_PERMUTED
+			/* interface aliases look like "eth0:1" or "wlan1:3" */
+			s = strchr(info->name, ':');
+			if (s != NULL) {
+				*s = '\0';
+			}
+#endif
+
+#ifdef SKIP_DUMMY_INTERFACES
+		} while (strncmp(info->name, "dummy", 5) == 0);
 #else
-/* XXX: need non-Solaris versions */
+		} while (0);
+#endif
+
+		memset(&tmp, 0, sizeof(tmp));
+		strcpy(tmp.ifr_name, name);
+		if (ioctl(ifaces->sock, SIOCGIFADDR, &tmp) < 0) {
+			if (errno == EADDRNOTAVAIL) {
+				continue;
+			}
+			log_error("Error getting interface address "
+				  "for '%s'; %m", name);
+			*err = 1;
+			return 0;
+		}
+		memcpy(&info->addr, &tmp.ifr_addr, sizeof(tmp.ifr_addr));
+
+		memset(&tmp, 0, sizeof(tmp));
+		strcpy(tmp.ifr_name, name);
+		if (ioctl(ifaces->sock, SIOCGIFFLAGS, &tmp) < 0) {
+			log_error("Error getting interface flags for '%s'; %m", 
+			  	name);
+			*err = 1;
+			return 0;
+		}
+		info->flags = tmp.ifr_flags;
+
+		*err = 0;
+		return 1;
+	}
+}
+
+#ifdef DHCPv6
+/*
+ * Read our IPv6 interfaces from /proc/net/if_inet6.
+ *
+ * The file looks something like this:
+ *
+ * fe80000000000000025056fffec00008 05 40 20 80   vmnet8
+ * 00000000000000000000000000000001 01 80 10 80       lo
+ * fe80000000000000025056fffec00001 06 40 20 80   vmnet1
+ * 200108881936000202166ffffe497d9b 03 40 00 00     eth1
+ * fe8000000000000002166ffffe497d9b 03 40 20 80     eth1
+ *
+ * We get IPv6 address from the start, the interface name from the end, 
+ * and ioctl() to get flags.
+ */
+static int
+next_iface6(struct iface_info *info, int *err, struct iface_conf_list *ifaces) {
+	char buf[256];
+	int len;
+	char *p;
+	char *name;
+	int i;
+	struct sockaddr_in6 addr;
+	struct ifreq tmp;
+
+	do {
+		/*
+		 *  Read the next line in the file.
+		 */
+		if (fgets(buf, sizeof(buf), ifaces->fp6) == NULL) {
+			if (ferror(ifaces->fp6)) {
+				*err = 1;
+				log_error("Error reading IPv6 "
+					  "interface information");
+			} else {
+				*err = 0;
+			}
+			return 0;
+		}
+
+		/*
+		 * Make sure the line is a nice, newline-terminated line.
+		 */
+		len = strlen(buf);
+		if ((len <= 0) || (buf[len-1] != '\n')) { 
+			log_error("Bad line reading IPv6 "
+				  "interface information");
+			*err = 1;
+			return 0;
+		}
+
+		/*
+ 		 * Figure out our name.
+ 		 */
+		buf[--len] = '\0';
+		p = strrchr(buf, ' ');
+		if (p == NULL) {
+			log_error("Bad line reading IPv6 interface "
+			          "information (no space)");
+			*err = 1;
+			return 0;
+		}
+		name = p+1;
+
+		/* 
+ 		 * Copy our name into our interface structure.
+ 		 */
+		len = strlen(name);
+		if (len >= sizeof(info->name)) {
+			*err = 1;
+			log_error("IPv6 interface name '%s' too long", name);
+			return 0;
+		}
+		strcpy(info->name, name);
+
+#ifdef SKIP_DUMMY_INTERFACES
+	} while (strncmp(info->name, "dummy", 5) == 0);
+#else
+	} while (0);
+#endif
+
+	/*
+	 * Double-check we start with the IPv6 address.
+	 */
+	for (i=0; i<32; i++) {
+		if (!isxdigit(buf[i]) || isupper(buf[i])) {
+			*err = 1;
+			log_error("Bad line reading IPv6 interface address "
+				  "for '%s'", name);
+			return 0;
+		}
+	}
+
+	/* 
+	 * Load our socket structure.
+	 */
+	memset(&addr, 0, sizeof(addr));
+	addr.sin6_family = AF_INET6;
+	for (i=0; i<16; i++) {
+		unsigned char byte;
+                static const char hex[] = "0123456789abcdef";
+                byte = ((index(hex, buf[i * 2]) - hex) << 4) |
+			(index(hex, buf[i * 2 + 1]) - hex);
+		addr.sin6_addr.s6_addr[i] = byte;
+	}
+	memcpy(&info->addr, &addr, sizeof(addr));
+
+	/*
+	 * Get our flags.
+	 */
+	memset(&tmp, 0, sizeof(tmp));
+	strcpy(tmp.ifr_name, name);
+	if (ioctl(ifaces->sock, SIOCGIFFLAGS, &tmp) < 0) {
+		log_error("Error getting interface flags for '%s'; %m", name);
+		*err = 1;
+		return 0;
+	}
+	info->flags = tmp.ifr_flags;
+
+	*err = 0;
+	return 1;
+}
+#endif /* DHCPv6 */
+
+/*
+ * Retrieve the next interface.
+ *
+ * Returns information in the info structure. 
+ * Sets err to 1 if there is an error, otherwise 1.
+ */
+int
+int
+next_iface(struct iface_info *info, int *err, struct iface_conf_list *ifaces) {
+	if (next_iface4(info, err, ifaces)) {
+		return 1;
+	}
+#ifdef DHCPv6
+	if (!(*err)) {
+		return next_iface6(info, err, ifaces);
+	}
+#endif
+	return 0;
+}
+
+/*
+ * End scan of interfaces.
+ */
+void
+end_iface_scan(struct iface_conf_list *ifaces) {
+	fclose(ifaces->fp);
+	ifaces->fp = NULL;
+	close(ifaces->sock);
+	ifaces->sock = -1;
+#ifdef DHCPv6
+	fclose(ifaces->fp6);
+	ifaces->fp6 = NULL;
+#endif
+}
+#else
+/* XXX: need to define non-Solaris, non-Linux iterators */
 #endif 
 
 /* XXX: perhaps create drealloc() rather than do it manually */
@@ -506,6 +936,7 @@ discover_interfaces(int state) {
 
 	end_iface_scan(&ifaces);
 
+#if 0
 #if defined (LINUX_SLASHPROC_DISCOVERY)
 	/* On Linux, interfaces that don't have IP addresses don't
 	   show up in the SIOCGIFCONF syscall.  This only matters for
@@ -593,6 +1024,7 @@ discover_interfaces(int state) {
 		fclose (proc_dev);
 	}
 #endif
+#endif /* 0 */
 
 	/* Now cycle through all the interfaces we found, looking for
 	   hardware addresses. */

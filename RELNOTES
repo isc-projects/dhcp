@@ -21,7 +21,7 @@ pages.
 There are a number of DHCPv6 limitiations and features missing in this
 release, which will be addressed shortly:
 
-- Only Solaris is supported.
+- Only Solaris and Linux are supported.
 
 - Only fixed addresses are supported.
 
@@ -53,6 +53,8 @@ as well as how to find documentation and report bugs, please consult
 the README file.
 
 		    Changes since V4.0.0-pre-alpha-comcast-1
+
+- Support for Linux has been added.
 
 - Limited DDNS support. We now update AAAA records in the same place we
   would update A records, if we have an IPv6 address. We also generate
