@@ -35,7 +35,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: inet.c,v 1.11.60.2 2006/10/25 22:32:41 shane Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: inet.c,v 1.11.60.3 2007/01/31 20:44:55 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -210,11 +210,13 @@ addr_match(addr, match)
 	return 1;
 }
 
+/* piaddr() turns an iaddr structure into a printable address. */
 /* XXX: should use a const pointer rather than passing the structure */
 const char *
 piaddr(const struct iaddr addr) {
-	static char 
+	static char
 		pbuf[sizeof("ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255")];
+			 /* "255.255.255.255" */
 
 	/* INSIST((addr.len == 0) || (addr.len == 4) || (addr.len == 16)); */
 
@@ -228,80 +230,61 @@ piaddr(const struct iaddr addr) {
 		return inet_ntop(AF_INET6, addr.iabuf, pbuf, sizeof(pbuf));
 	}
 
-	log_fatal("piaddr():%s:%d: Invalid address length %d.", MDL, addr.len);
+	log_fatal("piaddr():%s:%d: Invalid address length %d.", MDL,
+		  addr.len);
 	/* quell compiler warnings */
 	return NULL;
 }
 
-/* XXX: should use a const pointer rather than passing the structure */
+/* piaddrmask takes an iaddr structure mask, determines the bitlength of
+ * the mask, and then returns the printable CIDR notation of the two.
+ */
 char *
-piaddrmask(struct iaddr addr, struct iaddr mask, const char *file, int line) {
-	char *s, tbuf[sizeof("255.255.255.255/32")];
+piaddrmask(struct iaddr *addr, struct iaddr *mask) {
 	int mw;
-	unsigned i, oct, bit;
+	unsigned int oct, bit;
 
-	if (addr.len != 4)
+	if ((addr->len != 4) && (addr->len != 16))
 		log_fatal("piaddrmask():%s:%d: Address length %d invalid",
-			  MDL, addr.len);
-	if (addr.len != mask.len)
+			  MDL, addr->len);
+	if (addr->len != mask->len)
 		log_fatal("piaddrmask():%s:%d: Address and mask size mismatch",
 			  MDL);
 
 	/* Determine netmask width in bits. */
-	for (mw = 32; mw > 0; ) {
+	for (mw = (mask->len * 8) ; mw > 0 ; ) {
 		oct = (mw - 1) / 8;
 		bit = 0x80 >> ((mw - 1) % 8);
-		if (!mask.iabuf [oct])
+		if (!mask->iabuf[oct])
 			mw -= 8;
-		else if (mask.iabuf [oct] & bit)
+		else if (mask->iabuf[oct] & bit)
 			break;
 		else
 			mw--;
 	}
 
-	s = tbuf;
-	for (i = 0 ; i <= oct ; i++) {
-		sprintf(s, "%s%d", i ? "." : "", addr.iabuf[i]);
-		s += strlen(s);
-	}
-	sprintf(s, "/%d", mw);
+	if (mw < 0)
+		log_fatal("Impossible condition at %s:%d.", MDL);
 
-	s = dmalloc (strlen(tbuf) + 1, file, line);
-	if (!s)
-		return s;
-	strcpy(s, tbuf);
-	return s;
+	return piaddrcidr(addr, mw);
 }
 
+/* Format an address and mask-length into printable CIDR notation. */
 char *
-piaddrcidr(const struct iaddr *addr, unsigned int bits, 
-	   const char *file, int line) {
-	const char *tmp;
-	int tmp_len;
-	char *ret;
+piaddrcidr(const struct iaddr *addr, unsigned int bits) {
+	static char
+	    ret[sizeof("ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255/128")];
+		    /* "255.255.255.255/32" */
 
 	/* INSIST(addr != NULL); */
 	/* INSIST((addr->len == 4) || (addr->len == 16)); */
 	/* INSIST(bits <= (addr->len * 8)); */
 
-	tmp = piaddr(*addr);
+	if (bits > (addr->len * 8))
+		return NULL;
 
-	/*
-	 * Figure out how much space we need for the address plus
-	 * the bit count, and the trailing NUL character. 
-	 * "2001::/96", for instance.
-	 */
-	tmp_len = strlen(tmp) + 3;
-	if (bits >= 100) {
-		tmp_len += 2;
-	} else if (bits >= 10) {
-		tmp_len += 1;
-	}
+	sprintf(ret, "%s/%d", piaddr(*addr), bits);
 
-	ret = dmalloc(tmp_len, file, line);
-	if (ret != NULL) {
-		sprintf(ret, "%s/%d", tmp, bits);
-	}
 	return ret;
 }
 

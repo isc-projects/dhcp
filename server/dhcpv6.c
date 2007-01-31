@@ -40,25 +40,6 @@
  * TODO: simplify server ID
  */
 
-static char *dhcpv6_type_names[] = {
-	NULL,
-	"Solicit",
-	"Advertise",
-	"Request",
-	"Confirm",
-	"Renew",
-	"Rebind",
-	"Reply",
-	"Release",
-	"Decline",
-	"Reconfigure",
-	"Information-request",
-	"Relay-forward",
-	"Relay-reply"
-};
-static const int dhcpv6_type_name_max = 
-	(sizeof(dhcpv6_type_names) / sizeof(dhcpv6_type_names[0]));
-
 /* 
  * Prototypes local to this file.
  */

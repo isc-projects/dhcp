@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: clparse.c,v 1.67 2006/06/01 20:23:16 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: clparse.c,v 1.67.52.1 2007/01/31 20:44:55 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -66,9 +66,6 @@ isc_result_t read_client_conf ()
 	struct interface_info *ip;
 	isc_result_t status;
 
-	/* Set up the initial dhcp option universe. */
-	initialize_common_option_spaces ();
-
 	/* Initialize the top level client configuration. */
 	memset (&top_level_config, 0, sizeof top_level_config);
 
@@ -84,6 +81,9 @@ isc_result_t read_client_conf ()
 	top_level_config.requested_options = default_requested_options;
 	top_level_config.omapi_port = -1;
 	top_level_config.do_forward_update = 1;
+	/* Requested lease time, used by DHCPv6 (DHCPv4 uses the option cache)
+	 */
+	top_level_config.requested_lease = 7200;
 
 	group_allocate (&top_level_config.on_receipt, MDL);
 	if (!top_level_config.on_receipt)

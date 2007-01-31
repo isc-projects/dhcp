@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tables.c,v 1.56.2.6 2006/10/25 22:32:42 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: tables.c,v 1.56.2.7 2007/01/31 20:44:55 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -455,6 +455,26 @@ struct enumeration_value dhcpv6_message_values[] = {
 	{ "RELY-REPL", 13 },
 	{ NULL, 0 }
 };
+
+/* Some code refers to a different table. */
+char *dhcpv6_type_names[] = {
+	NULL,
+	"Solicit",
+	"Advertise",
+	"Request",
+	"Confirm",
+	"Renew",
+	"Rebind",
+	"Reply",
+	"Release",
+	"Decline",
+	"Reconfigure",
+	"Information-request",
+	"Relay-forward",
+	"Relay-reply"
+};
+const int dhcpv6_type_name_max =
+	(sizeof(dhcpv6_type_names) / sizeof(dhcpv6_type_names[0]));
 
 struct enumeration dhcpv6_messages = {
 	NULL,

@@ -787,6 +787,41 @@ struct client_lease {
 	struct option_state *options;	     /* Options supplied with lease. */
 };
 
+/* DHCPv6 lease structures */
+struct dhc6_addr {
+	struct dhc6_addr *next;
+	struct iaddr address;
+
+	TIME preferred_life;
+	TIME max_life;
+
+	struct option_state *options;
+};
+
+struct dhc6_ia {
+	struct dhc6_ia *next;
+	unsigned char iaid[4];
+
+	TIME starts;
+	TIME renew;
+	TIME rebind;
+	struct dhc6_addr *addrs;
+
+	struct option_state *options;
+};
+
+struct dhc6_lease {
+	struct dhc6_lease *next;
+	struct data_string server_id;
+
+	u_int8_t pref;
+
+	unsigned char dhcpv6_transaction_id[3];
+	struct dhc6_ia *bindings;
+
+	struct option_state *options;
+};
+
 /* Possible states in which the client can be. */
 enum dhcp_state {
 	S_REBOOTING = 1,
@@ -862,11 +897,20 @@ struct client_config {
 };
 
 /* Per-interface state used in the dhcp client... */
+/* XXX: consider union {}'ing this for v4/v6. */
 struct client_state {
 	struct client_state *next;
 	struct interface_info *interface;
 	char *name;
 
+	/* Common values. */
+	struct client_config *config;		    /* Client configuration. */
+	struct string_list *env;	       /* Client script environment. */
+        int envc;			/* Number of entries in environment. */
+
+	struct option_state *sent_options;		 /* Options we sent. */
+
+	/* DHCPv4 values. */
 	struct client_lease *active;		  /* Currently active lease. */
 	struct client_lease *new;			       /* New lease. */
 	struct client_lease *offered_leases;	    /* Leases offered to us. */
@@ -886,11 +930,32 @@ struct client_state {
 
 	struct iaddr requested_address;	    /* Address we would like to get. */
 
-	struct client_config *config;		    /* Client configuration. */
-	struct string_list *env;	       /* Client script environment. */
-	int envc;			/* Number of entries in environment. */
+	/* DHCPv6 values. */
+	struct option_cache *default_duid;
+	unsigned char dhcpv6_transaction_id[3];
 
-	struct option_state *sent_options;	/* Options we sent. */
+	struct dhc6_lease *active_lease;
+	struct dhc6_lease *advertised_leases;
+	struct dhc6_lease *selected_lease;
+	struct dhc6_lease *held_leases;
+
+	TIME start_time;
+	u_int16_t elapsed;
+	int txcount;
+
+	/* See RFC3315 section 14. */
+	TIME RT;
+	TIME IRT;
+	TIME MRC;
+	TIME MRT;
+	TIME MRD;
+
+	/* Rather than a state, we use a function that shifts around
+	 * depending what stage of life the v6 state machine is in.
+	 * This is where incoming packets are dispatched to (sometimes
+	 * a no-op).
+	 */
+	void (*v6_handler)(struct packet *, struct client_state *);
 };
 
 /* Relay agent server list. */
@@ -2047,8 +2112,8 @@ u_int32_t host_addr PROTO ((struct iaddr, struct iaddr));
 int addr_eq PROTO ((struct iaddr, struct iaddr));
 int addr_match(struct iaddr *, struct iaddrmatch *);
 const char *piaddr PROTO ((struct iaddr));
-char *piaddrmask(struct iaddr, struct iaddr, const char *, int);
-char *piaddrcidr(const struct iaddr *, unsigned int, const char *, int);
+char *piaddrmask(struct iaddr *, struct iaddr *);
+char *piaddrcidr(const struct iaddr *, unsigned int);
 
 /* dhclient.c */
 extern const char *path_dhclient_conf;
@@ -2120,6 +2185,13 @@ int dhclient_interface_discovery_hook (struct interface_info *);
 isc_result_t dhclient_interface_startup_hook (struct interface_info *);
 void client_dns_update_timeout (void *cp);
 isc_result_t client_dns_update (struct client_state *client, int, int);
+
+void dhcpv4_client_assignments(void);
+void dhcpv6_client_assignments(void);
+
+/* dhc6.c */
+void start_init6(struct client_state *client);
+void start_selecting6(struct client_state *client);
 
 /* db.c */
 int write_lease PROTO ((struct lease *));

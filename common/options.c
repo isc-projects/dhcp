@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.92.2.7 2006/11/15 21:17:12 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.92.2.8 2007/01/31 20:44:55 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -2540,7 +2540,7 @@ store_option(struct data_string *result, struct universe *universe,
 /* The 'data_string' primitive doesn't have an appension mechanism.
  * This function must then append a new option onto an existing buffer
  * by first duplicating the original buffer and appending the desired
- * values, followed by coping the new value into place.
+ * values, followed by copying the new value into place.
  */
 int
 append_option(struct data_string *dst, struct universe *universe,

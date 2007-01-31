@@ -80,25 +80,63 @@
 /* 
  * DHCPv6 message types, defined in section 5.3 of RFC 3315 
  */
-#define DHCPV6_SOLICIT 1
-#define DHCPV6_ADVERTISE 2
-#define DHCPV6_REQUEST 3
-#define DHCPV6_CONFIRM 4
-#define DHCPV6_RENEW 5
-#define DHCPV6_REBIND 6
-#define DHCPV6_REPLY 7
-#define DHCPV6_RELEASE 8
-#define DHCPV6_DECLINE 9
-#define DHCPV6_RECONFIGURE 10
+#define DHCPV6_SOLICIT		    1
+#define DHCPV6_ADVERTISE	    2
+#define DHCPV6_REQUEST		    3
+#define DHCPV6_CONFIRM		    4
+#define DHCPV6_RENEW		    5
+#define DHCPV6_REBIND		    6
+#define DHCPV6_REPLY		    7
+#define DHCPV6_RELEASE		    8
+#define DHCPV6_DECLINE		    9
+#define DHCPV6_RECONFIGURE	   10
 #define DHCPV6_INFORMATION_REQUEST 11
-#define DHCPV6_RELAY_FORW 12
-#define DHCPV6_RELAY_REPL 13
+#define DHCPV6_RELAY_FORW	   12
+#define DHCPV6_RELAY_REPL	   13
+
+extern char *dhcpv6_type_names[];
+extern const int dhcpv6_type_name_max;
+
+/* DUID type definitions (RFC3315 section 9).
+ */
+#define DUID_LLT	1
+#define DUID_EN		2
+#define DUID_LL		3
 
 /* 
  * DHCPv6 well-known multicast addressess, from section 5.1 of RFC 3315 
  */
 #define All_DHCP_Relay_Agents_and_Servers "FF02::1:2"
 #define All_DHCP_Servers "FF05::1:3"
+
+/*
+ * DHCPv6 Retransmission Constants (RFC3315 section 5.5)
+ */
+
+#define SOL_MAX_DELAY     1
+#define SOL_TIMEOUT       1
+#define SOL_MAX_RT      120
+#define REQ_TIMEOUT       1
+#define REQ_MAX_RT       30
+#define REQ_MAX_RC       10
+#define CNF_MAX_DELAY     1
+#define CNF_TIMEOUT       1
+#define CNF_MAX_RT        4
+#define CNF_MAX_RD       10
+#define REN_TIMEOUT      10
+#define REN_MAX_RT      600
+#define REB_TIMEOUT      10
+#define REB_MAX_RT      600
+#define INF_MAX_DELAY     1
+#define INF_TIMEOUT       1
+#define INF_MAX_RT      120
+#define REL_TIMEOUT       1
+#define REL_MAX_RC        5
+#define DEC_TIMEOUT       1
+#define DEC_MAX_RC        5
+#define REC_TIMEOUT       2
+#define REC_MAX_RC        8
+#define HOP_COUNT_LIMIT  32
 
 /* 
  * Normal packet format, defined in section 6 of RFC 3315 

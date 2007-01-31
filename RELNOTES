@@ -61,6 +61,8 @@ the README file.
   IP6.ARPA style names for PTR records if we're dealing with an IPv6
   address.
 
+- Initial 'dhclient -6' support.
+
 			Changes since 3.1 (New Features)
 
 - The IO system now tracks all local IP addresses, so that the DHCP

@@ -32,7 +32,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.142.8.5 2007/01/30 11:17:49 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.142.8.6 2007/01/31 20:44:55 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -83,7 +83,6 @@ int
 main(int argc, char **argv) {
 	int fd;
 	int i;
-	struct servent *ent;
 	struct interface_info *ip;
 	struct client_state *client;
 	unsigned seed;
@@ -99,6 +98,7 @@ main(int argc, char **argv) {
 	int no_dhclient_db = 0;
 	int no_dhclient_pid = 0;
 	int no_dhclient_script = 0;
+	int local_family_set = 0;
 	char *s;
 
         /* Make sure that file descriptors 0 (stdin), 1, (stdout), and
@@ -140,7 +140,19 @@ main(int argc, char **argv) {
 	dhcp_interface_startup_hook = dhclient_interface_startup_hook;
 
 	for (i = 1; i < argc; i++) {
-		if (!strcmp (argv [i], "-r")) {
+		if (!strcmp(argv[i], "-4")) {
+			if (local_family_set && local_family != AF_INET)
+				log_fatal("Client can only do v4 or v6, not "
+					  "both.");
+			local_family_set = 1;
+			local_family = AF_INET;
+		} else if (!strcmp(argv[i], "-6")) {
+			if (local_family_set && local_family != AF_INET6)
+				log_fatal("Client can only do v4 or v6, not "
+					  "both.");
+			local_family_set = 1;
+			local_family = AF_INET6;
+		} else if (!strcmp(argv[i], "-r")) {
 			release_mode = 1;
 			no_daemon = 1;
 		} else if (!strcmp (argv [i], "-p")) {
@@ -290,30 +302,16 @@ main(int argc, char **argv) {
 		}
 	}
 
-	/* Default to the DHCP/BOOTP port. */
-	if (!local_port) {
-		/* If we're faking a relay agent, and we're not using loopback,
-		   use the server port, not the client port. */
-		if (relay && giaddr.s_addr != htonl (INADDR_LOOPBACK)) {
-			local_port = htons(67);
-		} else {
-			ent = getservbyname ("dhcpc", "udp");
-			if (!ent)
-				local_port = htons (68);
-			else
-				local_port = ent -> s_port;
-#ifndef __CYGWIN32__
-			endservent ();
-#endif
-		}
-	}
+	/* Set up the initial dhcp option universe. */
+	initialize_common_option_spaces ();
 
-	/* If we're faking a relay agent, and we're not using loopback,
-	   we're using the server port, not the client port. */
-	if (relay && giaddr.s_addr != htonl (INADDR_LOOPBACK)) {
-		remote_port = local_port;
-	} else
-		remote_port = htons (ntohs (local_port) - 1);	/* XXX */
+	/* Assign port numbers. */
+	if (local_family == AF_INET)
+		dhcpv4_client_assignments();
+	else if (local_family == AF_INET6)
+		dhcpv6_client_assignments();
+	else
+		log_fatal("Impossible condition at %s:%d.", MDL);
 
 	/* Get the current time... */
 	GET_TIME (&cur_time);
@@ -379,12 +377,17 @@ main(int argc, char **argv) {
 					     INTERFACE_AUTOMATIC)) !=
 			     INTERFACE_REQUESTED))
 				continue;
-			script_init (ip -> client,
-				     "PREINIT", (struct string_list *)0);
-			if (ip -> client -> alias)
-				script_write_params (ip -> client, "alias_",
-						     ip -> client -> alias);
-			script_go (ip -> client);
+
+			if (local_family == AF_INET6) {
+				script_init(ip->client, "PREINIT6", NULL);
+			} else {
+				script_init(ip->client, "PREINIT", NULL);
+			    	if (ip->client->alias != NULL)
+					script_write_params(ip->client,
+							    "alias_",
+							    ip->client->alias);
+			}
+			script_go (ip->client);
 		}
 	}
 
@@ -412,17 +415,49 @@ main(int argc, char **argv) {
 	srandom (seed + cur_time);
 
 	/* Start a configuration state machine for each interface. */
-	for (ip = interfaces; ip; ip = ip -> next) {
-		ip -> flags |= INTERFACE_RUNNING;
-		for (client = ip -> client; client; client = client -> next) {
-			if (release_mode)
-				do_release (client);
-			else {
-				client -> state = S_INIT;
-				/* Set up a timeout to start the initialization
-				   process. */
-				add_timeout (cur_time + random () % 5,
-					     state_reboot, client, 0, 0);
+	if (local_family == AF_INET6) {
+		struct data_string duid;
+		struct option_cache *oc;
+
+		/* Establish a default DUID. */
+		memset(&duid, 0, sizeof(duid));
+		form_duid(&duid, MDL);
+
+		for (ip = interfaces ; ip != NULL ; ip = ip->next) {
+			for (client = ip->client ; client != NULL ;
+			     client = client->next) {
+				struct option *option = NULL;
+				int code = D6O_CLIENTID;
+
+				if (!option_code_hash_lookup(&option,
+					  dhcpv6_universe.code_hash,
+					  &code, 0, MDL))
+					log_fatal("DUID option not in "
+						  "configuration!");
+
+				option_cache(&client->default_duid, &duid,
+					     NULL, option, MDL);
+
+				start_init6(client);
+			}
+		}
+
+		data_string_forget(&duid, MDL);
+	} else {
+		for (ip = interfaces ; ip ; ip = ip->next) {
+			ip->flags |= INTERFACE_RUNNING;
+			for (client = ip->client ; client ;
+			     client = client->next) {
+				if (release_mode)
+					do_release(client);
+				else {
+					client->state = S_INIT;
+					/* Set up a timeout to start the
+					 * initialization process.
+					 */
+					add_timeout(cur_time + random() % 5,
+						    state_reboot, client, 0, 0);
+				}
 			}
 		}
 	}
@@ -448,6 +483,7 @@ main(int argc, char **argv) {
 
 	/* Set up the bootp packet handler... */
 	bootp_packet_handler = do_packet;
+	dhcpv6_packet_handler = do_packet6;
 
 #if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL) || \
 		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
@@ -1084,7 +1120,53 @@ void dhcp (packet)
 
 void 
 dhcpv6(struct packet *packet) {
-	log_fatal("IPv6 not supported in client");
+	struct iaddrmatchlist *ap;
+	struct client_state *client;
+	char addrbuf[sizeof("ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff")];
+
+	/* Silently drop bogus messages. */
+	if (packet->dhcpv6_msg_type >= dhcpv6_type_name_max)
+		return;
+
+	/* Discard, with log, packets from quenched sources. */
+	for (ap = packet->interface->client->config->reject_list ;
+	     ap ; ap = ap->next) {
+		if (addr_match(&packet->client_addr, &ap->match)) {
+			strcpy(addrbuf, piaddr(packet->client_addr));
+			log_info("%s from %s rejected by rule %s",
+				 dhcpv6_type_names[packet->dhcpv6_msg_type],
+				 addrbuf,
+				 piaddrmask(&ap->match.addr, &ap->match.mask));
+			return;
+		}
+	}
+
+	/* Screen out nonsensical messages. */
+	switch(packet->dhcpv6_msg_type) {
+	      case DHCPV6_ADVERTISE:
+	      case DHCPV6_REPLY:
+	      case DHCPV6_RECONFIGURE:
+		log_info("RCV: %s message on %s from %s.",
+			 dhcpv6_type_names[packet->dhcpv6_msg_type],
+			 packet->interface->name, piaddr(packet->client_addr));
+		break;
+
+	      default:
+		return;
+	}
+
+	/* Find a client state that matches the incoming XID. */
+	for (client = packet->interface->client ; client ;
+	     client = client->next) {
+		if (memcmp(&client->dhcpv6_transaction_id,
+			   packet->dhcpv6_transaction_id, 3) == 0) {
+			client->v6_handler(packet, client);
+			return;
+		}
+	}
+
+	/* XXX: temporary log for debuggin */
+	log_info("Packet received, but nothing done with it.");
 }
 
 void dhcpoffer (packet)
@@ -3191,4 +3273,35 @@ isc_result_t client_dns_update (struct client_state *client, int addp, int ttl)
 	data_string_forget (&ddns_fwd_name, MDL);
 	data_string_forget (&ddns_dhcid, MDL);
 	return rcode;
+}
+
+void
+dhcpv4_client_assignments(void)
+{
+	struct servent *ent;
+
+	/* Default to the DHCP/BOOTP port. */
+	if (!local_port) {
+		/* If we're faking a relay agent, and we're not using loopback,
+		   use the server port, not the client port. */
+		if (relay && giaddr.s_addr != htonl (INADDR_LOOPBACK)) {
+			local_port = htons(67);
+		} else {
+			ent = getservbyname ("dhcpc", "udp");
+			if (!ent)
+				local_port = htons (68);
+			else
+				local_port = ent -> s_port;
+#ifndef __CYGWIN32__
+			endservent ();
+#endif
+		}
+	}
+
+	/* If we're faking a relay agent, and we're not using loopback,
+	   we're using the server port, not the client port. */
+	if (relay && giaddr.s_addr != htonl (INADDR_LOOPBACK)) {
+		remote_port = local_port;
+	} else
+		remote_port = htons (ntohs (local_port) - 1);   /* XXX */
 }

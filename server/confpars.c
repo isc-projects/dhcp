@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.158.6.5 2006/11/22 11:02:11 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.158.6.6 2007/01/31 20:44:56 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -459,15 +459,18 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 
 			/* Make the shared network name from network number. */
 			if (token == SUBNET) {
-				n = piaddrmask(share->subnets->net,
-					       share->subnets->netmask, MDL);
+				n = piaddrmask(&share->subnets->net,
+					       &share->subnets->netmask);
 			} else {
 				n = piaddrcidr(&share->subnets->net,
-					       share->subnets->prefix_len, MDL);
+					       share->subnets->prefix_len);
 			}
 
-			/* XXX: do something if n is NULL */
-			share->name = n;
+			share->name = strdup(n);
+
+			if (share->name == NULL)
+				log_fatal("Out of memory allocating default "
+					  "shared network name (\"%s\").", n);
 
 			/* Copy the authoritative parameter from the subnet,
 			   since there is no opportunity to declare it here. */
