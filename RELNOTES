@@ -62,7 +62,8 @@ the README file.
   address.
 
 - Initial 'dhclient -6' support.  Values got in Replies are shelled out
-  to /sbin/dhclient-script.
+  to /sbin/dhclient-script.  The initial 4-packet handshake as well as
+  renew, rebind, and expiration are all supported.
 
 			Changes since 3.1 (New Features)
 

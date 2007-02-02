@@ -792,8 +792,13 @@ struct dhc6_addr {
 	struct dhc6_addr *next;
 	struct iaddr address;
 
-	TIME preferred_life;
-	TIME max_life;
+	/* Address state flags. */
+	#define DHC6_ADDR_DEPREFFED	0x01
+	#define DHC6_ADDR_EXPIRED	0x02
+	u_int8_t flags;
+
+	u_int32_t preferred_life;
+	u_int32_t max_life;
 
 	struct option_state *options;
 };
@@ -803,8 +808,8 @@ struct dhc6_ia {
 	unsigned char iaid[4];
 
 	TIME starts;
-	TIME renew;
-	TIME rebind;
+	u_int32_t renew;
+	u_int32_t rebind;
 	struct dhc6_addr *addrs;
 
 	struct option_state *options;
@@ -907,8 +912,9 @@ struct client_state {
 	struct client_config *config;		    /* Client configuration. */
 	struct string_list *env;	       /* Client script environment. */
         int envc;			/* Number of entries in environment. */
-
 	struct option_state *sent_options;		 /* Options we sent. */
+	enum dhcp_state state;          /* Current state for this interface. */
+
 
 	/* DHCPv4 values. */
 	struct client_lease *active;		  /* Currently active lease. */
@@ -917,7 +923,6 @@ struct client_state {
 	struct client_lease *leases;		/* Leases we currently hold. */
 	struct client_lease *alias;			     /* Alias lease. */
 
-	enum dhcp_state state;		/* Current state for this interface. */
 	struct iaddr destination;		    /* Where to send packet. */
 	u_int32_t xid;					  /* Transaction ID. */
 	u_int16_t secs;			    /* secs value from DHCPDISCOVER. */
@@ -933,8 +938,10 @@ struct client_state {
 	/* DHCPv6 values. */
 	struct option_cache *default_duid;
 	unsigned char dhcpv6_transaction_id[3];
+	u_int8_t refresh_type;
 
 	struct dhc6_lease *active_lease;
+	struct dhc6_lease *old_lease;
 	struct dhc6_lease *advertised_leases;
 	struct dhc6_lease *selected_lease;
 	struct dhc6_lease *held_leases;
