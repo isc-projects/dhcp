@@ -24,7 +24,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhc6.c,v 1.1.4.3 2007/02/02 17:54:49 dhankins Exp $ Copyright (c) 2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhc6.c,v 1.1.4.4 2007/02/05 17:22:13 dhankins Exp $ Copyright (c) 2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -142,37 +142,58 @@ dhcpv6_client_assignments(void)
 }
 
 /* Instead of implementing RFC3315 RAND (section 14) as a float "between"
- * -0.1 and 0.1 non-inclusive, we implement it as an integer from -10% to
- * +10%, inclusive, of the base.
+ * -0.1 and 0.1 non-inclusive, we implement it as an integer.
  *
- * XXX: for this to make sense, we really need to do timing on a
- * XXX: usec scale..
+ * The result is expected to follow this table:
+ *
+ *		split range answer
+ *		    - ERROR -		      base <= 0
+ *		0	1   0..0	 1 <= base <= 10
+ *		1	3  -1..1	11 <= base <= 20
+ *		2	5  -2..2	21 <= base <= 30
+ *		3	7  -3..3	31 <= base <= 40
+ *		...
+ *
+ * XXX: For this to make sense, we really need to do timing on a
+ * XXX: usec scale...we currently can assume zero for any value less than
+ * XXX: 11, which are very common in early stages of transmission for most
+ * XXX: messages.
  */
 static TIME
 dhc6_rand(TIME base)
 {
 	TIME rval;
 	TIME range;
+	TIME split;
 
-	if (base < 0)
+	/* A zero or less timeout is a bad thing...we don't want to
+	 * DHCP-flood anyone.
+	 */
+	if (base <= 0)
 		log_fatal("Impossible condition at %s:%d.", MDL);
 
-	/* The range is 20% of the base.  If we % a random number by this,
-	 * we actually get a number between 0 and 19.99% repeating of the
-	 * base, integer rounding excepted.  (foo % x is no greater than
-	 * x-1).  So if we subtract half the range from the resulting modulus,
-	 * we get a number between -10% and 10% of the base non-inclusive.
-	 * Modulo integer rounding.
+	/* The first thing we do is count how many random integers we want
+	 * in either direction (best thought of as the maximum negative
+	 * integer, as we will subtract this potentially from a random 0).
 	 */
-	range = (base / 5) + 1;
+	split = (base - 1) / 10;
 
-	if (range == 0)
+	/* Don't bother with the rest of the math if we know we'll get 0. */
+	if (split == 0)
 		return 0;
 
-	rval = random();
+	/* Then we count the total number of integers in this set.  This
+	 * is twice the number of integers in positive and negative
+	 * directions, plus zero (-1, 0, 1 is 3, -2..2 adds 2 to 5, so forth).
+	 */
+	range = (split * 2) + 1;
 
+	/* Take a random number from [0..(range-1)]. */
+	rval = random();
 	rval %= range;
-	rval -= (range + 1) / 2;
+
+	/* Offset it to uncover potential negative values. */
+	rval -= split;
 
 	return rval;
 }
