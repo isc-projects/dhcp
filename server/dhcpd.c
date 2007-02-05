@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.121.18.2 2006/10/25 22:32:42 shane Exp $ Copyright 2004-2006 Internet Systems Consortium.";
+"$Id: dhcpd.c,v 1.121.18.3 2007/02/05 19:28:14 shane Exp $ Copyright 2004-2006 Internet Systems Consortium.";
 #endif
 
   static char copyright[] =
@@ -193,6 +193,7 @@ static void omapi_listener_start (void *foo)
 	omapi_object_dereference (&listener, MDL);
 }
 
+#ifndef UNIT_TEST
 int 
 main(int argc, char **argv) {
 	int fd;
@@ -526,6 +527,13 @@ main(int argc, char **argv) {
 	}
 #endif
 
+#ifdef DHCPv6
+	/* set up DHCPv6 hash */
+	if (!ia_na_new_hash(ia_active, DEFAULT_HASH_SIZE, MDL)) {
+		log_fatal("Out of memory creating hash for active IA.");
+	}
+#endif /* DHCPv6 */
+
 	/* Read the dhcpd.conf file... */
 	if (readconf () != ISC_R_SUCCESS)
 		log_fatal ("Configuration file errors encountered -- exiting");
@@ -662,6 +670,7 @@ main(int argc, char **argv) {
 	/* Not reached */
 	return 0;
 }
+#endif /* !UNIT_TEST */
 
 void postconf_initialization (int quiet)
 {

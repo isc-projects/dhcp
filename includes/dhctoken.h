@@ -330,7 +330,9 @@ enum dhcp_token {
 	FIXED_ADDR6 = 634,
 	COMPRESSED = 635,
 	SUBNET6 = 636,
-	HOST_IDENTIFIER = 637
+	HOST_IDENTIFIER = 637,
+	IA_NA = 638,
+	IAADDR = 639
 };
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\

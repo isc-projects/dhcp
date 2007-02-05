@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: db.c,v 1.74 2006/07/19 16:44:47 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: db.c,v 1.74.8.1 2007/02/05 19:28:14 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -473,6 +473,72 @@ int write_group (group)
 		lease_file_is_corrupt = 1;
 	}
 	return !errors;
+}
+
+int
+write_ia_na(const struct ia_na *ia_na) {
+	struct iaaddr *iaaddr;
+	int i;
+	char addr_buf[sizeof("ffff:ffff:ffff:ffff:ffff:ffff.255.255.255.255")];
+	const char *binding_state;
+	const char *tval;
+	char *s;
+
+	/* 
+	 * If the lease file is corrupt, don't try to write any more 
+	 * leases until we've written a good lease file. 
+	 */
+	if (lease_file_is_corrupt) {
+		if (!new_lease_file()) {
+			return 0;
+		}
+	}
+
+	if (counting) {
+		++count;
+	}
+
+	
+	s = quotify_buf(ia_na->iaid_duid.data, ia_na->iaid_duid.len, MDL);
+	if (s == NULL) {
+		return 0;
+	}
+	dfree(s, MDL);
+	if (fprintf(db_file, "ia_na \"%s\" {\n", s) < 0) goto error_exit;
+	for (i=0; i<ia_na->num_iaaddr; i++) {
+		iaaddr = ia_na->iaaddr[i];
+
+		inet_ntop(AF_INET6, &iaaddr->addr, addr_buf, sizeof(addr_buf));
+		if (fprintf(db_file, "  iaaddr %s {\n", addr_buf) < 0) {
+			goto error_exit;
+		}
+		if ((iaaddr->state <= 0) || (iaaddr->state > FTS_LAST)) {
+			log_fatal("Unknown ia_na state %d at %s:%d", 
+				  iaaddr->state, MDL);
+		}
+		binding_state = binding_state_names[iaaddr->state-1];
+		if (fprintf(db_file, "    binding state %s;\n", 
+			    binding_state) < 0) {
+			goto error_exit;
+		}
+		tval = print_time(iaaddr->valid_lifetime_end_time);
+		if (tval == NULL) {
+			goto error_exit;
+		}
+		if (fprintf(db_file, "    ends %s", tval) < 0) {
+			goto error_exit;
+		}
+		if (fprintf(db_file, "\n  }\n") < 0) goto error_exit;
+	}
+	if (fprintf(db_file, "}\n\n") < 0) goto error_exit;
+
+	fflush(db_file);
+	return 1;
+
+error_exit:
+	log_info("write_ia_na: unable to write ia_na");
+	lease_file_is_corrupt = 1;
+	return 0;
 }
 
 #if defined (FAILOVER_PROTOCOL)

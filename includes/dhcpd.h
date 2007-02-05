@@ -77,6 +77,7 @@ typedef struct hash_table class_hash_t;
 #include "tree.h"
 #include "inet.h"
 #include "dhctoken.h"
+#include "heap.h"
 
 #include <isc-dhcp/result.h>
 #include <omapip/omapip_p.h>
@@ -1184,6 +1185,45 @@ typedef unsigned char option_mask [16];
 #define MAX_TIME 0x7fffffff
 #define MIN_TIME 0
 
+typedef struct hash_table ia_na_hash_t;
+typedef struct hash_table iaaddr_hash_t;
+
+struct iaaddr {
+	int refcnt;				/* reference count */
+	struct in6_addr addr;			/* IPv6 address */
+	binding_state_t state;			/* state */
+	time_t valid_lifetime_end_time;		/* time address expires */
+	struct ia_na *ia_na;			/* IA for this address */
+	struct ipv6_pool *ipv6_pool;		/* pool for this address */
+	int heap_index;				/* index into heap, or -1 
+						   (internal use only) */
+};
+
+struct ia_na {
+	int refcnt;			/* reference count */
+	struct data_string iaid_duid;	/* from the client */
+	int num_iaaddr;			/* number of IAADDR for this IA_NA */
+	int max_iaaddr;			/* space available for IAADDR */
+	struct iaaddr **iaaddr;		/* pointers to the various IAADDRs */
+};
+
+extern ia_na_hash_t *ia_active;
+
+struct ipv6_pool {
+	int refcnt;				/* reference count */
+	struct in6_addr start_addr;		/* first IPv6 address */
+	int bits;				/* number of bits, CIDR style */
+	iaaddr_hash_t *addrs;			/* non-free IAADDR */
+	int num_active;				/* count of active IAADDR */
+	isc_heap_t *active_timeouts;		/* timeouts for active leases */
+	isc_heap_t *inactive_timeouts;		/* timeouts for expired or 
+						   released leases */
+	struct subnet *subnet;			/* subnet for this pool */
+};
+
+extern struct ipv6_pool **pools;
+extern int num_pools;
+
 /* External definitions... */
 
 HASH_FUNCTIONS_DECL (group, const char *, struct group_object, group_hash_t)
@@ -1442,6 +1482,7 @@ int parse_fixed_addr_param PROTO ((struct option_cache **,
 int parse_lease_declaration PROTO ((struct lease **, struct parse *));
 void parse_address_range PROTO ((struct parse *, struct group *, int,
 				 struct pool *, struct lease **));
+void parse_ia_na_declaration(struct parse *);
 
 /* ddns.c */
 int ddns_updates PROTO ((struct packet *, struct lease *, struct lease *,
@@ -2221,6 +2262,7 @@ int commit_leases PROTO ((void));
 void db_startup PROTO ((int));
 int new_lease_file PROTO ((void));
 int group_writer (struct group_object *);
+int write_ia_na(const struct ia_na *);
 
 /* packet.c */
 u_int32_t checksum PROTO ((unsigned char *, unsigned, u_int32_t));
@@ -2760,6 +2802,7 @@ void uid_hash_delete PROTO ((struct lease *));
 void hw_hash_add PROTO ((struct lease *));
 void hw_hash_delete PROTO ((struct lease *));
 int write_leases PROTO ((void));
+int write_leases6(void);
 int lease_enqueue (struct lease *);
 isc_result_t lease_instantiate(const void *, unsigned, void *);
 void expire_all_pools PROTO ((void));
@@ -2941,3 +2984,60 @@ OMAPI_OBJECT_ALLOC_DECL (dhcp_failover_link, dhcp_failover_link_t,
 #endif /* FAILOVER_PROTOCOL */
 
 const char *binding_state_print (enum failover_state);
+
+
+/* mdb6.c */
+HASH_FUNCTIONS_DECL(ia_na, unsigned char *, struct ia_na, ia_na_hash_t);
+HASH_FUNCTIONS_DECL(iaaddr, struct in6_addr *, struct iaaddr, iaaddr_hash_t);
+
+isc_result_t iaaddr_allocate(struct iaaddr **iaaddr,
+			     const char *file, int line);
+isc_result_t iaaddr_reference(struct iaaddr **iaaddr, struct iaaddr *src,
+			      const char *file, int line);
+isc_result_t iaaddr_dereference(struct iaaddr **iaaddr,
+				const char *file, int line);
+
+isc_result_t ia_na_make_key(struct data_string *key, u_int32_t iaid,
+                            const char *duid, unsigned int duid_len,
+			    const char *file, int line);
+isc_result_t ia_na_allocate(struct ia_na **ia_na, u_int32_t iaid,
+			    const char *duid, unsigned int duid_len,
+			    const char *file, int line);
+isc_result_t ia_na_reference(struct ia_na **ia_na, struct ia_na *src,
+			     const char *file, int line);
+isc_result_t ia_na_dereference(struct ia_na **ia_na,
+			       const char *file, int line);
+isc_result_t ia_na_add_iaaddr(struct ia_na *ia_na, struct iaaddr *iaaddr,
+			      const char *file, int line);
+void ia_na_remove_iaaddr(struct ia_na *ia_na, struct iaaddr *iaaddr,
+			 const char *file, int line);
+
+isc_result_t ipv6_pool_allocate(struct ipv6_pool **pool,
+				const struct in6_addr *start_addr, int bits, 
+				const char *file, int line);
+isc_result_t ipv6_pool_reference(struct ipv6_pool **pool,
+				 struct ipv6_pool *src,
+				 const char *file, int line);
+isc_result_t ipv6_pool_dereference(struct ipv6_pool **pool,
+				   const char *file, int line);
+isc_result_t activate_lease6(struct ipv6_pool *pool,
+			     struct iaaddr **addr,
+			     const struct data_string *uid,
+			     time_t valid_lifetime_end_time);
+isc_result_t add_lease6(struct ipv6_pool *pool,
+			struct iaaddr *addr,
+			time_t valid_lifetime_end_time);
+isc_result_t renew_lease6(struct ipv6_pool *pool, struct iaaddr *addr);
+isc_result_t expire_lease6(struct iaaddr **addr, 
+			   struct ipv6_pool *pool, time_t now);
+isc_result_t release_lease6(struct ipv6_pool *pool, struct iaaddr *addr);
+isc_result_t decline_lease6(struct ipv6_pool *pool, struct iaaddr *addr);
+
+isc_result_t add_ipv6_pool(struct ipv6_pool *pool);
+isc_result_t find_ipv6_pool(struct ipv6_pool **pool, 
+			    const struct in6_addr *addr);
+void expire_leases(time_t now);
+isc_result_t renew_leases(struct ia_na *ia_na);
+isc_result_t release_leases(struct ia_na *ia_na);
+isc_result_t decline_leases(struct ia_na *ia_na);
+

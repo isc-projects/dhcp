@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.158.6.7 2007/02/02 17:54:50 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.158.6.8 2007/02/05 19:28:13 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -267,6 +267,8 @@ isc_result_t lease_file_subparse (struct parse *cfile)
 			} else
 				parse_warn (cfile,
 					    "possibly corrupt lease file");
+		} else if (token == IA_NA) {
+			parse_ia_na_declaration(cfile);
 		} else if (token == CLASS) {
 			parse_class_declaration(0, cfile, root_group,
 						CLASS_TYPE_CLASS);
@@ -2410,7 +2412,7 @@ void parse_shared_net_declaration (cfile, group)
 }
 
 
-static void
+static int
 common_subnet_parsing(struct parse *cfile, 
 		      struct shared_network *share,
 		      struct subnet *subnet) {
@@ -2423,7 +2425,7 @@ common_subnet_parsing(struct parse *cfile,
 
 	if (!parse_lbrace(cfile)) {
 		subnet_dereference(&subnet, MDL);
-		return;
+		return 0;
 	}
 
 	do {
@@ -2469,13 +2471,14 @@ common_subnet_parsing(struct parse *cfile,
 							 subnet, MDL);
 				}
 				subnet_dereference(&subnet, MDL);
-				return;
+				return 1;
 			}
 			u = t;
 		}
 		subnet_reference(&t->next_sibling, subnet, MDL);
 	}
 	subnet_dereference(&subnet, MDL);
+	return 1;
 }
 
 /* subnet-declaration :==
@@ -2559,6 +2562,7 @@ parse_subnet6_declaration(struct parse *cfile, struct shared_network *share) {
 	const static int mask[] = { 0x00, 0x80, 0xC0, 0xE0, 
 				    0xF0, 0xF8, 0xFC, 0xFE };
 	struct iaddr iaddr;
+	struct ipv6_pool *pool;
 
 	subnet = NULL;
 	status = subnet_allocate(&subnet, MDL);
@@ -2623,7 +2627,20 @@ parse_subnet6_declaration(struct parse *cfile, struct shared_network *share) {
 		return;
 	}
 
-	common_subnet_parsing(cfile, share, subnet);
+	if (!common_subnet_parsing(cfile, share, subnet)) {
+		return;
+	}
+
+	pool = NULL;
+	if (ipv6_pool_allocate(&pool, (struct in6_addr *)subnet->net.iabuf, 
+			       subnet->prefix_len, MDL) != ISC_R_SUCCESS) {
+		log_fatal ("Out of memory");
+	}
+	if (add_ipv6_pool(pool) != ISC_R_SUCCESS) {
+		log_fatal ("Out of memory");
+	}
+	pool->subnet = NULL;
+	subnet_reference(&pool->subnet, subnet, MDL);
 }
 
 /* group-declaration :== RBRACE parameters declarations LBRACE */
@@ -3612,5 +3629,183 @@ int parse_allow_deny (oc, cfile, flag)
 	expression_dereference (&data, MDL);
 	parse_semi (cfile);
 	return status;
+}
+
+void
+parse_ia_na_declaration(struct parse *cfile) {
+	enum dhcp_token token;
+	struct ia_na *ia_na;
+	const char *val;
+	int len;
+	u_int32_t iaid;
+	struct iaddr iaddr;
+	binding_state_t state;
+	TIME end_time;
+	struct iaaddr *iaaddr;
+	struct ipv6_pool *pool;
+	char addr_buf[sizeof("ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255")];
+	struct data_string uid;
+
+	token = next_token(&val, &len, cfile);
+	if (token != STRING) {
+		parse_warn(cfile, "corrupt lease file; "
+				  "expecting an iaid+ia_na string");
+		skip_to_semi(cfile);
+		return;
+	}
+	if (len < 5) {
+		parse_warn(cfile, "corrupt lease file; "
+				  "iaid+ia_na string too short");
+		skip_to_semi(cfile);
+		return;
+	}
+
+	memcpy(&iaid, val, 4);
+	ia_na = NULL;
+	if (ia_na_allocate(&ia_na, iaid, val+4, len-4, MDL) != ISC_R_SUCCESS) {
+		log_fatal("Out of memory.");
+	}
+
+	token = next_token(&val, NULL, cfile);
+	if (token != LBRACE) {
+		parse_warn(cfile, "corrupt lease file; expecting left brace");
+		skip_to_semi(cfile);
+		return;
+	}
+
+	for (;;) {
+		token = next_token(&val, NULL, cfile);
+		if (token == RBRACE) break;
+
+		if (token != IAADDR) {
+			parse_warn(cfile, "corrupt lease file; "
+					  "expecting IAADDR or right brace");
+			skip_to_semi(cfile);
+			return;
+		}
+
+		if (!parse_ip6_addr(cfile, &iaddr)) {
+			parse_warn(cfile, "corrupt lease file; "
+					  "expecting IPv6 address");
+			skip_to_semi(cfile);
+			return;
+		}
+
+		token = next_token(&val, NULL, cfile);
+		if (token != LBRACE) {
+			parse_warn(cfile, "corrupt lease file; "
+					  "expecting left brace");
+			skip_to_semi(cfile);
+			return;
+		}
+
+		state = FTS_LAST+1;
+		end_time = -1;
+		for (;;) {
+			token = next_token(&val, NULL, cfile);
+			if (token == RBRACE) break;
+
+			if (token == BINDING) {
+				token = next_token(&val, NULL, cfile);
+				if (token != STATE) {
+					parse_warn(cfile, "corrupt lease file; "
+							  "expecting state");
+					skip_to_semi(cfile);
+					return;
+				}
+				token = next_token(&val, NULL, cfile);
+				switch (token) {
+					case TOKEN_ABANDONED:
+						state = FTS_ABANDONED;
+						break;
+					case TOKEN_FREE:
+						state = FTS_FREE;
+						break;
+					case TOKEN_ACTIVE:
+						state = FTS_ACTIVE;
+						break;
+					case TOKEN_EXPIRED:
+						state = FTS_EXPIRED;
+						break;
+					case TOKEN_RELEASED:
+						state = FTS_RELEASED;
+						break;
+					default:
+						parse_warn(cfile,
+							   "corrupt lease "
+							   "file; "
+					    		   "expecting a "
+							   "binding state.");
+						skip_to_semi(cfile);
+						return;
+				}
+
+				token = next_token(&val, NULL, cfile);
+				if (token != SEMI) {
+					parse_warn(cfile, "corrupt lease file; "
+							  "expecting "
+							  "semicolon.");
+				}
+
+			} else if (token == ENDS) {
+				end_time = parse_date(cfile);
+			} else {
+				parse_warn(cfile, "corrupt lease file; "
+						  "expecting binding or ends, "
+						  "got '%s'", val);
+				skip_to_semi(cfile);
+				return;
+			}
+		}
+
+		if (state == FTS_LAST+1) {
+			parse_warn(cfile, "corrupt lease file; "
+					  "missing state in iaaddr");
+			return;
+		}
+		if (end_time == -1) {
+			parse_warn(cfile, "corrupt lease file; "
+					  "missing end time in iaaddr");
+			return;
+		}
+
+		iaaddr = NULL;
+		if (iaaddr_allocate(&iaaddr, MDL) != ISC_R_SUCCESS) {
+			log_fatal("Out of memory.");
+		}
+		memcpy(&iaaddr->addr, iaddr.iabuf, sizeof(iaaddr->addr));
+		iaaddr->state = state;
+		iaaddr->valid_lifetime_end_time = end_time;
+
+		/* add to our various structures */
+		ia_na_add_iaaddr(ia_na, iaaddr, MDL);
+		pool = NULL;
+		if (find_ipv6_pool(&pool, &iaaddr->addr) != ISC_R_SUCCESS) {
+			inet_ntop(AF_INET6, &iaaddr->addr, 
+				  addr_buf, sizeof(addr_buf));
+			parse_warn(cfile, "no pool found for address %s", 
+				   addr_buf);
+			return;
+		}
+		add_lease6(pool, iaaddr, end_time);
+		switch (state) {
+			case FTS_ABANDONED:
+				decline_lease6(pool, iaaddr);
+				break;
+			case FTS_EXPIRED:
+				decline_lease6(pool, iaaddr);
+				iaaddr->state = FTS_EXPIRED;
+				break;
+			case FTS_RELEASED:
+				decline_lease6(pool, iaaddr);
+				iaaddr->state = FTS_RELEASED;
+				break;
+		}
+		ipv6_pool_dereference(&pool, MDL);
+		iaaddr_dereference(&iaaddr, MDL);
+	}
+
+	ia_na_hash_add(ia_active, (char *)ia_na->iaid_duid.data,
+		       ia_na->iaid_duid.len, ia_na, MDL);
 }
 

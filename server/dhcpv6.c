@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2006-2007  Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -671,6 +671,13 @@ lease_to_client(struct data_string *reply_ret,
 	u_int32_t t1, t2;
 	struct host_decl *save_host;
 	char zeros[24];
+	struct ipv6_pool *pool;
+	struct iaaddr *lease;
+	struct group *group;
+	u_int32_t iaid;
+	struct ia_na *ia_na;
+	struct ia_na *existing_ia_na;
+	int i;
 
 	/*
 	 * Initialize to empty values, in case we have to exit early.
@@ -683,6 +690,8 @@ lease_to_client(struct data_string *reply_ret,
 	host_opt_state = NULL;
 	memset(&fixed_addr, 0, sizeof(fixed_addr));
 	memset(&iaaddr, 0, sizeof(iaaddr));
+	ia_na = NULL;
+	lease = NULL;
 
 	/*
 	 * If the client requests a rapid commit, then we will send a Reply,
@@ -737,7 +746,7 @@ lease_to_client(struct data_string *reply_ret,
 		if (!find_hosts_by_uid(&packet_host, 
 				       client_id->data, client_id->len, MDL)) {
 			packet_host = NULL;
-		}
+		} 
 	}
 	matched_packet_host = 0;
 
@@ -770,6 +779,16 @@ lease_to_client(struct data_string *reply_ret,
 		}
 
 		/*
+		 * Create an IA_NA structure.
+		 */
+		iaid = getULong(cli_enc_opt_data.data+4);
+		ia_na = NULL;
+		if (ia_na_allocate(&ia_na, iaid, client_id->data, 
+				   client_id->len, MDL) != ISC_R_SUCCESS) {
+			log_fatal("lease_to_client: no memory for ia_na.");
+		}
+
+		/*
 		 * Get the encapsulated ORO, if any. Otherwise use the
 		 * ORO from the packet.
 		 */
@@ -783,6 +802,7 @@ lease_to_client(struct data_string *reply_ret,
 						   &global_scope, oc, MDL)) {
 				log_error("lease_to_client: error "
 					  "evaluating IA_NA ORO.");
+
 				goto exit;
 			}
 		}
@@ -915,9 +935,99 @@ lease_to_client(struct data_string *reply_ret,
 				}
 			}
 		}
-		if (host != NULL) {
-			/* INSIST(host->fixed_addr != NULL); */
 
+		/*
+		 * At this point, if we don't have a host entry,
+		 * try to find the appropriate pool for this IA.
+		 */
+		group = NULL;
+		lease = NULL;
+		if (host != NULL) {
+			group = host->group;
+		} else if ((num_pools > 0) && 
+			   (packet->dhcpv6_msg_type == DHCPV6_SOLICIT)) {
+			/* 
+			 * For Solicit, we don't bother to check for 
+			 * existing IA_NA records.
+			 */
+			struct in6_addr *in6_addr;
+			if (iaaddr.len == 0) {
+				/* 
+				 * Hard to know what pool to use for
+				 * clients. Pick the first IPv6 address
+				 * we use on the interface?
+				 * 
+				 * XXX: we should probably iterate through
+				 *      these until we find a matching pool...
+				 */
+				in6_addr = &packet->interface->v6addresses[0];
+			} else {
+				in6_addr = (struct in6_addr *)iaaddr.data;
+			}
+			pool = NULL;
+			if (find_ipv6_pool(&pool, in6_addr) == ISC_R_SUCCESS) {
+				if (activate_lease6(pool, &lease, 
+						    client_id, 0) ==
+				    ISC_R_SUCCESS) {
+				    	group = pool->subnet->group;
+				}
+			}
+		} else if (num_pools > 0) {
+			/* 
+			 * For all other message types, we require 
+			 * existing IA_NA records.
+			 */
+			struct iaaddr *tmp;
+			struct in6_addr *in6_addr;
+			/*
+			 * Find existing IA_NA.
+			 */
+			existing_ia_na = NULL;
+			if (ia_na_hash_lookup(&existing_ia_na, ia_active, 
+					      (char *)ia_na->iaid_duid.data,
+					      ia_na->iaid_duid.len, MDL) == 0) {
+				existing_ia_na = NULL;
+			}
+			/*
+			 * If there are no addresses, we'll ignore this IA_NA.
+			 */
+			if ((existing_ia_na != NULL) && 
+			    (existing_ia_na->num_iaaddr == 0)) {
+				existing_ia_na = NULL;
+			}
+			if ((iaaddr.len == 0) && (existing_ia_na != NULL)) {
+				/* 
+				 * If the client doesn't ask for a specific
+				 * address (weird), we're cool.
+				 */
+				tmp = existing_ia_na->iaaddr[0];
+				pool = NULL;
+				ipv6_pool_reference(&pool, tmp->ipv6_pool, MDL);
+				iaaddr_reference(&lease, tmp, MDL);
+			} else if (existing_ia_na != NULL) {
+				/* 
+				 * Make sure this address is in the IA_NA.
+				 */
+				pool = NULL;
+				for (i=0; i<existing_ia_na->num_iaaddr; i++) {
+					tmp = existing_ia_na->iaaddr[i];
+					in6_addr = &tmp->addr;
+					if (memcmp(in6_addr, 
+						   iaaddr.data, 16) == 0) {
+						ipv6_pool_reference(&pool, 
+							tmp->ipv6_pool, MDL);
+						iaaddr_reference(&lease,
+								 tmp, MDL);
+						break;
+				        }
+				}
+			}
+		}
+
+		/*
+		 * Get the lease time from the group.
+		 */
+		if (group != NULL) {
 			/*
 			 * Execute statements for the host's group.
 			 */
@@ -925,8 +1035,7 @@ lease_to_client(struct data_string *reply_ret,
 				    		    packet->options, 
 						    host_opt_state, 
 						    &global_scope, 
-						    host->group, root_group);
-
+						    group, root_group);
 			/* 
 			 * Get our lease time. Note that "preferred lifetime"
 			 * and "valid lifetime" are defined in RFC 2462.
@@ -1037,36 +1146,22 @@ lease_to_client(struct data_string *reply_ret,
 					data_string_forget(&d, MDL);
 				}
 			}
+		}
 
-/* XXX: this was used for early testing */
-#if 0
-			/* 
-			 * Our expiration times, in a reasonable order:
-			 * 
-			 * T1: send a renew, to get our lease again
-			 * T2: send a rebind, because renew didn't work
-			 * preferred: try not to use this address
-			 * valid: address is no longer usable
-			 *
-			 * We use 25%, 50%, 75%, and 100% of the valid 
-			 * lifetime, respectively, for each of these.
-			 * 
-			 * XXX: the handling of this should be configurable
-			 */
-			t1 = valid_lifetime / 4;
-			t2 = valid_lifetime / 2;
-			preferred_lifetime = t1 + t2;
-#endif
+		/*
+		 * Shift the lease to the right place, based on our timeout.
+		 */
+		if (lease != NULL) {
+			lease->valid_lifetime_end_time = valid_lifetime + 
+							 cur_time;
+			renew_lease6(pool, lease);
+		}
 
-			/*
-			 * T1, T2, and valid lifetime are configurable
-			 * values.  In the absence of configuration
-			 */
-
-			/*
-			 * Get the address.
-			 */
-			memset(&fixed_addr, 0, sizeof(fixed_addr));
+		/*
+		 * Get the address.
+		 */
+		memset(&fixed_addr, 0, sizeof(fixed_addr));
+		if (host != NULL) {
 			if (!evaluate_option_cache(&fixed_addr, NULL, NULL, 
 						   NULL, NULL, NULL, 
 						   &global_scope,
@@ -1080,7 +1175,18 @@ lease_to_client(struct data_string *reply_ret,
 				          "length (%d)", fixed_addr.len);
 				goto exit;
 			}
+		} else if (lease != NULL) {
+			fixed_addr.len = 16;
+			if (!buffer_allocate(&fixed_addr.buffer, 16, MDL)) {
+				log_fatal("lease_to_client: no memory for "
+				          "address information.");
+			}
+			fixed_addr.data = fixed_addr.buffer->data;
+			memcpy((void *)fixed_addr.data, &lease->addr, 16);
+		}
 
+		if (fixed_addr.len == 16) {
+			struct iaaddr *store_iaaddr;
 
 			/*
 			 * Store the address.
@@ -1110,6 +1216,32 @@ lease_to_client(struct data_string *reply_ret,
 				goto exit;
 			}
 			data_string_forget(&d, MDL);
+
+			/* 
+			 * Store in IA_NA.
+			 */
+#if 0
+			store_iaaddr = NULL;
+			if (iaaddr_allocate(&store_iaaddr, 
+					    MDL) != ISC_R_SUCCESS) {
+				log_fatal("lease_to_client: no memory for "
+					  "iaaddr information.");
+
+			}
+			store_iaaddr->state = FTS_ACTIVE;
+			store_iaaddr->valid_lifetime_end_time = valid_lifetime;
+			ipv6_pool_reference(&store_iaaddr->ipv6_pool, 
+					    pool, MDL);
+			if (ia_na_add_iaaddr(ia_na, store_iaaddr, 
+					     MDL) != ISC_R_SUCCESS) {
+				log_fatal("lease_to_client: error storing "
+					  "iaaddr information.");
+			}
+#endif /* 0 */
+				
+		}
+
+		if ((host != NULL) || (lease != NULL)) {
 			
 			/*
 			 * Figure out what ORO we recommend to clients.
@@ -1131,7 +1263,28 @@ lease_to_client(struct data_string *reply_ret,
 			 * Remember the client identifier so we can look
 			 * it up later.
 			 */
-			change_host_uid(host, client_id->data, client_id->len);
+			if (host != NULL) {
+				change_host_uid(host, client_id->data, 
+						client_id->len);
+			} 
+			/*
+			 * Otherwise save the IA_NA, for the same reason.
+			 */
+			else {
+				ia_na_hash_delete(ia_active, 
+						  (char *)ia_na->iaid_duid.data,
+						  ia_na->iaid_duid.len, MDL);
+				if (ia_na_add_iaaddr(ia_na, lease, 
+						     MDL) != ISC_R_SUCCESS) {
+					log_fatal("lease_to_client: out of "
+						  "memory adding IAADDR");
+				}
+				ia_na_hash_add(ia_active, 
+					       (char *)ia_na->iaid_duid.data,
+				               ia_na->iaid_duid.len, 
+					       ia_na, MDL);
+				write_ia_na(ia_na);
+			}
 
 		} else {
 
@@ -1256,6 +1409,8 @@ lease_to_client(struct data_string *reply_ret,
 		/*
 		 * Bit of cleanup.
 		 */
+		iaaddr_dereference(&lease, MDL);
+		ia_na_dereference(&ia_na, MDL);
 		if (iaaddr.data != NULL) {
 			data_string_forget(&iaaddr, MDL);
 		}
@@ -1279,6 +1434,12 @@ lease_to_client(struct data_string *reply_ret,
 	memcpy((char *)reply_ret->data, reply, reply_ofs);
 	
 exit:
+	if (lease != NULL) {
+		iaaddr_dereference(&lease, MDL);
+	}
+	if (ia_na != NULL) {
+		ia_na_dereference(&ia_na, MDL);
+	}
 	if (iaaddr.buffer != NULL) {
 		data_string_forget(&iaaddr, MDL);
 	}
@@ -1616,7 +1777,8 @@ dhcpv6_rebind(struct data_string *reply, struct packet *packet) {
 
 static void
 ia_na_match_decline(const struct data_string *client_id,
-		    const struct data_string *iaaddr) {
+		    const struct data_string *iaaddr,
+		    struct iaaddr *lease) {
 	char tmp_addr[INET6_ADDRSTRLEN];
 
 	log_error("Client %s reports address %s is "
@@ -1624,6 +1786,10 @@ ia_na_match_decline(const struct data_string *client_id,
 		  print_hex_1(client_id->len, client_id->data, 60),
 		  inet_ntop(AF_INET6, iaaddr->data, 
 		  	    tmp_addr, sizeof(tmp_addr)));
+	if (lease != NULL) {
+		decline_lease6(lease->ipv6_pool, lease);
+		write_ia_na(lease->ia_na);
+	}
 }
 
 static void
@@ -1727,6 +1893,11 @@ iterate_over_ia_na(struct data_string *reply_ret,
 	int reply_ofs = (int)((char *)reply->options - (char *)reply);
 	struct data_string d;
 	char status_msg[32];
+	struct iaaddr *lease;
+	struct ia_na *existing_ia_na;
+	int i;
+	struct data_string key;
+	u_int32_t iaid;
 
 	/*
 	 * Initialize to empty values, in case we have to exit early.
@@ -1737,6 +1908,7 @@ iterate_over_ia_na(struct data_string *reply_ret,
 	memset(&iaaddr, 0, sizeof(iaaddr));
 	memset(&fixed_addr, 0, sizeof(fixed_addr));
 	host_opt_state = NULL;
+	lease = NULL;
 
 	/* 
 	 * Find the host record that matches from the packet, if any.
@@ -1831,6 +2003,8 @@ iterate_over_ia_na(struct data_string *reply_ret,
 			goto exit;
 		}
 
+		iaid = getULong(cli_enc_opt_data.data+4);
+
 		/* 
 		 * XXX: It is possible that we can get mulitple addresses
 		 *      sent by the client. We don't send multiple 
@@ -1892,13 +2066,53 @@ iterate_over_ia_na(struct data_string *reply_ret,
 			}
 			host = host->n_ipaddr;
 		}
-		if (host != NULL) {
-			ia_na_match(client_id, &iaaddr);
+
+		if ((host == NULL) && (iaaddr.len == 16)) {
+			/*
+			 * Find existing IA_NA.
+			 */
+			if (ia_na_make_key(&key, iaid, client_id->data,
+					   client_id->len, 
+					   MDL) != ISC_R_SUCCESS) {
+				log_fatal("iterate_over_ia_na: no memory for "
+					  "key.");
+			}
+
+			existing_ia_na = NULL;
+			if (ia_na_hash_lookup(&existing_ia_na, ia_active, 
+					      (char *)key.data, key.len, MDL)) {
+				/* 
+				 * Make sure this address is in the IA_NA.
+				 */
+				for (i=0; i<existing_ia_na->num_iaaddr; i++) {
+					struct iaaddr *tmp;
+					struct in6_addr *in6_addr;
+
+					tmp = existing_ia_na->iaaddr[i];
+					in6_addr = &tmp->addr;
+					if (memcmp(in6_addr, 
+						   iaaddr.data, 16) == 0) {
+						iaaddr_reference(&lease,
+								 tmp, MDL);
+						break;
+				        }
+				}
+			}
+
+			data_string_forget(&key, MDL);
+		}
+
+		if ((host != NULL) || (lease != NULL)) {
+			ia_na_match(client_id, &iaaddr, lease);
 		} else {
 			ia_na_nomatch(client_id, &iaaddr, 
 				      (u_int32_t *)cli_enc_opt_data.data, 
 				      packet, reply_data, &reply_ofs, 
 				      sizeof(reply_data));
+		}
+
+		if (lease != NULL) {
+			iaaddr_dereference(&lease, MDL);
 		}
 
 		data_string_forget(&iaaddr, MDL);
@@ -1918,6 +2132,9 @@ iterate_over_ia_na(struct data_string *reply_ret,
 	memcpy((char *)reply_ret->data, reply, reply_ofs);
 
 exit:
+	if (lease != NULL) {
+		iaaddr_dereference(&lease, MDL);
+	}
 	if (host_opt_state != NULL) {
 		option_state_dereference(&host_opt_state, MDL);
 	}
@@ -1974,12 +2191,17 @@ dhcpv6_decline(struct data_string *reply, struct packet *packet) {
 
 static void
 ia_na_match_release(const struct data_string *client_id,
-		    const struct data_string *iaaddr) {
+		    const struct data_string *iaaddr,
+		    struct iaaddr *lease) {
 	char tmp_addr[INET6_ADDRSTRLEN];
 
 	log_info("Client %s releases address %s",
 		 print_hex_1(client_id->len, client_id->data, 60),
 		 inet_ntop(AF_INET6, iaaddr->data, tmp_addr, sizeof(tmp_addr)));
+	if (lease != NULL) {
+		release_lease6(lease->ipv6_pool, lease);
+		write_ia_na(lease->ia_na);
+	}
 }
 
 static void
@@ -2461,7 +2683,7 @@ dhcpv6(struct packet *packet) {
 			to_addr.sin6_port = remote_port;
 		}
 /* For testing, we reply to the sending port, so we don't need a root client */
-/*		to_addr.sin6_port = packet->client_port;*/
+		to_addr.sin6_port = packet->client_port;
 		memcpy(&to_addr.sin6_addr, packet->client_addr.iabuf, 
 		       sizeof(to_addr.sin6_addr));
 

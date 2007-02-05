@@ -23,8 +23,6 @@ release, which will be addressed shortly:
 
 - Only Solaris and Linux are supported.
 
-- Only fixed addresses are supported.
-
 - Only a single fixed address is supported per IA.
 
 - IA_TA addresses are not supported.
@@ -48,6 +46,10 @@ release, which will be addressed shortly:
 
 - The "host-identifier" option is limited to a simple token.
 
+- Dynamically allocated leases do not respond to Confirm messages.
+
+- Old (expired) leases are never cleaned.
+
 For information on how to install, configure and run this software,
 as well as how to find documentation and report bugs, please consult
 the README file.
@@ -64,6 +66,8 @@ the README file.
 - Initial 'dhclient -6' support.  Values got in Replies are shelled out
   to /sbin/dhclient-script.  The initial 4-packet handshake as well as
   renew, rebind, and expiration are all supported.
+
+- Initial DHCPv6 lease support.
 
 			Changes since 3.1 (New Features)
 
