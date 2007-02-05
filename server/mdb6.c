@@ -26,7 +26,7 @@
 #include "omapip/omapip.h"
 #include "dhcpd.h"
 #include "omapip/hash.h"
-#include "md5.h"
+#include "dst/md5.h"
 
 HASH_FUNCTIONS(ia_na, unsigned char *, struct ia_na, ia_na_hash_t,
 	       ia_na_reference, ia_na_dereference, do_string_hash);
