@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.113.2.6 2006/10/25 22:32:41 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.113.2.7 2007/02/06 17:19:08 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -5468,20 +5468,42 @@ parse_domain_list(struct parse *cfile, int compress)
 		/* If compression pointers are enabled, compress.  If not,
 		 * just pack the names in series into the buffer.
 		 */
-		if (compress)
+		if (compress) {
 			result = MRns_name_compress(val, compbuf + clen,
 						    sizeof(compbuf) - clen,
 						    dnptrs, lastdnptr);
-		else
+
+			if (result < 0) {
+				parse_warn(cfile, "Error compressing domain "
+						  "list: %m");
+				return NULL;
+			}
+
+			clen += result;
+		} else {
 			result = MRns_name_pton(val, compbuf + clen,
 						sizeof(compbuf) - clen);
 
-		if (result < 0) {
-			parse_warn(cfile, "Error compressing domain list: %m");
-			return NULL;
-		}
+			/* result == 1 means the input was fully qualified.
+			 * result == 0 means the input wasn't.
+			 * result == -1 means bad things.
+			 */
+			if (result < 0) {
+				parse_warn(cfile, "Error assembling domain "
+						  "list: %m");
+				return NULL;
+			}
 
-		clen += result;
+			/*
+			 * We need to figure out how many bytes to increment
+			 * our buffer pointer since pton doesn't tell us.
+			 */
+			while (compbuf[clen] != 0)
+				clen += compbuf[clen] + 1;
+
+			/* Count the last label (0). */
+			clen++;
+		}
 
 		if (clen > sizeof(compbuf))
 			log_fatal("Impossible error at %s:%d", MDL);
