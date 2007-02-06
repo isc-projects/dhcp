@@ -67,6 +67,10 @@ the README file.
   to /sbin/dhclient-script.  The initial 4-packet handshake as well as
   renew, rebind, and expiration are all supported.
 
+- The Linux dhclient-script attempts to set and remove assigned addresses,
+  and to configure /etc/resolv.conf from nameserver and domain name
+  configurations.
+
 - Initial DHCPv6 lease support.
 
 			Changes since 3.1 (New Features)

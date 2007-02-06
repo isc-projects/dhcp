@@ -24,7 +24,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhc6.c,v 1.1.4.4 2007/02/05 17:22:13 dhankins Exp $ Copyright (c) 2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhc6.c,v 1.1.4.5 2007/02/06 19:32:48 dhankins Exp $ Copyright (c) 2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1345,6 +1345,10 @@ dhc6_marshall_values(char *prefix, struct client_state *client,
 
 	/* addr fields. */
 	if (addr != NULL) {
+		/* Current practice is that all subnets are /64's, but
+		 * some suspect this may not be permanent.
+		 */
+		client_envadd(client, prefix, "ip6_prefixlen", "%d", 64);
 		client_envadd(client, prefix, "ip6_address", "%s",
 			      piaddr(addr->address));
 		client_envadd(client, prefix, "preferred_life", "%d",

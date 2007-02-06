@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.92.2.10 2007/02/05 23:30:09 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.92.2.11 2007/02/06 19:32:48 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -1589,10 +1589,10 @@ const char *pretty_print_option (option, data, len, emit_commas, emit_quotes)
 	int count;
 	int i, j, k, l;
 	char fmtbuf[32] = "";
+	struct iaddr iaddr;
 	struct enumeration *enumbuf[32]; /* MUST be same as fmtbuf */
 	char *op = optbuf;
 	const unsigned char *dp = data;
-	struct in_addr foo;
 	char comma;
 	unsigned long tval;
 
@@ -1673,6 +1673,10 @@ const char *pretty_print_option (option, data, len, emit_commas, emit_quotes)
 				hunksize += enumbuf[l]->width;
 				hunkinc = enumbuf[l]->width;
 			}
+			break;
+		      case '6':
+			hunksize += 16;
+			hunkinc = 16;
 			break;
 		      case 'I':
 		      case 'l':
@@ -1849,9 +1853,16 @@ const char *pretty_print_option (option, data, len, emit_commas, emit_quotes)
 				break;
 
 			      case 'I':
-				foo.s_addr = htonl (getULong (dp));
-				strcpy (op, inet_ntoa (foo));
+				iaddr.len = 4;
+				memcpy(iaddr.iabuf, dp, 4);
+				strcpy(op, piaddr(iaddr));
 				dp += 4;
+				break;
+			      case '6':
+				iaddr.len = 16;
+				memcpy(iaddr.iabuf, dp, 16);
+				strcpy(op, piaddr(iaddr));
+				dp += 16;
 				break;
 			      case 'l':
 				sprintf (op, "%ld", (long)getLong (dp));
