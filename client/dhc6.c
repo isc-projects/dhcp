@@ -24,7 +24,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhc6.c,v 1.1.4.5 2007/02/06 19:32:48 dhankins Exp $ Copyright (c) 2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhc6.c,v 1.1.4.6 2007/02/06 22:10:47 dhankins Exp $ Copyright (c) 2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -32,10 +32,6 @@ static char ocopyright[] =
 struct sockaddr_in6 DHCPv6DestAddr;
 struct option *ia_na_option = NULL;
 struct option *ia_addr_option = NULL;
-
-static isc_result_t dhc6_parse_ia_na(struct dhc6_ia **pia,
-				     struct packet *packet,
-				     struct option_state *options);
 
 static void dhc6_lease_destroy(struct dhc6_lease *lease, char *file, int line);
 static isc_result_t dhc6_parse_ia_na(struct dhc6_ia **pia,
@@ -1392,28 +1388,6 @@ dhc6_check_times(struct client_state *client)
 	cancel_timeout(do_expire, client);
 
 	for(ia = lease->bindings ; ia != NULL ; ia = ia->next) {
-		if (ia->renew == 0)
-			tmp = ia->starts +
-			      (client->config->requested_lease / 2);
-		else if(ia->renew == 0xffffffff)
-			tmp = MAX_TIME;
-		else
-			tmp = ia->starts + ia->renew;
-
-		if (tmp < renew)
-			renew = tmp;
-
-		if (ia->rebind == 0) {
-			tmp = client->config->requested_lease / 2;
-			tmp += ia->starts + (tmp / 2);
-		} else if (ia->renew == 0xffffffff)
-			tmp = MAX_TIME;
-		else
-			tmp = ia->starts + ia->rebind;
-
-		if (tmp < rebind)
-			rebind = tmp;
-
 		for (addr = ia->addrs ; addr != NULL ; addr = addr->next) {
 			if(!(addr->flags & DHC6_ADDR_DEPREFFED)) {
 				if (addr->preferred_life == 0xffffffff)
@@ -1440,6 +1414,36 @@ dhc6_check_times(struct client_state *client)
 				has_addrs = ISC_TRUE;
 			}
 		}
+
+		if (ia->renew == 0) {
+			if (lo_expire != MAX_TIME)
+				tmp = (lo_expire - ia->starts) / 2;
+			else
+				tmp = client->config->requested_lease / 2;
+
+			tmp += ia->starts;
+		} else if(ia->renew == 0xffffffff)
+			tmp = MAX_TIME;
+		else
+			tmp = ia->starts + ia->renew;
+
+		if (tmp < renew)
+			renew = tmp;
+
+		if (ia->rebind == 0) {
+			if (lo_expire != MAX_TIME)
+				tmp = (lo_expire - ia->starts) / 2;
+			else
+				tmp = client->config->requested_lease / 2;
+
+			tmp += ia->starts + (tmp / 2);
+		} else if (ia->renew == 0xffffffff)
+			tmp = MAX_TIME;
+		else
+			tmp = ia->starts + ia->rebind;
+
+		if (tmp < rebind)
+			rebind = tmp;
 	}
 
 	/* If there are no addresses, give up, go to INIT.
