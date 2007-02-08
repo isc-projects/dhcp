@@ -1409,7 +1409,9 @@ lease_to_client(struct data_string *reply_ret,
 		/*
 		 * Bit of cleanup.
 		 */
-		iaaddr_dereference(&lease, MDL);
+		if (lease != NULL) {
+			iaaddr_dereference(&lease, MDL);
+		}
 		ia_na_dereference(&ia_na, MDL);
 		if (iaaddr.data != NULL) {
 			data_string_forget(&iaaddr, MDL);
