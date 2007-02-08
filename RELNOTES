@@ -27,6 +27,10 @@ the README file.
 
                         Changes since 3.1.0a3
 
+- The execute() statement has been changed from a "numeric expression" to
+  an "executable statement", so that it can now be used with the syntax
+  "execute(cmd, arg, ...)" rather than "eval(execute(cmd, arg, ...))".
+
 - Some spelling fixes.
 
 			Changes since 3.1.0a2

@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: print.c,v 1.61.12.1 2007/01/29 10:30:21 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: print.c,v 1.61.12.2 2007/02/08 20:38:49 each Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1034,6 +1034,7 @@ static unsigned print_subexpression (expr, buf, len)
 			return rv;
 		}
 		break;
+
 	      case expr_function:
 		rv = 9;
 		if (len > rv + 1) {
@@ -1051,37 +1052,6 @@ static unsigned print_subexpression (expr, buf, len)
 			buf [rv] = 0;
 			return rv;
 		}
-	      case expr_execute:
-#ifdef ENABLE_EXECUTE
-		rv = 11 + strlen(expr->data.execute.command);
-		if (len > rv + 2) {
-			sprintf(buf, "(execute \"%s\"",
-				expr->data.execute.command);
-			for(next_arg = expr->data.execute.arglist;
-			    next_arg;
-			    next_arg = next_arg->data.arg.next) {
-				if (len <= rv + 3)
-					return 0;
-
-				buf[rv++] = ' ';
-				rv += print_subexpression(next_arg->
-							  data.arg.val,
-							  buf + rv,
-							  len - rv - 2);
-			}
-
-			if (len <= rv + 2)
-				return 0;
-
-			buf[rv++] = ')';
-			buf[rv] = 0;
-			return rv;
-		}
-#else
-		log_fatal("Impossible case at %s:%d (ENABLE_EXECUTE is not "
-			  "defined.", MDL);
-#endif
-		break;
 
 	      default:
 		log_fatal("Impossible case at %s:%d (undefined expression "
