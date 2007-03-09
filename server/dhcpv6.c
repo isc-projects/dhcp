@@ -522,7 +522,6 @@ start_reply(struct packet *packet,
 	    const struct data_string *client_id, 
 	    const struct data_string *server_id,
 	    struct option_state **opt_state,
-	    int rapid_commit,
 	    struct dhcpv6_packet *reply) {
 	struct option_cache *oc;
 	struct data_string server_oro;
@@ -607,19 +606,6 @@ start_reply(struct packet *packet,
 	}
 
 	/*
-	 * Save rapid commit option, if we want to.
-	 */
-	if (rapid_commit) {
-		if (!save_option_buffer(&dhcpv6_universe, *opt_state,
-					NULL, "", 0, D6O_RAPID_COMMIT, 0)) {
-			log_error("start_reply: error saving "
-				  "RAPID_COMMIT option.");
-			option_state_dereference(opt_state, MDL);
-			return 0;
-		}
-	}
-
-	/*
 	 * Set the ORO for the main packet.
 	 */
 	build_server_oro(&server_oro, *opt_state, MDL);
@@ -643,8 +629,7 @@ static void
 lease_to_client(struct data_string *reply_ret,
 		struct packet *packet, 
 		const struct data_string *client_id,
-		const struct data_string *server_id,
-		int msg_type) {
+		const struct data_string *server_id) {
 	struct option_cache *oc;
 	struct data_string packet_oro;
 	struct host_decl *packet_host;
@@ -693,31 +678,12 @@ lease_to_client(struct data_string *reply_ret,
 	ia_na = NULL;
 	lease = NULL;
 
-	/*
-	 * If the client requests a rapid commit, then we will send a Reply,
-	 * otherwise we will send an Advertise.
-	 *
-	 * TODO: make this configurable on the server side
-	 */
-	oc = lookup_option(&dhcpv6_universe, packet->options, D6O_RAPID_COMMIT);
-	if (oc == NULL) {
-		rapid_commit = 0;
-	} else {
-		rapid_commit = 1;
-	}
-
 	/* 
 	 * Set up reply.
 	 */
-	if (!start_reply(packet, client_id, NULL, 
-			 &opt_state, rapid_commit, reply)) {
+	if (!start_reply(packet, client_id, NULL, &opt_state, reply)) {
 		goto exit;
 	}
-
-	/* 
-	 * Set the message type.
-	 */
-	reply->msg_type = msg_type;
 
 	/*
 	 * Get the ORO from the packet, if any.
@@ -732,6 +698,46 @@ lease_to_client(struct data_string *reply_ret,
 			goto exit;
 		}
 	}
+
+	/*
+	 * A small bit of special handling for Solicit messages.
+	 *
+	 * We could move the logic into a flag, but for now just check
+	 * explicitly.
+	 */
+	if (packet->dhcpv6_msg_type == DHCPV6_SOLICIT) {
+
+		reply->msg_type = DHCPV6_ADVERTISE;
+
+		/*
+		 * If: 
+		 * - this message type supports rapid commit (Solicit), and
+		 * - the server is configured to supply a rapid commit, and
+		 * - the client requests a rapid commit,
+		 * Then we add a rapid commit option, and send Reply (instead
+		 * of an Advertise).
+		 */
+		oc = lookup_option(&dhcpv6_universe, 
+				   opt_state, D6O_RAPID_COMMIT);
+		if (oc != NULL) {
+			oc = lookup_option(&dhcpv6_universe, 
+					   packet->options, D6O_RAPID_COMMIT);
+			if (oc != NULL) {
+				if (!save_option_buffer(&dhcpv6_universe, 
+							opt_state, NULL, "", 0,
+							D6O_RAPID_COMMIT, 0)) {
+					log_error("start_reply: error saving "
+						  "RAPID_COMMIT option.");
+					goto exit;
+				}
+				
+				reply->msg_type = DHCPV6_REPLY;
+			}
+		}
+
+	}
+
+
 
 	/* 
 	 * Find the host record that matches from the packet, if any.
@@ -1490,20 +1496,7 @@ dhcpv6_solicit(struct data_string *reply_ret, struct packet *packet) {
 		return;
 	}
 
-	/*
-	 * If the client requests a rapid commit, then we will send a Reply,
-	 * otherwise we will send an Advertise.
-	 *
-	 * TODO: make this configurable on the server side
-	 */
-	oc = lookup_option(&dhcpv6_universe, packet->options, D6O_RAPID_COMMIT);
-	if (oc == NULL) {
-		lease_to_client(reply_ret, packet, 
-				&client_id, NULL, DHCPV6_ADVERTISE);
-	} else {
-		lease_to_client(reply_ret, packet, 
-				&client_id, NULL, DHCPV6_REPLY);
-	}
+	lease_to_client(reply_ret, packet, &client_id, NULL);
 
 	/*
 	 * Clean up.
@@ -1533,8 +1526,7 @@ dhcpv6_request(struct data_string *reply_ret, struct packet *packet) {
 	/*
 	 * Issue our lease.
 	 */
-	lease_to_client(reply_ret, packet, &client_id, 
-			&server_id, DHCPV6_REPLY);
+	lease_to_client(reply_ret, packet, &client_id, &server_id);
 
 	/*
 	 * Cleanup.
@@ -1587,7 +1579,7 @@ dhcpv6_confirm(struct data_string *reply_ret, struct packet *packet) {
 	/* 
 	 * Set up reply.
 	 */
-	if (!start_reply(packet, &client_id, NULL, &opt_state, 0, reply)) {
+	if (!start_reply(packet, &client_id, NULL, &opt_state, reply)) {
 		goto exit;
 	}
 
@@ -1747,7 +1739,7 @@ dhcpv6_renew(struct data_string *reply, struct packet *packet) {
 	/*
 	 * Renew our lease.
 	 */
-	lease_to_client(reply, packet, &client_id, &server_id, DHCPV6_REPLY);
+	lease_to_client(reply, packet, &client_id, &server_id);
 
 	/*
 	 * Cleanup.
@@ -1772,7 +1764,7 @@ dhcpv6_rebind(struct data_string *reply, struct packet *packet) {
 		return;
 	}
 
-        lease_to_client(reply, packet, &client_id, NULL, DHCPV6_REPLY);
+        lease_to_client(reply, packet, &client_id, NULL);
 
 	data_string_forget(&client_id, MDL);
 }

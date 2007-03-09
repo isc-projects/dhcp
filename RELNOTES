@@ -41,9 +41,6 @@ release, which will be addressed shortly:
   should be configurable, and probably localized via gettext() or the
   like.
 
-- The server always uses Rapid-Commit if the client requests it. A
-  configuration option will be added to disable this.
-
 - The "host-identifier" option is limited to a simple token.
 
 - Dynamically allocated leases do not respond to Confirm messages.
@@ -53,6 +50,11 @@ release, which will be addressed shortly:
 For information on how to install, configure and run this software,
 as well as how to find documentation and report bugs, please consult
 the README file.
+
+		    Changes since V4.0.0-pre-alpha-comcast-2
+
+- The server only uses Rapid-Commit if it has been configured with the
+  Rapid-Commit option and the client requests it.
 
 		    Changes since V4.0.0-pre-alpha-comcast-1
 
