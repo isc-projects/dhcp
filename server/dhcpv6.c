@@ -1426,8 +1426,7 @@ lease_to_client(struct data_string *reply_ret,
 		option_state_dereference(&cli_enc_opt_state, MDL);
 		data_string_forget(&oro, MDL);
 		data_string_forget(&cli_enc_opt_data, MDL);
-		/* XXX: */ break;
-		/* ia = next_option(&dhcpv6_universe, packet->options, ia); */
+		ia = ia->next;
 	}
 
 	/* 
@@ -1587,10 +1586,7 @@ dhcpv6_confirm(struct data_string *reply_ret, struct packet *packet) {
 	 * Search each IA to make sure we know about it.
 	 */
 	ia = lookup_option(&dhcpv6_universe, packet->options, D6O_IA_NA);
-	for (; ia != NULL;
-	     /* XXX: */ ia = NULL) {
-	     /* ia = next_option(&dhcpv6_universe, packet->options, ia) */
-
+	for (; ia != NULL; ia = ia->next) {
 		num_ia++;
 
 		if (!get_encapsulated_IA_state(&cli_enc_opt_state,
@@ -1985,10 +1981,7 @@ iterate_over_ia_na(struct data_string *reply_ret,
 	 * addresses reported as already in use.
 	 */
 	for (ia = lookup_option(&dhcpv6_universe, packet->options, D6O_IA_NA);
-	     ia != NULL; 
-	     /* XXX: we should use the following line */
-             /* ia = next_option(&dhcpv6_universe, packet->options, ia) */
-	     ia = NULL) {
+	     ia != NULL; ia = ia->next) {
 	     	iaaddr_is_found = 0;
 
 		if (!get_encapsulated_IA_state(&cli_enc_opt_state,

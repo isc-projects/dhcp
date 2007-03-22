@@ -27,8 +27,6 @@ release, which will be addressed shortly:
 
 - IA_TA addresses are not supported.
 
-- Only a single IA is supported per request.
-
 - Unicast messages to the server are not discarded.
 
 - The Information-request message is not yet supported.
@@ -55,6 +53,9 @@ the README file.
 
 - The server only uses Rapid-Commit if it has been configured with the
   Rapid-Commit option and the client requests it.
+
+- All IA_NA in a packet from clients are looked at.
+
 
 		    Changes since V4.0.0-pre-alpha-comcast-1
 
