@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004,2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -67,8 +67,10 @@ res_nsendsigned(res_state statp,
 
 	bufsize = msglen + 1024;
 	newmsg = (double *) malloc(bufsize);
-	if (newmsg == NULL)
+	if (newmsg == NULL) {
+		free(nstatp);
 		return ISC_R_NOMEMORY;
+	}
 	memcpy(newmsg, msg, msglen);
 	newmsglen = msglen;
 
@@ -91,6 +93,7 @@ res_nsendsigned(res_state statp,
 			NOERROR, dstkey, NULL, 0,
 			sig, &siglen, 0);
 	if (rcode != ISC_R_SUCCESS) {
+		dst_free_key(dstkey);
 		free (nstatp);
 		free (newmsg);
 		return rcode;
@@ -107,6 +110,7 @@ retry:
 
 	rcode = res_nsend(nstatp, newmsg, newmsglen, answer, anslen, &ret);
 	if (rcode != ISC_R_SUCCESS) {
+		dst_free_key(dstkey);
 		free (nstatp);
 		free (newmsg);
 		return rcode;
@@ -119,6 +123,7 @@ retry:
 	if (rcode != ISC_R_SUCCESS) {
 		Dprint(nstatp->pfcode & RES_PRF_REPLY,
 		       (stdout, ";; TSIG invalid (%s)\n", p_rcode(ret)));
+		dst_free_key(dstkey);
 		free (nstatp);
 		free (newmsg);
 		return rcode;
@@ -132,6 +137,7 @@ retry:
 		goto retry;
 	}
 
+	dst_free_key(dstkey);
 	free (nstatp);
 	free (newmsg);
 	*anssize = anslen;
