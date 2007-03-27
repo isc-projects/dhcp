@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: ddns.c,v 1.15.2.17 2005/03/03 16:55:24 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: ddns.c,v 1.15.2.18 2007/03/27 02:49:08 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -400,7 +400,8 @@ int ddns_updates (struct packet *packet,
 				/* Now, install the DDNS data the new way. */
 				goto in;
 			}
-		}
+		} else
+			data_string_forget(&ddns_dhcid, MDL);
 
 		/* See if the administrator wants to do updates even
 		   in cases where the update already appears to have been
@@ -415,15 +416,12 @@ int ddns_updates (struct packet *packet,
 			result = 1;
 			goto noerror;
 		}
-	}
-
-	/* If there's no ddns-fwd-name on the lease, see if there's
-	   a ddns-client-fqdn, indicating a prior client FQDN update.
-	   If there is, and if we're still doing the client update,
-	   see if the name has changed.   If it hasn't, don't do the
-	   PTR update. */
-	if (find_bound_string (&old_ddns_fwd_name,
-			       lease -> scope, "ddns-client-fqdn")) {
+	/* If there's no "ddns-fwd-name" on the lease record, see if
+	 * there's a ddns-client-fqdn indicating a previous client
+	 * update (if it changes, we need to adjust the PTR).
+	 */
+	} else if (find_bound_string(&old_ddns_fwd_name, lease->scope,
+				     "ddns-client-fqdn")) {
 		/* If the name is not different, no need to update
 		   the PTR record. */
 		if (old_ddns_fwd_name.len == ddns_fwd_name.len &&
@@ -522,7 +520,6 @@ int ddns_updates (struct packet *packet,
 	 * If we are updating the A record, compute the DHCID value.
 	 */
 	if (server_updates_a) {
-		memset (&ddns_dhcid, 0, sizeof ddns_dhcid);
 		if (lease -> uid && lease -> uid_len)
 			result = get_dhcid (&ddns_dhcid,
 					    DHO_DHCP_CLIENT_IDENTIFIER,
@@ -551,7 +548,7 @@ int ddns_updates (struct packet *packet,
 	if (ddns_fwd_name.len && ddns_dhcid.len)
 		rcode1 = ddns_update_a (&ddns_fwd_name, lease -> ip_addr,
 					&ddns_dhcid, ddns_ttl, 0);
-	
+
 	if (rcode1 == ISC_R_SUCCESS) {
 		if (ddns_fwd_name.len && ddns_rev_name.len)
 			rcode2 = ddns_update_ptr (&ddns_fwd_name,

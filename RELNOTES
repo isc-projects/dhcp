@@ -87,6 +87,8 @@ and for prodding me into improving it.
 
 - Spelling fixes.
 
+- A reference leak on binding scopes set by ddns updates was repaired.
+
 			Changes since 3.0.5rc2
 
 - Failover servers try harder to retransmit binding updates upon entering
