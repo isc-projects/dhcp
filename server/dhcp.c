@@ -3,7 +3,7 @@
    DHCP Protocol engine. */
 
 /*
- * Copyright (c) 2004-2006 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.211.2.2 2006/10/17 20:48:42 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.211.2.3 2007/03/27 03:50:19 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1331,10 +1331,12 @@ void nak_lease (packet, cip)
 	get_server_source_address(&from, options, packet);
 
 	/* If there were agent options in the incoming packet, return
-	   them. */
-	if (packet -> raw -> giaddr.s_addr &&
-	    packet -> options -> universe_count > agent_universe.index &&
-	    packet -> options -> universes [agent_universe.index]) {
+	 * them.  We do not check giaddr to detect the presence of a
+	 * relay, as this excludes "l2" relay agents which have no
+	 * giaddr to set.
+	 */
+	if (packet->options->universe_count > agent_universe.index &&
+	    packet->options->universes [agent_universe.index]) {
 		option_chain_head_reference
 		    ((struct option_chain_head **)
 		     &(options -> universes [agent_universe.index]),
@@ -1492,11 +1494,13 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 		state -> got_server_identifier = 1;
 
 	/* If there were agent options in the incoming packet, return
-	   them.  Do not return the agent options if they were stashed
-	   on the lease. */
-	if (packet -> raw -> giaddr.s_addr &&
-	    packet -> options -> universe_count > agent_universe.index &&
-	    packet -> options -> universes [agent_universe.index] &&
+	 * them.  Do not return the agent options if they were stashed
+	 * on the lease.  We do not check giaddr to detect the presence of
+	 * a relay, as this excludes "l2" relay agents which have no giaddr
+	 * to set.
+	 */
+	if (packet->options->universe_count > agent_universe.index &&
+	    packet->options->universes [agent_universe.index] &&
 	    (state -> options -> universe_count <= agent_universe.index ||
 	     !state -> options -> universes [agent_universe.index]) &&
 	    lease -> agent_options !=
@@ -2244,13 +2248,15 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 					     lease -> agent_options, MDL);
 
 	/* If we got relay agent information options, and the packet really
-	   looks like it came through a relay agent, and if this feature is
-	   not disabled, save the relay agent information options that came
-	   in with the packet, so that we can use them at renewal time when
-	   the packet won't have gone through a relay agent. */
-	if (packet -> raw -> giaddr.s_addr &&
-	    packet -> options -> universe_count > agent_universe.index &&
-	    packet -> options -> universes [agent_universe.index] &&
+	 * looks like it came through a relay agent, and if this feature is
+	 * not disabled, save the relay agent information options that came
+	 * in with the packet, so that we can use them at renewal time when
+	 * the packet won't have gone through a relay agent.  We do not
+	 * check giaddr to detect the presence of a relay, as this excludes
+	 * "l2" relay agents which have no giaddr to set.
+	 */
+	if (packet->options->universe_count > agent_universe.index &&
+	    packet->options->universes [agent_universe.index] &&
 	    (state -> options -> universe_count <= agent_universe.index ||
 	     state -> options -> universes [agent_universe.index] ==
 	     packet -> options -> universes [agent_universe.index])) {

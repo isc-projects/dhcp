@@ -202,6 +202,15 @@ the README file.
 - A memory leak in the minires_nsendsigned() function call was repaired.
   Effectively, this leaked ~80 bytes per DDNS update.
 
+- In the case where an "L2" DHCP Relay Agent (one that does not set giaddr)
+  was directly attached to the same broadcast domain as the DHCP server,
+  the RFC3046 relay agent information option was not being returned to the
+  relay in the server's replies.  This was fixed; the dhcp server no longer
+  requires the giaddr to reply with relay agent information.  Note that
+  this also improves compatibility with L2 devices that "intercept" DHCP
+  packets and expect relay agent information even in unicast (renewal)
+  replies.
+
 			Changes since 3.0.5rc1
 
 - A bug was repaired in fixes to the dhclient which sought to run the
