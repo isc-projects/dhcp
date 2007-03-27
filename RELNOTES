@@ -89,6 +89,9 @@ and for prodding me into improving it.
 
 - A reference leak on binding scopes set by ddns updates was repaired.
 
+- A memory leak in the minires_nsendsigned() function call was repaired.
+  Effectively, this leaked ~80 bytes per DDNS update.
+
 			Changes since 3.0.5rc2
 
 - Failover servers try harder to retransmit binding updates upon entering
