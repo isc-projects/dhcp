@@ -197,6 +197,8 @@ the README file.
   incorrectly indicating 'up' state when any flags were set, rather than
   specifically the INTERFACE_REQUESTED flag.
 
+- A reference leak on binding scopes set by ddns updates was repaired.
+
 			Changes since 3.0.5rc1
 
 - A bug was repaired in fixes to the dhclient which sought to run the
