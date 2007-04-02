@@ -258,6 +258,7 @@ dhcpleasequery(struct packet *packet, int ms_nulltp) {
 	 * are looking for information about that IP address.
 	 */
 	assoc_ip_cnt = 0;
+	lease = tmp_lease = NULL;
 	if (memcmp(cip.iabuf, "\0\0\0", 4)) {
 
 		want_associated_ip = 0;
