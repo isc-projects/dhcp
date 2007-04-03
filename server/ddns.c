@@ -3,7 +3,7 @@
    Dynamic DNS updates. */
 
 /*
- * Copyright (c) 2004-2005 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2000-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: ddns.c,v 1.23.10.1 2007/03/27 02:51:25 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: ddns.c,v 1.23.10.2 2007/04/03 16:47:32 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -231,6 +231,7 @@ int ddns_updates (struct packet *packet,
 	int result = 0;
 	isc_result_t rcode1 = ISC_R_SUCCESS, rcode2 = ISC_R_SUCCESS;
 	int server_updates_a = 1;
+	int server_updates_ptr = 1;
 	struct buffer *bp = (struct buffer *)0;
 	int ignorep = 0, client_ignorep = 0;
 
@@ -467,6 +468,17 @@ int ddns_updates (struct packet *packet,
 		}
 	}
 
+	/* CC: see if we are configured NOT to do reverse ptr updates
+        */
+	if ((oc = lookup_option (&server_universe, state -> options,
+				 SV_DO_REVERSE_UPDATES)) &&
+	    !evaluate_boolean_option_cache (&ignorep, packet, lease,
+					    (struct client_state *)0,
+					    packet -> options,
+					    state -> options,
+					    &lease -> scope, oc, MDL)) {
+		server_updates_ptr = 0;
+	}
 
 	/*
 	 * Compute the reverse IP name.
@@ -561,7 +573,7 @@ int ddns_updates (struct packet *packet,
 					&ddns_dhcid, ddns_ttl, 0, conflict);
 	}
 
-	if (rcode1 == ISC_R_SUCCESS) {
+	if (rcode1 == ISC_R_SUCCESS && server_updates_ptr) {
 		if (ddns_fwd_name.len && ddns_rev_name.len)
 			rcode2 = ddns_update_ptr (&ddns_fwd_name,
 						  &ddns_rev_name, ddns_ttl);
@@ -579,7 +591,7 @@ int ddns_updates (struct packet *packet,
 				       &ddns_dhcid);
 	}
 
-	if (rcode2 == ISC_R_SUCCESS) {
+	if (rcode2 == ISC_R_SUCCESS && server_updates_ptr) {
 		bind_ds_value (&lease -> scope, "ddns-rev-name",
 			       &ddns_rev_name);
 	}
