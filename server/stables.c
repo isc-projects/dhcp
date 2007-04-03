@@ -3,7 +3,7 @@
    Tables of information only used by server... */
 
 /*
- * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: stables.c,v 1.35 2007/01/05 23:19:22 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: stables.c,v 1.36 2007/04/03 16:46:03 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -236,6 +236,7 @@ static struct option server_options[] = {
 	{ "update-conflict-detection", "f",	&server_universe,  48, 1 },
 	{ "leasequery", "f",			&server_universe,  49, 1 },
 	{ "adaptive-lease-time-threshold", "B",	&server_universe,  50, 1 },
+	{ "do-reverse-updates", "f",		&server_universe,  51, 1 },
 	{ NULL, NULL, NULL, 0, 0 }
 };
 

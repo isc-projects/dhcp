@@ -3,7 +3,7 @@
    Definitions for dhcpd... */
 
 /*
- * Copyright (c) 2004-2005 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -545,6 +545,7 @@ struct lease_state {
 #define SV_DDNS_CONFLICT_DETECT		48
 #define SV_LEASEQUERY			49
 #define SV_ADAPTIVE_LEASE_TIME_THRESHOLD	50
+#define SV_DO_REVERSE_UPDATES		51
 
 #if !defined (DEFAULT_PING_TIMEOUT)
 # define DEFAULT_PING_TIMEOUT 1

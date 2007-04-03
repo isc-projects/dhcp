@@ -30,6 +30,10 @@ the README file.
 - Some uninitialized values were repaired in dhcpleasequery.c that
   caused the server to abort.
 
+- A new server config option, 'do-reverse-updates', has been added
+  which causes the server to abstain from performing updates on PTR
+  records.  Thanks to a patch from Christof Chen at Allianz.
+
 			Changes since 3.1.0a3
 
 - Some spelling fixes.
