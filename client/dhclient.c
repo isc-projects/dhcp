@@ -32,7 +32,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.144 2006/08/22 15:01:47 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.145 2007/04/03 14:57:53 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2367,15 +2367,15 @@ int write_client_lease (client, lease, rewrite, makesure)
 			errors++;
 
 	}
-	if (lease -> server_name) {
-		s = quotify_string (lease -> filename, MDL);
-		if (s) {
-			fprintf (leaseFile, "  server-name \"%s\";\n", s);
+	if (lease->server_name != NULL) {
+		s = quotify_string(lease->server_name, MDL);
+		if (s != NULL) {
+			fprintf(leaseFile, "  server-name \"%s\";\n", s);
 			if (errno) {
 				++errors;
 				errno = 0;
 			}
-			dfree (s, MDL);
+			dfree(s, MDL);
 		} else
 			++errors;
 	}
