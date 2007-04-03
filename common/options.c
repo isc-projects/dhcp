@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.92.2.11 2007/02/06 19:32:48 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.92.2.12 2007/04/03 09:20:24 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -960,7 +960,11 @@ store_options6(char *buf, int buflen,
 		}
 	}
 
-	oro_size = oro->len / 2;
+	if (oro == NULL) {
+		oro_size = 0;
+	} else {
+		oro_size = oro->len / 2;
+	}
 	for (i=0; i<oro_size; i++) {
 		memcpy(&code, oro->data+(i*2), 2);
 		code = ntohs(code);

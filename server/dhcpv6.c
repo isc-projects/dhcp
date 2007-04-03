@@ -418,7 +418,6 @@ static const int required_opts_solicit[] = {
 	D6O_IA_NA,
 	D6O_IA_TA,
 	D6O_RAPID_COMMIT,
-	D6O_ORO,
 	D6O_STATUS_CODE,
 	D6O_VENDOR_OPTS,
 	D6O_RECONF_ACCEPT,
@@ -426,7 +425,6 @@ static const int required_opts_solicit[] = {
 };
 static const int required_opts_IA_NA[] = {
 	D6O_IAADDR,
-	D6O_ORO,
 	D6O_STATUS_CODE,
 	D6O_VENDOR_OPTS,
 	0
@@ -633,7 +631,6 @@ lease_to_client(struct data_string *reply_ret,
 	struct option_cache *oc;
 	struct data_string packet_oro;
 	struct host_decl *packet_host;
-	struct data_string server_oro;
 	int matched_packet_host;
 	struct option_cache *ia;
 	int rapid_commit;
@@ -641,7 +638,6 @@ lease_to_client(struct data_string *reply_ret,
 	struct dhcpv6_packet *reply = (struct dhcpv6_packet *)reply_data;
 	int reply_ofs = (int)((char *)reply->options - (char *)reply);
 	struct option_state *opt_state;
-	struct data_string oro;
 	struct host_decl *host;
 	struct option_state *host_opt_state;
 	/* cli_enc_... variables come from the IA_NA/IA_TA options */
@@ -669,7 +665,6 @@ lease_to_client(struct data_string *reply_ret,
 	 */
 	opt_state = NULL;
 	memset(&packet_oro, 0, sizeof(packet_oro));
-	memset(&oro, 0, sizeof(oro));
 	memset(&cli_enc_opt_data, 0, sizeof(cli_enc_opt_data));
 	cli_enc_opt_state = NULL;
 	host_opt_state = NULL;
@@ -792,25 +787,6 @@ lease_to_client(struct data_string *reply_ret,
 		if (ia_na_allocate(&ia_na, iaid, client_id->data, 
 				   client_id->len, MDL) != ISC_R_SUCCESS) {
 			log_fatal("lease_to_client: no memory for ia_na.");
-		}
-
-		/*
-		 * Get the encapsulated ORO, if any. Otherwise use the
-		 * ORO from the packet.
-		 */
-		oc = lookup_option(&dhcpv6_universe, cli_enc_opt_state, 
-				   D6O_ORO);
-		if (oc == NULL) {
-			data_string_copy(&oro, &packet_oro, MDL);
-		} else {
-			if (!evaluate_option_cache(&oro, NULL, NULL, 
-						   NULL, NULL, NULL, 
-						   &global_scope, oc, MDL)) {
-				log_error("lease_to_client: error "
-					  "evaluating IA_NA ORO.");
-
-				goto exit;
-			}
 		}
 
 		/*
@@ -1250,22 +1226,6 @@ lease_to_client(struct data_string *reply_ret,
 		if ((host != NULL) || (lease != NULL)) {
 			
 			/*
-			 * Figure out what ORO we recommend to clients.
-			 */
-			build_server_oro(&server_oro, host_opt_state, MDL);
-			if (!save_option_buffer(&dhcpv6_universe, 
-						host_opt_state, 
-						server_oro.buffer, 
-						(char *)server_oro.data, 
-						server_oro.len, D6O_ORO, 0)) {
-				log_error("lease_to_client: error saving "
-					  "server ORO.");
-				data_string_forget(&server_oro, MDL);
-				goto exit;
-			}
-			data_string_forget(&server_oro, MDL);
-
-			/*
 			 * Remember the client identifier so we can look
 			 * it up later.
 			 */
@@ -1391,7 +1351,7 @@ lease_to_client(struct data_string *reply_ret,
 		len = store_options6(reply_data+reply_ofs+16, 
 				     sizeof(reply_data)-reply_ofs-16, 
 				     host_opt_state, packet,
-				     required_opts_IA_NA, &oro);
+				     required_opts_IA_NA, NULL);
 
 		/*
 		 * Store the non-encapsulated option data for this IA_NA 
@@ -1424,7 +1384,6 @@ lease_to_client(struct data_string *reply_ret,
 		}
 		option_state_dereference(&host_opt_state, MDL);
 		option_state_dereference(&cli_enc_opt_state, MDL);
-		data_string_forget(&oro, MDL);
 		data_string_forget(&cli_enc_opt_data, MDL);
 		ia = ia->next;
 	}
@@ -1461,9 +1420,6 @@ exit:
 	}
 	if (cli_enc_opt_data.buffer != NULL) {
 		data_string_forget(&cli_enc_opt_data, MDL);
-	}
-	if (oro.buffer != NULL) {
-		data_string_forget(&oro, MDL);
 	}
 	if (packet_oro.buffer != NULL) {
 		data_string_forget(&packet_oro, MDL);
@@ -1792,7 +1748,6 @@ ia_na_nomatch_decline(const struct data_string *client_id,
 		      int reply_len) {
 	char tmp_addr[INET6_ADDRSTRLEN];
 	struct option_state *host_opt_state;
-	struct data_string oro;
 	int len;
 
 	log_info("Client %s declines address %s, which is not offered to it.",
@@ -1826,11 +1781,10 @@ ia_na_nomatch_decline(const struct data_string *client_id,
 	/*
 	 * Put our status code into the reply packet.
 	 */
-	memset(&oro, 0, sizeof(oro));	/* empty ORO */
 	len = store_options6(reply_data+(*reply_ofs)+16,
 			     reply_len-(*reply_ofs)-16,
 			     host_opt_state, packet,
-			     required_opts_STATUS_CODE, &oro);
+			     required_opts_STATUS_CODE, NULL);
 
 	/*
 	 * Store the non-encapsulated option data for this 
@@ -1881,7 +1835,6 @@ iterate_over_ia_na(struct data_string *reply_ret,
 	char reply_data[65536];
 	struct dhcpv6_packet *reply = (struct dhcpv6_packet *)reply_data;
 	int reply_ofs = (int)((char *)reply->options - (char *)reply);
-	struct data_string d;
 	char status_msg[32];
 	struct iaaddr *lease;
 	struct ia_na *existing_ia_na;
@@ -1970,11 +1923,10 @@ iterate_over_ia_na(struct data_string *reply_ret,
 	/* 
 	 * Add our options that are not associated with any IA_NA or IA_TA. 
 	 */
-	memset(&d, 0, sizeof(d));	/* empty ORO */
 	reply_ofs += store_options6(reply_data+reply_ofs,
 				    sizeof(reply_data)-reply_ofs, 
 				    opt_state, packet,
-				    required_opts, &d);
+				    required_opts, NULL);
 
 	/*
 	 * Loop through the IA_NA reported by the client, and deal with
@@ -2201,7 +2153,6 @@ ia_na_nomatch_release(const struct data_string *client_id,
 		      int reply_len) {
 	char tmp_addr[INET6_ADDRSTRLEN];
 	struct option_state *host_opt_state;
-	struct data_string oro;
 	int len;
 
 	log_info("Client %s releases address %s, which is not leased to it.",
@@ -2236,11 +2187,10 @@ ia_na_nomatch_release(const struct data_string *client_id,
 	/*
 	 * Put our status code into the reply packet.
 	 */
-	memset(&oro, 0, sizeof(oro));	/* empty ORO */
 	len = store_options6(reply_data+(*reply_ofs)+16,
 			     reply_len-(*reply_ofs)-16,
 			     host_opt_state, packet,
-			     required_opts_STATUS_CODE, &oro);
+			     required_opts_STATUS_CODE, NULL);
 
 	/*
 	 * Store the non-encapsulated option data for this 
