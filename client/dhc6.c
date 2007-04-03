@@ -24,7 +24,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhc6.c,v 1.1.4.6 2007/02/06 22:10:47 dhankins Exp $ Copyright (c) 2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhc6.c,v 1.1.4.7 2007/04/03 17:06:21 dhankins Exp $ Copyright (c) 2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -56,7 +56,7 @@ void do_depref(void *input);
 void do_expire(void *input);
 static void make_client6_options(struct client_state *client,
 				 struct option_state **op,
-				 struct dhc6_lease *lease);
+				 struct dhc6_lease *lease, u_int8_t message);
 static void script_write_params6(struct client_state *client, char *prefix,
 				 struct option_state *options);
 
@@ -390,7 +390,7 @@ dhc6_parse_ia_na(struct dhc6_ia **pia, struct packet *packet,
 	memset(&ds, 0, sizeof(ds));
 
 	oc = lookup_option(&dhcpv6_universe, options, D6O_IA_NA);
-	while(oc != NULL) {
+	for ( ; oc != NULL ; oc = oc->next) {
 		ia = dmalloc(sizeof(*ia), MDL);
 		if (ia == NULL) {
 			log_error("Out of memory allocating IA_NA structure.");
@@ -409,8 +409,26 @@ dhc6_parse_ia_na(struct dhc6_ia **pia, struct packet *packet,
 			/* XXX: This should be the printed time I think. */
 			log_debug("RCV:  | X-- starts %u",
 				  (unsigned)ia->starts);
-			log_debug("RCV:  | X-- renew  +%u", ia->renew);
-			log_debug("RCV:  | X-- rebind +%u", ia->rebind);
+			log_debug("RCV:  | X-- t1 - renew  +%u", ia->renew);
+			log_debug("RCV:  | X-- t2 - rebind +%u", ia->rebind);
+
+			/* RFC3315 section 22.4, discard IA_NA's that
+			 * have t1 greater than t2, and both not zero.
+			 * Since RFC3315 defines this behaviour, it is not
+			 * an error - just normal operation.
+			 *
+			 * Note that RFC3315 says we MUST honor these values
+			 * if they are not zero.  So insane values are
+			 * totally OK.
+			 */
+			if ((ia->renew > 0) && (ia->rebind > 0) &&
+			    (ia->renew > ia->rebind)) {
+				log_debug("RCV:  | !-- INVALID renew/rebind "
+					  "times, IA_NA discarded.");
+				dfree(ia, MDL);
+				data_string_forget(&ds, MDL);
+				continue;
+			}
 
 			if (ds.len > 12) {
 				log_debug("RCV:  | X-- [Options]");
@@ -458,8 +476,6 @@ dhc6_parse_ia_na(struct dhc6_ia **pia, struct packet *packet,
 				data_string_forget(&ds, MDL);
 			return ISC_R_UNEXPECTED;
 		}
-
-		oc = oc->next;
 	}
 
 	return ISC_R_SUCCESS;
@@ -477,7 +493,7 @@ dhc6_parse_addrs(struct dhc6_addr **paddr, struct packet *packet,
 	memset(&ds, 0, sizeof(ds));
 
 	oc = lookup_option(&dhcpv6_universe, options, D6O_IAADDR);
-	while(oc != NULL) {
+	for ( ; oc != NULL ; oc = oc->next) {
 		addr = dmalloc(sizeof(*addr), MDL);
 		if (addr == NULL) {
 			log_error("Out of memory allocating "
@@ -499,6 +515,18 @@ dhc6_parse_addrs(struct dhc6_addr **paddr, struct packet *packet,
 				  addr->preferred_life);
 			log_debug("RCV:  | | | X-- Max lifetime %u.",
 				  addr->max_life);
+
+			/* RFC 3315 section 22.6 says we must discard
+			 * addresses whose pref is later than valid.
+			 */
+			if ((addr->preferred_life > addr->max_life)) {
+				log_debug("RCV:  | | | !-- INVALID lifetimes, "
+					  "IAADDR discarded.  Check your "
+					  "server configuration.");
+				dfree(addr, MDL);
+				data_string_forget(&ds, MDL);
+				continue;
+			}
 
 			/* Fortunately this is the last recursion in the
 			 * protocol.
@@ -541,8 +569,6 @@ dhc6_parse_addrs(struct dhc6_addr **paddr, struct packet *packet,
 				data_string_forget(&ds, MDL);
 			return ISC_R_UNEXPECTED;
 		}
-
-		oc = oc->next;
 	}
 
 	return ISC_R_SUCCESS;
@@ -700,7 +726,8 @@ do_init6(void *input)
 
 	client->elapsed = htons(client->elapsed);
 
-	make_client6_options(client, &client->sent_options, NULL);
+	make_client6_options(client, &client->sent_options, NULL,
+			     DHCPV6_SOLICIT);
 
 	/* Fetch any configured 'sent' options (includes DUID) in wire format.
 	 */
@@ -1127,7 +1154,8 @@ do_select6(void *input)
 
 	client->elapsed = htons(client->elapsed);
 
-	make_client6_options(client, &client->sent_options, lease);
+	make_client6_options(client, &client->sent_options, lease,
+			     DHCPV6_REQUEST);
 
 	/* Fetch any configured 'sent' options (includes DUID) in wire format.
 	 */
@@ -1451,6 +1479,9 @@ dhc6_check_times(struct client_state *client)
 	 * we're scheduling an expiration event to ocurr in the past.  We
 	 * could probably optimize this to expire now (but then there's
 	 * recursion).
+	 *
+	 * In the future, we may decide that we're done here, or to
+	 * schedule a future request (using 4-pkt info-request model).
 	 */
 	if (has_addrs == ISC_FALSE) {
 		dhc6_lease_destroy(client->active_lease, MDL);
@@ -1467,9 +1498,9 @@ dhc6_check_times(struct client_state *client)
 		 * passed (time warp), head straight there.
 		 */
 		if ((rebind > cur_time) && (renew < rebind)) {
-			log_debug("PRC: Renewal event scheduled in %u seconds, "
+			log_debug("PRC: Renewal event scheduled in %d seconds, "
 				  "to run for %u seconds.",
-				  (unsigned)(renew - cur_time),
+				  (int)(renew - cur_time),
 				  (unsigned)(rebind - renew));
 			client->MRD = rebind - cur_time;
 			add_timeout(renew, start_renew6, client, NULL, NULL);
@@ -1725,7 +1756,8 @@ do_refresh6(void *input)
 
 	client->elapsed = htons(client->elapsed);
 
-	make_client6_options(client, &client->sent_options, lease);
+	make_client6_options(client, &client->sent_options, lease,
+			     client->refresh_type);
 
 	/* Put in any options from the sent cache. */
 	dhcpv6_universe.encapsulate(&ds, NULL, NULL, client, NULL,
@@ -1898,7 +1930,7 @@ do_expire(void *input)
  */
 static void
 make_client6_options(struct client_state *client, struct option_state **op,
-		     struct dhc6_lease *lease)
+		     struct dhc6_lease *lease, u_int8_t message)
 {
 	int code;
 	struct option_cache *oc;
@@ -1932,10 +1964,18 @@ make_client6_options(struct client_state *client, struct option_state **op,
 	if (client->default_duid != NULL)
 		save_option(&dhcpv6_universe, *op, client->default_duid);
 
-	/* In cases where we're responding to a server, put the server's
-	 * id in the response.
+	/* In cases where we're responding to a single server, put the
+	 * server's id in the response.
+	 *
+	 * Note that lease is NULL for SOLICIT or INFO request messages,
+	 * and otherwise MUST be present.
 	 */
-	if (lease != NULL) {
+	if (lease == NULL) {
+		if ((message != DHCPV6_SOLICIT) &&
+		    (message != DHCPV6_INFORMATION_REQUEST))
+			log_fatal("Impossible condition at %s:%d.", MDL);
+	} else if ((message != DHCPV6_REBIND) &&
+		   (message != DHCPV6_CONFIRM)) {
 		oc = lookup_option(&dhcpv6_universe, lease->options,
 				   D6O_SERVERID);
 		if (oc != NULL)
