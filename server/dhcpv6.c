@@ -782,7 +782,7 @@ lease_to_client(struct data_string *reply_ret,
 		/*
 		 * Create an IA_NA structure.
 		 */
-		iaid = getULong(cli_enc_opt_data.data+4);
+		iaid = getULong(cli_enc_opt_data.data);
 		ia_na = NULL;
 		if (ia_na_allocate(&ia_na, iaid, client_id->data, 
 				   client_id->len, MDL) != ISC_R_SUCCESS) {
@@ -824,13 +824,15 @@ lease_to_client(struct data_string *reply_ret,
 				goto exit;
 			}
 			/* 
-			 * XXX: Clients *love* to send :: as an address,
-			 *      which is *never* what we want.
+			 * Clients may choose to send :: as an address,
+			 * with the idea to give hints about 
+			 * preferred-lifetime or valid-lifetime.
+			 *
+			 * We ignore this.
 			 */
 			memset(zeros, 0, sizeof(zeros));
-			if ((iaaddr.len == 24) && 
+			if ((iaaddr.len >= 24) && 
 			    !memcmp(iaaddr.data, zeros, 16)) {
-			    	log_info("Ignoring IAADDR :: from client.");
 				data_string_forget(&iaaddr, MDL);
 			}
 		}
@@ -1240,6 +1242,15 @@ lease_to_client(struct data_string *reply_ret,
 				ia_na_hash_delete(ia_active, 
 						  (char *)ia_na->iaid_duid.data,
 						  ia_na->iaid_duid.len, MDL);
+				/*
+				 * ia_na_add_iaaddr() will reference the
+				 * lease, so we need to dereference the
+				 * previous refernce to the lease if one 
+				 * exists.
+				 */
+				if (lease->ia_na != NULL) {
+					ia_na_dereference(&lease->ia_na, MDL);
+				}
 				if (ia_na_add_iaaddr(ia_na, lease, 
 						     MDL) != ISC_R_SUCCESS) {
 					log_fatal("lease_to_client: out of "
@@ -1260,7 +1271,7 @@ lease_to_client(struct data_string *reply_ret,
 			 * attempting to renew an address it thinks it has.
 			 */
 			if (packet->dhcpv6_msg_type == DHCPV6_REBIND) {
-				if (iaaddr.len == 24) {
+				if (iaaddr.len >= 24) {
 					/* 
 				 	 * If the we have a client address, 
 					 * tell the client it is invalid.
@@ -1316,7 +1327,7 @@ lease_to_client(struct data_string *reply_ret,
 						     host_opt_state)) {
 					goto exit;
 				}
-			} else if ((iaaddr.len == 24) &&
+			} else if ((iaaddr.len >= 24) &&
 				   (packet->dhcpv6_msg_type == DHCPV6_REQUEST)){
 				if (!set_status_code(STATUS_NotOnLink, 
 					     	     "Address not for "
@@ -1942,7 +1953,7 @@ iterate_over_ia_na(struct data_string *reply_ret,
 			goto exit;
 		}
 
-		iaid = getULong(cli_enc_opt_data.data+4);
+		iaid = getULong(cli_enc_opt_data.data);
 
 		/* 
 		 * XXX: It is possible that we can get mulitple addresses
@@ -2006,7 +2017,7 @@ iterate_over_ia_na(struct data_string *reply_ret,
 			host = host->n_ipaddr;
 		}
 
-		if ((host == NULL) && (iaaddr.len == 16)) {
+		if ((host == NULL) && (iaaddr.len >= 24)) {
 			/*
 			 * Find existing IA_NA.
 			 */
