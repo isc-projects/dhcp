@@ -333,6 +333,12 @@ struct packet {
 
 	int known;
 	int authenticated;
+
+	/* 
+	 * ISC_TRUE if packet received unicast (as opposed to multicast). 
+	 * Only used in DHCPv6.
+	 */
+	isc_boolean_t unicast;
 };
 
 /* A network interface's MAC address. */
@@ -1407,7 +1413,7 @@ void do_packet PROTO ((struct interface_info *,
 		       struct dhcp_packet *, unsigned,
 		       unsigned int, struct iaddr, struct hardware *));
 void do_packet6(struct interface_info *, const char *, 
-		int, int, const struct iaddr *);
+		int, int, const struct iaddr *, isc_boolean_t);
 int packet6_len_okay(const char *, int);
 
 int add_option(struct option_state *options,
@@ -1910,7 +1916,7 @@ ssize_t receive_packet PROTO ((struct interface_info *,
 			       unsigned char *, size_t,
 			       struct sockaddr_in *, struct hardware *));
 ssize_t receive_packet6(struct interface_info *, unsigned char *, size_t,
-			struct sockaddr_in *);
+			struct sockaddr_in *, struct in6_addr *);
 #endif
 
 #if defined (USE_SOCKET_FALLBACK)
@@ -2074,7 +2080,7 @@ extern void (*bootp_packet_handler) PROTO ((struct interface_info *,
 					    struct iaddr, struct hardware *));
 extern void (*dhcpv6_packet_handler)(struct interface_info *,
 				     const char *, int,
-				     int, const struct iaddr *);
+				     int, const struct iaddr *, isc_boolean_t);
 extern struct timeout *timeouts;
 extern omapi_object_type_t *dhcp_type_interface;
 #if defined (TRACING)

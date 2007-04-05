@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: socket.c,v 1.58.116.3 2006/10/25 22:32:42 shane Exp $ "
+"$Id: socket.c,v 1.58.116.4 2007/04/05 09:57:42 shane Exp $ "
 "Copyright (c) 2004-2006 Internet Systems Consortium.\n";
 #endif /* not lint */
 
@@ -176,6 +176,20 @@ if_register_socket(struct interface_info *info, int family, int do_multicast) {
 		log_fatal("setsockopt: SO_BINDTODEVICE: %m");
 	}
 #endif
+
+	/*
+	 * If we turn on IPV6_PKTINFO, we will be able to receive 
+	 * additional information, such as the destination IP address.
+	 * We need this to spot unicast packets.
+	 */
+	if (family == AF_INET6) {
+		int on = 1;
+		if (setsockopt(sock, IPPROTO_IPV6, IPV6_PKTINFO, 
+		               &on, sizeof(on)) != 0) {
+			log_fatal("setsockopt: IPV6_PKTINFO: %m");
+		}
+
+	}
 	
 	if ((family == AF_INET6) && do_multicast) {
 		struct ipv6_mreq mreq;
@@ -189,20 +203,20 @@ if_register_socket(struct interface_info *info, int family, int do_multicast) {
 			log_fatal("inet_pton: unable to convert '%s'", 
 				  All_DHCP_Relay_Agents_and_Servers);
 		}
-		mreq.ipv6mr_interface = 0;
-		if (setsockopt(sock, IPPROTO_IPV6, IPV6_ADD_MEMBERSHIP, 
+		mreq.ipv6mr_interface = if_nametoindex(info->name);
+		if (setsockopt(sock, IPPROTO_IPV6, IPV6_JOIN_GROUP, 
 			       &mreq, sizeof(mreq)) < 0) {
-			log_fatal("setsockopt: IPV6_ADD_MEMBERSHIP: %m");
+			log_fatal("setsockopt: IPV6_JOIN_GROUP: %m");
 		}
 		if (inet_pton(AF_INET6, All_DHCP_Servers,
 			      &mreq.ipv6mr_multiaddr) <= 0) {
 			log_fatal("inet_pton: unable to convert '%s'", 
 				  All_DHCP_Servers);
 		}
-		mreq.ipv6mr_interface = 0;
-		if (setsockopt(sock, IPPROTO_IPV6, IPV6_ADD_MEMBERSHIP, 
+		mreq.ipv6mr_interface = if_nametoindex(info->name);
+		if (setsockopt(sock, IPPROTO_IPV6, IPV6_JOIN_GROUP, 
 			       &mreq, sizeof(mreq)) < 0) {
-			log_fatal("setsockopt: IPV6_ADD_MEMBERSHIP: %m");
+			log_fatal("setsockopt: IPV6_JOIN_GROUP: %m");
 		}
 	}
 
@@ -373,14 +387,77 @@ ssize_t send_packet (interface, packet, raw, len, from, to, hto)
 
 #endif /* USE_SOCKET_SEND || USE_SOCKET_FALLBACK */
 
+/* 
+ * For both send_packet6() and receive_packet6() we need to use the 
+ * sendmsg()/recvmsg() functions rather than the simplier send()/recv()
+ * functions.
+ *
+ * In the case of send_packet6(), we need to do this in order to insure
+ * that the reply packet leaves on the same interface that it arrived 
+ * on. 
+ *
+ * In the case of receive_packet6(), we need to do this in order to 
+ * get the IP address the packet was sent to. This is used to identify
+ * whether a packet is multicast or unicast.
+ *
+ * Helpful man pages: recvmsg, readv (talks about the iovec stuff), cmsg.
+ *
+ * Also see the sections in RFC 3542 about IPV6_PKTINFO.
+ */
+
+/* Send an IPv6 packet */
 ssize_t send_packet6(struct interface_info *interface,
 		     struct dhcp_packet *raw, 
 		     size_t len, 
 		     struct sockaddr_in6 *to) {
+	struct msghdr m;
+	struct iovec v;
 	int result;
+	struct in6_pktinfo *pktinfo;
+	char pbuf[CMSG_SPACE(sizeof(struct in6_pktinfo))];
+	struct cmsghdr *cmsg;
 
-	result = sendto(interface->wfdesc, (char *)raw, len, 0,
-		        (struct sockaddr *)to, sizeof(*to));
+	/*
+	 * Initialize our message header structure.
+	 */
+	memset(&m, 0, sizeof(m));
+
+	/*
+	 * Set the target address we're sending to.
+	 */
+	m.msg_name = to;
+	m.msg_namelen = sizeof(*to);
+
+	/*
+	 * Set the data buffer we're sending. (Using this wacky 
+	 * "scatter-gather" stuff... we only have a single chunk 
+	 * of data to send, so we declare a single vector entry.)
+	 */
+	v.iov_base = (char *)raw;
+	v.iov_len = len;
+	m.msg_iov = &v;
+	m.msg_iovlen = 1;
+
+	/*
+	 * Setting the interface is a bit more involved.
+	 * 
+	 * We have to create a "control message", and set that to 
+	 * define the IPv6 packet information. We could set the
+	 * source address if we wanted, but we can safely let the
+	 * kernel decide what that should be. 
+	 */
+	m.msg_control = pbuf;
+	m.msg_controllen = sizeof(pbuf);
+	cmsg = CMSG_FIRSTHDR(&m);
+	cmsg->cmsg_level = IPPROTO_IPV6;
+	cmsg->cmsg_type = IPV6_PKTINFO;
+	cmsg->cmsg_len = CMSG_LEN(sizeof(*pktinfo));
+	pktinfo = (struct in6_pktinfo *)CMSG_DATA(cmsg);
+	memset(pktinfo, 0, sizeof(*pktinfo));
+	pktinfo->ipi6_ifindex = if_nametoindex(interface->name);
+	m.msg_controllen = cmsg->cmsg_len;
+
+	result = sendmsg(interface->wfdesc, &m, 0);
 	if (result < 0) {
 		log_error("send_packet6: %m");
 	}
@@ -423,13 +500,77 @@ ssize_t receive_packet (interface, buf, len, from, hfrom)
 #endif /* USE_SOCKET_RECEIVE */
 
 ssize_t 
-receive_packet6(struct interface_info *interface, unsigned char *buf,
-		size_t len, struct sockaddr_in6 *from) {
-	SOCKLEN_T flen = sizeof(*from);
+receive_packet6(struct interface_info *interface, 
+		unsigned char *buf, size_t len, 
+		struct sockaddr_in6 *from, struct in6_addr *to_addr) {
+	struct msghdr m;
+	struct iovec v;
+	char pbuf[CMSG_SPACE(sizeof(struct in6_pktinfo))];
 	int result;
+	struct cmsghdr *cmsg;
+	struct in6_pktinfo *pktinfo;
+	int found_to_addr;
 
-	result = recvfrom(interface->rfdesc, (char *)buf, len, 0,
-			  (struct sockaddr *)from, &flen);
+	/*
+	 * Initialize our message header structure.
+	 */
+	memset(&m, 0, sizeof(m));
+
+	/*
+	 * Point so we can get the from address.
+	 */
+	m.msg_name = from;
+	m.msg_namelen = sizeof(*from);
+
+	/*
+	 * Set the data buffer we're receiving. (Using this wacky 
+	 * "scatter-gather" stuff... but we that doesn't really make
+	 * sense for us, so we use a single vector entry.)
+	 */
+	v.iov_base = buf;
+	v.iov_len = len;
+	m.msg_iov = &v;
+	m.msg_iovlen = 1;
+
+	/*
+	 * Getting the interface is a bit more involved.
+	 *
+	 * We set up some space for a "control message". We have 
+	 * previously asked the kernel to give us packet 
+	 * information (when we initialized the interface), so we
+	 * should get the destination address from that.
+	 */
+	m.msg_control = pbuf;
+	m.msg_controllen = sizeof(pbuf);
+
+	result = recvmsg(interface->rfdesc, &m, 0);
+
+	if (result >= 0) {
+		/*
+		 * If we did read successfully, then we need to loop
+		 * through the control messages we received and 
+		 * find the one with our destination address.
+		 *
+		 * We also keep a flag to see if we found it. If we 
+		 * didn't, then we consider this to be an error.
+		 */
+		found_to_addr = 0;
+		cmsg = CMSG_FIRSTHDR(&m);
+		while (cmsg != NULL) {
+			if ((cmsg->cmsg_level == IPPROTO_IPV6) && 
+			    (cmsg->cmsg_type == IPV6_PKTINFO)) {
+				pktinfo = (struct in6_pktinfo *)CMSG_DATA(cmsg);
+				*to_addr = pktinfo->ipi6_addr;
+				found_to_addr = 1;
+			}
+			cmsg = CMSG_NXTHDR(&m, cmsg);
+		}
+		if (!found_to_addr) {
+			result = -1;
+			errno = EIO;
+		}
+	}
+
 	return result;
 }
 

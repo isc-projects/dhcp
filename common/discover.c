@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: discover.c,v 1.50.90.9 2007/02/02 17:54:50 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: discover.c,v 1.50.90.10 2007/04/05 09:57:42 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -62,7 +62,8 @@ void (*bootp_packet_handler) PROTO ((struct interface_info *,
 				     struct iaddr, struct hardware *));
 void (*dhcpv6_packet_handler)(struct interface_info *,
 			      const char *, int,
-			      int, const struct iaddr *);
+			      int, const struct iaddr *,
+			      isc_boolean_t);
 
 
 omapi_object_type_t *dhcp_type_interface;
@@ -1439,28 +1440,40 @@ isc_result_t got_one (h)
 isc_result_t
 got_one_v6(omapi_object_t *h) {
 	struct sockaddr_in6 from;
+	struct in6_addr to;
 	struct iaddr ifrom;
 	int result;
 	char buf[65536];	/* maximum size for a UDP packet is 65536 */
 	struct interface_info *ip;
+	int is_unicast;
 
 	if (h->type != dhcp_type_interface) {
 		return ISC_R_INVALIDARG;
 	}
 	ip = (struct interface_info *)h;
 
-	result = receive_packet6(ip, buf, sizeof(buf), &from);
+	result = receive_packet6(ip, buf, sizeof(buf), &from, &to);
 	if (result < 0) {
 		log_error("receive_packet6() failed on %s: %m", ip->name);
 		return ISC_R_UNEXPECTED;
 	}
 
 	if (dhcpv6_packet_handler != NULL) {
+		/*
+		 * If a packet is not multicast, we assume it is unicast.
+		 */
+		if (IN6_IS_ADDR_MULTICAST(&to)) { 
+			is_unicast = ISC_FALSE;
+		} else {
+			is_unicast = ISC_TRUE;
+		}
+
 		ifrom.len = 16;
 		memcpy(ifrom.iabuf, &from.sin6_addr, ifrom.len);
 
 		(*dhcpv6_packet_handler)(ip, buf, 
-					 result, from.sin6_port, &ifrom);
+					 result, from.sin6_port, 
+					 &ifrom, is_unicast);
 	}
 
 	return ISC_R_SUCCESS;

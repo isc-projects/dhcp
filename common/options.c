@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.92.2.13 2007/04/03 17:06:21 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.92.2.14 2007/04/05 09:57:42 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -3281,7 +3281,8 @@ packet6_len_okay(const char *packet, int len) {
 
 void 
 do_packet6(struct interface_info *interface, const char *packet, 
-	   int len, int from_port, const struct iaddr *from) {
+	   int len, int from_port, const struct iaddr *from, 
+	   isc_boolean_t was_unicast) {
 	unsigned char msg_type;
 	const struct dhcpv6_packet *msg;
 	const struct dhcpv6_relay_packet *relay; 
@@ -3318,6 +3319,8 @@ do_packet6(struct interface_info *interface, const char *packet,
 	decoded_packet->client_port = from_port;
 	decoded_packet->client_addr = *from;
 	interface_reference(&decoded_packet->interface, interface, MDL);
+
+	decoded_packet->unicast = was_unicast;
 
 	msg_type = packet[0];
 	if ((msg_type == DHCPV6_RELAY_FORW) || 

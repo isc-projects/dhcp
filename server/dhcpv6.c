@@ -16,16 +16,6 @@
 
 #include "dhcpd.h"
 
-/* 
- * XXX: RFC 3315 section 15 states:
- *    A server MUST discard any Solicit, Confirm, Rebind or
- *    Information-request messages it receives with a unicast destination
- *    address.
- * We currently use a single socket for receiving unicast and multicast 
- * packets, and have no way to know what address the packet was sent to.
- * This will need to be fixed, but requires a bit of refactoring. -Shane
- */
-
 /*
  * We use print_hex_1() to output DUID values. We could actually output 
  * the DUID with more information... MAC address if using type 1 or 3, 
@@ -223,6 +213,20 @@ valid_client_msg(struct packet *packet, struct data_string *client_id) {
 			goto exit;
 	}
 
+	/*
+	 * Required by RFC 3315, section 15.
+	 */
+	if (packet->unicast) {
+		log_debug("Discarding %s from %s; packet sent unicast "
+			  "(CLIENTID %s, SERVERID %s)", 
+			  dhcpv6_type_names[packet->dhcpv6_msg_type],
+			  piaddr(packet->client_addr),
+			  print_hex_1(client_id->len, client_id->data, 60),
+			  print_hex_2(data.len, data.data, 60));
+		goto exit;
+	}
+
+
 	oc = lookup_option(&dhcpv6_universe, packet->options, D6O_SERVERID);
 	if (oc != NULL) {
 		if (evaluate_option_cache(&data, packet, NULL, NULL,
@@ -373,6 +377,17 @@ valid_client_info_req(struct packet *packet, struct data_string *server_id) {
 
 	ret_val = 0;
 	memset(server_id, 0, sizeof(*server_id));
+
+	/*
+	 * Required by RFC 3315, section 15.
+	 */
+	if (packet->unicast) {
+		log_debug("Discarding %s from %s; "
+			  "IA_NA option present", 
+			  dhcpv6_type_names[packet->dhcpv6_msg_type],
+			  piaddr(packet->client_addr));
+		goto exit;
+	}
 
 	oc = lookup_option(&dhcpv6_universe, packet->options, D6O_IA_NA);
 	if (oc != NULL) {
