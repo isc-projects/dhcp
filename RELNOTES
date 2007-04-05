@@ -29,8 +29,6 @@ release, which will be addressed shortly:
 
 - Unicast messages to the server are not discarded.
 
-- The Information-request message is not yet supported.
-
 - The server DUID must either be automatically generated, or specified
   in the configuration file. An option will be added to use type 1 or
   type 2 DUID.
@@ -50,6 +48,8 @@ as well as how to find documentation and report bugs, please consult
 the README file.
 
 		    Changes since V4.0.0-pre-alpha-comcast-2
+
+- The Information-request message support added.
 
 - The server only uses Rapid-Commit if it has been configured with the
   Rapid-Commit option and the client requests it.

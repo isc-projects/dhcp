@@ -162,6 +162,34 @@ set_server_duid(void) {
 }
 
 /*
+ * Get the client identifier from the packet.
+ */
+isc_result_t
+get_client_id(struct packet *packet, struct data_string *client_id) {
+	struct option_cache *oc;
+
+	/*
+	 * Verify our client_id structure is empty.
+	 */
+	if ((client_id->data != NULL) || (client_id->len != 0)) {
+		return ISC_R_INVALIDARG;
+	}
+
+	oc = lookup_option(&dhcpv6_universe, packet->options, D6O_CLIENTID);
+	if (oc == NULL) {
+		return ISC_R_NOTFOUND;
+	}
+
+	if (!evaluate_option_cache(client_id, packet, NULL, NULL, 
+				   packet->options, NULL,
+				   &global_scope, oc, MDL)) {
+		return ISC_R_FAILURE;
+	}
+
+	return ISC_R_SUCCESS;
+}
+
+/*
  * Message validation, defined in RFC 3315, sections 15.2, 15.5, 15.7:
  *
  *    Servers MUST discard any Solicit messages that do not include a
@@ -178,22 +206,21 @@ valid_client_msg(struct packet *packet, struct data_string *client_id) {
 	memset(client_id, 0, sizeof(*client_id));
 	memset(&data, 0, sizeof(data));
 
-	oc = lookup_option(&dhcpv6_universe, packet->options, D6O_CLIENTID);
-	if (oc == NULL) {
-		log_debug("Discarding %s from %s; "
-			  "client identifier missing", 
-			  dhcpv6_type_names[packet->dhcpv6_msg_type],
-			  piaddr(packet->client_addr));
-		goto exit;
-	}
-	if (!evaluate_option_cache(client_id, packet, NULL, NULL, 
-				   packet->options, NULL,
-				   &global_scope, oc, MDL)) {
-		log_error("Error processing %s from %s; "
-			  "unable to evaluate Client Identifier",
-			  dhcpv6_type_names[packet->dhcpv6_msg_type],
-			  piaddr(packet->client_addr));
-		goto exit;
+	switch (get_client_id(packet, client_id)) {
+		case ISC_R_SUCCESS:
+			break;
+		case ISC_R_NOTFOUND:
+			log_debug("Discarding %s from %s; "
+				  "client identifier missing", 
+				  dhcpv6_type_names[packet->dhcpv6_msg_type],
+				  piaddr(packet->client_addr));
+			goto exit;
+		default:
+			log_error("Error processing %s from %s; "
+				  "unable to evaluate Client Identifier",
+				  dhcpv6_type_names[packet->dhcpv6_msg_type],
+				  piaddr(packet->client_addr));
+			goto exit;
 	}
 
 	oc = lookup_option(&dhcpv6_universe, packet->options, D6O_SERVERID);
@@ -262,22 +289,21 @@ valid_client_resp(struct packet *packet,
 	memset(client_id, 0, sizeof(*client_id));
 	memset(server_id, 0, sizeof(*server_id));
 
-	oc = lookup_option(&dhcpv6_universe, packet->options, D6O_CLIENTID);
-	if (oc == NULL) {
-		log_debug("Discarding %s from %s; "
-			  "client identifier missing", 
-			  dhcpv6_type_names[packet->dhcpv6_msg_type],
-			  piaddr(packet->client_addr));
-		goto exit;
-	}
-	if (!evaluate_option_cache(client_id, packet, NULL, NULL, 
-				   packet->options, NULL,
-				   &global_scope, oc, MDL)) {
-		log_error("Error processing %s from %s; "
-			  "unable to evaluate Client Identifier",
-			  dhcpv6_type_names[packet->dhcpv6_msg_type],
-			  piaddr(packet->client_addr));
-		goto exit;
+	switch (get_client_id(packet, client_id)) {
+		case ISC_R_SUCCESS:
+			break;
+		case ISC_R_NOTFOUND:
+			log_debug("Discarding %s from %s; "
+				  "client identifier missing", 
+				  dhcpv6_type_names[packet->dhcpv6_msg_type],
+				  piaddr(packet->client_addr));
+			goto exit;
+		default:
+			log_error("Error processing %s from %s; "
+				  "unable to evaluate Client Identifier",
+				  dhcpv6_type_names[packet->dhcpv6_msg_type],
+				  piaddr(packet->client_addr));
+			goto exit;
 	}
 
 	oc = lookup_option(&dhcpv6_universe, packet->options, D6O_SERVERID);
@@ -575,13 +601,16 @@ start_reply(struct packet *packet,
 		}
 	}
 
-	if (!save_option_buffer(&dhcpv6_universe, *opt_state, 
-				client_id->buffer, 
-				(unsigned char *)client_id->data, 
-				client_id->len, 
-				D6O_CLIENTID, 0)) {
-		log_error("start_reply: error saving client identifier.");
-		return 0;
+	if (client_id->buffer != NULL) {
+		if (!save_option_buffer(&dhcpv6_universe, *opt_state, 
+					client_id->buffer, 
+					(unsigned char *)client_id->data, 
+					client_id->len, 
+					D6O_CLIENTID, 0)) {
+			log_error("start_reply: error saving "
+				  "client identifier.");
+			return 0;
+		}
 	}
 
 	/*
@@ -1200,29 +1229,6 @@ lease_to_client(struct data_string *reply_ret,
 				goto exit;
 			}
 			data_string_forget(&d, MDL);
-
-			/* 
-			 * Store in IA_NA.
-			 */
-#if 0
-			store_iaaddr = NULL;
-			if (iaaddr_allocate(&store_iaaddr, 
-					    MDL) != ISC_R_SUCCESS) {
-				log_fatal("lease_to_client: no memory for "
-					  "iaaddr information.");
-
-			}
-			store_iaaddr->state = FTS_ACTIVE;
-			store_iaaddr->valid_lifetime_end_time = valid_lifetime;
-			ipv6_pool_reference(&store_iaaddr->ipv6_pool, 
-					    pool, MDL);
-			if (ia_na_add_iaaddr(ia_na, store_iaaddr, 
-					     MDL) != ISC_R_SUCCESS) {
-				log_fatal("lease_to_client: error storing "
-					  "iaaddr information.");
-			}
-#endif /* 0 */
-				
 		}
 
 		if ((host != NULL) || (lease != NULL)) {
@@ -2254,15 +2260,46 @@ dhcpv6_release(struct data_string *reply, struct packet *packet) {
 	data_string_forget(&client_id, MDL);
 }
 
+/*
+ * Information-Request is used by clients who have obtained an address
+ * from other means, but want configuration information from the server.
+ */
+
 /* TODO: discard unicast messages, unless we set unicast option */
 static void
 dhcpv6_information_request(struct data_string *reply, struct packet *packet) {
+	struct data_string client_id;
 	struct data_string server_id;
 
+	/*
+	 * Validate our input.
+	 */
 	if (!valid_client_info_req(packet, &server_id)) {
 		return;
 	}
 
+	/*
+	 * Get our client ID, if there is one.
+	 */
+	memset(&client_id, 0, sizeof(client_id));
+	if (get_client_id(packet, &client_id) != ISC_R_SUCCESS) {
+		data_string_forget(&client_id, MDL);
+	}
+
+	/*
+	 * Use the lease_to_client() function. This will work fine, 
+	 * because the valid_client_info_req() insures that we 
+	 * don't have any IA_NA or IA_TA that would cause us to
+	 * allocate addresses to the client.
+	 */
+	lease_to_client(reply, packet, &client_id, &server_id);
+
+	/*
+	 * Cleanup.
+	 */
+	if (client_id.data != NULL) {
+		data_string_forget(&client_id, MDL);
+	}
 	data_string_forget(&server_id, MDL);
 }
 
