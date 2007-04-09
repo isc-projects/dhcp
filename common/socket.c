@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: socket.c,v 1.58.116.4 2007/04/05 09:57:42 shane Exp $ "
+"$Id: socket.c,v 1.58.116.5 2007/04/09 17:31:01 dhankins Exp $ "
 "Copyright (c) 2004-2006 Internet Systems Consortium.\n";
 #endif /* not lint */
 
@@ -184,11 +184,17 @@ if_register_socket(struct interface_info *info, int family, int do_multicast) {
 	 */
 	if (family == AF_INET6) {
 		int on = 1;
+#ifdef IPV6_RECVPKTINFO
+		if (setsockopt(sock, IPPROTO_IPV6, IPV6_RECVPKTINFO, 
+		               &on, sizeof(on)) != 0) {
+			log_fatal("setsockopt: IPV6_RECVPKTINFO: %m");
+		}
+#else
 		if (setsockopt(sock, IPPROTO_IPV6, IPV6_PKTINFO, 
 		               &on, sizeof(on)) != 0) {
 			log_fatal("setsockopt: IPV6_PKTINFO: %m");
 		}
-
+#endif
 	}
 	
 	if ((family == AF_INET6) && do_multicast) {
