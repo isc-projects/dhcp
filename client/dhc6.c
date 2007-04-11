@@ -24,7 +24,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhc6.c,v 1.1.4.7 2007/04/03 17:06:21 dhankins Exp $ Copyright (c) 2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhc6.c,v 1.1.4.8 2007/04/11 02:11:18 dhankins Exp $ Copyright (c) 2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -33,7 +33,13 @@ struct sockaddr_in6 DHCPv6DestAddr;
 struct option *ia_na_option = NULL;
 struct option *ia_addr_option = NULL;
 
+static struct dhc6_lease *dhc6_dup_lease(struct dhc6_lease *lease,
+					 char *file, int line);
+static struct dhc6_ia *dhc6_dup_ia(struct dhc6_ia *ia, char *file, int line);
+static struct dhc6_addr *dhc6_dup_addr(struct dhc6_addr *addr,
+				       char *file, int line);
 static void dhc6_lease_destroy(struct dhc6_lease *lease, char *file, int line);
+static void dhc6_ia_destroy(struct dhc6_ia *ia, char *file, int line);
 static isc_result_t dhc6_parse_ia_na(struct dhc6_ia **pia,
 				     struct packet *packet,
 				     struct option_state *options);
@@ -46,6 +52,7 @@ void reply_handler(struct packet *packet, struct client_state *client);
 static isc_result_t dhc6_add_ia(struct client_state *client,
 				struct data_string *packet,
 				struct dhc6_lease *lease);
+static void dhc6_merge_lease(struct dhc6_lease *src, struct dhc6_lease *dst);
 void do_select6(void *input);
 void do_refresh6(void *input);
 static void start_bound(struct client_state *client);
@@ -304,6 +311,104 @@ valid_reply(struct packet *packet, struct client_state *client)
 	return rval;
 }
 
+/* Create a complete copy of a DHCPv6 lease structure.
+ */
+static struct dhc6_lease *
+dhc6_dup_lease(struct dhc6_lease *lease, char *file, int line)
+{
+	struct dhc6_lease *copy;
+	struct dhc6_ia **insert_ia, *ia;
+
+	copy = dmalloc(sizeof(*copy), file, line);
+	if (copy == NULL) {
+		log_error("Out of memory for v6 lease structure.");
+		return NULL;
+	}
+
+	data_string_copy(&copy->server_id, &lease->server_id, file, line);
+	copy->pref = lease->pref;
+
+	memcpy(copy->dhcpv6_transaction_id, lease->dhcpv6_transaction_id,
+	       sizeof(copy->dhcpv6_transaction_id));
+
+	option_state_reference(&copy->options, lease->options, file, line);
+
+	insert_ia = &copy->bindings;
+	for (ia = lease->bindings ; ia != NULL ; ia = ia->next) {
+		*insert_ia = dhc6_dup_ia(ia, file, line);
+
+		if (*insert_ia == NULL) {
+			dhc6_lease_destroy(copy, file, line);
+			return NULL;
+		}
+
+		insert_ia = &(*insert_ia)->next;
+	}
+
+	return copy;
+}
+
+/* Duplicate an IA structure.
+ */
+static struct dhc6_ia *
+dhc6_dup_ia(struct dhc6_ia *ia, char *file, int line)
+{
+	struct dhc6_ia *copy;
+	struct dhc6_addr **insert_addr, *addr;
+
+	copy = dmalloc(sizeof(*ia), file, line);
+
+	memcpy(copy->iaid, ia->iaid, sizeof(copy->iaid));
+
+	copy->starts = ia->starts;
+	copy->renew = ia->renew;
+	copy->rebind = ia->rebind;
+
+	insert_addr = &copy->addrs;
+	for (addr = ia->addrs ; addr != NULL ; addr = addr->next) {
+		*insert_addr = dhc6_dup_addr(addr, file, line);
+
+		if (*insert_addr == NULL) {
+			dhc6_ia_destroy(copy, file, line);
+			return NULL;
+		}
+
+		insert_addr = &(*insert_addr)->next;
+	}
+
+	if (ia->options != NULL)
+		option_state_reference(&copy->options, ia->options,
+				       file, line);
+
+	return copy;
+}
+
+/* Duplicate an IAADDR structure.
+ */
+static struct dhc6_addr *
+dhc6_dup_addr(struct dhc6_addr *addr, char *file, int line)
+{
+	struct dhc6_addr *copy;
+
+	copy = dmalloc(sizeof(*addr), file, line);
+
+	if (copy == NULL)
+		return NULL;
+
+	memcpy(&copy->address, &addr->address, sizeof(copy->address));
+
+	copy->flags = addr->flags;
+	copy->starts = addr->starts;
+	copy->preferred_life = addr->preferred_life;
+	copy->max_life = addr->max_life;
+
+	if (addr->options != NULL)
+		option_state_reference(&copy->options, addr->options,
+				       file, line);
+
+	return copy;
+}
+
 /* Form a DHCPv6 lease structure based upon packet contents.  Creates and
  * populates IA's and any IAADDR's they contain.
  */
@@ -506,6 +611,7 @@ dhc6_parse_addrs(struct dhc6_addr **paddr, struct packet *packet,
 
 			addr->address.len = 16;
 			memcpy(addr->address.iabuf, ds.data, 16);
+			addr->starts = cur_time;
 			addr->preferred_life = getULong(ds.data + 16);
 			addr->max_life = getULong(ds.data + 20);
 
@@ -578,7 +684,6 @@ dhc6_parse_addrs(struct dhc6_addr **paddr, struct packet *packet,
 static void
 dhc6_lease_destroy(struct dhc6_lease *lease, char *file, int line)
 {
-	struct dhc6_addr *addr, *naddr;
 	struct dhc6_ia *ia, *nia;
 
 	/* no-op */
@@ -589,26 +694,36 @@ dhc6_lease_destroy(struct dhc6_lease *lease, char *file, int line)
 		data_string_forget(&lease->server_id, file, line);
 
 	for (ia = lease->bindings ; ia != NULL ; ia = nia) {
-		for (addr = ia->addrs ; addr != NULL ; addr = naddr) {
-			if (addr->options != NULL)
-				option_state_dereference(&addr->options,
-							 file, line);
-
-			naddr = addr->next;
-			dfree(addr, file, line);
-		}
-
-		if (ia->options != NULL)
-			option_state_dereference(&ia->options, file, line);
-
 		nia = ia->next;
-		dfree(ia, file, line);
+
+		dhc6_ia_destroy(ia, file, line);
 	}
 
 	if (lease->options != NULL)
 		option_state_dereference(&lease->options, file, line);
 
 	dfree(lease, file, line);
+}
+
+/* Traverse the addresses list, and destroy their contents. */
+static void
+dhc6_ia_destroy(struct dhc6_ia *ia, char *file, int line)
+{
+	struct dhc6_addr *addr, *naddr;
+
+	for (addr = ia->addrs ; addr != NULL ; addr = naddr) {
+		naddr = addr->next;
+
+		if (addr->options != NULL)
+			option_state_dereference(&addr->options, file, line);
+
+		dfree(addr, file, line);
+	}
+
+	if (ia->options != NULL)
+		option_state_dereference(&ia->options, file, line);
+
+	dfree(ia, file, line);
 }
 
 /* For a given lease, insert it into the tail of the lease list.  Upon
@@ -631,6 +746,38 @@ insert_lease(struct dhc6_lease **head, struct dhc6_lease *new)
 
 	*head = new;
 	return;
+}
+
+/* Not really clear what to do here yet.
+ */
+static int
+dhc6_score_lease(struct dhc6_lease *lease)
+{
+	struct dhc6_ia *ia;
+	struct dhc6_addr *addr;
+
+	if (lease->score)
+		return lease->score;
+
+	lease->score = 1;
+
+#if 0 /* XXX: oro is a bit...weird...still */
+	for (i = 0 ; i < oro_len ; i++) {
+		if (lookup_option(&dhcpv6_universe, lease->options,
+				  oro[i]) != NULL)
+			lease->score++;
+	}
+#endif
+
+	for (ia = lease->bindings ; ia != NULL ; ia = ia->next) {
+		lease->score += 50;
+
+		for (addr = ia->addrs ; addr != NULL ; addr = addr->next) {
+			lease->score += 100;
+		}
+	}
+
+	return lease->score;
 }
 
 /* start_init6() kicks off the process, transmitting a packet and
@@ -835,39 +982,79 @@ status_log(int code, char *scope, const char *additional, int len)
 		log_info("%s status code %s.", scope, msg);
 }
 
-/* Look for status codes that are not SUCCESS status.
- *
- * XXX: We probably should instrument precisely what status code has been
- * found back to the caller.
+/* Acquire a status code.
  */
 static isc_result_t
-dhc6_check_status_code(struct option_state *options, char *scope)
+dhc6_get_status_code(struct option_state *options, unsigned *code,
+		     struct data_string *msg)
 {
 	struct option_cache *oc;
 	struct data_string ds;
 	isc_result_t rval = ISC_R_SUCCESS;
-	int code;
+
+	if ((options == NULL) || (code == NULL))
+		return ISC_R_INVALIDARG;
+
+	if ((msg != NULL) && (msg->len != 0))
+		return ISC_R_INVALIDARG;
 
 	memset(&ds, 0, sizeof(ds));
 
+	/* Assume success if there is no option. */
+	*code = STATUS_Success;
+
 	oc = lookup_option(&dhcpv6_universe, options, D6O_STATUS_CODE);
-	if (oc &&
+	if ((oc != NULL) &&
 	    evaluate_option_cache(&ds, NULL, NULL, NULL, options,
 				  NULL, &global_scope, oc, MDL)) {
 		if (ds.len < 2) {
 			log_error("Invalid status code length %d.", ds.len);
-			rval = ISC_R_FAILURE;
-		} else {
-			code = getUShort(ds.data);
+			rval = ISC_R_FORMERR;
+		} else
+			*code = getUShort(ds.data);
 
-			if (code != STATUS_Success) {
-				status_log(code, scope, ds.data + 2,
-					   ds.len - 2);
-				rval = ISC_R_FAILURE;
-			}
+		if ((msg != NULL) && (ds.len > 2)) {
+			data_string_copy(msg, &ds, MDL);
+			msg->data += 2;
+			msg->len -= 2;
 		}
 
 		data_string_forget(&ds, MDL);
+		return rval;
+	}
+
+	return ISC_R_NOTFOUND;
+}
+
+/* Look at status codes in an advertise, and reform the return value.
+ */
+static isc_result_t
+dhc6_check_status(isc_result_t rval, struct option_state *options,
+		  char *scope, unsigned *code)
+{
+	struct data_string msg;
+	isc_result_t status;
+
+	if ((scope == NULL) || (code == NULL))
+		return ISC_R_INVALIDARG;
+
+	/* If we don't find a code, we assume success. */
+	*code = STATUS_Success;
+
+	/* If there is no options cache, then there is no code. */
+	if (options != NULL) {
+		memset(&msg, 0, sizeof(msg));
+		status = dhc6_get_status_code(options, code, &msg);
+
+		if (status == ISC_R_SUCCESS) {
+			status_log(*code, scope, msg.data, msg.len);
+			data_string_forget(&msg, MDL);
+
+			if (*code != STATUS_Success)
+				rval = ISC_R_FAILURE;
+
+		} else if (status != ISC_R_NOTFOUND)
+			rval = status;
 	}
 
 	return rval;
@@ -877,28 +1064,317 @@ dhc6_check_status_code(struct option_state *options, char *scope)
  * status code options that are not SUCCESS.
  */
 static isc_result_t
-dhc6_check_all_status_codes(struct dhc6_lease *lease) {
-	struct data_string ds;
+dhc6_check_advertise(struct dhc6_lease *lease)
+{
 	struct dhc6_ia *ia;
 	struct dhc6_addr *addr;
 	isc_result_t rval = ISC_R_SUCCESS;
-	int code;
+	int have_addrs = ISC_FALSE;
+	unsigned code;
 
-	memset(&ds, 0, sizeof(ds));
-
-	if (dhc6_check_status_code(lease->options, "packet") != ISC_R_SUCCESS)
-		rval = ISC_R_FAILURE;
+	rval = dhc6_check_status(rval, lease->options, "message", &code);
 
 	for (ia = lease->bindings ; ia != NULL ; ia = ia->next) {
-		if (dhc6_check_status_code(ia->options,
-					   "IA_NA") != ISC_R_SUCCESS)
-			rval = ISC_R_FAILURE;
+		rval = dhc6_check_status(rval, ia->options, "IA_NA", &code);
 
 		for (addr = ia->addrs ; addr != NULL ; addr = addr->next) {
-			if (dhc6_check_status_code(addr->options,
-						   "IAADDR") != ISC_R_SUCCESS)
-				rval = ISC_R_FAILURE;
+			rval = dhc6_check_status(rval, addr->options,
+						 "IAADDR", &code);
+			have_addrs = ISC_TRUE;
 		}
+	}
+
+	if (have_addrs != ISC_TRUE)
+		rval = ISC_R_ADDRNOTAVAIL;
+
+	return rval;
+}
+
+/* status code <-> action matrix for the client in SELECT state
+ * (request/reply).  Returns true if action was taken (and the
+ * packet should be ignored), or false if no action was taken.
+ */
+static isc_boolean_t
+dhc6_select_action(struct client_state *client, isc_result_t rval,
+		   unsigned code)
+{
+	struct dhc6_lease *lease;
+
+	if (client == NULL)
+		return ISC_R_INVALIDARG;
+
+	if (rval == ISC_R_SUCCESS)
+		return ISC_FALSE;
+
+	switch (code) {
+		/* We may have an earlier failure status code (so no
+		 * success rval), and a success code now.  This
+		 * doesn't upgrade the rval to success, but it does
+		 * mean we take no action here.
+		 */
+	      case STATUS_Success:
+		/* Gimpy server, or possibly an attacker. */
+	      case STATUS_NoBinding:
+	      case STATUS_UseMulticast:
+		/* Take no action. */
+		return ISC_FALSE;
+
+		/* If the server can't deal with us, either try the
+		 * next advertised server, or continue retrying if there
+		 * weren't any.
+		 */
+	      default:
+	      case STATUS_UnspecFail:
+		if (client->advertised_leases != NULL) {
+			dhc6_lease_destroy(client->selected_lease, MDL);
+			client->selected_lease = NULL;
+
+			start_selecting6(client);
+
+			break;
+		} else /* Take no action - continue to retry. */
+			return ISC_FALSE;
+
+		/* If the server has no addresses, try other servers if
+		 * we got some, otherwise go to INIT to hope for more
+		 * servers.
+		 */
+	      case STATUS_NoAddrsAvail:
+		dhc6_lease_destroy(client->selected_lease, MDL);
+		client->selected_lease = NULL;
+
+		if (client->advertised_leases != NULL)
+			start_selecting6(client);
+		else
+			start_init6(client);
+
+		break;
+
+		/* If we got a NotOnLink, something weird happened.  Start
+		 * over from scratch.
+		 */
+	      case STATUS_NotOnLink:
+		dhc6_lease_destroy(client->selected_lease, MDL);
+		client->selected_lease = NULL;
+
+		while (client->advertised_leases != NULL) {
+			lease = client->advertised_leases;
+			client->advertised_leases = lease->next;
+
+			dhc6_lease_destroy(lease, MDL);
+		}
+
+		start_init6(client);
+		break;
+	}
+
+	return ISC_TRUE;
+}
+
+static void
+dhc6_withdraw_lease(struct client_state *client)
+{
+	struct dhc6_ia *ia;
+	struct dhc6_addr *addr;
+	TIME future;
+
+	if ((client == NULL) || (client->active_lease == NULL))
+		return;
+
+	for (ia = client->active_lease->bindings ; ia != NULL ;
+	     ia = ia->next) {
+		for (addr = ia->addrs ; addr != NULL ; addr = addr->next) {
+			addr->max_life = addr->preferred_life = 0;
+		}
+	}
+
+	/* Perform expiry. */
+	do_expire(client);
+}
+
+/* status code <-> action matrix for the client in BOUND state
+ * (request/reply).  Returns true if action was taken (and the
+ * packet should be ignored), or false if no action was taken.
+ */
+static isc_boolean_t
+dhc6_reply_action(struct client_state *client, isc_result_t rval,
+		  unsigned code)
+{
+
+	if (client == NULL)
+		return ISC_R_INVALIDARG;
+
+	if (rval == ISC_R_SUCCESS)
+		return ISC_FALSE;
+
+	switch (code) {
+		/* It's possible an earlier status code set rval to a failure
+		 * code, and we've encountered a later success.
+		 */
+	      case STATUS_Success:
+		/* In "refreshes" (where we get replies), we probably
+		 * still have a valid lease.  So "take no action" and
+		 * the upper levels will keep retrying until the lease
+		 * expires (or we rebind).
+		 */
+	      case STATUS_UnspecFail:
+		/* We don't support the unicast option yet...we always send
+		 * multicast...so this is a no-op.
+		 */
+	      case STATUS_UseMulticast:
+		/* For unknown codes...it's a soft (retryable) error. */
+	      default:
+		return ISC_FALSE;
+
+		/* "When the client receives a NotOnLink status from the
+		 *  server in response to a Request, the client can either
+		 *  re-issue the Request without specifying any addresses
+		 *  or restart the DHCP server discovery process."
+		 *
+		 * This is strange.  If competing server evaluation is
+		 * useful (and therefore in the protocol), then why would
+		 * a client's first reaction be to request from the same
+		 * server on a different link?  Surely you'd want to re-evaluate
+		 * your server selection.
+		 *
+		 * Well, I guess that's the answer.
+		 */
+	      case STATUS_NotOnLink:
+		/* In this case, we need to rescind all current active
+		 * bindings (just 'expire' them all normally, if early).
+		 * They're no use to us on the wrong link.  Then head back
+		 * to init, redo server selection and get new addresses.
+		 */
+		dhc6_withdraw_lease(client);
+		return ISC_TRUE;
+
+		/* "If the status code is NoAddrsAvail, the client has
+		 *  received no usable addresses in the IA and may choose
+		 *  to try obtaining addresses for the IA from another
+		 *  server."
+		 */
+	      case STATUS_NoAddrsAvail:
+		/* Head back to init, keeping any active bindings (!). */
+		start_init6(client);
+		break;
+
+		/* -  sends a Request message if the IA contained a Status
+		 *    Code option with the NoBinding status (and does not
+		 *    send any additional Renew/Rebind messages)
+		 */
+	      case STATUS_NoBinding:
+		if (client->advertised_leases != NULL)
+			log_fatal("Impossible condition at %s:%d.", MDL);
+
+		client->advertised_leases =
+				dhc6_dup_lease(client->active_lease, MDL);
+		start_selecting6(client);
+		break;
+	}
+
+	return ISC_TRUE;
+}
+
+/* Look at a new and old lease, and make sure the new information is not
+ * losing us any state.
+ */
+static isc_result_t
+dhc6_check_reply(struct client_state *client, struct dhc6_lease *new)
+{
+	isc_boolean_t (*action)(struct client_state *, isc_result_t, unsigned);
+	struct dhc6_ia *ia;
+	struct dhc6_addr *addr;
+	isc_result_t rval = ISC_R_SUCCESS, status;
+	unsigned code;
+	int nscore, sscore;
+
+	if ((client == NULL) || (new == NULL))
+		return ISC_R_INVALIDARG;
+
+	switch (client->state) {
+	      case S_SELECTING:
+		action = dhc6_select_action;
+		break;
+
+	      case S_RENEWING:
+	      case S_REBINDING:
+		action = dhc6_reply_action;
+		break;
+
+	      default:
+		log_fatal("Impossible condition at %s:%d.", MDL);
+		return ISC_R_CANCELED;
+	}
+
+	/* If there is a code to extract, and if there is some
+	 * action to take based on that code, then take the action
+	 * and do not continue.
+	 */
+	rval = dhc6_check_status(rval, new->options, "message", &code);
+	if (action(client, rval, code))
+		return ISC_R_CANCELED;
+
+	for (ia = new->bindings ; ia != NULL ; ia = ia->next) {
+		rval = dhc6_check_status(rval, ia->options, "IA_NA",
+					 &code);
+		if (action(client, rval, code))
+			return ISC_R_CANCELED;
+
+		for (addr = ia->addrs ; addr != NULL ;
+		     addr = addr->next) {
+			rval = dhc6_check_status(rval, addr->options,
+						 "IAADDR", &code);
+			if (action(client, rval, code))
+				return ISC_R_CANCELED;
+		}
+	}
+
+	switch (client->state) {
+	      case S_SELECTING:
+		/* Compare the new lease with the selected lease to make
+		 * sure there is no risky business.
+		 */
+		nscore = dhc6_score_lease(new);
+		sscore = dhc6_score_lease(client->selected_lease);
+		if ((client->advertised_leases != NULL) &&
+		    (nscore < (sscore / 2))) {
+			/* XXX: An attacker might reply this way to make
+			 * XXX: sure we latch onto their configuration.
+			 * XXX: We might want to ignore the packet and
+			 * XXX: schedule re-selection at the next timeout?
+			 */
+			log_error("PRC: BAIT AND SWITCH detected.  Score of "
+				  "supplied lease (%d) is substantially "
+				  "smaller than the advertised score (%d).  "
+				  "Trying other servers.",
+				  nscore, sscore);
+
+			dhc6_lease_destroy(client->selected_lease, MDL);
+			client->selected_lease = NULL;
+
+			start_selecting6(client);
+
+			return ISC_R_CANCELED;
+		}
+		break;
+
+	      case S_RENEWING:
+	      case S_REBINDING:
+		/* This leaves one RFC3315 status check unimplemented:
+		 *
+		 * -  sends a Renew/Rebind if the IA is not in the Reply
+		 *    message
+		 *
+		 * We rely on the scheduling system to note that the IA has
+		 * not left Renewal/Rebinding/whatever since it still carries
+		 * old times from the last successful binding.  So this is
+		 * implemented actually, just not explicitly.
+		 */
+		break;
+
+	      default:
+		log_fatal("REALLY impossible condition at %s:%d.", MDL);
+		return ISC_R_CANCELED;
 	}
 
 	return rval;
@@ -930,7 +1406,8 @@ init_handler(struct packet *packet, struct client_state *client)
 
 	lease = dhc6_leaseify(packet);
 
-	if (dhc6_check_all_status_codes(lease) != ISC_R_SUCCESS) {
+	if (dhc6_check_advertise(lease) != ISC_R_SUCCESS) {
+		log_debug("PRC: Lease failed to satisfy.");
 		dhc6_lease_destroy(lease, MDL);
 		return;
 	}
@@ -944,9 +1421,11 @@ init_handler(struct packet *packet, struct client_state *client)
 	 * RFC3315 doesn't say so.
 	 *
 	 * If the lease is highest possible preference, 255, RFC3315 claims
-	 * we should continue immediately even on the first RT.
+	 * we should continue immediately even on the first RT.  We probably
+	 * should not if the advertise contains less than one IA and address.
 	 */
-	if ((client->txcount > 1) || (lease->pref == 255)) {
+	if ((client->txcount > 1) ||
+	    ((lease->pref == 255) && (dhc6_score_lease(lease) > 150))) {
 		log_debug("RCV:  Advertisement immediately selected.");
 		cancel_timeout(do_init6, client);
 		start_selecting6(client);
@@ -954,66 +1433,116 @@ init_handler(struct packet *packet, struct client_state *client)
 		log_debug("RCV:  Advertisement recorded.");
 }
 
-/* Find the 'best' lease in the cache of advertised leases (usually).  In
- * strict terms, the DHCPv6 Preference Option is the way to decide this.
- * Higher values are more preferrential.  Absence of the option defaults to
- * zero.  In the event two leases have the same preference, however, break
- * the tie by comparing the server id's and selecting the lower value.
+/* Find the 'best' lease in the cache of advertised leases (usually).  From
+ * RFC3315 Section 17.1.3:
+ *
+ *   Upon receipt of one or more valid Advertise messages, the client
+ *   selects one or more Advertise messages based upon the following
+ *   criteria.
+ *
+ *   -  Those Advertise messages with the highest server preference value
+ *      are preferred over all other Advertise messages.
+ *
+ *   -  Within a group of Advertise messages with the same server
+ *      preference value, a client MAY select those servers whose
+ *      Advertise messages advertise information of interest to the
+ *      client.  For example, the client may choose a server that returned
+ *      an advertisement with configuration options of interest to the
+ *      client.
+ *
+ *   -  The client MAY choose a less-preferred server if that server has a
+ *      better set of advertised parameters, such as the available
+ *      addresses advertised in IAs.
+ *
+ * Note that the first and third contradict each other.  The third should
+ * probably be taken to mean that the client should prefer answers that
+ * offer bindings, even if that violates the preference rule.
+ *
+ * The above also isn't deterministic where there are ties.  So the final
+ * tiebreaker we add, if all other values are equal, is to compare the
+ * server identifiers and to select the numerically lower one.
  */
 static struct dhc6_lease *
 dhc6_best_lease(struct dhc6_lease **head)
 {
 	struct dhc6_lease **rpos, *rval, **candp, *cand;
+	int cscore, rscore;
 
 	if (head == NULL || *head == NULL)
 		return NULL;
 
-	log_debug("PRC: Considering best lease.");
-	log_debug("PRC:  X-- Initial candidate %s (%u).",
-		  print_hex_1((*head)->server_id.len,
-			      (*head)->server_id.data, 40),
-		  (unsigned)(*head)->pref);
-
 	rpos = head;
 	rval = *rpos;
+	rscore = dhc6_score_lease(rval);
 	candp = &rval->next;
 	cand = *candp;
 
+	log_debug("PRC: Considering best lease.");
+	log_debug("PRC:  X-- Initial candidate %s (s: %d, p: %u).",
+		  print_hex_1(rval->server_id.len,
+			      rval->server_id.data, 48),
+		  rscore, (unsigned)rval->pref);
+
 	for (; cand != NULL ; candp = &cand->next, cand = *candp) {
-		log_debug("PRC:  X-- Candidate %s (%u).",
+		cscore = dhc6_score_lease(cand);
+
+		log_debug("PRC:  X-- Candidate %s (s: %d, p: %u).",
 			  print_hex_1(cand->server_id.len,
 				      cand->server_id.data, 48),
-			  (unsigned)cand->pref);
+			  cscore, (unsigned)cand->pref);
 
-		/* Reject lower (but not equal or higher) pref's. */
-		if (cand->pref < rval->pref) {
-			log_debug("PRC:  | X-- Rejected, lower preference.");
-			continue;
-		}
-
-		/* If the preference is higher that's an immediate win.
-		 * If the preference is therefore equal, break the tie
-		 * with the lowest digital server identifier.
+		/* Above you'll find quoted RFC3315 Section 17.1.3.
+		 *
+		 * The third clause tells us to give up on leases that
+		 * have no bindings even if their preference is better.
+		 * So where our 'selected' lease's score is less than 150
+		 * (1 ia + 1 addr), choose any candidate >= 150.
+		 *
+		 * The first clause tells us to make preference the primary
+		 * deciding factor.  So if it's lower, reject, if it's
+		 * higher, select.
+		 *
+		 * The second clause tells us where the preference is
+		 * equal, we should use 'our judgement' of what we like
+		 * to see in an advertisement primarily.
+		 *
+		 * But there can still be a tie.  To make this deterministic,
+		 * we compare the server identifiers and select the binary
+		 * lowest.
 		 *
 		 * Since server id's are unique in this list, there is
 		 * no further tie to break.
 		 */
-		if (cand->pref > rval->pref) {
+		if ((rscore < 150) && (cscore >= 150)) {
+			log_debug("PRC:  | X-- Selected, has bndings.");
+		} else if (cand->pref < rval->pref) {
+			log_debug("PRC:  | X-- Rejected, lower preference.");
+			continue;
+		} else if (cand->pref > rval->pref) {
 			log_debug("PRC:  | X-- Selected, higher preference.");
-			rpos = candp;
-			rval = cand;
+		} else if (cscore > rscore) {
+			log_debug("PRC:  | X-- Selected, equal preference, "
+				  "higher score.");
+		} else if (cscore < rscore) {
+			log_debug("PRC:  | X-- Rejected, equal preference, "
+				  "lower score.");
+			continue;
 		} else if ((cand->server_id.len < rval->server_id.len) ||
 			   ((cand->server_id.len == rval->server_id.len) &&
 			    (memcmp(cand->server_id.data,
 				    rval->server_id.data,
 				    cand->server_id.len) < 0))) {
 			log_debug("PRC:  | X-- Selected, equal preference, "
-				  "binary lesser server ID (tiebreaker).");
-			rpos = candp;
-			rval = cand;
-		} else
+				  "equal score, binary lesser server ID.");
+		} else {
 			log_debug("PRC:  | X-- Rejected, equal preference, "
-				  "binary greater server ID (no tiebreaker).");
+				  "equal score, binary greater server ID.");
+			continue;
+		}
+
+		rpos = candp;
+		rval = cand;
+		rscore = cscore;
 	}
 
 	/* Remove the selected lease from the chain. */
@@ -1077,8 +1606,6 @@ do_select6(void *input)
 	struct dhc6_addr *addr;
 	struct option_cache *oc;
 	struct data_string ds;
-	struct data_string iads;
-	struct data_string addrds;
 	TIME elapsed, t1, t2;
 	int abort = ISC_FALSE;
 	int code, send_ret;
@@ -1202,52 +1729,52 @@ dhc6_add_ia(struct client_state *client, struct data_string *packet,
 	isc_result_t rval = ISC_R_SUCCESS;
 	TIME t1, t2;
 	
-        /* Now appended any IA_NA's, and within them any IAADDRs. */
-        memset(&iads, 0, sizeof(iads));
-        memset(&addrds, 0, sizeof(addrds));
-        for (ia = lease->bindings ; ia ; ia = ia->next) {
-                if (!buffer_allocate(&iads.buffer, 12, MDL)) {
-                        log_error("Unable to allocate memory for IA.");
-                        break;
-                }
-                iads.data = iads.buffer->data;
-                iads.len = 12;
+	/* Now appended any IA_NA's, and within them any IAADDRs. */
+	memset(&iads, 0, sizeof(iads));
+	memset(&addrds, 0, sizeof(addrds));
+	for (ia = lease->bindings ; ia ; ia = ia->next) {
+		if (!buffer_allocate(&iads.buffer, 12, MDL)) {
+			log_error("Unable to allocate memory for IA.");
+			break;
+		}
+		iads.data = iads.buffer->data;
+		iads.len = 12;
 
-                memcpy(iads.buffer->data, ia->iaid, 4);
+		memcpy(iads.buffer->data, ia->iaid, 4);
 
-                t1 = client->config->requested_lease / 2;
-                t2 = t1 + (t1 / 2);
+		t1 = client->config->requested_lease / 2;
+		t2 = t1 + (t1 / 2);
 #if MAX_TIME > 0xffffffff
 		if (t1 > 0xffffffff)
 			t1 = 0xffffffff;
 		if (t2 > 0xffffffff)
 			t2 = 0xffffffff;
 #endif
-                putULong(iads.buffer->data + 4, t1);
-                putULong(iads.buffer->data + 8, t2);
+		putULong(iads.buffer->data + 4, t1);
+		putULong(iads.buffer->data + 8, t2);
 
-                log_debug("XMT:  X-- IA_NA %s",
-                          print_hex_1(4, iads.data, 59));
-                log_debug("XMT:  | X-- Requested renew  +%u", (unsigned)t1);
-                log_debug("XMT:  | X-- Requested rebind +%u", (unsigned)t2);
+		log_debug("XMT:  X-- IA_NA %s",
+			  print_hex_1(4, iads.data, 59));
+		log_debug("XMT:  | X-- Requested renew  +%u", (unsigned)t1);
+		log_debug("XMT:  | X-- Requested rebind +%u", (unsigned)t2);
 
-                for (addr = ia->addrs ; addr ; addr = addr->next) {
-                        if (!buffer_allocate(&addrds.buffer, 24, MDL)) {
-                                log_error("Unable to allocate memory for "
-                                          "IAADDR.");
-                                break;
-                        }
-                        addrds.data = addrds.buffer->data;
-                        addrds.len = 24;
+		for (addr = ia->addrs ; addr ; addr = addr->next) {
+			if (!buffer_allocate(&addrds.buffer, 24, MDL)) {
+				log_error("Unable to allocate memory for "
+					  "IAADDR.");
+				break;
+			}
+			addrds.data = addrds.buffer->data;
+			addrds.len = 24;
 
-                        memcpy(addrds.buffer->data, addr->address.iabuf, 16);
+			memcpy(addrds.buffer->data, addr->address.iabuf, 16);
 			t1 = client->config->requested_lease;
 			t2 = t1 + 300;
-                        putULong(addrds.buffer->data + 16, t1);
-                        putULong(addrds.buffer->data + 20, t2);
+			putULong(addrds.buffer->data + 16, t1);
+			putULong(addrds.buffer->data + 20, t2);
 
-                        log_debug("XMT:  | | X-- IAADDR %s",
-                                  piaddr(addr->address));
+			log_debug("XMT:  | | X-- IAADDR %s",
+				  piaddr(addr->address));
 			log_debug("XMT:  | | | X-- Preferred lifetime +%u",
 				  (unsigned)t1);
 			log_debug("XMT:  | | | X-- Max lifetime +%u",
@@ -1283,6 +1810,7 @@ void
 reply_handler(struct packet *packet, struct client_state *client)
 {
 	struct dhc6_lease *lease, *old;
+	isc_result_t check_status;
 
 	if (packet->dhcpv6_msg_type != DHCPV6_REPLY)
 		return;
@@ -1295,27 +1823,49 @@ reply_handler(struct packet *packet, struct client_state *client)
 		return;
 	}
 
-	/* A matching xid reply means we're done. */
-	cancel_timeout(do_select6, client);
-	cancel_timeout(do_refresh6, client);
-
-	dhc6_lease_destroy(client->selected_lease, MDL);
-	client->selected_lease = NULL;
-
 	lease = dhc6_leaseify(packet);
 
-	/* This is an out of memory condition...just let it hang? */
+	/* This is an out of memory condition...hopefully a temporary
+	 * problem.  Returning now makes us try to retransmit later.
+	 */
 	if (lease == NULL)
 		return;
 
-	if (dhc6_check_all_status_codes(lease) != ISC_R_SUCCESS) {
+	check_status = dhc6_check_reply(client, lease);
+	if (check_status != ISC_R_SUCCESS) {
 		dhc6_lease_destroy(lease, MDL);
 
-		if (client->advertised_leases != NULL)
-			start_selecting6(client);
-		else
-			start_init6(client);
+		/* If no action was taken, but there is an error, then
+		 * we wait for a retransmission.
+		 */
+		if (check_status != ISC_R_CANCELED)
+			return;
+	}
+
+	/* We're done retransmititng at this point. */
+	cancel_timeout(do_select6, client);
+	cancel_timeout(do_refresh6, client);
+
+	/* Action was taken, so now that we've torn down our scheduled
+	 * retransmissions, return.
+	 */
+	if (check_status == ISC_R_CANCELED)
 		return;
+
+	if (client->selected_lease != NULL) {
+		dhc6_lease_destroy(client->selected_lease, MDL);
+		client->selected_lease = NULL;
+	}
+
+	/* Merge any bindings in the active lease (if there is one) into
+	 * the new active lease.
+	 */
+	dhc6_merge_lease(client->active_lease, lease);
+
+	/* Cleanup if a previous attempt to go bound failed. */
+	if (client->old_lease != NULL) {
+		dhc6_lease_destroy(client->old_lease, MDL);
+		client->old_lease = NULL;
 	}
 
 	/* Make this lease active and BIND to it. */
@@ -1324,11 +1874,6 @@ reply_handler(struct packet *packet, struct client_state *client)
 	client->active_lease = lease;
 
 	/* We're done with the ADVERTISEd leases, if any. */
-	if (client->selected_lease != NULL) {
-		dhc6_lease_destroy(client->selected_lease, MDL);
-		client->selected_lease = NULL;
-	}
-
 	while(client->advertised_leases != NULL) {
 		lease = client->advertised_leases;
 		client->advertised_leases = lease->next;
@@ -1375,6 +1920,8 @@ dhc6_marshall_values(char *prefix, struct client_state *client,
 		client_envadd(client, prefix, "ip6_prefixlen", "%d", 64);
 		client_envadd(client, prefix, "ip6_address", "%s",
 			      piaddr(addr->address));
+		client_envadd(client, prefix, "life_starts", "%d",
+			      (int)(addr->starts));
 		client_envadd(client, prefix, "preferred_life", "%d",
 			      (int)(addr->preferred_life));
 		client_envadd(client, prefix, "max_life", "%d",
@@ -1421,7 +1968,7 @@ dhc6_check_times(struct client_state *client)
 				if (addr->preferred_life == 0xffffffff)
 					tmp = MAX_TIME;
 				else
-					tmp = ia->starts +
+					tmp = addr->starts +
 					      addr->preferred_life;
 
 				if (tmp < depref)
@@ -1432,7 +1979,7 @@ dhc6_check_times(struct client_state *client)
 				if (addr->max_life == 0xffffffff)
 					tmp = MAX_TIME;
 				else
-					tmp = ia->starts + addr->max_life;
+					tmp = addr->starts + addr->max_life;
 
 				if (tmp > hi_expire)
 					hi_expire = tmp;
@@ -1502,24 +2049,34 @@ dhc6_check_times(struct client_state *client)
 				  "to run for %u seconds.",
 				  (int)(renew - cur_time),
 				  (unsigned)(rebind - renew));
-			client->MRD = rebind - cur_time;
+			client->next_MRD = rebind - cur_time;
 			add_timeout(renew, start_renew6, client, NULL, NULL);
 
 			break;
 		}
 		/* FALL THROUGH */
 	      case S_RENEWING:
+		/* While actively renewing, MRD is bounded by the time
+		 * we stop renewing and start rebinding.  This helps us
+		 * process the state change on time.
+		 */
+		client->MRD = rebind - cur_time;
 		if (rebind != MAX_TIME) {
 			log_debug("PRC: Rebind event scheduled in %d seconds, "
 				  "to run for %d seconds.",
 				  (int)(rebind - cur_time),
 				  (int)(hi_expire - rebind));
-			client->MRD = hi_expire - cur_time;
+			client->next_MRD = hi_expire - cur_time;
 			add_timeout(rebind, start_rebind6, client, NULL, NULL);
 		}
 		break;
 
 	      case S_REBINDING:
+		/* For now, we rebind up until the last lease expires.  In
+		 * the future, we might want to start SOLICITing when we've
+		 * depreffed an address.
+		 */
+		client->MRD = hi_expire - cur_time;
 		break;
 
 	      default:
@@ -1572,6 +2129,67 @@ find_addr(struct dhc6_addr *head, struct iaddr *address)
 	return NULL;
 }
 
+/* Merge the bindings from the source lease into the destination lease
+ * structure, where they are missing.  We have to copy the stateful
+ * objects rather than move them over, because later code needs to be
+ * able to compare new versus old if they contain any bindings.
+ */
+static void
+dhc6_merge_lease(struct dhc6_lease *src, struct dhc6_lease *dst)
+{
+	struct dhc6_ia *sia, *dia, *tia;
+	struct dhc6_addr *saddr, *daddr, *taddr;
+	int changes = 0;
+
+	if ((dst == NULL) || (src == NULL))
+		return;
+
+	for (sia = src->bindings ; sia != NULL ; sia = sia->next) {
+		dia = find_ia(dst->bindings, sia->iaid);
+
+		if (dia == NULL) {
+			tia = dhc6_dup_ia(sia, MDL);
+
+			if (tia == NULL)
+				log_fatal("Out of memory merging lease - "
+					  "Unable to continue without losing "
+					  "state! (%s:%d)", MDL);
+
+			/* XXX: consider sorting? */
+			tia->next = dst->bindings;
+			dst->bindings = tia;
+			changes = 1;
+		} else {
+			for (saddr = sia->addrs ; saddr != NULL ;
+			     saddr = saddr->next) {
+				daddr = find_addr(dia->addrs,
+						  &saddr->address);
+
+				if (daddr == NULL) {
+					taddr = dhc6_dup_addr(saddr, MDL);
+
+					if (taddr == NULL)
+						log_fatal("Out of memory "
+							  "merging lease - "
+							  "Unable to continue "
+							  "without losing "
+							  "state! (%s:%d)",
+							  MDL);
+
+					/* XXX: consider sorting? */
+					taddr->next = dia->addrs;
+					dia->addrs = taddr;
+					changes = 1;
+				}
+			}
+		}
+	}
+
+	/* If we made changes, reset the score to 0 so it is recalculated. */
+	if (changes)
+		dst->score = 0;
+}
+
 /* We've either finished selecting or succeeded in Renew or Rebinding our
  * lease.  In all cases we got a Reply.  Give dhclient-script a tickle
  * to inform it about the new values, and then lay in wait for the next
@@ -1620,10 +2238,9 @@ start_bound(struct client_state *client)
 	for (ia = lease->bindings ; ia != NULL ; ia = ia->next) {
 		if (old != NULL)
 			oldia = find_ia(old->bindings, ia->iaid);
+		else
+			oldia = NULL;
 
-		/* XXX: If we ever get to information request, our IA's
-		 * might not have addresses at all.
-		 */
 		for (addr = ia->addrs ; addr != NULL ; addr = addr->next) {
 			if (oldia != NULL)
 				oldaddr = find_addr(oldia->addrs,
@@ -1641,6 +2258,31 @@ start_bound(struct client_state *client)
 
 			script_go(client);
 		}
+
+		/* XXX: maybe we should loop on the old values instead? */
+		if (ia->addrs == NULL) {
+			script_init(client, reason, NULL);
+
+			if (old != NULL)
+				dhc6_marshall_values("old_", client, old,
+						     oldia, oldia->addrs);
+
+			dhc6_marshall_values("new_", client, lease, ia,
+					     NULL);
+		}
+	}
+
+	/* XXX: maybe we should loop on the old values instead? */
+	if (lease->bindings == NULL) {
+		script_init(client, reason, NULL);
+
+		if (old != NULL)
+			dhc6_marshall_values("old_", client, old,
+					     old->bindings,
+					     (old->bindings != NULL) ?
+						old->bindings->addrs : NULL);
+
+		dhc6_marshall_values("new_", client, lease, NULL, NULL);
 	}
 
 	if (client->old_lease != NULL) {
@@ -1682,10 +2324,10 @@ start_renew6(void *input)
 	client->IRT = REN_TIMEOUT;
 	client->MRT = REN_MAX_RT;
 	client->MRC = 0;
-	/* MRD is special in renew - it is bounded either by entry into
-	 * REBIND or EXPIRE.  So it's set when the renew is scheduled (and
-	 * the rebind or expire time is known).
+	/* MRD is special in renew - we need to set it by checking timer
+	 * state.
 	 */
+	client->MRD = client->next_MRD;
 
 	dhc6_retrans_init(client);
 
@@ -1810,9 +2452,10 @@ start_rebind6(void *input)
 	client->IRT = REB_TIMEOUT;
 	client->MRT = REB_MAX_RT;
 	client->MRC = 0;
-	/* MRD is special in rebind - it's bounded by the last time of
-	 * expiration, so it's set by the caller.
+	/* MRD is special in rebind - it's determined by the timer
+	 * state.
 	 */
+	client->MRD = client->next_MRD;
 
 	dhc6_retrans_init(client);
 
@@ -1845,7 +2488,7 @@ do_depref(void *input)
 			if (addr->flags & DHC6_ADDR_DEPREFFED)
 				continue;
 
-			if (ia->starts + addr->preferred_life <= cur_time) {
+			if (addr->starts + addr->preferred_life <= cur_time) {
 				script_init(client, "DEPREF6", NULL);
 				dhc6_marshall_values("cur_", client, lease,
 						     ia, addr);
@@ -1888,7 +2531,7 @@ do_expire(void *input)
 			if (addr->flags & DHC6_ADDR_EXPIRED)
 				continue;
 
-			if (ia->starts + addr->max_life <= cur_time) {
+			if (addr->starts + addr->max_life <= cur_time) {
 				script_init(client, "EXPIRE6", NULL);
 				dhc6_marshall_values("old_", client, lease,
 						     ia, addr);

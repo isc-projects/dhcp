@@ -804,6 +804,7 @@ struct dhc6_addr {
 	#define DHC6_ADDR_EXPIRED	0x02
 	u_int8_t flags;
 
+	TIME starts;
 	u_int32_t preferred_life;
 	u_int32_t max_life;
 
@@ -826,6 +827,7 @@ struct dhc6_lease {
 	struct dhc6_lease *next;
 	struct data_string server_id;
 
+	int score;
 	u_int8_t pref;
 
 	unsigned char dhcpv6_transaction_id[3];
@@ -963,6 +965,7 @@ struct client_state {
 	TIME MRC;
 	TIME MRT;
 	TIME MRD;
+	TIME next_MRD;
 
 	/* Rather than a state, we use a function that shifts around
 	 * depending what stage of life the v6 state machine is in.
