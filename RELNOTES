@@ -221,6 +221,9 @@ the README file.
   copy written to persistent storage was actually the contents of the
   'file' field.
 
+- A bug was fixed where the nwip virtual option space was referencing
+  the fqdn option's virtual option space's option cache.
+
 			Changes since 3.0.5rc1
 
 - A bug was repaired in fixes to the dhclient, which sought to run the

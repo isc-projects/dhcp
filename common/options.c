@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.103 2007/01/29 10:25:54 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.104 2007/04/11 02:04:39 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -2315,7 +2315,7 @@ int nwip_option_space_encapsulate (result, packet, lease, client_state,
 	if (universe -> index >= cfg_options -> universe_count)
 		return 0;
 	head = ((struct option_chain_head *)
-		cfg_options -> universes [fqdn_universe.index]);
+		cfg_options -> universes [nwip_universe.index]);
 	if (!head)
 		return 0;
 
