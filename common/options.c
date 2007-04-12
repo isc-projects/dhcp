@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.92.2.16 2007/04/12 16:16:46 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.92.2.17 2007/04/12 16:22:13 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -2839,6 +2839,53 @@ int nwip_option_space_encapsulate (result, packet, lease, client_state,
 	return status;
 }
 
+/* We don't want to use ns_name_pton()...it doesn't tell us how many bytes
+ * it has consumed, and it plays havoc with our escapes.
+ *
+ * So this function does DNS encoding, and returns either the number of
+ * octects consumed (on success), or -1 on failure.
+ */
+static int
+fqdn_encode(unsigned char *dst, int dstlen, const unsigned char *src,
+	    int srclen)
+{
+	unsigned char *out;
+	int i, j, len, outlen=0;
+
+	out = dst;
+	for (i = 0, j = 0 ; i < srclen ; i = j) {
+		while ((j < srclen) && (src[j] != '.') && (src[j] != '\0'))
+			j++;
+
+		len = j - i;
+		if ((outlen + 1 + len) > dstlen)
+			return -1;
+
+		*out++ = len;
+		outlen++;
+
+		/* We only do one FQDN, ending in one root label. */
+		if (len == 0)
+			return outlen;
+
+		memcpy(out, src + i, len);
+		out += len;
+		outlen += len;
+
+		/* Advance past the root label. */
+		j++;
+	}
+
+	if ((outlen + 1) > dstlen)
+		return -1;
+
+	/* Place the root label. */
+	*out++ = 0;
+	outlen++;
+
+	return outlen;
+}
+
 int fqdn_option_space_encapsulate (result, packet, lease, client_state,
 				   in_options, cfg_options, scope, universe)
 	struct data_string *result;
@@ -2852,7 +2899,8 @@ int fqdn_option_space_encapsulate (result, packet, lease, client_state,
 {
 	pair ocp;
 	struct data_string results [FQDN_SUBOPTION_COUNT + 1];
-	unsigned i;
+	int status = 1;
+	int i;
 	unsigned len;
 	struct buffer *bp = (struct buffer *)0;
 	struct option_chain_head *head;
@@ -2875,17 +2923,35 @@ int fqdn_option_space_encapsulate (result, packet, lease, client_state,
 				       packet, lease, client_state, in_options,
 				       cfg_options, scope,  oc, MDL);
 	}
-	len = 4 + results [FQDN_FQDN].len;
+	/* We add a byte for the flags field.
+	 * We add two bytes for the two RCODE fields.
+	 * We add a byte because we will prepend a label count.
+	 * We add a byte because the input len doesn't count null termination,
+	 * and we will add a root label.
+	 */
+	len = 5 + results [FQDN_FQDN].len;
 	/* Save the contents of the option in a buffer. */
 	if (!buffer_allocate (&bp, len, MDL)) {
 		log_error ("no memory for option buffer.");
-		return 0;
+		status = 0;
+		goto exit;
 	}
 	buffer_reference (&result -> buffer, bp, MDL);
 	result -> len = 3;
 	result -> data = &bp -> data [0];
 
 	memset (&bp -> data [0], 0, len);
+	/* XXX: The server should set bit 4 (yes, 4, not 3) to 1 if it is
+	 * not going to perform any ddns updates.  The client should set the
+	 * bit if it doesn't want the server to perform any updates.
+	 * The problem is at this layer of abstraction we have no idea if
+	 * the caller is a client or server.
+	 *
+	 * See RFC4702, Section 3.1, 'The "N" bit'.
+	 *
+	 * if (?)
+	 *	bp->data[0] |= 8;
+	 */
 	if (results [FQDN_NO_CLIENT_UPDATE].len &&
 	    results [FQDN_NO_CLIENT_UPDATE].data [0])
 		bp -> data [0] |= 2;
@@ -2899,31 +2965,19 @@ int fqdn_option_space_encapsulate (result, packet, lease, client_state,
 
 	if (results [FQDN_ENCODED].len &&
 	    results [FQDN_ENCODED].data [0]) {
-		unsigned char *out;
-		int i;
-		bp -> data [0] |= 4;
-		out = &bp -> data [3];
+		bp->data[0] |= 4;
 		if (results [FQDN_FQDN].len) {
-			i = 0;
-			while (i < results [FQDN_FQDN].len) {
-				int j;
-				for (j = i; ('.' !=
-					     results [FQDN_FQDN].data [j]) &&
-					     j < results [FQDN_FQDN].len; j++)
-					;
-				*out++ = j - i;
-				memcpy (out, &results [FQDN_FQDN].data [i],
-					(unsigned)(j - i));
-				out += j - i;
-				i = j;
-				if (results [FQDN_FQDN].data [j] == '.')
-					i++;
+			i = fqdn_encode(&bp->data[3], len - 3,
+					results[FQDN_FQDN].data,
+					results[FQDN_FQDN].len);
+
+			if (i < 0) {
+				status = 0;
+				goto exit;
 			}
-			if ((results [FQDN_FQDN].data
-			     [results [FQDN_FQDN].len - 1] == '.'))
-				*out++ = 0;
-			result -> len = out - result -> data;
-			result -> terminated = 0;
+
+			result->len += i;
+			result->terminated = 0;
 		}
 	} else {
 		if (results [FQDN_FQDN].len) {
@@ -2933,12 +2987,278 @@ int fqdn_option_space_encapsulate (result, packet, lease, client_state,
 			result -> terminated = 0;
 		}
 	}
+      exit:
 	for (i = 1; i <= FQDN_SUBOPTION_COUNT; i++) {
 		if (results [i].len)
 			data_string_forget (&results [i], MDL);
 	}
 	buffer_dereference (&bp, MDL);
+	if (!status)
+		data_string_forget(result, MDL);
+	return status;
+}
+
+/* Shill to the DHCPv4 fqdn option cache any lookups in the fqdn6 universe.
+ *
+ * XXX: Is this necessary?  There shouldn't be any lookups directly...
+ */
+struct option_cache *
+lookup_fqdn6_option(struct universe *universe, struct option_state *options,
+		    unsigned code)
+{
+	log_fatal("Impossible condition at %s:%d.", MDL);
+
+	return fqdn_universe.lookup_func(&fqdn_universe, options, code);
+}
+
+/* Shill to the DHCPv4 fqdn option cache any direct saves to the fqdn6
+ * universe.
+ *
+ * XXX: Should this even be possible?  Never excercised code?
+ */
+void
+save_fqdn6_option(struct universe *universe, struct option_state *options,
+		  struct option_cache *oc)
+{
+	log_fatal("Impossible condition at %s:%d.", MDL);
+
+	fqdn_universe.save_func(&fqdn_universe, options, oc);
+}
+
+/* Shill to the DHCPv4 fqdn option cache any attempts to remove entries.
+ *
+ * XXX: Again...should this even be possible?
+ */
+void
+delete_fqdn6_option(struct universe *universe, struct option_state *options,
+		    int code)
+{
+	log_fatal("Impossible condition at %s:%d.", MDL);
+
+	fqdn_universe.delete_func(&fqdn_universe, options, code);
+}
+
+/* Shill to the DHCPv4 fqdn option cache any attempts to traverse the
+ * V6's option cache entry.
+ *
+ * This function is called speculatively by dhclient to setup
+ * environment variables.  But it would have already called the
+ * foreach on the normal fqdn universe, so this is superfluous.
+ */
+void
+fqdn6_option_space_foreach(struct packet *packet, struct lease *lease,
+			   struct client_state *client_state,
+			   struct option_state *in_options,
+			   struct option_state *cfg_options,
+			   struct binding_scope **scope,
+			   struct universe *u, void *stuff,
+			   void (*func)(struct option_cache *,
+					struct packet *,
+					struct lease *,
+					struct client_state *,
+					struct option_state *,
+					struct option_state *,
+					struct binding_scope **,
+					struct universe *, void *))
+{
+	/* Pretend it is empty. */
+	return;
+}
+
+/* Turn the FQDN option space into a DHCPv6 FQDN option buffer.
+ */
+int
+fqdn6_option_space_encapsulate(struct data_string *result,
+			       struct packet *packet, struct lease *lease,
+			       struct client_state *client_state,
+			       struct option_state *in_options,
+			       struct option_state *cfg_options,
+			       struct binding_scope **scope,
+			       struct universe *universe)
+{
+	pair ocp;
+	struct option_chain_head *head;
+	struct option_cache *oc;
+	unsigned char *data;
+	int i, len, rval = 0, count;
+	struct data_string results[FQDN_SUBOPTION_COUNT + 1];
+
+	if (fqdn_universe.index >= cfg_options->universe_count)
+		return 0;
+	head = ((struct option_chain_head *)
+		cfg_options->universes[fqdn_universe.index]);
+	if (head == NULL)
+		goto exit;
+
+	memset(results, 0, sizeof(results));
+	for (ocp = head->first ; ocp != NULL ; ocp = ocp->cdr) {
+		oc = (struct option_cache *)(ocp->car);
+		if (oc->option->code > FQDN_SUBOPTION_COUNT)
+			log_fatal("Impossible condition at %s:%d.", MDL);
+
+		evaluate_option_cache(&results[oc->option->code], packet,
+				      lease, client_state, in_options,
+				      cfg_options, scope, oc, MDL);
+	}
+
+	/* We add a byte for the flags field at the start of the option.
+	 * We add a byte because we will prepend a label count.
+	 * We add a byte because the input length doesn't include a trailing
+	 * NULL, and we will add a root label.
+	 */
+	len = results[FQDN_FQDN].len + 3;
+	if (!buffer_allocate(&result->buffer, len, MDL)) {
+		log_error("No memory for virtual option buffer.");
+		goto exit;
+	}
+	data = result->buffer->data;
+	result->data = data;
+
+	/* The first byte is the flags field. */
+	result->len = 1;
+	data[0] = 0;
+	/* XXX: The server should set bit 3 (yes, 3, not 4) to 1 if we
+	 * are not going to perform any DNS updates.  The problem is
+	 * that at this layer of abstraction, we do not know if the caller
+	 * is the client or the server.
+	 *
+	 * See RFC4704 Section 4.1, 'The "N" bit'.
+	 *
+	 * if (?)
+	 *	data[0] |= 4;
+	 */
+	if (results[FQDN_NO_CLIENT_UPDATE].len &&
+	    results[FQDN_NO_CLIENT_UPDATE].data[0])
+		data[0] |= 2;
+	if (results[FQDN_SERVER_UPDATE].len &&
+	    results[FQDN_SERVER_UPDATE].data[0])
+		data[0] |= 1;
+
+	/* If there is no name, we're done. */
+	if (results[FQDN_FQDN].len == 0) {
+		rval = 1;
+		goto exit;
+	}
+
+	/* Convert textual representation to DNS format. */
+	count = fqdn_encode(data + 1, len - 1,
+			    results[FQDN_FQDN].data, results[FQDN_FQDN].len);
+
+	if (count < 0) {
+		rval = 0;
+		data_string_forget(result, MDL);
+		goto exit;
+	}
+
+	result->len += count;
+	result->terminated = 0;
+
+	/* Success! */
+	rval = 1;
+
+      exit:
+	for (i = 1 ; i <= FQDN_SUBOPTION_COUNT ; i++) {
+		if (result[i].len)
+			data_string_forget(&results[i], MDL);
+	}
+
+	return rval;
+}
+
+/* Read the DHCPv6 FQDN option's contents into the FQDN virtual space.
+ */
+int
+fqdn6_universe_decode(struct option_state *options,
+		      const unsigned char *buffer, unsigned length,
+		      struct universe *u)
+{
+	struct buffer *bp = NULL;
+	unsigned char *first_dot;
+	int len, hlen, dlen;
+
+	/* The FQDN option has to be at least 1 byte long. */
+	if (length < 1)
+		return 0;
+
+	/* Save the contents of the option in a buffer.  There are 3
+	 * one-byte values we record from the packet, so we go ahead
+	 * and allocate a bigger buffer to accomodate them.  But the
+	 * 'length' we got (because it is a DNS encoded string) is
+	 * one longer than we need...so we only add two extra octets.
+	 */
+	if (!buffer_allocate(&bp, length + 2, MDL)) {
+		log_error("No memory for dhcp6.fqdn option buffer.");
+		return 0;
+	}
+
+	/* The v6 FQDN is always 'encoded' per DNS. */
+	bp->data[0] = 1;
+	if (!save_option_buffer(&fqdn_universe, options, bp,
+				bp->data, 1, FQDN_ENCODED, 0))
+		goto error;
+
+	/* XXX: We need to process 'The "N" bit'. */
+
+	if (buffer[0] & 1) /* server-update. */
+		bp->data[2] = 1;
+	else
+		bp->data[2] = 0;
+
+	if (!save_option_buffer(&fqdn_universe, options, bp, bp->data + 2, 1,
+				FQDN_SERVER_UPDATE, 0))
+		goto error;
+
+	if (buffer[0] & 2) /* no-client-update. */
+		bp->data[1] = 1;
+	else
+		bp->data[1] = 0;
+
+	if (!save_option_buffer(&fqdn_universe, options, bp, bp->data + 1, 1,
+				FQDN_NO_CLIENT_UPDATE, 0))
+		goto error;
+
+	/* Convert the domain name to textual representation for config. */
+	len = MRns_name_ntop(buffer + 1, bp->data + 3, length - 1);
+	if (len == -1) {
+		log_error("Unable to convert dhcp6.fqdn domain name to "
+			  "printable form.");
+		goto error;
+	}
+
+	/* Save the domain name. */
+	if (len > 0) {
+		if (!save_option_buffer(&fqdn_universe, options, bp,
+					bp->data + 3, len, FQDN_FQDN, 1))
+			goto error;
+
+		first_dot = strchr(bp->data + 3, '.');
+
+		if (first_dot != NULL) {
+			hlen = first_dot - bp->data + 3;
+			dlen = len - hlen;
+		} else {
+			hlen = len;
+			dlen = 0;
+		}
+
+		if (!save_option_buffer(&fqdn_universe, options, bp,
+					bp->data + 3, len, FQDN_FQDN, 1) ||
+		    ((hlen > 0) &&
+		     !save_option_buffer(&fqdn_universe, options, bp,
+					 bp->data + 3, hlen,
+					 FQDN_HOSTNAME, 0)) ||
+		    ((dlen > 0) &&
+		     !save_option_buffer(&fqdn_universe, options, bp, first_dot,
+					 dlen, FQDN_DOMAINNAME, 0)))
+				goto error;
+	}
+
+	buffer_dereference(&bp, MDL);
 	return 1;
+
+      error:
+	buffer_dereference(&bp, MDL);
+	return 0;
 }
 
 void option_space_foreach (struct packet *packet, struct lease *lease,

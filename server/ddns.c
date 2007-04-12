@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: ddns.c,v 1.22.4.2 2007/01/30 11:17:50 shane Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: ddns.c,v 1.22.4.3 2007/04/12 16:22:14 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -544,7 +544,7 @@ int ddns_updates (struct packet *packet,
 			ddns_rev_name.buffer -> data [ddns_rev_name.len] ='\0';
 			ddns_rev_name.terminated = 1;
 		}
-		
+
 		data_string_forget (&d1, MDL);
 	}
 

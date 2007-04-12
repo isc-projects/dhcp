@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tables.c,v 1.56.2.8 2007/02/02 17:54:50 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: tables.c,v 1.56.2.9 2007/04/12 16:22:13 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -264,9 +264,13 @@ static struct option nwip_options[] = {
  * the fqdn contents - domain and host names are derived from a common field,
  * and differ in the left and right hand side of the leftmost dot, fqdn is
  * the combination of the two).
+ *
+ * Note further that the DHCPv6 and DHCPv4 'fqdn' options use the same
+ * virtualized option space to store their work.
  */
 
 struct universe fqdn_universe;
+struct universe fqdn6_universe;
 static struct option fqdn_options[] = {
 	{ "no-client-update", "f",		&fqdn_universe,   1, 1 },
 	{ "server-update", "f",			&fqdn_universe,   2, 1 },
@@ -391,7 +395,7 @@ static struct option dhcpv6_options[] = {
 #if 0
 			/* RFC-ietf-geopriv-dhcp-civil-09.txt */
 
-	{ "geoconf-civic", "X",			&dhcpv6_universe, 35, 1 },
+	{ "geoconf-civic", "X",			&dhcpv6_universe, 36, 1 },
 #endif
 
 			/* RFC-ietf-dhc-dhcpv6-remoteid-01.txt */
@@ -403,23 +407,24 @@ static struct option dhcpv6_options[] = {
 	 * by a globlaly unique ID so long as you're within that enterprise
 	 * id).  So we'll use "X" for now unless someone grumbles.
 	 */
-	{ "remote-id", "X",			&dhcpv6_universe, 36, 1 },
+	{ "remote-id", "X",			&dhcpv6_universe, 37, 1 },
 
 				/* RFC4580 OPTIONS */
 
-	{ "subscriber-id", "X",			&dhcpv6_universe, 37, 1 },
+	{ "subscriber-id", "X",			&dhcpv6_universe, 38, 1 },
 
 			/* RFC-ietf-dhc-dhcpv6-fqdn-05.txt */
 
-	/* BDBDBD, nice FQDN, buck!  Seriously, the 'B' is actually a flags
-	 * field.  It's time we needed a 'flags' atom.
+	/* The DHCPv6 FQDN option is...weird.
+	 *
+	 * We use the same "virtual" encapsulated space as DHCPv4's FQDN
+	 * option, so it can all be configured in one place.  Since the
+	 * options system does not support multiple inheritance, we use
+	 * a 'shill' layer to perform the different protocol conversions,
+	 * and to redirect any queries in the DHCPv4 FQDN's space.
 	 */
-	/* XXX: picking the second part of this field out isn't possible
-	 * in our config language...so how does ddns-hostname = pick() work?
-	 * We're going to need to do a fdqn6 virtual encapsualted space like
-	 * we do for dhcpv4, but we might get away with not doing it today.
-	 */
-	{ "fqdn", "BD",				&dhcpv6_universe, 38, 1 },
+	{ "fqdn", "Efqdn6-if-you-see-me-its-a-bug-bug-bug.",
+						&dhcpv6_universe, 39, 1 },
 	{ NULL, NULL, NULL, 0, 0 }
 };
 
@@ -853,21 +858,22 @@ void initialize_common_option_spaces()
 	 *
 	 * 1: dhcp_universe (dhcpv4 options)
 	 * 2: nwip_universe (dhcpv4 NWIP option)
-	 * 3: fqdn_universe (dhcpv4 fqdn option - reusable for v6?)
+	 * 3: fqdn_universe (dhcpv4 fqdn option - reusable for v6)
 	 * 4: vendor_class_universe (VIVCO)
 	 * 5: vendor_universe (VIVSO)
 	 * 6: isc_universe (dhcpv4 isc config space)
 	 * 7: dhcpv6_universe (dhcpv6 options)
 	 * 8: vsio_universe (DHCPv6 Vendor-Identified space)
 	 * 9: isc6_universe (ISC's Vendor universe in DHCPv6 VSIO)
-	 * 10: agent_universe (dhcpv4 relay agent - see server/stables.c)
-	 * 11: server_universe (server's config, see server/stables.c)
-	 * 12: user-config
-	 * 13: more user-config
+	 * 10: fqdn6_universe (dhcpv6 fqdn option shill to v4)
+	 * 11: agent_universe (dhcpv4 relay agent - see server/stables.c)
+	 * 12: server_universe (server's config, see server/stables.c)
+	 * 13: user-config
 	 * 14: more user-config
 	 * 15: more user-config
+	 * 16: more user-config
 	 */
-	universe_max = 15;
+	universe_max = 16;
 	i = universe_max * sizeof(struct universe *);
 	if (i <= 0)
 		log_fatal("Ludicrous initial size option space table.");
@@ -1228,6 +1234,41 @@ void initialize_common_option_spaces()
 				     &isc6_options[i], MDL);
 	}
 
+	/* The fqdn6 option space is a protocol-wrapper shill for the
+	 * old DHCPv4 space.
+	 */
+	fqdn6_universe.name = "fqdn6-if-you-see-me-its-a-bug-bug-bug";
+	fqdn6_universe.lookup_func = lookup_fqdn6_option;
+	fqdn6_universe.option_state_dereference = NULL; /* Covered by v4. */
+	fqdn6_universe.save_func = save_fqdn6_option;
+	fqdn6_universe.delete_func = delete_fqdn6_option;
+	fqdn6_universe.encapsulate = fqdn6_option_space_encapsulate;
+	fqdn6_universe.foreach = fqdn6_option_space_foreach;
+	fqdn6_universe.decode = fqdn6_universe_decode;
+	/* This is not a 'normal' encapsulated space, so these values are
+	 * meaningless.
+	 */
+	fqdn6_universe.length_size = 0;
+	fqdn6_universe.tag_size = 0;
+	fqdn6_universe.get_tag = NULL;
+	fqdn6_universe.store_tag = NULL;
+	fqdn6_universe.get_length = NULL;
+	fqdn6_universe.store_length = NULL;
+	fqdn6_universe.end = 0;
+	fqdn6_universe.index = universe_count++;
+	code = D6O_CLIENT_FQDN;
+	fqdn6_universe.enc_opt = NULL;
+	if (!option_code_hash_lookup(&fqdn6_universe.enc_opt,
+				     dhcpv6_universe.code_hash, &code, 0, MDL))
+		log_fatal("Unable to find FQDN v6 parent option. (%s:%d).",
+			  MDL);
+	universes[fqdn6_universe.index] = &fqdn6_universe;
+	/* The fqdn6 space shares the same option space as the v4 space.
+	 * So there are no name or code hashes on the v6 side.
+	 */
+	fqdn6_universe.name_hash = NULL;
+	fqdn6_universe.code_hash = NULL;
+
 
 	/* Set up the hash of DHCPv4 universes. */
 	universe_new_hash(&universe_hash, UNIVERSE_HASH_SIZE, MDL);
@@ -1251,4 +1292,8 @@ void initialize_common_option_spaces()
 			  &vsio_universe, MDL);
 	universe_hash_add(universe_hash, isc6_universe.name, 0,
 			  &isc6_universe, MDL);
+/* This should not be neccessary.  Listing here just for consistency.
+ *	universe_hash_add(universe_hash, fqdn6_universe.name, 0,
+ *			  &fqdn6_universe, MDL);
+ */
 }

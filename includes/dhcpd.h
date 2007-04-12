@@ -484,6 +484,11 @@ struct lease_state {
 #define DISCOVER_RELAY		3
 #define DISCOVER_REQUESTED	4
 
+/* DDNS_UPDATE_STYLE enumerations. */
+#define DDNS_UPDATE_STYLE_NONE		0
+#define DDNS_UPDATE_STYLE_AD_HOC	1
+#define DDNS_UPDATE_STYLE_INTERIM	2
+
 /* Server option names. */
 
 #define SV_DEFAULT_LEASE_TIME		1
@@ -1271,6 +1276,42 @@ int cons_options PROTO ((struct packet *, struct dhcp_packet *, struct lease *,
 			 int, int, int, struct data_string *, const char *));
 int fqdn_universe_decode (struct option_state *,
 			  const unsigned char *, unsigned, struct universe *);
+struct option_cache *
+lookup_fqdn6_option(struct universe *universe, struct option_state *options,
+		    unsigned code);
+void
+save_fqdn6_option(struct universe *universe, struct option_state *options,
+		  struct option_cache *oc);
+void
+delete_fqdn6_option(struct universe *universe, struct option_state *options,
+		    int code);
+void
+fqdn6_option_space_foreach(struct packet *packet, struct lease *lease,
+			   struct client_state *client_state,
+			   struct option_state *in_options,
+			   struct option_state *cfg_options,
+			   struct binding_scope **scope,
+			   struct universe *u, void *stuff,
+			   void (*func)(struct option_cache *,
+					struct packet *,
+					struct lease *,
+					struct client_state *,
+					struct option_state *,
+					struct option_state *,
+					struct binding_scope **,
+					struct universe *, void *));
+int
+fqdn6_option_space_encapsulate(struct data_string *result,
+			       struct packet *packet, struct lease *lease,
+			       struct client_state *client_state,
+			       struct option_state *in_options,
+			       struct option_state *cfg_options,
+			       struct binding_scope **scope,
+			       struct universe *universe);
+int
+fqdn6_universe_decode(struct option_state *options,
+		      const unsigned char *buffer, unsigned length,
+		      struct universe *u);
 int store_options PROTO ((int *, unsigned char *, unsigned, struct packet *,
 			  struct lease *, struct client_state *,
 			  struct option_state *,
