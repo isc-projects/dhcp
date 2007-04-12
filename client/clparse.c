@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: clparse.c,v 1.67.52.3 2007/04/12 15:56:42 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: clparse.c,v 1.67.52.4 2007/04/12 16:20:47 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1097,6 +1097,7 @@ parse_client6_lease_statement(struct parse *cfile)
 	struct dhc6_ia **ia;
 	struct client_state *client = NULL;
 	struct interface_info *iface = NULL;
+	struct data_string ds;
 	const char *val;
 	unsigned len;
 	int token, has_ia, no_semi, has_name;
@@ -1255,6 +1256,37 @@ parse_client6_lease_statement(struct parse *cfile)
 
 	if (client == NULL) {
 		parse_warn(cfile, "No matching client state.");
+		dhc6_lease_destroy(lease, MDL);
+		return;
+	}
+
+	/* Fetch Preference option from option cache. */
+	memset(&ds, 0, sizeof(ds));
+	oc = lookup_option(&dhcpv6_universe, lease->options, D6O_PREFERENCE);
+	if ((oc != NULL) &&
+	    evaluate_option_cache(&ds, NULL, NULL, NULL, lease->options,
+				  NULL, &global_scope, oc, MDL)) {
+		if (ds.len != 1) {
+			log_error("Invalid length of DHCPv6 Preference option "
+				  "(%d != 1)", ds.len);
+			data_string_forget(&ds, MDL);
+			dhc6_lease_destroy(lease, MDL);
+			return;
+		} else
+			lease->pref = ds.data[0];
+
+		data_string_forget(&ds, MDL);
+	}
+
+	/* Fetch server-id option from option cache. */
+	oc = lookup_option(&dhcpv6_universe, lease->options, D6O_SERVERID);
+	if ((oc == NULL) ||
+	    !evaluate_option_cache(&lease->server_id, NULL, NULL, NULL,
+				   lease->options, NULL, &global_scope, oc,
+				   MDL) ||
+	    (lease->server_id.len == 0)) {
+		/* This should be impossible... */
+		log_error("Invalid SERVERID option cache.");
 		dhc6_lease_destroy(lease, MDL);
 		return;
 	}

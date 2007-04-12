@@ -2265,6 +2265,7 @@ void dhcpv6_client_assignments(void);
 /* dhc6.c */
 void dhc6_lease_destroy(struct dhc6_lease *lease, char *file, int line);
 void start_init6(struct client_state *client);
+void start_confirm6(struct client_state *client);
 void start_selecting6(struct client_state *client);
 isc_result_t write_client6_lease(struct client_state *client,
 				 struct dhc6_lease *lease,

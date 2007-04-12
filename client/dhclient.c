@@ -32,7 +32,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.142.8.9 2007/04/12 15:56:42 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.142.8.10 2007/04/12 16:20:47 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -438,13 +438,13 @@ main(int argc, char **argv) {
 				option_cache(&client->default_duid, &duid,
 					     NULL, option, MDL);
 
-#if 0
-				/* rt16793 placeholder. */
+				/* If we have a previous binding, Confirm
+				 * that we can (or can't) still use it.
+				 */
 				if (client->active_lease != NULL)
-					start_check6(client);
+					start_confirm6(client);
 				else
-#endif
-				start_init6(client);
+					start_init6(client);
 			}
 		}
 

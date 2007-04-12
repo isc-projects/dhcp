@@ -24,7 +24,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhc6.c,v 1.1.4.11 2007/04/12 15:56:42 dhankins Exp $ Copyright (c) 2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhc6.c,v 1.1.4.12 2007/04/12 16:20:47 dhankins Exp $ Copyright (c) 2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -50,6 +50,7 @@ static struct dhc6_addr *find_addr(struct dhc6_addr *head,
 				   struct iaddr *address);
 void init_handler(struct packet *packet, struct client_state *client);
 void do_init6(void *input);
+void do_confirm6(void *input);
 void reply_handler(struct packet *packet, struct client_state *client);
 static isc_result_t dhc6_add_ia(struct client_state *client,
 				struct data_string *packet,
@@ -445,6 +446,7 @@ dhc6_leaseify(struct packet *packet)
 		if (ds.len != 1) {
 			log_error("Invalid length of DHCPv6 Preference option "
 				  "(%d != 1)", ds.len);
+			data_string_forget(&ds, MDL);
 			dhc6_lease_destroy(lease, MDL);
 			return NULL;
 		} else {
@@ -824,6 +826,39 @@ start_init6(struct client_state *client)
 		    NULL, NULL);
 }
 
+/* start_init6() kicks off an "init-reboot" version of the process, at
+ * startup to find out if old bindings are 'fair' and at runtime whenever
+ * a link cycles state we'll eventually want to do this.
+ */
+void
+start_confirm6(struct client_state *client)
+{
+	/* If there is no active lease, there is nothing to check. */
+	if (client->active_lease == NULL) {
+		start_init6(client);
+		return;
+	}
+
+	log_debug("PRC: Confirming active lease (INIT-REBOOT).");
+	client->state = S_REBOOTING;
+
+	/* Fetch a 24-bit transaction ID. */
+	dhc6_new_xid(client);
+
+	/* Initialize timers, RFC3315 section 17.1.3. */
+	client->IRT = CNF_TIMEOUT;
+	client->MRT = CNF_MAX_RT;
+	client->MRC = 0;
+	client->MRD = CNF_MAX_RD;
+
+	dhc6_retrans_init(client);
+
+	client->v6_handler = reply_handler;
+
+	add_timeout(cur_time + (random() % CNF_MAX_DELAY), do_confirm6, client,
+		    NULL, NULL);
+}
+
 /* do_init6() marshals and transmits a solicit.
  */
 void
@@ -989,6 +1024,160 @@ do_init6(void *input)
 	data_string_forget(&ds, MDL);
 
 	add_timeout(cur_time + client->RT, do_init6, client, NULL, NULL);
+
+	dhc6_retrans_advance(client);
+}
+
+/* do_confirm6() creates a Confirm packet and transmits it.  This function
+ * is called on every timeout to (re)transmit.
+ */
+void
+do_confirm6(void *input)
+{
+	struct client_state *client;
+	struct dhc6_ia *ia;
+	struct dhc6_addr *addr;
+	struct data_string ds;
+	struct data_string ia_data;
+	struct data_string addr_data;
+	int send_ret;
+	TIME elapsed;
+
+	client = input;
+
+	if (client->active_lease == NULL)
+		log_fatal("Impossible condition at %s:%d.", MDL);
+
+	/* In section 17.1.3, it is said:
+	 *
+	 *   If the client receives no responses before the message
+	 *   transmission process terminates, as described in section 14,
+	 *   the client SHOULD continue to use any IP addresses, using the
+	 *   last known lifetimes for those addresses, and SHOULD continue
+	 *   to use any other previously obtained configuration parameters.
+	 *
+	 * So if confirm times out, we go active.
+	 *
+	 * XXX: Should we reduce all IA's t1 to 0, so that we renew and
+	 * stick there until we get a reply?
+	 */
+
+	if ((client->MRC != 0) && (client->txcount > client->MRC))  {
+		log_info("Max retransmission count exceeded.");
+		start_bound(client);
+		return;
+	}
+
+	elapsed = cur_time - client->start_time;
+	if ((client->MRD != 0) && (elapsed > client->MRD)) {
+		log_info("Max retransmission duration exceeded.");
+		start_bound(client);
+		return;
+	}
+
+	memset(&ds, 0, sizeof(ds));
+	if (!buffer_allocate(&ds.buffer, 4, MDL)) {
+		log_error("Unable to allocate memory for Confirm.");
+		return;
+	}
+	ds.data = ds.buffer->data;
+	ds.len = 4;
+
+	ds.buffer->data[0] = DHCPV6_CONFIRM;
+	memcpy(ds.buffer->data + 1, client->dhcpv6_transaction_id, 3);
+
+	/* Form an elapsed option. */
+	if ((elapsed < 0) || (elapsed > 655))
+		client->elapsed = 0xffff;
+	else
+		client->elapsed = elapsed * 100;
+
+	log_debug("XMT: Forming Confirm, %u ms elapsed.",
+		  (unsigned)client->elapsed);
+
+	client->elapsed = htons(client->elapsed);
+
+	make_client6_options(client, &client->sent_options,
+			     client->active_lease, DHCPV6_CONFIRM);
+
+	/* Fetch any configured 'sent' options (includes DUID') in wire format.
+	 */
+	dhcpv6_universe.encapsulate(&ds, NULL, NULL, client, NULL,
+				    client->sent_options, &global_scope,
+				    &dhcpv6_universe);
+
+	/* Append IA's. */
+	memset(&ia_data, 0, sizeof(ia_data));
+	memset(&addr_data, 0, sizeof(addr_data));
+	for (ia = client->active_lease->bindings ; ia != NULL ;
+	     ia = ia->next) {
+		if (!buffer_allocate(&ia_data.buffer, 12, MDL)) {
+			log_error("Unable to allocate memory for IA_NA.");
+			data_string_forget(&ds, MDL);
+			return;
+		}
+
+		/* Copy the IAID into the packet buffer. */
+		memcpy(ia_data.buffer->data, ia->iaid, 4);
+		/* Set t1 and t2 to zero (RFC3315 section 17.1.3) */
+		memset(ia_data.buffer->data + 4, 0, 8);
+
+		log_debug("XMT:  X-- IA_NA %s",
+			  print_hex_1(4, ia_data.buffer->data, 55));
+
+		for (addr = ia->addrs ; addr != NULL ; addr = addr->next) {
+			if (addr->address.len != 16) {
+				log_error("Illegal IPv6 address length (%d), "
+					  "ignoring.  (%s:%d)",
+					  addr->address.len, MDL);
+				continue;
+			}
+
+			if (!buffer_allocate(&addr_data.buffer, 24, MDL)) {
+				log_error("Unable to allocate memory for "
+					  "IAADDR.");
+				data_string_forget(&ia_data, MDL);
+				data_string_forget(&ds, MDL);
+				return;
+			}
+
+			/* Copy the address into the packet buffer. */
+			memcpy(addr_data.buffer->data, addr->address.iabuf,
+			       16);
+
+			/* Set preferred and max life to zero, per 17.1.3. */
+			memset(addr_data.buffer->data + 16, 0, 8);
+
+			log_debug("XMT:  | X-- Confirm Address %s",
+				  piaddr(addr->address));
+
+			append_option(&ia_data, &dhcpv6_universe,
+				      iaaddr_option, &addr_data);
+
+			data_string_forget(&addr_data, MDL);
+		}
+
+		append_option(&ds, &dhcpv6_universe, ia_na_option, &ia_data);
+
+		data_string_forget(&ia_data, MDL);
+	}
+
+	/* Transmit and wait. */
+
+	log_info("XMT: Confirm on %s, interval %ld.",
+		 client->name ? client->name : client->interface->name,
+		 client->RT);
+
+	send_ret = send_packet6(client->interface, ds.data, ds.len,
+				&DHCPv6DestAddr);
+	if (send_ret != ds.len) {
+		log_error("dhc6: sendpacket6() sent %d of %d bytes",
+			  send_ret, ds.len);
+	}
+
+	data_string_forget(&ds, MDL);
+
+	add_timeout(cur_time + client->RT, do_confirm6, client, NULL, NULL);
 
 	dhc6_retrans_advance(client);
 }
@@ -1195,6 +1384,12 @@ dhc6_select_action(struct client_state *client, isc_result_t rval,
 		 * servers.
 		 */
 	      case STATUS_NoAddrsAvail:
+		if (client->state == S_REBOOTING)
+			return ISC_FALSE;
+
+		if (client->selected_lease == NULL)
+			log_fatal("Impossible case at %s:%d.", MDL);
+
 		dhc6_lease_destroy(client->selected_lease, MDL);
 		client->selected_lease = NULL;
 
@@ -1205,18 +1400,31 @@ dhc6_select_action(struct client_state *client, isc_result_t rval,
 
 		break;
 
-		/* If we got a NotOnLink, something weird happened.  Start
-		 * over from scratch.
+		/* If we got a NotOnLink from a Confirm, then we're not
+		 * on link.  Kill the old-active binding and start over.
+		 *
+		 * If we got a NotOnLink from our Request, something weird
+		 * happened.  Start over from scratch anyway.
 		 */
 	      case STATUS_NotOnLink:
-		dhc6_lease_destroy(client->selected_lease, MDL);
-		client->selected_lease = NULL;
+		if (client->state == S_REBOOTING) {
+			if (client->active_lease == NULL)
+				log_fatal("Impossible case at %s:%d.", MDL);
 
-		while (client->advertised_leases != NULL) {
-			lease = client->advertised_leases;
-			client->advertised_leases = lease->next;
+			dhc6_lease_destroy(client->active_lease, MDL);
+		} else {
+			if (client->selected_lease == NULL)
+				log_fatal("Impossible case at %s:%d.", MDL);
 
-			dhc6_lease_destroy(lease, MDL);
+			dhc6_lease_destroy(client->selected_lease, MDL);
+			client->selected_lease = NULL;
+
+			while (client->advertised_leases != NULL) {
+				lease = client->advertised_leases;
+				client->advertised_leases = lease->next;
+
+				dhc6_lease_destroy(lease, MDL);
+			}
 		}
 
 		start_init6(client);
@@ -1289,8 +1497,8 @@ dhc6_reply_action(struct client_state *client, isc_result_t rval,
 		 * This is strange.  If competing server evaluation is
 		 * useful (and therefore in the protocol), then why would
 		 * a client's first reaction be to request from the same
-		 * server on a different link?  Surely you'd want to re-evaluate
-		 * your server selection.
+		 * server on a different link?  Surely you'd want to
+		 * re-evaluate your server selection.
 		 *
 		 * Well, I guess that's the answer.
 		 */
@@ -1348,6 +1556,7 @@ dhc6_check_reply(struct client_state *client, struct dhc6_lease *new)
 
 	switch (client->state) {
 	      case S_SELECTING:
+	      case S_REBOOTING:
 		action = dhc6_select_action;
 		break;
 
@@ -1898,6 +2107,7 @@ reply_handler(struct packet *packet, struct client_state *client)
 	}
 
 	/* We're done retransmititng at this point. */
+	cancel_timeout(do_confirm6, client);
 	cancel_timeout(do_select6, client);
 	cancel_timeout(do_refresh6, client);
 
@@ -1910,6 +2120,18 @@ reply_handler(struct packet *packet, struct client_state *client)
 	if (client->selected_lease != NULL) {
 		dhc6_lease_destroy(client->selected_lease, MDL);
 		client->selected_lease = NULL;
+	}
+
+	/* If this is in response to a confirm, we use the lease we've
+	 * already got, not the reply we were sent.
+	 */
+	if (client->state == S_REBOOTING) {
+		if (client->active_lease == NULL)
+			log_fatal("Impossible condition at %s:%d.", MDL);
+
+		dhc6_lease_destroy(lease, MDL);
+		start_bound(client);
+		return;
 	}
 
 	/* Merge any bindings in the active lease (if there is one) into
@@ -2270,6 +2492,7 @@ start_bound(struct client_state *client)
 
 	switch (client->state) {
 	      case S_SELECTING:
+	      case S_REBOOTING: /* Pretend we got bound. */
 		reason = "BOUND6";
 		break;
 
@@ -2689,9 +2912,9 @@ make_client6_options(struct client_state *client, struct option_state **op,
 					    client->config->on_transmission,
 					    NULL);
 
-	/* RFC3315 says we MUST inclue an ORO in requests.  If we have it
+	/* RFC3315 says we MUST inclue an ORO in Requests.  If we have it
 	 * in the cache for one, we have it for both, so it's fatal either
-	 * way.
+	 * way (may as well fail early).
 	 */
 	if (lookup_option(&dhcpv6_universe, *op, D6O_ORO) == NULL)
 		log_fatal("You must configure a dhcp6.oro!");
