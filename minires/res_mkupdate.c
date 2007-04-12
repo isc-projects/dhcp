@@ -27,7 +27,7 @@
  */
 
 #if !defined(lint) && !defined(SABER)
-static const char rcsid[] = "$Id: res_mkupdate.c,v 1.8 2005/03/17 20:15:19 dhankins Exp $";
+static const char rcsid[] = "$Id: res_mkupdate.c,v 1.8.116.1 2007/04/12 19:48:09 each Exp $";
 #endif /* not lint */
 
 #include <sys/types.h>
@@ -102,6 +102,7 @@ res_nmkupdate(res_state statp,
 	int n, i, soanum, multiline;
 	ns_updrec *rrecp;
 	struct in_addr ina;
+	struct in6_addr in6a;
         char buf2[MAXDNAME];
 	u_char buf3[MAXDNAME];
 	int section, numrrs = 0, counts[ns_s_max];
@@ -235,6 +236,16 @@ res_nmkupdate(res_state statp,
 			n1 = ntohl(ina.s_addr);
 			ShrinkBuffer(INT32SZ);
 			PUTLONG(n1, cp);
+			break;
+		case T_AAAA:
+			if (!getword_str(buf2, sizeof buf2, &startp, endp))
+				return (-1);
+			if (!inet_pton(AF_INET6, buf2, &in6a))
+				return (-1);
+			n = sizeof(in6_addr);
+			memcpy(cp, &in6a, n);
+			cp += n;
+			ShrinkBuffer(n);
 			break;
 		case T_CNAME:
 		case T_MB:

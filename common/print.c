@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: print.c,v 1.60.46.1 2006/08/11 22:50:21 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: print.c,v 1.60.46.2 2007/04/12 19:48:09 each Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1324,6 +1324,9 @@ void print_dns_status (int status, ns_updque *uq)
 		switch (u -> r_type) {
 		      case T_A:
 			en = "A";
+			break;
+		      case T_AAAA:
+			en = "AAAA";
 			break;
 		      case T_PTR:
 			en = "PTR";

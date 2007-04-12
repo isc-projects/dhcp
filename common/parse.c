@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.113.2.8 2007/04/12 19:42:47 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.113.2.9 2007/04/12 19:48:09 each Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -3670,6 +3670,8 @@ int parse_non_binary (expr, cfile, lose, context)
 			
 		if (!strcasecmp (val, "a"))
 			u = T_A;
+		else if (!strcasecmp (val, "aaaa"))
+			u = T_AAAA;
 		else if (!strcasecmp (val, "ptr"))
 			u = T_PTR;
 		else if (!strcasecmp (val, "mx"))
@@ -3929,6 +3931,8 @@ int parse_non_binary (expr, cfile, lose, context)
 			(*expr) -> data.ns_add.rrtype = atoi (val);
 		else if (!strcasecmp (val, "a"))
 			(*expr) -> data.ns_add.rrtype = T_A;
+		else if (!strcasecmp (val, "aaaa"))
+			(*expr) -> data.ns_add.rrtype = T_AAAA;
 		else if (!strcasecmp (val, "ptr"))
 			(*expr) -> data.ns_add.rrtype = T_PTR;
 		else if (!strcasecmp (val, "mx"))
