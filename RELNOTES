@@ -34,6 +34,9 @@ the README file.
   which causes the server to abstain from performing updates on PTR
   records.  Thanks to a patch from Christof Chen at Allianz.
 
+- A bug was repaired in subencapsulation support, where spaces separated
+  by empty spaces would not get included.
+
 			Changes since 3.1.0a3
 
 - Some spelling fixes.
