@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.92.2.17 2007/04/12 16:22:13 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.92.2.18 2007/04/12 22:31:17 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -703,7 +703,7 @@ int cons_options (inpacket, outpacket, lease, client_state,
 		}
 
 		/* Put any spaces that are encapsulated on the list,
-		 * sort out wether they contain values later.
+		 * sort out whether they contain values later.
 		 */
 		for (i = 0; i < cfg_options -> universe_count; i++) {
 		    if (universes[i]->enc_opt &&

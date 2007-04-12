@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.208.18.5 2007/04/12 19:44:22 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.208.18.6 2007/04/12 22:31:17 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -303,7 +303,7 @@ void dhcpdiscover (packet, ms_nulltp)
 		/* If the lease is ours to allocate, then allocate it.
 		 * If the lease is active, it belongs to the client.  This
 		 * is the right lease, if we are to offer one.  We decide
-		 * wether or not to offer later on.
+		 * whether or not to offer later on.
 		 */
 		if (lease->binding_state == FTS_ACTIVE ||
 		    lease_mine_to_reallocate(lease)) {
@@ -2115,7 +2115,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 			}
 
 			/* Update potential expiry.  Allow for the desired
-			 * lease time plus one half the actual (wether
+			 * lease time plus one half the actual (whether
 			 * modified downward or not) lease time, which is
 			 * actually an estimate of when the client will
 			 * renew.  This way, the client will be able to get
