@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.208.18.4 2006/10/25 22:32:42 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.208.18.5 2007/04/12 19:44:22 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2339,7 +2339,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 					    packet -> options,
 					    state -> options,
 					    &lt -> scope, oc, MDL))) {
-		ddns_updates (packet, lt, lease, state);
+		ddns_updates(packet, lt, lease, NULL, NULL, state->options);
 	}
 #endif /* NSUPDATE */
 

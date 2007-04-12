@@ -1282,6 +1282,29 @@ lease_to_client(struct data_string *reply_ret,
 				               ia_na->iaid_duid.len, 
 					       ia_na, MDL);
 				write_ia_na(ia_na);
+
+				/* If this constitutes a binding, and we
+				 * are performing ddns updates, then give
+				 * ddns_updates() a chance to do its mojo.
+				 */
+				if (((packet->dhcpv6_msg_type
+							 == DHCPV6_REQUEST) ||
+				     (packet->dhcpv6_msg_type
+							 == DHCPV6_RENEW) ||
+				     (packet->dhcpv6_msg_type
+							 == DHCPV6_REBIND)) &&
+				    (((oc = lookup_option(&server_universe,
+							  opt_state,
+							  SV_DDNS_UPDATES))
+								== NULL) ||
+				     evaluate_boolean_option_cache(NULL,
+						packet, NULL, NULL,
+						packet->options, opt_state,
+						&lease->scope, oc, MDL))) {
+					ddns_updates(packet, NULL, NULL,
+						     lease, /* XXX */ NULL,
+						     opt_state);
+				}
 			}
 
 		} else {
@@ -1430,7 +1453,7 @@ lease_to_client(struct data_string *reply_ret,
 	}
 	reply_ret->data = reply_ret->buffer->data;
 	memcpy((char *)reply_ret->data, reply, reply_ofs);
-	
+
 exit:
 	if (lease != NULL) {
 		iaaddr_dereference(&lease, MDL);

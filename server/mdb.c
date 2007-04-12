@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.82.10.4 2007/02/05 19:28:14 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.82.10.5 2007/04/12 19:44:22 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1426,7 +1426,7 @@ void make_binding_state_transition (struct lease *lease)
 	      lease -> binding_state == FTS_ACTIVE &&
 	      lease -> next_binding_state != FTS_RELEASED))) {
 #if defined (NSUPDATE)
-		ddns_removals (lease);
+		ddns_removals(lease, NULL);
 #endif
 		if (lease -> on_expiry) {
 			execute_statements ((struct binding_value **)0,
@@ -1477,7 +1477,7 @@ void make_binding_state_transition (struct lease *lease)
 	      lease -> binding_state == FTS_ACTIVE &&
 	      lease -> next_binding_state == FTS_RELEASED))) {
 #if defined (NSUPDATE)
-		ddns_removals (lease);
+		ddns_removals(lease, NULL);
 #endif
 		if (lease -> on_release) {
 			execute_statements ((struct binding_value **)0,
@@ -1644,7 +1644,7 @@ void release_lease (lease, packet)
 	/* If there are statements to execute when the lease is
 	   released, execute them. */
 #if defined (NSUPDATE)
-	ddns_removals (lease);
+	ddns_removals(lease, NULL);
 #endif
 	if (lease -> on_release) {
 		execute_statements ((struct binding_value **)0,
@@ -1698,7 +1698,7 @@ void abandon_lease (lease, message)
 {
 	struct lease *lt = (struct lease *)0;
 #if defined (NSUPDATE)
-	ddns_removals (lease);
+	ddns_removals(lease, NULL);
 #endif
 
 	if (!lease_copy (&lt, lease, MDL))
@@ -1730,7 +1730,7 @@ void dissociate_lease (lease)
 {
 	struct lease *lt = (struct lease *)0;
 #if defined (NSUPDATE)
-	ddns_removals (lease);
+	ddns_removals(lease, NULL);
 #endif
 
 	if (!lease_copy (&lt, lease, MDL))

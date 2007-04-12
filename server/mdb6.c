@@ -809,6 +809,13 @@ expire_leases(time_t now) {
 			if (addr == NULL) {
 				break;
 			}
+			/* Look to see if there were ddns updates, and if
+			 * so, drop them.
+			 *
+			 * DH: Do we want to do this on a special 'depref'
+			 * timer rather than expiration timer?
+			 */
+			ddns_removals(NULL, addr);
 			iaaddr_dereference(&addr, MDL);
 		}
 	}
