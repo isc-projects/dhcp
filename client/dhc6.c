@@ -24,7 +24,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhc6.c,v 1.1.4.13 2007/04/12 19:44:35 each Exp $ Copyright (c) 2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhc6.c,v 1.1.4.14 2007/04/12 20:04:52 dhankins Exp $ Copyright (c) 2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2488,6 +2488,7 @@ start_bound(struct client_state *client)
 	struct dhc6_addr *addr, *oldaddr;
 	struct dhc6_lease *lease, *old;
 	char *reason;
+	TIME dns_update_offset = 1;
 
 	lease = client->active_lease;
 	if (lease == NULL) {
@@ -2524,6 +2525,7 @@ start_bound(struct client_state *client)
 
 	write_client6_lease(client, lease, 0, 1);
 
+	oldia = NULL;
 	for (ia = lease->bindings ; ia != NULL ; ia = ia->next) {
 		if (old != NULL)
 			oldia = find_ia(old->bindings, ia->iaid);
@@ -2536,6 +2538,11 @@ start_bound(struct client_state *client)
 						    &addr->address);
 			else
 				oldaddr = NULL;
+
+			if (oldaddr == NULL)
+				dhclient_schedule_updates(client,
+							  &addr->address,
+							  dns_update_offset++);
 
 			/* Shell out to setup the new binding. */
 			script_init(client, reason, NULL);
@@ -2813,6 +2820,11 @@ do_depref(void *input)
 
 
 				addr->flags |= DHC6_ADDR_DEPREFFED;
+
+				/* Remove DDNS bindings at depref time. */
+				if (client->config->do_forward_update)
+					client_dns_update(client, 0, 0,
+							  &addr->address);
 			}
 		}
 	}
@@ -2855,6 +2867,15 @@ do_expire(void *input)
 					 print_hex_1(addr->address.len,
 						     addr->address.iabuf,
 						     50));
+
+				/* We remove DNS records at depref time, but
+				 * it is possible that we might get here
+				 * without depreffing.
+				 */
+				if (client->config->do_forward_update &&
+				    !(addr->flags & DHC6_ADDR_DEPREFFED))
+					client_dns_update(client, 0, 0,
+							  &addr->address);
 
 				continue;
 			}

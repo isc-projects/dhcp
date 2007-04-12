@@ -32,7 +32,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.142.8.10 2007/04/12 16:20:47 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.142.8.11 2007/04/12 20:04:52 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -941,11 +941,9 @@ void bind_lease (client)
 	client -> state = S_BOUND;
 	reinitialize_interfaces ();
 	go_daemon ();
-	if (client -> config -> do_forward_update) {
-		client -> dns_update_timeout = 1;
-		add_timeout (cur_time + 1, client_dns_update_timeout,
-			     client, 0, 0);
-	}
+	if (client->config->do_forward_update)
+		dhclient_schedule_updates(client, &client->active->address,
+					  1);
 }  
 
 /* state_bound is called when we've successfully bound to a particular
@@ -3243,7 +3241,8 @@ isc_result_t dhcp_set_control_state (control_object_state_t oldstate,
 		    if (client -> active &&
 			client -> active -> expiry > cur_time) {
 			    if (client -> config -> do_forward_update)
-				    client_dns_update (client, 0, 0);
+				    client_dns_update(client, 0, 0,
+						    &client->active->address);
 			    do_release (client);
 		    }
 		    break;
@@ -3263,30 +3262,63 @@ isc_result_t dhcp_set_control_state (control_object_state_t oldstate,
 	return ISC_R_SUCCESS;
 }
 
+/* Schedule updates to retry occaisionally until it no longer times out.
+ */
+void
+dhclient_schedule_updates(struct client_state *client, struct iaddr *addr,
+			  int offset)
+{
+	struct dns_update_state *ustate;
+
+	if (!client->config->do_forward_update)
+		return;
+
+	ustate = dmalloc(sizeof(*ustate), MDL);
+
+	if (ustate != NULL) {
+		ustate->client = client;
+		ustate->address = *addr;
+		ustate->dns_update_timeout = 1;
+
+		add_timeout(cur_time + offset, client_dns_update_timeout,
+			    ustate, NULL, NULL);
+	} else {
+		log_error("Unable to allocate dns update state for %s.",
+			  piaddr(*addr));
+	}
+}
+
 /* Called after a timeout if the DNS update failed on the previous try.
    Retries the update, and if it times out, schedules a retry after
    ten times as long of a wait. */
 
 void client_dns_update_timeout (void *cp)
 {
-	struct client_state *client = cp;
-	isc_result_t status;
+	struct dns_update_state *ustate = cp;
+	isc_result_t status = ISC_R_FAILURE;
 
-	if (client -> active) {
-		status = client_dns_update (client, 1,
-					    (client -> active -> renewal -
-					     cur_time));
-		if (status == ISC_R_TIMEDOUT) {
-			client -> dns_update_timeout *= 10;
-			add_timeout (cur_time + client -> dns_update_timeout,
-				     client_dns_update_timeout, client, 0, 0);
-		}
-	}
+	/* XXX: DNS TTL is a problem we need to solve properly.  Until
+	 * that time, 300 is a placeholder default for something that is
+	 * less insane than a value scaled by lease timeout.
+	 */
+	if ((ustate->client->active != NULL) ||
+	    (ustate->client->active_lease != NULL))
+		status = client_dns_update(ustate->client, 1, 300,
+					   &ustate->address);
+
+	if (status == ISC_R_TIMEDOUT) {
+		if (ustate->dns_update_timeout < 3600)
+			ustate->dns_update_timeout *= 10;
+		add_timeout(cur_time + ustate->dns_update_timeout,
+			    client_dns_update_timeout, ustate, NULL, NULL);
+	} else
+		dfree(ustate, MDL);
 }
 
 /* See if we should do a DNS update, and if so, do it. */
 
-isc_result_t client_dns_update (struct client_state *client, int addp, int ttl)
+isc_result_t client_dns_update (struct client_state *client, int addp,
+				int ttl, struct iaddr *address)
 {
 	struct data_string ddns_fqdn, ddns_fwd_name,
 	       ddns_dhcid, client_identifier;
@@ -3301,7 +3333,7 @@ isc_result_t client_dns_update (struct client_state *client, int addp, int ttl)
 		return ISC_R_SUCCESS;
 
 	/* If we don't have a lease, we can't do an update. */
-	if (!client -> active)
+	if ((client->active == NULL) && (client->active_lease == NULL))
 		return ISC_R_SUCCESS;
 
 	/* If we set the no client update flag, don't do the update. */
@@ -3336,30 +3368,50 @@ isc_result_t client_dns_update (struct client_state *client, int addp, int ttl)
 				    &global_scope, oc, MDL))
 		return ISC_R_SUCCESS;
 
-	/* Make a dhcid string out of either the client identifier,
-	   if we are sending one, or the interface's MAC address,
-	   otherwise. */
+	/* If this is a DHCPv6 client update, make a dhcid string out of
+	 * the DUID.  If this is a DHCPv4 client update, choose either
+	 * the client identifier, if there is one, or the interface's
+	 * MAC address.
+	 */
 	memset (&ddns_dhcid, 0, sizeof ddns_dhcid);
 
-	memset (&client_identifier, 0, sizeof client_identifier);
-	if ((oc = lookup_option (&dhcp_universe, client -> sent_options,
-				 DHO_DHCP_CLIENT_IDENTIFIER)) &&
-	    evaluate_option_cache (&client_identifier, (struct packet *)0, 
-				   (struct lease *)0, client,
-				   client -> sent_options,
-				   (struct option_state *)0,
-				   &global_scope, oc, MDL)) {
-		result = get_dhcid (&ddns_dhcid,
-				    DHO_DHCP_CLIENT_IDENTIFIER,
-				    client_identifier.data,
-				    client_identifier.len);
-		data_string_forget (&client_identifier, MDL);
-	} else
-		result = get_dhcid (&ddns_dhcid, 0,
-				    client -> interface -> hw_address.hbuf,
-				    client -> interface -> hw_address.hlen);
+	memset(&client_identifier, 0, sizeof(client_identifier));
+	if (client->active_lease != NULL) {
+		if (((oc =
+		      lookup_option(&dhcpv6_universe, client->sent_options,
+				    D6O_CLIENTID)) != NULL) &&
+		    evaluate_option_cache(&client_identifier, NULL, NULL,
+					  client, client->sent_options, NULL,
+					  &global_scope, oc, MDL)) {
+			/* RFC4701 defines type '2' as being for the DUID
+			 * field.  We aren't using RFC4701 DHCID RR's yet,
+			 * but this is as good a value as any.
+			 */
+			result = get_dhcid(&ddns_dhcid, 2,
+					   client_identifier.data,
+					   client_identifier.len);
+			data_string_forget(&client_identifier, MDL);
+		} else
+			log_fatal("Impossible condition at %s:%d.", MDL);
+	} else {
+		if (((oc =
+		      lookup_option(&dhcp_universe, client->sent_options,
+				    DHO_DHCP_CLIENT_IDENTIFIER)) != NULL) &&
+		    evaluate_option_cache(&client_identifier, NULL, NULL,
+					  client, client->sent_options, NULL,
+					  &global_scope, oc, MDL)) {
+			result = get_dhcid(&ddns_dhcid,
+					   DHO_DHCP_CLIENT_IDENTIFIER,
+					   client_identifier.data,
+					   client_identifier.len);
+			data_string_forget(&client_identifier, MDL);
+		} else
+			result = get_dhcid(&ddns_dhcid, 0,
+					   client->interface->hw_address.hbuf,
+					   client->interface->hw_address.hlen);
+	}
 	if (!result) {
-		data_string_forget (&ddns_fwd_name, MDL);
+		data_string_forget(&ddns_fwd_name, MDL);
 		return ISC_R_SUCCESS;
 	}
 
@@ -3376,12 +3428,10 @@ isc_result_t client_dns_update (struct client_state *client, int addp, int ttl)
 	 */
 	if (ddns_fwd_name.len && ddns_dhcid.len) {
 		if (addp)
-			rcode = ddns_update_fwd(&ddns_fwd_name,
-						client->active->address,
+			rcode = ddns_update_fwd(&ddns_fwd_name, *address,
 						&ddns_dhcid, ttl, 1, 1);
 		else
-			rcode = ddns_remove_fwd(&ddns_fwd_name,
-						client->active->address,
+			rcode = ddns_remove_fwd(&ddns_fwd_name, *address,
 						&ddns_dhcid);
 	} else
 		rcode = ISC_R_FAILURE;

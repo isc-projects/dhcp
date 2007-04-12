@@ -942,7 +942,6 @@ struct client_state {
 	u_int16_t secs;			    /* secs value from DHCPDISCOVER. */
 	TIME first_sending;			/* When was first copy sent? */
 	TIME interval;		      /* What's the current resend interval? */
-	int dns_update_timeout;		 /* Last timeout set for DNS update. */
 	struct string_list *medium;		   /* Last media type tried. */
 	struct dhcp_packet packet;		    /* Outgoing DHCP packet. */
 	unsigned packet_length;	       /* Actual length of generated packet. */
@@ -983,6 +982,12 @@ struct client_state {
 struct envadd_state {
 	struct client_state *client;
 	const char *prefix;
+};
+
+struct dns_update_state {
+	struct client_state *client;
+	struct iaddr address;
+	int dns_update_timeout;
 };
 
 /* Relay agent server list. */
@@ -2297,8 +2302,11 @@ void do_release PROTO ((struct client_state *));
 int dhclient_interface_shutdown_hook (struct interface_info *);
 int dhclient_interface_discovery_hook (struct interface_info *);
 isc_result_t dhclient_interface_startup_hook (struct interface_info *);
+void dhclient_schedule_updates(struct client_state *client,
+			       struct iaddr *addr, int offset);
 void client_dns_update_timeout (void *cp);
-isc_result_t client_dns_update (struct client_state *client, int, int);
+isc_result_t client_dns_update(struct client_state *client, int, int,
+			       struct iaddr *);
 
 void dhcpv4_client_assignments(void);
 void dhcpv6_client_assignments(void);
