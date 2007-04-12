@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.98.2.7 2007/04/11 02:05:21 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.98.2.8 2007/04/12 16:16:14 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -664,13 +664,11 @@ int cons_options (inpacket, outpacket, lease, client_state,
 			}
 		}
 
-		/* Now go through all the universes for which options
-		   were set and see if there are encapsulations for
-		   them; if there are, put the encapsulation options
-		   on the priority list as well. */
+		/* Put any spaces that are encapsulated on the list,
+		 * sort out wether they contain values later.
+		 */
 		for (i = 0; i < cfg_options -> universe_count; i++) {
-		    if (cfg_options -> universes [i] &&
-			universes [i] -> enc_opt &&
+		    if (universes[i]->enc_opt &&
 			priority_len < PRIORITY_COUNT &&
 			universes [i] -> enc_opt -> universe == &dhcp_universe)
 		    {
@@ -2218,34 +2216,54 @@ int option_space_encapsulate (result, packet, lease, client_state,
 		log_error("encapsulation requested for %s with no support.",
 			  name->data);
 
-	/* Attempt to store any 'E'ncapsulated options that have not yet been
-	 * placed on the option buffer by the above (configuring a value in
-	 * the space over-rides any values in the child universe).
-	 *
-	 * Note that there are far fewer universes than there will every be
-	 * options in any universe.  So it is faster to traverse the
-	 * configured universes, checking if each is encapsulated in the
-	 * current universe, and if so attempting to do so.
-	 *
-	 * For each configured universe for this configuration option space,
-	 * which is encapsulated within the current universe, can not be found
-	 * by the lookup function (the universe-specific encapsulation
-	 * functions would already have stored such a value), and encapsulates
-	 * at least one option, append it.
-	 */
+	return status;
+}
+
+/* Attempt to store any 'E'ncapsulated options that have not yet been
+ * placed on the option buffer by the above (configuring a value in
+ * the space over-rides any values in the child universe).
+ *
+ * Note that there are far fewer universes than there will every be
+ * options in any universe.  So it is faster to traverse the
+ * configured universes, checking if each is encapsulated in the
+ * current universe, and if so attempting to do so.
+ *
+ * For each configured universe for this configuration option space,
+ * which is encapsulated within the current universe, can not be found
+ * by the lookup function (the universe-specific encapsulation
+ * functions would already have stored such a value), and encapsulates
+ * at least one option, append it.
+ */
+static int
+search_subencapsulation(struct data_string *result, struct packet *packet,
+			struct lease *lease, struct client_state *client_state,
+			struct option_state *in_options,
+			struct option_state *cfg_options,
+			struct binding_scope **scope,
+			struct universe *universe)
+{
+	struct data_string sub;
+	struct universe *subu;
+	int i, status = 0;
+
 	memset(&sub, 0, sizeof(sub));
 	for (i = 0 ; i < cfg_options->universe_count ; i++) {
 		subu = universes[i];
-		if (cfg_options->universes[i] != NULL &&
-		    subu->enc_opt != NULL &&
-		    subu->enc_opt->universe == u &&
+
+		if (subu == NULL)
+			log_fatal("Impossible condition at %s:%d.", MDL);
+
+		if (subu->enc_opt != NULL &&
+		    subu->enc_opt->universe == universe &&
 		    subu->enc_opt->format != NULL &&
 		    subu->enc_opt->format[0] == 'E' &&
-		    lookup_option(u, cfg_options,
+		    lookup_option(universe, cfg_options,
 				  subu->enc_opt->code) == NULL &&
 		    subu->encapsulate(&sub, packet, lease, client_state,
-				      in_options, cfg_options, scope, subu)) {
-			if (append_option(result, u, subu->enc_opt, &sub))
+				      in_options, cfg_options,
+				      scope, subu)) {
+			if (append_option(result, universe,
+					  subu->enc_opt, &sub))
 				status = 1;
 
 			data_string_forget(&sub, MDL);
@@ -2290,6 +2308,10 @@ int hashed_option_space_encapsulate (result, packet, lease, client_state,
 				status = 1;
 		}
 	}
+
+	if (search_subencapsulation(result, packet, lease, client_state,
+				    in_options, cfg_options, scope, universe))
+		status = 1;
 
 	return status;
 }
@@ -2626,6 +2648,10 @@ int linked_option_space_encapsulate (result, packet, lease, client_state,
 				  scope, (struct option_cache *)(oc -> car)))
 			status = 1;
 	}
+
+	if (search_subencapsulation(result, packet, lease, client_state,
+				    in_options, cfg_options, scope, universe))
+		status = 1;
 
 	return status;
 }
