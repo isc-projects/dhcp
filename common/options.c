@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.92.2.14 2007/04/05 09:57:42 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.92.2.15 2007/04/12 15:56:42 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -3469,7 +3469,7 @@ pretty_domain(char **dst, char *dend, const unsigned char **src,
 		return -1;
 
 	**dst = '"';
-	*dst++;
+	(*dst)++;
 
 	do {
 		/* Continue loop until end of src buffer. */
@@ -3478,13 +3478,13 @@ pretty_domain(char **dst, char *dend, const unsigned char **src,
 
 		/* Consume tag size. */
 		tsiz = **src;
-		*src++;
+		(*src)++;
 
 		/* At root, finis. */
 		if (tsiz == 0)
 			break;
 
-		tend = *src + tsiz;
+		tend = (*src) + tsiz;
 
 		/* If the tag exceeds the source buffer, it's illegal.
 		 * This should also trap compression pointers (which should
@@ -3500,13 +3500,13 @@ pretty_domain(char **dst, char *dend, const unsigned char **src,
 			return -1;
 
 		**dst = '.';
-		*dst++;
+		(*dst)++;
 		count += status + 1;
 	}
 	while(1);
 
 	**dst = '"';
-	*dst++;
+	(*dst)++;
 
 	return count;
 }

@@ -332,7 +332,10 @@ enum dhcp_token {
 	SUBNET6 = 636,
 	HOST_IDENTIFIER = 637,
 	IA_NA = 638,
-	IAADDR = 639
+	IAADDR = 639,
+	LEASE6 = 640,
+	PREFERRED_LIFE = 641,
+	MAX_LIFE = 642
 };
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\

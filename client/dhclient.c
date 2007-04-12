@@ -3,7 +3,7 @@
    DHCP Client. */
 
 /*
- * Copyright (c) 2004-2006 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -32,7 +32,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.142.8.8 2007/02/02 17:54:49 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.142.8.9 2007/04/12 15:56:42 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -42,8 +42,8 @@ TIME default_lease_time = 43200; /* 12 hours... */
 TIME max_lease_time = 86400; /* 24 hours... */
 
 const char *path_dhclient_conf = _PATH_DHCLIENT_CONF;
-const char *path_dhclient_db = _PATH_DHCLIENT_DB;
-const char *path_dhclient_pid = _PATH_DHCLIENT_PID;
+const char *path_dhclient_db = NULL;
+const char *path_dhclient_pid = NULL;
 static char path_dhclient_script_array [] = _PATH_DHCLIENT_SCRIPT;
 char *path_dhclient_script = path_dhclient_script_array;
 
@@ -61,7 +61,7 @@ struct in_addr giaddr;
    assert (state_is == state_shouldbe). */
 #define ASSERT_STATE(state_is, state_shouldbe) {}
 
-static char copyright[] = "Copyright 2004-2006 Internet Systems Consortium.";
+static char copyright[] = "Copyright 2004-2007 Internet Systems Consortium.";
 static char arr [] = "All rights reserved.";
 static char message [] = "Internet Systems Consortium DHCP Client";
 static char url [] = "For info, please visit http://www.isc.org/sw/dhcp/";
@@ -74,6 +74,7 @@ int client_env_count=0;
 int onetry=0;
 int quiet=0;
 int nowait=0;
+char *mockup_relay = NULL;
 
 static void usage PROTO ((void));
 
@@ -87,7 +88,6 @@ main(int argc, char **argv) {
 	struct client_state *client;
 	unsigned seed;
 	char *server = (char *)0;
-	char *relay = (char *)0;
 	isc_result_t status;
  	int release_mode = 0;
 	omapi_object_t *listener;
@@ -195,7 +195,7 @@ main(int argc, char **argv) {
 		} else if (!strcmp (argv [i], "-g")) {
 			if (++i == argc)
 				usage ();
-			relay = argv [i];
+			mockup_relay = argv [i];
 		} else if (!strcmp (argv [i], "-nw")) {
 			nowait = 1;
 		} else if (!strcmp (argv [i], "-n")) {
@@ -256,6 +256,17 @@ main(int argc, char **argv) {
 		path_dhclient_script = s;
 	}
 
+	/* Set up the initial dhcp option universe. */
+	initialize_common_option_spaces();
+
+	/* Assign v4 or v6 specific running parameters. */
+	if (local_family == AF_INET)
+		dhcpv4_client_assignments();
+	else if (local_family == AF_INET6)
+		dhcpv6_client_assignments();
+	else
+		log_fatal("Impossible condition at %s:%d.", MDL);
+
 	/* first kill of any currently running client */
 	if (release_mode) {
 		FILE *pidfd;
@@ -289,29 +300,18 @@ main(int argc, char **argv) {
 
 	/* If we're given a relay agent address to insert, for testing
 	   purposes, figure out what it is. */
-	if (relay) {
-		if (!inet_aton (relay, &giaddr)) {
+	if (mockup_relay) {
+		if (!inet_aton (mockup_relay, &giaddr)) {
 			struct hostent *he;
-			he = gethostbyname (relay);
+			he = gethostbyname (mockup_relay);
 			if (he) {
 				memcpy (&giaddr, he -> h_addr_list [0],
 					sizeof giaddr);
 			} else {
-				log_fatal ("%s: no such host", relay);
+				log_fatal ("%s: no such host", mockup_relay);
 			}
 		}
 	}
-
-	/* Set up the initial dhcp option universe. */
-	initialize_common_option_spaces ();
-
-	/* Assign port numbers. */
-	if (local_family == AF_INET)
-		dhcpv4_client_assignments();
-	else if (local_family == AF_INET6)
-		dhcpv6_client_assignments();
-	else
-		log_fatal("Impossible condition at %s:%d.", MDL);
 
 	/* Get the current time... */
 	GET_TIME (&cur_time);
@@ -438,6 +438,12 @@ main(int argc, char **argv) {
 				option_cache(&client->default_duid, &duid,
 					     NULL, option, MDL);
 
+#if 0
+				/* rt16793 placeholder. */
+				if (client->active_lease != NULL)
+					start_check6(client);
+				else
+#endif
 				start_init6(client);
 			}
 		}
@@ -2290,7 +2296,8 @@ void destroy_client_lease (lease)
 	free_client_lease (lease, MDL);
 }
 
-FILE *leaseFile;
+FILE *leaseFile = NULL;
+int leases_written = 0;
 
 void rewrite_client_leases ()
 {
@@ -2298,10 +2305,10 @@ void rewrite_client_leases ()
 	struct client_state *client;
 	struct client_lease *lp;
 
-	if (leaseFile)
+	if (leaseFile != NULL)
 		fclose (leaseFile);
 	leaseFile = fopen (path_dhclient_db, "w");
-	if (!leaseFile) {
+	if (leaseFile == NULL) {
 		log_error ("can't create %s: %m", path_dhclient_db);
 		return;
 	}
@@ -2316,6 +2323,11 @@ void rewrite_client_leases ()
 			if (client -> active)
 				write_client_lease (client,
 						    client -> active, 1, 0);
+
+			if (client->active_lease != NULL)
+				write_client6_lease(client,
+						    client->active_lease,
+						    1, 0);
 		}
 	}
 
@@ -2329,6 +2341,11 @@ void rewrite_client_leases ()
 			if (client -> active)
 				write_client_lease (client,
 						    client -> active, 1, 0);
+
+			if (client->active_lease != NULL)
+				write_client6_lease(client,
+						    client->active_lease,
+						    1, 0);
 		}
 	}
 	fflush (leaseFile);
@@ -2346,6 +2363,7 @@ void write_lease_option (struct option_cache *oc,
 	struct data_string ds;
 	int status;
 	struct client_state *client;
+	char *preamble = stuff;
 
 	memset (&ds, 0, sizeof ds);
 
@@ -2358,12 +2376,122 @@ void write_lease_option (struct option_cache *oc,
 	}
 	if (evaluate_option_cache (&ds, packet, lease, client_state,
 				   in_options, cfg_options, scope, oc, MDL)) {
-		fprintf (leaseFile,
-			 "  option %s%s%s %s;\n",
-			 name, dot, oc -> option -> name,
-			 pretty_print_option (oc -> option,
-					      ds.data, ds.len, 1, 1));
+		fprintf(leaseFile, "%soption %s%s%s %s;\n", preamble,
+			name, dot, oc->option->name,
+			pretty_print_option(oc->option, ds.data, ds.len,
+					    1, 1));
 		data_string_forget (&ds, MDL);
+	}
+}
+
+/* Write an option cache to the lease store. */
+static void
+write_options(struct client_state *client, struct option_state *options,
+	      char *preamble)
+{
+	int i;
+
+	for (i = 0; i < options->universe_count; i++) {
+		option_space_foreach(NULL, NULL, client, NULL, options,
+				     &global_scope, universes[i], preamble,
+				     write_lease_option);
+	}
+}
+
+/* Write a DHCPv6 lease to the store. */
+isc_result_t
+write_client6_lease(struct client_state *client, struct dhc6_lease *lease,
+		    int rewrite, int sync)
+{
+	struct dhc6_ia *ia;
+	struct dhc6_addr *addr;
+	int stat;
+
+	/* This should include the current lease. */
+	if (!rewrite && (leases_written++ > 20)) {
+		rewrite_client_leases();
+		leases_written = 0;
+		return ISC_R_SUCCESS;
+	}
+
+	if (client == NULL || lease == NULL)
+		return ISC_R_INVALIDARG;
+
+	if (leaseFile == NULL) {	/* XXX? */
+		leaseFile = fopen(path_dhclient_db, "w");
+		if (leaseFile == NULL) {
+			log_error("can't create %s: %m", path_dhclient_db);
+			return ISC_R_IOERROR;
+		}
+	}
+
+	stat = fprintf(leaseFile, "lease6 {\n");
+	if (stat <= 0)
+		return ISC_R_IOERROR;
+
+	stat = fprintf(leaseFile, "  interface \"%s\";\n",
+		       client->interface->name);
+	if (stat <= 0)
+		return ISC_R_IOERROR;
+
+	for (ia = lease->bindings ; ia != NULL ; ia = ia->next) {
+		stat = fprintf(leaseFile, "  ia_na %s {\n",
+			       print_hex_1(4, ia->iaid, 12));
+		if (stat <= 0)
+			return ISC_R_IOERROR;
+
+		stat = fprintf(leaseFile, "    starts %d;\n"
+					  "    renew %u;\n"
+					  "    rebind %u;\n",
+			       ia->starts, ia->renew, ia->rebind);
+		if (stat <= 0)
+			return ISC_R_IOERROR;
+
+		for (addr = ia->addrs ; addr != NULL ; addr = addr->next) {
+			stat = fprintf(leaseFile, "    iaaddr %s {\n",
+				       piaddr(addr->address));
+			if (stat <= 0)
+				return ISC_R_IOERROR;
+
+			stat = fprintf(leaseFile, "      starts %d;\n"
+						  "      preferred-life %u;\n"
+						  "      max-life %u;\n",
+				       addr->starts, addr->preferred_life,
+				       addr->max_life);
+			if (stat <= 0)
+				return ISC_R_IOERROR;
+
+			if (addr->options != NULL)
+				write_options(client, addr->options, "      ");
+
+			stat = fprintf(leaseFile, "    }\n");
+			if (stat <= 0)
+				return ISC_R_IOERROR;
+		}
+
+		if (ia->options != NULL)
+			write_options(client, ia->options, "    ");
+
+		stat = fprintf(leaseFile, "  }\n");
+		if (stat <= 0)
+			return ISC_R_IOERROR;
+	}
+
+	if (lease->options != NULL)
+		write_options(client, lease->options, "  ");
+
+	stat = fprintf(leaseFile, "}\n");
+	if (stat <= 0)
+		return ISC_R_IOERROR;
+
+	if (fflush(leaseFile) != 0)
+		return ISC_R_IOERROR;
+
+	if (sync) {
+		if (fsync(fileno(leaseFile)) < 0) {
+			log_error("write_client_lease: fsync(): %m");
+			return ISC_R_IOERROR;
+		}
 	}
 }
 
@@ -2375,7 +2503,6 @@ int write_client_lease (client, lease, rewrite, makesure)
 {
 	int i;
 	struct tm *t;
-	static int leases_written;
 	struct option_cache *oc;
 	struct data_string ds;
 	pair *hash;
@@ -2395,9 +2522,9 @@ int write_client_lease (client, lease, rewrite, makesure)
 	if (lease -> is_static)
 		return 1;
 
-	if (!leaseFile) {	/* XXX */
+	if (leaseFile == NULL) {	/* XXX */
 		leaseFile = fopen (path_dhclient_db, "w");
-		if (!leaseFile) {
+		if (leaseFile == NULL) {
 			log_error ("can't create %s: %m", path_dhclient_db);
 			return 0;
 		}
@@ -2475,13 +2602,7 @@ int write_client_lease (client, lease, rewrite, makesure)
 
 	memset (&ds, 0, sizeof ds);
 
-	for (i = 0; i < lease -> options -> universe_count; i++) {
-		option_space_foreach ((struct packet *)0, (struct lease *)0,
-				      client, (struct option_state *)0,
-				      lease -> options, &global_scope,
-				      universes [i],
-				      client, write_lease_option);
-	}
+	write_options(client, lease->options, "  ");
 
 	tval = print_time(lease->renewal);
 	if (tval == NULL ||
@@ -3275,11 +3396,16 @@ dhcpv4_client_assignments(void)
 {
 	struct servent *ent;
 
+	if (path_dhclient_pid == NULL)
+		path_dhclient_pid = _PATH_DHCLIENT_PID;
+	if (path_dhclient_db == NULL)
+		path_dhclient_db = _PATH_DHCLIENT_DB;
+
 	/* Default to the DHCP/BOOTP port. */
 	if (!local_port) {
 		/* If we're faking a relay agent, and we're not using loopback,
 		   use the server port, not the client port. */
-		if (relay && giaddr.s_addr != htonl (INADDR_LOOPBACK)) {
+		if (mockup_relay && giaddr.s_addr != htonl (INADDR_LOOPBACK)) {
 			local_port = htons(67);
 		} else {
 			ent = getservbyname ("dhcpc", "udp");
@@ -3295,7 +3421,7 @@ dhcpv4_client_assignments(void)
 
 	/* If we're faking a relay agent, and we're not using loopback,
 	   we're using the server port, not the client port. */
-	if (relay && giaddr.s_addr != htonl (INADDR_LOOPBACK)) {
+	if (mockup_relay && giaddr.s_addr != htonl (INADDR_LOOPBACK)) {
 		remote_port = local_port;
 	} else
 		remote_port = htons (ntohs (local_port) - 1);   /* XXX */

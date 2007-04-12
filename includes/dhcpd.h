@@ -1175,8 +1175,16 @@ typedef unsigned char option_mask [16];
 #define _PATH_DHCLIENT_PID	"/var/run/dhclient.pid"
 #endif
 
+#ifndef _PATH_DHCLIENT6_PID
+#define _PATH_DHCLIENT6_PID	"/var/run/dhclient6.pid"
+#endif
+
 #ifndef _PATH_DHCLIENT_DB
 #define _PATH_DHCLIENT_DB	"/etc/dhclient.leases"
+#endif
+
+#ifndef _PATH_DHCLIENT6_DB
+#define _PATH_DHCLIENT6_DB	"/etc/dhclient6.leases"
 #endif
 
 #ifndef _PATH_RESOLV_CONF
@@ -2222,6 +2230,9 @@ void write_lease_option (struct option_cache *, struct packet *,
 			 struct binding_scope **, struct universe *, void *);
 int write_client_lease PROTO ((struct client_state *,
 			       struct client_lease *, int, int));
+isc_result_t write_client6_lease(struct client_state *client,
+				 struct dhc6_lease *lease,
+				 int rewrite, int sync);
 int dhcp_option_ev_name (char *, size_t, struct option *);
 
 void script_init PROTO ((struct client_state *, const char *,
@@ -2252,8 +2263,12 @@ void dhcpv4_client_assignments(void);
 void dhcpv6_client_assignments(void);
 
 /* dhc6.c */
+void dhc6_lease_destroy(struct dhc6_lease *lease, char *file, int line);
 void start_init6(struct client_state *client);
 void start_selecting6(struct client_state *client);
+isc_result_t write_client6_lease(struct client_state *client,
+				 struct dhc6_lease *lease,
+				 int rewrite, int sync);
 
 /* db.c */
 int write_lease PROTO ((struct lease *));

@@ -24,21 +24,20 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhc6.c,v 1.1.4.10 2007/04/11 20:57:21 each Exp $ Copyright (c) 2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhc6.c,v 1.1.4.11 2007/04/12 15:56:42 dhankins Exp $ Copyright (c) 2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
 
 struct sockaddr_in6 DHCPv6DestAddr;
 struct option *ia_na_option = NULL;
-struct option *ia_addr_option = NULL;
+struct option *iaaddr_option = NULL;
 
 static struct dhc6_lease *dhc6_dup_lease(struct dhc6_lease *lease,
 					 char *file, int line);
 static struct dhc6_ia *dhc6_dup_ia(struct dhc6_ia *ia, char *file, int line);
 static struct dhc6_addr *dhc6_dup_addr(struct dhc6_addr *addr,
 				       char *file, int line);
-static void dhc6_lease_destroy(struct dhc6_lease *lease, char *file, int line);
 static void dhc6_ia_destroy(struct dhc6_ia *ia, char *file, int line);
 static isc_result_t dhc6_parse_ia_na(struct dhc6_ia **pia,
 				     struct packet *packet,
@@ -46,6 +45,9 @@ static isc_result_t dhc6_parse_ia_na(struct dhc6_ia **pia,
 static isc_result_t dhc6_parse_addrs(struct dhc6_addr **paddr,
 				     struct packet *packet,
 				     struct option_state *options);
+static struct dhc6_ia *find_ia(struct dhc6_ia *head, const char *id);
+static struct dhc6_addr *find_addr(struct dhc6_addr *head,
+				   struct iaddr *address);
 void init_handler(struct packet *packet, struct client_state *client);
 void do_init6(void *input);
 void reply_handler(struct packet *packet, struct client_state *client);
@@ -107,6 +109,11 @@ dhcpv6_client_assignments(void)
 	struct servent *ent;
 	unsigned code;
 
+	if (path_dhclient_pid == NULL)
+		path_dhclient_pid = _PATH_DHCLIENT6_PID;
+	if (path_dhclient_db == NULL)
+		path_dhclient_db = _PATH_DHCLIENT6_DB;
+
 	if (local_port == 0) {
 		ent = getservbyname("dhcpv6-client", "udp");
 		if (ent == NULL)
@@ -135,7 +142,7 @@ dhcpv6_client_assignments(void)
 		log_fatal("Unable to find the IA_NA option definition.");
 
 	code = D6O_IAADDR;
-	if (!option_code_hash_lookup(&ia_addr_option, dhcpv6_universe.code_hash,
+	if (!option_code_hash_lookup(&iaaddr_option, dhcpv6_universe.code_hash,
 				     &code, 0, MDL))
 		log_fatal("Unable to find the IAADDR option definition.");
 
@@ -681,7 +688,7 @@ dhc6_parse_addrs(struct dhc6_addr **paddr, struct packet *packet,
 }
 
 /* Clean up a lease object and deallocate all its parts. */
-static void
+void
 dhc6_lease_destroy(struct dhc6_lease *lease, char *file, int line)
 {
 	struct dhc6_ia *ia, *nia;
@@ -823,8 +830,11 @@ void
 do_init6(void *input)
 {
 	struct client_state *client;
+	struct dhc6_ia *old_ia;
+	struct dhc6_addr *old_addr;
 	struct data_string ds;
 	struct data_string ia;
+	struct data_string addr;
 	struct option_cache *oc;
 	TIME elapsed;
 	u_int32_t t1, t2;
@@ -908,12 +918,57 @@ do_init6(void *input)
 
 	t1 = client->config->requested_lease / 2;
 	t2 = t1 + (t1 / 2);
-	putULong(ia.buffer->data+4, t1);
-	putULong(ia.buffer->data+8, t2);
+	putULong(ia.buffer->data + 4, t1);
+	putULong(ia.buffer->data + 8, t2);
 
 	log_debug("XMT:  X-- IA_NA %s", print_hex_1(4, ia.buffer->data, 55));
-	log_debug("XMT:    X-- Request renew in  +%u", (unsigned)t1);
-	log_debug("XMT:    X-- Request rebind in +%u", (unsigned)t2);
+	log_debug("XMT:  | X-- Request renew in  +%u", (unsigned)t1);
+	log_debug("XMT:  | X-- Request rebind in +%u", (unsigned)t2);
+
+	if ((client->active_lease != NULL) &&
+	    ((old_ia = find_ia(client->active_lease->bindings,
+			       ia.data)) != NULL)) {
+		/* For each address in the old IA, request a binding. */
+		memset(&addr, 0, sizeof(addr));
+		for (old_addr = old_ia->addrs ; old_addr != NULL ;
+		     old_addr = old_addr->next) {
+			if (old_addr->address.len != 16) {
+				log_error("Invalid IPv6 address length %d.  "
+				          "Ignoring.  (%s:%d)",
+					  old_addr->address.len, MDL);
+				continue;
+			}
+
+			if (!buffer_allocate(&addr.buffer, 24, MDL)) {
+				log_error("Unable to allocate memory for "
+					  "IAADDR.");
+				data_string_forget(&ia, MDL);
+				data_string_forget(&ds, MDL);
+				return;
+			}
+			addr.data = addr.buffer->data;
+			addr.len = 24;
+
+			memcpy(addr.buffer->data, old_addr->address.iabuf, 16);
+
+			t1 = client->config->requested_lease;
+			t2 = t1 + (t1 / 2);
+			putULong(addr.buffer->data + 16, t1);
+			putULong(addr.buffer->data + 20, t2);
+
+			log_debug("XMT:  | X-- Request address %s.",
+				  piaddr(old_addr->address));
+			log_debug("XMT:  | | X-- Request preferred in +%u",
+				  (unsigned)t1);
+			log_debug("XMT:  | | X-- Request valid in     +%u",
+				  (unsigned)t2);
+
+			append_option(&ia, &dhcpv6_universe, iaaddr_option,
+				      &addr);
+
+			data_string_forget(&addr, MDL);
+		}
+	}
 
 	append_option(&ds, &dhcpv6_universe, ia_na_option, &ia);
 	data_string_forget(&ia, MDL);
@@ -1780,7 +1835,7 @@ dhc6_add_ia(struct client_state *client, struct data_string *packet,
 			log_debug("XMT:  | | | X-- Max lifetime +%u",
 				  (unsigned)t2);
 
-			append_option(&iads, &dhcpv6_universe, ia_addr_option,
+			append_option(&iads, &dhcpv6_universe, iaaddr_option,
 				      &addrds);
 			data_string_forget(&addrds, MDL);
 		}
@@ -2101,7 +2156,7 @@ dhc6_check_times(struct client_state *client)
 
 /* In a given IA chain, find the IA with the same 'iaid'. */
 static struct dhc6_ia *
-find_ia(struct dhc6_ia *head, char *id)
+find_ia(struct dhc6_ia *head, const char *id)
 {
 	struct dhc6_ia *ia;
 
@@ -2234,6 +2289,8 @@ start_bound(struct client_state *client)
 		  print_hex_1(client->active_lease->server_id.len,
 			      client->active_lease->server_id.data, 55));
 	client->state = S_BOUND;
+
+	write_client6_lease(client, lease, 0, 1);
 
 	for (ia = lease->bindings ; ia != NULL ; ia = ia->next) {
 		if (old != NULL)

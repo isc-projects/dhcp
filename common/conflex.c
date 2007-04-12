@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: conflex.c,v 1.101.2.6 2007/02/05 19:28:13 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: conflex.c,v 1.101.2.7 2007/04/12 15:56:42 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -833,6 +833,8 @@ static enum dhcp_token intern (atom, dfv)
 			return LCASE;
 		if (!strcasecmp (atom + 1, "ease"))
 			return LEASE;
+		if (!strcasecmp(atom + 1, "ease6"))
+			return LEASE6;
 		if (!strcasecmp (atom + 1, "eased-address"))
 			return LEASED_ADDRESS;
 		if (!strcasecmp (atom + 1, "ease-time"))
@@ -866,6 +868,8 @@ static enum dhcp_token intern (atom, dfv)
 				if (!strcasecmp(atom + 10, "time"))
 					return MAX_LEASE_TIME;
 			}
+			if (!strcasecmp(atom + 3, "-life"))
+				return MAX_LIFE;
 			if (!strcasecmp (atom + 3, "-transmit-idle"))
 				return MAX_TRANSMIT_IDLE;
 			if (!strcasecmp (atom + 3, "-response-delay"))
@@ -955,6 +959,8 @@ static enum dhcp_token intern (atom, dfv)
 	      case 'p':
 		if (!strcasecmp (atom + 1, "repend"))
 			return PREPEND;
+		if (!strcasecmp(atom + 1, "referred-life"))
+			return PREFERRED_LIFE;
 		if (!strcasecmp (atom + 1, "acket"))
 			return PACKET;
 		if (!strcasecmp (atom + 1, "ool"))

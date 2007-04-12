@@ -83,6 +83,9 @@ typedef unsigned long u_int64_t;
 #ifndef _PATH_DHCLIENT_PID
 #define _PATH_DHCLIENT_PID "/var/run/dhclient.pid"
 #endif
+#ifndef _PATH_DHCLIENT6_PID
+#define _PATH_DHCLIENT6_PID "/var/run/dhclient6.pid"
+#endif
 
 #define EOL	'\n'
 #define VOIDPTR void *
