@@ -24,7 +24,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhc6.c,v 1.1.4.12 2007/04/12 16:20:47 dhankins Exp $ Copyright (c) 2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhc6.c,v 1.1.4.13 2007/04/12 19:44:35 each Exp $ Copyright (c) 2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1481,12 +1481,21 @@ dhc6_reply_action(struct client_state *client, isc_result_t rval,
 		 * expires (or we rebind).
 		 */
 	      case STATUS_UnspecFail:
-		/* We don't support the unicast option yet...we always send
-		 * multicast...so this is a no-op.
-		 */
-	      case STATUS_UseMulticast:
 		/* For unknown codes...it's a soft (retryable) error. */
 	      default:
+		return ISC_FALSE;
+
+		/* The server is telling us to use a multicast address, so
+		 * we have to delete the unicast option from the active
+		 * lease, then allow retransmission to occur normally.
+		 * (XXX: It might be preferable in this case to retransmit
+		 * sooner than the current interval, but for now we don't.)
+		 */
+	      case STATUS_UseMulticast:
+		if(client->active_lease != NULL)
+			delete_option(&dhcp_universe,
+				      client->active_lease->options,
+				      D6O_UNICAST);
 		return ISC_FALSE;
 
 		/* "When the client receives a NotOnLink status from the
@@ -2622,6 +2631,8 @@ start_renew6(void *input)
 void
 do_refresh6(void *input)
 {
+	struct option_cache *oc;
+	struct sockaddr_in6 unicast, *dest_addr = &DHCPv6DestAddr;
 	struct data_string ds;
 	struct client_state *client;
 	struct dhc6_lease *lease;
@@ -2653,6 +2664,27 @@ do_refresh6(void *input)
 		/* We're done.  Move on to the next phase, if any. */
 		dhc6_check_times(client);
 		return;
+	}
+
+	/*
+	 * Check whether the server has sent a unicast option; if so, we can
+	 * use the address it specified.
+	 */
+	oc = lookup_option(&dhcpv6_universe, lease->options, D6O_UNICAST);
+	if (oc && evaluate_option_cache(&ds, NULL, NULL, NULL,
+                                        lease->options, NULL, &global_scope,
+					oc, MDL)) {
+		if (ds.len < 16) {
+			log_error("Invalid unicast option length %d.", ds.len);
+		} else {
+			memset(&unicast, 0, sizeof(DHCPv6DestAddr));
+			unicast.sin6_family = AF_INET6;
+			unicast.sin6_port = remote_port;
+			memcpy(&unicast.sin6_addr, ds.data, 16);
+			dest_addr = &unicast;
+		}
+
+		data_string_forget(&ds, MDL);
 	}
 
 	/* Commence forming a renew packet. */
@@ -2696,8 +2728,8 @@ do_refresh6(void *input)
 		 client->name ? client->name : client->interface->name,
 		 client->RT);
 
-	send_ret = send_packet6(client->interface, ds.data, ds.len,
-				&DHCPv6DestAddr);
+	send_ret = send_packet6(client->interface, ds.data, ds.len, dest_addr);
+
 	if (send_ret != ds.len) {
 		log_error("dhc6: send_packet6() sent %d of %d bytes",
 			  send_ret, ds.len);
