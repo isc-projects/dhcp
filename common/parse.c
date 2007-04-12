@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.113.2.7 2007/02/06 17:19:08 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.113.2.8 2007/04/12 19:42:47 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -5121,10 +5121,13 @@ int parse_option_decl (oc, cfile)
 	struct option *option=NULL;
 	struct iaddr ip_addr;
 	u_int8_t *dp;
+	const u_int8_t *cdp;
 	unsigned len;
 	int nul_term = 0;
 	struct buffer *bp;
 	int known = 0;
+	int compress;
+	struct expression *express = NULL;
 	struct enumeration_value *e;
 	isc_result_t status;
 
@@ -5176,6 +5179,38 @@ int parse_option_decl (oc, cfile)
 				hunkix += len;
 				break;
 
+			      case 'D':
+				if (fmt[1] == 'c') {
+					compress = 1;
+					fmt++;
+				} else
+					compress = 0;
+
+				express = parse_domain_list(cfile, compress);
+
+				if (express == NULL)
+					goto exit;
+
+				if (express->op != expr_const_data) {
+					parse_warn(cfile, "unexpected "
+							  "expression");
+					goto parse_exit;
+				}
+
+				len = express->data.const_data.len;
+				cdp = express->data.const_data.data;
+
+				if ((hunkix + len) > sizeof(hunkbuf)) {
+					parse_warn(cfile, "option data buffer "
+							  "overflow");
+					goto parse_exit;
+				}
+				memcpy(&hunkbuf[hunkix], cdp, len);
+				hunkix += len;
+
+				expression_dereference(&express, MDL);
+				break;
+
 			      case 'N':
 				f = fmt;
 				fmt = strchr (fmt, '.');
@@ -5200,6 +5235,13 @@ int parse_option_decl (oc, cfile)
 				}
 				len = 1;
 				dp = &e -> value;
+				goto alloc;
+
+			      case '6':
+				if (!parse_ip6_addr(cfile, &ip_addr))
+					goto exit;
+				len = ip_addr.len;
+				dp = ip_addr.iabuf;
 				goto alloc;
 
 			      case 'I': /* IP address. */
@@ -5322,6 +5364,8 @@ int parse_option_decl (oc, cfile)
 	return 1;
 
 parse_exit:
+	if (express != NULL)
+		expression_dereference(&express, MDL);
 	skip_to_semi (cfile);
 exit:
 	option_dereference(&option, MDL);
