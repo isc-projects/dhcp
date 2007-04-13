@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.121.18.4 2007/04/13 21:15:42 dhankins Exp $ Copyright 2004-2006 Internet Systems Consortium.";
+"$Id: dhcpd.c,v 1.121.18.5 2007/04/13 21:47:43 dhankins Exp $ Copyright 2004-2006 Internet Systems Consortium.";
 #endif
 
   static char copyright[] =
@@ -574,8 +574,19 @@ main(int argc, char **argv) {
 #endif
 	postdb_startup ();
 
-	if (set_server_duid() != ISC_R_SUCCESS) {
-		log_fatal("Unable to set server identifer.");
+	/*
+	 * Set server DHCPv6 identifier.
+	 * See dhcpv6.c for discussion of setting DUID.
+	 */
+	if (set_server_duid_from_option() == ISC_R_SUCCESS) {
+		write_server_duid();
+	} else {
+		if (!server_duid_isset()) {
+			if (generate_new_server_duid() != ISC_R_SUCCESS) {
+				log_fatal("Unable to set server identifier.");
+			}
+			write_server_duid();
+		}
 	}
 
 #ifndef DEBUG

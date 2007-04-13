@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: conflex.c,v 1.101.2.8 2007/04/13 16:47:43 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: conflex.c,v 1.101.2.9 2007/04/13 21:47:43 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -742,6 +742,9 @@ static enum dhcp_token intern (atom, dfv)
 			return ENCAPSULATE;
 		if (!strcasecmp(atom + 1, "xecute"))
 			return EXECUTE;
+		if (!strcasecmp(atom+1, "n")) {
+			return EN;
+		}
 		break;
 	      case 'f':
 		if (!strcasecmp (atom + 1, "atal"))
@@ -790,7 +793,7 @@ static enum dhcp_token intern (atom, dfv)
 			return TOKEN_HELP;
 		break;
 	      case 'i':
-	      	if (!strcasecmp(atom+1, "a_na")) 
+	      	if (!strcasecmp(atom+1, "a-na")) 
 			return IA_NA;
 	      	if (!strcasecmp(atom+1, "aaddr")) 
 			return IAADDR;
@@ -855,6 +858,12 @@ static enum dhcp_token intern (atom, dfv)
 			return LOCAL;
 		if (!strcasecmp (atom + 1, "og"))
 			return LOG;
+		if (!strcasecmp(atom+1, "lt")) {
+			return LLT;
+		}
+		if (!strcasecmp(atom+1, "l")) {
+			return LL;
+		}
 		break;
 	      case 'm':
 		if (!strncasecmp (atom + 1, "ax", 2)) {
@@ -1069,6 +1078,9 @@ static enum dhcp_token intern (atom, dfv)
                                         if (atom[6] == '\0')
                                                 return SERVER;
 					if (atom[6] == '-') {
+						if (!strcasecmp(atom + 7,
+								"duid")) 
+							return SERVER_DUID;
                                                 if (!strcasecmp(atom + 7,
 								"name"))
                                                         return SERVER_NAME;

@@ -27,7 +27,6 @@
  * TODO: gettext() or other method of localization for the messages
  *       for status codes (and probably for log formats eventually)
  * TODO: refactoring (simplify, simplify, simplify)
- * TODO: simplify server ID
  */
 
 /* 
@@ -63,38 +62,67 @@ duid_time(time_t when) {
 
 /* 
  * Server DUID.
- */
-static struct data_string duid;
-
-/*
- * Set the server DUID.
+ *
  * This must remain the same for the lifetime of this server, because
  * clients return the server DUID that we sent them in Request packets.
- * 
- * TODO: Allow users to configure DUID in dhcpd.conf. This means 
- *       specifying type 1 or 3, and maybe specifying which MAC 
- *       address to use. Users who want type 2 are be able to 
- *       enter in the actual bytes of the DUID.
+ *
+ * We pick the server DUID like this:
+ *
+ * 1. Check dhcpd.conf - any value the administrator has configured 
+ *    overrides any possible values.
+ * 2. Check the leases.txt - we want to use the previous value if 
+ *    possible.
+ * 3. Check if dhcpd.conf specifies a type of server DUID to use,
+ *    and generate that type.
+ * 4. Generate a type 1 (time + hardware address) DUID.
+ */
+static struct data_string server_duid;
+
+/*
+ * Check if the server_duid has been set.
+ */
+isc_boolean_t 
+server_duid_isset(void) {
+	return (server_duid.data != NULL);
+}
+
+/*
+ * Return the server_duid.
+ */
+void
+copy_server_duid(struct data_string *ds, const char *file, int line) {
+	data_string_copy(ds, &server_duid, file, line);
+}
+
+/*
+ * Set the server DUID to a specified value. This is used when
+ * the server DUID is stored in persistent memory (basically the
+ * leases.txt file).
+ */
+void
+set_server_duid(struct data_string *new_duid) {
+	/* INSIST(new_duid != NULL); */
+	/* INSIST(new_duid->data != NULL); */
+
+	if (server_duid_isset()) {
+		data_string_forget(&server_duid, MDL);
+	}
+	data_string_copy(&server_duid, new_duid, MDL);
+}
+
+
+/*
+ * Set the server DUID based on the D6O_SERVERID option. This handles
+ * the case where the administrator explicitly put it in the dhcpd.conf 
+ * file.
  */
 isc_result_t
-set_server_duid(void) {
-	struct interface_info *p;
-	u_int32_t time_val;
+set_server_duid_from_option(void) {
 	struct option_state *opt_state;
 	struct option_cache *oc;
-	static int called = 0;
+	struct data_string option_duid;
+	isc_result_t ret_val;
 
-	/*
-	 * We only want to set the DUID once.
-	 */
-	if (called) {
-		return ISC_R_SUCCESS;
-	}
-	called = 1;
-
-	/*
-	 * First, see if the DUID is set by an option.
-	 */
 	opt_state = NULL;
 	if (!option_state_allocate(&opt_state, MDL)) {
 		log_fatal("No memory for server DUID.");
@@ -104,24 +132,69 @@ set_server_duid(void) {
 				    opt_state, &global_scope, root_group, NULL);
 
 	oc = lookup_option(&dhcpv6_universe, opt_state, D6O_SERVERID);
-	if (oc != NULL) {
-		if (!evaluate_option_cache(&duid, NULL, NULL, NULL, opt_state, 
-					   NULL, &global_scope, oc, MDL)) {
-			memset(&duid, 0, sizeof(duid));
+	if (oc == NULL) {
+		ret_val = ISC_R_NOTFOUND;
+	} else {
+		memset(&option_duid, 0, sizeof(option_duid));
+		if (!evaluate_option_cache(&option_duid, NULL, NULL, NULL, 
+					   opt_state, NULL, &global_scope, 
+					   oc, MDL)) {
+			ret_val = ISC_R_UNEXPECTED;
+		} else {
+			set_server_duid(&option_duid);
+			data_string_forget(&option_duid, MDL);
+			ret_val = ISC_R_SUCCESS;
 		}
 	}
 
 	option_state_dereference(&opt_state, MDL);
 
-	if (duid.len != 0) {
-		return ISC_R_SUCCESS;
+	return ret_val;
+}
+
+/*
+ * DUID layout, as defined in RFC 3315, section 9.
+ * 
+ * We support type 1 (hardware address plus time) and type 3 (hardware
+ * address).
+ *
+ * We can support type 2 for specific vendors in the future, if they 
+ * publish the specification. And of course there may be additional
+ * types later.
+ */
+static int server_duid_type = DUID_LLT;
+
+/* 
+ * Set the DUID type.
+ */
+void
+set_server_duid_type(int type) {
+	server_duid_type = type;
+}
+
+/*
+ * Generate a new server DUID. This is done if there was no DUID in 
+ * the leases.txt or in the dhcpd.conf file.
+ */
+isc_result_t
+generate_new_server_duid(void) {
+	struct interface_info *p;
+	u_int32_t time_val;
+	struct data_string generated_duid;
+
+	/*
+	 * Verify we have a type that we support.
+	 */
+	if ((server_duid_type != DUID_LL) && (server_duid_type != DUID_LLT)) {
+		log_error("Invalid DUID type %d specified, "
+			  "only LL and LLT types supported", server_duid_type);
+		return ISC_R_INVALIDARG;
 	}
 
 	/*
-	 * If the DUID is not set, we will generate one.
+	 * Find an interface with a hardware address.
+	 * Any will do. :)
 	 */
-
-	time_val = htonl(duid_time(time(NULL)));
 	for (p = interfaces; p != NULL; p = p->next) {
 		if (p->hw_address.hlen > 0) {
 			break;
@@ -131,22 +204,38 @@ set_server_duid(void) {
 		return ISC_R_UNEXPECTED;
 	}
 
-	duid.data = dmalloc(8 + p->hw_address.hlen - 1, MDL);
-	if (duid.data == NULL) {
-		log_fatal("No memory for server DUID.");
-	}
-
-	/* 
-	 * DUID layout as defined in RFC 3315, section 9.2.
+	/*
+	 * Build our DUID.
 	 */
-	*(char *)duid.data = '\x00';
-	*(char *)(duid.data+1) = '\x01';
-	*(char *)(duid.data+2) = '\x00';
-	*(char *)(duid.data+3) = p->hw_address.hbuf[0];
-	memcpy((char *)(duid.data+4), &time_val, 4);
-	memcpy((char *)(duid.data+8), 
-	       p->hw_address.hbuf+1, p->hw_address.hlen-1);
-	duid.len = 8 + p->hw_address.hlen - 1;
+	if (server_duid_type == DUID_LLT) {
+		time_val = duid_time(time(NULL));
+		generated_duid.data = dmalloc(8 + p->hw_address.hlen - 1, MDL);
+		if (generated_duid.data == NULL) {
+			log_fatal("No memory for server DUID.");
+		}
+		putUShort((char *)generated_duid.data, DUID_LLT);
+		putUShort((char *)generated_duid.data + 2, 
+			  p->hw_address.hbuf[0]);
+		putULong((char *)generated_duid.data + 4, time_val);
+		memcpy((char *)(generated_duid.data+8), 
+		       p->hw_address.hbuf+1, p->hw_address.hlen-1);
+		generated_duid.len = 8 + p->hw_address.hlen - 1;
+	} else if (server_duid_type == DUID_LL) {
+		generated_duid.data = dmalloc(4 + p->hw_address.hlen - 1, MDL);
+		if (generated_duid.data == NULL) {
+			log_fatal("No memory for server DUID.");
+		}
+		putUShort((char *)generated_duid.data, DUID_LL);
+		putUShort((char *)generated_duid.data + 2, 
+			  p->hw_address.hbuf[0]);
+		memcpy((char *)(generated_duid.data+4), 
+		       p->hw_address.hbuf+1, p->hw_address.hlen-1);
+		generated_duid.len = 4 + p->hw_address.hlen - 1;
+	} else {
+		log_fatal("Unsupported server DUID type %d.", server_duid_type);
+	} 
+
+	set_server_duid(&generated_duid);
 
 	return ISC_R_SUCCESS;
 }
@@ -329,8 +418,8 @@ valid_client_resp(struct packet *packet,
 			  print_hex_1(client_id->len, client_id->data, 60));
 		goto exit;
 	}
-	if ((duid.len != server_id->len) || 
-	    (memcmp(duid.data, server_id->data, duid.len) != 0)) {
+	if ((server_duid.len != server_id->len) || 
+	    (memcmp(server_duid.data, server_id->data, server_duid.len) != 0)) {
 		log_debug("Discarding %s from %s; " 
 			  "not our server identifier "
 			  "(CLIENTID %s, SERVERID %s, server DUID %s)", 
@@ -338,7 +427,7 @@ valid_client_resp(struct packet *packet,
 			  piaddr(packet->client_addr),
 			  print_hex_1(client_id->len, client_id->data, 60),
 			  print_hex_2(server_id->len, server_id->data, 60),
-			  print_hex_3(duid.len, duid.data, 60));
+			  print_hex_3(server_duid.len, server_duid.data, 60));
 		goto exit;
 	}
 
@@ -417,8 +506,9 @@ valid_client_info_req(struct packet *packet, struct data_string *server_id) {
 				  piaddr(packet->client_addr));
 			goto exit;
 		}
-		if ((duid.len != server_id->len) || 
-		    (memcmp(duid.data, server_id->data, duid.len) != 0)) {
+		if ((server_duid.len != server_id->len) || 
+		    (memcmp(server_duid.data, server_id->data, 
+		    	    server_duid.len) != 0)) {
 			log_debug("Discarding %s from %s; " 
 				  "not our server identifier "
 				  "(SERVERID %s, server DUID %s)", 
@@ -426,7 +516,8 @@ valid_client_info_req(struct packet *packet, struct data_string *server_id) {
 				  piaddr(packet->client_addr),
 				  print_hex_1(server_id->len, 
 				  	      server_id->data, 60),
-				  print_hex_2(duid.len, duid.data, 60));
+				  print_hex_2(server_duid.len, 
+				  	      server_duid.data, 60));
 			goto exit;
 		}
 	}
@@ -537,9 +628,9 @@ set_status_code(u_int16_t status_code, const char *status_message,
 		log_fatal("set_status_code: no memory for status code.");
 	}
 	d.data = d.buffer->data;
-	memcpy((char *)d.data, &status_code, sizeof(status_code));
-	memcpy((char *)(d.data + sizeof(status_code)), 
-			status_message, d.len - sizeof(status_code));
+	memcpy(d.buffer->data, &status_code, sizeof(status_code));
+	memcpy(d.buffer->data + sizeof(status_code), 
+	       status_message, d.len - sizeof(status_code));
 	if (!save_option_buffer(&dhcpv6_universe, opt_state, 
 				d.buffer, (char *)d.data, d.len, 
 				D6O_STATUS_CODE, 0)) {
@@ -592,7 +683,7 @@ start_reply(struct packet *packet,
 	 * client identifier.
 	 *
 	 * If the server ID is defined via the configuration file, then
-	 * it will already be presnet in the option state at this point, 
+	 * it will already be present in the option state at this point, 
 	 * so we don't need to set it.
 	 *
 	 * If we have a server ID passed in from the caller, 
@@ -601,8 +692,8 @@ start_reply(struct packet *packet,
 	oc = lookup_option(&dhcpv6_universe, *opt_state, D6O_SERVERID);
 	if (oc == NULL) {
 		if (server_id == NULL) {
-			server_id_data = (char *)duid.data;
-			server_id_len = duid.len;
+			server_id_data = (char *)server_duid.data;
+			server_id_len = server_duid.len;
 		} else {
 			server_id_data = (char *)server_id->data;
 			server_id_len = server_id->len;
@@ -1210,7 +1301,7 @@ lease_to_client(struct data_string *reply_ret,
 				          "address information.");
 			}
 			fixed_addr.data = fixed_addr.buffer->data;
-			memcpy((void *)fixed_addr.data, &lease->addr, 16);
+			memcpy(fixed_addr.buffer->data, &lease->addr, 16);
 		}
 
 		if (fixed_addr.len == 16) {
@@ -1229,14 +1320,14 @@ lease_to_client(struct data_string *reply_ret,
 				          "address information.");
 			}
 			d.data = d.buffer->data;
-			memcpy((char *)d.data, fixed_addr.data, 16);
-			putULong((char *)d.data+16, preferred_lifetime);
-			putULong((char *)d.data+20, valid_lifetime);
+			memcpy(d.buffer->data, fixed_addr.data, 16);
+			putULong(d.buffer->data+16, preferred_lifetime);
+			putULong(d.buffer->data+20, valid_lifetime);
 			data_string_forget(&fixed_addr, MDL);
 			if (!save_option_buffer(&dhcpv6_universe, 
 						host_opt_state, 
 						d.buffer, 
-						(char *)d.data, 
+						d.buffer->data, 
 						d.len, D6O_IAADDR, 0)) {
 				log_error("lease_to_client: error saving "
 					  "IAADDR.");
@@ -1330,14 +1421,14 @@ lease_to_client(struct data_string *reply_ret,
 							  "information.");
 					}
 					d.data = d.buffer->data;
-					memcpy((char *)d.data, iaaddr.data, 16);
-					putULong((char *)d.data+16, 0);
-					putULong((char *)d.data+20, 0);
+					memcpy(d.buffer->data, iaaddr.data, 16);
+					putULong(d.buffer->data+16, 0);
+					putULong(d.buffer->data+20, 0);
 					if (!save_option_buffer(
 						              &dhcpv6_universe, 
 							      host_opt_state, 
 							      d.buffer, 
-						              (char *)d.data, 
+						              d.buffer->data, 
 							      d.len, 
 							      D6O_IAADDR, 0)) {
 						log_error("lease_to_client: "
@@ -1452,7 +1543,7 @@ lease_to_client(struct data_string *reply_ret,
 		log_fatal("No memory to store reply.");
 	}
 	reply_ret->data = reply_ret->buffer->data;
-	memcpy((char *)reply_ret->data, reply, reply_ofs);
+	memcpy(reply_ret->buffer->data, reply, reply_ofs);
 
 exit:
 	if (lease != NULL) {
@@ -1711,7 +1802,7 @@ dhcpv6_confirm(struct data_string *reply_ret, struct packet *packet) {
 		log_fatal("No memory to store reply.");
 	}
 	reply_ret->data = reply_ret->buffer->data;
-	memcpy((char *)reply_ret->data, reply, reply_ofs);
+	memcpy(reply_ret->buffer->data, reply, reply_ofs);
 
 exit:
 	if (iaaddr.buffer != NULL) {
@@ -1952,8 +2043,8 @@ iterate_over_ia_na(struct data_string *reply_ret,
 	oc = lookup_option(&dhcpv6_universe, opt_state, D6O_SERVERID);
 	if (oc == NULL) {
 		if (!save_option_buffer(&dhcpv6_universe, opt_state, 
-					NULL, (char *)duid.data, duid.len, 
-					D6O_SERVERID, 0)) {
+					NULL, (char *)server_duid.data, 
+					server_duid.len, D6O_SERVERID, 0)) {
 			log_error("iterate_over_ia_na: "
 				  "error saving server identifier.");
 			goto exit;
@@ -2123,7 +2214,7 @@ iterate_over_ia_na(struct data_string *reply_ret,
 		log_fatal("No memory to store reply.");
 	}
 	reply_ret->data = reply_ret->buffer->data;
-	memcpy((char *)reply_ret->data, reply, reply_ofs);
+	memcpy(reply_ret->buffer->data, reply, reply_ofs);
 
 exit:
 	if (lease != NULL) {
@@ -2525,17 +2616,17 @@ dhcpv6_relay_forw(struct data_string *reply_ret, struct packet *packet) {
 		log_fatal("No memory to store reply.");
 	}
 	reply_ret->data = reply_ret->buffer->data;
-	memcpy((char *)reply_ret->data, &reply, sizeof(reply));
-	putShort((char *)reply_ret->data+sizeof(reply), D6O_RELAY_MSG);
-	putShort((char *)reply_ret->data+sizeof(reply)+2, enc_reply.len);
-	memcpy((char *)reply_ret->data+sizeof(reply)+4, 
+	memcpy(reply_ret->buffer->data, &reply, sizeof(reply));
+	putShort(reply_ret->buffer->data+sizeof(reply), D6O_RELAY_MSG);
+	putShort(reply_ret->buffer->data+sizeof(reply)+2, enc_reply.len);
+	memcpy(reply_ret->buffer->data+sizeof(reply)+4, 
 	       enc_reply.data, enc_reply.len);
 	if (interface_id.data != NULL) {
-		putShort((char *)reply_ret->data+sizeof(reply)+4+enc_reply.len,
+		putShort(reply_ret->buffer->data+sizeof(reply)+4+enc_reply.len,
 			 D6O_INTERFACE_ID);
-		putShort((char *)reply_ret->data+sizeof(reply)+6+enc_reply.len,
+		putShort(reply_ret->buffer->data+sizeof(reply)+6+enc_reply.len,
 			 interface_id.len);
-		memcpy((char *)reply_ret->data+sizeof(reply)+8+enc_reply.len,
+		memcpy(reply_ret->buffer->data+sizeof(reply)+8+enc_reply.len,
 		       interface_id.data, interface_id.len);
 	}
 

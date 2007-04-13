@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: db.c,v 1.74.8.1 2007/02/05 19:28:14 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: db.c,v 1.74.8.2 2007/04/13 21:47:43 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -475,6 +475,9 @@ int write_group (group)
 	return !errors;
 }
 
+/*
+ * Write an IA_NA and the options it has.
+ */
 int
 write_ia_na(const struct ia_na *ia_na) {
 	struct iaaddr *iaaddr;
@@ -483,6 +486,7 @@ write_ia_na(const struct ia_na *ia_na) {
 	const char *binding_state;
 	const char *tval;
 	char *s;
+	int fprintf_ret;
 
 	/* 
 	 * If the lease file is corrupt, don't try to write any more 
@@ -501,10 +505,13 @@ write_ia_na(const struct ia_na *ia_na) {
 	
 	s = quotify_buf(ia_na->iaid_duid.data, ia_na->iaid_duid.len, MDL);
 	if (s == NULL) {
-		return 0;
+		goto error_exit;
 	}
+	fprintf_ret = fprintf(db_file, "ia-na \"%s\" {\n", s);
 	dfree(s, MDL);
-	if (fprintf(db_file, "ia_na \"%s\" {\n", s) < 0) goto error_exit;
+	if (fprintf_ret < 0) {
+		goto error_exit;
+	}
 	for (i=0; i<ia_na->num_iaaddr; i++) {
 		iaaddr = ia_na->iaaddr[i];
 
@@ -536,7 +543,65 @@ write_ia_na(const struct ia_na *ia_na) {
 	return 1;
 
 error_exit:
-	log_info("write_ia_na: unable to write ia_na");
+	log_info("write_ia_na: unable to write ia-na");
+	lease_file_is_corrupt = 1;
+	return 0;
+}
+
+/*
+ * Put a copy of the server DUID in the leases file.
+ */
+int
+write_server_duid(void) {
+	struct data_string server_duid;
+	char *s;
+	int fprintf_ret;
+
+	/*
+	 * Only write the DUID if it's been set.
+	 */
+	if (!server_duid_isset()) {
+		return 1;
+	}
+
+	/* 
+	 * If the lease file is corrupt, don't try to write any more 
+	 * leases until we've written a good lease file. 
+	 */
+	if (lease_file_is_corrupt) {
+		if (!new_lease_file()) {
+			return 0;
+		}
+	}
+
+	/*
+	 * Get a copy of our server DUID and convert to a quoted string.
+	 */
+	memset(&server_duid, 0, sizeof(server_duid));
+	copy_server_duid(&server_duid, MDL);
+	s = quotify_buf(server_duid.data, server_duid.len, MDL);
+	data_string_forget(&server_duid, MDL);
+	if (s == NULL) {
+		goto error_exit;
+	}
+
+	/*
+	 * Write to the leases file.
+	 */
+	fprintf_ret = fprintf(db_file, "server-duid \"%s\";\n\n", s);
+	dfree(s, MDL);
+	if (fprintf_ret < 0) {
+		goto error_exit;
+	}
+
+	/*
+	 * Check if we actually managed to write.
+	 */
+	fflush(db_file);
+	return 1;
+
+error_exit:
+	log_info("write_server_duid: unable to write server-duid");
 	lease_file_is_corrupt = 1;
 	return 0;
 }

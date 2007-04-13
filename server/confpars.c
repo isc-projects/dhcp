@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.158.6.8 2007/02/05 19:28:13 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.158.6.9 2007/04/13 21:47:43 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -284,6 +284,8 @@ isc_result_t lease_file_subparse (struct parse *cfile)
 			parse_failover_state_declaration
 				(cfile, (dhcp_failover_state_t *)0);
 #endif
+		} else if (token == SERVER_DUID) {
+			parse_server_duid(cfile);
 		} else {
 			log_error ("Corrupt lease file - possible data loss!");
 			skip_to_semi (cfile);
@@ -698,6 +700,10 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		parse_warn (cfile, "No failover support.");
 		skip_to_semi (cfile);
 #endif
+		break;
+			
+	      case SERVER_DUID:
+		parse_server_duid_conf(cfile);
 		break;
 
 	      default:
@@ -3809,3 +3815,255 @@ parse_ia_na_declaration(struct parse *cfile) {
 		       ia_na->iaid_duid.len, ia_na, MDL);
 }
 
+/*
+ * When we parse a server-duid statement in a lease file, we are 
+ * looking at the saved server DUID from a previous run. In this case
+ * we expect it to be followed by the binary representation of the
+ * DUID stored in a string:
+ *
+ * server-duid "\000\001\000\001\015\221\034JRT\000\0224Y";
+ */
+void 
+parse_server_duid(struct parse *cfile) {
+	enum dhcp_token token;
+	const char *val;
+	int len;
+	struct data_string duid;
+
+	token = next_token(&val, &len, cfile);
+	if (token != STRING) {
+		parse_warn(cfile, "corrupt lease file; expecting a DUID");
+		skip_to_semi(cfile);
+		return;
+	}
+
+	memset(&duid, 0, sizeof(duid));
+	duid.len = len;
+	if (!buffer_allocate(&duid.buffer, duid.len, MDL)) {
+		log_fatal("Out of memory storing DUID");
+	}
+	duid.data = (char *)duid.buffer->data;
+	memcpy(duid.buffer->data, val, len);
+
+	set_server_duid(&duid);
+
+	data_string_forget(&duid, MDL);
+
+	token = next_token(&val, &len, cfile);
+	if (token != SEMI) {
+		parse_warn(cfile, "corrupt lease file; expecting a semicolon");
+		skip_to_semi(cfile);
+		return;
+	}
+}
+
+/*
+ * When we parse a server-duid statement in a config file, we will
+ * have the type of the server DUID to generate, and possibly the
+ * actual value defined.
+ *
+ * server-duid llt;
+ * server-duid llt ethernet|ieee802|fddi 213982198 00:16:6F:49:7D:9B;
+ * server-duid ll;
+ * server-duid ll ethernet|ieee802|fddi 00:16:6F:49:7D:9B;
+ * server-duid en 2495 "enterprise-specific-identifer-1234";
+ */
+void 
+parse_server_duid_conf(struct parse *cfile) {
+	enum dhcp_token token;
+	const char *val;
+	int len;
+	u_int32_t enterprise_number;
+	int ll_type;
+	struct data_string ll_addr;
+	u_int32_t llt_time;
+	struct data_string duid;
+
+	/*
+	 * Consume the SERVER_DUID token.
+	 */
+	token = next_token(NULL, NULL, cfile);
+
+	/*
+	 * Obtain the DUID type.
+	 */
+	token = next_token(NULL, NULL, cfile);
+
+	/* 
+	 * Enterprise is the easiest - enterprise number and raw data
+	 * are required.
+	 */
+	if (token == EN) {
+		/*
+		 * Get enterprise number and identifier.
+		 */
+		token = next_token(&val, NULL, cfile);
+		if (token != NUMBER) {
+			parse_warn(cfile, "enterprise number expected");
+			skip_to_semi(cfile);
+			return;
+		}
+		enterprise_number = atoi(val);
+
+		token = next_token(&val, &len, cfile);
+		if (token != STRING) {
+			parse_warn(cfile, "identifier expected");
+			skip_to_semi(cfile);
+			return;
+		}
+
+		/*
+		 * Save the DUID.
+		 */
+		memset(&duid, 0, sizeof(duid));
+        	duid.len = 2 + 4 + len;
+        	if (!buffer_allocate(&duid.buffer, duid.len, MDL)) {
+			log_fatal("Out of memory storing DUID");
+		}
+		duid.data = (char *)duid.buffer->data;
+		putUShort(duid.buffer->data, DUID_EN);
+ 		putULong(duid.buffer->data + 2, enterprise_number);
+		memcpy(duid.buffer->data + 6, val, len);
+
+		set_server_duid(&duid);
+		data_string_forget(&duid, MDL);
+	}
+
+	/* 
+	 * Next easiest is the link-layer DUID. It consists only of
+	 * the LL directive, or optionally the specific value to use.
+	 *
+	 * If we have LL only, then we set the type. If we have the
+	 * value, then we set the actual DUID.
+	 */
+	else if (token == LL) {
+		if (peek_token(NULL, NULL, cfile) == SEMI) {
+			set_server_duid_type(DUID_LL);
+		} else {
+			/*
+			 * Get our hardware type and address.
+			 */
+			token = next_token(NULL, NULL, cfile);
+			switch (token) {
+			      case ETHERNET:
+				ll_type = HTYPE_ETHER;
+				break;
+			      case TOKEN_RING:
+				ll_type = HTYPE_IEEE802;
+				break;
+			      case FDDI:
+				ll_type = HTYPE_FDDI;
+				break;
+			      default:
+				parse_warn(cfile, "hardware type expected");
+				skip_to_semi(cfile);
+				return;
+			} 
+			memset(&ll_addr, 0, sizeof(ll_addr));
+			if (!parse_cshl(&ll_addr, cfile)) {
+				return;
+			}
+
+			/*
+			 * Save the DUID.
+			 */
+			memset(&duid, 0, sizeof(duid));
+			duid.len = 2 + 2 + ll_addr.len;
+        		if (!buffer_allocate(&duid.buffer, duid.len, MDL)) {
+				log_fatal("Out of memory storing DUID");
+			}
+			duid.data = (char *)duid.buffer->data;
+			putUShort(duid.buffer->data, DUID_LL);
+ 			putULong(duid.buffer->data + 2, ll_type);
+			memcpy(duid.buffer->data + 4, 
+			       ll_addr.data, ll_addr.len);
+
+			set_server_duid(&duid);
+			data_string_forget(&duid, MDL);
+			data_string_forget(&ll_addr, MDL);
+		}
+	}
+
+	/* 
+	 * Finally the link-layer DUID plus time. It consists only of
+	 * the LLT directive, or optionally the specific value to use.
+	 *
+	 * If we have LLT only, then we set the type. If we have the
+	 * value, then we set the actual DUID.
+	 */
+	else if (token == LLT) {
+		if (peek_token(NULL, NULL, cfile) == SEMI) {
+			set_server_duid_type(DUID_LLT);
+		} else {
+			/*
+			 * Get our hardware type, timestamp, and address.
+			 */
+			token = next_token(NULL, NULL, cfile);
+			switch (token) {
+			      case ETHERNET:
+				ll_type = HTYPE_ETHER;
+				break;
+			      case TOKEN_RING:
+				ll_type = HTYPE_IEEE802;
+				break;
+			      case FDDI:
+				ll_type = HTYPE_FDDI;
+				break;
+			      default:
+				parse_warn(cfile, "hardware type expected");
+				skip_to_semi(cfile);
+				return;
+			} 
+			
+			token = next_token(&val, NULL, cfile);
+			if (token != NUMBER) {
+				parse_warn(cfile, "timestamp expected");
+				skip_to_semi(cfile);
+				return;
+			}
+			llt_time = atoi(val);
+
+			memset(&ll_addr, 0, sizeof(ll_addr));
+			if (!parse_cshl(&ll_addr, cfile)) {
+				return;
+			}
+
+			/*
+			 * Save the DUID.
+			 */
+			memset(&duid, 0, sizeof(duid));
+			duid.len = 2 + 2 + 4 + ll_addr.len;
+        		if (!buffer_allocate(&duid.buffer, duid.len, MDL)) {
+				log_fatal("Out of memory storing DUID");
+			}
+			duid.data = (char *)duid.buffer->data;
+			putUShort(duid.buffer->data, DUID_LLT);
+ 			putULong(duid.buffer->data + 2, ll_type);
+ 			putULong(duid.buffer->data + 4, llt_time);
+			memcpy(duid.buffer->data + 8, 
+			       ll_addr.data, ll_addr.len);
+
+			set_server_duid(&duid);
+			data_string_forget(&duid, MDL);
+			data_string_forget(&ll_addr, MDL);
+		}
+	}
+
+	/*
+	 * Anything else is an error.
+	 */
+	else {
+		parse_warn(cfile, "DUID type of LLT, EN, or LL expected");
+		skip_to_semi(cfile);
+		return;
+	}
+
+	/*
+	 * Finally consume our trailing semicolon.
+	 */
+	token = next_token(NULL, NULL, cfile);
+	if (token != SEMI) {
+		parse_warn(cfile, "semicolon expected");
+		skip_to_semi(cfile);
+	}
+}

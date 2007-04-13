@@ -28,7 +28,7 @@
 .\" see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
 .\" ``http://www.nominum.com''.
 .\"
-.\" $Id: dhcpd.conf.5,v 1.77.8.3 2006/11/15 21:17:13 dhankins Exp $
+.\" $Id: dhcpd.conf.5,v 1.77.8.4 2007/04/13 21:47:43 dhankins Exp $
 .\"
 .TH dhcpd.conf 5
 .SH NAME
@@ -2464,6 +2464,29 @@ that the clients use this IP address when contacting the server.
 .PP
 Supplying a value for the dhcp-server-identifier option is equivalent
 to using the server-identifier statement.
+.RE
+.PP
+The
+.I server-duid
+statement
+.RS 0.25i
+.PP
+.B server-duid \fILLT\fR [ \fIhardware-type\fR \fItimestamp\fR \fIhardware-address\fR ] \fB;\fR
+
+.B server-duid \fIEN\fR \fIenterprise-number\fR \fIenterprise-identifier\fR \fB;\fR
+
+.B server-duid \fILL\fR [ \fIhardware-type\fR \fIhardware-address\fR ] \fB;\fR
+.PP
+The server-duid statement configures the server DUID. You may pick either
+LLT (link local address plus time), EN (enterprise), or LL (link local).
+.PP
+If you choose LLT or LL, you may specify the exact contents of the DUID.
+Otherwise the server will generate a DUID of the specified type.
+.PP
+If you choose EN, you must include the enterprise number and the
+enterprise-identifier.
+.PP
+The default server-duid type is LLT.
 .RE
 .PP
 The

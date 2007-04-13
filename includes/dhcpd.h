@@ -1549,6 +1549,8 @@ int parse_lease_declaration PROTO ((struct lease **, struct parse *));
 void parse_address_range PROTO ((struct parse *, struct group *, int,
 				 struct pool *, struct lease **));
 void parse_ia_na_declaration(struct parse *);
+void parse_server_duid(struct parse *cfile);
+void parse_server_duid_conf(struct parse *cfile);
 
 /* ddns.c */
 int ddns_updates(struct packet *, struct lease *, struct lease *,
@@ -1766,7 +1768,11 @@ void get_server_source_address(struct in_addr *from,
        			       struct packet *packet);
 
 /* dhcpv6.c */
-isc_result_t set_server_duid(void);
+isc_boolean_t server_duid_isset(void);
+void copy_server_duid(struct data_string *ds, const char *file, int line);
+void set_server_duid(struct data_string *new_duid);
+isc_result_t set_server_duid_from_option(void);
+isc_result_t generate_new_server_duid(void);
 void dhcpv6(struct packet *);
 
 /* bootp.c */

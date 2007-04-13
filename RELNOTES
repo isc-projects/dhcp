@@ -31,10 +31,6 @@ release, which will be addressed shortly:
 
 - IA_PD prefixes are not supported.
 
-- The server DUID must either be automatically generated, or specified
-  in the configuration file. An option will be added to use type 1 or
-  type 2 DUID.
-
 - DHCPv6 includes human-readable text in status code messages. These
   should be configurable, and probably localized via gettext() or the
   like.
@@ -69,6 +65,10 @@ the README file.
 
 - Inappropriate unicast DHCPv6 messages sent to the server are now
   discarded, and this has rearchitected the IO system slightly.
+
+- The DHCPv6 server DUID defaults to type 1, is persistently stored in
+  the leases database, and can be over-ridden (either completely, or by
+  specifying type 1 or type 2).
 
 - The server only uses Rapid-Commit if it has been configured with the
   Rapid-Commit option and the client requests it.

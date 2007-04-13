@@ -994,11 +994,12 @@ write_ia_na_leases(const void *name, unsigned len, void *value) {
 }
 
 /*
- * Write all IPv6 leases.
+ * Write all DHCPv6 information.
  */
 int
 write_leases6(void) {
 	write_error = 0;
+	write_server_duid();
 	iaaddr_hash_foreach(ia_active, write_ia_na_leases);
 	if (write_error) {
 		return 0;
