@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.121.18.3 2007/02/05 19:28:14 shane Exp $ Copyright 2004-2006 Internet Systems Consortium.";
+"$Id: dhcpd.c,v 1.121.18.4 2007/04/13 21:15:42 dhankins Exp $ Copyright 2004-2006 Internet Systems Consortium.";
 #endif
 
   static char copyright[] =
@@ -529,7 +529,7 @@ main(int argc, char **argv) {
 
 #ifdef DHCPv6
 	/* set up DHCPv6 hash */
-	if (!ia_na_new_hash(ia_active, DEFAULT_HASH_SIZE, MDL)) {
+	if (!ia_na_new_hash(&ia_active, DEFAULT_HASH_SIZE, MDL)) {
 		log_fatal("Out of memory creating hash for active IA.");
 	}
 #endif /* DHCPv6 */

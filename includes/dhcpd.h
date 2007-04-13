@@ -32,6 +32,9 @@
  * ``http://www.nominum.com''.
  */
 
+/* XXX: HACK just until the code is autoconfiscated */
+#define DHCPv6
+
 #ifndef __CYGWIN32__
 #include <sys/types.h>
 #include <netinet/in.h>
