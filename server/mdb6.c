@@ -128,6 +128,9 @@ iaaddr_dereference(struct iaaddr **iaaddr, const char *file, int line) {
 		if (tmp->ipv6_pool != NULL) {
 			ipv6_pool_dereference(&(tmp->ipv6_pool), file, line);
 		}
+		if (tmp->scope != NULL) {
+			binding_scope_dereference(&tmp->scope, file, line);
+		}
 		dfree(tmp, file, line);
 	}
 

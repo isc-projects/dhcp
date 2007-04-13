@@ -1218,6 +1218,7 @@ struct iaaddr {
 	int refcnt;				/* reference count */
 	struct in6_addr addr;			/* IPv6 address */
 	binding_state_t state;			/* state */
+	struct binding_scope *scope;		/* "set var = value;" */
 	time_t valid_lifetime_end_time;		/* time address expires */
 	struct ia_na *ia_na;			/* IA for this address */
 	struct ipv6_pool *ipv6_pool;		/* pool for this address */
@@ -1547,9 +1548,9 @@ void parse_address_range PROTO ((struct parse *, struct group *, int,
 void parse_ia_na_declaration(struct parse *);
 
 /* ddns.c */
-int ddns_updates PROTO ((struct packet *, struct lease *, struct lease *,
-			 struct lease_state *));
-int ddns_removals PROTO ((struct lease *));
+int ddns_updates(struct packet *, struct lease *, struct lease *,
+		 struct iaaddr *, struct iaaddr *, struct option_state *);
+int ddns_removals(struct lease *, struct iaaddr *);
 
 /* parse.c */
 void add_enumeration (struct enumeration *);
