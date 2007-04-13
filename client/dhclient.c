@@ -32,7 +32,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.142.8.11 2007/04/12 20:04:52 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.142.8.12 2007/04/13 16:47:43 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -56,6 +56,7 @@ struct iaddr iaddr_any = { 4, { 0, 0, 0, 0 } };
 struct in_addr inaddr_any;
 struct sockaddr_in sockaddr_broadcast;
 struct in_addr giaddr;
+struct data_string default_duid;
 
 /* ASSERT_STATE() does nothing now; it used to be
    assert (state_is == state_shouldbe). */
@@ -80,6 +81,8 @@ static void usage PROTO ((void));
 
 void do_release(struct client_state *);
 
+static isc_result_t write_duid(struct data_string *duid);
+
 int 
 main(int argc, char **argv) {
 	int fd;
@@ -100,6 +103,9 @@ main(int argc, char **argv) {
 	int no_dhclient_script = 0;
 	int local_family_set = 0;
 	char *s;
+
+	/* Initialize client globals. */
+	memset(&default_duid, 0, sizeof(default_duid));
 
         /* Make sure that file descriptors 0 (stdin), 1, (stdout), and
            2 (stderr) are open. To do this, we assume that when we
@@ -416,28 +422,29 @@ main(int argc, char **argv) {
 
 	/* Start a configuration state machine for each interface. */
 	if (local_family == AF_INET6) {
-		struct data_string duid;
 		struct option_cache *oc;
+		struct option *option = NULL;
+		int code = D6O_CLIENTID;
 
-		/* Establish a default DUID. */
-		memset(&duid, 0, sizeof(duid));
-		form_duid(&duid, MDL);
+		if (!option_code_hash_lookup(&option,
+					     dhcpv6_universe.code_hash,
+					     &code, 0, MDL))
+			log_fatal("DUID option not in configuration!");
+
+		/* Establish a default DUID.  This may be moved to the
+		 * DHCPv4 area later.
+		 */
+		if (default_duid.len == 0) {
+			if (default_duid.buffer != NULL)
+				data_string_forget(&default_duid, MDL);
+
+			form_duid(&default_duid, MDL);
+			write_duid(&default_duid);
+		}
 
 		for (ip = interfaces ; ip != NULL ; ip = ip->next) {
 			for (client = ip->client ; client != NULL ;
 			     client = client->next) {
-				struct option *option = NULL;
-				int code = D6O_CLIENTID;
-
-				if (!option_code_hash_lookup(&option,
-					  dhcpv6_universe.code_hash,
-					  &code, 0, MDL))
-					log_fatal("DUID option not in "
-						  "configuration!");
-
-				option_cache(&client->default_duid, &duid,
-					     NULL, option, MDL);
-
 				/* If we have a previous binding, Confirm
 				 * that we can (or can't) still use it.
 				 */
@@ -448,7 +455,7 @@ main(int argc, char **argv) {
 			}
 		}
 
-		data_string_forget(&duid, MDL);
+		option_dereference(&option, MDL);
 	} else {
 		for (ip = interfaces ; ip ; ip = ip->next) {
 			ip->flags |= INTERFACE_RUNNING;
@@ -2311,6 +2318,10 @@ void rewrite_client_leases ()
 		return;
 	}
 
+	/* If there is a default duid, write it out. */
+	if (default_duid.len != 0)
+		write_duid(&default_duid);
+
 	/* Write out all the leases attached to configured interfaces that
 	   we know about. */
 	for (ip = interfaces; ip; ip = ip -> next) {
@@ -2394,6 +2405,42 @@ write_options(struct client_state *client, struct option_state *options,
 				     &global_scope, universes[i], preamble,
 				     write_lease_option);
 	}
+}
+
+/* Write the default DUID to the lease store. */
+static isc_result_t
+write_duid(struct data_string *duid)
+{
+	char *str;
+	int stat;
+
+	if ((duid == NULL) || (duid->len <= 2))
+		return ISC_R_INVALIDARG;
+
+	if (leaseFile == NULL) {	/* XXX? */
+		leaseFile = fopen(path_dhclient_db, "w");
+		if (leaseFile == NULL) {
+			log_error("can't create %s: %m", path_dhclient_db);
+			return ISC_R_IOERROR;
+		}
+	}
+
+	/* It would make more sense to write this as a hex string,
+	 * but our function to do that (print_hex_n) uses a fixed
+	 * length buffer...and we can't guarantee a duid would be
+	 * less than the fixed length.
+	 */
+	str = quotify_buf(duid->data, duid->len, MDL);
+	if (str == NULL)
+		return ISC_R_NOMEMORY;
+
+	stat = fprintf(leaseFile, "default-duid \"%s\";\n", str);
+	dfree(str, MDL);
+	if (stat <= 0)
+		return ISC_R_IOERROR;
+
+	if (fflush(leaseFile) != 0)
+		return ISC_R_IOERROR;
 }
 
 /* Write a DHCPv6 lease to the store. */

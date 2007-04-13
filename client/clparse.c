@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: clparse.c,v 1.67.52.4 2007/04/12 16:20:47 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: clparse.c,v 1.67.52.5 2007/04/13 16:47:43 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -54,6 +54,7 @@ u_int32_t default_requested_options [] = {
 	0
 };
 
+static void parse_client_default_duid(struct parse *cfile);
 static void parse_client6_lease_statement(struct parse *cfile);
 static struct dhc6_ia *parse_client6_ia_statement(struct parse *cfile);
 static struct dhc6_addr *parse_client6_iaaddr_statement(struct parse *cfile);
@@ -206,6 +207,10 @@ void read_client_leases ()
 			break;
 
 		switch (token) {
+		      case DEFAULT_DUID:
+			parse_client_default_duid(cfile);
+			break;
+
 		      case LEASE:
 			parse_client_lease_statement(cfile, 0);
 			break;
@@ -1081,6 +1086,50 @@ void parse_client_lease_declaration (cfile, lease, ipp, clientp)
 		parse_warn (cfile, "expecting semicolon.");
 		skip_to_semi (cfile);
 	}
+}
+
+/* Parse a default-duid ""; statement.
+ */
+static void
+parse_client_default_duid(struct parse *cfile)
+{
+	struct data_string new_duid;
+	const char *val = NULL;
+	unsigned len;
+	int token;
+
+	memset(&new_duid, 0, sizeof(new_duid));
+
+	token = next_token(&val, &len, cfile);
+	if (token != STRING) {
+		parse_warn(cfile, "Expected DUID string.");
+		skip_to_semi(cfile);
+		return;
+	}
+
+	if (len <= 2) {
+		parse_warn(cfile, "Invalid DUID contents.");
+		skip_to_semi(cfile);
+		return;
+	}
+
+	if (!buffer_allocate(&new_duid.buffer, len, MDL)) {
+		parse_warn(cfile, "Out of memory parsing default DUID.");
+		skip_to_semi(cfile);
+		return;
+	}
+	new_duid.data = new_duid.buffer->data;
+	new_duid.len = len;
+
+	memcpy(new_duid.buffer->data, val, len);
+
+	/* Rotate the last entry into place. */
+	if (default_duid.buffer != NULL)
+		data_string_forget(&default_duid, MDL);
+	data_string_copy(&default_duid, &new_duid, MDL);
+	data_string_forget(&new_duid, MDL);
+
+	parse_semi(cfile);
 }
 
 /* Parse a lease6 {} construct.  The v6 client is a little different

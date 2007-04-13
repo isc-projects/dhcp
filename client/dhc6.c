@@ -24,14 +24,16 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhc6.c,v 1.1.4.14 2007/04/12 20:04:52 dhankins Exp $ Copyright (c) 2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhc6.c,v 1.1.4.15 2007/04/13 16:47:43 dhankins Exp $ Copyright (c) 2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
 
 struct sockaddr_in6 DHCPv6DestAddr;
+struct option *clientid_option = NULL;
 struct option *ia_na_option = NULL;
 struct option *iaaddr_option = NULL;
+struct option *elapsed_option = NULL;
 
 static struct dhc6_lease *dhc6_dup_lease(struct dhc6_lease *lease,
 					 char *file, int line);
@@ -70,8 +72,18 @@ static void make_client6_options(struct client_state *client,
 static void script_write_params6(struct client_state *client, char *prefix,
 				 struct option_state *options);
 
-/* For now, simply because we do not retain this information statefully,
- * the DUID is simply the first interface's hardware address.
+/* The "best" default DUID, since we cannot predict any information
+ * about the system (such as whether or not the hardware addresses are
+ * integrated into the motherboard or similar), is the "LLT", link local
+ * plus time, DUID.
+ *
+ * Once generated, this duid is stored into the state database, and
+ * retained across restarts.
+ *
+ * For the time being, there is probably a different state database for
+ * every daemon, so this winds up being a per-interface identifier...which
+ * is not how it is intended.  Upcoming rearchitecting the client should
+ * address this "one daemon model."
  */
 void
 form_duid(struct data_string *duid, char *file, int line)
@@ -89,16 +101,23 @@ form_duid(struct data_string *duid, char *file, int line)
 	    (ip->hw_address.hlen > sizeof(ip->hw_address.hbuf)))
 		log_fatal("Impossible hardware address length at %s:%d.", MDL);
 
-	len = 4 + (ip->hw_address.hlen - 1);
+	/* 2 bytes for the 'duid type' field.
+	 * 2 bytes for the 'htype' field.
+	 * 4 bytes for the 'current time'.
+	 * enough bytes for the hardware address (note that hw_address has
+	 * the 'htype' on byte zero).
+	 */
+	len = 8 + (ip->hw_address.hlen - 1);
 	if (!buffer_allocate(&duid->buffer, len, MDL))
-		log_fatal("no memory for DUID!");
+		log_fatal("no memory for default DUID!");
 	duid->data = duid->buffer->data;
 	duid->len = len;
 
 	/* Basic Link Local Address type of DUID. */
-	putUShort(duid->buffer->data, DUID_LL);
+	putUShort(duid->buffer->data, DUID_LLT);
 	putUShort(duid->buffer->data + 2, ip->hw_address.hbuf[0]);
-	memcpy(duid->buffer->data + 4, ip->hw_address.hbuf + 1,
+	putULong(duid->buffer->data + 4, cur_time);
+	memcpy(duid->buffer->data + 8, ip->hw_address.hbuf + 1,
 	       ip->hw_address.hlen - 1);
 }
 
@@ -137,6 +156,11 @@ dhcpv6_client_assignments(void)
 	inet_pton(AF_INET6, All_DHCP_Relay_Agents_and_Servers,
 		  &DHCPv6DestAddr.sin6_addr);
 
+	code = D6O_CLIENTID;
+	if (!option_code_hash_lookup(&clientid_option,
+				     dhcpv6_universe.code_hash, &code, 0, MDL))
+		log_fatal("Unable to find the CLIENTID option definition.");
+
 	code = D6O_IA_NA;
 	if (!option_code_hash_lookup(&ia_na_option, dhcpv6_universe.code_hash,
 				     &code, 0, MDL))
@@ -146,6 +170,11 @@ dhcpv6_client_assignments(void)
 	if (!option_code_hash_lookup(&iaaddr_option, dhcpv6_universe.code_hash,
 				     &code, 0, MDL))
 		log_fatal("Unable to find the IAADDR option definition.");
+
+	code = D6O_ELAPSED_TIME;
+	if (!option_code_hash_lookup(&elapsed_option,
+				     dhcpv6_universe.code_hash, &code, 0, MDL))
+		log_fatal("Unable to find the ELAPSED_TIME option definition.");
 
 #ifndef __CYGWIN32__ /* XXX */
 	endservent();
@@ -2919,26 +2948,32 @@ make_client6_options(struct client_state *client, struct option_state **op,
 
 	option_state_allocate(op, MDL);
 
-	code = D6O_ELAPSED_TIME;
 	oc = NULL;
 	if (option_cache_allocate(&oc, MDL)) {
 		const unsigned char *cdata;
 
 		cdata = (unsigned char *)&client->elapsed;
 
-		if (make_const_data(&oc->expression, cdata, 2, 0, 0, MDL) &&
-		    option_code_hash_lookup(&oc->option,
-					    dhcpv6_universe.code_hash,
-					    &code, 0, MDL)) {
+		if (make_const_data(&oc->expression, cdata, 2, 0, 0, MDL)) {
+			option_reference(&oc->option, elapsed_option, MDL);
 			save_option(&dhcpv6_universe, *op, oc);
 		}
 
 		option_cache_dereference(&oc, MDL);
 	}
 
-	/* Put the default DUID in the state cache. */
-	if (client->default_duid != NULL)
-		save_option(&dhcpv6_universe, *op, client->default_duid);
+	/* See if the user configured a DUID in a relevant scope.  If not,
+	 * introduce our default manufactured id.
+	 */
+	if ((oc = lookup_option(&dhcpv6_universe, *op,
+				D6O_CLIENTID)) == NULL) {
+		if (!option_cache(&oc, &default_duid, NULL, clientid_option,
+				  MDL))
+			log_fatal("Failure assembling a DUID.");
+
+		save_option(&dhcpv6_universe, *op, oc);
+		option_cache_dereference(&oc, MDL);
+	}
 
 	/* In cases where we're responding to a single server, put the
 	 * server's id in the response.

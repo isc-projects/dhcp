@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tables.c,v 1.56.2.9 2007/04/12 16:22:13 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: tables.c,v 1.56.2.10 2007/04/13 16:47:43 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -307,8 +307,10 @@ static struct option dhcpv6_options[] = {
 
 				/* RFC3315 OPTIONS */
 
-	/* Client and server DUIDs are opaque fields. */
-	{ "client-id", "X",			&dhcpv6_universe,  1, 1 },
+	/* Client and server DUIDs are opaque fields, but marking them
+	 * up somewhat makes configuration easier.
+	 */
+	{ "client-id", "Nduid-types.X",		&dhcpv6_universe,  1, 1 },
 	{ "server-id", "X",			&dhcpv6_universe,  2, 1 },
 
 	/* ia-* options actually have at their ends a space for options
@@ -426,6 +428,19 @@ static struct option dhcpv6_options[] = {
 	{ "fqdn", "Efqdn6-if-you-see-me-its-a-bug-bug-bug.",
 						&dhcpv6_universe, 39, 1 },
 	{ NULL, NULL, NULL, 0, 0 }
+};
+
+struct enumeration_value dhcpv6_duid_type_values[] = {
+	{ "duid-llt",	DUID_LLT }, /* Link-Local Plus Time */
+	{ "duid-en",	DUID_EN },  /* DUID based upon enterprise-ID. */
+	{ "duid-ll",	DUID_LL },  /* DUID from Link Local address only. */
+	{ NULL, 0 }
+};
+
+struct enumeration dhcpv6_duid_types = {
+	NULL,
+	"duid-types", 2,
+	dhcpv6_duid_type_values
 };
 
 struct enumeration_value dhcpv6_status_code_values[] = {
@@ -1151,6 +1166,7 @@ void initialize_common_option_spaces()
 	}
 
 	/* Add DHCPv6 protocol enumeration sets. */
+	add_enumeration(&dhcpv6_duid_types);
 	add_enumeration(&dhcpv6_status_codes);
 	add_enumeration(&dhcpv6_messages);
 

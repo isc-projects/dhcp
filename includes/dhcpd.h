@@ -949,7 +949,6 @@ struct client_state {
 	struct iaddr requested_address;	    /* Address we would like to get. */
 
 	/* DHCPv6 values. */
-	struct option_cache *default_duid;
 	unsigned char dhcpv6_transaction_id[3];
 	u_int8_t refresh_type;
 
@@ -2237,6 +2236,7 @@ extern const char *path_dhclient_db;
 extern const char *path_dhclient_pid;
 extern char *path_dhclient_script;
 extern int interfaces_requested;
+extern struct data_string default_duid;
 
 extern struct client_config top_level_config;
 

@@ -335,7 +335,8 @@ enum dhcp_token {
 	IAADDR = 639,
 	LEASE6 = 640,
 	PREFERRED_LIFE = 641,
-	MAX_LIFE = 642
+	MAX_LIFE = 642,
+	DEFAULT_DUID = 643
 };
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\
