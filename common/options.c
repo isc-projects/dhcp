@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.92.2.18 2007/04/12 22:31:17 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.92.2.19 2007/04/13 23:18:54 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -3088,7 +3088,7 @@ fqdn6_option_space_encapsulate(struct data_string *result,
 	head = ((struct option_chain_head *)
 		cfg_options->universes[fqdn_universe.index]);
 	if (head == NULL)
-		goto exit;
+		return 0;
 
 	memset(results, 0, sizeof(results));
 	for (ocp = head->first ; ocp != NULL ; ocp = ocp->cdr) {
