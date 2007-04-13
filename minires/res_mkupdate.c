@@ -27,7 +27,7 @@
  */
 
 #if !defined(lint) && !defined(SABER)
-static const char rcsid[] = "$Id: res_mkupdate.c,v 1.8.116.1 2007/04/12 19:48:09 each Exp $";
+static const char rcsid[] = "$Id: res_mkupdate.c,v 1.8.116.2 2007/04/13 21:14:29 dhankins Exp $";
 #endif /* not lint */
 
 #include <sys/types.h>
@@ -242,7 +242,7 @@ res_nmkupdate(res_state statp,
 				return (-1);
 			if (!inet_pton(AF_INET6, buf2, &in6a))
 				return (-1);
-			n = sizeof(in6_addr);
+			n = sizeof(struct in6_addr);
 			memcpy(cp, &in6a, n);
 			cp += n;
 			ShrinkBuffer(n);
