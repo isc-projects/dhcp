@@ -23,9 +23,13 @@ release, which will be addressed shortly:
 
 - Only Solaris and Linux are supported.
 
+- There is no DHCPv6 Relay support.
+
 - Only a single fixed address is supported per IA.
 
 - IA_TA addresses are not supported.
+
+- IA_PD prefixes are not supported.
 
 - The server DUID must either be automatically generated, or specified
   in the configuration file. An option will be added to use type 1 or
@@ -41,42 +45,46 @@ release, which will be addressed shortly:
 
 - Old (expired) leases are never cleaned.
 
+- The client and server can only operate DHCPv4 or DHCPv6 at a time,
+  not both, so two instances of the daemons are required with the
+  "-6" command line option.
+
 For information on how to install, configure and run this software,
 as well as how to find documentation and report bugs, please consult
 the README file.
 
-		    Changes since V4.0.0-pre-alpha-comcast-2
+		    Changes since 3.1.0 (NEW FEATURES)
 
-- The Information-request message support added.
+- DHCPv6 Client and Server protocol support.  Use '-6' to run the daemons
+  as v6-only.  Use '-4' to run the daemons as v4-only (default.  There is
+  no support currently for both.
 
-- Inappropriate unicast messages sent to the server are now discarded.
+- Server support for multiple IA_NA options, containing at most one
+  IAADDR option.
+
+- Client support for one IA_NA option, containing any number of IAADDR
+  options.
+
+- Server support for the DHCPv6 Information-request message.
+
+- Inappropriate unicast DHCPv6 messages sent to the server are now
+  discarded, and this has rearchitected the IO system slightly.
 
 - The server only uses Rapid-Commit if it has been configured with the
   Rapid-Commit option and the client requests it.
 
-- All IA_NA in a packet from clients are looked at.
-
-
-		    Changes since V4.0.0-pre-alpha-comcast-1
-
-- Support for Linux has been added.
-
-- Limited DDNS support. We now update AAAA records in the same place we
-  would update A records, if we have an IPv6 address. We also generate
-  IP6.ARPA style names for PTR records if we're dealing with an IPv6
-  address.
-
-- Initial 'dhclient -6' support.  Values got in Replies are shelled out
-  to /sbin/dhclient-script.  The initial 4-packet handshake as well as
-  renew, rebind, and expiration are all supported.
+- DDNS support. We now update AAAA records in the same place we would
+  update A records, if we have an IPv6 address. We also generate IP6.ARPA
+  style names for PTR records if we're dealing with an IPv6 address.  Both
+  A and AAAA updates are done using the same 'fqdn.' virtual option space
+  (although the DHCPv4 FQDN and DHCPv6 FQDN options are formatted
+  differently, they both use the same code here).
 
 - The Linux dhclient-script attempts to set and remove assigned addresses,
   and to configure /etc/resolv.conf from nameserver and domain name
-  configurations.
+  configurations.  It can be extended to configure other parameters.
 
 - Initial DHCPv6 lease support.
-
-			Changes since 3.1 (New Features)
 
 - The IO system now tracks all local IP addresses, so that the DHCP
   applications (particularly the dhcrelay) can discern between what frames

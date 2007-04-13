@@ -1,4 +1,4 @@
-.\"	$Id: dhclient.conf.5,v 1.17 2006/05/15 15:07:49 dhankins Exp $
+.\"	$Id: dhclient.conf.5,v 1.17.60.1 2007/04/13 20:45:49 dhankins Exp $
 .\"
 .\" Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 1996-2003 by Internet Software Consortium
@@ -28,7 +28,7 @@
 .\" see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
 .\" ``http://www.nominum.com''.
 .\"
-.\" $Id: dhclient.conf.5,v 1.17 2006/05/15 15:07:49 dhankins Exp $
+.\" $Id: dhclient.conf.5,v 1.17.60.1 2007/04/13 20:45:49 dhankins Exp $
 .\"
 .TH dhclient.conf 5
 .SH NAME
@@ -224,11 +224,25 @@ than the default requested lease time, which is two hours.  The other
 obvious use for this statement is to send information to the server
 that will allow it to differentiate between this client and other
 clients or kinds of clients.
+.SH DHCPV6 OPERATION
+The client does not yet have a default DHCPv6 Option Request Option (ORO),
+nor has it been integrated with the 'request' and 'require' syntax above.
+It is neccessary to configure an ORO then.
+.PP
+.nf
+  send dhcp6.oro 1, 2, 7, 12, 13, 23, 24, 39;
+.fi
+.PP
+The above ORO will request both identifiers (server, client), the preference,
+unicast, nameservers, domain-search, and FQDN(v6) options.
 .SH DYNAMIC DNS
 The client now has some very limited support for doing DNS updates
 when a lease is acquired.   This is prototypical, and probably doesn't
 do what you want.   It also only works if you happen to have control
 over your DNS server, which isn't very likely.
+.PP
+Note that everything in this section is true wether you are using DHCPv4
+or DHCPv6.  The exact same syntax is used for both.
 .PP
 To make it work, you have to declare a key and zone as in the DHCP
 server (see \fBdhcpd.conf\fR(5) for details).   You also need to

@@ -1,17 +1,12 @@
- **********************************************************************
- *** This is NOT a public release, and should not be redistributed. ***
- **********************************************************************
-
- **************************************************************************
- *** Please see the file README.comcast for details about this tarball. ***
- **************************************************************************
-
-
 	       Internet Systems Consortium DHCP Distribution
 			     Version 3.1.0a1
 			      August 1, 2006
 
 			      README FILE
+
+ **********************************************************************
+ *** This is NOT a public release, and should not be redistributed. ***
+ **********************************************************************
 
 You should read this file carefully before trying to install or use
 the ISC DHCP Distribution.
