@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tables.c,v 1.56.2.10 2007/04/13 16:47:43 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: tables.c,v 1.56.2.11 2007/04/13 18:37:58 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -393,6 +393,8 @@ static struct option dhcpv6_options[] = {
 	{ "bcms-server-d", "D",			&dhcpv6_universe, 33, 1 },
 	{ "bcms-server-a", "6A",		&dhcpv6_universe, 34, 1 },
 
+	/* Note that 35 is not assigned. */
+
 	/* Not yet considering for inclusion. */
 #if 0
 			/* RFC-ietf-geopriv-dhcp-civil-09.txt */
@@ -400,7 +402,7 @@ static struct option dhcpv6_options[] = {
 	{ "geoconf-civic", "X",			&dhcpv6_universe, 36, 1 },
 #endif
 
-			/* RFC-ietf-dhc-dhcpv6-remoteid-01.txt */
+				/* RFC4649 OPTIONS */
 
 	/* The remote-id option looks like the VSIO option, but for all
 	 * intents and purposes we only need to treat the entire field
@@ -415,7 +417,7 @@ static struct option dhcpv6_options[] = {
 
 	{ "subscriber-id", "X",			&dhcpv6_universe, 38, 1 },
 
-			/* RFC-ietf-dhc-dhcpv6-fqdn-05.txt */
+				/* RFC4704 OPTIONS */
 
 	/* The DHCPv6 FQDN option is...weird.
 	 *
