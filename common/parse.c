@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.104.2.28 2007/01/29 10:41:01 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.104.2.29 2007/04/16 17:34:31 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -765,16 +765,16 @@ TIME parse_date (cfile)
 	token = next_token (&val, (unsigned *)0, cfile);
 	if (token != COLON) {
 		parse_warn (cfile,
-			    "expected colon separating hour from minute.");
+			    "expected colon separating minute from second.");
 		if (token != SEMI)
 			skip_to_semi (cfile);
 		return (TIME)0;
 	}
 
-	/* Minute... */
+	/* Second... */
 	token = next_token (&val, (unsigned *)0, cfile);
 	if (token != NUMBER) {
-		parse_warn (cfile, "numeric minute expected.");
+		parse_warn (cfile, "numeric second expected.");
 		if (token != SEMI)
 			skip_to_semi (cfile);
 		return (TIME)0;
