@@ -231,6 +231,10 @@ the README file.
 - A bug was fixed where the nwip virtual option space was referencing
   the fqdn option's virtual option space's option cache.
 
+- Timestamp parsing errors that indicated missing "minutes" fields rather
+  than the actually missing "seconds" fields have been repaired thanks to
+  a patch from Kevin Steves.
+
 			Changes since 3.0.5rc1
 
 - A bug was repaired in fixes to the dhclient which sought to run the
