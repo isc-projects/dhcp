@@ -1,4 +1,4 @@
-.\"	$Id: dhcp-options.5,v 1.31 2006/07/26 15:43:52 shane Exp $
+.\"	$Id: dhcp-options.5,v 1.32 2007/04/18 15:53:14 dhankins Exp $
 .\"
 .\" Copyright (c) 2004-2006 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 1996-2003 by Internet Software Consortium
@@ -1135,6 +1135,20 @@ each bit representing a flag describing the host in one of these ways.
 So far, only bit zero (being the least significant bit) is defined in
 RFC3256.  If this bit is set to one, the host is considered a CPE
 Controlled Cable Modem (CCCM).  All other bits are reserved.
+.RE
+.PP
+.B option \fBagent.link-selection\fR \fIip-address\fR\fB;\fR
+.RS 0.25i
+.PP
+The link-selection suboption is provided by relay agents to inform servers
+what subnet the client is actually attached to.  This is useful in those
+cases where the giaddr (where responses must be sent to the relay agent)
+is not on the same subnet as the client.  When this option is present in
+a packet from a relay agent, the DHCP server will use its contents to find
+a subnet declared in configuration, and from here take one step further
+backwards to any shared-network the subnet may be defined within...the
+client may be given any address within that shared network, as normally
+appropriate.
 .RE
 .SH THE CLIENT FQDN SUBOPTIONS
 The Client FQDN option, currently defined in the Internet Draft
