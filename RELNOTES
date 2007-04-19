@@ -118,6 +118,9 @@ and for prodding me into improving it.
 - Failover servers try harder to retransmit binding updates upon entering
   NORMAL state.
 
+- A grammar error in the dhclient.8 manpage was repaired thanks to a patch
+  from Chris Wagner.
+
 			Changes since 3.0.5rc1
 
 - A bug was repaired in fixes to the dhclient which sought to run the
