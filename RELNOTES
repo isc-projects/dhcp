@@ -235,6 +235,9 @@ the README file.
   than the actually missing "seconds" fields have been repaired thanks to
   a patch from Kevin Steves.
 
+- A grammar error in the dhclient.8 manpage was repaired thanks to a patch
+  from Chris Wagner.
+
 			Changes since 3.0.5rc1
 
 - A bug was repaired in fixes to the dhclient which sought to run the
