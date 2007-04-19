@@ -28,7 +28,7 @@
 .\" see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
 .\" ``http://www.nominum.com''.
 .\"
-.\" $Id: dhcpd.8,v 1.18.2.13 2006/07/13 17:29:34 dhankins Exp $
+.\" $Id: dhcpd.8,v 1.18.2.14 2007/04/19 21:35:33 dhankins Exp $
 .\"
 .TH dhcpd 8
 .SH NAME
@@ -435,7 +435,7 @@ currently supported).
 .PP
 .B pool \fIhandle\fR examine
 .RS 0.5i
-the pool object associted with this lease (the pool object is not
+the pool object associated with this lease (the pool object is not
 currently supported).
 .RE
 .PP
@@ -479,7 +479,7 @@ otherwise is simply the value supplied by the peer.
 .B atsfp \fItime\fR examine
 .RS 0.5i
 the actual tsfp value sent from the peer.  This value is forgotten when a
-lease binding state change is made, to facillitate retransmission logic.
+lease binding state change is made, to facilitate retransmission logic.
 .RE
 .PP
 .B cltt \fItime\fR examine
@@ -579,7 +579,7 @@ resynchronize with its peer.
 .PP
 On shutdown the server will also attempt to cleanly shut down all
 OMAPI connections.  If these connections do not go down cleanly after
-five seconds, they are shut down pre-emptively.  It can take as much
+five seconds, they are shut down preemptively.  It can take as much
 as 25 seconds from the beginning of the shutdown process to the time
 that the server actually exits.
 .PP
