@@ -238,6 +238,12 @@ the README file.
   relevant documents were included in the manpages, thanks to a patch
   by Andrew Pollock which got to us via Tomas Pospisek.
 
+- Some bugs were fixed in the 'emergency relay agent options hologram'
+  which is used to retain relay agent option contents from when the
+  client was in INIT or REBIND states.  This should solve problems where
+  relay agent options were not echoed from the server, even when giaddr
+  was set.
+
 			Changes since 3.0.5rc1
 
 - A bug was repaired in fixes to the dhclient, which sought to run the

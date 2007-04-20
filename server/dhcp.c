@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.214 2007/03/27 03:48:06 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.215 2007/04/20 15:25:26 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -104,38 +104,31 @@ void dhcp (packet)
 	}
 
 	/* There is a problem with the relay agent information option,
-	   which is that in order for a normal relay agent to append
-	   this option, the relay agent has to have been involved in
-	   getting the packet from the client to the server.  Note
-	   that this is the software entity known as the relay agent,
-	   _not_ the hardware entity known as a router in which the
-	   relay agent may be running, so the fact that a router has
-	   forwarded a packet does not mean that the relay agent in
-	   the router was involved.
-
-	   So when the client is in INIT or INIT-REBOOT or REBINDING
-	   state, the relay agent gets to tack on its options, but
-	   when it's not, the relay agent doesn't get to do this,
-	   which means that any decisions the DHCP server may make
-	   based on the agent options will be made incorrectly.  
-
-	   We work around this in the following way: if this is a
-	   DHCPREQUEST and doesn't have relay agent information
-	   options, we see if there's an existing lease for this IP
-	   address and this client that _does_ have stashed agent
-	   options.   If so, then we tack those options onto the
-	   packet as if they came from the client.   Later on, when we
-	   are deciding whether to steal the agent options from the
-	   packet, if the agent options stashed on the lease are the
-	   same as those stashed on the packet, we don't steal them -
-	   this ensures that the client never receives its agent
-	   options. */
-
-	if (packet -> packet_type == DHCPREQUEST &&
-	    packet -> raw -> ciaddr.s_addr &&
-	    !packet -> raw -> giaddr.s_addr &&
-	    (packet -> options -> universe_count < agent_universe.index ||
-	     !packet -> options -> universes [agent_universe.index]))
+	 * which is that in order for a normal relay agent to append
+	 * this option, the relay agent has to have been involved in
+	 * getting the packet from the client to the server.  Note
+	 * that this is the software entity known as the relay agent,
+	 * _not_ the hardware entity known as a router in which the
+	 * relay agent may be running, so the fact that a router has
+	 * forwarded a packet does not mean that the relay agent in
+	 * the router was involved.
+	 *
+	 * So when the client broadcasts (DHCPDISCOVER, or giaddr is set),
+	 * we can be sure that there are either agent options in the
+	 * packet, or there aren't supposed to be.  When the giaddr is not
+	 * set, it's still possible that the client is on a directly
+	 * attached subnet, and agent options are being appended by an l2
+	 * device that has no address, and so sets no giaddr.
+	 *
+	 * But in either case it's possible that the packets we receive
+	 * from the client in RENEW state may not include the agent options,
+	 * so if they are not in the packet we must "pretend" the last values
+	 * we observed were provided.
+	 */
+	if (packet->packet_type == DHCPREQUEST &&
+	    packet->raw->ciaddr.s_addr && !packet->raw->giaddr.s_addr &&
+	    (packet->options->universe_count <= agent_universe.index ||
+	     packet->options->universes[agent_universe.index] == NULL))
 	{
 		struct iaddr cip;
 
@@ -191,6 +184,12 @@ void dhcp (packet)
 					     &(packet -> options -> universes
 					       [agent_universe.index]),
 					     lease -> agent_options, MDL);
+
+		if (packet->options->universe_count <= agent_universe.index)
+			packet->options->universe_count =
+						agent_universe.index + 1;
+
+		packet->agent_options_stashed = ISC_TRUE;
 	}
       nolease:
 
@@ -1498,20 +1497,28 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 	 * on the lease.  We do not check giaddr to detect the presence of
 	 * a relay, as this excludes "l2" relay agents which have no giaddr
 	 * to set.
+	 *
+	 * XXX: If the user configures options for the relay agent information
+	 * (state->options->universes[agent_universe.index] is not NULL),
+	 * we're still required to duplicate other values provided by the
+	 * relay agent.  So we need to merge the old values not configured
+	 * by the user into the new state, not just give up.
 	 */
-	if (packet->options->universe_count > agent_universe.index &&
-	    packet->options->universes [agent_universe.index] &&
-	    (state -> options -> universe_count <= agent_universe.index ||
-	     !state -> options -> universes [agent_universe.index]) &&
-	    lease -> agent_options !=
-	    ((struct option_chain_head *)
-	     packet -> options -> universes [agent_universe.index])) {
+	if (!packet->agent_options_stashed &&
+	    packet->options->universe_count > agent_universe.index &&
+	    packet->options->universes[agent_universe.index] != NULL &&
+	    (state->options->universe_count <= agent_universe.index ||
+	     state->options->universes[agent_universe.index] == NULL)) {
 		option_chain_head_reference
 		    ((struct option_chain_head **)
 		     &(state -> options -> universes [agent_universe.index]),
 		     (struct option_chain_head *)
 		     packet -> options -> universes [agent_universe.index],
 		     MDL);
+
+		if (state->options->universe_count <= agent_universe.index)
+			state->options->universe_count =
+						agent_universe.index + 1;
 	}
 
 	/* If we are offering a lease that is still currently valid, preserve
@@ -2247,19 +2254,15 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 		option_chain_head_reference (&lt -> agent_options,
 					     lease -> agent_options, MDL);
 
-	/* If we got relay agent information options, and the packet really
-	 * looks like it came through a relay agent, and if this feature is
-	 * not disabled, save the relay agent information options that came
-	 * in with the packet, so that we can use them at renewal time when
-	 * the packet won't have gone through a relay agent.  We do not
-	 * check giaddr to detect the presence of a relay, as this excludes
-	 * "l2" relay agents which have no giaddr to set.
+	/* If we got relay agent information options from the packet, then
+	 * cache them for renewal in case the relay agent can't supply them
+	 * when the client unicasts.  The options may be from an addressed
+	 * "l3" relay, or from an unaddressed "l2" relay which does not set
+	 * giaddr.
 	 */
-	if (packet->options->universe_count > agent_universe.index &&
-	    packet->options->universes [agent_universe.index] &&
-	    (state -> options -> universe_count <= agent_universe.index ||
-	     state -> options -> universes [agent_universe.index] ==
-	     packet -> options -> universes [agent_universe.index])) {
+	if (!packet->agent_options_stashed &&
+	    packet->options->universe_count > agent_universe.index &&
+	    packet->options->universes[agent_universe.index] != NULL) {
 	    oc = lookup_option (&server_universe, state -> options,
 				SV_STASH_AGENT_OPTIONS);
 	    if (!oc ||
