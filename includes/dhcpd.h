@@ -235,6 +235,12 @@ struct packet {
 
 	int known;
 	int authenticated;
+
+	/* If we stash agent options onto the packet option state, to pretend
+	 * options we got in a previous exchange were still there, we need
+	 * to signal this in a reliable way.
+	 */
+	isc_boolean_t agent_options_stashed;
 };
 
 /* A network interface's MAC address. */
