@@ -28,7 +28,7 @@
 .\" see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
 .\" ``http://www.nominum.com''.
 .\"
-.\" $Id: dhcpd.conf.5,v 1.83 2007/04/19 21:35:12 dhankins Exp $
+.\" $Id: dhcpd.conf.5,v 1.84 2007/04/24 20:49:51 dhankins Exp $
 .\"
 .TH dhcpd.conf 5
 .SH NAME
@@ -2502,6 +2502,7 @@ perform standard DHCID multiple-client, one-name conflict detection.  If
 the parameter has been set false, the server will skip this check and
 instead simply tear down any previous bindings to install the new
 binding without question.  The default is true.
+.RE
 .PP
 The
 .I update-optimization
