@@ -247,6 +247,12 @@ the README file.
 - dhclient now closes its descriptor to dhclient.leases prior to executing
   dhclient-script.  Thanks to a patch from Tomas Pospisek.
 
+- The server's "by client-id" and "by hardware address" hash table lists
+  are now sorted according to the preference to re-allocate that lease to
+  returning clients.  This should eliminate pool starvation problems
+  arising when "INIT" clients were given new leases rather than presently
+  active ones.
+
 			Changes since 3.0.5rc1
 
 - A bug was repaired in fixes to the dhclient, which sought to run the
