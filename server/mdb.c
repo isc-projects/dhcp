@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.67.2.27 2006/07/18 18:16:25 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.67.2.28 2007/04/26 22:57:53 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1588,29 +1588,117 @@ int find_lease_by_hw_addr (struct lease **lp,
 				  hwaddr, hwlen, file, line);
 }
 
-/* Add the specified lease to the uid hash. */
-
-void uid_hash_add (lease)
-	struct lease *lease;
+/* If the lease is preferred over the candidate, return truth.  The
+ * 'cand' and 'lease' names are retained to read more clearly against
+ * the 'uid_hash_add' and 'hw_hash_add' functions (this is common logic
+ * to those two functions).
+ *
+ * 1) ACTIVE leases are preferred.  The active lease with
+ *    the longest lifetime is preferred over shortest.
+ * 2) "transitional states" are next, this time with the
+ *    most recent CLTT.
+ * 3) free/backup/etc states are next, again with CLTT.  In truth we
+ *    should never see reset leases for this.
+ * 4) Abandoned leases are always dead last.
+ */
+static isc_boolean_t
+client_lease_preferred(struct lease *cand, struct lease *lease)
 {
-	struct lease *head = (struct lease *)0;
-	struct lease *next = (struct lease *)0;
+	if (cand->binding_state == FTS_ACTIVE) {
+		if (lease->binding_state == FTS_ACTIVE &&
+		    lease->ends >= cand->ends)
+			return ISC_TRUE;
+	} else if (cand->binding_state == FTS_EXPIRED ||
+		   cand->binding_state == FTS_RELEASED) {
+		if (lease->binding_state == FTS_ACTIVE)
+			return ISC_TRUE;
 
+		if ((lease->binding_state == FTS_EXPIRED ||
+		     lease->binding_state == FTS_RELEASED) &&
+		    lease->cltt >= cand->cltt)
+			return ISC_TRUE;
+	} else if (cand->binding_state != FTS_ABANDONED) {
+		if (lease->binding_state == FTS_ACTIVE ||
+		    lease->binding_state == FTS_EXPIRED ||
+		    lease->binding_state == FTS_RELEASED)
+			return ISC_TRUE;
+
+		if (lease->binding_state != FTS_ABANDONED &&
+		    lease->cltt >= cand->cltt)
+			return ISC_TRUE;
+	} else /* (cand->binding_state == FTS_ABANDONED) */ {
+		if (lease->binding_state != FTS_ABANDONED ||
+		    lease->cltt >= cand->cltt)
+			return ISC_TRUE;
+	}
+
+	return ISC_FALSE;
+}
+
+/* Add the specified lease to the uid hash. */
+void
+uid_hash_add(struct lease *lease)
+{
+	struct lease *head = NULL;
+	struct lease *cand = NULL;
+	struct lease *prev = NULL;
+	struct lease *next = NULL;
 
 	/* If it's not in the hash, just add it. */
 	if (!find_lease_by_uid (&head, lease -> uid, lease -> uid_len, MDL))
 		lease_hash_add (lease_uid_hash, lease -> uid,
 				lease -> uid_len, lease, MDL);
 	else {
-		/* Otherwise, attach it to the end of the list. */
-		while (head -> n_uid) {
-			lease_reference (&next, head -> n_uid, MDL);
-			lease_dereference (&head, MDL);
-			lease_reference (&head, next, MDL);
-			lease_dereference (&next, MDL);
+		/* Otherwise, insert it into the list in order of its
+		 * preference for "resuming allocation to the client."
+		 *
+		 * Because we don't have control of the hash bucket index
+		 * directly, we have to remove and re-insert the client
+		 * id into the hash if we're inserting onto the head.
+		 */
+		lease_reference(&cand, head, MDL);
+		while (cand != NULL) {
+			if (client_lease_preferred(cand, lease))
+				break;
+
+			if (prev != NULL)
+				lease_dereference(&prev, MDL);
+			lease_reference(&prev, cand, MDL);
+
+			if (cand->n_uid != NULL)
+				lease_reference(&next, cand->n_uid, MDL);
+
+			lease_dereference(&cand, MDL);
+
+			if (next != NULL) {
+				lease_reference(&cand, next, MDL);
+				lease_dereference(&next, MDL);
+			}
 		}
-		lease_reference (&head -> n_uid, lease, MDL);
-		lease_dereference (&head, MDL);
+
+		/* If we want to insert 'before cand', and prev is NULL,
+		 * then it was the head of the list.  Assume that position.
+		 */
+		if (prev == NULL) {
+			lease_reference(&lease->n_uid, head, MDL);
+			lease_hash_delete(lease_uid_hash, lease->uid,
+					  lease->uid_len, MDL);
+			lease_hash_add(lease_uid_hash, lease->uid,
+				       lease->uid_len, lease, MDL);
+		} else /* (prev != NULL) */ {
+			if(prev->n_uid != NULL) {
+				lease_reference(&lease->n_uid, prev->n_uid,
+						MDL);
+				lease_dereference(&prev->n_uid, MDL);
+			}
+			lease_reference(&prev->n_uid, lease, MDL);
+
+			lease_dereference(&prev, MDL);
+		}
+
+		if (cand != NULL)
+			lease_dereference(&cand, MDL);
+		lease_dereference(&head, MDL);
 	}
 }
 
@@ -1664,11 +1752,13 @@ void uid_hash_delete (lease)
 
 /* Add the specified lease to the hardware address hash. */
 
-void hw_hash_add (lease)
-	struct lease *lease;
+void
+hw_hash_add(struct lease *lease)
 {
-	struct lease *head = (struct lease *)0;
-	struct lease *next = (struct lease *)0;
+	struct lease *head = NULL;
+	struct lease *cand = NULL;
+	struct lease *prev = NULL;
+	struct lease *next = NULL;
 
 	/* If it's not in the hash, just add it. */
 	if (!find_lease_by_hw_addr (&head, lease -> hardware_addr.hbuf,
@@ -1678,16 +1768,59 @@ void hw_hash_add (lease)
 				lease -> hardware_addr.hlen,
 				lease, MDL);
 	else {
-		/* Otherwise, attach it to the end of the list. */
-		while (head -> n_hw) {
-			lease_reference (&next, head -> n_hw, MDL);
-			lease_dereference (&head, MDL);
-			lease_reference (&head, next, MDL);
-			lease_dereference (&next, MDL);
+		/* Otherwise, insert it into the list in order of its
+		 * preference for "resuming allocation to the client."
+		 *
+		 * Because we don't have control of the hash bucket index
+		 * directly, we have to remove and re-insert the client
+		 * id into the hash if we're inserting onto the head.
+		 */
+		lease_reference(&cand, head, MDL);
+		while (cand != NULL) {
+			if (client_lease_preferred(cand, lease))
+				break;
+
+			if (prev != NULL)
+				lease_dereference(&prev, MDL);
+			lease_reference(&prev, cand, MDL);
+
+			if (cand->n_hw != NULL)
+				lease_reference(&next, cand->n_hw, MDL);
+
+			lease_dereference(&cand, MDL);
+
+			if (next != NULL) {
+				lease_reference(&cand, next, MDL);
+				lease_dereference(&next, MDL);
+			}
 		}
 
-		lease_reference (&head -> n_hw, lease, MDL);
-		lease_dereference (&head, MDL);
+		/* If we want to insert 'before cand', and prev is NULL,
+		 * then it was the head of the list.  Assume that position.
+		 */
+		if (prev == NULL) {
+			lease_reference(&lease->n_hw, head, MDL);
+			lease_hash_delete(lease_hw_addr_hash,
+					  lease->hardware_addr.hbuf,
+					  lease->hardware_addr.hlen, MDL);
+			lease_hash_add(lease_hw_addr_hash,
+				       lease->hardware_addr.hbuf,
+				       lease->hardware_addr.hlen,
+				       lease, MDL);
+		} else /* (prev != NULL) */ {
+			if(prev->n_hw != NULL) {
+				lease_reference(&lease->n_hw, prev->n_uid,
+						MDL);
+				lease_dereference(&prev->n_hw, MDL);
+			}
+			lease_reference(&prev->n_hw, lease, MDL);
+
+			lease_dereference(&prev, MDL);
+		}
+
+		if (cand != NULL)
+			lease_dereference(&cand, MDL);
+		lease_dereference(&head, MDL);
 	}
 }
 

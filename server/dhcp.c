@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.192.2.67 2007/04/20 15:27:36 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.192.2.68 2007/04/26 22:57:53 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -3098,10 +3098,14 @@ int find_lease (struct lease **lp,
 	}
 
 	/* If we found leases matching the client identifier, loop through
-	   the n_uid pointer looking for one that's actually valid.   We
-	   can't do this until we get here because we depend on
-	   packet -> known, which may be set by either the uid host
-	   lookup or the haddr host lookup. */
+	 * the n_uid pointer looking for one that's actually valid.   We
+	 * can't do this until we get here because we depend on
+	 * packet -> known, which may be set by either the uid host
+	 * lookup or the haddr host lookup.
+	 *
+	 * Note that the n_uid lease chain is sorted in order of
+	 * preference, so the first one is the best one.
+	 */
 	while (uid_lease) {
 #if defined (DEBUG_FIND_LEASE)
 		log_info ("trying next lease matching client id: %s",
@@ -3160,8 +3164,12 @@ int find_lease (struct lease **lp,
 #endif
 
 	/* Find a lease whose hardware address matches, whose client
-	   identifier matches, that's permitted, and that's on the
-	   correct subnet. */
+	 * identifier matches (or equally doesn't have one), that's
+	 * permitted, and that's on the correct subnet.
+	 *
+	 * Note that the n_hw chain is sorted in order of preference, so
+	 * the first one found is the best one.
+	 */
 	h.hlen = packet -> raw -> hlen + 1;
 	h.hbuf [0] = packet -> raw -> htype;
 	memcpy (&h.hbuf [1], packet -> raw -> chaddr, packet -> raw -> hlen);
