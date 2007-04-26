@@ -113,14 +113,6 @@ and for prodding me into improving it.
   than the actually missing "seconds" fields have been repaired thanks to
   a patch from Kevin Steves.
 
-- dhclient now closes its descriptor to dhclient.leases prior to executing
-  dhclient-script.  Thanks to a patch from Tomas Pospisek.
-
-			Changes since 3.0.5rc2
-
-- Failover servers try harder to retransmit binding updates upon entering
-  NORMAL state.
-
 - A grammar error in the dhclient.8 manpage was repaired thanks to a patch
   from Chris Wagner.
 
@@ -133,6 +125,14 @@ and for prodding me into improving it.
   client was in INIT or REBIND states.  This should solve problems where
   relay agent options were not echoed from the server, even when giaddr
   was set.
+
+- dhclient now closes its descriptor to dhclient.leases prior to executing
+  dhclient-script.  Thanks to a patch from Tomas Pospisek.
+
+			Changes since 3.0.5rc2
+
+- Failover servers try harder to retransmit binding updates upon entering
+  NORMAL state.
 
 			Changes since 3.0.5rc1
 
