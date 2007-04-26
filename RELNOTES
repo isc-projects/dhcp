@@ -203,11 +203,6 @@ the README file.
 - Encapsulated option spaces within encapsulated option spaces is now
   formally supported.
 
-*** for merge
-- dhclient now closes its descriptor to dhclient.leases prior to executing
-  dhclient-script.  Thanks to a patch from Tomas Pospisek.
-***
-
 			Changes since 3.0.5
 
 - A logic error in omapi interface code was repaired that might result in
@@ -252,6 +247,9 @@ the README file.
   client was in INIT or REBIND states.  This should solve problems where
   relay agent options were not echoed from the server, even when giaddr
   was set.
+
+- dhclient now closes its descriptor to dhclient.leases prior to executing
+  dhclient-script.  Thanks to a patch from Tomas Pospisek.
 
 			Changes since 3.0.5rc1
 
