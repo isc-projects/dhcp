@@ -113,6 +113,9 @@ and for prodding me into improving it.
   than the actually missing "seconds" fields have been repaired thanks to
   a patch from Kevin Steves.
 
+- dhclient now closes its descriptor to dhclient.leases prior to executing
+  dhclient-script.  Thanks to a patch from Tomas Pospisek.
+
 			Changes since 3.0.5rc2
 
 - Failover servers try harder to retransmit binding updates upon entering
