@@ -32,7 +32,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.145 2007/04/03 14:57:53 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.146 2007/04/26 19:31:58 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2650,6 +2650,11 @@ int script_go (client)
 			wstatus = 0;
 		}
 	} else {
+		/* We don't want to pass an open file descriptor for
+		 * dhclient.leases when executing dhclient-script.
+		 */
+		if (leaseFile != NULL)
+			fclose(leaseFile);
 		execve (scriptName, argv, envp);
 		log_error ("execve (%s, ...): %m", scriptName);
 		exit (0);

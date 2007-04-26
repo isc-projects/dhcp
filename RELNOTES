@@ -199,6 +199,11 @@ the README file.
 - Encapsulated option spaces within encapsulated option spaces is now
   formally supported.
 
+*** for merge
+- dhclient now closes its descriptor to dhclient.leases prior to executing
+  dhclient-script.  Thanks to a patch from Tomas Pospisek.
+***
+
 			Changes since 3.0.5
 
 - A logic error in omapi interface code was repaired that might result in
