@@ -552,6 +552,7 @@ struct lease_state {
 #define SV_LEASEQUERY			49
 #define SV_ADAPTIVE_LEASE_TIME_THRESHOLD	50
 #define SV_DO_REVERSE_UPDATES		51
+#define SV_FQDN_REPLY			52
 
 #if !defined (DEFAULT_PING_TIMEOUT)
 # define DEFAULT_PING_TIMEOUT 1

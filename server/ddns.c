@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: ddns.c,v 1.25 2007/04/03 16:46:03 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: ddns.c,v 1.26 2007/04/27 22:48:00 each Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -597,6 +597,21 @@ int ddns_updates (struct packet *packet,
 	}
 
       noerror:
+	/*
+	 * If fqdn-reply option is disabled in dhcpd.conf, then don't
+	 * send the client an FQDN option at all, even if one was requested.
+	 * (WinXP clients allegedly misbehave if the option is present,
+	 * refusing to handle PTR updates themselves).
+	 */
+	if ((oc = lookup_option (&server_universe, state->options,
+  				 SV_FQDN_REPLY)) &&
+  	    !evaluate_boolean_option_cache (&ignorep, packet, lease,
+  					    (struct client_state *)0,
+  					    packet->options,
+  					    state->options,
+  					    &lease->scope, oc, MDL)) {
+  	    	goto badfqdn;
+
 	/* If we're ignoring client updates, then we tell a sort of 'white
 	 * lie'.  We've already updated the name the server wants (per the
 	 * config written by the server admin).  Now let the client do as
@@ -605,7 +620,7 @@ int ddns_updates (struct packet *packet,
 	 * We only form an FQDN option this way if the client supplied an
 	 * FQDN option that had FQDN_SERVER_UPDATE set false.
 	 */
-	if (client_ignorep &&
+	} else if (client_ignorep &&
 	    (oc = lookup_option(&fqdn_universe, packet->options,
 				FQDN_SERVER_UPDATE)) &&
 	    !evaluate_boolean_option_cache(&ignorep, packet, lease, NULL,
