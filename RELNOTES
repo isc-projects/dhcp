@@ -27,6 +27,12 @@ the README file.
 
 			Changes since 3.1.0b1
 
+- Assorted fixes for broken network devices:  IP header length field is now
+  determined from payload, because some NIC drivers return more data than
+  they actually recived; IP and UDP packets now stored in aligned data
+  structures; outgoing packet TTL increased from 16 to 128.  Thanks to Ted
+  Lemon for the patch.
+
 - A new server config option "fqdn-reply" specifies whether the server
   should send out option 81 (FQDN).  Defaults to "on".  If set to "off",
   the FQDN option is not sent, even if the client requested it.  This is

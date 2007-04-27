@@ -33,7 +33,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: packet.c,v 1.45 2006/08/09 14:57:47 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: packet.c,v 1.45.2.1 2007/04/27 23:54:16 each Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -210,17 +210,17 @@ ssize_t decode_hw_header (interface, buf, bufix, from)
 
 /* UDP header and IP header decoded together for convenience. */
 
-ssize_t decode_udp_ip_header (interface, buf, bufix, from, buflen)
-	struct interface_info *interface;
-	unsigned char *buf;
-	unsigned bufix;
-	struct sockaddr_in *from;
-	unsigned buflen;
+ssize_t
+decode_udp_ip_header(struct interface_info *interface,
+		     unsigned char *buf, unsigned bufix,
+		     struct sockaddr_in *from, unsigned buflen,
+		     unsigned *rbuflen)
 {
   unsigned char *data;
   struct ip ip;
-  struct udphdr *udp;
-  u_int32_t ip_len = (buf [bufix] & 0xf) << 2;
+  struct udphdr udp;
+  unsigned char *upp, *endbuf;
+  u_int32_t ip_len, ulen, pkt_len;
   u_int32_t sum, usum;
   static int ip_packets_seen;
   static int ip_packets_bad_checksum;
@@ -229,11 +229,34 @@ ssize_t decode_udp_ip_header (interface, buf, bufix, from, buflen)
   static int udp_packets_length_checked;
   static int udp_packets_length_overflow;
   unsigned len;
-  unsigned ulen;
-  int ignore = 0;
 
-  memcpy(&ip, buf + bufix, sizeof (struct ip));
-  udp = (struct udphdr *)(buf + bufix + ip_len);
+  /* Designate the end of the input buffer for bounds checks. */
+  endbuf = buf + bufix + buflen;
+
+  /* Assure there is at least an IP header there. */
+  if ((buf + bufix + sizeof(ip)) > endbuf)
+	  return -1;
+
+  /* Copy the IP header into a stack aligned structure for inspection.
+   * There may be bits in the IP header that we're not decoding, so we
+   * copy out the bits we grok and skip ahead by ip.ip_hl * 4.
+   */
+  upp = buf + bufix;
+  memcpy(&ip, upp, sizeof(ip));
+  ip_len = (*upp & 0x0f) << 2;
+  upp += ip_len;
+
+  /* Check the IP packet length. */
+  pkt_len = ntohs(ip.ip_len);
+  if (pkt_len > buflen)
+	return -1;
+
+  /* Assure after ip_len bytes that there is enough room for a UDP header. */
+  if ((upp + sizeof(udp)) > endbuf)
+	  return -1;
+
+  /* Copy the UDP header into a stack alined structure for inspection. */
+  memcpy(&udp, upp, sizeof(udp));
 
 #ifdef USERLAND_FILTER
   /* Is it a UDP packet? */
@@ -241,16 +264,31 @@ ssize_t decode_udp_ip_header (interface, buf, bufix, from, buflen)
 	  return -1;
 
   /* Is it to the port we're serving? */
-  if (udp -> uh_dport != local_port)
+  if (udp.uh_dport != local_port)
 	  return -1;
 #endif /* USERLAND_FILTER */
 
-  ulen = ntohs (udp -> uh_ulen);
-  if (ulen < sizeof *udp ||
-      ((unsigned char *)udp) + ulen > buf + bufix + buflen) {
-	  log_info ("bogus UDP packet length: %d", ulen);
-	  return -1;
+  ulen = ntohs(udp.uh_ulen);
+  if (ulen < sizeof(udp))
+	return -1;
+
+  udp_packets_length_checked++;
+  if ((upp + ulen) > endbuf) {
+	udp_packets_length_overflow++;
+	if ((udp_packets_length_checked > 4) &&
+	    ((udp_packets_length_checked /
+	      udp_packets_length_overflow) < 2)) {
+		log_info("%d udp packets in %d too long - dropped",
+			 udp_packets_length_overflow,
+			 udp_packets_length_checked);
+		udp_packets_length_overflow = 0;
+		udp_packets_length_checked = 0;
+	}
+	return -1;
   }
+
+  if ((ulen < sizeof(udp)) || ((upp + ulen) > endbuf))
+	return -1;
 
   /* Check the IP header checksum - it should be zero. */
   ++ip_packets_seen;
@@ -265,57 +303,26 @@ ssize_t decode_udp_ip_header (interface, buf, bufix, from, buflen)
 	  return -1;
   }
 
-  /* Check the IP packet length. */
-  if (ntohs (ip.ip_len) != buflen) {
-	  if ((ntohs (ip.ip_len + 2) & ~1) == buflen)
-		  ignore = 1;
-	  else
-		  log_debug ("ip length %d disagrees with bytes received %d.",
-			     ntohs (ip.ip_len), buflen);
-  }
-
   /* Copy out the IP source address... */
-  memcpy (&from -> sin_addr, &ip.ip_src, 4);
+  memcpy(&from->sin_addr, &ip.ip_src, 4);
 
   /* Compute UDP checksums, including the ``pseudo-header'', the UDP
      header and the data.   If the UDP checksum field is zero, we're
      not supposed to do a checksum. */
 
-  data = buf + bufix + ip_len + sizeof *udp;
-  len = ulen - sizeof *udp;
-  ++udp_packets_length_checked;
-  if (len + data > buf + bufix + buflen) {
-	  ++udp_packets_length_overflow;
-	  if (udp_packets_length_checked > 4 &&
-	      (udp_packets_length_checked /
-	       udp_packets_length_overflow) < 2) {
-		  log_info ("%d udp packets in %d too long - dropped",
-			    udp_packets_length_overflow,
-			    udp_packets_length_checked);
-		  udp_packets_length_overflow =
-			  udp_packets_length_checked = 0;
-	  }
-	  return -1;
-  }
-  if (len + data < buf + bufix + buflen &&
-      len + data != buf + bufix + buflen && !ignore)
-	  log_debug ("accepting packet with data after udp payload.");
-  if (len + data > buf + bufix + buflen) {
-	  log_debug ("dropping packet with bogus uh_ulen %ld",
-		     (long)(len + sizeof *udp));
-	  return -1;
-  }
+  data = upp + sizeof(udp);
+  len = ulen - sizeof(udp);
 
-  usum = udp -> uh_sum;
-  udp -> uh_sum = 0;
+  usum = udp.uh_sum;
+  udp.uh_sum = 0;
 
-  sum = wrapsum (checksum ((unsigned char *)udp, sizeof *udp,
-			   checksum (data, len,
-				     checksum ((unsigned char *)
-					       &ip.ip_src,
-					       2 * sizeof ip.ip_src,
-					       IPPROTO_UDP +
-					       (u_int32_t)ulen))));
+  /* XXX: We have to pass &udp, because we have to zero the checksum
+   * field before calculating the sum...'upp' isn't zeroed.
+   */
+  sum = wrapsum(checksum((unsigned char *)&udp, sizeof(udp),
+			 checksum(data, len,
+				  checksum((unsigned char *)&ip.ip_src,
+					   8, IPPROTO_UDP + ulen))));
 
   udp_packets_seen++;
   if (usum && usum != sum) {
@@ -330,8 +337,13 @@ ssize_t decode_udp_ip_header (interface, buf, bufix, from, buflen)
   }
 
   /* Copy out the port... */
-  memcpy (&from -> sin_port, &udp -> uh_sport, sizeof udp -> uh_sport);
+  memcpy (&from -> sin_port, &udp.uh_sport, sizeof udp.uh_sport);
 
-  return ip_len + sizeof *udp;
+  /* Save the length of the UDP payload. */
+  if (rbuflen != NULL)
+	*rbuflen = len;
+
+  /* Return the index to the UDP payload. */
+  return ip_len + sizeof udp;
 }
 #endif /* PACKET_DECODING */
