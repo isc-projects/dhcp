@@ -27,6 +27,12 @@ the README file.
 
 			Changes since 3.1.0b1
 
+- A new server config option "fqdn-reply" specifies whether the server
+  should send out option 81 (FQDN).  Defaults to "on".  If set to "off",
+  the FQDN option is not sent, even if the client requested it.  This is
+  needed because some clients misbehave otherwise.  Thanks to Christof Chen
+  at Allianz.
+
 - Allow trace output files (-tf option) to be overwritten, rather than
   crashing dhcpd if the file already exists
 
