@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.160 2007/01/29 10:25:55 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.161 2007/04/27 22:36:26 each Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -550,11 +550,13 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		next_token (&val, (unsigned *)0, cfile);
 		if (type != SUBNET_DECL && type != SHARED_NET_DECL) {
 			parse_warn (cfile, "pool declared outside of network");
-		}
-		if (type == POOL_DECL) {
+			skip_to_semi(cfile);
+		} else if (type == POOL_DECL) {
 			parse_warn (cfile, "pool declared within pool.");
-		}
-		parse_pool_statement (cfile, group, type);
+			skip_to_semi(cfile);
+		} else
+			parse_pool_statement (cfile, group, type);
+
 		return declaration;
 
 	      case RANGE:
@@ -1318,7 +1320,8 @@ void parse_pool_statement (cfile, group, type)
 		shared_network_reference (&pool -> shared_network,
 					  group -> shared_network, MDL);
 
-	if (!clone_group (&pool -> group, pool -> shared_network -> group, MDL))
+	if (group->shared_network == NULL ||
+            !clone_group (&pool -> group, pool -> shared_network -> group, MDL))
 		log_fatal ("can't clone pool group.");
 
 #if defined (FAILOVER_PROTOCOL)
