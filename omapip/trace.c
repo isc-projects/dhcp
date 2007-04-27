@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: trace.c,v 1.12 2006/02/24 23:16:30 dhankins Exp $ Copyright 2004-2006 Internet Systems Consortium.";
+"$Id: trace.c,v 1.12.116.1 2007/04/27 22:24:02 each Exp $ Copyright 2004-2006 Internet Systems Consortium.";
 #endif
 
 #include <omapip/omapip_p.h>
@@ -56,6 +56,8 @@ trace_type_t trace_time_marker;
 #if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
 extern omapi_array_t *trace_listeners;
 extern omapi_array_t *omapi_connections;
+
+extern int errno;
 
 void trace_free_all ()
 {
@@ -142,6 +144,11 @@ isc_result_t trace_begin (const char *filename,
 	}
 
 	traceoutfile = open (filename, O_CREAT | O_WRONLY | O_EXCL, 0600);
+	if (traceoutfile < 0 && errno == EEXIST) {
+		log_error ("WARNING: Overwriting trace file \"%s\"", filename);
+		traceoutfile = open (filename, O_WRONLY | O_EXCL, 0600);
+	}
+
 	if (traceoutfile < 0) {
 		log_error ("%s(%d): trace_begin: %s: %m",
 			   file, line, filename);

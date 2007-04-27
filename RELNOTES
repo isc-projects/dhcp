@@ -27,6 +27,9 @@ the README file.
 
 			Changes since 3.1.0b1
 
+- Allow trace output files (-tf option) to be overwritten, rather than
+  crashing dhcpd if the file already exists
+
 - A bug was fixed that caused dhcpd to segfault if a pool was declared
   outside the scope of a subnet in dhcpd.conf.
 
