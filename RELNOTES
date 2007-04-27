@@ -27,6 +27,9 @@ the README file.
 
 			Changes since 3.1.0b1
 
+- A bug was fixed that caused dhcpd to segfault if a pool was declared
+  outside the scope of a subnet in dhcpd.conf.
+
 - Some uninitialized values were repaired in dhcpleasequery.c that
   caused the server to abort.
 
