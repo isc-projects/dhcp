@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: upf.c,v 1.21.2.5 2004/11/24 17:39:16 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: upf.c,v 1.21.2.6 2007/04/27 23:52:34 each Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -300,6 +300,7 @@ ssize_t receive_packet (interface, buf, len, from, hfrom)
 	int offset = 0;
 	unsigned char ibuf [1500 + sizeof (struct enstamp)];
 	int bufix = 0;
+	unsigned paylen;
 
 	length = read (interface -> rfdesc, ibuf, sizeof ibuf);
 	if (length <= 0)
@@ -321,7 +322,7 @@ ssize_t receive_packet (interface, buf, len, from, hfrom)
 
 	/* Decode the IP and UDP headers... */
 	offset = decode_udp_ip_header (interface, ibuf, bufix,
-				       from, length);
+				       from, length, &paylen);
 
 	/* If the IP or UDP checksum was bad, skip the packet... */
 	if (offset < 0)
@@ -330,9 +331,12 @@ ssize_t receive_packet (interface, buf, len, from, hfrom)
 	bufix += offset;
 	length -= offset;
 
+	if (length < paylen)
+		log_fatal("Internal inconsistency at %s:%d.", MDL);
+
 	/* Copy out the data in the packet... */
-	memcpy (buf, &ibuf [bufix], length);
-	return length;
+	memcpy (buf, &ibuf[bufix], paylen);
+	return paylen;
 }
 
 int can_unicast_without_arp (ip)

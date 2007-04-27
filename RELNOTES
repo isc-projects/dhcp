@@ -81,6 +81,12 @@ and for prodding me into improving it.
 
 			Changes since 3.0.5
 
+- Assorted fixes for broken network devices:  IP header length field is now
+  determined from payload, because some NIC drivers return more data than
+  they actually recived; IP and UDP packets now stored in aligned data
+  structures; outgoing packet TTL increased from 16 to 128.  Thanks to Ted
+  Lemon for the patch.
+
 - Allow trace output files (-tf option) to be overwritten, rather than
   crashing dhcpd if the file already exists
 

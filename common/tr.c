@@ -28,7 +28,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tr.c,v 1.7.2.3 2005/09/08 21:19:21 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: tr.c,v 1.7.2.4 2007/04/27 23:52:34 each Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -59,9 +59,9 @@ struct routing_entry {
         struct routing_entry *next;
         unsigned char addr[TR_ALEN];
         unsigned char iface[5];
-        u_int16_t rcf;                      /* route control field */
-        u_int16_t rseg[8];                  /* routing registers */
-        unsigned long access_time;      /* time we last used this entry */
+        u_int16_t rcf;			/* route control field */
+        u_int16_t rseg[8];		/* routing registers */
+        unsigned long access_time;	/* time we last used this entry */
 };
 
 static struct routing_entry *routing_info = NULL;
