@@ -1,6 +1,6 @@
 	       Internet Systems Consortium DHCP Distribution
-			      Version 3.0.5
-			     October 26, 2006
+	                    Version 3.0.6b1
+		              May 1, 2007
 
 			      README FILE
 
@@ -92,10 +92,10 @@ directory, it may not have up-to-date information).
 
 			    RELEASE STATUS
 
-This is the third Release Candidate of ISC DHCP 3.0.5.
+This is the first beta release of ISC DHCP 3.0.6.
 
-ISC DHCP 3.0.5 is a maintenance release which seeks only to fix bugs
-present in versions 3.0.4 and prior.  No new features have been added,
+ISC DHCP 3.0.6 is a maintenance release which seeks only to fix bugs
+present in versions 3.0.5 and prior.  No new features have been added,
 although if you run failover and are upgrading from 3.0.3 or prior,
 you should take careful note of the RELNOTES discussion on the new
 'atsfp' failover value.
@@ -141,12 +141,12 @@ information.   On Digital Unix, type ``man pfilt''.
 To build the DHCP Distribution, unpack the compressed tar file using
 the tar utility and the gzip command - type something like:
 
-	gunzip dhcp-3.0.5.tar.gz
-	tar xvf dhcp-3.0.5.tar
+	gunzip dhcp-3.0.6b1.tar.gz
+	tar xvf dhcp-3.0.6b1.tar
 
 			    CONFIGURING IT
 
-Now, cd to the dhcp-3.0.5 subdirectory that you've just created and
+Now, cd to the dhcp-3.0.6b1 subdirectory that you've just created and
 configure the source tree by typing:
 
 	./configure
