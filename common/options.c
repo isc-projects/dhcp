@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.85.2.37 2007/05/01 20:42:55 each Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.85.2.38 2007/05/02 22:57:30 each Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -77,10 +77,10 @@ int parse_options (packet)
 		return 0;
 
 	/* If we parsed a DHCP Option Overload option, parse more
-	   options out of the buffer(s) containing them. */
-	if (packet -> options_valid &&
-	    (op = lookup_option (&dhcp_universe, packet -> options,
-				 DHO_DHCP_OPTION_OVERLOAD))) {
+	 * options out of the buffer(s) containing them.
+	 */
+	if ((op = lookup_option(&dhcp_universe, packet->options,
+				DHO_DHCP_OPTION_OVERLOAD))) {
 		if (op -> data.data [0] & 1) {
 			if (!parse_option_buffer
 			    (packet -> options,
@@ -103,9 +103,8 @@ int parse_options (packet)
 }
 
 /* Parse options out of the specified buffer, storing addresses of option
-   values in packet -> options and setting packet -> options_valid if no
-   errors are encountered. */
-
+ * values in packet->options.
+ */
 int parse_option_buffer (options, buffer, length, universe)
 	struct option_state *options;
 	const unsigned char *buffer;

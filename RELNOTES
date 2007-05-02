@@ -148,6 +148,9 @@ and for prodding me into improving it.
   arising when "INIT" clients were given new leases rather than presently
   active ones.
 
+- A bug that kept option overloading from working (on reception) has
+  been repaired.
+
 			Changes since 3.0.5rc2
 
 - Failover servers try harder to retransmit binding updates upon entering
