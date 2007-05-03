@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.161 2007/04/27 22:36:26 each Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.162 2007/05/03 21:24:38 each Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1316,13 +1316,19 @@ void parse_pool_statement (cfile, group, type)
 		shared_network_reference (&pool -> shared_network,
 					  group -> subnet -> shared_network,
 					  MDL);
-	else
+	else if (type == SHARED_NET_DECL)
 		shared_network_reference (&pool -> shared_network,
 					  group -> shared_network, MDL);
+	else {
+		parse_warn(cfile, "Dynamic pools are only valid inside "
+				  "subnet or shared-network statements.");
+		skip_to_semi(cfile);
+		return;
+	}
 
-	if (group->shared_network == NULL ||
-            !clone_group (&pool -> group, pool -> shared_network -> group, MDL))
-		log_fatal ("can't clone pool group.");
+	if (pool->shared_network == NULL ||
+            !clone_group(&pool->group, pool->shared_network->group, MDL))
+		log_fatal("can't clone pool group.");
 
 #if defined (FAILOVER_PROTOCOL)
 	/* Inherit the failover peer from the shared network. */
