@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.83.16.4 2007/04/26 20:06:50 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.83.16.5 2007/05/04 21:47:15 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1910,7 +1910,7 @@ hw_hash_add(struct lease *lease)
 					  lease, MDL);
 		} else /* (prev != NULL) */ {
 			if(prev->n_hw != NULL) {
-				lease_reference(&lease->n_hw, prev->n_uid,
+				lease_reference(&lease->n_hw, prev->n_hw,
 						MDL);
 				lease_dereference(&prev->n_hw, MDL);
 			}
