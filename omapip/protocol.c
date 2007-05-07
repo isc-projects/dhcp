@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: protocol.c,v 1.30 2006/02/24 23:16:30 dhankins Exp $ Copyright 2004-2006 Internet Systems Consortium.";
+"$Id: protocol.c,v 1.31 2007/05/07 17:19:17 each Exp $ Copyright 2004-2006 Internet Systems Consortium.";
 #endif
 
 #include <omapip/omapip_p.h>
@@ -150,6 +150,10 @@ isc_result_t omapi_protocol_send_intro (omapi_object_t *h,
 	return ISC_R_SUCCESS;
 }
 
+#ifdef DEBUG_PROTOCOL
+extern const char *omapi_message_op_name(int);
+#endif /* DEBUG_PROTOCOL */
+
 isc_result_t omapi_protocol_send_message (omapi_object_t *po,
 					  omapi_object_t *id,
 					  omapi_object_t *mo,
@@ -176,9 +180,9 @@ isc_result_t omapi_protocol_send_message (omapi_object_t *po,
 	om = (omapi_message_object_t *)omo;
 
 #ifdef DEBUG_PROTOCOL
-	log_debug ("omapi_protocol_send_message()"
-		   "op=%ld  handle=%#lx  id=%#lx  rid=%#lx",
-		   (long)m -> op,
+	log_debug ("omapi_protocol_send_message(): "
+		   "op=%s  handle=%#lx  id=%#lx  rid=%#lx",
+		   omapi_message_op_name (m->op),
 		   (long)(m -> object ? m -> object -> handle : m -> handle),
 		   (long)p -> next_xid, (long)m -> rid);
 #endif
