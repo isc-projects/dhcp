@@ -1,4 +1,4 @@
-.\"	dhclient.8
+.\"	$Id: dhclient.8,v 1.21 2007/05/08 23:05:20 dhankins Exp $
 .\"
 .\" Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 1996-2003 by Internet Software Consortium
@@ -24,13 +24,16 @@
 .\" Support and other services are available for ISC products - see
 .\" http://www.isc.org for more information.
 .\"
-.\" $Id: dhclient.8,v 1.20 2007/04/19 21:35:11 dhankins Exp $
-.\"
 .TH dhclient 8
 .SH NAME
 dhclient - Dynamic Host Configuration Protocol Client
 .SH SYNOPSIS
 .B dhclient
+[
+.B -4
+|
+.B -6
+]
 [
 .B -p
 .I port
@@ -105,6 +108,13 @@ DHCP protocol also provides a mechanism whereby a client can learn
 important details about the network to which it is attached, such as
 the location of a default router, the location of a name server, and
 so on.
+.PP
+If given the -4 command line argument (default), dhclient will use the
+DHCPv4 protocol to obtain an IPv4 address and configuration parameters.
+.PP
+If given the -6 command line argument, dhclient will use the DHCPv6
+protocol to obtain whatever PIv6 addresses are available along with
+configuration parameters.  Information-request is not yet supported.
 .PP
 On startup, dhclient reads the
 .IR dhclient.conf

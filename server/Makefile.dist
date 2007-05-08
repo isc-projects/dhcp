@@ -25,10 +25,12 @@
 CATMANPAGES = dhcpd.cat8 dhcpd.conf.cat5 dhcpd.leases.cat5
 SEDMANPAGES = dhcpd.man8 dhcpd.conf.man5 dhcpd.leases.man5
 SRCS   = dhcpd.c dhcp.c bootp.c confpars.c db.c class.c failover.c \
-	 omapi.c mdb.c stables.c salloc.c ddns.c dhcpleasequery.c
+	 omapi.c mdb.c stables.c salloc.c ddns.c dhcpleasequery.c dhcpv6.c \
+	 mdb6.c
 OBJS   = dhcpd.o dhcp.o bootp.o confpars.o db.o class.o failover.o \
-	 omapi.o mdb.o stables.o salloc.o ddns.o dhcpleasequery.o
-PROG   = dhcpd
+	 omapi.o mdb.o stables.o salloc.o ddns.o dhcpleasequery.o dhcpv6.o \
+	 mdb6.o
+PROG   = dhcpd testmdb6
 MAN    = dhcpd.8 dhcpd.conf.5 dhcpd.leases.5
 
 INCLUDES = -I$(TOP) $(BINDINC) -I$(TOP)/includes
@@ -107,5 +109,18 @@ dhcpd.leases.man5:	dhcpd.leases.5
 
 dhcpd:	$(OBJS) $(COBJ) $(DHCPLIB)
 	$(CC) $(LFLAGS) -o dhcpd $(OBJS) $(DHCPLIB) $(LIBS)
+
+testmdb6.o: mdb6.c
+	$(CC) -c -DUNIT_TEST -o testmdb6.o $(INCLUDES) $(PREDEFINES) mdb6.c
+
+testdhcpd.o: dhcpd.c
+	$(CC) -c -DUNIT_TEST -o testdhcpd.o $(INCLUDES) $(PREDEFINES) dhcpd.c
+
+TOBJS  = dhcp.o bootp.o confpars.o db.o class.o failover.o \
+	 omapi.o mdb.o stables.o salloc.o ddns.o dhcpleasequery.o dhcpv6.o
+
+testmdb6: testmdb6.o testdhcpd.o $(TOBJS) $(COBJ) $(DHCPLIB)
+	$(CC) $(LFLAGS) -o testmdb6 testmdb6.o testdhcpd.o \
+	$(TOBJS) $(DHCPLIB) $(LIBS)
 
 # Dependencies (semi-automatically-generated)

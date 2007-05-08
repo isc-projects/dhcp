@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.121 2006/07/17 15:21:45 dhankins Exp $ Copyright 2004-2006 Internet Systems Consortium.";
+"$Id: dhcpd.c,v 1.122 2007/05/08 23:05:22 dhankins Exp $ Copyright 2004-2006 Internet Systems Consortium.";
 #endif
 
   static char copyright[] =
@@ -193,10 +193,9 @@ static void omapi_listener_start (void *foo)
 	omapi_object_dereference (&listener, MDL);
 }
 
-int main (argc, argv, envp)
-	int argc;
-	char **argv, **envp;
-{
+#ifndef UNIT_TEST
+int 
+main(int argc, char **argv) {
 	int fd;
 	int i, status;
 	struct servent *ent;
@@ -222,6 +221,7 @@ int main (argc, argv, envp)
 	int no_dhcpd_conf = 0;
 	int no_dhcpd_db = 0;
 	int no_dhcpd_pid = 0;
+	int local_family_set = 0;
 #if defined (TRACING)
 	char *traceinfile = (char *)0;
 	char *traceoutfile = (char *)0;
@@ -324,6 +324,20 @@ int main (argc, argv, envp)
 		} else if (!strcmp (argv [i], "-q")) {
 			quiet = 1;
 			quiet_interface_discovery = 1;
+		} else if (!strcmp(argv[i], "-4")) {
+			if (local_family_set && (local_family != AF_INET)) {
+				log_fatal("Server cannot run in both IPv4 and "
+					  "IPv6 mode at the same time.");
+			}
+			local_family = AF_INET;
+			local_family_set = 1;
+		} else if (!strcmp(argv[i], "-6")) {
+			if (local_family_set && (local_family != AF_INET6)) {
+				log_fatal("Server cannot run in both IPv4 and "
+					  "IPv6 mode at the same time.");
+			}
+			local_family = AF_INET6;
+			local_family_set = 1;
 		} else if (!strcmp (argv [i], "--version")) {
 			log_info ("isc-dhcpd-%s", DHCP_VERSION);
 			exit (0);
@@ -402,18 +416,39 @@ int main (argc, argv, envp)
 			log_debug ("binding to environment-specified port %d",
 				   ntohs (local_port));
 		} else {
-			ent = getservbyname ("dhcp", "udp");
-			if (!ent)
-				local_port = htons (67);
-			else
-				local_port = ent -> s_port;
+			if (local_family == AF_INET) {
+				ent = getservbyname("dhcp", "udp");
+				if (ent == NULL) {
+					local_port = htons(67);
+				} else {
+					local_port = ent->s_port;
+				}
+			} else {
+				/* INSIST(local_family == AF_INET6); */
+				ent = getservbyname("dhcpv6-server", "udp");
+				if (ent == NULL) {
+					local_port = htons(547);
+				} else {
+					local_port = ent->s_port;
+				}
+			}
 #ifndef __CYGWIN32__ /* XXX */
 			endservent ();
 #endif
 		}
 	}
   
-	remote_port = htons (ntohs (local_port) + 1);
+  	if (local_family == AF_INET) {
+		remote_port = htons(ntohs(local_port) + 1);
+	} else {
+		/* INSIST(local_family == AF_INET6); */
+		ent = getservbyname("dhcpv6-client", "udp");
+		if (ent == NULL) {
+			remote_port = htons(546);
+		} else {
+			remote_port = ent->s_port;
+		}
+	}
 
 	if (server) {
 		if (!inet_aton (server, &limited_broadcast)) {
@@ -448,6 +483,7 @@ int main (argc, argv, envp)
 	/* Set up various hooks. */
 	dhcp_interface_setup_hook = dhcpd_interface_setup_hook;
 	bootp_packet_handler = do_packet;
+	dhcpv6_packet_handler = do_packet6;
 
 #if defined (NSUPDATE)
 	/* Set up the standard name service updater routine. */
@@ -491,6 +527,13 @@ int main (argc, argv, envp)
 	}
 #endif
 
+#ifdef DHCPv6
+	/* set up DHCPv6 hash */
+	if (!ia_na_new_hash(&ia_active, DEFAULT_HASH_SIZE, MDL)) {
+		log_fatal("Out of memory creating hash for active IA.");
+	}
+#endif /* DHCPv6 */
+
 	/* Read the dhcpd.conf file... */
 	if (readconf () != ISC_R_SUCCESS)
 		log_fatal ("Configuration file errors encountered -- exiting");
@@ -510,7 +553,17 @@ int main (argc, argv, envp)
 		exit (0);
 
 	/* Discover all the network interfaces and initialize them. */
-	discover_interfaces (DISCOVER_SERVER);
+	discover_interfaces(DISCOVER_SERVER);
+
+#ifdef DHCPv6
+	/*
+	 * Remove addresses from our pools that we should not issue
+	 * to clients.
+	 */
+	mark_hosts_unavailable();
+	mark_interfaces_unavailable();
+#endif /* DHCPv6 */
+
 
 	/* Make up a seed for the random number generator from current
 	   time plus the sum of the last four bytes of each
@@ -530,6 +583,21 @@ int main (argc, argv, envp)
 	trace_seed_stash (trace_srandom, seed + cur_time);
 #endif
 	postdb_startup ();
+
+	/*
+	 * Set server DHCPv6 identifier.
+	 * See dhcpv6.c for discussion of setting DUID.
+	 */
+	if (set_server_duid_from_option() == ISC_R_SUCCESS) {
+		write_server_duid();
+	} else {
+		if (!server_duid_isset()) {
+			if (generate_new_server_duid() != ISC_R_SUCCESS) {
+				log_fatal("Unable to set server identifier.");
+			}
+			write_server_duid();
+		}
+	}
 
 #ifndef DEBUG
 	if (daemon) {
@@ -623,6 +691,7 @@ int main (argc, argv, envp)
 	/* Not reached */
 	return 0;
 }
+#endif /* !UNIT_TEST */
 
 void postconf_initialization (int quiet)
 {

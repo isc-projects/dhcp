@@ -32,6 +32,9 @@
  * ``http://www.nominum.com''.
  */
 
+/* XXX: HACK just until the code is autoconfiscated */
+#define DHCPv6
+
 #ifndef __CYGWIN32__
 #include <sys/types.h>
 #include <netinet/in.h>
@@ -73,10 +76,12 @@ typedef struct hash_table host_hash_t;
 typedef struct hash_table class_hash_t;
 
 #include "dhcp.h"
+#include "dhcp6.h"
 #include "statement.h"
 #include "tree.h"
 #include "inet.h"
 #include "dhctoken.h"
+#include "heap.h"
 
 #include <isc-dhcp/result.h>
 #include <omapip/omapip_p.h>
@@ -138,6 +143,10 @@ typedef struct hash_table class_hash_t;
 
 #if !defined (VIVSO_HASH_SIZE)
 # define VIVSO_HASH_SIZE	VIVCO_HASH_SIZE
+#endif
+
+#if !defined (VSIO_HASH_SIZE)
+# define VSIO_HASH_SIZE         VIVCO_HASH_SIZE
 #endif
 
 #if !defined (VIV_ISC_HASH_SIZE)
@@ -318,6 +327,20 @@ struct packet {
 	int refcnt;
 	unsigned packet_length;
 	int packet_type;
+
+	unsigned char dhcpv6_msg_type;		/* DHCPv6 message type */
+
+	/* DHCPv6 transaction ID */
+	unsigned char dhcpv6_transaction_id[3];
+
+	/* DHCPv6 relay information */
+	unsigned char dhcpv6_hop_count;
+	struct in6_addr dhcpv6_link_address;
+	struct in6_addr dhcpv6_peer_address;
+
+	/* DHCPv6 packet containing this one, or NULL if none */
+	struct packet *dhcpv6_container_packet;
+
 	int options_valid;
 	int client_port;
 	struct iaddr client_addr;
@@ -353,6 +376,12 @@ struct packet {
 	 * to signal this in a reliable way.
 	 */
 	isc_boolean_t agent_options_stashed;
+
+	/* 
+	 * ISC_TRUE if packet received unicast (as opposed to multicast). 
+	 * Only used in DHCPv6.
+	 */
+	isc_boolean_t unicast;
 };
 
 /* A network interface's MAC address. */
@@ -499,6 +528,11 @@ struct lease_state {
 #define DISCOVER_RELAY		3
 #define DISCOVER_REQUESTED	4
 
+/* DDNS_UPDATE_STYLE enumerations. */
+#define DDNS_UPDATE_STYLE_NONE		0
+#define DDNS_UPDATE_STYLE_AD_HOC	1
+#define DDNS_UPDATE_STYLE_INTERIM	2
+
 /* Server option names. */
 
 #define SV_DEFAULT_LEASE_TIME		1
@@ -553,6 +587,7 @@ struct lease_state {
 #define SV_ADAPTIVE_LEASE_TIME_THRESHOLD	50
 #define SV_DO_REVERSE_UPDATES		51
 #define SV_FQDN_REPLY			52
+#define SV_PREFER_LIFETIME		53
 
 #if !defined (DEFAULT_PING_TIMEOUT)
 # define DEFAULT_PING_TIMEOUT 1
@@ -661,6 +696,11 @@ struct host_decl {
 	char *name;
 	struct hardware interface;
 	struct data_string client_identifier;
+	struct option *host_id_option;
+	struct data_string host_id;
+	/* XXXSK: fixed_addr should be an array of iaddr values,
+		  not an option_cache, but it's referenced in a lot of
+		  places, so we'll leave it for now. */
 	struct option_cache *fixed_addr;
 	struct group *group;
 	struct group_object *named_group;
@@ -715,6 +755,9 @@ struct shared_network {
 	struct subnet *subnets;
 	struct interface_info *interface;
 	struct pool *pools;
+	struct ipv6_pool **ipv6_pools;		/* NULL-terminated array */
+	int last_ipv6_pool;			/* offset of last IPv6 pool
+						   used to issue a lease */
 	struct group *group;
 #if defined (FAILOVER_PROTOCOL)
 	dhcp_failover_state_t *failover_peer;
@@ -730,7 +773,7 @@ struct subnet {
 	struct iaddr interface_address;
 	struct iaddr net;
 	struct iaddr netmask;
-
+	int prefix_len;			/* XXX: currently for IPv6 only */
 	struct group *group;
 };
 
@@ -802,6 +845,48 @@ struct client_lease {
 	unsigned int is_bootp: 1;  /* If set, lease was acquired with BOOTP. */
 
 	struct option_state *options;	     /* Options supplied with lease. */
+};
+
+/* DHCPv6 lease structures */
+struct dhc6_addr {
+	struct dhc6_addr *next;
+	struct iaddr address;
+
+	/* Address state flags. */
+	#define DHC6_ADDR_DEPREFFED	0x01
+	#define DHC6_ADDR_EXPIRED	0x02
+	u_int8_t flags;
+
+	TIME starts;
+	u_int32_t preferred_life;
+	u_int32_t max_life;
+
+	struct option_state *options;
+};
+
+struct dhc6_ia {
+	struct dhc6_ia *next;
+	unsigned char iaid[4];
+
+	TIME starts;
+	u_int32_t renew;
+	u_int32_t rebind;
+	struct dhc6_addr *addrs;
+
+	struct option_state *options;
+};
+
+struct dhc6_lease {
+	struct dhc6_lease *next;
+	struct data_string server_id;
+
+	int score;
+	u_int8_t pref;
+
+	unsigned char dhcpv6_transaction_id[3];
+	struct dhc6_ia *bindings;
+
+	struct option_state *options;
 };
 
 /* Possible states in which the client can be. */
@@ -879,35 +964,77 @@ struct client_config {
 };
 
 /* Per-interface state used in the dhcp client... */
+/* XXX: consider union {}'ing this for v4/v6. */
 struct client_state {
 	struct client_state *next;
 	struct interface_info *interface;
 	char *name;
 
+	/* Common values. */
+	struct client_config *config;		    /* Client configuration. */
+	struct string_list *env;	       /* Client script environment. */
+        int envc;			/* Number of entries in environment. */
+	struct option_state *sent_options;		 /* Options we sent. */
+	enum dhcp_state state;          /* Current state for this interface. */
+
+
+	/* DHCPv4 values. */
 	struct client_lease *active;		  /* Currently active lease. */
 	struct client_lease *new;			       /* New lease. */
 	struct client_lease *offered_leases;	    /* Leases offered to us. */
 	struct client_lease *leases;		/* Leases we currently hold. */
 	struct client_lease *alias;			     /* Alias lease. */
 
-	enum dhcp_state state;		/* Current state for this interface. */
 	struct iaddr destination;		    /* Where to send packet. */
 	u_int32_t xid;					  /* Transaction ID. */
 	u_int16_t secs;			    /* secs value from DHCPDISCOVER. */
 	TIME first_sending;			/* When was first copy sent? */
 	TIME interval;		      /* What's the current resend interval? */
-	int dns_update_timeout;		 /* Last timeout set for DNS update. */
 	struct string_list *medium;		   /* Last media type tried. */
 	struct dhcp_packet packet;		    /* Outgoing DHCP packet. */
 	unsigned packet_length;	       /* Actual length of generated packet. */
 
 	struct iaddr requested_address;	    /* Address we would like to get. */
 
-	struct client_config *config;		    /* Client configuration. */
-	struct string_list *env;	       /* Client script environment. */
-	int envc;			/* Number of entries in environment. */
+	/* DHCPv6 values. */
+	unsigned char dhcpv6_transaction_id[3];
+	u_int8_t refresh_type;
 
-	struct option_state *sent_options;	/* Options we sent. */
+	struct dhc6_lease *active_lease;
+	struct dhc6_lease *old_lease;
+	struct dhc6_lease *advertised_leases;
+	struct dhc6_lease *selected_lease;
+	struct dhc6_lease *held_leases;
+
+	TIME start_time;
+	u_int16_t elapsed;
+	int txcount;
+
+	/* See RFC3315 section 14. */
+	TIME RT;
+	TIME IRT;
+	TIME MRC;
+	TIME MRT;
+	TIME MRD;
+	TIME next_MRD;
+
+	/* Rather than a state, we use a function that shifts around
+	 * depending what stage of life the v6 state machine is in.
+	 * This is where incoming packets are dispatched to (sometimes
+	 * a no-op).
+	 */
+	void (*v6_handler)(struct packet *, struct client_state *);
+};
+
+struct envadd_state {
+	struct client_state *client;
+	const char *prefix;
+};
+
+struct dns_update_state {
+	struct client_state *client;
+	struct iaddr address;
+	int dns_update_timeout;
 };
 
 /* Information about each network interface. */
@@ -918,7 +1045,17 @@ struct interface_info {
 	struct shared_network *shared_network;
 				/* Networks connected to this interface. */
 	struct hardware hw_address;	/* Its physical address. */
-	struct in_addr primary_address;	/* Primary interface address. */
+	struct in_addr *addresses;	/* Addresses associated with this
+					 * interface.
+					 */
+	int address_count;		/* Number of addresses stored. */
+	int address_max;		/* Size of addresses buffer. */
+	struct in6_addr *v6addresses;	/* IPv6 addresses associated with 
+					   this interface. */
+	int v6address_count;		/* Number of IPv6 addresses associated
+					   with this interface. */
+	int v6address_max;		/* Maximum number of IPv6 addresses
+					   we can store in current buffer. */
 
 	u_int8_t *circuit_id;		/* Circuit ID associated with this
 					   interface. */
@@ -939,6 +1076,9 @@ struct interface_info {
 	size_t rbuf_len;		/* Length of data in buffer. */
 
 	struct ifreq *ifp;		/* Pointer to ifreq struct. */
+	int configured;			/* If set to 1, interface has at least
+					 * one valid IP address.
+					 */
 	u_int32_t flags;		/* Control flags... */
 #define INTERFACE_REQUESTED 1
 #define INTERFACE_AUTOMATIC 2
@@ -1082,8 +1222,16 @@ typedef unsigned char option_mask [16];
 #define _PATH_DHCLIENT_PID	"/var/run/dhclient.pid"
 #endif
 
+#ifndef _PATH_DHCLIENT6_PID
+#define _PATH_DHCLIENT6_PID	"/var/run/dhclient6.pid"
+#endif
+
 #ifndef _PATH_DHCLIENT_DB
 #define _PATH_DHCLIENT_DB	"/etc/dhclient.leases"
+#endif
+
+#ifndef _PATH_DHCLIENT6_DB
+#define _PATH_DHCLIENT6_DB	"/etc/dhclient6.leases"
 #endif
 
 #ifndef _PATH_RESOLV_CONF
@@ -1100,6 +1248,47 @@ typedef unsigned char option_mask [16];
 
 #define MAX_TIME 0x7fffffff
 #define MIN_TIME 0
+
+typedef struct hash_table ia_na_hash_t;
+typedef struct hash_table iaaddr_hash_t;
+
+struct iaaddr {
+	int refcnt;				/* reference count */
+	struct in6_addr addr;			/* IPv6 address */
+	binding_state_t state;			/* state */
+	struct binding_scope *scope;		/* "set var = value;" */
+	time_t valid_lifetime_end_time;		/* time address expires */
+	struct ia_na *ia_na;			/* IA for this address */
+	struct ipv6_pool *ipv6_pool;		/* pool for this address */
+	int heap_index;				/* index into heap, or -1 
+						   (internal use only) */
+};
+
+struct ia_na {
+	int refcnt;			/* reference count */
+	struct data_string iaid_duid;	/* from the client */
+	int num_iaaddr;			/* number of IAADDR for this IA_NA */
+	int max_iaaddr;			/* space available for IAADDR */
+	struct iaaddr **iaaddr;		/* pointers to the various IAADDRs */
+};
+
+extern ia_na_hash_t *ia_active;
+
+struct ipv6_pool {
+	int refcnt;				/* reference count */
+	struct in6_addr start_addr;		/* first IPv6 address */
+	int bits;				/* number of bits, CIDR style */
+	iaaddr_hash_t *addrs;			/* non-free IAADDR */
+	int num_active;				/* count of active IAADDR */
+	isc_heap_t *active_timeouts;		/* timeouts for active leases */
+	isc_heap_t *inactive_timeouts;		/* timeouts for expired or 
+						   released leases */
+	struct shared_network *shared_network;	/* shared_network for 
+						   this pool */
+};
+
+extern struct ipv6_pool **pools;
+extern int num_pools;
 
 /* External definitions... */
 
@@ -1134,12 +1323,52 @@ int cons_options PROTO ((struct packet *, struct dhcp_packet *, struct lease *,
 			 int, int, int, struct data_string *, const char *));
 int fqdn_universe_decode (struct option_state *,
 			  const unsigned char *, unsigned, struct universe *);
+struct option_cache *
+lookup_fqdn6_option(struct universe *universe, struct option_state *options,
+		    unsigned code);
+void
+save_fqdn6_option(struct universe *universe, struct option_state *options,
+		  struct option_cache *oc);
+void
+delete_fqdn6_option(struct universe *universe, struct option_state *options,
+		    int code);
+void
+fqdn6_option_space_foreach(struct packet *packet, struct lease *lease,
+			   struct client_state *client_state,
+			   struct option_state *in_options,
+			   struct option_state *cfg_options,
+			   struct binding_scope **scope,
+			   struct universe *u, void *stuff,
+			   void (*func)(struct option_cache *,
+					struct packet *,
+					struct lease *,
+					struct client_state *,
+					struct option_state *,
+					struct option_state *,
+					struct binding_scope **,
+					struct universe *, void *));
+int
+fqdn6_option_space_encapsulate(struct data_string *result,
+			       struct packet *packet, struct lease *lease,
+			       struct client_state *client_state,
+			       struct option_state *in_options,
+			       struct option_state *cfg_options,
+			       struct binding_scope **scope,
+			       struct universe *universe);
+int
+fqdn6_universe_decode(struct option_state *options,
+		      const unsigned char *buffer, unsigned length,
+		      struct universe *u);
+int append_option(struct data_string *dst, struct universe *universe,
+		  struct option *option, struct data_string *src);
 int store_options PROTO ((int *, unsigned char *, unsigned, struct packet *,
 			  struct lease *, struct client_state *,
 			  struct option_state *,
 			  struct option_state *, struct binding_scope **,
 			  unsigned *, int, unsigned, unsigned,
 			  int, const char *));
+int store_options6(char *, int, struct option_state *, struct packet *,
+		   const int *, struct data_string *);
 int format_has_text(const char *);
 int format_min_length(const char *, struct option_cache *);
 const char *pretty_print_option PROTO ((struct option *, const unsigned char *,
@@ -1158,9 +1387,14 @@ struct option_cache *lookup_option PROTO ((struct universe *,
 struct option_cache *lookup_hashed_option PROTO ((struct universe *,
 						  struct option_state *,
 						  unsigned));
+struct option_cache *next_hashed_option(struct universe *,
+					struct option_state *, 
+					struct option_cache *);
 int save_option_buffer (struct universe *, struct option_state *,
 			struct buffer *, unsigned char *, unsigned,
 			unsigned, int);
+void build_server_oro(struct data_string *, struct option_state *, 
+		      const char *, int);
 void save_option PROTO ((struct universe *,
 			 struct option_state *, struct option_cache *));
 void save_hashed_option PROTO ((struct universe *,
@@ -1279,6 +1513,14 @@ struct option_cache *lookup_linked_option (struct universe *,
 void do_packet PROTO ((struct interface_info *,
 		       struct dhcp_packet *, unsigned,
 		       unsigned int, struct iaddr, struct hardware *));
+void do_packet6(struct interface_info *, const char *, 
+		int, int, const struct iaddr *, isc_boolean_t);
+int packet6_len_okay(const char *, int);
+
+int add_option(struct option_state *options,
+	       unsigned int option_num,
+       	       void *data,
+       	       unsigned int data_len);
 
 int add_option(struct option_state *options,
 	       unsigned int option_num,
@@ -1296,9 +1538,9 @@ extern const char *path_dhcpd_pid;
 
 extern int dhcp_max_agent_option_packet_length;
 
-int main PROTO ((int, char **, char **));
-void postconf_initialization (int);
-void postdb_startup (void);
+int main(int, char **);
+void postconf_initialization(int);
+void postdb_startup(void);
 void cleanup PROTO ((void));
 void lease_pinged PROTO ((struct iaddr, u_int8_t *, int));
 void lease_ping_timeout PROTO ((void *));
@@ -1344,16 +1586,23 @@ int parse_class_declaration PROTO ((struct class **, struct parse *,
 void parse_shared_net_declaration PROTO ((struct parse *, struct group *));
 void parse_subnet_declaration PROTO ((struct parse *,
 				      struct shared_network *));
+void parse_subnet6_declaration PROTO ((struct parse *,
+				       struct shared_network *));
 void parse_group_declaration PROTO ((struct parse *, struct group *));
-int parse_fixed_addr_param PROTO ((struct option_cache **, struct parse *));
+int parse_fixed_addr_param PROTO ((struct option_cache **, 
+				   struct parse *, enum dhcp_token));
 int parse_lease_declaration PROTO ((struct lease **, struct parse *));
 void parse_address_range PROTO ((struct parse *, struct group *, int,
 				 struct pool *, struct lease **));
+void parse_address_range6(struct parse *cfile, struct group *group);
+void parse_ia_na_declaration(struct parse *);
+void parse_server_duid(struct parse *cfile);
+void parse_server_duid_conf(struct parse *cfile);
 
 /* ddns.c */
-int ddns_updates PROTO ((struct packet *, struct lease *, struct lease *,
-			 struct lease_state *));
-int ddns_removals PROTO ((struct lease *));
+int ddns_updates(struct packet *, struct lease *, struct lease *,
+		 struct iaaddr *, struct iaaddr *, struct option_state *);
+int ddns_removals(struct lease *, struct iaaddr *);
 
 /* parse.c */
 void add_enumeration (struct enumeration *);
@@ -1419,7 +1668,7 @@ int parse_allow_deny PROTO ((struct option_cache **, struct parse *, int));
 int parse_auth_key PROTO ((struct data_string *, struct parse *));
 int parse_warn (struct parse *, const char *, ...)
 	__attribute__((__format__(__printf__,2,3)));
-struct expression *parse_domain_list (struct parse *cfile);
+struct expression *parse_domain_list(struct parse *cfile, int);
 
 
 /* tree.c */
@@ -1528,6 +1777,7 @@ int bind_ds_value (struct binding_scope **,
 int find_bound_string (struct data_string *,
 		       struct binding_scope *, const char *);
 int unset (struct binding_scope *, const char *);
+int data_string_sprintfa(struct data_string *ds, const char *fmt, ...);
 
 /* dhcp.c */
 extern int outstanding_pings;
@@ -1562,6 +1812,18 @@ unsigned cons_agent_information_options PROTO ((struct option_state *,
 void get_server_source_address(struct in_addr *from,
 			       struct option_state *options,
 			       struct packet *packet);
+
+void get_server_source_address(struct in_addr *from,
+			       struct option_state *options,
+       			       struct packet *packet);
+
+/* dhcpv6.c */
+isc_boolean_t server_duid_isset(void);
+void copy_server_duid(struct data_string *ds, const char *file, int line);
+void set_server_duid(struct data_string *new_duid);
+isc_result_t set_server_duid_from_option(void);
+isc_result_t generate_new_server_duid(void);
+void dhcpv6(struct packet *);
 
 /* bootp.c */
 void bootp PROTO ((struct packet *));
@@ -1730,10 +1992,12 @@ void print_dns_status (int, ns_updque *);
 #endif
 const char *print_time(TIME);
 
+void get_hw_addr(const char *name, struct hardware *hw);
+
 /* socket.c */
 #if defined (USE_SOCKET_SEND) || defined (USE_SOCKET_RECEIVE) \
 	|| defined (USE_SOCKET_FALLBACK)
-int if_register_socket PROTO ((struct interface_info *));
+int if_register_socket(struct interface_info *, int, int);
 #endif
 
 #if defined (USE_SOCKET_FALLBACK) && !defined (USE_SOCKET_SEND)
@@ -1743,6 +2007,9 @@ ssize_t send_fallback PROTO ((struct interface_info *,
 			      struct packet *, struct dhcp_packet *, size_t, 
 			      struct in_addr,
 			      struct sockaddr_in *, struct hardware *));
+ssize_t send_fallback6(struct interface_info *, struct packet *, 
+		       struct dhcp_packet *, size_t, struct in6_addr,
+		       struct sockaddr_in6 *, struct hardware *);
 #endif
 
 #ifdef USE_SOCKET_SEND
@@ -1753,6 +2020,9 @@ ssize_t send_packet PROTO ((struct interface_info *,
 			    struct packet *, struct dhcp_packet *, size_t, 
 			    struct in_addr,
 			    struct sockaddr_in *, struct hardware *));
+ssize_t send_packet6(struct interface_info *, struct packet *, 
+		     struct dhcp_packet *, size_t, struct in6_addr,
+		     struct sockaddr_in6 *, struct hardware *);
 #endif
 #ifdef USE_SOCKET_RECEIVE
 void if_reinitialize_receive PROTO ((struct interface_info *));
@@ -1761,6 +2031,8 @@ void if_deregister_receive PROTO ((struct interface_info *));
 ssize_t receive_packet PROTO ((struct interface_info *,
 			       unsigned char *, size_t,
 			       struct sockaddr_in *, struct hardware *));
+ssize_t receive_packet6(struct interface_info *, unsigned char *, size_t,
+			struct sockaddr_in *, struct in6_addr *);
 #endif
 
 #if defined (USE_SOCKET_FALLBACK)
@@ -1907,7 +2179,9 @@ isc_result_t interface_setup (void);
 void interface_trace_setup (void);
 
 extern struct in_addr limited_broadcast;
+extern int local_family;
 extern struct in_addr local_address;
+extern struct in6_addr local_address6;
 
 extern u_int16_t local_port;
 extern u_int16_t remote_port;
@@ -1920,6 +2194,9 @@ extern void (*bootp_packet_handler) PROTO ((struct interface_info *,
 					    struct dhcp_packet *, unsigned,
 					    unsigned int,
 					    struct iaddr, struct hardware *));
+extern void (*dhcpv6_packet_handler)(struct interface_info *,
+				     const char *, int,
+				     int, const struct iaddr *, isc_boolean_t);
 extern struct timeout *timeouts;
 extern omapi_object_type_t *dhcp_type_interface;
 #if defined (TRACING)
@@ -1930,8 +2207,8 @@ trace_type_t *outpacket_trace;
 extern struct interface_info **interface_vector;
 extern int interface_count;
 extern int interface_max;
-isc_result_t interface_initialize (omapi_object_t *, const char *, int);
-void discover_interfaces PROTO ((int));
+isc_result_t interface_initialize(omapi_object_t *, const char *, int);
+void discover_interfaces(int);
 int setup_fallback (struct interface_info **, const char *, int);
 int if_readsocket PROTO ((omapi_object_t *));
 void reinitialize_interfaces PROTO ((void));
@@ -1940,7 +2217,8 @@ void reinitialize_interfaces PROTO ((void));
 void set_time(TIME);
 struct timeval *process_outstanding_timeouts (struct timeval *);
 void dispatch PROTO ((void));
-isc_result_t got_one PROTO ((omapi_object_t *));
+isc_result_t got_one(omapi_object_t *);
+isc_result_t got_one_v6(omapi_object_t *);
 isc_result_t interface_set_value (omapi_object_t *, omapi_object_t *,
 				  omapi_data_string_t *, omapi_typed_data_t *);
 isc_result_t interface_get_value (omapi_object_t *, omapi_object_t *,
@@ -1970,8 +2248,10 @@ OMAPI_OBJECT_ALLOC_DECL (interface,
 /* tables.c */
 extern char *default_option_format;
 extern struct universe dhcp_universe;
+extern struct universe dhcpv6_universe;
 extern struct universe nwip_universe;
 extern struct universe fqdn_universe;
+extern struct universe vsio_universe;
 extern int dhcp_option_default_priority_list [];
 extern int dhcp_option_default_priority_list_count;
 extern const char *hardware_types [256];
@@ -2006,8 +2286,17 @@ struct iaddr broadcast_addr PROTO ((struct iaddr, struct iaddr));
 u_int32_t host_addr PROTO ((struct iaddr, struct iaddr));
 int addr_eq PROTO ((struct iaddr, struct iaddr));
 int addr_match(struct iaddr *, struct iaddrmatch *);
-char *piaddr PROTO ((struct iaddr));
-char *piaddrmask (struct iaddr, struct iaddr, const char *, int);
+int addr_cmp(const struct iaddr *a1, const struct iaddr *a2);
+int addr_or(struct iaddr *result, 
+	    const struct iaddr *a1, const struct iaddr *a2);
+int addr_and(struct iaddr *result, 
+	     const struct iaddr *a1, const struct iaddr *a2);
+isc_result_t range2cidr(struct iaddrcidrnetlist **result,
+			const struct iaddr *lo, const struct iaddr *hi);
+isc_result_t free_iaddrcidrnetlist(struct iaddrcidrnetlist **result);
+const char *piaddr PROTO ((struct iaddr));
+char *piaddrmask(struct iaddr *, struct iaddr *);
+char *piaddrcidr(const struct iaddr *, unsigned int);
 
 /* dhclient.c */
 extern const char *path_dhclient_conf;
@@ -2015,6 +2304,7 @@ extern const char *path_dhclient_db;
 extern const char *path_dhclient_pid;
 extern char *path_dhclient_script;
 extern int interfaces_requested;
+extern struct data_string default_duid;
 
 extern struct client_config top_level_config;
 
@@ -2054,6 +2344,9 @@ void write_lease_option (struct option_cache *, struct packet *,
 			 struct binding_scope **, struct universe *, void *);
 int write_client_lease PROTO ((struct client_state *,
 			       struct client_lease *, int, int));
+isc_result_t write_client6_lease(struct client_state *client,
+				 struct dhc6_lease *lease,
+				 int rewrite, int sync);
 int dhcp_option_ev_name (char *, size_t, struct option *);
 
 void script_init PROTO ((struct client_state *, const char *,
@@ -2077,8 +2370,23 @@ void do_release PROTO ((struct client_state *));
 int dhclient_interface_shutdown_hook (struct interface_info *);
 int dhclient_interface_discovery_hook (struct interface_info *);
 isc_result_t dhclient_interface_startup_hook (struct interface_info *);
+void dhclient_schedule_updates(struct client_state *client,
+			       struct iaddr *addr, int offset);
 void client_dns_update_timeout (void *cp);
-isc_result_t client_dns_update (struct client_state *client, int, int);
+isc_result_t client_dns_update(struct client_state *client, int, int,
+			       struct iaddr *);
+
+void dhcpv4_client_assignments(void);
+void dhcpv6_client_assignments(void);
+
+/* dhc6.c */
+void dhc6_lease_destroy(struct dhc6_lease *lease, char *file, int line);
+void start_init6(struct client_state *client);
+void start_confirm6(struct client_state *client);
+void start_selecting6(struct client_state *client);
+isc_result_t write_client6_lease(struct client_state *client,
+				 struct dhc6_lease *lease,
+				 int rewrite, int sync);
 
 /* db.c */
 int write_lease PROTO ((struct lease *));
@@ -2096,6 +2404,7 @@ int commit_leases PROTO ((void));
 void db_startup PROTO ((int));
 int new_lease_file PROTO ((void));
 int group_writer (struct group_object *);
+int write_ia_na(const struct ia_na *);
 
 /* packet.c */
 u_int32_t checksum PROTO ((unsigned char *, unsigned, u_int32_t));
@@ -2226,11 +2535,11 @@ void forget_zone (struct dns_zone **);
 void repudiate_zone (struct dns_zone **);
 void cache_found_zone (ns_class, char *, struct in_addr *, int);
 int get_dhcid (struct data_string *, int, const u_int8_t *, unsigned);
-isc_result_t ddns_update_a(struct data_string *, struct iaddr,
-			   struct data_string *, unsigned long, unsigned,
-			   unsigned);
-isc_result_t ddns_remove_a (struct data_string *,
-			    struct iaddr, struct data_string *);
+isc_result_t ddns_update_fwd(struct data_string *, struct iaddr,
+			     struct data_string *, unsigned long, unsigned,
+			     unsigned);
+isc_result_t ddns_remove_fwd(struct data_string *, 
+			     struct iaddr, struct data_string *);
 #endif /* NSUPDATE */
 
 /* resolv.c */
@@ -2591,11 +2900,14 @@ isc_result_t enter_class PROTO ((struct class *, int, int));
 isc_result_t delete_class PROTO ((struct class *, int));
 isc_result_t enter_host PROTO ((struct host_decl *, int, int));
 isc_result_t delete_host PROTO ((struct host_decl *, int));
+void change_host_uid(struct host_decl *host, const char *data, int len);
 int find_hosts_by_haddr PROTO ((struct host_decl **, int,
 				const unsigned char *, unsigned,
 				const char *, int));
 int find_hosts_by_uid PROTO ((struct host_decl **, const unsigned char *,
 			      unsigned, const char *, int));
+int find_hosts_by_option(struct host_decl **, struct packet *, 
+			 struct option_state *, const char *, int);
 int find_host_for_network PROTO ((struct subnet **, struct host_decl **,
 				  struct iaddr *, struct shared_network *));
 void new_address_range PROTO ((struct parse *, struct iaddr, struct iaddr,
@@ -2605,12 +2917,12 @@ isc_result_t dhcp_lease_free (omapi_object_t *, const char *, int);
 isc_result_t dhcp_lease_get (omapi_object_t **, const char *, int);
 int find_grouped_subnet PROTO ((struct subnet **, struct shared_network *,
 				struct iaddr, const char *, int));
-int find_subnet (struct subnet **, struct iaddr, const char *, int);
+int find_subnet(struct subnet **, struct iaddr, const char *, int);
 void enter_shared_network PROTO ((struct shared_network *));
 void new_shared_network_interface PROTO ((struct parse *,
 					  struct shared_network *,
 					  const char *));
-int subnet_inner_than PROTO ((struct subnet *, struct subnet *, int));
+int subnet_inner_than(const struct subnet *, const struct subnet *, int);
 void enter_subnet PROTO ((struct subnet *));
 void enter_lease PROTO ((struct lease *));
 int supersede_lease PROTO ((struct lease *, struct lease *, int, int, int));
@@ -2631,6 +2943,7 @@ void uid_hash_delete PROTO ((struct lease *));
 void hw_hash_add PROTO ((struct lease *));
 void hw_hash_delete PROTO ((struct lease *));
 int write_leases PROTO ((void));
+int write_leases6(void);
 int lease_enqueue (struct lease *);
 isc_result_t lease_instantiate(const void *, unsigned, void *);
 void expire_all_pools PROTO ((void));
@@ -2812,3 +3125,71 @@ OMAPI_OBJECT_ALLOC_DECL (dhcp_failover_link, dhcp_failover_link_t,
 #endif /* FAILOVER_PROTOCOL */
 
 const char *binding_state_print (enum failover_state);
+
+
+/* mdb6.c */
+HASH_FUNCTIONS_DECL(ia_na, unsigned char *, struct ia_na, ia_na_hash_t);
+HASH_FUNCTIONS_DECL(iaaddr, struct in6_addr *, struct iaaddr, iaaddr_hash_t);
+
+isc_result_t iaaddr_allocate(struct iaaddr **iaaddr,
+			     const char *file, int line);
+isc_result_t iaaddr_reference(struct iaaddr **iaaddr, struct iaaddr *src,
+			      const char *file, int line);
+isc_result_t iaaddr_dereference(struct iaaddr **iaaddr,
+				const char *file, int line);
+
+isc_result_t ia_na_make_key(struct data_string *key, u_int32_t iaid,
+                            const char *duid, unsigned int duid_len,
+			    const char *file, int line);
+isc_result_t ia_na_allocate(struct ia_na **ia_na, u_int32_t iaid,
+			    const char *duid, unsigned int duid_len,
+			    const char *file, int line);
+isc_result_t ia_na_reference(struct ia_na **ia_na, struct ia_na *src,
+			     const char *file, int line);
+isc_result_t ia_na_dereference(struct ia_na **ia_na,
+			       const char *file, int line);
+isc_result_t ia_na_add_iaaddr(struct ia_na *ia_na, struct iaaddr *iaaddr,
+			      const char *file, int line);
+void ia_na_remove_iaaddr(struct ia_na *ia_na, struct iaaddr *iaaddr,
+			 const char *file, int line);
+
+isc_result_t ipv6_pool_allocate(struct ipv6_pool **pool,
+				const struct in6_addr *start_addr, int bits, 
+				const char *file, int line);
+isc_result_t ipv6_pool_reference(struct ipv6_pool **pool,
+				 struct ipv6_pool *src,
+				 const char *file, int line);
+isc_result_t ipv6_pool_dereference(struct ipv6_pool **pool,
+				   const char *file, int line);
+isc_result_t activate_lease6(struct ipv6_pool *pool,
+			     struct iaaddr **addr,
+			     unsigned int *attempts,
+			     const struct data_string *uid,
+			     time_t valid_lifetime_end_time);
+isc_result_t add_lease6(struct ipv6_pool *pool,
+			struct iaaddr *addr,
+			time_t valid_lifetime_end_time);
+isc_result_t renew_lease6(struct ipv6_pool *pool, struct iaaddr *addr);
+isc_result_t expire_lease6(struct iaaddr **addr, 
+			   struct ipv6_pool *pool, time_t now);
+isc_result_t release_lease6(struct ipv6_pool *pool, struct iaaddr *addr);
+isc_result_t decline_lease6(struct ipv6_pool *pool, struct iaaddr *addr);
+isc_boolean_t lease6_exists(const struct ipv6_pool *pool, 
+			    const struct in6_addr *addr);
+isc_result_t mark_address_unavailble(struct ipv6_pool *pool,
+				     const struct in6_addr *addr);
+
+isc_result_t add_ipv6_pool(struct ipv6_pool *pool);
+isc_result_t find_ipv6_pool(struct ipv6_pool **pool, 
+			    const struct in6_addr *addr);
+isc_boolean_t ipv6_addr_in_pool(const struct in6_addr *addr, 
+				const struct ipv6_pool *pool);
+
+void expire_leases(time_t now);
+isc_result_t renew_leases(struct ia_na *ia_na);
+isc_result_t release_leases(struct ia_na *ia_na);
+isc_result_t decline_leases(struct ia_na *ia_na);
+
+void mark_hosts_unavailable(void);
+void mark_interfaces_unavailable(void);
+

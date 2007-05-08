@@ -33,7 +33,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: packet.c,v 1.46 2007/04/27 23:54:05 each Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: packet.c,v 1.47 2007/05/08 23:05:20 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"

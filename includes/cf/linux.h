@@ -89,6 +89,9 @@ extern int h_errno;
 #ifndef _PATH_DHCLIENT_DB
 #define _PATH_DHCLIENT_DB	"/var/state/dhcp/dhclient.leases"
 #endif
+#ifndef _PATH_DHCLIENT6_DB
+#define _PATH_DHCLIENT6_DB	"/var/state/dhcp/dhclient6.leases"
+#endif
 
 /* Varargs stuff... */
 #include <stdarg.h>

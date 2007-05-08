@@ -3,7 +3,7 @@
    Protocol structures... */
 
 /*
- * Copyright (c) 2004-2005 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2006 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -29,6 +29,9 @@
  * about Internet Systems Consortium, see ``http://www.isc.org''.
  * To learn more about Vixie Enterprises, see ``http://www.vix.com''.
  */
+
+#ifndef DHCP_H
+#define DHCP_H
 
 #define DHCP_UDP_OVERHEAD	(20 + /* IP header */			\
 			8)   /* UDP header */
@@ -197,3 +200,6 @@ struct dhcp_packet {
 
 /* Enterprise Suboptions: */
 #define VENDOR_ISC_SUBOPTIONS		2495
+
+#endif /* DHCP_H */
+

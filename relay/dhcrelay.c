@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcrelay.c,v 1.59 2006/08/09 14:57:48 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhcrelay.c,v 1.60 2007/05/08 23:05:21 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -103,10 +103,8 @@ static char arr [] = "All rights reserved.";
 static char message [] = "Internet Systems Consortium DHCP Relay Agent";
 static char url [] = "For info, please visit http://www.isc.org/sw/dhcp/";
 
-int main (argc, argv, envp)
-	int argc;
-	char **argv, **envp;
-{
+int 
+main(int argc, char **argv) {
 	int fd;
 	int i;
 	struct servent *ent;
@@ -350,9 +348,16 @@ void relay (ip, packet, length, from_port, from, hfrom)
 	   in the packet. */
 	if (packet -> giaddr.s_addr) {
 		for (out = interfaces; out; out = out -> next) {
-			if (!memcmp (&out -> primary_address,
-				     &packet -> giaddr,
-				     sizeof packet -> giaddr))
+			int i;
+
+			for (i = 0 ; i < out->address_count ; i++ ) {
+				if (out->addresses[i].s_addr ==
+				    packet->giaddr.s_addr)
+					i = -1;
+					break;
+			}
+
+			if (i == -1)
 				break;
 		}
 	} else {
@@ -399,10 +404,8 @@ void relay (ip, packet, length, from_port, from, hfrom)
 			return;
 		}
 
-		if (send_packet (out,
-				 (struct packet *)0,
-				 packet, length, out -> primary_address,
-				 &to, htop) < 0) {
+		if (send_packet(out, NULL, packet, length, out->addresses[0],
+				&to, htop) < 0) {
 			++server_packet_errors;
 		} else {
 			log_debug ("forwarded BOOTREPLY for %s to %s",
@@ -422,8 +425,8 @@ void relay (ip, packet, length, from_port, from, hfrom)
 
 	/* Add relay agent options if indicated.   If something goes wrong,
 	   drop the packet. */
-	if (!(length = add_relay_agent_options (ip, packet, length,
-						ip -> primary_address)))
+	if (!(length = add_relay_agent_options(ip, packet, length,
+					       ip->addresses[0])))
 		return;
 
 	/* If giaddr is not already set, Set it so the server can
@@ -432,7 +435,7 @@ void relay (ip, packet, length, from_port, from, hfrom)
 	   set, the response will be sent directly to the relay agent
 	   that set giaddr, so we won't see it. */
 	if (!packet -> giaddr.s_addr)
-		packet -> giaddr = ip -> primary_address;
+		packet->giaddr = ip->addresses[0];
 	if (packet -> hops < max_hop_count)
 		packet -> hops = packet -> hops + 1;
 	else
@@ -441,11 +444,10 @@ void relay (ip, packet, length, from_port, from, hfrom)
 	/* Otherwise, it's a BOOTREQUEST, so forward it to all the
 	   servers. */
 	for (sp = servers; sp; sp = sp -> next) {
-		if (send_packet ((fallback_interface
-				  ? fallback_interface : interfaces),
-				 (struct packet *)0,
-				 packet, length, ip -> primary_address,
-				 &sp -> to, (struct hardware *)0) < 0) {
+		if (send_packet((fallback_interface
+				 ? fallback_interface : interfaces),
+				 NULL, packet, length, ip->addresses[0],
+				 &sp->to, NULL) < 0) {
 			++client_packet_errors;
 		} else {
 			log_debug ("forwarded BOOTREQUEST for %s to %s",
@@ -492,6 +494,11 @@ void bootp (packet)
 void dhcp (packet)
 	struct packet *packet;
 {
+}
+
+void 
+dhcpv6(struct packet *packet) {
+	/* XXX: should we warn or something here? */
 }
 
 int find_subnet (struct subnet **sp,

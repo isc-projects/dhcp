@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: alloc.c,v 1.57 2006/06/01 20:23:17 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: alloc.c,v 1.58 2007/05/08 23:05:20 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -700,9 +700,12 @@ int buffer_allocate (ptr, len, file, line)
 {
 	struct buffer *bp;
 
+	/* XXXSK: should check for bad ptr values, otherwise we 
+		  leak memory if they are wrong */
 	bp = dmalloc (len + sizeof *bp, file, line);
 	if (!bp)
 		return 0;
+	/* XXXSK: both of these initializations are unnecessary */
 	memset (bp, 0, sizeof *bp);
 	bp -> refcnt = 0;
 	return buffer_reference (ptr, bp, file, line);
@@ -967,6 +970,7 @@ int option_state_dereference (ptr, file, line)
 		    universes [i] -> option_state_dereference)
 			((*(universes [i] -> option_state_dereference))
 			 (universes [i], options, file, line));
+
 	dfree (options, file, line);
 	return 1;
 }
@@ -1279,8 +1283,11 @@ void data_string_copy (dest, src, file, line)
 	const char *file;
 	int line;
 {
-	if (src -> buffer)
+	if (src -> buffer) {
 		buffer_reference (&dest -> buffer, src -> buffer, file, line);
+	} else {
+		dest->buffer = NULL;
+	}
 	dest -> data = src -> data;
 	dest -> terminated = src -> terminated;
 	dest -> len = src -> len;
@@ -1299,13 +1306,14 @@ void data_string_forget (data, file, line)
 	memset (data, 0, sizeof *data);
 }
 
-/* Make a copy of the data in data_string, upping the buffer reference
-   count if there's a buffer. */
+/* If the data_string is larger than the specified length, reduce 
+   the data_string to the specified size. */
 
 void data_string_truncate (dp, len)
 	struct data_string *dp;
 	int len;
 {
+	/* XXX: do we need to consider the "terminated" flag in the check? */
 	if (len < dp -> len) {
 		dp -> terminated = 0;
 		dp -> len = len;

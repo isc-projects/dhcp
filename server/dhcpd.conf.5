@@ -28,7 +28,7 @@
 .\" see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
 .\" ``http://www.nominum.com''.
 .\"
-.\" $Id: dhcpd.conf.5,v 1.84 2007/04/24 20:49:51 dhankins Exp $
+.\" $Id: dhcpd.conf.5,v 1.85 2007/05/08 23:05:22 dhankins Exp $
 .\"
 .TH dhcpd.conf 5
 .SH NAME
@@ -1474,6 +1474,27 @@ subnet-mask option statement be used in each subnet declaration to set
 the desired subnet mask, since any subnet-mask option statement will
 override the subnet mask declared in the subnet statement.
 .PP
+.B The 
+.I subnet6
+.B statement
+.PP
+.nf
+ \fBsubnet6\fR \fIsubnet6-number\fR \fB{\fR
+   [ \fIparameters\fR ]
+   [ \fIdeclarations\fR ]
+ \fB}\fR
+.fi
+.PP
+The \fIsubnet6\fR statement is used to provide dhcpd with enough
+information to tell whether or not an IPv6 address is on that subnet6.
+It may also be used to provide subnet-specific parameters and to
+specify what addresses may be dynamically allocated to clients booting
+on that subnet. 
+.PP
+The
+.I subnet6-number
+should be an IPv6 network identifer, specified as ip6-address/bits.
+.PP
 .B The
 .I range
 .B statement
@@ -1490,6 +1511,25 @@ addresses in the range should be in the subnet in which the
 be specified if addresses in the specified range may be dynamically
 assigned to BOOTP clients as well as DHCP clients.   When specifying a
 single address, \fIhigh-address\fR can be omitted.
+.PP
+.B The
+.I range6
+.B statement
+.PP
+.nf
+.B range6\fR \fIlow-address\fR \fIhigh-address\fR\fB;\fR
+.B range6\fR \fIsubnet6-number\fR\fB;\fR
+.fi
+.PP
+For any IPv6 subnet6 on which addresses will be assigned dynamically, there
+must be at least one \fIrange6\fR statement. The \fIrange6\fR statement
+can either be the lowest and highest IPv6 addresses in a \fIrange6\fR, or 
+use CIDR notation, specified as ip6-address/bits. All IP addresses 
+in the \fIrange6\fR should be in the subnet6 in which the
+\fIrange6\fR statement is declared.
+.PP
+Any IPv6 addresses given to hosts with \fIfixed-address6\fR are excluded 
+from the \fIrange6\fR, as are IPv6 addresses on the server itself.
 .PP
 .B The
 .I host
@@ -1549,14 +1589,20 @@ address supplied by the client.   BOOTP clients do not normally
 provide a \fIdhcp-client-identifier\fR, so the hardware address must
 be used for all clients that may boot using the BOOTP protocol.
 .PP
+DHCPv6 servers can use the \fIhost-identifier option\fR parameter in
+the \fIhost\fR declaration, and specify any option with a fixed value
+to identify hosts.
+.PP
 Please be aware that
 .B only
 the \fIdhcp-client-identifier\fR option and the hardware address can be
-used to match a host declaration.   For example, it is not possible to match
-a host declaration to a \fIhost-name\fR option.   This is because the
-host-name option cannot be guaranteed to be unique for any given client,
-whereas both the hardware address and \fIdhcp-client-identifier\fR option
-are at least theoretically guaranteed to be unique to a given client.
+used to match a host declaration, or the \fIhost-identifer option\fR
+parameter for DHCPv6 servers.   For example, it is not possible to
+match a host declaration to a \fIhost-name\fR option.   This is
+because the host-name option cannot be guaranteed to be unique for any
+given client, whereas both the hardware address and
+\fIdhcp-client-identifier\fR option are at least theoretically
+guaranteed to be unique to a given client.
 .PP
 .B The
 .I group
@@ -1983,7 +2029,8 @@ statement
 .I Time
 should be the length in seconds that will be assigned to a lease if
 the client requesting the lease does not ask for a specific expiration
-time.
+time.  This is used for both DHCPv4 and DHCPv6 leases (it is also known
+as the "valid lifetime" in DHCPv6).
 .RE
 .PP
 The
@@ -2090,6 +2137,18 @@ a domain name that resolves to one or more IP addresses.
 .RE
 .PP
 The
+.I fixed-address6
+declaration
+.RS 0.25i
+.PP
+.B fixed-address6 ip6-address\fR ;\fR
+.PP
+The \fIfixed-address6\fR declaration is used to assign a fixed
+IPv6 addresses to a client.  It should only appear in a \fIhost\fR
+declaration.
+.RE
+.PP
+The
 .I get-lease-hostnames
 statement
 .RS 0.25i
@@ -2129,6 +2188,24 @@ The
 should be a set of hexadecimal octets (numbers from 0 through ff)
 separated by colons.   The \fIhardware\fR statement may also be used
 for DHCP clients.
+.RE
+.PP
+The 
+.I host-identifier option
+statement
+.RS 0.25i
+.PP
+.B host-identifier option \fIoption-name option-data\fB;\fR
+.PP
+This identifies a DHCPv6 client in a
+.I host
+statement.
+.I option-name
+is any option, and 
+.I option-data
+is the value for the option that the client will send. The 
+.I option-data
+must be a constant value.
 .RE
 .PP
 The
@@ -2392,6 +2469,24 @@ If no value is set, ping-timeout defaults to 1 second.
 .RE
 .PP
 The
+.I preferred-lifetime
+statement
+.RS 0.25i
+.PP
+.B preferred-lifetime
+.I seconds\fR\fB;\fR
+.PP
+IPv6 addresses have 'valid' and 'preferred' lifetimes.  The valid lifetime
+determines at what point at lease might be said to have expired, and is no
+longer useable.  A preferred lifetime is an advisory condition to help
+applications move off of the address and onto currently valid addresses
+(should there still be any open TCP sockets or similar).
+.PP
+The preferred lifetime defaults to the renew+rebind timers, or 3/4 the
+default lease time if none were specified.
+.RE
+.PP
+The
 .I remote-port
 statement
 .RS 0.25i
@@ -2436,6 +2531,29 @@ that the clients use this IP address when contacting the server.
 .PP
 Supplying a value for the dhcp-server-identifier option is equivalent
 to using the server-identifier statement.
+.RE
+.PP
+The
+.I server-duid
+statement
+.RS 0.25i
+.PP
+.B server-duid \fILLT\fR [ \fIhardware-type\fR \fItimestamp\fR \fIhardware-address\fR ] \fB;\fR
+
+.B server-duid \fIEN\fR \fIenterprise-number\fR \fIenterprise-identifier\fR \fB;\fR
+
+.B server-duid \fILL\fR [ \fIhardware-type\fR \fIhardware-address\fR ] \fB;\fR
+.PP
+The server-duid statement configures the server DUID. You may pick either
+LLT (link local address plus time), EN (enterprise), or LL (link local).
+.PP
+If you choose LLT or LL, you may specify the exact contents of the DUID.
+Otherwise the server will generate a DUID of the specified type.
+.PP
+If you choose EN, you must include the enterprise number and the
+enterprise-identifier.
+.PP
+The default server-duid type is LLT.
 .RE
 .PP
 The

@@ -66,8 +66,14 @@ extern int h_errno;
 #ifndef _PATH_DHCLIENT_PID
 #define _PATH_DHCLIENT_PID "/var/run/dhclient.pid"
 #endif
+#ifndef _PATH_DHCLIENT6_PID
+#define _PATH_DHCLIENT6_PID "/var/run/dhclient6.pid"
+#endif
 #ifndef _PATH_DHCLIENT_DB
 #define _PATH_DHCLIENT_DB "/var/db/dhclient.leases"
+#endif
+#ifndef _PATH_DHCLIENT6_DB
+#define _PATH_DHCLIENT6_DB "/var/db/dhclient6.leases"
 #endif
 
 #define EOL	'\n'

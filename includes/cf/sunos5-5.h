@@ -38,6 +38,7 @@
 typedef uint8_t		u_int8_t;
 typedef uint16_t	u_int16_t;
 typedef uint32_t	u_int32_t;
+typedef uint64_t	u_int64_t;
 #else /* Older SunOS has no idea what these things mean. */
 typedef int8_t char
 typedef int16_t short
@@ -94,6 +95,9 @@ extern int h_errno;
 #endif
 #ifndef _PATH_DHCLIENT_PID
 #define _PATH_DHCLIENT_PID "/etc/dhclient.pid"
+#endif
+#ifndef _PATH_DHCLIENT6_PID
+#define _PATH_DHCLIENT6_PID "/etc/dhclient6.pid"
 #endif
 #ifndef _PATH_DHCRELAY_PID
 #define _PATH_DHCRELAY_PID "/etc/dhcrelay.pid"

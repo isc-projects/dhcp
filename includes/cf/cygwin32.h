@@ -84,8 +84,14 @@
 #ifndef _PATH_DHCLIENT_PID
 #define _PATH_DHCLIENT_PID "//e/etc/dhclient.pid"
 #endif
+#ifndef _PATH_DHCLIENT6_PID
+#define _PATH_DHCLIENT6_PID "//e/etc/dhclient6.pid"
+#endif
 #ifndef _PATH_DHCLIENT_DB
 #define _PATH_DHCLIENT_DB "//e/etc/dhclient.leases"
+#endif
+#ifndef _PATH_DHCLIENT6_DB
+#define _PATH_DHCLIENT6_DB "//e/etc/dhclient6.leases"
 #endif
 #ifndef _PATH_DHCLIENT_CONF
 #define _PATH_DHCLIENT_CONF "//e/etc/dhclient.conf"

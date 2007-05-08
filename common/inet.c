@@ -35,7 +35,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: inet.c,v 1.11 2006/05/15 15:07:49 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: inet.c,v 1.12 2007/05/08 23:05:20 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -210,63 +210,342 @@ addr_match(addr, match)
 	return 1;
 }
 
-char *piaddr (addr)
-	struct iaddr addr;
-{
-	static char pbuf [4 * 16];
-	char *s = pbuf;
+/* 
+ * Compares the addresses a1 and a2.
+ *
+ * If a1 < a2, returns -1.
+ * If a1 == a2, returns 0.
+ * If a1 > a2, returns 1.
+ *
+ * WARNING: if a1 and a2 differ in length, returns 0.
+ */
+int
+addr_cmp(const struct iaddr *a1, const struct iaddr *a2) {
 	int i;
 
-	if (addr.len > sizeof(addr.iabuf))
-		log_fatal("piaddr():%s:%d: Address length too long.", MDL);
+	if (a1->len != a2->len) {
+		return 0;
+	}
 
-	if (addr.len == 0) {
-		strcpy (s, "<null address>");
+	for (i=0; i<a1->len; i++) {
+		if (a1->iabuf[i] < a2->iabuf[i]) {
+			return -1;
+		}
+		if (a1->iabuf[i] > a2->iabuf[i]) {
+			return 1;
+		}
 	}
-	for (i = 0; i < addr.len; i++) {
-		sprintf (s, "%s%d", i ? "." : "", addr.iabuf [i]);
-		s += strlen (s);
-	}
-	return pbuf;
+
+	return 0;
 }
 
-char *piaddrmask (struct iaddr addr, struct iaddr mask,
-		  const char *file, int line)
-{
-	char *s, tbuf[sizeof("255.255.255.255/32")];
-	int mw;
-	unsigned i, oct, bit;
+/*
+ * Performs a bitwise-OR of two addresses.
+ *
+ * Returns 1 if the result is non-zero, or 0 otherwise.
+ *
+ * WARNING: if a1 and a2 differ in length, returns 0.
+ */
+int 
+addr_or(struct iaddr *result, const struct iaddr *a1, const struct iaddr *a2) {
+	int i;
+	int all_zero;
 
-	if (addr.len != 4)
+	if (a1->len != a2->len) {
+		return 0;
+	}
+
+	all_zero = 1;
+
+	result->len = a1->len;
+	for (i=0; i<a1->len; i++) {
+		result->iabuf[i] = a1->iabuf[i] | a2->iabuf[i];
+		if (result->iabuf[i] != 0) {
+			all_zero = 0;
+		}
+	}
+
+	return !all_zero;
+}
+
+/*
+ * Performs a bitwise-AND of two addresses.
+ *
+ * Returns 1 if the result is non-zero, or 0 otherwise.
+ *
+ * WARNING: if a1 and a2 differ in length, returns 0.
+ */
+int 
+addr_and(struct iaddr *result, const struct iaddr *a1, const struct iaddr *a2) {
+	int i;
+	int all_zero;
+
+	if (a1->len != a2->len) {
+		return 0;
+	}
+
+	all_zero = 1;
+
+	result->len = a1->len;
+	for (i=0; i<a1->len; i++) {
+		result->iabuf[i] = a1->iabuf[i] & a2->iabuf[i];
+		if (result->iabuf[i] != 0) {
+			all_zero = 0;
+		}
+	}
+
+	return !all_zero;
+}
+
+/*
+ * range2cidr
+ *
+ * Converts a range of IP addresses to a set of CIDR networks.
+ *
+ * Examples: 
+ *  192.168.0.0 - 192.168.0.255 = 192.168.0.0/24
+ *  10.0.0.0 - 10.0.1.127 = 10.0.0.0/24, 10.0.1.0/25
+ *  255.255.255.32 - 255.255.255.255 = 255.255.255.32/27, 255.255.255.64/26,
+ *  				       255.255.255.128/25
+ */
+isc_result_t 
+range2cidr(struct iaddrcidrnetlist **result, 
+	   const struct iaddr *lo, const struct iaddr *hi) {
+	struct iaddr addr;
+	struct iaddr mask;
+	int bit;
+	struct iaddr end_addr;
+	struct iaddr dummy;
+	int ofs, val;
+	struct iaddrcidrnetlist *net;
+	int tmp;
+
+	if (result == NULL) {
+		return ISC_R_INVALIDARG;
+	}
+	if (*result != NULL) {
+		return ISC_R_INVALIDARG;
+	}
+	if ((lo == NULL) || (hi == NULL) || (lo->len != hi->len)) {
+		return ISC_R_INVALIDARG;
+	}
+
+	/*
+	 * Put our start and end in the right order, if reversed.
+	 */
+	if (addr_cmp(lo, hi) > 0) {
+		const struct iaddr *tmp;
+		tmp = lo;
+		lo = hi;
+		hi = tmp;
+	}
+
+	/*
+	 * Theory of operation:
+	 *
+	 * -------------------
+	 * Start at the low end, and keep trying larger networks
+	 * until we get one that is too big (explained below).
+	 *
+	 * We keep a "mask", which is the ones-complement of a 
+	 * normal netmask. So, a /23 has a netmask of 255.255.254.0,
+	 * and a mask of 0.0.1.255.
+	 *
+	 * We know when a network is too big when we bitwise-AND the 
+	 * mask with the starting address and we get a non-zero 
+	 * result, like this:
+	 *
+	 *    addr: 192.168.1.0, mask: 0.0.1.255
+	 *    bitwise-AND: 0.0.1.0
+	 * 
+	 * A network is also too big if the bitwise-OR of the mask
+	 * with the starting address is larger than the end address,
+	 * like this:
+	 *
+	 *    start: 192.168.1.0, mask: 0.0.1.255, end: 192.168.0.255
+	 *    bitwise-OR: 192.168.1.255 
+	 *
+	 * -------------------
+	 * Once we have found a network that is too big, we add the 
+	 * appropriate CIDR network to our list of found networks.
+	 *
+	 * We then use the next IP address as our low address, and
+	 * begin the process of searching for a network that is 
+	 * too big again, starting with an empty mask.
+	 */
+	addr = *lo;
+	bit = 0;
+	memset(&mask, 0, sizeof(mask));
+	mask.len = addr.len;
+	while (addr_cmp(&addr, hi) <= 0) {
+		/*
+		 * Bitwise-OR mask with (1 << bit)
+		 */
+		ofs = addr.len - (bit / 8) - 1;
+		val = 1 << (bit % 8);
+		if (ofs >= 0) {
+			mask.iabuf[ofs] |= val;
+		}
+
+		/* 
+		 * See if we're too big, and save this network if so.
+		 */
+		addr_or(&end_addr, &addr, &mask);
+		if ((ofs < 0) ||
+		    (addr_cmp(&end_addr, hi) > 0) || 
+		    addr_and(&dummy, &addr, &mask)) {
+		    	/*
+			 * Add a new prefix to our list.
+			 */
+			net = dmalloc(sizeof(*net), MDL);
+			if (net == NULL) {
+				while (*result != NULL) {
+					net = (*result)->next;
+					dfree(*result, MDL);
+					*result = net;
+				}
+				return ISC_R_NOMEMORY;
+			}
+			net->cidrnet.lo_addr = addr;
+			net->cidrnet.bits = (addr.len * 8) - bit;
+			net->next = *result;
+			*result = net;
+
+		    	/* 
+			 * Figure out our new starting address, 
+			 * by adding (1 << bit) to our previous
+			 * starting address.
+			 */
+			tmp = addr.iabuf[ofs] + val;
+			while ((ofs >= 0) && (tmp > 255)) {
+				addr.iabuf[ofs] = tmp - 256;
+				ofs--;
+				tmp = addr.iabuf[ofs] + 1;
+			}
+			if (ofs < 0) {
+				/* Gone past last address, we're done. */
+				break;
+			}
+			addr.iabuf[ofs] = tmp;
+
+			/*
+			 * Reset our bit and mask.
+			 */
+		    	bit = 0;
+			memset(mask.iabuf, 0, sizeof(mask.iabuf));
+			memset(end_addr.iabuf, 0, sizeof(end_addr.iabuf));
+		} else {
+			/*
+			 * If we're not too big, increase our network size.
+			 */
+			bit++;
+		}
+	}
+
+	/*
+	 * We're done.
+	 */
+	return ISC_R_SUCCESS;
+}
+
+/*
+ * Free a list of CIDR networks, such as returned from range2cidr().
+ */
+isc_result_t
+free_iaddrcidrnetlist(struct iaddrcidrnetlist **result) {
+	struct iaddrcidrnetlist *p;
+
+	if (result == NULL) {
+		return ISC_R_INVALIDARG;
+	}
+	if (*result == NULL) {
+		return ISC_R_INVALIDARG;
+	}
+
+	while (*result != NULL) {
+		p = *result;
+		*result = p->next;
+		dfree(p, MDL);
+	}
+
+	return ISC_R_SUCCESS;
+}
+
+/* piaddr() turns an iaddr structure into a printable address. */
+/* XXX: should use a const pointer rather than passing the structure */
+const char *
+piaddr(const struct iaddr addr) {
+	static char
+		pbuf[sizeof("ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255")];
+			 /* "255.255.255.255" */
+
+	/* INSIST((addr.len == 0) || (addr.len == 4) || (addr.len == 16)); */
+
+	if (addr.len == 0) {
+		return "<null address>";
+	}
+	if (addr.len == 4) {
+		return inet_ntop(AF_INET, addr.iabuf, pbuf, sizeof(pbuf));
+	} 
+	if (addr.len == 16) {
+		return inet_ntop(AF_INET6, addr.iabuf, pbuf, sizeof(pbuf));
+	}
+
+	log_fatal("piaddr():%s:%d: Invalid address length %d.", MDL,
+		  addr.len);
+	/* quell compiler warnings */
+	return NULL;
+}
+
+/* piaddrmask takes an iaddr structure mask, determines the bitlength of
+ * the mask, and then returns the printable CIDR notation of the two.
+ */
+char *
+piaddrmask(struct iaddr *addr, struct iaddr *mask) {
+	int mw;
+	unsigned int oct, bit;
+
+	if ((addr->len != 4) && (addr->len != 16))
 		log_fatal("piaddrmask():%s:%d: Address length %d invalid",
-			  MDL, addr.len);
-	if (addr.len != mask.len)
+			  MDL, addr->len);
+	if (addr->len != mask->len)
 		log_fatal("piaddrmask():%s:%d: Address and mask size mismatch",
 			  MDL);
 
 	/* Determine netmask width in bits. */
-	for (mw = 32; mw > 0; ) {
+	for (mw = (mask->len * 8) ; mw > 0 ; ) {
 		oct = (mw - 1) / 8;
 		bit = 0x80 >> ((mw - 1) % 8);
-		if (!mask.iabuf [oct])
+		if (!mask->iabuf[oct])
 			mw -= 8;
-		else if (mask.iabuf [oct] & bit)
+		else if (mask->iabuf[oct] & bit)
 			break;
 		else
 			mw--;
 	}
 
-	s = tbuf;
-	for (i = 0 ; i <= oct ; i++) {
-		sprintf(s, "%s%d", i ? "." : "", addr.iabuf[i]);
-		s += strlen(s);
-	}
-	sprintf(s, "/%d", mw);
+	if (mw < 0)
+		log_fatal("Impossible condition at %s:%d.", MDL);
 
-	s = dmalloc (strlen(tbuf) + 1, file, line);
-	if (!s)
-		return s;
-	strcpy(s, tbuf);
-	return s;
+	return piaddrcidr(addr, mw);
+}
+
+/* Format an address and mask-length into printable CIDR notation. */
+char *
+piaddrcidr(const struct iaddr *addr, unsigned int bits) {
+	static char
+	    ret[sizeof("ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255/128")];
+		    /* "255.255.255.255/32" */
+
+	/* INSIST(addr != NULL); */
+	/* INSIST((addr->len == 4) || (addr->len == 16)); */
+	/* INSIST(bits <= (addr->len * 8)); */
+
+	if (bits > (addr->len * 8))
+		return NULL;
+
+	sprintf(ret, "%s/%d", piaddr(*addr), bits);
+
+	return ret;
 }
 

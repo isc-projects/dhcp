@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: conflex.c,v 1.105 2006/08/04 10:59:32 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: conflex.c,v 1.106 2007/05/08 23:05:20 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -621,6 +621,8 @@ static enum dhcp_token intern (atom, dfv)
 			return CLASS;
 		if (!strcasecmp (atom + 1, "lose"))
 			return TOKEN_CLOSE;
+		if (!strcasecmp(atom + 1, "ompressed"))
+			return COMPRESSED;
 		if (!strcasecmp (atom + 1, "reate"))
 			return TOKEN_CREATE;
 		if (!strcasecmp (atom + 1, "iaddr"))
@@ -674,6 +676,8 @@ static enum dhcp_token intern (atom, dfv)
 		if (!strncasecmp (atom + 1, "efault", 6)) {
 			if (!atom [7])
 				return DEFAULT;
+			if (!strcasecmp(atom + 7, "-duid"))
+				return DEFAULT_DUID;
 			if (!strcasecmp (atom + 7, "-lease-time"))
 				return DEFAULT_LEASE_TIME;
 			break;
@@ -738,6 +742,9 @@ static enum dhcp_token intern (atom, dfv)
 			return ENCAPSULATE;
 		if (!strcasecmp(atom + 1, "xecute"))
 			return EXECUTE;
+		if (!strcasecmp(atom+1, "n")) {
+			return EN;
+		}
 		break;
 	      case 'f':
 		if (!strcasecmp (atom + 1, "atal"))
@@ -746,6 +753,8 @@ static enum dhcp_token intern (atom, dfv)
 			return FILENAME;
 		if (!strcasecmp (atom + 1, "ixed-address"))
 			return FIXED_ADDR;
+		if (!strcasecmp (atom + 1, "ixed-address6"))
+			return FIXED_ADDR6;
 		if (!strcasecmp (atom + 1, "ddi"))
 			return FDDI;
 		if (!strcasecmp (atom + 1, "ormerr"))
@@ -774,6 +783,8 @@ static enum dhcp_token intern (atom, dfv)
 			return HOST;
 		if (!strcasecmp (atom + 1, "ost-decl-name"))
 			return HOST_DECL_NAME;
+		if (!strcasecmp(atom + 1, "ost-identifier"))
+			return HOST_IDENTIFIER;
 		if (!strcasecmp (atom + 1, "ardware"))
 			return HARDWARE;
 		if (!strcasecmp (atom + 1, "ostname"))
@@ -782,6 +793,10 @@ static enum dhcp_token intern (atom, dfv)
 			return TOKEN_HELP;
 		break;
 	      case 'i':
+	      	if (!strcasecmp(atom+1, "a-na")) 
+			return IA_NA;
+	      	if (!strcasecmp(atom+1, "aaddr")) 
+			return IAADDR;
 		if (!strcasecmp (atom + 1, "nclude"))
 			return INCLUDE;
 		if (!strcasecmp (atom + 1, "nteger"))
@@ -792,6 +807,8 @@ static enum dhcp_token intern (atom, dfv)
 			return INFO;
 		if (!strcasecmp (atom + 1, "p-address"))
 			return IP_ADDRESS;
+		if (!strcasecmp (atom + 1, "p6-address"))
+			return IP6_ADDRESS;
 		if (!strcasecmp (atom + 1, "nitial-interval"))
 			return INITIAL_INTERVAL;
 		if (!strcasecmp (atom + 1, "nterface"))
@@ -821,6 +838,8 @@ static enum dhcp_token intern (atom, dfv)
 			return LCASE;
 		if (!strcasecmp (atom + 1, "ease"))
 			return LEASE;
+		if (!strcasecmp(atom + 1, "ease6"))
+			return LEASE6;
 		if (!strcasecmp (atom + 1, "eased-address"))
 			return LEASED_ADDRESS;
 		if (!strcasecmp (atom + 1, "ease-time"))
@@ -839,6 +858,12 @@ static enum dhcp_token intern (atom, dfv)
 			return LOCAL;
 		if (!strcasecmp (atom + 1, "og"))
 			return LOG;
+		if (!strcasecmp(atom+1, "lt")) {
+			return LLT;
+		}
+		if (!strcasecmp(atom+1, "l")) {
+			return LL;
+		}
 		break;
 	      case 'm':
 		if (!strncasecmp (atom + 1, "ax", 2)) {
@@ -854,6 +879,8 @@ static enum dhcp_token intern (atom, dfv)
 				if (!strcasecmp(atom + 10, "time"))
 					return MAX_LEASE_TIME;
 			}
+			if (!strcasecmp(atom + 3, "-life"))
+				return MAX_LIFE;
 			if (!strcasecmp (atom + 3, "-transmit-idle"))
 				return MAX_TRANSMIT_IDLE;
 			if (!strcasecmp (atom + 3, "-response-delay"))
@@ -943,6 +970,8 @@ static enum dhcp_token intern (atom, dfv)
 	      case 'p':
 		if (!strcasecmp (atom + 1, "repend"))
 			return PREPEND;
+		if (!strcasecmp(atom + 1, "referred-life"))
+			return PREFERRED_LIFE;
 		if (!strcasecmp (atom + 1, "acket"))
 			return PACKET;
 		if (!strcasecmp (atom + 1, "ool"))
@@ -974,6 +1003,9 @@ static enum dhcp_token intern (atom, dfv)
 			return RESOLUTION_INTERRUPTED;
 		if (!strcasecmp (atom + 1, "ange"))
 			return RANGE;
+		if (!strcasecmp(atom + 1, "ange6")) {
+			return RANGE6;
+		}
 		if (!strcasecmp (atom + 1, "ecover"))
 			return RECOVER;
 		if (!strcasecmp (atom + 1, "ecover-done"))
@@ -1049,6 +1081,9 @@ static enum dhcp_token intern (atom, dfv)
                                         if (atom[6] == '\0')
                                                 return SERVER;
 					if (atom[6] == '-') {
+						if (!strcasecmp(atom + 7,
+								"duid")) 
+							return SERVER_DUID;
                                                 if (!strcasecmp(atom + 7,
 								"name"))
                                                         return SERVER_NAME;
@@ -1122,6 +1157,8 @@ static enum dhcp_token intern (atom, dfv)
                                 return SUBCLASS;
                         if (!strcasecmp(atom + 3, "net"))
                                 return SUBNET;
+                        if (!strcasecmp(atom + 3, "net6"))
+                                return SUBNET6;
                         if (!strcasecmp(atom + 3, "string"))
                                 return SUBSTRING;
                         break;

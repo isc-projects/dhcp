@@ -1,4 +1,4 @@
-.\"	$Id: dhcp-options.5,v 1.32 2007/04/18 15:53:14 dhankins Exp $
+.\"	$Id: dhcp-options.5,v 1.33 2007/05/08 23:05:20 dhankins Exp $
 .\"
 .\" Copyright (c) 2004-2006 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 1996-2003 by Internet Software Consortium
@@ -59,6 +59,10 @@ haagen.isc.org).  When entering a domain name, be sure that that
 domain name resolves to a single IP address.
 .PP
 The
+.B ip6-address
+data specifies an IPv6 address, like ::1 or 3ffe:bbbb:aaaa:aaaa::1.
+.PP
+The
 .B int32
 data type specifies a signed 32-bit integer.   The 
 .B uint32
@@ -91,11 +95,11 @@ existing DHCP options.   The domain name is stored just as if it were
 a text option.
 .PP
 The
-.B domain-list
+.B domain-list [compressed]
 data type specifies a list of domain names, a space between each name and
-the entire string enclosed in double quotes.  These types of data are used
-for the domain-search option for example, and encodes an RFC1035 compressed
-DNS label list on the wire.
+the entire string enclosed in double quotes.  On the wire, these names are
+formatted as per RFC1035.  The optional '\fBcompressed\fR' keyword can be
+used to indicate that RFC1035 name compression should be used.
 .PP
 The
 .B flag
@@ -1408,6 +1412,25 @@ option sql-server-address code 193 = ip-address;
 option sql-server-address sql.example.com;
 
 .fi
+.B IP6-ADDRESS
+.PP
+.B option
+.I new-name
+.B code
+.I new-code
+.B =
+.B ip6-address
+.B ;
+.PP
+An option whose structure is an IPv6 address must be expressed as
+a valid IPv6 address.  The following is an example use of the 
+ip6-address type:
+.nf
+
+option dhcp6.some-server code 1234 = array of ip6-address;
+option dhcp6.some-server 3ffe:bbbb:aaaa:aaaa::1, 3ffe:bbbb:aaaa:aaaa::2;
+
+.fi
 .PP
 .B TEXT
 .PP
@@ -1559,7 +1582,7 @@ hash tables to hold options in this space.
 The code and length widths are used in DHCP protocol - you must configure
 these numbers to match the applicable option space you are configuring.
 They each default to 1.  Valid values for code widths are 1, 2 or 4.
-Valid values for length widths are 1 or 2.
+Valid values for length widths are 0, 1 or 2.
 .PP
 The hash size defaults depend upon the \fBcode width\fR selected, and
 may be 254 or 1009.  Valid values range between 1 and 65535.  Note

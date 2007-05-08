@@ -67,3 +67,19 @@ struct iaddrmatchlist {
 	struct iaddrmatchlist *next;
 	struct iaddrmatch match;
 };
+
+
+/*
+ * Structure to store information about a CIDR network.
+ */
+
+struct iaddrcidrnet {
+	struct iaddr lo_addr;
+	int bits;
+};
+
+struct iaddrcidrnetlist {
+	struct iaddrcidrnetlist *next;
+	struct iaddrcidrnet cidrnet;
+};
+

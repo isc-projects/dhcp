@@ -1,31 +1,102 @@
 	      Internet Systems Consortium DHCP Distribution
-			   Version 3.1.0a1
-			    August 1, 2006
+		        Version V4.0.0-2007041300
+			     April 13, 2007
+
+ **********************************************************************
+ *** This is NOT a public release, and should not be redistributed. ***
+ **********************************************************************
 
 			     Release Notes
 
 			     NEW FEATURES
 
-Version 3.1.x of the ISC DHCP Distribution includes the following major
-new features compared to its 3.0.x derivative:
+The DHCP server in version 4.0.x of the ISC DHCP Distribution supports
+DHCPv6 in addition to DHCP for IPv4.
 
-	- Failover protocol 'MAC Address Affinity' to reduce pool churn.
-	- Support for the 'reserved' and 'bootp' failover flags, which
-	  means in lay terms that static allocations can be made to
-	  clients in which 'on events' can be supported.
-	- Several other failover optimizations and changes.
-	- Management of class and subclass statements via OMAPI.
-	- Many new configuration statement functions.
-	- Initial formal support for VIVCO/VIVSO options.
+Several new options have been added to the dhcpd executable, which are
+documented in the man page. Several changes have been made to the
+configuration file as well, which are also documented in the man
+pages.
 
-For a full list of new features added in this release, please observe
-the changes list directly following this section.
+There are a number of DHCPv6 limitiations and features missing in this
+release, which will be addressed shortly:
+
+- Only Solaris and Linux are supported.
+
+- There is no DHCPv6 Relay support.
+
+- Only a single fixed address is supported per IA.
+
+- IA_TA addresses are not supported.
+
+- IA_PD prefixes are not supported.
+
+- DHCPv6 includes human-readable text in status code messages. These
+  should be configurable, and probably localized via gettext() or the
+  like.
+
+- The "host-identifier" option is limited to a simple token.
+
+- Dynamically allocated leases do not respond to Confirm messages.
+
+- Old (expired) leases are never cleaned.
+
+- The client and server can only operate DHCPv4 or DHCPv6 at a time,
+  not both, so two instances of the daemons are required with the
+  "-6" command line option.
 
 For information on how to install, configure and run this software,
 as well as how to find documentation and report bugs, please consult
 the README file.
 
-			Changes since 3.1.0b1
+
+			Changes since 4.0.0-20070413
+
+- An obviated option code hash lookup to find D6O_CLIENTID was removed.
+
+		     Changes since 3.1.0 (NEW FEATURES)
+
+- DHCPv6 Client and Server protocol support.  Use '-6' to run the daemons
+  as v6-only.  Use '-4' to run the daemons as v4-only (default.  There is
+  no support currently for both.
+
+- Server support for multiple IA_NA options, containing at most one
+  IAADDR option.
+
+- Client support for one IA_NA option, containing any number of IAADDR
+  options.
+
+- Server support for the DHCPv6 Information-request message.
+
+- Inappropriate unicast DHCPv6 messages sent to the server are now
+  discarded, and this has rearchitected the IO system slightly.
+
+- The DHCPv6 server DUID defaults to type 1, is persistently stored in
+  the leases database, and can be over-ridden (either completely, or by
+  specifying type 1 or type 2).
+
+- The server only uses Rapid-Commit if it has been configured with the
+  Rapid-Commit option and the client requests it.
+
+- DDNS support. We now update AAAA records in the same place we would
+  update A records, if we have an IPv6 address. We also generate IP6.ARPA
+  style names for PTR records if we're dealing with an IPv6 address.  Both
+  A and AAAA updates are done using the same 'fqdn.' virtual option space
+  (although the DHCPv4 FQDN and DHCPv6 FQDN options are formatted
+  differently, they both use the same code here).
+
+- The Linux dhclient-script attempts to set and remove assigned addresses,
+  and to configure /etc/resolv.conf from nameserver and domain name
+  configurations.  It can be extended to configure other parameters.
+
+- Initial DHCPv6 lease support.
+
+- The IO system now tracks all local IP addresses, so that the DHCP
+  applications (particularly the dhcrelay) can discern between what frames
+  were transmitted to it, and what frames are being carried through it which
+  it should not intercept.
+
+			Chagnes since 3.1.0b1
 
 - Fixed a bug that caused OMAPI clients to freeze when opening lease
   objects.
@@ -104,7 +175,7 @@ the README file.
   server responses, if they contain a valid DHCP_MESSAGE_TYPE (OFFER, ACK,
   or NAK).  The server will continue to not accept corrupt client packets.
 
-- Support for 'reserved' (psuedo-static) and BOOTP leases via failover
+- Support for 'reserved' (pseudo-static) and BOOTP leases via failover
   was introduced.
 
 - Support for adding, removing, and managing class and subclass statements
@@ -409,7 +480,7 @@ the README file.
 
 - Failover peers no longer bother to look for free leases to allocate when
   they already found the client's ACTIVE lease.  DISCOVERs are load balanced
-  wether freely-allocated or not, unless the server doubts the peer has
+  whether freely-allocated or not, unless the server doubts the peer has
   leases to allocate.
 
 - Fixed a bug in dhcrelay agent addition code that suppressed trailing
@@ -498,7 +569,7 @@ the README file.
   Thanks to a patch from Jason Vas Dias at RedHat.
 
 - File handlers on configuration state (config files and lease dbs) should
-  be treated consistently, regardless of wether TRACING is defined or not.
+  be treated consistently, regardless of whether TRACING is defined or not.
 
 - The linux build environment has had some minor improvements - better
   sensing of 64-bit pointer sizes (only used for establishing an icmp_id),

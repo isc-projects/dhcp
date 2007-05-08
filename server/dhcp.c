@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.216 2007/04/26 20:06:25 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.217 2007/05/08 23:05:22 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -302,7 +302,7 @@ void dhcpdiscover (packet, ms_nulltp)
 		/* If the lease is ours to allocate, then allocate it.
 		 * If the lease is active, it belongs to the client.  This
 		 * is the right lease, if we are to offer one.  We decide
-		 * wether or not to offer later on.
+		 * whether or not to offer later on.
 		 */
 		if (lease->binding_state == FTS_ACTIVE ||
 		    lease_mine_to_reallocate(lease)) {
@@ -1132,7 +1132,7 @@ void dhcpinform (packet, ms_nulltp)
 		}
 
 		options -> site_universe = u -> index;
-		options -> site_code_min = 224; /* XXX */
+		options -> site_code_min = 224; /* From RFC3942 */
 		data_string_forget (&d1, MDL);
 	} else {
 		options -> site_universe = dhcp_universe.index;
@@ -1357,7 +1357,8 @@ void nak_lease (packet, cip)
 	option_state_dereference (&options, MDL);
 
 /*	memset (&raw.ciaddr, 0, sizeof raw.ciaddr);*/
-	raw.siaddr = packet -> interface -> primary_address;
+	if (packet->interface->address_count)
+		raw.siaddr = packet->interface->addresses[0];
 	raw.giaddr = packet -> raw -> giaddr;
 	memcpy (raw.chaddr, packet -> raw -> chaddr, sizeof raw.chaddr);
 	raw.hlen = packet -> raw -> hlen;
@@ -2120,7 +2121,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 			}
 
 			/* Update potential expiry.  Allow for the desired
-			 * lease time plus one half the actual (wether
+			 * lease time plus one half the actual (whether
 			 * modified downward or not) lease time, which is
 			 * actually an estimate of when the client will
 			 * renew.  This way, the client will be able to get
@@ -2342,7 +2343,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 					    packet -> options,
 					    state -> options,
 					    &lt -> scope, oc, MDL))) {
-		ddns_updates (packet, lt, lease, state);
+		ddns_updates(packet, lt, lease, NULL, NULL, state->options);
 	}
 #endif /* NSUPDATE */
 
@@ -2527,9 +2528,13 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 		}
 	} else {
 		/* XXXSK: should we use get_server_source_address() here? */
-		state -> from.len = sizeof state -> ip -> primary_address;
-		memcpy (state -> from.iabuf, &state -> ip -> primary_address,
-			state -> from.len);
+		if (state -> ip -> address_count) {
+			state -> from.len =
+				sizeof state -> ip -> addresses [0];
+			memcpy (state -> from.iabuf,
+				&state -> ip -> addresses [0],
+				state -> from.len);
+		}
 	}
 
 	/* Figure out the address of the boot file server. */
@@ -2679,7 +2684,7 @@ void ack_lease (packet, lease, offer, when, msg, ms_nulltp, hp)
 		}
 
 		state -> options -> site_universe = u -> index;
-		state -> options -> site_code_min = 224; /* XXX */
+		state -> options -> site_code_min = 224; /* From RFC3942 */
 		data_string_forget (&d1, MDL);
 	} else {
 		state -> options -> site_code_min = 0;
@@ -3952,18 +3957,22 @@ get_server_source_address(struct in_addr *from,
 		data_string_forget(&d, MDL);
 	}
 
-	if (option_cache_allocate(&oc, MDL)) {
-		a = &packet->interface->primary_address;
-		if (make_const_data(&oc->expression,
-				    (char *)a, sizeof(*a),
-				    0, 0, MDL)) {
-			option_code_hash_lookup(&oc->option, 
-						dhcp_universe.code_hash,
-						&option_num, 0, MDL);
-			save_option(&dhcp_universe, options, oc);
+	if (packet->interface->address_count > 0) {
+		if (option_cache_allocate(&oc, MDL)) {
+			a = &packet->interface->addresses[0];
+			if (make_const_data(&oc->expression,
+					    (char *)a, sizeof(*a),
+					    0, 0, MDL)) {
+				option_code_hash_lookup(&oc->option, 
+							dhcp_universe.code_hash,
+							&option_num, 0, MDL);
+				save_option(&dhcp_universe, options, oc);
+			}
+			option_cache_dereference(&oc, MDL);
 		}
-		option_cache_dereference(&oc, MDL);
+		*from = packet->interface->addresses[0];
+	} else {
+       		memset(from, 0, sizeof(*from));
 	}
-	*from = packet->interface->primary_address;
 }
 

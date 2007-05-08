@@ -83,6 +83,9 @@ extern int h_errno;
 #ifndef _PATH_DHCLIENT_PID
 #define _PATH_DHCLIENT_PID  "/etc/dhclient.pid"
 #endif
+#ifndef _PATH_DHCLIENT6_PID
+#define _PATH_DHCLIENT6_PID  "/etc/dhclient6.pid"
+#endif
 #ifndef _PATH_DHCRELAY_PID
 #define _PATH_DHCRELAY_PID  "/etc/dhcrelay.pid"
 #endif
@@ -91,6 +94,9 @@ extern int h_errno;
 #endif
 #ifndef _PATH_DHCLIENT_DB
 #define _PATH_DHCLIENT_DB   "/etc/dhclient.leases"
+#endif
+#ifndef _PATH_DHCLIENT6_DB
+#define _PATH_DHCLIENT6_DB  "/etc/dhclient6.leases"
 #endif
 
 

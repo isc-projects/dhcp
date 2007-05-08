@@ -67,6 +67,9 @@ extern int h_errno;
 #ifndef _PATH_DHCLIENT_PID
 #define _PATH_DHCLIENT_PID "/etc/dhclient.pid"
 #endif
+#ifndef _PATH_DHCLIENT6_PID
+#define _PATH_DHCLIENT6_PID "/etc/dhclient6.pid"
+#endif
 #ifndef _PATH_DHCRELAY_PID
 #define _PATH_DHCRELAY_PID "/etc/dhcrelay.pid"
 #endif
@@ -77,7 +80,7 @@ extern int h_errno;
 #define va_dcl
 
 /* The vsnprint function definition in /usr/include/ appears to use this
- * as a key for wether or not it should be declared.  Seems reasoanble for
+ * as a key for whether or not it should be declared.  Seems reasoanble for
  * us to use the same key.
  */
 #if (_XOPEN_SOURCE != 500)

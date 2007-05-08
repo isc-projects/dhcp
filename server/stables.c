@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: stables.c,v 1.37 2007/04/27 22:48:00 each Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: stables.c,v 1.38 2007/05/08 23:05:22 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -238,6 +238,7 @@ static struct option server_options[] = {
 	{ "adaptive-lease-time-threshold", "B",	&server_universe,  50, 1 },
 	{ "do-reverse-updates", "f",		&server_universe,  51, 1 },
 	{ "fqdn-reply", "f",			&server_universe,  52, 1 },
+	{ "preferred-lifetime", "T",		&server_universe,  53, 1 },
 	{ NULL, NULL, NULL, 0, 0 }
 };
 
@@ -250,7 +251,7 @@ struct enumeration_value ddns_styles_values [] = {
 
 struct enumeration ddns_styles = {
 	(struct enumeration *)0,
-	"ddns-styles",
+	"ddns-styles", 1,
 	ddns_styles_values
 };
 
@@ -320,7 +321,7 @@ struct enumeration_value syslog_values [] = {
 
 struct enumeration syslog_enum = {
 	(struct enumeration *)0,
-	"syslog-facilities",
+	"syslog-facilities", 1,
 	syslog_values
 };
 
@@ -331,6 +332,7 @@ void initialize_server_option_spaces()
 
 	/* Set up the Relay Agent Information Option suboption space... */
 	agent_universe.name = "agent";
+	agent_universe.concat_duplicates = 0;
 	agent_universe.option_state_dereference =
 		linked_option_state_dereference;
 	agent_universe.lookup_func = lookup_linked_option;
@@ -372,6 +374,7 @@ void initialize_server_option_spaces()
 
 	/* Set up the server option universe... */
 	server_universe.name = "server";
+	server_universe.concat_duplicates = 0;
 	server_universe.lookup_func = lookup_hashed_option;
 	server_universe.option_state_dereference =
 		hashed_option_state_dereference;

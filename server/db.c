@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: db.c,v 1.75 2006/10/27 22:54:12 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: db.c,v 1.76 2007/05/08 23:05:21 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -473,6 +473,137 @@ int write_group (group)
 		lease_file_is_corrupt = 1;
 	}
 	return !errors;
+}
+
+/*
+ * Write an IA_NA and the options it has.
+ */
+int
+write_ia_na(const struct ia_na *ia_na) {
+	struct iaaddr *iaaddr;
+	int i;
+	char addr_buf[sizeof("ffff:ffff:ffff:ffff:ffff:ffff.255.255.255.255")];
+	const char *binding_state;
+	const char *tval;
+	char *s;
+	int fprintf_ret;
+
+	/* 
+	 * If the lease file is corrupt, don't try to write any more 
+	 * leases until we've written a good lease file. 
+	 */
+	if (lease_file_is_corrupt) {
+		if (!new_lease_file()) {
+			return 0;
+		}
+	}
+
+	if (counting) {
+		++count;
+	}
+
+	
+	s = quotify_buf(ia_na->iaid_duid.data, ia_na->iaid_duid.len, MDL);
+	if (s == NULL) {
+		goto error_exit;
+	}
+	fprintf_ret = fprintf(db_file, "ia-na \"%s\" {\n", s);
+	dfree(s, MDL);
+	if (fprintf_ret < 0) {
+		goto error_exit;
+	}
+	for (i=0; i<ia_na->num_iaaddr; i++) {
+		iaaddr = ia_na->iaaddr[i];
+
+		inet_ntop(AF_INET6, &iaaddr->addr, addr_buf, sizeof(addr_buf));
+		if (fprintf(db_file, "  iaaddr %s {\n", addr_buf) < 0) {
+			goto error_exit;
+		}
+		if ((iaaddr->state <= 0) || (iaaddr->state > FTS_LAST)) {
+			log_fatal("Unknown ia_na state %d at %s:%d", 
+				  iaaddr->state, MDL);
+		}
+		binding_state = binding_state_names[iaaddr->state-1];
+		if (fprintf(db_file, "    binding state %s;\n", 
+			    binding_state) < 0) {
+			goto error_exit;
+		}
+		tval = print_time(iaaddr->valid_lifetime_end_time);
+		if (tval == NULL) {
+			goto error_exit;
+		}
+		if (fprintf(db_file, "    ends %s", tval) < 0) {
+			goto error_exit;
+		}
+		if (fprintf(db_file, "\n  }\n") < 0) goto error_exit;
+	}
+	if (fprintf(db_file, "}\n\n") < 0) goto error_exit;
+
+	fflush(db_file);
+	return 1;
+
+error_exit:
+	log_info("write_ia_na: unable to write ia-na");
+	lease_file_is_corrupt = 1;
+	return 0;
+}
+
+/*
+ * Put a copy of the server DUID in the leases file.
+ */
+int
+write_server_duid(void) {
+	struct data_string server_duid;
+	char *s;
+	int fprintf_ret;
+
+	/*
+	 * Only write the DUID if it's been set.
+	 */
+	if (!server_duid_isset()) {
+		return 1;
+	}
+
+	/* 
+	 * If the lease file is corrupt, don't try to write any more 
+	 * leases until we've written a good lease file. 
+	 */
+	if (lease_file_is_corrupt) {
+		if (!new_lease_file()) {
+			return 0;
+		}
+	}
+
+	/*
+	 * Get a copy of our server DUID and convert to a quoted string.
+	 */
+	memset(&server_duid, 0, sizeof(server_duid));
+	copy_server_duid(&server_duid, MDL);
+	s = quotify_buf(server_duid.data, server_duid.len, MDL);
+	data_string_forget(&server_duid, MDL);
+	if (s == NULL) {
+		goto error_exit;
+	}
+
+	/*
+	 * Write to the leases file.
+	 */
+	fprintf_ret = fprintf(db_file, "server-duid \"%s\";\n\n", s);
+	dfree(s, MDL);
+	if (fprintf_ret < 0) {
+		goto error_exit;
+	}
+
+	/*
+	 * Check if we actually managed to write.
+	 */
+	fflush(db_file);
+	return 1;
+
+error_exit:
+	log_info("write_server_duid: unable to write server-duid");
+	lease_file_is_corrupt = 1;
+	return 0;
 }
 
 #if defined (FAILOVER_PROTOCOL)
