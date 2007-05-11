@@ -50,6 +50,7 @@ int MRns_name_compress(const char *, u_char *, size_t, const unsigned char **,
 int MRns_name_unpack(const unsigned char *, const unsigned char *,
 		     const unsigned char *, unsigned char *, size_t);
 int MRns_name_ntop(const unsigned char *, char *, size_t);
+int MRns_name_pton(const char *, u_char *, size_t);
 
 #if defined (MINIRES_LIB)
 #define res_update minires_update

@@ -54,6 +54,14 @@ the README file.
 
 - An obviated option code hash lookup to find D6O_CLIENTID was removed.
 
+- Corrected some situations where variables might be used without being
+  initialized.
+
+- Silenced several other compiler warnings.
+
+- Include the more standard sys/uio.h rather than rely upon other
+  header files to include it (fixes a BSDI compile failure).
+
 		     Changes since 3.1.0 (NEW FEATURES)
 
 - DHCPv6 Client and Server protocol support.  Use '-6' to run the daemons

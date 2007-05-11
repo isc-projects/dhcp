@@ -42,11 +42,12 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: socket.c,v 1.60 2007/05/08 23:05:20 dhankins Exp $ "
+"$Id: socket.c,v 1.61 2007/05/11 15:50:18 dhankins Exp $ "
 "Copyright (c) 2004-2006 Internet Systems Consortium.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
+#include <sys/uio.h>
 
 #ifdef USE_SOCKET_FALLBACK
 # if !defined (USE_SOCKET_SEND)

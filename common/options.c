@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.106 2007/05/08 23:05:20 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.107 2007/05/11 15:50:18 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -177,11 +177,15 @@ int parse_option_buffer (options, buffer, length, universe)
 			len = universe->get_length(buffer + offset);
 		else if (universe->length_size == 0)
 			len = length - universe->tag_size;
-		else
+		else {
 			log_fatal("Improperly configured option space(%s): "
 				  "may not have a nonzero length size "
 				  "AND a NULL get_length function.",
 				  universe->name);
+
+			/* Silence compiler warnings. */
+			return 0;
+		}
 
 		offset += universe->length_size;
 
@@ -1851,6 +1855,7 @@ const char *pretty_print_option (option, data, len, emit_commas, emit_quotes)
 				    default:
 					log_fatal("Impossible case at %s:%d.",
 						  MDL);
+					return "<double impossible condition>";
 				}
 
 				for (i = 0; ;i++) {
@@ -1865,7 +1870,7 @@ const char *pretty_print_option (option, data, len, emit_commas, emit_quotes)
 				break;
 
 			      enum_as_num:
-				sprintf(op, "%u", tval);
+				sprintf(op, "%lu", tval);
 				break;
 
 			      case 'I':
@@ -1889,11 +1894,11 @@ const char *pretty_print_option (option, data, len, emit_commas, emit_quotes)
 				if (tval == -1)
 					sprintf (op, "%s", "infinite");
 				else
-					sprintf (op, "%ld", tval);
+					sprintf(op, "%lu", tval);
 				break;
 			      case 'L':
-				sprintf (op, "%ld",
-					 (unsigned long)getULong (dp));
+				sprintf(op, "%lu",
+					(unsigned long)getULong(dp));
 				dp += 4;
 				break;
 			      case 's':
@@ -1901,7 +1906,7 @@ const char *pretty_print_option (option, data, len, emit_commas, emit_quotes)
 				dp += 2;
 				break;
 			      case 'S':
-				sprintf (op, "%d", (unsigned)getUShort (dp));
+				sprintf(op, "%u", (unsigned)getUShort(dp));
 				dp += 2;
 				break;
 			      case 'b':

@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.121 2007/05/08 23:05:20 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.122 2007/05/11 15:50:18 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1562,7 +1562,7 @@ int parse_option_code_definition (cfile, option)
 		encapsulated = NULL;
 		if (!universe_hash_lookup(&encapsulated, universe_hash,
 					  val, strlen(val), MDL)) {
-			parse_warn(cfile, "unknown option space %s", s);
+			parse_warn(cfile, "unknown option space %s", val);
 			skip_to_semi (cfile);
 			return 0;
 		}
