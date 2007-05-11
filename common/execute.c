@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: execute.c,v 1.48.116.2 2007/02/14 22:41:22 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: execute.c,v 1.48.116.3 2007/05/11 15:51:07 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -796,7 +796,7 @@ void write_statements (file, statements, indent)
 			indent_spaces (file, indent);
 			fprintf (file, "}");
 			break;
-			
+
 		      case case_statement:
 			indent_spaces (file, indent - 1);
 			fprintf (file, "case ");
@@ -806,7 +806,7 @@ void write_statements (file, statements, indent)
 			token_print_indent (file, col, indent + 5,
 					    "", "", ":");
 			break;
-			
+
 		      case default_statement:
 			indent_spaces (file, indent - 1);
 			fprintf (file, "default: ");
@@ -975,8 +975,8 @@ void write_statements (file, statements, indent)
                       case execute_statement:
 #ifdef ENABLE_EXECUTE
                         indent_spaces (file, indent);
-			col = token_print_indent(file, col, indent + 4, "", "",
-						 "execute");
+			col = token_print_indent(file, indent + 4, indent + 4,
+						 "", "", "execute");
 			col = token_print_indent(file, col, indent + 4, " ", "",
 						 "(");
                         col = token_print_indent(file, col, indent + 4, "\"", "\"", r->data.execute.command);

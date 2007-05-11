@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.98.2.8 2007/04/12 16:16:14 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.98.2.9 2007/05/11 15:51:07 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -1545,11 +1545,11 @@ const char *pretty_print_option (option, data, len, emit_commas, emit_quotes)
 				if (tval == -1)
 					sprintf (op, "%s", "infinite");
 				else
-					sprintf (op, "%ld", tval);
+					sprintf(op, "%lu", tval);
 				break;
 			      case 'L':
-				sprintf (op, "%ld",
-					 (unsigned long)getULong (dp));
+				sprintf(op, "%lu",
+					(unsigned long)getULong(dp));
 				dp += 4;
 				break;
 			      case 's':
@@ -1557,7 +1557,7 @@ const char *pretty_print_option (option, data, len, emit_commas, emit_quotes)
 				dp += 2;
 				break;
 			      case 'S':
-				sprintf (op, "%d", (unsigned)getUShort (dp));
+				sprintf(op, "%u", (unsigned)getUShort(dp));
 				dp += 2;
 				break;
 			      case 'b':
