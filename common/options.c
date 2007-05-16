@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.98.2.9 2007/05/11 15:51:07 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.98.2.10 2007/05/16 21:30:32 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -128,9 +128,8 @@ int parse_options (packet)
 }
 
 /* Parse options out of the specified buffer, storing addresses of option
-   values in packet -> options and setting packet -> options_valid if no
-   errors are encountered. */
-
+ * values in packet->options.
+ */
 int parse_option_buffer (options, buffer, length, universe)
 	struct option_state *options;
 	const unsigned char *buffer;
