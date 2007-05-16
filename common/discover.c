@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: discover.c,v 1.53 2007/05/08 23:05:20 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: discover.c,v 1.54 2007/05/16 22:27:34 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -225,7 +225,7 @@ begin_iface_scan(struct iface_conf_list *ifaces) {
  * Retrieve the next interface.
  *
  * Returns information in the info structure. 
- * Sets err to 1 if there is an error, otherwise 1.
+ * Sets err to 1 if there is an error, otherwise 0.
  */
 int
 next_iface(struct iface_info *info, int *err, struct iface_conf_list *ifaces) {
@@ -635,7 +635,7 @@ next_iface6(struct iface_info *info, int *err, struct iface_conf_list *ifaces) {
  * Retrieve the next interface.
  *
  * Returns information in the info structure. 
- * Sets err to 1 if there is an error, otherwise 1.
+ * Sets err to 1 if there is an error, otherwise 0.
  */
 int
 next_iface(struct iface_info *info, int *err, struct iface_conf_list *ifaces) {
@@ -664,8 +664,88 @@ end_iface_scan(struct iface_conf_list *ifaces) {
 	ifaces->fp6 = NULL;
 #endif
 }
-#else
-/* XXX: need to define non-Solaris, non-Linux iterators */
+#else /* !HAVE_SIOCGLIFCONF, !__linux */
+
+/* 
+ * BSD support
+ * -----------
+ *
+ * FreeBSD, NetBSD, OpenBSD, and OS X all have the getifaddrs() 
+ * function.
+ *
+ * The getifaddrs() man page describes the use.
+ */
+
+#include <ifaddrs.h>
+
+/* 
+ * Structure holding state about the scan.
+ */
+struct iface_conf_list {
+	struct ifaddrs *head;	/* beginning of the list */
+	struct ifaddrs *next;	/* current position in the list */
+};
+
+/* 
+ * Structure used to return information about a specific interface.
+ */
+struct iface_info {
+	char name[IFNAMSIZ];		/* name of the interface, e.g. "bge0" */
+	struct sockaddr_storage addr;	/* address information */
+	isc_uint64_t flags;		/* interface flags, e.g. IFF_LOOPBACK */
+};
+
+/* 
+ * Start a scan of interfaces.
+ *
+ * The iface_conf_list structure maintains state for this process.
+ */
+int 
+begin_iface_scan(struct iface_conf_list *ifaces) {
+	if (getifaddrs(&ifaces->head) != 0) {
+		log_error("Error getting interfaces; %m");
+		return 0;
+	}
+	ifaces->next = ifaces->head;
+	return 1;
+}
+
+/*
+ * Retrieve the next interface.
+ *
+ * Returns information in the info structure. 
+ * Sets err to 1 if there is an error, otherwise 0.
+ */
+int
+next_iface(struct iface_info *info, int *err, struct iface_conf_list *ifaces) {
+	if (ifaces->next == NULL) {
+		*err = 0;
+		return 0;
+	}
+	if (strlen(ifaces->next->ifa_name) >= sizeof(info->name)) {
+		log_error("Interface name '%s' too long", 
+			  ifaces->next->ifa_name);
+		*err = 1;
+		return 0;
+	}
+	strcpy(info->name, ifaces->next->ifa_name);
+	memcpy(&info->addr, ifaces->next->ifa_addr, 
+	       ifaces->next->ifa_addr->sa_len);
+	info->flags = ifaces->next->ifa_flags;
+	ifaces->next = ifaces->next->ifa_next;
+	*err = 0;
+	return 1;
+}
+
+/*
+ * End scan of interfaces.
+ */
+void
+end_iface_scan(struct iface_conf_list *ifaces) {
+	freeifaddrs(ifaces->head);
+	ifaces->head = NULL;
+	ifaces->next = NULL;
+}
 #endif 
 
 /* XXX: perhaps create drealloc() rather than do it manually */
@@ -849,29 +929,6 @@ discover_interfaces(int state) {
 
 			add_ipv4_addr_to_interface(tmp, &a->sin_addr);
 
-/* 
- * XXX: We don't have ifreq in Solaris-land if we want IPv6. Fortunately,
- *      we don't actually need this for anything on Solaris.
- */
-#if 0
-			/* If this is the first real IP address we've
-			   found, keep a pointer to ifreq structure in
-			   which we found it. */
-			if (!tmp -> ifp) {
-#ifdef HAVE_SA_LEN
-				unsigned len = ((sizeof ifp -> ifr_name) +
-						ifp -> ifr_addr.sa_len);
-#else
-				unsigned len = sizeof *ifp;
-#endif
-				tif = (struct ifreq *)dmalloc (len, MDL);
-				if (!tif)
-					log_fatal ("no space for ifp.");
-				memcpy (tif, ifp, len);
-				tmp -> ifp = tif;
-			}
-#endif /* 0 */
-
 			/* invoke the setup hook */
 			addr.len = 4;
 			memcpy(addr.iabuf, &a->sin_addr.s_addr, addr.len);
@@ -898,30 +955,6 @@ discover_interfaces(int state) {
 
 			add_ipv6_addr_to_interface(tmp, &a->sin6_addr);
 
-/* 
- * XXX: We don't have ifreq in Solaris-land if we want IPv6. Fortunately,
- *      we don't actually need this for anything on Solaris.
- */
-#if 0
-			/* If this is the first real IP address we've
-			   found, keep a pointer to ifreq structure in
-			   which we found it. */
-			if (!tmp -> ifp) {
-#ifdef HAVE_SA_LEN
-				unsigned len = ((sizeof ifp -> ifr_name) +
-						ifp -> ifr_addr.sa_len);
-#else
-				unsigned len = sizeof *ifp;
-#endif
-				tif = (struct ifreq *)dmalloc (len, MDL);
-				if (!tif)
-					log_fatal ("no space for ifp.");
-				memcpy (tif, ifp, len);
-				tmp -> ifp = tif;
-				tmp -> primary_address = foo.sin_addr;
-			}
-#endif /* 0 */
-
 			/* invoke the setup hook */
 			addr.len = 16;
 			memcpy(addr.iabuf, &a->sin6_addr, addr.len);
@@ -937,95 +970,6 @@ discover_interfaces(int state) {
 
 	end_iface_scan(&ifaces);
 
-#if 0
-#if defined (LINUX_SLASHPROC_DISCOVERY)
-	/* On Linux, interfaces that don't have IP addresses don't
-	   show up in the SIOCGIFCONF syscall.  This only matters for
-	   the DHCP client, of course - the relay agent and server
-	   should only care about interfaces that are configured with
-	   IP addresses anyway.
-
-	   The PROCDEV_DEVICE (/proc/net/dev) is a kernel-supplied file
-	   that, when read, prints a human readable network status.   We
-	   extract the names of the network devices by skipping the first
-	   two lines (which are header) and then parsing off everything
-	   up to the colon in each subsequent line - these lines start
-	   with the interface name, then a colon, then a bunch of
-	   statistics. */
-
-	if (state == DISCOVER_UNCONFIGURED) {
-		FILE *proc_dev;
-		char buffer [256];
-		int skip = 2;
-
-		proc_dev = fopen (PROCDEV_DEVICE, "r");
-		if (!proc_dev)
-			log_fatal ("%s: %m", PROCDEV_DEVICE);
-
-		while (fgets (buffer, sizeof buffer, proc_dev)) {
-			char *name = buffer;
-			char *sep;
-
-			/* Skip the first two blocks, which are header
-			   lines. */
-			if (skip) {
-				--skip;
-				continue;
-			}
-
-			sep = strrchr (buffer, ':');
-			if (sep)
-				*sep = '\0';
-			while (*name == ' ')
-				name++;
-
-			/* See if we've seen an interface that matches
-			   this one. */
-			for (tmp = interfaces; tmp; tmp = tmp -> next)
-				if (!strcmp (tmp -> name, name))
-					break;
-
-			/* If we found one, nothing more to do.. */
-			if (tmp)
-				continue;
-
-			strncpy (ifr.ifr_name, name, IFNAMSIZ);
-
-			/* Skip non broadcast interfaces (plus loopback and
-			 * point-to-point in case an OS incorrectly marks them
-			 * as broadcast).
-			 */
-			if ((ioctl (sock, SIOCGIFFLAGS, &ifr) < 0) ||
-			    (!(ifr.ifr_flags & IFF_BROADCAST)) ||
-			    (ifr.ifr_flags & IFF_LOOPBACK ) ||
-			    (ifr.ifr_flags & IFF_POINTOPOINT))
-				continue;
-
-			/* Otherwise, allocate one. */
-			tmp = (struct interface_info *)0;
-			status = interface_allocate (&tmp, MDL);
-			if (status != ISC_R_SUCCESS)
-				log_fatal ("Can't allocate interface %s: %s",
-					   name, isc_result_totext (status));
-			tmp -> flags = ir;
-			strncpy (tmp -> name, name, IFNAMSIZ);
-			if (interfaces) {
-				interface_reference (&tmp -> next,
-						     interfaces, MDL);
-				interface_dereference (&interfaces, MDL);
-			}
-			interface_reference (&interfaces, tmp, MDL);
-			interface_dereference (&tmp, MDL);
-			tmp = interfaces;
-
-			if (dhcp_interface_discovery_hook)
-				(*dhcp_interface_discovery_hook) (tmp);
-
-		}
-		fclose (proc_dev);
-	}
-#endif
-#endif /* 0 */
 
 	/* Now cycle through all the interfaces we found, looking for
 	   hardware addresses. */
@@ -1167,8 +1111,6 @@ discover_interfaces(int state) {
 		    state == DISCOVER_REQUESTED)
 			tmp -> flags &= ~(INTERFACE_AUTOMATIC |
 					  INTERFACE_REQUESTED);
-/* XXX: no ifp in Solaris */
-/*		if (!tmp -> ifp || !(tmp -> flags & INTERFACE_REQUESTED)) {*/
 		if (!(tmp->flags & INTERFACE_REQUESTED)) {
 			if ((tmp -> flags & INTERFACE_REQUESTED) != ir)
 				log_fatal ("%s: not found", tmp -> name);
@@ -1201,10 +1143,6 @@ discover_interfaces(int state) {
 			continue;
 		}
 		last = tmp;
-
-/* XXX: no ifp in Solaris */
-/*		memcpy (&foo, &tmp -> ifp -> ifr_addr,
-			sizeof tmp -> ifp -> ifr_addr);*/
 
 		/* We must have a subnet declaration for each interface. */
 		if (!tmp->shared_network && (state == DISCOVER_SERVER)) {

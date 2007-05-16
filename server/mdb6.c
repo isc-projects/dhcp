@@ -17,6 +17,7 @@
 /* TODO: assert() */
 /* TODO: simplify functions, as pool is now in iaaddr */
 
+#include <sys/types.h>
 #include <time.h>
 #include <netinet/in.h>
 

@@ -21,7 +21,7 @@ pages.
 There are a number of DHCPv6 limitiations and features missing in this
 release, which will be addressed shortly:
 
-- Only Solaris and Linux are supported.
+- Only Solaris, Linux, FreeBSD, NetBSD, and OpenBSD are supported.
 
 - There is no DHCPv6 Relay support.
 

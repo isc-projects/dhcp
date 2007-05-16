@@ -2046,6 +2046,13 @@ int supports_multiple_interfaces (struct interface_info *);
 void maybe_setup_fallback PROTO ((void));
 #endif
 
+void if_register6(struct interface_info *info, int do_multicast);
+ssize_t receive_packet6(struct interface_info *interface,
+			unsigned char *buf, size_t len,
+			struct sockaddr_in6 *from, struct in6_addr *to_addr);
+void if_deregister6(struct interface_info *info);
+
+
 /* bpf.c */
 #if defined (USE_BPF_SEND) || defined (USE_BPF_RECEIVE)
 int if_register_bpf PROTO ( (struct interface_info *));

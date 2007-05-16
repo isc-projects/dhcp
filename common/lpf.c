@@ -28,7 +28,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: lpf.c,v 1.32 2007/05/08 23:05:20 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: lpf.c,v 1.33 2007/05/16 22:27:34 shane Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -443,9 +443,9 @@ get_hw_addr(const char *name, struct hardware *hw) {
 			memcpy(&hw->hbuf[1], sa->sa_data, 6);
 			break;
 		case ARPHRD_IEEE802:
-#ifdef ARPHDR_IEEE802_TR
+#ifdef ARPHRD_IEEE802_TR
 		case ARPHRD_IEEE802_TR:
-#endif /* ARPHDR_IEEE802_TR */
+#endif /* ARPHRD_IEEE802_TR */
 			hw->hlen = 7;
 			hw->hbuf[0] = HTYPE_IEEE802;
 			memcpy(&hw->hbuf[1], sa->sa_data, 6);

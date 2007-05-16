@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bpf.c,v 1.51 2007/04/27 23:54:05 each Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: bpf.c,v 1.52 2007/05/16 22:27:34 shane Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -58,6 +58,8 @@ static char copyright[] =
 #include "includes/netinet/udp.h"
 #include "includes/netinet/if_ether.h"
 #endif
+
+#include <ifaddrs.h>
 
 /* Reinitializes the specified interface after an address change.   This
    is not required for packet-filter APIs. */
@@ -542,5 +544,61 @@ void maybe_setup_fallback ()
 				   fbi -> name, isc_result_totext (status));
 		interface_dereference (&fbi, MDL);
 	}
+}
+
+void
+get_hw_addr(const char *name, struct hardware *hw) {
+	struct ifaddrs *ifa;
+	struct ifaddrs *p;
+	struct sockaddr *sa;
+
+	if (getifaddrs(&ifa) != 0) {
+		log_fatal("Error getting interface information; %m");
+	}
+
+	/*
+	 * Loop through our interfaces finding a match.
+	 */
+	sa = NULL;
+	for (p=ifa; (p != NULL) && (sa == NULL); p = p->ifa_next) {
+		if ((p->ifa_addr->sa_family == AF_LINK) && 
+		    !strcmp(p->ifa_name, name)) {
+		    	sa = p->ifa_addr;
+		}
+	}
+	if (sa == NULL) {
+		log_fatal("No interface called '%s'", name);
+	}
+
+	/*
+	 * Pull out the appropriate information.
+	 */
+        switch (sa->sa_family) {
+                case ARPHRD_ETHER:
+                        hw->hlen = 7;
+                        hw->hbuf[0] = HTYPE_ETHER;
+                        memcpy(&hw->hbuf[1], sa->sa_data, 6);
+                        break;
+                case ARPHRD_IEEE802:
+#ifdef ARPHRD_IEEE802_TR
+                case ARPHRD_IEEE802_TR:
+#endif /* ARPHRD_IEEE802_TR */
+                        hw->hlen = 7;
+                        hw->hbuf[0] = HTYPE_IEEE802;
+                        memcpy(&hw->hbuf[1], sa->sa_data, 6);
+                        break;
+#ifdef ARPHRD_FDDI
+                case ARPHRD_FDDI:
+                        hw->hlen = 17;
+                        hw->hbuf[0] = HTYPE_FDDI;
+                        memcpy(&hw->hbuf[1], sa->sa_data, 16);
+                        break;
+#endif /* ARPHRD_FDDI */
+                default:
+                        log_fatal("Unsupported device type %d for \"%s\"",
+                                  sa->sa_family, name);
+        }
+
+	freeifaddrs(ifa);
 }
 #endif
