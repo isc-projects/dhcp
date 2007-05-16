@@ -84,7 +84,7 @@ and for prodding me into improving it.
 - Assorted fixes for broken network devices:  Packet length is now
   determined from the IP header length field to finally calculate the
   UDP payload length, because some NIC drivers return more data than
-  they actually recived.
+  they actually received.
 
 - UDP packets are now stored in aligned data structures.
 
