@@ -24,8 +24,8 @@
 #include "isc-dhcp/result.h"
 
 #include <stdarg.h>
-#include "omapip/omapip.h"
 #include "dhcpd.h"
+#include "omapip/omapip.h"
 #include "omapip/hash.h"
 #include "dst/md5.h"
 

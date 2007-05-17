@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: socket.c,v 1.62 2007/05/16 22:27:34 shane Exp $ "
+"$Id: socket.c,v 1.63 2007/05/17 18:27:11 dhankins Exp $ "
 "Copyright (c) 2004-2006 Internet Systems Consortium.\n";
 #endif /* not lint */
 
@@ -417,8 +417,7 @@ ssize_t send_packet (interface, packet, raw, len, from, to, hto)
 
 /* Send an IPv6 packet */
 ssize_t send_packet6(struct interface_info *interface,
-		     struct dhcp_packet *raw, 
-		     size_t len, 
+		     const unsigned char *raw, size_t len,
 		     struct sockaddr_in6 *to) {
 	struct msghdr m;
 	struct iovec v;

@@ -32,7 +32,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.147 2007/05/08 23:05:20 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.148 2007/05/17 18:27:10 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2440,6 +2440,8 @@ write_duid(struct data_string *duid)
 
 	if (fflush(leaseFile) != 0)
 		return ISC_R_IOERROR;
+
+	return ISC_R_SUCCESS;
 }
 
 /* Write a DHCPv6 lease to the store. */
@@ -2487,7 +2489,7 @@ write_client6_lease(struct client_state *client, struct dhc6_lease *lease,
 		stat = fprintf(leaseFile, "    starts %d;\n"
 					  "    renew %u;\n"
 					  "    rebind %u;\n",
-			       ia->starts, ia->renew, ia->rebind);
+			       (int)ia->starts, ia->renew, ia->rebind);
 		if (stat <= 0)
 			return ISC_R_IOERROR;
 
@@ -2500,7 +2502,7 @@ write_client6_lease(struct client_state *client, struct dhc6_lease *lease,
 			stat = fprintf(leaseFile, "      starts %d;\n"
 						  "      preferred-life %u;\n"
 						  "      max-life %u;\n",
-				       addr->starts, addr->preferred_life,
+				       (int)addr->starts, addr->preferred_life,
 				       addr->max_life);
 			if (stat <= 0)
 				return ISC_R_IOERROR;
@@ -2537,6 +2539,8 @@ write_client6_lease(struct client_state *client, struct dhc6_lease *lease,
 			return ISC_R_IOERROR;
 		}
 	}
+
+	return ISC_R_SUCCESS;
 }
 
 int write_client_lease (client, lease, rewrite, makesure)
@@ -3426,6 +3430,7 @@ isc_result_t client_dns_update (struct client_state *client, int addp,
 	 */
 	memset (&ddns_dhcid, 0, sizeof ddns_dhcid);
 
+	result = 0;
 	memset(&client_identifier, 0, sizeof(client_identifier));
 	if (client->active_lease != NULL) {
 		if (((oc =

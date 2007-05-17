@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: ddns.c,v 1.27 2007/05/08 23:05:21 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: ddns.c,v 1.28 2007/05/17 18:27:11 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -253,8 +253,11 @@ ddns_updates(struct packet *packet, struct lease *lease, struct lease *old,
 		scope = &(lease6->scope);
 		memcpy(addr.iabuf, lease6->addr.s6_addr, 16);
 		addr.len = 16;
-	} else
+	} else {
 		log_fatal("Impossible condition at %s:%d.", MDL);
+		/* Silence compiler warnings. */
+		return 0;
+	}
 
 	memset(&d1, 0, sizeof(d1));
 	memset (&ddns_hostname, 0, sizeof (ddns_hostname));
@@ -489,8 +492,11 @@ ddns_updates(struct packet *packet, struct lease *lease, struct lease *old,
 		 * 32 hex characters separated by dots.
 		 */
 		rev_name_len = 64;
-	} else
+	} else {
 		log_fatal("invalid address length %d", addr.len);
+		/* Silence compiler warnings. */
+		return 0;
+	}
 
 	oc = lookup_option(&server_universe, options, SV_DDNS_REV_DOMAIN_NAME);
 	if (oc)

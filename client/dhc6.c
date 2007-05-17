@@ -24,7 +24,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhc6.c,v 1.2 2007/05/08 23:05:20 dhankins Exp $ Copyright (c) 2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhc6.c,v 1.3 2007/05/17 18:27:10 dhankins Exp $ Copyright (c) 2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2545,6 +2545,8 @@ start_bound(struct client_state *client)
 
 	      default:
 		log_fatal("Impossible condition at %s:%d.", MDL);
+		/* Silence compiler warnings. */
+		return;
 	}
 
 	log_debug("PRC: Bound to lease %s.",

@@ -1592,6 +1592,8 @@ void parse_group_declaration PROTO ((struct parse *, struct group *));
 int parse_fixed_addr_param PROTO ((struct option_cache **, 
 				   struct parse *, enum dhcp_token));
 int parse_lease_declaration PROTO ((struct lease **, struct parse *));
+int parse_ip6_addr(struct parse *, struct iaddr *);
+int parse_ip6_addr_expr(struct expression **, struct parse *);
 void parse_address_range PROTO ((struct parse *, struct group *, int,
 				 struct pool *, struct lease **));
 void parse_address_range6(struct parse *cfile, struct group *group);
@@ -1822,6 +1824,7 @@ isc_boolean_t server_duid_isset(void);
 void copy_server_duid(struct data_string *ds, const char *file, int line);
 void set_server_duid(struct data_string *new_duid);
 isc_result_t set_server_duid_from_option(void);
+void set_server_duid_type(int type);
 isc_result_t generate_new_server_duid(void);
 void dhcpv6(struct packet *);
 
@@ -2020,10 +2023,9 @@ ssize_t send_packet PROTO ((struct interface_info *,
 			    struct packet *, struct dhcp_packet *, size_t, 
 			    struct in_addr,
 			    struct sockaddr_in *, struct hardware *));
-ssize_t send_packet6(struct interface_info *, struct packet *, 
-		     struct dhcp_packet *, size_t, struct in6_addr,
-		     struct sockaddr_in6 *, struct hardware *);
 #endif
+ssize_t send_packet6(struct interface_info *, const unsigned char *, size_t,
+		     struct sockaddr_in6 *);
 #ifdef USE_SOCKET_RECEIVE
 void if_reinitialize_receive PROTO ((struct interface_info *));
 void if_register_receive PROTO ((struct interface_info *));
@@ -2031,8 +2033,6 @@ void if_deregister_receive PROTO ((struct interface_info *));
 ssize_t receive_packet PROTO ((struct interface_info *,
 			       unsigned char *, size_t,
 			       struct sockaddr_in *, struct hardware *));
-ssize_t receive_packet6(struct interface_info *, unsigned char *, size_t,
-			struct sockaddr_in *, struct in6_addr *);
 #endif
 
 #if defined (USE_SOCKET_FALLBACK)
@@ -2387,6 +2387,7 @@ void dhcpv4_client_assignments(void);
 void dhcpv6_client_assignments(void);
 
 /* dhc6.c */
+void form_duid(struct data_string *duid, char *file, int line);
 void dhc6_lease_destroy(struct dhc6_lease *lease, char *file, int line);
 void start_init6(struct client_state *client);
 void start_confirm6(struct client_state *client);
@@ -2398,6 +2399,7 @@ isc_result_t write_client6_lease(struct client_state *client,
 /* db.c */
 int write_lease PROTO ((struct lease *));
 int write_host PROTO ((struct host_decl *));
+int write_server_duid(void);
 #if defined (FAILOVER_PROTOCOL)
 int write_failover_state (dhcp_failover_state_t *);
 #endif
