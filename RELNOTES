@@ -52,6 +52,9 @@ the README file.
 
 			Changes since 4.0.0-20070413
 
+- IPv6 subnets now have support for arbitrary allocation ranges via
+  a new 'range6' configuration directive.
+
 - An obviated option code hash lookup to find D6O_CLIENTID was removed.
 
 - Corrected some situations where variables might be used without being
