@@ -1,4 +1,4 @@
-.\"	$Id: dhcp-options.5,v 1.33 2007/05/08 23:05:20 dhankins Exp $
+.\"	$Id: dhcp-options.5,v 1.34 2007/05/18 19:45:08 dhankins Exp $
 .\"
 .\" Copyright (c) 2004-2006 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 1996-2003 by Internet Software Consortium
@@ -95,11 +95,9 @@ existing DHCP options.   The domain name is stored just as if it were
 a text option.
 .PP
 The
-.B domain-list [compressed]
-data type specifies a list of domain names, a space between each name and
-the entire string enclosed in double quotes.  On the wire, these names are
-formatted as per RFC1035.  The optional '\fBcompressed\fR' keyword can be
-used to indicate that RFC1035 name compression should be used.
+.B domain-list
+data type specifies a list of domain names, enclosed in double quotes and
+separated by commas ("example.com", "foo.example.com").
 .PP
 The
 .B flag
@@ -135,7 +133,7 @@ For example:
   option hostname = binary-to-ascii (16, 8, "-",
                                      substring (hardware, 1, 6));
 .fi
-.SH STANDARD DHCP OPTIONS
+.SH STANDARD DHCPV4 OPTIONS
 The documentation for the various options mentioned below is taken
 from the latest IETF draft document on DHCP options.  Options not
 listed below may not yet be implemented, but it is possible to use
@@ -1297,6 +1295,339 @@ Specifies the IP address of the Primary Domain SAP/RIP Service server
 utility uses this value as Primary DSS server when configuring a
 secondary DSS server.
 .RE
+.SH STANDARD DHCPV6 OPTIONS
+DHCPv6 options differ from DHCPv4 options partially due to using
+16-bit code and length tags, but semantically zero-length options
+are legal in DHCPv6, and multiple options are treated differently.
+Whereas in DHCPv4 multiple options would be concatenated to form one
+option, in DHCPv6 they are expected to be individual instantiations.
+Understandably, many options are not "allowed" to have multiple
+instances in a packet - normally these are options which are digested
+by the DHCP protocol software, and not by users or applications.
+.PP
+.B option \fBdhcp6.client-id\fR \fIduid-type\fR \fIstring\fR\fB;\fR
+.RS 0.25i
+.PP
+This option specifies the client's DUID identifier.  DUIDs are similar
+but different from DHCPv4 client identifiers - there are documented duid
+types:
+.PP
+duid-llt
+.PP
+duid-en
+.PP
+duid-ll
+.PP
+This value should not be configured, but rather is provided by clients
+and treated as an opaque identifier key blob by servers.
+.RE
+.PP
+.B option \fBdhcp6.server-id\fR \fIstring\fR\fB;\fR
+.RS 0.25i
+.PP
+This option specifies the server's DUID identifier.  One may use this
+option to configure an opaque binary blob for your server's identifier.
+.RE
+.PP
+.B option \fBdhcp6.ia-na\fR \fIstring\fR\fB;\fR
+.RS 0.25i
+.PP
+The Identity Association for Non-temporary Addresses (ia-na) carries
+assigned addresses that are not temporary addresses for use by the
+DHCPv6 client.  This option is produced by the DHCPv6 server software,
+and should not be configured.
+.RE
+.PP
+.B option \fBdhcp6.ia-ta\fR \fIstring\fR\fB;\fR
+.RS 0.25i
+.PP
+The Identity Association for Temporary Addresses (ia-ta) carries
+temporary addresses, which may change upon every renewal.  There is
+no support for this in the current DHCPv6 software.
+.RE
+.PP
+.B option \fBdhcp6.ia-addr\fR \fIstring\fR\fB;\fR
+.RS 0.25i
+.PP
+The Identity Association Address option is encapsulated inside ia-na
+or ia-ta options in order to represent addresses associated with those
+IA's.  These options are manufactured by the software, so should not
+be configured.
+.RE
+.PP
+.B option \fBdhcp6.oro\fR \fIuint16\fR [ \fB,\fR \fIuint16\fR\fB,\fR ... ]\fB;\fR
+.RS 0.25i
+.PP
+The Option Request Option ("ORO") is the DHCPv6 equivalent of the
+parameter-request-list.  Clients supply this option to ask servers
+to reply with options relevant to their needs and use.  This option
+must be configured in dhclient.conf (5).  An easier way to manage
+the ORO will be supplied
+.RE
+.PP
+.B option \fBdhcp6.preference\fR \fIuint8\fR\fB;\fR
+.RS 0.25i
+.PP
+The \fBpreference\fR option informs a DHCPv6 client which server is
+'preferred' for use on a given subnet.  This preference is only
+applied during the initial stages of configuration - once a client
+is bound to an IA, it will remain bound to that IA until it is no
+longer valid or has expired.  This value may be configured on the
+server, and is digested by the client software.
+.RE
+.PP
+.B option \fBdhcp6.elapsed-time\fR \fIuint16\fR\fB;\fR
+.RS 0.25i
+.PP
+The \fBelapsed-time\fR option is constructed by the DHCPv6 client
+software, and is potentially consumed by intermediaries.  This
+option should not be configured.
+.RE
+.PP
+.B option \fBdhcp6.relay-msg\fR \fIstring\fR\fB;\fR
+.RS 0.25i
+.PP
+The \fBrelay-msg\fR option is constructed by intervening DHCPv6
+relay agent software.  This option is entirely used by protocol
+software, and is not meant for user configuration.
+.RE
+.PP
+.B option \fBdhcp6.unicast\fR \fIip6-address\fR\fB;\fR
+.RS 0.25i
+.PP
+The \fBunicast\fR option is provided by DHCPv6 servers which are
+willing (or prefer) to receive Renew packets from their clients
+by exchanging UDP unicasts with them.  Normally, DHCPv6 clients
+will multicast their Renew messages.  This may be configured on
+the server, and should be configured as an address the server
+is ready to reply to.
+.RE
+.PP
+.B option \fBdhcp6.status-code\fR \fIstatus-code\fR [ \fIstring\fR ] \fB;\fR
+.RS 0.25i
+.PP
+The \fBstatus-code\fR option is provided by DHCPv6 servers to inform
+clients of error conditions during protocol communication.  This option
+is manufactured and digested by protocol software, and should not be
+configured.
+.RE
+.PP
+.B option \fBdhcp6.rapid-commit\fR \fB;\fR
+.RS 0.25i
+.PP
+The \fBrapid-commit\fR option is a zero-length option that clients use
+to indicate their desire to enter into rapid-commit with the server.  This
+option is not supported by the client at this time, and is digested by
+the server when present, so should not be configured.
+.RE
+.PP
+.B option \fBdhcp6.vendor-opts\fR \fIstring\fR\fB;\fR
+.RS 0.25i
+.PP
+The \fBvendor-opts\fR option is actually an encapsulated sub-option space,
+in which each Vendor-specific Information Option (VSIO) is identified by
+a 32-bit Enterprise-ID number.  The encapsulated option spaces within these
+options are defined by the vendors.
+.RE
+.PP
+.B option \fBdhcp6.interface-id\fR \fItext\fR\fB;\fR
+.RS 0.25i
+.PP
+The \fBinterface-id\fR option is manufactured by relay agents, and may
+be used to guide configuration differentiating clients by the interface
+they are remotely attached to.  It does not make sense to configure a
+value for this option, but it may make sense to inspect its contents.
+.RE
+.PP
+.B option \fBdhcp6.reconf-msg\fR \fIdhcpv6-message\fR\fB;\fR
+.RS 0.25i
+.PP
+The \fBreconf-msg\fR option is manufactured by servers, and sent to
+clients in Reconfigure messages to inform them of what message
+the client should Reconfigure using.  There is no support for
+DHCPv6 Reconfigure extensions, and this option is documented
+informationally only.
+.RE
+.PP
+.B option \fBdhcp6.reconf-accept ;\fR
+.RS 0.25i
+.PP
+The \fBreconf-accept\fR option is included by DHCPv6 clients that
+support the Reconfigure extentions, advertising that they will
+respond if the server were to ask them to Reconfigure.  There is
+no support for DHCPv6 Reconfigure extensions, and this option is
+documented informationally only.
+.RE
+.PP
+.B option \fBdhcp6.sip-servers-names\fR \fIdomain-list\fR\fB;\fR
+.RS 0.25i
+.PP
+The \fBsip-servers-names\fR option allows SIP clients to locate a
+local SIP server that is to be used for all outbound SIP requests, a
+so-called"outbound proxy server."  If you wish to use manually entered
+IPv6 addresses instead, please see the \fBsip-servers-addresses\fR option
+below.
+.RE
+.PP
+.B option
+.B dhcp6.sip-servers-addresses
+.I ip6-address \fR[\fB,\fR
+.I ip6-address \fR... ]
+.B ;
+.RS 0.25i
+.PP
+The \fBsip-servers-addresses\fR option allows SIP clients to locate
+a local SIP server that is to be used for all outbound SIP requests,
+a so-called "outbound proxy servers."  If you wish to use domain names
+rather than IPv6 addresses, please see the \fBsip-servers-names\fR option
+above.
+.RE
+.PP
+.B option 
+.B dhcp6.name-servers
+.I ip6-address \fR[\fB,\fR
+.I ip6-address \fR... ]
+.B ;
+.RS 0.25i
+.PP
+The \fBname-servers\fR option instructs clients about locally available
+recursive DNS servers.  It is easiest to describe this as the "nameservers"
+line in /etc/resolv.conf.
+.RE
+.PP
+.B option \fBdhcp6.domain-search\fR \fIdomain-list\fR\fB;\fR
+.RS 0.25i
+.PP
+The \fBdomain-search\fR option specifies the client's domain search path
+to be applied to recursive DNS queries.  It is easiest to describe this as
+the "search" line in /etc/resolv.conf.
+.RE
+.PP
+.B option \fBdhcp6.ia-pd\fR \fIstring\fR\fB;\fR
+.RS 0.25i
+.PP
+The \fBia-pd\fR option is manufactured by clients and servers to create a
+Prefix Delegation binding - to delegate an IPv6 prefix to the client.  There
+is not yet any support for prefix delegation in this software, and this
+option is provided informationally only.
+.RE
+.PP
+.B option \fBdhcp6.ia-prefix\fR \fIdomain-list\fR\fB;\fR
+.RS 0.25i
+.PP
+The \fBia-prefix\fR option is placed inside \fBia-pd\fR options in order
+to identify the prefix(es) allocated to the client.  There is not yet
+any suport for prefix delegation in this software, and this option is
+provided informationally only.
+.RE
+.PP
+.B option
+.B dhcp6.nis-servers
+.I ip6-address \fR[\fB,
+.I ip6-address \fR...  ]
+.B ;
+.RS 0.25i
+.PP
+The \fBnis-servers\fR option identifies, in order, NIS servers available
+to the client.
+.RE
+.PP
+.B option
+.B dhcp6.nisp-servers
+.I ip6-address \fR[\fB,
+.I ip6-address \fR... ]
+.B ;
+.RS 0.25i
+.PP
+The \fBnisp-servers\fR option identifies, in order, NIS+ servers available
+to the client.
+.RE
+.PP
+.B option \fBnis-domain-name\fR \fIdomain-list\fR\fB;\fR
+.RS 0.25i
+.PP
+The \fBnis-domain-name\fR option specifies the NIS domain name the client is
+expected to use, and is related to the \fBnis-servers\fR option.
+.RE
+.PP
+.B option \fBnisp-domain-name\fR \fIdomain-list\fR\fB;\fR
+.RS 0.25i
+.PP
+The \fBnisp-domain-name\fR option specifies the NIS+ domain name the client
+is expected to use, and is related to the \fBnisp-servers\fR option.
+.RE
+.PP
+.B option
+.B dhcp6.sntp-servers
+.I ip6-address \fR[\fB,
+.I ip6-address \fR... ]
+.B ;
+.RS 0.25i
+.PP
+The \fBsntp-servers\fR option specifies a list of local SNTP servers
+available for the client to synchronize their clocks.
+.RE
+.PP
+.B option \fBdhcp6.info-refresh-time\fR \fIuint32\fR\fB;\fR
+.RS 0.25i
+.PP
+The \fBinfo-refresh-time\fR option gives DHCPv6 clients using
+Information-request messages a hint as to how long they should between
+refreshing the information they were given.  Note that this option will
+only be delivered to the client, and be likely to affect the client's
+behaviour, if the client requested the option.
+.RE
+.PP
+.B option \fBdhcp6.bcms-server-d\fR \fIdomain-list\fR\fB;\fR
+.RS 0.25i
+.PP
+The \fBbcms-server-d\fR option contains the domain names of local BCMS
+(Broadcast and Multicast Control Services) controllers which the client
+may use.
+.RE
+.PP
+.B option
+.B dhcp6.bcms-server-a
+.I ip6-address \fR[\fB,
+.I ip6-address \fR... ]
+.B ;
+.RS 0.25i
+.PP
+The \fBbcms-server-a\fR option contains the IPv6 addresses of local BCMS
+(Broadcast and Multicast Control Services) controllers which the client
+may use.
+.RE
+.PP
+.B option \fBdhcp6.remote-id\fR \fIstring\fR\fB;\fR
+.RS 0.25i
+.PP
+The \fBremote-id\fR option is constructed by relay agents, to inform the
+server of details pertaining to what the relay knows about the client (such
+as what port it is attached to, and so forth).  The contents of this option
+have some vendor-specific structure (similar to VSIO), but we have chosen
+to treat this option as an opaque field.
+.RE
+.PP
+.B option \fBdhcp6.subscriber-id\fR\fB;\fR
+.RS 0.25i
+.PP
+The \fBsubscriber-id\fR option is an opaque field provided by the relay agent,
+which provides additional information about the subscriber in question.  The
+exact contents of this option depend upon the vendor and/or the operator's
+configuration of the remote device, and as such is an opaque field.
+.RE
+.PP
+.B option \fBdhcp6.fqdn\fR \fIstring\fR\fB;\fR
+.RS 0.25i
+.PP
+The \fBfqdn\fR option is normally constructed by the client or server,
+and negotiates the client's Fully Qualified Domain Name, as well as which
+party is responsible for Dynamic DNS Updates.  See the section on the
+Client FQDN SubOptions for full details (the DHCPv4 and DHCPv6 FQDN options
+use the same "fqdn." encapsulated space, so are in all ways identical).
+.RE
+.PP
+.RE
 .SH DEFINING NEW OPTIONS
 The Internet Systems Consortium DHCP client and server provide the
 capability to define new options.   Each DHCP option has a name, a
@@ -1469,6 +1800,31 @@ values must be between 0 and FF.   For example:
 
 option sql-identification-token code 195 = string;
 option sql-identification-token 17:23:19:a6:42:ea:99:7c:22;
+
+.fi
+.PP
+.B DOMAIN-LIST
+.PP
+.B option
+.I new-name
+.B code
+.I new-code
+.B =
+.B domain-list
+.B [compressed]
+.B ;
+.PP
+An option whose type is \fBdomain-list\fR is an RFC1035 formatted (on the
+wire, "DNS Format") list of domain names, separated by root labels.  The
+optional \fBcompressed\fR keyword indicates if the option should be
+compressed relative to the start of the option contents (not the packet
+contents).
+.PP
+When in doubt, omit the \fBcompressed\fR keyword.  When the software recieves
+an option that is compressed and the \fBcompressed\fR keyword is omitted, it
+will still decompress the option (relative to the option contents field).  The
+keyword only controls wether or not transmitted packets are compressed.
+.nf
 
 .fi
 .PP

@@ -80,6 +80,10 @@ the README file.
 - -q is now the default behaviour on dhclient, with -d or -v enabling
   non-quiet (stderr logging) mode.
 
+- Fix documentation of the domain-search atom (quoted, with commas).
+
+- Document DHCPv6 options presently in the default table.
+
 		     Changes since 3.1.0 (NEW FEATURES)
 
 - DHCPv6 Client and Server protocol support.  Use '-6' to run the daemons
