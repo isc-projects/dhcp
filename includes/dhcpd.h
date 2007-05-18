@@ -1252,7 +1252,6 @@ typedef unsigned char option_mask [16];
 						/* these are referenced */
 typedef struct hash_table ia_na_hash_t;
 typedef struct hash_table iaaddr_hash_t;
-	int num_inactive;			/* count of inactive IAADDR */
 
 struct iaaddr {
 	int refcnt;				/* reference count */
@@ -1289,6 +1288,7 @@ struct ipv6_pool {
 	iaaddr_hash_t *addrs;			/* non-free IAADDR */
 	int num_active;				/* count of active IAADDR */
 	isc_heap_t *active_timeouts;		/* timeouts for active leases */
+	int num_inactive;			/* count of inactive IAADDR */
 	isc_heap_t *inactive_timeouts;		/* timeouts for expired or 
 						   released leases */
 	struct shared_network *shared_network;	/* shared_network for 

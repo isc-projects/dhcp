@@ -330,6 +330,7 @@ ia_na_remove_iaaddr(struct ia_na *ia_na, struct iaaddr *iaaddr,
 	log_error("%s(%d): IAADDR not in IA_NA", file, line);
 }
 
+/*
  * Remove all addresses from an IA_NA.
  */
 void
@@ -342,7 +343,6 @@ ia_na_remove_all_iaaddr(struct ia_na *ia_na, const char *file, int line) {
 	ia_na->num_iaaddr = 0;
 }
 
-/*
 /*
  * Helper function for lease heaps.
  * Makes the top of the heap the oldest lease.
