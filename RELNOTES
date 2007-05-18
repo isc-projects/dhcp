@@ -39,8 +39,6 @@ release, which will be addressed shortly:
 
 - Dynamically allocated leases do not respond to Confirm messages.
 
-- Old (expired) leases are never cleaned.
-
 - The client and server can only operate DHCPv4 or DHCPv6 at a time,
   not both, so two instances of the daemons are required with the
   "-6" command line option.
@@ -51,6 +49,8 @@ the README file.
 
 
 			Changes since 4.0.0-20070413
+
+- Old (expired) leases are now cleaned.
 
 - IPv6 subnets now have support for arbitrary allocation ranges via
   a new 'range6' configuration directive.

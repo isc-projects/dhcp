@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.163 2007/05/08 23:05:21 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.164 2007/05/18 09:26:58 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -3805,6 +3805,7 @@ parse_ia_na_declaration(struct parse *cfile) {
 	enum dhcp_token token;
 	struct ia_na *ia_na;
 	const char *val;
+	struct ia_na *old_ia_na;
 	int len;
 	u_int32_t iaid;
 	struct iaddr iaddr;
@@ -3959,23 +3960,42 @@ parse_ia_na_declaration(struct parse *cfile) {
 		add_lease6(pool, iaaddr, end_time);
 		switch (state) {
 			case FTS_ABANDONED:
-				decline_lease6(pool, iaaddr);
+				release_lease6(pool, iaaddr);
 				break;
 			case FTS_EXPIRED:
 				decline_lease6(pool, iaaddr);
 				iaaddr->state = FTS_EXPIRED;
 				break;
 			case FTS_RELEASED:
-				decline_lease6(pool, iaaddr);
-				iaaddr->state = FTS_RELEASED;
+				release_lease6(pool, iaaddr);
 				break;
 		}
 		ipv6_pool_dereference(&pool, MDL);
 		iaaddr_dereference(&iaaddr, MDL);
 	}
 
-	ia_na_hash_add(ia_active, (char *)ia_na->iaid_duid.data,
-		       ia_na->iaid_duid.len, ia_na, MDL);
+	/*
+	 * If we have an existing record for this IA_NA, remove it.
+	 */
+	old_ia_na = NULL;
+	if (ia_na_hash_lookup(&old_ia_na, ia_active,
+			      (char *)ia_na->iaid_duid.data,
+			      ia_na->iaid_duid.len, MDL)) {
+		ia_na_hash_delete(ia_active, 
+				  (char *)ia_na->iaid_duid.data,
+				  ia_na->iaid_duid.len, MDL);
+		ia_na_remove_all_iaaddr(old_ia_na, MDL);
+		ia_na_dereference(&old_ia_na, MDL);
+	}
+
+	/*
+	 * If we have addresses, add this, otherwise don't bother.
+	 */
+	if (ia_na->num_iaaddr > 0) {
+		ia_na_hash_add(ia_active, (char *)ia_na->iaid_duid.data,
+			       ia_na->iaid_duid.len, ia_na, MDL);
+	}
+	ia_na_dereference(&ia_na, MDL);
 }
 
 /*

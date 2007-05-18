@@ -1249,8 +1249,10 @@ typedef unsigned char option_mask [16];
 #define MAX_TIME 0x7fffffff
 #define MIN_TIME 0
 
+						/* these are referenced */
 typedef struct hash_table ia_na_hash_t;
 typedef struct hash_table iaaddr_hash_t;
+	int num_inactive;			/* count of inactive IAADDR */
 
 struct iaaddr {
 	int refcnt;				/* reference count */
@@ -1260,6 +1262,12 @@ struct iaaddr {
 	time_t valid_lifetime_end_time;		/* time address expires */
 	struct ia_na *ia_na;			/* IA for this address */
 	struct ipv6_pool *ipv6_pool;		/* pool for this address */
+/*
+ * For now, just pick an arbitrary time to keep old leases
+ * around (value in seconds).
+ */
+#define EXPIRED_IPV6_CLEANUP_TIME (60*60)
+
 	int heap_index;				/* index into heap, or -1 
 						   (internal use only) */
 };
@@ -3110,6 +3118,7 @@ isc_result_t dhcp_failover_process_update_request_all (dhcp_failover_state_t *,
 						       failover_message_t *);
 isc_result_t dhcp_failover_process_update_done (dhcp_failover_state_t *,
 						failover_message_t *);
+void ia_na_remove_all_iaaddr(struct ia_na *ia_na, const char *file, int line);
 void dhcp_failover_recover_done (void *);
 void failover_print PROTO ((char *, unsigned *, unsigned, const char *));
 void update_partner PROTO ((struct lease *));
@@ -3194,10 +3203,11 @@ isc_result_t find_ipv6_pool(struct ipv6_pool **pool,
 isc_boolean_t ipv6_addr_in_pool(const struct in6_addr *addr, 
 				const struct ipv6_pool *pool);
 
-void expire_leases(time_t now);
 isc_result_t renew_leases(struct ia_na *ia_na);
 isc_result_t release_leases(struct ia_na *ia_na);
 isc_result_t decline_leases(struct ia_na *ia_na);
+void schedule_lease_timeout(struct ipv6_pool *pool);
+void schedule_all_ipv6_lease_timeouts();
 
 void mark_hosts_unavailable(void);
 void mark_interfaces_unavailable(void);

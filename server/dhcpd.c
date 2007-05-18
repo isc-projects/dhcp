@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.122 2007/05/08 23:05:22 dhankins Exp $ Copyright 2004-2006 Internet Systems Consortium.";
+"$Id: dhcpd.c,v 1.123 2007/05/18 09:26:58 shane Exp $ Copyright 2004-2006 Internet Systems Consortium.";
 #endif
 
   static char copyright[] =
@@ -952,6 +952,11 @@ void postdb_startup (void)
 	/* Initialize the failover listener state. */
 	dhcp_failover_startup ();
 #endif
+
+	/*
+	 * Begin our lease timeout background task.
+	 */
+	schedule_all_ipv6_lease_timeouts();
 }
 
 /* Print usage message. */

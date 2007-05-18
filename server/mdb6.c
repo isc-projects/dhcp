@@ -321,6 +321,8 @@ ia_na_remove_iaaddr(struct ia_na *ia_na, struct iaaddr *iaaddr,
 				ia_na->iaaddr[j-1] = ia_na->iaaddr[j];
 			}
 			/* decrease our total count */
+			/* remove the back-reference in the IAADDR itself */
+			ia_na_dereference(&iaaddr->ia_na, file, line);
 			ia_na->num_iaaddr--;
 			return;
 		}
@@ -328,6 +330,19 @@ ia_na_remove_iaaddr(struct ia_na *ia_na, struct iaaddr *iaaddr,
 	log_error("%s(%d): IAADDR not in IA_NA", file, line);
 }
 
+ * Remove all addresses from an IA_NA.
+ */
+void
+ia_na_remove_all_iaaddr(struct ia_na *ia_na, const char *file, int line) {
+	int i, j;
+
+	for (i=0; i<ia_na->num_iaaddr; i++) {
+		iaaddr_dereference(&(ia_na->iaaddr[i]), file, line);
+	}
+	ia_na->num_iaaddr = 0;
+}
+
+/*
 /*
  * Helper function for lease heaps.
  * Makes the top of the heap the oldest lease.
@@ -572,8 +587,7 @@ activate_lease6(struct ipv6_pool *pool, struct iaaddr **addr,
 	struct iaaddr *test_iaaddr;
 	struct data_string new_ds;
 	struct iaaddr *iaaddr;
-	isc_result_t iaaddr_allocate_result;
-	isc_result_t insert_result;
+	isc_result_t result;
 
 	/* 
 	 * Use the UID as our initial seed for the hash
@@ -616,8 +630,8 @@ activate_lease6(struct ipv6_pool *pool, struct iaaddr **addr,
 			return ISC_R_NOMEMORY;
 		}
 		new_ds.data = new_ds.buffer->data;
-		memcpy((char *)new_ds.data, ds.data, ds.len);
-		memcpy((char *)new_ds.data + ds.len, &tmp, sizeof(tmp));
+		memcpy(new_ds.buffer->data, ds.data, ds.len);
+		memcpy(new_ds.buffer->data + ds.len, &tmp, sizeof(tmp));
 		data_string_forget(&ds, MDL);
 		data_string_copy(&ds, &new_ds, MDL);
 		data_string_forget(&new_ds, MDL);
@@ -630,14 +644,21 @@ activate_lease6(struct ipv6_pool *pool, struct iaaddr **addr,
 	 * to hold it.
 	 */
 	iaaddr = NULL;
-	iaaddr_allocate_result = iaaddr_allocate(&iaaddr, MDL);
-	if (iaaddr_allocate_result != ISC_R_SUCCESS) {
-		return iaaddr_allocate_result;
+	result = iaaddr_allocate(&iaaddr, MDL);
+	if (result != ISC_R_SUCCESS) {
+		return result;
 	}
 	memcpy(&iaaddr->addr, &tmp, sizeof(iaaddr->addr));
 
-	iaaddr_reference(addr, iaaddr, MDL);
-	return add_lease6(pool, iaaddr, valid_lifetime_end_time);
+	/*
+	 * Add the lease to the pool.
+	 */
+	result = add_lease6(pool, iaaddr, valid_lifetime_end_time);
+	if (result == ISC_R_SUCCESS) {
+		iaaddr_reference(addr, iaaddr, MDL);
+	}
+	iaaddr_dereference(&iaaddr, MDL);
+	return result;
 }
 
 /*
@@ -648,23 +669,57 @@ isc_result_t
 add_lease6(struct ipv6_pool *pool, struct iaaddr *iaaddr,
 	   time_t valid_lifetime_end_time) {
 	isc_result_t insert_result;
+	struct iaaddr *test_iaaddr;
+	struct iaaddr *tmp_iaaddr;
 
 	iaaddr->state = FTS_ACTIVE;
 	iaaddr->valid_lifetime_end_time = valid_lifetime_end_time;
 	ipv6_pool_reference(&iaaddr->ipv6_pool, pool, MDL);
 
+	/*
+	 * If this IAADDR is already in our structures, remove the 
+	 * old one.
+	 */
+	test_iaaddr = NULL;
+	if (iaaddr_hash_lookup(&test_iaaddr, pool->addrs,
+			       &iaaddr->addr, sizeof(iaaddr->addr), MDL)) {
+		isc_heap_delete(pool->active_timeouts, test_iaaddr->heap_index);
+		iaaddr_hash_delete(pool->addrs, &test_iaaddr->addr, 
+				   sizeof(test_iaaddr->addr), MDL);
+		pool->num_active--;
+		
+		/*
+		 * We're going to do a bit of evil trickery here.
+		 *
+		 * We need to dereference the entry once to remove our
+		 * current reference (in test_iaaddr), and then one
+		 * more time to remove the reference left when the
+		 * address was added to the pool before.
+		 */
+		tmp_iaaddr = test_iaaddr;
+		iaaddr_dereference(&test_iaaddr, MDL);
+		iaaddr_dereference(&tmp_iaaddr, MDL);
+	}
+
 	/* 
 	 * Add IAADDR to our structures.
 	 */
-        iaaddr_hash_add(pool->addrs, &iaaddr->addr, 
-			sizeof(iaaddr->addr), iaaddr, MDL);
-	insert_result = isc_heap_insert(pool->active_timeouts, iaaddr);
+	tmp_iaaddr = NULL;
+	iaaddr_reference(&tmp_iaaddr, iaaddr, MDL);
+        iaaddr_hash_add(pool->addrs, &tmp_iaaddr->addr, 
+			sizeof(tmp_iaaddr->addr), iaaddr, MDL);
+	insert_result = isc_heap_insert(pool->active_timeouts, tmp_iaaddr);
 	if (insert_result != ISC_R_SUCCESS) {
 		iaaddr_hash_delete(pool->addrs, &iaaddr->addr, 
 				   sizeof(iaaddr->addr), MDL);
-		iaaddr_dereference(&iaaddr, MDL);
+		iaaddr_dereference(&tmp_iaaddr, MDL);
 		return insert_result;
 	}
+
+	/* 
+	 * Note: we intentionally leave tmp_iaaddr referenced; there
+	 * is a reference in the heap/hash, after all.
+	 */
 
 	/*
 	 * And we're done.
@@ -673,6 +728,9 @@ add_lease6(struct ipv6_pool *pool, struct iaaddr *iaaddr,
 	return ISC_R_SUCCESS;
 }
 
+/*
+ * Determine if an address is present in a pool or not.
+ */
 isc_boolean_t
 lease6_exists(const struct ipv6_pool *pool, const struct in6_addr *addr) {
 	struct iaaddr *test_iaaddr;
@@ -688,64 +746,49 @@ lease6_exists(const struct ipv6_pool *pool, const struct in6_addr *addr) {
 }
 
 /*
+ * Put the lease on our active pool.
+ */
+static isc_result_t
+move_lease_to_active(struct ipv6_pool *pool, struct iaaddr *addr) {
+	isc_result_t insert_result;
+	int old_heap_index;
+
+	old_heap_index = addr->heap_index;
+	insert_result = isc_heap_insert(pool->active_timeouts, addr);
+	if (insert_result == ISC_R_SUCCESS) {
+       		iaaddr_hash_add(pool->addrs, &addr->addr, 
+				sizeof(addr->addr), addr, MDL);
+		isc_heap_delete(pool->inactive_timeouts, old_heap_index);
+		pool->num_active++;
+		pool->num_inactive--;
+		addr->state = FTS_ACTIVE;
+	}
+	return insert_result;
+}
+
+/*
  * Renew an lease in the pool.
  *
  * To do this, first set the new valid_lifetime_end_time for the address, 
  * and then invoke renew_lease() on the address.
  *
  * WARNING: lease times must only be extended, never reduced!!!
- *
- * We return a isc_result_t so this function can be called the same
- * as release or decline.
  */
 isc_result_t
 renew_lease6(struct ipv6_pool *pool, struct iaaddr *addr) {
-	isc_heap_decreased(pool->active_timeouts, addr->heap_index);
-	return ISC_R_SUCCESS;
-}
-
-/*
- * Expire the oldest lease if it's lifetime_end_time is 
- * older than the given time.
- *
- * - iaaddr must be a pointer to a (struct iaaddr *) pointer previously
- *   initialized to NULL
- *
- * On return iaaddr has a reference to the removed entry. It is left
- * pointing to NULL if the oldest lease has not expired.
- */
-isc_result_t
-expire_lease6(struct iaaddr **addr, struct ipv6_pool *pool, time_t now) {
-	struct iaaddr *tmp;
-	isc_result_t insert_result;
-
-	if (addr == NULL) {
-		log_error("%s(%d): NULL pointer reference", MDL);
-		return ISC_R_INVALIDARG;
+	/*
+	 * If we're already active, then we can just move our expiration
+	 * time down the heap. 
+	 *
+	 * Otherwise, we have to move from the inactive heap to the 
+	 * active heap.
+	 */
+	if (addr->state == FTS_ACTIVE) {
+		isc_heap_decreased(pool->active_timeouts, addr->heap_index);
+		return ISC_R_SUCCESS;
+	} else {
+		return move_lease_to_active(pool, addr);
 	}
-	if (*addr != NULL) {
-		log_error("%s(%d): non-NULL pointer", MDL);
-		return ISC_R_INVALIDARG;
-	}
-
-	if (pool->num_active > 0) {
-		tmp = (struct iaaddr *)isc_heap_element(pool->active_timeouts, 
-							1);
-		if (now > tmp->valid_lifetime_end_time) {
-			insert_result = isc_heap_insert(pool->inactive_timeouts,
-						        tmp);
-			if (insert_result != ISC_R_SUCCESS) {
-				return insert_result;
-			}
-			iaaddr_hash_delete(pool->addrs, 
-					   &tmp->addr, sizeof(tmp->addr), MDL);
-			isc_heap_delete(pool->active_timeouts, 1);
-			tmp->state = FTS_EXPIRED;
-			iaaddr_reference(addr, tmp, MDL);
-			pool->num_active--;
-		}
-	}
-	return ISC_R_SUCCESS;
 }
 
 /*
@@ -765,9 +808,49 @@ move_lease_to_inactive(struct ipv6_pool *pool, struct iaaddr *addr,
 		isc_heap_delete(pool->active_timeouts, old_heap_index);
 		addr->state = state;
 		pool->num_active--;
+		pool->num_inactive++;
 	}
 	return insert_result;
 }
+
+/*
+ * Expire the oldest lease if it's lifetime_end_time is 
+ * older than the given time.
+ *
+ * - iaaddr must be a pointer to a (struct iaaddr *) pointer previously
+ *   initialized to NULL
+ *
+ * On return iaaddr has a reference to the removed entry. It is left
+ * pointing to NULL if the oldest lease has not expired.
+ */
+isc_result_t
+expire_lease6(struct iaaddr **addr, struct ipv6_pool *pool, time_t now) {
+	struct iaaddr *tmp;
+	isc_result_t result;
+
+	if (addr == NULL) {
+		log_error("%s(%d): NULL pointer reference", MDL);
+		return ISC_R_INVALIDARG;
+	}
+	if (*addr != NULL) {
+		log_error("%s(%d): non-NULL pointer", MDL);
+		return ISC_R_INVALIDARG;
+	}
+
+	if (pool->num_active > 0) {
+		tmp = (struct iaaddr *)isc_heap_element(pool->active_timeouts, 
+							1);
+		if (now > tmp->valid_lifetime_end_time) {
+			result = move_lease_to_inactive(pool, tmp, FTS_EXPIRED);
+			if (result == ISC_R_SUCCESS) {
+				iaaddr_reference(addr, tmp, MDL);
+			}
+			return result;
+		}
+	}
+	return ISC_R_SUCCESS;
+}
+
 
 /*
  * For a declined lease, leave it on the "active" pool, but mark
@@ -775,6 +858,14 @@ move_lease_to_inactive(struct ipv6_pool *pool, struct iaaddr *addr,
  */
 isc_result_t
 decline_lease6(struct ipv6_pool *pool, struct iaaddr *addr) {
+	isc_result_t result;
+
+	if (addr->state != FTS_ACTIVE) {
+		result = move_lease_to_active(pool, addr);
+		if (result != ISC_R_SUCCESS) {
+			return result;
+		}
+	}
 	addr->state = FTS_ABANDONED;
 	addr->valid_lifetime_end_time = MAX_TIME;
 	isc_heap_decreased(pool->active_timeouts, addr->heap_index);
@@ -786,7 +877,11 @@ decline_lease6(struct ipv6_pool *pool, struct iaaddr *addr) {
  */
 isc_result_t
 release_lease6(struct ipv6_pool *pool, struct iaaddr *addr) {
-	return move_lease_to_inactive(pool, addr, FTS_RELEASED);
+	if (addr->state == FTS_ACTIVE) {
+		return move_lease_to_inactive(pool, addr, FTS_RELEASED);
+	} else {
+		return ISC_R_SUCCESS;
+	}
 }
 
 /*
@@ -835,34 +930,127 @@ add_ipv6_pool(struct ipv6_pool *pool) {
 }
 
 
+static void
+cleanup_old_expired(struct ipv6_pool *pool) {
+	struct iaaddr *tmp;
+	struct ia_na *ia_na;
+	
+	while (pool->num_inactive > 0) {
+		tmp = (struct iaaddr *)isc_heap_element(pool->inactive_timeouts,
+							1);
+		if (cur_time < 
+		    tmp->valid_lifetime_end_time + EXPIRED_IPV6_CLEANUP_TIME) {
+			break;
+		}
+
+		isc_heap_delete(pool->inactive_timeouts, tmp->heap_index);
+		pool->num_inactive--;
+
+		ia_na = NULL;
+		ia_na_reference(&ia_na, tmp->ia_na, MDL);
+		ia_na_remove_iaaddr(ia_na, tmp, MDL);
+		iaaddr_dereference(&tmp, MDL);
+		if (ia_na->num_iaaddr <= 0) {
+			ia_na_hash_delete(ia_active, 
+					  (char *)ia_na->iaid_duid.data,
+					  ia_na->iaid_duid.len, MDL);
+		}
+		ia_na_dereference(&ia_na, MDL);
+	}
+}
+
+static void
+lease_timeout_support(void *vpool) {
+	struct ipv6_pool *pool;
+	struct iaaddr *addr;
+	
+	pool = (struct ipv6_pool *)vpool;
+	for (;;) {
+		/*
+		 * Get the next lease scheduled to expire.
+		 *
+		 * Note that if there are no leases in the pool, 
+		 * expire_lease6() will return ISC_R_SUCCESS with 
+		 * a NULL lease.
+		 */
+		addr = NULL;
+		if (expire_lease6(&addr, pool, cur_time) != ISC_R_SUCCESS) {
+			break;
+		}
+		if (addr == NULL) {
+			break;
+		}
+
+		/* Look to see if there were ddns updates, and if
+		 * so, drop them.
+		 *
+		 * DH: Do we want to do this on a special 'depref'
+		 * timer rather than expiration timer?
+		 */
+		ddns_removals(NULL, addr);
+
+		write_ia_na(addr->ia_na);
+
+		iaaddr_dereference(&addr, MDL);
+	}
+
+	/*
+	 * Do some cleanup of our expired leases.
+	 */
+	cleanup_old_expired(pool);
+
+	/*
+	 * Schedule next round of expirations.
+	 */
+	schedule_lease_timeout(pool);
+}
+
 /*
- * Remove all leases that have expired from the active pool.
+ * For a given pool, add a timer that will remove the next
+ * lease to expire.
  */
 void 
-expire_leases(time_t now) {
-	struct ipv6_pool *pool;
+schedule_lease_timeout(struct ipv6_pool *pool) {
+	struct iaaddr *tmp;
+	time_t timeout;
+	time_t next_timeout;
+
+	next_timeout = MAX_TIME;
+
+	if (pool->num_active > 0) {
+		tmp = (struct iaaddr *)isc_heap_element(pool->active_timeouts, 
+							1);
+		if (tmp->valid_lifetime_end_time < next_timeout) {
+			next_timeout = tmp->valid_lifetime_end_time;
+		}
+	}
+
+	if (pool->num_inactive > 0) {
+		tmp = (struct iaaddr *)isc_heap_element(pool->inactive_timeouts,
+							1);
+		timeout = tmp->valid_lifetime_end_time + 
+			  EXPIRED_IPV6_CLEANUP_TIME;
+		if (timeout < next_timeout) {
+			next_timeout = timeout;
+		}
+	}
+
+	if (next_timeout < MAX_TIME) {
+		add_timeout(next_timeout, lease_timeout_support, pool,
+			    (tvref_t)ipv6_pool_reference, 
+			    (tvunref_t)ipv6_pool_dereference);
+	}
+}
+
+/*
+ * Schedule timeouts across all pools.
+ */
+void
+schedule_all_ipv6_lease_timeouts(void) {
 	int i;
-	struct iaaddr *addr;
 
 	for (i=0; i<num_pools; i++) {
-		pool = pools[i];
-		for (;;) {
-			addr = NULL;
-			if (expire_lease6(&addr, pool, now) != ISC_R_SUCCESS) {
-				break;
-			}
-			if (addr == NULL) {
-				break;
-			}
-			/* Look to see if there were ddns updates, and if
-			 * so, drop them.
-			 *
-			 * DH: Do we want to do this on a special 'depref'
-			 * timer rather than expiration timer?
-			 */
-			ddns_removals(NULL, addr);
-			iaaddr_dereference(&addr, MDL);
-		}
+		schedule_lease_timeout(pools[i]);
 	}
 }
 

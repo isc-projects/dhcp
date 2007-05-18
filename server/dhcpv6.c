@@ -989,6 +989,7 @@ lease_to_client(struct data_string *reply_ret,
 	u_int32_t iaid;
 	struct ia_na *ia_na;
 	struct ia_na *existing_ia_na;
+	struct ia_na *old_ia_na;
 	int i;
 
 	/*
@@ -1548,9 +1549,21 @@ lease_to_client(struct data_string *reply_ret,
 			 * Otherwise save the IA_NA, for the same reason.
 			 */
 			else if (packet->dhcpv6_msg_type != DHCPV6_SOLICIT) {
-				ia_na_hash_delete(ia_active, 
-						  (char *)ia_na->iaid_duid.data,
-						  ia_na->iaid_duid.len, MDL);
+				/*
+				 * Remove previous version of this IA_NA,
+				 * if one exists.
+				 */
+				struct data_string *d = &ia_na->iaid_duid;
+				old_ia_na = NULL;
+				if (ia_na_hash_lookup(&old_ia_na, ia_active,
+						      (char *)d->data,
+						      d->len, MDL)) {
+					ia_na_hash_delete(ia_active, 
+							  (char *)d->data,
+							  d->len, MDL);
+					ia_na_dereference(&old_ia_na, MDL);
+				}
+
 				/*
 				 * ia_na_add_iaaddr() will reference the
 				 * lease, so we need to dereference the
@@ -1570,6 +1583,7 @@ lease_to_client(struct data_string *reply_ret,
 				               ia_na->iaid_duid.len, 
 					       ia_na, MDL);
 				write_ia_na(ia_na);
+				schedule_lease_timeout(lease->ipv6_pool);
 
 				/* If this constitutes a binding, and we
 				 * are performing ddns updates, then give
