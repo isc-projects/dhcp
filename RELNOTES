@@ -63,7 +63,9 @@ the README file.
 - Silenced several other compiler warnings.
 
 - Include the more standard sys/uio.h rather than rely upon other
-  header files to include it (fixes a BSDI compile failure).
+  header files to include it (fixes a BSD 4.2 compile failure).
+
+- Duplicate dhclient-script updates for DHCPv6 to all provided scripts.
 
 		     Changes since 3.1.0 (NEW FEATURES)
 
