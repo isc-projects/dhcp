@@ -32,7 +32,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.148 2007/05/17 18:27:10 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.149 2007/05/18 18:45:51 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -73,7 +73,7 @@ int no_daemon=0;
 struct string_list *client_env=NULL;
 int client_env_count=0;
 int onetry=0;
-int quiet=0;
+int quiet=1;
 int nowait=0;
 char *mockup_relay = NULL;
 
@@ -169,6 +169,7 @@ main(int argc, char **argv) {
 			       ntohs (local_port));
 		} else if (!strcmp (argv [i], "-d")) {
 			no_daemon = 1;
+			quiet = 0;
                 } else if (!strcmp (argv [i], "-pf")) {
                         if (++i == argc)
                                 usage ();
@@ -193,7 +194,6 @@ main(int argc, char **argv) {
 			onetry = 1;
 		} else if (!strcmp (argv [i], "-q")) {
 			quiet = 1;
-			quiet_interface_discovery = 1;
 		} else if (!strcmp (argv [i], "-s")) {
 			if (++i == argc)
 				usage ();
@@ -221,6 +221,8 @@ main(int argc, char **argv) {
 			tmp -> next = client_env;
 			client_env = tmp;
 			client_env_count++;
+		} else if (!strcmp(argv[i], "-v")) {
+			quiet = 0;
 		} else if (!strcmp (argv [i], "--version")) {
 			log_info ("isc-dhclient-%s", DHCP_VERSION);
 			exit (0);
@@ -299,8 +301,10 @@ main(int argc, char **argv) {
 		log_info (arr);
 		log_info (url);
 		log_info ("%s", "");
-	} else
+	} else {
 		log_perror = 0;
+		quiet_interface_discovery = 1;
+	}
 
 	/* If we're given a relay agent address to insert, for testing
 	   purposes, figure out what it is. */
@@ -518,7 +522,7 @@ static void usage ()
 	log_info (arr);
 	log_info (url);
 
-	log_error ("Usage: dhclient [-1dqr] [-nw] [-p <port>] %s",
+	log_error ("Usage: dhclient [-1dvr] [-nw] [-p <port>] %s",
 		   "[-s server]");
 	log_error ("                [-cf config-file] [-lf lease-file]%s",
 		   "[-pf pid-file] [-e VAR=val]");
@@ -3024,7 +3028,6 @@ void go_daemon ()
 	open("/dev/null", O_RDWR);
 	open("/dev/null", O_RDWR);
 	open("/dev/null", O_RDWR);
-	log_perror = 0; /* No sense logging to /dev/null. */
 
 	write_client_pid_file ();
 }

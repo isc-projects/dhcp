@@ -24,7 +24,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhc6.c,v 1.3 2007/05/17 18:27:10 dhankins Exp $ Copyright (c) 2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhc6.c,v 1.4 2007/05/18 18:45:51 dhankins Exp $ Copyright (c) 2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -853,6 +853,9 @@ start_init6(struct client_state *client)
 	 */
 	add_timeout(cur_time + (random() % SOL_MAX_DELAY), do_init6, client,
 		    NULL, NULL);
+
+	if (nowait)
+		go_daemon();
 }
 
 /* start_init6() kicks off an "init-reboot" version of the process, at
@@ -2592,10 +2595,14 @@ start_bound(struct client_state *client)
 
 			if (old != NULL)
 				dhc6_marshall_values("old_", client, old,
-						     oldia, oldia->addrs);
+						     oldia,
+						     oldia != NULL ?
+							 oldia->addrs : NULL);
 
 			dhc6_marshall_values("new_", client, lease, ia,
 					     NULL);
+
+			script_go(client);
 		}
 	}
 
@@ -2610,7 +2617,11 @@ start_bound(struct client_state *client)
 						old->bindings->addrs : NULL);
 
 		dhc6_marshall_values("new_", client, lease, NULL, NULL);
+
+		script_go(client);
 	}
+
+	go_daemon();
 
 	if (client->old_lease != NULL) {
 		dhc6_lease_destroy(client->old_lease, MDL);

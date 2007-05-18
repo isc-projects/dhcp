@@ -2314,6 +2314,8 @@ char *piaddrmask(struct iaddr *, struct iaddr *);
 char *piaddrcidr(const struct iaddr *, unsigned int);
 
 /* dhclient.c */
+extern int nowait;
+
 extern const char *path_dhclient_conf;
 extern const char *path_dhclient_db;
 extern const char *path_dhclient_pid;

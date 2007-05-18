@@ -74,6 +74,12 @@ the README file.
 
 - Corrected a segmentation violation in DHCPv4 socket processing.
 
+- dhclient will now fork() into the background once it binds to an
+  IPv6 address, or immediately if the -n flag is supplised.
+
+- -q is now the default behaviour on dhclient, with -d or -v enabling
+  non-quiet (stderr logging) mode.
+
 		     Changes since 3.1.0 (NEW FEATURES)
 
 - DHCPv6 Client and Server protocol support.  Use '-6' to run the daemons

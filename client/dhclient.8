@@ -1,4 +1,4 @@
-.\"	$Id: dhclient.8,v 1.21 2007/05/08 23:05:20 dhankins Exp $
+.\"	$Id: dhclient.8,v 1.22 2007/05/18 18:45:51 dhankins Exp $
 .\"
 .\" Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 1996-2003 by Internet Software Consortium
@@ -88,6 +88,12 @@ relay
 .B -w
 ]
 [
+.B -v
+]
+[
+.B --version
+]
+[
 .I if0
 [
 .I ...ifN
@@ -115,6 +121,9 @@ DHCPv4 protocol to obtain an IPv4 address and configuration parameters.
 If given the -6 command line argument, dhclient will use the DHCPv6
 protocol to obtain whatever PIv6 addresses are available along with
 configuration parameters.  Information-request is not yet supported.
+.PP
+If given the --version command line argument, dhclient will print its
+version number and exit.
 .PP
 On startup, dhclient reads the
 .IR dhclient.conf
@@ -211,14 +220,17 @@ just as one would assign a variable in a shell.  Eg:
 .B -e
 .I IF_METRIC=1
 .PP
-The client normally prints a startup message and displays the
-protocol sequence to the standard error descriptor until it has
-acquired an address, and then only logs messages using the
+The client normally prints no output during its startup sequence.  It
+can be made to emit verbose messages displaying the startup sequence events
+until it has acquired an address by supplying the
+.B -v
+command line argument.  In either case, the client logs messages using
+the
 .B syslog (3)
-facility.   The
+facility.  A
 .B -q
-flag prevents any messages other than errors from being printed to the
-standard error descriptor.
+command line argument is provided for backwards compatibility, but since
+dhclient is quiet by default, it has no effect.
 .PP
 The client normally doesn't release the current lease as it is not
 required by the DHCP protocol.  Some cable ISPs require their clients
