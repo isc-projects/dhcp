@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bpf.c,v 1.52 2007/05/16 22:27:34 shane Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: bpf.c,v 1.53 2007/05/18 17:21:46 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -115,6 +115,8 @@ int if_register_bpf (info)
 	if (ioctl (sock, BIOCSETIF, info -> ifp) < 0)
 		log_fatal ("Can't attach interface %s to bpf device %s: %m",
 		       info -> name, filename);
+
+	get_hw_addr(info->name, &info->hw_address);
 
 	return sock;
 }

@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: discover.c,v 1.54 2007/05/16 22:27:34 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: discover.c,v 1.55 2007/05/18 17:21:46 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -52,7 +52,7 @@ int (*dhcp_interface_shutdown_hook) (struct interface_info *);
 
 struct in_addr limited_broadcast;
 
-int local_family = AF_INET6;
+int local_family = AF_INET;
 struct in_addr local_address;
 struct in6_addr local_address6;
 
@@ -969,6 +969,24 @@ discover_interfaces(int state) {
 	}
 
 	end_iface_scan(&ifaces);
+
+
+	/* Mock-up an 'ifp' structure which is no longer used in the
+	 * new interface-sensing code, but is used in higher layers
+	 * (for example to sense fallback interfaces).
+	 */
+	for (tmp = interfaces ; tmp != NULL ; tmp = tmp->next) {
+		if (tmp->ifp == NULL) {
+			struct ifreq *tif;
+
+			tif = (struct ifreq *)dmalloc(sizeof(struct ifreq),
+						      MDL);
+			if (tif == NULL)
+				log_fatal("no space for ifp mockup.");
+			strcpy(tif->ifr_name, tmp->name);
+			tmp->ifp = tif;
+		}
+	}
 
 
 	/* Now cycle through all the interfaces we found, looking for

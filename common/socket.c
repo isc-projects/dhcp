@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: socket.c,v 1.63 2007/05/17 18:27:11 dhankins Exp $ "
+"$Id: socket.c,v 1.64 2007/05/18 17:21:46 dhankins Exp $ "
 "Copyright (c) 2004-2006 Internet Systems Consortium.\n";
 #endif /* not lint */
 
@@ -244,6 +244,8 @@ if_register_socket(struct interface_info *info, int family, int do_multicast) {
 		}
 	}
 
+	get_hw_addr(info->name, &info->hw_address);
+
 	return sock;
 }
 #endif /* USE_SOCKET_SEND || USE_SOCKET_RECEIVE || USE_SOCKET_FALLBACK */
@@ -324,7 +326,6 @@ void
 if_register6(struct interface_info *info, int do_multicast) {
 	info->rfdesc = if_register_socket(info, AF_INET6, do_multicast);
 	info->wfdesc = info->rfdesc;
-	get_hw_addr(info->name, &info->hw_address);
 	if (!quiet_interface_discovery) {
 		if (info->shared_network != NULL) {
 			log_info("Listening on Socket/%s/%s", info->name, 

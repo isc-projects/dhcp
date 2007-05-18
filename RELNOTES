@@ -67,6 +67,13 @@ the README file.
 
 - Duplicate dhclient-script updates for DHCPv6 to all provided scripts.
 
+- DHCPv4 I/O methods that failed to sense hardware address were corrected.
+
+- DHCPv4 is now the default (as documented) rather than DHCPv6.  The default
+  was set to DHCPv6 to facilitate ease early development, and forgotten.
+
+- Corrected a segmentation violation in DHCPv4 socket processing.
+
 		     Changes since 3.1.0 (NEW FEATURES)
 
 - DHCPv6 Client and Server protocol support.  Use '-6' to run the daemons

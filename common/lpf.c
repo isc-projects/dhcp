@@ -28,7 +28,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: lpf.c,v 1.33 2007/05/16 22:27:34 shane Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: lpf.c,v 1.34 2007/05/18 17:21:46 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -107,6 +107,8 @@ int if_register_lpf (info)
 		}
 		log_fatal ("Bind socket to interface: %m");
 	}
+
+	get_hw_addr(info->name, &info->hw_address);
 
 	return sock;
 }

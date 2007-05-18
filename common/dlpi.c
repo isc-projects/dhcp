@@ -87,7 +87,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dlpi.c,v 1.31 2007/05/08 23:05:20 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dlpi.c,v 1.32 2007/05/18 17:21:46 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -293,6 +293,8 @@ int if_register_dlpi (info)
 		   info -> name);
 	}
 #endif
+
+	get_hw_addr(info->name, &info->hw_address);
 
 	return sock;
 }
