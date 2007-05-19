@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bpf.c,v 1.53 2007/05/18 17:21:46 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: bpf.c,v 1.54 2007/05/19 16:14:48 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -59,7 +59,9 @@ static char copyright[] =
 #include "includes/netinet/if_ether.h"
 #endif
 
+#ifdef USE_BPF_RECEIVE
 #include <ifaddrs.h>
+#endif
 
 /* Reinitializes the specified interface after an address change.   This
    is not required for packet-filter APIs. */
