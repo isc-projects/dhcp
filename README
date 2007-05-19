@@ -433,14 +433,10 @@ where iface is the name of the interface (e.g., ``ifconfig hme0 plumb'').
 
 It should be noted that Solaris versions from 2.6 onward include a
 DHCP client that you can run with ``/sbin/ifconfig iface dhcp start''
-rather than using the ISC DHCP client.  The feature set of the Solaris
-client is different (not necessarily better or worse) than that of the
-ISC client, but in most cases it will be a lot easier for you to just
-use that.  Please do not ask for help in using the Solaris DHCP client
-on Internet Systems Consortium mailing lists - that's why you're
-paying Sun the big bucks.   If you're having a problem with the
-Solaris client interoperating with the ISC dhcp server, that's another
-matter, but please check with Sun first.
+rather than using the ISC DHCP client, including DHCPv6.  Consequently,
+we don't believe there is a need for the client to run on Solaris, and
+have not engineered the needed DHCPv6 modifications for the dhclient-script.
+If you feel this is in error, or have a need, please contact us.
 
 				AIX
 
