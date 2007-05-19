@@ -10,6 +10,9 @@
 /* Define to 1 if you have the /dev/random file. */
 #undef HAVE_DEV_RANDOM
 
+/* Define to 1 if the system has a net/if_dl.h header. */
+#undef HAVE_IF_DL
+
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
 
@@ -39,9 +42,6 @@
 
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
-
-/* Define to 1 if you have the <net/if_dl.h> header file. */
-#undef HAVE_IF_DL
 
 /* Define to 1 if the inet_aton() function is missing. */
 #undef NEED_INET_ATON
