@@ -40,9 +40,14 @@
 #include "config.h"
 
 #include <inttypes.h>
+/* XXX: now that we have a nice autoconf, we should sense this in
+ * ./configure.
+ */
+#ifdef __sun__
 typedef uint8_t u_int8_t;
 typedef uint16_t u_int16_t;
 typedef uint32_t u_int32_t;
+#endif
 
 #ifndef LITTLE_ENDIAN
 #define LITTLE_ENDIAN 1234
