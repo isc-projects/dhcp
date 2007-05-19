@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bpf.c,v 1.56 2007/05/19 23:28:38 dhankins Exp $ Copyright (c) 2004,2007 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: bpf.c,v 1.57 2007/05/19 23:39:51 dhankins Exp $ Copyright (c) 2004,2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -48,6 +48,7 @@ static char copyright[] =
 #  include <sys/ioctl.h>
 #  include <sys/uio.h>
 #  include <net/bpf.h>
+#  include <net/if_types.h>
 #  if defined (NEED_OSF_PFILT_HACKS)
 #   include <net/pfilt.h>
 #  endif
@@ -602,7 +603,7 @@ get_hw_addr(const char *name, struct hardware *hw) {
 #endif /* IFT_FDDI */
                 default:
                         log_fatal("Unsupported device type %d for \"%s\"",
-                                  sa->sa_family, name);
+                                  sa->sdl_type, name);
         }
 
 	freeifaddrs(ifa);
