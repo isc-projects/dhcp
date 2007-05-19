@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: discover.c,v 1.57 2007/05/19 21:35:21 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: discover.c,v 1.58 2007/05/19 23:28:38 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -903,20 +903,6 @@ discover_interfaces(int state) {
 		if (dhcp_interface_discovery_hook) {
 			(*dhcp_interface_discovery_hook)(tmp);
 		}
-
-		/* If we have the capability, extract link information
-		   and record it in. */
-#ifdef HAVE_AF_LINK
-		if (info.addr.ss_family == AF_LINK) {
-			struct sockaddr_dl *d = (struct sockaddr_dl*)&info.addr;
-			tmp->hw_address.hlen = d->sdl_alen;
-			tmp->hw_address.hbuf[0] = HTYPE_ETHER; /* XXX */
-			memcpy(&tmp->hw_address.hbuf[1], 
-			       LLADDR(d),
-			       tmp->hw_address.hlen);
-			tmp->hw_address.hlen++;	/* for type. */
-		} else
-#endif /* AF_LINK */
 
 		if ((info.addr.ss_family == AF_INET) && 
 		    (local_family == AF_INET)) {

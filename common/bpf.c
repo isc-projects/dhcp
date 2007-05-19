@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bpf.c,v 1.55 2007/05/19 18:47:14 dhankins Exp $ Copyright (c) 2004,2007 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: bpf.c,v 1.56 2007/05/19 23:28:38 dhankins Exp $ Copyright (c) 2004,2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -556,7 +556,7 @@ void
 get_hw_addr(const char *name, struct hardware *hw) {
 	struct ifaddrs *ifa;
 	struct ifaddrs *p;
-	struct sockaddr *sa;
+	struct sockaddr_dl *sa;
 
 	if (getifaddrs(&ifa) != 0) {
 		log_fatal("Error getting interface information; %m");
@@ -569,7 +569,7 @@ get_hw_addr(const char *name, struct hardware *hw) {
 	for (p=ifa; (p != NULL) && (sa == NULL); p = p->ifa_next) {
 		if ((p->ifa_addr->sa_family == AF_LINK) && 
 		    !strcmp(p->ifa_name, name)) {
-		    	sa = p->ifa_addr;
+		    	sa = (struct sockaddr_dl *)p->ifa_addr;
 		}
 	}
 	if (sa == NULL) {
@@ -579,27 +579,27 @@ get_hw_addr(const char *name, struct hardware *hw) {
 	/*
 	 * Pull out the appropriate information.
 	 */
-        switch (sa->sa_family) {
-                case ARPHRD_ETHER:
-                        hw->hlen = 7;
+        switch (sa->sdl_type) {
+                case IFT_ETHER:
+                        hw->hlen = sa->sdl_alen + 1;
                         hw->hbuf[0] = HTYPE_ETHER;
-                        memcpy(&hw->hbuf[1], sa->sa_data, 6);
+                        memcpy(&hw->hbuf[1], LLADDR(sa), sa->sdl_alen);
                         break;
-                case ARPHRD_IEEE802:
-#ifdef ARPHRD_IEEE802_TR
-                case ARPHRD_IEEE802_TR:
-#endif /* ARPHRD_IEEE802_TR */
-                        hw->hlen = 7;
+		case IFT_ISO88023:
+		case IFT_ISO88024: /* "token ring" */
+		case IFT_ISO88025:
+		case IFT_ISO88026:
+                        hw->hlen = sa->sdl_alen + 1;
                         hw->hbuf[0] = HTYPE_IEEE802;
-                        memcpy(&hw->hbuf[1], sa->sa_data, 6);
+                        memcpy(&hw->hbuf[1], LLADDR(sa), sa->sdl_alen);
                         break;
-#ifdef ARPHRD_FDDI
-                case ARPHRD_FDDI:
-                        hw->hlen = 17;
+#ifdef IFT_FDDI
+                case IFT_FDDI:
+                        hw->hlen = sa->sdl_alen + 1;
                         hw->hbuf[0] = HTYPE_FDDI;
-                        memcpy(&hw->hbuf[1], sa->sa_data, 16);
+                        memcpy(&hw->hbuf[1], LLADDR(sa), sa->sdl_alen);
                         break;
-#endif /* ARPHRD_FDDI */
+#endif /* IFT_FDDI */
                 default:
                         log_fatal("Unsupported device type %d for \"%s\"",
                                   sa->sa_family, name);
