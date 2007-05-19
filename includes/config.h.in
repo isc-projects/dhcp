@@ -40,6 +40,9 @@
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
 
+/* Define to 1 if you have the <net/if_dl.h> header file. */
+#undef HAVE_IF_DL
+
 /* Define to 1 if the inet_aton() function is missing. */
 #undef NEED_INET_ATON
 

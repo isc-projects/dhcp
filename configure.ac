@@ -66,6 +66,11 @@ AC_CHECK_HEADER(net/bpf.h,
 		  [Define to 1 to use the 
 		   Berkeley Packet Filter interface code.]))
 
+# Look for optional headers.
+AC_CHECK_HEADER(net/if_dl.h,
+	AC_DEFINE([HAVE_IF_DL], [1],
+		  [Define to 1 if the system has a net/if_dl.h header.]))
+
 # find an MD5 library
 AC_SEARCH_LIBS(MD5_Init, [crypto])
 AC_SEARCH_LIBS(MD5Init, [crypto])

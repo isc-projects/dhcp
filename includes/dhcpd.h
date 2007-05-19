@@ -58,6 +58,9 @@
 #include <net/if.h>
 #include <net/route.h>
 #include <net/if_arp.h>
+#if HAVE_IF_DL
+# include <net/if_dl.h>
+#endif
 
 #include <setjmp.h>
 
