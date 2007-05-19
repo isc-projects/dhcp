@@ -3,7 +3,7 @@
    Parser for dhcpd config file... */
 
 /*
- * Copyright (c) 2004-2006 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.164 2007/05/18 09:26:58 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.165 2007/05/19 18:47:15 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -284,8 +284,10 @@ isc_result_t lease_file_subparse (struct parse *cfile)
 			parse_failover_state_declaration
 				(cfile, (dhcp_failover_state_t *)0);
 #endif
+#ifdef DHCPv6
 		} else if (token == SERVER_DUID) {
 			parse_server_duid(cfile);
+#endif /* DHCPv6 */
 		} else {
 			log_error ("Corrupt lease file - possible data loss!");
 			skip_to_semi (cfile);
@@ -596,6 +598,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 				     (struct lease **)0);
 		return declaration;
 
+#ifdef DHCPv6
 	      case RANGE6:
 		next_token(NULL, NULL, cfile);
 	        if ((type != SUBNET_DECL) || (group->subnet == NULL)) {
@@ -606,6 +609,7 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 		}
 	      	parse_address_range6(cfile, group);
 		return declaration;
+#endif /* DHCPv6 */
 
 	      case TOKEN_NOT:
 		token = next_token (&val, (unsigned *)0, cfile);
@@ -715,9 +719,11 @@ int parse_statement (cfile, group, type, host_decl, declaration)
 #endif
 		break;
 			
+#ifdef DHCPv6 
 	      case SERVER_DUID:
 		parse_server_duid_conf(cfile);
 		break;
+#endif /* DHCPv6 */
 
 	      default:
 		et = (struct executable_statement *)0;
@@ -2590,6 +2596,10 @@ parse_subnet6_declaration(struct parse *cfile, struct shared_network *share) {
 	struct iaddr iaddr;
 	struct ipv6_pool *pool;
 
+#if !defined(DHCPv6)
+	parse_warn(cfile, "No DHCPv6 support.");
+	skip_to_semi(cfile);
+#else /* defined(DHCPv6) */
 	subnet = NULL;
 	status = subnet_allocate(&subnet, MDL);
 	if (status != ISC_R_SUCCESS) {
@@ -2656,6 +2666,7 @@ parse_subnet6_declaration(struct parse *cfile, struct shared_network *share) {
 	if (!common_subnet_parsing(cfile, share, subnet)) {
 		return;
 	}
+#endif /* defined(DHCPv6) */
 }
 
 /* group-declaration :== RBRACE parameters declarations LBRACE */
@@ -3575,6 +3586,7 @@ void parse_address_range (cfile, group, type, inpool, lpchain)
 	pool_dereference (&pool, MDL);
 }
 
+#ifdef DHCPv6
 static void
 add_ipv6_pool_to_shared_network(struct shared_network *share, 
 				struct iaddr *lo_addr,
@@ -3728,6 +3740,7 @@ parse_address_range6(struct parse *cfile, struct group *group) {
 		return;
 	}
 }
+#endif /* DHCPv6 */
 
 /* allow-deny-keyword :== BOOTP
    			| BOOTING
@@ -3816,6 +3829,10 @@ parse_ia_na_declaration(struct parse *cfile) {
 	char addr_buf[sizeof("ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255")];
 	struct data_string uid;
 
+#if !defined(DHCPv6)
+	parse_warn(cfile, "No DHCPv6 support.");
+	skip_to_semi(cfile);
+#else /* defined(DHCPv6) */
 	token = next_token(&val, &len, cfile);
 	if (token != STRING) {
 		parse_warn(cfile, "corrupt lease file; "
@@ -3996,8 +4013,10 @@ parse_ia_na_declaration(struct parse *cfile) {
 			       ia_na->iaid_duid.len, ia_na, MDL);
 	}
 	ia_na_dereference(&ia_na, MDL);
+#endif /* defined(DHCPv6) */
 }
 
+#ifdef DHCPv6 
 /*
  * When we parse a server-duid statement in a lease file, we are 
  * looking at the saved server DUID from a previous run. In this case
@@ -4286,3 +4305,6 @@ parse_server_duid_conf(struct parse *cfile) {
 		skip_to_semi(cfile);
 	}
 }
+
+#endif /* DHCPv6 */
+

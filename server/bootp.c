@@ -34,10 +34,11 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bootp.c,v 1.77 2007/05/08 23:05:21 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: bootp.c,v 1.78 2007/05/19 18:47:15 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
+#include <errno.h>
 
 #if defined (TRACING)
 # define send_packet trace_packet_send

@@ -32,9 +32,13 @@
  * ``http://www.nominum.com''.
  */
 
+#include "dhcpd.h"
+
 #include <omapip/omapip_p.h>
 #include "arpa/nameser.h"
 #include "minires/minires.h"
+
+#include <errno.h>
 
 isc_result_t ns_rcode_to_isc (int nsr)
 {

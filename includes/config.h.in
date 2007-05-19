@@ -1,0 +1,92 @@
+/* includes/config.h.in.  Generated from configure.ac by autoheader.  */
+
+/* Define to BIG_ENDIAN for MSB (Motorola or SPARC CPUs) or LITTLE_ENDIAN for
+   LSB (Intel CPUs). */
+#undef DHCP_BYTE_ORDER
+
+/* Define to 1 to include DHCPv6 support. */
+#undef DHCPv6
+
+/* Define to 1 if you have the /dev/random file. */
+#undef HAVE_DEV_RANDOM
+
+/* Define to 1 if you have the <inttypes.h> header file. */
+#undef HAVE_INTTYPES_H
+
+/* Define to 1 if you have the <memory.h> header file. */
+#undef HAVE_MEMORY_H
+
+/* Define to 1 if the sockaddr structure has a length field. */
+#undef HAVE_SA_LEN
+
+/* Define to 1 if you have the <stdint.h> header file. */
+#undef HAVE_STDINT_H
+
+/* Define to 1 if you have the <stdlib.h> header file. */
+#undef HAVE_STDLIB_H
+
+/* Define to 1 if you have the <strings.h> header file. */
+#undef HAVE_STRINGS_H
+
+/* Define to 1 if you have the <string.h> header file. */
+#undef HAVE_STRING_H
+
+/* Define to 1 if you have the <sys/stat.h> header file. */
+#undef HAVE_SYS_STAT_H
+
+/* Define to 1 if you have the <sys/types.h> header file. */
+#undef HAVE_SYS_TYPES_H
+
+/* Define to 1 if you have the <unistd.h> header file. */
+#undef HAVE_UNISTD_H
+
+/* Define to 1 if the inet_aton() function is missing. */
+#undef NEED_INET_ATON
+
+/* Name of package */
+#undef PACKAGE
+
+/* Define to the address where bug reports for this package should be sent. */
+#undef PACKAGE_BUGREPORT
+
+/* Define to the full name of this package. */
+#undef PACKAGE_NAME
+
+/* Define to the full name and version of this package. */
+#undef PACKAGE_STRING
+
+/* Define to the one symbol short name of this package. */
+#undef PACKAGE_TARNAME
+
+/* Define to the version of this package. */
+#undef PACKAGE_VERSION
+
+/* Define to 1 if you have the ANSI C header files. */
+#undef STDC_HEADERS
+
+/* Define to 1 to use the Berkeley Packet Filter interface code. */
+#undef USE_BPF
+
+/* Define to 1 to use DLPI interface code. */
+#undef USE_DLPI
+
+/* Define to 1 to use the Linux Packet Filter interface code. */
+#undef USE_LPF
+
+/* Version number of package */
+#undef VERSION
+
+/* File for dhclient process information. */
+#undef _PATH_DHCLIENT
+
+/* File for dhclient leases. */
+#undef _PATH_DHCLIENT_DB
+
+/* File for dhcpd leases. */
+#undef _PATH_DHCPD_DB
+
+/* File for dhcpd process information. */
+#undef _PATH_DHCPD_PID
+
+/* File for dhcrelay process information. */
+#undef _PATH_DHCRELAY_PID

@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: alloc.c,v 1.58 2007/05/08 23:05:20 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: alloc.c,v 1.59 2007/05/19 18:47:13 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -310,7 +310,7 @@ void free_name_server (ptr, file, line)
 	const char *file;
 	int line;
 {
-	dfree ((VOIDPTR)ptr, file, line);
+	dfree ((void *)ptr, file, line);
 }
 
 struct option *new_option (name, file, line)
@@ -347,7 +347,7 @@ void free_universe (ptr, file, line)
 	const char *file;
 	int line;
 {
-	dfree ((VOIDPTR)ptr, file, line);
+	dfree ((void *)ptr, file, line);
 }
 
 void free_domain_search_list (ptr, file, line)
@@ -355,7 +355,7 @@ void free_domain_search_list (ptr, file, line)
 	const char *file;
 	int line;
 {
-	dfree ((VOIDPTR)ptr, file, line);
+	dfree ((void *)ptr, file, line);
 }
 
 void free_protocol (ptr, file, line)
@@ -363,7 +363,7 @@ void free_protocol (ptr, file, line)
 	const char *file;
 	int line;
 {
-	dfree ((VOIDPTR)ptr, file, line);
+	dfree ((void *)ptr, file, line);
 }
 
 void free_dhcp_packet (ptr, file, line)
@@ -371,7 +371,7 @@ void free_dhcp_packet (ptr, file, line)
 	const char *file;
 	int line;
 {
-	dfree ((VOIDPTR)ptr, file, line);
+	dfree ((void *)ptr, file, line);
 }
 
 struct client_lease *new_client_lease (file, line)
@@ -887,7 +887,7 @@ int option_state_allocate (ptr, file, line)
 #endif
 	}
 
-	size = sizeof **ptr + (universe_count - 1) * sizeof (VOIDPTR);
+	size = sizeof **ptr + (universe_count - 1) * sizeof (void *);
 	*ptr = dmalloc (size, file, line);
 	if (*ptr) {
 		memset (*ptr, 0, size);

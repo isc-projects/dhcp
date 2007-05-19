@@ -1223,6 +1223,7 @@ write_ia_na_leases(const void *name, unsigned len, void *value) {
 	return ISC_R_SUCCESS;
 }
 
+#ifdef DHCPv6
 /*
  * Write all DHCPv6 information.
  */
@@ -1236,6 +1237,7 @@ write_leases6(void) {
 	}
 	return 1;
 }
+#endif /* DHCPv6 */
 
 static isc_result_t
 mark_hosts_unavailable_support(const void *name, unsigned len, void *value) {

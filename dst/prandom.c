@@ -1,5 +1,5 @@
 #ifndef LINT
-static const char rcsid[] = "$Header: /tmp/cvstest/DHCP/dst/prandom.c,v 1.1 2001/02/22 07:22:09 mellon Exp $";
+static const char rcsid[] = "$Header: /tmp/cvstest/DHCP/dst/prandom.c,v 1.2 2007/05/19 18:47:14 dhankins Exp $";
 #endif
 /*
  * Portions Copyright (c) 1995-1998 by Trusted Information Systems, Inc.
@@ -75,6 +75,98 @@ static const char rcsid[] = "$Header: /tmp/cvstest/DHCP/dst/prandom.c,v 1.1 2001
  */
 #define MAX_OLD 3600
 
+/*
+ *  Define a single set of configuration for prand stuff. A superset 
+ *  works okay (failed commands return no data, missing directories 
+ *  are skipped, and so on.
+ */
+static const char *cmds[] = {
+	"/usr/bin/netstat -an 2>&1",
+        "/usr/sbin/netstat -an 2>&1",
+        "/usr/etc/netstat -an 2>&1",
+	"/bin/netstat -an 2>&1",
+	"/usr/ucb/netstat -an 2>&1",
+
+	/* AIX */
+	"/bin/ps -ef 2>&1",
+	"/bin/df  2>&1",
+	"/usr/bin/uptime  2>&1",
+	"/usr/bin/printenv  2>&1",
+	"/usr/bin/netstat -s 2>&1",
+	"/usr/bin/w  2>&1",
+	/* Tru64 */
+        "/usr/bin/dig com. soa +ti=1 +retry=0 2>&1",
+	"/usr/sbin/arp -an 2>&1",
+        "/usr/ucb/uptime  2>&1",
+        "/bin/iostat  2>&1",
+	/* BSD */
+        "/bin/ps -axlw 2>&1",
+        "/usr/sbin/iostat  2>&1",
+        "/usr/sbin/vmstat  2>&1",
+	/* FreeBSD */
+        "/usr/bin/vmstat  2>&1",
+        "/usr/bin/w  2>&1",
+	/* HP/UX */
+        "/usr/bin/ps -ef 2>&1",
+	/* IRIX */
+        "/usr/etc/arp -a 2>&1",
+        "/usr/bsd/uptime  2>&1",
+        "/usr/bin/printenv  2>&1",
+        "/usr/bsd/w  2>&1",
+	/* Linux */
+        "/sbin/arp -an 2>&1",
+        "/usr/bin/vmstat  2>&1",
+	/* NetBSD */
+	/* OpenBSD */
+	/* QNX */
+	"/bin/ps -a 2>&1",
+	"/bin/sin 2>&1",
+	"/bin/sin fds 2>&1",
+	"/bin/sin memory 2>&1",
+	/* Solaris */
+        "/usr/ucb/uptime  2>&1",
+        "/usr/ucb/netstat -an 2>&1",
+
+	"/usr/bin/netstat -an 2>&1",
+        "/usr/sbin/netstat -an 2>&1",
+        "/usr/etc/netstat -an 2>&1",
+	"/bin/netstat -an 2>&1",
+	"/usr/ucb/netstat -an 2>&1",
+	NULL
+};
+
+static const char *dirs[] = {
+	"/tmp",
+	"/var/tmp",
+	".",
+	"/",
+	"/var/spool",
+	"/var/adm",
+	"/dev",
+	"/var/spool/mail",
+	"/var/mail",
+	"/home",
+	"/usr/home",
+        NULL
+};
+
+static const char *files[] = {
+        "/var/adm/messages",
+        "/var/adm/wtmp",
+        "/var/adm/lastlog",
+        "/var/log/messages",
+        "/var/log/wtmp",
+        "/var/log/lastlog",
+        "/proc/stat",
+        "/proc/rtc",
+        "/proc/meminfo",
+        "/proc/interrupts",
+        "/proc/self/status",
+        "/proc/ipstats",
+        "/proc/dumper",
+        "/proc/self/as",
+        NULL
+};
 
 /*  
  *  these two data structure are used to process input data into digests, 

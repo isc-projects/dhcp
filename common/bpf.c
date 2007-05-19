@@ -3,7 +3,7 @@
    BPF socket interface code, originally contributed by Archie Cobbs. */
 
 /*
- * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004,2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: bpf.c,v 1.54 2007/05/19 16:14:48 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: bpf.c,v 1.55 2007/05/19 18:47:14 dhankins Exp $ Copyright (c) 2004,2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -62,6 +62,8 @@ static char copyright[] =
 #ifdef USE_BPF_RECEIVE
 #include <ifaddrs.h>
 #endif
+
+#include <errno.h>
 
 /* Reinitializes the specified interface after an address change.   This
    is not required for packet-filter APIs. */

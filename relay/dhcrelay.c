@@ -34,11 +34,11 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcrelay.c,v 1.60 2007/05/08 23:05:21 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhcrelay.c,v 1.61 2007/05/19 18:47:15 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
-#include "version.h"
+#include <syslog.h>
 
 static void usage PROTO ((void));
 
@@ -127,14 +127,9 @@ main(int argc, char **argv) {
         else if (fd != -1)
                 close(fd);
 
-#ifdef SYSLOG_4_2
-	openlog ("dhcrelay", LOG_NDELAY);
-	log_priority = LOG_DAEMON;
-#else
 	openlog ("dhcrelay", LOG_NDELAY, LOG_DAEMON);
-#endif
 
-#if !(defined (DEBUG) || defined (SYSLOG_4_2))
+#if !defined(DEBUG)
 	setlogmask (LOG_UPTO (LOG_INFO));
 #endif	
 
@@ -206,7 +201,7 @@ main(int argc, char **argv) {
  		} else if (argv [i][0] == '-') {
  		    usage ();
 		} else if (!strcmp (argv [i], "--version")) {
-			log_info ("isc-dhcrelay-%s", DHCP_VERSION);
+			log_info ("isc-dhcrelay-%s", PACKAGE_VERSION);
 			exit (0);
  		} else {
 			struct hostent *he;
@@ -241,7 +236,7 @@ main(int argc, char **argv) {
 	}
 
 	if (!quiet) {
-		log_info ("%s %s", message, DHCP_VERSION);
+		log_info ("%s %s", message, PACKAGE_VERSION);
 		log_info (copyright);
 		log_info (arr);
 		log_info (url);
@@ -276,7 +271,7 @@ main(int argc, char **argv) {
 	}
 
 	/* Get the current time... */
-	GET_TIME (&cur_time);
+	time(&cur_time);
 
 	/* Discover all the network interfaces. */
 	discover_interfaces (DISCOVER_RELAY);
@@ -496,10 +491,12 @@ void dhcp (packet)
 {
 }
 
+#ifdef DHCPv6
 void 
 dhcpv6(struct packet *packet) {
 	/* XXX: should we warn or something here? */
 }
+#endif /* DHCPv6 */
 
 int find_subnet (struct subnet **sp,
 		 struct iaddr addr, const char *file, int line)

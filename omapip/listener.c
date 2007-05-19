@@ -32,7 +32,10 @@
  * ``http://www.nominum.com''.
  */
 
+#include "dhcpd.h"
+
 #include <omapip/omapip_p.h>
+#include <errno.h>
 
 #if defined (TRACING)
 omapi_array_t *trace_listeners;
@@ -197,7 +200,7 @@ int omapi_listener_readfd (omapi_object_t *h)
 isc_result_t omapi_accept (omapi_object_t *h)
 {
 	isc_result_t status;
-	SOCKLEN_T len;
+	socklen_t len;
 	omapi_connection_object_t *obj;
 	omapi_listener_object_t *listener;
 	omapi_addr_t remote_addr;

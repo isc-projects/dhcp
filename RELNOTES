@@ -1,10 +1,6 @@
 	      Internet Systems Consortium DHCP Distribution
-		        Version V4.0.0-2007041300
-			     April 13, 2007
-
- **********************************************************************
- *** This is NOT a public release, and should not be redistributed. ***
- **********************************************************************
+		             Version 4.0.0a1
+			      May 19, 2007
 
 			     Release Notes
 
@@ -47,6 +43,13 @@ For information on how to install, configure and run this software,
 as well as how to find documentation and report bugs, please consult
 the README file.
 
+ISC DHCP now uses standard GNU configure for installation. Please
+review the output of "./configure --help" to see what options are
+available.
+
+The system has only been tested on Linux, FreeBSD, and Solaris, and 
+may not work on other platforms. Please report any problems and 
+suggested fixes to <dhcp-users@isc.org>.
 
 			Changes since 4.0.0-20070413
 
@@ -83,6 +86,8 @@ the README file.
 - Fix documentation of the domain-search atom (quoted, with commas).
 
 - Document DHCPv6 options presently in the default table.
+
+- Replaced ./configure shellscripting with GNU Autoconf.
 
 		     Changes since 3.1.0 (NEW FEATURES)
 
@@ -126,7 +131,7 @@ the README file.
   were transmitted to it, and what frames are being carried through it which
   it should not intercept.
 
-			Chagnes since 3.1.0b1
+			Changes since 3.1.0b1
 
 - Fixed a bug that caused OMAPI clients to freeze when opening lease
   objects.

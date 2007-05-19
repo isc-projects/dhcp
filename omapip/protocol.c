@@ -34,8 +34,10 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: protocol.c,v 1.31 2007/05/07 17:19:17 each Exp $ Copyright 2004-2006 Internet Systems Consortium.";
+"$Id: protocol.c,v 1.32 2007/05/19 18:47:15 dhankins Exp $ Copyright 2004-2006 Internet Systems Consortium.";
 #endif
+
+#include "dhcpd.h"
 
 #include <omapip/omapip_p.h>
 

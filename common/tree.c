@@ -34,12 +34,13 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.113 2007/05/08 23:05:20 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.114 2007/05/19 18:47:14 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
 #include <omapip/omapip_p.h>
 #include <ctype.h>
+#include <sys/wait.h>
 
 struct binding_scope *global_scope;
 

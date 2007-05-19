@@ -34,10 +34,12 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: trace.c,v 1.13 2007/04/27 22:38:03 each Exp $ Copyright 2004-2006 Internet Systems Consortium.";
+"$Id: trace.c,v 1.14 2007/05/19 18:47:15 dhankins Exp $ Copyright 2004-2006 Internet Systems Consortium.";
 #endif
 
+#include "dhcpd.h"
 #include <omapip/omapip_p.h>
+#include <errno.h>
 
 #if defined (TRACING)
 void (*trace_set_time_hook) (TIME);

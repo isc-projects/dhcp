@@ -37,6 +37,25 @@
 
 #include "site.h"
 
+#include "config.h"
+
+#include <inttypes.h>
+typedef uint8_t u_int8_t;
+typedef uint16_t u_int16_t;
+typedef uint32_t u_int32_t;
+
+#ifndef LITTLE_ENDIAN
+#define LITTLE_ENDIAN 1234
+#endif /* LITTLE_ENDIAN */
+
+#ifndef BIG_ENDIAN
+#define BIG_ENDIAN 4321
+#endif /* BIG_ENDIAN */
+
+#ifndef BYTE_ORDER
+#define BYTE_ORDER DHCP_BYTE_ORDER
+#endif /* BYTE_ORDER */
+
 /* Porting::
 
    If you add a new network API, you must add a check for it below: */
@@ -56,81 +75,13 @@
     !defined (USE_NIT) && \
     !defined (USE_NIT_SEND) && \
     !defined (USE_NIT_RECEIVE) && \
-    !defined (USR_DLPI_SEND) && \
+    !defined (USE_DLPI_SEND) && \
     !defined (USE_DLPI_RECEIVE)
 #  define USE_DEFAULT_NETWORK
 #endif
 
 #if !defined (TIME_MAX)
 # define TIME_MAX 2147483647
-#endif
-
-/* Porting::
-
-   If you add a new system configuration file, include it here: */
-
-#if defined (sun)
-# if defined (__svr4__) || defined (__SVR4)
-#  include "cf/sunos5-5.h"
-# else
-#  include "cf/sunos4.h"
-# endif
-#endif
-
-#ifdef aix
-#  include "cf/aix.h"
-#endif
-
-#ifdef bsdi
-#  include "cf/bsdos.h"
-#endif
-
-#ifdef __NetBSD__
-#  include "cf/netbsd.h"
-#endif
-
-#ifdef __FreeBSD__
-#  include "cf/freebsd.h"
-#endif
-
-#ifdef OpenBSD
-#  include "cf/openbsd.h"
-#endif
-
-#if defined (__osf__) && defined (__alpha)
-#  include "cf/alphaosf.h"
-#endif
-
-#ifdef ultrix
-#  include "cf/ultrix.h"
-#endif
-
-#ifdef linux
-#  include "cf/linux.h"
-#endif
-
-#ifdef SCO
-#  include "cf/sco.h"
-#endif
-
-#if defined (hpux) || defined (__hpux)
-#  include "cf/hpux.h"
-#endif
-
-#ifdef __QNX__
-#  include "cf/qnx.h"
-#endif
-
-#ifdef __CYGWIN32__
-#  include "cf/cygwin32.h"
-#endif
-
-#ifdef __APPLE__
-# include "cf/rhapsody.h"
-#else
-# if defined (NeXT)
-#  include "cf/nextstep.h"
-# endif
 #endif
 
 /* snprintf/vsnprintf hacks.  for systems with no libc versions only. */

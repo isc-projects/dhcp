@@ -3,7 +3,7 @@
    BSD socket interface code... */
 
 /*
- * Copyright (c) 2004-2006 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -42,11 +42,13 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: socket.c,v 1.64 2007/05/18 17:21:46 dhankins Exp $ "
-"Copyright (c) 2004-2006 Internet Systems Consortium.\n";
+"$Id: socket.c,v 1.65 2007/05/19 18:47:14 dhankins Exp $ "
+"Copyright (c) 2004-2007 Internet Systems Consortium.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
+#include <errno.h>
+#include <sys/ioctl.h>
 #include <sys/uio.h>
 #include <sys/uio.h>
 
@@ -103,7 +105,7 @@ if_register_socket(struct interface_info *info, int family, int do_multicast) {
 
 	/* INSIST((family == AF_INET) || (family == AF_INET6)); */
 
-#if !defined (HAVE_SO_BINDTODEVICE) && !defined (USE_FALLBACK)
+#if !defined(SO_BINDTODEVICE) && !defined(USE_FALLBACK)
 	/* Make sure only one interface is registered. */
 	if (once) {
 		log_fatal ("The standard socket API can only support %s",
@@ -126,6 +128,7 @@ if_register_socket(struct interface_info *info, int family, int do_multicast) {
 		       sizeof(addr->sin_addr));
 		name_len = sizeof(*addr);
 		domain = PF_INET;
+#ifdef DHCPv6
 	} else { 
 		struct sockaddr_in6 *addr = (struct sockaddr_in6 *)&name; 
 		addr->sin6_family = AF_INET6;
@@ -135,6 +138,7 @@ if_register_socket(struct interface_info *info, int family, int do_multicast) {
 		       sizeof(addr->sin6_addr));
 		name_len = sizeof(*addr);
 		domain = PF_INET6;
+#endif /* DHCPv6 */
 	}
 
 	/* Make a socket... */
@@ -170,7 +174,7 @@ if_register_socket(struct interface_info *info, int family, int do_multicast) {
 		log_fatal("includes a bootp server.");
 	}
 
-#if defined (HAVE_SO_BINDTODEVICE)
+#if defined(SO_BINDTODEVICE)
 	/* Bind this socket to this interface. */
 	if (info->ifp &&
 	    setsockopt(sock, SOL_SOCKET, SO_BINDTODEVICE,
@@ -193,6 +197,7 @@ if_register_socket(struct interface_info *info, int family, int do_multicast) {
 		log_fatal("Can't set IP_BROADCAST_IF on dhcp socket: %m");
 #endif
 
+#ifdef DHCPv6
 	/*
 	 * If we turn on IPV6_PKTINFO, we will be able to receive 
 	 * additional information, such as the destination IP address.
@@ -243,6 +248,7 @@ if_register_socket(struct interface_info *info, int family, int do_multicast) {
 			log_fatal("setsockopt: IPV6_JOIN_GROUP: %m");
 		}
 	}
+#endif /* DHCPv6 */
 
 	get_hw_addr(info->name, &info->hw_address);
 
@@ -322,6 +328,7 @@ void if_deregister_receive (info)
 #endif /* USE_SOCKET_RECEIVE */
 
 
+#ifdef DHCPv6 
 void
 if_register6(struct interface_info *info, int do_multicast) {
 	info->rfdesc = if_register_socket(info, AF_INET6, do_multicast);
@@ -362,6 +369,7 @@ if_deregister6(struct interface_info *info) {
 		}
 	}
 }
+#endif /* DHCPv6 */
 
 #if defined (USE_SOCKET_SEND) || defined (USE_SOCKET_FALLBACK)
 ssize_t send_packet (interface, packet, raw, len, from, to, hto)
@@ -398,6 +406,7 @@ ssize_t send_packet (interface, packet, raw, len, from, to, hto)
 
 #endif /* USE_SOCKET_SEND || USE_SOCKET_FALLBACK */
 
+#ifdef DHCPv6
 /* 
  * For both send_packet6() and receive_packet6() we need to use the 
  * sendmsg()/recvmsg() functions rather than the simplier send()/recv()
@@ -473,6 +482,7 @@ ssize_t send_packet6(struct interface_info *interface,
 	}
 	return result;
 }
+#endif /* DHCPv6 */
 
 #ifdef USE_SOCKET_RECEIVE
 ssize_t receive_packet (interface, buf, len, from, hfrom)
@@ -509,6 +519,7 @@ ssize_t receive_packet (interface, buf, len, from, hfrom)
 
 #endif /* USE_SOCKET_RECEIVE */
 
+#ifdef DHCPv6
 ssize_t 
 receive_packet6(struct interface_info *interface, 
 		unsigned char *buf, size_t len, 
@@ -583,6 +594,7 @@ receive_packet6(struct interface_info *interface,
 
 	return result;
 }
+#endif /* DHCPv6 */
 
 #if defined (USE_SOCKET_FALLBACK)
 /* This just reads in a packet and silently discards it. */

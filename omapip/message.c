@@ -32,6 +32,8 @@
  * ``http://www.nominum.com''.
  */
 
+#include "dhcpd.h"
+
 #include <omapip/omapip_p.h>
 
 OMAPI_OBJECT_ALLOC (omapi_message,

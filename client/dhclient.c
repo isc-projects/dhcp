@@ -32,11 +32,14 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.149 2007/05/18 18:45:51 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.150 2007/05/19 18:47:13 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
-#include "version.h"
+#include <syslog.h>
+#include <signal.h>
+#include <errno.h>
+#include <sys/wait.h>
 
 TIME default_lease_time = 43200; /* 12 hours... */
 TIME max_lease_time = 86400; /* 24 hours... */
@@ -120,14 +123,9 @@ main(int argc, char **argv) {
         else if (fd != -1)
                 close(fd);
 
-#ifdef SYSLOG_4_2
-	openlog ("dhclient", LOG_NDELAY);
-	log_priority = LOG_DAEMON;
-#else
 	openlog ("dhclient", LOG_NDELAY, LOG_DAEMON);
-#endif
 
-#if !(defined (DEBUG) || defined (SYSLOG_4_2) || defined (__CYGWIN32__))
+#if !(defined (DEBUG) || defined (__CYGWIN32__))
 	setlogmask (LOG_UPTO (LOG_INFO));
 #endif	
 
@@ -224,7 +222,7 @@ main(int argc, char **argv) {
 		} else if (!strcmp(argv[i], "-v")) {
 			quiet = 0;
 		} else if (!strcmp (argv [i], "--version")) {
-			log_info ("isc-dhclient-%s", DHCP_VERSION);
+			log_info ("isc-dhclient-%s", PACKAGE_VERSION);
 			exit (0);
  		} else if (argv [i][0] == '-') {
  		    usage ();
@@ -268,8 +266,10 @@ main(int argc, char **argv) {
 	/* Assign v4 or v6 specific running parameters. */
 	if (local_family == AF_INET)
 		dhcpv4_client_assignments();
+#ifdef DHCPv6
 	else if (local_family == AF_INET6)
 		dhcpv6_client_assignments();
+#endif /* DHCPv6 */
 	else
 		log_fatal("Impossible condition at %s:%d.", MDL);
 
@@ -296,7 +296,7 @@ main(int argc, char **argv) {
 	}
 
 	if (!quiet) {
-		log_info ("%s %s", message, DHCP_VERSION);
+		log_info ("%s %s", message, PACKAGE_VERSION);
 		log_info (copyright);
 		log_info (arr);
 		log_info (url);
@@ -322,7 +322,7 @@ main(int argc, char **argv) {
 	}
 
 	/* Get the current time... */
-	GET_TIME (&cur_time);
+	time(&cur_time);
 
 	sockaddr_broadcast.sin_family = AF_INET;
 	sockaddr_broadcast.sin_port = remote_port;
@@ -423,6 +423,7 @@ main(int argc, char **argv) {
 	srandom (seed + cur_time);
 
 	/* Start a configuration state machine for each interface. */
+#ifdef DHCPv6
 	if (local_family == AF_INET6) {
 		struct option_cache *oc;
 
@@ -449,7 +450,9 @@ main(int argc, char **argv) {
 					start_init6(client);
 			}
 		}
-	} else {
+	} else 
+#endif /* DHCPv6 */
+	{
 		for (ip = interfaces ; ip ; ip = ip->next) {
 			ip->flags |= INTERFACE_RUNNING;
 			for (client = ip->client ; client ;
@@ -489,7 +492,9 @@ main(int argc, char **argv) {
 
 	/* Set up the bootp packet handler... */
 	bootp_packet_handler = do_packet;
+#ifdef DHCPv6
 	dhcpv6_packet_handler = do_packet6;
+#endif /* DHCPv6 */
 
 #if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL) || \
 		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
@@ -517,7 +522,7 @@ main(int argc, char **argv) {
 
 static void usage ()
 {
-	log_info ("%s %s", message, DHCP_VERSION);
+	log_info ("%s %s", message, PACKAGE_VERSION);
 	log_info (copyright);
 	log_info (arr);
 	log_info (url);
@@ -1122,6 +1127,7 @@ void dhcp (packet)
 	(*handler) (packet);
 }
 
+#ifdef DHCPv6
 void 
 dhcpv6(struct packet *packet) {
 	struct iaddrmatchlist *ap;
@@ -1172,6 +1178,7 @@ dhcpv6(struct packet *packet) {
 	/* XXX: temporary log for debuggin */
 	log_info("Packet received, but nothing done with it.");
 }
+#endif /* DHCPv6 */
 
 void dhcpoffer (packet)
 	struct packet *packet;
@@ -2914,7 +2921,7 @@ int script_go (client)
 		client -> envc = 0;
 	}
 	dfree (envp, MDL);
-	GET_TIME (&cur_time);
+	time(&cur_time);
 	return (WIFEXITED (wstatus) ?
 		WEXITSTATUS (wstatus) : -WTERMSIG (wstatus));
 }

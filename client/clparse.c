@@ -34,10 +34,11 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: clparse.c,v 1.69 2007/05/08 23:05:20 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: clparse.c,v 1.70 2007/05/19 18:47:13 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
+#include <errno.h>
 
 static TIME parsed_time;
 
@@ -1151,6 +1152,10 @@ parse_client6_lease_statement(struct parse *cfile)
 	unsigned len;
 	int token, has_ia, no_semi, has_name;
 
+#if !defined(DHCPv6)
+	parse_warn(cfile, "No DHCPv6 support.");
+	skip_to_semi(cfile);
+#else /* defined(DHCPv6) */
 	token = next_token(NULL, NULL, cfile);
 	if (token != LBRACE) {
 		parse_warn(cfile, "Expecting open curly brace.");
@@ -1344,6 +1349,7 @@ parse_client6_lease_statement(struct parse *cfile)
 		dhc6_lease_destroy(client->active_lease, MDL);
 
 	client->active_lease = lease;
+#endif /* defined(DHCPv6) */
 }
 
 /* Parse an ia_na object from the client lease.

@@ -3,7 +3,7 @@
    DHCP Server Daemon. */
 
 /*
- * Copyright (c) 2004-2006 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.123 2007/05/18 09:26:58 shane Exp $ Copyright 2004-2006 Internet Systems Consortium.";
+"$Id: dhcpd.c,v 1.124 2007/05/19 18:47:15 dhankins Exp $ Copyright 2004-2007 Internet Systems Consortium.";
 #endif
 
   static char copyright[] =
@@ -44,8 +44,8 @@ static char message [] = "Internet Systems Consortium DHCP Server";
 static char url [] = "For info, please visit http://www.isc.org/sw/dhcp/";
 
 #include "dhcpd.h"
-#include "version.h"
 #include <omapip/omapip_p.h>
+#include <syslog.h>
 
 static void usage PROTO ((void));
 
@@ -256,12 +256,7 @@ main(int argc, char **argv) {
 	dhcp_common_objects_setup ();
 
 	/* Initially, log errors to stderr as well as to syslogd. */
-#ifdef SYSLOG_4_2
-	openlog ("dhcpd", LOG_NDELAY);
-	log_priority = DHCPD_LOG_FACILITY;
-#else
 	openlog ("dhcpd", LOG_NDELAY, DHCPD_LOG_FACILITY);
-#endif
 
 	for (i = 1; i < argc; i++) {
 		if (!strcmp (argv [i], "-p")) {
@@ -339,7 +334,7 @@ main(int argc, char **argv) {
 			local_family = AF_INET6;
 			local_family_set = 1;
 		} else if (!strcmp (argv [i], "--version")) {
-			log_info ("isc-dhcpd-%s", DHCP_VERSION);
+			log_info("isc-dhcpd-%s", PACKAGE_VERSION);
 			exit (0);
 #if defined (TRACING)
 		} else if (!strcmp (argv [i], "-tf")) {
@@ -384,7 +379,7 @@ main(int argc, char **argv) {
 	}
 
 	if (!quiet) {
-		log_info ("%s %s", message, DHCP_VERSION);
+		log_info("%s %s", message, PACKAGE_VERSION);
 		log_info (copyright);
 		log_info (arr);
 		log_info (url);
@@ -466,7 +461,7 @@ main(int argc, char **argv) {
 	}
 
 	/* Get the current time... */
-	GET_TIME (&cur_time);
+	time(&cur_time);
 
 	/* Set up the initial dhcp option universe. */
 	initialize_common_option_spaces ();
@@ -483,7 +478,9 @@ main(int argc, char **argv) {
 	/* Set up various hooks. */
 	dhcp_interface_setup_hook = dhcpd_interface_setup_hook;
 	bootp_packet_handler = do_packet;
+#ifdef DHCPv6
 	dhcpv6_packet_handler = do_packet6;
+#endif /* DHCPv6 */
 
 #if defined (NSUPDATE)
 	/* Set up the standard name service updater routine. */
@@ -584,6 +581,7 @@ main(int argc, char **argv) {
 #endif
 	postdb_startup ();
 
+#ifdef DHCPv6
 	/*
 	 * Set server DHCPv6 identifier.
 	 * See dhcpv6.c for discussion of setting DUID.
@@ -598,6 +596,7 @@ main(int argc, char **argv) {
 			write_server_duid();
 		}
 	}
+#endif /* DHCPv6 */
 
 #ifndef DEBUG
 	if (daemon) {
@@ -870,21 +869,15 @@ void postconf_initialization (int quiet)
 					   &global_scope, oc, MDL)) {
 			if (db.len == 1) {
 				closelog ();
-#ifdef SYSLOG_4_2
-				openlog ("dhcpd", LOG_NDELAY);
-				log_priority = db.data [0];
-#else
-				openlog ("dhcpd",
-					 LOG_NDELAY, db.data [0]);
-#endif
+				openlog ("dhcpd", LOG_NDELAY, db.data[0]);
 				/* Log the startup banner into the new
 				   log file. */
 				if (!quiet) {
 					/* Don't log to stderr twice. */
 					tmp = log_perror;
 					log_perror = 0;
-					log_info ("%s %s",
-						  message, DHCP_VERSION);
+					log_info("%s %s",
+						 message, PACKAGE_VERSION);
 					log_info (copyright);
 					log_info (arr);
 					log_info (url);
@@ -963,7 +956,7 @@ void postdb_startup (void)
 
 static void usage ()
 {
-	log_info ("%s %s", message, DHCP_VERSION);
+	log_info("%s %s", message, PACKAGE_VERSION);
 	log_info (copyright);
 	log_info (arr);
 

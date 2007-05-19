@@ -3,7 +3,7 @@
    DHCP options parsing and reassembly. */
 
 /*
- * Copyright (c) 2004-2006 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1995-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -34,12 +34,13 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.108 2007/05/16 21:29:57 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.109 2007/05/19 18:47:14 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
 #include "dhcpd.h"
 #include <omapip/omapip_p.h>
+#include <limits.h>
 
 struct option *vendor_cfg_option;
 
@@ -2337,7 +2338,7 @@ void save_hashed_option (universe, options, oc)
 			return;
 		}
 		memset (hash, 0, OPTION_HASH_SIZE * sizeof *hash);
-		options -> universes [universe -> index] = (VOIDPTR)hash;
+		options -> universes [universe -> index] = (void *)hash;
 	} else {
 		/* Try to find an existing option matching the new one. */
 		for (bptr = hash [hashix]; bptr; bptr = bptr -> cdr) {
@@ -3625,6 +3626,7 @@ packet6_len_okay(const char *packet, int len) {
 	}
 }
 
+#ifdef DHCPv6
 void 
 do_packet6(struct interface_info *interface, const char *packet, 
 	   int len, int from_port, const struct iaddr *from, 
@@ -3712,6 +3714,7 @@ do_packet6(struct interface_info *interface, const char *packet,
 
 	packet_dereference(&decoded_packet, MDL);
 }
+#endif /* DHCPv6 */
 
 int
 pretty_escape(char **dst, char *dend, const unsigned char **src,

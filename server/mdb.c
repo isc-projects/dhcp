@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.89 2007/05/08 23:05:22 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.90 2007/05/19 18:47:15 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2294,9 +2294,11 @@ int write_leases ()
 	    }
 	}
 	log_info ("Wrote %d leases to leases file.", num_written);
+#ifdef DHCPv6
 	if (!write_leases6()) {
 		return 0;
 	}
+#endif /* DHCPv6 */
 	if (!commit_leases ())
 		return 0;
 	return 1;

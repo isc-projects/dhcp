@@ -16,6 +16,8 @@
 
 #include "dhcpd.h"
 
+#ifdef DHCPv6
+
 /*
  * We use print_hex_1() to output DUID values. We could actually output 
  * the DUID with more information... MAC address if using type 1 or 3, 
@@ -3021,4 +3023,6 @@ dhcpv6(struct packet *packet) {
 		data_string_forget(&reply, MDL);
 	}
 }
+
+#endif /* DHCPv6 */
 

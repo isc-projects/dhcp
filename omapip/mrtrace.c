@@ -30,10 +30,13 @@
  * learn more about Nominum, Inc., see ``http://www.nominum.com''.
  */
 
+#include "dhcpd.h"
 #include <omapip/omapip_p.h>
 
 #include "minires/minires.h"
 #include "arpa/nameser.h"
+
+#include <errno.h>
 
 static void trace_mr_output_input (trace_type_t *, unsigned, char *);
 static void trace_mr_output_stop (trace_type_t *);
@@ -61,7 +64,7 @@ time_t trace_mr_time (time_t *);
 int trace_mr_select (int, fd_set *, fd_set *, fd_set *, struct timeval *);
 unsigned int trace_mr_res_randomid (unsigned int);
 
-extern TIME cur_time;
+extern time_t cur_time;
 
 #if defined (TRACING)
 void trace_mr_init ()

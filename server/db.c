@@ -34,12 +34,12 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: db.c,v 1.76 2007/05/08 23:05:21 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: db.c,v 1.77 2007/05/19 18:47:15 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
 #include <ctype.h>
-#include "version.h"
+#include <errno.h>
 
 FILE *db_file;
 
@@ -548,6 +548,7 @@ error_exit:
 	return 0;
 }
 
+#ifdef DHCPv6
 /*
  * Put a copy of the server DUID in the leases file.
  */
@@ -605,6 +606,7 @@ error_exit:
 	lease_file_is_corrupt = 1;
 	return 0;
 }
+#endif /* DHCPv6 */
 
 #if defined (FAILOVER_PROTOCOL)
 int write_failover_state (dhcp_failover_state_t *state)
@@ -914,7 +916,7 @@ void db_startup (testp)
 			write_time = cur_time;
 		else
 #endif
-			GET_TIME (&write_time);
+			time(&write_time);
 		new_lease_file ();
 	}
 
@@ -939,7 +941,7 @@ int new_lease_file ()
 	FILE *new_db_file;
 
 	/* Make a temporary lease file... */
-	GET_TIME (&t);
+	time(&t);
 
 	db_validity = lease_file_is_corrupt;
 
@@ -975,7 +977,7 @@ int new_lease_file ()
 	if (errno != 0)
 		goto fail;
 	fprintf (db_file, "# This lease file was written by isc-dhcp-%s\n\n",
-		 DHCP_VERSION);
+		 PACKAGE_VERSION);
 	if (errno != 0)
 		goto fail;
 

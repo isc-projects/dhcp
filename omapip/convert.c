@@ -35,8 +35,10 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: convert.c,v 1.2 2005/03/17 20:15:21 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: convert.c,v 1.3 2007/05/19 18:47:15 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
+
+#include "dhcpd.h"
 
 #include <omapip/omapip_p.h>
 

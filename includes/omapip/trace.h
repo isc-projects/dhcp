@@ -90,7 +90,7 @@ typedef struct {
 void trace_free_all (void);
 int trace_playback (void);
 int trace_record (void);
-isc_result_t trace_init (void (*set_time) (TIME), const char *, int);
+isc_result_t trace_init(void (*set_time)(time_t), const char *, int);
 isc_result_t trace_begin (const char *, const char *, int);
 isc_result_t trace_write_packet (trace_type_t *, unsigned, const char *,
 				 const char *, int);

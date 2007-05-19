@@ -32,9 +32,12 @@
  * ``http://www.nominum.com''.
  */
 
+#include "dhcpd.h"
+
 #include <omapip/omapip_p.h>
 #include <arpa/inet.h>
 #include <arpa/nameser.h>
+#include <errno.h>
 
 
 #if defined (TRACING)
@@ -187,7 +190,7 @@ isc_result_t omapi_connect_list (omapi_object_t *c,
 			obj -> local_addr = local_sin;
 		}
 
-#if defined (HAVE_SETFD)
+#if defined(F_SETFD)
 		if (fcntl (obj -> socket, F_SETFD, 1) < 0) {
 			close (obj -> socket);
 			omapi_connection_dereference (&obj, MDL);
@@ -383,9 +386,6 @@ static void trace_connect_input (trace_type_t *ttype,
 			lp -> state = omapi_connection_connected;
 			lp -> remote_addr = remote;
 			lp -> remote_addr.sin_family = AF_INET;
-#if defined (HAVE_SIN_LEN)
-			lp -> remote_addr.sin_len = sizeof remote;
-#endif
 			omapi_addr_list_dereference (&lp -> connect_list, MDL);
 			lp -> index = connect_index;
 			status = omapi_signal_in ((omapi_object_t *)lp,
@@ -568,7 +568,7 @@ static isc_result_t omapi_connection_connect_internal (omapi_object_t *h)
 {
 	int error;
 	omapi_connection_object_t *c;
-	SOCKLEN_T sl;
+	socklen_t sl;
 	isc_result_t status;
 
 	if (h -> type != omapi_type_connection)

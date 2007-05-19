@@ -35,8 +35,10 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: alloc.c,v 1.26 2006/02/24 23:16:30 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium, Inc.  All rights reserved.\n";
+"$Id: alloc.c,v 1.27 2007/05/19 18:47:15 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium, Inc.  All rights reserved.\n";
 #endif /* not lint */
+
+#include "dhcpd.h"
 
 #include <omapip/omapip_p.h>
 
@@ -59,15 +61,12 @@ int rc_history_count;
 static void print_rc_hist_entry (int);
 #endif
 
-VOIDPTR dmalloc (size, file, line)
-	unsigned size;
-	const char *file;
-	int line;
-{
+void *
+dmalloc(unsigned size, const char *file, int line) {
 	unsigned char *foo;
 	unsigned len;
 	int i;
-	VOIDPTR *bar;
+	void **bar;
 #if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL) || \
 		defined (DEBUG_MEMORY_LEAKAGE_ON_EXIT)
 	struct dmalloc_preamble *dp;
@@ -75,13 +74,13 @@ VOIDPTR dmalloc (size, file, line)
 
 	len = size + DMDSIZE;
 	if (len < size)
-		return (VOIDPTR)0;
+		return NULL;
 
 	foo = malloc(len);
 
 	if (!foo)
-		return (VOIDPTR)0;
-	bar = (VOIDPTR)(foo + DMDOFFSET);
+		return NULL;
+	bar = (void *)(foo + DMDOFFSET);
 	memset (bar, 0, size);
 
 #if defined (DEBUG_MEMORY_LEAKAGE) || defined (DEBUG_MALLOC_POOL) || \
@@ -137,11 +136,8 @@ VOIDPTR dmalloc (size, file, line)
 	return bar;
 }
 
-void dfree (ptr, file, line)
-	VOIDPTR ptr;
-	const char *file;
-	int line;
-{
+void 
+dfree(void *ptr, const char *file, int line) {
 	if (!ptr) {
 		log_error ("dfree %s(%d): free on null pointer.", file, line);
 		return;
@@ -207,12 +203,8 @@ void dfree (ptr, file, line)
 /* For allocation functions that keep their own free lists, we want to
    account for the reuse of the memory. */
 
-void dmalloc_reuse (foo, file, line, justref)
-	VOIDPTR foo;
-	const char *file;
-	int line;
-	int justref;
-{
+void 
+dmalloc_reuse(void *foo, const char *file, int line, int justref) {
 	struct dmalloc_preamble *dp;
 
 	/* Get the pointer to the dmalloc header. */

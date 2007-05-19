@@ -34,13 +34,16 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: hash.c,v 1.13 2007/05/08 23:05:21 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: hash.c,v 1.14 2007/05/19 18:47:15 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
+#include "dhcpd.h"
+
 #include <omapip/omapip_p.h>
+#include <limits.h>
 #include <ctype.h>
 
-static INLINE unsigned
+static unsigned
 find_length(const void *key,
 	    unsigned (*do_hash)(const void *, unsigned, unsigned))
 {
@@ -123,7 +126,7 @@ void free_hash_table (tp, file, line)
 	}
 #endif
 
-	dfree ((VOIDPTR)ptr, MDL);
+	dfree((void *)ptr, MDL);
 	*tp = (struct hash_table *)0;
 }
 

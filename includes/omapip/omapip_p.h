@@ -57,8 +57,11 @@
 #include <ctype.h>
 #include <time.h>
 
+/*
+ * XXX: I'm not sure why these were here.
 #include "cdefs.h"
 #include "osdep.h"
+ */
 
 #include <isc-dhcp/dst.h>
 #include <isc-dhcp/result.h>

@@ -32,7 +32,10 @@
  * ``http://www.nominum.com''.
  */
 
+#include "dhcpd.h"
+
 #include <omapip/omapip_p.h>
+#include <errno.h>
 
 #if defined (TRACING)
 static void trace_connection_input_input (trace_type_t *, unsigned, char *);

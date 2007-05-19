@@ -33,11 +33,14 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: errwarn.c,v 1.10 2005/03/17 20:15:21 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: errwarn.c,v 1.11 2007/05/19 18:47:15 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
+
+#include "dhcpd.h"
 
 #include <omapip/omapip_p.h>
 #include <errno.h>
+#include <syslog.h>
 
 #ifdef DEBUG
 int log_perror = -1;

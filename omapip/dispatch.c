@@ -32,10 +32,12 @@
  * ``http://www.nominum.com''.
  */
 
+#include "dhcpd.h"
+
 #include <omapip/omapip_p.h>
 
 static omapi_io_object_t omapi_io_states;
-TIME cur_time;
+time_t cur_time;
 
 OMAPI_OBJECT_ALLOC (omapi_io,
 		    omapi_io_object_t, omapi_type_io_object)

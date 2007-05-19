@@ -32,8 +32,7 @@
  * ``http://www.nominum.com''.
  */
 
-/* XXX: HACK just until the code is autoconfiscated */
-#define DHCPv6
+#include "config.h"
 
 #ifndef __CYGWIN32__
 #include <sys/types.h>
@@ -56,6 +55,12 @@
 #include <ctype.h>
 #include <time.h>
 
+#include <net/if.h>
+#include <net/route.h>
+#include <net/if_arp.h>
+
+#include <setjmp.h>
+
 #include "cdefs.h"
 #include "osdep.h"
 
@@ -74,6 +79,12 @@ typedef struct hash_table lease_ip_hash_t;
 typedef struct hash_table lease_id_hash_t;
 typedef struct hash_table host_hash_t;
 typedef struct hash_table class_hash_t;
+
+typedef time_t TIME;
+
+#ifndef EOL
+#define EOL '\n'
+#endif
 
 #include "dhcp.h"
 #include "dhcp6.h"
@@ -318,7 +329,7 @@ struct option_state {
 	int universe_count;
 	int site_universe;
 	int site_code_min;
-	VOIDPTR universes [1];
+	void *universes [1];
 };
 
 /* A dhcp packet and the pointers to its option values. */
@@ -1196,17 +1207,17 @@ typedef unsigned char option_mask [16];
 #define _PATH_DHCPD_DB		"dhcpd.leases"
 #undef _PATH_DHCPD_PID
 #define _PATH_DHCPD_PID		"dhcpd.pid"
-#else
+#else /* !DEBUG */
 #ifndef _PATH_DHCPD_CONF
 #define _PATH_DHCPD_CONF	"/etc/dhcpd.conf"
-#endif
+#endif /* DEBUG */
 
 #ifndef _PATH_DHCPD_DB
-#define _PATH_DHCPD_DB		"/etc/dhcpd.leases"
+#define _PATH_DHCPD_DB		LOCALSTATEDIR"/db/dhcpd.leases"
 #endif
 
 #ifndef _PATH_DHCPD_PID
-#define _PATH_DHCPD_PID		"/var/run/dhcpd.pid"
+#define _PATH_DHCPD_PID		LOCALSTATEDIR"/run/dhcpd.pid"
 #endif
 #endif
 
@@ -1219,19 +1230,19 @@ typedef unsigned char option_mask [16];
 #endif
 
 #ifndef _PATH_DHCLIENT_PID
-#define _PATH_DHCLIENT_PID	"/var/run/dhclient.pid"
+#define _PATH_DHCLIENT_PID	LOCALSTATEDIR"/run/dhclient.pid"
 #endif
 
 #ifndef _PATH_DHCLIENT6_PID
-#define _PATH_DHCLIENT6_PID	"/var/run/dhclient6.pid"
+#define _PATH_DHCLIENT6_PID	LOCALSTATEDIR"/run/dhclient6.pid"
 #endif
 
 #ifndef _PATH_DHCLIENT_DB
-#define _PATH_DHCLIENT_DB	"/etc/dhclient.leases"
+#define _PATH_DHCLIENT_DB	LOCALSTATEDIR"/db/dhclient.leases"
 #endif
 
 #ifndef _PATH_DHCLIENT6_DB
-#define _PATH_DHCLIENT6_DB	"/etc/dhclient6.leases"
+#define _PATH_DHCLIENT6_DB	LOCALSTATEDIR"/db/dhclient6.leases"
 #endif
 
 #ifndef _PATH_RESOLV_CONF
@@ -1239,7 +1250,7 @@ typedef unsigned char option_mask [16];
 #endif
 
 #ifndef _PATH_DHCRELAY_PID
-#define _PATH_DHCRELAY_PID	"/var/run/dhcrelay.pid"
+#define _PATH_DHCRELAY_PID	LOCALSTATEDIR"/run/dhcrelay.pid"
 #endif
 
 #ifndef DHCPD_LOG_FACILITY

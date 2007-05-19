@@ -34,11 +34,10 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.69 2007/01/29 10:25:55 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.70 2007/05/19 18:47:15 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
-#include "version.h"
 #include <omapip/omapip_p.h>
 
 #if defined (FAILOVER_PROTOCOL)
@@ -4165,8 +4164,8 @@ isc_result_t dhcp_failover_send_connect (omapi_object_t *l)
 					 state -> me.max_flying_updates),
 	      dhcp_failover_make_option (FTO_RECEIVE_TIMER, FMA,
 					 state -> me.max_response_delay),
-	      dhcp_failover_option_printf (FTO_VENDOR_CLASS, FMA,
-					   "isc-%s", DHCP_VERSION),
+	      dhcp_failover_option_printf(FTO_VENDOR_CLASS, FMA,
+					  "isc-%s", PACKAGE_VERSION),
 	      dhcp_failover_make_option (FTO_PROTOCOL_VERSION, FMA,
 					 DHCP_FAILOVER_VERSION),
 	      dhcp_failover_make_option (FTO_TLS_REQUEST, FMA,
@@ -4229,8 +4228,8 @@ isc_result_t dhcp_failover_send_connectack (omapi_object_t *l,
 	       ? dhcp_failover_make_option (FTO_RECEIVE_TIMER, FMA,
 					    state -> me.max_response_delay)
 	       : &skip_failover_option,
-	      dhcp_failover_option_printf (FTO_VENDOR_CLASS, FMA,
-					   "isc-%s", DHCP_VERSION),
+	      dhcp_failover_option_printf(FTO_VENDOR_CLASS, FMA,
+					  "isc-%s", PACKAGE_VERSION),
 	      dhcp_failover_make_option (FTO_PROTOCOL_VERSION, FMA,
 					 DHCP_FAILOVER_VERSION),
 	      (link->imsg->options_present & FTB_TLS_REQUEST)

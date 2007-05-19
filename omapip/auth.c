@@ -34,8 +34,10 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: auth.c,v 1.6 2006/06/01 20:23:17 dhankins Exp $ Copyright 2004 Internet Systems Consortium.";
+"$Id: auth.c,v 1.7 2007/05/19 18:47:15 dhankins Exp $ Copyright 2004 Internet Systems Consortium.";
 #endif
+
+#include "dhcpd.h"
 
 #include <omapip/omapip_p.h>
 

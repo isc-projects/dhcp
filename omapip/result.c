@@ -33,6 +33,8 @@
  * ``http://www.nominum.com''.
  */
 
+#include "dhcpd.h"
+
 #include <omapip/omapip_p.h>
 
 static const char *text[ISC_R_NRESULTS] = {

@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: omshell.c,v 1.13 2007/05/08 23:05:20 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: omshell.c,v 1.14 2007/05/19 18:47:14 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include <time.h>
@@ -44,6 +44,7 @@ static char copyright[] =
 #include <stdarg.h>
 #include <string.h>
 #include <isc-dhcp/result.h>
+#include <syslog.h>
 #include "dhcpctl.h"
 #include "dhcpd.h"
 
@@ -59,8 +60,10 @@ int parse_allow_deny (struct option_cache **oc, struct parse *cfile, int flag)
 void dhcp (struct packet *packet) { }
 void bootp (struct packet *packet) { }
 
+#ifdef DHCPv6
 /* XXX: should we warn or something here? */
 void dhcpv6(struct packet *packet) { }
+#endif /* DHCPv6 */
 
 int check_collection (struct packet *p, struct lease *l, struct collection *c)
 {
@@ -106,12 +109,7 @@ main(int argc, char **argv) {
 	}
 
 	/* Initially, log errors to stderr as well as to syslogd. */
-#ifdef SYSLOG_4_2
-	openlog ("omshell", LOG_NDELAY);
-	log_priority = DHCPD_LOG_FACILITY;
-#else
 	openlog ("omshell", LOG_NDELAY, DHCPD_LOG_FACILITY);
-#endif
 	status = dhcpctl_initialize ();
 	if (status != ISC_R_SUCCESS) {
 		fprintf (stderr, "dhcpctl_initialize: %s\n",

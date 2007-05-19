@@ -1,7 +1,7 @@
 /* dhc6.c - DHCPv6 client routines. */
 
 /*
- * Copyright (c) 2006 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2006-2007 by Internet Systems Consortium, Inc. ("ISC")
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -24,10 +24,12 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhc6.c,v 1.4 2007/05/18 18:45:51 dhankins Exp $ Copyright (c) 2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhc6.c,v 1.5 2007/05/19 18:47:13 dhankins Exp $ Copyright (c) 2006-2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
+
+#ifdef DHCPv6
 
 struct sockaddr_in6 DHCPv6DestAddr;
 struct option *clientid_option = NULL;
@@ -3054,3 +3056,4 @@ script_write_params6(struct client_state *client, char *prefix,
 	}
 }
 
+#endif /* DHCPv6 */

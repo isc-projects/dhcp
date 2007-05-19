@@ -1,12 +1,8 @@
 	       Internet Systems Consortium DHCP Distribution
-			 Version 4.0.0-2007041300
-			     April 13, 2007
+			     Version 4.0.0a1
+			      May 19, 2007
 
 			      README FILE
-
- **********************************************************************
- *** This is NOT a public release, and should not be redistributed. ***
- **********************************************************************
 
 You should read this file carefully before trying to install or use
 the ISC DHCP Distribution.
@@ -96,18 +92,15 @@ directory, it may not have up-to-date information).
 
 			    RELEASE STATUS
 
-This is a snapshot release of work leading up to the first alpha
-of ISC DHCP 4.0.0, a feature release bent to the purpose of implemeting
-DHCPv6.
+This is the first alpha realse of ISC DHCP 4.0.0, a feature release
+bent to the purpose of implementing DHCPv6.
 
-In this release, the server and relay agent are currently fully
-functional on Linux, and Solaris.  The software may also runon other
-systems.
+In this release, the DHCPv6 server should be fully functional on Linux,
+Solaris, or any BSD.  The DHCPv6 client should be similarly functional
+except on Solaris.
 
-The DHCP client currently only knows how to configure the network on
-Linux.  The client depends on a system-dependent shell script to do
-network configuration - support for other operating systems is simply
-a matter of porting this shell script to the new platform.
+The DHCPv4 server, relay, and client, should be fully functional
+on Linux, Solaris, any BSD, HPUX, SCO, NextSTEP, and Irix.
 
 If you are running the DHCP distribution on a machine which is a
 firewall, or if there is a firewall between your DHCP server(s) and
@@ -136,13 +129,13 @@ information.   On Digital Unix, type ``man pfilt''.
 To build the DHCP Distribution, unpack the compressed tar file using
 the tar utility and the gzip command - type something like:
 
-	gunzip dhcp-4.0.0-2007041300.tar.gz
-	tar xvf dhcp-4.0.0-2007041300.tar
+	gunzip dhcp-4.0.0a1.tar.gz
+	tar xvf dhcp-4.0.0a1.tar
 
 			    CONFIGURING IT
 
-Now, cd to the dhcp-dhcp-4.0.0-2007041300 subdirectory that you've
-just created and configure the source tree by typing:
+Now, cd to the dhcp-dhcp-4.0.0a1 subdirectory that you've just
+created and configure the source tree by typing:
 
 	./configure
 

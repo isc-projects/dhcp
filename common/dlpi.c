@@ -3,7 +3,7 @@
    Data Link Provider Interface (DLPI) network interface code. */
 
 /*
- * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004,2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1996-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -87,7 +87,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dlpi.c,v 1.32 2007/05/18 17:21:46 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dlpi.c,v 1.33 2007/05/19 18:47:14 dhankins Exp $ Copyright (c) 2004,2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -101,9 +101,8 @@ static char copyright[] =
 # ifdef USE_DLPI_PFMOD
 #  include <sys/pfmod.h>
 # endif
-# ifdef USE_POLL
-#  include <poll.h>
-# endif
+#include <poll.h>
+#include <errno.h>
 
 # include <netinet/in_systm.h>
 # include "includes/netinet/ip.h"
@@ -161,9 +160,6 @@ static int dlpiunitdataind PROTO ((int fd,
 				   unsigned char *data,
 				   int datalen));
 
-# ifndef USE_POLL
-static void	sigalrm PROTO ((int sig));
-# endif
 static int	expected PROTO ((unsigned long prim, union DL_primitives *dlp,
 				  int msgflags));
 static int	strgetmsg PROTO ((int fd, struct strbuf *ctlp,
@@ -1218,15 +1214,12 @@ static int strgetmsg (fd, ctlp, datap, flagsp, caller)
 	int fd;
 {
 	int result;
-#ifdef USE_POLL
 	struct pollfd pfd;
 	int count;
 	time_t now;
 	time_t starttime;
 	int to_msec;
-#endif
 	
-#ifdef USE_POLL
 	pfd.fd = fd;
 	pfd.events = POLLPRI;	/* We're only interested in knowing
 				 * when we can receive the next high
@@ -1254,18 +1247,6 @@ static int strgetmsg (fd, ctlp, datap, flagsp, caller)
 			break;
 		}
 	}
-#else  /* defined (USE_POLL) */
-	/*
-	 * Start timer.  Can't use select, since it might return true if there
-	 * were non High-Priority data available on the stream.
-	 */
-	(void) sigset (SIGALRM, sigalrm);
-	
-	if (alarm (DLPI_MAXWAIT) < 0) {
-		/* log_fatal ("alarm: %m"); */
-		return -1;
-	}
-#endif /* !defined (USE_POLL) */
 
 	/*
 	 * Set flags argument and issue getmsg ().
@@ -1274,16 +1255,6 @@ static int strgetmsg (fd, ctlp, datap, flagsp, caller)
 	if ((result = getmsg (fd, ctlp, datap, flagsp)) < 0) {
 		return result;
 	}
-
-#ifndef USE_POLL
-	/*
-	 * Stop timer.
-	 */	
-	if (alarm (0) < 0) {
-		/* log_fatal ("alarm: %m"); */
-		return -1;
-	}
-#endif
 
 	/*
 	 * Check for MOREDATA and/or MORECTL.
@@ -1301,18 +1272,6 @@ static int strgetmsg (fd, ctlp, datap, flagsp, caller)
 
 	return 0;
 }
-
-#ifndef USE_POLL
-/*
- * sigalrm - handle alarms.
- */
-static void sigalrm (sig)
-	int sig;
-{
-	fprintf (stderr, "strgetmsg: timeout");
-	exit (1);
-}
-#endif /* !defined (USE_POLL) */
 
 int can_unicast_without_arp (ip)
 	struct interface_info *ip;
