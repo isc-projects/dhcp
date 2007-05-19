@@ -42,7 +42,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: socket.c,v 1.65 2007/05/19 18:47:14 dhankins Exp $ "
+"$Id: socket.c,v 1.66 2007/05/19 23:16:13 dhankins Exp $ "
 "Copyright (c) 2004-2007 Internet Systems Consortium.\n";
 #endif /* not lint */
 
@@ -250,7 +250,8 @@ if_register_socket(struct interface_info *info, int family, int do_multicast) {
 	}
 #endif /* DHCPv6 */
 
-	get_hw_addr(info->name, &info->hw_address);
+	if (strcmp(info->name, "fallback") != 0)
+		get_hw_addr(info->name, &info->hw_address);
 
 	return sock;
 }
