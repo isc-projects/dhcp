@@ -3,7 +3,7 @@
    Subroutines providing general support for objects. */
 
 /*
- * Copyright (c) 2004-2006 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1999-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: support.c,v 1.29 2007/05/19 18:47:15 dhankins Exp $ Copyright 2004-2006 Internet Systems Consortium.";
+"$Id: support.c,v 1.30 2007/05/19 19:16:26 dhankins Exp $ Copyright 2004-2007 Internet Systems Consortium.";
 #endif
 
 #include "dhcpd.h"

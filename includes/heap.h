@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2006  Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (C) 2004-2007  Internet Systems Consortium, Inc. ("ISC")
  * Copyright (C) 1997-2001  Internet Software Consortium.
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -15,7 +15,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* $Id: heap.h,v 1.2 2007/05/08 23:05:21 dhankins Exp $ */
+/* $Id: heap.h,v 1.3 2007/05/19 19:16:25 dhankins Exp $ */
 
 #ifndef ISC_HEAP_H
 #define ISC_HEAP_H 1

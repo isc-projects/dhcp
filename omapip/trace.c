@@ -5,7 +5,7 @@
    transactions... */
 
 /*
- * Copyright (c) 2004-2006 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004-2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 2001-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: trace.c,v 1.14 2007/05/19 18:47:15 dhankins Exp $ Copyright 2004-2006 Internet Systems Consortium.";
+"$Id: trace.c,v 1.15 2007/05/19 19:16:26 dhankins Exp $ Copyright 2004-2007 Internet Systems Consortium.";
 #endif
 
 #include "dhcpd.h"

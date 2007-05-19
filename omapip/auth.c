@@ -3,7 +3,7 @@
    Subroutines having to do with authentication. */
 
 /*
- * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
+ * Copyright (c) 2004,2007 by Internet Systems Consortium, Inc. ("ISC")
  * Copyright (c) 1998-2003 by Internet Software Consortium
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: auth.c,v 1.7 2007/05/19 18:47:15 dhankins Exp $ Copyright 2004 Internet Systems Consortium.";
+"$Id: auth.c,v 1.8 2007/05/19 19:16:25 dhankins Exp $ Copyright 2004,2007 Internet Systems Consortium.";
 #endif
 
 #include "dhcpd.h"
