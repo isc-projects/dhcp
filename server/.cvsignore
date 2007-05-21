@@ -1,3 +1,4 @@
+.deps
 Makefile
 dhcpd
 dhcpd.man8

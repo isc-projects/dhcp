@@ -1,3 +1,4 @@
+.deps
 Makefile
 dhcp-options.man5
 dhcp-contrib.man5

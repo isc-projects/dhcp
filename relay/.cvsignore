@@ -1,3 +1,4 @@
+.deps
 Makefile
 dhcrelay
 dhcrelay.man8

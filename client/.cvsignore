@@ -1,3 +1,4 @@
+.deps
 Makefile
 dhclient
 dhclient.man8
