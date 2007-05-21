@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: dhcp.c,v 1.211.2.5 2007/04/26 20:06:50 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhcp.c,v 1.211.2.6 2007/05/21 22:13:50 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -3933,11 +3933,12 @@ void
 get_server_source_address(struct in_addr *from,
 			  struct option_state *options,
 			  struct packet *packet) {
-	int option_num;
+	unsigned option_num;
 	struct option_cache *oc;
-       	struct data_string d;
-       	struct in_addr *a;
-	struct option *option;
+	struct data_string d;
+	struct in_addr *a;
+
+	memset(&d, 0, sizeof(d));
 
        	option_num = DHO_DHCP_SERVER_IDENTIFIER;
        	oc = lookup_option(&dhcp_universe, options, option_num);

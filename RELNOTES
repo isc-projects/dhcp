@@ -60,6 +60,9 @@ the README file.
 - A bug in dhclient was repaired which caused it to send parameter request
   lists of 55 bytes in length no matter how long the declared PRL was.
 
+- 'dhcp.c(3953): non-null pointer' has been repaired.  This fixes a flaw
+  wherein the DHCPv4 server may ignore a configured server-identifier.
+
                         Changes since 3.1.0a3
 
 - The execute() statement has been changed from a "numeric expression" to
