@@ -55,7 +55,7 @@ suggested fixes to <dhcp-users@isc.org>.
 			Changes since 4.0.0a1
 
 - 'dhcp.c(3953): non-null pointer' has been repaired.  This fixes a flaw
-  wherein the DHCPv4 server may use seemingly random source addresses.
+  wherein the DHCPv4 server may ignore a configured server-identifier.
 
 			Changes since 4.0.0-20070413
 
