@@ -32,7 +32,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.143.2.4 2007/04/26 19:32:22 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.143.2.5 2007/05/21 18:17:31 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1903,12 +1903,13 @@ void make_client_options (client, lease, type, sid, rip, prl, op)
 		if (!buffer_allocate (&bp, i, MDL))
 			log_error ("can't make parameter list buffer.");
 		else {
+			unsigned code = DHO_DHCP_PARAMETER_REQUEST_LIST;
+
 			for (i = 0; prl [i]; i++)
 				bp -> data [i] = prl [i];
-			i = DHO_DHCP_PARAMETER_REQUEST_LIST;
 			if (!(option_code_hash_lookup(&option,
 						      dhcp_universe.code_hash,
-						      &i, 0, MDL) &&
+						      &code, 0, MDL) &&
 			      make_const_option_cache(&oc, &bp, NULL, i,
 						      option, MDL)))
 				log_error ("can't make option cache");
