@@ -158,6 +158,9 @@ suggested fixes to <dhcp-users@isc.org>.
 - A bug was repaired in subencapsulation support, where spaces separated
   by empty spaces would not get included.
 
+- A bug in dhclient was repaired which caused it to send parameter request
+  lists of 55 bytes in length no matter how long the declared PRL was.
+
 			Changes since 3.1.0a3
 
 - Some spelling fixes.
