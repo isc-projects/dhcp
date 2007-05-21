@@ -52,11 +52,6 @@ may not work on other platforms. Please report any problems and
 suggested fixes to <dhcp-users@isc.org>.
 
 
-			Changes since 4.0.0a1
-
-- 'dhcp.c(3953): non-null pointer' has been repaired.  This fixes a flaw
-  wherein the DHCPv4 server may ignore a configured server-identifier.
-
 			Changes since 4.0.0-20070413
 
 - Old (expired) leases are now cleaned.
@@ -166,6 +161,9 @@ suggested fixes to <dhcp-users@isc.org>.
 
 - A bug in dhclient was repaired which caused it to send parameter request
   lists of 55 bytes in length no matter how long the declared PRL was.
+
+- 'dhcp.c(3953): non-null pointer' has been repaired.  This fixes a flaw
+  wherein the DHCPv4 server may ignore a configured server-identifier.
 
 			Changes since 3.1.0a3
 
