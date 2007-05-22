@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.63.56.7 2007/02/14 22:41:23 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.63.56.8 2007/05/22 22:58:14 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -53,6 +53,7 @@ static isc_result_t failover_message_reference (failover_message_t **,
 static isc_result_t failover_message_dereference (failover_message_t **,
 						  const char *file, int line);
 
+static void dhcp_failover_pool_balance(dhcp_failover_state_t *state);
 static void dhcp_failover_pool_reqbalance(dhcp_failover_state_t *state);
 static int dhcp_failover_pool_dobalance(dhcp_failover_state_t *state);
 static INLINE int secondary_not_hoarding(dhcp_failover_state_t *state,
@@ -1740,8 +1741,11 @@ isc_result_t dhcp_failover_set_state (dhcp_failover_state_t *state,
     switch (new_state) {
 	  case normal:
 	    /* Upon entering normal state, the server is expected to retransmit
-	     * all pending binding updates.
+	     * all pending binding updates.  This is a good opportunity to
+	     * rebalance the pool (potentially making new pending updates),
+	     * which also schedules the next pool rebalance.
 	     */
+	    dhcp_failover_pool_balance(state);
 	    dhcp_failover_generate_update_queue(state, 0);
 
 	    if (state->update_queue_tail != NULL) {
@@ -1749,8 +1753,6 @@ isc_result_t dhcp_failover_set_state (dhcp_failover_state_t *state,
 		log_info("Sending updates to %s.", state->name);
 	    }
 
-	    if (state -> partner.state == normal)
-		    dhcp_failover_state_pool_check (state);
 	    break;
 	    
 	  case potential_conflict:
@@ -2227,21 +2229,41 @@ isc_result_t dhcp_failover_peer_state_changed (dhcp_failover_state_t *state,
 	return ISC_R_SUCCESS;
 }
 
-/* Entry from timer. */
-void dhcp_failover_pool_rebalance(void *failover_state)
+/* Balance operation manual entry. */
+static void
+dhcp_failover_pool_balance(dhcp_failover_state_t *state)
+{
+	/* Cancel pending event. */
+	cancel_timeout(dhcp_failover_pool_rebalance, state);
+	state->sched_balance = 0;
+
+	dhcp_failover_pool_dobalance(state);
+}
+
+/* Balance operation entry from timer event. */
+void
+dhcp_failover_pool_rebalance(void *failover_state)
 {
 	dhcp_failover_state_t *state;
 
 	state = (dhcp_failover_state_t *)failover_state;
 
+	/* Clear scheduled event indicator. */
+	state->sched_balance = 0;
+
 	if (dhcp_failover_pool_dobalance(state))
 		dhcp_failover_send_updates(state);
 }
 
-/* Entry from POOLREQ. */
-static void dhcp_failover_pool_reqbalance(dhcp_failover_state_t *state)
+/* Balance operation entry from POOLREQ protocol message. */
+static void
+dhcp_failover_pool_reqbalance(dhcp_failover_state_t *state)
 {
 	int queued;
+
+	/* Cancel pending event. */
+	cancel_timeout(dhcp_failover_pool_rebalance, state);
+	state->sched_balance = 0;
 
 	queued = dhcp_failover_pool_dobalance(state);
 
@@ -2274,8 +2296,6 @@ static int dhcp_failover_pool_dobalance(dhcp_failover_state_t *state)
 		return 0;
 
 	state->last_balance = cur_time;
-	cancel_timeout(dhcp_failover_pool_rebalance, state);
-	state->sched_balance = 0;
 
 	for (s = shared_networks ; s ; s = s->next) {
 	    for (p = s->pools ; p ; p = p->next) {

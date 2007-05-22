@@ -66,6 +66,9 @@ the README file.
 - 'dhcp.c(3953): non-null pointer' has been repaired.  This fixes a flaw
   wherein the DHCPv4 server may ignore a configured server-identifier.
 
+- A flaw in failover startup sequences was repaired that sometimes left
+  the primary DHCP server's pool rebalance schedules unscheduled.
+
                         Changes since 3.1.0a3
 
 - The execute() statement has been changed from a "numeric expression" to
