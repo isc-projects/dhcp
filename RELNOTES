@@ -27,6 +27,9 @@ the README file.
 
 			Changes since 3.1.0b1
 
+- Added -x option to dhclient, which triggers dhclient processes
+  to exit gracefully without releasing leases first.
+
 - Fixed a bug that caused OMAPI clients to freeze when opening lease
   objects.
 

@@ -24,7 +24,7 @@
 .\" Support and other services are available for ISC products - see
 .\" http://www.isc.org for more information.
 .\"
-.\" $Id: dhclient.8,v 1.18.116.2 2007/04/19 21:35:24 dhankins Exp $
+.\" $Id: dhclient.8,v 1.18.116.3 2007/05/22 20:37:04 each Exp $
 .\"
 .TH dhclient 8
 .SH NAME
@@ -50,6 +50,9 @@ dhclient - Dynamic Host Configuration Protocol Client
 ]
 [
 .B -r
+]
+[
+.B -x
 ]
 [
 .B -lf
@@ -217,6 +220,17 @@ The
 .B -r
 flag explicitly releases the current lease, and once the lease has been
 released, the client exits.
+.PP
+If the client is killed by a signal (for example at shutdown or reboot)
+it won't execute the
+.B dhclient-script (8)
+at exit. However if you shut the client down gracefully with
+.B -r
+or
+.B -x
+it will execute
+.B dhclient-script (8)
+at shutdown with the specific reason for calling the script set.
 .PP
 The
 .B -1

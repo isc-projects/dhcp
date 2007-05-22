@@ -32,7 +32,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.143.2.5 2007/05/21 18:17:31 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.143.2.6 2007/05/22 20:37:04 each Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -77,8 +77,6 @@ int nowait=0;
 
 static void usage PROTO ((void));
 
-void do_release(struct client_state *);
-
 int main (argc, argv, envp)
 	int argc;
 	char **argv, **envp;
@@ -92,6 +90,7 @@ int main (argc, argv, envp)
 	char *server = (char *)0;
 	char *relay = (char *)0;
 	isc_result_t status;
+ 	int exit_mode = 0;
  	int release_mode = 0;
 	omapi_object_t *listener;
 	isc_result_t result;
@@ -145,6 +144,10 @@ int main (argc, argv, envp)
 		if (!strcmp (argv [i], "-r")) {
 			release_mode = 1;
 			no_daemon = 1;
+                } else if (!strcmp (argv [i], "-x")) { /* eXit, no release */
+                        release_mode = 0;
+                        no_daemon = 0;
+                        exit_mode = 1;
 		} else if (!strcmp (argv [i], "-p")) {
 			if (++i == argc)
 				usage ();
@@ -245,7 +248,7 @@ int main (argc, argv, envp)
 	}
 
 	/* first kill of any currently running client */
-	if (release_mode) {
+	if (release_mode || exit_mode) {
 		FILE *pidfd;
 		pid_t oldpid;
 		long temp;
@@ -369,7 +372,7 @@ int main (argc, argv, envp)
 			log_info ("No broadcast interfaces found - exiting.");
 			exit (0);
 		}
-	} else if (!release_mode) {
+	} else if (!release_mode && !exit_mode) {
 		/* Call the script with the list of interfaces. */
 		for (ip = interfaces; ip; ip = ip -> next) {
 			/* If interfaces were specified, don't configure
@@ -415,7 +418,9 @@ int main (argc, argv, envp)
 	for (ip = interfaces; ip; ip = ip -> next) {
 		ip -> flags |= INTERFACE_RUNNING;
 		for (client = ip -> client; client; client = client -> next) {
-			if (release_mode)
+                        if (exit_mode)
+                                state_stop (client);
+                        else if (release_mode)
 				do_release (client);
 			else {
 				client -> state = S_INIT;
@@ -427,7 +432,7 @@ int main (argc, argv, envp)
 		}
 	}
 
-	if (release_mode)
+	if (release_mode || exit_mode)
 		return 0;
 
 	/* Start up a listener for the object management API protocol. */
@@ -480,7 +485,7 @@ static void usage ()
 	log_info (arr);
 	log_info (url);
 
-	log_error ("Usage: dhclient [-1dqr] [-nw] [-p <port>] %s",
+	log_error ("Usage: dhclient [-1dqrx] [-nw] [-p <port>] %s",
 		   "[-s server]");
 	log_error ("                [-cf config-file] [-lf lease-file]%s",
 		   "[-pf pid-file] [-e VAR=val]");
