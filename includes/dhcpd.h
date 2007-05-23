@@ -52,6 +52,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <sys/stat.h>
+#include <sys/mman.h>
 #include <ctype.h>
 #include <time.h>
 
@@ -272,8 +273,8 @@ struct parse {
 	int warnings_occurred;
 	int file;
 	char *inbuf;
-	unsigned bufix, buflen;
-	unsigned bufsiz;
+	size_t bufix, buflen;
+	size_t bufsiz;
 };
 
 /* Variable-length array of data. */

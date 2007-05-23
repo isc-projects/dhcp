@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: conflex.c,v 1.107 2007/05/19 19:16:24 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: conflex.c,v 1.108 2007/05/23 15:29:49 shane Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -63,29 +63,36 @@ isc_result_t new_parse (cfile, file, inbuf, buflen, name, eolp)
 		return ISC_R_NOMEMORY;
 	memset (tmp, 0, sizeof *tmp);
 
-	tmp -> token = 0;
-	tmp -> tlname = name;
-	tmp -> lpos = tmp -> line = 1;
-	tmp -> cur_line = tmp -> line1;
-	tmp -> prev_line = tmp -> line2;
-	tmp -> token_line = tmp -> cur_line;
-	tmp -> cur_line [0] = tmp -> prev_line [0] = 0;
-	tmp -> warnings_occurred = 0;
-	tmp -> file = file;
-	tmp -> eol_token = eolp;
+	tmp->token = 0;
+	tmp->tlname = name;
+	tmp->lpos = tmp -> line = 1;
+	tmp->cur_line = tmp -> line1;
+	tmp->prev_line = tmp -> line2;
+	tmp->token_line = tmp -> cur_line;
+	tmp->cur_line [0] = tmp -> prev_line [0] = 0;
+	tmp->warnings_occurred = 0;
+	tmp->file = file;
+	tmp->eol_token = eolp;
 
-	tmp -> bufix = 0;
-	tmp -> buflen = buflen;
+	tmp->bufix = 0;
+
 	if (inbuf) {
-		tmp -> bufsiz = 0;
-		tmp -> inbuf = inbuf;
+		tmp->inbuf = inbuf;
+		tmp->buflen = buflen;
+		tmp->bufsiz = 0;
 	} else {
-		tmp -> inbuf = dmalloc (8192, MDL);
-		if (!tmp -> inbuf) {
-			dfree (tmp, MDL);
-			return ISC_R_NOMEMORY;
+		struct stat sb;
+
+		if (fstat(file, &sb) < 0)
+			return ISC_R_IOERROR;
+
+		tmp->bufsiz = tmp->buflen = (size_t) sb.st_size;
+		tmp->inbuf = mmap(NULL, tmp->bufsiz, PROT_READ, MAP_SHARED,
+				  file, 0);
+
+		if (tmp->inbuf == MAP_FAILED) {
+			return ISC_R_IOERROR;
 		}
-		tmp -> bufsiz = 8192;
 	}
 
 	*cfile = tmp;
@@ -96,11 +103,11 @@ isc_result_t end_parse (cfile)
 	struct parse **cfile;
 {
 	/* "Memory" config files have no file. */
-	if ((*cfile)->file != -1)
+	if ((*cfile)->file != -1) {
+		munmap((*cfile)->inbuf, (*cfile)->bufsiz);
 		close((*cfile)->file);
-
-	if ((*cfile)->bufsiz)
-		dfree((*cfile)->inbuf, MDL);
+	}
+		
 	dfree(*cfile, MDL);
 	*cfile = NULL;
 	return ISC_R_SUCCESS;
@@ -112,49 +119,34 @@ static int get_char (cfile)
 	/* My kingdom for WITH... */
 	int c;
 
-	if (cfile -> bufix == cfile -> buflen) {
-		if (cfile -> file != -1) {
-			cfile -> buflen =
-				read (cfile -> file,
-				      cfile -> inbuf, cfile -> bufsiz);
-			if (cfile -> buflen == 0) {
-				c = EOF;
-				cfile -> bufix = 0;
-			} else if (cfile -> buflen < 0) {
-				c = EOF;
-				cfile -> bufix = cfile -> buflen = 0;
-			} else {
-				c = cfile -> inbuf [0];
-				cfile -> bufix = 1;
-			}
-		} else
-			c = EOF;
-	} else {
-		c = cfile -> inbuf [cfile -> bufix];
-		cfile -> bufix++;
+	if (cfile->bufix == cfile->buflen)
+		c = EOF;
+	else {
+		c = cfile->inbuf [cfile->bufix];
+		cfile->bufix++;
 	}
 
-	if (!cfile -> ugflag) {
+	if (!cfile->ugflag) {
 		if (c == EOL) {
-			if (cfile -> cur_line == cfile -> line1) {	
-				cfile -> cur_line = cfile -> line2;
-				cfile -> prev_line = cfile -> line1;
+			if (cfile->cur_line == cfile->line1) {	
+				cfile->cur_line = cfile->line2;
+				cfile->prev_line = cfile->line1;
 			} else {
-				cfile -> cur_line = cfile -> line1;
-				cfile -> prev_line = cfile -> line2;
+				cfile->cur_line = cfile->line1;
+				cfile->prev_line = cfile->line2;
 			}
-			cfile -> line++;
-			cfile -> lpos = 1;
-			cfile -> cur_line [0] = 0;
+			cfile->line++;
+			cfile->lpos = 1;
+			cfile->cur_line [0] = 0;
 		} else if (c != EOF) {
-			if (cfile -> lpos <= 80) {
-				cfile -> cur_line [cfile -> lpos - 1] = c;
-				cfile -> cur_line [cfile -> lpos] = 0;
+			if (cfile->lpos <= 80) {
+				cfile->cur_line [cfile->lpos - 1] = c;
+				cfile->cur_line [cfile->lpos] = 0;
 			}
-			cfile -> lpos++;
+			cfile->lpos++;
 		}
 	} else
-		cfile -> ugflag = 0;
+		cfile->ugflag = 0;
 	return c;		
 }
 

@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.124 2007/05/19 19:16:24 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.125 2007/05/23 15:29:49 shane Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -257,7 +257,11 @@ char *parse_host_name (cfile)
    
    Parse an ip address or a hostname.   If uniform is zero, put in
    an expr_substring node to limit hostnames that evaluate to more
-   than one IP address. */
+   than one IP address.
+
+   Note that RFC1123 permits hostnames to consist of all digits,
+   making it difficult to quickly disambiguate them from ip addresses.
+*/
 
 int parse_ip_addr_or_hostname (expr, cfile, uniform)
 	struct expression **expr;
@@ -270,9 +274,33 @@ int parse_ip_addr_or_hostname (expr, cfile, uniform)
 	unsigned len = sizeof addr;
 	char *name;
 	struct expression *x = (struct expression *)0;
+	struct parse cfile0;
+	int ipaddr = 0;
 
 	token = peek_token (&val, (unsigned *)0, cfile);
-	if (is_identifier (token)) {
+
+	if (token == NUMBER) {
+		/*
+		 * a hostname may be numeric, but domain names must
+		 * start with a letter, so we can disambiguate by
+		 * looking ahead a few tokens.  we save the parse
+		 * context first, and restore it after we know what
+		 * we're dealing with.
+		 */
+		memcpy(&cfile0, cfile, sizeof(struct parse));
+		(void) next_token(NULL, NULL, cfile);
+		if (next_token(NULL, NULL, cfile) == DOT &&
+		    next_token(NULL, NULL, cfile) == NUMBER)
+			ipaddr = 1;
+		memcpy(cfile, &cfile0, sizeof(struct parse));
+
+		if (ipaddr &&
+		    parse_numeric_aggregate (cfile, addr, &len, DOT, 10, 8))
+			return make_const_data (expr, addr, len, 0, 1, MDL);
+
+	}
+
+	if (is_identifier (token) || token == NUMBER) {
 		name = parse_host_name (cfile);
 		if (!name)
 			return 0;
@@ -287,10 +315,6 @@ int parse_ip_addr_or_hostname (expr, cfile, uniform)
 			expression_dereference (expr, MDL);
 			*expr = x;
 		}
-	} else if (token == NUMBER) {
-		if (!parse_numeric_aggregate (cfile, addr, &len, DOT, 10, 8))
-			return 0;
-		return make_const_data (expr, addr, len, 0, 1, MDL);
 	} else {
 		if (token != RBRACE && token != LBRACE)
 			token = next_token (&val, (unsigned *)0, cfile);
