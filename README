@@ -1,6 +1,6 @@
 	       Internet Systems Consortium DHCP Distribution
-			    Version 3.1.0b1
-			   February 14, 2007
+			    Version 3.1.0b2
+			      May 23, 2007
 
 			      README FILE
 
@@ -92,7 +92,7 @@ directory, it may not have up-to-date information).
 
 			    RELEASE STATUS
 
-This is the first BETA quality release of ISC DHCP 3.1.0.  This
+This is the second BETA quality release of ISC DHCP 3.1.0.  This
 release contains many new features not found in ISC DHCP 3.0.x.
 
 In this release, the server and relay agent are currently fully
