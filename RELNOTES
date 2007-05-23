@@ -69,6 +69,9 @@ the README file.
 - A flaw in failover startup sequences was repaired that sometimes left
   the primary DHCP server's pool rebalance schedules unscheduled.
 
+- Corrected a flaw that broke encapsulated spaces included due to presence
+  on the parameter request list.
+
                         Changes since 3.1.0a3
 
 - The execute() statement has been changed from a "numeric expression" to

@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: options.c,v 1.98.2.10 2007/05/16 21:30:32 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: options.c,v 1.98.2.11 2007/05/23 19:26:22 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #define DHCP_OPTION_DATA
@@ -870,13 +870,17 @@ int store_options (ocount, buffer, buflen, packet, lease, client_state,
 	    else
 		option_code_hash_lookup(&option, u->code_hash, &code, 0, MDL);
 
-	    /* It's an encapsulation, try to find the universe
-	       to be encapsulated first, except that if it's a straight
-	       encapsulation and the user has provided a value for the
-	       encapsulation option, use the user-provided value. */
+	    /* If it's a straight encapsulation, and the user supplied a
+	     * value for the entire option, use that.  Otherwise, search
+	     * the encapsulated space.
+	     *
+	     * If it's a limited encapsulation with preceding data, and the
+	     * user supplied values for the preceding bytes, search the
+	     * encapsulated space.
+	     */
 	    if ((option != NULL) &&
-		((option->format[0] == 'E' && oc != NULL) ||
-		 (option->format[0] == 'e'))) {
+		(((oc == NULL) && (option->format[0] == 'E')) ||
+		 ((oc != NULL) && (option->format[0] == 'e')))) {
 		int uix;
 		static char *s, *t;
 		struct option_cache *tmp;
