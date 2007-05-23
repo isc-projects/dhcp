@@ -95,6 +95,12 @@ AC_CHECK_MEMBER(struct sockaddr.sa_len,
 	,
 	[#include <sys/socket.h>])
 
+# figure out pointer size
+AC_CHECK_SIZEOF(struct iaddr *, , [
+#include "includes/inet.h"
+#include <stdio.h>
+])
+
 AC_OUTPUT(
   Makefile
   client/Makefile

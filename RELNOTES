@@ -52,6 +52,11 @@ may not work on other platforms. Please report any problems and
 suggested fixes to <dhcp-users@isc.org>.
 
 
+			Changes since 4.0.0a1
+
+- Fix for icmp packets on 64-bit systems (bug introduced in 4.0).
+
+
 			Changes since 4.0.0-20070413
 
 - Old (expired) leases are now cleaned.

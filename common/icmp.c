@@ -35,7 +35,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: icmp.c,v 1.33 2005/03/17 20:14:58 dhankins Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: icmp.c,v 1.34 2007/05/23 10:35:10 shane Exp $ Copyright (c) 2004 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -167,7 +167,7 @@ int icmp_echorequest (addr)
 	icmp.icmp_code = 0;
 	icmp.icmp_cksum = 0;
 	icmp.icmp_seq = 0;
-#ifdef PTRSIZE_64BIT
+#if SIZEOF_STRUCT_IADDR_P == 8
 	icmp.icmp_id = (((u_int32_t)(u_int64_t)addr) ^
   			(u_int32_t)(((u_int64_t)addr) >> 32));
 #else
