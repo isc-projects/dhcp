@@ -1,5 +1,5 @@
 #ifndef LINT
-static const char rcsid[] = "$Header: /tmp/cvstest/DHCP/dst/dst_api.c,v 1.1 2001/02/22 07:22:08 mellon Exp $";
+static const char rcsid[] = "$Header: /tmp/cvstest/DHCP/dst/dst_api.c,v 1.2 2007/05/29 18:11:55 each Exp $";
 #endif
 
 /*
@@ -470,7 +470,8 @@ dst_s_read_public_key(const char *in_name, const unsigned in_id, int in_alg)
 	unsigned flags, len;
 	int proto, alg, dlen;
 	int c;
-	char name[PATH_MAX], enckey[RAW_KEY_SIZE], *notspace;
+	char name[PATH_MAX], enckey[RAW_KEY_SIZE];
+        unsigned char *notspace;
 	u_char deckey[RAW_KEY_SIZE];
 	FILE *fp;
 

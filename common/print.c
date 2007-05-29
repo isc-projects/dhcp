@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: print.c,v 1.65 2007/05/19 19:16:24 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: print.c,v 1.66 2007/05/29 18:11:55 each Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -44,7 +44,7 @@ int db_time_format = DEFAULT_TIME_FORMAT;
 char *quotify_string (const char *s, const char *file, int line)
 {
 	unsigned len = 0;
-	const char *sp;
+	const unsigned char *sp;
 	char *buf, *nsp;
 
 	for (sp = s; sp && *sp; sp++) {

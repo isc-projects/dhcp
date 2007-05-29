@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.125 2007/05/23 15:29:49 shane Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.126 2007/05/29 18:11:55 each Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -721,7 +721,7 @@ void convert_num (cfile, buf, str, base, size)
 	int base;
 	unsigned size;
 {
-	const char *ptr = str;
+	const unsigned char *ptr = str;
 	int negative = 0;
 	u_int32_t val = 0;
 	int tval;

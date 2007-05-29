@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: hash.c,v 1.15 2007/05/19 19:16:26 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: hash.c,v 1.16 2007/05/29 18:11:56 each Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -352,7 +352,7 @@ hash_report(struct hash_table *table)
 	struct hash_bucket *bp;
 
 	if (table->hash_count == 0)
-		return "Invalid hash table.";
+		return (char *) "Invalid hash table.";
 
 	for (i = 0 ; i < table->hash_count ; i++) {
 		curlen = 0;
@@ -381,7 +381,7 @@ hash_report(struct hash_table *table)
 	    pct > 2147483647 ||
 	    minlen > 2147483647 ||
 	    maxlen > 2147483647)
-		return "Report out of range for display.";
+		return (char *) "Report out of range for display.";
 
 	sprintf(retbuf, "Contents/Size (%%): %u/%u (%u%%). Min/max: %u/%u",
 		contents, table->hash_count, pct, minlen, maxlen);
@@ -530,8 +530,8 @@ int hash_foreach (struct hash_table *table, hash_foreach_func func)
 int casecmp (const void *v1, const void *v2, size_t len)
 {
 	size_t i;
-	const char *s = v1;
-	const char *t = v2;
+	const unsigned char *s = v1;
+	const unsigned char *t = v2;
 	
 	for (i = 0; i < len; i++)
 	{

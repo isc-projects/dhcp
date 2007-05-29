@@ -76,7 +76,7 @@
 
 #if defined(LIBC_SCCS) && !defined(lint)
 static const char sccsid[] = "@(#)res_init.c	8.1 (Berkeley) 6/7/93";
-static const char rcsid[] = "$Id: res_init.c,v 1.6 2005/03/17 20:15:19 dhankins Exp $";
+static const char rcsid[] = "$Id: res_init.c,v 1.7 2007/05/29 18:11:56 each Exp $";
 #endif /* LIBC_SCCS and not lint */
 
 #include <sys/types.h>
@@ -154,7 +154,8 @@ res_ninit(res_state statp) {
 int
 minires_vinit(res_state statp, int preinit) {
 	register FILE *fp;
-	register char *cp, **pp;
+	register unsigned char *cp;
+	register char **pp;
 	register int n;
 	char buf[BUFSIZ];
 	int nserv = 0;    /* number of nameserver records read from file */

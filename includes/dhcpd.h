@@ -2428,7 +2428,7 @@ int write_server_duid(void);
 #if defined (FAILOVER_PROTOCOL)
 int write_failover_state (dhcp_failover_state_t *);
 #endif
-int db_printable PROTO ((const char *));
+int db_printable PROTO ((const unsigned char *));
 int db_printable_len PROTO ((const unsigned char *, unsigned));
 isc_result_t write_named_billing_class(const void *, unsigned, void *);
 void write_billing_classes (void);

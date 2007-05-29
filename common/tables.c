@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tables.c,v 1.63 2007/05/19 19:16:24 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: tables.c,v 1.64 2007/05/29 18:11:55 each Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -789,7 +789,7 @@ struct universe *config_universe;
  * option structures omapi typed objects, which is a bigger headache.
  */
 
-char *default_option_format = "X";
+char *default_option_format = (char *) "X";
 
 /* Must match hash_reference/dereference types in omapip/hash.h. */
 int
@@ -844,15 +844,15 @@ option_dereference(struct option **dest, const char *file, int line)
 		/* The option name may be packed in the same alloc as the
 		 * option structure.
 		 */
-	        if ((*dest)->name != (char *)((*dest) + 1))
-	                dfree((*dest)->name, file, line);
+	        if ((char *) (*dest)->name != (char *) ((*dest) + 1))
+	                dfree((char *) (*dest)->name, file, line);
 
 		/* It's either a user-configured format (allocated), or the
 		 * default static format.
 		 */
 		if (((*dest)->format != NULL) &&
 		    ((*dest)->format != default_option_format)) {
-			dfree((*dest)->format, file, line);
+			dfree((char *) (*dest)->format, file, line);
 		}
 
 	        dfree(*dest, file, line);
