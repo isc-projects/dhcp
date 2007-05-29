@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.121.42.1 2007/01/11 16:36:52 dhankins Exp $ Copyright 2004-2007 Internet Systems Consortium.";
+"$Id: dhcpd.c,v 1.121.42.2 2007/05/29 17:49:44 each Exp $ Copyright 2004-2007 Internet Systems Consortium.";
 #endif
 
   static char copyright[] =
@@ -200,7 +200,7 @@ int main (argc, argv, envp)
 	int fd;
 	int i, status;
 	struct servent *ent;
-	char *s;
+	unsigned char *s;
 	int cftest = 0;
 	int lftest = 0;
 #ifndef DEBUG

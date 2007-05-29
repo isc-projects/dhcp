@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: hash.c,v 1.11.16.1 2006/10/27 22:54:50 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: hash.c,v 1.11.16.2 2007/05/29 17:49:44 each Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include <omapip/omapip_p.h>
@@ -349,7 +349,7 @@ hash_report(struct hash_table *table)
 	struct hash_bucket *bp;
 
 	if (table->hash_count == 0)
-		return "Invalid hash table.";
+		return (char *) "Invalid hash table.";
 
 	for (i = 0 ; i < table->hash_count ; i++) {
 		curlen = 0;
@@ -378,7 +378,7 @@ hash_report(struct hash_table *table)
 	    pct > 2147483647 ||
 	    minlen > 2147483647 ||
 	    maxlen > 2147483647)
-		return "Report out of range for display.";
+		return (char *) "Report out of range for display.";
 
 	sprintf(retbuf, "Contents/Size (%%): %u/%u (%u%%). Min/max: %u/%u",
 		contents, table->hash_count, pct, minlen, maxlen);
@@ -527,8 +527,8 @@ int hash_foreach (struct hash_table *table, hash_foreach_func func)
 int casecmp (const void *v1, const void *v2, size_t len)
 {
 	size_t i;
-	const char *s = v1;
-	const char *t = v2;
+	const unsigned char *s = v1;
+	const unsigned char *t = v2;
 	
 	for (i = 0; i < len; i++)
 	{

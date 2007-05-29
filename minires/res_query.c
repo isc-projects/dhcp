@@ -76,7 +76,7 @@
 
 #if defined(LIBC_SCCS) && !defined(lint)
 static const char sccsid[] = "@(#)res_query.c	8.1 (Berkeley) 6/4/93";
-static const char rcsid[] = "$Id: res_query.c,v 1.5 2005/03/17 20:15:19 dhankins Exp $";
+static const char rcsid[] = "$Id: res_query.c,v 1.5.140.1 2007/05/29 17:49:44 each Exp $";
 #endif /* LIBC_SCCS and not lint */
 
 #include <sys/types.h>
@@ -383,7 +383,8 @@ res_nquerydomain(res_state statp,
 
 const char *
 res_hostalias(const res_state statp, const char *name, char *dst, size_t siz) {
-	char *file, *cp1, *cp2;
+	char *file;
+        unsigned char *cp1, *cp2;
 	char buf[BUFSIZ];
 	FILE *fp;
 

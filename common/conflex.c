@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: conflex.c,v 1.105 2006/08/04 10:59:32 shane Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: conflex.c,v 1.105.8.1 2007/05/29 17:49:44 each Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -46,7 +46,7 @@ static void skip_to_eol PROTO ((struct parse *));
 static enum dhcp_token read_string PROTO ((struct parse *));
 static enum dhcp_token read_number PROTO ((int, struct parse *));
 static enum dhcp_token read_num_or_name PROTO ((int, struct parse *));
-static enum dhcp_token intern PROTO ((char *, enum dhcp_token));
+static enum dhcp_token intern PROTO ((unsigned char *, enum dhcp_token));
 
 isc_result_t new_parse (cfile, file, inbuf, buflen, name, eolp)
 	struct parse **cfile;
@@ -528,7 +528,7 @@ static enum dhcp_token read_num_or_name (c, cfile)
 }
 
 static enum dhcp_token intern (atom, dfv)
-	char *atom;
+	unsigned char *atom;
 	enum dhcp_token dfv;
 {
 	if (!isascii (atom [0]))

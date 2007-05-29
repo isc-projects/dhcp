@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: db.c,v 1.74.32.1 2006/10/27 22:54:50 dhankins Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: db.c,v 1.74.32.2 2007/05/29 17:49:44 each Exp $ Copyright (c) 2004-2006 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -530,7 +530,7 @@ int write_failover_state (dhcp_failover_state_t *state)
 #endif
 
 int db_printable (s)
-	const char *s;
+	const unsigned char *s;
 {
 	int i;
 	for (i = 0; s [i]; i++)
