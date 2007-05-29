@@ -99,6 +99,7 @@ ECHO_N = @ECHO_N@
 ECHO_T = @ECHO_T@
 EGREP = @EGREP@
 EXEEXT = @EXEEXT@
+GREP = @GREP@
 INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
 INSTALL_SCRIPT = @INSTALL_SCRIPT@
@@ -122,8 +123,6 @@ SHELL = @SHELL@
 STRIP = @STRIP@
 VERSION = @VERSION@
 ac_ct_CC = @ac_ct_CC@
-ac_ct_RANLIB = @ac_ct_RANLIB@
-ac_ct_STRIP = @ac_ct_STRIP@
 am__fastdepCC_FALSE = @am__fastdepCC_FALSE@
 am__fastdepCC_TRUE = @am__fastdepCC_TRUE@
 am__include = @am__include@
@@ -135,24 +134,70 @@ bindir = @bindir@
 build_alias = @build_alias@
 byte_order = @byte_order@
 datadir = @datadir@
+datarootdir = @datarootdir@
+docdir = @docdir@
+dvidir = @dvidir@
 exec_prefix = @exec_prefix@
 host_alias = @host_alias@
+htmldir = @htmldir@
 includedir = @includedir@
 infodir = @infodir@
 install_sh = @install_sh@
 libdir = @libdir@
 libexecdir = @libexecdir@
+localedir = @localedir@
 localstatedir = @localstatedir@
 mandir = @mandir@
 mkdir_p = @mkdir_p@
 oldincludedir = @oldincludedir@
+pdfdir = @pdfdir@
 prefix = @prefix@
 program_transform_name = @program_transform_name@
+psdir = @psdir@
 sbindir = @sbindir@
 sharedstatedir = @sharedstatedir@
 sysconfdir = @sysconfdir@
 target_alias = @target_alias@
-EXTRA_DIST = contrib/* contrib/ms2isc/* doc/* tests/DHCPv6/* tests/failover/*
+
+#
+# We have a lot of files that we want shipped with the distribution.
+#
+EXTRA_DIST = contrib/3.0b1-lease-convert contrib/dhclient-tz-exithook.sh \
+	     contrib/dhcp.spec contrib/sethostname.sh contrib/solaris.init \
+	     contrib/ms2isc/Registry.pm contrib/ms2isc/ms2isc.pl \
+	     contrib/ms2isc/readme.txt \
+	     doc/IANA-arp-parameters doc/Makefile doc/References.html \
+	     doc/References.txt doc/References.xml doc/api+protocol \
+	     doc/ja_JP.eucJP/dhclient-script.8 doc/ja_JP.eucJP/dhclient.8 \
+	     doc/ja_JP.eucJP/dhclient.conf.5 doc/ja_JP.eucJP/dhclient.leases.5 \
+	     doc/ja_JP.eucJP/dhcp-eval.5 doc/ja_JP.eucJP/dhcp-options.5 \
+	     tests/failover/dhcp-1.cf tests/failover/dhcp-2.cf \
+	     tests/failover/new-failover \
+	     tests/DHCPv6/000-badmsgtype.pl \
+	     tests/DHCPv6/010-solicit-noclientid.pl \
+	     tests/DHCPv6/011-solicit-serverid.pl \
+	     tests/DHCPv6/020-advertise-mcast.pl \
+	     tests/DHCPv6/030-request-noclientid.pl \
+	     tests/DHCPv6/031-request-noserverid.pl \
+	     tests/DHCPv6/032-request-badduid.pl \
+	     tests/DHCPv6/110-information-request-ia_na.pl \
+	     tests/DHCPv6/111-information-request-ia_ta.pl \
+	     tests/DHCPv6/112-badduid.pl \
+	     tests/DHCPv6/210-solicit-nohost.pl \
+	     tests/DHCPv6/211-solicit-opt-in-na.pl \
+	     tests/DHCPv6/212-solicit-opt-in-na-norapidcommit.pl \
+	     tests/DHCPv6/280-release-nohost.pl \
+	     tests/DHCPv6/281-release-bad-address.pl \
+	     tests/DHCPv6/282-release-no-address.pl \
+	     tests/DHCPv6/283-release.pl \
+	     tests/DHCPv6/290-decline-nohost.pl \
+	     tests/DHCPv6/291-decline-bad-address.pl \
+	     tests/DHCPv6/292-decline-no-address.pl \
+	     tests/DHCPv6/293-decline.pl \
+	     tests/DHCPv6/README tests/DHCPv6/dhcp_client.pm \
+	     tests/DHCPv6/stubcli-opt-in-na.pl tests/DHCPv6/stubcli.pl \
+	     tests/DHCPv6/test-a.conf tests/DHCPv6/test-b.conf
+
 SUBDIRS = includes common minires dst omapip client dhcpctl relay server
 nobase_include_HEADERS = dhcpctl/dhcpctl.h
 all: all-recursive
@@ -174,15 +219,6 @@ $(srcdir)/Makefile.in:  $(srcdir)/Makefile.am  $(am__configure_deps)
 	cd $(top_srcdir) && \
 	  $(AUTOMAKE) --foreign  Makefile
 .PRECIOUS: Makefile
-Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
-	@case '$?' in \
-	  *config.status*) \
-	    echo ' $(SHELL) ./config.status'; \
-	    $(SHELL) ./config.status;; \
-	  *) \
-	    echo ' cd $(top_builddir) && $(SHELL) ./config.status $@ $(am__depfiles_maybe)'; \
-	    cd $(top_builddir) && $(SHELL) ./config.status $@ $(am__depfiles_maybe);; \
-	esac;
 
 $(top_builddir)/config.status: $(top_srcdir)/configure $(CONFIG_STATUS_DEPENDENCIES)
 	$(SHELL) ./config.status --recheck
@@ -347,7 +383,7 @@ distclean-tags:
 distdir: $(DISTFILES)
 	$(am__remove_distdir)
 	mkdir $(distdir)
-	$(mkdir_p) $(distdir)/contrib $(distdir)/contrib/ms2isc $(distdir)/dhcpctl $(distdir)/doc $(distdir)/tests/DHCPv6 $(distdir)/tests/failover
+	$(mkdir_p) $(distdir)/contrib $(distdir)/contrib/ms2isc $(distdir)/dhcpctl $(distdir)/doc $(distdir)/doc/ja_JP.eucJP $(distdir)/tests/DHCPv6 $(distdir)/tests/failover
 	@srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`; \
 	topsrcdirstrip=`echo "$(top_srcdir)" | sed 's|.|.|g'`; \
 	list='$(DISTFILES)'; for file in $$list; do \
@@ -584,6 +620,11 @@ uninstall-info: uninstall-info-recursive
 	pdf-am ps ps-am tags tags-recursive uninstall uninstall-am \
 	uninstall-info-am uninstall-nobase_includeHEADERS
 
+
+#
+# automake adds dependencies that we don't like, so we explicitly remove them
+#
+Makefile:
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
 .NOEXPORT:

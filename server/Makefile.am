@@ -1,6 +1,6 @@
 AM_CPPFLAGS = -I.. -DLOCALSTATEDIR='"@localstatedir@"'
 
-sysconf_DATA = dhcpd.conf
+dist_sysconf_DATA = dhcpd.conf
 sbin_PROGRAMS = dhcpd
 dhcpd_SOURCES = dhcpd.c dhcp.c bootp.c confpars.c db.c class.c failover.c \
 		omapi.c mdb.c stables.c salloc.c ddns.c dhcpleasequery.c \
@@ -12,4 +12,5 @@ dhcpd_LDADD = ../common/libdhcp.a ../omapip/libomapi.a ../dst/libdst.a \
 	      ../omapip/libomapi.a
 
 man_MANS = dhcpd.8 dhcpd.conf.5 dhcpd.leases.5
+EXTRA_DIST = $(man_MANS)
 

@@ -2,6 +2,7 @@ bin_PROGRAMS = omshell
 lib_LIBRARIES = libdhcpctl.a
 noinst_PROGRAMS = cltest
 man_MANS = omshell.1 dhcpctl.3
+EXTRA_DIST = $(man_MANS)
 
 omshell_SOURCES = omshell.c
 omshell_LDADD = libdhcpctl.a ../common/libdhcp.a ../minires/libres.a \

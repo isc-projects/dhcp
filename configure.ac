@@ -101,7 +101,7 @@ AC_CHECK_SIZEOF(struct iaddr *, , [
 #include <stdio.h>
 ])
 
-AC_OUTPUT(
+AC_OUTPUT([
   Makefile
   client/Makefile
   common/Makefile
@@ -112,5 +112,5 @@ AC_OUTPUT(
   omapip/Makefile
   relay/Makefile
   server/Makefile
-)
+])
 

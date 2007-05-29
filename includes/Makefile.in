@@ -79,6 +79,7 @@ ECHO_N = @ECHO_N@
 ECHO_T = @ECHO_T@
 EGREP = @EGREP@
 EXEEXT = @EXEEXT@
+GREP = @GREP@
 INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
 INSTALL_SCRIPT = @INSTALL_SCRIPT@
@@ -102,8 +103,6 @@ SHELL = @SHELL@
 STRIP = @STRIP@
 VERSION = @VERSION@
 ac_ct_CC = @ac_ct_CC@
-ac_ct_RANLIB = @ac_ct_RANLIB@
-ac_ct_STRIP = @ac_ct_STRIP@
 am__fastdepCC_FALSE = @am__fastdepCC_FALSE@
 am__fastdepCC_TRUE = @am__fastdepCC_TRUE@
 am__include = @am__include@
@@ -115,25 +114,43 @@ bindir = @bindir@
 build_alias = @build_alias@
 byte_order = @byte_order@
 datadir = @datadir@
+datarootdir = @datarootdir@
+docdir = @docdir@
+dvidir = @dvidir@
 exec_prefix = @exec_prefix@
 host_alias = @host_alias@
+htmldir = @htmldir@
 includedir = @includedir@
 infodir = @infodir@
 install_sh = @install_sh@
 libdir = @libdir@
 libexecdir = @libexecdir@
+localedir = @localedir@
 localstatedir = @localstatedir@
 mandir = @mandir@
 mkdir_p = @mkdir_p@
 oldincludedir = @oldincludedir@
+pdfdir = @pdfdir@
 prefix = @prefix@
 program_transform_name = @program_transform_name@
+psdir = @psdir@
 sbindir = @sbindir@
 sharedstatedir = @sharedstatedir@
 sysconfdir = @sysconfdir@
 target_alias = @target_alias@
-nobase_include_HEADERS = omapip/*.h isc-dhcp/*.h
-EXTRA_DIST = *.h apra/*.h minires/*.h netinet/*.h
+nobase_include_HEADERS = omapip/alloc.h omapip/buffer.h omapip/convert.h \
+			 omapip/hash.h omapip/omapip.h omapip/omapip_p.h \
+			 omapip/trace.h \
+			 isc-dhcp/boolean.h isc-dhcp/dst.h isc-dhcp/int.h \
+			 isc-dhcp/lang.h isc-dhcp/list.h isc-dhcp/result.h \
+			 isc-dhcp/types.h
+
+EXTRA_DIST = cdefs.h ctrace.h dhcp.h dhcp6.h dhcpd.h dhctoken.h failover.h \
+	     heap.h inet.h osdep.h site.h statement.h tree.h \
+	     arpa/nameser.h arpa/nameser_compat.h \
+	     minires/minires.h minires/res_update.h minires/resolv.h \
+	     netinet/if_ether.h netinet/ip.h netinet/ip_icmp.h netinet/udp.h
+
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-am
 
@@ -254,7 +271,7 @@ distclean-tags:
 	-rm -f TAGS ID GTAGS GRTAGS GSYMS GPATH tags
 
 distdir: $(DISTFILES)
-	$(mkdir_p) $(distdir)/apra $(distdir)/isc-dhcp $(distdir)/minires $(distdir)/netinet $(distdir)/omapip
+	$(mkdir_p) $(distdir)/arpa $(distdir)/isc-dhcp $(distdir)/minires $(distdir)/netinet $(distdir)/omapip
 	@srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`; \
 	topsrcdirstrip=`echo "$(top_srcdir)" | sed 's|.|.|g'`; \
 	list='$(DISTFILES)'; for file in $$list; do \
