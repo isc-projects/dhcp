@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: failover.c,v 1.72 2007/05/22 22:56:21 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: failover.c,v 1.73 2007/06/01 22:26:01 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2290,6 +2290,8 @@ static int dhcp_failover_pool_dobalance(dhcp_failover_state_t *state)
 	binding_state_t peer_lease_state;
 	binding_state_t my_lease_state;
 	struct lease **lq;
+	int (*log_func)(const char *, ...);
+	const char *result;
 
 	if (state -> me.state != normal)
 		return 0;
@@ -2319,16 +2321,17 @@ static int dhcp_failover_pool_dobalance(dhcp_failover_state_t *state)
 			lq = &p->backup;
 		}
 
-		log_info ("pool %lx %s  total %d  free %d  backup %d  lts %d",
-			(unsigned long)p,
-			(p->shared_network ?
-			 p->shared_network->name : ""), p->lease_count,
-			p->free_leases, p->backup_leases, lts);
-
 		total = p->backup_leases + p->free_leases;
 
 		thresh = ((total * state->max_lease_misbalance) + 50) / 100;
 		hold = ((total * state->max_lease_ownership) + 50) / 100;
+
+		log_info("balancing pool %lx %s  total %d  free %d  "
+			 "backup %d  lts %d  max-own (+/-)%d",
+			 (unsigned long)p,
+			 (p->shared_network ?
+			  p->shared_network->name : ""), p->lease_count,
+			 p->free_leases, p->backup_leases, lts, hold);
 
 		/* If lts is in the negatives (we need leases) more than
 		 * negative double the thresh%, panic and send poolreq to
@@ -2354,10 +2357,12 @@ static int dhcp_failover_pool_dobalance(dhcp_failover_state_t *state)
 		pass = 0;
 		lease_reference(&lp, *lq, MDL);
 
-		/* hold may be zero (consider the case where there are 2
-		 * leases, both on one server), therefore use >=.
+		/* In the case where there are 2 leases, hold is zero, and
+		 * lts is 1 if both leases are on the local server.  If
+		 * there is only 1 lease, both lts and hold are zero.  Let's
+		 * not play ping pong.
 		 */
-		while (lp && (lts >= (pass ? hold : -hold))) {
+		while (lp && (lts > (pass ? hold : -hold))) {
 			if (next)
 			    lease_dereference(&next, MDL);
 			if (lp->next)
@@ -2390,8 +2395,19 @@ static int dhcp_failover_pool_dobalance(dhcp_failover_state_t *state)
 		if (lp)
 			lease_dereference(&lp, MDL);
 
-		if (lts > thresh)
-			log_error("lease imbalance persists - lts = %d", lts);
+		if (lts > thresh) {
+			result = "IMBALANCED";
+			log_func = log_error;
+		} else {
+			result = "balanced";
+			log_func = log_info;
+		}
+
+		log_func("%s pool %lx %s  total %d  free %d  backup %d  "
+			 "lts %d  max-misbal %d", result, (unsigned long)p,
+			 (p->shared_network ?
+			  p->shared_network->name : ""), p->lease_count,
+			 p->free_leases, p->backup_leases, lts, thresh);
  
 		/* Recalculate next rebalance event timer. */
 		dhcp_failover_pool_check(p);
@@ -2470,6 +2486,9 @@ dhcp_failover_pool_check(struct pool *pool)
 	if(peer->last_balance && (est1 < est2))
 		est1 = est2;
 
+	/* Introduce a random delay. */
+	est1 += random() % 5;
+
 	/* Do not move the time forward, or reset to the same time. */
 	if(peer->sched_balance) {
 		if (est1 >= peer->sched_balance)
@@ -2517,6 +2536,12 @@ isc_result_t dhcp_failover_send_updates (dhcp_failover_state_t *state)
 	/* Can't update peer if we're not talking to it! */
 	if (!state -> link_to_peer)
 		return ISC_R_SUCCESS;
+
+	/* If there are acks pending, transmit them prior to potentialy
+	 * sending new updates for the same lease.
+	 */
+	if (state->toack_queue_head != NULL)
+		dhcp_failover_send_acks(state);
 
 	while ((state -> partner.max_flying_updates >
 		state -> cur_unacked_updates) && state -> update_queue_head) {
@@ -5125,7 +5150,7 @@ isc_result_t dhcp_failover_process_bind_ack (dhcp_failover_state_t *state,
 		dhcp_failover_send_update_done (state);
 	}
 
-	/* Now that the least is off the ack queue, consider putting it
+	/* Now that the lease is off the ack queue, consider putting it
 	 * back on the update queue for mac address affinity.
 	 */
 	if (send_to_backup && secondary_not_hoarding(state, lease->pool)) {

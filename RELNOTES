@@ -139,6 +139,19 @@ suggested fixes to <dhcp-users@isc.org>.
   were transmitted to it, and what frames are being carried through it which
   it should not intercept.
 
+			Changes since 3.1.0b2
+
+- Failover rebalance events no longer play ping pong with round errors
+  (moving leases between free and back to backup where there are an
+  odd number of leases).
+
+- The 'pool' log line has been split into two messages, one before the
+  rebalance run, and one after.
+
+- Any queued BNDACKs are transmitted before transmitting new BNDUPDs.
+  This enforces the correct sequence of events for the remote server
+  processing these messages.
+
 			Changes since 3.1.0b1
 
 - Fixed a bug that caused OMAPI clients to freeze when opening lease
