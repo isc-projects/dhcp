@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: discover.c,v 1.58 2007/05/19 23:28:38 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: discover.c,v 1.59 2007/06/01 22:11:49 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1054,7 +1054,9 @@ discover_interfaces(int state) {
 			if (local_family == AF_INET) {
 				log_error("No subnet declaration for %s (%s).",
 					  tmp->name, 
-					  inet_ntoa(tmp->addresses[0]));
+					  (tmp->addresses == NULL) ?
+					   "no IPv4 addresses" :
+					   inet_ntoa(tmp->addresses[0]));
 #ifdef DHCPv6
 			} else {
 				if (tmp->v6addresses != NULL) {
@@ -1063,7 +1065,7 @@ discover_interfaces(int state) {
 						  abuf,
 						  sizeof(abuf));
 				} else {
-					strcpy(abuf, "no addresses");
+					strcpy(abuf, "no IPv6 addresses");
 				}
 				log_error("No subnet declaration for %s (%s).",
 					  tmp->name,
