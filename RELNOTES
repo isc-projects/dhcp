@@ -29,6 +29,17 @@ the README file.
 
 - Silenced compiler warnings on NetBSD
 
+- Failover rebalance events no longer play ping pong with round errors
+  (moving leases between free and back to backup where there are an
+  odd number of leases).
+
+- The 'pool' log line has been split into two messages, one before the
+  rebalance run, and one after.
+
+- Any queued BNDACKs are transmitted before transmitting new BNDUPDs.
+  This enforces the correct sequence of events for the remote server
+  processing these messages.
+
 			Changes since 3.1.0b1
 
 - Added -x option to dhclient, which triggers dhclient processes
