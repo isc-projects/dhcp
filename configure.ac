@@ -55,16 +55,35 @@ AC_ARG_WITH(relay-pid-file,
 			   [File for dhcrelay process information.]))
 
 # figure out what IPv4 interface code to use
-AC_CHECK_HEADER(linux/filter.h, 
+AC_CHECK_HEADERS(linux/types.h)  # needed for linux/filter.h on old systems
+
+AC_CHECK_HEADER(linux/filter.h, DO_LPF=1, ,
+[
+#ifdef HAVE_LINUX_TYPES_H
+#include <linux/types.h>
+#endif
+])
+if test -n "$DO_LPF"
+then
 	AC_DEFINE([USE_LPF], [1], 
-		  [Define to 1 to use the Linux Packet Filter interface code.]))
-AC_CHECK_HEADER(sys/dlpi.h, 
-	AC_DEFINE([USE_DLPI], [1], 
-		  [Define to 1 to use DLPI interface code.]))
-AC_CHECK_HEADER(net/bpf.h,
-	AC_DEFINE([USE_BPF], [1],
-		  [Define to 1 to use the 
-		   Berkeley Packet Filter interface code.]))
+		  [Define to 1 to use the Linux Packet Filter interface code.])
+else
+	AC_CHECK_HEADER(sys/dlpi.h, DO_DLPI=1)
+	if test -n "$DO_DLPI"
+	then
+		AC_DEFINE([USE_DLPI], [1], 
+			  [Define to 1 to use DLPI interface code.])
+	else
+		AC_CHECK_HEADER(net/bpf.h, DO_BPF=1)
+		if test -n "$DO_BPF"
+		then
+			AC_DEFINE([USE_BPF], [""],
+	  			  [Define to 1 to use the 
+				   Berkeley Packet Filter interface code.])
+		fi
+	fi
+
+fi
 
 # Look for optional headers.
 AC_CHECK_HEADER(net/if_dl.h,
