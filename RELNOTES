@@ -40,6 +40,8 @@ the README file.
   This enforces the correct sequence of events for the remote server
   processing these messages.
 
+- Fixed a bug in which write_lease() might report a failure incorrectly
+
 			Changes since 3.1.0b1
 
 - Added -x option to dhclient, which triggers dhclient processes
