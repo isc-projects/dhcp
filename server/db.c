@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: db.c,v 1.79 2007/05/29 18:11:56 each Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: db.c,v 1.80 2007/06/05 23:28:43 each Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -147,6 +147,7 @@ int write_lease (lease)
 		int i;
 		s = quotify_buf (lease -> uid, lease -> uid_len, MDL);
 		if (s) {
+			errno = 0;
 			fprintf (db_file, "\n  uid \"%s\";", s);
 			if (errno)
 				++errors;

@@ -59,6 +59,8 @@ suggested fixes to <dhcp-users@isc.org>.
 - A bug was fixed in interface discovery wherein an error identifying
   a server-configured interface with no IPv4 addresses would SEGV.
 
+- Fixed a bug in which write_lease() might report a failure incorrectly
+
 			Changes since 4.0.0-20070413
 
 - Old (expired) leases are now cleaned.
