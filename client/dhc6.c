@@ -24,7 +24,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhc6.c,v 1.5 2007/05/19 18:47:13 dhankins Exp $ Copyright (c) 2006-2007 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhc6.c,v 1.6 2007/06/06 22:57:31 each Exp $ Copyright (c) 2006-2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -58,10 +58,12 @@ void do_confirm6(void *input);
 void reply_handler(struct packet *packet, struct client_state *client);
 static isc_result_t dhc6_add_ia(struct client_state *client,
 				struct data_string *packet,
-				struct dhc6_lease *lease);
+				struct dhc6_lease *lease,
+                                u_int8_t message);
 static void dhc6_merge_lease(struct dhc6_lease *src, struct dhc6_lease *dst);
 void do_select6(void *input);
 void do_refresh6(void *input);
+static void do_release6(void *input);
 static void start_bound(struct client_state *client);
 void bound_handler(struct packet *packet, struct client_state *client);
 void start_renew6(void *input);
@@ -1141,59 +1143,10 @@ do_confirm6(void *input)
 				    &dhcpv6_universe);
 
 	/* Append IA's. */
-	memset(&ia_data, 0, sizeof(ia_data));
-	memset(&addr_data, 0, sizeof(addr_data));
-	for (ia = client->active_lease->bindings ; ia != NULL ;
-	     ia = ia->next) {
-		if (!buffer_allocate(&ia_data.buffer, 12, MDL)) {
-			log_error("Unable to allocate memory for IA_NA.");
-			data_string_forget(&ds, MDL);
-			return;
-		}
-
-		/* Copy the IAID into the packet buffer. */
-		memcpy(ia_data.buffer->data, ia->iaid, 4);
-		/* Set t1 and t2 to zero (RFC3315 section 17.1.3) */
-		memset(ia_data.buffer->data + 4, 0, 8);
-
-		log_debug("XMT:  X-- IA_NA %s",
-			  print_hex_1(4, ia_data.buffer->data, 55));
-
-		for (addr = ia->addrs ; addr != NULL ; addr = addr->next) {
-			if (addr->address.len != 16) {
-				log_error("Illegal IPv6 address length (%d), "
-					  "ignoring.  (%s:%d)",
-					  addr->address.len, MDL);
-				continue;
-			}
-
-			if (!buffer_allocate(&addr_data.buffer, 24, MDL)) {
-				log_error("Unable to allocate memory for "
-					  "IAADDR.");
-				data_string_forget(&ia_data, MDL);
-				data_string_forget(&ds, MDL);
-				return;
-			}
-
-			/* Copy the address into the packet buffer. */
-			memcpy(addr_data.buffer->data, addr->address.iabuf,
-			       16);
-
-			/* Set preferred and max life to zero, per 17.1.3. */
-			memset(addr_data.buffer->data + 16, 0, 8);
-
-			log_debug("XMT:  | X-- Confirm Address %s",
-				  piaddr(addr->address));
-
-			append_option(&ia_data, &dhcpv6_universe,
-				      iaaddr_option, &addr_data);
-
-			data_string_forget(&addr_data, MDL);
-		}
-
-		append_option(&ds, &dhcpv6_universe, ia_na_option, &ia_data);
-
-		data_string_forget(&ia_data, MDL);
+	if (dhc6_add_ia(client, &ds, client->active_lease,
+                        DHCPV6_CONFIRM) != ISC_R_SUCCESS) {
+		data_string_forget(&ds, MDL);
+		return;
 	}
 
 	/* Transmit and wait. */
@@ -1213,6 +1166,134 @@ do_confirm6(void *input)
 
 	add_timeout(cur_time + client->RT, do_confirm6, client, NULL, NULL);
 
+	dhc6_retrans_advance(client);
+}
+
+/*
+ * Release addresses.
+ */
+void
+start_release6(struct client_state *client)
+{
+	struct data_string packet;
+
+        /* Cancel any pending transmissions */
+	cancel_timeout(do_confirm6, client);
+	cancel_timeout(do_select6, client);
+	cancel_timeout(do_refresh6, client);
+	cancel_timeout(do_release6, client);
+        client->state = S_STOPPED;
+
+        /*
+         * It is written:  "The client MUST NOT use any of the addresses it
+         * is releasing as the source address in the Release message or in
+         * any subsequently transmitted message."  So unconfigure now.
+         */
+        unconfigure6(client, "RELEASE6");
+
+	/* Fetch a 24-bit transaction ID. */
+	dhc6_new_xid(client);
+
+	/* Set timers per RFC3315 section 18.1.1. */
+	client->IRT = REL_TIMEOUT;
+	client->MRT = 0;
+	client->MRC = REL_MAX_RC;
+	client->MRD = 0;
+
+	dhc6_retrans_init(client);
+	client->v6_handler = reply_handler;
+
+	/* ("re")transmit the first packet. */
+	do_release6(client);
+}
+/*
+ * do_release6() creates a Release packet and transmits it.
+ */
+static void
+do_release6(void *input)
+{
+	struct sockaddr_in6 unicast, *dest_addr = &DHCPv6DestAddr;
+	struct client_state *client;
+	struct dhc6_ia *ia;
+	struct dhc6_addr *addr;
+	struct data_string ds;
+	struct data_string ia_data;
+	struct data_string addr_data;
+	struct option_cache *oc;
+        struct dhc6_lease *lease;
+	int send_ret;
+
+	client = input;
+
+	if (client->active_lease == NULL)
+		log_fatal("Impossible condition at %s:%d.", MDL);
+
+	if ((client->MRC != 0) && (client->txcount > client->MRC))  {
+		log_info("Max retransmission count exceeded.");
+		return;
+	}
+
+	/*
+	 * Check whether the server has sent a unicast option; if so, we can
+	 * use the address it specified.
+	 */
+	oc = lookup_option(&dhcpv6_universe, lease->options, D6O_UNICAST);
+	if (oc && evaluate_option_cache(&ds, NULL, NULL, NULL,
+                                        lease->options, NULL, &global_scope,
+					oc, MDL)) {
+		if (ds.len < 16) {
+			log_error("Invalid unicast option length %d.", ds.len);
+		} else {
+			memset(&unicast, 0, sizeof(DHCPv6DestAddr));
+			unicast.sin6_family = AF_INET6;
+			unicast.sin6_port = remote_port;
+			memcpy(&unicast.sin6_addr, ds.data, 16);
+			dest_addr = &unicast;
+		}
+
+		data_string_forget(&ds, MDL);
+	}
+
+	memset(&ds, 0, sizeof(ds));
+	if (!buffer_allocate(&ds.buffer, 4, MDL)) {
+		log_error("Unable to allocate memory for Release.");
+		return;
+	}
+
+	ds.data = ds.buffer->data;
+	ds.len = 4;
+	ds.buffer->data[0] = DHCPV6_RELEASE;
+	memcpy(ds.buffer->data + 1, client->dhcpv6_transaction_id, 3);
+
+	log_debug("XMT: Forming Release.");
+	make_client6_options(client, &client->sent_options,
+			     client->active_lease, DHCPV6_RELEASE);
+	dhcpv6_universe.encapsulate(&ds, NULL, NULL, client, NULL,
+				    client->sent_options, &global_scope,
+				    &dhcpv6_universe);
+
+	/* Append IA's. */
+	if (dhc6_add_ia(client, &ds, client->active_lease,
+                        DHCPV6_RELEASE) != ISC_R_SUCCESS) {
+		data_string_forget(&ds, MDL);
+		return;
+	}
+
+	/* Transmit and wait. */
+	log_info("XMT: Release on %s, interval %ld.",
+		 client->name ? client->name : client->interface->name,
+		 client->RT);
+
+	send_ret = send_packet6(client->interface, ds.data, ds.len,
+				&DHCPv6DestAddr);
+	if (send_ret != ds.len) {
+		log_error("dhc6: sendpacket6() sent %d of %d bytes",
+			  send_ret, ds.len);
+	}
+
+	data_string_forget(&ds, MDL);
+
+	add_timeout(cur_time + client->RT, do_release6, client, NULL, NULL);
 	dhc6_retrans_advance(client);
 }
 
@@ -1998,7 +2079,7 @@ do_select6(void *input)
 				    &dhcpv6_universe);
 
 	/* Now append any IA_NA's, and within them any IAADDRs. */
-	if (dhc6_add_ia(client, &ds, lease) != ISC_R_SUCCESS) {
+	if (dhc6_add_ia(client, &ds, lease, DHCPV6_REQUEST) != ISC_R_SUCCESS) {
 		data_string_forget(&ds, MDL);
 		return;
 	}
@@ -2022,12 +2103,11 @@ do_select6(void *input)
 }
 
 /* For each IA in the lease, for each address in the IA, append that
- * information onto the packet-so-far in a "what I would like to have
- * please" fashion.
+ * information onto the packet-so-far.
  */
 static isc_result_t
 dhc6_add_ia(struct client_state *client, struct data_string *packet,
-	    struct dhc6_lease *lease)
+	    struct dhc6_lease *lease, u_int8_t message)
 {
 	struct data_string iads;
 	struct data_string addrds;
@@ -2035,79 +2115,144 @@ dhc6_add_ia(struct client_state *client, struct data_string *packet,
 	struct dhc6_ia *ia;
 	isc_result_t rval = ISC_R_SUCCESS;
 	TIME t1, t2;
-	
-	/* Now appended any IA_NA's, and within them any IAADDRs. */
+
 	memset(&iads, 0, sizeof(iads));
 	memset(&addrds, 0, sizeof(addrds));
-	for (ia = lease->bindings ; ia ; ia = ia->next) {
+	for (ia = lease->bindings;
+             ia != NULL && rval == ISC_R_SUCCESS;
+             ia = ia->next) {
 		if (!buffer_allocate(&iads.buffer, 12, MDL)) {
-			log_error("Unable to allocate memory for IA.");
+			log_error("Unable to allocate memory for IA_NA.");
+			rval = ISC_R_NOMEMORY;
 			break;
 		}
+
+		/* Copy the IAID into the packet buffer. */
+		memcpy(iads.buffer->data, ia->iaid, 4);
 		iads.data = iads.buffer->data;
 		iads.len = 12;
 
-		memcpy(iads.buffer->data, ia->iaid, 4);
-
-		t1 = client->config->requested_lease / 2;
-		t2 = t1 + (t1 / 2);
+                switch (message) {
+                      case DHCPV6_REQUEST:
+                      case DHCPV6_RENEW:
+                      case DHCPV6_REBIND:
+                        
+                        t1 = client->config->requested_lease / 2;
+                        t2 = t1 + (t1 / 2);
 #if MAX_TIME > 0xffffffff
-		if (t1 > 0xffffffff)
-			t1 = 0xffffffff;
-		if (t2 > 0xffffffff)
-			t2 = 0xffffffff;
+                        if (t1 > 0xffffffff)
+                                t1 = 0xffffffff;
+                        if (t2 > 0xffffffff)
+                                t2 = 0xffffffff;
 #endif
-		putULong(iads.buffer->data + 4, t1);
-		putULong(iads.buffer->data + 8, t2);
+                        putULong(iads.buffer->data + 4, t1);
+                        putULong(iads.buffer->data + 8, t2);
 
-		log_debug("XMT:  X-- IA_NA %s",
-			  print_hex_1(4, iads.data, 59));
-		log_debug("XMT:  | X-- Requested renew  +%u", (unsigned)t1);
-		log_debug("XMT:  | X-- Requested rebind +%u", (unsigned)t2);
+                        log_debug("XMT:  X-- IA_NA %s",
+                                  print_hex_1(4, iads.data, 59));
+                        log_debug("XMT:  | X-- Requested renew  +%u",
+                                  (unsigned) t1);
+                        log_debug("XMT:  | X-- Requested rebind +%u",
+                                  (unsigned) t2);
+                        break;
 
-		for (addr = ia->addrs ; addr ; addr = addr->next) {
+                      case DHCPV6_CONFIRM:
+                      case DHCPV6_RELEASE:
+		        /* Set t1 and t2 to zero; server will ignore them */
+                        memset(iads.buffer->data + 4, 0, 8);
+                        log_debug("XMT:  X-- IA_NA %s",
+                                  print_hex_1(4, iads.buffer->data, 55));
+
+                        break;
+
+                      default:
+                        log_fatal("Impossible condition at %s:%d.", MDL);
+                }
+
+		for (addr = ia->addrs ; addr != NULL ; addr = addr->next) {
+			if (addr->address.len != 16) {
+				log_error("Illegal IPv6 address length (%d), "
+					  "ignoring.  (%s:%d)",
+					  addr->address.len, MDL);
+				continue;
+			}
+
 			if (!buffer_allocate(&addrds.buffer, 24, MDL)) {
 				log_error("Unable to allocate memory for "
 					  "IAADDR.");
+				rval = ISC_R_NOMEMORY;
 				break;
 			}
+
 			addrds.data = addrds.buffer->data;
 			addrds.len = 24;
 
+			/* Copy the address into the packet buffer. */
 			memcpy(addrds.buffer->data, addr->address.iabuf, 16);
-			t1 = client->config->requested_lease;
-			t2 = t1 + 300;
-			putULong(addrds.buffer->data + 16, t1);
-			putULong(addrds.buffer->data + 20, t2);
 
-			log_debug("XMT:  | | X-- IAADDR %s",
-				  piaddr(addr->address));
-			log_debug("XMT:  | | | X-- Preferred lifetime +%u",
-				  (unsigned)t1);
-			log_debug("XMT:  | | | X-- Max lifetime +%u",
-				  (unsigned)t2);
+                        /* Copy in additional information as appropriate */
+                        switch (message) {
+                              case DHCPV6_REQUEST:
+                              case DHCPV6_RENEW:
+                              case DHCPV6_REBIND:
+                                t1 = client->config->requested_lease;
+                                t2 = t1 + 300;
+                                putULong(addrds.buffer->data + 16, t1);
+                                putULong(addrds.buffer->data + 20, t2);
+
+                                log_debug("XMT:  | | X-- IAADDR %s",
+                                          piaddr(addr->address));
+                                log_debug("XMT:  | | | X-- Preferred "
+                                          "lifetime +%u", (unsigned)t1);
+                                log_debug("XMT:  | | | X-- Max lifetime +%u",
+                                          (unsigned)t2);
+
+                                break;
+
+                              case DHCPV6_CONFIRM:
+			        /*
+                                 * Set preferred and max life to zero,
+                                 * per 17.1.3.
+                                 */
+        			memset(addrds.buffer->data + 16, 0, 8);
+                                log_debug("XMT:  | X-- Confirm Address %s",
+                                          piaddr(addr->address));
+                                break;
+
+                              case DHCPV6_RELEASE:
+                                /* Preferred and max life are irrelevant */
+        			memset(addrds.buffer->data + 16, 0, 8);
+                                log_debug("XMT:  | X-- Release Address %s",
+                                          piaddr(addr->address));
+                                break;
+
+                              default:
+                                log_fatal("Impossible condition at %s:%d.",
+                                          MDL);
+                        }
 
 			append_option(&iads, &dhcpv6_universe, iaaddr_option,
-				      &addrds);
+                                      &addrds);
 			data_string_forget(&addrds, MDL);
 		}
 
-		/* It doesn't make sense to make a request without an
+		/*
+                 * It doesn't make sense to make a request without an
 		 * address.
 		 */
-		if (ia->addrs != NULL) {
+		if (ia->addrs == NULL) {
+			log_debug("!!!:  V IA_NA has no IAADDRs - removed.");
+			rval = ISC_R_FAILURE;
+		} else if (rval == ISC_R_SUCCESS) {
 			log_debug("XMT:  V IA_NA appended.");
 			append_option(packet, &dhcpv6_universe, ia_na_option,
 				      &iads);
-		} else {
-			log_debug("!!!:  V IA_NA has no IAADDRs - removed.");
-			rval = ISC_R_FAILURE;
 		}
 
 		data_string_forget(&iads, MDL);
 	}
 
-	return rval;
+        return rval;
 }
 
 /* reply_handler() accepts a Reply while we're attempting Select or Renew or
@@ -2153,6 +2298,7 @@ reply_handler(struct packet *packet, struct client_state *client)
 	cancel_timeout(do_confirm6, client);
 	cancel_timeout(do_select6, client);
 	cancel_timeout(do_refresh6, client);
+	cancel_timeout(do_release6, client);
 
 	/* Action was taken, so now that we've torn down our scheduled
 	 * retransmissions, return.
@@ -2164,6 +2310,16 @@ reply_handler(struct packet *packet, struct client_state *client)
 		dhc6_lease_destroy(client->selected_lease, MDL);
 		client->selected_lease = NULL;
 	}
+
+        /* If this is in response to a Release, clean up and return. */
+	if (client->state == S_STOPPED) {
+		if (client->active_lease == NULL)
+			log_fatal("Impossible condition at %s:%d.", MDL);
+
+                dhc6_lease_destroy(client->active_lease, MDL);
+                client->active_lease = NULL;
+                return;
+        }
 
 	/* If this is in response to a confirm, we use the lease we've
 	 * already got, not the reply we were sent.
@@ -2769,7 +2925,9 @@ do_refresh6(void *input)
 				    client->sent_options, &global_scope,
 				    &dhcpv6_universe);
 
-	if (dhc6_add_ia(client, &ds, lease) != ISC_R_SUCCESS) {
+        /* Append IA's */
+	if (dhc6_add_ia(client, &ds, lease,
+                        client->refresh_type) != ISC_R_SUCCESS) {
 		data_string_forget(&ds, MDL);
 		return;
 	}
@@ -2942,6 +3100,33 @@ do_expire(void *input)
 
 	/* Schedule the next run through. */
 	dhc6_check_times(client);
+}
+
+/*
+ * Run client script to unconfigure interface.
+ * Called with reason STOP6 when dhclient -x is run, or with reason
+ * RELEASE6 when server has replied to a Release message.
+ */
+void
+unconfigure6(struct client_state *client, const char *reason)
+{
+	struct dhc6_lease *lease;
+	struct dhc6_ia *ia;
+	struct dhc6_addr *addr;
+
+	if (client->active_lease == NULL)
+		return;
+
+	for (ia = client->active_lease->bindings ; ia != NULL ; ia = ia->next) {
+		for (addr = ia->addrs ; addr != NULL ; addr = addr->next) {
+			script_init(client, reason, NULL);
+			dhc6_marshall_values("old_", client, lease, ia, addr);
+			script_go(client);
+		 
+			if (client->config->do_forward_update)
+				client_dns_update(client, 0, 0, &addr->address);
+		}
+	}
 }
 
 /* make_client6_options() fetches option caches relevant to the client's

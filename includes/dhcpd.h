@@ -2416,10 +2416,12 @@ void form_duid(struct data_string *duid, char *file, int line);
 void dhc6_lease_destroy(struct dhc6_lease *lease, char *file, int line);
 void start_init6(struct client_state *client);
 void start_confirm6(struct client_state *client);
+void start_release6(struct client_state *client);
 void start_selecting6(struct client_state *client);
 isc_result_t write_client6_lease(struct client_state *client,
 				 struct dhc6_lease *lease,
 				 int rewrite, int sync);
+void unconfigure6(struct client_state *client, const char *reason);
 
 /* db.c */
 int write_lease PROTO ((struct lease *));

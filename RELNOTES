@@ -61,6 +61,11 @@ suggested fixes to <dhcp-users@isc.org>.
 
 - Fixed a bug in which write_lease() might report a failure incorrectly
 
+- Added support for DHCPv6 Release messages
+
+- Added -x option to dhclient, which triggers dhclient processes
+  to exit gracefully without releasing leases first
+
 			Changes since 4.0.0-20070413
 
 - Old (expired) leases are now cleaned.

@@ -32,7 +32,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.151 2007/05/21 18:16:54 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.152 2007/06/06 22:57:32 each Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -82,8 +82,6 @@ char *mockup_relay = NULL;
 
 static void usage PROTO ((void));
 
-void do_release(struct client_state *);
-
 static isc_result_t write_duid(struct data_string *duid);
 
 int 
@@ -95,6 +93,7 @@ main(int argc, char **argv) {
 	unsigned seed;
 	char *server = (char *)0;
 	isc_result_t status;
+ 	int exit_mode = 0;
  	int release_mode = 0;
 	omapi_object_t *listener;
 	isc_result_t result;
@@ -159,6 +158,10 @@ main(int argc, char **argv) {
 		} else if (!strcmp(argv[i], "-r")) {
 			release_mode = 1;
 			no_daemon = 1;
+                } else if (!strcmp (argv [i], "-x")) { /* eXit, no release */
+                        release_mode = 0;
+                        no_daemon = 0;
+                        exit_mode = 1;
 		} else if (!strcmp (argv [i], "-p")) {
 			if (++i == argc)
 				usage ();
@@ -274,7 +277,7 @@ main(int argc, char **argv) {
 		log_fatal("Impossible condition at %s:%d.", MDL);
 
 	/* first kill of any currently running client */
-	if (release_mode) {
+	if (release_mode || exit_mode) {
 		FILE *pidfd;
 		pid_t oldpid;
 		long temp;
@@ -375,7 +378,7 @@ main(int argc, char **argv) {
 			log_info ("No broadcast interfaces found - exiting.");
 			exit (0);
 		}
-	} else if (!release_mode) {
+	} else if (!release_mode && !exit_mode) {
 		/* Call the script with the list of interfaces. */
 		for (ip = interfaces; ip; ip = ip -> next) {
 			/* If interfaces were specified, don't configure
@@ -441,6 +444,14 @@ main(int argc, char **argv) {
 		for (ip = interfaces ; ip != NULL ; ip = ip->next) {
 			for (client = ip->client ; client != NULL ;
 			     client = client->next) {
+                                if (release_mode) {
+                                        start_release6(client);
+                                        continue;
+                                } else if (exit_mode) {
+                                        unconfigure6(client, "STOP6");
+                                        continue;
+                                }
+
 				/* If we have a previous binding, Confirm
 				 * that we can (or can't) still use it.
 				 */
@@ -457,7 +468,9 @@ main(int argc, char **argv) {
 			ip->flags |= INTERFACE_RUNNING;
 			for (client = ip->client ; client ;
 			     client = client->next) {
-				if (release_mode)
+                                if (exit_mode)
+                                        state_stop(client);
+                                else if (release_mode)
 					do_release(client);
 				else {
 					client->state = S_INIT;
@@ -471,7 +484,7 @@ main(int argc, char **argv) {
 		}
 	}
 
-	if (release_mode)
+	if (release_mode || exit_mode)
 		return 0;
 
 	/* Start up a listener for the object management API protocol. */
@@ -527,7 +540,7 @@ static void usage ()
 	log_info (arr);
 	log_info (url);
 
-	log_error ("Usage: dhclient [-1dvr] [-nw] [-p <port>] %s",
+	log_error ("Usage: dhclient [-1dvrx] [-nw] [-p <port>] %s",
 		   "[-s server]");
 	log_error ("                [-cf config-file] [-lf lease-file]%s",
 		   "[-pf pid-file] [-e VAR=val]");
@@ -1003,22 +1016,20 @@ void state_stop (cpp)
 	void *cpp;
 {
 	struct client_state *client = cpp;
-	int i;
 
 	/* Cancel all timeouts. */
-	cancel_timeout (state_selecting, client);
-	cancel_timeout (send_discover, client);
-	cancel_timeout (send_request, client);
-	cancel_timeout (state_bound, client);
+	cancel_timeout(state_selecting, client);
+	cancel_timeout(send_discover, client);
+	cancel_timeout(send_request, client);
+	cancel_timeout(state_bound, client);
 
 	/* If we have an address, unconfigure it. */
-	if (client -> active) {
-		script_init (client, "STOP", client -> active -> medium);
-		script_write_params (client, "old_", client -> active);
-		if (client -> alias)
-			script_write_params (client, "alias_",
-					     client -> alias);
-		script_go (client);
+	if (client->active) {
+		script_init(client, "STOP", client->active->medium);
+		script_write_params(client, "old_", client->active);
+		if (client->alias)
+			script_write_params(client, "alias_", client->alias);
+		script_go(client);
 	}
 }  
 
@@ -3323,6 +3334,7 @@ isc_result_t dhcp_set_control_state (control_object_state_t oldstate,
 		}
 	    }
 	}
+
 	if (newstate == server_shutdown)
 		add_timeout (cur_time + 1, shutdown_exit, 0, 0, 0);
 	return ISC_R_SUCCESS;

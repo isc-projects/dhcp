@@ -276,7 +276,7 @@ if [ ${reason} = DEPREF6 ] ; then
   exit_with_hooks 0
 fi
 
-if [ ${reason} = EXPIRE6 ] ; then
+if [ ${reason} = EXPIRE6 -o ${reason} = RELEASE6 -o ${reason} = STOP6 ] ; then
   if [ x${old_ip6_address} = x ] || [ x${old_ip6_prefixlen} = x ] ; then
     exit_with_hooks 2;
   fi
