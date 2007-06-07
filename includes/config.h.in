@@ -10,9 +10,6 @@
 /* Define to 1 if you have the /dev/random file. */
 #undef HAVE_DEV_RANDOM
 
-/* Define to 1 if the system has a net/if_dl.h header. */
-#undef HAVE_IF_DL
-
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
 
@@ -21,6 +18,12 @@
 
 /* Define to 1 if you have the <memory.h> header file. */
 #undef HAVE_MEMORY_H
+
+/* Define to 1 if you have the <net/if_dl.h> header file. */
+#undef HAVE_NET_IF_DL_H
+
+/* Define to 1 if you have the <regex.h> header file. */
+#undef HAVE_REGEX_H
 
 /* Define to 1 if the sockaddr structure has a length field. */
 #undef HAVE_SA_LEN
