@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.126 2007/05/29 18:11:56 each Exp $ Copyright 2004-2007 Internet Systems Consortium.";
+"$Id: dhcpd.c,v 1.127 2007/06/07 15:29:31 each Exp $ Copyright 2004-2007 Internet Systems Consortium.";
 #endif
 
   static char copyright[] =
@@ -46,6 +46,7 @@ static char url [] = "For info, please visit http://www.isc.org/sw/dhcp/";
 #include "dhcpd.h"
 #include <omapip/omapip_p.h>
 #include <syslog.h>
+#include <errno.h>
 
 static void usage PROTO ((void));
 
@@ -378,6 +379,19 @@ main(int argc, char **argv) {
 		path_dhcpd_pid = s;
 	}
 
+        /*
+         * convert relative path names to absolute, for files that need
+         * to be reopened after chdir() has been called
+         */
+        if (path_dhcpd_db[0] != '/') {
+                char *path = dmalloc(PATH_MAX, MDL);
+                if (path == NULL)
+                        log_fatal("No memory for filename\n");
+                path_dhcpd_db = realpath(path_dhcpd_db,  path);
+                if (path_dhcpd_db == NULL)
+                        log_fatal("%s: %s", path, strerror(errno));
+        }
+
 	if (!quiet) {
 		log_info("%s %s", message, PACKAGE_VERSION);
 		log_info (copyright);
@@ -638,6 +652,21 @@ main(int argc, char **argv) {
 	else
 		log_perror = 0;
 
+	/* If we didn't write the pid file earlier because we found a
+	   process running the logged pid, but we made it to here,
+	   meaning nothing is listening on the bootp port, then write
+	   the pid file out - what's in it now is bogus anyway. */
+	if (!pidfilewritten) {
+		unlink (path_dhcpd_pid);
+		if ((i = open (path_dhcpd_pid,
+			       O_WRONLY | O_CREAT, 0644)) >= 0) {
+			sprintf (pbuf, "%d\n", (int)getpid ());
+			write (i, pbuf, strlen (pbuf));
+			close (i);
+			pidfilewritten = 1;
+		}
+	}
+
 	if (daemon) {
 		/* Become session leader and get pid... */
 		pid = setsid();
@@ -652,21 +681,8 @@ main(int argc, char **argv) {
                 open("/dev/null", O_RDWR);
                 open("/dev/null", O_RDWR);
                 log_perror = 0; /* No sense logging to /dev/null. */
-	}
 
-	/* If we didn't write the pid file earlier because we found a
-	   process running the logged pid, but we made it to here,
-	   meaning nothing is listening on the bootp port, then write
-	   the pid file out - what's in it now is bogus anyway. */
-	if (!pidfilewritten) {
-		unlink (path_dhcpd_pid);
-		if ((i = open (path_dhcpd_pid,
-			       O_WRONLY | O_CREAT, 0644)) >= 0) {
-			sprintf (pbuf, "%d\n", (int)getpid ());
-			write (i, pbuf, strlen (pbuf));
-			close (i);
-			pidfilewritten = 1;
-		}
+                chdir("/");
 	}
 #endif /* !DEBUG */
 

@@ -32,7 +32,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhclient.c,v 1.152 2007/06/06 22:57:32 each Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhclient.c,v 1.153 2007/06/07 15:29:30 each Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -276,7 +276,29 @@ main(int argc, char **argv) {
 	else
 		log_fatal("Impossible condition at %s:%d.", MDL);
 
-	/* first kill of any currently running client */
+	/*
+	 * convert relative path names to absolute, for files that need
+	 * to be reopened after chdir() has been called
+	 */
+	if (path_dhclient_db[0] != '/') {
+		char *path = dmalloc(PATH_MAX, MDL);
+		if (path == NULL)
+			log_fatal("No memory for filename\n");
+		path_dhclient_db = realpath(path_dhclient_db,	path);
+		if (path_dhclient_db == NULL)
+			log_fatal("%s: %s", path, strerror(errno));
+	}
+ 
+	if (path_dhclient_script[0] != '/') {
+		char *path = dmalloc(PATH_MAX, MDL);
+		if (path == NULL)
+			log_fatal("No memory for filename\n");
+		path_dhclient_script = realpath(path_dhclient_script,	path);
+		if (path_dhclient_script == NULL)
+			log_fatal("%s: %s", path, strerror(errno));
+	}
+ 
+	/* first kill off any currently running client */
 	if (release_mode || exit_mode) {
 		FILE *pidfd;
 		pid_t oldpid;
@@ -3049,6 +3071,8 @@ void go_daemon ()
 	open("/dev/null", O_RDWR);
 
 	write_client_pid_file ();
+
+        chdir("/");
 }
 
 void write_client_pid_file ()

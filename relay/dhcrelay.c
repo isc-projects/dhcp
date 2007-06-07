@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcrelay.c,v 1.62 2007/05/19 19:16:26 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: dhcrelay.c,v 1.63 2007/06/07 15:29:31 each Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -312,6 +312,8 @@ main(int argc, char **argv) {
 		close (1);
 		close (2);
 		pid = setsid ();
+
+                chdir("/");
 	}
 
 	/* Start dispatching packets and timeouts... */
