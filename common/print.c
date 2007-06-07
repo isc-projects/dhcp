@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: print.c,v 1.66 2007/05/29 18:11:55 each Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: print.c,v 1.67 2007/06/07 15:52:29 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -513,6 +513,21 @@ static unsigned print_subexpression (expr, buf, len)
 						   buf + rv, len - rv - 1);
 			buf [rv++] = ')';
 			buf [rv] = 0;
+			return rv;
+		}
+		break;
+
+	      case expr_regex_match:
+		if (len > 10) {
+			rv = 4;
+			strcpy(buf, "(regex ");
+			rv += print_subexpression(expr->data.equal[0],
+						  buf + rv, len - rv - 2);
+			buf[rv++] = ' ';
+			rv += print_subexpression(expr->data.equal[1],
+						  buf + rv, len - rv - 1);
+			buf[rv++] = ')';
+			buf[rv] = 0;
 			return rv;
 		}
 		break;

@@ -86,9 +86,7 @@ else
 fi
 
 # Look for optional headers.
-AC_CHECK_HEADER(net/if_dl.h,
-	AC_DEFINE([HAVE_IF_DL], [1],
-		  [Define to 1 if the system has a net/if_dl.h header.]))
+AC_CHECK_HEADERS(net/if_dl.h regex.h)
 
 # find an MD5 library
 AC_SEARCH_LIBS(MD5_Init, [crypto])
@@ -101,6 +99,9 @@ AC_SEARCH_LIBS(inet_ntoa, [nsl])
 AC_SEARCH_LIBS(inet_aton, [socket nsl], , 
 	AC_DEFINE([NEED_INET_ATON], [1], 
 		  [Define to 1 if the inet_aton() function is missing.]))
+
+# Check for a standalone regex library.
+AC_SEARCH_LIBS(regcomp, [regex])
 
 # check for /dev/random (declares HAVE_DEV_RANDOM)
 AC_CHECK_FILE(/dev/random,

@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.126 2007/05/29 18:11:55 each Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.127 2007/06/07 15:52:29 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -3195,6 +3195,7 @@ int parse_if_statement (result, cfile, lose)
  *  			  NOT boolean-expression |
  *			  data-expression EQUAL data-expression |
  *			  data-expression BANG EQUAL data-expression |
+ *			  data-expression REGEX_MATCH data-expression |
  *			  boolean-expression AND boolean-expression |
  *			  boolean-expression OR boolean-expression
  *			  EXISTS OPTION-NAME
@@ -4559,6 +4560,35 @@ int parse_expression (expr, cfile, lose, context, plhs, binop)
 		context = expression_context (rhs);
 		break;
 
+	      case TILDE:
+#ifdef HAVE_REGEX_H
+		token = next_token(&val, NULL, cfile);
+		token = peek_token(&val, NULL, cfile);
+
+		if (token == TILDE)
+			next_op = expr_iregex_match;
+		else if (token == EQUAL)
+			next_op = expr_regex_match;
+		else {
+			parse_warn(cfile, "expecting ~= or ~~ operator");
+			*lose = 1;
+			skip_to_semi(cfile);
+			if (lhs)
+				expression_dereference(&lhs, MDL);
+			return 0;
+		}
+
+		context = expression_context(rhs);
+#else
+		parse_warn(cfile, "No support for regex operator.");
+		*lose = 1;
+		skip_to_semi(cfile);
+		if (lhs != NULL)
+			expression_dereference(&lhs, MDL);
+		return 0;
+#endif
+		break;
+
 	      case AND:
 		next_op = expr_and;
 		context = expression_context (rhs);
@@ -4683,6 +4713,23 @@ int parse_expression (expr, cfile, lose, context, plhs, binop)
 			*lose = 1;
 			return 0;
 		}
+		break;
+
+	    case expr_regex_match:
+#ifdef HAVE_REGEX_H
+		if (expression_context(rhs) != context_data) {
+			parse_warn(cfile, "expecting data expression");
+			skip_to_semi(cfile);
+			expression_dereference(&rhs, MDL);
+			*lose = 1;
+			return 0;
+		}
+#else
+		/* It should not be possible to attempt to parse the right
+		 * hand side of an operator there is no support for.
+		 */
+		log_fatal("Impossible condition at %s:%d.", MDL);
+#endif
 		break;
 
 	    case expr_and:

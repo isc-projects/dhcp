@@ -43,6 +43,7 @@ enum dhcp_token {
 	LPAREN = '(',
 	RPAREN = ')',
 	EQUAL = '=',
+	TILDE = '~',
 	BANG = '!',
 	PERCENT = '%',
  	PLUS = '+',

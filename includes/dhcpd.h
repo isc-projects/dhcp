@@ -59,7 +59,7 @@
 #include <net/if.h>
 #include <net/route.h>
 #include <net/if_arp.h>
-#if HAVE_IF_DL
+#if HAVE_IF_DL_H
 # include <net/if_dl.h>
 #endif
 

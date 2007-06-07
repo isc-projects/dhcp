@@ -193,7 +193,9 @@ enum expr_op {
 	expr_binary_xor,
 	expr_client_state,
 	expr_ucase,
-	expr_lcase
+	expr_lcase,
+	expr_regex_match,
+	expr_iregex_match
 };
 
 struct expression {

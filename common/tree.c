@@ -34,13 +34,17 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.115 2007/05/19 19:16:24 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.116 2007/06/07 15:52:29 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
 #include <omapip/omapip_p.h>
 #include <ctype.h>
 #include <sys/wait.h>
+
+#ifdef HAVE_REGEX_H
+# include <regex.h>
+#endif
 
 struct binding_scope *global_scope;
 
@@ -968,6 +972,8 @@ int evaluate_dns_expression (result, packet, lease, client_state, in_options,
 	      case expr_check:
 	      case expr_equal:
 	      case expr_not_equal:
+	      case expr_regex_match:
+	      case expr_iregex_match:
 	      case expr_and:
 	      case expr_or:
 	      case expr_not:
@@ -1061,6 +1067,10 @@ int evaluate_boolean_expression (result, packet, lease, client_state,
 	int sleft, sright;
 	struct binding *binding;
 	struct binding_value *bv, *obv;
+#ifdef HAVE_REGEX_H
+	int reg_st, regflags = REG_EXTENDED | REG_NOSUB;
+	regex_t re;
+#endif
 
 	switch (expr -> op) {
 	      case expr_check:
@@ -1152,6 +1162,57 @@ int evaluate_boolean_expression (result, packet, lease, client_state,
 		if (sright)
 			binding_value_dereference (&obv, MDL);
 		return 1;
+
+	      case expr_iregex_match:
+#ifdef HAVE_REGEX_H
+		regflags |= REG_ICASE;
+#endif
+		/* FALL THROUGH */
+	      case expr_regex_match:
+#ifdef HAVE_REGEX_H
+		memset(&left, 0, sizeof left);
+		bleft = evaluate_data_expression(&left, packet, lease,
+						 client_state,
+						 in_options, cfg_options,
+						 scope,
+						 expr->data.equal[0], MDL);
+		memset(&right, 0, sizeof right);
+		bright = evaluate_data_expression(&right, packet, lease,
+						  client_state,
+						  in_options, cfg_options,
+						  scope,
+						  expr->data.equal[1], MDL);
+
+		*result = 0;
+		memset(&re, 0, sizeof(re));
+		if (bleft && bright &&
+        	    (regcomp(&re, right.data, regflags) == 0) &&
+		    (regexec(&re, left.data, (size_t)0, NULL, 0) == 0))
+				*result = 1;
+
+#if defined (DEBUG_EXPRESSIONS)
+		log_debug("bool: %s ~= %s yields %s",
+			  bleft ? print_hex_1(left.len, left.data, 20)
+				: "NULL",
+			  bright ? print_hex_2 (right.len, right.data, 20)
+				 : "NULL",
+			  *result ? "true" : "false");
+#endif
+
+		if (bleft)
+			data_string_forget(&left, MDL);
+		if (bright)
+			data_string_forget(&right, MDL);
+
+		regfree(&re);
+		return reg_st;
+#else
+		/* It shouldn't be possible to configure a regex operator
+		 * when there's no support.
+		 */
+		log_fatal("Impossible condition at %s:%d.", MDL);
+		break;
+#endif
 
 	      case expr_and:
 		sleft = evaluate_boolean_expression (&bleft, packet, lease,
@@ -2296,6 +2357,8 @@ int evaluate_data_expression (result, packet, lease, client_state,
 	      case expr_check:
 	      case expr_equal:
 	      case expr_not_equal:
+	      case expr_regex_match:
+	      case expr_iregex_match:
 	      case expr_and:
 	      case expr_or:
 	      case expr_not:
@@ -2374,6 +2437,8 @@ int evaluate_numeric_expression (result, packet, lease, client_state,
 	      case expr_check:
 	      case expr_equal:
 	      case expr_not_equal:
+	      case expr_regex_match:
+	      case expr_iregex_match:
 	      case expr_and:
 	      case expr_or:
 	      case expr_not:
@@ -2990,6 +3055,8 @@ void expression_dereference (eptr, file, line)
 		/* All the binary operators can be handled the same way. */
 	      case expr_equal:
 	      case expr_not_equal:
+	      case expr_regex_match:
+	      case expr_iregex_match:
 	      case expr_concat:
 	      case expr_and:
 	      case expr_or:
@@ -3211,6 +3278,8 @@ int is_boolean_expression (expr)
 		expr -> op == expr_variable_exists ||
 		expr -> op == expr_equal ||
 		expr -> op == expr_not_equal ||
+		expr->op == expr_regex_match ||
+		expr->op == expr_iregex_match ||
 		expr -> op == expr_and ||
 		expr -> op == expr_or ||
 		expr -> op == expr_not ||
@@ -3350,6 +3419,8 @@ static int op_val (op)
 
 	      case expr_equal:
 	      case expr_not_equal:
+	      case expr_regex_match:
+	      case expr_iregex_match:
 		return 4;
 
 	      case expr_or:
@@ -3443,6 +3514,8 @@ enum expression_context op_context (op)
 
 	      case expr_equal:
 	      case expr_not_equal:
+	      case expr_regex_match:
+	      case expr_iregex_match:
 		return context_data;
 
 	      case expr_and:
@@ -3497,6 +3570,14 @@ int write_expression (file, expr, col, indent, firstp)
 						 expr -> data.check -> name,
 						 "\"", (char *)0);
 		break;
+
+	      case expr_regex_match:
+		s = "~=";
+		goto binary;
+
+	      case expr_iregex_match:
+		s = "~~";
+		goto binary;
 
 	      case expr_not_equal:
 		s = "!=";
@@ -4179,6 +4260,8 @@ int data_subexpression_length (int *rv,
 	      case expr_match:
 	      case expr_check:
 	      case expr_equal:
+	      case expr_regex_match:
+	      case expr_iregex_match:
 	      case expr_and:
 	      case expr_or:
 	      case expr_not:

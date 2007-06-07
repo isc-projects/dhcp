@@ -1,4 +1,4 @@
-.\"	$Id: dhcp-eval.5,v 1.26 2007/05/19 19:16:24 dhankins Exp $
+.\"	$Id: dhcp-eval.5,v 1.27 2007/06/07 15:52:29 dhankins Exp $
 .\"
 .\" Copyright (c) 2004,2007 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 1996-2003 by Internet Software Consortium
@@ -114,7 +114,7 @@ treated as false in conditionals.
 The following is the current list of boolean expressions that are
 supported by the DHCP distribution.
 .PP
-.I data-expression-1 \fB=\fI data-expression-2\fR
+.I data-expression-1 \fB=\fR \fIdata-expression-2\fR
 .RS 0.25i
 .PP
 The \fB=\fR operator compares the values of two data expressions,
@@ -123,7 +123,20 @@ either the left-hand side or the right-hand side are null, the
 result is also null.
 .RE
 .PP
-.I boolean-expression-1 \fBand\fI boolean-expression-2\fR
+.I data-expression-1 \fB~=\fR \fIdata-expression-2\fR
+.I data-expression-1 \fB~~\fR \fIdata-expression-2\fR
+.RS 0.25i
+.PP
+The \fB~=\fR and \fB~~\fR operators (not available on all systems) perform
+extended regex(7) matching of the values of two data expressions, returning
+true if \fIdata-expression-1\fR matches against the regular expression
+evaluated by \fIdata-expression-2\fR, or false if it does not match or
+encounters some error.  If either the left-hand side or the right-hand side 
+are null, the result is also false.  The \fB~~\fR operator differs from the
+\fB~=\fR operator in that it is case-insensitive.
+.RE
+.PP
+.I boolean-expression-1 \fBand\fR \fIboolean-expression-2\fR
 .PP
 .RS 0.25i
 The \fBand\fR operator evaluates to true if the boolean expression on
@@ -133,7 +146,7 @@ the expression on the left-hand side or the expression on the
 right-hand side are null, the result is null.
 .RE
 .PP
-.I boolean-expression-1 \fBor\fI boolean-expression-2\fR
+.I boolean-expression-1 \fBor\fR \fIboolean-expression-2\fR
 .PP
 .RS 0.25i
 The \fBor\fR operator evaluates to true if either the boolean

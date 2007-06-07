@@ -54,6 +54,11 @@ suggested fixes to <dhcp-users@isc.org>.
 
 			Changes since 4.0.0a1
 
+- Two new operators, ~= and ~~, have been integrated to implement
+  boolean matches by regular expression (such as may be used in
+  class matching statements).  Thanks to a patch by Alexandr S.
+  Agranovsky, which underwent slight modification.
+
 - Fix for icmp packets on 64-bit systems (bug introduced in 4.0).
 
 - A bug was fixed in interface discovery wherein an error identifying
