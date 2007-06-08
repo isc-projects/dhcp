@@ -19,6 +19,9 @@
 /* Define to 1 if you have the <memory.h> header file. */
 #undef HAVE_MEMORY_H
 
+/* Define to 1 if you have the <net/if6.h> header file. */
+#undef HAVE_NET_IF6_H
+
 /* Define to 1 if you have the <net/if_dl.h> header file. */
 #undef HAVE_NET_IF_DL_H
 
@@ -48,6 +51,15 @@
 
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
+
+/* Define to 1 if the system has 'struct if_laddrconf'. */
+#undef ISC_PLATFORM_HAVEIF_LADDRCONF
+
+/* Define to 1 if the system has 'struct if_laddrreq'. */
+#undef ISC_PLATFORM_HAVEIF_LADDRREQ
+
+/* Define to 1 if the system has 'struct lifnum'. */
+#undef ISC_PLATFORM_HAVELIFNUM
 
 /* Define to 1 if the inet_aton() function is missing. */
 #undef NEED_INET_ATON
