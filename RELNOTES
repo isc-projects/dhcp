@@ -255,6 +255,11 @@ the README file.
 - Encapsulated option spaces within encapsulated option spaces is now
   formally supported.
 
+			Changes since 3.0.6rc1
+
+- supersede_lease() now requeues leases in their respective hardware
+  address hash bucket.  This mirrors client identifier behaviour.
+
 			Changes since 3.0.5
 
 - Assorted fixes for broken network devices:  Packet length is now
