@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: mdb.c,v 1.67.2.30 2007/05/04 21:47:54 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: mdb.c,v 1.67.2.31 2007/06/08 18:59:13 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -792,8 +792,6 @@ int supersede_lease (comp, lease, commit, propogate, pimmediate)
 	int propogate;
 	int pimmediate;
 {
-	int enter_uid = 0;
-	int enter_hwaddr = 0;
 	struct lease *lp, **lq, *prev;
 	TIME lp_next_state;
 
@@ -840,28 +838,21 @@ int supersede_lease (comp, lease, commit, propogate, pimmediate)
 
 	/* If there's a Unique ID, dissociate it from the hash
 	   table and free it if necessary. */
-	if (comp -> uid) {
-		uid_hash_delete (comp);
-		enter_uid = 1;
-		if (comp -> uid != &comp -> uid_buf [0]) {
-			dfree (comp -> uid, MDL);
-			comp -> uid_max = 0;
-			comp -> uid_len = 0;
+	if (comp->uid) {
+		uid_hash_delete(comp);
+		if (comp->uid != comp->uid_buf) {
+			dfree(comp->uid, MDL);
+			comp->uid_max = 0;
+			comp->uid_len = 0;
 		}
 		comp -> uid = (unsigned char *)0;
-	} else
-		enter_uid = 1;
+	}
 
-	if (comp -> hardware_addr.hlen &&
-	    ((comp -> hardware_addr.hlen !=
-	      lease -> hardware_addr.hlen) ||
-	     memcmp (comp -> hardware_addr.hbuf,
-		     lease -> hardware_addr.hbuf,
-		     comp -> hardware_addr.hlen))) {
-		hw_hash_delete (comp);
-		enter_hwaddr = 1;
-	} else if (!comp -> hardware_addr.hlen)
-		enter_hwaddr = 1;
+	/* If there's a hardware address, remove the lease from its
+	 * old position in the hash bucket's ordered list.
+	 */
+	if (comp->hardware_addr.hlen)
+		hw_hash_delete(comp);
 
 	/* If the lease has been billed to a class, remove the billing. */
 	if (comp -> billing_class != lease -> billing_class) {
@@ -951,14 +942,12 @@ int supersede_lease (comp, lease, commit, propogate, pimmediate)
 	}
 
 	/* Record the lease in the uid hash if necessary. */
-	if (enter_uid && comp -> uid) {
-		uid_hash_add (comp);
-	}
+	if (comp->uid)
+		uid_hash_add(comp);
 
 	/* Record it in the hardware address hash if necessary. */
-	if (enter_hwaddr && lease -> hardware_addr.hlen) {
-		hw_hash_add (comp);
-	}
+	if (comp->hardware_addr.hlen)
+		hw_hash_add(comp);
 
 #if defined (FAILOVER_PROTOCOL)
 	comp->cltt = lease->cltt;

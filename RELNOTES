@@ -78,7 +78,13 @@ Murrell at BC Tel Advanced Communications.  I'd like to express my
 thanks to all of these good people here, both for working on the code
 and for prodding me into improving it.
 
-		       Changes since 3.0.6b1
+
+			Changes since 3.0.6rc1
+
+- supersede_lease() now requeues leases in their respective hardware
+  address hash bucket.  This mirrors client identifier behaviour.
+
+			Changes since 3.0.6b1
 
 - None
 
