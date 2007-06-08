@@ -54,6 +54,10 @@ suggested fixes to <dhcp-users@isc.org>.
 
 			Changes since 4.0.0a1
 
+- Compilation on HP/UX has been repaired.  The changes should generally
+  apply to any architecture that supplies SIOCGLIFCONF but does not
+  use 'struct lifconf' structures to pass values.
+
 - Two new operators, ~= and ~~, have been integrated to implement
   boolean matches by regular expression (such as may be used in
   class matching statements).  Thanks to a patch by Alexandr S.

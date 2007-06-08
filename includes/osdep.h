@@ -43,7 +43,7 @@
 /* XXX: now that we have a nice autoconf, we should sense this in
  * ./configure.
  */
-#ifdef __sun__
+#if defined(__sun__) || defined(__hpux__)
 typedef uint8_t u_int8_t;
 typedef uint16_t u_int16_t;
 typedef uint32_t u_int32_t;

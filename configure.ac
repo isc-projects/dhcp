@@ -85,8 +85,50 @@ else
 
 fi
 
+# SIOCGLIFCONF uses some transport structures.  Trick is not all platforms
+# use the same structures.  We like to use 'struct lifconf' and 'struct
+# lifreq', but we'll use these other structures if they're present.  HPUX
+# does not define 'struct lifnum', but does use SIOCGLIFNUM - they use an
+# int value.
+#
+AC_MSG_CHECKING([for struct lifnum])
+AC_TRY_COMPILE(
+[ #include <sys/types.h>
+  #include <net/if.h>
+],
+[ struct lifnum a;
+],
+	[AC_MSG_RESULT(yes)
+	 AC_DEFINE([ISC_PLATFORM_HAVELIFNUM], [1],
+		   [Define to 1 if the system has 'struct lifnum'.])],
+	[AC_MSG_RESULT(no)])
+
+AC_MSG_CHECKING([for struct if_laddrconf])
+AC_TRY_COMPILE(
+[ #include <sys/types.h>
+  #include <net/if6.h>
+],
+[ struct if_laddrconf a;
+],
+	[AC_MSG_RESULT(yes)
+	 AC_DEFINE([ISC_PLATFORM_HAVEIF_LADDRCONF], [1],
+		   [Define to 1 if the system has 'struct if_laddrconf'.])],
+	[AC_MSG_RESULT(no)])
+
+AC_MSG_CHECKING([for struct if_laddrreq])
+AC_TRY_LINK(
+[#include <sys/types.h>
+ #include <net/if6.h>
+],
+[ struct if_laddrreq a;
+],
+	[AC_MSG_RESULT(yes)
+	 AC_DEFINE([ISC_PLATFORM_HAVEIF_LADDRREQ], [1],
+		   [Define to 1 if the system has 'struct if_laddrreq'.])],
+	[AC_MSG_RESULT(no)])
+
 # Look for optional headers.
-AC_CHECK_HEADERS(net/if_dl.h regex.h)
+AC_CHECK_HEADERS(net/if_dl.h net/if6.h regex.h)
 
 # find an MD5 library
 AC_SEARCH_LIBS(MD5_Init, [crypto])

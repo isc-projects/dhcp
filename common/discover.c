@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: discover.c,v 1.59 2007/06/01 22:11:49 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: discover.c,v 1.60 2007/06/08 14:58:20 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -42,6 +42,10 @@ static char copyright[] =
 #define BSD_COMP		/* needed on Solaris for SIOCGLIFNUM */
 #include <sys/ioctl.h>
 #include <errno.h>
+
+#ifdef HAVE_NET_IF6_H
+# include <net/if6.h>
+#endif
 
 struct interface_info *interfaces, *dummy_interfaces, *fallback_interface;
 int interfaces_invalidated;
@@ -154,7 +158,44 @@ isc_result_t interface_initialize (omapi_object_t *ipo,
  * NOTE: the long-term goal is to use the interface code from BIND 9.
  */
 
-#if defined(SIOCGLIFNUM)
+#if defined(SIOCGLIFCONF) && defined(SIOCGLIFNUM) && defined(SIOCGLIFFLAGS)
+
+/* HP/UX doesn't define struct lifconf, instead they define struct
+ * if_laddrconf.  Similarly, 'struct lifreq' and 'struct lifaddrreq'.
+ */
+#ifdef ISC_PLATFORM_HAVEIF_LADDRCONF
+# define lifc_len iflc_len
+# define lifc_buf iflc_buf
+# define lifc_req iflc_req
+# define LIFCONF if_laddrconf
+#else
+# define ISC_HAVE_LIFC_FAMILY 1
+# define ISC_HAVE_LIFC_FLAGS 1
+# define LIFCONF lifconf
+#endif
+
+#ifdef ISC_PLATFORM_HAVEIF_LADDRREQ
+# define lifr_addr iflr_addr
+# define lifr_name iflr_name
+# define lifr_dstaddr iflr_dstaddr
+# define lifr_flags iflr_flags
+# define sockaddr_storage sockaddr_ext
+# define ss_family sa_family
+# define LIFREQ if_laddrreq
+#else
+# define LIFREQ lifreq
+#endif
+
+#ifndef IF_NAMESIZE
+# if defined(LIFNAMSIZ)
+#  define IF_NAMESIZE	LIFNAMSIZ
+# elseif defined(IFNAMSIZ)
+#  define IF_NAMESIZE	IFNAMSIZ
+# else
+#  define IF_NAMESIZE	16
+# endif
+#endif
+
 /* 
  * Solaris support
  * ---------------
@@ -171,7 +212,7 @@ isc_result_t interface_initialize (omapi_object_t *ipo,
 struct iface_conf_list {
 	int sock;		/* file descriptor used to get information */
 	int num;		/* total number of interfaces */
-	struct lifconf conf;	/* structure used to get information */
+	struct LIFCONF conf;	/* structure used to get information */
 	int next;		/* next interface to retrieve when iterating */
 };
 
@@ -179,7 +220,7 @@ struct iface_conf_list {
  * Structure used to return information about a specific interface.
  */
 struct iface_info {
-	char name[LIFNAMSIZ];		/* name of the interface, e.g. "bge0" */
+	char name[IF_NAMESIZE+1];	/* name of the interface, e.g. "bge0" */
 	struct sockaddr_storage addr;	/* address information */
 	isc_uint64_t flags;		/* interface flags, e.g. IFF_LOOPBACK */
 };
@@ -191,7 +232,11 @@ struct iface_info {
  */
 int 
 begin_iface_scan(struct iface_conf_list *ifaces) {
+#ifdef ISC_PLATFORM_HAVELIFNUM
 	struct lifnum lifnum;
+#else
+	int lifnum;
+#endif
 
 	ifaces->sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	if (ifaces->sock < 0) {
@@ -200,7 +245,9 @@ begin_iface_scan(struct iface_conf_list *ifaces) {
 	}
 
 	memset(&lifnum, 0, sizeof(lifnum));
+#ifdef ISC_PLATFORM_HAVELIFNUM
 	lifnum.lifn_family = AF_UNSPEC;
+#endif
 	if (ioctl(ifaces->sock, SIOCGLIFNUM, &lifnum) < 0) {
 		log_error("Error finding total number of interfaces; %m");
 		close(ifaces->sock);
@@ -208,10 +255,17 @@ begin_iface_scan(struct iface_conf_list *ifaces) {
 		return 0;
 	}
 
+#ifdef ISC_PLATFORM_HAVELIFNUM
 	ifaces->num = lifnum.lifn_count;
+#else
+	ifaces->num = lifnum;
+#endif
+
 	memset(&ifaces->conf, 0, sizeof(ifaces->conf));
+#ifdef ISC_HAVE_LIFC_FAMILY
 	ifaces->conf.lifc_family = AF_UNSPEC;
-	ifaces->conf.lifc_len = ifaces->num * sizeof(struct lifreq);
+#endif
+	ifaces->conf.lifc_len = ifaces->num * sizeof(struct LIFREQ);
 	ifaces->conf.lifc_buf = dmalloc(ifaces->conf.lifc_len, MDL);
 	if (ifaces->conf.lifc_buf == NULL) {
 		log_fatal("Out of memory getting interface list.");
@@ -238,8 +292,8 @@ begin_iface_scan(struct iface_conf_list *ifaces) {
  */
 int
 next_iface(struct iface_info *info, int *err, struct iface_conf_list *ifaces) {
-	struct lifreq *p;
-	struct lifreq tmp;
+	struct LIFREQ *p;
+	struct LIFREQ tmp;
 	char *s;
 
 	do {

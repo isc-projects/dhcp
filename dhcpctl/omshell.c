@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: omshell.c,v 1.15 2007/05/19 19:16:24 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: omshell.c,v 1.16 2007/06/08 14:58:20 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include <time.h>
@@ -240,7 +240,7 @@ main(int argc, char **argv) {
 		    }
 		    break;
 
-		  case SERVER:
+		  case TOKEN_SERVER:
 		    token = next_token (&val, (unsigned *)0, cfile);
 		    if (token == NUMBER) {
 			    int alen = (sizeof buf) - 1;

@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.166 2007/05/30 10:10:12 shane Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.167 2007/06/08 14:58:20 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1392,7 +1392,7 @@ void parse_pool_statement (cfile, group, type)
 	do {
 		token = peek_token (&val, (unsigned *)0, cfile);
 		switch (token) {
-		      case NO:
+		      case TOKEN_NO:
 			next_token (&val, (unsigned *)0, cfile);
 			token = next_token (&val, (unsigned *)0, cfile);
 			if (token != FAILOVER ||
