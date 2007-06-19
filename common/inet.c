@@ -35,7 +35,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: inet.c,v 1.13 2007/05/19 19:16:24 dhankins Exp $ Copyright (c) 2004,2005,2007 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: inet.c,v 1.14 2007/06/19 17:06:03 shane Exp $ Copyright (c) 2004,2005,2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -295,6 +295,66 @@ addr_and(struct iaddr *result, const struct iaddr *a1, const struct iaddr *a2) {
 	}
 
 	return !all_zero;
+}
+
+/*
+ * Check if a bitmask of the given length is valid for the address.
+ * This is not the case if any bits longer than the bitmask are 1.
+ *
+ * So, this is valid:
+ *
+ * 127.0.0.0/8
+ *
+ * But this is not:
+ *
+ * 127.0.0.1/8
+ *
+ * Because the final ".1" would get masked out by the /8.
+ */
+isc_boolean_t
+is_cidr_mask_valid(const struct iaddr *addr, int bits) {
+	int zero_bits;
+	int zero_bytes;
+	int i;
+	char byte;
+	int shift_bits;
+
+	/*
+	 * Check our bit boundaries.
+	 */
+	if (bits < 0) {
+		return ISC_FALSE;
+	}
+	if (bits > (addr->len * 8)) {
+		return ISC_FALSE;
+	}
+
+	/*
+	 * Figure out how many low-order bits need to be zero.
+	 */
+	zero_bits = (addr->len * 8) - bits;
+	zero_bytes = zero_bits / 8;
+
+	/* 
+	 * Check to make sure the low-order bytes are zero.
+	 */
+	for (i=1; i<=zero_bytes; i++) {
+		if (addr->iabuf[addr->len-i] != 0) {
+			return ISC_FALSE;
+		}
+	}
+
+	/* 
+	 * Look to see if any bits not in right-hand bytes are 
+	 * non-zero, by making a byte that has these bits set to zero 
+	 * comparing to the original byte. If these two values are 
+	 * equal, then the right-hand bits are zero, and we are 
+	 * happy.
+	 */
+	shift_bits = zero_bits % 8;
+	if (shift_bits == 0) return ISC_TRUE;
+	byte = addr->iabuf[addr->len-zero_bytes-1];
+	return (((byte >> shift_bits) << shift_bits) == byte);
 }
 
 /*

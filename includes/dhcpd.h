@@ -2321,6 +2321,7 @@ int addr_or(struct iaddr *result,
 	    const struct iaddr *a1, const struct iaddr *a2);
 int addr_and(struct iaddr *result, 
 	     const struct iaddr *a1, const struct iaddr *a2);
+isc_boolean_t is_cidr_mask_valid(const struct iaddr *addr, int bits);
 isc_result_t range2cidr(struct iaddrcidrnetlist **result,
 			const struct iaddr *lo, const struct iaddr *hi);
 isc_result_t free_iaddrcidrnetlist(struct iaddrcidrnetlist **result);

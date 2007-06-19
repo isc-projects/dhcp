@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.167 2007/06/08 14:58:20 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.168 2007/06/19 17:06:03 shane Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2640,6 +2640,12 @@ parse_subnet6_declaration(struct parse *cfile, struct shared_network *share) {
 		return;
 	}
 
+	if (!is_cidr_mask_valid(&subnet->net, subnet->prefix_len)) {
+		parse_warn(cfile, "New subnet mask too short.");
+		skip_to_semi(cfile);
+		return;
+	}
+
 	/* 
 	 * Create a netmask. 
 	 */
@@ -3700,6 +3706,11 @@ parse_address_range6(struct parse *cfile, struct group *group) {
 		bits = atoi(val);
 		if ((bits < 0) || (bits > 128)) {
 			parse_warn(cfile, "networks have 0 to 128 bits");
+			skip_to_semi(cfile);
+			return;
+		}
+		if (!is_cidr_mask_valid(&lo, bits)) {
+			parse_warn(cfile, "network mask too short");
 			skip_to_semi(cfile);
 			return;
 		}

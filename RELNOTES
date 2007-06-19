@@ -54,6 +54,9 @@ suggested fixes to <dhcp-users@isc.org>.
 
 			Changes since 4.0.0a1
 
+- Invalid CIDR representation for IPv6 subnets or ranges now checked
+  for when loading configuration.
+
 - Compilation on HP/UX has been repaired.  The changes should generally
   apply to any architecture that supplies SIOCGLIFCONF but does not
   use 'struct lifconf' structures to pass values.
