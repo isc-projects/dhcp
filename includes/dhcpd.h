@@ -266,15 +266,13 @@ struct parse {
 	int tlen;
 	char tokbuf [1500];
 
-#ifdef OLD_LEXER
-	char comments [4096];
-	int comment_index;
-#endif
 	int warnings_occurred;
 	int file;
 	char *inbuf;
 	size_t bufix, buflen;
 	size_t bufsiz;
+
+	struct parse *saved_state;
 };
 
 /* Variable-length array of data. */
@@ -1577,8 +1575,14 @@ isc_result_t dhcp_set_control_state (control_object_state_t oldstate,
 isc_result_t new_parse PROTO ((struct parse **, int,
 			       char *, unsigned, const char *, int));
 isc_result_t end_parse PROTO ((struct parse **));
+isc_result_t save_parse_state(struct parse *cfile);
+isc_result_t restore_parse_state(struct parse *cfile);
 enum dhcp_token next_token PROTO ((const char **, unsigned *, struct parse *));
 enum dhcp_token peek_token PROTO ((const char **, unsigned *, struct parse *));
+enum dhcp_token next_raw_token(const char **rval, unsigned *rlen, 
+			       struct parse *cfile);
+enum dhcp_token peek_raw_token(const char **rval, unsigned *rlen, 
+			       struct parse *cfile);
 
 /* confpars.c */
 void parse_trace_setup (void);

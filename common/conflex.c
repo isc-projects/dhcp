@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: conflex.c,v 1.110 2007/06/08 14:58:20 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: conflex.c,v 1.111 2007/06/20 10:38:55 shane Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -43,6 +43,7 @@ static char copyright[] =
 static int get_char PROTO ((struct parse *));
 static enum dhcp_token get_token PROTO ((struct parse *));
 static void skip_to_eol PROTO ((struct parse *));
+static enum dhcp_token read_whitespace(int c, struct parse *cfile);
 static enum dhcp_token read_string PROTO ((struct parse *));
 static enum dhcp_token read_number PROTO ((int, struct parse *));
 static enum dhcp_token read_num_or_name PROTO ((int, struct parse *));
@@ -58,25 +59,29 @@ isc_result_t new_parse (cfile, file, inbuf, buflen, name, eolp)
 {
 	struct parse *tmp;
 
-	tmp = dmalloc (sizeof (struct parse), MDL);
-	if (!tmp)
+	tmp = dmalloc(sizeof(struct parse), MDL);
+	if (tmp == NULL) {
 		return ISC_R_NOMEMORY;
-	memset (tmp, 0, sizeof *tmp);
+	}
 
-	tmp->token = 0;
+	/*
+	 * We don't need to initialize things to zero here, since 
+	 * dmalloc() returns memory that is set to zero.
+	 */
+	/* tmp->token = 0; */ 
+	/* tmp->warnings_occurred = 0; */
+	/* tmp->bufix = 0; */
+	/* tmp->saved_state = NULL; */
 	tmp->tlname = name;
 	tmp->lpos = tmp -> line = 1;
-	tmp->cur_line = tmp -> line1;
-	tmp->prev_line = tmp -> line2;
-	tmp->token_line = tmp -> cur_line;
-	tmp->cur_line [0] = tmp -> prev_line [0] = 0;
-	tmp->warnings_occurred = 0;
+	tmp->cur_line = tmp->line1;
+	tmp->prev_line = tmp->line2;
+	tmp->token_line = tmp->cur_line;
+	tmp->cur_line[0] = tmp->prev_line[0] = 0;
 	tmp->file = file;
 	tmp->eol_token = eolp;
 
-	tmp->bufix = 0;
-
-	if (inbuf) {
+	if (inbuf != NULL) {
 		tmp->inbuf = inbuf;
 		tmp->buflen = buflen;
 		tmp->bufsiz = 0;
@@ -86,7 +91,7 @@ isc_result_t new_parse (cfile, file, inbuf, buflen, name, eolp)
 		if (fstat(file, &sb) < 0)
 			return ISC_R_IOERROR;
 
-		tmp->bufsiz = tmp->buflen = (size_t) sb.st_size;
+		tmp->bufsiz = tmp->buflen = (size_t)sb.st_size;
 		tmp->inbuf = mmap(NULL, tmp->bufsiz, PROT_READ, MAP_SHARED,
 				  file, 0);
 
@@ -107,9 +112,60 @@ isc_result_t end_parse (cfile)
 		munmap((*cfile)->inbuf, (*cfile)->bufsiz);
 		close((*cfile)->file);
 	}
+
+	if ((*cfile)->saved_state != NULL) {
+		dfree((*cfile)->saved_state, MDL);
+	}
 		
 	dfree(*cfile, MDL);
 	*cfile = NULL;
+	return ISC_R_SUCCESS;
+}
+
+/*
+ * Save the current state of the parser.
+ *
+ * Only one state may be saved. Any previous saved state is
+ * lost.
+ */
+isc_result_t
+save_parse_state(struct parse *cfile) {
+	/*
+	 * Free any previous saved state.
+	 */
+	if (cfile->saved_state != NULL) {
+		dfree(cfile->saved_state, MDL);
+	}
+
+	/*
+	 * Save our current state.
+	 */
+	cfile->saved_state = dmalloc(sizeof(struct parse), MDL);
+	if (cfile->saved_state == NULL) {
+		return ISC_R_NOMEMORY;
+	}
+	memcpy(cfile->saved_state, cfile, sizeof(*cfile));
+	return ISC_R_SUCCESS;
+}
+
+/*
+ * Return the parser to the previous saved state.
+ *
+ * You must call save_parse_state() before calling 
+ * restore_parse_state(), but you can call restore_parse_state() any
+ * number of times after that.
+ */
+isc_result_t
+restore_parse_state(struct parse *cfile) {
+	struct parse *saved_state;
+
+	if (cfile->saved_state == NULL) {
+		return ISC_R_NOTYET;
+	}
+
+	saved_state = cfile->saved_state;
+	memcpy(cfile, saved_state, sizeof(*cfile));
+	cfile->saved_state = saved_state;
 	return ISC_R_SUCCESS;
 }
 
@@ -150,9 +206,29 @@ static int get_char (cfile)
 	return c;		
 }
 
-static enum dhcp_token get_token (cfile)
-	struct parse *cfile;
-{
+/*
+ * GENERAL NOTE ABOUT TOKENS
+ *
+ * We normally only want non-whitespace tokens. There are some 
+ * circumstances where we *do* want to see whitespace (for example
+ * when parsing IPv6 addresses).
+ *
+ * Generally we use the next_token() function to read tokens. This 
+ * in turn calls get_token, which does *not* return tokens for
+ * whitespace. Rather, it skips these.
+ *
+ * When we need to see whitespace, we us next_raw_token(), which also
+ * returns the WHITESPACE token.
+ *
+ * The peek_token() and peek_raw_token() functions work as expected.
+ *
+ * Warning: if you invoke peek_token(), then if there is a whitespace
+ * token, it will be lost, and subsequent use of next_raw_token() or
+ * peek_raw_token() will NOT see it.
+ */
+
+static enum dhcp_token
+get_raw_token(struct parse *cfile) {
 	int c;
 	enum dhcp_token ttok;
 	static char tb [2];
@@ -164,20 +240,12 @@ static enum dhcp_token get_token (cfile)
 		u = cfile -> ugflag;
 
 		c = get_char (cfile);
-#ifdef OLD_LEXER
-		if (c == '\n' && p == 1 && !u
-		    && cfile -> comment_index < sizeof cfile -> comments)
-			cfile -> comments [cfile -> comment_index++] = '\n';
-#endif
-
-		if (!(c == '\n' && cfile -> eol_token)
-		    && isascii (c) && isspace (c))
-			continue;
+		if (!((c == '\n') && cfile->eol_token) && 
+		    isascii(c) && isspace(c)) {
+		    	ttok = read_whitespace(c, cfile);
+			break;
+		}
 		if (c == '#') {
-#ifdef OLD_LEXER
-			if (cfile -> comment_index < sizeof cfile -> comments)
-			    cfile -> comments [cfile -> comment_index++] = '#';
-#endif
 			skip_to_eol (cfile);
 			continue;
 		}
@@ -215,11 +283,17 @@ static enum dhcp_token get_token (cfile)
 	return ttok;
 }
 
-enum dhcp_token next_token (rval, rlen, cfile)
-	const char **rval;
-	unsigned *rlen;
-	struct parse *cfile;
-{
+/*
+ * The get_next_token() function consumes the next token and
+ * returns it to the caller.
+ *
+ * Since the code is almost the same for "normal" and "raw" 
+ * input, we pass a flag to alter the way it works.
+ */
+
+static enum dhcp_token 
+get_next_token(const char **rval, unsigned *rlen, 
+	       struct parse *cfile, isc_boolean_t raw) {
 	int rv;
 
 	if (cfile -> token) {
@@ -230,9 +304,17 @@ enum dhcp_token next_token (rval, rlen, cfile)
 		rv = cfile -> token;
 		cfile -> token = 0;
 	} else {
-		rv = get_token (cfile);
+		rv = get_raw_token(cfile);
 		cfile -> token_line = cfile -> cur_line;
 	}
+
+	if (!raw) {
+		while (rv == WHITESPACE) {
+			rv = get_raw_token(cfile);
+			cfile->token_line = cfile->cur_line;
+		}
+	}
+	
 	if (rval)
 		*rval = cfile -> tval;
 	if (rlen)
@@ -243,17 +325,56 @@ enum dhcp_token next_token (rval, rlen, cfile)
 	return rv;
 }
 
-enum dhcp_token peek_token (rval, rlen, cfile)
-	const char **rval;
-	unsigned int *rlen;
-	struct parse *cfile;
-{
+
+/*
+ * Get the next token from cfile and return it.
+ *
+ * If rval is non-NULL, set the pointer it contains to 
+ * the contents of the token.
+ *
+ * If rlen is non-NULL, set the integer it contains to 
+ * the length of the token.
+ */
+
+enum dhcp_token
+next_token(const char **rval, unsigned *rlen, struct parse *cfile) {
+	return get_next_token(rval, rlen, cfile, ISC_FALSE);
+}
+
+
+/*
+ * The same as the next_token() function above, but will return space
+ * as the WHITESPACE token.
+ */
+
+enum dhcp_token
+next_raw_token(const char **rval, unsigned *rlen, struct parse *cfile) {
+	return get_next_token(rval, rlen, cfile, ISC_TRUE);
+}
+
+
+/*
+ * The do_peek_token() function checks the next token without
+ * consuming it, and returns it to the caller.
+ *
+ * Since the code is almost the same for "normal" and "raw" 
+ * input, we pass a flag to alter the way it works. (See the 
+ * warning in the GENERAL NOTES ABOUT TOKENS above though.)
+ */
+
+enum dhcp_token
+do_peek_token(const char **rval, unsigned int *rlen,
+	      struct parse *cfile, isc_boolean_t raw) {
 	int x;
 
-	if (!cfile -> token) {
+	if (!cfile->token || (!raw && (cfile->token == WHITESPACE))) {
 		cfile -> tlpos = cfile -> lexchar;
 		cfile -> tline = cfile -> lexline;
-		cfile -> token = get_token (cfile);
+
+		do {
+			cfile->token = get_raw_token(cfile);
+		} while (!raw && (cfile->token == WHITESPACE));
+
 		if (cfile -> lexline != cfile -> tline)
 			cfile -> token_line = cfile -> prev_line;
 
@@ -275,6 +396,36 @@ enum dhcp_token peek_token (rval, rlen, cfile)
 	return cfile -> token;
 }
 
+
+/*
+ * Get the next token from cfile and return it, leaving it for a 
+ * subsequent call to next_token().
+ *
+ * Note that it WILL consume whitespace tokens.
+ *
+ * If rval is non-NULL, set the pointer it contains to 
+ * the contents of the token.
+ *
+ * If rlen is non-NULL, set the integer it contains to 
+ * the length of the token.
+ */
+
+enum dhcp_token
+peek_token(const char **rval, unsigned *rlen, struct parse *cfile) {
+	return do_peek_token(rval, rlen, cfile, ISC_FALSE);
+}
+
+
+/*
+ * The same as the peek_token() function above, but will return space
+ * as the WHITESPACE token.
+ */
+
+enum dhcp_token
+peek_raw_token(const char **rval, unsigned *rlen, struct parse *cfile) {
+	return do_peek_token(rval, rlen, cfile, ISC_TRUE);
+}
+
 static void skip_to_eol (cfile)
 	struct parse *cfile;
 {
@@ -283,14 +434,40 @@ static void skip_to_eol (cfile)
 		c = get_char (cfile);
 		if (c == EOF)
 			return;
-#ifdef OLD_LEXER
-		if (cfile -> comment_index < sizeof (cfile -> comments))
-			comments [cfile -> comment_index++] = c;
-#endif
 		if (c == EOL) {
 			return;
 		}
 	} while (1);
+}
+
+static enum dhcp_token
+read_whitespace(int c, struct parse *cfile) {
+	int ofs;
+
+	/*
+	 * Read as much whitespace as we have available.
+	 */
+	ofs = 0;
+	do {
+		cfile->tokbuf[ofs++] = c;
+		c = get_char(cfile);
+	} while (!((c == '\n') && cfile->eol_token) && 
+		 isascii(c) && isspace(c));
+
+	/*
+	 * Put the last (non-whitespace) character back.
+	 */
+	if (c != EOF) {
+		cfile->bufix--;
+	}
+
+	/*
+	 * Return our token.
+	 */
+	cfile->tokbuf[ofs] = '\0';
+	cfile->tlen = ofs;
+	cfile->tval = cfile->tokbuf;
+	return WHITESPACE;
 }
 
 static enum dhcp_token read_string (cfile)
@@ -406,9 +583,6 @@ static enum dhcp_token read_number (c, cfile)
 	int c;
 	struct parse *cfile;
 {
-#ifdef OLD_LEXER
-	int seenx = 0;
-#endif
 	int i = 0;
 	int token = NUMBER;
 
@@ -416,7 +590,6 @@ static enum dhcp_token read_number (c, cfile)
 	for (; i < sizeof cfile -> tokbuf; i++) {
 		c = get_char (cfile);
 
-#ifndef OLD_LEXER
 		/* Promote NUMBER -> NUMBER_OR_NAME -> NAME, never demote.
 		 * Except in the case of '0x' syntax hex, which gets called
 		 * a NAME at '0x', and returned to NUMBER_OR_NAME once it's
@@ -459,17 +632,6 @@ static enum dhcp_token read_number (c, cfile)
 		    default:
 			log_fatal("read_number():%s:%d: impossible case", MDL);
 		}
-#else /* OLD_LEXER */
-		if (!seenx && (c == 'x')) {
-			seenx = 1;
-		} else if (!isascii (c) || !isxdigit (c)) {
-			if (c != EOF) {
-				cfile -> bufix--;
-				cfile -> ugflag = 1;
-			}
-			break;
-		}
-#endif /* OLD_LEXER */
 
 		cfile -> tokbuf [i] = c;
 	}

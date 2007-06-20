@@ -342,7 +342,8 @@ enum dhcp_token {
 	LLT = 645,
 	EN = 646,
 	LL = 647,
-	RANGE6 = 648
+	RANGE6 = 648,
+	WHITESPACE = 649
 };
 
 #define is_identifier(x)	((x) >= FIRST_TOKEN &&	\

@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.127 2007/06/07 15:52:29 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.128 2007/06/20 10:38:55 shane Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -274,7 +274,6 @@ int parse_ip_addr_or_hostname (expr, cfile, uniform)
 	unsigned len = sizeof addr;
 	char *name;
 	struct expression *x = (struct expression *)0;
-	struct parse cfile0;
 	int ipaddr = 0;
 
 	token = peek_token (&val, (unsigned *)0, cfile);
@@ -287,12 +286,12 @@ int parse_ip_addr_or_hostname (expr, cfile, uniform)
 		 * context first, and restore it after we know what
 		 * we're dealing with.
 		 */
-		memcpy(&cfile0, cfile, sizeof(struct parse));
+		save_parse_state(cfile);
 		(void) next_token(NULL, NULL, cfile);
 		if (next_token(NULL, NULL, cfile) == DOT &&
 		    next_token(NULL, NULL, cfile) == NUMBER)
 			ipaddr = 1;
-		memcpy(cfile, &cfile0, sizeof(struct parse));
+		restore_parse_state(cfile);
 
 		if (ipaddr &&
 		    parse_numeric_aggregate (cfile, addr, &len, DOT, 10, 8))
@@ -379,16 +378,24 @@ parse_ip6_addr(struct parse *cfile, struct iaddr *addr) {
 	char v6[sizeof("ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255")];
 	int v6_len;
 
+	/*
+	 * First token is non-raw. This way we eat any whitespace before 
+	 * our IPv6 address begins, like one would expect.
+	 */
+	token = peek_token(&val, NULL, cfile);
+
+	/*
+	 * Gather symbols.
+	 */
 	v6_len = 0;
 	for (;;) {
-		token = peek_token(&val, NULL, cfile);
 		if ((((token == NAME) || (token == NUMBER_OR_NAME)) && 
 		     is_hex_string(val)) ||
 		    (token == NUMBER) || 
 		    (token == DOT) || 
 		    (token == COLON)) {
 
-			next_token(&val, NULL, cfile);
+			next_raw_token(&val, NULL, cfile);
 			val_len = strlen(val);
 			if ((v6_len + val_len) >= sizeof(v6)) {
 				parse_warn(cfile, "Invalid IPv6 address.");
@@ -401,9 +408,13 @@ parse_ip6_addr(struct parse *cfile, struct iaddr *addr) {
 		} else {
 			break;
 		}
+		token = peek_raw_token(&val, NULL, cfile);
 	}
 	v6[v6_len] = '\0';
 
+	/*
+	 * Use inet_pton() for actual work.
+	 */
 	if (inet_pton(AF_INET6, v6, addr->iabuf) <= 0) {
 		parse_warn(cfile, "Invalid IPv6 address.");
 		skip_to_semi(cfile);
