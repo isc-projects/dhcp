@@ -163,6 +163,29 @@ AC_CHECK_SIZEOF(struct iaddr *, , [
 #include <stdio.h>
 ])
 
+# Solaris does not have the msg_control or msg_controlen members in 
+# in the msghdr structure unless you define:
+#
+#   _XOPEN_SOURCE, _XOPEN_SOURCE_EXTENDED, and __EXTENSIONS__
+# 
+# See the "standards" man page for details.
+# 
+# We check for the msg_control member, and if it is not found, we check
+# again with the appropriate defines added to the CFLAGS. (In order to
+# do this we have to remove the check from the cache, which is what the
+# "unset" is for.)
+AC_CHECK_MEMBER(struct msghdr.msg_control,,
+	[CFLAGS="$CFLAGS -D_XOPEN_SOURCE -D_XOPEN_SOURCE_EXTENDED=1"
+	 CFLAGS="$CFLAGS -D__EXTENSIONS__"
+	 unset ac_cv_member_struct_msghdr_msg_control
+	 AC_CHECK_MEMBER(struct msghdr.msg_control,,
+	 	[AC_MSG_ERROR([Missing msg_control member in 
+			       msg_control structure.])],
+		[#include <sys/types.h>
+	 	 #include <sys/socket.h>])],
+	[#include <sys/types.h>
+	 #include <sys/socket.h>])
+
 AC_OUTPUT([
   Makefile
   client/Makefile

@@ -54,6 +54,8 @@ suggested fixes to <dhcp-users@isc.org>.
 
 			Changes since 4.0.0a1
 
+- Autoconf now supplies proper flags for Solaris DHCPv6 builds.
+
 - Fix for parsing error on some IPv6 addresses.
 
 - Invalid CIDR representation for IPv6 subnets or ranges now checked
