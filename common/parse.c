@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: parse.c,v 1.128 2007/06/20 10:38:55 shane Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: parse.c,v 1.129 2007/06/27 18:25:15 each Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -3351,7 +3351,6 @@ int parse_non_binary (expr, cfile, lose, context)
 	enum expr_op opcode;
 	const char *s;
 	char *cptr;
-	struct executable_statement *stmt;
 	int i;
 	unsigned long u;
 	isc_result_t status, code;
@@ -4823,6 +4822,83 @@ int parse_expression (expr, cfile, lose, context, plhs, binop)
 	goto new_rhs;
 }	
 
+
+int parse_option_data (expr, cfile, lookups, option)
+struct expression **expr;
+struct parse *cfile;
+int lookups;
+struct option *option;
+{
+	const char *val;
+	const char *fmt = NULL;
+	struct expression *tmp;
+	enum dhcp_token token;
+
+	do {
+		/*
+                 * Set a flag if this is an array of a simple type (i.e.,
+                 * not an array of pairs of IP addresses, or something like
+                 * that.
+                 */
+		int uniform = option -> format [1] == 'A';
+
+	      and_again:
+		/* Set fmt to start of format for 'A' and one char back
+		 * for 'a'.
+		 */
+		if ((fmt != NULL) && (fmt != option->format) && (*fmt == 'a'))
+			fmt -= 1;
+		else if ((fmt == NULL) || (*fmt == 'A'))
+			fmt = option->format;
+
+		/* 'a' means always uniform */
+		uniform |= (fmt [1] == 'a');
+
+		for ( ; *fmt; fmt++) {
+			if ((*fmt == 'A') || (*fmt == 'a'))
+				break;
+			if (*fmt == 'o')
+				continue;
+
+			tmp = *expr;
+			*expr = NULL;
+			if (!parse_option_token(expr, cfile, &fmt, tmp,
+                                                uniform, lookups)) {
+				if (fmt [1] != 'o') {
+					if (tmp)
+						expression_dereference (&tmp,
+									MDL);
+					return 0;
+				}
+				*expr = tmp;
+				tmp = NULL;
+			}
+                        if (tmp)
+				expression_dereference (&tmp, MDL);
+		}
+		if ((*fmt == 'A') || (*fmt == 'a')) {
+			token = peek_token (&val, (unsigned *)0, cfile);
+			/* Comma means: continue with next element in array */
+			if (token == COMMA) {
+				token = next_token (&val,
+						    (unsigned *)0, cfile);
+				continue;
+			}
+			/* no comma: end of array.
+			   'A' or end of string means: leave the loop */
+			if ((*fmt == 'A') || (fmt[1] == '\0'))
+				break;
+			/* 'a' means: go on with next char */
+			if (*fmt == 'a') {
+				fmt++;
+				goto and_again;
+			}
+		}
+	} while ((*fmt == 'A') || (*fmt == 'a'));
+
+        return 1;
+}
+
 /* option-statement :== identifier DOT identifier <syntax> SEMI
 		      | identifier <syntax> SEMI
 
@@ -4839,11 +4915,8 @@ int parse_option_statement (result, cfile, lookups, option, op)
 {
 	const char *val;
 	enum dhcp_token token;
-	const char *fmt = NULL;
 	struct expression *expr = (struct expression *)0;
-	struct expression *tmp;
 	int lose;
-	struct executable_statement *stmt;
 	int ftt = 1;
 
 	token = peek_token (&val, (unsigned *)0, cfile);
@@ -4875,76 +4948,23 @@ int parse_option_statement (result, cfile, lookups, option, op)
 	}
 
 	/* Parse the option data... */
-	do {
-		/* Set a flag if this is an array of a simple type (i.e.,
-		   not an array of pairs of IP addresses, or something
-		   like that. */
-		int uniform = option -> format [1] == 'A';
-
-	      and_again:
-		/* Set fmt to start of format for 'A' and one char back
-		 * for 'a'.
-		 */
-		if ((fmt != NULL) && (fmt != option->format) && (*fmt == 'a'))
-			fmt -= 1;
-		else if ((fmt == NULL) || (*fmt == 'A'))
-			fmt = option->format;
-
-		/* 'a' means always uniform */
-		uniform |= (fmt [1] == 'a');
-
-		for ( ; *fmt; fmt++) {
-			if ((*fmt == 'A') || (*fmt == 'a'))
-				break;
-			if (*fmt == 'o')
-				continue;
-			tmp = expr;
-			expr = (struct expression *)0;
-			if (!parse_option_token (&expr, cfile, &fmt,
-						 tmp, uniform, lookups)) {
-				if (fmt [1] != 'o') {
-					if (tmp)
-						expression_dereference (&tmp,
-									MDL);
-					return 0;
-				}
-				expr = tmp;
-				tmp = (struct expression *)0;
-			}
-			if (tmp)
-				expression_dereference (&tmp, MDL);
-		}
-		if ((*fmt == 'A') || (*fmt == 'a')) {
-			token = peek_token (&val, (unsigned *)0, cfile);
-			/* Comma means: continue with next element in array */
-			if (token == COMMA) {
-				token = next_token (&val,
-						    (unsigned *)0, cfile);
-				continue;
-			}
-			/* no comma: end of array.
-			   'A' or end of string means: leave the loop */
-			if ((*fmt == 'A') || (fmt[1] == '\0'))
-				break;
-			/* 'a' means: go on with next char */
-			if (*fmt == 'a') {
-				fmt++;
-				goto and_again;
-			}
-		}
-	} while ((*fmt == 'A') || (*fmt == 'a'));
+        if (! parse_option_data(&expr, cfile, lookups, option))
+                return 0;
 
       done:
 	if (!parse_semi (cfile))
 		return 0;
 	if (!executable_statement_allocate (result, MDL))
 		log_fatal ("no memory for option statement.");
-	(*result) -> op = op;
-	if (expr && !option_cache (&(*result) -> data.option,
-				   (struct data_string *)0, expr, option, MDL))
+
+        (*result)->op = op;
+	if (expr && !option_cache (&(*result)->data.option,
+				   NULL, expr, option, MDL))
 		log_fatal ("no memory for option cache");
+
 	if (expr)
 		expression_dereference (&expr, MDL);
+
 	return 1;
 }
 
@@ -5010,11 +5030,12 @@ int parse_option_token (rv, cfile, fmt, expr, uniform, lookups)
 						(const unsigned char *)val,
 							len, 1, 1, MDL))
 					log_fatal ("No memory for \"%s\"", val);
-			} else if ((*fmt) [1] != 'o') {
-				parse_warn (cfile, "expecting string %s.",
-					    "or hexadecimal data");
-				skip_to_semi (cfile);
 			} else {
+                                if ((*fmt) [1] != 'o') {
+				        parse_warn (cfile, "expecting string "
+					            "or hexadecimal data.");
+				        skip_to_semi (cfile);
+                                }
 				return 0;
 			}
 		}

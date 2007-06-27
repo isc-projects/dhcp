@@ -85,6 +85,8 @@ suggested fixes to <dhcp-users@isc.org>.
 - All binaries (client, server, relay) now change directories
   to / before going into daemon mode, so as not to hold $CWD open
 
+- Fixed a bug parsing DHCPv6 client-id's in host-identifier statements
+
 			Changes since 4.0.0-20070413
 
 - Old (expired) leases are now cleaned.

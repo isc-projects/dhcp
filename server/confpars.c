@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.168 2007/06/19 17:06:03 shane Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.169 2007/06/27 18:25:15 each Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1733,8 +1733,7 @@ void parse_host_declaration (cfile, group)
 	isc_result_t status;
 	int known;
 	struct option *option;
-	struct expression *expr;
-	const char *tmp_format;
+	struct expression *expr = NULL;
 
 	name = parse_host_name (cfile);
 	if (!name) {
@@ -1867,6 +1866,7 @@ void parse_host_declaration (cfile, group)
 				break;
 			continue;
 		}
+
 		if (token == HOST_IDENTIFIER) {
 			if (host->host_id_option != NULL) {
 				parse_warn(cfile,
@@ -1897,33 +1897,12 @@ void parse_host_declaration (cfile, group)
 				break;
 			}
 
-			/* XXX: we're always using "lookups" */
-			expr = NULL;
-			tmp_format = option->format;
-			/* 
-			 * XXX: using parse_option_token() is not ideal here,
-			 *      as it does not handle things like arrays and
-			 *      such. 
-			 */
-			if (!parse_option_token(&expr, cfile, &tmp_format,
-						NULL, 1, 1)) {
-				skip_to_rbrace(cfile, 1);
-				option_dereference(&option, MDL);
-				break;
-			}
-
-			/* I think this is guaranteed, but a check
-			   won't hurt. -Shane */
-			if (expr->op != expr_const_data) {
-				parse_warn(cfile, 
-					   "options for host-identifier "
-				           "must have a constant value");
-				skip_to_rbrace(cfile, 1);
-				expression_dereference(&expr, MDL);
-				option_dereference(&option, MDL);
-				break;
-			}
-
+                        if (! parse_option_data(&expr, cfile, 1, option)) {
+		        	skip_to_rbrace(cfile, 1);
+		        	option_dereference(&option, MDL);
+		        	break;
+                        }
+                        
 			if (!parse_semi(cfile)) {
 				skip_to_rbrace(cfile, 1);
 				expression_dereference(&expr, MDL);
@@ -1939,9 +1918,8 @@ void parse_host_declaration (cfile, group)
 			continue;
 		}
 
-		declaration = parse_statement (cfile, host -> group,
-					       HOST_DECL, host,
-					       declaration);
+		declaration = parse_statement(cfile, host->group, HOST_DECL,
+                                              host, declaration);
 	} while (1);
 
 	if (deleted) {
