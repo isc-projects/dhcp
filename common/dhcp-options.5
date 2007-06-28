@@ -1,4 +1,4 @@
-.\"	$Id: dhcp-options.5,v 1.37 2007/05/19 19:16:24 dhankins Exp $
+.\"	$Id: dhcp-options.5,v 1.38 2007/06/28 18:29:49 dhankins Exp $
 .\"
 .\" Copyright (c) 2004-2007 by Internet Systems Consortium, Inc. ("ISC")
 .\" Copyright (c) 1996-2003 by Internet Software Consortium
@@ -1069,6 +1069,18 @@ but otherwise this must be configured manually - see the VENDOR
 ENCAPSULATED OPTIONS section later in this manual page for details.
 .RE
 .PP
+.B option \fBvivso\fR \fIstring\fR\fB;\fR
+.RS 0.25i
+.PP
+The \fBvivso\fR option can contain multiple separate options, one for
+each 32-bit Enterprise ID.  Each Enterprise-ID discriminated option then
+contains additional options whose format is defined by the vendor who
+holds that ID.  This option is usually not configured manually, but
+rather is configured via intervening option definitions.  Please also
+see the VENDOR ENCAPSULATED OPTIONS section later in this manual page
+for details.
+.RE
+.PP
 .B option \fBwww-server\fR \fIip-address\fR [\fB,\fR
 \fIip-address\fR... ]\fB;\fR
 .RS 0.25i
@@ -1428,6 +1440,10 @@ The \fBvendor-opts\fR option is actually an encapsulated sub-option space,
 in which each Vendor-specific Information Option (VSIO) is identified by
 a 32-bit Enterprise-ID number.  The encapsulated option spaces within these
 options are defined by the vendors.
+.PP
+To make use of this option, the best way is to examine the section
+titled VENDOR ENCAPSULATED OPTIONS below, in particular the bits about
+the "vsio" option space.
 .RE
 .PP
 .B option \fBdhcp6.interface-id\fR \fItext\fR\fB;\fR
@@ -1887,34 +1903,50 @@ option static-routes
 
 .fi	
 .SH VENDOR ENCAPSULATED OPTIONS
-The DHCP protocol defines the \fB vendor-encapsulated-options\fR
+The DHCP protocol defines the \fBvendor-encapsulated-options\fR
 option, which allows vendors to define their own options that will be
-sent encapsulated in a standard DHCP option.   The format of the
-.B vendor-encapsulated-options
-option is either a series of bytes whose format is not specified, or
-a sequence of options, each of which consists of a single-byte
-vendor-specific option code, followed by a single-byte length,
-followed by as many bytes of data as are specified in the length (the
-length does not include itself or the option code).
+sent encapsulated in a standard DHCP option.  It also defines
+the \fBVendor Identified Vendor Sub Options\fR option ("VIVSO"), and the
+DHCPv6 protocol defines the \fBVendor-specific Information Option\fR
+("VSIO").  The format of all of these options is usually internally a
+string of options, similarly to other normal DHCP options.  The VIVSO
+and VSIO options differ in that that they contain options that correspond
+to vendor Enterprise-ID numbers (assigned by IANA), which then contain
+options according to each Vendor's specifications.  You will need to refer
+to your vendor's documentation in order to form options to their
+specification.
 .PP
-The value of this option can be set in one of two ways.   The first
+The value of these options can be set in one of two ways.   The first
 way is to simply specify the data directly, using a text string or a
-colon-separated list of hexadecimal values.   For example:
+colon-separated list of hexadecimal values.  For help in forming these
+strings, please refer to \fBRFC2132\fR for the DHCPv4 \fBVendor Specific
+Information Option\fR, \fBRFC3925\fR for the DHCPv4 \fBVendor Identified Vendor
+Sub Options\fR, or \fBRFC3315\fR for the DHCPv6 \fBVendor-specific Information
+Option\fR.  For example:
 .PP
 .nf
 option vendor-encapsulated-options
-    2:4:AC:11:41:1:
-    3:12:73:75:6e:64:68:63:70:2d:73:65:72:76:65:72:31:37:2d:31:
-    4:12:2f:65:78:70:6f:72:74:2f:72:6f:6f:74:2f:69:38:36:70:63;
+    2:4:
+	AC:11:41:1:
+    3:12:
+	73:75:6e:64:68:63:70:2d:73:65:72:76:65:72:31:37:2d:31:
+    4:12:
+	2f:65:78:70:6f:72:74:2f:72:6f:6f:74:2f:69:38:36:70:63;
+option vivso
+    00:00:09:bf:0E:
+	01:0c:
+	    48:65:6c:6c:6f:20:77:6f:72:6c:64:21;
+option dhcp6.vendor-opts
+    00:00:09:bf:
+	00:01:00:0c:
+	    48:65:6c:6c:6f:20:77:6f:72:6c:64:21;
 .fi
 .PP
-The second way of setting the value of this option is to have the DHCP
+The second way of setting the value of these options is to have the DHCP
 server generate a vendor-specific option buffer.   To do this, you
 must do four things: define an option space, define some options in
 that option space, provide values for them, and specify that that 
-option space should be used to generate the
-.B vendor-encapsulated-options
-option.
+option space should be used to generate the relevant option.
 .PP
 To define a new option space in which vendor options can be stored,
 use the \fRoption space\fP statement:
@@ -1933,20 +1965,26 @@ use the \fRoption space\fP statement:
 Where the numbers following \fBcode width\fR, \fBlength width\fR,
 and \fBhash size\fR respectively identify the number of bytes used to
 describe option codes, option lengths, and the size in buckets of the
-hash tables to hold options in this space.
+hash tables to hold options in this space (most DHCPv4 option spaces
+use 1 byte codes and lengths, which is the default, whereas most
+DHCPv6 option spaces use 2 byte codes and lengths).
 .PP
 The code and length widths are used in DHCP protocol - you must configure
 these numbers to match the applicable option space you are configuring.
 They each default to 1.  Valid values for code widths are 1, 2 or 4.
-Valid values for length widths are 0, 1 or 2.
+Valid values for length widths are 0, 1 or 2.  Most DHCPv4 option spaces
+use 1 byte codes and lengths, which is the default, whereas most DHCPv6
+option spaces use 2 byte codes and lengths.  A zero-byte length produces
+options similar to the DHCPv6 Vendor-specific Information Option - but
+not their contents!
 .PP
 The hash size defaults depend upon the \fBcode width\fR selected, and
 may be 254 or 1009.  Valid values range between 1 and 65535.  Note
 that the higher you configure this value, the more memory will be used.  It
 is considered good practice to configure a value that is slightly larger
 than the estimated number of options you plan to configure within the
-space.  Due to limitations in previous versions of ISC DHCP (up to and
-including DHCP 3.0.*), this value was fixed at 9973.
+space.  Previous versions of ISC DHCP (up to and including DHCP 3.0.*),
+this value was fixed at 9973.
 .PP
 The name can then be used in option definitions, as described earlier in
 this document.   For example:
@@ -1956,6 +1994,19 @@ option space SUNW code width 1 length width 1 hash size 3;
 option SUNW.server-address code 2 = ip-address;
 option SUNW.server-name code 3 = text;
 option SUNW.root-path code 4 = text;
+
+option space vivso-sample code width 1 length width 1 hash size 3;
+option vivso-sample.sample code 1 = text;
+option vivso.vivso-sample code 2495 = encapsulate vivso-sample;
+
+option space docsis code width 2 length width 2 hash size 17;
+option docsis.tftp-servers code 32 = array of ip6-address;
+option docsis.cablelabs-configuration-file code 33 = text;
+option docsis.cablelabs-syslog-servers code 34 = array of ip6-address;
+option docsis.device-id code 36 = string;
+option docsis.time-servers code 37 = array of ip6-address;
+option docsis.time-offset code 38 = signed integer 32;
+option vsio.docsis code 4491 = encapsulate docsis;
 
 .fi
 Once you have defined an option space and the format of some options,
@@ -1971,9 +2022,6 @@ class "vendor-classes" {
   match option vendor-class-identifier;
 }
 
-option SUNW.server-address 172.17.65.1;
-option SUNW.server-name "sundhcp-server17-1";
-
 subclass "vendor-classes" "SUNW.Ultra-5_10" {
   vendor-option-space SUNW;
   option SUNW.root-path "/export/root/sparc";
@@ -1983,15 +2031,25 @@ subclass "vendor-classes" "SUNW.i86pc" {
   vendor-option-space SUNW;
   option SUNW.root-path "/export/root/i86pc";
 }
+
+option SUNW.server-address 172.17.65.1;
+option SUNW.server-name "sundhcp-server17-1";
+
+option vivso-sample.sample "Hello world!";
+
+option docsis.tftp-servers ::1;
+
 .fi
 .PP
 As you can see in the preceding example, regular scoping rules apply,
 so you can define values that are global in the global scope, and only
 define values that are specific to a particular class in the local
-scope.   The \fBvendor-option-space\fR declaration tells the DHCP
-server to use options in the SUNW option space to construct the
+scope.  The \fBvendor-option-space\fR declaration tells the DHCP
+server to use options in the SUNW option space to construct the DHCPv4
 .B vendor-encapsulated-options
-option.
+option.  This is a limitation of that option - the DHCPv4 VIVSO and the
+DHCPv6 VSIO options can have multiple vendor definitions all at once (even
+transmitted to the same client), so it is not necessary to configure this.
 .SH SEE ALSO
 dhcpd.conf(5), dhcpd.leases(5), dhclient.conf(5), dhcp-eval(5), dhcpd(8),
 dhclient(8), RFC2132, RFC2131, draft-ietf-dhc-agent-options-??.txt.
