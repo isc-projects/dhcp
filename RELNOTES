@@ -167,6 +167,11 @@ suggested fixes to <dhcp-users@isc.org>.
   were transmitted to it, and what frames are being carried through it which
   it should not intercept.
 
+			Changes since 3.1.0rc1
+
+- The parse warning that 'deny dyanmic bootp;' must be configured for
+  failover protected subnets was removed.
+
 			Changes since 3.1.0b2
 
 - Failover rebalance events no longer play ping pong with round errors

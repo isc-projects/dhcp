@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: confpars.c,v 1.169 2007/06/27 18:25:15 each Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: confpars.c,v 1.170 2007/06/28 17:19:55 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -1557,60 +1557,6 @@ void parse_pool_statement (cfile, group, type)
 			break;
 		}
 	} while (!done);
-
-#if defined (FAILOVER_PROTOCOL)
-	/* We can't do failover on a pool that supports dynamic bootp,
-	   because BOOTP doesn't support leases, and failover absolutely
-	   depends on lease timing. */
-	if (pool -> failover_peer) {
-		/* This search order matches the search orders later in
-		 * execution - deny first, if not denied, check permit
-		 * list.  A dynamic bootp client may be known or unknown,
-		 * it may belong to a member of a class, but it definitely
-		 * will not be authenticated since that requires DHCP
-		 * to work.  So a dynamic bootp client is definitely not
-		 * an authenticated client, and we can't say for sure about
-		 * anything else.
-		 *
-		 * So we nag the user.
-		 */
-		for (permit = pool -> prohibit_list; permit;
-		     permit = permit -> next) {
-			if (permit -> type == permit_dynamic_bootp_clients ||
-			    permit -> type == permit_unauthenticated_clients ||
-			    permit -> type == permit_all_clients)
-				break;
-		}
-		if (!permit) {
-			permit = pool -> permit_list;
-			do {
-				if (!permit ||
-				    permit -> type !=
-					permit_authenticated_clients) {
-					parse_warn (cfile,
-					  "pools with failover peers %s",
-					  "may not permit dynamic bootp.");
-					log_error ("Either write a \"%s\" %s",
-					  "no failover",
-					  "statement and use disjoint");
-					log_error ("pools, or%s (%s) %s",
-					  " don't permit dynamic bootp",
-					  "\"deny dynamic bootp clients;\"",
-					  "in this pool.");
-					log_error ("This is a protocol,%s %s",
-					   " limitation, not an ISC DHCP",
-					   "limitation, so");
-					log_error ("please don't request an %s",
-					   "enhancement or ask why this is.");
-
-					break;
-				}
-
-				permit = permit -> next;
-			} while (permit);
-		}
-	}
-#endif /* FAILOVER_PROTOCOL */
 
 	/* See if there's already a pool into which we can merge this one. */
 	for (pp = pool -> shared_network -> pools; pp; pp = pp -> next) {
