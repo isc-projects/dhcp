@@ -1,8 +1,8 @@
 	       Internet Systems Consortium DHCP Distribution
-	                    Version 3.0.6rc2
-		              June 11, 2007
+	                      Version 3.0.6
+		              June 29, 2007
 
-			      README FILE
+			       README FILE
 
 You should read this file carefully before trying to install or use
 the ISC DHCP Distribution.
@@ -92,7 +92,7 @@ directory, it may not have up-to-date information).
 
 			    RELEASE STATUS
 
-This is the second release candidate for ISC DHCP 3.0.6.
+This is ISC DHCP 3.0.6.
 
 ISC DHCP 3.0.6 is a maintenance release which seeks only to fix bugs
 present in versions 3.0.5 and prior.  No new features have been added,
@@ -141,12 +141,12 @@ information.   On Digital Unix, type ``man pfilt''.
 To build the DHCP Distribution, unpack the compressed tar file using
 the tar utility and the gzip command - type something like:
 
-	gunzip dhcp-3.0.6rc2.tar.gz
-	tar xvf dhcp-3.0.6rc2.tar
+	gunzip dhcp-3.0.6.tar.gz
+	tar xvf dhcp-3.0.6.tar
 
 			    CONFIGURING IT
 
-Now, cd to the dhcp-3.0.6rc2 subdirectory that you've just created and
+Now, cd to the dhcp-3.0.6 subdirectory that you've just created and
 configure the source tree by typing:
 
 	./configure
