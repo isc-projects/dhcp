@@ -25,6 +25,12 @@ For information on how to install, configure and run this software,
 as well as how to find documentation and report bugs, please consult
 the README file.
 
+
+			Changes since 3.1.0rc1
+
+- The parse warning that 'deny dyanmic bootp;' must be configured for
+  failover protected subnets was removed.
+
 			Changes since 3.1.0b2
 
 - Silenced compiler warnings on NetBSD
