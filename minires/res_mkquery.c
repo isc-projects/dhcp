@@ -76,16 +76,19 @@
 
 #if defined(LIBC_SCCS) && !defined(lint)
 static const char sccsid[] = "@(#)res_mkquery.c	8.1 (Berkeley) 6/4/93";
-static const char rcsid[] = "$Id: res_mkquery.c,v 1.5 2005/03/17 20:15:19 dhankins Exp $";
+static const char rcsid[] = "$Id: res_mkquery.c,v 1.6 2007/06/29 22:12:30 dhankins Exp $";
 #endif /* LIBC_SCCS and not lint */
 
 #include <sys/types.h>
 #include <sys/param.h>
+
 #include <netinet/in.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
+
 #include <netdb.h>
 #include <stdio.h>
 #include <string.h>
-#include <sys/socket.h>
 
 #include "minires/minires.h"
 #include "arpa/nameser.h"
