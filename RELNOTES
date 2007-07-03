@@ -83,6 +83,8 @@ and for prodding me into improving it.
 - Bug in octal parsing fixed. Thanks to Bernd Fuhrmann for the report
   and fix.
 
+- Fixed a bug in which write_lease() might report a failure incorrectly
+
 			Changes since 3.0.6rc1
 
 - supersede_lease() now requeues leases in their respective hardware
