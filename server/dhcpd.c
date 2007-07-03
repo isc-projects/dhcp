@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char ocopyright[] =
-"$Id: dhcpd.c,v 1.128 2007/06/15 15:02:05 shane Exp $ Copyright 2004-2007 Internet Systems Consortium.";
+"$Id: dhcpd.c,v 1.129 2007/07/03 10:34:18 shane Exp $ Copyright 2004-2007 Internet Systems Consortium.";
 #endif
 
   static char copyright[] =
@@ -49,7 +49,7 @@ static char url [] = "For info, please visit http://www.isc.org/sw/dhcp/";
 #include <errno.h>
 #include <limits.h>
 
-static void usage PROTO ((void));
+static void usage(void);
 
 struct iaddr server_identifier;
 int server_identifier_matched;
@@ -461,6 +461,10 @@ main(int argc, char **argv) {
 	}
 
 	if (server) {
+		if (local_family != AF_INET) {
+			log_fatal("You can only specify address to send "
+			          "replies to when running an IPv4 server.");
+		}
 		if (!inet_aton (server, &limited_broadcast)) {
 			struct hostent *he;
 			he = gethostbyname (server);
@@ -971,21 +975,19 @@ void postdb_startup (void)
 
 /* Print usage message. */
 
-static void usage ()
-{
+static void
+usage(void) {
 	log_info("%s %s", message, PACKAGE_VERSION);
-	log_info (copyright);
-	log_info (arr);
+	log_info(copyright);
+	log_info(arr);
 
-	log_fatal ("Usage: dhcpd [-p <UDP port #>] [-d] [-f]%s%s%s%s",
-		   "\n             [-cf config-file] [-lf lease-file]",
+	log_fatal("Usage: dhcpd [-p <UDP port #>] [-f] [-d] [-q] [-t|-T]\n"
+		  "             [-4|-6] [-cf config-file] [-lf lease-file]\n"
 #if defined (TRACING)
-		   "\n		   [-tf trace-output-file]",
-		   "\n		   [-play trace-input-file]",
-#else
-		   "", "",
+		  "             [-tf trace-output-file]\n"
+		  "             [-play trace-input-file]\n"
 #endif /* TRACING */
-		   "\n             [-t] [-T] [-s server] [if0 [...ifN]]");
+		  "             [-pf pid-file] [-s server] [if0 [...ifN]]");
 }
 
 void lease_pinged (from, packet, length)

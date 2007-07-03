@@ -28,7 +28,7 @@
 .\" see ``http://www.vix.com''.   To learn more about Nominum, Inc., see
 .\" ``http://www.nominum.com''.
 .\"
-.\" $Id: dhcpd.8,v 1.27 2007/05/19 19:16:26 dhankins Exp $
+.\" $Id: dhcpd.8,v 1.28 2007/07/03 10:34:18 shane Exp $
 .\"
 .TH dhcpd 8
 .SH NAME
@@ -59,6 +59,10 @@ dhcpd - Dynamic Host Configuration Protocol Server
 .B -6
 ]
 [
+.B -s
+.I server
+]
+[
 .B -cf
 .I config-file
 ]
@@ -84,6 +88,9 @@ dhcpd - Dynamic Host Configuration Protocol Server
 .I ...ifN
 ]
 ]
+
+.B dhcpd
+--version
 .SH DESCRIPTION
 The Internet Systems Consortium DHCP Server, dhcpd, implements the
 Dynamic Host Configuration Protocol (DHCP) and the Internet Bootstrap
@@ -193,6 +200,12 @@ the
 flag may used.  It should be followed by the udp port number on which
 dhcpd should listen.  This is mostly useful for debugging purposes.
 .PP
+If dhcpd should send replies to an address other than the broadcast
+address (255.255.255.255), the 
+.B -s
+flag may be used. It is followed by either the IP address or the host 
+name to send replies to. This option is only supported in IPv4.
+.PP
 To run dhcpd as a foreground process, rather than allowing it to run
 as a daemon in the background, the
 .B -f
@@ -251,6 +264,10 @@ using the \fB-lf\fR switch, so that the DHCP server doesn't wipe out
 your existing lease file with its test data.  The DHCP server will
 refuse to operate in playback mode unless you specify an alternate
 lease file.
+.PP
+To find the version of dhcpd that will run, use the
+.B --version
+argument. Instead of running, the version will be printed.
 .SH CONFIGURATION
 The syntax of the dhcpd.conf(5) file is discussed separately.   This
 section should be used as an overview of the configuration process,
