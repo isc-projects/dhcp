@@ -54,6 +54,9 @@ suggested fixes to <dhcp-users@isc.org>.
 
 			Changes since 4.0.0a1
 
+- Bug in octal parsing fixed. Thanks to Bernd Fuhrmann for the report
+  and fix.
+
 - Autoconf now supplies proper flags for Solaris DHCPv6 builds.
 
 - Fix for parsing error on some IPv6 addresses.
