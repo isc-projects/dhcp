@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: db.c,v 1.63.2.16 2007/07/03 22:52:58 each Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: db.c,v 1.63.2.17 2007/07/06 22:47:10 dhankins Exp $ Copyright (c) 2004-2005 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -166,17 +166,17 @@ int write_lease (lease)
                         ++errors;
 	}
 
-	if (lease -> binding_state != lease -> next_binding_state) {
-	    if (lease -> next_binding_state == FTS_ACTIVE &&
-		(lease -> flags & BOOTP_LEASE))
+	if (lease->binding_state != lease->next_binding_state) {
+	    if (lease->next_binding_state == FTS_ACTIVE &&
+		(lease->flags & BOOTP_LEASE)) {
 		if (fprintf(db_file, "\n  next binding state bootp;\n") < 0)
                         ++errors;
-	    else
+	    } else
 		if (fprintf(db_file, "\n  next binding state %s;",
-			    ((lease -> next_binding_state > 0 &&
-			      lease -> next_binding_state <= FTS_LAST)
+			    ((lease->next_binding_state > 0 &&
+			      lease->next_binding_state <= FTS_LAST)
 			     ? (binding_state_names
-			        [lease -> next_binding_state - 1])
+			        [lease->next_binding_state - 1])
 		             : "abandoned")) < 0)
                         ++errors;
 	}
