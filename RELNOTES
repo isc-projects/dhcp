@@ -90,6 +90,9 @@ suggested fixes to <dhcp-users@isc.org>.
 
 - Fixed a bug parsing DHCPv6 client-id's in host-identifier statements
 
+- Fixed a bug with the 'ddns-updates' boolean server configuration
+  parameter, which caused the server to fail.
+
 			Changes since 4.0.0-20070413
 
 - Old (expired) leases are now cleaned.

@@ -34,7 +34,7 @@
 
 #ifndef lint
 static char copyright[] =
-"$Id: tree.c,v 1.116 2007/06/07 15:52:29 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
+"$Id: tree.c,v 1.117 2007/07/10 21:42:05 dhankins Exp $ Copyright (c) 2004-2007 Internet Systems Consortium.  All rights reserved.\n";
 #endif /* not lint */
 
 #include "dhcpd.h"
@@ -2972,12 +2972,16 @@ int evaluate_boolean_option_cache (ignorep, packet,
 				    cfg_options, scope, oc, file, line))
 		return 0;
 
+	/* The boolean option cache is actually a trinary value.  Zero is
+	 * off, one is on, and 2 is 'ignore'.
+	 */
 	if (ds.len) {
 		result = ds.data [0];
 		if (result == 2) {
 			result = 0;
-			*ignorep = 1;
-		} else
+			if (ignorep != NULL)
+				*ignorep = 1;
+		} else if (ignorep != NULL)
 			*ignorep = 0;
 	} else
 		result = 0;
